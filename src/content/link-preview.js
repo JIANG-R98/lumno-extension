@@ -64,7 +64,7 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
       --lp-panel: #ffffff;
       --lp-panel-edge: rgba(0, 0, 0, 0.12);
       --lp-muted: rgba(20, 20, 26, 0.48);
-      --lp-control: rgba(255, 255, 255, 0.2);
+      --lp-control: rgba(255, 255, 255, 0.24);
       --lp-control-hover: rgba(255, 255, 255, 0.32);
       --lp-control-edge: rgba(255, 255, 255, 0.34);
       --lp-control-ink: #ffffff;
@@ -95,8 +95,11 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
     .root:focus {
       outline: none;
     }
+    /* Not quite 0: Chrome neither rasters nor uploads a layer at opacity 0,
+       which left all of it for the opening's first frame. At 0.002 it stays
+       below one step of color, so nothing shows while it gets ready. */
     .root[data-state="prewarm"] {
-      opacity: 0;
+      opacity: 0.002;
       pointer-events: none;
     }
     .stage {
@@ -137,15 +140,12 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
     .shot {
       will-change: opacity;
     }
-    /* Feathered, so once the sharp screenshot has faded out from under it
-       the receded page melts into the surround without a seam. */
+    /* Its edge is feathered (painted into the canvas, see paintVeil), so
+       once the sharp screenshot has faded out from under it the receded
+       page melts into the surround without a seam. */
     .veil {
       opacity: 0;
       will-change: opacity;
-      mask-image:
-        linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent),
-        linear-gradient(to bottom, transparent, #000 48px, #000 calc(100% - 48px), transparent);
-      mask-composite: intersect;
     }
     /* Fills the space the receding page leaves with the veil's picture, so
        the shrinking page shows no edge against it. Oversized so the blurred
@@ -161,9 +161,11 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
     .surround[hidden] {
       display: none;
     }
+    /* With a screenshot its tone is painted into the veil instead. */
     .scrim {
       position: absolute;
       inset: 0;
+      display: none;
       background: var(--lp-scrim);
       opacity: 0;
     }
@@ -171,6 +173,9 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
     .root[data-shot="none"] .stage {
       background: transparent;
       backdrop-filter: blur(16px) saturate(1.2);
+    }
+    .root[data-shot="none"] .scrim {
+      display: block;
     }
     .window {
       position: absolute;
@@ -191,9 +196,12 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
     }
     /* A continuous (squircle) corner like a macOS window's. Its curve starts
        as far from the corner as a 26pt continuous corner does, about 1.5
-       times the radius, so it looks the size of the window corner. */
+       times the radius, so it looks the size of the window corner. Only
+       while the window is still: clipping the frame to it takes a mask pass
+       on every frame, and the plain corner it stands in for while the window
+       springs open or shrinks away looks the same at that size. */
     @supports (corner-shape: squircle) {
-      .panel {
+      .root[data-motion="still"] .panel {
         border-radius: 40px;
         corner-shape: squircle;
       }
@@ -268,8 +276,10 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
       place-items: center;
       color: var(--lp-control-ink);
       background: var(--lp-control);
+      /* No backdrop blur: what lies under the buttons is the veil, already
+         blurred, and re-blurring it under each button cost a render pass per
+         button on every frame of the opening. */
       box-shadow: inset 0 0 0 0.5px var(--lp-control-edge), 0 6px 18px rgba(0, 0, 0, 0.18);
-      backdrop-filter: blur(18px) saturate(1.6);
       cursor: pointer;
       transition: background-color 140ms ease, transform 140ms ease;
     }
@@ -337,6 +347,10 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
   const BLUR_CSS_PX = 16;
   const VEIL_TONE = 'brightness(0.9) saturate(1.1)';
   const BLUR_RENDER_WIDTH = 480;
+  // The scrim over the receded page, and the width of the veil's feathered
+  // edge in CSS pixels.
+  const SCRIM_TONE = 'rgba(8, 8, 12, 0.2)';
+  const FEATHER_CSS_PX = 48;
 
   let current = null;
 
@@ -851,13 +865,40 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
     context.filter = `blur(${radius}px) ${VEIL_TONE}`;
     context.drawImage(image, -pad, -pad, canvasWidth + pad * 2, canvasHeight + pad * 2);
     context.drawImage(image, 0, 0, canvasWidth, canvasHeight);
+    // The scrim's tone goes into the picture rather than a layer of its own
+    // over the whole window.
+    context.filter = 'none';
+    context.fillStyle = SCRIM_TONE;
+    context.fillRect(0, 0, canvasWidth, canvasHeight);
     const surroundContext = preview.surround.getContext('2d');
     if (surroundContext) {
       preview.surround.width = canvasWidth;
       preview.surround.height = canvasHeight;
       surroundContext.drawImage(preview.veil, 0, 0);
     }
+    featherEdges(context, canvasWidth, canvasHeight, FEATHER_CSS_PX * canvasWidth / Math.max(1, window.innerWidth));
     return true;
+  }
+
+  // Fades the veil's edges out, once: a CSS mask did the same on every frame
+  // the veil faded in, each time compositing the whole window offscreen.
+  function featherEdges(context, width, height, feather) {
+    const fade = (x0, y0, x1, y1, length) => {
+      const gradient = context.createLinearGradient(x0, y0, x1, y1);
+      const stop = Math.min(0.5, feather / Math.max(1, length));
+      gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      gradient.addColorStop(stop, '#000');
+      gradient.addColorStop(1 - stop, '#000');
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      return gradient;
+    };
+    context.save();
+    context.globalCompositeOperation = 'destination-in';
+    context.fillStyle = fade(0, 0, width, 0, width);
+    context.fillRect(0, 0, width, height);
+    context.fillStyle = fade(0, 0, 0, height, height);
+    context.fillRect(0, 0, width, height);
+    context.restore();
   }
 
   // The screenshot usually arrives while the button is still down, so a
@@ -868,7 +909,23 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
       return;
     }
     preview.shotDecode = decodeImage(preview.shot, dataUrl)
-      .then((decoded) => decoded && paintVeil(preview));
+      .then((decoded) => decoded && paintVeil(preview))
+      .then((painted) => {
+        if (painted && current === preview && !preview.closing) {
+          showShot(preview);
+        }
+        return painted;
+      });
+  }
+
+  // The picture joins the invisible window as soon as it is ready, so it is
+  // decoded for the GPU and uploaded before the click instead of on the
+  // opening's first frame.
+  function showShot(preview) {
+    fitPageToWindow(preview);
+    preview.page.hidden = false;
+    preview.surround.hidden = false;
+    preview.root.dataset.shot = 'image';
   }
 
   async function show(message) {
@@ -897,9 +954,13 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
     if (current !== preview || preview.closing) {
       return true;
     }
-    preview.page.hidden = !hasShot;
-    preview.surround.hidden = !hasShot;
-    preview.root.dataset.shot = hasShot ? 'image' : 'none';
+    if (hasShot) {
+      showShot(preview);
+    } else {
+      preview.page.hidden = true;
+      preview.surround.hidden = true;
+      preview.root.dataset.shot = 'none';
+    }
     preview.root.dataset.state = 'open';
     preview.host.style.removeProperty('pointer-events');
     playOpening(preview, message.origin);
@@ -910,6 +971,7 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
 
   function playOpening(preview, origin) {
     const reduced = reducedMotionQuery.matches;
+    preview.root.dataset.motion = 'moving';
     const rect = preview.windowElement.getBoundingClientRect();
     const originX = origin ? Math.min(Math.max(origin.x - rect.left, 0), rect.width) : rect.width / 2;
     const originY = origin ? Math.min(Math.max(origin.y - rect.top, 0), rect.height) : rect.height / 2;
@@ -921,13 +983,19 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
     preview.veil.animate([{ opacity: 0 }, { opacity: 1 }], blurIn);
     preview.scrim.animate([{ opacity: 0 }, { opacity: 1 }], blurIn);
     if (reduced) {
+      preview.root.dataset.motion = 'still';
       preview.windowElement.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, fill: 'forwards' });
       return;
     }
-    preview.windowElement.animate([
+    const spring = preview.windowElement.animate([
       { transform: 'scale(0.78)' },
       { transform: 'scale(1)' }
     ], { duration: OPEN_SPRING.duration, easing: OPEN_SPRING.easing, fill: 'forwards' });
+    spring.finished.then(() => {
+      if (!preview.closing) {
+        preview.root.dataset.motion = 'still';
+      }
+    }, () => {});
     preview.windowElement.animate([{ opacity: 0 }, { opacity: 1 }], {
       duration: 110,
       easing: 'ease-out',
@@ -963,6 +1031,7 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
     }
     const reduced = reducedMotionQuery.matches;
     preview.root.style.pointerEvents = 'none';
+    preview.root.dataset.motion = 'moving';
     preview.controls.animate([{ opacity: 1 }, { opacity: 0 }], {
       duration: reduced ? 1 : 110,
       easing: 'ease-out',
