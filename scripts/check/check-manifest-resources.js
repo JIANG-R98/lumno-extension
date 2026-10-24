@@ -227,19 +227,15 @@ function checkCssFiles() {
 }
 
 function checkNewtabWallpaperFiles() {
-  const file = 'src/newtab/wallpaper/wallpaper.ts';
-  if (!fs.existsSync(file)) {
-    return;
-  }
-  const source = fs.readFileSync(file, 'utf8');
+  const source = fs.readFileSync('src/newtab/wallpaper/wallpaper.ts', 'utf8');
   const directoryMatch = source.match(/NEWTAB_WALLPAPER_EXTENSION_DIRECTORY\s*=\s*['"]([^'"]+)['"]/);
   // Each built-in wallpaper ships a panel thumbnail and the small copy its effects sample.
   const suffixes = ['NEWTAB_WALLPAPER_THUMBNAIL_SUFFIX', 'NEWTAB_WALLPAPER_SAMPLE_SUFFIX']
     .map((name) => (source.match(new RegExp(`${name}\\s*=\\s*['"]([^'"]+)['"]`)) || [])[1])
     .filter(Boolean);
   const directory = directoryMatch ? directoryMatch[1] : '';
-  if (!directory) {
-    return;
+  if (!directory || suffixes.length !== 2) {
+    throw new Error('wallpaper.ts no longer names the wallpaper directory and file suffixes.');
   }
   const filePattern = /\bfile:\s*['"]([^'"]+\.webp)['"]/g;
   let match = null;
