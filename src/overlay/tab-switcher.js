@@ -646,19 +646,20 @@ import * as TOAST from '../shared/ui/toast.js';
         width: fit-content;
         max-width: calc(100vw - 24px);
         color: #172033;
-        background:
-          radial-gradient(120% 160% at 12% -24%, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.44) 38%, rgba(241, 245, 249, 0.26) 100%),
-          linear-gradient(135deg, rgba(255, 255, 255, 0.48), rgba(226, 232, 240, 0.28));
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(245, 247, 250, 0.88));
         border: 0;
         border-radius: var(--x-tab-switcher-radius-panel);
         box-shadow:
-          0 26px 82px rgba(15, 23, 42, 0.22),
-          0 5px 18px rgba(15, 23, 42, 0.08),
-          inset 0 1px 0 rgba(255, 255, 255, 0.86),
-          inset 0 -18px 44px rgba(255, 255, 255, 0.22),
-          inset 0 0 0 1px rgba(255, 255, 255, 0.3);
-        backdrop-filter: blur(56px) saturate(210%);
-        -webkit-backdrop-filter: blur(56px) saturate(210%);
+          0 0 0 0.5px rgba(15, 23, 42, 0.1),
+          0 1px 2px rgba(15, 23, 42, 0.06),
+          0 10px 24px -6px rgba(15, 23, 42, 0.12),
+          0 36px 84px -12px rgba(15, 23, 42, 0.22),
+          0 96px 220px -16px rgba(15, 23, 42, 0.3),
+          0 0 140px 8px rgba(15, 23, 42, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(40px) saturate(120%);
+        -webkit-backdrop-filter: blur(40px) saturate(120%);
         padding: var(--x-tab-switcher-padding-panel);
         pointer-events: auto;
         opacity: 0;
@@ -701,7 +702,6 @@ import * as TOAST from '../shared/ui/toast.js';
         color: #172033;
         cursor: pointer;
         box-shadow: none;
-        transition: border-color 140ms ease, background 140ms ease, box-shadow var(--x-tab-switcher-motion-card);
       }
       .x-tab-switcher-card[data-active="true"] {
         transform: none;
@@ -834,7 +834,7 @@ import * as TOAST from '../shared/ui/toast.js';
       .x-tab-switcher-meta {
         min-width: 0;
         display: grid;
-        gap: 3px;
+        gap: 1px;
         padding: 0 var(--x-tab-switcher-meta-inline-padding);
       }
       .x-tab-switcher-name-row {
@@ -858,7 +858,7 @@ import * as TOAST from '../shared/ui/toast.js';
         color: #172033;
         font-size: 11.5px;
         font-weight: 500;
-        line-height: 1.16;
+        line-height: 1.32;
         letter-spacing: 0;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -872,7 +872,7 @@ import * as TOAST from '../shared/ui/toast.js';
         color: rgba(23, 32, 51, 0.58);
         font-size: 11px;
         font-weight: 560;
-        line-height: 1.18;
+        line-height: 1.32;
       }
       @supports (corner-shape: superellipse(1.25)) {
         #${PANEL_ID},
@@ -914,7 +914,7 @@ import * as TOAST from '../shared/ui/toast.js';
         }
         .x-tab-switcher-name {
           font-size: 10.5px;
-          line-height: 1.14;
+          line-height: 1.3;
         }
         .x-tab-switcher-host {
           display: none;
@@ -924,15 +924,16 @@ import * as TOAST from '../shared/ui/toast.js';
         --x-tab-switcher-thumb-stroke-color: rgba(255, 255, 255, 0.24);
         color-scheme: dark;
         color: #f8fafc;
-        background:
-          radial-gradient(120% 150% at 12% -22%, rgba(71, 85, 105, 0.4) 0%, rgba(30, 41, 59, 0.5) 40%, rgba(8, 13, 24, 0.44) 100%),
-          linear-gradient(135deg, rgba(30, 41, 59, 0.54), rgba(8, 13, 24, 0.46));
+        background: linear-gradient(180deg, rgba(36, 38, 44, 0.88), rgba(22, 24, 28, 0.9));
         box-shadow:
-          0 26px 82px rgba(0, 0, 0, 0.38),
-          0 5px 18px rgba(0, 0, 0, 0.18),
-          inset 0 1px 0 rgba(255, 255, 255, 0.16),
-          inset 0 -18px 42px rgba(255, 255, 255, 0.04),
-          inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+          0 0 0 0.5px rgba(0, 0, 0, 0.5),
+          0 1px 3px rgba(0, 0, 0, 0.32),
+          0 12px 26px -6px rgba(0, 0, 0, 0.4),
+          0 40px 92px -12px rgba(0, 0, 0, 0.55),
+          0 104px 236px -16px rgba(0, 0, 0, 0.66),
+          0 0 150px 10px rgba(0, 0, 0, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.08);
       }
       #${PANEL_ID}[data-theme="dark"] .x-tab-switcher-card {
         color: #f8fafc;
