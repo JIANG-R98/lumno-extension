@@ -5,6 +5,7 @@
 import * as LumnoPipMainWorld from '../shared/pip-main-world';
 import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as LumnoSettings from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoShortcutDisplay from '../domain/shortcut-display';
 import * as LumnoCursorTooltip from '../shared/ui/cursor-tooltip';
 import * as LumnoToast from '../shared/ui/toast';
@@ -330,7 +331,7 @@ function start() {
   if (!chromeApi || !settings || !reactApi || !host) {
     return;
   }
-  const provider = settings.createProviderStorageRuntime(chromeApi);
+  const provider = LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
   // The settings the popup shows, by row id: where each is stored and how a
   // stored value reads.
   const SETTING_SPECS = Object.freeze({
@@ -804,7 +805,7 @@ function start() {
     darkQuery.addEventListener('change', () => {
       if (state.settings.theme === 'system') applyTheme();
     });
-    settings.addStorageChangeListener(chromeApi, onStorageChanged);
+    LumnoSettingsStorage.addStorageChangeListener(chromeApi, onStorageChanged);
   }
 
   init().catch((error) => {

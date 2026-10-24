@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Site search and aggregate search providers: loading, icons, labels and
 // the trigger/scope lookups used by the search input.
+import * as LumnoAggregateSearchStorage from '../../platform/aggregate-search-storage';
 function createSiteSearchProviders(deps) {
   const {
     SEARCH_UTILS,
@@ -261,7 +262,7 @@ function createSiteSearchProviders(deps) {
       return pageState.aggregateSearchesLoadPromise;
     }
     const loadVersion = pageState.aggregateSearchesLoadVersion;
-    const loadTask = AGGREGATE_SEARCH_STORE.loadAggregateSearches(
+    const loadTask = LumnoAggregateSearchStorage.loadAggregateSearches(
       storageArea,
       pageState.AGGREGATE_SEARCH_STORAGE_KEY,
       chrome

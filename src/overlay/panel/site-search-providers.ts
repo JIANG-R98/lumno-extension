@@ -4,6 +4,7 @@
 // and loading and reloading both lists.
 import * as AGGREGATE_SEARCH_SURFACE from '../../domain/search/aggregate-search-surface';
 import * as SITE_SEARCH_STORE from '../../shared/search/site-search-store';
+import * as LumnoAggregateSearchStorage from '../../platform/aggregate-search-storage';
 
 function createSiteSearchProviders(deps) {
   const {
@@ -293,7 +294,7 @@ function createSiteSearchProviders(deps) {
       return overlayState.aggregateSearchesLoadPromise;
     }
     const loadVersion = overlayState.aggregateSearchesLoadVersion;
-    const loadTask = AGGREGATE_SEARCH_STORE.loadAggregateSearches(
+    const loadTask = LumnoAggregateSearchStorage.loadAggregateSearches(
       overlayState.storageArea,
       AGGREGATE_SEARCH_STORAGE_KEY,
       chrome

@@ -1,6 +1,7 @@
 // @ts-nocheck
 // The wordmark/clock area above the search box. Moving the blocks around
 // it when it shows, hides or changes height is layout-motion.ts's job.
+import * as LumnoSettingsStorage from '../../platform/settings-storage';
 function createTopContentRuntime(deps) {
   const {
     COMMUNITY_LINKS,
@@ -80,7 +81,7 @@ function createTopContentRuntime(deps) {
     }
     const motionEffectsEnabled = !document.documentElement ||
       document.documentElement.getAttribute('data-lumno-motion-effects') !== 'off';
-    return SETTINGS.shouldSkipEntryMotion(window, motionEffectsEnabled);
+    return LumnoSettingsStorage.shouldSkipEntryMotion(window, motionEffectsEnabled);
   }
 
   function shouldAnimateNewtabLayoutShift() {

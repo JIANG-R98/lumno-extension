@@ -4,6 +4,7 @@
 // registry, and the runtime messages that ask the page to refresh a section.
 import * as LumnoNewtabRemoteContent from './remote-content';
 import * as LumnoNewtabStorageChangeRegistry from './storage-change-registry';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 
 function createSettingsSync(deps) {
   const {
@@ -148,7 +149,7 @@ function createSettingsSync(deps) {
   const pageState = deps.pageState;
 
   function addStorageChangeListener(listener) {
-    return SETTINGS.addStorageChangeListener(chrome, listener);
+    return LumnoSettingsStorage.addStorageChangeListener(chrome, listener);
   }
 
   // Bookmark and site-card preferences arrive from storage (Options page, other tabs) and from
@@ -304,7 +305,7 @@ function createSettingsSync(deps) {
   storageChanges.on(NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY, (changes) => {
     const rawValue = changes[NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY].newValue;
     pageState.newtabInputAutoFocusEnabled = normalizeNewtabInputAutoFocusEnabled(rawValue);
-    settingsRuntimeApi.cacheNewtabInputAutoFocusEnabled(pageState.newtabInputAutoFocusEnabled);
+    LumnoSettingsStorage.cacheNewtabInputAutoFocusEnabled(pageState.newtabInputAutoFocusEnabled);
     updateNewtabInputAutoFocusUi();
   });
   storageChanges.on(RECENT_COUNT_STORAGE_KEY, (changes) => {

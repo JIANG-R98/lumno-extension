@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as LumnoSettings from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 
 const STORAGE_KEYS = Object.freeze({
   themeMode: '_x_extension_theme_mode_2024_unique_',
@@ -37,7 +37,7 @@ function getRuntimeUrl(chromeApi, path) {
 }
 
 function getStorageArea(chromeApi) {
-  return LumnoSettings.createProviderStorageRuntime(chromeApi);
+  return LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
 }
 
 function getStorageValues(storageArea, keys) {

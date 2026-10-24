@@ -2,6 +2,7 @@
 // The controls inside the search box: the settings menu button, the clear
 // button, close other tabs, the input's right padding, and which action
 // buttons the page shows.
+import * as LumnoSettingsStorage from '../../platform/settings-storage';
 function createSearchBoxControls(deps) {
   const {
     SEARCH_UTILS,
@@ -23,7 +24,6 @@ function createSearchBoxControls(deps) {
     closeFeedbackPopover,
     closeWallpaperPanel,
     storageArea,
-    settingsApi,
     NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
     NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
     normalizeNewtabFeedbackButtonVisible,
@@ -213,7 +213,7 @@ function createSearchBoxControls(deps) {
         applyNewtabActionButtonVisibility();
         // A missing value stays missing while this device's local copy
         // migrates in.
-        settingsApi.writeSettingRepairs(chrome, storageArea, repairs, stored);
+        LumnoSettingsStorage.writeSettingRepairs(chrome, storageArea, repairs, stored);
         resolve();
       });
     });

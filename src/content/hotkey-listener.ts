@@ -1,6 +1,7 @@
 // @ts-nocheck
 import * as PAGE_COLOR_SCHEME from '../shared/page-color-scheme';
 import * as SETTINGS from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 
 (function() {
   // The background injects this script on the first copy-URL command in a tab
@@ -26,7 +27,7 @@ import * as SETTINGS from '../domain/settings';
   ]);
   const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
   const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
-  const providerStorageRuntime = SETTINGS.createProviderStorageRuntime(chrome);
+  const providerStorageRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chrome);
   const storageArea = providerStorageRuntime
     ? providerStorageRuntime.area
     : ((chrome && chrome.storage && chrome.storage.sync)

@@ -3,6 +3,7 @@
 // icons and copy, saving provider state and disabled keys, and refreshing
 // the lists when providers change.
 import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 
 function createSiteSearchList(deps) {
   const {
@@ -30,7 +31,6 @@ function createSiteSearchList(deps) {
     initTooltips,
     scrollToOptionsTarget,
     normalizeSiteSearchProvider,
-    SETTINGS,
     SITE_SEARCH_STORAGE_KEY,
     getSiteSearchBuiltinKey,
     SITE_SEARCH_DISABLED_STORAGE_KEY,
@@ -371,7 +371,7 @@ function createSiteSearchList(deps) {
   }
 
   function loadCustomSiteSearchProviders(baseItems) {
-    return SETTINGS.readStorageValue(
+    return LumnoSettingsStorage.readStorageValue(
       optionsState.storageArea,
       chrome,
       SITE_SEARCH_STORAGE_KEY
@@ -390,7 +390,7 @@ function createSiteSearchList(deps) {
   }
 
   function loadDisabledSiteSearchKeys() {
-    return SETTINGS.readStorageValue(
+    return LumnoSettingsStorage.readStorageValue(
       optionsState.storageArea,
       chrome,
       SITE_SEARCH_DISABLED_STORAGE_KEY
@@ -404,7 +404,7 @@ function createSiteSearchList(deps) {
     const payload = Array.from(keys || [])
       .map((item) => String(item).toLowerCase())
       .filter(Boolean);
-    return SETTINGS.writeStorageValue(
+    return LumnoSettingsStorage.writeStorageValue(
       optionsState.rawStorageArea,
       chrome,
       SITE_SEARCH_DISABLED_STORAGE_KEY,
@@ -423,7 +423,7 @@ function createSiteSearchList(deps) {
       [SITE_SEARCH_STORAGE_KEY]: providersPayload,
       [SITE_SEARCH_DISABLED_STORAGE_KEY]: disabledPayload
     };
-    return SETTINGS.writeStorageValues(optionsState.rawStorageArea, chrome, payload);
+    return LumnoSettingsStorage.writeStorageValues(optionsState.rawStorageArea, chrome, payload);
   }
 
   function saveDisabledSiteSearchKeys(keys) {

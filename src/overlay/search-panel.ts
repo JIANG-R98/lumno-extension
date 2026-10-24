@@ -110,7 +110,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     overlayShell,
     stopOverlayPageThemeObserver,
     overlayLifecycle,
-    SETTINGS,
     overlayState
   });
 
@@ -707,7 +706,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     playOverlayPanelEnterAnimation,
     clearOverlayEnterAnimationFrames
   } = PANEL_ENTRY_MOTION.createEntryMotion({
-    SETTINGS,
     initialOverlayOpenStartedAt,
     overlayFrameTracker,
     overlayState

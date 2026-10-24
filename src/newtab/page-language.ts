@@ -1,6 +1,7 @@
 // The page language: resolving the locale, loading its messages, the
 // t() and formatMessage() lookups every module uses, the document's lang
 // attribute, and the listeners that re-render copy when it changes.
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 function createPageLanguage(deps) {
   const {
     languageChangeListeners,
@@ -44,7 +45,7 @@ function createPageLanguage(deps) {
 
   function loadLocaleMessages(locale) {
     const normalized = normalizeLocale(locale);
-    SETTINGS.cacheNewtabLocale(normalized);
+    LumnoSettingsStorage.cacheNewtabLocale(normalized);
     // newtab-storage-prefetch.ts started the last New Tab's locale before this script loaded.
     const prefetch = globalThis.LumnoNewtabLocalePrefetch;
     globalThis.LumnoNewtabLocalePrefetch = null;

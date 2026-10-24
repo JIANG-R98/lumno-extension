@@ -1,7 +1,7 @@
 // Unit tests for the shared auto PiP core (src/content/auto-pip-core.ts),
 // run against plain fakes with no DOM.
 const assert = require('assert');
-const settings = require('../../src/domain/settings');
+const settingsStorage = require('../../src/platform/settings-storage.ts');
 const CORE = require('../../src/content/auto-pip-core');
 const KEY = '_x_extension_auto_pip_enabled_2026_unique_';
 
@@ -125,7 +125,7 @@ function createHarness(overrides = {}) {
     document,
     navigator: overrides.navigator || {},
     chrome,
-    providerStorage: settings.getProviderStorage(chrome),
+    providerStorage: settingsStorage.getProviderStorage(chrome),
     config: {
       pageBridgeScriptId: 'bridge',
       mainWorldExitAction: 'testExitInMainWorld',

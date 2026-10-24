@@ -4,6 +4,7 @@
 // so a test does not restate the storage format.
 
 const store = require('../../src/domain/shortcuts-store.ts');
+const shortcutStorage = require('../../src/platform/shortcut-storage.ts');
 
 // The sync storage items that hold `items` as the user's shortcuts, written
 // by the real shortcuts store. Each item is a shortcut input:
@@ -28,7 +29,7 @@ async function shortcutsStorage(items) {
       setTimeout(() => callback && callback(), 0);
     }
   };
-  await store.saveShortcuts(area, items.map((item) => store.createShortcutRecord(item)));
+  await shortcutStorage.saveShortcuts(area, items.map((item) => store.createShortcutRecord(item)));
   return data;
 }
 

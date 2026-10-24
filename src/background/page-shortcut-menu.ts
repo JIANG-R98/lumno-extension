@@ -4,7 +4,9 @@
 // first, this device's overflow record for whatever does not fit.
 import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
 import * as LumnoSettings from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoSiteDisplayName from '../domain/site-display-name';
+import * as LumnoShortcutStorage from '../platform/shortcut-storage';
 
 const MENU_ITEM_ID = 'lumno-add-page-shortcut';
 // Shortcuts hold http and https pages; browser pages never show the menu.
@@ -18,7 +20,7 @@ function createController(options) {
   const settings = opts.settings || LumnoSettings;
   const store = opts.shortcuts || LumnoNewtabShortcutsStore;
   const siteDisplayName = opts.siteDisplayName || LumnoSiteDisplayName;
-  const provider = opts.provider || settings.createProviderStorageRuntime(chromeApi);
+  const provider = opts.provider || LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
   const loadLocaleMessages = typeof opts.loadLocaleMessages === 'function'
     ? opts.loadLocaleMessages
     : () => Promise.resolve({});
@@ -145,11 +147,11 @@ function createController(options) {
       migratedAt: state.migratedAt
     };
     if (!sync) {
-      await store.persistShortcutState(provider.area, nextState);
+      await LumnoShortcutStorage.persistShortcutState(provider.area, nextState);
       return { status: 'added', localOnly: false };
     }
     const usage = store.measureShortcutSyncUsage(await storage(chromeApi.storage.sync, 'get', null));
-    const result = await store.persistShortcutState(chromeApi.storage.sync, nextState, {
+    const result = await LumnoShortcutStorage.persistShortcutState(chromeApi.storage.sync, nextState, {
       overflowArea: chromeApi.storage.local,
       maxTotalBytes: store.getShortcutSyncBudget({ ...usage, quotaBytes: chromeApi.storage.sync.QUOTA_BYTES }),
       legacyKeysPresent: usage.legacyBytes > 0,

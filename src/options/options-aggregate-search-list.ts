@@ -1,5 +1,7 @@
 // The aggregate search list: available providers, item models, saving,
 // removing and clearing aggregate searches, and their error copy.
+import * as LumnoAggregateSearchStorage from '../platform/aggregate-search-storage';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 function createAggregateSearchList(deps) {
   const {
     AGGREGATE_SEARCH_STORE,
@@ -18,7 +20,6 @@ function createAggregateSearchList(deps) {
     getSearchSourceReorderCopy,
     AGGREGATE_SEARCH_STORAGE_KEY,
     getActivePrimaryAreaName,
-    SETTINGS,
     AGGREGATE_SEARCH,
     showToast,
     createPersistentId,
@@ -220,7 +221,7 @@ function createAggregateSearchList(deps) {
     if (getActivePrimaryAreaName() === 'sync' && serializedBytes > byteBudget) {
       return Promise.reject(new Error('aggregate-search-sync-item-quota-exceeded'));
     }
-    return SETTINGS.writeStorageValue(
+    return LumnoSettingsStorage.writeStorageValue(
       optionsState.rawStorageArea,
       chrome,
       AGGREGATE_SEARCH_STORAGE_KEY,
@@ -240,11 +241,11 @@ function createAggregateSearchList(deps) {
           return optionsState.aggregateSearches;
         },
         load() {
-          const loader = AGGREGATE_SEARCH_STORE.loadAggregateSearches;
-          if (typeof loader !== 'function') {
-            throw new Error('aggregate-search-runtime-unavailable');
-          }
-          return loader(optionsState.rawStorageArea, AGGREGATE_SEARCH_STORAGE_KEY, chrome);
+          return LumnoAggregateSearchStorage.loadAggregateSearches(
+            optionsState.rawStorageArea,
+            AGGREGATE_SEARCH_STORAGE_KEY,
+            chrome
+          );
         },
         normalize: normalizeAggregateSearches,
         onLoadError(error) {

@@ -18,6 +18,7 @@ import * as BROWSER_PROFILE from '../platform/browser-profile';
 import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SEARCH_UTILS from '../domain/search/search-utils';
 import * as SETTINGS from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 import {
   DEFAULT_SEARCH_ENGINE_STORAGE_KEY,
   PINYIN_PRO_SCRIPT_PATH,
@@ -605,7 +606,7 @@ export function sanitizeSiteSearchProviders(items) {
 }
 
 function loadCustomSiteSearchProviders() {
-  return SETTINGS.readStorageValue(
+  return LumnoSettingsStorage.readStorageValue(
     storageArea,
     chrome,
     SITE_SEARCH_STORAGE_KEY
@@ -613,7 +614,7 @@ function loadCustomSiteSearchProviders() {
 }
 
 function loadDisabledSiteSearchKeys() {
-  return SETTINGS.readStorageValue(
+  return LumnoSettingsStorage.readStorageValue(
     storageArea,
     chrome,
     SITE_SEARCH_DISABLED_STORAGE_KEY
@@ -680,7 +681,7 @@ function loadSearchFuzzyPinyinEnabled() {
   if (searchFuzzyPinyinEnabledPromise) {
     return searchFuzzyPinyinEnabledPromise;
   }
-  searchFuzzyPinyinEnabledPromise = SETTINGS.readStorageValue(
+  searchFuzzyPinyinEnabledPromise = LumnoSettingsStorage.readStorageValue(
     storageArea,
     chrome,
     SETTINGS.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY

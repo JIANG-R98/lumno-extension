@@ -1,5 +1,6 @@
 // @ts-nocheck
 import * as SETTINGS from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 
 (function() {
   const THEME_STORAGE_KEY = SETTINGS.THEME_STORAGE_KEY;
@@ -171,7 +172,7 @@ import * as SETTINGS from '../domain/settings';
   }
 
   try {
-    const storage = SETTINGS.getProviderStorage(globalThis.chrome).area;
+    const storage = LumnoSettingsStorage.getProviderStorage(globalThis.chrome).area;
     if (storage && typeof storage.get === 'function') {
       storage.get([THEME_STORAGE_KEY], (result) => {
         const storedMode = normalizeThemeMode(result && result[THEME_STORAGE_KEY]);

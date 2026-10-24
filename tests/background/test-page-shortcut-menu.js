@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const settings = require('../../src/domain/settings.ts');
 const shortcuts = require('../../src/domain/shortcuts-store.ts');
+const shortcutStorage = require('../../src/platform/shortcut-storage.ts');
 const siteDisplayName = require('../../src/domain/site-display-name.ts');
 const menu = require('../../src/background/page-shortcut-menu.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
@@ -130,7 +131,7 @@ async function run() {
   await settle();
 
   // A click saves the page to the end of the last group under its site name.
-  await shortcuts.saveShortcutState(sync.chrome.storage.sync, {
+  await shortcutStorage.saveShortcutState(sync.chrome.storage.sync, {
     groups: [{ id: 'g0', title: '' }, { id: 'gwork', title: 'Work' }],
     items: [
       { id: 'a', groupId: 'g0', title: 'Lumno', url: 'https://lumno.kubai.design/' },
@@ -142,7 +143,7 @@ async function run() {
     { id: 7, url: 'https://github.com/kubai087/lumno-extension', title: 'kubai087/lumno-extension: Lumno' }
   );
   assert.strictEqual(result.status, 'added');
-  let state = await shortcuts.loadShortcutState(sync.chrome.storage.sync);
+  let state = await shortcutStorage.loadShortcutState(sync.chrome.storage.sync);
   const added = state.items[state.items.length - 1];
   assert.strictEqual(added.url, 'https://github.com/kubai087/lumno-extension');
   assert.strictEqual(added.title, 'GitHub');
@@ -155,7 +156,7 @@ async function run() {
   // The same page again is reported, not duplicated.
   const repeat = await sync.click({ pageUrl: 'https://github.com/kubai087/lumno-extension' }, { id: 7, title: 'x' });
   assert.strictEqual(repeat.status, 'exists');
-  state = await shortcuts.loadShortcutState(sync.chrome.storage.sync);
+  state = await shortcutStorage.loadShortcutState(sync.chrome.storage.sync);
   assert.strictEqual(state.items.length, 3);
   assert.strictEqual(sync.toastArgs()[1][0], '已在快捷方式中');
 
@@ -164,7 +165,7 @@ async function run() {
     sync.click({ pageUrl: 'https://example.com/one' }, { id: 7, title: 'One' }),
     sync.click({ pageUrl: 'https://example.org/two' }, { id: 8, title: 'Two' })
   ]);
-  state = await shortcuts.loadShortcutState(sync.chrome.storage.sync);
+  state = await shortcutStorage.loadShortcutState(sync.chrome.storage.sync);
   assert.deepStrictEqual(state.items.slice(-2).map((item) => item.url), ['https://example.com/one', 'https://example.org/two']);
 
   // Other menu items are ignored.
@@ -178,13 +179,13 @@ async function run() {
   assert.strictEqual(local.menuItem().title, 'Lumno の新しいタブのショートカットに追加', 'the browser language applies without a Lumno one');
   const localResult = await local.click({ pageUrl: 'https://example.com/' }, { id: 3, title: 'Example Domain' });
   assert.strictEqual(localResult.status, 'added');
-  const localState = await shortcuts.loadShortcutState(local.chrome.storage.local);
+  const localState = await shortcutStorage.loadShortcutState(local.chrome.storage.local);
   assert(localState.items.some((item) => item.url === 'https://example.com/'), 'local-primary mode writes the local area');
   assert.strictEqual(local.chrome.storage.sync.values[shortcuts.SHORTCUTS_SYNC_KEYS[0]], undefined, 'sync stays untouched');
 
   // A full list is refused with the limit message.
   const full = device({}, { uiLanguage: 'en' });
-  await shortcuts.saveShortcutState(full.chrome.storage.sync, {
+  await shortcutStorage.saveShortcutState(full.chrome.storage.sync, {
     items: Array.from({ length: shortcuts.DEFAULT_MAX_SHORTCUTS }, (_, index) => ({
       id: `s${index}`, title: `S${index}`, url: `https://site${index}.example/`
     }))

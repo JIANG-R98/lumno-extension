@@ -147,7 +147,7 @@ global.LumnoFeatureHintView = {
 
 const featureHints = require('../../src/shared/ui/feature-hints.ts');
 const updateNotice = require('../../src/shared/update-notice.ts');
-const settings = require('../../src/domain/settings.ts');
+const settingsStorage = require('../../src/platform/settings-storage.ts');
 
 function createOnChangedEmitter() {
   const listeners = [];
@@ -458,7 +458,7 @@ function flushMicrotasks() {
   const chromeApi = createStorageBackedChrome({}, syncStore, '0.9.10');
   // The page's settings storage runtime keeps one storage-mode listener for
   // the page's lifetime; only the notices' own listeners must go on destroy.
-  settings.createProviderStorageRuntime(chromeApi);
+  settingsStorage.createProviderStorageRuntime(chromeApi);
   const pageStorageListenerCount = chromeApi.storage.onChanged.count;
   const detailsClicks = [];
   let sessionSlotClaims = 0;

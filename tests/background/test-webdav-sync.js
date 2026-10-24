@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const { webcrypto, randomUUID } = require('crypto');
 const settings = require('../../src/domain/settings.ts');
+const settingsStorage = require('../../src/platform/settings-storage.ts');
 const shortcuts = require('../../src/domain/shortcuts-store.ts');
 const contract = require('../../src/domain/webdav-contract.ts');
 const client = require('../../src/background/webdav-client.ts');
@@ -848,9 +849,9 @@ async function run() {
   assert.strictEqual((await first.controller.status()).enabled, false);
 
   // New pages and Chrome-delivered changes keep the existing sync path.
-  const restartedSettings = settings.createProviderStorageRuntime(second.chrome);
+  const restartedSettings = settingsStorage.createProviderStorageRuntime(second.chrome);
   await restartedSettings.ready;
-  const coldSettings = settings.createProviderStorageRuntime({ ...second.chrome });
+  const coldSettings = settingsStorage.createProviderStorageRuntime({ ...second.chrome });
   await coldSettings.ready;
   assert.strictEqual(coldSettings.getActiveAreaName(), 'sync');
   await second.controller.handle({ operation: 'sync' });
@@ -1168,7 +1169,7 @@ async function run() {
   saveServer.etagMode = 'weak';
   await savedRestart.handle({ operation: 'enable' });
   assert.strictEqual((await savedRestart.status()).enabled, true, 'saved credentials enable after a worker restart');
-  assert.strictEqual(settings.createProviderStorageRuntime(saved.chrome).getActiveAreaName(), 'sync');
+  assert.strictEqual(settingsStorage.createProviderStorageRuntime(saved.chrome).getActiveAreaName(), 'sync');
   const probeCount = () => saveServer.requests.filter((request) => request.path.includes('/probe-')).length;
   const initialProbeCount = probeCount();
   assert(initialProbeCount > 0);
@@ -1244,7 +1245,7 @@ async function run() {
   const migrated = createDevice(createServer(), { sync: { [theme]: 'light' }, local: {
     [settings.LOCAL_PRIMARY_STORAGE_KEY]: true, [theme]: 'dark' } });
   await migrated.controller.mirrorChrome();
-  assert.strictEqual(settings.createProviderStorageRuntime(migrated.chrome).getActiveAreaName(), 'sync');
+  assert.strictEqual(settingsStorage.createProviderStorageRuntime(migrated.chrome).getActiveAreaName(), 'sync');
   assert.strictEqual(migrated.chrome.storage.sync.values[theme], 'dark', 'an older local installation migrates without losing edits');
   const tooLarge = createDevice(createServer(), { sync: { [theme]: 'light' }, local: {
     [settings.LOCAL_PRIMARY_STORAGE_KEY]: true, [theme]: 'dark', [customSearch]: 'x'.repeat(120 * 1024) } });
@@ -1589,7 +1590,7 @@ async function testBackgroundRounds() {
     };
     const warn = console.warn;
     console.warn = () => {};
-    const runtime = settings.createProviderStorageRuntime(options.chrome, { modeRetryDelaysMs: [] });
+    const runtime = settingsStorage.createProviderStorageRuntime(options.chrome, { modeRetryDelaysMs: [] });
     runtime.ready.finally(() => { console.warn = warn; });
     return quiet(options);
   });

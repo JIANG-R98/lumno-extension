@@ -13,7 +13,8 @@ import '../domain/extension-routes';
 import './command-target-policy';
 import * as SETTINGS from '../domain/settings';
 import * as LumnoSettings from '../domain/settings';
-import * as LumnoBookmarkFolderReference from '../domain/bookmark-folder-reference';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
+import * as LumnoBookmarkFolderBindings from '../platform/bookmark-folder-bindings';
 import '../domain/shortcuts-store';
 import '../domain/site-display-name';
 import * as LumnoPageShortcutMenu from './page-shortcut-menu';
@@ -219,7 +220,7 @@ export function warnBackgroundFailure(context) {
   };
 }
 
-const providerStorageRuntime = LumnoSettings.createProviderStorageRuntime(chrome);
+const providerStorageRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chrome);
 export const storageArea = providerStorageRuntime
   ? providerStorageRuntime.area
   : ((chrome && chrome.storage && chrome.storage.sync)
@@ -421,7 +422,7 @@ function migrateStorageIfNeeded(keys) {
   if (isPrimaryStorageAreaName('local')) {
     return;
   }
-  SETTINGS.migrateLocalSettingsToSync(chrome.storage.local, storageArea, keys);
+  LumnoSettingsStorage.migrateLocalSettingsToSync(chrome.storage.local, storageArea, keys);
 }
 
 loadFirefoxBrandIcon();
@@ -797,7 +798,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 
 const shortcutFolderSyncController = providerStorageRuntime &&
   chrome.bookmarks && typeof chrome.bookmarks.getTree === 'function'
-  ? LumnoBookmarkFolderReference.createSyncController({ chrome, provider: providerStorageRuntime,
+  ? LumnoBookmarkFolderBindings.createSyncController({ chrome, provider: providerStorageRuntime,
     onError: (error) => console.warn('[Lumno] Could not refresh folder shortcuts.', error) }) : null;
 if (shortcutFolderSyncController) shortcutFolderSyncController.start();
 const webDavSyncController = typeof indexedDB !== 'undefined'

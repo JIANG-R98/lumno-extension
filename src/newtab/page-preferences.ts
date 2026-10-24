@@ -1,5 +1,6 @@
 // New Tab display preferences: normalizing, loading and applying the shortcut,
 // auto-focus, simple mode and search result settings.
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 function createPagePreferences(deps) {
   const {
     SETTINGS,
@@ -113,9 +114,7 @@ function createPagePreferences(deps) {
   }
 
   function cacheNewtabInputAutoFocusEnabled(value) {
-    if (typeof SETTINGS.cacheNewtabInputAutoFocusEnabled === 'function') {
-      SETTINGS.cacheNewtabInputAutoFocusEnabled(value);
-    }
+    LumnoSettingsStorage.cacheNewtabInputAutoFocusEnabled(value);
   }
 
   function normalizeNewtabFeedbackButtonVisible(value) {

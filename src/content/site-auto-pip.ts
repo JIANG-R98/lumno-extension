@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as LumnoSettings from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as CORE from './auto-pip-core';
 
 (function () {
@@ -61,7 +61,7 @@ import * as CORE from './auto-pip-core';
     document,
     navigator,
     chrome,
-    providerStorage: LumnoSettings.getProviderStorage(chrome),
+    providerStorage: LumnoSettingsStorage.getProviderStorage(chrome),
     config: {
       pageBridgeScriptId: PAGE_BRIDGE_SCRIPT_ID,
       mainWorldExitAction: "forceExitPiPInMainWorld",

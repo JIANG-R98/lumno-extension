@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as PAGE_COLOR_SCHEME from '../shared/page-color-scheme';
-import * as LumnoSettings from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as TOAST from '../shared/ui/toast';
 
 (function() {
@@ -14,7 +14,7 @@ import * as TOAST from '../shared/ui/toast';
   const switcherThemeMediaQuery = typeof window.matchMedia === 'function'
     ? window.matchMedia('(prefers-color-scheme: dark)')
     : null;
-  const providerRuntime = LumnoSettings.createProviderStorageRuntime(chromeApi);
+  const providerRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
   const switcherThemeStorageArea = providerRuntime ? providerRuntime.area : (chromeApi && chromeApi.storage && chromeApi.storage.sync)
     ? chromeApi.storage.sync
     : (chromeApi && chromeApi.storage ? chromeApi.storage.local : null);

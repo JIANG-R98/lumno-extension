@@ -15,6 +15,7 @@ import * as BACKGROUND_TAB_GROUPS from './tab-groups';
 import * as EXTENSION_ROUTES from '../domain/extension-routes';
 import * as SEARCH_RESULT_TABS from './search-result-tabs';
 import * as SETTINGS from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 import {
   BROWSER_NEWTAB_PROVIDER_DETECTION_MS,
   RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
@@ -102,7 +103,7 @@ export function createTabWithSourceGroup(createProperties, sourceTab, callback) 
 }
 
 export function resolveSearchResultTabPlacement(sourceTab) {
-  return SETTINGS.readStorageValue(storageArea, chrome, SETTINGS.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY)
+  return LumnoSettingsStorage.readStorageValue(storageArea, chrome, SETTINGS.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY)
     .catch(() => undefined)
     .then((value) => SEARCH_RESULT_TABS.resolvePlacement(
       chrome,

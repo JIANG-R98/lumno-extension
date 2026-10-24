@@ -1,6 +1,7 @@
 const assert = require('assert');
 const aggregateSearch = require('../../src/background/aggregate-search.ts');
 const aggregateStore = require('../../src/domain/search/aggregate-search-store.ts');
+const aggregateStorage = require('../../src/platform/aggregate-search-storage.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 
 const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_custom_2024_unique_';
@@ -595,12 +596,11 @@ async function run() {
   const runner = aggregateSearch.createAggregateSearchQueryRunner({
     aggregateSearchStore: aggregateStore,
     chromeApi: success.api,
-    storageArea: {
+    loadAggregateSearches: () => aggregateStorage.loadAggregateSearches({
       get(_keys, callback) {
         callback({ [aggregateStore.STORAGE_KEY]: storedDefinitions });
       }
-    },
-    storageKey: aggregateStore.STORAGE_KEY,
+    }, aggregateStore.STORAGE_KEY, success.api),
     loadSiteSearchProviders() {
       providerLoadCount += 1;
       return Promise.resolve(storedProviders);
@@ -658,12 +658,11 @@ async function run() {
   const missingSourceRunner = aggregateSearch.createAggregateSearchQueryRunner({
     aggregateSearchStore: aggregateStore,
     chromeApi: success.api,
-    storageArea: {
+    loadAggregateSearches: () => aggregateStorage.loadAggregateSearches({
       get(_keys, callback) {
         callback({ [aggregateStore.STORAGE_KEY]: missingSourceDefinitions });
       }
-    },
-    storageKey: aggregateStore.STORAGE_KEY,
+    }, aggregateStore.STORAGE_KEY, success.api),
     loadSiteSearchProviders: () => Promise.resolve([providers[0]]),
     openAggregateSearch() {
       throw new Error('must not open a partial aggregate');
@@ -685,10 +684,10 @@ async function run() {
   let delegatedAvailabilityChecks = 0;
   const delegatedAvailabilityOpenCalls = [];
   const delegatedAvailabilityRunner = aggregateSearch.createAggregateSearchQueryRunner({
+    loadAggregateSearches() {
+      return Promise.resolve([{ id: 'delegated', name: 'Delegated' }]);
+    },
     aggregateSearchStore: {
-      loadAggregateSearches() {
-        return Promise.resolve([{ id: 'delegated', name: 'Delegated' }]);
-      },
       getAggregateSearchAvailability(definition, availableProviders) {
         delegatedAvailabilityChecks += 1;
         return {
@@ -727,10 +726,10 @@ async function run() {
 
   const fallbackGroupCalls = [];
   const fallbackGroupRunner = aggregateSearch.createAggregateSearchQueryRunner({
+    loadAggregateSearches() {
+      return Promise.resolve([{ id: 'legacy-group', name: 'Legacy group' }]);
+    },
     aggregateSearchStore: {
-      loadAggregateSearches() {
-        return Promise.resolve([{ id: 'legacy-group', name: 'Legacy group' }]);
-      },
       getAggregateSearchAvailability(definition, availableProviders) {
         return {
           available: true,
@@ -767,13 +766,13 @@ async function run() {
 
   let storageLoadAttempts = 0;
   const storageRetryRunner = aggregateSearch.createAggregateSearchQueryRunner({
+    loadAggregateSearches() {
+      storageLoadAttempts += 1;
+      return storageLoadAttempts === 1
+        ? Promise.reject(new Error('temporary storage failure'))
+        : Promise.resolve([{ id: 'storage-retry', name: 'Storage retry' }]);
+    },
     aggregateSearchStore: {
-      loadAggregateSearches() {
-        storageLoadAttempts += 1;
-        return storageLoadAttempts === 1
-          ? Promise.reject(new Error('temporary storage failure'))
-          : Promise.resolve([{ id: 'storage-retry', name: 'Storage retry' }]);
-      },
       getAggregateSearchAvailability(definition, availableProviders) {
         return {
           available: true,
@@ -805,10 +804,10 @@ async function run() {
 
   let providerLoadAttempts = 0;
   const providerRetryRunner = aggregateSearch.createAggregateSearchQueryRunner({
+    loadAggregateSearches() {
+      return Promise.resolve([{ id: 'provider-retry', name: 'Provider retry' }]);
+    },
     aggregateSearchStore: {
-      loadAggregateSearches() {
-        return Promise.resolve([{ id: 'provider-retry', name: 'Provider retry' }]);
-      },
       getAggregateSearchAvailability(definition, availableProviders) {
         return {
           available: true,

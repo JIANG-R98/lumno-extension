@@ -11,11 +11,12 @@
 
 import * as AGGREGATE_SEARCH from './aggregate-search';
 import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
+import * as LumnoAggregateSearchStorage from '../platform/aggregate-search-storage';
 import * as AI_PROVIDER_SUBMIT from './ai-provider-submit';
 import * as COMMUNITY_LINKS from '../domain/community-links';
 import * as HELP_CENTER_SEARCH from '../domain/search/help-center-search';
 import * as SEARCH_RESULT_TABS from './search-result-tabs';
-import * as SETTINGS from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 import {
   AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
   AGGREGATE_SEARCH_STORAGE_KEY,
@@ -141,12 +142,15 @@ function runAggregateSearchQuery(aggregateId, query, sender, disposition) {
     aggregateSearchQueryRunner = AGGREGATE_SEARCH.createAggregateSearchQueryRunner({
       aggregateSearchStore: AGGREGATE_SEARCH_STORE,
       chromeApi: chrome,
-      storageArea,
-      storageKey: AGGREGATE_SEARCH_STORAGE_KEY,
+      loadAggregateSearches: () => LumnoAggregateSearchStorage.loadAggregateSearches(
+        storageArea,
+        AGGREGATE_SEARCH_STORAGE_KEY,
+        chrome
+      ),
       loadSiteSearchProviders,
       resolveTabPlacement: resolveSearchResultTabPlacement,
       loadAggregateSearchAutoGroupEnabled() {
-        return SETTINGS.readStorageValue(
+        return LumnoSettingsStorage.readStorageValue(
           storageArea,
           chrome,
           AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY

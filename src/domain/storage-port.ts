@@ -10,6 +10,7 @@ interface StorageAreaLike {
   get(keys: StorageKeys, callback?: (items: StorageItems) => void): Promise<StorageItems> | void;
   set(items: StorageItems, callback?: () => void): Promise<void> | void;
   remove?(keys: string | string[], callback?: () => void): Promise<void> | void;
+  clear?(callback?: () => void): Promise<void> | void;
 }
 
 type StorageChanges = Record<string, { oldValue?: unknown; newValue?: unknown }>;

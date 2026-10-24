@@ -1,11 +1,11 @@
 // @ts-nocheck
-import * as LumnoSettings from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 
 (function() {
   const STORAGE_KEY = '_x_extension_motion_effects_enabled_2026_unique_';
   const root = document.documentElement;
   const storage = chrome && chrome.storage ? chrome.storage : null;
-  const providerRuntime = LumnoSettings.createProviderStorageRuntime(chrome);
+  const providerRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chrome);
   const storageArea = providerRuntime ? providerRuntime.area : storage && storage.sync
     ? storage.sync
     : (storage && storage.local ? storage.local : null);

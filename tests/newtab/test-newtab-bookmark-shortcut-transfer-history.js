@@ -1,6 +1,6 @@
 const assert = require('assert');
 const historyApi = require('../../src/newtab/bookmarks/bookmark-move-history');
-const shortcutsStore = require('../../src/domain/shortcuts-store.ts');
+const shortcutStorage = require('../../src/platform/shortcut-storage.ts');
 const { openDragPage } = require('../helpers/newtab-drag-page');
 
 const FOLDER_ITEM_ICONS_KEY = '_x_extension_shortcut_folder_item_icons_2026_unique_';
@@ -105,7 +105,7 @@ async function testShortcutFolderSiteMovesWithItsIcon() {
   await newtab.dragTo(newtab.card('link'), newtab.shortcutSlot(1));
   assert.deepStrictEqual([newtab.shortcuts(), newtab.bar()], [['One', 'Link', 'Two'], ['Start', 'Folder']],
     'the site leaves the shortcut folder for the row');
-  const shortcut = (await shortcutsStore.loadShortcuts(newtab.page.storage.sync)).find((item) => item.title === 'Link');
+  const shortcut = (await shortcutStorage.loadShortcuts(newtab.page.storage.sync)).find((item) => item.title === 'Link');
   assert.strictEqual(shortcut.iconSource, 'custom', 'the shortcut keeps the icon source it had in the folder');
   const shortcutIcons = () => newtab.page.storage.local.data[SHORTCUT_ICONS_KEY] || {};
   const folderIcon = (title) => {
@@ -138,7 +138,7 @@ async function testShortcutSettingsRoundTripThroughAFolder() {
   assert.deepStrictEqual([newtab.shortcuts(), newtab.bar()], [['Two'], ['Start', 'One', 'Link', 'Folder']]);
   await newtab.dragTo(newtab.card(newtab.page.bookmarks.find('1').children[1].id), newtab.shortcutSlot(0));
   assert.deepStrictEqual([newtab.shortcuts(), newtab.bar()], [['One', 'Two'], ['Start', 'Link', 'Folder']]);
-  const one = (await shortcutsStore.loadShortcuts(newtab.page.storage.sync)).find((item) => item.title === 'One');
+  const one = (await shortcutStorage.loadShortcuts(newtab.page.storage.sync)).find((item) => item.title === 'One');
   assert.deepStrictEqual([one.iconSource, one.iconPlate, one.iconPlateColor], ['service', 'on', '#FFE4A0'],
     'the shortcut comes back with the icon source and plate it had');
   newtab.close();

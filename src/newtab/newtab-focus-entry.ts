@@ -1,5 +1,6 @@
 // @ts-nocheck
 import * as LumnoSettings from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoNewtabFocusResume from './focus-resume';
 
 (function() {
@@ -69,9 +70,7 @@ import * as LumnoNewtabFocusResume from './focus-resume';
   }
 
   function settle(enabled) {
-    if (typeof settings.cacheNewtabInputAutoFocusEnabled === 'function') {
-      settings.cacheNewtabInputAutoFocusEnabled(enabled);
-    }
+    LumnoSettingsStorage.cacheNewtabInputAutoFocusEnabled(enabled);
     if (!normalizeEnabled(enabled)) {
       revealPage();
       return;
@@ -94,7 +93,7 @@ import * as LumnoNewtabFocusResume from './focus-resume';
     return;
   }
 
-  const providerRuntime = settings.createProviderStorageRuntime(chromeApi);
+  const providerRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
   const storage = providerRuntime ? providerRuntime.area : chromeApi && chromeApi.storage
     ? (chromeApi.storage.sync || chromeApi.storage.local)
     : null;

@@ -1,7 +1,6 @@
 // Aggregate searches: one trigger that runs several site searches at once.
 // Stored as one synced record of definitions that refer to their sources
 // (built-in or custom site searches) by reference.
-import * as settingsApi from '../settings';
 import type { SiteSearchProvider } from './types';
 
 // One aggregate search as stored, after normalizing.
@@ -235,20 +234,6 @@ function createDeterministicCustomProviderId(item: unknown, _index: number, atte
   );
 }
 
-function readStorageValue(storageArea: unknown, chromeApi: unknown, key: string): Promise<unknown> {
-  if (!settingsApi || typeof settingsApi.readStorageValue !== 'function') {
-    return Promise.reject(new Error('storage-runtime-unavailable'));
-  }
-  return settingsApi.readStorageValue(storageArea, chromeApi, key);
-}
-
-function writeStorageValue(storageArea: unknown, chromeApi: unknown, key: string, value: unknown): Promise<unknown> {
-  if (!settingsApi || typeof settingsApi.writeStorageValue !== 'function') {
-    return Promise.reject(new Error('storage-runtime-unavailable'));
-  }
-  return settingsApi.writeStorageValue(storageArea, chromeApi, key, value);
-}
-
 // A stored definition, also in the older shapes it was saved in; null when
 // it has no id, no name or too few sources.
 function normalizeAggregateSearch(item: any): AggregateSearch | null {
@@ -467,12 +452,6 @@ function isAggregateSearchProvider(provider: Partial<SiteSearchProvider> | null 
   );
 }
 
-function loadAggregateSearches(storageArea: unknown, storageKey: unknown, chromeApi: unknown): Promise<AggregateSearch[]> {
-  const key = String(storageKey || STORAGE_KEY);
-  return readStorageValue(storageArea, chromeApi, key)
-    .then((value) => normalizeAggregateSearches(value));
-}
-
 export {
   STORAGE_KEY,
   SCHEMA_VERSION,
@@ -498,15 +477,12 @@ export {
   getAggregateSearchAvailability,
   isAggregateSearchProvider,
   isAggregateSearchAvailable,
-  loadAggregateSearches,
   mergeTriggerProviders,
   normalizeAggregateSearchKey,
   normalizeAggregateSearch,
   normalizeAggregateSearches,
   normalizeSourceRefs,
-  readStorageValue,
   resolveAggregateSearchSources,
-  serializeAggregateSearches,
-  writeStorageValue
+  serializeAggregateSearches
 };
 export type { AggregateScopeProvider, AggregateSearch, AggregateSearchAvailability, AggregateSearchResolution };

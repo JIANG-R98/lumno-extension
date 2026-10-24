@@ -3,6 +3,7 @@
 // session's panel from a stale one, the mount host and its visibility, wheel
 // isolation, telling the background about loading and closing, and removing
 // the panel.
+import * as LumnoSettingsStorage from '../../platform/settings-storage';
 function createPanelSession(deps) {
   const {
     pauseOverlayAntiTranslateObserverForScroll,
@@ -12,8 +13,7 @@ function createPanelSession(deps) {
     stopOverlayAntiTranslateObserver,
     overlayShell,
     stopOverlayPageThemeObserver,
-    overlayLifecycle,
-    SETTINGS
+    overlayLifecycle
   } = deps;
 
   // The panel state object shared with search-panel.ts and the other modules.
@@ -276,7 +276,7 @@ function createPanelSession(deps) {
   // setting and the system's reduced-motion preference.
   function closeOverlayWithMotion(overlayElement) {
     if (!overlayElement || !overlayElement.isConnected ||
-        SETTINGS.shouldSkipEntryMotion(window, overlayState.motionEffectsEnabled) ||
+        LumnoSettingsStorage.shouldSkipEntryMotion(window, overlayState.motionEffectsEnabled) ||
         overlayElement.getAttribute('data-lumno-overlay-entry') !== 'done') {
       removeOverlay(overlayElement);
       return;

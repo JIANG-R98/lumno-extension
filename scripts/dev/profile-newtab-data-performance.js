@@ -4,7 +4,7 @@ const { performance } = require('perf_hooks');
 require('../node/register-typescript');
 const bookmarkStore = require('../../src/newtab/bookmarks/bookmarks-store.ts');
 const recentStore = require('../../src/domain/recent-sites-store.ts');
-const settings = require('../../src/domain/settings.ts');
+const settingsStorage = require('../../src/platform/settings-storage.ts');
 
 function round(value) {
   return Number(Number(value || 0).toFixed(2));
@@ -123,7 +123,7 @@ async function profileStorageBatch(requestCount) {
       callback(result);
     }
   };
-  const batch = settings.createStorageReadBatch(area);
+  const batch = settingsStorage.createStorageReadBatch(area);
   const reads = [];
   for (let index = 0; index < requestCount; index += 1) {
     reads.push(batch.area.get(`key-${index}`));

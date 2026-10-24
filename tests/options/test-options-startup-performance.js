@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/domain/settings.ts');
+const settingsStorage = require('../../src/platform/settings-storage.ts');
 const { createOptionsPage } = require('../helpers/options-page');
 
 async function run() {
@@ -32,7 +32,7 @@ async function run() {
     }
   };
 
-  const batch = settings.createStorageReadBatch(rawArea);
+  const batch = settingsStorage.createStorageReadBatch(rawArea);
   assert(batch, 'a readable storage area should create a startup read batch');
 
   const callbackResults = [];
@@ -130,8 +130,8 @@ function createPrefetchHarness(values) {
 
 async function testStartupReadPrefetch() {
   const covered = createPrefetchHarness({ alpha: 1, beta: 2 });
-  assert.strictEqual(settings.prefetchStorageRead(covered.area, ['alpha', 'beta'], covered.chromeApi), true);
-  const coveredBatch = settings.createStorageReadBatch(covered.area);
+  assert.strictEqual(settingsStorage.prefetchStorageRead(covered.area, ['alpha', 'beta'], covered.chromeApi), true);
+  const coveredBatch = settingsStorage.createStorageReadBatch(covered.area);
   const coveredResult = await coveredBatch.area.get(['alpha']);
   assert.deepStrictEqual(coveredResult, { alpha: 1 });
   assert.deepStrictEqual(covered.reads, [['alpha', 'beta']],
@@ -139,21 +139,21 @@ async function testStartupReadPrefetch() {
   assert.strictEqual(covered.listeners.size, 0, 'the prefetch should stop watching once taken');
 
   const stale = createPrefetchHarness({ alpha: 1 });
-  settings.prefetchStorageRead(stale.area, ['alpha'], stale.chromeApi);
+  settingsStorage.prefetchStorageRead(stale.area, ['alpha'], stale.chromeApi);
   stale.change('alpha', 5);
-  const staleResult = await settings.createStorageReadBatch(stale.area).area.get(['alpha']);
+  const staleResult = await settingsStorage.createStorageReadBatch(stale.area).area.get(['alpha']);
   assert.deepStrictEqual(staleResult, { alpha: 5 }, 'a key that changed after the prefetch should be read again');
   assert.strictEqual(stale.reads.length, 2);
 
   const uncovered = createPrefetchHarness({ alpha: 1, gamma: 3 });
-  settings.prefetchStorageRead(uncovered.area, ['alpha'], uncovered.chromeApi);
-  const uncoveredResult = await settings.createStorageReadBatch(uncovered.area).area.get(['alpha', 'gamma']);
+  settingsStorage.prefetchStorageRead(uncovered.area, ['alpha'], uncovered.chromeApi);
+  const uncoveredResult = await settingsStorage.createStorageReadBatch(uncovered.area).area.get(['alpha', 'gamma']);
   assert.deepStrictEqual(uncoveredResult, { alpha: 1, gamma: 3 });
   assert.deepStrictEqual(uncovered.reads, [['alpha'], ['alpha', 'gamma']],
     'a batch asking for keys the prefetch lacks should read them all itself');
   assert.strictEqual(uncovered.listeners.size, 0);
 
-  assert.strictEqual(settings.prefetchStorageRead(covered.area, ['alpha'], {}), false,
+  assert.strictEqual(settingsStorage.prefetchStorageRead(covered.area, ['alpha'], {}), false,
     'without change events a prefetch could serve stale values, so it should not start');
 }
 

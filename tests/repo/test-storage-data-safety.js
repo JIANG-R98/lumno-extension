@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const settings = require('../../src/domain/settings.ts');
+const settingsStorage = require('../../src/platform/settings-storage.ts');
 const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
 const repoRoot = path.join(__dirname, '..', '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'manifest.json'), 'utf8'));
@@ -249,7 +250,7 @@ assert.strictEqual(
       clear: forbidden
     };
     const localArea = { get(requested, callback) { callback({ ...local }); }, remove: forbidden, clear: forbidden };
-    settings.migrateLocalSettingsToSync(localArea, syncArea, keys);
+    settingsStorage.migrateLocalSettingsToSync(localArea, syncArea, keys);
     return writes;
   }
   const allKeys = [PLAIN_KEY, ...settings.NEWTAB_SHORTCUTS_V2_STORAGE_KEYS];

@@ -422,6 +422,7 @@ function resolveAggregateSearchAutoGroupEnabled(value, definitions, fallbackDefi
 function createAggregateSearchQueryRunner(rawConfig) {
   const config = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
   const store = config.aggregateSearchStore || {};
+  const loadAggregateSearches = config.loadAggregateSearches;
   const loadSiteSearchProviders = config.loadSiteSearchProviders;
   const loadAggregateSearchAutoGroupEnabled =
     config.loadAggregateSearchAutoGroupEnabled;
@@ -449,7 +450,7 @@ function createAggregateSearchQueryRunner(rawConfig) {
     if (!normalizedId || !normalizedQuery) {
       return Promise.resolve({ ok: false, reason: 'invalid-aggregate-search-request' });
     }
-    if (typeof store.loadAggregateSearches !== 'function' ||
+    if (typeof loadAggregateSearches !== 'function' ||
         typeof store.getAggregateSearchAvailability !== 'function' ||
         typeof loadSiteSearchProviders !== 'function' ||
         typeof openSearch !== 'function') {
@@ -478,7 +479,7 @@ function createAggregateSearchQueryRunner(rawConfig) {
         )
       : Promise.resolve(undefined);
     const task = Promise.all([
-      store.loadAggregateSearches(config.storageArea, config.storageKey, config.chromeApi),
+      loadAggregateSearches(),
       Promise.resolve().then(() => loadSiteSearchProviders()),
       autoGroupSettingTask
     ]).then(async ([definitions, providers, autoGroupSetting]) => {

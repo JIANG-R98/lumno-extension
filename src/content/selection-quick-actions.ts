@@ -2,6 +2,7 @@
 import * as ACTION_ICON_LIBRARY from '../domain/selection-action-icons';
 import * as INTENT from '../domain/selection-intent';
 import * as SETTINGS from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as TOAST from '../shared/ui/toast';
 
 (function() {
@@ -34,7 +35,7 @@ import * as TOAST from '../shared/ui/toast';
   const ACTION_FAILURE_DISMISS_MS = 2200;
   const VIEWPORT_SAFE_MARGIN_PX = 12;
   const TEXT_INPUT_TYPES = new Set(['text', 'search', 'url', 'tel', 'email']);
-  const providerStorage = SETTINGS.getProviderStorage(chrome);
+  const providerStorage = LumnoSettingsStorage.getProviderStorage(chrome);
   const providerStorageRuntime = providerStorage.runtime;
   const storageArea = providerStorage.area;
 

@@ -1,6 +1,8 @@
 const assert = require('assert');
 
 const store = require('../../src/domain/search/aggregate-search-store.ts');
+const aggregateStorage = require('../../src/platform/aggregate-search-storage.ts');
+const settingsStorage = require('../../src/platform/settings-storage.ts');
 
 const providers = [
   { key: 'gg', name: 'Google' },
@@ -272,7 +274,7 @@ assert.strictEqual(
 );
 
 (async () => {
-  const readValue = await store.readStorageValue({
+  const readValue = await settingsStorage.readStorageValue({
     get(_keys, callback) {
       callback({ providers: migratedIds.items });
     }
@@ -283,7 +285,7 @@ assert.strictEqual(
     runtime: { lastError: null }
   };
   await assert.rejects(
-    store.readStorageValue({
+    settingsStorage.readStorageValue({
       get(_keys, callback) {
         chromeWithReadError.runtime.lastError = { message: 'read failed' };
         callback(undefined);
@@ -292,7 +294,7 @@ assert.strictEqual(
     /read failed/
   );
   await assert.rejects(
-    store.loadAggregateSearches({
+    aggregateStorage.loadAggregateSearches({
       get() {
         return Promise.reject(new Error('temporary sync failure'));
       }
@@ -302,7 +304,7 @@ assert.strictEqual(
   );
 
   let savedPayload = null;
-  const savedValue = await store.writeStorageValue({
+  const savedValue = await settingsStorage.writeStorageValue({
     set(payload, callback) {
       savedPayload = payload;
       callback();
@@ -311,7 +313,7 @@ assert.strictEqual(
   assert.deepStrictEqual(savedValue, migratedIds.items);
   assert.deepStrictEqual(savedPayload, { providers: migratedIds.items });
 
-  const promiseOnlyValue = await store.writeStorageValue({
+  const promiseOnlyValue = await settingsStorage.writeStorageValue({
     set(payload) {
       savedPayload = payload;
       return Promise.resolve();
@@ -321,7 +323,7 @@ assert.strictEqual(
   assert.deepStrictEqual(savedPayload, { providers: renamedIds.items });
 
   await assert.rejects(
-    store.writeStorageValue({
+    settingsStorage.writeStorageValue({
       set() {
         throw new Error('synchronous storage failure');
       }
@@ -333,7 +335,7 @@ assert.strictEqual(
     runtime: { lastError: null }
   };
   await assert.rejects(
-    store.writeStorageValue({
+    settingsStorage.writeStorageValue({
       set(_payload, callback) {
         chromeWithWriteError.runtime.lastError = { message: 'quota exceeded' };
         callback();
@@ -343,7 +345,7 @@ assert.strictEqual(
   );
 
   await assert.rejects(
-    store.writeStorageValue({
+    settingsStorage.writeStorageValue({
       set() {
         return Promise.reject(new Error('sync unavailable'));
       }

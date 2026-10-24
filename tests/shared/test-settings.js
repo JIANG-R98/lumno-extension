@@ -1,9 +1,10 @@
 const assert = require('assert');
 const settings = require('../../src/domain/settings.ts');
+const settingsStorage = require('../../src/platform/settings-storage.ts');
 
 let registeredStorageListener = null;
 const storageListener = () => {};
-assert.strictEqual(settings.addStorageChangeListener({
+assert.strictEqual(settingsStorage.addStorageChangeListener({
   storage: {
     onChanged: {
       addListener(listener) {
@@ -13,9 +14,9 @@ assert.strictEqual(settings.addStorageChangeListener({
   }
 }, storageListener), true);
 assert.strictEqual(registeredStorageListener, storageListener);
-assert.strictEqual(settings.addStorageChangeListener(null, storageListener), false);
-assert.strictEqual(settings.addStorageChangeListener({ storage: {} }, storageListener), false);
-assert.strictEqual(settings.addStorageChangeListener({
+assert.strictEqual(settingsStorage.addStorageChangeListener(null, storageListener), false);
+assert.strictEqual(settingsStorage.addStorageChangeListener({ storage: {} }, storageListener), false);
+assert.strictEqual(settingsStorage.addStorageChangeListener({
   storage: { onChanged: { addListener() {} } }
 }, null), false);
 
@@ -282,13 +283,13 @@ assert.strictEqual(
   settings.MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY,
   '_x_extension_macos_ctrl_suggestion_navigation_enabled_2026_unique_'
 );
-assert.strictEqual(settings.shouldSkipEntryMotion({
+assert.strictEqual(settingsStorage.shouldSkipEntryMotion({
   matchMedia: () => ({ matches: false })
 }, false), true);
-assert.strictEqual(settings.shouldSkipEntryMotion({
+assert.strictEqual(settingsStorage.shouldSkipEntryMotion({
   matchMedia: () => ({ matches: true })
 }, true), true);
-assert.strictEqual(settings.shouldSkipEntryMotion({
+assert.strictEqual(settingsStorage.shouldSkipEntryMotion({
   matchMedia: () => ({ matches: false })
 }, true), false);
 
@@ -497,7 +498,7 @@ async function testProviderStorageRuntime() {
       local
     }
   };
-  const runtime = settings.createProviderStorageRuntime(chromeApi);
+  const runtime = settingsStorage.createProviderStorageRuntime(chromeApi);
   await runtime.ready;
   assert.deepStrictEqual(
     await runtime.area.get([languageKey]),
@@ -517,20 +518,20 @@ async function testProviderStorageRuntime() {
     'the runtime should keep reading the Chrome Sync value'
   );
 
-  const providerStorage = settings.getProviderStorage(chromeApi);
+  const providerStorage = settingsStorage.getProviderStorage(chromeApi);
   assert.strictEqual(providerStorage.runtime, runtime, 'getProviderStorage should reuse the runtime');
   assert.strictEqual(providerStorage.area, runtime.area);
   assert.strictEqual(providerStorage.areaName, 'sync');
-  const localOnly = settings.getProviderStorage({ storage: { local: createArea({ [languageKey]: 'ja' }) } });
+  const localOnly = settingsStorage.getProviderStorage({ storage: { local: createArea({ [languageKey]: 'ja' }) } });
   assert.strictEqual(localOnly.areaName, 'local', 'without Chrome Sync the provider area is local');
   assert.deepStrictEqual(await localOnly.area.get([languageKey]), { [languageKey]: 'ja' });
-  const noStorage = settings.getProviderStorage(null);
+  const noStorage = settingsStorage.getProviderStorage(null);
   assert.ok(noStorage.runtime && noStorage.area, 'a runtime exists even without storage');
   assert.deepStrictEqual(await noStorage.area.get(['x']), {});
 
   let multiWriteCount = 0;
   let multiWritePayload = null;
-  const writtenValues = await settings.writeStorageValues({
+  const writtenValues = await settingsStorage.writeStorageValues({
     set(payload, callback) {
       multiWriteCount += 1;
       multiWritePayload = payload;
@@ -549,7 +550,7 @@ async function testProviderStorageRuntime() {
 
   const chromeWithMultiWriteError = { runtime: { lastError: null } };
   await assert.rejects(
-    settings.writeStorageValues({
+    settingsStorage.writeStorageValues({
       set(_payload, callback) {
         chromeWithMultiWriteError.runtime.lastError = { message: 'multi write failed' };
         callback();
@@ -589,7 +590,7 @@ async function testStorageFailures() {
     const failures = ['QUOTA_BYTES quota exceeded'];
     chromeApi.storage.sync = failingArea(chromeApi, failures);
     chromeApi.storage.local = failingArea(chromeApi, []);
-    const runtime = settings.createProviderStorageRuntime(chromeApi, { retryDelayMs: 0 });
+    const runtime = settingsStorage.createProviderStorageRuntime(chromeApi, { retryDelayMs: 0 });
     await runtime.ready;
     let seen;
     await runtime.area.set({ a: 1 }, (_result, error) => { seen = { error, lastError: chromeApi.runtime.lastError }; });
@@ -620,11 +621,11 @@ async function testStorageFailures() {
     const raw = { runtime: { lastError: null } };
     const rawFailures = [rateLimited];
     const rawArea = failingArea(raw, rawFailures);
-    await settings.writeStorageValues(rawArea, raw, { e: 1 }, { retryDelayMs: 0 });
+    await settingsStorage.writeStorageValues(rawArea, raw, { e: 1 }, { retryDelayMs: 0 });
     assert.deepStrictEqual([rawArea.values.e, rawArea.calls], [1, 2]);
     failures.push(rateLimited, rateLimited);
     const providerCalls = chromeApi.storage.sync.calls;
-    await assert.rejects(settings.writeStorageValues(runtime.area, chromeApi, { f: 1 }, { retryDelayMs: 0 }), /MAX_WRITE/);
+    await assert.rejects(settingsStorage.writeStorageValues(runtime.area, chromeApi, { f: 1 }, { retryDelayMs: 0 }), /MAX_WRITE/);
     assert.strictEqual(chromeApi.storage.sync.calls - providerCalls, 2, 'a provider area is retried once in total');
 
     // The local-primary flag decides where settings live.
@@ -645,11 +646,11 @@ async function testStorageFailures() {
       } };
       return api;
     }
-    const recovered = settings.createProviderStorageRuntime(modeApi(2), { modeRetryDelaysMs: [0, 0, 0] });
+    const recovered = settingsStorage.createProviderStorageRuntime(modeApi(2), { modeRetryDelaysMs: [0, 0, 0] });
     await recovered.ready;
     assert.deepStrictEqual([recovered.getActiveAreaName(), recovered.isModeKnown()], ['local', true],
       'a failed mode read is retried instead of falling back to browser sync');
-    const unknown = settings.createProviderStorageRuntime(modeApi(10), { modeRetryDelaysMs: [0, 0] });
+    const unknown = settingsStorage.createProviderStorageRuntime(modeApi(10), { modeRetryDelaysMs: [0, 0] });
     await unknown.ready;
     assert.deepStrictEqual([unknown.getActiveAreaName(), unknown.isModeKnown()], ['sync', false],
       'an unreadable mode is reported as unknown');
@@ -657,7 +658,7 @@ async function testStorageFailures() {
     // read; the overlay waits for this mode before it shows, so it must not
     // sit through the retries.
     const deniedApi = modeApi(10, 'Access to storage is not allowed from this context.');
-    const denied = settings.createProviderStorageRuntime(deniedApi, { modeRetryDelaysMs: [60000] });
+    const denied = settingsStorage.createProviderStorageRuntime(deniedApi, { modeRetryDelaysMs: [60000] });
     await denied.ready;
     assert.deepStrictEqual([denied.getActiveAreaName(), denied.isModeKnown(), deniedApi.modeReads], ['sync', false, 1],
       'a denied mode read is not retried');

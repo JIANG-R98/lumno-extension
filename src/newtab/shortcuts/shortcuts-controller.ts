@@ -1,6 +1,8 @@
 // @ts-nocheck
 // Shortcut storage, favicons, loading, persistence, rendering and the add/edit
 // dialog.
+import * as LumnoShortcutStorage from '../../platform/shortcut-storage';
+
 function createShortcutsController(deps) {
   const {
     shortcutFolderRuntime,
@@ -987,7 +989,7 @@ function createShortcutsController(deps) {
         }));
       }
       return finishTrackedPersistence(syncBudgetReady.then((budget) => (
-        NEWTAB_SHORTCUTS_STORE.persistShortcutState(storageArea, nextState, {
+        LumnoShortcutStorage.persistShortcutState(storageArea, nextState, {
           ...options,
           overflowArea: getShortcutOverflowStorageArea(),
           maxTotalBytes: budget.maxTotalBytes,

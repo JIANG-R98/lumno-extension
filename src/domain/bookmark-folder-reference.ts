@@ -1,36 +1,118 @@
-// @ts-nocheck
-import * as LumnoNewtabShortcutsStore from './shortcuts-store';
-import * as LumnoSettings from './settings';
+// Portable references to bookmark folders: a shortcut folder synced to
+// another device names its bookmark folder by root, path and contents
+// instead of by the browser's local bookmark ID.
+
+// The bookmark roots a reference can start from.
+type BookmarkRootType = 'bookmarks-bar' | 'other' | 'mobile' | 'managed';
+
+// Whether the folder lives in the browser account (synced), on this device
+// only, or the browser does not say.
+type FolderReferenceScope = 'account' | 'local' | 'unknown';
+
+interface FolderReference {
+  version: 1;
+  root: BookmarkRootType;
+  scope: FolderReferenceScope;
+  // Folder titles from below the root down to the folder.
+  path: string[];
+  // hashText of the folder's direct children.
+  fingerprint: string;
+}
+
+// A node of chrome.bookmarks.getTree().
+interface BookmarkNode {
+  id: string;
+  parentId?: string;
+  title?: string;
+  url?: string;
+  children?: BookmarkNode[];
+  folderType?: string;
+  syncing?: boolean;
+}
+
+type BookmarkNodeMap = Map<string, BookmarkNode>;
+
+// Which local bookmark folder a shortcut entry is bound to on this device.
+interface FolderBinding {
+  folderId: string;
+}
+
+type FolderBindings = Record<string, FolderBinding>;
+
+// What the reference helpers read from a shortcut entry.
+interface FolderShortcutLike {
+  id: string;
+  type?: string;
+  title?: string;
+  // The local bookmark ID, on this device only.
+  folderId?: string;
+  folderRef?: unknown;
+}
+
+// A folder entry with its local ID replaced by a portable reference.
+type PortableFolderShortcut<T extends FolderShortcutLike> = Omit<T, 'folderId'> & {
+  folderRef: FolderReference;
+  title: string;
+};
 
 const BINDINGS_KEY = '_x_extension_shortcut_folder_bindings_2026_unique_';
-const ROOT_TYPES = new Set(['bookmarks-bar', 'other', 'mobile', 'managed']);
+const ROOT_TYPES: ReadonlySet<string> = new Set<BookmarkRootType>(['bookmarks-bar', 'other', 'mobile', 'managed']);
+const SCOPES: ReadonlySet<string> = new Set<FolderReferenceScope>(['account', 'local', 'unknown']);
 // Chrome numbers its roots; Firefox uses fixed 12-character GUIDs. Mapping
 // both onto one root type keeps bookmark data portable between the browsers.
-const TREE_ROOT_IDS = new Set(['0', 'root________']);
-const ROOT_TYPES_BY_ID = Object.freeze({
+const TREE_ROOT_IDS: ReadonlySet<string> = new Set(['0', 'root________']);
+const ROOT_TYPES_BY_ID: Readonly<Record<string, string>> = Object.freeze({
   '1': 'bookmarks-bar', '2': 'other', '3': 'mobile',
   'toolbar_____': 'bookmarks-bar', 'unfiled_____': 'other', 'mobile______': 'mobile', 'menu________': 'menu'
 });
-const isTreeRootId = (id) => TREE_ROOT_IDS.has(String(id));
-const getTreeRoot = (nodeMap) => nodeMap.get('0') || nodeMap.get('root________');
-const getBookmarkRootType = (node) => (node && (node.folderType || ROOT_TYPES_BY_ID[String(node.id)])) || '';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function isRootType(value: unknown): value is BookmarkRootType {
+  return typeof value === 'string' && ROOT_TYPES.has(value);
+}
+
+function isScope(value: unknown): value is FolderReferenceScope {
+  return typeof value === 'string' && SCOPES.has(value);
+}
+
+function isTreeRootId(id: string | number | undefined): boolean {
+  return TREE_ROOT_IDS.has(String(id));
+}
+
+function getTreeRoot(nodeMap: BookmarkNodeMap): BookmarkNode | undefined {
+  return nodeMap.get('0') || nodeMap.get('root________');
+}
+
+function getBookmarkRootType(node: BookmarkNode | null | undefined): string {
+  return (node && (node.folderType || ROOT_TYPES_BY_ID[String(node.id)])) || '';
+}
+
 // Firefox's bookmarks menu has no Chrome counterpart. References sync through
 // WebDAV, and older clients reject a whole state that holds a root type they
 // do not know, so it is stored as "other".
-const getRootType = (node) => {
+function getRootType(node: BookmarkNode): string {
   const type = getBookmarkRootType(node);
   return type === 'menu' ? 'other' : type;
-};
-const own = (value, key) => Object.prototype.hasOwnProperty.call(value || {}, key);
-function normalizeReference(value) {
-  if (!value || value.version !== 1 || !ROOT_TYPES.has(value.root) ||
-      !['account', 'local', 'unknown'].includes(value.scope) || !Array.isArray(value.path) ||
-      value.path.length > 64 || value.path.some((part) => typeof part !== 'string' || part.length > 1024) ||
-      !/^[a-f0-9]{16}$/.test(value.fingerprint || '')) return null;
-  return { version: 1, root: value.root, scope: value.scope, path: value.path.slice(), fingerprint: value.fingerprint };
 }
+
+function normalizeReference(value: unknown): FolderReference | null {
+  if (!isRecord(value) || value.version !== 1) return null;
+  const { root, scope, path, fingerprint: hash } = value;
+  if (!isRootType(root) || !isScope(scope) || !Array.isArray(path) || path.length > 64) return null;
+  const parts: string[] = [];
+  for (const part of path) {
+    if (typeof part !== 'string' || part.length > 1024) return null;
+    parts.push(part);
+  }
+  if (typeof hash !== 'string' || !/^[a-f0-9]{16}$/.test(hash)) return null;
+  return { version: 1, root, scope, path: parts, fingerprint: hash };
+}
+
 // Two 32-bit FNV-style lanes, hex encoded. Stored hashes depend on it.
-function hashText(text) {
+function hashText(text: string): string {
   let first = 2166136261;
   let second = 0x9e3779b9;
   for (let index = 0; index < text.length; index += 1) {
@@ -40,13 +122,15 @@ function hashText(text) {
   }
   return [first, second].map((value) => (value >>> 0).toString(16).padStart(8, '0')).join('');
 }
-function fingerprint(node) {
+
+function fingerprint(node: BookmarkNode): string {
   return hashText(JSON.stringify((node.children || []).map((child) =>
     JSON.stringify([child.url ? 'url' : 'folder', String(child.title || ''), String(child.url || '')])).sort()));
 }
-function buildNodeMap(nodes) {
-  const map = new Map();
-  function visit(node) {
+
+function buildNodeMap(nodes: readonly BookmarkNode[] | null | undefined): BookmarkNodeMap {
+  const map: BookmarkNodeMap = new Map();
+  function visit(node: BookmarkNode | null | undefined): void {
     if (!node || !node.id) return;
     map.set(String(node.id), node);
     (node.children || []).forEach(visit);
@@ -54,12 +138,13 @@ function buildNodeMap(nodes) {
   (nodes || []).forEach(visit);
   return map;
 }
-function describe(folderId, nodeMap) {
+
+function describe(folderId: string | number | null | undefined, nodeMap: BookmarkNodeMap): FolderReference | null {
   let node = nodeMap.get(String(folderId || ''));
   if (!node || node.url || isTreeRootId(node.id)) return null;
   const target = node;
-  const path = [];
-  const visited = new Set();
+  const path: string[] = [];
+  const visited = new Set<string>();
   while (node && !isTreeRootId(node.parentId)) {
     if (visited.has(node.id) || path.length >= 64) return null;
     visited.add(node.id);
@@ -67,12 +152,12 @@ function describe(folderId, nodeMap) {
     node = nodeMap.get(String(node.parentId));
   }
   if (!node) return null;
-  const rootType = getRootType(node);
-  return normalizeReference({ version: 1, root: rootType,
+  return normalizeReference({ version: 1, root: getRootType(node),
     scope: typeof node.syncing === 'boolean' ? (node.syncing ? 'account' : 'local') : 'unknown',
     path, fingerprint: fingerprint(target) });
 }
-function resolveReference(reference, nodeMap) {
+
+function resolveReference(reference: unknown, nodeMap: BookmarkNodeMap): BookmarkNode | null {
   const ref = normalizeReference(reference);
   // A local-only directory is usable through its originating device's binding.
   if (!ref || ref.scope === 'local') return null;
@@ -88,219 +173,27 @@ function resolveReference(reference, nodeMap) {
   candidates = candidates.filter((node) => fingerprint(node) === ref.fingerprint);
   return candidates.length === 1 ? candidates[0] : null;
 }
-function createEntryId() {
+
+function createEntryId(): string {
   return `shortcut-folder-${globalThis.crypto.randomUUID()}`;
 }
-function normalizeBindings(value) {
-  const entries = Object.entries(value && typeof value === 'object' ? value : {}).slice(-512);
-  return Object.fromEntries(entries.filter(([id, binding]) => id && id.length <= 180 && binding &&
-    typeof binding.folderId === 'string' && binding.folderId && !isTreeRootId(binding.folderId) && binding.folderId.length <= 128)
-    .map(([id, binding]) => [id, { folderId: binding.folderId }]));
-}
-function createRuntime(options) {
-  const opts = options || {};
-  const chromeApi = opts.chrome || globalThis.chrome;
-  const area = opts.storageArea || (chromeApi && chromeApi.storage.local);
-  let bindings = {};
-  let loaded = false;
-  let pending = {};
-  let chain = Promise.resolve();
-  function storage(method, value) {
-    return new Promise((resolve, reject) => {
-      if (!area) { reject(new Error('Folder binding storage is unavailable')); return; }
-      let done = false;
-      const finish = (result) => {
-        if (done) return;
-        done = true;
-        const error = chromeApi && chromeApi.runtime && chromeApi.runtime.lastError;
-        if (error) reject(new Error(error.message)); else resolve(result);
-      };
-      try {
-        const request = area[method](value, finish);
-        if (request && request.then) request.then(finish, reject);
-      } catch (error) { reject(error); }
-    });
+
+// Keeps the newest 512 well-formed bindings.
+function normalizeBindings(value: unknown): FolderBindings {
+  const kept: Array<[string, FolderBinding]> = [];
+  for (const [id, binding] of Object.entries(isRecord(value) ? value : {}).slice(-512)) {
+    if (!id || id.length > 180 || !isRecord(binding)) continue;
+    const folderId = binding.folderId;
+    if (typeof folderId !== 'string' || !folderId || isTreeRootId(folderId) || folderId.length > 128) continue;
+    kept.push([id, { folderId }]);
   }
-  const ready = storage('get', [BINDINGS_KEY]).then((values) => {
-    bindings = normalizeBindings(values && values[BINDINGS_KEY]);
-    loaded = true;
-  });
-  function accept(value) {
-    bindings = { ...normalizeBindings(value), ...pending };
-  }
-  function bind(id, folderId) {
-    const next = { folderId: String(folderId) };
-    if (!id || !next.folderId || isTreeRootId(next.folderId)) return;
-    if (own(bindings, id) && bindings[id].folderId === next.folderId) return;
-    bindings = { ...bindings, [id]: next };
-    pending = { ...pending, [id]: next };
-  }
-  function flush() {
-    const operation = chain.catch(() => {}).then(async () => {
-      await ready;
-      if (!Object.keys(pending).length) return;
-      const changes = pending;
-      pending = {};
-      try {
-        const values = await storage('get', [BINDINGS_KEY]);
-        const merged = normalizeBindings({ ...normalizeBindings(values && values[BINDINGS_KEY]), ...changes });
-        await storage('set', { [BINDINGS_KEY]: merged });
-        bindings = { ...merged, ...pending };
-      } catch (error) { pending = { ...changes, ...pending }; throw error; }
-    });
-    chain = operation;
-    return operation;
-  }
-  function getNode(item, nodeMap) {
-    if (!loaded || !item || item.type !== 'folder') return null;
-    const binding = own(bindings, item.id) ? bindings[item.id] : null;
-    if (binding) {
-      const node = nodeMap.get(binding.folderId);
-      // Never reattach a deleted binding to a newly created same-name folder.
-      return node && !node.url ? node : null;
-    }
-    if (!item.folderRef) return null;
-    const node = resolveReference(item.folderRef, nodeMap);
-    if (node) bind(item.id, node.id);
-    return node;
-  }
-  function reconcile(items, nodeMap) {
-    if (!loaded) return items;
-    return items.map((item) => {
-      if (!item || item.type !== 'folder') return item;
-      let node = getNode(item, nodeMap);
-      if (!item.folderRef && !node) {
-        // Legacy sync IDs have no provenance. Migrate only a unique title,
-        // rather than trusting a possibly unrelated matching numeric ID.
-        const candidates = [...nodeMap.values()].filter((candidate) => !candidate.url &&
-          !isTreeRootId(candidate.id) && item.title && candidate.title === item.title);
-        if (candidates.length === 1 && String(candidates[0].id) === item.folderId) node = candidates[0];
-        if (node) bind(item.id, node.id);
-      }
-      const ref = node && describe(node.id, nodeMap);
-      if (!ref || (item.folderRef && JSON.stringify(item.folderRef) === JSON.stringify(ref))) return item;
-      const { folderId: _localId, ...portable } = item;
-      return { ...portable, folderRef: ref, title: String(node.title || '') };
-    });
-  }
-  function visibleItems(items, nodeMap) {
-    return items.flatMap((item) => {
-      if (item.type !== 'folder') return [item];
-      const node = getNode(item, nodeMap);
-      return node ? [{ ...item, folderId: String(node.id) }] : [];
-    });
-  }
-  return { ready, accept, bind, flush, getNode, reconcile, visibleItems };
-}
-// Keep portable locators current even when the originating new-tab is closed.
-function createSyncController(options) {
-  const opts = options || {};
-  const chromeApi = opts.chrome || globalThis.chrome;
-  const settings = opts.settings || LumnoSettings;
-  const store = opts.shortcuts || LumnoNewtabShortcutsStore;
-  const provider = opts.provider || settings.createProviderStorageRuntime(chromeApi);
-  const runtime = createRuntime({ chrome: chromeApi });
-  const overflowKey = store.SHORTCUTS_LOCAL_OVERFLOW_KEY;
-  let revision = 0;
-  let timer = null;
-  let chain = Promise.resolve();
-  function storage(area, method, value) {
-    return new Promise((resolve, reject) => {
-      let settled = false;
-      const done = (result) => {
-        if (settled) return;
-        settled = true;
-        const error = chromeApi.runtime && chromeApi.runtime.lastError;
-        if (error) reject(new Error(error.message)); else resolve(result);
-      };
-      try {
-        const request = area[method](value, done);
-        if (request && request.then) request.then(done, reject);
-      } catch (error) { reject(error); }
-    });
-  }
-  async function update() {
-    await Promise.all([provider.ready, runtime.ready]);
-    const generation = revision;
-    const sync = provider.getActiveAreaName() === 'sync';
-    const values = await storage(provider.area, 'get', store.SHORTCUT_STORAGE_KEYS.slice());
-    const local = sync ? await storage(chromeApi.storage.local, 'get', [overflowKey]) : {};
-    const state = store.readShortcutState(values, local[overflowKey]);
-    // A save from another device is still arriving; its next part reruns this.
-    if (state.torn || !state.items.some((item) => item.type === 'folder')) return;
-    const nodes = await new Promise((resolve, reject) => {
-      chromeApi.bookmarks.getTree((tree) => {
-        const error = chromeApi.runtime && chromeApi.runtime.lastError;
-        if (error || !Array.isArray(tree) || !tree.length) reject(new Error('Bookmarks are unavailable'));
-        else resolve(tree);
-      });
-    });
-    const next = runtime.reconcile(state.items, buildNodeMap(nodes));
-    await runtime.flush();
-    if (generation !== revision || JSON.stringify(next) === JSON.stringify(state.items)) return;
-    const nextState = { groups: state.groups, items: next, migratedAt: state.migratedAt };
-    // A New Tab page may have saved the shortcuts since they were read (a
-    // site dragged out of a folder, whose bookmark it then removes). Writing
-    // this older list over that save would lose the site, so a changed list
-    // is read again instead.
-    const unchanged = async () => {
-      const latest = await storage(provider.area, 'get', store.SHORTCUT_STORAGE_KEYS.slice());
-      const latestLocal = sync ? await storage(chromeApi.storage.local, 'get', [overflowKey]) : {};
-      return JSON.stringify(latest) === JSON.stringify(values) &&
-        JSON.stringify(latestLocal[overflowKey]) === JSON.stringify(local[overflowKey]);
-    };
-    if (!sync) {
-      if (generation !== revision) return;
-      if (!await unchanged()) { schedule(); return; }
-      await store.persistShortcutState(provider.area, nextState);
-      return;
-    }
-    const allSync = await storage(chromeApi.storage.sync, 'get', null);
-    if (generation !== revision) return;
-    if (!await unchanged()) { schedule(); return; }
-    const usage = store.measureShortcutSyncUsage(allSync);
-    await store.persistShortcutState(chromeApi.storage.sync, nextState, {
-      overflowArea: chromeApi.storage.local,
-      maxTotalBytes: store.getShortcutSyncBudget({ ...usage, quotaBytes: chromeApi.storage.sync.QUOTA_BYTES }),
-      legacyKeysPresent: usage.legacyBytes > 0,
-      getLastError: () => chromeApi.runtime && chromeApi.runtime.lastError
-    });
-  }
-  function refresh() {
-    if (timer) clearTimeout(timer);
-    timer = null;
-    const job = chain.catch(() => {}).then(update);
-    chain = job;
-    return job;
-  }
-  function schedule() {
-    revision += 1;
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => {
-      timer = null;
-      refresh().catch((error) => { if (opts.onError) opts.onError(error); });
-    }, 120);
-    if (timer && timer.unref) timer.unref();
-  }
-  function start() {
-    for (const name of ['onCreated', 'onRemoved', 'onChanged', 'onMoved', 'onChildrenReordered', 'onImportEnded']) {
-      if (chromeApi.bookmarks[name]) chromeApi.bookmarks[name].addListener(schedule);
-    }
-    chromeApi.storage.onChanged.addListener((changes, area) => {
-      if (area === 'local' && changes[BINDINGS_KEY]) {
-        runtime.accept(changes[BINDINGS_KEY].newValue);
-        schedule();
-      } else if (changes[settings.LOCAL_PRIMARY_STORAGE_KEY] || changes[overflowKey] ||
-          (provider.isActiveAreaName(area) && store.SHORTCUT_STORAGE_KEYS.some((key) => changes[key]))) schedule();
-    });
-    refresh().catch((error) => { if (opts.onError) opts.onError(error); });
-  }
-  return { start, refresh };
+  return Object.fromEntries(kept);
 }
 
 export {
   BINDINGS_KEY,
   normalizeReference,
+  normalizeBindings,
   describe,
   resolveReference,
   isTreeRootId,
@@ -308,7 +201,16 @@ export {
   getBookmarkRootType,
   hashText,
   buildNodeMap,
-  createEntryId,
-  createRuntime,
-  createSyncController
+  createEntryId
+};
+export type {
+  BookmarkNode,
+  BookmarkNodeMap,
+  BookmarkRootType,
+  FolderBinding,
+  FolderBindings,
+  FolderReference,
+  FolderReferenceScope,
+  FolderShortcutLike,
+  PortableFolderShortcut
 };

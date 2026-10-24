@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as LumnoSettings from '../../domain/settings';
+import * as LumnoSettingsStorage from '../../platform/settings-storage';
 import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
 
 (function() {
@@ -8,7 +8,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
   const WALLPAPER_EFFECT_STORAGE_KEY = '_x_extension_newtab_wallpaper_effect_2026_unique_';
   const FAVICON_STORAGE_KEY = '_x_extension_newtab_favicon_2026_unique_';
   const FAVICON_PRELOAD_STORAGE_KEY = '_x_extension_newtab_favicon_preload_2026_unique_';
-  const providerStorageRuntime = LumnoSettings.createProviderStorageRuntime(window.chrome);
+  const providerStorageRuntime = LumnoSettingsStorage.createProviderStorageRuntime(window.chrome);
   // Only bundled files paint on the first frame. Online photos and links paint from this device's
   // IndexedDB copy as soon as it is read, so a slow or failing network never holds the tab's spinner
   // or blanks the page; uploads paint from the local wallpaper library the same way.

@@ -1,6 +1,7 @@
 const assert = require('assert');
 
 const shortcutsStore = require('../../src/domain/shortcuts-store.ts');
+const shortcutStorage = require('../../src/platform/shortcut-storage.ts');
 
 const SYNC_KEYS = shortcutsStore.SHORTCUTS_SYNC_KEYS;
 const LEGACY_KEYS = shortcutsStore.LEGACY_SHORTCUTS_CHUNK_KEYS;
@@ -134,7 +135,7 @@ function testRejectsUnsafeOrMissingUrls() {
 
 async function testBrowserInternalShortcutsSurviveStorageAndEditing() {
   const storage = createMemoryStorage();
-  const saved = await shortcutsStore.saveShortcuts(storage, [
+  const saved = await shortcutStorage.saveShortcuts(storage, [
     { id: 'inspect', title: 'Inspect', url: 'chrome://inspect/#devices' },
     { id: 'settings', title: 'Settings', url: 'chrome://settings' },
     { id: 'duplicate', title: 'Duplicate', url: 'CHROME://SETTINGS/' },
@@ -142,7 +143,7 @@ async function testBrowserInternalShortcutsSurviveStorageAndEditing() {
     { id: 'plain', title: 'Plain', url: 'http://plain.example/' },
     { id: 'local', title: 'Local', url: 'https://localhost:3000/app' }
   ]);
-  const loaded = await shortcutsStore.loadShortcuts(storage);
+  const loaded = await shortcutStorage.loadShortcuts(storage);
 
   assert.deepStrictEqual(loaded, saved);
   assert.deepStrictEqual(loaded.map((item) => item.id), ['inspect', 'settings', 'example', 'plain', 'local']);
@@ -157,8 +158,8 @@ async function testBrowserInternalShortcutsSurviveStorageAndEditing() {
   const edited = loaded.map((item) => item.id === 'inspect'
     ? { ...item, title: 'Network', url: 'chrome://net-export/' }
     : item);
-  await shortcutsStore.saveShortcuts(storage, edited);
-  const reloaded = await shortcutsStore.loadShortcuts(storage);
+  await shortcutStorage.saveShortcuts(storage, edited);
+  const reloaded = await shortcutStorage.loadShortcuts(storage);
   assert.strictEqual(reloaded[0].id, 'inspect');
   assert.strictEqual(reloaded[0].title, 'Network');
   assert.strictEqual(reloaded[0].url, 'chrome://net-export/');
@@ -208,24 +209,24 @@ function testDefaultShortcutsContainLumno() {
 async function testLoadsDefaultShortcutsOnlyWhenStorageKeyIsMissing() {
   const storage = createMemoryStorage();
   assert.deepStrictEqual(
-    (await shortcutsStore.loadShortcuts(storage)).map((shortcut) => shortcut.title),
+    (await shortcutStorage.loadShortcuts(storage)).map((shortcut) => shortcut.title),
     ['Lumno'],
     'first run should seed the visible shortcuts with Lumno'
   );
 
   storage.data[LEGACY_KEYS[0]] = [];
-  assert.deepStrictEqual(await shortcutsStore.loadShortcuts(storage), [],
+  assert.deepStrictEqual(await shortcutStorage.loadShortcuts(storage), [],
     'an explicitly saved empty legacy list should stay empty');
 
-  await shortcutsStore.saveShortcuts(storage, []);
+  await shortcutStorage.saveShortcuts(storage, []);
   delete storage.data[LEGACY_KEYS[0]];
-  assert.deepStrictEqual(await shortcutsStore.loadShortcuts(storage), [],
+  assert.deepStrictEqual(await shortcutStorage.loadShortcuts(storage), [],
     'an explicitly saved empty grouped state should stay empty');
 }
 
 async function testSaveShortcutsPreservesExplicitOrder() {
   const storage = createMemoryStorage();
-  const saved = await shortcutsStore.saveShortcuts(storage, [
+  const saved = await shortcutStorage.saveShortcuts(storage, [
     { id: 'three', title: 'Three', url: 'https://three.example/' },
     { id: 'one', title: 'One', url: 'https://one.example/' },
     { id: 'two', title: 'Two', url: 'https://two.example/' }
@@ -233,7 +234,7 @@ async function testSaveShortcutsPreservesExplicitOrder() {
 
   assert.deepStrictEqual(saved.map((shortcut) => shortcut.id), ['three', 'one', 'two'],
     'bulk saving shortcuts should preserve the caller-provided order');
-  assert.deepStrictEqual((await shortcutsStore.loadShortcuts(storage)).map((shortcut) => shortcut.id),
+  assert.deepStrictEqual((await shortcutStorage.loadShortcuts(storage)).map((shortcut) => shortcut.id),
     ['three', 'one', 'two']);
 }
 
@@ -392,19 +393,19 @@ async function testLegacyListMigratesWithoutTouchingLegacyKeys() {
   const storage = createMemoryStorage({ [LEGACY_KEYS[0]]: legacyItems, [LEGACY_KEYS[1]]: [], [LEGACY_KEYS[2]]: [] });
   const legacyCopy = JSON.parse(JSON.stringify(storage.data));
 
-  const before = await shortcutsStore.loadShortcutState(storage);
+  const before = await shortcutStorage.loadShortcutState(storage);
   assert.strictEqual(before.source, 'legacy');
   assert.deepStrictEqual(before.groups, [{ id: 'g0', title: '' }]);
   assert.deepStrictEqual(before.items.map((item) => Object.keys(item)), before.items.map(() => ['id', 'groupId', 'title', 'url', 'host']),
     'timestamps from the legacy list are not carried into the grouped state');
 
-  await shortcutsStore.saveShortcuts(storage, before.items.slice(0, 2), { now: 50 });
+  await shortcutStorage.saveShortcuts(storage, before.items.slice(0, 2), { now: 50 });
   LEGACY_KEYS.forEach((key) => {
     assert.deepStrictEqual(storage.data[key], legacyCopy[key],
       'older devices keep reading the legacy list, so migration leaves it as it was');
   });
   storage.data[LEGACY_KEYS[0]] = createShortcutInputs(9);
-  const after = await shortcutsStore.loadShortcutState(storage);
+  const after = await shortcutStorage.loadShortcutState(storage);
   assert.strictEqual(after.source, 'v2');
   assert.strictEqual(after.migratedAt, 50);
   assert.deepStrictEqual(after.items.map((item) => item.id), ['shortcut-1', 'shortcut-2'],
@@ -436,7 +437,7 @@ async function testPersistSplitsSyncAndOverflowAndFallsBack() {
   const sync = createMemoryStorage({ [LEGACY_KEYS[0]]: [] });
   const local = createMemoryStorage();
   const items = createShortcutInputs(40, { path: `?q=${'y'.repeat(200)}` });
-  const result = await shortcutsStore.persistShortcutState(sync, { items }, {
+  const result = await shortcutStorage.persistShortcutState(sync, { items }, {
     overflowArea: local, maxTotalBytes: 4000, legacyKeysPresent: true, now: 10 * DAY_MS
   });
   assert(result.syncLimited, 'items past the budget are reported as local-only');
@@ -447,11 +448,11 @@ async function testPersistSplitsSyncAndOverflowAndFallsBack() {
     items.map((item) => item.id));
   assert(Object.prototype.hasOwnProperty.call(sync.data, LEGACY_KEYS[0]), 'a fresh migration keeps the legacy list');
 
-  const later = await shortcutsStore.persistShortcutState(sync, result.state, {
+  const later = await shortcutStorage.persistShortcutState(sync, result.state, {
     overflowArea: local, maxTotalBytes: 4000, legacyKeysPresent: true, now: 10 * DAY_MS + 29 * DAY_MS
   });
   assert.deepStrictEqual(later.plan.removeKeys, []);
-  await shortcutsStore.persistShortcutState(sync, result.state, {
+  await shortcutStorage.persistShortcutState(sync, result.state, {
     overflowArea: local, maxTotalBytes: 4000, legacyKeysPresent: true, now: 10 * DAY_MS + 30 * DAY_MS
   });
   assert(!Object.prototype.hasOwnProperty.call(sync.data, LEGACY_KEYS[0]),
@@ -459,7 +460,7 @@ async function testPersistSplitsSyncAndOverflowAndFallsBack() {
 
   const failing = { set() { throw new Error('QUOTA_BYTES quota exceeded'); } };
   const fallbackLocal = createMemoryStorage();
-  const failed = await shortcutsStore.persistShortcutState(failing, { items: items.slice(0, 3) }, {
+  const failed = await shortcutStorage.persistShortcutState(failing, { items: items.slice(0, 3) }, {
     overflowArea: fallbackLocal
   });
   assert(failed.syncError, 'a failed sync write is reported');
@@ -468,7 +469,7 @@ async function testPersistSplitsSyncAndOverflowAndFallsBack() {
   assert.deepStrictEqual(failed.localOnlyIds, ['shortcut-1', 'shortcut-2', 'shortcut-3']);
 
   const unlimited = createMemoryStorage();
-  const localOnly = await shortcutsStore.persistShortcutState(unlimited, { items }, {});
+  const localOnly = await shortcutStorage.persistShortcutState(unlimited, { items }, {});
   assert.strictEqual(localOnly.syncLimited, false, 'without an overflow area every item goes to the given area');
   assert.strictEqual(unlimited.data[SYNC_KEYS[0]].s.length, 40);
 }
@@ -502,14 +503,14 @@ async function testQuotaOverflowAndStorageFailuresAreObservable() {
     url: `https://oversized.example/path?query=${'x'.repeat(9000)}`
   }];
   await assert.rejects(
-    shortcutsStore.saveShortcuts(createMemoryStorage(), oversized),
+    shortcutStorage.saveShortcuts(createMemoryStorage(), oversized),
     (error) => error && error.code === 'SHORTCUT_SYNC_QUOTA_EXCEEDED',
     'callers without a local overflow layer should receive a quota error'
   );
 
   const writeError = { message: 'QUOTA_BYTES quota exceeded' };
   await assert.rejects(
-    shortcutsStore.saveShortcuts({
+    shortcutStorage.saveShortcuts({
       get(_keys, callback) {
         callback({});
       },
@@ -533,13 +534,13 @@ async function testFolderReferencesSurviveStorageAndDeduplicateIndependentlyFrom
   assert.strictEqual(shortcutsStore.normalizeShortcutItem({ type: 'folder', folderId: '0' }), null);
   const portable = { id: 'shortcut-folder-entry', type: 'folder', folderRef: FOLDER_REF, title: '灵感' };
   const storage = createMemoryStorage();
-  await shortcutsStore.saveShortcuts(storage, [folder,
+  await shortcutStorage.saveShortcuts(storage, [folder,
     { type: 'folder', folderId: '42', title: 'Duplicate' },
     { type: 'folder', folderId: '43', title: 'Other folder' },
     portable,
     { url: 'https://example.com/', title: 'Site' }
   ]);
-  const loaded = await shortcutsStore.loadShortcuts(storage);
+  const loaded = await shortcutStorage.loadShortcuts(storage);
   assert.strictEqual(loaded.length, 4);
   assert.strictEqual(loaded[0].folderId, '42');
   assert.strictEqual(loaded[1].folderId, '43');
@@ -550,7 +551,7 @@ async function testFolderReferencesSurviveStorageAndDeduplicateIndependentlyFrom
 
 async function testIconPlatePreferencesSurviveStorage() {
   const storage = createMemoryStorage();
-  await shortcutsStore.saveShortcuts(storage, [
+  await shortcutStorage.saveShortcuts(storage, [
     { url: 'https://auto.example/' },
     { url: 'https://off.example/', iconPlate: 'off', iconPlateColor: '#ff0000' },
     { url: 'https://on.example/', iconPlate: 'on' },
@@ -558,7 +559,7 @@ async function testIconPlatePreferencesSurviveStorage() {
     { url: 'https://color-only.example/', iconPlateColor: '#123ABC' },
     { url: 'https://invalid.example/', iconPlate: 'sometimes', iconPlateColor: 'red' }
   ]);
-  const loaded = await shortcutsStore.loadShortcuts(storage);
+  const loaded = await shortcutStorage.loadShortcuts(storage);
   assert.deepStrictEqual(loaded.map((item) => [item.iconPlate, item.iconPlateColor, item.iconSource]), [
     [undefined, undefined, undefined],
     ['off', undefined, undefined],
@@ -579,12 +580,12 @@ async function testIconPlatePreferencesSurviveStorage() {
 
 async function testBookmarkOriginSurvivesStorage() {
   const storage = createMemoryStorage();
-  await shortcutsStore.saveShortcuts(storage, [
+  await shortcutStorage.saveShortcuts(storage, [
     { url: 'https://copied.example/', fromBookmark: true },
     { url: 'https://plain.example/', fromBookmark: 'yes' },
     { type: 'folder', folderId: '42', title: 'Folder', fromBookmark: true }
   ]);
-  const loaded = await shortcutsStore.loadShortcuts(storage);
+  const loaded = await shortcutStorage.loadShortcuts(storage);
   assert.deepStrictEqual(loaded.map((item) => item.fromBookmark), [true, undefined, undefined],
     'only website shortcuts copied from a bookmark keep the mark');
   const plan = shortcutsStore.createShortcutStoragePlan({
@@ -599,7 +600,7 @@ async function run() {
   await testIconPlatePreferencesSurviveStorage();
   await testBookmarkOriginSurvivesStorage();
   const sourceStorage = createMemoryStorage();
-  await shortcutsStore.saveShortcuts(sourceStorage, [
+  await shortcutStorage.saveShortcuts(sourceStorage, [
     { url: 'https://service.example/', iconSource: 'service' },
     { url: 'https://favicon-is.example/', iconSource: 'favicon-is' },
     { url: 'https://cache.example/', iconSource: 'cache' },
@@ -608,7 +609,7 @@ async function run() {
     { url: 'https://legacy.example/' },
     { url: 'https://invalid.example/', iconSource: 'unapproved' }
   ]);
-  const sourceRecords = await shortcutsStore.loadShortcuts(sourceStorage);
+  const sourceRecords = await shortcutStorage.loadShortcuts(sourceStorage);
   assert.deepStrictEqual(sourceRecords.map((item) => item.iconSource),
     ['service', 'favicon-is', 'cache', 'custom', 'builtin', undefined, undefined],
     'source preferences must survive storage without rewriting legacy or invalid sources');

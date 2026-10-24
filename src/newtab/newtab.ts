@@ -1,6 +1,7 @@
 // @ts-nocheck
 import * as BLACKLIST_UTILS from '../domain/blacklist-utils';
 import * as FOLDER_REFERENCES from '../domain/bookmark-folder-reference';
+import * as FOLDER_BINDINGS from '../platform/bookmark-folder-bindings';
 import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as LumnoCommunityLinks from '../domain/community-links';
 import * as EXTENSION_ROUTES from '../domain/extension-routes';
@@ -100,6 +101,7 @@ import * as NEWTAB_TOP_CONTENT_RUNTIME from './top-content/top-content';
 import * as NEWTAB_URL_POLICY from './url-policy';
 import * as NEWTAB_VIEWPORT_INSETS from './viewport-insets';
 import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 
 (function() {
   // Page state shared with the modules split out of this file: each module
@@ -513,7 +515,7 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page';
     pageState
   });
 
-  const shortcutFolderRuntime = FOLDER_REFERENCES.createRuntime({ chrome });
+  const shortcutFolderRuntime = FOLDER_BINDINGS.createRuntime({ chrome });
   shortcutFolderRuntime.ready.catch((error) => {
     console.warn('[Lumno] Could not load shortcut folder bindings.', error);
   });
@@ -1460,7 +1462,7 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page';
     if (isPrimaryStorageAreaName('local')) {
       return;
     }
-    SETTINGS.migrateLocalSettingsToSync(chrome.storage.local, storageArea, keys);
+    LumnoSettingsStorage.migrateLocalSettingsToSync(chrome.storage.local, storageArea, keys);
   }
 
   function getRiSvg(id, sizeClass, extraClass) {
@@ -2895,12 +2897,12 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page';
     getSiteSearchTriggerCandidate,
     getLocalSearchScopeCandidate,
     getShortcutRules: (...args) => getShortcutRules(...args),
-    readSearchSourceOrder: () => SETTINGS.readStorageValue(
+    readSearchSourceOrder: () => LumnoSettingsStorage.readStorageValue(
       storageArea,
       chrome,
       SETTINGS.SEARCH_SOURCE_ORDER_STORAGE_KEY
     ),
-    writeSearchSourceOrder: (value) => SETTINGS.writeStorageValue(
+    writeSearchSourceOrder: (value) => LumnoSettingsStorage.writeStorageValue(
       storageArea,
       chrome,
       SETTINGS.SEARCH_SOURCE_ORDER_STORAGE_KEY,
@@ -3310,7 +3312,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page';
     closeFeedbackPopover,
     closeWallpaperPanel,
     storageArea,
-    settingsApi: SETTINGS,
     NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
     NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
     normalizeNewtabFeedbackButtonVisible,

@@ -1,5 +1,6 @@
 // @ts-nocheck
 import * as SETTINGS from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoFeatureHints from './ui/feature-hints';
 
 const UPDATE_NOTICE_STORAGE_KEY = '_x_lumno_update_notice_2026_unique_';
@@ -142,15 +143,7 @@ function normalizeUpdateNoticeEnabled(value) {
 
 function getStorageRuntime(chromeApi) {
   const api = chromeApi || (globalThis && globalThis.chrome) || null;
-  if (typeof SETTINGS.createProviderStorageRuntime === 'function') return SETTINGS.createProviderStorageRuntime(api);
-  const storage = api && api.storage ? api.storage : null;
-  const area = storage && storage.sync
-    ? storage.sync
-    : (storage && storage.local ? storage.local : null);
-  return {
-    area,
-    name: area && storage && area === storage.sync ? 'sync' : (area ? 'local' : '')
-  };
+  return LumnoSettingsStorage.createProviderStorageRuntime(api);
 }
 
 function getDomIdPart(id) {

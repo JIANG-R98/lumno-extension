@@ -1,5 +1,6 @@
 // @ts-nocheck
 import * as LumnoSettings from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 
 (function() {
   // Starts the startup work the last New Tab's choices make known while the rest of the page is still
@@ -35,8 +36,6 @@ import * as LumnoSettings from '../domain/settings';
   if (!Array.isArray(keys) || !keys.length || !keys.every((key) => typeof key === 'string')) {
     return;
   }
-  const providerRuntime = settings.createProviderStorageRuntime(chromeApi);
-  if (providerRuntime) {
-    settings.prefetchStorageRead(providerRuntime.area, keys, chromeApi);
-  }
+  const providerRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
+  LumnoSettingsStorage.prefetchStorageRead(providerRuntime.area, keys, chromeApi);
 })();

@@ -3,6 +3,7 @@ const { execFileSync } = require('child_process');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
 const settings = require('../../src/domain/settings.ts');
+const settingsStorage = require('../../src/platform/settings-storage.ts');
 const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
 const { readPageSource } = require('../helpers/page-source');
 const { loadBackground, wait } = require('../helpers/background-harness');
@@ -182,7 +183,7 @@ async function testLegacyLocalChoicesSurvive() {
   const writes = [];
   const area = { set: (values) => writes.push(values) };
   const local = (data) => ({ storage: { local: { get: (keys, callback) => callback(Object.fromEntries(keys.filter((key) => key in data).map((key) => [key, data[key]]))) } } });
-  settings.writeSettingRepairs(local({ a: 'old' }), area, { a: 'default', b: 'default', c: 'fixed' }, { c: 'broken' });
+  settingsStorage.writeSettingRepairs(local({ a: 'old' }), area, { a: 'default', b: 'default', c: 'fixed' }, { c: 'broken' });
   assert.deepStrictEqual(writes, [{ c: 'fixed' }, { b: 'default' }],
     'invalid values are repaired at once, missing ones only without a local copy');
 

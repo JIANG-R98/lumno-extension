@@ -2,6 +2,7 @@
 import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
 import * as LumnoNewtabWallpaperLocalStore from '../shared/wallpaper-local-store';
 import * as LumnoSettings from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoWebDavContract from '../domain/webdav-contract';
 import * as LumnoWebDavClient from './webdav-client';
 
@@ -81,7 +82,7 @@ function createConnectionController(options) {
   });
   const localPrefsArea = chromeApi.storage.local;
   const chromeFallbackArea = chromeApi.storage.sync;
-  const runtime = settings.createProviderStorageRuntime(chromeApi);
+  const runtime = LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
   const statusKey = opts.statusKey || settings.WEBDAV_STATUS_STORAGE_KEY;
   const alarmName = opts.alarmName || ALARM_NAME;
   const withLocalWrite = opts.withLocalWrite || ((fn) => fn());
@@ -130,7 +131,7 @@ function createConnectionController(options) {
         finished = true;
         const lastError = failure || (chromeApi.runtime && chromeApi.runtime.lastError);
         if (!lastError) { resolve(result); return; }
-        if (method !== 'get' && !retried && settings.isStorageRateLimitError && settings.isStorageRateLimitError(lastError)) {
+        if (method !== 'get' && !retried && LumnoSettingsStorage.isStorageRateLimitError(lastError)) {
           setTimeout(() => storage(area, method, value, true).then(resolve, reject), storageRetryDelayMs);
           return;
         }

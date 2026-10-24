@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as LumnoExtensionRoutes from '../domain/extension-routes';
-import * as LumnoSettings from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 
 const ONBOARDING_WEB_URL = 'https://lumno.kubai.design/onboarding/';
 const ONBOARDING_ROUTE_PATH = 'src/onboarding/onboarding.html';
@@ -174,8 +174,7 @@ function getSyncableStorageArea(chromeApi) {
   if (!chromeApi || !chromeApi.storage) {
     return null;
   }
-  const settings = LumnoSettings;
-  return settings.createProviderStorageRuntime(chromeApi).area;
+  return LumnoSettingsStorage.createProviderStorageRuntime(chromeApi).area;
 }
 
 function getStoredReleasePageOpen(payload) {

@@ -6,6 +6,7 @@ import * as NAVIGATION_DISPOSITION from '../domain/navigation-disposition';
 import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
 import * as SEARCH_UTILS from '../domain/search/search-utils';
 import * as SETTINGS from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoShortcutDisplay from '../domain/shortcut-display';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as OPTIONS_AGGREGATE_SEARCH_LIST from './options-aggregate-search-list';
@@ -386,7 +387,6 @@ import * as LumnoWebDavOptions from './webdav-options';
     initTooltips,
     scrollToOptionsTarget: (...args) => scrollToOptionsTarget(...args),
     normalizeSiteSearchProvider,
-    SETTINGS,
     SITE_SEARCH_STORAGE_KEY,
     getSiteSearchBuiltinKey: (...args) => getSiteSearchBuiltinKey(...args),
     SITE_SEARCH_DISABLED_STORAGE_KEY,
@@ -880,8 +880,8 @@ import * as LumnoWebDavOptions from './webdav-options';
     deriveLegacyAutoGroupEnabled: aggregateSearchModel.deriveLegacyAutoGroupEnabled,
     settings: SETTINGS
   });
-  ({ runtime: optionsState.providerStorageRuntime, area: optionsState.rawStorageArea } = SETTINGS.getProviderStorage(chrome));
-  const startupStorageReadBatch = SETTINGS.createStorageReadBatch(optionsState.rawStorageArea);
+  ({ runtime: optionsState.providerStorageRuntime, area: optionsState.rawStorageArea } = LumnoSettingsStorage.getProviderStorage(chrome));
+  const startupStorageReadBatch = LumnoSettingsStorage.createStorageReadBatch(optionsState.rawStorageArea);
   optionsState.storageArea = startupStorageReadBatch.area;
   optionsState.optionsStartupStorageBatchPending = true;
   // Each section registers its storage change handlers here, next to the
@@ -891,7 +891,7 @@ import * as LumnoWebDavOptions from './webdav-options';
   });
   const settingBinder = SETTING_BINDINGS.createSettingBinder({
     storageArea: optionsState.storageArea,
-    writeRepairs: (values, stored) => SETTINGS.writeSettingRepairs(chrome, optionsState.storageArea, values, stored),
+    writeRepairs: (values, stored) => LumnoSettingsStorage.writeSettingRepairs(chrome, optionsState.storageArea, values, stored),
     registry: storageChanges,
     refreshCustomSelects,
     setToggleState: setOptionsToggleState,
@@ -989,7 +989,7 @@ import * as LumnoWebDavOptions from './webdav-options';
     return optionsState.providerStorageRuntime.isActiveAreaName(areaName);
   }
   function addStorageChangeListener(listener) {
-    return SETTINGS.addStorageChangeListener(chrome, listener);
+    return LumnoSettingsStorage.addStorageChangeListener(chrome, listener);
   }
 
   optionsState.panelHeightAnimator = PANEL_MOTION.createPanelHeightAnimator({
@@ -1008,8 +1008,8 @@ import * as LumnoWebDavOptions from './webdav-options';
       groupHost: document.getElementById('_x_extension_search_source_group_order_2026_unique_'),
       getMessage,
       showToast: (message, isError) => showToast(message, isError),
-      read: () => SETTINGS.readStorageValue(optionsState.storageArea, chrome, SEARCH_SOURCE_ORDER_STORAGE_KEY),
-      write: (value) => SETTINGS.writeStorageValue(
+      read: () => LumnoSettingsStorage.readStorageValue(optionsState.storageArea, chrome, SEARCH_SOURCE_ORDER_STORAGE_KEY),
+      write: (value) => LumnoSettingsStorage.writeStorageValue(
         optionsState.rawStorageArea,
         chrome,
         SEARCH_SOURCE_ORDER_STORAGE_KEY,
@@ -1091,7 +1091,6 @@ import * as LumnoWebDavOptions from './webdav-options';
     getSearchSourceReorderCopy,
     AGGREGATE_SEARCH_STORAGE_KEY,
     getActivePrimaryAreaName,
-    SETTINGS,
     AGGREGATE_SEARCH,
     showToast,
     createPersistentId,

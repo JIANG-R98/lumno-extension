@@ -3,10 +3,11 @@
 // that fetches every key the first render needs before the modules ask for
 // them one by one.
 import * as LumnoSettings from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 
 function createStartupStorage(deps) {
   const settingsRuntimeApi = LumnoSettings;
-  const providerStorageRuntime = settingsRuntimeApi.createProviderStorageRuntime(chrome);
+  const providerStorageRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chrome);
   const rawStorageArea = providerStorageRuntime
     ? providerStorageRuntime.area
     : ((chrome && chrome.storage && chrome.storage.sync)
@@ -28,7 +29,7 @@ function createStartupStorage(deps) {
     }
   }
   const startupStorageReadBatch = rawStorageArea
-    ? settingsRuntimeApi.createStorageReadBatch(rawStorageArea)
+    ? LumnoSettingsStorage.createStorageReadBatch(rawStorageArea)
     : null;
   const storageArea = startupStorageReadBatch
     ? startupStorageReadBatch.area

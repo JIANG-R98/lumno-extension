@@ -7,9 +7,7 @@ const { moduleScript } = require('../helpers/module-script');
 function run(cache) {
   const fetched = [];
   const sandbox = {
-    LumnoSettings: Object.assign({}, settings, {
-      createProviderStorageRuntime: () => null
-    }),
+    LumnoSettings: settings,
     fetch(url, options) {
       fetched.push({ url, options });
       return Promise.resolve({ json: () => Promise.resolve({}) });

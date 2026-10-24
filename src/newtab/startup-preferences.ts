@@ -2,6 +2,7 @@
 // Reads the stored New Tab preferences once at startup (language, clock,
 // sections, shortcuts, pinned and hidden recent sites, appearance) and
 // applies them before the first reveal.
+import * as LumnoSettingsStorage from '../platform/settings-storage';
 function createStartupPreferences(deps) {
   const {
     storageArea,
@@ -70,7 +71,7 @@ function createStartupPreferences(deps) {
   // leaving a missing one alone while this device's local copy migrates in.
   const repairStoredSetting = (key, stored, value) => {
     if (stored !== value) {
-      settingsRuntimeApi.writeSettingRepairs(chrome, storageArea, { [key]: value }, { [key]: stored });
+      LumnoSettingsStorage.writeSettingRepairs(chrome, storageArea, { [key]: value }, { [key]: stored });
     }
   };
 
