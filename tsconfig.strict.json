@@ -45,6 +45,9 @@
     "src/background/selection-quick-actions-service.ts",
     "src/background/site-search-service.ts",
     "src/shared/favicon/favicon-theme.ts",
-    "src/background/tab-switcher-service.ts"
+    "src/background/tab-switcher-service.ts",
+    "src/background/overlay-open-service.ts",
+    "src/background/overlay-loading-service.ts",
+    "src/background/command-service.ts"
   ]
 }

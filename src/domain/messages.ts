@@ -390,6 +390,25 @@ interface TabSwitcherContext {
   source: string;
 }
 
+// What the search overlay opens with, handed to its toggle in the page.
+interface OverlayOpenContext {
+  // The page's zoom, which the overlay undoes to keep its size.
+  tabZoomFactor: number;
+  prefillQuery: string;
+  prioritizeCurrentPageMatch: boolean;
+  currentTabId: number | null;
+  currentTabUrl: string;
+  // When the user started waiting, for the entry motion's budget.
+  openedAt: number;
+  documentPipEnabled: boolean;
+  siteSearchProviders: SiteSearchProvider[];
+  // Open even when an overlay is already showing, instead of toggling it.
+  ensureOpen: boolean;
+  loadingSessionTracked: boolean;
+  // The input to restore after the page loaded under the overlay.
+  loadingSession: OverlayLoadingSession | null;
+}
+
 interface TabSwitcherThumbnailUpdate {
   tabId: number;
   url: string;
@@ -467,6 +486,7 @@ export type {
   SiteThemeColor,
   TabRankFields,
   TabSwitcherContext,
+  OverlayOpenContext,
   TabSwitcherItem,
   TabSwitcherThumbnailStatus,
   TabSwitcherThumbnailUpdate,

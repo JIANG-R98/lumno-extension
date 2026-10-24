@@ -3,12 +3,12 @@
 import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as LumnoExtensionRoutes from '../domain/extension-routes';
 import * as LumnoBackgroundTabGroups from './tab-groups';
-import type { CreatedTabCallback } from './tab-groups';
+import type { CreatedTabCallback, TabLike } from './tab-groups';
 import type { OkReply } from '../domain/messages';
 
 interface FallbackOptions {
   // The tab the request came from; the new tab joins its group.
-  sourceTab?: chrome.tabs.Tab | null;
+  sourceTab?: TabLike | null;
   // Show the notice that file URLs need the extension's file access.
   notice?: 'file-access' | null;
   followBrowserNewtab?: boolean;
@@ -21,7 +21,7 @@ function getChromeApi(): typeof chrome | null {
 }
 
 function createTab(
-  options: { sourceTab?: chrome.tabs.Tab | null; createProperties: chrome.tabs.CreateProperties },
+  options: { sourceTab?: TabLike | null; createProperties: chrome.tabs.CreateProperties },
   callback?: CreatedTabCallback
 ): void {
   const chromeApi = getChromeApi();

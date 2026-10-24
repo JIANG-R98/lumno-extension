@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Keeps the search overlay alive across page loads: per-tab navigation state
 // and loading records (in session storage, so a suspended worker can resume
 // them), and the retries that reopen the overlay once a navigating tab settles.
@@ -15,6 +14,99 @@ import {
   OVERLAY_RUNTIME_VERSION,
   openOverlayOnTab
 } from './overlay-open-service';
+import type { OpenOverlayOptions, TargetTab } from './overlay-open-service';
+import type { NavigationDetails, OverlayLoadingRecord, OverlaySessionState, TopFrameNavigationState } from './overlay-loading-lifecycle';
+import type { IncomingRequest, MessageSender, RejectionReply } from './message-router';
+import type { BackgroundReply } from '../domain/messages';
+
+// A loading record with the retry and stability bookkeeping this service
+// adds to it.
+interface TrackedLoadingRecord extends OverlayLoadingRecord {
+  // Counts settled loads; a stability check only acts on its own count.
+  stableCompletionToken?: number;
+  stableCompletionStartedAt?: number;
+  stableCompletionUrl?: string;
+  recoveryAttempts?: number;
+  preCompleteRetryUrl?: string;
+  preCompleteRecoveryAttempts?: number;
+  // The overlay was asked for while the tab was still leaving a page it
+  // cannot open on.
+  pendingNavigationDeferred?: boolean;
+  pendingNavigationUrl?: string;
+}
+
+// A tab update the recovery acts on: the browser's, or one this service
+// makes up after a settle delay or a document start.
+interface LoadingChangeInfo {
+  status?: string;
+  url?: string;
+  stable?: boolean;
+  stableCompletionToken?: number;
+  documentStarted?: boolean;
+}
+
+interface PendingLoadingUpdate {
+  changeInfo: LoadingChangeInfo;
+  tab: TargetTab | null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function readStoredSession(value: unknown): OverlaySessionState | null {
+  if (!isRecord(value) || typeof value.inputValue !== 'string' || typeof value.selectionStart !== 'number' ||
+      typeof value.selectionEnd !== 'number' || typeof value.focused !== 'boolean' ||
+      typeof value.revision !== 'number' || typeof value.updatedAt !== 'number') {
+    return null;
+  }
+  const direction = value.selectionDirection;
+  return {
+    inputValue: value.inputValue,
+    selectionStart: value.selectionStart,
+    selectionEnd: value.selectionEnd,
+    selectionDirection: direction === 'forward' || direction === 'backward' ? direction : 'none',
+    focused: value.focused,
+    revision: value.revision,
+    updatedAt: value.updatedAt
+  };
+}
+
+// A record this service saved to session storage, rebuilt from its fields.
+function readStoredLoadingRecord(value: unknown, tabId: number): TrackedLoadingRecord | null {
+  if (!isRecord(value) || value.tabId !== tabId) {
+    return null;
+  }
+  const record: TrackedLoadingRecord = {
+    tabId,
+    source: String(value.source || ''),
+    documentId: typeof value.documentId === 'string' ? value.documentId : '',
+    session: readStoredSession(value.session),
+    createdAt: Number(value.createdAt) || 0,
+    updatedAt: Number(value.updatedAt) || 0
+  };
+  if (typeof value.stableCompletionToken === 'number') record.stableCompletionToken = value.stableCompletionToken;
+  if (typeof value.stableCompletionStartedAt === 'number') record.stableCompletionStartedAt = value.stableCompletionStartedAt;
+  if (typeof value.stableCompletionUrl === 'string') record.stableCompletionUrl = value.stableCompletionUrl;
+  if (typeof value.recoveryAttempts === 'number') record.recoveryAttempts = value.recoveryAttempts;
+  if (typeof value.preCompleteRetryUrl === 'string') record.preCompleteRetryUrl = value.preCompleteRetryUrl;
+  if (typeof value.preCompleteRecoveryAttempts === 'number') record.preCompleteRecoveryAttempts = value.preCompleteRecoveryAttempts;
+  if (typeof value.pendingNavigationDeferred === 'boolean') record.pendingNavigationDeferred = value.pendingNavigationDeferred;
+  if (typeof value.pendingNavigationUrl === 'string') record.pendingNavigationUrl = value.pendingNavigationUrl;
+  return record;
+}
+
+function readStoredNavigationState(value: unknown, tabId: number): TopFrameNavigationState | null {
+  if (!isRecord(value) || value.tabId !== tabId) {
+    return null;
+  }
+  return {
+    tabId,
+    url: String(value.url || ''),
+    startedAt: Number(value.startedAt) || 0,
+    updatedAt: Number(value.updatedAt) || 0
+  };
+}
 
 const OVERLAY_NAVIGATION_STATE_STORAGE_PREFIX =
   '_x_extension_overlay_navigation_state_2026_unique_:';
@@ -31,24 +123,24 @@ const OVERLAY_LOADING_RECOVERY_RETRY_MS = 120;
 const OVERLAY_LOADING_PRE_COMPLETE_RETRY_MAX_ATTEMPTS = 3;
 const OVERLAY_LOADING_PRE_COMPLETE_RETRY_MS = 120;
 const OVERLAY_LOADING_STABLE_COMPLETE_MS = 1500;
-const overlayLoadingRecoveryInFlightByTabId = new Set();
-const overlayLoadingPendingUpdateByTabId = new Map();
+const overlayLoadingRecoveryInFlightByTabId = new Set<number>();
+const overlayLoadingPendingUpdateByTabId = new Map<number, PendingLoadingUpdate>();
 // Write-through caches of chrome.storage.session records, re-read on a miss.
-export const overlayNavigationStateByTabId = new Map();
-export const overlayLoadingRecordsByTabId = new Map();
+export const overlayNavigationStateByTabId = new Map<number, TopFrameNavigationState>();
+export const overlayLoadingRecordsByTabId = new Map<number, TrackedLoadingRecord>();
 
-function getOverlayLoadingRecordStorageArea() {
+function getOverlayLoadingRecordStorageArea(): chrome.storage.SessionStorageArea | null {
   return chrome && chrome.storage && chrome.storage.session &&
     typeof chrome.storage.session.get === 'function'
     ? chrome.storage.session
     : null;
 }
 
-function getOverlayNavigationStateStorageKey(tabId) {
+function getOverlayNavigationStateStorageKey(tabId: number): string {
   return `${OVERLAY_NAVIGATION_STATE_STORAGE_PREFIX}${tabId}`;
 }
 
-function setOverlayNavigationState(state) {
+function setOverlayNavigationState(state: TopFrameNavigationState): void {
   if (!state || typeof state.tabId !== 'number') {
     return;
   }
@@ -61,12 +153,12 @@ function setOverlayNavigationState(state) {
     sessionArea.set({
       [getOverlayNavigationStateStorageKey(state.tabId)]: state
     }, ignoreExpectedChromeError);
-  } catch (error) {
+  } catch (_error) {
     // The in-memory state still covers the current service-worker lifetime.
   }
 }
 
-export function clearOverlayNavigationState(tabId) {
+export function clearOverlayNavigationState(tabId: unknown): void {
   if (typeof tabId !== 'number') {
     return;
   }
@@ -77,18 +169,18 @@ export function clearOverlayNavigationState(tabId) {
   }
   try {
     sessionArea.remove(getOverlayNavigationStateStorageKey(tabId), ignoreExpectedChromeError);
-  } catch (error) {
+  } catch (_error) {
     // Ignore session-storage cleanup failures.
   }
 }
 
-export function getOverlayNavigationState(tabId, callback) {
+export function getOverlayNavigationState(tabId: unknown, callback?: (state: TopFrameNavigationState | null) => void): void {
   const done = typeof callback === 'function' ? callback : () => {};
   if (typeof tabId !== 'number') {
     done(null);
     return;
   }
-  const isExpired = (state) => OVERLAY_LOADING_LIFECYCLE.isNavigationStateExpired(
+  const isExpired = (state: TopFrameNavigationState): boolean => OVERLAY_LOADING_LIFECYCLE.isNavigationStateExpired(
       state,
       Date.now(),
       OVERLAY_NAVIGATION_STATE_TTL_MS
@@ -115,11 +207,10 @@ export function getOverlayNavigationState(tabId, callback) {
         done(null);
         return;
       }
-      const stored = result && result[storageKey] && typeof result[storageKey] === 'object'
-        ? result[storageKey]
-        : null;
-      if (!stored || stored.tabId !== tabId || isExpired(stored)) {
-        if (stored) {
+      const storedValue = result ? result[storageKey] : null;
+      const stored = readStoredNavigationState(storedValue, tabId);
+      if (!stored || isExpired(stored)) {
+        if (isRecord(storedValue)) {
           clearOverlayNavigationState(tabId);
         }
         done(null);
@@ -128,29 +219,30 @@ export function getOverlayNavigationState(tabId, callback) {
       overlayNavigationStateByTabId.set(tabId, stored);
       done(stored);
     });
-  } catch (error) {
+  } catch (_error) {
     done(null);
   }
 }
 
-export function rememberOverlayTopFrameNavigation(details) {
+export function rememberOverlayTopFrameNavigation(details: NavigationDetails | null | undefined): void {
   const state = OVERLAY_LOADING_LIFECYCLE.createTopFrameNavigationState(details, Date.now());
   if (state) {
     setOverlayNavigationState(state);
   }
 }
 
-export function updateOverlayTopFrameNavigation(details) {
+export function updateOverlayTopFrameNavigation(details: NavigationDetails | null | undefined): void {
   if (!details || typeof details.tabId !== 'number' || details.frameId !== 0) {
     return;
   }
+  const navigationDetails = details;
   getOverlayNavigationState(details.tabId, (state) => {
     if (!state) {
       return;
     }
     const nextState = OVERLAY_LOADING_LIFECYCLE.updateTopFrameNavigationState(
       state,
-      details,
+      navigationDetails,
       Date.now()
     );
     if (nextState) {
@@ -159,11 +251,11 @@ export function updateOverlayTopFrameNavigation(details) {
   });
 }
 
-function getOverlayLoadingRecordStorageKey(tabId) {
+function getOverlayLoadingRecordStorageKey(tabId: number): string {
   return `${OVERLAY_LOADING_RECORD_STORAGE_PREFIX}${tabId}`;
 }
 
-function setOverlayLoadingRecord(record) {
+function setOverlayLoadingRecord(record: TrackedLoadingRecord): void {
   if (!record || typeof record.tabId !== 'number') {
     return;
   }
@@ -193,16 +285,16 @@ function setOverlayLoadingRecord(record) {
   const shouldPreserveCurrentStability = Boolean(
     currentRecord && currentStableCompletionToken >= incomingStableCompletionToken
   );
-  const nextRecord = {
+  const nextRecord: TrackedLoadingRecord = {
     ...record,
     session: shouldPreserveCurrentSession ? currentSession : incomingSession,
     stableCompletionToken: shouldPreserveCurrentStability
       ? currentStableCompletionToken
       : incomingStableCompletionToken,
-    stableCompletionStartedAt: shouldPreserveCurrentStability
+    stableCompletionStartedAt: shouldPreserveCurrentStability && currentRecord
       ? Number(currentRecord.stableCompletionStartedAt) || 0
       : Number(record.stableCompletionStartedAt) || 0,
-    stableCompletionUrl: shouldPreserveCurrentStability
+    stableCompletionUrl: shouldPreserveCurrentStability && currentRecord
       ? String(currentRecord.stableCompletionUrl || '')
       : String(record.stableCompletionUrl || '')
   };
@@ -215,12 +307,12 @@ function setOverlayLoadingRecord(record) {
     sessionArea.set({
       [getOverlayLoadingRecordStorageKey(record.tabId)]: nextRecord
     }, ignoreExpectedChromeError);
-  } catch (error) {
+  } catch (_error) {
     // The in-memory record still covers ordinary loading lifetimes.
   }
 }
 
-export function clearOverlayLoadingRecord(tabId) {
+export function clearOverlayLoadingRecord(tabId: unknown): void {
   if (typeof tabId !== 'number') {
     return;
   }
@@ -233,12 +325,12 @@ export function clearOverlayLoadingRecord(tabId) {
   }
   try {
     sessionArea.remove(getOverlayLoadingRecordStorageKey(tabId), ignoreExpectedChromeError);
-  } catch (error) {
+  } catch (_error) {
     // Ignore session-storage cleanup failures.
   }
 }
 
-function getOverlayLoadingRecord(tabId, callback) {
+function getOverlayLoadingRecord(tabId: unknown, callback?: (record: TrackedLoadingRecord | null) => void): void {
   const done = typeof callback === 'function' ? callback : () => {};
   if (typeof tabId !== 'number') {
     done(null);
@@ -270,16 +362,15 @@ function getOverlayLoadingRecord(tabId, callback) {
         done(null);
         return;
       }
-      const stored = result && result[storageKey] && typeof result[storageKey] === 'object'
-        ? result[storageKey]
-        : null;
-      if (!stored || stored.tabId !== tabId ||
+      const storedValue = result ? result[storageKey] : null;
+      const stored = readStoredLoadingRecord(storedValue, tabId);
+      if (!stored ||
           (OVERLAY_LOADING_LIFECYCLE.isExpired(
               stored,
               Date.now(),
               OVERLAY_LOADING_RECORD_TTL_MS
             ))) {
-        if (stored) {
+        if (isRecord(storedValue)) {
           clearOverlayLoadingRecord(tabId);
         }
         done(null);
@@ -288,13 +379,17 @@ function getOverlayLoadingRecord(tabId, callback) {
       overlayLoadingRecordsByTabId.set(tabId, stored);
       done(stored);
     });
-  } catch (error) {
+  } catch (_error) {
     done(null);
   }
 }
 
-export function rememberOverlayLoadingRecord(activeTab, source, options) {
-  const settings = options && typeof options === 'object' ? options : {};
+export function rememberOverlayLoadingRecord(
+  activeTab: TargetTab & { id: number },
+  source: string,
+  options?: OpenOverlayOptions | null
+): TrackedLoadingRecord | null {
+  const settings: OpenOverlayOptions = options && typeof options === 'object' ? options : {};
   if (settings.loadingRecovery === true) {
     return settings.loadingRecord || overlayLoadingRecordsByTabId.get(activeTab.id) || null;
   }
@@ -308,21 +403,25 @@ export function rememberOverlayLoadingRecord(activeTab, source, options) {
   return record;
 }
 
-export function getPendingOverlayNavigationUrl(tab) {
+export function getPendingOverlayNavigationUrl(tab: TargetTab | null | undefined): string {
   return OVERLAY_LOADING_LIFECYCLE.getPendingInjectableUrl(
     tab,
     canOpenOverlayOnUrl
   );
 }
 
-export function shouldDeferRestrictedOverlayNavigation(tab) {
+export function shouldDeferRestrictedOverlayNavigation(tab: TargetTab | null | undefined): boolean {
   return OVERLAY_LOADING_LIFECYCLE.shouldDeferRestrictedLoadingTab(
     tab,
     canOpenOverlayOnUrl
   );
 }
 
-export function rememberOverlayPendingNavigationIntent(activeTab, source, pendingUrl) {
+export function rememberOverlayPendingNavigationIntent(
+  activeTab: TargetTab | null | undefined,
+  source: string,
+  pendingUrl: unknown
+): TrackedLoadingRecord | null {
   if (!activeTab || typeof activeTab.id !== 'number') {
     return null;
   }
@@ -331,7 +430,7 @@ export function rememberOverlayPendingNavigationIntent(activeTab, source, pendin
     return null;
   }
   const currentRecord = overlayLoadingRecordsByTabId.get(activeTab.id) || null;
-  const nextRecord = {
+  const nextRecord: TrackedLoadingRecord = {
     ...record,
     documentId: currentRecord && currentRecord.documentId
       ? currentRecord.documentId
@@ -352,7 +451,7 @@ export function rememberOverlayPendingNavigationIntent(activeTab, source, pendin
   return nextRecord;
 }
 
-function queueOverlayLoadingUpdate(tabId, changeInfo, tab) {
+function queueOverlayLoadingUpdate(tabId: number, changeInfo: LoadingChangeInfo | null | undefined, tab: TargetTab | null | undefined): void {
   const current = overlayLoadingPendingUpdateByTabId.get(tabId) || null;
   const incomingComplete = Boolean(changeInfo && changeInfo.status === 'complete');
   const incomingDocumentStarted = Boolean(changeInfo && changeInfo.documentStarted === true);
@@ -367,7 +466,7 @@ function queueOverlayLoadingUpdate(tabId, changeInfo, tab) {
   });
 }
 
-export function finishOverlayLoadingOpenAttempt(tabId) {
+export function finishOverlayLoadingOpenAttempt(tabId: number): void {
   if (typeof tabId !== 'number' ||
       !overlayLoadingRecoveryInFlightByTabId.has(tabId)) {
     return;
@@ -387,14 +486,14 @@ export function finishOverlayLoadingOpenAttempt(tabId) {
   }, 0);
 }
 
-export function markOverlayLoadingRecordUnstable(tabId, callback) {
+export function markOverlayLoadingRecordUnstable(tabId: unknown, callback?: (record: TrackedLoadingRecord | null) => void): void {
   const done = typeof callback === 'function' ? callback : () => {};
   getOverlayLoadingRecord(tabId, (record) => {
     if (!record) {
       done(null);
       return;
     }
-    const nextRecord = {
+    const nextRecord: TrackedLoadingRecord = {
       ...record,
       stableCompletionToken: Math.max(0, Number(record.stableCompletionToken) || 0) + 1,
       stableCompletionStartedAt: 0,
@@ -406,17 +505,18 @@ export function markOverlayLoadingRecordUnstable(tabId, callback) {
   });
 }
 
-function scheduleOverlayLoadingStableCompletion(tab, record) {
+function scheduleOverlayLoadingStableCompletion(tab: TargetTab | null | undefined, record: TrackedLoadingRecord | null | undefined): void {
   if (!tab || typeof tab.id !== 'number' || !record) {
     return;
   }
-  const currentRecord = overlayLoadingRecordsByTabId.get(tab.id) || record;
+  const tabId = tab.id;
+  const currentRecord = overlayLoadingRecordsByTabId.get(tabId) || record;
   const stableCompletionToken = Math.max(
     0,
     Number(currentRecord.stableCompletionToken) || 0
   ) + 1;
   const stableCompletionUrl = getResolvedTabUrl(tab);
-  const nextRecord = {
+  const nextRecord: TrackedLoadingRecord = {
     ...currentRecord,
     stableCompletionToken,
     stableCompletionStartedAt: Date.now(),
@@ -425,19 +525,19 @@ function scheduleOverlayLoadingStableCompletion(tab, record) {
   };
   setOverlayLoadingRecord(nextRecord);
   setTimeout(() => {
-    getOverlayLoadingRecord(tab.id, (latestRecord) => {
+    getOverlayLoadingRecord(tabId, (latestRecord) => {
       if (!latestRecord ||
           Number(latestRecord.stableCompletionToken) !== stableCompletionToken ||
           latestRecord.stableCompletionUrl !== stableCompletionUrl) {
         return;
       }
-      const finalizeWithCurrentTab = (currentTab) => {
+      const finalizeWithCurrentTab = (currentTab: TargetTab | null | undefined): void => {
         if (!currentTab || currentTab.status !== 'complete' ||
             getResolvedTabUrl(currentTab) !== stableCompletionUrl) {
           return;
         }
         recoverOverlayAfterLoadingUpdate(
-          tab.id,
+          tabId,
           {
             status: 'complete',
             stable: true,
@@ -447,7 +547,7 @@ function scheduleOverlayLoadingStableCompletion(tab, record) {
         );
       };
       if (chrome.tabs && typeof chrome.tabs.get === 'function') {
-        chrome.tabs.get(tab.id, (currentTab) => {
+        chrome.tabs.get(tabId, (currentTab) => {
           if (chrome.runtime && chrome.runtime.lastError) {
             return;
           }
@@ -460,7 +560,10 @@ function scheduleOverlayLoadingStableCompletion(tab, record) {
   }, OVERLAY_LOADING_STABLE_COMPLETE_MS);
 }
 
-export function updateOverlayLoadingRecordFromInvocation(activeTab, results) {
+export function updateOverlayLoadingRecordFromInvocation(
+  activeTab: TargetTab | null | undefined,
+  results: Parameters<typeof OVERLAY_LOADING_LIFECYCLE.applyInvocationResult>[1]
+): void {
   if (!activeTab || typeof activeTab.id !== 'number') {
     return;
   }
@@ -482,7 +585,11 @@ export function updateOverlayLoadingRecordFromInvocation(activeTab, results) {
   }
 }
 
-export function updateOverlayLoadingSessionFromMessage(request, sender, sendResponse) {
+export function updateOverlayLoadingSessionFromMessage(
+  request: IncomingRequest<'updateOverlayLoadingSession'>,
+  sender: MessageSender,
+  sendResponse: (reply: BackgroundReply<'updateOverlayLoadingSession'> | RejectionReply) => void
+): void {
   const senderTab = sender && sender.tab ? sender.tab : null;
   if (!senderTab || typeof senderTab.id !== 'number' ||
       (typeof sender.frameId === 'number' && sender.frameId !== 0)) {
@@ -516,17 +623,21 @@ export function updateOverlayLoadingSessionFromMessage(request, sender, sendResp
   });
 }
 
-function probeOverlayLoadingState(tabId, callback) {
+function probeOverlayLoadingState(
+  tabId: number,
+  callback: (results: Parameters<typeof OVERLAY_LOADING_LIFECYCLE.decideRecovery>[1]) => void
+): void {
   chrome.scripting.executeScript({
     target: { tabId },
     injectImmediately: true,
-    func: (runtimeVersion, hostId) => {
-      const rawOpenState = window._x_extension_search_overlay_open_2026_unique_;
+    // Runs in the page on its own.
+    func: (runtimeVersion: string, hostId: string): unknown => {
+      const rawOpenState: unknown = Reflect.get(window, '_x_extension_search_overlay_open_2026_unique_');
       const host = document.getElementById(hostId);
       return {
         runtimeReady:
-          window._x_extension_search_overlay_runtime_version_2026_unique_ === runtimeVersion &&
-          typeof window._x_extension_toggleSearchOverlay_2026_unique_ === 'function',
+          Reflect.get(window, '_x_extension_search_overlay_runtime_version_2026_unique_') === runtimeVersion &&
+          typeof Reflect.get(window, '_x_extension_toggleSearchOverlay_2026_unique_') === 'function',
         overlayOpenState: rawOpenState === true
           ? 'open'
           : (rawOpenState === false ? 'closed' : 'unknown'),
@@ -537,48 +648,50 @@ function probeOverlayLoadingState(tabId, callback) {
   }, callback);
 }
 
-function scheduleOverlayLoadingRecoveryRetry(tab, record) {
+function scheduleOverlayLoadingRecoveryRetry(tab: TargetTab | null | undefined, record: TrackedLoadingRecord | null | undefined): void {
   if (!tab || typeof tab.id !== 'number' || !record) {
     return;
   }
+  const tabId = tab.id;
   const recoveryAttempts = Math.max(0, Number(record.recoveryAttempts) || 0) + 1;
   if (recoveryAttempts > OVERLAY_LOADING_RECOVERY_MAX_ATTEMPTS) {
-    clearOverlayLoadingRecord(tab.id);
+    clearOverlayLoadingRecord(tabId);
     return;
   }
-  const nextRecord = {
+  const nextRecord: TrackedLoadingRecord = {
     ...record,
     recoveryAttempts,
     updatedAt: Date.now()
   };
   setOverlayLoadingRecord(nextRecord);
   setTimeout(() => {
-    recoverOverlayAfterLoadingUpdate(tab.id, { status: 'complete' }, tab);
+    recoverOverlayAfterLoadingUpdate(tabId, { status: 'complete' }, tab);
   }, OVERLAY_LOADING_RECOVERY_RETRY_MS * recoveryAttempts);
 }
 
-export function scheduleOverlayLoadingPreCompleteRetry(tab, record) {
+export function scheduleOverlayLoadingPreCompleteRetry(tab: TargetTab | null | undefined, record: TrackedLoadingRecord | null | undefined): void {
   if (!tab || typeof tab.id !== 'number' || !record) {
     return;
   }
+  const tabId = tab.id;
   const committedUrl = getResolvedTabUrl(tab);
   if (!canOpenOverlayOnUrl(committedUrl)) {
     return;
   }
-  const currentRecord = overlayLoadingRecordsByTabId.get(tab.id) || record;
+  const currentRecord = overlayLoadingRecordsByTabId.get(tabId) || record;
   const previousAttempts = currentRecord.preCompleteRetryUrl === committedUrl
     ? Math.max(0, Number(currentRecord.preCompleteRecoveryAttempts) || 0)
     : 0;
   const preCompleteRecoveryAttempts = previousAttempts + 1;
   if (preCompleteRecoveryAttempts > OVERLAY_LOADING_PRE_COMPLETE_RETRY_MAX_ATTEMPTS) {
     logHotkeyDebug('loading-pre-complete-retry-paused', {
-      tabId: tab.id,
+      tabId,
       url: committedUrl,
       source: currentRecord.source || ''
     });
     return;
   }
-  const nextRecord = {
+  const nextRecord: TrackedLoadingRecord = {
     ...currentRecord,
     preCompleteRetryUrl: committedUrl,
     preCompleteRecoveryAttempts,
@@ -586,31 +699,31 @@ export function scheduleOverlayLoadingPreCompleteRetry(tab, record) {
   };
   setOverlayLoadingRecord(nextRecord);
   setTimeout(() => {
-    getOverlayLoadingRecord(tab.id, (latestRecord) => {
+    getOverlayLoadingRecord(tabId, (latestRecord) => {
       if (!latestRecord || latestRecord.preCompleteRetryUrl !== committedUrl ||
           Number(latestRecord.preCompleteRecoveryAttempts) !== preCompleteRecoveryAttempts) {
         return;
       }
-      const retryWithCurrentTab = (currentTab) => {
-        const stillTracked = overlayLoadingRecordsByTabId.get(tab.id) || null;
+      const retryWithCurrentTab = (currentTab: TargetTab | null | undefined): void => {
+        const stillTracked = overlayLoadingRecordsByTabId.get(tabId) || null;
         if (!stillTracked || stillTracked.preCompleteRetryUrl !== committedUrl ||
             Number(stillTracked.preCompleteRecoveryAttempts) !== preCompleteRecoveryAttempts) {
           return;
         }
-        const retryTab = currentTab && typeof currentTab === 'object'
+        const retryTab: TargetTab = currentTab && typeof currentTab === 'object'
           ? currentTab
           : tab;
         const retryUrl = getResolvedTabUrl(retryTab);
         if (!canOpenOverlayOnUrl(retryUrl)) {
           return;
         }
-        const retryChangeInfo = retryTab.status === 'complete'
+        const retryChangeInfo: LoadingChangeInfo = retryTab.status === 'complete'
           ? { status: retryTab.status }
           : { url: retryUrl };
-        recoverOverlayAfterLoadingUpdate(tab.id, retryChangeInfo, retryTab);
+        recoverOverlayAfterLoadingUpdate(tabId, retryChangeInfo, retryTab);
       };
       if (chrome.tabs && typeof chrome.tabs.get === 'function') {
-        chrome.tabs.get(tab.id, (currentTab) => {
+        chrome.tabs.get(tabId, (currentTab) => {
           if (chrome.runtime && chrome.runtime.lastError) {
             return;
           }
@@ -623,10 +736,11 @@ export function scheduleOverlayLoadingPreCompleteRetry(tab, record) {
   }, OVERLAY_LOADING_PRE_COMPLETE_RETRY_MS * preCompleteRecoveryAttempts);
 }
 
-function restoreOverlayAfterLoadingDocumentChange(tab, record, complete) {
+function restoreOverlayAfterLoadingDocumentChange(tab: TargetTab | null | undefined, record: TrackedLoadingRecord | null | undefined, complete: boolean): void {
   if (!tab || typeof tab.id !== 'number' || !record) {
     return;
   }
+  const tabId = tab.id;
   openOverlayOnTab(tab, [], record.source, {
     loadingRecovery: true,
     loadingRecord: record,
@@ -635,8 +749,8 @@ function restoreOverlayAfterLoadingDocumentChange(tab, record, complete) {
     onComplete: (ok) => {
       if (complete === true) {
         if (ok) {
-          const restoredRecord = overlayLoadingRecordsByTabId.get(tab.id) || record;
-          if (!overlayLoadingPendingUpdateByTabId.has(tab.id)) {
+          const restoredRecord = overlayLoadingRecordsByTabId.get(tabId) || record;
+          if (!overlayLoadingPendingUpdateByTabId.has(tabId)) {
             scheduleOverlayLoadingStableCompletion(tab, restoredRecord);
           }
         } else {
@@ -646,7 +760,7 @@ function restoreOverlayAfterLoadingDocumentChange(tab, record, complete) {
       }
       if (!ok) {
         logHotkeyDebug('loading-recovery-failed', {
-          tabId: tab.id,
+          tabId,
           source: record.source || ''
         });
         scheduleOverlayLoadingPreCompleteRetry(tab, record);
@@ -655,7 +769,11 @@ function restoreOverlayAfterLoadingDocumentChange(tab, record, complete) {
   });
 }
 
-export function recoverOverlayAfterLoadingUpdate(tabId, changeInfo, tab) {
+export function recoverOverlayAfterLoadingUpdate(
+  tabId: number,
+  changeInfo: LoadingChangeInfo | null | undefined,
+  tab: TargetTab | null | undefined
+): void {
   const isComplete = Boolean(changeInfo && changeInfo.status === 'complete');
   const isStableComplete = Boolean(isComplete && changeInfo && changeInfo.stable === true);
   const isCommittedUrl = Boolean(changeInfo && typeof changeInfo.url === 'string');
@@ -670,7 +788,7 @@ export function recoverOverlayAfterLoadingUpdate(tabId, changeInfo, tab) {
     if (!record) {
       return;
     }
-    if (isStableComplete &&
+    if (isStableComplete && changeInfo &&
         Number(changeInfo.stableCompletionToken) !== Number(record.stableCompletionToken)) {
       return;
     }
@@ -678,8 +796,8 @@ export function recoverOverlayAfterLoadingUpdate(tabId, changeInfo, tab) {
       queueOverlayLoadingUpdate(tabId, changeInfo, tab);
       return;
     }
-    const resolvedTab = Object.assign({}, tab || {}, { id: tabId });
-    if (isCommittedUrl) {
+    const resolvedTab: TargetTab & { id: number } = { ...(tab || {}), id: tabId };
+    if (isCommittedUrl && changeInfo) {
       resolvedTab.url = changeInfo.url;
     }
     const resolvedUrl = getResolvedTabUrl(resolvedTab);
@@ -694,7 +812,7 @@ export function recoverOverlayAfterLoadingUpdate(tabId, changeInfo, tab) {
         record.pendingNavigationDeferred === true;
       clearOverlayLoadingRecord(tabId);
       if (shouldReplayRestrictedIntent) {
-        const settledTab = {
+        const settledTab: TargetTab = {
           ...resolvedTab,
           status: 'complete',
           pendingUrl: ''
@@ -757,27 +875,31 @@ export function recoverOverlayAfterLoadingUpdate(tabId, changeInfo, tab) {
   });
 }
 
-export function recoverOverlayAfterTopFrameDocumentStart(request, sender) {
+export function recoverOverlayAfterTopFrameDocumentStart(
+  request: IncomingRequest<'notifyTopFrameDocumentStarted'>,
+  sender: MessageSender
+): boolean {
   const senderTab = sender && sender.tab ? sender.tab : null;
   if (!senderTab || typeof senderTab.id !== 'number' ||
       (typeof sender.frameId === 'number' && sender.frameId !== 0)) {
     return false;
   }
-  const documentUrl = request && typeof request.documentUrl === 'string' &&
-    request.documentUrl.trim()
-    ? request.documentUrl.trim()
-    : getResolvedTabUrl(senderTab);
-  const committedTab = {
+  const requestedUrl = request && typeof request.documentUrl === 'string' ? request.documentUrl.trim() : '';
+  const documentUrl = requestedUrl || getResolvedTabUrl(senderTab);
+  const senderTabId = senderTab.id;
+  const committedTab: TargetTab = {
     ...senderTab,
     status: 'loading',
     url: documentUrl
   };
-  markOverlayLoadingRecordUnstable(senderTab.id, () => {
+  markOverlayLoadingRecordUnstable(senderTabId, () => {
     recoverOverlayAfterLoadingUpdate(
-      senderTab.id,
+      senderTabId,
       { url: documentUrl, documentStarted: true },
       committedTab
     );
   });
   return true;
 }
+
+export type { LoadingChangeInfo, TrackedLoadingRecord };
