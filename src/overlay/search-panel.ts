@@ -3,6 +3,7 @@ import * as FAVICON_THEME from '../shared/favicon/favicon-theme';
 import * as COMMUNITY_LINKS from '../domain/community-links';
 import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
+import * as LumnoShortcutFaviconStore from '../platform/shortcut-favicon-store';
 import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
 import * as LumnoImeKeyGuard from '../domain/search/ime-key-guard';
 import * as SEARCH_INPUT_HISTORY from '../domain/search/search-input-history';
@@ -1647,7 +1648,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   overlayState.aggregateSearchesCache = null;
   overlayState.aggregateSearchesLoadPromise = null;
   overlayState.aggregateSearchesLoadVersion = 0;
-  const siteSearchIconStore = SHORTCUT_FAVICON.createShortcutFaviconStore({
+  const siteSearchIconStore = LumnoShortcutFaviconStore.createShortcutFaviconStore({
     chromeApi: chrome,
     storageArea: localStorageArea,
     storageKey: SITE_SEARCH_ICON_CACHE_STORAGE_KEY,

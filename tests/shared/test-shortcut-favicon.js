@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
+const shortcutFaviconStore = require('../../src/platform/shortcut-favicon-store.ts');
 const searchUtils = require('../../src/domain/search/search-utils.ts');
 const { shortcutsStorage } = require('../helpers/newtab-fixtures');
 const { createNewtabPage } = require('../helpers/newtab-page');
@@ -166,7 +167,7 @@ async function testLocalCache() {
   const storage = createMemoryStorage({
     [shortcutFavicon.DEFAULT_STORAGE_KEY]: cache
   });
-  const store = shortcutFavicon.createShortcutFaviconStore({
+  const store = shortcutFaviconStore.createShortcutFaviconStore({
     storageArea: storage,
     chromeApi: { runtime: {} }
   });
@@ -237,7 +238,7 @@ function testStableShortcutArtwork() {
 async function testConcurrentCacheUpdates() {
   const storage = createMemoryStorage();
   const lockManager = createLockManager();
-  const createStore = () => shortcutFavicon.createShortcutFaviconStore({
+  const createStore = () => shortcutFaviconStore.createShortcutFaviconStore({
     storageArea: storage,
     chromeApi: { runtime: {} },
     lockManager
@@ -365,7 +366,7 @@ async function testDedicatedSiteSearchCachePolicy() {
   const storage = createMemoryStorage({
     [shortcutFavicon.SITE_SEARCH_STORAGE_KEY]: cache
   });
-  const store = shortcutFavicon.createShortcutFaviconStore({
+  const store = shortcutFaviconStore.createShortcutFaviconStore({
     storageArea: storage,
     storageKey: shortcutFavicon.SITE_SEARCH_STORAGE_KEY,
     chromeApi: { runtime: {} },

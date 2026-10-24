@@ -1,10 +1,88 @@
-// @ts-nocheck
+// Icons for shortcuts and site search providers: the bundled artwork for
+// known sites, picking the best icon a page declares, reading an icon
+// file's dimensions, and the saved icon snapshots keyed by page.
 import * as faviconUtils from './favicon-utils';
+import type { SiteSearchProvider } from '../search/types';
+
+// What the icon helpers read from a site search provider.
+type IconProvider = Partial<Pick<SiteSearchProvider, 'key' | 'builtinKey' | 'template' | 'icon' | 'iconUrl'>>;
+
+// A saved icon for one page.
+interface CachedIcon {
+  dataUrl: string;
+  // Where the image came from: the page's own icon, a favicon service or
+  // the browser's favicon cache.
+  sourceUrl: string;
+  updatedAt: number;
+}
+
+// Saved icons keyed by page URL (getCacheKey).
+type CachedIconMap = Record<string, CachedIcon>;
+
+interface IconCacheOptions {
+  // 0 keeps icons until their page is removed.
+  cacheTtlMs: number;
+  cacheMaxEntries: number;
+  maxDataUrlLength: number;
+}
+
+// How a saved icon was obtained, as the shortcut editor names it.
+type CachedIconSource = 'favicon-is' | 'service' | 'cache';
+
+// Where a page declares an icon, or a well-known address tried without one.
+type IconCandidateSource = 'icon' | 'apple-touch-icon' | 'manifest' | 'root-svg' | 'root';
+
+interface IconCandidate {
+  url: string;
+  source: IconCandidateSource;
+  // The largest square size declared; Infinity for a vector or "any".
+  declaredSize: number;
+  vector: boolean;
+  // A manifest icon's purpose ('any', 'maskable', ...), or ''.
+  purpose: string;
+  // How well the icon matches the preferred light or dark theme.
+  themeScore: number;
+  score: number;
+}
+
+interface IconCandidateOptions {
+  source?: IconCandidateSource;
+  declaredSize?: number;
+  vector?: boolean;
+  purpose?: string;
+  themeScore?: number;
+}
+
+interface IconDimensions {
+  width: number;
+  height: number;
+}
+
+// What a downloaded icon file turned out to be.
+interface IconResourceInfo {
+  // Large enough to show crisply.
+  usable: boolean;
+  vector: boolean;
+  width: number;
+  height: number;
+  mimeType: string;
+}
+
+interface IconInspectOptions {
+  // Smallest longer side accepted, between 16 and MIN_ICON_DIMENSION.
+  minDimension?: number;
+}
+
+interface SiteSearchIconOptions extends Partial<IconCacheOptions> {
+  // The extension URL of a bundled asset path.
+  resolveAssetUrl?: (assetPath: string) => string;
+}
+
 const DEFAULT_STORAGE_KEY = '_x_extension_newtab_shortcut_favicon_cache_2026_unique_';
 const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_icon_cache_canonical_2026_unique_';
 const GOOGLE_BRAND_ICON_URL =
   'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png';
-const SITE_SEARCH_PINNED_ICON_ASSETS = Object.freeze({
+const SITE_SEARCH_PINNED_ICON_ASSETS: Readonly<Record<string, string>> = Object.freeze({
   yt: 'assets/images/site-search/tile-yt.png',
   bb: 'assets/images/site-search/tile-bb.png',
   gh: 'assets/images/site-search/tile-gh.png',
@@ -59,7 +137,7 @@ const SITE_SEARCH_PINNED_ICON_ASSETS = Object.freeze({
 });
 // Shortcuts supply their own themed tile. Load the original artwork without
 // the background and rounded mask baked into the search-provider tiles.
-const SHORTCUT_PINNED_ICON_ASSETS = Object.freeze({
+const SHORTCUT_PINNED_ICON_ASSETS: Readonly<Record<string, string>> = Object.freeze({
   yt: 'assets/images/site-search/glyph-yt.svg',
   bb: 'assets/images/site-search/glyph-bb.svg',
   gh: 'assets/images/site-search/glyph-gh.svg',
@@ -114,7 +192,7 @@ const SHORTCUT_PINNED_ICON_ASSETS = Object.freeze({
 });
 // A provider's search often runs on its own subdomain (search.bilibili.com),
 // so list the hosts people actually save as shortcuts for the same brand.
-const SHORTCUT_ICON_SITE_HOSTS = Object.freeze({
+const SHORTCUT_ICON_SITE_HOSTS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   yt: Object.freeze(['m.youtube.com', 'youtu.be']),
   bb: Object.freeze(['bilibili.com', 'm.bilibili.com', 'space.bilibili.com']),
   maps: Object.freeze(['maps.google.com']),
@@ -140,14 +218,14 @@ const SHORTCUT_ICON_SITE_HOSTS = Object.freeze({
   zw: Object.freeze(['zh.m.wikipedia.org'])
 });
 // Products that share a host with another provider only own their section.
-const SHORTCUT_ICON_PATH_SCOPES = Object.freeze({
+const SHORTCUT_ICON_PATH_SCOPES: Readonly<Record<string, string>> = Object.freeze({
   maps: '/maps'
 });
 // Shortcut artwork is a saved snapshot; deletion or a URL edit prunes it.
 const CACHE_TTL_MS = 0;
 const CACHE_MAX_ENTRIES = 60;
 const MAX_DATA_URL_LENGTH = 384 * 1024;
-const SITE_SEARCH_CACHE_OPTIONS = Object.freeze({
+const SITE_SEARCH_CACHE_OPTIONS: Readonly<IconCacheOptions> = Object.freeze({
   cacheTtlMs: 1000 * 60 * 60 * 24 * 180,
   cacheMaxEntries: 40,
   maxDataUrlLength: 192 * 1024
@@ -158,7 +236,16 @@ const MIN_ICON_DIMENSION = 128;
 const SUPPORTED_DATA_URL_PATTERN =
   /^data:image\/(?:png|webp|avif|svg\+xml|x-icon|vnd\.microsoft\.icon|jpeg|jpg|gif);base64,/i;
 
-function getHtmlAttributeValue(tag, name) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+// An own value of a lookup table, so "constructor" and its kin never match.
+function lookup<T>(table: Readonly<Record<string, T>>, key: string): T | undefined {
+  return Object.prototype.hasOwnProperty.call(table, key) ? table[key] : undefined;
+}
+
+function getHtmlAttributeValue(tag: string | undefined, name: string): string {
   if (!tag || !name) {
     return '';
   }
@@ -167,7 +254,7 @@ function getHtmlAttributeValue(tag, name) {
   return match ? String(match[2] || match[3] || match[4] || '').trim() : '';
 }
 
-function normalizePageUrl(value) {
+function normalizePageUrl(value: unknown): string {
   try {
     const parsed = new URL(String(value || '').trim());
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
@@ -175,31 +262,31 @@ function normalizePageUrl(value) {
     }
     parsed.hash = '';
     return parsed.href;
-  } catch (error) {
+  } catch (_error) {
     return '';
   }
 }
 
-function getCacheKey(pageUrl) {
+function getCacheKey(pageUrl: unknown): string {
   return normalizePageUrl(pageUrl);
 }
 
-function normalizeIconSourceUrl(value) {
+function normalizeIconSourceUrl(value: unknown): string {
   const raw = String(value || '').trim();
   if (faviconUtils.isSafeVirtualFaviconRequestUrl(raw)) {
-    try { return new URL(raw).href; } catch (error) { return ''; }
+    try { return new URL(raw).href; } catch (_error) { return ''; }
   }
   return normalizePageUrl(raw);
 }
 
-function getCachedIconSource(entry) {
+function getCachedIconSource(entry: Partial<CachedIcon> | null | undefined): CachedIconSource {
   const sourceUrl = String(entry && entry.sourceUrl || '');
   if (faviconUtils.isFaviconIsUrl(sourceUrl)) return 'favicon-is';
   return !faviconUtils.isSafeVirtualFaviconRequestUrl(sourceUrl) && faviconUtils.isFaviconProxyUrl(sourceUrl)
     ? 'service' : 'cache';
 }
 
-function isCachedIconForPage(entry, pageUrl) {
+function isCachedIconForPage(entry: Partial<CachedIcon> | null | undefined, pageUrl: unknown): boolean {
   const page = normalizePageUrl(pageUrl);
   if (!entry || !page) return false;
   const parsedPage = new URL(page);
@@ -223,7 +310,7 @@ function isCachedIconForPage(entry, pageUrl) {
   return true;
 }
 
-function getSiteSearchProviderPageUrl(provider) {
+function getSiteSearchProviderPageUrl(provider: IconProvider | null | undefined): string {
   const template = provider && provider.template ? String(provider.template).trim() : '';
   if (!template) {
     return '';
@@ -234,42 +321,43 @@ function getSiteSearchProviderPageUrl(provider) {
       return '';
     }
     return `${parsed.origin}/`;
-  } catch (error) {
+  } catch (_error) {
     return '';
   }
 }
 
-function getSiteSearchProviderExplicitIcon(provider) {
+function getSiteSearchProviderExplicitIcon(provider: IconProvider | null | undefined): string {
   return String(provider && (provider.icon || provider.iconUrl) || '').trim();
 }
 
-function getSiteSearchPinnedIconAssetPath(provider) {
-  const providerKey = String(
-    provider && (provider.builtinKey || provider.key) || ''
-  ).trim().toLowerCase();
-  return SITE_SEARCH_PINNED_ICON_ASSETS[providerKey] || '';
+function getProviderAssetKey(provider: IconProvider | null | undefined): string {
+  return String(provider && (provider.builtinKey || provider.key) || '').trim().toLowerCase();
 }
 
-function getSiteSearchIconAssetPath(value) {
+function getSiteSearchPinnedIconAssetPath(provider: IconProvider | null | undefined): string {
+  return lookup(SITE_SEARCH_PINNED_ICON_ASSETS, getProviderAssetKey(provider)) || '';
+}
+
+function getSiteSearchIconAssetPath(value: unknown): string {
   const raw = String(value || '').trim();
   if (!raw) {
     return '';
   }
   try {
     return new URL(raw, 'https://lumno.invalid/').pathname.replace(/^\/+/, '');
-  } catch (error) {
+  } catch (_error) {
     return raw.split(/[?#]/, 1)[0].replace(/^\/+/, '');
   }
 }
 
-function isSiteSearchPinnedIconAssetUrl(value) {
+function isSiteSearchPinnedIconAssetUrl(value: unknown): boolean {
   const assetPath = getSiteSearchIconAssetPath(value);
   return Boolean(
     assetPath && Object.values(SITE_SEARCH_PINNED_ICON_ASSETS).includes(assetPath)
   );
 }
 
-function shouldHydrateSiteSearchProviderIcon(value) {
+function shouldHydrateSiteSearchProviderIcon(value: unknown): boolean {
   const iconUrl = String(value || '').trim();
   return Boolean(
     iconUrl &&
@@ -278,9 +366,13 @@ function shouldHydrateSiteSearchProviderIcon(value) {
   );
 }
 
-function createSiteSearchProviderIconHydrator(attachFaviconData) {
+// Swaps a provider icon for its saved image once that is available; bundled
+// artwork and data URLs are shown as they are.
+function createSiteSearchProviderIconHydrator<I, H>(
+  attachFaviconData: ((icon: I, iconUrl: string, iconHost: H) => void) | null | undefined
+): (icon: I, iconUrl: unknown, iconHost: H) => boolean {
   const attach = typeof attachFaviconData === 'function' ? attachFaviconData : null;
-  return function hydrateSiteSearchProviderIcon(icon, iconUrl, iconHost) {
+  return function hydrateSiteSearchProviderIcon(icon: I, iconUrl: unknown, iconHost: H): boolean {
     const resolvedIconUrl = String(iconUrl || '').trim();
     if (!attach || !shouldHydrateSiteSearchProviderIcon(resolvedIconUrl)) {
       return false;
@@ -290,7 +382,7 @@ function createSiteSearchProviderIconHydrator(attachFaviconData) {
   };
 }
 
-function getPinnedSiteSearchProviderIcon(provider) {
+function getPinnedSiteSearchProviderIcon(provider: IconProvider | null | undefined): string {
   const explicitIcon = getSiteSearchProviderExplicitIcon(provider);
   if (!explicitIcon) {
     return '';
@@ -301,7 +393,12 @@ function getPinnedSiteSearchProviderIcon(provider) {
     : '';
 }
 
-function getSiteSearchProviderIcon(cacheMap, provider, nowValue, options) {
+function getSiteSearchProviderIcon(
+  cacheMap: unknown,
+  provider: IconProvider | null | undefined,
+  nowValue?: unknown,
+  options?: SiteSearchIconOptions | null
+): string {
   const pinnedAssetPath = getSiteSearchPinnedIconAssetPath(provider);
   const resolveAssetUrl = options && typeof options.resolveAssetUrl === 'function'
     ? options.resolveAssetUrl
@@ -315,7 +412,7 @@ function getSiteSearchProviderIcon(cacheMap, provider, nowValue, options) {
   const pageUrl = getSiteSearchProviderPageUrl(provider);
   const cacheKey = getCacheKey(pageUrl);
   const normalizedCache = normalizeCacheMap(cacheMap, nowValue, options);
-  const cachedEntry = cacheKey ? normalizedCache[cacheKey] : null;
+  const cachedEntry = cacheKey ? lookup(normalizedCache, cacheKey) : undefined;
   const pinnedIcon = getPinnedSiteSearchProviderIcon(provider);
   if (cachedEntry && cachedEntry.dataUrl) {
     const cachedSource = normalizePageUrl(cachedEntry.sourceUrl);
@@ -327,53 +424,51 @@ function getSiteSearchProviderIcon(cacheMap, provider, nowValue, options) {
   return pinnedIcon || getSiteSearchProviderExplicitIcon(provider);
 }
 
-function getBundledShortcutIconAssetPath(pageUrl, providers) {
-  const getHost = (url) => {
-    try {
-      const parsed = new URL(String(url || ''));
-      return /^https?:$/.test(parsed.protocol)
-        ? parsed.hostname.toLowerCase().replace(/^www\./, '') : '';
-    } catch (error) {
-      return '';
-    }
-  };
-  const host = getHost(pageUrl);
+function getHttpHost(url: unknown): string {
+  try {
+    const parsed = new URL(String(url || ''));
+    return /^https?:$/.test(parsed.protocol)
+      ? parsed.hostname.toLowerCase().replace(/^www\./, '') : '';
+  } catch (_error) {
+    return '';
+  }
+}
+
+// The bundled artwork for a shortcut to a site a provider stands for, or ''.
+function getBundledShortcutIconAssetPath(pageUrl: unknown, providers: readonly IconProvider[] | null | undefined): string {
+  const host = getHttpHost(pageUrl);
   if (!host) {
     return '';
   }
   const pathname = new URL(String(pageUrl)).pathname;
-  const getKey = (item) => String(item && (item.builtinKey || item.key) || '').trim().toLowerCase();
-  const matchesSearchHost = (item) => {
-    const scope = SHORTCUT_ICON_PATH_SCOPES[getKey(item)];
-    return getHost(getSiteSearchProviderPageUrl(item)) === host &&
+  const matchesSearchHost = (item: IconProvider): boolean => {
+    const scope = lookup(SHORTCUT_ICON_PATH_SCOPES, getProviderAssetKey(item));
+    return getHttpHost(getSiteSearchProviderPageUrl(item)) === host &&
       (!scope || pathname === scope || pathname.startsWith(`${scope}/`));
   };
   const candidates = (Array.isArray(providers) ? providers : []).filter((item) => (
     getSiteSearchPinnedIconAssetPath(item) &&
-    (matchesSearchHost(item) || (SHORTCUT_ICON_SITE_HOSTS[getKey(item)] || []).includes(host))
+    (matchesSearchHost(item) || (lookup(SHORTCUT_ICON_SITE_HOSTS, getProviderAssetKey(item)) || []).includes(host))
   ));
   // A path-scoped product (Google Maps) wins inside its section; elsewhere
   // on a shared host the site's own artwork applies.
-  const provider = candidates.find((item) => SHORTCUT_ICON_PATH_SCOPES[getKey(item)]) || candidates[0];
-  return SHORTCUT_PINNED_ICON_ASSETS[getKey(provider)] || '';
+  const provider = candidates.find((item) => lookup(SHORTCUT_ICON_PATH_SCOPES, getProviderAssetKey(item))) || candidates[0];
+  return lookup(SHORTCUT_PINNED_ICON_ASSETS, getProviderAssetKey(provider)) || '';
 }
 
-function normalizeCacheOptions(options) {
-  const settings = options && typeof options === 'object' ? options : {};
+function normalizeCacheOptions(options: unknown): Readonly<IconCacheOptions> {
+  const settings = isRecord(options) ? options : {};
+  const ttl = Number(settings.cacheTtlMs);
+  const maxEntries = Number(settings.cacheMaxEntries);
+  const maxLength = Number(settings.maxDataUrlLength);
   return Object.freeze({
-    cacheTtlMs: Number.isFinite(Number(settings.cacheTtlMs)) && Number(settings.cacheTtlMs) >= 0
-      ? Number(settings.cacheTtlMs)
-      : CACHE_TTL_MS,
-    cacheMaxEntries: Number.isFinite(Number(settings.cacheMaxEntries)) && Number(settings.cacheMaxEntries) > 0
-      ? Math.floor(Number(settings.cacheMaxEntries))
-      : CACHE_MAX_ENTRIES,
-    maxDataUrlLength: Number.isFinite(Number(settings.maxDataUrlLength)) && Number(settings.maxDataUrlLength) > 0
-      ? Math.floor(Number(settings.maxDataUrlLength))
-      : MAX_DATA_URL_LENGTH
+    cacheTtlMs: Number.isFinite(ttl) && ttl >= 0 ? ttl : CACHE_TTL_MS,
+    cacheMaxEntries: Number.isFinite(maxEntries) && maxEntries > 0 ? Math.floor(maxEntries) : CACHE_MAX_ENTRIES,
+    maxDataUrlLength: Number.isFinite(maxLength) && maxLength > 0 ? Math.floor(maxLength) : MAX_DATA_URL_LENGTH
   });
 }
 
-function normalizeDataUrl(value, options) {
+function normalizeDataUrl(value: unknown, options?: unknown): string {
   const cacheOptions = normalizeCacheOptions(options);
   const dataUrl = String(value || '').trim();
   if (!SUPPORTED_DATA_URL_PATTERN.test(dataUrl) || dataUrl.length > cacheOptions.maxDataUrlLength) {
@@ -382,7 +477,9 @@ function normalizeDataUrl(value, options) {
   return dataUrl;
 }
 
-function getLargestDeclaredSize(value) {
+// The largest square size in a sizes attribute ("16x16 32x32"); Infinity
+// for "any".
+function getLargestDeclaredSize(value: unknown): number {
   const sizes = String(value || '').trim().toLowerCase();
   if (!sizes) {
     return 0;
@@ -390,14 +487,14 @@ function getLargestDeclaredSize(value) {
   if (sizes.split(/\s+/).includes('any')) {
     return Number.POSITIVE_INFINITY;
   }
-  const dimensions = sizes.match(/(\d+)\s*x\s*(\d+)/g) || [];
-  return dimensions.reduce((largest, dimension) => {
+  const dimensions: string[] = sizes.match(/(\d+)\s*x\s*(\d+)/g) || [];
+  return dimensions.reduce((largest: number, dimension) => {
     const parts = dimension.split('x').map((part) => Number(part));
     return Math.max(largest, Math.min(parts[0] || 0, parts[1] || 0));
   }, 0);
 }
 
-function getThemeScore(url, media, preferredTheme) {
+function getThemeScore(url: string, media: string, preferredTheme: unknown): number {
   const theme = String(preferredTheme || '').trim().toLowerCase();
   if (theme !== 'dark' && theme !== 'light') {
     return 0;
@@ -414,11 +511,10 @@ function getThemeScore(url, media, preferredTheme) {
   return score;
 }
 
-function scoreIconCandidate(candidate) {
-  const item = candidate || {};
-  const declaredSize = Number(item.declaredSize || 0);
+function scoreIconCandidate(candidate: Omit<IconCandidate, 'score'>): number {
+  const declaredSize = Number(candidate.declaredSize || 0);
   let score = 0;
-  if (item.vector) {
+  if (candidate.vector) {
     score += 1200;
   } else if (declaredSize >= 256) {
     score += 1000;
@@ -437,72 +533,75 @@ function scoreIconCandidate(candidate) {
   } else {
     score += 520;
   }
-  if (item.source === 'manifest') {
+  if (candidate.source === 'manifest') {
     score += 60;
   }
-  if (item.source === 'apple-touch-icon') {
+  if (candidate.source === 'apple-touch-icon') {
     score += 50;
   }
-  if (item.purpose === 'any') {
+  if (candidate.purpose === 'any') {
     score += 20;
   }
-  score += Number(item.themeScore || 0);
+  score += Number(candidate.themeScore || 0);
   return score;
 }
 
-function createCandidate(url, options) {
+function createCandidate(url: string, options?: IconCandidateOptions): IconCandidate | null {
   const normalizedUrl = normalizePageUrl(url);
   if (!normalizedUrl) {
     return null;
   }
-  const settings = options && typeof options === 'object' ? options : {};
+  const settings = options || {};
   const candidate = {
     url: normalizedUrl,
-    source: String(settings.source || 'icon'),
+    source: settings.source || 'icon',
     declaredSize: Number(settings.declaredSize || 0),
     vector: settings.vector === true,
     purpose: String(settings.purpose || ''),
     themeScore: Number(settings.themeScore || 0)
   };
-  candidate.score = scoreIconCandidate(candidate);
-  return candidate;
+  return { ...candidate, score: scoreIconCandidate(candidate) };
 }
 
-function parseHtmlIconCandidates(html, pageUrl, preferredTheme) {
+// The page URL relative links resolve against: its <base href>, or itself.
+function getHtmlBaseUrl(html: string, pageUrl: string): string {
+  const baseTag = (html.match(/<base\b[^>]*>/i) || [])[0];
+  const baseHref = getHtmlAttributeValue(baseTag, 'href');
+  if (!baseHref) {
+    return pageUrl;
+  }
+  try {
+    return new URL(baseHref, pageUrl).href;
+  } catch (_error) {
+    return pageUrl;
+  }
+}
+
+function parseHtmlIconCandidates(html: unknown, pageUrl: unknown, preferredTheme?: unknown): IconCandidate[] {
   const normalizedPageUrl = normalizePageUrl(pageUrl);
   if (!html || !normalizedPageUrl) {
     return [];
   }
-  let baseUrl = normalizedPageUrl;
-  const baseTag = (String(html).match(/<base\b[^>]*>/i) || [])[0];
-  const baseHref = getHtmlAttributeValue(baseTag, 'href');
-  if (baseHref) {
-    try {
-      baseUrl = new URL(baseHref, normalizedPageUrl).href;
-    } catch (error) {
-      baseUrl = normalizedPageUrl;
-    }
-  }
-  const candidates = [];
-  const links = String(html).match(/<link\b[^>]*>/gi) || [];
-  links.forEach((tag) => {
+  const text = String(html);
+  const baseUrl = getHtmlBaseUrl(text, normalizedPageUrl);
+  const candidates: IconCandidate[] = [];
+  for (const tag of text.match(/<link\b[^>]*>/gi) || []) {
     const rel = getHtmlAttributeValue(tag, 'rel').toLowerCase();
     const href = getHtmlAttributeValue(tag, 'href');
     if (!href || (!rel.includes('icon') && !rel.includes('apple-touch-icon'))) {
-      return;
+      continue;
     }
     let resolvedUrl = '';
     try {
       resolvedUrl = new URL(href, baseUrl).href;
-    } catch (error) {
-      return;
+    } catch (_error) {
+      continue;
     }
     const type = getHtmlAttributeValue(tag, 'type').toLowerCase();
     const media = getHtmlAttributeValue(tag, 'media');
     const vector = type.includes('svg') || /\.svg(?:[?#]|$)/i.test(resolvedUrl);
-    const source = rel.includes('apple-touch-icon') ? 'apple-touch-icon' : 'icon';
     const candidate = createCandidate(resolvedUrl, {
-      source,
+      source: rel.includes('apple-touch-icon') ? 'apple-touch-icon' : 'icon',
       declaredSize: vector ? Number.POSITIVE_INFINITY : getLargestDeclaredSize(getHtmlAttributeValue(tag, 'sizes')),
       vector,
       themeScore: getThemeScore(resolvedUrl, media, preferredTheme)
@@ -510,27 +609,19 @@ function parseHtmlIconCandidates(html, pageUrl, preferredTheme) {
     if (candidate) {
       candidates.push(candidate);
     }
-  });
+  }
   return mergeCandidates(candidates);
 }
 
-function parseHtmlManifestUrls(html, pageUrl) {
+function parseHtmlManifestUrls(html: unknown, pageUrl: unknown): string[] {
   const normalizedPageUrl = normalizePageUrl(pageUrl);
   if (!html || !normalizedPageUrl) {
     return [];
   }
-  let baseUrl = normalizedPageUrl;
-  const baseTag = (String(html).match(/<base\b[^>]*>/i) || [])[0];
-  const baseHref = getHtmlAttributeValue(baseTag, 'href');
-  if (baseHref) {
-    try {
-      baseUrl = new URL(baseHref, normalizedPageUrl).href;
-    } catch (error) {
-      baseUrl = normalizedPageUrl;
-    }
-  }
-  const seen = new Set();
-  return (String(html).match(/<link\b[^>]*>/gi) || []).flatMap((tag) => {
+  const text = String(html);
+  const baseUrl = getHtmlBaseUrl(text, normalizedPageUrl);
+  const seen = new Set<string>();
+  return (text.match(/<link\b[^>]*>/gi) || []).flatMap((tag) => {
     const rel = getHtmlAttributeValue(tag, 'rel').toLowerCase();
     const href = getHtmlAttributeValue(tag, 'href');
     if (!rel.split(/\s+/).includes('manifest') || !href) {
@@ -543,32 +634,33 @@ function parseHtmlManifestUrls(html, pageUrl) {
       }
       seen.add(url);
       return [url];
-    } catch (error) {
+    } catch (_error) {
       return [];
     }
   });
 }
 
-function parseManifestIconCandidates(manifest, manifestUrl) {
-  const source = manifest && typeof manifest === 'object' ? manifest : {};
-  const icons = Array.isArray(source.icons) ? source.icons : [];
-  return mergeCandidates(icons.flatMap((icon) => {
-    const src = String(icon && icon.src || '').trim();
+function parseManifestIconCandidates(manifest: unknown, manifestUrl: unknown): IconCandidate[] {
+  const source = isRecord(manifest) ? manifest : {};
+  const icons: unknown[] = Array.isArray(source.icons) ? source.icons : [];
+  return mergeCandidates(icons.flatMap((value) => {
+    const icon = isRecord(value) ? value : {};
+    const src = String(icon.src || '').trim();
     if (!src) {
       return [];
     }
     let resolvedUrl = '';
     try {
-      resolvedUrl = new URL(src, manifestUrl).href;
-    } catch (error) {
+      resolvedUrl = new URL(src, String(manifestUrl)).href;
+    } catch (_error) {
       return [];
     }
-    const type = String(icon && icon.type || '').toLowerCase();
+    const type = String(icon.type || '').toLowerCase();
     const vector = type.includes('svg') || /\.svg(?:[?#]|$)/i.test(resolvedUrl);
-    const purposeTokens = String(icon && icon.purpose || 'any').toLowerCase().split(/\s+/);
+    const purposeTokens = String(icon.purpose || 'any').toLowerCase().split(/\s+/);
     const candidate = createCandidate(resolvedUrl, {
       source: 'manifest',
-      declaredSize: vector ? Number.POSITIVE_INFINITY : getLargestDeclaredSize(icon && icon.sizes),
+      declaredSize: vector ? Number.POSITIVE_INFINITY : getLargestDeclaredSize(icon.sizes),
       vector,
       purpose: purposeTokens.includes('any') ? 'any' : (purposeTokens[0] || '')
     });
@@ -576,7 +668,8 @@ function parseManifestIconCandidates(manifest, manifestUrl) {
   }));
 }
 
-function getRootIconCandidates(pageUrl) {
+// The addresses sites conventionally serve icons at.
+function getRootIconCandidates(pageUrl: unknown): IconCandidate[] {
   const normalizedPageUrl = normalizePageUrl(pageUrl);
   if (!normalizedPageUrl) {
     return [];
@@ -598,29 +691,30 @@ function getRootIconCandidates(pageUrl) {
     }),
     createCandidate(`${origin}/favicon.png`, { source: 'root' }),
     createCandidate(`${origin}/favicon.ico`, { source: 'root' })
-  ].filter(Boolean);
+  ].filter((candidate): candidate is IconCandidate => candidate !== null);
 }
 
-function mergeCandidates(candidates) {
-  const byUrl = new Map();
-  (Array.isArray(candidates) ? candidates : []).forEach((candidate) => {
+// One candidate per URL, the best scored, best first.
+function mergeCandidates(candidates: ReadonlyArray<IconCandidate | null | undefined> | null | undefined): IconCandidate[] {
+  const byUrl = new Map<string, IconCandidate>();
+  for (const candidate of Array.isArray(candidates) ? candidates : []) {
     if (!candidate || !candidate.url) {
-      return;
+      continue;
     }
     const current = byUrl.get(candidate.url);
     if (!current || Number(candidate.score || 0) > Number(current.score || 0)) {
       byUrl.set(candidate.url, candidate);
     }
-  });
+  }
   return Array.from(byUrl.values()).sort((left, right) =>
     Number(right.score || 0) - Number(left.score || 0));
 }
 
-function readUint16BigEndian(bytes, offset) {
+function readUint16BigEndian(bytes: Uint8Array, offset: number): number {
   return ((bytes[offset] || 0) << 8) | (bytes[offset + 1] || 0);
 }
 
-function readUint32BigEndian(bytes, offset) {
+function readUint32BigEndian(bytes: Uint8Array, offset: number): number {
   return (
     ((bytes[offset] || 0) * 0x1000000) +
     ((bytes[offset + 1] || 0) << 16) +
@@ -629,13 +723,17 @@ function readUint32BigEndian(bytes, offset) {
   ) >>> 0;
 }
 
-function readUint24LittleEndian(bytes, offset) {
+function readUint24LittleEndian(bytes: Uint8Array, offset: number): number {
   return (bytes[offset] || 0) |
     ((bytes[offset + 1] || 0) << 8) |
     ((bytes[offset + 2] || 0) << 16);
 }
 
-function getPngDimensions(bytes) {
+function readAscii(bytes: Uint8Array, start: number, end: number): string {
+  return String.fromCharCode(...bytes.slice(start, end));
+}
+
+function getPngDimensions(bytes: Uint8Array): IconDimensions | null {
   if (bytes.length < 24 || bytes[0] !== 0x89 || bytes[1] !== 0x50 || bytes[2] !== 0x4e || bytes[3] !== 0x47) {
     return null;
   }
@@ -645,7 +743,7 @@ function getPngDimensions(bytes) {
   };
 }
 
-function getGifDimensions(bytes) {
+function getGifDimensions(bytes: Uint8Array): IconDimensions | null {
   if (bytes.length < 10 || bytes[0] !== 0x47 || bytes[1] !== 0x49 || bytes[2] !== 0x46) {
     return null;
   }
@@ -655,7 +753,8 @@ function getGifDimensions(bytes) {
   };
 }
 
-function getIcoDimensions(bytes) {
+// The largest image in an .ico directory.
+function getIcoDimensions(bytes: Uint8Array): IconDimensions | null {
   if (bytes.length < 22 || bytes[0] !== 0 || bytes[1] !== 0 || bytes[2] !== 1 || bytes[3] !== 0) {
     return null;
   }
@@ -673,7 +772,7 @@ function getIcoDimensions(bytes) {
   return width && height ? { width, height } : null;
 }
 
-function getJpegDimensions(bytes) {
+function getJpegDimensions(bytes: Uint8Array): IconDimensions | null {
   if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) {
     return null;
   }
@@ -700,12 +799,11 @@ function getJpegDimensions(bytes) {
   return null;
 }
 
-function getWebpDimensions(bytes) {
-  if (bytes.length < 30 || String.fromCharCode(...bytes.slice(0, 4)) !== 'RIFF' ||
-      String.fromCharCode(...bytes.slice(8, 12)) !== 'WEBP') {
+function getWebpDimensions(bytes: Uint8Array): IconDimensions | null {
+  if (bytes.length < 30 || readAscii(bytes, 0, 4) !== 'RIFF' || readAscii(bytes, 8, 12) !== 'WEBP') {
     return null;
   }
-  const chunk = String.fromCharCode(...bytes.slice(12, 16));
+  const chunk = readAscii(bytes, 12, 16);
   if (chunk === 'VP8X') {
     return {
       width: readUint24LittleEndian(bytes, 24) + 1,
@@ -730,27 +828,34 @@ function getWebpDimensions(bytes) {
   return null;
 }
 
-function isAvifResource(bytes) {
-  if (bytes.length < 16 || String.fromCharCode(...bytes.slice(4, 8)) !== 'ftyp') {
+function isAvifResource(bytes: Uint8Array): boolean {
+  if (bytes.length < 16 || readAscii(bytes, 4, 8) !== 'ftyp') {
     return false;
   }
-  const brands = String.fromCharCode(...bytes.slice(8, Math.min(bytes.length, 32)));
+  const brands = readAscii(bytes, 8, Math.min(bytes.length, 32));
   return brands.includes('avif') || brands.includes('avis');
 }
 
-function inspectIconResource(arrayBuffer, mimeType, url, candidate, options) {
+// What a downloaded icon is and whether it is large enough. AVIF headers
+// carry no simple size, so the size the page declared stands in for it.
+function inspectIconResource(
+  arrayBuffer: ArrayBuffer | null | undefined,
+  mimeType: unknown,
+  _url: unknown,
+  candidate?: Partial<Pick<IconCandidate, 'declaredSize'>> | null,
+  options?: IconInspectOptions | null
+): IconResourceInfo {
   const bytes = new Uint8Array(arrayBuffer || new ArrayBuffer(0));
   const type = String(mimeType || '').split(';')[0].trim().toLowerCase();
   let leadingText = '';
   if (bytes.length > 0) {
     try {
       leadingText = new TextDecoder().decode(bytes.slice(0, 512)).trim().toLowerCase();
-    } catch (error) {
+    } catch (_error) {
       leadingText = '';
     }
   }
-  const vector = /<svg(?:\s|>)/i.test(leadingText);
-  if (vector) {
+  if (/<svg(?:\s|>)/i.test(leadingText)) {
     return {
       usable: true,
       vector: true,
@@ -767,12 +872,14 @@ function inspectIconResource(arrayBuffer, mimeType, url, candidate, options) {
     { dimensions: getWebpDimensions(bytes), mimeType: 'image/webp' }
   ];
   const detected = detectedResources.find((item) => item.dimensions);
+  const detectedDimensions = detected ? detected.dimensions : null;
   const avif = isAvifResource(bytes);
   const declaredSize = Number(candidate && candidate.declaredSize || 0);
-  const effectiveWidth = detected ? detected.dimensions.width : (avif ? declaredSize : 0);
-  const effectiveHeight = detected ? detected.dimensions.height : (avif ? declaredSize : 0);
-  const minDimension = Number.isFinite(Number(options && options.minDimension))
-    ? Math.max(16, Math.min(MIN_ICON_DIMENSION, Number(options.minDimension)))
+  const effectiveWidth = detectedDimensions ? detectedDimensions.width : (avif ? declaredSize : 0);
+  const effectiveHeight = detectedDimensions ? detectedDimensions.height : (avif ? declaredSize : 0);
+  const requestedMinimum = Number(options && options.minDimension);
+  const minDimension = Number.isFinite(requestedMinimum)
+    ? Math.max(16, Math.min(MIN_ICON_DIMENSION, requestedMinimum))
     : MIN_ICON_DIMENSION;
   const usable = Number.isFinite(effectiveWidth) && Number.isFinite(effectiveHeight) &&
     Math.max(effectiveWidth, effectiveHeight) >= minDimension &&
@@ -789,40 +896,50 @@ function inspectIconResource(arrayBuffer, mimeType, url, candidate, options) {
   };
 }
 
-function normalizeCacheMap(value, nowValue, options) {
+// The valid, unexpired icons of a stored map, the newest `cacheMaxEntries`.
+function normalizeCacheMap(value: unknown, nowValue?: unknown, options?: unknown): CachedIconMap {
   const now = Number.isFinite(Number(nowValue)) ? Number(nowValue) : Date.now();
   const cacheOptions = normalizeCacheOptions(options);
-  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const source = isRecord(value) && !Array.isArray(value) ? value : {};
   const entries = Object.keys(source).flatMap((rawKey) => {
     const item = source[rawKey];
+    const fields = isRecord(item) ? item : {};
     const key = getCacheKey(rawKey);
-    const dataUrl = normalizeDataUrl(item && item.dataUrl, cacheOptions);
-    const sourceUrl = normalizeIconSourceUrl(item && item.sourceUrl);
-    const updatedAt = Number(item && item.updatedAt || 0);
+    const dataUrl = normalizeDataUrl(fields.dataUrl, cacheOptions);
+    const sourceUrl = normalizeIconSourceUrl(fields.sourceUrl);
+    const updatedAt = Number(fields.updatedAt || 0);
     if (!key || !dataUrl || !Number.isFinite(updatedAt) || updatedAt <= 0 ||
         (cacheOptions.cacheTtlMs > 0 && now - updatedAt > cacheOptions.cacheTtlMs)) {
       return [];
     }
     return [{ key, dataUrl, sourceUrl, updatedAt }];
   }).sort((left, right) => right.updatedAt - left.updatedAt).slice(0, cacheOptions.cacheMaxEntries);
-  return entries.reduce((result, entry) => {
+  const result: CachedIconMap = {};
+  for (const entry of entries) {
     result[entry.key] = {
       dataUrl: entry.dataUrl,
       sourceUrl: entry.sourceUrl,
       updatedAt: entry.updatedAt
     };
-    return result;
-  }, {});
+  }
+  return result;
 }
 
-function setCachedIcon(cacheMap, pageUrl, dataUrl, sourceUrl, nowValue, options) {
+function setCachedIcon(
+  cacheMap: unknown,
+  pageUrl: unknown,
+  dataUrl: unknown,
+  sourceUrl: unknown,
+  nowValue?: unknown,
+  options?: unknown
+): CachedIconMap {
   const key = getCacheKey(pageUrl);
   const iconDataUrl = normalizeDataUrl(dataUrl, options);
   if (!key || !iconDataUrl) {
     return normalizeCacheMap(cacheMap, nowValue, options);
   }
   return normalizeCacheMap({
-    ...(cacheMap || {}),
+    ...(isRecord(cacheMap) ? cacheMap : {}),
     [key]: {
       dataUrl: iconDataUrl,
       sourceUrl: normalizeIconSourceUrl(sourceUrl),
@@ -831,102 +948,24 @@ function setCachedIcon(cacheMap, pageUrl, dataUrl, sourceUrl, nowValue, options)
   }, nowValue, options);
 }
 
-function retainCachedIcons(cacheMap, pageUrls, nowValue, options) {
-  const allowed = new Set((Array.isArray(pageUrls) ? pageUrls : []).map(getCacheKey).filter(Boolean));
+// Only the icons of these pages; the rest belong to removed shortcuts.
+function retainCachedIcons(cacheMap: unknown, pageUrls: unknown, nowValue?: unknown, options?: unknown): CachedIconMap {
+  const urls: unknown[] = Array.isArray(pageUrls) ? pageUrls : [];
+  const allowed = new Set(urls.map(getCacheKey).filter(Boolean));
   const normalized = normalizeCacheMap(cacheMap, nowValue, options);
-  return Object.keys(normalized).reduce((result, key) => {
+  const result: CachedIconMap = {};
+  for (const [key, entry] of Object.entries(normalized)) {
     if (allowed.has(key)) {
-      result[key] = normalized[key];
+      result[key] = entry;
     }
-    return result;
-  }, {});
+  }
+  return result;
 }
 
-function getCachedIconDataUrl(cacheMap, pageUrl, nowValue, options) {
+function getCachedIconDataUrl(cacheMap: unknown, pageUrl: unknown, nowValue?: unknown, options?: unknown): string {
   const normalized = normalizeCacheMap(cacheMap, nowValue, options);
-  const entry = normalized[getCacheKey(pageUrl)];
-  return isCachedIconForPage(entry, pageUrl) ? entry.dataUrl : '';
-}
-
-function createShortcutFaviconStore(options) {
-  const settings = options && typeof options === 'object' ? options : {};
-  const storageArea = settings.storageArea || null;
-  const storageKey = String(settings.storageKey || DEFAULT_STORAGE_KEY);
-  const chromeApi = settings.chromeApi || null;
-  const lockManager = settings.lockManager || null;
-  const lockName = `lumno-shortcut-favicon-store:${storageKey}`;
-  const cacheOptions = normalizeCacheOptions(settings);
-
-  function getRuntimeError() {
-    return chromeApi && chromeApi.runtime ? chromeApi.runtime.lastError : null;
-  }
-
-  function readAll() {
-    return new Promise((resolve) => {
-      if (!storageArea || typeof storageArea.get !== 'function') {
-        resolve({});
-        return;
-      }
-      storageArea.get([storageKey], (result) => {
-        if (getRuntimeError()) {
-          resolve({});
-          return;
-        }
-        resolve(normalizeCacheMap(result && result[storageKey], undefined, cacheOptions));
-      });
-    });
-  }
-
-  function writeAll(cacheMap) {
-    const normalized = normalizeCacheMap(cacheMap, undefined, cacheOptions);
-    return new Promise((resolve, reject) => {
-      if (!storageArea || typeof storageArea.set !== 'function') {
-        resolve(normalized);
-        return;
-      }
-      storageArea.set({ [storageKey]: normalized }, () => {
-        const runtimeError = getRuntimeError();
-        if (runtimeError) {
-          reject(new Error(runtimeError.message || 'Failed to store shortcut favicons.'));
-          return;
-        }
-        resolve(normalized);
-      });
-    });
-  }
-
-  function runExclusive(task) {
-    if (lockManager && typeof lockManager.request === 'function') {
-      return Promise.resolve(lockManager.request(lockName, task));
-    }
-    return Promise.resolve().then(task);
-  }
-
-  function updateAll(updater) {
-    return runExclusive(() => readAll().then((current) => {
-      const next = typeof updater === 'function' ? updater(current) : current;
-      return writeAll(next);
-    }));
-  }
-
-  function mergeAll(cacheMap) {
-    const additions = normalizeCacheMap(cacheMap, undefined, cacheOptions);
-    return updateAll((current) => normalizeCacheMap({
-      ...current,
-      ...additions
-    }, undefined, cacheOptions));
-  }
-
-  function retainAll(pageUrls) {
-    return updateAll((current) => retainCachedIcons(
-      current,
-      pageUrls,
-      undefined,
-      cacheOptions
-    ));
-  }
-
-  return Object.freeze({ storageKey, cacheOptions, readAll, writeAll, mergeAll, retainAll });
+  const entry = lookup(normalized, getCacheKey(pageUrl));
+  return entry && isCachedIconForPage(entry, pageUrl) ? entry.dataUrl : '';
 }
 
 export {
@@ -965,6 +1004,18 @@ export {
   normalizeCacheMap,
   setCachedIcon,
   retainCachedIcons,
-  getCachedIconDataUrl,
-  createShortcutFaviconStore
+  getCachedIconDataUrl
+};
+export type {
+  CachedIcon,
+  CachedIconMap,
+  CachedIconSource,
+  IconCacheOptions,
+  IconCandidate,
+  IconCandidateSource,
+  IconDimensions,
+  IconInspectOptions,
+  IconProvider,
+  IconResourceInfo,
+  SiteSearchIconOptions
 };

@@ -7,6 +7,7 @@ import * as LumnoCommunityLinks from '../domain/community-links';
 import * as EXTENSION_ROUTES from '../domain/extension-routes';
 import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
+import * as LumnoShortcutFaviconStore from '../platform/shortcut-favicon-store';
 import * as NAVIGATION_DISPOSITION from '../domain/navigation-disposition';
 import * as PROGRESS_HISTORY from '../domain/progress-history';
 import * as PROGRESS_MATCH from '../domain/progress-match';
@@ -1069,13 +1070,13 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
   const folderItemIconStore = LumnoNewtabFolderItemIcons.createStore({
     storageArea: localStorageArea
   });
-  const shortcutFaviconStore = SHORTCUT_FAVICON.createShortcutFaviconStore({
+  const shortcutFaviconStore = LumnoShortcutFaviconStore.createShortcutFaviconStore({
     chromeApi: typeof chrome !== 'undefined' ? chrome : null,
     storageArea: localStorageArea,
     storageKey: NEWTAB_SHORTCUT_FAVICON_CACHE_STORAGE_KEY,
     lockManager: window.navigator && window.navigator.locks
   });
-  const siteSearchIconStore = SHORTCUT_FAVICON.createShortcutFaviconStore({
+  const siteSearchIconStore = LumnoShortcutFaviconStore.createShortcutFaviconStore({
     chromeApi: typeof chrome !== 'undefined' ? chrome : null,
     storageArea: localStorageArea,
     storageKey: SITE_SEARCH_ICON_CACHE_STORAGE_KEY,
