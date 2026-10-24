@@ -2,6 +2,7 @@
 import * as LumnoSettings from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoNewtabFocusResume from './focus-resume';
+import * as LumnoMessaging from '../platform/messaging';
 
 (function() {
   const locationUrl = new URL(window.location.href);
@@ -47,7 +48,7 @@ import * as LumnoNewtabFocusResume from './focus-resume';
       }
       document.removeEventListener('visibilitychange', requestSwap);
       try {
-        chromeApi.runtime.sendMessage({ action: 'swapNewtabForFocus' }, (response) => {
+        LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, { action: 'swapNewtabForFocus' }, (response) => {
           if (chromeApi.runtime.lastError || !response || !response.ok || !response.removed) {
             revealPage();
           }

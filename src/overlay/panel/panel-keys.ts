@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Keys inside the panel: Tab into modes and autocomplete, the input's
 // keydown, and navigating, opening and deleting results.
+import * as LumnoMessaging from '../../platform/messaging';
 function createPanelKeys(deps) {
   const {
     cancelPendingOpenTabsPrefixEntry,
@@ -413,9 +414,9 @@ function createPanelKeys(deps) {
           overlayState.searchInput.focus();
           return;
         } else if (commandMatch.command.type === 'commandNewTab') {
-          chrome.runtime.sendMessage({ action: 'openNewTab' });
+          LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openNewTab' });
         } else if (commandMatch.command.type === 'commandSettings') {
-          chrome.runtime.sendMessage({ action: 'openOptionsPage' });
+          LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openOptionsPage' });
         } else if (commandMatch.command.type === 'commandOpenTabs') {
           overlayState.searchInput.value = '';
           overlayState.latestRawInputValue = '';
@@ -424,7 +425,7 @@ function createPanelKeys(deps) {
           overlayState.searchInput.focus();
           return;
         } else if (commandMatch.command.type === 'commandCopyUrl') {
-          chrome.runtime.sendMessage({ action: 'copyCurrentPageUrl' });
+          LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'copyCurrentPageUrl' });
         } else if (commandMatch.command.type === 'commandDocumentPip') {
           openDocumentPipPickerFromOverlay();
         }
@@ -458,12 +459,12 @@ function createPanelKeys(deps) {
             return;
           }
           if (selectedSuggestion.type === 'commandNewTab') {
-            chrome.runtime.sendMessage({ action: 'openNewTab' });
+            LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openNewTab' });
             removeOverlay(overlayState.overlay);
             return;
           }
           if (selectedSuggestion.type === 'commandSettings') {
-            chrome.runtime.sendMessage({ action: 'openOptionsPage' });
+            LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openOptionsPage' });
             removeOverlay(overlayState.overlay);
             return;
           }
@@ -476,7 +477,7 @@ function createPanelKeys(deps) {
             return;
           }
           if (selectedSuggestion.type === 'commandCopyUrl') {
-            chrome.runtime.sendMessage({ action: 'copyCurrentPageUrl' });
+            LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'copyCurrentPageUrl' });
             removeOverlay(overlayState.overlay);
             return;
           }
@@ -506,13 +507,13 @@ function createPanelKeys(deps) {
           } else if (selectedSuggestion.forceSearch && selectedSuggestion.searchQuery) {
             if (shouldOpenSearchResultInBackgroundTab(e) && selectedSuggestion.url) {
               recordSearchSuggestionSelectionFromSuggestion(selectedSuggestion, query, 'overlay');
-              chrome.runtime.sendMessage({
+              LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
                 action: 'createTab',
                 url: selectedSuggestion.url,
                 disposition: 'backgroundTab'
               });
             } else {
-              chrome.runtime.sendMessage({
+              LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
                 action: 'searchOrNavigate',
                 query: selectedSuggestion.searchQuery,
                 forceSearch: true
@@ -522,7 +523,7 @@ function createPanelKeys(deps) {
           } else {
             // Navigate to the suggested URL
             recordSearchSuggestionSelectionFromSuggestion(selectedSuggestion, query, 'overlay');
-            chrome.runtime.sendMessage({
+            LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'createTab',
               url: selectedSuggestion.url,
               disposition: getSearchResultCreateDisposition(selectedSuggestion, e, activeItem)
@@ -540,7 +541,7 @@ function createPanelKeys(deps) {
             openMatchedTabSuggestion(activeItem._xSuggestion, e, activeItem, query);
             canKeepOverlayOpen = Boolean(activeItem._xSuggestion.url);
           } else if (activeItem && typeof activeItem._xTabId === 'number') {
-            chrome.runtime.sendMessage({
+            LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'switchToTab',
               tabId: activeItem._xTabId
             });
@@ -573,7 +574,7 @@ function createPanelKeys(deps) {
               return;
             }
           } else if (overlayState.inlineSearchState.url) {
-            chrome.runtime.sendMessage({
+            LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'createTab',
               url: overlayState.inlineSearchState.url,
               disposition: getSearchResultNewTabDisposition(e)
@@ -590,7 +591,7 @@ function createPanelKeys(deps) {
             title: overlayState.autocompleteState.title || '',
             type: 'autocomplete'
           }, query, 'overlay');
-          chrome.runtime.sendMessage({
+          LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
             action: 'createTab',
             url: overlayState.autocompleteState.url,
             disposition: getSearchResultNewTabDisposition(e)
@@ -600,20 +601,20 @@ function createPanelKeys(deps) {
         }
         resolveQuickNavigation(query).then((targetUrl) => {
           if (targetUrl) {
-            chrome.runtime.sendMessage({
+            LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'createTab',
               url: targetUrl,
               disposition: getSearchResultNewTabDisposition(e)
             });
           } else if (shouldOpenSearchResultInBackgroundTab(e)) {
-            chrome.runtime.sendMessage({
+            LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'searchOrNavigate',
               query: query,
               disposition: 'backgroundTab'
             });
           } else {
             // Handle search or URL navigation
-            chrome.runtime.sendMessage({
+            LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'searchOrNavigate',
               query: query
             });

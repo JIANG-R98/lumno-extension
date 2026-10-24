@@ -1,5 +1,6 @@
 // Slash commands for theme, zen mode and Firefox's website appearance, and
 // the setters behind them.
+import * as LumnoMessaging from '../platform/messaging';
 function createModeCommands(deps) {
   const {
     t,
@@ -295,7 +296,7 @@ function createModeCommands(deps) {
     if (typeof chrome === 'undefined' || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
       return;
     }
-    chrome.runtime.sendMessage({ action: 'getWebAppearance' }, (response) => {
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'getWebAppearance' }, (response) => {
       if (chrome.runtime.lastError) {
         return;
       }
@@ -307,7 +308,7 @@ function createModeCommands(deps) {
     // Show the choice at once; the reply carries what Firefox kept.
     webAppearanceState = { ...webAppearanceState, mode };
     refreshWebAppearanceCommand();
-    chrome.runtime.sendMessage({ action: 'setWebAppearance', mode }, (response) => {
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'setWebAppearance', mode }, (response) => {
       if (!chrome.runtime.lastError && response && typeof response.mode === 'string') {
         applyWebAppearanceState(response);
         return;

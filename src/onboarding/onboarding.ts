@@ -6,6 +6,7 @@ import * as LumnoSettings from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as MODEL from './onboarding-content';
+import * as LumnoMessaging from '../platform/messaging';
 
 (function() {
 
@@ -351,7 +352,7 @@ import * as MODEL from './onboarding-content';
       : getOpenDisposition(eventOrDisposition, 'newTab');
     if (chromeApi && chromeApi.runtime && typeof chromeApi.runtime.sendMessage === 'function') {
       try {
-        chromeApi.runtime.sendMessage({ action: 'createTab', url: targetUrl, disposition }, (response) => {
+        LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, { action: 'createTab', url: targetUrl, disposition }, (response) => {
           const lastError = chromeApi.runtime && chromeApi.runtime.lastError;
           if (!lastError && response && response.ok !== false) {
             return;
@@ -532,7 +533,7 @@ import * as MODEL from './onboarding-content';
       request.currentTabId = currentTabId;
     }
     try {
-      chromeApi.runtime.sendMessage(request, (response) => {
+      LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, request, (response) => {
         if (chromeApi.runtime && chromeApi.runtime.lastError) {
           done([], currentTabId);
           return;
@@ -1414,7 +1415,7 @@ import * as MODEL from './onboarding-content';
       return;
     }
     try {
-      chromeApi.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, {
         action: messageAction,
         disposition
       }, (response) => {

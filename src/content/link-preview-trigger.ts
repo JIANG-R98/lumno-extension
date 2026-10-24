@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { toPreviewFrameUrl } from '../domain/link-preview-frame-url';
+import * as LumnoMessaging from '../platform/messaging';
 
 (function() {
   // Runs in every frame. In an ordinary frame it turns Shift+click on a link
@@ -36,7 +37,7 @@ import { toPreviewFrameUrl } from '../domain/link-preview-frame-url';
 
   function send(message, callback) {
     try {
-      chrome.runtime.sendMessage(message, (response) => {
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, message, (response) => {
         void (chrome.runtime && chrome.runtime.lastError);
         if (typeof callback === 'function') {
           callback(response);

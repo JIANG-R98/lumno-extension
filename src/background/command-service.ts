@@ -34,6 +34,7 @@ import {
   shouldDeferRestrictedOverlayNavigation
 } from './overlay-loading-service';
 import { openOverlayOnTab } from './overlay-open-service';
+import * as LumnoMessaging from '../platform/messaging';
 
 export function shouldTriggerOnboardingOverlayFromCommand(source, url) {
   return COMMAND_TARGET_POLICY.shouldTriggerOnboardingOverlayFromCommand(source, url, {
@@ -56,7 +57,7 @@ export function triggerOnboardingOverlayFromCommand(activeTab, source) {
     });
     return;
   }
-  chrome.runtime.sendMessage({
+  LumnoMessaging.sendPageMessage(chrome.runtime, {
     action,
     tabId: activeTab.id,
     source: source || ''
@@ -168,7 +169,7 @@ export function requestFocusVisibleNewtabInput(source, tabId) {
     tabId: typeof tabId === 'number' ? tabId : null
   };
   try {
-    chrome.runtime.sendMessage(payload, (response) => {
+    LumnoMessaging.sendPageMessage(chrome.runtime, payload, (response) => {
       if (chrome.runtime && chrome.runtime.lastError) {
         logHotkeyDebug('command-newtab-focus-send-failed', {
           source: source || '',
@@ -470,7 +471,7 @@ export function getConfiguredCopyUrlCommandShortcut(callback) {
 const COPY_URL_LISTENER_FILES = Object.freeze(['build/hotkey-listener.js']);
 
 function sendCopyCurrentUrlCommand(tabId, callback) {
-  chrome.tabs.sendMessage(tabId, { action: 'copyCurrentPageUrlFromCommand' }, (response) => {
+  LumnoMessaging.sendTabMessage(chrome.tabs, tabId, { action: 'copyCurrentPageUrlFromCommand' }, (response) => {
     const error = chrome.runtime && chrome.runtime.lastError
       ? chrome.runtime.lastError.message || 'unknown'
       : '';

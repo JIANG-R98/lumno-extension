@@ -1,4 +1,5 @@
 // @ts-nocheck
+import * as LumnoMessaging from '../platform/messaging';
 (function() {
   if (window._x_extension_tab_switcher_page_bridge_2026_unique_) {
     return;
@@ -137,7 +138,7 @@
     recentTrustedKeydownAtByKey.delete(key);
     recentTrustedReleaseAtByKey.delete(key);
     try {
-      chromeApi.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, {
         action: 'notifyTabSwitcherShortcutModifierReleased',
         key
       }, () => {

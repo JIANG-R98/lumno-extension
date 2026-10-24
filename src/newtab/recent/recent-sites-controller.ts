@@ -2,6 +2,7 @@
 // Pinned and hidden recent sites, and the recent-site context menu.
 import * as LumnoNewtabDismissStack from '../dismiss-stack';
 import * as LumnoRecentSitesStorage from '../../platform/recent-sites-storage';
+import * as LumnoMessaging from '../../platform/messaging';
 
 function createRecentSitesController(deps) {
   const {
@@ -481,7 +482,7 @@ function createRecentSitesController(deps) {
     return new Promise((resolve) => {
       const timer = setTimeout(() => resolve(false), PIN_PROBE_TIMEOUT_MS);
       try {
-        chrome.runtime.sendMessage({ action: 'probeProgressSeries', url: item.url }, (response) => {
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'probeProgressSeries', url: item.url }, (response) => {
           clearTimeout(timer);
           resolve(!chrome.runtime.lastError && Boolean(response && response.series === true));
         });

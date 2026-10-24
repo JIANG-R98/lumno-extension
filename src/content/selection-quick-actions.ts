@@ -4,6 +4,7 @@ import * as INTENT from '../domain/selection-intent';
 import * as SETTINGS from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as TOAST from '../shared/ui/toast';
+import * as LumnoMessaging from '../platform/messaging';
 
 (function() {
   'use strict';
@@ -206,7 +207,7 @@ import * as TOAST from '../shared/ui/toast';
     if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
       return;
     }
-    chrome.runtime.sendMessage({ action: 'getLocaleMessages', locale: getCurrentLocale() }, (response) => {
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'getLocaleMessages', locale: getCurrentLocale() }, (response) => {
       if (chrome.runtime && chrome.runtime.lastError) {
         return;
       }
@@ -1669,7 +1670,7 @@ import * as TOAST from '../shared/ui/toast';
 
   function openLabsSettings() {
     try {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'openOptionsPage',
         hash: 'labs'
       });
@@ -1758,7 +1759,7 @@ import * as TOAST from '../shared/ui/toast';
       renderFailureStatus();
     };
     try {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'runSelectionQuickAction',
         intent: action,
         locale: getCurrentLocale(),

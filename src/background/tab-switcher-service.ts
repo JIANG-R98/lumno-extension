@@ -49,6 +49,7 @@ import {
   isOwnExtensionPageUrl
 } from './browser-urls-service';
 import { recordTabSwitchEvent } from './tab-switch-stats-service';
+import * as LumnoMessaging from '../platform/messaging';
 
 function hasTabSwitcherExtensionPagePort(tab) {
   if (!tab || typeof tab.id !== 'number') {
@@ -466,7 +467,7 @@ function sendTabSwitcherHostMessage(tab, payload, optionsArg) {
   }
   return new Promise((resolve) => {
     try {
-      chrome.tabs.sendMessage(tabId, payload, (response) => {
+      LumnoMessaging.sendTabMessage(chrome.tabs, tabId, payload, (response) => {
         if (!(chrome.runtime && chrome.runtime.lastError)) {
           const normalized = normalizeResponse(response);
           if (normalized !== null) {
@@ -781,7 +782,7 @@ function armTabSwitcherShortcutReleaseObservers(tabs, windowId, shortcut, comman
       return;
     }
     try {
-      chrome.tabs.sendMessage(item.id, message, ignoreExpectedChromeError);
+      LumnoMessaging.sendTabMessage(chrome.tabs, item.id, message, ignoreExpectedChromeError);
     } catch (error) {
       // Restricted tabs simply cannot participate in the release relay.
     }
@@ -2267,7 +2268,7 @@ function injectTabSwitcherOnTab(hostTab, items, context) {
       return;
     }
     try {
-      chrome.tabs.sendMessage(hostTab.id, {
+      LumnoMessaging.sendTabMessage(chrome.tabs, hostTab.id, {
         action: 'openTabSwitcherFromCommand',
         context: switcherContext
       }, (response) => {
@@ -2347,7 +2348,7 @@ function advanceExistingTabSwitcherOnTab(tab, source, callback) {
       return;
     }
     try {
-      chrome.tabs.sendMessage(tab.id, {
+      LumnoMessaging.sendTabMessage(chrome.tabs, tab.id, {
         action: 'advanceOpenTabSwitcherFromCommand',
         offset: 1
       }, (response) => {

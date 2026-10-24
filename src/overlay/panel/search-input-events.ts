@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Input events in the search box: reading the live value, the trigger
 // hint, IME composition and the main input handler.
+import * as LumnoMessaging from '../../platform/messaging';
 function createSearchInputEvents(deps) {
   const {
     applyNoTranslate,
@@ -31,7 +32,7 @@ function createSearchInputEvents(deps) {
   const handledSearchInputEvents = new WeakSet();
 
   function openDocumentPipPickerFromOverlay() {
-    chrome.runtime.sendMessage({ action: 'openDocumentPipPicker' });
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openDocumentPipPicker' });
   }
 
   function getLiveSearchInputFromEvent(event) {

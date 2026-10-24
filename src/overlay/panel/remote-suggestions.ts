@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Remote search suggestions: requesting them from the background and
 // merging late responses into what is shown.
+import * as LumnoMessaging from '../../platform/messaging';
 function createRemoteSuggestions(deps) {
   const {
     updateSearchSuggestions,
@@ -54,7 +55,7 @@ function createRemoteSuggestions(deps) {
     if (showExactSearchPendingState) {
       updateSearchSuggestions([], requestQuery, { remoteMixState });
     }
-    chrome.runtime.sendMessage({
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
       action: 'getSearchSuggestions',
       query: requestQuery,
       context: 'overlay',
@@ -106,7 +107,7 @@ function createRemoteSuggestions(deps) {
         if (requestSeq !== overlayState.overlaySuggestionRequestSeq || requestQuery !== overlayState.latestOverlayQuery) {
           return;
         }
-        chrome.runtime.sendMessage({
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
           action: 'getSearchEngineSuggestions',
           query: requestQuery,
           context: 'overlay',

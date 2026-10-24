@@ -2,6 +2,7 @@
 import * as PAGE_COLOR_SCHEME from '../shared/page-color-scheme';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as TOAST from '../shared/ui/toast';
+import * as LumnoMessaging from '../platform/messaging';
 
 (function() {
   'use strict';
@@ -1135,7 +1136,7 @@ import * as TOAST from '../shared/ui/toast';
         return false;
       }
       didRequestSwitch = true;
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'switchToTab',
         tabId: selected.id,
         windowId: typeof selected.windowId === 'number' ? selected.windowId : null
@@ -1161,7 +1162,7 @@ import * as TOAST from '../shared/ui/toast';
       const tabId = tab.id;
       closingTabIds.add(tabId);
       tabSwitcherReactView.setTabClosing(tabId, true);
-      chrome.runtime.sendMessage({ action: 'closeTabFromTabSwitcher', tabId }, (response) => {
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'closeTabFromTabSwitcher', tabId }, (response) => {
         const lastError = chrome.runtime && chrome.runtime.lastError;
         closingTabIds.delete(tabId);
         if (!tabSwitcherReactView) {

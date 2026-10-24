@@ -1,4 +1,5 @@
 // @ts-nocheck
+import * as LumnoMessaging from '../../platform/messaging';
 const STORAGE_KEYS = Object.freeze({
   custom: '_x_extension_site_search_custom_2024_unique_',
   disabled: '_x_extension_site_search_disabled_2024_unique_'
@@ -142,7 +143,7 @@ function loadSiteSearchProviders(options) {
       return;
     }
     try {
-      chromeApi.runtime.sendMessage({ action: 'getSiteSearchProviders' }, (response) => {
+      LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, { action: 'getSiteSearchProviders' }, (response) => {
         const items = response && Array.isArray(response.items) ? response.items : [];
         if (items.length > 0) {
           resolve(items);

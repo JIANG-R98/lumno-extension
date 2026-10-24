@@ -47,6 +47,7 @@ import * as PANEL_SUGGESTIONS_RENDER from './panel/suggestions-render';
 import * as PANEL_TAB_MATCHING from './panel/tab-matching';
 import * as LumnoOverlayRuntime from './runtime';
 import * as LumnoOverlaySiteFixes from './site-fixes';
+import * as LumnoMessaging from '../platform/messaging';
 
 'use strict';
 
@@ -1576,7 +1577,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       event.preventDefault();
       event.stopPropagation();
       hideInputActionCursorTooltip();
-      chrome.runtime.sendMessage({ action: 'openOptionsPage' });
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openOptionsPage' });
       removeOverlay(overlayState.overlay);
     });
   }
@@ -1611,7 +1612,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     }
     // The confirm button is going away with its bubble; keep typing in the field.
     overlayState.searchInput.focus({ preventScroll: true });
-    chrome.runtime.sendMessage({ action: 'closeOtherTabsForOverlay' }, (response) => {
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'closeOtherTabsForOverlay' }, (response) => {
       resetCloseOtherTabsButtonVisualState();
       if (!response || response.ok !== true) {
         return;

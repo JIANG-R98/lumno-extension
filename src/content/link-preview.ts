@@ -2,6 +2,7 @@
 import { toPreviewFrameUrl } from '../domain/link-preview-frame-url';
 import * as TOAST from '../shared/ui/toast';
 import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-state-art';
+import * as LumnoMessaging from '../platform/messaging';
 
 (function() {
   // The link preview surface, injected into a tab's top frame by
@@ -404,7 +405,7 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
 
   function send(message) {
     try {
-      chrome.runtime.sendMessage(message, () => {
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, message, () => {
         void (chrome.runtime && chrome.runtime.lastError);
       });
     } catch (error) {

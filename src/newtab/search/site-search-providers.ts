@@ -2,6 +2,7 @@
 // Site search and aggregate search providers: loading, icons, labels and
 // the trigger/scope lookups used by the search input.
 import * as LumnoAggregateSearchStorage from '../../platform/aggregate-search-storage';
+import * as LumnoMessaging from '../../platform/messaging';
 function createSiteSearchProviders(deps) {
   const {
     SEARCH_UTILS,
@@ -96,7 +97,7 @@ function createSiteSearchProviders(deps) {
       return true;
     }
     if (isInteractiveSiteSearchProvider(provider)) {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'runSiteSearchProviderQuery',
         provider: provider,
         query: trimmedQuery,
@@ -109,7 +110,7 @@ function createSiteSearchProviders(deps) {
       return false;
     }
     if (disposition === 'backgroundTab' || disposition === 'newTab') {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'createTab',
         url: siteUrl,
         disposition

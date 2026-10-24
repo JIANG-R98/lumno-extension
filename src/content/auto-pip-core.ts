@@ -4,6 +4,7 @@
 // content_scripts entries. Nothing here touches the page until a content
 // script calls createAutoPipCore.
 import * as LumnoSettings from '../domain/settings';
+import * as LumnoMessaging from '../platform/messaging';
 
 const AUTO_PIP_ENABLED_STORAGE_KEY = LumnoSettings.AUTO_PIP_ENABLED_STORAGE_KEY;
 const DOCUMENT_PIP_ACTIVE_FLAG = '__lumno_document_pip_active_2026__';
@@ -74,7 +75,7 @@ function createAutoPipCore(options) {
         }, Math.max(timeout.minMs, Number(timeout.ms)));
       }
       try {
-        chrome.runtime.sendMessage(message, (response) => {
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, message, (response) => {
           if (chrome.runtime && chrome.runtime.lastError) {
             finish({ ok: false, reason: chrome.runtime.lastError.message || 'runtime-lastError' });
             return;

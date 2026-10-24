@@ -1,5 +1,6 @@
 // @ts-nocheck
 // Requesting, rendering and activating search suggestions.
+import * as LumnoMessaging from '../../platform/messaging';
 function createSuggestionsController(deps) {
   const {
     SUGGESTION_ACTION_MODEL,
@@ -179,11 +180,11 @@ function createSuggestionsController(deps) {
 
   function activateRenderedSuggestion(suggestion, query, event, index, item) {
     if (suggestion.type === 'commandNewTab') {
-      chrome.runtime.sendMessage({ action: 'openNewTab' });
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openNewTab' });
       return;
     }
     if (suggestion.type === 'commandSettings') {
-      chrome.runtime.sendMessage({ action: 'openOptionsPage' });
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openOptionsPage' });
       return;
     }
     if (suggestion.type === 'siteSearchPrompt' && suggestion.provider) {
@@ -235,7 +236,7 @@ function createSuggestionsController(deps) {
   }
 
   function deleteRenderedHistorySuggestion(suggestion) {
-    chrome.runtime.sendMessage({
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
       action: 'deleteHistoryUrl',
       url: suggestion.url
     }, function(response) {

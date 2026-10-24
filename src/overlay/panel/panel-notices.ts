@@ -5,6 +5,7 @@ import * as ENGAGEMENT_NOTICE from '../../shared/engagement-notice';
 import * as COMMUNITY_QR_DIALOG from '../../shared/ui/community-qr-dialog';
 import * as FEATURE_HINTS from '../../shared/ui/feature-hints';
 import * as UPDATE_NOTICE from '../../shared/update-notice';
+import * as LumnoMessaging from '../../platform/messaging';
 
 function createPanelNotices(deps) {
   const {
@@ -58,7 +59,7 @@ function createPanelNotices(deps) {
       }
     },
     onDetailsClick(_notice, event) {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'openReleasePage',
         reason: 'notice',
         disposition: getOpenDisposition(event, 'newTab')
@@ -96,7 +97,7 @@ function createPanelNotices(deps) {
           if (!url) {
             return;
           }
-          chrome.runtime.sendMessage({
+          LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
             action: 'createTab',
             url,
             disposition
@@ -119,7 +120,7 @@ function createPanelNotices(deps) {
             openOverlayCommunityQrDialog(url);
             return;
           }
-          chrome.runtime.sendMessage({
+          LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
             action: 'createTab',
             url,
             disposition

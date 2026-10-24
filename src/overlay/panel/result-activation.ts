@@ -1,6 +1,7 @@
 // Opening a result: the modifier keys that pick the current, a new or a
 // background tab, and switching to an open tab instead.
 import * as NAVIGATION_DISPOSITION from '../../domain/navigation-disposition';
+import * as LumnoMessaging from '../../platform/messaging';
 
 function createResultActivation(deps) {
   const {
@@ -117,14 +118,14 @@ function createResultActivation(deps) {
         (shouldUseNewTabForSwitchAction(suggestion, event, item) ||
           shouldOpenSearchResultInBackgroundTab(event))) {
       recordSearchSuggestionSelectionFromSuggestion(suggestion, query, 'overlay');
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'createTab',
         url: suggestion.url,
         disposition: getSearchResultNewTabDisposition(event)
       });
       return;
     }
-    chrome.runtime.sendMessage({
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
       action: 'switchToTab',
       tabId: suggestion._xMatchedTabId
     });

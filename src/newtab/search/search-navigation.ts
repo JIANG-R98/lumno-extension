@@ -1,5 +1,6 @@
 // @ts-nocheck
 // Keyword and direct-URL suggestions, open-tab matching and quick navigation.
+import * as LumnoMessaging from '../../platform/messaging';
 function createSearchNavigation(deps) {
   const {
     formatMessage,
@@ -65,7 +66,7 @@ function createSearchNavigation(deps) {
           resolve([]);
           return;
         }
-        chrome.runtime.sendMessage({ action: 'getShortcutRules' }, (response) => {
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'getShortcutRules' }, (response) => {
           const items = response && Array.isArray(response.items) ? response.items : [];
           window._x_extension_shortcut_rules_2024_unique_ = items;
           resolve(items);
@@ -217,7 +218,7 @@ function createSearchNavigation(deps) {
     recordSearchSuggestionSelection(suggestion, query);
     const disposition = getSearchResultDisposition(event);
     if (disposition !== 'currentTab') {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'createTab',
         url: suggestion.url,
         disposition
@@ -232,14 +233,14 @@ function createSearchNavigation(deps) {
     if (shouldUseNewTabForSwitchAction(suggestion, event, item) ||
         shouldOpenSearchResultInBackgroundTab(event)) {
       recordSearchSuggestionSelection(suggestion, query);
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'createTab',
         url: suggestion.url,
         disposition: getSearchResultNewTabDisposition(event)
       });
       return;
     }
-    chrome.runtime.sendMessage({
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
       action: 'switchToTab',
       tabId: suggestion._xMatchedTabId
     });
@@ -271,7 +272,7 @@ function createSearchNavigation(deps) {
       }
     };
     timeout = setTimeout(() => finish(false), 240);
-    chrome.runtime.sendMessage(request, (response) => {
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, request, (response) => {
       if (chrome.runtime && chrome.runtime.lastError) {
         finish(false);
         return;
@@ -310,11 +311,11 @@ function createSearchNavigation(deps) {
     const commandMatch = pageState.localSearchScopeState ? null : getCommandMatch(query);
     if (commandMatch && pageState.selectedIndex === -1) {
       if (commandMatch.command.type === 'commandNewTab') {
-        chrome.runtime.sendMessage({ action: 'openNewTab' });
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openNewTab' });
         return;
       }
       if (commandMatch.command.type === 'commandSettings') {
-        chrome.runtime.sendMessage({ action: 'openOptionsPage' });
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openOptionsPage' });
         return;
       }
     }
@@ -346,11 +347,11 @@ function createSearchNavigation(deps) {
         return true;
       }
       if (selectedSuggestion.type === 'commandNewTab') {
-        chrome.runtime.sendMessage({ action: 'openNewTab' });
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openNewTab' });
         return true;
       }
       if (selectedSuggestion.type === 'commandSettings') {
-        chrome.runtime.sendMessage({ action: 'openOptionsPage' });
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openOptionsPage' });
         return true;
       }
       if (selectedSuggestion.type === 'siteSearchPrompt' && selectedSuggestion.provider) {

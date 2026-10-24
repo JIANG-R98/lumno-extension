@@ -1,5 +1,6 @@
 // @ts-nocheck
 import * as LumnoSettings from '../domain/settings';
+import * as LumnoMessaging from '../platform/messaging';
 
 const EXPECTED_CLIENT_REVISION = 'dav-lock-5';
 const EXPECTED_SYNC_REVISION = 'dav-multi-1';
@@ -190,7 +191,7 @@ function createController(options) {
   const infoController = globalThis.LumnoOptionsInfoButton?.createInfoButtonController(document.getElementById('lumno-webdav-beta-info'));
   const requiresReload = () => initialized && (current.clientRevision !== EXPECTED_CLIENT_REVISION || current.syncRevision !== EXPECTED_SYNC_REVISION);
   const message = (operation, extra) => new Promise((resolve, reject) => {
-    chromeApi.runtime.sendMessage({ action: 'webdav', operation, ...extra }, (response) => {
+    LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, { action: 'webdav', operation, ...extra }, (response) => {
       const error = chromeApi.runtime.lastError;
       if (error || !response || response.ok === false) reject(Object.assign(new Error(response && response.error || 'sync-failed'), {
         diagnostic: response && response.diagnostic

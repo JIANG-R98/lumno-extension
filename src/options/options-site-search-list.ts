@@ -4,6 +4,7 @@
 // the lists when providers change.
 import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import * as LumnoMessaging from '../platform/messaging';
 
 function createSiteSearchList(deps) {
   const {
@@ -362,7 +363,7 @@ function createSiteSearchList(deps) {
           resolve(optionsState.fallbackSiteSearchProviders.slice());
           return;
         }
-        chrome.runtime.sendMessage({ action: 'getSiteSearchProviders' }, (response) => {
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'getSiteSearchProviders' }, (response) => {
           const items = response && Array.isArray(response.items) ? response.items : [];
           const source = items.length > 0 ? items : optionsState.fallbackSiteSearchProviders;
           resolve(source.map((item) => normalizeSiteSearchProvider(item)).filter(Boolean));

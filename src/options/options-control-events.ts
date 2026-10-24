@@ -1,5 +1,6 @@
 // Change handlers for the page's selects, segmented controls and toggles,
 // and the buttons that open the browser's shortcut page or onboarding.
+import * as LumnoMessaging from '../platform/messaging';
 function createControlEvents(deps) {
   const {
     languageSelect,
@@ -216,7 +217,7 @@ function createControlEvents(deps) {
   }
 
   function openExtensionShortcutsPage() {
-    chrome.runtime.sendMessage({ action: 'openExtensionShortcutsPage' }, (response) => {
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openExtensionShortcutsPage' }, (response) => {
       if (chrome.runtime && chrome.runtime.lastError) {
         showToast(getMessage('toast_error', '操作失败，请重试。'), true);
         return;
@@ -231,7 +232,7 @@ function createControlEvents(deps) {
   }
   if (openOnboardingPageButton) {
     openOnboardingPageButton.addEventListener('click', () => {
-      chrome.runtime.sendMessage({ action: 'openOnboardingPage' }, (response) => {
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openOnboardingPage' }, (response) => {
         if (chrome.runtime && chrome.runtime.lastError) {
           showToast(getMessage('toast_error', '操作失败，请重试。'), true);
           return;

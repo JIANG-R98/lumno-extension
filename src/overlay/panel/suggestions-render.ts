@@ -2,6 +2,7 @@
 // Rendering suggestions: the React suggestions view, selection and
 // scrolling, activating or deleting a row, favicons in rows, the empty
 // state and the open tabs list.
+import * as LumnoMessaging from '../../platform/messaging';
 function createSuggestionsRender(deps) {
   const {
     updateSearchSuggestions,
@@ -118,7 +119,7 @@ function createSuggestionsRender(deps) {
     if (!targetUrl) {
       return;
     }
-    chrome.runtime.sendMessage({
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
       action: 'deleteHistoryUrl',
       url: targetUrl
     }, function(response) {
@@ -180,12 +181,12 @@ function createSuggestionsRender(deps) {
       return;
     }
     if (suggestion.type === 'commandNewTab') {
-      chrome.runtime.sendMessage({ action: 'openNewTab' });
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openNewTab' });
       removeOverlay(overlayState.overlay);
       return;
     }
     if (suggestion.type === 'commandSettings') {
-      chrome.runtime.sendMessage({ action: 'openOptionsPage' });
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openOptionsPage' });
       removeOverlay(overlayState.overlay);
       return;
     }
@@ -198,7 +199,7 @@ function createSuggestionsRender(deps) {
       return;
     }
     if (suggestion.type === 'commandCopyUrl') {
-      chrome.runtime.sendMessage({ action: 'copyCurrentPageUrl' });
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'copyCurrentPageUrl' });
       removeOverlay(overlayState.overlay);
       return;
     }
@@ -248,13 +249,13 @@ function createSuggestionsRender(deps) {
           query,
           'overlay'
         );
-        chrome.runtime.sendMessage({
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
           action: 'createTab',
           url: suggestion.url,
           disposition: 'backgroundTab'
         });
       } else {
-        chrome.runtime.sendMessage({
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
           action: 'searchOrNavigate',
           query: suggestion.searchQuery,
           forceSearch: true
@@ -266,7 +267,7 @@ function createSuggestionsRender(deps) {
         query,
         'overlay'
       );
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'createTab',
         url: suggestion.url,
         disposition: getSearchResultCreateDisposition(
@@ -503,7 +504,7 @@ function createSuggestionsRender(deps) {
     overlayTabsRequestSeq += 1;
     const requestSeq = overlayTabsRequestSeq;
     overlayTabsRequestInFlight = true;
-    chrome.runtime.sendMessage(request, (response) => {
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, request, (response) => {
       if (requestSeq !== overlayTabsRequestSeq) {
         return;
       }

@@ -1,5 +1,6 @@
 // @ts-nocheck
 import * as faviconUtils from '../../domain/favicon/favicon-utils';
+import * as LumnoMessaging from '../../platform/messaging';
 function noop() {}
 const FAVICON_INTRINSIC_SIZE = 128;
 
@@ -274,7 +275,7 @@ function createFaviconViewCore(options) {
         resolve(null);
         return;
       }
-      chromeApi.runtime.sendMessage({ action: 'getFaviconData', url: url, pageUrl: pageUrl || '' }, (response) => {
+      LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, { action: 'getFaviconData', url: url, pageUrl: pageUrl || '' }, (response) => {
         const dataUrl = response && response.data ? response.data : '';
         if (dataUrl) {
           cacheFaviconData(url, dataUrl);

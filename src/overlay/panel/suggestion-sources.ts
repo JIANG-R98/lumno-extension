@@ -4,6 +4,7 @@
 import * as BROWSER_PROFILE from '../../platform/browser-profile';
 import * as HELP_CENTER_SEARCH from '../../domain/search/help-center-search';
 import * as LumnoSearchUtils from '../../domain/search/search-utils';
+import * as LumnoMessaging from '../../platform/messaging';
 
 function createSuggestionSources(deps) {
   const {
@@ -104,7 +105,7 @@ function createSuggestionSources(deps) {
         return items;
       })
       .catch(() => new Promise((resolve) => {
-        chrome.runtime.sendMessage({ action: 'getShortcutRules' }, (response) => {
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'getShortcutRules' }, (response) => {
           const items = response && Array.isArray(response.items) ? response.items : [];
           window[cacheKey] = items;
           resolve(items);
@@ -214,7 +215,7 @@ function createSuggestionSources(deps) {
       helpCenterSuggestionSource = HELP_CENTER_SEARCH.createSuggestionSource({
         sendMessage: (message, callback) => {
           try {
-            chrome.runtime.sendMessage(message, (response) => {
+            LumnoMessaging.sendBackgroundMessage(chrome.runtime, message, (response) => {
               callback(chrome.runtime.lastError ? null : response);
             });
             return true;

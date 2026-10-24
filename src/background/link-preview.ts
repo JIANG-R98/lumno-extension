@@ -9,6 +9,7 @@
 // Preparing starts the screenshot, the header rule and the injection while
 // the button is still down, and asks the surface to start loading the page
 // in a hidden frame, so the window opens on click with the page underway.
+import * as LumnoMessaging from '../platform/messaging';
 const UI_FILES = Object.freeze(['build/link-preview.js']);
 // X-Frame-Options and CSP frame-ancestors are the two ways a page refuses to
 // be framed (a page that sends both is judged by frame-ancestors). While a
@@ -205,9 +206,9 @@ function createLinkPreviewService(options) {
     // (undefined), which must not read as success.
     return new Promise((resolve) => {
       try {
-        tabs.sendMessage(tabId, message, { frameId: 0 }, (response) => {
+        LumnoMessaging.sendTabMessage(tabs, tabId, message, (response) => {
           resolve(readLastError() || response === undefined ? null : response);
-        });
+        }, { frameId: 0 });
       } catch (error) {
         resolve(null);
       }

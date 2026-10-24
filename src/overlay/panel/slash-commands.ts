@@ -1,6 +1,7 @@
 // Slash commands in the overlay: their definitions, matching what is
 // typed, the suggestion each builds, the theme mode command and the website
 // appearance command.
+import * as LumnoMessaging from '../../platform/messaging';
 function createSlashCommands(deps) {
   const {
     t,
@@ -292,7 +293,7 @@ function createSlashCommands(deps) {
     if (typeof chrome === 'undefined' || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
       return;
     }
-    chrome.runtime.sendMessage({ action: 'getWebAppearance' }, (response) => {
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'getWebAppearance' }, (response) => {
       if (chrome.runtime.lastError) {
         return;
       }
@@ -304,7 +305,7 @@ function createSlashCommands(deps) {
     // Show the choice at once; the reply carries what Firefox kept.
     webAppearanceState = { ...webAppearanceState, mode };
     refreshWebAppearanceCommand();
-    chrome.runtime.sendMessage({ action: 'setWebAppearance', mode }, (response) => {
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'setWebAppearance', mode }, (response) => {
       if (!chrome.runtime.lastError && response && typeof response.mode === 'string') {
         applyWebAppearanceState(response);
         return;

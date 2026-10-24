@@ -2,6 +2,7 @@
 import * as PAGE_COLOR_SCHEME from '../shared/page-color-scheme';
 import * as SETTINGS from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import * as LumnoMessaging from '../platform/messaging';
 
 (function() {
   // The background injects this script on the first copy-URL command in a tab
@@ -120,7 +121,7 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
   function requestToastMessages(locale) {
     return new Promise((resolve) => {
       try {
-        chrome.runtime.sendMessage({
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
           action: 'getLocaleMessages',
           locale,
           keys: PAGE_TOAST_MESSAGE_KEYS

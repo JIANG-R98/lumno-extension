@@ -1,5 +1,6 @@
 // @ts-nocheck
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import * as LumnoMessaging from '../platform/messaging';
 
 const STORAGE_KEYS = Object.freeze({
   themeMode: '_x_extension_theme_mode_2024_unique_',
@@ -100,7 +101,7 @@ function loadLocaleMessages(options) {
       return;
     }
     try {
-      chromeApi.runtime.sendMessage({ action: 'getLocaleMessages', locale }, (response) => {
+      LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, { action: 'getLocaleMessages', locale }, (response) => {
         resolve((response && response.messages) || {});
       });
     } catch (error) {

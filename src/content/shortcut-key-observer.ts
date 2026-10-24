@@ -1,4 +1,5 @@
 import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
+import * as LumnoMessaging from '../platform/messaging';
 
 (function() {
   const RUNTIME_KEY = '_x_extension_shortcut_key_observer_2026_unique_';
@@ -50,7 +51,7 @@ import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
       return;
     }
     try {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'notifyTopFrameDocumentStarted',
         documentUrl: location && location.href ? location.href : '',
         documentReadyState: document.readyState,
@@ -113,7 +114,7 @@ import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
     }
     showSearchShortcutRefreshedAt = now;
     try {
-      chrome.runtime.sendMessage({ action: 'getShowSearchShortcut' }, (response) => {
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'getShowSearchShortcut' }, (response) => {
         if (chrome.runtime && chrome.runtime.lastError) {
           return;
         }
@@ -136,7 +137,7 @@ import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
       return;
     }
     try {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'triggerShowSearchFromPageHotkey',
         documentUrl: location && location.href ? location.href : '',
         documentIsTop: window.top === window,
@@ -173,7 +174,7 @@ import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
     event.preventDefault();
     event.stopPropagation();
     try {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'triggerShowSearchFromPageHotkey',
         documentUrl: location && location.href ? location.href : '',
         documentIsTop: window.top === window,
@@ -302,7 +303,7 @@ import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
     recentTrustedKeydownAtByKey.delete(key);
     recentTrustedReleaseAtByKey.delete(key);
     try {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'notifyTabSwitcherShortcutModifierReleased',
         key
       }, () => {

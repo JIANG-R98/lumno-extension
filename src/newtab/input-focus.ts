@@ -1,5 +1,6 @@
 // Focusing the search input: shortcut-triggered focus, typing anywhere on the
 // page and auto-focus recovery.
+import * as LumnoMessaging from '../platform/messaging';
 function createInputFocus(deps) {
   const {
     SHORTCUT_KEY_MATCHER,
@@ -34,7 +35,7 @@ function createInputFocus(deps) {
     }
     fallbackShortcutRefreshAt = now;
     try {
-      chrome.runtime.sendMessage({ action: 'getShowSearchShortcut' }, (response) => {
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'getShowSearchShortcut' }, (response) => {
         if (chrome.runtime && chrome.runtime.lastError) {
           return;
         }
@@ -105,7 +106,7 @@ function createInputFocus(deps) {
     }
     if (window.location.protocol === 'moz-extension:') {
       try {
-        chrome.runtime.sendMessage({ action: 'swapNewtabForFocus' }, () => {
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'swapNewtabForFocus' }, () => {
           void chrome.runtime.lastError;
         });
       } catch (e) {

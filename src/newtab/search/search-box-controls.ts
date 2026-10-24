@@ -3,6 +3,7 @@
 // button, close other tabs, the input's right padding, and which action
 // buttons the page shows.
 import * as LumnoSettingsStorage from '../../platform/settings-storage';
+import * as LumnoMessaging from '../../platform/messaging';
 function createSearchBoxControls(deps) {
   const {
     SEARCH_UTILS,
@@ -95,7 +96,7 @@ function createSearchBoxControls(deps) {
         getRiSvg,
         onLinkClick(event) {
           dismissWebdavFeatureHint();
-          chrome.runtime.sendMessage({
+          LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
             action: 'openOptionsPage',
             hash: 'account',
             disposition: getOpenDisposition(event, 'newTab')

@@ -2,6 +2,7 @@
 // The page language: resolving and loading the locale, applying the copy
 // to every control, and the document language.
 import * as LumnoBrowserProfile from '../platform/browser-profile';
+import * as LumnoMessaging from '../platform/messaging';
 
 function createLanguage(deps) {
   const {
@@ -186,7 +187,7 @@ function createLanguage(deps) {
         resolve({});
         return;
       }
-      chrome.runtime.sendMessage({ action: 'getLocaleMessages', locale: normalized }, (response) => {
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'getLocaleMessages', locale: normalized }, (response) => {
         if (chrome.runtime && chrome.runtime.lastError) {
           resolve({});
           return;

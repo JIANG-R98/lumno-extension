@@ -4,6 +4,7 @@
 import * as ENGAGEMENT_NOTICE from '../shared/engagement-notice';
 import * as COMMUNITY_QR_DIALOG from '../shared/ui/community-qr-dialog';
 import * as UPDATE_NOTICE from '../shared/update-notice';
+import * as LumnoMessaging from '../platform/messaging';
 
 function createPageNotices(deps) {
   const {
@@ -47,7 +48,7 @@ function createPageNotices(deps) {
 
   function openExtensionDetailsPage(detailsUrl) {
     if (chrome && chrome.runtime && typeof chrome.runtime.sendMessage === 'function') {
-      chrome.runtime.sendMessage({ action: 'openExtensionDetailsPage' }, (response) => {
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openExtensionDetailsPage' }, (response) => {
         if (chrome.runtime && chrome.runtime.lastError) {
           if (detailsUrl) {
             window.open(detailsUrl, '_blank');
@@ -96,7 +97,7 @@ function createPageNotices(deps) {
       clearPageNoticeQueryParam();
       return;
     }
-    chrome.runtime.sendMessage({ action: 'getFileSchemeAccessStatus' }, (response) => {
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'getFileSchemeAccessStatus' }, (response) => {
       if (chrome.runtime && chrome.runtime.lastError) {
         clearPageNoticeQueryParam();
         return;
@@ -129,7 +130,7 @@ function createPageNotices(deps) {
       }
     },
     onDetailsClick(_notice, event) {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'openReleasePage',
         reason: 'notice',
         disposition: getOpenDisposition(event, 'newTab')

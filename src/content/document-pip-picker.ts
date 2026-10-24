@@ -1,5 +1,6 @@
 // @ts-nocheck
 import * as TOAST from '../shared/ui/toast';
+import * as LumnoMessaging from '../platform/messaging';
 
 (function() {
   if (window.__lumnoDocumentPiPPicker2026) {
@@ -197,7 +198,7 @@ import * as TOAST from '../shared/ui/toast';
         return;
       }
       try {
-        chrome.runtime.sendMessage(message, (response) => {
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, message, (response) => {
           if (chrome.runtime && chrome.runtime.lastError) {
             resolve({
               ok: false,

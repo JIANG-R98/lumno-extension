@@ -2,6 +2,7 @@
 // Bookmark actions started from the page: editing a bookmark in the
 // shortcut dialog, opening a folder as a tab group after confirmation, and
 // the bookmark context menu's copy.
+import * as LumnoMessaging from '../../platform/messaging';
 function createBookmarkActions(deps) {
   const {
     t,
@@ -55,7 +56,7 @@ function createBookmarkActions(deps) {
         resolve({ ok: false, reason: 'runtime-unavailable' });
         return;
       }
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'openBookmarkFolderInNewTabGroup',
         folderId,
         title

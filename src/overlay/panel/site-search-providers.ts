@@ -5,6 +5,7 @@
 import * as AGGREGATE_SEARCH_SURFACE from '../../domain/search/aggregate-search-surface';
 import * as SITE_SEARCH_STORE from '../../shared/search/site-search-store';
 import * as LumnoAggregateSearchStorage from '../../platform/aggregate-search-storage';
+import * as LumnoMessaging from '../../platform/messaging';
 
 function createSiteSearchProviders(deps) {
   const {
@@ -101,7 +102,7 @@ function createSiteSearchProviders(deps) {
       return false;
     }
     if (isInteractiveSiteSearchProvider(provider)) {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'runSiteSearchProviderQuery',
         provider: provider,
         query: trimmedQuery,
@@ -113,7 +114,7 @@ function createSiteSearchProviders(deps) {
     if (!siteUrl) {
       return false;
     }
-    chrome.runtime.sendMessage({
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
       action: 'createTab',
       url: siteUrl,
       disposition: getSearchResultNewTabDisposition(event)
@@ -126,7 +127,7 @@ function createSiteSearchProviders(deps) {
       return;
     }
     try {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'recordSearchSuggestionSelection',
         query: String(query || '').trim(),
         url: suggestion.url,

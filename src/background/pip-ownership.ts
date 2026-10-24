@@ -1,4 +1,5 @@
 // @ts-nocheck
+import * as LumnoMessaging from '../platform/messaging';
 const GLOBAL_PIP_OWNER_STORAGE_KEY = '_x_lumno_global_pip_owner_2026_';
 
 function create(options) {
@@ -136,7 +137,7 @@ function create(options) {
         return;
       }
       try {
-        chromeApi.tabs.sendMessage(tabId, message, (response) => {
+        LumnoMessaging.sendTabMessage(chromeApi.tabs, tabId, message, (response) => {
           if (chromeApi.runtime && chromeApi.runtime.lastError) {
             resolve({
               ok: false,

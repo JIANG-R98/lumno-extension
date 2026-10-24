@@ -592,12 +592,6 @@ function createSettingsSync(deps) {
       if (!message) {
         return;
       }
-      if (message.action === 'lumno:wallpapers-updated') {
-        if (pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.refreshCustomWallpapers === 'function') {
-          pageState.wallpaperRuntime.refreshCustomWallpapers();
-        }
-        return;
-      }
       if (message.action !== 'lumno:newtab-refresh-sections') return;
       const section = message.section || 'all';
       if (section === 'recent' || section === 'all') {

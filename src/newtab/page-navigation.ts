@@ -1,5 +1,6 @@
 // Opening URLs, bookmarks, shortcuts and searches from the New Tab with the
 // right tab disposition.
+import * as LumnoMessaging from '../platform/messaging';
 function createPageNavigation(deps) {
   const {
     NAVIGATION_DISPOSITION,
@@ -64,7 +65,7 @@ function createPageNavigation(deps) {
       ? eventOrDisposition
       : getOpenDisposition(eventOrDisposition, 'newTab');
     if (chrome && chrome.runtime && typeof chrome.runtime.sendMessage === 'function') {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'createTab',
         url,
         disposition
@@ -99,7 +100,7 @@ function createPageNavigation(deps) {
     const disposition = getSurfaceOpenDisposition(config.surface, config.openInBackgroundTab);
     if (disposition !== 'currentTab' &&
         chrome && chrome.runtime && typeof chrome.runtime.sendMessage === 'function') {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'createTab',
         url: url,
         disposition
@@ -141,7 +142,7 @@ function createPageNavigation(deps) {
     if (!query) {
       return;
     }
-    chrome.runtime.sendMessage({
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
       action: 'recordSearchSuggestionSelection',
       query,
       url: suggestion.url,
@@ -169,7 +170,7 @@ function createPageNavigation(deps) {
     }
     chrome.tabs.getCurrent((tab) => {
       if (tab && typeof tab.id === 'number') {
-        chrome.runtime.sendMessage({ action: 'trackSearchTab', tabId: tab.id });
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'trackSearchTab', tabId: tab.id });
       }
     });
   }
@@ -196,7 +197,7 @@ function createPageNavigation(deps) {
   function navigateToQuery(query, forceSearch, disposition) {
     if (disposition && disposition !== 'currentTab' &&
         chrome && chrome.runtime && typeof chrome.runtime.sendMessage === 'function') {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'searchOrNavigate',
         query: query,
         forceSearch: Boolean(forceSearch),

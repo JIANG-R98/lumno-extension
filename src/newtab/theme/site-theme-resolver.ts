@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Resolves per-site accent themes from favicons and brand colors, caches them,
 // and applies them to suggestion rows, shortcut tiles and bookmark/recent cards.
+import * as LumnoMessaging from '../../platform/messaging';
 function createSiteThemeResolver(deps) {
   const {
     NEWTAB_FAVICON_THEME,
@@ -376,7 +377,7 @@ function createSiteThemeResolver(deps) {
       return siteThemeRequestPending.get(requestKey);
     }
     const promise = new Promise((resolve) => {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'resolveSiteThemeColor',
         url,
         host,
@@ -413,7 +414,7 @@ function createSiteThemeResolver(deps) {
       return themeFaviconCandidateRequestPending.get(requestKey);
     }
     const promise = new Promise((resolve) => {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'resolveFaviconCandidates',
         url,
         host,

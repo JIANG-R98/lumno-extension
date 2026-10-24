@@ -41,6 +41,7 @@ import * as OPTIONS_TOGGLE_CONTROLS from './options-toggle-controls';
 import * as OPTIONS_TOOLTIPS from './options-tooltips';
 import * as LumnoOptionsTranslationHelpSection from './options-translation-help';
 import * as LumnoWebDavOptions from './webdav-options';
+import * as LumnoMessaging from '../platform/messaging';
 
 (function() {
   // Page state shared with the parts of this page split out into
@@ -1370,7 +1371,7 @@ import * as LumnoWebDavOptions from './webdav-options';
       return;
     }
     try {
-      chrome.runtime.sendMessage(
+      LumnoMessaging.sendPageMessage(chrome.runtime, 
         { action: 'lumno:newtab-refresh-sections', section: section || 'all' },
         () => {
           if (chrome.runtime && chrome.runtime.lastError) {
@@ -1472,7 +1473,7 @@ import * as LumnoWebDavOptions from './webdav-options';
       if (!chrome?.runtime?.sendMessage) {
         return;
       }
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'openReleasePage',
         reason: 'options-version',
         disposition: getOpenDisposition(event, 'newTab')

@@ -1,5 +1,6 @@
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
+import * as LumnoMessaging from '../../platform/messaging';
 
 export const PAGE_NOTICE_ID =
   '_x_extension_newtab_notice_banner_2026_unique_';
@@ -43,7 +44,7 @@ function openDetailsPage(options: Record<string, any>, detailsUrl: string) {
     chromeApi?.runtime &&
     typeof chromeApi.runtime.sendMessage === 'function'
   ) {
-    chromeApi.runtime.sendMessage(
+    LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, 
       { action: 'openExtensionDetailsPage' },
       (response: { ok?: boolean; url?: string } | undefined) => {
         if (chromeApi.runtime.lastError) {

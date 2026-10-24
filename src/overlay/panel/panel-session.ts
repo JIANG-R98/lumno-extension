@@ -4,6 +4,7 @@
 // isolation, telling the background about loading and closing, and removing
 // the panel.
 import * as LumnoSettingsStorage from '../../platform/settings-storage';
+import * as LumnoMessaging from '../../platform/messaging';
 function createPanelSession(deps) {
   const {
     pauseOverlayAntiTranslateObserverForScroll,
@@ -209,7 +210,7 @@ function createPanelSession(deps) {
       return;
     }
     try {
-      chrome.runtime.sendMessage({ action: 'notifyOverlayClosed' }, () => {
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'notifyOverlayClosed' }, () => {
         void chrome.runtime.lastError;
       });
     } catch (error) {
@@ -244,7 +245,7 @@ function createPanelSession(deps) {
       ? Math.max(selectionStart, Math.min(inputLength, Math.trunc(rawSelectionEnd)))
       : selectionStart;
     try {
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'updateOverlayLoadingSession',
         session: {
           inputValue,

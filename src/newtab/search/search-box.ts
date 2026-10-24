@@ -2,6 +2,7 @@
 // key, input and focus handling, the global listeners that return focus to
 // it, and the search scope icon.
 import * as NEWTAB_BACKGROUND_SEARCH_FOCUS from './background-search-focus';
+import * as LumnoMessaging from '../../platform/messaging';
 
 function createSearchBox(deps) {
   const {
@@ -152,14 +153,14 @@ function createSearchBox(deps) {
     getSelectedIndex: () => pageState.selectedIndex,
     onSwitchToTab: (tab, event) => {
       if (shouldOpenSearchResultInBackgroundTab(event) && tab && tab.url) {
-        chrome.runtime.sendMessage({
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
           action: 'createTab',
           url: tab.url,
           disposition: 'backgroundTab'
         });
         return;
       }
-      chrome.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'switchToTab',
         tabId: tab.id
       });
@@ -545,7 +546,7 @@ function createSearchBox(deps) {
     const closeOtherTabsButton = pageState.inputParts && pageState.inputParts.secondaryAction;
     // The confirm button is going away with its bubble; keep typing in the field.
     searchInput.focus({ preventScroll: true });
-    chrome.runtime.sendMessage({ action: 'closeOtherTabsForOverlay' }, (response) => {
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'closeOtherTabsForOverlay' }, (response) => {
       if (closeOtherTabsButton) {
         closeOtherTabsButton.removeAttribute('data-hover-active');
       }

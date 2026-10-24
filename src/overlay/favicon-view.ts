@@ -1,6 +1,7 @@
 // @ts-nocheck
 import * as LumnoFaviconUtils from '../domain/favicon/favicon-utils';
 import * as LumnoFaviconViewCore from '../shared/favicon/favicon-view-core';
+import * as LumnoMessaging from '../platform/messaging';
 
 function noop() {}
 
@@ -237,7 +238,7 @@ function createOverlayFaviconViewRuntime(options) {
         finish('');
         return;
       }
-      chromeApi.runtime.sendMessage({
+      LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, {
         action: 'getFaviconData',
         url: sourceUrl,
         pageUrl: pageUrl || ''

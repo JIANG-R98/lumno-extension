@@ -104,6 +104,7 @@ import * as NEWTAB_URL_POLICY from './url-policy';
 import * as NEWTAB_VIEWPORT_INSETS from './viewport-insets';
 import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import * as LumnoMessaging from '../platform/messaging';
 
 (function() {
   // Page state shared with the modules split out of this file: each module
@@ -196,7 +197,7 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
       return false;
     }
     try {
-      chrome.runtime.sendMessage(message, callback);
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, message, callback);
       return true;
     } catch (_error) {
       return false;
@@ -2621,7 +2622,7 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
     if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
       return;
     }
-    chrome.runtime.sendMessage({ action: 'openBookmarkManager' });
+    LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openBookmarkManager' });
   });
   bookmarkSection.addEventListener('wheel', (event) => {
     if (!event || !isContentSectionVisible(bookmarkSection)) {
