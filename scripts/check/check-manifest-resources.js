@@ -120,7 +120,7 @@ function listJsFiles(dir) {
       files.push(...listJsFiles(fullPath));
       return;
     }
-    if (entry.isFile() && fullPath.endsWith('.js')) {
+    if (entry.isFile() && /\.(?:js|ts|tsx)$/.test(fullPath) && !fullPath.endsWith('.d.ts')) {
       files.push(fullPath);
     }
   });

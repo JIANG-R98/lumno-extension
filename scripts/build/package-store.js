@@ -60,6 +60,10 @@ function packagePathForFile(file) {
 
 function shouldCopyPackagePath(sourcePath) {
   const packagePath = normalizePackagePath(path.relative(repoRoot, sourcePath));
+  // TypeScript sources only reach the package through the bundles.
+  if (packagePath.startsWith('src/') && /\.tsx?$/.test(packagePath)) {
+    return false;
+  }
   if (packagePath.startsWith('src/') && packagePath.endsWith('.js') &&
       !packagePath.startsWith('src/react/') && !sourceRuntimeScripts.has(packagePath)) {
     return false;

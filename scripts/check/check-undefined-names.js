@@ -26,14 +26,14 @@ const UNRESOLVED_NAME_CODES = new Set([
   2724 // Module 'x' has no exported member 'y'. Did you mean 'z'?
 ]);
 
-function collectJavaScriptFiles(directory) {
+function collectSourceFiles(directory) {
   return fs.readdirSync(directory, { withFileTypes: true })
     .flatMap((entry) => {
       const filePath = path.join(directory, entry.name);
       if (entry.isDirectory()) {
-        return excludedDirectories.has(entry.name) ? [] : collectJavaScriptFiles(filePath);
+        return excludedDirectories.has(entry.name) ? [] : collectSourceFiles(filePath);
       }
-      return entry.isFile() && entry.name.endsWith('.js') ? [filePath] : [];
+      return entry.isFile() && /\.(?:js|ts|tsx)$/.test(entry.name) && !entry.name.endsWith('.d.ts') ? [filePath] : [];
     });
 }
 
@@ -81,11 +81,21 @@ function checkUndefinedNames(files) {
   const readFile = host.readFile.bind(host);
   const fileExists = host.fileExists.bind(host);
   const getSourceFile = host.getSourceFile.bind(host);
+  // A converted file not typed yet starts with @ts-nocheck, which would hide
+  // its unresolved names too; the check reads it without the directive.
+  const withoutNoCheck = (source) => source.replace(/^(\s*)\/\/\s*@ts-nocheck\b/, '$1//');
   host.readFile = (fileName) => (fileName === ambientPath ? ambientSource : readFile(fileName));
   host.fileExists = (fileName) => fileName === ambientPath || fileExists(fileName);
-  host.getSourceFile = (fileName, languageVersion, ...rest) => (fileName === ambientPath
-    ? ts.createSourceFile(fileName, ambientSource, languageVersion)
-    : getSourceFile(fileName, languageVersion, ...rest));
+  host.getSourceFile = (fileName, languageVersion, ...rest) => {
+    if (fileName === ambientPath) {
+      return ts.createSourceFile(fileName, ambientSource, languageVersion);
+    }
+    if (/\.tsx?$/.test(fileName) && !fileName.endsWith('.d.ts') && !fileName.includes(`${path.sep}node_modules${path.sep}`)) {
+      const source = readFile(fileName);
+      return source === undefined ? undefined : ts.createSourceFile(fileName, withoutNoCheck(source), languageVersion);
+    }
+    return getSourceFile(fileName, languageVersion, ...rest);
+  };
   const program = ts.createProgram([...files, ambientPath], options, host);
   return ts.getPreEmitDiagnostics(program)
     .filter((diagnostic) => UNRESOLVED_NAME_CODES.has(diagnostic.code) && diagnostic.file)
@@ -97,7 +107,7 @@ function checkUndefinedNames(files) {
 }
 
 if (require.main === module) {
-  const files = collectJavaScriptFiles(sourceRoot).sort();
+  const files = collectSourceFiles(sourceRoot).sort();
   const problems = checkUndefinedNames(files);
   if (problems.length) {
     process.stderr.write(`${problems.join('\n')}\n`);

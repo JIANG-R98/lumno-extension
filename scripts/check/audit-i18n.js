@@ -3,7 +3,7 @@ const path = require('path');
 
 const LOCALE_ROOT = '_locales';
 const SOURCE_ROOTS = ['src'];
-const INCLUDED_EXTENSIONS = new Set(['.js', '.html']);
+const INCLUDED_EXTENSIONS = new Set(['.js', '.ts', '.tsx', '.html']);
 const IGNORED_DIRS = new Set(['node_modules', 'dist', '.git']);
 const MAX_HITS_PER_FILE = 30;
 const HAN_RE = /\p{Script=Han}/u;

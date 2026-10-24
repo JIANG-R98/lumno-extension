@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const DEFAULT_ROOTS = ['src'];
-const INCLUDED_EXTENSIONS = new Set(['.js', '.html', '.css']);
+const INCLUDED_EXTENSIONS = new Set(['.js', '.ts', '.tsx', '.html', '.css']);
 const IGNORED_DIRS = new Set(['node_modules', 'dist', '.git']);
 const STYLE_DEBT_ALLOWLIST = [
   {

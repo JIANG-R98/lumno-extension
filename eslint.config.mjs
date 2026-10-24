@@ -43,14 +43,14 @@ export default tseslint.config(
     }
   },
   {
-    files: ['src/**/*.js'],
+    files: ['src/**/*.{js,ts,tsx}'],
     languageOptions: {
       sourceType: 'module',
       globals: extensionGlobals
     }
   },
   {
-    files: ['src/background/**/*.js'],
+    files: ['src/background/**/*.{js,ts}'],
     languageOptions: {
       globals: globals.serviceworker
     }
@@ -82,6 +82,20 @@ export default tseslint.config(
     languageOptions: {
       sourceType: 'module',
       globals: globals.node
+    }
+  },
+  {
+    // Converted runtime sources keep their JavaScript shape until they are
+    // typed, so only the TypeScript rules that hold for untyped code apply.
+    files: ['src/**/*.{ts,tsx}'],
+    extends: [tseslint.configs.recommended],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': ['error', unusedVarsOptions],
+      '@typescript-eslint/ban-ts-comment': ['error', { 'ts-nocheck': false }],
+      '@typescript-eslint/no-this-alias': 'off',
+      // Not enforced for the JavaScript sources either.
+      'prefer-const': 'off'
     }
   },
   {
