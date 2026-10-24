@@ -1,5 +1,52 @@
-// @ts-nocheck
-function collectBookmarkUrls(node, collected) {
+// Opening a bookmark folder's links in a new tab group.
+import type { BookmarkTabGroupReply } from '../domain/messages';
+
+// A bookmark tree node's fields the helpers read.
+interface BookmarkNodeLike {
+  url?: string;
+  title?: string;
+  children?: BookmarkNodeLike[];
+}
+
+// The callback-style extension API the helpers use.
+interface BookmarkTabGroupChromeApi {
+  bookmarks?: { getSubTree?(id: string, callback: (nodes: BookmarkNodeLike[]) => void): void };
+  tabs?: {
+    create?(createProperties: chrome.tabs.CreateProperties, callback: (tab: chrome.tabs.Tab) => void): void;
+    group?(options: { tabIds: number[] }, callback: (groupId: number) => void): void;
+  };
+  tabGroups?: { update?(groupId: number, updateProperties: { title: string }, callback: () => void): void };
+  runtime?: { lastError?: { message?: string } | null };
+}
+
+// The callable API once checked.
+interface ReadyChromeApi extends BookmarkTabGroupChromeApi {
+  bookmarks: { getSubTree(id: string, callback: (nodes: BookmarkNodeLike[]) => void): void };
+  tabs: {
+    create(createProperties: chrome.tabs.CreateProperties, callback: (tab: chrome.tabs.Tab) => void): void;
+    group(options: { tabIds: number[] }, callback: (groupId: number) => void): void;
+  };
+  tabGroups: { update(groupId: number, updateProperties: { title: string }, callback: () => void): void };
+}
+
+interface BookmarkTabGroupOptions {
+  folderId?: unknown;
+  title?: unknown;
+  windowId?: number;
+  // Where the first tab goes; the rest follow it.
+  insertIndex?: number;
+}
+
+interface BookmarkTabGroupResult extends BookmarkTabGroupReply {
+  requestedCount: number;
+  openedCount: number;
+  failedCount: number;
+  groupId: number | null;
+  reason: string;
+}
+
+// Every link under a node, depth first, without javascript: bookmarklets.
+function collectBookmarkUrls(node: BookmarkNodeLike | null | undefined, collected?: string[]): string[] {
   const urls = Array.isArray(collected) ? collected : [];
   if (!node) {
     return urls;
@@ -13,14 +60,20 @@ function collectBookmarkUrls(node, collected) {
   return urls;
 }
 
-function getLastErrorMessage(chromeApi, fallback) {
+function getLastErrorMessage(chromeApi: BookmarkTabGroupChromeApi, fallback: string): string {
   const runtime = chromeApi && chromeApi.runtime;
   return runtime && runtime.lastError
     ? String(runtime.lastError.message || fallback)
     : '';
 }
 
-function getBookmarkSubTree(chromeApi, folderId) {
+function isReady(chromeApi: BookmarkTabGroupChromeApi): chromeApi is ReadyChromeApi {
+  return Boolean(chromeApi.bookmarks && typeof chromeApi.bookmarks.getSubTree === 'function' &&
+    chromeApi.tabs && typeof chromeApi.tabs.create === 'function' && typeof chromeApi.tabs.group === 'function' &&
+    chromeApi.tabGroups && typeof chromeApi.tabGroups.update === 'function');
+}
+
+function getBookmarkSubTree(chromeApi: ReadyChromeApi, folderId: string): Promise<BookmarkNodeLike | null> {
   return new Promise((resolve, reject) => {
     try {
       chromeApi.bookmarks.getSubTree(folderId, (nodes) => {
@@ -40,7 +93,7 @@ function getBookmarkSubTree(chromeApi, folderId) {
   });
 }
 
-function createBackgroundTab(chromeApi, createProperties) {
+function createBackgroundTab(chromeApi: ReadyChromeApi, createProperties: chrome.tabs.CreateProperties): Promise<chrome.tabs.Tab | null> {
   return new Promise((resolve) => {
     try {
       chromeApi.tabs.create(createProperties, (tab) => {
@@ -57,7 +110,7 @@ function createBackgroundTab(chromeApi, createProperties) {
   });
 }
 
-function createTabGroup(chromeApi, tabIds) {
+function createTabGroup(chromeApi: ReadyChromeApi, tabIds: number[]): Promise<number> {
   return new Promise((resolve, reject) => {
     try {
       chromeApi.tabs.group({ tabIds }, (groupId) => {
@@ -74,7 +127,7 @@ function createTabGroup(chromeApi, tabIds) {
   });
 }
 
-function updateTabGroupTitle(chromeApi, groupId, title) {
+function updateTabGroupTitle(chromeApi: ReadyChromeApi, groupId: number, title: string): Promise<boolean> {
   return new Promise((resolve, reject) => {
     try {
       chromeApi.tabGroups.update(groupId, { title }, () => {
@@ -94,7 +147,7 @@ function updateTabGroupTitle(chromeApi, groupId, title) {
   });
 }
 
-function createResult(overrides) {
+function createResult(overrides: Partial<BookmarkTabGroupResult>): BookmarkTabGroupResult {
   return Object.assign({
     ok: false,
     requestedCount: 0,
@@ -105,7 +158,10 @@ function createResult(overrides) {
   }, overrides || {});
 }
 
-async function openBookmarkFolderInNewTabGroup(chromeApi, rawOptions) {
+async function openBookmarkFolderInNewTabGroup(
+  chromeApi: BookmarkTabGroupChromeApi | null | undefined,
+  rawOptions: BookmarkTabGroupOptions | null | undefined
+): Promise<BookmarkTabGroupResult> {
   const options = rawOptions && typeof rawOptions === 'object'
     ? rawOptions
     : {};
@@ -117,18 +173,16 @@ async function openBookmarkFolderInNewTabGroup(chromeApi, rawOptions) {
       typeof chromeApi.bookmarks.getSubTree !== 'function') {
     return createResult({ reason: 'bookmarks-api-unavailable' });
   }
-  if (!chromeApi.tabs || typeof chromeApi.tabs.create !== 'function' ||
-      typeof chromeApi.tabs.group !== 'function' ||
-      !chromeApi.tabGroups || typeof chromeApi.tabGroups.update !== 'function') {
+  if (!isReady(chromeApi)) {
     return createResult({ reason: 'tab-group-api-unavailable' });
   }
 
-  let folderNode = null;
+  let folderNode: BookmarkNodeLike | null = null;
   try {
     folderNode = await getBookmarkSubTree(chromeApi, folderId);
   } catch (error) {
     return createResult({
-      reason: error && error.message
+      reason: error instanceof Error && error.message
         ? error.message
         : 'bookmark-folder-unavailable'
     });
@@ -145,9 +199,9 @@ async function openBookmarkFolderInNewTabGroup(chromeApi, rawOptions) {
 
   const windowId = Number(options.windowId);
   const insertIndex = Number(options.insertIndex);
-  const openedTabs = [];
+  const openedTabs: Array<chrome.tabs.Tab & { id: number }> = [];
   for (let index = 0; index < urls.length; index += 1) {
-    const createProperties = {
+    const createProperties: chrome.tabs.CreateProperties = {
       url: urls[index],
       active: false
     };
@@ -158,8 +212,9 @@ async function openBookmarkFolderInNewTabGroup(chromeApi, rawOptions) {
       createProperties.index = Math.max(0, insertIndex + index);
     }
     const tab = await createBackgroundTab(chromeApi, createProperties);
-    if (tab) {
-      openedTabs.push(tab);
+    const tabId = tab && tab.id;
+    if (tab && typeof tabId === 'number') {
+      openedTabs.push({ ...tab, id: tabId });
     }
   }
 
@@ -173,7 +228,7 @@ async function openBookmarkFolderInNewTabGroup(chromeApi, rawOptions) {
     });
   }
 
-  let groupId = null;
+  let groupId: number | null = null;
   try {
     groupId = await createTabGroup(
       chromeApi,
@@ -187,7 +242,7 @@ async function openBookmarkFolderInNewTabGroup(chromeApi, rawOptions) {
       openedCount,
       failedCount,
       groupId,
-      reason: error && error.message ? error.message : 'tab-group-failed'
+      reason: error instanceof Error && error.message ? error.message : 'tab-group-failed'
     });
   }
 
@@ -202,3 +257,4 @@ async function openBookmarkFolderInNewTabGroup(chromeApi, rawOptions) {
 }
 
 export { collectBookmarkUrls, openBookmarkFolderInNewTabGroup };
+export type { BookmarkNodeLike, BookmarkTabGroupChromeApi, BookmarkTabGroupOptions, BookmarkTabGroupResult };

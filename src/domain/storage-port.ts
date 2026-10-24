@@ -7,7 +7,8 @@ type StorageItems = Record<string, unknown>;
 type StorageKeys = string | string[] | StorageItems | null;
 
 interface StorageAreaLike {
-  get(keys: StorageKeys, callback?: (items: StorageItems) => void): Promise<StorageItems> | void;
+  // The callback gets no items when the read failed (runtime.lastError says why).
+  get(keys: StorageKeys, callback?: (items: StorageItems | undefined) => void): Promise<StorageItems | undefined> | void;
   set(items: StorageItems, callback?: () => void): Promise<void> | void;
   remove?(keys: string | string[], callback?: () => void): Promise<void> | void;
   clear?(callback?: () => void): Promise<void> | void;

@@ -134,7 +134,7 @@ function createFaviconCache(options?: FaviconCacheOptions | null): FaviconCacheR
       return cache.loadPromise;
     }
     cache.loadPromise = new Promise((resolve) => {
-      area.get([key], (result: StorageItems) => {
+      area.get([key], (result: StorageItems | undefined) => {
         for (const [entryKey, entry] of read(result && result[key], Date.now())) {
           cache.entries.set(entryKey, entry);
         }

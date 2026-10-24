@@ -1,4 +1,3 @@
-// @ts-nocheck
 // How often each tab is switched to, kept per tab in session storage, and the
 // ranking the search overlay's open-tabs list uses to sort and describe tabs.
 //
@@ -9,6 +8,36 @@
 // that point.
 
 import { warnBackgroundFailure } from './background';
+import type { OverlayTab, TabRankFields } from '../domain/messages';
+import type { StorageAreaLike } from '../domain/storage-port';
+
+// When a tab was switched to in the last day, and last of all.
+interface TabSwitchStat {
+  events: number[];
+  lastSwitchAt: number;
+}
+
+interface TabSwitchRank {
+  score: number;
+  shortCount: number;
+  dayCount: number;
+  highFreq: boolean;
+  hint: string;
+  lastSwitchAt: number;
+}
+
+// A tab as the overlay's listing reads it.
+interface ListedTab {
+  id?: number;
+  title?: string;
+  url?: string;
+  favIconUrl?: string;
+  lastAccessed?: number;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
 
 const TAB_SWITCH_WINDOW_SHORT_MS = 30 * 60 * 1000;
 const TAB_SWITCH_WINDOW_DAY_MS = 24 * 60 * 60 * 1000;
@@ -18,18 +47,18 @@ const TAB_SWITCH_EVENT_HISTORY_LIMIT = 60;
 const TAB_SWITCH_STATS_STORAGE_KEY = '_x_extension_tab_switch_stats_2026_unique_';
 // Tab switch stats: persisted on every change to session storage and merged
 // back by ensureTabSwitchStatsLoaded on wake.
-const tabSwitchEventsByTabId = new Map();
+const tabSwitchEventsByTabId = new Map<number, TabSwitchStat>();
 // Rebuilt from tab.lastAccessed on the next tab listing.
-const tabLastAccessedByTabId = new Map();
+const tabLastAccessedByTabId = new Map<number, number>();
 // Debug counter and request sequence numbers; restarting them is harmless.
 let tabSwitchEventDebugTotal = 0;
 let tabSwitchStatsLoaded = false;
-let tabSwitchStatsLoadPromise = null;
+let tabSwitchStatsLoadPromise: Promise<void> | null = null;
 // Tabs whose stats were cleared before the stored stats were merged back; the
 // merge skips their stored entries so a cleared stat is not resurrected.
-const tabSwitchStatsClearedBeforeLoad = new Set();
+const tabSwitchStatsClearedBeforeLoad = new Set<number>();
 
-function getTabSwitchStorageArea() {
+function getTabSwitchStorageArea(): StorageAreaLike | null {
   if (!chrome || !chrome.storage) {
     return null;
   }
@@ -42,12 +71,12 @@ function getTabSwitchStorageArea() {
   return null;
 }
 
-function normalizeTabSwitchStatEntry(raw, now) {
-  if (!raw || typeof raw !== 'object') {
+function normalizeTabSwitchStatEntry(raw: unknown, now: number): TabSwitchStat | null {
+  if (!isRecord(raw)) {
     return null;
   }
   const minTs = now - TAB_SWITCH_WINDOW_DAY_MS;
-  const rawEvents = Array.isArray(raw.events) ? raw.events : [];
+  const rawEvents: unknown[] = Array.isArray(raw.events) ? raw.events : [];
   const events = rawEvents
     .map((item) => Number(item) || 0)
     .filter((item) => item >= minTs)
@@ -64,7 +93,7 @@ function normalizeTabSwitchStatEntry(raw, now) {
   };
 }
 
-function mergeTabSwitchStat(target, incoming, now) {
+function mergeTabSwitchStat(target: TabSwitchStat | null, incoming: TabSwitchStat, now: number): TabSwitchStat | null {
   const left = normalizeTabSwitchStatEntry(target, now) || { events: [], lastSwitchAt: 0 };
   const right = normalizeTabSwitchStatEntry(incoming, now) || { events: [], lastSwitchAt: 0 };
   const mergedEvents = left.events.concat(right.events)
@@ -81,9 +110,9 @@ function mergeTabSwitchStat(target, incoming, now) {
   };
 }
 
-function applyPersistedTabSwitchStats(payload) {
+function applyPersistedTabSwitchStats(payload: unknown): void {
   const now = Date.now();
-  if (!payload || typeof payload !== 'object') {
+  if (!isRecord(payload)) {
     return;
   }
   Object.keys(payload).forEach((tabIdKey) => {
@@ -103,9 +132,9 @@ function applyPersistedTabSwitchStats(payload) {
   });
 }
 
-function exportTabSwitchStatsSnapshot() {
+function exportTabSwitchStatsSnapshot(): Record<string, TabSwitchStat> {
   const now = Date.now();
-  const out = {};
+  const out: Record<string, TabSwitchStat> = {};
   tabSwitchEventsByTabId.forEach((stat, tabId) => {
     if (typeof tabId !== 'number') {
       return;
@@ -119,7 +148,7 @@ function exportTabSwitchStatsSnapshot() {
   return out;
 }
 
-function persistTabSwitchStatsNow() {
+function persistTabSwitchStatsNow(): Promise<boolean> {
   const area = getTabSwitchStorageArea();
   if (!area) {
     return Promise.resolve(false);
@@ -137,7 +166,7 @@ function persistTabSwitchStatsNow() {
   });
 }
 
-export function ensureTabSwitchStatsLoaded() {
+export function ensureTabSwitchStatsLoaded(): Promise<void> {
   if (tabSwitchStatsLoaded) {
     return Promise.resolve();
   }
@@ -162,7 +191,7 @@ export function ensureTabSwitchStatsLoaded() {
   return tabSwitchStatsLoadPromise;
 }
 
-function getTabSwitchStat(tabId, createIfMissing) {
+function getTabSwitchStat(tabId: number | null, createIfMissing: boolean): TabSwitchStat | null {
   if (typeof tabId !== 'number') {
     return null;
   }
@@ -170,7 +199,7 @@ function getTabSwitchStat(tabId, createIfMissing) {
   if (existing || !createIfMissing) {
     return existing || null;
   }
-  const created = {
+  const created: TabSwitchStat = {
     events: [],
     lastSwitchAt: 0
   };
@@ -178,7 +207,7 @@ function getTabSwitchStat(tabId, createIfMissing) {
   return created;
 }
 
-function pruneTabSwitchStat(stat, now) {
+function pruneTabSwitchStat(stat: TabSwitchStat | null, now: number): void {
   if (!stat || !Array.isArray(stat.events)) {
     return;
   }
@@ -189,7 +218,7 @@ function pruneTabSwitchStat(stat, now) {
   }
 }
 
-export function recordTabSwitchEvent(tabId, at) {
+export function recordTabSwitchEvent(tabId: number, at?: number): void {
   const stat = getTabSwitchStat(tabId, true);
   if (!stat) {
     return;
@@ -206,7 +235,7 @@ export function recordTabSwitchEvent(tabId, at) {
   persistTabSwitchStatsNow().catch(warnBackgroundFailure('Failed to save tab switch stats.'));
 }
 
-export function clearTabSwitchStat(tabId) {
+export function clearTabSwitchStat(tabId: unknown): void {
   if (typeof tabId !== 'number') {
     return;
   }
@@ -221,10 +250,11 @@ export function clearTabSwitchStat(tabId) {
   }
 }
 
-export function syncTabSwitchStatsFromTabList(tabs) {
+// Records the switches a listing reveals: tabs used since the last listing.
+export function syncTabSwitchStatsFromTabList(tabs: readonly (ListedTab | null | undefined)[]): void {
   const list = Array.isArray(tabs) ? tabs : [];
-  const aliveIds = new Set();
-  let mostRecentTabId = null;
+  const aliveIds = new Set<number>();
+  let mostRecentTabId: number | null = null;
   let mostRecentLastAccessed = 0;
   for (let i = 0; i < list.length; i += 1) {
     const tab = list[i];
@@ -247,7 +277,7 @@ export function syncTabSwitchStatsFromTabList(tabs) {
       recordTabSwitchEvent(tabId, lastAccessed);
     }
   }
-  const staleIds = [];
+  const staleIds: number[] = [];
   tabLastAccessedByTabId.forEach((_, tabId) => {
     if (!aliveIds.has(tabId)) {
       staleIds.push(tabId);
@@ -265,7 +295,7 @@ export function syncTabSwitchStatsFromTabList(tabs) {
   }
 }
 
-function getTabSwitchRank(tab, now) {
+function getTabSwitchRank(tab: ListedTab | null | undefined, now: number): TabSwitchRank {
   const safeNow = typeof now === 'number' ? now : Date.now();
   const stat = getTabSwitchStat(tab && typeof tab.id === 'number' ? tab.id : null, false);
   if (!stat) {
@@ -312,7 +342,8 @@ function getTabSwitchRank(tab, now) {
   };
 }
 
-export function sortTabsForOverlay(tabs) {
+// Most switched to and most recently used first.
+export function sortTabsForOverlay<T extends ListedTab>(tabs: readonly T[]): Array<T & TabRankFields> {
   const list = Array.isArray(tabs) ? tabs.slice() : [];
   const now = Date.now();
   const sortAt = now;
@@ -322,18 +353,19 @@ export function sortTabsForOverlay(tabs) {
       const lastAccessed = Number(tab && tab.lastAccessed) || 0;
       const idleMinutes = lastAccessed > 0 ? (now - lastAccessed) / 60000 : 999999;
       const accessBoost = Math.exp(-Math.max(0, idleMinutes) / 30);
+      const ranked: T & TabRankFields = {
+        ...tab,
+        _xTabRankScore: rank.score,
+        _xTabSwitchCount30m: rank.shortCount,
+        _xTabSwitchCount24h: rank.dayCount,
+        _xTabDebugEventTotal: tabSwitchEventDebugTotal,
+        _xTabLastAccessedRaw: lastAccessed,
+        _xTabSortAt: sortAt,
+        _xTabRankHighFreq: rank.highFreq,
+        _xTabRankHint: rank.hint
+      };
       return {
-        tab: {
-          ...tab,
-          _xTabRankScore: rank.score,
-          _xTabSwitchCount30m: rank.shortCount,
-          _xTabSwitchCount24h: rank.dayCount,
-          _xTabDebugEventTotal: tabSwitchEventDebugTotal,
-          _xTabLastAccessedRaw: lastAccessed,
-          _xTabSortAt: sortAt,
-          _xTabRankHighFreq: rank.highFreq,
-          _xTabRankHint: rank.hint
-        },
+        tab: ranked,
         score: rank.score + accessBoost,
         lastAccessed: lastAccessed,
         index: index
@@ -351,7 +383,7 @@ export function sortTabsForOverlay(tabs) {
     .map((item) => item.tab);
 }
 
-export function createOverlayTabPayload(tab, fetchSeq) {
+export function createOverlayTabPayload(tab: ListedTab & TabRankFields & { id: number }, fetchSeq: number): OverlayTab {
   return {
     id: tab.id,
     title: typeof tab.title === 'string' ? tab.title : '',

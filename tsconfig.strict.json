@@ -20,6 +20,13 @@
     "src/background/selection-script-registration.ts",
     "src/background/tab-groups.ts",
     "src/background/popup-recent-pin.ts",
-    "src/background/overlay-loading-lifecycle.ts"
+    "src/background/overlay-loading-lifecycle.ts",
+    "src/background/bookmark-tab-groups.ts",
+    "src/background/pip-ownership.ts",
+    "src/background/newtab-fallback.ts",
+    "src/background/browser-urls-service.ts",
+    "src/background/selection-target.ts",
+    "src/background/tab-switch-stats-service.ts",
+    "src/background/page-shortcut-menu.ts"
   ]
 }

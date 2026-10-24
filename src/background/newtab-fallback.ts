@@ -1,56 +1,46 @@
-// @ts-nocheck
+// Lumno's New Tab as the place a search or shortcut lands when the page it
+// was asked from cannot take it, and the Firefox focus swap for a New Tab.
 import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as LumnoExtensionRoutes from '../domain/extension-routes';
 import * as LumnoBackgroundTabGroups from './tab-groups';
+import type { CreatedTabCallback } from './tab-groups';
+import type { OkReply } from '../domain/messages';
 
-function getChromeApi() {
+interface FallbackOptions {
+  // The tab the request came from; the new tab joins its group.
+  sourceTab?: chrome.tabs.Tab | null;
+  // Show the notice that file URLs need the extension's file access.
+  notice?: 'file-access' | null;
+  followBrowserNewtab?: boolean;
+}
+
+type SwapReply = OkReply & { removed?: boolean };
+
+function getChromeApi(): typeof chrome | null {
   return typeof chrome !== 'undefined' ? chrome : null;
 }
 
-function getRoutesApi() {
-  return LumnoExtensionRoutes;
-}
-
-function getTabGroupsApi() {
-  return LumnoBackgroundTabGroups;
-}
-
-function createTab(options, callback) {
+function createTab(
+  options: { sourceTab?: chrome.tabs.Tab | null; createProperties: chrome.tabs.CreateProperties },
+  callback?: CreatedTabCallback
+): void {
   const chromeApi = getChromeApi();
-  const done = typeof callback === 'function' ? callback : () => {};
+  const done: CreatedTabCallback = typeof callback === 'function' ? callback : () => {};
   if (!chromeApi || !chromeApi.tabs || typeof chromeApi.tabs.create !== 'function') {
     done(null, { ok: false, reason: 'tabs-api-unavailable', grouped: false });
     return;
   }
-  const openOptions = options && typeof options === 'object' ? options : {};
-  const createProperties = openOptions.createProperties && typeof openOptions.createProperties === 'object'
-    ? openOptions.createProperties
-    : {};
-  const sourceTab = openOptions.sourceTab && typeof openOptions.sourceTab === 'object'
-    ? openOptions.sourceTab
-    : null;
-  const tabGroups = getTabGroupsApi();
-  if (tabGroups && typeof tabGroups.createTabInSourceGroup === 'function') {
-    tabGroups.createTabInSourceGroup(chromeApi, createProperties, sourceTab, done);
-    return;
-  }
-  chromeApi.tabs.create(createProperties, (tab) => {
-    done(tab || null, {
-      ok: !(chromeApi.runtime && chromeApi.runtime.lastError),
-      reason: chromeApi.runtime && chromeApi.runtime.lastError
-        ? chromeApi.runtime.lastError.message || 'tab-create-failed'
-        : '',
-      grouped: false
-    });
-  });
+  LumnoBackgroundTabGroups.createTabInSourceGroup(chromeApi, options.createProperties, options.sourceTab || null, done);
 }
 
-function isLocalFileLikeTargetUrl(url) {
+// File URLs, and pages that are likely files (PDF, saved HTML), need the
+// extension's file access to open from a script.
+function isLocalFileLikeTargetUrl(url: unknown): boolean {
   if (!url) {
     return false;
   }
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(String(url));
     const protocol = String(parsed.protocol || '').toLowerCase();
     if (protocol === 'file:') {
       return true;
@@ -71,7 +61,7 @@ function isLocalFileLikeTargetUrl(url) {
           nestedPath.endsWith('.html')) {
           return true;
         }
-      } catch (e) {
+      } catch (_error) {
         const lowerSrc = String(srcParam).toLowerCase();
         if (lowerSrc.startsWith('file://') ||
           lowerSrc.includes('.pdf') ||
@@ -81,7 +71,7 @@ function isLocalFileLikeTargetUrl(url) {
         }
       }
     }
-  } catch (e) {
+  } catch (_error) {
     const lower = String(url).toLowerCase();
     return lower.startsWith('file://') ||
       lower.includes('.pdf') ||
@@ -91,12 +81,13 @@ function isLocalFileLikeTargetUrl(url) {
   return false;
 }
 
-function isFirefoxRuntime(chromeApi) {
-  const profile = LumnoBrowserProfile;
-  return Boolean(profile && profile.isFirefoxExtensionRuntime(chromeApi));
+function isFirefoxRuntime(chromeApi: typeof chrome): boolean {
+  return LumnoBrowserProfile.isFirefoxExtensionRuntime(chromeApi);
 }
 
-function checkFileSchemeAccess(callback) {
+// Resolves whether the extension may open file URLs; null where the browser
+// has no such setting.
+function checkFileSchemeAccess(callback?: (isAllowed: boolean | null) => void): void {
   const chromeApi = getChromeApi();
   const done = typeof callback === 'function' ? callback : () => {};
   if (!chromeApi || !chromeApi.extension || typeof chromeApi.extension.isAllowedFileSchemeAccess !== 'function') {
@@ -117,38 +108,19 @@ function checkFileSchemeAccess(callback) {
       }
       done(Boolean(isAllowed));
     });
-  } catch (e) {
+  } catch (_error) {
     done(null);
   }
 }
 
-function buildNewtabFallbackUrl(options) {
-  const chromeApi = getChromeApi();
-  const routes = getRoutesApi();
-  if (routes && typeof routes.buildLumnoNewtabUrl === 'function') {
-    return routes.buildLumnoNewtabUrl(chromeApi, {
-      focus: true,
-      notice: options && options.notice === 'file-access' ? 'file-access' : null
-    });
-  }
-  if (routes && typeof routes.buildNewtabUrl === 'function') {
-    return routes.buildNewtabUrl(chromeApi, {
-      focus: true,
-      notice: options && options.notice === 'file-access' ? 'file-access' : null
-    });
-  }
-  const baseUrl = chromeApi && chromeApi.runtime && typeof chromeApi.runtime.getURL === 'function'
-    ? chromeApi.runtime.getURL('src/newtab/lumno-newtab.html')
-    : 'src/newtab/lumno-newtab.html';
-  const newtabUrl = new URL(baseUrl, 'chrome-extension://lumno/');
-  newtabUrl.searchParams.set('focus', '1');
-  if (options && options.notice === 'file-access') {
-    newtabUrl.searchParams.set('notice', 'file-access');
-  }
-  return newtabUrl.toString();
+function buildNewtabFallbackUrl(options?: FallbackOptions | null): string {
+  return LumnoExtensionRoutes.buildLumnoNewtabUrl(getChromeApi(), {
+    focus: true,
+    notice: options && options.notice === 'file-access' ? 'file-access' : null
+  });
 }
 
-function openNewtabFallback(options) {
+function openNewtabFallback(options?: FallbackOptions | null): void {
   const openOptions = options && typeof options === 'object' ? options : {};
   const newtabUrl = buildNewtabFallbackUrl(options);
   createTab({
@@ -157,7 +129,7 @@ function openNewtabFallback(options) {
   });
 }
 
-function openBrowserNewtabFallback(options) {
+function openBrowserNewtabFallback(options?: FallbackOptions | null): void {
   const openOptions = options && typeof options === 'object' ? options : {};
   createTab({
     sourceTab: openOptions.sourceTab || null,
@@ -167,7 +139,7 @@ function openBrowserNewtabFallback(options) {
 
 // followBrowserNewtab opens the browser's own New Tab instead of Lumno's,
 // except when the file-access notice still needs Lumno's page to explain it.
-function openNewtabFallbackForUrl(url, options) {
+function openNewtabFallbackForUrl(url: unknown, options?: FallbackOptions | null): void {
   const openOptions = options && typeof options === 'object' ? options : {};
   const openFallback = openOptions.followBrowserNewtab === true
     ? openBrowserNewtabFallback
@@ -188,7 +160,7 @@ function openNewtabFallbackForUrl(url, options) {
   });
 }
 
-function isLumnoNewtabPageUrl(chromeApi, url) {
+function isLumnoNewtabPageUrl(chromeApi: typeof chrome | null, url: unknown): boolean {
   if (!chromeApi || !chromeApi.runtime || typeof chromeApi.runtime.getURL !== 'function') {
     return false;
   }
@@ -196,17 +168,25 @@ function isLumnoNewtabPageUrl(chromeApi, url) {
     const parsed = new URL(String(url || ''));
     const newtabUrl = new URL(chromeApi.runtime.getURL('newtab.html'));
     return parsed.origin === newtabUrl.origin && parsed.pathname === newtabUrl.pathname;
-  } catch (e) {
+  } catch (_error) {
     return false;
   }
 }
 
 // Session stores may record the close slightly later (Zen does), so retry;
 // lastModified keeps an older, user-closed New Tab from being forgotten.
-function forgetClosedNewtab(chromeApi, closedUrl, closedAfter, attemptsLeft) {
+// Firefox's sessions.forgetClosedTab, which chrome.sessions lacks.
+function getForgetClosedTab(sessions: typeof chrome.sessions): ((windowId: number, sessionId: string) => unknown) | null {
+  const forget: unknown = 'forgetClosedTab' in sessions ? sessions.forgetClosedTab : null;
+  return typeof forget === 'function'
+    ? (windowId, sessionId) => forget.call(sessions, windowId, sessionId)
+    : null;
+}
+
+function forgetClosedNewtab(chromeApi: typeof chrome, closedUrl: string, closedAfter: number, attemptsLeft?: number): void {
   const sessions = chromeApi && chromeApi.sessions;
-  if (!sessions || typeof sessions.getRecentlyClosed !== 'function' ||
-      typeof sessions.forgetClosedTab !== 'function') {
+  const forgetClosedTab = sessions ? getForgetClosedTab(sessions) : null;
+  if (!sessions || typeof sessions.getRecentlyClosed !== 'function' || !forgetClosedTab) {
     return;
   }
   const remaining = typeof attemptsLeft === 'number' ? attemptsLeft : 3;
@@ -218,7 +198,8 @@ function forgetClosedNewtab(chromeApi, closedUrl, closedAfter, attemptsLeft) {
       item && item.tab && item.tab.url === closedUrl && item.tab.sessionId &&
       Number(item.lastModified) >= closedAfter
     ));
-    if (!entry) {
+    const closedTab = entry && entry.tab;
+    if (!closedTab || !closedTab.sessionId) {
       if (remaining > 1) {
         setTimeout(() => forgetClosedNewtab(chromeApi, closedUrl, closedAfter, remaining - 1), 150);
       }
@@ -226,11 +207,11 @@ function forgetClosedNewtab(chromeApi, closedUrl, closedAfter, attemptsLeft) {
     }
     // Firefox-only API; its schema takes no callback and returns a promise.
     try {
-      const forgetting = sessions.forgetClosedTab(entry.tab.windowId, entry.tab.sessionId);
-      if (forgetting && typeof forgetting.catch === 'function') {
+      const forgetting = forgetClosedTab(closedTab.windowId, closedTab.sessionId);
+      if (forgetting instanceof Promise) {
         forgetting.catch(() => {});
       }
-    } catch (e) {
+    } catch (_error) {
       // Keeping the closed entry is harmless.
     }
   });
@@ -241,21 +222,28 @@ function forgetClosedNewtab(chromeApi, closedUrl, closedAfter, attemptsLeft) {
 // freshly created tab. Replace the sender tab with one marked #focus: a
 // query would leave the URL bar showing the extension URL once cleared,
 // because Firefox compares it with the page principal.
-function swapNewtabForFocus(sourceTab, senderUrl, callback) {
+function swapNewtabForFocus(
+  sourceTab: chrome.tabs.Tab | null | undefined,
+  senderUrl: unknown,
+  callback?: (reply: SwapReply) => void
+): void {
   const chromeApi = getChromeApi();
   const done = typeof callback === 'function' ? callback : () => {};
-  if (!sourceTab || typeof sourceTab.id !== 'number' || !isLumnoNewtabPageUrl(chromeApi, senderUrl)) {
+  const sourceTabId = sourceTab && sourceTab.id;
+  if (!chromeApi || !sourceTab || typeof sourceTabId !== 'number' || !isLumnoNewtabPageUrl(chromeApi, senderUrl)) {
     done({ ok: false, reason: 'invalid-sender' });
     return;
   }
   // Recreating a container tab needs the cookies permission; leave it as is.
-  if (/^firefox-container-/.test(String(sourceTab.cookieStoreId || ''))) {
+  // Firefox's tab.cookieStoreId names the container.
+  const cookieStoreId: unknown = 'cookieStoreId' in sourceTab ? sourceTab.cookieStoreId : '';
+  if (/^firefox-container-/.test(String(cookieStoreId || ''))) {
     done({ ok: false, reason: 'container-tab' });
     return;
   }
   const focusUrl = new URL(String(senderUrl));
   focusUrl.hash = 'focus';
-  const createProperties = {
+  const createProperties: chrome.tabs.CreateProperties = {
     url: focusUrl.toString(),
     index: sourceTab.index,
     windowId: sourceTab.windowId,
@@ -270,7 +258,7 @@ function swapNewtabForFocus(sourceTab, senderUrl, callback) {
       return;
     }
     const removeStartedAt = Date.now();
-    chromeApi.tabs.remove(sourceTab.id, () => {
+    chromeApi.tabs.remove(sourceTabId, () => {
       if (chromeApi.runtime && chromeApi.runtime.lastError) {
         done({ ok: true, removed: false });
         return;

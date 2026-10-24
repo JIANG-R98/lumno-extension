@@ -43,14 +43,27 @@ interface ShortcutRule {
   searchSourceType?: string;
 }
 
+// How often a tab was switched to, which the overlay's tab list ranks by.
+interface TabRankFields {
+  _xTabRankScore: number;
+  _xTabSwitchCount30m: number;
+  _xTabSwitchCount24h: number;
+  _xTabDebugEventTotal: number;
+  _xTabLastAccessedRaw: number;
+  _xTabSortAt: number;
+  // Switched to often enough to say so, and the words that say it.
+  _xTabRankHighFreq: boolean;
+  _xTabRankHint: string;
+}
+
 // A tab as the overlay's tab list shows it.
-interface OverlayTab {
+interface OverlayTab extends TabRankFields {
   id: number;
   title: string;
   url: string;
   favIconUrl: string;
-  lastAccessed: number;
-  [field: string]: unknown;
+  // Which listing it came from, so a late answer cannot replace a newer one.
+  _xTabFetchSeq: number;
 }
 
 // What the overlay keeps of its input while the page under it loads.
@@ -160,9 +173,22 @@ interface AggregateSearchReply extends OkReply {
   warnings?: string[];
 }
 
+type PipKind = 'video' | 'document';
+
+// The frame that holds picture-in-picture; one at a time across tabs.
+interface PipOwner {
+  kind: PipKind;
+  tabId: number;
+  frameId: number;
+  token: string;
+  url: string;
+  updatedAt: number;
+}
+
 interface PipOwnershipReply extends OkReply {
   granted: boolean;
   token?: string;
+  owner?: PipOwner;
 }
 
 interface PipReleaseReply extends OkReply {
@@ -401,6 +427,8 @@ export type {
   PageReply,
   PageRequest,
   PageShortcutResult,
+  PipKind,
+  PipOwner,
   PipOwnershipReply,
   PipReleaseReply,
   PopupTabRequest,
@@ -410,6 +438,7 @@ export type {
   ShortcutFaviconData,
   ShortcutRule,
   SiteThemeColor,
+  TabRankFields,
   TabSwitcherContext,
   TabSwitcherItem,
   TabSwitcherThumbnailStatus,

@@ -36,16 +36,18 @@ type AreaName = 'sync' | 'local' | '';
 type StorageMethod = 'get' | 'set' | 'remove' | 'clear';
 
 // Called with the operation's result, and with its error when it failed
-// (Chrome also leaves the error in runtime.lastError meanwhile).
-type FacadeCallback = (result: unknown, error?: Error) => void;
+// (Chrome also leaves the error in runtime.lastError meanwhile). A failed
+// read has no result.
+type FacadeCallback<R> = (result: R | undefined, error?: Error) => void;
 
 // An area that answers like chrome.storage: with a callback, or a promise
-// when there is none.
+// when there is none. With a callback the promise still settles, with no
+// result when the operation failed.
 interface StorageAreaFacade {
-  get(keys?: StorageKeys | FacadeCallback, callback?: FacadeCallback): Promise<unknown>;
-  set(items: StorageItems, callback?: FacadeCallback): Promise<unknown>;
-  remove(keys: string | string[], callback?: FacadeCallback): Promise<unknown>;
-  clear(callback?: FacadeCallback): Promise<unknown>;
+  get(keys?: StorageKeys | FacadeCallback<StorageItems>, callback?: FacadeCallback<StorageItems>): Promise<StorageItems | undefined>;
+  set(items: StorageItems, callback?: FacadeCallback<void>): Promise<void>;
+  remove(keys: string | string[], callback?: FacadeCallback<void>): Promise<void>;
+  clear(callback?: FacadeCallback<void>): Promise<void>;
 }
 
 // The area provider-scoped settings live in, and which one that is.
@@ -76,7 +78,7 @@ interface ReadBatchMetrics {
 interface StorageReadBatch {
   area: {
     clear(callback?: () => void): unknown;
-    get(keys?: StorageKeys | ((items: StorageItems) => void), callback?: (items: StorageItems) => void): unknown;
+    get(keys?: StorageKeys | ((items: StorageItems | undefined) => void), callback?: (items: StorageItems | undefined) => void): unknown;
     remove(keys: string | string[], callback?: () => void): unknown;
     set(items: StorageItems, callback?: () => void): unknown;
   };
@@ -130,12 +132,18 @@ function toError(error: unknown, fallbackMessage: string): Error {
 function migrateLocalSettingsToSync(localArea: StorageAreaLike, syncArea: StorageAreaLike, keys: string[]): void {
   const [groupHeadKey] = NEWTAB_SHORTCUTS_V2_STORAGE_KEYS;
   const isGroupKey = (key: string) => NEWTAB_SHORTCUTS_V2_STORAGE_KEYS.includes(key);
-  localArea.get(keys, (localResult) => {
+  localArea.get(keys, (localItems) => {
+    // A failed read has no items: nothing to copy then.
+    const localResult = localItems || {};
     const hasLocal = keys.some((key) => typeof localResult[key] !== 'undefined');
     if (!hasLocal) {
       return;
     }
-    syncArea.get(keys, (syncResult) => {
+    syncArea.get(keys, (syncItems) => {
+      if (!syncItems) {
+        return;
+      }
+      const syncResult = syncItems;
       const groupMissing = typeof localResult[groupHeadKey] !== 'undefined'
         && typeof syncResult[groupHeadKey] === 'undefined';
       const missingSyncValues: StorageItems = {};
@@ -152,7 +160,11 @@ function migrateLocalSettingsToSync(localArea: StorageAreaLike, syncArea: Storag
       if (missingKeys.length === 0) {
         return;
       }
-      syncArea.get(missingKeys, (latestSyncResult) => {
+      syncArea.get(missingKeys, (latestSyncItems) => {
+        if (!latestSyncItems) {
+          return;
+        }
+        const latestSyncResult = latestSyncItems;
         const groupStillMissing = typeof latestSyncResult[groupHeadKey] === 'undefined';
         const stillMissingSyncValues: StorageItems = {};
         missingKeys.forEach((key) => {
@@ -276,7 +288,7 @@ function readStorageValue(
       }
       resolve(result[key]);
     };
-    const callback = (result: StorageItems) => {
+    const callback = (result: StorageItems | undefined) => {
       const runtimeError = chromeApi && chromeApi.runtime
         ? chromeApi.runtime.lastError
         : null;
@@ -433,7 +445,7 @@ function prefetchStorageRead(
 }
 
 interface ReadRequest {
-  callback: ((items: StorageItems) => void) | null;
+  callback: ((items: StorageItems | undefined) => void) | null;
   keys: StorageKeys | undefined;
   resolve: ((items: StorageItems) => void) | null;
 }
@@ -566,8 +578,8 @@ function createStorageReadBatch(area: StorageAreaLike | null | undefined): Stora
 
   // Like chrome.storage get: (keys, callback), (callback), or (keys) for a promise.
   function get(
-    keysOrCallback?: StorageKeys | ((items: StorageItems) => void),
-    maybeCallback?: (items: StorageItems) => void
+    keysOrCallback?: StorageKeys | ((items: StorageItems | undefined) => void),
+    maybeCallback?: (items: StorageItems | undefined) => void
   ): unknown {
     let keys: StorageKeys | undefined;
     let callback = maybeCallback;
@@ -702,26 +714,28 @@ function createProviderStorageRuntime(
   // in runtime.lastError while the callback runs); without a callback the
   // returned promise rejects. A write refused for exceeding the sync write
   // quota is retried once after the quota refills.
-  function invoke(
+  function invoke<R>(
     method: StorageMethod,
     writtenKeys: string[] | null,
-    operation: (area: StorageAreaLike, done: (result?: unknown) => void) => unknown,
-    callback: FacadeCallback | null
-  ): Promise<unknown> {
+    // What an area without this method answers: no items for a read.
+    emptyResult: R | undefined,
+    operation: (area: StorageAreaLike, done: (result?: R) => void) => PromiseLike<R | undefined> | void,
+    callback: FacadeCallback<R> | null
+  ): Promise<R | undefined> {
     const isWrite = writtenKeys !== null;
     const keys = writtenKeys || [];
     const sequence = ++writeSequence;
     keys.forEach((key) => latestWrites.set(key, sequence));
-    return modeReady.then(() => new Promise((resolve, reject) => {
+    return modeReady.then(() => new Promise<R | undefined>((resolve, reject) => {
       const area = getActiveArea();
       if (!area || typeof area[method] !== 'function') {
-        if (callback) callback(method === 'get' ? {} : undefined);
-        resolve(method === 'get' ? {} : undefined);
+        if (callback) callback(emptyResult);
+        resolve(emptyResult);
         return;
       }
       const target = area;
       let retried = false;
-      const complete = (result: unknown, error: Error | null) => {
+      const complete = (result: R | undefined, error: Error | null) => {
         if (callback) callback(result, error || undefined);
         if (error && callback && isWrite) {
           try { console.warn('[Lumno] Could not save settings.', error); } catch (_error) { /* ignore */ }
@@ -731,7 +745,7 @@ function createProviderStorageRuntime(
       };
       const attempt = () => {
         let settled = false;
-        const finish = (result: unknown, failure?: unknown) => {
+        const finish = (result: R | undefined, failure?: unknown) => {
           if (settled) return;
           settled = true;
           const lastError = failure || (chromeApi && chromeApi.runtime && chromeApi.runtime.lastError);
@@ -750,8 +764,7 @@ function createProviderStorageRuntime(
         };
         try {
           const maybePromise = operation(target, (result) => finish(result));
-          if (maybePromise && typeof maybePromise === 'object' && 'then' in maybePromise &&
-              typeof maybePromise.then === 'function') {
+          if (maybePromise && typeof maybePromise.then === 'function') {
             Promise.resolve(maybePromise).then((result) => finish(result))
               .catch((error: unknown) => finish(undefined, error || new Error('Storage operation failed')));
           }
@@ -769,25 +782,26 @@ function createProviderStorageRuntime(
   // Like chrome.storage: the callback comes last; get() with only a callback
   // reads every key.
   const area: StorageAreaFacade = Object.freeze({
-    get(keysOrCallback?: StorageKeys | FacadeCallback, maybeCallback?: FacadeCallback) {
+    get(keysOrCallback?: StorageKeys | FacadeCallback<StorageItems>, maybeCallback?: FacadeCallback<StorageItems>) {
       const callback = typeof keysOrCallback === 'function' ? keysOrCallback : maybeCallback;
       const keys = typeof keysOrCallback === 'function' || keysOrCallback === undefined ? null : keysOrCallback;
-      return invoke('get', null, (target, done) => target.get(keys, done), callback || null);
+      return invoke<StorageItems>('get', null, {}, (target, done) => target.get(keys, done), callback || null);
     },
-    set(items: StorageItems, callback?: FacadeCallback) {
+    set(items: StorageItems, callback?: FacadeCallback<void>) {
       const keys = Object.keys(items && typeof items === 'object' ? items : {});
-      return invoke('set', keys, (target, done) => target.set(items, () => done()), callback || null);
+      return invoke<void>('set', keys, undefined, (target, done) => target.set(items, () => done()), callback || null)
+        .then(() => undefined);
     },
-    remove(keys: string | string[], callback?: FacadeCallback) {
+    remove(keys: string | string[], callback?: FacadeCallback<void>) {
       const removed = (Array.isArray(keys) ? keys : [keys]).map(String);
-      return invoke('remove', removed, (target, done) => (
+      return invoke<void>('remove', removed, undefined, (target, done) => (
         target.remove ? target.remove(keys, () => done()) : undefined
-      ), callback || null);
+      ), callback || null).then(() => undefined);
     },
-    clear(callback?: FacadeCallback) {
-      return invoke('clear', [], (target, done) => (
+    clear(callback?: FacadeCallback<void>) {
+      return invoke<void>('clear', [], undefined, (target, done) => (
         target.clear ? target.clear(() => done()) : undefined
-      ), callback || null);
+      ), callback || null).then(() => undefined);
     }
   });
   rateLimitRetryingAreas.add(area);

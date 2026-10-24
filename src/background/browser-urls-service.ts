@@ -1,4 +1,3 @@
-// @ts-nocheck
 // URL classification for the tabs commands act on: restricted and browser-
 // internal pages, Lumno's own pages and New Tab, other extensions, and which
 // browser New Tab provider a fresh tab belongs to. Also opens search-result
@@ -28,60 +27,65 @@ import {
   storageArea,
   whenBackgroundSettingsReady
 } from './background';
+import type { CreatedTabCallback, TabGroupContext, TabLike } from './tab-groups';
+import type { TabPlacement } from './search-result-tabs';
 
-function isBrowserExtensionProtocol(protocol) {
-  const guards = LumnoUrlGuards;
-  return guards.isBrowserExtensionProtocol(protocol);
+// Which page a browser's fresh tab shows: Lumno's New Tab, another
+// extension's, or the browser's own.
+type BrowserNewtabProviderType = 'lumno' | 'other-extension' | 'browser' | '';
+
+// The fields of a tab the URL helpers read.
+type UrlTabLike = Partial<Pick<chrome.tabs.Tab, 'id' | 'url' | 'pendingUrl' | 'status'>>;
+
+function isBrowserExtensionProtocol(protocol: unknown): boolean {
+  return LumnoUrlGuards.isBrowserExtensionProtocol(protocol);
 }
 
-export function isBrowserInternalUrl(url) {
-  const guards = LumnoUrlGuards;
-  return guards.isBrowserInternalUrl(url);
+export function isBrowserInternalUrl(url: unknown): boolean {
+  return LumnoUrlGuards.isBrowserInternalUrl(url);
 }
 
-export function isRestrictedUrl(url) {
-  const guards = LumnoUrlGuards;
-  return guards.isRestrictedUrl(url);
+export function isRestrictedUrl(url: unknown): boolean {
+  return LumnoUrlGuards.isRestrictedUrl(url);
 }
 
-export function canOpenOverlayOnUrl(url) {
-  const guards = LumnoUrlGuards;
-  return guards.canOpenOverlayOnUrl(url);
+export function canOpenOverlayOnUrl(url: unknown): boolean {
+  return LumnoUrlGuards.canOpenOverlayOnUrl(url);
 }
 
-export function canFetchPageForFavicon(url) {
-  const guards = LumnoUrlGuards;
-  return guards.canFetchPageForFavicon(url);
+export function canFetchPageForFavicon(url: unknown): boolean {
+  return LumnoUrlGuards.canFetchPageForFavicon(url);
 }
 
 // Firefox hosts extension pages on a per-install UUID, not runtime.id. Compare
 // protocol and host: URL.origin is "null" for these schemes outside browsers.
-function getExtensionUrlKey(url) {
+function getExtensionUrlKey(url: unknown): string {
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(String(url));
     return parsed.hostname ? `${parsed.protocol}//${parsed.hostname}` : '';
-  } catch (error) {
+  } catch (_error) {
     return '';
   }
 }
 
-function getOwnExtensionOrigin() {
+function getOwnExtensionOrigin(): string {
   return getExtensionUrlKey(chrome.runtime.getURL(''));
 }
 
-export function isOwnExtensionPageUrl(url) {
+export function isOwnExtensionPageUrl(url: unknown): boolean {
   if (!url || !chrome || !chrome.runtime || !chrome.runtime.id) {
     return false;
   }
   try {
     const origin = getOwnExtensionOrigin();
     return Boolean(origin) && getExtensionUrlKey(url) === origin;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 }
 
-export function getResolvedTabUrl(tab) {
+// The tab's URL, or the one it is loading when it has none yet.
+export function getResolvedTabUrl(tab: UrlTabLike | null | undefined): string {
   if (!tab || typeof tab !== 'object') {
     return '';
   }
@@ -93,16 +97,20 @@ export function getResolvedTabUrl(tab) {
   return pendingUrl;
 }
 
-export function getSourceTabGroupContext(tab) {
+export function getSourceTabGroupContext(tab: TabLike | null | undefined): TabGroupContext | null {
   return BACKGROUND_TAB_GROUPS.getSourceTabGroupContext(tab, chrome);
 }
 
-export function createTabWithSourceGroup(createProperties, sourceTab, callback) {
-  const done = typeof callback === 'function' ? callback : () => {};
+export function createTabWithSourceGroup(
+  createProperties: chrome.tabs.CreateProperties,
+  sourceTab: TabLike | null | undefined,
+  callback?: CreatedTabCallback | null
+): void {
+  const done: CreatedTabCallback = typeof callback === 'function' ? callback : () => {};
   BACKGROUND_TAB_GROUPS.createTabInSourceGroup(chrome, createProperties, sourceTab, done);
 }
 
-export function resolveSearchResultTabPlacement(sourceTab) {
+export function resolveSearchResultTabPlacement(sourceTab: chrome.tabs.Tab | null | undefined): Promise<TabPlacement> {
   return LumnoSettingsStorage.readStorageValue(storageArea, chrome, SETTINGS.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY)
     .catch(() => undefined)
     .then((value) => SEARCH_RESULT_TABS.resolvePlacement(
@@ -112,12 +120,19 @@ export function resolveSearchResultTabPlacement(sourceTab) {
     ));
 }
 
-export function createSearchResultTab(createProperties, sourceTab, callback, resolvedPlacement) {
+// Opens a result tab where the person chose (next to the source tab or at
+// the end), in the source tab's group.
+export function createSearchResultTab(
+  createProperties: chrome.tabs.CreateProperties,
+  sourceTab: chrome.tabs.Tab | null | undefined,
+  callback?: CreatedTabCallback | null,
+  resolvedPlacement?: TabPlacement | null
+): void {
   const placementTask = resolvedPlacement
     ? Promise.resolve(resolvedPlacement)
     : resolveSearchResultTabPlacement(sourceTab);
   placementTask.then((placement) => {
-    const props = { ...createProperties };
+    const props: chrome.tabs.CreateProperties = { ...createProperties };
     if (typeof placement.index === 'number') {
       props.index = placement.index;
       props.windowId = placement.windowId;
@@ -126,11 +141,16 @@ export function createSearchResultTab(createProperties, sourceTab, callback, res
   });
 }
 
-export function moveTabToSourceGroupContext(tab, sourceContext, callback, createProperties) {
+export function moveTabToSourceGroupContext(
+  tab: TabLike | null | undefined,
+  sourceContext: unknown,
+  callback?: ((grouped: boolean, reason: string) => void) | null,
+  createProperties?: { pinned?: boolean } | null
+): void {
   BACKGROUND_TAB_GROUPS.moveTabToSourceGroupContext(chrome, tab, sourceContext, callback, createProperties);
 }
 
-export function isLumnoNewtabUrl(url) {
+export function isLumnoNewtabUrl(url: unknown): boolean {
   const value = String(url || '');
   if (!value || !chrome || !chrome.runtime || typeof chrome.runtime.getURL !== 'function') {
     return false;
@@ -139,20 +159,11 @@ export function isLumnoNewtabUrl(url) {
   if (routeType === 'newtab' && isOwnExtensionUrl(value)) {
     return true;
   }
-  const routeBuilders = [
-    EXTENSION_ROUTES.buildNewtabUrl,
-    EXTENSION_ROUTES.buildLumnoNewtabUrl
-  ].filter((builder) => typeof builder === 'function');
-  const prefixes = routeBuilders.length > 0
-    ? routeBuilders.map((builder) => builder(chrome))
-    : [
-        chrome.runtime.getURL('newtab.html'),
-        chrome.runtime.getURL('src/newtab/lumno-newtab.html')
-      ];
+  const prefixes = [EXTENSION_ROUTES.buildNewtabUrl(chrome), EXTENSION_ROUTES.buildLumnoNewtabUrl(chrome)];
   return prefixes.some((prefix) => value === prefix || value.startsWith(`${prefix}?`));
 }
 
-export function isBrowserNewtabUrl(url) {
+export function isBrowserNewtabUrl(url: unknown): boolean {
   const lower = String(url || '').toLowerCase();
   return lower === 'chrome://newtab/' ||
     lower === 'chrome://new-tab-page/' ||
@@ -163,21 +174,21 @@ export function isBrowserNewtabUrl(url) {
     lower === 'about:home';
 }
 
-export function isOwnExtensionUrl(url) {
+export function isOwnExtensionUrl(url: unknown): boolean {
   if (!url || !chrome || !chrome.runtime || !chrome.runtime.id) {
     return false;
   }
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(String(url));
     const protocol = String(parsed.protocol || '').toLowerCase();
     const origin = getOwnExtensionOrigin();
     return isBrowserExtensionProtocol(protocol) && Boolean(origin) && getExtensionUrlKey(url) === origin;
-  } catch (e) {
+  } catch (_error) {
     return false;
   }
 }
 
-function isLumnoBrowserOverrideNewtabUrl(url) {
+function isLumnoBrowserOverrideNewtabUrl(url: unknown): boolean {
   const value = String(url || '');
   if (!value || !isOwnExtensionUrl(value) || !chrome || !chrome.runtime || typeof chrome.runtime.getURL !== 'function') {
     return false;
@@ -186,7 +197,7 @@ function isLumnoBrowserOverrideNewtabUrl(url) {
   return value === newtabPrefix || value.startsWith(`${newtabPrefix}?`);
 }
 
-function isOtherExtensionUrl(url) {
+function isOtherExtensionUrl(url: unknown): boolean {
   if (!url || !chrome || !chrome.runtime || !chrome.runtime.id) {
     return false;
   }
@@ -194,12 +205,12 @@ function isOtherExtensionUrl(url) {
     const parsed = new URL(String(url));
     return isBrowserExtensionProtocol(parsed.protocol) &&
       String(parsed.hostname || '') !== String(chrome.runtime.id);
-  } catch (e) {
+  } catch (_error) {
     return false;
   }
 }
 
-function pruneBrowserNewtabProviderCandidates(now) {
+function pruneBrowserNewtabProviderCandidates(now?: number): void {
   const currentTime = Number.isFinite(Number(now)) ? Number(now) : Date.now();
   browserNewtabProviderCandidateTabIds.forEach((createdAt, tabId) => {
     if (currentTime - Number(createdAt || 0) > BROWSER_NEWTAB_PROVIDER_DETECTION_MS) {
@@ -208,7 +219,7 @@ function pruneBrowserNewtabProviderCandidates(now) {
   });
 }
 
-function isPotentialBrowserNewtabProviderCandidate(tab) {
+function isPotentialBrowserNewtabProviderCandidate(tab: UrlTabLike | null | undefined): tab is UrlTabLike & { id: number } {
   if (!tab || typeof tab.id !== 'number') {
     return false;
   }
@@ -221,7 +232,7 @@ function isPotentialBrowserNewtabProviderCandidate(tab) {
     (!directUrl && !pendingUrl && tab.status === 'loading');
 }
 
-export function rememberBrowserNewtabProviderCandidate(tab) {
+export function rememberBrowserNewtabProviderCandidate(tab: UrlTabLike | null | undefined): void {
   pruneBrowserNewtabProviderCandidates();
   if (!isPotentialBrowserNewtabProviderCandidate(tab)) {
     return;
@@ -229,7 +240,7 @@ export function rememberBrowserNewtabProviderCandidate(tab) {
   browserNewtabProviderCandidateTabIds.set(tab.id, Date.now());
 }
 
-function isRecentBrowserNewtabProviderCandidate(tab) {
+function isRecentBrowserNewtabProviderCandidate(tab: UrlTabLike | null | undefined): boolean {
   if (!tab || typeof tab.id !== 'number') {
     return false;
   }
@@ -237,7 +248,7 @@ function isRecentBrowserNewtabProviderCandidate(tab) {
   return browserNewtabProviderCandidateTabIds.has(tab.id);
 }
 
-function getBrowserNewtabProviderType(tab) {
+function getBrowserNewtabProviderType(tab: UrlTabLike | null | undefined): BrowserNewtabProviderType {
   const url = getResolvedTabUrl(tab);
   if (!url) {
     return '';
@@ -254,7 +265,14 @@ function getBrowserNewtabProviderType(tab) {
   return '';
 }
 
-function setRestrictedActionFromBrowserNewtabProvider(providerType, tab, stage) {
+// Another extension's New Tab replaces the browser's: commands on it then
+// do nothing instead of opening Lumno's fallback, once, unless the person
+// chose otherwise.
+function setRestrictedActionFromBrowserNewtabProvider(
+  providerType: BrowserNewtabProviderType,
+  tab: UrlTabLike | null | undefined,
+  stage: unknown
+): void {
   if (providerType !== 'other-extension') {
     return;
   }
@@ -285,7 +303,7 @@ function setRestrictedActionFromBrowserNewtabProvider(providerType, tab, stage) 
   });
 }
 
-export function maybeAutoSelectRestrictedBrowserSetting(tab, stage) {
+export function maybeAutoSelectRestrictedBrowserSetting(tab: UrlTabLike | null | undefined, stage?: string): void {
   if (!tab || typeof tab.id !== 'number') {
     return;
   }
@@ -312,12 +330,12 @@ export function maybeAutoSelectRestrictedBrowserSetting(tab, stage) {
   }
 }
 
-export function isLumnoOnboardingUrl(url) {
+export function isLumnoOnboardingUrl(url: unknown): boolean {
   return EXTENSION_ROUTES.isOnboardingUrl(url) &&
     isOwnExtensionUrl(url);
 }
 
-export function getOwnExtensionFaviconUrl() {
+export function getOwnExtensionFaviconUrl(): string {
   if (!chrome || !chrome.runtime || typeof chrome.runtime.getURL !== 'function') {
     return '';
   }

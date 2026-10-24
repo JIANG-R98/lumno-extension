@@ -1,27 +1,84 @@
-// @ts-nocheck
-const DEFAULT_GROUP_TITLE = 'AI Search';
-const DEFAULT_GROUP_COLOR = 'blue';
+// Where a selection quick action opens its AI provider: a new tab, or a tab
+// in the "AI Search" group, reusing the provider's tab when one is open.
 
-function getChromeApi(chromeApi) {
+type GroupColor = `${chrome.tabGroups.Color}`;
+
+// The callback-style extension API the helpers use.
+interface SelectionTargetChromeApi {
+  tabGroups?: {
+    query?(queryInfo: { title?: string; windowId?: number }, callback: (groups: chrome.tabGroups.TabGroup[]) => void): void;
+    update?(groupId: number, updateProperties: { title?: string; color?: GroupColor; collapsed?: boolean }, callback: () => void): void;
+  };
+  tabs?: {
+    query?(queryInfo: { windowId?: number }, callback: (tabs: chrome.tabs.Tab[]) => void): void;
+    create?(createProperties: chrome.tabs.CreateProperties, callback: (tab: chrome.tabs.Tab) => void): void;
+    group?(options: { tabIds: number; groupId?: number }, callback: (groupId: number) => void): void;
+  };
+  runtime?: { lastError?: { message?: string } | null };
+}
+
+// A group to put the tab in; preserve keeps its title and color as they are.
+interface SelectionGroup {
+  id?: number;
+  preserve?: boolean;
+}
+
+interface SelectionGroupStyle {
+  title?: string;
+  color?: GroupColor;
+  collapsed?: boolean;
+}
+
+interface SelectionTargetOptions {
+  url?: string;
+  sourceTab?: chrome.tabs.Tab | null;
+  windowId?: number;
+  groupTitle?: string;
+  groupColor?: GroupColor;
+  groupEnabled?: boolean;
+  reuseExisting?: boolean;
+}
+
+// 'reused' when an open tab of the provider was taken.
+type SelectionTargetMode = 'tab' | 'group' | 'reused' | 'none';
+
+interface SelectionTargetResult {
+  ok: boolean;
+  mode: SelectionTargetMode;
+  tab: chrome.tabs.Tab | null;
+  groupId?: number | null;
+  reason: string;
+}
+
+type SelectionTargetCallback = (result: SelectionTargetResult) => void;
+
+const DEFAULT_GROUP_TITLE = 'AI Search';
+const DEFAULT_GROUP_COLOR: GroupColor = 'blue';
+
+function getChromeApi(chromeApi: SelectionTargetChromeApi | null | undefined): SelectionTargetChromeApi | null {
   return chromeApi || (typeof chrome !== 'undefined' ? chrome : null);
 }
 
-function getRuntimeError(api, fallback) {
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function getRuntimeError(api: SelectionTargetChromeApi, fallback: string): string {
   return api && api.runtime && api.runtime.lastError
     ? api.runtime.lastError.message || fallback
     : '';
 }
 
-function getHttpOrigin(value) {
+function getHttpOrigin(value: unknown): string {
   try {
     const parsed = new URL(String(value || ''));
     return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.origin : '';
-  } catch (error) {
+  } catch (_error) {
     return '';
   }
 }
 
-function getTabUrl(tab) {
+function getTabUrl(tab: chrome.tabs.Tab | null | undefined): string {
   const pendingUrl = tab && typeof tab.pendingUrl === 'string' ? tab.pendingUrl.trim() : '';
   if (pendingUrl) {
     return pendingUrl;
@@ -29,19 +86,26 @@ function getTabUrl(tab) {
   return tab && typeof tab.url === 'string' ? tab.url.trim() : '';
 }
 
-function findExistingSelectionGroup(chromeApi, windowId, title, callback) {
+function findExistingSelectionGroup(
+  chromeApi: SelectionTargetChromeApi | null | undefined,
+  windowId: number | null,
+  title: string | undefined,
+  callback?: (group: SelectionGroup | null) => void
+): void {
   const api = getChromeApi(chromeApi);
   const done = typeof callback === 'function' ? callback : () => {};
-  if (!api || !api.tabGroups || typeof api.tabGroups.query !== 'function') {
+  const tabGroups = api && api.tabGroups;
+  const query = tabGroups && tabGroups.query;
+  if (!api || !tabGroups || typeof query !== 'function') {
     done(null);
     return;
   }
-  const queryInfo = { title: title || DEFAULT_GROUP_TITLE };
+  const queryInfo: { title: string; windowId?: number } = { title: title || DEFAULT_GROUP_TITLE };
   if (typeof windowId === 'number') {
     queryInfo.windowId = windowId;
   }
   try {
-    api.tabGroups.query(queryInfo, (groups) => {
+    query.call(tabGroups, queryInfo, (groups) => {
       if (getRuntimeError(api, 'tab-group-query-failed')) {
         done(null);
         return;
@@ -51,12 +115,16 @@ function findExistingSelectionGroup(chromeApi, windowId, title, callback) {
         : null;
       done(group || null);
     });
-  } catch (e) {
+  } catch (_error) {
     done(null);
   }
 }
 
-function resolveSelectionGroup(chromeApi, settings, callback) {
+function resolveSelectionGroup(
+  chromeApi: SelectionTargetChromeApi | null,
+  settings: SelectionTargetOptions,
+  callback: (group: SelectionGroup | null) => void
+): void {
   const api = getChromeApi(chromeApi);
   const done = typeof callback === 'function' ? callback : () => {};
   const sourceTab = settings && settings.sourceTab && typeof settings.sourceTab === 'object'
@@ -68,19 +136,26 @@ function resolveSelectionGroup(chromeApi, settings, callback) {
   findExistingSelectionGroup(api, windowId, settings && settings.groupTitle, done);
 }
 
-function findReusableSelectionTab(chromeApi, options, callback) {
+// An open tab of the provider's site, the most recently used loaded one.
+function findReusableSelectionTab(
+  chromeApi: SelectionTargetChromeApi | null | undefined,
+  options: SelectionTargetOptions | null | undefined,
+  callback?: (tab: chrome.tabs.Tab | null) => void
+): void {
   const api = getChromeApi(chromeApi);
   const settings = options && typeof options === 'object' ? options : {};
   const done = typeof callback === 'function' ? callback : () => {};
   const expectedOrigin = getHttpOrigin(settings.url);
-  if (!expectedOrigin || !api || !api.tabs || typeof api.tabs.query !== 'function') {
+  const tabsApi = api && api.tabs;
+  const query = tabsApi && tabsApi.query;
+  if (!expectedOrigin || !api || !tabsApi || typeof query !== 'function') {
     done(null);
     return;
   }
   const sourceTab = settings.sourceTab && typeof settings.sourceTab === 'object'
     ? settings.sourceTab
     : null;
-  const queryInfo = {};
+  const queryInfo: { windowId?: number } = {};
   const windowId = sourceTab && typeof sourceTab.windowId === 'number'
     ? sourceTab.windowId
     : (typeof settings.windowId === 'number' ? settings.windowId : null);
@@ -88,7 +163,7 @@ function findReusableSelectionTab(chromeApi, options, callback) {
     queryInfo.windowId = windowId;
   }
   try {
-    api.tabs.query(queryInfo, (tabs) => {
+    query.call(tabsApi, queryInfo, (tabs) => {
       if (getRuntimeError(api, 'tab-query-failed')) {
         done(null);
         return;
@@ -110,21 +185,28 @@ function findReusableSelectionTab(chromeApi, options, callback) {
         });
       done(candidates[0] || null);
     });
-  } catch (error) {
+  } catch (_error) {
     done(null);
   }
 }
 
-function updateSelectionGroup(chromeApi, groupId, options, callback) {
+function updateSelectionGroup(
+  chromeApi: SelectionTargetChromeApi | null | undefined,
+  groupId: number,
+  options: SelectionGroupStyle | null | undefined,
+  callback?: (updated: boolean, reason: string) => void
+): void {
   const api = getChromeApi(chromeApi);
   const done = typeof callback === 'function' ? callback : () => {};
-  if (!api || !api.tabGroups || typeof api.tabGroups.update !== 'function') {
+  const tabGroups = api && api.tabGroups;
+  const update = tabGroups && tabGroups.update;
+  if (!api || !tabGroups || typeof update !== 'function') {
     done(false, 'tab-groups-update-unavailable');
     return;
   }
   const settings = options && typeof options === 'object' ? options : {};
   try {
-    api.tabGroups.update(groupId, {
+    update.call(tabGroups, groupId, {
       title: settings.title || DEFAULT_GROUP_TITLE,
       color: settings.color || DEFAULT_GROUP_COLOR,
       collapsed: settings.collapsed !== false
@@ -133,15 +215,23 @@ function updateSelectionGroup(chromeApi, groupId, options, callback) {
       done(!error, error);
     });
   } catch (error) {
-    done(false, error && error.message ? error.message : 'tab-group-update-threw');
+    done(false, getErrorMessage(error, 'tab-group-update-threw'));
   }
 }
 
-function addTabToSelectionGroup(chromeApi, tab, group, options, callback) {
+function addTabToSelectionGroup(
+  chromeApi: SelectionTargetChromeApi | null | undefined,
+  tab: chrome.tabs.Tab | null | undefined,
+  group: SelectionGroup | null,
+  options: SelectionGroupStyle | null | undefined,
+  callback?: SelectionTargetCallback
+): void {
   const api = getChromeApi(chromeApi);
-  const done = typeof callback === 'function' ? callback : () => {};
-  if (!api || !api.tabs || typeof api.tabs.group !== 'function' ||
-      !tab || typeof tab.id !== 'number') {
+  const done: SelectionTargetCallback = typeof callback === 'function' ? callback : () => {};
+  const tabsApi = api && api.tabs;
+  const groupTabs = tabsApi && tabsApi.group;
+  const tabId = tab && tab.id;
+  if (!api || !tabsApi || typeof groupTabs !== 'function' || !tab || typeof tabId !== 'number') {
     done({
       ok: true,
       mode: 'tab',
@@ -151,12 +241,12 @@ function addTabToSelectionGroup(chromeApi, tab, group, options, callback) {
     });
     return;
   }
-  const groupOptions = { tabIds: tab.id };
+  const groupOptions: { tabIds: number; groupId?: number } = { tabIds: tabId };
   if (group && typeof group.id === 'number') {
     groupOptions.groupId = group.id;
   }
   try {
-    api.tabs.group(groupOptions, (groupId) => {
+    groupTabs.call(tabsApi, groupOptions, (groupId) => {
       const groupError = getRuntimeError(api, 'tab-group-failed');
       if (groupError || typeof groupId !== 'number') {
         done({
@@ -194,15 +284,20 @@ function addTabToSelectionGroup(chromeApi, tab, group, options, callback) {
       mode: 'tab',
       tab,
       groupId: null,
-      reason: error && error.message ? error.message : 'tab-group-threw'
+      reason: getErrorMessage(error, 'tab-group-threw')
     });
   }
 }
 
-function placeTabInSelectionGroup(chromeApi, tab, options, callback) {
+function placeTabInSelectionGroup(
+  chromeApi: SelectionTargetChromeApi | null | undefined,
+  tab: chrome.tabs.Tab | null | undefined,
+  options: SelectionTargetOptions | null | undefined,
+  callback?: SelectionTargetCallback
+): void {
   const api = getChromeApi(chromeApi);
   const settings = options && typeof options === 'object' ? options : {};
-  const done = typeof callback === 'function' ? callback : () => {};
+  const done: SelectionTargetCallback = typeof callback === 'function' ? callback : () => {};
   if (!tab || typeof tab.id !== 'number') {
     done({ ok: false, mode: 'none', tab: tab || null, groupId: null, reason: 'tab-unavailable' });
     return;
@@ -221,21 +316,27 @@ function placeTabInSelectionGroup(chromeApi, tab, options, callback) {
   );
 }
 
-function openInSelectionGroup(chromeApi, options, callback) {
+function openInSelectionGroup(
+  chromeApi: SelectionTargetChromeApi | null | undefined,
+  options: SelectionTargetOptions | null | undefined,
+  callback?: SelectionTargetCallback
+): void {
   const api = getChromeApi(chromeApi);
   const settings = options && typeof options === 'object' ? options : {};
-  const done = typeof callback === 'function' ? callback : () => {};
+  const done: SelectionTargetCallback = typeof callback === 'function' ? callback : () => {};
   const sourceTab = settings.sourceTab && typeof settings.sourceTab === 'object'
     ? settings.sourceTab
     : null;
   const windowId = sourceTab && typeof sourceTab.windowId === 'number'
     ? sourceTab.windowId
     : (typeof settings.windowId === 'number' ? settings.windowId : null);
-  if (!api || !api.tabs || typeof api.tabs.create !== 'function') {
+  const tabsApi = api && api.tabs;
+  const create = tabsApi && tabsApi.create;
+  if (!api || !tabsApi || typeof create !== 'function') {
     done({ ok: false, mode: 'none', tab: null, reason: 'tabs-api-unavailable' });
     return;
   }
-  const createProperties = {
+  const createProperties: chrome.tabs.CreateProperties = {
     url: String(settings.url || ''),
     active: false
   };
@@ -247,7 +348,7 @@ function openInSelectionGroup(chromeApi, options, callback) {
   }
   resolveSelectionGroup(api, settings, (group) => {
     try {
-      api.tabs.create(createProperties, (tab) => {
+      create.call(tabsApi, createProperties, (tab) => {
         const createError = getRuntimeError(api, 'tab-create-failed');
         if (createError || !tab || typeof tab.id !== 'number') {
           done({
@@ -269,24 +370,30 @@ function openInSelectionGroup(chromeApi, options, callback) {
         ok: false,
         mode: 'none',
         tab: null,
-        reason: error && error.message ? error.message : 'tab-create-threw'
+        reason: getErrorMessage(error, 'tab-create-threw')
       });
     }
   });
 }
 
-function openInNewTab(chromeApi, options, callback) {
+function openInNewTab(
+  chromeApi: SelectionTargetChromeApi | null | undefined,
+  options: SelectionTargetOptions | null | undefined,
+  callback?: SelectionTargetCallback
+): void {
   const api = getChromeApi(chromeApi);
   const settings = options && typeof options === 'object' ? options : {};
-  const done = typeof callback === 'function' ? callback : () => {};
+  const done: SelectionTargetCallback = typeof callback === 'function' ? callback : () => {};
   const sourceTab = settings.sourceTab && typeof settings.sourceTab === 'object'
     ? settings.sourceTab
     : null;
-  if (!api || !api.tabs || typeof api.tabs.create !== 'function') {
+  const tabsApi = api && api.tabs;
+  const create = tabsApi && tabsApi.create;
+  if (!api || !tabsApi || typeof create !== 'function') {
     done({ ok: false, mode: 'none', tab: null, groupId: null, reason: 'tabs-api-unavailable' });
     return;
   }
-  const createProperties = {
+  const createProperties: chrome.tabs.CreateProperties = {
     url: String(settings.url || ''),
     active: true
   };
@@ -300,7 +407,7 @@ function openInNewTab(chromeApi, options, callback) {
     createProperties.openerTabId = sourceTab.id;
   }
   try {
-    api.tabs.create(createProperties, (tab) => {
+    create.call(tabsApi, createProperties, (tab) => {
       const createError = getRuntimeError(api, 'tab-create-failed');
       if (createError || !tab || typeof tab.id !== 'number') {
         done({
@@ -320,14 +427,18 @@ function openInNewTab(chromeApi, options, callback) {
       mode: 'none',
       tab: null,
       groupId: null,
-      reason: error && error.message ? error.message : 'tab-create-threw'
+      reason: getErrorMessage(error, 'tab-create-threw')
     });
   }
 }
 
-function openSelectionTarget(chromeApi, options, callback) {
+function openSelectionTarget(
+  chromeApi: SelectionTargetChromeApi | null | undefined,
+  options: SelectionTargetOptions | null | undefined,
+  callback?: SelectionTargetCallback
+): void {
   const settings = options && typeof options === 'object' ? options : {};
-  const done = typeof callback === 'function' ? callback : () => {};
+  const done: SelectionTargetCallback = typeof callback === 'function' ? callback : () => {};
   if (settings.groupEnabled === true) {
     if (settings.reuseExisting !== false) {
       findReusableSelectionTab(chromeApi, settings, (tab) => {
@@ -337,7 +448,7 @@ function openSelectionTarget(chromeApi, options, callback) {
         }
         placeTabInSelectionGroup(chromeApi, tab, settings, (placement) => {
           done({
-            ...(placement && typeof placement === 'object' ? placement : {}),
+            ...placement,
             ok: true,
             mode: 'reused',
             tab
@@ -363,4 +474,13 @@ export {
   openSelectionTarget,
   placeTabInSelectionGroup,
   updateSelectionGroup
+};
+export type {
+  GroupColor,
+  SelectionGroup,
+  SelectionGroupStyle,
+  SelectionTargetChromeApi,
+  SelectionTargetMode,
+  SelectionTargetOptions,
+  SelectionTargetResult
 };

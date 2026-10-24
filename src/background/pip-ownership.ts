@@ -1,28 +1,62 @@
-// @ts-nocheck
+// One picture-in-picture at a time across tabs: the frame that holds it is
+// recorded in session storage, and a new request asks the holder to give
+// it up first.
 import * as LumnoMessaging from '../platform/messaging';
+import type { MessageTabs } from '../platform/messaging';
+import type { OkReply, PipKind, PipOwner, PipOwnershipReply, PipReleaseReply } from '../domain/messages';
+import type { StorageAreaLike } from '../domain/storage-port';
+
+interface PipOwnershipChromeApi {
+  storage?: { session?: StorageAreaLike; local?: StorageAreaLike };
+  tabs?: MessageTabs;
+  runtime?: { lastError?: { message?: string } | null };
+}
+
+interface PipOwnershipOptions {
+  chromeApi?: PipOwnershipChromeApi | null;
+  // The tab's URL, also while a navigation is pending.
+  getResolvedTabUrl?: (tab: chrome.tabs.Tab) => string;
+}
+
+interface PipSenderContext {
+  tabId: number;
+  frameId: number;
+  url: string;
+}
+
+interface PipOwnership {
+  clearGlobalPipOwnerForTabId(tabId: unknown): void;
+  releaseGlobalPipOwnership(sender: chrome.runtime.MessageSender | null | undefined, token: unknown): Promise<PipReleaseReply>;
+  requestGlobalPipOwnership(sender: chrome.runtime.MessageSender | null | undefined, kind: unknown): Promise<PipOwnershipReply>;
+}
+
 const GLOBAL_PIP_OWNER_STORAGE_KEY = '_x_lumno_global_pip_owner_2026_';
 
-function create(options) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function create(options?: PipOwnershipOptions | null): Readonly<PipOwnership> {
   const settings = options && typeof options === 'object' ? options : {};
-  const chromeApi = settings.chromeApi || (typeof chrome !== 'undefined' ? chrome : null);
+  const chromeApi: PipOwnershipChromeApi | null = settings.chromeApi || (typeof chrome !== 'undefined' ? chrome : null);
   const getResolvedTabUrl = typeof settings.getResolvedTabUrl === 'function'
     ? settings.getResolvedTabUrl
-    : (tab) => (tab && typeof tab.url === 'string' ? tab.url : '');
-  let globalPipOwnerCache = null;
+    : (tab: chrome.tabs.Tab) => (tab && typeof tab.url === 'string' ? tab.url : '');
+  let globalPipOwnerCache: PipOwner | null = null;
   let globalPipOwnerCacheLoaded = false;
 
-  function getSessionStorageArea() {
+  function getSessionStorageArea(): StorageAreaLike | null {
     if (!chromeApi || !chromeApi.storage) {
       return null;
     }
     return chromeApi.storage.session || chromeApi.storage.local || null;
   }
 
-  function normalizePipOwnerRecord(value) {
-    if (!value || typeof value !== 'object') {
+  function normalizePipOwnerRecord(value: unknown): PipOwner | null {
+    if (!isRecord(value)) {
       return null;
     }
-    const kind = value.kind === 'document' ? 'document' : (value.kind === 'video' ? 'video' : '');
+    const kind: PipKind | '' = value.kind === 'document' ? 'document' : (value.kind === 'video' ? 'video' : '');
     const tabId = Number(value.tabId);
     if (!kind || !Number.isInteger(tabId) || tabId < 0) {
       return null;
@@ -44,12 +78,12 @@ function create(options) {
     };
   }
 
-  function getGlobalPipOwnerRecord() {
+  function getGlobalPipOwnerRecord(): Promise<PipOwner | null> {
     if (globalPipOwnerCacheLoaded) {
       return Promise.resolve(globalPipOwnerCache);
     }
     const storageArea = getSessionStorageArea();
-    if (!storageArea || typeof storageArea.get !== 'function') {
+    if (!storageArea) {
       globalPipOwnerCacheLoaded = true;
       globalPipOwnerCache = null;
       return Promise.resolve(null);
@@ -66,12 +100,12 @@ function create(options) {
     });
   }
 
-  function setGlobalPipOwnerRecord(record) {
+  function setGlobalPipOwnerRecord(record: PipOwner): Promise<PipOwner | null> {
     const normalized = normalizePipOwnerRecord(record);
     globalPipOwnerCacheLoaded = true;
     globalPipOwnerCache = normalized;
     const storageArea = getSessionStorageArea();
-    if (!storageArea || typeof storageArea.set !== 'function') {
+    if (!storageArea) {
       return Promise.resolve(normalized);
     }
     return new Promise((resolve) => {
@@ -81,7 +115,7 @@ function create(options) {
     });
   }
 
-  function clearGlobalPipOwnerRecord(expectedToken) {
+  function clearGlobalPipOwnerRecord(expectedToken?: string): Promise<boolean> {
     const shouldClear = !expectedToken ||
       !globalPipOwnerCache ||
       globalPipOwnerCache.token === expectedToken;
@@ -91,27 +125,28 @@ function create(options) {
     globalPipOwnerCacheLoaded = true;
     globalPipOwnerCache = null;
     const storageArea = getSessionStorageArea();
-    if (!storageArea || typeof storageArea.remove !== 'function') {
+    const remove = storageArea && storageArea.remove;
+    if (!storageArea || typeof remove !== 'function') {
       return Promise.resolve(true);
     }
     return new Promise((resolve) => {
-      storageArea.remove(GLOBAL_PIP_OWNER_STORAGE_KEY, () => {
+      remove.call(storageArea, GLOBAL_PIP_OWNER_STORAGE_KEY, () => {
         resolve(true);
       });
     });
   }
 
-  function createGlobalPipOwnerToken() {
+  function createGlobalPipOwnerToken(): string {
     if (typeof crypto !== 'undefined' && crypto && typeof crypto.randomUUID === 'function') {
       return crypto.randomUUID();
     }
     return `pip-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }
 
-  function getPipSenderContext(sender) {
+  function getPipSenderContext(sender: chrome.runtime.MessageSender | null | undefined): PipSenderContext | null {
     const senderTab = sender && sender.tab ? sender.tab : null;
     const tabId = senderTab && typeof senderTab.id === 'number' ? senderTab.id : null;
-    if (typeof tabId !== 'number') {
+    if (!senderTab || typeof tabId !== 'number') {
       return null;
     }
     return {
@@ -121,7 +156,7 @@ function create(options) {
     };
   }
 
-  function isSameGlobalPipOwner(owner, context, kind) {
+  function isSameGlobalPipOwner(owner: PipOwner | null, context: PipSenderContext | null, kind: PipKind): boolean {
     if (!owner || !context) {
       return false;
     }
@@ -130,14 +165,20 @@ function create(options) {
       owner.frameId === context.frameId;
   }
 
-  function sendMessageToTab(tabId, message) {
+  // Asks the holder's frame to close its picture-in-picture.
+  function requestSurrender(tabId: number, requestedKind: PipKind, ownerKind: PipKind): Promise<OkReply> {
     return new Promise((resolve) => {
-      if (!chromeApi || !chromeApi.tabs || typeof chromeApi.tabs.sendMessage !== 'function') {
+      const tabs = chromeApi && chromeApi.tabs;
+      if (!chromeApi || !tabs || typeof tabs.sendMessage !== 'function') {
         resolve({ ok: false, reason: 'tabs-sendMessage-unavailable' });
         return;
       }
       try {
-        LumnoMessaging.sendTabMessage(chromeApi.tabs, tabId, message, (response) => {
+        LumnoMessaging.sendTabMessage(tabs, tabId, {
+          action: 'lumno:pip-force-surrender',
+          reason: requestedKind === 'document' ? 'document-owner-takeover' : 'video-owner-takeover',
+          ownerKind
+        }, (response) => {
           if (chromeApi.runtime && chromeApi.runtime.lastError) {
             resolve({
               ok: false,
@@ -155,15 +196,11 @@ function create(options) {
     });
   }
 
-  async function forceSurrenderGlobalPipOwner(owner, requestedKind) {
+  async function forceSurrenderGlobalPipOwner(owner: PipOwner | null, requestedKind: PipKind): Promise<OkReply & { cleared?: boolean }> {
     if (!owner) {
       return { ok: true, cleared: false };
     }
-    const result = await sendMessageToTab(owner.tabId, {
-      action: 'lumno:pip-force-surrender',
-      reason: requestedKind === 'document' ? 'document-owner-takeover' : 'video-owner-takeover',
-      ownerKind: owner.kind
-    });
+    const result = await requestSurrender(owner.tabId, requestedKind, owner.kind);
     if (result && result.ok) {
       await clearGlobalPipOwnerRecord(owner.token);
       return { ok: true, cleared: true };
@@ -182,7 +219,7 @@ function create(options) {
     };
   }
 
-  async function requestGlobalPipOwnership(sender, kind) {
+  async function requestGlobalPipOwnership(sender: chrome.runtime.MessageSender | null | undefined, kind: unknown): Promise<PipOwnershipReply> {
     const context = getPipSenderContext(sender);
     if (!context) {
       return { ok: false, granted: false, reason: 'no-tab' };
@@ -221,7 +258,7 @@ function create(options) {
       }
     }
 
-    const nextOwner = {
+    const nextOwner: PipOwner = {
       kind: kind,
       tabId: context.tabId,
       frameId: context.frameId,
@@ -238,7 +275,7 @@ function create(options) {
     };
   }
 
-  async function releaseGlobalPipOwnership(sender, token) {
+  async function releaseGlobalPipOwnership(sender: chrome.runtime.MessageSender | null | undefined, token: unknown): Promise<PipReleaseReply> {
     const context = getPipSenderContext(sender);
     if (!context) {
       return { ok: false, released: false, reason: 'no-tab' };
@@ -257,7 +294,7 @@ function create(options) {
     return { ok: true, released: true };
   }
 
-  function clearGlobalPipOwnerForTabId(tabId) {
+  function clearGlobalPipOwnerForTabId(tabId: unknown): void {
     if (typeof tabId !== 'number') {
       return;
     }
@@ -277,3 +314,4 @@ function create(options) {
 }
 
 export { create };
+export type { PipOwnership, PipOwnershipChromeApi, PipOwnershipOptions };
