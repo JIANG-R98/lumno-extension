@@ -12,6 +12,7 @@
 import * as AGGREGATE_SEARCH from './aggregate-search';
 import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
 import * as LumnoAggregateSearchStorage from '../platform/aggregate-search-storage';
+import * as LumnoHelpCenterIndex from '../platform/help-center-index';
 import * as AI_PROVIDER_SUBMIT from './ai-provider-submit';
 import * as COMMUNITY_LINKS from '../domain/community-links';
 import * as HELP_CENTER_SEARCH from '../domain/search/help-center-search';
@@ -335,9 +336,9 @@ function getHelpCenterSearchResults(query, locale) {
   }
   if (!helpCenterIndexLoader) {
     const fetchImpl = (url, init) => fetch(url, init);
-    helpCenterIndexLoader = HELP_CENTER_SEARCH.createIndexLoader({ fetchImpl });
+    helpCenterIndexLoader = LumnoHelpCenterIndex.createIndexLoader({ fetchImpl });
     // A language with no synonym list (404) is cached as empty rather than asked for on every key.
-    helpCenterSynonymsLoader = HELP_CENTER_SEARCH.createIndexLoader({
+    helpCenterSynonymsLoader = LumnoHelpCenterIndex.createIndexLoader({
       fetchImpl: (url, init) => fetch(url, init).then((response) => (
         response.status === 404 ? { ok: true, json: () => [] } : response
       )),

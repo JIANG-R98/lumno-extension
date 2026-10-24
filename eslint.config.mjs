@@ -35,13 +35,17 @@ function restrictImports(directories) {
   return { 'no-restricted-imports': ['error', { patterns: [importsFrom(directories)] }] };
 }
 
-// What domain code may not reach for: browser and extension globals, and DOM
-// work on any object handed to it.
+// What domain code may not reach for: browser and extension globals, directly
+// or through globalThis, and DOM work on any object handed to it. Timers and
+// network requests are I/O too; platform/ wraps them. crypto stays allowed:
+// its random values work the same in every runtime.
 const DOMAIN_GLOBALS = [
   'chrome', 'browser', 'document', 'window', 'navigator', 'localStorage', 'sessionStorage', 'location',
   'self', 'HTMLElement', 'Element', 'Node', 'getComputedStyle', 'requestAnimationFrame',
   'cancelAnimationFrame', 'matchMedia', 'MutationObserver', 'ResizeObserver', 'IntersectionObserver',
-  'Image', 'FileReader', 'fetch', 'indexedDB', 'caches', 'importScripts', 'DOMParser', 'screen', 'history'
+  'Image', 'FileReader', 'fetch', 'indexedDB', 'caches', 'importScripts', 'DOMParser', 'screen', 'history',
+  'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'AbortController', 'XMLHttpRequest',
+  'WebSocket', 'Worker', 'BroadcastChannel'
 ];
 const DOM_TYPES = [
   'Node', 'Element', 'HTMLElement', 'HTML\\w+Element', 'SVGElement', 'SVG\\w+Element', 'Document',
@@ -153,6 +157,9 @@ export default tseslint.config(
       'no-restricted-syntax': ['error', {
         selector: `MemberExpression[property.name=/^(?:${DOM_MEMBERS.join('|')})$/]`,
         message: 'Domain code does no DOM work; move this to shared/ or a surface.'
+      }, {
+        selector: `MemberExpression[object.name='globalThis'][property.name=/^(?:${DOMAIN_GLOBALS.join('|')})$/]`,
+        message: 'Domain code reaches no browser API; take it as a parameter or move this to platform/.'
       }, {
         // Typed code that handles the DOM names its types.
         selector: `TSTypeReference[typeName.name=/^(?:${DOM_TYPES.join('|')})$/]`,

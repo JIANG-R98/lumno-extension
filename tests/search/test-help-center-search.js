@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const helpCenterSearch = require('../../src/domain/search/help-center-search.ts');
+const helpCenterIndex = require('../../src/platform/help-center-index.ts');
 const communityLinks = require('../../src/domain/community-links.ts');
 const searchUtils = require('../../src/domain/search/search-utils.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
@@ -239,7 +240,7 @@ async function testIndexLoader() {
   let now = 0;
   const requests = [];
   let failNext = true;
-  const loader = helpCenterSearch.createIndexLoader({
+  const loader = helpCenterIndex.createIndexLoader({
     now: () => now,
     ttlMs: 1000,
     fetchImpl: (url) => {
