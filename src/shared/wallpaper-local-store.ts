@@ -1,5 +1,104 @@
-// @ts-nocheck
+// The custom wallpaper library in IndexedDB (uploads, kept as WebP with a
+// thumbnail and a small sample copy), and the device-only caches of link
+// wallpapers and curated photo tiles.
 import { getSamplerSize } from '../domain/wallpaper-sampler-size';
+
+// What the store uses of the page's window; the service worker passes its
+// global scope, which has no Image.
+interface WallpaperWindow {
+  indexedDB?: IDBFactory;
+  FileReader?: typeof FileReader;
+  Image?: typeof Image;
+}
+
+interface WallpaperStoreOptions {
+  documentObj?: Document | null;
+  windowObj?: WallpaperWindow | null;
+  // Called after a write; by default the asset revision tells other pages.
+  onChange?: () => void;
+}
+
+// A custom wallpaper as the library keeps it.
+interface WallpaperRecord {
+  id: string;
+  key: string;
+  name: string;
+  imageDataUrl: string;
+  thumbnailDataUrl: string;
+  // The copy the effects sample; '' for uploads saved before it existed.
+  sampleDataUrl: string;
+  width: number;
+  height: number;
+  updatedAt: number;
+}
+
+// A wallpaper to store: the key defaults to the id, and a missing sample
+// copy is left out.
+interface WallpaperRecordInput {
+  id: string;
+  key?: string;
+  name: string;
+  imageDataUrl: string;
+  thumbnailDataUrl: string;
+  sampleDataUrl?: string;
+  width: number;
+  height: number;
+  updatedAt: number;
+}
+
+interface CropRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface RenderedImage {
+  dataUrl: string;
+  width: number;
+  height: number;
+  byteSize: number;
+  quality: number;
+}
+
+interface WallpaperLocalStore {
+  buildRecordFromFile(file: File | null | undefined): Promise<WallpaperRecordInput>;
+  buildTileThumbnail(blob: Blob): Promise<string>;
+  isCustomWallpaperId(id: unknown): boolean;
+  normalizeRecord(record: unknown): WallpaperRecord | null;
+  readAll(): Promise<WallpaperRecord[]>;
+  readByIds(ids: unknown): Promise<WallpaperRecord[]>;
+  remove(record: { key?: string } | null | undefined): Promise<void>;
+  replaceAll(records: readonly WallpaperRecordInput[]): Promise<void>;
+  write(record: WallpaperRecordInput): Promise<void>;
+}
+
+// The caches hold whatever the pages stored; readers check each record.
+interface WallpaperImageCache {
+  readByIds(ids: unknown): Promise<unknown[]>;
+  write(record: { id: string }): Promise<void>;
+  remove(id: IDBValidKey): Promise<void>;
+  keys(): Promise<IDBValidKey[]>;
+}
+
+interface WallpaperThumbnailCache {
+  readByIds(ids: unknown): Promise<unknown[]>;
+  write(record: { id: string; url: string; dataUrl: string }): Promise<void>;
+}
+
+interface CacheOptions {
+  windowObj?: WallpaperWindow | null;
+}
+
+interface ThumbnailCacheOptions extends CacheOptions {
+  limit?: number;
+  now?: () => number;
+}
+
+// A task's result, read once its transaction completes.
+interface TaskResult<T> {
+  value?: T;
+}
 
 const CUSTOM_WALLPAPER_ID = 'custom-upload';
 const CUSTOM_WALLPAPER_ID_PREFIX = 'custom-wallpaper-';
@@ -35,18 +134,23 @@ const LEGACY_GENERIC_NAMES = [
   '\u81ea\u5b9a\u4e49\u58c1\u7eb8'
 ];
 
-function getOption(options, key, fallback) {
+// An option given, even as undefined, wins over the fallback.
+function getOption<T, K extends keyof T>(options: T | null | undefined, key: K, fallback: T[K]): T[K] {
   if (options && Object.prototype.hasOwnProperty.call(options, key)) {
     return options[key];
   }
   return fallback;
 }
 
-function isCustomWallpaperId(id) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function isCustomWallpaperId(id: unknown): boolean {
   return String(id || '').startsWith(CUSTOM_WALLPAPER_ID_PREFIX);
 }
 
-function isGenericCustomWallpaperName(name) {
+function isGenericCustomWallpaperName(name: unknown): boolean {
   const normalized = String(name || '').trim();
   if (!normalized) {
     return true;
@@ -54,21 +158,25 @@ function isGenericCustomWallpaperName(name) {
   return LEGACY_GENERIC_NAMES.indexOf(normalized) !== -1;
 }
 
-function createWallpaperLocalStore(options) {
-  const documentObj = getOption(options, 'documentObj', globalThis.document);
-  const windowObj = getOption(options, 'windowObj', globalThis.window || globalThis);
-  function notifyChange() {
+function getDefaultWindow(): WallpaperWindow {
+  return typeof window !== 'undefined' && window ? window : globalThis;
+}
+
+function createWallpaperLocalStore(options?: WallpaperStoreOptions | null): WallpaperLocalStore {
+  const documentObj = getOption(options, 'documentObj', typeof document !== 'undefined' ? document : null);
+  const windowObj = getOption(options, 'windowObj', getDefaultWindow());
+  function notifyChange(): void {
     if (options && typeof options.onChange === 'function') {
       options.onChange();
-    } else if (globalThis.chrome && globalThis.chrome.storage && globalThis.chrome.storage.local) {
-      globalThis.chrome.storage.local.set({
+    } else if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      void chrome.storage.local.set({
         _x_extension_asset_revision_2026_unique_: `${Date.now()}-${Math.random()}`
       });
     }
   }
 
-  function normalizeRecord(record) {
-    if (!record || typeof record !== 'object') {
+  function normalizeRecord(record: unknown): WallpaperRecord | null {
+    if (!isRecord(record)) {
       return null;
     }
     const imageDataUrl = String(record.imageDataUrl || '');
@@ -100,7 +208,7 @@ function createWallpaperLocalStore(options) {
     };
   }
 
-  function openDb() {
+  function openDb(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       if (!windowObj || !windowObj.indexedDB) {
         reject(new Error('IndexedDB is not available.'));
@@ -122,9 +230,16 @@ function createWallpaperLocalStore(options) {
     });
   }
 
-  function readAll() {
+  function sortByUpdate(records: readonly unknown[]): WallpaperRecord[] {
+    return records
+      .map(normalizeRecord)
+      .filter((record): record is WallpaperRecord => record !== null)
+      .sort((a, b) => a.updatedAt - b.updatedAt);
+  }
+
+  function readAll(): Promise<WallpaperRecord[]> {
     return openDb().then((db) => {
-      return new Promise((resolve, reject) => {
+      return new Promise<WallpaperRecord[]>((resolve, reject) => {
         const transaction = db.transaction(STORE_NAME, 'readonly');
         const store = transaction.objectStore(STORE_NAME);
         const request = typeof store.getAll === 'function' ? store.getAll() : null;
@@ -136,11 +251,8 @@ function createWallpaperLocalStore(options) {
           reject(request.error || new Error('Failed to read wallpapers.'));
         };
         request.onsuccess = () => {
-          const records = Array.isArray(request.result) ? request.result : [];
-          resolve(records
-            .map(normalizeRecord)
-            .filter(Boolean)
-            .sort((a, b) => a.updatedAt - b.updatedAt));
+          const records: unknown[] = Array.isArray(request.result) ? request.result : [];
+          resolve(sortByUpdate(records));
         };
         transaction.oncomplete = () => {
           db.close();
@@ -153,15 +265,16 @@ function createWallpaperLocalStore(options) {
     });
   }
 
-  function readByIds(ids) {
-    const recordKeys = [];
-    const addRecordKey = (key) => {
+  function readByIds(ids: unknown): Promise<WallpaperRecord[]> {
+    const recordKeys: string[] = [];
+    const addRecordKey = (key: string): void => {
       const normalizedKey = String(key || '').trim();
       if (normalizedKey && !recordKeys.includes(normalizedKey)) {
         recordKeys.push(normalizedKey);
       }
     };
-    (Array.isArray(ids) ? ids : []).forEach((value) => {
+    const idList: unknown[] = Array.isArray(ids) ? ids : [];
+    idList.forEach((value) => {
       const id = String(value || '').trim();
       if (id === CUSTOM_WALLPAPER_ID) {
         addRecordKey(LEGACY_RECORD_KEY);
@@ -179,7 +292,7 @@ function createWallpaperLocalStore(options) {
       return Promise.resolve([]);
     }
     return openDb().then((db) => {
-      return new Promise((resolve, reject) => {
+      return new Promise<WallpaperRecord[]>((resolve, reject) => {
         const transaction = db.transaction(STORE_NAME, 'readonly');
         const store = transaction.objectStore(STORE_NAME);
         if (typeof store.get !== 'function') {
@@ -187,9 +300,9 @@ function createWallpaperLocalStore(options) {
           reject(new Error('Wallpaper database does not support targeted reads.'));
           return;
         }
-        const records = [];
+        const records: unknown[] = [];
         let failed = false;
-        const fail = (error) => {
+        const fail = (error: unknown): void => {
           if (failed) {
             return;
           }
@@ -212,8 +325,8 @@ function createWallpaperLocalStore(options) {
           if (failed) {
             return;
           }
-          const normalizedById = new Map();
-          records.map(normalizeRecord).filter(Boolean).forEach((record) => {
+          const normalizedById = new Map<string, WallpaperRecord>();
+          sortByUpdate(records).forEach((record) => {
             normalizedById.set(record.id, record);
           });
           resolve(Array.from(normalizedById.values()).sort((a, b) => a.updatedAt - b.updatedAt));
@@ -226,9 +339,9 @@ function createWallpaperLocalStore(options) {
     });
   }
 
-  function write(record) {
+  function write(record: WallpaperRecordInput): Promise<void> {
     return openDb().then((db) => {
-      return new Promise((resolve, reject) => {
+      return new Promise<void>((resolve, reject) => {
         const transaction = db.transaction(STORE_NAME, 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
         store.put(Object.assign({}, record, { key: record.key || record.id }));
@@ -245,9 +358,9 @@ function createWallpaperLocalStore(options) {
     });
   }
 
-  function remove(record) {
+  function remove(record: { key?: string } | null | undefined): Promise<void> {
     return openDb().then((db) => {
-      return new Promise((resolve, reject) => {
+      return new Promise<void>((resolve, reject) => {
         const transaction = db.transaction(STORE_NAME, 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
         store.delete(record && record.key ? record.key : '');
@@ -266,8 +379,8 @@ function createWallpaperLocalStore(options) {
 
   // Apply a downloaded library in one IndexedDB transaction. The caller
   // validates media before replacing the catalog and publishes its revision.
-  function replaceAll(records) {
-    return openDb().then((db) => new Promise((resolve, reject) => {
+  function replaceAll(records: readonly WallpaperRecordInput[]): Promise<void> {
+    return openDb().then((db) => new Promise<void>((resolve, reject) => {
       const transaction = db.transaction(STORE_NAME, 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       store.clear();
@@ -280,7 +393,7 @@ function createWallpaperLocalStore(options) {
     }));
   }
 
-  function readFileAsDataUrl(file) {
+  function readFileAsDataUrl(file: Blob): Promise<string> {
     return new Promise((resolve, reject) => {
       const Reader = windowObj && windowObj.FileReader ? windowObj.FileReader : globalThis.FileReader;
       if (typeof Reader !== 'function') {
@@ -298,7 +411,7 @@ function createWallpaperLocalStore(options) {
     });
   }
 
-  function loadImageFromDataUrl(dataUrl) {
+  function loadImageFromDataUrl(dataUrl: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
       const ImageConstructor = windowObj && windowObj.Image ? windowObj.Image : globalThis.Image;
       if (typeof ImageConstructor !== 'function') {
@@ -316,7 +429,7 @@ function createWallpaperLocalStore(options) {
     });
   }
 
-  function getCenteredCrop(width, height) {
+  function getCenteredCrop(width: number, height: number): CropRect {
     const sourceWidth = Math.max(1, Number(width) || 1);
     const sourceHeight = Math.max(1, Number(height) || 1);
     const sourceRatio = sourceWidth / sourceHeight;
@@ -338,7 +451,7 @@ function createWallpaperLocalStore(options) {
     };
   }
 
-  function getDataUrlByteLength(dataUrl) {
+  function getDataUrlByteLength(dataUrl: string): number {
     const match = /^data:[^;,]+;base64,([a-zA-Z0-9+/]*={0,2})$/.exec(String(dataUrl || ''));
     if (!match) {
       return 0;
@@ -348,11 +461,18 @@ function createWallpaperLocalStore(options) {
     return Math.max(0, Math.floor((encoded.length * 3) / 4) - padding);
   }
 
-  function renderCroppedDataUrl(image, crop, targetWidth, maxBytes) {
-    const canvas = documentObj.createElement('canvas');
+  function createCanvas(): HTMLCanvasElement {
+    if (!documentObj) {
+      throw new Error('Canvas is not available.');
+    }
+    return documentObj.createElement('canvas');
+  }
+
+  function renderCroppedDataUrl(image: HTMLImageElement, crop: CropRect, targetWidth: number, maxBytes: number): RenderedImage {
+    const canvas = createCanvas();
     const initialWidth = Math.max(1, Math.round(targetWidth));
     const minimumWidth = Math.min(initialWidth, initialWidth > THUMBNAIL_WIDTH ? 1280 : 320);
-    const widths = [];
+    const widths: number[] = [];
     let width = initialWidth;
     while (width >= minimumWidth) {
       if (!widths.includes(width)) widths.push(width);
@@ -400,13 +520,13 @@ function createWallpaperLocalStore(options) {
   // losslessly, so sampling it reads the pixels sampling the full wallpaper would. Lossy WebP keeps
   // colour at half resolution and loses the fine colour specks of painted or dotted images. '' when
   // the wallpaper is no larger than the sampler or the browser cannot make the copy.
-  function renderSampleDataUrl(dataUrl, width, height) {
+  function renderSampleDataUrl(dataUrl: string, width: number, height: number): Promise<string> {
     const size = getSamplerSize(width, height);
     if (size.width >= width && size.height >= height) {
       return Promise.resolve('');
     }
     return loadImageFromDataUrl(dataUrl).then((image) => {
-      const canvas = documentObj.createElement('canvas');
+      const canvas = createCanvas();
       canvas.width = size.width;
       canvas.height = size.height;
       // Read-optimised like the sampler's canvas, so Chrome filters the downscale the same way.
@@ -420,7 +540,7 @@ function createWallpaperLocalStore(options) {
     }).catch(() => '');
   }
 
-  function buildRecordFromFile(file) {
+  function buildRecordFromFile(file: File | null | undefined): Promise<WallpaperRecordInput> {
     if (!file || !ACCEPTED_SOURCE_MIME_TYPES.includes(String(file.type || '').toLowerCase())) {
       return Promise.reject(new Error('Invalid image file.'));
     }
@@ -441,7 +561,7 @@ function createWallpaperLocalStore(options) {
       const outputWidth = Math.min(MAX_OUTPUT_WIDTH, Math.max(1, crop.width));
       const wallpaper = renderCroppedDataUrl(image, crop, outputWidth, MAX_WALLPAPER_BYTES);
       const thumbnail = renderCroppedDataUrl(image, crop, THUMBNAIL_WIDTH, MAX_THUMBNAIL_BYTES);
-      return renderSampleDataUrl(wallpaper.dataUrl, wallpaper.width, wallpaper.height).then((sampleDataUrl) => ({
+      return renderSampleDataUrl(wallpaper.dataUrl, wallpaper.width, wallpaper.height).then((sampleDataUrl): WallpaperRecordInput => ({
         id: `${CUSTOM_WALLPAPER_ID_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         name: file.name
           ? String(file.name).replace(/\.[^.]+$/, '')
@@ -457,7 +577,7 @@ function createWallpaperLocalStore(options) {
   }
 
   // A small WebP of a panel tile's photo, cropped to the tile's 16:9 like the wallpaper itself.
-  function buildTileThumbnail(blob) {
+  function buildTileThumbnail(blob: Blob): Promise<string> {
     return readFileAsDataUrl(blob).then(loadImageFromDataUrl).then((image) => {
       const crop = getCenteredCrop(image.naturalWidth || image.width, image.naturalHeight || image.height);
       return renderCroppedDataUrl(image, crop, Math.min(TILE_THUMBNAIL_WIDTH, crop.width),
@@ -490,9 +610,9 @@ function createWallpaperLocalStore(options) {
 const IMAGE_CACHE_DB_NAME = 'lumno-newtab-wallpaper-cache';
 const IMAGE_CACHE_STORE_NAME = 'images';
 
-function createWallpaperImageCache(options) {
-  const windowObj = getOption(options, 'windowObj', globalThis.window || globalThis);
-  function run(mode, task) {
+function createWallpaperImageCache(options?: CacheOptions | null): WallpaperImageCache {
+  const windowObj = getOption(options, 'windowObj', getDefaultWindow());
+  function run<T>(mode: IDBTransactionMode, task: (store: IDBObjectStore) => TaskResult<T>): Promise<T | undefined> {
     return new Promise((resolve, reject) => {
       if (!windowObj || !windowObj.indexedDB) {
         reject(new Error('IndexedDB is not available.'));
@@ -519,30 +639,31 @@ function createWallpaperImageCache(options) {
   }
   return {
     readByIds(ids) {
-      const keys = (Array.isArray(ids) ? ids : []).filter(Boolean);
+      const idList: unknown[] = Array.isArray(ids) ? ids : [];
+      const keys = idList.filter((key): key is string | number => (typeof key === 'string' || typeof key === 'number') && Boolean(key));
       if (!keys.length) return Promise.resolve([]);
       return run('readonly', (store) => {
-        const result = { value: [] };
+        const records: unknown[] = [];
         keys.forEach((key) => {
           const request = store.get(key);
-          request.onsuccess = () => { if (request.result) result.value.push(request.result); };
+          request.onsuccess = () => { if (request.result) records.push(request.result); };
         });
-        return result;
-      });
+        return { value: records };
+      }).then((records) => records || []);
     },
     write(record) {
-      return run('readwrite', (store) => { store.put(record); return {}; });
+      return run<void>('readwrite', (store) => { store.put(record); return {}; });
     },
     remove(id) {
-      return run('readwrite', (store) => { store.delete(id); return {}; });
+      return run<void>('readwrite', (store) => { store.delete(id); return {}; });
     },
     keys() {
       return run('readonly', (store) => {
-        const result = { value: [] };
+        const result: TaskResult<IDBValidKey[]> = { value: [] };
         const request = store.getAllKeys();
         request.onsuccess = () => { result.value = request.result || []; };
         return result;
-      });
+      }).then((keys) => keys || []);
     }
   };
 }
@@ -557,11 +678,11 @@ const THUMBNAIL_CACHE_LIMIT = 60;
 // A tile shown again moves to the front at most this often, so reopening the panel rarely writes.
 const THUMBNAIL_TOUCH_INTERVAL_MS = 60 * 60 * 1000;
 
-function createWallpaperThumbnailCache(options) {
-  const windowObj = getOption(options, 'windowObj', globalThis.window || globalThis);
-  const limit = getOption(options, 'limit', THUMBNAIL_CACHE_LIMIT);
-  const now = getOption(options, 'now', Date.now);
-  function run(task) {
+function createWallpaperThumbnailCache(options?: ThumbnailCacheOptions | null): WallpaperThumbnailCache {
+  const windowObj = getOption(options, 'windowObj', getDefaultWindow());
+  const limit = getOption(options, 'limit', THUMBNAIL_CACHE_LIMIT) ?? THUMBNAIL_CACHE_LIMIT;
+  const now = getOption(options, 'now', Date.now) || Date.now;
+  function run<T>(task: (store: IDBObjectStore) => TaskResult<T>): Promise<T | undefined> {
     return new Promise((resolve, reject) => {
       if (!windowObj || !windowObj.indexedDB) {
         reject(new Error('IndexedDB is not available.'));
@@ -590,25 +711,26 @@ function createWallpaperThumbnailCache(options) {
   return {
     // Records are { id, url, dataUrl, usedAt }.
     readByIds(ids) {
-      const keys = (Array.isArray(ids) ? ids : []).filter(Boolean);
+      const idList: unknown[] = Array.isArray(ids) ? ids : [];
+      const keys = idList.filter((key): key is string | number => (typeof key === 'string' || typeof key === 'number') && Boolean(key));
       if (!keys.length) return Promise.resolve([]);
       return run((store) => {
-        const result = { value: [] };
+        const records: unknown[] = [];
         const time = now();
         keys.forEach((key) => {
           const request = store.get(key);
           request.onsuccess = () => {
-            const record = request.result;
-            if (!record) return;
-            result.value.push(record);
-            if (!(time - record.usedAt < THUMBNAIL_TOUCH_INTERVAL_MS)) store.put({ ...record, usedAt: time });
+            const record: unknown = request.result;
+            if (!isRecord(record)) return;
+            records.push(record);
+            if (!(time - Number(record.usedAt) < THUMBNAIL_TOUCH_INTERVAL_MS)) store.put({ ...record, usedAt: time });
           };
         });
-        return result;
-      });
+        return { value: records };
+      }).then((records) => records || []);
     },
     write(record) {
-      return run((store) => {
+      return run<void>((store) => {
         store.put({ ...record, usedAt: now() });
         const count = store.count();
         count.onsuccess = () => {
@@ -628,6 +750,15 @@ function createWallpaperThumbnailCache(options) {
   };
 }
 
+export type {
+  WallpaperImageCache,
+  WallpaperLocalStore,
+  WallpaperRecord,
+  WallpaperRecordInput,
+  WallpaperStoreOptions,
+  WallpaperThumbnailCache,
+  WallpaperWindow
+};
 export {
   CUSTOM_WALLPAPER_ID,
   CUSTOM_WALLPAPER_ID_PREFIX,

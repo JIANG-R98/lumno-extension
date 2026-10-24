@@ -93,8 +93,6 @@ interface StateSnapshot {
   httpEtag: string | null;
 }
 
-type StateRead = StateSnapshot | { unchanged: true };
-
 interface StateWrite {
   state: unknown;
   etag: string;
@@ -123,7 +121,7 @@ interface WebDavClient {
   request(path: string, method: DavMethod, body?: BodyInit, headers?: DavHeaders, limit?: number): Promise<DavResponse>;
   ensureDirectories(): Promise<void>;
   // Null when there is no state file yet.
-  readState(etag?: string | null): Promise<StateRead | null>;
+  readState(): Promise<StateSnapshot | null>;
   writeState(state: unknown, etag: string | null | undefined): Promise<StateWrite>;
   releaseStaleLock(marker: unknown, now?: number): Promise<boolean>;
   sweepAbandoned(): Promise<number>;
@@ -318,16 +316,9 @@ function createClient(config: WebDavConfigInput, options?: WebDavClientOptions |
     try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
     catch (_cause) { throw error('remote-corrupt'); }
   }
-  async function readStateSnapshot(): Promise<StateSnapshot | null> {
+  async function readState(): Promise<StateSnapshot | null> {
     const read = await readStateBytes();
     return read ? { state: parseState(read.bytes), etag: read.revision, httpEtag: read.httpEtag } : null;
-  }
-  // { unchanged: true } when the state still has the revision etag names.
-  async function readState(etag?: string | null): Promise<StateRead | null> {
-    const read = await readStateBytes();
-    if (!read) return null;
-    if (etag === read.revision) return { unchanged: true };
-    return { state: parseState(read.bytes), etag: read.revision, httpEtag: read.httpEtag };
   }
   async function writeState(state: unknown, etag: string | null | undefined): Promise<StateWrite> {
     // Both acquisition strategies use the same mutex. A capability change
@@ -497,7 +488,7 @@ function createClient(config: WebDavConfigInput, options?: WebDavClientOptions |
     let primary: unknown = null;
     let verified: StateSnapshot | null = null;
     try {
-      const latest = await readStateSnapshot();
+      const latest = await readState();
       if ((latest && latest.etag || null) !== (revision || null)) throw error('remote-changed');
       let written: DavResponse;
       try {
@@ -517,7 +508,7 @@ function createClient(config: WebDavConfigInput, options?: WebDavClientOptions |
       if (written.status === 412) throw error('remote-changed');
       if ([404, 405].includes(written.status)) throw error('write-failed');
       if (![200, 201, 204].includes(written.status)) { uncertain = error('lock-write-uncertain'); throw uncertain; }
-      verified = await readStateSnapshot();
+      verified = await readState();
       if (!verified || JSON.stringify(verified.state) !== JSON.stringify(state)) throw error('remote-changed');
     } catch (cause) {
       primary = cause;
@@ -653,7 +644,6 @@ export type {
   ConnectionCapabilities,
   DavResponse,
   StaleLockMarker,
-  StateRead,
   StateSnapshot,
   StateWrite,
   WebDavClient,
