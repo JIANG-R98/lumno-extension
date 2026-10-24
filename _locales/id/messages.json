@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Buka pengalih tab terbaru"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Buka pengalih tab terbaru secara terbalik"
+  },
   "shortcut_reference_title": {
     "message": "Daftar pintasan keyboard"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Membuka pengalih tab terbaru"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Buka pengalih tab terbaru secara terbalik"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Membuka pengalih dengan tab terlama terpilih"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Input sebelumnya atau berikutnya"

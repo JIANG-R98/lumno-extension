@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Atidaryti naujausių skirtukų perjungiklį"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Atidaryti naujausių skirtukų perjungiklį atvirkštine tvarka"
+  },
   "shortcut_reference_title": {
     "message": "Sparčiųjų klavišų sąrašas"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Atidaryti naujausių skirtukų perjungiklį"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Atidaryti naujausių skirtukų perjungiklį atvirkštine tvarka"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Atidaryti perjungiklį pažymėjus seniausią skirtuką"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Ankstesnė ar kita įvestis"

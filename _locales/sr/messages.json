@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Отвори пребацивач недавних картица"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Отвори пребацивач недавних картица обрнутим редоследом"
+  },
   "shortcut_reference_title": {
     "message": "Листа тастерских пречица"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Отвара пребацивач недавних картица"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Отвори пребацивач недавних картица обрнутим редоследом"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Отвара пребацивач са изабраном најстаријом картицом"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Претходни или следећи унос"

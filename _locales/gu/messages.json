@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "તાજેતરના ટૅબ સ્વિચર ખોલો"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "તાજેતરના ટૅબ સ્વિચર ઉલટા ક્રમમાં ખોલો"
+  },
   "shortcut_reference_title": {
     "message": "શૉર્ટકટ સૂચિ"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "તાજેતરના ટૅબનું સ્વિચર ખોલો"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "તાજેતરના ટૅબ સ્વિચર ઉલટા ક્રમમાં ખોલો"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "સૌથી જૂનું ટૅબ પસંદ કરીને તાજેતરના ટૅબનું સ્વિચર ખોલો"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "પાછલું અથવા આગલું ઇનપુટ"

@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Odpri preklopnik nedavnih zavihkov"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Odpri preklopnik nedavnih zavihkov v obratnem vrstnem redu"
+  },
   "shortcut_reference_title": {
     "message": "Seznam bližnjic"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Odpre preklopnik nedavnih zavihkov"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Odpri preklopnik nedavnih zavihkov v obratnem vrstnem redu"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Odpre preklopnik z izbranim najstarejšim zavihkom"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Prejšnji ali naslednji vnos"

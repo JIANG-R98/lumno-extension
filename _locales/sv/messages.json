@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Öppna växlaren för senaste flikar"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Öppna växlaren för senaste flikar i omvänd ordning"
+  },
   "shortcut_reference_title": {
     "message": "Kortkommandon"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Öppna växlaren för senaste flikar"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Öppna växlaren för senaste flikar i omvänd ordning"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Öppna växlaren med den äldsta fliken markerad"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Föregående eller nästa inmatning"

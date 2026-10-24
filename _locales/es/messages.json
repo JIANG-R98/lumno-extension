@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Abrir el selector de pestañas recientes"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Abrir el selector de pestañas recientes en orden inverso"
+  },
   "shortcut_reference_title": {
     "message": "Lista de combinaciones de teclas"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Abre el selector de pestañas recientes"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Abrir el selector de pestañas recientes en orden inverso"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Abre el selector con la pestaña más antigua seleccionada"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Entrada anterior o siguiente"

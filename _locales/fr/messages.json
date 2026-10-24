@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Ouvrir le sélecteur d’onglets récents"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Ouvrir le sélecteur d’onglets récents en sens inverse"
+  },
   "shortcut_reference_title": {
     "message": "Raccourcis clavier"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Ouvrir le sélecteur d’onglets récents"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Ouvrir le sélecteur d’onglets récents en sens inverse"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Ouvrir le sélecteur avec l’onglet le plus ancien sélectionné"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Saisie précédente ou suivante"

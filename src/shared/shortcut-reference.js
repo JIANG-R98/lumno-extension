@@ -46,6 +46,14 @@ const BROWSER_SHORTCUTS = [
       default: 'Alt+Q',
       mac: 'Alt+Q'
     }
+  },
+  {
+    id: 'show-tab-switcher-reverse',
+    commandName: 'show-tab-switcher-reverse',
+    titleKey: 'shortcut_reference_tab_switcher_reverse_title',
+    titleFallback: 'Open recent tab switcher in reverse',
+    descKey: 'shortcut_reference_tab_switcher_reverse_desc',
+    descFallback: 'Open the recent tab switcher with the oldest tab selected'
   }
 ];
 
@@ -194,6 +202,7 @@ const REFERENCE_GROUPS = [
     titleFallback: 'Tab switcher',
     itemIds: [
       'show-tab-switcher',
+      'show-tab-switcher-reverse',
       'tab-switcher-cycle',
       'tab-switcher-confirm'
     ]

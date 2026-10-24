@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Avaa viimeisimpien välilehtien vaihtaja"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Avaa viimeisimpien välilehtien vaihtaja käänteisesti"
+  },
   "shortcut_reference_title": {
     "message": "Pikanäppäimet"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Avaa viimeisimpien välilehtien vaihtaja"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Avaa viimeisimpien välilehtien vaihtaja käänteisesti"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Avaa vaihtaja niin, että vanhin välilehti on valittuna"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Edellinen tai seuraava syöte"

@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "최근 탭 전환기 열기"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "최근 탭 전환기를 역순으로 열기"
+  },
   "shortcut_reference_title": {
     "message": "단축키 목록"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "최근 탭 전환기를 엽니다"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "최근 탭 전환기를 역순으로 열기"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "가장 오래된 탭을 선택한 상태로 최근 탭 전환기를 엽니다"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "이전 또는 다음 입력"

@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Buka penukar tab terbaharu"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Buka penukar tab terbaharu secara songsang"
+  },
   "shortcut_reference_title": {
     "message": "Senarai pintasan papan kekunci"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Buka penukar tab terbaharu"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Buka penukar tab terbaharu secara songsang"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Buka penukar dengan tab paling lama dipilih"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Input sebelumnya atau seterusnya"

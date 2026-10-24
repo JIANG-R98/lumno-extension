@@ -275,6 +275,7 @@ import * as TOAST from '../shared/ui/toast.js';
     const commitModifier = modifiers.find((modifier) => modifier.eventKey !== 'Shift') || modifiers[0] || null;
     return {
       triggerKey,
+      hasShift: modifiers.some((modifier) => modifier.eventKey === 'Shift'),
       commitModifierEventKey: commitModifier ? commitModifier.eventKey : '',
       commitModifierFlag: commitModifier ? commitModifier.flag : ''
     };
@@ -1266,7 +1267,9 @@ import * as TOAST from '../shared/ui/toast.js';
           return;
         }
         suppressInitialShortcutAdvanceUntilTriggerKeyup = false;
-        selectByOffset(1);
+        // Adding or dropping Shift relative to the opening shortcut reverses.
+        const openedDirection = context.reverse === true ? -1 : 1;
+        selectByOffset(event.shiftKey === shortcut.hasShift ? openedDirection : -openedDirection);
         return;
       }
       if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {

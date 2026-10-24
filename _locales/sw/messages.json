@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Fungua kibadilishaji cha vichupo vya hivi karibuni"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Fungua kibadilishaji cha vichupo vya hivi karibuni kwa mpangilio wa kinyume"
+  },
   "shortcut_reference_title": {
     "message": "Orodha ya njia za mkato za kibodi"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Fungua kibadilishaji cha vichupo vya hivi karibuni"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Fungua kibadilishaji cha vichupo vya hivi karibuni kwa mpangilio wa kinyume"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Fungua kibadilishaji huku kichupo cha zamani zaidi kikiwa kimechaguliwa"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Ingizo lililotangulia au linalofuata"

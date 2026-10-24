@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Buksan ang switcher ng kamakailang tab"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Buksan ang switcher ng kamakailang tab nang pabaliktad"
+  },
   "shortcut_reference_title": {
     "message": "Listahan ng shortcut"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Buksan ang switcher ng kamakailang tab"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Buksan ang switcher ng kamakailang tab nang pabaliktad"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Buksan ang switcher na napili ang pinakalumang tab"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Nakaraan o susunod na input"

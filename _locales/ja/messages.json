@@ -2333,6 +2333,9 @@
   "command_show_tab_switcher": {
     "message": "最近のタブ切り替えを開く"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "最近のタブ切り替えを逆順で開く"
+  },
   "shortcut_reference_title": {
     "message": "キー一覧"
   },
@@ -2374,6 +2377,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "最近のタブ切り替えを開きます"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "最近のタブ切り替えを逆順で開く"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "最も古いタブを選択した状態で最近のタブ切り替えを開きます"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "前または次の入力に切り替え"

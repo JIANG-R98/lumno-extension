@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "সাম্প্রতিক ট্যাব সুইচার খুলুন"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "সাম্প্রতিক ট্যাব সুইচার উল্টো ক্রমে খুলুন"
+  },
   "shortcut_reference_title": {
     "message": "কীবোর্ড শর্টকাটের তালিকা"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "সাম্প্রতিক ট্যাব সুইচার খুলুন"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "সাম্প্রতিক ট্যাব সুইচার উল্টো ক্রমে খুলুন"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "সবচেয়ে পুরোনো ট্যাব নির্বাচিত রেখে সাম্প্রতিক ট্যাব সুইচার খুলুন"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "আগের বা পরের ইনপুট"

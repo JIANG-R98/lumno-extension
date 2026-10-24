@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Abrir seletor de separadores recentes"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Abrir seletor de separadores recentes em ordem inversa"
+  },
   "shortcut_reference_title": {
     "message": "Atalhos de teclado"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Abrir o seletor de separadores recentes"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Abrir seletor de separadores recentes em ordem inversa"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Abrir o seletor com o separador mais antigo selecionado"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Entrada anterior ou seguinte"

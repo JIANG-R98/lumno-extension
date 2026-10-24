@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Åbn skifter til seneste faner"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Åbn skifter til seneste faner i omvendt rækkefølge"
+  },
   "shortcut_reference_title": {
     "message": "Tastaturgenveje"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Åbn skifteren til seneste faner"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Åbn skifter til seneste faner i omvendt rækkefølge"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Åbn skifteren med den ældste fane valgt"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Forrige eller næste input"

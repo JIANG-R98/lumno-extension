@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Wisselaar voor recente tabbladen openen"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Wisselaar voor recente tabbladen omgekeerd openen"
+  },
   "shortcut_reference_title": {
     "message": "Sneltoetsenlijst"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "De wisselaar voor recente tabbladen openen"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Wisselaar voor recente tabbladen omgekeerd openen"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "De wisselaar openen met het oudste tabblad geselecteerd"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Vorige of volgende invoer"

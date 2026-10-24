@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Obre el commutador de pestanyes recents"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Obre el commutador de pestanyes recents en ordre invers"
+  },
   "shortcut_reference_title": {
     "message": "Llista de dreceres"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Obre el commutador de pestanyes recents"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Obre el commutador de pestanyes recents en ordre invers"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Obre el commutador amb la pestanya més antiga seleccionada"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Entrada anterior o següent"

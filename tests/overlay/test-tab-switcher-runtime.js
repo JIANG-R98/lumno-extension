@@ -128,6 +128,24 @@ async function testHeldShortcutIsSuppressedUntilItsKeyIsReleased() {
   fresh.close();
 }
 
+function testShiftReversesTheShortcutKey() {
+  const forward = createTabSwitcherPage();
+  openDefault(forward, { shortcut: '⌃Q', selectedIndex: 1 });
+  forward.press('Q', { code: 'KeyQ', ctrlKey: true, shiftKey: true });
+  assert.strictEqual(forward.selectedIndex(), 0, 'adding Shift to the shortcut should move back');
+  forward.press('q', { code: 'KeyQ', ctrlKey: true });
+  assert.strictEqual(forward.selectedIndex(), 1, 'the plain shortcut should still move forward');
+  forward.close();
+
+  const reverse = createTabSwitcherPage();
+  openDefault(reverse, { shortcut: '⌃⇧Q', reverse: true, selectedIndex: 3 });
+  reverse.press('Q', { code: 'KeyQ', ctrlKey: true, shiftKey: true });
+  assert.strictEqual(reverse.selectedIndex(), 2, 'the reverse shortcut should keep moving back');
+  reverse.press('q', { code: 'KeyQ', ctrlKey: true });
+  assert.strictEqual(reverse.selectedIndex(), 3, 'dropping Shift from the reverse shortcut should move forward');
+  reverse.close();
+}
+
 async function testCustomShortcutCommitsOnItsPrimaryModifier() {
   const page = createTabSwitcherPage();
   openDefault(page, { shortcut: 'Ctrl+Shift+/' });
@@ -423,6 +441,7 @@ function testStylesheetKeepsTheLayoutRules() {
   testOpensAtMostFiveCardsVisibleOnFirstPaint();
   testKeyboardCyclesAndCommits();
   await testHeldShortcutIsSuppressedUntilItsKeyIsReleased();
+  testShiftReversesTheShortcutKey();
   await testCustomShortcutCommitsOnItsPrimaryModifier();
   await testRuntimeMessagesReuseTheInjectedSwitcher();
   testOpeningAgainAdvancesOrCloses();

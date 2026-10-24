@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "เปิดตัวสลับแท็บล่าสุด"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "เปิดตัวสลับแท็บล่าสุดแบบย้อนกลับ"
+  },
   "shortcut_reference_title": {
     "message": "รายการแป้นพิมพ์ลัด"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "เปิดตัวสลับแท็บล่าสุด"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "เปิดตัวสลับแท็บล่าสุดแบบย้อนกลับ"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "เปิดตัวสลับแท็บล่าสุดโดยเลือกแท็บที่เก่าที่สุด"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "ข้อความก่อนหน้าหรือถัดไป"

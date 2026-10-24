@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Atvērt neseno ciļņu pārslēdzēju"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Atvērt neseno ciļņu pārslēdzēju apgrieztā secībā"
+  },
   "shortcut_reference_title": {
     "message": "Īsinājumtaustiņu saraksts"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Atvērt neseno ciļņu pārslēdzēju"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Atvērt neseno ciļņu pārslēdzēju apgrieztā secībā"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Atvērt pārslēdzēju ar atlasītu vecāko cilni"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Iepriekšējā vai nākamā ievade"

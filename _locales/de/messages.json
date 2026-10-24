@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Tab-Umschalter öffnen"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Tab-Umschalter rückwärts öffnen"
+  },
   "shortcut_reference_title": {
     "message": "Tastenkombinationen"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Den Umschalter für die letzten Tabs öffnen"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Tab-Umschalter rückwärts öffnen"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Den Umschalter mit dem ältesten Tab ausgewählt öffnen"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Vorherige oder nächste Eingabe"

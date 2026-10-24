@@ -2333,6 +2333,9 @@
   "command_show_tab_switcher": {
     "message": "開啟最近分頁切換器"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "反向開啟最近分頁切換器"
+  },
   "shortcut_reference_title": {
     "message": "快速鍵列表"
   },
@@ -2374,6 +2377,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "開啟最近分頁切換器"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "反向開啟最近分頁切換器"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "開啟最近分頁切換器，並選取最早使用的分頁"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "切換上一筆或下一筆輸入"

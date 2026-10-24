@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Άνοιγμα εναλλαγής πρόσφατων καρτελών"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Άνοιγμα εναλλαγής πρόσφατων καρτελών αντίστροφα"
+  },
   "shortcut_reference_title": {
     "message": "Συντομεύσεις πληκτρολογίου"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Άνοιγμα της εναλλαγής πρόσφατων καρτελών"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Άνοιγμα εναλλαγής πρόσφατων καρτελών αντίστροφα"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Άνοιγμα της εναλλαγής με επιλεγμένη την παλαιότερη καρτέλα"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Προηγούμενη ή επόμενη καταχώριση"

@@ -291,6 +291,7 @@ export const SHOW_SEARCH_COMMAND_NAME = 'show-search';
 const SHOW_SEARCH_PREFILL_COMMAND_NAME = 'show-search-prefill';
 export const SHOW_SEARCH_PREFILL_V_COMMAND_NAME = 'show-search-prefill-v';
 export const SHOW_TAB_SWITCHER_COMMAND_NAME = 'show-tab-switcher';
+export const SHOW_TAB_SWITCHER_REVERSE_COMMAND_NAME = 'show-tab-switcher-reverse';
 export const BROWSER_NEWTAB_PROVIDER_DETECTION_MS = 6000;
 export const TAB_SWITCHER_THUMBNAIL_STORAGE_KEY = '_x_extension_tab_switcher_state_2026_unique_';
 // Service-worker lifetime: everything below is lost when the worker suspends
@@ -441,10 +442,13 @@ chrome.commands.onCommand.addListener(function(command) {
     command !== SHOW_SEARCH_COMMAND_NAME &&
     command !== SHOW_SEARCH_PREFILL_COMMAND_NAME &&
     command !== SHOW_SEARCH_PREFILL_V_COMMAND_NAME &&
-    command !== SHOW_TAB_SWITCHER_COMMAND_NAME
+    command !== SHOW_TAB_SWITCHER_COMMAND_NAME &&
+    command !== SHOW_TAB_SWITCHER_REVERSE_COMMAND_NAME
   ) {
     return;
   }
+  const isTabSwitcherCommand = command === SHOW_TAB_SWITCHER_COMMAND_NAME ||
+    command === SHOW_TAB_SWITCHER_REVERSE_COMMAND_NAME;
   const commandObservedAt = Date.now();
   const source = command === SHOW_SEARCH_COMMAND_NAME
     ? 'commands'
@@ -457,8 +461,9 @@ chrome.commands.onCommand.addListener(function(command) {
       triggerCopyCurrentUrlForTab(activeTabs[0], source);
       return;
     }
-    if (command === SHOW_TAB_SWITCHER_COMMAND_NAME) {
-      triggerTabSwitcherForTab(activeTabs[0], source, commandObservedAt);
+    if (isTabSwitcherCommand) {
+      triggerTabSwitcherForTab(activeTabs[0], source, commandObservedAt,
+        command === SHOW_TAB_SWITCHER_REVERSE_COMMAND_NAME ? -1 : 1);
       return;
     }
     triggerShowSearchForTab(activeTabs[0], source);

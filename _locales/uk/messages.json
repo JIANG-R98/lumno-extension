@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Відкрити перемикач нещодавніх вкладок"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Відкрити перемикач нещодавніх вкладок у зворотному порядку"
+  },
   "shortcut_reference_title": {
     "message": "Комбінації клавіш"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Відкрити перемикач нещодавніх вкладок"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Відкрити перемикач нещодавніх вкладок у зворотному порядку"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Відкрити перемикач із вибраною найдавнішою вкладкою"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Попереднє або наступне введення"

@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "സമീപകാല ടാബ് സ്വിച്ചർ തുറക്കുക"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "സമീപകാല ടാബ് സ്വിച്ചർ വിപരീത ക്രമത്തിൽ തുറക്കുക"
+  },
   "shortcut_reference_title": {
     "message": "കീബോർഡ് കുറുക്കുവഴികൾ"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "സമീപകാല ടാബ് സ്വിച്ചർ തുറക്കുക"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "സമീപകാല ടാബ് സ്വിച്ചർ വിപരീത ക്രമത്തിൽ തുറക്കുക"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "ഏറ്റവും പഴയ ടാബ് തിരഞ്ഞെടുത്ത് സമീപകാല ടാബ് സ്വിച്ചർ തുറക്കുക"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "മുമ്പത്തെ അല്ലെങ്കിൽ അടുത്ത ഇൻപുട്ട്"

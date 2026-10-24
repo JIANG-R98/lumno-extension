@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Legutóbbi lapok váltójának megnyitása"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Legutóbbi lapok váltójának megnyitása fordított sorrendben"
+  },
   "shortcut_reference_title": {
     "message": "Billentyűparancsok"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "A legutóbbi lapok váltójának megnyitása"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Legutóbbi lapok váltójának megnyitása fordított sorrendben"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "A váltó megnyitása a legrégebbi lap kijelölésével"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Előző vagy következő bevitel"

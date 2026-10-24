@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "हाल के टैब का स्विचर खोलें"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "हाल के टैब का स्विचर उल्टे क्रम में खोलें"
+  },
   "shortcut_reference_title": {
     "message": "शॉर्टकट की सूची"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "हाल के टैब का स्विचर खोलें"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "हाल के टैब का स्विचर उल्टे क्रम में खोलें"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "सबसे पुराना टैब चुनकर हाल के टैब का स्विचर खोलें"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "पिछला या अगला इनपुट"

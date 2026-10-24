@@ -2333,6 +2333,9 @@
   "command_show_tab_switcher": {
     "message": "打开最近标签页切换器"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "反向打开最近标签页切换器"
+  },
   "shortcut_reference_title": {
     "message": "快捷键列表"
   },
@@ -2374,6 +2377,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "打开最近标签页切换器"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "反向打开最近标签页切换器"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "打开最近标签页切换器，并选中最早使用的标签页"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "切换上一条或下一条输入"

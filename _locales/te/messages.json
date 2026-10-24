@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "ఇటీవలి ట్యాబ్ స్విచర్\u200cను తెరవండి"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "ఇటీవలి ట్యాబ్ స్విచర్‌ను విలోమ క్రమంలో తెరవండి"
+  },
   "shortcut_reference_title": {
     "message": "షార్ట్\u200cకట్ జాబితా"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "ఇటీవలి ట్యాబ్ స్విచర్\u200cను తెరవండి"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "ఇటీవలి ట్యాబ్ స్విచర్‌ను విలోమ క్రమంలో తెరవండి"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "అత్యంత పాత ట్యాబ్‌ను ఎంచుకుని ఇటీవలి ట్యాబ్ స్విచర్‌ను తెరవండి"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "మునుపటి లేదా తర్వాతి ఇన్\u200cపుట్"

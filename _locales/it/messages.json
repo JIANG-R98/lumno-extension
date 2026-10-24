@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Apri il selettore di schede recenti"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Apri il selettore di schede recenti in ordine inverso"
+  },
   "shortcut_reference_title": {
     "message": "Elenco scorciatoie da tastiera"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Apri il selettore di schede recenti"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Apri il selettore di schede recenti in ordine inverso"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Apri il selettore con la scheda meno recente selezionata"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Testo precedente o successivo"

@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Åpne fanebytteren for nylige faner"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Åpne fanebytteren for nylige faner i motsatt rekkefølge"
+  },
   "shortcut_reference_title": {
     "message": "Liste over hurtigtaster"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Åpne fanebytteren for nylige faner"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Åpne fanebytteren for nylige faner i motsatt rekkefølge"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Åpne fanebytteren med den eldste fanen valgt"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Forrige eller neste inndata"

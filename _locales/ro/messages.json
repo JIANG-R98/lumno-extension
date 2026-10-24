@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Deschideți comutatorul de file recente"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Deschideți comutatorul de file recente în ordine inversă"
+  },
   "shortcut_reference_title": {
     "message": "Comenzi rapide de la tastatură"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Deschide comutatorul de file recente"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Deschideți comutatorul de file recente în ordine inversă"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Deschide comutatorul cu cea mai veche filă selectată"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Textul anterior sau următor"

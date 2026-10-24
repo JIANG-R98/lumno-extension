@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Mở trình chuyển thẻ gần đây"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Mở trình chuyển thẻ gần đây theo thứ tự ngược"
+  },
   "shortcut_reference_title": {
     "message": "Danh sách phím tắt"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Mở trình chuyển thẻ gần đây"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Mở trình chuyển thẻ gần đây theo thứ tự ngược"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Mở trình chuyển thẻ gần đây với thẻ cũ nhất được chọn"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Nội dung nhập trước hoặc sau"

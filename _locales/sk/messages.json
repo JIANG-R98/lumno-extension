@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Otvoriť prepínač nedávnych kariet"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Otvoriť prepínač nedávnych kariet v opačnom poradí"
+  },
   "shortcut_reference_title": {
     "message": "Zoznam klávesových skratiek"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Otvorí prepínač nedávnych kariet"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Otvoriť prepínač nedávnych kariet v opačnom poradí"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Otvorí prepínač s vybratou najstaršou kartou"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Predchádzajúci alebo ďalší vstup"

@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Otvori izmjenjivač nedavnih kartica"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Otvori izmjenjivač nedavnih kartica obrnutim redoslijedom"
+  },
   "shortcut_reference_title": {
     "message": "Tipkovni prečaci"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Otvara izmjenjivač nedavnih kartica"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Otvori izmjenjivač nedavnih kartica obrnutim redoslijedom"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Otvara izmjenjivač s odabranom najstarijom karticom"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Prethodni ili sljedeći unos"

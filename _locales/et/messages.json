@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Ava hiljutiste vahelehtede vahetaja"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Ava hiljutiste vahelehtede vahetaja vastupidises järjekorras"
+  },
   "shortcut_reference_title": {
     "message": "Kiirklahvide loend"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Ava hiljutiste vahelehtede vahetaja"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Ava hiljutiste vahelehtede vahetaja vastupidises järjekorras"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Ava vahetaja nii, et valitud on vanim vaheleht"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Eelmine või järgmine sisestus"

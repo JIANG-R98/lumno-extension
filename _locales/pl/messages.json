@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Otwórz przełącznik ostatnich kart"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Otwórz przełącznik ostatnich kart w odwrotnej kolejności"
+  },
   "shortcut_reference_title": {
     "message": "Lista skrótów klawiszowych"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Otwiera przełącznik ostatnich kart"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Otwórz przełącznik ostatnich kart w odwrotnej kolejności"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Otwiera przełącznik z zaznaczoną najstarszą kartą"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Poprzedni lub następny wpis"

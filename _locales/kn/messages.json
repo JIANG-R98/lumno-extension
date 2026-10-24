@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "ಇತ್ತೀಚಿನ ಟ್ಯಾಬ್ ಸ್ವಿಚರ್ ತೆರೆಯಿರಿ"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "ಇತ್ತೀಚಿನ ಟ್ಯಾಬ್ ಸ್ವಿಚರ್ ಅನ್ನು ಹಿಮ್ಮುಖವಾಗಿ ತೆರೆಯಿರಿ"
+  },
   "shortcut_reference_title": {
     "message": "ಶಾರ್ಟ್\u200cಕಟ್ ಪಟ್ಟಿ"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "ಇತ್ತೀಚಿನ ಟ್ಯಾಬ್ ಸ್ವಿಚರ್ ತೆರೆಯಿರಿ"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "ಇತ್ತೀಚಿನ ಟ್ಯಾಬ್ ಸ್ವಿಚರ್ ಅನ್ನು ಹಿಮ್ಮುಖವಾಗಿ ತೆರೆಯಿರಿ"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "ಅತ್ಯಂತ ಹಳೆಯ ಟ್ಯಾಬ್ ಆಯ್ಕೆ ಮಾಡಿ ಇತ್ತೀಚಿನ ಟ್ಯಾಬ್ ಸ್ವಿಚರ್ ತೆರೆಯಿರಿ"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "ಹಿಂದಿನ ಅಥವಾ ಮುಂದಿನ ಇನ್\u200cಪುಟ್"

@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Отваряне на превключвателя на скорошни раздели"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Отваряне на превключвателя на скорошни раздели в обратен ред"
+  },
   "shortcut_reference_title": {
     "message": "Списък с клавишни комбинации"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Отваряне на превключвателя на скорошни раздели"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Отваряне на превключвателя на скорошни раздели в обратен ред"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Отваряне на превключвателя с избран най-стария раздел"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Предишно или следващо въвеждане"

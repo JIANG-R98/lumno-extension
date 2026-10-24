@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "சமீபத்திய தாவல் மாற்றியைத் திற"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "சமீபத்திய தாவல் மாற்றியைத் தலைகீழ் வரிசையில் திற"
+  },
   "shortcut_reference_title": {
     "message": "கீபோர்டு ஷார்ட்கட்கள்"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "சமீபத்திய தாவல் மாற்றியைத் திறக்கும்"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "சமீபத்திய தாவல் மாற்றியைத் தலைகீழ் வரிசையில் திற"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "மிகப் பழைய தாவலைத் தேர்ந்தெடுத்து சமீபத்திய தாவல் மாற்றியைத் திறக்கும்"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "முந்தைய அல்லது அடுத்த உள்ளீடு"

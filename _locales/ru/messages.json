@@ -2318,6 +2318,9 @@
   "command_show_tab_switcher": {
     "message": "Открыть переключатель недавних вкладок"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Открыть переключатель недавних вкладок в обратном порядке"
+  },
   "shortcut_reference_title": {
     "message": "Быстрые клавиши"
   },
@@ -2359,6 +2362,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Открыть переключатель недавних вкладок"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Открыть переключатель недавних вкладок в обратном порядке"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Открыть переключатель с выбранной самой давней вкладкой"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Предыдущий или следующий ввод"
