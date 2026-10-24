@@ -9,6 +9,7 @@
   "include": [
     "src/domain/**/*.ts",
     "src/platform/**/*.ts",
-    "src/types/**/*.d.ts"
+    "src/types/**/*.d.ts",
+    "src/background/message-router.ts"
   ]
 }
