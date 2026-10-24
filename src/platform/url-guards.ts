@@ -1,14 +1,15 @@
-// @ts-nocheck
+// Which URLs the extension may act on: pages scripts can run in, pages the
+// overlay can open on, and links a web page may ask to open.
 import * as LumnoBrowserProfile from './browser-profile';
 
-function isBrowserExtensionProtocol(protocol) {
+function isBrowserExtensionProtocol(protocol: unknown): boolean {
   const normalized = String(protocol || '').toLowerCase();
   return normalized === 'chrome-extension:' ||
     normalized === 'moz-extension:' ||
     normalized === 'ms-browser-extension:';
 }
 
-function isBrowserInternalUrl(url) {
+function isBrowserInternalUrl(url: unknown): boolean {
   const lower = String(url || '').toLowerCase();
   return lower.startsWith('chrome://') ||
     lower.startsWith('edge://') ||
@@ -18,7 +19,7 @@ function isBrowserInternalUrl(url) {
     lower.startsWith('about:');
 }
 
-function isBrowserNewtabUrl(url) {
+function isBrowserNewtabUrl(url: unknown): boolean {
   const lower = String(url || '').trim().toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '');
   return lower === 'chrome://newtab' ||
     lower === 'chrome://new-tab-page' ||
@@ -31,17 +32,16 @@ function isBrowserNewtabUrl(url) {
 }
 
 // Firefox forbids content scripts on its add-ons site; Chromium does not.
-function isFirefoxRuntime() {
-  const profile = LumnoBrowserProfile;
-  return Boolean(profile && profile.isFirefoxExtensionRuntime());
+function isFirefoxRuntime(): boolean {
+  return Boolean(LumnoBrowserProfile.isFirefoxExtensionRuntime());
 }
 
-function isExtensionStoreUrl(url) {
+function isExtensionStoreUrl(url: unknown): boolean {
   if (!url) {
     return false;
   }
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(String(url));
     const host = parsed.hostname.toLowerCase();
     const path = parsed.pathname.toLowerCase();
     return (host === 'chrome.google.com' && path.startsWith('/webstore')) ||
@@ -49,17 +49,18 @@ function isExtensionStoreUrl(url) {
       (host === 'microsoftedge.microsoft.com' && path.startsWith('/addons')) ||
       host === 'addons.opera.com' ||
       (host === 'addons.mozilla.org' && isFirefoxRuntime());
-  } catch (e) {
+  } catch (_error) {
     return false;
   }
 }
 
-function isRestrictedUrl(url) {
+// Pages content scripts cannot run in.
+function isRestrictedUrl(url: unknown): boolean {
   if (!url || isBrowserInternalUrl(url)) {
     return true;
   }
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(String(url));
     const protocol = String(parsed.protocol || '').toLowerCase();
     if (isBrowserExtensionProtocol(protocol)) {
       return true;
@@ -68,17 +69,17 @@ function isRestrictedUrl(url) {
       return true;
     }
     return isExtensionStoreUrl(url);
-  } catch (e) {
+  } catch (_error) {
     return true;
   }
 }
 
-function canOpenOverlayOnUrl(url) {
+function canOpenOverlayOnUrl(url: unknown): boolean {
   if (!url || isBrowserInternalUrl(url)) {
     return false;
   }
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(String(url));
     const protocol = String(parsed.protocol || '').toLowerCase();
     if (isBrowserExtensionProtocol(protocol)) {
       return false;
@@ -90,19 +91,19 @@ function canOpenOverlayOnUrl(url) {
       return false;
     }
     return !isExtensionStoreUrl(url);
-  } catch (e) {
+  } catch (_error) {
     return false;
   }
 }
 
-function canFetchPageForFavicon(url) {
+function canFetchPageForFavicon(url: unknown): boolean {
   if (!url || isBrowserInternalUrl(url) || isExtensionStoreUrl(url)) {
     return false;
   }
   try {
-    const protocol = String(new URL(url).protocol || '').toLowerCase();
+    const protocol = String(new URL(String(url)).protocol || '').toLowerCase();
     return protocol === 'http:' || protocol === 'https:';
-  } catch (e) {
+  } catch (_error) {
     return false;
   }
 }
@@ -111,15 +112,15 @@ function canFetchPageForFavicon(url) {
 // in-page overlay) asked for. Typed and bookmarked targets stay openable
 // (http(s), file:, mailto:, browser pages ...), but never script, inline
 // data documents or another extension's pages.
-function canOpenUrlFromWebPageContext(url, ownExtensionBaseUrl) {
+function canOpenUrlFromWebPageContext(url: unknown, ownExtensionBaseUrl?: unknown): boolean {
   const raw = String(url || '').trim();
   if (!raw) {
     return false;
   }
-  let parsed = null;
+  let parsed: URL;
   try {
     parsed = new URL(raw);
-  } catch (e) {
+  } catch (_error) {
     return false;
   }
   const protocol = String(parsed.protocol || '').toLowerCase();
