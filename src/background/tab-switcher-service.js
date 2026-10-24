@@ -758,7 +758,10 @@ export function handleTabSwitcherShortcutModifierReleased(senderTab, releasedKey
   });
 }
 
-function armTabSwitcherShortcutReleaseObservers(tabs, windowId, shortcut, commandStartedAt) {
+// Only the tabs the shortcut was pressed in or the switcher opened in get the
+// command's start time. A release buffered in any other tab came from an
+// earlier switcher and must not commit this one.
+function armTabSwitcherShortcutReleaseObservers(tabs, windowId, shortcut, commandStartedAt, replayTabIds) {
   if (typeof windowId !== 'number') {
     return;
   }
@@ -766,15 +769,16 @@ function armTabSwitcherShortcutReleaseObservers(tabs, windowId, shortcut, comman
   if (!keys.length) {
     return;
   }
-  const message = {
-    action: 'armTabSwitcherShortcutRelease',
-    keys,
-    commandStartedAt: Number(commandStartedAt) || 0
-  };
+  const replayIds = Array.isArray(replayTabIds) ? replayTabIds : [];
   (Array.isArray(tabs) ? tabs : []).forEach((item) => {
     if (!item || typeof item.id !== 'number' || item.windowId !== windowId) {
       return;
     }
+    const message = {
+      action: 'armTabSwitcherShortcutRelease',
+      keys,
+      commandStartedAt: replayIds.includes(item.id) ? Number(commandStartedAt) || 0 : 0
+    };
     if (isTabSwitcherExtensionPageMessageTarget(item)) {
       postTabSwitcherMessageToExtensionPage(item, message, () => {});
       return;
@@ -2510,7 +2514,8 @@ export function triggerTabSwitcherForTab(tab, source, commandObservedAt, directi
             tabList,
             activeTab.windowId,
             shortcut,
-            commandStartedAt
+            commandStartedAt,
+            [activeTab.id, openingHostTabId]
           );
         }
       };

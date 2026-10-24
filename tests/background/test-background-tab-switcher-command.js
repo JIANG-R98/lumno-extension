@@ -123,8 +123,13 @@ async function testCommandOpensTheRecentTabsOnTheActivePage() {
     'once open, every tab in the window should be armed to relay the release');
   arms.forEach((entry) => {
     assert.deepStrictEqual(entry.message.keys, ['Control'], 'the primary modifier of the shortcut should commit');
-    assert.ok(entry.message.commandStartedAt >= before && entry.message.commandStartedAt <= Date.now(),
-      'the arm message should carry the time the command arrived, to replay a release that came first');
+    if (entry.tabId === 11) {
+      assert.ok(entry.message.commandStartedAt >= before && entry.message.commandStartedAt <= Date.now(),
+        'the command tab should get the time the command arrived, to replay a release that came first');
+    } else {
+      assert.strictEqual(entry.message.commandStartedAt, 0,
+        'other tabs should not replay a release buffered for an earlier switcher');
+    }
   });
 
   const debug = session.harness.context._lumnoTabSwitcherShortcutDebug.snapshot().map((event) => event.stage);

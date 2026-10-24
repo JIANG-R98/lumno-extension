@@ -127,20 +127,35 @@
     }) || '';
   }
 
+  function forgetTrustedTabSwitcherShortcutRelease(key, releasedAt) {
+    // A newer press and release of the same key belongs to a later command.
+    if (recentTrustedReleaseAtByKey.get(key) !== releasedAt) {
+      return;
+    }
+    recentTrustedKeydownAtByKey.delete(key);
+    recentTrustedReleaseAtByKey.delete(key);
+  }
+
   function relayTabSwitcherShortcutRelease(key) {
     if (!key || !chromeApi || !chromeApi.runtime ||
         typeof chromeApi.runtime.sendMessage !== 'function') {
       return;
     }
     armedReleaseKeys = [];
-    recentTrustedKeydownAtByKey.delete(key);
-    recentTrustedReleaseAtByKey.delete(key);
+    // An earlier switcher arms every tab in its window, so a quick release
+    // can be relayed live while the next switcher is still opening. Keep it
+    // buffered until the background reports a commit, so the arm that
+    // follows the open can replay it.
+    const releasedAt = recentTrustedReleaseAtByKey.get(key);
     try {
       chromeApi.runtime.sendMessage({
         action: 'notifyTabSwitcherShortcutModifierReleased',
         key
-      }, () => {
+      }, (response) => {
         void (chromeApi.runtime && chromeApi.runtime.lastError);
+        if (response && response.committed === true) {
+          forgetTrustedTabSwitcherShortcutRelease(key, releasedAt);
+        }
       });
     } catch (error) {
       // Ignore stale extension page contexts during reload.

@@ -12,6 +12,8 @@ const shortcutResponseCallbacks = [];
 let keydownHandler = null;
 let keyupHandler = null;
 let runtimeMessageListener = null;
+// What the background answers to a relayed release; set per scenario.
+let releaseResponse;
 const keydownHandlers = new Set();
 const keyupHandlers = new Set();
 const runtimeMessageListeners = new Set();
@@ -56,7 +58,9 @@ window.chrome = {
         return;
       }
       runtimeMessages.push(message);
-      callback?.();
+      callback?.(message && message.action === 'notifyTabSwitcherShortcutModifierReleased'
+        ? releaseResponse
+        : undefined);
     }
   }
 };
@@ -421,6 +425,47 @@ assert.deepStrictEqual(
     [{ action: 'notifyTabSwitcherShortcutModifierReleased', key: 'Alt' }],
     'a release buffered by the replaced observer should still commit the switcher'
   );
+}
+
+// Every tab in the window stays armed after a switcher closes. A quick press
+// in such a tab is relayed before the next switcher exists, so the release
+// must stay buffered until the background reports a commit.
+{
+  const altKeydown = () => keydownHandler({
+    altKey: true,
+    code: 'AltLeft',
+    ctrlKey: false,
+    isComposing: false,
+    isTrusted: true,
+    key: 'Alt',
+    metaKey: false,
+    preventDefault() {},
+    repeat: false,
+    shiftKey: false,
+    stopPropagation() {}
+  });
+  const relays = () => runtimeMessages.filter((message) =>
+    message && message.action === 'notifyTabSwitcherShortcutModifierReleased');
+
+  runtimeMessageListener({ action: 'armTabSwitcherShortcutRelease', keys: ['Alt'], commandStartedAt: 0 }, {}, () => {});
+  releaseResponse = { ok: true, committed: false };
+  const commandStartedAt = Date.now();
+  altKeydown();
+  keyupHandler({ isTrusted: true, key: 'Alt', code: 'AltLeft' });
+  const relayedEarly = relays().length;
+  runtimeMessageListener({ action: 'armTabSwitcherShortcutRelease', keys: ['Alt'], commandStartedAt }, {}, () => {});
+  assert.strictEqual(relays().length, relayedEarly + 1,
+    'a release relayed before the switcher opened should be replayed when that switcher arms the tab');
+
+  runtimeMessageListener({ action: 'armTabSwitcherShortcutRelease', keys: ['Alt'], commandStartedAt: 0 }, {}, () => {});
+  releaseResponse = { ok: true, committed: true };
+  altKeydown();
+  keyupHandler({ isTrusted: true, key: 'Alt', code: 'AltLeft' });
+  const relayedCommitted = relays().length;
+  runtimeMessageListener({ action: 'armTabSwitcherShortcutRelease', keys: ['Alt'], commandStartedAt }, {}, () => {});
+  assert.strictEqual(relays().length, relayedCommitted,
+    'a release that committed a switcher should not be replayed for another one');
+  releaseResponse = undefined;
 }
 
 dom.window.close();
