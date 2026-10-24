@@ -1,4 +1,88 @@
-// @ts-nocheck
+// What each suggestion row offers to do: its action tags, its visit button,
+// how modifier keys change the action, and whether a new slate needs a full
+// render or only new highlights.
+import type { SiteSearchProvider, SuggestionLike } from './types';
+
+type SearchAction = 'switch' | 'search' | 'open' | 'openNewTab' | 'openBackgroundTab' | 'go';
+
+type OpenDisposition = 'currentTab' | 'backgroundTab' | 'newTab';
+
+// The keys held when a result is opened.
+interface OpenModifiers {
+  openInCurrentTab?: boolean;
+  openSwitchInNewTab?: boolean;
+  openInBackgroundTab?: boolean;
+}
+
+// A provider as rows carry it; command rows add display fields.
+interface DisplayedProvider extends Partial<SiteSearchProvider> {
+  label?: string;
+  displayName?: string;
+  favicon?: string;
+}
+
+// A row as the suggestion list shows it.
+interface DisplayedSuggestion extends SuggestionLike {
+  favicon?: string;
+  path?: string;
+  detail?: string;
+  recommended?: boolean;
+  commandText?: string;
+  provider?: DisplayedProvider | null;
+  searchQuery?: string;
+  forceSearch?: boolean;
+  nextMode?: string;
+  nextEnabled?: boolean;
+  reasons?: unknown[];
+}
+
+type MaybeSuggestion = DisplayedSuggestion | null | undefined;
+
+interface ActionTag {
+  action: string;
+}
+
+interface SearchActionModel {
+  actionTags: ActionTag[];
+  visitButtonAction: SearchAction | null;
+  alwaysHideVisitButton: boolean;
+  hasActionTags: boolean;
+  hasSwitchAction: boolean;
+  hideSourceTags: boolean;
+}
+
+interface SearchActionModelOptions {
+  suggestion?: MaybeSuggestion;
+  isPrimaryHighlight?: boolean;
+  primaryHighlightReason?: string;
+  onlyKeywordSuggestions?: boolean;
+  isPrimarySearchSuggest?: boolean;
+  isMergedHighlight?: boolean;
+  shouldSwitchMatchedTab?: boolean;
+  simpleMode?: boolean;
+  // What Enter does on the primary row.
+  enterAction?: string;
+}
+
+interface ActionContextOptions {
+  primarySuggestion?: MaybeSuggestion;
+  primaryHighlightIndex?: number;
+  primaryHighlightReason?: string;
+  onlyKeywordSuggestions?: boolean;
+  mergedProvider?: { key?: string } | null;
+}
+
+type SuggestionUpdateKind = 'highlight' | 'content' | 'append' | 'structure';
+
+interface UpdateKindOptions {
+  forceFullRerender?: boolean;
+  currentSuggestions?: unknown;
+  allSuggestions?: unknown;
+  actionContextKey?: string;
+  lastRenderedActionContextKey?: string;
+  includeDebugReasons?: boolean;
+}
+
 const SITE_SEARCH_TYPES = new Set([
   'siteSearch',
   'inlineSiteSearch',
@@ -16,7 +100,7 @@ const COMMAND_SUGGESTION_TYPES = new Set([
   'commandDocumentPip'
 ]);
 
-const PRIMARY_ACTION_REASONS = new Set([
+const PRIMARY_ACTION_REASONS = new Set<string>([
   'topSite',
   'inline',
   'autocomplete',
@@ -24,23 +108,23 @@ const PRIMARY_ACTION_REASONS = new Set([
   'currentOpenTab'
 ]);
 
-function isDirectNavigationSuggestion(suggestion) {
+function isDirectNavigationSuggestion(suggestion: MaybeSuggestion): boolean {
   return Boolean(
     suggestion &&
     (suggestion.type === 'directUrl' || suggestion.type === 'browserPage')
   );
 }
 
-function isSiteSearchSuggestion(suggestion) {
-  return Boolean(suggestion && SITE_SEARCH_TYPES.has(suggestion.type));
+function isSiteSearchSuggestion(suggestion: MaybeSuggestion): boolean {
+  return Boolean(suggestion && SITE_SEARCH_TYPES.has(String(suggestion.type)));
 }
 
-function getVisitButtonAction(suggestion, options) {
+function getVisitButtonAction(suggestion: MaybeSuggestion, options?: { shouldSwitchMatchedTab?: boolean } | null): SearchAction | null {
   const config = options || {};
   if (!suggestion) {
     return null;
   }
-  if (COMMAND_SUGGESTION_TYPES.has(suggestion.type)) {
+  if (COMMAND_SUGGESTION_TYPES.has(String(suggestion.type))) {
     return null;
   }
   if (suggestion.type === 'newtab') {
@@ -61,7 +145,7 @@ function getVisitButtonAction(suggestion, options) {
   return 'openNewTab';
 }
 
-function getModifierAdjustedAction(action, options) {
+function getModifierAdjustedAction(action: unknown, options?: OpenModifiers | null): string {
   const rawAction = String(action || '');
   const config = options || {};
   if (config.openSwitchInNewTab && rawAction === 'switch') {
@@ -79,7 +163,10 @@ function getModifierAdjustedAction(action, options) {
   return rawAction;
 }
 
-function shouldOpenNewTabActionInCurrentTab(suggestion, options) {
+function shouldOpenNewTabActionInCurrentTab(
+  suggestion: MaybeSuggestion,
+  options?: (OpenModifiers & { action?: string; shouldSwitchMatchedTab?: boolean }) | null
+): boolean {
   const config = options || {};
   if (!config.openInCurrentTab) {
     return false;
@@ -88,7 +175,10 @@ function shouldOpenNewTabActionInCurrentTab(suggestion, options) {
   return action === 'openNewTab';
 }
 
-function shouldOpenSwitchActionInNewTab(suggestion, options) {
+function shouldOpenSwitchActionInNewTab(
+  suggestion: MaybeSuggestion,
+  options?: (OpenModifiers & { action?: string; shouldSwitchMatchedTab?: boolean }) | null
+): boolean {
   const config = options || {};
   if (!config.openSwitchInNewTab || !suggestion || !suggestion.url) {
     return false;
@@ -97,7 +187,7 @@ function shouldOpenSwitchActionInNewTab(suggestion, options) {
   return action === 'switch';
 }
 
-function getSearchResultOpenDisposition(options) {
+function getSearchResultOpenDisposition(options?: OpenModifiers | null): OpenDisposition {
   const config = options || {};
   if (config.openInCurrentTab) {
     return 'currentTab';
@@ -108,8 +198,8 @@ function getSearchResultOpenDisposition(options) {
   return 'newTab';
 }
 
-function createSearchActionModel(options) {
-  const config = options || {};
+function createSearchActionModel(options?: SearchActionModelOptions | null): SearchActionModel {
+  const config: SearchActionModelOptions = options || {};
   const suggestion = config.suggestion || null;
   const isPrimaryHighlight = Boolean(config.isPrimaryHighlight);
   const primaryHighlightReason = String(config.primaryHighlightReason || '');
@@ -119,7 +209,7 @@ function createSearchActionModel(options) {
   const shouldSwitchMatchedTab = Boolean(config.shouldSwitchMatchedTab);
   const simpleMode = Boolean(config.simpleMode);
   const enterAction = config.enterAction || 'openNewTab';
-  const actionTags = [];
+  const actionTags: ActionTag[] = [];
   const isDirectHighlight = isPrimaryHighlight && isDirectNavigationSuggestion(suggestion);
   const shouldShowPrimaryActionTag = !isPrimarySearchSuggest &&
     isPrimaryHighlight &&
@@ -156,19 +246,24 @@ function createSearchActionModel(options) {
   };
 }
 
-function shouldShowVisitButton(model, isActive) {
+function shouldShowVisitButton(
+  model: { alwaysHideVisitButton?: boolean; visitButtonAction?: string | null; hasActionTags?: boolean } | null | undefined,
+  isActive: boolean
+): boolean {
   if (!model || model.alwaysHideVisitButton || !model.visitButtonAction) {
     return false;
   }
   return !(isActive && model.hasActionTags);
 }
 
-function getProviderKey(provider) {
+function getProviderKey(provider: { key?: string } | null | undefined): string {
   return provider && provider.key ? String(provider.key) : '';
 }
 
-function getActionContextKey(options) {
-  const config = options || {};
+// What decides the primary row's actions; a change means the rows need
+// their action tags rendered again.
+function getActionContextKey(options?: ActionContextOptions | null): string {
+  const config: ActionContextOptions = options || {};
   const primarySuggestion = config.primarySuggestion || null;
   const matchedTabId = primarySuggestion && typeof primarySuggestion._xMatchedTabId === 'number'
     ? String(primarySuggestion._xMatchedTabId)
@@ -185,7 +280,7 @@ function getActionContextKey(options) {
   ].join('|');
 }
 
-function getSuggestionProviderIdentity(suggestion) {
+function getSuggestionProviderIdentity(suggestion: MaybeSuggestion): string {
   const provider = suggestion && suggestion.provider;
   if (!provider || typeof provider !== 'object') {
     return '';
@@ -199,7 +294,11 @@ function getSuggestionProviderIdentity(suggestion) {
   );
 }
 
-function getSuggestionPresentationFingerprint(suggestion, options) {
+// Everything a row shows; equal fingerprints render the same.
+function getSuggestionPresentationFingerprint(
+  suggestion: MaybeSuggestion,
+  options?: { includeDebugReasons?: boolean } | null
+): string {
   if (!suggestion || typeof suggestion !== 'object') {
     return '';
   }
@@ -237,7 +336,8 @@ function getSuggestionPresentationFingerprint(suggestion, options) {
   ]);
 }
 
-function getSuggestionStructureIdentity(suggestion) {
+// Which row a suggestion is, across slates.
+function getSuggestionStructureIdentity(suggestion: MaybeSuggestion): string {
   if (!suggestion || typeof suggestion !== 'object') {
     return '';
   }
@@ -269,7 +369,11 @@ function getSuggestionStructureIdentity(suggestion) {
   return `${type}:title:${String(suggestion.title || '')}`;
 }
 
-function hasSameSuggestionSequence(previous, next, compare) {
+function hasSameSuggestionSequence(
+  previous: unknown,
+  next: unknown,
+  compare: (previous: DisplayedSuggestion, next: DisplayedSuggestion) => boolean
+): boolean {
   if (!Array.isArray(previous) || !Array.isArray(next) ||
       previous.length !== next.length) {
     return false;
@@ -277,8 +381,8 @@ function hasSameSuggestionSequence(previous, next, compare) {
   return previous.every((item, index) => compare(item, next[index]));
 }
 
-function getSuggestionUpdateKind(options) {
-  const config = options || {};
+function getSuggestionUpdateKind(options?: UpdateKindOptions | null): SuggestionUpdateKind {
+  const config: UpdateKindOptions = options || {};
   if (config.forceFullRerender === true) {
     return 'structure';
   }
@@ -308,7 +412,7 @@ function getSuggestionUpdateKind(options) {
     Array.isArray(next) &&
     previous.length > 0 &&
     previous.length < next.length &&
-    previous.every((item, index) => {
+    previous.every((item: DisplayedSuggestion, index: number) => {
       const identity = getSuggestionStructureIdentity(item);
       return Boolean(identity && identity === getSuggestionStructureIdentity(next[index]));
     });
@@ -327,4 +431,14 @@ export {
   getSuggestionPresentationFingerprint,
   getSuggestionStructureIdentity,
   getSuggestionUpdateKind
+};
+export type {
+  ActionTag,
+  DisplayedSuggestion,
+  OpenDisposition,
+  OpenModifiers,
+  SearchAction,
+  SearchActionModel,
+  SearchActionModelOptions,
+  SuggestionUpdateKind
 };

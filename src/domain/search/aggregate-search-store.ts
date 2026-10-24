@@ -1,5 +1,47 @@
-// @ts-nocheck
+// Aggregate searches: one trigger that runs several site searches at once.
+// Stored as one synced record of definitions that refer to their sources
+// (built-in or custom site searches) by reference.
 import * as settingsApi from '../settings';
+import type { SiteSearchProvider } from './types';
+
+// One aggregate search as stored, after normalizing.
+interface AggregateSearch {
+  id: string;
+  // The trigger typed for it; '' for none.
+  key: string;
+  name: string;
+  // 'builtin:<key>', 'custom:<id>', or an older form (see buildProviderRefMap).
+  sourceRefs: string[];
+  autoCreateTabGroup: boolean;
+}
+
+interface AggregateSearchResolution {
+  definition: AggregateSearch | null;
+  providers: SiteSearchProvider[];
+  unavailableSourceRefs: string[];
+}
+
+interface AggregateSearchAvailability extends AggregateSearchResolution {
+  available: boolean;
+  requiredSourceCount: number;
+  availableSourceCount: number;
+  unavailableSourceCount: number;
+}
+
+// The provider an aggregate search shows up as among site searches.
+interface AggregateScopeProvider extends SiteSearchProvider {
+  aliases: string[];
+  name: string;
+  template: '';
+  action: 'aggregateSearch';
+  category: 'aggregateSearch';
+  aggregateId: string;
+  sourceRefs: string[];
+  _xIsAggregateSearch: true;
+}
+
+type CreateProviderId = (item: unknown, index: number, attempt: number) => unknown;
+
 const STORAGE_KEY = '_x_extension_aggregate_searches_2026_unique_';
 const SCHEMA_VERSION = 2;
 const MIN_SOURCE_COUNT = 2;
@@ -14,7 +56,7 @@ const MAX_SOURCE_REF_BYTES = 56;
 const SYNC_ITEM_QUOTA_BYTES = 8192;
 const SYNC_ITEM_BYTE_BUDGET = 8064;
 
-function toWellFormedText(value) {
+function toWellFormedText(value: unknown): string {
   const source = String(value || '');
   let result = '';
   for (let index = 0; index < source.length; index += 1) {
@@ -34,11 +76,11 @@ function toWellFormedText(value) {
   return result;
 }
 
-function getUtf8ByteLength(value) {
+function getUtf8ByteLength(value: unknown): number {
   const source = toWellFormedText(value);
   let bytes = 0;
   for (let index = 0; index < source.length; index += 1) {
-    const codePoint = source.codePointAt(index);
+    const codePoint = source.codePointAt(index) ?? 0;
     if (codePoint <= 0x7F) {
       bytes += 1;
     } else if (codePoint <= 0x7FF) {
@@ -53,18 +95,18 @@ function getUtf8ByteLength(value) {
   return bytes;
 }
 
-function getJsonStringContentByteLength(value) {
+function getJsonStringContentByteLength(value: unknown): number {
   const serialized = JSON.stringify(toWellFormedText(value));
   return serialized ? getUtf8ByteLength(serialized.slice(1, -1)) : 0;
 }
 
-function truncateJsonStringContent(value, maxBytes) {
+function truncateJsonStringContent(value: unknown, maxBytes: number): string {
   const source = toWellFormedText(value);
   const limit = Math.max(0, Number(maxBytes) || 0);
   let bytes = 0;
   let result = '';
   for (let index = 0; index < source.length; index += 1) {
-    const codePoint = source.codePointAt(index);
+    const codePoint = source.codePointAt(index) ?? 0;
     const character = String.fromCodePoint(codePoint);
     const characterBytes = getJsonStringContentByteLength(character);
     if (bytes + characterBytes > limit) {
@@ -79,15 +121,15 @@ function truncateJsonStringContent(value, maxBytes) {
   return result;
 }
 
-function normalizeText(value) {
+function normalizeText(value: unknown): string {
   return toWellFormedText(value).replace(/\s+/g, ' ').trim();
 }
 
-function normalizeId(value) {
+function normalizeId(value: unknown): string {
   return truncateJsonStringContent(normalizeText(value), MAX_ID_BYTES);
 }
 
-function normalizeAggregateSearchKey(value) {
+function normalizeAggregateSearchKey(value: unknown): string {
   const key = truncateJsonStringContent(
     toWellFormedText(normalizeText(value).slice(0, MAX_KEY_LENGTH)).toLowerCase(),
     MAX_KEY_BYTES
@@ -95,14 +137,14 @@ function normalizeAggregateSearchKey(value) {
   return key && !/\s/.test(key) ? key : '';
 }
 
-function normalizeSourceToken(value, maxBytes) {
+function normalizeSourceToken(value: unknown, maxBytes?: number): string {
   return truncateJsonStringContent(
     normalizeText(value).toLowerCase(),
     Number.isFinite(Number(maxBytes)) ? Number(maxBytes) : MAX_SOURCE_REF_BYTES
   );
 }
 
-function normalizeSourceRef(value) {
+function normalizeSourceRef(value: unknown): string {
   const source = normalizeText(value).toLowerCase();
   const prefixes = ['custom-key:', 'builtin:', 'custom:', 'key:'];
   const prefix = prefixes.find((candidate) => source.startsWith(candidate)) || '';
@@ -119,10 +161,10 @@ function normalizeSourceRef(value) {
   );
 }
 
-function normalizeSourceRefs(items) {
-  const refs = [];
-  const seen = new Set();
-  (Array.isArray(items) ? items : []).forEach((item) => {
+function normalizeSourceRefs(items: unknown): string[] {
+  const refs: string[] = [];
+  const seen = new Set<string>();
+  (Array.isArray(items) ? items : []).forEach((item: unknown) => {
     const ref = normalizeSourceRef(item);
     if (!ref || seen.has(ref) || refs.length >= MAX_SOURCE_COUNT) {
       return;
@@ -133,12 +175,17 @@ function normalizeSourceRefs(items) {
   return refs;
 }
 
-function ensureCustomProviderIds(items, createId) {
-  const source = Array.isArray(items) ? items : [];
+// Gives each custom provider a unique id, keeping the ones it has; createId
+// makes the missing ones. Items stay as they are when ids cannot be made.
+function ensureCustomProviderIds<T extends { id?: unknown }>(
+  items: readonly T[] | null | undefined,
+  createId?: CreateProviderId | null
+): { changed: boolean; items: T[] } {
+  const source: readonly T[] = Array.isArray(items) ? items : [];
   const generateId = typeof createId === 'function' ? createId : null;
-  const used = new Set();
+  const used = new Set<string>();
   let changed = false;
-  const normalized = source.map((item, index) => {
+  const normalized = source.map((item: T, index: number): T => {
     const currentId = normalizeText(item && item.id);
     let id = normalizeId(currentId);
     if (!id || used.has(id.toLowerCase())) {
@@ -164,7 +211,7 @@ function ensureCustomProviderIds(items, createId) {
   return { changed, items: normalized };
 }
 
-function hashDeterministicText(value, seed) {
+function hashDeterministicText(value: unknown, seed: number): string {
   const source = toWellFormedText(value);
   let hash = Number(seed) >>> 0;
   for (let index = 0; index < source.length; index += 1) {
@@ -174,8 +221,8 @@ function hashDeterministicText(value, seed) {
   return hash.toString(36).padStart(7, '0');
 }
 
-function createDeterministicCustomProviderId(item, _index, attempt) {
-  const provider = item && typeof item === 'object' ? item : {};
+function createDeterministicCustomProviderId(item: unknown, _index: number, attempt: number): string {
+  const provider: Partial<SiteSearchProvider> = item && typeof item === 'object' ? item : {};
   const canonical = [
     normalizeText(provider.builtinKey).toLowerCase(),
     normalizeText(provider.key).toLowerCase(),
@@ -188,21 +235,23 @@ function createDeterministicCustomProviderId(item, _index, attempt) {
   );
 }
 
-function readStorageValue(storageArea, chromeApi, key) {
+function readStorageValue(storageArea: unknown, chromeApi: unknown, key: string): Promise<unknown> {
   if (!settingsApi || typeof settingsApi.readStorageValue !== 'function') {
     return Promise.reject(new Error('storage-runtime-unavailable'));
   }
   return settingsApi.readStorageValue(storageArea, chromeApi, key);
 }
 
-function writeStorageValue(storageArea, chromeApi, key, value) {
+function writeStorageValue(storageArea: unknown, chromeApi: unknown, key: string, value: unknown): Promise<unknown> {
   if (!settingsApi || typeof settingsApi.writeStorageValue !== 'function') {
     return Promise.reject(new Error('storage-runtime-unavailable'));
   }
   return settingsApi.writeStorageValue(storageArea, chromeApi, key, value);
 }
 
-function normalizeAggregateSearch(item) {
+// A stored definition, also in the older shapes it was saved in; null when
+// it has no id, no name or too few sources.
+function normalizeAggregateSearch(item: any): AggregateSearch | null {
   if (!item || typeof item !== 'object') {
     return null;
   }
@@ -228,12 +277,12 @@ function normalizeAggregateSearch(item) {
   };
 }
 
-function normalizeAggregateSearches(value) {
-  const source = Array.isArray(value)
+function normalizeAggregateSearches(value: any): AggregateSearch[] {
+  const source: unknown[] = Array.isArray(value)
     ? value
     : (value && Array.isArray(value.items) ? value.items : []);
-  const items = [];
-  const seen = new Set();
+  const items: AggregateSearch[] = [];
+  const seen = new Set<string>();
   source.forEach((item) => {
     if (items.length >= MAX_AGGREGATE_COUNT) {
       return;
@@ -249,19 +298,19 @@ function normalizeAggregateSearches(value) {
   return items;
 }
 
-function serializeAggregateSearches(items) {
+function serializeAggregateSearches(items: unknown): { version: number; items: AggregateSearch[] } {
   return {
     version: SCHEMA_VERSION,
     items: normalizeAggregateSearches(items)
   };
 }
 
-function getSerializedStorageByteLength(value, storageKey) {
+function getSerializedStorageByteLength(value: unknown, storageKey?: string): number {
   return getUtf8ByteLength(String(storageKey || STORAGE_KEY)) +
     getUtf8ByteLength(JSON.stringify(value));
 }
 
-function getProviderSourceRef(provider) {
+function getProviderSourceRef(provider: Partial<SiteSearchProvider> | null | undefined): string {
   if (!provider || typeof provider !== 'object') {
     return '';
   }
@@ -283,9 +332,10 @@ function getProviderSourceRef(provider) {
   return key ? normalizeSourceRef(`builtin:${key}`) : '';
 }
 
-function buildProviderRefMap(providers) {
-  const map = new Map();
-  (Array.isArray(providers) ? providers : []).forEach((provider) => {
+// Every reference a provider can be found under, older forms included.
+function buildProviderRefMap(providers: readonly SiteSearchProvider[] | null | undefined): Map<string, SiteSearchProvider> {
+  const map = new Map<string, SiteSearchProvider>();
+  (Array.isArray(providers) ? providers : []).forEach((provider: SiteSearchProvider) => {
     const ref = getProviderSourceRef(provider);
     if (ref && !map.has(ref)) {
       map.set(ref, provider);
@@ -306,14 +356,17 @@ function buildProviderRefMap(providers) {
   return map;
 }
 
-function resolveAggregateSearchSources(definition, providers) {
+function resolveAggregateSearchSources(
+  definition: unknown,
+  providers: readonly SiteSearchProvider[] | null | undefined
+): AggregateSearchResolution {
   const normalized = normalizeAggregateSearch(definition);
   if (!normalized) {
     return { definition: null, providers: [], unavailableSourceRefs: [] };
   }
   const providerMap = buildProviderRefMap(providers);
-  const resolved = [];
-  const unavailableSourceRefs = [];
+  const resolved: SiteSearchProvider[] = [];
+  const unavailableSourceRefs: string[] = [];
   normalized.sourceRefs.forEach((ref) => {
     const provider = providerMap.get(ref);
     if (provider) {
@@ -329,7 +382,10 @@ function resolveAggregateSearchSources(definition, providers) {
   };
 }
 
-function getAggregateSearchAvailability(definition, providers) {
+function getAggregateSearchAvailability(
+  definition: unknown,
+  providers: readonly SiteSearchProvider[] | null | undefined
+): AggregateSearchAvailability {
   const resolved = resolveAggregateSearchSources(definition, providers);
   const requiredSourceCount = resolved.definition && Array.isArray(resolved.definition.sourceRefs)
     ? resolved.definition.sourceRefs.length
@@ -354,11 +410,11 @@ function getAggregateSearchAvailability(definition, providers) {
   };
 }
 
-function isAggregateSearchAvailable(definition, providers) {
+function isAggregateSearchAvailable(definition: unknown, providers: readonly SiteSearchProvider[] | null | undefined): boolean {
   return getAggregateSearchAvailability(definition, providers).available;
 }
 
-function createScopeProvider(definition) {
+function createScopeProvider(definition: unknown): AggregateScopeProvider | null {
   const normalized = normalizeAggregateSearch(definition);
   if (!normalized) {
     return null;
@@ -376,12 +432,17 @@ function createScopeProvider(definition) {
   };
 }
 
-function mergeTriggerProviders(providers, definitions) {
-  const result = (Array.isArray(providers) ? providers : []).filter(Boolean).slice();
+// Site search providers with the aggregate searches whose trigger is free.
+function mergeTriggerProviders(
+  providers: ReadonlyArray<SiteSearchProvider | null | undefined> | null | undefined,
+  definitions: unknown
+): SiteSearchProvider[] {
+  const result: SiteSearchProvider[] = (Array.isArray(providers) ? providers : [])
+    .filter((provider): provider is SiteSearchProvider => Boolean(provider));
   const usedKeys = new Set(result.map((provider) => (
     String(provider && provider.key || '').trim().toLowerCase()
   )).filter(Boolean));
-  (Array.isArray(definitions) ? definitions : []).forEach((definition) => {
+  (Array.isArray(definitions) ? definitions : []).forEach((definition: unknown) => {
     const normalized = normalizeAggregateSearch(definition);
     if (!normalized || !normalized.key || usedKeys.has(normalized.key)) {
       return;
@@ -396,7 +457,7 @@ function mergeTriggerProviders(providers, definitions) {
   return result;
 }
 
-function isAggregateSearchProvider(provider) {
+function isAggregateSearchProvider(provider: Partial<SiteSearchProvider> | null | undefined): boolean {
   return Boolean(
     provider && (
       provider._xIsAggregateSearch === true ||
@@ -406,7 +467,7 @@ function isAggregateSearchProvider(provider) {
   );
 }
 
-function loadAggregateSearches(storageArea, storageKey, chromeApi) {
+function loadAggregateSearches(storageArea: unknown, storageKey: unknown, chromeApi: unknown): Promise<AggregateSearch[]> {
   const key = String(storageKey || STORAGE_KEY);
   return readStorageValue(storageArea, chromeApi, key)
     .then((value) => normalizeAggregateSearches(value));
@@ -448,3 +509,4 @@ export {
   serializeAggregateSearches,
   writeStorageValue
 };
+export type { AggregateScopeProvider, AggregateSearch, AggregateSearchAvailability, AggregateSearchResolution };

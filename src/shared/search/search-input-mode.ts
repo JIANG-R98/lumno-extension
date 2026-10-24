@@ -10,7 +10,7 @@ import * as INPUT_MODE_MODE_MENU_LIFECYCLE from './input-mode/mode-menu-lifecycl
 import * as INPUT_MODE_MODE_MENU_NAVIGATION from './input-mode/mode-menu-navigation';
 import * as INPUT_MODE_MODE_MENU_RENDER from './input-mode/mode-menu-render';
 import * as INPUT_MODE_MODE_MENU_SEARCH from './input-mode/mode-menu-search';
-import * as INPUT_MODE_MODE_TAB_KEYS from '../../domain/search/input-mode/mode-tab-keys';
+import * as INPUT_MODE_MODE_TAB_KEYS from './input-mode/mode-tab-keys';
 import * as INPUT_MODE_PREFIX_CONTENT from './input-mode/prefix-content';
 import * as INPUT_MODE_PREFIX_MOTION from './input-mode/prefix-motion';
 import * as INPUT_MODE_PREFIX_TEXT from './input-mode/prefix-text';

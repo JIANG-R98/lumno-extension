@@ -11,9 +11,8 @@ import {
 } from './suggestions';
 
 let views: SuggestionsViewController[] = [];
-// Typed by hand until the module has types of its own.
-const sharedSuggestionActionModel = suggestionActionModel as unknown as
-  NonNullable<SuggestionsViewOptions['actionModel']>;
+const sharedSuggestionActionModel: NonNullable<SuggestionsViewOptions['actionModel']> =
+  suggestionActionModel;
 
 function createOptions(
   overrides: Partial<SuggestionsViewOptions> = {}

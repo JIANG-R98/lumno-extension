@@ -1,5 +1,9 @@
 // Types the suggestion list shares between its rows, its runtime and the
 // New Tab and overlay adapters that create it.
+import type {
+  SearchActionModel,
+  SearchActionModelOptions
+} from '../../../../domain/search/suggestion-action-model';
 
 export type ThemeValue = Record<string, unknown> | null;
 type Translate = (key: string, fallback: string) => string;
@@ -51,9 +55,11 @@ export interface SuggestionActionModelResult {
 }
 
 interface SuggestionActionModel {
+  // The list tolerates any action name and reads a missing one as
+  // openNewTab (see createActionModel).
   createSearchActionModel?: (
-    options: Record<string, unknown>
-  ) => Partial<SuggestionActionModelResult> | null;
+    options: SearchActionModelOptions
+  ) => (Partial<Omit<SearchActionModel, 'visitButtonAction'>> & { visitButtonAction?: string | null }) | null;
   getModifierAdjustedAction?: (
     action: string,
     modifiers: {

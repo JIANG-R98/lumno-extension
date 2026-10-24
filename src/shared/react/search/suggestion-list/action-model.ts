@@ -8,6 +8,7 @@ import type {
   SuggestionActionModelResult,
   SuggestionActionTagModel
 } from './types';
+import type { SearchActionModelOptions } from '../../../../domain/search/suggestion-action-model';
 
 export function getSuggestionUrlLineText(
   options: NormalizedOptions,
@@ -154,7 +155,7 @@ export function getActionLabel(
 
 export function createActionModel(
   options: NormalizedOptions,
-  input: Record<string, unknown>
+  input: SearchActionModelOptions
 ): SuggestionActionModelResult {
   const model =
     options.actionModel.createSearchActionModel?.(input) || {};

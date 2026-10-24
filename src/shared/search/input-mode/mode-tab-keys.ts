@@ -1,7 +1,53 @@
-// @ts-nocheck
 // Tab and Backspace on the mode: confirming tag removal, the double Tab
 // that opens the menu, and when Tab toggles focus or opens it.
-function createModeTabKeys(deps) {
+
+// The parts of a keydown event these keys read.
+interface ModeKeyEvent {
+  key?: string;
+  defaultPrevented?: boolean;
+  shiftKey?: boolean;
+  metaKey?: boolean;
+  ctrlKey?: boolean;
+  altKey?: boolean;
+  repeat?: boolean;
+  preventDefault?: () => void;
+}
+
+// The window whose timers time the double Tab and the removal confirmation.
+interface TimerWindow {
+  setTimeout(handler: () => void, timeout: number): number;
+  clearTimeout(id: number): void;
+}
+
+interface ModeTabKeysConfig {
+  modeMenuDoubleTabDuration?: number;
+  modeTagRemovalConfirmationDuration?: number;
+  onModeTagRemovalConfirmation?: (details: { duration: number }) => void;
+  onModeTagRemovalConfirmationReset?: () => void;
+}
+
+// The controller state search-input-mode.ts shares with its modules.
+interface ModeTabKeysState {
+  destroyed: boolean;
+  modeMenuOpen: boolean;
+  modeMenuPending: boolean;
+}
+
+interface ModeTabKeysDeps {
+  win: TimerWindow | null | undefined;
+  config: ModeTabKeysConfig;
+  input: HTMLInputElement;
+  siteSearchPrefix: HTMLElement;
+  modeMenu: HTMLElement;
+  DEFAULT_MODE_MENU_DOUBLE_TAB_DURATION: number;
+  DEFAULT_MODE_TAG_REMOVAL_CONFIRMATION_DURATION: number;
+  getModeMenuActiveElement: () => Element | null;
+  focusModeInput: () => void;
+  focusModeMenuSearch: () => void;
+  inputModeState: ModeTabKeysState;
+}
+
+function createModeTabKeys(deps: ModeTabKeysDeps) {
   const {
     win,
     config,
@@ -23,7 +69,7 @@ function createModeTabKeys(deps) {
   let modeTagRemovalConfirmationPending = false;
   let modeTagRemovalConfirmationTimer = 0;
 
-  function resetModeTagRemovalConfirmation() {
+  function resetModeTagRemovalConfirmation(): boolean {
     const wasPending = modeTagRemovalConfirmationPending;
     if (modeTagRemovalConfirmationTimer && win &&
         typeof win.clearTimeout === 'function') {
@@ -38,7 +84,7 @@ function createModeTabKeys(deps) {
     return wasPending;
   }
 
-  function resetModeMenuDoubleTab() {
+  function resetModeMenuDoubleTab(): boolean {
     const wasPending = modeMenuDoubleTabPending;
     if (modeMenuDoubleTabTimer && win &&
         typeof win.clearTimeout === 'function') {
@@ -49,7 +95,7 @@ function createModeTabKeys(deps) {
     return wasPending;
   }
 
-  function shouldOpenModeMenuOnDoubleTab(event) {
+  function shouldOpenModeMenuOnDoubleTab(event: ModeKeyEvent | null | undefined): boolean {
     if (inputModeState.destroyed || !event || event.key !== 'Tab' || event.defaultPrevented) {
       return false;
     }
@@ -91,7 +137,7 @@ function createModeTabKeys(deps) {
     return false;
   }
 
-  function shouldCompleteModeMenuDoubleTab(event) {
+  function shouldCompleteModeMenuDoubleTab(event: ModeKeyEvent | null | undefined): boolean {
     if (inputModeState.destroyed || !modeMenuDoubleTabPending || !event ||
         event.key !== 'Tab' || event.defaultPrevented) {
       return false;
@@ -114,7 +160,7 @@ function createModeTabKeys(deps) {
     return true;
   }
 
-  function handleModeMenuTabFocusToggle(event) {
+  function handleModeMenuTabFocusToggle(event: ModeKeyEvent | null | undefined): boolean {
     if (inputModeState.destroyed || !event || event.key !== 'Tab' || event.defaultPrevented ||
         (!inputModeState.modeMenuOpen && !inputModeState.modeMenuPending)) {
       return false;
@@ -140,7 +186,7 @@ function createModeTabKeys(deps) {
     return true;
   }
 
-  function shouldOpenModeMenuForActiveModeOnTab(event) {
+  function shouldOpenModeMenuForActiveModeOnTab(event: ModeKeyEvent | null | undefined): boolean {
     if (inputModeState.destroyed || !event || event.key !== 'Tab' || event.defaultPrevented) {
       return false;
     }
@@ -165,7 +211,7 @@ function createModeTabKeys(deps) {
     return true;
   }
 
-  function shouldRemoveModeTagOnBackspace(event) {
+  function shouldRemoveModeTagOnBackspace(event?: ModeKeyEvent | null): boolean {
     if (inputModeState.destroyed || String(input.value || '') !== '') {
       resetModeTagRemovalConfirmation();
       return false;
@@ -211,4 +257,7 @@ function createModeTabKeys(deps) {
   };
 }
 
+type ModeTabKeysApi = ReturnType<typeof createModeTabKeys>;
+
 export { createModeTabKeys };
+export type { ModeKeyEvent, ModeTabKeysApi, ModeTabKeysConfig, ModeTabKeysDeps, ModeTabKeysState };
