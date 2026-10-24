@@ -114,6 +114,13 @@ async function testHeldShortcutIsSuppressedUntilItsKeyIsReleased() {
     'after a repeated command, held-key presses should cycle instead of being suppressed');
   reentered.close();
 
+  const quick = createTabSwitcherPage();
+  openDefault(quick, { suppressInitialShortcutAdvance: true });
+  quick.press('q', { code: 'KeyQ', altKey: true });
+  assert.strictEqual(quick.selectedIndex(), 1,
+    'a new press should advance even when the summoning Q was released before the panel opened');
+  quick.close();
+
   const fresh = createTabSwitcherPage();
   openDefault(fresh);
   fresh.press('q', { code: 'KeyQ', altKey: true });

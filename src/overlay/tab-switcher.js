@@ -1259,7 +1259,10 @@ import * as TOAST from '../shared/ui/toast.js';
       }
       if (isTabSwitcherShortcutTriggerEvent(shortcut, event)) {
         stopHandledKeyEvent(event);
-        if (shouldSuppressInitialShortcutAdvance() && isTabSwitcherCommitModifierPressed(shortcut, event)) {
+        // Only auto-repeat belongs to the press that opened the switcher; a
+        // quick press can be released before the panel exists to see it.
+        if (shouldSuppressInitialShortcutAdvance() && event.repeat === true &&
+            isTabSwitcherCommitModifierPressed(shortcut, event)) {
           return;
         }
         suppressInitialShortcutAdvanceUntilTriggerKeyup = false;
