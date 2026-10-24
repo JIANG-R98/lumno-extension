@@ -1,5 +1,5 @@
 const assert = require('assert');
-const providerResolver = require('../../src/background/selection-quick-action-provider.js');
+const providerResolver = require('../../src/background/selection-quick-action-provider.ts');
 
 function isInteractive(provider) {
   return Boolean(provider && provider.action === 'openAndSubmit' && provider.submitStrategy);

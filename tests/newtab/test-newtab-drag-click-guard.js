@@ -7,7 +7,7 @@ const path = require('path');
 const {
   DRAG_CLICK_GUARD_MS,
   createDragClickGuard
-} = require(path.join(__dirname, '..', '..', 'src', 'newtab', 'drag-click-guard.js'));
+} = require(path.join(__dirname, '..', '..', 'src', 'newtab', 'drag-click-guard.ts'));
 
 function createFixture() {
   let time = 1000;

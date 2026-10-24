@@ -5,8 +5,8 @@ const { JSDOM } = require('jsdom');
 const { openSearchSurface } = require('../helpers/search-surfaces');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const tooltipJsPath = path.join(repoRoot, 'src/shared/ui/tooltip.js');
-const cursorTooltipJsPath = path.join(repoRoot, 'src/shared/ui/cursor-tooltip.js');
+const tooltipJsPath = path.join(repoRoot, 'src/shared/ui/tooltip.ts');
+const cursorTooltipJsPath = path.join(repoRoot, 'src/shared/ui/cursor-tooltip.ts');
 const cursorTooltipCssPath = path.join(repoRoot, 'src/shared/ui/cursor-tooltip.css');
 const newtabHtmlPath = path.join(repoRoot, 'newtab.html');
 
@@ -64,7 +64,7 @@ global.LumnoTooltipView = {
   }
 };
 
-assert.ok(fs.existsSync(cursorTooltipJsPath), 'cursor-following tooltip should live in src/shared/ui/cursor-tooltip.js');
+assert.ok(fs.existsSync(cursorTooltipJsPath), 'cursor-following tooltip should live in src/shared/ui/cursor-tooltip.ts');
 assert.ok(fs.existsSync(cursorTooltipCssPath), 'cursor-following tooltip styling should live in src/shared/ui/cursor-tooltip.css');
 
 require(tooltipJsPath);
@@ -678,13 +678,13 @@ assert.strictEqual(
 
 const newtabDocument = new JSDOM(fs.readFileSync(newtabHtmlPath, 'utf8')).window.document;
 assert.ok(newtabDocument.querySelector('link[href="../shared/ui/cursor-tooltip.css"]'), 'newtab should load cursor tooltip stylesheet');
-assert.ok(getPageScripts('newtab.html').includes('src/shared/ui/cursor-tooltip.js'), 'newtab should load cursor tooltip component');
+assert.ok(getPageScripts('newtab.html').includes('src/shared/ui/cursor-tooltip.ts'), 'newtab should load cursor tooltip component');
 assert.ok(
-  runsBefore(getPageScripts('newtab.html'), 'src/shared/ui/tooltip.js', 'src/shared/ui/cursor-tooltip.js'),
+  runsBefore(getPageScripts('newtab.html'), 'src/shared/ui/tooltip.ts', 'src/shared/ui/cursor-tooltip.ts'),
   'newtab should load shared tooltip before cursor tooltip'
 );
 assert.ok(
-  runsBefore(getInjectedScripts('overlay'), 'src/shared/ui/cursor-tooltip.js', 'src/overlay/search-panel.js'),
+  runsBefore(getInjectedScripts('overlay'), 'src/shared/ui/cursor-tooltip.ts', 'src/overlay/search-panel.ts'),
   'overlay injection should load cursor tooltip behavior before search-panel'
 );
 

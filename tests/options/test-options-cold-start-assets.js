@@ -8,8 +8,8 @@ const { moduleScript } = require('../helpers/module-script');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 path.join(repoRoot, 'src/options/options.html');
-const preloadPath = path.join(repoRoot, 'src/options/theme-preload.js');
-const optionsSourcePath = path.join(repoRoot, 'src/options/options.js');
+const preloadPath = path.join(repoRoot, 'src/options/theme-preload.ts');
+const optionsSourcePath = path.join(repoRoot, 'src/options/options.ts');
 const lightBackgroundPath = path.join(repoRoot, 'assets/images/settings-bg-light.webp');
 const darkBackgroundPath = path.join(repoRoot, 'assets/images/settings-bg-dark.webp');
 
@@ -24,7 +24,7 @@ assert(
 const firstStylesheetIndex = html.indexOf('<link rel="stylesheet"');
 const themePreloadIndex = html.indexOf('<script src="../../build/options-preload.js"></script>');
 assert(
-  getBundleFiles('options-preload').includes('src/options/theme-preload.js') &&
+  getBundleFiles('options-preload').includes('src/options/theme-preload.ts') &&
     themePreloadIndex >= 0 && themePreloadIndex < firstStylesheetIndex,
   'Options should run its theme preloader before render-blocking stylesheets'
 );
@@ -159,10 +159,10 @@ sandbox.globalThis = sandbox;
 sandbox.window = sandbox;
 
 vm.createContext(sandbox);
-vm.runInContext(moduleScript('src/shared/settings.js', 'LumnoSettings'), sandbox, {
+vm.runInContext(moduleScript('src/shared/settings.ts', 'LumnoSettings'), sandbox, {
   filename: 'settings.js'
 });
-vm.runInContext(moduleScript('src/options/theme-preload.js'), sandbox, {
+vm.runInContext(moduleScript('src/options/theme-preload.ts'), sandbox, {
   filename: 'theme-preload.js'
 });
 

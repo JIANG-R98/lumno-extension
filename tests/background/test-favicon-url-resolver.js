@@ -1,5 +1,5 @@
 const assert = require('assert');
-const utils = require('../../src/shared/favicon/favicon-utils.js');
+const utils = require('../../src/shared/favicon/favicon-utils.ts');
 
 const runtimeBase = 'chrome-extension://abc';
 const createResolver = (options) => utils.createFaviconUrlResolver({

@@ -1,7 +1,7 @@
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
 
-const { isOverlayKeyEvent } = require('../../src/overlay/keyboard.js');
+const { isOverlayKeyEvent } = require('../../src/overlay/keyboard.ts');
 
 // The overlay listens for keys on the host document. It may only claim keys
 // that come from its own (closed) shadow tree or that reach the page while

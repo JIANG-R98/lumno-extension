@@ -13,7 +13,7 @@ import { isElementTextTruncated } from '../shared/text-overflow';
 import {
   followEmptyStateArtTheme,
   getEmptyStateArtMarkup
-} from '../../src/shared/ui/empty-state-art.js';
+} from '../../src/shared/ui/empty-state-art';
 
 type ThemeValue = unknown;
 type VisualOptions = Record<string, unknown> | undefined;

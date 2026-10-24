@@ -22,8 +22,8 @@ function setup() {
   env.runTimers = () => env.timers.splice(0).filter(timer => !timer.cancelled).forEach(timer => timer.fn());
   env.pendingTimers = () => env.timers.filter(timer => !timer.cancelled);
   window.LumnoNewtabCrossSurfaceDrag = { prefersReducedMotion: () => env.reducedMotion };
-  window.eval(moduleScript('src/newtab/bookmarks/bookmark-pager.js', 'LumnoNewtabBookmarkPager', null, {
-    'src/newtab/cross-surface-drag.js': 'LumnoNewtabCrossSurfaceDrag'
+  window.eval(moduleScript('src/newtab/bookmarks/bookmark-pager.ts', 'LumnoNewtabBookmarkPager', null, {
+    'src/newtab/cross-surface-drag.ts': 'LumnoNewtabCrossSurfaceDrag'
   }));
   env.state = { bookmarkGrid: grid, bookmarkAllItems: Array.from({ length: 8 }, (_, id) => ({ id })), bookmarkCurrentPage: 0 };
   env.pager = window.LumnoNewtabBookmarkPager.createBookmarkPager({ pageState: env.state, now: () => env.clock,

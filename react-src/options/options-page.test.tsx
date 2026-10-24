@@ -1,10 +1,8 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import optionsHtml from '../../src/options/options.html?raw';
-// @ts-expect-error The extension sources are untyped JavaScript modules.
-import * as settingsModule from '../../src/shared/settings.js';
-// @ts-expect-error The extension sources are untyped JavaScript modules.
-import * as toggleSettingsModule from '../../src/options/options-toggle-settings.js';
+import * as settingsModule from '../../src/shared/settings';
+import * as toggleSettingsModule from '../../src/options/options-toggle-settings';
 import { runPageBundle } from '../test/page-bundles';
 import siteSearchCatalog from '../../assets/data/site-search.json';
 import enMessages from '../../_locales/en/messages.json';
@@ -30,7 +28,8 @@ type ChangeListener = (changes: Record<string, { newValue?: unknown; oldValue?: 
 
 const addedListeners: Array<[EventTarget, string, EventListenerOrEventListenerObject, unknown]> = [];
 
-const SETTINGS: Record<string, string> = settingsModule;
+// Typed by hand until the module has types of its own.
+const SETTINGS = settingsModule as unknown as Record<string, string>;
 
 function trackListeners(target: Document | Window): void {
   // A test that boots the page twice finds the spy in place, and spying again
@@ -353,6 +352,7 @@ describe('Options page storage wiring', () => {
 
   it('binds every switch in the shared table to its storage key', async () => {
     const chrome = await bootOptionsPage();
+    // Typed by hand until the module has types of its own.
     const toggleSettings: {
       getToggleSettings(settings: unknown): Array<{
         control?: string;
@@ -361,7 +361,7 @@ describe('Options page storage wiring', () => {
         normalize(value: unknown): unknown;
         normalizeInput?(value: unknown): unknown;
       }>;
-    } = toggleSettingsModule;
+    } = toggleSettingsModule as unknown as typeof toggleSettings;
     const entries = toggleSettings.getToggleSettings(SETTINGS);
     // Sub-options stay disabled while their parent switch is off.
     const parents = [SETTINGS.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY, SETTINGS.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY];

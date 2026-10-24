@@ -13,7 +13,7 @@ const bootstrapState = runtime.LumnoPopupReactBootstrap;
 
 if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoPopupReact = createPopupApi();
-  // The shared tooltip (src/shared/ui/tooltip.js) renders through this view.
+  // The shared tooltip (src/shared/ui/tooltip.ts) renders through this view.
   runtime.LumnoTooltipView = createTooltipViewApi();
   if (bootstrapState) {
     bootstrapState.reactReady = true;

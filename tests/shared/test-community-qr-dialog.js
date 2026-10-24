@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
-const { HOST_ID } = require('../../src/shared/ui/community-qr-dialog.js');
+const { HOST_ID } = require('../../src/shared/ui/community-qr-dialog.ts');
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 const { moduleScript } = require('../helpers/module-script');
 
@@ -10,7 +10,7 @@ const dom = new JSDOM(
   { url: 'https://lumno.test/', pretendToBeVisual: true, runScripts: 'outside-only' }
 );
 const { window } = dom;
-window.eval(moduleScript('src/shared/ui/community-qr-dialog.js', 'LumnoCommunityQrDialog'));
+window.eval(moduleScript('src/shared/ui/community-qr-dialog.ts', 'LumnoCommunityQrDialog'));
 const dialog = window.LumnoCommunityQrDialog;
 const { document } = window;
 const trigger = document.getElementById('trigger');
@@ -61,10 +61,10 @@ assert.strictEqual(dialog.open({ imageUrl: '' }), null, 'nothing opens without a
 // Joining the WeChat group never opens the QR image in a new tab.
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 assert.ok(
-  runsBefore(getInjectedScripts('overlay'), 'src/shared/community-links.js', 'src/shared/ui/community-qr-dialog.js'),
+  runsBefore(getInjectedScripts('overlay'), 'src/shared/community-links.ts', 'src/shared/ui/community-qr-dialog.ts'),
   'the overlay loads the dialog'
 );
-assert.ok(getPageScripts('newtab.html').includes('src/shared/ui/community-qr-dialog.js'), 'the new tab loads the dialog');
+assert.ok(getPageScripts('newtab.html').includes('src/shared/ui/community-qr-dialog.ts'), 'the new tab loads the dialog');
 
 // The Help Center search offers the WeChat group when nothing matched; by
 // click or by Enter it opens the dialog on both surfaces. (The New Tab

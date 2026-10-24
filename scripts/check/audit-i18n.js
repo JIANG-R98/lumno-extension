@@ -14,18 +14,18 @@ const STRING_RE = /(['"`])((?:\\.|(?!\1|\\)[\s\S])*?)\1/g;
 
 const ALLOWLIST = [
   'brand/provider names in assets/data/site-search.json and provider defaults',
-  'AI provider remote page selector probes in src/background/ai-provider-submit.js',
-  'localized onboarding content model in src/onboarding/onboarding-content.js',
-  'localized update notice fallback model in src/shared/update-notice.js',
-  'localized selection prompt model in src/shared/selection-intent.js',
+  'AI provider remote page selector probes in src/background/ai-provider-submit.ts',
+  'localized onboarding content model in src/onboarding/onboarding-content.ts',
+  'localized update notice fallback model in src/shared/update-notice.ts',
+  'localized selection prompt model in src/shared/selection-intent.ts',
   'browser built-in bookmark folder aliases used only for folder detection',
   'debug-only score reason strings when the debug flag is disabled by default',
-  'Chinese search-intent tokens in src/shared/search/search-utils.js and its utils/ parts\' scoring dictionaries',
+  'Chinese search-intent tokens in src/shared/search/search-utils.ts and its utils/ parts\' scoring dictionaries',
   'generated traditional-to-simplified character table in src/shared/search/search-han-variants.js',
-  'question filler words dropped from help center queries in src/shared/search/help-center-search.js',
-  'episode and chapter title patterns in src/shared/progress-match.js',
-  'photographer names credited in src/newtab/wallpaper/wallpaper-catalog.js',
-  'language names written in their own language in UI_LOCALES (src/shared/settings.js)'
+  'question filler words dropped from help center queries in src/shared/search/help-center-search.ts',
+  'episode and chapter title patterns in src/shared/progress-match.ts',
+  'photographer names credited in src/newtab/wallpaper/wallpaper-catalog.ts',
+  'language names written in their own language in UI_LOCALES (src/shared/settings.ts)'
 ];
 const I18N_CALL_RE = /(?:^|[^\w])(?:t|baseT|getMessage|formatMessage|updateSyncStatusText|attachPopconfirm|createPopconfirmWrap|createModeOption)\s*\(/;
 
@@ -107,36 +107,36 @@ function stripHtmlTags(value) {
 }
 
 function isAllowlistedLine(file, line) {
-  if (file === 'src/background/ai-provider-submit.js') {
+  if (file === 'src/background/ai-provider-submit.ts') {
     return true;
   }
-  if (file === 'src/shared/search/search-utils.js' || file.startsWith('src/shared/search/utils/') ||
+  if (file === 'src/shared/search/search-utils.ts' || file.startsWith('src/shared/search/utils/') ||
       file === 'src/shared/search/search-han-variants.js') {
     return true;
   }
-  if (file === 'src/shared/selection-intent.js') {
+  if (file === 'src/shared/selection-intent.ts') {
     return true;
   }
-  if (file === 'src/shared/search/help-center-search.js') {
+  if (file === 'src/shared/search/help-center-search.ts') {
     return true;
   }
-  if (file === 'src/shared/progress-match.js') {
+  if (file === 'src/shared/progress-match.ts') {
     return true;
   }
-  if (file === 'src/onboarding/onboarding-content.js') {
+  if (file === 'src/onboarding/onboarding-content.ts') {
     return true;
   }
-  if (file === 'src/newtab/wallpaper/wallpaper-catalog.js') {
+  if (file === 'src/newtab/wallpaper/wallpaper-catalog.ts') {
     return true;
   }
-  if (file === 'src/shared/settings.js' && /^\s*\['[A-Za-z_]+', '[^']+'(?:, true)?\],?$/.test(line)) {
+  if (file === 'src/shared/settings.ts' && /^\s*\['[A-Za-z_]+', '[^']+'(?:, true)?\],?$/.test(line)) {
     return true;
   }
-  if (file === 'src/shared/update-notice.js' &&
+  if (file === 'src/shared/update-notice.ts' &&
       /\b(?:badgeFallback|textFallback|linkFallback|closeLabelFallback):\s*['"`]/.test(line)) {
     return true;
   }
-  if (file === 'src/onboarding/onboarding.js' && /\b(?:error|copied):\s*['"`]/.test(line)) {
+  if (file === 'src/onboarding/onboarding.ts' && /\b(?:error|copied):\s*['"`]/.test(line)) {
     return true;
   }
   if (/title === 'bookmarks bar'/.test(line) ||
@@ -145,14 +145,14 @@ function isAllowlistedLine(file, line) {
   }
   if (/name:\s*['"`]/.test(line) && (
       /site-search|provider|engine|search/i.test(file + line) ||
-      (file === 'src/background/background.js' || file === 'src/newtab/newtab.js')
+      (file === 'src/background/background.ts' || file === 'src/newtab/newtab.ts')
     )) {
     return true;
   }
-  if (file === 'src/newtab/newtab.js' && /'weibo\.com':\s*['"`]微博['"`]/.test(line)) {
+  if (file === 'src/newtab/newtab.ts' && /'weibo\.com':\s*['"`]微博['"`]/.test(line)) {
     return true;
   }
-  if (file === 'src/background/tab-switch-stats-service.js' && /近(?:30分钟|24小时)切换/.test(line)) {
+  if (file === 'src/background/tab-switch-stats-service.ts' && /近(?:30分钟|24小时)切换/.test(line)) {
     return true;
   }
   if (/debug|score|reason/i.test(line) && !/textContent|placeholder|aria-label|title/.test(line)) {

@@ -1,7 +1,7 @@
 const assert = require('assert');
 const path = require('path');
-const recentStore = require('../../src/newtab/recent/recent-sites-store.js');
-const bookmarkStore = require('../../src/newtab/bookmarks/bookmarks-store.js');
+const recentStore = require('../../src/newtab/recent/recent-sites-store.ts');
+const bookmarkStore = require('../../src/newtab/bookmarks/bookmarks-store.ts');
 
 path.resolve(__dirname, '..', '..');
 

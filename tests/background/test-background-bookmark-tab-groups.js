@@ -1,5 +1,5 @@
 const assert = require('assert');
-const bookmarkTabGroups = require('../../src/background/bookmark-tab-groups.js');
+const bookmarkTabGroups = require('../../src/background/bookmark-tab-groups.ts');
 
 const folderTree = {
   id: 'folder-1',

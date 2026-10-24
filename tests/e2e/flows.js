@@ -6,7 +6,7 @@
 
 const assert = require('assert');
 const { delay } = require('./browser');
-const SETTINGS = require('../../src/shared/settings.js');
+const SETTINGS = require('../../src/shared/settings.ts');
 
 const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
 const OVERLAY_INPUT = '#_x_extension_search_input_2024_unique_';

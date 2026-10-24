@@ -1,8 +1,8 @@
 const assert = require('assert');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/shared/settings.js');
-const aggregateStore = require('../../src/shared/search/aggregate-search-store.js');
+const settings = require('../../src/shared/settings.ts');
+const aggregateStore = require('../../src/shared/search/aggregate-search-store.ts');
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 const { createOptionsPage } = require('../helpers/options-page');
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
@@ -23,9 +23,9 @@ function testPackaging() {
   assert.ok(manifest.permissions.includes('tabs') && manifest.permissions.includes('tabGroups'),
     'aggregate searches require the existing tabs and tabGroups permissions');
   assert.strictEqual(settings.AGGREGATE_SEARCH_STORAGE_KEY, aggregateStore.STORAGE_KEY);
-  assert.ok(runsBefore(getPageScripts('newtab.html'), 'src/shared/search/aggregate-search-store.js', 'src/newtab/newtab.js'));
-  assert.ok(runsBefore(getInjectedScripts('overlay'), 'src/shared/search/aggregate-search-store.js', 'src/overlay/search-panel.js'));
-  assert.ok(runsBefore(getPageScripts('src/options/options.html'), 'src/shared/search/aggregate-search-store.js', 'src/options/options.js'));
+  assert.ok(runsBefore(getPageScripts('newtab.html'), 'src/shared/search/aggregate-search-store.ts', 'src/newtab/newtab.ts'));
+  assert.ok(runsBefore(getInjectedScripts('overlay'), 'src/shared/search/aggregate-search-store.ts', 'src/overlay/search-panel.ts'));
+  assert.ok(runsBefore(getPageScripts('src/options/options.html'), 'src/shared/search/aggregate-search-store.ts', 'src/options/options.ts'));
   ['en', 'ja', 'zh_CN', 'zh_TW'].forEach((locale) => {
     const messages = JSON.parse(fs.readFileSync(`_locales/${locale}/messages.json`, 'utf8'));
     [

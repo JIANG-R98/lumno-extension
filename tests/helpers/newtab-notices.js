@@ -3,9 +3,9 @@
 // Storage for a New Tab where the feature hints and the update notice have
 // been seen, so the engagement prompt is the notice left to show.
 
-const engagementNotice = require('../../src/shared/engagement-notice.js');
-const featureHints = require('../../src/shared/ui/feature-hints.js');
-const settings = require('../../src/shared/settings.js');
+const engagementNotice = require('../../src/shared/engagement-notice.ts');
+const featureHints = require('../../src/shared/ui/feature-hints.ts');
+const settings = require('../../src/shared/settings.ts');
 
 function dismissedFeatureHints() {
   const areas = { sync: {}, local: {}, session: {} };

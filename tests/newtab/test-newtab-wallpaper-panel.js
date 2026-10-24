@@ -11,11 +11,11 @@ const {
 const { getBundleFiles } = require('../helpers/runtime-scripts');
 
 // Real page dependencies, loaded the way newtab.html loads them before wallpaper.js.
-const LumnoSettings = require('../../src/shared/settings.js');
-const LumnoNewtabWallpaperAdaptiveTone = require('../../src/newtab/wallpaper/wallpaper-adaptive-tone.js');
-const LumnoNewtabWallpaperEffects = require('../../src/newtab/wallpaper/wallpaper-effects.js');
-const LumnoNewtabWallpaperLocalStore = require('../../src/newtab/wallpaper/wallpaper-local-store.js');
-const LumnoNewtabRemoteContent = require('../../src/newtab/remote-content.js');
+const LumnoSettings = require('../../src/shared/settings.ts');
+const LumnoNewtabWallpaperAdaptiveTone = require('../../src/newtab/wallpaper/wallpaper-adaptive-tone.ts');
+const LumnoNewtabWallpaperEffects = require('../../src/newtab/wallpaper/wallpaper-effects.ts');
+const LumnoNewtabWallpaperLocalStore = require('../../src/newtab/wallpaper/wallpaper-local-store.ts');
+const LumnoNewtabRemoteContent = require('../../src/newtab/remote-content.ts');
 const { moduleScript } = require('../helpers/module-script');
 const REAL_WALLPAPER_DEPENDENCIES = {
   LumnoSettings: LumnoSettings,
@@ -898,8 +898,8 @@ function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
     }
   };
 
-  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.js', undefined, null, { 'src/shared/settings.js': 'LumnoSettings', 'src/newtab/remote-content.js': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.js': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.js': 'LumnoNewtabWallpaperEffects', 'src/newtab/wallpaper/wallpaper-local-store.js': 'LumnoNewtabWallpaperLocalStore' }), sandbox, {
-    filename: 'src/newtab/wallpaper/wallpaper-preload.js'
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/shared/settings.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/newtab/wallpaper/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), sandbox, {
+    filename: 'src/newtab/wallpaper/wallpaper-preload.ts'
   });
 
   const faviconLink = documentObj.head.children.find((child) => child.tagName === 'LINK' &&
@@ -921,7 +921,7 @@ function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
   assert.ok(precedes(staticFavicon, page.querySelector('title')),
     'newtab.html should expose the monochrome favicon before the title can use the extension default icon');
   const preload = page.querySelector('script[src="../../build/newtab-preload.js"]');
-  assert.ok(getBundleFiles('newtab-preload').includes('src/newtab/wallpaper/wallpaper-preload.js'),
+  assert.ok(getBundleFiles('newtab-preload').includes('src/newtab/wallpaper/wallpaper-preload.ts'),
     'newtab.html should run wallpaper-preload in its head preload bundle');
   assert.ok(precedes(staticFavicon, preload), 'newtab.html should expose the monochrome favicon before the external preload script runs');
   const firstStylesheet = page.querySelector('link[rel="stylesheet"]');
@@ -937,7 +937,7 @@ function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
     'lumno-newtab fallback should load only its redirect (no wallpaper preload, no inline script) through an external script allowed by extension CSP'
   );
   const replaced = [];
-  vm.runInNewContext(fs.readFileSync('src/newtab/lumno-newtab.js', 'utf8'), {
+  vm.runInNewContext(fs.readFileSync('src/newtab/lumno-newtab.ts', 'utf8'), {
     URL,
     window: {
       location: {
@@ -964,8 +964,8 @@ async function testWallpaperPreloadUsesTheCachedResolvedMode() {
         }
       }
     };
-    vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.js', undefined, null, { 'src/shared/settings.js': 'LumnoSettings', 'src/newtab/remote-content.js': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.js': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.js': 'LumnoNewtabWallpaperEffects', 'src/newtab/wallpaper/wallpaper-local-store.js': 'LumnoNewtabWallpaperLocalStore' }), preloadSandbox, {
-      filename: 'src/newtab/wallpaper/wallpaper-preload.js'
+    vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/shared/settings.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/newtab/wallpaper/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), preloadSandbox, {
+      filename: 'src/newtab/wallpaper/wallpaper-preload.ts'
     });
     return preloadSandbox;
   };
@@ -1253,7 +1253,7 @@ function createWallpaperSandbox(options) {
   }
   testSandbox.globalThis = testSandbox;
   vm.runInNewContext(readWallpaperRuntimeSource(WALLPAPER_DEPENDENCY_GLOBALS), testSandbox, {
-    filename: 'src/newtab/wallpaper/wallpaper.js'
+    filename: 'src/newtab/wallpaper/wallpaper.ts'
   });
   return { documentObj: testDocument, windowObj: testWindow, sandbox: testSandbox };
 }
@@ -1286,7 +1286,7 @@ const sandbox = {
 sandbox.globalThis = sandbox;
 
 vm.runInNewContext(readWallpaperRuntimeSource(WALLPAPER_DEPENDENCY_GLOBALS), sandbox, {
-  filename: 'src/newtab/wallpaper/wallpaper.js'
+  filename: 'src/newtab/wallpaper/wallpaper.ts'
 });
 
 let inputAutoFocusEnabled = false;
@@ -2226,8 +2226,8 @@ function runPreloadForWallpaper(entry, wallpaperEffects, prepareWindow) {
   windowObj.chrome = { runtime: { getURL: (path) => `chrome-extension://abc/${path}` } };
   if (prepareWindow) prepareWindow(windowObj);
   const sandbox = { ...REAL_WALLPAPER_DEPENDENCIES, document: documentObj, window: windowObj, chrome: windowObj.chrome };
-  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.js', undefined, null, { 'src/shared/settings.js': 'LumnoSettings', 'src/newtab/remote-content.js': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.js': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.js': 'LumnoNewtabWallpaperEffects', 'src/newtab/wallpaper/wallpaper-local-store.js': 'LumnoNewtabWallpaperLocalStore' }), sandbox, {
-    filename: 'src/newtab/wallpaper/wallpaper-preload.js'
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/shared/settings.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/newtab/wallpaper/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), sandbox, {
+    filename: 'src/newtab/wallpaper/wallpaper-preload.ts'
   });
   return { root: documentObj.documentElement, preload: sandbox.LumnoNewtabWallpaperPreload };
 }
@@ -3341,7 +3341,7 @@ async function testCrtFilterPersistsAndShowsDisplayControls() {
 }
 
 async function testBingDailySelectionAndManualOverride() {
-  const remote = require('../../src/newtab/remote-content.js');
+  const remote = require('../../src/newtab/remote-content.ts');
   const id = 'bing-20261002-OHR.River_ZH-CN123';
   const photo = { ...remote.wallpaperFromId(id), name: 'River', copyright: 'River bank (© Photographer)',
     imageDataUrl: 'data:image/webp;base64,aGVsbG8=', thumbnailDataUrl: 'data:image/webp;base64,dGh1bWI=' };
@@ -3405,7 +3405,7 @@ async function testBingDailySelectionAndManualOverride() {
 }
 
 async function testLegacyOnlineWallpaperMigratesToBing() {
-  const remote = require('../../src/newtab/remote-content.js');
+  const remote = require('../../src/newtab/remote-content.ts');
   const ensured = [];
   const photo = { ...remote.wallpaperFromId('bing-20261002-OHR.River_ZH-CN123'),
     id: remote.BING_DAILY_ID };
@@ -3430,7 +3430,7 @@ function readPickedWallpaper(storage) {
 }
 
 async function testOnlineWallpaperSurvivesOlderVersions() {
-  const remote = require('../../src/newtab/remote-content.js');
+  const remote = require('../../src/newtab/remote-content.ts');
   const photo = { ...remote.wallpaperFromId('bing-20261002-OHR.River_ZH-CN123'), id: remote.BING_DAILY_ID };
   const client = { getWallpaper: () => photo, restoreWallpaper: async () => photo,
     ensureWallpaper: async () => photo, setPinnedIds() {} };
@@ -3485,7 +3485,7 @@ function getCuratedTileIds(runtime) {
 }
 
 async function testCuratedMixChoosesItsCategories() {
-  const remote = require('../../src/newtab/remote-content.js');
+  const remote = require('../../src/newtab/remote-content.ts');
   const prefs = createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID });
   const { context, runtime } = createCuratedRuntime(prefs);
   await runtime.bootstrapInitialWallpaper();
@@ -3551,7 +3551,7 @@ async function testCuratedMixChoosesItsCategories() {
 }
 
 async function testCuratedWallpapersSyncAsIdsAndRotateDaily() {
-  const remote = require('../../src/newtab/remote-content.js');
+  const remote = require('../../src/newtab/remote-content.ts');
   const prefs = createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID });
   const { context, runtime } = createCuratedRuntime(prefs);
   await runtime.bootstrapInitialWallpaper();
@@ -3689,7 +3689,7 @@ function createLinkLocalStoreApi(cache, built) {
 }
 
 async function testCuratedArtCachesOneDownscaledPrintPerDevice() {
-  const remote = require('../../src/newtab/remote-content.js');
+  const remote = require('../../src/newtab/remote-content.ts');
   const requests = [];
   const cache = createWallpaperImageCacheDouble();
   const prefs = createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID });
@@ -3786,8 +3786,8 @@ async function testPreloadPaintsTheCachedOnlineCopyBeforeTheRuntime() {
       wallpapers: { light: entry, dark: null }
     }));
     const sandbox = { ...REAL_WALLPAPER_DEPENDENCIES, document: documentObj, window: windowObj, chrome: {} };
-    vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.js', undefined, null, { 'src/shared/settings.js': 'LumnoSettings', 'src/newtab/remote-content.js': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.js': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.js': 'LumnoNewtabWallpaperEffects', 'src/newtab/wallpaper/wallpaper-local-store.js': 'LumnoNewtabWallpaperLocalStore' }), sandbox, {
-      filename: 'src/newtab/wallpaper/wallpaper-preload.js'
+    vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/shared/settings.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/newtab/wallpaper/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), sandbox, {
+      filename: 'src/newtab/wallpaper/wallpaper-preload.ts'
     });
     if (beforeRead) beforeRead(sandbox.LumnoNewtabWallpaperPreload);
     return { documentObj, windowObj, preload: sandbox.LumnoNewtabWallpaperPreload };
@@ -3830,8 +3830,8 @@ function runWallpaperPreloadWithEntry(entry, prepareWindow) {
   }));
   if (prepareWindow) prepareWindow(windowObj);
   const sandbox = { ...REAL_WALLPAPER_DEPENDENCIES, document: documentObj, window: windowObj, chrome: {} };
-  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.js', undefined, null, { 'src/shared/settings.js': 'LumnoSettings', 'src/newtab/remote-content.js': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.js': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.js': 'LumnoNewtabWallpaperEffects', 'src/newtab/wallpaper/wallpaper-local-store.js': 'LumnoNewtabWallpaperLocalStore' }), sandbox, {
-    filename: 'src/newtab/wallpaper/wallpaper-preload.js'
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/shared/settings.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/newtab/wallpaper/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), sandbox, {
+    filename: 'src/newtab/wallpaper/wallpaper-preload.ts'
   });
   return { documentObj, windowObj, preload: sandbox.LumnoNewtabWallpaperPreload };
 }
@@ -3968,7 +3968,7 @@ async function testShortDataUrlsStayInlineForCss() {
 }
 
 async function testOpenTabRollsOverWithoutOpeningThePanel() {
-  const remote = require('../../src/newtab/remote-content.js');
+  const remote = require('../../src/newtab/remote-content.ts');
   const prefs = createMemoryStorage({
     [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID,
     [ONLINE_WALLPAPER_STORAGE_KEY]: { value: 'curated-daily-nature', shared: DEFAULT_WALLPAPER_ID }
@@ -4044,7 +4044,7 @@ function copyRecord(photo) {
 
 // The runtime reads the clock in its own context and through the remote client in this one.
 function createDailyRuntimeAt(prefs, harness, clock, localStorageValue) {
-  const remote = require('../../src/newtab/remote-content.js');
+  const remote = require('../../src/newtab/remote-content.ts');
   const options = { ...harness.options, sandbox: { ...harness.options.sandbox, remoteApi: {
     ...remote, createClient: (config) => remote.createClient({ ...config, now: clock })
   } } };
@@ -4060,7 +4060,7 @@ async function settleWallpaperCaching() {
 }
 
 async function testCuratedDailyCachesTomorrowsPhotoAhead() {
-  const remote = require('../../src/newtab/remote-content.js');
+  const remote = require('../../src/newtab/remote-content.ts');
   const DAY = 24 * 60 * 60 * 1000;
   const start = new Date();
   const todayAt = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 15).getTime();
@@ -4103,8 +4103,8 @@ async function testCuratedDailyCachesTomorrowsPhotoAhead() {
   }
   const preloadSandbox = { ...REAL_WALLPAPER_DEPENDENCIES, document: preloadDocument, window: preloadWindow,
     chrome: {}, Date: TomorrowDate };
-  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.js', undefined, null, { 'src/shared/settings.js': 'LumnoSettings', 'src/newtab/remote-content.js': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.js': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.js': 'LumnoNewtabWallpaperEffects', 'src/newtab/wallpaper/wallpaper-local-store.js': 'LumnoNewtabWallpaperLocalStore' }), preloadSandbox, {
-    filename: 'src/newtab/wallpaper/wallpaper-preload.js'
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-preload.ts', undefined, null, { 'src/shared/settings.ts': 'LumnoSettings', 'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent', 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone', 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects', 'src/newtab/wallpaper/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore' }), preloadSandbox, {
+    filename: 'src/newtab/wallpaper/wallpaper-preload.ts'
   });
   assert.strictEqual(await preloadSandbox.LumnoNewtabWallpaperPreload.imageReady, copyDataUrl(tomorrow.imageUrl),
     'The first tab after midnight paints the new photo from this device');
@@ -4124,7 +4124,7 @@ async function testCuratedDailyCachesTomorrowsPhotoAhead() {
 }
 
 async function testDailySlotKeepsThePreviousCopyUntilTheNewOneIsCached() {
-  const remote = require('../../src/newtab/remote-content.js');
+  const remote = require('../../src/newtab/remote-content.ts');
   const DAY = 24 * 60 * 60 * 1000;
   const start = new Date();
   const todayAt = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 15).getTime();
@@ -4166,7 +4166,7 @@ async function testDailySlotKeepsThePreviousCopyUntilTheNewOneIsCached() {
 }
 
 async function testCuratedTilesComeFromTheThumbnailCache() {
-  const remote = require('../../src/newtab/remote-content.js');
+  const remote = require('../../src/newtab/remote-content.ts');
   const thumbs = new Map();
   const requests = [];
   const localStoreApi = createLinkLocalStoreApi(createWallpaperImageCacheDouble(), []);
@@ -4226,7 +4226,7 @@ async function testCuratedTilesComeFromTheThumbnailCache() {
 }
 
 async function testCuratedPhotoOpensNewTabsFromTheCachedCopy() {
-  const remote = require('../../src/newtab/remote-content.js');
+  const remote = require('../../src/newtab/remote-content.ts');
   const requests = [];
   const cache = createWallpaperImageCacheDouble();
   const fetchRemoteContent = async (url) => {
@@ -4294,7 +4294,7 @@ function createOfflineImageClass(requests) {
 }
 
 async function testNetworkWallpaperWaitsForThePageAndFallsBackOffline() {
-  const remote = require('../../src/newtab/remote-content.js');
+  const remote = require('../../src/newtab/remote-content.ts');
   const photo = remote.getCuratedWallpapers('nature')[0];
   const prefs = createMemoryStorage({
     [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID,
@@ -4325,7 +4325,7 @@ async function testNetworkWallpaperWaitsForThePageAndFallsBackOffline() {
 
 async function testBingPhotoOpensNewTabsFromTheCachedCopy() {
   const id = 'bing-20261002-OHR.River_ZH-CN123';
-  const remote = require('../../src/newtab/remote-content.js');
+  const remote = require('../../src/newtab/remote-content.ts');
   const photo = remote.wallpaperFromId(id);
   assert.strictEqual(photo.cacheImage, true, 'Bing photos are cached once per device');
   const requests = [];
@@ -4357,7 +4357,7 @@ async function testBingPhotoOpensNewTabsFromTheCachedCopy() {
 }
 
 async function testRandomDailyWallpaperReopensOnTheRandomMix() {
-  const remote = require('../../src/newtab/remote-content.js');
+  const remote = require('../../src/newtab/remote-content.ts');
   const prefs = createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID });
   const { runtime } = createCuratedRuntime(prefs);
   await runtime.bootstrapInitialWallpaper();

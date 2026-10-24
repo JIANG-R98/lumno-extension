@@ -12,7 +12,7 @@ const UPDATE_NOTICE_KEY = '_x_lumno_update_notice_2026_unique_';
 function loadRuntime() {
   const sandbox = { Promise };
   sandbox.globalThis = sandbox;
-  return runModuleInContext('src/background/dev-extension-startup.js', vm.createContext(sandbox));
+  return runModuleInContext('src/background/dev-extension-startup.ts', vm.createContext(sandbox));
 }
 
 function noticeWrites(harness) {

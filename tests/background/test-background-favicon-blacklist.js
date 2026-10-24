@@ -43,7 +43,7 @@ async function bootFavicons(options) {
       });
     },
     exposeModules: {
-      'src/background/favicon-service.js': [
+      'src/background/favicon-service.ts': [
         'resolveSiteThemeColor',
         'resolveFaviconCandidates',
         'fetchFaviconData',

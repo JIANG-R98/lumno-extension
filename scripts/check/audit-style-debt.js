@@ -6,18 +6,18 @@ const INCLUDED_EXTENSIONS = new Set(['.js', '.ts', '.tsx', '.html', '.css']);
 const IGNORED_DIRS = new Set(['node_modules', 'dist', '.git']);
 const STYLE_DEBT_ALLOWLIST = [
   {
-    file: 'src/overlay/lifecycle.js',
+    file: 'src/overlay/lifecycle.ts',
     reason: 'overlay viewport and zoom synchronization',
     setPropertyImportant: true
   },
   {
-    file: 'src/newtab/theme/favicon-view.js',
+    file: 'src/newtab/theme/favicon-view.ts',
     reason: 'favicon fallback display and optical alignment until class-rendered fallback is verified',
     important: true,
     setPropertyImportant: true
   },
   {
-    file: 'src/overlay/favicon-view.js',
+    file: 'src/overlay/favicon-view.ts',
     reason: 'favicon fallback display and optical alignment until class-rendered fallback is verified',
     setPropertyImportant: true
   }

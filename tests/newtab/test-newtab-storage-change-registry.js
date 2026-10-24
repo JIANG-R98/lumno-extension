@@ -5,7 +5,7 @@ const assert = require('assert');
 const path = require('path');
 
 const { createStorageChangeRegistry } = require(path.join(
-  __dirname, '..', '..', 'src', 'newtab', 'storage-change-registry.js'
+  __dirname, '..', '..', 'src', 'newtab', 'storage-change-registry.ts'
 ));
 
 const change = (value) => ({ oldValue: undefined, newValue: value });

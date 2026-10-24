@@ -14,7 +14,7 @@
 const path = require('path');
 const WebSocket = require('ws');
 require('../node/register-typescript');
-const shortcutsStore = require('../../src/newtab/shortcuts/shortcuts-store.js');
+const shortcutsStore = require('../../src/newtab/shortcuts/shortcuts-store.ts');
 const { findChrome, launchChrome } = require('./chrome-launcher.js');
 
 const repoRoot = path.resolve(__dirname, '..', '..');

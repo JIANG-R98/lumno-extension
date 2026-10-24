@@ -1,8 +1,8 @@
 const assert = require('assert');
-const refs = require('../../src/shared/bookmark-folder-reference.js');
-const shortcuts = require('../../src/newtab/shortcuts/shortcuts-store.js');
-const settings = require('../../src/shared/settings.js');
-const drag = require('../../src/newtab/cross-surface-drag.js');
+const refs = require('../../src/shared/bookmark-folder-reference.ts');
+const shortcuts = require('../../src/newtab/shortcuts/shortcuts-store.ts');
+const settings = require('../../src/shared/settings.ts');
+const drag = require('../../src/newtab/cross-surface-drag.ts');
 const { openDragPage } = require('../helpers/newtab-drag-page');
 
 function tree(folderId = '42', rootId = '1', rootTitle = '书签栏') {

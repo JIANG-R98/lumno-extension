@@ -1,7 +1,7 @@
 const assert = require('assert');
 const vm = require('vm');
 
-const settings = require('../../src/shared/settings.js');
+const settings = require('../../src/shared/settings.ts');
 const { moduleScript } = require('../helpers/module-script');
 
 function run(cache) {
@@ -22,7 +22,7 @@ function run(cache) {
     }
   };
   sandbox.globalThis = sandbox;
-  vm.runInNewContext(moduleScript('src/newtab/newtab-storage-prefetch.js', undefined, null, { 'src/shared/settings.js': 'LumnoSettings' }), sandbox, { filename: 'newtab-storage-prefetch.js' });
+  vm.runInNewContext(moduleScript('src/newtab/newtab-storage-prefetch.ts', undefined, null, { 'src/shared/settings.ts': 'LumnoSettings' }), sandbox, { filename: 'newtab-storage-prefetch.js' });
   return { fetched, prefetch: sandbox.LumnoNewtabLocalePrefetch };
 }
 

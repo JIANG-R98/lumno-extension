@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const LumnoOverlayLifecycle = require('../../src/overlay/lifecycle.js');
+const LumnoOverlayLifecycle = require('../../src/overlay/lifecycle.ts');
 
 const lifecycle = LumnoOverlayLifecycle;
 

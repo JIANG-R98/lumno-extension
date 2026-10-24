@@ -5,6 +5,7 @@
 //   node scripts/build/build-bundles.js --store --outdir <dir>
 // --store builds the store package's copies, minified.
 
+const fs = require('fs');
 const path = require('path');
 const esbuild = require('esbuild');
 const { BUNDLES, BUNDLE_DIRECTORY } = require('./bundles');
@@ -15,10 +16,21 @@ const ENTRY_NAMESPACE = 'lumno-bundle';
 const SHARED_MODULES_GLOBAL = 'LumnoSharedModules';
 const SHARED_NAMESPACE = 'lumno-shared-module';
 
-// A shared module's key, its path without src/ and .js, so the store checks do
-// not read the keys as files the package must contain.
+// A shared module's key, its path without src/ and its extension, so the
+// store checks do not read the keys as files the package must contain.
 function sharedModuleKey(file) {
-  return file.replace(/^src\//, '').replace(/\.js$/, '');
+  return file.replace(/^src\//, '').replace(/\.(?:js|ts|tsx)$/, '');
+}
+
+const MODULE_EXTENSIONS = ['', '.ts', '.tsx', '.js'];
+
+// The repository path of the file a relative import names; imports of
+// TypeScript modules leave out the extension.
+function resolveImportedFile(resolveDir, specifier) {
+  const base = path.resolve(resolveDir, specifier);
+  const file = MODULE_EXTENSIONS.map((extension) => base + extension)
+    .find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile());
+  return file ? path.relative(repoRoot, file).split(path.sep).join('/') : null;
 }
 
 // A bundle's entry imports its files in order, for their side effects. A
@@ -57,8 +69,8 @@ function sharedModulesPlugin(external) {
     setup(build) {
       build.onResolve({ filter: /^\.{1,2}\// }, (args) => {
         if (args.namespace !== 'file' && args.namespace !== ENTRY_NAMESPACE) return undefined;
-        const file = path.relative(repoRoot, path.resolve(args.resolveDir, args.path)).split(path.sep).join('/');
-        return external.has(file) ? { path: file, namespace: SHARED_NAMESPACE } : undefined;
+        const file = resolveImportedFile(args.resolveDir, args.path);
+        return file && external.has(file) ? { path: file, namespace: SHARED_NAMESPACE } : undefined;
       });
       build.onLoad({ filter: /.*/, namespace: SHARED_NAMESPACE }, (args) => ({
         contents: `module.exports = globalThis.${SHARED_MODULES_GLOBAL}[${JSON.stringify(sharedModuleKey(args.path))}];`,
@@ -89,7 +101,7 @@ function bundleOptions({ bundle, outdir, minify, write, sharedModules, external 
   };
 }
 
-const moduleInputs = (metafile) => Object.keys(metafile.inputs).filter((file) => /^src\/.*\.js$/.test(file));
+const moduleInputs = (metafile) => Object.keys(metafile.inputs).filter((file) => /^src\/.*\.(?:js|ts|tsx)$/.test(file));
 
 // The modules each shared bundle runs, from a first build of it.
 async function collectSharedModules(bundles, options) {

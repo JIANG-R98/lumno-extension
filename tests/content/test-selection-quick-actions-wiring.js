@@ -2,11 +2,11 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/shared/settings.js');
-const selectionScriptRegistration = require('../../src/background/selection-script-registration.js');
-const selectionTarget = require('../../src/background/selection-target.js');
-const selectionActionIcons = require('../../src/shared/selection-action-icons.js');
-const { getToggleSettings } = require('../../src/options/options-toggle-settings.js');
+const settings = require('../../src/shared/settings.ts');
+const selectionScriptRegistration = require('../../src/background/selection-script-registration.ts');
+const selectionTarget = require('../../src/background/selection-target.ts');
+const selectionActionIcons = require('../../src/shared/selection-action-icons.ts');
+const { getToggleSettings } = require('../../src/options/options-toggle-settings.ts');
 const { getBundleFiles, getManifestContentScripts } = require('../helpers/runtime-scripts');
 const { readStylesheet } = require('../helpers/css-tokens');
 const { parseCss } = require('../helpers/css-rules');
@@ -24,14 +24,14 @@ const PROVIDER_KEY = '_x_extension_selection_quick_actions_provider_2026_unique_
 const GROUP_KEY = '_x_extension_selection_quick_actions_group_enabled_2026_unique_';
 
 assert(
-  !getManifestContentScripts().some((files) => files.includes('src/content/selection-quick-actions.js')),
+  !getManifestContentScripts().some((files) => files.includes('src/content/selection-quick-actions.ts')),
   'the default-off selection toolbar should not load into every page from the manifest'
 );
 assert.deepStrictEqual(Array.from(selectionScriptRegistration.SCRIPT_FILES), ['build/selection-quick-actions.js']);
 assert.strictEqual(selectionScriptRegistration.RUN_AT, 'document_idle');
 assert.deepStrictEqual(
   getBundleFiles('selection-quick-actions').sort(),
-  ['src/content/selection-quick-actions.js', 'src/shared/selection-action-icons.js', 'src/shared/selection-intent.js', 'src/shared/settings.js', 'src/shared/ui/toast.js'],
+  ['src/content/selection-quick-actions.ts', 'src/shared/selection-action-icons.ts', 'src/shared/selection-intent.ts', 'src/shared/settings.ts', 'src/shared/ui/toast.ts'],
   'the toolbar bundle should carry provider-aware settings, the selection classifier and the shared Toast, and nothing else'
 );
 assert.strictEqual(selectionTarget.DEFAULT_GROUP_TITLE, 'AI Search',

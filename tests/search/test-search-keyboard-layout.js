@@ -5,7 +5,7 @@ const vm = require('vm');
 const { runModuleInContext } = require('../helpers/module-script');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const searchUtils = require('../../src/shared/search/search-utils.js');
+const searchUtils = require('../../src/shared/search/search-utils.ts');
 
 function readings(query) {
   return searchUtils.getSearchKeyboardLayoutQueries(query);
@@ -219,8 +219,8 @@ function loadBackground(historyItems) {
       vm.runInContext(fs.readFileSync(String(url), 'utf8'), context, { filename: String(url) });
     });
   };
-  const background = runModuleInContext('src/background/background.js', context, '__lumnoBackgroundExports', {
-    also: { 'src/background/search-suggestions-service.js': ['getSearchSuggestions'] }
+  const background = runModuleInContext('src/background/background.ts', context, '__lumnoBackgroundExports', {
+    also: { 'src/background/search-suggestions-service.ts': ['getSearchSuggestions'] }
   });
   return (query, options) => background.getSearchSuggestions(query, options);
 }

@@ -1,12 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/shared/settings.js');
+const settings = require('../../src/shared/settings.ts');
 const { readStylesheet } = require('../helpers/css-tokens');
 const { parseCss } = require('../helpers/css-rules');
 const { createOptionsPage } = require('../helpers/options-page');
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
-const suggestionNavigation = require('../../src/shared/search/suggestion-navigation.js');
+const suggestionNavigation = require('../../src/shared/search/suggestion-navigation.ts');
 
 // How many results a search surface shows, set in Settings (5 to 10). Open
 // tabs are the exception: the overlay lists them all in a scrolling viewport

@@ -273,7 +273,7 @@ async function assertDarkWallpaperKeepsShortcutThemeBackground() {
     clearTimeout
   };
   sandbox.globalThis = sandbox;
-  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-adaptive-tone.js', 'LumnoNewtabWallpaperAdaptiveTone'), sandbox);
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-adaptive-tone.ts', 'LumnoNewtabWallpaperAdaptiveTone'), sandbox);
   const runtime = sandbox.LumnoNewtabWallpaperAdaptiveTone.createWallpaperAdaptiveTone({
     documentObj,
     windowObj,
@@ -462,7 +462,7 @@ async function assertDarkThemeKeepsShortcutThemeBackground() {
     clearTimeout
   };
   sandbox.globalThis = sandbox;
-  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-adaptive-tone.js', 'LumnoNewtabWallpaperAdaptiveTone'), sandbox);
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-adaptive-tone.ts', 'LumnoNewtabWallpaperAdaptiveTone'), sandbox);
   const runtime = sandbox.LumnoNewtabWallpaperAdaptiveTone.createWallpaperAdaptiveTone({
     documentObj,
     windowObj,
@@ -551,17 +551,17 @@ async function assertDarkThemeKeepsShortcutThemeBackground() {
 
 const newtabScripts = getPageScripts('newtab.html');
 assert.ok(
-  runsBefore(newtabScripts, 'src/newtab/shortcuts/shortcuts-store.js', 'src/newtab/newtab.js'),
+  runsBefore(newtabScripts, 'src/newtab/shortcuts/shortcuts-store.ts', 'src/newtab/newtab.ts'),
   'new tab page should load the shortcuts store before newtab.js'
 );
 
 assert.ok(
-  runsBefore(newtabScripts, 'src/newtab/shortcuts/shortcut-icon-store.js', 'src/newtab/newtab.js'),
+  runsBefore(newtabScripts, 'src/newtab/shortcuts/shortcut-icon-store.ts', 'src/newtab/newtab.ts'),
   'shortcut icon processing should load before the page entry opens the React dialog'
 );
 
 assert.ok(
-  newtabScripts.includes('src/shared/favicon/shortcut-favicon.js'),
+  newtabScripts.includes('src/shared/favicon/shortcut-favicon.ts'),
   'new tab page should load the dedicated high-resolution shortcut favicon cache'
 );
 
@@ -1340,7 +1340,7 @@ assert.strictEqual(
 
 
 // On New Tab itself.
-const settings = require('../../src/shared/settings.js');
+const settings = require('../../src/shared/settings.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 
 const SITES = [

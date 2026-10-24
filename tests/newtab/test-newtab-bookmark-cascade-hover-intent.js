@@ -7,10 +7,10 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const {
   buildCascadeSafeTriangle,
   isPointInsideCascadeSafeTriangle
-} = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-cascade-position.js'));
+} = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-cascade-position.ts'));
 const {
   createBookmarkCascadeMenuRuntime
-} = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-cascade-menu.js'));
+} = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-cascade-menu.ts'));
 const {
   createFakeBookmarkCascadeView
 } = require(path.join(repoRoot, 'tests', 'helpers', 'fake-bookmark-cascade-view.js'));
@@ -398,8 +398,8 @@ assert.strictEqual(
 {
   const newtabScripts = getPageScripts('newtab.html');
   assert.ok(
-    runsBefore(newtabScripts, 'src/newtab/bookmarks/bookmark-cascade-position.js', 'src/newtab/newtab.js') &&
-      runsBefore(newtabScripts, 'src/newtab/bookmarks/bookmark-cascade-menu.js', 'src/newtab/newtab.js'),
+    runsBefore(newtabScripts, 'src/newtab/bookmarks/bookmark-cascade-position.ts', 'src/newtab/newtab.ts') &&
+      runsBefore(newtabScripts, 'src/newtab/bookmarks/bookmark-cascade-menu.ts', 'src/newtab/newtab.ts'),
     'newtab should load the cascade menu runtime and its positioning helpers before the page entry'
   );
 }

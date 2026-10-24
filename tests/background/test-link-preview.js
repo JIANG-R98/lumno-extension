@@ -1,9 +1,9 @@
 const assert = require('assert');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { moduleScript } = require('../helpers/module-script');
-const linkPreview = require('../../src/background/link-preview.js');
-const settings = require('../../src/shared/settings.js');
-const { toPreviewFrameUrl } = require('../../src/shared/link-preview-frame-url.js');
+const linkPreview = require('../../src/background/link-preview.ts');
+const settings = require('../../src/shared/settings.ts');
+const { toPreviewFrameUrl } = require('../../src/shared/link-preview-frame-url.ts');
 
 // The link preview: the background service that prepares and opens a
 // preview for a tab, and the content script that turns Shift+click on a link
@@ -331,7 +331,7 @@ function loadTrigger(options) {
   if (config.navigation) {
     window.navigation = config.navigation;
   }
-  window.eval(moduleScript('src/content/link-preview-trigger.js'));
+  window.eval(moduleScript('src/content/link-preview-trigger.ts'));
   // The events of one press, in Chrome's order. Returns the types whose
   // default was prevented; `claimed` collects the types kept from the page.
   const claimed = [];
@@ -533,7 +533,7 @@ function testPreviewFrameReportsIn() {
   frameWindow.name = 'lumno-link-preview';
   const sent = [];
   frameWindow.chrome = { runtime: { lastError: null, sendMessage: (message) => sent.push(message) } };
-  frameWindow.eval(moduleScript('src/content/link-preview-trigger.js'));
+  frameWindow.eval(moduleScript('src/content/link-preview-trigger.ts'));
   frameWindow.dispatchEvent(new frameWindow.KeyboardEvent('keydown', { key: 'Escape' }));
   assert.strictEqual(parentMessages[0].source, 'lumno-link-preview-frame');
   assert.strictEqual(parentMessages[0].type, 'alive',
@@ -571,7 +571,7 @@ function testShiftClickInsidePreviewStaysInPreview() {
     listeners.push({ type, listener });
     originalAdd(type, listener, options);
   };
-  frameWindow.eval(moduleScript('src/content/link-preview-trigger.js'));
+  frameWindow.eval(moduleScript('src/content/link-preview-trigger.ts'));
   const target = frameWindow.document.getElementById('next');
   const prevented = [];
   ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach((type) => {
@@ -609,7 +609,7 @@ async function testPreviewFrameReportsBackground() {
   frameWindow.name = 'lumno-link-preview';
   frameWindow.chrome = { runtime: { lastError: null, sendMessage() {} } };
   frameWindow.document.body.style.backgroundColor = 'rgb(13, 17, 23)';
-  frameWindow.eval(moduleScript('src/content/link-preview-trigger.js'));
+  frameWindow.eval(moduleScript('src/content/link-preview-trigger.ts'));
   const backgrounds = () => parentMessages.filter((message) => message.type === 'background').map((message) => message.color);
   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   await wait(320);
@@ -641,7 +641,7 @@ async function testPreviewFrameEscape() {
     }
     originalAdd(type, listener, options);
   };
-  frameWindow.eval(moduleScript('src/content/link-preview-trigger.js'));
+  frameWindow.eval(moduleScript('src/content/link-preview-trigger.ts'));
   // JSDOM events are untrusted, so the press is handed to the listener as
   // the page leaves it: here the page prevents every Escape.
   const pressEscape = () => {

@@ -2,7 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
-const SHORTCUT_FAVICON = require('../../src/shared/favicon/shortcut-favicon.js');
+const SHORTCUT_FAVICON = require('../../src/shared/favicon/shortcut-favicon.ts');
 const { createOptionsPage } = require('../helpers/options-page');
 const { readPageSource } = require('../helpers/page-source');
 

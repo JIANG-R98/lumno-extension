@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const settings = require('../../src/shared/settings.js');
+const settings = require('../../src/shared/settings.ts');
 const { parsePageCss } = require('../helpers/css-rules');
 const { createNewtabPage } = require('../helpers/newtab-page');
 

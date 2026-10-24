@@ -61,12 +61,12 @@ window.chrome = {
   }
 };
 
-window.eval(moduleScript('src/shared/shortcut-key-matcher.js', 'LumnoShortcutKeyMatcher'));
-window.eval(moduleScript('src/content/shortcut-key-observer.js'));
+window.eval(moduleScript('src/shared/shortcut-key-matcher.ts', 'LumnoShortcutKeyMatcher'));
+window.eval(moduleScript('src/content/shortcut-key-observer.ts'));
 assert.strictEqual(typeof keydownHandler, 'function', 'the frame should observe the configured search shortcut');
 assert.strictEqual(typeof keyupHandler, 'function', 'the frame should observe configured shortcut-key releases');
 assert.strictEqual(typeof runtimeMessageListener, 'function', 'the frame should wait for the switcher command to arm it');
-window.eval(moduleScript('src/content/shortcut-key-observer.js'));
+window.eval(moduleScript('src/content/shortcut-key-observer.ts'));
 assert.strictEqual(
   keydownHandlers.size,
   1,
@@ -402,7 +402,7 @@ assert.deepStrictEqual(
   });
   keyupHandler({ isTrusted: true, key: 'Alt', code: 'AltLeft' });
   const relayedBefore = runtimeMessages.length;
-  window.eval(moduleScript('src/content/shortcut-key-observer.js'));
+  window.eval(moduleScript('src/content/shortcut-key-observer.ts'));
   assert.strictEqual(keyupHandlers.size, 1, 'the replacement should leave one keyup listener');
   assert.strictEqual(shortcutResponseCallbacks.length, 0,
     'a replacement should reuse the shortcut its predecessor already received');

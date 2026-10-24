@@ -54,7 +54,7 @@ function withEntry(name, contents, run) {
 }
 
 // A module with some of the modules it imports replaced by globals of the
-// context it runs in, so a test can hand it fakes: { 'src/x.js': 'GlobalName' }.
+// context it runs in, so a test can hand it fakes: { 'src/x.ts': 'GlobalName' }.
 function buildWithStubs(entry, globalName, stubs) {
   const key = `${entry}\0${globalName || ''}\0${JSON.stringify(stubs)}`;
   if (!cache.has(key)) {
@@ -68,8 +68,8 @@ function buildWithStubs(entry, globalName, stubs) {
 
 // One module and everything it imports, as a script. With globalName, the
 // script assigns the module's exports to that global; `also` adds exports of
-// the modules it imports, by file: { 'src/x.js': ['name'] }; `stubs` replaces
-// imported modules with context globals: { 'src/x.js': 'GlobalName' }.
+// the modules it imports, by file: { 'src/x.ts': ['name'] }; `stubs` replaces
+// imported modules with context globals: { 'src/x.ts': 'GlobalName' }.
 function moduleScript(file, globalName, also, stubs) {
   if (stubs) {
     if (also) throw new Error('moduleScript takes also or stubs, not both');
@@ -99,7 +99,7 @@ function runModuleInContext(file, context, globalName = '__lumnoTestModule', opt
 // A bundle from scripts/build/bundles.js, as the page or injection list runs
 // it (development build). `expose` leaves the exports of some of its modules
 // on globals, so a test can reach the instances the bundle uses:
-// { 'src/x.js': 'GlobalName' }.
+// { 'src/x.ts': 'GlobalName' }.
 function bundleScript(name, expose) {
   const bundle = BUNDLES.find((candidate) => candidate.name === name);
   if (!bundle) {

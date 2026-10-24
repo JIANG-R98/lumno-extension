@@ -9,7 +9,7 @@ const { withoutExports } = require('./closure-source');
 const { resolveSourceFile } = require('../../scripts/node/register-typescript');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const BACKGROUND_ENTRY = 'src/background/background.js';
+const BACKGROUND_ENTRY = 'src/background/background.ts';
 
 // The services background.js imports, in its import order.
 function getBackgroundServiceFiles() {

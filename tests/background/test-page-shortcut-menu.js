@@ -1,10 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const settings = require('../../src/shared/settings.js');
-const shortcuts = require('../../src/newtab/shortcuts/shortcuts-store.js');
-const siteDisplayName = require('../../src/shared/site-display-name.js');
-const menu = require('../../src/background/page-shortcut-menu.js');
+const settings = require('../../src/shared/settings.ts');
+const shortcuts = require('../../src/newtab/shortcuts/shortcuts-store.ts');
+const siteDisplayName = require('../../src/shared/site-display-name.ts');
+const menu = require('../../src/background/page-shortcut-menu.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 
 const repoRoot = path.resolve(__dirname, '..', '..');

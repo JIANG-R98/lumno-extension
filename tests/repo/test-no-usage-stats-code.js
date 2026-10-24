@@ -10,8 +10,14 @@ function repoPath(relativePath) {
   return path.join(repoRoot, relativePath);
 }
 
+// A removed runtime module must not come back as TypeScript either.
 function assertPathMissing(relativePath) {
-  assert.ok(!fs.existsSync(repoPath(relativePath)), `${relativePath} should be removed`);
+  const candidates = /^src\/.*\.js$/.test(relativePath)
+    ? [relativePath, relativePath.replace(/\.js$/, '.ts')]
+    : [relativePath];
+  candidates.forEach((candidate) => {
+    assert.ok(!fs.existsSync(repoPath(candidate)), `${candidate} should be removed`);
+  });
 }
 
 [

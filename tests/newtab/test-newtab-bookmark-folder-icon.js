@@ -1,7 +1,7 @@
 const assert = require('assert');
 const path = require('path');
 const { JSDOM } = require('jsdom');
-const folderIcon = require('../../src/newtab/bookmarks/bookmark-folder-icon.js');
+const folderIcon = require('../../src/newtab/bookmarks/bookmark-folder-icon.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
@@ -192,7 +192,7 @@ assert.strictEqual(iconElement.querySelector('svg').getAttribute('data-folder-co
 }
 
 assert.ok(
-  runsBefore(getPageScripts('newtab.html'), 'src/newtab/bookmarks/bookmark-folder-icon.js', 'src/newtab/newtab.js'),
+  runsBefore(getPageScripts('newtab.html'), 'src/newtab/bookmarks/bookmark-folder-icon.ts', 'src/newtab/newtab.ts'),
   'the folder icon component should load before the newtab runtime'
 );
 // New Tab draws its folder shortcuts with this component's icon.

@@ -2,7 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-const onboarding = require('../../src/onboarding/onboarding-content.js');
+const onboarding = require('../../src/onboarding/onboarding-content.ts');
 const GITHUB_HOMEPAGE_URL = 'https://github.com/kubai087/lumno-extension';
 const COMPATIBILITY_TOOLTIP =
   '受浏览器限制，Lumno 无法提供单独关闭新标签页的入口，但它可以与其他新标签页插件同时使用。\n具体而言，安装 Lumno 后，再覆盖安装或重新启用你正在使用的新标签页插件，让它继续接管新标签页即可。';

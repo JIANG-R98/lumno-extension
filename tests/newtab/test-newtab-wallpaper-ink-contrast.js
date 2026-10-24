@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const LumnoNewtabWallpaperAdaptiveTone = require('../../src/newtab/wallpaper/wallpaper-adaptive-tone.js');
+const LumnoNewtabWallpaperAdaptiveTone = require('../../src/newtab/wallpaper/wallpaper-adaptive-tone.ts');
 
 const {
   chooseReadableInk,

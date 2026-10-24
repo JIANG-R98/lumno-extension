@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const routerApi = require('../../src/background/message-router.js');
+const routerApi = require('../../src/background/message-router.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 
 function testRouterModule() {

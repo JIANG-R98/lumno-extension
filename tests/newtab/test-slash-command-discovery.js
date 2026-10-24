@@ -180,7 +180,7 @@ async function testWebAppearanceCommand(name) {
 // match it; the overlay runs it for them when Enter has no row to act on.
 function testLegacyClipAliases() {
   const context = vm.createContext({});
-  const { createSlashCommands } = runModuleInContext('src/overlay/panel/slash-commands.js', context);
+  const { createSlashCommands } = runModuleInContext('src/overlay/panel/slash-commands.ts', context);
   const commands = createSlashCommands({
     t: (_key, fallback) => fallback,
     formatMessage: (_key, fallback) => fallback,

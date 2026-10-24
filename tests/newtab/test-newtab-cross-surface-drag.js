@@ -18,11 +18,11 @@ const {
   isBookmarkFolderDropTarget,
   planBookmarkToShortcut,
   setInsertionGap
-} = require(path.join(repoRoot, 'src', 'newtab', 'cross-surface-drag.js'));
+} = require(path.join(repoRoot, 'src', 'newtab', 'cross-surface-drag.ts'));
 
 // Drag slides honor a reduced-motion preference.
 {
-  const { prefersReducedMotion } = require(path.join(repoRoot, 'src', 'newtab', 'cross-surface-drag.js'));
+  const { prefersReducedMotion } = require(path.join(repoRoot, 'src', 'newtab', 'cross-surface-drag.ts'));
   const windowWith = (reduce) => ({
     matchMedia: (query) => ({ matches: reduce && query === '(prefers-reduced-motion: reduce)' })
   });
@@ -205,8 +205,8 @@ assert.strictEqual(
 // changes the group is still a recorded move, and a stacked folder takes the
 // group of the site it was stacked onto.
 {
-  const crossSurface = require(path.join(repoRoot, 'src', 'newtab', 'cross-surface-drag.js'));
-  const history = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-move-history.js'));
+  const crossSurface = require(path.join(repoRoot, 'src', 'newtab', 'cross-surface-drag.ts'));
+  const history = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-move-history.ts'));
   const shortcuts = [
     { id: 'a', url: 'https://a.example/', groupId: 'g0' },
     { id: 'b', url: 'https://b.example/', groupId: 'work' },
@@ -339,8 +339,8 @@ function testStylesAndCopy() {
     });
   });
   const scripts = getPageScripts('newtab.html');
-  assert.ok(scripts.indexOf('src/newtab/bookmarks/bookmark-drag.js') < scripts.indexOf('src/newtab/cross-surface-drag.js') &&
-    scripts.indexOf('src/newtab/cross-surface-drag.js') < scripts.indexOf('src/newtab/newtab.js'),
+  assert.ok(scripts.indexOf('src/newtab/bookmarks/bookmark-drag.ts') < scripts.indexOf('src/newtab/cross-surface-drag.ts') &&
+    scripts.indexOf('src/newtab/cross-surface-drag.ts') < scripts.indexOf('src/newtab/newtab.ts'),
   'the cross-surface helpers load with the drag helpers, before the page runtime');
 }
 

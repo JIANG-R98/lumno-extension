@@ -2,8 +2,8 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.js');
-const searchUtils = require('../../src/shared/search/search-utils.js');
+const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.ts');
+const searchUtils = require('../../src/shared/search/search-utils.ts');
 const { shortcutsStorage } = require('../helpers/newtab-fixtures');
 const { createNewtabPage } = require('../helpers/newtab-page');
 

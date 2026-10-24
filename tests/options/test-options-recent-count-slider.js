@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/shared/settings.js');
+const settings = require('../../src/shared/settings.ts');
 const { createOptionsPage } = require('../helpers/options-page');
 const { readPageSource } = require('../helpers/page-source');
 

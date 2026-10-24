@@ -10,7 +10,7 @@ const { getBundleFiles } = require('../helpers/runtime-scripts');
 // rounded panel that bar crowds the rows and leaves uneven insets, so every
 // scroll box in our UI, the pages included, must either draw the thin bar or
 // hide it. Where macOS draws overlay scrollbars that only show while
-// scrolling, our pages keep them: src/shared/scrollbar-mode.js marks
+// scrolling, our pages keep them: src/shared/scrollbar-mode.ts marks
 // <html data-lumno-scrollbars="overlay">, and every thin-bar rule is scoped
 // away from it, since any ::-webkit-scrollbar style turns an overlay bar into
 // a permanent one.
@@ -204,7 +204,7 @@ assert.deepStrictEqual(unscoped, [], `thin-bar rules should keep macOS overlay b
   const head = new JSDOM(fs.readFileSync(path.join(repoRoot, file), 'utf8')).window.document.head;
   assert.ok(
     head.querySelector(`script[src="../../build/${bundle}.js"]`) &&
-      getBundleFiles(bundle).includes('src/shared/scrollbar-mode.js'),
+      getBundleFiles(bundle).includes('src/shared/scrollbar-mode.ts'),
     `${file} should load the scrollbar mode marker in <head>`
   );
 });
@@ -228,7 +228,7 @@ function runScrollbarMode(probeWidth) {
     addEventListener: (type, listener) => { listeners[`document:${type}`] = listener; }
   };
   const window = { addEventListener: (type, listener) => { listeners[`window:${type}`] = listener; } };
-  const source = fs.readFileSync(path.join(repoRoot, 'src/shared/scrollbar-mode.js'), 'utf8');
+  const source = fs.readFileSync(path.join(repoRoot, 'src/shared/scrollbar-mode.ts'), 'utf8');
   new Function('document', 'window', source)(document, window);
   return { attributes, listeners };
 }

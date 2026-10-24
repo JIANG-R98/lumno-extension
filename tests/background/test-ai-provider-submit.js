@@ -1,5 +1,5 @@
 const assert = require('assert');
-const submitRuntime = require('../../src/background/ai-provider-submit.js');
+const submitRuntime = require('../../src/background/ai-provider-submit.ts');
 
 class FakeEvent {
   constructor(type, options) {

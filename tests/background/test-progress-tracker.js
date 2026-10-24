@@ -1,7 +1,7 @@
 const assert = require('assert');
-const progressMatch = require('../../src/shared/progress-match.js');
-const progressHistory = require('../../src/shared/progress-history.js');
-const { createProgressTracker } = require('../../src/background/progress-tracker.js');
+const progressMatch = require('../../src/shared/progress-match.ts');
+const progressHistory = require('../../src/shared/progress-history.ts');
+const { createProgressTracker } = require('../../src/background/progress-tracker.ts');
 
 const PINNED_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
 const HISTORY_KEY = progressHistory.STORAGE_KEY;
@@ -377,7 +377,7 @@ const otherCard = {
   // Reading a page: next and previous links, episode navigation and metadata.
   {
     const { JSDOM } = require('jsdom');
-    const { readProgressPageHints } = require('../../src/background/progress-tracker.js');
+    const { readProgressPageHints } = require('../../src/background/progress-tracker.ts');
     const read = (html, url) => {
       const dom = new JSDOM(html, { url });
       const previous = { document: global.document, location: global.location, navigator: global.navigator };

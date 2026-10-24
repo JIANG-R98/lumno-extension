@@ -2,7 +2,7 @@ const assert = require('assert');
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 
-const LumnoSuggestionsHeightLayout = require('../../src/shared/search/suggestions-height-layout.js');
+const LumnoSuggestionsHeightLayout = require('../../src/shared/search/suggestions-height-layout.ts');
 
 const runtime = LumnoSuggestionsHeightLayout;
 
@@ -57,12 +57,12 @@ assert.deepStrictEqual(
 assert.strictEqual(runtime.applyNaturalSuggestionsHeightLayout(null), false);
 
 assert.ok(
-  runsBefore(getPageScripts('newtab.html'), 'src/shared/search/suggestions-height-layout.js', 'src/newtab/layout.js') &&
-    runsBefore(getPageScripts('newtab.html'), 'src/shared/search/suggestions-height-layout.js', 'src/newtab/newtab.js'),
+  runsBefore(getPageScripts('newtab.html'), 'src/shared/search/suggestions-height-layout.ts', 'src/newtab/layout.ts') &&
+    runsBefore(getPageScripts('newtab.html'), 'src/shared/search/suggestions-height-layout.ts', 'src/newtab/newtab.ts'),
   'New Tab should load the shared height policy before its layout and page runtimes'
 );
 assert.ok(
-  runsBefore(getInjectedScripts('overlay'), 'src/shared/search/suggestions-height-layout.js', 'src/overlay/search-panel.js'),
+  runsBefore(getInjectedScripts('overlay'), 'src/shared/search/suggestions-height-layout.ts', 'src/overlay/search-panel.ts'),
   'Overlay injection should load the shared height policy before the panel runtime'
 );
 // Both surfaces leave their result list at its natural height.

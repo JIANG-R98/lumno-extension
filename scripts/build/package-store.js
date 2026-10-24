@@ -329,7 +329,7 @@ function checkCssFiles() {
 }
 
 function checkNewtabWallpaperFiles() {
-  const file = 'src/newtab/wallpaper/wallpaper.js';
+  const file = 'src/newtab/wallpaper/wallpaper.ts';
   const fullPath = stagedPath(file);
   if (!fs.existsSync(fullPath)) {
     return;

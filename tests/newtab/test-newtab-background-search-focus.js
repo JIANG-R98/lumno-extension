@@ -5,7 +5,7 @@ const { openSearchSurface } = require('../helpers/search-surfaces');
 const {
   createBackgroundFocusHandler,
   shouldFocusSearchFromPointer
-} = require(path.join('..', '..', 'src', 'newtab', 'search', 'background-search-focus.js'));
+} = require(path.join('..', '..', 'src', 'newtab', 'search', 'background-search-focus.ts'));
 
 const body = { name: 'body' };
 const root = { name: 'search root' };

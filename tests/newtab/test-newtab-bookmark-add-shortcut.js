@@ -4,7 +4,7 @@ const path = require('path');
 // Right-clicking a bookmarked site or folder offers "Add to shortcuts", which
 // adds it to the shortcuts and leaves the bookmark in place.
 global.LumnoNewtabDismissStack = { getDismissStack: () => ({ register() {} }) };
-const BOOKMARK_CONTEXT_MENU = require(path.join(__dirname, '..', '..', 'src', 'newtab', 'bookmarks', 'bookmark-context-menu.js'));
+const BOOKMARK_CONTEXT_MENU = require(path.join(__dirname, '..', '..', 'src', 'newtab', 'bookmarks', 'bookmark-context-menu.ts'));
 
 const shortcutUrls = new Set(['https://already.example/']);
 const pageState = {

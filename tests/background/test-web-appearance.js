@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const webAppearance = require('../../src/background/web-appearance.js');
+const webAppearance = require('../../src/background/web-appearance.ts');
 const { toFirefoxManifest } = require('../../scripts/build/firefox-manifest.js');
 const manifest = require('../../manifest.json');
 

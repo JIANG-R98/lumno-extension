@@ -95,7 +95,10 @@ export default tseslint.config(
       '@typescript-eslint/ban-ts-comment': ['error', { 'ts-nocheck': false }],
       '@typescript-eslint/no-this-alias': 'off',
       // Not enforced for the JavaScript sources either.
-      'prefer-const': 'off'
+      'prefer-const': 'off',
+      'prefer-spread': 'off',
+      'prefer-rest-params': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off'
     }
   },
   {

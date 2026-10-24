@@ -13,7 +13,7 @@ const {
   cloneBookmarkSnapshot,
   createBookmarkMoveHistory,
   createDeleteRecord
-} = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-move-history.js'));
+} = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-move-history.ts'));
 
 const sourceTree = {
   id: 'folder-a',

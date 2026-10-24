@@ -1,7 +1,7 @@
 // Merges a translation spreadsheet a native speaker sent back:
 //   node scripts/i18n/import-sheet.js <file.csv> <locale> [--dry-run]
 // The sheet is the one Settings → Language → Improve translation downloads
-// (src/options/options-translation-help.js): ID, reference text, current
+// (src/options/options-translation-help.ts): ID, reference text, current
 // text, Suggestion, Note. Every non-empty Suggestion replaces that message
 // in _locales/<locale>/messages.json; a suggestion whose {tokens} or line
 // breaks differ from English is reported and left out. Notes are printed

@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const policy = require('../../src/background/command-target-policy.js');
+const policy = require('../../src/background/command-target-policy.ts');
 
 assert.strictEqual(typeof policy.shouldSuppressRestrictedCommandFallback, 'function');
 assert.strictEqual(typeof policy.shouldTriggerOnboardingOverlayFromCommand, 'function');

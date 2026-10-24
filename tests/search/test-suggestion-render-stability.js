@@ -1,5 +1,5 @@
 const assert = require('assert');
-const suggestionModel = require('../../src/shared/search/suggestion-action-model.js');
+const suggestionModel = require('../../src/shared/search/suggestion-action-model.ts');
 const { openSearchSurface } = require('../helpers/search-surfaces');
 const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
@@ -116,7 +116,7 @@ function verifyClassification() {
 
 verifyClassification();
 assert.ok(
-  runsBefore(getPageScripts('newtab.html'), 'src/newtab/search/direct-navigation-settle.js', 'src/newtab/newtab.js'),
+  runsBefore(getPageScripts('newtab.html'), 'src/newtab/search/direct-navigation-settle.ts', 'src/newtab/newtab.ts'),
   'New Tab should load the direct-navigation settle controller before its page runtime'
 );
 

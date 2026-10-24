@@ -1,8 +1,8 @@
 const assert = require('assert');
-const faviconUtils = require('../../src/shared/favicon/favicon-utils.js');
-const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.js');
-const searchUtils = require('../../src/shared/search/search-utils.js');
-const faviconCache = require('../../src/shared/favicon/favicon-cache.js');
+const faviconUtils = require('../../src/shared/favicon/favicon-utils.ts');
+const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.ts');
+const searchUtils = require('../../src/shared/search/search-utils.ts');
+const faviconCache = require('../../src/shared/favicon/favicon-cache.ts');
 const { shortcutsStorage } = require('../helpers/newtab-fixtures');
 const { EXTENSION_ORIGIN, createAcquisition, openFrontend, png } = require('../helpers/favicon-acquisition');
 

@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const store = require('../../src/shared/search/aggregate-search-store.js');
+const store = require('../../src/shared/search/aggregate-search-store.ts');
 
 const providers = [
   { key: 'gg', name: 'Google' },

@@ -2,7 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-const helperPath = path.join(__dirname, '..', '..', 'src', 'background', 'recent-tab-switcher.js');
+const helperPath = path.join(__dirname, '..', '..', 'src', 'background', 'recent-tab-switcher.ts');
 
 assert.ok(fs.existsSync(helperPath), 'recent tab switcher helper should exist');
 

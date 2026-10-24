@@ -457,9 +457,9 @@ function loadBackgroundForTest(options) {
     });
   };
 
-  const service = runModuleInContext('src/background/background.js', context, '__testBackground', {
+  const service = runModuleInContext('src/background/background.ts', context, '__testBackground', {
     also: {
-      'src/background/search-suggestions-service.js': [
+      'src/background/search-suggestions-service.ts': [
         'getSearchSuggestions',
         'isSearchEngineResultUrl',
         'setDefaultSearchEngineState',

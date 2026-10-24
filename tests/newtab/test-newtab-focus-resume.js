@@ -66,7 +66,7 @@ function bootPage(options = {}) {
     }
   });
   context.globalThis = context;
-  vm.runInContext(moduleScript('src/newtab/focus-resume.js', 'LumnoNewtabFocusResume'), context);
+  vm.runInContext(moduleScript('src/newtab/focus-resume.ts', 'LumnoNewtabFocusResume'), context);
   return {
     api: context.LumnoNewtabFocusResume,
     documentElement,

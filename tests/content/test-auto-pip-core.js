@@ -1,4 +1,4 @@
-// Unit tests for the shared auto PiP core (src/content/auto-pip-core.js),
+// Unit tests for the shared auto PiP core (src/content/auto-pip-core.ts),
 // run against plain fakes with no DOM.
 const assert = require('assert');
 const settings = require('../../src/shared/settings');

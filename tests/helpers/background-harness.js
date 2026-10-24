@@ -419,7 +419,7 @@ function loadBackground(options) {
       filename: String(file)
     });
   };
-  const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
+  const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.ts'), 'utf8');
   if (config.firefoxOrder === true) {
     // Mirrors scripts/build/build-firefox.js: Firefox event pages have no
     // importScripts, so the scripts the worker imports on first use load as
@@ -434,10 +434,10 @@ function loadBackground(options) {
     };
   }
   // `exposeModules` adds exports of the worker's own modules to exposed(), by file:
-  // { 'src/background/x.js': ['name'] }. They are the instances the worker
+  // { 'src/background/x.ts': ['name'] }. They are the instances the worker
   // runs, not copies.
   vm.runInContext(
-    moduleScript('src/background/background.js', BACKGROUND_EXPORTS, config.exposeModules),
+    moduleScript('src/background/background.ts', BACKGROUND_EXPORTS, config.exposeModules),
     context,
     { filename: 'build/background.js' }
   );

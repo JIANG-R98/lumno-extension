@@ -6,7 +6,7 @@ import {
   followEmptyStateArtTheme,
   getEmptyStateArtMarkup,
   type EmptyStateArtName
-} from '../../../src/shared/ui/empty-state-art.js';
+} from '../../../src/shared/ui/empty-state-art';
 
 const EMPTY_ART_SIZE = 120;
 

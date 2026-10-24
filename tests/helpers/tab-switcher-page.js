@@ -46,7 +46,7 @@ function createChromeEvent() {
 //   darkSystem   whether prefers-color-scheme: dark matches
 //   viewport     { width, height, scale, offsetLeft, offsetTop } for visualViewport
 //   respond      (message) => response for chrome.runtime.sendMessage
-//   bridge       also run the extension-page bridge (src/overlay/tab-switcher-page-bridge.js)
+//   bridge       also run the extension-page bridge (src/overlay/tab-switcher-page-bridge.ts)
 //   connect      chrome.runtime.connect implementation (for the bridge)
 //   tabsGetCurrent  chrome.tabs.getCurrent implementation
 function createTabSwitcherPage(options) {
@@ -138,7 +138,7 @@ function createTabSwitcherPage(options) {
   run(overlayIslandsSource, 'src/react/overlay-islands.js');
   run(bundleScript('tab-switcher'), 'build/tab-switcher.js');
   if (config.bridge) {
-    run(moduleScript('src/overlay/tab-switcher-page-bridge.js'), 'src/overlay/tab-switcher-page-bridge.js');
+    run(moduleScript('src/overlay/tab-switcher-page-bridge.ts'), 'src/overlay/tab-switcher-page-bridge.ts');
   }
 
   const page = {

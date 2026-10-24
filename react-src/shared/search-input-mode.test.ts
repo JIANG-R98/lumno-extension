@@ -2,10 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // The Han variant table is a classic script that leaves a global.
 import '../../src/shared/search/search-han-variants.js';
-// @ts-expect-error The extension sources are untyped JavaScript modules.
-import * as searchInputModeModule from '../../src/shared/search/search-input-mode.js';
-// @ts-expect-error The extension sources are untyped JavaScript modules.
-import * as faviconUtilsModule from '../../src/shared/favicon/favicon-utils.js';
+import * as searchInputModeModule from '../../src/shared/search/search-input-mode';
+import * as faviconUtilsModule from '../../src/shared/favicon/favicon-utils';
 
 Object.assign(globalThis, {
   pinyinPro: {
@@ -92,12 +90,13 @@ function getTestContrastRatio(firstRgb: number[], secondRgb: number[]) {
     (Math.min(firstLuminance, secondLuminance) + 0.05);
 }
 
+// Typed by hand until the module has types of its own.
 const LumnoSearchInputMode: {
   createInputModeController(
     parts: Record<string, HTMLElement>,
     options?: Record<string, unknown>
   ): ModeController;
-} = searchInputModeModule;
+} = searchInputModeModule as unknown as typeof LumnoSearchInputMode;
 
 function createModeParts() {
   const container = document.createElement('div');
@@ -149,12 +148,13 @@ afterEach(() => {
 
 describe('Shared search scope menu', () => {
   it('checks current favicon policy before assigning prefix and menu images', () => {
+    // Typed by hand until the module has types of its own.
     const faviconUtils: {
       createFaviconUrlResolver(options: object): {
         getProviderFaviconUrl(pageUrl: string, iconUrl: string): string;
         getExtensionFaviconUrl(pageUrl: string): string;
       };
-    } = faviconUtilsModule;
+    } = faviconUtilsModule as unknown as typeof faviconUtils;
     let enhanced = true;
     const resolver = faviconUtils.createFaviconUrlResolver({
       getRuntimeUrl: (path: string) => `chrome-extension://abc${path}`,

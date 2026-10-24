@@ -1,6 +1,6 @@
 const assert = require('assert');
-const aggregateSearch = require('../../src/background/aggregate-search.js');
-const aggregateStore = require('../../src/shared/search/aggregate-search-store.js');
+const aggregateSearch = require('../../src/background/aggregate-search.ts');
+const aggregateStore = require('../../src/shared/search/aggregate-search-store.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 
 const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_custom_2024_unique_';
@@ -167,7 +167,7 @@ async function createSiteSearchProviderCacheHarness() {
       };
     },
     exposeModules: {
-      'src/background/search-suggestions-service.js': ['loadSiteSearchProviders', 'invalidateSiteSearchProviderCache']
+      'src/background/search-suggestions-service.ts': ['loadSiteSearchProviders', 'invalidateSiteSearchProviderCache']
     }
   });
   // Let the worker's own start-up load finish before the test takes over.

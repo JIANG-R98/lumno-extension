@@ -1,6 +1,6 @@
 const assert = require('assert');
 const vm = require('vm');
-const settings = require('../../src/shared/settings.js');
+const settings = require('../../src/shared/settings.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { runModuleInContext } = require('../helpers/module-script');
 
@@ -11,7 +11,7 @@ const sandbox = {
 sandbox.globalThis = sandbox;
 
 vm.createContext(sandbox);
-const guards = runModuleInContext('src/shared/url-guards.js', sandbox, 'LumnoUrlGuards');
+const guards = runModuleInContext('src/shared/url-guards.ts', sandbox, 'LumnoUrlGuards');
 assert.ok(guards, 'LumnoUrlGuards should be exported');
 
 assert.strictEqual(guards.isBrowserExtensionProtocol('chrome-extension:'), true);

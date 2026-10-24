@@ -4,10 +4,10 @@ const fs = require('fs');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const menuSurfaceJsPath = path.join(repoRoot, 'src/shared/ui/menu-surface.js');
+const menuSurfaceJsPath = path.join(repoRoot, 'src/shared/ui/menu-surface.ts');
 const menuSurfaceCssPath = path.join(repoRoot, 'src/shared/ui/menu-surface.css');
 
-assert.ok(fs.existsSync(menuSurfaceJsPath), 'shared menu surface behavior should live in src/shared/ui/menu-surface.js');
+assert.ok(fs.existsSync(menuSurfaceJsPath), 'shared menu surface behavior should live in src/shared/ui/menu-surface.ts');
 assert.ok(fs.existsSync(menuSurfaceCssPath), 'shared menu surface styling should live in src/shared/ui/menu-surface.css');
 
 const menuSurfaceCss = readStylesheet('src/shared/ui/menu-surface.css');

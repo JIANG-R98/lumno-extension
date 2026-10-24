@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { getGlassAdaptation } = require('../../src/newtab/wallpaper/wallpaper-adaptive-tone.js');
+const { getGlassAdaptation } = require('../../src/newtab/wallpaper/wallpaper-adaptive-tone.ts');
 
 const grey = (value) => ({ red: value, green: value, blue: value });
 

@@ -213,7 +213,7 @@ async function run() {
       const targets = await listTargets(port);
       return targets.find((target) =>
         /^chrome-extension:\/\//.test(target.url) &&
-        /\/src\/background\/background\.js(?:$|[?#])/.test(target.url)
+        /\/src\/background\/background\.ts(?:$|[?#])/.test(target.url)
       );
     }, 15000, 'Lumno extension target');
     const extensionIdMatch = extensionTarget.url.match(/^chrome-extension:\/\/([^/]+)/);

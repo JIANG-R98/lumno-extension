@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const tabGroups = require('../../src/background/tab-groups.js');
+const tabGroups = require('../../src/background/tab-groups.ts');
 
 function createChromeStub(options) {
   const settings = options || {};

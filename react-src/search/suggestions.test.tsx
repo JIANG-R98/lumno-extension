@@ -1,7 +1,6 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-// @ts-expect-error The extension sources are untyped JavaScript modules.
-import * as suggestionActionModel from '../../src/shared/search/suggestion-action-model.js';
+import * as suggestionActionModel from '../../src/shared/search/suggestion-action-model';
 import {
   createSuggestionsView,
   createSuggestionsViewApi,
@@ -12,8 +11,9 @@ import {
 } from './suggestions';
 
 let views: SuggestionsViewController[] = [];
-const sharedSuggestionActionModel: NonNullable<SuggestionsViewOptions['actionModel']> =
-  suggestionActionModel;
+// Typed by hand until the module has types of its own.
+const sharedSuggestionActionModel = suggestionActionModel as unknown as
+  NonNullable<SuggestionsViewOptions['actionModel']>;
 
 function createOptions(
   overrides: Partial<SuggestionsViewOptions> = {}

@@ -5,7 +5,7 @@ const vm = require('vm');
 const { runModuleInContext } = require('../helpers/module-script');
 
 const repoRoot = path.join(__dirname, '..', '..');
-const sources = runModuleInContext('src/newtab/wallpaper/runtime/wallpaper-sources.js', vm.createContext({}));
+const sources = runModuleInContext('src/newtab/wallpaper/runtime/wallpaper-sources.ts', vm.createContext({}));
 
 function createSources(overrides) {
   const cachedWallpaperImages = new Map();
@@ -131,8 +131,8 @@ function readImageSize(file) {
 // scripts/build/generate-wallpaper-samples.js writes these; a wallpaper added or replaced without
 // running it would sample a missing or stale copy.
 function testEveryBuiltInWallpaperHasASampleAtTheSamplerSize() {
-  const effects = runModuleInContext('src/newtab/wallpaper/wallpaper-effects.js', vm.createContext({}));
-  const source = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper/wallpaper.js'), 'utf8');
+  const effects = runModuleInContext('src/newtab/wallpaper/wallpaper-effects.ts', vm.createContext({}));
+  const source = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper/wallpaper.ts'), 'utf8');
   const suffix = source.match(/NEWTAB_WALLPAPER_SAMPLE_SUFFIX\s*=\s*'([^']+)'/)[1];
   const sourceSize = source.match(/NEWTAB_WALLPAPER_SOURCE_SIZE\s*=\s*Object\.freeze\(\{\s*width:\s*(\d+),\s*height:\s*(\d+)\s*\}\)/);
   const files = [...source.matchAll(/\bfile:\s*'([^']+\.webp)'/g)].map((match) => match[1]);

@@ -1,5 +1,5 @@
 /*
- * One variable font, declared in three weight bands so src/shared/cjk-font-faces.js
+ * One variable font, declared in three weight bands so src/shared/cjk-font-faces.ts
  * can add a CJK face to the middle band only. Faces compose into one font only when
  * their descriptors match, so the bands must stay in step with that file.
  */

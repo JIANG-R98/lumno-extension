@@ -94,10 +94,10 @@ BUNDLES.forEach((bundle) => {
   );
 });
 [
-  'src/newtab/newtab.js',
-  'src/options/options.js',
-  'src/overlay/search-panel.js',
-  'src/content/selection-quick-actions.js'
+  'src/newtab/newtab.ts',
+  'src/options/options.ts',
+  'src/overlay/search-panel.ts',
+  'src/content/selection-quick-actions.ts'
 ].forEach((file) => {
   assert(!entries.includes(file), `store package should ship ${file} only inside its bundle`);
 });
@@ -108,7 +108,7 @@ BUNDLES.forEach((bundle) => {
   assert(entries.includes(file), `store package should keep ${file}, which pages load by URL`);
 });
 const { getBackgroundServiceFiles } = require('../helpers/background-source');
-['src/background/background.js'].concat(getBackgroundServiceFiles()).forEach((file) => {
+['src/background/background.ts'].concat(getBackgroundServiceFiles()).forEach((file) => {
   assert(!entries.includes(file), `store package should ship ${file} only inside the background bundle`);
 });
 assert.strictEqual(packagedManifest.background.service_worker, 'build/background.js');

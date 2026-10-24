@@ -3,7 +3,7 @@
 const assert = require('assert');
 const path = require('path');
 
-const { nextDockDensity } = require(path.join(__dirname, '..', '..', 'src', 'newtab', 'layout.js'));
+const { nextDockDensity } = require(path.join(__dirname, '..', '..', 'src', 'newtab', 'layout.ts'));
 
 function probe(stable) {
   const calls = [];

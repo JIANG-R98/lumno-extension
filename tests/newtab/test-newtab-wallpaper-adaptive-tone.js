@@ -180,9 +180,9 @@ function getCssRgbChannels(value) {
   };
   sandbox.globalThis = sandbox;
   vm.runInNewContext(
-    moduleScript('src/newtab/wallpaper/wallpaper-adaptive-tone.js', 'LumnoNewtabWallpaperAdaptiveTone'),
+    moduleScript('src/newtab/wallpaper/wallpaper-adaptive-tone.ts', 'LumnoNewtabWallpaperAdaptiveTone'),
     sandbox,
-    { filename: 'src/newtab/wallpaper/wallpaper-adaptive-tone.js' }
+    { filename: 'src/newtab/wallpaper/wallpaper-adaptive-tone.ts' }
   );
 
   const readySamplers = [];

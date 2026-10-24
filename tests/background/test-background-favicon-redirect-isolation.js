@@ -19,7 +19,7 @@ async function run() {
       }
       return Promise.reject(new TypeError('redirect blocked'));
     },
-    exposeModules: { 'src/background/favicon-service.js': ['fetchShortcutFaviconData'] }
+    exposeModules: { 'src/background/favicon-service.ts': ['fetchShortcutFaviconData'] }
   });
   const fetchShortcutFaviconData = harness.exposed('fetchShortcutFaviconData');
   await wait(50);

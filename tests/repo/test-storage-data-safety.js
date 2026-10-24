@@ -3,8 +3,8 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const settings = require('../../src/shared/settings.js');
-const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.js');
+const settings = require('../../src/shared/settings.ts');
+const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.ts');
 const repoRoot = path.join(__dirname, '..', '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'manifest.json'), 'utf8'));
 const expectedDevelopmentExtensionId = 'kkcjcneagmlhpeaafngjdlpcfjakejgb';
@@ -187,15 +187,15 @@ sourceFiles.forEach((file) => {
 assert.deepStrictEqual(
   persistedRemoveCalls.sort(),
   [
-    'src/background/background.js:chrome.storage.sync:BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS',
-    'src/background/background.js:chrome.storage.sync:LANGUAGE_MESSAGES_STORAGE_KEY',
-    'src/background/background.js:chrome.storage.sync:OVERLAY_FONT_LOCAL_STORAGE_KEYS',
-    'src/background/background.js:localArea:REMOVED_AI_LOCAL_STORAGE_KEYS',
-    'src/background/background.js:syncArea:REMOVED_AI_SYNC_STORAGE_KEYS',
-    'src/background/favicon-service.js:localArea:legacyKeys',
-    'src/newtab/bookmarks/bookmark-display-settings.js:bookmarkTopbarSurfaceStorageArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY',
-    'src/newtab/bookmarks/bookmark-display-settings.js:localArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY',
-    'src/newtab/bookmarks/bookmark-display-settings.js:syncArea:cleanupKeys'
+    'src/background/background.ts:chrome.storage.sync:BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS',
+    'src/background/background.ts:chrome.storage.sync:LANGUAGE_MESSAGES_STORAGE_KEY',
+    'src/background/background.ts:chrome.storage.sync:OVERLAY_FONT_LOCAL_STORAGE_KEYS',
+    'src/background/background.ts:localArea:REMOVED_AI_LOCAL_STORAGE_KEYS',
+    'src/background/background.ts:syncArea:REMOVED_AI_SYNC_STORAGE_KEYS',
+    'src/background/favicon-service.ts:localArea:legacyKeys',
+    'src/newtab/bookmarks/bookmark-display-settings.ts:bookmarkTopbarSurfaceStorageArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY',
+    'src/newtab/bookmarks/bookmark-display-settings.ts:localArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY',
+    'src/newtab/bookmarks/bookmark-display-settings.ts:syncArea:cleanupKeys'
   ],
   'persisted storage removals must remain limited to the reviewed legacy cleanup paths'
 );

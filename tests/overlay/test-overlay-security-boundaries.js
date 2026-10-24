@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
-const { createOverlayKeyRouter } = require('../../src/overlay/keyboard.js');
+const { createOverlayKeyRouter } = require('../../src/overlay/keyboard.ts');
 const { createOverlayPage } = require('../helpers/overlay-runtime-harness');
 const { createTabSwitcherPage, switcherTabs } = require('../helpers/tab-switcher-page');
 

@@ -15,84 +15,84 @@
 
 const BUNDLES = [
   // The service worker
-  { name: 'background', files: ['src/background/background.js'] },
+  { name: 'background', files: ['src/background/background.ts'] },
 
   // New Tab
   {
     name: 'newtab-preload',
     files: [
-      'src/shared/scrollbar-mode.js',
-      'src/shared/browser-profile.js',
-      'src/newtab/newtab-focus-entry.js',
-      'src/newtab/newtab-storage-prefetch.js',
-      'src/shared/motion-preload.js',
-      'src/newtab/wallpaper/wallpaper-preload.js'
+      'src/shared/scrollbar-mode.ts',
+      'src/shared/browser-profile.ts',
+      'src/newtab/newtab-focus-entry.ts',
+      'src/newtab/newtab-storage-prefetch.ts',
+      'src/shared/motion-preload.ts',
+      'src/newtab/wallpaper/wallpaper-preload.ts'
     ]
   },
   {
     name: 'wallpaper-effect-preload',
-    files: ['src/newtab/wallpaper/wallpaper-effect-preload.js'],
+    files: ['src/newtab/wallpaper/wallpaper-effect-preload.ts'],
     sharedFrom: ['newtab-preload']
   },
   {
     name: 'newtab',
     sharedFrom: ['newtab-preload'],
-    files: ['src/overlay/tab-switcher.js', 'src/overlay/tab-switcher-page-bridge.js', 'src/newtab/newtab.js']
+    files: ['src/overlay/tab-switcher.ts', 'src/overlay/tab-switcher-page-bridge.ts', 'src/newtab/newtab.ts']
   },
-  { name: 'newtab-route-redirect', files: ['src/newtab/newtab-route-redirect.js'] },
-  { name: 'lumno-newtab', files: ['src/newtab/lumno-newtab.js'] },
+  { name: 'newtab-route-redirect', files: ['src/newtab/newtab-route-redirect.ts'] },
+  { name: 'lumno-newtab', files: ['src/newtab/lumno-newtab.ts'] },
 
   // Settings
   {
     name: 'options-preload',
-    files: ['src/shared/icon-font-preload.js', 'src/shared/scrollbar-mode.js', 'src/options/theme-preload.js']
+    files: ['src/shared/icon-font-preload.ts', 'src/shared/scrollbar-mode.ts', 'src/options/theme-preload.ts']
   },
   {
     name: 'options',
     sharedFrom: ['options-preload'],
-    files: ['src/overlay/tab-switcher.js', 'src/overlay/tab-switcher-page-bridge.js', 'src/options/options.js']
+    files: ['src/overlay/tab-switcher.ts', 'src/overlay/tab-switcher-page-bridge.ts', 'src/options/options.ts']
   },
 
   // Onboarding: its demo overlay runs the overlay's search panel.
-  { name: 'onboarding-preload', files: ['src/shared/scrollbar-mode.js'] },
+  { name: 'onboarding-preload', files: ['src/shared/scrollbar-mode.ts'] },
   {
     name: 'onboarding',
     sharedFrom: ['onboarding-preload', 'cjk-font-faces'],
     files: [
-      'src/overlay/search-panel.js',
-      'src/overlay/tab-switcher.js',
-      'src/overlay/tab-switcher-page-bridge.js',
-      'src/onboarding/onboarding.js'
+      'src/overlay/search-panel.ts',
+      'src/overlay/tab-switcher.ts',
+      'src/overlay/tab-switcher-page-bridge.ts',
+      'src/onboarding/onboarding.ts'
     ]
   },
 
   // Toolbar popup
-  { name: 'popup-preload', files: ['src/popup/popup-theme-preload.js'] },
-  { name: 'popup', sharedFrom: ['popup-preload'], files: ['src/popup/popup-page.js'] },
+  { name: 'popup-preload', files: ['src/popup/popup-theme-preload.ts'] },
+  { name: 'popup', sharedFrom: ['popup-preload'], files: ['src/popup/popup-page.ts'] },
 
   // Shared by the pages
-  { name: 'cjk-font-faces', files: ['src/shared/cjk-font-faces.js'] },
-  { name: 'react-page-bootstrap', files: ['src/shared/react-page-bootstrap.js'] },
+  { name: 'cjk-font-faces', files: ['src/shared/cjk-font-faces.ts'] },
+  { name: 'react-page-bootstrap', files: ['src/shared/react-page-bootstrap.ts'] },
 
   // Injected into web pages
-  { name: 'icon-font-preload', files: ['src/shared/icon-font-preload.js'] },
-  { name: 'overlay', files: ['src/shared/cjk-font-faces.js', 'src/overlay/search-panel.js'] },
-  { name: 'tab-switcher', files: ['src/overlay/tab-switcher.js'] },
-  { name: 'document-pip-picker', files: ['src/content/document-pip-picker.js'] },
-  { name: 'hotkey-listener', files: ['src/content/hotkey-listener.js'] },
-  { name: 'page-shortcut-toast', files: ['src/content/page-shortcut-toast.js'] },
-  { name: 'selection-quick-actions', files: ['src/content/selection-quick-actions.js'] },
-  { name: 'link-preview', files: ['src/content/link-preview.js'] },
+  { name: 'icon-font-preload', files: ['src/shared/icon-font-preload.ts'] },
+  { name: 'overlay', files: ['src/shared/cjk-font-faces.ts', 'src/overlay/search-panel.ts'] },
+  { name: 'tab-switcher', files: ['src/overlay/tab-switcher.ts'] },
+  { name: 'document-pip-picker', files: ['src/content/document-pip-picker.ts'] },
+  { name: 'hotkey-listener', files: ['src/content/hotkey-listener.ts'] },
+  { name: 'page-shortcut-toast', files: ['src/content/page-shortcut-toast.ts'] },
+  { name: 'selection-quick-actions', files: ['src/content/selection-quick-actions.ts'] },
+  { name: 'link-preview', files: ['src/content/link-preview.ts'] },
 
   // Manifest content scripts
   // The link preview's Shift+click trigger rides along: it needs the same
   // every-frame, document-start entry, and one script per frame costs less.
   {
     name: 'shortcut-key-observer',
-    files: ['src/content/shortcut-key-observer.js', 'src/content/link-preview-trigger.js']
+    files: ['src/content/shortcut-key-observer.ts', 'src/content/link-preview-trigger.ts']
   },
-  { name: 'site-auto-pip', files: ['src/content/auto-pip-blacklist.js', 'src/content/site-auto-pip.js'] },
-  { name: 'youtube-auto-pip', files: ['src/content/youtube-auto-pip.js'] }
+  { name: 'site-auto-pip', files: ['src/content/auto-pip-blacklist.ts', 'src/content/site-auto-pip.ts'] },
+  { name: 'youtube-auto-pip', files: ['src/content/youtube-auto-pip.ts'] }
 ];
 
 module.exports = {

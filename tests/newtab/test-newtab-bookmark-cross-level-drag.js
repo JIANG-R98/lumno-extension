@@ -14,7 +14,7 @@ const {
   getMoveApiDestinationIndex,
   isFolderInsideBookmark,
   normalizeMoveDestinationIndex
-} = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-move-history.js'));
+} = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-move-history.ts'));
 
 const nodeMap = new Map([
   ['1', { id: '1', parentId: '0' }],
@@ -200,11 +200,11 @@ assert.deepStrictEqual(history.commitRedo(), firstMove);
 assert.deepStrictEqual(history.peekUndo(), firstMove);
 
 assert.ok(
-  runsBefore(getPageScripts('newtab.html'), 'src/newtab/bookmarks/bookmark-move-history.js', 'src/newtab/newtab.js'),
+  runsBefore(getPageScripts('newtab.html'), 'src/newtab/bookmarks/bookmark-move-history.ts', 'src/newtab/newtab.ts'),
   'new tab should load bookmark move history before the main runtime'
 );
 assert.ok(
-  runsBefore(getPageScripts('newtab.html'), 'src/newtab/bookmarks/bookmark-drag.js', 'src/newtab/newtab.js'),
+  runsBefore(getPageScripts('newtab.html'), 'src/newtab/bookmarks/bookmark-drag.ts', 'src/newtab/newtab.ts'),
   'new tab should load the bookmark drag runtime before the page entry'
 );
 // The drag's look, read from the stylesheets.

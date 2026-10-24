@@ -3,11 +3,11 @@ const fs = require('fs');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const tooltipJsPath = path.join(repoRoot, 'src/shared/ui/tooltip.js');
+const tooltipJsPath = path.join(repoRoot, 'src/shared/ui/tooltip.ts');
 const tooltipCssPath = path.join(repoRoot, 'src/shared/ui/tooltip.css');
 const newtabHtmlPath = path.join(repoRoot, 'newtab.html');
 const optionsHtmlPath = path.join(repoRoot, 'src/options/options.html');
-const overlayPanelPath = path.join(repoRoot, 'src/overlay/search-panel.js');
+const overlayPanelPath = path.join(repoRoot, 'src/overlay/search-panel.ts');
 
 global.LumnoTooltipView = {
   implementation: 'react-test-double',
@@ -45,7 +45,7 @@ global.LumnoTooltipView = {
   }
 };
 
-assert.ok(fs.existsSync(tooltipJsPath), 'shared tooltip behavior should live in src/shared/ui/tooltip.js');
+assert.ok(fs.existsSync(tooltipJsPath), 'shared tooltip behavior should live in src/shared/ui/tooltip.ts');
 assert.ok(fs.existsSync(tooltipCssPath), 'shared tooltip styling should live in src/shared/ui/tooltip.css');
 
 const tooltipCss = fs.readFileSync(tooltipCssPath, 'utf8');
@@ -239,11 +239,11 @@ const optionsHtml = fs.readFileSync(optionsHtmlPath, 'utf8');
 const overlayPanel = fs.readFileSync(overlayPanelPath, 'utf8');
 
 assert.ok(newtabHtml.includes('../shared/ui/tooltip.css'), 'newtab should load the shared tooltip stylesheet');
-assert.ok(getPageScripts('newtab.html').includes('src/shared/ui/tooltip.js'), 'newtab should load the shared tooltip component');
+assert.ok(getPageScripts('newtab.html').includes('src/shared/ui/tooltip.ts'), 'newtab should load the shared tooltip component');
 assert.ok(optionsHtml.includes('../shared/ui/tooltip.css'), 'options should load the shared tooltip stylesheet');
-assert.ok(getPageScripts('src/options/options.html').includes('src/shared/ui/tooltip.js'), 'options should load the shared tooltip component');
+assert.ok(getPageScripts('src/options/options.html').includes('src/shared/ui/tooltip.ts'), 'options should load the shared tooltip component');
 assert.ok(
-  runsBefore(getInjectedScripts('overlay'), 'src/shared/ui/tooltip.js', 'src/overlay/search-panel.js'),
+  runsBefore(getInjectedScripts('overlay'), 'src/shared/ui/tooltip.ts', 'src/overlay/search-panel.ts'),
   'overlay injection should load the shared tooltip component before search-panel'
 );
 assert.ok(

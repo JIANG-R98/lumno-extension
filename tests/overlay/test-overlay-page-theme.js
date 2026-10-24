@@ -2,8 +2,8 @@ const assert = require('assert');
 
 const { JSDOM } = require('jsdom');
 
-const pageTheme = require('../../src/overlay/page-theme.js');
-const faviconTheme = require('../../src/newtab/theme/favicon-theme.js');
+const pageTheme = require('../../src/overlay/page-theme.ts');
+const faviconTheme = require('../../src/newtab/theme/favicon-theme.ts');
 const { createOverlayPage, HOST_ID } = require('../helpers/overlay-runtime-harness');
 
 function createElement(config) {

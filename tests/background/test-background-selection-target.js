@@ -1,5 +1,5 @@
 const assert = require('assert');
-const selectionTarget = require('../../src/background/selection-target.js');
+const selectionTarget = require('../../src/background/selection-target.ts');
 
 function createChromeStub(options) {
   const settings = options || {};

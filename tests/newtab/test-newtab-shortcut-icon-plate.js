@@ -1,5 +1,5 @@
 const assert = require('assert');
-const plate = require('../../src/newtab/shortcuts/shortcut-icon-plate.js');
+const plate = require('../../src/newtab/shortcuts/shortcut-icon-plate.ts');
 
 // See-through artwork gets a plate tinted from its main color; icons that
 // bring their own square, a rounded one included, do not.

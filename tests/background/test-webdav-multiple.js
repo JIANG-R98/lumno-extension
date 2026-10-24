@@ -1,6 +1,6 @@
 const assert = require('assert');
-const syncApi = require('../../src/background/webdav-sync.js');
-const settings = require('../../src/shared/settings.js');
+const syncApi = require('../../src/background/webdav-sync.ts');
+const settings = require('../../src/shared/settings.ts');
 const { createServer, createDevice, config, set } = require('./test-webdav-sync.js');
 
 async function run() {
@@ -94,8 +94,8 @@ async function run() {
   await legacy.controller.handle({ operation: 'save', config });
   await legacy.controller.stop();
   const createMigrated = () => syncApi.createController({ chrome: legacy.chrome, settings,
-    contract: require('../../src/shared/webdav-contract.js'), shortcuts: require('../../src/newtab/shortcuts/shortcuts-store.js'),
-    client: require('../../src/background/webdav-client.js'), privateStore: legacy.privateStore, wallpaperStore: legacy.wallpaperStore,
+    contract: require('../../src/shared/webdav-contract.ts'), shortcuts: require('../../src/newtab/shortcuts/shortcuts-store.ts'),
+    client: require('../../src/background/webdav-client.ts'), privateStore: legacy.privateStore, wallpaperStore: legacy.wallpaperStore,
     crypto: require('crypto').webcrypto });
   const migrated = createMigrated();
   assert.strictEqual((await migrated.status()).connections[0].id, 'default');

@@ -1,9 +1,9 @@
 const assert = require('assert');
-const bookmarkStore = require('../../src/newtab/bookmarks/bookmarks-store.js');
+const bookmarkStore = require('../../src/newtab/bookmarks/bookmarks-store.ts');
 const {
   BOOKMARK_EVENT_NAMES,
   createBookmarksRuntime
-} = require('../../src/newtab/bookmarks/bookmarks-runtime.js');
+} = require('../../src/newtab/bookmarks/bookmarks-runtime.ts');
 
 function createChromeEvent() {
   const listeners = new Set();

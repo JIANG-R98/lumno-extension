@@ -218,7 +218,7 @@ npm ci
 npm run build
 ```
 
-`src/` 下的脚本都是 ES 模块，各自 import 所需的模块；每个包包含 `scripts/build/bundles.js` 为它列出的模块及其全部依赖。修改 `src/` 期间可以运行 `npm run watch:bundles`，每次改动都会重新打包。
+`src/` 下的脚本都是 TypeScript ES 模块（尚未补类型的文件以 `// @ts-nocheck` 开头），各自 import 所需的模块；每个包包含 `scripts/build/bundles.js` 为它列出的模块及其全部依赖。修改 `src/` 期间可以运行 `npm run watch:bundles`，每次改动都会重新打包。
 
 然后在 `chrome://extensions/` 中保持「开发者模式」开启，并将仓库根目录作为已解压扩展加载。生成新产物，或修改后台脚本、`manifest.json` 后，请在扩展管理页手动点击「重新加载」。开发版不会在 Chrome 用户配置启动时主动二次刷新，以免中断启动阶段的新标签页接管。
 
@@ -241,11 +241,11 @@ npm run lint
 | 路径 | 说明 |
 | --- | --- |
 | `manifest.json` | Manifest V3 配置、权限、命令、内容脚本和新标签页覆盖配置 |
-| `src/background/` | Service worker 入口及其 `*-service.js` 部件：命令分发、打开浮层、搜索数据、站内/AI 搜索、标签页切换器、PiP 所有权、置顶标签页恢复、WebDAV 同步 |
+| `src/background/` | Service worker 入口及其 `*-service.ts` 部件：命令分发、打开浮层、搜索数据、站内/AI 搜索、标签页切换器、PiP 所有权、置顶标签页恢复、WebDAV 同步 |
 | `src/newtab/` | 新标签页运行时；按功能分为 `bookmarks/`、`shortcuts/`、`recent/`、`wallpaper/`、`search/`、`top-content/`、`theme/` |
-| `src/overlay/` | 网页内命令栏浮层（`search-panel.js` 及其位于 `panel/` 的部件）、主题/语言同步和站点修正 |
+| `src/overlay/` | 网页内命令栏浮层（`search-panel.ts` 及其位于 `panel/` 的部件）、主题/语言同步和站点修正 |
 | `src/content/` | 页面快捷键监听、划词快捷操作、网页剪裁 PiP、视频自动 PiP |
-| `src/options/` | 扩展设置页（`options.js` 及其 `options-*.js` 部件） |
+| `src/options/` | 扩展设置页（`options.ts` 及其 `options-*.ts` 部件） |
 | `src/onboarding/` | 安装/更新引导页 |
 | `src/shared/` | 设置、路由、URL 守卫等共享模块；`search/`（排序、输入、建议）、`ui/`（提示、Toast、菜单与控件样式）、`favicon/` |
 | `react-src/` | React 源码，构建产物输出到 `src/react/` |

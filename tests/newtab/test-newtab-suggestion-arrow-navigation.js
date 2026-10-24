@@ -4,7 +4,7 @@
 const assert = require('assert');
 const path = require('path');
 
-const { getNextSuggestionIndex } = require(path.join(__dirname, '..', '..', 'src', 'newtab', 'search', 'search-navigation.js'));
+const { getNextSuggestionIndex } = require(path.join(__dirname, '..', '..', 'src', 'newtab', 'search', 'search-navigation.ts'));
 const DOWN = 1;
 const UP = -1;
 

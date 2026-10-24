@@ -31,27 +31,27 @@ function filesContaining(files, pattern) {
 const runtimeFiles = collectFiles('src', /\.(?:js|ts|tsx)$/);
 assert.deepStrictEqual(
   filesContaining(runtimeFiles, /function getBrowserInternalScheme\(/),
-  ['src/shared/browser-profile.js'],
+  ['src/shared/browser-profile.ts'],
   'browser detection belongs to the shared browser profile runtime'
 );
 assert.deepStrictEqual(
   filesContaining(runtimeFiles, /function getClientHintBrowserName\(/),
-  ['src/shared/browser-profile.js'],
+  ['src/shared/browser-profile.ts'],
   'client-hint brand selection must not be copied into page entries'
 );
 assert.deepStrictEqual(
   filesContaining(runtimeFiles, /function parseShortcut\(/),
-  ['src/shared/shortcut-key-matcher.js'],
+  ['src/shared/shortcut-key-matcher.ts'],
   'configured shortcut parsing belongs to the shared matcher'
 );
 assert.deepStrictEqual(
   filesContaining(runtimeFiles, /function setBoundedCacheEntry\(/),
-  ['src/shared/favicon/favicon-utils.js'],
+  ['src/shared/favicon/favicon-utils.ts'],
   'bounded favicon cache writes belong to favicon-utils'
 );
 assert.deepStrictEqual(
   filesContaining(runtimeFiles, /function getFigmaFolderSvg\(/),
-  ['src/newtab/bookmarks/bookmark-folder-icon.js'],
+  ['src/newtab/bookmarks/bookmark-folder-icon.ts'],
   'bookmark folder SVG and morph logic must stay out of the newtab entry'
 );
 

@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { compareProgressPages, shouldAdvance, readTitle } = require('../../src/shared/progress-match.js');
+const { compareProgressPages, shouldAdvance, readTitle } = require('../../src/shared/progress-match.ts');
 
 function check(name, current, candidate, expected) {
   const actual = compareProgressPages(current, candidate);
@@ -222,7 +222,7 @@ assert.strictEqual(readTitle('某剧 第二十三集').episode, 23);
 assert.strictEqual(readTitle('Some Show - Episode 4 | Site').workName, 'some show');
 
 // Pinning starts tracking only for pages that read as part of a series.
-const { looksLikeSeriesPage } = require('../../src/shared/progress-match.js');
+const { looksLikeSeriesPage } = require('../../src/shared/progress-match.ts');
 [
   ['https://vidhub3.top/vodplay/55357-1-1.html', ''],
   ['https://www.bilibili.com/video/BV11LEA6eEuj?p=2', ''],

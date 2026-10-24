@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const faviconUtils = require('../../src/shared/favicon/favicon-utils.js');
-const faviconViewCoreApi = require('../../src/shared/favicon/favicon-view-core.js');
+const faviconUtils = require('../../src/shared/favicon/favicon-utils.ts');
+const faviconViewCoreApi = require('../../src/shared/favicon/favicon-view-core.ts');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
@@ -70,7 +70,7 @@ function testFaviconViewCoreCacheLimits() {
 function testRuntimeCachesUseBoundedWrites() {
   const background = readBackgroundSource();
   const overlay = readOverlayPanelSource();
-  const faviconCore = fs.readFileSync(path.join(repoRoot, 'src/shared/favicon/favicon-view-core.js'), 'utf8');
+  const faviconCore = fs.readFileSync(path.join(repoRoot, 'src/shared/favicon/favicon-view-core.ts'), 'utf8');
 
   assert.strictEqual(
     (background.match(/(?:faviconDataCache|siteThemeColorCache|titlePinyinCache)\.set\(/g) || []).length,

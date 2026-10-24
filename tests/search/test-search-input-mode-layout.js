@@ -166,7 +166,7 @@ const badge = new FakeElement('span');
 badge._layoutWidth = 48;
 badge.setAttribute('data-visible', 'true');
 
-const LumnoSearchInputMode = require(path.resolve(__dirname, '../../src/shared/search/search-input-mode.js'));
+const LumnoSearchInputMode = require(path.resolve(__dirname, '../../src/shared/search/search-input-mode.ts'));
 
 const controller = LumnoSearchInputMode.createInputModeController(
   {

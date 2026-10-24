@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
-const selectionIntent = require('../../src/shared/selection-intent.js');
+const selectionIntent = require('../../src/shared/selection-intent.ts');
 const { bundleScript } = require('../helpers/module-script');
 const { parseCss } = require('../helpers/css-rules');
 

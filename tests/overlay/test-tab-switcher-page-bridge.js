@@ -169,8 +169,8 @@ function testPagesConnectTheBridgeAfterTheirReactEntry() {
     ['src/onboarding/onboarding.html', 'src/react/onboarding-islands.js']
   ].forEach(([page, reactEntry]) => {
     const scripts = getPageScripts(page);
-    assert.ok(runsBefore(scripts, 'src/overlay/tab-switcher.js', 'src/overlay/tab-switcher-page-bridge.js'), `${page} should load the runtime before the bridge`);
-    assert.ok(runsBefore(scripts, reactEntry, 'src/overlay/tab-switcher-page-bridge.js'), `${page} should connect the bridge after its React entry`);
+    assert.ok(runsBefore(scripts, 'src/overlay/tab-switcher.ts', 'src/overlay/tab-switcher-page-bridge.ts'), `${page} should load the runtime before the bridge`);
+    assert.ok(runsBefore(scripts, reactEntry, 'src/overlay/tab-switcher-page-bridge.ts'), `${page} should connect the bridge after its React entry`);
   });
 }
 

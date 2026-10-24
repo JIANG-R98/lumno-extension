@@ -1,8 +1,8 @@
 const assert = require('assert');
 const fs = require('fs');
-const helpCenterSearch = require('../../src/shared/search/help-center-search.js');
-const communityLinks = require('../../src/shared/community-links.js');
-const searchUtils = require('../../src/shared/search/search-utils.js');
+const helpCenterSearch = require('../../src/shared/search/help-center-search.ts');
+const communityLinks = require('../../src/shared/community-links.ts');
+const searchUtils = require('../../src/shared/search/search-utils.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
@@ -356,11 +356,11 @@ function testSuggestionSource() {
 }
 
 assert.ok(
-  runsBefore(getInjectedScripts('overlay'), 'src/shared/search/help-center-search.js', 'src/overlay/search-panel.js'),
+  runsBefore(getInjectedScripts('overlay'), 'src/shared/search/help-center-search.ts', 'src/overlay/search-panel.ts'),
   'the overlay should load the help center module before the search panel'
 );
 assert.ok(
-  runsBefore(getPageScripts('newtab.html'), 'src/shared/search/help-center-search.js', 'src/newtab/search/suggestions-controller.js'),
+  runsBefore(getPageScripts('newtab.html'), 'src/shared/search/help-center-search.ts', 'src/newtab/search/suggestions-controller.ts'),
   'the new tab should load the help center module before its suggestions controller'
 );
 

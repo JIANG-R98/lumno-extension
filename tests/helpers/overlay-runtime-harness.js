@@ -226,7 +226,7 @@ async function createOverlayPage(options) {
   const evalFile = (file) => {
     const bundle = file.match(/^build\/([\w-]+)\.js$/);
     const source = bundle
-      ? bundleScript(bundle[1], bundle[1] === 'overlay' ? { 'src/overlay/runtime.js': 'LumnoOverlayRuntime' } : null)
+      ? bundleScript(bundle[1], bundle[1] === 'overlay' ? { 'src/overlay/runtime.ts': 'LumnoOverlayRuntime' } : null)
       : fs.readFileSync(path.join(repoRoot, file), 'utf8');
     window.eval(`${source}\n//# sourceURL=${file}`);
   };

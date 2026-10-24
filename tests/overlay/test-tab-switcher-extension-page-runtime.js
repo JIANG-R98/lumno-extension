@@ -76,10 +76,10 @@ window.chrome = {
 };
 
 // Extension pages load settings.js before the tab switcher runtime.
-window.eval(moduleScript('src/shared/settings.js', 'LumnoSettings'));
-window.eval(moduleScript('src/shared/ui/toast.js', 'LumnoToast'));
-window.eval(moduleScript('src/shared/page-color-scheme.js', 'LumnoPageColorScheme'));
-window.eval(moduleScript('src/overlay/tab-switcher.js'));
+window.eval(moduleScript('src/shared/settings.ts', 'LumnoSettings'));
+window.eval(moduleScript('src/shared/ui/toast.ts', 'LumnoToast'));
+window.eval(moduleScript('src/shared/page-color-scheme.ts', 'LumnoPageColorScheme'));
+window.eval(moduleScript('src/overlay/tab-switcher.ts'));
 
 const unavailableResult =
   window._x_extension_toggleTabSwitcher_2026_unique_({

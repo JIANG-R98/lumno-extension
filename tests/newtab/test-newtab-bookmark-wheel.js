@@ -12,8 +12,8 @@ function fixture({ page = 3, pages = 8, animated = false } = {}) {
   window.setTimeout = (fn, ms) => env.timers.push({ fn, ms });
   window.clearTimeout = () => {};
   window.LumnoNewtabCrossSurfaceDrag = { prefersReducedMotion: () => !animated };
-  window.eval(moduleScript('src/newtab/bookmarks/bookmark-pager.js', 'LumnoNewtabBookmarkPager', null, {
-    'src/newtab/cross-surface-drag.js': 'LumnoNewtabCrossSurfaceDrag'
+  window.eval(moduleScript('src/newtab/bookmarks/bookmark-pager.ts', 'LumnoNewtabBookmarkPager', null, {
+    'src/newtab/cross-surface-drag.ts': 'LumnoNewtabCrossSurfaceDrag'
   }));
   const state = { bookmarkGrid: window.document.getElementById('grid'),
     bookmarkAllItems: Array.from({ length: pages }, (_, id) => ({ id })), bookmarkCurrentPage: page };

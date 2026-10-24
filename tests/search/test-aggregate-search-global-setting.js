@@ -2,8 +2,8 @@ const assert = require('assert');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
 
-const settings = require('../../src/shared/settings.js');
-const store = require('../../src/shared/search/aggregate-search-store.js');
+const settings = require('../../src/shared/settings.ts');
+const store = require('../../src/shared/search/aggregate-search-store.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 
 // One setting in the aggregate search section decides whether an aggregate search gathers the tabs

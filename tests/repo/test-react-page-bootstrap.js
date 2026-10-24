@@ -5,7 +5,7 @@ const vm = require('vm');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const source = fs.readFileSync(
-  path.join(repoRoot, 'src/shared/react-page-bootstrap.js'),
+  path.join(repoRoot, 'src/shared/react-page-bootstrap.ts'),
   'utf8'
 );
 const executableSource = source.replace(

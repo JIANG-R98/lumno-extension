@@ -1,6 +1,6 @@
 const assert = require('assert');
-const siteDisplayName = require('../../src/shared/site-display-name.js');
-const settings = require('../../src/shared/settings.js');
+const siteDisplayName = require('../../src/shared/site-display-name.ts');
+const settings = require('../../src/shared/settings.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
@@ -46,11 +46,11 @@ assert.strictEqual(
 );
 
 assert.ok(
-  getPageScripts('newtab.html').includes('src/shared/site-display-name.js'),
+  getPageScripts('newtab.html').includes('src/shared/site-display-name.ts'),
   'newtab should load the shared site display-name resolver'
 );
 assert.ok(
-  runsBefore(getPageScripts('newtab.html'), 'src/shared/site-display-name.js', 'src/newtab/newtab.js'),
+  runsBefore(getPageScripts('newtab.html'), 'src/shared/site-display-name.ts', 'src/newtab/newtab.ts'),
   'the shared resolver should load before the newtab runtime entry'
 );
 // New Tab names recent sites with the shared resolver.

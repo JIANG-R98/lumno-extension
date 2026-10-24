@@ -2,8 +2,8 @@ const assert = require('assert');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const historyApi = require(path.join(repoRoot, 'src/shared/search/search-input-history.js'));
-const shortcutReference = require(path.join(repoRoot, 'src/shared/shortcut-reference.js'));
+const historyApi = require(path.join(repoRoot, 'src/shared/search/search-input-history.ts'));
+const shortcutReference = require(path.join(repoRoot, 'src/shared/shortcut-reference.ts'));
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 const { getInjectedScripts, getPageScripts } = require('../helpers/runtime-scripts');
 
@@ -128,8 +128,8 @@ function testShortcutIsListed() {
     .concat(shortcutReference.getFixedShortcutDefinitions());
   assert.ok(listed.some((item) => item.shortcut === 'Alt+ArrowUp / Alt+ArrowDown'),
     'the shortcut reference in Settings should list the input history shortcut');
-  assert.ok(getPageScripts('newtab.html').includes('src/shared/search/search-input-history.js'));
-  assert.ok(getInjectedScripts('overlay').includes('src/shared/search/search-input-history.js'));
+  assert.ok(getPageScripts('newtab.html').includes('src/shared/search/search-input-history.ts'));
+  assert.ok(getInjectedScripts('overlay').includes('src/shared/search/search-input-history.ts'));
 }
 
 (async () => {

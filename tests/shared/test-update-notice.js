@@ -145,9 +145,9 @@ global.LumnoFeatureHintView = {
   }
 };
 
-const featureHints = require('../../src/shared/ui/feature-hints.js');
-const updateNotice = require('../../src/shared/update-notice.js');
-const settings = require('../../src/shared/settings.js');
+const featureHints = require('../../src/shared/ui/feature-hints.ts');
+const updateNotice = require('../../src/shared/update-notice.ts');
+const settings = require('../../src/shared/settings.ts');
 
 function createOnChangedEmitter() {
   const listeners = [];

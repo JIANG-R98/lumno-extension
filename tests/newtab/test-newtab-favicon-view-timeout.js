@@ -56,7 +56,7 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 sandbox.LumnoFaviconViewCore = {
-  createFallbackIconPresenter: require('../../src/shared/favicon/favicon-view-core.js').createFallbackIconPresenter,
+  createFallbackIconPresenter: require('../../src/shared/favicon/favicon-view-core.ts').createFallbackIconPresenter,
   createFaviconViewCore() {
     return {
       createImage() {
@@ -100,12 +100,12 @@ sandbox.LumnoFaviconViewCore = {
   }
 };
 
-vm.runInNewContext(moduleScript('src/shared/favicon/favicon-utils.js', 'LumnoFaviconUtils', null, { 'src/shared/favicon/favicon-view-core.js': 'LumnoFaviconViewCore' }), sandbox, {
-  filename: 'src/shared/favicon/favicon-utils.js'
+vm.runInNewContext(moduleScript('src/shared/favicon/favicon-utils.ts', 'LumnoFaviconUtils', null, { 'src/shared/favicon/favicon-view-core.ts': 'LumnoFaviconViewCore' }), sandbox, {
+  filename: 'src/shared/favicon/favicon-utils.ts'
 });
 
-vm.runInNewContext(moduleScript('src/newtab/theme/favicon-view.js', 'LumnoNewtabFaviconView', null, { 'src/shared/favicon/favicon-view-core.js': 'LumnoFaviconViewCore' }), sandbox, {
-  filename: 'src/newtab/theme/favicon-view.js'
+vm.runInNewContext(moduleScript('src/newtab/theme/favicon-view.ts', 'LumnoNewtabFaviconView', null, { 'src/shared/favicon/favicon-view-core.ts': 'LumnoFaviconViewCore' }), sandbox, {
+  filename: 'src/newtab/theme/favicon-view.ts'
 });
 
 const runtime = sandbox.LumnoNewtabFaviconView.createFaviconViewRuntime({

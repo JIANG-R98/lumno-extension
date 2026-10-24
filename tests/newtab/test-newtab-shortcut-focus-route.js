@@ -69,7 +69,7 @@ function bootPage(options = {}) {
     globalThis: null
   });
   context.globalThis = context;
-  vm.runInContext(moduleScript('src/newtab/input-focus.js', 'LumnoNewtabInputFocus'), context);
+  vm.runInContext(moduleScript('src/newtab/input-focus.ts', 'LumnoNewtabInputFocus'), context);
   const pageState = {
     inputParts: { input },
     newtabInputAutoFocusEnabled: options.autoFocusEnabled === true

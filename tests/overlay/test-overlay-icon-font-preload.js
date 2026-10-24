@@ -7,7 +7,7 @@ const { parseCss } = require('../helpers/css-rules');
 const { getBundleFiles, getInjectedScripts, getManifestContentScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const preloadPath = path.join(repoRoot, 'src/shared/icon-font-preload.js');
+const preloadPath = path.join(repoRoot, 'src/shared/icon-font-preload.ts');
 const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'manifest.json'), 'utf8'));
 const remixCss = fs.readFileSync(
   path.join(repoRoot, 'assets/remixicon/fonts/remixicon.css'),
@@ -127,26 +127,26 @@ const startupContentScriptIndex = manifest.content_scripts.findIndex((entry) => 
 const startupScripts = startupContentScriptIndex >= 0
   ? getManifestContentScripts()[startupContentScriptIndex]
   : [];
-assert(startupScripts.includes('src/content/shortcut-key-observer.js'),
+assert(startupScripts.includes('src/content/shortcut-key-observer.ts'),
   'the ordinary-page startup content script should remain declared');
 assert.strictEqual(
-  startupScripts.includes('src/shared/icon-font-preload.js'),
+  startupScripts.includes('src/shared/icon-font-preload.ts'),
   false,
   'ordinary pages should not preload an extension font before Overlay UI is requested'
 );
 
 assert(
-  runsBefore(getInjectedScripts('overlay'), 'src/shared/icon-font-preload.js', 'src/react/overlay-islands.js'),
+  runsBefore(getInjectedScripts('overlay'), 'src/shared/icon-font-preload.ts', 'src/react/overlay-islands.js'),
   'existing tabs should start warming the icon font before Overlay React/runtime injection'
 );
 assert(
-  runsBefore(getInjectedScripts('tabSwitcher'), 'src/shared/icon-font-preload.js', 'src/react/overlay-islands.js'),
+  runsBefore(getInjectedScripts('tabSwitcher'), 'src/shared/icon-font-preload.ts', 'src/react/overlay-islands.js'),
   'the standalone tab switcher should also warm the icon font before rendering'
 );
 const optionsPreload = optionsDocument.querySelector('script[src="../../build/options-preload.js"]');
 const firstStylesheet = optionsDocument.querySelector('link[rel="stylesheet"]');
 assert(
-  getBundleFiles('options-preload')[0] === 'src/shared/icon-font-preload.js' &&
+  getBundleFiles('options-preload')[0] === 'src/shared/icon-font-preload.ts' &&
     optionsPreload && firstStylesheet &&
     (optionsPreload.compareDocumentPosition(firstStylesheet) & 4),
   'Options should warm the icon font before its stylesheets'

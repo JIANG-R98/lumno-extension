@@ -1,11 +1,11 @@
 const assert = require('assert');
 const fs = require('fs');
-const settings = require('../../src/shared/settings.js');
+const settings = require('../../src/shared/settings.ts');
 const { JSDOM } = require('jsdom');
 const { createNewtabPage } = require('../helpers/newtab-page');
 
 const optionsDocument = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
-const toggleSettings = require('../../src/options/options-toggle-settings.js').getToggleSettings(settings);
+const toggleSettings = require('../../src/options/options-toggle-settings.ts').getToggleSettings(settings);
 const localeNames = ['en', 'ja', 'zh_CN', 'zh_TW'];
 
 const settingsContract = [

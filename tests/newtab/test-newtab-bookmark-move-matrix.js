@@ -1,7 +1,7 @@
 const assert = require('assert');
-const bookmarkDrag = require('../../src/newtab/bookmarks/bookmark-drag.js');
-const bookmarkMoveHistory = require('../../src/newtab/bookmarks/bookmark-move-history.js');
-const bookmarkStore = require('../../src/newtab/bookmarks/bookmarks-store.js');
+const bookmarkDrag = require('../../src/newtab/bookmarks/bookmark-drag.ts');
+const bookmarkMoveHistory = require('../../src/newtab/bookmarks/bookmark-move-history.ts');
+const bookmarkStore = require('../../src/newtab/bookmarks/bookmarks-store.ts');
 
 const VIEW_MODES = ['folder', 'list', 'top'];
 const DUPLICATE_URL = 'https://same.example/';

@@ -4,7 +4,7 @@
 // with the extension's own icon store, so a test can start a page or the
 // worker with icons already cached.
 
-const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.js');
+const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.ts');
 
 // entries: [{ provider, dataUrl }]
 async function siteSearchIconCacheStorage(entries) {

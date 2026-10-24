@@ -3,7 +3,7 @@ const path = require('path');
 const { createOverlayPage } = require('../helpers/overlay-runtime-harness');
 
 path.resolve(__dirname, '..', '..');
-const LumnoNewtabSearchAutocomplete = require('../../src/newtab/search/search-autocomplete.js');
+const LumnoNewtabSearchAutocomplete = require('../../src/newtab/search/search-autocomplete.ts');
 
 // Inline autocomplete appends to what was typed; it must not rewrite the
 // typed characters in the candidate's own case ("4A" stays "4A").

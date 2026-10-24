@@ -2,9 +2,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/shared/settings.js');
-const LumnoNewtabRemoteContent = require('../../src/newtab/remote-content.js');
-const quotes = require('../../src/newtab/top-content/quotes.js');
+const settings = require('../../src/shared/settings.ts');
+const LumnoNewtabRemoteContent = require('../../src/newtab/remote-content.ts');
+const quotes = require('../../src/newtab/top-content/quotes.ts');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 async function main() {

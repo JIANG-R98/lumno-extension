@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
-const remote = require('../../src/newtab/remote-content.js');
-const settings = require('../../src/shared/settings.js');
+const remote = require('../../src/newtab/remote-content.ts');
+const settings = require('../../src/shared/settings.ts');
 
 function storage(initial = {}) {
   const values = structuredClone(initial);
@@ -259,7 +259,7 @@ async function main() {
   assert.equal(jaDaily.date, zhDaily.date);
   assert(jaDaily.dailyId.includes('JA-JP'), 'The same date in another market still switches to that market');
 
-  const catalog = require('../../src/newtab/wallpaper/wallpaper-catalog.js').WALLPAPER_CATALOG;
+  const catalog = require('../../src/newtab/wallpaper/wallpaper-catalog.ts').WALLPAPER_CATALOG;
   const morning0 = () => new Date(2026, 9, 7, 9).getTime();
   assert.deepEqual(remote.CURATED_CATEGORIES, ['random', 'nature', 'water', 'city', 'minimal', 'art']);
   const curatedIds = Object.values(catalog).flat().map(([id]) => id);

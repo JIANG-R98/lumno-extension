@@ -4,7 +4,7 @@ const { JSDOM } = require('jsdom');
 const { readStylesheet } = require('../helpers/css-tokens');
 const { parseCss } = require('../helpers/css-rules');
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
-const suggestionNavigation = require('../../src/shared/search/suggestion-navigation.js');
+const suggestionNavigation = require('../../src/shared/search/suggestion-navigation.ts');
 
 const macNavigator = { platform: 'MacIntel' };
 const ctrlNavigationEvent = (key, code, overrides) => ({

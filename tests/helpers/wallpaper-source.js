@@ -3,11 +3,11 @@ const { moduleScript } = require('./module-script');
 // The modules the runtime imports that tests may hand in as context globals,
 // so test doubles can replace their functions.
 const WALLPAPER_DEPENDENCY_GLOBALS = Object.freeze({
-  'src/shared/settings.js': 'LumnoSettings',
-  'src/newtab/remote-content.js': 'LumnoNewtabRemoteContent',
-  'src/newtab/wallpaper/wallpaper-adaptive-tone.js': 'LumnoNewtabWallpaperAdaptiveTone',
-  'src/newtab/wallpaper/wallpaper-effects.js': 'LumnoNewtabWallpaperEffects',
-  'src/newtab/wallpaper/wallpaper-local-store.js': 'LumnoNewtabWallpaperLocalStore'
+  'src/shared/settings.ts': 'LumnoSettings',
+  'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent',
+  'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone',
+  'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects',
+  'src/newtab/wallpaper/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore'
 });
 
 // The runtime as the page runs it, for evaluating in a test context: a
@@ -15,7 +15,7 @@ const WALLPAPER_DEPENDENCY_GLOBALS = Object.freeze({
 // With stubs (such as WALLPAPER_DEPENDENCY_GLOBALS), those imports read the
 // context's globals instead.
 function readWallpaperRuntimeSource(stubs) {
-  return moduleScript('src/newtab/wallpaper/wallpaper.js', 'LumnoNewtabWallpaper', null, stubs);
+  return moduleScript('src/newtab/wallpaper/wallpaper.ts', 'LumnoNewtabWallpaper', null, stubs);
 }
 
 module.exports = {

@@ -3,11 +3,11 @@ const fs = require('fs');
 const { readStylesheet } = require('../helpers/css-tokens');
 const { parseCss, parsePageCss } = require('../helpers/css-rules');
 
-require('../../src/shared/search/suggestions-height-layout.js');
-const LumnoNewtabLayout = require('../../src/newtab/layout.js');
+require('../../src/shared/search/suggestions-height-layout.ts');
+const LumnoNewtabLayout = require('../../src/newtab/layout.ts');
 
 const layoutRuntime = LumnoNewtabLayout;
-const layoutMotionRuntime = require('../../src/newtab/layout-motion.js');
+const layoutMotionRuntime = require('../../src/newtab/layout-motion.ts');
 const newtabCss = parsePageCss('newtab.html');
 const sharedSearchInputCss = parseCss(readStylesheet('src/shared/search/search-input.css'));
 const featureHintsCss = parseCss(fs.readFileSync('src/shared/ui/feature-hints.css', 'utf8'));

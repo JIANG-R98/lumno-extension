@@ -1,5 +1,5 @@
 const assert = require('assert');
-const registrationApi = require('../../src/background/selection-script-registration.js');
+const registrationApi = require('../../src/background/selection-script-registration.ts');
 
 function createChromeStub(options) {
   const config = options || {};
@@ -95,7 +95,7 @@ function createChromeStub(options) {
   }
 
   {
-    const stale = { id: SCRIPT_ID, matches: ['<all_urls>'], js: ['src/content/selection-quick-actions.js'], runAt: 'document_end' };
+    const stale = { id: SCRIPT_ID, matches: ['<all_urls>'], js: ['src/content/selection-quick-actions.ts'], runAt: 'document_end' };
     const stub = createChromeStub({ registered: [stale] });
     const registration = registrationApi.createSelectionScriptRegistration({ chromeApi: stub.chromeApi });
     await registration.sync(true);

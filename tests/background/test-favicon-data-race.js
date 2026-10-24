@@ -83,7 +83,7 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 
-const FAVICON_VIEW_CORE = runModuleInContext('src/shared/favicon/favicon-view-core.js', vm.createContext(sandbox));
+const FAVICON_VIEW_CORE = runModuleInContext('src/shared/favicon/favicon-view-core.ts', vm.createContext(sandbox));
 
 const core = FAVICON_VIEW_CORE.createFaviconViewCore({
   windowObj: sandbox,

@@ -85,7 +85,7 @@ function createEntryMotion({ wallpaperActive, wallpaperShownAgoMs, focusResume }
     globalThis: null
   };
   sandbox.globalThis = sandbox;
-  vm.runInNewContext(moduleScript('src/newtab/entry-motion.js', 'LumnoNewtabEntryMotion'), sandbox, { filename: 'src/newtab/entry-motion.js' });
+  vm.runInNewContext(moduleScript('src/newtab/entry-motion.ts', 'LumnoNewtabEntryMotion'), sandbox, { filename: 'src/newtab/entry-motion.ts' });
   const viewport = { width: 1280, height: 800 };
   const motion = sandbox.LumnoNewtabEntryMotion.createEntryMotion({
     root,
@@ -154,9 +154,9 @@ async function testEffectPreloadRecordsWhenTheWallpaperShowed() {
   };
   sandbox.globalThis = sandbox;
   const before = performance.now();
-  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-effect-preload.js', undefined, null, {
-    'src/newtab/wallpaper/wallpaper-effects.js': 'LumnoNewtabWallpaperEffects'
-  }), sandbox, { filename: 'src/newtab/wallpaper/wallpaper-effect-preload.js' });
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-effect-preload.ts', undefined, null, {
+    'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects'
+  }), sandbox, { filename: 'src/newtab/wallpaper/wallpaper-effect-preload.ts' });
   await Promise.resolve();
   await Promise.resolve();
   assert.strictEqual(body.getAttribute('data-nt-wallpaper-ready'), '1');

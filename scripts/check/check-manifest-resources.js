@@ -222,7 +222,7 @@ function checkCssFiles() {
 }
 
 function checkNewtabWallpaperFiles() {
-  const file = 'src/newtab/wallpaper/wallpaper.js';
+  const file = 'src/newtab/wallpaper/wallpaper.ts';
   if (!fs.existsSync(file)) {
     return;
   }

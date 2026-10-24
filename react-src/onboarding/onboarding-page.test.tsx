@@ -1,8 +1,7 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import onboardingHtml from '../../src/onboarding/onboarding.html?raw';
-// @ts-expect-error The extension sources are untyped JavaScript modules.
-import * as onboardingContentModule from '../../src/onboarding/onboarding-content.js';
+import * as onboardingContentModule from '../../src/onboarding/onboarding-content';
 import { runPageBundle } from '../test/page-bundles';
 import { createActionButtonsApi } from './action-buttons';
 import { createBodyCopyApi } from './body-copy';
@@ -20,12 +19,13 @@ interface OnboardingSlide {
 
 type Runtime = typeof globalThis & Record<string, unknown>;
 
+// Typed by hand until the module has types of its own.
 const onboardingContent: {
   getOnboardingBlueprint(locale: string): {
     htmlLang: string;
     slides: OnboardingSlide[];
   };
-} = onboardingContentModule;
+} = onboardingContentModule as unknown as typeof onboardingContent;
 
 const runtime = globalThis as Runtime;
 const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';

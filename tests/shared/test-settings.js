@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/shared/settings.js');
+const settings = require('../../src/shared/settings.ts');
 
 let registeredStorageListener = null;
 const storageListener = () => {};

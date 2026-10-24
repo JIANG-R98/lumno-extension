@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
-const { createNoticeLayer } = require('../../src/overlay/notices.js');
+const { createNoticeLayer } = require('../../src/overlay/notices.ts');
 
 // The overlay notice layer mounts the update and engagement notices beside
 // (above) the overlay panel inside its shadow root, counts one update-notice

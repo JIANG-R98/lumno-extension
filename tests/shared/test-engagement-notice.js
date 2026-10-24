@@ -1,10 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
 
-const communityLinks = require('../../src/shared/community-links.js');
-const engagementNotice = require('../../src/shared/engagement-notice.js');
-const updateNotice = require('../../src/shared/update-notice.js');
-const { HOST_ID: QR_DIALOG_ID } = require('../../src/shared/ui/community-qr-dialog.js');
+const communityLinks = require('../../src/shared/community-links.ts');
+const engagementNotice = require('../../src/shared/engagement-notice.ts');
+const updateNotice = require('../../src/shared/update-notice.ts');
+const { HOST_ID: QR_DIALOG_ID } = require('../../src/shared/ui/community-qr-dialog.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { ENGAGEMENT_DELAY_MS, engagementStorage } = require('../helpers/newtab-notices');
 

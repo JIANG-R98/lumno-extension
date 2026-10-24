@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const communityLinks = require('../../src/shared/community-links.js');
+const communityLinks = require('../../src/shared/community-links.ts');
 const { parsePageCss } = require('../helpers/css-rules');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { getPageScripts } = require('../helpers/runtime-scripts');
@@ -132,7 +132,7 @@ async function testRefresh(qrFails) {
 }
 
 function testPackaging() {
-  assert.ok(getPageScripts('newtab.html').includes('src/shared/community-links.js'), 'New Tab should load the shared community links');
+  assert.ok(getPageScripts('newtab.html').includes('src/shared/community-links.ts'), 'New Tab should load the shared community links');
   assert.strictEqual(getMessage(zhCnMessages, 'newtab_feedback_wechat_panel_title'), 'Bug 反馈 & 新功能提需');
   assert.strictEqual(getMessage(zhTwMessages, 'newtab_feedback_wechat_panel_title'), '問題回報與功能建議');
 }

@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const iconStoreApi = require('../../src/newtab/shortcuts/shortcut-icon-store.js');
+const iconStoreApi = require('../../src/newtab/shortcuts/shortcut-icon-store.ts');
 
 function createMemoryStorage(initialData) {
   const data = { ...(initialData || {}) };

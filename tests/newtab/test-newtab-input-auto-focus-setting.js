@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/shared/settings.js');
+const settings = require('../../src/shared/settings.ts');
 const { createNewtabPage, INPUT_ID } = require('../helpers/newtab-page');
 
 // Whether New Tab puts the cursor in its search box when it opens. Off by

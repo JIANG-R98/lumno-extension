@@ -14,11 +14,11 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 
-vm.runInNewContext(moduleScript('src/shared/settings.js', 'LumnoSettings', null, { 'src/newtab/wallpaper/wallpaper-effects.js': 'LumnoNewtabWallpaperEffects' }), sandbox, {
-  filename: 'src/shared/settings.js'
+vm.runInNewContext(moduleScript('src/shared/settings.ts', 'LumnoSettings', null, { 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects' }), sandbox, {
+  filename: 'src/shared/settings.ts'
 });
-vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-effects.js', 'LumnoNewtabWallpaperEffects'), sandbox, {
-  filename: 'src/newtab/wallpaper/wallpaper-effects.js'
+vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-effects.ts', 'LumnoNewtabWallpaperEffects'), sandbox, {
+  filename: 'src/newtab/wallpaper/wallpaper-effects.ts'
 });
 
 const effects = sandbox.LumnoNewtabWallpaperEffects;
@@ -434,7 +434,7 @@ const newtabDocument = new JSDOM(fs.readFileSync('newtab.html', 'utf8')).window.
 }
 
 vm.runInNewContext(readWallpaperRuntimeSource(), sandbox, {
-  filename: 'src/newtab/wallpaper/wallpaper.js'
+  filename: 'src/newtab/wallpaper/wallpaper.ts'
 });
 const wallpaper = sandbox.LumnoNewtabWallpaper;
 assert.ok(wallpaper, 'wallpaper runtime module should initialize');
@@ -493,11 +493,11 @@ assert.deepStrictEqual(
   'mode-aware wallpaper effects should preserve supported values and discard removed optics'
 );
 assert.ok(
-  runsBefore(getBundleFiles('newtab-preload'), 'src/newtab/wallpaper/wallpaper-crt-webgl.js', 'src/newtab/wallpaper/wallpaper-effects.js'),
+  runsBefore(getBundleFiles('newtab-preload'), 'src/newtab/wallpaper/wallpaper-crt-webgl.ts', 'src/newtab/wallpaper/wallpaper-effects.ts'),
   'the standalone CRT shader should load before the shared wallpaper effect controller'
 );
 assert.ok(
-  runsBefore(getBundleFiles('newtab-preload'), 'src/newtab/wallpaper/wallpaper-effects.js', 'src/newtab/wallpaper/wallpaper-preload.js'),
+  runsBefore(getBundleFiles('newtab-preload'), 'src/newtab/wallpaper/wallpaper-effects.ts', 'src/newtab/wallpaper/wallpaper-preload.ts'),
   'the wallpaper effect renderer should load before the head preload fast path'
 );
 assert.ok(
@@ -1206,8 +1206,8 @@ function runEffectPreload({ focusRoute, imageReady, imageUrl = '' }) {
     window: {}
   };
   preloadSandbox.globalThis = preloadSandbox;
-  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-effect-preload.js', undefined, null, { 'src/newtab/wallpaper/wallpaper-effects.js': 'LumnoNewtabWallpaperEffects' }), preloadSandbox, {
-    filename: 'src/newtab/wallpaper/wallpaper-effect-preload.js'
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-effect-preload.ts', undefined, null, { 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects' }), preloadSandbox, {
+    filename: 'src/newtab/wallpaper/wallpaper-effect-preload.ts'
   });
   return {
     attributes,

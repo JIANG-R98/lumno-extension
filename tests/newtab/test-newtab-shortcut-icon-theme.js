@@ -37,9 +37,9 @@ sandbox.Image = class {
 };
 
 vm.createContext(sandbox);
-runModuleInContext('src/newtab/theme/site-theme-resolver.js', sandbox, 'LumnoNewtabSiteThemeResolver');
-runModuleInContext('src/newtab/theme/favicon-theme.js', sandbox, 'LumnoNewtabFaviconTheme');
-runModuleInContext('src/shared/favicon/favicon-utils.js', sandbox, 'LumnoFaviconUtils');
+runModuleInContext('src/newtab/theme/site-theme-resolver.ts', sandbox, 'LumnoNewtabSiteThemeResolver');
+runModuleInContext('src/newtab/theme/favicon-theme.ts', sandbox, 'LumnoNewtabFaviconTheme');
+runModuleInContext('src/shared/favicon/favicon-utils.ts', sandbox, 'LumnoFaviconUtils');
 
 const FAVICON_UTILS = sandbox.LumnoFaviconUtils;
 const NEWTAB_FAVICON_THEME = sandbox.LumnoNewtabFaviconTheme;

@@ -11,9 +11,9 @@ const { getBundleFiles, getPageScripts } = require('../helpers/runtime-scripts')
 // New Tab's sequence by tests/newtab/test-newtab-page-layout.js.)
 
 const MOTION_KEY = '_x_extension_motion_effects_enabled_2026_unique_';
-const tabSwitcherSource = fs.readFileSync('src/overlay/tab-switcher.js', 'utf8');
+const tabSwitcherSource = fs.readFileSync('src/overlay/tab-switcher.ts', 'utf8');
 const backgroundSource = readBackgroundSource();
-const selectionActionsSource = fs.readFileSync('src/content/selection-quick-actions.js', 'utf8');
+const selectionActionsSource = fs.readFileSync('src/content/selection-quick-actions.ts', 'utf8');
 
 const optionsDocument = new JSDOM(readPageSource('src/options/options.html')).window.document;
 const appearance = optionsDocument.querySelector('[data-content="appearance"]');
@@ -29,10 +29,10 @@ assert.strictEqual(tooltip && tooltip.getAttribute('data-tooltip'), '如遇卡�
 assert.strictEqual(optionsDocument.getElementById('_x_extension_motion_effects_toggle_2026_unique_').checked, true,
   'motion effects should default to enabled in markup');
 
-assert(getBundleFiles('newtab-preload').includes('src/shared/motion-preload.js'),
+assert(getBundleFiles('newtab-preload').includes('src/shared/motion-preload.ts'),
   'New Tab should preload the synchronized entry-motion preference before it is revealed');
 ['src/options/options.html', 'src/onboarding/onboarding.html'].forEach((page) => {
-  assert(!getPageScripts(page).includes('src/shared/motion-preload.js'),
+  assert(!getPageScripts(page).includes('src/shared/motion-preload.ts'),
     'Options and Onboarding should not apply the New Tab entry-motion preference');
 });
 

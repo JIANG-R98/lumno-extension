@@ -218,7 +218,7 @@ npm ci
 npm run build
 ```
 
-The scripts under `src/` are ES modules: each one imports what it uses, and a bundle holds the modules `scripts/build/bundles.js` lists for it and everything they import. While editing `src/`, `npm run watch:bundles` rebuilds the bundles on every change.
+The scripts under `src/` are TypeScript ES modules (files not typed yet start with `// @ts-nocheck`): each one imports what it uses, and a bundle holds the modules `scripts/build/bundles.js` lists for it and everything they import. While editing `src/`, `npm run watch:bundles` rebuilds the bundles on every change.
 
 Then keep Developer mode enabled in `chrome://extensions/` and load the repository root as an unpacked extension. After generating new assets or changing background scripts or `manifest.json`, click Reload on the extensions page. Development installs do not force a second refresh when the Chrome profile starts, avoiding interruption of the startup New Tab override.
 
@@ -241,11 +241,11 @@ npm run lint
 | Path | Purpose |
 | --- | --- |
 | `manifest.json` | Manifest V3 configuration, permissions, commands, content scripts, and new tab override |
-| `src/background/` | Service worker entry and its `*-service.js` parts: command routing, overlay opening, search data, site/AI search, tab switcher, PiP ownership, pinned-tab recovery, WebDAV sync |
+| `src/background/` | Service worker entry and its `*-service.ts` parts: command routing, overlay opening, search data, site/AI search, tab switcher, PiP ownership, pinned-tab recovery, WebDAV sync |
 | `src/newtab/` | New tab page runtime; feature folders `bookmarks/`, `shortcuts/`, `recent/`, `wallpaper/`, `search/`, `top-content/`, `theme/` |
-| `src/overlay/` | In-page command bar overlay (`search-panel.js` with its parts in `panel/`), theme/language sync, and site fixes |
+| `src/overlay/` | In-page command bar overlay (`search-panel.ts` with its parts in `panel/`), theme/language sync, and site fixes |
 | `src/content/` | Page hotkey listener, selection quick actions, Web Clip PiP, and auto video PiP |
-| `src/options/` | Extension settings page (`options.js` and its `options-*.js` parts) |
+| `src/options/` | Extension settings page (`options.ts` and its `options-*.ts` parts) |
 | `src/onboarding/` | Install and update onboarding |
 | `src/shared/` | Shared settings, routes and URL guards; `search/` (ranking, input, suggestions), `ui/` (tooltip, toast, menu and control styles), `favicon/` |
 | `react-src/` | React sources built into `src/react/` |

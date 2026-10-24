@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const popup = require('../../src/popup/popup.js');
+const popup = require('../../src/popup/popup.ts');
 const { JSDOM } = require('jsdom');
 const { loadBackground, wait } = require('../helpers/background-harness');
 const { getBundleFiles, getPageScripts } = require('../helpers/runtime-scripts');
@@ -235,7 +235,7 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
 
 // Every string the popup asks for exists in every language.
 {
-  const source = read('src/popup/popup.js');
+  const source = read('src/popup/popup.ts');
   const keys = [...new Set([...source.matchAll(/\bt\('([a-z0-9_]+)'/g)].map((match) => match[1]))];
   assert(keys.length > 20, 'the popup reads its strings through t()');
   locales.forEach((locale) => {
@@ -252,13 +252,13 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
   assert.strictEqual(manifest.action.default_popup, 'src/popup/popup.html');
   const html = read('src/popup/popup.html');
   const scripts = getPageScripts('src/popup/popup.html');
-  ['src/shared/settings.js', 'src/popup/popup-theme-preload.js', 'src/shared/url-guards.js', 'src/shared/shortcut-display.js',
-    'src/shared/ui/tooltip.js', 'src/shared/ui/cursor-tooltip.js', 'src/shared/ui/toast.js', 'src/background/pip-main-world.js',
-    'src/shared/browser-profile.js']
+  ['src/shared/settings.ts', 'src/popup/popup-theme-preload.ts', 'src/shared/url-guards.ts', 'src/shared/shortcut-display.ts',
+    'src/shared/ui/tooltip.ts', 'src/shared/ui/cursor-tooltip.ts', 'src/shared/ui/toast.ts', 'src/background/pip-main-world.ts',
+    'src/shared/browser-profile.ts']
     .forEach((script) => assert(scripts.includes(script), `the popup loads ${script}`));
   const popupDocument = new JSDOM(html).window.document;
   assert((popupDocument.querySelector('script[src*="build/popup-preload.js"]').compareDocumentPosition(popupDocument.getElementById('x-lumno-popup-root')) & 4) &&
-      getBundleFiles('popup-preload').includes('src/popup/popup-theme-preload.js'),
+      getBundleFiles('popup-preload').includes('src/popup/popup-theme-preload.ts'),
     'the theme is painted before the popup renders');
 }
 

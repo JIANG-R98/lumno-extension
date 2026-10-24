@@ -153,8 +153,8 @@ global.LumnoFeatureHintView = {
   }
 };
 
-require('../../src/shared/shortcut-display.js');
-const featureHints = require('../../src/shared/ui/feature-hints.js');
+require('../../src/shared/shortcut-display.ts');
+const featureHints = require('../../src/shared/ui/feature-hints.ts');
 
 function createStorageArea(store) {
   return {

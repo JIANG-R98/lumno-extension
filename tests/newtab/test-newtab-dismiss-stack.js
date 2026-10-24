@@ -4,7 +4,7 @@
 const assert = require('assert');
 const path = require('path');
 
-const { createDismissStack } = require(path.join(__dirname, '..', '..', 'src', 'newtab', 'dismiss-stack.js'));
+const { createDismissStack } = require(path.join(__dirname, '..', '..', 'src', 'newtab', 'dismiss-stack.ts'));
 
 function createDocument() {
   const target = new EventTarget();

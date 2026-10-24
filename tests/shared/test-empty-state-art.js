@@ -8,7 +8,7 @@ const {
   followEmptyStateArtTheme,
   getEmptyStateArtMarkup,
   resolveEmptyStateArtTheme
-} = require('../../src/shared/ui/empty-state-art.js');
+} = require('../../src/shared/ui/empty-state-art.ts');
 
 const { window } = new JSDOM('<!doctype html><head></head><body></body>');
 const { document } = window;

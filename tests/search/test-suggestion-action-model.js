@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const LumnoSuggestionActionModel = require('../../src/shared/search/suggestion-action-model.js');
+const LumnoSuggestionActionModel = require('../../src/shared/search/suggestion-action-model.ts');
 
 const actionModel = LumnoSuggestionActionModel;
 

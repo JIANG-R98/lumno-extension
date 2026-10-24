@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/shared/settings.js');
+const settings = require('../../src/shared/settings.ts');
 const { loadBackground } = require('../helpers/background-harness');
 
 // The background worker caches shortcut icons by page. A miss is not

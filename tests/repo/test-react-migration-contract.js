@@ -21,7 +21,7 @@ const overlaySuggestionsCss = fs.readFileSync(
   path.join(repoRoot, 'src/overlay/suggestions-view.css'),
   'utf8'
 );
-const bootstrapPath = path.join(repoRoot, 'src/shared/react-page-bootstrap.js');
+const bootstrapPath = path.join(repoRoot, 'src/shared/react-page-bootstrap.ts');
 const bootstrap = fs.readFileSync(bootstrapPath, 'utf8');
 const newtabBundlePath = path.join(
   repoRoot,
@@ -65,17 +65,17 @@ const bundle = bundles.join('\n');
 
 const pageEntryRunsAfterBridge = (page, reactEntry, entry) => {
   const scripts = getPageScripts(page);
-  return runsBefore(scripts, reactEntry, 'src/overlay/tab-switcher-page-bridge.js') &&
-    runsBefore(scripts, 'src/overlay/tab-switcher-page-bridge.js', entry);
+  return runsBefore(scripts, reactEntry, 'src/overlay/tab-switcher-page-bridge.ts') &&
+    runsBefore(scripts, 'src/overlay/tab-switcher-page-bridge.ts', entry);
 };
 
 // Each page's bootstrap tag and the bootstrap itself are covered by
 // test-react-page-bootstrap.js; the React entry runs before the tab-switcher
 // bridge, which runs before the page entry.
 [
-  ['newtab.html', 'src/react/newtab-islands.js', 'src/newtab/newtab.js'],
-  ['src/options/options.html', 'src/react/options-islands.js', 'src/options/options.js'],
-  ['src/onboarding/onboarding.html', 'src/react/onboarding-islands.js', 'src/onboarding/onboarding.js']
+  ['newtab.html', 'src/react/newtab-islands.js', 'src/newtab/newtab.ts'],
+  ['src/options/options.html', 'src/react/options-islands.js', 'src/options/options.ts'],
+  ['src/onboarding/onboarding.html', 'src/react/onboarding-islands.js', 'src/onboarding/onboarding.ts']
 ].forEach(([page, reactEntry, entry]) => {
   assert(pageEntryRunsAfterBridge(page, reactEntry, entry), `${page} should connect its bridge between the React entry and the page entry`);
 });

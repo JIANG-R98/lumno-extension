@@ -2,8 +2,8 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/shared/settings.js');
-const { getToggleSettings } = require('../../src/options/options-toggle-settings.js');
+const settings = require('../../src/shared/settings.ts');
+const { getToggleSettings } = require('../../src/options/options-toggle-settings.ts');
 const { getManifestContentScripts } = require('../helpers/runtime-scripts');
 
 // What the tab switcher needs from the manifest, the locales and the Settings
@@ -21,10 +21,10 @@ const localeMessages = Object.fromEntries(localeNames.map((locale) => [
 
 const contentScripts = getManifestContentScripts();
 assert.ok(
-  contentScripts.every((files) => !files.includes('src/overlay/tab-switcher.js') && !files.includes('src/overlay/tab-switcher-page-bridge.js')),
+  contentScripts.every((files) => !files.includes('src/overlay/tab-switcher.ts') && !files.includes('src/overlay/tab-switcher-page-bridge.ts')),
   'web pages should not preload the switcher; the background injects it on the first command'
 );
-const observerEntry = manifest.content_scripts[contentScripts.findIndex((files) => files.includes('src/content/shortcut-key-observer.js'))];
+const observerEntry = manifest.content_scripts[contentScripts.findIndex((files) => files.includes('src/content/shortcut-key-observer.ts'))];
 assert.ok(observerEntry, 'the shortcut release observer should be a manifest content script');
 assert.deepStrictEqual(
   {

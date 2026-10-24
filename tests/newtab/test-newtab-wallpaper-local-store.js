@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const wallpaperStoreApi = require('../../src/newtab/wallpaper/wallpaper-local-store.js');
+const wallpaperStoreApi = require('../../src/newtab/wallpaper/wallpaper-local-store.ts');
 
 function dataUrlBytes(dataUrl) {
   return Buffer.from(String(dataUrl).split(',')[1] || '', 'base64').byteLength;

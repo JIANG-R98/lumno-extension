@@ -4,7 +4,7 @@ const path = require('path');
 const repoRoot = path.resolve(__dirname, '..', '..');
 const {
   createBookmarkCascadeMenuRuntime
-} = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-cascade-menu.js'));
+} = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-cascade-menu.ts'));
 const {
   createFakeBookmarkCascadeView
 } = require(path.join(repoRoot, 'tests', 'helpers', 'fake-bookmark-cascade-view.js'));

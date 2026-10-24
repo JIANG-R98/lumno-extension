@@ -5,8 +5,8 @@ const assert = require('assert');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const NEWTAB_SHORTCUTS_STORE = require(path.join(repoRoot, 'src/newtab/shortcuts/shortcuts-store.js'));
-const LumnoNewtabShortcutsController = require(path.join(repoRoot, 'src/newtab/shortcuts/shortcuts-controller.js'));
+const NEWTAB_SHORTCUTS_STORE = require(path.join(repoRoot, 'src/newtab/shortcuts/shortcuts-store.ts'));
+const LumnoNewtabShortcutsController = require(path.join(repoRoot, 'src/newtab/shortcuts/shortcuts-controller.ts'));
 
 global.document = { body: { getAttribute: () => '1' } };
 global.window = global;
@@ -26,7 +26,7 @@ const pageState = {
 const noop = () => {};
 const controller = LumnoNewtabShortcutsController.createShortcutsController({
   NEWTAB_SHORTCUTS_STORE,
-  NEWTAB_SHORTCUT_ICON_PLATE: require(path.join(repoRoot, 'src/newtab/shortcuts/shortcut-icon-plate.js')),
+  NEWTAB_SHORTCUT_ICON_PLATE: require(path.join(repoRoot, 'src/newtab/shortcuts/shortcut-icon-plate.ts')),
   isShortcutDragActive: () => dragActive,
   shortcutFolderRuntime: { visibleItems: (items) => items, flush: () => Promise.resolve() },
   bookmarksRuntime: { getNodeMap: () => new Map() },

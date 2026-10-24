@@ -1,5 +1,5 @@
 const assert = require('assert');
-const order = require('../../src/shared/search/search-source-order.js');
+const order = require('../../src/shared/search/search-source-order.ts');
 
 const KEY = '_x_extension_search_source_order_2026_unique_';
 

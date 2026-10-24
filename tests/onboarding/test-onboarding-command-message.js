@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const script = fs.readFileSync(
-  path.join(__dirname, '..', '..', 'src', 'onboarding', 'onboarding.js'),
+  path.join(__dirname, '..', '..', 'src', 'onboarding', 'onboarding.ts'),
   'utf8'
 );
 
