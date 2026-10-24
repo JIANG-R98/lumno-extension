@@ -43,6 +43,12 @@ const DOMAIN_GLOBALS = [
   'cancelAnimationFrame', 'matchMedia', 'MutationObserver', 'ResizeObserver', 'IntersectionObserver',
   'Image', 'FileReader', 'fetch', 'indexedDB', 'caches', 'importScripts', 'DOMParser', 'screen', 'history'
 ];
+const DOM_TYPES = [
+  'Node', 'Element', 'HTMLElement', 'HTML\\w+Element', 'SVGElement', 'SVG\\w+Element', 'Document',
+  'DocumentFragment', 'ShadowRoot', 'Window', 'EventTarget', 'Event', 'UIEvent', 'KeyboardEvent', 'MouseEvent',
+  'PointerEvent', 'FocusEvent', 'InputEvent', 'CompositionEvent', 'WheelEvent', 'DragEvent', 'ClipboardEvent',
+  'TouchEvent', 'CustomEvent', 'DOMRect', 'CSSStyleDeclaration'
+];
 const DOM_MEMBERS = [
   'createElement', 'createElementNS', 'createTextNode', 'createDocumentFragment', 'querySelector',
   'querySelectorAll', 'getElementById', 'getElementsByClassName', 'addEventListener', 'removeEventListener',
@@ -146,6 +152,10 @@ export default tseslint.config(
       'no-restricted-globals': ['error', ...DOMAIN_GLOBALS],
       'no-restricted-syntax': ['error', {
         selector: `MemberExpression[property.name=/^(?:${DOM_MEMBERS.join('|')})$/]`,
+        message: 'Domain code does no DOM work; move this to shared/ or a surface.'
+      }, {
+        // Typed code that handles the DOM names its types.
+        selector: `TSTypeReference[typeName.name=/^(?:${DOM_TYPES.join('|')})$/]`,
         message: 'Domain code does no DOM work; move this to shared/ or a surface.'
       }]
     }
