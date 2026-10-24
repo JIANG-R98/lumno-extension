@@ -49,9 +49,9 @@ function entryAnimations(page, overlay) {
 
 async function testEachEntrySettingPlaysItsMotion() {
   const cases = [
-    [{}, 'translateY(8px) scale(0.94)', 240, SPRING_EASING, 100, ELASTIC_REST],
-    [{ [OPEN_TABS_VISIBLE_KEY]: true }, 'translateY(8px) scale(0.96)', 240, SPRING_EASING, 100, ELASTIC_REST],
-    [{ [ANIMATION_KEY]: 'fade' }, 'translateY(16px) scale(0.985)', 220, 'cubic-bezier(0.2, 1, 0.36, 1)', 140, FADE_REST]
+    [{}, 'translateY(8px) scale(0.94)', 180, SPRING_EASING, 80, ELASTIC_REST],
+    [{ [OPEN_TABS_VISIBLE_KEY]: true }, 'translateY(8px) scale(0.96)', 180, SPRING_EASING, 80, ELASTIC_REST],
+    [{ [ANIMATION_KEY]: 'fade' }, 'translateY(16px) scale(0.985)', 170, 'cubic-bezier(0.2, 1, 0.36, 1)', 110, FADE_REST]
   ];
   for (const [settings, startDelta, duration, easing, opacityDuration, rest] of cases) {
     const label = JSON.stringify(settings);

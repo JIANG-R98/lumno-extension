@@ -17,22 +17,22 @@ function createEntryMotion(deps) {
   let overlayEnterAnimationRevision = 0;
   const OVERLAY_STARTUP_ENTRY_MOTION_BUDGET_MS = 280;
   // An underdamped spring (damping ratio 0.68) sampled for CSS linear(): it
-  // reaches its rest point in ~100ms, then a small overshoot settles.
+  // reaches its rest point in ~75ms, then a small overshoot settles.
   const OVERLAY_SPRING_EASING = 'linear(0, 0.0617, 0.2047, 0.3798, 0.5541, 0.708, 0.8325, 0.9253, 0.9888, 1.0278, 1.0478, 1.0542, 1.0518, 1.0446, 1.0352, 1.0256, 1.0171, 1.01, 1.0047, 1.0011, 1)';
   const OVERLAY_SPRING_FALLBACK_EASING = 'cubic-bezier(0.18, 1.32, 0.32, 1)';
   const OVERLAY_ENTER_MOTION = Object.freeze({
     elastic: Object.freeze({
-      opacityDurationMs: 100,
+      opacityDurationMs: 80,
       panelDelayMs: 0,
-      panelDurationMs: 240,
+      panelDurationMs: 180,
       panelEasing: OVERLAY_SPRING_EASING,
-      panelFallbackDurationMs: 200,
+      panelFallbackDurationMs: 150,
       panelFallbackEasing: OVERLAY_SPRING_FALLBACK_EASING
     }),
     fade: Object.freeze({
-      opacityDurationMs: 140,
+      opacityDurationMs: 110,
       panelDelayMs: 0,
-      panelDurationMs: 220,
+      panelDurationMs: 170,
       panelEasing: 'cubic-bezier(0.2, 1, 0.36, 1)'
     })
   });
