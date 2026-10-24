@@ -1,7 +1,58 @@
-// @ts-nocheck
+// Accent colors and the light and dark color themes built from them: the
+// tint a result row, tag or button takes from its site's icon or brand.
 import * as faviconUtils from '../../domain/favicon/favicon-utils';
+import type { ThemeRgb } from '../../domain/favicon/favicon-utils';
 
-const defaultAccentColor = [59, 130, 246];
+type ThemeMode = 'light' | 'dark';
+
+// The CSS colors of one theme, and where its accent came from.
+interface ThemeVariant {
+  accent: string;
+  accentRgb: ThemeRgb;
+  highlightBg: string;
+  highlightBorder: string;
+  markBg: string;
+  markText: string;
+  activeMarkBg: string;
+  activeMarkText: string;
+  tagBg: string;
+  tagText: string;
+  tagBorder: string;
+  keyBg: string;
+  keyText: string;
+  keyBorder: string;
+  buttonText: string;
+  buttonBg: string;
+  buttonBorder: string;
+  placeholderText: string;
+  _xIsDefault?: boolean;
+  _xIsBrand?: boolean;
+  _xIsUrl?: boolean;
+  _xIsFallback?: boolean;
+  // 'fallback', 'url', 'brand', or where a site's color came from.
+  _xThemeSource?: string;
+  _xThemeConfidence?: string;
+  _xThemeNeutral?: boolean;
+  // The dark variant, built once on first use.
+  _xDark?: ThemeVariant;
+}
+
+// What getThemeForMode and getHoverColors read of a theme.
+type ThemeLike = Partial<Pick<ThemeVariant, 'accent' | 'accentRgb' | '_xIsDefault' | '_xIsBrand' | '_xThemeSource' |
+  '_xThemeConfidence' | '_xThemeNeutral' | '_xDark'>>;
+
+interface ThemeModeOptions {
+  defaultTheme?: ThemeVariant | null;
+  isDarkMode?: boolean | (() => boolean);
+}
+
+interface HoverColors {
+  bg: string;
+  border: string;
+  text: string;
+}
+
+const defaultAccentColor: ThemeRgb = [59, 130, 246];
 const MIN_THEME_FOREGROUND_CONTRAST = 4.5;
 const MIN_THEME_STRONG_BOUNDARY_CONTRAST = 3;
 const MIN_THEME_SOFT_BOUNDARY_CONTRAST = 1.4;
@@ -9,7 +60,7 @@ const MIN_THEME_HIGHLIGHT_CONTRAST = 1.18;
 const MIN_THEME_HOVER_CONTRAST = 1.12;
 const LIGHT_THEME_SURFACE_MAX_SATURATION = 0.68;
 const DARK_THEME_SURFACE_MAX_SATURATION = 0.6;
-const brandAccentMap = {
+const brandAccentMap: Readonly<Record<string, ThemeRgb>> = {
   'github.com': [36, 41, 46],
   'docs.github.com': [36, 41, 46],
   'douban.com': [0, 181, 29],
@@ -45,7 +96,15 @@ const brandAccentMap = {
   'twitter.com': [29, 161, 242]
 };
 
-function mixColor(color, target, amount) {
+function copyRgb(rgb: readonly number[]): ThemeRgb {
+  return [rgb[0], rgb[1], rgb[2]];
+}
+
+function isRgb(value: unknown): value is ThemeRgb {
+  return Array.isArray(value) && value.length === 3;
+}
+
+function mixColor(color: readonly number[], target: readonly number[], amount: number): ThemeRgb {
   return [
     Math.round(color[0] + (target[0] - color[0]) * amount),
     Math.round(color[1] + (target[1] - color[1]) * amount),
@@ -53,7 +112,7 @@ function mixColor(color, target, amount) {
   ];
 }
 
-function stableHashCode(text) {
+function stableHashCode(text: unknown): number {
   const input = String(text || '');
   let hash = 0;
   for (let i = 0; i < input.length; i += 1) {
@@ -63,20 +122,20 @@ function stableHashCode(text) {
   return Math.abs(hash);
 }
 
-function rgbToCss(rgb) {
+function rgbToCss(rgb: readonly number[]): string {
   return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
 }
 
-function rgbToCssAlpha(rgb, alpha) {
+function rgbToCssAlpha(rgb: readonly number[], alpha: number): string {
   const nextAlpha = Number.isFinite(alpha) ? Math.max(0, Math.min(1, alpha)) : 1;
   return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${nextAlpha})`;
 }
 
-function rgbToCssParts(rgb) {
+function rgbToCssParts(rgb: readonly number[]): string {
   return `${rgb[0]}, ${rgb[1]}, ${rgb[2]}`;
 }
 
-function parseCssColor(color) {
+function parseCssColor(color: unknown): ThemeRgb | null {
   if (!color || typeof color !== 'string') {
     return null;
   }
@@ -113,7 +172,7 @@ function parseCssColor(color) {
   return null;
 }
 
-function getLuminance(rgb) {
+function getLuminance(rgb: readonly number[]): number {
   const [r, g, b] = rgb.map((value) => {
     const channel = value / 255;
     return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
@@ -121,24 +180,22 @@ function getLuminance(rgb) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-function getContrastRatio(firstRgb, secondRgb) {
+function getContrastRatio(firstRgb: readonly number[], secondRgb: readonly number[]): number {
   const firstLuminance = getLuminance(firstRgb);
   const secondLuminance = getLuminance(secondRgb);
   return (Math.max(firstLuminance, secondLuminance) + 0.05) /
     (Math.min(firstLuminance, secondLuminance) + 0.05);
 }
 
-function getSaturationCappedColor(color, maximumSaturation) {
-  const source = Array.isArray(color) && color.length === 3
-    ? color
-    : defaultAccentColor;
+function getSaturationCappedColor(color: unknown, maximumSaturation: number): ThemeRgb {
+  const source: ThemeRgb = isRgb(color) ? color : defaultAccentColor;
   const [red, green, blue] = source.map((channel) => channel / 255);
   const max = Math.max(red, green, blue);
   const min = Math.min(red, green, blue);
   const delta = max - min;
   const lightness = (max + min) / 2;
   if (!delta) {
-    return source.slice();
+    return copyRgb(source);
   }
   const saturation = delta / (1 - Math.abs((2 * lightness) - 1));
   const nextSaturation = Math.min(
@@ -146,7 +203,7 @@ function getSaturationCappedColor(color, maximumSaturation) {
     Math.max(0, Math.min(1, Number(maximumSaturation) || 0))
   );
   if (nextSaturation === saturation) {
-    return source.slice();
+    return copyRgb(source);
   }
   let hueSegment = 0;
   if (max === red) {
@@ -159,7 +216,7 @@ function getSaturationCappedColor(color, maximumSaturation) {
   const hue = ((hueSegment * 60) + 360) % 360;
   const chroma = (1 - Math.abs((2 * lightness) - 1)) * nextSaturation;
   const secondary = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
-  let rgb = [0, 0, 0];
+  let rgb: ThemeRgb = [0, 0, 0];
   if (hue < 60) {
     rgb = [chroma, secondary, 0];
   } else if (hue < 120) {
@@ -174,31 +231,27 @@ function getSaturationCappedColor(color, maximumSaturation) {
     rgb = [chroma, 0, secondary];
   }
   const offset = lightness - (chroma / 2);
-  return rgb.map((channel) => Math.round((channel + offset) * 255));
+  return copyRgb(rgb.map((channel) => Math.round((channel + offset) * 255)));
 }
 
-function getAccessibleThemeColor(color, background, minimumContrast) {
-  const source = Array.isArray(color) && color.length === 3
-    ? color
-    : defaultAccentColor;
-  const surface = Array.isArray(background) && background.length === 3
-    ? background
-    : [255, 255, 255];
-  const requiredContrast = Number.isFinite(minimumContrast)
+function getAccessibleThemeColor(color: unknown, background: unknown, minimumContrast?: number): ThemeRgb {
+  const source: ThemeRgb = isRgb(color) ? color : defaultAccentColor;
+  const surface: ThemeRgb = isRgb(background) ? background : [255, 255, 255];
+  const requiredContrast = typeof minimumContrast === 'number' && Number.isFinite(minimumContrast)
     ? Math.max(1, minimumContrast)
     : MIN_THEME_FOREGROUND_CONTRAST;
   if (getContrastRatio(source, surface) >= requiredContrast) {
-    return source.slice();
+    return copyRgb(source);
   }
-  const darkTarget = [17, 24, 39];
-  const lightTarget = [248, 250, 252];
+  const darkTarget: ThemeRgb = [17, 24, 39];
+  const lightTarget: ThemeRgb = [248, 250, 252];
   const target = getContrastRatio(darkTarget, surface) >=
     getContrastRatio(lightTarget, surface)
     ? darkTarget
     : lightTarget;
   let lowerWeight = 0;
   let upperWeight = 1;
-  let accessibleColor = target.slice();
+  let accessibleColor = copyRgb(target);
   for (let iteration = 0; iteration < 12; iteration += 1) {
     const weight = (lowerWeight + upperWeight) / 2;
     const candidate = mixColor(source, target, weight);
@@ -212,7 +265,7 @@ function getAccessibleThemeColor(color, background, minimumContrast) {
   return accessibleColor;
 }
 
-function getTintedSurfaceColor(accent, base, baseWeight, minimumContrast) {
+function getTintedSurfaceColor(accent: ThemeRgb, base: ThemeRgb, baseWeight: number, minimumContrast: number): ThemeRgb {
   const preferredColor = mixColor(accent, base, baseWeight);
   if (getContrastRatio(preferredColor, base) >= minimumContrast) {
     return preferredColor;
@@ -220,7 +273,7 @@ function getTintedSurfaceColor(accent, base, baseWeight, minimumContrast) {
   const contrastColor = getAccessibleThemeColor(accent, base, minimumContrast);
   let lowerWeight = 0;
   let upperWeight = baseWeight;
-  let tintedColor = contrastColor.slice();
+  let tintedColor = copyRgb(contrastColor);
   for (let iteration = 0; iteration < 12; iteration += 1) {
     const weight = (lowerWeight + upperWeight) / 2;
     const candidate = mixColor(contrastColor, base, weight);
@@ -234,7 +287,7 @@ function getTintedSurfaceColor(accent, base, baseWeight, minimumContrast) {
   return tintedColor;
 }
 
-function getSoftThemeBorderColor(accent, background) {
+function getSoftThemeBorderColor(accent: ThemeRgb, background: ThemeRgb): ThemeRgb {
   return getTintedSurfaceColor(
     accent,
     background,
@@ -243,25 +296,25 @@ function getSoftThemeBorderColor(accent, background) {
   );
 }
 
-function getReadableTextColor(bgRgb) {
-  if (!bgRgb || bgRgb.length !== 3) {
+function getReadableTextColor(bgRgb: unknown): string {
+  if (!isRgb(bgRgb)) {
     return '#111827';
   }
-  const darkText = [17, 24, 39];
-  const lightText = [248, 250, 252];
+  const darkText: ThemeRgb = [17, 24, 39];
+  const lightText: ThemeRgb = [248, 250, 252];
   const contrastWithDark = getContrastRatio(darkText, bgRgb);
   const contrastWithLight = getContrastRatio(lightText, bgRgb);
   return contrastWithDark >= contrastWithLight ? '#111827' : '#F8FAFC';
 }
 
-function normalizeAccentColor(rgb) {
-  if (!rgb || rgb.length !== 3) {
-    return defaultAccentColor.slice();
+function normalizeAccentColor(rgb: unknown): ThemeRgb {
+  if (!isRgb(rgb)) {
+    return copyRgb(defaultAccentColor);
   }
   const max = Math.max(...rgb);
   const min = Math.min(...rgb);
   if (min >= 235 && max >= 245) {
-    return defaultAccentColor.slice();
+    return copyRgb(defaultAccentColor);
   }
   const luminance = getLuminance(rgb);
   if (luminance < 0.12) {
@@ -273,9 +326,9 @@ function normalizeAccentColor(rgb) {
   return rgb;
 }
 
-function buildThemeVariant(accent, mode) {
+function buildThemeVariant(accent: ThemeRgb, mode: ThemeMode): ThemeVariant {
   const isDark = mode === 'dark';
-  const base = isDark ? [48, 48, 48] : [255, 255, 255];
+  const base: ThemeRgb = isDark ? [48, 48, 48] : [255, 255, 255];
   const surfaceAccent = getSaturationCappedColor(
     accent,
     isDark ? DARK_THEME_SURFACE_MAX_SATURATION : LIGHT_THEME_SURFACE_MAX_SATURATION
@@ -341,12 +394,12 @@ function buildThemeVariant(accent, mode) {
   };
 }
 
-function buildTheme(rgb) {
+function buildTheme(rgb: unknown): ThemeVariant {
   const accent = normalizeAccentColor(rgb);
   return buildThemeVariant(accent, 'light');
 }
 
-function createDefaultTheme() {
+function createDefaultTheme(): ThemeVariant {
   const theme = buildTheme(defaultAccentColor);
   theme._xIsDefault = true;
   theme._xIsBrand = false;
@@ -354,7 +407,7 @@ function createDefaultTheme() {
   return theme;
 }
 
-function createUrlHighlightTheme() {
+function createUrlHighlightTheme(): ThemeVariant {
   const theme = buildTheme(defaultAccentColor);
   theme._xIsBrand = true;
   theme._xIsUrl = true;
@@ -362,7 +415,7 @@ function createUrlHighlightTheme() {
   return theme;
 }
 
-function normalizeHost(hostname) {
+function normalizeHost(hostname: unknown): string {
   if (!hostname) {
     return '';
   }
@@ -374,63 +427,63 @@ function normalizeHost(hostname) {
   return stripped;
 }
 
-function normalizeFaviconHost(hostname) {
+function normalizeFaviconHost(hostname: unknown): string {
   return faviconUtils.normalizeFaviconHost(hostname);
 }
 
-function getBrandAccentForHost(hostname) {
+function getBrandAccentForHost(hostname: unknown): ThemeRgb | null {
   const host = String(hostname || '').toLowerCase();
   if (!host) {
     return null;
   }
-  if (brandAccentMap[host]) {
+  if (Object.prototype.hasOwnProperty.call(brandAccentMap, host)) {
     return brandAccentMap[host];
   }
   const entry = Object.keys(brandAccentMap).find((key) => host === key || host.endsWith(`.${key}`));
   return entry ? brandAccentMap[entry] : null;
 }
 
-function getBrandAccentForUrl(url) {
+function getBrandAccentForUrl(url: unknown): ThemeRgb | null {
   if (!url) {
     return null;
   }
   try {
-    const hostname = normalizeHost(new URL(url).hostname);
+    const hostname = normalizeHost(new URL(String(url)).hostname);
     return getBrandAccentForHost(hostname);
-  } catch (e) {
+  } catch (_error) {
     return null;
   }
 }
 
-function buildFallbackThemeForHost(hostname) {
+function buildFallbackThemeForHost(_hostname?: unknown): ThemeVariant {
   const theme = createDefaultTheme();
   theme._xIsFallback = true;
   return theme;
 }
 
-function getThemeFingerprint(theme) {
+function getThemeFingerprint(theme: ThemeLike | null | undefined): string {
   const source = theme && theme._xThemeSource
     ? String(theme._xThemeSource)
     : (theme && theme._xIsDefault ? 'fallback' : (theme && theme._xIsBrand ? 'brand' : 'unknown'));
   const confidence = theme && theme._xThemeConfidence ? String(theme._xThemeConfidence) : '';
   const neutral = theme && theme._xThemeNeutral ? 'neutral' : 'color';
-  const rgb = theme && (theme.accentRgb || parseCssColor(theme.accent));
-  const accent = rgb && rgb.length === 3 ? rgb : defaultAccentColor;
+  const rgb = theme ? (theme.accentRgb || parseCssColor(theme.accent)) : null;
+  const accent = isRgb(rgb) ? rgb : defaultAccentColor;
   return `${source}:${confidence || neutral}:${accent.join(',')}`;
 }
 
-function hasThemeTokenInUrl(url, token) {
+function hasThemeTokenInUrl(url: unknown, token: string): boolean {
   return faviconUtils.hasThemeTokenInUrl(url, token);
 }
 
-function shouldSkipThemeUpgradeCandidate(candidateUrl, preferredTheme, currentUrl) {
+function shouldSkipThemeUpgradeCandidate(candidateUrl: unknown, preferredTheme: unknown, currentUrl: unknown): boolean {
   return faviconUtils.shouldSkipThemeUpgradeCandidate(candidateUrl, preferredTheme, currentUrl);
 }
 
-function getKnownThemedFaviconCandidates(hostname, preferredTheme) {
+function getKnownThemedFaviconCandidates(hostname: unknown, preferredTheme: unknown): ReturnType<typeof faviconUtils.getKnownThemedFaviconCandidateUrls> {
   return faviconUtils.getKnownThemedFaviconCandidateUrls(hostname, preferredTheme, {
     getRuntimeUrl: (path) => {
-      const chromeApi = globalThis.chrome;
+      const chromeApi = typeof chrome !== 'undefined' ? chrome : null;
       return chromeApi && chromeApi.runtime && typeof chromeApi.runtime.getURL === 'function'
         ? chromeApi.runtime.getURL(path)
         : '';
@@ -438,17 +491,17 @@ function getKnownThemedFaviconCandidates(hostname, preferredTheme) {
   });
 }
 
-function hostHasExplicitDarkFavicon(hostname) {
+function hostHasExplicitDarkFavicon(hostname: unknown): boolean {
   return faviconUtils.hostHasExplicitDarkFavicon(hostname);
 }
 
-function isFaviconProxyUrl(url) {
+function isFaviconProxyUrl(url: unknown): boolean {
   return faviconUtils.isFaviconProxyUrl(url);
 }
 
-function extractAverageColor(image) {
+function extractAverageColor(image: CanvasImageSource): ThemeRgb | null {
   const size = 16;
-  const doc = globalThis.document;
+  const doc = typeof document !== 'undefined' ? document : null;
   if (!doc || typeof doc.createElement !== 'function') {
     return null;
   }
@@ -503,21 +556,21 @@ function extractAverageColor(image) {
       Math.round(g / count),
       Math.round(b / count)
     ];
-  } catch (e) {
+  } catch (_error) {
     return null;
   }
 }
 
-function resolveDarkModeOption(options) {
+function resolveDarkModeOption(options: ThemeModeOptions | null | undefined): boolean {
   if (options && typeof options.isDarkMode === 'function') {
     return Boolean(options.isDarkMode());
   }
   return Boolean(options && options.isDarkMode);
 }
 
-function getThemeForMode(theme, options) {
+function getThemeForMode(theme: ThemeLike | null | undefined, options?: ThemeModeOptions | null): ThemeLike {
   const fallbackTheme = options && options.defaultTheme ? options.defaultTheme : createDefaultTheme();
-  const sourceTheme = theme || fallbackTheme;
+  const sourceTheme: ThemeLike = theme || fallbackTheme;
   if (!resolveDarkModeOption(options)) {
     return sourceTheme;
   }
@@ -532,11 +585,11 @@ function getThemeForMode(theme, options) {
   return darkTheme;
 }
 
-function getHoverColors(theme, options) {
+function getHoverColors(theme: ThemeLike | null | undefined, options?: ThemeModeOptions | null): HoverColors {
   const resolvedTheme = getThemeForMode(theme, options);
   const accentRgb = resolvedTheme.accentRgb || parseCssColor(resolvedTheme.accent) || defaultAccentColor;
   const isDark = resolveDarkModeOption(options);
-  const base = isDark ? [48, 48, 48] : [255, 255, 255];
+  const base: ThemeRgb = isDark ? [48, 48, 48] : [255, 255, 255];
   const surfaceAccent = getSaturationCappedColor(
     accentRgb,
     isDark ? DARK_THEME_SURFACE_MAX_SATURATION : LIGHT_THEME_SURFACE_MAX_SATURATION
@@ -558,6 +611,7 @@ function getHoverColors(theme, options) {
   };
 }
 
+export type { HoverColors, ThemeLike, ThemeModeOptions, ThemeVariant };
 export {
   defaultAccentColor,
   mixColor,

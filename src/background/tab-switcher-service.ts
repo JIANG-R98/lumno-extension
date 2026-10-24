@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Recent-tab switcher (Alt+Q by default): the in-page host and the
 // extension-page port bridge, opening/advancing/committing the switcher and
 // relaying the shortcut release, the recent-tab list with its thumbnails
@@ -6,9 +5,7 @@
 // colors.
 //
 // A module of the service worker; background.ts imports it before its own code
-// runs. It uses other services' bindings only when its functions run, never
-// while this file loads, because the services import one another.
-// background.ts wires the browser events and the show-tab-switcher command to
+// runs. background.ts wires the browser events and the show-tab-switcher command to
 // the functions here.
 
 import * as RECENT_TAB_SWITCHER from './recent-tab-switcher';
@@ -48,11 +45,136 @@ import {
 } from './browser-urls-service';
 import { recordTabSwitchEvent } from './tab-switch-stats-service';
 import * as LumnoMessaging from '../platform/messaging';
+import type { SwitcherFields, ThumbnailState, TrackerState } from './recent-tab-switcher';
+import type { ThemeRgb } from '../domain/favicon/favicon-utils';
+import type {
+  PageAction,
+  PageRequest,
+  SiteThemeColor,
+  TabSwitcherContext,
+  TabSwitcherItem,
+  TabSwitcherThumbnailStatus,
+  TabSwitcherThumbnailUpdate
+} from '../domain/messages';
+
+// A tab as the switcher's helpers read it: a browser tab, a tab from the
+// recent list with its thumbnail fields, or a payload item.
+interface SwitcherTab extends Partial<SwitcherFields> {
+  id?: number;
+  windowId?: number | null;
+  url?: string;
+  pendingUrl?: string;
+  title?: string;
+  favIconUrl?: string;
+  incognito?: boolean;
+  active?: boolean;
+  pinned?: boolean;
+  status?: chrome.tabs.Tab['status'];
+  discarded?: boolean;
+}
+
+// The extension page's answer to a port request, as it sent it.
+type PortReplyCallback = (ok: boolean, reason: string, response?: Record<string, unknown>) => void;
+
+interface PendingPortRequest {
+  callback: PortReplyCallback | undefined;
+  timer: ReturnType<typeof setTimeout> | null;
+}
+
+// An extension page that hosts the switcher itself, reached through its port.
+interface ExtensionPagePortRecord {
+  port: chrome.runtime.Port;
+  tabId: number;
+  pending: Map<number, PendingPortRequest>;
+  url?: string;
+  title?: string;
+}
+
+// The page messages the switcher sends to the page that hosts it.
+type HostAction = Extract<PageAction,
+  | 'setTabSwitcherCaptureVisibility'
+  | 'getOpenTabSwitcherState'
+  | 'updateTabSwitcherThumbnail'
+  | 'commitOpenTabSwitcherFromShortcutRelease'
+  | 'openTabSwitcherFromCommand'
+  | 'advanceOpenTabSwitcherFromCommand'
+  | 'armTabSwitcherShortcutRelease'>;
+
+interface OpenSwitcherState {
+  ok: boolean;
+  open: boolean;
+}
+
+// How a host message is delivered and read: by message, or failing that by
+// running scriptFunc in the page.
+interface HostMessageOptions<T, A extends unknown[]> {
+  scriptFunc: (...args: A) => unknown;
+  scriptArgs: A;
+  normalizeResponse: (response: unknown) => T | null;
+  normalizeScriptResults: (results: unknown) => T | null;
+  fallbackValue: T;
+}
+
+interface ThumbnailPriority {
+  url: string;
+  status: string;
+  reason: string;
+  markedAt: number;
+}
+
+interface CaptureRequest {
+  tabId: number;
+  windowId: number;
+  reason: string;
+  captureReason: string;
+  requestedAt: number;
+}
+
+type CaptureResult = { ok: true; dataUrl: string } | { ok: false; reason: string };
+
+// A switcher being opened in a window; a second press meanwhile is ignored.
+interface SwitcherOpening {
+  key: string;
+  tabId: number | null;
+  windowId: number | null;
+  source: string;
+  startedAt: number;
+  expiresAt: number;
+  timer: ReturnType<typeof setTimeout> | null;
+}
+
+interface InjectContext {
+  currentTabId: number;
+  selectedIndex: number;
+  shortcut: string;
+  source: string;
+  onOpenComplete: (ok: boolean, reason: string) => void;
+}
+
+interface SwitchResult {
+  ok: boolean;
+  tabId?: number;
+  windowId?: number | null;
+  reason?: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function readTabSwitcherThumbnailStatus(value: unknown): TabSwitcherThumbnailStatus {
+  return value === 'ok' || value === 'pending' || value === 'missing' || value === 'stale' ||
+    value === 'failed' || value === 'restricted' ? value : '';
+}
 
 // The recent-tab list and its thumbnails, kept in session storage.
 const TAB_SWITCHER_THUMBNAIL_STORAGE_KEY = '_x_extension_tab_switcher_state_2026_unique_';
 
-function hasTabSwitcherExtensionPagePort(tab) {
+function hasTabSwitcherExtensionPagePort(tab: SwitcherTab | null | undefined): boolean {
   if (!tab || typeof tab.id !== 'number') {
     return false;
   }
@@ -60,7 +182,7 @@ function hasTabSwitcherExtensionPagePort(tab) {
   return Boolean(record && record.port && typeof record.port.postMessage === 'function');
 }
 
-function isTabSwitcherExtensionPageMessageTarget(tab) {
+function isTabSwitcherExtensionPageMessageTarget(tab: SwitcherTab | null | undefined): boolean {
   if (!tab || typeof tab.id !== 'number') {
     return false;
   }
@@ -71,7 +193,7 @@ function isTabSwitcherExtensionPageMessageTarget(tab) {
   return isBrowserNewtabUrl(url) && hasTabSwitcherExtensionPagePort(tab);
 }
 
-function shouldTrackSwitcherTab(tab) {
+function shouldTrackSwitcherTab(tab: SwitcherTab | null | undefined): boolean {
   if (!tab || typeof tab.id !== 'number' || typeof tab.windowId !== 'number' || tab.incognito === true) {
     return false;
   }
@@ -86,12 +208,12 @@ function shouldTrackSwitcherTab(tab) {
     const parsed = new URL(url);
     const protocol = String(parsed.protocol || '').toLowerCase();
     return Boolean(protocol) && protocol !== 'javascript:';
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 }
 
-function canHostSwitcherSurface(tab) {
+function canHostSwitcherSurface(tab: SwitcherTab | null | undefined): boolean {
   if (!tab || typeof tab.id !== 'number' || typeof tab.windowId !== 'number') {
     return false;
   }
@@ -101,19 +223,19 @@ function canHostSwitcherSurface(tab) {
     canOpenOverlayOnUrl(url);
 }
 
-function getPortSenderTabId(port) {
+function getPortSenderTabId(port: chrome.runtime.Port | null | undefined): number | null {
   const senderTab = port && port.sender && port.sender.tab ? port.sender.tab : null;
   return senderTab && typeof senderTab.id === 'number' ? senderTab.id : null;
 }
 
-function getPortMessageTabId(port, message) {
+function getPortMessageTabId(port: chrome.runtime.Port, message: Record<string, unknown> | null | undefined): number | null {
   if (message && typeof message.tabId === 'number') {
     return message.tabId;
   }
   return getPortSenderTabId(port);
 }
 
-function clearTabSwitcherExtensionPagePending(record, ok, reason) {
+function clearTabSwitcherExtensionPagePending(record: ExtensionPagePortRecord | null | undefined, ok: boolean, reason: string): void {
   if (!record || !record.pending || typeof record.pending.forEach !== 'function') {
     return;
   }
@@ -131,7 +253,7 @@ function clearTabSwitcherExtensionPagePending(record, ok, reason) {
   record.pending.clear();
 }
 
-function deleteTabSwitcherExtensionPagePort(tabId, port) {
+function deleteTabSwitcherExtensionPagePort(tabId: number | null, port: chrome.runtime.Port | null): void {
   if (typeof tabId !== 'number') {
     return;
   }
@@ -143,7 +265,7 @@ function deleteTabSwitcherExtensionPagePort(tabId, port) {
   tabSwitcherExtensionPagePortsByTabId.delete(tabId);
 }
 
-function registerTabSwitcherExtensionPagePort(port, message) {
+function registerTabSwitcherExtensionPagePort(port: chrome.runtime.Port, message: Record<string, unknown>): ExtensionPagePortRecord | null {
   const tabId = getPortMessageTabId(port, message);
   if (typeof tabId !== 'number') {
     return null;
@@ -152,7 +274,7 @@ function registerTabSwitcherExtensionPagePort(port, message) {
   if (previous && previous.port !== port) {
     clearTabSwitcherExtensionPagePending(previous, false, 'replaced');
   }
-  const record = previous && previous.port === port
+  const record: ExtensionPagePortRecord = previous && previous.port === port
     ? previous
     : {
       port,
@@ -165,8 +287,8 @@ function registerTabSwitcherExtensionPagePort(port, message) {
   return record;
 }
 
-function handleTabSwitcherExtensionPagePortMessage(port, message) {
-  if (!message || typeof message !== 'object') {
+function handleTabSwitcherExtensionPagePortMessage(port: chrome.runtime.Port, message: unknown): void {
+  if (!isRecord(message)) {
     return;
   }
   if (message.action === 'registerTabSwitcherExtensionPage') {
@@ -193,11 +315,11 @@ function handleTabSwitcherExtensionPagePortMessage(port, message) {
     clearTimeout(pending.timer);
   }
   if (typeof pending.callback === 'function') {
-    pending.callback(Boolean(message.ok), message.reason || '', message);
+    pending.callback(Boolean(message.ok), String(message.reason || ''), message);
   }
 }
 
-export function registerTabSwitcherExtensionPagePortConnection(port) {
+export function registerTabSwitcherExtensionPagePortConnection(port: chrome.runtime.Port): void {
   if (!port || port.name !== TAB_SWITCHER_EXTENSION_PAGE_PORT_NAME) {
     return;
   }
@@ -207,7 +329,7 @@ export function registerTabSwitcherExtensionPagePortConnection(port) {
     url: port.sender && typeof port.sender.url === 'string' ? port.sender.url : '',
     title: ''
   });
-  port.onMessage.addListener((message) => {
+  port.onMessage.addListener((message: unknown) => {
     handleTabSwitcherExtensionPagePortMessage(port, message);
   });
   port.onDisconnect.addListener(() => {
@@ -220,16 +342,21 @@ export function registerTabSwitcherExtensionPagePortConnection(port) {
   });
 }
 
-function postTabSwitcherMessageToExtensionPage(tab, message, callback) {
-  if (!tab || typeof tab.id !== 'number' || !isTabSwitcherExtensionPageMessageTarget(tab)) {
+function postTabSwitcherMessageToExtensionPage(
+  tab: SwitcherTab | null | undefined,
+  message: PageRequest<HostAction>,
+  callback?: PortReplyCallback
+): boolean {
+  const tabId = tab ? tab.id : undefined;
+  if (!tab || typeof tabId !== 'number' || !isTabSwitcherExtensionPageMessageTarget(tab)) {
     if (typeof callback === 'function') {
       callback(false, 'not-extension-page');
     }
     return false;
   }
   const startedAt = Date.now();
-  const attemptPost = () => {
-    const record = tabSwitcherExtensionPagePortsByTabId.get(tab.id);
+  const attemptPost = (): boolean => {
+    const record = tabSwitcherExtensionPagePortsByTabId.get(tabId);
     if (!record || !record.port || typeof record.port.postMessage !== 'function') {
       if (Date.now() - startedAt < TAB_SWITCHER_EXTENSION_PAGE_PORT_WAIT_MS) {
         setTimeout(attemptPost, TAB_SWITCHER_EXTENSION_PAGE_PORT_RETRY_MS);
@@ -241,10 +368,7 @@ function postTabSwitcherMessageToExtensionPage(tab, message, callback) {
       return false;
     }
     const requestId = ++tabSwitcherExtensionPageRequestSeq;
-    const payload = {
-      ...(message && typeof message === 'object' ? message : {}),
-      requestId
-    };
+    const payload = { ...message, requestId };
     const timer = setTimeout(() => {
       if (!record.pending || !record.pending.has(requestId)) {
         return;
@@ -265,7 +389,7 @@ function postTabSwitcherMessageToExtensionPage(tab, message, callback) {
       clearTimeout(timer);
       record.pending.delete(requestId);
       if (typeof callback === 'function') {
-        callback(false, error && error.message ? error.message : 'extension-page-post-failed');
+        callback(false, getErrorMessage(error, 'extension-page-post-failed'));
       }
       return false;
     }
@@ -273,7 +397,9 @@ function postTabSwitcherMessageToExtensionPage(tab, message, callback) {
   return attemptPost();
 }
 
-function setTabSwitcherCaptureVisibilityInPage(hidden, hostId) {
+// The functions below run in the page on their own: everything they use is
+// defined inside them.
+function setTabSwitcherCaptureVisibilityInPage(hidden: boolean, hostId: string): { ok: boolean; reason?: string } {
   const host = document.getElementById(hostId);
   if (!host) {
     return { ok: true, reason: 'tab_switcher_host_missing' };
@@ -311,7 +437,7 @@ function setTabSwitcherCaptureVisibilityInPage(hidden, hostId) {
   return { ok: true };
 }
 
-function getOpenTabSwitcherStateInPage(hostId) {
+function getOpenTabSwitcherStateInPage(hostId: string): OpenSwitcherState {
   const host = document.getElementById(hostId);
   return {
     ok: true,
@@ -319,42 +445,45 @@ function getOpenTabSwitcherStateInPage(hostId) {
   };
 }
 
-function updateTabSwitcherThumbnailInPage(update, hostId) {
+function updateTabSwitcherThumbnailInPage(update: unknown, hostId: string): unknown {
   const host = document.getElementById(hostId);
-  if (!host || typeof host._lumnoTabSwitcherUpdateThumbnail !== 'function') {
+  const updateThumbnail: unknown = host ? Reflect.get(host, '_lumnoTabSwitcherUpdateThumbnail') : null;
+  if (!host || typeof updateThumbnail !== 'function') {
     return { ok: false, reason: 'tab_switcher_host_missing' };
   }
-  return host._lumnoTabSwitcherUpdateThumbnail(update) || { ok: true };
+  const result: unknown = Reflect.apply(updateThumbnail, host, [update]);
+  return result || { ok: true };
 }
 
-function commitOpenTabSwitcherFromShortcutReleaseInPage(hostId) {
+function commitOpenTabSwitcherFromShortcutReleaseInPage(hostId: string): { ok: boolean; committed: boolean } {
   const host = document.getElementById(hostId);
-  if (!host || typeof host._lumnoTabSwitcherCommitFromShortcutRelease !== 'function') {
+  const commit: unknown = host ? Reflect.get(host, '_lumnoTabSwitcherCommitFromShortcutRelease') : null;
+  if (!host || typeof commit !== 'function') {
     return { ok: false, committed: false };
   }
   return {
     ok: true,
-    committed: host._lumnoTabSwitcherCommitFromShortcutRelease() === true
+    committed: Reflect.apply(commit, host, []) === true
   };
 }
 
-function getFailedOpenTabSwitcherState() {
+function getFailedOpenTabSwitcherState(): OpenSwitcherState {
   return { ok: false, open: false };
 }
 
-function normalizeTabSwitcherHostOkResponse(response) {
-  return response && response.ok === true ? true : null;
+function normalizeTabSwitcherHostOkResponse(response: unknown): boolean | null {
+  return isRecord(response) && response.ok === true ? true : null;
 }
 
-function normalizeTabSwitcherCommitResponse(response) {
-  if (!response || response.ok !== true || typeof response.committed !== 'boolean') {
+function normalizeTabSwitcherCommitResponse(response: unknown): boolean | null {
+  if (!isRecord(response) || response.ok !== true || typeof response.committed !== 'boolean') {
     return null;
   }
   return response.committed === true;
 }
 
-function normalizeOpenTabSwitcherStateResponse(response) {
-  if (!response || response.ok !== true || typeof response.open !== 'boolean') {
+function normalizeOpenTabSwitcherStateResponse(response: unknown): OpenSwitcherState | null {
+  if (!isRecord(response) || response.ok !== true || typeof response.open !== 'boolean') {
     return null;
   }
   return {
@@ -363,43 +492,38 @@ function normalizeOpenTabSwitcherStateResponse(response) {
   };
 }
 
-function normalizeTabSwitcherHostOkScriptResults(results) {
-  return Array.isArray(results) &&
-    results.some((item) => item && item.result && item.result.ok === true)
-    ? true
-    : null;
+// The results of the page script in each frame, as the page produced them.
+function readScriptResults(results: unknown): Record<string, unknown>[] {
+  const items: unknown[] = Array.isArray(results) ? results : [];
+  return items.flatMap((item) => (isRecord(item) && isRecord(item.result) ? [item.result] : []));
 }
 
-function normalizeTabSwitcherCommitScriptResults(results) {
-  const result = Array.isArray(results)
-    ? results.find((item) => (
-      item &&
-      item.result &&
-      item.result.ok === true &&
-      typeof item.result.committed === 'boolean'
-    ))
-    : null;
-  return result && result.result ? result.result.committed === true : null;
+function normalizeTabSwitcherHostOkScriptResults(results: unknown): boolean | null {
+  return readScriptResults(results).some((result) => result.ok === true) ? true : null;
 }
 
-function normalizeOpenTabSwitcherStateScriptResults(results) {
-  const result = Array.isArray(results)
-    ? results.find((item) => (
-      item &&
-      item.result &&
-      item.result.ok === true &&
-      typeof item.result.open === 'boolean'
-    ))
-    : null;
-  return result && result.result
+function normalizeTabSwitcherCommitScriptResults(results: unknown): boolean | null {
+  const result = readScriptResults(results).find((item) => item.ok === true && typeof item.committed === 'boolean');
+  return result ? result.committed === true : null;
+}
+
+function normalizeOpenTabSwitcherStateScriptResults(results: unknown): OpenSwitcherState | null {
+  const result = readScriptResults(results).find((item) => item.ok === true && typeof item.open === 'boolean');
+  return result
     ? {
       ok: true,
-      open: result.result.open === true
+      open: result.open === true
     }
     : null;
 }
 
-function runTabSwitcherHostScript(tabId, scriptFunc, scriptArgs, normalizeResults, fallbackValue) {
+function runTabSwitcherHostScript<T, A extends unknown[]>(
+  tabId: number,
+  scriptFunc: (...args: A) => unknown,
+  scriptArgs: A,
+  normalize: (results: unknown) => T | null,
+  fallbackValue: T
+): Promise<T> {
   if (typeof tabId !== 'number' ||
       !chrome ||
       !chrome.scripting ||
@@ -407,15 +531,12 @@ function runTabSwitcherHostScript(tabId, scriptFunc, scriptArgs, normalizeResult
       typeof scriptFunc !== 'function') {
     return Promise.resolve(fallbackValue);
   }
-  const normalize = typeof normalizeResults === 'function'
-    ? normalizeResults
-    : normalizeTabSwitcherHostOkScriptResults;
   return new Promise((resolve) => {
     try {
       chrome.scripting.executeScript({
         target: { tabId },
         func: scriptFunc,
-        args: Array.isArray(scriptArgs) ? scriptArgs : []
+        args: scriptArgs
       }, (results) => {
         if (chrome.runtime && chrome.runtime.lastError) {
           resolve(fallbackValue);
@@ -424,25 +545,24 @@ function runTabSwitcherHostScript(tabId, scriptFunc, scriptArgs, normalizeResult
         const normalized = normalize(results);
         resolve(normalized === null ? fallbackValue : normalized);
       });
-    } catch (error) {
+    } catch (_error) {
       resolve(fallbackValue);
     }
   });
 }
 
-function sendTabSwitcherHostMessage(tab, payload, optionsArg) {
+function sendTabSwitcherHostMessage<T, A extends unknown[]>(
+  tab: SwitcherTab | null | undefined,
+  payload: PageRequest<HostAction>,
+  options: HostMessageOptions<T, A>
+): Promise<T> {
   const tabId = tab && typeof tab.id === 'number' ? tab.id : null;
-  const options = optionsArg && typeof optionsArg === 'object' ? optionsArg : {};
-  const fallbackValue = Object.prototype.hasOwnProperty.call(options, 'fallbackValue')
-    ? options.fallbackValue
-    : false;
+  const fallbackValue = options.fallbackValue;
   if (typeof tabId !== 'number' || !payload || typeof payload !== 'object') {
     return Promise.resolve(fallbackValue);
   }
-  const normalizeResponse = typeof options.normalizeResponse === 'function'
-    ? options.normalizeResponse
-    : normalizeTabSwitcherHostOkResponse;
-  const runScriptFallback = () => runTabSwitcherHostScript(
+  const normalizeResponse = options.normalizeResponse;
+  const runScriptFallback = (): Promise<T> => runTabSwitcherHostScript(
     tabId,
     options.scriptFunc,
     options.scriptArgs,
@@ -468,7 +588,7 @@ function sendTabSwitcherHostMessage(tab, payload, optionsArg) {
   }
   return new Promise((resolve) => {
     try {
-      LumnoMessaging.sendTabMessage(chrome.tabs, tabId, payload, (response) => {
+      LumnoMessaging.sendTabMessage(chrome.tabs, tabId, payload, (response: unknown) => {
         if (!(chrome.runtime && chrome.runtime.lastError)) {
           const normalized = normalizeResponse(response);
           if (normalized !== null) {
@@ -478,29 +598,29 @@ function sendTabSwitcherHostMessage(tab, payload, optionsArg) {
         }
         runScriptFallback().then(resolve).catch(() => resolve(fallbackValue));
       });
-    } catch (error) {
+    } catch (_error) {
       runScriptFallback().then(resolve).catch(() => resolve(fallbackValue));
     }
   });
 }
 
-function setTabSwitcherCaptureVisibility(tab, hidden) {
-  const payload = {
+function setTabSwitcherCaptureVisibility(tab: SwitcherTab | null | undefined, hidden: boolean): Promise<boolean> {
+  return sendTabSwitcherHostMessage(tab, {
     action: 'setTabSwitcherCaptureVisibility',
     hidden: Boolean(hidden)
-  };
-  return sendTabSwitcherHostMessage(tab, payload, {
+  }, {
     scriptFunc: setTabSwitcherCaptureVisibilityInPage,
     scriptArgs: [Boolean(hidden), TAB_SWITCHER_HOST_ID],
+    normalizeResponse: normalizeTabSwitcherHostOkResponse,
+    normalizeScriptResults: normalizeTabSwitcherHostOkScriptResults,
     fallbackValue: false
   });
 }
 
-function getOpenTabSwitcherState(tab) {
-  const payload = {
+function getOpenTabSwitcherState(tab: SwitcherTab | null | undefined): Promise<OpenSwitcherState> {
+  return sendTabSwitcherHostMessage(tab, {
     action: 'getOpenTabSwitcherState'
-  };
-  return sendTabSwitcherHostMessage(tab, payload, {
+  }, {
     scriptFunc: getOpenTabSwitcherStateInPage,
     scriptArgs: [TAB_SWITCHER_HOST_ID],
     normalizeResponse: normalizeOpenTabSwitcherStateResponse,
@@ -509,22 +629,24 @@ function getOpenTabSwitcherState(tab) {
   });
 }
 
-function postTabSwitcherThumbnailUpdate(tab, update) {
+function postTabSwitcherThumbnailUpdate(tab: SwitcherTab | null | undefined, update: TabSwitcherThumbnailUpdate): Promise<boolean> {
   if (!update || typeof update !== 'object') {
     return Promise.resolve(false);
   }
-  const payload = {
+  const payload: PageRequest<'updateTabSwitcherThumbnail'> = {
     action: 'updateTabSwitcherThumbnail',
     ...update
   };
   return sendTabSwitcherHostMessage(tab, payload, {
     scriptFunc: updateTabSwitcherThumbnailInPage,
     scriptArgs: [payload, TAB_SWITCHER_HOST_ID],
+    normalizeResponse: normalizeTabSwitcherHostOkResponse,
+    normalizeScriptResults: normalizeTabSwitcherHostOkScriptResults,
     fallbackValue: false
   });
 }
 
-function commitOpenTabSwitcherFromShortcutReleaseOnTab(tab) {
+function commitOpenTabSwitcherFromShortcutReleaseOnTab(tab: SwitcherTab | null | undefined): Promise<boolean> {
   return sendTabSwitcherHostMessage(tab, {
     action: 'commitOpenTabSwitcherFromShortcutRelease'
   }, {
@@ -536,8 +658,9 @@ function commitOpenTabSwitcherFromShortcutReleaseOnTab(tab) {
   });
 }
 
-function prepareShortcutKeyObserver(tab) {
-  if (!tab || typeof tab.id !== 'number') {
+function prepareShortcutKeyObserver(tab: SwitcherTab | null | undefined): Promise<boolean> {
+  const tabId = tab ? tab.id : undefined;
+  if (!tab || typeof tabId !== 'number') {
     return Promise.resolve(false);
   }
   if (isTabSwitcherExtensionPageMessageTarget(tab)) {
@@ -550,18 +673,17 @@ function prepareShortcutKeyObserver(tab) {
     try {
       chrome.scripting.executeScript({
         target: {
-          tabId: tab.id,
+          tabId,
           allFrames: true
         },
         files: ['build/shortcut-key-observer.js']
       }, () => {
-        const error = chrome.runtime && chrome.runtime.lastError
-          ? chrome.runtime.lastError.message || 'unknown'
-          : '';
+        const lastError = chrome.runtime && chrome.runtime.lastError;
+        const error = lastError ? lastError.message || 'unknown' : '';
         recordTabSwitcherShortcutDebug(
           error ? 'release-observer-injection-failed' : 'release-observer-ready',
           {
-            tabId: tab.id,
+            tabId,
             windowId: typeof tab.windowId === 'number' ? tab.windowId : null,
             error
           }
@@ -570,9 +692,9 @@ function prepareShortcutKeyObserver(tab) {
       });
     } catch (error) {
       recordTabSwitcherShortcutDebug('release-observer-injection-failed', {
-        tabId: tab.id,
+        tabId,
         windowId: typeof tab.windowId === 'number' ? tab.windowId : null,
-        error: error && error.message ? error.message : String(error || 'unknown')
+        error: error instanceof Error && error.message ? error.message : String(error || 'unknown')
       });
       resolve(false);
     }
@@ -587,7 +709,7 @@ function prepareShortcutKeyObserver(tab) {
 // onboarding page and the first New Tab load, stalled the whole browser.
 const SHORTCUT_OBSERVER_SWEEP_CONCURRENCY = 3;
 
-function canSweepShortcutKeyObserverIntoTab(tab) {
+function canSweepShortcutKeyObserverIntoTab(tab: chrome.tabs.Tab | null | undefined): tab is chrome.tabs.Tab {
   return Boolean(
     tab &&
     typeof tab.id === 'number' &&
@@ -597,7 +719,7 @@ function canSweepShortcutKeyObserverIntoTab(tab) {
   );
 }
 
-export function prepareShortcutKeyObserversInOpenTabs() {
+export function prepareShortcutKeyObserversInOpenTabs(): Promise<void> {
   if (!chrome || !chrome.tabs || typeof chrome.tabs.query !== 'function') {
     return Promise.resolve();
   }
@@ -610,7 +732,7 @@ export function prepareShortcutKeyObserversInOpenTabs() {
       const queue = (Array.isArray(tabs) ? tabs : [])
         .filter(canSweepShortcutKeyObserverIntoTab)
         .sort((left, right) => Number(right.active === true) - Number(left.active === true));
-      const runNext = () => {
+      const runNext = (): Promise<void> => {
         const tab = queue.shift();
         return tab ? prepareShortcutKeyObserver(tab).then(runNext) : Promise.resolve();
       };
@@ -623,13 +745,13 @@ export function prepareShortcutKeyObserversInOpenTabs() {
   });
 }
 
-function findOpenTabSwitcherHostInWindow(windowId) {
+function findOpenTabSwitcherHostInWindow(windowId: number): Promise<chrome.tabs.Tab | null> {
   if (typeof windowId !== 'number' || !chrome || !chrome.tabs || typeof chrome.tabs.query !== 'function') {
     return Promise.resolve(null);
   }
-  const readStateWithTimeout = (tab) => new Promise((resolve) => {
+  const readStateWithTimeout = (tab: chrome.tabs.Tab): Promise<{ tab: chrome.tabs.Tab; open: boolean }> => new Promise((resolve) => {
     let settled = false;
-    const finish = (open) => {
+    const finish = (open: boolean): void => {
       if (settled) {
         return;
       }
@@ -664,7 +786,7 @@ function findOpenTabSwitcherHostInWindow(windowId) {
   });
 }
 
-function getTabForTabSwitcherCommit(tabId) {
+function getTabForTabSwitcherCommit(tabId: number): Promise<chrome.tabs.Tab | null> {
   if (typeof tabId !== 'number' || !chrome || !chrome.tabs || typeof chrome.tabs.get !== 'function') {
     return Promise.resolve(null);
   }
@@ -679,12 +801,12 @@ function getTabForTabSwitcherCommit(tabId) {
   });
 }
 
-function commitOpenTabSwitcherInWindow(windowId, source) {
+function commitOpenTabSwitcherInWindow(windowId: number, source: string): Promise<boolean> {
   recordTabSwitcherShortcutDebug('commit-search-start', {
     windowId,
     source: String(source || '')
   });
-  const finishCommit = (hostTab, path) => {
+  const finishCommit = (hostTab: chrome.tabs.Tab | null, path: string): boolean | Promise<boolean> => {
     recordTabSwitcherShortcutDebug('commit-host-resolved', {
       windowId,
       source: String(source || ''),
@@ -701,13 +823,13 @@ function commitOpenTabSwitcherInWindow(windowId, source) {
         hostTabId: hostTab.id,
         committed: didCommit === true
       });
-      if (didCommit === true && tabSwitcherHostTabIdByWindowId.get(windowId) === hostTab.id) {
+      if (didCommit && tabSwitcherHostTabIdByWindowId.get(windowId) === hostTab.id) {
         tabSwitcherHostTabIdByWindowId.delete(windowId);
       }
       return didCommit === true;
     });
   };
-  const findAndCommit = () => findOpenTabSwitcherHostInWindow(windowId)
+  const findAndCommit = (): Promise<boolean> => findOpenTabSwitcherHostInWindow(windowId)
     .then((hostTab) => finishCommit(hostTab, 'window-scan'));
   const knownHostTabId = tabSwitcherHostTabIdByWindowId.get(windowId);
   if (typeof knownHostTabId !== 'number') {
@@ -727,18 +849,23 @@ function commitOpenTabSwitcherInWindow(windowId, source) {
     .catch(() => findAndCommit().catch(() => false));
 }
 
-export function handleTabSwitcherShortcutModifierReleased(senderTab, releasedKey, callback) {
+export function handleTabSwitcherShortcutModifierReleased(
+  senderTab: chrome.tabs.Tab | null | undefined,
+  releasedKey: unknown,
+  callback?: (committed: boolean) => void
+): void {
   const finish = typeof callback === 'function' ? callback : () => {};
   if (!senderTab || typeof senderTab.windowId !== 'number') {
     finish(false);
     return;
   }
   const key = String(releasedKey || '');
+  const windowId = senderTab.windowId;
   getConfiguredTabSwitcherShortcut((shortcut) => {
     const expectedKeys = RECENT_TAB_SWITCHER.getShortcutReleaseEventKeys(shortcut);
     if (!expectedKeys.includes(key)) {
       recordTabSwitcherShortcutDebug('release-rejected', {
-        windowId: senderTab.windowId,
+        windowId,
         key,
         shortcut,
         expectedKeys
@@ -747,18 +874,23 @@ export function handleTabSwitcherShortcutModifierReleased(senderTab, releasedKey
       return;
     }
     recordTabSwitcherShortcutDebug('release-accepted', {
-      windowId: senderTab.windowId,
+      windowId,
       key,
       shortcut,
       expectedKeys
     });
-    commitOpenTabSwitcherInWindow(senderTab.windowId, 'keyup')
+    commitOpenTabSwitcherInWindow(windowId, 'keyup')
       .then((didCommit) => finish(didCommit === true))
       .catch(() => finish(false));
   });
 }
 
-function armTabSwitcherShortcutReleaseObservers(tabs, windowId, shortcut, commandStartedAt) {
+function armTabSwitcherShortcutReleaseObservers(
+  tabs: readonly chrome.tabs.Tab[],
+  windowId: number,
+  shortcut: string,
+  commandStartedAt: number
+): void {
   if (typeof windowId !== 'number') {
     return;
   }
@@ -766,7 +898,7 @@ function armTabSwitcherShortcutReleaseObservers(tabs, windowId, shortcut, comman
   if (!keys.length) {
     return;
   }
-  const message = {
+  const message: PageRequest<'armTabSwitcherShortcutRelease'> = {
     action: 'armTabSwitcherShortcutRelease',
     keys,
     commandStartedAt: Number(commandStartedAt) || 0
@@ -784,20 +916,20 @@ function armTabSwitcherShortcutReleaseObservers(tabs, windowId, shortcut, comman
     }
     try {
       LumnoMessaging.sendTabMessage(chrome.tabs, item.id, message, ignoreExpectedChromeError);
-    } catch (error) {
+    } catch (_error) {
       // Restricted tabs simply cannot participate in the release relay.
     }
   });
 }
 
-function waitForTabSwitcherCapturePaint() {
+function waitForTabSwitcherCapturePaint(): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, TAB_SWITCHER_CAPTURE_HIDE_PAINT_WAIT_MS);
   });
 }
 
-function withTabSwitcherHiddenForCapture(tab, capture) {
-  const runCapture = typeof capture === 'function' ? capture : () => Promise.resolve(false);
+function withTabSwitcherHiddenForCapture<T>(tab: SwitcherTab, capture: () => Promise<T>): Promise<T> {
+  const runCapture = capture;
   return setTabSwitcherCaptureVisibility(tab, true)
     .catch(() => false)
     .then(() => waitForTabSwitcherCapturePaint())
@@ -807,9 +939,9 @@ function withTabSwitcherHiddenForCapture(tab, capture) {
 
 const TAB_SWITCHER_SHORTCUT_DEBUG_LIMIT = 50;
 
-const tabSwitcherShortcutDebugEvents = [];
+const tabSwitcherShortcutDebugEvents: Array<Record<string, unknown>> = [];
 
-function recordTabSwitcherShortcutDebug(stage, payload) {
+function recordTabSwitcherShortcutDebug(stage: string, payload?: Record<string, unknown>): void {
   tabSwitcherShortcutDebugEvents.push({
     at: new Date().toISOString(),
     stage: String(stage || ''),
@@ -823,14 +955,15 @@ function recordTabSwitcherShortcutDebug(stage, payload) {
   }
 }
 
-globalThis._lumnoTabSwitcherShortcutDebug = Object.freeze({
+// Reachable from the worker's console while diagnosing the release relay.
+Reflect.set(globalThis, '_lumnoTabSwitcherShortcutDebug', Object.freeze({
   snapshot() {
     return tabSwitcherShortcutDebugEvents.map((event) => ({ ...event }));
   },
   clear() {
     tabSwitcherShortcutDebugEvents.length = 0;
   }
-});
+}));
 
 const TAB_SWITCHER_EXTENSION_PAGE_PORT_NAME = 'lumno-tab-switcher-extension-page';
 
@@ -841,17 +974,17 @@ const TAB_SWITCHER_EXTENSION_PAGE_PORT_RETRY_MS = 50;
 const TAB_SWITCHER_HOST_ID = '_x_extension_tab_switcher_host_2026_unique_';
 
 // Ports close when the worker suspends, so this registry dies with them.
-const tabSwitcherExtensionPagePortsByTabId = new Map();
+const tabSwitcherExtensionPagePortsByTabId = new Map<number, ExtensionPagePortRecord>();
 
 const TAB_SWITCHER_OPENING_GUARD_MS = 2000;
 
 // Short-lived opening guard; losing it only allows a fresh open.
-const tabSwitcherOpeningByWindowKey = new Map();
+const tabSwitcherOpeningByWindowKey = new Map<string, SwitcherOpening>();
 
 const TAB_SWITCHER_HOST_STATE_TIMEOUT_MS = 400;
 
 // Hint only: findOpenTabSwitcherHostInWindow scans the window when it is missing.
-export const tabSwitcherHostTabIdByWindowId = new Map();
+export const tabSwitcherHostTabIdByWindowId = new Map<number, number>();
 
 const TAB_SWITCHER_LIMIT = 5;
 
@@ -890,11 +1023,11 @@ const TAB_SWITCHER_THUMBNAIL_TARGET_HEIGHT = 200;
 
 // Thumbnail capture scheduling; pending captures are simply retried on the
 // next activation.
-const tabSwitcherThumbnailTimersByTabId = new Map();
+const tabSwitcherThumbnailTimersByTabId = new Map<number, ReturnType<typeof setTimeout>>();
 
-const tabSwitcherThumbnailPriorityByTabId = new Map();
+const tabSwitcherThumbnailPriorityByTabId = new Map<number, ThumbnailPriority>();
 
-let tabSwitcherThumbnailCaptureChain = Promise.resolve(false);
+let tabSwitcherThumbnailCaptureChain: Promise<boolean> = Promise.resolve(false);
 
 let tabSwitcherLastCaptureAt = 0;
 
@@ -905,9 +1038,9 @@ let tabSwitcherLastCaptureAt = 0;
 // the onSuspend flush only covers an event page unloaded with a write pending.
 let tabSwitcherStateLoaded = false;
 
-let tabSwitcherStateLoadPromise = null;
+let tabSwitcherStateLoadPromise: Promise<boolean> | null = null;
 
-let tabSwitcherStatePersistTimer = null;
+let tabSwitcherStatePersistTimer: ReturnType<typeof setTimeout> | null = null;
 
 let tabSwitcherStateDirtyBeforeLoad = false;
 
@@ -920,7 +1053,7 @@ const recentTabTracker = RECENT_TAB_SWITCHER.createRecentTabTracker({
   shouldIncludeTab: shouldTrackSwitcherTab
 });
 
-function getTabSwitcherStateStorageArea() {
+function getTabSwitcherStateStorageArea(): chrome.storage.StorageArea | null {
   if (!chrome || !chrome.storage) {
     return null;
   }
@@ -934,13 +1067,16 @@ function getTabSwitcherStateStorageArea() {
 // every open extension page.
 const TAB_SWITCHER_THUMBNAIL_KEY_PREFIX = '_x_extension_tab_switcher_thumbnail_2026_unique_:';
 let persistedTabSwitcherHeadSignature = '';
-const persistedThumbnailSignatureByTabId = new Map();
+const persistedThumbnailSignatureByTabId = new Map<number, string>();
 
-function getTabSwitcherThumbnailStorageKey(tabId) {
+function getTabSwitcherThumbnailStorageKey(tabId: unknown): string {
   return `${TAB_SWITCHER_THUMBNAIL_KEY_PREFIX}${tabId}`;
 }
 
-function getThumbnailPersistSignature(entry) {
+// What decides whether a stored thumbnail entry needs writing again.
+function getThumbnailPersistSignature(entry: {
+  updatedAt?: unknown; capturedAt?: unknown; status?: unknown; url?: unknown; reason?: unknown; dataUrl?: unknown;
+}): string {
   return [
     entry.updatedAt,
     entry.capturedAt,
@@ -951,11 +1087,11 @@ function getThumbnailPersistSignature(entry) {
   ].join('|');
 }
 
-function getTabSwitcherHeadSignature(head) {
+function getTabSwitcherHeadSignature(head: { stack?: unknown; thumbnailTabIds?: unknown }): string {
   return JSON.stringify([head.stack, head.thumbnailTabIds]);
 }
 
-function readTabSwitcherStorage(storageArea, keys) {
+function readTabSwitcherStorage(storageArea: chrome.storage.StorageArea, keys: string[]): Promise<Record<string, unknown> | null> {
   return new Promise((resolve) => {
     storageArea.get(keys, (result) => {
       resolve(chrome.runtime && chrome.runtime.lastError ? null : (result || {}));
@@ -963,37 +1099,40 @@ function readTabSwitcherStorage(storageArea, keys) {
   });
 }
 
-async function getTabSwitcherStateFromStorage() {
+// The stored state as saved; the tracker checks it as it hydrates.
+async function getTabSwitcherStateFromStorage(): Promise<Record<string, unknown> | null> {
   const storageArea = getTabSwitcherStateStorageArea();
   if (!storageArea || typeof storageArea.get !== 'function') {
     return null;
   }
   const headResult = await readTabSwitcherStorage(storageArea, [TAB_SWITCHER_THUMBNAIL_STORAGE_KEY]);
   const head = headResult ? headResult[TAB_SWITCHER_THUMBNAIL_STORAGE_KEY] : null;
-  if (!head || typeof head !== 'object') {
+  if (!isRecord(head)) {
     return null;
   }
   // A state saved before the split keeps its thumbnails inline.
   if (Array.isArray(head.thumbnails)) {
     return head;
   }
-  const thumbnailTabIds = (Array.isArray(head.thumbnailTabIds) ? head.thumbnailTabIds : [])
-    .filter((tabId) => Number.isInteger(tabId));
+  const storedTabIds: unknown[] = Array.isArray(head.thumbnailTabIds) ? head.thumbnailTabIds : [];
+  const thumbnailTabIds = storedTabIds.filter((tabId) => Number.isInteger(tabId));
   const thumbnailResult = thumbnailTabIds.length
     ? await readTabSwitcherStorage(storageArea, thumbnailTabIds.map(getTabSwitcherThumbnailStorageKey))
     : {};
   const thumbnails = thumbnailTabIds
     .map((tabId) => thumbnailResult && thumbnailResult[getTabSwitcherThumbnailStorageKey(tabId)])
-    .filter((entry) => entry && typeof entry === 'object');
+    .filter(isRecord);
   persistedTabSwitcherHeadSignature = getTabSwitcherHeadSignature(head);
   persistedThumbnailSignatureByTabId.clear();
   thumbnails.forEach((entry) => {
-    persistedThumbnailSignatureByTabId.set(entry.tabId, getThumbnailPersistSignature(entry));
+    if (typeof entry.tabId === 'number') {
+      persistedThumbnailSignatureByTabId.set(entry.tabId, getThumbnailPersistSignature(entry));
+    }
   });
   return { ...head, thumbnails };
 }
 
-function setTabSwitcherStateToStorage(state) {
+function setTabSwitcherStateToStorage(state: TrackerState): Promise<boolean> {
   const storageArea = getTabSwitcherStateStorageArea();
   if (!storageArea || typeof storageArea.set !== 'function' || !state) {
     return Promise.resolve(false);
@@ -1006,8 +1145,8 @@ function setTabSwitcherStateToStorage(state) {
     thumbnailTabIds: thumbnails.map((entry) => entry.tabId)
   };
   const headSignature = getTabSwitcherHeadSignature(head);
-  const writes = {};
-  const nextSignatures = new Map();
+  const writes: Record<string, unknown> = {};
+  const nextSignatures = new Map<number, string>();
   thumbnails.forEach((entry) => {
     const signature = getThumbnailPersistSignature(entry);
     nextSignatures.set(entry.tabId, signature);
@@ -1046,7 +1185,7 @@ function setTabSwitcherStateToStorage(state) {
   });
 }
 
-export function ensureTabSwitcherStateLoaded() {
+export function ensureTabSwitcherStateLoaded(): Promise<boolean> {
   if (tabSwitcherStateLoaded) {
     return Promise.resolve(true);
   }
@@ -1077,7 +1216,7 @@ export function ensureTabSwitcherStateLoaded() {
   return tabSwitcherStateLoadPromise;
 }
 
-function persistTabSwitcherState() {
+function persistTabSwitcherState(): Promise<boolean> {
   tabSwitcherStatePersistTimer = null;
   if (!tabSwitcherStateLoaded) {
     // Writing now would replace the stored state with only this wake's
@@ -1087,7 +1226,7 @@ function persistTabSwitcherState() {
   return setTabSwitcherStateToStorage(recentTabTracker.exportState());
 }
 
-function schedulePersistTabSwitcherState() {
+function schedulePersistTabSwitcherState(): void {
   if (!tabSwitcherStateLoaded) {
     tabSwitcherStateDirtyBeforeLoad = true;
   }
@@ -1099,19 +1238,19 @@ function schedulePersistTabSwitcherState() {
   }, TAB_SWITCHER_THUMBNAIL_PERSIST_DEBOUNCE_MS);
 }
 
-export function flushPendingTabSwitcherState() {
+export function flushPendingTabSwitcherState(): Promise<boolean> {
   if (tabSwitcherStatePersistTimer === null || !tabSwitcherStateLoaded) {
     return Promise.resolve(false);
   }
   clearTimeout(tabSwitcherStatePersistTimer);
   tabSwitcherStatePersistTimer = null;
-  return persistTabSwitcherState().catch((error) => {
+  return persistTabSwitcherState().catch((error: unknown) => {
     warnBackgroundFailure('Failed to save the recent-tab switcher state.')(error);
     return false;
   });
 }
 
-export function recordRecentSwitcherTab(tab, at) {
+export function recordRecentSwitcherTab(tab: chrome.tabs.Tab | null | undefined, at?: number): ReturnType<typeof recentTabTracker.recordTab> {
   const snapshot = recentTabTracker.recordTab(tab, at);
   if (snapshot) {
     schedulePersistTabSwitcherState();
@@ -1119,7 +1258,7 @@ export function recordRecentSwitcherTab(tab, at) {
   return snapshot;
 }
 
-export function updateRecentSwitcherTab(tab, at) {
+export function updateRecentSwitcherTab(tab: chrome.tabs.Tab | null | undefined, at?: number): ReturnType<typeof recentTabTracker.updateTab> {
   const snapshot = recentTabTracker.updateTab(tab, at);
   if (snapshot) {
     schedulePersistTabSwitcherState();
@@ -1127,19 +1266,19 @@ export function updateRecentSwitcherTab(tab, at) {
   return snapshot;
 }
 
-export function removeRecentSwitcherTab(tabId) {
+export function removeRecentSwitcherTab(tabId: number): void {
   clearSwitcherThumbnailPriority(tabId);
   if (recentTabTracker.removeTab(tabId)) {
     schedulePersistTabSwitcherState();
   }
 }
 
-function getSwitcherThumbnailStateForPayload(tab, url) {
+function getSwitcherThumbnailStateForPayload(tab: SwitcherTab & { id: number }, url: string): ThumbnailState {
   // Also drops blurred captures saved before such pages were skipped.
   if (isFirefoxPrivilegedPageUrl(url)) {
     return { status: 'restricted', reason: 'restricted-browser-page', dataUrl: '', capturedAt: 0, updatedAt: 0 };
   }
-  const status = typeof tab._xSwitcherThumbnailStatus === 'string' ? tab._xSwitcherThumbnailStatus : '';
+  const status = readTabSwitcherThumbnailStatus(tab._xSwitcherThumbnailStatus);
   if (status) {
     return {
       status,
@@ -1152,7 +1291,7 @@ function getSwitcherThumbnailStateForPayload(tab, url) {
   return recentTabTracker.getThumbnailState(tab.id, url);
 }
 
-function isSwitcherThumbnailRefreshNeeded(state) {
+function isSwitcherThumbnailRefreshNeeded(state: { status?: unknown; dataUrl?: unknown } | null | undefined): boolean {
   const status = String(state && state.status ? state.status : '').trim().toLowerCase();
   if (status === 'restricted' || status === 'pending') {
     return false;
@@ -1168,12 +1307,12 @@ function isSwitcherThumbnailRefreshNeeded(state) {
 
 // Opening the switcher takes a fresh shot of the current tab, unless the page
 // is still loading or Chrome's two-captures-per-second limit would refuse it.
-function shouldPreCaptureActiveSwitcherThumbnailBeforePayload(tab) {
+function shouldPreCaptureActiveSwitcherThumbnailBeforePayload(tab: chrome.tabs.Tab): boolean {
   const isActive = tab && tab.active === true;
-  if (!isActive || tab.status === 'loading' || !canCaptureSwitcherThumbnail(tab)) {
+  if (!isActive || tab.status === 'loading' || !canCaptureSwitcherThumbnail(tab) || typeof tab.id !== 'number') {
     return false;
   }
-  const state = getSwitcherThumbnailStateForPayload(tab, getResolvedTabUrl(tab));
+  const state = getSwitcherThumbnailStateForPayload({ ...tab, id: tab.id }, getResolvedTabUrl(tab));
   if (state && state.status === 'restricted') {
     return false;
   }
@@ -1181,7 +1320,7 @@ function shouldPreCaptureActiveSwitcherThumbnailBeforePayload(tab) {
     isSwitcherThumbnailRefreshNeeded(state);
 }
 
-function waitForSwitcherOpenCapture(captureReady) {
+function waitForSwitcherOpenCapture(captureReady: Promise<boolean>): Promise<void> {
   return new Promise((resolve) => {
     const timer = setTimeout(resolve, TAB_SWITCHER_OPEN_CAPTURE_BUDGET_MS);
     Promise.resolve(captureReady).catch(() => false).then(() => {
@@ -1191,7 +1330,7 @@ function waitForSwitcherOpenCapture(captureReady) {
   });
 }
 
-function findSwitcherTabById(tabList, tabId) {
+function findSwitcherTabById(tabList: readonly chrome.tabs.Tab[], tabId: number): chrome.tabs.Tab | null {
   if (typeof tabId !== 'number') {
     return null;
   }
@@ -1200,7 +1339,7 @@ function findSwitcherTabById(tabList, tabId) {
   ) || null;
 }
 
-function markSwitcherThumbnailPriorityForItems(items, tabList, reason) {
+function markSwitcherThumbnailPriorityForItems(items: readonly TabSwitcherItem[], tabList: readonly chrome.tabs.Tab[], reason: string): void {
   if (!Array.isArray(items) || !items.length) {
     return;
   }
@@ -1214,7 +1353,7 @@ function markSwitcherThumbnailPriorityForItems(items, tabList, reason) {
     })) {
       return;
     }
-    const tab = findSwitcherTabById(tabList, item.id) || item;
+    const tab: SwitcherTab = findSwitcherTabById(tabList, item.id) || item;
     if (!canCaptureSwitcherThumbnail(tab)) {
       return;
     }
@@ -1227,14 +1366,14 @@ function markSwitcherThumbnailPriorityForItems(items, tabList, reason) {
   });
 }
 
-export function clearSwitcherThumbnailPriority(tabId) {
+export function clearSwitcherThumbnailPriority(tabId: unknown): void {
   if (typeof tabId !== 'number') {
     return;
   }
   tabSwitcherThumbnailPriorityByTabId.delete(tabId);
 }
 
-function consumeSwitcherThumbnailPriority(tab, reason) {
+function consumeSwitcherThumbnailPriority(tab: SwitcherTab, reason: string): boolean {
   const tabId = tab && typeof tab.id === 'number' ? tab.id : null;
   if (typeof tabId !== 'number') {
     return false;
@@ -1264,7 +1403,7 @@ function consumeSwitcherThumbnailPriority(tab, reason) {
   return true;
 }
 
-function markSwitcherThumbnailStatus(tab, status, requestReason, failureReason) {
+function markSwitcherThumbnailStatus(tab: SwitcherTab | null | undefined, status: string, requestReason: string, failureReason: string): boolean {
   if (!tab || typeof tab.id !== 'number') {
     return false;
   }
@@ -1284,7 +1423,7 @@ function markSwitcherThumbnailStatus(tab, status, requestReason, failureReason) 
 // rasterized once into a data URL that any page can render.
 let firefoxBrandIconDataUrl = '';
 
-export function loadFirefoxBrandIcon() {
+export function loadFirefoxBrandIcon(): void {
   if (!BROWSER_PROFILE.isFirefoxExtensionRuntime() || typeof Image !== 'function' || typeof document === 'undefined') {
     return;
   }
@@ -1294,20 +1433,25 @@ export function loadFirefoxBrandIcon() {
       const canvas = document.createElement('canvas');
       canvas.width = 64;
       canvas.height = 64;
-      canvas.getContext('2d').drawImage(image, 0, 0, 64, 64);
+      const context = canvas.getContext('2d');
+      if (!context) {
+        firefoxBrandIconDataUrl = '';
+        return;
+      }
+      context.drawImage(image, 0, 0, 64, 64);
       firefoxBrandIconDataUrl = canvas.toDataURL('image/png');
-    } catch (error) {
+    } catch (_error) {
       firefoxBrandIconDataUrl = '';
     }
   };
   image.src = 'chrome://branding/content/icon64.png';
 }
 
-function isFirefoxPrivilegedPageUrl(url) {
+function isFirefoxPrivilegedPageUrl(url: unknown): boolean {
   return /^about:/i.test(String(url || '')) && BROWSER_PROFILE.isFirefoxExtensionRuntime();
 }
 
-function buildSwitcherTabFavicon(tab, url) {
+function buildSwitcherTabFavicon(tab: SwitcherTab, url: string): string {
   const resolved = String(url || getResolvedTabUrl(tab) || '').trim();
   if (firefoxBrandIconDataUrl && isFirefoxPrivilegedPageUrl(resolved) &&
       !/^(?:data:image\/|https?:)/i.test(String(tab && tab.favIconUrl || ''))) {
@@ -1317,7 +1461,7 @@ function buildSwitcherTabFavicon(tab, url) {
   return resolver ? resolver.resolveFaviconSource(tab && tab.favIconUrl, resolved) : '';
 }
 
-function getSwitcherRegistrableThemeHost(host) {
+function getSwitcherRegistrableThemeHost(host: unknown): string {
   const normalizedHost = normalizeFaviconHost(host);
   if (!normalizedHost ||
       normalizedHost === 'localhost' ||
@@ -1349,10 +1493,10 @@ function getSwitcherRegistrableThemeHost(host) {
   return labels.slice(-tailLength).join('.');
 }
 
-function getSwitcherThemeHostCandidates(host) {
+function getSwitcherThemeHostCandidates(host: unknown): string[] {
   const normalizedHost = normalizeFaviconHost(host);
-  const candidates = [];
-  const addCandidate = (candidate) => {
+  const candidates: string[] = [];
+  const addCandidate = (candidate: unknown): void => {
     const normalized = normalizeFaviconHost(candidate);
     if (normalized && !candidates.includes(normalized)) {
       candidates.push(normalized);
@@ -1369,7 +1513,7 @@ function getSwitcherThemeHostCandidates(host) {
   return candidates;
 }
 
-function getCachedSiteThemeColorForSwitcher(host, origin) {
+function getCachedSiteThemeColorForSwitcher(host: unknown, origin: unknown): SiteThemeColor | null {
   const normalizedHost = normalizeFaviconHost(host);
   const normalizedOrigin = String(origin || '').trim();
   if (!normalizedHost) {
@@ -1401,7 +1545,7 @@ function getCachedSiteThemeColorForSwitcher(host, origin) {
   return null;
 }
 
-function getPersistedSiteThemeColorForSwitcher(host) {
+function getPersistedSiteThemeColorForSwitcher(host: unknown): SiteThemeColor | null {
   const runtime = getBackgroundFaviconCacheRuntime();
   if (!runtime || typeof runtime.getPersistedThemeEntry !== 'function') {
     return null;
@@ -1410,7 +1554,7 @@ function getPersistedSiteThemeColorForSwitcher(host) {
   for (const candidateHost of candidateHosts) {
     const entry = runtime.getPersistedThemeEntry(candidateHost);
     const accentRgb = normalizeThemeAccentRgb(entry && entry.accentRgb);
-    if (accentRgb) {
+    if (entry && accentRgb) {
       return {
         accentRgb,
         source: entry.source || 'cache',
@@ -1422,12 +1566,13 @@ function getPersistedSiteThemeColorForSwitcher(host) {
   return null;
 }
 
-function persistSiteThemeColorForSwitcher(host, result) {
+function persistSiteThemeColorForSwitcher(host: string, result: SiteThemeColor | null): boolean {
   const runtime = getBackgroundFaviconCacheRuntime();
   const accentRgb = normalizeThemeAccentRgb(result && result.accentRgb);
   if (!runtime ||
       typeof runtime.setPersistedThemeEntry !== 'function' ||
       !host ||
+      !result ||
       !accentRgb) {
     return false;
   }
@@ -1439,9 +1584,9 @@ function persistSiteThemeColorForSwitcher(host, result) {
   });
 }
 
-function getNewtabBrandAccentForSwitcher(host, url) {
+function getNewtabBrandAccentForSwitcher(host: unknown, url: string): ThemeRgb | null {
   const normalizedHost = normalizeFaviconHost(host);
-  let accentRgb = null;
+  let accentRgb: ThemeRgb | null = null;
   if (normalizedHost) {
     accentRgb = NEWTAB_FAVICON_THEME.getBrandAccentForHost(normalizedHost);
   }
@@ -1451,7 +1596,7 @@ function getNewtabBrandAccentForSwitcher(host, url) {
   return normalizeThemeAccentRgb(accentRgb);
 }
 
-function normalizeSwitcherAccentRgbForPayload(accentRgb) {
+function normalizeSwitcherAccentRgbForPayload(accentRgb: unknown): ThemeRgb | null {
   const rgb = normalizeThemeAccentRgb(accentRgb);
   if (!rgb) {
     return null;
@@ -1462,16 +1607,16 @@ function normalizeSwitcherAccentRgbForPayload(accentRgb) {
   return rgb;
 }
 
-function warmSwitcherTabThemeColor(host, url) {
+function warmSwitcherTabThemeColor(host: unknown, url: string): void {
   const normalizedHost = normalizeFaviconHost(host);
   const resolved = String(url || '').trim();
   if (!normalizedHost || !resolved) {
     return;
   }
-  let parsed = null;
+  let parsed: URL;
   try {
     parsed = new URL(resolved);
-  } catch (error) {
+  } catch (_error) {
     return;
   }
   if (!/^https?:$/i.test(parsed.protocol) ||
@@ -1491,7 +1636,7 @@ function warmSwitcherTabThemeColor(host, url) {
     .then((result) => {
       const accentRgb = normalizeThemeAccentRgb(result && result.accentRgb);
       const sharedHost = getSwitcherRegistrableThemeHost(normalizedHost);
-      if (accentRgb && sharedHost && sharedHost !== normalizedHost) {
+      if (result && accentRgb && sharedHost && sharedHost !== normalizedHost) {
         const sharedKey = `${sharedHost}::${parsed.origin}::auto`;
         FAVICON_UTILS.setBoundedCacheEntry(
           siteThemeColorCache,
@@ -1508,15 +1653,15 @@ function warmSwitcherTabThemeColor(host, url) {
     });
 }
 
-function getSwitcherTabAccentRgb(tab, url) {
+function getSwitcherTabAccentRgb(tab: SwitcherTab, url: string): ThemeRgb | null {
   const resolved = String(url || getResolvedTabUrl(tab) || '').trim();
   if (!resolved) {
     return null;
   }
-  let parsed = null;
+  let parsed: URL;
   try {
     parsed = new URL(resolved);
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
   if (!/^https?:$/i.test(parsed.protocol) || shouldBlockFaviconForHost(parsed.hostname)) {
@@ -1533,7 +1678,7 @@ function getSwitcherTabAccentRgb(tab, url) {
   return normalizeSwitcherAccentRgbForPayload(cached && cached.accentRgb);
 }
 
-async function prepareSwitcherThumbnailDataUrl(dataUrl) {
+async function prepareSwitcherThumbnailDataUrl(dataUrl: unknown): Promise<string> {
   const source = typeof dataUrl === 'string' ? dataUrl : '';
   if (!source.startsWith('data:image/')) {
     return '';
@@ -1592,16 +1737,16 @@ async function prepareSwitcherThumbnailDataUrl(dataUrl) {
     });
     const buffer = await outputBlob.arrayBuffer();
     return `data:${outputBlob.type || 'image/webp'};base64,${arrayBufferToBase64(buffer)}`;
-  } catch (error) {
+  } catch (_error) {
     return source;
   }
 }
 
-function canCaptureSwitcherThumbnail(tab) {
+function canCaptureSwitcherThumbnail(tab: SwitcherTab | null | undefined): boolean {
   return getSwitcherThumbnailCaptureFailureReason(tab) === '';
 }
 
-function getSwitcherThumbnailCaptureFailureReason(tab) {
+function getSwitcherThumbnailCaptureFailureReason(tab: SwitcherTab | null | undefined): string {
   if (!tab || typeof tab.id !== 'number' || typeof tab.windowId !== 'number') {
     return 'invalid-tab';
   }
@@ -1621,12 +1766,12 @@ function getSwitcherThumbnailCaptureFailureReason(tab) {
       return 'restricted-browser-page';
     }
     return '';
-  } catch (error) {
+  } catch (_error) {
     return 'invalid-url';
   }
 }
 
-function logSwitcherThumbnailCaptureFailure(tab, failureReason, requestReason) {
+function logSwitcherThumbnailCaptureFailure(tab: SwitcherTab | null | undefined, failureReason: string, requestReason: string): void {
   markSwitcherThumbnailStatus(tab, getSwitcherThumbnailStatusForFailureReason(failureReason), requestReason, failureReason);
   logHotkeyDebug('tab-switcher-thumbnail-failed', {
     tabId: tab && typeof tab.id === 'number' ? tab.id : null,
@@ -1637,7 +1782,7 @@ function logSwitcherThumbnailCaptureFailure(tab, failureReason, requestReason) {
   });
 }
 
-function getSwitcherThumbnailStatusForFailureReason(reason) {
+function getSwitcherThumbnailStatusForFailureReason(reason: string): 'restricted' | 'failed' {
   const text = String(reason || '').toLowerCase();
   if (text.includes('restricted') ||
       text.includes('permission') ||
@@ -1653,7 +1798,7 @@ function getSwitcherThumbnailStatusForFailureReason(reason) {
   return 'failed';
 }
 
-function logSwitcherThumbnailCaptureSuccess(tab, requestReason) {
+function logSwitcherThumbnailCaptureSuccess(tab: SwitcherTab, requestReason: string): void {
   logHotkeyDebug('tab-switcher-thumbnail-captured', {
     tabId: tab && typeof tab.id === 'number' ? tab.id : null,
     windowId: tab && typeof tab.windowId === 'number' ? tab.windowId : null,
@@ -1662,7 +1807,7 @@ function logSwitcherThumbnailCaptureSuccess(tab, requestReason) {
   });
 }
 
-function waitForSwitcherThumbnailCaptureSlot() {
+function waitForSwitcherThumbnailCaptureSlot(): Promise<void> {
   const sinceLast = Date.now() - tabSwitcherLastCaptureAt;
   const waitMs = Math.max(0, TAB_SWITCHER_CAPTURE_MIN_INTERVAL_MS - sinceLast);
   if (waitMs <= 0) {
@@ -1673,7 +1818,7 @@ function waitForSwitcherThumbnailCaptureSlot() {
   });
 }
 
-function clearScheduledSwitcherThumbnailCapture(tabId) {
+function clearScheduledSwitcherThumbnailCapture(tabId: unknown): void {
   if (typeof tabId !== 'number') {
     return;
   }
@@ -1684,7 +1829,7 @@ function clearScheduledSwitcherThumbnailCapture(tabId) {
   }
 }
 
-function enqueueSwitcherThumbnailCapture(tab, reason) {
+function enqueueSwitcherThumbnailCapture(tab: chrome.tabs.Tab, reason: string): Promise<boolean> {
   markSwitcherThumbnailStatus(tab, 'pending', reason, '');
   const runCapture = () => waitForSwitcherThumbnailCaptureSlot()
     .then(() => captureSwitcherThumbnailForTab(tab, reason));
@@ -1695,7 +1840,7 @@ function enqueueSwitcherThumbnailCapture(tab, reason) {
   return queued;
 }
 
-function isTabSwitcherOpeningForCapture(tab) {
+function isTabSwitcherOpeningForCapture(tab: SwitcherTab): boolean {
   const key = getTabSwitcherOpeningWindowKey(tab);
   if (!key) {
     return false;
@@ -1704,12 +1849,12 @@ function isTabSwitcherOpeningForCapture(tab) {
   return Boolean(opening && opening.expiresAt > Date.now());
 }
 
-function isSwitcherCommandCaptureReason(reason) {
+function isSwitcherCommandCaptureReason(reason: unknown): boolean {
   const requestReason = String(reason || '');
   return requestReason === TAB_SWITCHER_CAPTURE_REASON_COMMAND_IMMEDIATE;
 }
 
-function shouldSkipSwitcherThumbnailCaptureForOpenSwitcher(tab, reason) {
+function shouldSkipSwitcherThumbnailCaptureForOpenSwitcher(tab: SwitcherTab, reason: string): Promise<boolean> {
   if (isSwitcherCommandCaptureReason(reason)) {
     return Promise.resolve(false);
   }
@@ -1721,7 +1866,7 @@ function shouldSkipSwitcherThumbnailCaptureForOpenSwitcher(tab, reason) {
     .catch(() => false);
 }
 
-function captureSwitcherThumbnailForTab(tab, reason) {
+function captureSwitcherThumbnailForTab(tab: chrome.tabs.Tab, reason: string): Promise<boolean> {
   const tabId = tab && typeof tab.id === 'number' ? tab.id : null;
   const windowId = tab && typeof tab.windowId === 'number' ? tab.windowId : null;
   clearScheduledSwitcherThumbnailCapture(tabId);
@@ -1733,7 +1878,7 @@ function captureSwitcherThumbnailForTab(tab, reason) {
     logSwitcherThumbnailCaptureFailure(tab, 'capture-api-unavailable', reason);
     return Promise.resolve(false);
   }
-  const captureResolvedTab = (resolvedTab) => new Promise((resolve) => {
+  const captureResolvedTab = (resolvedTab: chrome.tabs.Tab): Promise<boolean> => new Promise((resolve) => {
     const failureReason = getSwitcherThumbnailCaptureFailureReason(resolvedTab);
     if (failureReason) {
       logSwitcherThumbnailCaptureFailure(resolvedTab || tab, failureReason, reason);
@@ -1752,16 +1897,17 @@ function captureSwitcherThumbnailForTab(tab, reason) {
         return;
       }
       tabSwitcherLastCaptureAt = Date.now();
-      withTabSwitcherHiddenForCapture(resolvedTab, () => new Promise((captureResolve) => {
+      withTabSwitcherHiddenForCapture(resolvedTab, () => new Promise<CaptureResult>((captureResolve) => {
         try {
           chrome.tabs.captureVisibleTab(windowId, {
             format: 'jpeg',
             quality: TAB_SWITCHER_CAPTURE_JPEG_QUALITY
           }, (dataUrl) => {
-            if (chrome.runtime && chrome.runtime.lastError) {
+            const lastError = chrome.runtime && chrome.runtime.lastError;
+            if (lastError) {
               captureResolve({
                 ok: false,
-                reason: chrome.runtime.lastError.message || 'capture-visible-tab-failed'
+                reason: lastError.message || 'capture-visible-tab-failed'
               });
               return;
             }
@@ -1773,14 +1919,14 @@ function captureSwitcherThumbnailForTab(tab, reason) {
         } catch (error) {
           captureResolve({
             ok: false,
-            reason: error && error.message ? error.message : 'capture-visible-tab-threw'
+            reason: getErrorMessage(error, 'capture-visible-tab-threw')
           });
         }
       })).then((captureResult) => {
-        if (!captureResult || captureResult.ok !== true) {
+        if (!captureResult || !('dataUrl' in captureResult)) {
           logSwitcherThumbnailCaptureFailure(
             resolvedTab,
-            captureResult && captureResult.reason ? captureResult.reason : 'capture-visible-tab-failed',
+            captureResult && 'reason' in captureResult && captureResult.reason ? captureResult.reason : 'capture-visible-tab-failed',
             reason
           );
           resolve(false);
@@ -1792,7 +1938,8 @@ function captureSwitcherThumbnailForTab(tab, reason) {
             resolve(false);
             return;
           }
-          const didSet = recentTabTracker.setThumbnail(resolvedTab.id, thumbnailDataUrl, Date.now(), {
+          const resolvedTabId = typeof resolvedTab.id === 'number' ? resolvedTab.id : tabId;
+          const didSet = recentTabTracker.setThumbnail(resolvedTabId, thumbnailDataUrl, Date.now(), {
             url: getResolvedTabUrl(resolvedTab)
           });
           if (didSet) {
@@ -1800,7 +1947,7 @@ function captureSwitcherThumbnailForTab(tab, reason) {
             if (isSwitcherCommandCaptureReason(reason)) {
               // The switcher may have closed or its tab navigated meanwhile.
               postTabSwitcherThumbnailUpdate(resolvedTab, {
-                tabId: resolvedTab.id,
+                tabId: resolvedTabId,
                 url: getResolvedTabUrl(resolvedTab),
                 thumbnail: thumbnailDataUrl,
                 thumbnailStatus: 'ok',
@@ -1830,8 +1977,9 @@ function captureSwitcherThumbnailForTab(tab, reason) {
   }
   return new Promise((resolve) => {
     chrome.tabs.get(tabId, (freshTab) => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        logSwitcherThumbnailCaptureFailure(tab, chrome.runtime.lastError.message || 'tabs-get-failed', reason);
+      const lastError = chrome.runtime && chrome.runtime.lastError;
+      if (lastError) {
+        logSwitcherThumbnailCaptureFailure(tab, lastError.message || 'tabs-get-failed', reason);
         resolve(false);
         return;
       }
@@ -1842,7 +1990,10 @@ function captureSwitcherThumbnailForTab(tab, reason) {
   });
 }
 
-function hasFreshSwitcherThumbnail(tab, now) {
+function hasFreshSwitcherThumbnail(tab: SwitcherTab, now: number): boolean {
+  if (typeof tab.id !== 'number') {
+    return false;
+  }
   const state = recentTabTracker.getThumbnailState(tab.id, getResolvedTabUrl(tab));
   const capturedAt = Number(state && state.capturedAt) || 0;
   // getThumbnailState drops the image when the tab's URL changed since.
@@ -1851,12 +2002,12 @@ function hasFreshSwitcherThumbnail(tab, now) {
     (now - capturedAt) < TAB_SWITCHER_THUMBNAIL_FRESH_MS;
 }
 
-function isSwitcherThumbnailCaptureWanted(tab, reason, now) {
+function isSwitcherThumbnailCaptureWanted(tab: SwitcherTab, reason: string, now: number): boolean {
   return reason === TAB_SWITCHER_CAPTURE_REASON_LOAD_COMPLETE ||
     !hasFreshSwitcherThumbnail(tab, now);
 }
 
-function isSwitcherWindowFocused(windowId) {
+function isSwitcherWindowFocused(windowId: number): Promise<boolean> {
   if (!chrome.windows || typeof chrome.windows.get !== 'function') {
     return Promise.resolve(true);
   }
@@ -1869,7 +2020,7 @@ function isSwitcherWindowFocused(windowId) {
         }
         resolve(Boolean(win && win.focused !== false));
       });
-    } catch (error) {
+    } catch (_error) {
       resolve(false);
     }
   });
@@ -1877,7 +2028,7 @@ function isSwitcherWindowFocused(windowId) {
 
 // Re-checked when the settle timer fires: the tab must still be the active tab
 // of a focused window, on a URL whose thumbnail is still wanted.
-function getSettledSwitcherCaptureTab(request) {
+function getSettledSwitcherCaptureTab(request: CaptureRequest): Promise<chrome.tabs.Tab | null> {
   if (!tabSwitcherEnabledCache || typeof chrome.tabs.get !== 'function') {
     return Promise.resolve(null);
   }
@@ -1899,7 +2050,7 @@ function getSettledSwitcherCaptureTab(request) {
   });
 }
 
-export function scheduleSwitcherThumbnailCapture(tab, reason) {
+export function scheduleSwitcherThumbnailCapture(tab: chrome.tabs.Tab, reason: string): void {
   if (!areBackgroundSettingsLoaded()) {
     whenBackgroundSettingsReady(() => {
       scheduleSwitcherThumbnailCapture(tab, reason);
@@ -1923,10 +2074,14 @@ export function scheduleSwitcherThumbnailCapture(tab, reason) {
   if (!isSwitcherThumbnailCaptureWanted(tab, requestReason, now)) {
     return;
   }
+  const tabId = tab.id;
+  if (typeof tabId !== 'number') {
+    return;
+  }
   const hasPriority = consumeSwitcherThumbnailPriority(tab, requestReason);
-  clearScheduledSwitcherThumbnailCapture(tab.id);
-  const request = {
-    tabId: tab.id,
+  clearScheduledSwitcherThumbnailCapture(tabId);
+  const request: CaptureRequest = {
+    tabId,
     windowId: tab.windowId,
     reason: requestReason,
     captureReason: hasPriority ? `priority-${requestReason || 'visible'}` : requestReason,
@@ -1942,10 +2097,10 @@ export function scheduleSwitcherThumbnailCapture(tab, reason) {
       enqueueSwitcherThumbnailCapture(settledTab, request.captureReason).catch(() => {});
     }).catch(() => {});
   }, TAB_SWITCHER_CAPTURE_SETTLE_MS);
-  tabSwitcherThumbnailTimersByTabId.set(tab.id, timer);
+  tabSwitcherThumbnailTimersByTabId.set(tabId, timer);
 }
 
-function clearSwitcherThumbnailsForDisabledSwitcher() {
+function clearSwitcherThumbnailsForDisabledSwitcher(): Promise<boolean | void> {
   tabSwitcherThumbnailTimersByTabId.forEach((timer) => clearTimeout(timer));
   tabSwitcherThumbnailTimersByTabId.clear();
   tabSwitcherThumbnailPriorityByTabId.clear();
@@ -1963,14 +2118,14 @@ function clearSwitcherThumbnailsForDisabledSwitcher() {
 // Mirrors the stored setting, re-read on every wake; background.js applies it.
 let tabSwitcherEnabledCache = true;
 
-export function applyTabSwitcherEnabledSetting(enabled) {
+export function applyTabSwitcherEnabledSetting(enabled: unknown): void {
   tabSwitcherEnabledCache = enabled === true;
   if (!tabSwitcherEnabledCache) {
-    clearSwitcherThumbnailsForDisabledSwitcher();
+    void clearSwitcherThumbnailsForDisabledSwitcher();
   }
 }
 
-function normalizeSwitcherTabForPayload(tab, currentTabId) {
+function normalizeSwitcherTabForPayload(tab: SwitcherTab | null | undefined, currentTabId: number | undefined): TabSwitcherItem | null {
   if (!tab || typeof tab.id !== 'number') {
     return null;
   }
@@ -1978,7 +2133,7 @@ function normalizeSwitcherTabForPayload(tab, currentTabId) {
   if (!url) {
     return null;
   }
-  const thumbnailState = getSwitcherThumbnailStateForPayload(tab, url);
+  const thumbnailState = getSwitcherThumbnailStateForPayload({ ...tab, id: tab.id }, url);
   return {
     id: tab.id,
     windowId: typeof tab.windowId === 'number' ? tab.windowId : null,
@@ -1995,7 +2150,7 @@ function normalizeSwitcherTabForPayload(tab, currentTabId) {
   };
 }
 
-function getRecentTabsForSwitcher(tabList, currentTabId) {
+function getRecentTabsForSwitcher(tabList: readonly chrome.tabs.Tab[], currentTabId: number | undefined): TabSwitcherItem[] {
   const normalizedTabs = (Array.isArray(tabList) ? tabList : [])
     .map((tab) => ({
       ...tab,
@@ -2005,10 +2160,10 @@ function getRecentTabsForSwitcher(tabList, currentTabId) {
   return recentTabTracker
     .getRecentTabs(normalizedTabs, { limit: TAB_SWITCHER_LIMIT })
     .map((tab) => normalizeSwitcherTabForPayload(tab, currentTabId))
-    .filter(Boolean);
+    .filter((item): item is TabSwitcherItem => item !== null);
 }
 
-function getDefaultSwitcherSelectedIndex(items, currentTabId) {
+function getDefaultSwitcherSelectedIndex(items: readonly TabSwitcherItem[], currentTabId: number | undefined): number {
   const list = Array.isArray(items) ? items : [];
   if (list.length <= 0) {
     return 0;
@@ -2029,8 +2184,12 @@ function getDefaultSwitcherSelectedIndex(items, currentTabId) {
   return 0;
 }
 
-export function focusWindowAndActivateTab(tabId, windowId, callback) {
-  const run = (resolvedWindowId) => {
+export function focusWindowAndActivateTab(
+  tabId: number,
+  windowId: number | null | undefined,
+  callback?: (result: SwitchResult) => void
+): void {
+  const run = (resolvedWindowId: number | null | undefined): void => {
     RECENT_TAB_SWITCHER.focusWindowAndActivateTab(chrome, {
       tabId,
       windowId: typeof resolvedWindowId === 'number' ? resolvedWindowId : null
@@ -2043,13 +2202,13 @@ export function focusWindowAndActivateTab(tabId, windowId, callback) {
           callback(result || { ok: false });
         }
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         if (typeof callback === 'function') {
           callback({
             ok: false,
             tabId,
             windowId: typeof resolvedWindowId === 'number' ? resolvedWindowId : null,
-            reason: error && error.message ? error.message : 'switch-failed'
+            reason: getErrorMessage(error, 'switch-failed')
           });
         }
       });
@@ -2070,7 +2229,7 @@ export function focusWindowAndActivateTab(tabId, windowId, callback) {
   });
 }
 
-function getTabSwitcherOpeningWindowKey(tab) {
+function getTabSwitcherOpeningWindowKey(tab: SwitcherTab | null | undefined): string {
   if (tab && typeof tab.windowId === 'number') {
     return `window:${tab.windowId}`;
   }
@@ -2080,7 +2239,7 @@ function getTabSwitcherOpeningWindowKey(tab) {
   return '';
 }
 
-function finishTabSwitcherOpening(opening) {
+function finishTabSwitcherOpening(opening: SwitcherOpening | null | undefined): void {
   if (!opening || !opening.key) {
     return;
   }
@@ -2095,7 +2254,7 @@ function finishTabSwitcherOpening(opening) {
   tabSwitcherOpeningByWindowKey.delete(opening.key);
 }
 
-function beginTabSwitcherOpening(tab, source) {
+function beginTabSwitcherOpening(tab: chrome.tabs.Tab, source: string): SwitcherOpening | null {
   const key = getTabSwitcherOpeningWindowKey(tab);
   if (!key) {
     return null;
@@ -2114,7 +2273,7 @@ function beginTabSwitcherOpening(tab, source) {
   if (existing) {
     finishTabSwitcherOpening(existing);
   }
-  const opening = {
+  const opening: SwitcherOpening = {
     key,
     tabId: tab && typeof tab.id === 'number' ? tab.id : null,
     windowId: tab && typeof tab.windowId === 'number' ? tab.windowId : null,
@@ -2130,7 +2289,7 @@ function beginTabSwitcherOpening(tab, source) {
   return opening;
 }
 
-function createTabSwitcherOpeningFinisher(opening) {
+function createTabSwitcherOpeningFinisher(opening: SwitcherOpening): () => void {
   let didFinish = false;
   return function finishOpeningOnce() {
     if (didFinish) {
@@ -2141,13 +2300,14 @@ function createTabSwitcherOpeningFinisher(opening) {
   };
 }
 
-function injectTabSwitcherOnTab(hostTab, items, context) {
-  const finishOpen = (ok, reason) => {
+function injectTabSwitcherOnTab(hostTab: chrome.tabs.Tab, items: TabSwitcherItem[], context: InjectContext): void {
+  const finishOpen = (ok: boolean, reason: string): void => {
     if (context && typeof context.onOpenComplete === 'function') {
       context.onOpenComplete(Boolean(ok), reason || '');
     }
   };
-  if (!hostTab || typeof hostTab.id !== 'number') {
+  const hostTabId = hostTab ? hostTab.id : undefined;
+  if (!hostTab || typeof hostTabId !== 'number') {
     openNewtabFallback();
     finishOpen(false, 'invalid-host-tab');
     return;
@@ -2162,9 +2322,9 @@ function injectTabSwitcherOnTab(hostTab, items, context) {
     return;
   }
   let webPageTabItems = tabItems;
-  const buildSwitcherContext = (tabZoomFactor) => ({
+  const buildSwitcherContext = (tabZoomFactor: number): TabSwitcherContext => ({
     tabs: webPageTabItems,
-    currentTabId: context && typeof context.currentTabId === 'number' ? context.currentTabId : hostTab.id,
+    currentTabId: context && typeof context.currentTabId === 'number' ? context.currentTabId : hostTabId,
     selectedIndex: context && typeof context.selectedIndex === 'number' ? context.selectedIndex : 0,
     tabZoomFactor: tabZoomFactor,
     advanceOnExisting: true,
@@ -2197,17 +2357,18 @@ function injectTabSwitcherOnTab(hostTab, items, context) {
     });
     return;
   }
-  const runDynamicSwitcherScript = (switcherContext) => {
+  const runDynamicSwitcherScript = (switcherContext: TabSwitcherContext): void => {
     chrome.scripting.executeScript({
-      target: { tabId: hostTab.id },
+      target: { tabId: hostTabId },
       files: [
         'build/icon-font-preload.js',
         'src/react/overlay-islands.js',
         'build/tab-switcher.js'
       ]
     }, () => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        const errorMessage = chrome.runtime.lastError.message || 'unknown';
+      const injectError = chrome.runtime && chrome.runtime.lastError;
+      if (injectError) {
+        const errorMessage = injectError.message || 'unknown';
         logHotkeyDebug('tab-switcher-inject-failed', {
           tabId: hostTab.id,
           error: errorMessage,
@@ -2218,22 +2379,24 @@ function injectTabSwitcherOnTab(hostTab, items, context) {
         return;
       }
       chrome.scripting.executeScript({
-        target: { tabId: hostTab.id },
-        func: (switcherContext) => {
-          const toggle = window._x_extension_toggleTabSwitcher_2026_unique_;
+        target: { tabId: hostTabId },
+        // Runs in the page on its own.
+        func: (pageContext: TabSwitcherContext): unknown => {
+          const toggle: unknown = Reflect.get(window, '_x_extension_toggleTabSwitcher_2026_unique_');
           if (typeof toggle !== 'function') {
             console.warn('Lumno: tab switcher helper not available.');
             return { ok: false, reason: 'tab_switcher_missing' };
           }
-          const result = toggle(switcherContext);
+          const result: unknown = Reflect.apply(toggle, window, [pageContext]);
           return result && typeof result === 'object'
             ? result
             : { ok: true };
         },
         args: [switcherContext]
       }, (results) => {
-        if (chrome.runtime && chrome.runtime.lastError) {
-          const errorMessage = chrome.runtime.lastError.message || 'unknown';
+        const runError = chrome.runtime && chrome.runtime.lastError;
+        if (runError) {
+          const errorMessage = runError.message || 'unknown';
           logHotkeyDebug('tab-switcher-run-failed', {
             tabId: hostTab.id,
             error: errorMessage,
@@ -2242,14 +2405,15 @@ function injectTabSwitcherOnTab(hostTab, items, context) {
           finishOpen(false, errorMessage);
           return;
         }
-        const result = Array.isArray(results) && results[0] ? results[0].result : null;
+        const result = readScriptResults(results)[0];
         if (result && result.ok === false) {
+          const failure = String(result.reason || '');
           logHotkeyDebug('tab-switcher-run-failed', {
-            tabId: hostTab.id,
-            error: result.reason || 'unknown',
+            tabId: hostTabId,
+            error: failure || 'unknown',
             source: context && context.source ? context.source : ''
           });
-          finishOpen(false, result.reason || 'run-failed');
+          finishOpen(false, failure || 'run-failed');
           return;
         }
         logHotkeyDebug('tab-switcher-opened', {
@@ -2262,14 +2426,14 @@ function injectTabSwitcherOnTab(hostTab, items, context) {
       });
     });
   };
-  const runSwitcherScript = (tabZoomFactor) => {
+  const runSwitcherScript = (tabZoomFactor: number): void => {
     const switcherContext = buildSwitcherContext(tabZoomFactor);
     if (!chrome || !chrome.tabs || typeof chrome.tabs.sendMessage !== 'function') {
       runDynamicSwitcherScript(switcherContext);
       return;
     }
     try {
-      LumnoMessaging.sendTabMessage(chrome.tabs, hostTab.id, {
+      LumnoMessaging.sendTabMessage(chrome.tabs, hostTabId, {
         action: 'openTabSwitcherFromCommand',
         context: switcherContext
       }, (response) => {
@@ -2288,19 +2452,19 @@ function injectTabSwitcherOnTab(hostTab, items, context) {
         });
         finishOpen(true, 'runtime-message');
       });
-    } catch (error) {
+    } catch (_error) {
       runDynamicSwitcherScript(switcherContext);
     }
   };
   // The switcher renders inside the web page, which cannot load _favicon URLs.
-  const runWebPageSwitcherScript = (tabZoomFactor) => {
-    inlineExtensionFaviconsForWebPage(tabItems).then((pageItems) => {
+  const runWebPageSwitcherScript = (tabZoomFactor: number): void => {
+    void inlineExtensionFaviconsForWebPage(tabItems).then((pageItems) => {
       webPageTabItems = pageItems;
       runSwitcherScript(tabZoomFactor);
     });
   };
   if (chrome.tabs && typeof chrome.tabs.getZoom === 'function') {
-    chrome.tabs.getZoom(hostTab.id, (zoomFactor) => {
+    chrome.tabs.getZoom(hostTabId, (zoomFactor) => {
       const zoom = Number.isFinite(Number(zoomFactor)) && Number(zoomFactor) > 0
         ? Number(zoomFactor)
         : 1;
@@ -2311,7 +2475,7 @@ function injectTabSwitcherOnTab(hostTab, items, context) {
   runWebPageSwitcherScript(1);
 }
 
-function advanceExistingTabSwitcherOnTab(tab, source, callback) {
+function advanceExistingTabSwitcherOnTab(tab: chrome.tabs.Tab, source: string, callback: (didAdvance: boolean) => void): void {
   if (!tab || typeof tab.id !== 'number' || !canHostSwitcherSurface(tab)) {
     if (typeof callback === 'function') {
       callback(false);
@@ -2319,7 +2483,8 @@ function advanceExistingTabSwitcherOnTab(tab, source, callback) {
     return;
   }
 
-  const finish = (didAdvance) => {
+  const tabId = tab.id;
+  const finish = (didAdvance: boolean): void => {
     if (typeof callback === 'function') {
       callback(Boolean(didAdvance));
     }
@@ -2343,20 +2508,20 @@ function advanceExistingTabSwitcherOnTab(tab, source, callback) {
     return;
   }
 
-  const runRuntimeMessageFastPath = () => {
-    if (!chrome || !chrome.tabs || typeof chrome.tabs.sendMessage !== 'function') {
+  const runRuntimeMessageFastPath = (): void => {
+    if (!chrome || !chrome.tabs || typeof chrome.tabs.sendMessage !== 'function' || typeof tabId !== 'number') {
       finish(false);
       return;
     }
     try {
-      LumnoMessaging.sendTabMessage(chrome.tabs, tab.id, {
+      LumnoMessaging.sendTabMessage(chrome.tabs, tabId, {
         action: 'advanceOpenTabSwitcherFromCommand',
         offset: 1
       }, (response) => {
-        const didAdvance = !(chrome.runtime && chrome.runtime.lastError) &&
+        const didAdvance = Boolean(!(chrome.runtime && chrome.runtime.lastError) &&
           response &&
           response.ok === true &&
-          response.advanced === true;
+          response.advanced === true);
         if (didAdvance) {
           logHotkeyDebug('tab-switcher-advanced-fast', {
             tabId: tab.id,
@@ -2366,7 +2531,7 @@ function advanceExistingTabSwitcherOnTab(tab, source, callback) {
         }
         finish(didAdvance);
       });
-    } catch (error) {
+    } catch (_error) {
       finish(false);
     }
   };
@@ -2374,7 +2539,7 @@ function advanceExistingTabSwitcherOnTab(tab, source, callback) {
   runRuntimeMessageFastPath();
 }
 
-export function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
+export function triggerTabSwitcherForTab(tab: chrome.tabs.Tab | null | undefined, source: string, commandObservedAt?: number): void {
   if (!areBackgroundSettingsLoaded()) {
     whenBackgroundSettingsReady(() => {
       triggerTabSwitcherForTab(tab, source, commandObservedAt);
@@ -2397,6 +2562,7 @@ export function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
     openNewtabFallback();
     return;
   }
+  const tabId = tab.id;
   const windowId = typeof tab.windowId === 'number' ? tab.windowId : null;
   recordTabSwitcherShortcutDebug('command-received', {
     source: String(source || ''),
@@ -2411,11 +2577,11 @@ export function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
   clearScheduledSwitcherThumbnailCapture(tab.id);
   advanceExistingTabSwitcherOnTab(tab, source, (didAdvance) => {
     if (didAdvance) {
-      if (typeof tab.windowId === 'number') {
-        tabSwitcherHostTabIdByWindowId.set(tab.windowId, tab.id);
+      if (typeof windowId === 'number') {
+        tabSwitcherHostTabIdByWindowId.set(windowId, tabId);
       }
       recordTabSwitcherShortcutDebug('command-advanced', {
-        tabId: tab.id,
+        tabId,
         windowId
       });
       return;
@@ -2424,9 +2590,9 @@ export function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
     if (!opening) {
       return;
     }
-    let openingHostTabId = tab.id;
+    let openingHostTabId = tabId;
     const finishOpeningGuard = createTabSwitcherOpeningFinisher(opening);
-    const finishOpening = (ok) => {
+    const finishOpening = (ok?: boolean): void => {
       finishOpeningGuard();
       if (ok === true) {
         if (typeof windowId === 'number' && typeof openingHostTabId === 'number') {
@@ -2438,7 +2604,7 @@ export function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
         });
         return;
       }
-      if (tabSwitcherHostTabIdByWindowId.get(windowId) === openingHostTabId) {
+      if (typeof windowId === 'number' && tabSwitcherHostTabIdByWindowId.get(windowId) === openingHostTabId) {
         tabSwitcherHostTabIdByWindowId.delete(windowId);
       }
       recordTabSwitcherShortcutDebug('switcher-open-failed', {
@@ -2450,14 +2616,13 @@ export function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
       loadFaviconRequestBlacklistItems(),
       loadFaviconEnhancedFetchEnabled()
     ]).catch(() => {}); // Each loader falls back to its default; open regardless.
-    const shortcutReady = new Promise((resolve) => {
+    const shortcutReady = new Promise<string>((resolve) => {
       getConfiguredTabSwitcherShortcut(resolve);
     });
-    const tabQueryReady = new Promise((resolve) => {
+    const tabQueryReady = new Promise<{ error: string; tabs: chrome.tabs.Tab[] }>((resolve) => {
       chrome.tabs.query({}, (tabs) => {
-        const error = chrome.runtime && chrome.runtime.lastError
-          ? chrome.runtime.lastError.message || 'unknown'
-          : '';
+        const lastError = chrome.runtime && chrome.runtime.lastError;
+        const error = lastError ? lastError.message || 'unknown' : '';
         resolve({
           error,
           tabs: Array.isArray(tabs) ? tabs : []
@@ -2484,8 +2649,8 @@ export function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
         return;
       }
       const tabList = tabQuery.tabs;
-      const activeTab = tabList.find((item) => item && item.id === tab.id) || tab;
-      const finishOpeningAndArmShortcutRelease = (ok) => {
+      const activeTab = tabList.find((item) => item && item.id === tabId) || tab;
+      const finishOpeningAndArmShortcutRelease = (ok: boolean): void => {
         finishOpening(ok);
         if (ok === true) {
           armTabSwitcherShortcutReleaseObservers(
@@ -2497,7 +2662,7 @@ export function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
         }
       };
       clearScheduledSwitcherThumbnailCapture(activeTab.id);
-      let openCaptureReady = Promise.resolve(false);
+      let openCaptureReady: Promise<boolean> = Promise.resolve(false);
       if (shouldTrackSwitcherTab(activeTab)) {
         recordRecentSwitcherTab(activeTab);
         if (shouldPreCaptureActiveSwitcherThumbnailBeforePayload(activeTab)) {
@@ -2535,7 +2700,7 @@ export function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
         });
       const hostTab = canHostOnActiveTab
         ? activeTab
-        : (hostItem ? tabList.find((item) => item && item.id === hostItem.id) : null);
+        : (hostItem ? tabList.find((item) => item && item.id === hostItem.id) || null : null);
       const selectedIndex = getDefaultSwitcherSelectedIndex(items, activeTab.id);
       if (!hostTab || typeof hostTab.id !== 'number') {
         openNewtabFallbackForUrl(activeUrl, { sourceTab: activeTab });
@@ -2543,6 +2708,7 @@ export function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
         return;
       }
       openingHostTabId = hostTab.id;
+      const currentTabId = typeof activeTab.id === 'number' ? activeTab.id : tabId;
       if (hostTab.id !== activeTab.id) {
         focusWindowAndActivateTab(hostTab.id, hostTab.windowId, (result) => {
           if (!result || result.ok === false) {
@@ -2550,7 +2716,7 @@ export function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
             return;
           }
           injectTabSwitcherOnTab(hostTab, items, {
-            currentTabId: activeTab.id,
+            currentTabId,
             selectedIndex,
             shortcut,
             source,
@@ -2560,7 +2726,7 @@ export function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
         return;
       }
       injectTabSwitcherOnTab(hostTab, items, {
-        currentTabId: activeTab.id,
+        currentTabId,
         selectedIndex,
         shortcut,
         source,
@@ -2572,7 +2738,7 @@ export function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
   });
 }
 
-function getConfiguredTabSwitcherShortcut(callback) {
+function getConfiguredTabSwitcherShortcut(callback: (shortcut: string) => void): void {
   const fallbackShortcut = 'Alt+Q';
   if (!chrome || !chrome.commands || typeof chrome.commands.getAll !== 'function') {
     callback(fallbackShortcut);
@@ -2592,4 +2758,4 @@ function getConfiguredTabSwitcherShortcut(callback) {
   });
 }
 
-const switcherThemeColorWarmups = new Set();
+const switcherThemeColorWarmups = new Set<string>();
