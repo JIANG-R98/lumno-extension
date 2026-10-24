@@ -79,6 +79,7 @@ function createPanelActions(deps) {
     t,
     getRiSvg,
     syncWallpaperSourceTabToEditMode,
+    getResolvedWallpaperMode,
     setWallpaperPanelOpenState,
     loadCustomWallpapers,
     closeWallpaperPanel
@@ -392,9 +393,18 @@ function createPanelActions(deps) {
     if (!wallpaperState.wallpaperPanel || !wallpaperState.wallpaperButton) {
       return;
     }
+    // The panel opens on the wallpaper the page shows. With light and dark
+    // set apart, the mode picked on an earlier open (or the light default
+    // a page starts with) would leave every change to the other mode's
+    // wallpaper and filter, out of sight.
+    const shownMode = getResolvedWallpaperMode();
+    const modeChanged = wallpaperState.activeWallpaperMode !== shownMode;
+    wallpaperState.activeWallpaperMode = shownMode;
     if (!wallpaperPanelRendered) {
       bindWallpaperPanelSectionRuntimes();
-      // The first open shows the source the current wallpaper comes from.
+    }
+    if (!wallpaperPanelRendered || modeChanged) {
+      // The source tab shows where that wallpaper comes from.
       syncWallpaperSourceTabToEditMode({ force: true });
     }
     dismissWallpaperSourcesFeatureHint();

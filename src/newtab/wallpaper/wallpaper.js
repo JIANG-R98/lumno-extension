@@ -1388,6 +1388,7 @@ function createWallpaperRuntime(options) {
     t,
     getRiSvg,
     syncWallpaperSourceTabToEditMode,
+    getResolvedWallpaperMode,
     setWallpaperPanelOpenState,
     loadCustomWallpapers,
     closeWallpaperPanel,
