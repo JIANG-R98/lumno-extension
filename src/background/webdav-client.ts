@@ -104,7 +104,9 @@ function createClient(config, options) {
         size: length !== null && /^\d+$/.test(length) ? Number(length) : null,
         lastModified: response.headers.get('Last-Modified'), date: response.headers.get('Date') };
     } catch (cause) {
-      if (cause.code) throw cause;
+      // Only the client's own failures carry a string code; an aborted
+      // fetch rejects with a DOMException, whose code is a number.
+      if (cause && typeof cause.code === 'string') throw cause;
       throw error(abort.signal.aborted ? 'timeout' : 'network-error');
     } finally { clearTimeout(timer); }
   }

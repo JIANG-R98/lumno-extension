@@ -194,6 +194,17 @@ async function run() {
   assert.throws(() => client.normalizeConfig({ ...config, endpoint: 'http://dav.test/' }), /invalid-endpoint/);
   assert.throws(() => client.normalizeConfig({ ...config, endpoint: 'https://user:password@dav.test/' }), /invalid-endpoint/);
   assert.throws(() => client.normalizeConfig({ ...config, directory: '../outside' }), /invalid-directory/);
+  // fetch rejects an aborted request with a DOMException, whose numeric code
+  // must not pass for one of the client's own failure codes.
+  const hanging = client.createClient(config, {
+    timeoutMs: 5,
+    fetch: (_url, init) => new Promise((_resolve, reject) => {
+      init.signal.addEventListener('abort', () => reject(new DOMException('The operation was aborted.', 'AbortError')));
+    })
+  });
+  await assert.rejects(hanging.readState(), (cause) => cause.code === 'timeout');
+  const unreachable = client.createClient(config, { fetch: () => Promise.reject(new TypeError('Failed to fetch')) });
+  await assert.rejects(unreachable.readState(), (cause) => cause.code === 'network-error');
   const server = createServer();
   assert.deepStrictEqual(await client.createClient(config, { fetch: server.fetch }).testConnection(),
     { ok: true, concurrency: 'conditional', lockStrategy: 'collection-move' });
