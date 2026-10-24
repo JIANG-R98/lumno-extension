@@ -420,13 +420,13 @@ function loadBackground(options) {
       filename: String(file)
     });
   };
-  const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.ts'), 'utf8');
+  const workerContextSource = fs.readFileSync(path.join(repoRoot, 'src/background/worker-context.ts'), 'utf8');
   if (config.firefoxOrder === true) {
     // Mirrors scripts/build/build-firefox.js: Firefox event pages have no
     // importScripts, so the scripts the worker imports on first use load as
     // background scripts before the bundle, which runs with a no-op
     // importScripts.
-    [...backgroundSource.matchAll(/^export const \w+_SCRIPT_PATH = '([^']+)';$/gm)]
+    [...workerContextSource.matchAll(/^(?:export )?const \w+_SCRIPT_PATH = '([^']+)';$/gm)]
       .forEach((match) => runFile(path.join(repoRoot, match[1])));
     context.importScripts = () => {};
   } else {

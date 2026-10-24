@@ -3,11 +3,9 @@
 // a search or an AI prompt for the selected text in a new tab (in the toolbar's
 // tab group), and the messages the toolbar sends.
 //
-// A module of the service worker; background.js imports it before its own code
-// runs. Its functions use background.js bindings (storageArea, the selection
-// setting keys, SELECTION_TARGET, waitForTabComplete, ...) only when they run,
-// never while this file loads, because background.js has not initialized its
-// own top-level bindings yet at that point.
+// A module of the service worker; background.ts imports it before its own code
+// runs. It uses other services' bindings only when its functions run, never
+// while this file loads, because the services import one another.
 
 import * as AI_PROVIDER_SUBMIT from './ai-provider-submit';
 import * as SEARCH_UTILS from '../domain/search/search-utils';
@@ -18,10 +16,9 @@ import * as SETTINGS from '../domain/settings';
 import {
   SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
   SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY,
-  SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY,
-  storageArea,
-  waitForTabComplete
-} from './background';
+  SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY
+} from '../domain/settings';
+import { storageArea, waitForTabComplete } from './worker-context';
 import {
   getSiteSearchProviderEntryUrl,
   isInteractiveSiteSearchProvider,

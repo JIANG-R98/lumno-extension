@@ -3,22 +3,18 @@
 // overlay runtime and its stylesheets, handing it the tab list and settings,
 // and the fallbacks for pages the overlay cannot run on.
 //
-// A module of the service worker; background.js imports it before its own code
-// runs. Its functions use background.js bindings (the settings caches,
-// whenBackgroundSettingsReady, the New Tab fallbacks, ...) only when they run,
-// never while this file loads, because background.js has not initialized its
-// own top-level bindings yet at that point.
+// A module of the service worker; background.ts imports it before its own code
+// runs. It uses other services' bindings only when its functions run, never
+// while this file loads, because the services import one another.
 
 import * as OVERLAY_LOADING_LIFECYCLE from './overlay-loading-lifecycle';
+import { openBrowserNewtabFallback, openNewtabFallback, openNewtabFallbackForUrl } from './newtab-fallback';
 import {
-  documentPipEnabledCache,
+  getRestrictedAction,
+  isDocumentPipEnabled,
   logHotkeyDebug,
-  openBrowserNewtabFallback,
-  openNewtabFallback,
-  openNewtabFallbackForUrl,
-  restrictedActionCache,
   whenBackgroundSettingsReady
-} from './background';
+} from './worker-context';
 import { scheduleSiteSearchProviderIconWarmup } from './favicon-service';
 import { loadSiteSearchProviders, siteSearchCache } from './search-suggestions-service';
 import {
@@ -99,7 +95,7 @@ function beginOverlayOpening(tab, source) {
 }
 
 function openRestrictedOverlayFallback(activeTab, activeUrl, source) {
-  const action = restrictedActionCache || 'default';
+  const action = getRestrictedAction();
   logHotkeyDebug('restricted-url', {
     action: action,
     url: activeUrl,
@@ -123,7 +119,7 @@ function openRestrictedOverlayFallback(activeTab, activeUrl, source) {
 // viewer, so a failed injection follows the restricted page rule too.
 function openOverlayInjectionFallback(activeTab, activeUrl, source) {
   whenBackgroundSettingsReady(() => {
-    const followBrowserNewtab = restrictedActionCache === 'none';
+    const followBrowserNewtab = getRestrictedAction() === 'none';
     logHotkeyDebug('fallback-open-after-inject-failed', {
       followBrowserNewtab: followBrowserNewtab,
       source: source || ''
@@ -266,7 +262,7 @@ export function openOverlayOnTab(activeTab, tabs, source, options) {
               currentTabId: typeof activeTab.id === 'number' ? activeTab.id : null,
               currentTabUrl: getResolvedTabUrl(activeTab),
               openedAt: overlayEntryMotionStartedAt,
-              documentPipEnabled: documentPipEnabledCache,
+              documentPipEnabled: isDocumentPipEnabled(),
               siteSearchProviders: Array.isArray(siteSearchProviders) ? siteSearchProviders : [],
               ensureOpen: openOptions.ensureOpen === true,
               loadingSessionTracked: Boolean(overlayLoadingRecord),

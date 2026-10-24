@@ -3,11 +3,9 @@
 // providers, aggregate search across several engines, the help center index,
 // and the search and site-search message handlers.
 //
-// A module of the service worker; background.js imports it before its own code
-// runs. Its functions use background.js bindings (storageArea,
-// AGGREGATE_SEARCH, AI_PROVIDER_SUBMIT, waitForTabComplete, ...) only when they
-// run, never while this file loads, because background.js has not initialized
-// its own top-level bindings yet at that point.
+// A module of the service worker; background.ts imports it before its own code
+// runs. It uses other services' bindings only when its functions run, never
+// while this file loads, because the services import one another.
 
 import * as AGGREGATE_SEARCH from './aggregate-search';
 import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
@@ -20,12 +18,9 @@ import * as SEARCH_RESULT_TABS from './search-result-tabs';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import {
   AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
-  AGGREGATE_SEARCH_STORAGE_KEY,
-  getShortcutUrl,
-  loadShortcutRules,
-  storageArea,
-  waitForTabComplete
-} from './background';
+  AGGREGATE_SEARCH_STORAGE_KEY
+} from '../domain/settings';
+import { getShortcutUrl, loadShortcutRules, storageArea, waitForTabComplete } from './worker-context';
 import {
   abortSearchEngineSuggestionRequest,
   buildDefaultSearchUrl,

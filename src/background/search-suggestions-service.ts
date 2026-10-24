@@ -4,11 +4,9 @@
 // matching, remote search-engine suggestions, the default search engine, site
 // search providers, the search blacklist and selection stats.
 //
-// A module of the service worker; background.js imports it before its own code
-// runs. Its functions use background.js bindings (storageArea, SETTINGS,
-// SEARCH_UTILS, favicon policy, ...) only when they run, never while this file
-// loads, because background.js has not initialized its own top-level bindings
-// yet at that point.
+// A module of the service worker; background.ts imports it before its own code
+// runs. It uses other services' bindings only when its functions run, never
+// while this file loads, because the services import one another.
 //
 // Every cache and promise below is a rebuildable in-memory cache; nothing here
 // must survive a service-worker suspension.
@@ -18,19 +16,15 @@ import * as BROWSER_PROFILE from '../platform/browser-profile';
 import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SEARCH_UTILS from '../domain/search/search-utils';
 import * as SETTINGS from '../domain/settings';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
 import {
   DEFAULT_SEARCH_ENGINE_STORAGE_KEY,
-  PINYIN_PRO_SCRIPT_PATH,
   SEARCH_BLACKLIST_STORAGE_KEY,
   SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
-  SEARCH_SELECTION_STATS_STORAGE_KEY,
   SITE_SEARCH_DISABLED_STORAGE_KEY,
-  SITE_SEARCH_STORAGE_KEY,
-  localStorageArea,
-  normalizeHost,
-  storageArea
-} from './background';
+  SITE_SEARCH_STORAGE_KEY
+} from '../domain/settings';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
+import { PINYIN_PRO_SCRIPT_PATH, localStorageArea, normalizeHost, storageArea } from './worker-context';
 import {
   getFaviconFallbackHost,
   getHostFaviconUrl,
@@ -47,6 +41,9 @@ import {
   getSourceTabGroupContext,
   isOwnExtensionUrl
 } from './browser-urls-service';
+
+// Which suggestion the user picked for a query; device-only, in local storage.
+export const SEARCH_SELECTION_STATS_STORAGE_KEY = '_x_extension_search_selection_stats_2026_unique_';
 
 export function getSearchEngineSuggestionRequestKey(request, sender) {
   const senderTabId = sender && sender.tab && typeof sender.tab.id === 'number'

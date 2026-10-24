@@ -4,21 +4,21 @@
 // the missing ones after a browser or extension update, startup, or a new
 // normal window.
 //
-// A module of the service worker; background.js imports it before its own code
-// runs. Its functions use background.js bindings (storageArea, the storage
-// keys, getResolvedTabUrl, ...) only when they run, never
-// while this file loads. background.js decides when to snapshot (tab and window
-// events) and when to restore (install/startup/window events).
+// A module of the service worker; background.ts imports it before its own code
+// runs. It uses other services' bindings only when its functions run, never
+// while this file loads, because the services import one another.
+// background.ts decides when to snapshot (tab and window events) and when to
+// restore (install/startup/window events).
 //
 // Suspension: the setting is re-read on wake before an event is acted on, and
 // a pending debounced snapshot is flushed on runtime.onSuspend.
 
-import {
-  PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY,
-  PINNED_TAB_SNAPSHOT_STORAGE_KEY,
-  storageArea
-} from './background';
+import { PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY } from '../domain/settings';
+import { storageArea } from './worker-context';
 import { getResolvedTabUrl } from './browser-urls-service';
+
+// The last snapshot of the pinned tabs; device-only, in local storage.
+const PINNED_TAB_SNAPSHOT_STORAGE_KEY = '_x_extension_pinned_tab_snapshot_2026_unique_';
 
 const PINNED_TAB_SNAPSHOT_DEBOUNCE_MS = 600;
 

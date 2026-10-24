@@ -1,20 +1,14 @@
 // Picture-in-Picture: which tab owns the active video PiP window, the Web Clip
 // (Document PiP) picker, and the messages the page-world PiP helpers send.
 //
-// A module of the service worker; background.js imports it before its own code
-// runs. Its functions use background.js bindings (the Document PiP setting
-// cache, openExtensionOptionsPage, ...) only when they run, never while this
-// file loads, because background.js has not initialized its own top-level
-// bindings yet at that point.
+// A module of the service worker; background.ts imports it before its own code
+// runs. It uses other services' bindings only when its functions run, never
+// while this file loads, because the services import one another.
 
 import * as LumnoPipMainWorld from '../shared/pip-main-world';
 import * as LumnoPipOwnership from './pip-ownership';
-import {
-  documentPipEnabledCache,
-  documentPipEnabledReady,
-  logHotkeyDebug,
-  openExtensionOptionsPage
-} from './background';
+import { openExtensionOptionsPage } from './extension-pages';
+import { documentPipEnabledReady, isDocumentPipEnabled, logHotkeyDebug } from './worker-context';
 import { getResolvedTabUrl, isRestrictedUrl } from './browser-urls-service';
 import type { HandlersFor, MessageSender, RejectionReply } from './message-router';
 import type { PipMainWorldReply } from '../domain/messages';
@@ -152,12 +146,12 @@ function openDocumentPipSettings(): void {
 export function openDocumentPipPickerOnTab(activeTab: chrome.tabs.Tab | null | undefined, source: string): Promise<boolean> {
   return documentPipEnabledReady.then(() => {
     openDocumentPipPickerOnReadyTab(activeTab, source);
-    return documentPipEnabledCache;
+    return isDocumentPipEnabled();
   });
 }
 
 function openDocumentPipPickerOnReadyTab(activeTab: chrome.tabs.Tab | null | undefined, source: string): void {
-  if (!documentPipEnabledCache) {
+  if (!isDocumentPipEnabled()) {
     logHotkeyDebug('document-pip-disabled', { source: source || '' });
     openDocumentPipSettings();
     return;

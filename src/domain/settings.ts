@@ -83,6 +83,10 @@ type SearchResultPriority = 'search' | 'autocomplete';
 // Where a result opened in a new tab goes.
 type SearchResultTabPosition = 'afterCurrent' | 'beforeCurrent' | 'end';
 
+// What the search shortcut does on a page the extension cannot run on:
+// 'default' opens Lumno's New Tab, 'none' the browser's own.
+type RestrictedAction = 'default' | 'none';
+
 type SelectionQuickActionsProvider =
   | 'gpt' | 'gm' | 'dbai' | 'qw' | 'yb' | 'mx' | 'ds' | 'kimi' | 'cp' | 'grok' | 'qwen' | 'ais';
 
@@ -1084,6 +1088,10 @@ function normalizeTabRankScoreDebugMode(value: unknown): boolean {
   return value === true;
 }
 
+function normalizeRestrictedAction(value: unknown): RestrictedAction {
+  return value === 'none' ? 'none' : 'default';
+}
+
 function normalizeTabSwitcherEnabled(value: unknown): boolean {
   return value !== false;
 }
@@ -1340,6 +1348,7 @@ export {
   normalizeSearchResultDisplayLimit,
   normalizeSearchResultSourceTypes,
   normalizeTabRankScoreDebugMode,
+  normalizeRestrictedAction,
   normalizeTabSwitcherEnabled,
   normalizeLinkPreviewEnabled,
   normalizeSelectionQuickActionsEnabled,
@@ -1366,6 +1375,7 @@ export type {
   OverlayEnterAnimation,
   OverlaySizeMode,
   RangeOptions,
+  RestrictedAction,
   SearchResultPriority,
   SearchResultTabPosition,
   SearchWidthOptions,

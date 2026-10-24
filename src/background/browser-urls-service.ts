@@ -3,11 +3,8 @@
 // browser New Tab provider a fresh tab belongs to. Also opens search-result
 // tabs next to the tab they came from, in its tab group.
 //
-// A module of the service worker; background.js imports it before its own code
-// runs. Its functions use background.js bindings (EXTENSION_ROUTES,
-// SEARCH_RESULT_TABS, storageArea, the restricted-action caches, ...) only when
-// they run, never while this file loads, because background.js has not
-// initialized its own top-level bindings yet at that point.
+// A module of the service worker; background.ts imports it before its own code
+// runs.
 
 import * as LumnoUrlGuards from '../platform/url-guards';
 import * as BACKGROUND_TAB_GROUPS from './tab-groups';
@@ -16,17 +13,17 @@ import * as SEARCH_RESULT_TABS from './search-result-tabs';
 import * as SETTINGS from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import {
-  BROWSER_NEWTAB_PROVIDER_DETECTION_MS,
   RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
-  RESTRICTED_ACTION_STORAGE_KEY,
-  backgroundSettingsLoaded,
-  browserNewtabProviderCandidateTabIds,
+  RESTRICTED_ACTION_STORAGE_KEY
+} from '../domain/settings';
+import {
+  areBackgroundSettingsLoaded,
+  isRestrictedActionAutoBrowserSettingDone,
   logHotkeyDebug,
   markRestrictedActionAutoSelected,
-  restrictedActionAutoBrowserSettingDoneCache,
   storageArea,
   whenBackgroundSettingsReady
-} from './background';
+} from './worker-context';
 import type { CreatedTabCallback, TabGroupContext, TabLike } from './tab-groups';
 import type { TabPlacement } from './search-result-tabs';
 
@@ -210,6 +207,12 @@ function isOtherExtensionUrl(url: unknown): boolean {
   }
 }
 
+// How long a fresh tab may take to show which New Tab provider it belongs to.
+const BROWSER_NEWTAB_PROVIDER_DETECTION_MS = 6000;
+// Fresh tabs that may turn out to be the browser's New Tab, by creation time.
+// A suspension drops them, which only skips detection for those tabs.
+const browserNewtabProviderCandidateTabIds = new Map<number, number>();
+
 function pruneBrowserNewtabProviderCandidates(now?: number): void {
   const currentTime = Number.isFinite(Number(now)) ? Number(now) : Date.now();
   browserNewtabProviderCandidateTabIds.forEach((createdAt, tabId) => {
@@ -276,7 +279,7 @@ function setRestrictedActionFromBrowserNewtabProvider(
   if (providerType !== 'other-extension') {
     return;
   }
-  if (!backgroundSettingsLoaded) {
+  if (!areBackgroundSettingsLoaded()) {
     // The one-time auto choice must not overwrite a later manual choice just
     // because the done flag has not been read yet on this wake.
     whenBackgroundSettingsReady(() => {
@@ -284,7 +287,7 @@ function setRestrictedActionFromBrowserNewtabProvider(
     });
     return;
   }
-  if (restrictedActionAutoBrowserSettingDoneCache) {
+  if (isRestrictedActionAutoBrowserSettingDone()) {
     return;
   }
   const url = getResolvedTabUrl(tab);
@@ -293,9 +296,7 @@ function setRestrictedActionFromBrowserNewtabProvider(
     [RESTRICTED_ACTION_STORAGE_KEY]: 'none',
     [RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY]: true
   };
-  if (storageArea && typeof storageArea.set === 'function') {
-    storageArea.set(payload);
-  }
+  void storageArea.set(payload);
   logHotkeyDebug('restricted-action-auto-browser-setting', {
     providerType,
     stage: stage || '',
@@ -307,7 +308,7 @@ export function maybeAutoSelectRestrictedBrowserSetting(tab: UrlTabLike | null |
   if (!tab || typeof tab.id !== 'number') {
     return;
   }
-  if (restrictedActionAutoBrowserSettingDoneCache) {
+  if (isRestrictedActionAutoBrowserSettingDone()) {
     return;
   }
   const isCandidate = isRecentBrowserNewtabProviderCandidate(tab) ||

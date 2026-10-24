@@ -5,7 +5,7 @@
 import '../domain/blacklist-utils';
 import * as LumnoUrlGuards from '../platform/url-guards';
 import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
-import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
+import '../domain/favicon/shortcut-favicon';
 import '../domain/shortcut-key-matcher';
 import '../shared/favicon/favicon-theme';
 import '../domain/extension-routes';
@@ -44,7 +44,7 @@ import '../domain/selection-intent';
 import '../shared/search/site-search-store';
 import '../domain/community-links';
 import '../domain/search/help-center-search';
-import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
+import '../domain/search/aggregate-search-store';
 import './ai-provider-submit';
 import './aggregate-search';
 import * as BACKGROUND_PAGES from './extension-pages';
@@ -56,9 +56,9 @@ import './selection-quick-action-provider';
 import * as LumnoSelectionScriptRegistration from './selection-script-registration';
 import * as LumnoLinkPreview from './link-preview';
 import * as BACKGROUND_MESSAGE_ROUTER from './message-router';
-import * as BACKGROUND_NEWTAB_FALLBACK from './newtab-fallback';
+import './newtab-fallback';
 import '../platform/browser-profile';
-import * as BACKGROUND_SHORTCUT_RULES from './shortcut-rules';
+import './shortcut-rules';
 import * as LumnoWebAppearance from './web-appearance';
 import './pip-ownership';
 import '../shared/pip-main-world';
@@ -99,6 +99,7 @@ import {
   markFaviconDirtyForUrl
 } from './favicon-service';
 import {
+  SEARCH_SELECTION_STATS_STORAGE_KEY,
   clearPendingSearch,
   getSiteSearchProviderEntryUrl,
   invalidateSearchBlacklistCache,
@@ -155,90 +156,52 @@ import {
   TAB_MESSAGE_HANDLERS,
   loadLocaleMessages
 } from './message-handlers-service';
-// Development-only: the store build replaces it with an empty module.
+import {
+  DOCUMENT_PIP_ENABLED_STORAGE_KEY,
+  FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
+  FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
+  PINNED_RECENT_SITES_STORAGE_KEY,
+  PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY,
+  PROGRESS_TRACKING_ENABLED_STORAGE_KEY,
+  RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
+  RESTRICTED_ACTION_STORAGE_KEY,
+  SEARCH_BLACKLIST_STORAGE_KEY,
+  SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
+  SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
+  SITE_SEARCH_DISABLED_STORAGE_KEY,
+  SITE_SEARCH_STORAGE_KEY,
+  TAB_SWITCHER_ENABLED_STORAGE_KEY,
+  THEME_STORAGE_KEY
+} from '../domain/settings';
+import {
+  PINYIN_PRO_SCRIPT_PATH,
+  SHOW_SEARCH_COMMAND_NAME,
+  SHOW_SEARCH_PREFILL_COMMAND_NAME,
+  SHOW_SEARCH_PREFILL_V_COMMAND_NAME,
+  SHOW_TAB_SWITCHER_COMMAND_NAME,
+  isPrimaryStorageAreaName,
+  localStorageArea,
+  logHotkeyDebug,
+  markBackgroundSettingsLoaded,
+  normalizeHost,
+  providerStorageRuntime,
+  setDocumentPipEnabled,
+  setRestrictedAction,
+  setRestrictedActionAutoBrowserSettingDone,
+  storageArea,
+  warnBackgroundFailure
+} from './worker-context';
 
-// pinyin-pro (~320 KB) only matters when a Han-character title is matched
-// against a pinyin query, or a Han query against site addresses, so the
-// worker loads it on first use instead of on every wake (see getPinyinPro).
-// A service worker may only importScripts() a
-// file after installation if it imported that file while installing, hence
-// the install hook. Firefox's build lists this path in background.scripts.
-export const PINYIN_PRO_SCRIPT_PATH = 'assets/vendor/pinyin-pro.js';
+// See PINYIN_PRO_SCRIPT_PATH: the worker imports pinyin-pro while installing
+// so that it may import it again on first use.
 if (typeof globalThis.addEventListener === 'function') {
   globalThis.addEventListener('install', () => {
     importScripts(chrome.runtime.getURL(PINYIN_PRO_SCRIPT_PATH));
   });
 }
-export const getExtensionDetailsUrl = BACKGROUND_PAGES.getExtensionDetailsUrl;
-export const openExtensionOptionsPage = BACKGROUND_PAGES.openExtensionOptionsPage;
-export const openOnboardingPage = BACKGROUND_PAGES.openOnboardingPage;
+const openOnboardingPage = BACKGROUND_PAGES.openOnboardingPage;
 const shouldOpenOnboardingForUpdate = BACKGROUND_PAGES.shouldOpenOnboardingForUpdate;
-export const openReleasePage = BACKGROUND_PAGES.openReleasePage;
-export const openBookmarkManagerPage = BACKGROUND_PAGES.openBookmarkManagerPage;
-export const openExtensionShortcutsPage = BACKGROUND_PAGES.openExtensionShortcutsPage;
-export const openSiteSearchOptionsPage = BACKGROUND_PAGES.openSiteSearchOptionsPage;
-export const checkFileSchemeAccess = BACKGROUND_NEWTAB_FALLBACK.checkFileSchemeAccess;
-export const openBrowserNewtabFallback = BACKGROUND_NEWTAB_FALLBACK.openBrowserNewtabFallback;
-export const openNewtabFallback = BACKGROUND_NEWTAB_FALLBACK.openNewtabFallback;
-export const openNewtabFallbackForUrl = BACKGROUND_NEWTAB_FALLBACK.openNewtabFallbackForUrl;
-export const swapNewtabForFocus = BACKGROUND_NEWTAB_FALLBACK.swapNewtabForFocus;
-const shortcutRules = BACKGROUND_SHORTCUT_RULES.create({
-  chromeApi: chrome,
-  fetchImpl: fetch,
-  navigatorLike: navigator
-});
-export const loadShortcutRules = shortcutRules.loadShortcutRules;
-export const getShortcutUrl = shortcutRules.getShortcutUrl;
 
-const HOTKEY_DEBUG_ENABLED = false;
-export function logHotkeyDebug(stage, payload) {
-  if (!HOTKEY_DEBUG_ENABLED) {
-    return;
-  }
-  try {
-    const detail = payload && typeof payload === 'object' ? payload : {};
-    console.log(`[Lumno][hotkey] ${stage}`, detail);
-  } catch (e) {
-    // Ignore logging errors.
-  }
-}
-
-// Callback for chrome.* calls whose failure is routine for a background that
-// talks to arbitrary tabs and storage: a tab or frame that closed or navigated
-// ("No tab with id", "Frame was removed"), a restricted page, or a best-effort
-// cleanup. Reading lastError keeps Chrome from logging it as unchecked.
-export function ignoreExpectedChromeError() {
-  void (chrome && chrome.runtime && chrome.runtime.lastError);
-}
-
-// Rejection handler for work that is not expected to fail (storage writes,
-// startup restores). Failures stay non-fatal but leave a trace with context.
-export function warnBackgroundFailure(context) {
-  return (error) => {
-    console.warn(`[Lumno] ${context}`, error);
-  };
-}
-
-const providerStorageRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chrome);
-export const storageArea = providerStorageRuntime
-  ? providerStorageRuntime.area
-  : ((chrome && chrome.storage && chrome.storage.sync)
-      ? chrome.storage.sync
-      : (chrome && chrome.storage ? chrome.storage.local : null));
-export const localStorageArea = (chrome && chrome.storage && chrome.storage.local)
-  ? chrome.storage.local
-  : storageArea;
-const storageAreaName = providerStorageRuntime ? providerStorageRuntime.name : (storageArea
-  ? (storageArea === (chrome && chrome.storage ? chrome.storage.sync : null) ? 'sync' : 'local')
-  : null);
-function isPrimaryStorageAreaName(areaName) {
-  return providerStorageRuntime
-    ? providerStorageRuntime.isActiveAreaName(areaName)
-    : Boolean(storageAreaName) && areaName === storageAreaName;
-}
-const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
-const PINNED_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
-const PROGRESS_TRACKING_ENABLED_STORAGE_KEY = LumnoSettings.PROGRESS_TRACKING_ENABLED_STORAGE_KEY;
 // Labs: tracked pinned cards follow the episode or chapter the person is on.
 export let progressTrackingEnabled = false;
 export const progressTracker = LumnoProgressTracker.createProgressTracker({
@@ -251,118 +214,51 @@ export const progressTracker = LumnoProgressTracker.createProgressTracker({
   isEnabled: () => progressTrackingEnabled
 });
 progressTracker.attach();
-if (storageArea) {
-  storageArea.get([PROGRESS_TRACKING_ENABLED_STORAGE_KEY], (result) => {
-    progressTrackingEnabled = LumnoSettings.normalizeProgressTrackingEnabled(
-      result && result[PROGRESS_TRACKING_ENABLED_STORAGE_KEY]
-    );
-  });
-}
+storageArea.get([PROGRESS_TRACKING_ENABLED_STORAGE_KEY], (result) => {
+  progressTrackingEnabled = LumnoSettings.normalizeProgressTrackingEnabled(
+    result && result[PROGRESS_TRACKING_ENABLED_STORAGE_KEY]
+  );
+});
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (!isPrimaryStorageAreaName(areaName) || !changes[PROGRESS_TRACKING_ENABLED_STORAGE_KEY]) return;
   progressTrackingEnabled = LumnoSettings.normalizeProgressTrackingEnabled(
     changes[PROGRESS_TRACKING_ENABLED_STORAGE_KEY].newValue
   );
 });
-export const RESTRICTED_ACTION_STORAGE_KEY = '_x_extension_restricted_action_2024_unique_';
-export const RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY = '_x_extension_restricted_action_auto_browser_setting_done_2026_unique_';
-const TAB_SWITCHER_ENABLED_STORAGE_KEY = '_x_extension_tab_switcher_enabled_2026_unique_';
-const DOCUMENT_PIP_ENABLED_STORAGE_KEY = '_x_extension_document_pip_enabled_2026_unique_';
-export const PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY = '_x_extension_pinned_tab_recovery_enabled_2026_unique_';
-export const SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY = '_x_extension_selection_quick_actions_enabled_2026_unique_';
-export const SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY = '_x_extension_selection_quick_actions_provider_2026_unique_';
-export const SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY = '_x_extension_selection_quick_actions_group_enabled_2026_unique_';
-export const SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY = '_x_extension_search_result_source_types_2026_unique_';
-export const SEARCH_SELECTION_STATS_STORAGE_KEY = '_x_extension_search_selection_stats_2026_unique_';
-export const FAVICON_VISIT_DIRTY_STORAGE_KEY = '_x_extension_favicon_visit_dirty_2026_unique_';
-export const PINNED_TAB_SNAPSHOT_STORAGE_KEY = '_x_extension_pinned_tab_snapshot_2026_unique_';
-export const SHOW_SEARCH_COMMAND_NAME = 'show-search';
-const SHOW_SEARCH_PREFILL_COMMAND_NAME = 'show-search-prefill';
-export const SHOW_SEARCH_PREFILL_V_COMMAND_NAME = 'show-search-prefill-v';
-export const SHOW_TAB_SWITCHER_COMMAND_NAME = 'show-tab-switcher';
-export const BROWSER_NEWTAB_PROVIDER_DETECTION_MS = 6000;
-export const TAB_SWITCHER_THUMBNAIL_STORAGE_KEY = '_x_extension_tab_switcher_state_2026_unique_';
-// Service-worker lifetime: everything below is lost when the worker suspends
-// and is re-created on the next wake. Each group says how it survives that;
-// the service modules document their own.
-//
-// Settings mirrors, re-read from storage on every wake (see the storageArea.get
-// below; the tab switcher service keeps its own). Until that read lands they hold defaults, so event paths that act on
-// them wait for backgroundSettingsReady (see whenBackgroundSettingsReady).
-export let restrictedActionCache = 'default';
-export let restrictedActionAutoBrowserSettingDoneCache = false;
-export let documentPipEnabledCache = false;
-let resolveDocumentPipEnabledReady = () => {};
-// A service worker woken by the toolbar button or a clip command handles that
-// event before its stored settings arrive, so web clip waits for the real value.
-export const documentPipEnabledReady = new Promise((resolve) => {
-  resolveDocumentPipEnabledReady = resolve;
-});
-export let backgroundSettingsLoaded = false;
-let resolveBackgroundSettingsReady = () => {};
-const backgroundSettingsReady = new Promise((resolve) => {
-  resolveBackgroundSettingsReady = resolve;
-});
-// Records the restricted-action choice made for the user when the browser's
-// own New Tab provider is detected (browser-urls-service.ts).
-export function markRestrictedActionAutoSelected() {
-  restrictedActionAutoBrowserSettingDoneCache = true;
-  restrictedActionCache = 'none';
-}
-export const browserNewtabProviderCandidateTabIds = new Map();
-if (storageArea) {
-  storageArea.get([
-    RESTRICTED_ACTION_STORAGE_KEY,
-    RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
-    DOCUMENT_PIP_ENABLED_STORAGE_KEY,
-    TAB_SWITCHER_ENABLED_STORAGE_KEY,
-    PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY
-  ], (storedResult) => {
-    const result = storedResult || {};
-    const stored = result[RESTRICTED_ACTION_STORAGE_KEY];
-    const normalized = stored === 'none' ? 'none' : 'default';
-    if (normalized !== stored) {
-      storageArea.set({ [RESTRICTED_ACTION_STORAGE_KEY]: normalized });
-    }
-    restrictedActionCache = normalized;
-    restrictedActionAutoBrowserSettingDoneCache = result[RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY] === true;
-    const documentPipStored = result[DOCUMENT_PIP_ENABLED_STORAGE_KEY];
-    const normalizedDocumentPip = documentPipStored === true;
-    if (documentPipStored !== normalizedDocumentPip) {
-      storageArea.set({ [DOCUMENT_PIP_ENABLED_STORAGE_KEY]: normalizedDocumentPip });
-    }
-    documentPipEnabledCache = normalizedDocumentPip;
-    resolveDocumentPipEnabledReady();
-    const tabSwitcherStored = result[TAB_SWITCHER_ENABLED_STORAGE_KEY];
-    const normalizedTabSwitcher = SETTINGS.normalizeTabSwitcherEnabled(tabSwitcherStored);
-    if (tabSwitcherStored !== normalizedTabSwitcher) {
-      storageArea.set({ [TAB_SWITCHER_ENABLED_STORAGE_KEY]: normalizedTabSwitcher });
-    }
-    applyTabSwitcherEnabledSetting(normalizedTabSwitcher);
-    const pinnedTabRecoveryStored = result[PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY];
-    applyPinnedTabRecoverySetting(pinnedTabRecoveryStored);
-    markBackgroundSettingsLoaded();
-  });
-} else {
-  resolveDocumentPipEnabledReady();
-  markBackgroundSettingsLoaded();
-}
-
-function markBackgroundSettingsLoaded() {
-  backgroundSettingsLoaded = true;
-  resolveBackgroundSettingsReady();
-}
-
-// A worker woken by a command, a tab event or a page hotkey runs that handler
-// before its stored settings arrive. Run the callback now when they are known,
-// otherwise as soon as they are, so a disabled feature stays disabled.
-export function whenBackgroundSettingsReady(callback) {
-  if (backgroundSettingsLoaded) {
-    callback();
-    return;
+// The settings mirrors in worker-context.ts are re-read from storage on every
+// wake here, and kept current by the storage.onChanged listener further down.
+// The tab switcher and pinned-tab recovery services keep their own.
+storageArea.get([
+  RESTRICTED_ACTION_STORAGE_KEY,
+  RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
+  DOCUMENT_PIP_ENABLED_STORAGE_KEY,
+  TAB_SWITCHER_ENABLED_STORAGE_KEY,
+  PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY
+], (storedResult) => {
+  const result = storedResult || {};
+  const stored = result[RESTRICTED_ACTION_STORAGE_KEY];
+  const normalized = SETTINGS.normalizeRestrictedAction(stored);
+  if (normalized !== stored) {
+    storageArea.set({ [RESTRICTED_ACTION_STORAGE_KEY]: normalized });
   }
-  backgroundSettingsReady.then(callback);
-}
+  setRestrictedAction(normalized);
+  setRestrictedActionAutoBrowserSettingDone(result[RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY] === true);
+  const documentPipStored = result[DOCUMENT_PIP_ENABLED_STORAGE_KEY];
+  const normalizedDocumentPip = documentPipStored === true;
+  if (documentPipStored !== normalizedDocumentPip) {
+    storageArea.set({ [DOCUMENT_PIP_ENABLED_STORAGE_KEY]: normalizedDocumentPip });
+  }
+  setDocumentPipEnabled(normalizedDocumentPip);
+  const tabSwitcherStored = result[TAB_SWITCHER_ENABLED_STORAGE_KEY];
+  const normalizedTabSwitcher = SETTINGS.normalizeTabSwitcherEnabled(tabSwitcherStored);
+  if (tabSwitcherStored !== normalizedTabSwitcher) {
+    storageArea.set({ [TAB_SWITCHER_ENABLED_STORAGE_KEY]: normalizedTabSwitcher });
+  }
+  applyTabSwitcherEnabledSetting(normalizedTabSwitcher);
+  const pinnedTabRecoveryStored = result[PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY];
+  applyPinnedTabRecoverySetting(pinnedTabRecoveryStored);
+  markBackgroundSettingsLoaded();
+});
 
 function migrateStorageIfNeeded(keys) {
   if (!storageArea || !chrome || !chrome.storage || !chrome.storage.local) {
@@ -681,55 +577,6 @@ if (chrome && chrome.windows && chrome.windows.onRemoved) {
   });
 }
 
-export function waitForTabComplete(tabId, timeoutMs) {
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    let timeoutId = null;
-    const finish = (tab, error) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      chrome.tabs.onUpdated.removeListener(handleUpdated);
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve(tab || null);
-    };
-    const handleUpdated = (updatedTabId, changeInfo, tab) => {
-      if (updatedTabId !== tabId) {
-        return;
-      }
-      if (changeInfo && changeInfo.status === 'complete') {
-        finish(tab || null);
-      }
-    };
-    chrome.tabs.onUpdated.addListener(handleUpdated);
-    chrome.tabs.get(tabId, (tab) => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        finish(null, new Error(chrome.runtime.lastError.message || 'tab-unavailable'));
-        return;
-      }
-      if (tab && tab.status === 'complete') {
-        finish(tab);
-      }
-    });
-    timeoutId = setTimeout(() => {
-      chrome.tabs.get(tabId, (tab) => {
-        if (chrome.runtime && chrome.runtime.lastError) {
-          finish(null, new Error(chrome.runtime.lastError.message || 'tab-unavailable'));
-          return;
-        }
-        finish(tab || null);
-      });
-    }, Math.max(1000, Number(timeoutMs) || 15000));
-  });
-}
-
 const selectionScriptRegistration = LumnoSelectionScriptRegistration
   .createSelectionScriptRegistration({ chromeApi: chrome });
 loadSelectionQuickActionsEnabled().then((enabled) => selectionScriptRegistration.sync(enabled));
@@ -874,17 +721,6 @@ function dispatchBackgroundMessage(request, sender, sendResponse) {
 // Listen for extension runtime messages.
 chrome.runtime.onMessage.addListener(dispatchBackgroundMessage);
 
-export const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_custom_2024_unique_';
-export const SITE_SEARCH_DISABLED_STORAGE_KEY = '_x_extension_site_search_disabled_2024_unique_';
-export const AGGREGATE_SEARCH_STORAGE_KEY = AGGREGATE_SEARCH_STORE.STORAGE_KEY ||
-  '_x_extension_aggregate_searches_2026_unique_';
-export const AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY =
-  SETTINGS.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY ||
-  '_x_extension_aggregate_search_auto_group_enabled_2026_unique_';
-export const SEARCH_BLACKLIST_STORAGE_KEY = '_x_extension_search_blacklist_2026_unique_';
-export const FAVICON_REQUEST_BLACKLIST_STORAGE_KEY = '_x_extension_favicon_request_blacklist_2026_unique_';
-export const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_';
-export const DEFAULT_SEARCH_ENGINE_STORAGE_KEY = '_x_extension_default_search_engine_2024_unique_';
 const CHROME_SYNC_STORAGE_KEYS = Array.isArray(LumnoSettings.CHROME_SYNC_STORAGE_KEYS)
   ? LumnoSettings.CHROME_SYNC_STORAGE_KEYS
   : [];
@@ -895,32 +731,8 @@ if (providerStorageRuntime) {
 } else {
   migrateStorageIfNeeded(CHROME_SYNC_STORAGE_KEYS);
 }
-export const SITE_SEARCH_ICON_STORAGE_KEY = SHORTCUT_FAVICON.SITE_SEARCH_STORAGE_KEY ||
-  '_x_extension_site_search_icon_cache_canonical_2026_unique_';
-
-export const SITE_SEARCH_ICON_CACHE_OPTIONS = SHORTCUT_FAVICON.SITE_SEARCH_CACHE_OPTIONS || Object.freeze({
-  cacheTtlMs: 1000 * 60 * 60 * 24 * 180,
-  cacheMaxEntries: 40,
-  maxDataUrlLength: 192 * 1024
-});
-export const SITE_SEARCH_PINNED_ICON_KEYS = new Set(Object.keys(
-  SHORTCUT_FAVICON.SITE_SEARCH_PINNED_ICON_ASSETS || {}
-));
-export const logBackgroundFaviconDecision = FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'background' });
 
 getBackgroundFaviconCacheRuntime();
-
-export function normalizeHost(hostname) {
-  if (!hostname) {
-    return '';
-  }
-  const lower = String(hostname).toLowerCase();
-  const stripped = lower.replace(/^www\./i, '');
-  if (stripped === 'my.feishu.cn') {
-    return 'feishu.cn';
-  }
-  return stripped;
-}
 
 refreshDefaultSearchEngineState();
 
@@ -966,20 +778,20 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   }
   if (changes[RESTRICTED_ACTION_STORAGE_KEY]) {
     const next = changes[RESTRICTED_ACTION_STORAGE_KEY].newValue;
-    restrictedActionCache = next === 'none' ? 'none' : 'default';
-    if (typeof next !== 'undefined' && next !== restrictedActionCache && storageArea) {
-      storageArea.set({ [RESTRICTED_ACTION_STORAGE_KEY]: restrictedActionCache });
+    const normalized = SETTINGS.normalizeRestrictedAction(next);
+    setRestrictedAction(normalized);
+    if (typeof next !== 'undefined' && next !== normalized) {
+      storageArea.set({ [RESTRICTED_ACTION_STORAGE_KEY]: normalized });
     }
   }
   if (changes[RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY]) {
     const next = changes[RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY].newValue;
-    restrictedActionAutoBrowserSettingDoneCache = next === true;
+    setRestrictedActionAutoBrowserSettingDone(next === true);
   }
   if (changes[DOCUMENT_PIP_ENABLED_STORAGE_KEY]) {
     const next = changes[DOCUMENT_PIP_ENABLED_STORAGE_KEY].newValue;
     const normalized = next === true;
-    documentPipEnabledCache = normalized;
-    resolveDocumentPipEnabledReady();
+    setDocumentPipEnabled(normalized);
     if (typeof next !== 'undefined' && next !== normalized && storageArea) {
       storageArea.set({ [DOCUMENT_PIP_ENABLED_STORAGE_KEY]: normalized });
     }

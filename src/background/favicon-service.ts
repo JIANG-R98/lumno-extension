@@ -4,11 +4,9 @@
 // shortcut and site-search provider icons (with their cache and warmup), site
 // theme colors, and the "favicon may have changed" marks recorded on visits.
 //
-// A module of the service worker; background.js imports it before its own code
-// runs. Its functions use background.js bindings (FAVICON_UTILS,
-// SHORTCUT_FAVICON, storageArea, the site-search icon cache options, ...) only
-// when they run, never while this file loads, because background.js has not
-// initialized its own top-level bindings yet at that point.
+// A module of the service worker; background.ts imports it before its own code
+// runs. It uses other services' bindings only when its functions run, never
+// while this file loads, because the services import one another.
 //
 // The caches below are rebuildable; the pending visit marks only delay a
 // favicon refresh if a suspension drops them.
@@ -20,20 +18,20 @@ import * as LumnoBrowserIcons from '../platform/browser-icons';
 import * as LumnoShortcutFaviconStore from '../platform/shortcut-favicon-store';
 import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SETTINGS from '../domain/settings';
-import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
 import {
   FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
-  FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
-  FAVICON_VISIT_DIRTY_STORAGE_KEY,
-  SITE_SEARCH_ICON_CACHE_OPTIONS,
-  SITE_SEARCH_ICON_STORAGE_KEY,
-  SITE_SEARCH_PINNED_ICON_KEYS,
-  logBackgroundFaviconDecision,
-  normalizeHost,
-  storageArea,
-  warnBackgroundFailure
-} from './background';
+  FAVICON_REQUEST_BLACKLIST_STORAGE_KEY
+} from '../domain/settings';
+import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
+import { normalizeHost, storageArea, warnBackgroundFailure } from './worker-context';
 import './browser-urls-service';
+
+// Hosts whose favicon may have changed since it was cached, marked on visits.
+const FAVICON_VISIT_DIRTY_STORAGE_KEY = '_x_extension_favicon_visit_dirty_2026_unique_';
+const SITE_SEARCH_ICON_STORAGE_KEY = SHORTCUT_FAVICON.SITE_SEARCH_STORAGE_KEY;
+const SITE_SEARCH_ICON_CACHE_OPTIONS = SHORTCUT_FAVICON.SITE_SEARCH_CACHE_OPTIONS;
+const SITE_SEARCH_PINNED_ICON_KEYS = new Set(Object.keys(SHORTCUT_FAVICON.SITE_SEARCH_PINNED_ICON_ASSETS));
+const logBackgroundFaviconDecision = FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'background' });
 
 const FAVICON_VISIT_DIRTY_TTL_MS = 1000 * 60 * 60 * 24;
 

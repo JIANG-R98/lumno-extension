@@ -1,13 +1,10 @@
 // How often each tab is switched to, kept per tab in session storage, and the
 // ranking the search overlay's open-tabs list uses to sort and describe tabs.
 //
-// A module of the service worker; background.js imports it before its own code
-// runs. Its functions use background.js bindings (storageArea,
-// warnBackgroundFailure, ...) only when they run, never while this file loads,
-// because background.js has not initialized its own top-level bindings yet at
-// that point.
+// A module of the service worker; background.ts imports it before its own code
+// runs.
 
-import { warnBackgroundFailure } from './background';
+import { warnBackgroundFailure } from './worker-context';
 import type { OverlayTab, TabRankFields } from '../domain/messages';
 import type { StorageAreaLike } from '../domain/storage-port';
 

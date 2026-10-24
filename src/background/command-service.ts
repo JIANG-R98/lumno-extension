@@ -4,20 +4,18 @@
 // command acts on (recovering from a New Tab the shortcut itself opened), drops
 // duplicate presses, and resolves the fallback and copy-URL shortcuts.
 //
-// A module of the service worker; background.js imports it before its own code
-// runs. Its functions use background.js bindings (the command names,
-// COMMAND_TARGET_POLICY, the New Tab fallbacks, ...) only when they run, never
-// while this file loads, because background.js has not initialized its own
-// top-level bindings yet at that point.
+// A module of the service worker; background.ts imports it before its own code
+// runs. It uses other services' bindings only when its functions run, never
+// while this file loads, because the services import one another.
 
 import * as COMMAND_TARGET_POLICY from './command-target-policy';
 import * as OVERLAY_LOADING_LIFECYCLE from './overlay-loading-lifecycle';
+import { openNewtabFallback } from './newtab-fallback';
 import {
   SHOW_SEARCH_COMMAND_NAME,
   SHOW_SEARCH_PREFILL_V_COMMAND_NAME,
-  logHotkeyDebug,
-  openNewtabFallback
-} from './background';
+  logHotkeyDebug
+} from './worker-context';
 import {
   canOpenOverlayOnUrl,
   getResolvedTabUrl,

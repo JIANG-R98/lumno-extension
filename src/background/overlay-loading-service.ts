@@ -3,14 +3,12 @@
 // and loading records (in session storage, so a suspended worker can resume
 // them), and the retries that reopen the overlay once a navigating tab settles.
 //
-// A module of the service worker; background.js imports it before its own code
-// runs. Its functions use background.js bindings (logHotkeyDebug,
-// ignoreExpectedChromeError, ...) only when they run, never while this file
-// loads, because background.js has not initialized its own top-level bindings
-// yet at that point.
+// A module of the service worker; background.ts imports it before its own code
+// runs. It uses other services' bindings only when its functions run, never
+// while this file loads, because the services import one another.
 
 import * as OVERLAY_LOADING_LIFECYCLE from './overlay-loading-lifecycle';
-import { ignoreExpectedChromeError, logHotkeyDebug } from './background';
+import { ignoreExpectedChromeError, logHotkeyDebug } from './worker-context';
 import { canOpenOverlayOnUrl, getResolvedTabUrl } from './browser-urls-service';
 import {
   OVERLAY_HOST_ID,

@@ -5,27 +5,25 @@
 // (capture scheduling, persistence in session storage) and per-tab accent
 // colors.
 //
-// A module of the service worker; background.js imports it before its own code
-// runs. Its functions use background.js bindings (the settings mirrors,
-// whenBackgroundSettingsReady, ...) only when they run, never while this file
-// loads. background.js wires the browser events and the show-tab-switcher
-// command to the functions here.
+// A module of the service worker; background.ts imports it before its own code
+// runs. It uses other services' bindings only when its functions run, never
+// while this file loads, because the services import one another.
+// background.ts wires the browser events and the show-tab-switcher command to
+// the functions here.
 
 import * as RECENT_TAB_SWITCHER from './recent-tab-switcher';
 import * as BROWSER_PROFILE from '../platform/browser-profile';
 import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as NEWTAB_FAVICON_THEME from '../shared/favicon/favicon-theme';
+import { openNewtabFallback, openNewtabFallbackForUrl } from './newtab-fallback';
 import {
   SHOW_TAB_SWITCHER_COMMAND_NAME,
-  TAB_SWITCHER_THUMBNAIL_STORAGE_KEY,
-  backgroundSettingsLoaded,
+  areBackgroundSettingsLoaded,
   ignoreExpectedChromeError,
   logHotkeyDebug,
-  openNewtabFallback,
-  openNewtabFallbackForUrl,
   warnBackgroundFailure,
   whenBackgroundSettingsReady
-} from './background';
+} from './worker-context';
 import {
   BACKGROUND_SITE_THEME_CACHE_MAX_ENTRIES,
   arrayBufferToBase64,
@@ -50,6 +48,9 @@ import {
 } from './browser-urls-service';
 import { recordTabSwitchEvent } from './tab-switch-stats-service';
 import * as LumnoMessaging from '../platform/messaging';
+
+// The recent-tab list and its thumbnails, kept in session storage.
+const TAB_SWITCHER_THUMBNAIL_STORAGE_KEY = '_x_extension_tab_switcher_state_2026_unique_';
 
 function hasTabSwitcherExtensionPagePort(tab) {
   if (!tab || typeof tab.id !== 'number') {
@@ -1899,7 +1900,7 @@ function getSettledSwitcherCaptureTab(request) {
 }
 
 export function scheduleSwitcherThumbnailCapture(tab, reason) {
-  if (!backgroundSettingsLoaded) {
+  if (!areBackgroundSettingsLoaded()) {
     whenBackgroundSettingsReady(() => {
       scheduleSwitcherThumbnailCapture(tab, reason);
     });
@@ -2374,7 +2375,7 @@ function advanceExistingTabSwitcherOnTab(tab, source, callback) {
 }
 
 export function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
-  if (!backgroundSettingsLoaded) {
+  if (!areBackgroundSettingsLoaded()) {
     whenBackgroundSettingsReady(() => {
       triggerTabSwitcherForTab(tab, source, commandObservedAt);
     });

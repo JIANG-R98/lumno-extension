@@ -29,6 +29,7 @@
     "src/background/tab-switch-stats-service.ts",
     "src/background/page-shortcut-menu.ts",
     "src/background/pip-service.ts",
-    "src/background/extension-pages.ts"
+    "src/background/extension-pages.ts",
+    "src/background/worker-context.ts"
   ]
 }

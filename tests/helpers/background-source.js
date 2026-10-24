@@ -11,10 +11,11 @@ const { resolveSourceFile } = require('../../scripts/node/register-typescript');
 const repoRoot = path.resolve(__dirname, '..', '..');
 const BACKGROUND_ENTRY = 'src/background/background.ts';
 
-// The services background.js imports, in its import order.
+// The services background.js imports, and the worker context they share, in
+// its import order.
 function getBackgroundServiceFiles() {
   const source = fs.readFileSync(path.join(repoRoot, BACKGROUND_ENTRY), 'utf8');
-  const files = [...source.matchAll(/from '\.\/((?:[\w-]+-service|pinned-tab-recovery))(?:\.[jt]s)?';/g)]
+  const files = [...source.matchAll(/from '\.\/((?:[\w-]+-service|pinned-tab-recovery|worker-context))(?:\.[jt]s)?';/g)]
     .map((match) => path.relative(repoRoot, resolveSourceFile(`src/background/${match[1]}.js`)).split(path.sep).join('/'));
   return [...new Set(files)];
 }

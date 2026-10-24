@@ -4,32 +4,32 @@
 // favicons, and the toolbar popup. background.js combines them with the feature
 // handlers into one router.
 //
-// A module of the service worker; background.js imports it before its own code
-// runs. Its functions use background.js bindings (SETTINGS,
-// SHORTCUT_KEY_MATCHER, loadShortcutRules, the extension page helpers, ...)
-// only when they run, never while this file loads, because background.js has
-// not initialized its own top-level bindings yet at that point.
+// A module of the service worker; background.ts imports it before its own code
+// runs. Its functions use other services' bindings and background.ts's
+// controllers (the progress tracker, the page shortcut menu, the popup's
+// recent pin) only when they run, never while this file loads, because the
+// services import one another and background.ts has not initialized its own
+// top-level bindings yet at that point.
 
 import * as BOOKMARK_TAB_GROUPS from './bookmark-tab-groups';
 import * as SETTINGS from '../domain/settings';
 import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
 import {
-  SHOW_SEARCH_COMMAND_NAME,
-  checkFileSchemeAccess,
   getExtensionDetailsUrl,
-  loadShortcutRules,
-  logHotkeyDebug,
   openBookmarkManagerPage,
   openExtensionOptionsPage,
   openExtensionShortcutsPage,
   openOnboardingPage,
   openReleasePage,
-  openSiteSearchOptionsPage,
+  openSiteSearchOptionsPage
+} from './extension-pages';
+import { checkFileSchemeAccess, swapNewtabForFocus } from './newtab-fallback';
+import { SHOW_SEARCH_COMMAND_NAME, loadShortcutRules, logHotkeyDebug } from './worker-context';
+import {
   pageShortcutMenuController,
   popupRecentPin,
   progressTracker,
-  progressTrackingEnabled,
-  swapNewtabForFocus
+  progressTrackingEnabled
 } from './background';
 import {
   focusWindowAndActivateTab,
