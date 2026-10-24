@@ -7,7 +7,6 @@ import * as LumnoUrlGuards from '../platform/url-guards';
 import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
 import '../domain/shortcut-key-matcher';
-import '../domain/favicon/favicon-cache';
 import '../shared/favicon/favicon-theme';
 import '../domain/extension-routes';
 import './command-target-policy';

@@ -15,7 +15,7 @@
 
 import * as BLACKLIST_UTILS from '../domain/blacklist-utils';
 import * as BROWSER_PROFILE from '../platform/browser-profile';
-import * as FAVICON_CACHE from '../domain/favicon/favicon-cache';
+import * as FAVICON_CACHE from '../platform/favicon-cache';
 import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SETTINGS from '../domain/settings';
 import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';

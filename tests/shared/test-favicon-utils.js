@@ -800,8 +800,8 @@ assert.strictEqual(
   'near-white fallback theme colors should render with the shared blue fallback accent'
 );
 
-vm.runInNewContext(moduleScript('src/domain/favicon/favicon-cache.ts', 'LumnoFaviconCache'), sandbox, {
-  filename: 'src/domain/favicon/favicon-cache.ts'
+vm.runInNewContext(moduleScript('src/platform/favicon-cache.ts', 'LumnoFaviconCache'), sandbox, {
+  filename: 'src/platform/favicon-cache.ts'
 });
 
 async function testFaviconCacheThemeCompatibility() {

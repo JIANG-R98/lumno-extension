@@ -2,7 +2,8 @@ const assert = require('assert');
 const faviconUtils = require('../../src/domain/favicon/favicon-utils.ts');
 const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
 const searchUtils = require('../../src/domain/search/search-utils.ts');
-const faviconCache = require('../../src/domain/favicon/favicon-cache.ts');
+const faviconCache = require('../../src/platform/favicon-cache.ts');
+const faviconCacheRecords = require('../../src/domain/favicon/favicon-cache.ts');
 const { shortcutsStorage } = require('../helpers/newtab-fixtures');
 const { EXTENSION_ORIGIN, createAcquisition, openFrontend, png } = require('../helpers/favicon-acquisition');
 
@@ -15,8 +16,8 @@ const dataUrl = (image) => `data:image/png;base64,${image.toString('base64')}`;
 
 async function testCacheMigration(page) {
   const pageKey = faviconUtils.getFaviconPersistCacheKey(page);
-  const urlKey = faviconCache.DEFAULTS.faviconPersistStorageKey;
-  const dataKey = faviconCache.DEFAULTS.faviconDataPersistStorageKey;
+  const urlKey = faviconCacheRecords.DEFAULTS.faviconPersistStorageKey;
+  const dataKey = faviconCacheRecords.DEFAULTS.faviconDataPersistStorageKey;
   const sharedBytes = dataUrl(png(32, 99));
   for (const version of [1, 2, 3]) {
     const values = {
