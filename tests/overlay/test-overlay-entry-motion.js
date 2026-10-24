@@ -14,7 +14,8 @@ const ANIMATION_KEY = '_x_extension_overlay_enter_animation_2026_unique_';
 const OPEN_TABS_VISIBLE_KEY = '_x_extension_overlay_open_tabs_default_visible_2026_unique_';
 const THEME_KEY = '_x_extension_theme_mode_2024_unique_';
 const OVERLAY_ID = '_x_extension_overlay_2024_unique_';
-const ELASTIC_REST = 'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1)) scaleX(1)';
+const ELASTIC_REST = 'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1)) scale(1)';
+const SPRING_EASING = /^linear\(0, .*, 1\)$/;
 const FADE_REST = 'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1)) scale(1)';
 
 // The overlay skips its entry when it starts more than 280ms after the open
@@ -46,9 +47,9 @@ function entryAnimations(page, overlay) {
 
 async function testEachEntrySettingPlaysItsMotion() {
   const cases = [
-    [{}, 'translateY(12px) scaleX(0.88)', 210, 'cubic-bezier(0.18, 1.32, 0.32, 1)', 130, ELASTIC_REST],
-    [{ [OPEN_TABS_VISIBLE_KEY]: true }, 'translateY(12px) scaleX(0.94)', 210, 'cubic-bezier(0.18, 1.32, 0.32, 1)', 130, ELASTIC_REST],
-    [{ [ANIMATION_KEY]: 'fade' }, 'translateY(16px) scale(0.985)', 340, 'cubic-bezier(0.2, 1, 0.36, 1)', 220, FADE_REST]
+    [{}, 'translateY(8px) scale(0.94)', 240, SPRING_EASING, 100, ELASTIC_REST],
+    [{ [OPEN_TABS_VISIBLE_KEY]: true }, 'translateY(8px) scale(0.96)', 240, SPRING_EASING, 100, ELASTIC_REST],
+    [{ [ANIMATION_KEY]: 'fade' }, 'translateY(16px) scale(0.985)', 220, 'cubic-bezier(0.2, 1, 0.36, 1)', 140, FADE_REST]
   ];
   for (const [settings, startDelta, duration, easing, opacityDuration, rest] of cases) {
     const label = JSON.stringify(settings);
@@ -60,10 +61,15 @@ async function testEachEntrySettingPlaysItsMotion() {
     const { transform, opacity } = entryAnimations(page, overlay);
     assert.deepStrictEqual(transform.keyframes, [{ transform: startDelta }, { transform: 'none' }], `${label} entry delta`);
     assert.deepStrictEqual(
-      [transform.options.composite, transform.options.fill, transform.options.duration, transform.options.easing],
-      ['add', 'backwards', duration, easing],
+      [transform.options.composite, transform.options.fill, transform.options.duration],
+      ['add', 'backwards', duration],
       `${label} should add its motion on top of the centering transform`
     );
+    if (easing instanceof RegExp) {
+      assert.match(transform.options.easing, easing, `${label} should spring in`);
+    } else {
+      assert.strictEqual(transform.options.easing, easing, `${label} easing`);
+    }
     assert.deepStrictEqual(opacity.keyframes, [{ opacity: 0 }, { opacity: 1 }]);
     assert.strictEqual(opacity.options.duration, opacityDuration);
     assert.strictEqual(overlay.style.getPropertyValue('transform'), rest, 'the panel should sit in its final, centered transform while animating');

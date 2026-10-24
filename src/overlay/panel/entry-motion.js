@@ -16,22 +16,28 @@ function createEntryMotion(deps) {
   let overlayEnterAnimations = [];
   let overlayEnterAnimationRevision = 0;
   const OVERLAY_STARTUP_ENTRY_MOTION_BUDGET_MS = 280;
+  // An underdamped spring (damping ratio 0.68) sampled for CSS linear(): it
+  // reaches its rest point in ~100ms, then a small overshoot settles.
+  const OVERLAY_SPRING_EASING = 'linear(0, 0.0617, 0.2047, 0.3798, 0.5541, 0.708, 0.8325, 0.9253, 0.9888, 1.0278, 1.0478, 1.0542, 1.0518, 1.0446, 1.0352, 1.0256, 1.0171, 1.01, 1.0047, 1.0011, 1)';
+  const OVERLAY_SPRING_FALLBACK_EASING = 'cubic-bezier(0.18, 1.32, 0.32, 1)';
   const OVERLAY_ENTER_MOTION = Object.freeze({
     elastic: Object.freeze({
-      opacityDurationMs: 130,
+      opacityDurationMs: 100,
       panelDelayMs: 0,
-      panelDurationMs: 210,
-      panelEasing: 'cubic-bezier(0.18, 1.32, 0.32, 1)'
+      panelDurationMs: 240,
+      panelEasing: OVERLAY_SPRING_EASING,
+      panelFallbackDurationMs: 200,
+      panelFallbackEasing: OVERLAY_SPRING_FALLBACK_EASING
     }),
     fade: Object.freeze({
-      opacityDurationMs: 220,
+      opacityDurationMs: 140,
       panelDelayMs: 0,
-      panelDurationMs: 340,
+      panelDurationMs: 220,
       panelEasing: 'cubic-bezier(0.2, 1, 0.36, 1)'
     })
   });
-  const OVERLAY_ELASTIC_ENTRY_SCALE_START = 0.88;
-  const OVERLAY_ELASTIC_OPEN_TABS_ENTRY_SCALE_START = 0.94;
+  const OVERLAY_ELASTIC_ENTRY_SCALE_START = 0.94;
+  const OVERLAY_ELASTIC_OPEN_TABS_ENTRY_SCALE_START = 0.96;
   const OVERLAY_ENTER_CLEANUP_BUFFER_MS = 80;
 
   function shouldSkipOverlayEntryMotion() {
@@ -43,10 +49,7 @@ function createEntryMotion(deps) {
   }
 
   function getOverlayEnterAnimationRevealTransform() {
-    if (overlayState.overlayEnterAnimation === 'fade') {
-      return 'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1)) scale(1)';
-    }
-    return 'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1)) scaleX(1)';
+    return 'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1)) scale(1)';
   }
 
   function getOverlayElasticEntryScaleStart() {
@@ -59,19 +62,39 @@ function createEntryMotion(deps) {
     if (overlayState.overlayEnterAnimation === 'fade') {
       return 'translateX(-50%) translateY(16px) scale(var(--x-ov-visible-scale, 1)) scale(0.985)';
     }
-    return `translateX(-50%) translateY(12px) scale(var(--x-ov-visible-scale, 1)) scaleX(var(--x-lumno-search-entry-scale-start, ${getOverlayElasticEntryScaleStart()}))`;
+    return `translateX(-50%) translateY(8px) scale(var(--x-ov-visible-scale, 1)) scale(var(--x-lumno-search-entry-scale-start, ${getOverlayElasticEntryScaleStart()}))`;
   }
 
   function getOverlayEnterAnimationDeltaTransform() {
     if (overlayState.overlayEnterAnimation === 'fade') {
       return 'translateY(16px) scale(0.985)';
     }
-    return `translateY(12px) scaleX(${getOverlayElasticEntryScaleStart()})`;
+    return `translateY(8px) scale(${getOverlayElasticEntryScaleStart()})`;
+  }
+
+  let springEasingSupported = null;
+  function isSpringEasingSupported() {
+    if (springEasingSupported === null) {
+      try {
+        springEasingSupported = Boolean(window.CSS && typeof window.CSS.supports === 'function' &&
+          window.CSS.supports('transition-timing-function', 'linear(0, 1)'));
+      } catch (error) {
+        springEasingSupported = false;
+      }
+    }
+    return springEasingSupported;
   }
 
   function getOverlayEnterMotion() {
-    return OVERLAY_ENTER_MOTION[overlayState.overlayEnterAnimation] ||
+    const motion = OVERLAY_ENTER_MOTION[overlayState.overlayEnterAnimation] ||
       OVERLAY_ENTER_MOTION.elastic;
+    if (motion.panelFallbackEasing && !isSpringEasingSupported()) {
+      return Object.assign({}, motion, {
+        panelDurationMs: motion.panelFallbackDurationMs,
+        panelEasing: motion.panelFallbackEasing
+      });
+    }
+    return motion;
   }
 
   function clearOverlayPanelEnterCleanup() {

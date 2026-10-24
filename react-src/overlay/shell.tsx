@@ -472,7 +472,7 @@ function getPanelStyle(options: OverlayShellOptions): string {
     -webkit-backdrop-filter: blur(var(--x-ov-blur, 24px)) saturate(var(--x-ov-saturate, 165%)) !important;
     border: 1px solid var(--x-ov-border, var(--x-lumno-search-shell-border-light, rgba(0, 0, 0, 0.14))) !important;
     border-radius: var(--x-ov-panel-radius) !important;
-    box-shadow: var(--x-ov-shadow, inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 2px 5px -2px rgba(15, 23, 42, 0.11), 0 16px 42px -12px rgba(15, 23, 42, 0.17), 0 48px 112px -30px rgba(15, 23, 42, 0.19)) !important;
+    box-shadow: var(--x-ov-shadow, inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 1px 2px rgba(15, 23, 42, 0.06), 0 10px 24px -6px rgba(15, 23, 42, 0.12), 0 36px 84px -12px rgba(15, 23, 42, 0.22), 0 96px 220px -16px rgba(15, 23, 42, 0.3), 0 0 140px 8px rgba(15, 23, 42, 0.08)) !important;
     z-index: 2147483647 !important;
     font-family: var(--lumno-font-sans, sans-serif) !important;
     display: flex !important;
