@@ -255,6 +255,47 @@ function getCommandShortcutMap(commands) {
   return map;
 }
 
+const SYMBOL_MODIFIERS = Object.freeze({ '⌥': 'Alt', '⌃': 'Ctrl', '⌘': 'Command', '⇧': 'Shift' });
+const SYMBOL_KEYS = Object.freeze({ '⇥': 'Tab', '↩': 'Enter', '⎋': 'Escape', '↑': 'ArrowUp', '↓': 'ArrowDown', '←': 'ArrowLeft', '→': 'ArrowRight' });
+const CHORD_MODIFIERS = Object.freeze({
+  alt: 'Alt', option: 'Alt', ctrl: 'Ctrl', control: 'Ctrl', macctrl: 'Ctrl',
+  command: 'Command', cmd: 'Command', meta: 'Command', shift: 'Shift'
+});
+
+// chrome.commands reports "Alt+Q" on Windows and Linux but "⌥Q" on macOS.
+function parseCommandShortcut(shortcut) {
+  const text = String(shortcut || '').trim();
+  if (!text) {
+    return null;
+  }
+  if (!text.includes('+') && /[⌥⌃⌘⇧]/.test(text)) {
+    const symbols = Array.from(text);
+    const modifiers = symbols.filter((symbol) => SYMBOL_MODIFIERS[symbol]).map((symbol) => SYMBOL_MODIFIERS[symbol]);
+    const key = symbols.filter((symbol) => !SYMBOL_MODIFIERS[symbol]).join('');
+    return key ? { modifiers, key: SYMBOL_KEYS[key] || key } : null;
+  }
+  const parts = text.split('+').map((part) => part.trim()).filter(Boolean);
+  const key = parts.pop();
+  return key
+    ? { modifiers: parts.map((part) => CHORD_MODIFIERS[part.toLowerCase()] || part), key }
+    : null;
+}
+
+// The keys that move through and commit the open switcher follow its own
+// shortcut: press its key again, release its modifier.
+function getTabSwitcherFollowUpShortcuts(switcherShortcut) {
+  const parsed = parseCommandShortcut(switcherShortcut);
+  if (!parsed) {
+    return null;
+  }
+  const isTab = parsed.key.toLowerCase() === 'tab';
+  const commitModifier = parsed.modifiers.find((modifier) => modifier !== 'Shift') || parsed.modifiers[0] || '';
+  return {
+    'tab-switcher-cycle': isTab ? 'Tab / Arrow keys' : `${parsed.key} / Tab / Arrow keys`,
+    'tab-switcher-confirm': commitModifier ? `Enter / release ${commitModifier}` : 'Enter'
+  };
+}
+
 function getShortcutReferenceGroups(options) {
   const config = options || {};
   const hasCommandSnapshot = Array.isArray(config.commands);
@@ -269,13 +310,15 @@ function getShortcutReferenceGroups(options) {
       shortcut
     });
   });
+  const switcherItem = browserItems.find((item) => item.commandName === 'show-tab-switcher');
+  const switcherFollowUps = getTabSwitcherFollowUpShortcuts(switcherItem && switcherItem.shortcut) || {};
   const fixedItems = FIXED_SHORTCUTS.map((item) => {
     const definition = cloneShortcut(item);
     return Object.assign(definition, {
       editable: false,
-      shortcut: definition.defaultShortcut
+      shortcut: switcherFollowUps[definition.id] || (definition.defaultShortcut
         ? getDefaultShortcut(definition, platform)
-        : definition.shortcut
+        : definition.shortcut)
     });
   });
   const itemById = new Map(browserItems.concat(fixedItems).map((item) => [item.id, item]));
