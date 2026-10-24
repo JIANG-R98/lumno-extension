@@ -2108,6 +2108,9 @@
   "settings_aggregate_search_auto_group_title": {
     "message": "Agrupar automáticamente las pestañas de búsquedas combinadas"
   },
+  "settings_aggregate_search_auto_group_short_title": {
+    "message": "Crear grupos de pestañas automáticamente"
+  },
   "settings_aggregate_search_auto_group_desc": {
     "message": "Si está activado, todas las pestañas que abre una búsqueda combinada se colocan en un grupo llamado “Nombre de la búsqueda: términos de búsqueda”"
   },
@@ -2263,6 +2266,18 @@
   },
   "link_preview_open_in_tab": {
     "message": "Abrir en una pestaña nueva"
+  },
+  "link_preview_copy_link": {
+    "message": "Copiar enlace"
+  },
+  "link_preview_link_copied": {
+    "message": "Enlace copiado"
+  },
+  "link_preview_reload": {
+    "message": "Volver a cargar"
+  },
+  "link_preview_back": {
+    "message": "Atrás"
   },
   "link_preview_blocked": {
     "message": "Esta página no se puede mostrar en una vista previa"
@@ -2776,6 +2791,21 @@
   },
   "settings_tab_switcher_ctrl_tab_guide": {
     "message": "Guía: {shortcut} como en Arc"
+  },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "Mostrar solo las pestañas de la ventana actual"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "Para navegadores que abren cada espacio en su propia ventana, así las pestañas de otros espacios no aparecen en la lista"
+  },
+  "settings_features_section_title": {
+    "message": "Funciones"
+  },
+  "settings_link_preview_title": {
+    "message": "Vista previa de enlaces"
+  },
+  "settings_link_preview_desc": {
+    "message": "Haz clic en un enlace con Mayús pulsado para verlo en una ventana pequeña sobre la página; luego ciérrala o pásala a una pestaña"
   },
   "slash_command_empty": {
     "message": "No hay comandos que coincidan"

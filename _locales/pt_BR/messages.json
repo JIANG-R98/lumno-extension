@@ -2108,6 +2108,9 @@
   "settings_aggregate_search_auto_group_title": {
     "message": "Agrupar automaticamente as guias da pesquisa combinada"
   },
+  "settings_aggregate_search_auto_group_short_title": {
+    "message": "Criar grupos de guias automaticamente"
+  },
   "settings_aggregate_search_auto_group_desc": {
     "message": "Quando ativado, todas as guias abertas por uma pesquisa combinada ficam em um único grupo chamado “Nome da pesquisa: termo pesquisado”"
   },
@@ -2263,6 +2266,18 @@
   },
   "link_preview_open_in_tab": {
     "message": "Abrir em nova guia"
+  },
+  "link_preview_copy_link": {
+    "message": "Copiar link"
+  },
+  "link_preview_link_copied": {
+    "message": "Link copiado"
+  },
+  "link_preview_reload": {
+    "message": "Recarregar"
+  },
+  "link_preview_back": {
+    "message": "Voltar"
   },
   "link_preview_blocked": {
     "message": "Esta página não pode ser exibida em uma prévia"
@@ -2776,6 +2791,21 @@
   },
   "settings_tab_switcher_ctrl_tab_guide": {
     "message": "Guia: {shortcut} como no Arc"
+  },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "Mostrar apenas as guias da janela atual"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "Para navegadores que abrem cada espaço em uma janela própria, assim as guias de outros espaços ficam fora da lista"
+  },
+  "settings_features_section_title": {
+    "message": "Recursos"
+  },
+  "settings_link_preview_title": {
+    "message": "Prévia de links"
+  },
+  "settings_link_preview_desc": {
+    "message": "Clique em um link segurando Shift para vê-lo em uma janela pequena sobre a página; depois feche ou mova para uma guia"
   },
   "slash_command_empty": {
     "message": "Nenhum comando encontrado"

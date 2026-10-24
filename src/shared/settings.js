@@ -509,7 +509,6 @@ function writeSettingRepairs(chromeApi, area, repairs, stored) {
 
 // The UI languages, in the language picker's order. `id` is the _locales
 // folder (a Chrome locale code), `name` is the language in its own words.
-// Right-to-left languages are left out until the styles handle them.
 // `machineTranslated` marks copy that no native speaker has reviewed yet.
 const UI_LOCALES = Object.freeze([
   ['zh_CN', '简体中文'],
@@ -517,49 +516,11 @@ const UI_LOCALES = Object.freeze([
   ['ja', '日本語'],
   ['en', 'English'],
   ['ko', '한국어', true],
-  ['id', 'Bahasa Indonesia', true],
-  ['ms', 'Bahasa Melayu', true],
-  ['ca', 'Català', true],
-  ['cs', 'Čeština', true],
-  ['da', 'Dansk', true],
   ['de', 'Deutsch', true],
-  ['et', 'Eesti', true],
   ['es', 'Español', true],
-  ['fil', 'Filipino', true],
   ['fr', 'Français', true],
-  ['hr', 'Hrvatski', true],
-  ['it', 'Italiano', true],
-  ['sw', 'Kiswahili', true],
-  ['lv', 'Latviešu', true],
-  ['lt', 'Lietuvių', true],
-  ['hu', 'Magyar', true],
-  ['nl', 'Nederlands', true],
-  ['no', 'Norsk', true],
-  ['pl', 'Polski', true],
   ['pt_BR', 'Português (Brasil)', true],
-  ['pt_PT', 'Português (Portugal)', true],
-  ['ro', 'Română', true],
-  ['sk', 'Slovenčina', true],
-  ['sl', 'Slovenščina', true],
-  ['fi', 'Suomi', true],
-  ['sv', 'Svenska', true],
-  ['vi', 'Tiếng Việt', true],
-  ['tr', 'Türkçe', true],
-  ['el', 'Ελληνικά', true],
-  ['bg', 'Български', true],
-  ['ru', 'Русский', true],
-  ['sr', 'Српски', true],
-  ['uk', 'Українська', true],
-  ['am', 'አማርኛ', true],
-  ['hi', 'हिन्दी', true],
-  ['mr', 'मराठी', true],
-  ['bn', 'বাংলা', true],
-  ['gu', 'ગુજરાતી', true],
-  ['ta', 'தமிழ்', true],
-  ['te', 'తెలుగు', true],
-  ['kn', 'ಕನ್ನಡ', true],
-  ['ml', 'മലയാളം', true],
-  ['th', 'ไทย', true]
+  ['ru', 'Русский', true]
 ].map(([id, name, machineTranslated]) => Object.freeze({
   id,
   htmlLang: id.replace('_', '-'),
@@ -567,8 +528,6 @@ const UI_LOCALES = Object.freeze([
   machineTranslated: Boolean(machineTranslated)
 })));
 const UI_LOCALES_BY_ID = new Map(UI_LOCALES.map((entry) => [entry.id, entry]));
-// Language subtags browsers report under another name than the _locales folder.
-const LOCALE_SUBTAG_ALIASES = Object.freeze({ nb: 'no', nn: 'no', tl: 'fil', in: 'id' });
 
 // The _locales folder for a browser or stored language tag, or '' when
 // Lumno has no copy in that language.
@@ -583,12 +542,12 @@ function resolveSupportedLocale(locale) {
     }
     return 'zh_CN';
   }
-  const [language, ...rest] = lower.split('-');
+  const language = lower.split('-')[0];
+  // Portuguese from any region reads the Brazilian copy.
   if (language === 'pt') {
-    return rest.includes('pt') ? 'pt_PT' : 'pt_BR';
+    return 'pt_BR';
   }
-  const id = LOCALE_SUBTAG_ALIASES[language] || language;
-  return UI_LOCALES_BY_ID.has(id) ? id : '';
+  return UI_LOCALES_BY_ID.has(language) ? language : '';
 }
 
 function normalizeLocale(locale) {

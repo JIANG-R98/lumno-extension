@@ -2108,6 +2108,9 @@
   "settings_aggregate_search_auto_group_title": {
     "message": "Группировать вкладки сводного поиска"
   },
+  "settings_aggregate_search_auto_group_short_title": {
+    "message": "Автоматически создавать группы вкладок"
+  },
   "settings_aggregate_search_auto_group_desc": {
     "message": "Если включено, все вкладки, открытые сводным поиском, помещаются в одну группу с названием «Название поиска: запрос»"
   },
@@ -2263,6 +2266,18 @@
   },
   "link_preview_open_in_tab": {
     "message": "Открыть в новой вкладке"
+  },
+  "link_preview_copy_link": {
+    "message": "Копировать ссылку"
+  },
+  "link_preview_link_copied": {
+    "message": "Ссылка скопирована"
+  },
+  "link_preview_reload": {
+    "message": "Обновить"
+  },
+  "link_preview_back": {
+    "message": "Назад"
   },
   "link_preview_blocked": {
     "message": "Эту страницу нельзя показать в предпросмотре"
@@ -2776,6 +2791,21 @@
   },
   "settings_tab_switcher_ctrl_tab_guide": {
     "message": "Справка: {shortcut} как в Arc"
+  },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "Показывать только вкладки текущего окна"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "Для браузеров, которые открывают каждое пространство в отдельном окне: вкладки из других пространств не попадут в список"
+  },
+  "settings_features_section_title": {
+    "message": "Функции"
+  },
+  "settings_link_preview_title": {
+    "message": "Предпросмотр ссылок"
+  },
+  "settings_link_preview_desc": {
+    "message": "Щёлкните ссылку с зажатой клавишей Shift, чтобы открыть её в небольшом окне поверх страницы, а затем закройте его или перенесите во вкладку"
   },
   "slash_command_empty": {
     "message": "Команды не найдены"

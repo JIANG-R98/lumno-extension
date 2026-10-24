@@ -66,17 +66,19 @@ assert.strictEqual(settings.localeToHtmlLang('en-US'), 'en');
 assert.strictEqual(settings.localeToHtmlLang('ja-JP'), 'ja');
 assert.strictEqual(settings.localeToHtmlLang('zh-CN'), 'zh-CN');
 assert.strictEqual(settings.localeToHtmlLang('zh-HK'), 'zh-TW');
-// Browser tags map onto the _locales folders, aliases included.
+// Browser tags map onto the _locales folders.
 assert.strictEqual(settings.normalizeLocale('de-AT'), 'de');
 assert.strictEqual(settings.normalizeLocale('pt'), 'pt_BR');
-assert.strictEqual(settings.normalizeLocale('pt-PT'), 'pt_PT');
+assert.strictEqual(settings.normalizeLocale('pt-PT'), 'pt_BR');
 assert.strictEqual(settings.normalizeLocale('es-419'), 'es');
-assert.strictEqual(settings.normalizeLocale('nb'), 'no');
-assert.strictEqual(settings.normalizeLocale('tl'), 'fil');
+assert.strictEqual(settings.normalizeLocale('ko-KR'), 'ko');
+assert.strictEqual(settings.normalizeLocale('ru'), 'ru');
 assert.strictEqual(settings.localeToHtmlLang('pt_BR'), 'pt-BR');
-// Right-to-left and unlisted languages fall back to English.
+// Languages Lumno has no copy in fall back to English.
 assert.strictEqual(settings.normalizeLocale('ar'), 'en');
+assert.strictEqual(settings.normalizeLocale('it-IT'), 'en');
 assert.strictEqual(settings.resolveSupportedLocale('he-IL'), '');
+assert.strictEqual(settings.resolveSupportedLocale('nl'), '');
 assert.strictEqual(settings.resolveSupportedLocale('system'), '');
 assert.strictEqual(settings.isMachineTranslatedLocale('de'), true);
 assert.strictEqual(settings.isMachineTranslatedLocale('zh-TW'), false);

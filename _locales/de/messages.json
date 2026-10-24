@@ -2108,6 +2108,9 @@
   "settings_aggregate_search_auto_group_title": {
     "message": "Tabs von Sammelsuchen automatisch gruppieren"
   },
+  "settings_aggregate_search_auto_group_short_title": {
+    "message": "Tab-Gruppen automatisch erstellen"
+  },
   "settings_aggregate_search_auto_group_desc": {
     "message": "Wenn aktiviert, werden alle Tabs einer Sammelsuche in eine Gruppe mit dem Namen „Name der Sammelsuche: Suchbegriff“ gelegt"
   },
@@ -2263,6 +2266,18 @@
   },
   "link_preview_open_in_tab": {
     "message": "In neuem Tab öffnen"
+  },
+  "link_preview_copy_link": {
+    "message": "Link kopieren"
+  },
+  "link_preview_link_copied": {
+    "message": "Link kopiert"
+  },
+  "link_preview_reload": {
+    "message": "Neu laden"
+  },
+  "link_preview_back": {
+    "message": "Zurück"
   },
   "link_preview_blocked": {
     "message": "Diese Seite kann nicht in einer Vorschau angezeigt werden"
@@ -2776,6 +2791,21 @@
   },
   "settings_tab_switcher_ctrl_tab_guide": {
     "message": "Anleitung: {shortcut} wie in Arc"
+  },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "Nur Tabs im aktuellen Fenster anzeigen"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "Für Browser, die jeden Bereich in einem eigenen Fenster öffnen, damit Tabs aus anderen Bereichen nicht in der Liste erscheinen"
+  },
+  "settings_features_section_title": {
+    "message": "Funktionen"
+  },
+  "settings_link_preview_title": {
+    "message": "Link-Vorschau"
+  },
+  "settings_link_preview_desc": {
+    "message": "Klicke bei gedrückter Umschalttaste auf einen Link, um ihn in einem kleinen Fenster über der Seite anzusehen; danach schließen oder in einen Tab verschieben"
   },
   "slash_command_empty": {
     "message": "Keine passenden Befehle"

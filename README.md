@@ -106,7 +106,7 @@ Settings sync through Chrome's built-in sync by default. Optional [WebDAV sync](
 
 Shift+click a link to preview it in a small window over the page, then close it or move it to a tab. Restore pinned tabs after a restart, fall back from restricted pages to the new tab page, copy the current page URL with one shortcut, and open extension shortcut or details pages.
 
-The interface comes in 48 languages, or follows your browser language. English, Simplified Chinese, Traditional Chinese and Japanese are written and reviewed by people; the rest are AI-translated, and native speakers can fix them from Settings → General → Language → **Improve translation**.
+The interface comes in 10 languages (English, Simplified Chinese, Traditional Chinese, Japanese, Korean, German, French, Spanish, Brazilian Portuguese and Russian), or follows your browser language. English, Simplified Chinese, Traditional Chinese and Japanese are written and reviewed by people; the rest are AI-translated, and native speakers can fix them from Settings → General → Language → **Improve translation**.
 
 Step-by-step guides for every feature, with screenshots, are in the [Lumno Help Center](https://lumno.kubai.design/en/help/).
 

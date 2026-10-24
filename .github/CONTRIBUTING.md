@@ -52,7 +52,7 @@ show.
   `tests/<area>/test-*.js` and drive the real pages, worker and styles; React
   component tests sit next to their components in `react-src/` as `*.test.tsx`.
 - Put new or changed UI text in the four languages people maintain under
-  `_locales/`: `en`, `zh_CN`, `zh_TW` and `ja`. Leave the other 44, which are
+  `_locales/`: `en`, `zh_CN`, `zh_TW` and `ja`. Leave the other six, which are
   AI-translated, to the maintainers; `npm run check:locales` lists what they
   still wait for as a warning, and fails only on the four. `npm run audit:i18n`
   lists Chinese text written straight into the code instead of `_locales/`.
@@ -70,9 +70,10 @@ show.
 
 ## Translations
 
-Lumno's interface comes in 48 languages. English, Simplified Chinese,
-Traditional Chinese and Japanese are written and reviewed by people; the other
-44 are AI-translated, and the language picker says so.
+Lumno's interface comes in 10 languages. English, Simplified Chinese,
+Traditional Chinese and Japanese are written and reviewed by people; Korean,
+German, French, Spanish, Brazilian Portuguese and Russian are AI-translated,
+and the language picker says so.
 
 - If you speak one of them, open Settings → General → Language →
   **Improve translation**. You can report one string on a prefilled
