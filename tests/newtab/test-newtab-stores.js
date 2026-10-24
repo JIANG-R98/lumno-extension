@@ -1,6 +1,7 @@
 const assert = require('assert');
 const path = require('path');
 const recentStore = require('../../src/domain/recent-sites-store.ts');
+const recentSitesStorage = require('../../src/platform/recent-sites-storage.ts');
 const bookmarkStore = require('../../src/newtab/bookmarks/bookmarks-store.ts');
 
 path.resolve(__dirname, '..', '..');
@@ -152,11 +153,11 @@ async function testRecentStore() {
       { title: 'D', url: 'https://d.example/' }
     ]
   });
-  const loadedPinned = await recentStore.loadPinnedRecentSites(storage, options);
+  const loadedPinned = await recentSitesStorage.loadPinnedRecentSites(storage, options);
   assert.strictEqual(loadedPinned.length, 3);
   assert.deepStrictEqual(loadedPinned.map((item) => item.host), ['a.example', 'b.example', 'c.example']);
 
-  const savedHidden = await recentStore.saveHiddenRecentSites(storage, [
+  const savedHidden = await recentSitesStorage.saveHiddenRecentSites(storage, [
     'https://hidden.example/a',
     { url: 'https://hidden.example/a', lastVisitTime: 12 }
   ], options);

@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Pinned and hidden recent sites, and the recent-site context menu.
 import * as LumnoNewtabDismissStack from '../dismiss-stack';
+import * as LumnoRecentSitesStorage from '../../platform/recent-sites-storage';
 
 function createRecentSitesController(deps) {
   const {
@@ -347,13 +348,13 @@ function createRecentSitesController(deps) {
   }
 
   function readHiddenRecentSites() {
-    return NEWTAB_RECENT_STORE.loadHiddenRecentSites(recentSitesStorageArea, getRecentStoreOptions({
+    return LumnoRecentSitesStorage.loadHiddenRecentSites(recentSitesStorageArea, getRecentStoreOptions({
       key: HIDDEN_RECENT_SITES_STORAGE_KEY
     }));
   }
 
   function writeHiddenRecentSites(items) {
-    return NEWTAB_RECENT_STORE.saveHiddenRecentSites(recentSitesStorageArea, items, getRecentStoreOptions({
+    return LumnoRecentSitesStorage.saveHiddenRecentSites(recentSitesStorageArea, items, getRecentStoreOptions({
       key: HIDDEN_RECENT_SITES_STORAGE_KEY
     })).then((normalized) => {
       pageState.hiddenRecentSites = normalized;
@@ -421,13 +422,13 @@ function createRecentSitesController(deps) {
   }
 
   function readPinnedRecentSites() {
-    return NEWTAB_RECENT_STORE.loadPinnedRecentSites(recentSitesStorageArea, getRecentStoreOptions({
+    return LumnoRecentSitesStorage.loadPinnedRecentSites(recentSitesStorageArea, getRecentStoreOptions({
       key: PINNED_RECENT_SITES_STORAGE_KEY
     }));
   }
 
   function writePinnedRecentSites(items) {
-    return NEWTAB_RECENT_STORE.savePinnedRecentSites(recentSitesStorageArea, items, getRecentStoreOptions({
+    return LumnoRecentSitesStorage.savePinnedRecentSites(recentSitesStorageArea, items, getRecentStoreOptions({
       key: PINNED_RECENT_SITES_STORAGE_KEY
     })).then((normalized) => {
       pageState.pinnedRecentSites = normalized;

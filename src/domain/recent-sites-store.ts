@@ -1,85 +1,153 @@
-// @ts-nocheck
+// The New Tab's recent sites: the cards pinned in front, the sites hidden
+// until their next visit, and merging open tabs, history and top sites into
+// one list with a card per site.
+
+// A card as the New Tab shows and stores it.
+interface RecentSite {
+  title: string;
+  url: string;
+  // Normalized host, the key that makes a card one per site.
+  host: string;
+  siteName: string;
+  lastVisitTime: number;
+  visitCount: number;
+  // When the card was pinned; 0 for an unpinned site.
+  pinnedAt: number;
+  // A pinned card that follows the episodes of one work (Labs).
+  progressTracking?: true;
+  progressId?: string;
+  // Set on merged lists: the card is one of the pinned ones.
+  _xPinned?: boolean;
+}
+
+// A site hidden until a visit later than the one it was hidden at.
+interface HiddenRecentSite {
+  url: string;
+  lastVisitTime: number;
+  hiddenAt: number;
+}
+
+interface RecentSiteOptions {
+  normalizeHost?: (hostname: string) => string;
+  // The page a favicon proxy URL stands for.
+  getCanonicalPageUrlForFavicon?: (url: string) => string;
+  sanitizeDisplayText?: (text: unknown) => string;
+  getSiteDisplayName?: (host: string, title: string) => string;
+  // Sites the search blacklist leaves out; pinned cards ignore it.
+  shouldExcludeUrl?: (url: string) => boolean;
+  ignoreBlacklist?: boolean;
+  maxPinned?: number;
+  maxHidden?: number;
+  // A page a tracked card already stands for.
+  belongsToTrackedWork?: (item: RecentSite) => boolean;
+  // Open tabs that go ahead of history and top sites.
+  shouldPrioritizeTabUrl?: (url: string) => boolean;
+}
+
+type RecentSiteSource = 'tabs' | 'history' | 'topSites';
+
+interface RecentSiteSources extends RecentSiteOptions {
+  limit?: number;
+  // How many source candidates to consider; at least `limit`.
+  candidateLimit?: number;
+  // 'most' ranks history by visits; otherwise by the latest visit.
+  mode?: string;
+  pinned?: unknown;
+  hidden?: unknown;
+  // chrome.tabs, chrome.topSites and chrome.history results.
+  tabs?: unknown;
+  topSites?: unknown;
+  historyItems?: unknown;
+}
+
+interface RecentSiteCollector {
+  items: RecentSite[];
+  isFull(): boolean;
+  append(item: unknown, isPinned: boolean): boolean;
+  appendNormalized(normalized: RecentSite | null, isPinned: boolean): boolean;
+}
+
 const DEFAULT_PINNED_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
 const DEFAULT_HIDDEN_KEY = '_x_extension_newtab_hidden_recent_sites_2026_unique_';
 const DEFAULT_MAX_PINNED = 3;
 const DEFAULT_MAX_HIDDEN = 60;
 
-function normalizeRecentCount(value) {
-  const parsed = Number.parseInt(value, 10);
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function normalizeRecentCount(value: unknown): number {
+  const parsed = Number.parseInt(String(value), 10);
   if (parsed === 0 || parsed === 4 || parsed === 8) {
     return parsed;
   }
   return 4;
 }
 
-function defaultNormalizeHost(hostname) {
+function defaultNormalizeHost(hostname: string): string {
   return String(hostname || '').trim().toLowerCase().replace(/^www\./i, '');
 }
 
-function getNormalizeHost(options) {
+function getNormalizeHost(options: RecentSiteOptions | null | undefined): (hostname: string) => string {
   return options && typeof options.normalizeHost === 'function'
     ? options.normalizeHost
     : defaultNormalizeHost;
 }
 
-function getCanonicalPageUrl(url, options) {
+function getCanonicalPageUrl(url: string, options: RecentSiteOptions | null | undefined): string {
   if (options && typeof options.getCanonicalPageUrlForFavicon === 'function') {
     return options.getCanonicalPageUrlForFavicon(url) || String(url || '');
   }
   return String(url || '');
 }
 
-function getHostFromUrl(url, options) {
+function getHostFromUrl(url: string, options: RecentSiteOptions | null | undefined): string {
   const normalizeHost = getNormalizeHost(options);
   try {
     return normalizeHost(new URL(getCanonicalPageUrl(url, options)).hostname);
-  } catch (error) {
+  } catch (_error) {
     return '';
   }
 }
 
-function sanitizeDisplayText(text, options) {
-  if (options && typeof options.sanitizeDisplayText === 'function') {
+function sanitizeDisplayText(text: unknown, options: RecentSiteOptions): string {
+  if (typeof options.sanitizeDisplayText === 'function') {
     return options.sanitizeDisplayText(text);
   }
   return String(text || '').replace(/\s+/g, ' ').trim();
 }
 
-function getSiteDisplayName(host, title, options) {
-  if (options && typeof options.getSiteDisplayName === 'function') {
+function getSiteDisplayName(host: string, title: string, options: RecentSiteOptions): string {
+  if (typeof options.getSiteDisplayName === 'function') {
     return options.getSiteDisplayName(host, title);
   }
   return host || title || '';
 }
 
-function shouldExcludeUrl(url, options) {
-  return Boolean(
-    options &&
-    typeof options.shouldExcludeUrl === 'function' &&
-    options.shouldExcludeUrl(url)
-  );
+function shouldExcludeUrl(url: string, options: RecentSiteOptions): boolean {
+  return Boolean(typeof options.shouldExcludeUrl === 'function' && options.shouldExcludeUrl(url));
 }
 
-function getRecentSiteUrlKey(item) {
-  if (!item || !item.url) {
+function getRecentSiteUrlKey(item: unknown): string {
+  if (!isRecord(item) || !item.url) {
     return '';
   }
   return String(item.url).trim();
 }
 
-function getRecentSiteHostKey(item, options) {
-  if (!item) {
+function getRecentSiteHostKey(item: unknown, options?: RecentSiteOptions | null): string {
+  if (!isRecord(item)) {
     return '';
   }
   const normalizeHost = getNormalizeHost(options);
-  const rawHost = item.host || getHostFromUrl(item.url || '', options);
-  return normalizeHost(rawHost || '');
+  const rawHost = item.host || getHostFromUrl(String(item.url || ''), options);
+  return normalizeHost(String(rawHost || ''));
 }
 
-function normalizeRecentSiteItem(item, options) {
+function normalizeRecentSiteItem(item: unknown, options?: RecentSiteOptions | null): RecentSite | null {
   const opts = options && typeof options === 'object' ? options : {};
   const ignoreBlacklist = opts.ignoreBlacklist === true;
-  if (!item || !item.url) {
+  if (!isRecord(item) || !item.url) {
     return null;
   }
   const url = String(item.url).trim();
@@ -103,7 +171,7 @@ function normalizeRecentSiteItem(item, options) {
   };
 }
 
-function isSameRecentSite(a, b, options) {
+function isSameRecentSite(a: unknown, b: unknown, options?: RecentSiteOptions | null): boolean {
   const aUrlKey = getRecentSiteUrlKey(a);
   const bUrlKey = getRecentSiteUrlKey(b);
   if (aUrlKey && bUrlKey && aUrlKey === bUrlKey) {
@@ -117,8 +185,8 @@ function isSameRecentSite(a, b, options) {
 // Progress tracking (Labs) lives on pinned cards only. A tracked card
 // stands for one work rather than its whole site, and keeps a stable id
 // that its change history is stored under.
-function withProgressFields(nextItem, item) {
-  if (!nextItem || !item || item.progressTracking !== true) {
+function withProgressFields(nextItem: RecentSite | null, item: unknown): RecentSite | null {
+  if (!nextItem || !isRecord(item) || item.progressTracking !== true) {
     return nextItem;
   }
   const progressId = String(item.progressId || '').trim();
@@ -129,13 +197,13 @@ function withProgressFields(nextItem, item) {
   };
 }
 
-function isProgressTracked(item) {
-  return Boolean(item && item.progressTracking === true);
+function isProgressTracked(item: unknown): boolean {
+  return isRecord(item) && item.progressTracking === true;
 }
 
 // Pinned cards are one per site, except tracked cards: they are one per
 // work, so another page on the same site is a different card.
-function isSamePinnedRecentSite(a, b, options) {
+function isSamePinnedRecentSite(a: unknown, b: unknown, options?: RecentSiteOptions | null): boolean {
   if (isProgressTracked(a) || isProgressTracked(b)) {
     const aUrlKey = getRecentSiteUrlKey(a);
     return Boolean(aUrlKey && aUrlKey === getRecentSiteUrlKey(b));
@@ -143,7 +211,7 @@ function isSamePinnedRecentSite(a, b, options) {
   return isSameRecentSite(a, b, options);
 }
 
-function normalizePinnedRecentSites(items, options) {
+function normalizePinnedRecentSites(items: unknown, options?: RecentSiteOptions | null): RecentSite[] {
   const opts = options && typeof options === 'object' ? options : {};
   const maxPinned = Number.isFinite(Number(opts.maxPinned))
     ? Math.max(0, Number(opts.maxPinned))
@@ -151,12 +219,13 @@ function normalizePinnedRecentSites(items, options) {
   if (!Array.isArray(items) || maxPinned <= 0) {
     return [];
   }
-  const normalized = [];
-  for (let i = 0; i < items.length; i += 1) {
-    const nextItem = withProgressFields(normalizeRecentSiteItem(items[i], {
+  const source: unknown[] = items;
+  const normalized: RecentSite[] = [];
+  for (const item of source) {
+    const nextItem = withProgressFields(normalizeRecentSiteItem(item, {
       ...opts,
       ignoreBlacklist: true
-    }), items[i]);
+    }), item);
     if (!nextItem) {
       continue;
     }
@@ -174,27 +243,29 @@ function normalizePinnedRecentSites(items, options) {
   return normalized;
 }
 
-function normalizeHiddenRecentSiteEntry(item) {
+// A hidden entry, also as older versions stored it (the bare URL).
+function normalizeHiddenRecentSiteEntry(item: unknown): HiddenRecentSite | null {
   if (!item) {
     return null;
   }
+  const fields = isRecord(item) ? item : {};
   const url = typeof item === 'string'
     ? String(item).trim()
-    : String(item.url || '').trim();
+    : String(fields.url || '').trim();
   if (!url) {
     return null;
   }
   const lastVisitTime = typeof item === 'string'
     ? 0
-    : Math.max(0, Number(item.lastVisitTime) || 0);
+    : Math.max(0, Number(fields.lastVisitTime) || 0);
   return {
     url,
     lastVisitTime,
-    hiddenAt: Math.max(0, Number(item.hiddenAt) || Date.now())
+    hiddenAt: Math.max(0, Number(fields.hiddenAt) || Date.now())
   };
 }
 
-function normalizeHiddenRecentSites(items, options) {
+function normalizeHiddenRecentSites(items: unknown, options?: RecentSiteOptions | null): HiddenRecentSite[] {
   const opts = options && typeof options === 'object' ? options : {};
   const maxHidden = Number.isFinite(Number(opts.maxHidden))
     ? Math.max(0, Number(opts.maxHidden))
@@ -202,9 +273,10 @@ function normalizeHiddenRecentSites(items, options) {
   if (!Array.isArray(items) || maxHidden <= 0) {
     return [];
   }
-  const normalized = [];
-  for (let i = 0; i < items.length; i += 1) {
-    const entry = normalizeHiddenRecentSiteEntry(items[i]);
+  const source: unknown[] = items;
+  const normalized: HiddenRecentSite[] = [];
+  for (const item of source) {
+    const entry = normalizeHiddenRecentSiteEntry(item);
     if (!entry) {
       continue;
     }
@@ -223,7 +295,7 @@ function normalizeHiddenRecentSites(items, options) {
   return normalized;
 }
 
-function isRecentSiteHidden(item, hiddenSites) {
+function isRecentSiteHidden(item: unknown, hiddenSites: readonly (HiddenRecentSite | null | undefined)[] | null | undefined): boolean {
   const key = getRecentSiteUrlKey(item);
   if (!key || !Array.isArray(hiddenSites)) {
     return false;
@@ -232,64 +304,12 @@ function isRecentSiteHidden(item, hiddenSites) {
   if (!entry) {
     return false;
   }
-  const lastVisitTime = Math.max(0, Number(item && item.lastVisitTime) || 0);
+  const lastVisitTime = Math.max(0, Number(isRecord(item) ? item.lastVisitTime : 0) || 0);
   return lastVisitTime <= entry.lastVisitTime;
 }
 
-function storageGet(storage, key) {
-  return new Promise((resolve) => {
-    if (!storage || typeof storage.get !== 'function') {
-      resolve({});
-      return;
-    }
-    storage.get([key], (result) => {
-      resolve(result || {});
-    });
-  });
-}
-
-function storageSet(storage, value) {
-  return new Promise((resolve) => {
-    if (!storage || typeof storage.set !== 'function') {
-      resolve();
-      return;
-    }
-    storage.set(value, () => resolve());
-  });
-}
-
-function loadPinnedRecentSites(storage, options) {
-  const opts = options && typeof options === 'object' ? options : {};
-  const key = opts.key || DEFAULT_PINNED_KEY;
-  return storageGet(storage, key).then((result) =>
-    normalizePinnedRecentSites(result && result[key], opts)
-  );
-}
-
-function savePinnedRecentSites(storage, items, options) {
-  const opts = options && typeof options === 'object' ? options : {};
-  const key = opts.key || DEFAULT_PINNED_KEY;
-  const normalized = normalizePinnedRecentSites(items, opts);
-  return storageSet(storage, { [key]: normalized }).then(() => normalized);
-}
-
-function loadHiddenRecentSites(storage, options) {
-  const opts = options && typeof options === 'object' ? options : {};
-  const key = opts.key || DEFAULT_HIDDEN_KEY;
-  return storageGet(storage, key).then((result) =>
-    normalizeHiddenRecentSites(result && result[key], opts)
-  );
-}
-
-function saveHiddenRecentSites(storage, items, options) {
-  const opts = options && typeof options === 'object' ? options : {};
-  const key = opts.key || DEFAULT_HIDDEN_KEY;
-  const normalized = normalizeHiddenRecentSites(items, opts);
-  return storageSet(storage, { [key]: normalized }).then(() => normalized);
-}
-
-function normalizeSourceItem(item, source, options) {
-  if (!item) {
+function normalizeSourceItem(item: unknown, source: RecentSiteSource, options: RecentSiteOptions): RecentSite | null {
+  if (!isRecord(item)) {
     return null;
   }
   if (source === 'tabs') {
@@ -322,23 +342,24 @@ function normalizeSourceItem(item, source, options) {
   }, options);
 }
 
-function createRecentSiteCollector(pinned, hidden, limit, options) {
-  const opts = options && typeof options === 'object' ? options : {};
+// Collects up to `limit` cards: the pinned ones first, then each further
+// site once, skipping hidden sites and pages tracked cards stand for.
+function createRecentSiteCollector(pinned: unknown, hidden: unknown, limit: number, options: RecentSiteOptions): RecentSiteCollector {
   const maxItems = Math.max(0, Number(limit) || 0);
-  const items = [];
-  const seenUrls = new Set();
-  const seenHosts = new Set();
-  const hiddenByUrl = new Map();
+  const items: RecentSite[] = [];
+  const seenUrls = new Set<string>();
+  const seenHosts = new Set<string>();
+  const hiddenByUrl = new Map<string, HiddenRecentSite>();
 
-  normalizeHiddenRecentSites(hidden, opts).forEach((entry) => {
+  normalizeHiddenRecentSites(hidden, options).forEach((entry) => {
     hiddenByUrl.set(entry.url, entry);
   });
 
-  function isFull() {
+  function isFull(): boolean {
     return items.length >= maxItems;
   }
 
-  function appendNormalized(normalized, isPinned) {
+  function appendNormalized(normalized: RecentSite | null, isPinned: boolean): boolean {
     if (!normalized || isFull()) {
       return false;
     }
@@ -350,13 +371,13 @@ function createRecentSiteCollector(pinned, hidden, limit, options) {
         return false;
       }
     }
-    const hostKey = getRecentSiteHostKey(normalized, opts);
+    const hostKey = getRecentSiteHostKey(normalized, options);
     const claimsSite = !(isPinned && isProgressTracked(normalized));
     if ((urlKey && seenUrls.has(urlKey)) || (claimsSite && hostKey && seenHosts.has(hostKey))) {
       return false;
     }
-    if (!isPinned && typeof opts.belongsToTrackedWork === 'function' &&
-        opts.belongsToTrackedWork(normalized)) {
+    if (!isPinned && typeof options.belongsToTrackedWork === 'function' &&
+        options.belongsToTrackedWork(normalized)) {
       return false;
     }
     if (urlKey) {
@@ -370,7 +391,7 @@ function createRecentSiteCollector(pinned, hidden, limit, options) {
     return true;
   }
 
-  const normalizedPinned = normalizePinnedRecentSites(pinned, opts);
+  const normalizedPinned = normalizePinnedRecentSites(pinned, options);
   for (let index = 0; index < normalizedPinned.length && !isFull(); index += 1) {
     appendNormalized(normalizedPinned[index], true);
   }
@@ -378,9 +399,9 @@ function createRecentSiteCollector(pinned, hidden, limit, options) {
   return {
     items,
     isFull,
-    append(item, isPinned) {
+    append(item: unknown, isPinned: boolean): boolean {
       const normalized = normalizeRecentSiteItem(item, {
-        ...opts,
+        ...options,
         ignoreBlacklist: Boolean(isPinned)
       });
       return appendNormalized(normalized, isPinned);
@@ -390,20 +411,20 @@ function createRecentSiteCollector(pinned, hidden, limit, options) {
 }
 
 function appendSourceItemsToCollector(
-  collector,
-  candidateState,
-  seenHosts,
-  items,
-  source,
-  limit,
-  options
-) {
-  const list = Array.isArray(items) ? items : [];
-  for (let index = 0; index < list.length; index += 1) {
+  collector: RecentSiteCollector,
+  candidateState: { count: number },
+  seenHosts: Set<string>,
+  items: unknown,
+  source: RecentSiteSource,
+  limit: number,
+  options: RecentSiteOptions
+): void {
+  const list: unknown[] = Array.isArray(items) ? items : [];
+  for (const item of list) {
     if (candidateState.count >= limit || collector.isFull()) {
       break;
     }
-    const normalized = normalizeSourceItem(list[index], source, options);
+    const normalized = normalizeSourceItem(item, source, options);
     if (!normalized || !normalized.host || seenHosts.has(normalized.host)) {
       continue;
     }
@@ -414,10 +435,14 @@ function appendSourceItemsToCollector(
 }
 
 // Ranks history sites by the summed visitCount of their URLs, most visited first.
-function rankHistoryByVisits(items, options) {
-  const sites = new Map();
-  (Array.isArray(items) ? items : []).forEach((item, index) => {
-    const url = item && item.url ? String(item.url) : '';
+function rankHistoryByVisits(items: unknown, options: RecentSiteOptions): unknown[] {
+  const sites = new Map<string, { item: Record<string, unknown>; visits: number; total: number; index: number }>();
+  const list: unknown[] = Array.isArray(items) ? items : [];
+  list.forEach((item, index) => {
+    if (!isRecord(item)) {
+      return;
+    }
+    const url = item.url ? String(item.url) : '';
     const host = url ? getHostFromUrl(url, options) : '';
     if (!host) {
       return;
@@ -439,35 +464,39 @@ function rankHistoryByVisits(items, options) {
     .map((site) => site.item);
 }
 
-function sortTabCandidates(items) {
-  return (Array.isArray(items) ? items : [])
-    .slice()
-    .sort((a, b) => (Number(b && b.lastAccessed) || 0) - (Number(a && a.lastAccessed) || 0));
+function getLastAccessed(item: unknown): number {
+  return Number(isRecord(item) ? item.lastAccessed : 0) || 0;
 }
 
-function shouldPrioritizeTabUrl(url, options) {
-  return Boolean(
-    options &&
-    typeof options.shouldPrioritizeTabUrl === 'function' &&
-    options.shouldPrioritizeTabUrl(url)
-  );
+function sortTabCandidates(items: readonly unknown[]): unknown[] {
+  return items.slice().sort((a, b) => getLastAccessed(b) - getLastAccessed(a));
 }
 
-function mergeRecentSitesWithPinned(items, pinned, hidden, limit, options) {
+function shouldPrioritizeTabUrl(url: unknown, options: RecentSiteOptions): boolean {
+  return Boolean(typeof options.shouldPrioritizeTabUrl === 'function' && options.shouldPrioritizeTabUrl(String(url || '')));
+}
+
+function mergeRecentSitesWithPinned(
+  items: unknown,
+  pinned: unknown,
+  hidden: unknown,
+  limit: unknown,
+  options?: RecentSiteOptions | null
+): RecentSite[] {
   const opts = options && typeof options === 'object' ? options : {};
   const maxItems = Math.max(0, Number(limit) || 0);
   if (maxItems <= 0) {
     return [];
   }
   const collector = createRecentSiteCollector(pinned, hidden, maxItems, opts);
-  const candidates = Array.isArray(items) ? items : [];
+  const candidates: unknown[] = Array.isArray(items) ? items : [];
   for (let index = 0; index < candidates.length && !collector.isFull(); index += 1) {
     collector.append(candidates[index], false);
   }
   return collector.items;
 }
 
-function mergeRecentSiteSources(input) {
+function mergeRecentSiteSources(input: RecentSiteSources | null | undefined): RecentSite[] {
   const options = input && typeof input === 'object' ? input : {};
   const limit = Math.max(0, Number(options.limit) || 0);
   if (limit <= 0) {
@@ -485,8 +514,8 @@ function mergeRecentSiteSources(input) {
     return collector.items;
   }
   const candidateState = { count: 0 };
-  const sourceSeenHosts = new Set();
-  const appendSource = (items, source) => {
+  const sourceSeenHosts = new Set<string>();
+  const appendSource = (items: unknown, source: RecentSiteSource): void => {
     appendSourceItemsToCollector(
       collector,
       candidateState,
@@ -497,9 +526,9 @@ function mergeRecentSiteSources(input) {
       options
     );
   };
-  const rawTabCandidates = Array.isArray(options.tabs) ? options.tabs : [];
+  const rawTabCandidates: unknown[] = Array.isArray(options.tabs) ? options.tabs : [];
   const priorityTabCandidates = sortTabCandidates(
-    rawTabCandidates.filter((item) => shouldPrioritizeTabUrl(item && item.url, options))
+    rawTabCandidates.filter((item) => shouldPrioritizeTabUrl(isRecord(item) ? item.url : '', options))
   );
   appendSource(priorityTabCandidates, 'tabs');
   if (mode === 'most') {
@@ -525,10 +554,6 @@ export {
   normalizePinnedRecentSites,
   normalizeHiddenRecentSiteEntry,
   normalizeHiddenRecentSites,
-  loadPinnedRecentSites,
-  savePinnedRecentSites,
-  loadHiddenRecentSites,
-  saveHiddenRecentSites,
   getRecentSiteUrlKey,
   getRecentSiteHostKey,
   isSameRecentSite,
@@ -537,3 +562,4 @@ export {
   mergeRecentSitesWithPinned,
   mergeRecentSiteSources
 };
+export type { HiddenRecentSite, RecentSite, RecentSiteOptions, RecentSiteSource, RecentSiteSources };

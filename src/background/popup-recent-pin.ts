@@ -2,6 +2,8 @@
 // Pins the toolbar popup's page among the New Tab's recent sites, in the
 // list the New Tab keeps (one card per site, a tracked card per work). An
 // episode or chapter starts tracked, as when it is pinned on the New Tab.
+import * as LumnoRecentSitesStorage from '../platform/recent-sites-storage';
+
 function createController(options) {
   const opts = options || {};
   const store = opts.store;
@@ -27,7 +29,7 @@ function createController(options) {
 
   async function readPinned() {
     await ready();
-    return store.loadPinnedRecentSites(getArea(), { ...storeOptions, key });
+    return LumnoRecentSitesStorage.loadPinnedRecentSites(getArea(), { ...storeOptions, key });
   }
 
   function findPinned(pinned, item) {
@@ -55,7 +57,7 @@ function createController(options) {
       if (!item) return { status: 'invalid' };
       const pinned = await readPinned();
       const index = findPinned(pinned, item);
-      const save = (items) => store.savePinnedRecentSites(getArea(), items, { ...storeOptions, key });
+      const save = (items) => LumnoRecentSitesStorage.savePinnedRecentSites(getArea(), items, { ...storeOptions, key });
       if (index >= 0) {
         await save(pinned.filter((_, position) => position !== index));
         return { status: 'unpinned' };
