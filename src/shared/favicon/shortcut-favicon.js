@@ -218,6 +218,12 @@ function isCachedIconForPage(entry, pageUrl) {
     if (target && faviconUtils.isFaviconIsUrl(sourceUrl)) {
       return new URL(target).hostname === parsedPage.hostname;
     }
+    // Remote services are asked about the site, never the page, so their
+    // icon stands for every page on it.
+    if (target && !faviconUtils.isSafeVirtualFaviconRequestUrl(sourceUrl) &&
+        target === normalizePageUrl(`${parsedPage.origin}/`)) {
+      return true;
+    }
     if (!target || target !== page) return false;
     if (faviconUtils.isSafeVirtualFaviconRequestUrl(sourceUrl)) {
       return new URL(sourceUrl).searchParams.get('fallbackToHost') === '0';

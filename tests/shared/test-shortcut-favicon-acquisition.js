@@ -107,6 +107,11 @@ async function testSources(page, normalizedPage) {
   const serviceOnly = await explicit.fetchShortcutFaviconData(page, false, 'service');
   assert.ok(faviconUtils.isFaviconProxyUrl(serviceOnly.sourceUrl), 'source-specific caches must not return browser artwork for service mode');
   assert.ok(explicit.state.calls.every((call) => faviconUtils.isFaviconProxyUrl(call.url)));
+  assert.ok(shortcutFavicon.isCachedIconForPage(serviceOnly, normalizedPage),
+    'a service icon is asked for the site, so it must stay valid for a page on it');
+  assert.strictEqual(shortcutFavicon.isCachedIconForPage(serviceOnly, 'https://other.chrome.com/docs/'), false);
+  assert.strictEqual(shortcutFavicon.isCachedIconForPage(cacheOnly, 'https://developer.chrome.com/'), false,
+    'a browser snapshot of one page must not stand for another page on the site');
   explicit.state.calls.length = 0;
   explicit.state.proxyImage = png(128, 25);
   const faviconIsOnly = await explicit.fetchShortcutFaviconData(page, false, 'favicon-is');
