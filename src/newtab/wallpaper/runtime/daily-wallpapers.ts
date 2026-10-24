@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Daily wallpapers: the Bing catalog and curated categories, the picks
 // kept per day, refreshing them when a day has passed, and picking a Bing
 // or curated photo.

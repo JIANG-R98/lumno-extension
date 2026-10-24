@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Builds the recent section: its pointer tracking, heading and mode
 // switch, grid and the recent sites view.
 import * as NEWTAB_RECENT_MODE_SWITCH from './recent-mode-switch';

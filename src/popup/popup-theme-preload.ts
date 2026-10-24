@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as LumnoSettings from '../domain/settings';
 
 (function() {

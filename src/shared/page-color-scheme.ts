@@ -1,4 +1,3 @@
-// @ts-nocheck
 function parseCssColor(color) {
   if (!color || typeof color !== 'string') {
     return null;

@@ -1,4 +1,3 @@
-// @ts-nocheck
 const DEFAULT_MATCH_MODE = 'prefix';
 
 function normalizeMatchModes(value, fallbackMode) {

@@ -1,4 +1,3 @@
-// @ts-nocheck
 const DEFAULT_BRAND_NAMES = Object.freeze({
   'lumno.kubai.design': 'Lumno',
   'github.com': 'GitHub',

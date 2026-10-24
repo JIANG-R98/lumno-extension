@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Height motion for the Options panel. When a setting shows or hides rows,
 // the panel animates from its old height to its new one, and the focused
 // control (usually the switch just clicked) stays where it was on screen:

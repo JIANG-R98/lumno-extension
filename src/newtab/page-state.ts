@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The New Tab's shared page state, with the initial value of every property
 // that starts as a constant. newtab.js creates it first and hands the same
 // object to every module as `pageState`; properties whose first value

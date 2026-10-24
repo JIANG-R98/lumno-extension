@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
 
 (function() {

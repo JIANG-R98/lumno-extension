@@ -1,4 +1,3 @@
-// @ts-nocheck
 const DEFAULT_COMMIT_ENTER_IGNORE_MS = 120;
 
 function isEnterKey(event) {

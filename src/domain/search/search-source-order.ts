@@ -1,4 +1,3 @@
-// @ts-nocheck
 // One synced record holds every order the reader can set for search sources:
 // the group blocks of the search scope panel, each Settings list, and the
 // browser content source types. Nothing is stored until the reader moves

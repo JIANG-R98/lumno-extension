@@ -1,4 +1,3 @@
-// @ts-nocheck
 // "Improve translation" next to the language picker: lets native speakers
 // report a wrong string on a prefilled GitHub issue form, or download every
 // UI string as a spreadsheet, fill in a "Suggestion" column and attach it.

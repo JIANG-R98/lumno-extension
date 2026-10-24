@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Opening, closing and positioning the bookmark cascade menu, and the
 // top-level bookmarks local search matches against.
 function createBookmarkCascadeActions(deps) {

@@ -1,4 +1,3 @@
-// @ts-nocheck
 const KEY = '_x_extension_custom_quotes_2026_unique_';
 const PICK_KEY = '_x_extension_custom_quote_pick_2026_unique_';
 const MAX_BYTES = 1024 * 1024;

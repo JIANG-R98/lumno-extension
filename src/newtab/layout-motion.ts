@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Eases the page's blocks into place when a layout pass moves them. Every
 // pass reports in through `commit()`, which compares where each block now
 // sits with where the last pass left it and plays the difference as a

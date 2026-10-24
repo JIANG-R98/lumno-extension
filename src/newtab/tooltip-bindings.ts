@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Binds and hides the New Tab tooltips: top actions, search input, shortcut
 // tiles, the shortcut dialog and bookmark cursor tooltips.
 function createTooltipBindings(deps) {

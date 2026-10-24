@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Accent colors for suggestions: brand accents, favicon sources and
 // their average color, and the theme each suggestion row and mark uses.
 function createSuggestionThemes(deps) {

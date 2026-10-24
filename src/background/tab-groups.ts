@@ -1,4 +1,3 @@
-// @ts-nocheck
 function getChromeApi(chromeApi) {
   return chromeApi || (typeof chrome !== 'undefined' ? chrome : null);
 }

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /*
  * Chinese and Japanese text has no glyphs in Open Sans and falls back to the system
  * face, which has no weight between Medium and Semibold: PingFang draws 550 and 600

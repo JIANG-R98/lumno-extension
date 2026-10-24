@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The recent section's heading doubles as its display mode switch. At rest it reads as the
 // current mode's name; pointed at, focused or tapped it widens into a segmented control
 // with the other modes to its right, so the current name never moves under the pointer.

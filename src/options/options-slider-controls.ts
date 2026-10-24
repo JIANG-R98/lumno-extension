@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The page's sliders: clock weight, size and opacity, shortcut columns,
 // size and gap, bookmark rows and columns, recent count and the result
 // display limit, each with its React control.

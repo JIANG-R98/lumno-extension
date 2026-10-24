@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Inline autocomplete for the search input.
 function createSearchAutocomplete(deps) {
   const {

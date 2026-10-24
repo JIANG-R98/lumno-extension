@@ -1,4 +1,3 @@
-// @ts-nocheck
 // IME composition in the search input: holds suggestion updates while a
 // composition is open and runs them once it commits.
 function createSearchInputComposition(deps) {

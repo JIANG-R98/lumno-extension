@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The panel's own theme: light or dark from the setting or the page,
 // watching the page for theme changes, the font family, and the CSS
 // variables the panel draws with.

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The search and favicon blacklist lists: loading and saving them, their
 // item models and copy, and removing or saving a rule.
 function createBlacklistLists(deps) {

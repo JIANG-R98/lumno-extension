@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Aggregate searches on the Options page: the state coordinator that keeps
 // edits from racing storage, and the rules for saving one aggregate search.
 // Validation results name a locale message key in `error`.

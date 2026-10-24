@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Change handlers for the page's selects, segmented controls and toggles,
 // and the buttons that open the browser's shortcut page or onboarding.
 function createControlEvents(deps) {

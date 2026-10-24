@@ -1,4 +1,3 @@
-// @ts-nocheck
 function getBrowserInternalScheme(userAgent) {
   const ua = String(userAgent || '');
   // Firefox and its forks (Zen, LibreWolf) report Firefox/ and no Chrome/.

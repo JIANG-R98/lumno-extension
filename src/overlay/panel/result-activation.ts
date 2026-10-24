@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Opening a result: the modifier keys that pick the current, a new or a
 // background tab, and switching to an open tab instead.
 import * as NAVIGATION_DISPOSITION from '../../domain/navigation-disposition';

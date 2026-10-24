@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Normalizing stored values for the controls: counts, columns, width and
 // size modes, clock and shortcut settings, result priority, limit and
 // source types.

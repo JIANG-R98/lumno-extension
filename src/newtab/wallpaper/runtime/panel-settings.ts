@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Settings the appearance panel edits besides the wallpaper: top content
 // and the clock, search width and the shortcut grid sliders.
 function createPanelSettings(deps) {

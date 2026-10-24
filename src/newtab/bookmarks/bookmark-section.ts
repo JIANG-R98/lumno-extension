@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Builds the bookmark section: its heading, breadcrumb, view mode select,
 // pager buttons and grid, then the bookmark view, the cascade menu runtime
 // and the top bar runtime that render into it.

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Which favicons the overlay may fetch: the search and favicon
 // blacklists, local network hosts, and the display limit for results.
 import * as LumnoBlacklistUtils from '../../domain/blacklist-utils';

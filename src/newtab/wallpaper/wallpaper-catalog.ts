@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Photo rows are [Picsum ID, photographer, Unsplash photo ID]: landscape photos from Lorem Picsum,
 // which serves Unsplash images under the Unsplash License. Art rows are [accession number, artist,
 // title]: CC0 paintings from The Cleveland Museum of Art Open Access collection. The bundle carries

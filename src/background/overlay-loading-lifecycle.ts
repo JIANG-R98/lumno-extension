@@ -1,4 +1,3 @@
-// @ts-nocheck
 const DEFAULT_RECORD_TTL_MS = 5 * 60 * 1000;
 const DEFAULT_NAVIGATION_STATE_TTL_MS = 5 * 60 * 1000;
 const MAX_INPUT_VALUE_LENGTH = 64 * 1024;

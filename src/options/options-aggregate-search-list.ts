@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The aggregate search list: available providers, item models, saving,
 // removing and clearing aggregate searches, and their error copy.
 function createAggregateSearchList(deps) {

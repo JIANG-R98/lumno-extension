@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Opening URLs, bookmarks, shortcuts and searches from the New Tab with the
 // right tab disposition.
 function createPageNavigation(deps) {

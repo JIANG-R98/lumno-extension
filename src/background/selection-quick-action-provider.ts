@@ -1,4 +1,3 @@
-// @ts-nocheck
 function getInteractiveProviders(providers, isInteractive) {
   const predicate = typeof isInteractive === 'function'
     ? isInteractive

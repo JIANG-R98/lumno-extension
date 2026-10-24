@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The "Feedback & support" section on the General tab: the Help Center
 // row (whose description offers the "ask in the search box" demo while the
 // lm site search is on) and the community, review, GitHub and contact links.

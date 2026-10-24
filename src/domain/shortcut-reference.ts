@@ -1,4 +1,3 @@
-// @ts-nocheck
 const BROWSER_SHORTCUTS = [
   {
     id: 'show-search',

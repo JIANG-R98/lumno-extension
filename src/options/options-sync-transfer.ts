@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Settings export, import and "sync now" payloads. Only keys in the shared
 // Chrome Sync contract (LumnoSettings.CHROME_SYNC_STORAGE_KEYS) ever leave
 // or enter through these paths.

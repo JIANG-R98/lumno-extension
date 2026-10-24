@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The address the link preview loads in its frame for a link, where that
 // differs from the link itself.
 //

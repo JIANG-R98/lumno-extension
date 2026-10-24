@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The site search form: validating providers and key conflicts, its
 // expanded and editing state, inserting the query token, and the save
 // button animation.

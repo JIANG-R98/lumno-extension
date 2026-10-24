@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Window resizes: re-measures the layout once per frame, and once more
 // after the resize settles, without animating the blocks.
 function createPageResize(deps) {

@@ -1,4 +1,3 @@
-// @ts-nocheck
 function getNoticeElement(controller) {
   return controller && controller.element ? controller.element : null;
 }

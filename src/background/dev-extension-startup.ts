@@ -1,4 +1,3 @@
-// @ts-nocheck
 function isSameVersionReload(details, currentVersion) {
   if (!details || String(details.reason || '') !== 'update') {
     return false;

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Creates the bottom shortcut dock and the layout motion that moves the
 // page's blocks when the dock, sections or search entry change size.
 import * as LumnoNewtabLayoutMotion from '../layout-motion';

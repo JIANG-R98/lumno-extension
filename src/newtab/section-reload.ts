@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Reloads the recent and bookmark sections when tabs, history or
 // bookmarks change elsewhere, once the page is visible again.
 function createSectionReload(deps) {

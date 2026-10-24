@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Headings, mode menus, pager labels and breadcrumbs for the bookmark and
 // recent-site sections.
 function createSectionHeaders(deps) {

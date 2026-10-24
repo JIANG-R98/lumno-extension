@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Slash commands in the overlay: their definitions, matching what is
 // typed, the suggestion each builds, the theme mode command and the website
 // appearance command.

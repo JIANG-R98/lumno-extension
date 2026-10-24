@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The panel's entry motion: when to skip it, the start and reveal
 // transforms, and playing, tracking and cleaning up the enter animation.
 function createEntryMotion(deps) {

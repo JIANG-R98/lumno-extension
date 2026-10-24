@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Keeps the host page out of the panel: no page translation inside it,
 // and no other extension decorating its input.
 function createPageGuards(deps) {

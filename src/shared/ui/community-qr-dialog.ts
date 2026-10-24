@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The WeChat group QR, shown in a dialog over the current page instead of
 // opening the image in a new tab. It renders in its own shadow root so a
 // web page's CSS cannot reach it, and it never changes the page's overflow:

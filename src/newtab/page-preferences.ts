@@ -1,4 +1,3 @@
-// @ts-nocheck
 // New Tab display preferences: normalizing, loading and applying the shortcut,
 // auto-focus, simple mode and search result settings.
 function createPagePreferences(deps) {

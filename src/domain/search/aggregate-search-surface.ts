@@ -1,4 +1,3 @@
-// @ts-nocheck
 const PARTIAL_FEEDBACK_DELAY_MS = 2300;
 const RESULT_FAILURE_WARNING_CODES = new Set([
   'partial-tab-create-failure',

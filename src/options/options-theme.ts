@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The Options theme: the system / light / dark picker, the resolved theme
 // on the page, and the localStorage copy theme-preload.ts paints from on the
 // next load. While the mode is "system" the page follows the OS setting.

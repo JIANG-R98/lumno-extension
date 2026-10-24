@@ -1,4 +1,3 @@
-// @ts-nocheck
 const HEIGHT_LAYOUT_ATTRIBUTES = Object.freeze([
   'data-height-clipped',
   'data-input-height-locked',

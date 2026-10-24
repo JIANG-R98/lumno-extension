@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The New Tab entry animation and the ready signal once the viewport settles.
 function createEntryMotion(deps) {
   const {

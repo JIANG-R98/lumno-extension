@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The feedback button and popover: community links, QR code refresh and
 // the React-rendered control.
 import * as LumnoNewtabDismissStack from './dismiss-stack';

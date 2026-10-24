@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Firefox's "Website appearance" setting (browserSettings.
 // overrideContentColorScheme): the color scheme web pages see through
 // prefers-color-scheme. "auto" follows the browser theme. Chromium has no

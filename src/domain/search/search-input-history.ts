@@ -1,4 +1,3 @@
-// @ts-nocheck
 const STORAGE_KEY = '_x_extension_search_input_history_2026_unique_';
 const DEFAULT_MAX_ENTRIES = 50;
 const MAX_ENTRY_LENGTH = 4096;

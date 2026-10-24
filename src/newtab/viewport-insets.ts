@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Mirrors the visual viewport's insets (an on-screen keyboard) into CSS
 // custom properties the layout reads. A pinch zoom is left alone: the page
 // just zooms like any other, with nothing re-fitted to the zoomed-in view.

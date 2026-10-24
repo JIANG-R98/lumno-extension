@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The shared tooltip controllers the page's surfaces bind to: top actions,
 // shortcuts, the shortcut dialog, bookmark cascade copy, bookmark cards and
 // the search input's cursor tooltip.

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Builds the search box: the suggestions view, the search input with its
 // key, input and focus handling, the global listeners that return focus to
 // it, and the search scope icon.

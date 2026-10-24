@@ -1,4 +1,3 @@
-// @ts-nocheck
 function createChromeEventListenerRegistry(eventTarget) {
   const listeners = new Set();
 

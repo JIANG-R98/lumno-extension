@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Marks <html data-lumno-scrollbars="overlay"> when the system draws overlay
 // scrollbars (macOS with "Show scroll bars: Automatically" and no mouse), so
 // macOS keeps its own bar that shows while scrolling. Everywhere else, such as

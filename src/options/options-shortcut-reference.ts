@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The keyboard shortcut reference list and how shortcuts are shown.
 import * as LumnoShortcutReference from '../domain/shortcut-reference';
 

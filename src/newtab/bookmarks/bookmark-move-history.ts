@@ -1,4 +1,3 @@
-// @ts-nocheck
 function normalizeLocation(location) {
   if (!location || !location.parentId) {
     return null;

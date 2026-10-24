@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Wallpapers the user adds: imported files and URLs, link wallpapers,
 // saving an online wallpaper locally, caching wallpaper images (including
 // tomorrow's daily ones), the online wallpaper menu, and deleting.

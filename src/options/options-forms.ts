@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The site search and blacklist forms: their render models, saving
 // what they submit, error copy, and the blacklist rule drafts.
 function createForms(deps) {

@@ -1,4 +1,3 @@
-// @ts-nocheck
 const ROUTE_PATHS = Object.freeze({
   newtab: 'newtab.html',
   legacyNewtab: 'src/newtab/newtab.html',

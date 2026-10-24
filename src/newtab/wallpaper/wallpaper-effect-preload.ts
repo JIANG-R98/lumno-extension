@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
 
 (function() {

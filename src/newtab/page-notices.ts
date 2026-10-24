@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Notices on the page: the update notice and its session slot, the
 // engagement notice, the help center ask hint and community QR dialog, the
 // file access notice and the page notice banner, and the WebDAV hint.

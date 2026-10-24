@@ -1,4 +1,3 @@
-// @ts-nocheck
 function isMiddleClick(event) {
   return Boolean(event && Number(event.button) === 1);
 }

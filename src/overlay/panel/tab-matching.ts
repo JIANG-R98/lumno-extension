@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Matching open tabs: the text a tab is searched by, filtering them for
 // the query, and finding the tab a suggestion already has open.
 function createTabMatching(deps) {

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Accent colors for recent cards, bookmark cards and shortcut icons.
 function createCardThemes(deps) {
   const {

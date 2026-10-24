@@ -1,4 +1,3 @@
-// @ts-nocheck
 const OVERLAY_PANEL_ID = '_x_extension_overlay_2024_unique_';
 const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
 const DEFAULT_CANVAS_RGB = [255, 255, 255];

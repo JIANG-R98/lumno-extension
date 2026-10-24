@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Page-wide keys: Tab into site search, Escape through the dismiss stack,
 // and the modifier keys suggestion actions follow.
 function createPageKeyboard(deps) {

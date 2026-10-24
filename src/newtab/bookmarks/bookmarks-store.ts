@@ -1,4 +1,3 @@
-// @ts-nocheck
 const BOOKMARKS_BAR_TITLES = new Set([
   'bookmarks bar',
   '书签栏',

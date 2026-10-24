@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The page language: resolving the locale, loading its messages, the
 // t() and formatMessage() lookups every module uses, the document's lang
 // attribute, and the listeners that re-render copy when it changes.

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The default search engine: the built-in engine list, the stored choice,
 // and the search URL, label, theme and favicon each engine contributes.
 function createDefaultSearchEngine(deps) {

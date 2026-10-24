@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The default search engine inside the overlay: its stored choice and
 // the search URL, label, theme and favicon it contributes.
 function createDefaultSearchEngine(deps) {

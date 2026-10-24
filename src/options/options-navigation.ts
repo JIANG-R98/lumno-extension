@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Settings navigation: the tab list, the active tab, the sticky header,
 // scroll and resize refreshes, and scrolling to a linked setting.
 function createNavigation(deps) {

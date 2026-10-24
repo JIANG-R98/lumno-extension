@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Overlay settings that can change while it is open: one storage
 // listener per setting, and the reads that load them for this session.
 function createSettingsSync(deps) {

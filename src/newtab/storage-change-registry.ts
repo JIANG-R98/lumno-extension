@@ -1,4 +1,3 @@
-// @ts-nocheck
 // One storage listener for the New Tab page. Each part of the page
 // registers the keys it owns; a change runs the handlers whose keys it
 // carries, in the order they were registered.

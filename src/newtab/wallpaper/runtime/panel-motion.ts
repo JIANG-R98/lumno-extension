@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Appearance panel motion: resizing the panel between tabs, switching
 // source tabs and edit modes, opening and closing it, and the appearance
 // scope change animation.

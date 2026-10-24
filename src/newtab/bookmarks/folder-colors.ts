@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Folder accent colors: the per-folder color references kept in storage,
 // applying them to bookmark and shortcut folders, migrating the legacy
 // per-device map, and opening the color picker.

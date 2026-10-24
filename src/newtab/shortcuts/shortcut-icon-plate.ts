@@ -1,4 +1,3 @@
-// @ts-nocheck
 // A shortcut icon whose artwork has no background of its own (a bare logo on
 // transparency) gets a plate, so it reads as a tile like the icons that
 // bring their own square. The plate is a soft tint of the artwork's main

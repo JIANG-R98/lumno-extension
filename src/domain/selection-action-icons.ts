@@ -1,4 +1,3 @@
-// @ts-nocheck
 const icon = (body) => Object.freeze({
   viewBox: '0 0 24 24',
   body

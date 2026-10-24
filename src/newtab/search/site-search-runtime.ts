@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Site search providers and aggregate searches while the page is open:
 // their first load, restoring a search the shortcut's reload interrupted,
 // and refreshing both when their storage changes.

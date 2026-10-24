@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Where the suggestion list sits: shown or hidden, floating under the
 // search box, and offset below an open search mode menu.
 function createSuggestionsLayout(deps) {

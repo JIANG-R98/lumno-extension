@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Click handlers for the site search, aggregate search and blacklist
 // lists and their add, reset and clear buttons.
 function createSiteSearchEvents(deps) {

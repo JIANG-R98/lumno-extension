@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Focusing the search input: shortcut-triggered focus, typing anywhere on the
 // page and auto-focus recovery.
 function createInputFocus(deps) {

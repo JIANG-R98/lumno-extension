@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Where recent sites come from: open tabs, top sites and history, read
 // once at startup and then on demand, merged into the recent list; plus the
 // change history dialog and the recent context menu's copy.

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Inline autocomplete: the candidate for what is typed (domains, prefixes,
 // suggestions), showing it in the input and dismissing it.
 function createAutocomplete(deps) {

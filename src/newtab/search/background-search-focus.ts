@@ -1,4 +1,3 @@
-// @ts-nocheck
 function shouldFocusSearchFromPointer(event, backgroundTargets) {
   if (!event || event.defaultPrevented || !event.target || !Array.isArray(backgroundTargets)) {
     return false;

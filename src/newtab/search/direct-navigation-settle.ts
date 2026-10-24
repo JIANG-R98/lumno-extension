@@ -1,4 +1,3 @@
-// @ts-nocheck
 function createDirectNavigationSettleController(options) {
   const config = options && typeof options === 'object' ? options : {};
   const scheduleTimer = typeof config.setTimeout === 'function'

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // What the appearance panel's controls do: the action table the React view
 // calls, slider value inputs, and the wallpaper sources feature hint.
 function createPanelActions(deps) {

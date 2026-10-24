@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Slash commands for theme, zen mode and Firefox's website appearance, and
 // the setters behind them.
 function createModeCommands(deps) {

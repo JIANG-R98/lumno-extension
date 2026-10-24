@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Search settings that can change while the page is open: the default
 // engine, result priority, sources and limit, open-in-new-tab, number
 // shortcuts, simple mode and the search and favicon blacklists.

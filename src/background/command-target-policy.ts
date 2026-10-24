@@ -1,4 +1,3 @@
-// @ts-nocheck
 const ONBOARDING_SEARCH_OVERLAY_COMMAND_ACTION = 'triggerOnboardingSearchOverlayFromCommand';
 
 function isSearchCommandSource(source) {

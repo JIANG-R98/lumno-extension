@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The editable fallback shortcut on the Options page is stored as
 // "Ctrl+Alt+Shift+Command+Key" (modifiers in that order, at least one) and
 // only turned into keycap labels when shown.
