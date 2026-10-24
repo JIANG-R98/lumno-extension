@@ -2013,6 +2013,10 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
 ._x_extension_shortcuts_section_2024_unique_ > ._x_extension_shortcut_group_2024_unique_:last-child {
   padding-bottom: 0;
 }
+/* A switch inside a list group lines up with the group's title and cards. */
+._x_extension_shortcut_group_2024_unique_ > ._x_extension_setting_row_2024_unique_ {
+  padding-inline: 0;
+}
 ._x_extension_shortcut_group_title_2024_unique_ {
   font-size: inherit;
   font-weight: inherit;

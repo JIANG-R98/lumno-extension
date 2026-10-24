@@ -2102,6 +2102,9 @@
   "settings_aggregate_search_auto_group_title": {
     "message": "聚合搜索自动创建标签页组"
   },
+  "settings_aggregate_search_auto_group_short_title": {
+    "message": "自动创建标签页组"
+  },
   "settings_aggregate_search_auto_group_desc": {
     "message": "开启后，聚合搜索打开的所有标签页会归入同一组，并以“聚合名称：搜索关键词”命名"
   },
@@ -2767,6 +2770,15 @@
   },
   "settings_tab_switcher_desc": {
     "message": "快速切换最近标签页，默认 {shortcut}，可自定义"
+  },
+  "settings_features_section_title": {
+    "message": "功能"
+  },
+  "settings_link_preview_title": {
+    "message": "网页预览"
+  },
+  "settings_link_preview_desc": {
+    "message": "按住 Shift 点击链接，在页面上的小窗中预览，可随时关闭或移到新标签页"
   },
   "slash_command_empty": {
     "message": "无匹配命令"

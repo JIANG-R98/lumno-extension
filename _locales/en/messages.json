@@ -2102,6 +2102,9 @@
   "settings_aggregate_search_auto_group_title": {
     "message": "Automatically group aggregate search tabs"
   },
+  "settings_aggregate_search_auto_group_short_title": {
+    "message": "Automatically create tab groups"
+  },
   "settings_aggregate_search_auto_group_desc": {
     "message": "When enabled, all tabs opened by an aggregate search are placed in one group named “Aggregate name: Search query”"
   },
@@ -2767,6 +2770,15 @@
   },
   "settings_tab_switcher_desc": {
     "message": "Quickly switch between recent tabs; {shortcut} by default, customizable"
+  },
+  "settings_features_section_title": {
+    "message": "Features"
+  },
+  "settings_link_preview_title": {
+    "message": "Link preview"
+  },
+  "settings_link_preview_desc": {
+    "message": "Shift+click a link to preview it in a small window over the page, then close it or move it to a tab"
   },
   "slash_command_empty": {
     "message": "No matching commands"

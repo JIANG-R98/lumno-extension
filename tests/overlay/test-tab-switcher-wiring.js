@@ -65,7 +65,7 @@ const toggleInput = optionsDocument.getElementById('_x_extension_tab_switcher_to
 assert.ok(toggleInput, 'Settings should have a tab switcher toggle');
 assert.ok(optionsDocument.querySelector('[data-i18n="settings_tab_switcher_title"]'));
 assert.strictEqual(
-  optionsDocument.querySelector('[data-i18n="settings_tab_switcher_desc"]').textContent,
+  optionsDocument.querySelector('[data-i18n-tooltip="settings_tab_switcher_desc"]').getAttribute('data-tooltip'),
   '快速切换最近标签页，默认 {shortcut}，可自定义',
   'the fallback copy should explain the platform default and that it can be changed'
 );

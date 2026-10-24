@@ -2102,6 +2102,9 @@
   "settings_aggregate_search_auto_group_title": {
     "message": "彙整搜尋自動建立分頁群組"
   },
+  "settings_aggregate_search_auto_group_short_title": {
+    "message": "自動建立分頁群組"
+  },
   "settings_aggregate_search_auto_group_desc": {
     "message": "開啟後，彙整搜尋所開啟的所有分頁會歸入同一群組，並以「彙整名稱：搜尋關鍵字」命名"
   },
@@ -2767,6 +2770,15 @@
   },
   "settings_tab_switcher_desc": {
     "message": "快速切換最近分頁，預設 {shortcut}，可自訂"
+  },
+  "settings_features_section_title": {
+    "message": "功能"
+  },
+  "settings_link_preview_title": {
+    "message": "網頁預覽"
+  },
+  "settings_link_preview_desc": {
+    "message": "按住 Shift 點擊連結，在頁面上的小視窗中預覽，可隨時關閉或移到新分頁"
   },
   "slash_command_empty": {
     "message": "沒有相符的指令"

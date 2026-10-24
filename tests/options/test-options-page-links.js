@@ -25,7 +25,7 @@ async function testVersionBadgeOpensTheReleasePage() {
 }
 
 async function testTabSwitcherShortcutFollowsThePlatform() {
-  const description = (page) => page.document.querySelector('[data-i18n="settings_tab_switcher_desc"]').textContent;
+  const description = (page) => page.document.querySelector('[data-i18n-tooltip="settings_tab_switcher_desc"]').getAttribute('data-tooltip');
   const mac = await createOptionsPage({ platform: 'MacIntel' });
   assert.match(description(mac), /⌥Q/, 'on macOS the default shortcut should read ⌥Q');
   mac.close();

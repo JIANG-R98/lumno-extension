@@ -83,18 +83,18 @@ function createLanguage(deps) {
     renderOverlayFontMissingNotices();
     popconfirmLanguageRefreshers.forEach((refresh) => refresh());
     const browserName = LumnoBrowserProfile?.getBrowserInternalProfile(navigator).name || 'Chrome';
+    const templateValues = {
+      name: 'Lumno',
+      browser: browserName,
+      shortcut: formatShortcutForDisplay('Alt+Q') || (optionsState.isMacPlatform ? '⌥Q' : 'Alt+Q')
+    };
     document.querySelectorAll('[data-i18n]').forEach((node) => {
       const key = node.getAttribute('data-i18n');
       if (!key) {
         return;
       }
       const fallback = node.textContent || '';
-      const rawMessage = getMessage(key, fallback);
-      const message = formatTemplate(rawMessage, {
-        name: 'Lumno',
-        browser: browserName,
-        shortcut: formatShortcutForDisplay('Alt+Q') || (optionsState.isMacPlatform ? '⌥Q' : 'Alt+Q')
-      });
+      const message = formatTemplate(getMessage(key, fallback), templateValues);
       node.textContent = message;
       if (node.tagName === 'OPTION') {
         node.label = message;
@@ -115,7 +115,7 @@ function createLanguage(deps) {
         return;
       }
       const fallback = node.getAttribute('data-tooltip') || '';
-      const message = getMessage(key, fallback);
+      const message = formatTemplate(getMessage(key, fallback), templateValues);
       node.setAttribute('data-tooltip', message);
       if (node.getAttribute('title')) {
         node.removeAttribute('title');

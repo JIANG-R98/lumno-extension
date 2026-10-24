@@ -6,7 +6,7 @@ const settings = require('../../src/shared/settings.js');
 const store = require('../../src/shared/search/aggregate-search-store.js');
 const { loadBackground, wait } = require('../helpers/background-harness');
 
-// One General setting decides whether an aggregate search gathers the tabs
+// One setting in the aggregate search section decides whether an aggregate search gathers the tabs
 // it opens into a tab group. The editor's default names and placeholders are
 // covered by react-src/options/aggregate-search-list.test.tsx.
 
@@ -16,10 +16,14 @@ const AUTO_GROUP = settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY;
 function testMarkup() {
   const doc = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
   const toggle = doc.getElementById(TOGGLE);
-  assert.ok(toggle && toggle.closest('[data-content="general"]'), 'the aggregate tab-group setting should live on the General page');
-  const tabSwitcher = doc.querySelector('[data-content="general"] [data-i18n="settings_tab_switcher_title"]');
-  assert.ok(tabSwitcher && (tabSwitcher.compareDocumentPosition(toggle) & 4), 'it should follow the tab switcher setting');
+  assert.ok(toggle && toggle.closest('#_x_extension_aggregate_search_group_2026_unique_'),
+    'the aggregate tab-group setting should live with the aggregate searches');
+  const list = doc.getElementById('_x_extension_aggregate_search_list_2026_unique_');
+  assert.ok(toggle.compareDocumentPosition(list) & 4, 'it should come before the list of aggregate searches');
   assert.strictEqual(toggle.checked, true, 'grouping should default to on');
+  // The section heading names aggregate search, so the row drops it; the
+  // switch's accessible name keeps it for screen readers moving by control.
+  assert.ok(doc.querySelector('#_x_extension_aggregate_search_group_2026_unique_ [data-i18n="settings_aggregate_search_auto_group_short_title"]'));
   assert.strictEqual(toggle.getAttribute('data-i18n-aria-label'), 'settings_aggregate_search_auto_group_title');
   assert.strictEqual(AUTO_GROUP, '_x_extension_aggregate_search_auto_group_enabled_2026_unique_');
 }
@@ -62,15 +66,16 @@ async function testWorkerReadsTheSettingEachRun() {
 
 function testCopy() {
   const expectedCopy = {
-    en: { defaultName: 'Aggregate search', title: 'Automatically group aggregate search tabs' },
-    ja: { defaultName: '一括検索', title: '一括検索のタブグループを自動作成' },
-    zh_CN: { defaultName: '聚合搜索', title: '聚合搜索自动创建标签页组' },
-    zh_TW: { defaultName: '彙整搜尋', title: '彙整搜尋自動建立分頁群組' }
+    en: { defaultName: 'Aggregate search', title: 'Automatically group aggregate search tabs', shortTitle: 'Automatically create tab groups' },
+    ja: { defaultName: '一括検索', title: '一括検索のタブグループを自動作成', shortTitle: 'タブグループを自動作成' },
+    zh_CN: { defaultName: '聚合搜索', title: '聚合搜索自动创建标签页组', shortTitle: '自动创建标签页组' },
+    zh_TW: { defaultName: '彙整搜尋', title: '彙整搜尋自動建立分頁群組', shortTitle: '自動建立分頁群組' }
   };
   Object.entries(expectedCopy).forEach(([locale, expected]) => {
     const messages = JSON.parse(fs.readFileSync(`_locales/${locale}/messages.json`, 'utf8'));
     assert.strictEqual(messages.aggregate_search_default_name.message, expected.defaultName);
     assert.strictEqual(messages.settings_aggregate_search_auto_group_title.message, expected.title);
+    assert.strictEqual(messages.settings_aggregate_search_auto_group_short_title.message, expected.shortTitle);
     assert(messages.settings_aggregate_search_auto_group_desc.message.trim());
     assert(messages.aggregate_search_source_summary.message.includes('{count}'));
   });

@@ -2102,6 +2102,9 @@
   "settings_aggregate_search_auto_group_title": {
     "message": "一括検索のタブグループを自動作成"
   },
+  "settings_aggregate_search_auto_group_short_title": {
+    "message": "タブグループを自動作成"
+  },
   "settings_aggregate_search_auto_group_desc": {
     "message": "有効にすると、一括検索で開いたすべてのタブを1つのグループにまとめ、「一括検索名：検索キーワード」という名前を付けます"
   },
@@ -2767,6 +2770,15 @@
   },
   "settings_tab_switcher_desc": {
     "message": "既定の {shortcut} で最近のタブをすばやく切り替えます（変更可能）"
+  },
+  "settings_features_section_title": {
+    "message": "機能"
+  },
+  "settings_link_preview_title": {
+    "message": "リンクプレビュー"
+  },
+  "settings_link_preview_desc": {
+    "message": "Shift キーを押しながらリンクをクリックすると、ページ上の小さなウィンドウでプレビューします。いつでも閉じたり新しいタブに移したりできます。"
   },
   "slash_command_empty": {
     "message": "一致するコマンドはありません"
