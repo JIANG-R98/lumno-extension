@@ -2,7 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 const { parsePageCss } = require('../helpers/css-rules');
 const { createOptionsPage } = require('../helpers/options-page');
 const { readPageSource } = require('../helpers/page-source');
@@ -32,7 +32,7 @@ function testMarkupAndStyles() {
     'feedback channels should sit in one row of equal-width tiles');
   const link = css.rule('._x_extension_feedback_support_link_2026_unique_');
   assert.strictEqual(link && link.get('background'), 'var(--feedback-support-link-bg)', 'feedback channels should keep their filled tile surface');
-  assert.ok(getPageScripts('src/options/options.html').includes('src/shared/community-links.ts'),
+  assert.ok(getPageScripts('src/options/options.html').includes('src/domain/community-links.ts'),
     'Options should load the shared remote community links runtime');
 }
 

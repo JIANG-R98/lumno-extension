@@ -1,5 +1,5 @@
 const assert = require('assert');
-const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.ts');
+const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
 const { createOverlayPage, bundledSiteSearchProviders } = require('../helpers/overlay-runtime-harness');
 const { siteSearchIconCacheStorage } = require('../helpers/site-search-icon-cache');
 

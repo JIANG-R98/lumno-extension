@@ -6,7 +6,7 @@
 
 const assert = require('assert');
 const { delay } = require('./browser');
-const SETTINGS = require('../../src/shared/settings.ts');
+const SETTINGS = require('../../src/domain/settings.ts');
 
 const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
 const OVERLAY_INPUT = '#_x_extension_search_input_2024_unique_';
@@ -99,7 +99,7 @@ async function surfaces({ browser }) {
       NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY: true
     }
   ].map((round) => Object.fromEntries(Object.entries(round).map(([name, value]) => {
-    assert.ok(SETTINGS[name], `settings.js has no ${name}`);
+    assert.ok(SETTINGS[name], `settings.ts has no ${name}`);
     return [SETTINGS[name], value];
   })));
 

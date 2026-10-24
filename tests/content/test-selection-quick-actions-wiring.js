@@ -2,10 +2,10 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 const selectionScriptRegistration = require('../../src/background/selection-script-registration.ts');
 const selectionTarget = require('../../src/background/selection-target.ts');
-const selectionActionIcons = require('../../src/shared/selection-action-icons.ts');
+const selectionActionIcons = require('../../src/domain/selection-action-icons.ts');
 const { getToggleSettings } = require('../../src/options/options-toggle-settings.ts');
 const { getBundleFiles, getManifestContentScripts } = require('../helpers/runtime-scripts');
 const { readStylesheet } = require('../helpers/css-tokens');
@@ -31,7 +31,7 @@ assert.deepStrictEqual(Array.from(selectionScriptRegistration.SCRIPT_FILES), ['b
 assert.strictEqual(selectionScriptRegistration.RUN_AT, 'document_idle');
 assert.deepStrictEqual(
   getBundleFiles('selection-quick-actions').sort(),
-  ['src/content/selection-quick-actions.ts', 'src/shared/selection-action-icons.ts', 'src/shared/selection-intent.ts', 'src/shared/settings.ts', 'src/shared/ui/toast.ts'],
+  ['src/content/selection-quick-actions.ts', 'src/domain/selection-action-icons.ts', 'src/domain/selection-intent.ts', 'src/domain/settings.ts', 'src/shared/ui/toast.ts'],
   'the toolbar bundle should carry provider-aware settings, the selection classifier and the shared Toast, and nothing else'
 );
 assert.strictEqual(selectionTarget.DEFAULT_GROUP_TITLE, 'AI Search',

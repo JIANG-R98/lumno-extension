@@ -15,7 +15,7 @@ function createSlashCommands(deps) {
     updateSearchSuggestions
   } = deps;
 
-  // The panel state object shared with search-panel.js and the other modules.
+  // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
   // Firefox's website appearance setting (the color scheme pages see), read
   // and switched through the background for the /appearance command.

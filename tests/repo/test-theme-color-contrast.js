@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 
-const faviconTheme = require('../../src/newtab/theme/favicon-theme.ts');
+const faviconTheme = require('../../src/shared/favicon/favicon-theme.ts');
 const { parseCss, parsePageCss } = require('../helpers/css-rules');
 const { getInjectedScripts, runsBefore } = require('../helpers/runtime-scripts');
 
@@ -159,7 +159,7 @@ assert.ok(
 );
 
 assert.ok(
-  runsBefore(getInjectedScripts('overlay'), 'src/newtab/theme/favicon-theme.ts', 'src/overlay/search-panel.ts'),
+  runsBefore(getInjectedScripts('overlay'), 'src/shared/favicon/favicon-theme.ts', 'src/overlay/search-panel.ts'),
   'overlay injection should load the shared theme algorithm before the search panel'
 );
 // Softened passive borders keep a strong keyboard focus ring on both surfaces.

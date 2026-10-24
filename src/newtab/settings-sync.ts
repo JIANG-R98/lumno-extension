@@ -204,7 +204,7 @@ function createSettingsSync(deps) {
   }
 
   // Every storage change the page reacts to goes through this registry;
-  // each part registers the keys it owns (see storage-change-registry.js).
+  // each part registers the keys it owns (see storage-change-registry.ts).
   const storageChanges = LumnoNewtabStorageChangeRegistry.createStorageChangeRegistry({
     isPrimaryArea: isPrimaryStorageAreaName
   });

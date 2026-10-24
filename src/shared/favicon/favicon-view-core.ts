@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as faviconUtils from './favicon-utils';
+import * as faviconUtils from '../../domain/favicon/favicon-utils';
 function noop() {}
 const FAVICON_INTRINSIC_SIZE = 128;
 

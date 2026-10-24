@@ -1,6 +1,6 @@
 const assert = require('assert');
 const aggregateSearch = require('../../src/background/aggregate-search.ts');
-const aggregateStore = require('../../src/shared/search/aggregate-search-store.ts');
+const aggregateStore = require('../../src/domain/search/aggregate-search-store.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 
 const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_custom_2024_unique_';

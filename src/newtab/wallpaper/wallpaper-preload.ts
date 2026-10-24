@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as LumnoSettings from '../../shared/settings';
+import * as LumnoSettings from '../../domain/settings';
 import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
 
 (function() {
@@ -13,17 +13,17 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
   // IndexedDB copy as soon as it is read, so a slow or failing network never holds the tab's spinner
   // or blanks the page; uploads paint from the local wallpaper library the same way.
   const WALLPAPER_PATH_PATTERN = /^(?:assets\/wallpapers|output\/imagegen)\/[-.\w]+\.webp$/;
-  // Shared with createWallpaperImageCache in wallpaper-local-store.js.
+  // Shared with createWallpaperImageCache in wallpaper-local-store.ts.
   const IMAGE_CACHE_DB_NAME = 'lumno-newtab-wallpaper-cache';
   const IMAGE_CACHE_STORE_NAME = 'images';
-  // Shared with createWallpaperLocalStore in wallpaper-local-store.js.
+  // Shared with createWallpaperLocalStore in wallpaper-local-store.ts.
   const CUSTOM_WALLPAPER_DB_NAME = 'lumno-newtab-wallpaper';
   const CUSTOM_WALLPAPER_STORE_NAME = 'wallpapers';
   const CUSTOM_WALLPAPER_ID_PATTERN = /^custom-wallpaper-[-\w]+$/;
-  // Longer data URLs reach CSS as blob URLs, as in wallpaper.js (WALLPAPER_CSS_INLINE_URL_MAX_LENGTH):
+  // Longer data URLs reach CSS as blob URLs, as in wallpaper.ts (WALLPAPER_CSS_INLINE_URL_MAX_LENGTH):
   // every style recalculation re-reads the whole custom property, which a megabyte makes slow.
   const CSS_INLINE_URL_MAX_LENGTH = 32 * 1024;
-  // Chrome drops a CSS custom property longer than this (MAX_CSS_URL_LENGTH in wallpaper-local-store.js).
+  // Chrome drops a CSS custom property longer than this (MAX_CSS_URL_LENGTH in wallpaper-local-store.ts).
   const CSS_CUSTOM_PROPERTY_MAX_LENGTH = 2 * 1024 * 1024;
   const FAVICON_OPTIONS = {
     default: {
@@ -141,7 +141,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
     return width > 0 && height > 0 ? { width, height } : { width: 0, height: 0 };
   }
 
-  // Matches localDay in remote-content.js, which loads after this script.
+  // Matches localDay in remote-content.ts, which loads after this script.
   function getLocalDay(timestamp) {
     const date = new Date(timestamp);
     return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
@@ -165,7 +165,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
     return Number.isFinite(luminance) && luminance >= 0 && luminance <= 1 ? luminance : null;
   }
 
-  // Reads one record from an IndexedDB store wallpaper.js keeps, and only one holding an image.
+  // Reads one record from an IndexedDB store wallpaper.ts keeps, and only one holding an image.
   function readStoredImageRecord(dbName, storeName, key, isExpectedRecord) {
     return new Promise((resolve) => {
       let request = null;
@@ -178,7 +178,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
         resolve(null);
         return;
       }
-      // wallpaper.js creates the database; an empty one has nothing to paint.
+      // wallpaper.ts creates the database; an empty one has nothing to paint.
       request.onupgradeneeded = () => request.transaction.abort();
       request.onerror = () => resolve(null);
       request.onsuccess = () => {
@@ -203,7 +203,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
     });
   }
 
-  // The copy wallpaper.js saved, and only when it is still the copy of the same image.
+  // The copy wallpaper.ts saved, and only when it is still the copy of the same image.
   function readCachedImage(cachedImage) {
     return readStoredImageRecord(IMAGE_CACHE_DB_NAME, IMAGE_CACHE_STORE_NAME, cachedImage.id,
       (record) => record.url === cachedImage.url);
@@ -216,7 +216,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
       () => true);
   }
 
-  // wallpaper.js adopts the blob URL (cssObjectUrl) instead of making its own, so the background
+  // wallpaper.ts adopts the blob URL (cssObjectUrl) instead of making its own, so the background
   // never swaps to a second, still undecoded copy of the same image.
   function getCssSafeImageUrl(dataUrl) {
     if (dataUrl.length <= CSS_INLINE_URL_MAX_LENGTH ||
@@ -243,7 +243,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
       const url = window.URL.createObjectURL(new window.Blob([bytes], { type: meta.replace(/;base64$/i, '') }));
       return { url, objectUrl: { source: dataUrl, url } };
     } catch (e) {
-      // Past Chrome's custom-property limit the data URL would not paint at all; wallpaper.js tries again.
+      // Past Chrome's custom-property limit the data URL would not paint at all; wallpaper.ts tries again.
       return {
         url: getCssUrlValue(dataUrl).length <= CSS_CUSTOM_PROPERTY_MAX_LENGTH ? dataUrl : '',
         objectUrl: null
@@ -367,7 +367,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
         applyFaviconId(nextId);
       });
     } catch (e) {
-      // Best-effort only; wallpaper.js applies the definitive favicon after boot.
+      // Best-effort only; wallpaper.ts applies the definitive favicon after boot.
     }
   }
 
@@ -421,14 +421,14 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
     return Object.assign({
       effectPrefsReady: readStoredEffectPrefs(cachedWallpaper.mode, cachedWallpaper.effectPrefs),
       // The URL of the image this page preloaded, once known; the luminance belongs to it. Unlike
-      // imageUrl, wallpaper.js never changes it.
+      // imageUrl, wallpaper.ts never changes it.
       initialImageUrl: '',
       luminance: cachedWallpaper.luminance,
       mode: cachedWallpaper.mode
     }, fields);
   }
-  // A bundled wallpaper's small copy, which wallpaper.js and the effects sample instead of the full
-  // file (getWallpaperSample in wallpaper-sources.js).
+  // A bundled wallpaper's small copy, which wallpaper.ts and the effects sample instead of the full
+  // file (getWallpaperSample in wallpaper-sources.ts).
   function getBundledSamplePath(path) {
     return /^assets\/wallpapers\/[-.\w]+\.webp$/.test(path) && !/-thumb\.webp$/.test(path)
       ? path.replace(/\.webp$/, '-sample.avif')
@@ -436,7 +436,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
   }
 
   // The small copy saved with an upload or a cached photo for sampling (an older one's thumbnail),
-  // when it differs from the full image, as getWallpaperSample in wallpaper-sources.js names it.
+  // when it differs from the full image, as getWallpaperSample in wallpaper-sources.ts names it.
   function getRecordSample(record) {
     const url = [record && record.sampleDataUrl, record && record.thumbnailDataUrl]
       .find((value) => typeof value === 'string' && value.startsWith('data:image/')) || '';
@@ -445,7 +445,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
       : null;
   }
 
-  // Decodes the wallpaper's small copy while the page loads; wallpaper.js samples its tones from
+  // Decodes the wallpaper's small copy while the page loads; wallpaper.ts samples its tones from
   // this image (decodedImage) instead of loading and decoding it again. sourceUrl is the full image
   // it stands for.
   function decodeWallpaperImage(url, sourceUrl) {
@@ -506,7 +506,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
   if (!cachedWallpaper.cachedImage && !customImage) {
     return;
   }
-  // wallpaper.js sets runtimeApplied once it paints, and reuses cachedImageRecord instead of reading
+  // wallpaper.ts sets runtimeApplied once it paints, and reuses cachedImageRecord instead of reading
   // the same copy or upload again.
   const preloadState = createPreloadState({
     imageUrl: '',

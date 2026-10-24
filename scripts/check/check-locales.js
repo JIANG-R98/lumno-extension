@@ -80,7 +80,7 @@ async function main() {
   const localeDirs = fs.readdirSync(path.join(files.REPO_ROOT, '_locales'))
     .filter((name) => fs.existsSync(files.messagesPath(name)));
   localeDirs.filter((name) => !onlyLocales.length && !files.UI_LOCALE_IDS.includes(name))
-    .forEach((name) => report(name, 'has a _locales folder but is not in UI_LOCALES (src/shared/settings.ts)'));
+    .forEach((name) => report(name, 'has a _locales folder but is not in UI_LOCALES (src/domain/settings.ts)'));
 
   const sourceMessages = flattenMessages(files.readMessages(files.SOURCE_LOCALE));
   const onboardingSource = await files.readOnboardingSource();
@@ -89,10 +89,10 @@ async function main() {
     ? fs.readdirSync(onboardingDir).filter((name) => name.endsWith('.json')).map((name) => name.slice(0, -5))
     : [];
   onboardingFiles.filter((name) => !onlyLocales.length && !files.MACHINE_TRANSLATED_LOCALE_IDS.includes(name))
-    .forEach((name) => report(name, 'has an onboarding locale file but its onboarding copy is written in onboarding-content.js'));
+    .forEach((name) => report(name, 'has an onboarding locale file but its onboarding copy is written in onboarding-content.ts'));
 
   onlyLocales.filter((locale) => !files.UI_LOCALE_IDS.includes(locale))
-    .forEach((locale) => report(locale, 'is not in UI_LOCALES (src/shared/settings.ts)'));
+    .forEach((locale) => report(locale, 'is not in UI_LOCALES (src/domain/settings.ts)'));
   const locales = onlyLocales.length
     ? files.UI_LOCALE_IDS.filter((locale) => onlyLocales.includes(locale))
     : files.UI_LOCALE_IDS;

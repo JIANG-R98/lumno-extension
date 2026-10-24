@@ -1,5 +1,5 @@
 const assert = require('assert');
-const intent = require('../../src/shared/selection-intent.ts');
+const intent = require('../../src/domain/selection-intent.ts');
 
 function classify(text, options) {
   return intent.classifySelection(text, options || { uiLanguage: 'zh-CN' });

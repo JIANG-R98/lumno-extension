@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { JSDOM } = require('jsdom');
-const custom = require('../../src/newtab/top-content/custom-quotes.ts');
-const settings = require('../../src/shared/settings.ts');
+const custom = require('../../src/domain/custom-quotes.ts');
+const settings = require('../../src/domain/settings.ts');
 require('../../src/newtab/remote-content.ts');
 const quotesApi = require('../../src/newtab/top-content/quotes.ts');
 const locale = require('../../_locales/en/messages.json');

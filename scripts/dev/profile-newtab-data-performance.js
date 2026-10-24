@@ -3,8 +3,8 @@ const os = require('os');
 const { performance } = require('perf_hooks');
 require('../node/register-typescript');
 const bookmarkStore = require('../../src/newtab/bookmarks/bookmarks-store.ts');
-const recentStore = require('../../src/newtab/recent/recent-sites-store.ts');
-const settings = require('../../src/shared/settings.ts');
+const recentStore = require('../../src/domain/recent-sites-store.ts');
+const settings = require('../../src/domain/settings.ts');
 
 function round(value) {
   return Number(Number(value || 0).toFixed(2));

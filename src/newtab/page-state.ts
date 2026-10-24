@@ -39,7 +39,7 @@ function createPageState() {
     newtabResizeLayoutLocked: false,
     newtabReadyRequested: false,
 
-    // When the wallpaper was revealed (performance.now()); entry-motion.js lets it lead the content.
+    // When the wallpaper was revealed (performance.now()); entry-motion.ts lets it lead the content.
     wallpaperShownAt: 0,
     newtabReadyViewportRevision: 0,
     resolveNewtabEntryAnimationReady: null,

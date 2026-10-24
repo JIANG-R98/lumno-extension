@@ -17,7 +17,7 @@ function createPanelNotices(deps) {
     SETTINGS
   } = deps;
 
-  // The panel state object shared with search-panel.js and the other modules.
+  // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
   // The WeChat group QR opens in a dialog over the page, never in a new tab.

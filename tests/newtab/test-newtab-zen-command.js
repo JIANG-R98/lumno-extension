@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 const { parsePageCss } = require('../helpers/css-rules');
 const { openSearchSurface } = require('../helpers/search-surfaces');
 

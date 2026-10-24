@@ -2,7 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 const { getToggleSettings } = require('../../src/options/options-toggle-settings.ts');
 const { getManifestContentScripts } = require('../helpers/runtime-scripts');
 

@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Grouped and legacy shortcut keys: none of them is a plain preference.
 import * as settings from './settings';
-import * as shortcutStore from '../newtab/shortcuts/shortcuts-store';
+import * as shortcutStore from './shortcuts-store';
 const SHORTCUT_KEYS = shortcutStore.SHORTCUT_STORAGE_KEYS;
 const SHORTCUT_SYNC_KEYS = shortcutStore.SHORTCUTS_SYNC_KEYS;
 const OVERFLOW_KEY = shortcutStore.SHORTCUTS_LOCAL_OVERFLOW_KEY;

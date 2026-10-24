@@ -1,6 +1,6 @@
 // @ts-nocheck
-import '../navigation-disposition';
-import * as LumnoShortcutDisplay from '../shortcut-display';
+import '../../domain/navigation-disposition';
+import * as LumnoShortcutDisplay from '../../domain/shortcut-display';
 
 const FEATURE_HINTS = Object.freeze({
   NEWTAB_WALLPAPER_SOURCES: Object.freeze({

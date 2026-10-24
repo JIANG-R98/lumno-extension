@@ -1,5 +1,5 @@
 const assert = require('assert');
-const communityLinks = require('../../src/shared/community-links');
+const communityLinks = require('../../src/domain/community-links');
 const feedback = require('../../src/options/options-feedback-support');
 
 const getMessage = (key, fallback) => `${key}|${fallback}`;

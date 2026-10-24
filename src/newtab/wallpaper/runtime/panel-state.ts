@@ -2,7 +2,7 @@
 // The appearance panel's view model: the panel header, the theme, search
 // and shortcut sections, each wallpaper source's tiles, effects, favicons,
 // and drawing the model into the React view.
-import * as LumnoCommunityLinks from '../../../shared/community-links';
+import * as LumnoCommunityLinks from '../../../domain/community-links';
 
 function createPanelState(deps) {
   const {
@@ -116,7 +116,7 @@ function createPanelState(deps) {
     window
   } = deps;
 
-  // The runtime state object shared with wallpaper.js and the other modules.
+  // The runtime state object shared with wallpaper.ts and the other modules.
   const wallpaperState = deps.wallpaperState;
 
   // A closed panel is drawn again only when it next opens; meanwhile this records that its

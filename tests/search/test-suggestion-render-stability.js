@@ -1,5 +1,5 @@
 const assert = require('assert');
-const suggestionModel = require('../../src/shared/search/suggestion-action-model.ts');
+const suggestionModel = require('../../src/domain/search/suggestion-action-model.ts');
 const { openSearchSurface } = require('../helpers/search-surfaces');
 const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 

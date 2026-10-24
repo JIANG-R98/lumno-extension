@@ -12,9 +12,9 @@
 // command to the functions here.
 
 import * as RECENT_TAB_SWITCHER from './recent-tab-switcher';
-import * as BROWSER_PROFILE from '../shared/browser-profile';
-import * as FAVICON_UTILS from '../shared/favicon/favicon-utils';
-import * as NEWTAB_FAVICON_THEME from '../newtab/theme/favicon-theme';
+import * as BROWSER_PROFILE from '../platform/browser-profile';
+import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
+import * as NEWTAB_FAVICON_THEME from '../shared/favicon/favicon-theme';
 import {
   SHOW_TAB_SWITCHER_COMMAND_NAME,
   TAB_SWITCHER_THUMBNAIL_STORAGE_KEY,

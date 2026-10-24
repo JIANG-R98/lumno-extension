@@ -1,6 +1,6 @@
 const assert = require('assert');
 // The service worker loads settings before extension pages.
-require('../../src/shared/settings.ts');
+require('../../src/domain/settings.ts');
 const pages = require('../../src/background/extension-pages.ts');
 
 // The Settings version badge that sends openReleasePage is covered by

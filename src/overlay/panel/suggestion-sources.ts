@@ -1,9 +1,9 @@
 // @ts-nocheck
 // Building suggestions: keywords, direct navigation, help center
 // answers, and the update that merges local, tab and remote results.
-import * as BROWSER_PROFILE from '../../shared/browser-profile';
-import * as HELP_CENTER_SEARCH from '../../shared/search/help-center-search';
-import * as LumnoSearchUtils from '../../shared/search/search-utils';
+import * as BROWSER_PROFILE from '../../platform/browser-profile';
+import * as HELP_CENTER_SEARCH from '../../domain/search/help-center-search';
+import * as LumnoSearchUtils from '../../domain/search/search-utils';
 
 function createSuggestionSources(deps) {
   const {
@@ -64,7 +64,7 @@ function createSuggestionSources(deps) {
     clearDefaultOpenTabsSuggestions
   } = deps;
 
-  // The panel state object shared with search-panel.js and the other modules.
+  // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
   function getSearchUtilsRuntime() {

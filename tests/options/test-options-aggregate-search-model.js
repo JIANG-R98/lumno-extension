@@ -1,5 +1,5 @@
 const assert = require('assert');
-const aggregateSearchStore = require('../../src/shared/search/aggregate-search-store');
+const aggregateSearchStore = require('../../src/domain/search/aggregate-search-store');
 const { createAggregateSearchModel } = require('../../src/options/options-aggregate-search');
 
 const model = createAggregateSearchModel({ aggregateSearchStore });

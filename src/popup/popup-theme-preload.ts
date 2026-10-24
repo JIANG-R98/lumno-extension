@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as LumnoSettings from '../shared/settings';
+import * as LumnoSettings from '../domain/settings';
 
 (function() {
   // Paints the last theme the extension pages saw before the popup's first

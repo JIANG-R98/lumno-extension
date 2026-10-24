@@ -25,7 +25,7 @@ const FRAME_ANCESTORS_CSP = Object.freeze({ header: 'content-security-policy', v
 // alone: a worker may cache what it fetched and later serve it to the site's
 // own tabs, where a removed CSP would stay removed. A page a worker builds
 // from its cache keeps its headers and is still refused (X's posts load
-// through another address for that; see link-preview-frame-url.js).
+// through another address for that; see link-preview-frame-url.ts).
 const WORKER_RULE_ID = 1;
 const NO_TAB_ID = -1;
 // A press the page kept for itself (it handled the click) never opens; its

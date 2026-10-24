@@ -1,5 +1,5 @@
 const assert = require('assert');
-const navigationDisposition = require('../../src/shared/navigation-disposition.ts');
+const navigationDisposition = require('../../src/domain/navigation-disposition.ts');
 
 assert.strictEqual(
   navigationDisposition.isBackgroundOpenEvent({ metaKey: true, ctrlKey: false, button: 0 }),

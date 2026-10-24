@@ -1,6 +1,6 @@
 const assert = require('assert');
-const searchUtils = require('../../src/shared/search/search-utils');
-const aggregateSearchStore = require('../../src/shared/search/aggregate-search-store');
+const searchUtils = require('../../src/domain/search/search-utils');
+const aggregateSearchStore = require('../../src/domain/search/aggregate-search-store');
 const siteSearch = require('../../src/options/options-site-search');
 
 const model = siteSearch.createSiteSearchModel({ searchUtils, aggregateSearchStore });

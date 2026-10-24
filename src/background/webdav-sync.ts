@@ -1,8 +1,8 @@
 // @ts-nocheck
-import * as LumnoNewtabShortcutsStore from '../newtab/shortcuts/shortcuts-store';
-import * as LumnoNewtabWallpaperLocalStore from '../newtab/wallpaper/wallpaper-local-store';
-import * as LumnoSettings from '../shared/settings';
-import * as LumnoWebDavContract from '../shared/webdav-contract';
+import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
+import * as LumnoNewtabWallpaperLocalStore from '../shared/wallpaper-local-store';
+import * as LumnoSettings from '../domain/settings';
+import * as LumnoWebDavContract from '../domain/webdav-contract';
 import * as LumnoWebDavClient from './webdav-client';
 
 const DB_NAME = 'lumno-webdav-private';

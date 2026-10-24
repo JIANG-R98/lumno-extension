@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const blacklistUtils = require('../../src/shared/blacklist-utils.ts');
+const blacklistUtils = require('../../src/domain/blacklist-utils.ts');
 
 function run() {
   assert.deepEqual(

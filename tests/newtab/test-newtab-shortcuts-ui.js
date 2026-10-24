@@ -551,7 +551,7 @@ async function assertDarkThemeKeepsShortcutThemeBackground() {
 
 const newtabScripts = getPageScripts('newtab.html');
 assert.ok(
-  runsBefore(newtabScripts, 'src/newtab/shortcuts/shortcuts-store.ts', 'src/newtab/newtab.ts'),
+  runsBefore(newtabScripts, 'src/domain/shortcuts-store.ts', 'src/newtab/newtab.ts'),
   'new tab page should load the shortcuts store before newtab.js'
 );
 
@@ -561,7 +561,7 @@ assert.ok(
 );
 
 assert.ok(
-  newtabScripts.includes('src/shared/favicon/shortcut-favicon.ts'),
+  newtabScripts.includes('src/domain/favicon/shortcut-favicon.ts'),
   'new tab page should load the dedicated high-resolution shortcut favicon cache'
 );
 
@@ -1340,7 +1340,7 @@ assert.strictEqual(
 
 
 // On New Tab itself.
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 
 const SITES = [

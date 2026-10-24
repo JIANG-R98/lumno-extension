@@ -2,7 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-require('../../src/shared/extension-routes.ts');
+require('../../src/domain/extension-routes.ts');
 require('../../src/background/tab-groups.ts');
 const fallback = require('../../src/background/newtab-fallback.ts');
 
@@ -309,7 +309,7 @@ globalThis.chrome = originalChrome;
 // the worker follows the restricted page rule: Lumno's New Tab by default,
 // the browser's own New Tab when the rule says so.
 async function testFailedInjectionFollowsTheRestrictedPageRule() {
-  const settings = require('../../src/shared/settings.ts');
+  const settings = require('../../src/domain/settings.ts');
   const { loadBackground, wait } = require('../helpers/background-harness');
   const { createFakeTabPages } = require('../helpers/fake-tab-pages');
   for (const [rule, expected] of [['default', 'lumno'], ['none', 'browser']]) {

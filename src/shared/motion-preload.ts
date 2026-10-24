@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as LumnoSettings from './settings';
+import * as LumnoSettings from '../domain/settings';
 
 (function() {
   const STORAGE_KEY = '_x_extension_motion_effects_enabled_2026_unique_';

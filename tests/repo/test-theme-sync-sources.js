@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 const { createOptionsPage } = require('../helpers/options-page');
 const { openSearchSurface } = require('../helpers/search-surfaces');
 

@@ -2,7 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 require('../../src/shared/search/search-han-variants.js');
-const search = require('../../src/shared/search/search-utils.ts');
+const search = require('../../src/domain/search/search-utils.ts');
 const pinyinPro = require('../../assets/vendor/pinyin-pro.js');
 
 const repoRoot = path.resolve(__dirname, '..', '..');

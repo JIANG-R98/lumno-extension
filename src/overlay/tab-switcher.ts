@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as PAGE_COLOR_SCHEME from '../shared/page-color-scheme';
-import * as LumnoSettings from '../shared/settings';
+import * as LumnoSettings from '../domain/settings';
 import * as TOAST from '../shared/ui/toast';
 
 (function() {

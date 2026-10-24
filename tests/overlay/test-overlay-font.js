@@ -1,8 +1,8 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const settings = require('../../src/shared/settings.ts');
-const webdavContract = require('../../src/shared/webdav-contract.ts');
+const settings = require('../../src/domain/settings.ts');
+const webdavContract = require('../../src/domain/webdav-contract.ts');
 const { toFirefoxManifest } = require('../../scripts/build/firefox-manifest.js');
 const { parseCss } = require('../helpers/css-rules');
 const { createOverlayPage } = require('../helpers/overlay-runtime-harness');

@@ -2,7 +2,7 @@ const assert = require('assert');
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 
 // Both search surfaces read typed URLs, match results to open tabs and
-// autocomplete the same way, through the shared rules in search-utils.js
+// autocomplete the same way, through the shared rules in search-utils.ts
 // (unit-tested in test-search-utils.js).
 
 function respondWith(suggestions, tabs) {

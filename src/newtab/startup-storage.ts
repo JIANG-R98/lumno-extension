@@ -2,7 +2,7 @@
 // The storage area the page reads settings from, and the one batched read
 // that fetches every key the first render needs before the modules ask for
 // them one by one.
-import * as LumnoSettings from '../shared/settings';
+import * as LumnoSettings from '../domain/settings';
 
 function createStartupStorage(deps) {
   const settingsRuntimeApi = LumnoSettings;
@@ -12,7 +12,7 @@ function createStartupStorage(deps) {
     : ((chrome && chrome.storage && chrome.storage.sync)
         ? chrome.storage.sync
         : (chrome && chrome.storage ? chrome.storage.local : null));
-  // The next New Tab prefetches these keys before its scripts load (newtab-storage-prefetch.js).
+  // The next New Tab prefetches these keys before its scripts load (newtab-storage-prefetch.ts).
   function rememberStartupStorageKeys(keys) {
     if (!Array.isArray(keys) || !keys.length) {
       return;

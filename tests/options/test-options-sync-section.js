@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/shared/settings');
+const settings = require('../../src/domain/settings');
 const { createSyncSection } = require('../../src/options/options-sync-section');
 
 const KEY = settings.BOOKMARK_VIEW_MODE_STORAGE_KEY;

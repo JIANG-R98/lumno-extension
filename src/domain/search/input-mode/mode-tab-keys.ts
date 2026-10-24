@@ -15,7 +15,7 @@ function createModeTabKeys(deps) {
     DEFAULT_MODE_TAG_REMOVAL_CONFIRMATION_DURATION
   } = deps;
 
-  // The controller state object shared with search-input-mode.js and the other modules.
+  // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
 
   let modeMenuDoubleTabPending = false;

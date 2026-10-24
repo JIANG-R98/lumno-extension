@@ -13,7 +13,7 @@ The primary file covers ASCII, Latin-1, CJK punctuation, GB2312 symbols and the
 other character seen in the hitokoto bundle. Both are declared with
 unicode-range so the extended file only loads when a quote needs it.
 
-The face ids match NEWTAB_QUOTE_FONTS in src/shared/settings.ts.
+The face ids match NEWTAB_QUOTE_FONTS in src/domain/settings.ts.
 
 Usage: python3 scripts/build/subset-quote-font.py <face> <ttf> <d.json> <i.json>
 """

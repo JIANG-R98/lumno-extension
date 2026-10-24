@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 const { createOptionsPage } = require('../helpers/options-page');
 const { loadBackground, wait } = require('../helpers/background-harness');
 

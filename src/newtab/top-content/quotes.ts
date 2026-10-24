@@ -1,7 +1,7 @@
 // @ts-nocheck
-import * as LumnoSettings from '../../shared/settings';
+import * as LumnoSettings from '../../domain/settings';
 import * as LumnoNewtabRemoteContent from '../remote-content';
-import * as LumnoCustomQuotes from './custom-quotes';
+import * as LumnoCustomQuotes from '../../domain/custom-quotes';
 
 function createRuntime(options) {
   const config = options || {};

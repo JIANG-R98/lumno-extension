@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 const { openSearchSurface } = require('../helpers/search-surfaces');
 
 // /mode on New Tab switches the theme the page is showing: the global theme

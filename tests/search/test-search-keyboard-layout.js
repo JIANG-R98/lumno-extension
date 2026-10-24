@@ -5,7 +5,7 @@ const vm = require('vm');
 const { runModuleInContext } = require('../helpers/module-script');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const searchUtils = require('../../src/shared/search/search-utils.ts');
+const searchUtils = require('../../src/domain/search/search-utils.ts');
 
 function readings(query) {
   return searchUtils.getSearchKeyboardLayoutQueries(query);

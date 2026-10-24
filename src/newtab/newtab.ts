@@ -1,25 +1,25 @@
 // @ts-nocheck
-import * as BLACKLIST_UTILS from '../shared/blacklist-utils';
-import * as FOLDER_REFERENCES from '../shared/bookmark-folder-reference';
-import * as LumnoBrowserProfile from '../shared/browser-profile';
-import * as LumnoCommunityLinks from '../shared/community-links';
-import * as EXTENSION_ROUTES from '../shared/extension-routes';
-import * as FAVICON_UTILS from '../shared/favicon/favicon-utils';
-import * as SHORTCUT_FAVICON from '../shared/favicon/shortcut-favicon';
-import * as NAVIGATION_DISPOSITION from '../shared/navigation-disposition';
-import * as PROGRESS_HISTORY from '../shared/progress-history';
-import * as PROGRESS_MATCH from '../shared/progress-match';
-import * as AGGREGATE_SEARCH_STORE from '../shared/search/aggregate-search-store';
-import * as AGGREGATE_SEARCH_SURFACE from '../shared/search/aggregate-search-surface';
-import * as LumnoHelpCenterSearch from '../shared/search/help-center-search';
-import * as LumnoImeKeyGuard from '../shared/search/ime-key-guard';
-import * as SEARCH_INPUT_HISTORY from '../shared/search/search-input-history';
-import * as SEARCH_UTILS from '../shared/search/search-utils';
+import * as BLACKLIST_UTILS from '../domain/blacklist-utils';
+import * as FOLDER_REFERENCES from '../domain/bookmark-folder-reference';
+import * as LumnoBrowserProfile from '../platform/browser-profile';
+import * as LumnoCommunityLinks from '../domain/community-links';
+import * as EXTENSION_ROUTES from '../domain/extension-routes';
+import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
+import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
+import * as NAVIGATION_DISPOSITION from '../domain/navigation-disposition';
+import * as PROGRESS_HISTORY from '../domain/progress-history';
+import * as PROGRESS_MATCH from '../domain/progress-match';
+import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
+import * as AGGREGATE_SEARCH_SURFACE from '../domain/search/aggregate-search-surface';
+import * as LumnoHelpCenterSearch from '../domain/search/help-center-search';
+import * as LumnoImeKeyGuard from '../domain/search/ime-key-guard';
+import * as SEARCH_INPUT_HISTORY from '../domain/search/search-input-history';
+import * as SEARCH_UTILS from '../domain/search/search-utils';
 import * as SITE_SEARCH_STORE from '../shared/search/site-search-store';
-import * as SUGGESTION_ACTION_MODEL from '../shared/search/suggestion-action-model';
+import * as SUGGESTION_ACTION_MODEL from '../domain/search/suggestion-action-model';
 import * as SUGGESTION_NAVIGATION from '../shared/search/suggestion-navigation';
-import * as SHORTCUT_KEY_MATCHER from '../shared/shortcut-key-matcher';
-import * as SITE_DISPLAY_NAME from '../shared/site-display-name';
+import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
+import * as SITE_DISPLAY_NAME from '../domain/site-display-name';
 import * as FEATURE_HINTS from '../shared/ui/feature-hints';
 import * as NEWTAB_APPEARANCE_MODES from './appearance-modes';
 import * as NEWTAB_BOOKMARK_ACTIONS from './bookmarks/bookmark-actions';
@@ -55,7 +55,7 @@ import * as LumnoNewtabPageState from './page-state';
 import * as NEWTAB_RECENT_CARD_DRAG from './recent/recent-card-drag';
 import * as NEWTAB_RECENT_SECTION from './recent/recent-section';
 import * as NEWTAB_RECENT_SITES_CONTROLLER from './recent/recent-sites-controller';
-import * as NEWTAB_RECENT_STORE from './recent/recent-sites-store';
+import * as NEWTAB_RECENT_STORE from '../domain/recent-sites-store';
 import * as NEWTAB_RECENT_SOURCES from './recent/recent-sources';
 import * as NEWTAB_DEFAULT_SEARCH_ENGINE from './search/default-search-engine';
 import * as NEWTAB_DIRECT_NAVIGATION_SETTLE from './search/direct-navigation-settle';
@@ -85,11 +85,11 @@ import * as NEWTAB_SHORTCUT_ICON_PLATE from './shortcuts/shortcut-icon-plate';
 import * as NEWTAB_SHORTCUT_ICON_STORE from './shortcuts/shortcut-icon-store';
 import * as NEWTAB_SHORTCUT_PAGE_ACTIONS from './shortcuts/shortcut-page-actions';
 import * as NEWTAB_SHORTCUTS_CONTROLLER from './shortcuts/shortcuts-controller';
-import * as NEWTAB_SHORTCUTS_STORE from './shortcuts/shortcuts-store';
+import * as NEWTAB_SHORTCUTS_STORE from '../domain/shortcuts-store';
 import * as NEWTAB_STARTUP_PREFERENCES from './startup-preferences';
 import * as NEWTAB_STARTUP_STORAGE from './startup-storage';
 import * as NEWTAB_CARD_THEMES from './theme/card-themes';
-import * as NEWTAB_FAVICON_THEME from './theme/favicon-theme';
+import * as NEWTAB_FAVICON_THEME from '../shared/favicon/favicon-theme';
 import * as NEWTAB_GLASS_SURFACES from './theme/glass-surfaces';
 import * as NEWTAB_PAGE_FAVICONS from './theme/page-favicons';
 import * as NEWTAB_SITE_THEME_RESOLVER from './theme/site-theme-resolver';
@@ -104,7 +104,7 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page';
 (function() {
   // Page state shared with the modules split out of this file: each module
   // receives this one object as `pageState` and reads and writes the same
-  // properties this file does. page-state.js lists its initial values.
+  // properties this file does. page-state.ts lists its initial values.
   const pageState = LumnoNewtabPageState.createPageState();
   const root = document.getElementById('_x_extension_newtab_root_2024_unique_');
   const createSearchInput = window._x_extension_createSearchInput_2024_unique_;

@@ -3,8 +3,8 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const settings = require('../../src/shared/settings.ts');
-const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.ts');
+const settings = require('../../src/domain/settings.ts');
+const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
 const repoRoot = path.join(__dirname, '..', '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'manifest.json'), 'utf8'));
 const expectedDevelopmentExtensionId = 'kkcjcneagmlhpeaafngjdlpcfjakejgb';

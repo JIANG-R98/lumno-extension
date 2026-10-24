@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as browserProfile from '../shared/browser-profile';
+import * as browserProfile from '../platform/browser-profile';
 function getShortcutUrlForScheme(query, rules, scheme) {
   if (!query || !Array.isArray(rules)) {
     return null;

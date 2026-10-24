@@ -1,6 +1,6 @@
 // @ts-nocheck
 // The wordmark/clock area above the search box. Moving the blocks around
-// it when it shows, hides or changes height is layout-motion.js's job.
+// it when it shows, hides or changes height is layout-motion.ts's job.
 function createTopContentRuntime(deps) {
   const {
     COMMUNITY_LINKS,

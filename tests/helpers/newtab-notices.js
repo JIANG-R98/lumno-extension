@@ -5,7 +5,7 @@
 
 const engagementNotice = require('../../src/shared/engagement-notice.ts');
 const featureHints = require('../../src/shared/ui/feature-hints.ts');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 
 function dismissedFeatureHints() {
   const areas = { sync: {}, local: {}, session: {} };

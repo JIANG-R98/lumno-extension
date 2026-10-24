@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 const pageTheme = require('../../src/overlay/page-theme.ts');
 const { parseCss } = require('../helpers/css-rules');
 const { readStylesheet } = require('../helpers/css-tokens');

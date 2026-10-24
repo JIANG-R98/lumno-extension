@@ -1,5 +1,5 @@
 const assert = require('assert');
-const ORDER = require('../../src/shared/search/search-source-order.ts');
+const ORDER = require('../../src/domain/search/search-source-order.ts');
 const { createSearchSourceOrderController } = require('../../src/options/options-search-source-order.ts');
 
 const flush = () => new Promise((resolve) => setImmediate(resolve));

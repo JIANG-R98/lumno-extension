@@ -5,10 +5,10 @@
 // shortcut asks it for an icon, keeps a snapshot and edits it in the
 // shortcut editor.
 
-const settings = require('../../src/shared/settings.ts');
-const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.ts');
-const faviconCache = require('../../src/shared/favicon/favicon-cache.ts');
-const faviconUtils = require('../../src/shared/favicon/favicon-utils.ts');
+const settings = require('../../src/domain/settings.ts');
+const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
+const faviconCache = require('../../src/domain/favicon/favicon-cache.ts');
+const faviconUtils = require('../../src/domain/favicon/favicon-utils.ts');
 const { loadBackground } = require('./background-harness');
 const { createNewtabPage } = require('./newtab-page');
 

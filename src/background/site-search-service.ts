@@ -10,12 +10,12 @@
 // its own top-level bindings yet at that point.
 
 import * as AGGREGATE_SEARCH from './aggregate-search';
-import * as AGGREGATE_SEARCH_STORE from '../shared/search/aggregate-search-store';
+import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
 import * as AI_PROVIDER_SUBMIT from './ai-provider-submit';
-import * as COMMUNITY_LINKS from '../shared/community-links';
-import * as HELP_CENTER_SEARCH from '../shared/search/help-center-search';
+import * as COMMUNITY_LINKS from '../domain/community-links';
+import * as HELP_CENTER_SEARCH from '../domain/search/help-center-search';
 import * as SEARCH_RESULT_TABS from './search-result-tabs';
-import * as SETTINGS from '../shared/settings';
+import * as SETTINGS from '../domain/settings';
 import {
   AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
   AGGREGATE_SEARCH_STORAGE_KEY,

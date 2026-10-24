@@ -2,48 +2,48 @@
 // The worker runs these modules in this order before its own code: the
 // shared and background modules first, then the services split out of this
 // file.
-import '../shared/blacklist-utils';
-import * as LumnoUrlGuards from '../shared/url-guards';
-import * as FAVICON_UTILS from '../shared/favicon/favicon-utils';
-import * as SHORTCUT_FAVICON from '../shared/favicon/shortcut-favicon';
-import '../shared/shortcut-key-matcher';
-import '../shared/favicon/favicon-cache';
-import '../newtab/theme/favicon-theme';
-import '../shared/extension-routes';
+import '../domain/blacklist-utils';
+import * as LumnoUrlGuards from '../platform/url-guards';
+import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
+import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
+import '../domain/shortcut-key-matcher';
+import '../domain/favicon/favicon-cache';
+import '../shared/favicon/favicon-theme';
+import '../domain/extension-routes';
 import './command-target-policy';
-import * as SETTINGS from '../shared/settings';
-import * as LumnoSettings from '../shared/settings';
-import * as LumnoBookmarkFolderReference from '../shared/bookmark-folder-reference';
-import '../newtab/shortcuts/shortcuts-store';
-import '../shared/site-display-name';
+import * as SETTINGS from '../domain/settings';
+import * as LumnoSettings from '../domain/settings';
+import * as LumnoBookmarkFolderReference from '../domain/bookmark-folder-reference';
+import '../domain/shortcuts-store';
+import '../domain/site-display-name';
 import * as LumnoPageShortcutMenu from './page-shortcut-menu';
-import '../newtab/wallpaper/wallpaper-local-store';
-import '../shared/webdav-contract';
+import '../shared/wallpaper-local-store';
+import '../domain/webdav-contract';
 import * as LumnoWebDavClient from './webdav-client';
 import * as LumnoWebDavSync from './webdav-sync';
 import * as UPDATE_NOTICE from '../shared/update-notice';
 // Folds traditional characters to simplified ones for local search matching.
 import '../shared/search/search-han-variants.js';
-import '../shared/search/utils/direct-navigation';
-import '../shared/search/utils/text-normalize';
-import '../shared/search/utils/text-index';
-import '../shared/search/utils/keyboard-layouts';
-import '../shared/search/utils/text-matching';
-import '../shared/search/utils/selection-stats';
-import '../shared/search/utils/result-dedup';
-import '../shared/search/utils/suggestion-slate';
-import '../shared/search/utils/query-intent';
-import '../shared/search/utils/relevance-score';
-import '../shared/search/utils/brand-suggestions';
-import '../shared/search/utils/navigation-matching';
-import '../shared/search/utils/site-search-providers';
-import '../shared/search/utils/site-search-matching';
-import '../shared/search/search-utils';
-import '../shared/selection-intent';
+import '../domain/search/utils/direct-navigation';
+import '../domain/search/utils/text-normalize';
+import '../domain/search/utils/text-index';
+import '../domain/search/utils/keyboard-layouts';
+import '../domain/search/utils/text-matching';
+import '../domain/search/utils/selection-stats';
+import '../domain/search/utils/result-dedup';
+import '../domain/search/utils/suggestion-slate';
+import '../domain/search/utils/query-intent';
+import '../domain/search/utils/relevance-score';
+import '../domain/search/utils/brand-suggestions';
+import '../domain/search/utils/navigation-matching';
+import '../domain/search/utils/site-search-providers';
+import '../domain/search/utils/site-search-matching';
+import '../domain/search/search-utils';
+import '../domain/selection-intent';
 import '../shared/search/site-search-store';
-import '../shared/community-links';
-import '../shared/search/help-center-search';
-import * as AGGREGATE_SEARCH_STORE from '../shared/search/aggregate-search-store';
+import '../domain/community-links';
+import '../domain/search/help-center-search';
+import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
 import './ai-provider-submit';
 import './aggregate-search';
 import * as BACKGROUND_PAGES from './extension-pages';
@@ -56,16 +56,16 @@ import * as LumnoSelectionScriptRegistration from './selection-script-registrati
 import * as LumnoLinkPreview from './link-preview';
 import * as BACKGROUND_MESSAGE_ROUTER from './message-router';
 import * as BACKGROUND_NEWTAB_FALLBACK from './newtab-fallback';
-import '../shared/browser-profile';
+import '../platform/browser-profile';
 import * as BACKGROUND_SHORTCUT_RULES from './shortcut-rules';
 import * as LumnoWebAppearance from './web-appearance';
 import './pip-ownership';
-import './pip-main-world';
+import '../shared/pip-main-world';
 import './recent-tab-switcher';
-import * as LumnoProgressMatch from '../shared/progress-match';
-import * as LumnoProgressHistory from '../shared/progress-history';
+import * as LumnoProgressMatch from '../domain/progress-match';
+import * as LumnoProgressHistory from '../domain/progress-history';
 import * as LumnoProgressTracker from './progress-tracker';
-import * as LumnoNewtabRecentSitesStore from '../newtab/recent/recent-sites-store';
+import * as LumnoNewtabRecentSitesStore from '../domain/recent-sites-store';
 import * as LumnoPopupRecentPin from './popup-recent-pin';
 import './overlay-loading-lifecycle';
 import * as DEV_EXTENSION_STARTUP from './dev-extension-startup';
@@ -316,7 +316,7 @@ const backgroundSettingsReady = new Promise((resolve) => {
   resolveBackgroundSettingsReady = resolve;
 });
 // Records the restricted-action choice made for the user when the browser's
-// own New Tab provider is detected (browser-urls-service.js).
+// own New Tab provider is detected (browser-urls-service.ts).
 export function markRestrictedActionAutoSelected() {
   restrictedActionAutoBrowserSettingDoneCache = true;
   restrictedActionCache = 'none';

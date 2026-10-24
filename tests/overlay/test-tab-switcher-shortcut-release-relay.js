@@ -61,7 +61,7 @@ window.chrome = {
   }
 };
 
-window.eval(moduleScript('src/shared/shortcut-key-matcher.ts', 'LumnoShortcutKeyMatcher'));
+window.eval(moduleScript('src/domain/shortcut-key-matcher.ts', 'LumnoShortcutKeyMatcher'));
 window.eval(moduleScript('src/content/shortcut-key-observer.ts'));
 assert.strictEqual(typeof keydownHandler, 'function', 'the frame should observe the configured search shortcut');
 assert.strictEqual(typeof keyupHandler, 'function', 'the frame should observe configured shortcut-key releases');

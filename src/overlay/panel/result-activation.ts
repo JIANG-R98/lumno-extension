@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Opening a result: the modifier keys that pick the current, a new or a
 // background tab, and switching to an open tab instead.
-import * as NAVIGATION_DISPOSITION from '../../shared/navigation-disposition';
+import * as NAVIGATION_DISPOSITION from '../../domain/navigation-disposition';
 
 function createResultActivation(deps) {
   const {
@@ -11,7 +11,7 @@ function createResultActivation(deps) {
     recordSearchSuggestionSelectionFromSuggestion
   } = deps;
 
-  // The panel state object shared with search-panel.js and the other modules.
+  // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
   let openInCurrentTabModifierActive = false;

@@ -247,7 +247,9 @@ npm run lint
 | `src/content/` | Page hotkey listener, selection quick actions, Web Clip PiP, and auto video PiP |
 | `src/options/` | Extension settings page (`options.ts` and its `options-*.ts` parts) |
 | `src/onboarding/` | Install and update onboarding |
-| `src/shared/` | Shared settings, routes and URL guards; `search/` (ranking, input, suggestions), `ui/` (tooltip, toast, menu and control styles), `favicon/` |
+| `src/domain/` | Pure logic with no browser or DOM access: settings keys and normalization, routes, search ranking and matching (`search/`), favicon rules, shortcut and recent-site stores |
+| `src/platform/` | Browser and extension API wrappers: browser detection and URL guards |
+| `src/shared/` | UI and page runtime shared by several surfaces: `search/` (input and suggestions), `ui/` (tooltip, toast, menu and control styles), `favicon/`, preloads |
 | `react-src/` | React sources built into `src/react/` |
 | `_locales/` | Extension UI copy |
 | `assets/data/` | Built-in site-search and browser shortcut data |

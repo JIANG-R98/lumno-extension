@@ -1,7 +1,7 @@
 const assert = require('assert');
-const refs = require('../../src/shared/bookmark-folder-reference.ts');
-const shortcuts = require('../../src/newtab/shortcuts/shortcuts-store.ts');
-const settings = require('../../src/shared/settings.ts');
+const refs = require('../../src/domain/bookmark-folder-reference.ts');
+const shortcuts = require('../../src/domain/shortcuts-store.ts');
+const settings = require('../../src/domain/settings.ts');
 const drag = require('../../src/newtab/cross-surface-drag.ts');
 const { openDragPage } = require('../helpers/newtab-drag-page');
 

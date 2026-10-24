@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Binds every setting control to its storage key: the one-time loads and
 // the setting binder entries for each section, including the daily quote.
-import * as CUSTOM_QUOTES from '../newtab/top-content/custom-quotes';
+import * as CUSTOM_QUOTES from '../domain/custom-quotes';
 import * as LumnoOptionsDailyQuote from './options-daily-quote';
 
 function createSettingBinds(deps) {

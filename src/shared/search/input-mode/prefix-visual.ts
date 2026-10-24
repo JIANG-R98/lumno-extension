@@ -35,7 +35,7 @@ function createPrefixVisual(deps) {
     notifyModeMenuLayoutChange
   } = deps;
 
-  // The controller state object shared with search-input-mode.js and the other modules.
+  // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
 
   let baseInputPaddingLeft = null;

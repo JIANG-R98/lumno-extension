@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as SETTINGS from './settings';
+import * as SETTINGS from '../domain/settings';
 import * as LumnoFeatureHints from './ui/feature-hints';
 
 const UPDATE_NOTICE_STORAGE_KEY = '_x_lumno_update_notice_2026_unique_';

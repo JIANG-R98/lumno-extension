@@ -2,8 +2,8 @@ const assert = require('assert');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { moduleScript } = require('../helpers/module-script');
 const linkPreview = require('../../src/background/link-preview.ts');
-const settings = require('../../src/shared/settings.ts');
-const { toPreviewFrameUrl } = require('../../src/shared/link-preview-frame-url.ts');
+const settings = require('../../src/domain/settings.ts');
+const { toPreviewFrameUrl } = require('../../src/domain/link-preview-frame-url.ts');
 
 // The link preview: the background service that prepares and opens a
 // preview for a tab, and the content script that turns Shift+click on a link

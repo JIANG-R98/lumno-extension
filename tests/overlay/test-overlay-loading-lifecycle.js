@@ -17,9 +17,9 @@ const lifecycle = require(path.join(
 const urlGuardSandbox = { URL };
 urlGuardSandbox.globalThis = urlGuardSandbox;
 vm.runInNewContext(
-  moduleScript('src/shared/url-guards.ts', 'LumnoUrlGuards'),
+  moduleScript('src/platform/url-guards.ts', 'LumnoUrlGuards'),
   urlGuardSandbox,
-  { filename: 'src/shared/url-guards.ts' }
+  { filename: 'src/platform/url-guards.ts' }
 );
 const canInjectOverlayUrl = urlGuardSandbox.LumnoUrlGuards.canOpenOverlayOnUrl;
 

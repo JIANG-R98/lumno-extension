@@ -1,7 +1,7 @@
 const assert = require('assert');
 
 const shortcutRules = require('../../src/background/shortcut-rules.ts');
-const browserProfile = require('../../src/shared/browser-profile.ts');
+const browserProfile = require('../../src/platform/browser-profile.ts');
 const bundledShortcutRules = require('../../assets/data/shortcut-rules.json');
 const vm = require('vm');
 const { runModuleInContext } = require('../helpers/module-script');
@@ -100,15 +100,15 @@ function testBrowserProfileUsesClientHintBrand() {
 
 function testBrowserProfileRuntimeWiring() {
   assert(
-    runsBefore(getInjectedScripts('overlay'), 'src/shared/browser-profile.ts', 'src/overlay/search-panel.ts'),
+    runsBefore(getInjectedScripts('overlay'), 'src/platform/browser-profile.ts', 'src/overlay/search-panel.ts'),
     'overlay injection should load browser-profile before search-panel'
   );
   assert(
-    runsBefore(getPageScripts('newtab.html'), 'src/shared/browser-profile.ts', 'src/newtab/newtab.ts'),
+    runsBefore(getPageScripts('newtab.html'), 'src/platform/browser-profile.ts', 'src/newtab/newtab.ts'),
     'newtab should load browser-profile before its page entry'
   );
   assert(
-    runsBefore(getPageScripts('src/onboarding/onboarding.html'), 'src/shared/browser-profile.ts', 'src/overlay/search-panel.ts'),
+    runsBefore(getPageScripts('src/onboarding/onboarding.html'), 'src/platform/browser-profile.ts', 'src/overlay/search-panel.ts'),
     'onboarding preview should load browser-profile before overlay search'
   );
 }
@@ -121,7 +121,7 @@ function testNewtabKeywordSuggestionsFollowTheBrowser() {
     const context = vm.createContext({ navigator: { userAgent }, URL, chrome: null });
     context.window = context;
     context.globalThis = context;
-    const BROWSER_PROFILE = runModuleInContext('src/shared/browser-profile.ts', context, '__profile');
+    const BROWSER_PROFILE = runModuleInContext('src/platform/browser-profile.ts', context, '__profile');
     const { createSearchNavigation } = runModuleInContext('src/newtab/search/search-navigation.ts', context, '__navigation');
     const navigation = createSearchNavigation({
       BROWSER_PROFILE,

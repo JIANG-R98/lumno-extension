@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as LumnoSettings from '../shared/settings';
+import * as LumnoSettings from '../domain/settings';
 
 (function() {
   // Starts the startup work the last New Tab's choices make known while the rest of the page is still

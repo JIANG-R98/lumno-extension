@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/shared/settings');
+const settings = require('../../src/domain/settings');
 const { createThemeSection } = require('../../src/options/options-theme');
 
 function setup(stored, options) {

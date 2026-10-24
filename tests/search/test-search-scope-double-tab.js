@@ -1,6 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
-const search = require('../../src/shared/search/search-utils.ts');
+const search = require('../../src/domain/search/search-utils.ts');
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 
 // Two quick Tabs in an empty search input open the scope panel on the

@@ -8,7 +8,7 @@
 // file loads, because background.js has not initialized its own top-level
 // bindings yet at that point.
 
-import * as LumnoPipMainWorld from './pip-main-world';
+import * as LumnoPipMainWorld from '../shared/pip-main-world';
 import * as LumnoPipOwnership from './pip-ownership';
 import {
   documentPipEnabledCache,

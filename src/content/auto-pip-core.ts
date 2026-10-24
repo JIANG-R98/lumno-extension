@@ -1,9 +1,9 @@
 // @ts-nocheck
 // Shared auto Picture-in-Picture logic for src/content/site-auto-pip.ts and
-// src/content/youtube-auto-pip.ts, loaded after settings.js by both of their
+// src/content/youtube-auto-pip.ts, loaded after settings.ts by both of their
 // content_scripts entries. Nothing here touches the page until a content
 // script calls createAutoPipCore.
-import * as LumnoSettings from '../shared/settings';
+import * as LumnoSettings from '../domain/settings';
 
 const AUTO_PIP_ENABLED_STORAGE_KEY = LumnoSettings.AUTO_PIP_ENABLED_STORAGE_KEY;
 const DOCUMENT_PIP_ACTIVE_FLAG = '__lumno_document_pip_active_2026__';

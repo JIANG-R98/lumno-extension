@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const { createOptionsPage } = require('../helpers/options-page');
 
-const shortcutDisplay = require('../../src/shared/shortcut-display.ts');
-const shortcutReference = require('../../src/shared/shortcut-reference.ts');
+const shortcutDisplay = require('../../src/domain/shortcut-display.ts');
+const shortcutReference = require('../../src/domain/shortcut-reference.ts');
 
 const macNavigator = {
   platform: 'Linux x86_64',

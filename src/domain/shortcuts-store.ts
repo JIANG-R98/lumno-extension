@@ -3,7 +3,7 @@
 // each name their group. Browser sync holds a compact copy of that state in
 // three keys under a fixed byte ceiling; whatever does not fit stays in this
 // device's local overflow record, which WebDAV carries between devices.
-import * as references from '../../shared/bookmark-folder-reference';
+import * as references from './bookmark-folder-reference';
 const DEFAULT_MAX_SHORTCUTS = 200;
 const DEFAULT_MAX_SHORTCUT_GROUPS = 20;
 const SHORTCUT_GROUP_TITLE_MAX_LENGTH = 24;

@@ -3,7 +3,7 @@
 // Data a New Tab test page starts from, produced by the extension's own code
 // so a test does not restate the storage format.
 
-const store = require('../../src/newtab/shortcuts/shortcuts-store.ts');
+const store = require('../../src/domain/shortcuts-store.ts');
 
 // The sync storage items that hold `items` as the user's shortcuts, written
 // by the real shortcuts store. Each item is a shortcut input:

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as faviconUtils from '../../shared/favicon/favicon-utils';
+import * as faviconUtils from '../../domain/favicon/favicon-utils';
 
 const defaultAccentColor = [59, 130, 246];
 const MIN_THEME_FOREGROUND_CONTRAST = 4.5;

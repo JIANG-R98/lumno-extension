@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as PAGE_COLOR_SCHEME from '../shared/page-color-scheme';
-import * as SETTINGS from '../shared/settings';
+import * as SETTINGS from '../domain/settings';
 
 (function() {
   // The background injects this script on the first copy-URL command in a tab

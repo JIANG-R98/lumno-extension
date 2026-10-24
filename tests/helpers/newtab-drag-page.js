@@ -8,7 +8,7 @@
 //   await newtab.dragTo(newtab.card('link'), newtab.shortcutSlot(1));
 //   await newtab.undo(); await newtab.redo();
 
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 const { createNewtabPage } = require('./newtab-page');
 
 const SHORTCUT_ROW = { left: 300, top: 400, width: 64, height: 64, gap: 8 };

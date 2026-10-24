@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { toPreviewFrameUrl } from '../shared/link-preview-frame-url';
+import { toPreviewFrameUrl } from '../domain/link-preview-frame-url';
 import * as TOAST from '../shared/ui/toast';
 import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-state-art';
 

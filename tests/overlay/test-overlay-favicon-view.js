@@ -203,8 +203,8 @@ function createRuntime(options) {
       };
     }
   };
-  vm.runInNewContext(moduleScript('src/shared/favicon/favicon-utils.ts', 'LumnoFaviconUtils', null, { 'src/shared/favicon/favicon-view-core.ts': 'LumnoFaviconViewCore' }), sandbox, {
-    filename: 'src/shared/favicon/favicon-utils.ts'
+  vm.runInNewContext(moduleScript('src/domain/favicon/favicon-utils.ts', 'LumnoFaviconUtils', null, { 'src/shared/favicon/favicon-view-core.ts': 'LumnoFaviconViewCore' }), sandbox, {
+    filename: 'src/domain/favicon/favicon-utils.ts'
   });
   vm.runInNewContext(moduleScript('src/overlay/favicon-view.ts', 'LumnoOverlayFaviconView', null, { 'src/shared/favicon/favicon-view-core.ts': 'LumnoFaviconViewCore' }), sandbox, {
     filename: 'src/overlay/favicon-view.ts'

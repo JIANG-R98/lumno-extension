@@ -18,6 +18,39 @@ const extensionGlobals = {
   ...globals.webextensions
 };
 
+// src/ layers, lowest first: domain (pure logic), platform (browser and
+// extension API wrappers), shared (UI and page runtime used by several
+// surfaces), then the surfaces themselves. A module may import its own layer
+// and the ones below it; a surface may not import another surface.
+const SURFACES = ['background', 'content', 'overlay', 'newtab', 'options', 'onboarding', 'popup'];
+
+function importsFrom(directories) {
+  return {
+    regex: `(?:^|/)(?:${directories.join('|')})(?:/|$)`,
+    message: 'This layer may not import from there; see the layers in eslint.config.mjs.'
+  };
+}
+
+function restrictImports(directories) {
+  return { 'no-restricted-imports': ['error', { patterns: [importsFrom(directories)] }] };
+}
+
+// What domain code may not reach for: browser and extension globals, and DOM
+// work on any object handed to it.
+const DOMAIN_GLOBALS = [
+  'chrome', 'browser', 'document', 'window', 'navigator', 'localStorage', 'sessionStorage', 'location',
+  'self', 'HTMLElement', 'Element', 'Node', 'getComputedStyle', 'requestAnimationFrame',
+  'cancelAnimationFrame', 'matchMedia', 'MutationObserver', 'ResizeObserver', 'IntersectionObserver',
+  'Image', 'FileReader', 'fetch', 'indexedDB', 'caches', 'importScripts', 'DOMParser', 'screen', 'history'
+];
+const DOM_MEMBERS = [
+  'createElement', 'createElementNS', 'createTextNode', 'createDocumentFragment', 'querySelector',
+  'querySelectorAll', 'getElementById', 'getElementsByClassName', 'addEventListener', 'removeEventListener',
+  'appendChild', 'insertBefore', 'removeChild', 'replaceChildren', 'classList', 'setAttribute',
+  'removeAttribute', 'innerHTML', 'getBoundingClientRect', 'attachShadow', 'getRootNode', 'ownerDocument',
+  'defaultView', 'scrollIntoView'
+];
+
 export default tseslint.config(
   {
     ignores: [
@@ -101,6 +134,29 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-expressions': 'off'
     }
   },
+  {
+    files: ['src/domain/**/*.ts'],
+    rules: {
+      ...restrictImports(['platform', 'shared', 'react', ...SURFACES]),
+      'no-restricted-globals': ['error', ...DOMAIN_GLOBALS],
+      'no-restricted-syntax': ['error', {
+        selector: `MemberExpression[property.name=/^(?:${DOM_MEMBERS.join('|')})$/]`,
+        message: 'Domain code does no DOM work; move this to shared/ or a surface.'
+      }]
+    }
+  },
+  {
+    files: ['src/platform/**/*.ts'],
+    rules: restrictImports(['shared', 'react', ...SURFACES])
+  },
+  {
+    files: ['src/shared/**/*.ts'],
+    rules: restrictImports(SURFACES)
+  },
+  ...SURFACES.map((surface) => ({
+    files: [`src/${surface}/**/*.ts`],
+    rules: restrictImports(SURFACES.filter((other) => other !== surface))
+  })),
   {
     files: ['react-src/**/*.{ts,tsx}'],
     extends: [tseslint.configs.recommended],

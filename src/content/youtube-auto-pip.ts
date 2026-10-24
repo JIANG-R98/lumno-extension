@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as LumnoSettings from '../shared/settings';
+import * as LumnoSettings from '../domain/settings';
 import * as CORE from './auto-pip-core';
 
 (function () {

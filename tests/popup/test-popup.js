@@ -252,9 +252,9 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
   assert.strictEqual(manifest.action.default_popup, 'src/popup/popup.html');
   const html = read('src/popup/popup.html');
   const scripts = getPageScripts('src/popup/popup.html');
-  ['src/shared/settings.ts', 'src/popup/popup-theme-preload.ts', 'src/shared/url-guards.ts', 'src/shared/shortcut-display.ts',
-    'src/shared/ui/tooltip.ts', 'src/shared/ui/cursor-tooltip.ts', 'src/shared/ui/toast.ts', 'src/background/pip-main-world.ts',
-    'src/shared/browser-profile.ts']
+  ['src/domain/settings.ts', 'src/popup/popup-theme-preload.ts', 'src/platform/url-guards.ts', 'src/domain/shortcut-display.ts',
+    'src/shared/ui/tooltip.ts', 'src/shared/ui/cursor-tooltip.ts', 'src/shared/ui/toast.ts', 'src/shared/pip-main-world.ts',
+    'src/platform/browser-profile.ts']
     .forEach((script) => assert(scripts.includes(script), `the popup loads ${script}`));
   const popupDocument = new JSDOM(html).window.document;
   assert((popupDocument.querySelector('script[src*="build/popup-preload.js"]').compareDocumentPosition(popupDocument.getElementById('x-lumno-popup-root')) & 4) &&

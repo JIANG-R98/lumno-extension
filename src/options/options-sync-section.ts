@@ -9,7 +9,7 @@
 //   chromeApi, settings (LumnoSettings), syncTransfer, storageArea (the
 //   provider area), localStorageArea, getActivePrimaryAreaName(),
 //   getMessage, formatTemplate, showToast, beginToast, showTooltipFor
-import * as LumnoNewtabShortcutsStore from '../newtab/shortcuts/shortcuts-store';
+import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
 
 function createSyncSection(options) {
   const {

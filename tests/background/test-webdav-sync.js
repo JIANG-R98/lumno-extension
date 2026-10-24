@@ -1,9 +1,9 @@
 const assert = require('assert');
 const fs = require('fs');
 const { webcrypto, randomUUID } = require('crypto');
-const settings = require('../../src/shared/settings.ts');
-const shortcuts = require('../../src/newtab/shortcuts/shortcuts-store.ts');
-const contract = require('../../src/shared/webdav-contract.ts');
+const settings = require('../../src/domain/settings.ts');
+const shortcuts = require('../../src/domain/shortcuts-store.ts');
+const contract = require('../../src/domain/webdav-contract.ts');
 const client = require('../../src/background/webdav-client.ts');
 const syncApi = require('../../src/background/webdav-sync.ts');
 const { probeProvider } = require('../../scripts/dev/probe-webdav.js');
@@ -1099,7 +1099,7 @@ async function run() {
   assert(!contract.SHORTCUT_SYNC_KEYS.some((key) => Object.hasOwn(unchangedBackup.payload, key)),
     'an unchanged grouped copy is not rewritten for a new revision alone');
   const folderServer = createServer();
-  const folderRefs = require('../../src/shared/bookmark-folder-reference.ts');
+  const folderRefs = require('../../src/domain/bookmark-folder-reference.ts');
   const portableFolder = shortcuts.createShortcutRecord({ id: 'folder-sync-entry', type: 'folder', title: 'Design',
     folderRef: { version: 1, root: 'bookmarks-bar', scope: 'account', path: ['Design'], fingerprint: '0123456789abcdef' }
   }, { now: 100 });

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as LumnoNewtabCrtWebGL from './wallpaper-crt-webgl';
-import { getSamplerSize } from './wallpaper-sampler-size';
+import { getSamplerSize } from '../../domain/wallpaper-sampler-size';
 
 const EFFECT_TYPES = ['none', 'blur', 'grain', 'blocks', 'halftone', 'dither', 'ascii', 'crt'];
 const EFFECT_INK_TONES = ['auto', 'dark', 'light'];

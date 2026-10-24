@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 
-const communityLinks = require('../../src/shared/community-links.ts');
+const communityLinks = require('../../src/domain/community-links.ts');
 const engagementNotice = require('../../src/shared/engagement-notice.ts');
 const updateNotice = require('../../src/shared/update-notice.ts');
 const { HOST_ID: QR_DIALOG_ID } = require('../../src/shared/ui/community-qr-dialog.ts');

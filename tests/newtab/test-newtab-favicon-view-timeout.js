@@ -100,8 +100,8 @@ sandbox.LumnoFaviconViewCore = {
   }
 };
 
-vm.runInNewContext(moduleScript('src/shared/favicon/favicon-utils.ts', 'LumnoFaviconUtils', null, { 'src/shared/favicon/favicon-view-core.ts': 'LumnoFaviconViewCore' }), sandbox, {
-  filename: 'src/shared/favicon/favicon-utils.ts'
+vm.runInNewContext(moduleScript('src/domain/favicon/favicon-utils.ts', 'LumnoFaviconUtils', null, { 'src/shared/favicon/favicon-view-core.ts': 'LumnoFaviconViewCore' }), sandbox, {
+  filename: 'src/domain/favicon/favicon-utils.ts'
 });
 
 vm.runInNewContext(moduleScript('src/newtab/theme/favicon-view.ts', 'LumnoNewtabFaviconView', null, { 'src/shared/favicon/favicon-view-core.ts': 'LumnoFaviconViewCore' }), sandbox, {

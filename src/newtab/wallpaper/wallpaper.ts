@@ -1,6 +1,6 @@
 // @ts-nocheck
-import * as LumnoExtensionRoutes from '../../shared/extension-routes';
-import * as SETTINGS from '../../shared/settings';
+import * as LumnoExtensionRoutes from '../../domain/extension-routes';
+import * as SETTINGS from '../../domain/settings';
 import * as LumnoFeatureHints from '../../shared/ui/feature-hints';
 import * as REMOTE_CONTENT from '../remote-content';
 import * as WALLPAPER_CUSTOM_WALLPAPERS from './runtime/custom-wallpapers';
@@ -18,7 +18,7 @@ import * as WALLPAPER_WALLPAPER_STORAGE from './runtime/wallpaper-storage';
 import * as WALLPAPER_WALLPAPER_VISUAL from './runtime/wallpaper-visual';
 import * as WALLPAPER_ADAPTIVE_TONE from './wallpaper-adaptive-tone';
 import * as WALLPAPER_EFFECTS from './wallpaper-effects';
-import * as WALLPAPER_LOCAL_STORE from './wallpaper-local-store';
+import * as WALLPAPER_LOCAL_STORE from '../../shared/wallpaper-local-store';
 
 const DEFAULT_STORAGE_KEYS = {
   wallpaper: '_x_extension_newtab_wallpaper_2026_unique_',

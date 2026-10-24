@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Which favicons the overlay may fetch: the search and favicon
 // blacklists, local network hosts, and the display limit for results.
-import * as LumnoBlacklistUtils from '../../shared/blacklist-utils';
+import * as LumnoBlacklistUtils from '../../domain/blacklist-utils';
 
 function createFaviconPolicy(deps) {
   const {
@@ -11,7 +11,7 @@ function createFaviconPolicy(deps) {
     logOverlayFaviconDecision
   } = deps;
 
-  // The panel state object shared with search-panel.js and the other modules.
+  // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
   function normalizeOverlaySearchBlacklistItems(items) {

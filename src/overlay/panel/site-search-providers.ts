@@ -2,7 +2,7 @@
 // Site search providers and aggregate searches in the overlay: their
 // URLs and icons, running an interactive provider, recording a selection,
 // and loading and reloading both lists.
-import * as AGGREGATE_SEARCH_SURFACE from '../../shared/search/aggregate-search-surface';
+import * as AGGREGATE_SEARCH_SURFACE from '../../domain/search/aggregate-search-surface';
 import * as SITE_SEARCH_STORE from '../../shared/search/site-search-store';
 
 function createSiteSearchProviders(deps) {
@@ -26,7 +26,7 @@ function createSiteSearchProviders(deps) {
     AGGREGATE_SEARCH_STORAGE_KEY
   } = deps;
 
-  // The panel state object shared with search-panel.js and the other modules.
+  // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
   let siteSearchProvidersLoadPromise = null;

@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 const { createOptionsPage } = require('../helpers/options-page');
 
 // The overlay font rows in Settings: listing the installed fonts, saving a

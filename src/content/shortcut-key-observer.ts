@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as SHORTCUT_KEY_MATCHER from '../shared/shortcut-key-matcher';
+import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
 
 (function() {
   const RUNTIME_KEY = '_x_extension_shortcut_key_observer_2026_unique_';

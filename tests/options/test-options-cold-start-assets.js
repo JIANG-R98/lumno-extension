@@ -159,11 +159,11 @@ sandbox.globalThis = sandbox;
 sandbox.window = sandbox;
 
 vm.createContext(sandbox);
-vm.runInContext(moduleScript('src/shared/settings.ts', 'LumnoSettings'), sandbox, {
-  filename: 'settings.js'
+vm.runInContext(moduleScript('src/domain/settings.ts', 'LumnoSettings'), sandbox, {
+  filename: 'settings.ts'
 });
 vm.runInContext(moduleScript('src/options/theme-preload.ts'), sandbox, {
-  filename: 'theme-preload.js'
+  filename: 'theme-preload.ts'
 });
 
 (async () => {

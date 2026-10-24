@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Search mode menu and site-search / local-scope activation for the input.
-import * as SEARCH_SOURCE_ORDER from '../../shared/search/search-source-order';
+import * as SEARCH_SOURCE_ORDER from '../../domain/search/search-source-order';
 
 function createSearchModes(deps) {
   const {

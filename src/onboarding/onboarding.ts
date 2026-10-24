@@ -1,8 +1,8 @@
 // @ts-nocheck
-import * as COMMUNITY_LINKS from '../shared/community-links';
-import * as LumnoExtensionRoutes from '../shared/extension-routes';
-import * as NAVIGATION_DISPOSITION from '../shared/navigation-disposition';
-import * as LumnoSettings from '../shared/settings';
+import * as COMMUNITY_LINKS from '../domain/community-links';
+import * as LumnoExtensionRoutes from '../domain/extension-routes';
+import * as NAVIGATION_DISPOSITION from '../domain/navigation-disposition';
+import * as LumnoSettings from '../domain/settings';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as MODEL from './onboarding-content';
 

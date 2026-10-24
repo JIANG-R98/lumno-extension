@@ -4,7 +4,7 @@ const { withoutExports } = require('./closure-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 // The parts of the overlay panel split out into src/overlay/panel/, then
-// search-panel.js, in the order the overlay injection list loads them.
+// search-panel.ts, in the order the overlay injection list loads them.
 const OVERLAY_PANEL_FILES = [
   'src/overlay/panel/entry-motion.ts',
   'src/overlay/panel/panel-language.ts',

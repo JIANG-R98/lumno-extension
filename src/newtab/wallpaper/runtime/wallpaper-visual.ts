@@ -23,7 +23,7 @@ function createWallpaperVisual(deps) {
     afterNextPaint
   } = deps;
 
-  // The runtime state object shared with wallpaper.js and the other modules.
+  // The runtime state object shared with wallpaper.ts and the other modules.
   const wallpaperState = deps.wallpaperState;
 
   const WALLPAPER_VISUAL_TRANSITION_MS = 220;
@@ -34,7 +34,7 @@ function createWallpaperVisual(deps) {
   let wallpaperVisualRefreshTimer = 0;
   const wallpaperImageReadyCache = new Map();
 
-  // Used by overlay math; adaptive image sampling lives in wallpaper-adaptive-tone.js.
+  // Used by overlay math; adaptive image sampling lives in wallpaper-adaptive-tone.ts.
   function clampNumber(value, min, max) {
     const number = Number(value);
     if (!Number.isFinite(number)) {
@@ -111,7 +111,7 @@ function createWallpaperVisual(deps) {
   // Uploads and cached photos reach CSS as a blob URL rather than their data URL. Every style
   // recalculation re-reads the whole value of --x-nt-wallpaper-image, so a megabyte-long data URL
   // there costs ~10ms per recalc while the page builds; and Chrome drops a custom property longer
-  // than 2 MB, which uploads stored before that was capped can exceed. Matches wallpaper-preload.js.
+  // than 2 MB, which uploads stored before that was capped can exceed. Matches wallpaper-preload.ts.
   const WALLPAPER_CSS_INLINE_URL_MAX_LENGTH = 32 * 1024;
   let wallpaperCssObjectUrl = { source: '', url: '' };
 

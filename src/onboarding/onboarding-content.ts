@@ -1,6 +1,6 @@
 // @ts-nocheck
-import * as SHORTCUT_KEY_MATCHER from '../shared/shortcut-key-matcher';
-import * as SETTINGS from '../shared/settings';
+import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
+import * as SETTINGS from '../domain/settings';
 // zh_CN, zh_TW, ja and en are written below; every other UI language
 // translates the English copy into src/onboarding/locales/<locale>.json.
 const SUPPORTED_LOCALES = Object.freeze(SETTINGS.UI_LOCALES.map((entry) => entry.id));
@@ -843,7 +843,7 @@ function cloneTitleCycle(titleCycle) {
 }
 
 // Rows and actions that only apply to one browser family carry
-// browserOnly; the page hides them elsewhere (see browser-profile.js).
+// browserOnly; the page hides them elsewhere (see browser-profile.ts).
 function copyBrowserOnly(source, target) {
   if (source && (source.browserOnly === 'chromium' || source.browserOnly === 'firefox')) {
     target.browserOnly = source.browserOnly;

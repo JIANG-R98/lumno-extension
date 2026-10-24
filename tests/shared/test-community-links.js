@@ -1,10 +1,10 @@
 const assert = require('assert');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { createOnboardingPage } = require('../helpers/onboarding-page');
 const { createOptionsPage } = require('../helpers/options-page');
 
-const communityLinks = require('../../src/shared/community-links.ts');
+const communityLinks = require('../../src/domain/community-links.ts');
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 (async () => {
@@ -286,15 +286,15 @@ const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/r
     page.close();
   }
   assert(
-    runsBefore(getPageScripts('newtab.html'), 'src/shared/community-links.ts', 'src/shared/engagement-notice.ts'),
+    runsBefore(getPageScripts('newtab.html'), 'src/domain/community-links.ts', 'src/shared/engagement-notice.ts'),
     'newtab should load community links before the engagement runtime'
   );
   assert(
-    runsBefore(getPageScripts('src/options/options.html'), 'src/shared/community-links.ts', 'src/options/options.ts'),
+    runsBefore(getPageScripts('src/options/options.html'), 'src/domain/community-links.ts', 'src/options/options.ts'),
     'Options should load community links before its page entry'
   );
   assert(
-    runsBefore(getInjectedScripts('overlay'), 'src/shared/community-links.ts', 'src/shared/engagement-notice.ts'),
+    runsBefore(getInjectedScripts('overlay'), 'src/domain/community-links.ts', 'src/shared/engagement-notice.ts'),
     'overlay injection should load community links before engagement actions'
   );
 

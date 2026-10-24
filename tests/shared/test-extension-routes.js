@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const routes = require('../../src/shared/extension-routes.ts');
+const routes = require('../../src/domain/extension-routes.ts');
 
 const chromeApi = {
   runtime: {

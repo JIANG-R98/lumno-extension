@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as LumnoSettings from '../shared/settings';
+import * as LumnoSettings from '../domain/settings';
 
 const STORAGE_KEYS = Object.freeze({
   themeMode: '_x_extension_theme_mode_2024_unique_',

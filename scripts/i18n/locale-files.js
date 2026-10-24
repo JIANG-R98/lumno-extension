@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 require('../node/register-typescript');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 const SOURCE_LOCALE = 'en';
@@ -57,7 +57,7 @@ function writeOnboarding(locale, translations) {
 }
 
 // The English onboarding strings every translated onboarding file follows,
-// or the same strings in another locale written in onboarding-content.js.
+// or the same strings in another locale written in onboarding-content.ts.
 async function readOnboardingSource(locale = SOURCE_LOCALE) {
   const content = await import('../../src/onboarding/onboarding-content.ts');
   return content.getOnboardingTranslationSource(locale);

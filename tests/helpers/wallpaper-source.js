@@ -3,11 +3,11 @@ const { moduleScript } = require('./module-script');
 // The modules the runtime imports that tests may hand in as context globals,
 // so test doubles can replace their functions.
 const WALLPAPER_DEPENDENCY_GLOBALS = Object.freeze({
-  'src/shared/settings.ts': 'LumnoSettings',
+  'src/domain/settings.ts': 'LumnoSettings',
   'src/newtab/remote-content.ts': 'LumnoNewtabRemoteContent',
   'src/newtab/wallpaper/wallpaper-adaptive-tone.ts': 'LumnoNewtabWallpaperAdaptiveTone',
   'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects',
-  'src/newtab/wallpaper/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore'
+  'src/shared/wallpaper-local-store.ts': 'LumnoNewtabWallpaperLocalStore'
 });
 
 // The runtime as the page runs it, for evaluating in a test context: a

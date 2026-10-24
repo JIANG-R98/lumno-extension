@@ -38,8 +38,8 @@ sandbox.Image = class {
 
 vm.createContext(sandbox);
 runModuleInContext('src/newtab/theme/site-theme-resolver.ts', sandbox, 'LumnoNewtabSiteThemeResolver');
-runModuleInContext('src/newtab/theme/favicon-theme.ts', sandbox, 'LumnoNewtabFaviconTheme');
-runModuleInContext('src/shared/favicon/favicon-utils.ts', sandbox, 'LumnoFaviconUtils');
+runModuleInContext('src/shared/favicon/favicon-theme.ts', sandbox, 'LumnoNewtabFaviconTheme');
+runModuleInContext('src/domain/favicon/favicon-utils.ts', sandbox, 'LumnoFaviconUtils');
 
 const FAVICON_UTILS = sandbox.LumnoFaviconUtils;
 const NEWTAB_FAVICON_THEME = sandbox.LumnoNewtabFaviconTheme;

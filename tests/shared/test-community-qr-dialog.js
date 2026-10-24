@@ -61,7 +61,7 @@ assert.strictEqual(dialog.open({ imageUrl: '' }), null, 'nothing opens without a
 // Joining the WeChat group never opens the QR image in a new tab.
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 assert.ok(
-  runsBefore(getInjectedScripts('overlay'), 'src/shared/community-links.ts', 'src/shared/ui/community-qr-dialog.ts'),
+  runsBefore(getInjectedScripts('overlay'), 'src/domain/community-links.ts', 'src/shared/ui/community-qr-dialog.ts'),
   'the overlay loads the dialog'
 );
 assert.ok(getPageScripts('newtab.html').includes('src/shared/ui/community-qr-dialog.ts'), 'the new tab loads the dialog');

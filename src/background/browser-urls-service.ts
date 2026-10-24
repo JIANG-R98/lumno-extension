@@ -10,11 +10,11 @@
 // they run, never while this file loads, because background.js has not
 // initialized its own top-level bindings yet at that point.
 
-import * as LumnoUrlGuards from '../shared/url-guards';
+import * as LumnoUrlGuards from '../platform/url-guards';
 import * as BACKGROUND_TAB_GROUPS from './tab-groups';
-import * as EXTENSION_ROUTES from '../shared/extension-routes';
+import * as EXTENSION_ROUTES from '../domain/extension-routes';
 import * as SEARCH_RESULT_TABS from './search-result-tabs';
-import * as SETTINGS from '../shared/settings';
+import * as SETTINGS from '../domain/settings';
 import {
   BROWSER_NEWTAB_PROVIDER_DETECTION_MS,
   RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,

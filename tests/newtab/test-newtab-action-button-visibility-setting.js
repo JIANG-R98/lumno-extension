@@ -1,6 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 const { JSDOM } = require('jsdom');
 const { createNewtabPage } = require('../helpers/newtab-page');
 

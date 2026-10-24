@@ -29,7 +29,7 @@ assert.strictEqual(keys.buildShortcutFromEvent({ code: 'KeyK', key: 'k' }), '', 
 // Arrow keys record and save like any other key, and the saved chord is the
 // one the shared matcher recognizes on a keydown.
 {
-  const matcher = require('../../src/shared/shortcut-key-matcher');
+  const matcher = require('../../src/domain/shortcut-key-matcher');
   [['ArrowUp', '↑'], ['ArrowDown', '↓'], ['ArrowLeft', '←'], ['ArrowRight', '→']].forEach(([arrow, label]) => {
     const event = { code: arrow, key: arrow, altKey: true, shiftKey: true };
     const recorded = keys.buildShortcutFromEvent(event);

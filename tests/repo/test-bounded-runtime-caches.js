@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const faviconUtils = require('../../src/shared/favicon/favicon-utils.ts');
+const faviconUtils = require('../../src/domain/favicon/favicon-utils.ts');
 const faviconViewCoreApi = require('../../src/shared/favicon/favicon-view-core.ts');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');

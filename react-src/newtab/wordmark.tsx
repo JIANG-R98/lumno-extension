@@ -6,7 +6,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 export type NewtabTopContentMode = 'brand' | 'time';
 
-// One of the clock faces from NEWTAB_TIME_FONTS in src/shared/settings.ts.
+// One of the clock faces from NEWTAB_TIME_FONTS in src/domain/settings.ts.
 export interface TopContentClockFont {
   colonGap: number;
   colonShift: number;

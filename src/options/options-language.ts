@@ -1,7 +1,7 @@
 // @ts-nocheck
 // The page language: resolving and loading the locale, applying the copy
 // to every control, and the document language.
-import * as LumnoBrowserProfile from '../shared/browser-profile';
+import * as LumnoBrowserProfile from '../platform/browser-profile';
 
 function createLanguage(deps) {
   const {

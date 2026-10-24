@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Filtering the mode menu: the search text and Han readings of each item,
 // matching a query, and the highlighted label.
-import * as LumnoSearchUtils from '../search-utils';
+import * as LumnoSearchUtils from '../../../domain/search/search-utils';
 
 function createModeMenuSearch(deps) {
   const {

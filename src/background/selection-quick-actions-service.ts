@@ -10,11 +10,11 @@
 // own top-level bindings yet at that point.
 
 import * as AI_PROVIDER_SUBMIT from './ai-provider-submit';
-import * as SEARCH_UTILS from '../shared/search/search-utils';
-import * as SELECTION_INTENT from '../shared/selection-intent';
+import * as SEARCH_UTILS from '../domain/search/search-utils';
+import * as SELECTION_INTENT from '../domain/selection-intent';
 import * as SELECTION_QUICK_ACTION_PROVIDER from './selection-quick-action-provider';
 import * as SELECTION_TARGET from './selection-target';
-import * as SETTINGS from '../shared/settings';
+import * as SETTINGS from '../domain/settings';
 import {
   SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
   SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY,

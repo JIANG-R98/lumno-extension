@@ -1,6 +1,6 @@
 const assert = require('assert');
 const historyApi = require('../../src/newtab/bookmarks/bookmark-move-history');
-const shortcutsStore = require('../../src/newtab/shortcuts/shortcuts-store.ts');
+const shortcutsStore = require('../../src/domain/shortcuts-store.ts');
 const { openDragPage } = require('../helpers/newtab-drag-page');
 
 const FOLDER_ITEM_ICONS_KEY = '_x_extension_shortcut_folder_item_icons_2026_unique_';

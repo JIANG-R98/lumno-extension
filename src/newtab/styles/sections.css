@@ -403,7 +403,7 @@ body[data-drag-blocked="true"] {
   --x-nt-drag-cursor: not-allowed;
 }
 /* A dragged recent card stays in place, faded, while a copy of it shrinks
-   into a site icon on the pointer (recent-card-drag.js). */
+   into a site icon on the pointer (recent-card-drag.ts). */
 .x-nt-recent-card[data-recent-dragging="true"] .x-nt-recent-card-visual,
 .x-nt-recent-card[data-recent-dragging="true"]:hover .x-nt-recent-card-visual {
   opacity: 0.4;

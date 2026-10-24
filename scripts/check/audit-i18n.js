@@ -17,15 +17,15 @@ const ALLOWLIST = [
   'AI provider remote page selector probes in src/background/ai-provider-submit.ts',
   'localized onboarding content model in src/onboarding/onboarding-content.ts',
   'localized update notice fallback model in src/shared/update-notice.ts',
-  'localized selection prompt model in src/shared/selection-intent.ts',
+  'localized selection prompt model in src/domain/selection-intent.ts',
   'browser built-in bookmark folder aliases used only for folder detection',
   'debug-only score reason strings when the debug flag is disabled by default',
-  'Chinese search-intent tokens in src/shared/search/search-utils.ts and its utils/ parts\' scoring dictionaries',
+  'Chinese search-intent tokens in src/domain/search/search-utils.ts and its utils/ parts\' scoring dictionaries',
   'generated traditional-to-simplified character table in src/shared/search/search-han-variants.js',
-  'question filler words dropped from help center queries in src/shared/search/help-center-search.ts',
-  'episode and chapter title patterns in src/shared/progress-match.ts',
+  'question filler words dropped from help center queries in src/domain/search/help-center-search.ts',
+  'episode and chapter title patterns in src/domain/progress-match.ts',
   'photographer names credited in src/newtab/wallpaper/wallpaper-catalog.ts',
-  'language names written in their own language in UI_LOCALES (src/shared/settings.ts)'
+  'language names written in their own language in UI_LOCALES (src/domain/settings.ts)'
 ];
 const I18N_CALL_RE = /(?:^|[^\w])(?:t|baseT|getMessage|formatMessage|updateSyncStatusText|attachPopconfirm|createPopconfirmWrap|createModeOption)\s*\(/;
 
@@ -110,17 +110,17 @@ function isAllowlistedLine(file, line) {
   if (file === 'src/background/ai-provider-submit.ts') {
     return true;
   }
-  if (file === 'src/shared/search/search-utils.ts' || file.startsWith('src/shared/search/utils/') ||
+  if (file === 'src/domain/search/search-utils.ts' || file.startsWith('src/domain/search/utils/') ||
       file === 'src/shared/search/search-han-variants.js') {
     return true;
   }
-  if (file === 'src/shared/selection-intent.ts') {
+  if (file === 'src/domain/selection-intent.ts') {
     return true;
   }
-  if (file === 'src/shared/search/help-center-search.ts') {
+  if (file === 'src/domain/search/help-center-search.ts') {
     return true;
   }
-  if (file === 'src/shared/progress-match.ts') {
+  if (file === 'src/domain/progress-match.ts') {
     return true;
   }
   if (file === 'src/onboarding/onboarding-content.ts') {
@@ -129,7 +129,7 @@ function isAllowlistedLine(file, line) {
   if (file === 'src/newtab/wallpaper/wallpaper-catalog.ts') {
     return true;
   }
-  if (file === 'src/shared/settings.ts' && /^\s*\['[A-Za-z_]+', '[^']+'(?:, true)?\],?$/.test(line)) {
+  if (file === 'src/domain/settings.ts' && /^\s*\['[A-Za-z_]+', '[^']+'(?:, true)?\],?$/.test(line)) {
     return true;
   }
   if (file === 'src/shared/update-notice.ts' &&

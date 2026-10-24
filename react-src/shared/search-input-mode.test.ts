@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // The Han variant table is a classic script that leaves a global.
 import '../../src/shared/search/search-han-variants.js';
 import * as searchInputModeModule from '../../src/shared/search/search-input-mode';
-import * as faviconUtilsModule from '../../src/shared/favicon/favicon-utils';
+import * as faviconUtilsModule from '../../src/domain/favicon/favicon-utils';
 
 Object.assign(globalThis, {
   pinyinPro: {

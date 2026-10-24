@@ -2,14 +2,14 @@
 // The toolbar popup: actions on the current page, two global switches and
 // links to the rest of Lumno. React renders it from the model built here;
 // this script owns the browser APIs and the settings it reads and writes.
-import * as LumnoPipMainWorld from '../background/pip-main-world';
-import * as LumnoBrowserProfile from '../shared/browser-profile';
-import * as LumnoSettings from '../shared/settings';
-import * as LumnoShortcutDisplay from '../shared/shortcut-display';
+import * as LumnoPipMainWorld from '../shared/pip-main-world';
+import * as LumnoBrowserProfile from '../platform/browser-profile';
+import * as LumnoSettings from '../domain/settings';
+import * as LumnoShortcutDisplay from '../domain/shortcut-display';
 import * as LumnoCursorTooltip from '../shared/ui/cursor-tooltip';
 import * as LumnoToast from '../shared/ui/toast';
 import * as LumnoTooltip from '../shared/ui/tooltip';
-import * as LumnoUrlGuards from '../shared/url-guards';
+import * as LumnoUrlGuards from '../platform/url-guards';
 
 const COMMAND_SHOW_SEARCH = 'show-search';
 const COMMAND_COPY_URL = 'show-search-prefill-v';

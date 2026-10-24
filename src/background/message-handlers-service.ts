@@ -11,8 +11,8 @@
 // not initialized its own top-level bindings yet at that point.
 
 import * as BOOKMARK_TAB_GROUPS from './bookmark-tab-groups';
-import * as SETTINGS from '../shared/settings';
-import * as SHORTCUT_KEY_MATCHER from '../shared/shortcut-key-matcher';
+import * as SETTINGS from '../domain/settings';
+import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
 import {
   SHOW_SEARCH_COMMAND_NAME,
   checkFileSchemeAccess,

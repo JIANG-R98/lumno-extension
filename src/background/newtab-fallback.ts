@@ -1,6 +1,6 @@
 // @ts-nocheck
-import * as LumnoBrowserProfile from '../shared/browser-profile';
-import * as LumnoExtensionRoutes from '../shared/extension-routes';
+import * as LumnoBrowserProfile from '../platform/browser-profile';
+import * as LumnoExtensionRoutes from '../domain/extension-routes';
 import * as LumnoBackgroundTabGroups from './tab-groups';
 
 function getChromeApi() {

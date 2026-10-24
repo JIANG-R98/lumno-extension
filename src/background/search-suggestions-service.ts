@@ -13,11 +13,11 @@
 // Every cache and promise below is a rebuildable in-memory cache; nothing here
 // must survive a service-worker suspension.
 
-import * as BLACKLIST_UTILS from '../shared/blacklist-utils';
-import * as BROWSER_PROFILE from '../shared/browser-profile';
-import * as FAVICON_UTILS from '../shared/favicon/favicon-utils';
-import * as SEARCH_UTILS from '../shared/search/search-utils';
-import * as SETTINGS from '../shared/settings';
+import * as BLACKLIST_UTILS from '../domain/blacklist-utils';
+import * as BROWSER_PROFILE from '../platform/browser-profile';
+import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
+import * as SEARCH_UTILS from '../domain/search/search-utils';
+import * as SETTINGS from '../domain/settings';
 import {
   DEFAULT_SEARCH_ENGINE_STORAGE_KEY,
   PINYIN_PRO_SCRIPT_PATH,

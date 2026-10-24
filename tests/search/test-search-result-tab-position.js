@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 
 // Where a search result opens: next to the tab the search came from, before

@@ -119,7 +119,7 @@ function createGlassSurfaces(deps) {
     scheduleWallpaperAdaptiveToneUpdate();
   }
 
-  // A material set to light or dark holds the page's theme there (appearance-modes.js reads
+  // A material set to light or dark holds the page's theme there (appearance-modes.ts reads
   // pageState.glassThemeOverride) and marks the body, so the wallpaper sampler keeps light glass
   // light instead of turning it dark over a dark wallpaper.
   function syncNewtabGlassThemeOverride() {

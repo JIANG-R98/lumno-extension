@@ -2,9 +2,9 @@
 // The page context menu item that adds the page it was opened on to the
 // New Tab shortcuts, saved the same way the New Tab saves one: browser sync
 // first, this device's overflow record for whatever does not fit.
-import * as LumnoNewtabShortcutsStore from '../newtab/shortcuts/shortcuts-store';
-import * as LumnoSettings from '../shared/settings';
-import * as LumnoSiteDisplayName from '../shared/site-display-name';
+import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
+import * as LumnoSettings from '../domain/settings';
+import * as LumnoSiteDisplayName from '../domain/site-display-name';
 
 const MENU_ITEM_ID = 'lumno-add-page-shortcut';
 // Shortcuts hold http and https pages; browser pages never show the menu.

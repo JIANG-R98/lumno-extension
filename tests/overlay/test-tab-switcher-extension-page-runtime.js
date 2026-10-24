@@ -75,8 +75,8 @@ window.chrome = {
   }
 };
 
-// Extension pages load settings.js before the tab switcher runtime.
-window.eval(moduleScript('src/shared/settings.ts', 'LumnoSettings'));
+// Extension pages load settings.ts before the tab switcher runtime.
+window.eval(moduleScript('src/domain/settings.ts', 'LumnoSettings'));
 window.eval(moduleScript('src/shared/ui/toast.ts', 'LumnoToast'));
 window.eval(moduleScript('src/shared/page-color-scheme.ts', 'LumnoPageColorScheme'));
 window.eval(moduleScript('src/overlay/tab-switcher.ts'));

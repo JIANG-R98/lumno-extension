@@ -147,7 +147,7 @@ global.LumnoFeatureHintView = {
 
 const featureHints = require('../../src/shared/ui/feature-hints.ts');
 const updateNotice = require('../../src/shared/update-notice.ts');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 
 function createOnChangedEmitter() {
   const listeners = [];

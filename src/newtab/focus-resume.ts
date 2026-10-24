@@ -1,6 +1,6 @@
 // @ts-nocheck
 // The search shortcut reloads New Tab to take keyboard focus from the
-// address bar (see input-focus.js). This carries the page across that
+// address bar (see input-focus.ts). This carries the page across that
 // reload: the query, its search mode and the results on screen. A
 // cross-document view transition keeps the old page's last frame on screen
 // until the reloaded page shows the same search, so the reload never shows.

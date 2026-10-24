@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/shared/settings');
+const settings = require('../../src/domain/settings');
 const shortcutKeys = require('../../src/options/options-shortcut-keys');
 const { createFallbackShortcutSection } = require('../../src/options/options-fallback-shortcut');
 

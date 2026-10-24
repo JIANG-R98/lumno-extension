@@ -13,12 +13,12 @@
 // The caches below are rebuildable; the pending visit marks only delay a
 // favicon refresh if a suspension drops them.
 
-import * as BLACKLIST_UTILS from '../shared/blacklist-utils';
-import * as BROWSER_PROFILE from '../shared/browser-profile';
-import * as FAVICON_CACHE from '../shared/favicon/favicon-cache';
-import * as FAVICON_UTILS from '../shared/favicon/favicon-utils';
-import * as SETTINGS from '../shared/settings';
-import * as SHORTCUT_FAVICON from '../shared/favicon/shortcut-favicon';
+import * as BLACKLIST_UTILS from '../domain/blacklist-utils';
+import * as BROWSER_PROFILE from '../platform/browser-profile';
+import * as FAVICON_CACHE from '../domain/favicon/favicon-cache';
+import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
+import * as SETTINGS from '../domain/settings';
+import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
 import {
   FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
   FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,

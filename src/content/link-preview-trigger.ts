@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { toPreviewFrameUrl } from '../shared/link-preview-frame-url';
+import { toPreviewFrameUrl } from '../domain/link-preview-frame-url';
 
 (function() {
   // Runs in every frame. In an ordinary frame it turns Shift+click on a link
@@ -50,7 +50,7 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url';
   // The Options switch, on until storage says otherwise as it defaults to on.
   // Like every synced setting it lives in sync storage unless the user keeps
   // settings local (local-primary), so both areas are read and the active
-  // one decides. The keys are settings.js's, spelled out here: importing it
+  // one decides. The keys are settings.ts's, spelled out here: importing it
   // would double this every-frame script.
   const ENABLED_STORAGE_KEY = '_x_extension_link_preview_enabled_2026_unique_';
   const LOCAL_PRIMARY_STORAGE_KEY = '_x_extension_local_primary_2026_unique_';

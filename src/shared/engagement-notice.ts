@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as COMMUNITY_LINKS from './community-links';
+import * as COMMUNITY_LINKS from '../domain/community-links';
 import * as LumnoFeatureHints from './ui/feature-hints';
 
 const ENGAGEMENT_NOTICE_STORAGE_KEY = '_x_lumno_engagement_notice_state_2026_unique_';

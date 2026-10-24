@@ -1,5 +1,5 @@
 const assert = require('assert');
-const blacklistUtils = require('../../src/shared/blacklist-utils');
+const blacklistUtils = require('../../src/domain/blacklist-utils');
 const { createBlacklistModel } = require('../../src/options/options-blacklist');
 
 const model = createBlacklistModel({ blacklistUtils });

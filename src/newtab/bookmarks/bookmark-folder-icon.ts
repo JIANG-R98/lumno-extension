@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as references from '../../shared/bookmark-folder-reference';
+import * as references from '../../domain/bookmark-folder-reference';
 const DEFAULT_FOLDER_COLOR = '#5393FF';
 // Legacy device-only map keyed by bookmark id. Ids differ on every device,
 // so it is migrated into the synced reference map below.

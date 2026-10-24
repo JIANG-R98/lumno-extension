@@ -41,7 +41,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
   };
   globalThis.LumnoNewtabWallpaperEffectPreload = preloadRuntime;
 
-  // Created up front so wallpaper.js always adopts this controller instead of starting its own, slower
+  // Created up front so wallpaper.ts always adopts this controller instead of starting its own, slower
   // render; it renders nothing until the preferences and the image are known.
   const controller = effects.createWallpaperEffects({
     documentObj: document,
@@ -83,7 +83,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
 
   // The page stays unpainted until this resolves, so the wallpaper and its effect appear together.
   function startEffects(prefs, imageUrl) {
-    // Once wallpaper.js applies its own preferences it also decides when the wallpaper is ready.
+    // Once wallpaper.ts applies its own preferences it also decides when the wallpaper is ready.
     if (preloadRuntime.claimed || runtimeAppliedPrefs || !imageUrl) {
       return;
     }
@@ -100,7 +100,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
     controller.refresh({ immediate: true }).then(markWallpaperReady);
   }
 
-  // An online photo's IndexedDB copy may still be loading; without one, wallpaper.js takes over.
+  // An online photo's IndexedDB copy may still be loading; without one, wallpaper.ts takes over.
   const imageReady = preloadState.imageUrl ? null : preloadState.imageReady;
   preloadState.effectPrefsReady.then((prefs) => {
     if (!imageReady) {

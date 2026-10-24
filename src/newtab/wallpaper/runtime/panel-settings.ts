@@ -36,7 +36,7 @@ function createPanelSettings(deps) {
     setShortcutGap
   } = deps;
 
-  // The runtime state object shared with wallpaper.js and the other modules.
+  // The runtime state object shared with wallpaper.ts and the other modules.
   const wallpaperState = deps.wallpaperState;
 
   function finalizeInitialWallpaper() {

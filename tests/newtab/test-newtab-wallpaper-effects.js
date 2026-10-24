@@ -14,8 +14,8 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 
-vm.runInNewContext(moduleScript('src/shared/settings.ts', 'LumnoSettings', null, { 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects' }), sandbox, {
-  filename: 'src/shared/settings.ts'
+vm.runInNewContext(moduleScript('src/domain/settings.ts', 'LumnoSettings', null, { 'src/newtab/wallpaper/wallpaper-effects.ts': 'LumnoNewtabWallpaperEffects' }), sandbox, {
+  filename: 'src/domain/settings.ts'
 });
 vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-effects.ts', 'LumnoNewtabWallpaperEffects'), sandbox, {
   filename: 'src/newtab/wallpaper/wallpaper-effects.ts'
@@ -1227,20 +1227,20 @@ async function testFocusedRoutePreloadsEffectBeforeContent() {
     assert.strictEqual(preload.attributes.get('data-wallpaper-effect'), 'grain');
     assert.strictEqual(preload.attributes.get('data-nt-wallpaper-ready'), '1');
     assert.strictEqual(typeof preload.runtime.controller.refresh, 'function',
-      'wallpaper.js adopts the preload controller');
+      'wallpaper.ts adopts the preload controller');
   }
 
   let resolveImage;
   const late = runEffectPreload({ focusRoute: false, imageReady: new Promise((resolve) => { resolveImage = resolve; }) });
-  assert.ok(late.runtime.controller, 'the controller exists before the image does, so wallpaper.js never starts its own');
+  assert.ok(late.runtime.controller, 'the controller exists before the image does, so wallpaper.ts never starts its own');
   late.runtime.controller.apply({ type: 'dither' });
   resolveImage('data:image/webp;base64,AAAA');
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.deepStrictEqual(late.appliedPrefs, [{ type: 'dither' }],
-    'cached preferences never replace ones wallpaper.js already applied');
+    'cached preferences never replace ones wallpaper.ts already applied');
   assert.strictEqual(late.getRefreshes(), 0);
   assert.strictEqual(late.attributes.get('data-nt-wallpaper-ready'), undefined,
-    'once wallpaper.js owns the effect it also decides when the wallpaper is ready');
+    'once wallpaper.ts owns the effect it also decides when the wallpaper is ready');
 }
 
 async function testBlurFrostUsesTheRememberedLuminance() {

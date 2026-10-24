@@ -1,7 +1,7 @@
 // @ts-nocheck
 // URL classification, favicon source policy and the search/favicon blacklists
 // used by New Tab suggestions, recent sites and favicons.
-import * as LumnoUrlGuards from '../shared/url-guards';
+import * as LumnoUrlGuards from '../platform/url-guards';
 
 function createUrlPolicy(deps) {
   const {

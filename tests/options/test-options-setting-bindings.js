@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/shared/settings');
+const settings = require('../../src/domain/settings');
 const bindings = require('../../src/options/options-setting-bindings');
 const { getToggleSettings } = require('../../src/options/options-toggle-settings');
 

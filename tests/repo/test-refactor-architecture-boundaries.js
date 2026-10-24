@@ -31,22 +31,22 @@ function filesContaining(files, pattern) {
 const runtimeFiles = collectFiles('src', /\.(?:js|ts|tsx)$/);
 assert.deepStrictEqual(
   filesContaining(runtimeFiles, /function getBrowserInternalScheme\(/),
-  ['src/shared/browser-profile.ts'],
+  ['src/platform/browser-profile.ts'],
   'browser detection belongs to the shared browser profile runtime'
 );
 assert.deepStrictEqual(
   filesContaining(runtimeFiles, /function getClientHintBrowserName\(/),
-  ['src/shared/browser-profile.ts'],
+  ['src/platform/browser-profile.ts'],
   'client-hint brand selection must not be copied into page entries'
 );
 assert.deepStrictEqual(
   filesContaining(runtimeFiles, /function parseShortcut\(/),
-  ['src/shared/shortcut-key-matcher.ts'],
+  ['src/domain/shortcut-key-matcher.ts'],
   'configured shortcut parsing belongs to the shared matcher'
 );
 assert.deepStrictEqual(
   filesContaining(runtimeFiles, /function setBoundedCacheEntry\(/),
-  ['src/shared/favicon/favicon-utils.ts'],
+  ['src/domain/favicon/favicon-utils.ts'],
   'bounded favicon cache writes belong to favicon-utils'
 );
 assert.deepStrictEqual(

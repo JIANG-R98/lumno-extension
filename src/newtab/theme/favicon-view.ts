@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as LumnoFaviconUtils from '../../shared/favicon/favicon-utils';
+import * as LumnoFaviconUtils from '../../domain/favicon/favicon-utils';
 import * as LumnoFaviconViewCore from '../../shared/favicon/favicon-view-core';
 
 function noop() {}

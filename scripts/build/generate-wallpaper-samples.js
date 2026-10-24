@@ -2,7 +2,7 @@
 
 // Writes each built-in wallpaper's small copy (<name>-sample.avif next to it), which the New Tab's
 // effects and adaptive tone sample instead of decoding the full image. Each copy is the image the
-// sampler in wallpaper-effects.js would build from the full file: drawn into a canvas of
+// sampler in wallpaper-effects.ts would build from the full file: drawn into a canvas of
 // getSamplerSize() in Chrome the way the sampler draws it, then encoded by avifenc as AVIF with
 // full-resolution colour (4:4:4) at quality 95. Lossy WebP keeps colour at half resolution, which
 // wiped out the fine colour specks dither, halftone and ASCII pick up from painted wallpapers.
@@ -93,7 +93,7 @@ async function main() {
   } catch (error) {
     throw new Error('avifenc was not found; install it with `brew install libavif`.', { cause: error });
   }
-  const { getSamplerSize } = await import(path.join(repoRoot, 'src/newtab/wallpaper/wallpaper-sampler-size.ts'));
+  const { getSamplerSize } = await import(path.join(repoRoot, 'src/domain/wallpaper-sampler-size.ts'));
   const { directory, suffix, files } = readWallpaperFiles();
   const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lumno-wallpaper-samples-'));
   const server = http.createServer((request, response) => {

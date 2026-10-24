@@ -1,6 +1,6 @@
 const assert = require('assert');
-const progressMatch = require('../../src/shared/progress-match.ts');
-const progressHistory = require('../../src/shared/progress-history.ts');
+const progressMatch = require('../../src/domain/progress-match.ts');
+const progressHistory = require('../../src/domain/progress-history.ts');
 const { createProgressTracker } = require('../../src/background/progress-tracker.ts');
 
 const PINNED_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';

@@ -10,7 +10,7 @@ function createDefaultSearchEngine(deps) {
     SEARCH_UTILS
   } = deps;
 
-  // The panel state object shared with search-panel.js and the other modules.
+  // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
   function buildSearchUrlFromTemplate(template, query) {

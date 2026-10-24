@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as LumnoNewtabShortcutsStore from '../newtab/shortcuts/shortcuts-store';
+import * as LumnoNewtabShortcutsStore from './shortcuts-store';
 import * as LumnoSettings from './settings';
 
 const BINDINGS_KEY = '_x_extension_shortcut_folder_bindings_2026_unique_';

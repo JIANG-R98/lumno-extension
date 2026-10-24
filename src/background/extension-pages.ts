@@ -1,6 +1,6 @@
 // @ts-nocheck
-import * as LumnoExtensionRoutes from '../shared/extension-routes';
-import * as LumnoSettings from '../shared/settings';
+import * as LumnoExtensionRoutes from '../domain/extension-routes';
+import * as LumnoSettings from '../domain/settings';
 
 const ONBOARDING_WEB_URL = 'https://lumno.kubai.design/onboarding/';
 const ONBOARDING_ROUTE_PATH = 'src/onboarding/onboarding.html';

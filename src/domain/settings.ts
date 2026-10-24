@@ -865,7 +865,7 @@ function normalizeNewtabInputAutoFocusEnabled(value) {
   return value === true;
 }
 
-// newtab-focus-entry.js reads this copy to route a new tab before storage answers.
+// newtab-focus-entry.ts reads this copy to route a new tab before storage answers.
 function cacheNewtabInputAutoFocusEnabled(value) {
   try {
     const localStorageObj = globalThis.localStorage;
@@ -878,7 +878,7 @@ function cacheNewtabInputAutoFocusEnabled(value) {
   }
 }
 
-// newtab-storage-prefetch.js fetches this locale's messages before newtab.js asks for them.
+// newtab-storage-prefetch.ts fetches this locale's messages before newtab.js asks for them.
 function cacheNewtabLocale(locale) {
   try {
     const localStorageObj = globalThis.localStorage;

@@ -1,7 +1,7 @@
 // @ts-nocheck
 // The largest image the wallpaper effects sample. A wallpaper's small copy is made at this size, so
 // sampling it reads the same pixels as sampling the full image: scripts/build/generate-wallpaper-samples.js
-// makes the built-in ones, and wallpaper-local-store.js one for each upload and cached photo.
+// makes the built-in ones, and wallpaper-local-store.ts one for each upload and cached photo.
 const SAMPLER_MAX_WIDTH = 520;
 const SAMPLER_MAX_HEIGHT = 320;
 

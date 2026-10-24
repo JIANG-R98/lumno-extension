@@ -8,7 +8,7 @@ function createRemoteSuggestions(deps) {
     getDirectUrlSuggestion
   } = deps;
 
-  // The panel state object shared with search-panel.js and the other modules.
+  // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
   const OVERLAY_FIRST_RESULT_REVEAL_DELAY_MS = 120;

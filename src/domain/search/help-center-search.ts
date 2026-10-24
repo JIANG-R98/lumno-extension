@@ -2,7 +2,7 @@
 // Searches the help center's own index (lumno.kubai.design/<locale>/help/search-index.json)
 // and synonym list (search-synonyms.json). The help center's search box and the extension's
 // "Lumno 帮助中心" site search both run this file, so both list the same pages; keep it in
-// step with lumno-extension src/shared/search/help-center-search.ts. lumno-web checks it against
+// step with lumno-extension src/domain/search/help-center-search.ts. lumno-web checks it against
 // src/content/guides/search/eval/<locale>.json after every build (scripts/help-search-eval.mjs).
 // The extension's copy adds buildFeedbackSuggestions and createSuggestionSource at the end.
 const RESULT_LIMIT = 6;

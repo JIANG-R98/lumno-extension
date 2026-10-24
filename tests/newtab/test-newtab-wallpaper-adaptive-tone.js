@@ -227,7 +227,7 @@ function getCssRgbChannels(value) {
   assert.deepStrictEqual(
     readySamplers.map((sampler) => sampler.url),
     ['test://dark-wallpaper'],
-    'each new sampler should be handed out once, so wallpaper.js can cache a placeholder from it'
+    'each new sampler should be handed out once, so wallpaper.ts can cache a placeholder from it'
   );
   assert.strictEqual(readySamplers[0].canvas, canvas, 'the handed-out sampler should carry its scaled canvas');
 

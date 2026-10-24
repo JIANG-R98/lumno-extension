@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const remote = require('../../src/newtab/remote-content.ts');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 
 function storage(initial = {}) {
   const values = structuredClone(initial);

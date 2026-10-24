@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const matcher = require('../../src/shared/shortcut-key-matcher.ts');
+const matcher = require('../../src/domain/shortcut-key-matcher.ts');
 const { createOnboardingPage } = require('../helpers/onboarding-page');
 const { getManifestContentScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
@@ -84,20 +84,20 @@ assert.strictEqual(
 
 const contentScripts = getManifestContentScripts();
 assert(
-  contentScripts.some((files) => runsBefore(files, 'src/shared/shortcut-key-matcher.ts', 'src/content/shortcut-key-observer.ts')),
+  contentScripts.some((files) => runsBefore(files, 'src/domain/shortcut-key-matcher.ts', 'src/content/shortcut-key-observer.ts')),
   'the page shortcut observer should load the shared matcher first'
 );
 assert.strictEqual(
-  contentScripts.filter((files) => files.includes('src/shared/shortcut-key-matcher.ts')).length,
+  contentScripts.filter((files) => files.includes('src/domain/shortcut-key-matcher.ts')).length,
   1,
   'the shared matcher should be injected once per frame, by the observer entry that uses it'
 );
 assert(
-  runsBefore(getPageScripts('src/onboarding/onboarding.html'), 'src/shared/shortcut-key-matcher.ts', 'src/onboarding/onboarding-content.ts'),
+  runsBefore(getPageScripts('src/onboarding/onboarding.html'), 'src/domain/shortcut-key-matcher.ts', 'src/onboarding/onboarding-content.ts'),
   'onboarding should load the shared matcher before its content model'
 );
 assert(
-  runsBefore(getPageScripts('newtab.html'), 'src/shared/shortcut-key-matcher.ts', 'src/newtab/newtab.ts'),
+  runsBefore(getPageScripts('newtab.html'), 'src/domain/shortcut-key-matcher.ts', 'src/newtab/newtab.ts'),
   'newtab should load the shared matcher before its runtime entry'
 );
 

@@ -532,7 +532,7 @@ function createRecentSitesController(deps) {
   }
 
   // Progress tracking (Labs). A tracked pinned card follows the episode or
-  // chapter the person is on; the background moves it (progress-tracker.js)
+  // chapter the person is on; the background moves it (progress-tracker.ts)
   // and keeps the versions it leaves in local storage.
   function findPinnedIndex(item) {
     return pageState.pinnedRecentSites.findIndex((pinnedItem) => isSamePinnedSite(pinnedItem, item));

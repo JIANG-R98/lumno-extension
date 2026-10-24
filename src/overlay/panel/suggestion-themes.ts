@@ -17,7 +17,7 @@ function createSuggestionThemes(deps) {
     getThemeForMode
   } = deps;
 
-  // The panel state object shared with search-panel.js and the other modules.
+  // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
   const OVERLAY_THEME_COLOR_CACHE_MAX_ENTRIES = 384;

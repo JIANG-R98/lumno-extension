@@ -247,7 +247,9 @@ npm run lint
 | `src/content/` | ページショートカット監視、選択テキストのクイックアクション、Web Clip PiP、動画の自動 PiP |
 | `src/options/` | 拡張機能の設定ページ（`options.ts` と `options-*.ts` の各部） |
 | `src/onboarding/` | インストール/アップデート時のオンボーディング |
-| `src/shared/` | 設定、ルート、URL ガードなどの共通モジュール。`search/`（ランキング、入力、候補）、`ui/`（ツールチップ、トースト、メニューとコントロールのスタイル）、`favicon/` |
+| `src/domain/` | ブラウザや DOM に触れない純粋なロジック：設定キーと正規化、ルート、検索のランキングと照合（`search/`）、favicon のルール、ショートカットと最近のサイトのストア |
+| `src/platform/` | ブラウザと拡張機能 API のラッパー：ブラウザ判定、URL ガード |
+| `src/shared/` | 複数の画面が共有する UI とページのランタイム：`search/`（入力と候補）、`ui/`（ツールチップ、トースト、メニューとコントロールのスタイル）、`favicon/`、プリロード |
 | `react-src/` | React ソース（`src/react/` にビルド） |
 | `_locales/` | 拡張 UI 文言 |
 | `assets/data/` | 内蔵サイト内検索とブラウザショートカットのデータ |

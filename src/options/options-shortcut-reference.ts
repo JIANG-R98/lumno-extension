@@ -1,6 +1,6 @@
 // @ts-nocheck
 // The keyboard shortcut reference list and how shortcuts are shown.
-import * as LumnoShortcutReference from '../shared/shortcut-reference';
+import * as LumnoShortcutReference from '../domain/shortcut-reference';
 
 function createShortcutReference(deps) {
   const {

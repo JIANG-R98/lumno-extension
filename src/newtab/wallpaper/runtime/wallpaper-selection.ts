@@ -83,7 +83,7 @@ function createWallpaperSelection(deps) {
     getWallpaperLocalOverrideForMode
   } = deps;
 
-  // The runtime state object shared with wallpaper.js and the other modules.
+  // The runtime state object shared with wallpaper.ts and the other modules.
   const wallpaperState = deps.wallpaperState;
 
   let hasWallpaperBootstrapStarted = false;
@@ -318,7 +318,7 @@ function createWallpaperSelection(deps) {
     });
   }
 
-  // The copy the preload painted for each daily slot (see wallpaper-preload.js), which stands in
+  // The copy the preload painted for each daily slot (see wallpaper-preload.ts), which stands in
   // until the slot's photo of the day has its own copy, so the first frame and the runtime agree.
   function readPreloadedDailyWallpaperCopies() {
     const copies = new Map();

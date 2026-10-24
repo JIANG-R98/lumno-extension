@@ -1,5 +1,5 @@
 const assert = require('assert');
-const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.ts');
+const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
 const { readStylesheet } = require('../helpers/css-tokens');
 const { parseCss, parsePageCss } = require('../helpers/css-rules');
 const { openSearchSurface } = require('../helpers/search-surfaces');

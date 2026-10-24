@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { getSamplerSize } from './wallpaper-sampler-size';
+import { getSamplerSize } from '../domain/wallpaper-sampler-size';
 
 const CUSTOM_WALLPAPER_ID = 'custom-upload';
 const CUSTOM_WALLPAPER_ID_PREFIX = 'custom-wallpaper-';
@@ -395,7 +395,7 @@ function createWallpaperLocalStore(options) {
     throw new Error('Compressed wallpaper exceeds the upload limit.');
   }
 
-  // The small copy the effects sample (getWallpaperSample in wallpaper-sources.js): the stored
+  // The small copy the effects sample (getWallpaperSample in wallpaper-sources.ts): the stored
   // wallpaper decoded and drawn at the sampler's size the way the sampler draws it, then saved
   // losslessly, so sampling it reads the pixels sampling the full wallpaper would. Lossy WebP keeps
   // colour at half resolution and loses the fine colour specks of painted or dotted images. '' when

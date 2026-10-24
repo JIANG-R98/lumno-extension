@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as SETTINGS from '../shared/settings';
+import * as SETTINGS from '../domain/settings';
 
 (function() {
   const THEME_STORAGE_KEY = SETTINGS.THEME_STORAGE_KEY;

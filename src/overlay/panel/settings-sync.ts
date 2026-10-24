@@ -52,7 +52,7 @@ function createSettingsSync(deps) {
     TAB_RANK_SCORE_DEBUG_STORAGE_KEY
   } = deps;
 
-  // The panel state object shared with search-panel.js and the other modules.
+  // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
   function loadOverlaySearchBlacklistItems(onReload) {

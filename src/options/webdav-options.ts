@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as LumnoSettings from '../shared/settings';
+import * as LumnoSettings from '../domain/settings';
 
 const EXPECTED_CLIENT_REVISION = 'dav-lock-5';
 const EXPECTED_SYNC_REVISION = 'dav-multi-1';

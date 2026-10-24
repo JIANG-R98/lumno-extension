@@ -4,7 +4,7 @@ const assert = require('assert');
 // as the same, marks that can or cannot be left out, words and initials in
 // every script that writes words apart, Japanese kana and Korean jamo.
 require('../../src/shared/search/search-han-variants.js');
-const search = require('../../src/shared/search/search-utils.ts');
+const search = require('../../src/domain/search/search-utils.ts');
 const pinyinPro = require('../../assets/vendor/pinyin-pro.js');
 
 const options = {

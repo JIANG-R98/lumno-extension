@@ -22,7 +22,7 @@ const BUNDLES = [
     name: 'newtab-preload',
     files: [
       'src/shared/scrollbar-mode.ts',
-      'src/shared/browser-profile.ts',
+      'src/platform/browser-profile.ts',
       'src/newtab/newtab-focus-entry.ts',
       'src/newtab/newtab-storage-prefetch.ts',
       'src/shared/motion-preload.ts',

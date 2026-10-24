@@ -44,6 +44,13 @@ The [README](../README.md#project-structure) maps the folders. `src/` owns
 browser APIs, storage, navigation and ranking; `react-src/` owns what the pages
 show.
 
+`src/` is layered, and ESLint holds the layers apart: `domain/` is pure logic
+(no browser globals, no DOM work), `platform/` wraps browser and extension
+APIs, `shared/` is UI and page runtime that several surfaces use, and the
+surfaces (`background/`, `content/`, `overlay/`, `newtab/`, `options/`,
+`onboarding/`, `popup/`) sit on top. A module imports from its own layer and
+the ones below it, and a surface never imports another surface.
+
 ## Making a change
 
 - Keep a pull request to one topic. Unrelated fixes are easier to review in

@@ -1,6 +1,6 @@
 // @ts-nocheck
 // The Options theme: the system / light / dark picker, the resolved theme
-// on the page, and the localStorage copy theme-preload.js paints from on the
+// on the page, and the localStorage copy theme-preload.ts paints from on the
 // next load. While the mode is "system" the page follows the OS setting.
 const THEME_PREVIEWS = Object.freeze({
   system: '../../assets/images/system.svg',
@@ -108,7 +108,7 @@ function createThemeSection(options) {
     followSystemTheme(currentMode === 'system');
   }
 
-  // theme-preload.js has already painted the cached (or system) theme and
+  // theme-preload.ts has already painted the cached (or system) theme and
   // marked the page ready before this runs, so there is nothing to fall
   // back to while the stored preference loads.
   function init() {

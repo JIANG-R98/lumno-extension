@@ -2,7 +2,7 @@
 // Favicons on the page: the persisted favicon, data and site theme caches,
 // the favicon view runtime that renders icons with their fallbacks, and the
 // favicon sources suggestions and themes resolve from.
-import * as NEWTAB_FAVICON_CACHE from '../../shared/favicon/favicon-cache';
+import * as NEWTAB_FAVICON_CACHE from '../../domain/favicon/favicon-cache';
 import * as NEWTAB_FAVICON_VIEW from './favicon-view';
 
 function createPageFavicons(deps) {

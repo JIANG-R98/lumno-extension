@@ -2,7 +2,7 @@ const assert = require('assert');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const guardPath = path.join(repoRoot, 'src/shared/search/ime-key-guard.ts');
+const guardPath = path.join(repoRoot, 'src/domain/search/ime-key-guard.ts');
 const guard = require(guardPath);
 const { parseCss } = require('../helpers/css-rules');
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
@@ -96,12 +96,12 @@ assert.strictEqual(
 imeGuard.markCompositionEnd({ target: input });
 
 assert.ok(
-  runsBefore(getPageScripts('newtab.html'), 'src/shared/search/ime-key-guard.ts', 'src/newtab/newtab.ts'),
+  runsBefore(getPageScripts('newtab.html'), 'src/domain/search/ime-key-guard.ts', 'src/newtab/newtab.ts'),
   'New Tab should load the IME key guard before newtab.js'
 );
 assert.ok(
-  runsBefore(getInjectedScripts('overlay'), 'src/shared/search/ime-key-guard.ts', 'src/overlay/search-panel.ts'),
-  'overlay injection should load the IME key guard before search-panel.js'
+  runsBefore(getInjectedScripts('overlay'), 'src/domain/search/ime-key-guard.ts', 'src/overlay/search-panel.ts'),
+  'overlay injection should load the IME key guard before search-panel.ts'
 );
 
 const newtabRoot = parseCss(readStylesheet('src/newtab/styles/page.css')).rule('#_x_extension_newtab_root_2024_unique_');

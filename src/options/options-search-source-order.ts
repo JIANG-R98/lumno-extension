@@ -2,10 +2,10 @@
 // Search sources order on the Options page: the search panel group chips at
 // the top of Search sources, the per-list moves of the provider and aggregate
 // lists, and the browser content order on the result type checkboxes. All of
-// them edit one synced record (search-source-order.js); the page re-renders
+// them edit one synced record (search-source-order.ts); the page re-renders
 // its lists through `onChange`.
 
-import * as ORDER from '../shared/search/search-source-order';
+import * as ORDER from '../domain/search/search-source-order';
 import * as SORTABLE from '../shared/ui/sortable-drag';
 
 function createSearchSourceOrderController(config) {

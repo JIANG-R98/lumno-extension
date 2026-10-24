@@ -2,7 +2,7 @@
 // The site search lists: built-in, custom and AI providers with their
 // icons and copy, saving provider state and disabled keys, and refreshing
 // the lists when providers change.
-import * as SHORTCUT_FAVICON from '../shared/favicon/shortcut-favicon';
+import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
 
 function createSiteSearchList(deps) {
   const {

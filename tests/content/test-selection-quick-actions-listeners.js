@@ -3,7 +3,7 @@
 // MutationObserver, while the storage listener stays so it can turn back on.
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
-const selectionIntent = require('../../src/shared/selection-intent.ts');
+const selectionIntent = require('../../src/domain/selection-intent.ts');
 const { bundleScript } = require('../helpers/module-script');
 const { startSelectorEngine } = require('../helpers/trusted-events');
 

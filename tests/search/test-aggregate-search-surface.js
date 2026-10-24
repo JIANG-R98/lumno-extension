@@ -1,5 +1,5 @@
 const assert = require('assert');
-const surface = require('../../src/shared/search/aggregate-search-surface.ts');
+const surface = require('../../src/domain/search/aggregate-search-surface.ts');
 
 function createChromeRuntime(options = {}) {
   const messages = [];

@@ -1,12 +1,12 @@
 // @ts-nocheck
-import * as LumnoNewtabShortcutsStore from '../newtab/shortcuts/shortcuts-store';
-import * as LumnoBlacklistUtils from '../shared/blacklist-utils';
-import * as COMMUNITY_LINKS from '../shared/community-links';
-import * as NAVIGATION_DISPOSITION from '../shared/navigation-disposition';
-import * as AGGREGATE_SEARCH_STORE from '../shared/search/aggregate-search-store';
-import * as SEARCH_UTILS from '../shared/search/search-utils';
-import * as SETTINGS from '../shared/settings';
-import * as LumnoShortcutDisplay from '../shared/shortcut-display';
+import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
+import * as LumnoBlacklistUtils from '../domain/blacklist-utils';
+import * as COMMUNITY_LINKS from '../domain/community-links';
+import * as NAVIGATION_DISPOSITION from '../domain/navigation-disposition';
+import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
+import * as SEARCH_UTILS from '../domain/search/search-utils';
+import * as SETTINGS from '../domain/settings';
+import * as LumnoShortcutDisplay from '../domain/shortcut-display';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as OPTIONS_AGGREGATE_SEARCH_LIST from './options-aggregate-search-list';
 import * as AGGREGATE_SEARCH from './options-aggregate-search';

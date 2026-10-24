@@ -1,7 +1,7 @@
 // @ts-nocheck
-import * as ACTION_ICON_LIBRARY from '../shared/selection-action-icons';
-import * as INTENT from '../shared/selection-intent';
-import * as SETTINGS from '../shared/settings';
+import * as ACTION_ICON_LIBRARY from '../domain/selection-action-icons';
+import * as INTENT from '../domain/selection-intent';
+import * as SETTINGS from '../domain/settings';
 import * as TOAST from '../shared/ui/toast';
 
 (function() {

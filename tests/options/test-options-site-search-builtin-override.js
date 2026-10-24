@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/shared/settings.ts');
+const settings = require('../../src/domain/settings.ts');
 const { createOptionsPage } = require('../helpers/options-page');
 
 // Editing a built-in site search under a new trigger stores a custom copy

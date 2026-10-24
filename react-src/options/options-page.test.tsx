@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import optionsHtml from '../../src/options/options.html?raw';
-import * as settingsModule from '../../src/shared/settings';
+import * as settingsModule from '../../src/domain/settings';
 import * as toggleSettingsModule from '../../src/options/options-toggle-settings';
 import { runPageBundle } from '../test/page-bundles';
 import siteSearchCatalog from '../../assets/data/site-search.json';

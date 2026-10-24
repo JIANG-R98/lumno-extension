@@ -1,8 +1,8 @@
 const assert = require('assert');
 const fs = require('fs');
-const store = require('../../src/newtab/recent/recent-sites-store.ts');
-const progressMatch = require('../../src/shared/progress-match.ts');
-const progressHistory = require('../../src/shared/progress-history.ts');
+const store = require('../../src/domain/recent-sites-store.ts');
+const progressMatch = require('../../src/domain/progress-match.ts');
+const progressHistory = require('../../src/domain/progress-history.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 const { getPageScripts } = require('../helpers/runtime-scripts');
 require('../../src/newtab/dismiss-stack.ts');
@@ -297,7 +297,7 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
   // The worker answers New Tab's "is this an episode?" probe only while the
   // setting is on, and follows the setting when it changes.
   {
-    const settings = require('../../src/shared/settings.ts');
+    const settings = require('../../src/domain/settings.ts');
     const key = settings.PROGRESS_TRACKING_ENABLED_STORAGE_KEY;
     const episode = { id: 5, index: 0, windowId: 1, url: 'https://vidhub3.top/vodplay/55357-1-2.html', title: '某剧 第2集' };
     const worker = loadBackground({ tabs: [episode], sync: { [key]: true } });
@@ -312,7 +312,7 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
   {
     const { JSDOM } = require('jsdom');
     const newtabScripts = getPageScripts('newtab.html');
-    assert(newtabScripts.includes('src/shared/progress-match.ts') && newtabScripts.includes('src/shared/progress-history.ts'));
+    assert(newtabScripts.includes('src/domain/progress-match.ts') && newtabScripts.includes('src/domain/progress-history.ts'));
     const newtabDocument = new JSDOM(fs.readFileSync('newtab.html', 'utf8')).window.document;
     assert(newtabDocument.querySelector('link[rel="stylesheet"][href$="recent-history-dialog.css"]'), 'New Tab should style the history dialog');
     const optionsDocument = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
@@ -322,7 +322,7 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
     const section = general.querySelector('[data-i18n="settings_general_newtab_section_title"]');
     assert(section && general.contains(toggle) && (section.compareDocumentPosition(toggle) & 4),
       'the switch sits in the New Tab section of General settings');
-    const settings = require('../../src/shared/settings.ts');
+    const settings = require('../../src/domain/settings.ts');
     assert.strictEqual(settings.normalizeProgressTrackingEnabled(undefined), true);
     assert.strictEqual(settings.normalizeProgressTrackingEnabled(false), false);
   }

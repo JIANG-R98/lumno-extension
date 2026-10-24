@@ -40,7 +40,7 @@ async function run() {
     actions = options;
     return { render(value) { renderModel = value; } };
   } };
-  window.eval(moduleScript('src/shared/settings.ts', 'LumnoSettings'));
+  window.eval(moduleScript('src/domain/settings.ts', 'LumnoSettings'));
   window.eval(moduleScript('src/options/webdav-options.ts', 'LumnoWebDavOptions'));
   const messages = JSON.parse(fs.readFileSync('_locales/en/messages.json', 'utf8'));
   window.chrome = chrome;
