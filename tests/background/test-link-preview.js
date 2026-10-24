@@ -56,12 +56,20 @@ function createChromeMock(options) {
 }
 
 async function testRuleScope() {
-  const rule = linkPreview.buildFrameHeaderRule(7);
-  assert.strictEqual(rule.id, 7);
-  assert.deepStrictEqual(rule.condition, { tabIds: [7], resourceTypes: ['sub_frame'] },
+  const [frameOptionsRule, cspRule] = linkPreview.buildFrameHeaderRules(7);
+  assert.strictEqual(frameOptionsRule.id, 7);
+  assert.deepStrictEqual(frameOptionsRule.condition, { tabIds: [7], resourceTypes: ['sub_frame'] },
     'header removal must stay limited to subframes of the previewing tab');
-  assert.deepStrictEqual(rule.action.responseHeaders.map((entry) => entry.header),
-    ['x-frame-options', 'content-security-policy']);
+  assert.deepStrictEqual(frameOptionsRule.action.responseHeaders.map((entry) => entry.header), ['x-frame-options']);
+  assert.strictEqual(cspRule.id, 7 + linkPreview.CSP_RULE_ID_OFFSET);
+  assert.deepStrictEqual(cspRule.action.responseHeaders.map((entry) => entry.header), ['content-security-policy']);
+  assert.deepStrictEqual(cspRule.condition.responseHeaders,
+    [{ header: 'content-security-policy', values: ['*frame-ancestors*'] }],
+    'a CSP goes only when it refuses framing; its limits on script stay with the previewed page');
+  const legacy = linkPreview.buildFrameHeaderRules(7, false);
+  assert.strictEqual(legacy.length, 1);
+  assert.deepStrictEqual(legacy[0].action.responseHeaders.map((entry) => entry.header),
+    ['x-frame-options', 'content-security-policy'], 'without header matching the CSP goes as a whole');
   const workerRule = linkPreview.buildWorkerHeaderRule();
   assert.deepStrictEqual(workerRule.condition.tabIds, [-1], 'the second rule reaches service workers\' requests only');
   assert.deepStrictEqual(workerRule.action.responseHeaders, [{ header: 'x-frame-options', operation: 'remove' }],
@@ -96,7 +104,27 @@ async function testPrepareThenOpen() {
   assert.ok(sessionRules.has(3), 'a close from a replaced preview must not drop the open one');
   await service.discard(3, show.token);
   assert.ok(!sessionRules.has(3), 'closing the preview removes the header rule');
+  assert.ok(!sessionRules.has(3 + linkPreview.CSP_RULE_ID_OFFSET), 'and the CSP rule');
   assert.ok(!sessionRules.has(linkPreview.WORKER_RULE_ID), 'with no preview left, workers\' requests keep their headers');
+}
+
+async function testOlderChromeDropsWholeCsp() {
+  const { chromeApi, sessionRules } = createChromeMock();
+  const update = chromeApi.declarativeNetRequest.updateSessionRules;
+  chromeApi.declarativeNetRequest.updateSessionRules = (changes, callback) => {
+    if ((changes.addRules || []).some((rule) => rule.condition.responseHeaders)) {
+      chromeApi.runtime.lastError = { message: 'Unknown key responseHeaders' };
+      callback();
+      chromeApi.runtime.lastError = null;
+      return;
+    }
+    update(changes, callback);
+  };
+  const service = linkPreview.createLinkPreviewService({ chromeApi });
+  const result = await service.open({ id: 9, windowId: 1 }, 'https://example.com/a');
+  assert.deepStrictEqual(result, { ok: true }, 'a Chrome that cannot match on headers still previews');
+  assert.deepStrictEqual(sessionRules.get(9).action.responseHeaders.map((entry) => entry.header),
+    ['x-frame-options', 'content-security-policy']);
 }
 
 async function testWorkerRuleOutlivesOnePreview() {
@@ -236,11 +264,12 @@ async function testReconcileDropsRulesWithoutPreview() {
   const { chromeApi, sessionRules } = createChromeMock({
     respond: (message) => (message.action === 'lumnoLinkPreviewPing' ? { token: '' } : true)
   });
-  sessionRules.set(8, linkPreview.buildFrameHeaderRule(8));
+  linkPreview.buildFrameHeaderRules(8).forEach((rule) => sessionRules.set(rule.id, rule));
   sessionRules.set(linkPreview.WORKER_RULE_ID, linkPreview.buildWorkerHeaderRule());
   const service = linkPreview.createLinkPreviewService({ chromeApi });
   await service.reconcileRules();
   assert.ok(!sessionRules.has(8), 'a rule whose preview is gone is removed when the worker wakes');
+  assert.ok(!sessionRules.has(8 + linkPreview.CSP_RULE_ID_OFFSET));
   assert.ok(!sessionRules.has(linkPreview.WORKER_RULE_ID), 'and the workers\' rule with it');
 }
 
@@ -621,6 +650,7 @@ async function testPreviewFrameEscape() {
   await testOpenPreviewDroppedWhenSurfaceGone();
   await testReconcileDropsRulesWithoutPreview();
   await testWorkerRuleOutlivesOnePreview();
+  await testOlderChromeDropsWholeCsp();
   testShiftClickOpensPreview();
   testOtherPressesKeepDefault();
   testShownAddressOpensPreview();

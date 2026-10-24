@@ -10,10 +10,17 @@
 // in a hidden frame, so the window opens on click with the page underway.
 const UI_FILES = Object.freeze(['build/link-preview.js']);
 // X-Frame-Options and CSP frame-ancestors are the two ways a page refuses to
-// be framed. declarativeNetRequest can only drop a whole header, so the CSP
-// goes with frame-ancestors; the rule applies to subframes of the one tab and
-// only while its preview is open.
+// be framed (a page that sends both is judged by frame-ancestors). While a
+// tab's preview is open, its subframes lose X-Frame-Options, and lose their
+// CSP only where it has frame-ancestors: declarativeNetRequest drops a whole
+// header, never part of one, and the rest of a CSP (the limits on script and
+// style that guard against injected script) is worth keeping. Chrome before
+// 128 cannot match on a response header; there the CSP always goes.
 const FRAME_BLOCKING_HEADERS = Object.freeze(['x-frame-options', 'content-security-policy']);
+const FRAME_ANCESTORS_CSP = Object.freeze({ header: 'content-security-policy', values: ['*frame-ancestors*'] });
+// A tab's CSP rule sits this far above its X-Frame-Options rule, whose id is
+// the tab id.
+const CSP_RULE_ID_OFFSET = 1000000000;
 // A site with a service worker answers the frame from the worker, and the
 // worker's own request belongs to no tab (tab id -1), so the tab's rule never
 // sees it. While any preview is open, such requests lose X-Frame-Options
@@ -33,25 +40,37 @@ function isPreviewableUrl(url) {
   return typeof url === 'string' && url.length <= 8192 && PREVIEWABLE_URL_PATTERN.test(url);
 }
 
-// Session rules accept a tab condition and outlive a suspended worker; one
-// rule per tab, keyed by the tab id, so a woken worker still finds it.
-function getRuleIdForTab(tabId) {
-  return tabId;
+// Session rules accept a tab condition and outlive a suspended worker; the
+// rules are keyed by the tab id, so a woken worker still finds them.
+function getRuleIdsForTab(tabId) {
+  return [tabId, tabId + CSP_RULE_ID_OFFSET];
 }
 
-function buildFrameHeaderRule(tabId) {
+function buildRemoveHeadersRule(id, tabId, headers, responseHeaders) {
+  const condition = { tabIds: [tabId], resourceTypes: ['sub_frame'] };
+  if (responseHeaders) {
+    condition.responseHeaders = responseHeaders;
+  }
   return {
-    id: getRuleIdForTab(tabId),
+    id,
     priority: 1,
     action: {
       type: 'modifyHeaders',
-      responseHeaders: FRAME_BLOCKING_HEADERS.map((header) => ({ header, operation: 'remove' }))
+      responseHeaders: headers.map((header) => ({ header, operation: 'remove' }))
     },
-    condition: {
-      tabIds: [tabId],
-      resourceTypes: ['sub_frame']
-    }
+    condition
   };
+}
+
+// With matchHeaders false (Chrome before 128), one rule drops both headers.
+function buildFrameHeaderRules(tabId, matchHeaders = true) {
+  if (!matchHeaders) {
+    return [buildRemoveHeadersRule(tabId, tabId, FRAME_BLOCKING_HEADERS)];
+  }
+  return [
+    buildRemoveHeadersRule(tabId, tabId, ['x-frame-options']),
+    buildRemoveHeadersRule(tabId + CSP_RULE_ID_OFFSET, tabId, ['content-security-policy'], [FRAME_ANCESTORS_CSP])
+  ];
 }
 
 function buildWorkerHeaderRule() {
@@ -80,6 +99,8 @@ function createLinkPreviewService(options) {
   // "open" (the surface shows it).
   const sessions = new Map();
   let tokenCounter = 0;
+  // Cleared once Chrome refuses a rule that matches on a response header.
+  let headerMatching = true;
 
   function readLastError() {
     return chromeApi && chromeApi.runtime ? chromeApi.runtime.lastError : null;
@@ -102,20 +123,28 @@ function createLinkPreviewService(options) {
     return dnr && typeof dnr.updateSessionRules === 'function' ? dnr : null;
   }
 
-  function setFrameHeaderRule(tabId, enabled) {
+  async function setFrameHeaderRule(tabId, enabled) {
     const dnr = getDnr();
     if (!dnr) {
-      return Promise.resolve(false);
+      return false;
     }
-    const update = { removeRuleIds: [getRuleIdForTab(tabId)] };
-    if (enabled) {
-      update.removeRuleIds.push(WORKER_RULE_ID);
-      update.addRules = [buildFrameHeaderRule(tabId), buildWorkerHeaderRule()];
-    } else if (sessions.size === 0) {
-      // The last preview is gone; the workers' requests keep their headers.
-      update.removeRuleIds.push(WORKER_RULE_ID);
+    const apply = () => {
+      const update = { removeRuleIds: getRuleIdsForTab(tabId) };
+      if (enabled) {
+        update.removeRuleIds.push(WORKER_RULE_ID);
+        update.addRules = buildFrameHeaderRules(tabId, headerMatching).concat(buildWorkerHeaderRule());
+      } else if (sessions.size === 0) {
+        // The last preview is gone; the workers' requests keep their headers.
+        update.removeRuleIds.push(WORKER_RULE_ID);
+      }
+      return callback((done) => dnr.updateSessionRules(update, done)).then(Boolean);
+    };
+    const applied = await apply();
+    if (!applied && enabled && headerMatching) {
+      headerMatching = false;
+      return apply();
     }
-    return callback((done) => dnr.updateSessionRules(update, done)).then(Boolean);
+    return applied;
   }
 
   function captureTab(tab) {
@@ -328,9 +357,10 @@ function createLinkPreviewService(options) {
     if (!Array.isArray(rules)) {
       return;
     }
-    await Promise.all(rules
+    const tabIds = new Set(rules
       .filter((rule) => rule && rule.id !== WORKER_RULE_ID && rule.condition && Array.isArray(rule.condition.tabIds))
-      .map((rule) => verifyOpenPreview(rule.condition.tabIds[0])));
+      .map((rule) => rule.condition.tabIds[0]));
+    await Promise.all(Array.from(tabIds, (tabId) => verifyOpenPreview(tabId)));
     // The workers' rule outlives no preview.
     const left = await callback((done) => dnr.getSessionRules(done));
     if (Array.isArray(left) && left.length === 1 && left[0].id === WORKER_RULE_ID) {
@@ -416,9 +446,10 @@ export {
   UI_FILES,
   FRAME_BLOCKING_HEADERS,
   WORKER_RULE_ID,
+  CSP_RULE_ID_OFFSET,
   PREPARED_TTL_MS,
   isPreviewableUrl,
-  buildFrameHeaderRule,
+  buildFrameHeaderRules,
   buildWorkerHeaderRule,
   createLinkPreviewService
 };
