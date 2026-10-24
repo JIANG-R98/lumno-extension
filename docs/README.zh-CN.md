@@ -211,7 +211,7 @@ WebDAV 为 Beta 功能，入口在「设置 → 账号与同步」。添加连�
 
 开发和 CI 使用 Node.js 22。如果使用 `nvm`，运行 `nvm use` 即可切换到 `.nvmrc` 中声明的版本。
 
-Chrome 加载的是构建后的脚本：`npm run build` 会用 Vite 把 React 岛构建到 `src/react/`，并用 esbuild 把扩展运行的所有脚本打包到 `build/`，这两个目录都不提交。首次加载开发版，以及修改 `src/` 后，请运行：
+Chrome 加载的是构建后的脚本：`npm run build` 会用 Vite 把 React 岛构建到 `src/react/`，并用 Rolldown（Vite 底层的打包器）把扩展运行的所有脚本打包到 `build/`，这两个目录都不提交。首次加载开发版，以及修改 `src/` 后，请运行：
 
 ```bash
 npm ci

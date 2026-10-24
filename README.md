@@ -211,7 +211,7 @@ Existing server data requires an explicit initial-version choice. Later conflict
 
 Development and CI use Node.js 22. If you use `nvm`, run `nvm use` to select the version declared in `.nvmrc`.
 
-Chrome loads built scripts: `npm run build` builds the React islands into `src/react/` with Vite and bundles every script the extension runs into `build/` with esbuild. Neither folder is committed. Before loading the development extension for the first time, and after editing `src/`, run:
+Chrome loads built scripts: `npm run build` builds the React islands into `src/react/` with Vite and bundles every script the extension runs into `build/` with Rolldown, the bundler under Vite. Neither folder is committed. Before loading the development extension for the first time, and after editing `src/`, run:
 
 ```bash
 npm ci

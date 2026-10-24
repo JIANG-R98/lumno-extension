@@ -30,7 +30,7 @@ the Development section of the [README](../README.md#development).
 
 `npm run build` writes two folders that are build output and never committed:
 
-- `build/`: esbuild bundles of the scripts in `src/`. While you edit `src/`,
+- `build/`: Rolldown bundles of the scripts in `src/`. While you edit `src/`,
   `npm run watch:bundles` rebuilds them on every change.
 - `src/react/`: the React islands, built by Vite from the `react/` folders in
   `src/` (`src/newtab/react/`, `src/shared/react/`, ...). Run

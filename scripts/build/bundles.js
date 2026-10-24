@@ -1,6 +1,6 @@
 'use strict';
 
-// Every script the extension runs is one of these bundles, built by esbuild
+// Every script the extension runs is one of these bundles, built by Rolldown
 // (scripts/build/build-bundles.js) into build/<name>.js. A bundle runs the
 // modules in its files list, in order, with everything they import; pages,
 // the manifest and the background's injection lists load the bundle instead.
