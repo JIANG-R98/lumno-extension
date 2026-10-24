@@ -259,6 +259,69 @@ function testOpeningAgainAdvancesOrCloses() {
   page.close();
 }
 
+// JSDOM has neither popovers nor modal dialogs, so the page gets the browser
+// pieces the switcher relies on: showPopover and a dialog matching :modal.
+function stubTopLayer(page) {
+  const promoted = [];
+  page.window.HTMLElement.prototype.showPopover = function() {
+    promoted.push(this);
+  };
+  return promoted;
+}
+
+function openModalDialog(page) {
+  const dialog = page.document.createElement('dialog');
+  dialog.setAttribute('open', '');
+  const nativeMatches = dialog.matches.bind(dialog);
+  dialog.matches = (selector) => selector === ':modal' || nativeMatches(selector);
+  page.document.body.appendChild(dialog);
+  return dialog;
+}
+
+function testJoinsTheTopLayerAboveModalsAndFullscreen() {
+  const page = createTabSwitcherPage();
+  const promoted = stubTopLayer(page);
+  openDefault(page);
+  assert.strictEqual(page.host().getAttribute('popover'), 'manual', 'the host should be a manual popover');
+  assert.deepStrictEqual(promoted, [page.host()], 'the host should be promoted into the top layer');
+  assert.strictEqual(page.host().parentNode, page.document.documentElement);
+  page.close();
+
+  const modal = createTabSwitcherPage();
+  stubTopLayer(modal);
+  const modalDialog = openModalDialog(modal);
+  const nonModalDialog = modal.document.createElement('dialog');
+  nonModalDialog.setAttribute('open', '');
+  modal.document.body.appendChild(nonModalDialog);
+  openDefault(modal);
+  assert.strictEqual(modal.host().parentNode, modalDialog,
+    'an open modal dialog should hold the host, so the modal does not make it inert');
+  modal.close();
+
+  const fullscreen = createTabSwitcherPage();
+  stubTopLayer(fullscreen);
+  const video = fullscreen.document.createElement('div');
+  fullscreen.document.body.appendChild(video);
+  Object.defineProperty(fullscreen.document, 'fullscreenElement', { configurable: true, value: video });
+  openDefault(fullscreen);
+  assert.strictEqual(fullscreen.host().parentNode, video, 'a fullscreen element should hold the host');
+  fullscreen.close();
+
+  const refused = createTabSwitcherPage();
+  refused.window.HTMLElement.prototype.showPopover = function() {
+    throw new Error('not allowed');
+  };
+  openDefault(refused);
+  assert.ok(refused.host() && !refused.host().hasAttribute('popover'),
+    'a refused promotion should leave the fixed-position host in place');
+  refused.close();
+
+  const legacy = createTabSwitcherPage();
+  openDefault(legacy);
+  assert.ok(!legacy.host().hasAttribute('popover'), 'without popover support the host should stay a plain fixed layer');
+  legacy.close();
+}
+
 function testFailsCleanlyWithoutTheReactView() {
   const page = createTabSwitcherPage();
   delete page.window.LumnoOverlayTabSwitcherView;
@@ -472,6 +535,7 @@ function testStylesheetKeepsTheLayoutRules() {
   await testCustomShortcutCommitsOnItsPrimaryModifier();
   await testRuntimeMessagesReuseTheInjectedSwitcher();
   testOpeningAgainAdvancesOrCloses();
+  testJoinsTheTopLayerAboveModalsAndFullscreen();
   testFailsCleanlyWithoutTheReactView();
   await testThemeFollowsThePageThenTheSetting();
   testScaleCompensatesForZoomAndRoomyViewports();

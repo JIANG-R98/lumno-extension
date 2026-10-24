@@ -88,6 +88,50 @@ import * as TOAST from '../shared/ui/toast.js';
     return 'left';
   }
 
+  function isModalDialog(element) {
+    try {
+      return element.matches(':modal');
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Focus stays trapped in the topmost modal, so prefer the one holding it.
+  function findTopModalDialog(doc) {
+    const active = doc.activeElement;
+    const focusedDialog = active && typeof active.closest === 'function' ? active.closest('dialog') : null;
+    if (focusedDialog && isModalDialog(focusedDialog)) {
+      return focusedDialog;
+    }
+    const dialogs = Array.from(doc.querySelectorAll('dialog[open]')).filter(isModalDialog);
+    return dialogs.length ? dialogs[dialogs.length - 1] : null;
+  }
+
+  // Modal dialogs and fullscreen elements live in the browser's top layer,
+  // above any z-index (X's image viewer is a modal dialog). Mounting inside the
+  // modal keeps the switcher from being inert; the host then joins the top
+  // layer itself as a popover.
+  function getSwitcherMountParent(doc) {
+    const modalDialog = findTopModalDialog(doc);
+    const fullscreenElement = doc.fullscreenElement || null;
+    if (modalDialog && (!fullscreenElement || fullscreenElement.contains(modalDialog))) {
+      return modalDialog;
+    }
+    return fullscreenElement || doc.documentElement || doc.body;
+  }
+
+  function showSwitcherHostInTopLayer(host) {
+    if (!host.hasAttribute('popover')) {
+      return;
+    }
+    try {
+      host.showPopover();
+    } catch (error) {
+      // Keep the fixed-position fallback visible if top-layer promotion fails.
+      host.removeAttribute('popover');
+    }
+  }
+
   function updateOpenSwitcherThumbnailFromMessage(request) {
     const host = document.getElementById(HOST_ID);
     if (!host || typeof host._lumnoTabSwitcherUpdateThumbnail !== 'function') {
@@ -1053,6 +1097,9 @@ import * as TOAST from '../shared/ui/toast.js';
       'pointer-events: none !important',
       'contain: layout style paint !important'
     ].join(';');
+    if (typeof host.showPopover === 'function') {
+      host.setAttribute('popover', 'manual');
+    }
     const shadow = typeof host.attachShadow === 'function' ? host.attachShadow({ mode: 'closed' }) : host;
     const style = document.createElement('style');
     style.textContent = buildStyles();
@@ -1322,7 +1369,8 @@ import * as TOAST from '../shared/ui/toast.js';
     host._lumnoTabSwitcherUpdateThumbnail = function(update) {
       return tabSwitcherReactView.updateThumbnail(update);
     };
-    document.documentElement.appendChild(host);
+    getSwitcherMountParent(document).appendChild(host);
+    showSwitcherHostInTopLayer(host);
 
     const switcherVisualViewport = window.visualViewport && typeof window.visualViewport.addEventListener === 'function'
       ? window.visualViewport
