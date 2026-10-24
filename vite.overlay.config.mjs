@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { extensionOutputPath } from './scripts/build/extension-output.js';
 
 const repoRoot = import.meta.dirname;
 
@@ -13,7 +14,7 @@ export default defineConfig({
   },
   build: {
     target: 'chrome110',
-    outDir: resolve(repoRoot, 'src/react'),
+    outDir: extensionOutputPath('src/react'),
     emptyOutDir: false,
     copyPublicDir: false,
     sourcemap: false,

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { BUNDLES, BUNDLE_DIRECTORY } = require('../build/bundles');
+const { EXTENSION_OUTPUT, extensionOutputPath } = require('../build/extension-output');
 
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 const missing = [];
@@ -62,9 +63,15 @@ function checkPath(value) {
   if (manifestResourcePatternHasMatch(value)) {
     return;
   }
-  if (!fs.existsSync(value)) {
+  // The React islands are build output too, in the development extension.
+  const onDisk = isBuiltReactPath(value) ? extensionOutputPath(value) : value;
+  if (!fs.existsSync(onDisk)) {
     missing.push(value);
   }
+}
+
+function isBuiltReactPath(value) {
+  return normalizeManifestResourcePath(value).startsWith('src/react/');
 }
 
 function checkRelativeResourcePath(file, value) {
@@ -108,9 +115,9 @@ function checkConcreteExtensionPathReferences(file, source) {
   }
 }
 
-// The runtime scripts and the built React bundles in src/react/. The React
-// sources in the surfaces' react/ folders are checked through those bundles:
-// their CSS urls resolve against the page, not the source file.
+// The scripts under dir. The React sources in the surfaces' react/ folders
+// are checked through the islands built from them (listRuntimeFiles): their
+// CSS urls resolve against the page, not the source file.
 function listJsFiles(dir) {
   if (!fs.existsSync(dir)) {
     return [];
@@ -120,7 +127,7 @@ function listJsFiles(dir) {
   entries.forEach((entry) => {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name !== 'react' || dir === 'src') {
+      if (entry.name !== 'react') {
         files.push(...listJsFiles(fullPath));
       }
       return;
@@ -170,11 +177,25 @@ function listHtmlFiles(dir) {
   return files;
 }
 
+// The runtime sources and the React islands built from the react/ folders,
+// each under the path it has in the extension.
+function listRuntimeFiles() {
+  const builtReact = extensionOutputPath('src/react');
+  if (!fs.existsSync(builtReact)) {
+    throw new Error(`Missing ${EXTENSION_OUTPUT}/src/react/; run npm run build first.`);
+  }
+  return listJsFiles('src').map((file) => ({ file, disk: file }))
+    .concat(listJsFiles(builtReact).map((disk) => ({
+      file: path.join('src/react', path.relative(builtReact, disk)),
+      disk
+    })));
+}
+
 function checkRuntimeGetUrlReferences() {
-  const files = listJsFiles('src');
+  const files = listRuntimeFiles();
   const staticGetUrlPattern = /chrome\.runtime\.getURL\(\s*(['"`])([^'"`]+)\1\s*\)/g;
-  files.forEach((file) => {
-    const source = fs.readFileSync(file, 'utf8');
+  files.forEach(({ file, disk }) => {
+    const source = fs.readFileSync(disk, 'utf8');
     checkConcreteExtensionPathReferences(file, source);
     checkCssUrlReferences(file, source);
     let match = null;

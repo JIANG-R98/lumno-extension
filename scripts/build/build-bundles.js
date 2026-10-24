@@ -1,7 +1,8 @@
 'use strict';
 
-// Builds the bundles listed in scripts/build/bundles.js into build/ with
-// Rolldown, the bundler Vite builds the React islands with.
+// Builds the bundles listed in scripts/build/bundles.js with Rolldown, the
+// bundler Vite builds the React islands with, into the development
+// extension's build/ folder (dist/chrome/build/).
 //   node scripts/build/build-bundles.js [--watch]
 //   node scripts/build/build-bundles.js --store --outdir <dir>
 // --store builds the store package's copies, minified.
@@ -10,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const { rolldown, watch } = require('rolldown');
 const { BUNDLES, BUNDLE_DIRECTORY } = require('./bundles');
+const { EXTENSION_OUTPUT, extensionOutputPath } = require('./extension-output');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const ENTRY_PREFIX = '\0lumno-bundle:';
@@ -153,7 +155,7 @@ function extraFor(bundle, shared) {
 
 async function buildBundles(options = {}) {
   const common = {
-    outdir: options.outdir || path.join(repoRoot, BUNDLE_DIRECTORY),
+    outdir: options.outdir || extensionOutputPath(BUNDLE_DIRECTORY),
     minify: options.store === true,
     write: options.write !== false
   };
@@ -163,7 +165,7 @@ async function buildBundles(options = {}) {
 }
 
 async function watchBundles() {
-  const common = { outdir: path.join(repoRoot, BUNDLE_DIRECTORY), minify: false };
+  const common = { outdir: extensionOutputPath(BUNDLE_DIRECTORY), minify: false };
   const shared = await collectSharedModules(BUNDLES, common);
   const watcher = watch(BUNDLES.map((bundle) => ({
     ...inputOptions({ bundle, ...extraFor(bundle, shared) }),
@@ -177,7 +179,7 @@ async function watchBundles() {
       event.result.close();
     }
   });
-  console.log(`Watching ${BUNDLES.length} bundles; output in ${BUNDLE_DIRECTORY}/.`);
+  console.log(`Watching ${BUNDLES.length} bundles; output in ${EXTENSION_OUTPUT}/${BUNDLE_DIRECTORY}/.`);
 }
 
 function readOption(name) {
@@ -194,7 +196,7 @@ if (require.main === module) {
       outdir: outdir ? path.resolve(outdir) : undefined
     }).then((output) => {
       const bundles = output.filter((file) => file.type === 'chunk');
-      console.log(`Built ${bundles.length} bundles in ${outdir || BUNDLE_DIRECTORY}/.`);
+      console.log(`Built ${bundles.length} bundles in ${outdir || `${EXTENSION_OUTPUT}/${BUNDLE_DIRECTORY}`}/.`);
     });
   run.catch((error) => {
     console.error(error.message || error);

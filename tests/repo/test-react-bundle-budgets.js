@@ -4,8 +4,9 @@ const path = require('path');
 const zlib = require('zlib');
 const { execFileSync } = require('child_process');
 
-// Two checks guard the React bundles that npm run build:react writes to
-// src/react/ (build output, not committed; build before running this test):
+// Two checks guard the React bundles that npm run build:react writes to the
+// development extension's src/react/ (dist/chrome/src/react/; build before
+// running this test):
 //
 // 1. Growth: one change (a PR, or a push to main) may not grow a route by more
 //    than GROWTH_LIMIT_KIB over its base commit. Both sides are measured on the
@@ -23,7 +24,9 @@ const { execFileSync } = require('child_process');
 // the ceilings are checked.
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const reactDir = 'src/react';
+// Where a checkout's build put the islands: the development extension, or
+// src/react/ itself in checkouts from before builds wrote to dist/.
+const REACT_DIRECTORIES = ['dist/chrome/src/react', 'src/react'];
 
 // Rolldown (Vite 8) puts its CommonJS interop helpers, which every page chunk
 // imports, in a chunk of their own. Builds from before Vite 8 have none, so a
@@ -113,9 +116,11 @@ function resolveBase() {
 }
 
 function readBuiltBundle(checkoutDir) {
+  const reactDir = REACT_DIRECTORIES.map((directory) => path.join(checkoutDir, directory))
+    .find((directory) => fs.existsSync(directory));
   return (file) => {
-    const bundlePath = path.join(checkoutDir, reactDir, file);
-    return fs.existsSync(bundlePath) ? fs.readFileSync(bundlePath) : null;
+    const bundlePath = reactDir ? path.join(reactDir, file) : null;
+    return bundlePath && fs.existsSync(bundlePath) ? fs.readFileSync(bundlePath) : null;
   };
 }
 

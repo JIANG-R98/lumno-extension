@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { extensionFilePath } = require('../../scripts/build/extension-output');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript } = require('./module-script');
 const { trackPageTimers } = require('./page-timers');
@@ -167,7 +168,7 @@ async function createNewtabPage(options) {
       }
       throw new Error(`network disabled: ${url}`);
     }
-    const file = path.join(repoRoot, decodeURIComponent(parsed.pathname));
+    const file = extensionFilePath(decodeURIComponent(parsed.pathname));
     if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) {
       return { ok: false, status: 404, json: async () => ({}), text: async () => '' };
     }

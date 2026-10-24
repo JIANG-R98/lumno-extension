@@ -1,12 +1,12 @@
 'use strict';
 
-// End-to-end flows in a real headless Chrome with this checkout loaded as an
-// unpacked extension. Needs a built checkout (npm run build) and a local
-// Chrome (see browser.js for where it is looked for).
+// End-to-end flows in a real headless Chrome with the development build
+// (dist/chrome/, npm run build) loaded as an unpacked extension. Needs a
+// local Chrome (see browser.js for where it is looked for).
 //
 //   npm run test:e2e
 //   npm run test:e2e -- overlay-search tab-switcher   (some flows)
-//   npm run test:e2e -- --extension=dist/unpacked     (an unpacked package)
+//   npm run test:e2e -- --extension=<dir>            (another unpacked build)
 //   LUMNO_E2E_CHROME=/path/to/chrome npm run test:e2e
 
 const path = require('path');
@@ -14,11 +14,12 @@ require('../../scripts/node/register-typescript');
 const { launchBrowser } = require('./browser');
 const { startFixtureServer } = require('./fixtures');
 const FLOWS = require('./flows');
+const { EXTENSION_OUTPUT } = require('../../scripts/build/extension-output');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 
 function parseArguments(argv) {
-  let extensionPath = repoRoot;
+  let extensionPath = path.join(repoRoot, EXTENSION_OUTPUT);
   const names = [];
   argv.forEach((argument) => {
     if (argument.startsWith('--extension=')) {

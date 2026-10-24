@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { extensionFilePath } = require('../../scripts/build/extension-output');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript } = require('./module-script');
 const { getInjectedFiles } = require('./runtime-scripts');
@@ -219,7 +220,7 @@ async function createOverlayPage(options) {
   window.fetch = async (url) => {
     const parsed = new URL(url);
     assert.strictEqual(parsed.protocol, 'chrome-extension:', 'the overlay test must only read packaged resources');
-    const resource = fs.readFileSync(path.join(repoRoot, parsed.pathname), 'utf8');
+    const resource = fs.readFileSync(extensionFilePath(parsed.pathname), 'utf8');
     return { ok: true, json: async () => JSON.parse(resource), text: async () => resource };
   };
 
@@ -227,7 +228,7 @@ async function createOverlayPage(options) {
     const bundle = file.match(/^build\/([\w-]+)\.js$/);
     const source = bundle
       ? bundleScript(bundle[1], bundle[1] === 'overlay' ? { 'src/overlay/runtime.ts': 'LumnoOverlayRuntime' } : null)
-      : fs.readFileSync(path.join(repoRoot, file), 'utf8');
+      : fs.readFileSync(extensionFilePath(file), 'utf8');
     window.eval(`${source}\n//# sourceURL=${file}`);
   };
   if (config.stylesheetsLoad) {

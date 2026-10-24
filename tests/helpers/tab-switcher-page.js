@@ -6,18 +6,17 @@
 // and the switcher's closed shadow root is kept so tests can read its cards.
 
 const fs = require('fs');
-const path = require('path');
+const { extensionFilePath } = require('../../scripts/build/extension-output');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript, moduleScript } = require('./module-script');
 const { trackListeners } = require('./trusted-events');
 const { trackPageTimers } = require('./page-timers');
 const { parseCss } = require('./css-rules');
 
-const repoRoot = path.resolve(__dirname, '..', '..');
 const HOST_ID = '_x_extension_tab_switcher_host_2026_unique_';
 const PANEL_ID = '_x_extension_tab_switcher_panel_2026_unique_';
 const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
-const overlayIslandsSource = fs.readFileSync(path.join(repoRoot, 'src/react/overlay-islands.js'), 'utf8');
+const overlayIslandsSource = fs.readFileSync(extensionFilePath('src/react/overlay-islands.js'), 'utf8');
 
 function createChromeEvent() {
   const listeners = [];

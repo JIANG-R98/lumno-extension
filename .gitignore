@@ -1,7 +1,5 @@
 # Dependencies and build output
 node_modules/
-/build/
-/src/react/
 dist/
 coverage/
 

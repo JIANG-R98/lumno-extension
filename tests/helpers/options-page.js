@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { extensionFilePath } = require('../../scripts/build/extension-output');
 const esbuild = require('esbuild');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript } = require('./module-script');
@@ -24,7 +25,7 @@ function reactEntryScript(file) {
   if (!reactEntryCache.has(file)) {
     const result = esbuild.buildSync({
       absWorkingDir: repoRoot,
-      entryPoints: [path.join(repoRoot, file)],
+      entryPoints: [extensionFilePath(file)],
       bundle: true,
       format: 'iife',
       target: ['chrome110'],
@@ -236,7 +237,7 @@ async function createOptionsPage(options) {
     if (parsed.protocol !== 'chrome-extension:') {
       throw new Error(`network disabled: ${url}`);
     }
-    const file = path.join(repoRoot, decodeURIComponent(parsed.pathname));
+    const file = extensionFilePath(decodeURIComponent(parsed.pathname));
     if (!fs.existsSync(file)) {
       return { ok: false, status: 404, json: async () => ({}), text: async () => '' };
     }

@@ -1,14 +1,13 @@
 const assert = require('assert');
 const fs = require('fs');
-const path = require('path');
+const { extensionFilePath } = require('../../scripts/build/extension-output');
 
 // THIRD_PARTY_NOTICES.md is the index of every third-party license the store
 // package ships. A moved license file, a bundled dependency without its
 // license text or a vendored upgrade the notices miss would ship a package
 // that no longer carries the notices its licenses require.
 
-const repoRoot = path.join(__dirname, '..', '..');
-const read = (file) => fs.readFileSync(path.join(repoRoot, file), 'utf8');
+const read = (file) => fs.readFileSync(extensionFilePath(file), 'utf8');
 
 const notices = read('THIRD_PARTY_NOTICES.md');
 
@@ -17,7 +16,7 @@ const linkTargets = [...notices.matchAll(/\]\(([^)#]+)\)/g)]
   .filter((target) => !/^https?:/.test(target));
 assert(linkTargets.length > 0, 'THIRD_PARTY_NOTICES.md should link to the license files');
 linkTargets.forEach((target) => {
-  assert(fs.existsSync(path.join(repoRoot, target)), `THIRD_PARTY_NOTICES.md links to missing ${target}`);
+  assert(fs.existsSync(extensionFilePath(target)), `THIRD_PARTY_NOTICES.md links to missing ${target}`);
 });
 
 const generatedLicenseFiles = [

@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { extensionFilePath } = require('../../scripts/build/extension-output');
 const { JSDOM } = require('jsdom');
 const { parseCss } = require('../helpers/css-rules');
 const { readPageSource } = require('../helpers/page-source');
@@ -23,25 +24,16 @@ const overlaySuggestionsCss = fs.readFileSync(
 );
 const bootstrapPath = path.join(repoRoot, 'src/shared/react-page-bootstrap.ts');
 const bootstrap = fs.readFileSync(bootstrapPath, 'utf8');
-const newtabBundlePath = path.join(
-  repoRoot,
-  'src/react/newtab-islands.js'
-);
-const optionsBundlePath = path.join(repoRoot, 'src/react/options-islands.js');
-const onboardingBundlePath = path.join(
-  repoRoot,
-  'src/react/onboarding-islands.js'
-);
-const overlayBundlePath = path.join(repoRoot, 'src/react/overlay-islands.js');
-const popupBundlePath = path.join(repoRoot, 'src/react/popup-islands.js');
+const newtabBundlePath = extensionFilePath('src/react/newtab-islands.js');
+const optionsBundlePath = extensionFilePath('src/react/options-islands.js');
+const onboardingBundlePath = extensionFilePath('src/react/onboarding-islands.js');
+const overlayBundlePath = extensionFilePath('src/react/overlay-islands.js');
+const popupBundlePath = extensionFilePath('src/react/popup-islands.js');
 const popupBundle = fs.readFileSync(popupBundlePath, 'utf8');
 const popupHtml = readPageSource('src/popup/popup.html');
-const sharedBundlePath = path.join(repoRoot, 'src/react/react-shared.js');
-const tabSwitcherSharedBundlePath = path.join(
-  repoRoot,
-  'src/react/tab-switcher-shared.js'
-);
-const runtimeBundlePath = path.join(repoRoot, 'src/react/react-runtime.js');
+const sharedBundlePath = extensionFilePath('src/react/react-shared.js');
+const tabSwitcherSharedBundlePath = extensionFilePath('src/react/tab-switcher-shared.js');
+const runtimeBundlePath = extensionFilePath('src/react/react-runtime.js');
 const newtabBundle = fs.readFileSync(newtabBundlePath, 'utf8');
 const optionsBundle = fs.readFileSync(optionsBundlePath, 'utf8');
 const onboardingBundle = fs.readFileSync(onboardingBundlePath, 'utf8');

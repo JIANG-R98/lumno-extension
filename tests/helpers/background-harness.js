@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { extensionFilePath } = require('../../scripts/build/extension-output');
 const vm = require('vm');
 const { moduleScript } = require('./module-script');
 
@@ -413,7 +414,7 @@ function loadBackground(options) {
   context.self = context;
   const runFile = (file) => {
     const filePath = String(file).startsWith(`${EXTENSION_ORIGIN}/`)
-      ? path.join(repoRoot, String(file).slice(EXTENSION_ORIGIN.length + 1))
+      ? extensionFilePath(String(file).slice(EXTENSION_ORIGIN.length + 1))
       : String(file);
     vm.runInContext(fs.readFileSync(filePath, 'utf8'), context, {
       filename: String(file)

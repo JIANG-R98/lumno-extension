@@ -7,10 +7,9 @@
     "node": "22.x"
   },
   "scripts": {
-    "build": "npm run build:react && npm run build:bundles",
+    "build": "npm run build:static && npm run build:react && npm run build:bundles",
     "build:react": "vite build --config vite.config.mjs && vite build --config vite.overlay.config.mjs",
     "build:bundles": "node scripts/build/build-bundles.js",
-    "watch:bundles": "node scripts/build/build-bundles.js --watch",
     "typecheck": "tsc --project tsconfig.json --noEmit && npm run typecheck:react",
     "typecheck:react": "tsc --project tsconfig.react.json --noEmit",
     "test": "npm run build && npm run test:legacy && npm run test:react",
@@ -20,7 +19,7 @@
     "test:e2e": "node tests/e2e/run.js",
     "check": "npm run build && npm run check:static",
     "check:static": "npm run check:js && npm run check:names && npm run check:locales && npm run typecheck && npm run check:react-bundle && npm run check:manifest && npm run lint",
-    "check:react-bundle": "node --check src/react/newtab-islands.js && node --check src/react/options-islands.js && node --check src/react/onboarding-islands.js && node --check src/react/overlay-islands.js && node --check src/react/popup-islands.js && node --check src/react/react-shared.js && node --check src/react/tab-switcher-shared.js && node --check src/react/react-runtime.js && node --check src/react/rolldown-runtime.js",
+    "check:react-bundle": "node --check dist/chrome/src/react/newtab-islands.js && node --check dist/chrome/src/react/options-islands.js && node --check dist/chrome/src/react/onboarding-islands.js && node --check dist/chrome/src/react/overlay-islands.js && node --check dist/chrome/src/react/popup-islands.js && node --check dist/chrome/src/react/react-shared.js && node --check dist/chrome/src/react/tab-switcher-shared.js && node --check dist/chrome/src/react/react-runtime.js && node --check dist/chrome/src/react/rolldown-runtime.js",
     "check:js": "node scripts/check/check-js-syntax.js",
     "check:names": "node scripts/check/check-undefined-names.js",
     "check:locales": "node scripts/check/check-locales.js",
@@ -33,11 +32,13 @@
     "audit:i18n": "node scripts/check/audit-i18n.js",
     "profile:newtab-data": "node --expose-gc scripts/dev/profile-newtab-data-performance.js",
     "e2e:shortcut-groups": "node scripts/dev/e2e-newtab-shortcut-groups.js",
-    "smoke": "npm run build:bundles && node tests/e2e/run.js surfaces",
+    "smoke": "npm run build && node tests/e2e/run.js surfaces",
     "cleanup:browsers": "node scripts/dev/cleanup-test-browsers.js",
-    "package:store": "npm run check:locales:strict && npm run build:react && node scripts/build/package-store.js",
+    "package:store": "npm run check:locales:strict && npm run build && node scripts/build/package-store.js",
     "package:firefox": "npm run package:store && node scripts/build/build-firefox.js",
-    "lint:firefox": "npx --yes web-ext@latest lint -s dist/firefox"
+    "lint:firefox": "npx --yes web-ext@latest lint -s dist/firefox",
+    "build:static": "node scripts/build/build-static.js",
+    "watch": "node scripts/build/watch.js"
   },
   "dependencies": {
     "@number-flow/react": "^0.6.2",

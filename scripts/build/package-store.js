@@ -3,29 +3,15 @@ const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { BUNDLE_DIRECTORY } = require('./bundles');
+const { EXTENSION_OUTPUT, EXTENSION_ROOTS, copyExtensionFiles, extensionOutputPath } = require('./extension-output');
+const { chromeManifest, writeManifest } = require('./manifests');
 
-const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
-const storeManifest = { ...manifest };
-delete storeManifest.key;
-const version = manifest.version;
+const storeManifest = chromeManifest({ store: true });
+const version = storeManifest.version;
 const repoRoot = process.cwd();
 const distDir = path.join(process.cwd(), 'dist');
 const zipPath = path.join(distDir, `lumno-store-v${version}.zip`);
-const packageRoots = [
-  'src',
-  '_locales',
-  'assets',
-  'newtab.html',
-  // The GPL and the third-party licenses travel with every copy.
-  'LICENSE',
-  'THIRD_PARTY_NOTICES.md'
-];
-// Scripts pages and content scripts load by URL; every other script in src/
-// runs from a bundle.
-const sourceRuntimeScripts = new Set([
-  'src/shared/search/search-han-variants.js',
-  'src/content/youtube-auto-pip-page.js'
-]);
+const packageRoots = EXTENSION_ROOTS;
 const forbiddenPattern = /(^|\/)(\.git|\.github|\.vscode|node_modules)(\/|$)|(^|\/)(README\.md|AGENTS\.md|\.DS_Store|package-lock\.json|package\.json)$|^assets\/images\/readme\//;
 
 fs.mkdirSync(distDir, { recursive: true });
@@ -58,31 +44,16 @@ function packagePathForFile(file) {
   return normalizePackagePath(path.relative(packageStageDir, file));
 }
 
-function shouldCopyPackagePath(sourcePath) {
-  const packagePath = normalizePackagePath(path.relative(repoRoot, sourcePath));
-  // TypeScript sources only reach the package through the bundles.
-  if (packagePath.startsWith('src/') && /\.tsx?$/.test(packagePath)) {
-    return false;
-  }
-  if (packagePath.startsWith('src/') && packagePath.endsWith('.js') &&
-      !packagePath.startsWith('src/react/') && !sourceRuntimeScripts.has(packagePath)) {
-    return false;
-  }
-  // src/package.json only tells Node that the sources are ES modules.
-  if (path.basename(sourcePath) === '.DS_Store' || packagePath === 'src/package.json') {
-    return false;
-  }
-  return packagePath !== 'assets/images/readme' &&
-    !packagePath.startsWith('assets/images/readme/');
+// The package holds what the development build has, with the React islands
+// it built (Vite minifies them either way) and minified bundles of its own.
+const builtReact = extensionOutputPath('src/react');
+if (!fs.existsSync(builtReact)) {
+  console.error(`Missing ${EXTENSION_OUTPUT}/src/react/; run npm run build first.`);
+  process.exit(1);
 }
-
-packageRoots.forEach((packageRoot) => {
-  fs.cpSync(path.join(repoRoot, packageRoot), stagedPath(packageRoot), {
-    recursive: true,
-    filter: shouldCopyPackagePath
-  });
-});
-fs.writeFileSync(stagedPath('manifest.json'), `${JSON.stringify(storeManifest, null, 2)}\n`);
+copyExtensionFiles(packageStageDir);
+fs.cpSync(builtReact, stagedPath('src/react'), { recursive: true });
+writeManifest(packageStageDir, storeManifest);
 
 // The store builds its own bundles, minified.
 const bundleBuild = spawnSync(process.execPath, [

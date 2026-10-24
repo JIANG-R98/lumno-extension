@@ -1,9 +1,12 @@
 const fs = require('fs');
 const path = require('path');
+const { EXTENSION_OUTPUT } = require('../build/extension-output');
 const WebSocket = require('ws');
 const { findChrome, launchChrome } = require('./chrome-launcher.js');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
+// The development build (npm run build).
+const extensionDir = path.join(repoRoot, EXTENSION_OUTPUT);
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -175,8 +178,8 @@ async function run() {
 
   try {
     const chromeArgs = [
-      `--disable-extensions-except=${repoRoot}`,
-      `--load-extension=${repoRoot}`,
+      `--disable-extensions-except=${extensionDir}`,
+      `--load-extension=${extensionDir}`,
       '--remote-debugging-port=0',
       '--no-first-run',
       '--no-default-browser-check',

@@ -25,16 +25,18 @@ npm run build
 ```
 
 Then open `chrome://extensions/`, turn on Developer mode, choose
-**Load unpacked** and select the repository root. To try the Firefox build, see
+**Load unpacked** and select `dist/chrome`, the development extension the
+build writes. To try the Firefox build, see
 the Development section of the [README](../README.md#development).
 
-`npm run build` writes two folders that are build output and never committed:
+`dist/chrome/` is build output and never committed. It holds the pages,
+styles, assets and locales copied as they are, and two built folders:
 
-- `build/`: Rolldown bundles of the scripts in `src/`. While you edit `src/`,
-  `npm run watch:bundles` rebuilds them on every change.
+- `build/`: Rolldown bundles of the scripts in `src/`.
 - `src/react/`: the React islands, built by Vite from the `react/` folders in
-  `src/` (`src/newtab/react/`, `src/shared/react/`, ...). Run
-  `npm run build:react` after editing them.
+  `src/` (`src/newtab/react/`, `src/shared/react/`, ...).
+
+While you work, `npm run watch` keeps `dist/chrome/` current as you edit.
 
 After a rebuild, click Reload on the extensions page, then reload the pages you
 are testing.

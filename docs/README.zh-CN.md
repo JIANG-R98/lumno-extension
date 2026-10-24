@@ -147,7 +147,7 @@ Firefox 已占用 `Cmd+Shift+K` / `Ctrl+Shift+K` 等按键，因此 Firefox 版�
 1. 克隆或下载本仓库。
 2. 运行 `npm ci` 和 `npm run build`（见[开发](#开发)）。
 3. 打开 `chrome://extensions/` 或对应 Chromium 浏览器的扩展管理页，开启「开发者模式」。
-4. 点击「加载已解压的扩展程序」，选择仓库根目录。
+4. 点击「加载已解压的扩展程序」，选择构建生成的 `dist/chrome` 目录。
 5. 可选：进入扩展设置页，调整语言、主题、新标签页内容、站内搜索、黑名单、PiP 和快捷键策略。
 
 如果需要在本地 HTML、PDF 或 `file://` 页面使用命令栏，请在扩展详情页开启「允许访问文件网址」。
@@ -211,16 +211,16 @@ WebDAV 为 Beta 功能，入口在「设置 → 账号与同步」。添加连�
 
 开发和 CI 使用 Node.js 22。如果使用 `nvm`，运行 `nvm use` 即可切换到 `.nvmrc` 中声明的版本。
 
-Chrome 加载的是构建后的脚本：`npm run build` 会用 Vite 把 React 岛构建到 `src/react/`，并用 Rolldown（Vite 底层的打包器）把扩展运行的所有脚本打包到 `build/`，这两个目录都不提交。首次加载开发版，以及修改 `src/` 后，请运行：
+Chrome 加载的是构建后的扩展：`npm run build` 会把它写到 `dist/chrome/`（不提交）。页面、样式、资源和语言文件原样复制，React 岛用 Vite 构建到其中的 `src/react/`，扩展运行的所有脚本用 Rolldown（Vite 底层的打包器）打包到其中的 `build/`，`manifest.json` 由仓库里的同名文件生成。该目录保持与仓库相同的结构，因此页面 URL 与商店包一致。首次加载开发版前，请运行：
 
 ```bash
 npm ci
 npm run build
 ```
 
-`src/` 下的脚本都是 TypeScript ES 模块（尚未补类型的文件以 `// @ts-nocheck` 开头），各自 import 所需的模块；每个包包含 `scripts/build/bundles.js` 为它列出的模块及其全部依赖。修改 `src/` 期间可以运行 `npm run watch:bundles`，每次改动都会重新打包。
+`src/` 下的脚本都是 TypeScript ES 模块（尚未补类型的文件以 `// @ts-nocheck` 开头），各自 import 所需的模块；每个包包含 `scripts/build/bundles.js` 为它列出的模块及其全部依赖。开发期间运行 `npm run watch` 可保持 `dist/chrome/` 最新：每次改动都会复制变更的文件，并重新构建 React 岛和脚本包。
 
-然后在 `chrome://extensions/` 中保持「开发者模式」开启，并将仓库根目录作为已解压扩展加载。生成新产物，或修改后台脚本、`manifest.json` 后，请在扩展管理页手动点击「重新加载」。开发版不会在 Chrome 用户配置启动时主动二次刷新，以免中断启动阶段的新标签页接管。
+然后在 `chrome://extensions/` 中保持「开发者模式」开启，并将 `dist/chrome` 作为已解压扩展加载。生成新产物，或修改后台脚本、`manifest.json` 后，请在扩展管理页手动点击「重新加载」。开发版不会在 Chrome 用户配置启动时主动二次刷新，以免中断启动阶段的新标签页接管。
 
 提交 Pull Request 前请运行 `npm run verify`。它会构建扩展，并运行 Node 和 React 两套测试、静态检查和 ESLint，与 CI 一致。开发过程中可以只运行其中一部分：
 
@@ -250,12 +250,12 @@ npm run lint
 | `src/domain/` | 不访问浏览器和 DOM 的纯逻辑：设置键与规范化、路由、搜索排序与匹配（`search/`）、favicon 规则、快捷方式与最近访问存储 |
 | `src/platform/` | 浏览器与扩展 API 的封装：浏览器识别、URL 守卫 |
 | `src/shared/` | 多个界面共用的 UI 与页面运行时：`search/`（输入与建议）、`ui/`（提示、Toast、菜单与控件样式）、`favicon/`、预加载脚本 |
-| `src/*/react/` | 各界面的 React 视图，构建产物输出到 `src/react/`；多个页面共用的在 `src/shared/react/` |
+| `src/*/react/` | 各界面的 React 视图，构建产物输出到 `dist/chrome/src/react/`；多个页面共用的在 `src/shared/react/` |
 | `_locales/` | 扩展 UI 文案 |
 | `assets/data/` | 内置站内搜索和浏览器快捷入口数据 |
 | `assets/wallpapers/` | 新标签页内置壁纸与缩略图 |
 | `tests/` | 按区域划分的 Node 回归测试（`tests/<区域>/test-*.js`，共用 `tests/helpers/`）；`npm run test:legacy -- <过滤词>` 只跑部分测试 |
-| `scripts/` | 按用途划分的工具：`build/`（打包）、`check/`（静态检查与审计）、`dev/`（冒烟、e2e、性能剖析）、`release/`（商店提交） |
+| `scripts/` | 按用途划分的工具：`build/`（打包）、`check/`（静态检查与审计）、`dev/`（e2e 试验、性能剖析）、`release/`（商店提交） |
 
 ## 参与贡献
 

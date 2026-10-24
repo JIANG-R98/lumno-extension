@@ -12,12 +12,15 @@
 // Not part of `npm test`: it needs a Chromium build that loads extensions
 // (Chrome for Testing or Chromium; branded Chrome refuses --load-extension).
 const path = require('path');
+const { EXTENSION_OUTPUT } = require('../build/extension-output');
 const WebSocket = require('ws');
 require('../node/register-typescript');
 const shortcutsStore = require('../../src/domain/shortcuts-store.ts');
 const { findChrome, launchChrome } = require('./chrome-launcher.js');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
+// The development build (npm run build).
+const extensionDir = path.join(repoRoot, EXTENSION_OUTPUT);
 const EXTENSION_ID = 'kkcjcneagmlhpeaafngjdlpcfjakejgb';
 const NEWTAB_URL = `chrome-extension://${EXTENSION_ID}/newtab.html`;
 const TOLERANCE_PX = 0.75;
@@ -73,8 +76,8 @@ async function launchBrowser() {
     profileName: 'e2e',
     args: [
       '--headless=new',
-      `--load-extension=${repoRoot}`,
-      `--disable-extensions-except=${repoRoot}`,
+      `--load-extension=${extensionDir}`,
+      `--disable-extensions-except=${extensionDir}`,
       `--remote-debugging-port=${port}`,
       '--no-first-run',
       '--no-default-browser-check',

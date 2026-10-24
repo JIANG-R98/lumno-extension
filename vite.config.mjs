@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { extensionOutputPath } from './scripts/build/extension-output.js';
 
 // The page entries a module is reachable from, following static and dynamic
 // importers up the graph.
@@ -34,7 +35,7 @@ export default defineConfig({
   },
   build: {
     target: 'chrome110',
-    outDir: resolve(repoRoot, 'src/react'),
+    outDir: extensionOutputPath('src/react'),
     emptyOutDir: true,
     copyPublicDir: false,
     sourcemap: false,
