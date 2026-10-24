@@ -1,81 +1,43 @@
 // @ts-nocheck
-import * as SETTINGS from '../domain/settings';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
+// The "updated to vX" notice under the search box of New Tab and the overlay.
+// Its data (the published notice, the setting, display counts) lives in
+// platform/update-notice.ts, re-exported here for the surfaces.
 import * as LumnoFeatureHints from './ui/feature-hints';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
+import {
+  UPDATE_NOTICE_STORAGE_KEY,
+  UPDATE_NOTICE_ENABLED_STORAGE_KEY,
+  UPDATE_NOTICE_DISPLAY_COUNT_STORAGE_PREFIX,
+  UPDATE_NOTICE_MAX_DISPLAY_COUNT,
+  RELEASE_DETAILS_URL,
+  GITHUB_RELEASE_API_URL,
+  GITHUB_RELEASE_PAGE_URL,
+  normalizeVersionTag,
+  formatVersionLabel,
+  getReleaseTagCandidates,
+  sanitizeText,
+  extractReleaseTitleFromHtml,
+  getCurrentVersionTag,
+  buildReleaseDetailsUrl,
+  normalizeUpdateNoticePayload,
+  shouldShowUpdateNotice,
+  normalizeUpdateNoticeEnabled,
+  getDomIdPart,
+  getUpdateNoticeDisplayCountKey,
+  normalizeUpdateNoticeDisplayCount,
+  getStoredUpdateNotice,
+  getStoredUpdateNoticeEnabled,
+  getStoredUpdateNoticeDisplayCount,
+  setStoredUpdateNotice,
+  fetchReleaseTitle,
+  publishUpdateNotice
+} from '../platform/update-notice';
 
-const UPDATE_NOTICE_STORAGE_KEY = '_x_lumno_update_notice_2026_unique_';
-const UPDATE_NOTICE_ENABLED_STORAGE_KEY = SETTINGS.UPDATE_NOTICE_ENABLED_STORAGE_KEY ||
-  '_x_extension_update_notice_enabled_2026_unique_';
-const UPDATE_NOTICE_DISPLAY_COUNT_STORAGE_PREFIX =
-  '_x_lumno_update_notice_display_count_2026_';
-const UPDATE_NOTICE_MAX_DISPLAY_COUNT = 3;
 const UPDATE_NOTICE_ID = 'update-notice';
-const RELEASE_DETAILS_URL = 'https://lumno.kubai.design/release/';
-const GITHUB_RELEASE_API_URL = 'https://api.github.com/repos/kubai087/lumno-extension/releases/tags/';
-const GITHUB_RELEASE_PAGE_URL = 'https://github.com/kubai087/lumno-extension/releases/tag/';
 
-function normalizeVersionTag(value) {
-  const raw = String(value || '').trim();
-  if (!raw) {
-    return '';
-  }
-  return /^v/i.test(raw) ? `v${raw.slice(1)}` : `v${raw}`;
-}
-
-function formatVersionLabel(value) {
-  return normalizeVersionTag(value).replace(/^v/i, '');
-}
-
-function getReleaseTagCandidates(value) {
-  const raw = String(value || '').trim();
-  const normalized = normalizeVersionTag(raw);
-  const bare = formatVersionLabel(raw);
-  return [raw, normalized, bare].filter((candidate, index, list) => (
-    candidate && list.indexOf(candidate) === index
-  ));
-}
-
-function sanitizeText(value) {
-  return String(value || '')
-    .replace(/[\u0000-\u001F\u007F-\u009F\uFEFF\uFFF9-\uFFFD]|\p{Co}/gu, '')
-    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function decodeHtmlEntities(value) {
-  return String(value || '')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>');
-}
-
-function stripHtmlTags(value) {
-  return decodeHtmlEntities(String(value || '').replace(/<[^>]*>/g, ' '));
-}
-
-function extractReleaseTitleFromHtml(html) {
-  const source = String(html || '');
-  const titleMatch = source.match(/<title>\s*Release\s+([\s\S]*?)\s+·\s+[^<]*?GitHub\s*<\/title>/i);
-  if (titleMatch) {
-    return sanitizeText(stripHtmlTags(titleMatch[1]));
-  }
-  const ogTitleMatch = source.match(/<meta\b[^>]*property=["']og:title["'][^>]*content=["']Release\s+([^"']+?)\s+·\s+[^"']*["'][^>]*>/i);
-  if (ogTitleMatch) {
-    return sanitizeText(stripHtmlTags(ogTitleMatch[1]));
-  }
-  const h1Match = source.match(/<h1\b[^>]*class=["'][^"']*\bd-inline\b[^"']*["'][^>]*>([\s\S]*?)<\/h1>/i);
-  return h1Match ? sanitizeText(stripHtmlTags(h1Match[1])) : '';
-}
-
-function getCurrentVersionTag(chromeApi) {
+function getStorageRuntime(chromeApi) {
   const api = chromeApi || (globalThis && globalThis.chrome) || null;
-  const version = api && api.runtime && typeof api.runtime.getManifest === 'function'
-    ? String((api.runtime.getManifest() || {}).version || '').trim()
-    : '';
-  return normalizeVersionTag(version);
+  return LumnoSettingsStorage.createProviderStorageRuntime(api);
 }
 
 function formatTemplate(template, params) {
@@ -88,68 +50,6 @@ function formatTemplate(template, params) {
 
 function stripBadgeButterfly(value) {
   return String(value || '').replace(/^(?:\s*🦋\s*)+/u, '').trim();
-}
-
-function buildReleaseDetailsUrl(versionTag, options) {
-  const params = new URLSearchParams();
-  params.set('entry', 'ext');
-  const reason = options && typeof options.reason === 'string'
-    ? String(options.reason).trim().toLowerCase()
-    : '';
-  if (reason) {
-    params.set('reason', reason);
-  }
-  const normalizedVersion = normalizeVersionTag(versionTag);
-  if (normalizedVersion) {
-    params.set('version', normalizedVersion);
-  }
-  return `${RELEASE_DETAILS_URL}?${params.toString()}`;
-}
-
-function normalizeUpdateNoticePayload(payload) {
-  const source = payload && typeof payload === 'object' ? payload : {};
-  const version = normalizeVersionTag(source.version);
-  if (!version) {
-    return null;
-  }
-  const reason = String(source.reason || 'update').trim().toLowerCase() || 'update';
-  const releaseUrl = String(source.releaseUrl || '').trim() || buildReleaseDetailsUrl(version, { reason });
-  return {
-    version,
-    previousVersion: normalizeVersionTag(source.previousVersion),
-    title: sanitizeText(source.title || source.releaseTitle || ''),
-    releaseUrl,
-    reason,
-    updatedAt: Number(source.updatedAt) || 0
-  };
-}
-
-function shouldShowUpdateNotice(payload, currentVersion) {
-  const notice = normalizeUpdateNoticePayload(payload);
-  const currentVersionTag = normalizeVersionTag(currentVersion);
-  return Boolean(
-    notice &&
-    currentVersionTag &&
-    notice.version === currentVersionTag &&
-    notice.reason === 'update'
-  );
-}
-
-function normalizeUpdateNoticeEnabled(value) {
-  return typeof SETTINGS.normalizeUpdateNoticeEnabled === 'function'
-    ? SETTINGS.normalizeUpdateNoticeEnabled(value)
-    : value !== false;
-}
-
-function getStorageRuntime(chromeApi) {
-  const api = chromeApi || (globalThis && globalThis.chrome) || null;
-  return LumnoSettingsStorage.createProviderStorageRuntime(api);
-}
-
-function getDomIdPart(id) {
-  return String(id || 'update-notice')
-    .replace(/[^a-z0-9]+/gi, '_')
-    .replace(/^_+|_+$/g, '') || 'update_notice';
 }
 
 function createUpdateNoticeDefinition(versionTag, options) {
@@ -191,187 +91,6 @@ function getUpdateNoticeDismissKey(featureHints, versionTag) {
   const idPart = getDomIdPart(definition.id);
   const versionPart = getDomIdPart(definition.introducedIn || 'unversioned');
   return `_x_lumno_feature_hint_sync_dismissed_2026_${idPart}_${versionPart}`;
-}
-
-function getUpdateNoticeDisplayCountKey(versionTag) {
-  const versionPart = getDomIdPart(normalizeVersionTag(versionTag) || 'unversioned');
-  return `${UPDATE_NOTICE_DISPLAY_COUNT_STORAGE_PREFIX}${versionPart}`;
-}
-
-function normalizeUpdateNoticeDisplayCount(value) {
-  const count = Number(value);
-  if (!Number.isFinite(count)) {
-    return 0;
-  }
-  return Math.min(UPDATE_NOTICE_MAX_DISPLAY_COUNT, Math.max(0, Math.floor(count)));
-}
-
-function getStoredUpdateNotice(chromeApi) {
-  const storageRuntime = getStorageRuntime(chromeApi);
-  return new Promise((resolve) => {
-    if (!storageRuntime.area || typeof storageRuntime.area.get !== 'function') {
-      resolve(null);
-      return;
-    }
-    try {
-      storageRuntime.area.get([UPDATE_NOTICE_STORAGE_KEY], (result) => {
-        const api = chromeApi || (globalThis && globalThis.chrome) || null;
-        const runtimeError = api && api.runtime ? api.runtime.lastError : null;
-        resolve(runtimeError ? null : normalizeUpdateNoticePayload(result && result[UPDATE_NOTICE_STORAGE_KEY]));
-      });
-    } catch (e) {
-      resolve(null);
-    }
-  });
-}
-
-function getStoredUpdateNoticeEnabled(chromeApi) {
-  const storageRuntime = getStorageRuntime(chromeApi);
-  return new Promise((resolve) => {
-    if (!storageRuntime.area || typeof storageRuntime.area.get !== 'function') {
-      resolve(normalizeUpdateNoticeEnabled(undefined));
-      return;
-    }
-    try {
-      storageRuntime.area.get([UPDATE_NOTICE_ENABLED_STORAGE_KEY], (result) => {
-        const api = chromeApi || (globalThis && globalThis.chrome) || null;
-        const runtimeError = api && api.runtime ? api.runtime.lastError : null;
-        resolve(runtimeError
-          ? normalizeUpdateNoticeEnabled(undefined)
-          : normalizeUpdateNoticeEnabled(result && result[UPDATE_NOTICE_ENABLED_STORAGE_KEY]));
-      });
-    } catch (e) {
-      resolve(normalizeUpdateNoticeEnabled(undefined));
-    }
-  });
-}
-
-function getStoredUpdateNoticeDisplayCount(chromeApi, versionTag) {
-  const storageRuntime = getStorageRuntime(chromeApi);
-  const displayCountKey = getUpdateNoticeDisplayCountKey(versionTag);
-  return new Promise((resolve) => {
-    if (!storageRuntime.area || typeof storageRuntime.area.get !== 'function') {
-      resolve(0);
-      return;
-    }
-    try {
-      storageRuntime.area.get([displayCountKey], (result) => {
-        const api = chromeApi || (globalThis && globalThis.chrome) || null;
-        const runtimeError = api && api.runtime ? api.runtime.lastError : null;
-        resolve(runtimeError
-          ? 0
-          : normalizeUpdateNoticeDisplayCount(result && result[displayCountKey]));
-      });
-    } catch (e) {
-      resolve(0);
-    }
-  });
-}
-
-function setStoredUpdateNotice(chromeApi, payload, callback) {
-  const storageRuntime = getStorageRuntime(chromeApi);
-  const notice = normalizeUpdateNoticePayload(payload);
-  if (!notice || !storageRuntime.area || typeof storageRuntime.area.set !== 'function') {
-    if (typeof callback === 'function') {
-      callback(false);
-    }
-    return;
-  }
-  try {
-    storageRuntime.area.set({ [UPDATE_NOTICE_STORAGE_KEY]: notice }, () => {
-      const api = chromeApi || (globalThis && globalThis.chrome) || null;
-      callback && callback(!(api && api.runtime && api.runtime.lastError));
-    });
-  } catch (e) {
-    if (typeof callback === 'function') {
-      callback(false);
-    }
-  }
-}
-
-function fetchReleaseTitle(versionTag, options) {
-  const fetchImpl = options && typeof options.fetchImpl === 'function'
-    ? options.fetchImpl
-    : (typeof fetch === 'function' ? fetch : null);
-  const normalizedVersion = normalizeVersionTag(versionTag);
-  if (!fetchImpl || !normalizedVersion) {
-    return Promise.resolve('');
-  }
-  const candidates = getReleaseTagCandidates(versionTag);
-  const headers = {
-    Accept: 'application/vnd.github+json'
-  };
-  function tryApiCandidate(index) {
-    const candidate = candidates[index];
-    if (!candidate) {
-      return Promise.resolve('');
-    }
-    return fetchImpl(`${GITHUB_RELEASE_API_URL}${encodeURIComponent(candidate)}`, { headers })
-      .then((response) => {
-        if (!response || !response.ok || typeof response.json !== 'function') {
-          return '';
-        }
-        return response.json();
-      })
-      .then((release) => {
-        const title = sanitizeText(
-          release && (release.name || release.title || release.tag_name)
-            ? (release.name || release.title || release.tag_name)
-            : ''
-        );
-        return title || tryApiCandidate(index + 1);
-      })
-      .catch(() => tryApiCandidate(index + 1));
-  }
-  function tryPageCandidate(index) {
-    const candidate = candidates[index];
-    if (!candidate) {
-      return Promise.resolve('');
-    }
-    return fetchImpl(`${GITHUB_RELEASE_PAGE_URL}${encodeURIComponent(candidate)}`)
-      .then((response) => {
-        if (!response || !response.ok || typeof response.text !== 'function') {
-          return '';
-        }
-        return response.text();
-      })
-      .then((html) => extractReleaseTitleFromHtml(html) || tryPageCandidate(index + 1))
-      .catch(() => tryPageCandidate(index + 1));
-  }
-  return tryApiCandidate(0).then((title) => title || tryPageCandidate(0));
-}
-
-function publishUpdateNotice(options, callback) {
-  const settings = options && typeof options === 'object' ? options : {};
-  const chromeApi = settings.chromeApi || (globalThis && globalThis.chrome) || null;
-  const version = normalizeVersionTag(settings.version || getCurrentVersionTag(chromeApi));
-  if (!version) {
-    if (typeof callback === 'function') {
-      callback(false);
-    }
-    return Promise.resolve(false);
-  }
-  const reason = String(settings.reason || 'update').trim().toLowerCase() || 'update';
-  const basePayload = normalizeUpdateNoticePayload({
-    version,
-    previousVersion: settings.previousVersion,
-    title: settings.title,
-    releaseUrl: settings.releaseUrl || buildReleaseDetailsUrl(version, { reason }),
-    reason,
-    updatedAt: Date.now()
-  });
-  const titlePromise = basePayload.title
-    ? Promise.resolve(basePayload.title)
-    : fetchReleaseTitle(version, settings);
-  return titlePromise.then((title) => {
-    setStoredUpdateNotice(chromeApi, Object.assign({}, basePayload, {
-      title: sanitizeText(title || basePayload.title || '')
-    }), callback);
-    return true;
-  }).catch(() => {
-    setStoredUpdateNotice(chromeApi, basePayload, callback);
-    return true;
-  });
 }
 
 function createUpdateNotice(options) {
