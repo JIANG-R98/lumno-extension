@@ -18,6 +18,8 @@ import * as FAVICON_CACHE from '../shared/favicon/favicon-cache.js';
 import * as FAVICON_UTILS from '../shared/favicon/favicon-utils.js';
 import * as SETTINGS from '../shared/settings.js';
 import * as SHORTCUT_FAVICON from '../shared/favicon/shortcut-favicon.js';
+import * as SHORTCUT_ICON_STORE from '../newtab/shortcuts/shortcut-icon-store.js';
+import * as SHORTCUTS_STORE from '../newtab/shortcuts/shortcuts-store.js';
 import {
   FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
   FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
@@ -219,6 +221,9 @@ let siteSearchIconWarmActiveCount = 0;
 const siteSearchIconWarmQueue = [];
 
 const siteSearchIconWarmPending = new Set();
+
+// The shortcut data site-search icons follow; see loadSiteSearchShortcutIconSources.
+let siteSearchShortcutIconSourcesPromise = null;
 
 export function logBlockedLocalFavicon(url, candidateKind, reason, pageUrl) {
   return logBackgroundFaviconDecision(url, reason || 'local-rule', {
@@ -904,12 +909,110 @@ function drainSiteSearchIconWarmQueue() {
   }
 }
 
+function readStorageKeys(area, keys) {
+  return new Promise((resolve, reject) => {
+    if (!area || typeof area.get !== 'function') {
+      resolve({});
+      return;
+    }
+    area.get(keys, (result) => {
+      const error = chrome.runtime && chrome.runtime.lastError;
+      if (error) {
+        reject(new Error(error.message));
+        return;
+      }
+      resolve(result || {});
+    });
+  });
+}
+
+// What site search needs from the New Tab shortcuts: the list, uploaded
+// icons, and the saved online-icon snapshots. Kept until one of them changes.
+// Resolves null when they cannot be read whole, so a bad read keeps the
+// icons already written instead of dropping them.
+function loadSiteSearchShortcutIconSources() {
+  if (siteSearchShortcutIconSourcesPromise) {
+    return siteSearchShortcutIconSourcesPromise;
+  }
+  const runtime = SETTINGS.createProviderStorageRuntime(chrome);
+  const localArea = chrome.storage && chrome.storage.local ? chrome.storage.local : null;
+  const overflowKey = SHORTCUTS_STORE.SHORTCUTS_LOCAL_OVERFLOW_KEY;
+  const loadTask = Promise.resolve(runtime.ready).then(() => {
+    const syncActive = runtime.getActiveAreaName() === 'sync';
+    return Promise.all([
+      readStorageKeys(runtime.area, SHORTCUTS_STORE.SHORTCUT_STORAGE_KEYS.slice()),
+      readStorageKeys(localArea, [
+        ...(syncActive ? [overflowKey] : []),
+        SHORTCUT_ICON_STORE.DEFAULT_STORAGE_KEY,
+        SHORTCUT_FAVICON.DEFAULT_STORAGE_KEY
+      ])
+    ]);
+  }).then(([values, localValues]) => {
+    const state = SHORTCUTS_STORE.readShortcutState(values, localValues[overflowKey]);
+    if (state.torn) {
+      return null;
+    }
+    return {
+      shortcuts: state.items,
+      shortcutIcons: SHORTCUT_ICON_STORE.normalizeIconMap(localValues[SHORTCUT_ICON_STORE.DEFAULT_STORAGE_KEY]),
+      shortcutFavicons: SHORTCUT_FAVICON.normalizeCacheMap(localValues[SHORTCUT_FAVICON.DEFAULT_STORAGE_KEY])
+    };
+  }).catch(() => null);
+  siteSearchShortcutIconSourcesPromise = loadTask;
+  // A torn or failed read is retried on the next warmup.
+  loadTask.then((sources) => {
+    if (!sources && siteSearchShortcutIconSourcesPromise === loadTask) {
+      siteSearchShortcutIconSourcesPromise = null;
+    }
+  });
+  return loadTask;
+}
+
+const SITE_SEARCH_SHORTCUT_ICON_STORAGE_KEYS = new Set([
+  ...SHORTCUTS_STORE.SHORTCUT_STORAGE_KEYS,
+  SHORTCUTS_STORE.SHORTCUTS_LOCAL_OVERFLOW_KEY,
+  SHORTCUT_ICON_STORE.DEFAULT_STORAGE_KEY,
+  SHORTCUT_FAVICON.DEFAULT_STORAGE_KEY
+]);
+
+export function isSiteSearchShortcutIconStorageChange(changes) {
+  return Object.keys(changes || {}).some((key) => SITE_SEARCH_SHORTCUT_ICON_STORAGE_KEYS.has(key));
+}
+
+export function invalidateSiteSearchShortcutIconSources() {
+  siteSearchShortcutIconSourcesPromise = null;
+}
+
+function applySiteSearchShortcutIcons(providers) {
+  return loadSiteSearchShortcutIconSources().then((sources) => {
+    if (!sources || !siteSearchIconCache) {
+      return;
+    }
+    const nextCache = SHORTCUT_FAVICON.applySiteSearchShortcutIcons(
+      siteSearchIconCache,
+      SHORTCUT_FAVICON.getSiteSearchShortcutIcons(
+        providers,
+        sources.shortcuts,
+        sources.shortcutIcons,
+        sources.shortcutFavicons
+      ),
+      Date.now(),
+      SITE_SEARCH_ICON_CACHE_OPTIONS
+    );
+    if (nextCache) {
+      siteSearchIconCache = nextCache;
+      siteSearchIconCacheRevision += 1;
+      scheduleSiteSearchIconCacheWrite();
+    }
+  });
+}
+
 export function scheduleSiteSearchProviderIconWarmup(providers, preferredTheme) {
   const items = Array.isArray(providers) ? providers : [];
   if (items.length === 0) {
     return;
   }
-  loadSiteSearchIconCache().then(() => {
+  loadSiteSearchIconCache().then(() => applySiteSearchShortcutIcons(items)).then(() => {
     pruneSiteSearchProviderIconCache(items);
     items.forEach((provider) => {
       const explicitIcon = SHORTCUT_FAVICON.getSiteSearchProviderExplicitIcon(provider);

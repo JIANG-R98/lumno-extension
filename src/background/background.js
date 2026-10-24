@@ -95,6 +95,8 @@ import {
   invalidateFaviconEnhancedFetchEnabledCache,
   invalidateFaviconRequestBlacklistCache,
   invalidateShortcutFaviconPolicyCache,
+  invalidateSiteSearchShortcutIconSources,
+  isSiteSearchShortcutIconStorageChange,
   markFaviconDirtyForUrl,
   removeLegacySiteSearchIconCaches
 } from './favicon-service.js';
@@ -1026,6 +1028,21 @@ if (chrome && chrome.tabs) {
 
 removeLegacySiteSearchIconCaches();
 warmSiteSearchProviderIcons();
+
+// Site-search icons follow the icon chosen for a home-page shortcut. One
+// shortcut save touches several keys, so they settle before the rewarm.
+let siteSearchShortcutIconRewarmTimer = null;
+chrome.storage.onChanged.addListener((changes) => {
+  if (!isSiteSearchShortcutIconStorageChange(changes)) {
+    return;
+  }
+  invalidateSiteSearchShortcutIconSources();
+  clearTimeout(siteSearchShortcutIconRewarmTimer);
+  siteSearchShortcutIconRewarmTimer = setTimeout(() => {
+    siteSearchShortcutIconRewarmTimer = null;
+    warmSiteSearchProviderIcons();
+  }, 300);
+});
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (!isPrimaryStorageAreaName(areaName)) {
