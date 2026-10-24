@@ -108,6 +108,36 @@ describe('Overlay tab switcher React island', () => {
     );
   });
 
+  it('treats a Control-held click, which macOS sends as a context menu, as a click', () => {
+    const { controller, shadow, onActivate, onClose } = createView();
+    const contextMenu = (target: Element, button: number) => {
+      const event = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        button,
+        ctrlKey: true
+      });
+      act(() => {
+        target.dispatchEvent(event);
+      });
+      return event;
+    };
+
+    const rightClick = contextMenu(controller.buttons[1], 2);
+    expect(rightClick.defaultPrevented).toBe(false);
+    expect(onActivate).not.toHaveBeenCalled();
+
+    const controlClick = contextMenu(controller.buttons[1], 0);
+    expect(controlClick.defaultPrevented).toBe(true);
+    expect(onActivate).toHaveBeenCalledWith(1, controlClick);
+
+    const closeButton = shadow.querySelectorAll('.x-tab-switcher-close')[0];
+    const controlClose = contextMenu(closeButton, 0);
+    expect(controlClose.defaultPrevented).toBe(true);
+    expect(onClose).toHaveBeenCalledWith(0, controlClose);
+    expect(onActivate).toHaveBeenCalledTimes(1);
+  });
+
   it('crossfades a live thumbnail update on the existing card', () => {
     vi.useFakeTimers();
     const { controller } = createView();

@@ -1,6 +1,6 @@
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
 
 export type TabSwitcherCloseButtonPlacement = 'left' | 'right';
 
@@ -129,6 +129,14 @@ function normalizeOptions(
   };
 }
 
+// macOS turns a primary click with Control held into a context menu and sends
+// no click. A Control shortcut keeps Control down while the switcher is open,
+// so that "context menu" is the reader clicking a card. A real right click
+// reports button 2 and keeps its menu.
+function isControlHeldPrimaryClick(event: ReactMouseEvent): boolean {
+  return event.button === 0 && event.ctrlKey;
+}
+
 function isImageDataUrl(value: unknown): boolean {
   return String(value || '').startsWith('data:image/');
 }
@@ -242,6 +250,14 @@ function TabCard({
           event.stopPropagation();
           options.onActivate(index, event.nativeEvent);
         }}
+        onContextMenu={(event) => {
+          if (!isControlHeldPrimaryClick(event)) {
+            return;
+          }
+          event.preventDefault();
+          event.stopPropagation();
+          options.onActivate(index, event.nativeEvent);
+        }}
       >
         <div
           className="x-tab-switcher-thumb"
@@ -303,6 +319,14 @@ function TabCard({
         tabIndex={-1}
         disabled={Boolean(tab._closing)}
         onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          options.onClose(index, event.nativeEvent);
+        }}
+        onContextMenu={(event) => {
+          if (!isControlHeldPrimaryClick(event) || tab._closing) {
+            return;
+          }
           event.preventDefault();
           event.stopPropagation();
           options.onClose(index, event.nativeEvent);
