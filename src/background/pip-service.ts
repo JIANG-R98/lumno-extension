@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Picture-in-Picture: which tab owns the active video PiP window, the Web Clip
 // (Document PiP) picker, and the messages the page-world PiP helpers send.
 //
@@ -17,6 +16,53 @@ import {
   openExtensionOptionsPage
 } from './background';
 import { getResolvedTabUrl, isRestrictedUrl } from './browser-urls-service';
+import type { HandlersFor, MessageSender, RejectionReply } from './message-router';
+import type { PipMainWorldReply } from '../domain/messages';
+
+// The page-world helpers a content script asks the background to run.
+type PipMainWorldMethod =
+  | 'siteTryEnterPiPInMainWorld'
+  | 'iqiyiTryEnterPiPInMainWorld'
+  | 'iqiyiSetupAutoPiPInMainWorld'
+  | 'forceExitPiPInMainWorld'
+  | 'youtubeForceExitPiPInMainWorld';
+
+// What the Web Clip picker does when asked: open or close, or explain that
+// a video's picture-in-picture is in the way.
+type PickerMode = 'toggle' | 'conflict-toast';
+
+interface VideoPipDetection {
+  checked: number;
+  foundTabId: number | null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+// A page-world helper's result, which comes from the page: only fields of
+// the expected types are kept.
+function readPipMainWorldReply(value: unknown): PipMainWorldReply {
+  if (!isRecord(value) || typeof value.ok !== 'boolean') {
+    return { ok: false, reason: 'no-result' };
+  }
+  const reply: PipMainWorldReply = { ok: value.ok };
+  if (typeof value.reason === 'string') reply.reason = value.reason;
+  if (typeof value.before === 'boolean') reply.before = value.before;
+  if (typeof value.after === 'boolean') reply.after = value.after;
+  if (typeof value.attempted === 'boolean') reply.attempted = value.attempted;
+  if (typeof value.attemptedExit === 'boolean') reply.attemptedExit = value.attemptedExit;
+  if (typeof value.used === 'string') reply.used = value.used;
+  if (typeof value.unminimized === 'boolean') reply.unminimized = value.unminimized;
+  if (typeof value.bound === 'boolean') reply.bound = value.bound;
+  if (typeof value.preparedVideos === 'number') reply.preparedVideos = value.preparedVideos;
+  if (typeof value.error === 'string') reply.error = value.error;
+  return reply;
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : String(error || fallback);
+}
 
 export const pipOwnership = LumnoPipOwnership.create({
   chromeApi: chrome,
@@ -33,10 +79,10 @@ const pipMainWorld = LumnoPipMainWorld.create({
 // tabs that still do not answer in time count as having none.
 const VIDEO_PIP_DETECT_TIMEOUT_MS = 400;
 
-function detectAnyActiveVideoPiP(callback) {
+function detectAnyActiveVideoPiP(callback: (active: boolean, detail: VideoPipDetection) => void): void {
   chrome.tabs.query({}, (tabs) => {
     const tabList = Array.isArray(tabs) ? tabs : [];
-    const candidates = tabList.filter((tab) => {
+    const candidates = tabList.filter((tab): tab is chrome.tabs.Tab & { id: number } => {
       if (!tab || typeof tab.id !== 'number' || tab.discarded === true || tab.frozen === true) {
         return false;
       }
@@ -53,8 +99,8 @@ function detectAnyActiveVideoPiP(callback) {
     let pending = candidates.length;
     let finished = false;
     let checked = 0;
-    let timeoutId = null;
-    const done = (active, tabId) => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const done = (active: boolean, tabId: number | null): void => {
       if (finished) {
         return;
       }
@@ -98,24 +144,26 @@ function detectAnyActiveVideoPiP(callback) {
   });
 }
 
-function openDocumentPipSettings() {
+function openDocumentPipSettings(): void {
   openExtensionOptionsPage({ hash: 'labs:document-pip' });
 }
 
-export function openDocumentPipPickerOnTab(activeTab, source) {
+// Opens the Web Clip picker on the tab; resolves whether Web Clip is on.
+export function openDocumentPipPickerOnTab(activeTab: chrome.tabs.Tab | null | undefined, source: string): Promise<boolean> {
   return documentPipEnabledReady.then(() => {
     openDocumentPipPickerOnReadyTab(activeTab, source);
     return documentPipEnabledCache;
   });
 }
 
-function openDocumentPipPickerOnReadyTab(activeTab, source) {
+function openDocumentPipPickerOnReadyTab(activeTab: chrome.tabs.Tab | null | undefined, source: string): void {
   if (!documentPipEnabledCache) {
     logHotkeyDebug('document-pip-disabled', { source: source || '' });
     openDocumentPipSettings();
     return;
   }
-  if (!activeTab || typeof activeTab.id !== 'number') {
+  const activeTabId = activeTab && activeTab.id;
+  if (!activeTab || typeof activeTabId !== 'number') {
     logHotkeyDebug('document-pip-no-active-tab', { source: source || '' });
     openExtensionOptionsPage();
     return;
@@ -137,9 +185,9 @@ function openDocumentPipPickerOnReadyTab(activeTab, source) {
     openExtensionOptionsPage();
     return;
   }
-  const injectAndInvoke = (invokeMode) => {
+  const injectAndInvoke = (invokeMode: PickerMode): void => {
     chrome.scripting.executeScript({
-      target: { tabId: activeTab.id },
+      target: { tabId: activeTabId },
       files: [
         'build/document-pip-picker.js'
       ]
@@ -155,19 +203,25 @@ function openDocumentPipPickerOnReadyTab(activeTab, source) {
         return;
       }
       chrome.scripting.executeScript({
-        target: { tabId: activeTab.id },
-        func: (mode) => {
-          const controller = window.__lumnoDocumentPiPPicker2026;
-          if (!controller || typeof controller.toggle !== 'function') {
+        target: { tabId: activeTabId },
+        // Runs in the page, where the picker script left its controller.
+        func: (mode: PickerMode): unknown => {
+          const controller: unknown = '__lumnoDocumentPiPPicker2026' in window ? window.__lumnoDocumentPiPPicker2026 : null;
+          if (!controller || typeof controller !== 'object') {
+            return { ok: false, reason: 'picker-missing' };
+          }
+          const toggle = 'toggle' in controller ? controller.toggle : null;
+          if (typeof toggle !== 'function') {
             return { ok: false, reason: 'picker-missing' };
           }
           if (mode === 'conflict-toast') {
-            if (typeof controller.notifyVideoPiPConflict === 'function') {
-              return controller.notifyVideoPiPConflict();
+            const notify = 'notifyVideoPiPConflict' in controller ? controller.notifyVideoPiPConflict : null;
+            if (typeof notify === 'function') {
+              return notify.call(controller);
             }
             return { ok: false, reason: 'picker-conflict-handler-missing' };
           }
-          return controller.toggle();
+          return toggle.call(controller);
         },
         args: [invokeMode]
       }, (results) => {
@@ -207,35 +261,43 @@ function openDocumentPipPickerOnReadyTab(activeTab, source) {
   });
 }
 
-function sendPipMainWorldResponse(methodName, sender, sendResponse) {
-  if (typeof pipMainWorld[methodName] !== 'function') {
+function sendPipMainWorldResponse(
+  methodName: PipMainWorldMethod,
+  sender: MessageSender,
+  sendResponse: (reply: PipMainWorldReply | RejectionReply) => void
+): void {
+  const run = pipMainWorld[methodName];
+  if (typeof run !== 'function') {
     sendResponse({ ok: false, reason: 'pip-main-world-unavailable' });
     return;
   }
-  pipMainWorld[methodName](sender)
-    .then((result) => {
-      sendResponse(result);
+  run.call(pipMainWorld, sender)
+    .then((result: unknown) => {
+      sendResponse(readPipMainWorldReply(result));
     })
-    .catch((error) => {
+    .catch((error: unknown) => {
       sendResponse({
         ok: false,
-        reason: error && error.message ? error.message : String(error || 'pip-main-world-failed')
+        reason: getErrorMessage(error, 'pip-main-world-failed')
       });
     });
 }
 
 // Picture-in-picture ownership and main-world helpers.
-export const PIP_MESSAGE_HANDLERS = Object.freeze({
+type PipAction = 'pipRequestOwnership' | 'pipReleaseOwnership' | 'openDocumentPipPicker' | 'siteTryEnterPiPInMainWorld'
+  | 'iqiyiTryEnterPiPInMainWorld' | 'iqiyiSetupAutoPiPInMainWorld' | 'forceExitPiPInMainWorld' | 'ytForceExitPiPInMainWorld';
+
+export const PIP_MESSAGE_HANDLERS: HandlersFor<PipAction> = Object.freeze({
   pipRequestOwnership(request, sender, sendResponse) {
     pipOwnership.requestGlobalPipOwnership(sender, request && request.kind ? String(request.kind) : '')
       .then((result) => {
         sendResponse(result);
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         sendResponse({
           ok: false,
           granted: false,
-          reason: error && error.message ? error.message : String(error || 'ownership-request-failed')
+          reason: getErrorMessage(error, 'ownership-request-failed')
         });
       });
     return true;
@@ -245,11 +307,11 @@ export const PIP_MESSAGE_HANDLERS = Object.freeze({
       .then((result) => {
         sendResponse(result);
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         sendResponse({
           ok: false,
           released: false,
-          reason: error && error.message ? error.message : String(error || 'ownership-release-failed')
+          reason: getErrorMessage(error, 'ownership-release-failed')
         });
       });
     return true;

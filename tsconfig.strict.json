@@ -27,6 +27,8 @@
     "src/background/browser-urls-service.ts",
     "src/background/selection-target.ts",
     "src/background/tab-switch-stats-service.ts",
-    "src/background/page-shortcut-menu.ts"
+    "src/background/page-shortcut-menu.ts",
+    "src/background/pip-service.ts",
+    "src/background/extension-pages.ts"
   ]
 }

@@ -191,6 +191,22 @@ interface PipOwnershipReply extends OkReply {
   owner?: PipOwner;
 }
 
+// What a page-world picture-in-picture helper reports about the page.
+interface PipMainWorldReply extends OkReply {
+  // Whether the page showed picture-in-picture before and after.
+  before?: boolean;
+  after?: boolean;
+  attempted?: boolean;
+  attemptedExit?: boolean;
+  // The player method that worked.
+  used?: string;
+  unminimized?: boolean;
+  // iQIYI: the automatic picture-in-picture handler is set up.
+  bound?: boolean;
+  preparedVideos?: number;
+  error?: string;
+}
+
 interface PipReleaseReply extends OkReply {
   released: boolean;
 }
@@ -285,11 +301,11 @@ interface BackgroundMessages {
   pipRequestOwnership: { request: { kind: string }; reply: PipOwnershipReply };
   pipReleaseOwnership: { request: { token: string }; reply: PipReleaseReply };
   openDocumentPipPicker: { request: NoFields; reply: OkReply & { enabled?: boolean } };
-  siteTryEnterPiPInMainWorld: { request: NoFields; reply: OkReply };
-  iqiyiTryEnterPiPInMainWorld: { request: NoFields; reply: OkReply };
-  iqiyiSetupAutoPiPInMainWorld: { request: NoFields; reply: OkReply };
-  forceExitPiPInMainWorld: { request: NoFields; reply: OkReply };
-  ytForceExitPiPInMainWorld: { request: NoFields; reply: OkReply };
+  siteTryEnterPiPInMainWorld: { request: NoFields; reply: PipMainWorldReply };
+  iqiyiTryEnterPiPInMainWorld: { request: NoFields; reply: PipMainWorldReply };
+  iqiyiSetupAutoPiPInMainWorld: { request: NoFields; reply: PipMainWorldReply };
+  forceExitPiPInMainWorld: { request: NoFields; reply: PipMainWorldReply };
+  ytForceExitPiPInMainWorld: { request: NoFields; reply: PipMainWorldReply };
   runSelectionQuickAction: { request: { text: string; intent?: string; locale?: string }; reply: OkReply };
   searchOrNavigate: {
     request: { query: string; forceSearch?: boolean; disposition?: OpenDisposition };
@@ -428,6 +444,7 @@ export type {
   PageRequest,
   PageShortcutResult,
   PipKind,
+  PipMainWorldReply,
   PipOwner,
   PipOwnershipReply,
   PipReleaseReply,

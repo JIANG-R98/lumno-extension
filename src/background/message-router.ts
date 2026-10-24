@@ -24,6 +24,9 @@ type BackgroundHandler<A extends BackgroundAction> = (
 
 type BackgroundHandlerMap = { [A in BackgroundAction]?: BackgroundHandler<A> };
 
+// The handler map of a feature area: one handler for each of its actions.
+type HandlersFor<A extends BackgroundAction> = { readonly [K in A]: BackgroundHandler<K> };
+
 // A request for any one action.
 type AnyIncomingRequest = { [A in BackgroundAction]: IncomingRequest<A> }[BackgroundAction];
 
@@ -186,6 +189,7 @@ export type {
   BackgroundHandler,
   BackgroundHandlerMap,
   BackgroundRouter,
+  HandlersFor,
   IncomingRequest,
   MessageSender,
   RejectionReply,

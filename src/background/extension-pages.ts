@@ -1,6 +1,39 @@
-// @ts-nocheck
+// Opening the extension's own pages (settings, onboarding, the release
+// notes, the browser's shortcut and bookmark managers).
 import * as LumnoExtensionRoutes from '../domain/extension-routes';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import type { OpenDisposition } from '../domain/messages';
+import type { StorageAreaLike } from '../domain/storage-port';
+
+interface PageOpenOptions {
+  disposition?: OpenDisposition;
+  // The settings section to show.
+  hash?: string;
+  // Why the page opens ('install', 'update', 'manual', ...).
+  reason?: string;
+  // Open the release notes only once per version.
+  oncePerVersion?: boolean;
+}
+
+type OpenCallback = (opened: boolean) => void;
+
+// The release notes opened for a version, so they open once.
+interface ReleasePageOpen {
+  version: string;
+  reason: string;
+  openedAt: number;
+}
+
+// The options argument, or the callback when it comes first.
+function readOpenArguments(
+  options: PageOpenOptions | OpenCallback | null | undefined,
+  callback: OpenCallback | null | undefined
+): { openOptions: PageOpenOptions; done: OpenCallback } {
+  if (typeof options === 'function') {
+    return { openOptions: {}, done: options };
+  }
+  return { openOptions: options || {}, done: typeof callback === 'function' ? callback : () => {} };
+}
 
 const ONBOARDING_WEB_URL = 'https://lumno.kubai.design/onboarding/';
 const ONBOARDING_ROUTE_PATH = 'src/onboarding/onboarding.html';
@@ -8,15 +41,11 @@ const ONBOARDING_UPDATE_MIGRATION_VERSION = 'v0.9.11';
 const RELEASE_URL = 'https://lumno.kubai.design/release/';
 const RELEASE_PAGE_OPENED_STORAGE_KEY = '_x_lumno_release_page_opened_2026_unique_';
 
-function getChromeApi() {
+function getChromeApi(): typeof chrome | null {
   return typeof chrome !== 'undefined' ? chrome : null;
 }
 
-function getRoutesApi() {
-  return LumnoExtensionRoutes;
-}
-
-function getExtensionDetailsUrl() {
+function getExtensionDetailsUrl(): string {
   const chromeApi = getChromeApi();
   if (!chromeApi || !chromeApi.runtime || !chromeApi.runtime.id) {
     return 'chrome://extensions/';
@@ -24,37 +53,23 @@ function getExtensionDetailsUrl() {
   return `chrome://extensions/?id=${encodeURIComponent(chromeApi.runtime.id)}`;
 }
 
-function openExtensionOptionsPage(options, callback) {
+// Opens the settings page; a section (hash) or a background tab opens a
+// new tab, otherwise the browser's own settings page entry is used.
+function openExtensionOptionsPage(options?: PageOpenOptions | OpenCallback | null, callback?: OpenCallback | null): void {
   const chromeApi = getChromeApi();
-  const openOptions = typeof options === 'function' ? {} : (options || {});
-  const done = typeof options === 'function'
-    ? options
-    : (typeof callback === 'function' ? callback : () => {});
+  const { openOptions, done } = readOpenArguments(options, callback);
   const hash = typeof openOptions.hash === 'string' ? openOptions.hash.trim() : '';
   const active = openOptions.disposition !== 'backgroundTab';
-  const fallbackOpen = () => {
-    const routes = getRoutesApi();
-    const optionsUrl = routes && typeof routes.buildOptionsUrl === 'function'
-      ? routes.buildOptionsUrl(chromeApi, hash)
-      : (() => {
-        const url = new URL(
-          chromeApi.runtime.getURL('src/options/options.html'),
-          'chrome-extension://lumno/'
-        );
-        if (hash) {
-          url.hash = hash.startsWith('#') ? hash.slice(1) : hash;
-        }
-        return url.toString();
-      })();
-    chromeApi.tabs.create({ url: optionsUrl, active }, () => {
-      done(!(chromeApi.runtime && chromeApi.runtime.lastError));
-    });
-  };
-
   if (!chromeApi || !chromeApi.tabs || !chromeApi.runtime) {
     done(false);
     return;
   }
+  const fallbackOpen = (): void => {
+    const optionsUrl = LumnoExtensionRoutes.buildOptionsUrl(chromeApi, hash);
+    chromeApi.tabs.create({ url: optionsUrl, active }, () => {
+      done(!(chromeApi.runtime && chromeApi.runtime.lastError));
+    });
+  };
 
   if (hash || !active) {
     fallbackOpen();
@@ -75,25 +90,16 @@ function openExtensionOptionsPage(options, callback) {
   });
 }
 
-function openSiteSearchOptionsPage(options, callback) {
-  const openOptions = typeof options === 'function' ? {} : (options || {});
-  const done = typeof options === 'function' ? options : callback;
-  openExtensionOptionsPage(Object.assign({}, openOptions, { hash: 'shortcuts' }), done);
+function openSiteSearchOptionsPage(options?: PageOpenOptions | OpenCallback | null, callback?: OpenCallback | null): void {
+  const { openOptions, done } = readOpenArguments(options, callback);
+  openExtensionOptionsPage({ ...openOptions, hash: 'shortcuts' }, done);
 }
 
-function buildExtensionPageUrl(path) {
-  const chromeApi = getChromeApi();
-  const routes = getRoutesApi();
-  if (routes && typeof routes.buildExtensionUrl === 'function') {
-    return routes.buildExtensionUrl(chromeApi, path);
-  }
-  if (chromeApi && chromeApi.runtime && typeof chromeApi.runtime.getURL === 'function') {
-    return chromeApi.runtime.getURL(path);
-  }
-  return path;
+function buildExtensionPageUrl(path: string): string {
+  return LumnoExtensionRoutes.buildExtensionUrl(getChromeApi(), path);
 }
 
-function buildOnboardingUrl(options) {
+function buildOnboardingUrl(options?: PageOpenOptions | null): string {
   const params = new URLSearchParams();
   params.set('entry', 'ext');
   const reason = options && typeof options.reason === 'string'
@@ -116,12 +122,9 @@ function buildOnboardingUrl(options) {
   return url.toString();
 }
 
-function openOnboardingPage(options, callback) {
+function openOnboardingPage(options?: PageOpenOptions | OpenCallback | null, callback?: OpenCallback | null): void {
   const chromeApi = getChromeApi();
-  const openOptions = typeof options === 'function' ? {} : (options || {});
-  const done = typeof options === 'function'
-    ? options
-    : (typeof callback === 'function' ? callback : () => {});
+  const { openOptions, done } = readOpenArguments(options, callback);
   if (!chromeApi || !chromeApi.tabs) {
     done(false);
     return;
@@ -134,7 +137,7 @@ function openOnboardingPage(options, callback) {
   });
 }
 
-function normalizeExtensionVersionTag(value) {
+function normalizeExtensionVersionTag(value: unknown): string {
   const version = String(value || '').trim();
   if (!version) {
     return '';
@@ -142,7 +145,11 @@ function normalizeExtensionVersionTag(value) {
   return /^v/i.test(version) ? `v${version.slice(1)}` : `v${version}`;
 }
 
-function shouldOpenOnboardingForUpdate(details, currentVersion) {
+// The update that introduced onboarding shows it once.
+function shouldOpenOnboardingForUpdate(
+  details: { reason?: string; previousVersion?: string } | null | undefined,
+  currentVersion?: string
+): boolean {
   const reason = details && typeof details.reason === 'string'
     ? String(details.reason).trim().toLowerCase()
     : '';
@@ -157,28 +164,33 @@ function shouldOpenOnboardingForUpdate(details, currentVersion) {
   return previousVersion !== ONBOARDING_UPDATE_MIGRATION_VERSION;
 }
 
-function getExtensionVersionTag() {
+function getExtensionVersionTag(): string {
   const chromeApi = getChromeApi();
-  return normalizeExtensionVersionTag(chromeApi && chromeApi.runtime && chromeApi.runtime.getManifest
-    ? String((chromeApi.runtime.getManifest() || {}).version || '').trim()
-    : '');
+  const manifest = chromeApi && chromeApi.runtime && chromeApi.runtime.getManifest
+    ? chromeApi.runtime.getManifest()
+    : null;
+  return normalizeExtensionVersionTag(manifest ? String(manifest.version || '').trim() : '');
 }
 
-function getLocalStorageArea(chromeApi) {
+function getLocalStorageArea(chromeApi: typeof chrome): StorageAreaLike | null {
   return chromeApi && chromeApi.storage && chromeApi.storage.local
     ? chromeApi.storage.local
     : null;
 }
 
-function getSyncableStorageArea(chromeApi) {
+function getSyncableStorageArea(chromeApi: typeof chrome): StorageAreaLike | null {
   if (!chromeApi || !chromeApi.storage) {
     return null;
   }
   return LumnoSettingsStorage.createProviderStorageRuntime(chromeApi).area;
 }
 
-function getStoredReleasePageOpen(payload) {
-  if (!payload || typeof payload !== 'object') {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function getStoredReleasePageOpen(payload: unknown): ReleasePageOpen | null {
+  if (!isRecord(payload)) {
     return null;
   }
   const version = typeof payload.version === 'string' ? payload.version.trim() : '';
@@ -192,13 +204,13 @@ function getStoredReleasePageOpen(payload) {
   };
 }
 
-function getReleaseOpenReason(options) {
+function getReleaseOpenReason(options: PageOpenOptions | null | undefined): string {
   return options && typeof options.reason === 'string'
     ? String(options.reason).trim().toLowerCase()
     : '';
 }
 
-function buildReleaseUrl(options) {
+function buildReleaseUrl(options?: PageOpenOptions | null): string {
   const params = new URLSearchParams();
   params.set('entry', 'ext');
   const reason = options && typeof options.reason === 'string' ? String(options.reason).trim().toLowerCase() : '';
@@ -212,7 +224,7 @@ function buildReleaseUrl(options) {
   return `${RELEASE_URL}?${params.toString()}`;
 }
 
-function openReleasePage(options, callback) {
+function openReleasePage(options?: PageOpenOptions | null, callback?: OpenCallback | null): void {
   const chromeApi = getChromeApi();
   const done = typeof callback === 'function' ? callback : () => {};
   if (!chromeApi || !chromeApi.tabs) {
@@ -225,7 +237,7 @@ function openReleasePage(options, callback) {
   const version = getExtensionVersionTag();
   const storageArea = getSyncableStorageArea(chromeApi);
   const localStorageArea = getLocalStorageArea(chromeApi);
-  const openTab = (afterOpen) => {
+  const openTab = (afterOpen: (() => void) | null): void => {
     chromeApi.tabs.create({ url: releaseUrl, active }, () => {
       const opened = !(chromeApi.runtime && chromeApi.runtime.lastError);
       if (opened && typeof afterOpen === 'function') {
@@ -234,8 +246,8 @@ function openReleasePage(options, callback) {
       done(opened);
     });
   };
-  const markOpened = () => {
-    if (!storageArea || typeof storageArea.set !== 'function' || !version) {
+  const markOpened = (): void => {
+    if (!storageArea || !version) {
       return;
     }
     try {
@@ -246,12 +258,12 @@ function openReleasePage(options, callback) {
           openedAt: Date.now()
         }
       }, () => {});
-    } catch (e) {
+    } catch (_error) {
       // A failed marker should not block the user from seeing the release page.
     }
   };
 
-  if (!oncePerVersion || !version || !storageArea || typeof storageArea.get !== 'function') {
+  if (!oncePerVersion || !version || !storageArea) {
     openTab(oncePerVersion ? markOpened : null);
     return;
   }
@@ -265,9 +277,7 @@ function openReleasePage(options, callback) {
         done(false);
         return;
       }
-      if (storageArea !== localStorageArea &&
-          localStorageArea &&
-          typeof localStorageArea.get === 'function') {
+      if (storageArea !== localStorageArea && localStorageArea) {
         localStorageArea.get([RELEASE_PAGE_OPENED_STORAGE_KEY], (localResult) => {
           const localRuntimeError = chromeApi.runtime ? chromeApi.runtime.lastError : null;
           const legacyStored = localRuntimeError
@@ -284,17 +294,18 @@ function openReleasePage(options, callback) {
       }
       openTab(markOpened);
     });
-  } catch (e) {
+  } catch (_error) {
     openTab(markOpened);
   }
 }
 
-function getBookmarkManagerUrls() {
+// The bookmark manager addresses of this browser, best first.
+function getBookmarkManagerUrls(): string[] {
   const ua = (typeof navigator !== 'undefined' && navigator.userAgent)
     ? String(navigator.userAgent).toLowerCase()
     : '';
-  const candidates = [];
-  const pushUnique = (url) => {
+  const candidates: string[] = [];
+  const pushUnique = (url: string): void => {
     const value = String(url || '').trim();
     if (!value || candidates.includes(value)) {
       return;
@@ -321,7 +332,8 @@ function getBookmarkManagerUrls() {
   return candidates;
 }
 
-function openBookmarkManagerPage() {
+// Resolves with the address that opened.
+function openBookmarkManagerPage(): Promise<string> {
   const chromeApi = getChromeApi();
   const urls = getBookmarkManagerUrls();
   return new Promise((resolve, reject) => {
@@ -329,7 +341,7 @@ function openBookmarkManagerPage() {
       reject(new Error('tabs-api-unavailable'));
       return;
     }
-    const tryOpen = (index) => {
+    const tryOpen = (index: number): void => {
       if (index >= urls.length) {
         reject(new Error('no-bookmark-manager-url'));
         return;
@@ -347,17 +359,16 @@ function openBookmarkManagerPage() {
   });
 }
 
-function openExtensionShortcutsPage(options, callback) {
+function openExtensionShortcutsPage(options?: PageOpenOptions | OpenCallback | null, callback?: OpenCallback | null): void {
   const chromeApi = getChromeApi();
-  const openOptions = typeof options === 'function' ? {} : (options || {});
-  const done = typeof options === 'function'
-    ? options
-    : (typeof callback === 'function' ? callback : () => {});
+  const { openOptions, done } = readOpenArguments(options, callback);
   // Firefox cannot open about:addons from an extension; it offers this
   // dedicated API for its shortcut manager instead.
-  if (chromeApi && chromeApi.commands && typeof chromeApi.commands.openShortcutSettings === 'function') {
+  const commands = chromeApi && chromeApi.commands;
+  const openShortcutSettings: unknown = commands && 'openShortcutSettings' in commands ? commands.openShortcutSettings : null;
+  if (commands && typeof openShortcutSettings === 'function') {
     Promise.resolve()
-      .then(() => chromeApi.commands.openShortcutSettings())
+      .then(() => openShortcutSettings.call(commands))
       .then(() => done(true), () => done(false));
     return;
   }
@@ -391,3 +402,4 @@ export {
   openOnboardingPage,
   openReleasePage
 };
+export type { OpenCallback, PageOpenOptions, ReleasePageOpen };
