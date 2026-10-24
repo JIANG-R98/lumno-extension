@@ -1,7 +1,57 @@
-// @ts-nocheck
 // Suggestions the ranking adds or reshapes: open tabs, brand direct
 // navigation, host diversity, and limiting and filtering by source type.
-function createBrandSuggestions(deps) {
+import type {
+  SearchPolicy,
+  SearchQueryContext,
+  SearchRankingOptions,
+  SearchSuggestion,
+  SiteSearchProvider,
+  SuggestionLike
+} from '../types';
+import type { DirectNavigationApi } from './direct-navigation';
+import type { QueryIntentApi } from './query-intent';
+import type { RelevanceScoreApi, ScoredItem } from './relevance-score';
+import type { ResultDedupApi } from './result-dedup';
+import type { SuggestionSlateApi } from './suggestion-slate';
+
+type FindProvider = (
+  trigger: unknown,
+  providers: readonly SiteSearchProvider[] | null | undefined
+) => SiteSearchProvider | null;
+
+type BrandSuggestionsDeps =
+  Pick<ResultDedupApi, 'buildSearchDedupUrlKey' | 'buildSearchDedupEntryKey'> &
+  Pick<RelevanceScoreApi, 'calculateSearchRelevanceScore' | 'createSearchSuggestion'> &
+  Pick<QueryIntentApi, 'getSearchSuggestionClusterInfo'> &
+  Pick<SuggestionSlateApi, 'getSearchBrandHostMatchScore' | 'getSearchNavigationRepresentativeSignal' |
+    'hasSearchHomeTitle' | 'groupSearchSuggestionsByKind'> &
+  Pick<DirectNavigationApi, 'getSearchDirectNavigationUrl' | 'getSearchDirectNavigationTitle' |
+    'getSearchSuggestionFamilyKey'> & {
+    DEFAULT_SITE_SEARCH_PROVIDERS: readonly SiteSearchProvider[];
+    SEARCH_POLICY: SearchPolicy;
+    // From site-search-matching.ts, which is wired after this module.
+    findSiteSearchProvider: FindProvider;
+    findSiteSearchProviderByKey: FindProvider;
+  };
+
+interface BrandDirectOptions extends SearchRankingOptions {
+  siteSearchProviders?: readonly SiteSearchProvider[];
+  buildReasons?: (item: ScoredItem, sourceType: string, context: SearchQueryContext) => string[];
+  buildFavicon?: (url: string) => string;
+}
+
+// The host whose pages best stand for a brand query.
+interface BrandHostGroup<T> {
+  host: string;
+  sourceSuggestion: T;
+  hasRepresentative: boolean;
+  totalScore: number;
+}
+
+// The fields every function here reads from a slate row.
+type SlateRow = SuggestionLike & { url?: string };
+
+function createBrandSuggestions(deps: BrandSuggestionsDeps) {
   const {
     DEFAULT_SITE_SEARCH_PROVIDERS,
     findSiteSearchProvider,
@@ -21,7 +71,7 @@ function createBrandSuggestions(deps) {
     groupSearchSuggestionsByKind
   } = deps;
 
-  function isSearchOpenTabSuggestion(suggestion) {
+  function isSearchOpenTabSuggestion(suggestion: SuggestionLike | null | undefined): boolean {
     return Boolean(
       suggestion &&
       (
@@ -31,9 +81,13 @@ function createBrandSuggestions(deps) {
     );
   }
 
-  function buildConfiguredSearchBrandDirectSuggestion(candidates, context, options) {
-    const settings = options && typeof options === 'object' ? options : {};
-    const providers = Array.isArray(settings.siteSearchProviders)
+  function buildConfiguredSearchBrandDirectSuggestion(
+    candidates: ReadonlyArray<SlateRow | null | undefined> | null | undefined,
+    context: SearchQueryContext,
+    options?: BrandDirectOptions | null
+  ): SearchSuggestion | null {
+    const settings: BrandDirectOptions = options && typeof options === 'object' ? options : {};
+    const providers: readonly SiteSearchProvider[] = Array.isArray(settings.siteSearchProviders)
       ? settings.siteSearchProviders
       : DEFAULT_SITE_SEARCH_PROVIDERS;
     const provider = findSiteSearchProvider(context.lookupQuery || context.queryLower, providers) ||
@@ -49,7 +103,7 @@ function createBrandSuggestions(deps) {
     if (alreadyPresent) {
       return null;
     }
-    const directItem = {
+    const directItem: ScoredItem = {
       title: String(provider.directNavigationTitle || context.lookupQuery || provider.name || '').trim(),
       url: directUrl
     };
@@ -70,8 +124,14 @@ function createBrandSuggestions(deps) {
     });
   }
 
-  function buildSearchBrandDirectSuggestion(candidates, context, options) {
-    const settings = options && typeof options === 'object' ? options : {};
+  // A made-up row for a brand's home page, when the query names a brand and
+  // no result already stands for its site.
+  function buildSearchBrandDirectSuggestion(
+    candidates: ReadonlyArray<SlateRow | null | undefined> | null | undefined,
+    context: SearchQueryContext,
+    options?: BrandDirectOptions | null
+  ): SearchSuggestion | null {
+    const settings: BrandDirectOptions = options && typeof options === 'object' ? options : {};
     if (context.intentType !== 'brand' || context.hasInformationalIntent) {
       return null;
     }
@@ -83,8 +143,8 @@ function createBrandSuggestions(deps) {
     if (configuredDirectSuggestion) {
       return configuredDirectSuggestion;
     }
-    const hostGroups = new Map();
-    (Array.isArray(candidates) ? candidates : []).forEach((suggestion) => {
+    const hostGroups = new Map<string, SlateRow[]>();
+    (Array.isArray(candidates) ? candidates : []).forEach((suggestion: SlateRow | null | undefined) => {
       if (!suggestion || !suggestion.url || suggestion.type === 'googleSuggest') {
         return;
       }
@@ -97,11 +157,11 @@ function createBrandSuggestions(deps) {
       hostGroups.set(info.host, list);
     });
 
-    let bestGroup = null;
-    hostGroups.forEach((group, host) => {
+    let bestGroup: BrandHostGroup<SlateRow> | null = null;
+    for (const [host, group] of hostGroups) {
       const hostScore = getSearchBrandHostMatchScore(host, context);
       if (hostScore <= 0) {
-        return;
+        continue;
       }
       const sourceSuggestion = group
         .slice()
@@ -132,7 +192,7 @@ function createBrandSuggestions(deps) {
           totalScore
         };
       }
-    });
+    }
 
     if (!bestGroup || bestGroup.hasRepresentative || !bestGroup.sourceSuggestion) {
       return null;
@@ -146,7 +206,7 @@ function createBrandSuggestions(deps) {
     const sourceType = bestGroup.sourceSuggestion.type === 'bookmark'
       ? 'bookmark'
       : ((bestGroup.sourceSuggestion.type === 'topSite' || bestGroup.sourceSuggestion.isTopSite) ? 'topSite' : 'history');
-    const directItem = {
+    const directItem: ScoredItem = {
       title: directTitle,
       url: directUrl,
       lastVisitTime: bestGroup.sourceSuggestion.lastVisitTime || 0,
@@ -169,23 +229,29 @@ function createBrandSuggestions(deps) {
     });
   }
 
-  function applySearchSuggestionHostDiversity(list, options) {
-    const candidates = Array.isArray(list) ? list : [];
-    const settings = options && typeof options === 'object' ? options : {};
+  // Keeps a few rows per host, cluster and (for brand queries) site family,
+  // so one site cannot fill the slate.
+  function applySearchSuggestionHostDiversity<T extends SlateRow>(
+    list: readonly T[] | null | undefined,
+    options?: { context?: Pick<SearchQueryContext, 'intentType' | 'hasInformationalIntent'> | null } | null
+  ): T[] {
+    const candidates: readonly T[] = Array.isArray(list) ? list : [];
+    const settings: { context?: Pick<SearchQueryContext, 'intentType' | 'hasInformationalIntent'> | null } =
+      options && typeof options === 'object' ? options : {};
     const context = settings.context && typeof settings.context === 'object'
       ? settings.context
       : null;
     const useBrandFamilyLimit = Boolean(
       context && context.intentType === 'brand' && !context.hasInformationalIntent
     );
-    const selected = [];
-    const selectedKeys = new Set();
-    const hostCounts = new Map();
-    const clusterCounts = new Map();
-    const familyCounts = new Map();
-    const hostHasTopSiteRepresentative = new Set();
+    const selected: T[] = [];
+    const selectedKeys = new Set<string>();
+    const hostCounts = new Map<string, number>();
+    const clusterCounts = new Map<string, number>();
+    const familyCounts = new Map<string, number>();
+    const hostHasTopSiteRepresentative = new Set<string>();
 
-    const tryTake = (suggestion, hostLimit, clusterLimit, familyLimit) => {
+    const tryTake = (suggestion: T | null | undefined, hostLimit: number, clusterLimit: number, familyLimit: number) => {
       if (!suggestion) {
         return false;
       }
@@ -273,7 +339,7 @@ function createBrandSuggestions(deps) {
     // ahead of stronger results. Restore the incoming rank order for every
     // primary pick, then let secondary picks fill the tail.
     const candidateIndex = new Map(candidates.map((suggestion, index) => [suggestion, index]));
-    selected.sort((a, b) => candidateIndex.get(a) - candidateIndex.get(b));
+    selected.sort((a, b) => (candidateIndex.get(a) ?? 0) - (candidateIndex.get(b) ?? 0));
 
     if (selected.length < SEARCH_POLICY.finalSuggestionLimit) {
       candidates.forEach((suggestion) => {
@@ -289,17 +355,20 @@ function createBrandSuggestions(deps) {
     return selected.slice(0, SEARCH_POLICY.finalSuggestionLimit);
   }
 
-  function composeSearchSuggestionSlate(list, context) {
-    const suggestions = Array.isArray(list) ? list.slice() : [];
+  function composeSearchSuggestionSlate<T extends SlateRow>(
+    list: readonly T[] | null | undefined,
+    context: Pick<SearchQueryContext, 'intentType' | 'hasInformationalIntent'> | null | undefined
+  ): T[] {
+    const suggestions: T[] = Array.isArray(list) ? list.slice() : [];
     if (!context || context.intentType !== 'brand' || context.hasInformationalIntent) {
       return suggestions;
     }
     return groupSearchSuggestionsByKind(suggestions);
   }
 
-  function limitSearchSuggestionsForDisplay(list, options) {
-    const suggestions = Array.isArray(list) ? list : [];
-    const settings = options && typeof options === 'object' ? options : {};
+  function limitSearchSuggestionsForDisplay<T>(list: readonly T[] | null | undefined, options?: { limit?: number } | null): T[] {
+    const suggestions: readonly T[] = Array.isArray(list) ? list : [];
+    const settings: { limit?: number } = options && typeof options === 'object' ? options : {};
     const rawLimit = Number(settings.limit);
     const fallbackLimit = Number(SEARCH_POLICY.displaySuggestionLimit) || 10;
     const limit = Number.isInteger(rawLimit) && rawLimit >= 5 && rawLimit <= 10
@@ -308,7 +377,7 @@ function createBrandSuggestions(deps) {
     return suggestions.slice(0, limit);
   }
 
-  function normalizeSearchSuggestionSourceFilterType(value) {
+  function normalizeSearchSuggestionSourceFilterType(value: unknown): '' | 'topSite' | 'bookmark' | 'history' {
     if (value === 'topSite' || value === 'topSites' || value === 'frequent' || value === 'common') {
       return 'topSite';
     }
@@ -321,7 +390,7 @@ function createBrandSuggestions(deps) {
     return '';
   }
 
-  function getSearchSuggestionFilterType(suggestion) {
+  function getSearchSuggestionFilterType(suggestion: SuggestionLike | null | undefined): '' | 'topSite' | 'bookmark' | 'history' {
     if (!suggestion) {
       return '';
     }
@@ -337,8 +406,12 @@ function createBrandSuggestions(deps) {
     return '';
   }
 
-  function filterSearchSuggestionsBySourceTypes(list, sourceTypes) {
-    const suggestions = Array.isArray(list) ? list : [];
+  // Rows of the chosen local sources; rows of no local source always stay.
+  function filterSearchSuggestionsBySourceTypes<T extends SuggestionLike>(
+    list: readonly T[] | null | undefined,
+    sourceTypes: unknown
+  ): T[] {
+    const suggestions: readonly T[] = Array.isArray(list) ? list : [];
     const selectedTypes = Array.isArray(sourceTypes)
       ? sourceTypes.map(normalizeSearchSuggestionSourceFilterType).filter(Boolean)
       : [];
@@ -362,4 +435,7 @@ function createBrandSuggestions(deps) {
   };
 }
 
+type BrandSuggestionsApi = ReturnType<typeof createBrandSuggestions>;
+
 export { createBrandSuggestions };
+export type { BrandDirectOptions, BrandSuggestionsApi };

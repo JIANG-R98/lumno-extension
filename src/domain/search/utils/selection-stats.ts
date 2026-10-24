@@ -1,7 +1,33 @@
-// @ts-nocheck
 // The query context a ranking pass shares, and the per-query selection
 // stats that boost what was picked before.
-function createSelectionStats(deps) {
+import type {
+  SearchQueryContext,
+  SearchRankingOptions,
+  SearchSelection,
+  SearchSelectionBucket,
+  SearchSelectionEntry,
+  SearchSelectionPolicy,
+  SearchSelectionStats,
+  SearchSelectionType
+} from '../types';
+import type { QueryIntentApi } from './query-intent';
+import type { ResultDedupApi } from './result-dedup';
+import type { TextMatchingApi } from './text-matching';
+import type { TextNormalizeApi } from './text-normalize';
+
+type SelectionStatsDeps =
+  Pick<TextNormalizeApi, 'normalizeSearchText' | 'compactSearchQuery' | 'splitSearchTerms'> &
+  Pick<TextMatchingApi, 'isSearchUnitQueryEligible'> &
+  Pick<QueryIntentApi, 'classifySearchIntent'> &
+  Pick<ResultDedupApi, 'buildSearchDedupUrlKey'> & {
+    // From relevance-score.ts, which reads these stats in turn.
+    getNow: (options?: Pick<SearchRankingOptions, 'now'> | null) => number;
+    SEARCH_SELECTION_POLICY: SearchSelectionPolicy;
+  };
+
+type SelectionStatsOptions = Pick<SearchRankingOptions, 'now' | 'retentionDays' | 'maxQueries' | 'maxEntriesPerQuery'>;
+
+function createSelectionStats(deps: SelectionStatsDeps) {
   const {
     normalizeSearchText,
     isSearchUnitQueryEligible,
@@ -63,7 +89,7 @@ function createSelectionStats(deps) {
     '如何'
   ]);
 
-  function buildSearchQueryContext(query) {
+  function buildSearchQueryContext(query: unknown): SearchQueryContext {
     const lookupQuery = String(query || '');
     const queryLower = normalizeSearchText(lookupQuery).trim();
     // The query as title units spell it ("wxds", "gh ck", "微信 读书"); empty
@@ -86,7 +112,7 @@ function createSelectionStats(deps) {
     };
   }
 
-  function normalizeSearchSelectionQuery(query) {
+  function normalizeSearchSelectionQuery(query: unknown): string {
     const value = String(query || '')
       .trim()
       .toLowerCase()
@@ -94,7 +120,7 @@ function createSelectionStats(deps) {
     return value.length > 120 ? value.slice(0, 120) : value;
   }
 
-  function normalizeSearchSelectionType(type) {
+  function normalizeSearchSelectionType(type: unknown): SearchSelectionType {
     const value = String(type || '').trim();
     if (!value) {
       return 'history';
@@ -105,7 +131,7 @@ function createSelectionStats(deps) {
     return 'history';
   }
 
-  function normalizeSearchSelectionEntry(urlKey, entry, now, retentionMs) {
+  function normalizeSearchSelectionEntry(urlKey: string, entry: any, now: number, retentionMs: number): SearchSelectionEntry | null {
     if (!urlKey || !entry || typeof entry !== 'object') {
       return null;
     }
@@ -126,8 +152,9 @@ function createSelectionStats(deps) {
     };
   }
 
-  function normalizeSearchSelectionStats(rawStats, options) {
-    const settings = options && typeof options === 'object' ? options : {};
+  // Stored stats are read as untrusted input and rebuilt.
+  function normalizeSearchSelectionStats(rawStats: any, options?: SelectionStatsOptions | null): SearchSelectionStats {
+    const settings: SelectionStatsOptions = options && typeof options === 'object' ? options : {};
     const now = getNow(settings);
     const retentionDays = Number(settings.retentionDays) > 0
       ? Number(settings.retentionDays)
@@ -139,19 +166,19 @@ function createSelectionStats(deps) {
     const maxEntriesPerQuery = Number(settings.maxEntriesPerQuery) > 0
       ? Math.floor(Number(settings.maxEntriesPerQuery))
       : SEARCH_SELECTION_POLICY.maxEntriesPerQuery;
-    const sourceQueries = rawStats && typeof rawStats === 'object' && rawStats.queries && typeof rawStats.queries === 'object'
+    const sourceQueries: Record<string, any> = rawStats && typeof rawStats === 'object' && rawStats.queries && typeof rawStats.queries === 'object'
       ? rawStats.queries
       : {};
-    const buckets = [];
+    const buckets: Array<[string, SearchSelectionBucket]> = [];
 
     Object.entries(sourceQueries).forEach(([rawQueryKey, rawBucket]) => {
       const queryKey = normalizeSearchSelectionQuery(rawQueryKey);
       const bucket = rawBucket && typeof rawBucket === 'object' ? rawBucket : {};
-      const sourceEntries = bucket.entries && typeof bucket.entries === 'object' ? bucket.entries : {};
-      const entries = {};
+      const sourceEntries: Record<string, unknown> = bucket.entries && typeof bucket.entries === 'object' ? bucket.entries : {};
+      const entries: Record<string, SearchSelectionEntry> = {};
       Object.entries(sourceEntries)
-        .map(([urlKey, entry]) => [urlKey, normalizeSearchSelectionEntry(urlKey, entry, now, retentionMs)])
-        .filter(([, entry]) => Boolean(entry))
+        .map(([urlKey, entry]): [string, SearchSelectionEntry | null] => [urlKey, normalizeSearchSelectionEntry(urlKey, entry, now, retentionMs)])
+        .filter((pair): pair is [string, SearchSelectionEntry] => Boolean(pair[1]))
         .sort((a, b) => {
           const lastDiff = b[1].lastSelectedAt - a[1].lastSelectedAt;
           if (lastDiff !== 0) {
@@ -174,7 +201,7 @@ function createSelectionStats(deps) {
     });
 
     buckets.sort((a, b) => b[1].updatedAt - a[1].updatedAt);
-    const queries = {};
+    const queries: Record<string, SearchSelectionBucket> = {};
     buckets.slice(0, maxQueries).forEach(([queryKey, bucket]) => {
       queries[queryKey] = bucket;
     });
@@ -185,8 +212,12 @@ function createSelectionStats(deps) {
     };
   }
 
-  function recordSearchSelectionInStats(rawStats, selection, options) {
-    const settings = options && typeof options === 'object' ? options : {};
+  function recordSearchSelectionInStats(
+    rawStats: unknown,
+    selection: SearchSelection | null | undefined,
+    options?: SelectionStatsOptions | null
+  ): SearchSelectionStats {
+    const settings: SelectionStatsOptions = options && typeof options === 'object' ? options : {};
     const now = getNow(settings);
     const queryKey = normalizeSearchSelectionQuery(selection && selection.query);
     const url = String(selection && selection.url || '').trim();
@@ -198,12 +229,13 @@ function createSelectionStats(deps) {
       return normalizeSearchSelectionStats(rawStats, settings);
     }
     const stats = normalizeSearchSelectionStats(rawStats, settings);
-    const bucket = stats.queries[queryKey] || { updatedAt: 0, entries: {} };
+    const bucket: SearchSelectionBucket = stats.queries[queryKey] || { updatedAt: 0, entries: {} };
     const existing = bucket.entries[urlKey] || null;
+    const picked: SearchSelection = selection || {};
     bucket.entries[urlKey] = {
       url,
-      title: String(selection.title || (existing && existing.title) || '').trim().slice(0, 180),
-      type: normalizeSearchSelectionType(selection.type || (existing && existing.type)),
+      title: String(picked.title || (existing && existing.title) || '').trim().slice(0, 180),
+      type: normalizeSearchSelectionType(picked.type || (existing && existing.type)),
       count: Math.max(1, Math.min(999, (Number(existing && existing.count) || 0) + 1)),
       lastSelectedAt: now
     };
@@ -221,4 +253,7 @@ function createSelectionStats(deps) {
   };
 }
 
+type SelectionStatsApi = ReturnType<typeof createSelectionStats>;
+
 export { createSelectionStats };
+export type { SelectionStatsApi, SelectionStatsOptions };

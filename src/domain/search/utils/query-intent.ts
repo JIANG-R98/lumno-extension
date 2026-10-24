@@ -1,7 +1,35 @@
-// @ts-nocheck
 // What a query is after: URL clusters, navigation versus information
 // intent, source adjustments, term coverage and category adjustments.
-function createQueryIntent(deps) {
+import type {
+  SearchCandidateParts,
+  SearchClusterCategory,
+  SearchClusterInfo,
+  SearchIntentType,
+  SearchQueryContext,
+  SearchTermCoverage
+} from '../types';
+import type { DirectNavigationApi } from './direct-navigation';
+import type { TextMatchingApi, TitleMatchOptions } from './text-matching';
+import type { TextNormalizeApi } from './text-normalize';
+
+type QueryIntentDeps =
+  Pick<DirectNavigationApi, 'normalizeHost' | 'getSearchSiteConfig'> &
+  Pick<TextNormalizeApi, 'normalizeSearchText' | 'splitSearchTitleTokens' | 'SEARCH_WORD_CHARACTERS_PATTERN' |
+    'SEARCH_HAN_PATTERN' | 'splitSearchTerms'> &
+  Pick<TextMatchingApi, 'getSearchTitleUnitMatch'>;
+
+// What the intent checks read from a result.
+interface IntentItem {
+  url?: string;
+  title?: string;
+  type?: string;
+  isTopSite?: boolean;
+}
+
+type QueryTextContext = Pick<SearchQueryContext, 'queryLower'> &
+  Partial<Pick<SearchQueryContext, 'coreQueryTerms' | 'queryTerms' | 'queryHostSpellings'>>;
+
+function createQueryIntent(deps: QueryIntentDeps) {
   const {
     normalizeHost,
     getSearchSiteConfig,
@@ -94,7 +122,7 @@ function createQueryIntent(deps) {
     'compose'
   ]);
 
-  function looksLikeVersionSegment(segment) {
+  function looksLikeVersionSegment(segment: unknown): boolean {
     const value = String(segment || '').trim().toLowerCase();
     if (!value) {
       return false;
@@ -102,7 +130,7 @@ function createQueryIntent(deps) {
     return /^v?\d+(\.\d+){1,3}([.-][a-z0-9]+)?$/i.test(value);
   }
 
-  function looksLikeOpaqueIdSegment(segment) {
+  function looksLikeOpaqueIdSegment(segment: unknown): boolean {
     const value = String(segment || '').trim().toLowerCase();
     if (!value) {
       return false;
@@ -119,7 +147,7 @@ function createQueryIntent(deps) {
     return false;
   }
 
-  function normalizeClusterSegment(segment) {
+  function normalizeClusterSegment(segment: unknown): string {
     const value = String(segment || '').trim().toLowerCase();
     if (!value) {
       return '';
@@ -133,7 +161,7 @@ function createQueryIntent(deps) {
     return value;
   }
 
-  function getSearchSuggestionClusterInfo(url) {
+  function getSearchSuggestionClusterInfo(url: unknown): SearchClusterInfo {
     if (!url) {
       return {
         host: '',
@@ -144,7 +172,7 @@ function createQueryIntent(deps) {
       };
     }
     try {
-      const parsed = new URL(url);
+      const parsed = new URL(String(url));
       const host = normalizeHost(parsed.hostname);
       const path = parsed.pathname !== '/' ? (parsed.pathname.replace(/\/+$/, '') || '/') : '/';
       const rawSegments = path.split('/').filter(Boolean).map((item) => decodeURIComponent(item).toLowerCase());
@@ -162,8 +190,9 @@ function createQueryIntent(deps) {
         const repoAreaCategories = siteConfig && siteConfig.repoAreaCategories
           ? siteConfig.repoAreaCategories
           : null;
-        if (repoAreaCategories && repoAreaCategories.has(third)) {
-          return { host, category: repoAreaCategories.get(third), clusterKey: `${repoBase}/${third}`, depth: segments.length, path };
+        const repoAreaCategory = repoAreaCategories ? repoAreaCategories.get(third) : undefined;
+        if (repoAreaCategory) {
+          return { host, category: repoAreaCategory, clusterKey: `${repoBase}/${third}`, depth: segments.length, path };
         }
         if (third === 'tree' || third === 'blob') {
           const area = segments[4] || segments[3] || 'root';
@@ -216,7 +245,7 @@ function createQueryIntent(deps) {
     }
   }
 
-  function looksLikeNavigationQuery(query) {
+  function looksLikeNavigationQuery(query: unknown): boolean {
     const value = String(query || '').trim().toLowerCase();
     if (!value) {
       return false;
@@ -230,9 +259,9 @@ function createQueryIntent(deps) {
     return false;
   }
 
-  function classifySearchIntent(query, queryTerms) {
+  function classifySearchIntent(query: unknown, queryTerms: unknown): SearchIntentType {
     const raw = String(query || '').trim().toLowerCase();
-    const terms = Array.isArray(queryTerms) ? queryTerms.filter(Boolean) : [];
+    const terms: string[] = Array.isArray(queryTerms) ? queryTerms.filter(Boolean) : [];
     if (looksLikeNavigationQuery(raw)) {
       return 'navigation';
     }
@@ -259,7 +288,7 @@ function createQueryIntent(deps) {
     return 'object';
   }
 
-  function getSearchSourceAdjustment(sourceType, intentType) {
+  function getSearchSourceAdjustment(sourceType: unknown, intentType: unknown): number {
     const source = String(sourceType || '');
     const intent = String(intentType || 'object');
 
@@ -305,14 +334,21 @@ function createQueryIntent(deps) {
   // A Han query spelled the way a site's address writes it: 知乎 is
   // zhihu.com, 京东 is jd.com. The background fills queryHostSpellings with
   // the query's pinyin and initials; only a whole address label counts.
-  function matchesSearchHostSpelling(hostLabels, context) {
+  function matchesSearchHostSpelling(
+    hostLabels: string[],
+    context: Pick<SearchQueryContext, 'queryHostSpellings'> | null | undefined
+  ): boolean {
     const spellings = context && Array.isArray(context.queryHostSpellings) ? context.queryHostSpellings : [];
     return spellings.length > 0 && hostLabels.some((label) => spellings.includes(label));
   }
 
   // Title units (pinyin, initials, words across spaces) are walked only when
   // the plain text checks fail, since most queries match the text itself.
-  function matchesSearchQueryText(item, context, options) {
+  function matchesSearchQueryText(
+    item: IntentItem | null | undefined,
+    context: QueryTextContext,
+    options?: TitleMatchOptions | null
+  ): boolean {
     if (!item || !item.url) {
       return false;
     }
@@ -321,7 +357,7 @@ function createQueryIntent(deps) {
     const urlLower = item.url.toLowerCase();
     const titleTokens = splitSearchTitleTokens(title);
     let hostname = '';
-    let hostLabels = [];
+    let hostLabels: string[] = [];
     try {
       hostname = normalizeHost(new URL(item.url).hostname);
       hostLabels = hostname.split('.').filter(Boolean);
@@ -329,7 +365,7 @@ function createQueryIntent(deps) {
       hostname = '';
       hostLabels = [];
     }
-    const matchesTerm = (term) => {
+    const matchesTerm = (term: string) => {
       if (!term) {
         return false;
       }
@@ -362,12 +398,12 @@ function createQueryIntent(deps) {
     return coreTerms.length > 0 && coreTerms.every((term) => matchesTerm(term));
   }
 
-  function isShortWordSearchTerm(term) {
+  function isShortWordSearchTerm(term: unknown): boolean {
     const value = String(term || '').trim();
     return Boolean(value) && Array.from(value).length <= 2 && SEARCH_WORD_CHARACTERS_PATTERN.test(value);
   }
 
-  function shouldAllowLooseTextContains(term) {
+  function shouldAllowLooseTextContains(term: unknown): boolean {
     const value = String(term || '').trim().toLowerCase();
     if (!value) {
       return false;
@@ -378,9 +414,13 @@ function createQueryIntent(deps) {
     return !isShortWordSearchTerm(value);
   }
 
-  function getSearchTermCoverageStats(context, candidateParts) {
-    const terms = Array.isArray(context && context.coreQueryTerms) && context.coreQueryTerms.length > 0
-      ? context.coreQueryTerms
+  function getSearchTermCoverageStats(
+    context: Partial<Pick<SearchQueryContext, 'coreQueryTerms' | 'queryLower'>> | null | undefined,
+    candidateParts: SearchCandidateParts | null | undefined
+  ): SearchTermCoverage {
+    const coreTerms = context && context.coreQueryTerms;
+    const terms = Array.isArray(coreTerms) && coreTerms.length > 0
+      ? coreTerms
       : splitSearchTerms(context && context.queryLower ? context.queryLower : '');
     if (terms.length === 0) {
       return {
@@ -390,7 +430,7 @@ function createQueryIntent(deps) {
         allMatched: false
       };
     }
-    const normalizedCandidate = candidateParts && typeof candidateParts === 'object'
+    const normalizedCandidate: SearchCandidateParts = candidateParts && typeof candidateParts === 'object'
       ? candidateParts
       : {};
     const titleLower = String(normalizedCandidate.titleLower || '');
@@ -435,12 +475,17 @@ function createQueryIntent(deps) {
     };
   }
 
-  function getSearchSuggestionCategoryAdjustment(item, context, coverageStats) {
+  function getSearchSuggestionCategoryAdjustment(
+    item: IntentItem | null | undefined,
+    context: Partial<Pick<SearchQueryContext, 'queryTerms' | 'hasSettingsIntent'>> | null | undefined,
+    coverageStats: SearchTermCoverage | null | undefined
+  ): number {
     if (!item || !item.url) {
       return 0;
     }
     const info = getSearchSuggestionClusterInfo(item.url);
-    const querySet = new Set(Array.isArray(context && context.queryTerms) ? context.queryTerms : []);
+    const queryTerms = context && context.queryTerms;
+    const querySet = new Set(Array.isArray(queryTerms) ? queryTerms : []);
     const hasSettingsIntent = Boolean(context && context.hasSettingsIntent);
     const hasActionIntent = querySet.has('new') || querySet.has('edit') || querySet.has('create') || querySet.has('settings') || querySet.has('设置');
     let adjustment = 0;
@@ -506,8 +551,12 @@ function createQueryIntent(deps) {
     return adjustment;
   }
 
-  function getOwnExtensionUtilityPenalty(item, options) {
-    const settings = options && typeof options === 'object' ? options : {};
+  function getOwnExtensionUtilityPenalty(
+    item: IntentItem | null | undefined,
+    options?: { isOwnExtensionUrl?: (url: string) => boolean; hasSettingsIntent?: boolean } | null
+  ): number {
+    const settings: { isOwnExtensionUrl?: (url: string) => boolean; hasSettingsIntent?: boolean } =
+      options && typeof options === 'object' ? options : {};
     const isOwnExtensionUrl = typeof settings.isOwnExtensionUrl === 'function'
       ? settings.isOwnExtensionUrl
       : () => false;
@@ -541,4 +590,7 @@ function createQueryIntent(deps) {
   };
 }
 
+type QueryIntentApi = ReturnType<typeof createQueryIntent>;
+
 export { createQueryIntent };
+export type { IntentItem, QueryIntentApi, QueryTextContext, SearchClusterCategory };

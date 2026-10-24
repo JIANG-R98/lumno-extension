@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as SEARCH_UTILS_BRAND_SUGGESTIONS from './utils/brand-suggestions';
 import * as SEARCH_UTILS_DIRECT_NAVIGATION from './utils/direct-navigation';
 import * as SEARCH_UTILS_KEYBOARD_LAYOUTS from './utils/keyboard-layouts';
@@ -13,8 +12,9 @@ import * as SEARCH_UTILS_SUGGESTION_SLATE from './utils/suggestion-slate';
 import * as SEARCH_UTILS_TEXT_INDEX from './utils/text-index';
 import * as SEARCH_UTILS_TEXT_MATCHING from './utils/text-matching';
 import * as SEARCH_UTILS_TEXT_NORMALIZE from './utils/text-normalize';
+import type { SearchPolicy, SearchSelectionPolicy, SiteSearchProvider } from './types';
 
-const SEARCH_POLICY = Object.freeze({
+const SEARCH_POLICY: Readonly<SearchPolicy> = Object.freeze({
   lookupWindowDays: 180,
   fallbackHistoryWindowDays: 365,
   lookupMaxResults: 120,
@@ -42,14 +42,14 @@ const SEARCH_POLICY = Object.freeze({
   genericBrandDeepTitlePenalty: 180
 });
 
-const SEARCH_SELECTION_POLICY = Object.freeze({
+const SEARCH_SELECTION_POLICY: Readonly<SearchSelectionPolicy> = Object.freeze({
   retentionDays: 45,
   maxQueries: 80,
   maxEntriesPerQuery: 12,
   maxSelectionBoost: 320
 });
 
-const DEFAULT_SITE_SEARCH_PROVIDERS = Object.freeze([
+const DEFAULT_SITE_SEARCH_PROVIDERS: readonly SiteSearchProvider[] = Object.freeze([
   { key: 'yt', aliases: ['youtube'], name: 'YouTube', template: 'https://www.youtube.com/results?search_query={query}' },
   { key: 'bb', aliases: ['bilibili', 'bili'], name: 'Bilibili', template: 'https://search.bilibili.com/all?keyword={query}' },
   { key: 'gh', aliases: ['github'], name: 'GitHub', template: 'https://github.com/search?q={query}' },
@@ -112,9 +112,7 @@ const {
   getSearchDirectNavigationTitle,
   getDirectNavigationUrl,
   isUrlLikeSearchQuery
-} = SEARCH_UTILS_DIRECT_NAVIGATION.createDirectNavigation({
-
-});
+} = SEARCH_UTILS_DIRECT_NAVIGATION.createDirectNavigation();
 const {
   SEARCH_HAN_PATTERN,
   SEARCH_TEXT_MATCHER_CACHE_MAX_ENTRIES,
@@ -129,9 +127,7 @@ const {
   splitSearchTitleTokens,
   normalizeSearchHanReadings,
   expandSearchFuzzyPinyinReadings
-} = SEARCH_UTILS_TEXT_NORMALIZE.createTextNormalize({
-
-});
+} = SEARCH_UTILS_TEXT_NORMALIZE.createTextNormalize();
 const {
   SEARCH_UNIT_WORD,
   SEARCH_UNIT_DIGIT,
@@ -191,7 +187,7 @@ const {
   foldSearchCharacter,
   SEARCH_TEXT_MATCHER_CACHE_MAX_ENTRIES,
   buildSearchTextIndex,
-  shouldAllowLooseTextContains: (...args) => shouldAllowLooseTextContains(...args)
+  shouldAllowLooseTextContains: (term) => shouldAllowLooseTextContains(term)
 });
 const {
   getSearchSuggestionClusterInfo,
@@ -239,7 +235,7 @@ const {
   compactSearchQuery,
   splitSearchTerms,
   classifySearchIntent,
-  getNow: (...args) => getNow(...args),
+  getNow: (options) => getNow(options),
   SEARCH_SELECTION_POLICY,
   buildSearchDedupUrlKey
 });
@@ -272,7 +268,7 @@ const {
   getSearchTitleUnitMatch,
   SEARCH_POLICY,
   findSearchOpenTabMatchIndex,
-  findProviderForSiteSearchSuggestion: (...args) => findProviderForSiteSearchSuggestion(...args)
+  findProviderForSiteSearchSuggestion: (suggestion, providers) => findProviderForSiteSearchSuggestion(suggestion, providers)
 });
 const {
   getNow,
@@ -309,8 +305,8 @@ const {
   filterSearchSuggestionsBySourceTypes
 } = SEARCH_UTILS_BRAND_SUGGESTIONS.createBrandSuggestions({
   DEFAULT_SITE_SEARCH_PROVIDERS,
-  findSiteSearchProvider: (...args) => findSiteSearchProvider(...args),
-  findSiteSearchProviderByKey: (...args) => findSiteSearchProviderByKey(...args),
+  findSiteSearchProvider: (trigger, providers) => findSiteSearchProvider(trigger, providers),
+  findSiteSearchProviderByKey: (trigger, providers) => findSiteSearchProviderByKey(trigger, providers),
   buildSearchDedupUrlKey,
   calculateSearchRelevanceScore,
   createSearchSuggestion,
@@ -348,10 +344,10 @@ const {
 } = SEARCH_UTILS_SITE_SEARCH_PROVIDERS.createSiteSearchProviders({
   normalizeHost,
   DEFAULT_SITE_SEARCH_PROVIDERS,
-  getUrlHost: (...args) => getUrlHost(...args),
-  findSiteSearchProvider: (...args) => findSiteSearchProvider(...args),
-  siteSearchHostsMatch: (...args) => siteSearchHostsMatch(...args),
-  getSiteSearchProviderHost: (...args) => getSiteSearchProviderHost(...args)
+  getUrlHost: (url) => getUrlHost(url),
+  findSiteSearchProvider: (trigger, providers) => findSiteSearchProvider(trigger, providers),
+  siteSearchHostsMatch: (a, b) => siteSearchHostsMatch(a, b),
+  getSiteSearchProviderHost: (provider) => getSiteSearchProviderHost(provider)
 });
 const {
   getUrlHost,

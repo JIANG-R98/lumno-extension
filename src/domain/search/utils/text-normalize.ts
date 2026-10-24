@@ -1,26 +1,25 @@
-// @ts-nocheck
 // Normalizing text for matching: folding case, width, accents and
 // traditional Han characters, splitting terms and title words, and the Han
 // readings and fuzzy pinyin variants a query may be typed as.
-function createTextNormalize(deps) {
+function createTextNormalize() {
   // Han ideographs: the unified block, its Extension A and the compatibility block.
   const SEARCH_HAN_PATTERN = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
   const SEARCH_TEXT_MATCHER_CACHE_MAX_ENTRIES = 1024;
 
-  let searchHanVariantMap = null;
+  let searchHanVariantMap: Map<string, string> | null = null;
   const SEARCH_FOLDED_CHARACTER_CACHE_MAX_ENTRIES = 16384;
-  const searchFoldedCharacters = new Map();
+  const searchFoldedCharacters = new Map<string, string>();
   // Titles are folded again on every keystroke, so their folded and
   // lowercased forms are kept; a full cache starts over.
   const SEARCH_FOLDED_TEXT_CACHE_MAX_ENTRIES = 8192;
-  const searchFoldedTexts = new Map();
-  const searchNormalizedTexts = new Map();
+  const searchFoldedTexts = new Map<string, string>();
+  const searchNormalizedTexts = new Map<string, string>();
 
   // Traditional characters fold to simplified ones where the variant table is
   // loaded (the background worker loads search-han-variants.js, pages load it
   // with the pinyin runtime). Each character stays one character, so highlight
   // ranges keep their places.
-  function getSearchHanVariantMap() {
+  function getSearchHanVariantMap(): Map<string, string> | null {
     if (searchHanVariantMap) {
       return searchHanVariantMap;
     }
@@ -41,7 +40,7 @@ function createTextNormalize(deps) {
 
   // Letters that read as other letters without a Unicode decomposition, and
   // letters whose mark is part of the letter itself.
-  const SEARCH_FOLD_LETTERS = new Map([
+  const SEARCH_FOLD_LETTERS = new Map<string, string>([
     ['ß', 'ss'], ['ẞ', 'SS'], ['Ł', 'L'], ['ł', 'l'], ['Ø', 'O'], ['ø', 'o'], ['Đ', 'D'], ['đ', 'd'],
     ['Æ', 'AE'], ['æ', 'ae'], ['Œ', 'OE'], ['œ', 'oe'], ['Þ', 'TH'], ['þ', 'th'], ['Ħ', 'H'], ['ħ', 'h'],
     ['ı', 'i'],
@@ -56,7 +55,7 @@ function createTextNormalize(deps) {
 
   // Second spellings a reader may type for a Latin letter: "mueller" for
   // Müller, "aa" for å, "oe" for ø.
-  const SEARCH_LETTER_ALTERNATES = new Map([
+  const SEARCH_LETTER_ALTERNATES = new Map<string, string>([
     ['ä', 'ae'], ['ö', 'oe'], ['ü', 'ue'], ['Ä', 'Ae'], ['Ö', 'Oe'], ['Ü', 'Ue'],
     ['å', 'aa'], ['Å', 'Aa'], ['ø', 'oe'], ['Ø', 'Oe']
   ]);
@@ -71,7 +70,7 @@ function createTextNormalize(deps) {
   // Marks a reader leaves out when typing: Latin, Greek and Cyrillic accents,
   // Arabic vowel signs and the tatweel, Hebrew points. Marks that change a
   // word, such as the vowel signs of Devanagari or Thai, stay.
-  function isSearchOptionalMark(code) {
+  function isSearchOptionalMark(code: number): boolean {
     return (code >= 0x0300 && code <= 0x036f) ||
       (code >= 0x0591 && code <= 0x05bd) || code === 0x05bf ||
       (code >= 0x05c1 && code <= 0x05c2) || (code >= 0x05c4 && code <= 0x05c5) || code === 0x05c7 ||
@@ -83,11 +82,12 @@ function createTextNormalize(deps) {
 
   // One character after decomposition: kana as hiragana, digits as 0-9,
   // traditional Han characters as simplified ones.
-  function foldSearchSimpleCharacter(character) {
-    if (SEARCH_FOLD_LETTERS.has(character)) {
-      return SEARCH_FOLD_LETTERS.get(character);
+  function foldSearchSimpleCharacter(character: string): string {
+    const letter = SEARCH_FOLD_LETTERS.get(character);
+    if (letter !== undefined) {
+      return letter;
     }
-    const code = character.codePointAt(0);
+    const code = character.codePointAt(0) ?? 0;
     if ((code >= 0x30a1 && code <= 0x30f6) || code === 0x30fd || code === 0x30fe) {
       return String.fromCharCode(code - 0x60);
     }
@@ -103,11 +103,12 @@ function createTextNormalize(deps) {
     return character;
   }
 
-  function computeSearchFoldedCharacter(character) {
-    if (SEARCH_FOLD_LETTERS.has(character)) {
-      return SEARCH_FOLD_LETTERS.get(character);
+  function computeSearchFoldedCharacter(character: string): string {
+    const letter = SEARCH_FOLD_LETTERS.get(character);
+    if (letter !== undefined) {
+      return letter;
     }
-    const code = character.codePointAt(0);
+    const code = character.codePointAt(0) ?? 0;
     if (isSearchOptionalMark(code)) {
       return '';
     }
@@ -120,7 +121,7 @@ function createTextNormalize(deps) {
     const composed = decomposed === character
       ? character
       : Array.from(decomposed)
-        .filter((piece) => !isSearchOptionalMark(piece.codePointAt(0)))
+        .filter((piece) => !isSearchOptionalMark(piece.codePointAt(0) ?? 0))
         .join('')
         .normalize('NFC');
     return Array.from(composed).map(foldSearchSimpleCharacter).join('');
@@ -133,7 +134,7 @@ function createTextNormalize(deps) {
   // so camel-case words can still be found. A mark a reader leaves out folds
   // to nothing; every other character folds on its own, so a title is indexed
   // character by character.
-  function foldSearchCharacter(character) {
+  function foldSearchCharacter(character: string): string {
     if (character.length === 1 && character.charCodeAt(0) < 0x80) {
       return character;
     }
@@ -150,14 +151,14 @@ function createTextNormalize(deps) {
 
   // Pages load the variant table later than this file; once it is there,
   // building the map empties the caches folded without it.
-  function ensureSearchHanVariants() {
+  function ensureSearchHanVariants(): void {
     if (!searchHanVariantMap && typeof globalThis !== 'undefined' &&
         typeof globalThis.LumnoSearchHanVariants === 'string') {
       getSearchHanVariantMap();
     }
   }
 
-  function rememberSearchText(cache, text, result) {
+  function rememberSearchText(cache: Map<string, string>, text: string, result: string): string {
     if (cache.size >= SEARCH_FOLDED_TEXT_CACHE_MAX_ENTRIES) {
       cache.clear();
     }
@@ -165,7 +166,7 @@ function createTextNormalize(deps) {
     return result;
   }
 
-  function foldSearchText(value) {
+  function foldSearchText(value: unknown): string {
     const text = String(value || '');
     if (!/[^\x00-\x7f]/.test(text)) {
       return text;
@@ -176,7 +177,7 @@ function createTextNormalize(deps) {
       return cached;
     }
     // Built only once a character changes, so unchanged text is returned as is.
-    let folded = null;
+    let folded: string | null = null;
     let position = 0;
     for (const character of text) {
       const piece = foldSearchCharacter(character);
@@ -190,11 +191,11 @@ function createTextNormalize(deps) {
     return rememberSearchText(searchFoldedTexts, text, folded === null ? text : folded);
   }
 
-  function hasSearchHanCharacters(value) {
+  function hasSearchHanCharacters(value: unknown): boolean {
     return SEARCH_HAN_PATTERN.test(String(value || ''));
   }
 
-  function normalizeSearchText(value) {
+  function normalizeSearchText(value: unknown): string {
     const text = String(value || '');
     if (!/[^\x00-\x7f]/.test(text)) {
       return text.toLowerCase();
@@ -209,11 +210,11 @@ function createTextNormalize(deps) {
 
   // The query as one run of letters, marks and digits: "gh ck" and "wx 读书"
   // are typed the way the title reads, without the spaces between its words.
-  function compactSearchQuery(value) {
+  function compactSearchQuery(value: unknown): string {
     return normalizeSearchText(value).replace(/[^\p{L}\p{M}\p{N}]+/gu, '');
   }
 
-  function splitSearchTerms(value) {
+  function splitSearchTerms(value: unknown): string[] {
     return Array.from(new Set(
       normalizeSearchText(value)
         .split(/[^\p{L}\p{M}\p{N}]+/u)
@@ -234,16 +235,16 @@ function createTextNormalize(deps) {
   // The words of a run: "OpenAI" is "open" and "ai", "iPhone15" is "i",
   // "phone" and "15", "HTMLParser" is "html" and "parser", "ВКонтакте" is
   // "в" and "контакте".
-  function splitSearchRunWords(run) {
+  function splitSearchRunWords(run: string): string[] {
     return String(run || '').match(SEARCH_WORD_PART_PATTERN) || [];
   }
 
   // A title token is also every word inside it, so a short term finds the
   // "4a" in "移动4a平台", the "15" in "iPhone15" and the "ai" in "OpenAI".
-  function splitSearchTitleTokens(value) {
+  function splitSearchTitleTokens(value: unknown): string[] {
     const tokens = splitSearchTerms(value);
     const seen = new Set(tokens);
-    const add = (word) => {
+    const add = (word: string) => {
       const token = String(word || '').toLowerCase();
       if (token && !seen.has(token)) {
         seen.add(token);
@@ -258,27 +259,29 @@ function createTextNormalize(deps) {
   }
 
   const SEARCH_HAN_READINGS_CACHE_MAX_ENTRIES = 8192;
-  const normalizedSearchHanReadingsCache = new Map();
+  const normalizedSearchHanReadingsCache = new Map<string, string[]>();
 
   // Readings as typed, longest first; one shared array per distinct set.
   // The reading lists a caller keeps per character come back as the same
   // arrays, so their normalized form is found without joining them again.
-  const normalizedSearchHanReadingsByList = new WeakMap();
+  const normalizedSearchHanReadingsByList = new WeakMap<unknown[], string[]>();
 
-  function normalizeSearchHanReadings(readings) {
-    if (Array.isArray(readings) && normalizedSearchHanReadingsByList.has(readings)) {
-      return normalizedSearchHanReadingsByList.get(readings);
+  // Takes one reading or a list of them, as the pinyin runtime gives them.
+  function normalizeSearchHanReadings(readings: unknown): string[] {
+    const known = Array.isArray(readings) ? normalizedSearchHanReadingsByList.get(readings) : undefined;
+    if (known) {
+      return known;
     }
     const raw = (Array.isArray(readings) ? readings : [readings]).map((reading) => String(reading || ''));
     const key = raw.join(',');
-    if (normalizedSearchHanReadingsCache.has(key)) {
-      const cached = normalizedSearchHanReadingsCache.get(key);
+    const cached = normalizedSearchHanReadingsCache.get(key);
+    if (cached) {
       if (Array.isArray(readings)) {
         normalizedSearchHanReadingsByList.set(readings, cached);
       }
       return cached;
     }
-    const result = [];
+    const result: string[] = [];
     raw.forEach((reading) => {
       const value = normalizeSearchText(reading).replace(/[^a-z]+/g, '');
       if (!value) {
@@ -297,7 +300,10 @@ function createTextNormalize(deps) {
     }
     normalizedSearchHanReadingsCache.set(key, result);
     if (normalizedSearchHanReadingsCache.size > SEARCH_HAN_READINGS_CACHE_MAX_ENTRIES) {
-      normalizedSearchHanReadingsCache.delete(normalizedSearchHanReadingsCache.keys().next().value);
+      const oldest = normalizedSearchHanReadingsCache.keys().next().value;
+      if (oldest !== undefined) {
+        normalizedSearchHanReadingsCache.delete(oldest);
+      }
     }
     return result;
   }
@@ -306,14 +312,14 @@ function createTextNormalize(deps) {
   // initials and finals many speakers and input methods treat as one sound.
   // z/zh, c/ch, s/sh and n/l swap initials; an/ang, en/eng and in/ing swap
   // finals (so ian/iang and uan/uang as well).
-  function expandSearchFuzzyPinyinReadings(readings) {
-    const expanded = [];
-    const add = (reading) => {
+  function expandSearchFuzzyPinyinReadings(readings: unknown): string[] {
+    const expanded: string[] = [];
+    const add = (reading: string) => {
       if (reading && !expanded.includes(reading)) {
         expanded.push(reading);
       }
     };
-    (Array.isArray(readings) ? readings : []).forEach((value) => {
+    (Array.isArray(readings) ? readings : []).forEach((value: unknown) => {
       const reading = String(value || '').toLowerCase();
       add(reading);
       const match = /^(zh|ch|sh|[bpmfdtnlgkhjqxrzcsyw]?)([aeiouv].*)$/.exec(reading);
@@ -360,4 +366,7 @@ function createTextNormalize(deps) {
   };
 }
 
+type TextNormalizeApi = ReturnType<typeof createTextNormalize>;
+
 export { createTextNormalize };
+export type { TextNormalizeApi };

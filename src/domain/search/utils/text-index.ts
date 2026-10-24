@@ -1,7 +1,32 @@
-// @ts-nocheck
 // The search text index: the word, digit, Han and kana units of a title
 // with their readings, built once and matched against many queries.
-function createTextIndex(deps) {
+import type { SearchTextIndex, SearchTextIndexOptions, SearchUnitKind } from '../types';
+import type { TextNormalizeApi } from './text-normalize';
+
+type TextIndexDeps = Pick<
+  TextNormalizeApi,
+  | 'SEARCH_WORD_PART_PATTERN'
+  | 'SEARCH_HAN_PATTERN'
+  | 'foldSearchCharacter'
+  | 'SEARCH_WORD_CHARACTERS_PATTERN'
+  | 'SEARCH_LETTER_ALTERNATES'
+  | 'normalizeSearchHanReadings'
+>;
+
+// A run of letters of the scripts that write words apart, before it is
+// split into words: per letter, where it starts and ends in the source and
+// its second spelling.
+interface WordRun {
+  text: string;
+  starts: number[];
+  ends: number[];
+  alternates: string[];
+  // Each letter is one source character.
+  simple: boolean;
+  hasAlternate: boolean;
+}
+
+function createTextIndex(deps: TextIndexDeps) {
   const {
     SEARCH_WORD_PART_PATTERN,
     SEARCH_HAN_PATTERN,
@@ -11,13 +36,13 @@ function createTextIndex(deps) {
     normalizeSearchHanReadings
   } = deps;
 
-  const SEARCH_UNIT_WORD = 'w';
-  const SEARCH_UNIT_DIGIT = 'd';
-  const SEARCH_UNIT_HAN = 'h';
-  const SEARCH_UNIT_CHAR = 'c';
+  const SEARCH_UNIT_WORD: SearchUnitKind = 'w';
+  const SEARCH_UNIT_DIGIT: SearchUnitKind = 'd';
+  const SEARCH_UNIT_HAN: SearchUnitKind = 'h';
+  const SEARCH_UNIT_CHAR: SearchUnitKind = 'c';
 
   // Hiragana (katakana fold to it), except の, which Chinese titles borrow.
-  function isSearchKanaCode(code) {
+  function isSearchKanaCode(code: number): boolean {
     return (code >= 0x3041 && code <= 0x3096 && code !== 0x306e) || (code >= 0x30f7 && code <= 0x30fa);
   }
 
@@ -28,27 +53,34 @@ function createTextIndex(deps) {
   // remember where they sit in the original text for highlighting. Thousands
   // of these stay cached, so each field is one compact value: kinds and
   // segment starts as strings, spans as start/end pairs.
-  function buildSearchTextIndex(text, options) {
-    const settings = options && typeof options === 'object' ? options : {};
+  function buildSearchTextIndex(text: unknown, options?: SearchTextIndexOptions | null): SearchTextIndex {
+    const settings: SearchTextIndexOptions = options && typeof options === 'object' ? options : {};
     const source = String(text || '');
     let kinds = '';
     let segments = '';
-    const texts = [];
-    const spans = [];
+    const texts: string[] = [];
+    const spans: number[] = [];
     // Per word: where each of its letters ends, when the letters are not one
     // source character each ("ﬁ", accents typed apart), and its second
     // spelling ("mueller" for Müller).
-    let letterEnds = null;
-    let alternates = null;
+    let letterEnds: Record<number, number[]> | null = null;
+    let alternates: Record<number, string> | null = null;
     let segmentStart = true;
     let spaceBefore = false;
     let lastKind = '';
     let attachable = false;
     let hasKana = false;
-    let run = null;
-    const isCjkKind = (kind) => kind === SEARCH_UNIT_HAN || kind === SEARCH_UNIT_CHAR;
+    let run: WordRun | null = null;
+    const isCjkKind = (kind: string) => kind === SEARCH_UNIT_HAN || kind === SEARCH_UNIT_CHAR;
 
-    const pushUnit = (kind, unitText, start, end, ends, alternate) => {
+    const pushUnit = (
+      kind: SearchUnitKind,
+      unitText: string,
+      start: number,
+      end: number,
+      ends?: number[] | null,
+      alternate?: string
+    ) => {
       if (ends) {
         letterEnds = letterEnds || {};
         letterEnds[texts.length] = ends;
@@ -70,29 +102,30 @@ function createTextIndex(deps) {
       attachable = true;
     };
     const flushRun = () => {
-      if (!run) {
+      const current = run;
+      if (!current) {
         return;
       }
       SEARCH_WORD_PART_PATTERN.lastIndex = 0;
-      let match = SEARCH_WORD_PART_PATTERN.exec(run.text);
+      let match = SEARCH_WORD_PART_PATTERN.exec(current.text);
       while (match) {
         const from = match.index;
         const to = from + match[0].length;
         const word = match[0].toLowerCase();
-        const alternate = run.hasAlternate ? run.alternates.slice(from, to).join('').toLowerCase() : '';
+        const alternate = current.hasAlternate ? current.alternates.slice(from, to).join('').toLowerCase() : '';
         pushUnit(
           /^\d/.test(match[0]) ? SEARCH_UNIT_DIGIT : SEARCH_UNIT_WORD,
           word,
-          run.starts[from],
-          run.ends[to - 1],
-          run.simple ? null : run.ends.slice(from, to),
+          current.starts[from],
+          current.ends[to - 1],
+          current.simple ? null : current.ends.slice(from, to),
           alternate && alternate !== word ? alternate : ''
         );
-        match = SEARCH_WORD_PART_PATTERN.exec(run.text);
+        match = SEARCH_WORD_PART_PATTERN.exec(current.text);
       }
       run = null;
     };
-    const extendLastUnit = (end, addedText) => {
+    const extendLastUnit = (end: number, addedText: string) => {
       const last = texts.length - 1;
       spans[last * 2 + 1] = end;
       if (addedText) {
@@ -145,7 +178,7 @@ function createTextIndex(deps) {
       flushRun();
       const lower = folded.toLowerCase();
       if (/^[\p{L}\p{N}][\p{L}\p{M}\p{N}]*$/u.test(lower)) {
-        if (isSearchKanaCode(lower.codePointAt(0))) {
+        if (isSearchKanaCode(lower.codePointAt(0) ?? 0)) {
           hasKana = true;
         }
         pushUnit(SEARCH_UNIT_CHAR, lower, start, offset);
@@ -179,7 +212,7 @@ function createTextIndex(deps) {
 
   // Readings are looked up the first time a typed letter meets the index, so
   // a query of Han characters never needs the pinyin data.
-  function resolveSearchTextIndexReadings(index) {
+  function resolveSearchTextIndexReadings(index: SearchTextIndex): void {
     if (index.readingsResolved) {
       return;
     }
@@ -187,23 +220,25 @@ function createTextIndex(deps) {
     if (!index.getHanReadings) {
       return;
     }
-    const hanUnits = [];
+    const hanUnits: number[] = [];
     for (let unit = 0; unit < index.count; unit += 1) {
       if (index.kinds.charAt(unit) === SEARCH_UNIT_HAN) {
         hanUnits.push(unit);
       }
     }
-    let readings = null;
+    let readings: unknown = null;
     try {
       readings = index.getHanReadings(index.text, hanUnits.map((unit) => index.texts[unit]));
     } catch (error) {
       readings = null;
     }
     if (Array.isArray(readings)) {
-      index.readings = new Array(index.count).fill(null);
+      const lookedUp = readings;
+      const resolved: Array<string[] | null> = new Array(index.count).fill(null);
       hanUnits.forEach((unit, position) => {
-        index.readings[unit] = normalizeSearchHanReadings(readings[position]);
+        resolved[unit] = normalizeSearchHanReadings(lookedUp[position]);
       });
+      index.readings = resolved;
     }
   }
 
@@ -217,4 +252,7 @@ function createTextIndex(deps) {
   };
 }
 
+type TextIndexApi = ReturnType<typeof createTextIndex>;
+
 export { createTextIndex };
+export type { TextIndexApi };

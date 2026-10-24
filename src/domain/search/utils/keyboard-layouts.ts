@@ -1,8 +1,30 @@
-// @ts-nocheck
 // Queries typed in the wrong keyboard layout: Hangul composition from
 // keystrokes and the Latin and Cyrillic layout conversions a query is also
 // tried as.
-function createKeyboardLayouts(deps) {
+import type { DirectNavigationApi } from './direct-navigation';
+
+type KeyboardLayoutsDeps = Pick<DirectNavigationApi, 'isUrlLikeSearchQuery'>;
+
+// The parts of a Hangul syllable by index: initial consonant, vowel, final
+// consonant (0 for none).
+interface HangulParts {
+  initial: number;
+  vowel: number;
+  final: number;
+}
+
+// How a unit step was spelled (see getSearchUnitSteps in text-matching.ts).
+type AddUnitStep = (length: number, type: 'full' | 'partial' | 'initial', reading: boolean) => void;
+
+// The layouts a query is also read in, and the US keys a reading is typed with.
+type SearchKeyboardLayoutId = 'ru' | 'uk' | 'he' | 'ar' | 'ko' | 'en';
+
+interface SearchKeyboardLayoutQuery {
+  layout: SearchKeyboardLayoutId;
+  query: string;
+}
+
+function createKeyboardLayouts(deps: KeyboardLayoutsDeps) {
   const {
     isUrlLikeSearchQuery
   } = deps;
@@ -25,11 +47,11 @@ function createKeyboardLayouts(deps) {
     [0x3145], [0x3146], [0x3147], [0x3148], [0x314a], [0x314b], [0x314c], [0x314d], [0x314e]
   ];
   // Compound vowels by index, as the vowels typed for them.
-  const HANGUL_VOWEL_PARTS = { 9: [8, 0], 10: [8, 1], 11: [8, 20], 14: [13, 4], 15: [13, 5], 16: [13, 20], 19: [18, 20] };
+  const HANGUL_VOWEL_PARTS: Record<number, [number, number]> = { 9: [8, 0], 10: [8, 1], 11: [8, 20], 14: [13, 4], 15: [13, 5], 16: [13, 20], 19: [18, 20] };
 
-  function getHangulParts(character) {
+  function getHangulParts(character: unknown): HangulParts | null {
     const code = String(character || '').codePointAt(0);
-    if (!(code >= HANGUL_FIRST && code <= HANGUL_LAST)) {
+    if (code === undefined || !(code >= HANGUL_FIRST && code <= HANGUL_LAST)) {
       return null;
     }
     const index = code - HANGUL_FIRST;
@@ -41,14 +63,15 @@ function createKeyboardLayouts(deps) {
   }
 
   // A syllable as the jamo keystrokes that build it.
-  function getHangulKeystrokes(parts) {
+  // Consonants as their jamo code, vowels as -1 - vowel index.
+  function getHangulKeystrokes(parts: HangulParts): number[] {
     const vowels = HANGUL_VOWEL_PARTS[parts.vowel] || [parts.vowel];
     return [HANGUL_INITIAL_JAMO[parts.initial]]
       .concat(vowels.map((vowel) => -1 - vowel))
       .concat(HANGUL_FINAL_JAMO[parts.final]);
   }
 
-  function addHangulSteps(text, query, position, add) {
+  function addHangulSteps(text: string, query: string, position: number, add: AddUnitStep): void {
     const unitParts = text.length === 1 ? getHangulParts(text) : null;
     if (!unitParts) {
       return;
@@ -71,7 +94,7 @@ function createKeyboardLayouts(deps) {
 
   // While typing, a final consonant may still become the next syllable's
   // initial ("간" on the way to 가나): the query with that consonant moved out.
-  function getHangulCarriedQuery(compact) {
+  function getHangulCarriedQuery(compact: string): string {
     const last = compact.charAt(compact.length - 1);
     const parts = getHangulParts(last);
     if (!parts || parts.final === 0) {
@@ -91,20 +114,22 @@ function createKeyboardLayouts(deps) {
   // marks a key that gives no letter there. Korean keys are composed into
   // syllables separately.
   const SEARCH_LAYOUT_KEYS = "qwertyuiop[]asdfghjkl;'zxcvbnm,.`\\/";
-  const SEARCH_KEYBOARD_LAYOUTS = [
+  const SEARCH_KEYBOARD_LAYOUT_LETTERS: Array<{ id: 'ru' | 'uk' | 'he' | 'ar'; letters: string; extra?: Record<string, string> }> = [
     { id: 'ru', letters: 'йцукенгшщзхъфывапролджэячсмитьбюё  ' },
     { id: 'uk', letters: "йцукенгшщзхїфівапролджєячсмитьбю'ґ " },
     { id: 'he', letters: '  קראטוןםפ  שדגכעיחלךף זסבהנמצתץ   ' },
     { id: 'ar', letters: 'ضصثقفغعهخحجدشسيبلاتنمكطئءؤر ىةوزذ ظ', extra: { b: 'لا' } }
-  ].map((layout) => {
-    const toLayout = new Map();
+  ];
+  const SEARCH_KEYBOARD_LAYOUTS = SEARCH_KEYBOARD_LAYOUT_LETTERS.map((layout) => {
+    const toLayout = new Map<string, string>();
     Array.from(layout.letters).forEach((letter, index) => {
       if (letter !== ' ') {
         toLayout.set(SEARCH_LAYOUT_KEYS[index], letter);
       }
     });
-    Object.keys(layout.extra || {}).forEach((key) => toLayout.set(key, layout.extra[key]));
-    const toKeys = new Map();
+    const extra = layout.extra || {};
+    Object.keys(extra).forEach((key) => toLayout.set(key, extra[key]));
+    const toKeys = new Map<string, string>();
     toLayout.forEach((letter, key) => {
       if (letter.length === 1 && !toKeys.has(letter)) {
         toKeys.set(letter, key);
@@ -116,39 +141,40 @@ function createKeyboardLayouts(deps) {
   SEARCH_KEYBOARD_LAYOUTS[3].toKeys.set('أ', 'h').set('إ', 'y').set('آ', 'n');
   // 두벌식: consonants as their jamo, vowels as -1 - vowel index, the way
   // getHangulKeystrokes spells a syllable. Shift doubles q w e r t, o p.
-  const SEARCH_KOREAN_KEYS = {
+  const SEARCH_KOREAN_KEYS: Record<string, number> = {
     r: 0x3131, R: 0x3132, s: 0x3134, e: 0x3137, E: 0x3138, f: 0x3139, a: 0x3141,
     q: 0x3142, Q: 0x3143, t: 0x3145, T: 0x3146, d: 0x3147, w: 0x3148, W: 0x3149,
     c: 0x314a, z: 0x314b, x: 0x314c, v: 0x314d, g: 0x314e,
     k: -1, o: -2, i: -3, O: -4, j: -5, p: -6, u: -7, P: -8, h: -9, y: -13, n: -14, b: -18, m: -19, l: -21
   };
-  const SEARCH_KOREAN_KEY_LETTERS = new Map();
+  const SEARCH_KOREAN_KEY_LETTERS = new Map<number, string>();
   Object.keys(SEARCH_KOREAN_KEYS).forEach((key) => {
     if (!SEARCH_KOREAN_KEY_LETTERS.has(SEARCH_KOREAN_KEYS[key])) {
       SEARCH_KOREAN_KEY_LETTERS.set(SEARCH_KOREAN_KEYS[key], key.toLowerCase());
     }
   });
-  const SEARCH_LAYOUT_SCRIPT_PATTERNS = {
+  const SEARCH_LAYOUT_SCRIPT_IDS = ['ru', 'he', 'ar', 'ko'] as const;
+  const SEARCH_LAYOUT_SCRIPT_PATTERNS: Record<typeof SEARCH_LAYOUT_SCRIPT_IDS[number], RegExp> = {
     ru: /[\p{Script=Cyrillic}]/u,
     he: /[\p{Script=Hebrew}]/u,
     ar: /[\p{Script=Arabic}]/u,
     ko: /[\p{Script=Hangul}]/u
   };
   // The script a reading on each layout is written in.
-  const SEARCH_LAYOUT_READING_SCRIPTS = Object.freeze({
+  const SEARCH_LAYOUT_READING_SCRIPTS: Readonly<Record<string, RegExp>> = Object.freeze({
     ...SEARCH_LAYOUT_SCRIPT_PATTERNS,
     uk: SEARCH_LAYOUT_SCRIPT_PATTERNS.ru,
     en: /[a-z]/i
   });
 
   // Whether a text is written partly in the script of a layout's readings.
-  function hasSearchKeyboardLayoutScript(layout, text) {
+  function hasSearchKeyboardLayoutScript(layout: string, text: unknown): boolean {
     const pattern = SEARCH_LAYOUT_READING_SCRIPTS[layout];
     return Boolean(pattern && text && pattern.test(String(text)));
   }
   const HANGUL_VOWEL_JAMO_FIRST = 0x314f;
 
-  function findHangulFinal(jamo) {
+  function findHangulFinal(jamo: number[]): number {
     return HANGUL_FINAL_JAMO.findIndex((parts) => (
       parts.length === jamo.length && parts.every((part, i) => part === jamo[i])
     ));
@@ -158,13 +184,13 @@ function createKeyboardLayouts(deps) {
   // final consonant moves on to a following vowel, ㅗ ㅏ make ㅘ, ㄹ ㄱ make
   // ㄺ. Null unless every jamo joins a syllable; only the last consonant may
   // stand alone, as one typed before its vowel.
-  function composeHangulKeystrokes(keys) {
+  function composeHangulKeystrokes(keys: number[]): string | null {
     let text = '';
     let complete = true;
     let initial = -1;
     let vowel = -1;
     let final = 0;
-    const flush = (atEnd) => {
+    const flush = (atEnd: boolean) => {
       if (initial >= 0 && vowel >= 0) {
         text += String.fromCharCode(HANGUL_FIRST + (initial * 21 + vowel) * 28 + final);
       } else if (initial >= 0) {
@@ -203,7 +229,7 @@ function createKeyboardLayouts(deps) {
       }
       if (vowel >= 0) {
         const compound = Object.keys(HANGUL_VOWEL_PARTS).find((index) => (
-          HANGUL_VOWEL_PARTS[index][0] === vowel && HANGUL_VOWEL_PARTS[index][1] === next
+          HANGUL_VOWEL_PARTS[Number(index)][0] === vowel && HANGUL_VOWEL_PARTS[Number(index)][1] === next
         ));
         if (compound) {
           vowel = Number(compound);
@@ -218,7 +244,7 @@ function createKeyboardLayouts(deps) {
   }
 
   // US keys as 두벌식 typing, word by word; spaces and digits stay.
-  function composeHangulText(text) {
+  function composeHangulText(text: string): string | null {
     const words = text.split(/([\s\d]+)/);
     let composed = '';
     for (let i = 0; i < words.length; i += 1) {
@@ -239,12 +265,12 @@ function createKeyboardLayouts(deps) {
   }
 
   // Hangul back into the keys that type it; null for a character no key gives.
-  function getHangulKeyLetters(text) {
+  function getHangulKeyLetters(text: string): string | null {
     let letters = '';
     for (const character of text) {
       const code = character.charCodeAt(0);
       const parts = getHangulParts(character);
-      let keys = null;
+      let keys: number[] | null = null;
       if (parts) {
         keys = getHangulKeystrokes(parts);
       } else if (HANGUL_INITIAL_JAMO.includes(code)) {
@@ -266,7 +292,7 @@ function createKeyboardLayouts(deps) {
 
   // Letters a layout writes that no word of its language puts there: Russian
   // ь ъ ы never start a word, Hebrew final forms and Arabic ة ى end one.
-  function isPlausibleSearchLayoutText(layoutId, text) {
+  function isPlausibleSearchLayoutText(layoutId: string, text: string): boolean {
     if (layoutId === 'ru') {
       return !/(?:^|\s)[ьъы]/.test(text);
     }
@@ -279,7 +305,7 @@ function createKeyboardLayouts(deps) {
     return true;
   }
 
-  function convertSearchTextByLayout(text, map) {
+  function convertSearchTextByLayout(text: string, map: Map<string, string>): string | null {
     let converted = '';
     for (const character of text) {
       const mapped = map.get(character);
@@ -299,17 +325,20 @@ function createKeyboardLayouts(deps) {
   // ("vjcrdf" is москва, "tkatjd" is 삼성), and those scripts read back as US
   // keys ("пшерги" is github). Each entry is { layout, query }; addresses and
   // queries mixing scripts give none.
-  function getSearchKeyboardLayoutQueries(query) {
+  function getSearchKeyboardLayoutQueries(query: unknown): SearchKeyboardLayoutQuery[] {
     const raw = String(query || '').trim();
     const lower = raw.toLowerCase();
     if (raw.length > 64 || isUrlLikeSearchQuery(raw)) {
       return [];
     }
-    const results = [];
+    const results: SearchKeyboardLayoutQuery[] = [];
     // Three keys at least: one or two match too much in any script.
-    const add = (layout, converted) => {
+    const add = (layout: SearchKeyboardLayoutId, converted: string | null) => {
+      if (!converted) {
+        return;
+      }
       const latin = layout === 'en' ? converted : lower;
-      if (converted && converted !== lower && (latin.match(/[a-z]/g) || []).length >= 3 &&
+      if (converted !== lower && (latin.match(/[a-z]/g) || []).length >= 3 &&
           !results.some((item) => item.query === converted)) {
         results.push({ layout, query: converted });
       }
@@ -327,9 +356,7 @@ function createKeyboardLayouts(deps) {
       add('ko', composeHangulText(lower));
       return results;
     }
-    const scripts = Object.keys(SEARCH_LAYOUT_SCRIPT_PATTERNS).filter((id) => (
-      SEARCH_LAYOUT_SCRIPT_PATTERNS[id].test(lower)
-    ));
+    const scripts = SEARCH_LAYOUT_SCRIPT_IDS.filter((id) => SEARCH_LAYOUT_SCRIPT_PATTERNS[id].test(lower));
     if (scripts.length !== 1) {
       return [];
     }
@@ -337,7 +364,7 @@ function createKeyboardLayouts(deps) {
       add('en', getHangulKeyLetters(lower));
       return results;
     }
-    const toKeys = new Map();
+    const toKeys = new Map<string, string>();
     SEARCH_KEYBOARD_LAYOUTS.forEach((layout) => {
       if (scripts[0] === layout.id || (scripts[0] === 'ru' && layout.id === 'uk')) {
         layout.toKeys.forEach((key, letter) => toKeys.set(letter, key));
@@ -361,4 +388,7 @@ function createKeyboardLayouts(deps) {
   };
 }
 
+type KeyboardLayoutsApi = ReturnType<typeof createKeyboardLayouts>;
+
 export { createKeyboardLayouts };
+export type { AddUnitStep, HangulParts, KeyboardLayoutsApi, SearchKeyboardLayoutId, SearchKeyboardLayoutQuery };

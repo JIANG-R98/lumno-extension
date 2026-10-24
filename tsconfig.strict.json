@@ -8,6 +8,7 @@
   },
   "include": [
     "src/domain/**/*.ts",
-    "src/platform/**/*.ts"
+    "src/platform/**/*.ts",
+    "src/types/**/*.d.ts"
   ]
 }

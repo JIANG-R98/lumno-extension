@@ -1,8 +1,67 @@
-// @ts-nocheck
 // Matching a query against an index: unit steps and runs, initials and
 // pieces, compact matching, the reusable matcher and title highlight
 // ranges.
-function createTextMatching(deps) {
+import type {
+  SearchQueryContext,
+  SearchRange,
+  SearchRankingOptions,
+  SearchTextIndex,
+  SearchTextMatch,
+  SearchTextMatcher,
+  SearchTextMatcherOptions
+} from '../types';
+import type { KeyboardLayoutsApi } from './keyboard-layouts';
+import type { TextIndexApi } from './text-index';
+import type { TextNormalizeApi } from './text-normalize';
+
+type TextMatchingDeps =
+  Pick<TextIndexApi, 'SEARCH_UNIT_HAN' | 'SEARCH_UNIT_CHAR' | 'SEARCH_UNIT_WORD' | 'SEARCH_UNIT_DIGIT' |
+    'resolveSearchTextIndexReadings' | 'buildSearchTextIndex'> &
+  Pick<KeyboardLayoutsApi, 'addHangulSteps' | 'getHangulParts' | 'HANGUL_INITIAL_JAMO' | 'getHangulCarriedQuery'> &
+  Pick<TextNormalizeApi, 'SEARCH_HAN_PATTERN' | 'compactSearchQuery' | 'normalizeSearchText' |
+    'SEARCH_LETTER_ALTERNATES' | 'foldSearchCharacter' | 'SEARCH_TEXT_MATCHER_CACHE_MAX_ENTRIES'> & {
+    // From query-intent.ts, which matches title units in turn.
+    shouldAllowLooseTextContains: (term: unknown) => boolean;
+  };
+
+type UnitStepType = 'full' | 'partial' | 'initial';
+
+// One unit spelling part of the query.
+interface UnitStep {
+  unit: number;
+  length: number;
+  type: UnitStepType;
+  // Spelled through a Han reading.
+  reading: boolean;
+  // Spelled through the unit's second spelling.
+  alternate: boolean;
+}
+
+interface UnitPathShape {
+  segmentStart: boolean;
+  usesInitial: boolean;
+  initialThenSpelled: boolean;
+  singleHan: boolean;
+  hasHan: boolean;
+  literal: boolean;
+  usesPinyin: boolean;
+  abbreviation: boolean;
+  anchored: boolean;
+  exact: boolean;
+}
+
+interface UnitRun {
+  path: UnitStep[];
+  shape: UnitPathShape;
+}
+
+// The options getSearchTitleUnitMatch reads.
+type TitleMatchOptions = Pick<SearchRankingOptions, 'titleMatcher'>;
+
+// The parts of the query context highlighting reads.
+type HighlightContext = Partial<Pick<SearchQueryContext, 'queryLower' | 'coreQueryTerms'>>;
+
+function createTextMatching(deps: TextMatchingDeps) {
   const {
     SEARCH_UNIT_HAN,
     SEARCH_UNIT_CHAR,
@@ -26,11 +85,11 @@ function createTextMatching(deps) {
   // The ways one unit can spell the query from position p: the whole word
   // or reading, its initial ("zh", "ch" and "sh" count as initials), or any
   // prefix when the query ends inside it.
-  function getSearchUnitSteps(index, unit, query, position) {
-    const steps = [];
+  function getSearchUnitSteps(index: SearchTextIndex, unit: number, query: string, position: number): UnitStep[] {
+    const steps: UnitStep[] = [];
     const rest = query.length - position;
     const tail = query.slice(position);
-    const add = (length, type, reading, alternate) => {
+    const add = (length: number, type: UnitStepType, reading: boolean, alternate?: boolean) => {
       if (length > 0 && length <= rest &&
           !steps.some((step) => step.length === length && step.type === type)) {
         steps.push({ unit, length, type, reading, alternate: Boolean(alternate) });
@@ -101,9 +160,9 @@ function createTextMatching(deps) {
   // A mark is drawn with the letter it sits on, so a highlight never ends
   // before it: splitting a word there would also break the joining of Arabic
   // letters.
-  function extendSearchRangesOverMarks(text, ranges) {
-    const isMark = (position) => position < text.length && /^\p{M}$/u.test(text.charAt(position));
-    const extended = ranges.map(([start, end]) => {
+  function extendSearchRangesOverMarks(text: string, ranges: SearchRange[]): SearchRange[] {
+    const isMark = (position: number) => position < text.length && /^\p{M}$/u.test(text.charAt(position));
+    const extended = ranges.map(([start, end]): SearchRange => {
       let stop = end;
       while (isMark(stop)) {
         stop += 1;
@@ -113,12 +172,12 @@ function createTextMatching(deps) {
     return mergeSearchRanges(extended);
   }
 
-  function mergeSearchRanges(ranges) {
+  function mergeSearchRanges(ranges: SearchRange[]): SearchRange[] {
     const sorted = (Array.isArray(ranges) ? ranges : [])
       .filter((range) => Array.isArray(range) && range[1] > range[0])
-      .map((range) => [range[0], range[1]])
+      .map((range): SearchRange => [range[0], range[1]])
       .sort((left, right) => left[0] - right[0] || left[1] - right[1]);
-    const merged = [];
+    const merged: SearchRange[] = [];
     sorted.forEach((range) => {
       const last = merged[merged.length - 1];
       if (last && range[0] <= last[1]) {
@@ -130,7 +189,7 @@ function createTextMatching(deps) {
     return merged;
   }
 
-  function describeSearchUnitPath(index, path) {
+  function describeSearchUnitPath(index: SearchTextIndex, path: UnitStep[]): UnitPathShape {
     const firstUnit = path[0].unit;
     const lastStep = path[path.length - 1];
     const abbreviation = path.every((step) => (
@@ -160,7 +219,7 @@ function createTextMatching(deps) {
     };
   }
 
-  function getSearchUnitStepRange(index, step) {
+  function getSearchUnitStepRange(index: SearchTextIndex, step: UnitStep): SearchRange {
     const start = index.spans[step.unit * 2];
     const kind = index.kinds.charAt(step.unit);
     if (step.type === 'full' || step.alternate || (kind !== SEARCH_UNIT_WORD && kind !== SEARCH_UNIT_DIGIT)) {
@@ -172,7 +231,7 @@ function createTextMatching(deps) {
 
   // Whether a unit can spell the given first letter or character at all; a
   // quick test before working out its steps.
-  function canSearchUnitStartWith(index, unit, character) {
+  function canSearchUnitStartWith(index: SearchTextIndex, unit: number, character: string): boolean {
     const text = index.texts[unit];
     if (index.kinds.charAt(unit) !== SEARCH_UNIT_HAN) {
       if (text.charAt(0) === character) {
@@ -192,15 +251,15 @@ function createTextMatching(deps) {
       return true;
     }
     const readings = index.readings && index.readings[unit];
-    return Boolean(readings) && readings.some((reading) => reading.charAt(0) === character);
+    return Boolean(readings && readings.some((reading) => reading.charAt(0) === character));
   }
 
   // The first place the query reads as consecutive units of the text, each
   // spelled in full, by its initial, or by a prefix where the query ends.
-  function findSearchUnitRun(index, compact) {
-    const failed = new Set();
-    const path = [];
-    const walk = (unit, position) => {
+  function findSearchUnitRun(index: SearchTextIndex, compact: string): UnitRun | null {
+    const failed = new Set<number>();
+    const path: UnitStep[] = [];
+    const walk = (unit: number, position: number): boolean => {
       if (position === compact.length) {
         return true;
       }
@@ -260,35 +319,38 @@ function createTextMatching(deps) {
   // find 美国银行. Pieces typed as letters have to read Han characters, since
   // English already separates its words with spaces. The split with the
   // fewest pieces wins.
-  function findSearchUnitPieces(index, compact) {
+  function findSearchUnitPieces(index: SearchTextIndex, compact: string): UnitRun[] | null {
     if (compact.length < 4 || compact.length > SEARCH_PIECES_QUERY_MAX_LENGTH) {
       return null;
     }
     const queryHasHan = SEARCH_HAN_PATTERN.test(compact);
-    const runs = new Map();
-    const getRun = (from, to) => {
+    const runs = new Map<number, UnitRun | null>();
+    const getRun = (from: number, to: number): UnitRun | null => {
       const key = from * (compact.length + 1) + to;
-      if (!runs.has(key)) {
-        const run = findSearchUnitRun(index, compact.slice(from, to));
-        runs.set(key, run && (queryHasHan || run.shape.hasHan) ? run : null);
+      const known = runs.get(key);
+      if (known !== undefined) {
+        return known;
       }
-      return runs.get(key);
+      const run = findSearchUnitRun(index, compact.slice(from, to));
+      const usable = run && (queryHasHan || run.shape.hasHan) ? run : null;
+      runs.set(key, usable);
+      return usable;
     };
     // How far a piece starting at `from` could reach at most, from one pass
     // over the units without the piece rules. Splits that end beyond it
     // cannot match, so most titles are rejected after one short walk.
-    const getReach = (from) => {
+    const getReach = (from: number): number => {
       let reach = from;
-      const seen = new Set();
-      const stack = [];
+      const seen = new Set<number>();
+      // Unit and query position pairs still to walk.
+      const stack: Array<[number, number]> = [];
       for (let unit = 0; unit < index.count; unit += 1) {
         if (canSearchUnitStartWith(index, unit, compact.charAt(from))) {
-          stack.push(unit, from);
+          stack.push([unit, from]);
         }
       }
-      while (stack.length > 0) {
-        const position = stack.pop();
-        const unit = stack.pop();
+      for (let entry = stack.pop(); entry; entry = stack.pop()) {
+        const [unit, position] = entry;
         const key = unit * (compact.length + 1) + position;
         if (seen.has(key)) {
           continue;
@@ -308,25 +370,26 @@ function createTextMatching(deps) {
           const next = position + step.length;
           if (next < compact.length && unit + 1 < index.count &&
               canSearchUnitStartWith(index, unit + 1, compact.charAt(next))) {
-            stack.push(unit + 1, next);
+            stack.push([unit + 1, next]);
           }
         });
       }
       return reach;
     };
-    const covers = new Map();
-    const cover = (from) => {
+    const covers = new Map<number, UnitRun[] | null>();
+    const cover = (from: number): UnitRun[] | null => {
       if (from === compact.length) {
         return [];
       }
-      if (covers.has(from)) {
-        return covers.get(from);
+      const known = covers.get(from);
+      if (known !== undefined) {
+        return known;
       }
-      let best = null;
+      let best: UnitRun[] | null = null;
       for (let to = getReach(from); to >= from + 2; to -= 1) {
         const run = getRun(from, to);
         const rest = run ? cover(to) : null;
-        if (rest && (!best || rest.length + 1 < best.length)) {
+        if (run && rest && (!best || rest.length + 1 < best.length)) {
           best = [run].concat(rest);
         }
       }
@@ -337,7 +400,7 @@ function createTextMatching(deps) {
     if (!pieces || pieces.length < 2) {
       return null;
     }
-    const used = new Set();
+    const used = new Set<number>();
     for (let i = 0; i < pieces.length; i += 1) {
       for (let j = 0; j < pieces[i].path.length; j += 1) {
         const unit = pieces[i].path[j].unit;
@@ -355,7 +418,7 @@ function createTextMatching(deps) {
   // finds "GitHub 仓库"), then in pieces. Readings come from the simplified
   // form, so "taiwan" finds 臺灣 too. One run outranks pieces, and pieces in
   // the query's order outrank pieces out of it.
-  function matchSearchTextIndex(index, query) {
+  function matchSearchTextIndex(index: SearchTextIndex | null | undefined, query: unknown): SearchTextMatch | null {
     const compact = compactSearchQuery(query);
     if (!compact || !index || !(index.count > 0)) {
       return null;
@@ -368,7 +431,7 @@ function createTextMatching(deps) {
     return carried ? matchSearchTextCompact(index, carried) : result;
   }
 
-  function matchSearchTextCompact(index, compact) {
+  function matchSearchTextCompact(index: SearchTextIndex, compact: string): SearchTextMatch | null {
     const run = findSearchUnitRun(index, compact);
     if (run) {
       const shape = run.shape;
@@ -407,9 +470,9 @@ function createTextMatching(deps) {
       anchored: starts[0] === 0,
       exact: false,
       pieces: pieces.length,
-      ranges: mergeSearchRanges([].concat(...pieces.map((piece) => (
+      ranges: mergeSearchRanges(pieces.flatMap((piece) => (
         piece.path.map((step) => getSearchUnitStepRange(index, step))
-      ))))
+      )))
     };
   }
 
@@ -417,7 +480,7 @@ function createTextMatching(deps) {
   // matched as themselves, so the title must hold every one of them. Without
   // Han characters in the title every unit is the title's own letters, so the
   // query's letters have to appear in order.
-  function canSearchTextMatchQuery(text, compact) {
+  function canSearchTextMatchQuery(text: string, compact: string): boolean {
     const folded = normalizeSearchText(text);
     if (SEARCH_HAN_PATTERN.test(folded)) {
       return Array.from(compact).every((character) => (
@@ -451,16 +514,16 @@ function createTextMatching(deps) {
   // Keeps the index of recently seen titles, so typing one more letter only
   // walks the units again. Pinyin comes from getHanReadings(text, characters),
   // which returns the readings of each Han character in order.
-  function createSearchTextMatcher(options) {
-    const settings = options && typeof options === 'object' ? options : {};
+  function createSearchTextMatcher(options?: SearchTextMatcherOptions | null): SearchTextMatcher {
+    const settings: SearchTextMatcherOptions = options && typeof options === 'object' ? options : {};
     const maxEntries = Number(settings.maxEntries) >= 0
       ? Math.floor(Number(settings.maxEntries))
       : SEARCH_TEXT_MATCHER_CACHE_MAX_ENTRIES;
-    const cache = new Map();
-    const getIndex = (text) => {
+    const cache = new Map<string, SearchTextIndex>();
+    const getIndex = (text: unknown): SearchTextIndex => {
       const key = String(text || '');
-      if (cache.has(key)) {
-        const cached = cache.get(key);
+      const cached = cache.get(key);
+      if (cached) {
         cache.delete(key);
         cache.set(key, cached);
         return cached;
@@ -469,14 +532,18 @@ function createTextMatching(deps) {
       if (maxEntries > 0) {
         cache.set(key, index);
         while (cache.size > maxEntries) {
-          cache.delete(cache.keys().next().value);
+          const oldest = cache.keys().next().value;
+          if (oldest === undefined) {
+            break;
+          }
+          cache.delete(oldest);
         }
       }
       return index;
     };
     return {
       getIndex,
-      match(text, query) {
+      match(text: unknown, query: unknown) {
         const source = String(text || '');
         const compact = compactSearchQuery(query);
         if (!source || !compact || !canSearchTextMatchQuery(source, compact)) {
@@ -492,14 +559,14 @@ function createTextMatching(deps) {
 
   const DEFAULT_SEARCH_TEXT_MATCHER = createSearchTextMatcher();
 
-  function getSearchTitleMatcher(options) {
+  function getSearchTitleMatcher(options?: TitleMatchOptions | null): SearchTextMatcher {
     const matcher = options && options.titleMatcher;
     return matcher && typeof matcher.match === 'function' ? matcher : DEFAULT_SEARCH_TEXT_MATCHER;
   }
 
   // Two letters at least, and more than a number: digits alone match the
   // title text itself.
-  function isSearchUnitQueryEligible(term) {
+  function isSearchUnitQueryEligible(term: unknown): boolean {
     const compact = compactSearchQuery(term);
     // One Hangul syllable may still be half typed ("서" on the way to 성).
     return (compact.length >= 2 && /\D/.test(compact)) ||
@@ -508,9 +575,15 @@ function createTextMatching(deps) {
 
   // A unit match the plain text checks already credit (the title holds the
   // query as typed) adds nothing to the score.
-  function getSearchTitleUnitMatch(title, term, options, matchOptions) {
+  // skipLiteral: no match where the title already holds the term as typed.
+  function getSearchTitleUnitMatch(
+    title: unknown,
+    term: unknown,
+    options?: TitleMatchOptions | null,
+    matchOptions?: { skipLiteral?: boolean } | null
+  ): SearchTextMatch | null {
     const text = String(title || '');
-    const extra = matchOptions && typeof matchOptions === 'object' ? matchOptions : {};
+    const extra: { skipLiteral?: boolean } = matchOptions && typeof matchOptions === 'object' ? matchOptions : {};
     if (!text || !isSearchUnitQueryEligible(term)) {
       return null;
     }
@@ -525,7 +598,11 @@ function createTextMatching(deps) {
   // neither is there literally, the units a pinyin or initials match spelled.
   // A short ASCII term is only marked where a word starts, the way it matches,
   // so "ai" marks OpenAI but not "Detail". Ranges index the given text.
-  function getSearchTitleHighlightRanges(title, context, options) {
+  function getSearchTitleHighlightRanges(
+    title: unknown,
+    context: HighlightContext | null | undefined,
+    options?: TitleMatchOptions | null
+  ): SearchRange[] {
     const text = String(title || '');
     const queryLower = context && context.queryLower ? String(context.queryLower) : '';
     if (!text || !queryLower) {
@@ -535,8 +612,8 @@ function createTextMatching(deps) {
     const wordIndex = buildSearchTextIndex(text);
     const unitStarts = new Set(wordIndex.spans.filter((value, position) => position % 2 === 0));
     let foldedText = '';
-    const foldedStarts = [];
-    const foldedEnds = [];
+    const foldedStarts: number[] = [];
+    const foldedEnds: number[] = [];
     let offset = 0;
     Array.from(text).forEach((character) => {
       const start = offset;
@@ -549,8 +626,8 @@ function createTextMatching(deps) {
         }
       });
     });
-    const ranges = [];
-    const markLiteral = (needle) => {
+    const ranges: SearchRange[] = [];
+    const markLiteral = (needle: string) => {
       if (!needle) {
         return false;
       }
@@ -567,7 +644,7 @@ function createTextMatching(deps) {
       }
       return found;
     };
-    const markUnits = (term) => {
+    const markUnits = (term: string) => {
       const result = getSearchTitleUnitMatch(text, term, options);
       if (result) {
         ranges.push(...result.ranges);
@@ -576,7 +653,7 @@ function createTextMatching(deps) {
       return false;
     };
     if (!markLiteral(queryLower) && !markUnits(queryLower)) {
-      const terms = Array.isArray(context.coreQueryTerms) ? context.coreQueryTerms : [];
+      const terms = context && Array.isArray(context.coreQueryTerms) ? context.coreQueryTerms : [];
       terms.forEach((term) => {
         if (!markLiteral(term)) {
           markUnits(term);
@@ -595,4 +672,7 @@ function createTextMatching(deps) {
   };
 }
 
+type TextMatchingApi = ReturnType<typeof createTextMatching>;
+
 export { createTextMatching };
+export type { TextMatchingApi, TitleMatchOptions };

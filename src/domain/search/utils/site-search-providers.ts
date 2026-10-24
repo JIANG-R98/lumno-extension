@@ -1,8 +1,32 @@
-// @ts-nocheck
 // Site search providers: templates, local search scopes, the built-in
 // and help center providers, AI and search engine providers, and
 // normalizing, sanitizing and merging provider lists.
-function createSiteSearchProviders(deps) {
+import type {
+  LocalSearchScope,
+  LocalSearchScopeRule,
+  NormalizedSiteSearchProvider,
+  SearchEngineState,
+  SiteSearchProvider
+} from '../types';
+import type { DirectNavigationApi } from './direct-navigation';
+
+type SiteSearchProvidersDeps = Pick<DirectNavigationApi, 'normalizeHost'> & {
+  DEFAULT_SITE_SEARCH_PROVIDERS: readonly SiteSearchProvider[];
+  // From site-search-matching.ts, which is wired after this module.
+  getUrlHost: (url: unknown) => string;
+  findSiteSearchProvider: (
+    trigger: unknown,
+    providers: readonly SiteSearchProvider[] | null | undefined
+  ) => SiteSearchProvider | null;
+  siteSearchHostsMatch: (a: unknown, b: unknown) => boolean;
+  getSiteSearchProviderHost: (provider: SiteSearchProvider | null | undefined) => string;
+};
+
+// A provider as settings may hold it: a stored entry with any of the
+// provider fields, possibly missing or malformed.
+type ProviderInput = Partial<SiteSearchProvider> | null | undefined;
+
+function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
   const {
     normalizeHost,
     DEFAULT_SITE_SEARCH_PROVIDERS,
@@ -12,7 +36,7 @@ function createSiteSearchProviders(deps) {
     getSiteSearchProviderHost
   } = deps;
 
-  function normalizeSiteSearchTemplate(template) {
+  function normalizeSiteSearchTemplate(template: unknown): string {
     if (!template) {
       return '';
     }
@@ -25,11 +49,11 @@ function createSiteSearchProviders(deps) {
 
   const LOCAL_SEARCH_SOURCE_TYPES = new Set(['topSite', 'bookmark', 'history']);
 
-  function normalizeLocalSearchScopeTrigger(value) {
+  function normalizeLocalSearchScopeTrigger(value: unknown): string {
     return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
   }
 
-  function findLocalSearchScope(input, rules) {
+  function findLocalSearchScope(input: unknown, rules: ReadonlyArray<LocalSearchScopeRule | null | undefined> | null | undefined): LocalSearchScope | null {
     const trigger = normalizeLocalSearchScopeTrigger(input);
     if (!trigger || !Array.isArray(rules)) {
       return null;
@@ -37,10 +61,11 @@ function createSiteSearchProviders(deps) {
     for (let i = 0; i < rules.length; i += 1) {
       const rule = rules[i];
       const sourceType = String(rule && rule.searchSourceType ? rule.searchSourceType : '').trim();
-      if (!LOCAL_SEARCH_SOURCE_TYPES.has(sourceType) || !Array.isArray(rule.keys)) {
+      const keys = rule && rule.keys;
+      if (!LOCAL_SEARCH_SOURCE_TYPES.has(sourceType) || !Array.isArray(keys)) {
         continue;
       }
-      const matchedKey = rule.keys.find((key) => normalizeLocalSearchScopeTrigger(key) === trigger);
+      const matchedKey = keys.find((key) => normalizeLocalSearchScopeTrigger(key) === trigger);
       if (!matchedKey) {
         continue;
       }
@@ -68,7 +93,7 @@ function createSiteSearchProviders(deps) {
     'aiStudioPrompt'
   ]);
 
-  const SITE_SEARCH_PROVIDER_DISPLAY_NAME_MESSAGES = Object.freeze({
+  const SITE_SEARCH_PROVIDER_DISPLAY_NAME_MESSAGES: Readonly<Record<string, readonly [string, string]>> = Object.freeze({
     gpt: ['site_search_name_chatgpt', 'ChatGPT'],
     gm: ['site_search_name_gemini', 'Gemini'],
     dbai: ['site_search_name_doubao', 'Doubao'],
@@ -102,14 +127,14 @@ function createSiteSearchProviders(deps) {
   const HELP_CENTER_SITE_SEARCH_PROVIDER_KEY = 'lm';
   const HELP_CENTER_HOST = 'lumno.kubai.design';
 
-  function cloneSiteSearchProvider(provider) {
+  function cloneSiteSearchProvider(provider: SiteSearchProvider): SiteSearchProvider {
     return {
-      ...(provider || {}),
-      aliases: Array.isArray(provider && provider.aliases) ? provider.aliases.slice() : []
+      ...provider,
+      aliases: Array.isArray(provider.aliases) ? provider.aliases.slice() : []
     };
   }
 
-  function getSiteSearchProviderDisplayNameMessage(provider) {
+  function getSiteSearchProviderDisplayNameMessage(provider: ProviderInput): { messageKey: string; fallback: string } | null {
     if (provider && provider._xIsCustom === true) {
       return null;
     }
@@ -126,7 +151,7 @@ function createSiteSearchProviders(deps) {
 
   // The built-in Lumno Help Center search, also after the person edits it, as long as it
   // still searches the help center: its results come from the site's own search index.
-  function isHelpCenterSiteSearchProvider(provider) {
+  function isHelpCenterSiteSearchProvider(provider: ProviderInput): boolean {
     if (!provider || provider._xIsAggregateSearch === true) {
       return false;
     }
@@ -144,7 +169,7 @@ function createSiteSearchProviders(deps) {
 
   // Help Center links carry the interface language its results came from (lang=), since the
   // site otherwise follows the browser language for pages opened from the extension.
-  function withHelpCenterLocale(url, provider, locale) {
+  function withHelpCenterLocale(url: string, provider: ProviderInput, locale: unknown): string {
     const lang = String(locale || '').trim().replace(/_/g, '-');
     if (!url || !lang || !isHelpCenterSiteSearchProvider(provider)) {
       return url;
@@ -158,22 +183,23 @@ function createSiteSearchProviders(deps) {
     }
   }
 
-  function getDefaultSiteSearchProviders() {
+  function getDefaultSiteSearchProviders(): SiteSearchProvider[] {
     return DEFAULT_SITE_SEARCH_PROVIDERS.map(cloneSiteSearchProvider);
   }
 
-  function isInteractiveSiteSearchSubmitStrategy(strategy) {
-    return INTERACTIVE_SITE_SEARCH_SUBMIT_STRATEGIES.includes(String(strategy || '').trim());
+  function isInteractiveSiteSearchSubmitStrategy(strategy: unknown): boolean {
+    const value = String(strategy || '').trim();
+    return INTERACTIVE_SITE_SEARCH_SUBMIT_STRATEGIES.some((candidate) => candidate === value);
   }
 
-  function hasOpenAndSubmitSiteSearchAction(provider) {
+  function hasOpenAndSubmitSiteSearchAction(provider: ProviderInput): boolean {
     return Boolean(
       provider &&
       String(provider.action || '').trim() === 'openAndSubmit'
     );
   }
 
-  function isAiSiteSearchProvider(provider) {
+  function isAiSiteSearchProvider(provider: ProviderInput): boolean {
     if (!provider) {
       return false;
     }
@@ -201,8 +227,8 @@ function createSiteSearchProviders(deps) {
     'sm'
   ]);
 
-  function isRetiredSearchEngineState(searchEngineState) {
-    const state = searchEngineState && typeof searchEngineState === 'object'
+  function isRetiredSearchEngineState(searchEngineState: SearchEngineState | null | undefined): boolean {
+    const state: SearchEngineState = searchEngineState && typeof searchEngineState === 'object'
       ? searchEngineState
       : {};
     const stateId = String(state.id || '').trim().toLowerCase();
@@ -210,7 +236,7 @@ function createSiteSearchProviders(deps) {
     return stateId === 'so' || stateHost === 'so.com' || stateHost.endsWith('.so.com');
   }
 
-  function isSearchEngineSiteSearchProvider(provider) {
+  function isSearchEngineSiteSearchProvider(provider: ProviderInput): boolean {
     if (!provider) {
       return false;
     }
@@ -225,11 +251,16 @@ function createSiteSearchProviders(deps) {
     return SEARCH_ENGINE_SITE_SEARCH_PROVIDER_KEYS.has(key);
   }
 
-  function getSearchEngineSiteSearchProvider(searchEngineState, providers) {
-    const state = searchEngineState && typeof searchEngineState === 'object'
+  // The provider for the browser's search engine: a listed one where it can
+  // be told apart, else one made from the engine's own template.
+  function getSearchEngineSiteSearchProvider(
+    searchEngineState: SearchEngineState | null | undefined,
+    providers: readonly SiteSearchProvider[] | null | undefined
+  ): SiteSearchProvider | null {
+    const state: SearchEngineState = searchEngineState && typeof searchEngineState === 'object'
       ? searchEngineState
       : {};
-    const engineProviders = (Array.isArray(providers) ? providers : [])
+    const engineProviders: SiteSearchProvider[] = (Array.isArray(providers) ? providers : [])
       .filter(isSearchEngineSiteSearchProvider);
     const stateHost = normalizeHost(state.host) || getUrlHost(state.searchTemplate);
     const fallbackProvider = findSiteSearchProvider('google', engineProviders);
@@ -256,10 +287,11 @@ function createSiteSearchProviders(deps) {
     }
     const stateId = String(state.id || '').trim().toLowerCase();
     if (stateId) {
-      const aliasMatch = engineProviders.find((provider) => (
-        Array.isArray(provider && provider.aliases) &&
-        provider.aliases.some((alias) => String(alias || '').trim().toLowerCase() === stateId)
-      ));
+      const aliasMatch = engineProviders.find((provider) => {
+        const aliases = provider && provider.aliases;
+        return Array.isArray(aliases) &&
+          aliases.some((alias: unknown) => String(alias || '').trim().toLowerCase() === stateId);
+      });
       if (aliasMatch) {
         return aliasMatch;
       }
@@ -282,14 +314,16 @@ function createSiteSearchProviders(deps) {
     };
   }
 
-  function isInteractiveSiteSearchProvider(provider) {
+  function isInteractiveSiteSearchProvider(provider: ProviderInput): boolean {
     return Boolean(
       hasOpenAndSubmitSiteSearchAction(provider) &&
-      isInteractiveSiteSearchSubmitStrategy(provider.submitStrategy)
+      provider && isInteractiveSiteSearchSubmitStrategy(provider.submitStrategy)
     );
   }
 
-  function normalizeSiteSearchProvider(item, baseProvider) {
+  // A stored provider, filled in from the built-in it started from; null
+  // when it has no key or no usable template.
+  function normalizeSiteSearchProvider(item: ProviderInput, baseProvider?: ProviderInput): NormalizedSiteSearchProvider | null {
     if (!item && !baseProvider) {
       return null;
     }
@@ -308,10 +342,12 @@ function createSiteSearchProviders(deps) {
     })) {
       return null;
     }
-    const aliasSource = Array.isArray(item && item.aliases)
-      ? item.aliases
-      : (Array.isArray(baseProvider && baseProvider.aliases) ? baseProvider.aliases : []);
-    const provider = {
+    const itemAliases = item && item.aliases;
+    const baseAliases = baseProvider && baseProvider.aliases;
+    const aliasSource: string[] = Array.isArray(itemAliases)
+      ? itemAliases
+      : (Array.isArray(baseAliases) ? baseAliases : []);
+    const provider: NormalizedSiteSearchProvider = {
       id: String((item && item.id) || (baseProvider && baseProvider.id) || '').trim(),
       key,
       aliases: aliasSource.filter(Boolean),
@@ -338,21 +374,21 @@ function createSiteSearchProviders(deps) {
     return provider;
   }
 
-  function sanitizeSiteSearchProviders(items, baseItems) {
-    const baseMap = new Map((Array.isArray(baseItems) ? baseItems : []).map((item) => [
+  function sanitizeSiteSearchProviders(items: unknown, baseItems: unknown): NormalizedSiteSearchProvider[] {
+    const baseMap = new Map<string, ProviderInput>((Array.isArray(baseItems) ? baseItems : []).map((item: ProviderInput): [string, ProviderInput] => [
       String(item && item.key ? item.key : '').toLowerCase(),
       item
     ]));
     return (Array.isArray(items) ? items : [])
-      .map((item) => {
+      .map((item: ProviderInput) => {
         const key = String(item && item.key ? item.key : '').toLowerCase();
         const builtinKey = String(item && item.builtinKey ? item.builtinKey : '').toLowerCase();
         return normalizeSiteSearchProvider(item, baseMap.get(builtinKey || key));
       })
-      .filter(Boolean);
+      .filter((provider): provider is NormalizedSiteSearchProvider => Boolean(provider));
   }
 
-  function inheritSiteSearchProviderBehavior(provider, baseProvider) {
+  function inheritSiteSearchProviderBehavior<T extends SiteSearchProvider>(provider: T, baseProvider?: ProviderInput): T {
     if (!provider) {
       return provider;
     }
@@ -365,10 +401,15 @@ function createSiteSearchProviders(deps) {
     };
   }
 
-  function mergeCustomProviders(baseItems, customItems) {
-    const merged = [];
-    const seen = new Set();
-    const baseMap = new Map((baseItems || []).map((item) => [String(item && item.key ? item.key : '').toLowerCase(), item]));
+  // The reader's providers first (marked _xIsCustom), then the built-ins
+  // they do not replace.
+  function mergeCustomProviders(
+    baseItems: readonly SiteSearchProvider[] | null | undefined,
+    customItems: readonly SiteSearchProvider[] | null | undefined
+  ): SiteSearchProvider[] {
+    const merged: SiteSearchProvider[] = [];
+    const seen = new Set<string>();
+    const baseMap = new Map((baseItems || []).map((item): [string, SiteSearchProvider] => [String(item && item.key ? item.key : '').toLowerCase(), item]));
     (customItems || []).forEach((item) => {
       if (item && item.disabled) {
         return;
@@ -395,7 +436,7 @@ function createSiteSearchProviders(deps) {
     return merged;
   }
 
-  function buildSearchUrlFromTemplate(template, query) {
+  function buildSearchUrlFromTemplate(template: unknown, query: unknown): string {
     const normalizedTemplate = normalizeSiteSearchTemplate(template);
     if (!normalizedTemplate) {
       return '';
@@ -406,7 +447,7 @@ function createSiteSearchProviders(deps) {
     return normalizedTemplate.replace(/\{query\}/g, encodeURIComponent(String(query || '')));
   }
 
-  function buildBlacklistProbeUrlFromTemplate(template, query) {
+  function buildBlacklistProbeUrlFromTemplate(template: unknown, query: unknown): string {
     return buildSearchUrlFromTemplate(template, String(query || '').trim() || 'test');
   }
 
@@ -433,4 +474,7 @@ function createSiteSearchProviders(deps) {
   };
 }
 
+type SiteSearchProvidersApi = ReturnType<typeof createSiteSearchProviders>;
+
 export { createSiteSearchProviders };
+export type { SiteSearchProvidersApi };

@@ -1,7 +1,46 @@
-// @ts-nocheck
 // Matching open tabs and navigation results: comparable URLs, tab match
 // URLs, direct navigation matches and promoting a strong navigation match.
-function createNavigationMatching(deps) {
+import type { SuggestionLike } from '../types';
+import type { DirectNavigationApi } from './direct-navigation';
+import type { IntentItem, QueryIntentApi, QueryTextContext } from './query-intent';
+import type { TitleMatchOptions } from './text-matching';
+import type { TextNormalizeApi } from './text-normalize';
+
+type NavigationMatchingDeps =
+  Pick<QueryIntentApi, 'matchesSearchQueryText'> &
+  Pick<DirectNavigationApi, 'normalizeHost'> &
+  Pick<TextNormalizeApi, 'normalizeSearchText' | 'splitSearchTerms'>;
+
+interface CollectMatchesOptions extends TitleMatchOptions {
+  isUrlBlockedBySearchBlacklist?: (url: string | undefined, blacklistItems: unknown) => boolean;
+}
+
+interface DirectNavigationOptions {
+  // The address the query names, when the caller already worked it out.
+  directNavigationUrl?: string;
+  getDirectNavigationUrl?: (rawQuery: string) => unknown;
+}
+
+// How the surface wants open tabs among the results treated.
+interface OpenTabMatchOptions extends DirectNavigationOptions {
+  rawQuery?: string;
+  query?: string;
+  primaryHighlightIndex?: number;
+  prioritizeCurrentPageMatch?: boolean;
+  currentTabId?: number;
+  openTabQuickSwitchEnabled?: boolean;
+}
+
+interface OpenTabMatch {
+  index: number;
+  reason: '' | 'currentOpenTab' | 'openTab';
+}
+
+interface StrongNavigationOptions extends DirectNavigationOptions {
+  getUrlDisplay?: (url: string) => string;
+}
+
+function createNavigationMatching(deps: NavigationMatchingDeps) {
   const {
     matchesSearchQueryText,
     normalizeHost,
@@ -9,18 +48,23 @@ function createNavigationMatching(deps) {
     splitSearchTerms
   } = deps;
 
-  function collectSearchMatches(items, context, searchBlacklistItems, options) {
-    const settings = options && typeof options === 'object' ? options : {};
+  function collectSearchMatches<T extends IntentItem>(
+    items: readonly T[] | null | undefined,
+    context: QueryTextContext,
+    searchBlacklistItems: unknown,
+    options?: CollectMatchesOptions | null
+  ): T[] {
+    const settings: CollectMatchesOptions = options && typeof options === 'object' ? options : {};
     const isUrlBlocked = typeof settings.isUrlBlockedBySearchBlacklist === 'function'
       ? settings.isUrlBlockedBySearchBlacklist
       : () => false;
-    return (Array.isArray(items) ? items : []).filter((item) => (
+    return (Array.isArray(items) ? items : []).filter((item: T) => (
       matchesSearchQueryText(item, context, settings) &&
       !isUrlBlocked(item && item.url, searchBlacklistItems)
     ));
   }
 
-  function buildComparableNavigationUrl(url) {
+  function buildComparableNavigationUrl(url: unknown): string {
     try {
       const parsed = new URL(String(url || '').trim());
       parsed.protocol = String(parsed.protocol || '').toLowerCase();
@@ -36,11 +80,12 @@ function createNavigationMatching(deps) {
     }
   }
 
-  function buildTabMatchUrl(url, options) {
+  // includeSearch: false leaves the query string out.
+  function buildTabMatchUrl(url: unknown, options?: { includeSearch?: boolean } | null): string {
     if (!url) {
       return '';
     }
-    const settings = options && typeof options === 'object' ? options : {};
+    const settings: { includeSearch?: boolean } = options && typeof options === 'object' ? options : {};
     try {
       const parsed = new URL(String(url));
       const protocol = String(parsed.protocol || '').toLowerCase();
@@ -61,8 +106,8 @@ function createNavigationMatching(deps) {
     }
   }
 
-  function getDirectNavigationUrlForQuery(rawQuery, options) {
-    const settings = options && typeof options === 'object' ? options : {};
+  function getDirectNavigationUrlForQuery(rawQuery: string, options?: DirectNavigationOptions | null): string {
+    const settings: DirectNavigationOptions = options && typeof options === 'object' ? options : {};
     if (typeof settings.getDirectNavigationUrl !== 'function') {
       return '';
     }
@@ -73,11 +118,15 @@ function createNavigationMatching(deps) {
     }
   }
 
-  function isDirectNavigationMatch(suggestion, rawQuery, options) {
+  function isDirectNavigationMatch(
+    suggestion: SuggestionLike | null | undefined,
+    rawQuery: string,
+    options?: DirectNavigationOptions | null
+  ): boolean {
     if (!suggestion || !suggestion.url) {
       return false;
     }
-    const settings = options && typeof options === 'object' ? options : {};
+    const settings: DirectNavigationOptions = options && typeof options === 'object' ? options : {};
     const directUrl = String(settings.directNavigationUrl || getDirectNavigationUrlForQuery(rawQuery, settings) || '').trim();
     if (!directUrl) {
       return false;
@@ -85,11 +134,14 @@ function createNavigationMatching(deps) {
     return buildComparableNavigationUrl(suggestion.url) === buildComparableNavigationUrl(directUrl);
   }
 
-  function findSearchOpenTabMatchIndex(list, options) {
-    const suggestions = Array.isArray(list) ? list : [];
-    const settings = options && typeof options === 'object' ? options : {};
+  function findSearchOpenTabMatchIndex(
+    list: ReadonlyArray<SuggestionLike | null | undefined> | null | undefined,
+    options?: OpenTabMatchOptions | null
+  ): OpenTabMatch {
+    const suggestions: ReadonlyArray<SuggestionLike | null | undefined> = Array.isArray(list) ? list : [];
+    const settings: OpenTabMatchOptions = options && typeof options === 'object' ? options : {};
     const rawQuery = String(settings.rawQuery || settings.query || '').trim();
-    const primaryHighlightIndex = Number.isInteger(settings.primaryHighlightIndex)
+    const primaryHighlightIndex = typeof settings.primaryHighlightIndex === 'number' && Number.isInteger(settings.primaryHighlightIndex)
       ? settings.primaryHighlightIndex
       : -1;
     const directNavigationPrimaryIndex = primaryHighlightIndex >= 0 ? primaryHighlightIndex : 0;
@@ -97,11 +149,11 @@ function createNavigationMatching(deps) {
       suggestions[directNavigationPrimaryIndex] &&
       isDirectNavigationMatch(suggestions[directNavigationPrimaryIndex], rawQuery, settings)
     );
-    const matchesPrimaryNavigationIntent = (suggestion) => (
+    const matchesPrimaryNavigationIntent = (suggestion: SuggestionLike) => (
       !hasDirectNavigationPrimary ||
       isDirectNavigationMatch(suggestion, rawQuery, settings)
     );
-    const isEligibleOpenTab = (suggestion) => Boolean(
+    const isEligibleOpenTab = (suggestion: SuggestionLike | null | undefined): suggestion is SuggestionLike => Boolean(
       suggestion &&
       suggestion.type !== 'newtab' &&
       typeof suggestion._xMatchedTabId === 'number' &&
@@ -109,9 +161,10 @@ function createNavigationMatching(deps) {
     );
 
     if (settings.prioritizeCurrentPageMatch && typeof settings.currentTabId === 'number') {
+      const currentTabId = settings.currentTabId;
       const currentIndex = suggestions.findIndex((suggestion) => (
         isEligibleOpenTab(suggestion) &&
-        suggestion._xMatchedTabId === settings.currentTabId
+        suggestion._xMatchedTabId === currentTabId
       ));
       if (currentIndex >= 0) {
         return { index: currentIndex, reason: 'currentOpenTab' };
@@ -128,7 +181,7 @@ function createNavigationMatching(deps) {
     return { index: -1, reason: '' };
   }
 
-  function getNavigationSuggestionPathDepth(url) {
+  function getNavigationSuggestionPathDepth(url: unknown): number {
     try {
       return new URL(String(url || '').trim()).pathname.split('/').filter(Boolean).length;
     } catch (e) {
@@ -136,7 +189,7 @@ function createNavigationMatching(deps) {
     }
   }
 
-  function getDefaultNavigationUrlDisplay(url) {
+  function getDefaultNavigationUrlDisplay(url: unknown): string {
     try {
       const parsed = new URL(String(url || '').trim());
       return `${normalizeHost(parsed.hostname)}${parsed.pathname === '/' ? '' : parsed.pathname}`;
@@ -145,8 +198,12 @@ function createNavigationMatching(deps) {
     }
   }
 
-  function getStrongNavigationMatchScore(suggestion, rawQuery, options) {
-    const settings = options && typeof options === 'object' ? options : {};
+  function getStrongNavigationMatchScore(
+    suggestion: SuggestionLike | null | undefined,
+    rawQuery: unknown,
+    options?: StrongNavigationOptions | null
+  ): number {
+    const settings: StrongNavigationOptions = options && typeof options === 'object' ? options : {};
     if (!suggestion || !suggestion.url || suggestion.type === 'newtab' || suggestion.type === 'googleSuggest') {
       return 0;
     }
@@ -231,7 +288,13 @@ function createNavigationMatching(deps) {
     return score;
   }
 
-  function promoteStrongNavigationMatch(list, rawQuery, options) {
+  // Moves the strongest navigation match to the front of list (in place) and
+  // returns it; null when none is strong enough.
+  function promoteStrongNavigationMatch<T extends SuggestionLike>(
+    list: T[] | null | undefined,
+    rawQuery: unknown,
+    options?: StrongNavigationOptions | null
+  ): T | null {
     if (!Array.isArray(list)) {
       return null;
     }
@@ -266,4 +329,7 @@ function createNavigationMatching(deps) {
   };
 }
 
+type NavigationMatchingApi = ReturnType<typeof createNavigationMatching>;
+
 export { createNavigationMatching };
+export type { NavigationMatchingApi, OpenTabMatch, OpenTabMatchOptions, StrongNavigationOptions };

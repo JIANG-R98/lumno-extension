@@ -1,8 +1,9 @@
-// @ts-nocheck
 // Hosts and direct navigation: normalizing hosts and their aliases,
 // the per-site search config, and telling a typed address (with dev hosts,
 // numeric hosts and full-width dots) from a search.
-function createDirectNavigation(deps) {
+import type { SearchSiteConfig } from '../types';
+
+function createDirectNavigation() {
   const SEARCH_COMMON_SECOND_LEVEL_DOMAIN_LABELS = new Set([
     'ac',
     'co',
@@ -44,7 +45,7 @@ function createDirectNavigation(deps) {
     'webcal:'
   ]);
 
-  const SEARCH_SITE_CONFIG = {
+  const SEARCH_SITE_CONFIG: Record<string, SearchSiteConfig> = {
     'lumno.kubai.design': {
       ignoreAllSearchParamsPaths: new Set(['/', '/release', '/onboarding'])
     },
@@ -68,7 +69,7 @@ function createDirectNavigation(deps) {
     }
   };
 
-  function normalizeHost(hostname) {
+  function normalizeHost(hostname: unknown): string {
     return String(hostname || '').toLowerCase().replace(/^www\./, '');
   }
 
@@ -76,24 +77,24 @@ function createDirectNavigation(deps) {
   // background and New Tab compute it: my.feishu.cn is Feishu's account portal
   // and shares feishu.cn's identity. Search ranking, dedup and saved selection
   // stats keep the plain host, so their stored keys stay what they were.
-  const HOST_ALIASES = Object.freeze({
+  const HOST_ALIASES: Readonly<Record<string, string>> = Object.freeze({
     'my.feishu.cn': 'feishu.cn'
   });
 
-  function normalizeHostIdentity(hostname) {
+  function normalizeHostIdentity(hostname: unknown): string {
     const host = normalizeHost(hostname);
     return Object.prototype.hasOwnProperty.call(HOST_ALIASES, host) ? HOST_ALIASES[host] : host;
   }
 
   // Strips control, format, private-use and lone-surrogate code points so
   // page titles cannot inject invisible or broken characters into the UI.
-  function sanitizeDisplayText(text) {
+  function sanitizeDisplayText(text: unknown): string {
     const raw = String(text || '');
     const withoutSpecial = raw.replace(/[\u0000-\u001F\u007F-\u009F\uFEFF\uFFF9-\uFFFD]|\p{Co}/gu, '');
     return withoutSpecial.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '');
   }
 
-  function getSearchSuggestionFamilyKey(urlOrHost) {
+  function getSearchSuggestionFamilyKey(urlOrHost: unknown): string {
     let host = normalizeHost(urlOrHost);
     try {
       host = normalizeHost(new URL(String(urlOrHost || '')).hostname);
@@ -126,12 +127,12 @@ function createDirectNavigation(deps) {
     return labels.slice(-2).join('.');
   }
 
-  function getSearchSiteConfig(hostname) {
+  function getSearchSiteConfig(hostname: unknown): SearchSiteConfig | null {
     const host = normalizeHost(hostname);
     return host ? (SEARCH_SITE_CONFIG[host] || null) : null;
   }
 
-  function getSearchDirectNavigationUrl(hostname) {
+  function getSearchDirectNavigationUrl(hostname: unknown): string {
     const host = normalizeHost(hostname);
     if (!host) {
       return '';
@@ -142,7 +143,7 @@ function createDirectNavigation(deps) {
       : `https://${host}/`;
   }
 
-  function getSearchDirectNavigationTitle(hostname, fallbackTitle) {
+  function getSearchDirectNavigationTitle(hostname: unknown, fallbackTitle?: unknown): string {
     const siteConfig = getSearchSiteConfig(hostname);
     const title = siteConfig && siteConfig.directNavigationTitle
       ? siteConfig.directNavigationTitle
@@ -150,7 +151,7 @@ function createDirectNavigation(deps) {
     return String(title || '').trim();
   }
 
-  function isNumericDirectNavigationHost(hostname) {
+  function isNumericDirectNavigationHost(hostname: string): boolean {
     if (!hostname) {
       return false;
     }
@@ -170,7 +171,7 @@ function createDirectNavigation(deps) {
     });
   }
 
-  function extractDirectNavigationHost(rawInput) {
+  function extractDirectNavigationHost(rawInput: string): string {
     const withoutScheme = String(rawInput || '').replace(/^https?:\/\//i, '');
     const authority = withoutScheme.split(/[/?#]/)[0] || '';
     if (!authority) {
@@ -189,7 +190,7 @@ function createDirectNavigation(deps) {
     return (authority.split(':')[0] || '').toLowerCase();
   }
 
-  function isDevDirectNavigationHost(hostname) {
+  function isDevDirectNavigationHost(hostname: string): boolean {
     if (!hostname) {
       return false;
     }
@@ -210,7 +211,7 @@ function createDirectNavigation(deps) {
     return hostname === '::1' || hostname === '0:0:0:0:0:0:0:1';
   }
 
-  function getDirectNavigationProtocol(input) {
+  function getDirectNavigationProtocol(input: unknown): string {
     const value = String(input || '').trim();
     const match = value.match(/^([a-z][a-z0-9+.-]*):/i);
     if (!match) {
@@ -223,7 +224,7 @@ function createDirectNavigation(deps) {
     return `${scheme}:`;
   }
 
-  function isExplicitDirectNavigationUrl(input) {
+  function isExplicitDirectNavigationUrl(input: unknown): boolean {
     const value = String(input || '').trim();
     if (!value || /\s/.test(value)) {
       return false;
@@ -241,7 +242,7 @@ function createDirectNavigation(deps) {
   // A CJK input method types "baidu。com" for "baidu.com". Read the full-width
   // stops in the host as dots, but only when that yields a plain ASCII domain,
   // so a sentence ending in "。" still searches.
-  function normalizeFullWidthHostDots(input) {
+  function normalizeFullWidthHostDots(input: string): string {
     if (!/[。．｡]/.test(input)) {
       return input;
     }
@@ -256,7 +257,7 @@ function createDirectNavigation(deps) {
     return `${authority}${match[2] || ''}`;
   }
 
-  function getDirectNavigationUrl(input) {
+  function getDirectNavigationUrl(input: unknown): string {
     const trimmed = String(input || '').trim();
     if (!trimmed) {
       return '';
@@ -294,7 +295,7 @@ function createDirectNavigation(deps) {
   // any scheme URL (such as the prefilled current page), a host, an IP, or a
   // file path. It can carry intranet hosts, tokens or local paths, so it never
   // goes to a remote suggestion provider.
-  function isUrlLikeSearchQuery(input) {
+  function isUrlLikeSearchQuery(input: unknown): boolean {
     const value = String(input || '').trim();
     if (!value) {
       return false;
@@ -323,4 +324,7 @@ function createDirectNavigation(deps) {
   };
 }
 
+type DirectNavigationApi = ReturnType<typeof createDirectNavigation>;
+
 export { createDirectNavigation };
+export type { DirectNavigationApi };

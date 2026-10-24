@@ -1,8 +1,33 @@
-// @ts-nocheck
 // Matching site search providers: provider hosts and path scopes, the
 // provider for a page, for a key or typed prefix, and for a suggestion,
 // and the trigger candidate for what is typed.
-function createSiteSearchMatching(deps) {
+import type { SiteSearchProvider, SuggestionLike } from '../types';
+import type { DirectNavigationApi } from './direct-navigation';
+import type { QueryIntentApi } from './query-intent';
+import type { SiteSearchProvidersApi } from './site-search-providers';
+import type { TextNormalizeApi } from './text-normalize';
+
+type SiteSearchMatchingDeps =
+  Pick<DirectNavigationApi, 'normalizeHost'> &
+  Pick<SiteSearchProvidersApi, 'normalizeSiteSearchTemplate' | 'buildSearchUrlFromTemplate' |
+    'isSearchEngineSiteSearchProvider' | 'isAiSiteSearchProvider'> &
+  Pick<TextNormalizeApi, 'normalizeSearchText' | 'splitSearchTitleTokens'> &
+  Pick<QueryIntentApi, 'shouldAllowLooseTextContains'>;
+
+type Providers = readonly SiteSearchProvider[] | null | undefined;
+type MaybeProvider = SiteSearchProvider | null | undefined;
+type MaybeSuggestion = SuggestionLike | null | undefined;
+
+interface InlineSiteSearchCandidate {
+  provider: SiteSearchProvider;
+  query: string;
+}
+
+interface TriggerCandidateOptions {
+  matchesTopSitePrefix?: (topSiteMatch: SuggestionLike, input: string) => boolean;
+}
+
+function createSiteSearchMatching(deps: SiteSearchMatchingDeps) {
   const {
     normalizeHost,
     normalizeSiteSearchTemplate,
@@ -16,7 +41,7 @@ function createSiteSearchMatching(deps) {
 
   const SITE_SEARCH_QUERY_PROBE = '__lumno_site_search_query__';
 
-  function getUrlHost(url) {
+  function getUrlHost(url: unknown): string {
     if (!url) {
       return '';
     }
@@ -27,11 +52,11 @@ function createSiteSearchMatching(deps) {
     }
   }
 
-  function getSearchSuggestionHost(suggestion) {
+  function getSearchSuggestionHost(suggestion: MaybeSuggestion): string {
     return getUrlHost(suggestion && suggestion.url);
   }
 
-  function getSiteSearchProviderHost(provider) {
+  function getSiteSearchProviderHost(provider: MaybeProvider): string {
     if (!provider || !provider.template) {
       return '';
     }
@@ -43,7 +68,7 @@ function createSiteSearchMatching(deps) {
     }
   }
 
-  function siteSearchHostsMatch(a, b) {
+  function siteSearchHostsMatch(a: unknown, b: unknown): boolean {
     const hostA = normalizeHost(a);
     const hostB = normalizeHost(b);
     if (!hostA || !hostB) {
@@ -52,7 +77,7 @@ function createSiteSearchMatching(deps) {
     return hostA === hostB || hostA.endsWith(`.${hostB}`) || hostB.endsWith(`.${hostA}`);
   }
 
-  function siteSearchPageHostMatchesProvider(pageHost, providerHost) {
+  function siteSearchPageHostMatchesProvider(pageHost: string, providerHost: string): boolean {
     const normalizedPageHost = normalizeHost(pageHost);
     const normalizedProviderHost = normalizeHost(providerHost);
     if (!normalizedPageHost || !normalizedProviderHost) {
@@ -62,7 +87,7 @@ function createSiteSearchMatching(deps) {
       normalizedPageHost.endsWith(`.${normalizedProviderHost}`);
   }
 
-  function getSiteSearchProviderPathScope(provider) {
+  function getSiteSearchProviderPathScope(provider: MaybeProvider): string {
     const template = normalizeSiteSearchTemplate(provider && provider.template);
     if (!template) {
       return '';
@@ -76,8 +101,9 @@ function createSiteSearchMatching(deps) {
     }
   }
 
-  function findSiteSearchProviderForPageUrl(pageUrl, providers) {
-    let parsedPageUrl;
+  // The site search of the site a page is on (not a search engine or AI).
+  function findSiteSearchProviderForPageUrl(pageUrl: unknown, providers: Providers): SiteSearchProvider | null {
+    let parsedPageUrl: URL;
     try {
       parsedPageUrl = new URL(String(pageUrl || ''));
     } catch (e) {
@@ -87,7 +113,7 @@ function createSiteSearchMatching(deps) {
     if (!pageHost) {
       return null;
     }
-    const providerItems = Array.isArray(providers) ? providers : [];
+    const providerItems: readonly SiteSearchProvider[] = Array.isArray(providers) ? providers : [];
     const searchEngineHosts = new Set(
       providerItems
         .filter(isSearchEngineSiteSearchProvider)
@@ -117,7 +143,8 @@ function createSiteSearchMatching(deps) {
     }) || null;
   }
 
-  function findSiteSearchProvider(trigger, providers) {
+  // By key, name or alias.
+  function findSiteSearchProvider(trigger: unknown, providers: Providers): SiteSearchProvider | null {
     const key = String(trigger || '').trim().toLowerCase();
     if (!key) {
       return null;
@@ -134,12 +161,13 @@ function createSiteSearchMatching(deps) {
       if (providerName === key) {
         return true;
       }
-      const aliases = Array.isArray(provider && provider.aliases) ? provider.aliases : [];
+      const providerAliases = provider && provider.aliases;
+      const aliases: unknown[] = Array.isArray(providerAliases) ? providerAliases : [];
       return aliases.some((alias) => String(alias).toLowerCase() === key);
     }) || null;
   }
 
-  function findSiteSearchProviderByKey(trigger, providers) {
+  function findSiteSearchProviderByKey(trigger: unknown, providers: Providers): SiteSearchProvider | null {
     const key = String(trigger || '').toLowerCase();
     if (!key) {
       return null;
@@ -147,7 +175,7 @@ function createSiteSearchMatching(deps) {
     return (providers || []).find((provider) => String(provider && provider.key || '').toLowerCase() === key) || null;
   }
 
-  function findSiteSearchProviderKeyConflict(trigger, providers, allowedKey) {
+  function findSiteSearchProviderKeyConflict(trigger: unknown, providers: Providers, allowedKey: unknown): SiteSearchProvider | null {
     const key = String(trigger || '').trim().toLowerCase();
     const allowed = String(allowedKey || '').trim().toLowerCase();
     if (!key || key === allowed) {
@@ -156,18 +184,18 @@ function createSiteSearchMatching(deps) {
     return findSiteSearchProviderByKey(key, providers);
   }
 
-  function suggestionMatchesSiteSearchProvider(suggestion, provider) {
+  function suggestionMatchesSiteSearchProvider(suggestion: MaybeSuggestion, provider: MaybeProvider): boolean {
     if (!suggestion || !provider || !suggestion.url) {
       return false;
     }
     return siteSearchHostsMatch(getSearchSuggestionHost(suggestion), getSiteSearchProviderHost(provider));
   }
 
-  function isAsciiProviderToken(token) {
+  function isAsciiProviderToken(token: string): boolean {
     return /^[a-z0-9]+$/i.test(token || '');
   }
 
-  function isSiteSearchProviderTokenEligible(token) {
+  function isSiteSearchProviderTokenEligible(token: unknown): boolean {
     if (!token) {
       return false;
     }
@@ -181,25 +209,26 @@ function createSiteSearchMatching(deps) {
     return normalized.length >= 2;
   }
 
-  function providerMatchesSiteSearchSuggestion(provider, suggestion) {
+  function providerMatchesSiteSearchSuggestion(provider: MaybeProvider, suggestion: MaybeSuggestion): boolean {
     if (!provider || !suggestion) {
       return false;
     }
     return suggestionMatchesSiteSearchProvider(suggestion, provider);
   }
 
-  function findProviderForSiteSearchSuggestion(suggestion, providers) {
+  function findProviderForSiteSearchSuggestion(suggestion: MaybeSuggestion, providers: Providers): SiteSearchProvider | null {
     if (!suggestion) {
       return null;
     }
     const eligibleTypes = new Set(['topSite', 'history', 'bookmark']);
-    if (!eligibleTypes.has(suggestion.type) && !suggestion.isTopSite) {
+    if (!eligibleTypes.has(String(suggestion.type)) && !suggestion.isTopSite) {
       return null;
     }
     return (providers || []).find((provider) => providerMatchesSiteSearchSuggestion(provider, suggestion)) || null;
   }
 
-  function findSiteSearchProviderByInput(input, providers) {
+  // By the first word typed: a key, name or alias, or a host.
+  function findSiteSearchProviderByInput(input: unknown, providers: Providers): SiteSearchProvider | null {
     const raw = String(input || '').trim();
     if (!raw) {
       return null;
@@ -229,7 +258,8 @@ function createSiteSearchMatching(deps) {
     )) || null;
   }
 
-  function getInlineSiteSearchCandidate(input, providers) {
+  // "yt cats": the provider and the query after it.
+  function getInlineSiteSearchCandidate(input: unknown, providers: Providers): InlineSiteSearchCandidate | null {
     const raw = String(input || '').trim();
     if (!raw) {
       return null;
@@ -250,7 +280,7 @@ function createSiteSearchMatching(deps) {
     return { provider: provider, query: remainder };
   }
 
-  function providerMatchesSiteSearchInputPrefix(provider, input) {
+  function providerMatchesSiteSearchInputPrefix(provider: MaybeProvider, input: unknown): boolean {
     const needle = String(input || '').toLowerCase();
     if (!needle || !provider) {
       return false;
@@ -278,7 +308,7 @@ function createSiteSearchMatching(deps) {
     return false;
   }
 
-  function siteSearchTemplatePartMatchesCandidate(candidatePart, probePart) {
+  function siteSearchTemplatePartMatchesCandidate(candidatePart: string, probePart: string): boolean {
     const candidateValue = String(candidatePart || '');
     const probeValue = String(probePart || '');
     if (!probeValue.includes(SITE_SEARCH_QUERY_PROBE)) {
@@ -292,7 +322,7 @@ function createSiteSearchMatching(deps) {
       candidateValue.length > prefix.length + suffix.length;
   }
 
-  function isSiteSearchProviderSearchResultUrl(suggestion, provider) {
+  function isSiteSearchProviderSearchResultUrl(suggestion: MaybeSuggestion, provider: MaybeProvider): boolean {
     const template = normalizeSiteSearchTemplate(provider && provider.template);
     if (!template || !template.includes('{query}') || !suggestion || !suggestion.url) {
       return false;
@@ -325,7 +355,7 @@ function createSiteSearchMatching(deps) {
     }
   }
 
-  function siteSearchSuggestionTitleMatchesInput(suggestion, input) {
+  function siteSearchSuggestionTitleMatchesInput(suggestion: MaybeSuggestion, input: unknown): boolean {
     const needle = String(input || '').trim().toLowerCase();
     if (!isSiteSearchProviderTokenEligible(needle)) {
       return false;
@@ -344,7 +374,7 @@ function createSiteSearchMatching(deps) {
       (shouldAllowLooseTextContains(needle) && titleLower.includes(needle));
   }
 
-  function providerMatchesSiteSearchSuggestionTitle(provider, suggestion, input) {
+  function providerMatchesSiteSearchSuggestionTitle(provider: MaybeProvider, suggestion: MaybeSuggestion, input: unknown): boolean {
     if (!provider || !suggestion || !suggestionMatchesSiteSearchProvider(suggestion, provider)) {
       return false;
     }
@@ -354,7 +384,14 @@ function createSiteSearchMatching(deps) {
     return siteSearchSuggestionTitleMatchesInput(suggestion, input);
   }
 
-  function getSiteSearchTriggerCandidate(input, providers, topSiteMatch, options) {
+  // The provider a site-search tag would offer for what is typed, using the
+  // top site match when the input only names its site.
+  function getSiteSearchTriggerCandidate(
+    input: unknown,
+    providers: Providers,
+    topSiteMatch?: SuggestionLike | null,
+    options?: TriggerCandidateOptions | null
+  ): SiteSearchProvider | null {
     const trimmed = String(input || '').trim();
     if (!trimmed) {
       return null;
@@ -411,4 +448,7 @@ function createSiteSearchMatching(deps) {
   };
 }
 
+type SiteSearchMatchingApi = ReturnType<typeof createSiteSearchMatching>;
+
 export { createSiteSearchMatching };
+export type { InlineSiteSearchCandidate, SiteSearchMatchingApi };

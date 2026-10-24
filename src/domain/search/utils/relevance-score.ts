@@ -1,7 +1,52 @@
-// @ts-nocheck
 // The relevance score of a suggestion for a query, the selection boost,
 // source ranks and the comparison results are sorted by.
-function createRelevanceScore(deps) {
+import type {
+  BrowserItem,
+  SearchPolicy,
+  SearchQueryContext,
+  SearchRankingOptions,
+  SearchSelectionPolicy,
+  SearchSuggestion,
+  SuggestionLike
+} from '../types';
+import type { DirectNavigationApi } from './direct-navigation';
+import type { QueryIntentApi } from './query-intent';
+import type { ResultDedupApi } from './result-dedup';
+import type { SelectionStatsApi } from './selection-stats';
+import type { SuggestionSlateApi } from './suggestion-slate';
+import type { TextMatchingApi } from './text-matching';
+import type { TextNormalizeApi } from './text-normalize';
+
+type RelevanceScoreDeps =
+  Pick<TextNormalizeApi, 'normalizeSearchText' | 'splitSearchTitleTokens'> &
+  Pick<QueryIntentApi, 'getSearchSuggestionClusterInfo' | 'shouldAllowLooseTextContains' | 'matchesSearchHostSpelling' |
+    'getSearchTermCoverageStats' | 'getSearchSourceAdjustment' | 'getSearchSuggestionCategoryAdjustment' |
+    'getOwnExtensionUtilityPenalty'> &
+  Pick<TextMatchingApi, 'getSearchTitleUnitMatch'> &
+  Pick<DirectNavigationApi, 'normalizeHost'> &
+  Pick<SuggestionSlateApi, 'getSearchDirectNavigationAdjustment'> &
+  Pick<SelectionStatsApi, 'normalizeSearchSelectionQuery'> &
+  Pick<ResultDedupApi, 'buildSearchDedupUrlKey' | 'getSearchSuggestionDisplayTitle'> & {
+    SEARCH_POLICY: SearchPolicy;
+    SEARCH_SELECTION_POLICY: SearchSelectionPolicy;
+  };
+
+// What a ranking pass scores: a browser page, with the source it came from.
+type ScoredItem = Pick<BrowserItem, 'url' | 'title' | 'lastVisitTime' | 'visitCount' | 'typedCount' | 'type' | 'isTopSite'>;
+
+// Selection stats as they come from storage; read defensively.
+interface StoredSelectionStats {
+  queries?: Record<string, { entries?: Record<string, { lastSelectedAt?: number; count?: number } | undefined> } | undefined>;
+}
+
+// Extra fields for createSearchSuggestion; they are copied onto the result.
+interface SuggestionExtras {
+  favicon?: string;
+  reasons?: string[];
+  [field: string]: unknown;
+}
+
+function createRelevanceScore(deps: RelevanceScoreDeps) {
   const {
     normalizeSearchText,
     getSearchSuggestionClusterInfo,
@@ -22,24 +67,28 @@ function createRelevanceScore(deps) {
     getSearchSuggestionDisplayTitle
   } = deps;
 
-  function getNow(options) {
-    const settings = options && typeof options === 'object' ? options : {};
+  function getNow(options?: Pick<SearchRankingOptions, 'now'> | null): number {
+    const settings: Pick<SearchRankingOptions, 'now'> = options && typeof options === 'object' ? options : {};
     return Number(settings.now) || Date.now();
   }
 
-  function calculateSearchRelevanceScore(item, sourceType, context, options) {
-    const settings = options && typeof options === 'object' ? options : {};
+  function calculateSearchRelevanceScore(
+    item: ScoredItem,
+    sourceType: string,
+    context: SearchQueryContext,
+    options?: SearchRankingOptions | null
+  ): number {
+    const settings: SearchRankingOptions = options && typeof options === 'object' ? options : {};
     const title = item.title ? String(item.title) : '';
     const titleLower = normalizeSearchText(title);
     const urlLower = item.url.toLowerCase();
     let hostname = '';
-    let hostLabels = [];
-    let titleTokens = [];
-    let pathTokens = [];
+    let hostLabels: string[] = [];
+    let titleTokens: string[] = [];
+    const pathTokens: string[] = [];
     let textScore = 0;
     let behaviorScore = 0;
     let sourceScore = 0;
-    let coverageStats = null;
     const now = getNow(settings);
     const clusterInfo = getSearchSuggestionClusterInfo(item.url);
     const isGenericBrandDeepTitle = Boolean(
@@ -162,14 +211,14 @@ function createRelevanceScore(deps) {
       // Ignore invalid URL parsing/decoding errors.
     }
 
-    coverageStats = getSearchTermCoverageStats(context, {
+    const coverageStats = getSearchTermCoverageStats(context, {
       titleLower,
       hostname,
       urlLower,
       titleTokens,
       hostLabels,
       pathTokens,
-      matchesTitleUnits: (term) => (
+      matchesTitleUnits: (term: string) => (
         Boolean(getSearchTitleUnitMatch(title, term, settings)) ||
         matchesSearchHostSpelling(hostLabels, context)
       )
@@ -189,8 +238,9 @@ function createRelevanceScore(deps) {
       return 0;
     }
 
-    if (item.lastVisitTime) {
-      const daysSinceVisit = (now - item.lastVisitTime) / (1000 * 60 * 60 * 24);
+    const lastVisitTime = Number(item.lastVisitTime) || 0;
+    if (lastVisitTime) {
+      const daysSinceVisit = (now - lastVisitTime) / (1000 * 60 * 60 * 24);
       if (daysSinceVisit < 1) behaviorScore += 10;
       else if (daysSinceVisit < 7) behaviorScore += 5;
       else if (daysSinceVisit < 30) behaviorScore += 2;
@@ -204,8 +254,8 @@ function createRelevanceScore(deps) {
     if (typedCount > 0) {
       behaviorScore += Math.min(12, typedCount * 2);
     }
-    if (item.lastVisitTime) {
-      const hoursSinceVisit = (now - item.lastVisitTime) / (1000 * 60 * 60);
+    if (lastVisitTime) {
+      const hoursSinceVisit = (now - lastVisitTime) / (1000 * 60 * 60);
       if (hoursSinceVisit < 2) behaviorScore += 20;
       else if (hoursSinceVisit < 24) behaviorScore += 14;
       else if (hoursSinceVisit < 72) behaviorScore += 8;
@@ -232,7 +282,12 @@ function createRelevanceScore(deps) {
       });
   }
 
-  function getSearchSelectionBoost(item, context, stats, options) {
+  function getSearchSelectionBoost(
+    item: SuggestionLike | null | undefined,
+    context: Pick<SearchQueryContext, 'lookupQuery' | 'queryLower' | 'intentType'> | null | undefined,
+    stats: StoredSelectionStats | null | undefined,
+    options?: SearchRankingOptions | null
+  ): number {
     if (!item || !item.url || !context || !stats || typeof stats !== 'object') {
       return 0;
     }
@@ -249,7 +304,7 @@ function createRelevanceScore(deps) {
     if (!entry) {
       return 0;
     }
-    const settings = options && typeof options === 'object' ? options : {};
+    const settings: SearchRankingOptions = options && typeof options === 'object' ? options : {};
     const now = getNow(settings);
     const lastSelectedAt = Number(entry.lastSelectedAt) || 0;
     if (!lastSelectedAt) {
@@ -285,7 +340,7 @@ function createRelevanceScore(deps) {
     return boost;
   }
 
-  function getSearchSuggestionSourceRank(suggestion) {
+  function getSearchSuggestionSourceRank(suggestion: SuggestionLike | null | undefined): number {
     if (!suggestion) {
       return 0;
     }
@@ -301,7 +356,7 @@ function createRelevanceScore(deps) {
     return 0;
   }
 
-  function compareSearchSuggestions(a, b, options) {
+  function compareSearchSuggestions(a: SuggestionLike, b: SuggestionLike): number {
     const scoreDiff = (b.score || 0) - (a.score || 0);
     if (scoreDiff !== 0) {
       return scoreDiff;
@@ -319,8 +374,22 @@ function createRelevanceScore(deps) {
     return bVisit - aVisit;
   }
 
-  function createSearchSuggestion(item, sourceType, score, extras) {
-    return {
+  // A result row; fields in extras are copied onto it and win over the
+  // ones worked out here.
+  function createSearchSuggestion(item: ScoredItem, sourceType: string, score: number): SearchSuggestion;
+  function createSearchSuggestion<E extends SuggestionExtras>(
+    item: ScoredItem,
+    sourceType: string,
+    score: number,
+    extras: E
+  ): SearchSuggestion & E;
+  function createSearchSuggestion(
+    item: ScoredItem,
+    sourceType: string,
+    score: number,
+    extras?: SuggestionExtras | null
+  ): SearchSuggestion {
+    const suggestion: SearchSuggestion = {
       type: sourceType,
       title: getSearchSuggestionDisplayTitle(item, sourceType),
       url: item.url,
@@ -329,9 +398,9 @@ function createRelevanceScore(deps) {
       lastVisitTime: Number(item.lastVisitTime) || 0,
       visitCount: Number(item.visitCount) || 0,
       typedCount: Number(item.typedCount) || 0,
-      reasons: extras && Array.isArray(extras.reasons) ? extras.reasons : [],
-      ...(extras || {})
+      reasons: extras && Array.isArray(extras.reasons) ? extras.reasons : []
     };
+    return extras ? { ...suggestion, ...extras } : suggestion;
   }
 
   return {
@@ -344,4 +413,7 @@ function createRelevanceScore(deps) {
   };
 }
 
+type RelevanceScoreApi = ReturnType<typeof createRelevanceScore>;
+
 export { createRelevanceScore };
+export type { RelevanceScoreApi, ScoredItem, StoredSelectionStats, SuggestionExtras };

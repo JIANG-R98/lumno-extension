@@ -135,6 +135,11 @@ export default tseslint.config(
     }
   },
   {
+    // Globals are declared with var, the only form globalThis picks up.
+    files: ['src/types/**/*.d.ts'],
+    rules: { 'no-var': 'off' }
+  },
+  {
     files: ['src/domain/**/*.ts'],
     rules: {
       ...restrictImports(['platform', 'shared', 'react', ...SURFACES]),

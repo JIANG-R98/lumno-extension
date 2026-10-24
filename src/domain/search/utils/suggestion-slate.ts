@@ -1,8 +1,95 @@
-// @ts-nocheck
 // The suggestion slate: brand and navigation representations, search
 // engine suggestion scores and limits, and composing and ranking the slate
 // shown under the input.
-function createSuggestionSlate(deps) {
+import type {
+  SearchPolicy,
+  SearchQueryContext,
+  SiteSearchProvider,
+  SuggestionLike
+} from '../types';
+import type { DirectNavigationApi } from './direct-navigation';
+import type { NavigationMatchingApi, OpenTabMatchOptions } from './navigation-matching';
+import type { IntentItem, QueryIntentApi } from './query-intent';
+import type { TextMatchingApi, TitleMatchOptions } from './text-matching';
+import type { TextNormalizeApi } from './text-normalize';
+
+type SuggestionSlateDeps =
+  Pick<TextNormalizeApi, 'splitSearchTerms' | 'normalizeSearchText' | 'splitSearchTitleTokens'> &
+  Pick<DirectNavigationApi, 'normalizeHost'> &
+  Pick<QueryIntentApi, 'getSearchSuggestionClusterInfo' | 'getSearchTermCoverageStats'> &
+  Pick<TextMatchingApi, 'getSearchTitleUnitMatch'> &
+  Pick<NavigationMatchingApi, 'findSearchOpenTabMatchIndex'> & {
+    SEARCH_POLICY: SearchPolicy;
+    // From site-search-matching.ts, which is wired after this module.
+    findProviderForSiteSearchSuggestion: (
+      suggestion: SuggestionLike | null | undefined,
+      providers: readonly SiteSearchProvider[] | null | undefined
+    ) => SiteSearchProvider | null;
+  };
+
+type SlateContext = Pick<SearchQueryContext, 'queryLower' | 'queryTerms' | 'intentType' | 'hasSettingsIntent' |
+  'hasInformationalIntent' | 'coreQueryTerms'>;
+
+// The text an autocompletion would put in the input, and its page.
+interface AutocompleteCandidate {
+  url?: string;
+  completion?: string;
+}
+
+// What the overlay and the New Tab search box supply to rank a slate.
+interface SlateMatchers<T> {
+  filterSuggestions?: (items: T[]) => T[];
+  promoteStrongNavigationMatch: (list: T[], rawQuery: string) => T | null;
+  promoteTopSiteMatch: (list: T[], rawQuery: string) => T | null;
+  getSiteSearchTriggerCandidate: (
+    input: unknown,
+    providers: SiteSearchProvider[] | undefined,
+    topSiteMatch: T | null
+  ) => SiteSearchProvider | null;
+  getAutocompleteCandidate: (suggestions: T[] | undefined, rawQuery: string) => AutocompleteCandidate | null;
+  getUrlDisplay: (url: string | undefined) => string;
+}
+
+interface RankSlateOptions<T> {
+  matchers: SlateMatchers<T>;
+  query?: string;
+  rawQuery?: string;
+  triggerInput?: unknown;
+  providers?: SiteSearchProvider[];
+  inlineSuggestion?: T | null;
+  siteSearchActive?: boolean;
+  // false when the reader wants search rows before local results.
+  preferAutocompleteFirst?: boolean;
+  onlyKeywordSuggestions?: boolean;
+  autocompleteSuggestions?: T[];
+  openTabMatch?: OpenTabMatchOptions | null;
+}
+
+type PrimaryHighlightReason =
+  | 'none' | 'navigation' | 'autocomplete' | 'inline' | 'topSite' | 'currentOpenTab' | 'openTab' | 'default';
+
+interface RankedSlate<T> {
+  suggestions: T[];
+  primaryHighlightIndex: number;
+  primaryHighlightReason: PrimaryHighlightReason;
+  primarySuggestion: T | null;
+  mergedProvider: SiteSearchProvider | null;
+  siteSearchTrigger: SiteSearchProvider | null;
+}
+
+interface EngineSuggestionPolicy {
+  hasLocalResults: boolean;
+  limit: number;
+  score: number;
+}
+
+interface EngineSuggestionLimits {
+  maxEngineSuggestions?: number;
+  maxEngineSuggestionsWithLocalResults?: number;
+  searchFirst?: boolean;
+}
+
+function createSuggestionSlate(deps: SuggestionSlateDeps) {
   const {
     splitSearchTerms,
     normalizeHost,
@@ -30,12 +117,12 @@ function createSuggestionSlate(deps) {
     '工作台'
   ]);
 
-  function hasSearchHomeTitle(title) {
+  function hasSearchHomeTitle(title: unknown): boolean {
     const titleTerms = splitSearchTerms(String(title || '').toLowerCase());
     return titleTerms.some((term) => SEARCH_HOME_TITLE_TERMS.has(term));
   }
 
-  function isSearchLikelyBrandProductQuery(context) {
+  function isSearchLikelyBrandProductQuery(context: SlateContext | null | undefined): boolean {
     if (!context || context.intentType !== 'object') {
       return false;
     }
@@ -49,14 +136,14 @@ function createSuggestionSlate(deps) {
     return context.queryLower.length <= 28;
   }
 
-  function isSearchLikelyDirectNavigationQuery(context) {
+  function isSearchLikelyDirectNavigationQuery(context: SlateContext | null | undefined): boolean {
     if (!context || context.hasInformationalIntent) {
       return false;
     }
     return context.intentType === 'brand' || isSearchLikelyBrandProductQuery(context);
   }
 
-  function getSearchBrandHostMatchScore(host, context) {
+  function getSearchBrandHostMatchScore(host: string, context: SlateContext | null | undefined): number {
     if (!host || !context || context.intentType !== 'brand') {
       return 0;
     }
@@ -78,7 +165,7 @@ function createSuggestionSlate(deps) {
     return score;
   }
 
-  function getSearchNavigationRepresentativeSignal(item, context) {
+  function getSearchNavigationRepresentativeSignal(item: IntentItem | null | undefined, context: SlateContext): number {
     if (!item || !item.url) {
       return 0;
     }
@@ -138,19 +225,25 @@ function createSuggestionSlate(deps) {
     return signal;
   }
 
-  function getSearchDirectNavigationAdjustment(item, sourceType, context, options) {
+  function getSearchDirectNavigationAdjustment(
+    item: IntentItem | null | undefined,
+    sourceType: unknown,
+    context: SlateContext,
+    options?: TitleMatchOptions | null
+  ): number {
     if (!isSearchLikelyDirectNavigationQuery(context) || !item || !item.url) {
       return 0;
     }
+    const url = item.url;
     const info = getSearchSuggestionClusterInfo(item.url);
     const hasHomeTitle = hasSearchHomeTitle(item.title);
     const representativeSignal = getSearchNavigationRepresentativeSignal(item, context);
     const titleLower = normalizeSearchText(item.title);
-    const pathTokens = [];
+    const pathTokens: string[] = [];
     let hostname = '';
-    let hostLabels = [];
+    let hostLabels: string[] = [];
     try {
-      const parsedUrl = new URL(item.url);
+      const parsedUrl = new URL(url);
       hostname = normalizeHost(parsedUrl.hostname);
       hostLabels = hostname.split('.').filter(Boolean);
       decodeURIComponent(String(parsedUrl.pathname || '').toLowerCase())
@@ -169,11 +262,11 @@ function createSuggestionSlate(deps) {
     const coverageStats = getSearchTermCoverageStats(context, {
       titleLower,
       hostname,
-      urlLower: String(item.url || '').toLowerCase(),
+      urlLower: url.toLowerCase(),
       titleTokens: splitSearchTitleTokens(item.title),
       hostLabels,
       pathTokens,
-      matchesTitleUnits: (term) => Boolean(getSearchTitleUnitMatch(item.title, term, options))
+      matchesTitleUnits: (term: string) => Boolean(getSearchTitleUnitMatch(item.title, term, options))
     });
     let adjustment = 0;
 
@@ -223,8 +316,11 @@ function createSuggestionSlate(deps) {
     return adjustment;
   }
 
-  function getSearchEngineSuggestionScore(context, localSuggestions) {
-    const candidates = Array.isArray(localSuggestions) ? localSuggestions : [];
+  function getSearchEngineSuggestionScore(
+    context: SlateContext,
+    localSuggestions: ReadonlyArray<SuggestionLike | null | undefined> | null | undefined
+  ): number {
+    const candidates: ReadonlyArray<SuggestionLike | null | undefined> = Array.isArray(localSuggestions) ? localSuggestions : [];
     const hasStrongLocalDirectMatch = candidates.some((suggestion) => (
       suggestion &&
       suggestion.type !== 'googleSuggest' &&
@@ -246,25 +342,27 @@ function createSuggestionSlate(deps) {
     return 160;
   }
 
-  function getSearchEngineSuggestionLimit(value) {
+  function getSearchEngineSuggestionLimit(value: unknown): number {
     const rawLimit = Number(value);
     return Number.isFinite(rawLimit) && rawLimit > 0
       ? Math.floor(rawLimit)
       : SEARCH_POLICY.maxEngineSuggestions;
   }
 
-  function normalizeSearchEngineSuggestionText(value) {
+  function normalizeSearchEngineSuggestionText(value: unknown): string {
     return String(value || '').trim();
   }
 
-  function normalizeSearchEngineSuggestions(items, query, options) {
-    const suggestions = Array.isArray(items) ? items : [];
-    const settings = options && typeof options === 'object' ? options : {};
+  // The engine's suggested queries, trimmed, without the query itself or
+  // repeats, up to the limit.
+  function normalizeSearchEngineSuggestions(items: unknown, query: unknown, options?: { limit?: number } | null): string[] {
+    const suggestions: unknown[] = Array.isArray(items) ? items : [];
+    const settings: { limit?: number } = options && typeof options === 'object' ? options : {};
     const limit = getSearchEngineSuggestionLimit(settings.limit);
     const queryText = normalizeSearchEngineSuggestionText(query);
     const queryKey = queryText.toLowerCase();
-    const seen = new Set();
-    const normalized = [];
+    const seen = new Set<string>();
+    const normalized: string[] = [];
     for (let i = 0; i < suggestions.length && normalized.length < limit; i += 1) {
       const suggestion = normalizeSearchEngineSuggestionText(suggestions[i]);
       if (!suggestion) {
@@ -280,23 +378,27 @@ function createSuggestionSlate(deps) {
     return normalized;
   }
 
-  function isSearchEngineSuggestion(suggestion) {
+  function isSearchEngineSuggestion(suggestion: SuggestionLike | null | undefined): boolean {
     return Boolean(suggestion && suggestion.type === 'googleSuggest');
   }
 
-  function isSearchActionSuggestion(suggestion) {
+  function isSearchActionSuggestion(suggestion: SuggestionLike | null | undefined): boolean {
     return Boolean(suggestion && suggestion.type === 'newtab');
   }
 
-  function isKeywordSearchSuggestion(suggestion) {
+  function isKeywordSearchSuggestion(suggestion: SuggestionLike | null | undefined): boolean {
     return isSearchEngineSuggestion(suggestion) || isSearchActionSuggestion(suggestion);
   }
 
-  function groupSearchSuggestionsByKind(list, options) {
-    const suggestions = Array.isArray(list) ? list.filter(Boolean) : [];
-    const settings = options && typeof options === 'object' ? options : {};
-    const navigationSuggestions = [];
-    const keywordSuggestions = [];
+  // Navigation rows, then search rows (or the other way round with searchFirst).
+  function groupSearchSuggestionsByKind<T extends SuggestionLike>(
+    list: ReadonlyArray<T | null | undefined> | null | undefined,
+    options?: { searchFirst?: boolean } | null
+  ): T[] {
+    const suggestions: T[] = Array.isArray(list) ? list.filter((item): item is T => Boolean(item)) : [];
+    const settings: { searchFirst?: boolean } = options && typeof options === 'object' ? options : {};
+    const navigationSuggestions: T[] = [];
+    const keywordSuggestions: T[] = [];
     suggestions.forEach((suggestion) => {
       if (isKeywordSearchSuggestion(suggestion)) {
         keywordSuggestions.push(suggestion);
@@ -309,9 +411,12 @@ function createSuggestionSlate(deps) {
       : [...navigationSuggestions, ...keywordSuggestions];
   }
 
-  function composeSearchFirstSuggestionSlate(list, options) {
-    const suggestions = Array.isArray(list) ? list.filter(Boolean) : [];
-    const settings = options && typeof options === 'object' ? options : {};
+  function composeSearchFirstSuggestionSlate<T extends SuggestionLike>(
+    list: ReadonlyArray<T | null | undefined> | null | undefined,
+    options?: { limit?: number } | null
+  ): T[] {
+    const suggestions: T[] = Array.isArray(list) ? list.filter((item): item is T => Boolean(item)) : [];
+    const settings: { limit?: number } = options && typeof options === 'object' ? options : {};
     const rawLimit = Number(settings.limit);
     const fallbackLimit = Number(SEARCH_POLICY.displaySuggestionLimit) || 10;
     const limit = Number.isInteger(rawLimit) && rawLimit >= 5 && rawLimit <= 12
@@ -321,10 +426,10 @@ function createSuggestionSlate(deps) {
     const searchActions = suggestions.filter(isSearchActionSuggestion);
     const engineSuggestions = suggestions.filter(isSearchEngineSuggestion);
     const localSuggestions = suggestions.filter((suggestion) => !isKeywordSearchSuggestion(suggestion));
-    const selected = [];
-    const selectedSuggestions = new Set();
+    const selected: T[] = [];
+    const selectedSuggestions = new Set<T>();
 
-    const take = (suggestion) => {
+    const take = (suggestion: T | undefined) => {
       if (!suggestion || selectedSuggestions.has(suggestion) || selected.length >= limit) {
         return false;
       }
@@ -342,8 +447,8 @@ function createSuggestionSlate(deps) {
 
     const localSlotTarget = Math.max(0, limit - searchSlotTarget);
     const localSourceCap = Math.max(1, Math.ceil(localSlotTarget / 2));
-    const localSourceCounts = new Map();
-    const deferredLocalSuggestions = [];
+    const localSourceCounts = new Map<string, number>();
+    const deferredLocalSuggestions: T[] = [];
     for (let i = 0; i < localSuggestions.length && selected.length < limit; i += 1) {
       const suggestion = localSuggestions[i];
       const sourceType = suggestion && (suggestion.type === 'history' || suggestion.type === 'bookmark')
@@ -376,8 +481,8 @@ function createSuggestionSlate(deps) {
     ];
   }
 
-  function pinExactSearchActionSecond(list) {
-    const suggestions = Array.isArray(list) ? list.filter(Boolean) : [];
+  function pinExactSearchActionSecond<T extends SuggestionLike>(list: ReadonlyArray<T | null | undefined> | null | undefined): T[] {
+    const suggestions: T[] = Array.isArray(list) ? list.filter((item): item is T => Boolean(item)) : [];
     if (suggestions.length < 2) {
       return suggestions;
     }
@@ -396,7 +501,11 @@ function createSuggestionSlate(deps) {
     return [primaryResult, searchAction, ...remainingSuggestions];
   }
 
-  function findAutocompleteCandidateSuggestionIndex(list, candidate, getUrlDisplay) {
+  function findAutocompleteCandidateSuggestionIndex<T extends SuggestionLike>(
+    list: T[],
+    candidate: AutocompleteCandidate,
+    getUrlDisplay: (url: string | undefined) => string
+  ): number {
     const completion = String(candidate && candidate.completion || '').toLowerCase();
     return list.findIndex((suggestion) => {
       if (!suggestion || suggestion.type === 'newtab') {
@@ -413,7 +522,7 @@ function createSuggestionSlate(deps) {
     });
   }
 
-  function moveSuggestionToFront(list, index) {
+  function moveSuggestionToFront<T>(list: T[], index: number): void {
     if (index > 0) {
       const [suggestion] = list.splice(index, 1);
       list.unshift(suggestion);
@@ -426,10 +535,13 @@ function createSuggestionSlate(deps) {
   // a top site, a matching open tab, or else the first row. Shared by the
   // Overlay and the New Tab search box, which supply their own matchers.
   // Returns a new list; `suggestions` itself is not reordered.
-  function rankSearchSuggestionSlate(suggestions, options) {
-    const config = options && typeof options === 'object' ? options : {};
-    const matchers = config.matchers || {};
-    const identity = (items) => items;
+  function rankSearchSuggestionSlate<T extends SuggestionLike>(
+    suggestions: readonly T[] | null | undefined,
+    options: RankSlateOptions<T>
+  ): RankedSlate<T> {
+    const config = options;
+    const matchers = config.matchers;
+    const identity = (items: T[]) => items;
     const filterSuggestions = typeof matchers.filterSuggestions === 'function'
       ? matchers.filterSuggestions
       : identity;
@@ -440,11 +552,11 @@ function createSuggestionSlate(deps) {
     const preferAutocompleteFirst = config.preferAutocompleteFirst !== false;
     const onlyKeywordSuggestions = Boolean(config.onlyKeywordSuggestions);
     const canPromoteLocalMatches = !siteSearchActive && !inlineSuggestion && preferAutocompleteFirst;
-    let list = Array.isArray(suggestions) ? suggestions.slice() : [];
+    let list: T[] = Array.isArray(suggestions) ? suggestions.slice() : [];
     let primaryHighlightIndex = -1;
-    let primaryHighlightReason = 'none';
-    let strongNavigationMatch = null;
-    let topSiteMatch = null;
+    let primaryHighlightReason: PrimaryHighlightReason = 'none';
+    let strongNavigationMatch: T | null = null;
+    let topSiteMatch: T | null = null;
 
     if (canPromoteLocalMatches) {
       strongNavigationMatch = matchers.promoteStrongNavigationMatch(list, trimmedRawQuery);
@@ -516,27 +628,27 @@ function createSuggestionSlate(deps) {
     };
   }
 
-  function hasLocalResultSuggestion(list) {
+  function hasLocalResultSuggestion(list: ReadonlyArray<SuggestionLike | null | undefined> | null | undefined): boolean {
     return (Array.isArray(list) ? list : []).some((suggestion) => (
       suggestion && !isKeywordSearchSuggestion(suggestion)
     ));
   }
 
-  function areOnlyKeywordSearchSuggestions(list) {
-    const suggestions = Array.isArray(list) ? list : [];
+  function areOnlyKeywordSearchSuggestions(list: ReadonlyArray<SuggestionLike | null | undefined> | null | undefined): boolean {
+    const suggestions: ReadonlyArray<SuggestionLike | null | undefined> = Array.isArray(list) ? list : [];
     return suggestions.length > 0 && suggestions.every(isKeywordSearchSuggestion);
   }
 
-  function getAutocompleteSearchSuggestionPool(list) {
-    const suggestions = Array.isArray(list) ? list : [];
+  function getAutocompleteSearchSuggestionPool<T extends SuggestionLike>(list: readonly T[] | null | undefined): T[] {
+    const suggestions: readonly T[] = Array.isArray(list) ? list : [];
     if (!hasLocalResultSuggestion(suggestions)) {
       return suggestions.slice();
     }
     return suggestions.filter((suggestion) => !isSearchEngineSuggestion(suggestion));
   }
 
-  function getKeywordSearchSuggestionState(list) {
-    const suggestions = Array.isArray(list) ? list : [];
+  function getKeywordSearchSuggestionState<T extends SuggestionLike>(list: readonly T[] | null | undefined) {
+    const suggestions: readonly T[] = Array.isArray(list) ? list : [];
     return {
       onlyKeywordSuggestions: areOnlyKeywordSearchSuggestions(suggestions),
       hasLocalResults: hasLocalResultSuggestion(suggestions),
@@ -544,8 +656,12 @@ function createSuggestionSlate(deps) {
     };
   }
 
-  function getSearchEngineSuggestionPolicy(context, localSuggestions, policy) {
-    const settings = policy && typeof policy === 'object' ? policy : {};
+  function getSearchEngineSuggestionPolicy(
+    context: SlateContext,
+    localSuggestions: ReadonlyArray<SuggestionLike | null | undefined> | null | undefined,
+    policy?: EngineSuggestionLimits | null
+  ): EngineSuggestionPolicy {
+    const settings: EngineSuggestionLimits = policy && typeof policy === 'object' ? policy : {};
     const hasLocalResults = hasLocalResultSuggestion(localSuggestions);
     const baseScore = getSearchEngineSuggestionScore(context, localSuggestions);
     const maxEngineSuggestions = getSearchEngineSuggestionLimit(settings.maxEngineSuggestions);
@@ -584,4 +700,16 @@ function createSuggestionSlate(deps) {
   };
 }
 
+type SuggestionSlateApi = ReturnType<typeof createSuggestionSlate>;
+
 export { createSuggestionSlate };
+export type {
+  AutocompleteCandidate,
+  EngineSuggestionPolicy,
+  PrimaryHighlightReason,
+  RankedSlate,
+  RankSlateOptions,
+  SlateContext,
+  SlateMatchers,
+  SuggestionSlateApi
+};

@@ -1,7 +1,23 @@
-// @ts-nocheck
 // Deduplicating results: URL keys without tracking parameters, which of
 // two duplicates to keep, and merging item lists by URL.
-function createResultDedup(deps) {
+import type { DirectNavigationApi } from './direct-navigation';
+
+type ResultDedupDeps = Pick<
+  DirectNavigationApi,
+  'normalizeHost' | 'getSearchSiteConfig' | 'getSearchDirectNavigationTitle' | 'getSearchDirectNavigationUrl'
+>;
+
+// What dedup reads from a result: browser items and suggestion rows alike.
+interface DedupItem {
+  id?: string | number;
+  url?: string;
+  title?: string;
+  lastVisitTime?: number;
+  typedCount?: number;
+  visitCount?: number;
+}
+
+function createResultDedup(deps: ResultDedupDeps) {
   const {
     normalizeHost,
     getSearchSiteConfig,
@@ -32,7 +48,7 @@ function createResultDedup(deps) {
     'si'
   ]);
 
-  function shouldIgnoreSearchDedupQueryParam(paramName) {
+  function shouldIgnoreSearchDedupQueryParam(paramName: string): boolean {
     const normalized = String(paramName || '').trim().toLowerCase();
     if (!normalized) {
       return false;
@@ -40,7 +56,7 @@ function createResultDedup(deps) {
     return normalized.startsWith('utm_') || SEARCH_DEDUP_IGNORED_QUERY_PARAM_NAMES.has(normalized);
   }
 
-  function buildSearchDedupUrlKey(url) {
+  function buildSearchDedupUrlKey(url: unknown): string {
     if (!url || typeof url !== 'string') {
       return '';
     }
@@ -85,7 +101,7 @@ function createResultDedup(deps) {
     }
   }
 
-  function getStableDirectNavigationTitleForUrl(url, sourceType) {
+  function getStableDirectNavigationTitleForUrl(url: unknown, sourceType: unknown): string {
     if (sourceType === 'bookmark') {
       return '';
     }
@@ -103,14 +119,14 @@ function createResultDedup(deps) {
     }
   }
 
-  function getSearchSuggestionDisplayTitle(item, sourceType) {
+  function getSearchSuggestionDisplayTitle(item: DedupItem | null | undefined, sourceType: unknown): string {
     return getStableDirectNavigationTitleForUrl(item && item.url, sourceType) ||
       (item && item.title) ||
       (item && item.url) ||
       '';
   }
 
-  function shouldReplaceDedupedSearchItem(candidate, existing) {
+  function shouldReplaceDedupedSearchItem(candidate: DedupItem, existing: DedupItem | undefined): boolean {
     if (!existing) {
       return true;
     }
@@ -134,14 +150,14 @@ function createResultDedup(deps) {
     return candidateTitleLength > existingTitleLength;
   }
 
-  function normalizeSearchDedupTitle(title) {
+  function normalizeSearchDedupTitle(title: unknown): string {
     return String(title || '')
       .toLowerCase()
       .replace(/\s+/g, ' ')
       .trim();
   }
 
-  function buildSearchDedupEntryKey(item) {
+  function buildSearchDedupEntryKey(item: DedupItem | null | undefined): string {
     if (!item) {
       return '';
     }
@@ -160,11 +176,12 @@ function createResultDedup(deps) {
     return `id:${item.id || ''}:${String(item.title || '').trim()}`;
   }
 
-  function mergeItemsByUrl(itemGroups) {
-    const merged = [];
-    const mergedIndexByKey = new Map();
+  // Lists of results into one, keeping one result per page.
+  function mergeItemsByUrl<T extends DedupItem>(itemGroups: ReadonlyArray<ReadonlyArray<T | null | undefined> | null | undefined>): T[] {
+    const merged: T[] = [];
+    const mergedIndexByKey = new Map<string, number>();
     (Array.isArray(itemGroups) ? itemGroups : []).forEach((items) => {
-      (Array.isArray(items) ? items : []).forEach((item) => {
+      (Array.isArray(items) ? items : []).forEach((item: T | null | undefined) => {
         if (!item) {
           return;
         }
@@ -191,4 +208,7 @@ function createResultDedup(deps) {
   };
 }
 
+type ResultDedupApi = ReturnType<typeof createResultDedup>;
+
 export { createResultDedup };
+export type { DedupItem, ResultDedupApi };
