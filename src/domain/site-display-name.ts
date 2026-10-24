@@ -1,4 +1,9 @@
-const DEFAULT_BRAND_NAMES = Object.freeze({
+interface SiteDisplayNameOptions {
+  // Localizes a brand name; returns the fallback when it has no translation.
+  getBrandName?: (brandHost: string, fallback: string) => unknown;
+}
+
+const DEFAULT_BRAND_NAMES: Readonly<Record<string, string>> = Object.freeze({
   'lumno.kubai.design': 'Lumno',
   'github.com': 'GitHub',
   'youtube.com': 'YouTube',
@@ -26,7 +31,7 @@ const TITLE_SEPARATORS = Object.freeze([
   ' | ', ' - ', ' — ', ' – ', ' · ', ' • ', '：', ':'
 ]);
 
-function getPrimaryLabelFromHost(host) {
+function getPrimaryLabelFromHost(host: string): string {
   if (!host) {
     return '';
   }
@@ -44,7 +49,7 @@ function getPrimaryLabelFromHost(host) {
   return parts[index] || parts[0];
 }
 
-function prettifyLabel(label) {
+function prettifyLabel(label: string): string {
   const value = String(label || '').trim();
   if (!value) {
     return '';
@@ -58,11 +63,11 @@ function prettifyLabel(label) {
   return value;
 }
 
-function collectTitleCandidates(rawTitle) {
+function collectTitleCandidates(rawTitle: string): string[] {
   if (!rawTitle) {
     return [];
   }
-  const candidates = [rawTitle];
+  const candidates: string[] = [rawTitle];
   TITLE_SEPARATORS.forEach((separator) => {
     if (rawTitle.includes(separator)) {
       rawTitle.split(separator).forEach((part) => candidates.push(part));
@@ -71,7 +76,7 @@ function collectTitleCandidates(rawTitle) {
   return candidates;
 }
 
-function pickTitleCandidate(candidates) {
+function pickTitleCandidate(candidates: string[]): string {
   let best = '';
   let bestScore = -1;
   candidates.forEach((part) => {
@@ -100,11 +105,11 @@ function pickTitleCandidate(candidates) {
   return best;
 }
 
-function normalizeWordToken(value) {
+function normalizeWordToken(value: string): string {
   return String(value || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
 }
 
-function pickCasedLabelFromTitle(rawTitle, candidates, hostLabel) {
+function pickCasedLabelFromTitle(rawTitle: string, candidates: string[], hostLabel: string): string {
   const raw = String(hostLabel || '').trim();
   if (!raw || !rawTitle) {
     return '';
@@ -131,19 +136,19 @@ function pickCasedLabelFromTitle(rawTitle, candidates, hostLabel) {
   return '';
 }
 
-function isWeakHostLabel(label) {
+function isWeakHostLabel(label: string): boolean {
   const value = String(label || '').trim().toLowerCase();
   return !value || value.length <= 1 || /^\d+$/.test(value) || NOISY_SUBDOMAINS.has(value);
 }
 
-function getMatchedBrandHost(host) {
+function getMatchedBrandHost(host: string): string {
   if (Object.prototype.hasOwnProperty.call(DEFAULT_BRAND_NAMES, host)) {
     return host;
   }
   return BRAND_HOSTS.find((brandHost) => host.endsWith(`.${brandHost}`)) || '';
 }
 
-function getBrandName(host, options) {
+function getBrandName(host: string, options?: SiteDisplayNameOptions): string {
   const brandHost = getMatchedBrandHost(host);
   if (!brandHost) {
     return '';
@@ -156,7 +161,7 @@ function getBrandName(host, options) {
   return typeof localized === 'string' && localized ? localized : fallback;
 }
 
-function getSiteDisplayName(hostname, title, options) {
+function getSiteDisplayName(hostname: unknown, title: unknown, options?: SiteDisplayNameOptions): string {
   const rawTitle = String(title || '').trim();
   const host = String(hostname || '').toLowerCase().replace(/^(www|m)\./i, '');
   const brandName = getBrandName(host, options);
@@ -187,7 +192,8 @@ function getSiteDisplayName(hostname, title, options) {
       return titleCandidate;
     }
   }
-  return rawTitle || hostname || '';
+  return rawTitle || String(hostname || '');
 }
 
 export { DEFAULT_BRAND_NAMES, getSiteDisplayName };
+export type { SiteDisplayNameOptions };

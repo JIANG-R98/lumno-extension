@@ -1,4 +1,4 @@
-const icon = (body) => Object.freeze({
+const icon = (body: string) => Object.freeze({
   viewBox: '0 0 24 24',
   body
 });

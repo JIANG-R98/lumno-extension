@@ -1,10 +1,60 @@
+// The worker's reply to runAggregateSearchQuery.
+interface AggregateSearchResponse {
+  ok?: boolean;
+  reason?: string;
+  failedCount?: number;
+  interactiveFailedCount?: number;
+  warnings?: unknown[];
+  activationDeferred?: boolean;
+  activationDelayMs?: number;
+}
+
+interface FeedbackDescriptor {
+  fallback: string;
+  isError: boolean;
+  messageKey: string;
+}
+
+type MaybeResponse = AggregateSearchResponse | null | undefined;
+
+// The part of the extension API the controller sends its request through.
+interface RuntimePort {
+  runtime?: {
+    sendMessage?: (message: object, callback: (response?: AggregateSearchResponse) => void) => void;
+    lastError?: unknown;
+  };
+}
+
+interface RequestControllerOptions {
+  chromeApi?: RuntimePort | null;
+  onFeedback?: (descriptor: FeedbackDescriptor, response: MaybeResponse, runtimeError: unknown) => void;
+}
+
+interface AggregateSearchRequest {
+  aggregateId?: string;
+  query?: string;
+  disposition?: string;
+}
+
+interface RequestCallbacks {
+  onDuplicate?: (response: AggregateSearchResponse) => void;
+  onFailure?: (response: MaybeResponse, runtimeError: unknown) => void;
+  onSuccess?: (response: AggregateSearchResponse) => void;
+}
+
+interface RequestRun {
+  duplicate: boolean;
+  started: boolean;
+  key?: string;
+}
+
 const PARTIAL_FEEDBACK_DELAY_MS = 2300;
 const RESULT_FAILURE_WARNING_CODES = new Set([
   'partial-tab-create-failure',
   'interactive-submit-failed'
 ]);
 
-function hasPartialFailure(response) {
+function hasPartialFailure(response: MaybeResponse): boolean {
   return Boolean(response && response.ok === true && (
     Number(response.failedCount) > 0 ||
     Number(response.interactiveFailedCount) > 0 ||
@@ -14,7 +64,7 @@ function hasPartialFailure(response) {
   ));
 }
 
-function hasAncillaryWarning(response) {
+function hasAncillaryWarning(response: MaybeResponse): boolean {
   return Boolean(
     response &&
     response.ok === true &&
@@ -24,11 +74,11 @@ function hasAncillaryWarning(response) {
   );
 }
 
-function hasSuccessFeedback(response) {
+function hasSuccessFeedback(response: MaybeResponse): boolean {
   return hasPartialFailure(response) || hasAncillaryWarning(response);
 }
 
-function getSuccessFeedbackDelayMs(response) {
+function getSuccessFeedbackDelayMs(response: MaybeResponse): number {
   const activationDelayMs = response && response.activationDeferred === true
     ? Math.max(0, Number(response.activationDelayMs) || 0)
     : 0;
@@ -38,7 +88,7 @@ function getSuccessFeedbackDelayMs(response) {
   return hasSuccessFeedback(response) ? PARTIAL_FEEDBACK_DELAY_MS : 0;
 }
 
-function getResponseDescriptor(response, runtimeError) {
+function getResponseDescriptor(response: MaybeResponse, runtimeError?: unknown): FeedbackDescriptor {
   const reason = String(response && response.reason ? response.reason : '');
   if (reason === 'aggregate-search-sources-unavailable' ||
       reason === 'aggregate-search-not-found') {
@@ -76,32 +126,33 @@ function getResponseDescriptor(response, runtimeError) {
   };
 }
 
-function createAggregateSearchRequestController(rawOptions) {
-  const options = rawOptions && typeof rawOptions === 'object' ? rawOptions : {};
+function createAggregateSearchRequestController(rawOptions?: RequestControllerOptions) {
+  const options: RequestControllerOptions = rawOptions && typeof rawOptions === 'object' ? rawOptions : {};
   const chromeApi = options.chromeApi || null;
   const onFeedback = typeof options.onFeedback === 'function'
     ? options.onFeedback
     : () => {};
-  const pending = new Set();
+  const pending = new Set<string>();
 
-  function notify(response, runtimeError) {
+  function notify(response: MaybeResponse, runtimeError: unknown) {
     onFeedback(getResponseDescriptor(response, runtimeError), response || null, runtimeError || null);
   }
 
-  function run(rawRequest, callbacks) {
-    const request = rawRequest && typeof rawRequest === 'object' ? rawRequest : {};
+  function run(rawRequest?: AggregateSearchRequest | null, callbacks?: RequestCallbacks | null): RequestRun {
+    const request: AggregateSearchRequest = rawRequest && typeof rawRequest === 'object' ? rawRequest : {};
     const aggregateId = String(request.aggregateId || '').trim();
     const query = String(request.query || '').trim();
     const disposition = String(request.disposition || 'currentTab');
-    const handlers = callbacks && typeof callbacks === 'object' ? callbacks : {};
-    if (!aggregateId || !query || !chromeApi || !chromeApi.runtime ||
-        typeof chromeApi.runtime.sendMessage !== 'function') {
+    const handlers: RequestCallbacks = callbacks && typeof callbacks === 'object' ? callbacks : {};
+    const runtime = chromeApi && chromeApi.runtime;
+    const sendMessage = runtime && runtime.sendMessage;
+    if (!aggregateId || !query || !runtime || typeof sendMessage !== 'function') {
       notify(null, new Error('aggregate-search-runtime-unavailable'));
       return { duplicate: false, started: false };
     }
     const requestKey = [aggregateId, query, disposition].join('\n');
     if (pending.has(requestKey)) {
-      const duplicateResponse = {
+      const duplicateResponse: AggregateSearchResponse = {
         ok: false,
         reason: 'aggregate-search-request-in-progress'
       };
@@ -113,11 +164,9 @@ function createAggregateSearchRequestController(rawOptions) {
     }
 
     pending.add(requestKey);
-    const finish = (response) => {
+    const finish = (response?: AggregateSearchResponse) => {
       pending.delete(requestKey);
-      const runtimeError = chromeApi.runtime && chromeApi.runtime.lastError
-        ? chromeApi.runtime.lastError
-        : null;
+      const runtimeError = runtime.lastError ? runtime.lastError : null;
       if (runtimeError || !response || response.ok !== true) {
         notify(response, runtimeError);
         if (typeof handlers.onFailure === 'function') {
@@ -134,7 +183,7 @@ function createAggregateSearchRequestController(rawOptions) {
     };
 
     try {
-      chromeApi.runtime.sendMessage({
+      sendMessage.call(runtime, {
         action: 'runAggregateSearchQuery',
         aggregateId,
         query,
@@ -152,7 +201,7 @@ function createAggregateSearchRequestController(rawOptions) {
   }
 
   return Object.freeze({
-    isPending(key) {
+    isPending(key: unknown) {
       return pending.has(String(key || ''));
     },
     run
@@ -168,3 +217,4 @@ export {
   hasSuccessFeedback,
   hasPartialFailure
 };
+export type { AggregateSearchResponse, FeedbackDescriptor };

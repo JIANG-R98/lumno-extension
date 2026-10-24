@@ -4,7 +4,7 @@
 const SAMPLER_MAX_WIDTH = 520;
 const SAMPLER_MAX_HEIGHT = 320;
 
-function getSamplerSize(naturalWidth, naturalHeight) {
+function getSamplerSize(naturalWidth: number, naturalHeight: number): { width: number; height: number } {
   const width = Math.max(1, Number(naturalWidth) || 1);
   const height = Math.max(1, Number(naturalHeight) || 1);
   const scale = Math.min(1, SAMPLER_MAX_WIDTH / width, SAMPLER_MAX_HEIGHT / height);

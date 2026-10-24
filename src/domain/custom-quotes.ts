@@ -2,14 +2,42 @@ const KEY = '_x_extension_custom_quotes_2026_unique_';
 const PICK_KEY = '_x_extension_custom_quote_pick_2026_unique_';
 const MAX_BYTES = 1024 * 1024;
 const MAX_QUOTES = 1000;
-const clean = value => String(value || '').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+
+interface Quote {
+  text: string;
+  author: string;
+}
+
+// A user's quote collection as it is stored.
+interface QuoteLibrary {
+  version: 1;
+  filename: string;
+  revision: number;
+  quotes: Quote[];
+}
+
+// Which quote a day shows, kept so the same one stays up all day.
+interface QuotePick {
+  day: string;
+  revision: number;
+  index: number;
+}
+
+// The parts of a picked File the reader uses.
+interface QuoteFile {
+  name: string;
+  size: number;
+  text(): Promise<string>;
+}
+
+const clean = (value: unknown): string => String(value || '').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
   .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]*>/g, '')
   .replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
   .replace(/[*_`~]/g, '').replace(/\s+/g, ' ').trim();
-function parseQuotes(content, format = 'md') {
+function parseQuotes(content: unknown, format: 'md' | 'txt' = 'md'): Quote[] {
   const text = String(content || '').replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
   if (new TextEncoder().encode(text).length > MAX_BYTES) throw new Error('too-large');
-  const quotes = []; let fence = null;
+  const quotes: Quote[] = []; let fence: { char: string; length: number } | null = null;
   const markdown = format !== 'txt';
   text.split('\n').forEach(line => {
     if (markdown) {
@@ -32,19 +60,19 @@ function parseQuotes(content, format = 'md') {
   return quotes;
 }
 // Retain the previous helper for callers; all new imports use line-based parsing.
-const parseMarkdown = content => parseQuotes(content, 'md');
-function normalizeLibrary(value) {
+const parseMarkdown = (content: unknown): Quote[] => parseQuotes(content, 'md');
+function normalizeLibrary(value: any): QuoteLibrary | null {
   if (!value || value.version !== 1 || !Array.isArray(value.quotes) || !value.quotes.length || value.quotes.length > MAX_QUOTES) return null;
-  const quotes = value.quotes.filter(item => item && typeof item.text === 'string' && item.text.trim() && item.text.length <= 500)
-    .map(item => ({ text: item.text.trim(), author: String(item.author || '').slice(0, 120) }));
+  const quotes: Quote[] = value.quotes.filter((item: any) => item && typeof item.text === 'string' && item.text.trim() && item.text.length <= 500)
+    .map((item: any) => ({ text: item.text.trim(), author: String(item.author || '').slice(0, 120) }));
   return quotes.length ? { version: 1, filename: String(value.filename || '').slice(0, 128), revision: Number(value.revision) || 0, quotes } : null;
 }
 // `random` (defaults to Math.random) is injectable so tests stay deterministic.
-function select(library, date, pick, reroll, random) {
+function select(library: QuoteLibrary, date: Date, pick?: QuotePick | null, reroll?: boolean, random?: () => number) {
   const day = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
   let hash = 0; for (const char of `${day}|${library.filename}|${library.revision}`) hash = ((hash * 31) + char.charCodeAt(0)) >>> 0;
   const existing = pick && pick.day === day && pick.revision === library.revision && Number.isInteger(pick.index) && pick.index >= 0 && pick.index < library.quotes.length;
-  let index = existing ? pick.index : hash % library.quotes.length;
+  let index = existing && pick ? pick.index : hash % library.quotes.length;
   // A reroll picks another quote at random, never the one on screen.
   if (reroll && library.quotes.length > 1) {
     const draw = typeof random === 'function' ? random : Math.random;
@@ -55,10 +83,10 @@ function select(library, date, pick, reroll, random) {
 }
 // Reads a picked .txt / .md / .markdown file into a collection record, or
 // throws ('type', 'too-large', 'empty', 'limit'). New Tab and Options share it.
-async function readLibraryFile(file, now) {
+async function readLibraryFile(file: QuoteFile | null | undefined, now?: number): Promise<QuoteLibrary> {
   const name = String(file && file.name || '');
   if (!/\.(txt|md|markdown)$/i.test(name)) throw new Error('type');
-  if (!file.size || file.size > MAX_BYTES) throw new Error('too-large');
+  if (!file || !file.size || file.size > MAX_BYTES) throw new Error('too-large');
   const text = await file.text();
   const quotes = parseQuotes(text, /\.txt$/i.test(name) ? 'txt' : 'md');
   return { version: 1, filename: name.slice(0, 128), revision: Number(now) || Date.now(), quotes };
@@ -75,3 +103,4 @@ export {
   readLibraryFile,
   select
 };
+export type { Quote, QuoteFile, QuoteLibrary, QuotePick };

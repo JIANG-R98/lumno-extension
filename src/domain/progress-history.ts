@@ -3,7 +3,16 @@
 const STORAGE_KEY = '_x_extension_newtab_progress_history_2026_unique_';
 const MAX_VERSIONS = 10;
 
-function normalizeVersion(value) {
+// A page a tracked card pointed at before.
+interface ProgressVersion {
+  url: string;
+  title: string;
+  updatedAt: number;
+}
+
+type ProgressHistoryMap = Record<string, ProgressVersion[]>;
+
+function normalizeVersion(value: any): ProgressVersion | null {
   if (!value || typeof value !== 'object') return null;
   const url = String(value.url || '').trim();
   if (!/^https?:\/\//i.test(url)) return null;
@@ -14,9 +23,9 @@ function normalizeVersion(value) {
   };
 }
 
-function normalizeVersions(value) {
+function normalizeVersions(value: unknown): ProgressVersion[] {
   if (!Array.isArray(value)) return [];
-  const versions = [];
+  const versions: ProgressVersion[] = [];
   value.forEach((entry) => {
     const version = normalizeVersion(entry);
     if (version && !versions.some((existing) => existing.url === version.url)) {
@@ -26,8 +35,8 @@ function normalizeVersions(value) {
   return versions.slice(0, MAX_VERSIONS);
 }
 
-function normalizeHistoryMap(value) {
-  const map = {};
+function normalizeHistoryMap(value: any): ProgressHistoryMap {
+  const map: ProgressHistoryMap = {};
   if (!value || typeof value !== 'object' || Array.isArray(value)) return map;
   Object.keys(value).forEach((siteKey) => {
     const versions = normalizeVersions(value[siteKey]);
@@ -38,7 +47,7 @@ function normalizeHistoryMap(value) {
 
 // Records the version a card is leaving. A URL already in the history moves
 // to the front instead of appearing twice.
-function recordVersion(map, siteKey, version) {
+function recordVersion(map: unknown, siteKey: string, version: unknown): ProgressHistoryMap {
   const next = normalizeHistoryMap(map);
   const entry = normalizeVersion(version);
   if (!siteKey || !entry) return next;
@@ -48,7 +57,7 @@ function recordVersion(map, siteKey, version) {
 
 // Makes a retained version current. The version the card is leaving takes
 // its place at the front, so restoring can always be undone the same way.
-function restoreVersion(map, siteKey, index, currentVersion) {
+function restoreVersion(map: unknown, siteKey: string, index: number, currentVersion: unknown): { map: ProgressHistoryMap; version: ProgressVersion | null } {
   const next = normalizeHistoryMap(map);
   const versions = next[siteKey] || [];
   const restored = versions[index];
@@ -62,18 +71,21 @@ function restoreVersion(map, siteKey, index, currentVersion) {
 
 // Tracked cards store their history under their own id; cards tracked
 // before ids existed fall back to their site.
-function getHistoryId(card, progressMatch) {
+function getHistoryId(
+  card: { progressId?: string; url?: string } | null | undefined,
+  progressMatch?: { getProgressSiteKey(url: string | undefined): string } | null
+): string {
   const progressId = String(card && card.progressId || '').trim();
   if (progressId) return progressId;
   return progressMatch && card ? progressMatch.getProgressSiteKey(card.url) : '';
 }
 
-function createProgressId(now) {
+function createProgressId(now?: number): string {
   const time = Math.max(0, Number(now) || Date.now()).toString(36);
   return `p${time}${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function removeSite(map, siteKey) {
+function removeSite(map: unknown, siteKey: string): ProgressHistoryMap {
   const next = normalizeHistoryMap(map);
   delete next[siteKey];
   return next;
@@ -90,3 +102,4 @@ export {
   getHistoryId,
   createProgressId
 };
+export type { ProgressHistoryMap, ProgressVersion };

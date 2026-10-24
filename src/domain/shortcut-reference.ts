@@ -1,4 +1,42 @@
-const BROWSER_SHORTCUTS = [
+interface DefaultShortcut {
+  default: string;
+  mac?: string;
+}
+
+// A row of the shortcut reference: a browser command the user can rebind,
+// or a fixed key inside Lumno's own surfaces.
+interface ShortcutDefinition {
+  id: string;
+  commandName?: string;
+  titleKey: string;
+  titleFallback: string;
+  descKey: string;
+  descFallback: string;
+  defaultShortcut?: DefaultShortcut;
+  shortcut?: string;
+  shortcutLabelKey?: string;
+  shortcutLabelFallback?: string;
+}
+
+interface ShortcutReferenceItem extends ShortcutDefinition {
+  editable: boolean;
+  shortcut: string;
+}
+
+interface ShortcutReferenceGroup {
+  id: string;
+  titleKey: string;
+  titleFallback: string;
+  items: ShortcutReferenceItem[];
+}
+
+// The fields of chrome.commands.Command the reference reads.
+interface CommandSnapshot {
+  name?: string;
+  shortcut?: string;
+}
+
+const BROWSER_SHORTCUTS: ShortcutDefinition[] = [
   {
     id: 'show-search',
     commandName: 'show-search',
@@ -49,7 +87,7 @@ const BROWSER_SHORTCUTS = [
   }
 ];
 
-const FIXED_SHORTCUTS = [
+const FIXED_SHORTCUTS: ShortcutDefinition[] = [
   {
     id: 'search-input-history',
     titleKey: 'shortcut_reference_search_input_history_title',
@@ -161,7 +199,7 @@ const FIXED_SHORTCUTS = [
   }
 ];
 
-const REFERENCE_GROUPS = [
+const REFERENCE_GROUPS: Array<{ id: string; titleKey: string; titleFallback: string; itemIds: string[] }> = [
   {
     id: 'search',
     titleKey: 'shortcut_reference_group_search',
@@ -209,7 +247,7 @@ const REFERENCE_GROUPS = [
   }
 ];
 
-function cloneShortcut(item) {
+function cloneShortcut(item: ShortcutDefinition): ShortcutDefinition {
   return Object.assign({}, item, {
     defaultShortcut: item.defaultShortcut ? Object.assign({}, item.defaultShortcut) : item.defaultShortcut
   });
@@ -223,8 +261,8 @@ function getFixedShortcutDefinitions() {
   return FIXED_SHORTCUTS.map(cloneShortcut);
 }
 
-function getDefaultShortcut(definition, platform) {
-  const defaults = definition && definition.defaultShortcut ? definition.defaultShortcut : {};
+function getDefaultShortcut(definition: ShortcutDefinition | null | undefined, platform?: string): string {
+  const defaults: Partial<DefaultShortcut> = definition && definition.defaultShortcut ? definition.defaultShortcut : {};
   const normalizedPlatform = String(platform || '').toLowerCase();
   if (normalizedPlatform.indexOf('mac') !== -1 && defaults.mac) {
     return defaults.mac;
@@ -232,12 +270,12 @@ function getDefaultShortcut(definition, platform) {
   return defaults.default || '';
 }
 
-function getCommandShortcutMap(commands) {
-  const map = new Map();
+function getCommandShortcutMap(commands: unknown): Map<string, string> {
+  const map = new Map<string, string>();
   if (!Array.isArray(commands)) {
     return map;
   }
-  commands.forEach((command) => {
+  commands.forEach((command: CommandSnapshot | null) => {
     if (!command || !command.name) {
       return;
     }
@@ -246,14 +284,14 @@ function getCommandShortcutMap(commands) {
   return map;
 }
 
-function getShortcutReferenceGroups(options) {
+function getShortcutReferenceGroups(options?: { commands?: CommandSnapshot[]; platform?: string }): ShortcutReferenceGroup[] {
   const config = options || {};
   const hasCommandSnapshot = Array.isArray(config.commands);
   const commandShortcuts = getCommandShortcutMap(config.commands);
   const platform = config.platform || '';
   const browserItems = BROWSER_SHORTCUTS.map((item) => {
-    const shortcut = hasCommandSnapshot && commandShortcuts.has(item.commandName)
-      ? commandShortcuts.get(item.commandName)
+    const shortcut = hasCommandSnapshot && item.commandName && commandShortcuts.has(item.commandName)
+      ? commandShortcuts.get(item.commandName) || ''
       : getDefaultShortcut(item, platform);
     return Object.assign(cloneShortcut(item), {
       editable: true,
@@ -266,17 +304,17 @@ function getShortcutReferenceGroups(options) {
       editable: false,
       shortcut: definition.defaultShortcut
         ? getDefaultShortcut(definition, platform)
-        : definition.shortcut
+        : definition.shortcut || ''
     });
   });
-  const itemById = new Map(browserItems.concat(fixedItems).map((item) => [item.id, item]));
+  const itemById = new Map<string, ShortcutReferenceItem>(browserItems.concat(fixedItems).map((item) => [item.id, item]));
   return REFERENCE_GROUPS.map((group) => ({
     id: group.id,
     titleKey: group.titleKey,
     titleFallback: group.titleFallback,
     items: group.itemIds
       .map((id) => itemById.get(id))
-      .filter(Boolean)
+      .filter((item): item is ShortcutReferenceItem => Boolean(item))
   }));
 }
 
@@ -286,3 +324,4 @@ export {
   getDefaultShortcut,
   getShortcutReferenceGroups
 };
+export type { ShortcutDefinition, ShortcutReferenceGroup, ShortcutReferenceItem };

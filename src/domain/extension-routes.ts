@@ -7,7 +7,16 @@ const ROUTE_PATHS = Object.freeze({
   optionsAppearance: 'src/options/options.html#appearance'
 });
 
-function hasRuntimeGetUrl(chromeApi) {
+// The part of the extension API that turns a packaged path into a URL.
+interface RuntimeUrlApi {
+  runtime?: { getURL?: (path: string) => string };
+}
+
+type RouteParams = Record<string, string | number | boolean | null | undefined>;
+
+type ExtensionPageKind = 'newtab' | 'options' | 'onboarding' | 'other';
+
+function hasRuntimeGetUrl(chromeApi: RuntimeUrlApi | null | undefined): chromeApi is { runtime: { getURL: (path: string) => string } } {
   return Boolean(
     chromeApi &&
     chromeApi.runtime &&
@@ -15,7 +24,7 @@ function hasRuntimeGetUrl(chromeApi) {
   );
 }
 
-function buildExtensionUrl(chromeApi, routePath) {
+function buildExtensionUrl(chromeApi: RuntimeUrlApi | null | undefined, routePath: unknown): string {
   const value = String(routePath || '').trim();
   if (!value) {
     return '';
@@ -29,7 +38,7 @@ function buildExtensionUrl(chromeApi, routePath) {
   return value;
 }
 
-function setUrlParam(url, key, value) {
+function setUrlParam(url: URL, key: string, value: RouteParams[string]) {
   if (value === undefined || value === null || value === false) {
     return;
   }
@@ -40,25 +49,25 @@ function setUrlParam(url, key, value) {
   url.searchParams.set(key, String(value));
 }
 
-function buildRouteUrl(chromeApi, routePath, params) {
+function buildRouteUrl(chromeApi: RuntimeUrlApi | null | undefined, routePath: string, params?: RouteParams | null): string {
   const baseUrl = buildExtensionUrl(chromeApi, routePath);
   const url = new URL(baseUrl, 'chrome-extension://lumno/');
-  const nextParams = params && typeof params === 'object' ? params : {};
+  const nextParams: RouteParams = params && typeof params === 'object' ? params : {};
   Object.keys(nextParams).sort().forEach((key) => {
     setUrlParam(url, key, nextParams[key]);
   });
   return url.toString();
 }
 
-function buildNewtabUrl(chromeApi, params) {
+function buildNewtabUrl(chromeApi: RuntimeUrlApi | null | undefined, params?: RouteParams | null): string {
   return buildRouteUrl(chromeApi, ROUTE_PATHS.newtab, params);
 }
 
-function buildLumnoNewtabUrl(chromeApi, params) {
+function buildLumnoNewtabUrl(chromeApi: RuntimeUrlApi | null | undefined, params?: RouteParams | null): string {
   return buildRouteUrl(chromeApi, ROUTE_PATHS.lumnoNewtab, params);
 }
 
-function buildOptionsUrl(chromeApi, hash) {
+function buildOptionsUrl(chromeApi: RuntimeUrlApi | null | undefined, hash?: string): string {
   const baseRoute = hash ? ROUTE_PATHS.options : ROUTE_PATHS.options;
   const url = new URL(
     buildExtensionUrl(chromeApi, baseRoute),
@@ -71,7 +80,7 @@ function buildOptionsUrl(chromeApi, hash) {
   return url.toString();
 }
 
-function getPathname(url) {
+function getPathname(url: unknown): string {
   if (!url) {
     return '';
   }
@@ -83,27 +92,27 @@ function getPathname(url) {
   }
 }
 
-function pathMatchesRoute(pathname, routePath) {
+function pathMatchesRoute(pathname: string, routePath: string): boolean {
   const route = `/${String(routePath || '').split(/[?#]/)[0].toLowerCase()}`;
   return pathname === route || pathname.endsWith(route);
 }
 
-function isNewtabUrl(url) {
+function isNewtabUrl(url: unknown): boolean {
   const pathname = getPathname(url);
   return pathMatchesRoute(pathname, ROUTE_PATHS.newtab) ||
     pathMatchesRoute(pathname, ROUTE_PATHS.legacyNewtab) ||
     pathMatchesRoute(pathname, ROUTE_PATHS.lumnoNewtab);
 }
 
-function isOptionsUrl(url) {
+function isOptionsUrl(url: unknown): boolean {
   return pathMatchesRoute(getPathname(url), ROUTE_PATHS.options);
 }
 
-function isOnboardingUrl(url) {
+function isOnboardingUrl(url: unknown): boolean {
   return pathMatchesRoute(getPathname(url), ROUTE_PATHS.onboarding);
 }
 
-function classifyExtensionUrl(url) {
+function classifyExtensionUrl(url: unknown): ExtensionPageKind {
   if (isNewtabUrl(url)) {
     return 'newtab';
   }
@@ -127,3 +136,4 @@ export {
   isOnboardingUrl,
   classifyExtensionUrl
 };
+export type { ExtensionPageKind, RouteParams, RuntimeUrlApi };

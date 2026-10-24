@@ -1,8 +1,16 @@
-const DEFAULT_MATCH_MODE = 'prefix';
+type MatchMode = 'exact' | 'prefix' | 'suffix';
 
-function normalizeMatchModes(value, fallbackMode) {
-  const source = Array.isArray(value) ? value : [value];
-  const set = new Set();
+// A blacklist entry: a normalized host+path+query pattern and how it matches.
+interface BlacklistRule {
+  pattern: string;
+  matchModes: MatchMode[];
+}
+
+const DEFAULT_MATCH_MODE: MatchMode = 'prefix';
+
+function normalizeMatchModes(value: unknown, fallbackMode?: MatchMode | null): MatchMode[] {
+  const source: unknown[] = Array.isArray(value) ? value : [value];
+  const set = new Set<MatchMode>();
   source.forEach((item) => {
     const mode = String(item || '').trim().toLowerCase();
     if (mode === 'exact' || mode === 'prefix' || mode === 'suffix') {
@@ -12,7 +20,7 @@ function normalizeMatchModes(value, fallbackMode) {
   if (set.has('exact')) {
     return ['exact'];
   }
-  const next = [];
+  const next: MatchMode[] = [];
   if (set.has('prefix')) {
     next.push('prefix');
   }
@@ -28,7 +36,7 @@ function normalizeMatchModes(value, fallbackMode) {
   return [fallbackMode];
 }
 
-function normalizeUrlLikePattern(value) {
+function normalizeUrlLikePattern(value: unknown): string {
   const withoutScheme = String(value || '').trim().replace(/^https?:\/\//i, '').trim();
   if (!withoutScheme) {
     return '';
@@ -48,7 +56,7 @@ function normalizeUrlLikePattern(value) {
   }
 }
 
-function normalizeDomainPattern(value) {
+function normalizeDomainPattern(value: unknown): string {
   const raw = String(value || '').trim().replace(/^https?:\/\//i, '').trim();
   if (!raw) {
     return '';
@@ -67,7 +75,7 @@ function normalizeDomainPattern(value) {
   }
 }
 
-function normalizePattern(value, matchModes, fallbackMode) {
+function normalizePattern(value: unknown, matchModes: unknown, fallbackMode?: MatchMode | null): string {
   const raw = String(value || '').trim();
   if (!raw) {
     return '';
@@ -79,7 +87,7 @@ function normalizePattern(value, matchModes, fallbackMode) {
   return normalizeUrlLikePattern(raw);
 }
 
-function normalizeUrlForMatching(url) {
+function normalizeUrlForMatching(url: unknown): string {
   const raw = String(url || '').trim();
   if (!raw) {
     return '';
@@ -99,7 +107,7 @@ function normalizeUrlForMatching(url) {
   }
 }
 
-function splitHostPathQuery(value) {
+function splitHostPathQuery(value: unknown): { host: string; path: string; search: string } | null {
   const normalized = String(value || '').trim();
   if (!normalized) {
     return null;
@@ -116,7 +124,7 @@ function splitHostPathQuery(value) {
   return { host, path: path || '/', search };
 }
 
-function canToggleWwwHost(host) {
+function canToggleWwwHost(host: unknown): boolean {
   const normalized = String(host || '').trim().toLowerCase();
   if (!normalized || normalized === 'localhost' || normalized.includes(':')) {
     return false;
@@ -127,7 +135,7 @@ function canToggleWwwHost(host) {
   return normalized.includes('.');
 }
 
-function toggleWwwHost(host) {
+function toggleWwwHost(host: unknown): string {
   const normalized = String(host || '').trim().toLowerCase();
   if (!canToggleWwwHost(normalized)) {
     return '';
@@ -137,7 +145,7 @@ function toggleWwwHost(host) {
     : `www.${normalized}`;
 }
 
-function getEquivalentPatterns(pattern) {
+function getEquivalentPatterns(pattern: string): string[] {
   const parts = splitHostPathQuery(pattern);
   if (!parts) {
     return [];
@@ -149,7 +157,7 @@ function getEquivalentPatterns(pattern) {
   return [`${toggledHost}${parts.path}${parts.search}`];
 }
 
-function buildRuleKey(rule, fallbackMode) {
+function buildRuleKey(rule: { pattern?: unknown; matchModes?: unknown } | null | undefined, fallbackMode?: MatchMode | null): string {
   if (!rule || !rule.pattern) {
     return '';
   }
@@ -157,13 +165,14 @@ function buildRuleKey(rule, fallbackMode) {
   return `${String(rule.pattern)}::${modes.join('|')}`;
 }
 
-function normalizeItems(items, fallbackMode) {
+// Stored entries: rule objects, or bare pattern strings from older versions.
+function normalizeItems(items: unknown, fallbackMode?: MatchMode | null): BlacklistRule[] {
   if (!Array.isArray(items)) {
     return [];
   }
-  const normalized = [];
-  const seen = new Set();
-  items.forEach((entry) => {
+  const normalized: BlacklistRule[] = [];
+  const seen = new Set<string>();
+  items.forEach((entry: any) => {
     const matchModes = normalizeMatchModes(
       entry && entry.matchModes ? entry.matchModes : [DEFAULT_MATCH_MODE],
       fallbackMode === undefined ? DEFAULT_MATCH_MODE : fallbackMode
@@ -186,7 +195,7 @@ function normalizeItems(items, fallbackMode) {
   return normalized;
 }
 
-function isRuleMatch(rule, url) {
+function isRuleMatch(rule: BlacklistRule | null | undefined, url: unknown): boolean {
   if (!rule || !rule.pattern) {
     return false;
   }
@@ -227,12 +236,12 @@ function isRuleMatch(rule, url) {
   return false;
 }
 
-function isUrlBlocked(url, items) {
-  const rules = Array.isArray(items) ? items : [];
+function isUrlBlocked(url: unknown, items: unknown): boolean {
+  const rules: BlacklistRule[] = Array.isArray(items) ? items : [];
   return rules.some((rule) => isRuleMatch(rule, url));
 }
 
-function getPatternInputValue(rule) {
+function getPatternInputValue(rule: { pattern?: unknown } | null | undefined): string {
   if (!rule || !rule.pattern) {
     return '';
   }
@@ -250,3 +259,4 @@ export {
   isUrlBlocked,
   getPatternInputValue
 };
+export type { BlacklistRule, MatchMode };

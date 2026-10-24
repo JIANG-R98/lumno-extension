@@ -1,15 +1,30 @@
 const DEFAULT_COMMIT_ENTER_IGNORE_MS = 120;
 
-function isEnterKey(event) {
+// The fields of a keyboard or composition event the guard reads.
+interface ImeKeyEvent {
+  key?: string;
+  code?: string;
+  target?: unknown;
+  isComposing?: boolean;
+  keyCode?: number;
+  which?: number;
+}
+
+interface ImeKeyGuardOptions {
+  now?: () => number;
+  commitEnterIgnoreMs?: number;
+}
+
+function isEnterKey(event: ImeKeyEvent | null | undefined): boolean {
   return Boolean(event && (event.key === 'Enter' || event.code === 'Enter'));
 }
 
-function getEventTarget(event) {
+function getEventTarget(event: ImeKeyEvent | null | undefined): unknown {
   return event && event.target ? event.target : null;
 }
 
-function createImeKeyGuard(options) {
-  const settings = options && typeof options === 'object' ? options : {};
+function createImeKeyGuard(options?: ImeKeyGuardOptions) {
+  const settings: ImeKeyGuardOptions = options && typeof options === 'object' ? options : {};
   const now = typeof settings.now === 'function'
     ? settings.now
     : () => Date.now();
@@ -19,19 +34,19 @@ function createImeKeyGuard(options) {
   );
   let composing = false;
   let lastCompositionEndAt = 0;
-  let lastCompositionTarget = null;
+  let lastCompositionTarget: unknown = null;
 
   function isComposing() {
     return composing;
   }
 
-  function markCompositionStart(event) {
+  function markCompositionStart(event?: ImeKeyEvent | null) {
     composing = true;
     lastCompositionEndAt = 0;
     lastCompositionTarget = getEventTarget(event);
   }
 
-  function markCompositionEnd(event) {
+  function markCompositionEnd(event?: ImeKeyEvent | null) {
     composing = false;
     lastCompositionEndAt = now();
     lastCompositionTarget = getEventTarget(event);
@@ -45,7 +60,7 @@ function createImeKeyGuard(options) {
     }
   }
 
-  function isNativeCompositionEvent(event) {
+  function isNativeCompositionEvent(event: ImeKeyEvent | null | undefined): boolean {
     return Boolean(
       event &&
       (
@@ -57,7 +72,7 @@ function createImeKeyGuard(options) {
     );
   }
 
-  function isWithinCompositionCommitWindow(event) {
+  function isWithinCompositionCommitWindow(event: ImeKeyEvent | null | undefined): boolean {
     if (!isEnterKey(event) || !lastCompositionEndAt) {
       return false;
     }
@@ -69,7 +84,7 @@ function createImeKeyGuard(options) {
     return !lastCompositionTarget || !target || target === lastCompositionTarget;
   }
 
-  function shouldIgnoreKeydown(event) {
+  function shouldIgnoreKeydown(event: ImeKeyEvent | null | undefined): boolean {
     return Boolean(
       composing ||
       isNativeCompositionEvent(event) ||
@@ -87,3 +102,4 @@ function createImeKeyGuard(options) {
 }
 
 export { createImeKeyGuard };
+export type { ImeKeyEvent, ImeKeyGuardOptions };

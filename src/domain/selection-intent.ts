@@ -5,7 +5,23 @@ const ACTIONS = Object.freeze([
   'summarize',
   'search',
   'calculate'
-]);
+] as const);
+
+type SelectionAction = typeof ACTIONS[number];
+
+type PromptLocale = 'zh' | 'zh_TW' | 'ja' | 'en';
+
+// What the page knows about the selection besides its text.
+interface SelectionContext {
+  pageLanguage?: string;
+  uiLanguage?: string;
+  insideCode?: boolean;
+  codeLike?: boolean;
+  genericUiLike?: boolean;
+  sensitive?: boolean;
+}
+
+type ScriptStats = ReturnType<typeof getScriptStats>;
 const MAX_SELECTION_LENGTH = 2400;
 const MIN_SELECTION_LENGTH = 2;
 const LOW_INTENT_ENGLISH_TERMS = new Set([
@@ -23,7 +39,7 @@ const LOW_INTENT_CJK_TERMS = new Set([
   'これ', 'それ', 'あれ', 'ここ', 'そこ', 'こちら', 'もっと'
 ]);
 
-function normalizeText(value) {
+function normalizeText(value: unknown): string {
   return String(value || '')
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .replace(/[ \t\f\v]+/g, ' ')
@@ -32,7 +48,7 @@ function normalizeText(value) {
     .trim();
 }
 
-function normalizeLocale(value) {
+function normalizeLocale(value: unknown): 'zh' | 'ja' | 'en' {
   const locale = String(value || '').replace(/_/g, '-').toLowerCase();
   if (locale.startsWith('zh')) {
     return 'zh';
@@ -43,12 +59,12 @@ function normalizeLocale(value) {
   return 'en';
 }
 
-function countMatches(text, pattern) {
+function countMatches(text: unknown, pattern: RegExp): number {
   const matches = String(text || '').match(pattern);
   return matches ? matches.length : 0;
 }
 
-function getScriptStats(text) {
+function getScriptStats(text: unknown) {
   const source = String(text || '');
   const latin = countMatches(source, /[A-Za-z\u00C0-\u024F]/g);
   const han = countMatches(source, /[\u3400-\u4DBF\u4E00-\u9FFF]/g);
@@ -66,7 +82,7 @@ function getScriptStats(text) {
   });
 }
 
-function getSymbolRatio(text) {
+function getSymbolRatio(text: string) {
   const compact = String(text || '').replace(/\s/g, '');
   if (!compact) {
     return 0;
@@ -75,7 +91,7 @@ function getSymbolRatio(text) {
   return symbols / compact.length;
 }
 
-function isQuestionLike(text) {
+function isQuestionLike(text: string) {
   const source = String(text || '').trim();
   return /[?？]\s*$/.test(source) ||
     /^(?:how|why|what|when|where|who|which|can|could|would|should|is|are|do|does|did)\b/i.test(source) ||
@@ -83,15 +99,15 @@ function isQuestionLike(text) {
     /^(?:なぜ|どうして|どのように|何|いつ|どこ|誰)/.test(source);
 }
 
-function isUrlLike(text) {
+function isUrlLike(text: string) {
   return /^(?:https?:\/\/|www\.)\S+$/i.test(String(text || '').trim());
 }
 
-function isEmailLike(text) {
+function isEmailLike(text: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(text || '').trim());
 }
 
-function isErrorLike(text, options) {
+function isErrorLike(text: string, options?: SelectionContext) {
   const source = String(text || '');
   const settings = options && typeof options === 'object' ? options : {};
   const structuredError = /\b(?:TypeError|ReferenceError|SyntaxError|RangeError|Exception|Traceback|Caused by|Unhandled|ERR_[A-Z_]+|HTTP\s*[45]\d\d)\b/i.test(source) ||
@@ -101,7 +117,7 @@ function isErrorLike(text, options) {
   return structuredError || (naturalFailure && (settings.insideCode === true || settings.codeLike === true));
 }
 
-function isCodeLike(text, options) {
+function isCodeLike(text: string, options?: SelectionContext) {
   const source = String(text || '');
   const settings = options && typeof options === 'object' ? options : {};
   if (settings.insideCode === true) {
@@ -113,7 +129,7 @@ function isCodeLike(text, options) {
     (source.includes('\n') && getSymbolRatio(source) >= 0.24);
 }
 
-function isNumericLike(text) {
+function isNumericLike(text: string) {
   const source = String(text || '').trim();
   if (!/\d/.test(source) || source.length > 80) {
     return false;
@@ -124,7 +140,7 @@ function isNumericLike(text) {
   return hasUnitOrCurrency || hasConversion || hasArithmetic;
 }
 
-function isGenericUiText(text) {
+function isGenericUiText(text: string) {
   const source = String(text || '').trim();
   const lower = source.toLowerCase();
   if (LOW_INTENT_ENGLISH_TERMS.has(lower) || LOW_INTENT_CJK_TERMS.has(source)) {
@@ -138,7 +154,7 @@ function isGenericUiText(text) {
     /^(?:(?:ここ|こちら)を(?:クリック|タップ)|続きを読む|次へ|前へ|戻る|続ける|キャンセル|保存|閉じる)$/.test(source);
 }
 
-function isMeaningfulTermLike(text, options) {
+function isMeaningfulTermLike(text: string, options?: SelectionContext) {
   const source = String(text || '').trim();
   const settings = options && typeof options === 'object' ? options : {};
   if (!source || settings.genericUiLike === true) {
@@ -162,7 +178,7 @@ function isMeaningfulTermLike(text, options) {
   return cjkCount >= 2 && cjkCount >= source.replace(/\s/g, '').length * 0.72;
 }
 
-function isSearchLike(text, shortTermLike) {
+function isSearchLike(text: string, shortTermLike: boolean) {
   if (!shortTermLike) {
     return false;
   }
@@ -172,7 +188,7 @@ function isSearchLike(text, shortTermLike) {
     /(?:最新|ニュース|価格|料金|レビュー|リリース|公式|ドキュメント|バージョン|更新)/.test(source);
 }
 
-function getFallbackSentenceCount(text) {
+function getFallbackSentenceCount(text: string) {
   const source = String(text || '').trim();
   if (!source) {
     return 0;
@@ -183,7 +199,7 @@ function getFallbackSentenceCount(text) {
   return Math.max(1, terminalCount + trailingClause);
 }
 
-function getSegmentationLocale(value) {
+function getSegmentationLocale(value: unknown): string | undefined {
   const locale = String(value || '').replace(/_/g, '-').trim();
   if (!locale || typeof Intl !== 'object' || typeof Intl.getCanonicalLocales !== 'function') {
     return undefined;
@@ -195,11 +211,11 @@ function getSegmentationLocale(value) {
   }
 }
 
-function getTextStructureStats(text, locale) {
+function getTextStructureStats(text: string, locale: unknown) {
   const source = String(text || '');
   const sentenceSource = source.replace(/\n+/g, ' ');
   const segmentationLocale = getSegmentationLocale(locale);
-  let lexicalUnits = [];
+  let lexicalUnits: string[] = [];
   let sentenceCount = 0;
 
   if (typeof Intl === 'object' && typeof Intl.Segmenter === 'function') {
@@ -241,7 +257,7 @@ function getTextStructureStats(text, locale) {
   });
 }
 
-function isLanguageMismatch(text, options, scriptStats, codeLike) {
+function isLanguageMismatch(text: string, options: SelectionContext, scriptStats: ScriptStats, codeLike: boolean) {
   if (codeLike || !scriptStats || scriptStats.letters < 2) {
     return false;
   }
@@ -259,15 +275,15 @@ function isLanguageMismatch(text, options, scriptStats, codeLike) {
   return wordCount >= 2 || lowerSingleLatinWord;
 }
 
-function rankScores(scores) {
+function rankScores(scores: Record<SelectionAction, number>) {
   return ACTIONS
     .map((action) => ({ action, score: Math.min(1, Math.max(0, Number(scores[action]) || 0)) }))
     .sort((left, right) => right.score - left.score);
 }
 
-function classifySelection(value, options) {
+function classifySelection(value: unknown, options?: SelectionContext) {
   const text = normalizeText(value);
-  const settings = options && typeof options === 'object' ? options : {};
+  const settings: SelectionContext = options && typeof options === 'object' ? options : {};
   const length = text.length;
   const lineCount = text ? text.split('\n').length : 0;
   const wordCount = text ? text.split(/\s+/).filter(Boolean).length : 0;
@@ -323,7 +339,7 @@ function classifySelection(value, options) {
     urlLike ||
     emailLike ||
     settings.sensitive === true;
-  const scores = Object.fromEntries(ACTIONS.map((action) => [action, 0]));
+  const scores = Object.fromEntries(ACTIONS.map((action) => [action, 0])) as Record<SelectionAction, number>;
 
   if (!suppressed) {
     if (questionLike) {
@@ -404,10 +420,10 @@ function classifySelection(value, options) {
   });
 }
 
-function buildPrompt(action, value, locale) {
+function buildPrompt(action: SelectionAction, value: unknown, locale: unknown): string {
   const text = normalizeText(value);
   const rawLocale = String(locale || '').replace(/_/g, '-').toLowerCase();
-  const targetLocale = rawLocale.startsWith('zh-tw') ||
+  const targetLocale: PromptLocale = rawLocale.startsWith('zh-tw') ||
     rawLocale.startsWith('zh-hk') ||
     rawLocale.includes('hant')
     ? 'zh_TW'
@@ -415,7 +431,7 @@ function buildPrompt(action, value, locale) {
   if (!text || action === 'ask') {
     return text;
   }
-  const templates = {
+  const templates: Record<PromptLocale, Record<Exclude<SelectionAction, 'ask'>, string>> = {
     zh: {
       translate: '请将下面内容翻译成简体中文，只输出自然准确的译文：',
       explain: '请结合上下文解释下面内容；如果是代码或报错，请说明原因和解决方向：',
@@ -458,7 +474,7 @@ function buildPrompt(action, value, locale) {
 
 // "German" for "de", "Brazilian Portuguese" for "pt-br"; '' for English or
 // a tag Intl does not know.
-function getEnglishLanguageName(locale) {
+function getEnglishLanguageName(locale: string): string {
   if (!locale || locale === 'en' || locale.startsWith('en-')) {
     return '';
   }
@@ -479,3 +495,4 @@ export {
   normalizeLocale,
   normalizeText
 };
+export type { ScriptStats, SelectionAction, SelectionContext };

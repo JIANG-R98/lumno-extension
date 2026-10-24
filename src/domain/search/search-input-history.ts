@@ -1,17 +1,34 @@
+import type { StorageAreaLike, StorageChangeEventLike, StorageChanges, StorageItems } from '../storage-port';
+
+type HistoryDirection = 'previous' | 'next' | '';
+
+interface HistoryMove {
+  handled: boolean;
+  value: string;
+}
+
+interface SearchInputHistoryOptions {
+  storageArea?: StorageAreaLike | null;
+  storageChanges?: StorageChangeEventLike | null;
+  storageAreaName?: string;
+  storageKey?: string;
+  maxEntries?: number;
+}
+
 const STORAGE_KEY = '_x_extension_search_input_history_2026_unique_';
 const DEFAULT_MAX_ENTRIES = 50;
 const MAX_ENTRY_LENGTH = 4096;
 
-function normalizeEntry(value) {
+function normalizeEntry(value: unknown): string {
   return String(value || '').trim().slice(0, MAX_ENTRY_LENGTH);
 }
 
-function normalizeEntries(value, maxEntries) {
+function normalizeEntries(value: unknown, maxEntries?: number): string[] {
   const limit = Number.isFinite(Number(maxEntries))
     ? Math.max(1, Math.round(Number(maxEntries)))
     : DEFAULT_MAX_ENTRIES;
-  const unique = [];
-  (Array.isArray(value) ? value : []).forEach((item) => {
+  const unique: string[] = [];
+  (Array.isArray(value) ? value : []).forEach((item: unknown) => {
     const entry = normalizeEntry(item);
     if (!entry) {
       return;
@@ -25,7 +42,9 @@ function normalizeEntries(value, maxEntries) {
   return unique.slice(-limit);
 }
 
-function getShortcutDirection(event) {
+function getShortcutDirection(
+  event: { altKey?: boolean; ctrlKey?: boolean; metaKey?: boolean; shiftKey?: boolean; code?: string; key?: string } | null | undefined
+): HistoryDirection {
   if (!event ||
       !event.altKey ||
       event.ctrlKey ||
@@ -44,8 +63,8 @@ function getShortcutDirection(event) {
   return '';
 }
 
-function createSearchInputHistoryController(options) {
-  const config = options && typeof options === 'object' ? options : {};
+function createSearchInputHistoryController(options?: SearchInputHistoryOptions) {
+  const config: SearchInputHistoryOptions = options && typeof options === 'object' ? options : {};
   const storageArea = config.storageArea || null;
   const storageChanges = config.storageChanges || null;
   const storageAreaName = config.storageAreaName || 'local';
@@ -53,27 +72,27 @@ function createSearchInputHistoryController(options) {
   const maxEntries = Number.isFinite(Number(config.maxEntries))
     ? Math.max(1, Math.round(Number(config.maxEntries)))
     : DEFAULT_MAX_ENTRIES;
-  let entries = [];
+  let entries: string[] = [];
   let cursor = 0;
   let draft = '';
   let hydrated = false;
   let destroyed = false;
-  let loadPromise = null;
-  let pendingRecords = [];
-  let storageChangeListener = null;
+  let loadPromise: Promise<string[]> | null = null;
+  let pendingRecords: string[] = [];
+  let storageChangeListener: ((changes: StorageChanges, areaName: string) => void) | null = null;
 
   function resetNavigation() {
     cursor = entries.length;
     draft = '';
   }
 
-  function replaceEntries(value) {
+  function replaceEntries(value: unknown): string[] {
     entries = normalizeEntries(value, maxEntries);
     resetNavigation();
     return entries.slice();
   }
 
-  function applyRecord(value) {
+  function applyRecord(value: unknown): string {
     const entry = normalizeEntry(value);
     if (!entry) {
       return '';
@@ -96,14 +115,14 @@ function createSearchInputHistoryController(options) {
     }
   }
 
-  function readStorage() {
+  function readStorage(): Promise<StorageItems> {
     return new Promise((resolve) => {
       if (!storageArea || typeof storageArea.get !== 'function') {
         resolve({});
         return;
       }
       let settled = false;
-      const finish = (result) => {
+      const finish = (result?: StorageItems) => {
         if (settled) {
           return;
         }
@@ -121,7 +140,7 @@ function createSearchInputHistoryController(options) {
     });
   }
 
-  function load() {
+  function load(): Promise<string[]> {
     if (loadPromise) {
       return loadPromise;
     }
@@ -142,7 +161,7 @@ function createSearchInputHistoryController(options) {
     return loadPromise;
   }
 
-  function record(value) {
+  function record(value: unknown): boolean {
     const entry = normalizeEntry(value);
     if (!entry) {
       return false;
@@ -159,7 +178,7 @@ function createSearchInputHistoryController(options) {
     return true;
   }
 
-  function move(direction, currentValue) {
+  function move(direction: HistoryDirection, currentValue: unknown): HistoryMove {
     if (entries.length === 0) {
       return { handled: false, value: String(currentValue || '') };
     }
@@ -185,7 +204,7 @@ function createSearchInputHistoryController(options) {
     return { handled: false, value: String(currentValue || '') };
   }
 
-  function handleStorageChange(changes, areaName) {
+  function handleStorageChange(changes: StorageChanges, areaName: string) {
     if (destroyed ||
         areaName !== storageAreaName ||
         !changes ||
@@ -209,7 +228,7 @@ function createSearchInputHistoryController(options) {
   return Object.freeze({
     destroy() {
       destroyed = true;
-      if (storageChangeListener) {
+      if (storageChangeListener && storageChanges) {
         storageChanges.removeListener(storageChangeListener);
         storageChangeListener = null;
       }
@@ -231,3 +250,4 @@ export {
   getShortcutDirection,
   normalizeEntries
 };
+export type { HistoryDirection, HistoryMove, SearchInputHistoryOptions };

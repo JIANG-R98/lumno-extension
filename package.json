@@ -10,7 +10,7 @@
     "build": "npm run build:static && npm run build:react && npm run build:bundles",
     "build:react": "vite build --config vite.config.mjs && vite build --config vite.overlay.config.mjs",
     "build:bundles": "node scripts/build/build-bundles.js",
-    "typecheck": "tsc --project tsconfig.json --noEmit && npm run typecheck:react",
+    "typecheck": "tsc --project tsconfig.json --noEmit && tsc --project tsconfig.strict.json --noEmit && npm run typecheck:react",
     "typecheck:react": "tsc --project tsconfig.react.json --noEmit",
     "test": "npm run build && npm run test:legacy && npm run test:react",
     "verify": "npm test && npm run check:static",

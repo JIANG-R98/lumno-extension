@@ -1,4 +1,22 @@
-function getBrowserInternalScheme(userAgent) {
+type BrowserInternalScheme = 'about:' | 'edge://' | 'brave://' | 'vivaldi://' | 'opera://' | 'chrome://';
+type BrowserFamily = 'firefox' | 'chromium';
+
+// navigator, or the parts of it the profile reads.
+interface NavigatorLike {
+  userAgent?: string;
+  userAgentData?: { brands?: Array<{ brand?: string } | null> } | null;
+}
+
+interface BrowserInternalProfile {
+  scheme: BrowserInternalScheme;
+  name: string;
+}
+
+interface RuntimeUrlApi {
+  runtime?: { getURL?: (path: string) => string };
+}
+
+function getBrowserInternalScheme(userAgent: unknown): BrowserInternalScheme {
   const ua = String(userAgent || '');
   // Firefox and its forks (Zen, LibreWolf) report Firefox/ and no Chrome/.
   if (ua.includes('Firefox/') && !ua.includes('Chrome/')) {
@@ -19,20 +37,20 @@ function getBrowserInternalScheme(userAgent) {
   return 'chrome://';
 }
 
-function normalizeBrandName(brand) {
+function normalizeBrandName(brand: unknown): string {
   return String(brand || '').replace(/\s+/g, ' ').trim();
 }
 
-function isGreaseBrandName(brand) {
+function isGreaseBrandName(brand: string): boolean {
   const compact = normalizeBrandName(brand).toLowerCase().replace(/[^a-z]/g, '');
   return compact.includes('not') && compact.includes('brand');
 }
 
-function isChromiumEngineBrandName(brand) {
+function isChromiumEngineBrandName(brand: string): boolean {
   return normalizeBrandName(brand).toLowerCase() === 'chromium';
 }
 
-function getClientHintBrowserName(userAgentData) {
+function getClientHintBrowserName(userAgentData: NavigatorLike['userAgentData']): string {
   const brands = userAgentData && Array.isArray(userAgentData.brands)
     ? userAgentData.brands
     : [];
@@ -53,7 +71,7 @@ function getClientHintBrowserName(userAgentData) {
     '';
 }
 
-function getFallbackBrowserName(scheme) {
+function getFallbackBrowserName(scheme: BrowserInternalScheme): string {
   if (scheme === 'about:') {
     return 'Firefox';
   }
@@ -74,14 +92,15 @@ function getFallbackBrowserName(scheme) {
 
 // Firefox refuses to let extensions open privileged about: pages, so its
 // internal-page shortcuts would only fail silently.
-function canOpenBrowserPages(scheme) {
+function canOpenBrowserPages(scheme: BrowserInternalScheme): boolean {
   return scheme !== 'about:';
 }
 
-function getBrowserInternalProfile(navigatorLike) {
-  const source = navigatorLike && typeof navigatorLike === 'object'
+// Takes navigator, or a user agent string on its own.
+function getBrowserInternalProfile(navigatorLike?: NavigatorLike | string | null): Readonly<BrowserInternalProfile> {
+  const source: NavigatorLike = typeof navigatorLike === 'object' && navigatorLike
     ? navigatorLike
-    : { userAgent: navigatorLike };
+    : { userAgent: typeof navigatorLike === 'string' ? navigatorLike : undefined };
   const scheme = getBrowserInternalScheme(source.userAgent);
   return Object.freeze({
     scheme,
@@ -92,8 +111,8 @@ function getBrowserInternalProfile(navigatorLike) {
 
 // The extension's own URL scheme is the reliable signal for code that cares
 // about Firefox's extension APIs rather than the browser's branding.
-function isFirefoxExtensionRuntime(chromeApi) {
-  const api = chromeApi === undefined && typeof chrome !== 'undefined' ? chrome : chromeApi;
+function isFirefoxExtensionRuntime(chromeApi?: RuntimeUrlApi | null): boolean {
+  const api: RuntimeUrlApi | null | undefined = chromeApi === undefined && typeof chrome !== 'undefined' ? chrome : chromeApi;
   try {
     return Boolean(api && api.runtime && typeof api.runtime.getURL === 'function' &&
       /^moz-extension:/i.test(api.runtime.getURL('')));
@@ -102,15 +121,15 @@ function isFirefoxExtensionRuntime(chromeApi) {
   }
 }
 
-function getBrowserFamily(navigatorLike) {
+function getBrowserFamily(navigatorLike?: NavigatorLike | string | null): BrowserFamily {
   return getBrowserInternalProfile(navigatorLike).scheme === 'about:' ? 'firefox' : 'chromium';
 }
 
 // Marks an extension page with its browser family and hides UI declared for
 // the other one, e.g. <button data-browser-only="chromium"> in Firefox.
-function applyDocumentBrowserFamily(documentObj, navigatorLike) {
+function applyDocumentBrowserFamily(documentObj: Document | null | undefined, navigatorLike?: NavigatorLike | null): BrowserFamily | '' {
   const rootElement = documentObj && documentObj.documentElement;
-  if (!rootElement) {
+  if (!documentObj || !rootElement) {
     return '';
   }
   const family = getBrowserFamily(navigatorLike);
@@ -142,3 +161,4 @@ export {
   getBrowserInternalProfile,
   canOpenBrowserPages
 };
+export type { BrowserFamily, BrowserInternalProfile, BrowserInternalScheme, NavigatorLike };

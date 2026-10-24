@@ -9,7 +9,7 @@
 // same post and puts the post's own address back in place.
 const X_POST_PATTERN = /^https:\/\/(?:www\.|mobile\.)?(?:x|twitter)\.com\/[A-Za-z0-9_]{1,20}\/status\/(\d+)(?:[/?#]|$)/i;
 
-function toPreviewFrameUrl(url) {
+function toPreviewFrameUrl(url: string): string {
   const match = X_POST_PATTERN.exec(String(url || ''));
   return match ? `https://x.com/i/web/status/${match[1]}` : url;
 }
