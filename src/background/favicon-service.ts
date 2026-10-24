@@ -26,7 +26,6 @@ import {
   SITE_SEARCH_ICON_CACHE_OPTIONS,
   SITE_SEARCH_ICON_STORAGE_KEY,
   SITE_SEARCH_PINNED_ICON_KEYS,
-  ignoreExpectedChromeError,
   logBackgroundFaviconDecision,
   normalizeHost,
   storageArea,
@@ -761,17 +760,6 @@ function getSiteSearchIconStore() {
     ...SITE_SEARCH_ICON_CACHE_OPTIONS
   });
   return siteSearchIconStore;
-}
-
-export function removeLegacySiteSearchIconCaches() {
-  const legacyKeys = Array.isArray(SHORTCUT_FAVICON.SITE_SEARCH_LEGACY_STORAGE_KEYS)
-    ? SHORTCUT_FAVICON.SITE_SEARCH_LEGACY_STORAGE_KEYS
-    : [];
-  const localArea = chrome && chrome.storage ? chrome.storage.local : null;
-  if (legacyKeys.length === 0 || !localArea || typeof localArea.remove !== 'function') {
-    return;
-  }
-  localArea.remove(legacyKeys, ignoreExpectedChromeError);
 }
 
 function loadSiteSearchIconCache() {

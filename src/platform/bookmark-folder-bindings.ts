@@ -26,6 +26,7 @@ import type {
 } from '../domain/storage-port';
 import { createProviderStorageRuntime } from './settings-storage';
 import { persistShortcutState } from './shortcut-storage';
+import { callStorage, isRecord } from './storage-call';
 import type { ProviderStorageRuntime, StorageChromeApi } from './settings-storage';
 
 // An area that reads like chrome.storage: through the callback, or through
@@ -92,38 +93,9 @@ interface FolderSyncController {
   refresh(): Promise<void>;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object';
-}
-
-function isThenable(value: unknown): value is PromiseLike<unknown> {
-  return isRecord(value) && 'then' in value && typeof value.then === 'function';
-}
-
 // Node's timers keep a test process alive unless unreferenced.
 function unrefTimer(handle: unknown): void {
   if (isRecord(handle) && 'unref' in handle && typeof handle.unref === 'function') handle.unref();
-}
-
-// Runs one storage call and settles with its result, or with the error
-// Chrome leaves in runtime.lastError.
-function callStorage(
-  chromeApi: StorageChromeApi | null | undefined,
-  start: (done: (result?: unknown) => void) => unknown
-): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const done = (result?: unknown): void => {
-      if (settled) return;
-      settled = true;
-      const error = chromeApi && chromeApi.runtime && chromeApi.runtime.lastError;
-      if (error) reject(new Error(error.message)); else resolve(result);
-    };
-    try {
-      const request = start(done);
-      if (isThenable(request)) request.then(done, reject);
-    } catch (error) { reject(error); }
-  });
 }
 
 async function readItems(

@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
+const settingsMigrations = require('../../src/domain/settings-migrations.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 const { siteSearchIconCacheStorage } = require('../helpers/site-search-icon-cache');
 
@@ -34,7 +35,7 @@ async function run() {
     }
   };
   const local = await siteSearchIconCacheStorage([{ provider: CUSTOM[1], dataUrl: ICON }]);
-  shortcutFavicon.SITE_SEARCH_LEGACY_STORAGE_KEYS.forEach((key) => {
+  settingsMigrations.LEGACY_SITE_SEARCH_ICON_STORAGE_KEYS.forEach((key) => {
     local[key] = { stale: true };
   });
   const harness = loadBackground({
@@ -77,7 +78,7 @@ async function run() {
     const pageHost = new URL(provider.template.replace('{query}', 'x')).hostname;
     assert.ok(!warmedHosts.has(pageHost), `the bundled ${provider.key} provider should keep its packaged tile`);
   });
-  shortcutFavicon.SITE_SEARCH_LEGACY_STORAGE_KEYS.forEach((key) => {
+  settingsMigrations.LEGACY_SITE_SEARCH_ICON_STORAGE_KEYS.forEach((key) => {
     assert.ok(!(key in harness.storage.local.data), `${key} from an earlier cache layout should be removed`);
   });
   const reads = harness.storage.local.reads.flatMap((keys) => (Array.isArray(keys) ? keys : [keys]));

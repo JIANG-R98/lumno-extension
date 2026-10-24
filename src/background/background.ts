@@ -14,6 +14,7 @@ import './command-target-policy';
 import * as SETTINGS from '../domain/settings';
 import * as LumnoSettings from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import * as LumnoSettingsMigration from '../platform/settings-migration';
 import * as LumnoBookmarkFolderBindings from '../platform/bookmark-folder-bindings';
 import '../domain/shortcuts-store';
 import '../domain/site-display-name';
@@ -96,8 +97,7 @@ import {
   invalidateFaviconEnhancedFetchEnabledCache,
   invalidateFaviconRequestBlacklistCache,
   invalidateShortcutFaviconPolicyCache,
-  markFaviconDirtyForUrl,
-  removeLegacySiteSearchIconCaches
+  markFaviconDirtyForUrl
 } from './favicon-service';
 import {
   clearPendingSearch,
@@ -238,10 +238,6 @@ function isPrimaryStorageAreaName(areaName) {
     : Boolean(storageAreaName) && areaName === storageAreaName;
 }
 const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
-const LANGUAGE_MESSAGES_STORAGE_KEY = '_x_extension_language_messages_2024_unique_';
-const BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS = Array.isArray(LumnoSettings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS)
-  ? LumnoSettings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS
-  : [];
 const PINNED_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
 const PROGRESS_TRACKING_ENABLED_STORAGE_KEY = LumnoSettings.PROGRESS_TRACKING_ENABLED_STORAGE_KEY;
 // Labs: tracked pinned cards follow the episode or chapter the person is on.
@@ -281,14 +277,6 @@ export const SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY = '_x_extension_search_resul
 export const SEARCH_SELECTION_STATS_STORAGE_KEY = '_x_extension_search_selection_stats_2026_unique_';
 export const FAVICON_VISIT_DIRTY_STORAGE_KEY = '_x_extension_favicon_visit_dirty_2026_unique_';
 export const PINNED_TAB_SNAPSHOT_STORAGE_KEY = '_x_extension_pinned_tab_snapshot_2026_unique_';
-const REMOVED_AI_SYNC_STORAGE_KEYS = [
-  '_x_extension_ai_search_mode_2026_unique_',
-  '_x_extension_ai_provider_2026_unique_',
-  '_x_extension_ai_entitlement_cache_2026_unique_'
-];
-const REMOVED_AI_LOCAL_STORAGE_KEYS = [
-  '_x_extension_ai_api_key_2026_unique_'
-];
 export const SHOW_SEARCH_COMMAND_NAME = 'show-search';
 const SHOW_SEARCH_PREFILL_COMMAND_NAME = 'show-search-prefill';
 export const SHOW_SEARCH_PREFILL_V_COMMAND_NAME = 'show-search-prefill-v';
@@ -323,44 +311,6 @@ export function markRestrictedActionAutoSelected() {
   restrictedActionCache = 'none';
 }
 export const browserNewtabProviderCandidateTabIds = new Map();
-function cleanupRemovedAiStorageKeys() {
-  if (!chrome || !chrome.storage) {
-    return;
-  }
-  const syncArea = chrome.storage.sync;
-  const localArea = chrome.storage.local;
-  if (syncArea && typeof syncArea.remove === 'function') {
-    syncArea.remove(REMOVED_AI_SYNC_STORAGE_KEYS, ignoreExpectedChromeError);
-  }
-  if (localArea && typeof localArea.remove === 'function') {
-    localArea.remove(REMOVED_AI_LOCAL_STORAGE_KEYS, ignoreExpectedChromeError);
-  }
-}
-
-const OVERLAY_FONT_LOCAL_STORAGE_KEYS = Array.isArray(LumnoSettings.OVERLAY_FONT_LOCAL_STORAGE_KEYS)
-  ? LumnoSettings.OVERLAY_FONT_LOCAL_STORAGE_KEYS
-  : [];
-
-// Development builds before the fonts became device-only kept them in
-// Chrome Sync; those copies would otherwise reach every signed-in device.
-function cleanupLocalOnlyOverlayFontSyncStorage() {
-  if (!chrome || !chrome.storage || !chrome.storage.sync ||
-      typeof chrome.storage.sync.remove !== 'function' ||
-      OVERLAY_FONT_LOCAL_STORAGE_KEYS.length === 0) {
-    return;
-  }
-  chrome.storage.sync.remove(OVERLAY_FONT_LOCAL_STORAGE_KEYS, ignoreExpectedChromeError);
-}
-
-function cleanupLocalOnlyBookmarkTopbarSyncStorage() {
-  if (!chrome || !chrome.storage || !chrome.storage.sync ||
-      typeof chrome.storage.sync.remove !== 'function' ||
-      BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS.length === 0) {
-    return;
-  }
-  chrome.storage.sync.remove(BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS, ignoreExpectedChromeError);
-}
-
 if (storageArea) {
   storageArea.get([
     RESTRICTED_ACTION_STORAGE_KEY,
@@ -566,9 +516,8 @@ if (chrome && chrome.runtime && chrome.runtime.onSuspend) {
     flushPendingTabSwitcherState();
   });
 }
-cleanupRemovedAiStorageKeys();
-cleanupLocalOnlyBookmarkTopbarSyncStorage();
-cleanupLocalOnlyOverlayFontSyncStorage();
+LumnoSettingsMigration.runSettingsMigrations(chrome)
+  .catch(warnBackgroundFailure('Failed to migrate this device\'s stored settings.'));
 
 if (chrome && chrome.tabs && chrome.tabs.onActivated) {
   chrome.tabs.onActivated.addListener((activeInfo) => {
@@ -947,10 +896,6 @@ if (providerStorageRuntime) {
 } else {
   migrateStorageIfNeeded(CHROME_SYNC_STORAGE_KEYS);
 }
-if (chrome && chrome.storage && chrome.storage.sync &&
-    typeof chrome.storage.sync.remove === 'function') {
-  chrome.storage.sync.remove(LANGUAGE_MESSAGES_STORAGE_KEY, ignoreExpectedChromeError);
-}
 export const SITE_SEARCH_ICON_STORAGE_KEY = SHORTCUT_FAVICON.SITE_SEARCH_STORAGE_KEY ||
   '_x_extension_site_search_icon_cache_canonical_2026_unique_';
 
@@ -1014,7 +959,6 @@ if (chrome && chrome.tabs) {
   });
 }
 
-removeLegacySiteSearchIconCaches();
 warmSiteSearchProviderIcons();
 
 chrome.storage.onChanged.addListener((changes, areaName) => {

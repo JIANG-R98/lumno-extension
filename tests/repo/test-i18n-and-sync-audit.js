@@ -243,7 +243,6 @@ async function testTopbarMaterialIsLocal() {
   assert.strictEqual(topbar.getAttribute('data-surface-mode'), 'custom', 'material mode should load from current-device storage');
   assert.strictEqual(topbar.style.getPropertyValue('--x-nt-bookmarks-topbar-surface'), '#112233',
     'initial topbar appearance should use only current-device values');
-  assert(TOPBAR_LOCAL_KEYS.every((key) => !Object.hasOwn(page.storage.sync.data, key)), 'all local-only keys should be purged from Sync');
   assert.deepStrictEqual(page.storage.local.writes.filter((write) => TOPBAR_LOCAL_KEYS.some((key) => Object.hasOwn(write, key))), [],
     'Sync values must never be imported into local topbar settings');
   page.changeStorage('sync', modeKey, 'transparent');

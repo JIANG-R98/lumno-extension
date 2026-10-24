@@ -5,7 +5,7 @@ const path = require('path');
 
 const settings = require('../../src/domain/settings.ts');
 const settingsStorage = require('../../src/platform/settings-storage.ts');
-const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
+const settingsMigrations = require('../../src/domain/settings-migrations.ts');
 const repoRoot = path.join(__dirname, '..', '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'manifest.json'), 'utf8'));
 const expectedDevelopmentExtensionId = 'kkcjcneagmlhpeaafngjdlpcfjakejgb';
@@ -188,18 +188,25 @@ sourceFiles.forEach((file) => {
 assert.deepStrictEqual(
   persistedRemoveCalls.sort(),
   [
-    'src/background/background.ts:chrome.storage.sync:BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS',
-    'src/background/background.ts:chrome.storage.sync:LANGUAGE_MESSAGES_STORAGE_KEY',
-    'src/background/background.ts:chrome.storage.sync:OVERLAY_FONT_LOCAL_STORAGE_KEYS',
-    'src/background/background.ts:localArea:REMOVED_AI_LOCAL_STORAGE_KEYS',
-    'src/background/background.ts:syncArea:REMOVED_AI_SYNC_STORAGE_KEYS',
-    'src/background/favicon-service.ts:localArea:legacyKeys',
     'src/newtab/bookmarks/bookmark-display-settings.ts:bookmarkTopbarSurfaceStorageArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY',
-    'src/newtab/bookmarks/bookmark-display-settings.ts:localArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY',
-    'src/newtab/bookmarks/bookmark-display-settings.ts:syncArea:cleanupKeys'
+    'src/newtab/bookmarks/bookmark-display-settings.ts:localArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY'
   ],
   'persisted storage removals must remain limited to the reviewed legacy cleanup paths'
 );
+// The settings migrations remove what older versions left behind; these are
+// every key they may remove, and none is a setting the current version keeps.
+const migrationRemovals = settingsMigrations.planSettingsMigrations(0, { sync: {}, local: {} }).patch;
+assert.deepStrictEqual(migrationRemovals.sync.remove.slice().sort(), [
+  settingsMigrations.LANGUAGE_MESSAGES_STORAGE_KEY,
+  ...settingsMigrations.REMOVED_AI_SYNC_STORAGE_KEYS,
+  ...settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS,
+  ...settings.OVERLAY_FONT_LOCAL_STORAGE_KEYS
+].sort(), 'settings migrations must remove only the reviewed keys from Chrome Sync');
+assert.deepStrictEqual(migrationRemovals.local.remove.slice().sort(), [
+  settingsMigrations.LANGUAGE_MESSAGES_STORAGE_KEY,
+  ...settingsMigrations.REMOVED_AI_LOCAL_STORAGE_KEYS,
+  ...settingsMigrations.LEGACY_SITE_SEARCH_ICON_STORAGE_KEYS
+].sort(), 'settings migrations must remove only the reviewed keys from local storage');
 assert.strictEqual(
   settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS.some((key) => expectedSyncKeys.includes(key)),
   false,
@@ -213,7 +220,7 @@ assert.strictEqual(
   'device-local overlay font keys must never overlap active sync settings'
 );
 assert.strictEqual(
-  shortcutFavicon.SITE_SEARCH_LEGACY_STORAGE_KEYS.some((key) => expectedSyncKeys.includes(key)),
+  settingsMigrations.LEGACY_SITE_SEARCH_ICON_STORAGE_KEYS.some((key) => expectedSyncKeys.includes(key)),
   false,
   'legacy site-search icon cache keys must never overlap active sync settings'
 );

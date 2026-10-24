@@ -435,13 +435,6 @@ function createBookmarkDisplaySettings(deps) {
     ];
   }
 
-  function getBookmarkTopbarSurfaceCleanupKeys() {
-    return [
-      BOOKMARK_TOPBAR_SURFACE_MODE_STORAGE_KEY,
-      ...getBookmarkTopbarSurfaceColorStorageKeys()
-    ];
-  }
-
   function applyInitialBookmarkTopbarSurfaceColors(result, readRevisions) {
     [
       {
@@ -474,8 +467,6 @@ function createBookmarkDisplaySettings(deps) {
       return;
     }
     const colorKeys = getBookmarkTopbarSurfaceColorStorageKeys();
-    const cleanupKeys = getBookmarkTopbarSurfaceCleanupKeys();
-    const syncArea = chrome && chrome.storage ? chrome.storage.sync : null;
     initialThemeReadyPromise.then(() => {
       localArea.get(colorKeys, (localResult) => {
         const resolvedLocalResult = Object.assign({}, localResult || {});
@@ -510,11 +501,6 @@ function createBookmarkDisplaySettings(deps) {
         }
         finishLocalMigration();
       });
-      if (syncArea && syncArea !== localArea && typeof syncArea.remove === 'function') {
-        syncArea.remove(cleanupKeys, () => {
-          void (chrome.runtime && chrome.runtime.lastError);
-        });
-      }
     });
   }
 

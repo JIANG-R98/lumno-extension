@@ -2,10 +2,6 @@
 import * as faviconUtils from './favicon-utils';
 const DEFAULT_STORAGE_KEY = '_x_extension_newtab_shortcut_favicon_cache_2026_unique_';
 const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_icon_cache_canonical_2026_unique_';
-const SITE_SEARCH_LEGACY_STORAGE_KEYS = Object.freeze([
-  '_x_extension_site_search_icon_cache_2026_unique_',
-  '_x_extension_site_search_icon_cache_retina_2026_unique_'
-]);
 const GOOGLE_BRAND_ICON_URL =
   'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png';
 const SITE_SEARCH_PINNED_ICON_ASSETS = Object.freeze({
@@ -936,7 +932,6 @@ function createShortcutFaviconStore(options) {
 export {
   DEFAULT_STORAGE_KEY,
   SITE_SEARCH_STORAGE_KEY,
-  SITE_SEARCH_LEGACY_STORAGE_KEYS,
   GOOGLE_BRAND_ICON_URL,
   SITE_SEARCH_PINNED_ICON_ASSETS,
   SHORTCUT_PINNED_ICON_ASSETS,
