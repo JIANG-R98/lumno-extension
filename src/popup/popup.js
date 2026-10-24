@@ -141,8 +141,9 @@ function buildModel(state, t) {
   const tab = state.tab;
   const url = tab ? String(tab.url || '') : '';
   const restricted = !tab || state.restricted === true;
-  // Shortcuts and pinned recent sites hold web pages only.
-  const canSaveToNewTab = Boolean(tab) && isWebUrl(url) && !restricted;
+  // Shortcuts and pinned recent sites hold web pages only. They only store the
+  // address, so a store page that takes no scripts can still be saved.
+  const canSaveToNewTab = Boolean(tab) && isWebUrl(url);
   const recentPin = state.recentPin || {};
   const pinned = recentPin.pinned === true;
   const pinFull = !pinned && recentPin.full === true;

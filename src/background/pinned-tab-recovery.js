@@ -5,7 +5,7 @@
 //
 // A module of the service worker; background.js imports it before its own code
 // runs. Its functions use background.js bindings (storageArea, the storage
-// keys, getResolvedTabUrl, isRestrictedUrl, ...) only when they run, never
+// keys, getResolvedTabUrl, ...) only when they run, never
 // while this file loads. background.js decides when to snapshot (tab and window
 // events) and when to restore (install/startup/window events).
 //
@@ -17,9 +17,15 @@ import {
   PINNED_TAB_SNAPSHOT_STORAGE_KEY,
   storageArea
 } from './background.js';
-import { getResolvedTabUrl, isRestrictedUrl } from './browser-urls-service.js';
+import { getResolvedTabUrl } from './browser-urls-service.js';
 
 const PINNED_TAB_SNAPSHOT_DEBOUNCE_MS = 600;
+
+// Restoring only opens a tab, so any web page qualifies, store pages included
+// even though they take no scripts.
+function isRestorablePinnedUrl(url) {
+  return /^https?:\/\//i.test(String(url || ''));
+}
 
 const PINNED_TAB_RESTORE_MAX_TABS = 24;
 
@@ -245,7 +251,7 @@ function normalizePinnedTabSnapshotEntry(rawValue) {
     return null;
   }
   const url = String(raw.url || '').trim();
-  if (!url || isRestrictedUrl(url)) {
+  if (!isRestorablePinnedUrl(url)) {
     return null;
   }
   const entry = { url };
@@ -446,7 +452,7 @@ async function persistPinnedTabSnapshotNow(options) {
     }
     const tab = snapshotTabs[i];
     const url = getResolvedTabUrl(tab);
-    if (!url || isRestrictedUrl(url)) {
+    if (!isRestorablePinnedUrl(url)) {
       continue;
     }
     const entry = { url };
@@ -535,7 +541,7 @@ async function restorePinnedTabsFromSnapshotNow() {
   const existingPinnedUrls = currentTabs
     .filter((tab) => tab && tab.pinned && tab.incognito !== true)
     .map((tab) => getResolvedTabUrl(tab))
-    .filter((url) => Boolean(url) && !isRestrictedUrl(url));
+    .filter((url) => isRestorablePinnedUrl(url));
   const missingEntries = getMissingPinnedTabEntries(savedEntries, existingPinnedUrls);
   if (!missingEntries.length) {
     return;

@@ -161,6 +161,16 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
   assert.strictEqual(model.notice, null);
 }
 
+// A store page takes no scripts, but its address can still be saved: add and
+// pin stay on while clip is off.
+{
+  const tab = { id: 4, url: 'https://chrome.google.com/webstore/devconsole/abc', title: 'Developer Dashboard', iconUrl: 'icon.png' };
+  const actions = byId(popup.buildModel(state({ tab, restricted: true, documentPipEnabled: true }), t));
+  assert.strictEqual(actions.shortcut.disabled, false);
+  assert.strictEqual(actions.pin.disabled, false);
+  assert.strictEqual(actions.clip.disabled, true);
+}
+
 // Page icons: Lumno's own pages, browser pages by browser, other extensions, files, the web.
 {
   const context = (browserName) => ({
