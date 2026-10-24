@@ -146,6 +146,32 @@ function testShiftReversesTheShortcutKey() {
   reverse.close();
 }
 
+// Ctrl+Tab can only be bound from the browser's shortcuts page console; macOS
+// reports it as ⌃⇥, and Tab then has to follow the shortcut's rules rather
+// than the switcher's plain Tab key.
+async function testCtrlTabShortcutCyclesLikeTheShortcutKey() {
+  const held = createTabSwitcherPage();
+  openDefault(held, { shortcut: '⌃⇥', suppressInitialShortcutAdvance: true });
+  held.press('Tab', { code: 'Tab', ctrlKey: true, repeat: true });
+  assert.strictEqual(held.selectedIndex(), 0, 'the Tab still held from the summon should not advance');
+  held.release('Tab', { code: 'Tab', ctrlKey: true });
+  held.press('Tab', { code: 'Tab', ctrlKey: true });
+  assert.strictEqual(held.selectedIndex(), 1, 'pressing Tab again with Control held should advance');
+  held.release('Control', { code: 'ControlLeft' });
+  await held.settle();
+  assert.deepStrictEqual(lastSwitch(held), { action: 'switchToTab', tabId: 2, windowId: 1 },
+    'releasing Control should switch to the highlighted tab');
+  held.close();
+
+  const reverse = createTabSwitcherPage();
+  openDefault(reverse, { shortcut: 'Ctrl+Shift+Tab', reverse: true, selectedIndex: 3 });
+  reverse.press('Tab', { code: 'Tab', ctrlKey: true, shiftKey: true });
+  assert.strictEqual(reverse.selectedIndex(), 2, 'the reverse shortcut should keep moving back');
+  reverse.press('Tab', { code: 'Tab', ctrlKey: true });
+  assert.strictEqual(reverse.selectedIndex(), 3, 'dropping Shift from the reverse shortcut should move forward');
+  reverse.close();
+}
+
 async function testCustomShortcutCommitsOnItsPrimaryModifier() {
   const page = createTabSwitcherPage();
   openDefault(page, { shortcut: 'Ctrl+Shift+/' });
@@ -442,6 +468,7 @@ function testStylesheetKeepsTheLayoutRules() {
   testKeyboardCyclesAndCommits();
   await testHeldShortcutIsSuppressedUntilItsKeyIsReleased();
   testShiftReversesTheShortcutKey();
+  await testCtrlTabShortcutCyclesLikeTheShortcutKey();
   await testCustomShortcutCommitsOnItsPrimaryModifier();
   await testRuntimeMessagesReuseTheInjectedSwitcher();
   testOpeningAgainAdvancesOrCloses();

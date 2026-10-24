@@ -198,7 +198,8 @@ import * as TOAST from '../shared/ui/toast.js';
       return: 'enter',
       esc: 'escape',
       space: ' ',
-      spacebar: ' '
+      spacebar: ' ',
+      '⇥': 'tab'
     };
     return aliases[key] || key;
   }
@@ -1253,11 +1254,6 @@ import * as TOAST from '../shared/ui/toast.js';
       if (!event || event.isTrusted !== true) {
         return;
       }
-      if (event.key === 'Tab') {
-        stopHandledKeyEvent(event);
-        selectByOffset(event.shiftKey ? -1 : 1);
-        return;
-      }
       if (isTabSwitcherShortcutTriggerEvent(shortcut, event)) {
         stopHandledKeyEvent(event);
         // Only auto-repeat belongs to the press that opened the switcher; a
@@ -1270,6 +1266,11 @@ import * as TOAST from '../shared/ui/toast.js';
         // Adding or dropping Shift relative to the opening shortcut reverses.
         const openedDirection = context.reverse === true ? -1 : 1;
         selectByOffset(event.shiftKey === shortcut.hasShift ? openedDirection : -openedDirection);
+        return;
+      }
+      if (event.key === 'Tab') {
+        stopHandledKeyEvent(event);
+        selectByOffset(event.shiftKey ? -1 : 1);
         return;
       }
       if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {

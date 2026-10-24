@@ -97,7 +97,9 @@ function getShortcutTriggerEventKey(shortcut) {
     return: 'Enter',
     esc: 'Escape',
     space: ' ',
-    spacebar: ' '
+    spacebar: ' ',
+    tab: 'Tab',
+    '⇥': 'Tab'
   };
   if (aliases[token]) {
     return aliases[token];
