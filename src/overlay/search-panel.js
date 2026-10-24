@@ -85,6 +85,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   }
   const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
   const OVERLAY_PANEL_ID = '_x_extension_overlay_2024_unique_';
+  const TAB_SWITCHER_HOST_ID = '_x_extension_tab_switcher_host_2026_unique_';
   const overlayLifecycle = LumnoOverlayLifecycle;
 
   const overlayShell = globalThis.LumnoOverlayShell;
@@ -2074,6 +2075,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       panel: overlayState.overlay
     }),
     isOverlayConnected: () => Boolean(overlayState.overlay && overlayState.overlay.isConnected),
+    isKeyboardYielded: () => Boolean(document.getElementById(TAB_SWITCHER_HOST_ID)),
     isSearchInputActive,
     shouldHandleModeMenuKey: (e) => Boolean(
       overlayState.inputModeController &&

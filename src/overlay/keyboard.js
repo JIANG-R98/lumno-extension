@@ -45,6 +45,9 @@ function isOverlayKeyEvent(event, mount) {
 //   the keyboard (focus inside the overlay, or nowhere); a focused host-page
 //   control keeps its keys, except Escape, which closes the overlay;
 // - window blur: modifier tracking resets.
+// While another Lumno surface holds the keyboard (the tab switcher opened over
+// the overlay), every key passes untouched so that surface sees its arrows,
+// Enter, Escape and the modifier release that commits it.
 // Synthetic (untrusted) events never drive the overlay. `handlers` supplies
 // the overlay's state queries and actions.
 function createOverlayKeyRouter(win, handlers) {
@@ -66,7 +69,7 @@ function createOverlayKeyRouter(win, handlers) {
       }
       return;
     }
-    if (!call('isOverlayConnected')) {
+    if (!call('isOverlayConnected') || call('isKeyboardYielded')) {
       return;
     }
     if (event.type === 'keyup') {
@@ -117,14 +120,14 @@ function createOverlayKeyRouter(win, handlers) {
     if (!isTrustedEvent(event) || event.key !== 'Tab') {
       return;
     }
-    if (!call('isSearchInputActive')) {
+    if (call('isKeyboardYielded') || !call('isSearchInputActive')) {
       return;
     }
     call('handleTab', event);
   }
 
   function handleDocumentKeydown(event) {
-    if (!isTrustedEvent(event)) {
+    if (!isTrustedEvent(event) || call('isKeyboardYielded')) {
       return;
     }
     if (!isOverlayKeyEvent(event, call('getMount'))) {
@@ -137,7 +140,8 @@ function createOverlayKeyRouter(win, handlers) {
   }
 
   function handleDocumentKeyup(event) {
-    if (!isTrustedEvent(event) || !isOverlayKeyEvent(event, call('getMount'))) {
+    if (!isTrustedEvent(event) || call('isKeyboardYielded') ||
+        !isOverlayKeyEvent(event, call('getMount'))) {
       return;
     }
     call('handleOverlayKeyup', event);
