@@ -86,7 +86,7 @@ function readDisposition(value: unknown): OpenDisposition | undefined {
 }
 
 // A provider a page asks to run, with only the string fields running it reads.
-function readSiteSearchProvider(value: unknown): SiteSearchProvider | null {
+export function readSiteSearchProvider(value: unknown): SiteSearchProvider | null {
   if (!isRecord(value)) {
     return null;
   }

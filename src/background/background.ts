@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The worker runs these modules in this order before its own code: the
 // shared and background modules first, then the services split out of this
 // file.
@@ -20,9 +19,8 @@ import '../domain/site-display-name';
 import './page-shortcut-menu';
 import '../shared/wallpaper-local-store';
 import '../domain/webdav-contract';
-import * as LumnoWebDavClient from './webdav-client';
 import * as LumnoWebDavSync from './webdav-sync';
-import * as UPDATE_NOTICE from '../shared/update-notice';
+import * as UPDATE_NOTICE from '../platform/update-notice';
 // Folds traditional characters to simplified ones for local search matching.
 import '../shared/search/search-han-variants.js';
 import '../domain/search/utils/direct-navigation';
@@ -122,6 +120,7 @@ import {
   moveTabToSourceGroupContext,
   rememberBrowserNewtabProviderCandidate
 } from './browser-urls-service';
+import type { UrlTabLike } from './browser-urls-service';
 import {
   clearTabSwitchStat,
   ensureTabSwitchStatsLoaded,
@@ -143,11 +142,16 @@ import {
   triggerShowSearchForTab
 } from './command-service';
 import { PIP_MESSAGE_HANDLERS, pipOwnership } from './pip-service';
+import type { BackgroundHandler } from './message-router';
 import {
   SELECTION_QUICK_ACTION_MESSAGE_HANDLERS,
   loadSelectionQuickActionsEnabled
 } from './selection-quick-actions-service';
-import { SEARCH_MESSAGE_HANDLERS, SITE_SEARCH_MESSAGE_HANDLERS } from './site-search-service';
+import {
+  SEARCH_MESSAGE_HANDLERS,
+  SITE_SEARCH_MESSAGE_HANDLERS,
+  readSiteSearchProvider
+} from './site-search-service';
 import {
   EXTENSION_PAGE_MESSAGE_HANDLERS,
   FAVICON_MESSAGE_HANDLERS,
@@ -176,6 +180,7 @@ import {
   SHOW_SEARCH_PREFILL_COMMAND_NAME,
   SHOW_SEARCH_PREFILL_V_COMMAND_NAME,
   SHOW_TAB_SWITCHER_COMMAND_NAME,
+  getImportScripts,
   isPrimaryStorageAreaName,
   logHotkeyDebug,
   markBackgroundSettingsLoaded,
@@ -189,9 +194,10 @@ import {
 
 // See PINYIN_PRO_SCRIPT_PATH: the worker imports pinyin-pro while installing
 // so that it may import it again on first use.
-if (typeof globalThis.addEventListener === 'function') {
+const importScriptsForInstall = getImportScripts();
+if (importScriptsForInstall && typeof globalThis.addEventListener === 'function') {
   globalThis.addEventListener('install', () => {
-    importScripts(chrome.runtime.getURL(PINYIN_PRO_SCRIPT_PATH));
+    importScriptsForInstall(chrome.runtime.getURL(PINYIN_PRO_SCRIPT_PATH));
   });
 }
 const openOnboardingPage = BACKGROUND_PAGES.openOnboardingPage;
@@ -233,10 +239,7 @@ storageArea.get([
   markBackgroundSettingsLoaded();
 });
 
-function migrateStorageIfNeeded(keys) {
-  if (!storageArea || !chrome || !chrome.storage || !chrome.storage.local) {
-    return;
-  }
+function migrateStorageIfNeeded(keys: string[]): void {
   if (isPrimaryStorageAreaName('local')) {
     return;
   }
@@ -245,13 +248,13 @@ function migrateStorageIfNeeded(keys) {
 
 loadFirefoxBrandIcon();
 
-function publishExtensionUpdateNotice(details) {
+function publishExtensionUpdateNotice(details: chrome.runtime.InstalledDetails): void {
   const version = UPDATE_NOTICE.getCurrentVersionTag(chrome);
   UPDATE_NOTICE.publishUpdateNotice({
     chromeApi: chrome,
     fetchImpl: typeof fetch === 'function' ? fetch : null,
     version,
-    previousVersion: details && details.previousVersion ? details.previousVersion : '',
+    previousVersion: details.previousVersion || '',
     reason: 'update'
   }).catch(warnBackgroundFailure('Failed to publish the extension update notice.'));
 }
@@ -309,7 +312,7 @@ chrome.tabs.onCreated.addListener((tab) => {
 // storage, and the overlay waited out every settings-mode retry (about two
 // seconds) before it showed; a second shortcut press closed it unseen. Put
 // the default back whenever the extension is installed or updated.
-function restoreLocalStorageContentScriptAccess() {
+function restoreLocalStorageContentScriptAccess(): void {
   const localArea = chrome && chrome.storage ? chrome.storage.local : null;
   if (!localArea || typeof localArea.setAccessLevel !== 'function') {
     return;
@@ -343,7 +346,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   if (reason === 'update') {
     const isSameVersionReload = DEV_EXTENSION_STARTUP.isSameVersionReload(details, chrome.runtime.getManifest().version);
     if (!isSameVersionReload) {
-      if (typeof shouldOpenOnboardingForUpdate === 'function' && shouldOpenOnboardingForUpdate(details)) {
+      if (shouldOpenOnboardingForUpdate(details)) {
         openOnboardingPage({ reason: 'update' });
       }
       publishExtensionUpdateNotice(details);
@@ -358,7 +361,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   schedulePersistPinnedTabSnapshot({ skipEmptyWhenNoNormalWindows: true });
 });
 
-function restoreBackgroundStateOnStartup() {
+function restoreBackgroundStateOnStartup(): Promise<void> {
   return restorePinnedTabsFromSnapshotOnStartup().catch(warnBackgroundFailure('Failed to restore pinned tabs.')).finally(() => {
     schedulePersistPinnedTabSnapshot({ skipEmptyWhenNoNormalWindows: true });
   });
@@ -480,13 +483,12 @@ if (chrome && chrome.tabs && chrome.tabs.onUpdated) {
       clearOverlayNavigationState(tabId);
     }
     if (typeof changeInfo.url === 'string' || changeInfo.status === 'complete') {
-      const providerTab = Object.assign({}, tab || {}, {
-        id: typeof tabId === 'number' ? tabId : (tab && tab.id),
-        status: changeInfo.status || (tab && tab.status)
-      });
-      if (typeof changeInfo.url === 'string') {
-        providerTab.url = changeInfo.url;
-      }
+      const providerTab: UrlTabLike = {
+        id: tabId,
+        url: typeof changeInfo.url === 'string' ? changeInfo.url : (tab ? tab.url : undefined),
+        pendingUrl: tab ? tab.pendingUrl : undefined,
+        status: changeInfo.status || (tab ? tab.status : undefined)
+      };
       maybeAutoSelectRestrictedBrowserSetting(
         providerTab,
         changeInfo.status === 'complete' ? 'updated-complete' : 'updated'
@@ -564,8 +566,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   });
 });
 
-const shortcutFolderSyncController = providerStorageRuntime &&
-  chrome.bookmarks && typeof chrome.bookmarks.getTree === 'function'
+const shortcutFolderSyncController = chrome.bookmarks && typeof chrome.bookmarks.getTree === 'function'
   ? LumnoBookmarkFolderBindings.createSyncController({ chrome, provider: providerStorageRuntime,
     onError: (error) => console.warn('[Lumno] Could not refresh folder shortcuts.', error) }) : null;
 if (shortcutFolderSyncController) shortcutFolderSyncController.start();
@@ -573,7 +574,7 @@ const webDavSyncController = typeof indexedDB !== 'undefined'
   ? LumnoWebDavSync.createController({ chrome }) : null;
 if (webDavSyncController) webDavSyncController.start();
 
-function handleWebDavMessage(request, sender, sendResponse) {
+const handleWebDavMessage: BackgroundHandler<'webdav'> = (message, sender, sendResponse) => {
   // Content scripts and externally connected extensions cannot use stored
   // credentials, configure endpoints, or request arbitrary remote resources.
   if (!LumnoWebDavSync.isTrustedSender(chrome, sender)) {
@@ -584,11 +585,15 @@ function handleWebDavMessage(request, sender, sendResponse) {
     sendResponse({ ok: false, error: 'private-storage-unavailable' });
     return;
   }
+  const request = LumnoWebDavSync.readWebDavRequest(message);
+  if (!request) {
+    sendResponse({ ok: false, error: 'invalid-request' });
+    return;
+  }
   webDavSyncController.handle(request).then((result) => sendResponse({ ok: true, ...result }))
-    .catch((error) => sendResponse({ ok: false, error: error.code || 'sync-failed',
-      diagnostic: LumnoWebDavClient.diagnostic(error.diagnostic) }));
+    .catch((error: unknown) => sendResponse(LumnoWebDavSync.failureReply(error)));
   return true;
-}
+};
 
 // The page context menu item that adds the page to the New Tab shortcuts.
 if (pageShortcutMenuController) pageShortcutMenuController.start();
@@ -656,13 +661,17 @@ const backgroundMessageSenderPolicy = BACKGROUND_MESSAGE_ROUTER.createSenderPoli
     linkPreviewOpenInTab: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
     setWebAppearance: (request) => Boolean(LumnoWebAppearance.normalizeMode(request.mode)),
     runSiteSearchProviderQuery: (request) => {
-      const entryUrl = getSiteSearchProviderEntryUrl(request.provider, request.query);
+      const entryUrl = getSiteSearchProviderEntryUrl(readSiteSearchProvider(request.provider), request.query);
       return /^https?:\/\//i.test(entryUrl);
     }
   }
 });
 
-function dispatchBackgroundMessage(request, sender, sendResponse) {
+function dispatchBackgroundMessage(
+  request: unknown,
+  sender: chrome.runtime.MessageSender,
+  sendResponse: (reply: unknown) => void
+): boolean | void {
   return BACKGROUND_MESSAGE_ROUTER.dispatch(
     backgroundMessageRouter,
     request,
@@ -675,16 +684,9 @@ function dispatchBackgroundMessage(request, sender, sendResponse) {
 // Listen for extension runtime messages.
 chrome.runtime.onMessage.addListener(dispatchBackgroundMessage);
 
-const CHROME_SYNC_STORAGE_KEYS = Array.isArray(LumnoSettings.CHROME_SYNC_STORAGE_KEYS)
-  ? LumnoSettings.CHROME_SYNC_STORAGE_KEYS
-  : [];
-if (providerStorageRuntime) {
-  providerStorageRuntime.ready.then(() => {
-    migrateStorageIfNeeded(CHROME_SYNC_STORAGE_KEYS);
-  });
-} else {
-  migrateStorageIfNeeded(CHROME_SYNC_STORAGE_KEYS);
-}
+providerStorageRuntime.ready.then(() => {
+  migrateStorageIfNeeded([...LumnoSettings.CHROME_SYNC_STORAGE_KEYS]);
+});
 
 getBackgroundFaviconCacheRuntime();
 
@@ -746,7 +748,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     const next = changes[DOCUMENT_PIP_ENABLED_STORAGE_KEY].newValue;
     const normalized = next === true;
     setDocumentPipEnabled(normalized);
-    if (typeof next !== 'undefined' && next !== normalized && storageArea) {
+    if (typeof next !== 'undefined' && next !== normalized) {
       storageArea.set({ [DOCUMENT_PIP_ENABLED_STORAGE_KEY]: normalized });
     }
   }
@@ -754,7 +756,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     const next = changes[TAB_SWITCHER_ENABLED_STORAGE_KEY].newValue;
     const normalized = SETTINGS.normalizeTabSwitcherEnabled(next);
     applyTabSwitcherEnabledSetting(normalized);
-    if (typeof next !== 'undefined' && next !== normalized && storageArea) {
+    if (typeof next !== 'undefined' && next !== normalized) {
       storageArea.set({ [TAB_SWITCHER_ENABLED_STORAGE_KEY]: normalized });
     }
   }

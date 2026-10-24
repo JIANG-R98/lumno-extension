@@ -32,7 +32,7 @@ import type { TabPlacement } from './search-result-tabs';
 type BrowserNewtabProviderType = 'lumno' | 'other-extension' | 'browser' | '';
 
 // The fields of a tab the URL helpers read.
-type UrlTabLike = Partial<Pick<chrome.tabs.Tab, 'id' | 'url' | 'pendingUrl' | 'status'>>;
+export type UrlTabLike = Partial<Pick<chrome.tabs.Tab, 'id' | 'url' | 'pendingUrl' | 'status'>>;
 
 function isBrowserExtensionProtocol(protocol: unknown): boolean {
   return LumnoUrlGuards.isBrowserExtensionProtocol(protocol);

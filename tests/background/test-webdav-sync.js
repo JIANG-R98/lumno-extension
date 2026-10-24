@@ -191,6 +191,21 @@ async function run() {
   assert(!syncApi.isTrustedSender(caller, { id: 'other-extension', url: caller.runtime.getURL('src/options/options.html') }));
   assert(!syncApi.isTrustedSender(caller, { id: 'our-extension', url: 'https://webpage.test/' }));
   assert(!syncApi.isTrustedSender(caller, { id: 'our-extension', url: caller.runtime.getURL('newtab.html') }));
+  // A runtime message becomes a request only with a known operation and well-typed fields.
+  assert.deepStrictEqual(syncApi.readWebDavRequest({ action: 'webdav', operation: 'save', id: 'a', config, resume: true }),
+    { operation: 'save', id: 'a', config, resume: true });
+  assert.deepStrictEqual(syncApi.readWebDavRequest({ action: 'webdav', operation: 'status' }), { operation: 'status' });
+  assert.strictEqual(syncApi.readWebDavRequest({ action: 'webdav', operation: 'toString' }), null);
+  assert.strictEqual(syncApi.readWebDavRequest({ action: 'webdav', operation: 'save', id: 7 }), null);
+  assert.strictEqual(syncApi.readWebDavRequest({ action: 'webdav', operation: 'save', config: 'endpoint' }), null);
+  assert.strictEqual(syncApi.readWebDavRequest({ action: 'webdav', operation: 'add', enable: 'yes' }), null);
+  // A failure replies with its code and redacted diagnostic; one without a code is a failed sync.
+  const unsupportedFailure = Object.assign(client.error('conditional-write-unsupported'),
+    { diagnostic: { revision: client.REVISION, phase: 'state-etag', statuses: [412, 'x'], password: 'secret' } });
+  assert.deepStrictEqual(syncApi.failureReply(unsupportedFailure), { ok: false, error: 'conditional-write-unsupported',
+    diagnostic: { revision: client.REVISION, phase: 'state-etag', statuses: [412] } });
+  assert.deepStrictEqual(syncApi.failureReply(new DOMException('The operation timed out.', 'TimeoutError')),
+    { ok: false, error: 'sync-failed', diagnostic: null });
   assert.throws(() => client.normalizeConfig({ ...config, endpoint: 'http://dav.test/' }), /invalid-endpoint/);
   assert.throws(() => client.normalizeConfig({ ...config, endpoint: 'https://user:password@dav.test/' }), /invalid-endpoint/);
   assert.throws(() => client.normalizeConfig({ ...config, directory: '../outside' }), /invalid-directory/);

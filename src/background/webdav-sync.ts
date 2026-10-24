@@ -18,7 +18,7 @@ import type {
   WebDavAssetMime,
   WebDavState
 } from '../domain/webdav-contract';
-import type { WebDavRequest } from '../domain/messages';
+import type { WebDavOperation, WebDavReply, WebDavRequest } from '../domain/messages';
 import type { WallpaperRecord, WallpaperRecordInput } from '../shared/wallpaper-local-store';
 import type {
   ConnectionCapabilities,
@@ -290,6 +290,47 @@ function isTrustedSender(
 ): boolean {
   const page = String(sender && sender.url || '').split(/[?#]/)[0];
   return Boolean(sender && sender.id === chromeApi.runtime.id && page === chromeApi.runtime.getURL('src/options/options.html'));
+}
+
+const WEBDAV_OPERATIONS: readonly WebDavOperation[] = Object.freeze([
+  'status', 'add', 'test', 'save', 'remove', 'enable', 'connect', 'sync', 'pause', 'browser',
+  'schedule', 'recover', 'conflictDetails', 'restoreBackup', 'dismissSuggestion'
+]);
+
+// Rebuilds the request from a runtime message; null when it names no known
+// operation or one of its fields has the wrong type.
+function readWebDavRequest(message: Record<string, unknown>): WebDavRequest | null {
+  const operation = WEBDAV_OPERATIONS.find((candidate) => candidate === message.operation);
+  if (!operation) return null;
+  const { id, config, decision, enable, resume } = message;
+  const request: WebDavRequest = { operation };
+  if (id !== undefined) {
+    if (typeof id !== 'string') return null;
+    request.id = id;
+  }
+  if (config !== undefined) {
+    if (!isRecord(config)) return null;
+    request.config = config;
+  }
+  if (decision !== undefined) {
+    if (typeof decision !== 'string') return null;
+    request.decision = decision;
+  }
+  if (enable !== undefined) {
+    if (typeof enable !== 'boolean') return null;
+    request.enable = enable;
+  }
+  if (resume !== undefined) {
+    if (typeof resume !== 'boolean') return null;
+    request.resume = resume;
+  }
+  return request;
+}
+
+// The reply for a request that failed: its code and redacted diagnostic.
+function failureReply(cause: unknown): WebDavReply {
+  return { ok: false, error: errorCode(cause) || 'sync-failed',
+    diagnostic: LumnoWebDavClient.diagnostic(errorField(cause, 'diagnostic')) };
 }
 function createPrivateStore(indexedDB: IDBFactory): Required<PrivateStore> {
   async function open(): Promise<IDBDatabase> {
@@ -1552,7 +1593,9 @@ export {
   createConnectionController,
   createPrivateStore,
   createProbeCache,
+  failureReply,
   isTrustedSender,
+  readWebDavRequest,
   ALARM_NAME,
   SYNC_REVISION
 };
