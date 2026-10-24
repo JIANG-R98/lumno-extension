@@ -96,7 +96,7 @@ async function testEntryMotionIsSkippedWhenItWouldStutter() {
   await assertInstant('a slow start', {}, { storageDelayMs: 320 });
 }
 
-// The shell's own rest state is covered by react-src/overlay/shell.test.tsx.
+// The shell's own rest state is covered by src/overlay/react/shell.test.tsx.
 async function testThemeElevation() {
   const { page, overlay } = await openWithMotion({});
   const lightShadow = overlay.style.getPropertyValue('--x-ov-shadow');

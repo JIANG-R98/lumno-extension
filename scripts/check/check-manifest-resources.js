@@ -108,6 +108,9 @@ function checkConcreteExtensionPathReferences(file, source) {
   }
 }
 
+// The runtime scripts and the built React bundles in src/react/. The React
+// sources in the surfaces' react/ folders are checked through those bundles:
+// their CSS urls resolve against the page, not the source file.
 function listJsFiles(dir) {
   if (!fs.existsSync(dir)) {
     return [];
@@ -117,10 +120,12 @@ function listJsFiles(dir) {
   entries.forEach((entry) => {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      files.push(...listJsFiles(fullPath));
+      if (entry.name !== 'react' || dir === 'src') {
+        files.push(...listJsFiles(fullPath));
+      }
       return;
     }
-    if (entry.isFile() && /\.(?:js|ts|tsx)$/.test(fullPath) && !fullPath.endsWith('.d.ts')) {
+    if (entry.isFile() && /\.(?:js|ts|tsx)$/.test(fullPath) && !/\.(?:d|test)\.tsx?$/.test(fullPath)) {
       files.push(fullPath);
     }
   });

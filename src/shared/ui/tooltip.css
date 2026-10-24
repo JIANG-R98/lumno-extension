@@ -86,7 +86,7 @@ body[data-theme="dark"] ._x_extension_tooltip_2026_unique_,
 }
 
 /*
- * A help center result's passage card (react-src/search/help-passage-card.ts): the tooltip's look,
+ * A help center result's passage card (src/shared/react/search/help-passage-card.ts): the tooltip's look,
  * with the page's own headings, paragraphs, lists and tables, beside the result list.
  */
 ._x_extension_tooltip_2026_unique_._x_extension_help_passage_2026_unique_ {

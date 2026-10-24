@@ -58,7 +58,7 @@ assert.deepStrictEqual(
 // New Tab's site names and the overlay's storage listeners are checked at
 // runtime: tests/shared/test-site-display-name.js and
 // tests/overlay/test-overlay-session-teardown.js.
-const onboardingReactFiles = collectFiles('react-src/onboarding', /\.tsx$/);
+const onboardingReactFiles = collectFiles('src/onboarding/react', /\.tsx$/);
 assert.deepStrictEqual(
   filesContaining(onboardingReactFiles, /function Icon\(/),
   [],

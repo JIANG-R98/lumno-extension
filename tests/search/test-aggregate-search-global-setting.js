@@ -8,7 +8,7 @@ const { loadBackground, wait } = require('../helpers/background-harness');
 
 // One setting in the aggregate search section decides whether an aggregate search gathers the tabs
 // it opens into a tab group. The editor's default names and placeholders are
-// covered by react-src/options/aggregate-search-list.test.tsx.
+// covered by src/options/react/aggregate-search-list.test.tsx.
 
 const TOGGLE = '_x_extension_aggregate_search_auto_group_toggle_2026_unique_';
 const AUTO_GROUP = settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY;

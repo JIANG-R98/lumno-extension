@@ -211,7 +211,7 @@ Existing server data requires an explicit initial-version choice. Later conflict
 
 Development and CI use Node.js 22. If you use `nvm`, run `nvm use` to select the version declared in `.nvmrc`.
 
-Chrome loads built scripts: `npm run build` builds the React islands into `src/react/` with Vite and bundles every script the extension runs into `build/` with esbuild. Neither folder is committed. Before loading the development extension for the first time, and after editing `src/` or `react-src/`, run:
+Chrome loads built scripts: `npm run build` builds the React islands into `src/react/` with Vite and bundles every script the extension runs into `build/` with esbuild. Neither folder is committed. Before loading the development extension for the first time, and after editing `src/`, run:
 
 ```bash
 npm ci
@@ -250,7 +250,7 @@ npm run lint
 | `src/domain/` | Pure logic with no browser or DOM access: settings keys and normalization, routes, search ranking and matching (`search/`), favicon rules, shortcut and recent-site stores |
 | `src/platform/` | Browser and extension API wrappers: browser detection and URL guards |
 | `src/shared/` | UI and page runtime shared by several surfaces: `search/` (input and suggestions), `ui/` (tooltip, toast, menu and control styles), `favicon/`, preloads |
-| `react-src/` | React sources built into `src/react/` |
+| `src/*/react/` | React views of each surface, built into `src/react/`; `src/shared/react/` holds the ones several pages use |
 | `_locales/` | Extension UI copy |
 | `assets/data/` | Built-in site-search and browser shortcut data |
 | `assets/wallpapers/` | Built-in new tab wallpapers and thumbnails |

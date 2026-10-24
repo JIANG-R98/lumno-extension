@@ -305,7 +305,7 @@ function createFakeDocument() {
   return documentObj;
 }
 
-// Stands in for the React panel (react-src/newtab/wallpaper-view.tsx, tested with vitest):
+// Stands in for the React panel (src/newtab/react/wallpaper-view.tsx, tested with vitest):
 // it keeps the state the runtime renders and the few elements the runtime measures or
 // focuses. Tests read settings from that state and act through its callbacks, as the
 // panel's controls do.

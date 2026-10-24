@@ -158,7 +158,7 @@ export default tseslint.config(
     rules: restrictImports(SURFACES.filter((other) => other !== surface))
   })),
   {
-    files: ['react-src/**/*.{ts,tsx}'],
+    files: ['src/**/react/**/*.{ts,tsx}', 'tests/react/**/*.ts'],
     extends: [tseslint.configs.recommended],
     plugins: { 'react-hooks': reactHooks },
     languageOptions: {

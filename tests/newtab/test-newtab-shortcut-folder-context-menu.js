@@ -3,7 +3,7 @@ const { createNewtabPage } = require('../helpers/newtab-page');
 
 // A folder shortcut's icon opens while its context menu is open, and closes
 // again however the menu is dismissed. The icon animation itself is covered
-// by react-src/newtab/shortcuts.test.tsx.
+// by src/newtab/react/shortcuts.test.tsx.
 
 const MENU = '#_x_extension_newtab_shortcut_context_menu_2026_unique__menu';
 

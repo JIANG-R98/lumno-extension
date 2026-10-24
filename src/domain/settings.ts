@@ -980,7 +980,7 @@ function normalizeOverlayEnterAnimation(value) {
 
 // The bundled stack the overlay draws with when no family is chosen. The
 // same value as --lumno-font-sans in tokens.css and on the overlay panel
-// (react-src/overlay/shell.tsx); chosen families go in front of it.
+// (src/overlay/react/shell.tsx); chosen families go in front of it.
 const OVERLAY_FONT_DEFAULT_STACK = "'Lumno Open Sans', 'Open Sans', -apple-system, " +
   "BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 

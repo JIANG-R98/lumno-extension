@@ -4,7 +4,7 @@ const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 
 // Backspace in an empty input removes the active search scope only when
 // pressed twice: the first press explains itself in a Toast. The timing of
-// the two presses is covered by react-src/shared/search-input-mode.test.ts.
+// the two presses is covered by src/shared/react/search-input-mode.test.ts.
 
 async function testTwoPressesRemoveTheScope(name) {
   const surface = await openSearchSurface(name);

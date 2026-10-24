@@ -211,7 +211,7 @@ WebDAV 为 Beta 功能，入口在「设置 → 账号与同步」。添加连�
 
 开发和 CI 使用 Node.js 22。如果使用 `nvm`，运行 `nvm use` 即可切换到 `.nvmrc` 中声明的版本。
 
-Chrome 加载的是构建后的脚本：`npm run build` 会用 Vite 把 React 岛构建到 `src/react/`，并用 esbuild 把扩展运行的所有脚本打包到 `build/`，这两个目录都不提交。首次加载开发版，以及修改 `src/` 或 `react-src/` 后，请运行：
+Chrome 加载的是构建后的脚本：`npm run build` 会用 Vite 把 React 岛构建到 `src/react/`，并用 esbuild 把扩展运行的所有脚本打包到 `build/`，这两个目录都不提交。首次加载开发版，以及修改 `src/` 后，请运行：
 
 ```bash
 npm ci
@@ -250,7 +250,7 @@ npm run lint
 | `src/domain/` | 不访问浏览器和 DOM 的纯逻辑：设置键与规范化、路由、搜索排序与匹配（`search/`）、favicon 规则、快捷方式与最近访问存储 |
 | `src/platform/` | 浏览器与扩展 API 的封装：浏览器识别、URL 守卫 |
 | `src/shared/` | 多个界面共用的 UI 与页面运行时：`search/`（输入与建议）、`ui/`（提示、Toast、菜单与控件样式）、`favicon/`、预加载脚本 |
-| `react-src/` | React 源码，构建产物输出到 `src/react/` |
+| `src/*/react/` | 各界面的 React 视图，构建产物输出到 `src/react/`；多个页面共用的在 `src/shared/react/` |
 | `_locales/` | 扩展 UI 文案 |
 | `assets/data/` | 内置站内搜索和浏览器快捷入口数据 |
 | `assets/wallpapers/` | 新标签页内置壁纸与缩略图 |

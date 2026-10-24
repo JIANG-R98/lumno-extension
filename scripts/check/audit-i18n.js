@@ -48,7 +48,8 @@ function walk(root) {
       files.push(...walk(fullPath));
       return;
     }
-    if (entry.isFile() && INCLUDED_EXTENSIONS.has(path.extname(entry.name))) {
+    // Component tests sit next to their components; their copy is fixture text.
+    if (entry.isFile() && INCLUDED_EXTENSIONS.has(path.extname(entry.name)) && !/\.test\.tsx?$/.test(entry.name)) {
       files.push(fullPath);
     }
   });
@@ -153,6 +154,10 @@ function isAllowlistedLine(file, line) {
     return true;
   }
   if (file === 'src/background/tab-switch-stats-service.ts' && /近(?:30分钟|24小时)切换/.test(line)) {
+    return true;
+  }
+  // A message key paired with its fallback copy, which the caller passes to t().
+  if (/\[\s*'[a-z][a-z0-9_]*',\s*'[^']*'\s*\]/.test(line)) {
     return true;
   }
   if (/debug|score|reason/i.test(line) && !/textContent|placeholder|aria-label|title/.test(line)) {

@@ -32,8 +32,9 @@ the Development section of the [README](../README.md#development).
 
 - `build/`: esbuild bundles of the scripts in `src/`. While you edit `src/`,
   `npm run watch:bundles` rebuilds them on every change.
-- `src/react/`: the React islands, built by Vite from `react-src/`. Run
-  `npm run build:react` after editing `react-src/`.
+- `src/react/`: the React islands, built by Vite from the `react/` folders in
+  `src/` (`src/newtab/react/`, `src/shared/react/`, ...). Run
+  `npm run build:react` after editing them.
 
 After a rebuild, click Reload on the extensions page, then reload the pages you
 are testing.
@@ -41,8 +42,8 @@ are testing.
 ## Where things live
 
 The [README](../README.md#project-structure) maps the folders. `src/` owns
-browser APIs, storage, navigation and ranking; `react-src/` owns what the pages
-show.
+browser APIs, storage, navigation and ranking; its `react/` folders own what
+the pages show.
 
 `src/` is layered, and ESLint holds the layers apart: `domain/` is pure logic
 (no browser globals, no DOM work), `platform/` wraps browser and extension
@@ -57,7 +58,8 @@ the ones below it, and a surface never imports another surface.
   pull requests of their own.
 - Add or update tests for what the change does. Node tests live in
   `tests/<area>/test-*.js` and drive the real pages, worker and styles; React
-  component tests sit next to their components in `react-src/` as `*.test.tsx`.
+  component tests sit next to their components in the `react/` folders as
+  `*.test.tsx`.
 - Put new or changed UI text in the four languages people maintain under
   `_locales/`: `en`, `zh_CN`, `zh_TW` and `ja`. Leave the other 44, which are
   AI-translated, to the maintainers; `npm run check:locales` lists what they

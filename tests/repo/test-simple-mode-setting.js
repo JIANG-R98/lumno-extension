@@ -36,7 +36,7 @@ assert.strictEqual(settings.normalizeSimpleModeEnabled(true), true);
 
 // Both surfaces render results with the live preference: resolved before the
 // first results show, and followed when it changes. (What simple mode
-// removes from a row is covered by react-src/search/suggestions.test.tsx.)
+// removes from a row is covered by src/shared/react/search/suggestions.test.tsx.)
 async function testSurface(name) {
   const stored = { [settings.SIMPLE_MODE_ENABLED_STORAGE_KEY]: true };
   const surface = await openSearchSurface(name, name === 'overlay' ? { settings: stored } : { sync: stored });

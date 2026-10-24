@@ -1,6 +1,6 @@
 /* Shared text link button: label + trailing ↗ icon, no surface. The icon's
    hover spring comes from external-link-icon.css, like every other ↗.
-   React: react-src/shared/link-button.tsx. Static HTML reuses the same markup:
+   React: src/shared/react/link-button.tsx. Static HTML reuses the same markup:
    <a|button class="x-lumno-link-button">
      <span class="x-lumno-link-button__label">…</span>
      <i class="ri-icon x-lumno-link-button__icon ri-external-link-line"></i>

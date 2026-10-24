@@ -2,8 +2,8 @@
 
 Lumno's own code is licensed under the GNU General Public License v3.0 only
 (see [LICENSE](LICENSE)). The source code, including the React sources in
-`react-src/` that the minified bundles in the package's `src/react/` are built
-from, is at https://github.com/kubai087/lumno-extension.
+the `react/` folders of `src/` that the minified bundles in the package's
+`src/react/` are built from, is at https://github.com/kubai087/lumno-extension.
 
 Lumno also ships the third-party components below. Each one stays under its
 own license, and the GPL does not cover the ones whose license is not

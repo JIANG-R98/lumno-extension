@@ -5,7 +5,7 @@ const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 
 // Two quick Tabs in an empty search input open the scope panel on the
 // default scope; with a scope already active, one Tab does. The gesture's
-// timing rules are covered by react-src/shared/search-input-mode.test.ts.
+// timing rules are covered by src/shared/react/search-input-mode.test.ts.
 
 const ENGINE_KEY = '_x_extension_default_search_engine_2024_unique_';
 const LANGUAGE_KEY = '_x_extension_language_2024_unique_';

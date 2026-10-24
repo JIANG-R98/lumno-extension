@@ -10,7 +10,7 @@ const read = (relativePath) =>
 const newtabHtml = readPageSource('newtab.html');
 const optionsHtml = readPageSource('src/options/options.html');
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
-const overlayShell = read('react-src/overlay/shell.tsx');
+const overlayShell = read('src/overlay/react/shell.tsx');
 const documentPipPicker = read('src/content/document-pip-picker.ts');
 const tooltipCss = read('src/shared/ui/tooltip.css');
 const cursorTooltipCss = read('src/shared/ui/cursor-tooltip.css');

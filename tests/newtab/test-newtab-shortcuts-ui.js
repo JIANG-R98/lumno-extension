@@ -746,7 +746,7 @@ assertContains(
 );
 
 // The appearance panel is a React view driven by the wallpaper runtime; its controls are
-// tested by behavior in react-src/newtab/wallpaper-view.test.tsx and
+// tested by behavior in src/newtab/react/wallpaper-view.test.tsx and
 // tests/newtab/test-newtab-wallpaper-panel.js rather than by matching source text here.
 
 assert.ok(optionsDocument.getElementById('_x_extension_newtab_shortcuts_toggle_2026_unique_'), 'Options should keep the New Tab shortcuts visibility control');

@@ -73,8 +73,8 @@ assert(
   assert(entries.includes(file), `store package should include the license file ${file}`);
 });
 assert(
-  entries.every((entry) => !entry.startsWith('react-src/')),
-  'store package should not include React source or test files'
+  entries.every((entry) => !/^src\/.*\.tsx?$/.test(entry)),
+  'store package should not include TypeScript source or test files'
 );
 assert(
   entries.every((entry) => !/^(?:supabase|docs|scripts|tests)\//.test(entry)),

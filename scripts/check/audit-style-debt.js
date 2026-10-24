@@ -42,7 +42,8 @@ function walk(root) {
       files.push(...walk(fullPath));
       return;
     }
-    if (entry.isFile() && INCLUDED_EXTENSIONS.has(path.extname(entry.name))) {
+    // Component tests sit next to their components; their copy is fixture text.
+    if (entry.isFile() && INCLUDED_EXTENSIONS.has(path.extname(entry.name)) && !/\.test\.tsx?$/.test(entry.name)) {
       files.push(fullPath);
     }
   });

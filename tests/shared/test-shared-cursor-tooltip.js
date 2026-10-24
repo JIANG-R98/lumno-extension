@@ -691,7 +691,7 @@ assert.ok(
 // In the overlay the input's action icons share one cursor tooltip, styled
 // from the extension's stylesheet inside the overlay's shadow root. (JSDOM
 // has no :hover, so the bubble's text shows which control it belongs to.
-// Search-scope labels are covered by react-src/shared/search-input-mode.test.ts.)
+// Search-scope labels are covered by src/shared/react/search-input-mode.test.ts.)
 async function testOverlayInputActions() {
   const surface = await openSearchSurface('overlay');
   await surface.settle(200);

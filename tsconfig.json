@@ -12,6 +12,7 @@
     "src/**/*"
   ],
   "exclude": [
-    "src/react/**"
+    "src/react/**",
+    "src/**/react/**"
   ]
 }

@@ -88,7 +88,7 @@ assert(
 );
 assert.strictEqual(
   packageJson.scripts['build:react'],
-  'vite build --config react-src/vite.config.mjs && vite build --config react-src/vite.overlay.config.mjs',
+  'vite build --config vite.config.mjs && vite build --config vite.overlay.config.mjs',
   'the React output should have a reproducible local build command'
 );
 assert(

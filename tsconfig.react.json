@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "types": [
+      "chrome",
+      "vite/client",
+      "vitest/globals"
+    ]
+  },
+  "include": [
+    "src/**/react/**/*.ts",
+    "src/**/react/**/*.tsx",
+    "tests/react/**/*.ts",
+    "vite.config.mjs",
+    "vite.overlay.config.mjs",
+    "vitest.config.ts"
+  ]
+}

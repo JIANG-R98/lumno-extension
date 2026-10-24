@@ -6,7 +6,7 @@ const { createOverlayPage, bundledSiteSearchProviders } = require('../helpers/ov
 // The search icon at the start of the real overlay's input opens the search
 // scope menu, by pointer or keyboard, and steps aside while a scope tag is
 // active. The current-label slot itself is covered by
-// react-src/shared/search-input-mode.test.ts.
+// src/shared/react/search-input-mode.test.ts.
 
 async function openOverlay() {
   const page = await createOverlayPage({ stylesheetsLoad: true });

@@ -45,7 +45,7 @@ async function run() {
   const messages = JSON.parse(fs.readFileSync('_locales/en/messages.json', 'utf8'));
   window.chrome = chrome;
   chrome.i18n = { getMessage: (key) => messages[key]?.message || '' };
-  // react-src/options/options-page.test.tsx boots the whole Options page, so
+  // src/options/react/options-page.test.tsx boots the whole Options page, so
   // the host's declaration order is covered there; here the controller gets
   // the same options the page passes.
   const controller = window.LumnoWebDavOptions.createController({

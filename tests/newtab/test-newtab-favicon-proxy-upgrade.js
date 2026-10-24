@@ -3,7 +3,7 @@ const vm = require('vm');
 const { moduleScript } = require('../helpers/module-script');
 
 // That open-tab favicon preloads carry the page URL is checked in
-// react-src/search/suggestions.test.tsx.
+// src/shared/react/search/suggestions.test.tsx.
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));

@@ -211,7 +211,7 @@ WebDAV は「設定 → アカウントと同期」にある Beta 機能です�
 
 開発と CI では Node.js 22 を使用します。`nvm` を使う場合は `nvm use` を実行すると `.nvmrc` のバージョンに切り替わります。
 
-Chrome はビルド済みのスクリプトを読み込みます。`npm run build` は React アイランドを Vite で `src/react/` に、拡張機能が実行するすべてのスクリプトを esbuild で `build/` にまとめます。どちらのフォルダもコミットしません。開発版を初めて読み込む前と、`src/` や `react-src/` を変更した後に次を実行してください。
+Chrome はビルド済みのスクリプトを読み込みます。`npm run build` は React アイランドを Vite で `src/react/` に、拡張機能が実行するすべてのスクリプトを esbuild で `build/` にまとめます。どちらのフォルダもコミットしません。開発版を初めて読み込む前と、`src/` を変更した後に次を実行してください。
 
 ```bash
 npm ci
@@ -250,7 +250,7 @@ npm run lint
 | `src/domain/` | ブラウザや DOM に触れない純粋なロジック：設定キーと正規化、ルート、検索のランキングと照合（`search/`）、favicon のルール、ショートカットと最近のサイトのストア |
 | `src/platform/` | ブラウザと拡張機能 API のラッパー：ブラウザ判定、URL ガード |
 | `src/shared/` | 複数の画面が共有する UI とページのランタイム：`search/`（入力と候補）、`ui/`（ツールチップ、トースト、メニューとコントロールのスタイル）、`favicon/`、プリロード |
-| `react-src/` | React ソース（`src/react/` にビルド） |
+| `src/*/react/` | 各画面の React ビュー（`src/react/` にビルド）。複数のページで使うものは `src/shared/react/` |
 | `_locales/` | 拡張 UI 文言 |
 | `assets/data/` | 内蔵サイト内検索とブラウザショートカットのデータ |
 | `assets/wallpapers/` | 新しいタブの内蔵壁紙とサムネイル |

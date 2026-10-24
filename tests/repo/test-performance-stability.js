@@ -11,7 +11,7 @@ const { openSearchSurface } = require('../helpers/search-surfaces');
 // Work the pages coalesce or avoid: one resize listener in Settings, one
 // reload for a burst of external changes, motion without paint-heavy
 // filters, and markup that reserves image space. (The segmented indicator's
-// measurement is in react-src/shared/segmented-indicator.test.ts.)
+// measurement is in src/shared/react/segmented-indicator.test.ts.)
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 

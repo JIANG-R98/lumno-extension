@@ -5,7 +5,7 @@ const { openSearchSurface } = require('../helpers/search-surfaces');
 // /mode on New Tab switches the theme the page is showing: the global theme
 // while New Tab follows it, or New Tab's own override when it has one. The
 // appearance panel's Global / New Tab scope picker is covered by
-// react-src/newtab/wallpaper-view.test.tsx and test-newtab-wallpaper-panel.js.
+// src/newtab/react/wallpaper-view.test.tsx and test-newtab-wallpaper-panel.js.
 
 const THEME = settings.THEME_STORAGE_KEY;
 const NEWTAB_THEME = settings.NEWTAB_THEME_MODE_STORAGE_KEY;
