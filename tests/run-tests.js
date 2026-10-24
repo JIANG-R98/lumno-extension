@@ -18,7 +18,8 @@ function collectTestFiles(directory) {
   return fs.readdirSync(directory, { withFileTypes: true })
     .flatMap((entry) => {
       if (entry.isDirectory()) {
-        return entry.name === 'helpers' ? [] : collectTestFiles(path.join(directory, entry.name));
+        // helpers/ holds shared code; e2e/ runs in a browser (npm run test:e2e).
+        return entry.name === 'helpers' || entry.name === 'e2e' ? [] : collectTestFiles(path.join(directory, entry.name));
       }
       return /^test-.*\.js$/.test(entry.name) ? [path.join(directory, entry.name)] : [];
     });

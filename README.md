@@ -230,7 +230,7 @@ npm run test:react
 npm run lint
 ```
 
-`npm run test:legacy -- <filter>` runs the Node tests whose path contains any of the filters. `npm run check:locales` checks the copy in every language; strings the AI-translated languages still wait for are warnings, which `npm run package:store` turns into errors. `npm run audit:i18n` and `npm run audit:style` report Chinese text written straight into the code and leftover style debt.
+`npm run test:legacy -- <filter>` runs the Node tests whose path contains any of the filters. `npm run test:e2e` drives the built extension through its main flows (new tab and overlay search, the tab switcher, link preview, every extension page) in a headless Chrome; CI runs it after `npm run verify`, and `npm run test:e2e -- <flow>` runs some of them. `npm run check:locales` checks the copy in every language; strings the AI-translated languages still wait for are warnings, which `npm run package:store` turns into errors. `npm run audit:i18n` and `npm run audit:style` report Chinese text written straight into the code and leftover style debt.
 
 `npm run package:store` reads the version from `manifest.json` and creates `dist/lumno-store-v<version>.zip`. It requires `zip` and `zipinfo` to be available on the system.
 
@@ -252,8 +252,8 @@ npm run lint
 | `_locales/` | Extension UI copy |
 | `assets/data/` | Built-in site-search and browser shortcut data |
 | `assets/wallpapers/` | Built-in new tab wallpapers and thumbnails |
-| `tests/` | Node regression tests by area (`tests/<area>/test-*.js`, shared `tests/helpers/`); `npm run test:legacy -- <filter>` runs a subset |
-| `scripts/` | Tooling by purpose: `build/` (packaging), `check/` (static checks and audits), `dev/` (smoke, e2e, profiling), `release/` (store submissions) |
+| `tests/` | Node regression tests by area (`tests/<area>/test-*.js`, shared `tests/helpers/`); `npm run test:legacy -- <filter>` runs a subset; browser flows in `tests/e2e/` |
+| `scripts/` | Tooling by purpose: `build/` (packaging), `check/` (static checks and audits), `dev/` (e2e experiments, profiling), `release/` (store submissions) |
 
 ## Contributing
 

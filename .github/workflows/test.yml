@@ -75,3 +75,7 @@ jobs:
       # checks (the same ones npm run check runs after its own build).
       - name: Run tests and checks
         run: npm run verify
+
+      # The flows drive the built extension in the runner's Chrome.
+      - name: Run end-to-end flows
+        run: npm run test:e2e

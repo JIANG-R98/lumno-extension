@@ -103,6 +103,7 @@ checks and ESLint, the same as CI. While you work, run only part of it:
 npm run test:legacy -- settings search/  # Node tests whose path contains a filter
 npm run test:react                       # React component tests
 npm run lint                             # ESLint
+npm run test:e2e                         # Browser flows, after npm run build
 ```
 
 ## Commit messages
