@@ -163,6 +163,8 @@ export interface SuggestionsRenderPayload {
   onlyKeywordSuggestions?: boolean;
   mergedProvider?: Record<string, unknown> | null;
   emptyMessage?: string;
+  // The empty-state illustration to show with emptyMessage.
+  emptyArt?: 'noResults' | 'noCommands' | 'noTabs';
 }
 
 export interface SuggestionsViewOptions {

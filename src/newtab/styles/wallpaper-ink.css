@@ -54,6 +54,12 @@ body[data-wallpaper-active="true"] .x-nt-wallpaper-button:not([data-wallpaper-ov
   text-shadow: 0 1px 1px var(--x-nt-wallpaper-adaptive-shadow),
     0 0 12px var(--x-nt-wallpaper-adaptive-halo);
 }
+/* An empty folder's words sit straight on the wallpaper too. */
+body[data-wallpaper-active="true"] .x-nt-bookmark-empty {
+  --lumno-art-tile: var(--x-nt-wallpaper-glass-bg, #fafafa);
+  --lumno-art-tile-dark: var(--x-nt-wallpaper-glass-bg, #26262b);
+  color: var(--x-nt-wallpaper-adaptive-ink-muted, var(--x-nt-subtext, #6b7280));
+}
 body[data-wallpaper-active="true"] .x-nt-shortcut-group-header {
   color: var(--x-nt-wallpaper-adaptive-ink);
   text-shadow: 0 1px 1px var(--x-nt-wallpaper-adaptive-shadow),

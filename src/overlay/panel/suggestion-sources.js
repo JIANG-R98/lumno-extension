@@ -594,7 +594,8 @@ function createSuggestionSources(deps) {
         primaryHighlightReason,
         onlyKeywordSuggestions,
         mergedProvider,
-        emptyMessage
+        emptyMessage,
+        emptyArt: slashCommandModeActive ? 'noCommands' : 'noResults'
       });
       // Reveal only after the target rows render, then adopt their natural
       // height directly in the same commit.

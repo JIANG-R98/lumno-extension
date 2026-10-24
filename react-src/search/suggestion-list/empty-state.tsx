@@ -1,14 +1,35 @@
 // The empty state, and the captions for help center groups.
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import type { NormalizedOptions, Suggestion } from './types';
 import { surfaceClass } from './surface-options';
+import {
+  followEmptyStateArtTheme,
+  getEmptyStateArtMarkup,
+  type EmptyStateArtName
+} from '../../../src/shared/ui/empty-state-art.js';
+
+const EMPTY_ART_SIZE = 120;
 
 export function EmptyState({
   options,
-  message
+  message,
+  art
 }: {
   options: NormalizedOptions;
   message: string;
+  art?: EmptyStateArtName;
 }) {
+  // Kept while the list stays empty, so typing on does not redraw (and
+  // replay) the illustration; its theme follows the panel it sits on.
+  const artMarkup = useMemo(
+    () => getEmptyStateArtMarkup(art || 'noResults', { size: EMPTY_ART_SIZE }),
+    [art]
+  );
+  const artRef = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const svg = artRef.current?.querySelector('svg');
+    return svg ? followEmptyStateArtTheme(svg) : undefined;
+  }, [artMarkup]);
   return (
     <div
       className={surfaceClass(options, 'x-nt-empty-state')}
@@ -21,16 +42,12 @@ export function EmptyState({
       }
     >
       <span
+        ref={artRef}
         className={surfaceClass(
           options,
-          'x-nt-empty-state__icon'
+          'x-nt-empty-state__art'
         )}
-        dangerouslySetInnerHTML={{
-          __html: options.getRiSvg(
-            'ri-file-3-line',
-            'ri-size-16'
-          )
-        }}
+        dangerouslySetInnerHTML={{ __html: artMarkup }}
       />
       <span
         className={surfaceClass(

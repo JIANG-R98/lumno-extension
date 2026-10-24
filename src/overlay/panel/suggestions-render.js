@@ -413,12 +413,13 @@ function createSuggestionsRender(deps) {
     return overlayState.overlaySuggestionsView;
   }
 
-  function renderOverlayEmptyState(message) {
+  function renderOverlayEmptyState(message, art) {
     pauseOverlayAntiTranslateObserverForMutationBurst();
     ensureOverlaySuggestionsView().render({
       suggestions: [],
       query: overlayState.latestOverlayQuery,
-      emptyMessage: message || t('overlay_empty_result', '无匹配结果')
+      emptyMessage: message || t('overlay_empty_result', '无匹配结果'),
+      emptyArt: art || 'noResults'
     });
   }
 
@@ -436,7 +437,7 @@ function createSuggestionsRender(deps) {
       const emptyText = overlayState.openTabsSearchModeActive
         ? t('overlay_empty_open_tabs', '未找到匹配的已打开标签页')
         : t('overlay_empty_result', '无匹配结果');
-      renderOverlayEmptyState(emptyText);
+      renderOverlayEmptyState(emptyText, 'noTabs');
       setOverlayResultsCollapsed(false, { deferLayoutSync: true });
       commitSuggestionsNaturalHeightAfterRender();
       return;

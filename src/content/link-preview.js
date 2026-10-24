@@ -1,6 +1,6 @@
 import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
 import * as TOAST from '../shared/ui/toast.js';
-import { createEmptyStateArt } from '../shared/ui/empty-state-art.js';
+import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-state-art.js';
 
 (function() {
   // The link preview surface, injected into a tab's top frame by
@@ -248,6 +248,7 @@ import { createEmptyStateArt } from '../shared/ui/empty-state-art.js';
     .notice button:hover {
       background: var(--lp-button-hover);
     }
+    ${EMPTY_STATE_ART_CSS}
     .controls {
       position: absolute;
       top: 0;

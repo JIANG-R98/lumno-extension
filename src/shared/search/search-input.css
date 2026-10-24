@@ -670,6 +670,8 @@
 .x-lumno-search-input-mode__menu-empty {
   all: unset !important;
   display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
   grid-column: 1 / -1 !important;
   align-items: center !important;
   justify-content: center !important;
@@ -679,6 +681,16 @@
   color: var(--x-nt-subtext, var(--x-ov-subtext, #64748b)) !important;
   font: 500 13px/20px var(--lumno-font-sans, sans-serif) !important;
   text-align: center !important;
+}
+
+/* With nothing left to show, the empty state sits in the middle of the menu. */
+.x-lumno-search-input-mode__menu-content:has(> .x-lumno-search-input-mode__menu-empty:not([hidden])) {
+  align-content: center !important;
+}
+
+.x-lumno-search-input-mode__menu-empty > svg {
+  display: block !important;
+  flex: none !important;
 }
 
 .x-lumno-search-input-mode__menu-item {

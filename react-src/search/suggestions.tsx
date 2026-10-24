@@ -271,6 +271,7 @@ export function createSuggestionsView(
             key="empty"
             options={options}
             message={payload.emptyMessage || ''}
+            art={payload.emptyArt}
           />
         );
       });

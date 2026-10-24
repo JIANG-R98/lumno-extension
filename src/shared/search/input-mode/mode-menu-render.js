@@ -1,6 +1,11 @@
 // Rendering the mode menu: its groups and items, history keys, moving and
 // reordering groups, and applying the filter.
 import * as LumnoSortableDrag from '../../ui/sortable-drag.js';
+import {
+  createEmptyStateArt,
+  ensureEmptyStateArtStyles,
+  resolveEmptyStateArtTheme
+} from '../../ui/empty-state-art.js';
 
 function createModeMenuRender(deps) {
   const {
@@ -104,11 +109,17 @@ function createModeMenuRender(deps) {
     syncModeMenuGroupMoveControls();
     modeMenuEmptyState = applyNoTranslate(doc.createElement('div'));
     modeMenuEmptyState.className = 'x-lumno-search-input-mode__menu-empty';
-    modeMenuEmptyState.setAttribute('data-i18n', 'overlay_empty_result');
     modeMenuEmptyState.setAttribute('role', 'status');
-    modeMenuEmptyState.textContent = formatMessage(
+    // The words sit in their own element, so relocalizing them keeps the art.
+    const modeMenuEmptyText = doc.createElement('span');
+    modeMenuEmptyText.setAttribute('data-i18n', 'overlay_empty_result');
+    modeMenuEmptyText.textContent = formatMessage(
       'overlay_empty_result',
       'No matching results'
+    );
+    modeMenuEmptyState.append(
+      createEmptyStateArt(doc, 'noResults', { size: 96 }),
+      modeMenuEmptyText
     );
     modeMenuEmptyState.hidden = true;
     inputModeState.modeMenuContent.appendChild(modeMenuEmptyState);
@@ -278,6 +289,12 @@ function createModeMenuRender(deps) {
     });
     if (modeMenuEmptyState) {
       modeMenuEmptyState.hidden = visibleCount > 0;
+      const art = modeMenuEmptyState.firstElementChild;
+      if (visibleCount === 0 && art) {
+        // The page's theme may have changed since the menu was built.
+        art.setAttribute('data-theme', resolveEmptyStateArtTheme(modeMenu || input));
+        ensureEmptyStateArtStyles(art);
+      }
     }
     if (!filterOptions || filterOptions.preserveScroll !== true) {
       inputModeState.modeMenuContent.scrollTop = 0;

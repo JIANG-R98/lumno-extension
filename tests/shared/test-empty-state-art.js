@@ -1,15 +1,19 @@
 const assert = require('node:assert/strict');
 const { JSDOM } = require('jsdom');
 const {
+  EMPTY_STATE_ART_CSS,
   EMPTY_STATE_ART_NAMES,
   createEmptyStateArt,
-  getEmptyStateArtMarkup
+  ensureEmptyStateArtStyles,
+  followEmptyStateArtTheme,
+  getEmptyStateArtMarkup,
+  resolveEmptyStateArtTheme
 } = require('../../src/shared/ui/empty-state-art.js');
 
-const { window } = new JSDOM('<!doctype html><body></body>');
+const { window } = new JSDOM('<!doctype html><head></head><body></body>');
 const { document } = window;
 
-function run() {
+function testDrawings() {
   ['blockedPage', 'noResults', 'noCommands', 'noTabs', 'emptyFolder', 'emptyList', 'loadFailed', 'nothing']
     .forEach((name) => assert.ok(EMPTY_STATE_ART_NAMES.includes(name), `${name} should be in the set`));
 
@@ -21,13 +25,15 @@ function run() {
     assert.equal(element.getAttribute('data-theme'), 'auto');
     assert.equal(element.getAttribute('width'), '160');
     assert.equal(element.getAttribute('height'), '120');
-    // No raster images, links or requests: the art must work in any page.
-    assert.equal(element.querySelector('image, use, a, foreignObject'), null, `${name} should stay self-contained`);
-
-    // Its pattern, shadows and colors are its own, scoped to its id.
-    const style = element.querySelector('style').textContent;
-    assert.ok(style.includes('#art-test[data-theme="dark"]'), `${name} should carry its dark palette`);
-    assert.ok(!/[<&]/.test(style), `${name} style should be safe to inline as markup`);
+    // No raster images, links or requests, and no text of its own: the
+    // words around it stay the only text in an empty state.
+    assert.equal(element.querySelector('image, use, a, foreignObject, style, text'), null, `${name} should stay self-contained`);
+    assert.equal(element.textContent, '', `${name} should add no text`);
+    // Without the stylesheet it still draws, in the light palette.
+    element.querySelectorAll('[class^="p-"]').forEach((node) => {
+      assert.ok(node.hasAttribute('fill') || node.hasAttribute('stroke') || node.hasAttribute('stop-color') || node.hasAttribute('flood-color'),
+        `${name}: ${node.getAttribute('class')} should carry its light colors`);
+    });
     element.querySelectorAll('[filter], [fill^="url("]').forEach((node) => {
       const reference = (node.getAttribute('filter') || node.getAttribute('fill')).slice(5, -1);
       assert.ok(element.querySelector(`[id="${reference}"]`), `${name} should define ${reference} itself`);
@@ -41,9 +47,7 @@ function run() {
   });
 
   // Two illustrations on one page never share ids.
-  const first = createEmptyStateArt(document, 'noResults');
-  const second = createEmptyStateArt(document, 'noResults');
-  assert.notEqual(first.id, second.id);
+  assert.notEqual(createEmptyStateArt(document, 'noResults').id, createEmptyStateArt(document, 'noResults').id);
 
   const labeled = createEmptyStateArt(document, 'blockedPage', { size: 200, theme: 'dark', label: 'Blocked <page>' });
   assert.equal(labeled.getAttribute('role'), 'img');
@@ -59,5 +63,61 @@ function run() {
   assert.throws(() => getEmptyStateArtMarkup('missing'), /Unknown empty-state art/);
 }
 
-run();
-console.log('Empty-state art tests passed.');
+function testStylesheet() {
+  assert.ok(EMPTY_STATE_ART_CSS.includes('.lumno-empty-art[data-theme="dark"]'), 'the stylesheet should carry the dark palette');
+  assert.ok(EMPTY_STATE_ART_CSS.includes('var(--lumno-art-accent, #3462ad)'), 'the accent should be re-pointable');
+
+  const detached = createEmptyStateArt(document, 'noResults');
+  assert.equal(ensureEmptyStateArtStyles(detached), false, 'a detached illustration has nowhere to put styles');
+
+  document.body.append(createEmptyStateArt(document, 'noResults'), createEmptyStateArt(document, 'emptyFolder'));
+  document.body.querySelectorAll('svg').forEach((svg) => assert.equal(ensureEmptyStateArtStyles(svg), true));
+  assert.equal(document.head.querySelectorAll('style[data-lumno-empty-art-style]').length, 1, 'a document gets the stylesheet once');
+
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const shadow = host.attachShadow({ mode: 'closed' });
+  const inShadow = createEmptyStateArt(document, 'blockedPage');
+  shadow.appendChild(inShadow);
+  ensureEmptyStateArtStyles(inShadow);
+  ensureEmptyStateArtStyles(inShadow);
+  assert.equal(shadow.querySelectorAll('style[data-lumno-empty-art-style]').length, 1, 'a shadow root gets its own copy once');
+}
+
+async function testTheme() {
+  document.body.innerHTML = `
+    <div data-theme="dark"><span id="dark"></span>
+      <div data-glass-ink-theme="dark" data-theme="light"><span id="glass"></span></div>
+      <div data-wallpaper-ink="dark"><span id="ink"></span></div>
+    </div>
+    <span id="none"></span>`;
+  const byId = (id) => document.getElementById(id);
+  assert.equal(resolveEmptyStateArtTheme(byId('dark')), 'dark');
+  assert.equal(resolveEmptyStateArtTheme(byId('glass')), 'dark', 'a glass panel inked for a dark wallpaper takes the dark art');
+  assert.equal(resolveEmptyStateArtTheme(byId('ink')), 'dark', 'wallpaper ink counts only while a wallpaper is on');
+  assert.equal(resolveEmptyStateArtTheme(byId('none')), 'auto');
+  document.body.setAttribute('data-wallpaper-active', 'true');
+  assert.equal(resolveEmptyStateArtTheme(byId('ink')), 'light', 'dark ink means a light wallpaper, so light art');
+
+  const svg = createEmptyStateArt(document, 'emptyFolder');
+  byId('ink').appendChild(svg);
+  const stop = followEmptyStateArtTheme(svg);
+  assert.equal(svg.getAttribute('data-theme'), 'light');
+  byId('ink').parentElement.setAttribute('data-wallpaper-ink', 'light');
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(svg.getAttribute('data-theme'), 'dark', 'a new wallpaper ink should restyle the art');
+  stop();
+  byId('ink').parentElement.setAttribute('data-wallpaper-ink', 'dark');
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(svg.getAttribute('data-theme'), 'dark', 'a stopped follower should leave the art alone');
+}
+
+(async () => {
+  testDrawings();
+  testStylesheet();
+  await testTheme();
+  console.log('Empty-state art tests passed.');
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -5,12 +5,14 @@
 // search pill) with hairline rings, soft drops, placeholder lines, Remix icons
 // and one Lumno-blue accent for the way forward.
 //
-// Each illustration is one self-contained <svg>: its tile pattern, shadows and
-// colors live inside it, scoped to its own id, so it renders the same on an
-// extension page and in a content script's shadow root, needs no stylesheet
-// and makes no requests. Colors follow the theme: "light", "dark", or "auto"
-// (the system setting). A surface may re-point the accent and the tile color
-// with --lumno-art-accent(-dark) and --lumno-art-tile(-dark).
+// Each illustration is one inline <svg> holding its own tile pattern, shadows
+// and gradient, so it works on an extension page and in a content script's
+// shadow root and makes no requests. Its shapes carry the light palette as
+// presentation attributes; EMPTY_STATE_ART_CSS, placed once per document or
+// shadow root (ensureEmptyStateArtStyles, or followEmptyStateArtTheme), adds
+// the dark palette and the entry motion. Colors then follow data-theme on the
+// svg: "light", "dark", or "auto" (the system setting). A surface may re-point
+// the accent and the tile with --lumno-art-accent(-dark), --lumno-art-tile(-dark).
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const CLASS_PREFIX = 'lumno-empty-art';
@@ -36,7 +38,7 @@ const ICONS = {
 
 // The palette, from the site's art (light) and Lumno's dark surfaces.
 const LIGHT = {
-  tile: 'var(--lumno-art-tile, #fafafa)',
+  tile: '#fafafa',
   hatch: 'rgba(15, 23, 42, 0.05)',
   edge: 'rgba(15, 23, 42, 0.07)',
   surface: '#ffffff',
@@ -50,12 +52,12 @@ const LIGHT = {
   strong: '#cdd4de',
   icon: '#a3abb7',
   ink: '#6b7280',
-  accent: 'var(--lumno-art-accent, #3462ad)',
+  accent: '#3462ad',
   keyTop: '#404859',
   keyBottom: '#273042'
 };
 const DARK = {
-  tile: 'var(--lumno-art-tile-dark, #26262b)',
+  tile: '#26262b',
   hatch: 'rgba(255, 255, 255, 0.035)',
   edge: 'rgba(255, 255, 255, 0.07)',
   surface: '#323238',
@@ -69,9 +71,14 @@ const DARK = {
   strong: '#52525b',
   icon: '#7d828c',
   ink: '#a1a1aa',
-  accent: 'var(--lumno-art-accent-dark, #7ea6ea)',
+  accent: '#7ea6ea',
   keyTop: '#5a6375',
   keyBottom: '#3b4354'
+};
+// Palette entries a surface may re-point, light and dark.
+const OVERRIDABLE = {
+  tile: ['--lumno-art-tile', '--lumno-art-tile-dark'],
+  accent: ['--lumno-art-accent', '--lumno-art-accent-dark']
 };
 
 // Building blocks. Every scene is a list of [tag, attributes, children?]
@@ -221,51 +228,90 @@ const ART = {
 
 export const EMPTY_STATE_ART_NAMES = Object.freeze(Object.keys(ART));
 
+// Each paint: presentation attributes, where a value naming a palette entry
+// takes that color (light as the attribute, both themes through the CSS).
+const KEY_GRADIENT = Symbol('key gradient');
 const PAINTS = {
-  surface: (id) => `fill: var(--${id}-surface); stroke: var(--${id}-ring); stroke-width: 1px;`,
-  behind: (id) => `fill: var(--${id}-behind); stroke: var(--${id}-ring); stroke-width: 1px;`,
-  strip: (id) => `fill: var(--${id}-strip);`,
-  slot: (id) => `fill: var(--${id}-slot);`,
-  line: (id) => `fill: var(--${id}-line);`,
-  strong: (id) => `fill: var(--${id}-strong);`,
-  icon: (id) => `fill: var(--${id}-icon);`,
-  ink: (id) => `fill: var(--${id}-ink);`,
-  accent: (id) => `fill: var(--${id}-accent);`,
-  key: (id) => `fill: url(#${id}-key);`,
-  onAccent: () => 'fill: #ffffff;',
-  onAccentLine: () => 'fill: none; stroke: #ffffff; stroke-width: 1.6px; stroke-linecap: round;',
-  dash: (id) => `fill: none; stroke: var(--${id}-strong); stroke-width: 1.2px; stroke-dasharray: 3 3;`
+  tile: { fill: 'tile' },
+  hatch: { stroke: 'hatch' },
+  edge: { stroke: 'edge' },
+  drop: { 'flood-color': 'drop', 'flood-opacity': 'dropOpacity' },
+  keyTop: { 'stop-color': 'keyTop' },
+  keyBottom: { 'stop-color': 'keyBottom' },
+  surface: { fill: 'surface', stroke: 'ring', 'stroke-width': 1 },
+  behind: { fill: 'behind', stroke: 'ring', 'stroke-width': 1 },
+  strip: { fill: 'strip' },
+  slot: { fill: 'slot' },
+  line: { fill: 'line' },
+  strong: { fill: 'strong' },
+  icon: { fill: 'icon' },
+  ink: { fill: 'ink' },
+  accent: { fill: 'accent' },
+  key: { fill: KEY_GRADIENT },
+  onAccent: { fill: '#ffffff' },
+  onAccentLine: { fill: 'none', stroke: '#ffffff', 'stroke-width': 1.6, 'stroke-linecap': 'round' },
+  dash: { fill: 'none', stroke: 'strong', 'stroke-width': 1.2, 'stroke-dasharray': '3 3' }
 };
 
-function paletteRules(id, palette) {
+function paletteVariables(palette, themeIndex) {
   return Object.entries(palette)
-    .map(([key, value]) => `--${id}-${key}: ${value};`)
+    .map(([key, value]) => {
+      const override = OVERRIDABLE[key] ? OVERRIDABLE[key][themeIndex] : '';
+      return `--${CLASS_PREFIX}-${key}: ${override ? `var(${override}, ${value})` : value};`;
+    })
     .join(' ');
 }
 
-function buildStyle(id) {
-  const self = `#${id}`;
-  const paints = Object.entries(PAINTS)
-    .map(([name, rule]) => `${self} .p-${name} { ${rule(id)} }`)
-    .join('\n');
-  return `
-${self} { ${paletteRules(id, LIGHT)} }
-${self}[data-theme="dark"] { ${paletteRules(id, DARK)} }
+const SELF = `.${CLASS_PREFIX}`;
+const PAINT_RULES = Object.entries(PAINTS)
+  .map(([name, paint]) => {
+    const declarations = Object.entries(paint)
+      .filter(([, value]) => typeof value === 'string' && Object.prototype.hasOwnProperty.call(LIGHT, value))
+      .map(([property, value]) => `${property}: var(--${CLASS_PREFIX}-${value});`)
+      .join(' ');
+    return declarations ? `${SELF} .p-${name} { ${declarations} }` : '';
+  })
+  .filter(Boolean)
+  .join('\n');
+
+// The illustrations' shared stylesheet: both palettes and the entry motion.
+export const EMPTY_STATE_ART_CSS = `
+${SELF} { ${paletteVariables(LIGHT, 0)} }
+${SELF}[data-theme="dark"] { ${paletteVariables(DARK, 1)} }
 @media (prefers-color-scheme: dark) {
-  ${self}[data-theme="auto"] { ${paletteRules(id, DARK)} }
+  ${SELF}[data-theme="auto"] { ${paletteVariables(DARK, 1)} }
 }
-${self} .tile { fill: var(--${id}-tile); }
-${self} .hatch { stroke: var(--${id}-hatch); }
-${self} .edge { stroke: var(--${id}-edge); }
-${self} .drop { flood-color: var(--${id}-drop); flood-opacity: var(--${id}-dropOpacity); }
-${self} .key-top { stop-color: var(--${id}-keyTop); }
-${self} .key-bottom { stop-color: var(--${id}-keyBottom); }
-${paints}
+${PAINT_RULES}
 @media (prefers-reduced-motion: no-preference) {
-  ${self} .pop { transform-box: fill-box; transform-origin: center; animation: ${CLASS_PREFIX}-pop 460ms cubic-bezier(0.34, 1.4, 0.64, 1) 160ms both; }
+  ${SELF} .pop { transform-box: fill-box; transform-origin: center; animation: ${CLASS_PREFIX}-pop 460ms cubic-bezier(0.34, 1.4, 0.64, 1) 160ms both; }
 }
 @keyframes ${CLASS_PREFIX}-pop { from { opacity: 0; transform: scale(0.4); } }
 `;
+
+const STYLE_MARK = 'data-lumno-empty-art-style';
+
+// Places EMPTY_STATE_ART_CSS once in the document or shadow root that holds
+// `node`. Returns false while `node` is not connected to either.
+export function ensureEmptyStateArtStyles(node) {
+  const root = node && typeof node.getRootNode === 'function' ? node.getRootNode() : null;
+  const isDocument = Boolean(root && root.nodeType === 9);
+  const isShadowRoot = Boolean(root && root.nodeType === 11 && root.host);
+  if (!isDocument && !isShadowRoot) {
+    return false;
+  }
+  const holder = isDocument ? (root.head || root.documentElement) : root;
+  // Looked up among the holder's own children: `:scope` matches nothing in
+  // a shadow root.
+  const present = Array.prototype.some.call(holder.children, (child) => (
+    child.localName === 'style' && child.hasAttribute(STYLE_MARK)
+  ));
+  if (!present) {
+    const style = (isDocument ? root : root.ownerDocument).createElement('style');
+    style.setAttribute(STYLE_MARK, '');
+    style.textContent = EMPTY_STATE_ART_CSS;
+    holder.appendChild(style);
+  }
+  return true;
 }
 
 // A drop shadow under the shape. Built from primitives every HTML parser
@@ -275,7 +321,7 @@ function shadowFilter(id, dy, blur, start, size) {
   return ['filter', { id, x: start, y: start, width: size, height: size }, [
     ['feGaussianBlur', { in: 'SourceAlpha', stdDeviation: blur }],
     ['feOffset', { dy, result: 'blur' }],
-    ['feFlood', { class: 'drop' }],
+    ['feFlood', { paint: 'drop' }],
     ['feComposite', { in2: 'blur', operator: 'in' }],
     ['feMerge', {}, [['feMergeNode', {}], ['feMergeNode', { in: 'SourceGraphic' }]]]
   ]];
@@ -286,25 +332,34 @@ function frame(id) {
   return [
     ['defs', {}, [
       ['pattern', { id: `${id}-hatch`, width: 7, height: 7, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, [
-        ['line', { class: 'hatch', x1: 0.5, y1: 0, x2: 0.5, y2: 7, 'stroke-width': 1 }]
+        ['line', { paint: 'hatch', x1: 0.5, y1: 0, x2: 0.5, y2: 7, 'stroke-width': 1 }]
       ]],
       shadowFilter(`${id}-drop`, 5, 4.5, '-30%', '160%'),
       shadowFilter(`${id}-lift`, 2.5, 2.5, '-50%', '200%'),
       ['linearGradient', { id: `${id}-key`, x1: 0, y1: 0, x2: 0, y2: 1 }, [
-        ['stop', { class: 'key-top', offset: 0 }],
-        ['stop', { class: 'key-bottom', offset: 1 }]
+        ['stop', { paint: 'keyTop', offset: 0 }],
+        ['stop', { paint: 'keyBottom', offset: 1 }]
       ]]
     ]],
-    ['rect', { class: 'tile', x: 0, y: 0, width: WIDTH, height: HEIGHT, rx: 18 }],
+    ['rect', { paint: 'tile', x: 0, y: 0, width: WIDTH, height: HEIGHT, rx: 18 }],
     ['rect', { x: 0, y: 0, width: WIDTH, height: HEIGHT, rx: 18, fill: `url(#${id}-hatch)` }],
-    ['rect', { class: 'edge', x: 0.5, y: 0.5, width: WIDTH - 1, height: HEIGHT - 1, rx: 17.5, fill: 'none', 'stroke-width': 1 }]
+    ['rect', { paint: 'edge', x: 0.5, y: 0.5, width: WIDTH - 1, height: HEIGHT - 1, rx: 17.5, fill: 'none', 'stroke-width': 1 }]
   ];
+}
+
+function paintAttributes(id, paint) {
+  return Object.fromEntries(Object.entries(PAINTS[paint]).map(([property, value]) => {
+    if (value === KEY_GRADIENT) {
+      return [property, `url(#${id}-key)`];
+    }
+    return [property, Object.prototype.hasOwnProperty.call(LIGHT, value) ? LIGHT[value] : value];
+  }));
 }
 
 function resolveAttributes(id, attributes) {
   const { paint, shadow, class: className, ...rest } = attributes;
   const classes = [paint ? `p-${paint}` : '', className || ''].filter(Boolean).join(' ');
-  const resolved = { ...rest };
+  const resolved = { ...(paint ? paintAttributes(id, paint) : {}), ...rest };
   if (classes) {
     resolved.class = classes;
   }
@@ -349,7 +404,7 @@ function describe(name, options) {
   } else {
     attributes['aria-hidden'] = 'true';
   }
-  return { id, attributes, children: [...frame(id), ...getScene(name)], style: buildStyle(id) };
+  return { id, attributes, children: [...frame(id), ...getScene(name)] };
 }
 
 function buildElement(doc, id, tag, attributes, children) {
@@ -371,15 +426,8 @@ function buildElement(doc, id, tag, attributes, children) {
 // Without a label it is aria-hidden.
 export function createEmptyStateArt(doc, name, options) {
   const ownerDocument = doc || globalThis.document;
-  const { id, attributes, children, style } = describe(name, options);
-  const svg = buildElement(ownerDocument, id, 'svg', attributes, []);
-  const styleElement = ownerDocument.createElementNS(SVG_NS, 'style');
-  styleElement.textContent = style;
-  svg.appendChild(styleElement);
-  children.forEach(([tag, childAttributes, grandchildren]) => {
-    svg.appendChild(buildElement(ownerDocument, id, tag, childAttributes, grandchildren));
-  });
-  return svg;
+  const { id, attributes, children } = describe(name, options);
+  return buildElement(ownerDocument, id, 'svg', attributes, children);
 }
 
 function escapeText(value) {
@@ -401,11 +449,68 @@ function toMarkup(id, tag, attributes, children) {
   return childText ? `<${tag}${attributeText}>${childText}</${tag}>` : `<${tag}${attributeText}/>`;
 }
 
+// The theme an illustration should take where it is placed, from the nearest
+// of: a New Tab glass panel inked for a dark wallpaper, New Tab text laid
+// straight on a wallpaper (its sampled ink: dark ink means a light backdrop),
+// or a page's data-theme (New Tab, Options, the overlay). Else the system's.
+export function resolveEmptyStateArtTheme(element) {
+  if (!element || typeof element.closest !== 'function') {
+    return 'auto';
+  }
+  const doc = element.ownerDocument;
+  const wallpaperActive = Boolean(doc && doc.body && doc.body.getAttribute('data-wallpaper-active') === 'true');
+  const scope = element.closest(wallpaperActive
+    ? '[data-glass-ink-theme], [data-wallpaper-ink], [data-theme]'
+    : '[data-glass-ink-theme], [data-theme]');
+  if (!scope) {
+    return 'auto';
+  }
+  if (scope.getAttribute('data-glass-ink-theme') === 'dark') {
+    return 'dark';
+  }
+  const ink = wallpaperActive ? scope.getAttribute('data-wallpaper-ink') : null;
+  if (ink === 'dark' || ink === 'light') {
+    return ink === 'dark' ? 'light' : 'dark';
+  }
+  const theme = scope.getAttribute('data-theme');
+  return theme === 'dark' || theme === 'light' ? theme : 'auto';
+}
+
+const THEME_ATTRIBUTES = ['data-theme', 'data-glass-ink-theme', 'data-wallpaper-ink', 'data-wallpaper-active'];
+
+// Keeps a placed illustration's theme in step with where it sits (a theme
+// switch, a new wallpaper sampled to another ink), and makes sure its root
+// has the shared stylesheet. Returns a stop function.
+export function followEmptyStateArtTheme(svg) {
+  ensureEmptyStateArtStyles(svg);
+  const view = svg && svg.ownerDocument ? svg.ownerDocument.defaultView : null;
+  // Writes only a change: the svg's own data-theme is among the attributes
+  // watched, and rewriting the same value would notify again, forever.
+  const update = () => {
+    const theme = resolveEmptyStateArtTheme(svg.parentElement || svg);
+    if (svg.getAttribute('data-theme') !== theme) {
+      svg.setAttribute('data-theme', theme);
+    }
+  };
+  if (!view || typeof view.MutationObserver !== 'function') {
+    if (svg) {
+      update();
+    }
+    return () => {};
+  }
+  update();
+  const observer = new view.MutationObserver(update);
+  const root = svg.getRootNode();
+  observer.observe(root.nodeType === 9 ? root.documentElement : root, {
+    subtree: true,
+    attributes: true,
+    attributeFilter: THEME_ATTRIBUTES
+  });
+  return () => observer.disconnect();
+}
+
 // The same illustration as markup, for views that render SVG strings.
 export function getEmptyStateArtMarkup(name, options) {
-  const { id, attributes, children, style } = describe(name, options);
-  const svg = toMarkup(id, 'svg', attributes, children);
-  const open = svg.indexOf('>') + 1;
-  // The style holds no markup characters, so it goes in as it is.
-  return `${svg.slice(0, open)}<style>${style}</style>${svg.slice(open)}`;
+  const { id, attributes, children } = describe(name, options);
+  return toMarkup(id, 'svg', attributes, children);
 }

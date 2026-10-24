@@ -214,17 +214,21 @@ body[data-glass-style] .x-nt-suggestion-number-shortcut[data-glass-ink-theme="da
   line-height: 15px;
 }
 .x-nt-empty-state {
-  height: var(--x-nt-suggestion-row-height, 52px);
   min-height: var(--x-nt-suggestion-row-height, 52px);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 0 16px;
+  gap: 10px;
+  padding: 18px 16px 20px;
   box-sizing: border-box;
   color: var(--x-nt-subtext, #6B7280);
   font-size: var(--lumno-font-size-md);
   text-align: center;
+}
+.x-nt-empty-state__art,
+.x-nt-empty-state__art > svg {
+  display: block;
 }
 .x-nt-suggestion-mark {
   background: var(--x-ext-mark-bg, #CFE8FF);
@@ -707,14 +711,20 @@ body[data-glass-style] .x-nt-suggestion-item[data-row-state="active"][data-glass
   padding-left: 0;
   opacity: 0;
 }
+.x-nt-bookmark-empty__art,
+.x-nt-bookmark-empty__art > svg {
+  display: block;
+}
 .x-nt-bookmark-empty {
   grid-column: 1 / -1;
   min-height: inherit;
   color: var(--x-nt-subtext, #6b7280);
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 16px 0;
   font-size: var(--lumno-font-size-md);
   font-weight: 500;
   box-sizing: border-box;

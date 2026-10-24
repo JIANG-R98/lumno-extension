@@ -10,6 +10,10 @@ import {
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { isElementTextTruncated } from '../shared/text-overflow';
+import {
+  followEmptyStateArtTheme,
+  getEmptyStateArtMarkup
+} from '../../src/shared/ui/empty-state-art.js';
 
 type ThemeValue = unknown;
 type VisualOptions = Record<string, unknown> | undefined;
@@ -1135,19 +1139,26 @@ function EmptyFolderState({
 }: {
   options: NormalizedBookmarksOptions;
 }) {
+  // Kept across re-renders of the same empty folder, so the art is not
+  // redrawn (and replayed) each time; its theme follows the wallpaper ink.
+  const artMarkup = useMemo(
+    () => getEmptyStateArtMarkup('emptyFolder', { size: 112 }),
+    []
+  );
+  const artRef = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const svg = artRef.current?.querySelector('svg');
+    return svg ? followEmptyStateArtTheme(svg) : undefined;
+  }, [artMarkup]);
   return (
-    <div
-      className="x-nt-bookmark-empty"
-      dangerouslySetInnerHTML={{
-        __html:
-          `${options.getRiSvg(
-            'ri-file-3-line',
-            'ri-size-16'
-          )}<span>${
-            options.t('bookmarks_empty_folder', '暂无内容')
-          }</span>`
-      }}
-    />
+    <div className="x-nt-bookmark-empty">
+      <span
+        ref={artRef}
+        className="x-nt-bookmark-empty__art"
+        dangerouslySetInnerHTML={{ __html: artMarkup }}
+      />
+      <span>{options.t('bookmarks_empty_folder', '暂无内容')}</span>
+    </div>
   );
 }
 

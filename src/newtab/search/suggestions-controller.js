@@ -681,7 +681,8 @@ function createSuggestionsController(deps) {
         primaryHighlightReason,
         onlyKeywordSuggestions,
         mergedProvider,
-        emptyMessage
+        emptyMessage,
+        emptyArt: slashCommandModeActive ? 'noCommands' : 'noResults'
       });
       if (updateKind !== 'highlight') {
         updateSelection();

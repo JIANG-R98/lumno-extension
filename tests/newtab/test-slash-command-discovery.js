@@ -209,9 +209,9 @@ function testStyles() {
   const row = newtab.rule('.x-nt-suggestion-item');
   assert.deepStrictEqual([row.get('height'), row.get('min-height')], ['var(--x-nt-suggestion-row-height, 52px)', 'var(--x-nt-suggestion-row-height, 52px)']);
   const empty = newtab.rule('.x-nt-empty-state');
-  assert.deepStrictEqual(['height', 'min-height', 'display', 'align-items', 'justify-content', 'gap'].map((name) => empty.get(name)),
-    ['var(--x-nt-suggestion-row-height, 52px)', 'var(--x-nt-suggestion-row-height, 52px)', 'flex', 'center', 'center', '8px'],
-    'the empty state should take one row and center its contents');
+  assert.deepStrictEqual(['height', 'min-height', 'display', 'flex-direction', 'align-items', 'justify-content'].map((name) => empty.get(name)),
+    [null, 'var(--x-nt-suggestion-row-height, 52px)', 'flex', 'column', 'center', 'center'],
+    'the empty state should stack its art over the words, centered, at least one row tall');
 }
 
 function testCopy() {

@@ -247,10 +247,11 @@
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-empty-state {
   all: unset;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 16px 14px;
+  gap: 10px;
+  padding: 18px 14px 20px;
   margin: 0;
   border: none;
   border-radius: var(--lumno-radius-2xl, 14px);
@@ -270,13 +271,14 @@
   background: transparent;
 }
 
-:is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-empty-state__icon {
+:is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-empty-state__art {
   all: unset;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--x-ov-subtext, #9CA3AF);
-  line-height: 1;
+  display: block;
+  line-height: 0;
+}
+
+:is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-empty-state__art > svg {
+  display: block;
 }
 
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-empty-state__text {
