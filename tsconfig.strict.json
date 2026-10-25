@@ -41,7 +41,12 @@
     "src/options/options-slider-controls.ts",
     "src/options/options-control-events.ts",
     "src/options/options-daily-quote.ts",
-    "src/options/options-setting-binds.ts"
+    "src/options/options-setting-binds.ts",
+    "src/options/options-shortcut-keys.ts",
+    "src/options/options-fallback-shortcut.ts",
+    "src/options/options-sync-transfer.ts",
+    "src/options/options-sync-section.ts",
+    "src/options/webdav-options.ts"
   ],
   "exclude": [
     "src/**/react/**"

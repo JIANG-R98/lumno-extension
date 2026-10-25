@@ -18,7 +18,7 @@ import type {
   WebDavAssetMime,
   WebDavState
 } from '../domain/webdav-contract';
-import type { WebDavOperation, WebDavReply, WebDavRequest } from '../domain/messages';
+import type { WebDavReply, WebDavRequest } from '../domain/messages';
 import type { WallpaperRecord, WallpaperRecordInput } from '../shared/wallpaper-local-store';
 import type {
   ConnectionCapabilities,
@@ -292,15 +292,10 @@ function isTrustedSender(
   return Boolean(sender && sender.id === chromeApi.runtime.id && page === chromeApi.runtime.getURL('src/options/options.html'));
 }
 
-const WEBDAV_OPERATIONS: readonly WebDavOperation[] = Object.freeze([
-  'status', 'add', 'test', 'save', 'remove', 'enable', 'connect', 'sync', 'pause', 'browser',
-  'schedule', 'recover', 'conflictDetails', 'restoreBackup', 'dismissSuggestion'
-]);
-
 // Rebuilds the request from a runtime message; null when it names no known
 // operation or one of its fields has the wrong type.
 function readWebDavRequest(message: Record<string, unknown>): WebDavRequest | null {
-  const operation = WEBDAV_OPERATIONS.find((candidate) => candidate === message.operation);
+  const operation = LumnoWebDavContract.readWebDavOperation(message.operation);
   if (!operation) return null;
   const { id, config, decision, enable, resume } = message;
   const request: WebDavRequest = { operation };

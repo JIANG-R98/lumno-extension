@@ -4,6 +4,7 @@ import { InlinePopconfirm } from './inline-popconfirm';
 import { InfoButton } from './info-button';
 import { getAsyncErrorMessage, useExclusiveAsyncAction } from '../../shared/react/use-exclusive-async-action';
 import { BusyLabel } from '../../shared/react/busy-label';
+import type { ConflictDescription, ListChangeSummary, NameSample, ValueSummary } from '../../domain/webdav-contract';
 
 export interface WebDavConfig {
   endpoint: string;
@@ -35,8 +36,14 @@ export interface WebDavListModel {
   ready: boolean;
   outdated: boolean;
 }
+// What an action reports back to the card: whether a first sync needs a
+// choice, and for conflictDetails the conflicting items.
+export interface WebDavActionResult {
+  needsChoice?: boolean;
+  items?: WebDavConflictItem[];
+}
 export interface WebDavListOptions {
-  onAction(operation: string, id?: string, extra?: Record<string, unknown>): Promise<{ needsChoice?: boolean }>;
+  onAction(operation: string, id?: string, extra?: Record<string, unknown>): Promise<WebDavActionResult>;
 }
 type Tone = 'success' | 'warning' | 'danger' | undefined;
 
@@ -120,24 +127,8 @@ function DiagnosticButton({ copy, text, compact = false, ghost = false }: { copy
   );
 }
 
-interface ListSummary { names: string[]; count: number }
-interface DomainSummary {
-  total: number;
-  added: ListSummary;
-  removed: ListSummary;
-  changed: ListSummary;
-  reordered: boolean;
-  selectionChanged?: boolean;
-}
-interface ValueSummary { kind: 'unset' | 'boolean' | 'number' | 'text' | 'list' | 'changed'; value?: boolean | number | string; count?: number }
-export interface WebDavConflictItem {
-  key: string;
-  field?: string;
-  label: string;
-  domain: 'preference' | 'shortcuts' | 'wallpapers';
-  local: DomainSummary | ValueSummary;
-  remote: DomainSummary | ValueSummary;
-}
+// A conflict as the worker describes it, named the way the settings page names it.
+export type WebDavConflictItem = ConflictDescription & { label: string };
 
 function fill(template: string, values: Record<string, string | number>) {
   return Object.entries(values).reduce((text, [key, value]) => text.replace(`{${key}}`, String(value)), template);
@@ -146,13 +137,13 @@ function fill(template: string, values: Record<string, string | number>) {
 function describeValue(value: ValueSummary, copy: Record<string, string>) {
   if (value.kind === 'boolean') return value.value ? copy.webdav_value_on : copy.webdav_value_off;
   if (value.kind === 'number' || value.kind === 'text') return String(value.value);
-  if (value.kind === 'list') return fill(copy.webdav_value_list, { count: value.count ?? 0 });
+  if (value.kind === 'list') return fill(copy.webdav_value_list, { count: value.count });
   if (value.kind === 'unset') return copy.webdav_value_default;
   return copy.webdav_value_changed;
 }
 
-function describeDomain(summary: DomainSummary, domain: string, copy: Record<string, string>, separator: string) {
-  const list = (template: string, part: ListSummary) => part.count ? fill(template, {
+function describeDomain(summary: ListChangeSummary, domain: string, copy: Record<string, string>, separator: string) {
+  const list = (template: string, part: NameSample) => part.count ? fill(template, {
     items: part.names.join(separator) + (part.count > part.names.length ? ` ${fill(copy.webdav_diff_more, { count: part.count })}` : '')
   }) : '';
   const lines = [
@@ -171,8 +162,8 @@ function describeDomain(summary: DomainSummary, domain: string, copy: Record<str
 function ConflictDiff({ items, copy, lang }: { items: WebDavConflictItem[]; copy: Record<string, string>; lang: string }) {
   const separator = /^(zh|ja)/i.test(lang) ? '、' : ', ';
   const cell = (item: WebDavConflictItem, side: 'local' | 'remote') => item.domain === 'preference'
-    ? [describeValue(item[side] as ValueSummary, copy)]
-    : describeDomain(item[side] as DomainSummary, item.domain, copy, separator);
+    ? [describeValue(item[side], copy)]
+    : describeDomain(item[side], item.domain, copy, separator);
   return (
     <div className="lumno-webdav-diff" role="table">
       <div className="lumno-webdav-diff-row lumno-webdav-diff-head" role="row">
@@ -181,7 +172,7 @@ function ConflictDiff({ items, copy, lang }: { items: WebDavConflictItem[]; copy
         <span role="columnheader">{copy.webdav_diff_remote}</span>
       </div>
       {items.map((item) => (
-        <div className="lumno-webdav-diff-row" key={item.field ? `${item.key}:${item.field}` : item.key} role="row">
+        <div className="lumno-webdav-diff-row" key={item.domain === 'preference' && item.field ? `${item.key}:${item.field}` : item.key} role="row">
           <span className="lumno-webdav-diff-label" role="rowheader">{item.label}</span>
           {(['local', 'remote'] as const).map((side) => (
             <span data-side={side} key={side} role="cell">
@@ -383,7 +374,7 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
     if (diff.open) { setDiff({ ...diff, open: false }); return; }
     setDiff({ open: true, items: null, error: '' });
     try {
-      const result = await options.onAction('conflictDetails', item.id) as { items?: WebDavConflictItem[] };
+      const result = await options.onAction('conflictDetails', item.id);
       setDiff({ open: true, items: result.items || [], error: '' });
     } catch (error) {
       setDiff({ open: true, items: [], error: getAsyncErrorMessage(error) });

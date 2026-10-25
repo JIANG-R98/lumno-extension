@@ -2,7 +2,7 @@
 // "Ctrl+Alt+Shift+Command+Key" (modifiers in that order, at least one) and
 // only turned into keycap labels when shown.
 
-const KEY_ALIASES = Object.freeze({
+const KEY_ALIASES: Readonly<Record<string, string>> = Object.freeze({
   tab: 'Tab',
   enter: 'Enter',
   return: 'Enter',
@@ -34,7 +34,7 @@ const KEY_ALIASES = Object.freeze({
 });
 
 // Printed characters, shifted or not, name the physical key.
-const KEY_CHARACTERS = Object.freeze({
+const KEY_CHARACTERS: Readonly<Record<string, string>> = Object.freeze({
   ' ': 'Space',
   ',': 'Comma',
   '<': 'Comma',
@@ -58,7 +58,7 @@ const KEY_CHARACTERS = Object.freeze({
   '}': 'BracketRight'
 });
 
-const KEY_CODES = Object.freeze({
+const KEY_CODES: Readonly<Record<string, string>> = Object.freeze({
   Backquote: 'Backquote',
   Minus: 'Minus',
   Equal: 'Plus',
@@ -80,7 +80,7 @@ const KEY_CODES = Object.freeze({
   ArrowRight: 'ArrowRight'
 });
 
-const PUNCTUATION_LABELS = Object.freeze({
+const PUNCTUATION_LABELS: Readonly<Record<string, string>> = Object.freeze({
   Comma: ',',
   Period: '.',
   Slash: '/',
@@ -93,22 +93,22 @@ const PUNCTUATION_LABELS = Object.freeze({
   BracketLeft: '[',
   BracketRight: ']'
 });
-const ARROW_LABELS = Object.freeze({
+const ARROW_LABELS: Readonly<Record<string, string>> = Object.freeze({
   ArrowUp: '↑',
   ArrowDown: '↓',
   ArrowLeft: '←',
   ArrowRight: '→'
 });
-const MAC_KEY_LABELS = Object.freeze(Object.assign({}, ARROW_LABELS, PUNCTUATION_LABELS, {
+const MAC_KEY_LABELS: Readonly<Record<string, string>> = Object.freeze(Object.assign({}, ARROW_LABELS, PUNCTUATION_LABELS, {
   Enter: '↩',
   Escape: '⎋',
   Tab: '⇥',
   Space: 'Space'
 }));
-const DEFAULT_KEY_LABELS = Object.freeze(Object.assign({}, ARROW_LABELS, PUNCTUATION_LABELS, {
+const DEFAULT_KEY_LABELS: Readonly<Record<string, string>> = Object.freeze(Object.assign({}, ARROW_LABELS, PUNCTUATION_LABELS, {
   Escape: 'Esc'
 }));
-const MAC_MODIFIER_LABELS = Object.freeze({
+const MAC_MODIFIER_LABELS: Readonly<Record<string, string>> = Object.freeze({
   Ctrl: '⌃',
   Alt: '⌥',
   Shift: '⇧',
@@ -116,22 +116,39 @@ const MAC_MODIFIER_LABELS = Object.freeze({
 });
 const MODIFIER_KEYS = new Set(['Shift', 'Control', 'Alt', 'Meta', 'AltGraph']);
 
+// The parts of a KeyboardEvent a chord is read from.
+interface ShortcutKeyEvent {
+  key?: string;
+  code?: string;
+  ctrlKey?: boolean;
+  altKey?: boolean;
+  shiftKey?: boolean;
+  metaKey?: boolean;
+}
+
+// The table's own entry for a key; '' when it has none.
+function lookup(table: Readonly<Record<string, string>>, key: string): string {
+  return Object.prototype.hasOwnProperty.call(table, key) ? table[key] : '';
+}
+
 // A key name or printed character -> its token ('K', 'F5', 'Comma', ...), or ''.
-function normalizeShortcutKeyToken(rawKey) {
+function normalizeShortcutKeyToken(rawKey: unknown): string {
   const value = String(rawKey || '').trim();
   if (!value) {
     return '';
   }
   const lower = value.toLowerCase();
-  if (KEY_ALIASES[lower]) {
-    return KEY_ALIASES[lower];
+  const alias = lookup(KEY_ALIASES, lower);
+  if (alias) {
+    return alias;
   }
   if (/^f\d{1,2}$/.test(lower)) {
     return lower.toUpperCase();
   }
   if (value.length === 1) {
-    if (KEY_CHARACTERS[value]) {
-      return KEY_CHARACTERS[value];
+    const named = lookup(KEY_CHARACTERS, value);
+    if (named) {
+      return named;
     }
     if (/^[a-z0-9]$/i.test(value)) {
       return value.toUpperCase();
@@ -141,7 +158,7 @@ function normalizeShortcutKeyToken(rawKey) {
 }
 
 // KeyboardEvent.code -> token; independent of keyboard layout and Shift.
-function getShortcutKeyTokenFromCode(rawCode) {
+function getShortcutKeyTokenFromCode(rawCode: unknown): string {
   const code = String(rawCode || '').trim();
   if (!code) {
     return '';
@@ -152,8 +169,9 @@ function getShortcutKeyTokenFromCode(rawCode) {
   if (/^Digit[0-9]$/.test(code)) {
     return code.slice(5);
   }
-  if (KEY_CODES[code]) {
-    return KEY_CODES[code];
+  const named = lookup(KEY_CODES, code);
+  if (named) {
+    return named;
   }
   if (/^F\d{1,2}$/.test(code)) {
     return code;
@@ -161,7 +179,7 @@ function getShortcutKeyTokenFromCode(rawCode) {
   return '';
 }
 
-function getShortcutKeyTokenFromEvent(event) {
+function getShortcutKeyTokenFromEvent(event: ShortcutKeyEvent | null | undefined): string {
   if (!event) {
     return '';
   }
@@ -170,14 +188,14 @@ function getShortcutKeyTokenFromEvent(event) {
 
 // Any spelling of a chord ("cmd+shift+k", "MacCtrl+Option+,") -> the stored
 // form, or '' when it has no modifier, an unknown part or no key.
-function normalizeFallbackShortcut(value) {
+function normalizeFallbackShortcut(value: unknown): string {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
   const parts = text
     .split('+')
-    .map((token) => String(token || '').trim())
+    .map((token) => token.trim())
     .filter(Boolean);
   if (parts.length < 2) {
     return '';
@@ -209,7 +227,7 @@ function normalizeFallbackShortcut(value) {
   if (!modifierState.ctrl && !modifierState.alt && !modifierState.shift && !modifierState.meta) {
     return '';
   }
-  const normalized = [];
+  const normalized: string[] = [];
   if (modifierState.ctrl) normalized.push('Ctrl');
   if (modifierState.alt) normalized.push('Alt');
   if (modifierState.shift) normalized.push('Shift');
@@ -219,7 +237,7 @@ function normalizeFallbackShortcut(value) {
 }
 
 // The chord a keydown would record, or '' for a lone modifier or no modifier.
-function buildShortcutFromEvent(event) {
+function buildShortcutFromEvent(event: ShortcutKeyEvent | null | undefined): string {
   if (!event) {
     return '';
   }
@@ -231,7 +249,7 @@ function buildShortcutFromEvent(event) {
   if (!keyToken) {
     return '';
   }
-  const modifiers = [];
+  const modifiers: string[] = [];
   if (event.ctrlKey) modifiers.push('Ctrl');
   if (event.altKey) modifiers.push('Alt');
   if (event.shiftKey) modifiers.push('Shift');
@@ -245,26 +263,23 @@ function buildShortcutFromEvent(event) {
 
 // Keycap labels for a stored chord. macSymbols uses ⌃⌥⇧⌘ and Mac key
 // glyphs; otherwise words (Cmd for Command). Multi-letter labels are upper case.
-function getShortcutDisplayTokens(shortcut, options) {
+function getShortcutDisplayTokens(shortcut: unknown, options?: { macSymbols?: boolean } | null): string[] {
   const normalized = normalizeFallbackShortcut(shortcut);
   if (!normalized) {
     return [];
   }
   const macSymbols = Boolean(options && options.macSymbols);
   const parts = normalized.split('+').filter(Boolean);
-  const keyToken = parts.pop();
+  const keyToken = parts.pop() || '';
   const tokens = parts.map((token) => {
     if (macSymbols) {
-      return MAC_MODIFIER_LABELS[token];
+      return lookup(MAC_MODIFIER_LABELS, token);
     }
     return token === 'Command' ? 'Cmd' : token;
   });
   const keyLabels = macSymbols ? MAC_KEY_LABELS : DEFAULT_KEY_LABELS;
-  tokens.push(keyLabels[keyToken] || keyToken);
-  return tokens.map((token) => {
-    const text = String(token || '');
-    return text.length > 1 ? text.toUpperCase() : text;
-  });
+  tokens.push(lookup(keyLabels, keyToken) || keyToken);
+  return tokens.map((text) => (text.length > 1 ? text.toUpperCase() : text));
 }
 
 export {
@@ -275,3 +290,4 @@ export {
   normalizeFallbackShortcut,
   normalizeShortcutKeyToken
 };
+export type { ShortcutKeyEvent };

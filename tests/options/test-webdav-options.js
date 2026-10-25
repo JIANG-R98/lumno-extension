@@ -16,14 +16,20 @@ async function run() {
   let actions;
   let nextError;
   let model = { connections: [], clientRevision: 'dav-lock-5', syncRevision: 'dav-multi-1' };
+  // Conflict summaries as the worker describes them.
+  const noNames = { names: [], count: 0 };
+  const unchangedList = { total: 0, added: noNames, removed: noNames, changed: noNames, reordered: false };
+  const unset = { kind: 'unset' };
   const chrome = { runtime: { lastError: null, getManifest: () => ({ version: '9.9.9' }), sendMessage(request, callback) {
     requests.push(request);
     if (request.operation === 'status') return callback({ ok: true, ...model });
     if (nextError) { const error = nextError; nextError = null; return callback({ ok: false, ...error }); }
     if (request.operation === 'conflictDetails') return callback({ ok: true, items: [
-      { key: 'shortcuts', domain: 'shortcuts' }, { key: '_x_extension_simple_mode_enabled_2026_unique_', domain: 'preference' },
-      { key: '_x_extension_search_blacklist_2026_unique_', domain: 'preference' }, { key: '_x_extension_unknown_2026_unique_', domain: 'preference' },
-      { key: '_x_extension_newtab_zen_mode_2026_unique_', domain: 'preference' },
+      { key: 'shortcuts', domain: 'shortcuts', local: unchangedList, remote: unchangedList },
+      { key: '_x_extension_simple_mode_enabled_2026_unique_', domain: 'preference', local: unset, remote: unset },
+      { key: '_x_extension_search_blacklist_2026_unique_', domain: 'preference', local: unset, remote: unset },
+      { key: '_x_extension_unknown_2026_unique_', domain: 'preference', local: unset, remote: unset },
+      { key: '_x_extension_newtab_zen_mode_2026_unique_', domain: 'preference', local: unset, remote: unset },
       { key: '_x_extension_newtab_quote_prefs_2026_unique_', field: 'position', domain: 'preference',
         local: { kind: 'text', value: 'bottom' }, remote: { kind: 'text', value: 'input' } },
       { key: '_x_extension_bookmark_folder_color_refs_2026_unique_', field: 'aaaaaaaaaaaaaaaa', domain: 'preference',
@@ -97,7 +103,8 @@ async function run() {
   assert(requests.some((request) => request.operation === 'pause' && request.id === 'a'));
   const statusReads = requests.filter((request) => request.operation === 'status').length;
   const details = await actions.onAction('conflictDetails', 'b');
-  assert.deepStrictEqual(details.items.map((item) => item.label), ['Shortcuts and icons', messages.settings_simple_mode_title.message,
+  // The page builds its arrays in its own window; compare their contents.
+  assert.deepStrictEqual(Array.from(details.items, (item) => item.label), ['Shortcuts and icons', messages.settings_simple_mode_title.message,
     messages.settings_tab_blacklist.message, messages.webdav_preference_other.message, messages.webdav_preference_zen_mode.message,
     messages.newtab_quote_position.message, messages.folder_color_title.message, messages.bookmark_topbar_surface_title.message,
     `${messages.bookmark_topbar_surface_title.message} · ${messages.theme_label_dark.message}`], 'conflicting settings use their visible titles');
@@ -105,7 +112,7 @@ async function run() {
     [messages.newtab_quote_bottom.message, messages.newtab_quote_input.message], 'record fields show option names');
   assert.deepStrictEqual([details.items[6].local.value, details.items[6].remote.value], ['#22C55E', '#F59E0B'],
     'folder color conflicts hide the folder reference and show the colors');
-  assert.deepStrictEqual(details.items.slice(7).map((item) => [item.label, item.local.value, item.remote.value]), [
+  assert.deepStrictEqual(Array.from(details.items.slice(7), (item) => [item.label, item.local.value, item.remote.value]), [
     [messages.bookmark_topbar_surface_title.message, messages.bookmark_topbar_surface_clear.message, messages.bookmark_topbar_surface_custom.message],
     [`${messages.bookmark_topbar_surface_title.message} · ${messages.theme_label_dark.message}`, '#000000', '#445566']
   ], 'bookmark bar conflicts name the material and tell the light and dark colors apart');

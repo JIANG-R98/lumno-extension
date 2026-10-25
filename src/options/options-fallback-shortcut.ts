@@ -1,16 +1,47 @@
-// @ts-nocheck
 // The editable "open search" shortcut on the Shortcuts tab. The browser
 // owns the real command; the page shows its current chord, records a new
 // one from a keydown while the field has focus, and stores it under the
 // fallback-shortcut key for the background to apply.
-//
-//   elements: fallbackShortcutInput, fallbackShortcutWrap,
-//             clearShortcutButton, resetShortcutButton, shortcutsStatus
-//   shortcutHotkeyController   React view of the keycaps
-//   chromeApi, settings (LumnoSettings), storageArea, isMacPlatform,
-//   shortcutKeys (LumnoOptionsShortcutKeys), formatShortcutForDisplay,
-//   getMessage, showToast, documentObj, windowObj
-function createFallbackShortcutSection(options) {
+import type * as Settings from '../domain/settings';
+import type { StorageAreaLike } from '../domain/storage-port';
+import { isElementNode } from '../shared/dom-guards';
+import type * as ShortcutKeys from './options-shortcut-keys';
+import type { GetMessage } from './options-types';
+import type { ShortcutHotkeyController } from './react/shortcut-hotkey';
+
+// The parts of chrome the section uses; commands is missing in some browsers.
+interface FallbackShortcutChromeApi {
+  commands?: {
+    getAll(callback: (commands: Array<{ name?: string; shortcut?: string }>) => void): void;
+  };
+  runtime: { lastError?: { message?: string } | null };
+}
+
+interface FallbackShortcutElements {
+  fallbackShortcutInput: HTMLInputElement | null;
+  fallbackShortcutWrap: HTMLElement | null;
+  clearShortcutButton: HTMLElement | null;
+  resetShortcutButton: HTMLElement | null;
+  shortcutsStatus: HTMLElement | null;
+}
+
+interface FallbackShortcutOptions {
+  elements: FallbackShortcutElements;
+  // React view of the keycaps.
+  shortcutHotkeyController: Pick<ShortcutHotkeyController, 'render'> | null;
+  chromeApi: FallbackShortcutChromeApi;
+  settings: Pick<typeof Settings, 'FALLBACK_SHORTCUT_STORAGE_KEY'>;
+  storageArea: StorageAreaLike | null;
+  isMacPlatform: boolean;
+  shortcutKeys: Pick<typeof ShortcutKeys, 'buildShortcutFromEvent' | 'normalizeFallbackShortcut' | 'getShortcutDisplayTokens'>;
+  formatShortcutForDisplay(shortcut: string): string;
+  getMessage: GetMessage;
+  showToast(message: string, isError?: boolean): void;
+  documentObj: Document;
+  windowObj: Window;
+}
+
+function createFallbackShortcutSection(options: FallbackShortcutOptions) {
   const {
     fallbackShortcutInput,
     fallbackShortcutWrap,
@@ -32,23 +63,23 @@ function createFallbackShortcutSection(options) {
   const FALLBACK_SHORTCUT_STORAGE_KEY = options.settings.FALLBACK_SHORTCUT_STORAGE_KEY;
   const documentObj = options.documentObj;
   const windowObj = options.windowObj;
-  let currentShortcutLabel = null;
+  let currentShortcutLabel: string | null = null;
   let isCapturingFallbackShortcut = false;
   let cancelCaptureOnMouseLeave = false;
-  let fallbackCaptureStopTimer = null;
+  let fallbackCaptureStopTimer: number | null = null;
 
-  function refreshShortcutsStatus() {
+  function refreshShortcutsStatus(): void {
     if (!shortcutsStatus) return;
     shortcutsStatus.textContent = currentShortcutLabel
       ? (formatShortcutForDisplay(currentShortcutLabel) || currentShortcutLabel)
       : getMessage('settings_shortcuts_unset', '未设置');
   }
 
-  function getDefaultFallbackShortcut() {
+  function getDefaultFallbackShortcut(): string {
     return isMacPlatform ? 'Command+Shift+K' : 'Ctrl+Shift+K';
   }
 
-  function renderFallbackShortcutTokens(shortcut, animate) {
+  function renderFallbackShortcutTokens(shortcut: string, animate?: boolean): void {
     if (!shortcutHotkeyController) {
       return;
     }
@@ -63,7 +94,7 @@ function createFallbackShortcutSection(options) {
     });
   }
 
-  function setFallbackShortcutLabel(value, animate) {
+  function setFallbackShortcutLabel(value: string, animate?: boolean): void {
     currentShortcutLabel = value || '';
     if (fallbackShortcutInput) {
       fallbackShortcutInput.value = '';
@@ -73,7 +104,7 @@ function createFallbackShortcutSection(options) {
     refreshShortcutsStatus();
   }
 
-  function updateFallbackShortcutResetVisibility() {
+  function updateFallbackShortcutResetVisibility(): void {
     if (!resetShortcutButton) {
       return;
     }
@@ -88,9 +119,9 @@ function createFallbackShortcutSection(options) {
     }
   }
 
-  function stopFallbackShortcutCapture() {
+  function stopFallbackShortcutCapture(): void {
     if (fallbackCaptureStopTimer) {
-      clearTimeout(fallbackCaptureStopTimer);
+      windowObj.clearTimeout(fallbackCaptureStopTimer);
       fallbackCaptureStopTimer = null;
     }
     isCapturingFallbackShortcut = false;
@@ -106,47 +137,42 @@ function createFallbackShortcutSection(options) {
     }
   }
 
-  function stopFallbackShortcutCaptureDeferred(delayMs) {
+  function stopFallbackShortcutCaptureDeferred(delayMs: number): void {
     if (fallbackCaptureStopTimer) {
-      clearTimeout(fallbackCaptureStopTimer);
+      windowObj.clearTimeout(fallbackCaptureStopTimer);
       fallbackCaptureStopTimer = null;
     }
-    fallbackCaptureStopTimer = setTimeout(() => {
+    fallbackCaptureStopTimer = windowObj.setTimeout(() => {
       fallbackCaptureStopTimer = null;
       stopFallbackShortcutCapture();
     }, Math.max(0, Number(delayMs) || 0));
   }
 
-  function persistFallbackShortcut(value, onDone) {
+  function persistFallbackShortcut(value: string, onDone: (ok: boolean) => void): void {
     if (!storageArea) {
-      if (typeof onDone === 'function') {
-        onDone(true);
-      }
+      onDone(true);
       return;
     }
     storageArea.set({ [FALLBACK_SHORTCUT_STORAGE_KEY]: value }, () => {
-      const ok = !(chrome.runtime && chrome.runtime.lastError);
-      if (typeof onDone === 'function') {
-        onDone(ok);
-      }
+      onDone(!chrome.runtime.lastError);
     });
   }
 
-  function loadCurrentShortcut() {
+  function loadCurrentShortcut(): void {
     const defaultShortcut = getDefaultFallbackShortcut();
-    if (!chrome || !chrome.commands || typeof chrome.commands.getAll !== 'function') {
+    if (!chrome.commands || typeof chrome.commands.getAll !== 'function') {
       setFallbackShortcutLabel(defaultShortcut);
       return;
     }
     chrome.commands.getAll((commands) => {
-      if (chrome.runtime && chrome.runtime.lastError) {
+      if (chrome.runtime.lastError) {
         setFallbackShortcutLabel(defaultShortcut);
         return;
       }
       const items = Array.isArray(commands) ? commands : [];
       const command = items.find((item) => item && item.name === 'show-search');
       const shortcut = command && typeof command.shortcut === 'string'
-        ? String(command.shortcut).trim()
+        ? command.shortcut.trim()
         : '';
       const effectiveShortcut = shortcut || defaultShortcut;
       setFallbackShortcutLabel(effectiveShortcut);
@@ -154,12 +180,9 @@ function createFallbackShortcutSection(options) {
   }
 
   // Records a chord from keydown while the field is focused; Escape cancels.
-  function bindControls() {
+  function bindControls(): void {
     if (fallbackShortcutInput) {
-      const handleFallbackShortcutKeydown = (event) => {
-        if (!event) {
-          return;
-        }
+      const handleFallbackShortcutKeydown = (event: KeyboardEvent): void => {
         if (event.key === 'Tab') {
           return;
         }
@@ -192,7 +215,7 @@ function createFallbackShortcutSection(options) {
           stopFallbackShortcutCaptureDeferred(260);
         }
       };
-      const captureWindowKeydown = (event) => {
+      const captureWindowKeydown = (event: KeyboardEvent): void => {
         if (!isCapturingFallbackShortcut) {
           return;
         }
@@ -201,8 +224,8 @@ function createFallbackShortcutSection(options) {
       windowObj.addEventListener('keydown', captureWindowKeydown, true);
       if (fallbackShortcutWrap) {
         fallbackShortcutWrap.addEventListener('pointerdown', (event) => {
-          const target = event && event.target;
-          if (target && target.closest && target.closest('button')) {
+          const target = event.target;
+          if (isElementNode(target) && target.closest('button')) {
             return;
           }
           event.preventDefault();
@@ -277,3 +300,4 @@ function createFallbackShortcutSection(options) {
 }
 
 export { createFallbackShortcutSection };
+export type { FallbackShortcutChromeApi, FallbackShortcutElements, FallbackShortcutOptions };

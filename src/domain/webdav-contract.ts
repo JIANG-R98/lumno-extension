@@ -5,6 +5,7 @@
 import * as settings from './settings';
 import * as shortcutStore from './shortcuts-store';
 import type { GroupedShortcutItem, ShortcutGroup, ShortcutStateRead } from './shortcuts-store';
+import type { WebDavOperation } from './messages';
 import type { StorageItems } from './storage-port';
 
 type WebDavAssetMime = 'image/png' | 'image/webp';
@@ -513,6 +514,122 @@ function describeFields(key: string, previous: unknown, left: unknown, right: un
     remote: summarizeValue(fieldValue(key, theirs[field])) }));
 }
 
+// The operations the options page may ask the worker for.
+const WEBDAV_OPERATIONS: readonly WebDavOperation[] = Object.freeze([
+  'status', 'add', 'test', 'save', 'remove', 'enable', 'connect', 'sync', 'pause', 'browser',
+  'schedule', 'recover', 'conflictDetails', 'restoreBackup', 'dismissSuggestion'
+]);
+
+// A requested operation; null when it names none.
+function readWebDavOperation(value: unknown): WebDavOperation | null {
+  return WEBDAV_OPERATIONS.find((operation) => operation === value) || null;
+}
+
+// Conflict descriptions as the worker sent them, read as untrusted; an
+// entry that is not one is left out.
+function readConflictDescriptions(value: unknown): ConflictDescription[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const items: ConflictDescription[] = [];
+  value.forEach((entry: unknown) => {
+    const item = readConflictDescription(entry);
+    if (item) {
+      items.push(item);
+    }
+  });
+  return items;
+}
+
+function readConflictDescription(value: unknown): ConflictDescription | null {
+  if (!value || typeof value !== 'object' || !('key' in value) || !('domain' in value) ||
+      !('local' in value) || !('remote' in value) || typeof value.key !== 'string') {
+    return null;
+  }
+  const { key, domain } = value;
+  if ((domain === 'shortcuts' || domain === 'wallpapers') && key === domain) {
+    const local = readListChangeSummary(value.local);
+    const remote = readListChangeSummary(value.remote);
+    if (!local || !remote) {
+      return null;
+    }
+    return key === 'shortcuts'
+      ? { key: 'shortcuts', domain: 'shortcuts', local, remote }
+      : { key: 'wallpapers', domain: 'wallpapers', local, remote };
+  }
+  if (domain !== 'preference') {
+    return null;
+  }
+  const local = readValueSummary(value.local);
+  const remote = readValueSummary(value.remote);
+  if (!local || !remote) {
+    return null;
+  }
+  const field = 'field' in value && typeof value.field === 'string' ? value.field : undefined;
+  return field === undefined
+    ? { key, domain: 'preference', local, remote }
+    : { key, field, domain: 'preference', local, remote };
+}
+
+function readNameSample(value: unknown): NameSample | null {
+  if (!value || typeof value !== 'object' || !('names' in value) || !('count' in value) ||
+      !Array.isArray(value.names) || typeof value.count !== 'number') {
+    return null;
+  }
+  return {
+    names: value.names.filter((name: unknown): name is string => typeof name === 'string'),
+    count: value.count
+  };
+}
+
+function readListChangeSummary(value: unknown): ListChangeSummary | null {
+  if (!value || typeof value !== 'object' || !('total' in value) || typeof value.total !== 'number' ||
+      !('added' in value) || !('removed' in value) || !('changed' in value)) {
+    return null;
+  }
+  const added = readNameSample(value.added);
+  const removed = readNameSample(value.removed);
+  const changed = readNameSample(value.changed);
+  if (!added || !removed || !changed) {
+    return null;
+  }
+  const summary: ListChangeSummary = {
+    total: value.total,
+    added,
+    removed,
+    changed,
+    reordered: 'reordered' in value && value.reordered === true
+  };
+  if ('selectionChanged' in value && typeof value.selectionChanged === 'boolean') {
+    summary.selectionChanged = value.selectionChanged;
+  }
+  return summary;
+}
+
+function readValueSummary(value: unknown): ValueSummary | null {
+  if (!value || typeof value !== 'object' || !('kind' in value)) {
+    return null;
+  }
+  const kind = value.kind;
+  const inner: unknown = 'value' in value ? value.value : undefined;
+  if (kind === 'unset' || kind === 'changed') {
+    return { kind };
+  }
+  if (kind === 'boolean' && typeof inner === 'boolean') {
+    return { kind, value: inner };
+  }
+  if (kind === 'number' && typeof inner === 'number') {
+    return { kind, value: inner };
+  }
+  if (kind === 'text' && typeof inner === 'string') {
+    return { kind, value: inner };
+  }
+  if (kind === 'list' && 'count' in value && typeof value.count === 'number') {
+    return { kind, count: value.count };
+  }
+  return null;
+}
+
 function describeConflict(base: WebDavState, local: WebDavState, remote: WebDavState, keys: readonly string[]): ConflictDescription[] {
   return [...new Set(keys)].flatMap((key): ConflictDescription | ConflictDescription[] => {
     if (key === 'shortcuts') return { key, domain: 'shortcuts', local: describeShortcuts(base, local), remote: describeShortcuts(base, remote) };
@@ -626,6 +743,9 @@ export {
   mergeStates,
   mergeInitialWallpapers,
   describeConflict,
+  readConflictDescriptions,
+  readWebDavOperation,
+  WEBDAV_OPERATIONS,
   planChromeBackup
 };
 export type {

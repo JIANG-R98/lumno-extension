@@ -1,10 +1,153 @@
-// @ts-nocheck
+// The WebDAV card on the Account tab: the connections the worker reports,
+// their actions, and the copy for their states and failures.
 import * as LumnoSettings from '../domain/settings';
+import type { WebDavOperation } from '../domain/messages';
+import { readConflictDescriptions, readWebDavOperation } from '../domain/webdav-contract';
+import type { ConflictDescription, ValueSummary } from '../domain/webdav-contract';
 import * as LumnoMessaging from '../platform/messaging';
+import type { MessageRuntime } from '../platform/messaging';
+import type { GetMessage } from './options-types';
+import type { WebDavActionResult, WebDavConfig, WebDavConflictItem, WebDavConnection } from './react/webdav-list';
 
 const EXPECTED_CLIENT_REVISION = 'dav-lock-5';
 const EXPECTED_SYNC_REVISION = 'dav-multi-1';
-function createCopy(t) {
+
+// A connection as the worker's status reports it.
+interface WebDavConnectionStatus {
+  id: string;
+  config: WebDavConfig;
+  enabled: boolean;
+  state: string;
+  error: string;
+  diagnostic: unknown;
+  retryAt: number | null;
+  lastSyncAt: number | null;
+  localPrimary: boolean;
+  chromeBackup: string;
+  conflicts: string[];
+  needsRecovery: boolean;
+  hasMigrationBackup: boolean;
+}
+
+interface WebDavStatus {
+  clientRevision: string;
+  syncRevision: string;
+  connections: WebDavConnectionStatus[];
+  // Connections other devices published through browser sync.
+  suggestions: WebDavConfig[];
+}
+
+// A failed request: the worker's code and its redacted diagnostic.
+interface WebDavFailure {
+  code: string;
+  diagnostic: unknown;
+}
+
+interface WebDavChromeApi {
+  runtime: MessageRuntime & {
+    lastError?: { message?: string } | null;
+    getManifest?(): { version?: string };
+  };
+  storage: {
+    onChanged: { addListener(listener: (changes: Record<string, unknown>, areaName: string) => void): void };
+  };
+}
+
+interface WebDavControllerOptions {
+  chromeApi: WebDavChromeApi;
+  getMessage: GetMessage;
+}
+
+type Translate = (key: string, fallback: string) => string;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function readText(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function readTime(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function readConfig(value: unknown): WebDavConfig | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  return {
+    endpoint: readText(value.endpoint),
+    directory: readText(value.directory),
+    username: readText(value.username),
+    hasPassword: value.hasPassword === true
+  };
+}
+
+function readConnection(value: unknown): WebDavConnectionStatus | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const config = readConfig(value.config);
+  if (!config) {
+    return null;
+  }
+  return {
+    id: readText(value.id),
+    config,
+    enabled: value.enabled === true,
+    state: readText(value.state),
+    error: readText(value.error),
+    diagnostic: value.diagnostic,
+    retryAt: readTime(value.retryAt),
+    lastSyncAt: readTime(value.lastSyncAt),
+    localPrimary: value.localPrimary === true,
+    chromeBackup: readText(value.chromeBackup),
+    conflicts: Array.isArray(value.conflicts)
+      ? value.conflicts.filter((key: unknown): key is string => typeof key === 'string')
+      : [],
+    needsRecovery: value.needsRecovery === true,
+    hasMigrationBackup: value.hasMigrationBackup === true
+  };
+}
+
+// The worker's status reply; an older worker reports one connection at the top level.
+function readStatus(value: Record<string, unknown>): WebDavStatus {
+  const source = Array.isArray(value.connections)
+    ? value.connections
+    : (isRecord(value.config) ? [{ id: 'default', ...value }] : []);
+  const connections: WebDavConnectionStatus[] = [];
+  source.forEach((entry: unknown) => {
+    const connection = readConnection(entry);
+    if (connection) {
+      connections.push(connection);
+    }
+  });
+  const suggestions: WebDavConfig[] = [];
+  if (Array.isArray(value.suggestions)) {
+    value.suggestions.forEach((entry: unknown) => {
+      const config = readConfig(entry);
+      if (config) {
+        suggestions.push(config);
+      }
+    });
+  }
+  return {
+    clientRevision: readText(value.clientRevision),
+    syncRevision: readText(value.syncRevision),
+    connections,
+    suggestions
+  };
+}
+
+function readFailure(error: unknown): WebDavFailure {
+  return {
+    code: error instanceof Error ? error.message : String(error),
+    diagnostic: isRecord(error) ? error.diagnostic : undefined
+  };
+}
+
+function createCopy(t: Translate): Record<string, string> {
   return {
     confirm_ok: t("confirm_ok", "确认"),
     confirm_cancel: t("confirm_cancel", "取消"),
@@ -89,7 +232,7 @@ function createCopy(t) {
 }
 // Conflict summaries name settings by the title already shown on the
 // settings page; keys without a single visible title fall back to their tab.
-const PREFERENCE_LABELS = [
+const PREFERENCE_LABELS: ReadonlyArray<readonly [fragment: string, messageKey: string]> = [
   ['theme_mode_2024', 'settings_theme_title'], ['newtab_theme', 'newtab_theme_scope_label'],
   ['language', 'settings_language_title'], ['recent_mode', 'settings_recent_title'],
   ['recent_count', 'settings_recent_sites_title'], ['recent_sites', 'settings_recent_sites_title'],
@@ -137,7 +280,11 @@ const PREFERENCE_LABELS = [
 ];
 // Field-merged records name each conflicting field, and enumerated text
 // values use the option names the settings controls show.
-const FIELD_LABELS = {
+interface FieldLabels {
+  fields: Record<string, string> | null;
+  values: Record<string, string>;
+}
+const FIELD_LABELS: Record<string, FieldLabels> = {
   newtab_quote_prefs: {
     fields: { enabled: 'newtab_quote_title', position: 'newtab_quote_position', category: 'newtab_quote_category',
       fontSize: 'newtab_quote_font_size_label' },
@@ -147,24 +294,31 @@ const FIELD_LABELS = {
   // Fields are folder references with no readable name; the color shows which is which.
   bookmark_folder_color_refs: { fields: null, values: {} }
 };
-function preferenceLabel(t, key) {
+function preferenceLabel(t: Translate, key: string): string {
   const match = PREFERENCE_LABELS.find(([fragment]) => key.includes(fragment));
   const label = match ? t(match[1], '').trim() : '';
   return label || t('webdav_preference_other', '其他设置');
 }
 // Whole-value settings that need more than their title: a qualifier for
 // settings sharing one title, and the option names of enumerated values.
-const VALUE_LABELS = {
+interface ValueLabels {
+  qualifier?: string;
+  values: Record<string, string>;
+}
+const VALUE_LABELS: Record<string, ValueLabels> = {
   bookmark_topbar_surface_mode: { values: { adaptive: 'bookmark_topbar_surface_adaptive', clear: 'bookmark_topbar_surface_clear',
     transparent: 'bookmark_topbar_surface_transparent', custom: 'bookmark_topbar_surface_custom' } },
   bookmark_topbar_surface_color_light: { qualifier: 'theme_label_light', values: {} },
   bookmark_topbar_surface_color_dark: { qualifier: 'theme_label_dark', values: {} }
 };
-function optionValue(t, values, summary) {
-  return summary && summary.kind === 'text' && Object.hasOwn(values, summary.value)
+function optionValue(t: Translate, values: Record<string, string>, summary: ValueSummary): ValueSummary {
+  return summary.kind === 'text' && Object.hasOwn(values, summary.value)
     ? { ...summary, value: t(values[summary.value], summary.value) } : summary;
 }
-function preferenceItem(t, item) {
+function preferenceItem(
+  t: Translate,
+  item: Extract<ConflictDescription, { domain: 'preference' }>
+): WebDavConflictItem {
   const fields = Object.entries(FIELD_LABELS).find(([fragment]) => item.key.includes(fragment));
   if (!item.field || !fields) {
     const extra = Object.entries(VALUE_LABELS).find(([fragment]) => item.key.includes(fragment));
@@ -175,30 +329,41 @@ function preferenceItem(t, item) {
   }
   const labels = fields[1];
   const label = labels.fields && Object.hasOwn(labels.fields, item.field) ? t(labels.fields[item.field], '').trim() : '';
-  const value = (summary) => optionValue(t, labels.values, summary);
+  const value = (summary: ValueSummary): ValueSummary => optionValue(t, labels.values, summary);
   const fallback = labels.fields ? `${preferenceLabel(t, item.key)} · ${item.field}` : preferenceLabel(t, item.key);
   return { ...item, label: label || fallback, local: value(item.local), remote: value(item.remote) };
 }
-function createController(options) {
+function createController(options: WebDavControllerOptions) {
   const chromeApi = options.chromeApi;
   const t = options.getMessage;
   const panel = document.getElementById('lumno-webdav-settings');
   const api = globalThis.LumnoOptionsWebDavList;
-  if (!panel || !api) return null;
-  let current = { connections: [] };
+  const listHost = document.getElementById('lumno-webdav-list');
+  const setupHintElement = document.getElementById('lumno-webdav-setup-hint');
+  const versionElement = document.getElementById('lumno-webdav-version');
+  if (!panel || !api || !setupHintElement || !versionElement) return null;
+  // Narrowed here, for the functions below.
+  const setupHint = setupHintElement;
+  const versionNotice = versionElement;
+  let current: WebDavStatus = { clientRevision: '', syncRevision: '', connections: [], suggestions: [] };
   let initialized = false;
   let refreshSequence = 0;
   const infoController = globalThis.LumnoOptionsInfoButton?.createInfoButtonController(document.getElementById('lumno-webdav-beta-info'));
-  const requiresReload = () => initialized && (current.clientRevision !== EXPECTED_CLIENT_REVISION || current.syncRevision !== EXPECTED_SYNC_REVISION);
-  const message = (operation, extra) => new Promise((resolve, reject) => {
-    LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, { action: 'webdav', operation, ...extra }, (response) => {
-      const error = chromeApi.runtime.lastError;
-      if (error || !response || response.ok === false) reject(Object.assign(new Error(response && response.error || 'sync-failed'), {
-        diagnostic: response && response.diagnostic
-      }));
-      else resolve(response);
+  const requiresReload = (): boolean => initialized &&
+    (current.clientRevision !== EXPECTED_CLIENT_REVISION || current.syncRevision !== EXPECTED_SYNC_REVISION);
+  const message = (operation: WebDavOperation, extra?: Record<string, unknown>): Promise<Record<string, unknown>> =>
+    new Promise((resolve, reject) => {
+      LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, { action: 'webdav', operation, ...extra }, (response) => {
+        const error = chromeApi.runtime.lastError;
+        if (error || !response || response.ok === false) {
+          reject(Object.assign(new Error(response && response.ok === false ? response.error : 'sync-failed'), {
+            diagnostic: response && response.ok === false ? response.diagnostic : undefined
+          }));
+        } else {
+          resolve(response);
+        }
+      });
     });
-  });
   // Data errors name the exact record kind and whether this device or the
   // server holds it; connection errors share a sentence per cause.
   const DETAILED_CODES = ['remote-unreadable', 'remote-corrupt', 'invalid-state', 'state-too-large', 'response-too-large',
@@ -206,10 +371,10 @@ function createController(options) {
     'local-invalid-state', 'local-state-too-large', 'local-invalid-shortcuts', 'local-invalid-icon', 'local-invalid-wallpaper',
     'local-invalid-asset', 'local-asset-too-large', 'shortcut-id-conflict', 'write-failed', 'directory-unavailable',
     'folder-create-refused', 'merge-too-large'];
-  function errorText(code) {
+  function errorText(code: string): string {
     const generic = t('webdav_error_generic', '同步失败，请稍后重试。');
     if (DETAILED_CODES.includes(code)) return t(`webdav_error_${code.replace(/-/g, '_')}`, generic);
-    const categories = {
+    const categories: Record<string, string> = {
       'invalid-endpoint': 'endpoint', 'invalid-directory': 'directory', 'missing-credentials': 'credentials',
       'http-401': 'auth', 'http-403': 'permission', 'http-429': 'rate', 'http-503': 'unavailable', 'http-507': 'capacity',
       'conditional-write-unsupported': 'conditional', 'remote-changed': 'changed', 'local-changed': 'changed',
@@ -218,43 +383,50 @@ function createController(options) {
       'private-storage-unavailable': 'storage', 'local-storage-failed': 'storage',
       'shortcut-capacity': 'shortcuts', 'interrupted-apply': 'interrupted', 'duplicate-connection': 'duplicate'
     };
-    if (categories[code]) return t(`webdav_error_${categories[code]}`, generic);
+    if (Object.hasOwn(categories, code)) return t(`webdav_error_${categories[code]}`, generic);
     const status = /^http-(\d{3})$/.exec(String(code || ''));
     return status ? t('webdav_error_http', generic).replace('{status}', status[1]) : generic;
   }
   // Diagnostics stay out of the sentence users read; the card offers them
   // through a copy action for bug reports. Every failure carries its exact
   // code, plus the protocol phase and HTTP statuses when the client saw them.
-  function diagnosticText(code, diagnostic) {
+  function diagnosticText(code: string, diagnostic: unknown): string {
     if (!code) return '';
     const version = chromeApi.runtime.getManifest?.()?.version;
-    const parts = [version ? `Lumno ${version}` : 'Lumno', String(code)];
-    if (diagnostic && diagnostic.revision === EXPECTED_CLIENT_REVISION &&
+    const parts = [version ? `Lumno ${version}` : 'Lumno', code];
+    if (isRecord(diagnostic) && diagnostic.revision === EXPECTED_CLIENT_REVISION && typeof diagnostic.phase === 'string' &&
         ['state-etag', 'state-lock-create', 'directory-race', 'directory-delete', 'directory-recreate',
           'move-race', 'move-owner', 'move-delete', 'move-recreate', 'move-claim', 'state-read'].includes(diagnostic.phase)) {
-      const statuses = (Array.isArray(diagnostic.statuses) ? diagnostic.statuses : []).filter((status) => Number.isInteger(status) && status >= 0 && status <= 599).slice(0, 2);
+      const rawStatuses: unknown[] = Array.isArray(diagnostic.statuses) ? diagnostic.statuses : [];
+      const statuses = rawStatuses
+        .filter((status): status is number => typeof status === 'number' && Number.isInteger(status) && status >= 0 && status <= 599)
+        .slice(0, 2);
       parts.push(`${diagnostic.revision} / ${diagnostic.phase} / ${statuses.join(',')}`);
     }
     return parts.join(' · ');
   }
-  function failure(error) {
-    return Object.assign(new Error(errorText(error.message)), { diagnostic: diagnosticText(error.message, error.diagnostic) });
+  function failure(error: unknown): Error & { diagnostic: string } {
+    const { code, diagnostic } = readFailure(error);
+    return Object.assign(new Error(errorText(code)), { diagnostic: diagnosticText(code, diagnostic) });
   }
-  function connectionName(item) {
+  function connectionName(item: WebDavConnectionStatus): string {
     try { return new URL(item.config.endpoint).host; } catch (_error) { return item.config.endpoint; }
   }
-  const listController = api.createWebDavListController(document.getElementById('lumno-webdav-list'), {
-    async onAction(operation, id, extra) {
+  const listController = api.createWebDavListController(listHost, {
+    async onAction(operation, id, extra): Promise<WebDavActionResult> {
       if (requiresReload() && !['pause'].includes(operation)) throw new Error(createCopy(t).webdav_error_outdated);
+      const webDavOperation = readWebDavOperation(operation);
+      if (!webDavOperation) throw failure(new Error('unknown-operation'));
       try {
-        const result = await message(operation, { ...(id ? { id } : {}), ...extra });
-        if (operation === 'conflictDetails') {
+        const result = await message(webDavOperation, { ...(id ? { id } : {}), ...extra });
+        if (webDavOperation === 'conflictDetails') {
           const copy = createCopy(t);
-          return { items: (result.items || []).map((item) => item.domain === 'shortcuts' ? { ...item, label: copy.webdav_conflict_shortcuts }
+          return { items: readConflictDescriptions(result.items).map((item): WebDavConflictItem => item.domain === 'shortcuts'
+            ? { ...item, label: copy.webdav_conflict_shortcuts }
             : item.domain === 'wallpapers' ? { ...item, label: copy.webdav_conflict_wallpapers } : preferenceItem(t, item)) };
         }
         await refresh();
-        return result;
+        return { needsChoice: result.needsChoice === true };
       } catch (error) {
         // The action's own error is what the list shows; a failed refresh on top of it only warns.
         await refresh().catch((refreshError) => console.warn('[Lumno] WebDAV status refresh failed', refreshError));
@@ -262,13 +434,13 @@ function createController(options) {
       }
     }
   });
-  function render() {
+  function render(): void {
     infoController?.render({ tooltip: createCopy(t).webdav_beta_hint, tooltipKey: 'webdav_beta_hint' });
     const copy = createCopy(t);
-    const connections = (current.connections || (current.config ? [{ id: 'default', ...current }] : []))
-      .map((item) => ({ ...item, needsRecovery: Boolean(item.needsRecovery || (item.error === 'interrupted-apply' && !item.enabled)) }));
+    const connections = current.connections
+      .map((item) => ({ ...item, needsRecovery: item.needsRecovery || (item.error === 'interrupted-apply' && !item.enabled) }));
     const blocking = connections.find((item) => item.needsRecovery);
-    const describeError = (item) => {
+    const describeError = (item: WebDavConnectionStatus): string => {
       // The choice panel already explains a missing remote copy.
       if (!item.error || item.error === 'remote-missing') return '';
       if (item.error === 'interrupted-apply' && !item.needsRecovery && blocking) {
@@ -278,8 +450,8 @@ function createController(options) {
     };
     // A server refusing requests for a while is waited out in the background,
     // so the card says when the next try is instead of reporting a failure.
-    const throttleText = (item) => {
-      if (item.state !== 'pending' || !['http-429', 'http-503'].includes(item.error) || !Number.isFinite(item.retryAt)) return '';
+    const throttleText = (item: WebDavConnectionStatus): string => {
+      if (item.state !== 'pending' || !['http-429', 'http-503'].includes(item.error) || item.retryAt === null) return '';
       const time = new Date(Math.max(item.retryAt, Date.now())).toLocaleTimeString(document.documentElement.lang || undefined,
         { hour: '2-digit', minute: '2-digit' });
       return t('webdav_warning_throttled', '服务器暂时拒绝了请求（HTTP {status}），通常是短时间内请求过多，坚果云等网盘会这样限流。Lumno 会在 {time} 后自动重试，本机数据已保留。')
@@ -287,29 +459,37 @@ function createController(options) {
     };
     listController.render({
       ready: initialized, outdated: requiresReload(), copy, lang: document.documentElement.lang || '',
-      suggestions: Array.isArray(current.suggestions) ? current.suggestions : [],
-      connections: connections.map((item) => ({ ...item, errorText: throttleText(item) ? '' : describeError(item),
+      suggestions: current.suggestions,
+      connections: connections.map((item): WebDavConnection => ({
+        id: item.id,
+        config: item.config,
+        enabled: item.enabled,
+        state: item.state,
+        lastSyncAt: item.lastSyncAt,
+        hasMigrationBackup: item.hasMigrationBackup,
+        needsRecovery: item.needsRecovery,
+        errorText: throttleText(item) ? '' : describeError(item),
         remoteMissing: item.error === 'remote-missing',
         // An older local-only installation whose settings do not fit browser
         // sync keeps syncing through WebDAV; the card says the backup waits.
         warningText: throttleText(item) || (item.localPrimary && ['incomplete', 'failed'].includes(item.chromeBackup)
           ? t('webdav_warning_chrome_backup', '本机配置超过 Chrome 同步容量，暂未备份到 Chrome 同步。WebDAV 同步照常进行，本机数据保留；减少配置内容后会完成备份。') : ''),
         diagnosticText: diagnosticText(item.error, item.diagnostic),
-        conflictsText: [...new Set((item.conflicts || []).map((key) => copy[
+        conflictsText: [...new Set(item.conflicts.map((key) => copy[
           key === 'shortcuts' ? 'webdav_conflict_shortcuts' : key === 'wallpapers' ? 'webdav_conflict_wallpapers' : 'webdav_conflict_preferences'
         ]))].join(/^(zh|ja)/.test(document.documentElement.lang) ? '、' : ', ') }))
     });
-    document.getElementById('lumno-webdav-setup-hint').hidden = connections.length > 0;
-    const version = document.getElementById('lumno-webdav-version');
+    setupHint.hidden = connections.length > 0;
+    const version = versionNotice;
     version.hidden = !requiresReload();
     version.dataset.error = 'true';
     version.textContent = requiresReload() ? copy.webdav_error_outdated : '';
   }
-  async function refresh() {
+  async function refresh(): Promise<void> {
     const sequence = ++refreshSequence;
     const result = await message('status');
     if (sequence !== refreshSequence) return;
-    current = result;
+    current = readStatus(result);
     initialized = true;
     render();
   }
@@ -323,8 +503,8 @@ function createController(options) {
     }
   });
   render();
-  refresh().catch((error) => {
-    const version = document.getElementById('lumno-webdav-version');
+  refresh().catch((error: unknown) => {
+    const version = versionNotice;
     version.hidden = false;
     version.dataset.error = 'true';
     version.textContent = failure(error).message;
@@ -333,3 +513,4 @@ function createController(options) {
 }
 
 export { createController };
+export type { WebDavChromeApi, WebDavConnectionStatus, WebDavControllerOptions, WebDavStatus };
