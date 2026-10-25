@@ -6,7 +6,7 @@ import type { FaviconUrlResolver } from '../../domain/favicon/favicon-utils';
 import type * as ShortcutFavicon from '../../domain/favicon/shortcut-favicon';
 import type { CachedIconMap, CachedIconSource } from '../../domain/favicon/shortcut-favicon';
 import type * as SearchUtils from '../../domain/search/search-utils';
-import { isShortcutFolder } from '../../domain/shortcuts-store';
+import { getShortcutUrl, isShortcutFolder } from '../../domain/shortcuts-store';
 import type * as ShortcutsStore from '../../domain/shortcuts-store';
 import type {
   ShortcutGroup,
@@ -293,11 +293,6 @@ function isIconChangeList(
   value: ShortcutIconChange | readonly ShortcutIconChange[]
 ): value is readonly ShortcutIconChange[] {
   return Array.isArray(value);
-}
-
-// '' for a folder, which has no page of its own.
-function getShortcutUrl(item: ShortcutItem | VisibleShortcutItem): string {
-  return isShortcutFolder(item) ? '' : item.url;
 }
 
 function createShortcutsController(deps: ShortcutsControllerDeps) {
@@ -2042,4 +2037,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
   };
 }
 
+type ShortcutsController = ReturnType<typeof createShortcutsController>;
+
 export { createShortcutsController };
+export type { ShortcutsController, ShortcutsControllerDeps, ShortcutsControllerState };

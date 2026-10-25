@@ -102,6 +102,16 @@ interface ReturnDropTarget {
   markerElement?: HTMLElement | null;
 }
 
+// The middle of another website tile, which the dragged website stacks
+// onto to make a folder.
+interface ShortcutStackTarget {
+  kind: 'shortcut-stack';
+  surface: 'shortcuts';
+  shortcutId: string;
+  element: HTMLElement;
+  markerElement?: null;
+}
+
 // Over a surface that takes no drop here.
 interface BlockedDropTarget {
   kind: 'blocked';
@@ -116,6 +126,7 @@ type DragDropTarget =
   | ShortcutInsertionTarget
   | FolderDropTarget
   | ReturnDropTarget
+  | ShortcutStackTarget
   | BlockedDropTarget;
 
 // What every drag over the bookmarks keeps, whichever surface it started on.
@@ -401,7 +412,8 @@ function planShortcutReorder(options: {
   shortcuts?: readonly ShortcutItem[];
   order?: readonly string[];
   sourceOrder?: readonly string[] | null;
-  groups?: readonly string[] | null;
+  // An entry with no recorded group keeps its current one.
+  groups?: readonly (string | undefined)[] | null;
 }): ShortcutItem[] | null {
   const config = options;
   const shortcuts = config.shortcuts || [];
@@ -461,5 +473,6 @@ export type {
   ReturnDropTarget,
   ShortcutInsertionTarget,
   ShortcutPlacement,
+  ShortcutStackTarget,
   SurfaceDragState
 };

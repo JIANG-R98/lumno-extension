@@ -263,6 +263,11 @@ function isShortcutFolder<T extends ShortcutItem | VisibleShortcutItem>(item: T)
   return item.type === 'folder';
 }
 
+// A link's page; '' for a folder, which has none of its own.
+function getShortcutUrl(item: ShortcutItem | VisibleShortcutItem): string {
+  return isShortcutFolder(item) ? '' : item.url;
+}
+
 function isPortableFolder(item: ShortcutFolder): item is PortableShortcutFolder {
   return Boolean(item.folderRef);
 }
@@ -914,7 +919,8 @@ export {
   createShortcutStoragePlan,
   createAuthoritativeOverflowRecord,
   isShortcutFolder,
-  isPortableFolder
+  isPortableFolder,
+  getShortcutUrl
 };
 export type {
   GroupedShortcutItem,
