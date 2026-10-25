@@ -3,7 +3,7 @@ import type { FaviconUrlResolver, ThemeRgb } from '../../domain/favicon/favicon-
 import type * as ShortcutFavicon from '../../domain/favicon/shortcut-favicon';
 import type * as SearchUtils from '../../domain/search/search-utils';
 import type { SiteSearchProvider } from '../../domain/search/types';
-import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
+import type { ThemeLike, ThemeVariant } from '../../shared/favicon/favicon-theme';
 
 interface SuggestionThemesState {
   defaultTheme: ThemeVariant;
@@ -26,7 +26,7 @@ interface SuggestionThemesDeps {
   defaultAccentColor: ThemeRgb;
   shouldBlockOverlayFaviconForHost(hostname: string): boolean;
   getProviderIcon(provider: SiteSearchProvider): string;
-  getThemeForMode(theme: ThemeVariant): ThemeVariant;
+  getThemeForMode<T extends ThemeLike>(theme: T): T | ThemeVariant;
   overlayState: SuggestionThemesState;
 }
 
@@ -488,23 +488,24 @@ function createSuggestionThemes(deps: SuggestionThemesDeps) {
     return null;
   }
 
-  function applyThemeVariables(target: HTMLElement | null, theme: ThemeVariant | null): void {
+  // Themes from the list may be partial; a missing color clears its variable.
+  function applyThemeVariables(target: HTMLElement | null, theme: Partial<ThemeVariant> | null): void {
     if (!target || !theme) {
       return;
     }
     const resolvedTheme = getThemeForMode(theme);
-    target.style.setProperty('--x-ext-mark-bg', resolvedTheme.markBg);
-    target.style.setProperty('--x-ext-mark-text', resolvedTheme.markText);
-    target.style.setProperty('--x-ext-tag-bg', resolvedTheme.tagBg);
-    target.style.setProperty('--x-ext-tag-text', resolvedTheme.tagText);
-    target.style.setProperty('--x-ext-tag-border', resolvedTheme.tagBorder);
-    target.style.setProperty('--x-ext-key-bg', resolvedTheme.keyBg);
-    target.style.setProperty('--x-ext-key-text', resolvedTheme.keyText);
-    target.style.setProperty('--x-ext-key-border', resolvedTheme.keyBorder);
-    target.style.setProperty('--x-ext-icon-color', resolvedTheme.accent);
+    target.style.setProperty('--x-ext-mark-bg', resolvedTheme.markBg || '');
+    target.style.setProperty('--x-ext-mark-text', resolvedTheme.markText || '');
+    target.style.setProperty('--x-ext-tag-bg', resolvedTheme.tagBg || '');
+    target.style.setProperty('--x-ext-tag-text', resolvedTheme.tagText || '');
+    target.style.setProperty('--x-ext-tag-border', resolvedTheme.tagBorder || '');
+    target.style.setProperty('--x-ext-key-bg', resolvedTheme.keyBg || '');
+    target.style.setProperty('--x-ext-key-text', resolvedTheme.keyText || '');
+    target.style.setProperty('--x-ext-key-border', resolvedTheme.keyBorder || '');
+    target.style.setProperty('--x-ext-icon-color', resolvedTheme.accent || '');
   }
 
-  function applyMarkVariables(target: HTMLElement | null, theme: ThemeVariant | null, active: boolean): void {
+  function applyMarkVariables(target: HTMLElement | null, theme: Partial<ThemeVariant> | null, active: boolean): void {
     if (!target || !theme) {
       return;
     }
@@ -515,8 +516,8 @@ function createSuggestionThemes(deps: SuggestionThemesDeps) {
     const markText = active
       ? resolvedTheme.activeMarkText || resolvedTheme.markText
       : resolvedTheme.markText;
-    target.style.setProperty('--x-ext-mark-bg', markBg);
-    target.style.setProperty('--x-ext-mark-text', markText);
+    target.style.setProperty('--x-ext-mark-bg', markBg || '');
+    target.style.setProperty('--x-ext-mark-text', markText || '');
   }
 
   // Works out an icon's theme ahead of time from its fetched image.

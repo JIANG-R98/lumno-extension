@@ -1,11 +1,20 @@
 // Types the suggestion list shares between its rows, its runtime and the
 // New Tab and overlay adapters that create it.
+import type { TabRankFields } from '../../../../domain/messages';
+import type { HelpContextBlock } from '../../../../domain/search/help-center-search';
 import type {
+  DisplayedSuggestion,
   SearchActionModel,
   SearchActionModelOptions
 } from '../../../../domain/search/suggestion-action-model';
+import type { SiteSearchProvider } from '../../../../domain/search/types';
+import type { ThemeVariant } from '../../../favicon/favicon-theme';
 
-export type ThemeValue = Record<string, unknown> | null;
+// A row's theme, as the surface builds it from favicon-theme; the list
+// reads what is there and falls back for the rest.
+export type ThemeValue = Partial<ThemeVariant> | null;
+// A provider as rows carry it; command rows may leave fields out.
+export type SuggestionProvider = Partial<SiteSearchProvider>;
 type Translate = (key: string, fallback: string) => string;
 export type SuggestionsSurface = 'newtab' | 'overlay';
 export type SuggestionUpdateKind =
@@ -14,31 +23,26 @@ export type SuggestionUpdateKind =
   | 'append'
   | 'structure';
 
-export interface Suggestion {
-  type?: string;
-  title?: string;
-  url?: string;
-  favicon?: string;
-  path?: string;
-  commandText?: string;
-  reasons?: unknown[];
+// A row as the list draws it.
+export interface Suggestion extends DisplayedSuggestion {
   titleHighlight?: {
     text: string;
     query: string;
     ranges: Array<[number, number]>;
   };
-  isTopSite?: boolean;
-  provider?: Record<string, unknown> | null;
-  searchQuery?: string;
-  [key: string]: unknown;
+  // A help center page's matched passage.
+  context?: HelpContextBlock[];
+  // A help or feedback row's Remix icon and which link it opens.
+  iconName?: string;
+  feedbackKey?: string;
 }
 
-export interface OpenTabSuggestion {
+// An open tab as the list draws it, with its switch ranking when known.
+export interface OpenTabSuggestion extends Partial<TabRankFields> {
   id?: number;
   title?: string;
   url?: string;
   favIconUrl?: string;
-  [key: string]: unknown;
 }
 
 export interface SuggestionActionTagModel {
@@ -167,7 +171,7 @@ export interface SuggestionsRenderPayload {
   primarySuggestion?: Suggestion | null;
   primaryHighlightReason?: string;
   onlyKeywordSuggestions?: boolean;
-  mergedProvider?: Record<string, unknown> | null;
+  mergedProvider?: SuggestionProvider | null;
   emptyMessage?: string;
   // The empty-state illustration to show with emptyMessage.
   emptyArt?: 'noResults' | 'noCommands' | 'noTabs';
@@ -285,10 +289,10 @@ export interface SuggestionsViewOptions {
   getHelpPassageHost?: () => Node | null;
   getSearchActionLabel?: () => string;
   getSiteSearchDisplayName?: (
-    provider: Record<string, unknown>
+    provider: SuggestionProvider
   ) => string;
   isAiSiteSearchProvider?: (
-    provider: Record<string, unknown>
+    provider: SuggestionProvider
   ) => boolean;
   getDefaultSearchEngineThemeUrl?: () => string;
   getBrandAccentForUrl?: (url: string) => unknown;

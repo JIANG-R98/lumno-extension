@@ -97,7 +97,7 @@ function OpenTabRowComponent({
       url: tab.url || '',
       favicon: tab.favIconUrl || '',
       _xMatchedTabId:
-        typeof tab.id === 'number' ? tab.id : null
+        typeof tab.id === 'number' ? tab.id : undefined
     }),
     [tab.favIconUrl, tab.id, tab.url, titleText]
   );
