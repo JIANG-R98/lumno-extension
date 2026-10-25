@@ -2,7 +2,128 @@
 // that starts as a constant. newtab.js creates it first and hands the same
 // object to every module as `pageState`; properties whose first value
 // depends on settings or other modules are set where that value exists.
-function createPageState() {
+import * as SETTINGS from '../domain/settings';
+import type { BookmarkActionsState } from './bookmarks/bookmark-actions';
+import type { BookmarkCascadeActionsState } from './bookmarks/bookmark-cascade-actions';
+import type { BookmarkContextMenuState } from './bookmarks/bookmark-context-menu';
+import type { BookmarkDisplaySettingsState } from './bookmarks/bookmark-display-settings';
+import type { BookmarkDragControllerState } from './bookmarks/bookmark-drag-controller';
+import type { BookmarkPagerState } from './bookmarks/bookmark-pager';
+import type { BookmarkSectionState } from './bookmarks/bookmark-section';
+import type { BottomDockRuntimeState } from './shortcuts/bottom-dock-runtime';
+import type { CardThemesState } from './theme/card-themes';
+import type { ClipboardActionsState } from './clipboard-actions';
+import type { DefaultSearchEngineModuleState } from './search/default-search-engine';
+import type { EntryMotionState } from './entry-motion';
+import type { FeedbackControlState } from './feedback-control';
+import type { FocusResumeState } from './focus-resume';
+import type { FolderColorsState } from './bookmarks/folder-colors';
+import type { GlassSurfacesState } from './theme/glass-surfaces';
+import type { InputFocusState } from './input-focus';
+import type { ModeCommandsState } from './mode-commands';
+import type { PageFaviconsState } from './theme/page-favicons';
+import type { PageKeyboardState } from './page-keyboard';
+import type { PageLanguageState } from './page-language';
+import type { PageNavigationState } from './page-navigation';
+import type { PageNoticesState } from './page-notices';
+import type { PageResizeState } from './page-resize';
+import type { RecentCardDragState } from './recent/recent-card-drag';
+import type { RecentSectionState } from './recent/recent-section';
+import type { RecentSitesControllerState } from './recent/recent-sites-controller';
+import type { RecentSourcesState } from './recent/recent-sources';
+import type { SearchAutocompleteState } from './search/search-autocomplete';
+import type { SearchBoxControlsState } from './search/search-box-controls';
+import type { SearchBoxState } from './search/search-box';
+import type { SearchInputCompositionState } from './search/search-input-composition';
+import type { SearchModeControllerState } from './search/search-mode-controller';
+import type { SearchModesState } from './search/search-modes';
+import type { SearchNavigationState } from './search/search-navigation';
+import type { SearchSettingsSyncState } from './search/search-settings-sync';
+import type { SectionReloadState } from './section-reload';
+import type { ShortcutContextMenuState } from './shortcuts/shortcut-context-menu';
+import type { ShortcutDockState } from './shortcuts/shortcut-dock';
+import type { ShortcutDragState } from './shortcuts/shortcut-drag';
+import type { ShortcutPageActionsState } from './shortcuts/shortcut-page-actions';
+import type { ShortcutsControllerState } from './shortcuts/shortcuts-controller';
+import type { SiteSearchProvidersState } from './search/site-search-providers';
+import type { SiteSearchRuntimeState } from './search/site-search-runtime';
+import type { SiteThemeResolverState } from './theme/site-theme-resolver';
+import type { SuggestionsControllerState } from './search/suggestions-controller';
+import type { SuggestionsLayoutState } from './search/suggestions-layout';
+import type { TooltipBindingsState } from './tooltip-bindings';
+import type { TopContentState } from './top-content/top-content';
+import type { UrlPolicyState } from './url-policy';
+import type { WallpaperPageState } from './wallpaper/wallpaper-page';
+
+// Page state the modules typed so far do not declare yet: the theme and
+// language startup, layout and the site search icon cache.
+interface PageCoreState {
+  resolveInitialThemeReady: (() => void) | null;
+  resolveInitialLanguageReady: (() => void) | null;
+  currentRecentCount: number;
+  currentBookmarkColumns: number;
+  siteSearchIconCacheLoadPromise: Promise<unknown> | null;
+  siteSearchIconCacheRevision: number;
+  currentNewtabWidthMode: string;
+  currentNewtabSearchWidth: number | null;
+}
+
+// Every module's view of the page state, together.
+type NewtabPageState =
+  PageCoreState &
+  BookmarkActionsState &
+  BookmarkCascadeActionsState &
+  BookmarkContextMenuState &
+  BookmarkDisplaySettingsState &
+  BookmarkDragControllerState &
+  BookmarkPagerState &
+  BookmarkSectionState &
+  BottomDockRuntimeState &
+  CardThemesState &
+  ClipboardActionsState &
+  DefaultSearchEngineModuleState &
+  EntryMotionState &
+  FeedbackControlState &
+  FocusResumeState &
+  FolderColorsState &
+  GlassSurfacesState &
+  InputFocusState &
+  ModeCommandsState &
+  PageFaviconsState &
+  PageKeyboardState &
+  PageLanguageState &
+  PageNavigationState &
+  PageNoticesState &
+  PageResizeState &
+  RecentCardDragState &
+  RecentSectionState &
+  RecentSitesControllerState &
+  RecentSourcesState &
+  SearchAutocompleteState &
+  SearchBoxControlsState &
+  SearchBoxState &
+  SearchInputCompositionState &
+  SearchModeControllerState &
+  SearchModesState &
+  SearchNavigationState &
+  SearchSettingsSyncState &
+  SectionReloadState &
+  ShortcutContextMenuState &
+  ShortcutDockState &
+  ShortcutDragState &
+  ShortcutPageActionsState &
+  ShortcutsControllerState &
+  SiteSearchProvidersState &
+  SiteSearchRuntimeState &
+  SiteThemeResolverState &
+  SuggestionsControllerState &
+  SuggestionsLayoutState &
+  TooltipBindingsState &
+  TopContentState &
+  UrlPolicyState &
+  WallpaperPageState;
+
+function createPageState(): NewtabPageState {
   return {
     globalThemeMode: 'system',
     newtabThemeMode: 'global',
@@ -16,7 +137,6 @@ function createPageState() {
     resolveInitialLanguageReady: null,
     modeBadge: null,
     inputModeController: null,
-    inputParts: null,
     selectedIndex: -1,
     currentSuggestions: [],
     lastSuggestionResponse: [],
@@ -137,8 +257,84 @@ function createPageState() {
     handleTabKey: null,
 
     // Created once the search modes and providers below exist.
-    focusResume: null
+    focusResume: null,
+
+    // Set by the modules that own them once they exist.
+    inputParts: null,
+    suggestionsContainer: null,
+    recentCardDragRuntime: null,
+    faviconCacheRuntime: null,
+    requestFaviconData: null,
+    faviconDataCache: new Map(),
+    bookmarkContextMenu: null,
+    bookmarkContextMenuSelectController: null,
+    bookmarkContextMenuTarget: null,
+    bookmarkCascadeRuntime: null,
+    bookmarkDragState: null,
+    bookmarkTopbarRuntime: null,
+    resolveInitialBookmarkViewModeReady: null,
+    shortcutSection: null,
+    shortcutGrid: null,
+    addShortcutButton: null,
+    recentSection: null,
+    toastController: null,
+    feedbackLinks: null,
+    feedbackControl: null,
+    feedbackButton: null,
+    feedbackReactController: null,
+    siteSearchState: null,
+    localSearchScopeState: null,
+    folderColorPicker: null,
+    searchScopeIcon: null,
+    currentMessages: null,
+    recentContextMenu: null,
+    recentContextMenuSelectController: null,
+    recentContextMenuTarget: null,
+    recentHistoryDialogController: null,
+    startupRecentSourceReads: null,
+    firefoxBrowserIcons: null,
+    firefoxBrowserIconsReady: Promise.resolve(null),
+    siteSearchProvidersCache: null,
+    aggregateSearchesCache: null,
+    aggregateSearchesLoadPromise: null,
+    shortcutContextMenu: null,
+    shortcutContextMenuSelectController: null,
+    shortcutContextMenuTarget: null,
+    shortcutPlateColorPicker: null,
+    shortcutPlateColorPick: null,
+    shortcutDialogController: null,
+
+    bookmarkViewModeRevision: 0,
+    bookmarkLoadedOnce: false,
+    bookmarkRenderSignature: '',
+    sectionDataRevision: 0,
+    newtabShortcuts: [],
+    currentResolvedLocale: null,
+    currentLanguageMode: 'system',
+    recentLoadedOnce: false,
+    recentRenderSignature: '',
+    progressTrackingEnabled: SETTINGS.normalizeProgressTrackingEnabled(undefined),
+    enabledSearchResultSourceTypes: ['topSite', 'bookmark', 'history'],
+    searchResultDisplayLimit: 10,
+    newtabOpenInNewTab: SETTINGS.normalizeNewtabOpenInNewTab(null),
+    faviconRequestBlacklistItems: [],
+    faviconEnhancedFetchEnabled: false,
+    shortcutDockPendingPointerX: Number.NaN,
+    newtabShortcutColumns: SETTINGS.NEWTAB_SHORTCUT_COLUMNS_DEFAULT,
+    newtabShortcutSize: SETTINGS.NEWTAB_SHORTCUT_SIZE_DEFAULT,
+    newtabShortcutGap: SETTINGS.NEWTAB_SHORTCUT_GAP_DEFAULT,
+    siteSearchIconCache: {},
+    siteSearchIconCacheLoaded: false,
+    siteSearchProvidersLoadVersion: 0,
+    aggregateSearchesLoadVersion: 0,
+    AGGREGATE_SEARCH_STORAGE_KEY: SETTINGS.AGGREGATE_SEARCH_STORAGE_KEY,
+    newtabTimeFont: SETTINGS.NEWTAB_TIME_FONT_DEFAULT,
+    newtabTimeFontSize: SETTINGS.NEWTAB_TIME_FONT_SIZE_DEFAULT,
+    newtabTimeFontWeight: SETTINGS.NEWTAB_TIME_FONT_WEIGHT_DEFAULT,
+    newtabTimeInk: SETTINGS.NEWTAB_TIME_INK_DEFAULT,
+    newtabTimeOpacity: SETTINGS.NEWTAB_TIME_OPACITY_DEFAULT
   };
 }
 
 export { createPageState };
+export type { NewtabPageState };

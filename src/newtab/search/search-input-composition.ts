@@ -6,7 +6,7 @@ import type { DirectNavigationSettleController } from './direct-navigation-settl
 import type { RequestSuggestions } from './search-types';
 
 interface SearchInputCompositionState {
-  inputParts: { input: HTMLInputElement };
+  inputParts: { input: HTMLInputElement } | null;
   // Bumped by each request, so an older one's results are dropped.
   suggestionRequestSeq: number;
   remoteSuggestionDebounceTimer: ReturnType<typeof setTimeout> | null;
@@ -41,7 +41,13 @@ function createSearchInputComposition(deps: SearchInputCompositionDeps): void {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  const input = pageState.inputParts.input;
+  // The search box exists before this module is created.
+  const inputParts = pageState.inputParts;
+  if (!inputParts) {
+    throw new Error('Search input unavailable');
+  }
+
+  const input = inputParts.input;
 
   input.addEventListener('compositionstart', function(event) {
     pageState.suggestionRequestSeq += 1;

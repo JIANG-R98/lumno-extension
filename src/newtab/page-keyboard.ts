@@ -12,10 +12,10 @@ interface PageKeyboardState {
   recentCardDragRuntime: {
     hasRecentCardDragSession(): boolean;
     finishRecentCardDrag(event: null, options: { cancel: boolean }): void;
-  };
+  } | null;
   folderColorPicker: { isOpen(): boolean } | null;
   suggestionsContainer: NumberShortcutContainer | null;
-  inputParts: { input: HTMLElement };
+  inputParts: { input: HTMLElement } | null;
 }
 
 interface PageKeyboardDeps {
@@ -57,11 +57,14 @@ function createPageKeyboard(deps: PageKeyboardDeps): void {
   // Escape cancels a drag before it closes any open layer.
   dismissStack.register('drag', {
     priority: 1,
-    isOpen: () => Boolean(pageState.shortcutDragState || pageState.bookmarkDragState || pageState.recentCardDragRuntime.hasRecentCardDragSession()),
+    isOpen: () => Boolean(pageState.shortcutDragState || pageState.bookmarkDragState ||
+      (pageState.recentCardDragRuntime && pageState.recentCardDragRuntime.hasRecentCardDragSession())),
     close: () => {
       finishShortcutDrag(null, { cancel: true });
       finishBookmarkDrag(null, { canceled: true });
-      pageState.recentCardDragRuntime.finishRecentCardDrag(null, { cancel: true });
+      if (pageState.recentCardDragRuntime) {
+        pageState.recentCardDragRuntime.finishRecentCardDrag(null, { cancel: true });
+      }
     }
   });
 
@@ -100,7 +103,7 @@ function createPageKeyboard(deps: PageKeyboardDeps): void {
     if (event.key !== 'Tab') {
       return;
     }
-    if (document.activeElement !== pageState.inputParts.input) {
+    if (!pageState.inputParts || document.activeElement !== pageState.inputParts.input) {
       return;
     }
     if (pageState.handleTabKey) {

@@ -21,8 +21,9 @@ interface SiteThemeResolverState {
   // Favicon data URLs by icon address.
   faviconDataCache: Map<string, string>;
   // Fetches an icon's data URL; null when it cannot.
-  requestFaviconData(url: string): Promise<string | null>;
-  faviconCacheRuntime: Pick<FaviconCacheRuntime, 'ensureCachesReady'>;
+  // Set once the page's favicon runtime exists.
+  requestFaviconData: ((url: string) => Promise<string | null>) | null;
+  faviconCacheRuntime: Pick<FaviconCacheRuntime, 'ensureCachesReady'> | null;
 }
 
 // Applies a theme to an element that shows a site.
@@ -584,7 +585,9 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
     if (cachedFaviconData) {
       return loadThemeFromImageSource(url, cachedFaviconData, hostKey, Boolean(useHostCache), { preferIconTheme });
     }
-    return withThemeTimeout(pageState.requestFaviconData(url), THEME_ICON_LOAD_TIMEOUT_MS, null).then((dataUrl) => {
+    const requestFaviconData = pageState.requestFaviconData;
+    const faviconData = requestFaviconData ? requestFaviconData(url) : Promise.resolve(null);
+    return withThemeTimeout(faviconData, THEME_ICON_LOAD_TIMEOUT_MS, null).then((dataUrl) => {
       if (dataUrl) {
         return loadThemeFromImageSource(url, dataUrl, hostKey, Boolean(useHostCache), { preferIconTheme });
       }
@@ -958,9 +961,10 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
       return;
     }
     if (!areFaviconRenderCachesReady()) {
-      if (!themeResolutionCacheWaitStarted) {
+      const faviconCacheRuntime = pageState.faviconCacheRuntime;
+      if (!themeResolutionCacheWaitStarted && faviconCacheRuntime) {
         themeResolutionCacheWaitStarted = true;
-        void pageState.faviconCacheRuntime.ensureCachesReady().then(() => {
+        void faviconCacheRuntime.ensureCachesReady().then(() => {
           themeResolutionCacheWaitStarted = false;
           scheduleThemeResolutionFlush(0);
         });

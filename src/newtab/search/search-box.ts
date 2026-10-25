@@ -26,7 +26,7 @@ type ViewOption<K extends keyof SuggestionsViewOptions> = NonNullable<Suggestion
 
 interface SearchBoxState {
   suggestionsView: SuggestionsViewController | null;
-  suggestionsContainer: HTMLElement;
+  suggestionsContainer: HTMLElement | null;
   tabRankScoreDebugEnabled: boolean;
   simpleModeEnabled: boolean;
   selectedIndex: number;
@@ -228,6 +228,12 @@ function createSearchBox(deps: SearchBoxDeps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
+  // The page structure creates the results container before the search box.
+  const suggestionsContainer = pageState.suggestionsContainer;
+  if (!suggestionsContainer) {
+    throw new Error('Search results container unavailable');
+  }
+
   const NEWTAB_SUGGESTIONS_VIEW = globalThis.LumnoNewtabSuggestionsView;
   if (!NEWTAB_SUGGESTIONS_VIEW) {
     throw new Error('Suggestions view unavailable');
@@ -254,7 +260,7 @@ function createSearchBox(deps: SearchBoxDeps) {
   let isApplyingSearchInputHistory = false;
   pageState.suggestionsView = NEWTAB_SUGGESTIONS_VIEW.createSuggestionsView({
     document,
-    container: pageState.suggestionsContainer,
+    container: suggestionsContainer,
     items: suggestionItems,
     t,
     formatMessage,

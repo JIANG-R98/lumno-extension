@@ -18,9 +18,9 @@ import type { ActiveLocalScope, RenderSuggestions } from './search-types';
 type ModeOption<K extends keyof InputModeConfig> = NonNullable<InputModeConfig[K]>;
 
 interface SearchModeControllerState {
-  inputParts: SearchInputParts;
+  inputParts: SearchInputParts | null;
   modeBadge: HTMLElement | null;
-  suggestionsContainer: HTMLElement;
+  suggestionsContainer: HTMLElement | null;
   inputModeController: InputModeController | null;
   siteSearchState: SiteSearchProvider | null;
   localSearchScopeState: ActiveLocalScope | null;
@@ -132,6 +132,17 @@ function createSearchModeController(deps: SearchModeControllerDeps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
+  // The search box exists before this module is created.
+  const inputParts = pageState.inputParts;
+  if (!inputParts) {
+    throw new Error('Search input unavailable');
+  }
+  // The page structure creates the results container before the search box.
+  const suggestionsContainer = pageState.suggestionsContainer;
+  if (!suggestionsContainer) {
+    throw new Error('Search results container unavailable');
+  }
+
   function setSiteSearchTabHint(provider: SiteSearchProvider | null): void {
     if (pageState.inputModeController) {
       pageState.inputModeController.setTabHintVisible(true, provider);
@@ -182,7 +193,7 @@ function createSearchModeController(deps: SearchModeControllerDeps) {
   const defaultPlaceholder = searchInput.placeholder;
   const defaultCaretColor = searchInput.style.caretColor || '#7DB7FF';
   const inputModePrefixTransition = 'opacity 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1), background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, color 140ms ease';
-  pageState.inputModeController = SEARCH_INPUT_MODE.createInputModeController(pageState.inputParts, {
+  pageState.inputModeController = SEARCH_INPUT_MODE.createInputModeController(inputParts, {
     surface: 'newtab',
     useImportantStyles: false,
     prefixTransition: inputModePrefixTransition,
@@ -191,7 +202,7 @@ function createSearchModeController(deps: SearchModeControllerDeps) {
     modeBadgeElement: pageState.modeBadge,
     rightReserveBase: 100,
     rightAnchorOffset: 88,
-    getExtraRightInset: () => (pageState.inputParts.syncClearAction() ? SEARCH_CLEAR_BUTTON_INSET : 0),
+    getExtraRightInset: () => (inputParts.syncClearAction() ? SEARCH_CLEAR_BUTTON_INSET : 0),
     baseInputPaddingLeft: 44,
     getThemeForMode,
     defaultTheme,
@@ -236,7 +247,7 @@ function createSearchModeController(deps: SearchModeControllerDeps) {
     const searchModeMenuResultResizeObserver = new window.ResizeObserver(
       syncSearchModeMenuResultOffset
     );
-    searchModeMenuResultResizeObserver.observe(pageState.suggestionsContainer);
+    searchModeMenuResultResizeObserver.observe(suggestionsContainer);
   }
   loadSiteSearchIconCache().then(() => {
     if (!pageState.siteSearchState || !pageState.inputModeController) {

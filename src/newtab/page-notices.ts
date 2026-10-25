@@ -19,9 +19,9 @@ import type { Translate } from './newtab-types';
 interface PageNoticesState {
   updateNoticeController: UpdateNoticeController | null;
   engagementNoticeController: EngagementNoticeController | null;
-  inputParts: { input: HTMLInputElement; container: HTMLElement };
+  inputParts: { input: HTMLInputElement; container: HTMLElement } | null;
   feedbackLinks: CommunityLinks | null;
-  currentResolvedLocale: string;
+  currentResolvedLocale: string | null;
   currentLanguageMode: string;
   helpCenterAskHintController: FeatureHintController | null;
   webdavFeatureHintController: { dismiss?: () => void } | null;
@@ -75,6 +75,14 @@ function createPageNotices(deps: PageNoticesDeps) {
 
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
+
+  // The search box exists before this module is created.
+  const inputParts = pageState.inputParts;
+  if (!inputParts) {
+    throw new Error('Search input unavailable');
+  }
+  const searchInput = inputParts.input;
+  const searchInputContainer = inputParts.container;
 
   const NEWTAB_PAGE_NOTICE = globalThis.LumnoNewtabPageNotice;
 
@@ -204,7 +212,7 @@ function createPageNotices(deps: PageNoticesDeps) {
         return !updateNoticeVisible &&
           !updateNoticeClaimsSessionSlot() &&
           document.visibilityState === 'visible' &&
-          !String(pageState.inputParts.input.value || '').trim() &&
+          !String(searchInput.value || '').trim() &&
           document.body.getAttribute('data-nt-suggestions-open') !== 'true' &&
           !isFeedbackPopoverOpen();
       },
@@ -278,7 +286,7 @@ function createPageNotices(deps: PageNoticesDeps) {
         if (helpCenterAskProvider) {
           activateSiteSearch(helpCenterAskProvider);
         }
-        pageState.inputParts.input.focus({ preventScroll: true });
+        searchInput.focus({ preventScroll: true });
       }
     });
     pageState.helpCenterAskHintController = askHint;
@@ -292,7 +300,7 @@ function createPageNotices(deps: PageNoticesDeps) {
       helpCenterAskHint.setAttribute('data-search-anchored', 'true');
       root.after(helpCenterAskHint);
     } else {
-      pageState.inputParts.container.appendChild(helpCenterAskHint);
+      searchInputContainer.appendChild(helpCenterAskHint);
     }
     const providerReady = getSiteSearchProviders()
       .then((items) => (items || [])

@@ -15,7 +15,7 @@ import type { FeatureHintController } from '../../shared/ui/feature-hints';
 import type { BindCursorTooltip, FormatMessage, Translate } from '../newtab-types';
 
 interface SearchBoxControlsState {
-  inputParts: SearchInputParts;
+  inputParts: SearchInputParts | null;
   siteSearchState: SiteSearchProvider | null;
   // Counts the uses the review notice waits for.
   engagementNoticeController: { recordMeaningfulUse?(): void } | null;
@@ -88,16 +88,22 @@ function createSearchBoxControls(deps: SearchBoxControlsDeps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  pageState.inputParts.input.addEventListener('input', function() {
+  // The search box exists before this module is created.
+  const inputParts = pageState.inputParts;
+  if (!inputParts) {
+    throw new Error('Search input unavailable');
+  }
+
+  inputParts.input.addEventListener('input', function() {
     // Typing a question in the Help Center search means the tip has done its job.
     if (pageState.siteSearchState && SEARCH_UTILS.isHelpCenterSiteSearchProvider(pageState.siteSearchState)) {
       dismissHelpCenterAskHint();
     }
   });
 
-  pageState.inputParts.input.addEventListener('input', function() {
+  inputParts.input.addEventListener('input', function() {
     const notice = pageState.engagementNoticeController;
-    if (!String(pageState.inputParts.input.value || '').trim() ||
+    if (!String(inputParts.input.value || '').trim() ||
         !notice || !notice.recordMeaningfulUse) {
       return;
     }
@@ -158,7 +164,7 @@ function createSearchBoxControls(deps: SearchBoxControlsDeps) {
       });
       pageState.webdavFeatureHintController = hint;
       if (hint) {
-        pageState.inputParts.container.appendChild(hint.element);
+        inputParts.container.appendChild(hint.element);
         helpCenterAskHintSettled.then((helpTipShowing) => {
           if (!helpTipShowing && pageState.webdavFeatureHintController) {
             pageState.webdavFeatureHintController.setVisible(true);
@@ -168,7 +174,7 @@ function createSearchBoxControls(deps: SearchBoxControlsDeps) {
     }
   }
 
-  const searchClearButton = pageState.inputParts.clearAction;
+  const searchClearButton = inputParts.clearAction;
   // Width the clear button adds left of the close-other-tabs button: 30px button + 6px gap.
   const SEARCH_CLEAR_BUTTON_INSET = 36;
   if (searchClearButton) {
@@ -184,7 +190,7 @@ function createSearchBoxControls(deps: SearchBoxControlsDeps) {
     searchInput.addEventListener('input', updateInputRightPadding);
   }
 
-  const closeOtherTabsButton = pageState.inputParts.secondaryAction;
+  const closeOtherTabsButton = inputParts.secondaryAction;
   if (closeOtherTabsButton) {
     const closeOtherTabsTooltipText = (): string => t('overlay_close_other_tabs_tooltip', '关闭其他标签页');
     const applyCloseOtherTabsTooltip = () => {

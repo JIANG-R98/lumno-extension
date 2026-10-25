@@ -365,3 +365,4 @@ function createBookmarkSection(deps: BookmarkSectionDeps) {
 }
 
 export { createBookmarkSection };
+export type { BookmarkSectionDeps, BookmarkSectionState };

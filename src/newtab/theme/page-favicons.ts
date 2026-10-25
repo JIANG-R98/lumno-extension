@@ -17,9 +17,9 @@ import type { ThemeSubject } from './theme-types';
 
 interface PageFaviconsState {
   faviconDataCache: Map<string, string>;
-  faviconCacheRuntime: FaviconCacheRuntime;
+  faviconCacheRuntime: FaviconCacheRuntime | null;
   faviconViewRuntime: FaviconViewRuntime | null;
-  requestFaviconData: FaviconViewRuntime['requestFaviconData'];
+  requestFaviconData: FaviconViewRuntime['requestFaviconData'] | null;
 }
 
 interface PageFaviconsDeps {
@@ -108,7 +108,7 @@ function createPageFavicons(deps: PageFaviconsDeps) {
 
   pageState.faviconDataCache = new Map<string, string>();
   const faviconDataPending = new Map<string, Promise<string | null>>();
-  pageState.faviconCacheRuntime = NEWTAB_FAVICON_CACHE.createFaviconCache({
+  const faviconCacheRuntime = NEWTAB_FAVICON_CACHE.createFaviconCache({
     storageArea: (chrome && chrome.storage && chrome.storage.local) ? chrome.storage.local : null,
     windowObj: window,
     normalizeFaviconHost,
@@ -116,21 +116,22 @@ function createPageFavicons(deps: PageFaviconsDeps) {
     isChromeMonogramFaviconUrl,
     faviconCacheBootWaitMs: FAVICON_CACHE_BOOT_WAIT_MS
   });
+  pageState.faviconCacheRuntime = faviconCacheRuntime;
 
   function isFaviconPersistLoaded(): boolean {
-    return pageState.faviconCacheRuntime.isFaviconPersistLoaded();
+    return faviconCacheRuntime.isFaviconPersistLoaded();
   }
 
   function isFaviconDataPersistLoaded(): boolean {
-    return pageState.faviconCacheRuntime.isFaviconDataPersistLoaded();
+    return faviconCacheRuntime.isFaviconDataPersistLoaded();
   }
 
   function isSiteThemePersistLoaded(): boolean {
-    return pageState.faviconCacheRuntime.isSiteThemePersistLoaded();
+    return faviconCacheRuntime.isSiteThemePersistLoaded();
   }
 
   function waitForFaviconCachesOrTimeout(maxWaitMs?: number): Promise<void> {
-    return pageState.faviconCacheRuntime.waitForCachesOrTimeout(maxWaitMs);
+    return faviconCacheRuntime.waitForCachesOrTimeout(maxWaitMs);
   }
 
   function areFaviconRenderCachesReady(): boolean {
@@ -145,27 +146,27 @@ function createPageFavicons(deps: PageFaviconsDeps) {
   }
 
   function isHostFaviconVisitDirty(hostname: string): boolean {
-    return pageState.faviconCacheRuntime.isHostVisitDirty(hostname);
+    return faviconCacheRuntime.isHostVisitDirty(hostname);
   }
 
   function setPersistedFaviconUrl(cacheKey: string, url: string): void {
-    pageState.faviconCacheRuntime.setPersistedUrl(cacheKey, url);
+    faviconCacheRuntime.setPersistedUrl(cacheKey, url);
   }
 
   function getPersistedFaviconEntry(cacheKey: string): FaviconUrlEntry | null {
-    return pageState.faviconCacheRuntime.getPersistedEntry(cacheKey);
+    return faviconCacheRuntime.getPersistedEntry(cacheKey);
   }
 
   function getPersistedFaviconDataEntry(cacheKey: string): FaviconDataEntry | null {
-    return pageState.faviconCacheRuntime.getPersistedDataEntry(cacheKey);
+    return faviconCacheRuntime.getPersistedDataEntry(cacheKey);
   }
 
   function setPersistedFaviconData(cacheKey: string, dataUrl: string): void {
-    pageState.faviconCacheRuntime.setPersistedData(cacheKey, dataUrl);
+    faviconCacheRuntime.setPersistedData(cacheKey, dataUrl);
   }
 
   function getPersistedSiteThemeEntry(hostKey: string): SiteThemeEntry | null {
-    return pageState.faviconCacheRuntime.getPersistedThemeEntry(hostKey);
+    return faviconCacheRuntime.getPersistedThemeEntry(hostKey);
   }
 
   // Stores a theme strong enough to keep; false when it is not one.
@@ -177,7 +178,7 @@ function createPageFavicons(deps: PageFaviconsDeps) {
     if (!accentRgb) {
       return false;
     }
-    return pageState.faviconCacheRuntime.setPersistedThemeEntry(hostKey, {
+    return faviconCacheRuntime.setPersistedThemeEntry(hostKey, {
       accentRgb,
       source: getThemeSource(theme),
       neutral: isLowConfidenceTheme(theme) || theme._xThemeNeutral === true,

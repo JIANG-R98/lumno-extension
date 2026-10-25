@@ -41,6 +41,7 @@
     "src/newtab/page-navigation.ts",
     "src/newtab/page-notices.ts",
     "src/newtab/page-resize.ts",
+    "src/newtab/page-state.ts",
     "src/newtab/section-reload.ts",
     "src/newtab/startup-storage.ts",
     "src/newtab/tooltip-bindings.ts",

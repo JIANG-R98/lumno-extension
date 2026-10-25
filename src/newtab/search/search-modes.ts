@@ -30,7 +30,7 @@ interface LocalScopeTrigger {
 }
 
 interface SearchModesState {
-  inputParts: SearchInputParts;
+  inputParts: SearchInputParts | null;
   inputModeController: InputModeController | null;
   defaultSearchEngineState: DefaultSearchEngineState;
   siteSearchProvidersCache: SiteSearchProvider[] | null;
@@ -135,6 +135,15 @@ function createSearchModes(deps: SearchModesDeps) {
 
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
+
+  // The search box's input; the page creates it before any mode is used.
+  function getSearchInput(): HTMLInputElement {
+    const inputParts = pageState.inputParts;
+    if (!inputParts) {
+      throw new Error('Search input unavailable');
+    }
+    return inputParts.input;
+  }
 
   function getDefaultSearchModeProvider(providers: readonly SiteSearchProvider[]): SiteSearchProvider | null {
     return SEARCH_UTILS.getSearchEngineSiteSearchProvider(
@@ -335,11 +344,11 @@ function createSearchModes(deps: SearchModesDeps) {
   // With an empty or typed input, a double Tab starts the default engine's
   // mode and opens the menu; false when it did not.
   function openSearchModeMenuFromDoubleTab(): boolean | Promise<boolean> {
-    const expectedInputValue = String(pageState.inputParts.input.value || '');
+    const expectedInputValue = String(getSearchInput().value || '');
     const activateDefaultProvider = (providers: readonly SiteSearchProvider[]): boolean => {
       const controller = pageState.inputModeController;
       if (!controller || pageState.siteSearchState || pageState.localSearchScopeState ||
-          String(pageState.inputParts.input.value || '') !== expectedInputValue) {
+          String(getSearchInput().value || '') !== expectedInputValue) {
         return false;
       }
       const provider = getDefaultSearchModeProvider(providers);
@@ -368,10 +377,10 @@ function createSearchModes(deps: SearchModesDeps) {
 
   function restoreSearchModeQuery(rawQuery: unknown): void {
     const value = String(rawQuery || '');
-    pageState.inputParts.input.value = value;
+    getSearchInput().value = value;
     pageState.latestRawQuery = value;
     pageState.latestQuery = value.trim();
-    pageState.inputParts.input.dispatchEvent(new Event('input', { bubbles: true }));
+    getSearchInput().dispatchEvent(new Event('input', { bubbles: true }));
   }
 
   function shouldPreserveSearchModeResults(rawQuery: unknown): boolean {
@@ -382,7 +391,7 @@ function createSearchModes(deps: SearchModesDeps) {
     if (!item.kind) {
       return;
     }
-    const rawQuery = pageState.inputParts.input.value || '';
+    const rawQuery = getSearchInput().value || '';
     const preserveResults = shouldPreserveSearchModeResults(rawQuery);
     if (item.kind === 'local') {
       if (item.sourceType) {
@@ -444,7 +453,7 @@ function createSearchModes(deps: SearchModesDeps) {
     pageState.siteSearchState = null;
     pageState.siteSearchTriggerState = null;
     pageState.inlineSearchState = null;
-    pageState.inputParts.input.value = '';
+    getSearchInput().value = '';
     pageState.latestRawQuery = '';
     pageState.latestQuery = '';
     clearAutocomplete();
@@ -477,7 +486,7 @@ function createSearchModes(deps: SearchModesDeps) {
     pageState.localSearchScopeTriggerState = null;
     pageState.siteSearchState = provider;
     pageState.inlineSearchState = null;
-    pageState.inputParts.input.value = '';
+    getSearchInput().value = '';
     pageState.latestRawQuery = '';
     pageState.latestQuery = '';
     clearAutocomplete();
@@ -510,12 +519,12 @@ function createSearchModes(deps: SearchModesDeps) {
       return;
     }
     const completion = pageState.autocompleteState.completion;
-    pageState.inputParts.input.value = completion;
-    pageState.inputParts.input.setSelectionRange(completion.length, completion.length);
+    getSearchInput().value = completion;
+    getSearchInput().setSelectionRange(completion.length, completion.length);
     pageState.latestRawQuery = completion;
     pageState.latestQuery = completion.trim();
     pageState.autocompleteState = null;
-    pageState.inputParts.input.dispatchEvent(new Event('input', { bubbles: true }));
+    getSearchInput().dispatchEvent(new Event('input', { bubbles: true }));
   }
 
   // Tab in the search box: toggles or opens the mode menu, turns a typed
@@ -536,7 +545,7 @@ function createSearchModes(deps: SearchModesDeps) {
     if (pageState.siteSearchState || pageState.localSearchScopeState) {
       return false;
     }
-    const rawValue = pageState.inputParts.input.value;
+    const rawValue = getSearchInput().value;
     const rawTrigger = pageState.latestRawQuery || rawValue;
     const triggerInput = (rawTrigger || rawValue).trim();
     if (!triggerInput && controller) {
@@ -586,7 +595,7 @@ function createSearchModes(deps: SearchModesDeps) {
         getShortcutRules()
       ]).then(([items, definitions, rules]) => {
         if (pageState.siteSearchState || pageState.localSearchScopeState ||
-            String(pageState.inputParts.input.value || '').trim() !== triggerInput) {
+            String(getSearchInput().value || '').trim() !== triggerInput) {
           return;
         }
         const asyncTopSiteMatch = getTopSiteMatchCandidate(pageState.currentSuggestions, triggerInput);

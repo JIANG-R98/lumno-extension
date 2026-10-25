@@ -10,7 +10,7 @@ import type { createFeedbackControlApi, FeedbackControlController, FeedbackContr
 
 interface FeedbackControlState {
   feedbackLinks: CommunityLinks | null;
-  currentResolvedLocale: string;
+  currentResolvedLocale: string | null;
   currentLanguageMode: string;
   feedbackControl: HTMLDivElement | null;
   feedbackButton: HTMLElement | null;
