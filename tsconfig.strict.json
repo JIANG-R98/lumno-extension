@@ -26,6 +26,9 @@
     "src/shared/ui/cursor-tooltip.ts",
     "src/shared/ui/sortable-drag.ts",
     "src/shared/ui/empty-state-art.ts",
-    "src/shared/ui/community-qr-dialog.ts"
+    "src/shared/ui/community-qr-dialog.ts",
+    "src/shared/ui/feature-hints.ts",
+    "src/shared/engagement-notice.ts",
+    "src/shared/update-notice.ts"
   ]
 }

@@ -1,6 +1,157 @@
-// @ts-nocheck
+// In-page feature hints ("New: ..." notes beside a control): their
+// definitions, where each remembers that it was dismissed, and the
+// controller that shows one through the React feature hint view
+// (globalThis.LumnoFeatureHintView).
 import '../../domain/navigation-disposition';
 import * as LumnoShortcutDisplay from '../../domain/shortcut-display';
+import type { NavigatorLike } from '../../domain/shortcut-display';
+import type { StorageAreaLike } from '../../domain/storage-port';
+import type { FeatureHintViewController, FeatureHintViewLabels } from '../../types/view-apis';
+
+type FeatureHintArrowSide = 'top' | 'right' | 'bottom' | 'left';
+type FeatureHintArrowAlign = 'start' | 'center' | 'end';
+// Where a dismissal is remembered; 'none' forgets it with the page.
+type FeatureHintDismissStorage = 'none' | 'session' | 'local' | 'sync';
+type FeatureHintWidthMode = 'fixed' | 'container' | 'content';
+type FeatureHintAlignMode = 'center' | 'start' | 'auto';
+
+// A button the hint offers besides its link.
+interface FeatureHintAction {
+  id?: string;
+  actionId?: string;
+  icon?: string;
+  labelKey?: string;
+  labelFallback?: string;
+  variant?: string;
+  onClick?(event: MouseEvent, definition: FeatureHintDefinition, action: FeatureHintActionItem): void;
+}
+
+interface FeatureHintActionItem {
+  id: string;
+  iconHtml: string;
+  labelKey: string;
+  labelFallback: string;
+  onClick: FeatureHintAction['onClick'] | null;
+  variant: 'primary' | 'secondary';
+  order: number;
+}
+
+interface FeatureHintDefinition {
+  id: string;
+  // The version that introduced it; a later version's hint shows again.
+  introducedIn?: string;
+  surface?: string;
+  placement?: string;
+  className?: string;
+  arrowSide?: string;
+  arrowAlign?: string;
+  widthMode?: string;
+  alignMode?: string;
+  dismissStorage?: string;
+  // Count the first showing as a dismissal, so it shows only once.
+  rememberOnFirstShow?: boolean;
+  roundedArrowTip?: boolean;
+  inlineActions?: boolean;
+  badgeIcon?: string;
+  badgeIconText?: string;
+  badgeIconImageSrc?: string;
+  badgeWordmarkImageSrc?: string;
+  badgeWordmarkDarkImageSrc?: string;
+  badgeKey: string;
+  badgeFallback: string;
+  textKey: string;
+  textFallback: string;
+  linkKey?: string;
+  linkFallback?: string;
+  linkUrl?: string;
+  connectorKey?: string;
+  connectorFallback?: string;
+  trailingKey?: string;
+  trailingFallback?: string;
+  closeLabelKey: string;
+  closeLabelFallback: string;
+  actions?: FeatureHintAction[];
+}
+
+// The storage the dismissals use, from chrome or a test double.
+interface FeatureHintChromeApi {
+  runtime?: { lastError?: unknown } | null;
+  storage?: {
+    sync?: StorageAreaLike;
+    local?: StorageAreaLike;
+    session?: StorageAreaLike;
+  } | null;
+}
+
+// The page window, or a stand-in with the members used here.
+type FeatureHintWindow = Partial<Pick<Window,
+  'getComputedStyle' | 'requestAnimationFrame' | 'cancelAnimationFrame' | 'navigator' | 'open' | 'location'>> & {
+  ResizeObserver?: typeof ResizeObserver;
+};
+
+type Translate = (key: string, fallback: string) => string;
+
+interface FeatureHintOptions {
+  documentObj?: Document | null;
+  windowObj?: FeatureHintWindow | null;
+  chromeApi?: FeatureHintChromeApi | null;
+  // The hint, by definition or by id (or FEATURE_HINTS key).
+  definition?: FeatureHintDefinition | string | null;
+  id?: string;
+  hint?: FeatureHintDefinition | string | null;
+  t?: Translate | null;
+  // The markup of a Remix icon.
+  getRiSvg?(id: string, sizeClass: string): string;
+  arrowSide?: string;
+  arrowAlign?: string;
+  dismissStorage?: string;
+  widthMode?: string;
+  alignMode?: string;
+  dismissKey?: string;
+  syncDismissKey?: string;
+  localDismissKey?: string;
+  sessionDismissKey?: string;
+  rememberOnFirstShow?: boolean;
+  roundedArrowTip?: boolean;
+  inlineActions?: boolean;
+  actions?: FeatureHintAction[];
+  onLinkClick?(event: MouseEvent, definition: FeatureHintDefinition): void;
+  linkUrl?: string;
+  getLinkUrl?(definition: FeatureHintDefinition): string;
+  linkTarget?: string;
+  linkKey?: string;
+  linkFallback?: string;
+  connectorKey?: string;
+  connectorFallback?: string;
+  trailingKey?: string;
+  trailingFallback?: string;
+  initiallyDismissed?: boolean;
+  initiallyVisible?: boolean;
+  // The hint stays hidden until this settles.
+  visibilityGate?: PromiseLike<unknown> | null;
+  badgeIconImageSrc?: string;
+  badgeWordmarkImageSrc?: string;
+  badgeWordmarkDarkImageSrc?: string;
+  elementId?: string;
+  textId?: string;
+  navigatorLike?: NavigatorLike | null;
+  onActionClick?(actionId: string, event: MouseEvent, definition: FeatureHintDefinition): void;
+  onDismiss?(definition: FeatureHintDefinition): void;
+}
+
+interface FeatureHintController {
+  definition: FeatureHintDefinition;
+  element: HTMLElement;
+  textId: string;
+  destroy(): void;
+  dismiss(): void;
+  isDismissed(): boolean;
+  isVisible(): boolean;
+  // Whether the hint is showing once its dismissal and visibility gate are known.
+  ready: Promise<boolean>;
+  setVisible(visible: boolean): void;
+  updateLanguage(): void;
+}
 
 const FEATURE_HINTS = Object.freeze({
   NEWTAB_WALLPAPER_SOURCES: Object.freeze({
@@ -114,128 +265,110 @@ const FEATURE_HINTS = Object.freeze({
     closeLabelKey: 'newtab_help_center_ask_feature_hint_close',
     closeLabelFallback: 'Dismiss Help Center tip'
   })
-});
+} satisfies Record<string, FeatureHintDefinition>);
 
-const FEATURE_HINT_ARROW_SIDES = Object.freeze({
-  top: true,
-  right: true,
-  bottom: true,
-  left: true
-});
+type FeatureHintKey = keyof typeof FEATURE_HINTS;
 
-const FEATURE_HINT_ARROW_ALIGNS = Object.freeze({
-  start: true,
-  center: true,
-  end: true
-});
-
-const FEATURE_HINT_DISMISS_STORAGE_TYPES = Object.freeze({
-  none: true,
-  session: true,
-  local: true,
-  sync: true
-});
-
-const FEATURE_HINT_WIDTH_MODES = Object.freeze({
-  fixed: true,
-  container: true,
-  content: true
-});
-
-const FEATURE_HINT_ALIGN_MODES = Object.freeze({
-  center: true,
-  start: true,
-  auto: true
-});
+const FEATURE_HINT_ARROW_SIDES: readonly FeatureHintArrowSide[] = ['top', 'right', 'bottom', 'left'];
+const FEATURE_HINT_ARROW_ALIGNS: readonly FeatureHintArrowAlign[] = ['start', 'center', 'end'];
+const FEATURE_HINT_DISMISS_STORAGE_TYPES: readonly FeatureHintDismissStorage[] = ['none', 'session', 'local', 'sync'];
+const FEATURE_HINT_WIDTH_MODES: readonly FeatureHintWidthMode[] = ['fixed', 'container', 'content'];
+const FEATURE_HINT_ALIGN_MODES: readonly FeatureHintAlignMode[] = ['center', 'start', 'auto'];
 
 const FEATURE_HINT_SESSION_DISMISS_PREFIX = '_x_lumno_feature_hint_session_dismissed_2026_';
 const FEATURE_HINT_LOCAL_DISMISS_PREFIX = '_x_lumno_feature_hint_local_dismissed_2026_';
 const FEATURE_HINT_SYNC_DISMISS_PREFIX = '_x_lumno_feature_hint_sync_dismissed_2026_';
 
-const FEATURE_HINTS_BY_ID = Object.freeze(Object.keys(FEATURE_HINTS).reduce((map, key) => {
-  const hint = FEATURE_HINTS[key];
-  map[hint.id] = hint;
-  return map;
-}, {}));
-
-function getMessage(t, key, fallback) {
-  return typeof t === 'function' ? t(key, fallback) : (fallback || '');
+function hasOwn(object: object, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(object, key);
 }
 
-function formatShortcutText(text, shortcut, navigatorLike) {
-  const shortcutDisplay = LumnoShortcutDisplay;
-  if (!shortcutDisplay || typeof shortcutDisplay.formatShortcutTemplate !== 'function') {
-    return String(text || '').replace(/\{shortcut\}/g, shortcut);
-  }
-  return shortcutDisplay.formatShortcutTemplate(text, shortcut, {
-    navigatorLike
-  });
+function isFeatureHintKey(value: string): value is FeatureHintKey {
+  return hasOwn(FEATURE_HINTS, value);
 }
 
-function getDefaultRiSvg(id, sizeClass) {
+const FEATURE_HINTS_BY_ID: Readonly<Record<string, FeatureHintDefinition>> = Object.freeze(
+  Object.keys(FEATURE_HINTS).filter(isFeatureHintKey).reduce<Record<string, FeatureHintDefinition>>((map, key) => {
+    const hint = FEATURE_HINTS[key];
+    map[hint.id] = hint;
+    return map;
+  }, {})
+);
+
+function getMessage(t: Translate | null, key: string | undefined, fallback: string | undefined): string {
+  return t ? t(key || '', fallback || '') : (fallback || '');
+}
+
+function formatShortcutText(text: string, shortcut: string, navigatorLike: NavigatorLike | null): string {
+  return LumnoShortcutDisplay.formatShortcutTemplate(text, shortcut, { navigatorLike });
+}
+
+function getDefaultRiSvg(id: string, sizeClass: string): string {
   const size = sizeClass || 'ri-size-16';
   return '<i class="ri-icon ' + size + ' ' + id + '" aria-hidden="true"></i>';
 }
 
-function getDomIdPart(id) {
+function getDomIdPart(id: string | undefined): string {
   return String(id || 'feature-hint').replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '') || 'feature_hint';
 }
 
-function normalizeFeatureHintValue(value, allowedValues, fallback) {
+function normalizeFeatureHintValue<T extends string>(value: unknown, allowedValues: readonly T[], fallback: T): T {
   const normalized = String(value || '').toLowerCase();
-  return Object.prototype.hasOwnProperty.call(allowedValues, normalized) ? normalized : fallback;
+  return allowedValues.find((allowed) => allowed === normalized) || fallback;
 }
 
-function normalizeArrowSide(value) {
+function normalizeArrowSide(value: unknown): FeatureHintArrowSide {
   return normalizeFeatureHintValue(value, FEATURE_HINT_ARROW_SIDES, 'bottom');
 }
 
-function normalizeArrowAlign(value) {
+function normalizeArrowAlign(value: unknown): FeatureHintArrowAlign {
   return normalizeFeatureHintValue(value, FEATURE_HINT_ARROW_ALIGNS, 'center');
 }
 
-function normalizeDismissStorage(value) {
+function normalizeDismissStorage(value: unknown): FeatureHintDismissStorage {
   return normalizeFeatureHintValue(value, FEATURE_HINT_DISMISS_STORAGE_TYPES, 'none');
 }
 
-function normalizeWidthMode(value) {
+function normalizeWidthMode(value: unknown): FeatureHintWidthMode {
   return normalizeFeatureHintValue(value, FEATURE_HINT_WIDTH_MODES, 'fixed');
 }
 
-function normalizeAlignMode(value) {
+function normalizeAlignMode(value: unknown): FeatureHintAlignMode {
   return normalizeFeatureHintValue(value, FEATURE_HINT_ALIGN_MODES, 'center');
 }
 
-function getFeatureHintStorageId(definition) {
+type FeatureHintReference = FeatureHintDefinition | string | null | undefined;
+
+function getFeatureHintStorageId(definition: FeatureHintReference): string {
   const hint = getFeatureHint(definition);
   const idPart = getDomIdPart(hint ? hint.id : '');
   const versionPart = getDomIdPart(hint && hint.introducedIn ? hint.introducedIn : 'unversioned');
   return `${idPart}_${versionPart}`;
 }
 
-function getFeatureHintDismissKey(definition, storageType) {
-  const normalizedStorageType = normalizeDismissStorage(storageType);
-  const prefix = normalizedStorageType === 'sync'
+function getFeatureHintDismissKey(definition: FeatureHintReference, storageType: FeatureHintDismissStorage): string {
+  const prefix = storageType === 'sync'
     ? FEATURE_HINT_SYNC_DISMISS_PREFIX
-    : (normalizedStorageType === 'local'
+    : (storageType === 'local'
       ? FEATURE_HINT_LOCAL_DISMISS_PREFIX
       : FEATURE_HINT_SESSION_DISMISS_PREFIX);
   return prefix + getFeatureHintStorageId(definition);
 }
 
-function getFeatureHintSessionDismissKey(definition) {
+function getFeatureHintSessionDismissKey(definition: FeatureHintReference): string {
   return getFeatureHintDismissKey(definition, 'session');
 }
 
-function getFeatureHintLocalDismissKey(definition) {
+function getFeatureHintLocalDismissKey(definition: FeatureHintReference): string {
   return getFeatureHintDismissKey(definition, 'local');
 }
 
-function getFeatureHintSyncDismissKey(definition) {
+function getFeatureHintSyncDismissKey(definition: FeatureHintReference): string {
   return getFeatureHintDismissKey(definition, 'sync');
 }
 
-function getLegacyLocalDismissKeyForSyncKey(key) {
+// Older versions kept sync-remembered dismissals in local storage.
+function getLegacyLocalDismissKeyForSyncKey(key: string): string {
   const rawKey = String(key || '');
   if (!rawKey.startsWith(FEATURE_HINT_SYNC_DISMISS_PREFIX)) {
     return '';
@@ -243,24 +376,32 @@ function getLegacyLocalDismissKeyForSyncKey(key) {
   return FEATURE_HINT_LOCAL_DISMISS_PREFIX + rawKey.slice(FEATURE_HINT_SYNC_DISMISS_PREFIX.length);
 }
 
-function getDismissStorageArea(chromeApi, storageType) {
-  if (!chromeApi || !chromeApi.storage) {
+function getDismissStorageArea(
+  chromeApi: FeatureHintChromeApi | null,
+  storageType: FeatureHintDismissStorage
+): StorageAreaLike | null {
+  const storage = chromeApi ? chromeApi.storage : null;
+  if (!storage) {
     return null;
   }
   if (storageType === 'sync') {
-    return chromeApi.storage.sync || chromeApi.storage.local || null;
+    return storage.sync || storage.local || null;
   }
   if (storageType === 'local') {
-    return chromeApi.storage.local || null;
+    return storage.local || null;
   }
   if (storageType === 'session') {
-    return chromeApi.storage.session || null;
+    return storage.session || null;
   }
   return null;
 }
 
-function getStoredDismissedFromArea(chromeApi, storageArea, key) {
-  if (!storageArea || typeof storageArea.get !== 'function') {
+function getStoredDismissedFromArea(
+  chromeApi: FeatureHintChromeApi | null,
+  storageArea: StorageAreaLike | null,
+  key: string
+): Promise<boolean> {
+  if (!storageArea) {
     return Promise.resolve(false);
   }
   return new Promise((resolve) => {
@@ -271,19 +412,23 @@ function getStoredDismissedFromArea(chromeApi, storageArea, key) {
           : null;
         resolve(!runtimeError && Boolean(result && result[key]));
       });
-    } catch (e) {
+    } catch (_error) {
       resolve(false);
     }
   });
 }
 
-function getStoredDismissed(chromeApi, key, storageType) {
+function getStoredDismissed(
+  chromeApi: FeatureHintChromeApi | null,
+  key: string,
+  storageType: FeatureHintDismissStorage
+): Promise<boolean> {
   const storageArea = getDismissStorageArea(chromeApi, storageType);
   return getStoredDismissedFromArea(chromeApi, storageArea, key).then((isDismissed) => {
     if (isDismissed || storageType !== 'sync') {
       return isDismissed;
     }
-    const localArea = chromeApi && chromeApi.storage ? chromeApi.storage.local : null;
+    const localArea = chromeApi && chromeApi.storage ? chromeApi.storage.local || null : null;
     const legacyLocalKey = getLegacyLocalDismissKeyForSyncKey(key);
     if (!localArea || !legacyLocalKey) {
       return false;
@@ -297,81 +442,88 @@ function getStoredDismissed(chromeApi, key, storageType) {
   });
 }
 
-function setStoredDismissed(chromeApi, key, storageType) {
+function setStoredDismissed(
+  chromeApi: FeatureHintChromeApi | null,
+  key: string,
+  storageType: FeatureHintDismissStorage
+): void {
   const storageArea = getDismissStorageArea(chromeApi, storageType);
-  if (!storageArea || typeof storageArea.set !== 'function') {
+  if (!storageArea) {
     return;
   }
   try {
     storageArea.set({ [key]: true }, () => {});
-  } catch (e) {
+  } catch (_error) {
     // Storage errors should not block the visible in-page dismissal.
   }
 }
 
-function getFeatureHint(definition) {
+function getFeatureHint(definition: FeatureHintReference): FeatureHintDefinition | null {
   if (!definition) {
     return null;
   }
   if (typeof definition === 'string') {
-    return FEATURE_HINTS_BY_ID[definition] || FEATURE_HINTS[definition] || null;
+    if (hasOwn(FEATURE_HINTS_BY_ID, definition)) {
+      return FEATURE_HINTS_BY_ID[definition];
+    }
+    return isFeatureHintKey(definition) ? FEATURE_HINTS[definition] : null;
   }
   return definition;
 }
 
-function createFeatureHint(options) {
-  const config = options || {};
+// HTML, SVG and MathML elements have blur(); other elements do not.
+function isBlurrable(element: Element): element is Element & HTMLOrSVGElement {
+  return 'blur' in element && typeof element.blur === 'function';
+}
+
+function createFeatureHint(options?: FeatureHintOptions | null): FeatureHintController | null {
+  const config: FeatureHintOptions = options || {};
   const documentObj = config.documentObj || (typeof document !== 'undefined' ? document : null);
   const definition = getFeatureHint(config.definition || config.id || config.hint);
-  const featureHintView = globalThis && globalThis.LumnoFeatureHintView;
-  if (!definition || !documentObj || !featureHintView ||
-      typeof featureHintView.createFeatureHintView !== 'function') {
+  const featureHintView = globalThis.LumnoFeatureHintView;
+  if (!definition || !documentObj || !featureHintView) {
     return null;
   }
+  const hint = definition;
+  const page = documentObj;
   const t = typeof config.t === 'function' ? config.t : null;
   const getRiSvg = typeof config.getRiSvg === 'function' ? config.getRiSvg : getDefaultRiSvg;
-  const idPart = getDomIdPart(definition.id);
-  const arrowSide = normalizeArrowSide(config.arrowSide || definition.arrowSide);
-  const arrowAlign = normalizeArrowAlign(config.arrowAlign || definition.arrowAlign);
-  const dismissStorage = normalizeDismissStorage(config.dismissStorage || definition.dismissStorage);
-  const widthMode = normalizeWidthMode(config.widthMode || definition.widthMode);
-  const alignMode = normalizeAlignMode(config.alignMode || definition.alignMode);
-  const chromeApi = config.chromeApi || (typeof chrome !== 'undefined' ? chrome : null);
+  const idPart = getDomIdPart(hint.id);
+  const arrowSide = normalizeArrowSide(config.arrowSide || hint.arrowSide);
+  const arrowAlign = normalizeArrowAlign(config.arrowAlign || hint.arrowAlign);
+  const dismissStorage = normalizeDismissStorage(config.dismissStorage || hint.dismissStorage);
+  const widthMode = normalizeWidthMode(config.widthMode || hint.widthMode);
+  const alignMode = normalizeAlignMode(config.alignMode || hint.alignMode);
+  const chromeApi: FeatureHintChromeApi | null = config.chromeApi || (typeof chrome !== 'undefined' ? chrome : null);
   const dismissKey = config.dismissKey ||
     (dismissStorage === 'sync'
-      ? (config.syncDismissKey || getFeatureHintSyncDismissKey(definition))
+      ? (config.syncDismissKey || getFeatureHintSyncDismissKey(hint))
       : (dismissStorage === 'local'
-        ? (config.localDismissKey || getFeatureHintLocalDismissKey(definition))
-        : (config.sessionDismissKey || getFeatureHintSessionDismissKey(definition))));
-  const windowObj = config.windowObj || (documentObj && documentObj.defaultView) ||
+        ? (config.localDismissKey || getFeatureHintLocalDismissKey(hint))
+        : (config.sessionDismissKey || getFeatureHintSessionDismissKey(hint))));
+  const windowObj: FeatureHintWindow | null = config.windowObj || page.defaultView ||
     (typeof window !== 'undefined' ? window : null);
   const rememberOnFirstShow = typeof config.rememberOnFirstShow === 'boolean'
     ? config.rememberOnFirstShow
-    : Boolean(definition.rememberOnFirstShow);
+    : Boolean(hint.rememberOnFirstShow);
   const roundedArrowTip = typeof config.roundedArrowTip === 'boolean'
     ? config.roundedArrowTip
-    : Boolean(definition.roundedArrowTip);
+    : Boolean(hint.roundedArrowTip);
   const configuredActions = Array.isArray(config.actions)
     ? config.actions
-    : (Array.isArray(definition.actions) ? definition.actions : []);
-  const actions = configuredActions.reduce((items, action, index) => {
+    : (Array.isArray(hint.actions) ? hint.actions : []);
+  const actions = configuredActions.reduce<FeatureHintActionItem[]>((items, action, index) => {
     const id = String(action && (action.id || action.actionId) || '').trim();
     if (!id || items.some((item) => item.id === id)) {
       return items;
     }
     items.push({
       id,
-      iconHtml: action && action.icon
-        ? getRiSvg(String(action.icon), 'ri-size-12')
-        : '',
-      labelKey: String(action && action.labelKey || '').trim(),
-      labelFallback: String(action && action.labelFallback || '').trim(),
-      onClick: action && typeof action.onClick === 'function'
-        ? action.onClick
-        : null,
-      variant: action && action.variant === 'primary'
-        ? 'primary'
-        : 'secondary',
+      iconHtml: action.icon ? getRiSvg(String(action.icon), 'ri-size-12') : '',
+      labelKey: String(action.labelKey || '').trim(),
+      labelFallback: String(action.labelFallback || '').trim(),
+      onClick: typeof action.onClick === 'function' ? action.onClick : null,
+      variant: action.variant === 'primary' ? 'primary' : 'secondary',
       order: index
     });
     return items;
@@ -379,36 +531,35 @@ function createFeatureHint(options) {
   const hasLink = Boolean(
     config.onLinkClick ||
     config.linkUrl ||
-    definition.linkKey ||
-    definition.linkFallback
+    hint.linkKey ||
+    hint.linkFallback
   );
   let dismissed = Boolean(config.initiallyDismissed);
   let requestedVisible = config.initiallyVisible !== false;
   let dismissStateLoaded = dismissStorage === 'none';
-  const visibilityGate = config.visibilityGate &&
-    typeof config.visibilityGate.then === 'function'
+  const visibilityGate = config.visibilityGate && typeof config.visibilityGate.then === 'function'
     ? config.visibilityGate
     : null;
   let visibilityGateSettled = !visibilityGate;
   let firstShowRemembered = false;
   let destroyed = false;
   let readySettled = false;
-  let resolveReady = null;
-  const ready = new Promise((resolve) => {
+  let resolveReady: ((visible: boolean) => void) | null = null;
+  const ready = new Promise<boolean>((resolve) => {
     resolveReady = resolve;
   });
-  const badgeIconText = String(definition.badgeIconText || '').trim();
-  const activateLink = (event) => {
+  const badgeIconText = String(hint.badgeIconText || '').trim();
+  const activateLink = (event: MouseEvent): void => {
     event.preventDefault();
     event.stopPropagation();
     if (typeof config.onLinkClick === 'function') {
-      config.onLinkClick(event, definition);
+      config.onLinkClick(event, hint);
       return;
     }
     const linkUrl = typeof config.getLinkUrl === 'function'
-      ? config.getLinkUrl(definition)
-      : (config.linkUrl || definition.linkUrl || '');
-    const targetWindow = config.windowObj || (typeof window !== 'undefined' ? window : null);
+      ? config.getLinkUrl(hint)
+      : (config.linkUrl || hint.linkUrl || '');
+    const targetWindow: FeatureHintWindow | null = config.windowObj || (typeof window !== 'undefined' ? window : null);
     if (!linkUrl || !targetWindow) {
       return;
     }
@@ -416,13 +567,13 @@ function createFeatureHint(options) {
       targetWindow.open(linkUrl, '_blank', 'noopener');
       return;
     }
-    if (targetWindow.location && typeof targetWindow.location.assign === 'function') {
+    if (targetWindow.location) {
       targetWindow.location.assign(linkUrl);
     }
   };
-  let controller = null;
-  const viewController = featureHintView.createFeatureHintView({
-    documentObj,
+  let controller: FeatureHintController | null = null;
+  const viewController: FeatureHintViewController | null = featureHintView.createFeatureHintView({
+    documentObj: page,
     model: {
       actions: actions.map((action) => ({
         iconHtml: action.iconHtml,
@@ -432,32 +583,32 @@ function createFeatureHint(options) {
       alignMode,
       arrowAlign,
       arrowSide,
-      badgeIconHtml: definition.badgeIcon
-        ? getRiSvg(definition.badgeIcon, 'ri-size-10')
+      badgeIconHtml: hint.badgeIcon
+        ? getRiSvg(hint.badgeIcon, 'ri-size-10')
         : '',
       badgeIconImageSrc: String(
-        config.badgeIconImageSrc || definition.badgeIconImageSrc || ''
+        config.badgeIconImageSrc || hint.badgeIconImageSrc || ''
       ),
       badgeIconText,
       badgeWordmarkDarkImageSrc: String(
         config.badgeWordmarkDarkImageSrc ||
-        definition.badgeWordmarkDarkImageSrc ||
+        hint.badgeWordmarkDarkImageSrc ||
         ''
       ),
       badgeWordmarkImageSrc: String(
-        config.badgeWordmarkImageSrc || definition.badgeWordmarkImageSrc || ''
+        config.badgeWordmarkImageSrc || hint.badgeWordmarkImageSrc || ''
       ),
-      className: definition.className || '',
+      className: hint.className || '',
       dismissStorage,
       elementId: config.elementId || `_x_lumno_feature_hint_${idPart}_2026_unique_`,
       hasLink,
-      hintId: definition.id,
-      inlineActions: Boolean(config.inlineActions || definition.inlineActions),
-      placement: definition.placement || '',
+      hintId: hint.id,
+      inlineActions: Boolean(config.inlineActions || hint.inlineActions),
+      placement: hint.placement || '',
       roundedArrowTip,
-      surface: definition.surface || '',
+      surface: hint.surface || '',
       textId: config.textId || `_x_lumno_feature_hint_${idPart}_text_2026_unique_`,
-      version: definition.introducedIn || '',
+      version: hint.introducedIn || '',
       widthMode
     },
     labels: {
@@ -477,10 +628,10 @@ function createFeatureHint(options) {
     onActionClick(actionId, event) {
       const action = actions.find((item) => item.id === actionId);
       if (action && action.onClick) {
-        action.onClick(event, definition, action);
+        action.onClick(event, hint, action);
       }
       if (typeof config.onActionClick === 'function') {
-        config.onActionClick(actionId, event, definition);
+        config.onActionClick(actionId, event, hint);
       }
     },
     onLinkClick: activateLink
@@ -488,33 +639,36 @@ function createFeatureHint(options) {
   if (!viewController) {
     return null;
   }
-  const element = viewController.element;
-  const text = viewController.text;
-  const badge = viewController.badge;
-  const linkButton = viewController.linkButton;
-  const actionButtons = Array.isArray(viewController.actionButtons)
-    ? viewController.actionButtons
-    : [];
+  const view = viewController;
+  const element = view.element;
+  const text = view.text;
+  const badge = view.badge;
+  const linkButton = view.linkButton;
+  const actionButtons = Array.isArray(view.actionButtons) ? view.actionButtons : [];
   element.setAttribute('data-dismissed', dismissed ? 'true' : 'false');
 
   let alignUpdateFrame = 0;
 
-  function getCssNumber(style, property) {
-    const value = Number.parseFloat(style && style.getPropertyValue(property));
+  function getCssNumber(style: CSSStyleDeclaration, property: string): number {
+    const value = Number.parseFloat(style.getPropertyValue(property));
     return Number.isFinite(value) ? value : 0;
   }
 
-  function updateContentAlignment() {
+  // Marks the hint multiline when its text wraps or its row breaks, so its
+  // content aligns to the top instead of the middle.
+  function updateContentAlignment(): void {
     alignUpdateFrame = 0;
     if (alignMode !== 'auto' || !windowObj || typeof windowObj.getComputedStyle !== 'function') {
       return;
     }
+    const readStyle = windowObj.getComputedStyle;
+    const computeStyle = (target: Element): CSSStyleDeclaration => Reflect.apply(readStyle, windowObj, [target]);
     const rect = element.getBoundingClientRect();
     if (!rect.width || !rect.height) {
       return;
     }
-    const elementStyle = windowObj.getComputedStyle(element);
-    const textStyle = windowObj.getComputedStyle(text);
+    const elementStyle = computeStyle(element);
+    const textStyle = computeStyle(text);
     const contentHeight = rect.height -
       getCssNumber(elementStyle, 'padding-top') -
       getCssNumber(elementStyle, 'padding-bottom') -
@@ -527,30 +681,20 @@ function createFeatureHint(options) {
       getCssNumber(elementStyle, 'border-right-width');
     const textRect = text.getBoundingClientRect();
     const badgeRect = badge.getBoundingClientRect();
-    const linkRect = hasLink && linkButton
-      ? linkButton.getBoundingClientRect()
-      : { height: 0 };
-    const actionHeight = actionButtons.reduce((height, actionButton) => {
-      const actionRect = actionButton && typeof actionButton.getBoundingClientRect === 'function'
-        ? actionButton.getBoundingClientRect()
-        : { height: 0 };
-      return Math.max(height, actionRect.height || 0);
-    }, 0);
+    const linkHeight = hasLink && linkButton ? linkButton.getBoundingClientRect().height : 0;
+    const actionHeight = actionButtons.reduce((height, actionButton) => (
+      Math.max(height, actionButton.getBoundingClientRect().height || 0)
+    ), 0);
     const lineHeight = getCssNumber(textStyle, 'line-height') ||
       ((getCssNumber(textStyle, 'font-size') || 12) * 1.45);
-    const isEngagementNotice = element.classList &&
-      element.classList.contains('x-lumno-feature-hint--engagement-notice');
-    const inlineSentence = isEngagementNotice && typeof element.querySelector === 'function'
+    const isEngagementNotice = element.classList.contains('x-lumno-feature-hint--engagement-notice');
+    const inlineSentence = isEngagementNotice
       ? element.querySelector('.x-lumno-feature-hint__sentence')
       : null;
-    if (inlineSentence && inlineSentence.children) {
-      const sentenceItems = Array.from(inlineSentence.children);
-      const sentenceWidth = sentenceItems.reduce((width, item) => {
-        if (!item || typeof item.getBoundingClientRect !== 'function') {
-          return width;
-        }
+    if (inlineSentence) {
+      const sentenceWidth = Array.from(inlineSentence.children).reduce((width, item) => {
         const itemRect = item.getBoundingClientRect();
-        const itemStyle = windowObj.getComputedStyle(item);
+        const itemStyle = computeStyle(item);
         const currentInlineMargin =
           getCssNumber(itemStyle, 'margin-left') +
           getCssNumber(itemStyle, 'margin-right');
@@ -571,7 +715,7 @@ function createFeatureHint(options) {
     const maxChildHeight = Math.max(
       textRect.height,
       badgeRect.height,
-      linkRect.height,
+      linkHeight,
       actionHeight
     );
     const textWrapped = textRect.height > lineHeight * 1.35;
@@ -579,7 +723,7 @@ function createFeatureHint(options) {
     element.setAttribute('data-multiline', (textWrapped || rowWrapped) ? 'true' : 'false');
   }
 
-  function scheduleContentAlignmentUpdate() {
+  function scheduleContentAlignmentUpdate(): void {
     if (alignMode !== 'auto') {
       return;
     }
@@ -590,53 +734,53 @@ function createFeatureHint(options) {
     if (alignUpdateFrame) {
       return;
     }
-    alignUpdateFrame = windowObj.requestAnimationFrame(updateContentAlignment);
+    alignUpdateFrame = Reflect.apply(windowObj.requestAnimationFrame, windowObj, [updateContentAlignment]);
   }
 
-  let alignResizeObserver = null;
+  let alignResizeObserver: ResizeObserver | null = null;
   if (alignMode === 'auto' && windowObj && typeof windowObj.ResizeObserver === 'function') {
-    alignResizeObserver = new windowObj.ResizeObserver(scheduleContentAlignmentUpdate);
-    alignResizeObserver.observe(element);
-    alignResizeObserver.observe(text);
-    if (hasLink) {
-      alignResizeObserver.observe(linkButton);
+    const observer = new windowObj.ResizeObserver(scheduleContentAlignmentUpdate);
+    observer.observe(element);
+    observer.observe(text);
+    if (hasLink && linkButton) {
+      observer.observe(linkButton);
     }
     actionButtons.forEach((actionButton) => {
-      alignResizeObserver.observe(actionButton);
+      observer.observe(actionButton);
     });
+    alignResizeObserver = observer;
   }
 
-  function setElementInert(inert) {
+  function setElementInert(inert: boolean): void {
     try {
       if ('inert' in element) {
-        element.inert = Boolean(inert);
+        element.inert = inert;
       }
-    } catch (e) {
+    } catch (_error) {
       // Some DOM test doubles expose readonly properties; inert is only a progressive enhancement.
     }
   }
 
-  function blurFocusedChildIfNeeded() {
-    const activeElement = documentObj && documentObj.activeElement ? documentObj.activeElement : null;
-    if (!activeElement || typeof activeElement.blur !== 'function') {
+  function blurFocusedChildIfNeeded(): void {
+    const activeElement = page.activeElement;
+    if (!activeElement || !isBlurrable(activeElement)) {
       return;
     }
-    if (activeElement === element ||
-        (typeof element.contains === 'function' && element.contains(activeElement))) {
+    if (activeElement === element || element.contains(activeElement)) {
       activeElement.blur();
     }
   }
 
-  function disconnectAlignmentObserver() {
-    if (!alignResizeObserver || typeof alignResizeObserver.disconnect !== 'function') {
+  function disconnectAlignmentObserver(): void {
+    if (!alignResizeObserver) {
       return;
     }
     alignResizeObserver.disconnect();
     alignResizeObserver = null;
   }
 
-  function syncVisibility() {
-    const nextVisible = Boolean(requestedVisible) &&
+  function syncVisibility(): void {
+    const nextVisible = requestedVisible &&
       !dismissed &&
       dismissStateLoaded &&
       visibilityGateSettled;
@@ -657,7 +801,7 @@ function createFeatureHint(options) {
     }
   }
 
-  function settleReady(force) {
+  function settleReady(force?: boolean): void {
     if (readySettled || (!force && (!dismissStateLoaded || !visibilityGateSettled))) {
       return;
     }
@@ -667,8 +811,8 @@ function createFeatureHint(options) {
     }
   }
 
-  controller = {
-    definition,
+  const hintController: FeatureHintController = {
+    definition: hint,
     element,
     textId: text.id,
     destroy() {
@@ -679,10 +823,10 @@ function createFeatureHint(options) {
       settleReady(true);
       disconnectAlignmentObserver();
       if (alignUpdateFrame && windowObj && typeof windowObj.cancelAnimationFrame === 'function') {
-        windowObj.cancelAnimationFrame(alignUpdateFrame);
+        Reflect.apply(windowObj.cancelAnimationFrame, windowObj, [alignUpdateFrame]);
         alignUpdateFrame = 0;
       }
-      viewController.destroy();
+      view.destroy();
     },
     dismiss() {
       if (destroyed || dismissed) {
@@ -695,7 +839,7 @@ function createFeatureHint(options) {
       }
       syncVisibility();
       if (typeof config.onDismiss === 'function') {
-        config.onDismiss(definition);
+        config.onDismiss(hint);
       }
     },
     isDismissed() {
@@ -705,7 +849,7 @@ function createFeatureHint(options) {
       return element.getAttribute('data-visible') === 'true';
     },
     ready,
-    setVisible(visible) {
+    setVisible(visible: boolean) {
       if (destroyed) {
         return;
       }
@@ -716,39 +860,35 @@ function createFeatureHint(options) {
       if (destroyed) {
         return;
       }
-      const badgeLabel = getMessage(t, definition.badgeKey, definition.badgeFallback);
-      const rawTextLabel = getMessage(t, definition.textKey, definition.textFallback);
+      const badgeLabel = getMessage(t, hint.badgeKey, hint.badgeFallback);
+      const rawTextLabel = getMessage(t, hint.textKey, hint.textFallback);
       const navigatorLike = config.navigatorLike ||
         (windowObj && windowObj.navigator) ||
-        (globalThis && globalThis.navigator) ||
+        globalThis.navigator ||
         null;
       const textLabel = formatShortcutText(rawTextLabel, 'Alt+Q', navigatorLike);
-      const closeLabel = getMessage(t, definition.closeLabelKey, definition.closeLabelFallback);
-      const connectorKey = config.connectorKey || definition.connectorKey || '';
+      const closeLabel = getMessage(t, hint.closeLabelKey, hint.closeLabelFallback);
+      const connectorKey = config.connectorKey || hint.connectorKey || '';
       const connectorFallback =
-        config.connectorFallback || definition.connectorFallback || '';
+        config.connectorFallback || hint.connectorFallback || '';
       const connectorLabel = connectorKey || connectorFallback
         ? getMessage(t, connectorKey, connectorFallback)
         : '';
-      const trailingKey = config.trailingKey || definition.trailingKey || '';
+      const trailingKey = config.trailingKey || hint.trailingKey || '';
       const trailingFallback =
-        config.trailingFallback || definition.trailingFallback || '';
+        config.trailingFallback || hint.trailingFallback || '';
       const trailingLabel = trailingKey || trailingFallback
         ? getMessage(t, trailingKey, trailingFallback)
         : '';
       let linkLabel = '';
-      const actionLabels = {};
+      const actionLabels: Record<string, string> = {};
       if (hasLink) {
-        linkLabel = getMessage(t, config.linkKey || definition.linkKey, config.linkFallback || definition.linkFallback);
+        linkLabel = getMessage(t, config.linkKey || hint.linkKey, config.linkFallback || hint.linkFallback);
       }
       actions.forEach((action) => {
-        actionLabels[action.id] = getMessage(
-          t,
-          action.labelKey,
-          action.labelFallback
-        );
+        actionLabels[action.id] = getMessage(t, action.labelKey, action.labelFallback);
       });
-      viewController.updateLabels({
+      const labels: FeatureHintViewLabels = {
         actions: actionLabels,
         badge: badgeLabel,
         close: closeLabel,
@@ -756,15 +896,17 @@ function createFeatureHint(options) {
         link: linkLabel,
         text: textLabel,
         trailing: trailingLabel
-      });
+      };
+      view.updateLabels(labels);
       scheduleContentAlignmentUpdate();
     }
   };
+  controller = hintController;
 
-  controller.updateLanguage();
+  hintController.updateLanguage();
   syncVisibility();
   if (visibilityGate) {
-    const releaseVisibilityGate = () => {
+    const releaseVisibilityGate = (): void => {
       if (destroyed || visibilityGateSettled) {
         return;
       }
@@ -790,9 +932,27 @@ function createFeatureHint(options) {
   } else {
     settleReady();
   }
-  return controller;
+  return hintController;
 }
 
+function listFeatureHints(): FeatureHintDefinition[] {
+  return Object.keys(FEATURE_HINTS).filter(isFeatureHintKey).map((key) => FEATURE_HINTS[key]);
+}
+
+export type {
+  FeatureHintAction,
+  FeatureHintActionItem,
+  FeatureHintAlignMode,
+  FeatureHintArrowAlign,
+  FeatureHintArrowSide,
+  FeatureHintChromeApi,
+  FeatureHintController,
+  FeatureHintDefinition,
+  FeatureHintDismissStorage,
+  FeatureHintOptions,
+  FeatureHintWidthMode,
+  FeatureHintWindow
+};
 export {
   FEATURE_HINTS,
   getFeatureHint,
@@ -804,8 +964,6 @@ export {
   getFeatureHintSessionDismissKey,
   getFeatureHintLocalDismissKey,
   getFeatureHintSyncDismissKey,
-  createFeatureHint
+  createFeatureHint,
+  listFeatureHints
 };
-export function listFeatureHints() {
-      return Object.keys(FEATURE_HINTS).map((key) => FEATURE_HINTS[key]);
-    }

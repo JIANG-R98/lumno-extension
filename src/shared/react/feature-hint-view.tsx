@@ -1,64 +1,18 @@
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
+import type {
+  FeatureHintViewController,
+  FeatureHintViewLabels,
+  FeatureHintViewModel,
+  FeatureHintViewOptions
+} from '../../types/view-apis';
 
-export interface FeatureHintViewModel {
-  actions?: Array<{
-    iconHtml?: string;
-    id: string;
-    variant?: 'primary' | 'secondary';
-  }>;
-  alignMode: string;
-  arrowAlign: string;
-  arrowSide: string;
-  badgeIconHtml?: string;
-  badgeIconImageSrc?: string;
-  badgeIconText?: string;
-  badgeWordmarkDarkImageSrc?: string;
-  badgeWordmarkImageSrc?: string;
-  className?: string;
-  dismissStorage: string;
-  elementId: string;
-  hasLink: boolean;
-  hintId: string;
-  inlineActions?: boolean;
-  placement?: string;
-  roundedArrowTip: boolean;
-  surface?: string;
-  textId: string;
-  version?: string;
-  widthMode: string;
-}
-
-export interface FeatureHintViewLabels {
-  actions?: Record<string, string>;
-  badge: string;
-  close: string;
-  connector?: string;
-  link?: string;
-  text: string;
-  trailing?: string;
-}
-
-export interface FeatureHintViewOptions {
-  documentObj?: Document;
-  labels: FeatureHintViewLabels;
-  model: FeatureHintViewModel;
-  onActionClick?(actionId: string, event: MouseEvent): void;
-  onDismiss?(): void;
-  onLinkClick?(event: MouseEvent): void;
-}
-
-export interface FeatureHintViewController {
-  actionButtons: HTMLButtonElement[];
-  arrowTip: HTMLSpanElement | null;
-  badge: HTMLSpanElement;
-  closeButton: HTMLButtonElement;
-  destroy(): void;
-  element: HTMLSpanElement;
-  linkButton: HTMLButtonElement | null;
-  text: HTMLSpanElement;
-  updateLabels(labels: FeatureHintViewLabels): void;
-}
+export type {
+  FeatureHintViewController,
+  FeatureHintViewLabels,
+  FeatureHintViewModel,
+  FeatureHintViewOptions
+};
 
 function FeatureHintContent({
   labels,

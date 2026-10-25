@@ -1,6 +1,12 @@
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { useState, type ReactNode } from 'react';
+import type {
+  BrowserAvatar,
+  BrowserAvatarTooltipModel,
+  CursorTagModel,
+  TooltipElementOptions
+} from '../../types/view-apis';
 
 const TOOLTIP_CLASS = '_x_extension_tooltip_2026_unique_';
 const LINE_CLASS = '_x_extension_tooltip_line_2026_unique_';
@@ -19,32 +25,6 @@ const TOOLTIP_RENDER_HOOK =
   '_x_lumnoTooltipRenderReact_2026_unique_';
 const TOOLTIP_DESTROY_HOOK =
   '_x_lumnoTooltipDestroyReact_2026_unique_';
-
-interface TooltipElementOptions {
-  className?: string;
-  documentObj?: Document;
-  id?: string;
-  kind?: string;
-  positionMode?: string;
-}
-
-interface CursorTagModel {
-  keyText: string;
-  label: string;
-  windowsLogo?: boolean;
-}
-
-interface BrowserAvatar {
-  id?: string;
-  name?: string;
-  src?: string;
-}
-
-interface BrowserAvatarTooltipModel {
-  browsers?: BrowserAvatar[];
-  browserNameSeparator?: string;
-  browserAvatarSuffix?: string;
-}
 
 interface TooltipRootState {
   destroyed: boolean;

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The "updated to vX" notice under the search box of New Tab and the overlay.
 // Its data (the published notice, the setting, display counts) lives in
 // platform/update-notice.ts, re-exported here for the surfaces.
@@ -22,7 +21,6 @@ import {
   normalizeUpdateNoticePayload,
   shouldShowUpdateNotice,
   normalizeUpdateNoticeEnabled,
-  getDomIdPart,
   getUpdateNoticeDisplayCountKey,
   normalizeUpdateNoticeDisplayCount,
   getStoredUpdateNotice,
@@ -32,30 +30,73 @@ import {
   fetchReleaseTitle,
   publishUpdateNotice
 } from '../platform/update-notice';
+import type { ReleaseFetch, UpdateNotice, UpdateNoticeChromeApi } from '../platform/update-notice';
+import type { StorageChanges } from '../domain/storage-port';
+import type { FeatureHintController, FeatureHintDefinition } from './ui/feature-hints';
+
+type UpdateNoticeSurface = 'newtab' | 'overlay' | 'shared';
+
+type Translate = (key: string, fallback: string) => string;
+
+interface UpdateNoticeOptions {
+  documentObj?: Document | null;
+  windowObj?: Partial<Pick<Window, 'open'>> | null;
+  chromeApi?: UpdateNoticeChromeApi | null;
+  featureHints?: Pick<typeof LumnoFeatureHints, 'createFeatureHint' | 'getFeatureHintSyncDismissKey'> | null;
+  // This version; the manifest's when absent.
+  version?: string;
+  surface?: string;
+  t?: Translate;
+  getRiSvg?(id: string, sizeClass: string): string;
+  // The stored notice and setting when the page already read them.
+  initialNotice?: unknown;
+  updateNoticeEnabled?: unknown;
+  fetchImpl?: ReleaseFetch | null;
+  onDetailsClick?(notice: UpdateNotice | null, event: MouseEvent): void;
+  onDismiss?(): void;
+  // The notice showed, so other notices this page view should wait.
+  onSessionSlotClaimed?(): void;
+}
+
+interface UpdateNoticeController extends Omit<FeatureHintController, 'ready'> {
+  applyNoticePayload(payload: unknown): void;
+  getNotice(): UpdateNotice | null;
+  getDisplayCount(): number;
+  hasSessionSlot(): boolean;
+  // Counts this showing towards the limit; resolves to whether it counted.
+  recordExposure(): Promise<boolean>;
+  // Resolves to whether the notice claimed this page view's notice slot.
+  ready: Promise<boolean>;
+  getDetailsUrl(): string;
+}
 
 const UPDATE_NOTICE_ID = 'update-notice';
 
-function getStorageRuntime(chromeApi) {
-  const api = chromeApi || (globalThis && globalThis.chrome) || null;
-  return LumnoSettingsStorage.createProviderStorageRuntime(api);
+function getStorageRuntime(chromeApi: UpdateNoticeChromeApi | null): LumnoSettingsStorage.ProviderStorageRuntime {
+  return LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
 }
 
-function formatTemplate(template, params) {
+function formatTemplate(template: string, params: Record<string, string>): string {
   let text = String(template || '');
-  Object.keys(params || {}).forEach((key) => {
+  Object.keys(params).forEach((key) => {
     text = text.replace(new RegExp(`\\{${key}\\}`, 'g'), params[key]);
   });
   return text;
 }
 
-function stripBadgeButterfly(value) {
+function stripBadgeButterfly(value: string): string {
   return String(value || '').replace(/^(?:\s*🦋\s*)+/u, '').trim();
 }
 
-function createUpdateNoticeDefinition(versionTag, options) {
-  const surface = options && options.surface === 'overlay'
-    ? 'overlay'
-    : (options && options.surface === 'newtab' ? 'newtab' : 'shared');
+function readSurface(surface: unknown): UpdateNoticeSurface {
+  return surface === 'overlay' ? 'overlay' : (surface === 'newtab' ? 'newtab' : 'shared');
+}
+
+function createUpdateNoticeDefinition(
+  versionTag: unknown,
+  options?: { surface?: string } | null
+): Readonly<FeatureHintDefinition> {
+  const surface = readSurface(options ? options.surface : undefined);
   const className = surface === 'shared'
     ? 'x-lumno-feature-hint--update-notice'
     : `x-lumno-feature-hint--update-notice x-lumno-feature-hint--update-notice-${surface}`;
@@ -83,52 +124,47 @@ function createUpdateNoticeDefinition(versionTag, options) {
   });
 }
 
-function getUpdateNoticeDismissKey(featureHints, versionTag) {
-  const definition = createUpdateNoticeDefinition(versionTag);
-  if (featureHints && typeof featureHints.getFeatureHintSyncDismissKey === 'function') {
-    return featureHints.getFeatureHintSyncDismissKey(definition);
-  }
-  const idPart = getDomIdPart(definition.id);
-  const versionPart = getDomIdPart(definition.introducedIn || 'unversioned');
-  return `_x_lumno_feature_hint_sync_dismissed_2026_${idPart}_${versionPart}`;
+// The key that remembers the notice of this version was dismissed.
+function getUpdateNoticeDismissKey(
+  featureHints: Pick<typeof LumnoFeatureHints, 'getFeatureHintSyncDismissKey'> | null | undefined,
+  versionTag: unknown
+): string {
+  return (featureHints || LumnoFeatureHints).getFeatureHintSyncDismissKey(createUpdateNoticeDefinition(versionTag));
 }
 
-function createUpdateNotice(options) {
-  const config = options && typeof options === 'object' ? options : {};
+function createUpdateNotice(options?: UpdateNoticeOptions | null): UpdateNoticeController | null {
+  const config: UpdateNoticeOptions = options || {};
   const documentObj = config.documentObj || (typeof document !== 'undefined' ? document : null);
   const featureHints = config.featureHints || LumnoFeatureHints;
-  const chromeApi = config.chromeApi || (globalThis && globalThis.chrome) || null;
+  const chromeApi: UpdateNoticeChromeApi | null = config.chromeApi || (typeof chrome !== 'undefined' ? chrome : null);
   const currentVersion = normalizeVersionTag(config.version || getCurrentVersionTag(chromeApi));
-  if (!documentObj || !currentVersion || !featureHints || typeof featureHints.createFeatureHint !== 'function') {
+  if (!documentObj || !currentVersion) {
     return null;
   }
 
   const storageRuntime = getStorageRuntime(chromeApi);
-  const surface = config.surface === 'overlay'
-    ? 'overlay'
-    : (config.surface === 'newtab' ? 'newtab' : 'shared');
+  const surface = readSurface(config.surface);
   const definition = createUpdateNoticeDefinition(currentVersion, { surface });
   const dismissKey = getUpdateNoticeDismissKey(featureHints, currentVersion);
   const displayCountKey = getUpdateNoticeDisplayCountKey(currentVersion);
-  const baseT = typeof config.t === 'function'
+  const baseT: Translate = typeof config.t === 'function'
     ? config.t
-    : function(_key, fallback) { return fallback || ''; };
+    : (_key, fallback) => fallback || '';
   const displayVersion = formatVersionLabel(currentVersion);
   let notice = shouldShowUpdateNotice(config.initialNotice, currentVersion)
     ? normalizeUpdateNoticePayload(config.initialNotice)
     : null;
   let updateNoticeEnabled = normalizeUpdateNoticeEnabled(config.updateNoticeEnabled);
   let destroyed = false;
-  let titleRefreshPromise = null;
+  let titleRefreshPromise: Promise<void> | null = null;
   let sessionSlotClaimed = false;
-  let readyPromise = null;
   let displayCount = 0;
   let displayCountLoaded = false;
   let exposureRequested = false;
   let exposureRecorded = false;
   let ignoreOwnAutoDismissChange = false;
 
-  function translate(key, fallback) {
+  function translate(key: string, fallback: string): string {
     if (key === 'update_notice_badge') {
       return stripBadgeButterfly(
         formatTemplate(baseT(key, fallback || '已更新至 {version}'), { version: displayVersion })
@@ -151,7 +187,7 @@ function createUpdateNotice(options) {
     return baseT(key, fallback);
   }
 
-  function getActiveNotice() {
+  function getActiveNotice(): UpdateNotice | null {
     return notice || normalizeUpdateNoticePayload({
       version: currentVersion,
       reason: 'update',
@@ -159,7 +195,7 @@ function createUpdateNotice(options) {
     });
   }
 
-  function openDetails(event) {
+  function openDetails(event: MouseEvent): void {
     const activeNotice = getActiveNotice();
     if (typeof config.onDetailsClick === 'function') {
       config.onDetailsClick(activeNotice, event);
@@ -172,7 +208,7 @@ function createUpdateNotice(options) {
     }
   }
 
-  const hintController = featureHints.createFeatureHint({
+  const createdHint = featureHints.createFeatureHint({
     documentObj,
     definition,
     chromeApi,
@@ -187,17 +223,16 @@ function createUpdateNotice(options) {
       }
     }
   });
-  if (!hintController) {
+  if (!createdHint) {
     return null;
   }
+  const hintController: FeatureHintController = createdHint;
 
-  function isVisible() {
-    return typeof hintController.isVisible === 'function'
-      ? hintController.isVisible()
-      : hintController.element.getAttribute('data-visible') === 'true';
+  function isVisible(): boolean {
+    return hintController.isVisible();
   }
 
-  function claimSessionSlotIfVisible() {
+  function claimSessionSlotIfVisible(): void {
     if (destroyed || sessionSlotClaimed || !isVisible()) {
       return;
     }
@@ -207,7 +242,7 @@ function createUpdateNotice(options) {
     }
   }
 
-  function syncDisplayCountAttribute() {
+  function syncDisplayCountAttribute(): void {
     hintController.element.setAttribute(
       'data-update-notice-display-count',
       String(displayCount)
@@ -218,17 +253,14 @@ function createUpdateNotice(options) {
     );
   }
 
-  function recordExposureIfVisible() {
+  function recordExposureIfVisible(): boolean {
     if (destroyed || exposureRecorded || !exposureRequested || !displayCountLoaded || !isVisible()) {
       return false;
     }
     exposureRecorded = true;
     displayCount = normalizeUpdateNoticeDisplayCount(displayCount + 1);
     syncDisplayCountAttribute();
-    if (!storageRuntime.area || typeof storageRuntime.area.set !== 'function') {
-      return true;
-    }
-    const values = { [displayCountKey]: displayCount };
+    const values: Record<string, unknown> = { [displayCountKey]: displayCount };
     if (displayCount >= UPDATE_NOTICE_MAX_DISPLAY_COUNT) {
       // Persist the normal per-version dismissal while leaving this third
       // exposure visible. Any later newtab or overlay instance will start
@@ -238,18 +270,17 @@ function createUpdateNotice(options) {
     }
     try {
       storageRuntime.area.set(values, () => {
-        const api = chromeApi || (globalThis && globalThis.chrome) || null;
-        if (api && api.runtime && api.runtime.lastError) {
+        if (chromeApi && chromeApi.runtime && chromeApi.runtime.lastError) {
           ignoreOwnAutoDismissChange = false;
         }
       });
-    } catch (e) {
+    } catch (_error) {
       ignoreOwnAutoDismissChange = false;
     }
     return true;
   }
 
-  function syncNoticeVisibility() {
+  function syncNoticeVisibility(): void {
     hintController.updateLanguage();
     const displayLimitReached = displayCountLoaded &&
       displayCount >= UPDATE_NOTICE_MAX_DISPLAY_COUNT &&
@@ -267,7 +298,7 @@ function createUpdateNotice(options) {
     }
   }
 
-  function applyNoticePayload(payload) {
+  function applyNoticePayload(payload: unknown): void {
     if (destroyed) {
       return;
     }
@@ -277,20 +308,18 @@ function createUpdateNotice(options) {
     syncNoticeVisibility();
   }
 
-  function refreshMissingTitle() {
+  function refreshMissingTitle(): void {
     if (destroyed || !notice || notice.title || titleRefreshPromise) {
       return;
     }
-    titleRefreshPromise = fetchReleaseTitle(notice.version, config)
+    titleRefreshPromise = fetchReleaseTitle(notice.version, { fetchImpl: config.fetchImpl })
       .then((title) => {
         titleRefreshPromise = null;
         const sanitizedTitle = sanitizeText(title || '');
         if (destroyed || !sanitizedTitle || !notice || notice.title) {
           return;
         }
-        const nextNotice = normalizeUpdateNoticePayload(Object.assign({}, notice, {
-          title: sanitizedTitle
-        }));
+        const nextNotice = normalizeUpdateNoticePayload({ ...notice, title: sanitizedTitle });
         if (!nextNotice) {
           return;
         }
@@ -314,15 +343,15 @@ function createUpdateNotice(options) {
     syncDisplayCountAttribute();
     applyNoticePayload(payload);
   });
-  readyPromise = Promise.all([
+  const readyPromise: Promise<boolean> = Promise.all([
     storedNoticeReadyPromise,
-    hintController.ready || Promise.resolve(false)
+    hintController.ready
   ]).then(() => {
     claimSessionSlotIfVisible();
     return sessionSlotClaimed;
   });
 
-  function handleStorageChanged(changes, areaName) {
+  function handleStorageChanged(changes: StorageChanges, areaName: string): void {
     if (destroyed || (storageRuntime.name && areaName && areaName !== storageRuntime.name)) {
       return;
     }
@@ -352,25 +381,19 @@ function createUpdateNotice(options) {
     }
   }
 
-  if (chromeApi &&
-      chromeApi.storage &&
-      chromeApi.storage.onChanged &&
-      typeof chromeApi.storage.onChanged.addListener === 'function') {
-    chromeApi.storage.onChanged.addListener(handleStorageChanged);
+  const storageChanges = chromeApi && chromeApi.storage ? chromeApi.storage.onChanged : null;
+  if (storageChanges) {
+    storageChanges.addListener(handleStorageChanged);
   }
 
-  return Object.freeze(Object.assign({}, hintController, {
+  return Object.freeze({
+    ...hintController,
     applyNoticePayload,
     destroy() {
       destroyed = true;
-      if (typeof hintController.destroy === 'function') {
-        hintController.destroy();
-      }
-      if (chromeApi &&
-          chromeApi.storage &&
-          chromeApi.storage.onChanged &&
-          typeof chromeApi.storage.onChanged.removeListener === 'function') {
-        chromeApi.storage.onChanged.removeListener(handleStorageChanged);
+      hintController.destroy();
+      if (storageChanges) {
+        storageChanges.removeListener(handleStorageChanged);
       }
     },
     getNotice() {
@@ -386,9 +409,6 @@ function createUpdateNotice(options) {
     recordExposure() {
       const wasRecorded = exposureRecorded;
       exposureRequested = true;
-      if (!readyPromise) {
-        return Promise.resolve(false);
-      }
       return readyPromise.then(() => (
         recordExposureIfVisible() || (!wasRecorded && exposureRecorded)
       ));
@@ -398,8 +418,10 @@ function createUpdateNotice(options) {
       const activeNotice = getActiveNotice();
       return activeNotice ? activeNotice.releaseUrl : '';
     }
-  }));
+  });
 }
+
+export type { UpdateNoticeController, UpdateNoticeOptions, UpdateNoticeSurface };
 
 export {
   UPDATE_NOTICE_STORAGE_KEY,
