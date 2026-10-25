@@ -1,10 +1,96 @@
-// @ts-nocheck
 // Pinned and hidden recent sites, and the recent-site context menu.
-import * as LumnoNewtabDismissStack from '../dismiss-stack';
-import * as LumnoRecentSitesStorage from '../../platform/recent-sites-storage';
+import type { Disposition } from '../../domain/navigation-disposition';
+import type * as ProgressHistory from '../../domain/progress-history';
+import type { ProgressHistoryMap, ProgressVersion } from '../../domain/progress-history';
+import type * as ProgressMatch from '../../domain/progress-match';
+import type * as RecentSitesStore from '../../domain/recent-sites-store';
+import type { HiddenRecentSite, RecentSite, RecentSiteOptions } from '../../domain/recent-sites-store';
+import type { StorageAreaLike } from '../../domain/storage-port';
 import * as LumnoMessaging from '../../platform/messaging';
+import * as LumnoRecentSitesStorage from '../../platform/recent-sites-storage';
+import type { RecentSiteStorageOptions } from '../../platform/recent-sites-storage';
+import { isElementNode } from '../../shared/dom-guards';
+import type { SelectMenuOption } from '../../shared/react/select-menu';
+import * as LumnoNewtabDismissStack from '../dismiss-stack';
+import type { ContextMenuParts, SelectMenuController, ShowToast, Translate } from '../newtab-types';
+import type { RecentHistoryItem } from '../react/recent-history-dialog';
+import type { RecentProgressState, RecentSitesViewOptions } from '../react/recent-sites';
+import type { SelectMenuInstance } from '../react/select-menu';
+import type { ShortcutSite } from '../shortcuts/shortcut-types';
+import type { RecentContextTarget } from './recent-types';
 
-function createRecentSitesController(deps) {
+interface RecentSitesControllerState {
+  recentContextMenu: ContextMenuParts | null;
+  recentContextMenuSelectController: SelectMenuController | null;
+  recentContextMenuTarget: RecentContextTarget | null;
+  hiddenRecentSites: HiddenRecentSite[];
+  pinnedRecentSites: RecentSite[];
+  // The items the grid shows, to skip renders that change nothing.
+  recentRenderSignature: string;
+  recentSourceItems: RecentSite[];
+  progressTrackingEnabled: boolean;
+  // Versions a tracked card left, by history id.
+  progressHistoryMap: ProgressHistoryMap;
+}
+
+interface RecentSitesControllerDeps {
+  NEWTAB_CONTEXT_MENU_OPEN_VALUE: string;
+  t: Translate;
+  showToast: ShowToast;
+  openExternalNewTabUrl(url: string, disposition: Disposition): unknown;
+  hasShortcutForSite(site: ShortcutSite): boolean;
+  addSiteToShortcuts(site: ShortcutSite): unknown;
+  closeShortcutContextMenu(): void;
+  closeBookmarkContextMenu(): void;
+  canDismissRecentCard(): boolean;
+  hideCursorTooltip(): void;
+  hideTopActionTooltip(): void;
+  normalizeHost: NonNullable<RecentSiteOptions['normalizeHost']>;
+  getCanonicalPageUrlForFavicon: NonNullable<RecentSiteOptions['getCanonicalPageUrlForFavicon']>;
+  sanitizeDisplayText: NonNullable<RecentSiteOptions['sanitizeDisplayText']>;
+  getSiteDisplayName: NonNullable<RecentSiteOptions['getSiteDisplayName']>;
+  shouldExcludeFromRecentSites(url: string): boolean;
+  isBrowserPageRecentUrl(url: string): boolean;
+  MAX_PINNED_RECENT_SITES: number;
+  NEWTAB_RECENT_STORE: Pick<typeof RecentSitesStore,
+    | 'getRecentSiteUrlKey'
+    | 'normalizeHiddenRecentSiteEntry'
+    | 'normalizeHiddenRecentSites'
+    | 'isRecentSiteHidden'
+    | 'normalizeRecentSiteItem'
+    | 'isSamePinnedRecentSite'
+    | 'normalizePinnedRecentSites'
+    | 'mergeRecentSitesWithPinned'>;
+  recentSitesStorageArea: StorageAreaLike | null;
+  HIDDEN_RECENT_SITES_STORAGE_KEY: string;
+  renderRecentSites(items: RecentSite[]): unknown;
+  PINNED_RECENT_SITES_STORAGE_KEY: string;
+  progressMatch: Pick<typeof ProgressMatch, 'looksLikeSeriesPage' | 'compareProgressPages' | 'getProgressSiteKey'>;
+  progressHistory: Pick<typeof ProgressHistory, 'STORAGE_KEY' | 'createProgressId' | 'getHistoryId' | 'restoreVersion'>;
+  progressHistoryStorageArea: Pick<StorageAreaLike, 'set'> | null;
+  openProgressHistory?(item: RecentHistoryItem): unknown;
+  pageState: RecentSitesControllerState;
+}
+
+// Whether pinning took, or the pin limit stopped it; and the pinned cards.
+interface PinToggleResult {
+  pinned: boolean;
+  limitReached: boolean;
+  items?: RecentSite[];
+}
+
+// Whether the site was hidden, and whether it was a pinned card.
+interface HideResult {
+  hidden: boolean;
+  wasPinned: boolean;
+}
+
+// A pinned card to save; saving derives a site name left out.
+type PinnedSiteDraft = Omit<RecentSite, 'siteName'> & Partial<Pick<RecentSite, 'siteName'>>;
+
+type CardContextMenuPayload = Parameters<NonNullable<RecentSitesViewOptions['onItemContextMenu']>>[0];
+
+function createRecentSitesController(deps: RecentSitesControllerDeps) {
   const {
     NEWTAB_CONTEXT_MENU_OPEN_VALUE,
     t,
@@ -18,7 +104,6 @@ function createRecentSitesController(deps) {
     hideCursorTooltip,
     hideTopActionTooltip,
     normalizeHost,
-    getHostFromUrl,
     getCanonicalPageUrlForFavicon,
     sanitizeDisplayText,
     getSiteDisplayName,
@@ -51,7 +136,7 @@ function createRecentSitesController(deps) {
   const RECENT_CONTEXT_MENU_PORTAL_Z_INDEX = 10050;
   const RECENT_CONTEXT_MENU_PORTAL_OFFSET_PX = -6;
 
-  function getRecentShortcutSite(item) {
+  function getRecentShortcutSite(item: RecentSite): ShortcutSite {
     const normalizedItem = normalizeRecentSiteRecord(item) || item;
     return {
       title: normalizedItem.siteName || normalizedItem.title || '',
@@ -59,7 +144,7 @@ function createRecentSitesController(deps) {
     };
   }
 
-  function getRecentContextMenuOptions(target) {
+  function getRecentContextMenuOptions(target?: RecentContextTarget | null): SelectMenuOption[] {
     const isShortcut = Boolean(target && target.item &&
       hasShortcutForSite(getRecentShortcutSite(target.item)));
     return [
@@ -88,7 +173,7 @@ function createRecentSitesController(deps) {
     ];
   }
 
-  function isRecentContextMenuOpen() {
+  function isRecentContextMenuOpen(): boolean {
     return Boolean(
       pageState.recentContextMenu &&
       pageState.recentContextMenuSelectController &&
@@ -96,25 +181,22 @@ function createRecentSitesController(deps) {
     );
   }
 
-  function isRecentContextMenuNode(node) {
-    if (!node || !pageState.recentContextMenu) {
+  function isRecentContextMenuNode(node: EventTarget | null): boolean {
+    if (!isElementNode(node) || !pageState.recentContextMenu) {
       return false;
     }
     const { control, menu } = pageState.recentContextMenu;
-    return Boolean(
-      (control && (node === control || (typeof control.contains === 'function' && control.contains(node)))) ||
-      (menu && (node === menu || (typeof menu.contains === 'function' && menu.contains(node))))
-    );
+    return control.contains(node) || menu.contains(node);
   }
 
-  function clearRecentContextMenuTargetVisual() {
+  function clearRecentContextMenuTargetVisual(): void {
     const element = pageState.recentContextMenuTarget && pageState.recentContextMenuTarget.element;
-    if (element && typeof element.removeAttribute === 'function') {
+    if (element) {
       element.removeAttribute('data-recent-context-menu-open');
     }
   }
 
-  function closeRecentContextMenu() {
+  function closeRecentContextMenu(): void {
     clearRecentContextMenuTargetVisual();
     if (pageState.recentContextMenu && pageState.recentContextMenuSelectController) {
       pageState.recentContextMenuSelectController.setOpen(pageState.recentContextMenu.control, false);
@@ -122,25 +204,21 @@ function createRecentSitesController(deps) {
     pageState.recentContextMenuTarget = null;
   }
 
-  function getRecentContextMenuPoint(target, event) {
+  function getRecentContextMenuPoint(target: RecentContextTarget, event: MouseEvent | null | undefined): { x: number; y: number } {
     const clientX = Number(event && event.clientX);
     const clientY = Number(event && event.clientY);
     if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
       return { x: clientX, y: clientY };
     }
-    const element = target && target.element;
-    if (element && typeof element.getBoundingClientRect === 'function') {
-      const rect = element.getBoundingClientRect();
-      return {
-        x: rect.left + (rect.width / 2),
-        y: rect.bottom
-      };
-    }
-    return { x: 0, y: 0 };
+    const rect = target.element.getBoundingClientRect();
+    return {
+      x: rect.left + (rect.width / 2),
+      y: rect.bottom
+    };
   }
 
-  function setRecentContextMenuPosition(target, event) {
-    if (!pageState.recentContextMenu || !pageState.recentContextMenu.control) {
+  function setRecentContextMenuPosition(target: RecentContextTarget, event: MouseEvent | null | undefined): void {
+    if (!pageState.recentContextMenu) {
       return;
     }
     const point = getRecentContextMenuPoint(target, event);
@@ -148,9 +226,9 @@ function createRecentSitesController(deps) {
     pageState.recentContextMenu.control.style.top = `${Math.round(point.y)}px`;
   }
 
-  function removeRecentSiteFromContextMenu(item) {
-    return Promise.resolve(hideRecentSiteTemporarily(item)).then((result) => {
-      if (!result || !result.hidden) {
+  function removeRecentSiteFromContextMenu(item: RecentSite): Promise<void> {
+    return hideRecentSiteTemporarily(item).then((result) => {
+      if (!result.hidden) {
         return;
       }
       showToast(
@@ -170,7 +248,7 @@ function createRecentSitesController(deps) {
     });
   }
 
-  function handleRecentContextMenuAction(actionValue) {
+  function handleRecentContextMenuAction(actionValue: unknown): void {
     const action = String(actionValue || '');
     const target = pageState.recentContextMenuTarget;
     closeRecentContextMenu();
@@ -197,15 +275,15 @@ function createRecentSitesController(deps) {
     if (action !== RECENT_CONTEXT_MENU_REMOVE_VALUE) {
       return;
     }
-    removeRecentSiteFromContextMenu(target.item);
+    void removeRecentSiteFromContextMenu(target.item);
   }
 
-  function handleRecentContextMenuActionClick(event) {
-    const target = event && event.target;
-    const option = target && typeof target.closest === 'function'
+  function handleRecentContextMenuActionClick(event: MouseEvent): void {
+    const target = event.target;
+    const option = isElementNode(target)
       ? target.closest('._x_extension_select_option_2024_unique_')
       : null;
-    if (!option || !pageState.recentContextMenu || !pageState.recentContextMenu.menu ||
+    if (!option || !pageState.recentContextMenu ||
         !pageState.recentContextMenu.menu.contains(option)) {
       return;
     }
@@ -222,19 +300,18 @@ function createRecentSitesController(deps) {
     close: () => closeRecentContextMenu()
   });
 
-  function handleRecentContextMenuDocumentPointerDown(event) {
+  function handleRecentContextMenuDocumentPointerDown(event: PointerEvent): void {
     if (!pageState.recentContextMenuTarget || isRecentContextMenuNode(event.target)) {
       return;
     }
     closeRecentContextMenu();
   }
 
-  function createRecentContextMenu() {
-    if (!pageState.recentContextMenuSelectController ||
-        typeof pageState.recentContextMenuSelectController.createSelect !== 'function') {
+  function createRecentContextMenu(): ContextMenuParts | null {
+    if (!pageState.recentContextMenuSelectController) {
       return null;
     }
-    const created = pageState.recentContextMenuSelectController.createSelect({
+    const created: SelectMenuInstance | null = pageState.recentContextMenuSelectController.createSelect({
       id: '_x_extension_newtab_recent_context_menu_2026_unique_',
       selectId: '_x_extension_newtab_recent_context_menu_select_2026_unique_',
       className: 'x-nt-shortcut-context-menu x-nt-recent-context-menu',
@@ -255,15 +332,15 @@ function createRecentSitesController(deps) {
         handleRecentContextMenuAction(payload && payload.action);
       }
     });
+    if (!created) {
+      return null;
+    }
     const control = created.wrapper;
     const select = created.select;
     const trigger = created.trigger;
     const menu = created.menu;
-    if (!control || !select || !trigger || !menu) {
-      return null;
-    }
     trigger.tabIndex = -1;
-    const stopContextMenuEvent = (event) => {
+    const stopContextMenuEvent = (event: Event): void => {
       event.stopPropagation();
     };
     [control, trigger, menu].forEach((element) => {
@@ -280,10 +357,7 @@ function createRecentSitesController(deps) {
     return { control, select, trigger, menu };
   }
 
-  function openRecentContextMenu(target, event) {
-    if (!target || !target.item || !target.element) {
-      return;
-    }
+  function openRecentContextMenu(target: RecentContextTarget, event: MouseEvent): void {
     if (!pageState.recentContextMenu) {
       pageState.recentContextMenu = createRecentContextMenu();
     }
@@ -296,21 +370,17 @@ function createRecentSitesController(deps) {
     pageState.recentContextMenuTarget = target;
     target.element.setAttribute('data-recent-context-menu-open', 'true');
     setRecentContextMenuPosition(target, event);
-    if (typeof pageState.recentContextMenuSelectController.setOptions === 'function') {
-      pageState.recentContextMenuSelectController.setOptions(
-        pageState.recentContextMenu.control,
-        getRecentContextMenuOptions(target),
-        NEWTAB_CONTEXT_MENU_OPEN_VALUE
-      );
-    }
+    pageState.recentContextMenuSelectController.setOptions(
+      pageState.recentContextMenu.control,
+      getRecentContextMenuOptions(target),
+      NEWTAB_CONTEXT_MENU_OPEN_VALUE
+    );
     pageState.recentContextMenuSelectController.setOpen(pageState.recentContextMenu.control, true);
   }
 
-  function handleRecentCardContextMenu(payload) {
-    const event = payload && payload.event;
-    const item = payload && payload.item;
-    const element = payload && payload.element;
-    if (!event || !item || !element || !canDismissRecentCard()) {
+  function handleRecentCardContextMenu(payload: CardContextMenuPayload): void {
+    const { event, item, element } = payload;
+    if (!canDismissRecentCard()) {
       return;
     }
     event.preventDefault();
@@ -320,10 +390,9 @@ function createRecentSitesController(deps) {
     openRecentContextMenu({ item, element }, event);
   }
 
-  function getRecentStoreOptions(extraOptions) {
+  function getRecentStoreOptions(extraOptions?: RecentSiteStorageOptions): RecentSiteStorageOptions {
     return {
       normalizeHost,
-      getHostFromUrl,
       getCanonicalPageUrlForFavicon,
       sanitizeDisplayText,
       getSiteDisplayName,
@@ -336,25 +405,25 @@ function createRecentSitesController(deps) {
     };
   }
 
-  function getRecentSiteUrlKey(item) {
+  function getRecentSiteUrlKey(item: unknown): string {
     return NEWTAB_RECENT_STORE.getRecentSiteUrlKey(item);
   }
 
-  function normalizeHiddenRecentSiteEntry(item) {
+  function normalizeHiddenRecentSiteEntry(item: unknown): HiddenRecentSite | null {
     return NEWTAB_RECENT_STORE.normalizeHiddenRecentSiteEntry(item);
   }
 
-  function normalizeHiddenRecentSites(items) {
+  function normalizeHiddenRecentSites(items: unknown): HiddenRecentSite[] {
     return NEWTAB_RECENT_STORE.normalizeHiddenRecentSites(items, getRecentStoreOptions());
   }
 
-  function readHiddenRecentSites() {
+  function readHiddenRecentSites(): Promise<HiddenRecentSite[]> {
     return LumnoRecentSitesStorage.loadHiddenRecentSites(recentSitesStorageArea, getRecentStoreOptions({
       key: HIDDEN_RECENT_SITES_STORAGE_KEY
     }));
   }
 
-  function writeHiddenRecentSites(items) {
+  function writeHiddenRecentSites(items: readonly (HiddenRecentSite | null)[]): Promise<HiddenRecentSite[]> {
     return LumnoRecentSitesStorage.saveHiddenRecentSites(recentSitesStorageArea, items, getRecentStoreOptions({
       key: HIDDEN_RECENT_SITES_STORAGE_KEY
     })).then((normalized) => {
@@ -363,11 +432,11 @@ function createRecentSitesController(deps) {
     });
   }
 
-  function isRecentSiteHidden(item) {
+  function isRecentSiteHidden(item: unknown): boolean {
     return NEWTAB_RECENT_STORE.isRecentSiteHidden(item, pageState.hiddenRecentSites);
   }
 
-  function hideRecentSiteTemporarily(item) {
+  function hideRecentSiteTemporarily(item: RecentSite): Promise<HideResult> {
     const normalizedItem = normalizeRecentSiteRecord(item);
     const key = getRecentSiteUrlKey(normalizedItem);
     if (!normalizedItem || !key) {
@@ -395,7 +464,7 @@ function createRecentSitesController(deps) {
     });
   }
 
-  function getRecentDismissTooltip(item) {
+  function getRecentDismissTooltip(item: RecentSite): string {
     const normalizedItem = normalizeRecentSiteRecord(item);
     if (normalizedItem && isRecentSitePinned(normalizedItem)) {
       return t(
@@ -409,26 +478,26 @@ function createRecentSitesController(deps) {
     );
   }
 
-  function normalizeRecentSiteRecord(item, options) {
+  function normalizeRecentSiteRecord(item: unknown, options?: RecentSiteStorageOptions): RecentSite | null {
     return NEWTAB_RECENT_STORE.normalizeRecentSiteItem(item, getRecentStoreOptions(options));
   }
 
   // Pinned cards are one per site, tracked cards one per work.
-  function isSamePinnedSite(a, b) {
+  function isSamePinnedSite(a: unknown, b: unknown): boolean {
     return NEWTAB_RECENT_STORE.isSamePinnedRecentSite(a, b, getRecentStoreOptions());
   }
 
-  function normalizePinnedRecentSites(items) {
+  function normalizePinnedRecentSites(items: unknown): RecentSite[] {
     return NEWTAB_RECENT_STORE.normalizePinnedRecentSites(items, getRecentStoreOptions());
   }
 
-  function readPinnedRecentSites() {
+  function readPinnedRecentSites(): Promise<RecentSite[]> {
     return LumnoRecentSitesStorage.loadPinnedRecentSites(recentSitesStorageArea, getRecentStoreOptions({
       key: PINNED_RECENT_SITES_STORAGE_KEY
     }));
   }
 
-  function writePinnedRecentSites(items) {
+  function writePinnedRecentSites(items: readonly PinnedSiteDraft[]): Promise<RecentSite[]> {
     return LumnoRecentSitesStorage.savePinnedRecentSites(recentSitesStorageArea, items, getRecentStoreOptions({
       key: PINNED_RECENT_SITES_STORAGE_KEY
     })).then((normalized) => {
@@ -437,11 +506,11 @@ function createRecentSitesController(deps) {
     });
   }
 
-  function isRecentSitePinned(item) {
+  function isRecentSitePinned(item: unknown): boolean {
     return pageState.pinnedRecentSites.some((pinnedItem) => isSamePinnedSite(pinnedItem, item));
   }
 
-  function mergeRecentSitesWithPinned(items, limit) {
+  function mergeRecentSitesWithPinned(items: unknown, limit: number): RecentSite[] {
     return NEWTAB_RECENT_STORE.mergeRecentSitesWithPinned(
       items,
       pageState.pinnedRecentSites,
@@ -451,7 +520,7 @@ function createRecentSitesController(deps) {
     );
   }
 
-  function togglePinnedRecentSite(item) {
+  function togglePinnedRecentSite(item: RecentSite): Promise<PinToggleResult> {
     const normalizedItem = normalizeRecentSiteRecord(item, { ignoreBlacklist: true });
     if (!normalizedItem) {
       return Promise.resolve({ pinned: false, limitReached: false });
@@ -473,7 +542,7 @@ function createRecentSitesController(deps) {
   // tracking), which also makes it a card for the work, not the site. The
   // title and URL usually tell; otherwise an open tab with the page is read
   // for episode navigation or metadata, briefly.
-  function shouldAutoTrackOnPin(item) {
+  function shouldAutoTrackOnPin(item: RecentSite): Promise<boolean> {
     if (!pageState.progressTrackingEnabled) return Promise.resolve(false);
     if (progressMatch.looksLikeSeriesPage(item)) return Promise.resolve(true);
     if (typeof chrome === 'undefined' || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
@@ -486,15 +555,15 @@ function createRecentSitesController(deps) {
           clearTimeout(timer);
           resolve(!chrome.runtime.lastError && Boolean(response && response.series === true));
         });
-      } catch (error) {
+      } catch {
         clearTimeout(timer);
         resolve(false);
       }
     });
   }
 
-  function pinOrUnpinRecentSite(normalizedItem, autoTrack) {
-    const candidate = autoTrack ? { ...normalizedItem, progressTracking: true } : normalizedItem;
+  function pinOrUnpinRecentSite(normalizedItem: RecentSite, autoTrack: boolean): Promise<PinToggleResult> {
+    const candidate: RecentSite = autoTrack ? { ...normalizedItem, progressTracking: true } : normalizedItem;
     const existingIndex = pageState.pinnedRecentSites.findIndex((pinnedItem) => isSamePinnedSite(pinnedItem, candidate));
     if (existingIndex >= 0) {
       const nextItems = pageState.pinnedRecentSites.filter((_, index) => index !== existingIndex);
@@ -511,14 +580,15 @@ function createRecentSitesController(deps) {
     if (pageState.pinnedRecentSites.length >= MAX_PINNED_RECENT_SITES) {
       return Promise.resolve({ pinned: false, limitReached: true, items: pageState.pinnedRecentSites.slice() });
     }
-    const nextItems = [{
+    const pinned: RecentSite = {
       ...normalizedItem,
       pinnedAt: Date.now(),
       ...(autoTrack ? {
         progressTracking: true,
         progressId: progressHistory.createProgressId(Date.now())
       } : {})
-    }].concat(pageState.pinnedRecentSites);
+    };
+    const nextItems = [pinned].concat(pageState.pinnedRecentSites);
     return writePinnedRecentSites(nextItems).then((savedItems) => {
       pageState.recentRenderSignature = '';
       renderRecentSites(pageState.recentSourceItems);
@@ -536,37 +606,37 @@ function createRecentSitesController(deps) {
   // Progress tracking (Labs). A tracked pinned card follows the episode or
   // chapter the person is on; the background moves it (progress-tracker.ts)
   // and keeps the versions it leaves in local storage.
-  function findPinnedIndex(item) {
+  function findPinnedIndex(item: unknown): number {
     return pageState.pinnedRecentSites.findIndex((pinnedItem) => isSamePinnedSite(pinnedItem, item));
   }
 
-  function getTrackedPinnedItem(item) {
+  function getTrackedPinnedItem(item: RecentSite | null | undefined): RecentSite | null {
     if (!pageState.progressTrackingEnabled || !item) return null;
     const index = findPinnedIndex(item);
     const pinnedItem = index >= 0 ? pageState.pinnedRecentSites[index] : null;
     return pinnedItem && pinnedItem.progressTracking === true ? pinnedItem : null;
   }
 
-  function getProgressHistoryId(item) {
+  function getProgressHistoryId(item: RecentSite): string {
     return progressHistory.getHistoryId(item, progressMatch);
   }
 
-  function getProgressVersions(item) {
+  function getProgressVersions(item: RecentSite): ProgressVersion[] {
     const historyId = getProgressHistoryId(item);
-    const map = pageState.progressHistoryMap || {};
-    return historyId && Array.isArray(map[historyId]) ? map[historyId] : [];
+    const map = pageState.progressHistoryMap;
+    return historyId && Object.hasOwn(map, historyId) ? map[historyId] : [];
   }
 
   // 'tracking' or 'available' for pinned cards, so the card can offer the
   // switch; '' where tracking does not apply.
-  function getRecentProgressState(item) {
+  function getRecentProgressState(item: RecentSite | null | undefined): RecentProgressState {
     if (!pageState.progressTrackingEnabled || !item) return '';
     const index = findPinnedIndex(item);
     if (index < 0) return '';
     return pageState.pinnedRecentSites[index].progressTracking === true ? 'tracking' : 'available';
   }
 
-  function toggleRecentProgressTracking(item) {
+  function toggleRecentProgressTracking(item: RecentSite): Promise<boolean> {
     const state = getRecentProgressState(item);
     if (!state) return Promise.resolve(false);
     return setProgressTracking(item, state !== 'tracking');
@@ -574,7 +644,7 @@ function createRecentSitesController(deps) {
 
   // Recent pages of a tracked work fold into its card instead of filling
   // the list with earlier or later episodes.
-  function belongsToTrackedWork(item) {
+  function belongsToTrackedWork(item: RecentSite): boolean {
     if (!pageState.progressTrackingEnabled || !item) return false;
     return pageState.pinnedRecentSites.some((pinnedItem) => (
       pinnedItem && pinnedItem.progressTracking === true &&
@@ -585,10 +655,10 @@ function createRecentSitesController(deps) {
     ));
   }
 
-  function getProgressContextMenuOptions(item) {
+  function getProgressContextMenuOptions(item: RecentSite | null | undefined): SelectMenuOption[] {
     if (!pageState.progressTrackingEnabled || !item) return [];
     const tracked = Boolean(getTrackedPinnedItem(item));
-    const options = [{
+    const options: SelectMenuOption[] = [{
       action: tracked ? RECENT_CONTEXT_MENU_STOP_PROGRESS_VALUE : RECENT_CONTEXT_MENU_TRACK_PROGRESS_VALUE,
       value: tracked ? RECENT_CONTEXT_MENU_STOP_PROGRESS_VALUE : RECENT_CONTEXT_MENU_TRACK_PROGRESS_VALUE,
       label: tracked
@@ -608,16 +678,16 @@ function createRecentSitesController(deps) {
 
   // Turning tracking on for an unpinned card pins it, since only pinned
   // cards stay put long enough to follow a work.
-  function setProgressTracking(item, enabled) {
+  function setProgressTracking(item: RecentSite, enabled: boolean): Promise<boolean> {
     const normalizedItem = normalizeRecentSiteRecord(item, { ignoreBlacklist: true });
     if (!normalizedItem) return Promise.resolve(false);
     const index = findPinnedIndex(normalizedItem);
-    let nextItems;
+    let nextItems: RecentSite[];
     if (index >= 0) {
-      nextItems = pageState.pinnedRecentSites.map((pinnedItem, position) => {
+      nextItems = pageState.pinnedRecentSites.map((pinnedItem, position): RecentSite => {
         if (position !== index) return pinnedItem;
         if (!enabled) {
-          const { progressTracking, progressId, ...rest } = pinnedItem;
+          const { progressTracking: _tracking, progressId: _progressId, ...rest } = pinnedItem;
           return rest;
         }
         return {
@@ -632,12 +702,13 @@ function createRecentSitesController(deps) {
       showToast(t('recent_pin_limit_toast', '最多只能置顶 3 个卡片。'), true);
       return Promise.resolve(false);
     } else {
-      nextItems = [{
+      const tracked: RecentSite = {
         ...normalizedItem,
         pinnedAt: Date.now(),
         progressTracking: true,
         progressId: progressHistory.createProgressId(Date.now())
-      }].concat(pageState.pinnedRecentSites);
+      };
+      nextItems = [tracked].concat(pageState.pinnedRecentSites);
     }
     return writePinnedRecentSites(nextItems).then(() => {
       pageState.recentRenderSignature = '';
@@ -652,10 +723,10 @@ function createRecentSitesController(deps) {
     });
   }
 
-  function openProgressHistoryFor(item) {
+  function openProgressHistoryFor(item: RecentSite): void {
     const pinnedItem = getTrackedPinnedItem(item);
     const versions = pinnedItem ? getProgressVersions(pinnedItem) : [];
-    if (!pinnedItem || !versions.length || typeof openProgressHistory !== 'function') return;
+    if (!pinnedItem || !versions.length || !openProgressHistory) return;
     openProgressHistory({
       cardId: getProgressHistoryId(pinnedItem),
       title: pinnedItem.title,
@@ -664,13 +735,13 @@ function createRecentSitesController(deps) {
     });
   }
 
-  function writeProgressHistory(map) {
+  function writeProgressHistory(map: ProgressHistoryMap): Promise<ProgressHistoryMap> {
     return new Promise((resolve, reject) => {
-      if (!progressHistoryStorageArea || typeof progressHistoryStorageArea.set !== 'function') {
+      if (!progressHistoryStorageArea) {
         reject(new Error('storage-unavailable'));
         return;
       }
-      progressHistoryStorageArea.set({ [progressHistory.STORAGE_KEY]: map }, () => {
+      void progressHistoryStorageArea.set({ [progressHistory.STORAGE_KEY]: map }, () => {
         const error = typeof chrome !== 'undefined' && chrome.runtime ? chrome.runtime.lastError : null;
         if (error) reject(new Error(error.message || 'storage-error'));
         else resolve(map);
@@ -680,7 +751,7 @@ function createRecentSitesController(deps) {
 
   // Makes a retained version current; the version the card leaves takes its
   // place in the history, so a restore can itself be restored.
-  function restoreProgressVersion(historyItem, _version, historyIndex) {
+  function restoreProgressVersion(historyItem: RecentHistoryItem, _version: unknown, historyIndex: number): Promise<boolean> {
     const index = pageState.pinnedRecentSites.findIndex((pinnedItem) =>
       pinnedItem && pinnedItem.progressTracking === true &&
       getProgressHistoryId(pinnedItem) === historyItem.cardId
@@ -694,12 +765,14 @@ function createRecentSitesController(deps) {
       historyIndex,
       { url: current.url, title: current.title, updatedAt: timestamp }
     );
-    if (!restored.version) return Promise.resolve(false);
+    // Narrowed here, for the cards below.
+    const version = restored.version;
+    if (!version) return Promise.resolve(false);
     const nextItems = pageState.pinnedRecentSites.map((entry, position) => {
       if (position !== index) return entry;
       // The site name can come from the old title, so it is derived again.
       const { siteName: _staleSiteName, ...card } = entry;
-      return { ...card, url: restored.version.url, title: restored.version.title || entry.title };
+      return { ...card, url: version.url, title: version.title || entry.title };
     });
     return writeProgressHistory(restored.map).then(() => {
       pageState.progressHistoryMap = restored.map;
@@ -714,10 +787,7 @@ function createRecentSitesController(deps) {
     });
   }
 
-  function updateRecentPinButton(button, isPinned, limitReached) {
-    if (!button) {
-      return;
-    }
+  function updateRecentPinButton(button: HTMLButtonElement, isPinned: boolean, limitReached: boolean): void {
     button.classList.toggle('x-nt-recent-pin--active', Boolean(isPinned));
     button.disabled = false;
     button.classList.toggle('x-nt-recent-pin--limit', Boolean(!isPinned && limitReached));
@@ -762,4 +832,7 @@ function createRecentSitesController(deps) {
   };
 }
 
+type RecentSitesController = ReturnType<typeof createRecentSitesController>;
+
 export { createRecentSitesController };
+export type { RecentSitesController, RecentSitesControllerDeps, RecentSitesControllerState };
