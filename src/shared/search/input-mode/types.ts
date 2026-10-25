@@ -9,15 +9,14 @@ type FormatMessage = (key: string, fallback: string, values?: Record<string, str
 
 type CssDeclaration = [property: string, value: string];
 
-// An inline style text from declarations, each !important when asked.
-type CssText = (pairs: CssDeclaration[], useImportantStyles: boolean) => string;
+// An inline style text from declarations.
+type CssText = (pairs: CssDeclaration[]) => string;
 
-// Sets one style property, !important when asked; ignores a missing element.
+// Sets one style property; ignores a missing element.
 type SetStyle = (
   element: ElementCSSInlineStyle | null | undefined,
   property: string,
-  value: string,
-  useImportantStyles: boolean
+  value: string
 ) => void;
 
 // Whether an element shows: its data-visible, else its display.

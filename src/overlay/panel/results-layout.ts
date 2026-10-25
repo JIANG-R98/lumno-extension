@@ -14,7 +14,6 @@ interface ResultsLayoutState {
   suggestionsContainer: HTMLElement | null;
   // The panel's styles live in its own shadow root, so inline styles need
   // no !important.
-  inputUsesIsolatedStyles: boolean;
   inputModeController: Pick<InputModeController,
     'setModeMenuResultOffset' | 'fitModeMenuWithinViewport' | 'updateLayout' | 'setTabHintVisible'> | null;
   overlaySearchResultDisplayLimit: number;
@@ -69,9 +68,6 @@ function createResultsLayout(deps: ResultsLayoutDeps) {
     }
     element.style.setProperty(property, value, 'important');
   };
-  function getImportance(): string {
-    return overlayState.inputUsesIsolatedStyles ? '' : 'important';
-  }
   function readComputedCssPixels(computedStyle: CSSStyleDeclaration | null, property: CssPixelProperty): number {
     if (!computedStyle) {
       return 0;
@@ -106,8 +102,7 @@ function createResultsLayout(deps: ResultsLayoutDeps) {
     }
     container.style.setProperty(
       '--x-ov-open-tabs-scrollbar-gutter',
-      `${gutterWidth}px`,
-      getImportance()
+      `${gutterWidth}px`
     );
   }
   // Caps the open tabs list at the display limit's rows, scrolling the rest.
@@ -158,8 +153,7 @@ function createResultsLayout(deps: ResultsLayoutDeps) {
     if (maxHeight > 0) {
       container.style.setProperty(
         '--x-ov-suggestions-max-height',
-        `${maxHeight}px`,
-        getImportance()
+        `${maxHeight}px`
       );
     } else {
       container.style.removeProperty('--x-ov-suggestions-max-height');
@@ -171,7 +165,7 @@ function createResultsLayout(deps: ResultsLayoutDeps) {
       return;
     }
     overlayState.inputDivider.setAttribute('data-visible', visible ? 'true' : 'false');
-    overlayState.inputDivider.style.setProperty('display', visible ? 'block' : 'none', overlayState.inputUsesIsolatedStyles ? '' : 'important');
+    overlayState.inputDivider.style.setProperty('display', visible ? 'block' : 'none');
   }
 
   function getSearchModeMenuResultOffset(): number {
@@ -207,8 +201,7 @@ function createResultsLayout(deps: ResultsLayoutDeps) {
     if (resultHeightLimit !== null && Number.isFinite(resultHeightLimit)) {
       container.style.setProperty(
         fitMaxHeightProperty,
-        `${resultHeightLimit}px`,
-        getImportance()
+        `${resultHeightLimit}px`
       );
     } else {
       container.style.removeProperty(fitMaxHeightProperty);
@@ -250,14 +243,13 @@ function createResultsLayout(deps: ResultsLayoutDeps) {
     );
     if (shouldCollapse) {
       SUGGESTIONS_HEIGHT_LAYOUT.applyNaturalSuggestionsHeightLayout(container);
-      const importance = getImportance();
-      container.style.setProperty('max-height', '0px', importance);
-      container.style.setProperty('min-height', '0px', importance);
-      container.style.setProperty('padding-top', '0px', importance);
-      container.style.setProperty('padding-bottom', '0px', importance);
-      container.style.setProperty('opacity', '0', importance);
-      container.style.setProperty('pointer-events', 'none', importance);
-      container.style.setProperty('overflow', 'hidden', importance);
+      container.style.setProperty('max-height', '0px');
+      container.style.setProperty('min-height', '0px');
+      container.style.setProperty('padding-top', '0px');
+      container.style.setProperty('padding-bottom', '0px');
+      container.style.setProperty('opacity', '0');
+      container.style.setProperty('pointer-events', 'none');
+      container.style.setProperty('overflow', 'hidden');
       setInputDividerVisible(false);
       syncSearchModeMenuResultOffset();
       return;

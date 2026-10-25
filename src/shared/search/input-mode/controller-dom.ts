@@ -32,7 +32,6 @@ interface ControllerDomDeps {
   siteSearchPrefixGlyph: HTMLElement;
   siteSearchPrefixLineIcon: SVGElement;
   cssText: CssText;
-  useImportantStyles: boolean;
   siteSearchPrefixChevron: HTMLElement;
   siteSearchPrefixCurrent: HTMLElement;
   siteSearchPrefixCurrentText: HTMLElement;
@@ -86,7 +85,6 @@ function createControllerDom(deps: ControllerDomDeps): ControllerDomParts {
     siteSearchPrefixGlyph,
     siteSearchPrefixLineIcon,
     cssText,
-    useImportantStyles,
     siteSearchPrefixChevron,
     siteSearchPrefixCurrent,
     siteSearchPrefixCurrentText,
@@ -202,7 +200,7 @@ function createControllerDom(deps: ControllerDomDeps): ControllerDomParts {
     ['width', '16px'],
     ['height', '16px'],
     ['flex', '0 0 16px']
-  ], useImportantStyles);
+  ]);
   if (!siteSearchPrefixLineIcon.parentNode) {
     siteSearchPrefix.insertBefore(siteSearchPrefixLineIcon, siteSearchPrefixText);
   }
@@ -259,10 +257,10 @@ function createControllerDom(deps: ControllerDomDeps): ControllerDomParts {
     ['pointer-events', 'auto'],
     ['z-index', '1'],
     ['user-select', 'none']
-  ], useImportantStyles);
-  setStyle(siteSearchPrefix, 'justify-content', 'flex-start', useImportantStyles);
-  setStyle(siteSearchPrefix, 'height', '32px', useImportantStyles);
-  setStyle(siteSearchPrefix, 'padding', '0 6px', useImportantStyles);
+  ]);
+  setStyle(siteSearchPrefix, 'justify-content', 'flex-start');
+  setStyle(siteSearchPrefix, 'height', '32px');
+  setStyle(siteSearchPrefix, 'padding', '0 6px');
   modeMenu.id = `${prefixId}-menu`;
   modeMenu.className = `x-lumno-search-input-mode__menu ${menuSurfaceClass}`;
   menuSurface.apply(modeMenu);
@@ -305,7 +303,7 @@ function createControllerDom(deps: ControllerDomDeps): ControllerDomParts {
   ];
   modeMenu.style.cssText = '';
   modeMenuStyles.forEach((pair) => {
-    setStyle(modeMenu, pair[0], pair[1], useImportantStyles);
+    setStyle(modeMenu, pair[0], pair[1]);
   });
   if (!modeMenu.parentNode) {
     container.appendChild(modeMenu);

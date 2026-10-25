@@ -46,7 +46,6 @@ interface PrefixVisualDeps {
   rgbToCss: (rgb: Rgb) => string;
   setStyle: SetStyle;
   container: HTMLElement;
-  useImportantStyles: boolean;
   siteSearchPrefix: HTMLElement;
   siteSearchPrefixLineIcon: SVGElement;
   siteSearchPrefixChevron: HTMLElement;
@@ -82,7 +81,6 @@ function createPrefixVisual(deps: PrefixVisualDeps) {
     rgbToCss,
     setStyle,
     container,
-    useImportantStyles,
     siteSearchPrefix,
     siteSearchPrefixLineIcon,
     siteSearchPrefixChevron,
@@ -168,16 +166,16 @@ function createPrefixVisual(deps: PrefixVisualDeps) {
     visualOptions?: PrefixVisualOptions | null
   ): PrefixVisual {
     const visual = getInputModePrefixVisual(theme, visualOptions);
-    setStyle(container, '--x-lumno-search-mode-accent', visual.accentColor, useImportantStyles);
-    setStyle(container, '--x-lumno-search-mode-selected-bg', visual.background, useImportantStyles);
-    setStyle(siteSearchPrefix, 'background', visual.background, useImportantStyles);
-    setStyle(siteSearchPrefix, 'border', visual.border, useImportantStyles);
-    setStyle(siteSearchPrefix, 'box-shadow', visual.shadow, useImportantStyles);
-    setStyle(siteSearchPrefix, 'color', visual.color, useImportantStyles);
-    setStyle(siteSearchPrefix, '--x-lumno-search-mode-accent', visual.accentColor, useImportantStyles);
-    setStyle(siteSearchPrefixLineIcon, 'color', visual.accentColor, useImportantStyles);
-    setStyle(siteSearchPrefixChevron, 'color', visual.accentColor, useImportantStyles);
-    setStyle(siteSearchPrefixCurrent, 'color', visual.accentColor, useImportantStyles);
+    setStyle(container, '--x-lumno-search-mode-accent', visual.accentColor);
+    setStyle(container, '--x-lumno-search-mode-selected-bg', visual.background);
+    setStyle(siteSearchPrefix, 'background', visual.background);
+    setStyle(siteSearchPrefix, 'border', visual.border);
+    setStyle(siteSearchPrefix, 'box-shadow', visual.shadow);
+    setStyle(siteSearchPrefix, 'color', visual.color);
+    setStyle(siteSearchPrefix, '--x-lumno-search-mode-accent', visual.accentColor);
+    setStyle(siteSearchPrefixLineIcon, 'color', visual.accentColor);
+    setStyle(siteSearchPrefixChevron, 'color', visual.accentColor);
+    setStyle(siteSearchPrefixCurrent, 'color', visual.accentColor);
     return visual;
   }
 
@@ -187,9 +185,9 @@ function createPrefixVisual(deps: PrefixVisualDeps) {
     let totalReserve = rightReserveBase + extraInset;
     const badgeElement = getModeBadgeElement();
     if (getExtraRightInset) {
-      setStyle(siteSearchTabHint, 'right', `${anchorOffset}px`, useImportantStyles);
+      setStyle(siteSearchTabHint, 'right', `${anchorOffset}px`);
       if (badgeElement) {
-        setStyle(badgeElement, 'right', `${anchorOffset}px`, useImportantStyles);
+        setStyle(badgeElement, 'right', `${anchorOffset}px`);
       }
     }
     if (badgeElement && isElementVisible(badgeElement)) {
@@ -221,7 +219,7 @@ function createPrefixVisual(deps: PrefixVisualDeps) {
 
   function updatePrefixLayout(): void {
     const basePadding = getBaseInputPaddingLeft();
-    setStyle(siteSearchPrefix, 'left', `${basePadding}px`, useImportantStyles);
+    setStyle(siteSearchPrefix, 'left', `${basePadding}px`);
     if (!isElementVisible(siteSearchPrefix)) {
       setInputStyle(input, 'padding-left', `${basePadding}px`);
       return;
@@ -252,8 +250,7 @@ function createPrefixVisual(deps: PrefixVisualDeps) {
     setStyle(
       inputModeState.modeMenuFooter,
       '--x-lumno-search-mode-footer-inline-start',
-      `${Math.round(inlineStart * 100) / 100}px`,
-      useImportantStyles
+      `${Math.round(inlineStart * 100) / 100}px`
     );
   }
 

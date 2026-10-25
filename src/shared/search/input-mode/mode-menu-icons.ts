@@ -30,7 +30,6 @@ interface ModeMenuIconsDeps {
   getAccessibleThemeFocusRingRgb: (accentRgb: Rgb, backgroundRgb: Rgb) => Rgb;
   setStyle: SetStyle;
   rgbToCss: (rgb: Rgb) => string;
-  useImportantStyles: boolean;
   getBuiltInSurfaceColor: () => string;
   getModeMenuLineIconPaths: (iconName: string) => readonly string[] | null;
   createSvgElement: (tagName: string) => Element;
@@ -57,7 +56,6 @@ function createModeMenuIcons(deps: ModeMenuIconsDeps) {
     getAccessibleThemeFocusRingRgb,
     setStyle,
     rgbToCss,
-    useImportantStyles,
     getBuiltInSurfaceColor,
     getModeMenuLineIconPaths,
     createSvgElement,
@@ -108,21 +106,18 @@ function createModeMenuIcons(deps: ModeMenuIconsDeps) {
     setStyle(
       wrap,
       '--x-lumno-search-mode-icon-color',
-      rgbToCss(focusRingRgb),
-      useImportantStyles
+      rgbToCss(focusRingRgb)
     );
     if (menuItem) {
       setStyle(
         menuItem,
         '--x-lumno-search-mode-selected-bg',
-        `rgba(${accentRgb[0]}, ${accentRgb[1]}, ${accentRgb[2]}, ${selectedBackgroundOpacity})`,
-        useImportantStyles
+        `rgba(${accentRgb[0]}, ${accentRgb[1]}, ${accentRgb[2]}, ${selectedBackgroundOpacity})`
       );
       setStyle(
         menuItem,
         '--x-lumno-search-mode-item-focus-ring',
-        rgbToCss(focusRingRgb),
-        useImportantStyles
+        rgbToCss(focusRingRgb)
       );
     }
   }
@@ -134,21 +129,18 @@ function createModeMenuIcons(deps: ModeMenuIconsDeps) {
     setStyle(
       wrap,
       '--x-lumno-search-mode-icon-color',
-      surfaceColor,
-      useImportantStyles
+      surfaceColor
     );
     if (menuItem) {
       setStyle(
         menuItem,
         '--x-lumno-search-mode-selected-bg',
-        selectedBackground,
-        useImportantStyles
+        selectedBackground
       );
       setStyle(
         menuItem,
         '--x-lumno-search-mode-item-focus-ring',
-        surfaceColor,
-        useImportantStyles
+        surfaceColor
       );
     }
   }

@@ -21,7 +21,6 @@ interface PrefixContentDeps {
   siteSearchPrefix: HTMLElement;
   formatMessage: FormatMessage;
   setStyle: SetStyle;
-  useImportantStyles: boolean;
   shouldReduceInputModeMotion: () => boolean;
   siteSearchPrefixLineIcon: SVGElement;
   siteSearchPrefixIconFrame: HTMLElement;
@@ -66,7 +65,6 @@ function createPrefixContent(deps: PrefixContentDeps) {
     siteSearchPrefix,
     formatMessage,
     setStyle,
-    useImportantStyles,
     shouldReduceInputModeMotion,
     siteSearchPrefixLineIcon,
     siteSearchPrefixIconFrame,
@@ -133,10 +131,10 @@ function createPrefixContent(deps: PrefixContentDeps) {
       outgoingAnimation.cancel();
     }
     if (incomingElement) {
-      setStyle(incomingElement, 'opacity', '1', useImportantStyles);
-      setStyle(incomingElement, 'filter', 'none', useImportantStyles);
-      setStyle(incomingElement, 'transform', 'none', useImportantStyles);
-      setStyle(incomingElement, 'will-change', 'auto', useImportantStyles);
+      setStyle(incomingElement, 'opacity', '1');
+      setStyle(incomingElement, 'filter', 'none');
+      setStyle(incomingElement, 'transform', 'none');
+      setStyle(incomingElement, 'will-change', 'auto');
     }
     if (outgoingIcon && outgoingIcon.parentNode) {
       outgoingIcon.parentNode.removeChild(outgoingIcon);
@@ -171,21 +169,21 @@ function createPrefixContent(deps: PrefixContentDeps) {
     ghost.removeAttribute('data-search-input-mode-prefix-icon-frame');
     ghost.setAttribute('aria-hidden', 'true');
     ghost.setAttribute('data-search-input-mode-icon-ghost', '');
-    setStyle(ghost, 'position', 'absolute', useImportantStyles);
-    setStyle(ghost, 'left', `${Number.isFinite(iconLeft) ? iconLeft : 0}px`, useImportantStyles);
-    setStyle(ghost, 'top', `${Number.isFinite(iconTop) ? iconTop : 0}px`, useImportantStyles);
-    setStyle(ghost, 'width', `${iconWidth}px`, useImportantStyles);
-    setStyle(ghost, 'height', `${iconHeight}px`, useImportantStyles);
-    setStyle(ghost, 'display', 'inline-flex', useImportantStyles);
-    setStyle(ghost, 'align-items', 'center', useImportantStyles);
-    setStyle(ghost, 'justify-content', 'center', useImportantStyles);
-    setStyle(ghost, 'pointer-events', 'none', useImportantStyles);
-    setStyle(ghost, 'opacity', '1', useImportantStyles);
-    setStyle(ghost, 'filter', 'none', useImportantStyles);
-    setStyle(ghost, 'transform', 'none', useImportantStyles);
-    setStyle(ghost, 'transform-origin', 'center', useImportantStyles);
-    setStyle(ghost, 'will-change', 'opacity, transform', useImportantStyles);
-    setStyle(ghost, 'z-index', '2', useImportantStyles);
+    setStyle(ghost, 'position', 'absolute');
+    setStyle(ghost, 'left', `${Number.isFinite(iconLeft) ? iconLeft : 0}px`);
+    setStyle(ghost, 'top', `${Number.isFinite(iconTop) ? iconTop : 0}px`);
+    setStyle(ghost, 'width', `${iconWidth}px`);
+    setStyle(ghost, 'height', `${iconHeight}px`);
+    setStyle(ghost, 'display', 'inline-flex');
+    setStyle(ghost, 'align-items', 'center');
+    setStyle(ghost, 'justify-content', 'center');
+    setStyle(ghost, 'pointer-events', 'none');
+    setStyle(ghost, 'opacity', '1');
+    setStyle(ghost, 'filter', 'none');
+    setStyle(ghost, 'transform', 'none');
+    setStyle(ghost, 'transform-origin', 'center');
+    setStyle(ghost, 'will-change', 'opacity, transform');
+    setStyle(ghost, 'z-index', '2');
     siteSearchPrefix.appendChild(ghost);
     return ghost;
   }
@@ -201,11 +199,11 @@ function createPrefixContent(deps: PrefixContentDeps) {
       }
       return;
     }
-    setStyle(activeIcon, 'opacity', '1', useImportantStyles);
-    setStyle(activeIcon, 'filter', 'none', useImportantStyles);
-    setStyle(activeIcon, 'transform', 'none', useImportantStyles);
-    setStyle(activeIcon, 'transform-origin', 'center', useImportantStyles);
-    setStyle(activeIcon, 'will-change', 'auto', useImportantStyles);
+    setStyle(activeIcon, 'opacity', '1');
+    setStyle(activeIcon, 'filter', 'none');
+    setStyle(activeIcon, 'transform', 'none');
+    setStyle(activeIcon, 'transform-origin', 'center');
+    setStyle(activeIcon, 'will-change', 'auto');
     if (!animateIcon || shouldReduceInputModeMotion() ||
         typeof activeIcon.animate !== 'function') {
       if (outgoingIcon && outgoingIcon.parentNode) {
@@ -241,17 +239,17 @@ function createPrefixContent(deps: PrefixContentDeps) {
     });
     inputModePrefixIconAnimation = animation;
     inputModePrefixIconAnimationElement = activeIcon;
-    setStyle(activeIcon, 'will-change', 'opacity, transform', useImportantStyles);
+    setStyle(activeIcon, 'will-change', 'opacity, transform');
     animation.onfinish = () => {
       if (inputModePrefixIconAnimation !== animation) {
         return;
       }
       inputModePrefixIconAnimation = null;
       inputModePrefixIconAnimationElement = null;
-      setStyle(activeIcon, 'opacity', '1', useImportantStyles);
-      setStyle(activeIcon, 'filter', 'none', useImportantStyles);
-      setStyle(activeIcon, 'transform', 'none', useImportantStyles);
-      setStyle(activeIcon, 'will-change', 'auto', useImportantStyles);
+      setStyle(activeIcon, 'opacity', '1');
+      setStyle(activeIcon, 'filter', 'none');
+      setStyle(activeIcon, 'transform', 'none');
+      setStyle(activeIcon, 'will-change', 'auto');
     };
     animation.oncancel = () => {
       if (inputModePrefixIconAnimation === animation) {
@@ -329,16 +327,16 @@ function createPrefixContent(deps: PrefixContentDeps) {
       '2'
     );
     if (hasBuiltInLineIcon) {
-      setStyle(siteSearchPrefixLineIcon, 'display', 'inline-flex', useImportantStyles);
-      setStyle(siteSearchPrefixGlyph, 'display', 'none', useImportantStyles);
-      setStyle(siteSearchPrefixIconFrame, 'display', 'none', useImportantStyles);
-      setStyle(siteSearchPrefixIcon, 'display', 'none', useImportantStyles);
+      setStyle(siteSearchPrefixLineIcon, 'display', 'inline-flex');
+      setStyle(siteSearchPrefixGlyph, 'display', 'none');
+      setStyle(siteSearchPrefixIconFrame, 'display', 'none');
+      setStyle(siteSearchPrefixIcon, 'display', 'none');
       siteSearchPrefixIcon.removeAttribute('src');
     } else {
-      setStyle(siteSearchPrefixLineIcon, 'display', 'none', useImportantStyles);
+      setStyle(siteSearchPrefixLineIcon, 'display', 'none');
       siteSearchPrefixGlyph.className = `ri-icon ri-size-16 ${iconClass}`;
-      setStyle(siteSearchPrefixGlyph, 'display', 'inline-flex', useImportantStyles);
-      setStyle(siteSearchPrefixGlyph, 'flex', '0 0 auto', useImportantStyles);
+      setStyle(siteSearchPrefixGlyph, 'display', 'inline-flex');
+      setStyle(siteSearchPrefixGlyph, 'flex', '0 0 auto');
     }
     if (!hasBuiltInLineIcon && iconUrl) {
       const icon = siteSearchPrefixIcon;
@@ -353,7 +351,7 @@ function createPrefixContent(deps: PrefixContentDeps) {
         ['isolation', 'isolate'],
         ['flex', '0 0 20px'],
         ['display', 'inline-flex']
-      ], useImportantStyles);
+      ]);
       icon.alt = '';
       icon.decoding = 'async';
       icon.referrerPolicy = 'no-referrer';
@@ -367,17 +365,17 @@ function createPrefixContent(deps: PrefixContentDeps) {
         ['object-fit', 'contain'],
         ['flex', '0 0 auto'],
         ['display', 'block']
-      ], useImportantStyles);
-      setStyle(siteSearchPrefixGlyph, 'display', 'none', useImportantStyles);
+      ]);
+      setStyle(siteSearchPrefixGlyph, 'display', 'none');
       const removeUnavailableIcon = (): void => {
         if (contentRevision !== inputModeState.inputModePrefixContentRevision) {
           return;
         }
         removeProviderIconRuntimeFallbacks(siteSearchPrefix);
-        setStyle(siteSearchPrefixIconFrame, 'display', 'none', useImportantStyles);
-        setStyle(icon, 'display', 'none', useImportantStyles);
+        setStyle(siteSearchPrefixIconFrame, 'display', 'none');
+        setStyle(icon, 'display', 'none');
         icon.removeAttribute('src');
-        setStyle(siteSearchPrefixGlyph, 'display', 'inline-flex', useImportantStyles);
+        setStyle(siteSearchPrefixGlyph, 'display', 'inline-flex');
         updatePrefixLayout();
       };
       const iconHost = contentOptions && contentOptions.iconHost ? String(contentOptions.iconHost || '').trim() : '';
@@ -403,14 +401,14 @@ function createPrefixContent(deps: PrefixContentDeps) {
         }
       }
     } else if (!hasBuiltInLineIcon) {
-      setStyle(siteSearchPrefixIconFrame, 'display', 'none', useImportantStyles);
-      setStyle(siteSearchPrefixIcon, 'display', 'none', useImportantStyles);
+      setStyle(siteSearchPrefixIconFrame, 'display', 'none');
+      setStyle(siteSearchPrefixIcon, 'display', 'none');
       siteSearchPrefixIcon.removeAttribute('src');
     }
-    setStyle(siteSearchPrefixIcon, 'transition', 'none', useImportantStyles);
-    setStyle(siteSearchPrefixIconFrame, 'transition', 'none', useImportantStyles);
-    setStyle(siteSearchPrefixGlyph, 'transition', 'none', useImportantStyles);
-    setStyle(siteSearchPrefixLineIcon, 'transition', 'none', useImportantStyles);
+    setStyle(siteSearchPrefixIcon, 'transition', 'none');
+    setStyle(siteSearchPrefixIconFrame, 'transition', 'none');
+    setStyle(siteSearchPrefixGlyph, 'transition', 'none');
+    setStyle(siteSearchPrefixLineIcon, 'transition', 'none');
     const text = siteSearchPrefixText;
     text.textContent = prefixText;
     text.style.cssText = cssText([
@@ -422,7 +420,7 @@ function createPrefixContent(deps: PrefixContentDeps) {
       ['text-overflow', 'ellipsis'],
       ['white-space', 'nowrap'],
       ['line-height', '18px']
-    ], useImportantStyles);
+    ]);
     siteSearchPrefixCurrentText.textContent = formatMessage(
       'search_scope_current',
       '当前'
@@ -441,10 +439,10 @@ function createPrefixContent(deps: PrefixContentDeps) {
       ['white-space', 'nowrap'],
       ['overflow', 'hidden'],
       ['flex', '0 0 auto']
-    ], useImportantStyles);
+    ]);
     setInputModePrefixIdentity(prefixText, contentOptions);
-    setStyle(siteSearchPrefixChevron, 'display', 'inline-flex', useImportantStyles);
-    setStyle(siteSearchPrefixChevron, 'flex', '0 0 auto', useImportantStyles);
+    setStyle(siteSearchPrefixChevron, 'display', 'inline-flex');
+    setStyle(siteSearchPrefixChevron, 'flex', '0 0 auto');
     if (!preserveIconAnimation) {
       playInputModePrefixIconSwap(animateIcon, outgoingIcon);
     }

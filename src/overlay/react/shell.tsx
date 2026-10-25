@@ -24,7 +24,7 @@ type OverlayShellOptions = Record<string, unknown> & {
 interface OverlayMount {
   host: HTMLElement;
   panel: HTMLElement;
-  root: ShadowRoot | null;
+  root: ShadowRoot;
 }
 
 function findById(
@@ -636,21 +636,19 @@ export function createOverlayShellApi() {
       return null;
     }
     const host = createOverlayHost(doc, options);
-    const shadowRoot =
-      typeof host.attachShadow === 'function'
-        ? host.attachShadow({ mode: 'closed' })
-        : null;
-    const renderRoot = shadowRoot || host;
+    // Every supported browser has closed shadow roots, so page styles never
+    // reach the panel and its own never reach the page.
+    const shadowRoot = host.attachShadow({ mode: 'closed' });
     appendOverlayStyleNodes(doc, {
       ...options,
-      root: shadowRoot || doc.head || doc.documentElement
+      root: shadowRoot
     });
 
     let panel: OverlayPanelElement | null = null;
     const registerPanel = (nextPanel: HTMLDivElement) => {
       panel = nextPanel;
     };
-    const reactRoot = createRoot(renderRoot);
+    const reactRoot = createRoot(shadowRoot);
     flushSync(() => {
       reactRoot.render(
         <OverlayPanel

@@ -195,7 +195,6 @@ function createSearchModeController(deps: SearchModeControllerDeps) {
   const inputModePrefixTransition = 'opacity 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1), background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, color 140ms ease';
   pageState.inputModeController = SEARCH_INPUT_MODE.createInputModeController(inputParts, {
     surface: 'newtab',
-    useImportantStyles: false,
     prefixTransition: inputModePrefixTransition,
     defaultPlaceholder,
     defaultCaretColor,

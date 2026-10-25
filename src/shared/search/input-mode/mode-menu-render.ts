@@ -59,7 +59,6 @@ interface ModeMenuRenderDeps {
   notifyModeMenuLayoutChange: () => void;
   input: HTMLInputElement;
   setStyle: SetStyle;
-  useImportantStyles: boolean;
   inputModeState: ModeMenuRenderState;
 }
 
@@ -100,7 +99,6 @@ function createModeMenuRender(deps: ModeMenuRenderDeps) {
     notifyModeMenuLayoutChange,
     input,
     setStyle,
-    useImportantStyles
   } = deps;
 
   // The controller state object shared with search-input-mode.ts and the other modules.
@@ -394,8 +392,7 @@ function createModeMenuRender(deps: ModeMenuRenderDeps) {
     setStyle(
       modeMenu,
       '--x-lumno-search-mode-menu-lift',
-      hasQuery ? '-8px' : '0px',
-      useImportantStyles
+      hasQuery ? '-8px' : '0px'
     );
   }
 

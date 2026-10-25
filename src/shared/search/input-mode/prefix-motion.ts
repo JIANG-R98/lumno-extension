@@ -18,7 +18,6 @@ interface PrefixMotionState {
 interface PrefixMotionDeps {
   siteSearchPrefixCurrent: HTMLElement;
   setStyle: SetStyle;
-  useImportantStyles: boolean;
   shouldReduceInputModeMotion: () => boolean;
   updatePrefixLayout: () => void;
   DEFAULT_PREFIX_RESIZE_DURATION: number;
@@ -46,7 +45,6 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
   const {
     siteSearchPrefixCurrent,
     setStyle,
-    useImportantStyles,
     shouldReduceInputModeMotion,
     updatePrefixLayout,
     DEFAULT_PREFIX_RESIZE_DURATION,
@@ -70,7 +68,7 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
   function clearInputModePrefixCurrentAnimatedStyles(): void {
     siteSearchPrefixCurrent.style.removeProperty('width');
     siteSearchPrefixCurrent.style.removeProperty('margin-left');
-    setStyle(siteSearchPrefixCurrent, 'will-change', 'auto', useImportantStyles);
+    setStyle(siteSearchPrefixCurrent, 'will-change', 'auto');
   }
 
   function cancelInputModePrefixCurrentAnimation(): void {
@@ -121,7 +119,7 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
       easing: DEFAULT_PREFIX_RESIZE_EASING
     });
     inputModeState.inputModePrefixCurrentAnimation = animation;
-    setStyle(siteSearchPrefixCurrent, 'will-change', 'width', useImportantStyles);
+    setStyle(siteSearchPrefixCurrent, 'will-change', 'width');
     const finish = (): void => {
       if (inputModeState.inputModePrefixCurrentAnimation !== animation ||
           animationRevision !== inputModePrefixAnimationRevision) {
@@ -166,19 +164,19 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
 
   function restoreInputModePrefixAnimatedState(): void {
     siteSearchPrefix.style.removeProperty('width');
-    setStyle(siteSearchPrefix, 'opacity', '1', useImportantStyles);
-    setStyle(siteSearchPrefix, 'transform', 'translateY(-50%) translateX(0) scaleX(1)', useImportantStyles);
-    setStyle(siteSearchPrefix, 'transition', prefixTransition, useImportantStyles);
-    setStyle(siteSearchPrefix, 'will-change', 'auto', useImportantStyles);
+    setStyle(siteSearchPrefix, 'opacity', '1');
+    setStyle(siteSearchPrefix, 'transform', 'translateY(-50%) translateX(0) scaleX(1)');
+    setStyle(siteSearchPrefix, 'transition', prefixTransition);
+    setStyle(siteSearchPrefix, 'will-change', 'auto');
   }
 
   function setInputModePrefixRestState(restOptions?: { transition?: boolean }): void {
     cancelInputModePrefixAnimation();
     const transitionEnabled = !restOptions || restOptions.transition !== false;
-    setStyle(siteSearchPrefix, 'opacity', '1', useImportantStyles);
-    setStyle(siteSearchPrefix, 'transform', 'translateY(-50%) translateX(0) scaleX(1)', useImportantStyles);
-    setStyle(siteSearchPrefix, 'transition', transitionEnabled ? prefixTransition : 'none', useImportantStyles);
-    setStyle(siteSearchPrefix, 'will-change', 'auto', useImportantStyles);
+    setStyle(siteSearchPrefix, 'opacity', '1');
+    setStyle(siteSearchPrefix, 'transform', 'translateY(-50%) translateX(0) scaleX(1)');
+    setStyle(siteSearchPrefix, 'transition', transitionEnabled ? prefixTransition : 'none');
+    setStyle(siteSearchPrefix, 'will-change', 'auto');
   }
 
   function playInputModePrefixEnterAnimation(): void {
@@ -189,9 +187,9 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
       'transform',
       'translateY(-50%) translateX(0) scaleX(1)'
     );
-    setStyle(siteSearchPrefix, 'transition', prefixTransition, useImportantStyles);
+    setStyle(siteSearchPrefix, 'transition', prefixTransition);
     if (shouldReduceInputModeMotion() || typeof siteSearchPrefix.animate !== 'function') {
-      setStyle(siteSearchPrefix, 'will-change', 'auto', useImportantStyles);
+      setStyle(siteSearchPrefix, 'will-change', 'auto');
       return;
     }
     const animation = siteSearchPrefix.animate([
@@ -208,7 +206,7 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
       easing: DEFAULT_PREFIX_ENTER_EASING
     });
     inputModeState.inputModePrefixAnimation = animation;
-    setStyle(siteSearchPrefix, 'will-change', 'opacity, transform', useImportantStyles);
+    setStyle(siteSearchPrefix, 'will-change', 'opacity, transform');
     animation.onfinish = () => {
       if (inputModeState.inputModePrefixAnimation !== animation ||
           animationRevision !== inputModePrefixAnimationRevision) {
@@ -259,7 +257,7 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
       { width: `${startWidth}px` },
       { width: `${endWidth}px` }
     ];
-    setStyle(siteSearchPrefix, 'will-change', 'width', useImportantStyles);
+    setStyle(siteSearchPrefix, 'will-change', 'width');
     if (typeof siteSearchPrefix.animate === 'function') {
       const animation = siteSearchPrefix.animate(keyframes, {
         duration: DEFAULT_PREFIX_RESIZE_DURATION,
@@ -271,7 +269,7 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
           return;
         }
         inputModeState.inputModePrefixAnimation = null;
-        setStyle(siteSearchPrefix, 'width', `${endWidth}px`, useImportantStyles);
+        setStyle(siteSearchPrefix, 'width', `${endWidth}px`);
         if (onFinish) {
           onFinish(animationRevision);
         }
@@ -287,17 +285,16 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
       };
       return;
     }
-    setStyle(siteSearchPrefix, 'transition', prefixTransition, useImportantStyles);
-    setStyle(siteSearchPrefix, 'width', `${startWidth}px`, useImportantStyles);
+    setStyle(siteSearchPrefix, 'transition', prefixTransition);
+    setStyle(siteSearchPrefix, 'width', `${startWidth}px`);
     inputModeState.inputModePrefixAnimationFrame = win.requestAnimationFrame(() => {
       inputModeState.inputModePrefixAnimationFrame = null;
       setStyle(
         siteSearchPrefix,
         'transition',
-        `width ${DEFAULT_PREFIX_RESIZE_DURATION}ms ${DEFAULT_PREFIX_RESIZE_EASING}, ${prefixTransition}`,
-        useImportantStyles
+        `width ${DEFAULT_PREFIX_RESIZE_DURATION}ms ${DEFAULT_PREFIX_RESIZE_EASING}, ${prefixTransition}`
       );
-      setStyle(siteSearchPrefix, 'width', `${endWidth}px`, useImportantStyles);
+      setStyle(siteSearchPrefix, 'width', `${endWidth}px`);
       inputModeState.inputModePrefixAnimationTimer = win.setTimeout(() => {
         inputModeState.inputModePrefixAnimationTimer = 0;
         if (animationRevision !== inputModePrefixAnimationRevision) {
@@ -326,8 +323,7 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
     setStyle(
       siteSearchPrefixCurrent,
       'display',
-      nextVisible || measuring ? 'inline-flex' : 'none',
-      useImportantStyles
+      nextVisible || measuring ? 'inline-flex' : 'none'
     );
   }
 
@@ -343,8 +339,7 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
     setStyle(
       siteSearchPrefixCurrent,
       'display',
-      nextMeasuring || visible ? 'inline-flex' : 'none',
-      useImportantStyles
+      nextMeasuring || visible ? 'inline-flex' : 'none'
     );
   }
 

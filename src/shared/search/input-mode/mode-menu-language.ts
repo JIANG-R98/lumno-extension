@@ -37,7 +37,6 @@ interface ModeMenuLanguageDeps {
   rightAnchorOffset: number;
   vars: InputModeVars;
   INPUT_FONT_STACK: string;
-  useImportantStyles: boolean;
   inputModeState: ModeMenuLanguageState;
 }
 
@@ -57,7 +56,6 @@ function createModeMenuLanguage(deps: ModeMenuLanguageDeps) {
     rightAnchorOffset,
     vars,
     INPUT_FONT_STACK,
-    useImportantStyles
   } = deps;
 
   // The controller state object shared with search-input-mode.ts and the other modules.
@@ -167,7 +165,7 @@ function createModeMenuLanguage(deps: ModeMenuLanguageDeps) {
     ['pointer-events', 'none'],
     ['user-select', 'none'],
     ['z-index', '1']
-  ], useImportantStyles);
+  ]);
 
   return {
     refreshModeMenuFilterText,

@@ -803,7 +803,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     if (!element) {
       return;
     }
-    element.style.setProperty(property, value, overlayState.inputUsesIsolatedStyles ? '' : 'important');
+    element.style.setProperty(property, value);
   };
 
 
@@ -1020,13 +1020,15 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     externalLinkIconCssUrl: EXTERNAL_LINK_ICON_CSS_URL,
     overlaySuggestionsCssUrl: OVERLAY_SUGGESTIONS_CSS_URL
   });
-  overlayState.overlay = overlayMount && overlayMount.panel ? overlayMount.panel : null;
-  const overlayHost = overlayMount && overlayMount.host ? overlayMount.host : overlayState.overlay;
-  overlayState.overlayStyleRoot = overlayMount && overlayMount.root ? overlayMount.root : null;
-  if (!overlayState.overlay || !overlayHost) {
+  if (!overlayMount) {
     console.warn('Lumno: overlay mount could not be created.');
     return;
   }
+  overlayState.overlay = overlayMount.panel;
+  const overlayHost = overlayMount.host;
+  // The panel's shadow root, which holds its styles.
+  const overlayStyleRoot = overlayMount.root;
+  overlayState.overlayStyleRoot = overlayStyleRoot;
   setOverlayStoredContextToken(overlayState.overlay);
   addOverlaySessionCleanup(overlayLifecycle.onSessionDestroyRequest(overlayHost, (options) => {
     if (options.animateExit === true) closeOverlayWithMotion(overlayState.overlay);
@@ -1037,7 +1039,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   applyNoTranslate(overlayState.overlay);
 
   overlayShell.appendOverlayStyleNodes(document, {
-    root: overlayState.overlayStyleRoot,
+    root: overlayStyleRoot,
     remixIconCssUrl: RI_CSS_URL,
     searchInputCssUrl: SEARCH_INPUT_CSS_URL,
     featureHintsCssUrl: FEATURE_HINTS_CSS_URL,
@@ -1058,7 +1060,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   overlayToastElement.setAttribute('data-show', 'false');
   overlayToastElement.setAttribute('role', 'status');
   overlayToastElement.setAttribute('aria-live', 'polite');
-  const overlayToastStylesheet = (overlayState.overlayStyleRoot || document)
+  const overlayToastStylesheet = overlayStyleRoot
     .getElementById('_x_extension_toast_style_2026_unique_');
   const overlayToastStyleGate = OVERLAY_TOAST.createToastStyleGate(
     overlayToastElement,
@@ -1067,7 +1069,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       stylesheetElement: overlayToastStylesheet
     }
   );
-  (overlayState.overlayStyleRoot || overlayHost).appendChild(overlayToastElement);
+  overlayStyleRoot.appendChild(overlayToastElement);
   const overlayToastController = OVERLAY_TOAST.createToastController(
     overlayToastElement,
     { windowObj: window }
@@ -1088,7 +1090,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
 
   overlayState.overlayRevealGate = overlaySiteFixes.createOverlayRevealGate(window, {
     overlay: overlayState.overlay,
-    styleRoot: overlayState.overlayStyleRoot || document.head || document.documentElement
+    styleRoot: overlayStyleRoot
   });
   if (typeof globalThis._x_extension_createSearchInput_2024_unique_ !== 'function') {
     console.warn('Lumno: input UI helper not available.');
@@ -1100,11 +1102,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     initialOverlaySettingsReady
   ).catch(() => {});
 
-  overlayState.inputUsesIsolatedStyles = Boolean(overlayState.overlayStyleRoot);
   const inputParts = globalThis._x_extension_createSearchInput_2024_unique_({
-    styleRoot: overlayState.overlayStyleRoot,
-    useIsolatedStyles: overlayState.inputUsesIsolatedStyles,
-    useInlineBaseStyles: !overlayState.inputUsesIsolatedStyles,
+    styleRoot: overlayStyleRoot,
     placeholder: t('overlay_search_placeholder', t('search_placeholder', overlayState.defaultPlaceholderText)),
     inputId: '_x_extension_search_input_2024_unique_',
     iconId: '_x_extension_search_icon_2024_unique_',
@@ -1222,7 +1221,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     documentObj: document,
     windowObj: window,
     id: '_x_extension_overlay_mode_menu_cursor_tooltip_2026_unique_',
-    appendTo: overlayState.overlayStyleRoot || document.body,
+    appendTo: overlayStyleRoot,
     positionMode: 'fixed',
     maxWidth: 320,
     offsetX: 14,
@@ -1565,7 +1564,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
 
   overlayState.inputModeController = SEARCH_INPUT_MODE.createInputModeController(inputParts, {
     surface: 'overlay',
-    useImportantStyles: !overlayState.inputUsesIsolatedStyles,
     prefixTransition: inputModePrefixTransition,
     defaultPlaceholder: overlayState.defaultPlaceholderText || defaultPlaceholder,
     getDefaultPlaceholder: () => overlayState.defaultPlaceholderText || defaultPlaceholder,

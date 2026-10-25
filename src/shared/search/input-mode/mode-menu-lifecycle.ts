@@ -43,7 +43,6 @@ interface ModeMenuLifecycleDeps {
   container: HTMLElement;
   siteSearchPrefix: HTMLElement;
   setStyle: SetStyle;
-  useImportantStyles: boolean;
   setInputModePrefixMenuOpen: PrefixMotionApi['setInputModePrefixMenuOpen'];
   notifyModeMenuLayoutChange: () => void;
   focusModeInput: ModeMenuNavigationApi['focusModeInput'];
@@ -106,7 +105,6 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
     container,
     siteSearchPrefix,
     setStyle,
-    useImportantStyles,
     setInputModePrefixMenuOpen,
     notifyModeMenuLayoutChange,
     focusModeInput,
@@ -157,7 +155,7 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
       revealModeMenuSurface();
       container.setAttribute('data-mode-menu-open', 'true');
       siteSearchPrefix.setAttribute('aria-expanded', 'true');
-      setStyle(siteSearchPrefix, 'z-index', '41', useImportantStyles);
+      setStyle(siteSearchPrefix, 'z-index', '41');
       setInputModePrefixMenuOpen(true);
       notifyModeMenuLayoutChange();
       const activeIndex = normalizedItems.findIndex((item) => item.active);
@@ -274,7 +272,7 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
     syncInputPlaceholder();
     container.removeAttribute('data-mode-menu-open');
     siteSearchPrefix.setAttribute('aria-expanded', 'false');
-    setStyle(siteSearchPrefix, 'z-index', '1', useImportantStyles);
+    setStyle(siteSearchPrefix, 'z-index', '1');
     setInputModePrefixMenuOpen(false);
     notifyModeMenuLayoutChange();
     if (restoreFocus) {

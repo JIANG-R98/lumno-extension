@@ -1224,7 +1224,7 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
     if (typeof host.showPopover === 'function') {
       host.setAttribute('popover', 'manual');
     }
-    const shadow = typeof host.attachShadow === 'function' ? host.attachShadow({ mode: 'closed' }) : host;
+    const shadow = host.attachShadow({ mode: 'closed' });
     const style = document.createElement('style');
     style.textContent = buildStyles();
     shadow.appendChild(style);

@@ -158,7 +158,6 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
     searchClearButton: null,
     modeBadge: null,
     suggestionsContainer: null,
-    inputUsesIsolatedStyles: false,
 
     // Controllers made later in the session.
     overlayContextToken: '',

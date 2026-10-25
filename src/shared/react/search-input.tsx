@@ -65,11 +65,9 @@ export interface SearchInputConfig {
   };
   showRightIcon?: boolean;
   showUnderlineWhenEmpty?: boolean;
-  styleMode?: string;
+  // The shadow root the input draws in; its styles go there. Without one the
+  // page's own stylesheet styles it.
   styleRoot?: Document | ShadowRoot | null;
-  useImportantStyles?: boolean;
-  useInlineBaseStyles?: boolean;
-  useIsolatedStyles?: boolean;
 }
 
 export interface SearchInputParts {
@@ -110,118 +108,6 @@ const CLASSES = Object.freeze({
     'x-lumno-search-input__right-icon _x_extension_input_right_icon_class_2026_ notranslate'
 });
 const roots = new WeakMap<HTMLElement, Root>();
-
-const BASE_STYLES: Record<
-  Exclude<keyof typeof CLASSES, 'clearAction'>,
-  StyleOverrides
-> = {
-  container: {
-    all: 'unset',
-    background: 'transparent',
-    'border-radius': 'var(--x-ext-search-input-corners,28px 28px 0 0)',
-    'box-sizing': 'border-box',
-    color: 'inherit',
-    display: 'block',
-    'flex-shrink': '0',
-    font: 'inherit',
-    'font-size': '100%',
-    'line-height': '1',
-    'list-style': 'none',
-    margin: '0',
-    outline: 'none',
-    overflow: 'hidden',
-    padding: '0',
-    position: 'relative',
-    'text-decoration': 'none',
-    'vertical-align': 'baseline',
-    width: '100%'
-  },
-  divider: {
-    all: 'unset',
-    background: 'var(--x-ext-input-underline, #E5E7EB)',
-    bottom: '0',
-    display: 'block',
-    height: '1px',
-    left: 'var(--x-ext-input-divider-inset, 20px)',
-    opacity: 'var(--x-ext-input-divider-opacity, 0.55)',
-    'pointer-events': 'none',
-    position: 'absolute',
-    right: 'var(--x-ext-input-divider-inset, 20px)'
-  },
-  icon: {
-    all: 'unset',
-    'align-items': 'center',
-    background: 'transparent',
-    'box-sizing': 'border-box',
-    color: 'var(--x-ext-input-icon, #9CA3AF)',
-    display: 'flex',
-    font: 'inherit',
-    'font-size': '100%',
-    'justify-content': 'center',
-    left: '20px',
-    'line-height': '1',
-    'list-style': 'none',
-    margin: '0',
-    outline: 'none',
-    padding: '6px 0',
-    'pointer-events': 'none',
-    position: 'absolute',
-    'text-decoration': 'none',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    'vertical-align': 'baseline',
-    'z-index': '1'
-  },
-  input: {
-    all: 'unset',
-    background: 'transparent',
-    border: 'none',
-    'border-bottom': 'none',
-    'box-sizing': 'border-box',
-    'caret-color': 'var(--x-ext-input-caret, #7DB7FF)',
-    color: 'var(--x-ext-input-text, #1F2937)',
-    cursor: 'text',
-    display: 'block',
-    'font-family':
-      "'Lumno Open Sans', 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-    'font-size': '16px',
-    'font-weight': '500',
-    'line-height': '1',
-    'list-style': 'none',
-    margin: '0',
-    outline: 'none',
-    padding: '20px 64px 20px 50px',
-    'text-align': 'left',
-    'text-decoration': 'none',
-    'vertical-align': 'baseline',
-    width: '100%'
-  },
-  rightIcon: {
-    all: 'unset',
-    'align-items': 'center',
-    background: 'transparent',
-    'border-radius': 'var(--x-ext-input-right-icon-radius, 10px)',
-    'box-sizing': 'border-box',
-    color: 'var(--x-ext-input-icon, #9CA3AF)',
-    cursor: 'pointer',
-    display: 'inline-flex',
-    height: '30px',
-    'justify-content': 'center',
-    'line-height': '1',
-    'list-style': 'none',
-    margin: '0',
-    outline: 'none',
-    padding: '0',
-    position: 'absolute',
-    right: 'var(--x-ext-input-right-icon-inset, 13px)',
-    'text-decoration': 'none',
-    top: 'var(--x-ext-input-right-icon-inset, 13px)',
-    transform: 'none',
-    transition: 'background-color 140ms ease, color 140ms ease',
-    width: '30px',
-    'z-index': '2'
-  }
-};
 
 function noTranslateProps() {
   return {
@@ -532,11 +418,9 @@ function ensureLink(
 }
 
 function ensureStyles(config: SearchInputConfig) {
-  const isolated = Boolean(
-    config.useIsolatedStyles || config.styleMode === 'isolated'
-  );
+  const isolated = Boolean(config.styleRoot);
   const root =
-    (isolated && config.styleRoot) ||
+    config.styleRoot ||
     document.head ||
     document.documentElement;
   if (!root) {
@@ -565,11 +449,10 @@ function ensureStyles(config: SearchInputConfig) {
 
 function applyStyles(
   element: HTMLElement,
-  styles: StyleOverrides,
-  important: boolean
+  styles: StyleOverrides
 ) {
   Object.entries(styles).forEach(([property, value]) => {
-    element.style.setProperty(property, value, important ? 'important' : '');
+    element.style.setProperty(property, value);
   });
 }
 
@@ -577,21 +460,7 @@ export function createSearchInput(
   config: SearchInputConfig = {}
 ): SearchInputParts {
   ensureStyles(config);
-  const isolated = Boolean(
-    config.useIsolatedStyles || config.styleMode === 'isolated'
-  );
-  const important = Object.prototype.hasOwnProperty.call(
-    config,
-    'useImportantStyles'
-  )
-    ? Boolean(config.useImportantStyles)
-    : !isolated;
-  const useInline = Object.prototype.hasOwnProperty.call(
-    config,
-    'useInlineBaseStyles'
-  )
-    ? Boolean(config.useInlineBaseStyles)
-    : !isolated || !config.styleRoot;
+  const isolated = Boolean(config.styleRoot);
   const container = document.createElement('div');
   container.id =
     config.containerId || '_x_extension_input_container_2024_unique_';
@@ -696,11 +565,8 @@ export function createSearchInput(
       [rightIcon, 'rightIcon', config.rightIconStyleOverrides]
     ] as const
   ).forEach(([element, key, overrides]) => {
-    if (useInline) {
-      applyStyles(element, BASE_STYLES[key], important);
-    }
     if (overrides) {
-      applyStyles(element, overrides, important);
+      applyStyles(element, overrides);
     }
   });
   const hasBorderOverride = Boolean(
@@ -711,13 +577,12 @@ export function createSearchInput(
       )
   );
   const setDividerVisible = (visible: boolean) => {
-    if (isolated && config.styleRoot) {
+    if (isolated) {
       divider.dataset.visible = visible ? 'true' : 'false';
     } else {
       divider.style.setProperty(
         'display',
-        visible ? 'block' : 'none',
-        important ? 'important' : ''
+        visible ? 'block' : 'none'
       );
     }
   };
@@ -746,7 +611,7 @@ export function createSearchInput(
   }
   const setRightIconVisualState = (active: boolean) => {
     rightIcon.dataset.hoverActive = active ? 'true' : 'false';
-    if (isolated && config.styleRoot) {
+    if (isolated) {
       return;
     }
     applyStyles(
@@ -759,18 +624,16 @@ export function createSearchInput(
           ? 'var(--x-ext-input-icon-hover, #4B5563)'
           : 'var(--x-ext-input-icon, #9CA3AF)',
         transform: 'none'
-      },
-      important
+      }
     );
   };
   setRightIconVisualState(false);
   queryHtmlElements(rightIcon, '*')
     .forEach((node) => {
-      if (!isolated || !config.styleRoot) {
+      if (!isolated) {
         applyStyles(
           node,
-          { cursor: 'inherit', 'pointer-events': 'none' },
-          important
+          { cursor: 'inherit', 'pointer-events': 'none' }
         );
       }
     });
@@ -786,7 +649,7 @@ export function createSearchInput(
   });
   if (clearAction) {
     if (config.clearAction?.styleOverrides) {
-      applyStyles(clearAction, config.clearAction.styleOverrides, important);
+      applyStyles(clearAction, config.clearAction.styleOverrides);
     }
     const resetClearVisualState = () => {
       clearAction.removeAttribute('data-hover-active');

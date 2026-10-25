@@ -341,8 +341,6 @@ function createSearchBox(deps: SearchBoxDeps) {
   }
 
   const inputParts = createSearchInput({
-    useImportantStyles: false,
-    useInlineBaseStyles: false,
     containerId: '_x_extension_newtab_input_container_2024_unique_',
     inputId: '_x_extension_newtab_search_input_2024_unique_',
     iconId: '_x_extension_newtab_search_icon_2024_unique_',

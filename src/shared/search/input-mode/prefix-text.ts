@@ -49,7 +49,6 @@ interface PrefixTextDeps {
   settleInputModePrefixMenuVisualState: PrefixMotionApi['settleInputModePrefixMenuVisualState'];
   setStyle: SetStyle;
   prefixTransition: string;
-  useImportantStyles: boolean;
   setInputModePrefixIdentity: PrefixContentApi['setInputModePrefixIdentity'];
   applyInputModePrefixVisual: PrefixVisualApi['applyInputModePrefixVisual'];
   syncInputPlaceholder: () => void;
@@ -99,7 +98,6 @@ function createPrefixText(deps: PrefixTextDeps) {
     settleInputModePrefixMenuVisualState,
     setStyle,
     prefixTransition,
-    useImportantStyles,
     setInputModePrefixIdentity,
     applyInputModePrefixVisual,
     syncInputPlaceholder,
@@ -197,13 +195,13 @@ function createPrefixText(deps: PrefixTextDeps) {
       hasActivePrefixAnimation
     );
     if (shouldAnimateResize) {
-      setStyle(siteSearchPrefix, 'transition', prefixTransition, useImportantStyles);
+      setStyle(siteSearchPrefix, 'transition', prefixTransition);
     } else if (!shouldAnimate && !shouldPreserveAnimation) {
-      setStyle(siteSearchPrefix, 'transition', 'none', useImportantStyles);
+      setStyle(siteSearchPrefix, 'transition', 'none');
     }
     setInputModePrefixIdentity(nextPrefixText, nextOptions);
     const visual = applyInputModePrefixVisual(theme, nextOptions);
-    setStyle(siteSearchPrefix, 'display', 'inline-flex', useImportantStyles);
+    setStyle(siteSearchPrefix, 'display', 'inline-flex');
     setModeTagActive(true);
     if (shouldWaitForPendingText) {
       syncInputPlaceholder();
@@ -292,14 +290,14 @@ function createPrefixText(deps: PrefixTextDeps) {
     siteSearchPrefixText.textContent = '';
     siteSearchPrefix.removeAttribute('data-mode-id');
     siteSearchPrefix.removeAttribute('aria-label');
-    setStyle(siteSearchPrefixIcon, 'display', 'none', useImportantStyles);
-    setStyle(siteSearchPrefixIconFrame, 'display', 'none', useImportantStyles);
+    setStyle(siteSearchPrefixIcon, 'display', 'none');
+    setStyle(siteSearchPrefixIconFrame, 'display', 'none');
     siteSearchPrefixIcon.removeAttribute('src');
-    setStyle(siteSearchPrefixGlyph, 'display', 'none', useImportantStyles);
-    setStyle(siteSearchPrefixLineIcon, 'display', 'none', useImportantStyles);
-    setStyle(siteSearchPrefixChevron, 'display', 'none', useImportantStyles);
+    setStyle(siteSearchPrefixGlyph, 'display', 'none');
+    setStyle(siteSearchPrefixLineIcon, 'display', 'none');
+    setStyle(siteSearchPrefixChevron, 'display', 'none');
     setInputModePrefixRestState({ transition: false });
-    setStyle(siteSearchPrefix, 'display', 'none', useImportantStyles);
+    setStyle(siteSearchPrefix, 'display', 'none');
     setModeTagActive(false);
     closeModeMenu(false);
     input.placeholder = getDefaultPlaceholder();
@@ -350,7 +348,7 @@ function createPrefixText(deps: PrefixTextDeps) {
       ['letter-spacing', '0'],
       ['white-space', 'nowrap'],
       ['flex', '0 0 auto']
-    ], useImportantStyles);
+    ]);
     const textLabel = siteSearchTabHintText;
     textLabel.textContent = label;
     textLabel.style.cssText = cssText([
@@ -368,7 +366,7 @@ function createPrefixText(deps: PrefixTextDeps) {
       ['line-height', '18px'],
       ['letter-spacing', '0'],
       ['flex', '1 1 auto']
-    ], useImportantStyles);
+    ]);
     if (provider) {
       siteSearchTabHint.setAttribute('title', label);
     } else {
@@ -387,7 +385,7 @@ function createPrefixText(deps: PrefixTextDeps) {
 
   function setTabHintVisible(visible: boolean, provider?: InputModeProvider | null): void {
     if (!visible || hasNoTabKeyPointer()) {
-      setStyle(siteSearchTabHint, 'display', 'none', useImportantStyles);
+      setStyle(siteSearchTabHint, 'display', 'none');
       siteSearchTabHint.removeAttribute('title');
       updateInputRightPadding();
       return;
@@ -396,7 +394,7 @@ function createPrefixText(deps: PrefixTextDeps) {
       return;
     }
     renderTabHint(provider);
-    setStyle(siteSearchTabHint, 'display', 'inline-flex', useImportantStyles);
+    setStyle(siteSearchTabHint, 'display', 'inline-flex');
     updateInputRightPadding();
   }
 

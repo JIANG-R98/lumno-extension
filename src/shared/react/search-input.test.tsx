@@ -39,8 +39,7 @@ describe('Shared search input React island', () => {
       iconId: 'icon',
       inputId: 'input',
       placeholder: 'Search',
-      rightIconAlt: 'Settings',
-      useInlineBaseStyles: false
+      rightIconAlt: 'Settings'
     });
 
     expect(createSearchInputApi().implementation).toBe('react');
@@ -101,8 +100,7 @@ describe('Shared search input React island', () => {
     });
     const parts = create({
       showUnderlineWhenEmpty: true,
-      styleRoot,
-      useIsolatedStyles: true
+      styleRoot
     });
 
     expect(parts.divider.dataset.visible).toBe('true');

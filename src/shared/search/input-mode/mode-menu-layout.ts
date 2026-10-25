@@ -20,7 +20,6 @@ type ModeMenuLayoutWindow = Partial<Pick<Window,
 interface ModeMenuLayoutDeps {
   setStyle: SetStyle;
   modeMenu: HTMLElement;
-  useImportantStyles: boolean;
   container: HTMLElement;
   win: ModeMenuLayoutWindow | null | undefined;
   doc: Document | null | undefined;
@@ -40,7 +39,6 @@ function createModeMenuLayout(deps: ModeMenuLayoutDeps) {
   const {
     setStyle,
     modeMenu,
-    useImportantStyles,
     container,
     win,
     doc,
@@ -64,8 +62,7 @@ function createModeMenuLayout(deps: ModeMenuLayoutDeps) {
     setStyle(
       modeMenu,
       '--x-lumno-search-mode-menu-result-offset',
-      `${nextOffset}px`,
-      useImportantStyles
+      `${nextOffset}px`
     );
   }
 
@@ -124,8 +121,7 @@ function createModeMenuLayout(deps: ModeMenuLayoutDeps) {
     setStyle(
       modeMenu,
       viewportMaxHeightProperty,
-      `${Math.floor(availableLayoutHeight)}px`,
-      useImportantStyles
+      `${Math.floor(availableLayoutHeight)}px`
     );
     const menuLayoutHeight = Math.max(
       0,

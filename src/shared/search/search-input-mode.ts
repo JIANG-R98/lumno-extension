@@ -74,8 +74,6 @@ interface InputModeOwnConfig {
   document?: Document | null;
   windowObj?: InputModeWindow | null;
   surface?: 'newtab' | 'overlay';
-  // Write every style with !important (the overlay, inside web pages).
-  useImportantStyles?: boolean;
   applyNoTranslate?: <T extends Element>(element: T) => T;
   setInputStyle?: (target: HTMLElement, property: string, value: string) => void;
   formatMessage?: FormatMessage;
@@ -228,28 +226,23 @@ function getWindow(options: InputModeConfig): InputModeWindow {
   return options.windowObj || globalThis.window;
 }
 
-function priorityFor(useImportantStyles: boolean): string {
-  return useImportantStyles ? 'important' : '';
+function declaration(property: string, value: string): string {
+  return `      ${property}: ${value};`;
 }
 
-function declaration(property: string, value: string, useImportantStyles: boolean): string {
-  return `      ${property}: ${value}${useImportantStyles ? ' !important' : ''};`;
-}
-
-function cssText(pairs: CssDeclaration[], useImportantStyles: boolean): string {
-  return `\n${pairs.map((pair) => declaration(pair[0], pair[1], useImportantStyles)).join('\n')}\n    `;
+function cssText(pairs: CssDeclaration[]): string {
+  return `\n${pairs.map((pair) => declaration(pair[0], pair[1])).join('\n')}\n    `;
 }
 
 function setStyle(
   element: ElementCSSInlineStyle | null | undefined,
   property: string,
-  value: string,
-  useImportantStyles: boolean
+  value: string
 ): void {
   if (!element || !element.style) {
     return;
   }
-  element.style.setProperty(property, value, priorityFor(useImportantStyles));
+  element.style.setProperty(property, value);
 }
 
 function hasInlineStyle(element: Element): element is Element & ElementCSSInlineStyle {
@@ -412,13 +405,12 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
   const input = parts.input;
   const container = parts.container;
   const surface = config.surface === 'overlay' ? 'overlay' : 'newtab';
-  const useImportantStyles = Boolean(config.useImportantStyles);
   const applyNoTranslate = typeof config.applyNoTranslate === 'function'
     ? config.applyNoTranslate
     : noopTranslate;
   const setInputStyle = typeof config.setInputStyle === 'function'
     ? config.setInputStyle
-    : (target: HTMLElement, property: string, value: string) => setStyle(target, property, value, useImportantStyles);
+    : (target: HTMLElement, property: string, value: string) => setStyle(target, property, value);
   const formatMessage: FormatMessage = typeof config.formatMessage === 'function'
     ? config.formatMessage
     : (_key, fallback, values) => String(fallback || '').replace(/\{([^}]+)\}/g, (match, token: string) => {
@@ -662,7 +654,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     siteSearchPrefixGlyph,
     siteSearchPrefixLineIcon,
     cssText,
-    useImportantStyles,
     siteSearchPrefixChevron,
     siteSearchPrefixCurrent,
     siteSearchPrefixCurrentText,
@@ -709,7 +700,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
   } = INPUT_MODE_MODE_MENU_LAYOUT.createModeMenuLayout({
     setStyle,
     modeMenu,
-    useImportantStyles,
     container,
     win,
     doc,
@@ -750,7 +740,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     notifyModeMenuLayoutChange,
     input,
     setStyle,
-    useImportantStyles,
     inputModeState
   });
 
@@ -778,7 +767,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     container,
     siteSearchPrefix,
     setStyle,
-    useImportantStyles,
     setInputModePrefixMenuOpen: (...args) => setInputModePrefixMenuOpen(...args),
     notifyModeMenuLayoutChange,
     focusModeInput: (...args) => focusModeInput(...args),
@@ -869,7 +857,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     rgbToCss,
     setStyle,
     container,
-    useImportantStyles,
     siteSearchPrefix,
     siteSearchPrefixLineIcon,
     siteSearchPrefixChevron,
@@ -905,7 +892,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     getAccessibleThemeFocusRingRgb,
     setStyle,
     rgbToCss,
-    useImportantStyles,
     getBuiltInSurfaceColor,
     getModeMenuLineIconPaths,
     createSvgElement,
@@ -931,7 +917,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     siteSearchPrefix,
     formatMessage,
     setStyle,
-    useImportantStyles,
     shouldReduceInputModeMotion,
     siteSearchPrefixLineIcon,
     siteSearchPrefixIconFrame,
@@ -968,7 +953,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
   } = INPUT_MODE_PREFIX_MOTION.createPrefixMotion({
     siteSearchPrefixCurrent,
     setStyle,
-    useImportantStyles,
     shouldReduceInputModeMotion,
     updatePrefixLayout,
     DEFAULT_PREFIX_RESIZE_DURATION,
@@ -1003,7 +987,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     settleInputModePrefixMenuVisualState,
     setStyle,
     prefixTransition,
-    useImportantStyles,
     setInputModePrefixIdentity,
     applyInputModePrefixVisual,
     syncInputPlaceholder,
@@ -1059,7 +1042,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     rightAnchorOffset,
     vars,
     INPUT_FONT_STACK,
-    useImportantStyles,
     inputModeState
   });
 
