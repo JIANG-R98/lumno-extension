@@ -139,7 +139,7 @@ function buildNodeMap(nodes: readonly BookmarkNode[] | null | undefined): Bookma
   return map;
 }
 
-function describe(folderId: string | number | null | undefined, nodeMap: BookmarkNodeMap): FolderReference | null {
+function describe(folderId: string | number | null | undefined, nodeMap: ReadonlyMap<string, BookmarkNode>): FolderReference | null {
   let node = nodeMap.get(String(folderId || ''));
   if (!node || node.url || isTreeRootId(node.id)) return null;
   const target = node;
@@ -157,7 +157,7 @@ function describe(folderId: string | number | null | undefined, nodeMap: Bookmar
     path, fingerprint: fingerprint(target) });
 }
 
-function resolveReference(reference: unknown, nodeMap: BookmarkNodeMap): BookmarkNode | null {
+function resolveReference(reference: unknown, nodeMap: ReadonlyMap<string, BookmarkNode>): BookmarkNode | null {
   const ref = normalizeReference(reference);
   // A local-only directory is usable through its originating device's binding.
   if (!ref || ref.scope === 'local') return null;

@@ -135,7 +135,8 @@ interface SurfaceDragState {
   // The bookmark being dragged, or the bookmark folder a dragged shortcut shows.
   bookmarkId?: string;
   shortcutId?: string;
-  // The dragged shortcut tile.
+  // The dragged bookmark card or shortcut tile.
+  card?: HTMLElement | null;
   tile?: HTMLElement | null;
 }
 

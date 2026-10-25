@@ -1,4 +1,5 @@
 import * as LumnoNewtabDismissStack from '../dismiss-stack';
+import type { BlockedDropTarget, CascadeDropTarget } from '../cross-surface-drag';
 import type { DismissStack } from '../dismiss-stack';
 import type { BindCursorTooltip, Translate } from '../newtab-types';
 import type { CascadeItemView, CascadeLevelView, createBookmarkCascadeViewApi } from '../react/bookmark-cascade-view';
@@ -38,8 +39,8 @@ interface InsertionGapApi {
   setInsertionGap(owner: object, before: Element | null, after: Element | null): void;
 }
 
-interface CascadeItemEventDetail {
-  event: Event;
+interface CascadeItemEventDetail<E extends Event = Event> {
+  event: E;
   item: BookmarkItem;
   element: HTMLButtonElement;
   parentFolderId: string;
@@ -88,8 +89,8 @@ interface BookmarkCascadeMenuOptions {
   copyTooltipController?: Pick<TooltipController, 'show' | 'hide'> | null;
   copyUrl?(url: string): unknown;
   shouldSuppressHover?(target: Element, event: Event | PointLike | null): boolean;
-  onItemPointerDown?(detail: CascadeItemEventDetail): void;
-  onItemContextMenu?(detail: CascadeItemEventDetail & { sourceKind: 'cascade' }): void;
+  onItemPointerDown?(detail: CascadeItemEventDetail<PointerEvent>): void;
+  onItemContextMenu?(detail: CascadeItemEventDetail<MouseEvent> & { sourceKind: 'cascade' }): void;
   // True right after a press on an open context menu, so it does not open
   // the item underneath.
   isActivationSuppressed?(): boolean;
@@ -161,18 +162,7 @@ type CascadeDropMatch =
 
 // Where a drag over the menu would drop: into a folder row, or between
 // two rows; 'blocked' over the menu where nothing takes the drop.
-type CascadeDragTarget =
-  | {
-    kind: 'insertion' | 'cascade';
-    surface: 'cascade';
-    folderId: string;
-    title: string;
-    index?: number;
-    element: HTMLElement | null;
-    markerElement: HTMLElement | null;
-    markerPosition: CascadeMarkerPosition | '';
-  }
-  | { kind: 'blocked'; surface: 'cascade' };
+type CascadeDragTarget = CascadeDropTarget | BlockedDropTarget;
 
 const BOOKMARK_CASCADE_MENU_MIN_WIDTH_PX = 210;
 const BOOKMARK_CASCADE_MENU_MAX_WIDTH_PX = 260;

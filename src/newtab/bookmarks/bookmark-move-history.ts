@@ -67,7 +67,8 @@ interface TransferRecord {
   beforeShortcut: ShortcutDeleteRecord | null;
   afterShortcut: ShortcutDeleteRecord | null;
   itemIcon: Readonly<FolderItemIcon> | null;
-  runtime: { currentBookmarkId: string };
+  // The bookmark's id and place once the transfer last created or moved it.
+  runtime: { currentBookmarkId: string; location?: BookmarkLocation | null };
 }
 
 interface ShortcutStackRecord {

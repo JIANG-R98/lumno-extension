@@ -1,9 +1,169 @@
-// @ts-nocheck
 // Bookmark card layout animation, drag and drop (within the grid, across
 // folders and onto shortcuts) and the bookmark move undo history.
+import type * as FolderReferences from '../../domain/bookmark-folder-reference';
+import { isShortcutFolder } from '../../domain/shortcuts-store';
+import type * as ShortcutsStore from '../../domain/shortcuts-store';
+import type { ShortcutFolder, ShortcutGroup, ShortcutItem } from '../../domain/shortcuts-store';
+import type { FolderBindingRuntime } from '../../platform/bookmark-folder-bindings';
+import { isElementNode, isHtmlElement, isHtmlTag } from '../../shared/dom-guards';
+import { queryHtmlTags } from '../../shared/dom-lookup';
+import type * as CrossSurfaceDrag from '../cross-surface-drag';
+import type {
+  BlockedDropTarget,
+  DragDropTarget,
+  FolderDropTarget,
+  GridInsertionTarget,
+  LayoutRect,
+  ShortcutInsertionTarget,
+  SurfaceDragState
+} from '../cross-surface-drag';
 import * as LumnoNewtabDragClickGuard from '../drag-click-guard';
+import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
+import type { BookmarkCardElement } from '../react/bookmarks';
+import type { BookmarksTopbarRuntime } from '../react/bookmarks-topbar';
+import type { PersistShortcuts, ShortcutIconChange, ShortcutInsertionSlot } from '../shortcuts/shortcut-types';
+import type { BookmarkCascadeRuntime, CascadeItemEventDetail, CascadeRefreshOptions } from './bookmark-cascade-menu';
+import type * as BookmarkDrag from './bookmark-drag';
+import type { BookmarkDragSession, BookmarkDragSource, BookmarkLayoutItem } from './bookmark-drag';
+import type * as FolderIcon from './bookmark-folder-icon';
+import type * as MoveHistory from './bookmark-move-history';
+import type {
+  BookmarkLocation,
+  BookmarkMoveHistory,
+  ShortcutDeleteRecord,
+  ShortcutGroupDeleteRecord,
+  ShortcutStackRecord,
+  TransferRecord
+} from './bookmark-move-history';
+import type { BookmarkItem, BookmarkNode } from './bookmarks-store';
+import type { BookmarksRuntime } from './bookmarks-runtime';
+import type { FolderItemIcon, FolderItemIconMap } from './folder-item-icons';
 
-function createBookmarkDragController(deps) {
+interface BookmarkDragControllerState {
+  bookmarkGrid: HTMLElement | null;
+  bookmarkAllItems: BookmarkItem[];
+  bookmarkCurrentPage: number;
+  bookmarkCurrentFolderId: string;
+  bookmarkRootFolderId: string;
+  currentBookmarkCount: number;
+  currentBookmarkViewMode: string;
+  bookmarkTopbarRuntime: BookmarksTopbarRuntime | null;
+  bookmarkLoadedOnce: boolean;
+  bookmarkCascadeRuntime: BookmarkCascadeRuntime | null;
+  shortcutSection: HTMLElement | null;
+  shortcutGrid: HTMLElement | null;
+  addShortcutButton: HTMLElement | null;
+  bookmarkDragState: BookmarkDragSession | null;
+  newtabShortcuts: ShortcutItem[];
+  // Custom icon images by shortcut id.
+  newtabShortcutIcons: Record<string, string>;
+  // While an undoable change runs, no other may start.
+  bookmarkMoveHistoryBusy: boolean;
+  bookmarkPagerPrevButton: HTMLElement | null;
+  bookmarkPagerNextButton: HTMLElement | null;
+  bookmarkPageAnimating: boolean;
+}
+
+interface BookmarkDragControllerDeps {
+  isBookmarkTopbarMode(): boolean;
+  getBookmarkLimit(): number;
+  NEWTAB_BOOKMARK_DRAG: typeof BookmarkDrag;
+  getFigmaFolderSvg: typeof FolderIcon.getFigmaFolderSvg;
+  initFolderPathMorph: typeof FolderIcon.initFolderPathMorph;
+  setFolderPathMorphState: typeof FolderIcon.setFolderPathMorphState;
+  isContentSectionVisible(section: HTMLElement | null): boolean;
+  bookmarkSection: HTMLElement | null;
+  bookmarksRuntime: BookmarksRuntime;
+  NEWTAB_CROSS_SURFACE_DRAG: typeof CrossSurfaceDrag;
+  NEWTAB_BOOKMARK_MOVE_HISTORY: typeof MoveHistory;
+  getShortcutById(id: string): ShortcutItem | null;
+  // The local bookmark folder a folder shortcut shows.
+  getShortcutFolderId(shortcut: ShortcutItem): string;
+  getShortcutReorderTiles(): HTMLElement[];
+  getShortcutTileLayoutRect(tile: HTMLElement | null): LayoutRect | null;
+  NEWTAB_SHORTCUTS_STORE: Pick<typeof ShortcutsStore, 'createShortcutRecord'>;
+  getShortcutStoreOptions(): Parameters<typeof ShortcutsStore.createShortcutRecord>[1];
+  getShortcutInsertionSlotAt(pointerX: number, pointerY: number, excludedTile: HTMLElement | null): ShortcutInsertionSlot;
+  MAX_NEWTAB_SHORTCUTS: number;
+  getShortcutTileId(tile: HTMLElement | null | undefined): string;
+  FOLDER_REFERENCES: Pick<typeof FolderReferences, 'describe' | 'createEntryId'>;
+  bookmarkMoveHistory: BookmarkMoveHistory;
+  showToast: ShowToast;
+  t: Translate;
+  refreshShortcutFolderReferences(): Promise<unknown>;
+  shortcutFolderRuntime: Pick<FolderBindingRuntime, 'bind' | 'flush'>;
+  getFolderItemIcon?(bookmarkId: string): FolderItemIcon | null;
+  updateFolderItemIcons(changes: Readonly<Record<string, FolderItemIcon | null>>): Promise<FolderItemIconMap>;
+  persistShortcuts: PersistShortcuts;
+  markBookmarkTreeDirty(options?: { preserveCascadeOpen?: boolean }): void;
+  loadBookmarks(options?: { force?: boolean }): unknown;
+  getBookmarkPageCount(): number;
+  isBookmarkSurfaceDragStateActive(state: SurfaceDragState): boolean;
+  openBookmarkCascadeMenu(...args: Parameters<BookmarkCascadeRuntime['open']>): void;
+  navigateBookmarkFolder(folderId: string): void;
+  // Shows another page of the bookmarks during a drag; false when it cannot.
+  switchBookmarkPageDuringDrag(page: number): boolean;
+  setShortcutDragTileTransform(state: SurfaceDragState, pointerX: number, pointerY: number): void;
+  scheduleWallpaperAdaptiveToneUpdate(): void;
+  formatMessage: FormatMessage;
+  isShortcutDragActive(): boolean;
+  hideCursorTooltip(): void;
+  isEditableElement(element: Element): boolean;
+  closeBookmarkCascadeMenu(options?: { animate?: boolean }): void;
+  renderCurrentBookmarkPage(): void;
+  applyShortcutGroupDeleteRecord(record: ShortcutGroupDeleteRecord, isUndo: boolean): Promise<boolean>;
+  // Scrolls the shortcuts while a drag rests near their edge.
+  autoScrollShortcutArea(pointerX: number, pointerY: number): boolean;
+  closeBookmarkContextMenu(): void;
+  getShortcutGroups?(): ShortcutGroup[];
+  isWebDavBackingUpShortcuts?(): Promise<boolean>;
+  pageState: BookmarkDragControllerState;
+}
+
+// A context menu's bookmark, to delete.
+interface BookmarkDeleteTarget {
+  bookmarkId: string;
+  title?: string;
+  parentId?: string;
+  index?: number;
+  sourceKind?: string;
+}
+
+// Where a bookmark joins the shortcuts as `record`.
+interface ShortcutDropPlan {
+  record: ShortcutItem | null;
+  index: number;
+  groupId: string;
+}
+
+interface PendingLayoutAnimation {
+  folderId: string;
+  page: number;
+  excludedBookmarkId: string;
+  draggedBookmarkId: string;
+  draggedRect: AnimationRect | null;
+  rects: Map<string, LayoutRect>;
+}
+
+interface AnimationRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
+}
+
+type InsertLineTarget = GridInsertionTarget | ShortcutInsertionTarget;
+
+// An insertion or folder row of the open cascade menu.
+type CascadeDropTargetLike = Extract<DragDropTarget, { surface: 'cascade'; kind: 'insertion' | 'cascade' }>;
+
+// The grid insertion line or shortcut gap a drop target draws, and what it
+// sits by.
+type InsertionGapKey = [string, string, HTMLElement | null];
+
+function createBookmarkDragController(deps: BookmarkDragControllerDeps) {
   const {
     isBookmarkTopbarMode,
     getBookmarkLimit,
@@ -65,56 +225,64 @@ function createBookmarkDragController(deps) {
   const BOOKMARK_REORDER_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
   const BOOKMARK_DRAG_PAGE_SWITCH_DELAY_MS = 640;
   const BOOKMARK_DRAG_FOLDER_SWITCH_DELAY_MS = 640;
-  let bookmarkPendingLayoutAnimation = null;
+  let bookmarkPendingLayoutAnimation: PendingLayoutAnimation | null = null;
   const insertionGapOwner = {};
+  let insertionGapKey: InsertionGapKey | null = null;
+  // The timers that end each card's reorder slide and drop settle.
+  const cardLayoutAnimationTimers = new WeakMap<HTMLElement, number>();
+  const cardDropTimers = new WeakMap<HTMLElement, number>();
 
-  function getBookmarkCardFromNode(node) {
-    return node && typeof node.closest === 'function'
-      ? node.closest('.x-nt-bookmark-card')
-      : null;
+  function getBookmarkCardFromNode(node: EventTarget | null): BookmarkCardElement | null {
+    const card = isElementNode(node) ? node.closest('.x-nt-bookmark-card') : null;
+    return isHtmlTag(card, 'div') ? card : null;
   }
 
-  function getBookmarkCardId(card) {
-    return card && typeof card.getAttribute === 'function'
-      ? card.getAttribute('data-bookmark-id') || ''
-      : '';
+  function getBookmarkCardId(card: Element | null | undefined): string {
+    return card ? card.getAttribute('data-bookmark-id') || '' : '';
   }
 
-  function getBookmarkCardParentId(card) {
-    return card && typeof card.getAttribute === 'function'
-      ? card.getAttribute('data-bookmark-parent-id') || ''
-      : '';
+  function getBookmarkCardParentId(card: Element): string {
+    return card.getAttribute('data-bookmark-parent-id') || '';
   }
 
-  function getBookmarkReorderCards() {
+  function getBookmarkReorderCards(): BookmarkCardElement[] {
     return pageState.bookmarkGrid
-      ? Array.from(pageState.bookmarkGrid.querySelectorAll('.x-nt-bookmark-card[data-bookmark-draggable="true"]'))
+      ? queryHtmlTags(pageState.bookmarkGrid, '.x-nt-bookmark-card[data-bookmark-draggable="true"]', 'div')
       : [];
   }
 
-  function getBookmarkCardInsertionIndex(card) {
-    if (!card) {
-      return -1;
-    }
-    return getBookmarkReorderCards().indexOf(card);
+  // The card's layout box, with each card of the page measured once.
+  function getCardLayoutItems(cards: readonly BookmarkCardElement[]): BookmarkLayoutItem[] {
+    const items: BookmarkLayoutItem[] = [];
+    cards.forEach((card) => {
+      const rect = getBookmarkCardLayoutRect(card);
+      if (rect && rect.width > 0 && rect.height > 0) {
+        items.push({ card, rect });
+      }
+    });
+    return items;
   }
 
-  function getBookmarkCardAllIndex(bookmarkId) {
+  function getBookmarkCardInsertionIndex(card: HTMLElement): number {
+    return getBookmarkReorderCards().findIndex((item) => item === card);
+  }
+
+  function getBookmarkCardAllIndex(bookmarkId: unknown): number {
     const id = String(bookmarkId || '');
     return id
       ? pageState.bookmarkAllItems.findIndex((item) => item && String(item.id || '') === id)
       : -1;
   }
 
-  function getBookmarkPageStartIndex() {
+  function getBookmarkPageStartIndex(): number {
     if (isBookmarkTopbarMode()) {
       return 0;
     }
     return Math.max(0, pageState.bookmarkCurrentPage * getBookmarkLimit());
   }
 
-  function getBookmarkCardLayoutRect(card) {
-    if (!card || !pageState.bookmarkGrid || typeof card.getBoundingClientRect !== 'function') {
+  function getBookmarkCardLayoutRect(card: Element | null): LayoutRect | null {
+    if (!card || !pageState.bookmarkGrid) {
       return null;
     }
     const rect = card.getBoundingClientRect();
@@ -138,24 +306,22 @@ function createBookmarkDragController(deps) {
     };
   }
 
-  function clearBookmarkCardLayoutAnimation(card) {
-    if (!card || !card.style) {
-      return;
-    }
-    if (card._xBookmarkLayoutAnimationTimer) {
-      window.clearTimeout(card._xBookmarkLayoutAnimationTimer);
-      card._xBookmarkLayoutAnimationTimer = 0;
+  function clearBookmarkCardLayoutAnimation(card: HTMLElement): void {
+    const timer = cardLayoutAnimationTimers.get(card);
+    if (timer) {
+      window.clearTimeout(timer);
+      cardLayoutAnimationTimers.delete(card);
     }
     card.style.removeProperty('transition');
     card.style.removeProperty('will-change');
-    if (card.getAttribute && card.getAttribute('data-bookmark-dragging') !== 'true' &&
+    if (card.getAttribute('data-bookmark-dragging') !== 'true' &&
         card.getAttribute('data-bookmark-dropping') !== 'true') {
       card.style.removeProperty('transform');
     }
   }
 
-  function getBookmarkLayoutRectMapById() {
-    const rects = new Map();
+  function getBookmarkLayoutRectMapById(): Map<string, LayoutRect> {
+    const rects = new Map<string, LayoutRect>();
     getBookmarkReorderCards().forEach((card) => {
       const bookmarkId = getBookmarkCardId(card);
       const rect = getBookmarkCardLayoutRect(card);
@@ -166,7 +332,7 @@ function createBookmarkDragController(deps) {
     return rects;
   }
 
-  function normalizeBookmarkAnimationRect(rect) {
+  function normalizeBookmarkAnimationRect(rect: Partial<AnimationRect> | null | undefined): AnimationRect | null {
     if (!rect) {
       return null;
     }
@@ -188,17 +354,19 @@ function createBookmarkDragController(deps) {
     };
   }
 
-  function getBookmarkDragVisualRect(state) {
+  function getBookmarkDragVisualRect(state: BookmarkDragSession): AnimationRect | null {
     const visualElement = getBookmarkDragVisualElement(state);
-    return visualElement && typeof visualElement.getBoundingClientRect === 'function'
+    return visualElement
       ? normalizeBookmarkAnimationRect(visualElement.getBoundingClientRect())
       : null;
   }
 
-  function queueBookmarkLayoutAnimation(excludedBookmarkId, animationOptions) {
-    const options = animationOptions && typeof animationOptions === 'object'
-      ? animationOptions
-      : {};
+  // Notes where the cards are, so the next render slides them from there.
+  function queueBookmarkLayoutAnimation(
+    excludedBookmarkId: unknown,
+    animationOptions?: { draggedBookmarkId?: string; draggedRect?: AnimationRect | null }
+  ): void {
+    const options = animationOptions || {};
     const rects = getBookmarkLayoutRectMapById();
     const draggedRect = normalizeBookmarkAnimationRect(options.draggedRect);
     bookmarkPendingLayoutAnimation = rects.size > 0 || draggedRect
@@ -213,7 +381,7 @@ function createBookmarkDragController(deps) {
       : null;
   }
 
-  function playPendingBookmarkLayoutAnimation() {
+  function playPendingBookmarkLayoutAnimation(): boolean {
     const pending = bookmarkPendingLayoutAnimation;
     bookmarkPendingLayoutAnimation = null;
     if (!pending || !pageState.bookmarkGrid ||
@@ -222,7 +390,8 @@ function createBookmarkDragController(deps) {
         NEWTAB_CROSS_SURFACE_DRAG.prefersReducedMotion(window)) {
       return false;
     }
-    const shifts = [];
+    const grid = pageState.bookmarkGrid;
+    const shifts: { card: BookmarkCardElement; dx: number; dy: number }[] = [];
     getBookmarkReorderCards().forEach((card) => {
       const bookmarkId = getBookmarkCardId(card);
       const isDraggedCard = Boolean(
@@ -263,7 +432,7 @@ function createBookmarkDragController(deps) {
       card.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
       card.style.willChange = 'transform';
     });
-    void pageState.bookmarkGrid.offsetHeight;
+    void grid.offsetHeight;
     window.requestAnimationFrame(() => {
       shifts.forEach(({ card }) => {
         if (!card.isConnected) {
@@ -271,27 +440,21 @@ function createBookmarkDragController(deps) {
         }
         card.style.transition = `transform ${BOOKMARK_REORDER_ANIMATION_MS}ms ${BOOKMARK_REORDER_EASING}`;
         card.style.transform = 'translate3d(0, 0, 0)';
-        card._xBookmarkLayoutAnimationTimer = window.setTimeout(() => {
-          card._xBookmarkLayoutAnimationTimer = 0;
+        cardLayoutAnimationTimers.set(card, window.setTimeout(() => {
+          cardLayoutAnimationTimers.delete(card);
           clearBookmarkCardLayoutAnimation(card);
-        }, BOOKMARK_REORDER_ANIMATION_MS + 80);
+        }, BOOKMARK_REORDER_ANIMATION_MS + 80));
       });
     });
     return true;
   }
 
-  function updateBookmarkDragLayoutCache(state) {
+  function updateBookmarkDragLayoutCache(state: BookmarkDragSession | null): void {
     if (!state || !state.card) {
       return;
     }
     const draggedCard = state.card;
-    state.layoutItems = getBookmarkReorderCards()
-      .filter((card) => card && card !== draggedCard)
-      .map((card) => ({
-        card,
-        rect: getBookmarkCardLayoutRect(card)
-      }))
-      .filter((item) => item.rect && item.rect.width > 0 && item.rect.height > 0);
+    state.layoutItems = getCardLayoutItems(getBookmarkReorderCards().filter((card) => card !== draggedCard));
     const draggedLayoutRect = getBookmarkCardLayoutRect(draggedCard);
     if (draggedLayoutRect && !state.dragPreviewElement) {
       state.baseLeft = draggedLayoutRect.left;
@@ -299,7 +462,7 @@ function createBookmarkDragController(deps) {
     }
   }
 
-  function cancelBookmarkDragMoveFrame(state) {
+  function cancelBookmarkDragMoveFrame(state: BookmarkDragSession): void {
     if (!state || !state.moveFrameId) {
       return;
     }
@@ -307,11 +470,11 @@ function createBookmarkDragController(deps) {
     state.moveFrameId = 0;
   }
 
-  function getBookmarkDragVisualElement(state) {
+  function getBookmarkDragVisualElement(state: BookmarkDragSession): HTMLElement | null {
     return NEWTAB_BOOKMARK_DRAG.getVisualElement(state);
   }
 
-  function createBookmarkCascadeDragPreview(state) {
+  function createBookmarkCascadeDragPreview(state: BookmarkDragSession): HTMLElement | null {
     return NEWTAB_BOOKMARK_DRAG.createPreview(state, {
       documentObj: document,
       renderClosedFolderIcon: ({ bookmarkId, folderIcon }) => {
@@ -322,20 +485,17 @@ function createBookmarkDragController(deps) {
     });
   }
 
-  function removeBookmarkCascadeDragPreview(state) {
+  function removeBookmarkCascadeDragPreview(state: BookmarkDragSession): void {
     NEWTAB_BOOKMARK_DRAG.removePreview(state);
   }
 
-  function setBookmarkDragCardTransform(state, pointerX, pointerY) {
+  function setBookmarkDragCardTransform(state: BookmarkDragSession, pointerX: number, pointerY: number): void {
     NEWTAB_BOOKMARK_DRAG.updateVisualPosition(state, pointerX, pointerY, {
       windowObj: window
     });
   }
 
-  function settleBookmarkDragCard(card) {
-    if (!card || !card.style) {
-      return;
-    }
+  function settleBookmarkDragCard(card: HTMLElement): void {
     card.setAttribute('data-bookmark-dropping', 'true');
     card.style.pointerEvents = '';
     const reducedMotion = NEWTAB_CROSS_SURFACE_DRAG.prefersReducedMotion(window);
@@ -343,32 +503,31 @@ function createBookmarkDragController(deps) {
       ? 'none'
       : `transform ${BOOKMARK_DROP_ANIMATION_MS}ms ${BOOKMARK_REORDER_EASING}`;
     card.style.transform = 'translate3d(0, 0, 0)';
-    if (card._xBookmarkDropTimer) {
-      window.clearTimeout(card._xBookmarkDropTimer);
+    const dropTimer = cardDropTimers.get(card);
+    if (dropTimer) {
+      window.clearTimeout(dropTimer);
     }
-    card._xBookmarkDropTimer = window.setTimeout(() => {
-      card._xBookmarkDropTimer = 0;
+    cardDropTimers.set(card, window.setTimeout(() => {
+      cardDropTimers.delete(card);
       card.removeAttribute('data-bookmark-dragging');
       card.removeAttribute('data-bookmark-dropping');
       card.style.removeProperty('transition');
       card.style.removeProperty('transform');
       card.style.removeProperty('will-change');
       card.style.pointerEvents = '';
-    }, reducedMotion ? 0 : BOOKMARK_DROP_ANIMATION_MS + 90);
+    }, reducedMotion ? 0 : BOOKMARK_DROP_ANIMATION_MS + 90));
   }
 
-  function isPointInsideBookmarkElement(element, pointerX, pointerY) {
+  function isPointInsideBookmarkElement(element: HTMLElement | null, pointerX: number, pointerY: number): boolean {
     return NEWTAB_BOOKMARK_DRAG.isPointInsideElement(element, pointerX, pointerY);
   }
 
-  function getBookmarkGridInsertionDropTarget(state, pointerX, pointerY) {
-    if (!pageState.bookmarkGrid || !state || !Number.isFinite(pointerX) ||
+  function getBookmarkGridInsertionDropTarget(state: BookmarkDragSession, pointerX: number, pointerY: number): GridInsertionTarget | null {
+    if (!pageState.bookmarkGrid || !Number.isFinite(pointerX) ||
         !Number.isFinite(pointerY)) {
       return null;
     }
-    const computedStyle = typeof window.getComputedStyle === 'function'
-      ? window.getComputedStyle(pageState.bookmarkGrid)
-      : null;
+    const computedStyle = window.getComputedStyle(pageState.bookmarkGrid);
     const pageStartIndex = getBookmarkPageStartIndex();
     const pageEndIndex = pageStartIndex + getBookmarkLimit();
     const originalIndex = Number(state.originalIndex);
@@ -378,11 +537,11 @@ function createBookmarkDragController(deps) {
       Number.isFinite(originalIndex) &&
       (originalIndex < pageStartIndex || originalIndex >= pageEndIndex);
     return NEWTAB_BOOKMARK_DRAG.getGridInsertionTarget({
-      columnGap: computedStyle ? computedStyle.columnGap : '',
+      columnGap: computedStyle.columnGap,
       folderId: pageState.bookmarkCurrentFolderId,
       gridElement: pageState.bookmarkGrid,
       isCrossPageDrag,
-      layoutItems: state && state.layoutItems,
+      layoutItems: state.layoutItems,
       markerVerticalInsetPx: isBookmarkTopbarMode() ? 3 : 8,
       pageStartIndex,
       pointerX,
@@ -390,7 +549,7 @@ function createBookmarkDragController(deps) {
     });
   }
 
-  function getBookmarkDropSurfaceElement() {
+  function getBookmarkDropSurfaceElement(): HTMLElement | null {
     if (!pageState.bookmarkGrid || pageState.currentBookmarkCount <= 0) {
       return null;
     }
@@ -402,7 +561,7 @@ function createBookmarkDragController(deps) {
     return isContentSectionVisible(bookmarkSection) ? bookmarkSection : null;
   }
 
-  function isEmptyBookmarkRootHidden() {
+  function isEmptyBookmarkRootHidden(): boolean {
     return Boolean(
       pageState.currentBookmarkCount > 0 &&
       pageState.bookmarkLoadedOnce &&
@@ -412,7 +571,9 @@ function createBookmarkDragController(deps) {
     );
   }
 
-  function getExternalBookmarkSurfacePoint(pointerX, pointerY) {
+  // Where a drag from another surface meets the bookmarks: the point on
+  // the bar's row of cards, or the point itself over the section.
+  function getExternalBookmarkSurfacePoint(pointerX: number, pointerY: number): { x: number; y: number } | null {
     const surface = getBookmarkDropSurfaceElement();
     if (!surface) {
       return null;
@@ -420,7 +581,7 @@ function createBookmarkDragController(deps) {
     if (isBookmarkTopbarMode()) {
       return NEWTAB_BOOKMARK_DRAG.getTopbarDropPoint({
         surfaceElement: surface,
-        viewportElement: pageState.bookmarkTopbarRuntime.viewport,
+        viewportElement: pageState.bookmarkTopbarRuntime ? pageState.bookmarkTopbarRuntime.viewport : null,
         pointerX,
         pointerY
       });
@@ -431,18 +592,19 @@ function createBookmarkDragController(deps) {
 
   // Foreign items share the bookmark edge insertion zones. A folder's center
   // accepts its contents; ordinary cards snap to the nearest row boundary.
-  function isValidExternalBookmarkDropTarget(state, target) {
+  function isValidExternalBookmarkDropTarget(state: SurfaceDragState | null, target: DragDropTarget | null): boolean {
     const nodeMap = bookmarksRuntime.getNodeMap();
-    if (!target || !NEWTAB_CROSS_SURFACE_DRAG.isBookmarkFolderDropTarget(target.folderId, nodeMap)) {
+    if (!target || target.kind === 'blocked' || target.surface === 'shortcuts' ||
+        !NEWTAB_CROSS_SURFACE_DRAG.isBookmarkFolderDropTarget(target.folderId, nodeMap)) {
       return false;
     }
     const destination = nodeMap.get(String(target.folderId));
-    if (destination.unmodifiable) {
+    if (!destination || destination.unmodifiable) {
       return false;
     }
     if (target.kind === 'return') {
-      const source = state && nodeMap.get(String(state.bookmarkId || ''));
-      if (!source || source.url || !state.shortcutId ||
+      const source = state ? nodeMap.get(String(state.bookmarkId || '')) : undefined;
+      if (!state || !source || source.url || !state.shortcutId ||
           String(target.bookmarkId) !== String(source.id) ||
           String(target.folderId) !== String(source.parentId)) {
         return false;
@@ -453,23 +615,36 @@ function createBookmarkDragController(deps) {
     );
   }
 
-  function resolveExternalBookmarkDropTarget(state, target) {
+  function resolveExternalBookmarkDropTarget(state: SurfaceDragState | null, dropTarget: DragDropTarget): DragDropTarget {
+    let target = dropTarget;
     const shortcut = state && state.shortcutId ? getShortcutById(state.shortcutId) : null;
-    if (shortcut && shortcut.type === 'folder' && target &&
+    if (shortcut && isShortcutFolder(shortcut) &&
         (target.kind === 'card' || target.kind === 'cascade') &&
         String(target.folderId) === String(getShortcutFolderId(shortcut))) {
       const source = bookmarksRuntime.getNodeMap().get(String(getShortcutFolderId(shortcut)));
       if (source && !source.url) {
         // Returning the alias to its original bookmark removes the shortcut
         // without trying to move the real folder into itself.
-        target = { ...target, kind: 'return', bookmarkId: source.id, folderId: source.parentId };
+        target = {
+          kind: 'return',
+          surface: target.surface,
+          bookmarkId: source.id,
+          folderId: String(source.parentId || ''),
+          title: target.title,
+          element: target.element,
+          markerElement: target.markerElement
+        };
       }
     }
-    return isValidExternalBookmarkDropTarget(state, target)
-      ? target : { kind: 'blocked', surface: target && target.surface || 'folder' };
+    const blocked: BlockedDropTarget = { kind: 'blocked', surface: target.surface || 'folder' };
+    return isValidExternalBookmarkDropTarget(state, target) ? target : blocked;
   }
 
-  function getShortcutFolderDropTargetAt(state, pointerX, pointerY) {
+  function getShortcutFolderDropTargetAt(
+    state: SurfaceDragState,
+    pointerX: number,
+    pointerY: number
+  ): FolderDropTarget | BlockedDropTarget | null {
     if (!isPointOverShortcutDropSurface(pointerX, pointerY)) {
       return null;
     }
@@ -484,16 +659,19 @@ function createBookmarkDragController(deps) {
     if (!tile) {
       return null;
     }
-    const target = { kind: 'shortcut-folder', surface: 'folder', element: tile,
-      folderId: tile.getAttribute('data-bookmark-drop-folder-id'),
+    const target: FolderDropTarget = { kind: 'shortcut-folder', surface: 'folder', element: tile,
+      folderId: tile.getAttribute('data-bookmark-drop-folder-id') || '',
       title: tile.getAttribute('data-shortcut-title') || '' };
-    const valid = state === pageState.bookmarkDragState
-      ? isValidBookmarkFolderDropTarget(state, target)
+    const bookmarkState = pageState.bookmarkDragState;
+    const valid = bookmarkState && state === bookmarkState
+      ? isValidBookmarkFolderDropTarget(bookmarkState, target)
       : isValidExternalBookmarkDropTarget(state, target);
     return valid ? target : { kind: 'blocked', surface: 'folder' };
   }
 
-  function getExternalBookmarkDropTarget(pointerX, pointerY, state) {
+  // Where a drag from the shortcuts or the recent sites would drop on the
+  // bookmarks: the open cascade menu, a folder, or a line in the grid.
+  function getExternalBookmarkDropTarget(pointerX: number, pointerY: number, state: SurfaceDragState | null): DragDropTarget | null {
     if (pageState.bookmarkCascadeRuntime && pageState.bookmarkCascadeRuntime.isOpen()) {
       const cascadeTarget = pageState.bookmarkCascadeRuntime.updateDragPointer({ clientX: pointerX, clientY: pointerY });
       if (cascadeTarget) {
@@ -514,22 +692,19 @@ function createBookmarkDragController(deps) {
     if (!surfacePoint) {
       return folderTarget ? resolveExternalBookmarkDropTarget(state, folderTarget) : null;
     }
-    const computedStyle = typeof window.getComputedStyle === 'function'
-      ? window.getComputedStyle(pageState.bookmarkGrid)
-      : null;
+    const grid = pageState.bookmarkGrid;
+    if (!grid) {
+      return folderTarget ? resolveExternalBookmarkDropTarget(state, folderTarget) : null;
+    }
+    const computedStyle = window.getComputedStyle(grid);
     const insertionTarget = NEWTAB_BOOKMARK_DRAG.getGridInsertionTarget({
-      columnGap: computedStyle ? computedStyle.columnGap : '',
+      columnGap: computedStyle.columnGap,
       folderId: pageState.bookmarkCurrentFolderId,
-      gridElement: pageState.bookmarkGrid,
+      gridElement: grid,
       // Keep the shared narrow edge zones over folders so their centers can
       // still accept contents. Other points may snap anywhere in the row.
-      hitZonePx: folderTarget ? undefined : pageState.bookmarkGrid.getBoundingClientRect().width,
-      layoutItems: getBookmarkReorderCards()
-        .map((card) => ({
-          card,
-          rect: getBookmarkCardLayoutRect(card)
-        }))
-        .filter((item) => item.rect && item.rect.width > 0 && item.rect.height > 0),
+      hitZonePx: folderTarget ? undefined : grid.getBoundingClientRect().width,
+      layoutItems: getCardLayoutItems(getBookmarkReorderCards()),
       markerVerticalInsetPx: isBookmarkTopbarMode() ? 3 : 8,
       pageStartIndex: getBookmarkPageStartIndex(),
       pointerX: surfacePoint.x,
@@ -543,7 +718,7 @@ function createBookmarkDragController(deps) {
 
   // A scrolling shortcut section shows only part of its grid; the rest,
   // scrolled under the search box or the bottom dock, takes no drops.
-  function isPointOverShortcutDropSurface(pointerX, pointerY) {
+  function isPointOverShortcutDropSurface(pointerX: number, pointerY: number): boolean {
     const section = pageState.shortcutSection;
     return Boolean(
       pageState.shortcutGrid &&
@@ -555,10 +730,7 @@ function createBookmarkDragController(deps) {
     );
   }
 
-  function getBookmarkDragShortcutDropTarget(state, pointerX, pointerY) {
-    if (!state) {
-      return null;
-    }
+  function getBookmarkDragShortcutDropTarget(state: BookmarkDragSession, pointerX: number, pointerY: number): ShortcutInsertionTarget | null {
     const node = bookmarksRuntime.getNodeMap().get(String(state.bookmarkId || ''));
     const record = node
       ? NEWTAB_SHORTCUTS_STORE.createShortcutRecord(
@@ -573,7 +745,7 @@ function createBookmarkDragController(deps) {
 
   // Where `record` would join the shortcuts under the pointer, with the
   // line to show there; null (and a blocked cursor) when it cannot.
-  function getShortcutInsertionDropTarget(record, pointerX, pointerY) {
+  function getShortcutInsertionDropTarget(record: ShortcutItem | null, pointerX: number, pointerY: number): ShortcutInsertionTarget | null {
     const slot = getShortcutInsertionSlotAt(pointerX, pointerY, null);
     const canMove = Boolean(NEWTAB_CROSS_SURFACE_DRAG.planBookmarkToShortcut({
       shortcuts: pageState.newtabShortcuts,
@@ -606,17 +778,17 @@ function createBookmarkDragController(deps) {
     };
   }
 
-  function hasShortcutForBookmarkFolder(bookmarkId) {
+  function hasShortcutForBookmarkFolder(bookmarkId: unknown): boolean {
     const id = String(bookmarkId || '');
     return Boolean(id) && pageState.newtabShortcuts.some((item) => (
-      item && item.type === 'folder' && String(getShortcutFolderId(item)) === id
+      item && isShortcutFolder(item) && String(getShortcutFolderId(item)) === id
     ));
   }
 
   // "Add to shortcuts" from a bookmark folder's context menu: the same
   // folder shortcut a drop makes, at the end of the last group. The folder
   // stays where it is and the step can be undone like a drop.
-  function addBookmarkFolderToShortcuts(bookmarkId) {
+  function addBookmarkFolderToShortcuts(bookmarkId: unknown): Promise<boolean> {
     const node = bookmarksRuntime.getNode(String(bookmarkId || ''));
     if (!node || node.url || hasShortcutForBookmarkFolder(node.id)) {
       return Promise.resolve(false);
@@ -646,9 +818,9 @@ function createBookmarkDragController(deps) {
   }
 
   // Whether a bookmark sits in a folder shown as a shortcut, at any depth.
-  function isInShortcutFolder(bookmarkId) {
+  function isInShortcutFolder(bookmarkId: unknown): boolean {
     const folderIds = new Set(pageState.newtabShortcuts
-      .filter((item) => item && item.type === 'folder')
+      .filter((item) => item && isShortcutFolder(item))
       .map((item) => String(getShortcutFolderId(item) || ''))
       .filter(Boolean));
     let node = bookmarksRuntime.getNode(String(bookmarkId || ''));
@@ -664,12 +836,13 @@ function createBookmarkDragController(deps) {
   // bookmarks and the bookmark stays, like a folder always does. A site
   // taken out of a shortcut folder always moves: it was already one of the
   // shortcuts, so leaving it in the folder would show it twice.
-  function moveBookmarkToShortcuts(state, target) {
-    if (pageState.bookmarkMoveHistoryBusy) return Promise.resolve(false);
-    if (target.record.type !== 'folder' && isInShortcutFolder(state.bookmarkId)) {
+  function moveBookmarkToShortcuts(state: { bookmarkId: string }, target: ShortcutDropPlan): Promise<boolean> {
+    const record = target.record;
+    if (pageState.bookmarkMoveHistoryBusy || !record) return Promise.resolve(false);
+    if (!isShortcutFolder(record) && isInShortcutFolder(state.bookmarkId)) {
       return transferBookmarkToShortcuts(state, target, false);
     }
-    if (target.record.type === 'folder' || typeof isWebDavBackingUpShortcuts !== 'function') {
+    if (isShortcutFolder(record) || typeof isWebDavBackingUpShortcuts !== 'function') {
       return transferBookmarkToShortcuts(state, target, true);
     }
     pageState.bookmarkMoveHistoryBusy = true;
@@ -679,8 +852,13 @@ function createBookmarkDragController(deps) {
     });
   }
 
-  function transferBookmarkToShortcuts(state, target, keepsBookmark) {
-    if (pageState.bookmarkMoveHistoryBusy) return Promise.resolve(false);
+  function transferBookmarkToShortcuts(
+    state: { bookmarkId: string },
+    target: ShortcutDropPlan,
+    keepsBookmark: boolean
+  ): Promise<boolean> {
+    const targetRecord = target.record;
+    if (pageState.bookmarkMoveHistoryBusy || !targetRecord) return Promise.resolve(false);
     const node = bookmarksRuntime.getNode(state.bookmarkId);
     if (!node) return Promise.resolve(false);
     const plan = NEWTAB_CROSS_SURFACE_DRAG.planBookmarkToShortcut({
@@ -700,10 +878,12 @@ function createBookmarkDragController(deps) {
       index: existingIndex,
       iconDataUrl: pageState.newtabShortcutIcons[plan.shortcutId]
     } : null;
-    if (target.record.type === 'folder') {
+    const isFolder = isShortcutFolder(targetRecord);
+    if (isShortcutFolder(targetRecord)) {
       const index = plan.shortcuts.findIndex((item) => item.id === plan.shortcutId);
       const original = plan.shortcuts[index];
-      const folderId = String(target.record.folderId || getShortcutFolderId(original));
+      if (!original || !isShortcutFolder(original)) return Promise.resolve(false);
+      const folderId = String(targetRecord.folderId || getShortcutFolderId(original));
       const folderRef = FOLDER_REFERENCES.describe(folderId, bookmarksRuntime.getNodeMap());
       if (!folderRef) return Promise.resolve(false);
       const id = original.folderRef ? original.id : FOLDER_REFERENCES.createEntryId();
@@ -713,25 +893,27 @@ function createBookmarkDragController(deps) {
     }
     // A site from a shortcut folder becomes a shortcut with the icon it
     // showed there: the same source, and a custom image as its own.
-    const itemIcon = target.record.type === 'folder' || typeof getFolderItemIcon !== 'function'
+    const itemIcon = isFolder || typeof getFolderItemIcon !== 'function'
       ? null
       : getFolderItemIcon(node.id) || null;
     let iconDataUrl = beforeShortcut ? beforeShortcut.iconDataUrl : '';
-    if (target.record.type !== 'folder' && !beforeShortcut) {
+    if (!isFolder && !beforeShortcut) {
       const index = plan.shortcuts.findIndex((item) => item.id === plan.shortcutId);
+      const current = plan.shortcuts[index];
       const settings = (itemIcon && itemIcon.shortcut) || {};
       const iconSource = (itemIcon && itemIcon.iconSource) || settings.iconSource;
-      plan.shortcuts[index] = {
-        ...plan.shortcuts[index],
-        ...(keepsBookmark ? { fromBookmark: true } : {}),
-        ...(iconSource ? { iconSource } : {}),
-        ...(settings.iconPlate ? { iconPlate: settings.iconPlate } : {}),
-        ...(settings.iconPlateColor ? { iconPlateColor: settings.iconPlateColor } : {})
-      };
-      if (itemIcon && itemIcon.iconSource === 'custom') iconDataUrl = itemIcon.dataUrl;
+      if (current && !isShortcutFolder(current)) {
+        plan.shortcuts[index] = {
+          ...current,
+          ...(keepsBookmark ? { fromBookmark: true } : {}),
+          ...(iconSource ? { iconSource } : {}),
+          ...(settings.iconPlate ? { iconPlate: settings.iconPlate } : {}),
+          ...(settings.iconPlateColor ? { iconPlateColor: settings.iconPlateColor } : {})
+        };
+      }
+      if (itemIcon && itemIcon.iconSource === 'custom') iconDataUrl = itemIcon.dataUrl || '';
     }
     const afterIndex = plan.shortcuts.findIndex((item) => item.id === plan.shortcutId);
-    const isFolder = target.record.type === 'folder';
     const from = { parentId: node.parentId, index: node.index };
     const record = NEWTAB_BOOKMARK_MOVE_HISTORY.createTransferRecord({
       bookmarkId: node.id,
@@ -760,32 +942,38 @@ function createBookmarkDragController(deps) {
       return true;
     }).finally(() => {
       pageState.bookmarkMoveHistoryBusy = false;
-      if (pageState.newtabShortcuts.some((item) => item.type === 'folder')) return refreshShortcutFolderReferences();
+      if (pageState.newtabShortcuts.some((item) => isShortcutFolder(item))) return refreshShortcutFolderReferences();
+      return undefined;
     });
   }
 
-  async function applyBookmarkShortcutTransfer(record, isUndo) {
+  // Moves a site between a bookmark and a shortcut, or back on undo: the
+  // destination is saved first, and the source goes only once it holds.
+  async function applyBookmarkShortcutTransfer(record: TransferRecord, isUndo: boolean): Promise<boolean> {
     const from = isUndo ? record.to : record.from;
     const to = isUndo ? record.from : record.to;
     const sourceShortcut = isUndo ? record.afterShortcut : record.beforeShortcut;
     const destinationShortcut = isUndo ? record.beforeShortcut : record.afterShortcut;
-    const planShortcuts = (source, destination) => NEWTAB_CROSS_SURFACE_DRAG.planTransferShortcuts({
+    const planShortcuts = (
+      source: ShortcutDeleteRecord | null,
+      destination: ShortcutDeleteRecord | null
+    ): ShortcutItem[] | null => NEWTAB_CROSS_SURFACE_DRAG.planTransferShortcuts({
       shortcuts: pageState.newtabShortcuts, source, destination, maxShortcuts: MAX_NEWTAB_SHORTCUTS
     });
-    const persistShortcutState = async (items, destination) => {
-      if (destination && destination.snapshot.type === 'folder') {
+    const persistShortcutState = async (items: ShortcutItem[], destination: ShortcutDeleteRecord | null): Promise<boolean> => {
+      if (destination && isShortcutFolder(destination.snapshot)) {
         shortcutFolderRuntime.bind(destination.snapshot.id, record.bookmarkId);
         await shortcutFolderRuntime.flush();
       }
-      const iconChange = destination && destination.iconDataUrl
+      const iconChange: ShortcutIconChange | undefined = destination && destination.iconDataUrl
         ? { shortcutId: destination.snapshot.id, action: 'replace', dataUrl: destination.iconDataUrl }
         : undefined;
       return persistShortcuts(items, '', iconChange, {
-        syncOverflowShortcutId: destination && destination.snapshot.id,
+        syncOverflowShortcutId: destination ? destination.snapshot.id : undefined,
         animateLayout: true
       });
     };
-    let rollbackBookmark = null;
+    const rollbackState: { run: (() => Promise<unknown>) | null } = { run: null };
     let shortcutsSaved = false;
     const keepCascadeOpen = Boolean(pageState.bookmarkCascadeRuntime && pageState.bookmarkCascadeRuntime.isOpen());
     try {
@@ -799,27 +987,29 @@ function createBookmarkDragController(deps) {
         if (from && (!node || Boolean(node.url) !== Boolean(record.snapshot.url))) {
           throw new Error('The transferred bookmark is unavailable.');
         }
-        let movedNode = node;
+        let movedNode: BookmarkNode | null = node;
         if (to && !from) {
-          movedNode = await bookmarksRuntime.create({
+          const createdNode = await bookmarksRuntime.create({
             parentId: to.parentId, index: to.index,
             title: record.snapshot.title, url: record.snapshot.url
           });
-          if (!movedNode || !movedNode.id) throw new Error('The restored bookmark id is unavailable.');
-          rollbackBookmark = () => bookmarksRuntime.remove(movedNode.id);
-        } else if (to && (from.parentId !== to.parentId || from.index !== to.index)) {
+          if (!createdNode || !createdNode.id) throw new Error('The restored bookmark id is unavailable.');
+          movedNode = createdNode;
+          rollbackState.run = () => bookmarksRuntime.remove(createdNode.id);
+        } else if (to && from && node && (from.parentId !== to.parentId || from.index !== to.index)) {
           const originalLocation = { parentId: String(node.parentId), index: Number(node.index) || 0 };
-          movedNode = await bookmarksRuntime.move(bookmarkId, {
+          const relocatedNode = await bookmarksRuntime.move(bookmarkId, {
             parentId: to.parentId,
             index: NEWTAB_BOOKMARK_MOVE_HISTORY.getMoveApiDestinationIndex({
               sourceParentId: node.parentId, sourceIndex: node.index,
               targetParentId: to.parentId, targetIndex: to.index
             })
           });
-          rollbackBookmark = () => bookmarksRuntime.move(bookmarkId, {
+          movedNode = relocatedNode;
+          rollbackState.run = () => bookmarksRuntime.move(bookmarkId, {
             parentId: originalLocation.parentId,
             index: NEWTAB_BOOKMARK_MOVE_HISTORY.getMoveApiDestinationIndex({
-              sourceParentId: movedNode.parentId, sourceIndex: movedNode.index,
+              sourceParentId: relocatedNode.parentId, sourceIndex: relocatedNode.index,
               targetParentId: originalLocation.parentId, targetIndex: originalLocation.index
             })
           });
@@ -829,10 +1019,9 @@ function createBookmarkDragController(deps) {
         // A bookmark-only transfer leaves the shortcuts alone.
         if ((sourceShortcut || destinationShortcut) &&
             !await persistShortcutState(nextShortcuts, destinationShortcut)) {
-          if (rollbackBookmark) {
-            await rollbackBookmark();
-            rollbackBookmark = null;
-          }
+          const rollback = rollbackState.run;
+          rollbackState.run = null;
+          if (rollback) await rollback();
           return false;
         }
         shortcutsSaved = Boolean(sourceShortcut || destinationShortcut);
@@ -850,14 +1039,15 @@ function createBookmarkDragController(deps) {
           await bookmarksRuntime.remove(bookmarkId);
           if (record.snapshot.url) await updateFolderItemIcons({ [bookmarkId]: null }).catch(() => {});
         }
-        if (to && !from) {
+        if (to && !from && movedNode) {
+          const restoredId = movedNode.id;
           await bookmarksRuntime.ensureReady(true);
           // A shortcut that left for the bookmarks comes back if its
           // bookmark is not there after all.
-          if (sourceShortcut && !bookmarksRuntime.getNode(movedNode.id)) {
+          if (sourceShortcut && !bookmarksRuntime.getNode(restoredId)) {
             throw new Error('The bookmarks did not keep the transferred site.');
           }
-          if (record.itemIcon) await updateFolderItemIcons({ [movedNode.id]: record.itemIcon }).catch(() => {});
+          if (record.itemIcon) await updateFolderItemIcons({ [restoredId]: record.itemIcon }).catch(() => {});
         }
         if (movedNode && to) {
           bookmarkMoveHistory.remapBookmarkId(record.bookmarkId, movedNode.id);
@@ -869,8 +1059,9 @@ function createBookmarkDragController(deps) {
     } catch (error) {
       // Keep failures out of history and restore any completed destination write.
       try {
+        const rollback = rollbackState.run;
         await bookmarksRuntime.runControlledMutation(async () => {
-          if (rollbackBookmark) await rollbackBookmark();
+          if (rollback) await rollback();
           if (shortcutsSaved) {
             const originalShortcuts = planShortcuts(destinationShortcut, sourceShortcut);
             if (!originalShortcuts || !await persistShortcutState(originalShortcuts, sourceShortcut)) {
@@ -894,9 +1085,9 @@ function createBookmarkDragController(deps) {
 
   // Shortcut folders are bookmark folders, so stacking two website shortcuts
   // creates one holding both sites and shows it where the stack target was.
-  async function applyShortcutStack(record, isUndo) {
+  async function applyShortcutStack(record: ShortcutStackRecord, isUndo: boolean): Promise<boolean> {
     const keepCascadeOpen = Boolean(pageState.bookmarkCascadeRuntime && pageState.bookmarkCascadeRuntime.isOpen());
-    const planShortcuts = (folderSnapshot) => NEWTAB_CROSS_SURFACE_DRAG.planShortcutStack({
+    const planShortcuts = (folderSnapshot: ShortcutFolder): ShortcutItem[] | null => NEWTAB_CROSS_SURFACE_DRAG.planShortcutStack({
       shortcuts: pageState.newtabShortcuts,
       sources: record.sources,
       folder: { snapshot: folderSnapshot, index: record.folderShortcut.index, groupId: record.folderShortcut.groupId },
@@ -904,9 +1095,17 @@ function createBookmarkDragController(deps) {
       maxShortcuts: MAX_NEWTAB_SHORTCUTS
     });
     const folderShortcutId = record.folderShortcut.id;
-    let rollbackBookmark = null;
+    // Only the folder entry's id decides whether the stack still fits; its
+    // bookmark folder is not known until it is created.
+    const folderStandIn: ShortcutFolder = {
+      id: folderShortcutId,
+      type: 'folder',
+      title: record.runtime.title || record.snapshot.title,
+      folderId: ''
+    };
+    const rollbackState: { run: (() => Promise<unknown>) | null } = { run: null };
     try {
-      if (!planShortcuts({ id: folderShortcutId, type: 'folder' })) {
+      if (!planShortcuts(folderStandIn)) {
         throw new Error('Shortcut stack conflicts with the current shortcuts.');
       }
       return await bookmarksRuntime.runControlledMutation(async () => {
@@ -914,11 +1113,11 @@ function createBookmarkDragController(deps) {
         if (isUndo) {
           const folderId = bookmarkMoveHistory.resolveBookmarkId(record.bookmarkId);
           const node = bookmarksRuntime.getNode(folderId);
-          if (!NEWTAB_BOOKMARK_MOVE_HISTORY.isShortcutStackFolderIntact(node, record.snapshot)) {
+          if (!node || !NEWTAB_BOOKMARK_MOVE_HISTORY.isShortcutStackFolderIntact(node, record.snapshot)) {
             throw new Error('The stacked folder has changed.');
           }
-          const nextShortcuts = planShortcuts({ id: folderShortcutId, type: 'folder' });
-          const iconChanges = record.sources.filter((source) => source.iconDataUrl).map((source) => ({
+          const nextShortcuts = planShortcuts(folderStandIn);
+          const iconChanges = record.sources.filter((source) => source.iconDataUrl).map((source): ShortcutIconChange => ({
             shortcutId: source.snapshot.id, action: 'replace', dataUrl: source.iconDataUrl
           }));
           const previousShortcuts = pageState.newtabShortcuts;
@@ -929,7 +1128,7 @@ function createBookmarkDragController(deps) {
             await persistShortcuts(previousShortcuts, '');
             throw error;
           }
-          await updateFolderItemIcons(Object.fromEntries(node.children.map((child) => [child.id, null])))
+          await updateFolderItemIcons(Object.fromEntries((node.children || []).map((child) => [child.id, null])))
             .catch(() => {});
           // Redo recreates the folder where, and under the name, it was left.
           record.runtime.location = { parentId: String(node.parentId), index: Number(node.index) || 0 };
@@ -939,22 +1138,23 @@ function createBookmarkDragController(deps) {
         }
         // New folders go to the end of the bookmarks bar shown on this page.
         const location = record.runtime.location;
-        const parent = location && bookmarksRuntime.getNode(location.parentId);
+        const parent = location ? bookmarksRuntime.getNode(location.parentId) : null;
         const children = parent && !parent.url && Array.isArray(parent.children) ? parent.children : null;
         const title = record.runtime.title || record.snapshot.title;
         const folderNode = await bookmarksRuntime.create({
-          parentId: children ? String(parent.id) : bookmarksRuntime.getRootFolderId(),
-          ...(children ? { index: Math.min(location.index, children.length) } : {}),
+          parentId: parent && children ? String(parent.id) : bookmarksRuntime.getRootFolderId(),
+          ...(location && children ? { index: Math.min(location.index, children.length) } : {}),
           title
         });
         const folderId = String(folderNode && folderNode.id || '');
         if (!folderId) throw new Error('The stacked folder id is unavailable.');
-        rollbackBookmark = () => bookmarksRuntime.remove(folderId, { recursive: true });
-        const itemIcons = {};
+        rollbackState.run = () => bookmarksRuntime.remove(folderId, { recursive: true });
+        const itemIcons: Record<string, FolderItemIcon> = {};
         for (let index = 0; index < record.snapshot.children.length; index += 1) {
           const child = record.snapshot.children[index];
           const childNode = await bookmarksRuntime.create({ parentId: folderId, index, title: child.title, url: child.url });
-          if (childNode && childNode.id && record.itemIcons[index]) itemIcons[childNode.id] = record.itemIcons[index];
+          const itemIcon = record.itemIcons[index];
+          if (childNode && childNode.id && itemIcon) itemIcons[childNode.id] = itemIcon;
         }
         await bookmarksRuntime.ensureReady(true);
         const folderRef = FOLDER_REFERENCES.describe(folderId, bookmarksRuntime.getNodeMap());
@@ -969,20 +1169,22 @@ function createBookmarkDragController(deps) {
           syncOverflowShortcutId: folderShortcutId,
           animateLayout: true
         })) {
-          await rollbackBookmark();
-          rollbackBookmark = null;
+          const rollback = rollbackState.run;
+          rollbackState.run = null;
+          if (rollback) await rollback();
           return false;
         }
-        rollbackBookmark = null;
+        rollbackState.run = null;
         await updateFolderItemIcons(itemIcons).catch(() => {});
         if (record.bookmarkId) bookmarkMoveHistory.remapBookmarkId(record.bookmarkId, folderId);
         record.runtime.currentBookmarkId = folderId;
         return true;
       });
     } catch (error) {
-      if (rollbackBookmark) {
+      const rollback = rollbackState.run;
+      if (rollback) {
         try {
-          await bookmarksRuntime.runControlledMutation(rollbackBookmark);
+          await bookmarksRuntime.runControlledMutation(rollback);
         } catch (rollbackError) {
           console.warn('[Lumno] Failed to roll back shortcut stack', rollbackError);
         }
@@ -1000,7 +1202,7 @@ function createBookmarkDragController(deps) {
     }
   }
 
-  function isInsertLineDropTarget(target) {
+  function isInsertLineDropTarget(target: DragDropTarget | null | undefined): target is InsertLineTarget {
     return Boolean(
       target &&
       target.kind === 'insertion' &&
@@ -1008,38 +1210,42 @@ function createBookmarkDragController(deps) {
     );
   }
 
-  function isSameLayoutRow(element, anchor) {
+  function isSameLayoutRow(element: HTMLElement, anchor: HTMLElement): boolean {
     const height = Math.min(element.offsetHeight, anchor.offsetHeight) || 1;
     return Math.abs(element.offsetTop - anchor.offsetTop) < height / 2;
   }
 
-  function getInsertLineNeighbors(state, target) {
+  function getInsertLineNeighbors(
+    state: SurfaceDragState | null,
+    target: InsertLineTarget
+  ): { before: HTMLElement | null; after: HTMLElement | null } {
     const isGrid = target.surface === 'grid';
-    const dragged = state && (state.card || state.tile);
-    const items = (isGrid ? getBookmarkReorderCards() : getShortcutReorderTiles())
+    const dragged = state ? state.card || state.tile : null;
+    const items: HTMLElement[] = (isGrid ? getBookmarkReorderCards() : getShortcutReorderTiles())
       .filter((item) => item !== dragged);
-    const anchor = isGrid ? target.element : target.anchorElement;
+    const anchor = target.surface === 'grid' ? target.element : target.anchorElement;
     return NEWTAB_CROSS_SURFACE_DRAG.getInsertionGapNeighbors(
       items, anchor, target.markerPosition, isSameLayoutRow);
   }
 
   // Opens a small gap at a grid, bar or shortcut-row insertion point by
   // leaning its two neighbours apart. The line itself lives on the container.
-  function syncInsertionGap(state, target) {
-    const isLine = isInsertLineDropTarget(target);
-    const key = isLine
-      ? [target.surface, target.markerPosition, target.surface === 'grid' ? target.element : target.anchorElement]
+  function syncInsertionGap(state: SurfaceDragState | null, target: DragDropTarget | null): void {
+    const lineTarget = isInsertLineDropTarget(target) ? target : null;
+    const key: InsertionGapKey | null = lineTarget
+      ? [lineTarget.surface, lineTarget.markerPosition,
+        lineTarget.surface === 'grid' ? lineTarget.element : lineTarget.anchorElement]
       : null;
-    const previousKey = insertionGapOwner.key;
+    const previousKey = insertionGapKey;
     if (key && previousKey && key.every((part, index) => part === previousKey[index])) {
       return;
     }
-    insertionGapOwner.key = key;
-    const { before, after } = isLine ? getInsertLineNeighbors(state, target) : { before: null, after: null };
+    insertionGapKey = key;
+    const { before, after } = lineTarget ? getInsertLineNeighbors(state, lineTarget) : { before: null, after: null };
     NEWTAB_CROSS_SURFACE_DRAG.setInsertionGap(insertionGapOwner, before, after);
   }
 
-  function clearDropTargetMarker(marker) {
+  function clearDropTargetMarker(marker: HTMLElement): void {
     marker.removeAttribute('data-bookmark-insert-position');
     marker.removeAttribute('data-insert-line-position');
     marker.style.removeProperty('--x-nt-insert-line-left');
@@ -1048,7 +1254,7 @@ function createBookmarkDragController(deps) {
     marker.removeAttribute('data-insert-line-motion');
   }
 
-  function clearDragDropTarget(state) {
+  function clearDragDropTarget(state: SurfaceDragState | null): void {
     if (!state) {
       return;
     }
@@ -1058,14 +1264,15 @@ function createBookmarkDragController(deps) {
     if (state.dropTarget && state.dropTarget.markerElement) {
       clearDropTargetMarker(state.dropTarget.markerElement);
     }
-    if (pageState.bookmarkCascadeRuntime && typeof pageState.bookmarkCascadeRuntime.clearDragTarget === 'function') {
+    if (pageState.bookmarkCascadeRuntime) {
       pageState.bookmarkCascadeRuntime.clearDragTarget();
     }
     syncInsertionGap(state, null);
     state.dropTarget = null;
   }
 
-  function restoreBookmarkDragPreview(state) {
+  function restoreBookmarkDragPreview(state: BookmarkDragSession | null): void {
+    const grid = pageState.bookmarkGrid;
     if (!state || !state.hasReordered || !Array.isArray(state.originalAllItems)) {
       return;
     }
@@ -1073,8 +1280,8 @@ function createBookmarkDragController(deps) {
     const cardsById = new Map(getBookmarkReorderCards().map((card) => [getBookmarkCardId(card), card]));
     (state.originalPageCardIds || []).forEach((bookmarkId) => {
       const card = cardsById.get(bookmarkId);
-      if (card && card.parentNode === pageState.bookmarkGrid) {
-        pageState.bookmarkGrid.appendChild(card);
+      if (grid && card && card.parentNode === grid) {
+        grid.appendChild(card);
       }
     });
     state.pageIndex = state.originalPageIndex;
@@ -1082,7 +1289,7 @@ function createBookmarkDragController(deps) {
     updateBookmarkDragLayoutCache(state);
   }
 
-  function isValidBookmarkFolderDropTarget(state, target) {
+  function isValidBookmarkFolderDropTarget(state: BookmarkDragSession | null, target: { folderId: string } | null): boolean {
     return Boolean(
       state &&
       target &&
@@ -1095,7 +1302,10 @@ function createBookmarkDragController(deps) {
     );
   }
 
-  function isValidBookmarkInsertionDropTarget(state, target) {
+  function isValidBookmarkInsertionDropTarget(
+    state: BookmarkDragSession | null,
+    target: GridInsertionTarget | CascadeDropTargetLike | null
+  ): boolean {
     return Boolean(
       state &&
       target &&
@@ -1111,16 +1321,13 @@ function createBookmarkDragController(deps) {
     );
   }
 
-  function getBookmarkElementDropTarget(pointerX, pointerY) {
-    if (!document || typeof document.elementFromPoint !== 'function') {
-      return null;
-    }
+  function getBookmarkElementDropTarget(pointerX: number, pointerY: number): FolderDropTarget | null {
     const element = document.elementFromPoint(pointerX, pointerY);
-    if (!element || typeof element.closest !== 'function') {
+    if (!element) {
       return null;
     }
     const breadcrumbTarget = element.closest('[data-bookmark-drop-folder-id]');
-    if (breadcrumbTarget && !breadcrumbTarget.classList.contains('x-nt-bookmark-card')) {
+    if (isHtmlElement(breadcrumbTarget) && !breadcrumbTarget.classList.contains('x-nt-bookmark-card')) {
       return {
         folderId: breadcrumbTarget.getAttribute('data-bookmark-drop-folder-id') || '',
         title: breadcrumbTarget.getAttribute('data-bookmark-drop-folder-title') || '',
@@ -1128,7 +1335,8 @@ function createBookmarkDragController(deps) {
         kind: breadcrumbTarget.classList.contains('x-nt-shortcut-tile') ? 'shortcut-folder' : 'breadcrumb'
       };
     }
-    const folderCard = element.closest('.x-nt-bookmark-card--folder[data-bookmark-id]');
+    const folderCardElement = element.closest('.x-nt-bookmark-card--folder[data-bookmark-id]');
+    const folderCard: BookmarkCardElement | null = isHtmlTag(folderCardElement, 'div') ? folderCardElement : null;
     if (!folderCard) {
       return null;
     }
@@ -1141,43 +1349,36 @@ function createBookmarkDragController(deps) {
     };
   }
 
-  function isBookmarkCascadeSurfaceAtPoint(pointerX, pointerY) {
-    if (!document || typeof document.elementFromPoint !== 'function') {
-      return false;
-    }
+  function isBookmarkCascadeSurfaceAtPoint(pointerX: number, pointerY: number): boolean {
     const element = document.elementFromPoint(pointerX, pointerY);
-    return Boolean(
-      element &&
-      typeof element.closest === 'function' &&
-      element.closest('.x-nt-bookmark-cascade-menu')
-    );
+    return Boolean(element && element.closest('.x-nt-bookmark-cascade-menu'));
   }
 
-  function getBookmarkCrossLevelDropTarget(state, pointerX, pointerY) {
-    let target = null;
+  // Where a bookmark drag would drop across levels: the open cascade
+  // menu, a folder, or a line in the grid.
+  function getBookmarkCrossLevelDropTarget(state: BookmarkDragSession, pointerX: number, pointerY: number): DragDropTarget | null {
     let cascadeBlocked = false;
-    if (pageState.bookmarkCascadeRuntime && typeof pageState.bookmarkCascadeRuntime.updateDragPointer === 'function') {
-      target = pageState.bookmarkCascadeRuntime.updateDragPointer({
-        clientX: pointerX,
-        clientY: pointerY
-      });
-    }
-    if (target && target.kind === 'blocked') {
-      cascadeBlocked = true;
-    } else if (target) {
-      const isValidCascadeTarget = target.kind === 'insertion'
-        ? isValidBookmarkInsertionDropTarget(state, target)
-        : isValidBookmarkFolderDropTarget(state, target);
-      if (!isValidCascadeTarget) {
-        if (pageState.bookmarkCascadeRuntime && typeof pageState.bookmarkCascadeRuntime.clearDragTarget === 'function') {
-          pageState.bookmarkCascadeRuntime.clearDragTarget();
+    const cascadeTarget = pageState.bookmarkCascadeRuntime
+      ? pageState.bookmarkCascadeRuntime.updateDragPointer({ clientX: pointerX, clientY: pointerY })
+      : null;
+    if (cascadeTarget) {
+      if (cascadeTarget.kind === 'blocked') {
+        cascadeBlocked = true;
+      } else {
+        const isValidCascadeTarget = cascadeTarget.kind === 'insertion'
+          ? isValidBookmarkInsertionDropTarget(state, cascadeTarget)
+          : isValidBookmarkFolderDropTarget(state, cascadeTarget);
+        if (!isValidCascadeTarget) {
+          if (pageState.bookmarkCascadeRuntime) {
+            pageState.bookmarkCascadeRuntime.clearDragTarget();
+          }
+          return null;
         }
-        return null;
+        return cascadeTarget;
       }
-      return target;
     }
 
-    target = getBookmarkElementDropTarget(pointerX, pointerY);
+    const target = getBookmarkElementDropTarget(pointerX, pointerY);
     if (cascadeBlocked && isBookmarkCascadeSurfaceAtPoint(pointerX, pointerY)) {
       return null;
     }
@@ -1200,7 +1401,7 @@ function createBookmarkDragController(deps) {
     return target;
   }
 
-  function setDragDropTarget(state, target) {
+  function setDragDropTarget(state: SurfaceDragState | null, target: DragDropTarget | null): void {
     const previousTarget = state && state.dropTarget ? state.dropTarget : null;
     const previousElement = previousTarget ? previousTarget.element : null;
     const previousMarker = previousTarget ? previousTarget.markerElement : null;
@@ -1215,13 +1416,13 @@ function createBookmarkDragController(deps) {
       ? previousMarker.getAttribute('data-insert-line-motion')
       : null;
     const isNewInsertLineTarget = Boolean(
-      isNextInsertLine &&
+      target && isInsertLineDropTarget(target) &&
       (
         !isInsertLineDropTarget(previousTarget) ||
         previousTarget.surface !== target.surface ||
         previousTarget.markerElement !== nextMarker ||
         previousTarget.markerPosition !== target.markerPosition ||
-        Number(previousTarget.markerOffsetPx) !== Number(target.markerOffsetPx)
+        getMarkerOffset(previousTarget) !== getMarkerOffset(target)
       )
     );
     if (previousElement && previousElement !== nextElement) {
@@ -1230,7 +1431,7 @@ function createBookmarkDragController(deps) {
     if (previousMarker &&
         (previousMarker !== nextMarker ||
           previousMarker.getAttribute(nextMarkerAttribute) !==
-            String((target && target.markerPosition) || ''))) {
+            String((target && 'markerPosition' in target && target.markerPosition) || ''))) {
       clearDropTargetMarker(previousMarker);
     }
     if (!state) {
@@ -1241,11 +1442,11 @@ function createBookmarkDragController(deps) {
     if (nextElement) {
       nextElement.setAttribute('data-bookmark-drop-target', 'true');
     }
-    if (!nextMarker || target.kind !== 'insertion') {
+    if (!nextMarker || !target || target.kind !== 'insertion') {
       return;
     }
     nextMarker.setAttribute(nextMarkerAttribute, target.markerPosition);
-    if (!isNextInsertLine) {
+    if (target.surface !== 'grid') {
       return;
     }
     setRestingInsertLine(nextMarker, target);
@@ -1257,7 +1458,12 @@ function createBookmarkDragController(deps) {
     }
   }
 
-  function setRestingInsertLine(nextMarker, target) {
+  // A grid line's offset along the row; shortcut gaps draw no line.
+  function getMarkerOffset(target: InsertLineTarget): number {
+    return target.surface === 'grid' ? Number(target.markerOffsetPx) : NaN;
+  }
+
+  function setRestingInsertLine(nextMarker: HTMLElement, target: GridInsertionTarget): void {
     nextMarker.style.setProperty(
       '--x-nt-insert-line-left',
       `${Number(target.markerOffsetPx) || 0}px`
@@ -1272,7 +1478,7 @@ function createBookmarkDragController(deps) {
     );
   }
 
-  function getBookmarkDragPageSwitchDirection(pointerX, pointerY) {
+  function getBookmarkDragPageSwitchDirection(pointerX: number, pointerY: number): number {
     if (pageState.bookmarkCurrentPage > 0 &&
         pageState.bookmarkPagerPrevButton &&
         pageState.bookmarkPagerPrevButton.getAttribute('aria-disabled') !== 'true' &&
@@ -1289,7 +1495,7 @@ function createBookmarkDragController(deps) {
     return 0;
   }
 
-  function clearBookmarkDragPageSwitch(state) {
+  function clearBookmarkDragPageSwitch(state: SurfaceDragState | null): void {
     if (!state) {
       return;
     }
@@ -1304,7 +1510,7 @@ function createBookmarkDragController(deps) {
     state.pageSwitchDirection = 0;
   }
 
-  function clearBookmarkDragFolderSwitch(state) {
+  function clearBookmarkDragFolderSwitch(state: SurfaceDragState | null): void {
     if (!state) {
       return;
     }
@@ -1321,10 +1527,15 @@ function createBookmarkDragController(deps) {
     state.folderSwitchTargetId = '';
   }
 
-  function scheduleBookmarkDragFolderSwitch(state, dropTarget) {
-    const getSwitchTarget = (target) => target && (target.kind === 'card' || target.kind === 'shortcut-folder')
-      ? { folderId: String(target.folderId), element: target.element }
-      : NEWTAB_BOOKMARK_DRAG.getFolderSwitchTarget(pageState.bookmarkCurrentFolderId, target);
+  // Opens the folder a drag rests on: a folder card or shortcut opens its
+  // menu, a breadcrumb step shows the folder in the grid.
+  function scheduleBookmarkDragFolderSwitch(state: SurfaceDragState, dropTarget: DragDropTarget | null): boolean {
+    const getSwitchTarget = (
+      target: DragDropTarget | null
+    ): { folderId: string; element: HTMLElement | null } | null => (
+      target && (target.kind === 'card' || target.kind === 'shortcut-folder')
+        ? { folderId: String(target.folderId), element: target.element }
+        : NEWTAB_BOOKMARK_DRAG.getFolderSwitchTarget(pageState.bookmarkCurrentFolderId, target));
     const switchTarget = getSwitchTarget(dropTarget);
     if (!state || !switchTarget || !isBookmarkSurfaceDragStateActive(state) ||
         !state.isDragging) {
@@ -1359,17 +1570,19 @@ function createBookmarkDragController(deps) {
         return;
       }
       const targetFolderId = activeTarget.folderId;
+      const activeDropTarget = state.dropTarget;
       clearBookmarkDragFolderSwitch(state);
-      if (state.dropTarget.kind === 'shortcut-folder' ||
-          (state.dropTarget.kind === 'card' && (isBookmarkTopbarMode() || pageState.currentBookmarkViewMode === 'list'))) {
-        openBookmarkCascadeMenu({ id: targetFolderId, title: state.dropTarget.title, type: 'folder' },
+      if (activeDropTarget && (activeDropTarget.kind === 'shortcut-folder' ||
+          (activeDropTarget.kind === 'card' && (isBookmarkTopbarMode() || pageState.currentBookmarkViewMode === 'list')))) {
+        openBookmarkCascadeMenu({ id: targetFolderId, title: activeDropTarget.title },
           activeTarget.element, { dragMode: true, shouldOpen: () => isBookmarkSurfaceDragStateActive(state) });
         return;
       }
       clearDragDropTarget(state);
-      if (state === pageState.bookmarkDragState) {
-        restoreBookmarkDragPreview(state);
-        setBookmarkDragCardTransform(state, Number(state.pendingPointerX), Number(state.pendingPointerY));
+      const bookmarkState = pageState.bookmarkDragState;
+      if (bookmarkState && state === bookmarkState) {
+        restoreBookmarkDragPreview(bookmarkState);
+        setBookmarkDragCardTransform(bookmarkState, Number(state.pendingPointerX), Number(state.pendingPointerY));
       }
       state.folderSwitchPendingId = targetFolderId;
       navigateBookmarkFolder(targetFolderId);
@@ -1377,7 +1590,7 @@ function createBookmarkDragController(deps) {
     return true;
   }
 
-  function scheduleBookmarkDragPageSwitch(state, direction) {
+  function scheduleBookmarkDragPageSwitch(state: SurfaceDragState, direction: number): void {
     const normalizedDirection = direction < 0 ? -1 : direction > 0 ? 1 : 0;
     if (!state || !normalizedDirection || !isBookmarkSurfaceDragStateActive(state) || !state.isDragging) {
       clearBookmarkDragPageSwitch(state);
@@ -1414,16 +1627,18 @@ function createBookmarkDragController(deps) {
       }
       clearDragDropTarget(state);
       clearBookmarkDragFolderSwitch(state);
-      if (state === pageState.bookmarkDragState) {
-        restoreBookmarkDragPreview(state);
+      const bookmarkState = pageState.bookmarkDragState;
+      const isBookmarkDrag = Boolean(bookmarkState && state === bookmarkState);
+      if (bookmarkState && isBookmarkDrag) {
+        restoreBookmarkDragPreview(bookmarkState);
       }
       if (!switchBookmarkPageDuringDrag(pageState.bookmarkCurrentPage + normalizedDirection)) {
         clearBookmarkDragPageSwitch(state);
         return;
       }
-      if (state === pageState.bookmarkDragState) {
-        updateBookmarkDragLayoutCache(state);
-        setBookmarkDragCardTransform(state, pointerX, pointerY);
+      if (bookmarkState && isBookmarkDrag) {
+        updateBookmarkDragLayoutCache(bookmarkState);
+        setBookmarkDragCardTransform(bookmarkState, pointerX, pointerY);
       } else {
         setShortcutDragTileTransform(state, pointerX, pointerY);
       }
@@ -1436,7 +1651,7 @@ function createBookmarkDragController(deps) {
     }, BOOKMARK_DRAG_PAGE_SWITCH_DELAY_MS);
   }
 
-  function processBookmarkDragMove(state) {
+  function processBookmarkDragMove(state: BookmarkDragSession): void {
     if (!state || pageState.bookmarkDragState !== state || !state.isDragging) {
       return;
     }
@@ -1511,7 +1726,7 @@ function createBookmarkDragController(deps) {
     setBookmarkDragCardTransform(state, pointerX, pointerY);
   }
 
-  function scheduleBookmarkDragMove(state, pointerX, pointerY) {
+  function scheduleBookmarkDragMove(state: BookmarkDragSession | null, pointerX: number, pointerY: number): void {
     if (!state || !state.isDragging) {
       return;
     }
@@ -1525,7 +1740,8 @@ function createBookmarkDragController(deps) {
     });
   }
 
-  function getBookmarkMoveDestination(bookmarkId) {
+  // Where the card the drag reordered sits among its folder's bookmarks.
+  function getBookmarkMoveDestination(bookmarkId: unknown): BookmarkLocation | null {
     const movedIndex = getBookmarkCardAllIndex(bookmarkId);
     if (movedIndex < 0) {
       return null;
@@ -1554,7 +1770,7 @@ function createBookmarkDragController(deps) {
     };
   }
 
-  function getBookmarkDeleteRecord(target) {
+  function getBookmarkDeleteRecord(target: BookmarkDeleteTarget | null) {
     if (!target || !target.bookmarkId) {
       return null;
     }
@@ -1571,7 +1787,7 @@ function createBookmarkDragController(deps) {
     });
   }
 
-  function deleteBookmarkFromContextTarget(target) {
+  function deleteBookmarkFromContextTarget(target: BookmarkDeleteTarget | null): boolean {
     if (!target || !target.bookmarkId || pageState.bookmarkMoveHistoryBusy) {
       return false;
     }
@@ -1579,7 +1795,6 @@ function createBookmarkDragController(deps) {
     const keepCascadeOpen = Boolean(
       target.sourceKind === 'cascade' &&
       pageState.bookmarkCascadeRuntime &&
-      typeof pageState.bookmarkCascadeRuntime.isOpen === 'function' &&
       pageState.bookmarkCascadeRuntime.isOpen()
     );
     bookmarksRuntime.runControlledMutation(() => {
@@ -1611,10 +1826,15 @@ function createBookmarkDragController(deps) {
     return true;
   }
 
-  function getBookmarkMoveRecord(state, destination, movedNode) {
+  function getBookmarkMoveRecord(
+    state: BookmarkDragSession | null,
+    destination: BookmarkLocation | null,
+    movedNode: BookmarkNode | null
+  ) {
     if (!state || !destination) {
       return null;
     }
+    const movedIndex = movedNode ? Number(movedNode.index) : NaN;
     return NEWTAB_BOOKMARK_MOVE_HISTORY.createMoveRecord({
       bookmarkId: state.bookmarkId,
       title: state.itemTitle,
@@ -1624,42 +1844,34 @@ function createBookmarkDragController(deps) {
       },
       to: {
         parentId: String((movedNode && movedNode.parentId) || destination.parentId || ''),
-        index: Number.isFinite(Number(movedNode && movedNode.index))
-          ? Number(movedNode.index)
-          : destination.index
+        index: Number.isFinite(movedIndex) ? movedIndex : destination.index
       }
     });
   }
 
-  function getBookmarkUndoShortcutLabel() {
+  function getBookmarkUndoShortcutLabel(): string {
     const isMac = /Mac|iPhone|iPad|iPod/i.test(String(navigator.platform || navigator.userAgent || ''));
     return isMac ? '⌘Z' : 'Ctrl+Z';
   }
 
-  function getBookmarkRedoShortcutLabel() {
+  function getBookmarkRedoShortcutLabel(): string {
     const isMac = /Mac|iPhone|iPad|iPod/i.test(String(navigator.platform || navigator.userAgent || ''));
     return isMac ? '⇧⌘Z' : 'Ctrl+Shift+Z';
   }
 
-  function refreshOpenBookmarkCascadeMenu(refreshOptions) {
-    if (!pageState.bookmarkCascadeRuntime ||
-        typeof pageState.bookmarkCascadeRuntime.isOpen !== 'function' ||
-        !pageState.bookmarkCascadeRuntime.isOpen() ||
-        typeof pageState.bookmarkCascadeRuntime.refresh !== 'function') {
+  function refreshOpenBookmarkCascadeMenu(refreshOptions?: CascadeRefreshOptions): Promise<boolean> {
+    if (!pageState.bookmarkCascadeRuntime || !pageState.bookmarkCascadeRuntime.isOpen()) {
       return Promise.resolve(false);
     }
-    return Promise.resolve(pageState.bookmarkCascadeRuntime.refresh(refreshOptions)).catch((error) => {
+    return pageState.bookmarkCascadeRuntime.refresh(refreshOptions).catch((error: unknown) => {
       console.warn('[Lumno] Failed to refresh bookmark cascade after move', error);
       return false;
     });
   }
 
-  function syncOpenBookmarkCascadeAnchorVisual() {
-    if (!pageState.bookmarkCascadeRuntime ||
-        typeof pageState.bookmarkCascadeRuntime.isOpen !== 'function' ||
-        !pageState.bookmarkCascadeRuntime.isOpen() ||
-        typeof pageState.bookmarkCascadeRuntime.getRootFolderId !== 'function' ||
-        typeof pageState.bookmarkCascadeRuntime.rebindAnchor !== 'function') {
+  // Moves the open menu onto its folder's card or shortcut drawn anew.
+  function syncOpenBookmarkCascadeAnchorVisual(): boolean {
+    if (!pageState.bookmarkCascadeRuntime || !pageState.bookmarkCascadeRuntime.isOpen()) {
       return false;
     }
     const rootFolderId = String(pageState.bookmarkCascadeRuntime.getRootFolderId() || '');
@@ -1678,24 +1890,28 @@ function createBookmarkDragController(deps) {
       : false;
   }
 
-  function finishPersistedBookmarkMove(state, destination, movedNode) {
+  function finishPersistedBookmarkMove(
+    state: BookmarkDragSession,
+    destination: BookmarkLocation,
+    movedNode: BookmarkNode | null
+  ): boolean {
     const record = getBookmarkMoveRecord(state, destination, movedNode);
     if (record) {
       bookmarkMoveHistory.push(record);
     }
-    const keepCascadeOpen = Boolean(state && state.keepCascadeOpenAfterDrop);
+    const keepCascadeOpen = Boolean(state.keepCascadeOpenAfterDrop);
     markBookmarkTreeDirty({ preserveCascadeOpen: keepCascadeOpen });
     loadBookmarks({ force: true });
     if (keepCascadeOpen) {
       refreshOpenBookmarkCascadeMenu({
-        draggedBookmarkId: String((state && state.bookmarkId) || ''),
-        draggedRect: state && state.draggedVisualRect
+        draggedBookmarkId: String(state.bookmarkId || ''),
+        draggedRect: state.draggedVisualRect
       });
     }
     return true;
   }
 
-  function persistBookmarkDragOrder(state) {
+  function persistBookmarkDragOrder(state: BookmarkDragSession): Promise<boolean> {
     if (!state || !state.bookmarkId) {
       return Promise.resolve(false);
     }
@@ -1716,8 +1932,8 @@ function createBookmarkDragController(deps) {
     });
   }
 
-  function persistBookmarkCrossLevelMove(state, target) {
-    if (!state || !target || !target.folderId) {
+  function persistBookmarkCrossLevelMove(state: BookmarkDragSession, target: DragDropTarget): Promise<boolean> {
+    if (target.kind === 'blocked' || target.surface === 'shortcuts' || !target.folderId) {
       return Promise.resolve(false);
     }
     const targetFolderId = String(target.folderId);
@@ -1725,8 +1941,7 @@ function createBookmarkDragController(deps) {
     const rawTargetIndex = target.kind === 'insertion' && Number.isFinite(Number(target.index))
       ? Number(target.index)
       : targetItems.length;
-    const shouldPreserveTargetPageSlot = target.kind === 'insertion' &&
-      target.surface === 'grid' &&
+    const shouldPreserveTargetPageSlot = target.surface === 'grid' &&
       target.preservePageSlot === true &&
       String(state.parentId || '') === targetFolderId &&
       Number(state.originalIndex) < rawTargetIndex;
@@ -1755,7 +1970,7 @@ function createBookmarkDragController(deps) {
     });
   }
 
-  function performBookmarkMoveHistoryAction(direction) {
+  function performBookmarkMoveHistoryAction(direction: 'undo' | 'redo'): boolean {
     if (pageState.bookmarkMoveHistoryBusy) {
       return false;
     }
@@ -1800,7 +2015,8 @@ function createBookmarkDragController(deps) {
         }
       }).finally(() => {
         pageState.bookmarkMoveHistoryBusy = false;
-        if (pageState.newtabShortcuts.some((item) => item.type === 'folder')) return refreshShortcutFolderReferences();
+        if (pageState.newtabShortcuts.some((item) => isShortcutFolder(item))) return refreshShortcutFolderReferences();
+        return undefined;
       });
       return true;
     }
@@ -1817,7 +2033,8 @@ function createBookmarkDragController(deps) {
         ));
       }).finally(() => {
         pageState.bookmarkMoveHistoryBusy = false;
-        if (pageState.newtabShortcuts.some((item) => item.type === 'folder')) return refreshShortcutFolderReferences();
+        if (pageState.newtabShortcuts.some((item) => isShortcutFolder(item))) return refreshShortcutFolderReferences();
+        return undefined;
       });
       return true;
     }
@@ -1842,9 +2059,9 @@ function createBookmarkDragController(deps) {
       const restores = (record.kind === 'shortcut-delete') === isUndo;
       const snapshot = record.snapshot;
       const exists = pageState.newtabShortcuts.some((item) => item.id === snapshot.id ||
-        (snapshot.type === 'folder'
-          ? !snapshot.folderRef && !item.folderRef && item.type === 'folder' && item.folderId === snapshot.folderId
-          : item.url === snapshot.url));
+        (isShortcutFolder(snapshot)
+          ? !snapshot.folderRef && isShortcutFolder(item) && !item.folderRef && item.folderId === snapshot.folderId
+          : !isShortcutFolder(item) && item.url === snapshot.url));
       if (restores && (exists || pageState.newtabShortcuts.length >= MAX_NEWTAB_SHORTCUTS)) {
         pageState.bookmarkMoveHistoryBusy = false;
         showToast(t('toast_error', 'Operation failed. Please try again.'), true);
@@ -1857,7 +2074,7 @@ function createBookmarkDragController(deps) {
         const index = next.findIndex((item) => item.id === snapshot.id);
         if (index >= 0) next.splice(index, 1);
       }
-      const iconChange = restores && record.iconDataUrl
+      const iconChange: ShortcutIconChange | undefined = restores && record.iconDataUrl
         ? { shortcutId: snapshot.id, action: 'replace', dataUrl: record.iconDataUrl }
         : undefined;
       const messages = record.kind === 'shortcut-add'
@@ -1879,7 +2096,6 @@ function createBookmarkDragController(deps) {
     }
     const keepCascadeOpen = Boolean(
       pageState.bookmarkCascadeRuntime &&
-      typeof pageState.bookmarkCascadeRuntime.isOpen === 'function' &&
       pageState.bookmarkCascadeRuntime.isOpen()
     );
     if (record.kind === 'delete') {
@@ -1982,32 +2198,30 @@ function createBookmarkDragController(deps) {
     return true;
   }
 
-  function isBookmarkDragActive() {
+  function isBookmarkDragActive(): boolean {
     return Boolean(
       (pageState.bookmarkDragState && pageState.bookmarkDragState.isDragging) ||
       (pageState.bookmarkGrid && pageState.bookmarkGrid.getAttribute('data-bookmark-dragging') === 'true')
     );
   }
 
-  function isBookmarkReorderInteractionActive() {
+  function isBookmarkReorderInteractionActive(): boolean {
     return Boolean(pageState.bookmarkDragState || isBookmarkDragActive());
   }
 
-  function shouldSuppressBookmarkHover(target) {
+  // Bookmark cards and cascade rows show no hover while a drag is on.
+  function shouldSuppressBookmarkHover(target: Element | null | undefined): boolean {
     return Boolean(
       target &&
       (isBookmarkReorderInteractionActive() || isShortcutDragActive()) &&
       (
-        (target.classList &&
-          typeof target.classList.contains === 'function' &&
-          target.classList.contains('x-nt-bookmark-card')) ||
-        (typeof target.closest === 'function' &&
-          target.closest('.x-nt-bookmark-card, .x-nt-bookmark-cascade-item'))
+        target.classList.contains('x-nt-bookmark-card') ||
+        target.closest('.x-nt-bookmark-card, .x-nt-bookmark-cascade-item')
       )
     );
   }
 
-  function startBookmarkDrag(event, card) {
+  function startBookmarkDrag(event: PointerEvent, card: BookmarkDragSource): void {
     if (!pageState.bookmarkGrid || !card || !pageState.bookmarkDragState || pageState.bookmarkDragState.card !== card) {
       return;
     }
@@ -2017,13 +2231,11 @@ function createBookmarkDragController(deps) {
     }
     hideCursorTooltip();
     const activeElement = document.activeElement;
-    if (activeElement &&
-        isEditableElement(activeElement) &&
-        typeof activeElement.blur === 'function') {
+    if (isHtmlElement(activeElement) && isEditableElement(activeElement)) {
       activeElement.blur();
     }
     if (pageState.bookmarkDragState.sourceKind === 'cascade') {
-      if (pageState.bookmarkCascadeRuntime && typeof pageState.bookmarkCascadeRuntime.setDragMode === 'function') {
+      if (pageState.bookmarkCascadeRuntime) {
         pageState.bookmarkCascadeRuntime.setDragMode(true);
       }
     } else {
@@ -2041,22 +2253,18 @@ function createBookmarkDragController(deps) {
     updateBookmarkDragLayoutCache(pageState.bookmarkDragState);
     createBookmarkCascadeDragPreview(pageState.bookmarkDragState);
     setBookmarkDragCardTransform(pageState.bookmarkDragState, Number(event.clientX), Number(event.clientY));
-    if (typeof card.setPointerCapture === 'function') {
-      try {
-        card.setPointerCapture(event.pointerId);
-      } catch (error) {
-        // Pointer capture can fail if the browser already canceled the pointer.
-      }
+    try {
+      card.setPointerCapture(event.pointerId);
+    } catch (error) {
+      // Pointer capture can fail if the browser already canceled the pointer.
     }
   }
 
-  function clearBookmarkDragCardVisual(card) {
-    if (!card || !card.style) {
-      return;
-    }
-    if (card._xBookmarkDropTimer) {
-      window.clearTimeout(card._xBookmarkDropTimer);
-      card._xBookmarkDropTimer = 0;
+  function clearBookmarkDragCardVisual(card: HTMLElement): void {
+    const dropTimer = cardDropTimers.get(card);
+    if (dropTimer) {
+      window.clearTimeout(dropTimer);
+      cardDropTimers.delete(card);
     }
     card.removeAttribute('data-bookmark-dragging');
     card.removeAttribute('data-bookmark-dropping');
@@ -2067,10 +2275,7 @@ function createBookmarkDragController(deps) {
     card.style.pointerEvents = '';
   }
 
-  function clearBookmarkDragSourceVisual(state) {
-    if (!state) {
-      return;
-    }
+  function clearBookmarkDragSourceVisual(state: BookmarkDragSession): void {
     removeBookmarkCascadeDragPreview(state);
     clearBookmarkDragCardVisual(state.card);
   }
@@ -2089,14 +2294,15 @@ function createBookmarkDragController(deps) {
     document.removeEventListener('selectstart', handleBookmarkDragSelectStart, true);
   }
 
-  function handleBookmarkDragSelectStart(event) {
-    if (!pageState.bookmarkDragState || !event || typeof event.preventDefault !== 'function') {
+  function handleBookmarkDragSelectStart(event: Event): void {
+    if (!pageState.bookmarkDragState) {
       return;
     }
     event.preventDefault();
   }
 
-  function finishBookmarkDrag(event, finishOptions) {
+  // Ends the drag on the pointer's release (or cancel) and makes its drop.
+  function finishBookmarkDrag(event: PointerEvent | null, finishOptions?: { canceled?: boolean }): void {
     if (!pageState.bookmarkDragState) {
       return;
     }
@@ -2128,8 +2334,7 @@ function createBookmarkDragController(deps) {
     );
     state.keepCascadeOpenAfterDrop = Boolean(dropTarget && shouldKeepCascadeOpen);
     if (state.isDragging) {
-      if (shouldKeepCascadeOpen && pageState.bookmarkCascadeRuntime &&
-          typeof pageState.bookmarkCascadeRuntime.setDragMode === 'function') {
+      if (shouldKeepCascadeOpen && pageState.bookmarkCascadeRuntime) {
         pageState.bookmarkCascadeRuntime.setDragMode(false);
       } else {
         closeBookmarkCascadeMenu({ animate: true });
@@ -2147,12 +2352,10 @@ function createBookmarkDragController(deps) {
     }
     if (card) {
       card.removeAttribute('aria-grabbed');
-      if (typeof card.releasePointerCapture === 'function') {
-        try {
-          card.releasePointerCapture(state.pointerId);
-        } catch (error) {
-          // Ignore stale pointer capture releases.
-        }
+      try {
+        card.releasePointerCapture(state.pointerId);
+      } catch (error) {
+        // Ignore stale pointer capture releases.
       }
       if (state.isDragging && dropTarget) {
         clearBookmarkDragSourceVisual(state);
@@ -2172,13 +2375,13 @@ function createBookmarkDragController(deps) {
         LumnoNewtabDragClickGuard.getDragClickGuard().armAfterDrag(event, state.pointerId);
       }
     }
-    if (state.isDragging && dropTarget && dropTarget.surface === 'shortcuts') {
-      if (event && typeof event.preventDefault === 'function') {
+    if (state.isDragging && dropTarget && dropTarget.surface === 'shortcuts' && dropTarget.kind === 'insertion') {
+      if (event) {
         event.preventDefault();
       }
       moveBookmarkToShortcuts(state, dropTarget);
     } else if (state.isDragging && dropTarget) {
-      if (event && typeof event.preventDefault === 'function') {
+      if (event) {
         event.preventDefault();
       }
       queueBookmarkLayoutAnimation(state.bookmarkId, {
@@ -2187,7 +2390,7 @@ function createBookmarkDragController(deps) {
       });
       persistBookmarkCrossLevelMove(state, dropTarget);
     } else if (!canceled && state.isDragging && state.hasReordered) {
-      if (event && typeof event.preventDefault === 'function') {
+      if (event) {
         event.preventDefault();
       }
       queueBookmarkLayoutAnimation(state.bookmarkId, {
@@ -2207,12 +2410,17 @@ function createBookmarkDragController(deps) {
 
   // On macOS a Control-click is a right-click. Starting a drag on it would
   // make the context menu that follows ignore the press.
-  function isMacContextClick(event) {
+  function isMacContextClick(event: MouseEvent): boolean {
     return Boolean(event && event.ctrlKey) &&
       /Mac|iPhone|iPad|iPod/i.test(String(navigator.platform || navigator.userAgent || ''));
   }
 
-  function beginBookmarkDragPointerTracking(event, card, bookmarkItem, sourceKind) {
+  function beginBookmarkDragPointerTracking(
+    event: PointerEvent,
+    card: BookmarkDragSource | null,
+    bookmarkItem: BookmarkCardElement['_xBookmarkItem'] | BookmarkItem | null | undefined,
+    sourceKind: 'card' | 'cascade'
+  ): boolean {
     if (!event || !card || pageState.bookmarkDragState || pageState.bookmarkMoveHistoryBusy ||
         isMacContextClick(event)) {
       return false;
@@ -2229,7 +2437,6 @@ function createBookmarkDragController(deps) {
     const isOpenCascadeAnchor = Boolean(
       sourceKind !== 'cascade' &&
       pageState.bookmarkCascadeRuntime &&
-      typeof pageState.bookmarkCascadeRuntime.isOpen === 'function' &&
       pageState.bookmarkCascadeRuntime.isOpen() &&
       card.getAttribute('aria-expanded') === 'true'
     );
@@ -2237,7 +2444,7 @@ function createBookmarkDragController(deps) {
       closeBookmarkCascadeMenu();
     }
     const pageIndex = sourceKind === 'cascade' ? -1 : getBookmarkCardInsertionIndex(card);
-    pageState.bookmarkDragState = NEWTAB_BOOKMARK_DRAG.createSession({
+    const session = NEWTAB_BOOKMARK_DRAG.createSession({
       allItems: pageState.bookmarkAllItems,
       bookmarkItem,
       card,
@@ -2245,49 +2452,46 @@ function createBookmarkDragController(deps) {
       bookmarkId,
       parentId,
       pageIndex,
-      pageCardIds: getBookmarkReorderCards().map(getBookmarkCardId),
+      pageCardIds: getBookmarkReorderCards().map((reorderCard) => getBookmarkCardId(reorderCard)),
       sourceKind
     });
+    pageState.bookmarkDragState = session;
     attachBookmarkDragDocumentListeners();
-    const rect = sourceKind === 'cascade' && typeof card.getBoundingClientRect === 'function'
+    const rect = sourceKind === 'cascade'
       ? card.getBoundingClientRect()
-      : getBookmarkCardLayoutRect(card) ||
-      (typeof card.getBoundingClientRect === 'function' ? card.getBoundingClientRect() : null);
-    if (rect) {
-      pageState.bookmarkDragState.grabOffsetX = Number(event.clientX) - rect.left;
-      pageState.bookmarkDragState.grabOffsetY = Number(event.clientY) - rect.top;
-      pageState.bookmarkDragState.baseLeft = rect.left;
-      pageState.bookmarkDragState.baseTop = rect.top;
-    }
+      : getBookmarkCardLayoutRect(card) || card.getBoundingClientRect();
+    session.grabOffsetX = Number(event.clientX) - rect.left;
+    session.grabOffsetY = Number(event.clientY) - rect.top;
+    session.baseLeft = rect.left;
+    session.baseTop = rect.top;
     if (typeof card._xDeactivateBookmarkHoverVisual === 'function') {
       card._xDeactivateBookmarkHoverVisual();
     }
     return true;
   }
 
-  function handleBookmarkDragPointerDown(event) {
+  function handleBookmarkDragPointerDown(event: PointerEvent): void {
     if (pageState.bookmarkPageAnimating || pageState.bookmarkDragState) {
       return;
     }
-    if (event.target && typeof event.target.closest === 'function' &&
-        event.target.closest('.x-nt-bookmark-copy-action')) {
+    if (isElementNode(event.target) && event.target.closest('.x-nt-bookmark-copy-action')) {
       return;
     }
     const card = getBookmarkCardFromNode(event.target);
     beginBookmarkDragPointerTracking(event, card, card && card._xBookmarkItem, 'card');
   }
 
-  function handleBookmarkCascadeItemPointerDown(payload) {
-    const event = payload && payload.event;
-    const element = payload && payload.element;
-    const item = payload && payload.item;
+  function handleBookmarkCascadeItemPointerDown(payload: CascadeItemEventDetail<PointerEvent>): void {
+    const event = payload.event;
+    const element = payload.element;
+    const item = payload.item;
     if (pageState.bookmarkPageAnimating || pageState.bookmarkDragState || !event || !element || !item) {
       return;
     }
     beginBookmarkDragPointerTracking(event, element, item, 'cascade');
   }
 
-  function handleBookmarkDragPointerMove(event) {
+  function handleBookmarkDragPointerMove(event: PointerEvent): void {
     if (!pageState.bookmarkDragState || pageState.bookmarkDragState.pointerId !== event.pointerId) {
       return;
     }
@@ -2312,11 +2516,11 @@ function createBookmarkDragController(deps) {
     scheduleBookmarkDragMove(pageState.bookmarkDragState, pointerX, pointerY);
   }
 
-  function handleBookmarkDragPointerUp(event) {
+  function handleBookmarkDragPointerUp(event: PointerEvent): void {
     finishBookmarkDrag(event);
   }
 
-  function handleBookmarkDragPointerCancel(event) {
+  function handleBookmarkDragPointerCancel(event: PointerEvent): void {
     finishBookmarkDrag(event, { canceled: true });
   }
 
@@ -2358,4 +2562,12 @@ function createBookmarkDragController(deps) {
   };
 }
 
+type BookmarkDragController = ReturnType<typeof createBookmarkDragController>;
+
 export { createBookmarkDragController };
+export type {
+  BookmarkDeleteTarget,
+  BookmarkDragController,
+  BookmarkDragControllerDeps,
+  BookmarkDragControllerState
+};

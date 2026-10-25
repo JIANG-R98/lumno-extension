@@ -25,12 +25,14 @@
     "src/newtab/bookmarks/bookmark-cascade-menu.ts",
     "src/newtab/bookmarks/bookmark-cascade-position.ts",
     "src/newtab/bookmarks/bookmark-drag.ts",
+    "src/newtab/bookmarks/bookmark-drag-controller.ts",
     "src/newtab/bookmarks/bookmark-folder-icon.ts",
     "src/newtab/bookmarks/bookmark-move-history.ts",
     "src/newtab/bookmarks/bookmarks-runtime.ts",
     "src/newtab/bookmarks/bookmarks-store.ts",
     "src/newtab/bookmarks/folder-colors.ts",
-    "src/newtab/bookmarks/folder-item-icons.ts"
+    "src/newtab/bookmarks/folder-item-icons.ts",
+    "src/newtab/shortcuts/shortcut-types.ts"
   ],
   "exclude": [
     "src/**/react/**"
