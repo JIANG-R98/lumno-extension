@@ -70,7 +70,6 @@ import * as NEWTAB_SEARCH_MODE_CONTROLLER from './search/search-mode-controller'
 import * as NEWTAB_SEARCH_MODES from './search/search-modes';
 import * as NEWTAB_SEARCH_NAVIGATION from './search/search-navigation';
 import * as NEWTAB_SEARCH_SETTINGS_SYNC from './search/search-settings-sync';
-import * as NEWTAB_SITE_SEARCH_ICON_CACHE from './search/site-search-icon-cache';
 import * as NEWTAB_SITE_SEARCH_PROVIDERS from './search/site-search-providers';
 import * as NEWTAB_SITE_SEARCH_RUNTIME from './search/site-search-runtime';
 import * as NEWTAB_SUGGESTIONS_CONTROLLER from './search/suggestions-controller';
@@ -194,6 +193,7 @@ import {
   createSiteDisplayNameOptions
 } from './newtab-config';
 import { getRiSvg } from '../shared/ui/remix-icon';
+import * as SITE_SEARCH_ICON_CACHE from '../shared/search/site-search-icon-cache';
 import type { BackgroundAction, BackgroundReply, BackgroundRequest } from '../domain/messages';
 import type { Disposition } from '../domain/navigation-disposition';
 import type { SearchActionModel, SearchActionModelOptions } from '../domain/search/suggestion-action-model';
@@ -973,10 +973,11 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     ...siteSearchIconCacheOptions
   });
 
-  const { loadSiteSearchIconCache } = NEWTAB_SITE_SEARCH_ICON_CACHE.createSiteSearchIconCache({
+  const siteSearchIconCache = SITE_SEARCH_ICON_CACHE.createSiteSearchIconCache({
     store: siteSearchIconStore,
-    pageState
+    state: pageState
   });
+  const { loadSiteSearchIconCache } = siteSearchIconCache;
 
   loadSiteSearchIconCache();
   const sectionModeSelectController =
@@ -1491,8 +1492,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     NEWTAB_SHORTCUT_ICON_STORE,
     NEWTAB_SHORTCUT_FAVICON_CACHE_STORAGE_KEY,
     SHORTCUT_FAVICON,
-    SITE_SEARCH_ICON_CACHE_STORAGE_KEY,
-    siteSearchIconCacheOptions,
+    siteSearchIconCache,
     setSiteSearchPrefix: (...args) => setSiteSearchPrefix(...args),
     defaultTheme,
     getThemeForProvider,

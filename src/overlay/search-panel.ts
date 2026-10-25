@@ -16,6 +16,7 @@ import * as SUGGESTIONS_HEIGHT_LAYOUT from '../shared/search/suggestions-height-
 import * as SETTINGS from '../domain/settings';
 import * as LumnoCursorTooltip from '../shared/ui/cursor-tooltip';
 import { getRiSvg } from '../shared/ui/remix-icon';
+import * as SITE_SEARCH_ICON_CACHE from '../shared/search/site-search-icon-cache';
 import * as OVERLAY_TOAST from '../shared/ui/toast';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as LumnoOverlayFaviconView from './favicon-view';
@@ -49,7 +50,6 @@ import * as PANEL_TAB_MATCHING from './panel/tab-matching';
 import * as OVERLAY_CONTEXT from './overlay-context';
 import * as OVERLAY_STATE from './overlay-state';
 import { TAB_SWITCHER_HOST_ID } from './tab-switcher-host';
-import type { CachedIconMap } from '../domain/favicon/shortcut-favicon';
 import type { OverlaySizePreset } from './lifecycle';
 import type { StorageChangeListener } from './panel/types';
 import type { ThemeMode } from '../domain/settings';
@@ -566,11 +566,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const AGGREGATE_SEARCH_STORAGE_KEY = overlayStorageKeys.aggregateSearches;
 
   const faviconDataCache = window._x_extension_overlay_favicon_data_cache_2026_unique_ || new Map();
-  const siteSearchIconCacheOptions = SHORTCUT_FAVICON.SITE_SEARCH_CACHE_OPTIONS || {
-    cacheTtlMs: 1000 * 60 * 60 * 24 * 180,
-    cacheMaxEntries: 40,
-    maxDataUrlLength: 192 * 1024
-  };
+  const siteSearchIconCacheOptions = SHORTCUT_FAVICON.SITE_SEARCH_CACHE_OPTIONS;
 
   const {
     buildSearchUrl,
@@ -632,7 +628,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     SEARCH_SOURCE_ORDER,
     getStorageValuesAsync: (...args) => getStorageValuesAsync(...args),
     SEARCH_SOURCE_ORDER_STORAGE_KEY,
-    loadSiteSearchIconCache,
+    loadSiteSearchIconCache: () => loadSiteSearchIconCache(),
     getSiteSearchProviders,
     getAggregateSearches,
     cancelPendingOpenTabsPrefixEntry,
@@ -756,42 +752,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY
     ]
   );
-  const initialOverlayEnterAnimationReady = initialOverlaySettingsReady.then((result) => {
-    overlayState.overlayEnterAnimation = SETTINGS.normalizeOverlayEnterAnimation(
-      result[OVERLAY_ENTER_ANIMATION_STORAGE_KEY]
-    );
-    return overlayState.overlayEnterAnimation;
-  });
-  const initialMotionEffectsReady = initialOverlaySettingsReady.then((result) => {
-    overlayState.motionEffectsEnabled = SETTINGS.normalizeMotionEffectsEnabled(result[MOTION_EFFECTS_ENABLED_STORAGE_KEY]);
-    return overlayState.motionEffectsEnabled;
-  });
-  const initialSimpleModeReady = initialOverlaySettingsReady.then((result) => {
-    const rawValue = result[SIMPLE_MODE_ENABLED_STORAGE_KEY];
-    overlayState.simpleModeEnabled = SETTINGS.normalizeSimpleModeEnabled(rawValue);
-    return overlayState.simpleModeEnabled;
-  });
-  const initialSearchResultDisplayLimitReady = initialOverlaySettingsReady.then((result) => {
-    const rawValue = result[SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY];
-    overlayState.overlaySearchResultDisplayLimit = normalizeSearchResultDisplayLimit(rawValue);
-    if (overlayState.storageArea && rawValue !== overlayState.overlaySearchResultDisplayLimit) {
-      overlayState.storageArea.set({
-        [SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY]: overlayState.overlaySearchResultDisplayLimit
-      });
-    }
-    return overlayState.overlaySearchResultDisplayLimit;
-  });
-  const initialNumberShortcutInstantReady = initialOverlaySettingsReady.then((result) => {
-    overlayState.numberShortcutInstantEnabled = SETTINGS.normalizeNumberShortcutInstantEnabled(result[NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY]);
-    return overlayState.numberShortcutInstantEnabled;
-  });
-  const initialMacosCtrlSuggestionNavigationReady = initialOverlaySettingsReady.then((result) => {
-    const rawValue = result[MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY];
-    overlayState.macosCtrlSuggestionNavigationEnabled =
-      SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled(rawValue);
-    return overlayState.macosCtrlSuggestionNavigationEnabled;
-  });
-
   const logOverlayFaviconDecision = FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'overlay' });
 
   const {
@@ -1472,34 +1432,12 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     storageKey: SITE_SEARCH_ICON_CACHE_STORAGE_KEY,
     ...siteSearchIconCacheOptions
   });
-  let siteSearchIconCacheLoadPromise: Promise<CachedIconMap> | null = null;
-  let siteSearchIconCacheRevision = 0;
 
-  function loadSiteSearchIconCache() {
-    if (overlayState.siteSearchIconCacheLoaded) {
-      return Promise.resolve(overlayState.siteSearchIconCache);
-    }
-    if (siteSearchIconCacheLoadPromise) {
-      return siteSearchIconCacheLoadPromise;
-    }
-    const loadRevision = siteSearchIconCacheRevision;
-    siteSearchIconCacheLoadPromise = siteSearchIconStore.readAll()
-      .then((cache) => {
-        if (siteSearchIconCacheRevision === loadRevision) {
-          overlayState.siteSearchIconCache = cache;
-        }
-        overlayState.siteSearchIconCacheLoaded = true;
-        return overlayState.siteSearchIconCache;
-      })
-      .catch(() => {
-        if (siteSearchIconCacheRevision === loadRevision) {
-          overlayState.siteSearchIconCache = {};
-        }
-        overlayState.siteSearchIconCacheLoaded = true;
-        return overlayState.siteSearchIconCache;
-      });
-    return siteSearchIconCacheLoadPromise;
-  }
+  const siteSearchIconCache = SITE_SEARCH_ICON_CACHE.createSiteSearchIconCache({
+    store: siteSearchIconStore,
+    state: overlayState
+  });
+  const { loadSiteSearchIconCache } = siteSearchIconCache;
 
   // Warm local icon lookup immediately, but never put it on the overlay reveal path.
   loadSiteSearchIconCache();
@@ -1548,27 +1486,14 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
 
   const rgbToCss = FAVICON_THEME.rgbToCss;
 
-
-  const initialOverlayThemeReady = initialOverlaySettingsReady.then((result): ThemeMode => {
-    if (!overlayState.storageArea) {
-      applyOverlayTheme('system');
-      return 'system';
-    }
-    const initialThemeMode = SETTINGS.normalizeThemeMode(result[THEME_STORAGE_KEY]);
-    const rawAdaptationEnabled = result[OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY];
-    overlayState.overlayPageThemeAdaptationEnabled = normalizeOverlayPageThemeAdaptationEnabled(
-      rawAdaptationEnabled
-    );
-    if (rawAdaptationEnabled !== overlayState.overlayPageThemeAdaptationEnabled) {
-      overlayState.storageArea.set({
-        [OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY]: overlayState.overlayPageThemeAdaptationEnabled
-      });
-    }
-    applyOverlayTheme(initialThemeMode);
-    return initialThemeMode;
-  });
-
   const {
+    initialOverlayThemeReady,
+    initialOverlayEnterAnimationReady,
+    initialMotionEffectsReady,
+    initialSimpleModeReady,
+    initialSearchResultDisplayLimitReady,
+    initialNumberShortcutInstantReady,
+    initialMacosCtrlSuggestionNavigationReady,
     initialOverlaySizeReady,
     initialOverlayFontFamilyReady
   } = PANEL_SETTINGS_SYNC.createSettingsSync({
@@ -1614,6 +1539,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     OVERLAY_TAB_PRIORITY_STORAGE_KEY,
     OVERLAY_SIZE_MODE_STORAGE_KEY,
     OVERLAY_WIDTH_STORAGE_KEY,
+    OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
+    MOTION_EFFECTS_ENABLED_STORAGE_KEY,
     overlayRuntime,
     localStorageArea,
     OVERLAY_FONT_FAMILY_STORAGE_KEY,
@@ -1807,18 +1734,11 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   });
 
   overlayState.storageChangeListeners.add((changes, areaName) => {
-    const iconChange = changes && changes[SITE_SEARCH_ICON_CACHE_STORAGE_KEY];
+    const iconChange = changes && changes[siteSearchIconCache.storageKey];
     if (areaName !== 'local' || !iconChange) {
       return;
     }
-    overlayState.siteSearchIconCache = SHORTCUT_FAVICON.normalizeCacheMap(
-      iconChange.newValue,
-      Date.now(),
-      siteSearchIconCacheOptions
-    );
-    overlayState.siteSearchIconCacheLoaded = true;
-    siteSearchIconCacheRevision += 1;
-    siteSearchIconCacheLoadPromise = Promise.resolve(overlayState.siteSearchIconCache);
+    siteSearchIconCache.applyStoredSiteSearchIcons(iconChange.newValue);
     if (overlayState.siteSearchState && overlayState.inputModeController) {
       const activeProvider = overlayState.siteSearchState;
       setSiteSearchPrefix(activeProvider, overlayState.defaultTheme);

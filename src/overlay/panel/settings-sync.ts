@@ -5,7 +5,7 @@ import type * as SearchUtils from '../../domain/search/search-utils';
 import type { LocalSearchScope, SearchEngineState, SearchSourceType } from '../../domain/search/types';
 import type * as Settings from '../../domain/settings';
 import { normalizeThemeMode } from '../../domain/settings';
-import type { OverlaySizeMode, SearchResultPriority, ThemeMode } from '../../domain/settings';
+import type { OverlayEnterAnimation, OverlaySizeMode, SearchResultPriority, ThemeMode } from '../../domain/settings';
 import type { StorageAreaFacade } from '../../platform/settings-storage';
 import type * as SuggestionNavigation from '../../shared/search/suggestion-navigation';
 import type * as OverlayRuntime from '../runtime';
@@ -42,6 +42,8 @@ interface SettingsSyncState<Row, Provider> {
   numberShortcutInstantEnabled: boolean;
   macosCtrlSuggestionNavigationEnabled: boolean;
   simpleModeEnabled: boolean;
+  overlayEnterAnimation: OverlayEnterAnimation;
+  motionEffectsEnabled: boolean;
   faviconEnhancedFetchEnabled: boolean;
   initialFaviconEnhancedFetchReady: Promise<void>;
   overlayFaviconRequestBlacklistItems: BlacklistRule[];
@@ -76,6 +78,8 @@ interface SettingsSyncDeps<Row, Provider, Theme> {
   OVERLAY_TAB_PRIORITY_STORAGE_KEY: string;
   OVERLAY_SIZE_MODE_STORAGE_KEY: string;
   OVERLAY_WIDTH_STORAGE_KEY: string;
+  OVERLAY_ENTER_ANIMATION_STORAGE_KEY: string;
+  MOTION_EFFECTS_ENABLED_STORAGE_KEY: string;
   OVERLAY_FONT_FAMILY_STORAGE_KEY: string;
   OVERLAY_FONT_FALLBACK_STORAGE_KEY: string;
   TAB_RANK_SCORE_DEBUG_STORAGE_KEY: string;
@@ -84,7 +88,8 @@ interface SettingsSyncDeps<Row, Provider, Theme> {
     'normalizeSearchResultSourceTypes' | 'normalizeNumberShortcutInstantEnabled' |
     'normalizeMacosCtrlSuggestionNavigationEnabled' | 'normalizeSimpleModeEnabled' |
     'normalizeOverlayOpenTabsDefaultVisible' | 'normalizeOverlayTabPriorityMode' |
-    'normalizeOverlaySizeMode' | 'normalizeOverlayWidth' | 'normalizeOverlayFontFamily' | 'normalizeTabRankScoreDebugMode'>;
+    'normalizeOverlaySizeMode' | 'normalizeOverlayWidth' | 'normalizeOverlayFontFamily' | 'normalizeTabRankScoreDebugMode' |
+    'normalizeOverlayEnterAnimation' | 'normalizeMotionEffectsEnabled'>;
   SEARCH_UTILS: Pick<typeof SearchUtils, 'isRetiredSearchEngineState'>;
   SUGGESTION_NAVIGATION: Pick<typeof SuggestionNavigation, 'cancelNumberShortcuts'>;
   normalizeOverlaySearchBlacklistItems(items: unknown): BlacklistRule[];
@@ -162,6 +167,8 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
     OVERLAY_TAB_PRIORITY_STORAGE_KEY,
     OVERLAY_SIZE_MODE_STORAGE_KEY,
     OVERLAY_WIDTH_STORAGE_KEY,
+    OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
+    MOTION_EFFECTS_ENABLED_STORAGE_KEY,
     overlayRuntime,
     localStorageArea,
     OVERLAY_FONT_FAMILY_STORAGE_KEY,
@@ -454,6 +461,57 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
       updateSearchSuggestions(overlayState.lastSuggestionResponse, overlayState.latestOverlayQuery);
     }
   });
+  const initialOverlayThemeReady = initialOverlaySettingsReady.then((result): ThemeMode => {
+    if (!overlayState.storageArea) {
+      applyOverlayTheme('system');
+      return 'system';
+    }
+    const initialThemeMode = normalizeThemeMode(result[THEME_STORAGE_KEY]);
+    const rawAdaptationEnabled = result[OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY];
+    overlayState.overlayPageThemeAdaptationEnabled = normalizeOverlayPageThemeAdaptationEnabled(rawAdaptationEnabled);
+    if (rawAdaptationEnabled !== overlayState.overlayPageThemeAdaptationEnabled) {
+      void overlayState.storageArea.set({
+        [OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY]: overlayState.overlayPageThemeAdaptationEnabled
+      });
+    }
+    applyOverlayTheme(initialThemeMode);
+    return initialThemeMode;
+  });
+  const initialOverlayEnterAnimationReady = initialOverlaySettingsReady.then((result) => {
+    overlayState.overlayEnterAnimation = SETTINGS.normalizeOverlayEnterAnimation(result[OVERLAY_ENTER_ANIMATION_STORAGE_KEY]);
+    return overlayState.overlayEnterAnimation;
+  });
+  const initialMotionEffectsReady = initialOverlaySettingsReady.then((result) => {
+    overlayState.motionEffectsEnabled = SETTINGS.normalizeMotionEffectsEnabled(result[MOTION_EFFECTS_ENABLED_STORAGE_KEY]);
+    return overlayState.motionEffectsEnabled;
+  });
+  const initialSimpleModeReady = initialOverlaySettingsReady.then((result) => {
+    overlayState.simpleModeEnabled = SETTINGS.normalizeSimpleModeEnabled(result[SIMPLE_MODE_ENABLED_STORAGE_KEY]);
+    return overlayState.simpleModeEnabled;
+  });
+  // A stored limit out of range is written back in range.
+  const initialSearchResultDisplayLimitReady = initialOverlaySettingsReady.then((result) => {
+    const rawValue = result[SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY];
+    overlayState.overlaySearchResultDisplayLimit = normalizeSearchResultDisplayLimit(rawValue);
+    if (overlayState.storageArea && rawValue !== overlayState.overlaySearchResultDisplayLimit) {
+      void overlayState.storageArea.set({
+        [SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY]: overlayState.overlaySearchResultDisplayLimit
+      });
+    }
+    return overlayState.overlaySearchResultDisplayLimit;
+  });
+  const initialNumberShortcutInstantReady = initialOverlaySettingsReady.then((result) => {
+    overlayState.numberShortcutInstantEnabled = SETTINGS.normalizeNumberShortcutInstantEnabled(
+      result[NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY]
+    );
+    return overlayState.numberShortcutInstantEnabled;
+  });
+  const initialMacosCtrlSuggestionNavigationReady = initialOverlaySettingsReady.then((result) => {
+    overlayState.macosCtrlSuggestionNavigationEnabled = SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled(
+      result[MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY]
+    );
+    return overlayState.macosCtrlSuggestionNavigationEnabled;
+  });
   const initialOverlaySizeReady = initialOverlaySettingsReady.then((result) => {
     overlayState.overlaySizeMode = SETTINGS.normalizeOverlaySizeMode(result[OVERLAY_SIZE_MODE_STORAGE_KEY]);
     overlayState.overlayCustomWidth = SETTINGS.normalizeOverlayWidth(result[OVERLAY_WIDTH_STORAGE_KEY]);
@@ -523,6 +581,13 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
   });
 
   return {
+    initialOverlayThemeReady,
+    initialOverlayEnterAnimationReady,
+    initialMotionEffectsReady,
+    initialSimpleModeReady,
+    initialSearchResultDisplayLimitReady,
+    initialNumberShortcutInstantReady,
+    initialMacosCtrlSuggestionNavigationReady,
     initialOverlaySizeReady,
     initialOverlayFontFamilyReady
   };

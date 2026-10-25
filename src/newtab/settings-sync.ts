@@ -3,7 +3,8 @@
 // registry, and the runtime messages that ask the page to refresh a section.
 import type * as FolderReferences from '../domain/bookmark-folder-reference';
 import type * as ShortcutFavicon from '../domain/favicon/shortcut-favicon';
-import type { CachedIconMap, IconCacheOptions } from '../domain/favicon/shortcut-favicon';
+import type { CachedIconMap } from '../domain/favicon/shortcut-favicon';
+import type { SiteSearchIconCache } from '../shared/search/site-search-icon-cache';
 import type * as ProgressHistory from '../domain/progress-history';
 import type { ProgressHistoryMap } from '../domain/progress-history';
 import type { HiddenRecentSite, RecentSite } from '../domain/recent-sites-store';
@@ -66,10 +67,6 @@ interface SettingsSyncState {
   // Favicons fetched on this page and not stored yet.
   shortcutFaviconPendingCacheEntries: CachedIconMap;
   shortcutPersistenceInFlightCount: number;
-  siteSearchIconCache: CachedIconMap;
-  siteSearchIconCacheLoaded: boolean;
-  siteSearchIconCacheRevision: number;
-  siteSearchIconCacheLoadPromise: Promise<CachedIconMap> | null;
   siteSearchState: SiteSearchProvider | null;
   inputModeController: Pick<InputModeController, 'refreshModeMenu'> | null;
   latestQuery: string;
@@ -144,14 +141,13 @@ interface SettingsSyncDeps extends
   NEWTAB_BOOKMARK_FOLDER_ICON: Pick<typeof BookmarkFolderIcon, 'normalizeFolderColorRefs'>;
   NEWTAB_SHORTCUT_ICON_STORE: Pick<typeof ShortcutIconStore, 'normalizeIconMap'>;
   SHORTCUT_FAVICON: Pick<typeof ShortcutFavicon, 'normalizeCacheMap'>;
-  siteSearchIconCacheOptions: Readonly<IconCacheOptions>;
   defaultTheme: ThemeVariant;
   PROGRESS_HISTORY: Pick<typeof ProgressHistory, 'STORAGE_KEY' | 'normalizeHistoryMap'>;
   NEWTAB_SHORTCUTS_STORAGE_KEYS: readonly string[];
   FOLDER_COLOR_REFS_STORAGE_KEY: string;
   NEWTAB_SHORTCUT_ICONS_STORAGE_KEY: string;
   NEWTAB_SHORTCUT_FAVICON_CACHE_STORAGE_KEY: string;
-  SITE_SEARCH_ICON_CACHE_STORAGE_KEY: string;
+  siteSearchIconCache: Pick<SiteSearchIconCache, 'storageKey' | 'applyStoredSiteSearchIcons'>;
   NEWTAB_SHORTCUTS_LOCAL_OVERFLOW_STORAGE_KEY: string;
   NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY: string;
   THEME_STORAGE_KEY: string;
@@ -225,8 +221,7 @@ function createSettingsSync(deps: SettingsSyncDeps) {
     NEWTAB_SHORTCUT_ICON_STORE,
     NEWTAB_SHORTCUT_FAVICON_CACHE_STORAGE_KEY,
     SHORTCUT_FAVICON,
-    SITE_SEARCH_ICON_CACHE_STORAGE_KEY,
-    siteSearchIconCacheOptions,
+    siteSearchIconCache,
     setSiteSearchPrefix,
     defaultTheme,
     getThemeForProvider,
@@ -428,15 +423,8 @@ function createSettingsSync(deps: SettingsSyncDeps) {
     });
     renderShortcuts();
   }, { area: 'local' });
-  storageChanges.on(SITE_SEARCH_ICON_CACHE_STORAGE_KEY, (changes) => {
-    pageState.siteSearchIconCache = SHORTCUT_FAVICON.normalizeCacheMap(
-      changes[SITE_SEARCH_ICON_CACHE_STORAGE_KEY].newValue,
-      Date.now(),
-      siteSearchIconCacheOptions
-    );
-    pageState.siteSearchIconCacheLoaded = true;
-    pageState.siteSearchIconCacheRevision += 1;
-    pageState.siteSearchIconCacheLoadPromise = Promise.resolve(pageState.siteSearchIconCache);
+  storageChanges.on(siteSearchIconCache.storageKey, (changes) => {
+    siteSearchIconCache.applyStoredSiteSearchIcons(changes[siteSearchIconCache.storageKey].newValue);
     if (pageState.siteSearchState && pageState.inputModeController) {
       const activeProvider = pageState.siteSearchState;
       setSiteSearchPrefix(activeProvider, defaultTheme);

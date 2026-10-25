@@ -52,7 +52,7 @@ import type { ShortcutDragState } from './shortcuts/shortcut-drag';
 import type { ShortcutPageActionsState } from './shortcuts/shortcut-page-actions';
 import type { ShortcutsControllerState } from './shortcuts/shortcuts-controller';
 import type { StartupPreferencesState } from './startup-preferences';
-import type { SiteSearchIconCacheState } from './search/site-search-icon-cache';
+import type { SiteSearchIconCacheState } from '../shared/search/site-search-icon-cache';
 import type { SiteSearchProvidersState } from './search/site-search-providers';
 import type { SiteSearchRuntimeState } from './search/site-search-runtime';
 import type { SiteThemeResolverState } from './theme/site-theme-resolver';
