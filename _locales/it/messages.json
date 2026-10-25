@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Contatta l'autore"
   },
+  "settings_diagnostics_title": {
+    "message": "Diagnostica"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Esporta la versione, le impostazioni e gli errori recenti da allegare a una segnalazione. Scorciatoie, indirizzi web e altri contenuti personali restano fuori dal file."
+  },
+  "settings_diagnostics_action": {
+    "message": "Esporta diagnostica"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Diagnostica esportata"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Impossibile esportare la diagnostica"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Tour di benvenuto"
   },

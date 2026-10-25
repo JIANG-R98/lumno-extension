@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Contacta amb l'autor"
   },
+  "settings_diagnostics_title": {
+    "message": "Diagnòstic"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Exporta la versió, la configuració i els errors recents per adjuntar-los a un informe. Les dreceres, les adreces web i altre contingut personal no s'inclouen al fitxer."
+  },
+  "settings_diagnostics_action": {
+    "message": "Exporta el diagnòstic"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "S'ha exportat el diagnòstic"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "No s'ha pogut exportar el diagnòstic"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Visita de benvinguda"
   },

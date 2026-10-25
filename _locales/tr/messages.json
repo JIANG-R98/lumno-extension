@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Geliştiriciyle iletişime geç"
   },
+  "settings_diagnostics_title": {
+    "message": "Tanılama"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Bir bildirime eklemek için sürümü, ayarları ve son hataları dışa aktarın. Kısayollar, web adresleri ve diğer kişisel içerikler dosyaya girmez."
+  },
+  "settings_diagnostics_action": {
+    "message": "Tanılamayı dışa aktar"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Tanılama dışa aktarıldı"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Tanılama dışa aktarılamadı"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Tanıtım turu"
   },

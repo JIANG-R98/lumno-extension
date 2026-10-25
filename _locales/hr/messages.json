@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Kontaktirajte autora"
   },
+  "settings_diagnostics_title": {
+    "message": "Dijagnostika"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Izvezite verziju, postavke i nedavne pogreške kako biste ih priložili prijavi. Prečaci, web-adrese i drugi osobni sadržaj ne ulaze u datoteku."
+  },
+  "settings_diagnostics_action": {
+    "message": "Izvezi dijagnostiku"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Dijagnostika je izvezena"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Dijagnostiku nije moguće izvesti"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Uvodni obilazak"
   },

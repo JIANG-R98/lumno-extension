@@ -40,6 +40,7 @@ import * as THEME from './options-theme';
 import * as OPTIONS_TOGGLE_CONTROLS from './options-toggle-controls';
 import * as OPTIONS_TOOLTIPS from './options-tooltips';
 import * as LumnoOptionsTranslationHelpSection from './options-translation-help';
+import * as LumnoOptionsDiagnostics from './options-diagnostics';
 import * as LumnoWebDavOptions from './webdav-options';
 import * as LumnoMessaging from '../platform/messaging';
 
@@ -546,9 +547,26 @@ import * as LumnoMessaging from '../platform/messaging';
     windowObj: window,
     duration: 2200
   });
+  const diagnosticsExport = LumnoOptionsDiagnostics.createDiagnosticsExport({
+    chromeApi: chrome,
+    documentObj: document,
+    getPrimaryAreaName: () => getActivePrimaryAreaName(),
+    getSettingsArea: () => optionsState.storageArea,
+    getVersion: () => chrome?.runtime?.getManifest?.()?.version || '',
+    localArea: localStorageArea,
+    navigatorObj: navigator,
+    settingKeys: SETTINGS.CHROME_SYNC_STORAGE_KEYS
+  });
   const feedbackSupportSection = LumnoOptionsFeedbackSupportSection.createFeedbackSupportSection({
     communityLinks: COMMUNITY_LINKS,
     controller: optionsFeedbackSupportApi.createFeedbackSupportController(feedbackSupportHost),
+    exportDiagnostics: () => diagnosticsExport.exportReport().then(
+      () => showToast(getMessage('settings_diagnostics_export_done', '已导出诊断信息'), false),
+      (error) => {
+        console.warn('[Lumno] Could not export diagnostics.', error);
+        showToast(getMessage('settings_diagnostics_export_failed', '诊断信息导出失败'), true);
+      }
+    ),
     licensesLink: document.getElementById('_x_extension_open_licenses_2026_unique_'),
     getLocale: () => (optionsState.currentLanguageMode === 'system' ? getSystemLocale() : normalizeLocale(optionsState.currentLanguageMode)),
     getMessage,

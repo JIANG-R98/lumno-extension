@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Ota yhteyttä tekijään"
   },
+  "settings_diagnostics_title": {
+    "message": "Diagnostiikka"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Vie versio, asetukset ja viimeaikaiset virheet liitettäväksi raporttiin. Pikakuvakkeet, verkko-osoitteet ja muu henkilökohtainen sisältö eivät päädy tiedostoon."
+  },
+  "settings_diagnostics_action": {
+    "message": "Vie diagnostiikka"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Diagnostiikka viety"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Diagnostiikan vieminen epäonnistui"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Esittely"
   },

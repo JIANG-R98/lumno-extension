@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Kapcsolat a szerzővel"
   },
+  "settings_diagnostics_title": {
+    "message": "Diagnosztika"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Exportálja a verziót, a beállításokat és a legutóbbi hibákat, hogy csatolhassa őket egy hibajelentéshez. A parancsikonok, a webcímek és más személyes tartalmak nem kerülnek a fájlba."
+  },
+  "settings_diagnostics_action": {
+    "message": "Diagnosztika exportálása"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Diagnosztika exportálva"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Nem sikerült exportálni a diagnosztikát"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Bemutató"
   },

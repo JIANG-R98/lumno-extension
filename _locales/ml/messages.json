@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "രചയിതാവിനെ ബന്ധപ്പെടുക"
   },
+  "settings_diagnostics_title": {
+    "message": "ഡയഗ്നോസ്റ്റിക്സ്"
+  },
+  "settings_diagnostics_desc": {
+    "message": "പതിപ്പ്, ക്രമീകരണം, അടുത്തിടെയുള്ള പിശകുകൾ എന്നിവ എക്\u200cസ്\u200cപോർട്ട് ചെയ്\u200cത് റിപ്പോർട്ടിനൊപ്പം ചേർക്കാം. കുറുക്കുവഴികൾ, വെബ് വിലാസങ്ങൾ, മറ്റ് സ്വകാര്യ ഉള്ളടക്കം എന്നിവ ഫയലിൽ ഉൾപ്പെടില്ല."
+  },
+  "settings_diagnostics_action": {
+    "message": "ഡയഗ്നോസ്റ്റിക്സ് എക്\u200cസ്\u200cപോർട്ട് ചെയ്യുക"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "ഡയഗ്നോസ്റ്റിക്സ് എക്\u200cസ്\u200cപോർട്ട് ചെയ്\u200cതു"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "ഡയഗ്നോസ്റ്റിക്സ് എക്\u200cസ്\u200cപോർട്ട് ചെയ്യാനായില്ല"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "സ്വാഗത ടൂർ"
   },

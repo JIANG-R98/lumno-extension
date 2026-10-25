@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Contact met de maker"
   },
+  "settings_diagnostics_title": {
+    "message": "Diagnose"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Exporteer de versie, instellingen en recente fouten om ze bij een melding te voegen. Snelkoppelingen, webadressen en andere persoonlijke inhoud komen niet in het bestand."
+  },
+  "settings_diagnostics_action": {
+    "message": "Diagnose exporteren"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Diagnose geëxporteerd"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Diagnose kan niet worden geëxporteerd"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Rondleiding"
   },

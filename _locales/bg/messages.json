@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Връзка с автора"
   },
+  "settings_diagnostics_title": {
+    "message": "Диагностика"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Експортирайте версията, настройките и последните грешки, за да ги приложите към сигнал. Преките пътища, уеб адресите и друго лично съдържание не влизат във файла."
+  },
+  "settings_diagnostics_action": {
+    "message": "Експортиране на диагностика"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Диагностиката е експортирана"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Диагностиката не можа да се експортира"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Начална обиколка"
   },

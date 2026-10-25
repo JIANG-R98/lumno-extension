@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "ደራሲውን ያግኙ"
   },
+  "settings_diagnostics_title": {
+    "message": "የምርመራ መረጃ"
+  },
+  "settings_diagnostics_desc": {
+    "message": "ስሪቱን፣ ቅንብሮቹን እና የቅርብ ጊዜ ስህተቶችን ወደ ፋይል ይላኩ እና ከሪፖርትዎ ጋር ያያይዙት። አቋራጮች፣ የድር አድራሻዎች እና ሌሎች የግል ይዘቶች በፋይሉ ውስጥ አይካተቱም።"
+  },
+  "settings_diagnostics_action": {
+    "message": "የምርመራ መረጃ ላክ"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "የምርመራ መረጃ ተልኳል"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "የምርመራ መረጃን መላክ አልተቻለም"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "የእንኳን ደህና መጡ ጉብኝት"
   },

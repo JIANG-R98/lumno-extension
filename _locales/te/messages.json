@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "రచయితను సంప్రదించండి"
   },
+  "settings_diagnostics_title": {
+    "message": "డయాగ్నస్టిక్స్"
+  },
+  "settings_diagnostics_desc": {
+    "message": "వెర్షన్, సెట్టింగ్\u200cలు, ఇటీవలి లోపాలను ఎగుమతి చేసి నివేదికకు జోడించండి. షార్ట్\u200cకట్\u200cలు, వెబ్ చిరునామాలు, ఇతర వ్యక్తిగత కంటెంట్ ఫైల్\u200cలో చేరవు."
+  },
+  "settings_diagnostics_action": {
+    "message": "డయాగ్నస్టిక్స్\u200cను ఎగుమతి చేయండి"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "డయాగ్నస్టిక్స్ ఎగుమతి చేయబడ్డాయి"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "డయాగ్నస్టిక్స్\u200cను ఎగుమతి చేయలేకపోయాము"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "స్వాగత టూర్"
   },

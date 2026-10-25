@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Kontaktovat autora"
   },
+  "settings_diagnostics_title": {
+    "message": "Diagnostika"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Exportujte verzi, nastavení a nedávné chyby a přiložte je k hlášení. Zkratky, webové adresy ani jiný osobní obsah se do souboru nedostanou."
+  },
+  "settings_diagnostics_action": {
+    "message": "Exportovat diagnostiku"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Diagnostika exportována"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Diagnostiku se nepodařilo exportovat"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Úvodní prohlídka"
   },

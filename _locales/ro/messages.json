@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Contactați autorul"
   },
+  "settings_diagnostics_title": {
+    "message": "Diagnosticare"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Exportați versiunea, setările și erorile recente pentru a le atașa unui raport. Comenzile rapide, adresele web și alt conținut personal nu sunt incluse în fișier."
+  },
+  "settings_diagnostics_action": {
+    "message": "Exportați diagnosticarea"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Diagnosticarea a fost exportată"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Diagnosticarea nu a putut fi exportată"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Turul de bun venit"
   },

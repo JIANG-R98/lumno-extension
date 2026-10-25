@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "લેખકનો સંપર્ક કરો"
   },
+  "settings_diagnostics_title": {
+    "message": "નિદાન માહિતી"
+  },
+  "settings_diagnostics_desc": {
+    "message": "આવૃત્તિ, સેટિંગ અને તાજેતરની ભૂલો નિકાસ કરીને રિપોર્ટ સાથે જોડો. શૉર્ટકટ, વેબ સરનામાં અને અન્ય અંગત સામગ્રી ફાઇલમાં સામેલ થતી નથી."
+  },
+  "settings_diagnostics_action": {
+    "message": "નિદાન માહિતી નિકાસ કરો"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "નિદાન માહિતી નિકાસ થઈ"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "નિદાન માહિતી નિકાસ કરી શકાઈ નહીં"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "સ્વાગત ટૂર"
   },

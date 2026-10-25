@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Зв’язатися з автором"
   },
+  "settings_diagnostics_title": {
+    "message": "Діагностика"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Експортуйте версію, налаштування та нещодавні помилки, щоб додати їх до звіту. Ярлики, веб-адреси та інший особистий вміст до файлу не потрапляють."
+  },
+  "settings_diagnostics_action": {
+    "message": "Експортувати діагностику"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Діагностику експортовано"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Не вдалося експортувати діагностику"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Ознайомлення"
   },

@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Võta autoriga ühendust"
   },
+  "settings_diagnostics_title": {
+    "message": "Diagnostika"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Ekspordi versioon, seaded ja hiljutised vead, et need aruandele lisada. Otseteed, veebiaadressid ja muu isiklik sisu faili ei satu."
+  },
+  "settings_diagnostics_action": {
+    "message": "Ekspordi diagnostika"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Diagnostika on eksporditud"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Diagnostikat ei õnnestunud eksportida"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Tutvustus"
   },

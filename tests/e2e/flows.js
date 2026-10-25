@@ -7,6 +7,7 @@
 const assert = require('assert');
 const { delay } = require('./browser');
 const SETTINGS = require('../../src/domain/settings.ts');
+const { DIAGNOSTIC_ERRORS_STORAGE_KEY } = require('../../src/domain/diagnostics.ts');
 
 const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
 const OVERLAY_INPUT = '#_x_extension_search_input_2024_unique_';
@@ -251,10 +252,51 @@ async function linkPreview({ browser, fixtures }) {
     'Shift+click should not preview once link preview is off');
 }
 
+// A failure in the worker lands in the diagnostics log, and the settings page
+// saves it in the diagnostics file without the address it mentioned.
+async function diagnostics({ browser }) {
+  await browser.worker.evaluate(`self.dispatchEvent(new ErrorEvent('error', {
+    message: 'probe',
+    error: new Error('Probe failure at https://intranet.example/private?q=1')
+  }))`);
+  await browser.worker.waitFor(`chrome.storage.local.get(${JSON.stringify(DIAGNOSTIC_ERRORS_STORAGE_KEY)})
+    .then((items) => (items[${JSON.stringify(DIAGNOSTIC_ERRORS_STORAGE_KEY)}] || [])
+      .some((entry) => entry.message === 'Probe failure at https://...'))`, {
+    message: 'the worker did not record the failure'
+  });
+
+  const options = await browser.openPage(browser.extensionUrl('src/options/options.html'));
+  await focusTab(browser, options);
+  await options.waitFor(`document.documentElement.getAttribute('data-lumno-options-ready') === 'true'`, {
+    timeout: 8000,
+    message: 'Settings did not finish loading'
+  });
+  // Keeps the saved file in the page instead of the downloads folder.
+  await options.evaluate(`(() => {
+    URL.createObjectURL = (blob) => { window.__lumnoDiagnosticsFile = blob; return 'blob:diagnostics'; };
+    URL.revokeObjectURL = () => {};
+    HTMLAnchorElement.prototype.click = function click() {};
+  })()`);
+  const button = await elementCenter(options, `document.querySelector('[data-feedback-support="diagnostics"]')`);
+  await options.click(button.x, button.y);
+  const text = await options.waitFor(`window.__lumnoDiagnosticsFile ? window.__lumnoDiagnosticsFile.text() : null`, {
+    message: 'the diagnostics file was not saved'
+  });
+  const report = JSON.parse(text);
+  const version = await browser.worker.evaluate('chrome.runtime.getManifest().version');
+  assert.strictEqual(report.format, 'lumno-diagnostics');
+  assert.strictEqual(report.extension.version, version);
+  assert.ok(Object.keys(report.settings).length > 0, 'the file should list the settings');
+  assert.ok(report.recentErrors.some((entry) => entry.context === 'Uncaught error in the background worker.'
+    && entry.message === 'Probe failure at https://...'), 'the file should carry the recorded failure');
+  assert.ok(!text.includes('intranet.example'), 'the file should not carry the address');
+}
+
 module.exports = {
   surfaces,
   'newtab-search': newtabSearch,
   'overlay-search': overlaySearch,
   'tab-switcher': tabSwitcher,
-  'link-preview': linkPreview
+  'link-preview': linkPreview,
+  diagnostics
 };

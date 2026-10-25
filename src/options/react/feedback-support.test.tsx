@@ -330,4 +330,45 @@ describe('Options feedback support React island', () => {
     expect(host.querySelector('[data-feedback-support="community"]')?.textContent)
       .toContain('加入反馈群（新）');
   });
+
+  it('ends with the diagnostics export, busy until the export settles', async () => {
+    let finishExport = () => {};
+    const onExport = vi.fn(() => new Promise<void>((resolve) => { finishExport = resolve; }));
+    const { controller, host } = createFixture();
+    act(() => controller.render({
+      ...model,
+      diagnostics: {
+        description: '导出版本、设置和最近的错误记录，可附在反馈里。',
+        descriptionKey: 'settings_diagnostics_desc',
+        label: '导出诊断信息',
+        labelKey: 'settings_diagnostics_action',
+        onExport,
+        title: '诊断信息',
+        titleKey: 'settings_diagnostics_title'
+      }
+    }));
+
+    const rows = host.querySelectorAll('._x_extension_feedback_support_row_2026_unique_');
+    const row = rows[rows.length - 1];
+    expect(row?.querySelector('[data-i18n="settings_diagnostics_title"]')?.textContent).toBe('诊断信息');
+    const button = row?.querySelector<HTMLButtonElement>('button[data-feedback-support="diagnostics"]');
+    expect(button?.type).toBe('button');
+    expect(button?.textContent).toBe('导出诊断信息');
+
+    act(() => button?.click());
+    act(() => button?.click());
+    expect(onExport).toHaveBeenCalledTimes(1);
+    expect(button?.disabled).toBe(true);
+    expect(button?.getAttribute('aria-busy')).toBe('true');
+
+    await act(async () => finishExport());
+    expect(button?.disabled).toBe(false);
+    expect(button?.hasAttribute('aria-busy')).toBe(false);
+  });
+
+  it('leaves the diagnostics row out when the page offers no export', () => {
+    const { controller, host } = createFixture();
+    act(() => controller.render(model));
+    expect(host.querySelector('[data-feedback-support="diagnostics"]')).toBeNull();
+  });
 });

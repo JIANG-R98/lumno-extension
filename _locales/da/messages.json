@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Kontakt udvikleren"
   },
+  "settings_diagnostics_title": {
+    "message": "Diagnosticering"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Eksportér versionen, indstillingerne og de seneste fejl, så du kan vedhæfte dem til en rapport. Genveje, webadresser og andet personligt indhold kommer ikke med i filen."
+  },
+  "settings_diagnostics_action": {
+    "message": "Eksportér diagnosticering"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Diagnosticering er eksporteret"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Diagnosticering kunne ikke eksporteres"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Velkomstrundvisning"
   },

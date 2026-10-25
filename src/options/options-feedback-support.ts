@@ -1,6 +1,7 @@
 // The "Feedback & support" section on the General tab: the Help Center
 // row (whose description offers the "ask in the search box" demo while the
-// lm site search is on) and the community, review, GitHub and contact links.
+// lm site search is on), the community, review, GitHub and contact links,
+// and the diagnostics export.
 // It also points the open-source licenses link in the Global settings header
 // at the current URL. Links come from the shared remote community-links
 // file, with its bundled fallback first.
@@ -17,7 +18,8 @@ function getFeedbackSupportWebLocale(locale) {
 }
 
 //   getMessage(key, fallback), communityLinks (LumnoCommunityLinks),
-//   links, webLocale, helpCenterSearchEnabled, helpIconUrl
+//   links, webLocale, helpCenterSearchEnabled, helpIconUrl,
+//   onExportDiagnostics() (optional; resolves once the export is reported)
 function buildFeedbackSupportModel(input) {
   const { communityLinks, getMessage, links, webLocale } = input;
   const communityIsWechat = communityLinks.getCommunityChannel(links, webLocale) === 'wechat';
@@ -25,6 +27,15 @@ function buildFeedbackSupportModel(input) {
     channels: {
       title: getMessage('settings_feedback_support_channels_title', '交流与反馈'),
       titleKey: 'settings_feedback_support_channels_title'
+    },
+    diagnostics: typeof input.onExportDiagnostics !== 'function' ? null : {
+      description: getMessage('settings_diagnostics_desc', '导出版本、设置和最近的错误记录，可附在反馈里。快捷方式、网址等个人内容不会写入文件。'),
+      descriptionKey: 'settings_diagnostics_desc',
+      label: getMessage('settings_diagnostics_action', '导出诊断信息'),
+      labelKey: 'settings_diagnostics_action',
+      onExport: input.onExportDiagnostics,
+      title: getMessage('settings_diagnostics_title', '诊断信息'),
+      titleKey: 'settings_diagnostics_title'
     },
     heading: getMessage('settings_feedback_support_section_title', '反馈与支持'),
     headingKey: 'settings_feedback_support_section_title',
@@ -104,6 +115,7 @@ function buildFeedbackSupportModel(input) {
 //   licensesLink          the open-source licenses <a> beside the onboarding guide (may be null)
 //   communityLinks        LumnoCommunityLinks
 //   getMessage, getLocale(), isHelpCenterSearchEnabled(), helpIconUrl
+//   exportDiagnostics()   saves the diagnostics file and reports the outcome (may be null)
 function createFeedbackSupportSection(options) {
   const communityLinks = options.communityLinks;
   let links = communityLinks.FALLBACK_LINKS;
@@ -121,6 +133,7 @@ function createFeedbackSupportSection(options) {
       helpCenterSearchEnabled: options.isHelpCenterSearchEnabled(),
       helpIconUrl: options.helpIconUrl,
       links,
+      onExportDiagnostics: options.exportDiagnostics || null,
       webLocale: getFeedbackSupportWebLocale(options.getLocale())
     }));
   }

@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Kontakta utvecklaren"
   },
+  "settings_diagnostics_title": {
+    "message": "Diagnostik"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Exportera versionen, inställningarna och de senaste felen för att bifoga dem till en rapport. Genvägar, webbadresser och annat personligt innehåll kommer inte med i filen."
+  },
+  "settings_diagnostics_action": {
+    "message": "Exportera diagnostik"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Diagnostiken har exporterats"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Det gick inte att exportera diagnostiken"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Välkomstguide"
   },

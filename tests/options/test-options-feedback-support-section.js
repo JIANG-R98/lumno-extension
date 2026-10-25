@@ -40,6 +40,19 @@ function model(webLocale, helpCenterSearchEnabled) {
   assert.strictEqual(model('ja', null).help.ask, null, 'and until the providers have loaded');
 }
 
+// The diagnostics row appears only when the page can export.
+{
+  assert.strictEqual(model('en', false).diagnostics, null);
+  const onExportDiagnostics = () => Promise.resolve();
+  const withExport = feedback.buildFeedbackSupportModel({
+    communityLinks, getMessage, helpIconUrl: 'icon.png', helpCenterSearchEnabled: false, links, webLocale: 'en',
+    onExportDiagnostics
+  });
+  assert.strictEqual(withExport.diagnostics.onExport, onExportDiagnostics);
+  assert.strictEqual(withExport.diagnostics.titleKey, 'settings_diagnostics_title');
+  assert.strictEqual(withExport.diagnostics.label, 'settings_diagnostics_action|导出诊断信息');
+}
+
 // "Rate Lumno" opens the review page of the store this copy came from.
 {
   const reviewHref = () => model('en', false).items.find((item) => item.key === 'chrome-review').href;

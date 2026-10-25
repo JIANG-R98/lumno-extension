@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Napisz do autora"
   },
+  "settings_diagnostics_title": {
+    "message": "Diagnostyka"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Wyeksportuj wersję, ustawienia i ostatnie błędy, aby dołączyć je do zgłoszenia. Skróty, adresy stron i inne treści osobiste nie trafiają do pliku."
+  },
+  "settings_diagnostics_action": {
+    "message": "Eksportuj diagnostykę"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Wyeksportowano diagnostykę"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Nie udało się wyeksportować diagnostyki"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Przewodnik powitalny"
   },

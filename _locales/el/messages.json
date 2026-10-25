@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Επικοινωνία"
   },
+  "settings_diagnostics_title": {
+    "message": "Διαγνωστικά"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Εξαγάγετε την έκδοση, τις ρυθμίσεις και τα πρόσφατα σφάλματα για να τα επισυνάψετε σε μια αναφορά. Οι συντομεύσεις, οι διευθύνσεις ιστού και άλλο προσωπικό περιεχόμενο δεν περιλαμβάνονται στο αρχείο."
+  },
+  "settings_diagnostics_action": {
+    "message": "Εξαγωγή διαγνωστικών"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Τα διαγνωστικά εξήχθησαν"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Δεν ήταν δυνατή η εξαγωγή των διαγνωστικών"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Περιήγηση καλωσορίσματος"
   },

@@ -180,6 +180,7 @@ import {
   SHOW_SEARCH_PREFILL_COMMAND_NAME,
   SHOW_SEARCH_PREFILL_V_COMMAND_NAME,
   SHOW_TAB_SWITCHER_COMMAND_NAME,
+  diagnosticsLog,
   getImportScripts,
   isPrimaryStorageAreaName,
   logHotkeyDebug,
@@ -198,6 +199,15 @@ const importScriptsForInstall = getImportScripts();
 if (importScriptsForInstall && typeof globalThis.addEventListener === 'function') {
   globalThis.addEventListener('install', () => {
     importScriptsForInstall(chrome.runtime.getURL(PINYIN_PRO_SCRIPT_PATH));
+  });
+}
+// Failures nothing caught go to the diagnostics log as well as the console.
+if (typeof globalThis.addEventListener === 'function') {
+  globalThis.addEventListener('unhandledrejection', (event) => {
+    diagnosticsLog.record('Unhandled rejection in the background worker.', event.reason);
+  });
+  globalThis.addEventListener('error', (event) => {
+    diagnosticsLog.record('Uncaught error in the background worker.', event.error || event.message);
   });
 }
 const openOnboardingPage = BACKGROUND_PAGES.openOnboardingPage;

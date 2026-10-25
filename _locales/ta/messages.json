@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "தொடர்புகொள்"
   },
+  "settings_diagnostics_title": {
+    "message": "கண்டறிதல் தகவல்"
+  },
+  "settings_diagnostics_desc": {
+    "message": "பதிப்பு, அமைப்புகள், சமீபத்திய பிழைகள் ஆகியவற்றை ஏற்றுமதி செய்து புகாருடன் இணைக்கலாம். ஷார்ட்கட்கள், இணைய முகவரிகள் மற்றும் பிற தனிப்பட்ட உள்ளடக்கம் கோப்பில் சேர்க்கப்படாது."
+  },
+  "settings_diagnostics_action": {
+    "message": "கண்டறிதல் தகவலை ஏற்றுமதி செய்"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "கண்டறிதல் தகவல் ஏற்றுமதி செய்யப்பட்டது"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "கண்டறிதல் தகவலை ஏற்றுமதி செய்ய முடியவில்லை"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "வரவேற்புச் சுற்றுலா"
   },

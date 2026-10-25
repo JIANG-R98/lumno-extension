@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Kontakin ang author"
   },
+  "settings_diagnostics_title": {
+    "message": "Diagnostics"
+  },
+  "settings_diagnostics_desc": {
+    "message": "I-export ang bersyon, mga setting at mga kamakailang error para ilakip sa isang ulat. Hindi kasama sa file ang mga shortcut, web address at iba pang personal na nilalaman."
+  },
+  "settings_diagnostics_action": {
+    "message": "I-export ang diagnostics"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Na-export ang diagnostics"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Hindi ma-export ang diagnostics"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Welcome tour"
   },

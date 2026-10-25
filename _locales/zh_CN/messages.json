@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "联系作者"
   },
+  "settings_diagnostics_title": {
+    "message": "诊断信息"
+  },
+  "settings_diagnostics_desc": {
+    "message": "导出版本、设置和最近的错误记录，可附在反馈里。快捷方式、网址等个人内容不会写入文件。"
+  },
+  "settings_diagnostics_action": {
+    "message": "导出诊断信息"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "已导出诊断信息"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "诊断信息导出失败"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "新手引导"
   },

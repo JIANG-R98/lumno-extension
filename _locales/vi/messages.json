@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Liên hệ tác giả"
   },
+  "settings_diagnostics_title": {
+    "message": "Thông tin chẩn đoán"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Xuất phiên bản, cài đặt và các lỗi gần đây để đính kèm vào báo cáo. Lối tắt, địa chỉ web và nội dung cá nhân khác không có trong tệp."
+  },
+  "settings_diagnostics_action": {
+    "message": "Xuất thông tin chẩn đoán"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Đã xuất thông tin chẩn đoán"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Không thể xuất thông tin chẩn đoán"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Hướng dẫn làm quen"
   },

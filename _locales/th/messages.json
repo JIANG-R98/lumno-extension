@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "ติดต่อผู้พัฒนา"
   },
+  "settings_diagnostics_title": {
+    "message": "ข้อมูลการวินิจฉัย"
+  },
+  "settings_diagnostics_desc": {
+    "message": "ส่งออกเวอร์ชัน การตั้งค่า และข้อผิดพลาดล่าสุดเพื่อแนบไปกับรายงาน ทางลัด ที่อยู่เว็บ และเนื้อหาส่วนตัวอื่นๆ จะไม่อยู่ในไฟล์"
+  },
+  "settings_diagnostics_action": {
+    "message": "ส่งออกข้อมูลการวินิจฉัย"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "ส่งออกข้อมูลการวินิจฉัยแล้ว"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "ส่งออกข้อมูลการวินิจฉัยไม่ได้"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "ทัวร์แนะนำ"
   },

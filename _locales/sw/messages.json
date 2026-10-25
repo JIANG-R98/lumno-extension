@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Wasiliana na msanidi"
   },
+  "settings_diagnostics_title": {
+    "message": "Taarifa za uchunguzi"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Hamisha toleo, mipangilio na hitilafu za hivi karibuni ili uziambatishe kwenye ripoti. Njia za mkato, anwani za wavuti na maudhui mengine binafsi hayaingii kwenye faili."
+  },
+  "settings_diagnostics_action": {
+    "message": "Hamisha taarifa za uchunguzi"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Taarifa za uchunguzi zimehamishwa"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Imeshindwa kuhamisha taarifa za uchunguzi"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Ziara ya utangulizi"
   },

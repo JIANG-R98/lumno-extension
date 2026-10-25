@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "डेवलपर से संपर्क करें"
   },
+  "settings_diagnostics_title": {
+    "message": "डायग्नॉस्टिक्स"
+  },
+  "settings_diagnostics_desc": {
+    "message": "वर्ज़न, सेटिंग और हाल की गड़बड़ियाँ एक्सपोर्ट करें और रिपोर्ट के साथ जोड़ें। शॉर्टकट, वेब पते और दूसरी निजी सामग्री फ़ाइल में शामिल नहीं होती।"
+  },
+  "settings_diagnostics_action": {
+    "message": "डायग्नॉस्टिक्स एक्सपोर्ट करें"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "डायग्नॉस्टिक्स एक्सपोर्ट किए गए"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "डायग्नॉस्टिक्स एक्सपोर्ट नहीं हो सके"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "वेलकम टूर"
   },

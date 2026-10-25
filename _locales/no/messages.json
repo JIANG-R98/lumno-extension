@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Kontakt utvikleren"
   },
+  "settings_diagnostics_title": {
+    "message": "Diagnostikk"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Eksporter versjonen, innstillingene og nylige feil for å legge dem ved en rapport. Snarveier, nettadresser og annet personlig innhold kommer ikke med i filen."
+  },
+  "settings_diagnostics_action": {
+    "message": "Eksporter diagnostikk"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Diagnostikken er eksportert"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Kunne ikke eksportere diagnostikk"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Velkomstomvisning"
   },

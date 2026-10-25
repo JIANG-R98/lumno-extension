@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "ಲೇಖಕರನ್ನು ಸಂಪರ್ಕಿಸಿ"
   },
+  "settings_diagnostics_title": {
+    "message": "ರೋಗನಿರ್ಣಯ ಮಾಹಿತಿ"
+  },
+  "settings_diagnostics_desc": {
+    "message": "ಆವೃತ್ತಿ, ಸೆಟ್ಟಿಂಗ್\u200cಗಳು ಮತ್ತು ಇತ್ತೀಚಿನ ದೋಷಗಳನ್ನು ರಫ್ತು ಮಾಡಿ ವರದಿಗೆ ಲಗತ್ತಿಸಿ. ಶಾರ್ಟ್\u200cಕಟ್\u200cಗಳು, ವೆಬ್ ವಿಳಾಸಗಳು ಮತ್ತು ಇತರ ವೈಯಕ್ತಿಕ ವಿಷಯ ಫೈಲ್\u200cನಲ್ಲಿ ಸೇರುವುದಿಲ್ಲ."
+  },
+  "settings_diagnostics_action": {
+    "message": "ರೋಗನಿರ್ಣಯ ಮಾಹಿತಿ ರಫ್ತು ಮಾಡಿ"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "ರೋಗನಿರ್ಣಯ ಮಾಹಿತಿ ರಫ್ತು ಮಾಡಲಾಗಿದೆ"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "ರೋಗನಿರ್ಣಯ ಮಾಹಿತಿಯನ್ನು ರಫ್ತು ಮಾಡಲಾಗಲಿಲ್ಲ"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "ಸ್ವಾಗತ ಪ್ರವಾಸ"
   },

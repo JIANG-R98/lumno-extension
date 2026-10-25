@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Sazināties ar autoru"
   },
+  "settings_diagnostics_title": {
+    "message": "Diagnostika"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Eksportējiet versiju, iestatījumus un nesenās kļūdas, lai pievienotu tās ziņojumam. Saīsnes, tīmekļa adreses un cits personisks saturs failā netiek iekļauts."
+  },
+  "settings_diagnostics_action": {
+    "message": "Eksportēt diagnostiku"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Diagnostika eksportēta"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Neizdevās eksportēt diagnostiku"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Iepazīšanās ceļvedis"
   },

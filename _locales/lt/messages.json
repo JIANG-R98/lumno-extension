@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Susisiekti su autoriumi"
   },
+  "settings_diagnostics_title": {
+    "message": "Diagnostika"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Eksportuokite versiją, nustatymus ir naujausias klaidas, kad galėtumėte pridėti jas prie pranešimo. Nuorodos, žiniatinklio adresai ir kitas asmeninis turinys į failą nepatenka."
+  },
+  "settings_diagnostics_action": {
+    "message": "Eksportuoti diagnostiką"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Diagnostika eksportuota"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Nepavyko eksportuoti diagnostikos"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Įvadinis turas"
   },

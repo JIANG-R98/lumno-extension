@@ -281,6 +281,21 @@
   "settings_feedback_support_contact_author_action": {
     "message": "Hubungi pembangun"
   },
+  "settings_diagnostics_title": {
+    "message": "Diagnostik"
+  },
+  "settings_diagnostics_desc": {
+    "message": "Eksport versi, tetapan dan ralat terkini untuk dilampirkan pada laporan. Pintasan, alamat web dan kandungan peribadi lain tidak dimasukkan ke dalam fail."
+  },
+  "settings_diagnostics_action": {
+    "message": "Eksport diagnostik"
+  },
+  "settings_diagnostics_export_done": {
+    "message": "Diagnostik dieksport"
+  },
+  "settings_diagnostics_export_failed": {
+    "message": "Tidak dapat mengeksport diagnostik"
+  },
   "settings_onboarding_tutorial_action": {
     "message": "Lawatan pengenalan"
   },
