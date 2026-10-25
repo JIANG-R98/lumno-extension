@@ -339,9 +339,11 @@ function testStylesAndCopy() {
     });
   });
   const scripts = getPageScripts('newtab.html');
-  assert.ok(scripts.indexOf('src/newtab/bookmarks/bookmark-drag.ts') < scripts.indexOf('src/newtab/cross-surface-drag.ts') &&
-    scripts.indexOf('src/newtab/cross-surface-drag.ts') < scripts.indexOf('src/newtab/newtab.ts'),
-  'the cross-surface helpers load with the drag helpers, before the page runtime');
+  const pageRuntimeIndex = scripts.indexOf('src/newtab/newtab.ts');
+  ['src/newtab/bookmarks/bookmark-drag.ts', 'src/newtab/cross-surface-drag.ts'].forEach((helper) => {
+    const helperIndex = scripts.indexOf(helper);
+    assert.ok(helperIndex >= 0 && helperIndex < pageRuntimeIndex, `${helper} loads before the page runtime`);
+  });
 }
 
 (async () => {

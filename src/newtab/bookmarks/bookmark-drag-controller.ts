@@ -36,6 +36,8 @@ import type {
   TransferRecord
 } from './bookmark-move-history';
 import type { BookmarkItem, BookmarkNode } from './bookmarks-store';
+import * as BOOKMARK_DRAG_RULES from './bookmark-drag-rules';
+import type { AnimationRect } from './bookmark-drag-rules';
 import type { BookmarksRuntime } from './bookmarks-runtime';
 import type { FolderItemIcon, FolderItemIconMap } from './folder-item-icons';
 
@@ -143,15 +145,6 @@ interface PendingLayoutAnimation {
   draggedBookmarkId: string;
   draggedRect: AnimationRect | null;
   rects: Map<string, LayoutRect>;
-}
-
-interface AnimationRect {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-  width: number;
-  height: number;
 }
 
 type InsertLineTarget = GridInsertionTarget | ShortcutInsertionTarget;
@@ -267,13 +260,6 @@ function createBookmarkDragController(deps: BookmarkDragControllerDeps) {
     return getBookmarkReorderCards().findIndex((item) => item === card);
   }
 
-  function getBookmarkCardAllIndex(bookmarkId: unknown): number {
-    const id = String(bookmarkId || '');
-    return id
-      ? pageState.bookmarkAllItems.findIndex((item) => item && String(item.id || '') === id)
-      : -1;
-  }
-
   function getBookmarkPageStartIndex(): number {
     if (isBookmarkTopbarMode()) {
       return 0;
@@ -332,32 +318,10 @@ function createBookmarkDragController(deps: BookmarkDragControllerDeps) {
     return rects;
   }
 
-  function normalizeBookmarkAnimationRect(rect: Partial<AnimationRect> | null | undefined): AnimationRect | null {
-    if (!rect) {
-      return null;
-    }
-    const left = Number(rect.left);
-    const top = Number(rect.top);
-    const width = Number(rect.width);
-    const height = Number(rect.height);
-    if (!Number.isFinite(left) || !Number.isFinite(top) ||
-        !Number.isFinite(width) || !Number.isFinite(height)) {
-      return null;
-    }
-    return {
-      left,
-      top,
-      right: Number.isFinite(Number(rect.right)) ? Number(rect.right) : left + width,
-      bottom: Number.isFinite(Number(rect.bottom)) ? Number(rect.bottom) : top + height,
-      width,
-      height
-    };
-  }
-
   function getBookmarkDragVisualRect(state: BookmarkDragSession): AnimationRect | null {
     const visualElement = getBookmarkDragVisualElement(state);
     return visualElement
-      ? normalizeBookmarkAnimationRect(visualElement.getBoundingClientRect())
+      ? BOOKMARK_DRAG_RULES.normalizeAnimationRect(visualElement.getBoundingClientRect())
       : null;
   }
 
@@ -368,7 +332,7 @@ function createBookmarkDragController(deps: BookmarkDragControllerDeps) {
   ): void {
     const options = animationOptions || {};
     const rects = getBookmarkLayoutRectMapById();
-    const draggedRect = normalizeBookmarkAnimationRect(options.draggedRect);
+    const draggedRect = BOOKMARK_DRAG_RULES.normalizeAnimationRect(options.draggedRect);
     bookmarkPendingLayoutAnimation = rects.size > 0 || draggedRect
       ? {
         folderId: String(pageState.bookmarkCurrentFolderId || ''),
@@ -593,26 +557,7 @@ function createBookmarkDragController(deps: BookmarkDragControllerDeps) {
   // Foreign items share the bookmark edge insertion zones. A folder's center
   // accepts its contents; ordinary cards snap to the nearest row boundary.
   function isValidExternalBookmarkDropTarget(state: SurfaceDragState | null, target: DragDropTarget | null): boolean {
-    const nodeMap = bookmarksRuntime.getNodeMap();
-    if (!target || target.kind === 'blocked' || target.surface === 'shortcuts' ||
-        !NEWTAB_CROSS_SURFACE_DRAG.isBookmarkFolderDropTarget(target.folderId, nodeMap)) {
-      return false;
-    }
-    const destination = nodeMap.get(String(target.folderId));
-    if (!destination || destination.unmodifiable) {
-      return false;
-    }
-    if (target.kind === 'return') {
-      const source = state ? nodeMap.get(String(state.bookmarkId || '')) : undefined;
-      if (!state || !source || source.url || !state.shortcutId ||
-          String(target.bookmarkId) !== String(source.id) ||
-          String(target.folderId) !== String(source.parentId)) {
-        return false;
-      }
-    }
-    return !state || !state.bookmarkId || !NEWTAB_BOOKMARK_MOVE_HISTORY.isFolderInsideBookmark(
-      nodeMap, state.bookmarkId, target.folderId
-    );
+    return BOOKMARK_DRAG_RULES.isExternalBookmarkDropAllowed(state, target, bookmarksRuntime.getNodeMap());
   }
 
   function resolveExternalBookmarkDropTarget(state: SurfaceDragState | null, dropTarget: DragDropTarget): DragDropTarget {
@@ -1742,32 +1687,7 @@ function createBookmarkDragController(deps: BookmarkDragControllerDeps) {
 
   // Where the card the drag reordered sits among its folder's bookmarks.
   function getBookmarkMoveDestination(bookmarkId: unknown): BookmarkLocation | null {
-    const movedIndex = getBookmarkCardAllIndex(bookmarkId);
-    if (movedIndex < 0) {
-      return null;
-    }
-    const movedItem = pageState.bookmarkAllItems[movedIndex];
-    const parentId = String((movedItem && movedItem.parentId) || pageState.bookmarkCurrentFolderId || '');
-    if (!parentId) {
-      return null;
-    }
-    const afterItem = pageState.bookmarkAllItems.slice(movedIndex + 1).find((item) =>
-      item && String(item.parentId || parentId) === parentId && Number.isFinite(Number(item.index))
-    );
-    let destinationIndex = 0;
-    if (afterItem) {
-      destinationIndex = Number(afterItem.index);
-    } else {
-      const beforeItems = pageState.bookmarkAllItems.slice(0, movedIndex).reverse();
-      const beforeItem = beforeItems.find((item) =>
-        item && String(item.parentId || parentId) === parentId && Number.isFinite(Number(item.index))
-      );
-      destinationIndex = beforeItem ? Number(beforeItem.index) + 1 : 0;
-    }
-    return {
-      parentId,
-      index: Math.max(0, Math.round(destinationIndex))
-    };
+    return BOOKMARK_DRAG_RULES.getMoveDestination(pageState.bookmarkAllItems, bookmarkId, pageState.bookmarkCurrentFolderId);
   }
 
   function getBookmarkDeleteRecord(target: BookmarkDeleteTarget | null) {
@@ -1850,13 +1770,11 @@ function createBookmarkDragController(deps: BookmarkDragControllerDeps) {
   }
 
   function getBookmarkUndoShortcutLabel(): string {
-    const isMac = /Mac|iPhone|iPad|iPod/i.test(String(navigator.platform || navigator.userAgent || ''));
-    return isMac ? '⌘Z' : 'Ctrl+Z';
+    return BOOKMARK_DRAG_RULES.getUndoShortcutLabels(navigator).undo;
   }
 
   function getBookmarkRedoShortcutLabel(): string {
-    const isMac = /Mac|iPhone|iPad|iPod/i.test(String(navigator.platform || navigator.userAgent || ''));
-    return isMac ? '⇧⌘Z' : 'Ctrl+Shift+Z';
+    return BOOKMARK_DRAG_RULES.getUndoShortcutLabels(navigator).redo;
   }
 
   function refreshOpenBookmarkCascadeMenu(refreshOptions?: CascadeRefreshOptions): Promise<boolean> {
@@ -2408,13 +2326,6 @@ function createBookmarkDragController(deps: BookmarkDragControllerDeps) {
     }
   }
 
-  // On macOS a Control-click is a right-click. Starting a drag on it would
-  // make the context menu that follows ignore the press.
-  function isMacContextClick(event: MouseEvent): boolean {
-    return Boolean(event && event.ctrlKey) &&
-      /Mac|iPhone|iPad|iPod/i.test(String(navigator.platform || navigator.userAgent || ''));
-  }
-
   function beginBookmarkDragPointerTracking(
     event: PointerEvent,
     card: BookmarkDragSource | null,
@@ -2422,7 +2333,7 @@ function createBookmarkDragController(deps: BookmarkDragControllerDeps) {
     sourceKind: 'card' | 'cascade'
   ): boolean {
     if (!event || !card || pageState.bookmarkDragState || pageState.bookmarkMoveHistoryBusy ||
-        isMacContextClick(event)) {
+        BOOKMARK_DRAG_RULES.isMacContextClick(event, navigator)) {
       return false;
     }
     const bookmarkId = getBookmarkCardId(card);
