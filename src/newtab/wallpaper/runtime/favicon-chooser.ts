@@ -1,8 +1,51 @@
-// @ts-nocheck
 // The New Tab favicon the appearance panel picks: the built-in icons, the
 // theme-aware SVG link kept in step with the browser theme across tabs, and
 // the cached choice the next page load starts from.
-function createFaviconChooser(deps) {
+import type { StorageAreaLike } from '../../../domain/storage-port';
+import type { FormatMessage, ShowToast, Translate } from '../../newtab-types';
+import type { WallpaperStorage } from './wallpaper-storage';
+import type { WallpaperVisual } from './wallpaper-visual';
+import type { WallpaperState } from './wallpaper-runtime-types';
+
+// A favicon the panel offers.
+interface NewtabFaviconOption {
+  id: string;
+  nameKey: string;
+  fallbackName: string;
+  file: string;
+  type: string;
+  sizes?: string;
+  // How the panel previews it.
+  preview?: 'inlineSvg';
+  // Drawn as an SVG data URL in the browser theme's colors.
+  themeAwareSvg?: boolean;
+}
+
+type FaviconTheme = 'light' | 'dark';
+
+interface FaviconChooserDeps extends Pick<WallpaperVisual, 'getRuntimeAssetUrl'>,
+  Pick<WallpaperStorage, 'writeStorageValue' | 'readStorageValue'> {
+  NEWTAB_FAVICON_OPTIONS: readonly NewtabFaviconOption[];
+  NEWTAB_FAVICON_DEFAULT_ID: string;
+  t: Translate;
+  window: Window;
+  NEWTAB_FAVICON_SVG_SHADOW_PATH: string;
+  NEWTAB_FAVICON_SVG_MAIN_PATH: string;
+  BroadcastChannelCtor: typeof BroadcastChannel | null;
+  document: Document;
+  renderWallpaperPanelState(): void;
+  storageArea: Pick<StorageAreaLike, 'get' | 'set'> | null;
+  NEWTAB_FAVICON_STORAGE_KEY: string;
+  showToast: ShowToast;
+  formatMessage: FormatMessage;
+  wallpaperState: Pick<WallpaperState, 'currentNewtabFaviconId'>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function createFaviconChooser(deps: FaviconChooserDeps) {
   const {
     NEWTAB_FAVICON_OPTIONS,
     NEWTAB_FAVICON_DEFAULT_ID,
@@ -29,7 +72,7 @@ function createFaviconChooser(deps) {
   const NEWTAB_FAVICON_THEME_BROADCAST_CHANNEL = 'lumno:newtab-favicon-theme';
   const NEWTAB_FAVICON_THEME_REFRESH_ACTION = 'lumno:newtab-favicon-theme-refresh';
   const NEWTAB_FAVICON_PRELOAD_STORAGE_KEY = '_x_extension_newtab_favicon_preload_2026_unique_';
-  const NEWTAB_FAVICON_THEMES = {
+  const NEWTAB_FAVICON_THEMES: Record<FaviconTheme, { color: string; shadowOpacity: string; mainOpacity: string }> = {
     light: {
       color: '#000000',
       shadowOpacity: '0.2',
@@ -42,55 +85,55 @@ function createFaviconChooser(deps) {
     }
   };
   let hasNewtabFaviconBootstrapStarted = false;
-  let initialNewtabFaviconReadyPromise = null;
-  let newtabFaviconThemeQueryList = null;
-  let newtabFaviconThemeChangeHandler = null;
+  let initialNewtabFaviconReadyPromise: Promise<void> | null = null;
+  let newtabFaviconThemeQueryList: MediaQueryList | null = null;
+  let newtabFaviconThemeChangeHandler: (() => void) | null = null;
   let hasNewtabFaviconLifecycleListeners = false;
-  let newtabFaviconLifecycleRefreshHandler = null;
-  let newtabFaviconThemeBroadcastChannel = null;
+  let newtabFaviconLifecycleRefreshHandler: (() => void) | null = null;
+  let newtabFaviconThemeBroadcastChannel: BroadcastChannel | null = null;
   let hasNewtabFaviconThemeBroadcastListener = false;
 
-  function getNewtabFaviconById(id) {
+  function getNewtabFaviconById(id: unknown): NewtabFaviconOption | null {
     const normalizedId = String(id || '').trim();
     return NEWTAB_FAVICON_OPTIONS.find((item) => item && item.id === normalizedId) || null;
   }
 
-  function normalizeNewtabFaviconId(value) {
-    const raw = value && typeof value === 'object' && value.id
+  function normalizeNewtabFaviconId(value: unknown): string {
+    const raw = isRecord(value) && value.id
       ? value.id
       : value;
     const id = String(raw || '').trim();
     return getNewtabFaviconById(id) ? id : NEWTAB_FAVICON_DEFAULT_ID;
   }
 
-  function getNewtabFaviconDisplayName(item) {
+  function getNewtabFaviconDisplayName(item: NewtabFaviconOption | null): string {
     if (!item) {
       return '';
     }
     return t(item.nameKey, item.fallbackName || item.id || '');
   }
 
-  function getNewtabFaviconUrl(item) {
+  function getNewtabFaviconUrl(item: NewtabFaviconOption | null | undefined): string {
     return item && item.file ? getRuntimeAssetUrl(item.file) : '';
   }
 
-  function getNewtabFaviconThemeQueryList() {
+  function getNewtabFaviconThemeQueryList(): MediaQueryList | null {
     if (!window || typeof window.matchMedia !== 'function') {
       return null;
     }
     try {
       return window.matchMedia(NEWTAB_FAVICON_THEME_QUERY);
-    } catch (_error) {
+    } catch {
       return null;
     }
   }
 
-  function getNewtabFaviconBrowserTheme() {
+  function getNewtabFaviconBrowserTheme(): FaviconTheme {
     const queryList = getNewtabFaviconThemeQueryList();
     return queryList && queryList.matches ? 'dark' : 'light';
   }
 
-  function buildNewtabFaviconSvgDataUrl(themeName) {
+  function buildNewtabFaviconSvgDataUrl(themeName: FaviconTheme): string {
     const theme = NEWTAB_FAVICON_THEMES[themeName] || NEWTAB_FAVICON_THEMES.light;
     const svg = [
       '<svg width="104" height="104" viewBox="0 0 104 104" fill="none" xmlns="http://www.w3.org/2000/svg">',
@@ -101,25 +144,25 @@ function createFaviconChooser(deps) {
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
   }
 
-  function getNewtabFaviconHref(item) {
+  function getNewtabFaviconHref(item: NewtabFaviconOption): string {
     if (item && item.themeAwareSvg) {
       return buildNewtabFaviconSvgDataUrl(getNewtabFaviconBrowserTheme());
     }
     return getNewtabFaviconUrl(item);
   }
 
-  function cacheNewtabFaviconPreloadId(id) {
+  function cacheNewtabFaviconPreloadId(id: unknown): void {
     const normalizedId = normalizeNewtabFaviconId(id);
     try {
       if (window && window.localStorage) {
         window.localStorage.setItem(NEWTAB_FAVICON_PRELOAD_STORAGE_KEY, normalizedId);
       }
-    } catch (_error) {
+    } catch {
       // The main runtime still applies the favicon even when localStorage is unavailable.
     }
   }
 
-  function clearNewtabFaviconThemeListener() {
+  function clearNewtabFaviconThemeListener(): void {
     if (!newtabFaviconThemeQueryList || !newtabFaviconThemeChangeHandler) {
       newtabFaviconThemeQueryList = null;
       newtabFaviconThemeChangeHandler = null;
@@ -134,7 +177,7 @@ function createFaviconChooser(deps) {
     newtabFaviconThemeChangeHandler = null;
   }
 
-  function applyNewtabFaviconLinkAttributes(link, item) {
+  function applyNewtabFaviconLinkAttributes(link: Element, item: NewtabFaviconOption): void {
     const themeName = item && item.themeAwareSvg ? getNewtabFaviconBrowserTheme() : '';
     link.setAttribute('rel', 'icon');
     link.setAttribute('type', item.type || 'image/png');
@@ -152,7 +195,7 @@ function createFaviconChooser(deps) {
     }
   }
 
-  function refreshNewtabFaviconLink() {
+  function refreshNewtabFaviconLink(): void {
     const item = getNewtabFaviconById(wallpaperState.currentNewtabFaviconId) ||
       getNewtabFaviconById(NEWTAB_FAVICON_DEFAULT_ID);
     const link = getNewtabFaviconLink();
@@ -161,14 +204,14 @@ function createFaviconChooser(deps) {
     }
   }
 
-  function refreshNewtabFaviconLinkIfThemeAware() {
+  function refreshNewtabFaviconLinkIfThemeAware(): void {
     const item = getNewtabFaviconById(wallpaperState.currentNewtabFaviconId);
     if (item && item.themeAwareSvg) {
       refreshNewtabFaviconLink();
     }
   }
 
-  function getNewtabFaviconThemeBroadcastChannel() {
+  function getNewtabFaviconThemeBroadcastChannel(): BroadcastChannel | null {
     if (newtabFaviconThemeBroadcastChannel) {
       return newtabFaviconThemeBroadcastChannel;
     }
@@ -177,13 +220,13 @@ function createFaviconChooser(deps) {
     }
     try {
       newtabFaviconThemeBroadcastChannel = new BroadcastChannelCtor(NEWTAB_FAVICON_THEME_BROADCAST_CHANNEL);
-    } catch (_error) {
+    } catch {
       newtabFaviconThemeBroadcastChannel = null;
     }
     return newtabFaviconThemeBroadcastChannel;
   }
 
-  function bindNewtabFaviconThemeBroadcastListener() {
+  function bindNewtabFaviconThemeBroadcastListener(): void {
     if (hasNewtabFaviconThemeBroadcastListener) {
       return;
     }
@@ -192,9 +235,9 @@ function createFaviconChooser(deps) {
     if (!channel) {
       return;
     }
-    const handleMessage = (event) => {
-      const data = event && event.data ? event.data : null;
-      if (!data || data.action !== NEWTAB_FAVICON_THEME_REFRESH_ACTION) {
+    const handleMessage = (event: MessageEvent) => {
+      const data: unknown = event && event.data ? event.data : null;
+      if (!isRecord(data) || data.action !== NEWTAB_FAVICON_THEME_REFRESH_ACTION) {
         return;
       }
       refreshNewtabFaviconLinkIfThemeAware();
@@ -206,7 +249,7 @@ function createFaviconChooser(deps) {
     }
   }
 
-  function broadcastNewtabFaviconThemeRefresh() {
+  function broadcastNewtabFaviconThemeRefresh(): void {
     const channel = getNewtabFaviconThemeBroadcastChannel();
     if (!channel || typeof channel.postMessage !== 'function') {
       return;
@@ -216,12 +259,12 @@ function createFaviconChooser(deps) {
         action: NEWTAB_FAVICON_THEME_REFRESH_ACTION,
         at: Date.now()
       });
-    } catch (_error) {
+    } catch {
       // BroadcastChannel can be unavailable in constrained extension contexts.
     }
   }
 
-  function bindNewtabFaviconLifecycleRefreshListeners() {
+  function bindNewtabFaviconLifecycleRefreshListeners(): void {
     if (hasNewtabFaviconLifecycleListeners) {
       return;
     }
@@ -238,7 +281,7 @@ function createFaviconChooser(deps) {
     }
   }
 
-  function bindNewtabFaviconThemeListener(item) {
+  function bindNewtabFaviconThemeListener(item: NewtabFaviconOption | null): void {
     clearNewtabFaviconThemeListener();
     if (!item || !item.themeAwareSvg) {
       return;
@@ -261,15 +304,14 @@ function createFaviconChooser(deps) {
     }
   }
 
-  function getNewtabFaviconLink() {
-    const head = document.head || document.getElementsByTagName && document.getElementsByTagName('head')[0];
+  function getNewtabFaviconLink(): Element | null {
+    const head: HTMLHeadElement | undefined = document.head || document.getElementsByTagName('head')[0];
     if (!head) {
       return null;
     }
-    const children = Array.from(head.children || []);
-    let link = children.find((child) => child &&
+    const children = Array.from(head.children);
+    let link = children.find((child) =>
       String(child.tagName || '').toUpperCase() === 'LINK' &&
-      child.getAttribute &&
       child.getAttribute('data-lumno-newtab-favicon') === 'true');
     if (!link) {
       link = document.createElement('link');
@@ -279,7 +321,7 @@ function createFaviconChooser(deps) {
     return link;
   }
 
-  function applyNewtabFavicon(value) {
+  function applyNewtabFavicon(value: unknown): void {
     const nextId = normalizeNewtabFaviconId(value);
     const item = getNewtabFaviconById(nextId) || getNewtabFaviconById(NEWTAB_FAVICON_DEFAULT_ID);
     wallpaperState.currentNewtabFaviconId = item ? item.id : NEWTAB_FAVICON_DEFAULT_ID;
@@ -292,7 +334,7 @@ function createFaviconChooser(deps) {
     renderWallpaperPanelState();
   }
 
-  function persistNewtabFavicon(value) {
+  function persistNewtabFavicon(value: unknown): void {
     const nextId = normalizeNewtabFaviconId(value);
     applyNewtabFavicon(nextId);
     writeStorageValue(storageArea, NEWTAB_FAVICON_STORAGE_KEY, nextId, () => {
@@ -300,7 +342,7 @@ function createFaviconChooser(deps) {
     });
   }
 
-  function bootstrapInitialNewtabFavicon() {
+  function bootstrapInitialNewtabFavicon(): Promise<void> {
     if (hasNewtabFaviconBootstrapStarted) {
       return initialNewtabFaviconReadyPromise || Promise.resolve();
     }
@@ -340,4 +382,7 @@ function createFaviconChooser(deps) {
   };
 }
 
+type FaviconChooser = ReturnType<typeof createFaviconChooser>;
+
 export { createFaviconChooser };
+export type { FaviconChooser, FaviconChooserDeps, NewtabFaviconOption };
