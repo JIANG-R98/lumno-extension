@@ -32,6 +32,7 @@ import {
 } from './shortcut-dialog-helpers';
 import { isNode } from '../../shared/dom-guards';
 import { queryHtmlTag } from '../../shared/dom-lookup';
+import { innerHtml } from '../../shared/react/inner-html';
 
 type Translate = (key: string, fallback: string) => string;
 type IconAction = 'keep' | 'replace' | 'remove';
@@ -911,9 +912,7 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                     'About supported URLs'
                   )}
                   aria-describedby={urlInfoId}
-                  dangerouslySetInnerHTML={{
-                    __html: options.getRiSvg('ri-information-line', 'ri-size-14')
-                  }}
+                  dangerouslySetInnerHTML={innerHtml(options.getRiSvg('ri-information-line', 'ri-size-14'))}
                 />
               </div>
               <div
@@ -1023,9 +1022,7 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                     isBuiltinIcon ? 'About built-in icons' : 'About local shortcut icons'
                   )}
                   aria-describedby={iconInfoId}
-                  dangerouslySetInnerHTML={{
-                    __html: options.getRiSvg('ri-information-line', 'ri-size-14')
-                  }}
+                  dangerouslySetInnerHTML={innerHtml(options.getRiSvg('ri-information-line', 'ri-size-14'))}
                 /> : null}
               </div>
 
@@ -1043,9 +1040,7 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                         />
                       </span>
                     ) : (
-                      <span aria-hidden="true" dangerouslySetInnerHTML={{
-                        __html: options.getRiSvg('ri-link', 'ri-size-24')
-                      }} />
+                      <span aria-hidden="true" dangerouslySetInnerHTML={innerHtml(options.getRiSvg('ri-link', 'ri-size-24'))} />
                     )}
                   </span>
                   {!isBuiltinIcon ? <button
@@ -1065,7 +1060,7 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                       ref={iconRefreshGlyphRef}
                       className="x-nt-shortcut-icon-refresh-glyph x-lumno-busy-spin"
                       aria-hidden="true"
-                      dangerouslySetInnerHTML={{ __html: options.getRiSvg(formState.iconRefreshSuccess ? 'ri-check-line' : 'ri-refresh-line', 'ri-size-16') }}
+                      dangerouslySetInnerHTML={innerHtml(options.getRiSvg(formState.iconRefreshSuccess ? 'ri-check-line' : 'ri-refresh-line', 'ri-size-16'))}
                     />
                     <span ref={iconRefreshLabelRef} className="x-nt-shortcut-icon-refresh-label" aria-live="polite">{refreshLabel}</span>
                   </button> : null}
@@ -1106,9 +1101,7 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                     <span
                       className="x-nt-wallpaper-upload-placeholder x-nt-shortcut-icon-placeholder"
                       hidden={hasIcon}
-                      dangerouslySetInnerHTML={{
-                        __html: options.getRiSvg('ri-add-large-line', 'ri-size-18')
-                      }}
+                      dangerouslySetInnerHTML={innerHtml(options.getRiSvg('ri-add-large-line', 'ri-size-18'))}
                     />
                   </span>
                   <button
@@ -1119,9 +1112,7 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                     disabled={disabled}
                     aria-label={options.t('newtab_shortcuts_icon_remove', 'Remove')}
                     onClick={handleIconRemove}
-                    dangerouslySetInnerHTML={{
-                      __html: options.getRiSvg('ri-subtract-line', 'ri-size-14')
-                    }}
+                    dangerouslySetInnerHTML={innerHtml(options.getRiSvg('ri-subtract-line', 'ri-size-14'))}
                   />
                 </div>
                 <input
@@ -1199,7 +1190,7 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                     disabled={formState.busy}
                     style={getIconPlateStyle(autoPlate)}
                     onClick={() => selectPlateColor('')}
-                    dangerouslySetInnerHTML={{ __html: options.getRiSvg('ri-magic-line', 'ri-size-14') }}
+                    dangerouslySetInnerHTML={innerHtml(options.getRiSvg('ri-magic-line', 'ri-size-14'))}
                   />
                   {plateColorChoices.map((color) => (
                     <button
@@ -1244,7 +1235,7 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                           sourceElement: event.currentTarget
                         });
                       }}
-                      dangerouslySetInnerHTML={{ __html: options.getRiSvg('ri-palette-line', 'ri-size-16') }}
+                      dangerouslySetInnerHTML={innerHtml(options.getRiSvg('ri-palette-line', 'ri-size-16'))}
                     />
                   ) : null}
                 </div>

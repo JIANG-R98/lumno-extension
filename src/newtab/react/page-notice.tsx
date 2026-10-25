@@ -2,6 +2,7 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import * as LumnoMessaging from '../../platform/messaging';
 import type { MessageRuntime } from '../../platform/messaging';
+import { innerHtml } from '../../shared/react/inner-html';
 
 export const PAGE_NOTICE_ID =
   '_x_extension_newtab_notice_banner_2026_unique_';
@@ -108,9 +109,7 @@ function PageNotice({
         <div
           aria-hidden="true"
           className="x-nt-page-notice-icon"
-          dangerouslySetInnerHTML={{
-            __html: getRiSvg('ri-error-warning-line', 'ri-size-20')
-          }}
+          dangerouslySetInnerHTML={innerHtml(getRiSvg('ri-error-warning-line', 'ri-size-20'))}
         />
         <div className="x-nt-page-notice-message">
           {getMessage(
@@ -142,9 +141,7 @@ function PageNotice({
           '关闭提示'
         )}
         className="x-nt-page-notice-close"
-        dangerouslySetInnerHTML={{
-          __html: getRiSvg('ri-close-line', 'ri-size-16')
-        }}
+        dangerouslySetInnerHTML={innerHtml(getRiSvg('ri-close-line', 'ri-size-16'))}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();

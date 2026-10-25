@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { getEmptyStateArtMarkup } from '../ui/empty-state-art';
 import { createReactRootController, type ReactRootController } from './root-controller';
+import { innerHtml } from './inner-html';
 
 // The link preview window over a page: the receded page behind it, the
 // frame, the notice for a page that refuses to be framed, the buttons
@@ -183,7 +184,7 @@ function LinkPreviewView({ model, handlers, refs, styles, toastStylesheetUrl, bl
               src={model.frameUrl}
             />
             <div className="notice">
-              <span dangerouslySetInnerHTML={{ __html: blockedArt }} />
+              <span dangerouslySetInnerHTML={innerHtml(blockedArt)} />
               <div>{model.labels.blocked}</div>
               <button onClick={handlers.onOpenInTab} type="button">{model.labels.openInTab}</button>
             </div>

@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
+import { innerHtml } from '../../shared/react/inner-html';
 
 export const PAGE_STRUCTURE_IDS = Object.freeze({
   suggestionsContainer:
@@ -107,26 +108,20 @@ function BookmarkStructure({
         <div className="x-nt-bookmarks-pager" ref={pagerRef}>
           <button
             className="x-nt-bookmarks-pager-btn"
-            dangerouslySetInnerHTML={{
-              __html: getRiSvg('ri-arrow-left-s-line', 'ri-size-16')
-            }}
+            dangerouslySetInnerHTML={innerHtml(getRiSvg('ri-arrow-left-s-line', 'ri-size-16'))}
             ref={previousButtonRef}
             type="button"
           />
           <button
             className="x-nt-bookmarks-pager-btn"
-            dangerouslySetInnerHTML={{
-              __html: getRiSvg('ri-arrow-right-s-line', 'ri-size-16')
-            }}
+            dangerouslySetInnerHTML={innerHtml(getRiSvg('ri-arrow-right-s-line', 'ri-size-16'))}
             ref={nextButtonRef}
             type="button"
           />
           {/* Firefox gives extensions no way to open its bookmarks Library. */}
           <button
             className="x-nt-bookmarks-pager-btn"
-            dangerouslySetInnerHTML={{
-              __html: getRiSvg('ri-bookmark-line', 'ri-size-16')
-            }}
+            dangerouslySetInnerHTML={innerHtml(getRiSvg('ri-bookmark-line', 'ri-size-16'))}
             data-browser-only="chromium"
             ref={managerButtonRef}
             type="button"

@@ -25,6 +25,7 @@ import {
 } from './wallpaper-tiles';
 import type { WallpaperPanelContext } from './use-wallpaper-panel';
 import { isNode } from '../../../shared/dom-guards';
+import { innerHtml } from '../../../shared/react/inner-html';
 
 export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
   const {
@@ -191,9 +192,7 @@ export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
             <span className="x-nt-wallpaper-thumb x-nt-wallpaper-upload-thumb">
               <span
                 className="x-nt-wallpaper-upload-placeholder"
-                dangerouslySetInnerHTML={{
-                  __html: String(model.icons?.add || '')
-                }}
+                dangerouslySetInnerHTML={innerHtml(String(model.icons?.add || ''))}
               />
             </span>
           </div>
@@ -214,9 +213,7 @@ export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
             <span className="x-nt-wallpaper-thumb x-nt-wallpaper-upload-thumb">
               <span
                 className="x-nt-wallpaper-upload-placeholder"
-                dangerouslySetInnerHTML={{
-                  __html: String(model.icons?.link || '')
-                }}
+                dangerouslySetInnerHTML={innerHtml(String(model.icons?.link || ''))}
               />
             </span>
           </div>
@@ -293,9 +290,7 @@ export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
                 <span
                   aria-hidden="true"
                   className="x-nt-bing-refresh-glyph x-lumno-busy-spin"
-                  dangerouslySetInnerHTML={{
-                    __html: String(model.icons?.refresh || '')
-                  }}
+                  dangerouslySetInnerHTML={innerHtml(String(model.icons?.refresh || ''))}
                 />
               </button>
             </div>
@@ -366,9 +361,7 @@ export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
                 <span
                   aria-hidden="true"
                   className="x-nt-bing-refresh-glyph"
-                  dangerouslySetInnerHTML={{
-                    __html: String(model.icons?.refresh || '')
-                  }}
+                  dangerouslySetInnerHTML={innerHtml(String(model.icons?.refresh || ''))}
                 />
               </button>
             </div>

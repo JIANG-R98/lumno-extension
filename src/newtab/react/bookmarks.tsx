@@ -17,6 +17,7 @@ import {
 import type { CursorTooltipOptions } from '../../shared/ui/cursor-tooltip';
 import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 import { queryHtmlTags } from '../../shared/dom-lookup';
+import { innerHtml } from '../../shared/react/inner-html';
 
 // A site's theme as the page resolves it; the view passes it through.
 type ThemeValue = Partial<ThemeVariant> | null;
@@ -1044,12 +1045,10 @@ function BookmarkCard({
           type="button"
           className="x-nt-bookmark-copy-action"
           aria-label={options.t('bookmarks_copy_url', 'Copy link')}
-          dangerouslySetInnerHTML={{
-            __html: options.getRiSvg(
+          dangerouslySetInnerHTML={innerHtml(options.getRiSvg(
               'ri-file-copy-line',
               'ri-size-16'
-            )
-          }}
+            ))}
           onPointerEnter={() => {
             options.hideCursorTooltip();
             setCopyActionVisible(true);
@@ -1152,7 +1151,7 @@ function EmptyFolderState({
       <span
         ref={artRef}
         className="x-nt-bookmark-empty__art"
-        dangerouslySetInnerHTML={{ __html: artMarkup }}
+        dangerouslySetInnerHTML={innerHtml(artMarkup)}
       />
       <span>{options.t('bookmarks_empty_folder', '暂无内容')}</span>
     </div>

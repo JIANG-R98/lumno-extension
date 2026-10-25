@@ -19,6 +19,7 @@ import { surfaceClass, setSurfaceStyle } from './surface-options';
 import { bindTextTooltip } from './highlight';
 import { setIconEmphasis } from './action-styles';
 import { queryHtmlTag } from '../../../dom-lookup';
+import { innerHtml } from '../../inner-html';
 
 function OpenTabRowComponent({
   runtime,
@@ -364,12 +365,10 @@ function OpenTabRowComponent({
                     ? 'x-ov-inline-icon'
                     : undefined
                 }
-                dangerouslySetInnerHTML={{
-                  __html: options.getRiSvg(
+                dangerouslySetInnerHTML={innerHtml(options.getRiSvg(
                     'ri-arrow-right-line',
                     'ri-size-12'
-                  )
-                }}
+                  ))}
               />
             </>
           )}

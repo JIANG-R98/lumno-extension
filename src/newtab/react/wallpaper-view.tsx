@@ -22,6 +22,7 @@ import { QuoteSection } from './wallpaper-panel/quote-section';
 import { WallpaperSection } from './wallpaper-panel/wallpaper-section';
 import { FaviconSection } from './wallpaper-panel/favicon-section';
 import { queryHtmlElement, queryHtmlElements, queryHtmlTag } from '../../shared/dom-lookup';
+import { innerHtml } from '../../shared/react/inner-html';
 export { EFFECT_SLIDER_KEYS } from './wallpaper-panel/panel-model';
 export type { WallpaperSourceTab, WallpaperMode, ThemeScope, TopContentMode, TimeInk, GlassTheme, EffectSliderKey, WallpaperPanelModel, TileState, OnlineTileState, SelectedSourceState, DailyState, PanelSelectModel, CuratedMixState, WallpaperPanelActions, WallpaperPanelState } from './wallpaper-panel/panel-model';
 
@@ -108,9 +109,7 @@ function WallpaperPanel(props: WallpaperPanelProps) {
         className="x-nt-wallpaper-button"
         data-active={state.button.active ? 'true' : 'false'}
         data-open={state.open ? 'true' : 'false'}
-        dangerouslySetInnerHTML={{
-          __html: String(model.icons?.wallpaper || '')
-        }}
+        dangerouslySetInnerHTML={innerHtml(String(model.icons?.wallpaper || ''))}
         onBlur={() => actions.hideTooltip()}
         onClick={(event) => {
           event.preventDefault();

@@ -7,6 +7,7 @@ import {
   getEmptyStateArtMarkup,
   type EmptyStateArtName
 } from '../../../ui/empty-state-art';
+import { innerHtml } from '../../inner-html';
 
 const EMPTY_ART_SIZE = 120;
 
@@ -47,7 +48,7 @@ export function EmptyState({
           options,
           'x-nt-empty-state__art'
         )}
-        dangerouslySetInnerHTML={{ __html: artMarkup }}
+        dangerouslySetInnerHTML={innerHtml(artMarkup)}
       />
       <span
         className={surfaceClass(

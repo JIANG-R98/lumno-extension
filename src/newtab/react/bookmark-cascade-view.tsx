@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { queryHtmlTag, queryHtmlTags } from '../../shared/dom-lookup';
 import { isHtmlTag } from '../../shared/dom-guards';
+import { innerHtml } from '../../shared/react/inner-html';
 
 export interface CascadeItemView {
   button: HTMLButtonElement;
@@ -158,11 +159,9 @@ function CascadeLevel({
                 <span
                   aria-hidden="true"
                   className="x-nt-bookmark-cascade-icon x-nt-bookmark-cascade-icon--folder"
-                  dangerouslySetInnerHTML={{
-                    __html: getFigmaFolderSvg(
+                  dangerouslySetInnerHTML={innerHtml(getFigmaFolderSvg(
                       `${String(item.id || 'folder')}-cascade-${index}`, String(item.id || '')
-                    )
-                  }}
+                    ))}
                 />
               ) : (
                 <img
@@ -177,12 +176,10 @@ function CascadeLevel({
                 <span
                   aria-hidden="true"
                   className="x-nt-bookmark-cascade-arrow"
-                  dangerouslySetInnerHTML={{
-                    __html: getRiSvg(
+                  dangerouslySetInnerHTML={innerHtml(getRiSvg(
                       'ri-arrow-right-s-line',
                       'ri-size-16'
-                    )
-                  }}
+                    ))}
                 />
               ) : null}
             </button>
@@ -191,9 +188,7 @@ function CascadeLevel({
                 aria-label={copyLabel}
                 className="x-nt-bookmark-cascade-copy-trigger"
                 data-tooltip={copyLabel}
-                dangerouslySetInnerHTML={{
-                  __html: getRiSvg('ri-file-copy-line', 'ri-size-16')
-                }}
+                dangerouslySetInnerHTML={innerHtml(getRiSvg('ri-file-copy-line', 'ri-size-16'))}
                 type="button"
               />
             ) : null}

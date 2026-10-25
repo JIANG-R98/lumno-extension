@@ -20,6 +20,7 @@ import {
 } from './shortcut-dialog-helpers';
 import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 import { queryHtmlElements, queryHtmlTag, queryHtmlTags } from '../../shared/dom-lookup';
+import { innerHtml } from '../../shared/react/inner-html';
 
 // A site's theme as the page resolves it; the view passes it through.
 type ThemeValue = Partial<ThemeVariant> | null;
@@ -619,7 +620,7 @@ function ShortcutGroupHeader({
           event.stopPropagation();
           openMenu();
         }}
-        dangerouslySetInnerHTML={{ __html: options.getGroupMoreIconSvg() }}
+        dangerouslySetInnerHTML={innerHtml(options.getGroupMoreIconSvg())}
       />
     </div>
   );
@@ -683,7 +684,7 @@ function ShortcutsList({
               >
                 <span
                   className="x-nt-shortcut-icon x-nt-shortcut-icon--add"
-                  dangerouslySetInnerHTML={{ __html: options.getAddIconSvg() }}
+                  dangerouslySetInnerHTML={innerHtml(options.getAddIconSvg())}
                 />
               </button>
             ]
@@ -712,7 +713,7 @@ function ShortcutsList({
       >
         <span
           className="x-nt-shortcut-icon x-nt-shortcut-icon--add"
-          dangerouslySetInnerHTML={{ __html: options.getAddIconSvg() }}
+          dangerouslySetInnerHTML={innerHtml(options.getAddIconSvg())}
         />
       </button>
     </>

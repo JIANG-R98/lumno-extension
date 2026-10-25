@@ -16,6 +16,7 @@ import type {
   SuggestionElement
 } from './types';
 import { surfaceClass, setSurfaceStyle } from './surface-options';
+import { innerHtml } from '../../inner-html';
 
 export function getBrowserFallbackIcon(
   options: NormalizedOptions,
@@ -168,9 +169,7 @@ function InlineIcon({
         'x-nt-suggestion-inline-icon'
       )}
       data-tone={tone || undefined}
-      dangerouslySetInnerHTML={{
-        __html: options.getRiSvg(name, 'ri-size-16')
-      }}
+      dangerouslySetInnerHTML={innerHtml(options.getRiSvg(name, 'ri-size-16'))}
     />
   );
 }
@@ -422,9 +421,7 @@ export function SuggestionUtilityAction({
         )}
         data-visible="false"
         aria-label={tooltip}
-        dangerouslySetInnerHTML={{
-          __html: options.getRiSvg(iconName, 'ri-size-14')
-        }}
+        dangerouslySetInnerHTML={innerHtml(options.getRiSvg(iconName, 'ri-size-14'))}
         onMouseEnter={applyHover}
         onMouseLeave={reset}
         onFocus={applyHover}

@@ -7,6 +7,7 @@ import type {
   FeatureHintViewOptions
 } from '../../types/view-apis';
 import { queryHtmlTag, queryHtmlTags } from '../dom-lookup';
+import { innerHtml } from './inner-html';
 
 export type {
   FeatureHintViewController,
@@ -66,7 +67,7 @@ function FeatureHintContent({
         <span
           aria-hidden="true"
           className="x-lumno-feature-hint__action-icon"
-          dangerouslySetInnerHTML={{ __html: action.iconHtml }}
+          dangerouslySetInnerHTML={innerHtml(action.iconHtml)}
         />
       ) : null}
       <span className="x-lumno-feature-hint__action-text">
@@ -104,9 +105,7 @@ function FeatureHintContent({
         ) : model.badgeIconHtml ? (
           <span
             className="x-lumno-feature-hint__badge-icon"
-            dangerouslySetInnerHTML={{
-              __html: model.badgeIconHtml
-            }}
+            dangerouslySetInnerHTML={innerHtml(model.badgeIconHtml)}
           />
         ) : model.badgeIconText ? (
           <span
@@ -185,10 +184,7 @@ function FeatureHintContent({
           </span>
           <span
             className="x-lumno-feature-hint__link-icon"
-            dangerouslySetInnerHTML={{
-              __html:
-                '<i class="ri-icon ri-size-12 ri-arrow-right-line" aria-hidden="true"></i>'
-            }}
+            dangerouslySetInnerHTML={innerHtml('<i class="ri-icon ri-size-12 ri-arrow-right-line" aria-hidden="true"></i>')}
           />
         </button>
       ) : null}
@@ -204,10 +200,7 @@ function FeatureHintContent({
       <button
         aria-label={labels.close}
         className="x-lumno-feature-hint__close"
-        dangerouslySetInnerHTML={{
-          __html:
-            '<i class="ri-icon ri-size-12 ri-close-line" aria-hidden="true"></i>'
-        }}
+        dangerouslySetInnerHTML={innerHtml('<i class="ri-icon ri-size-12 ri-close-line" aria-hidden="true"></i>')}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();

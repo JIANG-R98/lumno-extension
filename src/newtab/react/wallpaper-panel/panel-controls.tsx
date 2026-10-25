@@ -7,6 +7,7 @@ import { RangeSliderField } from '../../../shared/react/range-slider';
 import type { SelectMenuControls } from '../../../shared/react/select-menu';
 import { type PanelSelectModel, type CuratedMixState, CURATED_MIX_SELECT_ID } from './panel-model';
 import { SelectMenu } from '../select-menu';
+import { innerHtml } from '../../../shared/react/inner-html';
 
 // Leading chevron + title form one disclosure hot area for every panel section.
 export function SectionTrigger({
@@ -50,7 +51,7 @@ export function SectionTrigger({
       <span
         aria-hidden="true"
         className="x-nt-section-chevron"
-        dangerouslySetInnerHTML={{ __html: arrowIcon }}
+        dangerouslySetInnerHTML={innerHtml(arrowIcon)}
       />
       <span
         {...ref(titleRef)}
@@ -81,7 +82,7 @@ export function InfoButton({
       {...(actions ? tooltipHandlers(actions, tooltip) : {})}
       aria-label={label || undefined}
       className="x-nt-appearance-info-button"
-      dangerouslySetInnerHTML={{ __html: icon }}
+      dangerouslySetInnerHTML={innerHtml(icon)}
       type="button"
     />
   );

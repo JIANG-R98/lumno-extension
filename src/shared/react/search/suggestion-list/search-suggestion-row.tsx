@@ -26,6 +26,7 @@ import { bindTextTooltip, HighlightedText } from './highlight';
 import { isHelpPassage } from '../help-passage-card';
 import { setIconEmphasis } from './action-styles';
 import { queryHtmlElement, queryHtmlTag } from '../../../dom-lookup';
+import { innerHtml } from '../../inner-html';
 
 function SearchSuggestionRowComponent({
   runtime,
@@ -706,12 +707,10 @@ function SearchSuggestionRowComponent({
                 options,
                 'x-nt-suggestion-action-button__icon'
               )}
-              dangerouslySetInnerHTML={{
-                __html: options.getRiSvg(
+              dangerouslySetInnerHTML={innerHtml(options.getRiSvg(
                   'ri-arrow-right-line',
                   'ri-size-12'
-                )
-              }}
+                ))}
             />
           )}
         </button>

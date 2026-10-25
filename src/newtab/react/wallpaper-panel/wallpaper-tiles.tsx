@@ -13,6 +13,7 @@ import type {
 import { ref, tooltipHandlers, Switch } from './panel-primitives';
 import { LinkButton } from '../../../shared/react/link-button';
 import { InfoButton } from './panel-controls';
+import { innerHtml } from '../../../shared/react/inner-html';
 
 export function WallpaperTile({
   checkIcon,
@@ -51,9 +52,7 @@ export function WallpaperTile({
       </span>
       <span
         className="x-nt-wallpaper-check"
-        dangerouslySetInnerHTML={{
-          __html: checkIcon
-        }}
+        dangerouslySetInnerHTML={innerHtml(checkIcon)}
       />
     </button>
   );
@@ -87,7 +86,7 @@ export function FaviconTile({
           <span
             aria-hidden="true"
             className="x-nt-favicon-image x-nt-favicon-svg-preview"
-            dangerouslySetInnerHTML={{ __html: item.inlineSvg }}
+            dangerouslySetInnerHTML={innerHtml(item.inlineSvg)}
           />
         ) : (
           <img
@@ -100,7 +99,7 @@ export function FaviconTile({
       </span>
       <span
         className="x-nt-wallpaper-check"
-        dangerouslySetInnerHTML={{ __html: checkIcon }}
+        dangerouslySetInnerHTML={innerHtml(checkIcon)}
       />
     </button>
   );
@@ -164,12 +163,12 @@ export function CustomWallpaperTile({
       </span>
       <span
         className="x-nt-wallpaper-check"
-        dangerouslySetInnerHTML={{ __html: checkIcon }}
+        dangerouslySetInnerHTML={innerHtml(checkIcon)}
       />
       <button
         aria-label={deleteLabel || undefined}
         className="x-nt-wallpaper-delete-button"
-        dangerouslySetInnerHTML={{ __html: deleteIcon }}
+        dangerouslySetInnerHTML={innerHtml(deleteIcon)}
         onClick={(event: ReactMouseEvent<HTMLButtonElement>) => {
           event.preventDefault();
           event.stopPropagation();
@@ -230,9 +229,7 @@ export function DailyRow({
           {...tooltipHandlers(actions, state.restoreLabel)}
           aria-label={state.restoreLabel || undefined}
           className="x-nt-panel-icon-button x-nt-daily-restore"
-          dangerouslySetInnerHTML={{
-            __html: String(icons?.restore || '')
-          }}
+          dangerouslySetInnerHTML={innerHtml(String(icons?.restore || ''))}
           hidden={!state.restoreVisible}
           onClick={() => {
             actions.hideTooltip();
@@ -291,7 +288,7 @@ export function OnlineTiles({
           </span>
           <span
             className="x-nt-wallpaper-check"
-            dangerouslySetInnerHTML={{ __html: checkIcon }}
+            dangerouslySetInnerHTML={innerHtml(checkIcon)}
           />
         </button>
       ))}

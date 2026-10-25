@@ -3,6 +3,7 @@ import { SectionTrigger, InfoButton } from './panel-controls';
 import { SegmentedChoice, ref } from './panel-primitives';
 import { collapsible } from './panel-model';
 import type { WallpaperPanelContext } from './use-wallpaper-panel';
+import { innerHtml } from '../../../shared/react/inner-html';
 
 export function ThemeSection({ panel }: { panel: WallpaperPanelContext }) {
   const {
@@ -82,7 +83,7 @@ export function ThemeSection({ panel }: { panel: WallpaperPanelContext }) {
                     ) : null}
                     <span
                       className="x-nt-appearance-check"
-                      dangerouslySetInnerHTML={{ __html: checkIcon }}
+                      dangerouslySetInnerHTML={innerHtml(checkIcon)}
                     />
                   </span>
                   <span className="x-nt-appearance-label">{option?.label}</span>
