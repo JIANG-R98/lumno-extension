@@ -15,8 +15,7 @@ import type { createShortcutsTabApi } from '../options/react/shortcuts-tab';
 import type { createToastApi } from '../shared/react/toast';
 import type { createAccountTabApi } from '../options/react/account-tab';
 import type { createPopupApi } from '../popup/react/popup-view';
-import type { createCopyPanelApi } from '../onboarding/react/copy-panel';
-import type { createVisualPanelApi } from '../onboarding/react/visual-panel';
+import type { createOnboardingPageApi } from '../onboarding/react/onboarding-page';
 import type { createBookmarksViewApi } from '../newtab/react/bookmarks';
 import type { createSegmentedIndicatorApi } from '../shared/react/segmented-indicator';
 import type { createDockApi } from '../newtab/react/dock';
@@ -103,8 +102,7 @@ declare global {
   var LumnoOptionsToast: ReturnType<typeof createToastApi> | undefined;
   var LumnoOptionsAccountTab: ReturnType<typeof createAccountTabApi> | undefined;
   // Set by the onboarding page's React islands entry.
-  var LumnoOnboardingCopyPanel: ReturnType<typeof createCopyPanelApi> | undefined;
-  var LumnoOnboardingVisualPanel: ReturnType<typeof createVisualPanelApi> | undefined;
+  var LumnoOnboardingPage: ReturnType<typeof createOnboardingPageApi> | undefined;
   // Set by the New Tab's React islands entry.
   var LumnoNewtabBookmarksView: ReturnType<typeof createBookmarksViewApi> | undefined;
   var LumnoNewtabFeedbackControl: ReturnType<typeof createFeedbackControlApi> | undefined;

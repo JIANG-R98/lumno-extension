@@ -1,9 +1,10 @@
 import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createCopyPanelController, type CopyPanelController, type CopyPanelModel } from './copy-panel';
+import { CopyPanel, type CopyPanelModel } from './copy-panel';
 import { getElement } from '../../../tests/react/dom';
 
-let controllers: CopyPanelController[] = [];
+let roots: Root[] = [];
 
 function model(overrides: Partial<CopyPanelModel> = {}): CopyPanelModel {
   return {
@@ -34,22 +35,26 @@ function setUp() {
     onShowInfoTooltip: vi.fn(),
     onHideInfoTooltip: vi.fn()
   };
-  const controller = createCopyPanelController(host, handlers);
-  controllers.push(controller);
+  const root = createRoot(host);
+  roots.push(root);
+  const controller = {
+    render(next: CopyPanelModel) {
+      root.render(<CopyPanel handlers={handlers} model={next} />);
+    }
+  };
   return { host, handlers, controller };
 }
 
 afterEach(() => {
-  act(() => controllers.forEach((controller) => controller.destroy()));
-  controllers = [];
+  act(() => roots.forEach((root) => root.unmount()));
+  roots = [];
   document.body.textContent = '';
 });
 
 describe('Onboarding copy panel', () => {
-  it('draws the strip, heading, body and buttons in order, naming its slide on the host', () => {
+  it('draws the strip, heading, body and buttons in order', () => {
     const { host, controller } = setUp();
     act(() => controller.render(model()));
-    expect([host.dataset.reactIsland, host.dataset.slideId]).toEqual(['onboarding-copy-panel', 'setup']);
     const order = ['#onboarding-page-strip', '#onboarding-eyebrow', '#onboarding-title', '#onboarding-body', '.onboarding-copy-actions']
       .map((selector) => getElement(host, selector));
     order.slice(1).forEach((element, index) => {

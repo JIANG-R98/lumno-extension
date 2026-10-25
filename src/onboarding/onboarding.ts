@@ -17,6 +17,7 @@ import type {
   OnboardingState
 } from './onboarding-content';
 import type { CopyPanelModel, CopySwapPhase } from './react/copy-panel';
+import type { OnboardingPageModel } from './react/onboarding-page';
 import type { InteractionBrowserAvatars, InteractionInfoTooltip } from './react/interactions';
 import type { NewtabPreviewItem } from './react/newtab-preview';
 import type { SiteSearchTheme } from './react/site-search-demo';
@@ -121,17 +122,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
   const params = new URLSearchParams(window.location.search || '');
   const root = queryHtmlElement(document, '[data-onboarding-shell]');
-  const copyPanel = getHtmlElement(document, 'onboarding-copy-panel');
-  const visualSlot = getHtmlElement(document, 'onboarding-visual-slot');
-  const visualPanel = getHtmlElement(document, 'onboarding-visual-panel');
-  const visualCanvas = getHtmlElement(document, 'onboarding-visual-canvas');
   // Set by the React islands entry, which the page loads first.
-  const onboardingCopyPanelApi = globalThis.LumnoOnboardingCopyPanel;
-  const onboardingVisualPanelApi = globalThis.LumnoOnboardingVisualPanel;
-  if (!onboardingCopyPanelApi || !onboardingVisualPanelApi) {
+  const onboardingPageApi = globalThis.LumnoOnboardingPage;
+  if (!onboardingPageApi) {
     return;
   }
-  const copyPanelController = onboardingCopyPanelApi.createCopyPanelController(copyPanel, {
+  const pageController = onboardingPageApi.createOnboardingPageController(root, {
     onNavigate(slideIndex) {
       dispatch({ type: 'GOTO', index: slideIndex });
     },
@@ -157,7 +153,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       hideOnboardingInfoTooltip();
     }
   });
-  const visualPanelController = onboardingVisualPanelApi.createVisualPanelController(visualCanvas);
+  // The frame shows at once; its columns fill in once the slides are read.
+  const pageModel: OnboardingPageModel = { copy: null, visual: null };
+  pageController.render(pageModel);
+  const copyPanel = getHtmlElement(document, 'onboarding-copy-panel');
+  const visualSlot = getHtmlElement(document, 'onboarding-visual-slot');
+  const visualPanel = getHtmlElement(document, 'onboarding-visual-panel');
+  const visualCanvas = getHtmlElement(document, 'onboarding-visual-canvas');
   let blueprint: OnboardingBlueprint | null = null;
   let state: OnboardingState | null = null;
   let currentShortcutValue = getDefaultShortcutValue();
@@ -842,7 +844,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   }
 
   function renderVisualPanel(slide: OnboardingSlide): void {
-    visualPanelController.render({
+    pageModel.visual = {
       slideId: slide.id,
       kind: slide.visual.kind,
       surface: slide.visual.visible ? getVisualSurfaceModel(slide.visual.kind) : null,
@@ -851,7 +853,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
         mode: slide.cursor.enabled ? slide.id : ''
       },
       exiting: visualExiting
-    });
+    };
+    pageController.render({ ...pageModel });
   }
 
   function prepareVisualExit(nextState: OnboardingState): void {
@@ -937,7 +940,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       return;
     }
     hideOnboardingInfoTooltip();
-    copyPanelController.render(getCopyPanelModel(slide, blueprint.slides.length, state.index));
+    pageModel.copy = getCopyPanelModel(slide, blueprint.slides.length, state.index);
+    pageController.render({ ...pageModel });
     scheduleTitleFitUpdate();
   }
 

@@ -1,9 +1,10 @@
 import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createVisualPanelController, type VisualPanelController, type VisualPanelModel } from './visual-panel';
+import { VisualPanel, type VisualPanelModel } from './visual-panel';
 import { getElement } from '../../../tests/react/dom';
 
-let controllers: VisualPanelController[] = [];
+let roots: Root[] = [];
 
 function model(overrides: Partial<VisualPanelModel> = {}): VisualPanelModel {
   return {
@@ -25,14 +26,19 @@ function model(overrides: Partial<VisualPanelModel> = {}): VisualPanelModel {
 function setUp() {
   const host = document.createElement('div');
   document.body.appendChild(host);
-  const controller = createVisualPanelController(host);
-  controllers.push(controller);
+  const root = createRoot(host);
+  roots.push(root);
+  const controller = {
+    render(next: VisualPanelModel) {
+      root.render(<VisualPanel model={next} />);
+    }
+  };
   return { host, controller };
 }
 
 afterEach(() => {
-  act(() => controllers.forEach((controller) => controller.destroy()));
-  controllers = [];
+  act(() => roots.forEach((root) => root.unmount()));
+  roots = [];
   document.body.textContent = '';
 });
 
@@ -41,7 +47,7 @@ describe('Onboarding visual panel', () => {
     const { host, controller } = setUp();
     act(() => controller.render(model()));
     const stage = getElement(host, '#onboarding-visual-stage');
-    expect([host.dataset.reactIsland, stage.dataset.visualKind]).toEqual(['onboarding-visual-panel', 'lumno-web-wordmark-surface']);
+    expect(stage.dataset.visualKind).toBe('lumno-web-wordmark-surface');
     expect(getElement(stage, '[data-visual-surface]').dataset.visualSurface).toBe('onboarding-lumno-wordmark-surface');
     expect(getElement(host, '#onboarding-cursor-layer').dataset.cursorMode).toBe('intro');
   });

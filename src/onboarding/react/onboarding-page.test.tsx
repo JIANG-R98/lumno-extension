@@ -3,8 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import onboardingHtml from '../onboarding.html?raw';
 import * as onboardingContent from '../onboarding-content';
 import { runPageBundle } from '../../../tests/react/page-bundles';
-import { createCopyPanelApi } from './copy-panel';
-import { createVisualPanelApi } from './visual-panel';
+import { createOnboardingPageApi } from './onboarding-page';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
 import { expectElement, getElements, required } from '../../../tests/react/dom';
 import { queryHtmlTag } from '../../shared/dom-lookup';
@@ -80,8 +79,7 @@ async function bootOnboardingPage(stored: Record<string, unknown> = {}) {
     addEventListener() {},
     removeEventListener() {}
   }));
-  globalThis.LumnoOnboardingCopyPanel = createCopyPanelApi();
-  globalThis.LumnoOnboardingVisualPanel = createVisualPanelApi();
+  globalThis.LumnoOnboardingPage = createOnboardingPageApi();
   globalThis.LumnoTooltipView = createTooltipViewApi();
   vi.resetModules();
   await runPageBundle('onboarding-preload');
@@ -132,6 +130,7 @@ describe('Onboarding page runtime', () => {
       const slide = blueprint.slides[index];
       expect(root.dataset.activeIndex).toBe(String(index));
       expect(root.dataset.activeSlide).toBe(slide.id);
+      expect(document.getElementById('onboarding-copy-panel')?.dataset.slideId).toBe(slide.id);
       expect(stage().dataset.visualKind).toBe(slide.visual.kind);
       const surfaces = Array.from(
         getElements(stage(), ':scope > [data-visual-surface]'),

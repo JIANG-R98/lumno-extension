@@ -3,7 +3,6 @@ import { BodyCopy, type BodyCopyRenderModel } from './body-copy';
 import { CopyHeading, type CopyHeadingHandlers, type CopyHeadingRenderModel } from './copy-heading';
 import { Interactions, type InteractionsHandlers, type InteractionsRenderModel } from './interactions';
 import { PageStrip, type PageStripHandlers, type PageStripRenderModel } from './page-strip';
-import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 
 // Where the title and body are in their slide change: sliding out, placed
 // to slide in, sliding in, or still.
@@ -62,29 +61,4 @@ export function CopyPanel({ model, handlers }: { model: CopyPanelModel; handlers
       <ActionButtons actions={model.actions} handlers={handlers} />
     </>
   );
-}
-
-export type CopyPanelController = ReactRootController<CopyPanelModel>;
-
-export function createCopyPanelController(host: HTMLElement | null, handlers: CopyPanelHandlers): CopyPanelController {
-  if (host) {
-    host.dataset.reactIsland = 'onboarding-copy-panel';
-  }
-  const view = createReactRootController(host, (model: CopyPanelModel) => <CopyPanel handlers={handlers} model={model} />);
-  return Object.freeze({
-    render(model: CopyPanelModel) {
-      if (host) {
-        host.dataset.slideId = model.slideId;
-      }
-      view.render(model);
-    },
-    destroy: view.destroy
-  });
-}
-
-export function createCopyPanelApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createCopyPanelController
-  });
 }

@@ -1,17 +1,14 @@
-import { createCopyPanelApi } from './copy-panel';
-import { createVisualPanelApi } from './visual-panel';
+import { createOnboardingPageApi } from './onboarding-page';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
 
 declare global {
-  var LumnoOnboardingCopyPanelReact: ReturnType<typeof createCopyPanelApi> | undefined;
-  var LumnoOnboardingVisualPanelReact: ReturnType<typeof createVisualPanelApi> | undefined;
+  var LumnoOnboardingPageReact: ReturnType<typeof createOnboardingPageApi> | undefined;
   var LumnoTooltipViewReact: ReturnType<typeof createTooltipViewApi> | undefined;
   var LumnoOnboardingReactBootstrap: {
       reactReady: boolean;
     } | undefined;
   var LumnoOnboardingReactIslands: {
-      copyPanel: ReturnType<typeof createCopyPanelApi>;
-      visualPanel: ReturnType<typeof createVisualPanelApi>;
+      page: ReturnType<typeof createOnboardingPageApi>;
     } | undefined;
 }
 
@@ -20,19 +17,15 @@ const runtime = globalThis;
 const bootstrapState = runtime.LumnoOnboardingReactBootstrap;
 
 if (!bootstrapState || !bootstrapState.reactReady) {
-  const copyPanelApi = createCopyPanelApi();
-  const visualPanelApi = createVisualPanelApi();
+  const pageApi = createOnboardingPageApi();
   const tooltipViewApi = createTooltipViewApi();
 
-  runtime.LumnoOnboardingCopyPanelReact = copyPanelApi;
-  runtime.LumnoOnboardingCopyPanel = copyPanelApi;
-  runtime.LumnoOnboardingVisualPanelReact = visualPanelApi;
-  runtime.LumnoOnboardingVisualPanel = visualPanelApi;
+  runtime.LumnoOnboardingPageReact = pageApi;
+  runtime.LumnoOnboardingPage = pageApi;
   runtime.LumnoTooltipViewReact = tooltipViewApi;
   runtime.LumnoTooltipView = tooltipViewApi;
   runtime.LumnoOnboardingReactIslands = Object.freeze({
-    copyPanel: copyPanelApi,
-    visualPanel: visualPanelApi
+    page: pageApi
   });
 
   if (bootstrapState) {

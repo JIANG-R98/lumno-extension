@@ -1,6 +1,5 @@
 import { CursorLayer, type CursorLayerRenderModel } from './cursor-layer';
 import { VisualSurface, type VisualSurfaceRenderModel } from './visual-surface';
-import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 
 export interface VisualPanelModel {
   // The slide the visual belongs to; a new slide starts its demo afresh.
@@ -29,20 +28,4 @@ export function VisualPanel({ model }: { model: VisualPanelModel }) {
       <CursorLayer className={exitClassName} model={model.cursor} />
     </>
   );
-}
-
-export type VisualPanelController = ReactRootController<VisualPanelModel>;
-
-export function createVisualPanelController(host: HTMLElement | null): VisualPanelController {
-  if (host) {
-    host.dataset.reactIsland = 'onboarding-visual-panel';
-  }
-  return createReactRootController(host, (model: VisualPanelModel) => <VisualPanel model={model} />);
-}
-
-export function createVisualPanelApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createVisualPanelController
-  });
 }

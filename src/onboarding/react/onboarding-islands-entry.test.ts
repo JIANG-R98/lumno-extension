@@ -4,10 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const runtime = globalThis;
 
 function clearRuntime(): void {
-  Reflect.deleteProperty(runtime, 'LumnoOnboardingCopyPanel');
-  Reflect.deleteProperty(runtime, 'LumnoOnboardingCopyPanelReact');
-  Reflect.deleteProperty(runtime, 'LumnoOnboardingVisualPanel');
-  Reflect.deleteProperty(runtime, 'LumnoOnboardingVisualPanelReact');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingPage');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingPageReact');
   Reflect.deleteProperty(runtime, 'LumnoOnboardingReactBootstrap');
   Reflect.deleteProperty(runtime, 'LumnoOnboardingReactIslands');
 }
@@ -26,17 +24,10 @@ describe('Onboarding React islands entry', () => {
     await import('./onboarding-islands-entry');
 
     expect(runtime.LumnoOnboardingReactBootstrap.reactReady).toBe(true);
-    expect(runtime.LumnoOnboardingCopyPanel?.implementation).toBe('react');
-    expect(runtime.LumnoOnboardingCopyPanelReact).toBe(
-      runtime.LumnoOnboardingCopyPanel
-    );
-    expect(runtime.LumnoOnboardingVisualPanel?.implementation).toBe('react');
-    expect(runtime.LumnoOnboardingVisualPanelReact).toBe(
-      runtime.LumnoOnboardingVisualPanel
-    );
+    expect(runtime.LumnoOnboardingPage?.implementation).toBe('react');
+    expect(runtime.LumnoOnboardingPageReact).toBe(runtime.LumnoOnboardingPage);
     expect(runtime.LumnoOnboardingReactIslands).toEqual({
-      copyPanel: runtime.LumnoOnboardingCopyPanel,
-      visualPanel: runtime.LumnoOnboardingVisualPanel
+      page: runtime.LumnoOnboardingPage
     });
   });
 });
