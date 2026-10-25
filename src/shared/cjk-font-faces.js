@@ -41,6 +41,25 @@ function resolveScript(lang) {
   return '';
 }
 
+// The face for the FontFace API: its src and descriptors, and the script
+// whose glyph forms it draws, or null for a language without one.
+function getFontFaceSource(lang) {
+  const script = resolveScript(lang);
+  const faces = LOCAL_FACES[script];
+  if (!faces) {
+    return null;
+  }
+  return {
+    script,
+    source: faces.map((name) => `local("${name}")`).join(', '),
+    descriptors: {
+      style: 'normal',
+      weight: FONT_WEIGHT_BAND,
+      unicodeRange: UNICODE_RANGE
+    }
+  };
+}
+
 function buildFontFaceCss(family, lang) {
   const faces = LOCAL_FACES[resolveScript(lang)];
   if (!family || !faces) {
@@ -110,6 +129,8 @@ watchFromCurrentScript(typeof document !== 'undefined' ? document : null);
 export {
   FONT_WEIGHT_BAND,
   buildFontFaceCss,
+  getFontFaceSource,
+  resolveScript,
   install,
   watchDocumentLanguage,
   watchFromCurrentScript

@@ -88,12 +88,27 @@ function createPanelTheme(deps) {
     });
   }
 
+  // Sampling hit-tests points across the viewport and reads their computed
+  // styles, which forces a full style and layout pass when the page has
+  // pending changes and costs hundreds of milliseconds on large pages. One
+  // reading serves the session until the page signals a theme change.
+  let pageThemeReading = null;
+
   function detectPageTheme() {
-    return overlayPageTheme.detectPageTheme({
-      document,
-      window,
-      parseThemeColorRgb: parseCssColor
-    });
+    if (!pageThemeReading) {
+      pageThemeReading = {
+        theme: overlayPageTheme.detectPageTheme({
+          document,
+          window,
+          parseThemeColorRgb: parseCssColor
+        })
+      };
+    }
+    return pageThemeReading.theme;
+  }
+
+  function invalidatePageTheme() {
+    pageThemeReading = null;
   }
 
   function shouldObserveOverlayPageTheme() {
@@ -119,9 +134,12 @@ function createPanelTheme(deps) {
       return;
     }
     if (!overlayState.overlayPageThemeObserver) {
-      overlayState.overlayPageThemeObserver = overlayPageTheme.createPageThemeObserver(window, () => {
+      overlayState.overlayPageThemeObserver = overlayPageTheme.createPageThemeObserver(window, (change) => {
         if (!overlayState.overlay || !overlayState.overlay.isConnected || !shouldObserveOverlayPageTheme()) {
           return;
+        }
+        if (change && change.pageChanged) {
+          invalidatePageTheme();
         }
         applyOverlayTheme(overlayState.overlayThemeMode);
       });
@@ -222,6 +240,7 @@ function createPanelTheme(deps) {
   return {
     getHighlightColors,
     detectPageTheme,
+    invalidatePageTheme,
     syncOverlayPageThemeObservation,
     applyOverlayFontFamily,
     applyOverlayThemeVariables,

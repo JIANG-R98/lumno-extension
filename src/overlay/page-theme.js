@@ -741,11 +741,14 @@ const PAGE_THEME_ATTRIBUTE_FILTER = Object.freeze([
 ]);
 
 // Watches the host page for theme switches (root/body theme attributes and
-// head meta changes) and calls `onChange` at most once per frame.
+// head meta changes) and calls `onChange` at most once per frame. The call
+// made after `start` alone passes `{ pageChanged: false }`; one that follows
+// a page mutation passes `{ pageChanged: true }`.
 function createPageThemeObserver(win, onChange) {
   const doc = win && win.document;
   let observer = null;
   let frame = null;
+  let pageChanged = false;
 
   function scheduleChange() {
     if (frame !== null) {
@@ -753,17 +756,24 @@ function createPageThemeObserver(win, onChange) {
     }
     frame = win.requestAnimationFrame(() => {
       frame = null;
+      const changed = pageChanged;
+      pageChanged = false;
       if (typeof onChange === 'function') {
-        onChange();
+        onChange({ pageChanged: changed });
       }
     });
+  }
+
+  function handleMutations() {
+    pageChanged = true;
+    scheduleChange();
   }
 
   function start() {
     if (observer || !doc || typeof win.MutationObserver !== 'function') {
       return;
     }
-    observer = new win.MutationObserver(scheduleChange);
+    observer = new win.MutationObserver(handleMutations);
     [doc.documentElement, doc.body].forEach((element) => {
       if (element) {
         observer.observe(element, {
@@ -788,6 +798,7 @@ function createPageThemeObserver(win, onChange) {
       win.cancelAnimationFrame(frame);
       frame = null;
     }
+    pageChanged = false;
     if (observer) {
       observer.disconnect();
       observer = null;

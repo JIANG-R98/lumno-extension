@@ -104,6 +104,31 @@ async function testEntryMotionIsSkippedWhenItWouldStutter() {
   await assertInstant('a slow start', {}, { storageDelayMs: 320 });
 }
 
+// A page's first open loads the panel stylesheets cold. When they arrive
+// after the reveal gate's budget but before the settings, the panel is fully
+// styled by the time it shows and still plays its entry.
+async function testLateStylesheetsStillPlayTheEntry() {
+  const { page, overlay } = await openWithMotion({}, {
+    stylesheetsLoad: false,
+    storageDelayMs: 160,
+    setup(window) {
+      const addLinkListener = window.HTMLLinkElement.prototype.addEventListener;
+      window.HTMLLinkElement.prototype.addEventListener = function(type, listener, options) {
+        addLinkListener.call(this, type, listener, options);
+        if (type === 'load' && this.rel === 'stylesheet' && !this.__lumnoLoadScheduled) {
+          this.__lumnoLoadScheduled = true;
+          window.setTimeout(() => this.dispatchEvent(new window.Event('load')), 110);
+        }
+      };
+    }
+  }, true);
+  const { transform, opacity } = entryAnimations(page, overlay);
+  assert.ok(transform && opacity, 'stylesheets that arrived before the reveal should not cancel the entry motion');
+  assert.strictEqual(overlay.hasAttribute('data-lumno-site-fix-style-fallback'), false,
+    'the panel should reveal with its real styles, not the fallback');
+  page.close();
+}
+
 // The shell's own rest state is covered by react-src/overlay/shell.test.tsx.
 async function testThemeElevation() {
   const { page, overlay } = await openWithMotion({});
@@ -190,6 +215,7 @@ function testSharedSearchInputMotionTokens() {
 (async () => {
   await testEachEntrySettingPlaysItsMotion();
   await testEntryMotionIsSkippedWhenItWouldStutter();
+  await testLateStylesheetsStillPlayTheEntry();
   await testThemeElevation();
   await testCustomWidthReplacesTheSizeWidth();
   await testCornersFollowTheResults();

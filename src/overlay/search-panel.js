@@ -2,6 +2,7 @@ import * as FAVICON_THEME from '../newtab/theme/favicon-theme.js';
 import * as COMMUNITY_LINKS from '../shared/community-links.js';
 import * as FAVICON_UTILS from '../shared/favicon/favicon-utils.js';
 import * as SHORTCUT_FAVICON from '../shared/favicon/shortcut-favicon.js';
+import * as OVERLAY_FONT_FACES from '../shared/overlay-font-faces.js';
 import * as AGGREGATE_SEARCH_STORE from '../shared/search/aggregate-search-store.js';
 import * as LumnoImeKeyGuard from '../shared/search/ime-key-guard.js';
 import * as SEARCH_INPUT_HISTORY from '../shared/search/search-input-history.js';
@@ -178,6 +179,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
         overlayState.overlayThemeMediaListener = function() {
           if (overlayState.overlayThemeMode === 'system') {
             // 仅更新容器变量会导致建议项主题变量滞后，系统主题切换时完整刷新。
+            // A page that follows the system theme may have switched too.
+            invalidatePageTheme();
             applyOverlayTheme('system');
           }
         };
@@ -945,6 +948,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const {
     getHighlightColors,
     detectPageTheme,
+    invalidatePageTheme,
     syncOverlayPageThemeObservation,
     applyOverlayFontFamily,
     applyOverlayThemeVariables,
@@ -1044,6 +1048,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   });
 
   const {
+    applyOverlayCjkFontFace,
     getSystemLocale,
     t,
     getStorageValuesAsync,
@@ -1076,48 +1081,29 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   };
   overlayState.overlaySearchEngineStateReady = Promise.resolve(overlayState.overlaySearchEngineState);
 
-  // Chrome ignores @font-face rules inside shadow roots, so the overlay's
-  // fonts are declared on the host document. Only the faces live there, under
-  // Lumno-specific family names, so they can neither restyle host elements
-  // nor replace a page's own "Open Sans" or Remix Icon faces. The icon class
-  // rules load inside the overlay's shadow root (remixicon.css, re-pointed at
-  // the scoped face by suggestions-view.css).
+  // The overlay's faces on the host document (see overlay-font-faces.js),
+  // unless the page registered them while it loaded. The icon class rules
+  // load inside the overlay's shadow root (remixicon.css, re-pointed at the
+  // scoped face by suggestions-view.css).
   function ensureOverlayFontFaces() {
     const styleId = '_x_extension_overlay_font_faces_2026_unique_';
     const host = document.head || document.documentElement;
-    if (!host || document.getElementById(styleId)) {
+    if (!host || document.getElementById(styleId) ||
+        OVERLAY_FONT_FACES.hasEarlyOverlayFontFaces(window)) {
       return;
     }
-    const toCssUrl = (assetPath) => {
-      const url = overlayRuntime.getRuntimeUrl(chrome, assetPath);
-      return `url("${String(url).replace(/["\\\n\r\f]/g, '\\$&')}")`;
-    };
     const style = document.createElement('style');
     style.id = styleId;
-    // The same weight bands as open-sans.css, so applyOverlayCjkFontFace can
-    // add its CJK face to the middle one.
-    const openSansUrl = toCssUrl('assets/fonts/open-sans/OpenSans-VariableFont-wdth-wght.woff2');
-    const openSansFaces = ['300 549', '550 649', '650 800'].map((weight) => [
-      '@font-face {',
-      '  font-family: "Lumno Open Sans";',
-      `  src: ${openSansUrl} format("woff2");`,
-      '  font-style: normal;',
-      `  font-weight: ${weight};`,
-      '  font-display: swap;',
-      '}'
-    ].join('\n'));
-    style.textContent = [
-      ...openSansFaces,
-      '@font-face {',
-      '  font-family: "lumno-remixicon";',
-      `  src: ${toCssUrl('assets/remixicon/fonts/remixicon.woff2')} format("woff2");`,
-      '  font-display: swap;',
-      '}'
-    ].join('\n');
+    style.textContent = OVERLAY_FONT_FACES.buildOverlayFontFaceCss(
+      (assetPath) => overlayRuntime.getRuntimeUrl(chrome, assetPath)
+    );
     host.appendChild(style);
+    // Every face added to a page that has already laid out restyles and
+    // relays out the whole page, so the CJK face joins in the same task,
+    // guessed from the browser language. The language setting changes it
+    // later only when it calls for another script.
+    applyOverlayCjkFontFace(getSystemLocale());
   }
-
-  ensureOverlayFontFaces();
 
   // A custom width replaces the size's own; the size keeps its height cap
   // and content scale.
@@ -1173,6 +1159,11 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
 
   // No overlay is open here (an open one has closed above, a stale one is
   // being replaced): create it.
+  // Read the page theme while the page's layout is still settled: the font
+  // faces and the overlay host below each invalidate it, and sampling the
+  // page after them pays for a full style and layout pass.
+  detectPageTheme();
+  ensureOverlayFontFaces();
   const initialOverlaySizePreset = getOverlaySizePreset(overlayState.overlaySizeMode);
   const overlayMount = overlayShell.createOverlayMount(document, {
     hostId: OVERLAY_HOST_ID,
@@ -2296,12 +2287,16 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     }
     applyOverlayEnterAnimationInitialState(overlayState.overlay);
     const styleGateResult = readyStates[0];
+    const revealGate = overlayState.overlayRevealGate;
+    // The gate gives up on its first-frame budget while the settings above
+    // are still loading, so the stylesheets have often arrived by now.
+    const stylesReady = Boolean(styleGateResult && styleGateResult.ok === true) ||
+      Boolean(revealGate && typeof revealGate.isReady === 'function' && revealGate.isReady());
     revealOverlay({
       // A late stylesheet uses the shell's stable fallback. Starting a
       // spring while that fallback is about to upgrade only makes slow
       // devices look more broken, so reveal its final state instead.
-      forceInstant: !styleGateResult || styleGateResult.ok !== true ||
-        shouldSkipOverlayEntryMotionForSlowStartup()
+      forceInstant: !stylesReady || shouldSkipOverlayEntryMotionForSlowStartup()
     });
   });
   overlayState.overlayScrollPauseHandler = () => {

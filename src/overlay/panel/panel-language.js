@@ -1,6 +1,7 @@
 // The panel language: locale, messages, t() and formatMessage(), and
 // applying the copy to the panel when the language changes.
 import * as LumnoCjkFontFaces from '../../shared/cjk-font-faces.js';
+import * as OVERLAY_FONT_FACES from '../../shared/overlay-font-faces.js';
 
 function createPanelLanguage(deps) {
   const {
@@ -27,9 +28,13 @@ function createPanelLanguage(deps) {
     if (!cjkFontFaces) {
       return;
     }
+    const lang = SETTINGS.localeToHtmlLang(locale);
+    if (OVERLAY_FONT_FACES.keepEarlyCjkFontFace(window, lang)) {
+      return;
+    }
     cjkFontFaces.install(document, {
-      family: 'Lumno Open Sans',
-      lang: SETTINGS.localeToHtmlLang(locale),
+      family: OVERLAY_FONT_FACES.OVERLAY_TEXT_FAMILY,
+      lang,
       styleId: '_x_extension_overlay_cjk_font_faces_2026_unique_'
     });
   }
@@ -168,6 +173,7 @@ function createPanelLanguage(deps) {
   }
 
   return {
+    applyOverlayCjkFontFace,
     getSystemLocale,
     t,
     getStorageValuesAsync,

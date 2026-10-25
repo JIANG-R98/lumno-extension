@@ -1,4 +1,5 @@
 import * as SHORTCUT_KEY_MATCHER from '../shared/shortcut-key-matcher.js';
+import * as OVERLAY_FONT_FACES from '../shared/overlay-font-faces.js';
 
 (function() {
   const RUNTIME_KEY = '_x_extension_shortcut_key_observer_2026_unique_';
@@ -57,6 +58,24 @@ import * as SHORTCUT_KEY_MATCHER from '../shared/shortcut-key-matcher.js';
         observedAt: Date.now()
       }, () => {
         void (chrome.runtime && chrome.runtime.lastError);
+      });
+    } catch (error) {
+      // Ignore an extension context invalidated while this Document commits.
+    }
+  }
+
+  // The search overlay opens in the top frame only, and its faces cost
+  // nothing before the page first lays out (see overlay-font-faces.js).
+  function registerOverlayFontFaces() {
+    if (window.top !== window) {
+      return;
+    }
+    try {
+      OVERLAY_FONT_FACES.registerEarlyOverlayFontFaces(window, {
+        getUrl: (assetPath) => chrome.runtime.getURL(assetPath),
+        lang: chrome.i18n && typeof chrome.i18n.getUILanguage === 'function'
+          ? chrome.i18n.getUILanguage()
+          : ''
       });
     } catch (error) {
       // Ignore an extension context invalidated while this Document commits.
@@ -386,11 +405,12 @@ import * as SHORTCUT_KEY_MATCHER from '../shared/shortcut-key-matcher.js';
   };
 
   adoptInheritedState(inheritedState);
-  // Only the observer a Document starts with reports that start; a
-  // replacement, or a sweep of tabs open before an install, runs in a page
-  // that is already showing.
+  // Only the observer a Document starts with reports that start and
+  // registers the overlay's faces; a replacement, or a sweep of tabs open
+  // before an install, runs in a page that is already showing.
   if (!previousRuntime && document.readyState === 'loading') {
     notifyTopFrameDocumentStarted();
+    registerOverlayFontFaces();
   }
   // A subframe cannot receive keys before its window takes focus, which
   // refreshes the shortcut, so only the top frame asks at startup. Asking from
