@@ -1,10 +1,171 @@
-// @ts-nocheck
 // The appearance panel's view model: the panel header, the theme, search
 // and shortcut sections, each wallpaper source's tiles, effects, favicons,
 // and drawing the model into the React view.
+import type * as LumnoExtensionRoutes from '../../../domain/extension-routes';
+import type * as LumnoSettings from '../../../domain/settings';
+import type { NewtabTopContentMode } from '../../../domain/settings';
 import * as LumnoCommunityLinks from '../../../platform/community-links';
+import type { WallpaperLocalStore, WallpaperThumbnailCache } from '../../../shared/wallpaper-local-store';
+import type { FormatMessage, Translate } from '../../newtab-types';
+import type {
+  GlassTheme,
+  TileState,
+  OnlineTileState,
+  SelectedSourceState,
+  DailyState,
+  CuratedMixState,
+  ThemeScope,
+  TimeInk,
+  TopContentMode,
+  WallpaperPanelModel,
+  WallpaperPanelState,
+  WallpaperSourceTab
+} from '../../react/wallpaper-panel/panel-model';
+import type { SegmentOption, SliderChange, SliderState, ToggleState } from '../../react/wallpaper-panel/panel-primitives';
+import type * as RemoteContent from '../../remote-content';
+import type { RemoteContentClient } from '../../remote-content';
+import type { RemoteWallpaper } from '../../remote-content-types';
+import type { QuoteRuntime } from '../../top-content/quotes';
+import type { CustomWallpapers } from './custom-wallpapers';
+import type { DailyWallpapers } from './daily-wallpapers';
+import type { FaviconChooser, NewtabFaviconOption } from './favicon-chooser';
+import type { PanelSettings, SliderConfig } from './panel-settings';
+import type { WallpaperEffectPrefsDeps, WallpaperEffectPrefsRuntime } from './wallpaper-effect-prefs';
+import type { WallpaperOverlay } from './wallpaper-overlay';
+import type { WallpaperSources } from './wallpaper-sources';
+import type { WallpaperStorage } from './wallpaper-storage';
+import type {
+  AppearanceMode,
+  BuiltInWallpaper,
+  WallpaperItem,
+  WallpaperMode,
+  WallpaperState
+} from './wallpaper-runtime-types';
 
-function createPanelState(deps) {
+// The CRT settings stored as physical values and shown as percentages.
+type CrtParameterKey = 'crtStrength' | 'crtBloom' | 'crtRgbOffset' | 'crtCurvature';
+
+interface PanelStateDeps extends
+  Pick<PanelSettings,
+    'getSearchWidthSnapPoints' | 'getSearchWidthPercent' | 'getShortcutColumnsTickValues' |
+    'getShortcutColumnsPercent' | 'normalizeShortcutSizeValue' | 'getShortcutLayoutPercent' |
+    'normalizeShortcutGapValue' | 'normalizeSearchWidthValue' | 'getSearchWidthMin' | 'getSearchWidthMax' |
+    'formatSearchWidthValue' | 'normalizeShortcutColumnsValue' | 'getShortcutColumnsMin' |
+    'getShortcutColumnsMax' | 'getShortcutLayoutMin' | 'getShortcutLayoutMax' | 'getShortcutLayoutDefault'>,
+  Pick<WallpaperSources,
+    'getWallpaperThumbnailUrl' | 'getWallpaperDisplayName' | 'getWallpaperById' | 'normalizeWallpaperMode' |
+    'getWallpaperLocalPath'>,
+  Pick<CustomWallpapers, 'getLinkWallpaperById' | 'isLocalWallpaperLibraryFull' | 'fetchCustomWallpaperFile'>,
+  Pick<DailyWallpapers,
+    'formatBingCopyright' | 'getBingWallpaperLabel' | 'getCuratedPhotoLabel' | 'isCuratedDailyWallpaperActive' |
+    'getCuratedCategoryLabel' | 'getCuratedPhotoMeta' | 'getCuratedTileItems'>,
+  Pick<WallpaperEffectPrefsRuntime,
+    'getWallpaperEffectPrefsForEditMode' | 'getWallpaperEffectControlVisibility' | 'getWallpaperEffectLabel' |
+    'getWallpaperEffectInkToneForUi' | 'getWallpaperEffectInkToneLabel' | 'getWallpaperEffectStrengthLabel' |
+    'getWallpaperEffectSizeLabel' | 'getWallpaperEffectSpacingLabel' | 'getWallpaperEffectTextureLabel'>,
+  Pick<WallpaperEffectPrefsDeps, 'NEWTAB_WALLPAPER_EFFECT_TYPES' | 'NEWTAB_WALLPAPER_EFFECT_INK_TONES'>,
+  Pick<WallpaperStorage,
+    'hasAnyWallpaperEnabled' | 'getWallpaperSelectionIdForUi' | 'getWallpaperTileSelectionId' | 'getWallpaperModeLabel'>,
+  Pick<WallpaperOverlay,
+    'getWallpaperOverlayOpacityForCurrentMode' | 'snapWallpaperOverlaySliderValue' | 'normalizeWallpaperOverlayOpacity'>,
+  Pick<FaviconChooser, 'getNewtabFaviconUrl' | 'buildNewtabFaviconState'> {
+  t: Translate;
+  formatMessage: FormatMessage;
+  NEWTAB_FAVICON_SVG_SHADOW_PATH: string;
+  NEWTAB_FAVICON_SVG_MAIN_PATH: string;
+  NEWTAB_FAVICON_OPTIONS: readonly NewtabFaviconOption[];
+  getRiSvg(id: string, sizeClass?: string, extraClass?: string): string;
+  SETTINGS: Pick<typeof LumnoSettings,
+    'NEWTAB_QUOTE_FONT_SIZE_MIN' | 'NEWTAB_QUOTE_FONT_SIZE_MAX' | 'NEWTAB_QUOTE_FONT_SIZE_DEFAULT' |
+    'NEWTAB_TIME_FONT_SIZE_DEFAULT' | 'NEWTAB_TIME_FONT_SIZE_MIN' | 'NEWTAB_TIME_FONT_SIZE_MAX' |
+    'normalizeNewtabTimeFont' | 'getNewtabTimeFont' | 'resolveNewtabTimeFontWeight' | 'normalizeNewtabTimeFontSize' |
+    'normalizeNewtabTimeOpacity' | 'NEWTAB_TIME_FONTS' | 'NEWTAB_TIME_OPACITY_MIN' | 'NEWTAB_TIME_OPACITY_MAX' |
+    'NEWTAB_TIME_OPACITY_DEFAULT' | 'normalizeNewtabTimeInk' | 'normalizeNewtabTime12Hour' | 'normalizeNewtabGlassTheme'>;
+  shortcutSizeConfig: SliderConfig;
+  shortcutGapConfig: SliderConfig;
+  // The page's theme settings: its scope, mode and the global mode.
+  getThemeScope(): string;
+  getGlobalThemeMode(): string;
+  getThemeMode(): string;
+  getRuntimeAssetUrl(path: unknown): string;
+  getWallpaperAppearanceModeLabel(mode: AppearanceMode): string;
+  // The page's own settings, read on each build when the page passes a getter.
+  hasTopContentModeGetter: boolean;
+  normalizeNewtabTopContentMode(value: unknown): NewtabTopContentMode;
+  getTopContentMode(): unknown;
+  hasTimeFontWeightGetter: boolean;
+  normalizeNewtabTimeFontWeight(value: unknown): number;
+  getTimeFontWeight(): unknown;
+  hasTimeFontGetter: boolean;
+  getTimeFont(): unknown;
+  hasTimeSecondsVisibleGetter: boolean;
+  normalizeNewtabTimeSecondsVisible(value: unknown): boolean;
+  getTimeSecondsVisible(): unknown;
+  getTimeFontSize(): unknown;
+  getTimeOpacity(): unknown;
+  getSearchWidth(): unknown;
+  getInputAutoFocusEnabled(): unknown;
+  getTimeInk(): unknown;
+  getTime12Hour(): unknown;
+  getShortcutsVisible(): unknown;
+  getShortcutSize(): unknown;
+  getShortcutGap(): unknown;
+  getShortcutAddVisible(): unknown;
+  getShortcutDockMagnificationEnabled(): unknown;
+  getShortcutColumns(): unknown;
+  getGlassStyle(): string;
+  getGlassTheme(): unknown;
+  REMOTE_CONTENT: Pick<typeof RemoteContent,
+    'getWallpaperProvider' | 'BING_DAILY_ID' | 'CURATED_CATEGORIES' | 'getRandomMixCategories' | 'RANDOM_CATEGORY'>;
+  remoteClient: Pick<RemoteContentClient, 'getWallpaper'>;
+  wallpaperThumbnailCache: WallpaperThumbnailCache | null;
+  localWallpaperStore: Pick<WallpaperLocalStore, 'buildTileThumbnail'>;
+  warnWallpaperStoreFailure(message: string): (error: unknown) => void;
+  BLOCK_PARAMETER_MAX: number;
+  getCrtParameterPercent(key: CrtParameterKey, value: unknown): number;
+  clampNumber(value: unknown, min: number, max: number): number;
+  NEWTAB_WALLPAPER_MODES: readonly WallpaperMode[];
+  NEWTAB_WALLPAPER_MODE_DARK: 'dark';
+  NEWTAB_WALLPAPER_OPTIONS: readonly BuiltInWallpaper[];
+  options: { getQuoteRuntime?: () => Pick<QuoteRuntime, 'getProviderLabel'> | null | undefined };
+  // Runs a change to the open panel while animating its height.
+  animateWallpaperPanelResize(mutate: () => void): void;
+  document: Document;
+  extensionRoutes: Pick<typeof LumnoExtensionRoutes, 'buildOptionsUrl'> | null | undefined;
+  chrome: { runtime?: { getURL?: (path: string) => string } } | null | undefined;
+  window: Window;
+  wallpaperState: Pick<WallpaperState,
+    'pendingThemeScope' | 'heldAppearanceModeLabels' | 'currentTopContentMode' | 'currentTimeFontWeight' |
+    'currentTimeFont' | 'currentTimeSecondsVisible' | 'customWallpapers' | 'linkWallpapers' |
+    'customWallpaperImporting' | 'customWallpaperUrlFormOpen' | 'customWallpaperUrlInvalid' |
+    'customWallpaperUrlClearToken' | 'bingLoading' | 'bingSelecting' | 'bingItems' | 'bingStatus' |
+    'wallpaperPanelOpen' | 'activeWallpaperTab' | 'curatedCategory' | 'currentWallpaperPrefs' |
+    'activeWallpaperMode' | 'wallpaperPanelActions' | 'currentWallpaperId' | 'wallpaperViewController' |
+    'wallpaperButton' | 'wallpaperPanelState' | 'wallpaperPanelLayoutKey'>;
+}
+
+const WALLPAPER_APPEARANCE_MODES: readonly AppearanceMode[] = ['system', 'light', 'dark'];
+const THEME_SCOPES: readonly ThemeScope[] = ['global', 'home'];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+// A cached panel tile: the thumbnail's URL and the data URL drawn from it.
+interface TileThumbnailRecord {
+  id: string;
+  url: string;
+  dataUrl: string;
+}
+
+function readTileThumbnailRecord(value: unknown): TileThumbnailRecord | null {
+  if (!isRecord(value) || typeof value.id !== 'string' || typeof value.dataUrl !== 'string' || !value.dataUrl) {
+    return null;
+  }
+  return { id: value.id, url: typeof value.url === 'string' ? value.url : '', dataUrl: value.dataUrl };
+}
+
+function createPanelState(deps: PanelStateDeps) {
   const {
     t,
     NEWTAB_FAVICON_SVG_SHADOW_PATH,
@@ -124,15 +285,14 @@ function createPanelState(deps) {
   let wallpaperPanelDrawPending = false;
   // Per curated photo: its panel tile from the thumbnail cache, '' while it is read or downloaded,
   // or null when that failed and the tile loads from Picsum as before.
-  const curatedTileThumbnails = new Map();
+  const curatedTileThumbnails = new Map<string, string | null>();
   // Shown while a tile is being read, so the tile does not start a Picsum request it may not need.
   const EMPTY_TILE_IMAGE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
   const BING_RECENT_TILE_LIMIT = 6;
-  const WALLPAPER_APPEARANCE_MODES = ['system', 'light', 'dark'];
   const BING_DAILY_HINT = 'A new Bing photo every day. A photo you pick while this is on stays for the rest of the day.';
   const CURATED_DAILY_HINT = 'A new photo every day from the category shown when you turn this on, ' +
     'the same on every synced device. A photo you pick stays for the rest of the day.';
-  function getWallpaperButtonLabel() {
+  function getWallpaperButtonLabel(): string {
     return t('settings_tab_appearance', 'Appearance');
   }
 
@@ -140,23 +300,23 @@ function createPanelState(deps) {
   // The panel view renders from the state built here and calls back through
   // wallpaperPanelActions; this runtime owns the settings and their storage.
 
-  function buildPanelToggle(checked, label) {
+  function buildPanelToggle(checked: unknown, label: string): ToggleState {
     return { checked: Boolean(checked), label };
   }
 
-  function getSliderMarks(values, toPercent) {
-    return values.map(toPercent);
+  function getSliderMarks(values: readonly number[], toPercent: (value: number) => number): number[] {
+    return values.map((value) => toPercent(value));
   }
 
   // Asset URLs, icons and slider marks: fixed for the page's lifetime.
-  function createWallpaperPanelModel() {
+  function createWallpaperPanelModel(): WallpaperPanelModel {
     const faviconInlineSvg = [
       '<svg viewBox="0 0 104 104" fill="none" xmlns="http://www.w3.org/2000/svg">',
       `<path opacity="var(--x-nt-favicon-shadow-opacity, 0.2)" d="${NEWTAB_FAVICON_SVG_SHADOW_PATH}" fill="currentColor"/>`,
       `<path d="${NEWTAB_FAVICON_SVG_MAIN_PATH}" fill="currentColor" fill-opacity="var(--x-nt-favicon-main-opacity, 0.5)"/>`,
       '</svg>'
     ].join('');
-    const uniqueSorted = (values) => values
+    const uniqueSorted = (values: number[]) => values
       .filter((value, index, array) => array.indexOf(value) === index)
       .sort((a, b) => a - b);
     return {
@@ -187,11 +347,11 @@ function createPanelState(deps) {
         searchWidth: getSliderMarks(getSearchWidthSnapPoints(), getSearchWidthPercent),
         shortcutColumns: getSliderMarks(getShortcutColumnsTickValues(), getShortcutColumnsPercent),
         shortcutSize: getSliderMarks(
-          uniqueSorted([48, 64, 80, 96, 112].map(normalizeShortcutSizeValue)),
+          uniqueSorted([48, 64, 80, 96, 112].map((value) => normalizeShortcutSizeValue(value))),
           (value) => getShortcutLayoutPercent(value, shortcutSizeConfig, 48, 112, 64)
         ),
         shortcutGap: getSliderMarks(
-          uniqueSorted([0, 8, 16, 24].map(normalizeShortcutGapValue)),
+          uniqueSorted([0, 8, 16, 24].map((value) => normalizeShortcutGapValue(value))),
           (value) => getShortcutLayoutPercent(value, shortcutGapConfig, 0, 24, 4)
         ),
         timeWeight: [50],
@@ -205,11 +365,11 @@ function createPanelState(deps) {
     };
   }
 
-  function getSliderMarkPercent(value, min, max) {
+  function getSliderMarkPercent(value: number, min: number, max: number): number {
     return max > min ? Math.round(((value - min) / (max - min)) * 10000) / 100 : 0;
   }
 
-  function buildWallpaperPanelHeaderState() {
+  function buildWallpaperPanelHeaderState(): WallpaperPanelState['header'] {
     return {
       title: t('newtab_appearance_settings_title', 'Appearance settings'),
       moreSettingsLabel: t('newtab_more_settings', 'More settings'),
@@ -220,7 +380,7 @@ function createPanelState(deps) {
     };
   }
 
-  function getWallpaperAppearancePreviewUrl(mode) {
+  function getWallpaperAppearancePreviewUrl(mode: AppearanceMode): string {
     // Global covers every page, so it keeps the shared previews; New Tab gets miniature New Tabs.
     if (getThemeScope() !== 'home') {
       return getRuntimeAssetUrl(`assets/images/${mode}.svg`);
@@ -230,16 +390,16 @@ function createPanelState(deps) {
     return getRuntimeAssetUrl(`assets/images/newtab-${previewMode}.svg`);
   }
 
-  function getWallpaperAppearanceModeLabels() {
-    const labels = {};
-    WALLPAPER_APPEARANCE_MODES.forEach((mode) => {
-      labels[mode] = getWallpaperAppearanceModeLabel(mode);
-    });
-    return labels;
+  function getWallpaperAppearanceModeLabels(): Record<AppearanceMode, string> {
+    return {
+      system: getWallpaperAppearanceModeLabel('system'),
+      light: getWallpaperAppearanceModeLabel('light'),
+      dark: getWallpaperAppearanceModeLabel('dark')
+    };
   }
 
-  function buildWallpaperThemeState() {
-    const scope = wallpaperState.pendingThemeScope || (getThemeScope() === 'home' ? 'home' : 'global');
+  function buildWallpaperThemeState(): WallpaperPanelState['theme'] {
+    const scope: ThemeScope = wallpaperState.pendingThemeScope || (getThemeScope() === 'home' ? 'home' : 'global');
     const themeMode = getThemeMode();
     // While the options slide between scopes they keep the labels they left with.
     const modeLabels = wallpaperState.heldAppearanceModeLabels || getWallpaperAppearanceModeLabels();
@@ -253,7 +413,7 @@ function createPanelState(deps) {
       scope: {
         active: scope,
         label: t('newtab_theme_scope_label', 'Theme scope'),
-        options: ['global', 'home'].map((value) => {
+        options: THEME_SCOPES.map((value) => {
           const label = value === 'home'
             ? t('newtab_theme_scope_home', 'New Tab')
             : t('newtab_theme_scope_global', 'Global');
@@ -285,7 +445,7 @@ function createPanelState(deps) {
     };
   }
 
-  function buildWallpaperSearchState() {
+  function buildWallpaperSearchState(): WallpaperPanelState['search'] {
     if (hasTopContentModeGetter) {
       wallpaperState.currentTopContentMode = normalizeNewtabTopContentMode(getTopContentMode());
     }
@@ -335,11 +495,11 @@ function createPanelState(deps) {
         tabs: {
           active: wallpaperState.currentTopContentMode,
           label: topContentTitle,
-          options: [
+          options: withAriaLabels<TopContentMode>([
             { value: 'brand', label: t('newtab_top_content_brand', 'Brand') },
             { value: 'time', label: t('newtab_top_content_time', 'Time') },
             { value: 'off', label: t('newtab_top_content_off', 'Hide') }
-          ].map((option) => Object.assign(option, { ariaLabel: option.label }))
+          ])
         }
       },
       timeFont: {
@@ -385,11 +545,11 @@ function createPanelState(deps) {
         tabs: {
           active: SETTINGS.normalizeNewtabTimeInk(getTimeInk()),
           label: timeInkTitle,
-          options: [
+          options: withAriaLabels<TimeInk>([
             { value: 'auto', label: t('newtab_time_ink_auto', 'Auto') },
             { value: 'light', label: t('newtab_time_ink_light', 'Light') },
             { value: 'dark', label: t('newtab_time_ink_dark', 'Dark') }
-          ].map((option) => Object.assign(option, { ariaLabel: option.label }))
+          ])
         }
       },
       seconds: {
@@ -405,7 +565,12 @@ function createPanelState(deps) {
     };
   }
 
-  function buildWallpaperShortcutsState() {
+  // Segment options whose buttons are named by their labels.
+  function withAriaLabels<V extends string>(options: Array<SegmentOption<V>>): Array<SegmentOption<V>> {
+    return options.map((option) => Object.assign(option, { ariaLabel: option.label }));
+  }
+
+  function buildWallpaperShortcutsState(): WallpaperPanelState['shortcuts'] {
     const enabled = Boolean(getShortcutsVisible());
     const title = t('settings_newtab_shortcuts_title', 'Shortcuts');
     const addTitle = t('settings_newtab_shortcut_add_title', 'Show “+”');
@@ -450,11 +615,11 @@ function createPanelState(deps) {
     };
   }
 
-  function getWallpaperSelectLabel(name) {
+  function getWallpaperSelectLabel(name: string): string {
     return formatMessage('newtab_wallpaper_select_label', 'Select {name}', { name });
   }
 
-  function buildWallpaperTileState(item, selectedTileId) {
+  function buildWallpaperTileState(item: WallpaperItem, selectedTileId: string): TileState {
     return {
       id: item.id,
       thumbnailUrl: getWallpaperThumbnailUrl(item),
@@ -463,9 +628,9 @@ function createPanelState(deps) {
     };
   }
 
-  const NO_SELECTED_SOURCE = Object.freeze({ visible: false, title: '', meta: '', url: '', linkLabel: '' });
+  const NO_SELECTED_SOURCE: SelectedSourceState = Object.freeze({ visible: false, title: '', meta: '', url: '', linkLabel: '' });
 
-  function buildSelectedSourceState(title, meta, url) {
+  function buildSelectedSourceState(title: string, meta: string, url: string): SelectedSourceState {
     return {
       visible: true,
       title,
@@ -475,7 +640,7 @@ function createPanelState(deps) {
     };
   }
 
-  function buildDailyState(toggleChecked, hint, selected) {
+  function buildDailyState(toggleChecked: boolean, hint: string, selected: WallpaperItem | null): DailyState {
     const label = t('newtab_bing_daily', 'Auto-update daily');
     return {
       label,
@@ -486,13 +651,14 @@ function createPanelState(deps) {
     };
   }
 
-  function getLocalWallpaperItems() {
-    return wallpaperState.customWallpapers.concat(wallpaperState.linkWallpapers.map((item) => getLinkWallpaperById(item.id)))
-      .filter(Boolean)
-      .sort((a, b) => a.updatedAt - b.updatedAt);
+  function getLocalWallpaperItems(): WallpaperItem[] {
+    const links = wallpaperState.linkWallpapers.map((item) => getLinkWallpaperById(item.id));
+    return [...wallpaperState.customWallpapers, ...links]
+      .filter((item): item is WallpaperItem => Boolean(item))
+      .sort((a, b) => (a.updatedAt || 0) - (b.updatedAt || 0));
   }
 
-  function buildLocalWallpaperState(label, selectedTileId) {
+  function buildLocalWallpaperState(label: string, selectedTileId: string): WallpaperPanelState['wallpaper']['local'] {
     const urlLabel = t('newtab_wallpaper_add_url', 'Add image link');
     return {
       label,
@@ -516,16 +682,17 @@ function createPanelState(deps) {
     };
   }
 
-  function buildBingWallpaperState(selectedId, selectedTileId) {
+  function buildBingWallpaperState(selectedId: string, selectedTileId: string): WallpaperPanelState['wallpaper']['bing'] {
     const selected = REMOTE_CONTENT.getWallpaperProvider(selectedId) === 'bing'
       ? getWallpaperById(selectedId)
       : null;
     const busy = wallpaperState.bingLoading || wallpaperState.bingSelecting;
     // Bing skips some days, so cap the list to two full rows instead of leaving a ragged last row.
+    const recent: WallpaperItem[] = wallpaperState.bingItems;
     const items = (selected && selectedId !== REMOTE_CONTENT.BING_DAILY_ID &&
       !wallpaperState.bingItems.some((item) => item.id === selectedId)
-      ? [selected, ...wallpaperState.bingItems]
-      : wallpaperState.bingItems).slice(0, BING_RECENT_TILE_LIMIT);
+      ? [selected, ...recent]
+      : recent).slice(0, BING_RECENT_TILE_LIMIT);
     const daily = buildDailyState(
       selectedId === REMOTE_CONTENT.BING_DAILY_ID,
       t('newtab_bing_daily_hint', BING_DAILY_HINT),
@@ -543,12 +710,12 @@ function createPanelState(deps) {
         : wallpaperState.bingStatus === 'error'
           ? t('newtab_bing_error', 'Could not load wallpapers. Please try again.') : '',
       selected: selected && selected.date
-        ? Object.assign(buildSelectedSourceState(selected.name, formatBingCopyright(selected.copyright),
-          selected.sourceUrl), {
+        ? Object.assign(buildSelectedSourceState(selected.name || '', formatBingCopyright(selected.copyright),
+          selected.sourceUrl || ''), {
           linkLabel: `${getBingWallpaperLabel(selected)} · ${t('newtab_bing_source', 'View wallpaper source')}`
         })
         : NO_SELECTED_SOURCE,
-      tiles: items.map((item) => {
+      tiles: items.map((item): OnlineTileState => {
         const wallpaper = remoteClient.getWallpaper(item.id);
         const label = getBingWallpaperLabel(wallpaper);
         return {
@@ -563,7 +730,7 @@ function createPanelState(deps) {
     };
   }
 
-  function getCuratedTileThumbnailUrl(item) {
+  function getCuratedTileThumbnailUrl(item: RemoteWallpaper): string {
     const url = getWallpaperThumbnailUrl(item);
     // A photo with a cached wallpaper copy already shows that copy's thumbnail.
     if (!wallpaperThumbnailCache || url !== item.thumbnailUrl) return url;
@@ -576,15 +743,17 @@ function createPanelState(deps) {
   // Tiles the curated tab shows come from this device's thumbnail cache; a tile seen for the
   // first time downloads once and is kept, so reopening the panel, even days later, asks Picsum
   // only for photos it has not shown before.
-  function loadCuratedTileThumbnails(items) {
+  function loadCuratedTileThumbnails(items: RemoteWallpaper[]): RemoteWallpaper[] {
     if (!wallpaperThumbnailCache || !wallpaperState.wallpaperPanelOpen || wallpaperState.activeWallpaperTab !== 'curated') return items;
     const pending = items.filter((item) => item.thumbnailUrl && !curatedTileThumbnails.has(item.id) &&
       getWallpaperThumbnailUrl(item) === item.thumbnailUrl);
     if (!pending.length) return items;
     pending.forEach((item) => curatedTileThumbnails.set(item.id, ''));
-    wallpaperThumbnailCache.readByIds(pending.map((item) => item.id)).catch(() => []).then((records) => {
-      const stored = new Map(records.filter((record) => record && record.dataUrl)
-        .map((record) => [record.id, record]));
+    void wallpaperThumbnailCache.readByIds(pending.map((item) => item.id)).catch((): unknown[] => []).then((records) => {
+      const stored = new Map(records.flatMap((value): Array<[string, TileThumbnailRecord]> => {
+        const record = readTileThumbnailRecord(value);
+        return record ? [[record.id, record]] : [];
+      }));
       pending.forEach((item) => {
         const record = stored.get(item.id);
         if (record && record.url === item.thumbnailUrl) {
@@ -598,12 +767,17 @@ function createPanelState(deps) {
     return items;
   }
 
-  function downloadCuratedTileThumbnail(item) {
-    fetchCustomWallpaperFile(item.thumbnailUrl)
+  function downloadCuratedTileThumbnail(item: RemoteWallpaper): void {
+    const thumbnailUrl = item.thumbnailUrl;
+    const cache = wallpaperThumbnailCache;
+    if (!thumbnailUrl || !cache) {
+      return;
+    }
+    void fetchCustomWallpaperFile(thumbnailUrl)
       .then((file) => localWallpaperStore.buildTileThumbnail(file))
       .then((dataUrl) => {
         curatedTileThumbnails.set(item.id, dataUrl);
-        wallpaperThumbnailCache.write({ id: item.id, url: item.thumbnailUrl, dataUrl })
+        cache.write({ id: item.id, url: thumbnailUrl, dataUrl })
           .catch(warnWallpaperStoreFailure('Could not cache a wallpaper thumbnail.'));
       }, () => {
         curatedTileThumbnails.set(item.id, null);
@@ -611,7 +785,11 @@ function createPanelState(deps) {
       .then(() => renderWallpaperPanelState());
   }
 
-  function buildCuratedWallpaperState(label, selectedId, selectedTileId) {
+  function buildCuratedWallpaperState(
+    label: string,
+    selectedId: string,
+    selectedTileId: string
+  ): WallpaperPanelState['wallpaper']['curated'] {
     const selected = REMOTE_CONTENT.getWallpaperProvider(selectedId) === 'curated'
       ? getWallpaperById(selectedId)
       : null;
@@ -638,10 +816,10 @@ function createPanelState(deps) {
       listLabel: t('newtab_curated_list', 'Photos'),
       mix: buildCuratedMixState(),
       refreshLabel: t('newtab_curated_more', 'Show others'),
-      selected: photoLabel
-        ? buildSelectedSourceState(photoLabel, getCuratedPhotoMeta(selected), selected.sourceUrl)
+      selected: photoLabel && selected
+        ? buildSelectedSourceState(photoLabel, getCuratedPhotoMeta(selected), selected.sourceUrl || '')
         : NO_SELECTED_SOURCE,
-      tiles: loadCuratedTileThumbnails(getCuratedTileItems()).map((item) => {
+      tiles: loadCuratedTileThumbnails(getCuratedTileItems()).map((item): OnlineTileState => {
         const wallpaper = remoteClient.getWallpaper(item.id);
         const tileLabel = [getCuratedPhotoLabel(wallpaper), wallpaper && wallpaper.title ? wallpaper.name : '']
           .filter(Boolean)
@@ -658,10 +836,10 @@ function createPanelState(deps) {
   }
 
   // Shown on the random tab only: which categories the mix, and its daily photo, draw from.
-  function buildCuratedMixState() {
+  function buildCuratedMixState(): CuratedMixState {
     const included = REMOTE_CONTENT.getRandomMixCategories();
     const categories = REMOTE_CONTENT.CURATED_CATEGORIES.filter((value) => value !== REMOTE_CONTENT.RANDOM_CATEGORY);
-    const names = included.map(getCuratedCategoryLabel);
+    const names = included.map((value) => getCuratedCategoryLabel(value));
     let label = t('newtab_curated_mix_all', 'All categories');
     if (included.length < categories.length) {
       label = included.length <= 2
@@ -686,7 +864,13 @@ function createPanelState(deps) {
     };
   }
 
-  function buildWallpaperEffectSliderState(labelInfo, value, visible, max, percent) {
+  function buildWallpaperEffectSliderState(
+    labelInfo: { labelKey: string; fallback: string },
+    value: unknown,
+    visible: boolean,
+    max: number,
+    percent: boolean
+  ): SliderState & { visible: boolean } {
     const number = Number(value);
     const normalizedValue = Number.isFinite(number) ? number : 0;
     return {
@@ -701,13 +885,13 @@ function createPanelState(deps) {
     };
   }
 
-  function buildWallpaperEffectState() {
+  function buildWallpaperEffectState(): WallpaperPanelState['wallpaper']['effect'] {
     const prefs = getWallpaperEffectPrefsForEditMode();
     const visibility = getWallpaperEffectControlVisibility(prefs);
     const title = t('newtab_wallpaper_effect_title', 'Wallpaper filter');
     const inkTitle = t('newtab_wallpaper_effect_ink_title', 'Sample tones');
     const blockMax = prefs.type === 'blocks' ? BLOCK_PARAMETER_MAX : 100;
-    const crtSlider = (key, labelKey, fallback) => buildWallpaperEffectSliderState(
+    const crtSlider = (key: 'crtBloom' | 'crtRgbOffset' | 'crtCurvature', labelKey: string, fallback: string) => buildWallpaperEffectSliderState(
       { labelKey, fallback },
       getCrtParameterPercent(key, prefs[key]),
       visibility[key],
@@ -780,7 +964,7 @@ function createPanelState(deps) {
     };
   }
 
-  function buildWallpaperSectionState() {
+  function buildWallpaperSectionState(): WallpaperPanelState['wallpaper'] {
     const enabled = hasAnyWallpaperEnabled();
     const selectedId = getWallpaperSelectionIdForUi();
     const selectedTileId = getWallpaperTileSelectionId(selectedId);
@@ -825,12 +1009,12 @@ function createPanelState(deps) {
         tabs: {
           active: wallpaperState.activeWallpaperTab,
           label: sourceLabel,
-          options: [
+          options: withAriaLabels<WallpaperSourceTab>([
             { value: 'built-in', label: builtInLabel },
             { value: 'local', label: localLabel },
             { value: 'bing', label: 'Bing' },
             { value: 'curated', label: curatedLabel }
-          ].map((option) => Object.assign(option, { ariaLabel: option.label }))
+          ])
         }
       },
       builtIn: {
@@ -853,11 +1037,16 @@ function createPanelState(deps) {
     };
   }
 
-  function buildWallpaperPanelState() {
+  // The panel's state, once its actions exist.
+  function buildWallpaperPanelState(): WallpaperPanelState | null {
+    const actions = wallpaperState.wallpaperPanelActions;
+    if (!actions) {
+      return null;
+    }
     const glassStyleValue = getGlassStyle();
     const glassThemeTitle = t('settings_newtab_glass_theme_title', 'Material theme');
     return {
-      actions: wallpaperState.wallpaperPanelActions,
+      actions,
       open: wallpaperState.wallpaperPanelOpen,
       panelLabel: t('settings_tab_appearance', 'Appearance'),
       button: { active: Boolean(wallpaperState.currentWallpaperId), label: getWallpaperButtonLabel() },
@@ -880,11 +1069,11 @@ function createPanelState(deps) {
           tabs: {
             active: SETTINGS.normalizeNewtabGlassTheme(getGlassTheme()),
             label: glassThemeTitle,
-            options: [
+            options: withAriaLabels<GlassTheme>([
               { value: 'follow', label: t('settings_newtab_glass_theme_follow', 'Auto') },
               { value: 'light', label: t('settings_newtab_glass_theme_light', 'Light') },
               { value: 'dark', label: t('settings_newtab_glass_theme_dark', 'Dark') }
-            ].map((option) => Object.assign(option, { ariaLabel: option.label }))
+            ])
           }
         }
       },
@@ -903,14 +1092,14 @@ function createPanelState(deps) {
     };
   }
 
-  function getQuoteProviderLabel() {
+  function getQuoteProviderLabel(): string {
     const quoteRuntime = options.getQuoteRuntime && options.getQuoteRuntime();
     return (quoteRuntime && typeof quoteRuntime.getProviderLabel === 'function' &&
       quoteRuntime.getProviderLabel()) || t('newtab_quote_provider', 'Powered by Hitokoto');
   }
 
   // What changes the panel's height: a change here animates the resize.
-  function getWallpaperPanelLayoutKey(state) {
+  function getWallpaperPanelLayoutKey(state: WallpaperPanelState): string {
     const wallpaper = state.wallpaper;
     return JSON.stringify([
       wallpaper.activeTab,
@@ -924,7 +1113,7 @@ function createPanelState(deps) {
   // this returns. A closed panel waits for its next open, and only its button, which stays on
   // the page, follows the state at once: the New Tab start-up changes the state many times,
   // and drawing the whole hidden panel for each change held the page back.
-  function renderWallpaperPanelState() {
+  function renderWallpaperPanelState(): void {
     if (!wallpaperState.wallpaperViewController) {
       return;
     }
@@ -938,7 +1127,7 @@ function createPanelState(deps) {
 
   // The button's attributes as the view draws them; React leaves an attribute alone while its
   // value matches the last render, so the DOM set here stays right until the next draw.
-  function syncClosedWallpaperButton() {
+  function syncClosedWallpaperButton(): void {
     if (!wallpaperState.wallpaperButton) {
       return;
     }
@@ -953,17 +1142,21 @@ function createPanelState(deps) {
     wallpaperState.wallpaperButton.setAttribute('data-active', active);
   }
 
-  function drawWallpaperPanelState() {
+  function drawWallpaperPanelState(): void {
+    const controller = wallpaperState.wallpaperViewController;
+    const state = controller ? buildWallpaperPanelState() : null;
+    if (!controller || !state) {
+      return;
+    }
     const previous = wallpaperPanelDrawPending ? null : wallpaperState.wallpaperPanelState;
     wallpaperPanelDrawPending = false;
-    const state = buildWallpaperPanelState();
     const layoutKey = getWallpaperPanelLayoutKey(state);
     const layoutChanged = Boolean(previous) && layoutKey !== wallpaperState.wallpaperPanelLayoutKey;
     wallpaperState.wallpaperPanelState = state;
     wallpaperState.wallpaperPanelLayoutKey = layoutKey;
     // Rows that show or hide (mode, link form, effect controls) animate their own height
     // through .x-nt-panel-collapsible.
-    const apply = () => wallpaperState.wallpaperViewController.render(state);
+    const apply = () => controller.render(state);
     if (layoutChanged) {
       animateWallpaperPanelResize(apply);
       return;
@@ -971,22 +1164,27 @@ function createPanelState(deps) {
     apply();
   }
 
-  function getWallpaperPanelRefs() {
+  function getWallpaperPanelRefs(): Readonly<Partial<Record<string, HTMLElement>>> {
     return wallpaperState.wallpaperViewController ? wallpaperState.wallpaperViewController.getRefs() : {};
   }
 
-  function isWallpaperTileSelected(id) {
+  function isWallpaperTileSelected(id: string): boolean {
     return getWallpaperTileSelectionId(getWallpaperSelectionIdForUi()) === id;
   }
 
   // Overlay and filter sliders snap to their marks while dragged.
-  function getWallpaperStyleSliderValue(value, fallbackValue, change, snap) {
+  function getWallpaperStyleSliderValue(
+    value: unknown,
+    fallbackValue: unknown,
+    change: SliderChange | null | undefined,
+    snap: boolean
+  ): number {
     return change && change.dragging && snap
       ? snapWallpaperOverlaySliderValue(value)
       : normalizeWallpaperOverlayOpacity(value, fallbackValue);
   }
   // The wallpaper article opens with how this panel works, so it is the panel's help page.
-  function buildHelpCenterUrl() {
+  function buildHelpCenterUrl(): string {
     const communityLinks = LumnoCommunityLinks;
     if (!communityLinks || typeof communityLinks.getHelpUrl !== 'function') {
       return '';
@@ -995,7 +1193,7 @@ function createPanelState(deps) {
     return communityLinks.getHelpUrl(htmlLang, 'newtab-wallpaper');
   }
 
-  function buildAppearanceSettingsUrl() {
+  function buildAppearanceSettingsUrl(): string {
     if (extensionRoutes && typeof extensionRoutes.buildOptionsUrl === 'function') {
       return extensionRoutes.buildOptionsUrl(chrome, 'appearance');
     }
@@ -1004,7 +1202,7 @@ function createPanelState(deps) {
     }
     try {
       return new URL('../options/options.html#appearance', document.baseURI || window.location.href).toString();
-    } catch (e) {
+    } catch {
       return '../options/options.html#appearance';
     }
   }
@@ -1023,4 +1221,7 @@ function createPanelState(deps) {
   };
 }
 
+type PanelState = ReturnType<typeof createPanelState>;
+
 export { createPanelState };
+export type { CrtParameterKey, PanelState, PanelStateDeps };

@@ -35,6 +35,8 @@
     "src/newtab/wallpaper/runtime/custom-wallpapers.ts",
     "src/newtab/wallpaper/runtime/daily-wallpapers.ts",
     "src/newtab/wallpaper/runtime/favicon-chooser.ts",
+    "src/newtab/wallpaper/runtime/panel-settings.ts",
+    "src/newtab/wallpaper/runtime/panel-state.ts",
     "src/newtab/wallpaper/runtime/wallpaper-effect-prefs.ts",
     "src/newtab/wallpaper/runtime/wallpaper-overlay.ts",
     "src/newtab/wallpaper/runtime/wallpaper-runtime-types.ts",
