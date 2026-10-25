@@ -1,6 +1,54 @@
 // The search and favicon blacklist lists: loading and saving them, their
 // item models and copy, and removing or saving a rule.
-function createBlacklistLists(deps) {
+import type { BlacklistRule, MatchMode } from '../domain/blacklist-utils';
+import type { BatchedStorageArea } from '../platform/settings-storage';
+import type { BlacklistRuleDraft, createBlacklistModel } from './options-blacklist';
+import type { GetMessage } from './options-types';
+import type {
+  BlacklistListController,
+  BlacklistListCopyModel,
+  BlacklistListItemModel,
+  BlacklistSaveResult
+} from './react/blacklist-list';
+
+type BlacklistModel = ReturnType<typeof createBlacklistModel>;
+
+type BlacklistListControllerRef = Pick<BlacklistListController, 'render'> | null;
+
+interface BlacklistListsState {
+  storageArea: BatchedStorageArea | null;
+  searchBlacklistItems: BlacklistRule[];
+  faviconRequestBlacklistItems: BlacklistRule[];
+  // The blacklist model's helpers, kept on the state for the other modules.
+  normalizeBlacklistItems: BlacklistModel['normalizeItems'];
+  buildBlacklistItemKey: BlacklistModel['buildItemKey'];
+  formatBlacklistPatternForDisplay: BlacklistModel['formatPatternForDisplay'];
+  getBlacklistPatternInputValue: BlacklistModel['getPatternInputValue'];
+  normalizeBlacklistMatchModes: BlacklistModel['normalizeMatchModes'];
+}
+
+interface BlacklistListsDeps {
+  SEARCH_BLACKLIST_STORAGE_KEY: string;
+  FAVICON_REQUEST_BLACKLIST_STORAGE_KEY: string;
+  getMessage: GetMessage;
+  getBlacklistMatchBadgeConfig(modes: unknown): { tone: MatchMode; text: string };
+  initTooltips(): void;
+  showToast(message: string, isError?: boolean): void;
+  notifyNewtabSectionsRefresh(section: string): void;
+  buildBlacklistRuleDraft(inputValue: string, matchModes: MatchMode[]): BlacklistRuleDraft;
+  upsertBlacklistItems(nextItem: BlacklistRule, replacedRuleKey: string): BlacklistRule[];
+  persistBlacklistItems(nextItems: BlacklistRule[], successMessage: string): Promise<unknown>;
+  faviconBlacklistList: HTMLElement | null;
+  syncClearButtonAvailability(button: HTMLElement | null, hasItems: boolean): void;
+  faviconBlacklistClearButton: HTMLElement | null;
+  faviconBlacklistListController: BlacklistListControllerRef;
+  blacklistList: HTMLElement | null;
+  blacklistClearButton: HTMLElement | null;
+  searchBlacklistListController: BlacklistListControllerRef;
+  optionsState: BlacklistListsState;
+}
+
+function createBlacklistLists(deps: BlacklistListsDeps) {
   const {
     SEARCH_BLACKLIST_STORAGE_KEY,
     FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
@@ -24,53 +72,57 @@ function createBlacklistLists(deps) {
   // The page state object shared with options.js and the other modules.
   const optionsState = deps.optionsState;
 
-  function loadSearchBlacklistItems() {
+  function loadSearchBlacklistItems(): Promise<BlacklistRule[]> {
     return new Promise((resolve) => {
-      if (!optionsState.storageArea) {
+      const storageArea = optionsState.storageArea;
+      if (!storageArea) {
         resolve([]);
         return;
       }
-      optionsState.storageArea.get([SEARCH_BLACKLIST_STORAGE_KEY], (result) => {
+      storageArea.get([SEARCH_BLACKLIST_STORAGE_KEY], (result) => {
         resolve(optionsState.normalizeBlacklistItems(result && result[SEARCH_BLACKLIST_STORAGE_KEY]));
       });
     });
   }
 
-  function saveSearchBlacklistItems(items) {
+  function saveSearchBlacklistItems(items: BlacklistRule[]): Promise<BlacklistRule[]> {
     return new Promise((resolve) => {
-      if (!optionsState.storageArea) {
+      const storageArea = optionsState.storageArea;
+      if (!storageArea) {
         resolve([]);
         return;
       }
       const normalized = optionsState.normalizeBlacklistItems(items);
-      optionsState.storageArea.set({ [SEARCH_BLACKLIST_STORAGE_KEY]: normalized }, () => resolve(normalized));
+      storageArea.set({ [SEARCH_BLACKLIST_STORAGE_KEY]: normalized }, () => resolve(normalized));
     });
   }
 
-  function loadFaviconRequestBlacklistItems() {
+  function loadFaviconRequestBlacklistItems(): Promise<BlacklistRule[]> {
     return new Promise((resolve) => {
-      if (!optionsState.storageArea) {
+      const storageArea = optionsState.storageArea;
+      if (!storageArea) {
         resolve([]);
         return;
       }
-      optionsState.storageArea.get([FAVICON_REQUEST_BLACKLIST_STORAGE_KEY], (result) => {
+      storageArea.get([FAVICON_REQUEST_BLACKLIST_STORAGE_KEY], (result) => {
         resolve(optionsState.normalizeBlacklistItems(result && result[FAVICON_REQUEST_BLACKLIST_STORAGE_KEY]));
       });
     });
   }
 
-  function saveFaviconRequestBlacklistItems(items) {
+  function saveFaviconRequestBlacklistItems(items: BlacklistRule[]): Promise<BlacklistRule[]> {
     return new Promise((resolve) => {
       const normalized = optionsState.normalizeBlacklistItems(items);
-      if (!optionsState.storageArea) {
+      const storageArea = optionsState.storageArea;
+      if (!storageArea) {
         resolve(normalized);
         return;
       }
-      optionsState.storageArea.set({ [FAVICON_REQUEST_BLACKLIST_STORAGE_KEY]: normalized }, () => resolve(normalized));
+      storageArea.set({ [FAVICON_REQUEST_BLACKLIST_STORAGE_KEY]: normalized }, () => resolve(normalized));
     });
   }
 
-  function getBlacklistListCopy() {
+  function getBlacklistListCopy(): BlacklistListCopyModel {
     return {
       cancelLabel: getMessage('shortcuts_cancel', '取消'),
       confirmLabel: getMessage('confirm_ok', '确认'),
@@ -116,7 +168,7 @@ function createBlacklistLists(deps) {
     };
   }
 
-  function getBlacklistListItemModel(item) {
+  function getBlacklistListItemModel(item: BlacklistRule): BlacklistListItemModel {
     const badgeConfig = getBlacklistMatchBadgeConfig(item.matchModes);
     return {
       key: optionsState.buildBlacklistItemKey(item),
@@ -128,20 +180,24 @@ function createBlacklistLists(deps) {
     };
   }
 
-  function renderBlacklistListWithReact(controller, items, editable) {
-    if (!controller || typeof controller.render !== 'function') {
+  function renderBlacklistListWithReact(
+    controller: BlacklistListControllerRef,
+    items: readonly BlacklistRule[],
+    editable: boolean
+  ): boolean {
+    if (!controller) {
       return false;
     }
     controller.render({
       copy: getBlacklistListCopy(),
-      editable: Boolean(editable),
-      items: (Array.isArray(items) ? items : []).map(getBlacklistListItemModel)
+      editable,
+      items: items.map((item) => getBlacklistListItemModel(item))
     });
     initTooltips();
     return true;
   }
 
-  function handleFaviconBlacklistRemove(itemKey) {
+  function handleFaviconBlacklistRemove(itemKey: string): Promise<void> {
     const nextItems = optionsState.faviconRequestBlacklistItems.filter(
       (entry) => optionsState.buildBlacklistItemKey(entry) !== itemKey
     );
@@ -154,7 +210,7 @@ function createBlacklistLists(deps) {
     });
   }
 
-  function handleSearchBlacklistRemove(itemKey) {
+  function handleSearchBlacklistRemove(itemKey: string): Promise<void> {
     const nextItems = optionsState.searchBlacklistItems.filter(
       (entry) => optionsState.buildBlacklistItemKey(entry) !== itemKey
     );
@@ -168,7 +224,7 @@ function createBlacklistLists(deps) {
     });
   }
 
-  function handleSearchBlacklistSave(itemKey, inputValue, matchModes) {
+  function handleSearchBlacklistSave(itemKey: string, inputValue: string, matchModes: MatchMode[]): Promise<BlacklistSaveResult> {
     const draft = buildBlacklistRuleDraft(inputValue, matchModes);
     if (!draft.item) {
       return Promise.resolve({
@@ -192,7 +248,7 @@ function createBlacklistLists(deps) {
     });
   }
 
-  function renderFaviconRequestBlacklistList() {
+  function renderFaviconRequestBlacklistList(): void {
     if (!faviconBlacklistList) {
       return;
     }
@@ -204,7 +260,7 @@ function createBlacklistLists(deps) {
     );
   }
 
-  function renderSearchBlacklistList() {
+  function renderSearchBlacklistList(): void {
     if (!blacklistList) {
       return;
     }
@@ -230,3 +286,4 @@ function createBlacklistLists(deps) {
 }
 
 export { createBlacklistLists };
+export type { BlacklistListsDeps, BlacklistListsState };

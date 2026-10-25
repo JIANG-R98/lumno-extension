@@ -1,27 +1,46 @@
-// @ts-nocheck
 // Rules for the search and favicon blacklists on the Options page. Rule
 // parsing itself lives in LumnoBlacklistUtils; this adds the editor's
 // presentation and how a saved rule joins the list. Results name a locale
 // message key in `error`.
-const DEFAULT_MATCH_MODE = 'prefix';
+import type * as BlacklistUtils from '../domain/blacklist-utils';
+import type { BlacklistRule, MatchMode } from '../domain/blacklist-utils';
 
-function createBlacklistModel(deps) {
+const DEFAULT_MATCH_MODE: MatchMode = 'prefix';
+
+// The rule the editor's input makes, or why it makes none.
+type BlacklistRuleDraft = { item: BlacklistRule; error?: undefined } | { item?: undefined; error: string };
+
+interface BlacklistInputConfig {
+  labelKey: string;
+  labelFallback: string;
+  placeholderKey: string;
+  placeholderFallback: string;
+  // Shown before the input, as the part of the URL the rule leaves out.
+  prefixText: string;
+}
+
+interface BlacklistModelDeps {
+  blacklistUtils: Pick<typeof BlacklistUtils,
+    'normalizeMatchModes' | 'normalizeItems' | 'buildRuleKey' | 'normalizePattern' | 'getPatternInputValue'>;
+}
+
+function createBlacklistModel(deps: BlacklistModelDeps) {
   const utils = deps.blacklistUtils;
 
-  function normalizeMatchModes(value, fallbackMode) {
+  function normalizeMatchModes(value: unknown, fallbackMode?: MatchMode | null): MatchMode[] {
     return utils.normalizeMatchModes(value, fallbackMode === undefined ? DEFAULT_MATCH_MODE : fallbackMode);
   }
 
-  function normalizeItems(items) {
+  function normalizeItems(items: unknown): BlacklistRule[] {
     return utils.normalizeItems(items, DEFAULT_MATCH_MODE);
   }
 
-  function buildItemKey(item) {
+  function buildItemKey(item: Partial<BlacklistRule> | null | undefined): string {
     return utils.buildRuleKey(item, DEFAULT_MATCH_MODE);
   }
 
   // 'exact' (this page), 'suffix' (the whole site) or 'prefix' (this path).
-  function getMatchTone(modes) {
+  function getMatchTone(modes: unknown): MatchMode {
     const normalized = normalizeMatchModes(modes);
     if (normalized.includes('exact')) {
       return 'exact';
@@ -29,7 +48,7 @@ function createBlacklistModel(deps) {
     return normalized.includes('suffix') ? 'suffix' : 'prefix';
   }
 
-  function formatPatternForDisplay(item) {
+  function formatPatternForDisplay(item: Partial<BlacklistRule> | null | undefined): string {
     if (!item || !item.pattern) {
       return '';
     }
@@ -39,7 +58,7 @@ function createBlacklistModel(deps) {
   }
 
   // Label, placeholder and the fixed prefix shown before the input.
-  function getInputConfig(modes) {
+  function getInputConfig(modes: unknown): BlacklistInputConfig {
     const tone = getMatchTone(modes);
     return {
       labelKey: 'blacklist_label_url',
@@ -54,8 +73,8 @@ function createBlacklistModel(deps) {
     };
   }
 
-  function buildRuleDraft(inputValue, matchModes) {
-    if (!Array.isArray(matchModes) || matchModes.length === 0) {
+  function buildRuleDraft(inputValue: string, matchModes: MatchMode[]): BlacklistRuleDraft {
+    if (matchModes.length === 0) {
       return { error: 'blacklist_error_match_mode' };
     }
     const pattern = utils.normalizePattern(inputValue, matchModes, null);
@@ -67,14 +86,15 @@ function createBlacklistModel(deps) {
 
   // The saved rule goes first; it replaces the rule being edited and any
   // rule that already matches the same way.
-  function upsertItems(items, nextItem, replacedRuleKey) {
+  function upsertItems(items: readonly BlacklistRule[], nextItem: BlacklistRule, replacedRuleKey: string): BlacklistRule[] {
     const nextKey = buildItemKey(nextItem);
-    return [{ pattern: nextItem.pattern, matchModes: nextItem.matchModes }].concat(
-      (items || []).filter((entry) => {
+    return [
+      { pattern: nextItem.pattern, matchModes: nextItem.matchModes },
+      ...items.filter((entry) => {
         const entryKey = buildItemKey(entry);
         return entryKey !== replacedRuleKey && entryKey !== nextKey;
       })
-    );
+    ];
   }
 
   return Object.freeze({
@@ -83,7 +103,7 @@ function createBlacklistModel(deps) {
     formatPatternForDisplay,
     getInputConfig,
     getMatchTone,
-    getPatternInputValue: (item) => utils.getPatternInputValue(item),
+    getPatternInputValue: (item: Partial<BlacklistRule> | null | undefined): string => utils.getPatternInputValue(item),
     normalizeItems,
     normalizeMatchModes,
     upsertItems
@@ -91,3 +111,4 @@ function createBlacklistModel(deps) {
 }
 
 export { createBlacklistModel };
+export type { BlacklistInputConfig, BlacklistModelDeps, BlacklistRuleDraft };

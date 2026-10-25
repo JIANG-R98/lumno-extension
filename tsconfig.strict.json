@@ -28,7 +28,11 @@
     "src/options/options-site-search-form.ts",
     "src/options/options-search-source-order.ts",
     "src/options/options-site-search-list.ts",
-    "src/options/options-site-search-events.ts"
+    "src/options/options-site-search-events.ts",
+    "src/options/options-aggregate-search.ts",
+    "src/options/options-aggregate-search-list.ts",
+    "src/options/options-blacklist.ts",
+    "src/options/options-blacklist-lists.ts"
   ],
   "exclude": [
     "src/**/react/**"

@@ -132,7 +132,7 @@ function createSiteSearchList(deps: SiteSearchListDeps) {
     PreparedSiteSearchProviders
   >> | null = null;
 
-  function getLocalizedBuiltinProviderName(item: ListedSiteSearchProvider | null): string {
+  function getLocalizedBuiltinProviderName(item: SiteSearchProvider | null): string {
     if (!item || item._xIsCustom) {
       return item ? (item.name || item.key) : '';
     }
@@ -143,7 +143,7 @@ function createSiteSearchList(deps: SiteSearchListDeps) {
     return getMessage(mapping.messageKey, mapping.fallback);
   }
 
-  function getSiteSearchItemIconUrl(item: ListedSiteSearchProvider | null): string {
+  function getSiteSearchItemIconUrl(item: SiteSearchProvider | null): string {
     if (!item) {
       return '';
     }

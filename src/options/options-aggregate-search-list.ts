@@ -1,8 +1,70 @@
 // The aggregate search list: available providers, item models, saving,
 // removing and clearing aggregate searches, and their error copy.
+import type * as AggregateSearchStore from '../domain/search/aggregate-search-store';
+import type { AggregateSearch } from '../domain/search/aggregate-search-store';
+import type * as SearchUtils from '../domain/search/search-utils';
+import type { SiteSearchProvider } from '../domain/search/types';
 import * as LumnoAggregateSearchStorage from '../platform/aggregate-search-storage';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
-function createAggregateSearchList(deps) {
+import type { StorageAreaFacade } from '../platform/settings-storage';
+import type * as AggregateSearchModule from './options-aggregate-search';
+import type { AggregateSearchItem } from './options-aggregate-search';
+import type { createSearchSourceOrderController } from './options-search-source-order';
+import type { FormatTemplate, GetMessage } from './options-types';
+import type {
+  AggregateSearchCopyModel,
+  AggregateSearchDraft,
+  AggregateSearchItemModel,
+  AggregateSearchListController,
+  AggregateSearchProviderOptionModel,
+  AggregateSearchSaveResult
+} from './react/aggregate-search-list';
+import type { ReorderCopyModel } from './react/reorder-buttons';
+
+interface AggregateSearchListState {
+  aggregateSearches: AggregateSearch[];
+  defaultSiteSearchProviders: SiteSearchProvider[];
+  customSiteSearchProviders: SiteSearchProvider[];
+  customSiteSearchProviderIdsReady: boolean;
+  disabledSiteSearchKeys: Set<string>;
+  searchSourceOrderController: Pick<ReturnType<typeof createSearchSourceOrderController>, 'sortList'>;
+  rawStorageArea: StorageAreaFacade | null;
+}
+
+interface AggregateSearchListDeps {
+  AGGREGATE_SEARCH_STORE: Pick<typeof AggregateSearchStore,
+    'normalizeAggregateSearches' | 'getProviderSourceRef' | 'getAggregateSearchAvailability' |
+    'serializeAggregateSearches' | 'getSerializedStorageByteLength' | 'SYNC_ITEM_BYTE_BUDGET'>;
+  aggregateSearchModel: ReturnType<typeof AggregateSearchModule.createAggregateSearchModel>;
+  SEARCH_UTILS: Pick<typeof SearchUtils, 'mergeCustomProviders'>;
+  isAiSiteSearchProvider(item: Partial<SiteSearchProvider> | null | undefined): boolean;
+  isSearchEngineSiteSearchProvider(item: Partial<SiteSearchProvider> | null | undefined): boolean;
+  getMessage: GetMessage;
+  getSiteSearchItemIconUrl(item: SiteSearchProvider | null): string;
+  getLocalizedBuiltinProviderName(item: SiteSearchProvider | null): string;
+  formatTemplate: FormatTemplate;
+  aggregateSearchListController: Pick<AggregateSearchListController, 'render'> | null;
+  syncClearButtonAvailability(button: HTMLElement | null, hasItems: boolean): void;
+  aggregateSearchClearButton: HTMLElement | null;
+  // The keys each list shows right now, in order, for the move buttons.
+  renderedSearchSourceKeys: Record<string, string[]>;
+  getSearchSourceReorderCopy(): ReorderCopyModel;
+  AGGREGATE_SEARCH_STORAGE_KEY: string;
+  getActivePrimaryAreaName(): string;
+  AGGREGATE_SEARCH: Pick<typeof AggregateSearchModule, 'createAggregateSearchStateCoordinator'>;
+  showToast(message: string, isError?: boolean): void;
+  createPersistentId(prefix: string): string;
+  findSiteSearchKeyConflict(key: string, allowedKey?: string, allowedAggregateId?: string): unknown;
+  getSiteSearchErrorMessage(errorKey: string): string;
+  optionsState: AggregateSearchListState;
+}
+
+interface AggregateProviderGroup {
+  group: string;
+  label: string;
+}
+
+function createAggregateSearchList(deps: AggregateSearchListDeps) {
   const {
     AGGREGATE_SEARCH_STORE,
     aggregateSearchModel,
@@ -31,32 +93,35 @@ function createAggregateSearchList(deps) {
   const optionsState = deps.optionsState;
 
   let aggregateSearchesReady = false;
-  let aggregateSearchStateCoordinator = null;
+  let aggregateSearchStateCoordinator: ReturnType<typeof AggregateSearchModule.createAggregateSearchStateCoordinator<
+    AggregateSearch,
+    AggregateSearchItem
+  >> | null = null;
 
-  function normalizeAggregateSearches(value) {
+  function normalizeAggregateSearches(value: unknown): AggregateSearch[] {
     return AGGREGATE_SEARCH_STORE.normalizeAggregateSearches(value);
   }
 
-  function deriveLegacyAggregateSearchAutoGroupEnabled(value) {
+  function deriveLegacyAggregateSearchAutoGroupEnabled(value: unknown): boolean {
     return aggregateSearchModel.deriveLegacyAutoGroupEnabled(value);
   }
 
-  function getAggregateSearchProviderSourceRef(provider) {
+  function getAggregateSearchProviderSourceRef(provider: SiteSearchProvider): string {
     return AGGREGATE_SEARCH_STORE.getProviderSourceRef(provider);
   }
 
-  function getAggregateSearchAvailableProviders() {
+  function getAggregateSearchAvailableProviders(): SiteSearchProvider[] {
     const activeDefaults = optionsState.defaultSiteSearchProviders.filter((item) => {
-      const key = String(item && item.key ? item.key : '').trim().toLowerCase();
-      return key && !optionsState.disabledSiteSearchKeys.has(key);
+      const key = item.key.trim().toLowerCase();
+      return Boolean(key) && !optionsState.disabledSiteSearchKeys.has(key);
     });
     const aggregateCustomProviders = optionsState.customSiteSearchProviderIdsReady
       ? optionsState.customSiteSearchProviders
-      : optionsState.customSiteSearchProviders.filter((item) => String(item && item.id ? item.id : '').trim());
+      : optionsState.customSiteSearchProviders.filter((item) => String(item.id || '').trim());
     return SEARCH_UTILS.mergeCustomProviders(activeDefaults, aggregateCustomProviders);
   }
 
-  function getAggregateSearchProviderGroup(provider) {
+  function getAggregateSearchProviderGroup(provider: SiteSearchProvider): AggregateProviderGroup {
     if (isAiSiteSearchProvider(provider)) {
       return {
         group: 'aiSearch',
@@ -75,7 +140,7 @@ function createAggregateSearchList(deps) {
     };
   }
 
-  function getAggregateSearchListCopy() {
+  function getAggregateSearchListCopy(): AggregateSearchCopyModel {
     return {
       addLabel: getMessage('aggregate_search_add', '添加聚合搜索'),
       cancelLabel: getMessage('shortcuts_cancel', '取消'),
@@ -117,27 +182,28 @@ function createAggregateSearchList(deps) {
     };
   }
 
-  function getAggregateSearchProviderModels() {
+  function getAggregateSearchProviderModels(): AggregateSearchProviderOptionModel[] {
     const providers = getAggregateSearchAvailableProviders();
-    const availableRefs = new Set();
-    const models = providers.map((provider) => {
+    const availableRefs = new Set<string>();
+    const models: AggregateSearchProviderOptionModel[] = [];
+    providers.forEach((provider) => {
       const sourceRef = getAggregateSearchProviderSourceRef(provider);
       if (!sourceRef) {
-        return null;
+        return;
       }
       availableRefs.add(sourceRef);
       const grouping = getAggregateSearchProviderGroup(provider);
-      return {
+      models.push({
         available: true,
         group: grouping.group,
         groupLabel: grouping.label,
         iconUrl: getSiteSearchItemIconUrl(provider),
         name: getLocalizedBuiltinProviderName(provider),
         sourceRef
-      };
-    }).filter(Boolean);
+      });
+    });
     const unavailableRefs = Array.from(new Set(
-      optionsState.aggregateSearches.flatMap((item) => Array.isArray(item.sourceRefs) ? item.sourceRefs : [])
+      optionsState.aggregateSearches.flatMap((item) => item.sourceRefs)
     )).filter((ref) => !availableRefs.has(ref));
     unavailableRefs.forEach((sourceRef) => {
       models.push({
@@ -154,16 +220,16 @@ function createAggregateSearchList(deps) {
     return models;
   }
 
-  function getAggregateSearchItemModel(item) {
-    const count = Array.isArray(item && item.sourceRefs) ? item.sourceRefs.length : 0;
+  function getAggregateSearchItemModel(item: AggregateSearch): AggregateSearchItemModel {
+    const count = item.sourceRefs.length;
     const providers = getAggregateSearchAvailableProviders();
     const availability = AGGREGATE_SEARCH_STORE.getAggregateSearchAvailability(item, providers);
     if (!availability.available) {
       return {
-        id: String(item && item.id ? item.id : ''),
-        key: String(item && item.key ? item.key : ''),
-        name: String(item && item.name ? item.name : ''),
-        sourceRefs: Array.isArray(item && item.sourceRefs) ? item.sourceRefs.slice() : [],
+        id: item.id,
+        key: item.key,
+        name: item.name,
+        sourceRefs: item.sourceRefs.slice(),
         sourceSummary: formatTemplate(
           getMessage(
             'aggregate_search_source_summary_unavailable',
@@ -171,16 +237,16 @@ function createAggregateSearchList(deps) {
           ),
           {
             count,
-            unavailable: Number(availability.unavailableSourceCount) || 0
+            unavailable: availability.unavailableSourceCount
           }
         )
       };
     }
     return {
-      id: String(item && item.id ? item.id : ''),
-      key: String(item && item.key ? item.key : ''),
-      name: String(item && item.name ? item.name : ''),
-      sourceRefs: Array.isArray(item && item.sourceRefs) ? item.sourceRefs.slice() : [],
+      id: item.id,
+      key: item.key,
+      name: item.name,
+      sourceRefs: item.sourceRefs.slice(),
       sourceSummary: formatTemplate(
         getMessage('aggregate_search_source_summary', '{count} sources'),
         { count }
@@ -188,20 +254,20 @@ function createAggregateSearchList(deps) {
     };
   }
 
-  function renderAggregateSearchList() {
-    if (!aggregateSearchListController || typeof aggregateSearchListController.render !== 'function') {
+  function renderAggregateSearchList(): void {
+    if (!aggregateSearchListController) {
       return;
     }
     syncClearButtonAvailability(aggregateSearchClearButton, optionsState.aggregateSearches.length > 0);
     const ordered = optionsState.searchSourceOrderController.sortList(
       optionsState.aggregateSearches,
       'aggregate',
-      (item) => item && item.id
+      (item) => item.id
     );
-    renderedSearchSourceKeys.aggregate = ordered.map((item) => String(item.id || ''));
+    renderedSearchSourceKeys.aggregate = ordered.map((item) => item.id);
     aggregateSearchListController.render({
       copy: getAggregateSearchListCopy(),
-      items: ordered.map(getAggregateSearchItemModel),
+      items: ordered.map((item) => getAggregateSearchItemModel(item)),
       reorder: getSearchSourceReorderCopy(),
       maxKeyLength: aggregateSearchModel.limits.maxKeyLength,
       maxNameLength: aggregateSearchModel.limits.maxNameLength,
@@ -211,13 +277,13 @@ function createAggregateSearchList(deps) {
     });
   }
 
-  function saveAggregateSearches(items) {
+  function saveAggregateSearches(items: AggregateSearchItem[]): Promise<AggregateSearch[]> {
     const serialized = AGGREGATE_SEARCH_STORE.serializeAggregateSearches(items);
     const serializedBytes = AGGREGATE_SEARCH_STORE.getSerializedStorageByteLength(
       serialized,
       AGGREGATE_SEARCH_STORAGE_KEY
     );
-    const byteBudget = Number(AGGREGATE_SEARCH_STORE.SYNC_ITEM_BYTE_BUDGET) || 7800;
+    const byteBudget = AGGREGATE_SEARCH_STORE.SYNC_ITEM_BYTE_BUDGET;
     if (getActivePrimaryAreaName() === 'sync' && serializedBytes > byteBudget) {
       return Promise.reject(new Error('aggregate-search-sync-item-quota-exceeded'));
     }
@@ -231,7 +297,10 @@ function createAggregateSearchList(deps) {
 
   function getAggregateSearchStateCoordinator() {
     if (!aggregateSearchStateCoordinator) {
-      aggregateSearchStateCoordinator = AGGREGATE_SEARCH.createAggregateSearchStateCoordinator({
+      aggregateSearchStateCoordinator = AGGREGATE_SEARCH.createAggregateSearchStateCoordinator<
+        AggregateSearch,
+        AggregateSearchItem
+      >({
         apply(items) {
           optionsState.aggregateSearches = items;
           aggregateSearchesReady = true;
@@ -259,11 +328,11 @@ function createAggregateSearchList(deps) {
     return aggregateSearchStateCoordinator;
   }
 
-  function refreshAggregateSearches() {
+  function refreshAggregateSearches(): Promise<AggregateSearch[]> {
     return getAggregateSearchStateCoordinator().refresh();
   }
 
-  function handleAggregateSearchSave(id, draft) {
+  function handleAggregateSearchSave(id: string | null, draft: AggregateSearchDraft): Promise<AggregateSearchSaveResult> {
     if (!aggregateSearchesReady) {
       return Promise.resolve({ ok: false, error: getAggregateSearchErrorMessage('storage_unavailable') });
     }
@@ -273,15 +342,20 @@ function createAggregateSearchList(deps) {
       hasKeyConflict: (key, currentId) => Boolean(findSiteSearchKeyConflict(key, '', currentId)),
       items: optionsState.aggregateSearches
     });
-    if (!built.ok) {
+    if (built.ok === false) {
       return Promise.resolve({ ok: false, error: getAggregateSearchErrorMessage(built.error) });
     }
-    return getAggregateSearchStateCoordinator().enqueueMutation((items) => {
-      const merged = aggregateSearchModel.mergeAggregateSearchItem(items, built.item, id);
-      return merged.ok ? merged : { ok: false, error: getAggregateSearchErrorMessage(merged.error) };
-    }).then((result) => {
-      if (!result || !result.ok) {
-        return result;
+    const builtItem = built.item;
+    return getAggregateSearchStateCoordinator().enqueueMutation((items): {
+      ok: boolean;
+      error?: string;
+      items?: AggregateSearchItem[];
+    } => {
+      const merged = aggregateSearchModel.mergeAggregateSearchItem(items, builtItem, id);
+      return merged.ok === false ? { ok: false, error: getAggregateSearchErrorMessage(merged.error) } : merged;
+    }).then((result): AggregateSearchSaveResult => {
+      if (!result.ok) {
+        return { ok: false, error: result.error };
       }
       showToast(getMessage('toast_saved', '已保存'), false);
       return { ok: true };
@@ -292,7 +366,7 @@ function createAggregateSearchList(deps) {
     });
   }
 
-  function getAggregateSearchErrorMessage(errorKey) {
+  function getAggregateSearchErrorMessage(errorKey: string): string {
     switch (errorKey) {
       case 'storage_unavailable':
         return getMessage(
@@ -319,13 +393,13 @@ function createAggregateSearchList(deps) {
     }
   }
 
-  function handleAggregateSearchRemove(id) {
+  function handleAggregateSearchRemove(id: string): Promise<void> {
     if (!aggregateSearchesReady) {
       showToast(getAggregateSearchErrorMessage('storage_unavailable'), true);
       return Promise.resolve();
     }
     return getAggregateSearchStateCoordinator().enqueueMutation((items) => ({
-      items: items.filter((item) => String(item.id || '') !== String(id || '')),
+      items: items.filter((item) => item.id !== id),
       ok: true
     })).then(() => {
       showToast(getMessage('toast_removed', '已移除'), false);
@@ -334,7 +408,7 @@ function createAggregateSearchList(deps) {
     });
   }
 
-  function handleAggregateSearchClear() {
+  function handleAggregateSearchClear(): Promise<void> {
     if (!aggregateSearchesReady) {
       showToast(getAggregateSearchErrorMessage('storage_unavailable'), true);
       return Promise.resolve();
@@ -361,3 +435,4 @@ function createAggregateSearchList(deps) {
 }
 
 export { createAggregateSearchList };
+export type { AggregateSearchListDeps, AggregateSearchListState };
