@@ -1,21 +1,16 @@
-// @ts-nocheck
 // The storage area the page reads settings from, and the one batched read
 // that fetches every key the first render needs before the modules ask for
 // them one by one.
 import * as LumnoSettings from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 
-function createStartupStorage(deps) {
+function createStartupStorage() {
   const settingsRuntimeApi = LumnoSettings;
   const providerStorageRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chrome);
-  const rawStorageArea = providerStorageRuntime
-    ? providerStorageRuntime.area
-    : ((chrome && chrome.storage && chrome.storage.sync)
-        ? chrome.storage.sync
-        : (chrome && chrome.storage ? chrome.storage.local : null));
+  const rawStorageArea = providerStorageRuntime.area;
   // The next New Tab prefetches these keys before its scripts load (newtab-storage-prefetch.ts).
-  function rememberStartupStorageKeys(keys) {
-    if (!Array.isArray(keys) || !keys.length) {
+  function rememberStartupStorageKeys(keys: readonly string[] | null | undefined): void {
+    if (!keys || !keys.length) {
       return;
     }
     try {
@@ -24,7 +19,7 @@ function createStartupStorage(deps) {
       if (window.localStorage.getItem(cacheKey) !== value) {
         window.localStorage.setItem(cacheKey, value);
       }
-    } catch (_error) {
+    } catch {
       // localStorage is only a fast path; the next load reads storage as before.
     }
   }
@@ -35,7 +30,7 @@ function createStartupStorage(deps) {
     ? startupStorageReadBatch.area
     : rawStorageArea;
   if (startupStorageReadBatch) {
-    startupStorageReadBatch.ready.then((metrics) => {
+    void startupStorageReadBatch.ready.then((metrics) => {
       rememberStartupStorageKeys(metrics && metrics.keys);
       if (!document.documentElement) {
         return;
@@ -66,4 +61,7 @@ function createStartupStorage(deps) {
   };
 }
 
+type StartupStorage = ReturnType<typeof createStartupStorage>;
+
 export { createStartupStorage };
+export type { StartupStorage };

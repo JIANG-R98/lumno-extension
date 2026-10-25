@@ -126,9 +126,7 @@ import * as LumnoMessaging from '../platform/messaging';
     rawStorageArea,
     startupStorageReadBatch,
     storageArea
-  } = NEWTAB_STARTUP_STORAGE.createStartupStorage({
-
-  });
+  } = NEWTAB_STARTUP_STORAGE.createStartupStorage();
 
   // Edge's topSites lists its own promoted sites instead of the user's, so Edge
   // ranks most-visited from history visit counts alone.
@@ -206,9 +204,7 @@ import * as LumnoMessaging from '../platform/messaging';
 
   const {
     getNewtabVisualViewportInsets
-  } = NEWTAB_VIEWPORT_INSETS.createViewportInsets({
-
-  });
+  } = NEWTAB_VIEWPORT_INSETS.createViewportInsets();
 
   const SETTINGS = settingsRuntimeApi;
   const BROWSER_PROFILE = LumnoBrowserProfile;
@@ -2161,9 +2157,7 @@ import * as LumnoMessaging from '../platform/messaging';
     bookmarkCascadeCopyTooltipController,
     bookmarkCursorTooltipController,
     searchInputCursorTooltipController
-  } = NEWTAB_TOOLTIP_CONTROLLERS.createTooltipControllers({
-
-  });
+  } = NEWTAB_TOOLTIP_CONTROLLERS.createTooltipControllers();
 
 
   const {

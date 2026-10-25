@@ -1,6 +1,43 @@
 // Window resizes: re-measures the layout once per frame, and once more
 // after the resize settles, without animating the blocks.
-function createPageResize(deps) {
+
+// A card's place on screen before a layout change.
+type CardLayout = Map<HTMLElement, { left: number; top: number }>;
+
+interface PageResizeState {
+  recentLoadedOnce: boolean;
+  bookmarkLoadedOnce: boolean;
+  recentSourceItems: readonly unknown[];
+  newtabReadyViewportRevision: number;
+  // Holds the search box in place while the window is being resized.
+  newtabResizeLayoutLocked: boolean;
+  newtabReadyRequested: boolean;
+}
+
+interface PageResizeDeps {
+  getBookmarkLimit(): number;
+  applyNewtabWidthMode(): void;
+  applyNewtabShortcutColumns(): void;
+  shouldAnimateNewtabLayoutShift(): boolean;
+  captureRecentCardLayout(): CardLayout;
+  // Each returns whether the grid's column count changed.
+  applyRecentGridColumns(): boolean;
+  applyBookmarkGridColumns(): boolean;
+  updateSiteSearchPrefixLayout(): void;
+  keepBookmarkPageAnchorAfterLimitChange(previousLimit: number): void;
+  renderCurrentBookmarkPage(): void;
+  updateBookmarkGridHeightLock(): void;
+  updateBookmarkSectionPosition(options?: { preserveSearchEntryLayout?: boolean; stabilizeDockDensity?: boolean }): void;
+  positionBookmarkCascadeLevels(): void;
+  updateSuggestionsFloatingLayout(): void;
+  cancelRecentResizeLayoutAnimations(): void;
+  renderRecentSites(items: readonly unknown[]): void;
+  animateRecentResizeLayout(fromPositions: CardLayout | null): void;
+  scheduleNewtabReadyAfterViewportSettle(): void;
+  pageState: PageResizeState;
+}
+
+function createPageResize(deps: PageResizeDeps): void {
   const {
     getBookmarkLimit,
     applyNewtabWidthMode,
@@ -29,7 +66,7 @@ function createPageResize(deps) {
 
   let newtabResizeFrame = 0;
   let newtabResizeSettleTimer = 0;
-  function handleNewtabResize() {
+  function handleNewtabResize(): void {
     newtabResizeFrame = 0;
     const previousBookmarkLimit = getBookmarkLimit();
     applyNewtabWidthMode();
@@ -81,8 +118,7 @@ function createPageResize(deps) {
     }
     newtabResizeFrame = window.requestAnimationFrame(handleNewtabResize);
   }, { passive: true });
-
-  return {};
 }
 
 export { createPageResize };
+export type { PageResizeDeps, PageResizeState };

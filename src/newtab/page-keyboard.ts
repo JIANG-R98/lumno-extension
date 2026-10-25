@@ -1,6 +1,40 @@
 // Page-wide keys: Tab into site search, Escape through the dismiss stack,
 // and the modifier keys suggestion actions follow.
-function createPageKeyboard(deps) {
+import type * as SuggestionNavigation from '../shared/search/suggestion-navigation';
+import type { NumberShortcutContainer, NumberShortcutItem, NumberShortcutOptions } from '../shared/search/suggestion-navigation';
+import type { DismissStack } from './dismiss-stack';
+
+interface PageKeyboardState {
+  // Moves into site search on Tab, when the search box allows it.
+  handleTabKey: ((event: KeyboardEvent) => void) | null;
+  shortcutDragState: unknown;
+  bookmarkDragState: unknown;
+  recentCardDragRuntime: {
+    hasRecentCardDragSession(): boolean;
+    finishRecentCardDrag(event: null, options: { cancel: boolean }): void;
+  };
+  folderColorPicker: { isOpen(): boolean } | null;
+  suggestionsContainer: NumberShortcutContainer | null;
+  inputParts: { input: HTMLElement };
+}
+
+interface PageKeyboardDeps {
+  handleSearchTabKey(event: KeyboardEvent): void;
+  dismissStack: Pick<DismissStack, 'register'>;
+  finishShortcutDrag(event: null, options: { cancel: boolean }): void;
+  finishBookmarkDrag(event: null, options: { canceled: boolean }): void;
+  isEditableElement(target: EventTarget | null): boolean;
+  // Undoes or redoes a bookmark move; false when there was none.
+  performBookmarkMoveHistoryAction(direction: 'undo' | 'redo'): boolean;
+  syncSuggestionActionModifiersFromEvent(event: KeyboardEvent): void;
+  SUGGESTION_NAVIGATION: Pick<typeof SuggestionNavigation, 'handleNumberShortcutKeyEvent' | 'cancelNumberShortcuts'>;
+  suggestionItems: ReadonlyArray<NumberShortcutItem | null | undefined>;
+  numberShortcutOptions: NumberShortcutOptions;
+  setSuggestionActionModifiersActive(primary: boolean, shift: boolean, alt: boolean): void;
+  pageState: PageKeyboardState;
+}
+
+function createPageKeyboard(deps: PageKeyboardDeps): void {
   const {
     handleSearchTabKey,
     dismissStack,
@@ -86,8 +120,7 @@ function createPageKeyboard(deps) {
     setSuggestionActionModifiersActive(false, false, false);
     SUGGESTION_NAVIGATION.cancelNumberShortcuts(pageState.suggestionsContainer);
   });
-
-  return {};
 }
 
 export { createPageKeyboard };
+export type { PageKeyboardDeps, PageKeyboardState };

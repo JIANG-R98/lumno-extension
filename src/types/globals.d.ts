@@ -165,6 +165,9 @@ declare global {
   // Set by src/newtab/wallpaper/wallpaper-preload.ts when it painted a
   // wallpaper, and by wallpaper-effect-preload.ts when it started the effect.
   var LumnoNewtabWallpaperPreload: WallpaperPreloadState | undefined;
+  // The last New Tab's locale messages, fetched by
+  // src/newtab/newtab-storage-prefetch.ts before the page's scripts load.
+  var LumnoNewtabLocalePrefetch: { locale: string; messages: Promise<unknown> } | null | undefined;
   var LumnoNewtabWallpaperEffectPreload: WallpaperEffectPreloadRuntime | undefined;
   var LumnoNewtabBookmarkBreadcrumb: ReturnType<typeof createBookmarkBreadcrumbApi> | undefined;
   var LumnoSearchInputUI: ReturnType<typeof createSearchInputApi> | undefined;

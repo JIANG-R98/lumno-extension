@@ -4,7 +4,7 @@
 import * as LumnoCursorTooltip from '../shared/ui/cursor-tooltip';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 
-function createTooltipControllers(deps) {
+function createTooltipControllers() {
   const topActionTooltipController = LumnoTooltip.createController({
     documentObj: document,
     windowObj: window,
@@ -66,4 +66,7 @@ function createTooltipControllers(deps) {
   };
 }
 
+type TooltipControllers = ReturnType<typeof createTooltipControllers>;
+
 export { createTooltipControllers };
+export type { TooltipControllers };

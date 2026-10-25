@@ -1,13 +1,13 @@
 // Mirrors the visual viewport's insets (an on-screen keyboard) into CSS
 // custom properties the layout reads. A pinch zoom is left alone: the page
 // just zooms like any other, with nothing re-fitted to the zoomed-in view.
-function isPinchZoomed(visualViewport) {
+function isPinchZoomed(visualViewport: Pick<VisualViewport, 'scale'> | null | undefined): boolean {
   const scale = Number(visualViewport && visualViewport.scale);
   return Number.isFinite(scale) && Math.abs(scale - 1) > 0.001;
 }
 
-function createViewportInsets(deps) {
-  function getNewtabVisualViewportInsets() {
+function createViewportInsets() {
+  function getNewtabVisualViewportInsets(): { top: number; bottom: number } {
     const visualViewport = window.visualViewport;
     if (!visualViewport || isPinchZoomed(visualViewport)) {
       return { top: 0, bottom: 0 };
@@ -22,7 +22,7 @@ function createViewportInsets(deps) {
     const bottom = Math.max(0, layoutHeight - top - viewportHeight);
     return { top, bottom };
   }
-  function syncNewtabVisualViewportInsets() {
+  function syncNewtabVisualViewportInsets(): void {
     if (!document.documentElement || !document.documentElement.style) {
       return;
     }
@@ -57,4 +57,7 @@ function createViewportInsets(deps) {
   };
 }
 
+type ViewportInsets = ReturnType<typeof createViewportInsets>;
+
 export { createViewportInsets, isPinchZoomed };
+export type { ViewportInsets };

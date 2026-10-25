@@ -1,4 +1,5 @@
-// @ts-nocheck
+// Starts reading what the last New Tab's choices make known before the page's
+// own scripts load: its locale messages and its startup storage keys.
 import * as LumnoSettings from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 
@@ -8,10 +9,10 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
   const settings = LumnoSettings;
   const chromeApi = window.chrome || null;
 
-  function readCache(key) {
+  function readCache(key: string): string | null {
     try {
       return window.localStorage ? window.localStorage.getItem(key) : null;
-    } catch (_error) {
+    } catch {
       return null;
     }
   }
@@ -23,17 +24,19 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
     const localePath = chromeApi.runtime.getURL(`_locales/${cachedLocale}/messages.json`);
     globalThis.LumnoNewtabLocalePrefetch = {
       locale: cachedLocale,
-      messages: fetch(localePath, { cache: 'no-store' }).then((response) => response.json())
+      messages: fetch(localePath, { cache: 'no-store' }).then((response): Promise<unknown> => response.json())
     };
   }
 
-  let keys = null;
+  let stored: unknown = null;
   try {
-    keys = JSON.parse(readCache(settings.NEWTAB_STARTUP_STORAGE_KEYS_CACHE_KEY) || 'null');
-  } catch (_error) {
-    keys = null;
+    stored = JSON.parse(readCache(settings.NEWTAB_STARTUP_STORAGE_KEYS_CACHE_KEY) || 'null');
+  } catch {
+    stored = null;
   }
-  if (!Array.isArray(keys) || !keys.length || !keys.every((key) => typeof key === 'string')) {
+  const list: unknown[] = Array.isArray(stored) ? stored : [];
+  const keys = list.filter((key): key is string => typeof key === 'string');
+  if (!keys.length || keys.length !== list.length) {
     return;
   }
   const providerRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);

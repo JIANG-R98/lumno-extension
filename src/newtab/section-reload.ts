@@ -1,6 +1,27 @@
 // Reloads the recent and bookmark sections when tabs, history or
 // bookmarks change elsewhere, once the page is visible again.
-function createSectionReload(deps) {
+import type { BookmarksRuntime } from './bookmarks/bookmarks-runtime';
+
+interface SectionReloadState {
+  newtabShortcuts: ReadonlyArray<{ type?: string }>;
+  bookmarkCascadeRuntime: { isOpen?: () => boolean } | null;
+}
+
+interface SectionReloadDeps {
+  loadRecentSites(options: { force: boolean }): unknown;
+  loadBookmarks(options: { force: boolean }): unknown;
+  releaseStartupRecentSourceReads(): void;
+  markRecentDataDirty(): void;
+  bookmarksRuntime: Pick<BookmarksRuntime, 'subscribe'>;
+  refreshShortcutFolderReferences(): void;
+  scheduleFolderColorSync(): void;
+  markBookmarkTreeDirty(options: { preserveCascadeOpen: boolean; skipRuntimeInvalidate: boolean }): void;
+  bookmarkMoveHistory: { clear(): void };
+  refreshOpenBookmarkCascadeMenu(): void;
+  pageState: SectionReloadState;
+}
+
+function createSectionReload(deps: SectionReloadDeps) {
   const {
     loadRecentSites,
     loadBookmarks,
@@ -21,7 +42,7 @@ function createSectionReload(deps) {
 
   let recentExternalChangeTimer = 0;
   let bookmarkExternalChangeTimer = 0;
-  function scheduleRecentReloadIfVisible() {
+  function scheduleRecentReloadIfVisible(): void {
     if (document.visibilityState !== 'visible') {
       return;
     }
@@ -36,7 +57,7 @@ function createSectionReload(deps) {
     }, NEWTAB_EXTERNAL_CHANGE_DEBOUNCE_MS);
   }
 
-  function scheduleBookmarkReloadIfVisible() {
+  function scheduleBookmarkReloadIfVisible(): void {
     if (document.visibilityState !== 'visible') {
       return;
     }
@@ -51,7 +72,7 @@ function createSectionReload(deps) {
     }, NEWTAB_EXTERNAL_CHANGE_DEBOUNCE_MS);
   }
 
-  function bindRecentAndBookmarkChangeListeners() {
+  function bindRecentAndBookmarkChangeListeners(): void {
     if (chrome.history && chrome.history.onVisited && chrome.history.onVisited.addListener) {
       chrome.history.onVisited.addListener(() => {
         releaseStartupRecentSourceReads();
@@ -100,4 +121,7 @@ function createSectionReload(deps) {
   };
 }
 
+type SectionReload = ReturnType<typeof createSectionReload>;
+
 export { createSectionReload };
+export type { SectionReload, SectionReloadDeps, SectionReloadState };

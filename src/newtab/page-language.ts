@@ -1,8 +1,46 @@
 // The page language: resolving the locale, loading its messages, the
 // t() and formatMessage() lookups every module uses, the document's lang
 // attribute, and the listeners that re-render copy when it changes.
+import type * as LumnoSettings from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
-function createPageLanguage(deps) {
+import type * as SearchUtils from '../domain/search/search-utils';
+import type { FormatMessage, Translate } from './newtab-types';
+
+// A locale's messages as _locales/<locale>/messages.json holds them.
+type LocaleMessages = Record<string, { message?: string } | undefined>;
+
+interface PageLanguageState {
+  currentMessages: LocaleMessages | null;
+}
+
+interface PageLanguageDeps {
+  languageChangeListeners: Array<() => void>;
+  SETTINGS: Pick<typeof LumnoSettings, 'normalizeLocale' | 'localeToHtmlLang'>;
+  SEARCH_UTILS: Pick<typeof SearchUtils, 'sanitizeDisplayText'>;
+  getExtensionResourceUrl(path: string): string;
+  pageState: PageLanguageState;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+// Messages read from a fetched file, read as untrusted.
+function readLocaleMessages(value: unknown): LocaleMessages {
+  const messages: LocaleMessages = {};
+  if (!isRecord(value)) {
+    return messages;
+  }
+  Object.keys(value).forEach((key) => {
+    const entry = value[key];
+    if (isRecord(entry) && typeof entry.message === 'string') {
+      messages[key] = { message: entry.message };
+    }
+  });
+  return messages;
+}
+
+function createPageLanguage(deps: PageLanguageDeps) {
   const {
     languageChangeListeners,
     SETTINGS,
@@ -13,52 +51,52 @@ function createPageLanguage(deps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  function onLanguageChange(listener) {
+  function onLanguageChange(listener: () => void): void {
     languageChangeListeners.push(listener);
   }
 
-  function normalizeLocale(locale) {
+  function normalizeLocale(locale: unknown): string {
     return SETTINGS.normalizeLocale(locale);
   }
 
-  function localeToHtmlLang(locale) {
+  function localeToHtmlLang(locale: unknown): string {
     return SETTINGS.localeToHtmlLang(locale);
   }
 
-  function applyDocumentLanguage(locale) {
+  function applyDocumentLanguage(locale: unknown): void {
     if (!document.documentElement) {
       return;
     }
     document.documentElement.lang = localeToHtmlLang(locale);
   }
 
-  function getSystemLocale() {
+  function getSystemLocale(): string {
     if (chrome && chrome.i18n && chrome.i18n.getUILanguage) {
       return normalizeLocale(chrome.i18n.getUILanguage());
     }
     return normalizeLocale(navigator.language || 'en');
   }
 
-  function sanitizeDisplayText(text) {
+  function sanitizeDisplayText(text: unknown): string {
     return SEARCH_UTILS.sanitizeDisplayText(text);
   }
 
-  function loadLocaleMessages(locale) {
+  function loadLocaleMessages(locale: unknown): Promise<LocaleMessages> {
     const normalized = normalizeLocale(locale);
     LumnoSettingsStorage.cacheNewtabLocale(normalized);
     // newtab-storage-prefetch.ts started the last New Tab's locale before this script loaded.
     const prefetch = globalThis.LumnoNewtabLocalePrefetch;
     globalThis.LumnoNewtabLocalePrefetch = null;
     if (prefetch && prefetch.locale === normalized) {
-      return prefetch.messages.catch(() => ({}));
+      return prefetch.messages.then(readLocaleMessages, (): LocaleMessages => ({}));
     }
     const localePath = getExtensionResourceUrl(`_locales/${normalized}/messages.json`);
     return fetch(localePath, { cache: 'no-store' })
-      .then((response) => response.json())
-      .catch(() => ({}));
+      .then((response): Promise<unknown> => response.json())
+      .then(readLocaleMessages, (): LocaleMessages => ({}));
   }
 
-  function t(key, fallback) {
+  const t: Translate = (key, fallback) => {
     if (pageState.currentMessages && pageState.currentMessages[key] && pageState.currentMessages[key].message) {
       return pageState.currentMessages[key].message;
     }
@@ -69,19 +107,19 @@ function createPageLanguage(deps) {
       }
     }
     return fallback || '';
-  }
+  };
 
-  function formatMessage(key, fallback, params) {
+  const formatMessage: FormatMessage = (key, fallback, params) => {
     let text = t(key, fallback);
     if (!params) {
       return text;
     }
     Object.keys(params).forEach((token) => {
       const value = params[token];
-      text = text.replace(new RegExp(`\\{${token}\\}`, 'g'), value);
+      text = text.replace(new RegExp(`\\{${token}\\}`, 'g'), String(value));
     });
     return text;
-  }
+  };
 
   return {
     onLanguageChange,
@@ -95,4 +133,7 @@ function createPageLanguage(deps) {
   };
 }
 
+type PageLanguage = ReturnType<typeof createPageLanguage>;
+
 export { createPageLanguage };
+export type { LocaleMessages, PageLanguage, PageLanguageDeps, PageLanguageState };

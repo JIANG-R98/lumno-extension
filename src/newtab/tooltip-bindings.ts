@@ -1,6 +1,31 @@
 // Binds and hides the New Tab tooltips: top actions, search input, shortcut
 // tiles, the shortcut dialog and bookmark cursor tooltips.
-function createTooltipBindings(deps) {
+import type { CursorTooltipController, CursorTooltipOptions, CursorTooltipTextSource } from '../shared/ui/cursor-tooltip';
+import type { TooltipBindOptions, TooltipController, TooltipShowOptions, TooltipTextSource } from '../shared/ui/tooltip';
+import type { Translate } from './newtab-types';
+
+interface TooltipBindingsState {
+  inputParts: { container: HTMLElement | null } | null;
+  newtabShortcutDockMagnificationEnabled: boolean;
+  shortcutGrid: HTMLElement | null;
+}
+
+interface TooltipBindingsDeps {
+  topActionTooltipController: TooltipController;
+  searchInputCursorTooltipController: CursorTooltipController;
+  shortcutTooltipController: TooltipController;
+  t: Translate;
+  isShortcutDragActive(): boolean;
+  isBookmarkDragActive(): boolean;
+  isShortcutContextMenuOpen(): boolean;
+  shortcutDialogTooltipController: TooltipController;
+  bookmarkCursorTooltipController: CursorTooltipController;
+  // Whether bookmark hover feedback is off for this target, as during a drag.
+  shouldSuppressBookmarkHover(target: HTMLElement): boolean;
+  pageState: TooltipBindingsState;
+}
+
+function createTooltipBindings(deps: TooltipBindingsDeps) {
   const {
     topActionTooltipController,
     searchInputCursorTooltipController,
@@ -17,7 +42,11 @@ function createTooltipBindings(deps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  function showTopActionTooltip(button, text, options) {
+  function showTopActionTooltip(
+    button: HTMLElement | null | undefined,
+    text: string | null | undefined,
+    options?: TooltipShowOptions | null
+  ): void {
     if (!button || !text) {
       return;
     }
@@ -25,17 +54,21 @@ function createTooltipBindings(deps) {
     const placement = tooltipOptions.placement === 'left' || tooltipOptions.placement === 'left-above'
       ? tooltipOptions.placement
       : 'top';
-    topActionTooltipController.show(button, text, Object.assign({}, tooltipOptions, {
+    topActionTooltipController.show(button, text, {
+      ...tooltipOptions,
       placement,
       maxWidth: 420
-    }));
+    });
   }
 
-  function hideTopActionTooltip() {
+  function hideTopActionTooltip(): void {
     topActionTooltipController.hide();
   }
 
-  function bindSearchInputCursorTooltip(button, getText) {
+  function bindSearchInputCursorTooltip(
+    button: HTMLElement | null | undefined,
+    getText: CursorTooltipTextSource | null | undefined
+  ): HTMLElement | null {
     if (!button) {
       return null;
     }
@@ -49,16 +82,20 @@ function createTooltipBindings(deps) {
     });
   }
 
-  function hideSearchInputCursorTooltip() {
+  function hideSearchInputCursorTooltip(): void {
     searchInputCursorTooltipController.hide();
   }
 
-  function bindShortcutTooltip(target, getText, options) {
+  function bindShortcutTooltip(
+    target: HTMLElement | null | undefined,
+    getText?: TooltipTextSource | null,
+    options?: TooltipBindOptions | null
+  ): HTMLElement | null {
     if (!target) {
       return null;
     }
     const tooltipOptions = options && typeof options === 'object' ? options : {};
-    const resolveText = typeof getText === 'function'
+    const resolveText: TooltipTextSource = typeof getText === 'function'
       ? getText
       : () => (typeof target.getAttribute === 'function' ? target.getAttribute('data-tooltip') : '');
     return shortcutTooltipController.bind(target, (tooltipTarget) => {
@@ -74,15 +111,16 @@ function createTooltipBindings(deps) {
         tooltip.removeAttribute('data-shortcut-origin-label');
       }
       return resolveText(tooltipTarget);
-    }, Object.assign({
+    }, {
       placement: 'bottom',
       maxWidth: 360,
       spacing: () => (pageState.newtabShortcutDockMagnificationEnabled ? -6 : -2),
-      showOnFocus: false
-    }, tooltipOptions));
+      showOnFocus: false,
+      ...tooltipOptions
+    });
   }
 
-  function isShortcutTooltipSuppressed() {
+  function isShortcutTooltipSuppressed(): boolean {
     return Boolean(
       isShortcutDragActive() ||
       isBookmarkDragActive() ||
@@ -91,25 +129,34 @@ function createTooltipBindings(deps) {
     );
   }
 
-  function hideShortcutTooltip() {
+  function hideShortcutTooltip(): void {
     shortcutTooltipController.hide();
   }
 
-  function bindShortcutDialogTooltip(target, getText, options) {
+  function bindShortcutDialogTooltip(
+    target: HTMLElement | null | undefined,
+    getText?: TooltipTextSource | null,
+    options?: TooltipBindOptions | null
+  ): HTMLElement | null {
     if (!target) {
       return null;
     }
-    return shortcutDialogTooltipController.bind(target, getText, Object.assign({
+    return shortcutDialogTooltipController.bind(target, getText, {
       placement: 'top',
-      maxWidth: 320
-    }, options || {}));
+      maxWidth: 320,
+      ...options
+    });
   }
 
-  function hideShortcutDialogTooltip() {
+  function hideShortcutDialogTooltip(): void {
     shortcutDialogTooltipController.hide();
   }
 
-  function bindCursorTooltip(target, getText, options) {
+  function bindCursorTooltip(
+    target: HTMLElement | null | undefined,
+    getText?: CursorTooltipTextSource | null,
+    options?: CursorTooltipOptions | null
+  ): HTMLElement | null {
     if (!target) {
       return null;
     }
@@ -117,23 +164,23 @@ function createTooltipBindings(deps) {
     const originalShouldShow = typeof tooltipOptions.shouldShow === 'function'
       ? tooltipOptions.shouldShow
       : null;
-    return bookmarkCursorTooltipController.bind(target, getText, Object.assign({
-      maxWidth: 460
-    }, tooltipOptions, {
+    return bookmarkCursorTooltipController.bind(target, getText, {
+      maxWidth: 460,
+      ...tooltipOptions,
       shouldShow: (tooltipTarget, inputEvent) => {
         if (isBookmarkCursorTooltipSuppressed(tooltipTarget)) {
           return false;
         }
         return originalShouldShow ? originalShouldShow(tooltipTarget, inputEvent) !== false : true;
       }
-    }));
+    });
   }
 
-  function isBookmarkCursorTooltipSuppressed(target) {
+  function isBookmarkCursorTooltipSuppressed(target: HTMLElement): boolean {
     return shouldSuppressBookmarkHover(target);
   }
 
-  function hideCursorTooltip() {
+  function hideCursorTooltip(): void {
     bookmarkCursorTooltipController.hide();
   }
 
@@ -151,4 +198,7 @@ function createTooltipBindings(deps) {
   };
 }
 
+type TooltipBindings = ReturnType<typeof createTooltipBindings>;
+
 export { createTooltipBindings };
+export type { TooltipBindings, TooltipBindingsDeps, TooltipBindingsState };
