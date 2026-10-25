@@ -166,7 +166,20 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
 
   // The link under the press, also inside open shadow roots.
   function findPreviewTarget(event) {
-    const path = typeof event.composedPath === 'function' ? event.composedPath() : [event.target];
+    return findPreviewTargetInPath(typeof event.composedPath === 'function' ? event.composedPath() : [event.target]);
+  }
+
+  // The path an event at this node would take, for a node kept from an
+  // earlier event (composedPath is empty once dispatch ends).
+  function readNodePath(node) {
+    const path = [];
+    for (let current = node; current; current = current.assignedSlot || current.parentNode || current.host || null) {
+      path.push(current);
+    }
+    return path;
+  }
+
+  function findPreviewTargetInPath(path) {
     for (const element of path) {
       if (element === window || element === document) {
         break;
@@ -291,8 +304,13 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
   // returns; Chrome would open a new window for it.
   const PREVIEW_HANDLERS = Object.freeze({
     navigatesHere: false,
-    prepare(href) {
-      send({ action: 'linkPreviewPrepare', url: href });
+    prewarmsOnHover: true,
+    prepare(href, prepareOptions) {
+      const message = { action: 'linkPreviewPrepare', url: href };
+      if (prepareOptions && prepareOptions.hover) {
+        message.hover = true;
+      }
+      send(message);
     },
     cancel() {
       send({ action: 'linkPreviewCancel' });
@@ -307,6 +325,7 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
   });
   const IN_PREVIEW_HANDLERS = Object.freeze({
     navigatesHere: true,
+    prewarmsOnHover: false,
     prepare() {},
     cancel() {},
     open(href) {
@@ -346,6 +365,9 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
         claim(event);
       }
     }, true);
+    const hover = handlers.prewarmsOnHover
+      ? setupHoverPrewarm(handlers, () => preparePending)
+      : null;
     listen(window, 'mousedown', (event) => {
       const href = isPreviewGesture(event) ? findPreviewTarget(event) : '';
       if (!href) {
@@ -354,6 +376,11 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
       }
       pressedHref = href;
       claim(event);
+      if (hover) {
+        // The press takes the preparation over, and cancels it if it ends
+        // away from the link.
+        hover.release();
+      }
       // Shift+mousedown would extend the text selection to the link.
       event.preventDefault();
       preparePending = true;
@@ -396,6 +423,140 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
       }
       handlers.open(href, event);
     }, true);
+  }
+
+  // Shift held over a link starts the preview's page loading before the
+  // press, so the window opens on more of it. Shift must be held alone for a
+  // moment over the same link: a capital letter typed, a shortcut, or a
+  // pointer passing over links starts nothing. Releasing Shift, or leaving
+  // the link for longer than the grace, cancels it.
+  const HOVER_PREWARM_DELAY_MS = 150;
+  const HOVER_LEAVE_GRACE_MS = 250;
+
+  function setupHoverPrewarm(handlers, isPressing) {
+    let hoverNode = null;
+    let shiftHeld = false;
+    // Another key or modifier joined this Shift: it is a shortcut or typing.
+    let shiftChord = false;
+    let preparedHref = '';
+    let dwellTimer = 0;
+    let leaveTimer = 0;
+
+    const clearTimers = () => {
+      clearTimeout(dwellTimer);
+      clearTimeout(leaveTimer);
+      dwellTimer = 0;
+      leaveTimer = 0;
+    };
+    const drop = () => {
+      clearTimers();
+      if (preparedHref && !isPressing()) {
+        handlers.cancel();
+      }
+      preparedHref = '';
+    };
+    const readHoveredHref = () => (
+      triggerEnabled && shiftHeld && !shiftChord && hoverNode && !isPressing()
+        ? findPreviewTargetInPath(readNodePath(hoverNode))
+        : ''
+    );
+    const sync = () => {
+      const href = readHoveredHref();
+      if (href && href === preparedHref) {
+        clearTimers();
+        return;
+      }
+      clearTimeout(dwellTimer);
+      dwellTimer = 0;
+      if (href) {
+        dwellTimer = setTimeout(() => {
+          dwellTimer = 0;
+          if (readHoveredHref() !== href) {
+            return;
+          }
+          // A new link replaces the one prepared before; its cancel must
+          // not follow.
+          clearTimeout(leaveTimer);
+          leaveTimer = 0;
+          preparedHref = href;
+          handlers.prepare(href, { hover: true });
+        }, HOVER_PREWARM_DELAY_MS);
+      }
+      if (preparedHref && !leaveTimer) {
+        leaveTimer = setTimeout(() => {
+          leaveTimer = 0;
+          if (readHoveredHref() !== preparedHref) {
+            drop();
+          }
+        }, HOVER_LEAVE_GRACE_MS);
+      }
+    };
+    const readModifiers = (event) => {
+      shiftHeld = event.shiftKey === true;
+      if (!shiftHeld) {
+        shiftChord = false;
+      } else if (event.ctrlKey || event.metaKey || event.altKey) {
+        shiftChord = true;
+      }
+    };
+
+    listen(window, 'pointerover', (event) => {
+      if (!event.isTrusted || event.pointerType !== 'mouse') {
+        return;
+      }
+      hoverNode = typeof event.composedPath === 'function' ? event.composedPath()[0] || event.target : event.target;
+      readModifiers(event);
+      if (!shiftHeld) {
+        if (preparedHref || dwellTimer) {
+          drop();
+        }
+        return;
+      }
+      sync();
+    }, true);
+    listen(window, 'pointerout', (event) => {
+      if (event.isTrusted && event.pointerType === 'mouse' && !event.relatedTarget) {
+        hoverNode = null;
+        if (shiftHeld) {
+          sync();
+        }
+      }
+    }, true);
+    listen(window, 'keydown', (event) => {
+      if (!event.isTrusted) {
+        return;
+      }
+      if (event.key === 'Shift') {
+        if (!event.repeat) {
+          readModifiers(event);
+          sync();
+        }
+        return;
+      }
+      if (shiftHeld && !shiftChord) {
+        shiftChord = true;
+        drop();
+      }
+    }, true);
+    listen(window, 'keyup', (event) => {
+      if (event.isTrusted && event.key === 'Shift') {
+        shiftHeld = false;
+        shiftChord = false;
+        drop();
+      }
+    }, true);
+    listen(window, 'blur', () => {
+      shiftHeld = false;
+      shiftChord = false;
+      drop();
+    });
+
+    return {
+      release() {
+        clearTimers();
+        preparedHref = '';
+      }
+    };
   }
 
   function postToPreviewSurface(message) {

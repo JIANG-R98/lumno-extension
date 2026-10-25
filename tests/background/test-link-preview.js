@@ -377,6 +377,25 @@ async function testWorkerRuleOutlivesOnePreview() {
   assert.ok(!sessionRules.has(linkPreview.WORKER_RULE_ID));
 }
 
+async function testHoverPrepareWaitsForPressToCapture() {
+  const { chromeApi, calls } = createChromeMock();
+  const service = linkPreview.createLinkPreviewService({ chromeApi });
+  const tab = { id: 3, windowId: 1 };
+  const hovered = service.prepare(tab, 'https://example.com/a', { capture: false });
+  await hovered.ready;
+  await flush();
+  assert.strictEqual(calls.captures, 0, 'Shift over a link loads its page but leaves the screenshot to the press');
+  assert.deepStrictEqual(calls.sent.map((entry) => entry.message.action), ['lumnoLinkPreviewPrewarm']);
+  const pressed = service.prepare(tab, 'https://example.com/a');
+  assert.strictEqual(pressed, hovered, 'the press reuses the page already loading');
+  const result = await service.open(tab, 'https://example.com/a', { x: 1, y: 2 });
+  assert.deepStrictEqual(result, { ok: true });
+  assert.strictEqual(calls.captures, 1);
+  assert.deepStrictEqual(calls.sent.map((entry) => entry.message.action),
+    ['lumnoLinkPreviewPrewarm', 'lumnoLinkPreviewScreenshot', 'lumnoLinkPreviewShow'],
+    'one hidden window, given the screenshot once the press asks for it');
+}
+
 async function testUnclaimedPrepareExpires() {
   const { chromeApi, sessionRules } = createChromeMock();
   const timers = [];
@@ -602,7 +621,31 @@ function loadTrigger(options) {
     });
     return prevented;
   }
-  return { window, sent, press, claimed, listeners };
+  // One event at an element, with Shift held unless the options say not.
+  function fire(type, id, eventOptions) {
+    const target = id ? window.document.getElementById(id) : null;
+    const event = Object.assign({
+      type,
+      isTrusted: true,
+      pointerType: 'mouse',
+      shiftKey: true,
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      repeat: false,
+      target,
+      relatedTarget: null,
+      composedPath: () => {
+        const path = [];
+        for (let node = target; node; node = node.parentNode) {
+          path.push(node);
+        }
+        return path.concat(window);
+      }
+    }, eventOptions || {});
+    listeners.filter((entry) => entry.type === type).forEach((entry) => entry.listener(event));
+  }
+  return { window, sent, press, fire, claimed, listeners };
 }
 
 function testShiftClickOpensPreview() {
@@ -616,6 +659,62 @@ function testShiftClickOpensPreview() {
     { action: 'linkPreviewPrepare', url: 'https://other.example/page' },
     { action: 'linkPreviewOpen', url: 'https://other.example/page', origin: { x: 30, y: 40 } }
   ]);
+}
+
+const waitFor = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function testShiftHoverPrewarms() {
+  const page = loadTrigger();
+  page.fire('pointerover', 'out', { shiftKey: false });
+  await waitFor(200);
+  assert.deepStrictEqual(page.sent, [], 'a pointer over a link without Shift prepares nothing');
+
+  page.fire('keydown', null, { key: 'Shift' });
+  await waitFor(200);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(page.sent)), [
+    { action: 'linkPreviewPrepare', url: 'https://other.example/page', hover: true }
+  ], 'Shift held over a link starts its page loading before the press');
+  page.sent.length = 0;
+  page.press('out');
+  await waitFor(5);
+  assert.deepStrictEqual(page.sent.map((message) => message.action), ['linkPreviewPrepare', 'linkPreviewOpen'],
+    'the press takes the preparation over, adding the screenshot, and opens it');
+  page.fire('keyup', null, { key: 'Shift', shiftKey: false });
+  assert.ok(!page.sent.some((message) => message.action === 'linkPreviewCancel'),
+    'letting go of Shift after the click leaves the preview open');
+}
+
+async function testShiftHoverCancels() {
+  const released = loadTrigger();
+  released.fire('pointerover', 'out');
+  await waitFor(200);
+  released.fire('keyup', null, { key: 'Shift', shiftKey: false });
+  assert.deepStrictEqual(released.sent.map((message) => message.action), ['linkPreviewPrepare', 'linkPreviewCancel'],
+    'letting go of Shift before pressing cancels the preparation');
+
+  const left = loadTrigger();
+  left.fire('pointerover', 'out');
+  await waitFor(200);
+  left.fire('pointerover', 'hash');
+  await waitFor(50);
+  assert.strictEqual(left.sent.length, 1, 'a pointer slipping off the link for a moment keeps it');
+  await waitFor(300);
+  assert.deepStrictEqual(left.sent.map((message) => message.action), ['linkPreviewPrepare', 'linkPreviewCancel'],
+    'leaving the link cancels it');
+
+  const typing = loadTrigger();
+  typing.fire('pointerover', 'out', { shiftKey: false });
+  typing.fire('keydown', null, { key: 'Shift' });
+  typing.fire('keydown', null, { key: 'A' });
+  await waitFor(200);
+  assert.deepStrictEqual(typing.sent, [], 'a capital letter typed with the pointer over a link prepares nothing');
+
+  const passing = loadTrigger();
+  passing.fire('pointerover', 'out');
+  await waitFor(50);
+  passing.fire('pointerover', 'hash');
+  await waitFor(200);
+  assert.deepStrictEqual(passing.sent, [], 'a pointer passing over a link with Shift held prepares nothing');
 }
 
 function testOrphanedTriggerStepsAside() {
@@ -931,6 +1030,7 @@ async function testPreviewFrameEscape() {
 (async () => {
   await testRuleScope();
   await testPrepareThenOpen();
+  await testHoverPrepareWaitsForPressToCapture();
   await testUnclaimedPrepareExpires();
   await testMissingSurfaceOpensTab();
   await testFrameLoadWhileOpeningKeepsPreview();
@@ -950,6 +1050,8 @@ async function testPreviewFrameEscape() {
   testShiftClickOpensPreview();
   testOrphanedTriggerStepsAside();
   await testPressReleasedElsewhereCancels();
+  await testShiftHoverPrewarms();
+  await testShiftHoverCancels();
   testOtherPressesKeepDefault();
   testShownAddressOpensPreview();
   testPostOpensPreview();

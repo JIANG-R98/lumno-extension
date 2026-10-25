@@ -11,6 +11,11 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
 // the button is still down, and asks the surface to start loading the page
 // in a hidden frame, so the window opens on click with the page underway. A
 // press released anywhere but the link ("cancel") drops all of that.
+//
+// Shift held over a link prepares it earlier still, without the screenshot:
+// the page may change before the press, and Chrome takes only two captures
+// a second. The press that follows reuses the preparation and adds the
+// screenshot.
 const UI_FILES = Object.freeze(['build/link-preview.js']);
 // X-Frame-Options and CSP frame-ancestors are the two ways a page refuses to
 // be framed (a page that sends both is judged by frame-ancestors). While a
@@ -408,13 +413,20 @@ function createLinkPreviewService(options) {
     }, PREPARED_TTL_MS);
   }
 
-  function prepare(tab, url) {
+  // A press prepares with the screenshot; Shift held over the link prepares
+  // without it (capture: false).
+  function prepare(tab, url, prepareOptions) {
     const tabId = tab && tab.id;
     if (typeof tabId !== 'number' || !isPreviewableUrl(url)) {
       return null;
     }
+    const capture = !prepareOptions || prepareOptions.capture !== false;
     const existing = sessions.get(tabId);
     if (existing && existing.url === url && existing.state === 'prepared') {
+      if (capture && !existing.capture) {
+        existing.capture = captureTab(tab);
+        deliverScreenshot(tabId, existing);
+      }
       scheduleExpiry(tabId, existing);
       return existing;
     }
@@ -427,7 +439,9 @@ function createLinkPreviewService(options) {
     sessions.set(tabId, session);
     // The screenshot goes first: the surface's hidden frame stays out of it
     // either way, but the capture is the slowest step.
-    session.capture = captureTab(tab);
+    if (capture) {
+      session.capture = captureTab(tab);
+    }
     session.ready = Promise.all([syncRules(tabId), injectSurface(tabId)])
       .then(([, injected]) => {
         if (!injected) {
@@ -440,15 +454,22 @@ function createLinkPreviewService(options) {
           frameSecret: session.frameSecret
         }).then(Boolean);
       });
-    // The surface gets the screenshot as soon as both are ready, to decode
-    // it while the button is still down; "show" then carries none.
+    if (session.capture) {
+      deliverScreenshot(tabId, session);
+    }
+    scheduleExpiry(tabId, session);
+    return session;
+  }
+
+  // The surface gets the screenshot as soon as both are ready, to decode it
+  // while the button is still down; "show" then carries none.
+  function deliverScreenshot(tabId, session) {
+    const token = session.token;
     session.screenshotDelivered = Promise.all([session.ready, session.capture]).then(([surfaceReady, screenshot]) => (
-      surfaceReady && screenshot
+      surfaceReady && screenshot && sessions.get(tabId) === session
         ? sendToSurface(tabId, { action: 'lumnoLinkPreviewScreenshot', token, screenshot }).then(Boolean)
         : false
     ));
-    scheduleExpiry(tabId, session);
-    return session;
   }
 
   async function open(tab, url, origin) {
@@ -796,7 +817,7 @@ function createLinkPreviewService(options) {
 
   const messageHandlers = Object.freeze({
     linkPreviewPrepare(request, sender, sendResponse) {
-      prepare(sender && sender.tab, request.url);
+      prepare(sender && sender.tab, request.url, { capture: request.hover !== true });
       sendResponse({ ok: true });
       return false;
     },

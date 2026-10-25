@@ -208,6 +208,9 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
         corner-shape: squircle;
       }
     }
+    /* The site's name while its page loads. It waits a moment before fading
+       in, so a page that loads quickly opens without it flashing, then
+       breathes gently until the page arrives. */
     .placeholder {
       position: absolute;
       inset: 0;
@@ -216,6 +219,25 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
       color: var(--lp-muted);
       font-size: 13px;
       letter-spacing: 0.01em;
+      opacity: 0;
+    }
+    .root[data-state="open"]:not([data-loaded="true"]) .placeholder {
+      animation:
+        lp-placeholder-in 320ms ease-out 360ms forwards,
+        lp-placeholder-breathe 2000ms ease-in-out 680ms infinite;
+    }
+    @keyframes lp-placeholder-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes lp-placeholder-breathe {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .root[data-state="open"]:not([data-loaded="true"]) .placeholder {
+        animation: lp-placeholder-in 320ms ease-out 360ms forwards;
+      }
     }
     /* Gone once the page has loaded: a page with no background of its own
        leaves the frame clear, and the site's name showed through it. */
