@@ -564,7 +564,7 @@
     "message": "在 Dia 中使用"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "在 Dia 环境下，受浏览器限制，Lumno 的新标签页功能暂不可用，但聚焦搜索功能仍可正常运行。\n\n若快捷键在 Dia 中不可用，请点击下方右侧按钮进入浏览器的快捷键设置页面，将「Open command bar」从 In Dia 改成 Global。"
+    "message": "Dia 不允许扩展替换新标签页，所以 Lumno 的新标签页在 Dia 中暂不可用，聚焦搜索可以正常使用。\n\n想用 ⌘T 唤起聚焦搜索：Dia 自带快捷键的优先级更高，请先在 Dia 的 Settings → Shortcuts 中，把「New Tab」的 ⌘T 改成其他按键，再点击下方右侧按钮，将「Open command bar」设为 ⌘T。\n\n若快捷键在 Dia 中没有反应，请将其作用范围从 In Dia 改成 Global。"
   },
   "settings_shortcuts_section_title": {
     "message": "快捷键设置"
@@ -691,6 +691,12 @@
   },
   "settings_overlay_size_title": {
     "message": "尺寸"
+  },
+  "settings_overlay_width_title": {
+    "message": "宽度"
+  },
+  "settings_overlay_width_reset": {
+    "message": "跟随尺寸设置"
   },
   "overlay_size_compact": {
     "message": "小"
@@ -2348,6 +2354,9 @@
   "command_show_tab_switcher": {
     "message": "打开最近标签页切换器"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "反向打开最近标签页切换器"
+  },
   "shortcut_reference_title": {
     "message": "快捷键列表"
   },
@@ -2389,6 +2398,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "打开最近标签页切换器"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "反向打开最近标签页切换器"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "打开最近标签页切换器，并选中最早使用的标签页"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "切换上一条或下一条输入"
@@ -2785,6 +2800,18 @@
   },
   "settings_tab_switcher_desc": {
     "message": "快速切换最近标签页，默认 {shortcut}，可自定义"
+  },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "像 Arc 一样用 {shortcut} 切换"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Arc 式 {shortcut} 切换说明"
+  },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "只显示当前窗口的标签页"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "适用于把每个空间放在独立窗口的浏览器，避免列出其他空间的标签页"
   },
   "settings_features_section_title": {
     "message": "功能"
@@ -3577,6 +3604,9 @@
   },
   "settings_newtab_glass_theme_title": {
     "message": "材质深浅色"
+  },
+  "settings_newtab_glass_theme_desc": {
+    "message": "「自动」：跟随深浅色模式，壁纸较暗时改用深色材质，让文字保持清晰。\n「浅色」「深色」：固定材质，并让新标签页使用同样的深浅色。"
   },
   "settings_newtab_glass_theme_follow": {
     "message": "自动"

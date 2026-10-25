@@ -27,6 +27,7 @@ const SHOW_SEARCH_COMMAND_NAME = 'show-search';
 const SHOW_SEARCH_PREFILL_COMMAND_NAME = 'show-search-prefill';
 const SHOW_SEARCH_PREFILL_V_COMMAND_NAME = 'show-search-prefill-v';
 const SHOW_TAB_SWITCHER_COMMAND_NAME = 'show-tab-switcher';
+const SHOW_TAB_SWITCHER_REVERSE_COMMAND_NAME = 'show-tab-switcher-reverse';
 
 const providerStorageRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chrome);
 // The area settings are read from and written to: browser sync, or local when
@@ -267,6 +268,7 @@ export {
   SHOW_SEARCH_PREFILL_COMMAND_NAME,
   SHOW_SEARCH_PREFILL_V_COMMAND_NAME,
   SHOW_TAB_SWITCHER_COMMAND_NAME,
+  SHOW_TAB_SWITCHER_REVERSE_COMMAND_NAME,
   areBackgroundSettingsLoaded,
   diagnosticsLog,
   documentPipEnabledReady,

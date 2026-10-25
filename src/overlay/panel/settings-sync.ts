@@ -51,6 +51,7 @@ interface SettingsSyncState<Row, Provider> {
   documentPipEnabled: boolean;
   overlayTabQuickSwitchEnabled: boolean;
   overlaySizeMode: OverlaySizeMode;
+  overlayCustomWidth: number | null;
   overlayFontFamily: string;
   overlayFontFallback: string;
   overlayTabScoreDebugEnabled: boolean;
@@ -74,6 +75,7 @@ interface SettingsSyncDeps<Row, Provider, Theme> {
   DOCUMENT_PIP_ENABLED_STORAGE_KEY: string;
   OVERLAY_TAB_PRIORITY_STORAGE_KEY: string;
   OVERLAY_SIZE_MODE_STORAGE_KEY: string;
+  OVERLAY_WIDTH_STORAGE_KEY: string;
   OVERLAY_FONT_FAMILY_STORAGE_KEY: string;
   OVERLAY_FONT_FALLBACK_STORAGE_KEY: string;
   TAB_RANK_SCORE_DEBUG_STORAGE_KEY: string;
@@ -82,7 +84,7 @@ interface SettingsSyncDeps<Row, Provider, Theme> {
     'normalizeSearchResultSourceTypes' | 'normalizeNumberShortcutInstantEnabled' |
     'normalizeMacosCtrlSuggestionNavigationEnabled' | 'normalizeSimpleModeEnabled' |
     'normalizeOverlayOpenTabsDefaultVisible' | 'normalizeOverlayTabPriorityMode' |
-    'normalizeOverlaySizeMode' | 'normalizeOverlayFontFamily' | 'normalizeTabRankScoreDebugMode'>;
+    'normalizeOverlaySizeMode' | 'normalizeOverlayWidth' | 'normalizeOverlayFontFamily' | 'normalizeTabRankScoreDebugMode'>;
   SEARCH_UTILS: Pick<typeof SearchUtils, 'isRetiredSearchEngineState'>;
   SUGGESTION_NAVIGATION: Pick<typeof SuggestionNavigation, 'cancelNumberShortcuts'>;
   normalizeOverlaySearchBlacklistItems(items: unknown): BlacklistRule[];
@@ -159,6 +161,7 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
     documentPipSupported,
     OVERLAY_TAB_PRIORITY_STORAGE_KEY,
     OVERLAY_SIZE_MODE_STORAGE_KEY,
+    OVERLAY_WIDTH_STORAGE_KEY,
     overlayRuntime,
     localStorageArea,
     OVERLAY_FONT_FAMILY_STORAGE_KEY,
@@ -453,6 +456,7 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
   });
   const initialOverlaySizeReady = initialOverlaySettingsReady.then((result) => {
     overlayState.overlaySizeMode = SETTINGS.normalizeOverlaySizeMode(result[OVERLAY_SIZE_MODE_STORAGE_KEY]);
+    overlayState.overlayCustomWidth = SETTINGS.normalizeOverlayWidth(result[OVERLAY_WIDTH_STORAGE_KEY]);
     applyOverlaySizeForPageZoom(overlayState.overlay);
     return overlayState.overlaySizeMode;
   });
@@ -488,10 +492,16 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
   });
   overlayState.storageChangeListeners.add((changes, areaName) => {
     const sizeModeChange = changes[OVERLAY_SIZE_MODE_STORAGE_KEY];
-    if (!isPrimaryStorageAreaName(areaName) || !sizeModeChange) {
+    const widthChange = changes[OVERLAY_WIDTH_STORAGE_KEY];
+    if (!isPrimaryStorageAreaName(areaName) || (!sizeModeChange && !widthChange)) {
       return;
     }
-    overlayState.overlaySizeMode = SETTINGS.normalizeOverlaySizeMode(sizeModeChange.newValue);
+    if (sizeModeChange) {
+      overlayState.overlaySizeMode = SETTINGS.normalizeOverlaySizeMode(sizeModeChange.newValue);
+    }
+    if (widthChange) {
+      overlayState.overlayCustomWidth = SETTINGS.normalizeOverlayWidth(widthChange.newValue);
+    }
     applyOverlaySizeForPageZoom(overlayState.overlay);
   });
   if (overlayState.storageArea) {

@@ -1,7 +1,8 @@
 // The page's sliders: clock weight, size and opacity, shortcut columns,
 // size and gap, bookmark rows and columns, recent count and the result
-// display limit, each with its React control.
+// display limit and the overlay width, each with its React control.
 import type * as Settings from '../domain/settings';
+import type { OverlaySizeMode } from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
 import type { GetMessage } from './options-types';
 import type { createSettingsControlsApi } from './react/settings-controls';
@@ -18,6 +19,9 @@ interface SliderControlsState {
   currentRecentCount: number;
   currentBookmarkColumns: number;
   currentSearchResultDisplayLimit: number;
+  currentOverlaySizeMode: OverlaySizeMode;
+  // A custom overlay width, or null while it follows the size.
+  currentOverlayWidth: number | null;
 }
 
 interface SliderControlsDeps {
@@ -27,7 +31,9 @@ interface SliderControlsDeps {
     'NEWTAB_TIME_FONT_SIZE_DEFAULT' | 'NEWTAB_TIME_FONT_SIZE_MAX' | 'NEWTAB_TIME_FONT_SIZE_MIN' |
     'NEWTAB_TIME_FONT_SIZE_STORAGE_KEY' | 'NEWTAB_TIME_OPACITY_DEFAULT' | 'NEWTAB_TIME_OPACITY_MAX' |
     'NEWTAB_TIME_OPACITY_MIN' | 'NEWTAB_TIME_OPACITY_STORAGE_KEY' | 'getNewtabTimeFont' |
-    'normalizeNewtabTimeFontSize' | 'normalizeNewtabTimeOpacity' | 'resolveNewtabTimeFontWeight'>;
+    'normalizeNewtabTimeFontSize' | 'normalizeNewtabTimeOpacity' | 'resolveNewtabTimeFontWeight' |
+    'OVERLAY_WIDTH_MAX' | 'OVERLAY_WIDTH_MIN' | 'OVERLAY_WIDTH_STORAGE_KEY' | 'getOverlaySizePreset' |
+    'normalizeOverlayWidth'>;
   getMessage: GetMessage;
   newtabTimeFontWeightControlHost: HTMLElement | null;
   normalizeNewtabTimeFontWeight(value: unknown): number;
@@ -75,6 +81,7 @@ interface SliderControlsDeps {
   searchResultDisplayLimitControlHost: HTMLElement | null;
   normalizeSearchResultDisplayLimit(value: unknown): number;
   SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY: string;
+  overlayWidthControlHost: HTMLElement | null;
   optionsState: SliderControlsState;
 }
 
@@ -129,7 +136,8 @@ function createSliderControls(deps: SliderControlsDeps) {
     BOOKMARK_COLUMNS_STORAGE_KEY,
     searchResultDisplayLimitControlHost,
     normalizeSearchResultDisplayLimit,
-    SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY
+    SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
+    overlayWidthControlHost
   } = deps;
 
   // The page state object shared with options.js and the other modules.
@@ -514,6 +522,62 @@ function createSliderControls(deps: SliderControlsDeps) {
     });
   }
 
+  function getOverlaySizeWidth(): number {
+    return SETTINGS.getOverlaySizePreset(optionsState.currentOverlaySizeMode).width;
+  }
+
+  const overlayWidthController =
+    optionsSettingsControlsApi.createRangeSliderControlController(
+      overlayWidthControlHost,
+      {
+        kind: 'overlay-width',
+        onInput(value) {
+          const nextWidth = SETTINGS.normalizeOverlayWidth(value);
+          // The size's own width (also what reset picks) clears the custom
+          // value, so the panel follows the size again.
+          optionsState.currentOverlayWidth = nextWidth === getOverlaySizeWidth() ? null : nextWidth;
+          if (!storageArea) {
+            return;
+          }
+          if (optionsState.currentOverlayWidth === null) {
+            if (storageArea.remove) {
+              storageArea.remove(SETTINGS.OVERLAY_WIDTH_STORAGE_KEY);
+            }
+          } else {
+            storageArea.set({ [SETTINGS.OVERLAY_WIDTH_STORAGE_KEY]: optionsState.currentOverlayWidth });
+          }
+        }
+      }
+    );
+  function renderOverlayWidthControl(value: unknown): void {
+    if (!overlayWidthController) {
+      return;
+    }
+    optionsState.currentOverlayWidth = SETTINGS.normalizeOverlayWidth(value);
+    const min = SETTINGS.OVERLAY_WIDTH_MIN;
+    const max = SETTINGS.OVERLAY_WIDTH_MAX;
+    const sizeWidth = getOverlaySizeWidth();
+    // Like the New Tab search width, the marks are the named widths (each
+    // size's own) and a drag settles on them.
+    const sizeModes: readonly OverlaySizeMode[] = ['compact', 'standard', 'large'];
+    const sizeWidths = sizeModes.map((mode) => SETTINGS.getOverlaySizePreset(mode).width);
+    overlayWidthController.render({
+      ariaLabel: getMessage('settings_overlay_width_title', 'Width'),
+      defaultValue: sizeWidth,
+      id: '_x_extension_overlay_width_slider_2026_unique_',
+      min,
+      max,
+      resetAriaLabel: getMessage('settings_overlay_width_reset', 'Match the size setting'),
+      resetButtonId: '_x_extension_overlay_width_reset_2026_unique_',
+      snapPoints: sizeWidths,
+      snapThreshold: 14,
+      step: 1,
+      ticks: sizeWidths.map((width) => ({ label: String(width), percent: ((width - min) / (max - min)) * 100 })),
+      value: optionsState.currentOverlayWidth || sizeWidth,
+      valueSuffix: ' px'
+    });
+  }
+
   return {
     renderNewtabTimeFontWeightControl,
     renderNewtabTimeFontSizeControl,
@@ -525,7 +589,8 @@ function createSliderControls(deps: SliderControlsDeps) {
     renderBookmarkRowsControl,
     renderRecentCountControl,
     renderBookmarkColumnsControl,
-    renderSearchResultDisplayLimitControl
+    renderSearchResultDisplayLimitControl,
+    renderOverlayWidthControl
   };
 }
 

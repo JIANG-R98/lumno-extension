@@ -564,7 +564,7 @@
     "message": "Dia에서 사용"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "Dia에서는 브라우저 제한으로 인해 Lumno의 새 탭 기능을 일시적으로 사용할 수 없지만, 커맨드 바는 정상적으로 작동합니다.\n\nDia에서 단축키가 작동하지 않으면 오른쪽 아래 버튼을 클릭해 브라우저 단축키 설정 페이지를 열고, \"Open command bar\"를 In Dia에서 Global로 변경하세요."
+    "message": "Dia는 확장 프로그램이 새 탭을 바꾸는 것을 허용하지 않아 Lumno의 새 탭을 사용할 수 없습니다. 커맨드 바는 정상적으로 작동합니다.\n\n⌘T로 커맨드 바를 열려면: Dia 자체 단축키가 우선 적용되므로, 먼저 Dia의 Settings → Shortcuts에서 \"New Tab\"의 ⌘T를 다른 키로 바꾸세요. 그다음 오른쪽 아래 버튼을 클릭해 \"Open command bar\"를 ⌘T로 설정하세요.\n\nDia에서 단축키가 반응하지 않으면 범위를 In Dia에서 Global로 변경하세요."
   },
   "settings_shortcuts_section_title": {
     "message": "단축키 설정"
@@ -691,6 +691,12 @@
   },
   "settings_overlay_size_title": {
     "message": "크기"
+  },
+  "settings_overlay_width_title": {
+    "message": "너비"
+  },
+  "settings_overlay_width_reset": {
+    "message": "크기 설정에 맞추기"
   },
   "overlay_size_compact": {
     "message": "작게"
@@ -2117,6 +2123,9 @@
   "settings_aggregate_search_auto_group_title": {
     "message": "통합 검색 탭 자동 그룹화"
   },
+  "settings_aggregate_search_auto_group_short_title": {
+    "message": "탭 그룹 자동 만들기"
+  },
   "settings_aggregate_search_auto_group_desc": {
     "message": "사용 설정하면 통합 검색으로 열린 모든 탭이 '통합 검색 이름: 검색어'라는 이름의 그룹 하나에 모입니다"
   },
@@ -2273,6 +2282,18 @@
   "link_preview_open_in_tab": {
     "message": "새 탭에서 열기"
   },
+  "link_preview_copy_link": {
+    "message": "링크 복사"
+  },
+  "link_preview_link_copied": {
+    "message": "링크를 복사했습니다"
+  },
+  "link_preview_reload": {
+    "message": "새로고침"
+  },
+  "link_preview_back": {
+    "message": "뒤로"
+  },
   "link_preview_blocked": {
     "message": "이 페이지는 미리보기로 표시할 수 없습니다"
   },
@@ -2333,6 +2354,9 @@
   "command_show_tab_switcher": {
     "message": "최근 탭 전환기 열기"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "최근 탭 전환기를 역순으로 열기"
+  },
   "shortcut_reference_title": {
     "message": "단축키 목록"
   },
@@ -2374,6 +2398,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "최근 탭 전환기를 엽니다"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "최근 탭 전환기를 역순으로 열기"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "가장 오래된 탭을 선택한 상태로 최근 탭 전환기를 엽니다"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "이전 또는 다음 입력"
@@ -2770,6 +2800,27 @@
   },
   "settings_tab_switcher_desc": {
     "message": "최근 탭 간에 빠르게 전환합니다. 기본값은 {shortcut}이며 변경할 수 있습니다"
+  },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Arc처럼 {shortcut}로 전환"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Arc 방식 {shortcut} 전환 안내"
+  },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "현재 창의 탭만 표시"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "공간마다 별도의 창을 쓰는 브라우저에서 다른 공간의 탭이 목록에 나오지 않게 합니다"
+  },
+  "settings_features_section_title": {
+    "message": "기능"
+  },
+  "settings_link_preview_title": {
+    "message": "링크 미리보기"
+  },
+  "settings_link_preview_desc": {
+    "message": "Shift를 누른 채 링크를 클릭하면 페이지 위의 작은 창에서 미리 보고, 닫거나 탭으로 옮길 수 있습니다"
   },
   "slash_command_empty": {
     "message": "일치하는 명령 없음"
@@ -3553,6 +3604,9 @@
   },
   "settings_newtab_glass_theme_title": {
     "message": "소재 테마"
+  },
+  "settings_newtab_glass_theme_desc": {
+    "message": "자동: 테마 모드를 따르되, 배경화면이 어두우면 글자가 잘 보이도록 어두운 소재로 바꿉니다.\n라이트 / 다크: 소재를 고정하고 새 탭도 같은 테마로 표시합니다."
   },
   "settings_newtab_glass_theme_follow": {
     "message": "자동"

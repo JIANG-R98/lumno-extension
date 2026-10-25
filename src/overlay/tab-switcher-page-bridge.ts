@@ -156,20 +156,35 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     }) || '';
   }
 
+  function forgetTrustedTabSwitcherShortcutRelease(key: string, releasedAt: number | undefined): void {
+    // A newer press and release of the same key belongs to a later command.
+    if (recentTrustedReleaseAtByKey.get(key) !== releasedAt) {
+      return;
+    }
+    recentTrustedKeydownAtByKey.delete(key);
+    recentTrustedReleaseAtByKey.delete(key);
+  }
+
   function relayTabSwitcherShortcutRelease(key: string): void {
     if (!key || !chromeApi || !chromeApi.runtime ||
         typeof chromeApi.runtime.sendMessage !== 'function') {
       return;
     }
     armedReleaseKeys = [];
-    recentTrustedKeydownAtByKey.delete(key);
-    recentTrustedReleaseAtByKey.delete(key);
+    // An earlier switcher arms every tab in its window, so a quick release
+    // can be relayed live while the next switcher is still opening. Keep it
+    // buffered until the background reports a commit, so the arm that
+    // follows the open can replay it.
+    const releasedAt = recentTrustedReleaseAtByKey.get(key);
     try {
       LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, {
         action: 'notifyTabSwitcherShortcutModifierReleased',
         key
-      }, () => {
+      }, (response) => {
         void (chromeApi.runtime && chromeApi.runtime.lastError);
+        if (response && response.committed === true) {
+          forgetTrustedTabSwitcherShortcutRelease(key, releasedAt);
+        }
       });
     } catch (_error) {
       // Ignore stale extension page contexts during reload.

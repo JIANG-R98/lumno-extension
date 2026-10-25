@@ -105,8 +105,11 @@ import * as OPTIONS_STATE from './options-state';
   const bookmarkColumnsSettingRow = getHtmlElement(document, '_x_extension_bookmark_columns_setting_row_2026_unique_');
   const bookmarkColumnsControlHost = getHtmlElement(document, '_x_extension_bookmark_columns_control_2026_unique_');
   const searchResultDisplayLimitControlHost = getHtmlElement(document, '_x_extension_search_result_display_limit_control_2026_unique_');
+  const overlayWidthControlHost = getHtmlElement(document, '_x_extension_overlay_width_control_2026_unique_');
   const bookmarkFolderIconsVisibleRow = getHtmlElement(document, '_x_extension_bookmark_folder_icons_visible_row_2026_unique_');
   const aggregateSearchAutoGroupToggle = getHtmlTag(document, '_x_extension_aggregate_search_auto_group_toggle_2026_unique_', 'input');
+  const tabSwitcherToggle = getHtmlTag(document, '_x_extension_tab_switcher_toggle_2026_unique_', 'input');
+  const tabSwitcherSubrows = getHtmlElement(document, '_x_extension_tab_switcher_subrows_2026_unique_');
   const selectionQuickActionsToggle = getHtmlTag(document, '_x_extension_selection_quick_actions_toggle_2026_unique_', 'input');
   const selectionQuickActionsSubrows = getHtmlElement(document, '_x_extension_selection_quick_actions_subrows_2026_unique_');
   const selectionQuickActionsProviderRow = getHtmlElement(document, '_x_extension_selection_quick_actions_provider_row_2026_unique_');
@@ -573,6 +576,7 @@ import * as OPTIONS_STATE from './options-state';
     renderBookmarkRowsControl: (...args) => renderBookmarkRowsControl(...args),
     renderBookmarkColumnsControl: (...args) => renderBookmarkColumnsControl(...args),
     renderSearchResultDisplayLimitControl: (...args) => renderSearchResultDisplayLimitControl(...args),
+    renderOverlayWidthControl: (...args) => renderOverlayWidthControl(...args),
     renderSettingsNavigation,
     renderSiteSearchList,
     renderAggregateSearchList: (...args) => renderAggregateSearchList(...args),
@@ -844,6 +848,8 @@ import * as OPTIONS_STATE from './options-state';
     renderSearchResultSourceTypeControl
   } = OPTIONS_TOGGLE_CONTROLS.createToggleControls({
     optionsSettingsControlsApi,
+    tabSwitcherToggle,
+    tabSwitcherSubrows,
     selectionQuickActionsToggle,
     selectionQuickActionsProviderSelect,
     renderOptionsSelectControl: renderOptionsSelectControl,
@@ -1250,7 +1256,8 @@ import * as OPTIONS_STATE from './options-state';
     renderBookmarkRowsControl,
     renderRecentCountControl,
     renderBookmarkColumnsControl,
-    renderSearchResultDisplayLimitControl
+    renderSearchResultDisplayLimitControl,
+    renderOverlayWidthControl
   } = OPTIONS_SLIDER_CONTROLS.createSliderControls({
     optionsSettingsControlsApi,
     newtabTimeFontWeightControlHost,
@@ -1302,6 +1309,7 @@ import * as OPTIONS_STATE from './options-state';
     searchResultDisplayLimitControlHost,
     normalizeSearchResultDisplayLimit,
     SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
+    overlayWidthControlHost,
     optionsState
   });
 
@@ -1316,6 +1324,7 @@ import * as OPTIONS_STATE from './options-state';
   renderBookmarkRowsControl(8);
   renderBookmarkColumnsControl(6);
   renderSearchResultDisplayLimitControl(10);
+  renderOverlayWidthControl(null);
   syncSelectionQuickActionsProviderAvailability();
 
   function renderFeedbackSupport() {
@@ -1406,6 +1415,12 @@ import * as OPTIONS_STATE from './options-state';
     shortcutReferenceController,
     getMessage,
     formatTemplate,
+    getHelpUrl: (slug, anchor) => COMMUNITY_LINKS.getHelpUrl(
+      optionsState.currentLanguageMode === 'system' ? getSystemLocale() : normalizeLocale(optionsState.currentLanguageMode),
+      slug,
+      anchor
+    ),
+    tabSwitcherCtrlTabLink: getHtmlTag(document, '_x_extension_tab_switcher_ctrl_tab_link_2026_unique_', 'a'),
     optionsState
   });
 
@@ -1700,6 +1715,7 @@ import * as OPTIONS_STATE from './options-state';
     SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
     normalizeSearchResultDisplayLimit,
     renderSearchResultDisplayLimitControl,
+    renderOverlayWidthControl,
     RECENT_MODE_STORAGE_KEY,
     recentModeSelect,
     setRecentModeTabState,

@@ -564,7 +564,7 @@
     "message": "Использовать в Dia"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "Из-за ограничений браузера Dia функции новой вкладки Lumno там временно недоступны, но панель команд работает как обычно.\n\nЕсли сочетание клавиш не срабатывает в Dia, нажмите кнопку справа внизу, чтобы открыть настройки быстрых клавиш браузера, и для «Open command bar» замените In Dia на Global."
+    "message": "Dia не позволяет расширениям заменять новую вкладку, поэтому новая вкладка Lumno там недоступна. Панель команд работает как обычно.\n\nЧтобы открывать панель команд по ⌘T: собственные сочетания клавиш Dia имеют приоритет, поэтому сначала откройте в Dia Settings → Shortcuts и замените ⌘T у «New Tab» на другую клавишу. Затем нажмите кнопку справа внизу и назначьте ⌘T для «Open command bar».\n\nЕсли сочетание клавиш не срабатывает в Dia, замените область действия In Dia на Global."
   },
   "settings_shortcuts_section_title": {
     "message": "Быстрые клавиши"
@@ -691,6 +691,12 @@
   },
   "settings_overlay_size_title": {
     "message": "Размер"
+  },
+  "settings_overlay_width_title": {
+    "message": "Ширина"
+  },
+  "settings_overlay_width_reset": {
+    "message": "По настройке размера"
   },
   "overlay_size_compact": {
     "message": "Компактный"
@@ -2117,6 +2123,9 @@
   "settings_aggregate_search_auto_group_title": {
     "message": "Группировать вкладки сводного поиска"
   },
+  "settings_aggregate_search_auto_group_short_title": {
+    "message": "Автоматически создавать группы вкладок"
+  },
   "settings_aggregate_search_auto_group_desc": {
     "message": "Если включено, все вкладки, открытые сводным поиском, помещаются в одну группу с названием «Название поиска: запрос»"
   },
@@ -2273,6 +2282,18 @@
   "link_preview_open_in_tab": {
     "message": "Открыть в новой вкладке"
   },
+  "link_preview_copy_link": {
+    "message": "Копировать ссылку"
+  },
+  "link_preview_link_copied": {
+    "message": "Ссылка скопирована"
+  },
+  "link_preview_reload": {
+    "message": "Обновить"
+  },
+  "link_preview_back": {
+    "message": "Назад"
+  },
   "link_preview_blocked": {
     "message": "Эту страницу нельзя показать в предпросмотре"
   },
@@ -2333,6 +2354,9 @@
   "command_show_tab_switcher": {
     "message": "Открыть переключатель недавних вкладок"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Открыть переключатель недавних вкладок в обратном порядке"
+  },
   "shortcut_reference_title": {
     "message": "Быстрые клавиши"
   },
@@ -2374,6 +2398,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Открыть переключатель недавних вкладок"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Открыть переключатель недавних вкладок в обратном порядке"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Открыть переключатель с выбранной самой давней вкладкой"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Предыдущий или следующий ввод"
@@ -2770,6 +2800,27 @@
   },
   "settings_tab_switcher_desc": {
     "message": "Быстрый переход между недавними вкладками; по умолчанию {shortcut}, можно изменить"
+  },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Переключать по {shortcut}, как в Arc"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Справка: {shortcut} как в Arc"
+  },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "Показывать только вкладки текущего окна"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "Для браузеров, которые открывают каждое пространство в отдельном окне: вкладки из других пространств не попадут в список"
+  },
+  "settings_features_section_title": {
+    "message": "Функции"
+  },
+  "settings_link_preview_title": {
+    "message": "Предпросмотр ссылок"
+  },
+  "settings_link_preview_desc": {
+    "message": "Щёлкните ссылку с зажатой клавишей Shift, чтобы открыть её в небольшом окне поверх страницы, а затем закройте его или перенесите во вкладку"
   },
   "slash_command_empty": {
     "message": "Команды не найдены"
@@ -3553,6 +3604,9 @@
   },
   "settings_newtab_glass_theme_title": {
     "message": "Тема материала"
+  },
+  "settings_newtab_glass_theme_desc": {
+    "message": "Авто: следует режиму темы, но на темных обоях переключается на темный материал, чтобы текст оставался читаемым.\nСветлая / Темная: закрепляют материал и применяют ту же тему к новой вкладке."
   },
   "settings_newtab_glass_theme_follow": {
     "message": "Авто"

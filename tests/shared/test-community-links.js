@@ -30,6 +30,11 @@ const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/r
     'surfaces can deep link to a specific help article'
   );
   assert.strictEqual(
+    communityLinks.getHelpUrl('en', 'tab-switcher', 'ctrl-tab'),
+    'https://lumno.kubai.design/en/help/tab-switcher/#ctrl-tab',
+    'surfaces can deep link to a section of a help article'
+  );
+  assert.strictEqual(
     communityLinks.normalizeHttpsUrl('http://example.com/qr.webp'),
     '',
     'remote community URLs should reject insecure HTTP values'

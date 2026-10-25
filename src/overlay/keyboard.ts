@@ -9,6 +9,8 @@ interface OverlayKeyMount {
 interface OverlayKeyRouterHandlers {
   isTrustedEvent?(event: KeyboardEvent): boolean;
   isOverlayConnected?(): boolean;
+  // Another Lumno surface (the tab switcher over the overlay) holds the keyboard.
+  isKeyboardYielded?(): boolean;
   getMount?(): OverlayKeyMount | null;
   isSearchInputActive?(): boolean;
   shouldHandleModeMenuKey?(event: KeyboardEvent): boolean;
@@ -87,6 +89,9 @@ function isOverlayKeyEvent(event: KeyboardEvent | null, mount: OverlayKeyMount |
 //   the keyboard (focus inside the overlay, or nowhere); a focused host-page
 //   control keeps its keys, except Escape, which closes the overlay;
 // - window blur: modifier tracking resets.
+// While another Lumno surface holds the keyboard (the tab switcher opened over
+// the overlay), every key passes untouched so that surface sees its arrows,
+// Enter, Escape and the modifier release that commits it.
 // Synthetic (untrusted) events never drive the overlay. `handlers` supplies
 // the overlay's state queries and actions.
 function createOverlayKeyRouter(win: Window, handlers?: OverlayKeyRouterHandlers | null) {
@@ -104,7 +109,7 @@ function createOverlayKeyRouter(win: Window, handlers?: OverlayKeyRouterHandlers
       }
       return;
     }
-    if (!config.isOverlayConnected?.()) {
+    if (!config.isOverlayConnected?.() || config.isKeyboardYielded?.()) {
       return;
     }
     if (event.type === 'keyup') {
@@ -155,14 +160,14 @@ function createOverlayKeyRouter(win: Window, handlers?: OverlayKeyRouterHandlers
     if (!isTrustedEvent(event) || event.key !== 'Tab') {
       return;
     }
-    if (!config.isSearchInputActive?.()) {
+    if (config.isKeyboardYielded?.() || !config.isSearchInputActive?.()) {
       return;
     }
     config.handleTab?.(event);
   }
 
   function handleDocumentKeydown(event: KeyboardEvent): void {
-    if (!isTrustedEvent(event)) {
+    if (!isTrustedEvent(event) || config.isKeyboardYielded?.()) {
       return;
     }
     if (!isOverlayKeyEvent(event, config.getMount?.())) {
@@ -175,7 +180,8 @@ function createOverlayKeyRouter(win: Window, handlers?: OverlayKeyRouterHandlers
   }
 
   function handleDocumentKeyup(event: KeyboardEvent): void {
-    if (!isTrustedEvent(event) || !isOverlayKeyEvent(event, config.getMount?.())) {
+    if (!isTrustedEvent(event) || config.isKeyboardYielded?.() ||
+        !isOverlayKeyEvent(event, config.getMount?.())) {
       return;
     }
     config.handleOverlayKeyup?.(event);

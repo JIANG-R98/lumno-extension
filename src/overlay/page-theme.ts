@@ -798,12 +798,21 @@ const PAGE_THEME_ATTRIBUTE_FILTER = Object.freeze([
   'data-bs-theme'
 ]);
 
+// What a page theme observer reports with each change.
+interface PageThemeChange {
+  // A page mutation led to it, not just the observer starting.
+  pageChanged: boolean;
+}
+
 // Watches the host page for theme switches (root/body theme attributes and
-// head meta changes) and calls `onChange` at most once per frame.
-function createPageThemeObserver(win: Window & typeof globalThis, onChange: () => void) {
+// head meta changes) and calls `onChange` at most once per frame. The call
+// made after `start` alone passes `{ pageChanged: false }`; one that follows
+// a page mutation passes `{ pageChanged: true }`.
+function createPageThemeObserver(win: Window & typeof globalThis, onChange: (change: PageThemeChange) => void) {
   const doc = win && win.document;
   let observer: MutationObserver | null = null;
   let frame: number | null = null;
+  let pageChanged = false;
 
   function scheduleChange(): void {
     if (frame !== null) {
@@ -811,17 +820,24 @@ function createPageThemeObserver(win: Window & typeof globalThis, onChange: () =
     }
     frame = win.requestAnimationFrame(() => {
       frame = null;
+      const changed = pageChanged;
+      pageChanged = false;
       if (typeof onChange === 'function') {
-        onChange();
+        onChange({ pageChanged: changed });
       }
     });
+  }
+
+  function handleMutations(): void {
+    pageChanged = true;
+    scheduleChange();
   }
 
   function start(): void {
     if (observer || !doc || typeof win.MutationObserver !== 'function') {
       return;
     }
-    const pageObserver = new win.MutationObserver(scheduleChange);
+    const pageObserver = new win.MutationObserver(handleMutations);
     observer = pageObserver;
     [doc.documentElement, doc.body].forEach((element) => {
       if (element) {
@@ -847,6 +863,7 @@ function createPageThemeObserver(win: Window & typeof globalThis, onChange: () =
       win.cancelAnimationFrame(frame);
       frame = null;
     }
+    pageChanged = false;
     if (observer) {
       observer.disconnect();
       observer = null;
@@ -925,4 +942,4 @@ export {
   shouldObservePageTheme,
   syncPageThemeObservation
 };
-export type { PageTheme, PageThemeOptions, ParsedColor, ThemeModeOptions, ThemeSignal, VisualThemeSignal };
+export type { PageTheme, PageThemeChange, PageThemeOptions, ParsedColor, ThemeModeOptions, ThemeSignal, VisualThemeSignal };

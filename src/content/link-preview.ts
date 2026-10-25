@@ -1,7 +1,7 @@
 import { toPreviewFrameUrl } from '../domain/link-preview-frame-url';
 import { PREVIEW_SURFACE_SOURCE, readPreviewFrameMessage } from '../domain/link-preview-frame-messages';
 import type { PreviewSurfaceCommand } from '../domain/link-preview-frame-messages';
-import type { BackgroundAction, BackgroundRequest, LinkPreviewOrigin } from '../domain/messages';
+import type { BackgroundAction, BackgroundReply, BackgroundRequest, LinkPreviewOrigin } from '../domain/messages';
 import * as TOAST from '../shared/ui/toast';
 import type { ToastController, ToastShowOptions, ToastStyleGate } from '../shared/ui/toast';
 import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-state-art';
@@ -16,6 +16,8 @@ interface LinkPreview {
   // The address now, following links taken inside the preview.
   currentUrl: string;
   frameUrl: string;
+  // Handed to the frame once its page reports in (see linkPreviewFrameBind).
+  frameSecret: string;
   host: HTMLDivElement;
   root: HTMLDivElement;
   page: HTMLDivElement;
@@ -48,6 +50,7 @@ interface LinkPreview {
 interface ShowRequest {
   token: string;
   url: string;
+  frameSecret: string;
   screenshot: string;
   origin: LinkPreviewOrigin | null;
 }
@@ -252,7 +255,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       position: absolute;
       inset: 0;
       overflow: clip;
-      border-radius: 26px;
+      border-radius: 23px;
       background: var(--lp-panel);
       box-shadow:
         0 0 0 0.5px var(--lp-panel-edge),
@@ -263,14 +266,19 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
        as far from the corner as a 26pt continuous corner does, about 1.5
        times the radius, so it looks the size of the window corner. Only
        while the window is still: clipping the frame to it takes a mask pass
-       on every frame, and the plain corner it stands in for while the window
-       springs open or shrinks away looks the same at that size. */
+       on every frame. The plain corner it stands in for while the window
+       springs open or shrinks away is the circle closest to it, within about
+       half a pixel, so the swap does not show; a 26px circle was nearly two
+       pixels off and the corner visibly jumped when the spring settled. */
     @supports (corner-shape: squircle) {
       .root[data-motion="still"] .panel {
         border-radius: 40px;
         corner-shape: squircle;
       }
     }
+    /* The site's name while its page loads. It waits a moment before fading
+       in, so a page that loads quickly opens without it flashing, then
+       breathes gently until the page arrives. */
     .placeholder {
       position: absolute;
       inset: 0;
@@ -279,6 +287,25 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       color: var(--lp-muted);
       font-size: 13px;
       letter-spacing: 0.01em;
+      opacity: 0;
+    }
+    .root[data-state="open"]:not([data-loaded="true"]) .placeholder {
+      animation:
+        lp-placeholder-in 320ms ease-out 360ms forwards,
+        lp-placeholder-breathe 2000ms ease-in-out 680ms infinite;
+    }
+    @keyframes lp-placeholder-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes lp-placeholder-breathe {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .root[data-state="open"]:not([data-loaded="true"]) .placeholder {
+        animation: lp-placeholder-in 320ms ease-out 360ms forwards;
+      }
     }
     /* Gone once the page has loaded: a page with no background of its own
        leaves the frame clear, and the site's name showed through it. */
@@ -466,13 +493,36 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
     }
   }
 
-  function send<A extends BackgroundAction>(message: BackgroundRequest<A>): void {
+  function send<A extends BackgroundAction>(
+    message: BackgroundRequest<A>,
+    callback?: (response: BackgroundReply<A> | undefined) => void
+  ): void {
     try {
-      LumnoMessaging.sendBackgroundMessage(chrome.runtime, message, () => {
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, message, (response) => {
         void (chrome.runtime && chrome.runtime.lastError);
+        if (typeof callback === 'function') {
+          callback(response);
+        }
       });
     } catch (_error) {
       // Ignore an extension context invalidated during reload or navigation.
+      if (typeof callback === 'function') {
+        callback(undefined);
+      }
+    }
+  }
+
+  // Sends the frame to another address in place of its current entry, so
+  // Back does not return to the error page it replaces.
+  function replaceFrameLocation(preview: LinkPreview, url: string): void {
+    try {
+      const frameWindow = preview.frame.contentWindow;
+      if (!frameWindow) {
+        throw new Error('The preview frame has no window.');
+      }
+      frameWindow.location.replace(url);
+    } catch (_error) {
+      preview.frame.src = url;
     }
   }
 
@@ -546,11 +596,11 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
     preview.toast.show(message, options);
   }
 
-  function postToFrame(preview: LinkPreview, type: PreviewSurfaceCommand): void {
+  function postToFrame(preview: LinkPreview, command: PreviewSurfaceCommand): void {
     try {
       const frameWindow = preview.frame.contentWindow;
       if (frameWindow) {
-        frameWindow.postMessage({ source: PREVIEW_SURFACE_SOURCE, type }, '*');
+        frameWindow.postMessage({ source: PREVIEW_SURFACE_SOURCE, ...command }, '*');
       }
     } catch (_error) {
       // The frame may be between documents.
@@ -561,7 +611,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
   // the previewed page reports it has somewhere to go back to.
   function goBack(preview: LinkPreview): void {
     preview.root.dataset.loaded = 'false';
-    postToFrame(preview, 'back');
+    postToFrame(preview, { type: 'back' });
   }
 
   // A page that reported in reloads itself, keeping its place in the
@@ -570,7 +620,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
   function reload(preview: LinkPreview): void {
     preview.root.dataset.loaded = 'false';
     if (preview.pageReported && preview.root.dataset.blocked !== 'true') {
-      postToFrame(preview, 'reload');
+      postToFrame(preview, { type: 'reload' });
     } else {
       preview.frame.src = toPreviewFrameUrl(preview.currentUrl || preview.url);
     }
@@ -685,6 +735,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       url,
       currentUrl: url,
       frameUrl: toPreviewFrameUrl(url),
+      frameSecret: '',
       host,
       root,
       page,
@@ -810,6 +861,12 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       preview.currentUrl = message.url === preview.frameUrl ? preview.url : message.url;
       preview.root.dataset.blocked = 'false';
       preview.backButton.hidden = !message.canGoBack;
+      // Only this window holds the frame, so only the frame's page hears
+      // the secret; its content script hands it to the background, which
+      // then takes that frame's reports as the preview's.
+      if (preview.frameSecret) {
+        postToFrame(preview, { type: 'bind', secret: preview.frameSecret });
+      }
     } else if (message.type === 'background') {
       preview.panel.style.backgroundColor = message.color;
     } else if (message.type === 'loading') {
@@ -834,12 +891,31 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       }
       const alive = preview.aliveSinceLoad;
       preview.aliveSinceLoad = false;
-      preview.root.dataset.loaded = 'true';
       if (alive) {
+        preview.root.dataset.loaded = 'true';
         return;
       }
-      preview.root.dataset.blocked = 'true';
+      retryRefusedPage(preview, loadNumber);
     }, ALIVE_GRACE_MS);
+  }
+
+  // The preview frames the previewed site's domains only. A refused page may
+  // be one it went to from there (a link that redirects, or a link followed
+  // in the preview): the background allows that domain if it may and the
+  // frame tries once more; otherwise the window says the page is refused.
+  function retryRefusedPage(preview: LinkPreview, loadNumber: number): void {
+    send({ action: 'linkPreviewFrameRefused', token: preview.token }, (response) => {
+      if (current !== preview || preview.closing || loadNumber !== preview.loadCount) {
+        return;
+      }
+      if (response && response.retry === true && typeof response.url === 'string' &&
+          /^https?:\/\//i.test(response.url)) {
+        replaceFrameLocation(preview, response.url);
+        return;
+      }
+      preview.root.dataset.loaded = 'true';
+      preview.root.dataset.blocked = 'true';
+    });
   }
 
   // The page under the preview cannot be used while it is up, so a new
@@ -899,7 +975,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
     }
   }
 
-  function prewarm(token: string, url: string): boolean {
+  function prewarm(token: string, url: string, frameSecret: string): boolean {
     if (current && !current.shown) {
       teardown(current);
     }
@@ -908,6 +984,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       return false;
     }
     const preview = build(token, url);
+    preview.frameSecret = frameSecret;
     current = preview;
     preview.prewarmTimer = window.setTimeout(() => {
       if (current === preview && !preview.shown) {
@@ -1016,7 +1093,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       return false;
     }
     if (!current || current.token !== message.token || current.url !== message.url) {
-      prewarm(message.token, message.url);
+      prewarm(message.token, message.url, message.frameSecret);
     }
     const preview = current;
     if (!preview) {
@@ -1142,7 +1219,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       return false;
     }
     if (message.action === 'lumnoLinkPreviewPrewarm') {
-      sendResponse(prewarm(String(message.token || ''), String(message.url || '')));
+      sendResponse(prewarm(String(message.token || ''), String(message.url || ''), String(message.frameSecret || '')));
       return false;
     }
     if (message.action === 'lumnoLinkPreviewScreenshot') {
@@ -1160,10 +1237,21 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       show({
         token: String(message.token || ''),
         url: String(message.url || ''),
+        frameSecret: String(message.frameSecret || ''),
         screenshot: typeof message.screenshot === 'string' ? message.screenshot : '',
         origin: readOrigin(message.origin)
       }).then(sendResponse, () => sendResponse(false));
       return true;
+    }
+    if (message.action === 'lumnoLinkPreviewDiscard') {
+      // The press ended away from the link: the click will not come.
+      const preview = current;
+      const discarded = preview !== null && !preview.shown && preview.token === String(message.token || '');
+      if (preview && discarded) {
+        teardown(preview);
+      }
+      sendResponse(discarded);
+      return false;
     }
     if (message.action === 'lumnoLinkPreviewPing') {
       // Answers for a preview still opening too: its own frame loading can

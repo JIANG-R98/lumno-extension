@@ -564,7 +564,7 @@
     "message": "Usar en Dia"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "En Dia, por limitaciones del navegador, las funciones de Nueva pestaña de Lumno no están disponibles por ahora, pero la barra de comandos funciona con normalidad.\n\nSi la combinación de teclas no funciona en Dia, haz clic en el botón de abajo a la derecha para abrir la página de combinaciones de teclas del navegador y cambia «Abrir la barra de comandos» de In Dia a Global."
+    "message": "Dia no permite que las extensiones reemplacen la nueva pestaña, así que la Nueva pestaña de Lumno no está disponible ahí. La barra de comandos funciona con normalidad.\n\nPara abrir la barra de comandos con ⌘T: los atajos propios de Dia tienen prioridad, así que primero abre Settings → Shortcuts en Dia y cambia «New Tab» de ⌘T a otra tecla. Luego haz clic en el botón de abajo a la derecha y asigna ⌘T a «Abrir la barra de comandos».\n\nSi la combinación de teclas no responde en Dia, cambia su ámbito de In Dia a Global."
   },
   "settings_shortcuts_section_title": {
     "message": "Combinaciones de teclas"
@@ -691,6 +691,12 @@
   },
   "settings_overlay_size_title": {
     "message": "Tamaño"
+  },
+  "settings_overlay_width_title": {
+    "message": "Ancho"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Seguir el tamaño"
   },
   "overlay_size_compact": {
     "message": "Compacto"
@@ -2117,6 +2123,9 @@
   "settings_aggregate_search_auto_group_title": {
     "message": "Agrupar automáticamente las pestañas de búsquedas combinadas"
   },
+  "settings_aggregate_search_auto_group_short_title": {
+    "message": "Crear grupos de pestañas automáticamente"
+  },
   "settings_aggregate_search_auto_group_desc": {
     "message": "Si está activado, todas las pestañas que abre una búsqueda combinada se colocan en un grupo llamado “Nombre de la búsqueda: términos de búsqueda”"
   },
@@ -2273,6 +2282,18 @@
   "link_preview_open_in_tab": {
     "message": "Abrir en una pestaña nueva"
   },
+  "link_preview_copy_link": {
+    "message": "Copiar enlace"
+  },
+  "link_preview_link_copied": {
+    "message": "Enlace copiado"
+  },
+  "link_preview_reload": {
+    "message": "Volver a cargar"
+  },
+  "link_preview_back": {
+    "message": "Atrás"
+  },
   "link_preview_blocked": {
     "message": "Esta página no se puede mostrar en una vista previa"
   },
@@ -2333,6 +2354,9 @@
   "command_show_tab_switcher": {
     "message": "Abrir el selector de pestañas recientes"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Abrir el selector de pestañas recientes en orden inverso"
+  },
   "shortcut_reference_title": {
     "message": "Lista de combinaciones de teclas"
   },
@@ -2374,6 +2398,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Abre el selector de pestañas recientes"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Abrir el selector de pestañas recientes en orden inverso"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Abre el selector con la pestaña más antigua seleccionada"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Entrada anterior o siguiente"
@@ -2770,6 +2800,27 @@
   },
   "settings_tab_switcher_desc": {
     "message": "Cambia rápidamente entre pestañas recientes; {shortcut} de forma predeterminada, personalizable"
+  },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Cambiar con {shortcut}, como en Arc"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Guía: {shortcut} como en Arc"
+  },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "Mostrar solo las pestañas de la ventana actual"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "Para navegadores que abren cada espacio en su propia ventana, así las pestañas de otros espacios no aparecen en la lista"
+  },
+  "settings_features_section_title": {
+    "message": "Funciones"
+  },
+  "settings_link_preview_title": {
+    "message": "Vista previa de enlaces"
+  },
+  "settings_link_preview_desc": {
+    "message": "Haz clic en un enlace con Mayús pulsado para verlo en una ventana pequeña sobre la página; luego ciérrala o pásala a una pestaña"
   },
   "slash_command_empty": {
     "message": "No hay comandos que coincidan"
@@ -3553,6 +3604,9 @@
   },
   "settings_newtab_glass_theme_title": {
     "message": "Tema del material"
+  },
+  "settings_newtab_glass_theme_desc": {
+    "message": "Automático: sigue el modo de tema, pero usa material oscuro sobre fondos más oscuros para que el texto se lea bien.\nClaro / Oscuro: fijan el material y aplican el mismo tema a la Nueva pestaña."
   },
   "settings_newtab_glass_theme_follow": {
     "message": "Automático"

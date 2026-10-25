@@ -13,7 +13,7 @@ import type { ThemeScope } from '../react/wallpaper-panel/panel-model';
 import type { TopContentController } from '../react/wordmark';
 import type { QuoteRuntime } from '../top-content/quotes';
 import type { TopContentRuntime } from '../top-content/top-content';
-import type { AdaptiveToneTarget } from './wallpaper-adaptive-tone';
+import type { AdaptiveToneTarget, ToneScheduleOptions } from './wallpaper-adaptive-tone';
 import * as NEWTAB_WALLPAPER from './wallpaper';
 import type { WallpaperRuntime } from './wallpaper';
 import type { SectionPanelSettings } from './runtime/panel-actions';
@@ -421,12 +421,13 @@ function createWallpaperPage(deps: WallpaperPageDeps) {
       bookmarksBar.style.removeProperty('--x-nt-glass-saturate');
     }
     // Floating panels and menus take the same material and ink as the plates; flipped to light ink
-    // they switch their controls to the dark palette (paletteSwap).
+    // they switch their controls to the dark palette (paletteSwap). They follow the plates' ink
+    // rather than weigh in on it (floating).
     queryHtmlElements(document,
       '.x-nt-wallpaper-panel, ._x_extension_menu_surface_2024_unique_, .x-lumno-feature-hint, ' +
       '.x-nt-feedback-popover, .x-lumno-toast'
     ).forEach((element) => {
-      targets.push({ element, sampleElement: element, glass: true, paletteSwap: true });
+      targets.push({ element, sampleElement: element, glass: true, paletteSwap: true, floating: true });
     });
     // A dialog samples the wallpaper under itself and sets its ink on its backdrop layer, which hands
     // it down to the dialog and its controls; the WeChat group dialog's card is in its shadow root.
@@ -437,7 +438,7 @@ function createWallpaperPage(deps: WallpaperPageDeps) {
         ? element.shadowRoot.querySelector('.card')
         : element.querySelector('.x-nt-shortcut-dialog, .x-nt-recent-history-dialog');
       if (dialog) {
-        targets.push({ element, sampleElement: dialog, glass: true, paletteSwap: true });
+        targets.push({ element, sampleElement: dialog, glass: true, paletteSwap: true, floating: true });
       }
     });
     return targets;
@@ -674,9 +675,9 @@ function createWallpaperPage(deps: WallpaperPageDeps) {
     }
   }
 
-  function scheduleWallpaperAdaptiveToneUpdate(): void {
+  function scheduleWallpaperAdaptiveToneUpdate(options?: ToneScheduleOptions | Event | null): void {
     if (pageState.wallpaperRuntime) {
-      pageState.wallpaperRuntime.scheduleAdaptiveToneUpdate();
+      pageState.wallpaperRuntime.scheduleAdaptiveToneUpdate(options);
     }
   }
 

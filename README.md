@@ -106,7 +106,7 @@ Settings sync through Chrome's built-in sync by default. Optional [WebDAV sync](
 
 Shift+click a link to preview it in a small window over the page, then close it or move it to a tab. Restore pinned tabs after a restart, fall back from restricted pages to the new tab page, copy the current page URL with one shortcut, and open extension shortcut or details pages.
 
-The interface comes in 48 languages, or follows your browser language. English, Simplified Chinese, Traditional Chinese and Japanese are written and reviewed by people; the rest are AI-translated, and native speakers can fix them from Settings → General → Language → **Improve translation**.
+The interface comes in 10 languages (English, Simplified Chinese, Traditional Chinese, Japanese, Korean, German, French, Spanish, Brazilian Portuguese and Russian), or follows your browser language. English, Simplified Chinese, Traditional Chinese and Japanese are written and reviewed by people; the rest are AI-translated, and native speakers can fix them from Settings → General → Language → **Improve translation**.
 
 Step-by-step guides for every feature, with screenshots, are in the [Lumno Help Center](https://lumno.kubai.design/en/help/).
 
@@ -172,7 +172,7 @@ Lumno is built for Chromium browsers and also ships a Firefox build. Browsers bu
 | "Open shortcut settings" | Works differently | Opens the Add-ons Manager; choose **Manage Extension Shortcuts** from the gear menu |
 | Settings sync | Works differently | Uses Firefox Sync instead of Chrome sync. WebDAV sync works across Chrome and Firefox, including both open on the same computer |
 
-**Chromium-based browsers.** Brave, Arc, Vivaldi, Opera and others use the Chrome Web Store build with the same features as Chrome, though some reserve or remap extension shortcuts. In Dia, the New Tab page is unavailable but the command bar works; if its shortcut does nothing, set "Open command bar" from **In Dia** to **Global** in the browser's shortcut settings.
+**Chromium-based browsers.** Brave, Arc, Vivaldi, Opera and others use the Chrome Web Store build with the same features as Chrome, though some reserve or remap extension shortcuts. In Dia, the New Tab page is unavailable but the command bar works. Dia's own shortcuts take priority, so to open the command bar with ⌘T, first change Dia's "New Tab" shortcut away from ⌘T in Dia's Settings → Shortcuts, then set "Open command bar" to ⌘T on the browser's extension shortcuts page. If the shortcut does nothing, change its scope there from **In Dia** to **Global**.
 
 ## Privacy
 
@@ -197,6 +197,22 @@ Browsers block extensions on internal pages such as `chrome://` and on the Chrom
 
 **How do I change the keyboard shortcut?**
 Open `chrome://extensions/shortcuts` (or `edge://extensions/shortcuts`) and set new keys for Lumno.
+
+**Can I open the tab switcher with Ctrl+Tab, like in Arc?**
+Yes, though the shortcuts page itself won't accept Ctrl+Tab. Open `chrome://extensions/shortcuts`, open the DevTools console (`Cmd+Option+J` on macOS, `Ctrl+Shift+J` on Windows and Linux) and run:
+
+```js
+const extensions = await chrome.developerPrivate.getExtensionsInfo();
+const lumno = extensions.find((item) =>
+  item.commands.some((command) => command.name === "show-tab-switcher"));
+await chrome.developerPrivate.updateExtensionCommand({
+  extensionId: lumno.id,
+  commandName: "show-tab-switcher",
+  keybinding: "Ctrl+Tab",
+});
+```
+
+This changes only Lumno's tab switcher shortcut, and the browser's own Ctrl+Tab stops working. The [Help Center](https://lumno.kubai.design/en/help/tab-switcher/#ctrl-tab) walks through it with screenshots.
 
 **How is Lumno different from the default Chrome tab search?**
 Lumno searches tabs, bookmarks, history and top sites together, adds site and AI search prefixes, aggregate search and a recent tab switcher, and works as an overlay on the current page instead of only in the toolbar.

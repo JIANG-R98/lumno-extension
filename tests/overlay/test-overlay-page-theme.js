@@ -304,16 +304,16 @@ function testPageThemeObserverBatchesChangesPerFrame() {
   window.cancelAnimationFrame = (id) => {
     frames[id - 1] = null;
   };
-  let changes = 0;
-  const observer = pageTheme.createPageThemeObserver(window, () => {
-    changes += 1;
+  const changes = [];
+  const observer = pageTheme.createPageThemeObserver(window, (change) => {
+    changes.push(change);
   });
   observer.start();
   observer.start();
   assert.strictEqual(observer.active, true);
   assert.strictEqual(frames.length, 1, 'starting schedules one initial sync');
   frames.shift()();
-  assert.strictEqual(changes, 1);
+  assert.deepStrictEqual(changes, [{ pageChanged: false }], 'the initial sync should not claim the page changed');
   observer.stop();
   assert.strictEqual(observer.active, false);
   window.close();
@@ -323,24 +323,25 @@ async function testPageThemeObserverReactsToThemeAttributes() {
   const window = createThemedPage('');
   window.requestAnimationFrame = (callback) => setTimeout(callback, 0);
   window.cancelAnimationFrame = (id) => clearTimeout(id);
-  let changes = 0;
-  const observer = pageTheme.createPageThemeObserver(window, () => {
-    changes += 1;
+  const changes = [];
+  const observer = pageTheme.createPageThemeObserver(window, (change) => {
+    changes.push(change);
   });
   observer.start();
   await new Promise((resolve) => setTimeout(resolve, 5));
-  const afterStart = changes;
+  const afterStart = changes.length;
   window.document.documentElement.setAttribute('data-theme', 'dark');
   window.document.documentElement.setAttribute('data-color-mode', 'dark');
   await new Promise((resolve) => setTimeout(resolve, 5));
-  assert.strictEqual(changes, afterStart + 1, 'theme attribute bursts collapse into one sync');
+  assert.strictEqual(changes.length, afterStart + 1, 'theme attribute bursts collapse into one sync');
+  assert.deepStrictEqual(changes[afterStart], { pageChanged: true }, 'a sync after a mutation should say the page changed');
   window.document.documentElement.setAttribute('aria-label', 'unrelated');
   await new Promise((resolve) => setTimeout(resolve, 5));
-  assert.strictEqual(changes, afterStart + 1, 'unrelated attributes are ignored');
+  assert.strictEqual(changes.length, afterStart + 1, 'unrelated attributes are ignored');
   observer.stop();
   window.document.documentElement.setAttribute('data-theme', 'light');
   await new Promise((resolve) => setTimeout(resolve, 5));
-  assert.strictEqual(changes, afterStart + 1, 'a stopped observer stays quiet');
+  assert.strictEqual(changes.length, afterStart + 1, 'a stopped observer stays quiet');
   window.close();
 }
 
@@ -382,6 +383,59 @@ async function testOverlayIsReadyBeforeItJoinsThePage() {
   page.close();
 }
 
+// Sampling the page hit-tests points across it, which forces a full style
+// and layout pass once the page has pending changes, and every font face the
+// overlay adds to the page restyles all of it. So each open samples the page
+// once, before it adds anything, and adds its faces together; only a page
+// theme change samples again.
+async function testOverlaySamplesThePageOnceBeforeChangingIt() {
+  const FONT_FACES_ID = '_x_extension_overlay_font_faces_2026_unique_';
+  const CJK_FACES_ID = '_x_extension_overlay_cjk_font_faces_2026_unique_';
+  const samples = [];
+  const atMount = [];
+  const page = await createOverlayPage({
+    settings: { _x_extension_language_2024_unique_: 'system' },
+    setup(window) {
+      window.chrome.i18n.getUILanguage = () => 'zh-CN';
+      const doc = window.document;
+      doc.elementFromPoint = () => {
+        samples.push({
+          hostMounted: Boolean(doc.getElementById(HOST_ID)),
+          fontFaces: Boolean(doc.getElementById(FONT_FACES_ID))
+        });
+        return doc.body;
+      };
+      const appendChild = window.Node.prototype.appendChild;
+      window.Node.prototype.appendChild = function(child) {
+        if (child && child.id === HOST_ID) {
+          atMount.push({
+            fontFaces: Boolean(doc.getElementById(FONT_FACES_ID)),
+            cjkFaces: Boolean(doc.getElementById(CJK_FACES_ID))
+          });
+        }
+        return appendChild.call(this, child);
+      };
+    }
+  });
+  const cjkStyle = () => page.document.getElementById(CJK_FACES_ID);
+  await page.open();
+  const perOpen = samples.length;
+  assert.ok(perOpen > 0, 'the overlay should sample the page');
+  assert.ok(samples.every((sample) => !sample.hostMounted && !sample.fontFaces),
+    'the page should be sampled before the overlay adds its fonts or host');
+  assert.deepStrictEqual(atMount, [{ fontFaces: true, cjkFaces: true }],
+    'the CJK face should join the other faces before the host mounts');
+  const cjkCss = cjkStyle().textContent;
+  assert.match(cjkCss, /PingFangSC-Medium/);
+
+  page.document.documentElement.setAttribute('data-theme', 'dark');
+  await page.waitFor(() => samples.length === perOpen * 2, 'a page theme change should sample the page again');
+  await page.settle(60);
+  assert.strictEqual(samples.length, perOpen * 2, 'one theme change should sample the page once');
+  assert.strictEqual(cjkStyle().textContent, cjkCss, 'the language setting should keep the matching CJK face');
+  page.close();
+}
+
 const INPUT_ISOLATION = {
   'data-1p-ignore': 'true',
   'data-op-ignore': 'true',
@@ -408,6 +462,7 @@ testPageThemeObserverBatchesChangesPerFrame();
 
 testPageThemeObserverReactsToThemeAttributes()
   .then(testOverlayIsReadyBeforeItJoinsThePage)
+  .then(testOverlaySamplesThePageOnceBeforeChangingIt)
   .then(() => {
     console.log('overlay page theme tests passed');
     process.exit(0);

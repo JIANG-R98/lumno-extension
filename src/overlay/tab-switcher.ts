@@ -3,6 +3,7 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
 import type { TabSwitcherTab, TabSwitcherThumbnailUpdate } from '../shared/react/tab-switcher';
 import * as TOAST from '../shared/ui/toast';
 import * as LumnoMessaging from '../platform/messaging';
+import { queryHtmlTags } from '../shared/dom-lookup';
 import { TAB_SWITCHER_HOST_ID, getTabSwitcherHost } from './tab-switcher-host';
 import type { TabSwitcherHost, TabSwitcherReply } from './tab-switcher-host';
 
@@ -15,6 +16,8 @@ interface OpenContext {
   advanceOnExisting: boolean;
   suppressInitialShortcutAdvance: boolean;
   shortcut: unknown;
+  // Opened by the reverse command, on the oldest tab.
+  reverse: boolean;
 }
 
 type ModifierFlag = 'altKey' | 'ctrlKey' | 'metaKey' | 'shiftKey';
@@ -28,6 +31,8 @@ interface ShortcutModifier {
 // whose release switches to the selected tab.
 interface ParsedShortcut {
   triggerKey: string;
+  // Shift is part of the chord, so pressing the key without it goes back.
+  hasShift: boolean;
   commitModifierEventKey: string;
   commitModifierFlag: ModifierFlag | '';
 }
@@ -87,7 +92,8 @@ function readOpenContext(value: unknown): OpenContext {
     tabZoomFactor: context.tabZoomFactor,
     advanceOnExisting: context.advanceOnExisting === true,
     suppressInitialShortcutAdvance: context.suppressInitialShortcutAdvance === true,
-    shortcut: context.shortcut
+    shortcut: context.shortcut,
+    reverse: context.reverse === true
   };
 }
 
@@ -194,6 +200,50 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
       }
     }
     return 'left';
+  }
+
+  function isModalDialog(element: Element): boolean {
+    try {
+      return element.matches(':modal');
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  // Focus stays trapped in the topmost modal, so prefer the one holding it.
+  function findTopModalDialog(doc: Document): HTMLDialogElement | null {
+    const active = doc.activeElement;
+    const focusedDialog = active ? active.closest('dialog') : null;
+    if (focusedDialog && isModalDialog(focusedDialog)) {
+      return focusedDialog;
+    }
+    const dialogs = queryHtmlTags(doc, 'dialog[open]', 'dialog').filter(isModalDialog);
+    return dialogs.length ? dialogs[dialogs.length - 1] : null;
+  }
+
+  // Modal dialogs and fullscreen elements live in the browser's top layer,
+  // above any z-index (X's image viewer is a modal dialog). Mounting inside the
+  // modal keeps the switcher from being inert; the host then joins the top
+  // layer itself as a popover.
+  function getSwitcherMountParent(doc: Document): Element {
+    const modalDialog = findTopModalDialog(doc);
+    const fullscreenElement = doc.fullscreenElement || null;
+    if (modalDialog && (!fullscreenElement || fullscreenElement.contains(modalDialog))) {
+      return modalDialog;
+    }
+    return fullscreenElement || doc.documentElement || doc.body;
+  }
+
+  function showSwitcherHostInTopLayer(host: HTMLElement): void {
+    if (!host.hasAttribute('popover')) {
+      return;
+    }
+    try {
+      host.showPopover();
+    } catch (_error) {
+      // Keep the fixed-position fallback visible if top-layer promotion fails.
+      host.removeAttribute('popover');
+    }
   }
 
   function updateOpenSwitcherThumbnailFromMessage(request: unknown): TabSwitcherReply {
@@ -313,7 +363,8 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
       return: 'enter',
       esc: 'escape',
       space: ' ',
-      spacebar: ' '
+      spacebar: ' ',
+      '⇥': 'tab'
     };
     return aliases[key] || key;
   }
@@ -390,6 +441,7 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
     const commitModifier = modifiers.find((modifier) => modifier.eventKey !== 'Shift') || modifiers[0] || null;
     return {
       triggerKey,
+      hasShift: modifiers.some((modifier) => modifier.eventKey === 'Shift'),
       commitModifierEventKey: commitModifier ? commitModifier.eventKey : '',
       commitModifierFlag: commitModifier ? commitModifier.flag : ''
     };
@@ -767,19 +819,20 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
         width: fit-content;
         max-width: calc(100vw - 24px);
         color: #172033;
-        background:
-          radial-gradient(120% 160% at 12% -24%, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.44) 38%, rgba(241, 245, 249, 0.26) 100%),
-          linear-gradient(135deg, rgba(255, 255, 255, 0.48), rgba(226, 232, 240, 0.28));
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(245, 247, 250, 0.88));
         border: 0;
         border-radius: var(--x-tab-switcher-radius-panel);
         box-shadow:
-          0 26px 82px rgba(15, 23, 42, 0.22),
-          0 5px 18px rgba(15, 23, 42, 0.08),
-          inset 0 1px 0 rgba(255, 255, 255, 0.86),
-          inset 0 -18px 44px rgba(255, 255, 255, 0.22),
-          inset 0 0 0 1px rgba(255, 255, 255, 0.3);
-        backdrop-filter: blur(56px) saturate(210%);
-        -webkit-backdrop-filter: blur(56px) saturate(210%);
+          0 0 0 0.5px rgba(15, 23, 42, 0.1),
+          0 1px 2px rgba(15, 23, 42, 0.06),
+          0 10px 24px -6px rgba(15, 23, 42, 0.12),
+          0 36px 84px -12px rgba(15, 23, 42, 0.22),
+          0 96px 220px -16px rgba(15, 23, 42, 0.3),
+          0 0 140px 8px rgba(15, 23, 42, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(40px) saturate(120%);
+        -webkit-backdrop-filter: blur(40px) saturate(120%);
         padding: var(--x-tab-switcher-padding-panel);
         pointer-events: auto;
         opacity: 0;
@@ -822,7 +875,6 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
         color: #172033;
         cursor: pointer;
         box-shadow: none;
-        transition: border-color 140ms ease, background 140ms ease, box-shadow var(--x-tab-switcher-motion-card);
       }
       .x-tab-switcher-card[data-active="true"] {
         transform: none;
@@ -955,7 +1007,7 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
       .x-tab-switcher-meta {
         min-width: 0;
         display: grid;
-        gap: 3px;
+        gap: 1px;
         padding: 0 var(--x-tab-switcher-meta-inline-padding);
       }
       .x-tab-switcher-name-row {
@@ -979,7 +1031,7 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
         color: #172033;
         font-size: 11.5px;
         font-weight: 500;
-        line-height: 1.16;
+        line-height: 1.32;
         letter-spacing: 0;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -993,7 +1045,7 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
         color: rgba(23, 32, 51, 0.58);
         font-size: 11px;
         font-weight: 560;
-        line-height: 1.18;
+        line-height: 1.32;
       }
       @supports (corner-shape: superellipse(1.25)) {
         #${PANEL_ID},
@@ -1035,7 +1087,7 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
         }
         .x-tab-switcher-name {
           font-size: 10.5px;
-          line-height: 1.14;
+          line-height: 1.3;
         }
         .x-tab-switcher-host {
           display: none;
@@ -1045,15 +1097,16 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
         --x-tab-switcher-thumb-stroke-color: rgba(255, 255, 255, 0.24);
         color-scheme: dark;
         color: #f8fafc;
-        background:
-          radial-gradient(120% 150% at 12% -22%, rgba(71, 85, 105, 0.4) 0%, rgba(30, 41, 59, 0.5) 40%, rgba(8, 13, 24, 0.44) 100%),
-          linear-gradient(135deg, rgba(30, 41, 59, 0.54), rgba(8, 13, 24, 0.46));
+        background: linear-gradient(180deg, rgba(36, 38, 44, 0.88), rgba(22, 24, 28, 0.9));
         box-shadow:
-          0 26px 82px rgba(0, 0, 0, 0.38),
-          0 5px 18px rgba(0, 0, 0, 0.18),
-          inset 0 1px 0 rgba(255, 255, 255, 0.16),
-          inset 0 -18px 42px rgba(255, 255, 255, 0.04),
-          inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+          0 0 0 0.5px rgba(0, 0, 0, 0.5),
+          0 1px 3px rgba(0, 0, 0, 0.32),
+          0 12px 26px -6px rgba(0, 0, 0, 0.4),
+          0 40px 92px -12px rgba(0, 0, 0, 0.55),
+          0 104px 236px -16px rgba(0, 0, 0, 0.66),
+          0 0 150px 10px rgba(0, 0, 0, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.08);
       }
       #${PANEL_ID}[data-theme="dark"] .x-tab-switcher-card {
         color: #f8fafc;
@@ -1168,6 +1221,9 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
       'pointer-events: none !important',
       'contain: layout style paint !important'
     ].join(';');
+    if (typeof host.showPopover === 'function') {
+      host.setAttribute('popover', 'manual');
+    }
     const shadow = typeof host.attachShadow === 'function' ? host.attachShadow({ mode: 'closed' }) : host;
     const style = document.createElement('style');
     style.textContent = buildStyles();
@@ -1371,18 +1427,23 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
       if (!event || event.isTrusted !== true) {
         return;
       }
-      if (event.key === 'Tab') {
-        stopHandledKeyEvent(event);
-        selectByOffset(event.shiftKey ? -1 : 1);
-        return;
-      }
       if (isTabSwitcherShortcutTriggerEvent(shortcut, event)) {
         stopHandledKeyEvent(event);
-        if (shouldSuppressInitialShortcutAdvance() && isTabSwitcherCommitModifierPressed(shortcut, event)) {
+        // Only auto-repeat belongs to the press that opened the switcher; a
+        // quick press can be released before the panel exists to see it.
+        if (shouldSuppressInitialShortcutAdvance() && event.repeat === true &&
+            isTabSwitcherCommitModifierPressed(shortcut, event)) {
           return;
         }
         suppressInitialShortcutAdvanceUntilTriggerKeyup = false;
-        selectByOffset(1);
+        // Adding or dropping Shift relative to the opening shortcut reverses.
+        const openedDirection = context.reverse ? -1 : 1;
+        selectByOffset(event.shiftKey === shortcut.hasShift ? openedDirection : -openedDirection);
+        return;
+      }
+      if (event.key === 'Tab') {
+        stopHandledKeyEvent(event);
+        selectByOffset(event.shiftKey ? -1 : 1);
         return;
       }
       if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
@@ -1434,7 +1495,8 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
     host._lumnoTabSwitcherUpdateThumbnail = function(update: unknown): TabSwitcherReply {
       return view.updateThumbnail(readThumbnailUpdate(update));
     };
-    document.documentElement.appendChild(host);
+    getSwitcherMountParent(document).appendChild(host);
+    showSwitcherHostInTopLayer(host);
 
     const switcherVisualViewport = window.visualViewport && typeof window.visualViewport.addEventListener === 'function'
       ? window.visualViewport

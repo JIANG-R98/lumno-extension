@@ -30,6 +30,12 @@ interface LinkPreviewOrigin {
   y: number;
 }
 
+// Whether a refused preview frame loads url again.
+interface LinkPreviewRetry {
+  retry: boolean;
+  url?: string;
+}
+
 // The search surface asking, which keeps its suggestion requests apart.
 type SearchContext = 'newtab' | 'overlay' | 'popup' | string;
 
@@ -342,10 +348,19 @@ interface BackgroundMessages {
     request: { aggregateId: string; query: string; disposition?: OpenDisposition };
     reply: AggregateSearchReply;
   };
-  linkPreviewPrepare: { request: { url: string }; reply: OkReply };
+  // A press on a link, or Shift held over one (hover), which skips the screenshot.
+  linkPreviewPrepare: { request: { url: string; hover?: boolean }; reply: OkReply };
   linkPreviewOpen: { request: { url: string; origin?: LinkPreviewOrigin }; reply: OkReply };
+  // The press was released away from the link.
+  linkPreviewCancel: { request: NoFields; reply: OkReply };
   linkPreviewClose: { request: { token?: string }; reply: OkReply };
   linkPreviewOpenInTab: { request: { url: string }; reply: OkReply };
+  // Sent by the preview frame: the secret binds it, then it reports where it goes.
+  linkPreviewFrameBind: { request: { secret: string }; reply: OkReply };
+  linkPreviewFrameNavigating: { request: { url: string }; reply: OkReply };
+  linkPreviewFrameCommitted: { request: NoFields; reply: OkReply };
+  // The surface found the frame refused; the reply says whether to load url again.
+  linkPreviewFrameRefused: { request: { token: string }; reply: LinkPreviewRetry };
   getWebAppearance: { request: NoFields; reply: WebAppearanceState };
   setWebAppearance: { request: { mode: WebAppearanceMode }; reply: OkReply & { mode?: WebAppearanceMode; controllable?: boolean } };
   webdav: { request: WebDavRequest; reply: WebDavReply };
@@ -388,6 +403,8 @@ interface TabSwitcherContext {
   advanceOnExisting: boolean;
   suppressInitialShortcutAdvance: boolean;
   shortcut: string;
+  // Opened by the reverse command, on the oldest tab.
+  reverse: boolean;
   source: string;
 }
 
@@ -433,12 +450,14 @@ interface PageMessages {
   getOpenTabSwitcherState: { request: NoFields; reply: { ok: boolean; open: boolean } };
   updateTabSwitcherThumbnail: { request: TabSwitcherThumbnailUpdate; reply: OkReply };
   // The link preview surface answers whether it took the request.
-  lumnoLinkPreviewPrewarm: { request: { token: string; url: string }; reply: boolean };
+  lumnoLinkPreviewPrewarm: { request: { token: string; url: string; frameSecret: string }; reply: boolean };
   lumnoLinkPreviewScreenshot: { request: { token: string; screenshot: string }; reply: boolean };
   lumnoLinkPreviewShow: {
-    request: { token: string; url: string; screenshot: string; origin: LinkPreviewOrigin | null };
+    request: { token: string; url: string; frameSecret: string; screenshot: string; origin: LinkPreviewOrigin | null };
     reply: boolean;
   };
+  // A press released away from the link drops the preview it prepared.
+  lumnoLinkPreviewDiscard: { request: { token: string }; reply: boolean };
   // The token of the preview on screen, or '' with none.
   lumnoLinkPreviewPing: { request: NoFields; reply: { token: string } };
   'lumno:newtab-focus-input': { request: { source: string; tabId: number | null }; reply: OkReply };
@@ -462,6 +481,7 @@ export type {
   BackgroundRequest,
   BookmarkTabGroupReply,
   LinkPreviewOrigin,
+  LinkPreviewRetry,
   LocaleMessage,
   NoFields,
   OkReply,

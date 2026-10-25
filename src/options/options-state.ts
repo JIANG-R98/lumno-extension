@@ -158,6 +158,7 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     currentRecentMode: 'most',
     currentNewtabWidthMode: 'wide',
     currentOverlaySizeMode: 'standard',
+    currentOverlayWidth: null,
     currentOverlayEnterAnimation: 'elastic',
     // Empty means the bundled Lumno Open Sans stack.
     currentOverlayFontFamily: '',

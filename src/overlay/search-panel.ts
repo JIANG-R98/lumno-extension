@@ -2,6 +2,7 @@ import * as FAVICON_THEME from '../shared/favicon/favicon-theme';
 import * as COMMUNITY_LINKS from '../platform/community-links';
 import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
+import * as OVERLAY_FONT_FACES from '../shared/overlay-font-faces';
 import * as LumnoShortcutFaviconStore from '../platform/shortcut-favicon-store';
 import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
 import * as LumnoImeKeyGuard from '../domain/search/ime-key-guard';
@@ -46,6 +47,7 @@ import * as PANEL_SUGGESTIONS_RENDER from './panel/suggestions-render';
 import * as PANEL_TAB_MATCHING from './panel/tab-matching';
 import * as OVERLAY_CONTEXT from './overlay-context';
 import * as OVERLAY_STATE from './overlay-state';
+import { TAB_SWITCHER_HOST_ID } from './tab-switcher-host';
 import type { CachedIconMap } from '../domain/favicon/shortcut-favicon';
 import type { OverlaySizePreset } from './lifecycle';
 import type { StorageChangeListener } from './panel/types';
@@ -249,6 +251,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
           if (overlayState.overlayThemeMode === 'system') {
             // Re-apply in full: updating only the panel's variables would leave
             // the rows on the previous scheme's colors.
+            // A page that follows the system theme may have switched too.
+            invalidatePageTheme();
             applyOverlayTheme('system');
           }
         };
@@ -746,6 +750,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = overlayStorageKeys.faviconEnhancedFetchEnabled;
   const OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY = overlayStorageKeys.overlayOpenTabsDefaultVisible;
   const OVERLAY_SIZE_MODE_STORAGE_KEY = overlayStorageKeys.overlaySizeMode;
+  const OVERLAY_WIDTH_STORAGE_KEY = overlayStorageKeys.overlayWidth;
   const OVERLAY_ENTER_ANIMATION_STORAGE_KEY = overlayStorageKeys.overlayEnterAnimation ||
     '_x_extension_overlay_enter_animation_2026_unique_';
   const OVERLAY_FONT_FAMILY_STORAGE_KEY = overlayStorageKeys.overlayFontFamily ||
@@ -789,6 +794,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       THEME_STORAGE_KEY,
       OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
       OVERLAY_SIZE_MODE_STORAGE_KEY,
+      OVERLAY_WIDTH_STORAGE_KEY,
       OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
       MOTION_EFFECTS_ENABLED_STORAGE_KEY,
       SIMPLE_MODE_ENABLED_STORAGE_KEY,
@@ -896,6 +902,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const {
     getHighlightColors,
     detectPageTheme,
+    invalidatePageTheme,
     syncOverlayPageThemeObservation,
     applyOverlayFontFamily,
     applyOverlayThemeVariables,
@@ -995,6 +1002,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   });
 
   const {
+    applyOverlayCjkFontFace,
     getSystemLocale,
     t,
     getStorageValuesAsync,
@@ -1017,58 +1025,36 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     overlayState
   });
 
-  // Chrome ignores @font-face rules inside shadow roots, so the overlay's
-  // fonts are declared on the host document. Only the faces live there, under
-  // Lumno-specific family names, so they can neither restyle host elements
-  // nor replace a page's own "Open Sans" or Remix Icon faces. The icon class
-  // rules load inside the overlay's shadow root (remixicon.css, re-pointed at
-  // the scoped face by suggestions-view.css).
+  // The overlay's faces on the host document (see overlay-font-faces.ts),
+  // unless the page registered them while it loaded. The icon class rules
+  // load inside the overlay's shadow root (remixicon.css, re-pointed at the
+  // scoped face by suggestions-view.css).
   function ensureOverlayFontFaces() {
     const styleId = '_x_extension_overlay_font_faces_2026_unique_';
     const host = document.head || document.documentElement;
-    if (!host || document.getElementById(styleId)) {
+    if (!host || document.getElementById(styleId) ||
+        OVERLAY_FONT_FACES.hasEarlyOverlayFontFaces(window)) {
       return;
     }
-    const toCssUrl = (assetPath: string): string => {
-      const url = overlayRuntime.getRuntimeUrl(chrome, assetPath);
-      return `url("${url.replace(/["\\\n\r\f]/g, '\\$&')}")`;
-    };
     const style = document.createElement('style');
     style.id = styleId;
-    // The same weight bands as open-sans.css, so applyOverlayCjkFontFace can
-    // add its CJK face to the middle one.
-    const openSansUrl = toCssUrl('assets/fonts/open-sans/OpenSans-VariableFont-wdth-wght.woff2');
-    const openSansFaces = ['300 549', '550 649', '650 800'].map((weight) => [
-      '@font-face {',
-      '  font-family: "Lumno Open Sans";',
-      `  src: ${openSansUrl} format("woff2");`,
-      '  font-style: normal;',
-      `  font-weight: ${weight};`,
-      '  font-display: swap;',
-      '}'
-    ].join('\n'));
-    style.textContent = [
-      ...openSansFaces,
-      '@font-face {',
-      '  font-family: "lumno-remixicon";',
-      `  src: ${toCssUrl('assets/remixicon/fonts/remixicon.woff2')} format("woff2");`,
-      '  font-display: swap;',
-      '}'
-    ].join('\n');
+    style.textContent = OVERLAY_FONT_FACES.buildOverlayFontFaceCss(
+      (assetPath) => overlayRuntime.getRuntimeUrl(chrome, assetPath)
+    );
     host.appendChild(style);
+    // Every face added to a page that has already laid out restyles and
+    // relays out the whole page, so the CJK face joins in the same task,
+    // guessed from the browser language. The language setting changes it
+    // later only when it calls for another script.
+    applyOverlayCjkFontFace(getSystemLocale());
   }
 
-  ensureOverlayFontFaces();
-
+  // A custom width replaces the size's own; the size keeps its height cap
+  // and content scale.
   function getOverlaySizePreset(mode: unknown): OverlaySizePreset {
-    const normalizedMode = SETTINGS.normalizeOverlaySizeMode(mode);
-    if (normalizedMode === 'compact') {
-      return { width: 680, maxHeightVh: 72, uiScale: 0.94 };
-    }
-    if (normalizedMode === 'large') {
-      return { width: 840, maxHeightVh: 80, uiScale: 1.06 };
-    }
-    return { width: 760, maxHeightVh: 75, uiScale: 1 };
+    const preset = SETTINGS.getOverlaySizePreset(mode);
+    const customWidth = SETTINGS.normalizeOverlayWidth(overlayState.overlayCustomWidth);
+    return customWidth ? { ...preset, width: customWidth } : preset;
   }
 
   function getRiSvg(id: string, sizeClass?: string, extraClass?: string): string {
@@ -1110,6 +1096,11 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
 
   // No overlay is open here (an open one has closed above, a stale one is
   // being replaced): create it.
+  // Read the page theme while the page's layout is still settled: the font
+  // faces and the overlay host below each invalidate it, and sampling the
+  // page after them pays for a full style and layout pass.
+  detectPageTheme();
+  ensureOverlayFontFaces();
   const initialOverlaySizePreset = getOverlaySizePreset(overlayState.overlaySizeMode);
   const overlayMount = overlayShell.createOverlayMount(document, {
     hostId: OVERLAY_HOST_ID,
@@ -1678,6 +1669,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     documentPipSupported,
     OVERLAY_TAB_PRIORITY_STORAGE_KEY,
     OVERLAY_SIZE_MODE_STORAGE_KEY,
+    OVERLAY_WIDTH_STORAGE_KEY,
     overlayRuntime,
     localStorageArea,
     OVERLAY_FONT_FAMILY_STORAGE_KEY,
@@ -1946,6 +1938,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       panel: overlayState.overlay
     }),
     isOverlayConnected: () => Boolean(overlayState.overlay && overlayState.overlay.isConnected),
+    isKeyboardYielded: () => Boolean(document.getElementById(TAB_SWITCHER_HOST_ID)),
     isSearchInputActive,
     shouldHandleModeMenuKey: (e) => Boolean(
       overlayState.inputModeController &&
@@ -2158,12 +2151,16 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     }
     applyOverlayEnterAnimationInitialState(overlayState.overlay);
     const styleGateResult = readyStates[0];
+    const revealGate = overlayState.overlayRevealGate;
+    // The gate gives up on its first-frame budget while the settings above
+    // are still loading, so the stylesheets have often arrived by now.
+    const stylesReady = Boolean(styleGateResult && styleGateResult.ok === true) ||
+      Boolean(revealGate && revealGate.isReady());
     revealOverlay({
       // A late stylesheet uses the shell's stable fallback. Starting a
       // spring while that fallback is about to upgrade only makes slow
       // devices look more broken, so reveal its final state instead.
-      forceInstant: !styleGateResult || styleGateResult.ok !== true ||
-        shouldSkipOverlayEntryMotionForSlowStartup()
+      forceInstant: !stylesReady || shouldSkipOverlayEntryMotionForSlowStartup()
     });
   });
   overlayState.overlayScrollPauseHandler = () => {

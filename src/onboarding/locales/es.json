@@ -24,7 +24,7 @@
   "setup.titleLines.1": "que se siente nativa",
   "setup.body": "Pulsa {shortcut} para abrir Lumno en cualquier lugar.",
   "setup.diaLabel": "¿Usas Dia?",
-  "setup.diaText": "Si la combinación de teclas no responde en Dia, haz clic en Abrir combinaciones de teclas y cambia «Abrir la barra de comandos» de «In Dia» a «Global».",
+  "setup.diaText": "Para usar ⌘T, cambia primero «New Tab» en Settings → Shortcuts de Dia, luego haz clic en Abrir combinaciones de teclas y asigna ⌘T a «Abrir la barra de comandos». Si no responde, cambia «In Dia» por «Global».",
   "setup.shortcutsLink": "Abrir combinaciones de teclas",
   "setup.localFileLabel": "¿Trabajas con archivos locales?",
   "setup.localFileText": "Haz clic en Abrir detalles de la extensión, permite que Lumno acceda a las URLs de archivo y vuelve a cargar la pestaña del PDF o HTML.",

@@ -61,6 +61,9 @@ function testCustomShortcutCommitModifierNormalization() {
   assert.strictEqual(switcher.getShortcutTriggerEventKey('⌃⇧/'), '/');
   assert.strictEqual(switcher.getShortcutTriggerEventKey('Shift+F2'), 'F2');
   assert.strictEqual(switcher.getShortcutTriggerEventKey('Ctrl+Shift+Comma'), ',');
+  assert.strictEqual(switcher.getShortcutTriggerEventKey('⌃⇥'), 'Tab',
+    'macOS shows a Ctrl+Tab binding as ⌃⇥');
+  assert.strictEqual(switcher.getShortcutTriggerEventKey('Ctrl+Tab'), 'Tab');
   assert.deepStrictEqual(
     switcher.getShortcutReleaseEventKeys('Command+1'),
     ['Meta'],
@@ -72,6 +75,7 @@ function testCustomShortcutCommitModifierNormalization() {
   assert.deepStrictEqual(switcher.getShortcutReleaseEventKeys('Ctrl+Shift+/'), ['Control']);
   assert.deepStrictEqual(switcher.getShortcutReleaseEventKeys('Alt+Shift+Q'), ['Alt']);
   assert.deepStrictEqual(switcher.getShortcutReleaseEventKeys('Alt+Q'), ['Alt']);
+  assert.deepStrictEqual(switcher.getShortcutReleaseEventKeys('⌃⇥'), ['Control']);
 }
 
 function testThumbnailCacheMatchesUrlAndHydratesFromState() {

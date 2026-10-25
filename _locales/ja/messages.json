@@ -564,7 +564,7 @@
     "message": "Diaで使用"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "Diaではブラウザ制限により、Lumnoの新しいタブ機能は現在利用できませんが、検索バーは通常どおり使えます。\n\nDiaでキーが使えない場合は、右下のボタンからブラウザのキー設定を開き、「Open command bar」をIn DiaからGlobalに変更してください。"
+    "message": "Diaでは拡張機能による新しいタブの置き換えが許可されていないため、Lumnoの新しいタブは利用できません。検索バーは通常どおり使えます。\n\n⌘Tで検索バーを開くには：Dia自体のキー設定が優先されるため、まずDiaのSettings → Shortcutsで「New Tab」の⌘Tを別のキーに変更します。次に右下のボタンから「Open command bar」を⌘Tに設定してください。\n\nDiaでキーが反応しない場合は、範囲をIn DiaからGlobalに変更してください。"
   },
   "settings_shortcuts_section_title": {
     "message": "キー設定"
@@ -691,6 +691,12 @@
   },
   "settings_overlay_size_title": {
     "message": "サイズ"
+  },
+  "settings_overlay_width_title": {
+    "message": "幅"
+  },
+  "settings_overlay_width_reset": {
+    "message": "サイズ設定に合わせる"
   },
   "overlay_size_compact": {
     "message": "小"
@@ -2348,6 +2354,9 @@
   "command_show_tab_switcher": {
     "message": "最近のタブ切り替えを開く"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "最近のタブ切り替えを逆順で開く"
+  },
   "shortcut_reference_title": {
     "message": "キー一覧"
   },
@@ -2389,6 +2398,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "最近のタブ切り替えを開きます"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "最近のタブ切り替えを逆順で開く"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "最も古いタブを選択した状態で最近のタブ切り替えを開きます"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "前または次の入力に切り替え"
@@ -2785,6 +2800,18 @@
   },
   "settings_tab_switcher_desc": {
     "message": "既定の {shortcut} で最近のタブをすばやく切り替えます（変更可能）"
+  },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Arc のように {shortcut} で切り替え"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Arc 風 {shortcut} 切り替えの説明"
+  },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "現在のウィンドウのタブのみ表示"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "スペースごとに別ウィンドウを使うブラウザで、ほかのスペースのタブを一覧に表示しません"
   },
   "settings_features_section_title": {
     "message": "機能"
@@ -3577,6 +3604,9 @@
   },
   "settings_newtab_glass_theme_title": {
     "message": "ガラスの明暗"
+  },
+  "settings_newtab_glass_theme_desc": {
+    "message": "「自動」：テーマに合わせ、壁紙が暗いときは文字が読みやすいよう暗いガラスに切り替えます。\n「ライト」「ダーク」：ガラスを固定し、新しいタブも同じテーマにします。"
   },
   "settings_newtab_glass_theme_follow": {
     "message": "自動"

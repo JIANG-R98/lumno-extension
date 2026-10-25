@@ -620,6 +620,10 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
 ._x_extension_setting_desc_compact_2026_unique_ {
   margin: -2px 0 0;
 }
+/* A description whose message breaks into lines keeps them. */
+._x_extension_setting_desc_lines_2026_unique_ {
+  white-space: pre-line;
+}
 ._x_extension_shortcut_input_affix_2026_unique_ {
   display: flex;
   align-items: center;
@@ -1795,6 +1799,17 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   align-items: center;
 }
 #_x_extension_overlay_tab_priority_row_2024_unique_ {
+  display: none;
+}
+/* A row's trailing controls when a link sits before its switch. */
+._x_extension_setting_row_actions_2026_unique_ {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+._x_extension_setting_row_actions_2026_unique_ > [hidden] {
   display: none;
 }
 ._x_extension_sync_actions_2024_unique_ {

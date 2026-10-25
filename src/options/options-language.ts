@@ -53,6 +53,7 @@ interface LanguageState {
   currentBookmarkCount: number;
   currentBookmarkColumns: number;
   currentSearchResultDisplayLimit: number;
+  currentOverlayWidth: number | null;
   // Made as the page starts; null until then.
   webDavSettingsController: ReturnType<typeof createWebDavController>;
   fallbackShortcutSection: ReturnType<typeof createFallbackShortcutSection> | null;
@@ -105,6 +106,7 @@ interface LanguageDeps {
   renderBookmarkRowsControl(value: unknown): void;
   renderBookmarkColumnsControl(value: unknown): void;
   renderSearchResultDisplayLimitControl(value: unknown): void;
+  renderOverlayWidthControl(value: unknown): void;
   renderSettingsNavigation(tabKey: SettingsTabKey): void;
   renderSiteSearchList(): void;
   renderAggregateSearchList(): void;
@@ -157,6 +159,7 @@ function createLanguage(deps: LanguageDeps) {
     renderBookmarkRowsControl,
     renderBookmarkColumnsControl,
     renderSearchResultDisplayLimitControl,
+    renderOverlayWidthControl,
     renderSettingsNavigation,
     renderSiteSearchList,
     renderAggregateSearchList,
@@ -381,6 +384,7 @@ function createLanguage(deps: LanguageDeps) {
       renderBookmarkRowsControl(optionsState.currentBookmarkCount);
       renderBookmarkColumnsControl(optionsState.currentBookmarkColumns);
       renderSearchResultDisplayLimitControl(optionsState.currentSearchResultDisplayLimit);
+      renderOverlayWidthControl(optionsState.currentOverlayWidth);
       renderSettingsNavigation(optionsState.currentActiveSettingsTab);
       renderSiteSearchList();
       renderAggregateSearchList();

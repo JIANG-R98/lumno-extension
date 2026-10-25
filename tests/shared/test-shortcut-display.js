@@ -57,6 +57,20 @@ assert.strictEqual(
   'Windows release instructions should retain the Alt label'
 );
 assert.strictEqual(
+  shortcutDisplay.formatShortcutReference('Enter / release Ctrl', {
+    navigatorLike: macNavigator
+  }),
+  '↩ / ⌃↑',
+  'releasing Control should read as the Control key on macOS'
+);
+assert.strictEqual(
+  shortcutDisplay.formatShortcutReference('Ctrl+Shift+/ / Tab', {
+    navigatorLike: windowsNavigator
+  }),
+  'Ctrl+Shift+/ / Tab',
+  'a slash key inside a chord should not split the list'
+);
+assert.strictEqual(
   shortcutDisplay.formatShortcutReference('Tab Tab', {
     navigatorLike: macNavigator
   }),

@@ -564,7 +564,7 @@
     "message": "Use in Dia"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "In Dia, due to browser limitations, Lumno's New Tab features are temporarily unavailable, but the command bar still works normally.\n\nIf the shortcut does not work in Dia, click the button on the lower right to open the browser shortcut settings page, then change \"Open command bar\" from In Dia to Global."
+    "message": "Dia doesn't allow extensions to replace the new tab, so Lumno's New Tab isn't available there. The command bar works normally.\n\nTo open the command bar with ⌘T: Dia's own shortcuts take priority, so first open Dia's Settings → Shortcuts and change \"New Tab\" from ⌘T to another key. Then click the button on the lower right and set \"Open command bar\" to ⌘T.\n\nIf the shortcut doesn't respond in Dia, change its scope from In Dia to Global."
   },
   "settings_shortcuts_section_title": {
     "message": "Shortcut Settings"
@@ -691,6 +691,12 @@
   },
   "settings_overlay_size_title": {
     "message": "Size"
+  },
+  "settings_overlay_width_title": {
+    "message": "Width"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Match the size setting"
   },
   "overlay_size_compact": {
     "message": "Compact"
@@ -2348,6 +2354,9 @@
   "command_show_tab_switcher": {
     "message": "Open recent tab switcher"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Open recent tab switcher in reverse"
+  },
   "shortcut_reference_title": {
     "message": "Shortcut list"
   },
@@ -2389,6 +2398,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Open the recent tab switcher"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Open recent tab switcher in reverse"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Open the recent tab switcher with the oldest tab selected"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Previous or next input"
@@ -2785,6 +2800,18 @@
   },
   "settings_tab_switcher_desc": {
     "message": "Quickly switch between recent tabs; {shortcut} by default, customizable"
+  },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Switch with {shortcut}, like Arc"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Guide: {shortcut} like Arc"
+  },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "Show only tabs in the current window"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "For browsers that put each space in its own window, so tabs from other spaces stay out of the list"
   },
   "settings_features_section_title": {
     "message": "Features"
@@ -3577,6 +3604,9 @@
   },
   "settings_newtab_glass_theme_title": {
     "message": "Material theme"
+  },
+  "settings_newtab_glass_theme_desc": {
+    "message": "Auto: follows Theme mode, but switches to dark material over darker wallpapers to keep text legible.\nLight / Dark: fix the material and set New Tab to the same theme."
   },
   "settings_newtab_glass_theme_follow": {
     "message": "Auto"

@@ -32,6 +32,8 @@ const expectedSyncKeys = [
   '_x_extension_newtab_wallpaper_effect_2026_unique_',
   '_x_extension_newtab_favicon_2026_unique_',
   '_x_extension_overlay_size_mode_2026_unique_',
+  // Additive preference: an absent value keeps the size mode's own width.
+  '_x_extension_overlay_width_2026_unique_',
   '_x_extension_overlay_enter_animation_2026_unique_',
   '_x_extension_overlay_page_theme_adaptation_enabled_2026_unique_',
   '_x_extension_bookmark_count_2024_unique_',
@@ -72,6 +74,7 @@ const expectedSyncKeys = [
   '_x_extension_macos_ctrl_suggestion_navigation_enabled_2026_unique_',
   '_x_extension_auto_pip_enabled_2026_unique_',
   '_x_extension_tab_switcher_enabled_2026_unique_',
+  '_x_extension_tab_switcher_current_window_only_2026_unique_',
   '_x_extension_document_pip_enabled_2026_unique_',
   '_x_extension_pinned_tab_recovery_enabled_2026_unique_',
   '_x_extension_link_preview_enabled_2026_unique_',

@@ -114,11 +114,62 @@ async function testHeldShortcutIsSuppressedUntilItsKeyIsReleased() {
     'after a repeated command, held-key presses should cycle instead of being suppressed');
   reentered.close();
 
+  const quick = createTabSwitcherPage();
+  openDefault(quick, { suppressInitialShortcutAdvance: true });
+  quick.press('q', { code: 'KeyQ', altKey: true });
+  assert.strictEqual(quick.selectedIndex(), 1,
+    'a new press should advance even when the summoning Q was released before the panel opened');
+  quick.close();
+
   const fresh = createTabSwitcherPage();
   openDefault(fresh);
   fresh.press('q', { code: 'KeyQ', altKey: true });
   assert.strictEqual(fresh.selectedIndex(), 1, 'without the summon flag the shortcut key cycles right away');
   fresh.close();
+}
+
+function testShiftReversesTheShortcutKey() {
+  const forward = createTabSwitcherPage();
+  openDefault(forward, { shortcut: '⌃Q', selectedIndex: 1 });
+  forward.press('Q', { code: 'KeyQ', ctrlKey: true, shiftKey: true });
+  assert.strictEqual(forward.selectedIndex(), 0, 'adding Shift to the shortcut should move back');
+  forward.press('q', { code: 'KeyQ', ctrlKey: true });
+  assert.strictEqual(forward.selectedIndex(), 1, 'the plain shortcut should still move forward');
+  forward.close();
+
+  const reverse = createTabSwitcherPage();
+  openDefault(reverse, { shortcut: '⌃⇧Q', reverse: true, selectedIndex: 3 });
+  reverse.press('Q', { code: 'KeyQ', ctrlKey: true, shiftKey: true });
+  assert.strictEqual(reverse.selectedIndex(), 2, 'the reverse shortcut should keep moving back');
+  reverse.press('q', { code: 'KeyQ', ctrlKey: true });
+  assert.strictEqual(reverse.selectedIndex(), 3, 'dropping Shift from the reverse shortcut should move forward');
+  reverse.close();
+}
+
+// Ctrl+Tab can only be bound from the browser's shortcuts page console; macOS
+// reports it as ⌃⇥, and Tab then has to follow the shortcut's rules rather
+// than the switcher's plain Tab key.
+async function testCtrlTabShortcutCyclesLikeTheShortcutKey() {
+  const held = createTabSwitcherPage();
+  openDefault(held, { shortcut: '⌃⇥', suppressInitialShortcutAdvance: true });
+  held.press('Tab', { code: 'Tab', ctrlKey: true, repeat: true });
+  assert.strictEqual(held.selectedIndex(), 0, 'the Tab still held from the summon should not advance');
+  held.release('Tab', { code: 'Tab', ctrlKey: true });
+  held.press('Tab', { code: 'Tab', ctrlKey: true });
+  assert.strictEqual(held.selectedIndex(), 1, 'pressing Tab again with Control held should advance');
+  held.release('Control', { code: 'ControlLeft' });
+  await held.settle();
+  assert.deepStrictEqual(lastSwitch(held), { action: 'switchToTab', tabId: 2, windowId: 1 },
+    'releasing Control should switch to the highlighted tab');
+  held.close();
+
+  const reverse = createTabSwitcherPage();
+  openDefault(reverse, { shortcut: 'Ctrl+Shift+Tab', reverse: true, selectedIndex: 3 });
+  reverse.press('Tab', { code: 'Tab', ctrlKey: true, shiftKey: true });
+  assert.strictEqual(reverse.selectedIndex(), 2, 'the reverse shortcut should keep moving back');
+  reverse.press('Tab', { code: 'Tab', ctrlKey: true });
+  assert.strictEqual(reverse.selectedIndex(), 3, 'dropping Shift from the reverse shortcut should move forward');
+  reverse.close();
 }
 
 async function testCustomShortcutCommitsOnItsPrimaryModifier() {
@@ -206,6 +257,69 @@ function testOpeningAgainAdvancesOrCloses() {
   page.open({ tabs: switcherTabs(4) });
   assert.strictEqual(page.host(), null, 'summoning without advanceOnExisting should close the open switcher');
   page.close();
+}
+
+// JSDOM has neither popovers nor modal dialogs, so the page gets the browser
+// pieces the switcher relies on: showPopover and a dialog matching :modal.
+function stubTopLayer(page) {
+  const promoted = [];
+  page.window.HTMLElement.prototype.showPopover = function() {
+    promoted.push(this);
+  };
+  return promoted;
+}
+
+function openModalDialog(page) {
+  const dialog = page.document.createElement('dialog');
+  dialog.setAttribute('open', '');
+  const nativeMatches = dialog.matches.bind(dialog);
+  dialog.matches = (selector) => selector === ':modal' || nativeMatches(selector);
+  page.document.body.appendChild(dialog);
+  return dialog;
+}
+
+function testJoinsTheTopLayerAboveModalsAndFullscreen() {
+  const page = createTabSwitcherPage();
+  const promoted = stubTopLayer(page);
+  openDefault(page);
+  assert.strictEqual(page.host().getAttribute('popover'), 'manual', 'the host should be a manual popover');
+  assert.deepStrictEqual(promoted, [page.host()], 'the host should be promoted into the top layer');
+  assert.strictEqual(page.host().parentNode, page.document.documentElement);
+  page.close();
+
+  const modal = createTabSwitcherPage();
+  stubTopLayer(modal);
+  const modalDialog = openModalDialog(modal);
+  const nonModalDialog = modal.document.createElement('dialog');
+  nonModalDialog.setAttribute('open', '');
+  modal.document.body.appendChild(nonModalDialog);
+  openDefault(modal);
+  assert.strictEqual(modal.host().parentNode, modalDialog,
+    'an open modal dialog should hold the host, so the modal does not make it inert');
+  modal.close();
+
+  const fullscreen = createTabSwitcherPage();
+  stubTopLayer(fullscreen);
+  const video = fullscreen.document.createElement('div');
+  fullscreen.document.body.appendChild(video);
+  Object.defineProperty(fullscreen.document, 'fullscreenElement', { configurable: true, value: video });
+  openDefault(fullscreen);
+  assert.strictEqual(fullscreen.host().parentNode, video, 'a fullscreen element should hold the host');
+  fullscreen.close();
+
+  const refused = createTabSwitcherPage();
+  refused.window.HTMLElement.prototype.showPopover = function() {
+    throw new Error('not allowed');
+  };
+  openDefault(refused);
+  assert.ok(refused.host() && !refused.host().hasAttribute('popover'),
+    'a refused promotion should leave the fixed-position host in place');
+  refused.close();
+
+  const legacy = createTabSwitcherPage();
+  openDefault(legacy);
+  assert.ok(!legacy.host().hasAttribute('popover'), 'without popover support the host should stay a plain fixed layer');
+  legacy.close();
 }
 
 function testFailsCleanlyWithoutTheReactView() {
@@ -416,9 +530,12 @@ function testStylesheetKeepsTheLayoutRules() {
   testOpensAtMostFiveCardsVisibleOnFirstPaint();
   testKeyboardCyclesAndCommits();
   await testHeldShortcutIsSuppressedUntilItsKeyIsReleased();
+  testShiftReversesTheShortcutKey();
+  await testCtrlTabShortcutCyclesLikeTheShortcutKey();
   await testCustomShortcutCommitsOnItsPrimaryModifier();
   await testRuntimeMessagesReuseTheInjectedSwitcher();
   testOpeningAgainAdvancesOrCloses();
+  testJoinsTheTopLayerAboveModalsAndFullscreen();
   testFailsCleanlyWithoutTheReactView();
   await testThemeFollowsThePageThenTheSetting();
   testScaleCompensatesForZoomAndRoomyViewports();

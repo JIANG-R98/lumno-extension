@@ -29,6 +29,7 @@ import type { QuoteRuntime } from './top-content/quotes';
 import type { TopContentRuntime } from './top-content/top-content';
 import type { WallpaperRuntime } from './wallpaper/wallpaper';
 import type { WallpaperPage } from './wallpaper/wallpaper-page';
+import type { ToneScheduleOptions } from './wallpaper/wallpaper-adaptive-tone';
 
 type ResolvedTheme = 'light' | 'dark';
 type LanguageAware = Pick<FeatureHintController, 'updateLanguage'>;
@@ -88,7 +89,8 @@ interface AppearanceModesDeps extends
   // Tells the listeners outside this module that the language changed.
   notifyLanguageChange(): void;
   forceReloadRecentSitesForI18n: SectionLoaders['forceReloadRecentSitesForI18n'];
-  scheduleWallpaperAdaptiveToneUpdate(): void;
+  // { resetInk: true } when a setting changed what the glass ink should be.
+  scheduleWallpaperAdaptiveToneUpdate(options?: ToneScheduleOptions): void;
   recentCards: readonly RecentCardElement[];
   bookmarkCards: readonly BookmarkCardElement[];
   shortcutTiles: readonly ShortcutTileElement[];
@@ -360,7 +362,8 @@ function createAppearanceModes(deps: AppearanceModesDeps) {
       removeMediaQueryChangeListener(mediaQuery, handleMediaChange);
       mediaListenerAttached = false;
     }
-    scheduleWallpaperAdaptiveToneUpdate();
+    // A new theme decides the glass ink afresh rather than holding the last theme's.
+    scheduleWallpaperAdaptiveToneUpdate(didResolvedThemeChange ? { resetInk: true } : undefined);
   }
 
   function normalizeThemeMode(value: unknown): ThemeMode {

@@ -16,8 +16,12 @@ type PreviewFrameMessage =
   | { type: 'loaded' }
   | { type: 'escape' };
 
-// From the surface: go back in the frame's own history, or reload it.
-type PreviewSurfaceCommand = 'back' | 'reload';
+// From the surface: go back in the frame's own history, reload it, or pass
+// the background the secret that binds this frame to the preview.
+type PreviewSurfaceCommand =
+  | { type: 'back' }
+  | { type: 'reload' }
+  | { type: 'bind'; secret: string };
 
 const CSS_RGB_PATTERN = /^rgba?\([\d.,\s%/]+\)$/;
 
@@ -45,7 +49,13 @@ function readPreviewSurfaceCommand(data: unknown): PreviewSurfaceCommand | null 
   if (!isRecord(data) || data.source !== PREVIEW_SURFACE_SOURCE) {
     return null;
   }
-  return data.type === 'back' || data.type === 'reload' ? data.type : null;
+  if (data.type === 'back' || data.type === 'reload') {
+    return { type: data.type };
+  }
+  if (data.type === 'bind' && typeof data.secret === 'string') {
+    return { type: 'bind', secret: data.secret };
+  }
+  return null;
 }
 
 export {

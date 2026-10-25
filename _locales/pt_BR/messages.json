@@ -564,7 +564,7 @@
     "message": "Usar no Dia"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "No Dia, por limitações do navegador, os recursos de Nova guia do Lumno estão temporariamente indisponíveis, mas a barra de comandos funciona normalmente.\n\nSe o atalho não funcionar no Dia, clique no botão no canto inferior direito para abrir a página de atalhos do navegador e mude \"Open command bar\" de In Dia para Global."
+    "message": "O Dia não permite que extensões substituam a nova guia, então a Nova guia do Lumno não está disponível nele. A barra de comandos funciona normalmente.\n\nPara abrir a barra de comandos com ⌘T: os atalhos do próprio Dia têm prioridade, então primeiro abra Settings → Shortcuts no Dia e troque o ⌘T de \"New Tab\" por outra tecla. Depois clique no botão no canto inferior direito e defina \"Open command bar\" como ⌘T.\n\nSe o atalho não responder no Dia, mude o escopo de In Dia para Global."
   },
   "settings_shortcuts_section_title": {
     "message": "Configurações de atalho"
@@ -691,6 +691,12 @@
   },
   "settings_overlay_size_title": {
     "message": "Tamanho"
+  },
+  "settings_overlay_width_title": {
+    "message": "Largura"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Seguir o tamanho"
   },
   "overlay_size_compact": {
     "message": "Compacto"
@@ -2117,6 +2123,9 @@
   "settings_aggregate_search_auto_group_title": {
     "message": "Agrupar automaticamente as guias da pesquisa combinada"
   },
+  "settings_aggregate_search_auto_group_short_title": {
+    "message": "Criar grupos de guias automaticamente"
+  },
   "settings_aggregate_search_auto_group_desc": {
     "message": "Quando ativado, todas as guias abertas por uma pesquisa combinada ficam em um único grupo chamado “Nome da pesquisa: termo pesquisado”"
   },
@@ -2273,6 +2282,18 @@
   "link_preview_open_in_tab": {
     "message": "Abrir em nova guia"
   },
+  "link_preview_copy_link": {
+    "message": "Copiar link"
+  },
+  "link_preview_link_copied": {
+    "message": "Link copiado"
+  },
+  "link_preview_reload": {
+    "message": "Recarregar"
+  },
+  "link_preview_back": {
+    "message": "Voltar"
+  },
   "link_preview_blocked": {
     "message": "Esta página não pode ser exibida em uma prévia"
   },
@@ -2333,6 +2354,9 @@
   "command_show_tab_switcher": {
     "message": "Abrir o alternador de guias recentes"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Abrir o alternador de guias recentes em ordem inversa"
+  },
   "shortcut_reference_title": {
     "message": "Atalhos do teclado"
   },
@@ -2374,6 +2398,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Abre o alternador de guias recentes"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Abrir o alternador de guias recentes em ordem inversa"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Abre o alternador com a guia mais antiga selecionada"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Entrada anterior ou seguinte"
@@ -2770,6 +2800,27 @@
   },
   "settings_tab_switcher_desc": {
     "message": "Alterne rapidamente entre as guias recentes; {shortcut} por padrão, personalizável"
+  },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Alternar com {shortcut}, como no Arc"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Guia: {shortcut} como no Arc"
+  },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "Mostrar apenas as guias da janela atual"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "Para navegadores que abrem cada espaço em uma janela própria, assim as guias de outros espaços ficam fora da lista"
+  },
+  "settings_features_section_title": {
+    "message": "Recursos"
+  },
+  "settings_link_preview_title": {
+    "message": "Prévia de links"
+  },
+  "settings_link_preview_desc": {
+    "message": "Clique em um link segurando Shift para vê-lo em uma janela pequena sobre a página; depois feche ou mova para uma guia"
   },
   "slash_command_empty": {
     "message": "Nenhum comando encontrado"
@@ -3553,6 +3604,9 @@
   },
   "settings_newtab_glass_theme_title": {
     "message": "Tema do material"
+  },
+  "settings_newtab_glass_theme_desc": {
+    "message": "Automático: segue o modo de tema, mas usa material escuro sobre planos de fundo mais escuros para manter o texto legível.\nClaro / Escuro: fixam o material e aplicam o mesmo tema à Nova guia."
   },
   "settings_newtab_glass_theme_follow": {
     "message": "Automático"

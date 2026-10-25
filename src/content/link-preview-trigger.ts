@@ -9,12 +9,26 @@ import * as LumnoMessaging from '../platform/messaging';
 import { isNavigateEvent, readPageNavigation } from '../platform/page-navigation';
 import type { ListenerTarget } from '../platform/page-navigation';
 
+interface PrepareOptions {
+  // Shift held over the link, before any press.
+  hover?: boolean;
+}
+
 // What happens to a Shift+click on a link.
 interface PreviewHandlers {
   // The click opens the link in this frame (inside the preview itself).
   navigatesHere: boolean;
-  prepare(href: string): void;
+  // Shift held over a link prepares it before the press.
+  prewarmsOnHover: boolean;
+  prepare(href: string, prepareOptions?: PrepareOptions): void;
+  // The press ended away from the link it prepared.
+  cancel(): void;
   open(href: string, event: MouseEvent): void;
+}
+
+interface HoverPrewarm {
+  // The press takes the hover's preparation over.
+  release(): void;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -47,23 +61,54 @@ function isElement(value: EventTarget | null | undefined): value is Element {
   }
 
   const cleanups: Array<() => void> = [];
+  function cleanup(): void {
+    cleanups.splice(0).forEach((run) => run());
+  }
+
+  // A tab left open across an extension reload or update keeps this script
+  // from the old extension running next to the one injected after it, in a
+  // separate isolated world the new one cannot reach through window. Its
+  // listeners come first and would keep claiming presses whose messages no
+  // longer reach the background, so the first event it sees after its
+  // extension went away removes them all and is left alone.
+  function isExtensionAlive(): boolean {
+    try {
+      return Boolean(chrome.runtime && chrome.runtime.id);
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function guard<E>(listener: (event: E) => void): (event: E) => void {
+    return (event) => {
+      if (!isExtensionAlive()) {
+        cleanup();
+        return;
+      }
+      listener(event);
+    };
+  }
+
   function listenWindow<K extends keyof WindowEventMap>(
     type: K,
     listener: (event: WindowEventMap[K]) => void,
     options?: boolean
   ): void {
-    window.addEventListener(type, listener, options);
-    cleanups.push(() => window.removeEventListener(type, listener, options));
+    const guarded = guard(listener);
+    window.addEventListener(type, guarded, options);
+    cleanups.push(() => window.removeEventListener(type, guarded, options));
   }
 
   function listenDocument<K extends keyof DocumentEventMap>(type: K, listener: (event: DocumentEventMap[K]) => void): void {
-    document.addEventListener(type, listener);
-    cleanups.push(() => document.removeEventListener(type, listener));
+    const guarded = guard(listener);
+    document.addEventListener(type, guarded);
+    cleanups.push(() => document.removeEventListener(type, guarded));
   }
 
   function listenTarget(target: ListenerTarget, type: string, listener: (event: Event) => void): void {
-    target.addEventListener(type, listener);
-    cleanups.push(() => target.removeEventListener(type, listener));
+    const guarded = guard(listener);
+    target.addEventListener(type, guarded);
+    cleanups.push(() => target.removeEventListener(type, guarded));
   }
 
   function isPreviewFrame(): boolean {
@@ -194,7 +239,23 @@ function isElement(value: EventTarget | null | undefined): value is Element {
 
   // The link under the press, also inside open shadow roots.
   function findPreviewTarget(event: MouseEvent): string {
-    const path = event.composedPath();
+    return findPreviewTargetInPath(event.composedPath());
+  }
+
+  // The path an event at this node would take, for a node kept from an
+  // earlier event (composedPath is empty once dispatch ends).
+  function readNodePath(node: Node): EventTarget[] {
+    const path: EventTarget[] = [];
+    let current: Node | null = node;
+    while (current) {
+      path.push(current);
+      const slot: HTMLSlotElement | null = current instanceof Element ? current.assignedSlot : null;
+      current = slot || current.parentNode || (current instanceof ShadowRoot ? current.host : null);
+    }
+    return path;
+  }
+
+  function findPreviewTargetInPath(path: readonly EventTarget[]): string {
     for (const element of path) {
       if (element === window || element === document) {
         break;
@@ -263,7 +324,7 @@ function isElement(value: EventTarget | null | undefined): value is Element {
   // theirs, and the post a page is about has nothing to preview.
   const POST_HOST_PATTERN = /(^|\.)(x|twitter)\.com$/i;
   const POST_CONTROL_SELECTOR = 'button, [role="button"], input, textarea, select, video, [contenteditable="true"]';
-  function findPostLink(path: EventTarget[]): string {
+  function findPostLink(path: readonly EventTarget[]): string {
     if (!POST_HOST_PATTERN.test(location.hostname)) {
       return '';
     }
@@ -322,8 +383,12 @@ function isElement(value: EventTarget | null | undefined): value is Element {
   // returns; Chrome would open a new window for it.
   const PREVIEW_HANDLERS: Readonly<PreviewHandlers> = Object.freeze({
     navigatesHere: false,
-    prepare(href: string) {
-      send({ action: 'linkPreviewPrepare', url: href });
+    prewarmsOnHover: true,
+    prepare(href: string, prepareOptions?: PrepareOptions) {
+      send({ action: 'linkPreviewPrepare', url: href, ...(prepareOptions && prepareOptions.hover ? { hover: true } : {}) });
+    },
+    cancel() {
+      send({ action: 'linkPreviewCancel' });
     },
     open(href: string, event: MouseEvent) {
       send({
@@ -335,7 +400,9 @@ function isElement(value: EventTarget | null | undefined): value is Element {
   });
   const IN_PREVIEW_HANDLERS: Readonly<PreviewHandlers> = Object.freeze({
     navigatesHere: true,
+    prewarmsOnHover: false,
     prepare() {},
+    cancel() {},
     open(href: string) {
       location.assign(toPreviewFrameUrl(href));
     }
@@ -344,6 +411,10 @@ function isElement(value: EventTarget | null | undefined): value is Element {
   function setupTrigger(handlers: Readonly<PreviewHandlers>): void {
     let pressedHref = '';
     let guardUntil = 0;
+    // A prepared press waits for its click; released anywhere else (or with
+    // Shift let go) it is cancelled, so the preview's header rule does not
+    // outlive the press.
+    let preparePending = false;
     const navigation = readPageNavigation(window);
     if (navigation) {
       listenTarget(navigation, 'navigate', (event) => {
@@ -367,6 +438,9 @@ function isElement(value: EventTarget | null | undefined): value is Element {
         claim(event);
       }
     }, true);
+    const hover = handlers.prewarmsOnHover
+      ? setupHoverPrewarm(handlers, () => preparePending)
+      : null;
     listenWindow('mousedown', (event) => {
       const href = isPreviewGesture(event) ? findPreviewTarget(event) : '';
       if (!href) {
@@ -375,8 +449,14 @@ function isElement(value: EventTarget | null | undefined): value is Element {
       }
       pressedHref = href;
       claim(event);
+      if (hover) {
+        // The press takes the preparation over, and cancels it if it ends
+        // away from the link.
+        hover.release();
+      }
       // Shift+mousedown would extend the text selection to the link.
       event.preventDefault();
+      preparePending = true;
       handlers.prepare(href);
     }, true);
     const claimRelease = (event: MouseEvent): void => {
@@ -386,6 +466,19 @@ function isElement(value: EventTarget | null | undefined): value is Element {
     };
     listenWindow('pointerup', claimRelease, true);
     listenWindow('mouseup', claimRelease, true);
+    // The click, if any, is dispatched with the mouseup, ahead of this.
+    listenWindow('mouseup', () => {
+      if (!preparePending) {
+        return;
+      }
+      setTimeout(() => {
+        if (preparePending) {
+          preparePending = false;
+          pressedHref = '';
+          handlers.cancel();
+        }
+      }, 0);
+    }, true);
     // Preventing the click also stops Chrome's Shift+click new window.
     listenWindow('click', (event) => {
       const wasPressed = isClaimedPress(event);
@@ -394,6 +487,7 @@ function isElement(value: EventTarget | null | undefined): value is Element {
       if (!wasPressed) {
         return;
       }
+      preparePending = false;
       claim(event);
       event.preventDefault();
       if (handlers.navigatesHere) {
@@ -402,6 +496,141 @@ function isElement(value: EventTarget | null | undefined): value is Element {
       }
       handlers.open(href, event);
     }, true);
+  }
+
+  // Shift held over a link starts the preview's page loading before the
+  // press, so the window opens on more of it. Shift must be held alone for a
+  // moment over the same link: a capital letter typed, a shortcut, or a
+  // pointer passing over links starts nothing. Releasing Shift, or leaving
+  // the link for longer than the grace, cancels it.
+  const HOVER_PREWARM_DELAY_MS = 150;
+  const HOVER_LEAVE_GRACE_MS = 250;
+
+  function setupHoverPrewarm(handlers: Readonly<PreviewHandlers>, isPressing: () => boolean): HoverPrewarm {
+    let hoverNode: Node | null = null;
+    let shiftHeld = false;
+    // Another key or modifier joined this Shift: it is a shortcut or typing.
+    let shiftChord = false;
+    let preparedHref = '';
+    let dwellTimer: ReturnType<typeof setTimeout> | undefined;
+    let leaveTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const clearTimers = (): void => {
+      clearTimeout(dwellTimer);
+      clearTimeout(leaveTimer);
+      dwellTimer = undefined;
+      leaveTimer = undefined;
+    };
+    const drop = (): void => {
+      clearTimers();
+      if (preparedHref && !isPressing()) {
+        handlers.cancel();
+      }
+      preparedHref = '';
+    };
+    const readHoveredHref = (): string => (
+      triggerEnabled && shiftHeld && !shiftChord && hoverNode && !isPressing()
+        ? findPreviewTargetInPath(readNodePath(hoverNode))
+        : ''
+    );
+    const sync = (): void => {
+      const href = readHoveredHref();
+      if (href && href === preparedHref) {
+        clearTimers();
+        return;
+      }
+      clearTimeout(dwellTimer);
+      dwellTimer = undefined;
+      if (href) {
+        dwellTimer = setTimeout(() => {
+          dwellTimer = undefined;
+          if (readHoveredHref() !== href) {
+            return;
+          }
+          // A new link replaces the one prepared before; its cancel must
+          // not follow.
+          clearTimeout(leaveTimer);
+          leaveTimer = undefined;
+          preparedHref = href;
+          handlers.prepare(href, { hover: true });
+        }, HOVER_PREWARM_DELAY_MS);
+      }
+      if (preparedHref && leaveTimer === undefined) {
+        leaveTimer = setTimeout(() => {
+          leaveTimer = undefined;
+          if (readHoveredHref() !== preparedHref) {
+            drop();
+          }
+        }, HOVER_LEAVE_GRACE_MS);
+      }
+    };
+    const readModifiers = (event: MouseEvent | KeyboardEvent): void => {
+      shiftHeld = event.shiftKey === true;
+      if (!shiftHeld) {
+        shiftChord = false;
+      } else if (event.ctrlKey || event.metaKey || event.altKey) {
+        shiftChord = true;
+      }
+    };
+
+    listenWindow('pointerover', (event) => {
+      if (!event.isTrusted || event.pointerType !== 'mouse') {
+        return;
+      }
+      const target = event.composedPath()[0] || event.target;
+      hoverNode = target instanceof Node ? target : null;
+      readModifiers(event);
+      if (!shiftHeld) {
+        if (preparedHref || dwellTimer !== undefined) {
+          drop();
+        }
+        return;
+      }
+      sync();
+    }, true);
+    listenWindow('pointerout', (event) => {
+      if (event.isTrusted && event.pointerType === 'mouse' && !event.relatedTarget) {
+        hoverNode = null;
+        if (shiftHeld) {
+          sync();
+        }
+      }
+    }, true);
+    listenWindow('keydown', (event) => {
+      if (!event.isTrusted) {
+        return;
+      }
+      if (event.key === 'Shift') {
+        if (!event.repeat) {
+          readModifiers(event);
+          sync();
+        }
+        return;
+      }
+      if (shiftHeld && !shiftChord) {
+        shiftChord = true;
+        drop();
+      }
+    }, true);
+    listenWindow('keyup', (event) => {
+      if (event.isTrusted && event.key === 'Shift') {
+        shiftHeld = false;
+        shiftChord = false;
+        drop();
+      }
+    }, true);
+    listenWindow('blur', () => {
+      shiftHeld = false;
+      shiftChord = false;
+      drop();
+    });
+
+    return {
+      release() {
+        clearTimers();
+        preparedHref = '';
+      }
+    };
   }
 
   function postToPreviewSurface(message: PreviewFrameMessage): void {
@@ -564,7 +793,22 @@ function isElement(value: EventTarget | null | undefined): value is Element {
       });
     };
     reportLocation();
+    // The background reads this page's address from the browser and lets
+    // the preview frame its site from now on (see linkPreviewFrameCommitted;
+    // until the frame is bound it is ignored, and the bind below counts).
+    send({ action: 'linkPreviewFrameCommitted' });
     if (navigation) {
+      // Where the frame goes next, for the background to try again if the
+      // site there refuses framing. It allows nothing by itself.
+      listenTarget(navigation, 'navigate', (event) => {
+        if (!isNavigateEvent(event) || event.downloadRequest || (event.destination && event.destination.sameDocument)) {
+          return;
+        }
+        const url = event.destination && typeof event.destination.url === 'string' ? event.destination.url : '';
+        if (/^https?:\/\//i.test(url)) {
+          send({ action: 'linkPreviewFrameNavigating', url });
+        }
+      });
       listenTarget(navigation, 'navigatesuccess', reportLocation);
       listenTarget(navigation, 'currententrychange', reportLocation);
       // The window shows the page loading again when it leaves for another
@@ -582,7 +826,10 @@ function isElement(value: EventTarget | null | undefined): value is Element {
         return;
       }
       const command = readPreviewSurfaceCommand(event.data);
-      if (command === 'back' && navigation && navigation.canGoBack && typeof navigation.back === 'function') {
+      if (!command) {
+        return;
+      }
+      if (command.type === 'back' && navigation && navigation.canGoBack && typeof navigation.back === 'function') {
         const result = navigation.back();
         // A traversal the page cancels rejects both; nothing is left to do.
         [result.committed, result.finished].forEach((promise) => {
@@ -590,8 +837,10 @@ function isElement(value: EventTarget | null | undefined): value is Element {
             promise.catch(() => {});
           }
         });
-      } else if (command === 'reload') {
+      } else if (command.type === 'reload') {
         location.reload();
+      } else if (command.type === 'bind') {
+        send({ action: 'linkPreviewFrameBind', secret: command.secret });
       }
     });
     // Escape closes the preview even where the previewed page claims the key
@@ -624,9 +873,5 @@ function isElement(value: EventTarget | null | undefined): value is Element {
     setupTrigger(PREVIEW_HANDLERS);
   }
 
-  Reflect.set(window, RUNTIME_KEY, {
-    cleanup() {
-      cleanups.splice(0).forEach((cleanup) => cleanup());
-    }
-  });
+  Reflect.set(window, RUNTIME_KEY, { cleanup });
 })();

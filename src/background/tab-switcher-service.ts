@@ -15,6 +15,7 @@ import * as NEWTAB_FAVICON_THEME from '../shared/favicon/favicon-theme';
 import { openNewtabFallback, openNewtabFallbackForUrl } from './newtab-fallback';
 import {
   SHOW_TAB_SWITCHER_COMMAND_NAME,
+  SHOW_TAB_SWITCHER_REVERSE_COMMAND_NAME,
   areBackgroundSettingsLoaded,
   ignoreExpectedChromeError,
   logHotkeyDebug,
@@ -147,8 +148,19 @@ interface InjectContext {
   currentTabId: number;
   selectedIndex: number;
   shortcut: string;
+  // Opened by the reverse command, on the oldest tab.
+  reverse: boolean;
   source: string;
   onOpenComplete: (ok: boolean, reason: string) => void;
+}
+
+// 1 moves to older tabs, -1 back toward newer ones.
+type SwitcherOffset = 1 | -1;
+
+// The keys bound to the switcher commands; reverse is '' while unbound.
+interface TabSwitcherShortcuts {
+  forward: string;
+  reverse: string;
 }
 
 interface SwitchResult {
@@ -861,8 +873,10 @@ export function handleTabSwitcherShortcutModifierReleased(
   }
   const key = String(releasedKey || '');
   const windowId = senderTab.windowId;
-  getConfiguredTabSwitcherShortcut((shortcut) => {
-    const expectedKeys = RECENT_TAB_SWITCHER.getShortcutReleaseEventKeys(shortcut);
+  getConfiguredTabSwitcherShortcuts(({ forward, reverse }) => {
+    const shortcut = [forward, reverse].filter(Boolean).join(' / ');
+    const expectedKeys = Array.from(new Set([forward, reverse]
+      .flatMap((item) => (item ? RECENT_TAB_SWITCHER.getShortcutReleaseEventKeys(item) : []))));
     if (!expectedKeys.includes(key)) {
       recordTabSwitcherShortcutDebug('release-rejected', {
         windowId,
@@ -885,11 +899,15 @@ export function handleTabSwitcherShortcutModifierReleased(
   });
 }
 
+// Only the tabs the shortcut was pressed in or the switcher opened in get the
+// command's start time. A release buffered in any other tab came from an
+// earlier switcher and must not commit this one.
 function armTabSwitcherShortcutReleaseObservers(
   tabs: readonly chrome.tabs.Tab[],
   windowId: number,
   shortcut: string,
-  commandStartedAt: number
+  commandStartedAt: number,
+  replayTabIds: readonly (number | null | undefined)[]
 ): void {
   if (typeof windowId !== 'number') {
     return;
@@ -898,15 +916,15 @@ function armTabSwitcherShortcutReleaseObservers(
   if (!keys.length) {
     return;
   }
-  const message: PageRequest<'armTabSwitcherShortcutRelease'> = {
-    action: 'armTabSwitcherShortcutRelease',
-    keys,
-    commandStartedAt: Number(commandStartedAt) || 0
-  };
   (Array.isArray(tabs) ? tabs : []).forEach((item) => {
     if (!item || typeof item.id !== 'number' || item.windowId !== windowId) {
       return;
     }
+    const message: PageRequest<'armTabSwitcherShortcutRelease'> = {
+      action: 'armTabSwitcherShortcutRelease',
+      keys,
+      commandStartedAt: replayTabIds.includes(item.id) ? Number(commandStartedAt) || 0 : 0
+    };
     if (isTabSwitcherExtensionPageMessageTarget(item)) {
       postTabSwitcherMessageToExtensionPage(item, message, () => {});
       return;
@@ -2118,6 +2136,14 @@ function clearSwitcherThumbnailsForDisabledSwitcher(): Promise<boolean | void> {
 // Mirrors the stored setting, re-read on every wake; background.js applies it.
 let tabSwitcherEnabledCache = true;
 
+// Browsers that present each space as its own window need this to keep other
+// spaces out of the list; by default every normal window shares one list.
+let tabSwitcherCurrentWindowOnlyCache = false;
+
+export function applyTabSwitcherCurrentWindowOnlySetting(enabled: unknown): void {
+  tabSwitcherCurrentWindowOnlyCache = enabled === true;
+}
+
 export function applyTabSwitcherEnabledSetting(enabled: unknown): void {
   tabSwitcherEnabledCache = enabled === true;
   if (!tabSwitcherEnabledCache) {
@@ -2150,8 +2176,13 @@ function normalizeSwitcherTabForPayload(tab: SwitcherTab | null | undefined, cur
   };
 }
 
-function getRecentTabsForSwitcher(tabList: readonly chrome.tabs.Tab[], currentTabId: number | undefined): TabSwitcherItem[] {
+function getRecentTabsForSwitcher(
+  tabList: readonly chrome.tabs.Tab[],
+  currentTabId: number | undefined,
+  windowId: number | undefined
+): TabSwitcherItem[] {
   const normalizedTabs = (Array.isArray(tabList) ? tabList : [])
+    .filter((tab) => !tabSwitcherCurrentWindowOnlyCache || (tab && tab.windowId === windowId))
     .map((tab) => ({
       ...tab,
       url: getResolvedTabUrl(tab)
@@ -2163,7 +2194,11 @@ function getRecentTabsForSwitcher(tabList: readonly chrome.tabs.Tab[], currentTa
     .filter((item): item is TabSwitcherItem => item !== null);
 }
 
-function getDefaultSwitcherSelectedIndex(items: readonly TabSwitcherItem[], currentTabId: number | undefined): number {
+function getDefaultSwitcherSelectedIndex(
+  items: readonly TabSwitcherItem[],
+  currentTabId: number | undefined,
+  offset: SwitcherOffset
+): number {
   const list = Array.isArray(items) ? items : [];
   if (list.length <= 0) {
     return 0;
@@ -2175,6 +2210,10 @@ function getDefaultSwitcherSelectedIndex(items: readonly TabSwitcherItem[], curr
     return 0;
   }
   const currentIndex = list.findIndex((item) => item && item.id === currentTabId);
+  if (offset < 0) {
+    // Reverse opens on the oldest tab, wrapping back from the current one.
+    return currentIndex >= 0 ? (currentIndex - 1 + list.length) % list.length : list.length - 1;
+  }
   if (currentIndex === 0) {
     return 1;
   }
@@ -2330,6 +2369,7 @@ function injectTabSwitcherOnTab(hostTab: chrome.tabs.Tab, items: TabSwitcherItem
     advanceOnExisting: true,
     suppressInitialShortcutAdvance: context && context.source === 'commands-tab-switcher',
     shortcut: context && typeof context.shortcut === 'string' ? context.shortcut : 'Alt+Q',
+    reverse: context.reverse,
     source: context && context.source ? context.source : ''
   });
   if (isTabSwitcherExtensionPageMessageTarget(hostTab)) {
@@ -2475,7 +2515,12 @@ function injectTabSwitcherOnTab(hostTab: chrome.tabs.Tab, items: TabSwitcherItem
   runWebPageSwitcherScript(1);
 }
 
-function advanceExistingTabSwitcherOnTab(tab: chrome.tabs.Tab, source: string, callback: (didAdvance: boolean) => void): void {
+function advanceExistingTabSwitcherOnTab(
+  tab: chrome.tabs.Tab,
+  source: string,
+  offset: SwitcherOffset,
+  callback: (didAdvance: boolean) => void
+): void {
   if (!tab || typeof tab.id !== 'number' || !canHostSwitcherSurface(tab)) {
     if (typeof callback === 'function') {
       callback(false);
@@ -2493,7 +2538,7 @@ function advanceExistingTabSwitcherOnTab(tab: chrome.tabs.Tab, source: string, c
   if (isTabSwitcherExtensionPageMessageTarget(tab)) {
     postTabSwitcherMessageToExtensionPage(tab, {
       action: 'advanceOpenTabSwitcherFromCommand',
-      offset: 1
+      offset
     }, (ok, _reason, response) => {
       const didAdvance = Boolean(ok && response && response.advanced === true);
       if (didAdvance) {
@@ -2516,7 +2561,7 @@ function advanceExistingTabSwitcherOnTab(tab: chrome.tabs.Tab, source: string, c
     try {
       LumnoMessaging.sendTabMessage(chrome.tabs, tabId, {
         action: 'advanceOpenTabSwitcherFromCommand',
-        offset: 1
+        offset
       }, (response) => {
         const didAdvance = Boolean(!(chrome.runtime && chrome.runtime.lastError) &&
           response &&
@@ -2539,13 +2584,20 @@ function advanceExistingTabSwitcherOnTab(tab: chrome.tabs.Tab, source: string, c
   runRuntimeMessageFastPath();
 }
 
-export function triggerTabSwitcherForTab(tab: chrome.tabs.Tab | null | undefined, source: string, commandObservedAt?: number): void {
+export function triggerTabSwitcherForTab(
+  tab: chrome.tabs.Tab | null | undefined,
+  source: string,
+  commandObservedAt?: number,
+  direction?: SwitcherOffset
+): void {
   if (!areBackgroundSettingsLoaded()) {
     whenBackgroundSettingsReady(() => {
-      triggerTabSwitcherForTab(tab, source, commandObservedAt);
+      triggerTabSwitcherForTab(tab, source, commandObservedAt, direction);
     });
     return;
   }
+  const offset = direction === -1 ? -1 : 1;
+  const reverse = offset < 0;
   const observedAt = Number(commandObservedAt);
   const commandStartedAt = Number.isFinite(observedAt) && observedAt > 0
     ? observedAt
@@ -2575,7 +2627,7 @@ export function triggerTabSwitcherForTab(tab: chrome.tabs.Tab | null | undefined
   // modifier release can be buffered and replayed after the panel opens.
   const shortcutObserverReady = prepareShortcutKeyObserver(tab);
   clearScheduledSwitcherThumbnailCapture(tab.id);
-  advanceExistingTabSwitcherOnTab(tab, source, (didAdvance) => {
+  advanceExistingTabSwitcherOnTab(tab, source, offset, (didAdvance) => {
     if (didAdvance) {
       if (typeof windowId === 'number') {
         tabSwitcherHostTabIdByWindowId.set(windowId, tabId);
@@ -2617,7 +2669,9 @@ export function triggerTabSwitcherForTab(tab: chrome.tabs.Tab | null | undefined
       loadFaviconEnhancedFetchEnabled()
     ]).catch(() => {}); // Each loader falls back to its default; open regardless.
     const shortcutReady = new Promise<string>((resolve) => {
-      getConfiguredTabSwitcherShortcut(resolve);
+      getConfiguredTabSwitcherShortcuts((shortcuts) => {
+        resolve(reverse && shortcuts.reverse ? shortcuts.reverse : shortcuts.forward);
+      });
     });
     const tabQueryReady = new Promise<{ error: string; tabs: chrome.tabs.Tab[] }>((resolve) => {
       chrome.tabs.query({}, (tabs) => {
@@ -2657,7 +2711,8 @@ export function triggerTabSwitcherForTab(tab: chrome.tabs.Tab | null | undefined
             tabList,
             activeTab.windowId,
             shortcut,
-            commandStartedAt
+            commandStartedAt,
+            [activeTab.id, openingHostTabId]
           );
         }
       };
@@ -2684,7 +2739,7 @@ export function triggerTabSwitcherForTab(tab: chrome.tabs.Tab | null | undefined
         return;
       }
       const { tabList, activeTab, shortcut, finishOpeningAndArmShortcutRelease } = openContext;
-      const items = getRecentTabsForSwitcher(tabList, activeTab.id);
+      const items = getRecentTabsForSwitcher(tabList, activeTab.id, activeTab.windowId);
       markSwitcherThumbnailPriorityForItems(items, tabList, 'command-payload');
       if (!items.length) {
         finishOpening();
@@ -2701,7 +2756,7 @@ export function triggerTabSwitcherForTab(tab: chrome.tabs.Tab | null | undefined
       const hostTab = canHostOnActiveTab
         ? activeTab
         : (hostItem ? tabList.find((item) => item && item.id === hostItem.id) || null : null);
-      const selectedIndex = getDefaultSwitcherSelectedIndex(items, activeTab.id);
+      const selectedIndex = getDefaultSwitcherSelectedIndex(items, activeTab.id, offset);
       if (!hostTab || typeof hostTab.id !== 'number') {
         openNewtabFallbackForUrl(activeUrl, { sourceTab: activeTab });
         finishOpening();
@@ -2719,6 +2774,7 @@ export function triggerTabSwitcherForTab(tab: chrome.tabs.Tab | null | undefined
             currentTabId,
             selectedIndex,
             shortcut,
+            reverse,
             source,
             onOpenComplete: finishOpeningAndArmShortcutRelease
           });
@@ -2729,6 +2785,7 @@ export function triggerTabSwitcherForTab(tab: chrome.tabs.Tab | null | undefined
         currentTabId,
         selectedIndex,
         shortcut,
+        reverse,
         source,
         onOpenComplete: finishOpeningAndArmShortcutRelease
       });
@@ -2738,23 +2795,27 @@ export function triggerTabSwitcherForTab(tab: chrome.tabs.Tab | null | undefined
   });
 }
 
-function getConfiguredTabSwitcherShortcut(callback: (shortcut: string) => void): void {
+// The reverse command ships unbound, so it is '' until the user assigns it.
+function getConfiguredTabSwitcherShortcuts(callback: (shortcuts: TabSwitcherShortcuts) => void): void {
   const fallbackShortcut = 'Alt+Q';
   if (!chrome || !chrome.commands || typeof chrome.commands.getAll !== 'function') {
-    callback(fallbackShortcut);
+    callback({ forward: fallbackShortcut, reverse: '' });
     return;
   }
   chrome.commands.getAll((commands) => {
     if (chrome.runtime && chrome.runtime.lastError) {
-      callback(fallbackShortcut);
+      callback({ forward: fallbackShortcut, reverse: '' });
       return;
     }
     const items = Array.isArray(commands) ? commands : [];
-    const command = items.find((item) => item && item.name === SHOW_TAB_SWITCHER_COMMAND_NAME);
-    const shortcut = command && typeof command.shortcut === 'string'
-      ? String(command.shortcut).trim()
-      : '';
-    callback(shortcut || fallbackShortcut);
+    const shortcutOf = (name: string): string => {
+      const command = items.find((item) => item && item.name === name);
+      return command && typeof command.shortcut === 'string' ? String(command.shortcut).trim() : '';
+    };
+    callback({
+      forward: shortcutOf(SHOW_TAB_SWITCHER_COMMAND_NAME) || fallbackShortcut,
+      reverse: shortcutOf(SHOW_TAB_SWITCHER_REVERSE_COMMAND_NAME)
+    });
   });
 }
 

@@ -149,6 +149,36 @@ async function testBufferedReleaseIsReplayedForTheCurrentCommand() {
   page.close();
 }
 
+// A tab left armed by an earlier switcher relays a quick release before the
+// next switcher opens; the release must stay buffered until it commits.
+async function testEarlyReleaseInAnArmedPageWaitsForItsSwitcher() {
+  let committed = false;
+  const { page, ports } = createExtensionPage({
+    respond: (message) => (message.action === 'notifyTabSwitcherShortcutModifierReleased'
+      ? { ok: true, committed }
+      : { ok: true })
+  });
+  const port = ports[0];
+  const relays = () => page.messages.filter((message) => message.action === 'notifyTabSwitcherShortcutModifierReleased');
+  request(port, { action: 'armTabSwitcherShortcutRelease', keys: ['Alt'], commandStartedAt: 0 });
+  const commandStartedAt = Date.now();
+  page.press('Alt', { code: 'AltLeft', altKey: true });
+  page.release('Alt', { code: 'AltLeft' });
+  await page.settle();
+  assert.strictEqual(relays().length, 1, 'the armed page should relay the release right away');
+  request(port, { action: 'armTabSwitcherShortcutRelease', keys: ['Alt'], commandStartedAt });
+  assert.strictEqual(relays().length, 2, 'the release should be replayed once its switcher arms the page');
+
+  committed = true;
+  request(port, { action: 'armTabSwitcherShortcutRelease', keys: ['Alt'], commandStartedAt: 0 });
+  page.press('Alt', { code: 'AltLeft', altKey: true });
+  page.release('Alt', { code: 'AltLeft' });
+  await page.settle();
+  request(port, { action: 'armTabSwitcherShortcutRelease', keys: ['Alt'], commandStartedAt });
+  assert.strictEqual(relays().length, 3, 'a release that committed should not be replayed again');
+  page.close();
+}
+
 async function testReconnectsAfterTheWorkerGoesAway() {
   const { page, ports, connects } = createExtensionPage();
   ports[0].disconnect();
@@ -179,6 +209,7 @@ function testPagesConnectTheBridgeAfterTheirReactEntry() {
   await testPortRequestsDriveTheSwitcher();
   testRuntimeMessagesReachTheBridgeToo();
   await testBufferedReleaseIsReplayedForTheCurrentCommand();
+  await testEarlyReleaseInAnArmedPageWaitsForItsSwitcher();
   await testReconnectsAfterTheWorkerGoesAway();
   testPagesConnectTheBridgeAfterTheirReactEntry();
   console.log('tab switcher page bridge tests passed');

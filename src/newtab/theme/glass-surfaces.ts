@@ -6,6 +6,7 @@ import type { NewtabGlassTheme } from '../../domain/settings';
 import type { StorageAreaLike } from '../../domain/storage-port';
 import type { createLiquidSurfaces } from '../react/liquid-glass';
 import * as LumnoNewtabWallpaperAdaptiveTone from '../wallpaper/wallpaper-adaptive-tone';
+import type { ToneScheduleOptions } from '../wallpaper/wallpaper-adaptive-tone';
 
 interface GlassSurfacesState {
   newtabGlassTheme: NewtabGlassTheme;
@@ -15,7 +16,8 @@ interface GlassSurfacesState {
 }
 
 interface GlassSurfacesDeps {
-  scheduleWallpaperAdaptiveToneUpdate(): void;
+  // { resetInk: true } when a setting changed what the glass ink should be.
+  scheduleWallpaperAdaptiveToneUpdate(options?: ToneScheduleOptions): void;
   SETTINGS: Pick<typeof Settings, 'normalizeNewtabGlassStyle' | 'normalizeNewtabGlassTheme' | 'getNewtabGlassThemeOverride'>;
   syncBookmarkTopbarSurfaceAppearance(options: { updateMenu: boolean }): void;
   updateWallpaperAppearanceSelectionUi(): void;
@@ -99,7 +101,7 @@ function createGlassSurfaces(deps: GlassSurfacesDeps) {
     if (newtabGlassOpenObserver || typeof MutationObserver !== 'function') {
       return;
     }
-    newtabGlassOpenObserver = new MutationObserver(scheduleWallpaperAdaptiveToneUpdate);
+    newtabGlassOpenObserver = new MutationObserver(() => scheduleWallpaperAdaptiveToneUpdate());
     newtabGlassOpenObserver.observe(document.body, {
       attributes: true,
       subtree: true,
@@ -137,7 +139,7 @@ function createGlassSurfaces(deps: GlassSurfacesDeps) {
     // The bookmarks bar's "match style" background follows the page's material.
     syncBookmarkTopbarSurfaceAppearance({ updateMenu: false });
     updateWallpaperAppearanceSelectionUi();
-    scheduleWallpaperAdaptiveToneUpdate();
+    scheduleWallpaperAdaptiveToneUpdate({ resetInk: true });
   }
 
   // A material set to light or dark holds the page's theme there (appearance-modes.ts reads
@@ -170,7 +172,7 @@ function createGlassSurfaces(deps: GlassSurfacesDeps) {
     pageState.newtabGlassTheme = SETTINGS.normalizeNewtabGlassTheme(value);
     syncNewtabGlassThemeOverride();
     updateWallpaperAppearanceSelectionUi();
-    scheduleWallpaperAdaptiveToneUpdate();
+    scheduleWallpaperAdaptiveToneUpdate({ resetInk: true });
   }
 
   function loadNewtabGlassStyle(): Promise<void> {

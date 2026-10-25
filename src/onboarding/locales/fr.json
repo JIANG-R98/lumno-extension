@@ -24,7 +24,7 @@
   "setup.titleLines.1": "aussi fluide que native",
   "setup.body": "Appuyez sur {shortcut} pour ouvrir Lumno n’importe où.",
   "setup.diaLabel": "Vous utilisez Dia\u00a0?",
-  "setup.diaText": "Si le raccourci clavier ne répond pas dans Dia, cliquez sur «\u00a0Ouvrir les raccourcis clavier\u00a0» et passez «\u00a0Open command bar\u00a0» de «\u00a0In Dia\u00a0» à «\u00a0Global\u00a0».",
+  "setup.diaText": "Le nouvel onglet de Lumno n'est pas disponible dans Dia, mais la barre de commandes fonctionne. Pour utiliser ⌘T, changez d'abord «\u00a0New Tab\u00a0» dans Settings → Shortcuts de Dia, puis cliquez sur «\u00a0Ouvrir les raccourcis clavier\u00a0» et attribuez ⌘T à «\u00a0Open command bar\u00a0». S'il ne répond pas, passez de «\u00a0In Dia\u00a0» à «\u00a0Global\u00a0».",
   "setup.shortcutsLink": "Ouvrir les raccourcis clavier",
   "setup.localFileLabel": "Vous travaillez sur des fichiers locaux\u00a0?",
   "setup.localFileText": "Cliquez sur «\u00a0Ouvrir les détails de l’extension\u00a0», autorisez Lumno à accéder aux URL de fichiers, puis actualisez l’onglet PDF ou HTML.",

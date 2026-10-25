@@ -15,7 +15,7 @@ interface PageNavigation extends ListenerTarget {
 // A 'navigate' event; the destination and flags may be missing elsewhere.
 interface NavigateEventLike extends Event {
   readonly navigationType: string;
-  readonly destination?: { readonly sameDocument?: boolean } | null;
+  readonly destination?: { readonly sameDocument?: boolean; readonly url?: string } | null;
   readonly downloadRequest?: string | null;
   readonly userInitiated?: boolean;
 }

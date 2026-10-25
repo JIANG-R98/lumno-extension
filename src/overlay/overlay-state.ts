@@ -184,6 +184,8 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
     overlaySearchResultPriorityMode: 'autocomplete',
     overlaySearchResultDisplayLimit: 10,
     overlaySizeMode: 'standard',
+    // A custom panel width, or null while it follows the size.
+    overlayCustomWidth: null,
     overlayEnterAnimation: 'elastic',
     // Empty keeps the bundled Lumno Open Sans stack the CSS declares. The
     // fallback covers glyphs (Chinese) the chosen family does not carry.

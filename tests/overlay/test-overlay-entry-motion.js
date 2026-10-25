@@ -13,8 +13,11 @@ const MOTION_KEY = '_x_extension_motion_effects_enabled_2026_unique_';
 const ANIMATION_KEY = '_x_extension_overlay_enter_animation_2026_unique_';
 const OPEN_TABS_VISIBLE_KEY = '_x_extension_overlay_open_tabs_default_visible_2026_unique_';
 const THEME_KEY = '_x_extension_theme_mode_2024_unique_';
+const SIZE_KEY = '_x_extension_overlay_size_mode_2026_unique_';
+const WIDTH_KEY = '_x_extension_overlay_width_2026_unique_';
 const OVERLAY_ID = '_x_extension_overlay_2024_unique_';
-const ELASTIC_REST = 'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1)) scaleX(1)';
+const ELASTIC_REST = 'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1)) scale(1)';
+const SPRING_EASING = /^linear\(0, .*, 1\)$/;
 const FADE_REST = 'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1)) scale(1)';
 
 // The overlay skips its entry when it starts more than 280ms after the open
@@ -46,9 +49,9 @@ function entryAnimations(page, overlay) {
 
 async function testEachEntrySettingPlaysItsMotion() {
   const cases = [
-    [{}, 'translateY(12px) scaleX(0.88)', 210, 'cubic-bezier(0.18, 1.32, 0.32, 1)', 130, ELASTIC_REST],
-    [{ [OPEN_TABS_VISIBLE_KEY]: true }, 'translateY(12px) scaleX(0.94)', 210, 'cubic-bezier(0.18, 1.32, 0.32, 1)', 130, ELASTIC_REST],
-    [{ [ANIMATION_KEY]: 'fade' }, 'translateY(16px) scale(0.985)', 340, 'cubic-bezier(0.2, 1, 0.36, 1)', 220, FADE_REST]
+    [{}, 'translateY(8px) scale(0.94)', 180, SPRING_EASING, 80, ELASTIC_REST],
+    [{ [OPEN_TABS_VISIBLE_KEY]: true }, 'translateY(8px) scale(0.96)', 180, SPRING_EASING, 80, ELASTIC_REST],
+    [{ [ANIMATION_KEY]: 'fade' }, 'translateY(16px) scale(0.985)', 170, 'cubic-bezier(0.2, 1, 0.36, 1)', 110, FADE_REST]
   ];
   for (const [settings, startDelta, duration, easing, opacityDuration, rest] of cases) {
     const label = JSON.stringify(settings);
@@ -60,10 +63,15 @@ async function testEachEntrySettingPlaysItsMotion() {
     const { transform, opacity } = entryAnimations(page, overlay);
     assert.deepStrictEqual(transform.keyframes, [{ transform: startDelta }, { transform: 'none' }], `${label} entry delta`);
     assert.deepStrictEqual(
-      [transform.options.composite, transform.options.fill, transform.options.duration, transform.options.easing],
-      ['add', 'backwards', duration, easing],
+      [transform.options.composite, transform.options.fill, transform.options.duration],
+      ['add', 'backwards', duration],
       `${label} should add its motion on top of the centering transform`
     );
+    if (easing instanceof RegExp) {
+      assert.match(transform.options.easing, easing, `${label} should spring in`);
+    } else {
+      assert.strictEqual(transform.options.easing, easing, `${label} easing`);
+    }
     assert.deepStrictEqual(opacity.keyframes, [{ opacity: 0 }, { opacity: 1 }]);
     assert.strictEqual(opacity.options.duration, opacityDuration);
     assert.strictEqual(overlay.style.getPropertyValue('transform'), rest, 'the panel should sit in its final, centered transform while animating');
@@ -96,6 +104,31 @@ async function testEntryMotionIsSkippedWhenItWouldStutter() {
   await assertInstant('a slow start', {}, { storageDelayMs: 320 });
 }
 
+// A page's first open loads the panel stylesheets cold. When they arrive
+// after the reveal gate's budget but before the settings, the panel is fully
+// styled by the time it shows and still plays its entry.
+async function testLateStylesheetsStillPlayTheEntry() {
+  const { page, overlay } = await openWithMotion({}, {
+    stylesheetsLoad: false,
+    storageDelayMs: 160,
+    setup(window) {
+      const addLinkListener = window.HTMLLinkElement.prototype.addEventListener;
+      window.HTMLLinkElement.prototype.addEventListener = function(type, listener, options) {
+        addLinkListener.call(this, type, listener, options);
+        if (type === 'load' && this.rel === 'stylesheet' && !this.__lumnoLoadScheduled) {
+          this.__lumnoLoadScheduled = true;
+          window.setTimeout(() => this.dispatchEvent(new window.Event('load')), 110);
+        }
+      };
+    }
+  }, true);
+  const { transform, opacity } = entryAnimations(page, overlay);
+  assert.ok(transform && opacity, 'stylesheets that arrived before the reveal should not cancel the entry motion');
+  assert.strictEqual(overlay.hasAttribute('data-lumno-site-fix-style-fallback'), false,
+    'the panel should reveal with its real styles, not the fallback');
+  page.close();
+}
+
 // The shell's own rest state is covered by src/overlay/react/shell.test.tsx.
 async function testThemeElevation() {
   const { page, overlay } = await openWithMotion({});
@@ -110,6 +143,23 @@ async function testThemeElevation() {
   assert.ok((darkShadow.match(/rgba\(\d+, \d+, \d+/g) || []).every((color) => /rgba\((0, 0, 0|255, 255, 255)/.test(color)),
     'the dark elevation should stay neutral, without a colored glow');
   assert.strictEqual(overlay.style.getPropertyValue('--x-ov-blur'), '28px', 'the dark panel should cap its backdrop blur');
+  page.close();
+}
+
+// A custom width replaces the size's own width, within its range; clearing
+// it follows the size again.
+async function testCustomWidthReplacesTheSizeWidth() {
+  const { page, overlay } = await openWithMotion({ [SIZE_KEY]: 'large', [WIDTH_KEY]: 920 });
+  assert.strictEqual(overlay.style.getPropertyValue('width'), '920px');
+  page.changeSetting(WIDTH_KEY, 5000);
+  await page.settle();
+  assert.strictEqual(overlay.style.getPropertyValue('width'), '1040px', 'the width should stay within its range');
+  page.changeSetting(WIDTH_KEY, undefined);
+  await page.settle();
+  assert.strictEqual(overlay.style.getPropertyValue('width'), '840px', 'without a custom width the size decides');
+  page.changeSetting(SIZE_KEY, 'compact');
+  await page.settle();
+  assert.strictEqual(overlay.style.getPropertyValue('width'), '680px');
   page.close();
 }
 
@@ -165,7 +215,9 @@ function testSharedSearchInputMotionTokens() {
 (async () => {
   await testEachEntrySettingPlaysItsMotion();
   await testEntryMotionIsSkippedWhenItWouldStutter();
+  await testLateStylesheetsStillPlayTheEntry();
   await testThemeElevation();
+  await testCustomWidthReplacesTheSizeWidth();
   await testCornersFollowTheResults();
   testSharedSearchInputMotionTokens();
   console.log('overlay entry motion tests passed');

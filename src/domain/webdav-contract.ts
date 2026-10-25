@@ -4,6 +4,7 @@
 // sync.
 import * as settings from './settings';
 import * as shortcutStore from './shortcuts-store';
+import * as SHORTCUT_ICON_MAP from './shortcut-icon-map';
 import type { GroupedShortcutItem, ShortcutGroup, ShortcutStateRead } from './shortcuts-store';
 import type { WebDavOperation } from './messages';
 import type { StorageItems } from './storage-port';
@@ -124,7 +125,7 @@ const OVERFLOW_KEY = shortcutStore.SHORTCUTS_LOCAL_OVERFLOW_KEY;
 const GROUPED_STATE_VERSION = 3;
 const LEGACY_MAX_SHORTCUTS = 60;
 const MAX_SHORTCUTS = shortcutStore.DEFAULT_MAX_SHORTCUTS;
-const ICONS_KEY = '_x_extension_newtab_shortcut_icons_2026_unique_';
+const ICONS_KEY = SHORTCUT_ICON_MAP.DEFAULT_STORAGE_KEY;
 const WALLPAPER_KEY = '_x_extension_newtab_wallpaper_2026_unique_';
 const LOCAL_WALLPAPER_KEY = '_x_extension_newtab_local_wallpaper_2026_unique_';
 const LINK_WALLPAPERS_KEY = settings.NEWTAB_LINK_WALLPAPERS_STORAGE_KEY;

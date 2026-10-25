@@ -2150,6 +2150,55 @@ async function testDisablingWallpaperModeConsistencyIgnoresStaleLocalDisabledOve
   );
 }
 
+// With light and dark set apart, the panel opens on the mode the page shows:
+// a dark page that opened on Light took every filter change to the light
+// wallpaper, and the one on screen never changed.
+async function testSplitWallpaperPanelOpensOnTheShownMode() {
+  const syncStorage = createMemoryStorage({
+    [WALLPAPER_STORAGE_KEY]: {
+      version: WALLPAPER_PREFS_STORAGE_VERSION,
+      sameForModes: false,
+      light: 'white-shanshui',
+      dark: 'dark-shanshui-moonlit'
+    }
+  });
+  const { documentObj: testDocument, windowObj: testWindow, sandbox: testSandbox } = createWallpaperSandbox();
+  testDocument.body.setAttribute('data-theme', 'dark');
+  const testRuntime = testSandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
+    documentObj: testDocument,
+    windowObj: testWindow,
+    storageArea: syncStorage,
+    storageKeys: {
+      wallpaper: WALLPAPER_STORAGE_KEY,
+      localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY,
+      effect: WALLPAPER_EFFECT_STORAGE_KEY
+    },
+    t: (_key, fallback) => fallback || '',
+    getRiSvg: () => ''
+  });
+
+  await testRuntime.bootstrapInitialWallpaper();
+  testRuntime.createControls();
+  openPanel(testRuntime);
+  const wallpaper = () => panelState(testRuntime).wallpaper;
+  assert.strictEqual(wallpaper().mode.visible, true);
+  assert.strictEqual(wallpaper().mode.tabs.active, 'dark', 'a dark page opens the panel on Dark');
+
+  panelActions(testRuntime).selectEffect('halftone');
+  assert.strictEqual(testDocument.body.getAttribute('data-wallpaper-effect'), 'halftone',
+    'the filter picked applies to the wallpaper on screen');
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  const savedEffects = clonePlain(syncStorage.data[WALLPAPER_EFFECT_STORAGE_KEY]);
+  assert.strictEqual(savedEffects.dark.type, 'halftone', 'and is saved for that mode');
+  assert.notStrictEqual(savedEffects.light.type, 'halftone', 'not for the other one');
+
+  panelActions(testRuntime).selectWallpaperMode('light');
+  assert.strictEqual(wallpaper().mode.tabs.active, 'light', 'the other mode can still be edited on purpose');
+  testRuntime.closePanel();
+  openPanel(testRuntime);
+  assert.strictEqual(wallpaper().mode.tabs.active, 'dark', 'and the next open starts on the shown mode again');
+}
+
 async function testWallpaperLuminanceIsCachedForThePreload() {
   const createRuntime = (cachedPreload) => {
     let toneOptions = null;
@@ -4513,6 +4562,7 @@ Promise.resolve()
   .then(testInitialThemeResolutionDoesNotPaintFallbackBeforeCustomWallpaper)
   .then(testWallpaperModeConsistencyDefaultsOnAndCopiesLegacySelectionWhenDisabled)
   .then(testDisablingWallpaperModeConsistencyIgnoresStaleLocalDisabledOverride)
+  .then(testSplitWallpaperPanelOpensOnTheShownMode)
   .then(testWallpaperLuminanceIsCachedForThePreload)
   .then(testSplitBuiltInWallpaperSelectionFollowsResolvedTheme)
   .then(testWallpaperPreloadCacheRetainsMinimumLightOverlay)

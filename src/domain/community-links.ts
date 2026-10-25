@@ -207,9 +207,10 @@ function getCommunityUrl(links: Partial<CommunityLinks> | null | undefined, loca
     : (source.x || FALLBACK_LINKS.x);
 }
 
-function getHelpUrl(locale: unknown, slug?: unknown): string {
+function getHelpUrl(locale: unknown, slug?: unknown, anchor?: unknown): string {
   const page = String(slug || '').trim().replace(/^\/+|\/+$/g, '') || HELP_DEFAULT_SLUG;
-  return `${WEB_ORIGIN}${HELP_LOCALE_PREFIXES[normalizeWebLocale(locale)]}/help/${page}/`;
+  const section = String(anchor || '').trim().replace(/^#/, '');
+  return `${WEB_ORIGIN}${HELP_LOCALE_PREFIXES[normalizeWebLocale(locale)]}/help/${page}/${section ? `#${section}` : ''}`;
 }
 
 // The index behind the help center's search box, in the reader's language.

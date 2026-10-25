@@ -47,6 +47,7 @@ interface ToggleSettingHooks {
   faviconBlacklistEditor?(enabled: boolean): void;
   newtabShortcutSubcontrols?(): void;
   selectionQuickActionsAvailability?(): void;
+  tabSwitcherSubrows?(): void;
 }
 
 function getToggleSettings(settings: typeof Settings, hooks?: ToggleSettingHooks): readonly ToggleSettingsEntry[] {
@@ -199,6 +200,14 @@ function getToggleSettings(settings: typeof Settings, hooks?: ToggleSettingHooks
       kind: 'tab-switcher',
       key: S.TAB_SWITCHER_ENABLED_STORAGE_KEY,
       normalize: S.normalizeTabSwitcherEnabled,
+      refreshSelects: true,
+      afterApply: page.tabSwitcherSubrows
+    },
+    {
+      inputId: '_x_extension_tab_switcher_current_window_only_toggle_2026_unique_',
+      kind: 'tab-switcher-current-window-only',
+      key: S.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY,
+      normalize: S.normalizeTabSwitcherCurrentWindowOnly,
       refreshSelects: true
     },
     {

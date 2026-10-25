@@ -1,4 +1,5 @@
 import { act } from 'react';
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createOverlayShellApi } from './shell';
 import { queryHtmlTag } from '../../shared/dom-lookup';
@@ -86,6 +87,19 @@ describe('Overlay React shell', () => {
     expect(criticalStyle?.textContent).not.toMatch(
       /#_x_extension_overlay_2024_unique_\s+\.x-ov-suggestion-switch-button/
     );
+    // The mounted, closed popconfirm starts in the stylesheet's closed state,
+    // so the stylesheet arriving late plays no closing transition.
+    const fallbackPopconfirm = criticalStyle?.textContent?.match(
+      /:where\(\.x-lumno-search-input__popconfirm\)\s*\{([^}]*)\}/
+    )?.[1] || '';
+    const sheetPopconfirm = readFileSync('src/shared/search/search-input.css', 'utf8')
+      .match(/\n\.x-lumno-search-input__popconfirm\s*\{([^}]*)\}/)?.[1] || '';
+    ['opacity', 'visibility', 'transform', 'pointer-events'].forEach((property) => {
+      const pattern = new RegExp(`(?:^|;|\\s)${property}:\\s*([^;]+);`);
+      const fallbackValue = fallbackPopconfirm.match(pattern)?.[1]?.trim();
+      expect(fallbackValue, property).toBeTruthy();
+      expect(fallbackValue, property).toBe(sheetPopconfirm.match(pattern)?.[1]?.trim());
+    });
     expect(criticalStyle?.textContent).toContain(
       'url("chrome-extension://example/assets/remixicon/icons/search-line.svg")'
     );

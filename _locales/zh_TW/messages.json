@@ -564,7 +564,7 @@
     "message": "在 Dia 中使用"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "在 Dia 環境下，受瀏覽器限制，Lumno 的新分頁功能暫不可用，但聚焦搜尋功能仍可正常運作。\n\n若快速鍵在 Dia 中不可用，請點按下方右側按鈕進入瀏覽器的快速鍵設定頁面，將「Open command bar」從 In Dia 改成 Global。"
+    "message": "Dia 不允許擴充功能取代新分頁，所以 Lumno 的新分頁在 Dia 中暫不可用，聚焦搜尋可以正常使用。\n\n想用 ⌘T 叫出聚焦搜尋：Dia 內建快速鍵的優先順序較高，請先在 Dia 的 Settings → Shortcuts 中，把「New Tab」的 ⌘T 改成其他按鍵，再點按下方右側按鈕，將「Open command bar」設為 ⌘T。\n\n若快速鍵在 Dia 中沒有反應，請將其作用範圍從 In Dia 改成 Global。"
   },
   "settings_shortcuts_section_title": {
     "message": "快速鍵設定"
@@ -691,6 +691,12 @@
   },
   "settings_overlay_size_title": {
     "message": "尺寸"
+  },
+  "settings_overlay_width_title": {
+    "message": "寬度"
+  },
+  "settings_overlay_width_reset": {
+    "message": "跟隨尺寸設定"
   },
   "overlay_size_compact": {
     "message": "小"
@@ -2348,6 +2354,9 @@
   "command_show_tab_switcher": {
     "message": "開啟最近分頁切換器"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "反向開啟最近分頁切換器"
+  },
   "shortcut_reference_title": {
     "message": "快速鍵列表"
   },
@@ -2389,6 +2398,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "開啟最近分頁切換器"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "反向開啟最近分頁切換器"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "開啟最近分頁切換器，並選取最早使用的分頁"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "切換上一筆或下一筆輸入"
@@ -2785,6 +2800,18 @@
   },
   "settings_tab_switcher_desc": {
     "message": "快速切換最近分頁，預設 {shortcut}，可自訂"
+  },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "像 Arc 一樣用 {shortcut} 切換"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Arc 式 {shortcut} 切換說明"
+  },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "只顯示目前視窗的分頁"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "適用於把每個空間放在獨立視窗的瀏覽器，避免列出其他空間的分頁"
   },
   "settings_features_section_title": {
     "message": "功能"
@@ -3577,6 +3604,9 @@
   },
   "settings_newtab_glass_theme_title": {
     "message": "材質深淺色"
+  },
+  "settings_newtab_glass_theme_desc": {
+    "message": "「自動」：跟隨深淺色模式，桌布較暗時改用深色材質，讓文字保持清晰。\n「淺色」「深色」：固定材質，並讓新分頁使用同樣的深淺色。"
   },
   "settings_newtab_glass_theme_follow": {
     "message": "自動"

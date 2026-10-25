@@ -2,6 +2,7 @@ import type { LocaleMessage } from '../../domain/messages';
 import type { LocalSearchScope } from '../../domain/search/types';
 import type * as Settings from '../../domain/settings';
 import * as LumnoCjkFontFaces from '../../shared/cjk-font-faces';
+import * as OVERLAY_FONT_FACES from '../../shared/overlay-font-faces';
 import type * as OverlayRuntime from '../runtime';
 import type { ReadableStorageArea } from '../runtime';
 
@@ -64,9 +65,13 @@ function createPanelLanguage<Row, Provider, Theme>(deps: PanelLanguageDeps<Row, 
   let currentMessages: LocaleMessages | null = null;
 
   function applyOverlayCjkFontFace(locale: string): void {
+    const lang = SETTINGS.localeToHtmlLang(locale);
+    if (OVERLAY_FONT_FACES.keepEarlyCjkFontFace(window, lang)) {
+      return;
+    }
     LumnoCjkFontFaces.install(document, {
-      family: 'Lumno Open Sans',
-      lang: SETTINGS.localeToHtmlLang(locale),
+      family: OVERLAY_FONT_FACES.OVERLAY_TEXT_FAMILY,
+      lang,
       styleId: '_x_extension_overlay_cjk_font_faces_2026_unique_'
     });
   }
@@ -210,6 +215,7 @@ function createPanelLanguage<Row, Provider, Theme>(deps: PanelLanguageDeps<Row, 
   }
 
   return {
+    applyOverlayCjkFontFace,
     getSystemLocale,
     t,
     getStorageValuesAsync,

@@ -1,6 +1,14 @@
 // Custom shortcut icons: reading a picked image file, fitting it into a
 // 128 px PNG, and keeping the images by shortcut id in local storage.
 import type { StorageAreaLike } from '../../domain/storage-port';
+import {
+  DEFAULT_STORAGE_KEY,
+  MAX_OUTPUT_BYTES,
+  getDataUrlByteLength,
+  normalizeIconDataUrl,
+  normalizeIconMap
+} from '../../domain/shortcut-icon-map';
+import type { ShortcutIconMap } from '../../domain/shortcut-icon-map';
 
 // An error with a code saying which step failed.
 type ShortcutIconError = Error & { code: string };
@@ -27,15 +35,9 @@ interface PreparedShortcutIcon {
   outputHeight: number;
 }
 
-// Icon images by shortcut id.
-type ShortcutIconMap = Record<string, string>;
-
-const DEFAULT_STORAGE_KEY = '_x_extension_newtab_shortcut_icons_2026_unique_';
 const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 const MAX_SOURCE_DIMENSION = 4096;
 const OUTPUT_SIZE = 128;
-const MAX_STORED_DATA_URL_LENGTH = 160 * 1024;
-const MAX_OUTPUT_BYTES = 96 * 1024;
 const ACCEPTED_MIME_TYPES: readonly string[] = Object.freeze([
   'image/png',
   'image/jpeg',
@@ -46,10 +48,6 @@ function createIconError(code: string, message?: string): ShortcutIconError {
   return Object.assign(new Error(message || code || 'Shortcut icon error.'), {
     code: String(code || 'unknown')
   });
-}
-
-function normalizeShortcutId(value: unknown): string {
-  return String(value || '').trim();
 }
 
 function isAcceptedMimeType(value: unknown): boolean {
@@ -102,41 +100,6 @@ function getContainedRect(
     width,
     height
   };
-}
-
-function getDataUrlByteLength(value: unknown): number {
-  const match = /^data:[^;,]+;base64,([a-zA-Z0-9+/]*={0,2})$/.exec(String(value || '').trim());
-  if (!match) return 0;
-  const encoded = match[1];
-  const padding = encoded.endsWith('==') ? 2 : (encoded.endsWith('=') ? 1 : 0);
-  return Math.max(0, Math.floor((encoded.length * 3) / 4) - padding);
-}
-
-function normalizeIconDataUrl(value: unknown): string {
-  const dataUrl = String(value || '').trim();
-  if (!dataUrl.startsWith('data:image/png;base64,') ||
-      dataUrl.length > MAX_STORED_DATA_URL_LENGTH ||
-      getDataUrlByteLength(dataUrl) > MAX_OUTPUT_BYTES) {
-    return '';
-  }
-  return dataUrl;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object';
-}
-
-function normalizeIconMap(value: unknown): ShortcutIconMap {
-  const source = isRecord(value) && !Array.isArray(value) ? value : {};
-  const normalized: ShortcutIconMap = {};
-  Object.keys(source).forEach((rawId) => {
-    const shortcutId = normalizeShortcutId(rawId);
-    const dataUrl = normalizeIconDataUrl(source[rawId]);
-    if (shortcutId && dataUrl) {
-      normalized[shortcutId] = dataUrl;
-    }
-  });
-  return normalized;
 }
 
 function createShortcutIconStore(options?: ShortcutIconStoreOptions) {

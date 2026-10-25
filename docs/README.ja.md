@@ -106,7 +106,7 @@
 
 Shift キーを押しながらリンクをクリックすると、ページの上の小さなウィンドウでプレビューでき、閉じるかタブに移せます。再起動後の固定タブ復元、制限ページから新しいタブへのフォールバック、現在ページ URL のワンキーコピー、拡張機能ショートカット/詳細ページのオープンに対応します。
 
-UI は 48 言語に対応し、ブラウザ言語への追従も選べます。日本語、英語、簡体字中国語、繁体字中国語は人が書いて確認しており、それ以外は AI 翻訳です。ネイティブスピーカーの方は、設定 → 一般 → 言語 → **翻訳を改善** から修正にご協力いただけます。
+UI は 10 言語（日本語、英語、簡体字中国語、繁体字中国語、韓国語、ドイツ語、フランス語、スペイン語、ブラジルポルトガル語、ロシア語）に対応し、ブラウザ言語への追従も選べます。日本語、英語、簡体字中国語、繁体字中国語は人が書いて確認しており、それ以外は AI 翻訳です。ネイティブスピーカーの方は、設定 → 一般 → 言語 → **翻訳を改善** から修正にご協力いただけます。
 
 各機能の使い方は、スクリーンショット付きで [Lumno ヘルプセンター](https://lumno.kubai.design/ja/help/)にまとめています。
 
@@ -172,7 +172,7 @@ Lumno は Chromium ブラウザ向けに開発しており、Firefox 版も用�
 | 「ショートカット設定を開く」 | 動作が異なる | アドオンマネージャーが開くので、歯車メニューから「拡張機能のショートカットキーの管理」を選ぶ |
 | 設定の同期 | 動作が異なる | Chrome の同期ではなく Firefox Sync を使う。WebDAV 同期は Chrome と Firefox の間でも使え、同じパソコンで両方を開いていても動作する |
 
-**Chromium 系ブラウザ。** Brave、Arc、Vivaldi、Opera などは Chrome ウェブストア版を使い、機能は Chrome と同じですが、拡張機能のショートカットを予約または変更するブラウザもあります。Dia では新しいタブ機能は使えませんが、コマンドバーは使えます。ショートカットが効かない場合は、ブラウザのショートカット設定で「Open command bar」を In Dia から Global に変更してください。
+**Chromium 系ブラウザ。** Brave、Arc、Vivaldi、Opera などは Chrome ウェブストア版を使い、機能は Chrome と同じですが、拡張機能のショートカットを予約または変更するブラウザもあります。Dia では新しいタブ機能は使えませんが、コマンドバーは使えます。Dia 自体のショートカットが優先されるため、⌘T で開くには、まず Dia の Settings → Shortcuts で「New Tab」の ⌘T を別のキーに変更し、拡張機能のショートカットページで「Open command bar」を ⌘T に設定してください。ショートカットが効かない場合は、同じページで In Dia から Global に変更してください。
 
 ## プライバシー
 
@@ -197,6 +197,22 @@ Manifest V3 拡張機能に対応した Chromium ブラウザ（Google Chrome、
 
 **ショートカットを変更するには？**
 `chrome://extensions/shortcuts`（または `edge://extensions/shortcuts`）を開き、Lumno に新しいキーを設定してください。
+
+**Arc のように Ctrl+Tab でタブ切り替えを開けますか？**
+はい。ただし、ショートカット設定ページでは Ctrl+Tab を登録できません。`chrome://extensions/shortcuts` を開き、`Cmd+Option+J`（Windows と Linux では `Ctrl+Shift+J`）でデベロッパーツールのコンソールを開いて、次のコードを実行してください。
+
+```js
+const extensions = await chrome.developerPrivate.getExtensionsInfo();
+const lumno = extensions.find((item) =>
+  item.commands.some((command) => command.name === "show-tab-switcher"));
+await chrome.developerPrivate.updateExtensionCommand({
+  extensionId: lumno.id,
+  commandName: "show-tab-switcher",
+  keybinding: "Ctrl+Tab",
+});
+```
+
+このコードが変更するのは Lumno のタブ切り替えのショートカットだけで、設定後はブラウザ標準の Ctrl+Tab は使えなくなります。画像付きの手順は[ヘルプセンター](https://lumno.kubai.design/ja/help/tab-switcher/#ctrl-tab)を参照してください。
 
 **Chrome 標準のタブ検索との違いは？**
 Lumno はタブ、ブックマーク、履歴、よく使うサイトをまとめて検索し、サイト内検索や AI 検索のプレフィックス、集約検索、最近のタブスイッチャーを備えています。ツールバーだけでなく、現在のページ上にオーバーレイとして開けます。

@@ -50,6 +50,30 @@ function resolveScript(lang: string | null | undefined): CjkScript | '' {
   return '';
 }
 
+interface CjkFontFaceSource {
+  script: CjkScript;
+  source: string;
+  descriptors: FontFaceDescriptors;
+}
+
+// The face for the FontFace API: its src and descriptors, and the script
+// whose glyph forms it draws, or null for a language without one.
+function getFontFaceSource(lang: string | null | undefined): CjkFontFaceSource | null {
+  const script = resolveScript(lang);
+  if (!script) {
+    return null;
+  }
+  return {
+    script,
+    source: LOCAL_FACES[script].map((name) => `local("${name}")`).join(', '),
+    descriptors: {
+      style: 'normal',
+      weight: FONT_WEIGHT_BAND,
+      unicodeRange: UNICODE_RANGE
+    }
+  };
+}
+
 function buildFontFaceCss(family: string | null | undefined, lang: string | null | undefined): string {
   const script = resolveScript(lang);
   if (!family || !script) {
@@ -117,10 +141,12 @@ function watchFromCurrentScript(doc: Document | null | undefined): void {
 // its <html lang>; elsewhere there is no such script and this does nothing.
 watchFromCurrentScript(typeof document !== 'undefined' ? document : null);
 
-export type { CjkFontFaceOptions, CjkScript };
+export type { CjkFontFaceOptions, CjkFontFaceSource, CjkScript };
 export {
   FONT_WEIGHT_BAND,
   buildFontFaceCss,
+  getFontFaceSource,
+  resolveScript,
   install,
   watchDocumentLanguage,
   watchFromCurrentScript

@@ -564,7 +564,7 @@
     "message": "In Dia verwenden"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "In Dia sind die Neuer-Tab-Funktionen von Lumno aufgrund von Browsereinschränkungen vorübergehend nicht verfügbar, die Befehlsleiste funktioniert aber normal.\n\nWenn die Tastenkombination in Dia nicht funktioniert, klicken Sie unten rechts auf die Schaltfläche, um die Tastenkombinationen des Browsers zu öffnen, und ändern Sie „Befehlsleiste öffnen“ von In Dia zu Global."
+    "message": "Dia erlaubt Erweiterungen nicht, den neuen Tab zu ersetzen, daher ist Lumnos Neuer Tab dort nicht verfügbar. Die Befehlsleiste funktioniert normal.\n\nBefehlsleiste mit ⌘T öffnen: Die Tastenkombinationen von Dia haben Vorrang. Ändern Sie daher zuerst in Dia unter Settings → Shortcuts „New Tab“ von ⌘T auf eine andere Taste. Klicken Sie dann unten rechts auf die Schaltfläche und legen Sie „Befehlsleiste öffnen“ auf ⌘T fest.\n\nWenn die Tastenkombination in Dia nicht reagiert, ändern Sie den Bereich von In Dia zu Global."
   },
   "settings_shortcuts_section_title": {
     "message": "Tastenkombination"
@@ -691,6 +691,12 @@
   },
   "settings_overlay_size_title": {
     "message": "Größe"
+  },
+  "settings_overlay_width_title": {
+    "message": "Breite"
+  },
+  "settings_overlay_width_reset": {
+    "message": "An Größe anpassen"
   },
   "overlay_size_compact": {
     "message": "Kompakt"
@@ -2117,6 +2123,9 @@
   "settings_aggregate_search_auto_group_title": {
     "message": "Tabs von Sammelsuchen automatisch gruppieren"
   },
+  "settings_aggregate_search_auto_group_short_title": {
+    "message": "Tab-Gruppen automatisch erstellen"
+  },
   "settings_aggregate_search_auto_group_desc": {
     "message": "Wenn aktiviert, werden alle Tabs einer Sammelsuche in eine Gruppe mit dem Namen „Name der Sammelsuche: Suchbegriff“ gelegt"
   },
@@ -2273,6 +2282,18 @@
   "link_preview_open_in_tab": {
     "message": "In neuem Tab öffnen"
   },
+  "link_preview_copy_link": {
+    "message": "Link kopieren"
+  },
+  "link_preview_link_copied": {
+    "message": "Link kopiert"
+  },
+  "link_preview_reload": {
+    "message": "Neu laden"
+  },
+  "link_preview_back": {
+    "message": "Zurück"
+  },
   "link_preview_blocked": {
     "message": "Diese Seite kann nicht in einer Vorschau angezeigt werden"
   },
@@ -2333,6 +2354,9 @@
   "command_show_tab_switcher": {
     "message": "Tab-Umschalter öffnen"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Tab-Umschalter rückwärts öffnen"
+  },
   "shortcut_reference_title": {
     "message": "Tastenkombinationen"
   },
@@ -2374,6 +2398,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Den Umschalter für die letzten Tabs öffnen"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Tab-Umschalter rückwärts öffnen"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Den Umschalter mit dem ältesten Tab ausgewählt öffnen"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Vorherige oder nächste Eingabe"
@@ -2770,6 +2800,27 @@
   },
   "settings_tab_switcher_desc": {
     "message": "Schnell zwischen den letzten Tabs wechseln; standardmäßig {shortcut}, anpassbar"
+  },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Wie in Arc mit {shortcut} wechseln"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Anleitung: {shortcut} wie in Arc"
+  },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "Nur Tabs im aktuellen Fenster anzeigen"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "Für Browser, die jeden Bereich in einem eigenen Fenster öffnen, damit Tabs aus anderen Bereichen nicht in der Liste erscheinen"
+  },
+  "settings_features_section_title": {
+    "message": "Funktionen"
+  },
+  "settings_link_preview_title": {
+    "message": "Link-Vorschau"
+  },
+  "settings_link_preview_desc": {
+    "message": "Klicke bei gedrückter Umschalttaste auf einen Link, um ihn in einem kleinen Fenster über der Seite anzusehen; danach schließen oder in einen Tab verschieben"
   },
   "slash_command_empty": {
     "message": "Keine passenden Befehle"
@@ -3553,6 +3604,9 @@
   },
   "settings_newtab_glass_theme_title": {
     "message": "Materialdesign"
+  },
+  "settings_newtab_glass_theme_desc": {
+    "message": "Automatisch: folgt dem Farbmodus, wechselt aber bei dunkleren Hintergrundbildern zu dunklem Material, damit Text lesbar bleibt.\nHell / Dunkel: legen das Material fest und zeigen den neuen Tab im selben Modus."
   },
   "settings_newtab_glass_theme_follow": {
     "message": "Automatisch"

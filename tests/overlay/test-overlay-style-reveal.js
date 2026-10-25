@@ -246,6 +246,7 @@ async function testTimeoutKeepsSafeFallbackUntilStylesFinish() {
     reason: 'timeout',
     fixId: overlaySiteFixes.OVERLAY_STYLE_REVEAL_POLICY.id
   });
+  assert.strictEqual(gate.isReady(), false, 'the gate should report styles still loading after its budget');
   gate.release();
   assert.strictEqual(
     overlay.getAttribute('data-lumno-site-fix-style-fallback'),
@@ -270,6 +271,7 @@ async function testTimeoutKeepsSafeFallbackUntilStylesFinish() {
     null,
     'late component styles should upgrade the visible fallback automatically'
   );
+  assert.strictEqual(gate.isReady(), true, 'the gate should report styles that loaded after its budget');
 }
 
 // The fallback styles the real overlay puts in its shadow root before its

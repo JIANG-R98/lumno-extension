@@ -2,6 +2,7 @@
 // pages the browser command does not reach, and the release of the tab
 // switcher's modifier, which commits the switch.
 import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
+import * as OVERLAY_FONT_FACES from '../shared/overlay-font-faces';
 import type { KeyDescriptor, ShortcutSpec } from '../domain/shortcut-key-matcher';
 import type { PageReply } from '../domain/messages';
 import * as LumnoMessaging from '../platform/messaging';
@@ -83,6 +84,24 @@ function isFiniteNumber(value: unknown): value is number {
         observedAt: Date.now()
       }, () => {
         void (chrome.runtime && chrome.runtime.lastError);
+      });
+    } catch (_error) {
+      // Ignore an extension context invalidated while this Document commits.
+    }
+  }
+
+  // The search overlay opens in the top frame only, and its faces cost
+  // nothing before the page first lays out (see overlay-font-faces.ts).
+  function registerOverlayFontFaces(): void {
+    if (window.top !== window) {
+      return;
+    }
+    try {
+      OVERLAY_FONT_FACES.registerEarlyOverlayFontFaces(window, {
+        getUrl: (assetPath) => chrome.runtime.getURL(assetPath),
+        lang: chrome.i18n && typeof chrome.i18n.getUILanguage === 'function'
+          ? chrome.i18n.getUILanguage()
+          : ''
       });
     } catch (_error) {
       // Ignore an extension context invalidated while this Document commits.
@@ -327,19 +346,34 @@ function isFiniteNumber(value: unknown): value is number {
     }) || '';
   }
 
+  function forgetTrustedShortcutRelease(key: string, releasedAt: number | undefined): void {
+    // A newer press and release of the same key belongs to a later command.
+    if (recentTrustedReleaseAtByKey.get(key) !== releasedAt) {
+      return;
+    }
+    recentTrustedKeydownAtByKey.delete(key);
+    recentTrustedReleaseAtByKey.delete(key);
+  }
+
   function relayTabSwitcherShortcutRelease(key: string): void {
     if (!key) {
       return;
     }
     armedReleaseKeys = [];
-    recentTrustedKeydownAtByKey.delete(key);
-    recentTrustedReleaseAtByKey.delete(key);
+    // An earlier switcher arms every tab in its window, so a quick release
+    // can be relayed live while the next switcher is still opening. Keep it
+    // buffered until the background reports a commit, so the arm that
+    // follows the open can replay it.
+    const releasedAt = recentTrustedReleaseAtByKey.get(key);
     try {
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'notifyTabSwitcherShortcutModifierReleased',
         key
-      }, () => {
+      }, (response) => {
         void (chrome.runtime && chrome.runtime.lastError);
+        if (response && response.committed === true) {
+          forgetTrustedShortcutRelease(key, releasedAt);
+        }
       });
     } catch (_error) {
       // Ignore stale extension contexts while a tab or the extension reloads.
@@ -409,11 +443,12 @@ function isFiniteNumber(value: unknown): value is number {
   };
 
   adoptInheritedState(inheritedState);
-  // Only the observer a Document starts with reports that start; a
-  // replacement, or a sweep of tabs open before an install, runs in a page
-  // that is already showing.
+  // Only the observer a Document starts with reports that start and
+  // registers the overlay's faces; a replacement, or a sweep of tabs open
+  // before an install, runs in a page that is already showing.
   if (!previousRuntime && document.readyState === 'loading') {
     notifyTopFrameDocumentStarted();
+    registerOverlayFontFaces();
   }
   // A subframe cannot receive keys before its window takes focus, which
   // refreshes the shortcut, so only the top frame asks at startup. Asking from

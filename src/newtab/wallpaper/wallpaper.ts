@@ -10,7 +10,7 @@ import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
 import type { GlassTheme, ThemeScope, WallpaperSourceTab } from '../react/wallpaper-panel/panel-model';
 import type { createWallpaperViewApi } from '../react/wallpaper-view';
 import type { QuoteRuntime } from '../top-content/quotes';
-import type { AdaptiveToneTarget } from './wallpaper-adaptive-tone';
+import type { AdaptiveToneTarget, ToneScheduleOptions } from './wallpaper-adaptive-tone';
 import type { EffectType, WallpaperEffectPrefs, WallpaperEffectStoragePrefs } from './wallpaper-effects';
 import type { NewtabFaviconOption } from './runtime/favicon-chooser';
 import type { SearchWidthConfig, SliderConfig } from './runtime/panel-settings';
@@ -1550,6 +1550,7 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
     t,
     getRiSvg,
     syncWallpaperSourceTabToEditMode,
+    getResolvedWallpaperMode,
     setWallpaperPanelOpenState,
     loadCustomWallpapers,
     closeWallpaperPanel,
@@ -1623,9 +1624,9 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
     wallpaperState.wallpaperEffects = WALLPAPER_EFFECTS.createWallpaperEffects(wallpaperEffectRuntimeOptions);
   }
 
-  function scheduleWallpaperAdaptiveToneUpdate(): void {
+  function scheduleWallpaperAdaptiveToneUpdate(options?: ToneScheduleOptions | Event | null): void {
     if (wallpaperState.wallpaperAdaptiveTone) {
-      wallpaperState.wallpaperAdaptiveTone.schedule();
+      wallpaperState.wallpaperAdaptiveTone.schedule(options);
     }
   }
 

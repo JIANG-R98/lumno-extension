@@ -106,7 +106,7 @@
 
 按住 Shift 点击链接，会在页面上方的小窗里预览，看完可以关闭或移到新标签页。重启后恢复置顶标签页、受限页面回退到新标签页、一键复制当前页面链接、打开扩展快捷键页和详情页。
 
-界面支持 48 种语言，也可以跟随浏览器语言。简体中文、繁体中文、英文、日文由人工撰写和校对，其余语言为 AI 翻译；母语用户可以在设置 → 常规 → 语言 → **改进翻译** 中帮忙修正。
+界面支持 10 种语言（简体中文、繁体中文、英文、日文、韩文、德文、法文、西班牙文、巴西葡萄牙文和俄文），也可以跟随浏览器语言。简体中文、繁体中文、英文、日文由人工撰写和校对，其余语言为 AI 翻译；母语用户可以在设置 → 常规 → 语言 → **改进翻译** 中帮忙修正。
 
 每项功能的图文教程见 [Lumno 帮助中心](https://lumno.kubai.design/help/)。
 
@@ -172,7 +172,7 @@ Lumno 为 Chromium 浏览器开发，同时提供 Firefox 版。Zen、LibreWolf�
 | 「前往快捷键设置」 | 表现不同 | 打开附加组件管理器，需在齿轮菜单中选择「管理扩展快捷键」 |
 | 设置同步 | 表现不同 | 使用 Firefox 同步而非 Chrome 同步。WebDAV 同步可在 Chrome 与 Firefox 之间进行，包括同一台电脑上同时打开两者 |
 
-**Chromium 系浏览器。** Brave、Arc、Vivaldi、Opera 等使用 Chrome 应用商店的版本，功能与 Chrome 相同，但部分浏览器会占用或改写扩展快捷键。在 Dia 中，新标签页功能暂不可用，聚焦搜索可正常使用；如果快捷键无效，请在浏览器的快捷键设置中把「Open command bar」从 In Dia 改为 Global。
+**Chromium 系浏览器。** Brave、Arc、Vivaldi、Opera 等使用 Chrome 应用商店的版本，功能与 Chrome 相同，但部分浏览器会占用或改写扩展快捷键。在 Dia 中，新标签页功能暂不可用，聚焦搜索可正常使用。Dia 自带快捷键优先，想用 ⌘T 唤起聚焦搜索，需先在 Dia 的 Settings → Shortcuts 中把「New Tab」的 ⌘T 改成其他按键，再到浏览器的扩展快捷键页面把「Open command bar」设为 ⌘T；如果快捷键无效，请在同一页面把它从 In Dia 改为 Global。
 
 ## 隐私
 
@@ -197,6 +197,22 @@ Lumno 本地优先。书签、历史和标签页仅在本机读取用于搜索�
 
 **如何修改快捷键？**
 打开 `chrome://extensions/shortcuts`（或 `edge://extensions/shortcuts`），为 Lumno 设置新的按键。
+
+**能像 Arc 一样用 Ctrl+Tab 打开标签切换器吗？**
+可以，但快捷键页面本身不接受 Ctrl+Tab。打开 `chrome://extensions/shortcuts`，按 `Cmd+Option+J`（Windows 和 Linux 上为 `Ctrl+Shift+J`）打开开发者工具的控制台，运行：
+
+```js
+const extensions = await chrome.developerPrivate.getExtensionsInfo();
+const lumno = extensions.find((item) =>
+  item.commands.some((command) => command.name === "show-tab-switcher"));
+await chrome.developerPrivate.updateExtensionCommand({
+  extensionId: lumno.id,
+  commandName: "show-tab-switcher",
+  keybinding: "Ctrl+Tab",
+});
+```
+
+这段代码只修改 Lumno 标签切换器的快捷键，设置后浏览器自带的 Ctrl+Tab 不再生效。图文步骤见[帮助中心](https://lumno.kubai.design/help/tab-switcher/#ctrl-tab)。
 
 **和 Chrome 自带的标签页搜索有什么不同？**
 Lumno 同时搜索标签页、书签、历史和常用网站，额外提供站内搜索和 AI 搜索前缀、聚合搜索和最近标签页切换器，并且直接在当前网页上以浮层打开，而不只是在工具栏中。

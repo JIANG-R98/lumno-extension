@@ -24,7 +24,7 @@
   "setup.titleLines.1": "com cara de nativa",
   "setup.body": "Pressione {shortcut} para abrir o Lumno em qualquer lugar.",
   "setup.diaLabel": "Usa o Dia?",
-  "setup.diaText": "Se o atalho não responder no Dia, clique em Abrir configurações de atalho e mude \"Open command bar\" de \"In Dia\" para \"Global\".",
+  "setup.diaText": "Para usar ⌘T, troque antes o atalho de \"New Tab\" em Settings → Shortcuts do Dia, depois clique em Abrir configurações de atalho e defina \"Open command bar\" como ⌘T. Se não responder, mude \"In Dia\" para \"Global\".",
   "setup.shortcutsLink": "Abrir configurações de atalho",
   "setup.localFileLabel": "Trabalha com arquivos locais?",
   "setup.localFileText": "Clique em Abrir detalhes da extensão, permita que o Lumno acesse URLs de arquivo e atualize a guia do PDF ou HTML.",

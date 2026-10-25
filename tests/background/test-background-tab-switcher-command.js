@@ -34,7 +34,10 @@ function bootSwitcher(options) {
     extensionUrls: true,
     sync: Object.assign({ [TAB_SWITCHER_ENABLED_KEY]: true }, config.sync || {}),
     local: config.local,
-    commands: [{ name: 'show-tab-switcher', shortcut: config.shortcut || 'Alt+Q' }],
+    commands: [
+      { name: 'show-tab-switcher', shortcut: config.shortcut || 'Alt+Q' },
+      { name: 'show-tab-switcher-reverse', shortcut: config.reverseShortcut || '' }
+    ],
     configureChrome(chromeApi, calls) {
       chromeApi.tabs.sendMessage = (tabId, message, optionsOrCallback, maybeCallback) => {
         const callback = typeof optionsOrCallback === 'function' ? optionsOrCallback : maybeCallback;
@@ -65,7 +68,7 @@ function bootSwitcher(options) {
       await wait(5);
     }
   };
-  const press = () => harness.chrome.commands.onCommand.dispatch('show-tab-switcher');
+  const press = (command) => harness.chrome.commands.onCommand.dispatch(command || 'show-tab-switcher');
   return { harness, tabs, responders, sent, scripts, visit, press };
 }
 
@@ -120,14 +123,29 @@ async function testCommandOpensTheRecentTabsOnTheActivePage() {
     'once open, every tab in the window should be armed to relay the release');
   arms.forEach((entry) => {
     assert.deepStrictEqual(entry.message.keys, ['Control'], 'the primary modifier of the shortcut should commit');
-    assert.ok(entry.message.commandStartedAt >= before && entry.message.commandStartedAt <= Date.now(),
-      'the arm message should carry the time the command arrived, to replay a release that came first');
+    if (entry.tabId === 11) {
+      assert.ok(entry.message.commandStartedAt >= before && entry.message.commandStartedAt <= Date.now(),
+        'the command tab should get the time the command arrived, to replay a release that came first');
+    } else {
+      assert.strictEqual(entry.message.commandStartedAt, 0,
+        'other tabs should not replay a release buffered for an earlier switcher');
+    }
   });
 
   const debug = session.harness.context._lumnoTabSwitcherShortcutDebug.snapshot().map((event) => event.stage);
   ['command-received', 'shortcut-configured', 'switcher-opened'].forEach((stage) => {
     assert.ok(debug.includes(stage), `the shortcut trace should record ${stage}`);
   });
+}
+
+async function testCurrentWindowOnlyKeepsOtherWindowsOut() {
+  const session = bootSwitcher({ sync: { '_x_extension_tab_switcher_current_window_only_2026_unique_': true } });
+  await wait(30);
+  await session.visit([12, 13, 11]);
+  session.press();
+  await wait(400);
+  assert.deepStrictEqual(session.sent('openTabSwitcherFromCommand')[0].message.context.tabs.map((tab) => tab.id), [11, 13, 12],
+    'with the setting on, tabs from other windows should stay out of the list');
 }
 
 async function testRepeatedCommandAdvancesTheOpenSwitcher() {
@@ -271,6 +289,31 @@ async function testReleaseCommitsOnlyForTheConfiguredModifier() {
     'the commit should go straight to the tab the switcher opened on');
   const debug = session.harness.context._lumnoTabSwitcherShortcutDebug.snapshot().map((event) => event.stage);
   assert.ok(debug.includes('commit-host-resolved') && debug.includes('commit-finished'));
+}
+
+async function testReverseCommandOpensOnTheOldestTabAndCommitsOnItsModifier() {
+  const session = bootSwitcher({ shortcut: 'Alt+Q', reverseShortcut: '⌃⇧Q' });
+  await wait(30);
+  await session.visit([12, 13, 11]);
+  session.harness.calls.length = 0;
+  session.press('show-tab-switcher-reverse');
+  await wait(400);
+  assert.deepStrictEqual(session.sent('advanceOpenTabSwitcherFromCommand').map((entry) => entry.message.offset), [-1],
+    'the reverse command should move an open switcher back');
+  const context = session.sent('openTabSwitcherFromCommand')[0].message.context;
+  assert.deepStrictEqual(context.tabs.map((tab) => tab.id), [11, 13, 12, 15]);
+  assert.strictEqual(context.selectedIndex, 3, 'the reverse command should start on the oldest tab');
+  assert.strictEqual(context.reverse, true);
+  assert.strictEqual(context.shortcut, '⌃⇧Q', 'the page should hear the shortcut that opened it');
+  assert.deepStrictEqual(session.sent('armTabSwitcherShortcutRelease')[0].message.keys, ['Control']);
+
+  const sender = { tab: session.tabs.find((tab) => tab.id === 12), url: 'https://news.example.com/' };
+  const response = await new Promise((resolve) => {
+    session.harness.chrome.runtime.onMessage.dispatch(
+      { action: 'notifyTabSwitcherShortcutModifierReleased', key: 'Control' }, sender, resolve);
+  });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(response)), { ok: true, committed: true },
+    'releasing the reverse shortcut modifier should commit even when the forward shortcut uses another one');
 }
 
 async function testUncommittedHostIsNotReportedAsCommitted() {
@@ -472,7 +515,9 @@ async function testShowSearchOnTheNewtabFocusesItsInput() {
 
 (async () => {
   await testCommandOpensTheRecentTabsOnTheActivePage();
+  await testCurrentWindowOnlyKeepsOtherWindowsOut();
   await testRepeatedCommandAdvancesTheOpenSwitcher();
+  await testReverseCommandOpensOnTheOldestTabAndCommitsOnItsModifier();
   await testSuppressedAdvanceStillOpens();
   await testFallsBackToInjectingTheSwitcher();
   await testRepeatsWhileOpeningAreIgnored();

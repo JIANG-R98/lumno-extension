@@ -158,8 +158,12 @@ function formatShortcutReferencePart(part: unknown, options?: ShortcutDisplayOpt
   if (text.toLowerCase() === 'arrow keys') {
     return '↑↓←→';
   }
-  if (text.toLowerCase() === 'release alt') {
-    return resolvePlatform(options) === 'mac' ? '⌥↑' : 'Alt↑';
+  // "release Alt": letting go of a held modifier, shown as the key and ↑.
+  const release = text.match(/^release\s+(\S+)$/i);
+  if (release) {
+    const modifier = MODIFIER_ALIASES[release[1].toLowerCase()] || release[1];
+    const label = resolvePlatform(options) === 'mac' ? (MAC_MODIFIER_LABELS[modifier] || modifier) : modifier;
+    return `${label}↑`;
   }
   const sequence = text.split(/\s+/).filter(Boolean);
   if (sequence.length > 1) {
@@ -173,7 +177,7 @@ function formatShortcutReferencePart(part: unknown, options?: ShortcutDisplayOpt
 // Alternatives separated by "/".
 function formatShortcutReference(shortcut: unknown, options?: ShortcutDisplayOptions | null): string {
   return String(shortcut || '')
-    .split(/\s*\/\s*/)
+    .split(/\s+\/\s+/)
     .map((part) => formatShortcutReferencePart(part, options))
     .filter(Boolean)
     .join(' / ');

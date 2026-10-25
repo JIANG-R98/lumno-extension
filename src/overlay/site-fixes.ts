@@ -309,6 +309,7 @@ function createNoopRevealGate(): RevealGate {
     active: false,
     fixId: '',
     waitUntilReady: () => Promise.resolve({ ok: true, reason: 'not-needed' }),
+    isReady: () => true,
     release: () => {},
     cancel: () => {}
   });
@@ -383,10 +384,18 @@ function createOverlayRevealGate(win?: SiteFixWindow | null, options?: RevealGat
     return waitPromise;
   }
 
+  // Whether the styles have loaded by now. waitUntilReady settles once the
+  // first-frame budget expires, while the stylesheets may still finish loading
+  // before the panel is actually revealed.
+  function isReady(): boolean {
+    return stylesReady;
+  }
+
   return Object.freeze({
     active: true,
     fixId: activeFix.id,
     waitUntilReady,
+    isReady,
     release,
     cancel
   });
@@ -397,6 +406,8 @@ interface RevealGate {
   readonly active: boolean;
   readonly fixId: string;
   waitUntilReady(): Promise<RevealResult & { fixId?: string }>;
+  // Whether the styles have loaded by now, even after waitUntilReady gave up.
+  isReady(): boolean;
   release(): void;
   cancel(): void;
 }

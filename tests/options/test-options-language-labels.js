@@ -22,6 +22,16 @@ async function testLanguagePickerListsEveryLocaleInItsOwnName() {
   page.close();
 }
 
+// A saved language Lumno no longer ships falls back to following the browser.
+async function testDroppedLanguageFallsBackToSystem() {
+  const page = await createOptionsPage({ sync: { [settings.LANGUAGE_STORAGE_KEY]: 'it' } });
+  await page.settle(200);
+  assert.strictEqual(page.byId('_x_extension_language_select_2024_unique_').value, 'system');
+  assert.ok(settings.resolveSupportedLocale(page.document.documentElement.lang),
+    'the page should show a language Lumno has copy in');
+  page.close();
+}
+
 // The React-owned search-result source labels follow the active language,
 // from the first render on.
 async function testSourceLabelsFollowTheLanguage() {
@@ -40,6 +50,7 @@ async function testSourceLabelsFollowTheLanguage() {
 
 (async () => {
   await testLanguagePickerListsEveryLocaleInItsOwnName();
+  await testDroppedLanguageFallsBackToSystem();
   await testSourceLabelsFollowTheLanguage();
   console.log('options language label tests passed');
   process.exit(0);

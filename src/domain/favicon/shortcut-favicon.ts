@@ -3,6 +3,8 @@
 // file's dimensions, and the saved icon snapshots keyed by page.
 import * as faviconUtils from './favicon-utils';
 import type { SiteSearchProvider } from '../search/types';
+import type { ShortcutIconMap } from '../shortcut-icon-map';
+import type { ShortcutItem, ShortcutLink } from '../shortcuts-store';
 
 // What the icon helpers read from a site search provider.
 type IconProvider = Partial<Pick<SiteSearchProvider, 'key' | 'builtinKey' | 'template' | 'icon' | 'iconUrl'>>;
@@ -14,6 +16,8 @@ interface CachedIcon {
   // the browser's favicon cache.
   sourceUrl: string;
   updatedAt: number;
+  // Copied from the icon chosen for a shortcut to the same site.
+  fromShortcut?: true;
 }
 
 // Saved icons keyed by page URL (getCacheKey).
@@ -301,6 +305,12 @@ function isCachedIconForPage(entry: Partial<CachedIcon> | null | undefined, page
     const target = normalizePageUrl(faviconUtils.getPageUrlFromFaviconProxyUrl(sourceUrl));
     if (target && faviconUtils.isFaviconIsUrl(sourceUrl)) {
       return new URL(target).hostname === parsedPage.hostname;
+    }
+    // Remote services are asked about the site, never the page, so their
+    // icon stands for every page on it.
+    if (target && !faviconUtils.isSafeVirtualFaviconRequestUrl(sourceUrl) &&
+        target === normalizePageUrl(`${parsedPage.origin}/`)) {
+      return true;
     }
     if (!target || target !== page) return false;
     if (faviconUtils.isSafeVirtualFaviconRequestUrl(sourceUrl)) {
@@ -912,17 +922,115 @@ function normalizeCacheMap(value: unknown, nowValue?: unknown, options?: unknown
         (cacheOptions.cacheTtlMs > 0 && now - updatedAt > cacheOptions.cacheTtlMs)) {
       return [];
     }
-    return [{ key, dataUrl, sourceUrl, updatedAt }];
+    return [{ key, dataUrl, sourceUrl, updatedAt, fromShortcut: fields.fromShortcut === true }];
   }).sort((left, right) => right.updatedAt - left.updatedAt).slice(0, cacheOptions.cacheMaxEntries);
   const result: CachedIconMap = {};
   for (const entry of entries) {
     result[entry.key] = {
       dataUrl: entry.dataUrl,
       sourceUrl: entry.sourceUrl,
-      updatedAt: entry.updatedAt
+      updatedAt: entry.updatedAt,
+      ...(entry.fromShortcut ? { fromShortcut: true } : {})
     };
   }
   return result;
+}
+
+function getShortcutHomeHost(url: unknown): string {
+  const page = normalizePageUrl(url);
+  if (!page) {
+    return '';
+  }
+  const parsed = new URL(page);
+  return parsed.pathname === '/' && !parsed.search
+    ? parsed.hostname.toLowerCase().replace(/^www\./, '') : '';
+}
+
+// The image a home-page shortcut shows when its icon was chosen by hand: an
+// uploaded icon, or the Gstatic / Favicon.is snapshot it saved. The browser
+// cache and built-in choices match what site search already uses.
+function getShortcutChosenIcon(
+  shortcut: ShortcutLink,
+  shortcutIcons: ShortcutIconMap | null | undefined,
+  shortcutFavicons: CachedIconMap | null | undefined
+): string {
+  const id = String(shortcut.id || '').trim();
+  const uploaded = id && shortcutIcons ? String(shortcutIcons[id] || '') : '';
+  if (uploaded) {
+    return uploaded;
+  }
+  const source = shortcut.iconSource;
+  if (source !== 'service' && source !== 'favicon-is') {
+    return '';
+  }
+  const entry = shortcutFavicons ? shortcutFavicons[getCacheKey(shortcut.url)] : null;
+  return entry && entry.dataUrl && getCachedIconSource(entry) === source ? String(entry.dataUrl) : '';
+}
+
+// Custom site-search providers without bundled artwork take the icon chosen
+// for a shortcut to the same site's home page. Keyed like the site-search
+// icon cache.
+function getSiteSearchShortcutIcons(
+  providers: readonly IconProvider[] | null | undefined,
+  shortcuts: readonly ShortcutItem[] | null | undefined,
+  shortcutIcons: ShortcutIconMap | null | undefined,
+  shortcutFavicons: CachedIconMap | null | undefined
+): ShortcutIconMap {
+  const links = (shortcuts || []).filter((shortcut): shortcut is ShortcutLink => shortcut.type !== 'folder');
+  const result: ShortcutIconMap = {};
+  for (const provider of providers || []) {
+    const pageUrl = getSiteSearchProviderPageUrl(provider);
+    const key = getCacheKey(pageUrl);
+    if (!key || result[key] || getSiteSearchPinnedIconAssetPath(provider)) {
+      continue;
+    }
+    const host = getShortcutHomeHost(pageUrl);
+    const dataUrl = links.reduce((found, shortcut) => found || (
+      getShortcutHomeHost(shortcut.url) === host
+        ? getShortcutChosenIcon(shortcut, shortcutIcons, shortcutFavicons) : ''
+    ), '');
+    if (dataUrl) {
+      result[key] = dataUrl;
+    }
+  }
+  return result;
+}
+
+// Writes the shortcut icons into the site-search icon cache and drops the
+// ones whose shortcut no longer chooses an icon, so the warmup fetches the
+// site's own icon again. Returns null when nothing changes.
+function applySiteSearchShortcutIcons(
+  cacheMap: unknown,
+  shortcutIconMap: ShortcutIconMap | null | undefined,
+  nowValue?: unknown,
+  options?: unknown
+): CachedIconMap | null {
+  const current = normalizeCacheMap(cacheMap, nowValue, options);
+  const icons: ShortcutIconMap = shortcutIconMap || {};
+  const next: CachedIconMap = { ...current };
+  let changed = false;
+  Object.keys(current).forEach((key) => {
+    if (current[key].fromShortcut && !icons[key]) {
+      delete next[key];
+      changed = true;
+    }
+  });
+  Object.keys(icons).forEach((rawKey) => {
+    const key = getCacheKey(rawKey);
+    const dataUrl = normalizeDataUrl(icons[rawKey], options);
+    const entry = current[key];
+    if (!key || !dataUrl || (entry && entry.fromShortcut && entry.dataUrl === dataUrl)) {
+      return;
+    }
+    next[key] = {
+      dataUrl,
+      sourceUrl: '',
+      updatedAt: Number.isFinite(Number(nowValue)) ? Number(nowValue) : Date.now(),
+      fromShortcut: true
+    };
+    changed = true;
+  });
+  return changed ? normalizeCacheMap(next, nowValue, options) : null;
 }
 
 function setCachedIcon(
@@ -1003,6 +1111,8 @@ export {
   inspectIconResource,
   normalizeCacheMap,
   setCachedIcon,
+  getSiteSearchShortcutIcons,
+  applySiteSearchShortcutIcons,
   retainCachedIcons,
   getCachedIconDataUrl
 };

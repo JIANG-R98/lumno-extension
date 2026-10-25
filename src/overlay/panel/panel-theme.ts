@@ -91,7 +91,7 @@ function createPanelTheme(deps: PanelThemeDeps) {
       bg: 'linear-gradient(135deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 255, 255, 0.95) 100%)',
       modeMenuBg: '#FFFFFF',
       border: 'var(--x-lumno-search-shell-border-light, rgba(0, 0, 0, 0.14))',
-      shadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 2px 5px -2px rgba(15, 23, 42, 0.11), 0 16px 42px -12px rgba(15, 23, 42, 0.17), 0 48px 112px -30px rgba(15, 23, 42, 0.19)',
+      shadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 1px 2px rgba(15, 23, 42, 0.06), 0 10px 24px -6px rgba(15, 23, 42, 0.12), 0 36px 84px -12px rgba(15, 23, 42, 0.22), 0 96px 220px -16px rgba(15, 23, 42, 0.3), 0 0 140px 8px rgba(15, 23, 42, 0.08)',
       text: '#111827',
       subtext: '#6B7280',
       link: '#2563EB',
@@ -114,7 +114,7 @@ function createPanelTheme(deps: PanelThemeDeps) {
       lightPageBg: 'rgba(20, 20, 20, 0.82)',
       modeMenuBg: '#141414',
       border: 'var(--x-lumno-search-shell-border-dark, rgba(255, 255, 255, 0.16))',
-      shadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 2px 6px -2px rgba(0, 0, 0, 0.28), 0 18px 48px -14px rgba(0, 0, 0, 0.42), 0 52px 124px -34px rgba(0, 0, 0, 0.52)',
+      shadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 1px 3px rgba(0, 0, 0, 0.32), 0 12px 26px -6px rgba(0, 0, 0, 0.4), 0 40px 92px -12px rgba(0, 0, 0, 0.55), 0 104px 236px -16px rgba(0, 0, 0, 0.66), 0 0 150px 10px rgba(0, 0, 0, 0.3)',
       text: '#E5E7EB',
       subtext: '#9CA3AF',
       link: '#D1D5DB',
@@ -143,12 +143,27 @@ function createPanelTheme(deps: PanelThemeDeps) {
     });
   }
 
+  // Sampling hit-tests points across the viewport and reads their computed
+  // styles, which forces a full style and layout pass when the page has
+  // pending changes and costs hundreds of milliseconds on large pages. One
+  // reading serves the session until the page signals a theme change.
+  let pageThemeReading: { theme: PageTheme | null } | null = null;
+
   function detectPageTheme(): PageTheme | null {
-    return overlayPageTheme.detectPageTheme({
-      document,
-      window,
-      parseThemeColorRgb: parseCssColor
-    });
+    if (!pageThemeReading) {
+      pageThemeReading = {
+        theme: overlayPageTheme.detectPageTheme({
+          document,
+          window,
+          parseThemeColorRgb: parseCssColor
+        })
+      };
+    }
+    return pageThemeReading.theme;
+  }
+
+  function invalidatePageTheme(): void {
+    pageThemeReading = null;
   }
 
   function shouldObserveOverlayPageTheme(): boolean {
@@ -174,9 +189,12 @@ function createPanelTheme(deps: PanelThemeDeps) {
       return;
     }
     const observer = overlayState.overlayPageThemeObserver ||
-      overlayPageTheme.createPageThemeObserver(window, () => {
+      overlayPageTheme.createPageThemeObserver(window, (change) => {
         if (!overlayState.overlay || !overlayState.overlay.isConnected || !shouldObserveOverlayPageTheme()) {
           return;
+        }
+        if (change.pageChanged) {
+          invalidatePageTheme();
         }
         applyOverlayTheme(overlayState.overlayThemeMode);
       });
@@ -279,6 +297,7 @@ function createPanelTheme(deps: PanelThemeDeps) {
   return {
     getHighlightColors,
     detectPageTheme,
+    invalidatePageTheme,
     syncOverlayPageThemeObservation,
     applyOverlayFontFamily,
     applyOverlayThemeVariables,

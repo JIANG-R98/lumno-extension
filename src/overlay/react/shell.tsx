@@ -286,6 +286,16 @@ function appendOverlayStyleNodes(
     :where(#_x_extension_overlay_2024_unique_) :where(.x-ov-close-other-tabs) {
       right: calc(var(--x-ext-input-right-icon-inset, 13px) + 36px);
     }
+    /* The close-other-tabs popconfirm stays mounted while closed. Hidden
+       from the first frame, the stylesheet's closed state changes nothing
+       when it arrives, so its closing transition never plays unopened. */
+    :where(#_x_extension_overlay_2024_unique_) :where(.x-lumno-search-input__popconfirm) {
+      position: absolute;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(-6px) scale(0.98);
+    }
     :where(#_x_extension_overlay_2024_unique_[data-lumno-site-fix-style-fallback]) :where(.x-ov-suggestions-container) {
       visibility: hidden;
     }
@@ -469,7 +479,7 @@ function getPanelStyle(options: OverlayShellOptions): string {
     -webkit-backdrop-filter: blur(var(--x-ov-blur, 24px)) saturate(var(--x-ov-saturate, 165%)) !important;
     border: 1px solid var(--x-ov-border, var(--x-lumno-search-shell-border-light, rgba(0, 0, 0, 0.14))) !important;
     border-radius: var(--x-ov-panel-radius) !important;
-    box-shadow: var(--x-ov-shadow, inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 2px 5px -2px rgba(15, 23, 42, 0.11), 0 16px 42px -12px rgba(15, 23, 42, 0.17), 0 48px 112px -30px rgba(15, 23, 42, 0.19)) !important;
+    box-shadow: var(--x-ov-shadow, inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 1px 2px rgba(15, 23, 42, 0.06), 0 10px 24px -6px rgba(15, 23, 42, 0.12), 0 36px 84px -12px rgba(15, 23, 42, 0.22), 0 96px 220px -16px rgba(15, 23, 42, 0.3), 0 0 140px 8px rgba(15, 23, 42, 0.08)) !important;
     z-index: 2147483647 !important;
     font-family: var(--lumno-font-sans, sans-serif) !important;
     display: flex !important;

@@ -28,6 +28,9 @@ interface ToggleControlsState {
 interface ToggleControlsDeps {
   optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>,
     'createToggleControlController' | 'createRequiredCheckboxGroupController'>;
+  tabSwitcherToggle: HTMLInputElement | null;
+  // The rows under the tab switcher switch, open while it is on.
+  tabSwitcherSubrows: HTMLElement | null;
   selectionQuickActionsToggle: HTMLInputElement | null;
   selectionQuickActionsProviderSelect: HTMLSelectElement | null;
   renderOptionsSelectControl(select: HTMLSelectElement): void;
@@ -67,6 +70,8 @@ interface SourceTypeItem {
 function createToggleControls(deps: ToggleControlsDeps) {
   const {
     optionsSettingsControlsApi,
+    tabSwitcherToggle,
+    tabSwitcherSubrows,
     selectionQuickActionsToggle,
     selectionQuickActionsProviderSelect,
     renderOptionsSelectControl,
@@ -143,37 +148,42 @@ function createToggleControls(deps: ToggleControlsDeps) {
     record.controller.render(record.model);
   }
 
-  // The sub-rows open and fold with the switch. The first sync only places
+  // Sub-rows open and fold with their switch. The first sync only places
   // them (no motion while the page loads its settings); later ones animate.
-  if (selectionQuickActionsSubrows) {
-    selectionQuickActionsSubrows.addEventListener('transitionend', (event) => {
-      if (event.target === selectionQuickActionsSubrows
+  function createSubrowsReveal(wrap: HTMLElement | null): (expanded: boolean) => void {
+    if (!wrap) {
+      return () => {};
+    }
+    wrap.addEventListener('transitionend', (event) => {
+      if (event.target === wrap
         && event.propertyName === 'grid-template-rows'
-        && selectionQuickActionsSubrows.getAttribute('data-expanded') === 'true') {
-        selectionQuickActionsSubrows.setAttribute('data-settled', 'true');
+        && wrap.getAttribute('data-expanded') === 'true') {
+        wrap.setAttribute('data-settled', 'true');
       }
     });
+    let motionQueued = false;
+    return function setExpanded(expanded: boolean): void {
+      const next = expanded ? 'true' : 'false';
+      if (wrap.getAttribute('data-expanded') !== next) {
+        wrap.setAttribute('data-expanded', next);
+        wrap.inert = !expanded;
+        const instant = wrap.getAttribute('data-motion') === 'off'
+          || getComputedStyle(wrap).transitionDuration.split(',').every((value) => parseFloat(value) === 0);
+        wrap.setAttribute('data-settled', expanded && instant ? 'true' : 'false');
+      }
+      if (!motionQueued && wrap.getAttribute('data-motion') === 'off') {
+        motionQueued = true;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          wrap.removeAttribute('data-motion');
+        }));
+      }
+    };
   }
-  let selectionQuickActionsSubrowsMotionQueued = false;
-  function setSelectionQuickActionsSubrowsExpanded(expanded: boolean): void {
-    const wrap = selectionQuickActionsSubrows;
-    if (!wrap) {
-      return;
-    }
-    const next = expanded ? 'true' : 'false';
-    if (wrap.getAttribute('data-expanded') !== next) {
-      wrap.setAttribute('data-expanded', next);
-      wrap.inert = !expanded;
-      const instant = wrap.getAttribute('data-motion') === 'off'
-        || getComputedStyle(wrap).transitionDuration.split(',').every((value) => parseFloat(value) === 0);
-      wrap.setAttribute('data-settled', expanded && instant ? 'true' : 'false');
-    }
-    if (!selectionQuickActionsSubrowsMotionQueued && wrap.getAttribute('data-motion') === 'off') {
-      selectionQuickActionsSubrowsMotionQueued = true;
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        wrap.removeAttribute('data-motion');
-      }));
-    }
+  const setSelectionQuickActionsSubrowsExpanded = createSubrowsReveal(selectionQuickActionsSubrows);
+  const setTabSwitcherSubrowsExpanded = createSubrowsReveal(tabSwitcherSubrows);
+
+  function syncTabSwitcherSubrows(): void {
+    setTabSwitcherSubrowsExpanded(Boolean(tabSwitcherToggle && tabSwitcherToggle.checked));
   }
 
   function syncSelectionQuickActionsProviderAvailability(): void {
@@ -202,7 +212,8 @@ function createToggleControls(deps: ToggleControlsDeps) {
   const TOGGLE_SETTINGS = LumnoOptionsToggleSettings.getToggleSettings(SETTINGS, {
     faviconBlacklistEditor: setFaviconBlacklistEditorEnabled,
     newtabShortcutSubcontrols: syncNewtabShortcutSubcontrolAvailability,
-    selectionQuickActionsAvailability: syncSelectionQuickActionsProviderAvailability
+    selectionQuickActionsAvailability: syncSelectionQuickActionsProviderAvailability,
+    tabSwitcherSubrows: syncTabSwitcherSubrows
   });
   // Each switch's React view replaces its <input> in the document. The page
   // keeps working with the original element: the view reports clicks to it as

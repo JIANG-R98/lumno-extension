@@ -267,6 +267,8 @@ const NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY = '_x_extension_newtab_wallpaper_over
 const NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY = '_x_extension_newtab_wallpaper_effect_2026_unique_';
 const NEWTAB_FAVICON_STORAGE_KEY = '_x_extension_newtab_favicon_2026_unique_';
 const OVERLAY_SIZE_MODE_STORAGE_KEY = '_x_extension_overlay_size_mode_2026_unique_';
+// A custom panel width in CSS px; unset follows the size mode's own width.
+const OVERLAY_WIDTH_STORAGE_KEY = '_x_extension_overlay_width_2026_unique_';
 // An installed family name, or the empty string for the bundled Lumno stack.
 // A missing face falls back to the bundled stack.
 const OVERLAY_FONT_FAMILY_STORAGE_KEY = '_x_extension_overlay_font_family_2026_unique_';
@@ -297,6 +299,7 @@ const HIDDEN_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_hidden_recent_sites
 const NEWTAB_SHORTCUTS_STORAGE_KEY = '_x_extension_newtab_shortcuts_2026_unique_';
 const AUTO_PIP_ENABLED_STORAGE_KEY = '_x_extension_auto_pip_enabled_2026_unique_';
 const TAB_SWITCHER_ENABLED_STORAGE_KEY = '_x_extension_tab_switcher_enabled_2026_unique_';
+const TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY = '_x_extension_tab_switcher_current_window_only_2026_unique_';
 const DOCUMENT_PIP_ENABLED_STORAGE_KEY = '_x_extension_document_pip_enabled_2026_unique_';
 const PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY = '_x_extension_pinned_tab_recovery_enabled_2026_unique_';
 const LINK_PREVIEW_ENABLED_STORAGE_KEY = '_x_extension_link_preview_enabled_2026_unique_';
@@ -465,6 +468,7 @@ const CHROME_SYNC_STORAGE_KEYS: readonly string[] = Object.freeze([
   NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY,
   NEWTAB_FAVICON_STORAGE_KEY,
   OVERLAY_SIZE_MODE_STORAGE_KEY,
+  OVERLAY_WIDTH_STORAGE_KEY,
   OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
   OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
   BOOKMARK_COUNT_STORAGE_KEY,
@@ -497,6 +501,7 @@ const CHROME_SYNC_STORAGE_KEYS: readonly string[] = Object.freeze([
   MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY,
   AUTO_PIP_ENABLED_STORAGE_KEY,
   TAB_SWITCHER_ENABLED_STORAGE_KEY,
+  TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY,
   DOCUMENT_PIP_ENABLED_STORAGE_KEY,
   PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY,
   LINK_PREVIEW_ENABLED_STORAGE_KEY,
@@ -536,7 +541,6 @@ const CHROME_SYNC_STORAGE_KEYS: readonly string[] = Object.freeze([
 
 // The UI languages, in the language picker's order. `id` is the _locales
 // folder (a Chrome locale code), `name` is the language in its own words.
-// Right-to-left languages are left out until the styles handle them.
 // `machineTranslated` marks copy that no native speaker has reviewed yet.
 const UI_LOCALE_ENTRIES: ReadonlyArray<readonly [string, string, boolean?]> = [
   ['zh_CN', '简体中文'],
@@ -544,49 +548,11 @@ const UI_LOCALE_ENTRIES: ReadonlyArray<readonly [string, string, boolean?]> = [
   ['ja', '日本語'],
   ['en', 'English'],
   ['ko', '한국어', true],
-  ['id', 'Bahasa Indonesia', true],
-  ['ms', 'Bahasa Melayu', true],
-  ['ca', 'Català', true],
-  ['cs', 'Čeština', true],
-  ['da', 'Dansk', true],
   ['de', 'Deutsch', true],
-  ['et', 'Eesti', true],
   ['es', 'Español', true],
-  ['fil', 'Filipino', true],
   ['fr', 'Français', true],
-  ['hr', 'Hrvatski', true],
-  ['it', 'Italiano', true],
-  ['sw', 'Kiswahili', true],
-  ['lv', 'Latviešu', true],
-  ['lt', 'Lietuvių', true],
-  ['hu', 'Magyar', true],
-  ['nl', 'Nederlands', true],
-  ['no', 'Norsk', true],
-  ['pl', 'Polski', true],
   ['pt_BR', 'Português (Brasil)', true],
-  ['pt_PT', 'Português (Portugal)', true],
-  ['ro', 'Română', true],
-  ['sk', 'Slovenčina', true],
-  ['sl', 'Slovenščina', true],
-  ['fi', 'Suomi', true],
-  ['sv', 'Svenska', true],
-  ['vi', 'Tiếng Việt', true],
-  ['tr', 'Türkçe', true],
-  ['el', 'Ελληνικά', true],
-  ['bg', 'Български', true],
-  ['ru', 'Русский', true],
-  ['sr', 'Српски', true],
-  ['uk', 'Українська', true],
-  ['am', 'አማርኛ', true],
-  ['hi', 'हिन्दी', true],
-  ['mr', 'मराठी', true],
-  ['bn', 'বাংলা', true],
-  ['gu', 'ગુજરાતી', true],
-  ['ta', 'தமிழ்', true],
-  ['te', 'తెలుగు', true],
-  ['kn', 'ಕನ್ನಡ', true],
-  ['ml', 'മലയാളം', true],
-  ['th', 'ไทย', true]
+  ['ru', 'Русский', true]
 ];
 const UI_LOCALES: readonly UiLocale[] = Object.freeze(UI_LOCALE_ENTRIES.map(([id, name, machineTranslated]) => Object.freeze({
   id,
@@ -595,8 +561,6 @@ const UI_LOCALES: readonly UiLocale[] = Object.freeze(UI_LOCALE_ENTRIES.map(([id
   machineTranslated: Boolean(machineTranslated)
 })));
 const UI_LOCALES_BY_ID: ReadonlyMap<string, UiLocale> = new Map(UI_LOCALES.map((entry) => [entry.id, entry]));
-// Language subtags browsers report under another name than the _locales folder.
-const LOCALE_SUBTAG_ALIASES: ReadonlyMap<string, string> = new Map([['nb', 'no'], ['nn', 'no'], ['tl', 'fil'], ['in', 'id']]);
 
 function isOneOf<T extends string>(list: readonly T[], value: unknown): value is T {
   return list.some((item) => item === value);
@@ -628,12 +592,12 @@ function resolveSupportedLocale(locale: unknown): string {
     }
     return 'zh_CN';
   }
-  const [language, ...rest] = lower.split('-');
+  const language = lower.split('-')[0];
+  // Portuguese from any region reads the Brazilian copy.
   if (language === 'pt') {
-    return rest.includes('pt') ? 'pt_PT' : 'pt_BR';
+    return 'pt_BR';
   }
-  const id = LOCALE_SUBTAG_ALIASES.get(language) || language;
-  return UI_LOCALES_BY_ID.has(id) ? id : '';
+  return UI_LOCALES_BY_ID.has(language) ? language : '';
 }
 
 function normalizeLocale(locale: unknown): string {
@@ -968,6 +932,40 @@ function normalizeOverlaySizeMode(value: unknown): OverlaySizeMode {
   return 'standard';
 }
 
+interface OverlaySizePreset {
+  // The panel width in CSS px before zoom compensation.
+  width: number;
+  maxHeightVh: number;
+  // The scale applied to the panel's contents.
+  uiScale: number;
+}
+
+// What each size draws: the panel width before zoom compensation, its height
+// cap and the scale applied to its contents.
+const OVERLAY_SIZE_PRESETS: Readonly<Record<OverlaySizeMode, Readonly<OverlaySizePreset>>> = Object.freeze({
+  compact: Object.freeze({ width: 680, maxHeightVh: 72, uiScale: 0.94 }),
+  standard: Object.freeze({ width: 760, maxHeightVh: 75, uiScale: 1 }),
+  large: Object.freeze({ width: 840, maxHeightVh: 80, uiScale: 1.06 })
+});
+const OVERLAY_WIDTH_MIN = 560;
+const OVERLAY_WIDTH_MAX = 1040;
+
+function getOverlaySizePreset(mode: unknown): Readonly<OverlaySizePreset> {
+  return OVERLAY_SIZE_PRESETS[normalizeOverlaySizeMode(mode)];
+}
+
+// A custom width, or null when the panel follows its size mode.
+function normalizeOverlayWidth(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return null;
+  }
+  return Math.min(OVERLAY_WIDTH_MAX, Math.max(OVERLAY_WIDTH_MIN, Math.round(number)));
+}
+
 function normalizeOverlayEnterAnimation(value: unknown): OverlayEnterAnimation {
   return value === 'fade' ? 'fade' : 'elastic';
 }
@@ -1096,6 +1094,10 @@ function normalizeTabSwitcherEnabled(value: unknown): boolean {
   return value !== false;
 }
 
+function normalizeTabSwitcherCurrentWindowOnly(value: unknown): boolean {
+  return value === true;
+}
+
 function normalizeLinkPreviewEnabled(value: unknown): boolean {
   return value !== false;
 }
@@ -1164,6 +1166,7 @@ export {
   NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY,
   NEWTAB_FAVICON_STORAGE_KEY,
   OVERLAY_SIZE_MODE_STORAGE_KEY,
+  OVERLAY_WIDTH_STORAGE_KEY,
   OVERLAY_FONT_FAMILY_STORAGE_KEY,
   OVERLAY_FONT_FALLBACK_STORAGE_KEY,
   OVERLAY_FONT_LABELS_STORAGE_KEY,
@@ -1178,6 +1181,7 @@ export {
   NEWTAB_SHORTCUTS_STORAGE_KEY,
   AUTO_PIP_ENABLED_STORAGE_KEY,
   TAB_SWITCHER_ENABLED_STORAGE_KEY,
+  TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY,
   DOCUMENT_PIP_ENABLED_STORAGE_KEY,
   PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY,
   LINK_PREVIEW_ENABLED_STORAGE_KEY,
@@ -1338,6 +1342,11 @@ export {
   normalizeOverlayOpenTabsDefaultVisible,
   normalizeOverlayPageThemeAdaptationEnabled,
   normalizeOverlaySizeMode,
+  OVERLAY_SIZE_PRESETS,
+  OVERLAY_WIDTH_MIN,
+  OVERLAY_WIDTH_MAX,
+  getOverlaySizePreset,
+  normalizeOverlayWidth,
   normalizeOverlayEnterAnimation,
   normalizeOverlayFontFamily,
   normalizeOverlayFontLabels,
@@ -1351,6 +1360,7 @@ export {
   normalizeTabRankScoreDebugMode,
   normalizeRestrictedAction,
   normalizeTabSwitcherEnabled,
+  normalizeTabSwitcherCurrentWindowOnly,
   normalizeLinkPreviewEnabled,
   normalizeSelectionQuickActionsEnabled,
   normalizeSelectionQuickActionsProvider,
@@ -1375,6 +1385,7 @@ export type {
   NewtabWidthMode,
   OverlayEnterAnimation,
   OverlaySizeMode,
+  OverlaySizePreset,
   RangeOptions,
   RestrictedAction,
   SearchResultPriority,

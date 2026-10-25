@@ -71,6 +71,7 @@ import './overlay-loading-lifecycle';
 import * as DEV_EXTENSION_STARTUP from './dev-extension-startup';
 import {
   applyTabSwitcherEnabledSetting,
+  applyTabSwitcherCurrentWindowOnlySetting,
   clearSwitcherThumbnailPriority,
   ensureTabSwitcherStateLoaded,
   flushPendingTabSwitcherState,
@@ -95,6 +96,8 @@ import {
   invalidateFaviconEnhancedFetchEnabledCache,
   invalidateFaviconRequestBlacklistCache,
   invalidateShortcutFaviconPolicyCache,
+  invalidateSiteSearchShortcutIconSources,
+  isSiteSearchShortcutIconStorageChange,
   markFaviconDirtyForUrl
 } from './favicon-service';
 import {
@@ -180,6 +183,7 @@ import {
   SHOW_SEARCH_PREFILL_COMMAND_NAME,
   SHOW_SEARCH_PREFILL_V_COMMAND_NAME,
   SHOW_TAB_SWITCHER_COMMAND_NAME,
+  SHOW_TAB_SWITCHER_REVERSE_COMMAND_NAME,
   diagnosticsLog,
   getImportScripts,
   isPrimaryStorageAreaName,
@@ -222,6 +226,7 @@ storageArea.get([
   RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
   DOCUMENT_PIP_ENABLED_STORAGE_KEY,
   TAB_SWITCHER_ENABLED_STORAGE_KEY,
+  SETTINGS.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY,
   PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY
 ], (storedResult) => {
   const result = storedResult || {};
@@ -244,6 +249,9 @@ storageArea.get([
     storageArea.set({ [TAB_SWITCHER_ENABLED_STORAGE_KEY]: normalizedTabSwitcher });
   }
   applyTabSwitcherEnabledSetting(normalizedTabSwitcher);
+  applyTabSwitcherCurrentWindowOnlySetting(SETTINGS.normalizeTabSwitcherCurrentWindowOnly(
+    result[SETTINGS.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY]
+  ));
   const pinnedTabRecoveryStored = result[PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY];
   applyPinnedTabRecoverySetting(pinnedTabRecoveryStored);
   markBackgroundSettingsLoaded();
@@ -274,10 +282,13 @@ chrome.commands.onCommand.addListener(function(command) {
     command !== SHOW_SEARCH_COMMAND_NAME &&
     command !== SHOW_SEARCH_PREFILL_COMMAND_NAME &&
     command !== SHOW_SEARCH_PREFILL_V_COMMAND_NAME &&
-    command !== SHOW_TAB_SWITCHER_COMMAND_NAME
+    command !== SHOW_TAB_SWITCHER_COMMAND_NAME &&
+    command !== SHOW_TAB_SWITCHER_REVERSE_COMMAND_NAME
   ) {
     return;
   }
+  const isTabSwitcherCommand = command === SHOW_TAB_SWITCHER_COMMAND_NAME ||
+    command === SHOW_TAB_SWITCHER_REVERSE_COMMAND_NAME;
   const commandObservedAt = Date.now();
   const source = command === SHOW_SEARCH_COMMAND_NAME
     ? 'commands'
@@ -290,8 +301,9 @@ chrome.commands.onCommand.addListener(function(command) {
       triggerCopyCurrentUrlForTab(activeTabs[0], source);
       return;
     }
-    if (command === SHOW_TAB_SWITCHER_COMMAND_NAME) {
-      triggerTabSwitcherForTab(activeTabs[0], source, commandObservedAt);
+    if (isTabSwitcherCommand) {
+      triggerTabSwitcherForTab(activeTabs[0], source, commandObservedAt,
+        command === SHOW_TAB_SWITCHER_REVERSE_COMMAND_NAME ? -1 : 1);
       return;
     }
     triggerShowSearchForTab(activeTabs[0], source);
@@ -651,7 +663,8 @@ const WEB_PAGE_MESSAGE_ACTIONS = Object.freeze([
   'recordSearchSuggestionSelection', 'deleteHistoryUrl',
   'getSiteSearchProviders', 'getHelpCenterSearchResults', 'runSiteSearchProviderQuery',
   'runAggregateSearchQuery', 'runSelectionQuickAction',
-  'linkPreviewPrepare', 'linkPreviewOpen', 'linkPreviewClose', 'linkPreviewOpenInTab',
+  'linkPreviewPrepare', 'linkPreviewOpen', 'linkPreviewCancel', 'linkPreviewClose', 'linkPreviewOpenInTab',
+  'linkPreviewFrameBind', 'linkPreviewFrameNavigating', 'linkPreviewFrameCommitted', 'linkPreviewFrameRefused',
   'getLocaleMessages', 'openOptionsPage', 'openReleasePage', 'createTab', 'openNewTab',
   'getFaviconData'
 ]);
@@ -669,6 +682,7 @@ const backgroundMessageSenderPolicy = BACKGROUND_MESSAGE_ROUTER.createSenderPoli
     linkPreviewPrepare: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
     linkPreviewOpen: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
     linkPreviewOpenInTab: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
+    linkPreviewFrameNavigating: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
     setWebAppearance: (request) => Boolean(LumnoWebAppearance.normalizeMode(request.mode)),
     runSiteSearchProviderQuery: (request) => {
       const entryUrl = getSiteSearchProviderEntryUrl(readSiteSearchProvider(request.provider), request.query);
@@ -738,6 +752,21 @@ if (chrome && chrome.tabs) {
 
 warmSiteSearchProviderIcons();
 
+// Site-search icons follow the icon chosen for a home-page shortcut. One
+// shortcut save touches several keys, so they settle before the rewarm.
+let siteSearchShortcutIconRewarmTimer: ReturnType<typeof setTimeout> | undefined;
+chrome.storage.onChanged.addListener((changes) => {
+  if (!isSiteSearchShortcutIconStorageChange(changes)) {
+    return;
+  }
+  invalidateSiteSearchShortcutIconSources();
+  clearTimeout(siteSearchShortcutIconRewarmTimer);
+  siteSearchShortcutIconRewarmTimer = setTimeout(() => {
+    siteSearchShortcutIconRewarmTimer = undefined;
+    warmSiteSearchProviderIcons();
+  }, 300);
+});
+
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (!isPrimaryStorageAreaName(areaName)) {
     return;
@@ -769,6 +798,11 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     if (typeof next !== 'undefined' && next !== normalized) {
       storageArea.set({ [TAB_SWITCHER_ENABLED_STORAGE_KEY]: normalized });
     }
+  }
+  if (changes[SETTINGS.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY]) {
+    applyTabSwitcherCurrentWindowOnlySetting(SETTINGS.normalizeTabSwitcherCurrentWindowOnly(
+      changes[SETTINGS.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY].newValue
+    ));
   }
   if (changes[PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY]) {
     const next = changes[PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY].newValue;

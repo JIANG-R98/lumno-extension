@@ -217,7 +217,9 @@ function getShortcutTriggerEventKey(shortcut: unknown): string {
     return: 'Enter',
     esc: 'Escape',
     space: ' ',
-    spacebar: ' '
+    spacebar: ' ',
+    tab: 'Tab',
+    '⇥': 'Tab'
   };
   if (Object.prototype.hasOwnProperty.call(aliases, token)) {
     return aliases[token];

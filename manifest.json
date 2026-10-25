@@ -34,6 +34,9 @@
         "default": "Alt+Q",
         "mac": "Alt+Q"
       }
+    },
+    "show-tab-switcher-reverse": {
+      "description": "__MSG_command_show_tab_switcher_reverse__"
     }
   },
   "content_scripts": [
@@ -166,7 +169,8 @@
     "unlimitedStorage",
     "contextMenus",
     "fontSettings",
-    "declarativeNetRequestWithHostAccess"
+    "declarativeNetRequestWithHostAccess",
+    "webRequest"
   ],
   "version": "1.2.0"
 }

@@ -564,7 +564,7 @@
     "message": "Utiliser dans Dia"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "Dans Dia, en raison des limitations du navigateur, les fonctionnalités Nouvel onglet de Lumno sont temporairement indisponibles, mais la barre de commandes fonctionne normalement.\n\nSi le raccourci clavier ne fonctionne pas dans Dia, cliquez sur le bouton en bas à droite pour ouvrir la page des raccourcis du navigateur, puis passez «\u00a0Open command bar\u00a0» de In Dia à Global."
+    "message": "Dia ne permet pas aux extensions de remplacer le nouvel onglet, donc le Nouvel onglet de Lumno n'y est pas disponible. La barre de commandes fonctionne normalement.\n\nPour ouvrir la barre de commandes avec ⌘T\u00a0: les raccourcis de Dia sont prioritaires, donc ouvrez d'abord Settings → Shortcuts dans Dia et remplacez le ⌘T de «\u00a0New Tab\u00a0» par une autre touche. Cliquez ensuite sur le bouton en bas à droite et définissez «\u00a0Open command bar\u00a0» sur ⌘T.\n\nSi le raccourci clavier ne répond pas dans Dia, passez sa portée de In Dia à Global."
   },
   "settings_shortcuts_section_title": {
     "message": "Raccourcis clavier"
@@ -691,6 +691,12 @@
   },
   "settings_overlay_size_title": {
     "message": "Taille"
+  },
+  "settings_overlay_width_title": {
+    "message": "Largeur"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Suivre la taille"
   },
   "overlay_size_compact": {
     "message": "Compacte"
@@ -2117,6 +2123,9 @@
   "settings_aggregate_search_auto_group_title": {
     "message": "Grouper automatiquement les onglets des recherches combinées"
   },
+  "settings_aggregate_search_auto_group_short_title": {
+    "message": "Créer automatiquement des groupes d’onglets"
+  },
   "settings_aggregate_search_auto_group_desc": {
     "message": "Si cette option est activée, tous les onglets ouverts par une recherche combinée sont placés dans un groupe nommé «\u00a0Nom de la recherche\u00a0: requête\u00a0»"
   },
@@ -2273,6 +2282,18 @@
   "link_preview_open_in_tab": {
     "message": "Ouvrir dans un nouvel onglet"
   },
+  "link_preview_copy_link": {
+    "message": "Copier le lien"
+  },
+  "link_preview_link_copied": {
+    "message": "Lien copié"
+  },
+  "link_preview_reload": {
+    "message": "Actualiser"
+  },
+  "link_preview_back": {
+    "message": "Retour"
+  },
   "link_preview_blocked": {
     "message": "Cette page ne peut pas s’afficher dans un aperçu"
   },
@@ -2333,6 +2354,9 @@
   "command_show_tab_switcher": {
     "message": "Ouvrir le sélecteur d’onglets récents"
   },
+  "command_show_tab_switcher_reverse": {
+    "message": "Ouvrir le sélecteur d’onglets récents en sens inverse"
+  },
   "shortcut_reference_title": {
     "message": "Raccourcis clavier"
   },
@@ -2374,6 +2398,12 @@
   },
   "shortcut_reference_tab_switcher_desc": {
     "message": "Ouvrir le sélecteur d’onglets récents"
+  },
+  "shortcut_reference_tab_switcher_reverse_title": {
+    "message": "Ouvrir le sélecteur d’onglets récents en sens inverse"
+  },
+  "shortcut_reference_tab_switcher_reverse_desc": {
+    "message": "Ouvrir le sélecteur avec l’onglet le plus ancien sélectionné"
   },
   "shortcut_reference_search_input_history_title": {
     "message": "Saisie précédente ou suivante"
@@ -2770,6 +2800,27 @@
   },
   "settings_tab_switcher_desc": {
     "message": "Passez rapidement d’un onglet récent à l’autre\u00a0; {shortcut} par défaut, personnalisable"
+  },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Changer avec {shortcut}, comme dans Arc"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Guide : {shortcut} comme dans Arc"
+  },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "Afficher uniquement les onglets de la fenêtre actuelle"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "Pour les navigateurs qui ouvrent chaque espace dans sa propre fenêtre, afin que les onglets des autres espaces restent hors de la liste"
+  },
+  "settings_features_section_title": {
+    "message": "Fonctionnalités"
+  },
+  "settings_link_preview_title": {
+    "message": "Aperçu des liens"
+  },
+  "settings_link_preview_desc": {
+    "message": "Cliquez sur un lien en maintenant Maj pour l’afficher dans une petite fenêtre au-dessus de la page, puis fermez-la ou déplacez-la dans un onglet"
   },
   "slash_command_empty": {
     "message": "Aucune commande correspondante"
@@ -3553,6 +3604,9 @@
   },
   "settings_newtab_glass_theme_title": {
     "message": "Thème de la matière"
+  },
+  "settings_newtab_glass_theme_desc": {
+    "message": "Auto : suit le mode du thème, mais passe à une matière sombre sur les fonds d’écran plus sombres pour garder le texte lisible.\nClair / Sombre : fixent la matière et appliquent le même thème au Nouvel onglet."
   },
   "settings_newtab_glass_theme_follow": {
     "message": "Auto"

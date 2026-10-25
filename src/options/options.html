@@ -135,10 +135,32 @@
                 <span class="_x_extension_info_button_2026_unique_ _x_extension_tooltip_host_2026_unique_" data-i18n-tooltip="settings_tab_switcher_desc" data-tooltip="快速切换最近标签页，默认 {shortcut}，可自定义" aria-label="快速切换最近标签页，默认 {shortcut}，可自定义" role="img" tabindex="0"><i class="ri-icon ri-size-14 ri-information-line" aria-hidden="true"></i></span>
               </p>
             </div>
-            <label class="_x_extension_switch_2024_unique_" for="_x_extension_tab_switcher_toggle_2026_unique_">
-              <input id="_x_extension_tab_switcher_toggle_2026_unique_" type="checkbox" checked>
-              <span class="_x_extension_switch_slider_2024_unique_" aria-hidden="true"></span>
-            </label>
+            <div class="_x_extension_setting_row_actions_2026_unique_">
+              <a id="_x_extension_tab_switcher_ctrl_tab_link_2026_unique_" class="_x_extension_shortcut_submit_2024_unique_ _x_extension_shortcut_ghost_2026_unique_" data-browser-only="chromium" target="_blank" rel="noopener noreferrer" hidden>
+                <span data-ctrl-tab-label></span>
+                <i class="ri-icon ri-size-14 ri-external-link-line" aria-hidden="true"></i>
+              </a>
+              <label class="_x_extension_switch_2024_unique_" for="_x_extension_tab_switcher_toggle_2026_unique_">
+                <input id="_x_extension_tab_switcher_toggle_2026_unique_" type="checkbox" checked>
+                <span class="_x_extension_switch_slider_2024_unique_" aria-hidden="true"></span>
+              </label>
+            </div>
+          </div>
+          <div id="_x_extension_tab_switcher_subrows_2026_unique_" class="_x_extension_setting_reveal_2026_unique_" data-expanded="false" data-motion="off" inert>
+            <div class="_x_extension_setting_reveal_inner_2026_unique_">
+              <div class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_ _x_extension_setting_subrow_2026_unique_">
+                <div>
+                  <p class="_x_extension_setting_title_2024_unique_ _x_extension_setting_title_with_icon_2024_unique_">
+                    <span data-i18n="settings_tab_switcher_current_window_only_title">只显示当前窗口的标签页</span>
+                    <span class="_x_extension_info_button_2026_unique_ _x_extension_tooltip_host_2026_unique_" data-i18n-tooltip="settings_tab_switcher_current_window_only_desc" data-tooltip="适用于把每个空间放在独立窗口的浏览器，避免列出其他空间的标签页" aria-label="适用于把每个空间放在独立窗口的浏览器，避免列出其他空间的标签页" role="img" tabindex="0"><i class="ri-icon ri-size-14 ri-information-line" aria-hidden="true"></i></span>
+                  </p>
+                </div>
+                <label class="_x_extension_switch_2024_unique_" for="_x_extension_tab_switcher_current_window_only_toggle_2026_unique_">
+                  <input id="_x_extension_tab_switcher_current_window_only_toggle_2026_unique_" type="checkbox" aria-label="只显示当前窗口的标签页" data-i18n-aria-label="settings_tab_switcher_current_window_only_title">
+                  <span class="_x_extension_switch_slider_2024_unique_" aria-hidden="true"></span>
+                </label>
+              </div>
+            </div>
           </div>
           <div class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_">
             <div>
@@ -422,8 +444,8 @@
                   class="_x_extension_shortcut_badge_2024_unique_ _x_extension_shortcuts_dia_badge_2026_unique_ _x_extension_tooltip_host_2024_unique_"
                   data-browser-only="chromium"
                   data-i18n-tooltip="settings_shortcuts_dia_tooltip"
-                  data-tooltip="在 Dia 环境下，受浏览器限制，Lumno 的新标签页功能暂不可用，但聚焦搜索功能仍可正常运行。&#10;&#10;若快捷键在 Dia 中不可用，请点击下方右侧按钮进入浏览器的快捷键设置页面，将「Open command bar」从 In Dia 改成 Global。"
-                  aria-label="在 Dia 环境下，受浏览器限制，Lumno 的新标签页功能暂不可用，但聚焦搜索功能仍可正常运行。若快捷键在 Dia 中不可用，请点击下方右侧按钮进入浏览器的快捷键设置页面，将「Open command bar」从 In Dia 改成 Global。"
+                  data-tooltip="Dia 不允许扩展替换新标签页，所以 Lumno 的新标签页在 Dia 中暂不可用，聚焦搜索可以正常使用。&#10;&#10;想用 ⌘T 唤起聚焦搜索：Dia 自带快捷键的优先级更高，请先在 Dia 的 Settings → Shortcuts 中，把「New Tab」的 ⌘T 改成其他按键，再点击下方右侧按钮，将「Open command bar」设为 ⌘T。&#10;&#10;若快捷键在 Dia 中没有反应，请将其作用范围从 In Dia 改成 Global。"
+                  aria-label="Dia 不允许扩展替换新标签页，所以 Lumno 的新标签页在 Dia 中暂不可用，聚焦搜索可以正常使用。想用 ⌘T 唤起聚焦搜索：Dia 自带快捷键的优先级更高，请先在 Dia 的 Settings → Shortcuts 中，把「New Tab」的 ⌘T 改成其他按键，再点击下方右侧按钮，将「Open command bar」设为 ⌘T。若快捷键在 Dia 中没有反应，请将其作用范围从 In Dia 改成 Global。"
                   role="img">
                   <span data-i18n="settings_shortcuts_dia_tag">在 Dia 中使用</span>
                   <i class="ri-icon ri-size-12 ri-information-line" aria-hidden="true"></i>
@@ -604,6 +626,14 @@
               </div>
             </div>
           </div>
+          <div id="_x_extension_overlay_width_setting_row_2026_unique_" class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_">
+            <div>
+              <p class="_x_extension_setting_title_2024_unique_">
+                <span data-i18n="settings_overlay_width_title">宽度</span>
+              </p>
+            </div>
+            <div id="_x_extension_overlay_width_control_2026_unique_"></div>
+          </div>
           <div class="_x_extension_setting_row_2024_unique_">
             <div>
               <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_overlay_enter_animation_title">进入动画</p>
@@ -697,6 +727,8 @@
           <div id="_x_extension_newtab_glass_theme_row_2026_unique_" class="_x_extension_setting_row_2024_unique_ _x_extension_setting_subrow_2026_unique_" aria-hidden="true" hidden>
             <div>
               <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_newtab_glass_theme_title">材质深浅色</p>
+              <p class="_x_extension_setting_desc_2024_unique_ _x_extension_setting_desc_lines_2026_unique_" data-i18n="settings_newtab_glass_theme_desc">「自动」：跟随深浅色模式，壁纸较暗时改用深色材质，让文字保持清晰。
+「浅色」「深色」：固定材质，并让新标签页使用同样的深浅色。</p>
             </div>
             <div id="_x_extension_newtab_glass_theme_tabs_wrap_2026_unique_" class="_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_" role="group" aria-label="材质深浅色" data-i18n-aria-label="settings_newtab_glass_theme_title">
               <span class="_x_extension_theme_indicator_2024_unique_" aria-hidden="true"></span>

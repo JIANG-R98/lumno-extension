@@ -15,6 +15,10 @@ interface ShortcutReferenceDeps {
   shortcutReferenceController: Pick<ShortcutReferenceController, 'render'>;
   getMessage: GetMessage;
   formatTemplate: FormatTemplate;
+  // The help center page for a slug and section (getHelpUrl in community-links).
+  getHelpUrl?: (slug: string, anchor: string) => string;
+  // The tab switcher row's link to the Ctrl+Tab guide.
+  tabSwitcherCtrlTabLink?: HTMLAnchorElement | null;
   optionsState: ShortcutReferenceState;
 }
 
@@ -24,7 +28,9 @@ function createShortcutReference(deps: ShortcutReferenceDeps) {
     shortcutReferenceList,
     shortcutReferenceController,
     getMessage,
-    formatTemplate
+    formatTemplate,
+    getHelpUrl,
+    tabSwitcherCtrlTabLink
   } = deps;
 
   // The page state object shared with options.js and the other modules.
@@ -46,13 +52,43 @@ function createShortcutReference(deps: ShortcutReferenceDeps) {
     });
   }
 
+  function isCtrlTabShortcut(shortcut: string | undefined): boolean {
+    const value = String(shortcut || '').replace(/\s+/g, '').toLowerCase();
+    return value === '⌃⇥' || value === 'ctrl+tab' || value === 'macctrl+tab';
+  }
+
+  // The browser's shortcuts page cannot take Ctrl+Tab, so the tab switcher row
+  // links to the help center's console snippet; once bound, it links there as
+  // the place to read how to change it back.
+  function renderTabSwitcherCtrlTabLink(groups: readonly ShortcutReferenceGroup[]): void {
+    if (!tabSwitcherCtrlTabLink || typeof getHelpUrl !== 'function') {
+      return;
+    }
+    const item = groups
+      .flatMap((group) => group.items)
+      .find((entry) => entry.commandName === 'show-tab-switcher');
+    const bound = isCtrlTabShortcut(item && item.shortcut);
+    const label = formatTemplate(bound
+      ? getMessage('settings_tab_switcher_ctrl_tab_guide', 'Arc 式 {shortcut} 切换说明')
+      : getMessage('settings_tab_switcher_ctrl_tab_link', '像 Arc 一样用 {shortcut} 切换'), {
+      shortcut: optionsState.isMacPlatform ? '⌃Tab' : 'Ctrl+Tab'
+    });
+    tabSwitcherCtrlTabLink.href = getHelpUrl('tab-switcher', 'ctrl-tab');
+    tabSwitcherCtrlTabLink.setAttribute('data-bound', bound ? 'true' : 'false');
+    const labelNode = tabSwitcherCtrlTabLink.querySelector('[data-ctrl-tab-label]');
+    if (labelNode) {
+      labelNode.textContent = label;
+    }
+    tabSwitcherCtrlTabLink.hidden = false;
+  }
+
   function getShortcutReferenceParts(shortcut: string): string[] {
     const value = shortcut.trim();
     if (!value) {
       return [];
     }
     return value
-      .split(/\s*\/\s*/)
+      .split(/\s+\/\s+/)
       .map(getShortcutReferencePartLabel)
       .filter(Boolean);
   }
@@ -110,6 +146,7 @@ function createShortcutReference(deps: ShortcutReferenceDeps) {
         platform
       });
       renderShortcutReferenceGroups(groups);
+      renderTabSwitcherCtrlTabLink(groups);
     };
     // Not every browser has the commands API.
     if (!chrome.commands || typeof chrome.commands.getAll !== 'function') {

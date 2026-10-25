@@ -31,6 +31,7 @@ const suggestionItems = Array.from({ length: 3 }, (_, index) => ({
 const numberShortcutSignals = [];
 let imeKeyUpCount = 0;
 let macosCtrlNavigationEnabled = false;
+let keyboardYielded = false;
 const SUGGESTION_NAVIGATION = require('../../src/shared/search/suggestion-navigation.ts');
 const numberShortcutOptions = {
   primaryModifier: 'meta',
@@ -47,6 +48,7 @@ const keyRouter = createOverlayKeyRouter(window, {
   isTrustedEvent: (event) => Boolean(event),
   getMount: () => ({ document, host, panel: overlay }),
   isOverlayConnected: () => overlay.isConnected,
+  isKeyboardYielded: () => keyboardYielded,
   isSearchInputActive: () => document.activeElement === searchInput ||
     shadowRoot.activeElement === searchInput,
   shouldHandleModeMenuKey: () => shadowRoot.activeElement === modeMenu,
@@ -356,6 +358,48 @@ assert.strictEqual(pasteKeydown.defaultPrevented, false,
 assert.deepStrictEqual(hostPageKeys.slice(-1), [{ key: 'v', targetTag: 'DIV' }],
   'modifier keydowns should still pass for browser and system shortcuts');
 hostPageKeys.length = 0;
+
+// The tab switcher can open over the overlay while its input keeps focus. The
+// switcher listens on the window after the router, so the router must let it
+// see its navigation keys and the modifier release that commits it.
+keyboardYielded = true;
+searchInput.focus();
+const switcherKeys = [];
+const recordSwitcherKey = (event) => {
+  switcherKeys.push(`${event.type}:${event.key}`);
+};
+window.addEventListener('keydown', recordSwitcherKey, true);
+window.addEventListener('keyup', recordSwitcherKey, true);
+const handledInputKeyCount = handledInputKeys.length;
+['ArrowRight', 'Enter', 'Escape', 'Tab'].forEach((key) => {
+  searchInput.dispatchEvent(new window.KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    key
+  }));
+});
+searchInput.dispatchEvent(new window.KeyboardEvent('keyup', {
+  bubbles: true,
+  cancelable: true,
+  composed: true,
+  key: 'Alt',
+  code: 'AltLeft'
+}));
+window.removeEventListener('keydown', recordSwitcherKey, true);
+window.removeEventListener('keyup', recordSwitcherKey, true);
+assert.deepStrictEqual(switcherKeys, [
+  'keydown:ArrowRight',
+  'keydown:Enter',
+  'keydown:Escape',
+  'keydown:Tab',
+  'keyup:Alt'
+], 'the tab switcher should see every key while it holds the keyboard');
+assert.strictEqual(handledInputKeys.length, handledInputKeyCount,
+  'the overlay input should not act on keys meant for the tab switcher');
+keyboardYielded = false;
+hostPageKeys.length = 0;
+hostPageKeyups.length = 0;
 
 keyRouter.stop();
 const afterStopKeydown = new window.KeyboardEvent('keydown', {
