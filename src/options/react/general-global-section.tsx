@@ -1,5 +1,5 @@
 import { FeedbackSupportView, type FeedbackSupportRenderModel } from './feedback-support';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { SettingSelect, type SelectControlRenderModel } from './select-control';
 import { SettingDivider, SettingSwitch, SettingTitle } from './setting-rows';
 import type { ToggleControlRenderModel } from './toggle-control';

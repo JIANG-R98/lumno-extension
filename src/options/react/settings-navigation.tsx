@@ -3,7 +3,7 @@ import { useSegmentedIndicator } from '../../shared/react/segmented-indicator';
 import {
   createReactRootController,
   type ReactRootController
-} from './root-controller';
+} from '../../shared/react/root-controller';
 import { queryHtmlElement } from '../../shared/dom-lookup';
 
 export interface SettingsNavigationItemModel {

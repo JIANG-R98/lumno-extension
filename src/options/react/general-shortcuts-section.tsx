@@ -1,5 +1,5 @@
 import { InfoButton } from './info-button';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { SegmentedControl, type SegmentedControlRenderModel } from './segmented-control';
 import { SettingSwitch } from './setting-rows';
 import { ShortcutReference, type ShortcutReferenceRenderModel } from './shortcut-reference';

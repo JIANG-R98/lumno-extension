@@ -5,7 +5,7 @@ import {
   type GeneralShortcutsSectionHandlers,
   type GeneralShortcutsSectionModel
 } from './general-shortcuts-section';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import type { SectionPart } from './section-part';
 import { SettingDivider } from './setting-rows';
 import { SettingsRows, type SettingsRowsHandlers, type SettingsSectionModel } from './settings-rows-view';

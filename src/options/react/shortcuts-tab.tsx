@@ -3,7 +3,7 @@ import { queryHtmlElement } from '../../shared/dom-lookup';
 import { AggregateSearchList, type AggregateSearchListOptions, type AggregateSearchListRenderModel } from './aggregate-search-list';
 import { GroupActionConfirm, type GroupActionConfirmModel } from './group-action-confirm';
 import { InfoButton } from './info-button';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { SettingDivider, SettingSwitch } from './setting-rows';
 import { SiteSearchForm, type SiteSearchFormRenderModel, type SiteSearchFormSaveHandler } from './settings-forms';
 import { SiteSearchList, type SiteSearchListOptions, type SiteSearchListRenderModel } from './site-search-list';

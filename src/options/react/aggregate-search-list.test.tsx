@@ -5,7 +5,7 @@ import {
   getNextAggregateSearchDefaultName,
   type AggregateSearchListRenderModel
 } from './aggregate-search-list';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { getElement, getElements, getTag, getTags } from '../../../tests/react/dom';
 import { closestHtmlElement, queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 

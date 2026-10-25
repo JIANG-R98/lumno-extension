@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ThemePicker, type ThemePickerRenderModel } from './theme-picker';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: Array<ReactRootController<ThemePickerRenderModel>> = [];

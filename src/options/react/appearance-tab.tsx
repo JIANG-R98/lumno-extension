@@ -11,7 +11,7 @@ import {
   type AppearanceOverlaySectionModel
 } from './appearance-overlay-section';
 import { DailyQuoteSection, type DailyQuoteSectionHandlers, type DailyQuoteSectionModel } from './daily-quote-section';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import type { SectionPart } from './section-part';
 import { SettingDivider } from './setting-rows';
 import { SettingsRows, type SettingsRowsHandlers, type SettingsSectionModel } from './settings-rows-view';

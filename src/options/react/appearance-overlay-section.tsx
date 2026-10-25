@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { SettingSelect, type SelectControlRenderModel } from './select-control';
 import { SettingTitle, type SettingRowUnsupported } from './setting-rows';
 import {

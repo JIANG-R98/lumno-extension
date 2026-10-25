@@ -1,5 +1,5 @@
 import { useRef, type ReactNode } from 'react';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { SettingTitle } from './setting-rows';
 import { SettingsRows, type SettingsRowModel, type SettingsRowsHandlers } from './settings-rows-view';
 

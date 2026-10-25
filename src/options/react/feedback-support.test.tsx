@@ -5,7 +5,7 @@ import {
   FeedbackSupportView,
   type FeedbackSupportRenderModel
 } from './feedback-support';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: Array<ReactRootController<FeedbackSupportRenderModel>> = [];

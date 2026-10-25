@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { InfoButton } from './info-button';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { SettingDivider } from './setting-rows';
 import { WebDavList, type WebDavListModel, type WebDavListOptions } from './webdav-list';
 

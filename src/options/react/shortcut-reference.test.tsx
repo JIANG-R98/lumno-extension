@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ShortcutReference, type ShortcutReferenceRenderModel } from './shortcut-reference';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 
 let controllers: Array<ReactRootController<ShortcutReferenceRenderModel>> = [];
 

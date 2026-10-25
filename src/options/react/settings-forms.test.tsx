@@ -8,7 +8,7 @@ import {
   type SiteSearchFormRenderModel,
   type SiteSearchFormSaveHandler
 } from './settings-forms';
-import { createReactRootController } from './root-controller';
+import { createReactRootController } from '../../shared/react/root-controller';
 import { getElement, getTags } from '../../../tests/react/dom';
 import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 

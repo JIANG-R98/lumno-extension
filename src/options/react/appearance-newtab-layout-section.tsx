@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { RangeSliderControl, type RangeSliderControlRenderModel } from './range-slider-control';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { SegmentedControl, type SegmentedControlRenderModel } from './segmented-control';
 import { SettingTitle } from './setting-rows';
 import { SettingsRows, type SettingsRowModel, type SettingsRowsHandlers } from './settings-rows-view';

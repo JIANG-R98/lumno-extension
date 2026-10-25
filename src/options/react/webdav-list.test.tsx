@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WebDavList, type WebDavListModel } from './webdav-list';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import messages from '../../../_locales/en/messages.json';
 import { expectElement, getElement, getTag, required } from '../../../tests/react/dom';
 import { queryHtmlTag } from '../../shared/dom-lookup';

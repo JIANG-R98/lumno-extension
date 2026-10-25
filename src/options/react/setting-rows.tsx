@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { InfoButton } from './info-button';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { ToggleControl, type ToggleControlRenderModel } from './toggle-control';
 
 // A setting the browser cannot honor: the row stays, disabled, and says why

@@ -1,7 +1,7 @@
 import { BlacklistList, type BlacklistListRenderModel, type BlacklistSaveHandler } from './blacklist-list';
 import { InfoButton } from './info-button';
 import { GroupActionConfirm, type GroupActionConfirmModel } from './group-action-confirm';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { SettingDivider, SettingSwitch } from './setting-rows';
 import { BlacklistForm, type BlacklistFormRenderModel, type BlacklistFormSaveHandler } from './settings-forms';
 import type { ToggleControlRenderModel } from './toggle-control';

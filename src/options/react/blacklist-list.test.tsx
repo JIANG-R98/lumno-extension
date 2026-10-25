@@ -5,7 +5,7 @@ import {
   type BlacklistListRenderModel,
   type BlacklistSaveHandler
 } from './blacklist-list';
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { getTags } from '../../../tests/react/dom';
 import { queryHtmlTag } from '../../shared/dom-lookup';
 

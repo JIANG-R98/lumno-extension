@@ -1,4 +1,4 @@
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { SettingsRows, type SettingsRowModel, type SettingsRowsHandlers } from './settings-rows-view';
 import { ThemePicker, type ThemeMode, type ThemePickerRenderModel } from './theme-picker';
 
