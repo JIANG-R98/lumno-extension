@@ -1,7 +1,118 @@
-// @ts-nocheck
 // Applying the UI language and the light/dark theme to the New Tab, and
 // following the system theme.
-function createAppearanceModes(deps) {
+import type * as LumnoSettings from '../domain/settings';
+import type { NewtabGlassTheme, ThemeMode } from '../domain/settings';
+import type { SiteSearchProvider } from '../domain/search/types';
+import type { StorageAreaLike } from '../domain/storage-port';
+import type { Suggestion, SuggestionElement, SuggestionsViewOptions } from '../shared/react/search/suggestion-list/types';
+import type { InputModeController } from '../shared/search/search-input-mode';
+import type { FeatureHintController } from '../shared/ui/feature-hints';
+import type { BookmarkDisplaySettings } from './bookmarks/bookmark-display-settings';
+import type { FeedbackControlRuntime } from './feedback-control';
+import type { ModeCommands } from './mode-commands';
+import type { FormatMessage, NewtabThemeMode, NewtabThemeScope, Translate } from './newtab-types';
+import type { LocaleMessages, PageLanguage } from './page-language';
+import type { BookmarkCardElement } from './react/bookmarks';
+import type { BookmarksTopbarRuntime } from './react/bookmarks-topbar';
+import type { RecentCardElement } from './react/recent-sites';
+import type { ShortcutTileElement } from './react/shortcuts';
+import type { NewtabTopContentMode, TopContentController } from './react/wordmark';
+import type { SearchModes } from './search/search-modes';
+import type { ActiveLocalScope } from './search/search-types';
+import type { SuggestionsController } from './search/suggestions-controller';
+import type { ShortcutPageActions } from './shortcuts/shortcut-page-actions';
+import type { CardThemes } from './theme/card-themes';
+import type { FaviconViewRuntime } from './theme/favicon-view';
+import type { QuoteRuntime } from './top-content/quotes';
+import type { TopContentRuntime } from './top-content/top-content';
+import type { WallpaperRuntime } from './wallpaper/wallpaper';
+import type { WallpaperPage } from './wallpaper/wallpaper-page';
+
+type ResolvedTheme = 'light' | 'dark';
+type LanguageAware = Pick<FeatureHintController, 'updateLanguage'>;
+
+interface AppearanceModesState {
+  currentLanguageMode: string;
+  currentResolvedLocale: string | null;
+  currentMessages: LocaleMessages | null;
+  resolveInitialLanguageReady: (() => void) | null;
+  // The mode applied to the page, after scope and glass material are settled.
+  currentThemeMode: ThemeMode;
+  globalThemeMode: ThemeMode;
+  newtabThemeMode: NewtabThemeMode;
+  newtabThemeScope: NewtabThemeScope;
+  glassThemeOverride: Exclude<NewtabGlassTheme, 'follow'> | '';
+  initialThemeApplied: boolean;
+  resolveInitialThemeReady: (() => void) | null;
+  newtabTopContentMode: NewtabTopContentMode;
+  topContentController: TopContentController | null;
+  bookmarkTopbarRuntime: Pick<BookmarksTopbarRuntime, 'updateLanguage'> | null;
+  quoteRuntime: Pick<QuoteRuntime, 'updateLanguage'> | null;
+  inputModeController: Pick<InputModeController, 'refreshModeMenuLanguage'> | null;
+  updateNoticeController: LanguageAware | null;
+  engagementNoticeController: LanguageAware | null;
+  webdavFeatureHintController: LanguageAware | null;
+  helpCenterAskHintController: LanguageAware | null;
+  inputParts: { input: HTMLInputElement } | null;
+  defaultPlaceholderText: string;
+  siteSearchState: SiteSearchProvider | null;
+  localSearchScopeState: ActiveLocalScope | null;
+  latestQuery: string;
+  lastSuggestionResponse: Suggestion[];
+  faviconViewRuntime: Pick<FaviconViewRuntime,
+    'refreshFallbackIcons' | 'refreshThemeAwareFavicons' | 'scheduleThemeAwareFaviconRescue'> | null;
+  wallpaperRuntime: Pick<WallpaperRuntime, 'handleThemeModeChange'> | null;
+}
+
+interface AppearanceModesDeps extends
+  Pick<PageLanguage, 'getSystemLocale' | 'normalizeLocale' | 'applyDocumentLanguage' | 'loadLocaleMessages'>,
+  Pick<TopContentRuntime, 'renderNewtabTopContent' | 'applyWordmarkThemeAppearance'>,
+  Pick<WallpaperPage, 'updateWallpaperLanguageStrings' | 'updateWallpaperAppearanceSelectionUi'>,
+  Pick<FeedbackControlRuntime, 'updateFeedbackLanguageStrings'>,
+  Pick<ShortcutPageActions, 'updateShortcutLanguageStrings'>,
+  Pick<SearchModes, 'setLocalSearchScopePrefix'>,
+  Pick<ModeCommands, 'updateModeBadge'>,
+  Pick<SuggestionsController, 'renderSuggestions' | 'updateSelection'>,
+  Pick<BookmarkDisplaySettings, 'syncBookmarkTopbarSurfaceColorForTheme'>,
+  Pick<CardThemes, 'applyRecentCardTheme' | 'applyBookmarkCardTheme' | 'applyShortcutTileTheme'> {
+  t: Translate;
+  formatMessage: FormatMessage;
+  updateRecentHeading(): void;
+  updateRecentModeMenu(): void;
+  updateBookmarkHeading(): void;
+  updateBookmarkPagerLabels(): void;
+  updateBookmarkBreadcrumb(): void;
+  updateBookmarkModeMenu(): void;
+  // Tells the listeners outside this module that the language changed.
+  notifyLanguageChange(): void;
+  forceReloadRecentSitesForI18n(): void;
+  scheduleWallpaperAdaptiveToneUpdate(): void;
+  recentCards: readonly RecentCardElement[];
+  bookmarkCards: readonly BookmarkCardElement[];
+  shortcutTiles: readonly ShortcutTileElement[];
+  suggestionItems: readonly SuggestionElement[];
+  applyThemeVariables: NonNullable<SuggestionsViewOptions['applyThemeVariables']>;
+  // Resolves "system" through the media query unless a match is given.
+  resolveTheme(mode: ThemeMode, mediaMatchesOverride?: boolean | null): ResolvedTheme;
+  mediaQuery: MediaQueryList;
+  // Reports whether the listener was attached.
+  addMediaQueryChangeListener(queryList: MediaQueryList, listener: (event: MediaQueryListEvent) => void): boolean;
+  removeMediaQueryChangeListener(queryList: MediaQueryList, listener: (event: MediaQueryListEvent) => void): void;
+  // Settle once the first theme and the first language are applied.
+  initialThemeReadyPromise: Promise<unknown>;
+  initialLanguageReadyPromise: Promise<unknown>;
+  storageArea: StorageAreaLike | null;
+  THEME_STORAGE_KEY: string;
+  NEWTAB_THEME_MODE_STORAGE_KEY: string;
+  NEWTAB_THEME_SCOPE_STORAGE_KEY: string;
+  NEWTAB_GLASS_STYLE_STORAGE_KEY: string;
+  NEWTAB_GLASS_THEME_STORAGE_KEY: string;
+  LANGUAGE_STORAGE_KEY: string;
+  getGlassThemeOverride: typeof LumnoSettings.getNewtabGlassThemeOverride;
+  pageState: AppearanceModesState;
+}
+
+function createAppearanceModes(deps: AppearanceModesDeps) {
   const {
     t,
     renderNewtabTopContent,
@@ -62,7 +173,7 @@ function createAppearanceModes(deps) {
   let hasLanguageBootstrapStarted = false;
   let languageApplyRequestId = 0;
 
-  function applyLanguageStrings() {
+  function applyLanguageStrings(): void {
     document.title = t('newtab_page_title', 'New Tab');
     if (pageState.topContentController && pageState.newtabTopContentMode === 'time') {
       renderNewtabTopContent(false);
@@ -81,24 +192,19 @@ function createAppearanceModes(deps) {
     updateWallpaperAppearanceSelectionUi();
     updateFeedbackLanguageStrings();
     updateShortcutLanguageStrings();
-    if (pageState.inputModeController &&
-        typeof pageState.inputModeController.refreshModeMenuLanguage === 'function') {
+    if (pageState.inputModeController) {
       pageState.inputModeController.refreshModeMenuLanguage();
     }
-    if (pageState.updateNoticeController &&
-        typeof pageState.updateNoticeController.updateLanguage === 'function') {
+    if (pageState.updateNoticeController) {
       pageState.updateNoticeController.updateLanguage();
     }
-    if (pageState.engagementNoticeController &&
-        typeof pageState.engagementNoticeController.updateLanguage === 'function') {
+    if (pageState.engagementNoticeController) {
       pageState.engagementNoticeController.updateLanguage();
     }
-    if (pageState.webdavFeatureHintController &&
-        typeof pageState.webdavFeatureHintController.updateLanguage === 'function') {
+    if (pageState.webdavFeatureHintController) {
       pageState.webdavFeatureHintController.updateLanguage();
     }
-    if (pageState.helpCenterAskHintController &&
-        typeof pageState.helpCenterAskHintController.updateLanguage === 'function') {
+    if (pageState.helpCenterAskHintController) {
       pageState.helpCenterAskHintController.updateLanguage();
     }
     if (pageState.inputParts && pageState.inputParts.input) {
@@ -129,14 +235,14 @@ function createAppearanceModes(deps) {
       }));
     });
     if (pageState.latestQuery && pageState.latestQuery.trim()) {
-      renderSuggestions(pageState.lastSuggestionResponse, pageState.latestQuery);
+      void renderSuggestions(pageState.lastSuggestionResponse, pageState.latestQuery);
     }
     notifyLanguageChange();
   }
 
-  function applyLanguageMode(mode) {
+  function applyLanguageMode(mode: unknown): void {
     const requestId = ++languageApplyRequestId;
-    pageState.currentLanguageMode = mode || 'system';
+    pageState.currentLanguageMode = typeof mode === 'string' && mode ? mode : 'system';
     const targetLocale = pageState.currentLanguageMode === 'system' ? getSystemLocale() : normalizeLocale(pageState.currentLanguageMode);
     pageState.currentResolvedLocale = targetLocale;
     applyDocumentLanguage(targetLocale);
@@ -145,11 +251,11 @@ function createAppearanceModes(deps) {
         return;
       }
       initialLanguageApplied = true;
-      if (typeof pageState.resolveInitialLanguageReady === 'function') {
+      if (pageState.resolveInitialLanguageReady) {
         pageState.resolveInitialLanguageReady();
       }
     };
-    const applyResolvedMessages = (messages) => {
+    const applyResolvedMessages = (messages: LocaleMessages | null | undefined) => {
       if (requestId !== languageApplyRequestId) {
         return;
       }
@@ -158,10 +264,10 @@ function createAppearanceModes(deps) {
       forceReloadRecentSitesForI18n();
       finalizeLanguageInit();
     };
-    loadLocaleMessages(targetLocale).then(applyResolvedMessages);
+    void loadLocaleMessages(targetLocale).then(applyResolvedMessages);
   }
 
-  function refreshShortcutTileThemes() {
+  function refreshShortcutTileThemes(): void {
     shortcutTiles.forEach((tile) => {
       if (!tile) {
         return;
@@ -170,25 +276,25 @@ function createAppearanceModes(deps) {
     });
   }
 
-  function refreshFallbackIcons() {
-    if (pageState.faviconViewRuntime && typeof pageState.faviconViewRuntime.refreshFallbackIcons === 'function') {
+  function refreshFallbackIcons(): void {
+    if (pageState.faviconViewRuntime) {
       pageState.faviconViewRuntime.refreshFallbackIcons();
     }
   }
 
-  function refreshThemeAwareFavicons() {
-    if (pageState.faviconViewRuntime && typeof pageState.faviconViewRuntime.refreshThemeAwareFavicons === 'function') {
+  function refreshThemeAwareFavicons(): void {
+    if (pageState.faviconViewRuntime) {
       pageState.faviconViewRuntime.refreshThemeAwareFavicons();
     }
   }
 
-  function scheduleThemeAwareFaviconRescue() {
-    if (pageState.faviconViewRuntime && typeof pageState.faviconViewRuntime.scheduleThemeAwareFaviconRescue === 'function') {
+  function scheduleThemeAwareFaviconRescue(): void {
+    if (pageState.faviconViewRuntime) {
       pageState.faviconViewRuntime.scheduleThemeAwareFaviconRescue();
     }
   }
 
-  function applyThemeMode(mode, options) {
+  function applyThemeMode(mode: ThemeMode, options?: { mediaMatches?: boolean }): void {
     const previousThemeMode = pageState.currentThemeMode;
     pageState.currentThemeMode = normalizeThemeMode(mode);
     const mediaMatchesOverride = options && typeof options.mediaMatches === 'boolean'
@@ -236,12 +342,12 @@ function createAppearanceModes(deps) {
       scheduleThemeAwareFaviconRescue();
     }
     if ((didResolvedThemeChange || previousThemeMode !== pageState.currentThemeMode) &&
-        pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.handleThemeModeChange === 'function') {
+        pageState.wallpaperRuntime) {
       pageState.wallpaperRuntime.handleThemeModeChange();
     }
     if (!pageState.initialThemeApplied) {
       pageState.initialThemeApplied = true;
-      if (typeof pageState.resolveInitialThemeReady === 'function') {
+      if (pageState.resolveInitialThemeReady) {
         pageState.resolveInitialThemeReady();
       }
     }
@@ -255,48 +361,50 @@ function createAppearanceModes(deps) {
     scheduleWallpaperAdaptiveToneUpdate();
   }
 
-  function normalizeThemeMode(value) {
+  function normalizeThemeMode(value: unknown): ThemeMode {
     if (value === 'light' || value === 'dark') {
       return value;
     }
     return 'system';
   }
 
-  function normalizeNewtabThemeMode(value) {
+  function normalizeNewtabThemeMode(value: unknown): NewtabThemeMode {
     if (value === 'light' || value === 'dark') {
       return value;
     }
     return 'global';
   }
 
-  function normalizeNewtabThemeScope(value) {
+  function normalizeNewtabThemeScope(value: unknown): NewtabThemeScope {
     return value === 'home' ? 'home' : 'global';
   }
 
-  function isNewtabThemeFollowingGlobal() {
+  function isNewtabThemeFollowingGlobal(): boolean {
     return pageState.newtabThemeMode === 'global';
   }
 
   // A glass material set to light or dark holds the page there, over whatever the theme says.
-  function getScopedThemeMode() {
+  function getScopedThemeMode(): ThemeMode {
     if (pageState.glassThemeOverride) {
       return pageState.glassThemeOverride;
     }
-    return isNewtabThemeFollowingGlobal() ? pageState.globalThemeMode : pageState.newtabThemeMode;
+    const newtabThemeMode = pageState.newtabThemeMode;
+    return newtabThemeMode === 'global' ? pageState.globalThemeMode : newtabThemeMode;
   }
 
-  function getSelectedThemeMode() {
+  function getSelectedThemeMode(): ThemeMode {
     if (pageState.newtabThemeScope !== 'home') {
       return pageState.globalThemeMode;
     }
-    return isNewtabThemeFollowingGlobal() ? 'system' : pageState.newtabThemeMode;
+    const newtabThemeMode = pageState.newtabThemeMode;
+    return newtabThemeMode === 'global' ? 'system' : newtabThemeMode;
   }
 
-  function applyScopedThemeMode(options) {
+  function applyScopedThemeMode(options?: { mediaMatches?: boolean }): void {
     applyThemeMode(getScopedThemeMode(), options);
   }
 
-  function bootstrapInitialThemeMode() {
+  function bootstrapInitialThemeMode(): Promise<unknown> {
     if (hasThemeBootstrapStarted) {
       return initialThemeReadyPromise;
     }
@@ -308,7 +416,7 @@ function createAppearanceModes(deps) {
       applyScopedThemeMode();
       return initialThemeReadyPromise;
     }
-    storageArea.get([
+    void storageArea.get([
       THEME_STORAGE_KEY,
       NEWTAB_THEME_MODE_STORAGE_KEY,
       NEWTAB_THEME_SCOPE_STORAGE_KEY,
@@ -328,7 +436,7 @@ function createAppearanceModes(deps) {
     return initialThemeReadyPromise;
   }
 
-  function bootstrapInitialLanguageMode() {
+  function bootstrapInitialLanguageMode(): Promise<unknown> {
     if (hasLanguageBootstrapStarted) {
       return initialLanguageReadyPromise;
     }
@@ -337,13 +445,13 @@ function createAppearanceModes(deps) {
       applyLanguageMode('system');
       return initialLanguageReadyPromise;
     }
-    storageArea.get([LANGUAGE_STORAGE_KEY], (result) => {
-      applyLanguageMode(result[LANGUAGE_STORAGE_KEY] || 'system');
+    void storageArea.get([LANGUAGE_STORAGE_KEY], (result) => {
+      applyLanguageMode(result ? result[LANGUAGE_STORAGE_KEY] : 'system');
     });
     return initialLanguageReadyPromise;
   }
 
-  function handleMediaChange(event) {
+  function handleMediaChange(event: MediaQueryListEvent): void {
     if (pageState.currentThemeMode !== 'system') {
       return;
     }
@@ -354,7 +462,7 @@ function createAppearanceModes(deps) {
     applyThemeMode('system', { mediaMatches });
   }
 
-  function syncSystemThemeMode() {
+  function syncSystemThemeMode(): void {
     if (pageState.currentThemeMode !== 'system') {
       return;
     }
@@ -383,4 +491,7 @@ function createAppearanceModes(deps) {
   };
 }
 
+type AppearanceModes = ReturnType<typeof createAppearanceModes>;
+
 export { createAppearanceModes };
+export type { AppearanceModes, AppearanceModesDeps, AppearanceModesState };

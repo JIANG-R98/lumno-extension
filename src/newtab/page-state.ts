@@ -3,6 +3,7 @@
 // object to every module as `pageState`; properties whose first value
 // depends on settings or other modules are set where that value exists.
 import * as SETTINGS from '../domain/settings';
+import type { AppearanceModesState } from './appearance-modes';
 import type { BookmarkActionsState } from './bookmarks/bookmark-actions';
 import type { BookmarkCascadeActionsState } from './bookmarks/bookmark-cascade-actions';
 import type { BookmarkContextMenuState } from './bookmarks/bookmark-context-menu';
@@ -26,6 +27,7 @@ import type { PageKeyboardState } from './page-keyboard';
 import type { PageLanguageState } from './page-language';
 import type { PageNavigationState } from './page-navigation';
 import type { PageNoticesState } from './page-notices';
+import type { PagePreferencesState } from './page-preferences';
 import type { PageResizeState } from './page-resize';
 import type { RecentCardDragState } from './recent/recent-card-drag';
 import type { RecentSectionState } from './recent/recent-section';
@@ -45,6 +47,7 @@ import type { ShortcutDockState } from './shortcuts/shortcut-dock';
 import type { ShortcutDragState } from './shortcuts/shortcut-drag';
 import type { ShortcutPageActionsState } from './shortcuts/shortcut-page-actions';
 import type { ShortcutsControllerState } from './shortcuts/shortcuts-controller';
+import type { StartupPreferencesState } from './startup-preferences';
 import type { SiteSearchProvidersState } from './search/site-search-providers';
 import type { SiteSearchRuntimeState } from './search/site-search-runtime';
 import type { SiteThemeResolverState } from './theme/site-theme-resolver';
@@ -71,6 +74,7 @@ interface PageCoreState {
 // Every module's view of the page state, together.
 type NewtabPageState =
   PageCoreState &
+  AppearanceModesState &
   BookmarkActionsState &
   BookmarkCascadeActionsState &
   BookmarkContextMenuState &
@@ -94,6 +98,7 @@ type NewtabPageState =
   PageLanguageState &
   PageNavigationState &
   PageNoticesState &
+  PagePreferencesState &
   PageResizeState &
   RecentCardDragState &
   RecentSectionState &
@@ -113,6 +118,7 @@ type NewtabPageState =
   ShortcutDragState &
   ShortcutPageActionsState &
   ShortcutsControllerState &
+  StartupPreferencesState &
   SiteSearchProvidersState &
   SiteSearchRuntimeState &
   SiteThemeResolverState &
@@ -149,6 +155,8 @@ function createPageState(): NewtabPageState {
     pinnedRecentSites: [],
     progressHistoryMap: {},
     hiddenRecentSites: [],
+    initialPinnedRecentSitesReadyTask: Promise.resolve([]),
+    initialHiddenRecentSitesReadyTask: Promise.resolve([]),
     searchBlacklistItems: [],
     defaultPlaceholderText: 'Search or enter URL…',
     layoutController: null,

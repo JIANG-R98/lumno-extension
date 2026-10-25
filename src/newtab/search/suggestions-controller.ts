@@ -5,6 +5,7 @@ import type * as HelpCenterSearch from '../../domain/search/help-center-search';
 import type * as SearchUtils from '../../domain/search/search-utils';
 import type * as SuggestionActionModel from '../../domain/search/suggestion-action-model';
 import type { SiteSearchProvider } from '../../domain/search/types';
+import type { ThemeMode } from '../../domain/settings';
 import type { StorageAreaLike } from '../../domain/storage-port';
 import type * as CommunityLinks from '../../platform/community-links';
 import * as LumnoMessaging from '../../platform/messaging';
@@ -16,7 +17,8 @@ import type {
   SuggestionsViewController
 } from '../../shared/react/search/suggestion-list/types';
 import type * as SuggestionNavigation from '../../shared/search/suggestion-navigation';
-import type { SendRuntimeMessage, Translate, FormatMessage } from '../newtab-types';
+import type { AppearanceModes } from '../appearance-modes';
+import type { FormatMessage, NewtabThemeMode, NewtabThemeScope, SendRuntimeMessage, Translate } from '../newtab-types';
 import type * as DirectNavigationSettle from './direct-navigation-settle';
 import type { SearchAutocomplete } from './search-autocomplete';
 import type { SearchModeController } from './search-mode-controller';
@@ -52,10 +54,10 @@ interface SuggestionsControllerState {
   suggestionRequestWatchdogTimer: ReturnType<typeof setTimeout> | null;
   localSearchScopeState: ActiveLocalScope | null;
   siteSearchState: SiteSearchProvider | null;
-  globalThemeMode: string;
-  newtabThemeMode: string;
-  newtabThemeScope: string;
-  currentThemeMode: string;
+  globalThemeMode: ThemeMode;
+  newtabThemeMode: NewtabThemeMode;
+  newtabThemeScope: NewtabThemeScope;
+  currentThemeMode: ThemeMode;
   siteSearchProvidersCache: SiteSearchProvider[] | null;
   aggregateSearchesCache: AggregateSearch[] | null;
   simpleModeEnabled: boolean;
@@ -93,12 +95,12 @@ interface SuggestionsControllerDeps {
   THEME_STORAGE_KEY: string;
   NEWTAB_THEME_MODE_STORAGE_KEY: string;
   NEWTAB_THEME_SCOPE_STORAGE_KEY: string;
-  normalizeThemeMode(value: unknown): string;
-  normalizeNewtabThemeMode(value: unknown): string;
-  normalizeNewtabThemeScope(value: unknown): string;
+  normalizeThemeMode: AppearanceModes['normalizeThemeMode'];
+  normalizeNewtabThemeMode: AppearanceModes['normalizeNewtabThemeMode'];
+  normalizeNewtabThemeScope: AppearanceModes['normalizeNewtabThemeScope'];
   // The theme mode the page follows: its own, or the global one.
-  getScopedThemeMode(): string;
-  applyThemeMode(mode: string): void;
+  getScopedThemeMode: AppearanceModes['getScopedThemeMode'];
+  applyThemeMode: AppearanceModes['applyThemeMode'];
   getCommandMatches(rawInput: string): SlashCommand[];
   buildModeSuggestion(): Suggestion;
   buildZenSuggestion(): Suggestion;
