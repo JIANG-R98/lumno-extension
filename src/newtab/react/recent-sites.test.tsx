@@ -5,12 +5,18 @@ import {
   createRecentSitesViewApi,
   getRecentSitesSignature,
   type RecentCardElement,
-  type RecentSiteItem,
+  type RecentSite,
   type RecentSitesViewController,
   type RecentSitesViewOptions
 } from './recent-sites';
 
 let views: RecentSitesViewController[] = [];
+
+// A recent site; fields left out are empty, as the store leaves them for
+// a site it knows little about.
+function site(fields: Partial<RecentSite> & Pick<RecentSite, 'url'>): RecentSite {
+  return { title: '', host: '', siteName: '', lastVisitTime: 0, visitCount: 0, pinnedAt: 0, ...fields };
+}
 
 function createOptions(
   overrides: Partial<RecentSitesViewOptions> = {}
@@ -77,7 +83,7 @@ function createView(
 
 function renderItems(
   view: RecentSitesViewController,
-  items: RecentSiteItem[],
+  items: RecentSite[],
   signature = ''
 ) {
   let result = {
@@ -100,11 +106,11 @@ afterEach(() => {
 
 describe('Recent Sites React island', () => {
   it('preserves signatures without a legacy renderer', () => {
-    const items = [{
+    const items = [site({
       title: 'Example',
       url: 'https://example.com/',
       visitCount: 2
-    }];
+    })];
     expect(getRecentSitesSignature(items)).toBe(
       '0::https://example.com/::Example::::::2'
     );
@@ -126,12 +132,12 @@ describe('Recent Sites React island', () => {
       applyCardTheme: applyTheme,
       bindCursorTooltip: bindTooltip
     });
-    const items = [{
+    const items = [site({
       title: 'Example Docs',
       url: 'https://example.com/docs',
       lastVisitTime: 42,
       visitCount: 3
-    }];
+    })];
 
     const result = renderItems(view, items);
     const grid = options.grid as HTMLElement;
@@ -164,18 +170,18 @@ describe('Recent Sites React island', () => {
 
   it('preserves card nodes when history metadata changes or order moves', () => {
     const { view } = createView();
-    const first = {
+    const first = site({
       title: 'First',
       url: 'https://first.example/',
       lastVisitTime: 10,
       visitCount: 1
-    };
-    const second = {
+    });
+    const second = site({
       title: 'Second',
       url: 'https://second.example/',
       lastVisitTime: 20,
       visitCount: 2
-    };
+    });
     const initial = renderItems(view, [first, second]);
     const firstCard = view.getCards()[0];
     const secondCard = view.getCards()[1];
@@ -211,10 +217,10 @@ describe('Recent Sites React island', () => {
       attachFaviconWithFallbacks: attachFavicon
     });
 
-    renderItems(view, [{
+    renderItems(view, [site({
       title: 'Extensions',
       url: browserPageUrl
-    }]);
+    })]);
 
     const grid = options.grid as HTMLElement;
     const image = grid.querySelector<HTMLImageElement>(
@@ -247,10 +253,10 @@ describe('Recent Sites React island', () => {
         opened.push({ url, ...options });
       }
     });
-    renderItems(view, [{
+    renderItems(view, [site({
       title: 'Example',
       url: 'https://example.com/'
-    }]);
+    })]);
     const card = view.getCards()[0];
 
     act(() => {
@@ -294,10 +300,10 @@ describe('Recent Sites React island', () => {
       openUrl: opened,
       isActivationSuppressed: () => suppressed
     });
-    renderItems(view, [{
+    renderItems(view, [site({
       title: 'Example',
       url: 'https://example.com/'
-    }]);
+    })]);
     const card = view.getCards()[0];
     const press = () => {
       act(() => {
@@ -329,10 +335,10 @@ describe('Recent Sites React island', () => {
       .mockReturnValue('MacIntel');
     const opened = vi.fn();
     const { view } = createView({ openUrl: opened });
-    renderItems(view, [{
+    renderItems(view, [site({
       title: 'Example',
       url: 'https://example.com/'
-    }]);
+    })]);
     const card = view.getCards()[0];
 
     const controlPress = () => {
@@ -367,10 +373,10 @@ describe('Recent Sites React island', () => {
       openUrl: opened,
       onCardPointerDown: pressed
     });
-    renderItems(view, [{
+    renderItems(view, [site({
       title: 'Example',
       url: 'https://example.com/'
-    }]);
+    })]);
     const card = view.getCards()[0];
 
     act(() => {
@@ -411,9 +417,9 @@ describe('Recent Sites React island', () => {
       showTopActionTooltip: (_target, message) => tooltips.push(message)
     });
     renderItems(view, [
-      { title: '合集 P2', url: 'https://www.bilibili.com/video/BV11LEA6eEuj?p=2' },
-      { title: 'Docs', url: 'https://example.com/docs' },
-      { title: 'Example', url: 'https://example.com/' }
+      site({ title: '合集 P2', url: 'https://www.bilibili.com/video/BV11LEA6eEuj?p=2' }),
+      site({ title: 'Docs', url: 'https://example.com/docs' }),
+      site({ title: 'Example', url: 'https://example.com/' })
     ]);
     const [tracked, available, plain] = view.getCards();
     const trackedButton = tracked.querySelector<HTMLButtonElement>('.x-nt-recent-track');
@@ -439,9 +445,9 @@ describe('Recent Sites React island', () => {
   });
 
   it('includes tracking in the signature only for tracked cards', () => {
-    expect(getRecentSitesSignature([{ url: 'https://a.com/', title: 'A' }])).not.toContain('tracking');
+    expect(getRecentSitesSignature([site({ url: 'https://a.com/', title: 'A' })])).not.toContain('tracking');
     expect(getRecentSitesSignature([
-      { url: 'https://a.com/', title: 'A', progressTracking: true }
+      site({ url: 'https://a.com/', title: 'A', progressTracking: true })
     ])).toContain('::tracking');
   });
 
@@ -451,10 +457,10 @@ describe('Recent Sites React island', () => {
     const windowAdd = vi.spyOn(window, 'addEventListener');
     const windowRemove = vi.spyOn(window, 'removeEventListener');
     const { view } = createView();
-    renderItems(view, [{
+    renderItems(view, [site({
       title: 'Example',
       url: 'https://example.com/'
-    }]);
+    })]);
 
     act(() => {
       view.getCards()[0].dispatchEvent(new MouseEvent('click', {
@@ -492,10 +498,10 @@ describe('Recent Sites React island', () => {
       showToast,
       updatePinButton
     });
-    renderItems(view, [{
+    renderItems(view, [site({
       title: 'Example',
       url: 'https://example.com/'
-    }]);
+    })]);
     updatePinButton.mockClear();
 
     act(() => {
@@ -517,10 +523,10 @@ describe('Recent Sites React island', () => {
       payload.event.stopPropagation();
     });
     const opened = vi.fn();
-    const item = {
+    const item = site({
       title: 'Example',
       url: 'https://example.com/'
-    };
+    });
     const { view } = createView({
       openUrl: opened,
       onItemContextMenu
@@ -559,10 +565,10 @@ describe('Recent Sites React island', () => {
       resolvePin = resolve;
     }));
     const { view } = createView({ togglePinned });
-    renderItems(view, [{
+    renderItems(view, [site({
       title: 'Example',
       url: 'https://example.com/'
-    }]);
+    })]);
     const pinButton = view.getCards()[0]._xPinButton;
 
     act(() => {

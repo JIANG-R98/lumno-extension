@@ -10,19 +10,12 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { useExclusiveAsyncAction } from '../../shared/react/use-exclusive-async-action';
 import { isElementTextTruncated } from '../../shared/react/text-overflow';
+import type { RecentSite } from '../../domain/recent-sites-store';
 
 type Translate = (key: string, fallback: string) => string;
 type ThemeValue = unknown;
 
-export interface RecentSiteItem {
-  url?: string;
-  title?: string;
-  siteName?: string;
-  host?: string;
-  lastVisitTime?: string | number;
-  visitCount?: string | number;
-  [key: string]: unknown;
-}
+export type { RecentSite };
 
 interface OwnExtensionDisplay {
   siteName: string;
@@ -94,7 +87,7 @@ export interface RecentSitesViewOptions {
     host: string
   ) => void;
   getCurrentRecentCount?: () => number;
-  isPinned?: (item: RecentSiteItem) => boolean;
+  isPinned?: (item: RecentSite) => boolean;
   getPinnedCount?: () => number;
   getMaxPinnedCount?: () => number;
   updatePinButton?: (
@@ -124,11 +117,11 @@ export interface RecentSitesViewOptions {
   ) => unknown;
   hideCursorTooltip?: () => void;
   togglePinned?: (
-    item: RecentSiteItem
+    item: RecentSite
   ) => PinResult | null | Promise<PinResult | null>;
   onItemContextMenu?: (payload: {
     event: MouseEvent;
-    item: RecentSiteItem;
+    item: RecentSite;
     element: RecentCardElement;
   }) => void;
   // True while a card context menu is open or has just closed, so presses
@@ -138,13 +131,13 @@ export interface RecentSitesViewOptions {
   // or the bookmarks. The card opens on the click that ends a press.
   onCardPointerDown?: (payload: {
     event: PointerEvent;
-    item: RecentSiteItem;
+    item: RecentSite;
     element: RecentCardElement;
   }) => void;
   // Progress tracking: 'available' on a pinned card that is not tracked,
   // '' where tracking does not apply.
-  getProgressState?: (item: RecentSiteItem) => RecentProgressState;
-  toggleProgressTracking?: (item: RecentSiteItem) => boolean | Promise<boolean>;
+  getProgressState?: (item: RecentSite) => RecentProgressState;
+  toggleProgressTracking?: (item: RecentSite) => boolean | Promise<boolean>;
 }
 
 export type RecentProgressState = 'tracking' | 'available' | '';
@@ -162,10 +155,10 @@ export interface RecentSitesRenderResult {
 export interface RecentSitesViewController {
   clear(): void;
   render(
-    items: RecentSiteItem[],
+    items: RecentSite[],
     state?: RecentSitesRenderState
   ): RecentSitesRenderResult;
-  getSignature(items: RecentSiteItem[]): string;
+  getSignature(items: RecentSite[]): string;
   getCards(): RecentCardElement[];
 }
 
@@ -234,7 +227,7 @@ interface NormalizedRecentSitesOptions {
 }
 
 interface RecentSiteCardProps {
-  item: RecentSiteItem;
+  item: RecentSite;
   index: number;
   options: NormalizedRecentSitesOptions;
 }
@@ -261,7 +254,7 @@ function fallbackFormatMessage(
   return text;
 }
 
-export function getRecentSitesSignature(items: RecentSiteItem[]): string {
+export function getRecentSitesSignature(items: RecentSite[]): string {
   if (!Array.isArray(items) || items.length === 0) {
     return '';
   }
@@ -1044,7 +1037,7 @@ function RecentSitesList({
   items,
   options
 }: {
-  items: RecentSiteItem[];
+  items: RecentSite[];
   options: NormalizedRecentSitesOptions;
 }) {
   const occurrences = new Map<string, number>();
@@ -1114,7 +1107,7 @@ export function createRecentSitesView(
   }
 
   function render(
-    items: RecentSiteItem[],
+    items: RecentSite[],
     state: RecentSitesRenderState = {}
   ): RecentSitesRenderResult {
     const normalizedItems = Array.isArray(items) ? items : [];
