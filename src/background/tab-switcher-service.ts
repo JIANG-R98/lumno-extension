@@ -1700,7 +1700,7 @@ async function prepareSwitcherThumbnailDataUrl(dataUrl: unknown): Promise<string
     const targetRatio = TAB_SWITCHER_THUMBNAIL_TARGET_WIDTH / TAB_SWITCHER_THUMBNAIL_TARGET_HEIGHT;
     const sourceRatio = sourceWidth / sourceHeight;
     let cropX = 0;
-    let cropY = 0;
+    const cropY = 0;
     let cropWidth = sourceWidth;
     let cropHeight = sourceHeight;
     if (sourceRatio > targetRatio) {

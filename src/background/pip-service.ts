@@ -93,7 +93,7 @@ function detectAnyActiveVideoPiP(callback: (active: boolean, detail: VideoPipDet
     let pending = candidates.length;
     let finished = false;
     let checked = 0;
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timeoutId = setTimeout(() => done(false, null), VIDEO_PIP_DETECT_TIMEOUT_MS);
     const done = (active: boolean, tabId: number | null): void => {
       if (finished) {
         return;
@@ -105,7 +105,6 @@ function detectAnyActiveVideoPiP(callback: (active: boolean, detail: VideoPipDet
         foundTabId: typeof tabId === 'number' ? tabId : null
       });
     };
-    timeoutId = setTimeout(() => done(false, null), VIDEO_PIP_DETECT_TIMEOUT_MS);
     candidates.forEach((tab) => {
       chrome.scripting.executeScript({
         target: { tabId: tab.id },

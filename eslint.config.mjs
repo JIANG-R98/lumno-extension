@@ -128,20 +128,11 @@ export default tseslint.config(
     }
   },
   {
-    // Converted runtime sources keep their JavaScript shape until they are
-    // typed, so only the TypeScript rules that hold for untyped code apply.
     files: ['src/**/*.{ts,tsx}'],
     extends: [tseslint.configs.recommended],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-vars': ['error', unusedVarsOptions],
-      '@typescript-eslint/ban-ts-comment': ['error', { 'ts-nocheck': false }],
-      '@typescript-eslint/no-this-alias': 'off',
-      // Not enforced for the JavaScript sources either.
-      'prefer-const': 'off',
-      'prefer-spread': 'off',
-      'prefer-rest-params': 'off',
-      '@typescript-eslint/no-unused-expressions': 'off'
+      '@typescript-eslint/no-unused-vars': ['error', unusedVarsOptions]
     }
   },
   {

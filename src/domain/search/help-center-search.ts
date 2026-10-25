@@ -571,7 +571,7 @@ function passage(doc: HelpIndexDoc, section: HelpIndexSection | null, words: str
   const body = doc.lower.text.slice(range.start, range.end);
   const hits = words.filter(Boolean).map((word) => body.indexOf(word)).filter((at) => at >= 0);
   const hit = hits.length ? range.start + Math.min(...hits) : range.start;
-  let at = lines.findIndex((line) => line.end > hit);
+  const at = lines.findIndex((line) => line.end > hit);
   if (at < 0 || lines[at].start >= range.end) {
     return [];
   }

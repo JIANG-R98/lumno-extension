@@ -530,7 +530,7 @@ function getShortcutUrlBaseSurfaceColor(color: RgbColor, localLuminance: number,
   const paleBase = surfaceLuminance >= 0.58
     ? { red: 244, green: 246, blue: 248 }
     : { red: 248, green: 250, blue: 252 };
-  let backgroundColor = mixColor(paleBase, baseColor, tintAmount);
+  const backgroundColor = mixColor(paleBase, baseColor, tintAmount);
   const minSeparation = surfaceLuminance >= 0.78 ? 0.082 : 0.11;
   const backgroundLuminance = getColorLuminance(backgroundColor);
   if (Math.abs(backgroundLuminance - surfaceLuminance) >= minSeparation) {

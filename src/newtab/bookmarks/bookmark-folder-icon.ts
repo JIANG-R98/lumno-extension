@@ -536,7 +536,7 @@ function buildPointMorphTemplate(pathEl: Element, fromD: string, toD: string): P
     return null;
   }
   const closed = fromData.closed && toData.closed;
-  let fromPoints = fromData.points;
+  const fromPoints = fromData.points;
   let toPoints = toData.points;
   if (closed && fromPoints.length > 4) {
     const alignClosedPoints = (sourcePoints: Point[], targetPoints: Point[]): Point[] => {
