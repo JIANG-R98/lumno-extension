@@ -2,7 +2,7 @@
 // prefixes, the tab hint for site search, the placeholder and caret color
 // per mode, and the cached provider icons the prefixes show.
 import type { FaviconUrlResolver } from '../../domain/favicon/favicon-utils';
-import type { LocalSearchScope, SearchSourceType, SiteSearchProvider } from '../../domain/search/types';
+import type { SearchSourceType, SiteSearchProvider } from '../../domain/search/types';
 import type * as Settings from '../../domain/settings';
 import type { NewtabOpenInNewTab } from '../../domain/settings';
 import type { StorageAreaLike } from '../../domain/storage-port';
@@ -12,7 +12,7 @@ import * as SEARCH_INPUT_MODE from '../../shared/search/search-input-mode';
 import type { InputModeConfig, InputModeController } from '../../shared/search/search-input-mode';
 import type { InputModeTheme } from '../../shared/search/input-mode/types';
 import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
-import type { RenderSuggestions } from './search-types';
+import type { ActiveLocalScope, RenderSuggestions } from './search-types';
 
 // An option the input mode controller is handed as it is.
 type ModeOption<K extends keyof InputModeConfig> = NonNullable<InputModeConfig[K]>;
@@ -23,7 +23,7 @@ interface SearchModeControllerState {
   suggestionsContainer: HTMLElement;
   inputModeController: InputModeController | null;
   siteSearchState: SiteSearchProvider | null;
-  localSearchScopeState: LocalSearchScope | null;
+  localSearchScopeState: ActiveLocalScope | null;
   searchResultPriorityMode: string;
   enabledSearchResultSourceTypes: SearchSourceType[];
   searchResultDisplayLimit: number;

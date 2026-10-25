@@ -24,6 +24,7 @@ import type * as SiteSearchStore from '../../shared/search/site-search-store';
 import type { AttachProviderIcon } from '../../shared/search/input-mode/types';
 import type { AttachFaviconWithFallbacks, FormatMessage, ShowToast, Translate } from '../newtab-types';
 import { getAggregateSearchId } from './search-types';
+import type { ActiveLocalScope } from './search-types';
 
 interface SiteSearchProvidersState {
   // Icons saved for site search providers, by page URL.
@@ -537,7 +538,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     return scope;
   }
 
-  function getLocalSearchScopeLabel(scope: LocalSearchScope | null | undefined): string {
+  function getLocalSearchScopeLabel(scope: ActiveLocalScope | null | undefined): string {
     const sourceType = scope && scope.sourceType ? scope.sourceType : '';
     if (sourceType === 'bookmark') {
       return t('search_tag_bookmark', '书签');
