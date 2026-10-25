@@ -43,6 +43,8 @@ export interface OpenTabSuggestion extends Partial<TabRankFields> {
   title?: string;
   url?: string;
   favIconUrl?: string;
+  // Which tab list fetch it came from, for the rank debug line.
+  _xTabFetchSeq?: number;
 }
 
 export interface SuggestionActionTagModel {

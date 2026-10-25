@@ -45,10 +45,10 @@ export interface SearchInputConfig {
     surface?: string;
     visible?: boolean;
   };
-  onBlur?(event: Event): void;
-  onFocus?(event: Event): void;
+  onBlur?(event: FocusEvent): void;
+  onFocus?(event: FocusEvent): void;
   onInput?(event: Event): void;
-  onKeyDown?(event: Event): void;
+  onKeyDown?(event: KeyboardEvent): void;
   placeholder?: string;
   rightIconAlt?: string;
   rightIconHtml?: string;

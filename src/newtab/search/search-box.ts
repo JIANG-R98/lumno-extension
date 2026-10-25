@@ -1,10 +1,147 @@
 // Builds the search box: the suggestions view, the search input with its
 // key, input and focus handling, the global listeners that return focus to
 // it, and the search scope icon.
-import * as NEWTAB_BACKGROUND_SEARCH_FOCUS from './background-search-focus';
+import type * as SearchInputHistory from '../../domain/search/search-input-history';
+import type { createSearchInputHistoryController } from '../../domain/search/search-input-history';
+import type { createImeKeyGuard } from '../../domain/search/ime-key-guard';
+import type { SiteSearchProvider, SuggestionLike } from '../../domain/search/types';
 import * as LumnoMessaging from '../../platform/messaging';
+import { isHtmlTag } from '../../shared/dom-guards';
+import type { createSearchInput, SearchInputParts } from '../../shared/react/search-input';
+import type {
+  OpenTabSuggestion,
+  SuggestionsViewController,
+  SuggestionsViewOptions
+} from '../../shared/react/search/suggestion-list/types';
+import type * as SuggestionNavigation from '../../shared/search/suggestion-navigation';
+import type { InputModeController } from '../../shared/search/search-input-mode';
+import type { BindCursorTooltip, FormatMessage, Translate } from '../newtab-types';
+import * as NEWTAB_BACKGROUND_SEARCH_FOCUS from './background-search-focus';
+import type { SearchAutocomplete } from './search-autocomplete';
+import type { SearchModes } from './search-modes';
+import type { ActiveLocalScope, RenderSuggestions, RequestSuggestions } from './search-types';
 
-function createSearchBox(deps) {
+// An option the suggestions view is handed as it is.
+type ViewOption<K extends keyof SuggestionsViewOptions> = NonNullable<SuggestionsViewOptions[K]>;
+
+interface SearchBoxState {
+  suggestionsView: SuggestionsViewController | null;
+  suggestionsContainer: HTMLElement;
+  tabRankScoreDebugEnabled: boolean;
+  simpleModeEnabled: boolean;
+  selectedIndex: number;
+  inputParts: SearchInputParts | null;
+  inputModeController: Pick<InputModeController, 'shouldRemoveModeTagOnBackspace' | 'resetModeMenuDoubleTab'> | null;
+  defaultPlaceholderText: string;
+  // Hidden from the background; the input's focus shows them again.
+  searchSuggestionsDismissed: boolean;
+  lastDeletionAt: number;
+  latestQuery: string;
+  latestRawQuery: string;
+  remoteSuggestionDebounceTimer: ReturnType<typeof setTimeout> | null;
+  suggestionRequestWatchdogTimer: ReturnType<typeof setTimeout> | null;
+  localSearchScopeState: ActiveLocalScope | null;
+  siteSearchState: SiteSearchProvider | null;
+  macosCtrlSuggestionNavigationEnabled: boolean;
+  handleTabKey: ((event: KeyboardEvent) => unknown) | null;
+  searchLayer: HTMLElement | null;
+  modeBadge: HTMLElement | null;
+  searchScopeIcon: HTMLElement | null;
+}
+
+interface SearchBoxDeps {
+  suggestionItems: ViewOption<'items'>;
+  t: Translate;
+  formatMessage: FormatMessage;
+  getRiSvg(id: string, sizeClass?: string, extraClass?: string): string;
+  sanitizeDisplayText: ViewOption<'sanitizeDisplayText'>;
+  shouldBlockFaviconForHost: ViewOption<'shouldBlockFaviconForHost'>;
+  isLocalNetworkHost: ViewOption<'isLocalNetworkHost'>;
+  getHostFromUrl: ViewOption<'getHostFromUrl'>;
+  getUrlDisplay: ViewOption<'getUrlDisplay'>;
+  getThemeHostForSuggestion: ViewOption<'getThemeHostForSuggestion'>;
+  getImmediateThemeForSuggestion: ViewOption<'getImmediateThemeForSuggestion'>;
+  getThemeForSuggestion: ViewOption<'getThemeForSuggestion'>;
+  shouldUseUrlFallbackThemeForSuggestion: ViewOption<'shouldUseUrlFallbackThemeForSuggestion'>;
+  getThemeForMode: ViewOption<'getThemeForMode'>;
+  getHoverColors: ViewOption<'getHoverColors'>;
+  getNeutralHoverActionColors: ViewOption<'getNeutralHoverActionColors'>;
+  applyThemeVariables: ViewOption<'applyThemeVariables'>;
+  applyMarkVariables: ViewOption<'applyMarkVariables'>;
+  applyFaviconOpticalAlignment: ViewOption<'applyFaviconOpticalAlignment'>;
+  applyFaviconOpticalShift: ViewOption<'applyFaviconOpticalShift'>;
+  applyFallbackIcon: ViewOption<'applyFallbackIcon'>;
+  setFaviconSrcWithAnimation: ViewOption<'setFaviconSrcWithAnimation'>;
+  attachFaviconWithFallbacks: ViewOption<'attachFaviconWithFallbacks'>;
+  reportMissingIcon: ViewOption<'reportMissingIcon'>;
+  preloadIcon: ViewOption<'preloadIcon'>;
+  getChromeFaviconUrl: ViewOption<'getChromeFaviconUrl'>;
+  getBrowserPageFaviconUrl: ViewOption<'getBrowserPageFaviconUrl'>;
+  getPageFaviconRenderCandidates: ViewOption<'getPageFaviconRenderCandidates'>;
+  setSuggestionsVisible: ViewOption<'setSuggestionsVisible'>;
+  shouldOpenSearchResultInBackgroundTab(event: MouseEvent): boolean;
+  activateRenderedSuggestion: ViewOption<'onActivateSuggestion'>;
+  deleteRenderedHistorySuggestion: ViewOption<'onDeleteHistory'>;
+  copySearchResultUrl: ViewOption<'onCopyUrl'>;
+  showTopActionTooltip: ViewOption<'showTopActionTooltip'>;
+  hideTopActionTooltip: ViewOption<'hideTopActionTooltip'>;
+  bindCursorTooltip: ViewOption<'bindCursorTooltip'>;
+  getSearchActionLabel: ViewOption<'getSearchActionLabel'>;
+  getSiteSearchDisplayName: ViewOption<'getSiteSearchDisplayName'>;
+  isAiSiteSearchProvider: ViewOption<'isAiSiteSearchProvider'>;
+  getDefaultSearchEngineThemeUrl: ViewOption<'getDefaultSearchEngineThemeUrl'>;
+  getBrandAccentForUrl: ViewOption<'getBrandAccentForUrl'>;
+  buildThemeFromAccent: ViewOption<'buildThemeFromAccent'>;
+  newtabSuggestionActionModel: ViewOption<'actionModel'>;
+  shouldSwitchMatchedTabSuggestion: ViewOption<'shouldSwitchMatchedTabSuggestion'>;
+  defaultTheme: ViewOption<'defaultTheme'>;
+  urlHighlightTheme: ViewOption<'urlHighlightTheme'>;
+  createSearchInput: typeof createSearchInput;
+  searchInputHistoryController: Pick<ReturnType<typeof createSearchInputHistoryController>, 'resetNavigation' | 'move' | 'record'>;
+  updateModeBadge(rawValue: string): void;
+  imeKeyGuard: Pick<ReturnType<typeof createImeKeyGuard>, 'isComposing'>;
+  clearAutocomplete(): void;
+  clearSearchSuggestions(): void;
+  isSlashCommandInput(query: string): boolean;
+  renderSuggestions: RenderSuggestions;
+  // The address the query is, as a suggestion; null when it is not one.
+  getDirectUrlSuggestion(query: string): SuggestionLike | null;
+  renderPendingSuggestions(query: string): unknown;
+  requestSuggestions: RequestSuggestions;
+  syncSuggestionActionModifiersFromEvent(event: KeyboardEvent): void;
+  dismissAutocompletePreviewOnNonTabKey: SearchAutocomplete['dismissAutocompletePreviewOnNonTabKey'];
+  SUGGESTION_NAVIGATION: Pick<typeof SuggestionNavigation, 'getSuggestionNavigationKey'>;
+  clearSiteSearch: SearchModes['clearSiteSearch'];
+  clearLocalSearchScope: SearchModes['clearLocalSearchScope'];
+  isImeCompositionEvent(event: KeyboardEvent): boolean;
+  SEARCH_INPUT_HISTORY: Pick<typeof SearchInputHistory, 'getShortcutDirection'>;
+  // The row a step from `selectedIndex` lands on, and whether it wrapped.
+  getNextSuggestionIndex(direction: number, selectedIndex: number, itemCount: number, autoIndex: number): { index: number; didWrap: boolean };
+  getAutoHighlightIndex(): number;
+  updateSelection(): void;
+  scrollSelectedSuggestionIntoView(direction: 'up' | 'down', didWrap: boolean): void;
+  submitSearchQuery(query: string, event: KeyboardEvent): unknown;
+  root: HTMLElement | null;
+  dismissSearchSuggestionsFromBackground(): void;
+  focusSearchInputPreservingScroll(): boolean;
+  finishNewtabEntryAnimation(): void;
+  handleGlobalTypingFocus(event: KeyboardEvent): void;
+  refreshFallbackShortcut(force: boolean): void;
+  restoreDismissedSearchSuggestions(): void;
+  hideSearchInputCursorTooltip(): void;
+  // Runs the listener again whenever the page language changes.
+  onLanguageChange(listener: () => void): void;
+  openSearchModeMenuFromDoubleTab: SearchModes['openSearchModeMenuFromDoubleTab'];
+  bindSearchInputCursorTooltip: BindCursorTooltip;
+  pageState: SearchBoxState;
+}
+
+// The text in the input an event came from.
+function readInputValue(event: Event): string {
+  return isHtmlTag(event.target, 'input') ? event.target.value : '';
+}
+
+function createSearchBox(deps: SearchBoxDeps) {
   const {
     suggestionItems,
     t,
@@ -92,9 +229,12 @@ function createSearchBox(deps) {
   const pageState = deps.pageState;
 
   const NEWTAB_SUGGESTIONS_VIEW = globalThis.LumnoNewtabSuggestionsView;
+  if (!NEWTAB_SUGGESTIONS_VIEW) {
+    throw new Error('Suggestions view unavailable');
+  }
   const NEWTAB_OPEN_TAB_SUGGESTION_LIMIT = 8;
 
-  function formatTabRankDebugText(tab) {
+  function formatTabRankDebugText(tab: OpenTabSuggestion): string {
     const scoreRaw = Number(tab && tab._xTabRankScore);
     const score = Number.isFinite(scoreRaw) ? scoreRaw.toFixed(2) : '0.00';
     const count30mRaw = Number(tab && tab._xTabSwitchCount30m);
@@ -152,7 +292,7 @@ function createSearchBox(deps) {
     },
     getSelectedIndex: () => pageState.selectedIndex,
     onSwitchToTab: (tab, event) => {
-      if (shouldOpenSearchResultInBackgroundTab(event) && tab && tab.url) {
+      if (shouldOpenSearchResultInBackgroundTab(event) && tab.url) {
         LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
           action: 'createTab',
           url: tab.url,
@@ -160,10 +300,12 @@ function createSearchBox(deps) {
         });
         return;
       }
-      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
-        action: 'switchToTab',
-        tabId: tab.id
-      });
+      if (typeof tab.id === 'number') {
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
+          action: 'switchToTab',
+          tabId: tab.id
+        });
+      }
     },
     onActivateSuggestion: activateRenderedSuggestion,
     onDeleteHistory: deleteRenderedHistorySuggestion,
@@ -184,19 +326,18 @@ function createSearchBox(deps) {
     openTabSuggestionLimit: NEWTAB_OPEN_TAB_SUGGESTION_LIMIT
   });
 
-  function shouldRemoveSearchModeTagOnBackspace(event) {
-    if (!pageState.inputModeController ||
-        typeof pageState.inputModeController.shouldRemoveModeTagOnBackspace !== 'function') {
+  function shouldRemoveSearchModeTagOnBackspace(event: KeyboardEvent): boolean {
+    if (!pageState.inputModeController) {
       return true;
     }
     const shouldRemove = pageState.inputModeController.shouldRemoveModeTagOnBackspace(event);
-    if (!shouldRemove && event && typeof event.preventDefault === 'function') {
+    if (!shouldRemove) {
       event.preventDefault();
     }
     return shouldRemove;
   }
 
-  pageState.inputParts = createSearchInput({
+  const inputParts = createSearchInput({
     useImportantStyles: false,
     useInlineBaseStyles: false,
     containerId: '_x_extension_newtab_input_container_2024_unique_',
@@ -266,12 +407,12 @@ function createSearchBox(deps) {
       if (!isApplyingSearchInputHistory) {
         searchInputHistoryController.resetNavigation();
       }
-      const rawValue = event.target.value;
+      const rawValue = readInputValue(event);
       const query = rawValue.trim();
       updateModeBadge(rawValue);
-      const inputType = event && event.inputType;
+      const inputType = 'inputType' in event && typeof event.inputType === 'string' ? event.inputType : '';
       const isPaste = inputType === 'insertFromPaste';
-      const isDelete = inputType && inputType.startsWith('delete');
+      const isDelete = inputType.startsWith('delete');
       if (isDelete) {
         pageState.lastDeletionAt = Date.now();
       }
@@ -330,9 +471,10 @@ function createSearchBox(deps) {
           macosCtrlEnabled: pageState.macosCtrlSuggestionNavigationEnabled,
           navigatorLike: typeof navigator === 'object' && navigator ? navigator : null
         });
+      const input = inputParts.input;
       if (event.key !== 'Backspace' && !event.metaKey && !event.ctrlKey && !event.altKey) {
-        pageState.latestRawQuery = pageState.inputParts.input.value;
-        pageState.latestQuery = pageState.inputParts.input.value.trim();
+        pageState.latestRawQuery = input.value;
+        pageState.latestQuery = input.value.trim();
       }
       if (event.key === 'Escape' && pageState.siteSearchState) {
         event.preventDefault();
@@ -342,7 +484,7 @@ function createSearchBox(deps) {
       if (event.key === 'Escape' && pageState.localSearchScopeState) {
         event.preventDefault();
         clearLocalSearchScope();
-        const fallbackQuery = pageState.inputParts.input.value.trim();
+        const fallbackQuery = input.value.trim();
         if (fallbackQuery) {
           requestSuggestions(fallbackQuery, { immediate: true });
         } else {
@@ -350,14 +492,14 @@ function createSearchBox(deps) {
         }
         return;
       }
-      if (event.key === 'Backspace' && pageState.siteSearchState && !pageState.inputParts.input.value) {
+      if (event.key === 'Backspace' && pageState.siteSearchState && !input.value) {
         if (!shouldRemoveSearchModeTagOnBackspace(event)) {
           return;
         }
         clearSiteSearch();
         return;
       }
-      if (event.key === 'Backspace' && pageState.localSearchScopeState && !pageState.inputParts.input.value) {
+      if (event.key === 'Backspace' && pageState.localSearchScopeState && !input.value) {
         if (!shouldRemoveSearchModeTagOnBackspace(event)) {
           return;
         }
@@ -375,14 +517,14 @@ function createSearchBox(deps) {
         event.stopPropagation();
         const result = searchInputHistoryController.move(
           inputHistoryDirection,
-          pageState.inputParts.input.value
+          input.value
         );
         if (result.handled) {
           isApplyingSearchInputHistory = true;
           try {
-            pageState.inputParts.input.value = result.value;
-            pageState.inputParts.input.setSelectionRange(result.value.length, result.value.length);
-            pageState.inputParts.input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.value = result.value;
+            input.setSelectionRange(result.value.length, result.value.length);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
           } finally {
             isApplyingSearchInputHistory = false;
           }
@@ -416,7 +558,7 @@ function createSearchBox(deps) {
       if (event.key !== 'Enter') {
         return;
       }
-      const query = event.target.value.trim();
+      const query = readInputValue(event).trim();
       if (!query) {
         return;
       }
@@ -424,10 +566,11 @@ function createSearchBox(deps) {
       submitSearchQuery(query, event);
     }
   });
+  pageState.inputParts = inputParts;
 
   const handleBackgroundPointerFocus = NEWTAB_BACKGROUND_SEARCH_FOCUS.createBackgroundFocusHandler({
     getBackgroundTargets: () => [document.body, root, pageState.searchLayer],
-    getSearchValue: () => pageState.inputParts.input.value,
+    getSearchValue: () => inputParts.input.value,
     dismissSearchResults: dismissSearchSuggestionsFromBackground,
     focusSearch: focusSearchInputPreservingScroll
   });
@@ -443,92 +586,74 @@ function createSearchBox(deps) {
   }, true);
   window.addEventListener('pointerdown', handleBackgroundPointerFocus, true);
   window.addEventListener('mousedown', handleBackgroundPointerFocus, true);
-  pageState.modeBadge = pageState.inputParts.modeBadge;
-  const searchInput = pageState.inputParts.input;
+  pageState.modeBadge = inputParts.modeBadge;
+  const searchInput = inputParts.input;
   searchInput.addEventListener('focus', restoreDismissedSearchSuggestions);
-  pageState.searchScopeIcon = pageState.inputParts.icon;
-  const rightIcon = pageState.inputParts.rightIcon;
-  const searchScopeTooltipText = () => t(
+  const searchScopeIcon: HTMLElement = inputParts.icon;
+  pageState.searchScopeIcon = searchScopeIcon;
+  const rightIcon = inputParts.rightIcon;
+  const searchScopeTooltipText = (): string => t(
     'shortcut_reference_search_open_scope_menu_title',
     '打开搜索范围面板'
   );
-  function setSearchScopeIconVisualState(active) {
-    if (!pageState.searchScopeIcon) {
-      return;
-    }
-    const enabled = pageState.searchScopeIcon.getAttribute('aria-disabled') !== 'true';
-    pageState.searchScopeIcon.dataset.hoverActive = active && enabled ? 'true' : 'false';
+  function setSearchScopeIconVisualState(active: boolean): void {
+    const enabled = searchScopeIcon.getAttribute('aria-disabled') !== 'true';
+    searchScopeIcon.dataset.hoverActive = active && enabled ? 'true' : 'false';
   }
-  function setSearchScopeIconEnabled(enabled) {
-    if (!pageState.searchScopeIcon) {
-      return;
-    }
+  function setSearchScopeIconEnabled(enabled: boolean): void {
     const nextEnabled = enabled !== false;
-    pageState.searchScopeIcon.setAttribute('aria-disabled', nextEnabled ? 'false' : 'true');
-    pageState.searchScopeIcon.setAttribute('tabindex', nextEnabled ? '0' : '-1');
-    pageState.searchScopeIcon.setAttribute('aria-label', searchScopeTooltipText());
+    searchScopeIcon.setAttribute('aria-disabled', nextEnabled ? 'false' : 'true');
+    searchScopeIcon.setAttribute('tabindex', nextEnabled ? '0' : '-1');
+    searchScopeIcon.setAttribute('aria-label', searchScopeTooltipText());
     if (nextEnabled) {
-      pageState.searchScopeIcon.setAttribute('data-tooltip', searchScopeTooltipText());
+      searchScopeIcon.setAttribute('data-tooltip', searchScopeTooltipText());
       return;
     }
-    pageState.searchScopeIcon.removeAttribute('data-tooltip');
+    searchScopeIcon.removeAttribute('data-tooltip');
     hideSearchInputCursorTooltip();
     setSearchScopeIconVisualState(false);
-    if (typeof pageState.searchScopeIcon.blur === 'function') {
-      pageState.searchScopeIcon.blur();
-    }
+    searchScopeIcon.blur();
   }
   onLanguageChange(() => {
-    if (pageState.searchScopeIcon) {
-      setSearchScopeIconEnabled(pageState.searchScopeIcon.getAttribute('aria-disabled') !== 'true');
-    }
+    setSearchScopeIconEnabled(searchScopeIcon.getAttribute('aria-disabled') !== 'true');
   });
-  function activateSearchScopeIcon(event) {
-    if (!pageState.searchScopeIcon || pageState.searchScopeIcon.getAttribute('aria-disabled') === 'true') {
+  function activateSearchScopeIcon(event: Event): void {
+    if (searchScopeIcon.getAttribute('aria-disabled') === 'true') {
       return;
     }
-    if (event && typeof event.preventDefault === 'function') {
-      event.preventDefault();
-    }
-    if (event && typeof event.stopPropagation === 'function') {
-      event.stopPropagation();
-    }
+    event.preventDefault();
+    event.stopPropagation();
     hideSearchInputCursorTooltip();
     setSearchScopeIconVisualState(false);
-    if (pageState.inputModeController &&
-        typeof pageState.inputModeController.resetModeMenuDoubleTab === 'function') {
+    if (pageState.inputModeController) {
       pageState.inputModeController.resetModeMenuDoubleTab();
     }
-    openSearchModeMenuFromDoubleTab();
-    if (pageState.searchScopeIcon && typeof pageState.searchScopeIcon.blur === 'function') {
-      pageState.searchScopeIcon.blur();
+    void openSearchModeMenuFromDoubleTab();
+    searchScopeIcon.blur();
+  }
+  searchScopeIcon.dataset.searchScopeAction = 'true';
+  searchScopeIcon.setAttribute('role', 'button');
+  setSearchScopeIconEnabled(true);
+  setSearchScopeIconVisualState(false);
+  searchScopeIcon.addEventListener('mouseenter', () => {
+    setSearchScopeIconVisualState(true);
+  });
+  searchScopeIcon.addEventListener('focus', () => {
+    setSearchScopeIconVisualState(true);
+  });
+  ['mouseleave', 'blur', 'pointerup', 'pointercancel'].forEach((type) => {
+    searchScopeIcon.addEventListener(type, () => {
+      setSearchScopeIconVisualState(false);
+    });
+  });
+  searchScopeIcon.addEventListener('click', activateSearchScopeIcon);
+  searchScopeIcon.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
     }
-  }
-  if (pageState.searchScopeIcon) {
-    pageState.searchScopeIcon.dataset.searchScopeAction = 'true';
-    pageState.searchScopeIcon.setAttribute('role', 'button');
-    setSearchScopeIconEnabled(true);
-    setSearchScopeIconVisualState(false);
-    pageState.searchScopeIcon.addEventListener('mouseenter', () => {
-      setSearchScopeIconVisualState(true);
-    });
-    pageState.searchScopeIcon.addEventListener('focus', () => {
-      setSearchScopeIconVisualState(true);
-    });
-    ['mouseleave', 'blur', 'pointerup', 'pointercancel'].forEach((type) => {
-      pageState.searchScopeIcon.addEventListener(type, () => {
-        setSearchScopeIconVisualState(false);
-      });
-    });
-    pageState.searchScopeIcon.addEventListener('click', activateSearchScopeIcon);
-    pageState.searchScopeIcon.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') {
-        return;
-      }
-      activateSearchScopeIcon(event);
-    });
-    bindSearchInputCursorTooltip(pageState.searchScopeIcon, searchScopeTooltipText);
-  }
+    activateSearchScopeIcon(event);
+  });
+  bindSearchInputCursorTooltip(searchScopeIcon, searchScopeTooltipText);
 
   function getCloseOtherTabsConfirmCopy() {
     return {
@@ -539,11 +664,11 @@ function createSearchBox(deps) {
     };
   }
 
-  function closeOtherTabs(event) {
-    if (!event || event.isTrusted !== true) {
+  function closeOtherTabs(event: Event): void {
+    if (event.isTrusted !== true) {
       return;
     }
-    const closeOtherTabsButton = pageState.inputParts && pageState.inputParts.secondaryAction;
+    const closeOtherTabsButton = inputParts.secondaryAction;
     // The confirm button is going away with its bubble; keep typing in the field.
     searchInput.focus({ preventScroll: true });
     LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'closeOtherTabsForOverlay' }, (response) => {
@@ -568,4 +693,7 @@ function createSearchBox(deps) {
   };
 }
 
+type SearchBox = ReturnType<typeof createSearchBox>;
+
 export { createSearchBox };
+export type { SearchBox, SearchBoxDeps, SearchBoxState };

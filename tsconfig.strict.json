@@ -28,6 +28,7 @@
     "src/newtab/recent/**/*.ts",
     "src/newtab/search/background-search-focus.ts",
     "src/newtab/search/search-autocomplete.ts",
+    "src/newtab/search/search-box.ts",
     "src/newtab/search/search-box-controls.ts",
     "src/newtab/search/default-search-engine.ts",
     "src/newtab/search/direct-navigation-settle.ts",
