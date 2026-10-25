@@ -6,15 +6,9 @@ import {
   type GeneralShortcutsSectionModel
 } from './general-shortcuts-section';
 import { createReactRootController, type ReactRootController } from './root-controller';
+import type { SectionPart } from './section-part';
 import { SettingDivider } from './setting-rows';
 import { SettingsRows, type SettingsRowsHandlers, type SettingsSectionModel } from './settings-rows-view';
-
-// A section of the General tab as its module last drew it, with the
-// handlers its view reports to.
-interface SectionPart<M, H> {
-  model: M;
-  handlers: H;
-}
 
 // Each section is null until its module first draws it.
 export interface GeneralTabModel {

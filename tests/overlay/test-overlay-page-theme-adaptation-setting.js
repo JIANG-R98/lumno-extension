@@ -17,16 +17,16 @@ const ROW_ID = '_x_extension_overlay_page_theme_adaptation_row_2026_unique_';
 async function testSettingsMarkup() {
   const page = await createOptionsPage();
   const follows = (later, earlier) => Boolean(earlier.compareDocumentPosition(later) & 4);
-  const overlay = page.byId('_x_extension_appearance_overlay_section_2026_unique_');
-  const newtab = page.byId('_x_extension_appearance_newtab_look_section_2026_unique_');
-  assert.strictEqual(overlay.querySelector('._x_extension_section_title_2024_unique_').textContent, '网页聚焦搜索浮层');
-  assert.ok(follows(newtab, overlay), 'webpage overlay settings should appear above New Tab settings');
+  const tab = page.document.querySelector('._x_extension_settings_content_2024_unique_[data-content="appearance"]');
+  assert.deepStrictEqual(Array.from(tab.querySelectorAll('._x_extension_section_title_2024_unique_'), (title) => title.textContent),
+    ['全局', '网页聚焦搜索浮层', '新标签页'], 'webpage overlay settings should appear above New Tab settings');
   const size = page.byId('_x_extension_overlay_size_tabs_wrap_2026_unique_');
   const animation = page.byId('_x_extension_overlay_enter_animation_tabs_wrap_2026_unique_');
   const row = page.byId(ROW_ID);
   assert.ok(follows(animation, size));
   assert.ok(follows(row, animation), 'webpage theme adaptation should be the last overlay appearance setting');
-  assert.strictEqual(row, overlay.querySelector('._x_extension_setting_row_2024_unique_:last-child'));
+  assert.ok(row.nextElementSibling.classList.contains('_x_extension_setting_divider_wrap_2024_unique_'),
+    'the overlay section should end with webpage theme adaptation');
   assert.strictEqual(page.byId('_x_extension_overlay_page_theme_adaptation_toggle_2026_unique_').checked, true,
     'webpage theme adaptation should default to on');
   assert.strictEqual(row.querySelector('[title]'), null, 'the row should not fall back to a native title tooltip');

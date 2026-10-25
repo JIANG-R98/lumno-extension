@@ -11,6 +11,7 @@ import * as LumnoShortcutDisplay from '../domain/shortcut-display';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as OPTIONS_ACCOUNT_SECTION from './options-account-section';
 import * as OPTIONS_APPEARANCE_GLOBAL_SECTION from './options-appearance-global-section';
+import * as OPTIONS_APPEARANCE_TAB from './options-appearance-tab';
 import * as OPTIONS_DAILY_QUOTE_SECTION from './options-appearance-daily-quote-section';
 import * as OPTIONS_APPEARANCE_NEWTAB_LAYOUT_SECTION from './options-appearance-newtab-layout-section';
 import * as OPTIONS_APPEARANCE_NEWTAB_LOOK_SECTION from './options-appearance-newtab-look-section';
@@ -432,9 +433,11 @@ import * as OPTIONS_STATE from './options-state';
     getViewportTopInset: getMenuViewportTopInset,
     hideTooltip: () => optionsState.tooltipController.hide()
   });
-  const appearanceGlobalHost = getHtmlElement(document, '_x_extension_appearance_global_section_2026_unique_');
+  const appearanceTab = OPTIONS_APPEARANCE_TAB.createAppearanceTab(optionsSettingsControlsApi.createAppearanceTabController(
+    queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="appearance"]')
+  ));
   const appearanceGlobalSection = OPTIONS_APPEARANCE_GLOBAL_SECTION.createAppearanceGlobalSection({
-    view: (handlers) => optionsSettingsControlsApi.createAppearanceGlobalSectionController(appearanceGlobalHost, handlers),
+    view: appearanceTab.global,
     storageArea: optionsState.storageArea,
     SETTINGS,
     getMessage,
@@ -443,9 +446,8 @@ import * as OPTIONS_STATE from './options-state';
       setThemeMode(mode);
     }
   });
-  const appearanceOverlayHost = getHtmlElement(document, '_x_extension_appearance_overlay_section_2026_unique_');
   const appearanceOverlaySection = OPTIONS_APPEARANCE_OVERLAY_SECTION.createAppearanceOverlaySection({
-    view: (handlers) => optionsSettingsControlsApi.createAppearanceOverlaySectionController(appearanceOverlayHost, handlers),
+    view: appearanceTab.overlay,
     storageArea: optionsState.storageArea,
     localStorageArea,
     SETTINGS,
@@ -455,19 +457,17 @@ import * as OPTIONS_STATE from './options-state';
     listInstalledFonts,
     getViewportTopInset: getMenuViewportTopInset
   });
-  const appearanceNewtabLookHost = getHtmlElement(document, '_x_extension_appearance_newtab_look_section_2026_unique_');
   const appearanceNewtabLookSection = OPTIONS_APPEARANCE_NEWTAB_LOOK_SECTION.createAppearanceNewtabLookSection({
-    view: (handlers) => optionsSettingsControlsApi.createSettingsSectionController(appearanceNewtabLookHost, handlers),
+    view: appearanceTab.newtabLook,
     storageArea: optionsState.storageArea,
     SETTINGS,
     getMessage,
     notifyNewtabSectionsRefresh: (section) => notifyNewtabSectionsRefresh(section),
     getViewportTopInset: getMenuViewportTopInset
   });
-  const dailyQuoteHost = getHtmlElement(document, '_x_extension_appearance_daily_quote_section_2026_unique_');
   // The daily quote mirrors the quote section of New Tab's appearance panel.
   const dailyQuoteSection = OPTIONS_DAILY_QUOTE_SECTION.createDailyQuoteSection({
-    view: (handlers) => optionsSettingsControlsApi.createDailyQuoteSectionController(dailyQuoteHost, handlers),
+    view: appearanceTab.dailyQuote,
     settings: SETTINGS,
     customQuotes: CUSTOM_QUOTES,
     getMessage,
@@ -476,9 +476,8 @@ import * as OPTIONS_STATE from './options-state';
     localArea: localStorageArea,
     getViewportTopInset: getMenuViewportTopInset
   });
-  const appearanceNewtabLayoutHost = getHtmlElement(document, '_x_extension_appearance_newtab_layout_section_2026_unique_');
   const appearanceNewtabLayoutSection = OPTIONS_APPEARANCE_NEWTAB_LAYOUT_SECTION.createAppearanceNewtabLayoutSection({
-    view: (handlers) => optionsSettingsControlsApi.createAppearanceNewtabLayoutSectionController(appearanceNewtabLayoutHost, handlers),
+    view: appearanceTab.newtabLayout,
     storageArea: optionsState.storageArea,
     SETTINGS,
     getMessage,
