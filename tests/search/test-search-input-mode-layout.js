@@ -222,6 +222,22 @@ modeMenu.appendChild(modeMenuContent);
 modeMenu.appendChild(modeMenuFooter);
 container.appendChild(modeMenu);
 const modeMenuView = { render() {} };
+// The tag's and hint's views, standing in for React: they show what the
+// controller draws, as far as the layout reads it.
+const modePrefixIconFrame = new FakeElement('span');
+const modePrefixGlyph = new FakeElement('i');
+const modePrefixLineIcon = new FakeElement('svg');
+const modePrefixCurrent = new FakeElement('span');
+const modeTagView = {
+  render(model) {
+    modePrefix.style.setProperty('display', model.visible ? 'inline-flex' : 'none');
+  }
+};
+const tabHintView = {
+  render(model) {
+    modeTabHint.style.setProperty('display', model.visible ? 'inline-flex' : 'none');
+  }
+};
 const badge = new FakeElement('span');
 badge._layoutWidth = 48;
 badge.setAttribute('data-visible', 'true');
@@ -233,15 +249,17 @@ const controller = LumnoSearchInputMode.createInputModeController(
     container,
     input,
     modePrefix,
-    modePrefixIcon,
-    modePrefixText,
     modeTabHint,
-    modeTabHintKey,
-    modeTabHintText,
     modeMenu,
     modeMenuContent,
     modeMenuFooter,
-    modeMenuView
+    modeMenuView,
+    modePrefixIconFrame,
+    modePrefixGlyph,
+    modePrefixLineIcon,
+    modePrefixCurrent,
+    modeTagView,
+    tabHintView
   },
   {
     document: documentObj,

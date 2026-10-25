@@ -1,8 +1,10 @@
-// The mode prefix's content: its identity, the icon swap with a ghost of
-// the previous icon, and measuring and setting its text and icon.
+// The mode tag's content: its identity, text and icon, the icon swap with a
+// fading copy of the previous icon, and measuring the tag. The React view
+// (react/search/mode-tag.tsx) draws the content from the tag's model; the
+// swap's motion runs here on the drawn icons.
+import { getModeLineIconPaths } from './line-icons';
+import type { ModeTagGhost, ModeTagIcon, ModeTagModel } from './mode-tag-model';
 import type {
-  AttachFaviconData,
-  CssText,
   FormatMessage,
   IsElementVisible,
   PrefixContentOptions,
@@ -12,33 +14,26 @@ import type {
 
 // The controller state search-input-mode.ts shares with its modules.
 interface PrefixContentState {
-  // Counts content changes, so a late icon failure knows it is stale.
-  inputModePrefixContentRevision: number;
+  modeTag: ModeTagModel;
 }
 
 interface PrefixContentDeps {
   siteSearchPrefix: HTMLElement;
-  formatMessage: FormatMessage;
-  setStyle: SetStyle;
-  shouldReduceInputModeMotion: () => boolean;
   siteSearchPrefixLineIcon: SVGElement;
   siteSearchPrefixIconFrame: HTMLElement;
   siteSearchPrefixGlyph: HTMLElement;
+  siteSearchPrefixCurrent: HTMLElement;
+  formatMessage: FormatMessage;
+  setStyle: SetStyle;
+  shouldReduceInputModeMotion: () => boolean;
   isElementVisible: IsElementVisible;
   DEFAULT_PREFIX_ICON_POP_DURATION: number;
   DEFAULT_PREFIX_ICON_POP_EASING: string;
   DEFAULT_PREFIX_ICON_EXIT_DURATION: number;
   DEFAULT_PREFIX_ICON_EXIT_EASING: string;
-  siteSearchPrefixText: HTMLElement;
   resolveProviderIconUrl: ResolveProviderIconUrl;
-  renderModeLineIconSvg: (svg: Element | null | undefined, lineIconName: string, strokeWidth?: string) => boolean;
-  siteSearchPrefixIcon: HTMLImageElement;
-  cssText: CssText;
   updatePrefixLayout: () => void;
-  attachFaviconData: AttachFaviconData | null;
-  siteSearchPrefixCurrentText: HTMLElement;
-  siteSearchPrefixCurrent: HTMLElement;
-  siteSearchPrefixChevron: HTMLElement;
+  updateModeTag: (patch: Partial<ModeTagModel>) => void;
   win: Partial<Pick<Window, 'getComputedStyle'>> | null | undefined;
   inputModeState: PrefixContentState;
 }
@@ -51,35 +46,36 @@ interface PrefixCurrentVisualState {
 
 type PrefixIcon = SVGElement | HTMLElement;
 
-// An element node with an inline style; nodeType 1 is an element.
-function isStyledElement(node: Node): node is Element & ElementCSSInlineStyle {
-  return node.nodeType === 1 && 'style' in node;
+function isAnimatable(element: Element | null): element is Element & ElementCSSInlineStyle & Animatable {
+  return Boolean(element && 'style' in element && 'animate' in element && typeof element.animate === 'function');
+}
+
+function getScopeLabel(formatMessage: FormatMessage, prefixText: string): string {
+  return formatMessage(
+    'search_scope_switcher_label',
+    '搜索范围：{scope}。选择即可切换。',
+    { scope: prefixText }
+  );
 }
 
 function createPrefixContent(deps: PrefixContentDeps) {
   const {
     siteSearchPrefix,
-    formatMessage,
-    setStyle,
-    shouldReduceInputModeMotion,
     siteSearchPrefixLineIcon,
     siteSearchPrefixIconFrame,
     siteSearchPrefixGlyph,
+    siteSearchPrefixCurrent,
+    formatMessage,
+    setStyle,
+    shouldReduceInputModeMotion,
     isElementVisible,
     DEFAULT_PREFIX_ICON_POP_DURATION,
     DEFAULT_PREFIX_ICON_POP_EASING,
     DEFAULT_PREFIX_ICON_EXIT_DURATION,
     DEFAULT_PREFIX_ICON_EXIT_EASING,
-    siteSearchPrefixText,
     resolveProviderIconUrl,
-    renderModeLineIconSvg,
-    siteSearchPrefixIcon,
-    cssText,
     updatePrefixLayout,
-    attachFaviconData,
-    siteSearchPrefixCurrentText,
-    siteSearchPrefixCurrent,
-    siteSearchPrefixChevron,
+    updateModeTag,
     win
   } = deps;
 
@@ -88,8 +84,8 @@ function createPrefixContent(deps: PrefixContentDeps) {
 
   let inputModePrefixIconAnimation: Animation | null = null;
   let inputModePrefixIconAnimationElement: PrefixIcon | null = null;
-  let inputModePrefixIconGhost: Element | null = null;
   let inputModePrefixOutgoingIconAnimation: Animation | null = null;
+  let ghostCount = 0;
 
   function getActivePrefixIcon(): PrefixIcon | undefined {
     const icons: PrefixIcon[] = [siteSearchPrefixLineIcon, siteSearchPrefixIconFrame, siteSearchPrefixGlyph];
@@ -97,25 +93,26 @@ function createPrefixContent(deps: PrefixContentDeps) {
   }
 
   function setInputModePrefixIdentity(prefixText: string, contentOptions?: PrefixContentOptions | null): void {
-    siteSearchPrefix.setAttribute(
-      'data-mode-id',
-      contentOptions && contentOptions.modeId ? String(contentOptions.modeId) : ''
-    );
-    siteSearchPrefix.setAttribute('aria-label', formatMessage(
-      'search_scope_switcher_label',
-      '搜索范围：{scope}。选择即可切换。',
-      { scope: prefixText }
-    ));
+    updateModeTag({
+      modeId: contentOptions && contentOptions.modeId ? String(contentOptions.modeId) : '',
+      ariaLabel: getScopeLabel(formatMessage, prefixText)
+    });
+  }
+
+  // Drops the fading copy; only the given one when a key is passed.
+  function removeIconGhost(key?: number): void {
+    const ghost = inputModeState.modeTag.ghost;
+    if (ghost && (key === undefined || ghost.key === key)) {
+      updateModeTag({ ghost: null });
+    }
   }
 
   function cancelInputModePrefixIconAnimation(): void {
     const incomingAnimation = inputModePrefixIconAnimation;
     const incomingElement = inputModePrefixIconAnimationElement;
     const outgoingAnimation = inputModePrefixOutgoingIconAnimation;
-    const outgoingIcon = inputModePrefixIconGhost;
     inputModePrefixIconAnimation = null;
     inputModePrefixIconAnimationElement = null;
-    inputModePrefixIconGhost = null;
     inputModePrefixOutgoingIconAnimation = null;
     if (incomingAnimation && typeof incomingAnimation.cancel === 'function') {
       incomingAnimation.cancel();
@@ -129,67 +126,41 @@ function createPrefixContent(deps: PrefixContentDeps) {
       setStyle(incomingElement, 'transform', 'none');
       setStyle(incomingElement, 'will-change', 'auto');
     }
-    if (outgoingIcon && outgoingIcon.parentNode) {
-      outgoingIcon.parentNode.removeChild(outgoingIcon);
-    }
+    removeIconGhost();
   }
 
   // A copy of the shown icon over it, to fade out while the new one pops in.
-  function createInputModePrefixIconGhost(animateIcon: boolean): (Element & ElementCSSInlineStyle) | null {
-    if (!animateIcon || shouldReduceInputModeMotion()) {
+  function createInputModePrefixIconGhost(animateIcon: boolean): ModeTagGhost | null {
+    const icon = inputModeState.modeTag.icon;
+    if (!animateIcon || !icon || shouldReduceInputModeMotion()) {
       return null;
     }
     const activeIcon = getActivePrefixIcon();
-    if (!activeIcon || typeof activeIcon.cloneNode !== 'function') {
-      return null;
-    }
-    const ghost = activeIcon.cloneNode(true);
-    if (!isStyledElement(ghost)) {
+    if (!activeIcon) {
       return null;
     }
     const prefixRect = siteSearchPrefix.getBoundingClientRect();
     const iconRect = activeIcon.getBoundingClientRect();
     const layoutWidth = 'offsetWidth' in activeIcon ? Number(activeIcon.offsetWidth) : 0;
     const layoutHeight = 'offsetHeight' in activeIcon ? Number(activeIcon.offsetHeight) : 0;
-    const iconWidth = Number(iconRect.width) || layoutWidth || 16;
-    const iconHeight = Number(iconRect.height) || layoutHeight || 16;
     const iconLeft = Number(iconRect.left) - Number(prefixRect.left);
     const iconTop = Number(iconRect.top) - Number(prefixRect.top);
-    ghost.removeAttribute('id');
-    ghost.removeAttribute('data-search-input-mode-line-icon');
-    ghost.removeAttribute('data-search-input-mode-prefix-glyph');
-    ghost.removeAttribute('data-search-input-mode-prefix-icon');
-    ghost.removeAttribute('data-search-input-mode-prefix-icon-frame');
-    ghost.setAttribute('aria-hidden', 'true');
-    ghost.setAttribute('data-search-input-mode-icon-ghost', '');
-    setStyle(ghost, 'position', 'absolute');
-    setStyle(ghost, 'left', `${Number.isFinite(iconLeft) ? iconLeft : 0}px`);
-    setStyle(ghost, 'top', `${Number.isFinite(iconTop) ? iconTop : 0}px`);
-    setStyle(ghost, 'width', `${iconWidth}px`);
-    setStyle(ghost, 'height', `${iconHeight}px`);
-    setStyle(ghost, 'display', 'inline-flex');
-    setStyle(ghost, 'align-items', 'center');
-    setStyle(ghost, 'justify-content', 'center');
-    setStyle(ghost, 'pointer-events', 'none');
-    setStyle(ghost, 'opacity', '1');
-    setStyle(ghost, 'filter', 'none');
-    setStyle(ghost, 'transform', 'none');
-    setStyle(ghost, 'transform-origin', 'center');
-    setStyle(ghost, 'will-change', 'opacity, transform');
-    setStyle(ghost, 'z-index', '2');
-    siteSearchPrefix.appendChild(ghost);
-    return ghost;
+    ghostCount += 1;
+    return {
+      key: ghostCount,
+      icon,
+      showImage: activeIcon === siteSearchPrefixIconFrame,
+      left: Number.isFinite(iconLeft) ? iconLeft : 0,
+      top: Number.isFinite(iconTop) ? iconTop : 0,
+      width: Number(iconRect.width) || layoutWidth || 16,
+      height: Number(iconRect.height) || layoutHeight || 16
+    };
   }
 
-  function playInputModePrefixIconSwap(
-    animateIcon: boolean,
-    outgoingIcon: (Element & ElementCSSInlineStyle) | null
-  ): void {
+  function playInputModePrefixIconSwap(animateIcon: boolean, ghost: ModeTagGhost | null): void {
     const activeIcon = getActivePrefixIcon();
     if (!activeIcon) {
-      if (outgoingIcon && outgoingIcon.parentNode) {
-        outgoingIcon.parentNode.removeChild(outgoingIcon);
-      }
+      removeIconGhost();
       return;
     }
     setStyle(activeIcon, 'opacity', '1');
@@ -197,16 +168,10 @@ function createPrefixContent(deps: PrefixContentDeps) {
     setStyle(activeIcon, 'transform', 'none');
     setStyle(activeIcon, 'transform-origin', 'center');
     setStyle(activeIcon, 'will-change', 'auto');
-    if (!animateIcon || shouldReduceInputModeMotion() ||
-        typeof activeIcon.animate !== 'function') {
-      if (outgoingIcon && outgoingIcon.parentNode) {
-        outgoingIcon.parentNode.removeChild(outgoingIcon);
-      }
+    if (!animateIcon || shouldReduceInputModeMotion() || !isAnimatable(activeIcon)) {
+      removeIconGhost();
       return;
     }
-    activeIcon.style.setProperty('opacity', '1');
-    activeIcon.style.setProperty('filter', 'none');
-    activeIcon.style.setProperty('transform', 'none');
     const animation = activeIcon.animate([
       {
         opacity: 0.45,
@@ -250,14 +215,14 @@ function createPrefixContent(deps: PrefixContentDeps) {
         inputModePrefixIconAnimationElement = null;
       }
     };
-    if (!outgoingIcon || typeof outgoingIcon.animate !== 'function') {
-      if (outgoingIcon && outgoingIcon.parentNode) {
-        outgoingIcon.parentNode.removeChild(outgoingIcon);
-      }
+    const outgoingIcon = ghost ? siteSearchPrefix.querySelector('[data-search-input-mode-icon-ghost]') : null;
+    if (!ghost || !isAnimatable(outgoingIcon)) {
+      removeIconGhost();
       return;
     }
     outgoingIcon.style.setProperty('opacity', '1');
     outgoingIcon.style.setProperty('transform', 'none');
+    outgoingIcon.style.setProperty('will-change', 'opacity, transform');
     const outgoingAnimation = outgoingIcon.animate([
       { opacity: 1, transform: 'scale(1)' },
       { opacity: 0, transform: 'scale(0.84)' }
@@ -265,28 +230,23 @@ function createPrefixContent(deps: PrefixContentDeps) {
       duration: DEFAULT_PREFIX_ICON_EXIT_DURATION,
       easing: DEFAULT_PREFIX_ICON_EXIT_EASING
     });
-    inputModePrefixIconGhost = outgoingIcon;
     inputModePrefixOutgoingIconAnimation = outgoingAnimation;
     const removeOutgoingIcon = (): void => {
       if (inputModePrefixOutgoingIconAnimation === outgoingAnimation) {
         inputModePrefixOutgoingIconAnimation = null;
       }
-      if (inputModePrefixIconGhost === outgoingIcon) {
-        inputModePrefixIconGhost = null;
-      }
-      if (outgoingIcon.parentNode) {
-        outgoingIcon.parentNode.removeChild(outgoingIcon);
-      }
+      removeIconGhost(ghost.key);
     };
     outgoingAnimation.onfinish = removeOutgoingIcon;
     outgoingAnimation.oncancel = removeOutgoingIcon;
   }
 
+  // How wide the tag would be with this text.
   function measureInputModePrefixWidthForText(prefixText: string): number {
-    const previousText = String(siteSearchPrefixText.textContent || '');
-    siteSearchPrefixText.textContent = String(prefixText || '');
+    const previousText = inputModeState.modeTag.text;
+    updateModeTag({ text: String(prefixText || '') });
     const width = Number(siteSearchPrefix.getBoundingClientRect().width) || 0;
-    siteSearchPrefixText.textContent = previousText;
+    updateModeTag({ text: previousText });
     return width;
   }
 
@@ -298,130 +258,47 @@ function createPrefixContent(deps: PrefixContentDeps) {
     const animateOutgoingIcon = Boolean(
       contentOptions && contentOptions.animateOutgoingIcon
     );
-    let outgoingIcon: (Element & ElementCSSInlineStyle) | null = null;
+    let ghost: ModeTagGhost | null = null;
     if (!preserveIconAnimation) {
       cancelInputModePrefixIconAnimation();
-      outgoingIcon = createInputModePrefixIconGhost(animateOutgoingIcon);
+      ghost = createInputModePrefixIconGhost(animateOutgoingIcon);
     }
-    const contentRevision = ++inputModeState.inputModePrefixContentRevision;
-    const iconUrl = String(resolveProviderIconUrl(
-      contentOptions && contentOptions.provider,
-      contentOptions && contentOptions.iconUrl || ''
-    ) || '').trim();
-    const iconClass = contentOptions && contentOptions.iconClass
-      ? String(contentOptions.iconClass).trim()
-      : (contentOptions && contentOptions.isAi ? 'ri-search-ai-line' : 'ri-search-line');
     const lineIconName = contentOptions && contentOptions.menuIconName
       ? String(contentOptions.menuIconName).trim()
       : '';
-    const hasBuiltInLineIcon = renderModeLineIconSvg(
-      siteSearchPrefixLineIcon,
-      lineIconName,
-      '2'
-    );
-    if (hasBuiltInLineIcon) {
-      setStyle(siteSearchPrefixLineIcon, 'display', 'inline-flex');
-      setStyle(siteSearchPrefixGlyph, 'display', 'none');
-      setStyle(siteSearchPrefixIconFrame, 'display', 'none');
-      setStyle(siteSearchPrefixIcon, 'display', 'none');
-      siteSearchPrefixIcon.removeAttribute('src');
-    } else {
-      setStyle(siteSearchPrefixLineIcon, 'display', 'none');
-      siteSearchPrefixGlyph.className = `ri-icon ri-size-16 ${iconClass}`;
-      setStyle(siteSearchPrefixGlyph, 'display', 'inline-flex');
-      setStyle(siteSearchPrefixGlyph, 'flex', '0 0 auto');
-    }
-    if (!hasBuiltInLineIcon && iconUrl) {
-      const icon = siteSearchPrefixIcon;
-      siteSearchPrefixIconFrame.style.cssText = cssText([
-        ['all', 'unset'],
-        ['position', 'relative'],
-        ['width', '20px'],
-        ['height', '20px'],
-        ['border-radius', '6px'],
-        ['clip-path', 'inset(0 round 6px)'],
-        ['overflow', 'hidden'],
-        ['isolation', 'isolate'],
-        ['flex', '0 0 20px'],
-        ['display', 'inline-flex']
-      ]);
-      icon.alt = '';
-      icon.decoding = 'async';
-      icon.referrerPolicy = 'no-referrer';
-      icon.style.cssText = cssText([
-        ['all', 'unset'],
-        ['width', '20px'],
-        ['height', '20px'],
-        ['border-radius', '6px'],
-        ['clip-path', 'inset(0 round 6px)'],
-        ['overflow', 'hidden'],
-        ['object-fit', 'contain'],
-        ['flex', '0 0 auto'],
-        ['display', 'block']
-      ]);
-      setStyle(siteSearchPrefixGlyph, 'display', 'none');
-      const removeUnavailableIcon = (): void => {
-        if (contentRevision !== inputModeState.inputModePrefixContentRevision) {
-          return;
-        }
-        setStyle(siteSearchPrefixIconFrame, 'display', 'none');
-        setStyle(icon, 'display', 'none');
-        icon.removeAttribute('src');
-        setStyle(siteSearchPrefixGlyph, 'display', 'inline-flex');
-        updatePrefixLayout();
-      };
-      const iconHost = contentOptions && contentOptions.iconHost ? String(contentOptions.iconHost || '').trim() : '';
-      icon.addEventListener('error', removeUnavailableIcon, { once: true });
-      icon.src = iconUrl;
-      if (attachFaviconData && !iconUrl.startsWith('data:')) {
-        attachFaviconData(icon, iconUrl, iconHost);
-      }
-    } else if (!hasBuiltInLineIcon) {
-      setStyle(siteSearchPrefixIconFrame, 'display', 'none');
-      setStyle(siteSearchPrefixIcon, 'display', 'none');
-      siteSearchPrefixIcon.removeAttribute('src');
-    }
-    setStyle(siteSearchPrefixIcon, 'transition', 'none');
-    setStyle(siteSearchPrefixIconFrame, 'transition', 'none');
-    setStyle(siteSearchPrefixGlyph, 'transition', 'none');
-    setStyle(siteSearchPrefixLineIcon, 'transition', 'none');
-    const text = siteSearchPrefixText;
-    text.textContent = prefixText;
-    text.style.cssText = cssText([
-      ['all', 'unset'],
-      ['display', 'block'],
-      ['flex', '0 1 auto'],
-      ['min-width', '0'],
-      ['overflow', 'hidden'],
-      ['text-overflow', 'ellipsis'],
-      ['white-space', 'nowrap'],
-      ['line-height', '18px']
-    ]);
-    siteSearchPrefixCurrentText.textContent = formatMessage(
-      'search_scope_current',
-      '当前'
-    );
-    const currentLabelVisible = siteSearchPrefix.getAttribute(
-      'data-current-visible'
-    ) === 'true';
-    siteSearchPrefixCurrent.style.cssText = cssText([
-      ['all', 'unset'],
-      ['display', currentLabelVisible ? 'inline-flex' : 'none'],
-      ['align-items', 'center'],
-      ['font-size', '13px'],
-      ['font-weight', '600'],
-      ['line-height', '18px'],
-      ['letter-spacing', '0.04em'],
-      ['white-space', 'nowrap'],
-      ['overflow', 'hidden'],
-      ['flex', '0 0 auto']
-    ]);
-    setInputModePrefixIdentity(prefixText, contentOptions);
-    setStyle(siteSearchPrefixChevron, 'display', 'inline-flex');
-    setStyle(siteSearchPrefixChevron, 'flex', '0 0 auto');
+    const icon: ModeTagIcon = {
+      lineIcon: getModeLineIconPaths(lineIconName) ? lineIconName : '',
+      glyphClass: contentOptions && contentOptions.iconClass
+        ? String(contentOptions.iconClass).trim()
+        : (contentOptions && contentOptions.isAi ? 'ri-search-ai-line' : 'ri-search-line'),
+      iconUrl: String(resolveProviderIconUrl(
+        contentOptions && contentOptions.provider,
+        contentOptions && contentOptions.iconUrl || ''
+      ) || '').trim(),
+      iconHost: contentOptions && contentOptions.iconHost ? String(contentOptions.iconHost).trim() : ''
+    };
+    updateModeTag({
+      text: prefixText,
+      icon,
+      iconFailed: false,
+      currentText: formatMessage('search_scope_current', '当前'),
+      modeId: contentOptions && contentOptions.modeId ? String(contentOptions.modeId) : '',
+      ariaLabel: getScopeLabel(formatMessage, prefixText),
+      ...(preserveIconAnimation ? {} : { ghost })
+    });
     if (!preserveIconAnimation) {
-      playInputModePrefixIconSwap(animateIcon, outgoingIcon);
+      playInputModePrefixIconSwap(animateIcon, ghost);
     }
+  }
+
+  // The site icon failed: the glyph shows in its place.
+  function handleModeTagIconError(): void {
+    const { icon, iconFailed } = inputModeState.modeTag;
+    if (!icon || iconFailed || !icon.iconUrl || getModeLineIconPaths(icon.lineIcon)) {
+      return;
+    }
+    updateModeTag({ iconFailed: true });
+    updatePrefixLayout();
   }
 
   function getInputModePrefixRenderedWidth(): number {
@@ -456,6 +333,7 @@ function createPrefixContent(deps: PrefixContentDeps) {
     cancelInputModePrefixIconAnimation,
     measureInputModePrefixWidthForText,
     setInputModePrefixContent,
+    handleModeTagIconError,
     getInputModePrefixRenderedWidth,
     getInputModePrefixCurrentVisualState
   };

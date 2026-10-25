@@ -14,15 +14,14 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactElement
 } from 'react';
-import { flushSync } from 'react-dom';
 import * as LumnoSortableDrag from '../../ui/sortable-drag';
 import { followEmptyStateArtTheme, getEmptyStateArtMarkup } from '../../ui/empty-state-art';
 import { className as MENU_SURFACE_CLASS } from '../../ui/menu-surface';
 import { hostClassName as CURSOR_TOOLTIP_HOST_CLASS } from '../../ui/cursor-tooltip';
 import { getModeLineIconPaths } from '../../search/input-mode/line-icons';
+import { createRenderStore, type RenderStore } from '../render-store';
+import { FONT_STACK, NO_TRANSLATE, SURFACE_VARS, type ModeSurface } from './mode-surface';
 import type { ModeMenuRange } from '../../search/input-mode/types';
-
-type ModeMenuSurface = 'newtab' | 'overlay';
 
 export interface ModeMenuTileIcon {
   // A built-in line icon's name; empty for a glyph or a site icon.
@@ -113,7 +112,7 @@ export interface ModeMenuHandlers {
   attachIconData(image: HTMLImageElement, iconUrl: string, iconHost: string): void;
 }
 
-interface ModeMenuSnapshot {
+export interface ModeMenuSnapshot {
   model: ModeMenuModel;
   handlers: ModeMenuHandlers | null;
 }
@@ -124,10 +123,7 @@ export interface ModeMenuView {
   render(model: ModeMenuModel, handlers: ModeMenuHandlers): void;
 }
 
-export interface ModeMenuStore extends ModeMenuView {
-  getSnapshot(): ModeMenuSnapshot;
-  subscribe(listener: () => void): () => void;
-}
+export type ModeMenuStore = RenderStore<ModeMenuSnapshot>;
 
 const EMPTY_LABELS: ModeMenuLabels = Object.freeze({
   filter: Object.freeze({ before: '', mark: '', after: '' }),
@@ -159,54 +155,13 @@ const CLOSED_MODEL: ModeMenuModel = Object.freeze({
 });
 
 export function createModeMenuStore(): ModeMenuStore {
-  let snapshot: ModeMenuSnapshot = { model: CLOSED_MODEL, handlers: null };
-  const listeners = new Set<() => void>();
-  return {
-    getSnapshot: () => snapshot,
-    subscribe(listener) {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    render(model, handlers) {
-      snapshot = { model, handlers };
-      flushSync(() => {
-        listeners.forEach((listener) => listener());
-      });
-    }
-  };
+  return createRenderStore<ModeMenuSnapshot>({ model: CLOSED_MODEL, handlers: null });
 }
-
-// The text stack tokens.css defines for New Tab and onboarding, and the
-// overlay panel defines and swaps for the chosen font.
-const FONT_STACK = 'var(--lumno-font-sans, sans-serif)';
-
-const SURFACE_VARS = Object.freeze({
-  overlay: {
-    border: 'var(--x-ov-border, rgba(0, 0, 0, 0.08))',
-    background: 'var(--x-ov-mode-menu-bg, #FFFFFF)',
-    text: 'var(--x-ov-text, #111827)',
-    shadow: 'var(--x-ov-shadow, 0 16px 40px rgba(15, 23, 42, 0.13))',
-    radius: 'var(--x-ov-panel-radius, 26px)',
-    gap: '14px',
-    edge: '-1px'
-  },
-  newtab: {
-    border: 'var(--x-nt-surface-border, var(--x-nt-panel-border, rgba(0, 0, 0, 0.08)))',
-    background: 'var(--x-nt-mode-menu-bg, #FFFFFF)',
-    text: 'var(--x-nt-text, #111827)',
-    shadow: 'var(--x-nt-panel-shadow-focus, 0 16px 40px rgba(15, 23, 42, 0.13))',
-    radius: 'var(--x-nt-search-shell-radius, 26px)',
-    gap: '18px',
-    edge: '-6px'
-  }
-});
 
 // The panel sits below the input, pushed down by the results shown above
 // it (--x-lumno-search-mode-menu-result-offset) and capped to the viewport
 // (--x-lumno-search-mode-menu-viewport-max-height); the controller sets both.
-function getMenuStyle(surface: ModeMenuSurface, hasQuery: boolean): CSSProperties {
+function getMenuStyle(surface: ModeSurface, hasQuery: boolean): CSSProperties {
   const vars = SURFACE_VARS[surface];
   const position = 'translateY(calc(var(--x-lumno-search-mode-menu-result-offset, 0px) + var(--x-lumno-search-mode-menu-lift, 0px)))';
   const closedTransform = surface === 'newtab'
@@ -225,7 +180,7 @@ function getMenuStyle(surface: ModeMenuSurface, hasQuery: boolean): CSSPropertie
     padding: '0',
     border: `1px solid ${vars.border}`,
     borderRadius: vars.radius,
-    background: vars.background,
+    background: vars.panelBackground,
     boxShadow: vars.shadow,
     boxSizing: 'border-box',
     fontFamily: FONT_STACK,
@@ -238,14 +193,6 @@ function getMenuStyle(surface: ModeMenuSurface, hasQuery: boolean): CSSPropertie
     overscrollBehavior: 'contain'
   };
 }
-
-// Keeps translation tools away from the panel's labels.
-const NO_TRANSLATE = {
-  'data-no-translate': 'true',
-  lang: 'zxx',
-  notranslate: '',
-  translate: 'no'
-} as const;
 
 function LineIcon({ name, className, strokeWidth }: { name: string; className?: string; strokeWidth: string }) {
   const paths = getModeLineIconPaths(name);
@@ -553,7 +500,7 @@ function getGroupTitles(tiles: readonly ModeMenuTile[]): GroupTitleRun[] {
 export function ModeMenu({ store, prefixId, surface }: {
   store: ModeMenuStore;
   prefixId: string;
-  surface: ModeMenuSurface;
+  surface: ModeSurface;
 }) {
   const { model, handlers } = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const contentRef = useRef<HTMLDivElement>(null);

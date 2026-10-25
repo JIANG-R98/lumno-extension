@@ -4,7 +4,6 @@
 // this file builds them around one shared state.
 import * as LumnoShortcutDisplay from '../../domain/shortcut-display';
 import * as LumnoCursorTooltip from '../ui/cursor-tooltip';
-import * as INPUT_MODE_CONTROLLER_DOM from './input-mode/controller-dom';
 import * as INPUT_MODE_MODE_MENU_ICONS from './input-mode/mode-menu-icons';
 import * as INPUT_MODE_MODE_MENU_LANGUAGE from './input-mode/mode-menu-language';
 import * as INPUT_MODE_MODE_MENU_LAYOUT from './input-mode/mode-menu-layout';
@@ -33,34 +32,34 @@ import type { PrefixTextConfig, PrefixTextState } from './input-mode/prefix-text
 import type { PrefixVisualConfig, PrefixVisualState } from './input-mode/prefix-visual';
 import type {
   AttachFaviconData,
-  CssDeclaration,
   FormatMessage,
   GetThemeForProvider,
   InputModeProvider,
   InputModeTheme,
-  InputModeVars,
   ResolveProviderIconUrl,
   Rgb
 } from './input-mode/types';
-import { queryHtmlElement } from '../dom-lookup';
 import { getModeLineIconPaths } from './input-mode/line-icons';
 import type { ModeMenuView } from '../react/search/mode-menu';
+import type { ModeTagHandlers, ModeTagView, TabHintView } from '../react/search/mode-tag';
+import { EMPTY_MODE_TAG, MODE_TAG_ITEM_GAP_PX } from './input-mode/mode-tag-model';
+import type { ModeTagModel, TabHintModel } from './input-mode/mode-tag-model';
 
-// The elements the surface renders for the mode (React owns them).
+// The elements the surface's React view draws for the mode, and the views
+// the controller draws them through. The controller animates and measures
+// the elements.
 interface InputModeParts {
   container: HTMLElement;
   input: HTMLInputElement;
   modePrefix: HTMLElement;
-  modePrefixIcon: HTMLImageElement;
-  modePrefixText: HTMLElement;
+  modePrefixIconFrame: HTMLElement;
+  modePrefixGlyph: HTMLElement;
+  modePrefixLineIcon: SVGElement;
+  modePrefixCurrent: HTMLElement;
   modeTabHint: HTMLElement;
-  modeTabHintKey: HTMLElement;
-  modeTabHintText: HTMLElement;
-  modePrefixGlyph?: HTMLElement | null;
-  modePrefixIconFrame?: HTMLElement | null;
-  modePrefixCurrent?: HTMLElement | null;
-  modePrefixChevron?: HTMLElement | null;
-  // The mode menu the React view draws, with its scrolling content and footer.
+  modeTagView: ModeTagView;
+  tabHintView: TabHintView;
+  // The mode menu, with its scrolling content and footer.
   modeMenu: HTMLElement;
   modeMenuContent: HTMLElement;
   modeMenuFooter: HTMLElement;
@@ -77,7 +76,6 @@ interface InputModeOwnConfig {
   document?: Document | null;
   windowObj?: InputModeWindow | null;
   surface?: 'newtab' | 'overlay';
-  applyNoTranslate?: <T extends Element>(element: T) => T;
   setInputStyle?: (target: HTMLElement, property: string, value: string) => void;
   formatMessage?: FormatMessage;
   getThemeForMode?: (theme: InputModeTheme) => InputModeTheme | null | undefined;
@@ -105,8 +103,6 @@ interface InputModeOwnConfig {
   defaultPlaceholder?: string;
   getDefaultPlaceholder?: () => string;
   defaultCaretColor?: string;
-  prefixId?: string;
-  tabHintId?: string;
   // Loads pinyin-pro for the menu's filter; the bundled copy by default.
   loadPinyinRuntime?: () => unknown;
   // The surface's cursor tooltip for cut-off menu labels; the menu makes its own without one.
@@ -139,9 +135,6 @@ type InputModeState = ModeMenuIconsState &
   PrefixTextState &
   PrefixVisualState;
 
-// The shared text stack: tokens.css defines it for New Tab and onboarding,
-// and focus search's overlay panel defines it and swaps in the chosen font.
-const INPUT_FONT_STACK = 'var(--lumno-font-sans, sans-serif)';
 const DEFAULT_ACCENT_RGB: Rgb = [59, 130, 246];
 const DEFAULT_PREFIX_GAP = 8;
 const DEFAULT_MODE_MENU_DOUBLE_TAB_DURATION = 700;
@@ -155,7 +148,6 @@ const DEFAULT_PREFIX_ICON_EXIT_DURATION = 100;
 const DEFAULT_PREFIX_ICON_EXIT_EASING = 'cubic-bezier(0.4, 0, 1, 1)';
 const DEFAULT_PREFIX_RESIZE_DURATION = 140;
 const DEFAULT_PREFIX_RESIZE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
-const DEFAULT_PREFIX_ITEM_GAP_PX = 6;
 const DEFAULT_PREFIX_ENTER_DURATION = 180;
 const DEFAULT_PREFIX_ENTER_EASING = 'cubic-bezier(0.16, 1, 0.3, 1)';
 const DEFAULT_PREFIX_TRANSITION = 'background-color 140ms ease, color 140ms ease';
@@ -200,24 +192,12 @@ const MODE_MENU_PINYIN_FALLBACKS: Readonly<Record<string, string>> = Object.free
   史: 'shi'
 });
 
-function noopTranslate<T extends Element>(element: T): T {
-  return element;
-}
-
 function getDocument(options: InputModeConfig): Document | null {
   return options.document || globalThis.document || null;
 }
 
 function getWindow(options: InputModeConfig): InputModeWindow {
   return options.windowObj || globalThis.window;
-}
-
-function declaration(property: string, value: string): string {
-  return `      ${property}: ${value};`;
-}
-
-function cssText(pairs: CssDeclaration[]): string {
-  return `\n${pairs.map((pair) => declaration(pair[0], pair[1])).join('\n')}\n    `;
 }
 
 function setStyle(
@@ -391,9 +371,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
   const input = parts.input;
   const container = parts.container;
   const surface = config.surface === 'overlay' ? 'overlay' : 'newtab';
-  const applyNoTranslate = typeof config.applyNoTranslate === 'function'
-    ? config.applyNoTranslate
-    : noopTranslate;
   const setInputStyle = typeof config.setInputStyle === 'function'
     ? config.setInputStyle
     : (target: HTMLElement, property: string, value: string) => setStyle(target, property, value);
@@ -468,33 +445,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
   const defaultCaretColor = hasOwn(config, 'defaultCaretColor')
     ? String(config.defaultCaretColor ?? '')
     : (input.style.caretColor || 'var(--x-ext-input-caret, #7DB7FF)');
-  const prefixId = config.prefixId || (surface === 'overlay'
-    ? '_x_extension_site_search_prefix_2024_unique_'
-    : '_x_extension_newtab_site_search_prefix_2024_unique_');
-  const tabHintId = config.tabHintId || (surface === 'overlay'
-    ? '_x_extension_site_search_tab_hint_2026_unique_'
-    : '_x_extension_newtab_site_search_tab_hint_2026_unique_');
-  const vars: InputModeVars = surface === 'overlay'
-    ? {
-      tagBg: 'var(--x-ov-tag-bg, #F3F4F6)',
-      tagText: 'var(--x-ov-tag-text, #6B7280)',
-      panelBorder: 'var(--x-ov-border, rgba(0, 0, 0, 0.08))',
-      panelBg: 'var(--x-ov-mode-menu-bg, #FFFFFF)',
-      panelText: 'var(--x-ov-text, #111827)',
-      panelShadow: 'var(--x-ov-shadow, 0 16px 40px rgba(15, 23, 42, 0.13))',
-      panelRadius: 'var(--x-ov-panel-radius, 26px)',
-      panelGap: '14px'
-    }
-    : {
-      tagBg: 'var(--x-nt-tag-bg, #F3F4F6)',
-      tagText: 'var(--x-nt-tag-text, #6B7280)',
-      panelBorder: 'var(--x-nt-surface-border, var(--x-nt-panel-border, rgba(0, 0, 0, 0.08)))',
-      panelBg: 'var(--x-nt-mode-menu-bg, #FFFFFF)',
-      panelText: 'var(--x-nt-text, #111827)',
-      panelShadow: 'var(--x-nt-panel-shadow-focus, 0 16px 40px rgba(15, 23, 42, 0.13))',
-      panelRadius: 'var(--x-nt-search-shell-radius, 26px)',
-      panelGap: '18px'
-    };
   let layoutResizeObserver: ResizeObserver | null = null;
   const canReorderModeMenu = typeof config.onModeMenuReorder === 'function';
   const canMoveModeMenuGroups = typeof config.onModeMenuGroupMove === 'function';
@@ -592,7 +542,7 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
       documentObj: doc,
       windowObj: win,
       appendTo: doc.body,
-      id: `${prefixId}-label-cursor-tooltip`,
+      id: `${parts.modePrefix.id}-label-cursor-tooltip`,
       maxWidth: 320,
       offsetX: 14,
       offsetY: 16
@@ -600,47 +550,24 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
   const modeMenuCursorTooltipController: ModeMenuTooltipController | null =
     providedModeMenuCursorTooltipController || ownedModeMenuCursorTooltipController;
 
-  const createSvgElement = (tagName: string): SVGElement => doc.createElementNS('http://www.w3.org/2000/svg', tagName);
-  const siteSearchPrefix = applyNoTranslate(parts.modePrefix);
-  const siteSearchPrefixGlyph = parts.modePrefixGlyph || doc.createElement('i');
-  const siteSearchPrefixLineIcon = createSvgElement('svg');
-  const siteSearchPrefixIcon = parts.modePrefixIcon;
-  const siteSearchPrefixIconFrame = parts.modePrefixIconFrame || doc.createElement('span');
-  const siteSearchPrefixText = applyNoTranslate(parts.modePrefixText);
-  const siteSearchPrefixCurrent = applyNoTranslate(
-    parts.modePrefixCurrent || doc.createElement('span')
-  );
-  const siteSearchPrefixCurrentText = applyNoTranslate(
-    queryHtmlElement(siteSearchPrefixCurrent, '[data-search-input-mode-current-text]') ||
-      doc.createElement('span')
-  );
-  const siteSearchPrefixChevron = parts.modePrefixChevron || doc.createElement('i');
+  const siteSearchPrefix = parts.modePrefix;
+  const siteSearchPrefixGlyph = parts.modePrefixGlyph;
+  const siteSearchPrefixLineIcon = parts.modePrefixLineIcon;
+  const siteSearchPrefixIconFrame = parts.modePrefixIconFrame;
+  const siteSearchPrefixCurrent = parts.modePrefixCurrent;
+  const siteSearchTabHint = parts.modeTabHint;
   const modeMenu = parts.modeMenu;
   const modeMenuContent = parts.modeMenuContent;
   const modeMenuFooter = parts.modeMenuFooter;
-  const siteSearchTabHint = applyNoTranslate(parts.modeTabHint);
-  const siteSearchTabHintKey = applyNoTranslate(parts.modeTabHintKey);
-  const siteSearchTabHintText = applyNoTranslate(parts.modeTabHintText);
 
-  INPUT_MODE_CONTROLLER_DOM.createControllerDom({
-    siteSearchPrefix,
-    siteSearchPrefixIcon,
-    siteSearchPrefixText,
-    siteSearchTabHint,
-    siteSearchTabHintKey,
-    siteSearchTabHintText,
-    prefixId,
-    siteSearchPrefixIconFrame,
-    siteSearchPrefixGlyph,
-    siteSearchPrefixLineIcon,
-    cssText,
-    siteSearchPrefixChevron,
-    siteSearchPrefixCurrent,
-    siteSearchPrefixCurrentText,
-    DEFAULT_PREFIX_ITEM_GAP_PX,
-    INPUT_FONT_STACK,
-    prefixTransition
-  });
+  // Where the tag sits and how it moves are the controller's: these start
+  // its place and rest motion, and the Tab hint's distance from the right.
+  setStyle(siteSearchPrefix, 'left', '50px');
+  setStyle(siteSearchPrefix, 'transform', 'translateY(-50%)');
+  setStyle(siteSearchPrefix, 'opacity', '1');
+  setStyle(siteSearchPrefix, 'transition', prefixTransition);
+  setStyle(siteSearchPrefix, 'will-change', 'auto');
+  setStyle(siteSearchTabHint, 'right', `${rightAnchorOffset}px`);
 
   const inputModeState: InputModeState = {
     destroyed: false,
@@ -659,10 +586,32 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     inputModePrefixAnimation: null,
     inputModePrefixAnimationFrame: null,
     inputModePrefixAnimationTimer: 0,
-    inputModePrefixContentRevision: 0,
     inputModePrefixCurrentAnimation: null,
-    inputModePrefixPendingText: ''
+    inputModePrefixPendingText: '',
+    modeTag: EMPTY_MODE_TAG,
+    tabHint: { visible: false, label: '', title: '' }
   };
+
+  const modeTagHandlers: ModeTagHandlers = {
+    onClick: (event) => handlePrefixClick(event),
+    onKeyDown: (event) => handlePrefixKeydown(event),
+    onIconError: () => handleModeTagIconError(),
+    attachIconData(image, iconUrl, iconHost) {
+      if (attachFaviconData) {
+        attachFaviconData(image, iconUrl, iconHost);
+      }
+    }
+  };
+
+  function updateModeTag(patch: Partial<ModeTagModel>): void {
+    inputModeState.modeTag = { ...inputModeState.modeTag, ...patch };
+    parts.modeTagView.render(inputModeState.modeTag, modeTagHandlers);
+  }
+
+  function updateTabHint(patch: Partial<TabHintModel>): void {
+    inputModeState.tabHint = { ...inputModeState.tabHint, ...patch };
+    parts.tabHintView.render(inputModeState.tabHint);
+  }
 
   const {
     setModeMenuResultOffset,
@@ -743,7 +692,7 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     revealModeMenuSurface,
     container,
     siteSearchPrefix,
-    setStyle,
+    updateModeTag,
     setInputModePrefixMenuOpen: (...args) => setInputModePrefixMenuOpen(...args),
     notifyModeMenuLayoutChange,
     focusModeInput: (...args) => focusModeInput(...args),
@@ -838,9 +787,7 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     setStyle,
     container,
     siteSearchPrefix,
-    siteSearchPrefixLineIcon,
-    siteSearchPrefixChevron,
-    siteSearchPrefixCurrent,
+    updateModeTag,
     input,
     getExtraRightInset,
     rightAnchorOffset,
@@ -863,8 +810,7 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     clearModeMenuProviderThemes,
     requestModeMenuProviderThemes,
     getModeMenuTileColors,
-    getModeMenuTileIcon,
-    renderModeLineIconSvg
+    getModeMenuTileIcon
   } = INPUT_MODE_MODE_MENU_ICONS.createModeMenuIcons({
     getThemeForMode,
     defaultTheme,
@@ -875,7 +821,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     getAccessibleThemeFocusRingRgb,
     rgbToCss,
     getBuiltInSurfaceColor,
-    createSvgElement,
     getThemeForProvider,
     resolveProviderIconUrl,
     getProviderThemeHost,
@@ -888,31 +833,26 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     cancelInputModePrefixIconAnimation,
     measureInputModePrefixWidthForText,
     setInputModePrefixContent,
+    handleModeTagIconError,
     getInputModePrefixRenderedWidth,
     getInputModePrefixCurrentVisualState
   } = INPUT_MODE_PREFIX_CONTENT.createPrefixContent({
     siteSearchPrefix,
-    formatMessage,
-    setStyle,
-    shouldReduceInputModeMotion,
     siteSearchPrefixLineIcon,
     siteSearchPrefixIconFrame,
     siteSearchPrefixGlyph,
+    siteSearchPrefixCurrent,
+    formatMessage,
+    setStyle,
+    shouldReduceInputModeMotion,
     isElementVisible,
     DEFAULT_PREFIX_ICON_POP_DURATION,
     DEFAULT_PREFIX_ICON_POP_EASING,
     DEFAULT_PREFIX_ICON_EXIT_DURATION,
     DEFAULT_PREFIX_ICON_EXIT_EASING,
-    siteSearchPrefixText,
     resolveProviderIconUrl,
-    renderModeLineIconSvg,
-    siteSearchPrefixIcon,
-    cssText,
     updatePrefixLayout,
-    attachFaviconData,
-    siteSearchPrefixCurrentText,
-    siteSearchPrefixCurrent,
-    siteSearchPrefixChevron,
+    updateModeTag,
     win,
     inputModeState
   });
@@ -938,7 +878,8 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     DEFAULT_PREFIX_ENTER_EASING,
     isElementVisible,
     getInputModePrefixCurrentVisualState,
-    DEFAULT_PREFIX_ITEM_GAP_PX,
+    DEFAULT_PREFIX_ITEM_GAP_PX: MODE_TAG_ITEM_GAP_PX,
+    updateModeTag,
     inputModeState
   });
 
@@ -950,7 +891,8 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
   } = INPUT_MODE_PREFIX_TEXT.createPrefixText({
     config,
     siteSearchPrefix,
-    siteSearchPrefixText,
+    updateModeTag,
+    updateTabHint,
     resetModeMenuDoubleTab,
     resetModeTagRemovalConfirmation,
     isElementVisible,
@@ -975,21 +917,11 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     getProviderThemeHost,
     getSiteSearchPrefixText,
     cancelInputModePrefixIconAnimation,
-    siteSearchPrefixIcon,
-    siteSearchPrefixIconFrame,
-    siteSearchPrefixGlyph,
-    siteSearchPrefixLineIcon,
-    siteSearchPrefixChevron,
     closeModeMenu,
     getDefaultPlaceholder,
     defaultCaretColor,
     getSiteSearchDisplayName,
     formatMessage,
-    siteSearchTabHintKey,
-    cssText,
-    vars,
-    siteSearchTabHintText,
-    siteSearchTabHint,
     win,
     updateInputRightPadding,
     inputModeState
@@ -1006,14 +938,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     win,
     syncInputPlaceholder,
     renderModeMenuView,
-    siteSearchTabHint,
-    tabHintId,
-    siteSearchTabHintKey,
-    siteSearchTabHintText,
-    cssText,
-    rightAnchorOffset,
-    vars,
-    INPUT_FONT_STACK,
     inputModeState
   });
 
@@ -1057,8 +981,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
 
   const modePointerEventRoot = container.getRootNode();
 
-  siteSearchPrefix.addEventListener('click', handlePrefixClick);
-  siteSearchPrefix.addEventListener('keydown', handlePrefixKeydown);
   input.addEventListener('input', handleModeInput);
   input.addEventListener('keydown', handleModeInputKeydown);
   input.addEventListener('blur', handleModeInputBlur);
@@ -1109,8 +1031,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
       layoutResizeObserver.disconnect();
       layoutResizeObserver = null;
     }
-    siteSearchPrefix.removeEventListener('click', handlePrefixClick);
-    siteSearchPrefix.removeEventListener('keydown', handlePrefixKeydown);
     input.removeEventListener('input', handleModeInput);
     input.removeEventListener('keydown', handleModeInputKeydown);
     input.removeEventListener('blur', handleModeInputBlur);

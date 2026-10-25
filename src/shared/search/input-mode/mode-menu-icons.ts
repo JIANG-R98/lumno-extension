@@ -1,6 +1,6 @@
 // Mode menu icons: which icon a tile shows (a built-in line icon, a site
 // icon or a glyph) and its colors from the mode's theme, with provider
-// themes resolved once per opening; and the line icon of the mode tag.
+// themes resolved once per opening.
 import { getModeLineIconPaths } from './line-icons';
 import type { ModeMenuTileColors, ModeMenuTileIcon } from '../../react/search/mode-menu';
 import type {
@@ -27,7 +27,6 @@ interface ModeMenuIconsDeps {
   getAccessibleThemeFocusRingRgb: (accentRgb: Rgb, backgroundRgb: Rgb) => Rgb;
   rgbToCss: (rgb: Rgb) => string;
   getBuiltInSurfaceColor: () => string;
-  createSvgElement: (tagName: string) => Element;
   getThemeForProvider: GetThemeForProvider | null;
   resolveProviderIconUrl: ResolveProviderIconUrl;
   getProviderThemeHost: (provider: SiteSearchProvider) => string | null | undefined;
@@ -52,7 +51,6 @@ function createModeMenuIcons(deps: ModeMenuIconsDeps) {
     getAccessibleThemeFocusRingRgb,
     rgbToCss,
     getBuiltInSurfaceColor,
-    createSvgElement,
     getThemeForProvider,
     resolveProviderIconUrl,
     getProviderThemeHost,
@@ -146,37 +144,11 @@ function createModeMenuIcons(deps: ModeMenuIconsDeps) {
     };
   }
 
-  // Draws a built-in line icon into the svg; false when there is no such icon.
-  function renderModeLineIconSvg(svg: Element | null | undefined, lineIconName: string, strokeWidth?: string): boolean {
-    const lineIconPaths = getModeLineIconPaths(lineIconName);
-    if (!svg || !lineIconPaths) {
-      return false;
-    }
-    while (svg.firstChild) {
-      svg.removeChild(svg.firstChild);
-    }
-    svg.setAttribute('data-icon-name', lineIconName);
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('focusable', 'false');
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-linecap', 'round');
-    svg.setAttribute('stroke-linejoin', 'round');
-    svg.setAttribute('stroke-width', strokeWidth || '1.65');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    lineIconPaths.forEach((pathData) => {
-      const path = createSvgElement('path');
-      path.setAttribute('d', pathData);
-      svg.appendChild(path);
-    });
-    return true;
-  }
-
   return {
     clearModeMenuProviderThemes,
     requestModeMenuProviderThemes,
     getModeMenuTileColors,
-    getModeMenuTileIcon,
-    renderModeLineIconSvg
+    getModeMenuTileIcon
   };
 }
 

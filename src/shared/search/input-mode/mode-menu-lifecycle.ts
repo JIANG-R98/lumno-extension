@@ -1,7 +1,8 @@
 // Opening, refreshing and closing the mode menu, and the prefix, menu and
 // document pointer and key handlers around it.
 import type { CursorTooltipController } from '../../ui/cursor-tooltip';
-import type { ModeMenuEntry, ModeMenuItem, SetStyle } from './types';
+import type { ModeTagModel } from './mode-tag-model';
+import type { ModeMenuEntry, ModeMenuItem } from './types';
 import type { ModeMenuLanguageApi } from './mode-menu-language';
 import type { ModeMenuLayoutApi } from './mode-menu-layout';
 import type { ModeMenuNavigationApi } from './mode-menu-navigation';
@@ -48,7 +49,7 @@ interface ModeMenuLifecycleDeps {
   revealModeMenuSurface: ModeMenuLayoutApi['revealModeMenuSurface'];
   container: HTMLElement;
   siteSearchPrefix: HTMLElement;
-  setStyle: SetStyle;
+  updateModeTag: (patch: Partial<ModeTagModel>) => void;
   setInputModePrefixMenuOpen: PrefixMotionApi['setInputModePrefixMenuOpen'];
   notifyModeMenuLayoutChange: () => void;
   focusModeInput: ModeMenuNavigationApi['focusModeInput'];
@@ -112,7 +113,7 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
     revealModeMenuSurface,
     container,
     siteSearchPrefix,
-    setStyle,
+    updateModeTag,
     setInputModePrefixMenuOpen,
     notifyModeMenuLayoutChange,
     focusModeInput,
@@ -176,8 +177,7 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
       updateModeMenuFooterAlignment();
       revealModeMenuSurface();
       container.setAttribute('data-mode-menu-open', 'true');
-      siteSearchPrefix.setAttribute('aria-expanded', 'true');
-      setStyle(siteSearchPrefix, 'z-index', '41');
+      updateModeTag({ expanded: true });
       setInputModePrefixMenuOpen(true);
       notifyModeMenuLayoutChange();
       const activeIndex = normalizedItems.findIndex((item) => item.active);
@@ -296,8 +296,7 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
     concealModeMenuSurface();
     syncInputPlaceholder();
     container.removeAttribute('data-mode-menu-open');
-    siteSearchPrefix.setAttribute('aria-expanded', 'false');
-    setStyle(siteSearchPrefix, 'z-index', '1');
+    updateModeTag({ expanded: false });
     setInputModePrefixMenuOpen(false);
     notifyModeMenuLayoutChange();
     if (restoreFocus) {

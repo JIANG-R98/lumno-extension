@@ -1,5 +1,5 @@
 import { act } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 // The Han variant table is a classic script that leaves a global.
 import '../search/search-han-variants.js';
@@ -1947,17 +1947,14 @@ describe('Shared search scope menu', () => {
       (_keyframes: Keyframe[], _options?: KeyframeAnimationOptions) =>
         outgoingIconAnimation
     );
-    Object.defineProperty(parts.modePrefixGlyph, 'cloneNode', {
+    // jsdom has no Web Animations; the fading copy of the old icon, which
+    // the view draws during the swap, takes this stand-in.
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
       configurable: true,
-      value: vi.fn(() => {
-        const clone = document.createElement('i');
-        clone.className = parts.modePrefixGlyph.className;
-        Object.defineProperty(clone, 'animate', {
-          configurable: true,
-          value: animateOutgoingIcon
-        });
-        return clone;
-      })
+      value: animateOutgoingIcon
+    });
+    onTestFinished(() => {
+      Reflect.deleteProperty(HTMLElement.prototype, 'animate');
     });
     Object.defineProperty(parts.modePrefix, 'getBoundingClientRect', {
       configurable: true,
@@ -2035,11 +2032,12 @@ describe('Shared search scope menu', () => {
       duration: 100,
       easing: 'cubic-bezier(0.4, 0, 1, 1)'
     });
-    expect(
-      parts.modePrefix.querySelector('[data-search-input-mode-icon-ghost]')
-    ).not.toBeNull();
+    const ghost = parts.modePrefix.querySelector('[data-search-input-mode-icon-ghost]');
+    expect(ghost?.className).toContain('ri-window-line');
     expect(parts.modePrefixGlyph.style.transform).toBe('none');
     expect(parts.modePrefix.style.willChange).toBe('auto');
+    outgoingIconAnimation.emitFinish();
+    expect(parts.modePrefix.querySelector('[data-search-input-mode-icon-ghost]')).toBeNull();
     controller.destroy();
   });
 
@@ -2737,6 +2735,26 @@ describe('Shared search scope menu', () => {
 
     moveButtons[0][1].click();
     expect(onModeMenuGroupMove).toHaveBeenCalledWith({ delta: 1, group: 'engines', groups: ['engines', 'local'] });
+    controller.destroy();
+  });
+
+  it('shows the glyph in the tag when the site icon fails to load', () => {
+    const parts = createModeParts();
+    const controller = LumnoSearchInputMode.createInputModeController(parts, {});
+    controller.setPrefixText('YouTube', {}, {
+      iconClass: 'ri-global-line',
+      iconUrl: 'https://www.youtube.com/favicon.ico',
+      modeId: 'provider:youtube'
+    });
+    expect(parts.modePrefixIconFrame.style.display).toBe('inline-flex');
+    expect(parts.modePrefixGlyph.style.display).toBe('none');
+
+    parts.modePrefixIcon.dispatchEvent(new Event('error'));
+
+    expect(parts.modePrefixIconFrame.style.display).toBe('none');
+    expect(parts.modePrefixIcon.hasAttribute('src')).toBe(false);
+    expect(parts.modePrefixGlyph.style.display).toBe('inline-flex');
+    expect(parts.modePrefixGlyph.className).toContain('ri-global-line');
     controller.destroy();
   });
 });

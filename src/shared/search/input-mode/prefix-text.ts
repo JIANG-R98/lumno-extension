@@ -1,11 +1,10 @@
-// Setting the mode prefix for a provider or scope, clearing it, and the
-// site search Tab hint.
+// Setting the mode tag for a provider or scope, clearing it, and the site
+// search Tab hint.
+import type { ModeTagModel, TabHintModel } from './mode-tag-model';
 import type {
-  CssText,
   FormatMessage,
   InputModeProvider,
   InputModeTheme,
-  InputModeVars,
   IsElementVisible,
   PrefixContentOptions,
   SetStyle
@@ -22,7 +21,8 @@ interface PrefixTextState {
   inputModePrefixAnimationFrame: number | null;
   inputModePrefixAnimationTimer: number;
   inputModePrefixPendingText: string;
-  inputModePrefixContentRevision: number;
+  modeTag: ModeTagModel;
+  tabHint: TabHintModel;
 }
 
 interface PrefixTextConfig {
@@ -40,7 +40,8 @@ interface PrefixTextOptions extends PrefixContentOptions {
 interface PrefixTextDeps {
   config: PrefixTextConfig;
   siteSearchPrefix: HTMLElement;
-  siteSearchPrefixText: HTMLElement;
+  updateModeTag: (patch: Partial<ModeTagModel>) => void;
+  updateTabHint: (patch: Partial<TabHintModel>) => void;
   resetModeMenuDoubleTab: () => void;
   resetModeTagRemovalConfirmation: () => void;
   isElementVisible: IsElementVisible;
@@ -65,21 +66,11 @@ interface PrefixTextDeps {
   getProviderThemeHost: (provider: InputModeProvider | null | undefined) => string;
   getSiteSearchPrefixText: (provider: InputModeProvider | null | undefined) => string;
   cancelInputModePrefixIconAnimation: PrefixContentApi['cancelInputModePrefixIconAnimation'];
-  siteSearchPrefixIcon: HTMLImageElement;
-  siteSearchPrefixIconFrame: HTMLElement;
-  siteSearchPrefixGlyph: HTMLElement;
-  siteSearchPrefixLineIcon: SVGElement;
-  siteSearchPrefixChevron: HTMLElement;
   closeModeMenu: (restoreFocus?: boolean) => void;
   getDefaultPlaceholder: () => string;
   defaultCaretColor: string;
   getSiteSearchDisplayName: (provider: InputModeProvider | null | undefined) => string;
   formatMessage: FormatMessage;
-  siteSearchTabHintKey: HTMLElement;
-  cssText: CssText;
-  vars: InputModeVars;
-  siteSearchTabHintText: HTMLElement;
-  siteSearchTabHint: HTMLElement;
   win: Partial<Pick<Window, 'matchMedia'>> | null | undefined;
   updateInputRightPadding: () => void;
   inputModeState: PrefixTextState;
@@ -89,7 +80,8 @@ function createPrefixText(deps: PrefixTextDeps) {
   const {
     config,
     siteSearchPrefix,
-    siteSearchPrefixText,
+    updateModeTag,
+    updateTabHint,
     resetModeMenuDoubleTab,
     resetModeTagRemovalConfirmation,
     isElementVisible,
@@ -114,21 +106,11 @@ function createPrefixText(deps: PrefixTextDeps) {
     getProviderThemeHost,
     getSiteSearchPrefixText,
     cancelInputModePrefixIconAnimation,
-    siteSearchPrefixIcon,
-    siteSearchPrefixIconFrame,
-    siteSearchPrefixGlyph,
-    siteSearchPrefixLineIcon,
-    siteSearchPrefixChevron,
     closeModeMenu,
     getDefaultPlaceholder,
     defaultCaretColor,
     getSiteSearchDisplayName,
     formatMessage,
-    siteSearchTabHintKey,
-    cssText,
-    vars,
-    siteSearchTabHintText,
-    siteSearchTabHint,
     win,
     updateInputRightPadding
   } = deps;
@@ -156,8 +138,8 @@ function createPrefixText(deps: PrefixTextDeps) {
     const nextPrefixText = String(prefixText || '');
     const shouldAnimate = Boolean(nextOptions.animate);
     const nextModeId = nextOptions.modeId ? String(nextOptions.modeId) : '';
-    const previousModeId = String(siteSearchPrefix.getAttribute('data-mode-id') || '');
-    const previousPrefixText = String(siteSearchPrefixText.textContent || '');
+    const previousModeId = inputModeState.modeTag.modeId;
+    const previousPrefixText = inputModeState.modeTag.text;
     if (previousModeId !== nextModeId || previousPrefixText !== nextPrefixText) {
       if (!nextOptions.preserveModeMenuDoubleTab) {
         resetModeMenuDoubleTab();
@@ -201,7 +183,7 @@ function createPrefixText(deps: PrefixTextDeps) {
     }
     setInputModePrefixIdentity(nextPrefixText, nextOptions);
     const visual = applyInputModePrefixVisual(theme, nextOptions);
-    setStyle(siteSearchPrefix, 'display', 'inline-flex');
+    updateModeTag({ visible: true });
     setModeTagActive(true);
     if (shouldWaitForPendingText) {
       syncInputPlaceholder();
@@ -286,18 +268,9 @@ function createPrefixText(deps: PrefixTextDeps) {
     resetModeMenuDoubleTab();
     resetModeTagRemovalConfirmation();
     cancelInputModePrefixIconAnimation();
-    inputModeState.inputModePrefixContentRevision += 1;
-    siteSearchPrefixText.textContent = '';
-    siteSearchPrefix.removeAttribute('data-mode-id');
-    siteSearchPrefix.removeAttribute('aria-label');
-    setStyle(siteSearchPrefixIcon, 'display', 'none');
-    setStyle(siteSearchPrefixIconFrame, 'display', 'none');
-    siteSearchPrefixIcon.removeAttribute('src');
-    setStyle(siteSearchPrefixGlyph, 'display', 'none');
-    setStyle(siteSearchPrefixLineIcon, 'display', 'none');
-    setStyle(siteSearchPrefixChevron, 'display', 'none');
+    updateModeTag({ text: '', modeId: '', ariaLabel: '', icon: null, iconFailed: false });
     setInputModePrefixRestState({ transition: false });
-    setStyle(siteSearchPrefix, 'display', 'none');
+    updateModeTag({ visible: false });
     setModeTagActive(false);
     closeModeMenu(false);
     input.placeholder = getDefaultPlaceholder();
@@ -305,61 +278,12 @@ function createPrefixText(deps: PrefixTextDeps) {
     updatePrefixLayout();
   }
 
-  // Removes the fallback icons the surfaces' icon runtimes leave beside an image.
-  function renderTabHint(provider: InputModeProvider | null | undefined): void {
-    const site = getSiteSearchDisplayName(provider);
+  function getTabHintLabel(provider: InputModeProvider | null | undefined): string {
     const explicitLabel = provider && provider.tabHintLabel
       ? String(provider.tabHintLabel).trim()
       : '';
-    const label = explicitLabel ||
-      formatMessage('site_search_tab_hint', '使用 {site} 搜索', { site });
-    const keyLabel = siteSearchTabHintKey;
-    keyLabel.textContent = 'Tab';
-    keyLabel.style.cssText = cssText([
-      ['all', 'unset'],
-      ['display', 'inline-flex'],
-      ['align-items', 'center'],
-      ['justify-content', 'center'],
-      ['min-width', '32px'],
-      ['height', '22px'],
-      ['padding', '0 6px'],
-      ['border-radius', '7px'],
-      ['corner-shape', 'superellipse(1.25)'],
-      ['border', `1px solid ${vars.panelBorder}`],
-      ['background', vars.tagBg],
-      ['color', vars.tagText],
-      ['box-sizing', 'border-box'],
-      ['font-size', '11px'],
-      ['font-family', 'inherit'],
-      ['font-weight', '700'],
-      ['line-height', '14px'],
-      ['letter-spacing', '0'],
-      ['white-space', 'nowrap'],
-      ['flex', '0 0 auto']
-    ]);
-    const textLabel = siteSearchTabHintText;
-    textLabel.textContent = label;
-    textLabel.style.cssText = cssText([
-      ['all', 'unset'],
-      ['display', 'inline-block'],
-      ['min-width', '0'],
-      ['max-width', '220px'],
-      ['overflow', 'hidden'],
-      ['text-overflow', 'ellipsis'],
-      ['white-space', 'nowrap'],
-      ['color', vars.tagText],
-      ['font-size', '13px'],
-      ['font-family', 'inherit'],
-      ['font-weight', '400'],
-      ['line-height', '18px'],
-      ['letter-spacing', '0'],
-      ['flex', '1 1 auto']
-    ]);
-    if (provider) {
-      siteSearchTabHint.setAttribute('title', label);
-    } else {
-      siteSearchTabHint.removeAttribute('title');
-    }
+    return explicitLabel ||
+      formatMessage('site_search_tab_hint', '使用 {site} 搜索', { site: getSiteSearchDisplayName(provider) });
   }
 
   // Touch-only devices have no Tab key, so the hint would only crowd the query.
@@ -373,16 +297,15 @@ function createPrefixText(deps: PrefixTextDeps) {
 
   function setTabHintVisible(visible: boolean, provider?: InputModeProvider | null): void {
     if (!visible || hasNoTabKeyPointer()) {
-      setStyle(siteSearchTabHint, 'display', 'none');
-      siteSearchTabHint.removeAttribute('title');
+      updateTabHint({ visible: false, title: '' });
       updateInputRightPadding();
       return;
     }
     if (typeof config.isTabHintSuppressed === 'function' && config.isTabHintSuppressed()) {
       return;
     }
-    renderTabHint(provider);
-    setStyle(siteSearchTabHint, 'display', 'inline-flex');
+    const label = getTabHintLabel(provider);
+    updateTabHint({ visible: true, label, title: provider ? label : '' });
     updateInputRightPadding();
   }
 

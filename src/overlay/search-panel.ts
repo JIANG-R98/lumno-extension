@@ -1573,7 +1573,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     getExtraRightInset: () => (inputParts.syncClearAction() ? 36 : 0),
     baseInputPaddingLeft: 50,
     setInputStyle: setInputScopedStyle,
-    applyNoTranslate,
     getThemeForMode,
     defaultTheme: overlayState.defaultTheme,
     defaultAccentColor,

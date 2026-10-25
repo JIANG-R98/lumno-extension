@@ -1,6 +1,6 @@
 // Typed lookups for a page's own elements: an element of the expected kind,
 // or null (or nothing) when the page holds another kind or none.
-import { isHtmlElement, isHtmlTag } from './dom-guards';
+import { isHtmlElement, isHtmlTag, isSvgElement } from './dom-guards';
 
 function getHtmlElement(root: Document | ShadowRoot, id: string): HTMLElement | null {
   const element = root.getElementById(id);
@@ -30,6 +30,11 @@ function queryHtmlTag<K extends keyof HTMLElementTagNameMap>(
   return isHtmlTag(element, tag) ? element : null;
 }
 
+function querySvgElement(root: ParentNode, selector: string): SVGElement | null {
+  const element = root.querySelector(selector);
+  return isSvgElement(element) ? element : null;
+}
+
 function closestHtmlElement(element: Element, selector: string): HTMLElement | null {
   const match = element.closest(selector);
   return isHtmlElement(match) ? match : null;
@@ -55,5 +60,6 @@ export {
   queryHtmlElement,
   queryHtmlElements,
   queryHtmlTag,
-  queryHtmlTags
+  queryHtmlTags,
+  querySvgElement
 };

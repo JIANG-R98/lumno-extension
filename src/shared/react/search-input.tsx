@@ -13,8 +13,18 @@ import {
   type PopconfirmClassNames,
   type PopconfirmCopy
 } from './popconfirm-content';
-import { queryHtmlElement, queryHtmlElements, queryHtmlTag } from '../dom-lookup';
+import { queryHtmlElement, queryHtmlElements, queryHtmlTag, querySvgElement } from '../dom-lookup';
 import { ModeMenu, createModeMenuStore, type ModeMenuStore, type ModeMenuView } from './search/mode-menu';
+import {
+  ModeTag,
+  TabHint,
+  createModeTagStore,
+  createTabHintStore,
+  type ModeTagView,
+  type ModeTagStore,
+  type TabHintStore,
+  type TabHintView
+} from './search/mode-tag';
 
 type StyleOverrides = Record<string, string>;
 
@@ -82,12 +92,15 @@ export interface SearchInputParts {
   modeMenuContent: HTMLDivElement;
   modeMenuFooter: HTMLDivElement;
   modeMenuView: ModeMenuView;
+  modeTagView: ModeTagView;
+  tabHintView: TabHintView;
   modePrefix: HTMLButtonElement;
   modePrefixChevron: HTMLElement;
   modePrefixCurrent: HTMLSpanElement;
   modePrefixGlyph: HTMLElement;
   modePrefixIconFrame: HTMLSpanElement;
   modePrefixIcon: HTMLImageElement;
+  modePrefixLineIcon: SVGElement;
   modePrefixText: HTMLSpanElement;
   modeTabHint: HTMLSpanElement;
   modeTabHintKey: HTMLSpanElement;
@@ -250,7 +263,15 @@ function SecondaryAction({ action }: { action: SecondaryActionConfig }) {
   );
 }
 
-function SearchInput({ config, modeMenuStore }: { config: SearchInputConfig; modeMenuStore: ModeMenuStore }) {
+// The stores the input mode controller draws the mode tag, Tab hint and
+// scope panel through.
+interface ModeStores {
+  modeMenu: ModeMenuStore;
+  modeTag: ModeTagStore;
+  tabHint: TabHintStore;
+}
+
+function SearchInput({ config, stores }: { config: SearchInputConfig; stores: ModeStores }) {
   const modeSurface =
     config.modeBadge?.surface === 'overlay' ? 'overlay' : 'newtab';
   const modePrefixId =
@@ -281,62 +302,9 @@ function SearchInput({ config, modeMenuStore }: { config: SearchInputConfig; mod
         placeholder={config.placeholder || 'Search or enter URL…'}
         type="text"
       />
-      <button
-        {...noTranslateProps()}
-        className="x-lumno-search-input-mode__prefix"
-        data-search-input-mode-prefix=""
-        id={modePrefixId}
-        type="button"
-      >
-        <span
-          className="x-lumno-search-input-mode__prefix-icon-frame"
-          data-search-input-mode-prefix-icon-frame=""
-          style={{ display: 'none' }}
-        >
-          <img
-            alt=""
-            data-search-input-mode-prefix-icon=""
-            decoding="async"
-            referrerPolicy="no-referrer"
-          />
-        </span>
-        <i
-          aria-hidden="true"
-          className="ri-icon ri-size-16 ri-search-line"
-          data-search-input-mode-prefix-glyph=""
-        />
-        <span
-          {...noTranslateProps()}
-          data-search-input-mode-prefix-text=""
-        />
-        <span
-          {...noTranslateProps()}
-          aria-hidden="true"
-          data-search-input-mode-current=""
-        />
-        <i
-          aria-hidden="true"
-          className="ri-icon ri-size-16 ri-arrow-down-s-line"
-          data-search-input-mode-prefix-chevron=""
-        />
-      </button>
-      <ModeMenu prefixId={modePrefixId} store={modeMenuStore} surface={modeSurface} />
-      <span
-        {...noTranslateProps()}
-        aria-hidden="true"
-        className="x-lumno-search-input-mode__tab-hint"
-        data-search-input-mode-tab-hint=""
-        id={modeTabHintId}
-      >
-        <span
-          {...noTranslateProps()}
-          data-search-input-mode-tab-key=""
-        />
-        <span
-          {...noTranslateProps()}
-          data-search-input-mode-tab-text=""
-        />
-      </span>
+      <ModeTag prefixId={modePrefixId} store={stores.modeTag} />
+      <ModeMenu prefixId={modePrefixId} store={stores.modeMenu} surface={modeSurface} />
+      <TabHint id={modeTabHintId} store={stores.tabHint} surface={modeSurface} />
       <div
         {...noTranslateProps()}
         className={CLASSES.divider}
@@ -472,8 +440,12 @@ export function createSearchInput(
   container.setAttribute('translate', 'no');
   const root = createRoot(container);
   roots.set(container, root);
-  const modeMenuStore = createModeMenuStore();
-  flushSync(() => root.render(<SearchInput config={config} modeMenuStore={modeMenuStore} />));
+  const stores: ModeStores = {
+    modeMenu: createModeMenuStore(),
+    modeTag: createModeTagStore(),
+    tabHint: createTabHintStore()
+  };
+  flushSync(() => root.render(<SearchInput config={config} stores={stores} />));
   const input = queryHtmlTag(container, 'input', 'input');
   const icon = queryHtmlTag(container, '.x-lumno-search-input__icon', 'div');
   const divider = queryHtmlTag(container, '.x-lumno-search-input__divider', 'div');
@@ -496,6 +468,7 @@ export function createSearchInput(
     : null;
   const modePrefix = queryHtmlTag(container, '[data-search-input-mode-prefix]', 'button');
   const modePrefixGlyph = queryHtmlElement(container, '[data-search-input-mode-prefix-glyph]');
+  const modePrefixLineIcon = querySvgElement(container, '[data-search-input-mode-line-icon]');
   const modePrefixIcon = queryHtmlTag(container, '[data-search-input-mode-prefix-icon]', 'img');
   const modePrefixIconFrame = queryHtmlTag(container, '[data-search-input-mode-prefix-icon-frame]', 'span');
   const modePrefixText = queryHtmlTag(container, '[data-search-input-mode-prefix-text]', 'span');
@@ -510,6 +483,7 @@ export function createSearchInput(
   if (
     !modePrefix ||
     !modePrefixGlyph ||
+    !modePrefixLineIcon ||
     !modePrefixIconFrame ||
     !modePrefixIcon ||
     !modePrefixText ||
@@ -539,6 +513,13 @@ export function createSearchInput(
     }
     return visible;
   };
+  const modeMenuView: ModeMenuView = {
+    render: (model, handlers) => stores.modeMenu.render({ model, handlers })
+  };
+  const modeTagView: ModeTagView = {
+    render: (model, handlers) => stores.modeTag.render({ model, handlers })
+  };
+  const tabHintView: TabHintView = { render: stores.tabHint.render };
   const parts = {
     clearAction,
     container,
@@ -549,13 +530,16 @@ export function createSearchInput(
     modeMenu,
     modeMenuContent,
     modeMenuFooter,
-    modeMenuView: { render: modeMenuStore.render },
+    modeMenuView,
+    modeTagView,
+    tabHintView,
     modePrefix,
     modePrefixChevron,
     modePrefixCurrent,
     modePrefixGlyph,
     modePrefixIconFrame,
     modePrefixIcon,
+    modePrefixLineIcon,
     modePrefixText,
     modeTabHint,
     modeTabHintKey,

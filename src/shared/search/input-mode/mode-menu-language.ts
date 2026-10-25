@@ -1,9 +1,9 @@
 // The mode menu's copy: the filter query line and the footer hints in the
-// current language, and the site search Tab hint element.
+// current language.
 import type { ModeMenuLabels, ModeMenuMarkedText } from '../../react/search/mode-menu';
 import type * as LumnoShortcutDisplay from '../../../domain/shortcut-display';
 import type { NavigatorLike } from '../../../domain/shortcut-display';
-import type { CssText, FormatMessage, InputModeVars } from './types';
+import type { FormatMessage } from './types';
 
 // The controller state search-input-mode.ts shares with its modules.
 interface ModeMenuLanguageState {
@@ -21,14 +21,6 @@ interface ModeMenuLanguageDeps {
   win: { navigator?: NavigatorLike } | null | undefined;
   syncInputPlaceholder: () => void;
   renderModeMenuView: () => unknown;
-  siteSearchTabHint: HTMLElement;
-  tabHintId: string;
-  siteSearchTabHintKey: HTMLElement;
-  siteSearchTabHintText: HTMLElement;
-  cssText: CssText;
-  rightAnchorOffset: number;
-  vars: InputModeVars;
-  INPUT_FONT_STACK: string;
   inputModeState: ModeMenuLanguageState;
 }
 
@@ -39,15 +31,7 @@ function createModeMenuLanguage(deps: ModeMenuLanguageDeps) {
     config,
     win,
     syncInputPlaceholder,
-    renderModeMenuView,
-    siteSearchTabHint,
-    tabHintId,
-    siteSearchTabHintKey,
-    siteSearchTabHintText,
-    cssText,
-    rightAnchorOffset,
-    vars,
-    INPUT_FONT_STACK,
+    renderModeMenuView
   } = deps;
 
   // The controller state object shared with search-input-mode.ts and the other modules.
@@ -109,39 +93,6 @@ function createModeMenuLanguage(deps: ModeMenuLanguageDeps) {
   }
 
   syncInputPlaceholder();
-  siteSearchTabHint.id = tabHintId;
-  siteSearchTabHint.className = 'x-lumno-search-input-mode__tab-hint';
-  siteSearchTabHint.setAttribute('aria-hidden', 'true');
-  siteSearchTabHintKey.textContent = '';
-  siteSearchTabHintText.textContent = '';
-  siteSearchTabHint.style.cssText = cssText([
-    ['all', 'unset'],
-    ['position', 'absolute'],
-    ['right', `${rightAnchorOffset}px`],
-    ['top', '50%'],
-    ['transform', 'translateY(-50%)'],
-    ['display', 'none'],
-    ['align-items', 'center'],
-    ['justify-content', 'center'],
-    ['gap', '7px'],
-    ['max-width', 'min(300px, 52%)'],
-    ['min-width', '0'],
-    ['height', '28px'],
-    ['padding', '0'],
-    ['border', 'none'],
-    ['background', 'transparent'],
-    ['color', vars.tagText],
-    ['box-sizing', 'border-box'],
-    ['font-size', '13px'],
-    ['font-family', INPUT_FONT_STACK],
-    ['font-weight', '700'],
-    ['line-height', '18px'],
-    ['letter-spacing', '0'],
-    ['white-space', 'nowrap'],
-    ['pointer-events', 'none'],
-    ['user-select', 'none'],
-    ['z-index', '1']
-  ]);
 
   return {
     getModeMenuLabels,

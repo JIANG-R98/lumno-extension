@@ -1,5 +1,6 @@
 // How the mode prefix looks and where it sits: its colors on each surface,
 // the input padding it takes, and the menu footer alignment.
+import type { ModeTagModel } from './mode-tag-model';
 import type { InputModeTheme, IsElementVisible, Rgb, SetStyle } from './types';
 import { queryHtmlElement } from '../../dom-lookup';
 
@@ -45,9 +46,7 @@ interface PrefixVisualDeps {
   setStyle: SetStyle;
   container: HTMLElement;
   siteSearchPrefix: HTMLElement;
-  siteSearchPrefixLineIcon: SVGElement;
-  siteSearchPrefixChevron: HTMLElement;
-  siteSearchPrefixCurrent: HTMLElement;
+  updateModeTag: (patch: Partial<ModeTagModel>) => void;
   input: HTMLInputElement;
   // Width taken by optional actions beside the input's right icon.
   getExtraRightInset: (() => number) | null;
@@ -82,9 +81,7 @@ function createPrefixVisual(deps: PrefixVisualDeps) {
     setStyle,
     container,
     siteSearchPrefix,
-    siteSearchPrefixLineIcon,
-    siteSearchPrefixChevron,
-    siteSearchPrefixCurrent,
+    updateModeTag,
     input,
     getExtraRightInset,
     rightAnchorOffset,
@@ -170,14 +167,15 @@ function createPrefixVisual(deps: PrefixVisualDeps) {
     const visual = getInputModePrefixVisual(theme, visualOptions);
     setStyle(container, '--x-lumno-search-mode-accent', visual.accentColor);
     setStyle(container, '--x-lumno-search-mode-selected-bg', visual.background);
-    setStyle(siteSearchPrefix, 'background', visual.background);
-    setStyle(siteSearchPrefix, 'border', visual.border);
-    setStyle(siteSearchPrefix, 'box-shadow', visual.shadow);
-    setStyle(siteSearchPrefix, 'color', visual.color);
-    setStyle(siteSearchPrefix, '--x-lumno-search-mode-accent', visual.accentColor);
-    setStyle(siteSearchPrefixLineIcon, 'color', visual.accentColor);
-    setStyle(siteSearchPrefixChevron, 'color', visual.accentColor);
-    setStyle(siteSearchPrefixCurrent, 'color', visual.accentColor);
+    updateModeTag({
+      colors: {
+        accent: visual.accentColor,
+        background: visual.background,
+        color: visual.color,
+        border: visual.border,
+        shadow: visual.shadow
+      }
+    });
     return visual;
   }
 

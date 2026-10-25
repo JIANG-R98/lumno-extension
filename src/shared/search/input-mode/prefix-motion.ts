@@ -1,5 +1,6 @@
-// Mode prefix motion: the current label reveal, entering, resizing, and
-// the rest state and menu-open state it settles into.
+// Mode tag motion: the current label reveal, entering, resizing, and the
+// rest state and menu-open state it settles into.
+import type { ModeTagModel } from './mode-tag-model';
 import type { IsElementVisible, SetStyle } from './types';
 import type { PrefixCurrentVisualState } from './prefix-content';
 
@@ -13,6 +14,7 @@ interface PrefixMotionState {
   inputModePrefixAnimationTimer: number;
   // The text a resize is on its way to.
   inputModePrefixPendingText: string;
+  modeTag: ModeTagModel;
 }
 
 interface PrefixMotionDeps {
@@ -30,6 +32,7 @@ interface PrefixMotionDeps {
   isElementVisible: IsElementVisible;
   getInputModePrefixCurrentVisualState: () => PrefixCurrentVisualState;
   DEFAULT_PREFIX_ITEM_GAP_PX: number;
+  updateModeTag: (patch: Partial<ModeTagModel>) => void;
   inputModeState: PrefixMotionState;
 }
 
@@ -55,7 +58,8 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
     DEFAULT_PREFIX_ENTER_EASING,
     isElementVisible,
     getInputModePrefixCurrentVisualState,
-    DEFAULT_PREFIX_ITEM_GAP_PX
+    DEFAULT_PREFIX_ITEM_GAP_PX,
+    updateModeTag
   } = deps;
 
   // The controller state object shared with search-input-mode.ts and the other modules.
@@ -310,35 +314,12 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
   }
 
   function setInputModePrefixCurrentVisible(visible: boolean): void {
-    const nextVisible = Boolean(visible);
-    siteSearchPrefix.setAttribute(
-      'data-current-visible',
-      nextVisible ? 'true' : 'false'
-    );
-    const measuring = siteSearchPrefix.getAttribute(
-      'data-current-measuring'
-    ) === 'true';
-    setStyle(
-      siteSearchPrefixCurrent,
-      'display',
-      nextVisible || measuring ? 'inline-flex' : 'none'
-    );
+    updateModeTag({ currentVisible: Boolean(visible) });
   }
 
+  // Lays the "current" label out, hidden or not, so it can be measured.
   function setInputModePrefixCurrentMeasuring(measuring: boolean): void {
-    const nextMeasuring = Boolean(measuring);
-    siteSearchPrefix.setAttribute(
-      'data-current-measuring',
-      nextMeasuring ? 'true' : 'false'
-    );
-    const visible = siteSearchPrefix.getAttribute(
-      'data-current-visible'
-    ) === 'true';
-    setStyle(
-      siteSearchPrefixCurrent,
-      'display',
-      nextMeasuring || visible ? 'inline-flex' : 'none'
-    );
+    updateModeTag({ currentMeasuring: Boolean(measuring) });
   }
 
   function settleInputModePrefixMenuVisualState(): void {
@@ -351,7 +332,7 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
   // Reveals the "current" label beside the prefix while the menu is open.
   function setInputModePrefixMenuOpen(open: boolean): void {
     const nextOpen = Boolean(open);
-    const wasOpen = siteSearchPrefix.getAttribute('data-menu-open') === 'true';
+    const wasOpen = inputModeState.modeTag.menuOpen;
     if (wasOpen === nextOpen) {
       if (!nextOpen) {
         setInputModePrefixCurrentVisible(false);
@@ -365,7 +346,7 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
     if (shouldAnimate) {
       cancelInputModePrefixAnimation();
     }
-    siteSearchPrefix.setAttribute('data-menu-open', nextOpen ? 'true' : 'false');
+    updateModeTag({ menuOpen: nextOpen });
     setInputModePrefixCurrentMeasuring(nextOpen);
     const nextCurrentState: PrefixCurrentVisualState = nextOpen
       ? getInputModePrefixCurrentVisualState()
