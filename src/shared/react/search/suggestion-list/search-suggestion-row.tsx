@@ -25,6 +25,7 @@ import { surfaceCssValue, surfaceClass } from './surface-options';
 import { bindTextTooltip, HighlightedText } from './highlight';
 import { isHelpPassage } from '../help-passage-card';
 import { setIconEmphasis } from './action-styles';
+import { queryHtmlElement, queryHtmlTag } from '../../../dom-lookup';
 
 function SearchSuggestionRowComponent({
   runtime,
@@ -231,12 +232,10 @@ function SearchSuggestionRowComponent({
     item._xVisitButtonAction = actionModel.visitButtonAction;
     item._xActionTags = actionTagRefs.current;
     item._xActionTags.forEach((tag) => {
-      tag._xActionLabel = tag.querySelector<HTMLSpanElement>(
-        `.${surfaceClass(
+      tag._xActionLabel = queryHtmlTag(tag, `.${surfaceClass(
           options,
           'x-nt-suggestion-action-tag__label'
-        )}`
-      );
+        )}`, 'span');
     });
     item._xSuggestion = suggestionRef.current;
     item._xAlwaysHideVisitButton =
@@ -326,9 +325,7 @@ function SearchSuggestionRowComponent({
       titleRef.current,
       suggestion.title || ''
     );
-    const urlLine = item.querySelector<HTMLElement>(
-      `.${surfaceClass(options, 'x-nt-suggestion-url-line')}`
-    );
+    const urlLine = queryHtmlElement(item, `.${surfaceClass(options, 'x-nt-suggestion-url-line')}`);
     // A help center page's line shows the matched passage, so its tooltip shows the passage too,
     // unless the row has a passage card beside the list to show it in full.
     bindTextTooltip(
@@ -610,8 +607,7 @@ function SearchSuggestionRowComponent({
             <span
               ref={(node) => {
                 if (node) {
-                  const actionTag =
-                    node as SuggestionActionTagElement;
+                  const actionTag: SuggestionActionTagElement = node;
                   actionTagRefs.current[tagIndex] = actionTag;
                   actionTag._xAction = tag.action;
                   actionTag._xSuggestion = suggestionRef.current;

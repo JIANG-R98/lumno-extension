@@ -4,6 +4,7 @@ import {
   createReactRootController,
   type ReactRootController
 } from './root-controller';
+import { queryHtmlElement } from '../../shared/dom-lookup';
 
 export interface SettingsNavigationItemModel {
   iconClass: string;
@@ -72,7 +73,7 @@ function useTabStripOverflow(
 
   useLayoutEffect(() => {
     const strip = indicatorRef.current?.parentElement;
-    const active = strip?.querySelector<HTMLElement>('button[data-active="true"]');
+    const active = (strip ? queryHtmlElement(strip, 'button[data-active="true"]') : null);
     if (!strip || !active || strip.scrollWidth <= strip.clientWidth) {
       return;
     }

@@ -16,6 +16,7 @@ import {
 } from '../../shared/ui/empty-state-art';
 import type { CursorTooltipOptions } from '../../shared/ui/cursor-tooltip';
 import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
+import { queryHtmlTags } from '../../shared/dom-lookup';
 
 // A site's theme as the page resolves it; the view passes it through.
 type ThemeValue = Partial<ThemeVariant> | null;
@@ -1093,7 +1094,7 @@ function BookmarkCard({
               style={{
                 '--x-nt-folder-favicon-rot': preview.rotation,
                 zIndex: 10 + previewIndex
-              } as React.CSSProperties}
+              }}
               alt=""
               loading="eager"
               decoding="async"
@@ -1210,9 +1211,9 @@ export function createBookmarksView(
 
   function syncCards(resetInteraction = false): void {
     options.cards.length = 0;
-    options.grid
-      .querySelectorAll<BookmarkCardElement>('.x-nt-bookmark-card')
-      .forEach((card) => {
+    queryHtmlTags(options.grid, '.x-nt-bookmark-card', 'div')
+      .forEach((element) => {
+        const card: BookmarkCardElement = element;
         options.cards.push(card);
         if (
           resetInteraction &&

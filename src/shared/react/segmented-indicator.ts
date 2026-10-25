@@ -1,4 +1,5 @@
 import { useLayoutEffect, type RefObject } from 'react';
+import { queryHtmlElement } from '../dom-lookup';
 
 // The one implementation of the sliding indicator under a segmented control's active
 // button. React controls use the hook; the page modules call the same functions through
@@ -84,7 +85,7 @@ export function syncSegmentedIndicator(
   }
   applySegmentedIndicator(
     indicator,
-    measureSegmentedIndicator(container, indicator, container.querySelector<HTMLElement>(activeSelector))
+    measureSegmentedIndicator(container, indicator, queryHtmlElement(container, activeSelector))
   );
 }
 

@@ -1,6 +1,7 @@
 // Moving through the mode menu: its buttons, focus between the search
 // field and items, scrolling, rows and arrow-key directions, and selecting.
 import type { ModeMenuItem } from './types';
+import { queryHtmlElements } from '../../dom-lookup';
 
 // The controller state search-input-mode.ts shares with its modules.
 interface ModeMenuNavigationState {
@@ -78,7 +79,7 @@ function createModeMenuNavigation(deps: ModeMenuNavigationDeps) {
   const inputModeState = deps.inputModeState;
 
   function getAllModeMenuButtons(): HTMLElement[] {
-    return Array.from(modeMenu.querySelectorAll<HTMLElement>('[role="menuitemradio"]'));
+    return Array.from(queryHtmlElements(modeMenu, '[role="menuitemradio"]'));
   }
 
   function getModeMenuButtons(): HTMLElement[] {

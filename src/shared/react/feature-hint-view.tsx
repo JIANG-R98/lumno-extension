@@ -6,6 +6,7 @@ import type {
   FeatureHintViewModel,
   FeatureHintViewOptions
 } from '../../types/view-apis';
+import { queryHtmlTag, queryHtmlTags } from '../dom-lookup';
 
 export type {
   FeatureHintViewController,
@@ -295,15 +296,9 @@ export function createFeatureHintView(
   };
   render();
 
-  const badge = element.querySelector<HTMLSpanElement>(
-    '.x-lumno-feature-hint__badge'
-  );
-  const text = element.querySelector<HTMLSpanElement>(
-    '.x-lumno-feature-hint__text'
-  );
-  const closeButton = element.querySelector<HTMLButtonElement>(
-    '.x-lumno-feature-hint__close'
-  );
+  const badge = queryHtmlTag(element, '.x-lumno-feature-hint__badge', 'span');
+  const text = queryHtmlTag(element, '.x-lumno-feature-hint__text', 'span');
+  const closeButton = queryHtmlTag(element, '.x-lumno-feature-hint__close', 'button');
   if (!badge || !text || !closeButton) {
     flushSync(() => root.unmount());
     return null;
@@ -311,13 +306,9 @@ export function createFeatureHintView(
 
   return {
     actionButtons: Array.from(
-      element.querySelectorAll<HTMLButtonElement>(
-        '.x-lumno-feature-hint__action'
-      )
+      queryHtmlTags(element, '.x-lumno-feature-hint__action', 'button')
     ),
-    arrowTip: element.querySelector<HTMLSpanElement>(
-      '.x-lumno-feature-hint__arrow-tip'
-    ),
+    arrowTip: queryHtmlTag(element, '.x-lumno-feature-hint__arrow-tip', 'span'),
     badge,
     closeButton,
     destroy() {
@@ -328,9 +319,7 @@ export function createFeatureHintView(
       flushSync(() => root.unmount());
     },
     element,
-    linkButton: element.querySelector<HTMLButtonElement>(
-      '.x-lumno-feature-hint__link'
-    ),
+    linkButton: queryHtmlTag(element, '.x-lumno-feature-hint__link', 'button'),
     text,
     updateLabels(nextLabels) {
       labels = nextLabels;

@@ -12,6 +12,7 @@ import { useExclusiveAsyncAction } from '../../shared/react/use-exclusive-async-
 import { isElementTextTruncated } from '../../shared/react/text-overflow';
 import type { RecentSite } from '../../domain/recent-sites-store';
 import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
+import { queryHtmlTags } from '../../shared/dom-lookup';
 
 type Translate = (key: string, fallback: string) => string;
 // A site's theme as the page resolves it; the view passes it through.
@@ -1094,8 +1095,7 @@ export function createRecentSitesView(
 
   function syncCards(): void {
     options.cards.length = 0;
-    options.grid
-      .querySelectorAll<RecentCardElement>('.x-nt-recent-card')
+    queryHtmlTags(options.grid, '.x-nt-recent-card', 'div')
       .forEach((card) => options.cards.push(card));
   }
 

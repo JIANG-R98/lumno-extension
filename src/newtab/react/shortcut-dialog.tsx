@@ -30,12 +30,18 @@ import {
   type ShortcutDialogMode,
   type ShortcutRecord
 } from './shortcut-dialog-helpers';
+import { isNode } from '../../shared/dom-guards';
+import { queryHtmlTag } from '../../shared/dom-lookup';
 
 type Translate = (key: string, fallback: string) => string;
 type IconAction = 'keep' | 'replace' | 'remove';
 export type OnlineIconSource = 'service' | 'favicon-is' | 'cache';
 type IconMode = OnlineIconSource | 'custom' | 'builtin';
-const ICON_MODES: IconMode[] = ['builtin', 'service', 'favicon-is', 'cache', 'custom'];
+const ICON_MODES: readonly IconMode[] = ['builtin', 'service', 'favicon-is', 'cache', 'custom'];
+
+function isIconMode(value: string): value is IconMode {
+  return ICON_MODES.some((mode) => mode === value);
+}
 const ICON_REFRESH_SUCCESS_MS = 2000;
 // A group needs only a name, which may be empty: an untitled group just
 // starts a new row of shortcuts.
@@ -111,7 +117,7 @@ interface PreparedIcon {
 
 export interface ShortcutDialogOptions {
   documentObj?: Document;
-  windowObj?: Window;
+  windowObj?: Window & typeof globalThis;
   t?: Translate;
   onSubmit?: (payload: Readonly<ShortcutDialogPayload>) => boolean | Promise<boolean>;
   prepareIconFile?: (file: File) => PreparedIcon | Promise<PreparedIcon>;
@@ -175,7 +181,7 @@ interface FormState {
 
 interface NormalizedOptions {
   documentObj: Document;
-  windowObj: Window;
+  windowObj: Window & typeof globalThis;
   t: Translate;
   onSubmit: (payload: Readonly<ShortcutDialogPayload>) => boolean | Promise<boolean>;
   prepareIconFile: (file: File) => PreparedIcon | Promise<PreparedIcon>;
@@ -301,7 +307,7 @@ function normalizeError(message: unknown): string {
 function getIconErrorMessage(errorValue: unknown, t: Translate): string {
   const code = String(
     errorValue && typeof errorValue === 'object' && 'code' in errorValue
-      ? (errorValue as { code?: unknown }).code || ''
+      ? errorValue.code || ''
       : ''
   );
   if (code === 'unsupported-type' || code === 'empty-file') {
@@ -490,7 +496,7 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
           nameInputRef.current,
           urlInfoButtonRef.current,
           urlInputRef.current,
-          iconSelectHost?.querySelector<HTMLButtonElement>('button') || null,
+          (iconSelectHost ? queryHtmlTag(iconSelectHost, 'button', 'button') : null) || null,
           iconInfoButtonRef.current,
           iconRefreshButtonRef.current,
           iconUploadTileRef.current,
@@ -734,7 +740,9 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
     const isOnlineIcon = formState.iconMode !== 'custom';
     const isBuiltinIcon = formState.iconMode === 'builtin';
     const showIconInfo = isBuiltinIcon || !isOnlineIcon;
-    const sourceUnavailable = !isBuiltinIcon && isOnlineIcon && !options.isIconSourceAvailable(formState.iconMode as OnlineIconSource, formState.url);
+    const iconMode = formState.iconMode;
+    const sourceUnavailable = iconMode !== 'builtin' && iconMode !== 'custom' &&
+      !options.isIconSourceAvailable(iconMode, formState.url);
     const builtinIconUrl = options.getBuiltinIconUrl(formState.url);
     const isMonochromeBuiltinIcon = isBuiltinIcon && /\/glyph-(?:gh|gpt|mdn|wk|zw)\.svg(?:[?#]|$)/.test(builtinIconUrl);
     const iconSourceLabel = options.t('newtab_shortcuts_icon_mode_label', 'Icon source');
@@ -812,7 +820,7 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
         setIconRefreshWidth(Math.ceil(glyph.offsetWidth + label.offsetWidth + spacing));
       };
       measure();
-      const ResizeObserverCtor = (options.windowObj as Window & { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
+      const ResizeObserverCtor = options.windowObj.ResizeObserver;
       const observer = ResizeObserverCtor ? new ResizeObserverCtor(measure) : null;
       observer?.observe(glyph);
       observer?.observe(label);
@@ -978,8 +986,8 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                     menuPortalContainer: dialogRef.current?.parentElement || undefined,
                     menuPortalZIndex: 10060,
                     onValueChange: (value) => {
-                      if (!ICON_MODES.includes(value as IconMode) || stateRef.current.busy || stateRef.current.iconBusy) return false;
-                      selectIconMode(value as IconMode);
+                      if (!isIconMode(value) || stateRef.current.busy || stateRef.current.iconBusy) return false;
+                      selectIconMode(value);
                     }
                   }}
                   documentObj={options.documentObj}
@@ -1382,11 +1390,12 @@ export function createShortcutDialog(
   }
   // While the color picker is open over the dialog, focus belongs to it.
   let childModalOpen = false;
+  const pickIconPlateColor = normalizedOptions.pickIconPlateColor;
   const options: NormalizedOptions = {
     ...normalizedOptions,
-    pickIconPlateColor: normalizedOptions.pickIconPlateColor && ((request) => {
+    pickIconPlateColor: pickIconPlateColor && ((request) => {
       childModalOpen = true;
-      return Promise.resolve(normalizedOptions.pickIconPlateColor!(request)).finally(() => {
+      return Promise.resolve(pickIconPlateColor(request)).finally(() => {
         childModalOpen = false;
       });
     })
@@ -1638,7 +1647,7 @@ export function createShortcutDialog(
   }
 
   function handleDocumentFocusIn(event: FocusEvent): void {
-    if (!modalActive || childModalOpen || host.contains(event.target as Node)) {
+    if (!modalActive || childModalOpen || host.contains(isNode(event.target) ? event.target : null)) {
       return;
     }
     keepFocusInDialog();
@@ -1671,7 +1680,7 @@ export function createShortcutDialog(
     } else if (!event.shiftKey && options.documentObj.activeElement === last) {
       event.preventDefault();
       focusElement(first);
-    } else if (!activeFocusables.includes(options.documentObj.activeElement as HTMLElement)) {
+    } else if (!activeFocusables.some((element) => element === options.documentObj.activeElement)) {
       event.preventDefault();
       focusElement(first);
     }

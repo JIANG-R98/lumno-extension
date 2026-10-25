@@ -19,6 +19,7 @@ import {
   type IconPlateInput
 } from './shortcut-dialog-helpers';
 import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
+import { queryHtmlElements, queryHtmlTag, queryHtmlTags } from '../../shared/dom-lookup';
 
 // A site's theme as the page resolves it; the view passes it through.
 type ThemeValue = Partial<ThemeVariant> | null;
@@ -575,7 +576,9 @@ function ShortcutGroupHeader({
 
   function openMenu(): void {
     options.hideTooltip();
-    options.onGroupMenu(group.id, moreRef.current as HTMLElement);
+    if (moreRef.current) {
+      options.onGroupMenu(group.id, moreRef.current);
+    }
   }
 
   return (
@@ -752,24 +755,16 @@ export function createShortcutsView(
   }
   const options: NormalizedOptions = normalizedOptions;
   const reactRoot: Root = createRoot(options.grid);
-  const addButtonRef = { current: null } as {
-    current: HTMLButtonElement | null;
-  };
+  const addButtonRef: { current: HTMLButtonElement | null } = { current: null };
   options.grid.setAttribute('data-react-island', 'shortcuts');
 
   function refreshElements(): void {
     options.tiles.length = 0;
-    options.grid
-      .querySelectorAll<ShortcutTileElement>(
-        '.x-nt-shortcut-tile[data-shortcut-id]'
-      )
+    queryHtmlTags(options.grid, '.x-nt-shortcut-tile[data-shortcut-id]', 'button')
       .forEach((tile) => options.tiles.push(tile));
-    addButtonRef.current = options.grid.querySelector<HTMLButtonElement>(
-      '.x-nt-shortcut-tile--add'
-    );
+    addButtonRef.current = queryHtmlTag(options.grid, '.x-nt-shortcut-tile--add', 'button');
     options.groupHeaders.length = 0;
-    options.grid
-      .querySelectorAll<HTMLElement>('.x-nt-shortcut-group-header')
+    queryHtmlElements(options.grid, '.x-nt-shortcut-group-header')
       .forEach((header) => options.groupHeaders.push(header));
   }
 
@@ -789,11 +784,12 @@ export function createShortcutsView(
 
   function render(items: VisibleShortcutItem[], layout: ShortcutsLayout = {}): { count: number } {
     const normalizedItems = Array.isArray(items) ? items : [];
-    const grouped = Boolean(layout.grouped && Array.isArray(layout.groups) && layout.groups.length);
+    const groups = layout.grouped && layout.groups && layout.groups.length ? layout.groups : null;
+    const grouped = Boolean(groups);
     options.hideTooltip();
-    if (grouped) {
+    if (groups) {
       options.grid.setAttribute('data-shortcut-grouped', 'true');
-      fitGroupedColumns(normalizedItems, layout.groups as ShortcutGroup[]);
+      fitGroupedColumns(normalizedItems, groups);
     } else {
       options.grid.removeAttribute('data-shortcut-grouped');
       options.grid.style.removeProperty('--x-nt-shortcut-grouped-columns');
@@ -817,8 +813,7 @@ export function createShortcutsView(
         { maxWidth: 260 }
       );
     }
-    options.grid
-      .querySelectorAll<HTMLButtonElement>('.x-nt-shortcut-group-empty')
+    queryHtmlTags(options.grid, '.x-nt-shortcut-group-empty', 'button')
       .forEach((slot) => {
         options.bindTooltip(
           slot,

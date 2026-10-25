@@ -1,7 +1,6 @@
 import {
   useEffect,
-  useState,
-  type CSSProperties
+  useState
 } from 'react';
 import { RemixIcon as Icon } from '../../shared/react/remix-icon';
 import { HighlightedText } from './site-search-demo';
@@ -238,7 +237,7 @@ function SourceTag({
       ? 'var(--x-ext-tag-text, #1E3A8A)'
       : 'var(--x-ov-tag-text, #667085)',
     '--x-ov-suggestion-source-tag-border': 'transparent'
-  } as CSSProperties;
+  };
   return (
     <span
       className="x-ov-suggestion-source-tag"
@@ -263,7 +262,7 @@ function OverlayResult({
 }) {
   const hasActionTags = Boolean(result.actionTagLabel);
   const showActionTag = active && hasActionTags;
-  const style = { '--result-index': String(index) } as CSSProperties;
+  const style = { '--result-index': String(index) };
 
   return (
     <div
@@ -352,7 +351,7 @@ function QueryText({ query }: { query: string }) {
       {characters.map((character, index) => {
         const style = {
           '--typing-char-delay': `${Math.round((index + 1) * stepMs)}ms`
-        } as CSSProperties;
+        };
         return (
           <span
             className="onboarding-typing-char"

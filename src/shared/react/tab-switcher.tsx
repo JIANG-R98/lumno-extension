@@ -1,6 +1,6 @@
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
-import type { CSSProperties } from 'react';
+import { queryHtmlTags } from '../dom-lookup';
 
 export type TabSwitcherCloseButtonPlacement = 'left' | 'right';
 
@@ -210,7 +210,7 @@ function TabCard({
   const style = accent
     ? ({
         '--x-tab-switcher-card-accent': accent
-      } as CSSProperties)
+      })
     : undefined;
 
   const closeLabel = options.getMessage(
@@ -339,7 +339,7 @@ function TabSwitcherView({
         '--x-tab-count': String(
           Math.max(1, Math.min(5, tabs.length))
         )
-      } as CSSProperties}
+      }}
     >
       <div className="x-tab-switcher-list">
         {tabs.map((tab, index) => (
@@ -405,9 +405,7 @@ export function createTabSwitcherView(
     get buttons() {
       return panel
         ? Array.from(
-            panel.querySelectorAll<HTMLButtonElement>(
-              '.x-tab-switcher-card'
-            )
+            queryHtmlTags(panel, '.x-tab-switcher-card', 'button')
           )
         : [];
     },

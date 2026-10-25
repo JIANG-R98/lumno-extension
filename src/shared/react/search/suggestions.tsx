@@ -7,7 +7,6 @@ import type {
   SuggestionsViewOptions,
   Suggestion,
   SuggestionsRuntime,
-  SuggestionElement,
   OpenTabSuggestion,
   SuggestionsViewController,
   SuggestionValueRef,
@@ -24,6 +23,7 @@ import { updateSelectionForRuntime, syncModifierLabels } from './suggestion-list
 import { SearchSuggestionRow } from './suggestion-list/search-suggestion-row';
 import { OpenTabRow } from './suggestion-list/open-tab-row';
 import { EmptyState, getHelpGroupCaptionStart } from './suggestion-list/empty-state';
+import { queryHtmlTags } from '../../dom-lookup';
 export type {
   SuggestionsSurface,
   SuggestionUpdateKind,
@@ -38,10 +38,7 @@ export type {
 
 function syncItems(options: NormalizedOptions): void {
   options.items.length = 0;
-  options.container
-    .querySelectorAll<SuggestionElement>(
-      `.${surfaceClass(options, 'x-nt-suggestion-item')}`
-    )
+  queryHtmlTags(options.container, `.${surfaceClass(options, 'x-nt-suggestion-item')}`, 'div')
     .forEach((item) => options.items.push(item));
 }
 

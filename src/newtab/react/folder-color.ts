@@ -32,7 +32,20 @@ export function folderColorToRgb(color: string): string {
   return `rgb(${folderColorToChannels(color).join(', ')})`;
 }
 
-export function folderColorToChannels(color: string): [string, string, string] {
+// A color's red, green and blue channels, as the picker's fields show them.
+export type FolderColorChannels = [string, string, string];
+
+export function folderColorToChannels(color: string): FolderColorChannels {
   const hex = parseFolderColor(color) || DEFAULT_FOLDER_COLOR;
-  return [1, 3, 5].map((offset) => String(parseInt(hex.slice(offset, offset + 2), 16))) as [string, string, string];
+  const channel = (offset: number) => String(parseInt(hex.slice(offset, offset + 2), 16));
+  return [channel(1), channel(3), channel(5)];
+}
+
+// The channels with the one at `index` replaced.
+export function withFolderColorChannel(channels: FolderColorChannels, index: number, value: string): FolderColorChannels {
+  return [
+    index === 0 ? value : channels[0],
+    index === 1 ? value : channels[1],
+    index === 2 ? value : channels[2]
+  ];
 }

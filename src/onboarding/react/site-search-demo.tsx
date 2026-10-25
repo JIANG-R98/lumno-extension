@@ -83,7 +83,7 @@ function getCaseStyle(
     '--x-ov-suggestion-action-button-border': rgbToCss(theme.buttonBorder),
     '--x-ov-suggestion-action-button-text': rgbToCss(theme.buttonText),
     '--x-ov-suggestion-row-bg': rgbToCss(theme.highlightBg)
-  } as CSSProperties;
+  };
 }
 
 function ProviderIcon({
@@ -141,7 +141,7 @@ function TypedText({
   const tokenStyle = {
     '--typed-width': `calc(${typedWidth} + var(--typed-width-buffer, 0.65em))`,
     '--typing-steps': String(Math.max(1, characters.length))
-  } as CSSProperties;
+  };
   const stepMs = durationMs / Math.max(1, characters.length);
 
   return (
@@ -152,7 +152,7 @@ function TypedText({
       {characters.map((character, index) => {
         const style = {
           '--typing-char-delay': `${Math.round((index + 1) * stepMs)}ms`
-        } as CSSProperties;
+        };
         return (
           <span
             className="onboarding-typing-char"
@@ -313,7 +313,7 @@ function SearchResult({
   item: SiteSearchCaseModel;
   model: SiteSearchDemoModel;
 }) {
-  const style = { '--result-index': '0' } as CSSProperties;
+  const style = { '--result-index': '0' };
   return (
     <div
       className="x-ov-suggestion-item site-search-demo-result"

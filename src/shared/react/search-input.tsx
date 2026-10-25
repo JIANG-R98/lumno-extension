@@ -13,6 +13,7 @@ import {
   type PopconfirmClassNames,
   type PopconfirmCopy
 } from './popconfirm-content';
+import { queryHtmlElement, queryHtmlElements, queryHtmlTag } from '../dom-lookup';
 
 type StyleOverrides = Record<string, string>;
 
@@ -265,7 +266,7 @@ function SecondaryAction({ action }: { action: SecondaryActionConfig }) {
     }
     // The Overlay lives in a closed ShadowRoot, whose nodes are hidden from
     // document listeners, so watch the root the button is rendered in.
-    const root = trigger.getRootNode() as Document | ShadowRoot;
+    const root = trigger.getRootNode();
     const onPointerDown = (event: Event) => {
       const path = event.composedPath();
       if (
@@ -301,7 +302,7 @@ function SecondaryAction({ action }: { action: SecondaryActionConfig }) {
       setOpen(false);
       return;
     }
-    const parent = trigger.offsetParent as HTMLElement | null;
+    const parent = trigger.offsetParent;
     setPosition({
       right: parent
         ? parent.clientWidth - trigger.offsetLeft - trigger.offsetWidth
@@ -504,13 +505,11 @@ function SearchInput({ config }: { config: SearchInputConfig }) {
   );
 }
 
-function getRuntimeUrl(path: string) {
-  const chromeApi = (
-    globalThis as typeof globalThis & {
-      chrome?: { runtime?: { getURL?(path: string): string } };
-    }
-  ).chrome;
-  return chromeApi?.runtime?.getURL?.(path) || '';
+function getRuntimeUrl(path: string): string {
+  if (typeof chrome === 'undefined' || !chrome.runtime || typeof chrome.runtime.getURL !== 'function') {
+    return '';
+  }
+  return chrome.runtime.getURL(path) || '';
 }
 
 function ensureLink(
@@ -605,16 +604,10 @@ export function createSearchInput(
   const root = createRoot(container);
   roots.set(container, root);
   flushSync(() => root.render(<SearchInput config={config} />));
-  const input = container.querySelector<HTMLInputElement>('input');
-  const icon = container.querySelector<HTMLDivElement>(
-    '.x-lumno-search-input__icon'
-  );
-  const divider = container.querySelector<HTMLDivElement>(
-    '.x-lumno-search-input__divider'
-  );
-  let rightIcon = container.querySelector<HTMLButtonElement>(
-    '.x-lumno-search-input__right-icon'
-  );
+  const input = queryHtmlTag(container, 'input', 'input');
+  const icon = queryHtmlTag(container, '.x-lumno-search-input__icon', 'div');
+  const divider = queryHtmlTag(container, '.x-lumno-search-input__divider', 'div');
+  let rightIcon = queryHtmlTag(container, '.x-lumno-search-input__right-icon', 'button');
   if (!rightIcon) {
     rightIcon = document.createElement('button');
   }
@@ -623,51 +616,25 @@ export function createSearchInput(
     throw new Error('Search input mount');
   }
   const modeBadge = config.modeBadge
-    ? container.querySelector<HTMLDivElement>(`#${config.modeBadge.id}`)
-    : container.querySelector<HTMLDivElement>(
-        '.x-lumno-search-input-mode__badge'
-      );
+    ? queryHtmlTag(container, `#${config.modeBadge.id}`, 'div')
+    : queryHtmlTag(container, '.x-lumno-search-input-mode__badge', 'div');
   const secondaryAction = config.secondaryAction
-    ? container.querySelector<HTMLButtonElement>(
-        `#${config.secondaryAction.id}`
-      )
+    ? queryHtmlTag(container, `#${config.secondaryAction.id}`, 'button')
     : null;
   const clearAction = config.clearAction
-    ? container.querySelector<HTMLButtonElement>(`#${config.clearAction.id}`)
+    ? queryHtmlTag(container, `#${config.clearAction.id}`, 'button')
     : null;
-  const modePrefix = container.querySelector<HTMLButtonElement>(
-    '[data-search-input-mode-prefix]'
-  );
-  const modePrefixGlyph = container.querySelector<HTMLElement>(
-    '[data-search-input-mode-prefix-glyph]'
-  );
-  const modePrefixIcon = container.querySelector<HTMLImageElement>(
-    '[data-search-input-mode-prefix-icon]'
-  );
-  const modePrefixIconFrame = container.querySelector<HTMLSpanElement>(
-    '[data-search-input-mode-prefix-icon-frame]'
-  );
-  const modePrefixText = container.querySelector<HTMLSpanElement>(
-    '[data-search-input-mode-prefix-text]'
-  );
-  const modeTabHint = container.querySelector<HTMLSpanElement>(
-    '[data-search-input-mode-tab-hint]'
-  );
-  const modeTabHintKey = container.querySelector<HTMLSpanElement>(
-    '[data-search-input-mode-tab-key]'
-  );
-  const modeTabHintText = container.querySelector<HTMLSpanElement>(
-    '[data-search-input-mode-tab-text]'
-  );
-  const modePrefixChevron = container.querySelector<HTMLElement>(
-    '[data-search-input-mode-prefix-chevron]'
-  );
-  const modePrefixCurrent = container.querySelector<HTMLSpanElement>(
-    '[data-search-input-mode-current]'
-  );
-  const modeMenu = container.querySelector<HTMLDivElement>(
-    '[data-search-input-mode-menu]'
-  );
+  const modePrefix = queryHtmlTag(container, '[data-search-input-mode-prefix]', 'button');
+  const modePrefixGlyph = queryHtmlElement(container, '[data-search-input-mode-prefix-glyph]');
+  const modePrefixIcon = queryHtmlTag(container, '[data-search-input-mode-prefix-icon]', 'img');
+  const modePrefixIconFrame = queryHtmlTag(container, '[data-search-input-mode-prefix-icon-frame]', 'span');
+  const modePrefixText = queryHtmlTag(container, '[data-search-input-mode-prefix-text]', 'span');
+  const modeTabHint = queryHtmlTag(container, '[data-search-input-mode-tab-hint]', 'span');
+  const modeTabHintKey = queryHtmlTag(container, '[data-search-input-mode-tab-key]', 'span');
+  const modeTabHintText = queryHtmlTag(container, '[data-search-input-mode-tab-text]', 'span');
+  const modePrefixChevron = queryHtmlElement(container, '[data-search-input-mode-prefix-chevron]');
+  const modePrefixCurrent = queryHtmlTag(container, '[data-search-input-mode-current]', 'span');
+  const modeMenu = queryHtmlTag(container, '[data-search-input-mode-menu]', 'div');
   if (
     !modePrefix ||
     !modePrefixGlyph ||
@@ -797,8 +764,7 @@ export function createSearchInput(
     );
   };
   setRightIconVisualState(false);
-  rightIcon
-    .querySelectorAll<HTMLElement>('*')
+  queryHtmlElements(rightIcon, '*')
     .forEach((node) => {
       if (!isolated || !config.styleRoot) {
         applyStyles(

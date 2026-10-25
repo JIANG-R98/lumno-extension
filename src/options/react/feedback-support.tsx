@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createReactRootController, type ReactRootController } from './root-controller';
+import { isNode } from '../../shared/dom-guards';
 
 export interface FeedbackSupportQr {
   alt: string;
@@ -114,7 +115,7 @@ function FeedbackSupportQrButton({ item, qr }: { item: FeedbackSupportItem; qr: 
       return undefined;
     }
     const handlePointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      if (!rootRef.current?.contains(isNode(event.target) ? event.target : null)) {
         setOpen(false);
       }
     };
@@ -276,7 +277,7 @@ function FeedbackSupportAskDemoView({ demo, playing }: { demo: FeedbackSupportAs
         </ul>
         <ul className="_x_extension_help_ask_demo_list_2026_unique_">
           {demo.results.map((result, index) => (
-            <li key={result.title} style={{ '--help-ask-demo-row': index } as CSSProperties}>
+            <li key={result.title} style={{ '--help-ask-demo-row': index }}>
               <img alt="" src={demo.iconUrl} />
               <span className="_x_extension_help_ask_demo_result_title_2026_unique_">{result.title}</span>
               <span className="_x_extension_help_ask_demo_result_detail_2026_unique_">{result.detail}</span>
@@ -325,7 +326,7 @@ function FeedbackSupportAskHint({ demo }: { demo: FeedbackSupportAskDemo }) {
       }
     };
     const handlePointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      if (!rootRef.current?.contains(isNode(event.target) ? event.target : null)) {
         window.clearTimeout(timerRef.current);
         setOpen(false);
       }
@@ -342,7 +343,7 @@ function FeedbackSupportAskHint({ demo }: { demo: FeedbackSupportAskDemo }) {
     <span
       className="_x_extension_help_ask_anchor_2026_unique_"
       onBlur={(event) => {
-        if (!rootRef.current?.contains(event.relatedTarget as Node | null)) {
+        if (!rootRef.current?.contains(isNode(event.relatedTarget) ? event.relatedTarget : null)) {
           schedule(false, 0);
         }
       }}

@@ -1,5 +1,4 @@
 import {
-  type CSSProperties,
   useLayoutEffect,
   useRef,
   useState
@@ -285,7 +284,7 @@ function RangeSliderControl({
           '--x-range-slider-percent': `${
             ((value - model.min) / (model.max - model.min)) * 100
           }%`
-        } as CSSProperties}
+        }}
         value={value}
         valueInputProps={{
           'aria-label': model.ariaLabel,

@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
+import { isNode } from '../../shared/dom-guards';
 
 export type FeedbackCommunityChannel = 'wechat' | 'x';
 
@@ -102,7 +103,7 @@ function FeedbackControl({
       return undefined;
     }
     const onDocumentPointerDown = (event: PointerEvent) => {
-      if (!host.contains(event.target as Node)) {
+      if (!host.contains(isNode(event.target) ? event.target : null)) {
         setOpen(false);
       }
     };

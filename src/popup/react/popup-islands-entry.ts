@@ -1,13 +1,13 @@
 import { createPopupApi } from './popup-view';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
 
-const runtime = globalThis as typeof globalThis & {
-  LumnoPopupReactBootstrap?: {
-    reactReady: boolean;
-  };
-  LumnoPopupReact?: ReturnType<typeof createPopupApi>;
-  LumnoTooltipView?: ReturnType<typeof createTooltipViewApi>;
-};
+declare global {
+  var LumnoPopupReactBootstrap: {
+      reactReady: boolean;
+    } | undefined;
+}
+
+const runtime = globalThis;
 
 const bootstrapState = runtime.LumnoPopupReactBootstrap;
 

@@ -3,6 +3,7 @@
 // it that names what a held modifier key would do.
 import * as LumnoTooltip from './tooltip';
 import type { TooltipElementOptions, TooltipRect, TooltipWindow } from './tooltip';
+import { queryHtmlElements } from '../dom-lookup';
 
 const HOST_CLASS = '_x_extension_cursor_tooltip_host_2026_unique_';
 const TAG_CLASS = '_x_extension_cursor_tooltip_tag_2026_unique_';
@@ -924,7 +925,7 @@ function createController(options?: CursorTooltipOptions | null): CursorTooltipC
     const settings: CursorTooltipOptions = bindOptions || {};
     const selector = settings.selector || `[${settings.attributeName || DEFAULT_TEXT_ATTRIBUTE}]`;
     const bound: HTMLElement[] = [];
-    scope.querySelectorAll<HTMLElement>(selector).forEach((node) => {
+    queryHtmlElements(scope, selector).forEach((node) => {
       const result = bind(node, null, settings);
       if (result) {
         bound.push(result);

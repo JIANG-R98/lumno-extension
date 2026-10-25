@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import type { CSSProperties } from 'react';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 export type NewtabTopContentMode = 'brand' | 'time';
 
@@ -109,7 +110,7 @@ function getClockFontSize(fontSize: number | undefined) {
 const clockDigitsStyle = {
   '--number-flow-mask-height': '0.16em',
   '--number-flow-mask-width': '0.24em'
-} as CSSProperties;
+};
 
 // Each face sets these on the clock; the defaults are Open Sans's.
 const colonStyle: CSSProperties = {
@@ -374,7 +375,7 @@ function ClockMark({
             : getClockLetterSpacing(fontWeight),
         '--x-nt-clock-colon-gap': `${font.colonGap}em`,
         '--x-nt-clock-colon-shift': `${font.colonShift}em`
-      } as CSSProperties)
+      })
     : { letterSpacing: getClockLetterSpacing(fontWeight) };
   const [time, setTime] = useState(getCurrentTime);
   const dateTime = getClockDateTime(time, showSeconds);
@@ -537,13 +538,13 @@ export function createTopContentController(
       return host.querySelector('button');
     },
     getContent() {
-      return host.querySelector<HTMLElement>('.x-nt-wordmark-content');
+      return queryHtmlElement(host, '.x-nt-wordmark-content');
     },
     getImage() {
       return host.querySelector('img');
     },
     getSolid() {
-      return host.querySelector<HTMLSpanElement>('.x-nt-wordmark-solid');
+      return queryHtmlTag(host, '.x-nt-wordmark-solid', 'span');
     },
     render(model: TopContentModel) {
       if (destroyed) {

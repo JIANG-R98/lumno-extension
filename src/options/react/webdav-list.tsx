@@ -59,6 +59,13 @@ const JIANGUOYUN_ENDPOINT = 'https://dav.jianguoyun.com/dav/';
 
 // Nutstore needs no different input, only its app-password guide, so it is
 // recognised from the address instead of being chosen up front.
+// The diagnostic a failed WebDAV operation attached to its error, if any.
+function getErrorDiagnostic(error: unknown): string {
+  return typeof error === 'object' && error !== null && 'diagnostic' in error && typeof error.diagnostic === 'string'
+    ? error.diagnostic
+    : '';
+}
+
 function isJianguoyun(endpoint: string) {
   try { return new URL(endpoint.trim()).hostname === 'dav.jianguoyun.com'; }
   catch { return false; }
@@ -244,8 +251,7 @@ function ConnectionEditor({ id, item, preset, model, open, options, onClose }: {
     const outcome = await action.run(operation);
     setPendingOperation('');
     if (outcome.status === 'rejected') {
-      const error = outcome.error as { diagnostic?: string };
-      setFeedback({ text: getAsyncErrorMessage(outcome.error), failed: true, diagnostic: error?.diagnostic || '' });
+      setFeedback({ text: getAsyncErrorMessage(outcome.error), failed: true, diagnostic: getErrorDiagnostic(outcome.error) });
     }
     if (outcome.status === 'fulfilled') {
       if (operation === 'test') setFeedback({ text: copy.webdav_test_success, failed: false });
@@ -389,8 +395,7 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
     const outcome = await action.run(operation, decision);
     setPendingOperation('');
     if (outcome.status === 'rejected') {
-      const error = outcome.error as { diagnostic?: string };
-      setFeedback({ text: getAsyncErrorMessage(outcome.error), diagnostic: error?.diagnostic || '' });
+      setFeedback({ text: getAsyncErrorMessage(outcome.error), diagnostic: getErrorDiagnostic(outcome.error) });
     }
   };
   const syncing = action.pending && ['sync', 'enable'].includes(pendingOperation);

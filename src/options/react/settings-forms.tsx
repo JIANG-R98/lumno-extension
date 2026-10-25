@@ -16,6 +16,7 @@ import {
 } from '../../shared/react/use-exclusive-async-action';
 import { InfoButton } from './info-button';
 import { BusyLabel } from '../../shared/react/busy-label';
+import { queryHtmlTag } from '../../shared/dom-lookup';
 
 export interface SiteSearchFormCopyModel
   extends SiteSearchProviderCategoryCopyModel {
@@ -400,10 +401,9 @@ function BlacklistForm({
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
                   event.preventDefault();
-                  event.currentTarget
-                    .closest('._x_extension_shortcut_form_fields_2024_unique_')
-                    ?.querySelector<HTMLButtonElement>('[data-form-primary="true"]')
-                    ?.click();
+                  const fields = event.currentTarget.closest('._x_extension_shortcut_form_fields_2024_unique_');
+                  const primary = fields ? queryHtmlTag(fields, '[data-form-primary="true"]', 'button') : null;
+                  primary?.click();
                 }
               }}
               placeholder={activeMode?.placeholder}

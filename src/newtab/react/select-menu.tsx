@@ -7,6 +7,7 @@ import {
   type SelectMenuControls,
   type SelectMenuOption
 } from '../../shared/react/select-menu';
+import { queryHtmlElement, queryHtmlElements, queryHtmlTag } from '../../shared/dom-lookup';
 
 export {
   SelectMenu,
@@ -18,7 +19,7 @@ export interface SelectMenuControllerOptions {
   documentObj?: Document;
   getViewportTopInset?(wrapper: HTMLElement): number;
   onBeforeOpen?(): void;
-  windowObj?: Window;
+  windowObj?: Window & typeof globalThis;
 }
 
 export interface SelectMenuInstance {
@@ -111,16 +112,12 @@ export function createSelectMenuController(
       const select = host.querySelector('select');
       const trigger = host.querySelector('button');
       const menu = config.id
-        ? documentObj.querySelector<HTMLElement>(
-            `[data-react-select-owner="${config.id}"]`
-          )
+        ? queryHtmlElement(documentObj, `[data-react-select-owner="${config.id}"]`)
         : null;
       const portalMenu =
         menu ||
         Array.from(
-          documentObj.querySelectorAll<HTMLElement>(
-            'body > ._x_extension_select_menu_2024_unique_'
-          )
+          queryHtmlElements(documentObj, 'body > ._x_extension_select_menu_2024_unique_')
         ).find((candidate) => !candidate.dataset.reactSelectClaimed);
       if (!select || !trigger || !portalMenu) {
         root.unmount();
@@ -180,7 +177,7 @@ export function createSelectMenuController(
     },
     sync(host: HTMLElement) {
       const instance = instances.get(host);
-      const select = host.querySelector<HTMLSelectElement>('select');
+      const select = queryHtmlTag(host, 'select', 'select');
       if (instance && select) {
         flushSync(() => instance.controls.syncValue(select.value));
       }

@@ -4,7 +4,6 @@ import {
   useLayoutEffect,
   useRef,
   useState,
-  type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode
 } from 'react';
@@ -344,8 +343,7 @@ export function PanelSlider({
         bubble?.startDrag(event.currentTarget);
       }}
       onPointerUp={endDrag}
-      // React 19 passes ref through as a prop; the shared field forwards it to the range input.
-      {...({ ref: inputRef } as object)}
+      ref={inputRef}
       resetButtonProps={reset
         ? {
             ...ref(reset.name),
@@ -360,7 +358,7 @@ export function PanelSlider({
         : undefined}
       rowClassName="x-nt-range-slider-row"
       step={String(step)}
-      style={{ '--x-range-slider-percent': `${clampNumber(percent, 0, 100)}%` } as CSSProperties}
+      style={{ '--x-range-slider-percent': `${clampNumber(percent, 0, 100)}%` }}
       value={String(value)}
       valueInputProps={{
         ...ref(`${name}ValueInput`),

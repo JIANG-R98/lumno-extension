@@ -213,12 +213,12 @@ export interface BookmarksTopbarRuntime {
   syncOverflowFade(): boolean;
   updateLanguage(ariaLabel: string): void;
   viewport: HTMLDivElement;
-  windowObj: Window;
+  windowObj: Window & typeof globalThis;
 }
 
 export interface BookmarksTopbarOptions {
   documentObj?: Document;
-  windowObj?: Window;
+  windowObj?: Window & typeof globalThis;
   ariaLabel?: string;
   // Moved into the bar while it shows, and back when it hides.
   grid?: HTMLElement | null;
@@ -231,7 +231,7 @@ export function createBookmarksTopbar(
   options: BookmarksTopbarOptions = {}
 ): BookmarksTopbarRuntime {
   const documentObj: Document = options.documentObj || document;
-  const windowObj: Window = options.windowObj || window;
+  const windowObj = options.windowObj || window;
   const element = documentObj.createElement('section');
   element.id = BOOKMARK_TOPBAR_IDS.topbar;
   element.className = 'x-nt-bookmarks-topbar';

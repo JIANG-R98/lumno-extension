@@ -8,8 +8,9 @@ import {
   useRef,
   useState
 } from 'react';
-import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
+import { isNode } from '../dom-guards';
+import { queryHtmlElement } from '../dom-lookup';
 
 export interface SelectMenuOption {
   action?: string;
@@ -156,7 +157,7 @@ export function SelectMenu({
   host: HTMLElement;
   onBeforeOpen?(): void;
   registerControls?(controls: SelectMenuControls): void;
-  windowObj: Window;
+  windowObj: Window & typeof globalThis;
 }) {
   const options = Array.isArray(config.options) ? config.options : NO_OPTIONS;
   const searchable = config.searchable === true;
@@ -340,7 +341,7 @@ export function SelectMenu({
     const onViewportChange = () => positionMenu();
     windowObj.addEventListener('resize', onViewportChange);
     windowObj.addEventListener('scroll', onViewportChange, true);
-    const ResizeObserverCtor = (windowObj as Window & { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
+    const ResizeObserverCtor = windowObj.ResizeObserver;
     const resizeObserver = ResizeObserverCtor ? new ResizeObserverCtor(onViewportChange) : null;
     if (triggerRef.current) resizeObserver?.observe(triggerRef.current);
     if (menuRef.current) resizeObserver?.observe(menuRef.current);
@@ -360,9 +361,7 @@ export function SelectMenu({
     if (!open || activeIndex < 0) {
       return;
     }
-    const activeOption = menuRef.current?.querySelector<HTMLElement>(
-      '._x_extension_select_option_2024_unique_[data-active="true"]'
-    );
+    const activeOption = (menuRef.current ? queryHtmlElement(menuRef.current, '._x_extension_select_option_2024_unique_[data-active="true"]') : null);
     activeOption?.scrollIntoView?.({ block: 'nearest' });
   }, [activeIndex, open]);
 
@@ -371,7 +370,7 @@ export function SelectMenu({
       return undefined;
     }
     const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Node | null;
+      const target = isNode(event.target) ? event.target : null;
       if (
         target &&
         !host.contains(target) &&
@@ -390,7 +389,7 @@ export function SelectMenu({
       }
     };
     const onFocusIn = (event: FocusEvent) => {
-      const target = event.target as Node | null;
+      const target = isNode(event.target) ? event.target : null;
       if (target && !host.contains(target) && !menuRef.current?.contains(target)) {
         setOpen(false);
       }
@@ -581,7 +580,7 @@ export function SelectMenu({
           // Body portals are fixed once opened; start fixed so a closed menu never
           // stretches a scrolling page (mobile new tab flows in the document).
           ...(config.menuPortal !== false && !config.menuPortalContainer ? { position: 'fixed' } : null)
-        } as CSSProperties
+        }
       }
     >
       {searchable ? (

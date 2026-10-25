@@ -31,10 +31,27 @@ interface TooltipRootState {
   root: Root;
 }
 
-type TooltipElementWithOwner = HTMLElement & {
-  [TOOLTIP_DESTROY_HOOK]?: () => void;
-  [TOOLTIP_RENDER_HOOK]?: (content: ReactNode) => void;
-};
+type TooltipRenderHook = (content: ReactNode) => void;
+
+function isRenderHook(value: unknown): value is TooltipRenderHook {
+  return typeof value === 'function';
+}
+
+function isDestroyHook(value: unknown): value is () => void {
+  return typeof value === 'function';
+}
+
+// The copy of this view that owns an element (another bundle may have its
+// own) leaves these hooks on it for the others to call.
+function readRenderHook(element: HTMLElement): TooltipRenderHook | null {
+  const hook: unknown = Reflect.get(element, TOOLTIP_RENDER_HOOK);
+  return isRenderHook(hook) ? hook : null;
+}
+
+function readDestroyHook(element: HTMLElement): (() => void) | null {
+  const hook: unknown = Reflect.get(element, TOOLTIP_DESTROY_HOOK);
+  return isDestroyHook(hook) ? hook : null;
+}
 
 const roots = new WeakMap<HTMLElement, TooltipRootState>();
 const browserClassById: Record<string, string> = {
@@ -164,10 +181,8 @@ function renderInto(
     flushSync(() => state.root.render(content));
     return true;
   }
-  const ownerRender = (element as TooltipElementWithOwner)[
-    TOOLTIP_RENDER_HOOK
-  ];
-  if (typeof ownerRender !== 'function') {
+  const ownerRender = readRenderHook(element);
+  if (!ownerRender) {
     return false;
   }
   ownerRender(content);
@@ -208,8 +223,7 @@ export function createTooltipElement(
   }
   const root = createRoot(element);
   roots.set(element, { destroyed: false, root });
-  const ownedElement = element as TooltipElementWithOwner;
-  Object.defineProperty(ownedElement, TOOLTIP_RENDER_HOOK, {
+  Object.defineProperty(element, TOOLTIP_RENDER_HOOK, {
     configurable: true,
     value(content: ReactNode) {
       const state = roots.get(element);
@@ -219,7 +233,7 @@ export function createTooltipElement(
       flushSync(() => state.root.render(content));
     }
   });
-  Object.defineProperty(ownedElement, TOOLTIP_DESTROY_HOOK, {
+  Object.defineProperty(element, TOOLTIP_DESTROY_HOOK, {
     configurable: true,
     value() {
       const state = roots.get(element);
@@ -229,8 +243,8 @@ export function createTooltipElement(
       state.destroyed = true;
       flushSync(() => state.root.unmount());
       roots.delete(element);
-      delete ownedElement[TOOLTIP_RENDER_HOOK];
-      delete ownedElement[TOOLTIP_DESTROY_HOOK];
+      Reflect.deleteProperty(element, TOOLTIP_RENDER_HOOK);
+      Reflect.deleteProperty(element, TOOLTIP_DESTROY_HOOK);
     }
   });
   renderInto(element, null);
@@ -269,18 +283,14 @@ export function destroyTooltipElement(
   }
   const state = roots.get(element);
   if (state && !state.destroyed) {
-    const ownerDestroy = (element as TooltipElementWithOwner)[
-      TOOLTIP_DESTROY_HOOK
-    ];
-    if (typeof ownerDestroy === 'function') {
+    const ownerDestroy = readDestroyHook(element);
+    if (ownerDestroy) {
       ownerDestroy();
     }
     return;
   }
-  const ownerDestroy = (element as TooltipElementWithOwner)[
-    TOOLTIP_DESTROY_HOOK
-  ];
-  if (typeof ownerDestroy === 'function') {
+  const ownerDestroy = readDestroyHook(element);
+  if (ownerDestroy) {
     ownerDestroy();
   }
 }

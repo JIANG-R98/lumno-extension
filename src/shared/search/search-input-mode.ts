@@ -45,6 +45,7 @@ import type {
   ResolveProviderIconUrl,
   Rgb
 } from './input-mode/types';
+import { queryHtmlElement } from '../dom-lookup';
 
 // The elements the surface renders for the mode (React owns them).
 interface InputModeParts {
@@ -639,7 +640,7 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     parts.modePrefixCurrent || doc.createElement('span')
   );
   const siteSearchPrefixCurrentText = applyNoTranslate(
-    siteSearchPrefixCurrent.querySelector<HTMLElement>('[data-search-input-mode-current-text]') ||
+    queryHtmlElement(siteSearchPrefixCurrent, '[data-search-input-mode-current-text]') ||
       doc.createElement('span')
   );
   const siteSearchPrefixChevron = parts.modePrefixChevron || doc.createElement('i');

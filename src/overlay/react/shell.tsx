@@ -1,5 +1,6 @@
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
+import { queryHtmlElement } from '../../shared/dom-lookup';
 
 type OverlayShellOptions = Record<string, unknown> & {
   cursorTooltipCssUrl?: string;
@@ -36,9 +37,7 @@ function findById(
   if ('getElementById' in rootNode) {
     return rootNode.getElementById(id);
   }
-  return rootNode.querySelector<HTMLElement>(
-    `[id="${id.replace(/["\\]/g, '\\$&')}"]`
-  );
+  return queryHtmlElement(rootNode, `[id="${id.replace(/["\\]/g, '\\$&')}"]`);
 }
 
 function appendStylesheet(
@@ -59,12 +58,10 @@ function appendStylesheet(
 }
 
 function getRuntimeAssetUrl(path: string): string {
-  const chromeApi = (
-    globalThis as typeof globalThis & {
-      chrome?: { runtime?: { getURL?(assetPath: string): string } };
-    }
-  ).chrome;
-  return chromeApi?.runtime?.getURL?.(path) || '';
+  if (typeof chrome === 'undefined' || !chrome.runtime || typeof chrome.runtime.getURL !== 'function') {
+    return '';
+  }
+  return chrome.runtime.getURL(path) || '';
 }
 
 function getRemixIconAssetUrl(
@@ -610,6 +607,13 @@ function OverlayPanel({
   );
 }
 
+// The panel carries its host and shadow root for the content scripts, which
+// read them back by name.
+interface OverlayPanelElement extends HTMLDivElement {
+  _lumnoOverlayHost?: HTMLElement;
+  _lumnoOverlayRoot?: ShadowRoot | null;
+}
+
 export function createOverlayShellApi() {
   const roots = new WeakMap<HTMLElement, Root>();
   const panels = new WeakMap<HTMLElement, HTMLElement>();
@@ -632,7 +636,7 @@ export function createOverlayShellApi() {
       root: shadowRoot || doc.head || doc.documentElement
     });
 
-    let panel: HTMLDivElement | null = null;
+    let panel: OverlayPanelElement | null = null;
     const registerPanel = (nextPanel: HTMLDivElement) => {
       panel = nextPanel;
     };
@@ -656,10 +660,7 @@ export function createOverlayShellApi() {
       return null;
     }
 
-    const mountedPanel = panel as HTMLElement & {
-      _lumnoOverlayHost?: HTMLElement;
-      _lumnoOverlayRoot?: ShadowRoot | null;
-    };
+    const mountedPanel: OverlayPanelElement = panel;
     mountedPanel._lumnoOverlayHost = host;
     mountedPanel._lumnoOverlayRoot = shadowRoot;
     roots.set(host, reactRoot);

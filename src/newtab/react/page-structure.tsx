@@ -191,17 +191,17 @@ function renderStatic<T>(
   host: HTMLElement,
   render: (register: (elements: T) => void) => ReactNode
 ) {
-  let elements: T | null = null;
+  const mounted: { elements: T | null } = { elements: null };
   const register = (nextElements: T) => {
-    elements = nextElements;
+    mounted.elements = nextElements;
   };
   const root = createRoot(host);
   flushSync(() => root.render(render(register)));
-  if (!elements) {
+  if (!mounted.elements) {
     flushSync(() => root.unmount());
     throw new Error('Lumno New Tab React page structure did not mount.');
   }
-  return { elements: elements as T, root };
+  return { elements: mounted.elements, root };
 }
 
 export interface PageStructureRuntime {

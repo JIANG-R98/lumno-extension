@@ -12,6 +12,7 @@ import type { ModeMenuLanguageApi } from './mode-menu-language';
 import type { ModeMenuNavigationApi } from './mode-menu-navigation';
 import type { ModeMenuSearchApi } from './mode-menu-search';
 import type { PrefixVisualApi } from './prefix-visual';
+import { queryHtmlTags } from '../../dom-lookup';
 
 // The controller state search-input-mode.ts shares with its modules.
 interface ModeMenuRenderState {
@@ -258,7 +259,7 @@ function createModeMenuRender(deps: ModeMenuRenderDeps) {
   function syncModeMenuGroupMoveControls(): void {
     const movable = renderedModeMenuGroups.filter((entry) => entry.groupKey);
     movable.forEach((entry, index) => {
-      entry.element.querySelectorAll<HTMLButtonElement>('[data-group-move]').forEach((button) => {
+      queryHtmlTags(entry.element, '[data-group-move]', 'button').forEach((button) => {
         button.disabled = button.dataset.groupMove === 'up'
           ? index === 0
           : index === movable.length - 1;

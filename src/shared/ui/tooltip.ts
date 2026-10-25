@@ -1,3 +1,4 @@
+import { queryHtmlElements } from '../dom-lookup';
 // The shared tooltip: one element per controller, placed beside its target
 // and drawn by the React tooltip view (globalThis.LumnoTooltipView).
 const TOOLTIP_CLASS = '_x_extension_tooltip_2026_unique_';
@@ -412,7 +413,7 @@ function createController(options?: TooltipControllerOptions | null): TooltipCon
     const settings: TooltipBindOptions = bindOptions || {};
     const selector = settings.selector || `[${settings.attributeName || DEFAULT_TEXT_ATTRIBUTE}]`;
     const bound: HTMLElement[] = [];
-    scope.querySelectorAll<HTMLElement>(selector).forEach((node) => {
+    queryHtmlElements(scope, selector).forEach((node) => {
       const result = bind(node, null, settings);
       if (result) {
         bound.push(result);

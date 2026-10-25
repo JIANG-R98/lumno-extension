@@ -1,5 +1,6 @@
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
+import { queryHtmlTag, queryHtmlTags } from '../../shared/dom-lookup';
 
 export interface RecentHistoryVersion {
   title: string;
@@ -225,7 +226,7 @@ export function createRecentHistoryDialog(
     });
     windowObj.requestAnimationFrame(() => {
       if (!host.hidden && (host.dataset.state === 'opening' || host.dataset.state === 'open')) {
-        host.querySelector<HTMLButtonElement>('.x-nt-recent-history-close')?.focus();
+        queryHtmlTag(host, '.x-nt-recent-history-close', 'button')?.focus();
       }
     });
     return true;
@@ -253,7 +254,7 @@ export function createRecentHistoryDialog(
       return;
     }
     if (event.key === 'Tab') {
-      const focusable = Array.from(host.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
+      const focusable = queryHtmlTags(host, 'button:not(:disabled)', 'button');
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (!first || !last) return;

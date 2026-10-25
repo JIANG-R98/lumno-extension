@@ -4,6 +4,7 @@
 import * as faviconUtils from '../../domain/favicon/favicon-utils';
 import * as LumnoMessaging from '../../platform/messaging';
 import type { MessageRuntime } from '../../platform/messaging';
+import { queryHtmlElements } from '../dom-lookup';
 
 // A favicon <img>; the load token tells a finished load whether a newer
 // one started since. The surfaces read it too.
@@ -698,7 +699,7 @@ function createFallbackIconPresenter(options: FallbackIconPresenterOptions) {
     if (mappedNode && mappedNode.isConnected && mappedNode.parentElement === img.parentElement) {
       return mappedNode;
     }
-    const fallbackNodes: FallbackIconNode[] = Array.from(img.parentElement.querySelectorAll<HTMLElement>(`.${fallbackClassName}`));
+    const fallbackNodes: FallbackIconNode[] = Array.from(queryHtmlElements(img.parentElement, `.${fallbackClassName}`));
     const linkedNode = fallbackNodes.find((candidate) => candidate && candidate._xFallbackForImage === img) || null;
     if (linkedNode) {
       nodeMap.set(img, linkedNode);

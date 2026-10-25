@@ -1,4 +1,4 @@
-import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 
@@ -64,7 +64,7 @@ export function createPageStripController(
               const active = pageIndex === currentPageIndex;
               const style = {
                 '--page-strip-segment-index': String(pageIndex)
-              } as CSSProperties;
+              };
               const handleClick = (
                 event: ReactMouseEvent<HTMLButtonElement>
               ): void => {

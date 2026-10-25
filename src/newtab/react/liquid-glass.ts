@@ -1,3 +1,5 @@
+import { isElementNode, isHtmlElement } from '../../shared/dom-guards';
+import { queryHtmlElements } from '../../shared/dom-lookup';
 // Liquid glass: the wallpaper behind a surface's rim bends inward the way a thick glass edge
 // refracts, and splits slightly into its colors there. An SVG displacement map drives the bend
 // through `backdrop-filter: url(#…)`, which only Chromium renders; other browsers keep the CSS-only
@@ -32,10 +34,27 @@ export interface LiquidGlassGeometry {
   radius?: number;
 }
 
+// The computed style a surface's lens reads.
+type LensStyle = Pick<CSSStyleDeclaration, 'borderTopLeftRadius' | 'getPropertyValue'>;
+
+// A resize observer as the lenses use it: they read only each entry's target.
+type LensResizeCallback = (entries: ReadonlyArray<Pick<ResizeObserverEntry, 'target'>>) => void;
+
+// The parts of the window the liquid glass reads.
+interface LiquidGlassWindow {
+  CSS?: Pick<typeof CSS, 'supports'>;
+  navigator?: Pick<Navigator, 'userAgent'>;
+  innerWidth?: number;
+  requestAnimationFrame(callback: FrameRequestCallback): number;
+  getComputedStyle(element: Element): LensStyle;
+  ResizeObserver?: new (callback: LensResizeCallback) => Pick<ResizeObserver, 'observe' | 'unobserve' | 'disconnect'>;
+  MutationObserver?: new (callback: MutationCallback) => Pick<MutationObserver, 'observe' | 'disconnect'>;
+}
+
 let filterCount = 0;
 
-export function isLiquidGlassSupported(windowObj: Window) {
-  const css = (windowObj as Window & { CSS?: typeof CSS }).CSS;
+export function isLiquidGlassSupported(windowObj: Pick<LiquidGlassWindow, 'CSS' | 'navigator'>) {
+  const css = windowObj.CSS;
   const userAgent = String(windowObj.navigator?.userAgent || '');
   // Firefox parses url() in backdrop-filter but draws nothing for it.
   return Boolean(
@@ -254,13 +273,18 @@ const svgNamespace = 'http://www.w3.org/2000/svg';
 // Each filter gets an <svg> of its own. Adding a filter to an <svg> that holds others can make
 // Chrome reload all their images, and a backdrop-filter naming a filter whose images are reloading
 // drops its blur too, so one new lens would briefly clear every plate.
-function createFilterHost(documentObj: Document, markup: string) {
+// The markup holds one filter, which becomes the host's first element.
+function createFilterHost(documentObj: Document, markup: string): { host: SVGSVGElement; filter: Element } {
   const host = documentObj.createElementNS(svgNamespace, 'svg');
   host.setAttribute('aria-hidden', 'true');
   host.setAttribute('style', 'position:absolute;width:0;height:0;pointer-events:none');
   host.innerHTML = markup;
+  const filter = host.firstElementChild;
+  if (!filter) {
+    throw new Error('The lens filter markup has no filter.');
+  }
   (documentObj.body || documentObj.documentElement).appendChild(host);
-  return host;
+  return { host, filter };
 }
 
 // One surface's lens: which tiles it uses and the filter that draws them.
@@ -285,7 +309,7 @@ function placeLens(lens: Lens, width: number, height: number) {
 // filter is in the document so it never draws before its images; meanwhile the old lens stays.
 function createLensSwitcher(options: {
   documentObj: Document;
-  windowObj: Window;
+  windowObj: LiquidGlassWindow;
   idPrefix: string;
   apply(filterId: string, lens: Lens): void;
   measure(): [number, number];
@@ -327,7 +351,7 @@ function createLensSwitcher(options: {
         // Numbered across every lens on the page: url(#id) takes the first element with an id, so a
         // repeated id would give every surface the first surface's lens.
         const filterId = `${idPrefix}_${(filterCount += 1)}_2026_unique_`;
-        const host = createFilterHost(
+        const { host, filter } = createFilterHost(
           documentObj,
           buildLensFilter(filterId, nextWidth, nextHeight, tiles, scale, dispersion)
         );
@@ -340,7 +364,7 @@ function createLensSwitcher(options: {
           current = {
             key,
             host,
-            filter: host.firstElementChild as Element,
+            filter,
             tiles,
             width: nextWidth,
             height: nextHeight
@@ -380,7 +404,7 @@ const FLOATING_SIDE_INSET_PX = 12;
 export function createLiquidGlass(options: {
   documentObj: Document;
   element: HTMLElement;
-  windowObj: Window;
+  windowObj: LiquidGlassWindow;
 }): LiquidGlass {
   const { documentObj, element, windowObj } = options;
   const supported = isLiquidGlassSupported(windowObj);
@@ -462,7 +486,7 @@ export function getSurfaceDisplacementScale(bezel: number, strength = 1) {
   return Math.round(2 * LIQUID_GLASS_REFRACTION * strength * bezel);
 }
 
-function readCornerRadius(style: CSSStyleDeclaration, width: number, height: number) {
+function readCornerRadius(style: LensStyle, width: number, height: number) {
   const value = String(style.borderTopLeftRadius || '0').split(' ')[0];
   const amount = Number.parseFloat(value) || 0;
   return value.endsWith('%') ? (amount / 100) * Math.min(width, height) : amount;
@@ -488,7 +512,7 @@ export function createLiquidSurfaces(options: {
   rimProperty?: string;
   selector: string;
   strengthProperty?: string;
-  windowObj: Window;
+  windowObj: LiquidGlassWindow;
 }): LiquidSurfaces {
   const { documentObj, dispersionSelector, property, rimProperty, selector, strengthProperty, windowObj } = options;
   const supported = isLiquidGlassSupported(windowObj);
@@ -546,19 +570,21 @@ export function createLiquidSurfaces(options: {
       getSurfaceDisplacementScale(bezel, strength), dispersion);
   };
 
-  const ResizeObserverCtor = (windowObj as Window & { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
-  const MutationObserverCtor =
-    (windowObj as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+  const ResizeObserverCtor = windowObj.ResizeObserver;
+  const MutationObserverCtor = windowObj.MutationObserver;
   const resizeObserver = supported && ResizeObserverCtor
-    ? new ResizeObserverCtor((entries) => entries.forEach((entry) => update(entry.target as HTMLElement)))
+    ? new ResizeObserverCtor((entries) => entries.forEach((entry) => {
+      if (isHtmlElement(entry.target)) {
+        update(entry.target);
+      }
+    }))
     : null;
-  const observeAll = () => documentObj.querySelectorAll<HTMLElement>(selector).forEach((element) => {
+  const observeAll = () => queryHtmlElements(documentObj, selector).forEach((element) => {
     resizeObserver?.observe(element);
   });
   // Only changes that add or remove a surface matter; the clock alone rewrites its digits every second.
   const touchesSurface = (nodes: NodeList) => Array.from(nodes).some((node) =>
-    node.nodeType === 1 &&
-    ((node as Element).matches(selector) || Boolean((node as Element).querySelector(selector))));
+    isElementNode(node) && (node.matches(selector) || Boolean(node.querySelector(selector))));
   const mutationObserver = supported && MutationObserverCtor
     ? new MutationObserverCtor((records) => {
       if (records.some((record) => touchesSurface(record.removedNodes))) {

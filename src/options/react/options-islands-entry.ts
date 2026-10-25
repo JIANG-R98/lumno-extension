@@ -19,68 +19,50 @@ import { createTranslationHelpApi } from './translation-help';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
 import { createTabSwitcherViewApi } from '../../shared/react/tab-switcher';
 
-const runtime = globalThis as typeof globalThis & {
-  LumnoOptionsReactBootstrap?: {
-    reactReady: boolean;
-  };
-  LumnoOptionsReactIslands?: {
-    aggregateSearchList: ReturnType<typeof createAggregateSearchListApi>;
-    blacklistList: ReturnType<typeof createBlacklistListApi>;
-    feedbackSupport: ReturnType<typeof createFeedbackSupportApi>;
-    infoButton: ReturnType<typeof createInfoButtonApi>;
-    popconfirm: ReturnType<typeof createPopconfirmApi>;
-    segmentedControl: ReturnType<typeof createSegmentedControlApi>;
-    selectControl: ReturnType<typeof createSelectControlApi>;
-    settingsNavigation: ReturnType<typeof createSettingsNavigationApi>;
-    settingsControls: ReturnType<typeof createSettingsControlsApi>;
-    settingsForms: ReturnType<typeof createSettingsFormsApi>;
-    shortcutReference: ReturnType<typeof createShortcutReferenceApi>;
-    shortcutHotkey: ReturnType<typeof createShortcutHotkeyApi>;
-    siteSearchList: ReturnType<typeof createSiteSearchListApi>;
-    webDavList: ReturnType<typeof createWebDavListApi>;
-    themePicker: ReturnType<typeof createThemePickerApi>;
-    translationHelp: ReturnType<typeof createTranslationHelpApi>;
-    toast: ReturnType<typeof createToastApi>;
-    tabSwitcher: ReturnType<typeof createTabSwitcherViewApi>;
-  };
-  LumnoOptionsAggregateSearchList?: ReturnType<typeof createAggregateSearchListApi>;
-  LumnoOptionsAggregateSearchListReact?: ReturnType<typeof createAggregateSearchListApi>;
-  LumnoOptionsBlacklistList?: ReturnType<typeof createBlacklistListApi>;
-  LumnoOptionsBlacklistListReact?: ReturnType<typeof createBlacklistListApi>;
-  LumnoOptionsFeedbackSupport?: ReturnType<typeof createFeedbackSupportApi>;
-  LumnoOptionsFeedbackSupportReact?: ReturnType<typeof createFeedbackSupportApi>;
-  LumnoOptionsInfoButton?: ReturnType<typeof createInfoButtonApi>;
-  LumnoOptionsInfoButtonReact?: ReturnType<typeof createInfoButtonApi>;
-  LumnoOptionsPopconfirm?: ReturnType<typeof createPopconfirmApi>;
-  LumnoOptionsPopconfirmReact?: ReturnType<typeof createPopconfirmApi>;
-  LumnoOptionsSegmentedControl?: ReturnType<typeof createSegmentedControlApi>;
-  LumnoOptionsSegmentedControlReact?: ReturnType<typeof createSegmentedControlApi>;
-  LumnoOptionsSelectControl?: ReturnType<typeof createSelectControlApi>;
-  LumnoOptionsSelectControlReact?: ReturnType<typeof createSelectControlApi>;
-  LumnoOptionsSettingsNavigation?: ReturnType<typeof createSettingsNavigationApi>;
-  LumnoOptionsSettingsNavigationReact?: ReturnType<typeof createSettingsNavigationApi>;
-  LumnoOptionsSettingsControls?: ReturnType<typeof createSettingsControlsApi>;
-  LumnoOptionsSettingsControlsReact?: ReturnType<typeof createSettingsControlsApi>;
-  LumnoOptionsSettingsForms?: ReturnType<typeof createSettingsFormsApi>;
-  LumnoOptionsSettingsFormsReact?: ReturnType<typeof createSettingsFormsApi>;
-  LumnoOptionsShortcutReference?: ReturnType<typeof createShortcutReferenceApi>;
-  LumnoOptionsShortcutReferenceReact?: ReturnType<typeof createShortcutReferenceApi>;
-  LumnoOptionsShortcutHotkey?: ReturnType<typeof createShortcutHotkeyApi>;
-  LumnoOptionsShortcutHotkeyReact?: ReturnType<typeof createShortcutHotkeyApi>;
-  LumnoOptionsSiteSearchList?: ReturnType<typeof createSiteSearchListApi>;
-  LumnoOptionsSiteSearchListReact?: ReturnType<typeof createSiteSearchListApi>;
-  LumnoOptionsWebDavList?: ReturnType<typeof createWebDavListApi>;
-  LumnoOptionsThemePicker?: ReturnType<typeof createThemePickerApi>;
-  LumnoOptionsThemePickerReact?: ReturnType<typeof createThemePickerApi>;
-  LumnoOptionsTranslationHelp?: ReturnType<typeof createTranslationHelpApi>;
-  LumnoOptionsToast?: ReturnType<typeof createToastApi>;
-  LumnoOptionsToastReact?: ReturnType<typeof createToastApi>;
-  LumnoTooltipView?: ReturnType<typeof createTooltipViewApi>;
-  LumnoSegmentedIndicator?: ReturnType<typeof createSegmentedIndicatorApi>;
-  LumnoTooltipViewReact?: ReturnType<typeof createTooltipViewApi>;
-  LumnoOverlayTabSwitcherView?: ReturnType<typeof createTabSwitcherViewApi>;
-  LumnoOverlayTabSwitcherViewReact?: ReturnType<typeof createTabSwitcherViewApi>;
-};
+declare global {
+  var LumnoOptionsReactBootstrap: {
+      reactReady: boolean;
+    } | undefined;
+  var LumnoOptionsReactIslands: {
+      aggregateSearchList: ReturnType<typeof createAggregateSearchListApi>;
+      blacklistList: ReturnType<typeof createBlacklistListApi>;
+      feedbackSupport: ReturnType<typeof createFeedbackSupportApi>;
+      infoButton: ReturnType<typeof createInfoButtonApi>;
+      popconfirm: ReturnType<typeof createPopconfirmApi>;
+      segmentedControl: ReturnType<typeof createSegmentedControlApi>;
+      selectControl: ReturnType<typeof createSelectControlApi>;
+      settingsNavigation: ReturnType<typeof createSettingsNavigationApi>;
+      settingsControls: ReturnType<typeof createSettingsControlsApi>;
+      settingsForms: ReturnType<typeof createSettingsFormsApi>;
+      shortcutReference: ReturnType<typeof createShortcutReferenceApi>;
+      shortcutHotkey: ReturnType<typeof createShortcutHotkeyApi>;
+      siteSearchList: ReturnType<typeof createSiteSearchListApi>;
+      webDavList: ReturnType<typeof createWebDavListApi>;
+      themePicker: ReturnType<typeof createThemePickerApi>;
+      translationHelp: ReturnType<typeof createTranslationHelpApi>;
+      toast: ReturnType<typeof createToastApi>;
+      tabSwitcher: ReturnType<typeof createTabSwitcherViewApi>;
+    } | undefined;
+  var LumnoOptionsAggregateSearchListReact: ReturnType<typeof createAggregateSearchListApi> | undefined;
+  var LumnoOptionsBlacklistListReact: ReturnType<typeof createBlacklistListApi> | undefined;
+  var LumnoOptionsFeedbackSupportReact: ReturnType<typeof createFeedbackSupportApi> | undefined;
+  var LumnoOptionsInfoButtonReact: ReturnType<typeof createInfoButtonApi> | undefined;
+  var LumnoOptionsPopconfirmReact: ReturnType<typeof createPopconfirmApi> | undefined;
+  var LumnoOptionsSegmentedControlReact: ReturnType<typeof createSegmentedControlApi> | undefined;
+  var LumnoOptionsSelectControlReact: ReturnType<typeof createSelectControlApi> | undefined;
+  var LumnoOptionsSettingsNavigationReact: ReturnType<typeof createSettingsNavigationApi> | undefined;
+  var LumnoOptionsSettingsControlsReact: ReturnType<typeof createSettingsControlsApi> | undefined;
+  var LumnoOptionsSettingsFormsReact: ReturnType<typeof createSettingsFormsApi> | undefined;
+  var LumnoOptionsShortcutReferenceReact: ReturnType<typeof createShortcutReferenceApi> | undefined;
+  var LumnoOptionsShortcutHotkeyReact: ReturnType<typeof createShortcutHotkeyApi> | undefined;
+  var LumnoOptionsSiteSearchListReact: ReturnType<typeof createSiteSearchListApi> | undefined;
+  var LumnoOptionsThemePickerReact: ReturnType<typeof createThemePickerApi> | undefined;
+  var LumnoOptionsToastReact: ReturnType<typeof createToastApi> | undefined;
+  var LumnoTooltipViewReact: ReturnType<typeof createTooltipViewApi> | undefined;
+  var LumnoOverlayTabSwitcherViewReact: ReturnType<typeof createTabSwitcherViewApi> | undefined;
+}
+
+const runtime = globalThis;
 
 const bootstrapState = runtime.LumnoOptionsReactBootstrap;
 

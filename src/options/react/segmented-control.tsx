@@ -4,6 +4,7 @@ import {
 } from './root-controller';
 import { useRef, type KeyboardEvent } from 'react';
 import { useSegmentedIndicator } from '../../shared/react/segmented-indicator';
+import { queryHtmlTags } from '../../shared/dom-lookup';
 
 export interface SegmentedControlItemModel {
   iconClass?: string;
@@ -75,9 +76,7 @@ function SegmentedControl({
     const buttonGroup = event.currentTarget.parentElement;
     onSelect(nextItem.value);
     window.requestAnimationFrame(() => {
-      const buttons = buttonGroup?.querySelectorAll<HTMLButtonElement>(
-        `button[${model.dataAttribute}]`
-      );
+      const buttons = (buttonGroup ? queryHtmlTags(buttonGroup, `button[${model.dataAttribute}]`, 'button') : []);
       buttons?.[nextIndex]?.focus();
     });
   };

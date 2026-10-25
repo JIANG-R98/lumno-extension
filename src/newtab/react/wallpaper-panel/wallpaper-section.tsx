@@ -24,6 +24,7 @@ import {
   SelectedSource
 } from './wallpaper-tiles';
 import type { WallpaperPanelContext } from './use-wallpaper-panel';
+import { isNode } from '../../../shared/dom-guards';
 
 export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
   const {
@@ -176,7 +177,7 @@ export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
             data-selected="false"
             data-upload="true"
             onBlur={(event) => {
-              const next = event.relatedTarget as Node | null;
+              const next = isNode(event.relatedTarget) ? event.relatedTarget : null;
               if (!next || !event.currentTarget.contains(next)) actions.hideTooltip();
             }}
             onClick={openFilePicker}

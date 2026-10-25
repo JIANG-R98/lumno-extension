@@ -1,13 +1,14 @@
 import { useRef } from 'react';
 import type {
   ComponentPropsWithoutRef,
+  ComponentPropsWithRef,
   CSSProperties,
   ReactNode,
   Ref
 } from 'react';
 
 export interface RangeSliderProps
-  extends Omit<ComponentPropsWithoutRef<'input'>, 'className' | 'type'> {
+  extends Omit<ComponentPropsWithRef<'input'>, 'className' | 'type'> {
   children?: ReactNode;
   className?: string;
   inputClass?: string;
@@ -85,7 +86,7 @@ export function RangeSlider({
         {...inputProps}
         className={joinClassNames('x-range-slider-input', inputClass)}
         style={marksBackground
-          ? ({ ...style, '--x-range-slider-marks': marksBackground } as CSSProperties)
+          ? ({ ...style, '--x-range-slider-marks': marksBackground })
           : style}
         type="range"
       />

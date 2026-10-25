@@ -339,7 +339,14 @@ function classifySelection(value: unknown, options?: SelectionContext) {
     urlLike ||
     emailLike ||
     settings.sensitive === true;
-  const scores = Object.fromEntries(ACTIONS.map((action) => [action, 0])) as Record<SelectionAction, number>;
+  const scores: Record<SelectionAction, number> = {
+    ask: 0,
+    translate: 0,
+    explain: 0,
+    summarize: 0,
+    search: 0,
+    calculate: 0
+  };
 
   if (!suppressed) {
     if (questionLike) {

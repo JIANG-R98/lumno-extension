@@ -13,6 +13,7 @@ import type {
   FaviconWarmItem
 } from '../../shared/favicon/favicon-view-core';
 import type { FaviconAttachOptions } from '../newtab-types';
+import { queryHtmlTags } from '../../shared/dom-lookup';
 
 // An icon image with the attach state this runtime keeps on it; tests read
 // the session to tell an attach was replaced.
@@ -294,7 +295,7 @@ function createFaviconViewRuntime(options?: FaviconViewRuntimeOptions | null) {
   } = fallbackIcons;
 
   function refreshFallbackIcons(): void {
-    doc.querySelectorAll<HTMLImageElement>('img[data-fallback-icon="true"]').forEach((img) => {
+    queryHtmlTags(doc, 'img[data-fallback-icon="true"]', 'img').forEach((img) => {
       const node = ensureFallbackIconNode(img);
       if (node) {
         setFallbackNodeVisible(node, true);
@@ -725,7 +726,7 @@ function createFaviconViewRuntime(options?: FaviconViewRuntimeOptions | null) {
   }
 
   function refreshThemeAwareFavicons(): void {
-    doc.querySelectorAll<HTMLImageElement>('img[data-x-nt-theme-favicon="1"]').forEach((img) => {
+    queryHtmlTags(doc, 'img[data-x-nt-theme-favicon="1"]', 'img').forEach((img) => {
       if (!img.isConnected) {
         return;
       }
@@ -756,10 +757,8 @@ function createFaviconViewRuntime(options?: FaviconViewRuntimeOptions | null) {
   }
 
   function rescueThemeAwareFallbackFavicons(): void {
-    doc.querySelectorAll<HTMLImageElement>(
-      'img[data-x-nt-theme-favicon="1"][data-fallback-icon="true"], ' +
-      'img[data-x-nt-theme-favicon="1"][data-favicon-placeholder="true"]'
-    ).forEach((img) => {
+    queryHtmlTags(doc, 'img[data-x-nt-theme-favicon="1"][data-fallback-icon="true"], ' +
+      'img[data-x-nt-theme-favicon="1"][data-favicon-placeholder="true"]', 'img').forEach((img) => {
       if (!img.isConnected) {
         return;
       }

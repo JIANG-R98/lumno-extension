@@ -2,6 +2,7 @@ import { useRef, type KeyboardEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { useSegmentedIndicator } from '../../shared/react/segmented-indicator';
+import { queryHtmlTags } from '../../shared/dom-lookup';
 
 export type PopupActionId = 'clip' | 'shortcut' | 'copy' | 'search' | 'pin' | 'pip';
 export type PopupLinkId = 'settings' | 'shortcuts' | 'feedback' | 'release' | 'sync';
@@ -226,7 +227,7 @@ function SegmentedControl({
     const group = event.currentTarget.parentElement;
     onSelect(row.id, row.options[nextIndex].value);
     window.requestAnimationFrame(() => {
-      group?.querySelectorAll<HTMLButtonElement>('button[data-value]')[nextIndex]?.focus();
+      (group ? queryHtmlTags(group, 'button[data-value]', 'button') : [])[nextIndex]?.focus();
     });
   };
 

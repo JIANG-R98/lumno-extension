@@ -4,6 +4,7 @@ import * as LumnoFaviconViewCore from '../shared/favicon/favicon-view-core';
 import type { FallbackIconNode, FaviconImage, FaviconViewCoreOptions, FaviconViewWindow, FaviconWarmItem } from '../shared/favicon/favicon-view-core';
 import * as LumnoMessaging from '../platform/messaging';
 import type { MessageRuntime } from '../platform/messaging';
+import { queryHtmlTags } from '../shared/dom-lookup';
 
 // An overlay favicon image and the attach session state kept on it.
 type OverlayFaviconImage = FaviconImage & {
@@ -781,7 +782,7 @@ function createOverlayFaviconViewRuntime(options?: OverlayFaviconViewOptions | n
       return;
     }
     const skipWithin = optionsArg && optionsArg.skipWithin ? optionsArg.skipWithin : null;
-    overlay.querySelectorAll<HTMLImageElement>('img[data-x-ov-theme-favicon="1"]').forEach((img) => {
+    queryHtmlTags(overlay, 'img[data-x-ov-theme-favicon="1"]', 'img').forEach((img) => {
       if (!img || !img.isConnected) {
         return;
       }

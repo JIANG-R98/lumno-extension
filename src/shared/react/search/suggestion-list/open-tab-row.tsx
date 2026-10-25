@@ -18,6 +18,7 @@ import {
 import { surfaceClass, setSurfaceStyle } from './surface-options';
 import { bindTextTooltip } from './highlight';
 import { setIconEmphasis } from './action-styles';
+import { queryHtmlTag } from '../../../dom-lookup';
 
 function OpenTabRowComponent({
   runtime,
@@ -141,12 +142,10 @@ function OpenTabRowComponent({
       switchActionTagRef.current._xAction = 'switch';
       switchActionTagRef.current._xSuggestion = tabSuggestion;
       switchActionTagRef.current._xActionLabel =
-        switchActionTagRef.current.querySelector<HTMLSpanElement>(
-          `.${surfaceClass(
+        queryHtmlTag(switchActionTagRef.current, `.${surfaceClass(
             options,
             'x-nt-suggestion-action-tag__label'
-          )}`
-        );
+          )}`, 'span');
     }
     options.applyThemeVariables(item, immediateTheme);
     bindTextTooltip(options, titleRef.current, titleText);

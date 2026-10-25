@@ -6,8 +6,7 @@ import type {
   SuggestionActionTagElement,
   ModeTheme,
   SuggestionsRuntime,
-  ThemeValue,
-  Suggestion
+  ThemeValue
 } from './types';
 import { setSurfaceStyle, surfaceCssValue } from './surface-options';
 import { getActionLabel, getModifierAction } from './action-model';
@@ -414,7 +413,8 @@ export function updateSelectionForRuntime(
 
 export function syncModifierLabels(runtime: SuggestionsRuntime): void {
   runtime.options.items.forEach((item) => {
-    if (!item._xSuggestion) {
+    const suggestion = item._xSuggestion;
+    if (!suggestion) {
       return;
     }
     if (
@@ -424,7 +424,7 @@ export function syncModifierLabels(runtime: SuggestionsRuntime): void {
       item._xVisitButtonLabel.textContent = getActionLabel(
         runtime,
         getModifierAction(runtime, item._xVisitButtonAction),
-        item._xSuggestion
+        suggestion
       );
       item._xVisitButton?.setAttribute(
         'aria-label',
@@ -438,7 +438,7 @@ export function syncModifierLabels(runtime: SuggestionsRuntime): void {
       tag._xActionLabel.textContent = getActionLabel(
         runtime,
         getModifierAction(runtime, tag._xAction),
-        item._xSuggestion as Suggestion
+        suggestion
       );
     });
   });

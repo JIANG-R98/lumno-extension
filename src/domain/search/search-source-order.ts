@@ -77,6 +77,10 @@ function normalizeKeyList(value: unknown, normalize: KeyNormalizer): string[] {
   return result;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
 function normalizeGroups(value: unknown): string[] {
   const groups = normalizeKeyList(value, (item) => {
     const id = toText(item).toLowerCase();
@@ -118,12 +122,11 @@ function getRecordBytes(record: SearchSourceOrder): number {
 // Always returns a complete record, so callers never branch on "no order".
 // An over-budget record drops entries from the tail of its longest list.
 function normalizeOrder(value: unknown): SearchSourceOrder {
-  const raw = value as Partial<SearchSourceOrder> | null | undefined;
-  const source: Partial<SearchSourceOrder> = raw && typeof raw === 'object' && !Array.isArray(raw) &&
-    Number(raw.version) === SCHEMA_VERSION
-    ? raw
+  const source: Record<string, unknown> = isRecord(value) && !Array.isArray(value) &&
+    Number(value.version) === SCHEMA_VERSION
+    ? value
     : {};
-  const sourceLists: Record<string, unknown> = source.lists && typeof source.lists === 'object' ? source.lists : {};
+  const sourceLists: Record<string, unknown> = isRecord(source.lists) ? source.lists : {};
   const lists: Record<string, string[]> = {};
   LIST_IDS.forEach((listId) => {
     lists[listId] = normalizeKeyList(sourceLists[listId], getKeyNormalizer(listId));
@@ -146,10 +149,16 @@ function normalizeOrder(value: unknown): SearchSourceOrder {
   return record;
 }
 
-function getListKeys(order: SearchSourceOrder | unknown, listId: string): string[] {
-  const given = order as SearchSourceOrder | null | undefined;
-  const record = given && given.lists ? given : normalizeOrder(order);
-  return Array.isArray(record.lists[listId]) ? record.lists[listId] : [];
+// A record normalizeOrder produced carries its lists; anything else is
+// normalized first.
+function isNormalizedOrder(value: unknown): value is SearchSourceOrder {
+  return isRecord(value) && isRecord(value.lists);
+}
+
+function getListKeys(order: unknown, listId: string): string[] {
+  const record = isNormalizedOrder(order) ? order : normalizeOrder(order);
+  const keys: unknown = record.lists[listId];
+  return Array.isArray(keys) ? keys.filter((key): key is string => typeof key === 'string') : [];
 }
 
 // Items the record lists come first in its order; the rest keep their own

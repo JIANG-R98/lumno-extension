@@ -1,6 +1,7 @@
 // How the mode prefix looks and where it sits: its colors on each surface,
 // the input padding it takes, and the menu footer alignment.
 import type { InputModeTheme, IsElementVisible, Rgb, SetStyle } from './types';
+import { queryHtmlElement } from '../../dom-lookup';
 
 // The controller state search-input-mode.ts shares with its modules.
 interface PrefixVisualState {
@@ -235,9 +236,7 @@ function createPrefixVisual(deps: PrefixVisualDeps) {
     if (modeMenu.hidden || !inputModeState.modeMenuFooter || !inputModeState.modeMenuContent) {
       return;
     }
-    const firstIcon = inputModeState.modeMenuContent.querySelector<HTMLElement>(
-      '.x-lumno-search-input-mode__menu-icon'
-    );
+    const firstIcon = queryHtmlElement(inputModeState.modeMenuContent, '.x-lumno-search-input-mode__menu-icon');
     if (!firstIcon || Number(firstIcon.offsetWidth) <= 0) {
       return;
     }

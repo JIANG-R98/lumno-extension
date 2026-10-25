@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createReactRootController, type ReactRootController } from './root-controller';
+import { isNode } from '../../shared/dom-guards';
 
 export interface TranslationHelpRenderModel {
   visible: boolean;
@@ -32,7 +33,7 @@ function TranslationHelpView(model: TranslationHelpRenderModel) {
       return undefined;
     }
     const handlePointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      if (!rootRef.current?.contains(isNode(event.target) ? event.target : null)) {
         setOpen(false);
       }
     };

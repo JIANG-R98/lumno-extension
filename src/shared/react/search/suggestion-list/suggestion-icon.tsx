@@ -191,8 +191,7 @@ export function SuggestionIcon({
   const isFavicon = spec.kind === 'favicon' && !failed;
 
   useLayoutEffect(() => {
-    const slot =
-      iconSlotRef.current as SuggestionIconSlotElement | null;
+    const slot: SuggestionIconSlotElement | null = iconSlotRef.current;
     if (!slot) {
       return;
     }
@@ -221,8 +220,7 @@ export function SuggestionIcon({
 
   useLayoutEffect(() => {
     const image = imageRef.current;
-    const slot =
-      iconSlotRef.current as SuggestionIconSlotElement | null;
+    const slot: SuggestionIconSlotElement | null = iconSlotRef.current;
     if (slot) {
       slot._xIsFavicon = isFavicon;
     }

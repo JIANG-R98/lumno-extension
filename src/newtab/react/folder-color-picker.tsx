@@ -4,7 +4,8 @@ import { createRoot } from 'react-dom/client';
 import { HexColorPicker } from 'react-colorful';
 import { SelectMenu } from './select-menu';
 import { DEFAULT_CLOSE_DELAY_MS, getEnterOffset } from './shortcut-dialog-helpers';
-import { DEFAULT_FOLDER_COLOR, MAX_SAVED_FOLDER_COLORS, normalizeSavedFolderColors, parseFolderColor, folderColorToChannels } from './folder-color';
+import { DEFAULT_FOLDER_COLOR, MAX_SAVED_FOLDER_COLORS, normalizeSavedFolderColors, parseFolderColor, folderColorToChannels, withFolderColorChannel } from './folder-color';
+import { queryHtmlElement, queryHtmlElements, queryHtmlTags } from '../../shared/dom-lookup';
 
 interface OpenOptions {
   folderId: string;
@@ -84,8 +85,8 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
 
   // Rest on the selected swatch, or the saturation area for a custom color, so the dialog opens in a browsing state.
   function focusCurrentColor() {
-    (editorRef.current?.querySelector<HTMLElement>('.x-nt-folder-color-swatch[aria-pressed="true"]')
-      || editorRef.current?.querySelector<HTMLElement>('.react-colorful__saturation .react-colorful__interactive'))?.focus();
+    ((editorRef.current ? queryHtmlElement(editorRef.current, '.x-nt-folder-color-swatch[aria-pressed="true"]') : null)
+      || (editorRef.current ? queryHtmlElement(editorRef.current, '.react-colorful__saturation .react-colorful__interactive') : null))?.focus();
   }
   useLayoutEffect(focusCurrentColor, []);
   useLayoutEffect(() => {
@@ -93,7 +94,7 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
       if (target) options.bindTooltip?.(target, () => target.getAttribute('data-tooltip') || '', { placement: 'top', maxWidth: 260 });
     }
     if (focusSavedColorRef.current !== null) {
-      const target = savedColorsRef.current?.querySelectorAll<HTMLButtonElement>('.x-nt-folder-color-saved-item .x-nt-folder-color-swatch')[focusSavedColorRef.current] || addColorRef.current;
+      const target = (savedColorsRef.current ? queryHtmlTags(savedColorsRef.current, '.x-nt-folder-color-saved-item .x-nt-folder-color-swatch', 'button') : [])[focusSavedColorRef.current] || addColorRef.current;
       focusSavedColorRef.current = null;
       if (target && !target.disabled) target.focus();
       else focusCurrentColor();
@@ -101,8 +102,9 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
   }, [options, savedColors]);
   useEffect(() => {
     let active = true;
-    if (options.readSavedColors) {
-      void Promise.resolve().then(() => options.readSavedColors!()).then((value) => {
+    const readSavedColors = options.readSavedColors;
+    if (readSavedColors) {
+      void Promise.resolve().then(() => readSavedColors()).then((value) => {
         if (!active) return;
         const colors = normalizeSavedFolderColors(value);
         setSavedColors(colors);
@@ -303,14 +305,13 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
                       value={rgbTexts[index]} aria-invalid={invalidChannels[index]}
                       aria-describedby={invalidChannels[index] ? 'x-nt-folder-color-error' : undefined}
                       onChange={(event) => {
-                        const next = [...rgbTexts] as [string, string, string];
-                        next[index] = event.currentTarget.value;
+                        const next = withFolderColorChannel(rgbTexts, index, event.currentTarget.value);
                         setRgbTexts(next); setColorSource('custom'); setReset(false); setError('');
                         const parsed = next.every((channel) => /^\d{1,3}$/.test(channel) && Number(channel) <= 255)
                           ? parseFolderColor(next.join(', ')) : null;
                         if (parsed) { setColor(parsed); setHexText(parsed); }
                       }} onBlur={() => {
-                        if (!invalidChannels[index]) setRgbTexts((current) => current.map((value, channel) => channel === index ? String(Number(value)) : value) as [string, string, string]);
+                        if (!invalidChannels[index]) setRgbTexts((current) => withFolderColorChannel(current, index, String(Number(current[index]))));
                       }} />
                   </label>)}
                 </div>}
@@ -340,7 +341,7 @@ export function createFolderColorPicker(options: PickerOptions = {}) {
   let openFrame = 0;
   let closeTimer = 0;
   const view = doc.defaultView || window;
-  const getBackdrop = () => host.querySelector<HTMLElement>('.x-nt-folder-color-backdrop');
+  const getBackdrop = () => queryHtmlElement(host, '.x-nt-folder-color-backdrop');
   function cancelMotion() {
     if (openFrame) { view.cancelAnimationFrame(openFrame); openFrame = 0; }
     if (closeTimer) { view.clearTimeout(closeTimer); closeTimer = 0; }
@@ -353,7 +354,7 @@ export function createFolderColorPicker(options: PickerOptions = {}) {
   }
   // Drift in from the source tile the same way the shortcut dialog does.
   function setEnterDirection(sourceElement: HTMLElement | null | undefined) {
-    const dialog = host.querySelector<HTMLElement>('.x-nt-folder-color-dialog');
+    const dialog = queryHtmlElement(host, '.x-nt-folder-color-dialog');
     if (!dialog) return;
     let enterX = 0;
     if (sourceElement?.isConnected) {
@@ -383,7 +384,7 @@ export function createFolderColorPicker(options: PickerOptions = {}) {
     // Keep modal keys from reaching new-tab search and shortcut navigation.
     event.stopImmediatePropagation();
     if (event.defaultPrevented) return;
-    const controls = Array.from(host.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex="0"]')).filter((element) => !element.closest('[inert]'));
+    const controls = queryHtmlElements(host, 'button:not(:disabled), input:not(:disabled), [tabindex="0"]').filter((element) => !element.closest('[inert]'));
     if (event.key === 'Escape') {
       event.preventDefault();
       if (!host.querySelector('fieldset:disabled')) close();

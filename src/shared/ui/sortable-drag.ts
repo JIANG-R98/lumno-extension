@@ -1,3 +1,4 @@
+import { closestHtmlElement } from '../dom-lookup';
 // Pointer-driven reordering shared by Settings lists, chip rows and the search
 // scope panel. The dragged item follows the pointer and its peers slide into
 // the slots they would take, using transforms only, so a framework that owns
@@ -162,7 +163,7 @@ function attach(container: HTMLElement | null | undefined, options: SortableDrag
 
   function findItem(target: EventTarget | null): HTMLElement | null {
     const element = isElement(target) ? target : (isNode(target) ? target.parentElement : null);
-    const item = element ? element.closest<HTMLElement>(settings.itemSelector) : null;
+    const item = element ? closestHtmlElement(element, settings.itemSelector) : null;
     if (!element || !item || !host.contains(item)) {
       return null;
     }

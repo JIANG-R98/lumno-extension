@@ -4,6 +4,7 @@ import {
   PopconfirmContent,
   type PopconfirmCopy
 } from '../../shared/react/popconfirm-content';
+import { queryHtmlTag } from '../../shared/dom-lookup';
 
 export interface PopconfirmRenderModel extends PopconfirmCopy {
   open: boolean;
@@ -80,7 +81,7 @@ export function createPopconfirmController(
       ) : null);
     });
     if (opening) {
-      hostElement.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+      queryHtmlTag(hostElement, 'button', 'button')?.focus({ preventScroll: true });
     } else if (closing) {
       const target = returnFocusTarget;
       returnFocusTarget = null;

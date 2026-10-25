@@ -23,86 +23,58 @@ import { createFeatureHintViewApi } from '../../shared/react/feature-hint-view';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
 import { createTabSwitcherViewApi } from '../../shared/react/tab-switcher';
 
-const runtime = globalThis as typeof globalThis & {
-  LumnoNewtabReactBootstrap?: {
-    reactReady: boolean;
-  };
-  LumnoNewtabReactIslands?: {
-    bookmarks: ReturnType<typeof createBookmarksViewApi>;
-    dock: ReturnType<typeof createDockApi>;
-    feedback: ReturnType<typeof createFeedbackControlApi>;
-    shortcutDialog: ReturnType<typeof createShortcutDialogApi>;
-    recentHistoryDialog: ReturnType<typeof createRecentHistoryDialogApi>;
-    recentSites: ReturnType<typeof createRecentSitesViewApi>;
-    searchInput: ReturnType<typeof createSearchInputApi>;
-    selectMenu: ReturnType<typeof createSelectMenuApi>;
-    shortcuts: ReturnType<typeof createShortcutsViewApi>;
-    suggestions: ReturnType<typeof createSuggestionsViewApi>;
-    toast: ReturnType<typeof createToastApi>;
-    topContent: ReturnType<typeof createTopContentApi>;
-    wordmark: ReturnType<typeof createTopContentApi>;
-    pageStructure: ReturnType<typeof createPageStructureApi>;
-    bookmarksTopbar: ReturnType<typeof createBookmarksTopbarApi>;
-    pageNotice: ReturnType<typeof createPageNoticeApi>;
-    bookmarkCascadeView: ReturnType<typeof createBookmarkCascadeViewApi>;
-    wallpaperView: ReturnType<typeof createWallpaperViewApi>;
-    bookmarkBreadcrumb: ReturnType<typeof createBookmarkBreadcrumbApi>;
-    tabSwitcher: ReturnType<typeof createTabSwitcherViewApi>;
-  };
-  LumnoNewtabBookmarksView?: ReturnType<typeof createBookmarksViewApi>;
-  LumnoNewtabBookmarksViewReact?: ReturnType<typeof createBookmarksViewApi>;
-  LumnoNewtabFeedbackControl?: ReturnType<typeof createFeedbackControlApi>;
-  LumnoNewtabFeedbackControlReact?: ReturnType<typeof createFeedbackControlApi>;
-  LumnoNewtabDock?: ReturnType<typeof createDockApi>;
-  LumnoNewtabDockReact?: ReturnType<typeof createDockApi>;
-  LumnoNewtabShortcutDialog?: ReturnType<typeof createShortcutDialogApi>;
-  LumnoNewtabShortcutDialogReact?: ReturnType<typeof createShortcutDialogApi>;
-  LumnoNewtabRecentHistoryDialog?: ReturnType<typeof createRecentHistoryDialogApi>;
-  LumnoNewtabFolderColorPicker?: ReturnType<typeof createFolderColorPickerApi>;
-  LumnoNewtabShortcutsView?: ReturnType<typeof createShortcutsViewApi>;
-  LumnoNewtabShortcutsViewReact?: ReturnType<typeof createShortcutsViewApi>;
-  LumnoNewtabRecentSitesView?: ReturnType<typeof createRecentSitesViewApi>;
-  LumnoNewtabRecentSitesViewReact?: ReturnType<typeof createRecentSitesViewApi>;
-  LumnoNewtabSelectMenu?: ReturnType<typeof createSelectMenuApi>;
-  LumnoNewtabSelectMenuReact?: ReturnType<typeof createSelectMenuApi>;
-  LumnoNewtabSuggestionsView?: ReturnType<typeof createSuggestionsViewApi>;
-  LumnoNewtabSuggestionsViewReact?: ReturnType<typeof createSuggestionsViewApi>;
-  LumnoNewtabToast?: ReturnType<typeof createToastApi>;
-  LumnoNewtabToastReact?: ReturnType<typeof createToastApi>;
-  LumnoNewtabTopContent?: ReturnType<typeof createTopContentApi>;
-  LumnoNewtabTopContentReact?: ReturnType<typeof createTopContentApi>;
-  LumnoNewtabWordmark?: ReturnType<typeof createTopContentApi>;
-  LumnoNewtabWordmarkReact?: ReturnType<typeof createTopContentApi>;
-  LumnoNewtabPageStructure?: ReturnType<typeof createPageStructureApi>;
-  LumnoNewtabPageStructureReact?: ReturnType<typeof createPageStructureApi>;
-  LumnoNewtabBookmarksTopbar?: ReturnType<typeof createBookmarksTopbarApi>;
-  LumnoNewtabBookmarksTopbarReact?: ReturnType<typeof createBookmarksTopbarApi>;
-  LumnoNewtabLiquidSurfaces?: { create: typeof createLiquidSurfaces };
-  LumnoNewtabPageNotice?: ReturnType<typeof createPageNoticeApi>;
-  LumnoNewtabPageNoticeReact?: ReturnType<typeof createPageNoticeApi>;
-  LumnoNewtabBookmarkCascadeView?: ReturnType<
-    typeof createBookmarkCascadeViewApi
-  >;
-  LumnoNewtabBookmarkCascadeViewReact?: ReturnType<
-    typeof createBookmarkCascadeViewApi
-  >;
-  LumnoNewtabWallpaperView?: ReturnType<typeof createWallpaperViewApi>;
-  LumnoNewtabWallpaperViewReact?: ReturnType<typeof createWallpaperViewApi>;
-  LumnoNewtabBookmarkBreadcrumb?: ReturnType<typeof createBookmarkBreadcrumbApi>;
-  LumnoNewtabBookmarkBreadcrumbReact?: ReturnType<typeof createBookmarkBreadcrumbApi>;
-  LumnoSearchInputUI?: ReturnType<typeof createSearchInputApi>;
-  LumnoSearchInputUIReact?: ReturnType<typeof createSearchInputApi>;
-  LumnoFeatureHintView?: ReturnType<typeof createFeatureHintViewApi>;
-  LumnoFeatureHintViewReact?: ReturnType<typeof createFeatureHintViewApi>;
-  LumnoTooltipView?: ReturnType<typeof createTooltipViewApi>;
-  LumnoSegmentedIndicator?: ReturnType<typeof createSegmentedIndicatorApi>;
-  LumnoTooltipViewReact?: ReturnType<typeof createTooltipViewApi>;
-  LumnoOverlayTabSwitcherView?: ReturnType<typeof createTabSwitcherViewApi>;
-  LumnoOverlayTabSwitcherViewReact?: ReturnType<typeof createTabSwitcherViewApi>;
-  _x_extension_createSearchInput_2024_unique_?: ReturnType<
-    typeof createSearchInputApi
-  >['createSearchInput'];
-};
+declare global {
+  var LumnoNewtabReactBootstrap: {
+      reactReady: boolean;
+    } | undefined;
+  var LumnoNewtabReactIslands: {
+      bookmarks: ReturnType<typeof createBookmarksViewApi>;
+      dock: ReturnType<typeof createDockApi>;
+      feedback: ReturnType<typeof createFeedbackControlApi>;
+      shortcutDialog: ReturnType<typeof createShortcutDialogApi>;
+      recentHistoryDialog: ReturnType<typeof createRecentHistoryDialogApi>;
+      recentSites: ReturnType<typeof createRecentSitesViewApi>;
+      searchInput: ReturnType<typeof createSearchInputApi>;
+      selectMenu: ReturnType<typeof createSelectMenuApi>;
+      shortcuts: ReturnType<typeof createShortcutsViewApi>;
+      suggestions: ReturnType<typeof createSuggestionsViewApi>;
+      toast: ReturnType<typeof createToastApi>;
+      topContent: ReturnType<typeof createTopContentApi>;
+      wordmark: ReturnType<typeof createTopContentApi>;
+      pageStructure: ReturnType<typeof createPageStructureApi>;
+      bookmarksTopbar: ReturnType<typeof createBookmarksTopbarApi>;
+      pageNotice: ReturnType<typeof createPageNoticeApi>;
+      bookmarkCascadeView: ReturnType<typeof createBookmarkCascadeViewApi>;
+      wallpaperView: ReturnType<typeof createWallpaperViewApi>;
+      bookmarkBreadcrumb: ReturnType<typeof createBookmarkBreadcrumbApi>;
+      tabSwitcher: ReturnType<typeof createTabSwitcherViewApi>;
+    } | undefined;
+  var LumnoNewtabBookmarksViewReact: ReturnType<typeof createBookmarksViewApi> | undefined;
+  var LumnoNewtabFeedbackControlReact: ReturnType<typeof createFeedbackControlApi> | undefined;
+  var LumnoNewtabDockReact: ReturnType<typeof createDockApi> | undefined;
+  var LumnoNewtabShortcutDialogReact: ReturnType<typeof createShortcutDialogApi> | undefined;
+  var LumnoNewtabShortcutsViewReact: ReturnType<typeof createShortcutsViewApi> | undefined;
+  var LumnoNewtabRecentSitesViewReact: ReturnType<typeof createRecentSitesViewApi> | undefined;
+  var LumnoNewtabSelectMenuReact: ReturnType<typeof createSelectMenuApi> | undefined;
+  var LumnoNewtabSuggestionsViewReact: ReturnType<typeof createSuggestionsViewApi> | undefined;
+  var LumnoNewtabToastReact: ReturnType<typeof createToastApi> | undefined;
+  var LumnoNewtabTopContentReact: ReturnType<typeof createTopContentApi> | undefined;
+  var LumnoNewtabWordmarkReact: ReturnType<typeof createTopContentApi> | undefined;
+  var LumnoNewtabPageStructureReact: ReturnType<typeof createPageStructureApi> | undefined;
+  var LumnoNewtabBookmarksTopbarReact: ReturnType<typeof createBookmarksTopbarApi> | undefined;
+  var LumnoNewtabPageNoticeReact: ReturnType<typeof createPageNoticeApi> | undefined;
+  var LumnoNewtabBookmarkCascadeViewReact: ReturnType<
+      typeof createBookmarkCascadeViewApi
+    > | undefined;
+  var LumnoNewtabWallpaperViewReact: ReturnType<typeof createWallpaperViewApi> | undefined;
+  var LumnoNewtabBookmarkBreadcrumbReact: ReturnType<typeof createBookmarkBreadcrumbApi> | undefined;
+  var LumnoSearchInputUIReact: ReturnType<typeof createSearchInputApi> | undefined;
+  var LumnoFeatureHintViewReact: ReturnType<typeof createFeatureHintViewApi> | undefined;
+  var LumnoTooltipViewReact: ReturnType<typeof createTooltipViewApi> | undefined;
+  var LumnoOverlayTabSwitcherViewReact: ReturnType<typeof createTabSwitcherViewApi> | undefined;
+}
+
+const runtime = globalThis;
 
 const bootstrapState = runtime.LumnoNewtabReactBootstrap;
 

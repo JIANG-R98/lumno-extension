@@ -7,36 +7,30 @@ import { createPageStripApi } from './page-strip';
 import { createVisualSurfaceApi } from './visual-surface';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
 
-const runtime = globalThis as typeof globalThis & {
-  LumnoOnboardingActions?: ReturnType<typeof createActionButtonsApi>;
-  LumnoOnboardingActionsReact?: ReturnType<typeof createActionButtonsApi>;
-  LumnoOnboardingBodyCopy?: ReturnType<typeof createBodyCopyApi>;
-  LumnoOnboardingBodyCopyReact?: ReturnType<typeof createBodyCopyApi>;
-  LumnoOnboardingCopyHeading?: ReturnType<typeof createCopyHeadingApi>;
-  LumnoOnboardingCopyHeadingReact?: ReturnType<typeof createCopyHeadingApi>;
-  LumnoOnboardingCursorLayer?: ReturnType<typeof createCursorLayerApi>;
-  LumnoOnboardingCursorLayerReact?: ReturnType<typeof createCursorLayerApi>;
-  LumnoOnboardingInteractions?: ReturnType<typeof createInteractionsApi>;
-  LumnoOnboardingInteractionsReact?: ReturnType<typeof createInteractionsApi>;
-  LumnoOnboardingPageStrip?: ReturnType<typeof createPageStripApi>;
-  LumnoOnboardingPageStripReact?: ReturnType<typeof createPageStripApi>;
-  LumnoOnboardingVisualSurface?: ReturnType<typeof createVisualSurfaceApi>;
-  LumnoOnboardingVisualSurfaceReact?: ReturnType<typeof createVisualSurfaceApi>;
-  LumnoTooltipView?: ReturnType<typeof createTooltipViewApi>;
-  LumnoTooltipViewReact?: ReturnType<typeof createTooltipViewApi>;
-  LumnoOnboardingReactBootstrap?: {
-    reactReady: boolean;
-  };
-  LumnoOnboardingReactIslands?: {
-    actions: ReturnType<typeof createActionButtonsApi>;
-    bodyCopy: ReturnType<typeof createBodyCopyApi>;
-    copyHeading: ReturnType<typeof createCopyHeadingApi>;
-    cursorLayer: ReturnType<typeof createCursorLayerApi>;
-    interactions: ReturnType<typeof createInteractionsApi>;
-    pageStrip: ReturnType<typeof createPageStripApi>;
-    visualSurface: ReturnType<typeof createVisualSurfaceApi>;
-  };
-};
+declare global {
+  var LumnoOnboardingActionsReact: ReturnType<typeof createActionButtonsApi> | undefined;
+  var LumnoOnboardingBodyCopyReact: ReturnType<typeof createBodyCopyApi> | undefined;
+  var LumnoOnboardingCopyHeadingReact: ReturnType<typeof createCopyHeadingApi> | undefined;
+  var LumnoOnboardingCursorLayerReact: ReturnType<typeof createCursorLayerApi> | undefined;
+  var LumnoOnboardingInteractionsReact: ReturnType<typeof createInteractionsApi> | undefined;
+  var LumnoOnboardingPageStripReact: ReturnType<typeof createPageStripApi> | undefined;
+  var LumnoOnboardingVisualSurfaceReact: ReturnType<typeof createVisualSurfaceApi> | undefined;
+  var LumnoTooltipViewReact: ReturnType<typeof createTooltipViewApi> | undefined;
+  var LumnoOnboardingReactBootstrap: {
+      reactReady: boolean;
+    } | undefined;
+  var LumnoOnboardingReactIslands: {
+      actions: ReturnType<typeof createActionButtonsApi>;
+      bodyCopy: ReturnType<typeof createBodyCopyApi>;
+      copyHeading: ReturnType<typeof createCopyHeadingApi>;
+      cursorLayer: ReturnType<typeof createCursorLayerApi>;
+      interactions: ReturnType<typeof createInteractionsApi>;
+      pageStrip: ReturnType<typeof createPageStripApi>;
+      visualSurface: ReturnType<typeof createVisualSurfaceApi>;
+    } | undefined;
+}
+
+const runtime = globalThis;
 
 const bootstrapState = runtime.LumnoOnboardingReactBootstrap;
 

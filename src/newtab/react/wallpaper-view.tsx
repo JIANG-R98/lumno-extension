@@ -21,6 +21,7 @@ import { RecentSettingsSection } from './wallpaper-panel/recent-settings-section
 import { QuoteSection } from './wallpaper-panel/quote-section';
 import { WallpaperSection } from './wallpaper-panel/wallpaper-section';
 import { FaviconSection } from './wallpaper-panel/favicon-section';
+import { queryHtmlElement, queryHtmlElements, queryHtmlTag } from '../../shared/dom-lookup';
 export { EFFECT_SLIDER_KEYS } from './wallpaper-panel/panel-model';
 export type { WallpaperSourceTab, WallpaperMode, ThemeScope, TopContentMode, TimeInk, GlassTheme, EffectSliderKey, WallpaperPanelModel, TileState, OnlineTileState, SelectedSourceState, DailyState, PanelSelectModel, CuratedMixState, WallpaperPanelActions, WallpaperPanelState } from './wallpaper-panel/panel-model';
 
@@ -175,16 +176,15 @@ export function createWallpaperViewController(
     ));
   };
   renderRoot();
-  const panel = control.querySelector<HTMLDivElement>('[data-wallpaper-ref="panel"]');
-  const button = control.querySelector<HTMLButtonElement>('[data-wallpaper-ref="button"]');
+  const panel = queryHtmlTag(control, '[data-wallpaper-ref="panel"]', 'div');
+  const button = queryHtmlTag(control, '[data-wallpaper-ref="button"]', 'button');
   if (!panel || !button) {
     flushSync(() => root.unmount());
     throw new Error('Lumno React wallpaper view did not mount.');
   }
   const getRefs = () => {
     const refs: Record<string, HTMLElement> = {};
-    control
-      .querySelectorAll<HTMLElement>('[data-wallpaper-ref]')
+    queryHtmlElements(control, '[data-wallpaper-ref]')
       .forEach((element) => {
         const name = element.dataset.wallpaperRef;
         if (name) {
@@ -209,7 +209,7 @@ export function createWallpaperViewController(
       flushSync(() => root.unmount());
     },
     focus(name: string) {
-      const element = control.querySelector<HTMLElement>(`[data-wallpaper-ref="${name}"]`);
+      const element = queryHtmlElement(control, `[data-wallpaper-ref="${name}"]`);
       element?.focus();
     },
     getRefs,
@@ -226,7 +226,7 @@ export function createWallpaperViewController(
       }
       flushSync(() => selectControls.get(openId)?.setOpen(false));
       if (options?.restoreFocus) {
-        control.querySelector<HTMLElement>(`[data-wallpaper-ref="${SELECT_HOST_REFS[openId]}"] button`)?.focus();
+        queryHtmlElement(control, `[data-wallpaper-ref="${SELECT_HOST_REFS[openId]}"] button`)?.focus();
       }
       return true;
     },

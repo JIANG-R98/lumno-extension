@@ -111,14 +111,14 @@ function recentCardStyle(item: NewtabPreviewItem): CSSProperties {
     '--x-nt-recent-card-border-color': rgb(border),
     '--x-nt-recent-card-color': rgb(base),
     '--x-nt-recent-inner-tint-rgb': rgbParts(innerTint)
-  } as CSSProperties;
+  };
 }
 
 function bookmarkCardStyle(item: NewtabPreviewItem): CSSProperties {
   if (item.type === 'folder') {
     return {
       '--x-nt-bookmark-shadow-rgb': '86, 138, 220'
-    } as CSSProperties;
+    };
   }
   const accent = normalizeRgb(item.accentRgb);
   const base = mixColor(accent, [255, 255, 255], 0.94);
@@ -132,7 +132,7 @@ function bookmarkCardStyle(item: NewtabPreviewItem): CSSProperties {
     '--x-nt-bookmark-card-hover-color': rgba(hover, 0.86),
     '--x-nt-bookmark-icon-color': rgb(icon),
     '--x-nt-bookmark-shadow-rgb': rgbParts(shadow)
-  } as CSSProperties;
+  };
 }
 
 function BrowserBar() {
@@ -543,7 +543,7 @@ function BookmarkCard({
               style={{
                 '--x-nt-folder-favicon-rot':
                   `${(previewIndex - 1.5) * 2}deg`
-              } as CSSProperties}
+              }}
             />
           ))}
         </span>

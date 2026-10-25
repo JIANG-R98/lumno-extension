@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import {
@@ -219,7 +218,7 @@ function FeatureCard({
   const style = {
     '--feature-card-delay': `${260 + index * 90}ms`,
     '--feature-card-index': String(index)
-  } as CSSProperties;
+  };
 
   return (
     <article
@@ -247,7 +246,7 @@ function FeatureAward({
   const style = {
     '--feature-award-delay': `${180 + index * 80}ms`,
     '--feature-award-index': String(index)
-  } as CSSProperties;
+  };
   const lines = Array.isArray(item.lines) ? item.lines : [];
 
   return (

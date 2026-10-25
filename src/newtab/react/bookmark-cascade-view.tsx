@@ -1,6 +1,8 @@
 import { useLayoutEffect, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
+import { queryHtmlTag, queryHtmlTags } from '../../shared/dom-lookup';
+import { isHtmlTag } from '../../shared/dom-guards';
 
 export interface CascadeItemView {
   button: HTMLButtonElement;
@@ -75,20 +77,19 @@ function CascadeLevel({
     if (!content) {
       return;
     }
-    const itemViews = Array.from(
-      content.querySelectorAll<HTMLDivElement>('[data-cascade-view-index]')
-    ).map((row) => ({
-      row,
-      button: row.querySelector<HTMLButtonElement>(
-        '.x-nt-bookmark-cascade-item'
-      ) as HTMLButtonElement,
-      copyButton: row.querySelector<HTMLButtonElement>(
-        '.x-nt-bookmark-cascade-copy-trigger'
-      ),
-      icon: row.querySelector<HTMLImageElement | HTMLSpanElement>(
-        '.x-nt-bookmark-cascade-icon'
-      )
-    }));
+    const itemViews = queryHtmlTags(content, '[data-cascade-view-index]', 'div').map((row): CascadeItemView => {
+      const button = queryHtmlTag(row, '.x-nt-bookmark-cascade-item', 'button');
+      if (!button) {
+        throw new Error('A bookmark cascade row has no item button.');
+      }
+      const icon = row.querySelector('.x-nt-bookmark-cascade-icon');
+      return {
+        row,
+        button,
+        copyButton: queryHtmlTag(row, '.x-nt-bookmark-cascade-copy-trigger', 'button'),
+        icon: isHtmlTag(icon, 'img') || isHtmlTag(icon, 'span') ? icon : null
+      };
+    });
     register(content, itemViews);
   }, [register]);
   const cleanFolderTitle = sanitizeDisplayText(folderTitle);

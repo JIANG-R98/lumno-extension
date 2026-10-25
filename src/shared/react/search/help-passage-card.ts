@@ -40,7 +40,7 @@ const HOVER_DELAY_MS = 250;
 
 export function isHelpPassage(value: unknown): value is HelpPassageBlock[] {
   return Array.isArray(value) && value.length > 0 && value.every(
-    (block) => block && typeof block === 'object' && typeof (block as HelpPassageBlock).kind === 'string'
+    (block) => typeof block === 'object' && block !== null && 'kind' in block && typeof block.kind === 'string'
   );
 }
 

@@ -36,7 +36,7 @@ export function EmptyState({
       data-theme={
         options.surface === 'overlay'
           ? options.container
-              .closest<HTMLElement>('[data-theme]')
+              .closest('[data-theme]')
               ?.getAttribute('data-theme') || undefined
           : undefined
       }

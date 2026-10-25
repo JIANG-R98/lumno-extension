@@ -4,6 +4,7 @@ import {
   PopconfirmContent,
   type PopconfirmCopy
 } from '../../shared/react/popconfirm-content';
+import { isNode } from '../../shared/dom-guards';
 
 export type InlinePopconfirmCopy = PopconfirmCopy;
 
@@ -47,7 +48,7 @@ export function InlinePopconfirm({
       return undefined;
     }
     const onDocumentPointerDown = (event: PointerEvent) => {
-      if (!wrapRef.current?.contains(event.target as Node)) {
+      if (!wrapRef.current?.contains(isNode(event.target) ? event.target : null)) {
         setOpen(false);
       }
     };

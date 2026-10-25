@@ -2,6 +2,7 @@
 // and chevron, the mode menu surface with its content and footer hints.
 import type * as LumnoMenuSurface from '../../ui/menu-surface';
 import type { CssDeclaration, CssText, InputModeVars, SetStyle } from './types';
+import { queryHtmlElement } from '../../dom-lookup';
 
 // The menu parts this module finds or creates; search-input-mode.ts keeps
 // them in the state it shares with its modules.
@@ -69,7 +70,7 @@ interface FooterParts {
 }
 
 function findPart(root: HTMLElement, attribute: string): HTMLElement | null {
-  return root.querySelector<HTMLElement>(`[${attribute}]`);
+  return queryHtmlElement(root, `[${attribute}]`);
 }
 
 function createControllerDom(deps: ControllerDomDeps): ControllerDomParts {
