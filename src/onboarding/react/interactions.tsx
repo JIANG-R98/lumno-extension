@@ -7,6 +7,7 @@ import type {
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { RemixIcon as Icon } from '../../shared/react/remix-icon';
+import type { BrowserAvatar } from '../../types/view-apis';
 
 interface InteractionLink {
   actionId?: string;
@@ -17,11 +18,17 @@ interface InteractionLink {
 interface InteractionAccordion {
   expandedByDefault?: boolean;
   icon?: string;
-  links?: InteractionLink[];
+  links?: readonly InteractionLink[];
   text?: string;
 }
 
-interface InteractionInfoTooltip {
+export interface InteractionBrowserAvatars {
+  prefix?: string;
+  suffix?: string;
+  browsers?: readonly BrowserAvatar[];
+}
+
+export interface InteractionInfoTooltip {
   icon?: string;
   label?: string;
   text?: string;
@@ -39,7 +46,7 @@ export interface InteractionSlot {
   accordion?: InteractionAccordion;
   accordionId?: string;
   actionId?: string;
-  browserAvatars?: unknown;
+  browserAvatars?: InteractionBrowserAvatars;
   browserOnly?: string;
   description?: string;
   icon?: string;
@@ -53,7 +60,7 @@ export interface InteractionSlot {
 
 export interface InteractionsRenderModel {
   expandedAccordionId: string;
-  slots: InteractionSlot[];
+  slots: readonly InteractionSlot[];
 }
 
 export interface InteractionsController {
@@ -68,7 +75,7 @@ export interface InteractionsControllerOptions {
   onShowInfoTooltip(
     target: HTMLElement,
     infoTooltip: InteractionInfoTooltip,
-    browserAvatars: unknown
+    browserAvatars: InteractionBrowserAvatars | undefined
   ): void;
   onToggleAccordion(accordionId: string): void;
 }
@@ -158,7 +165,7 @@ function InteractionInfoButton({
   infoTooltip,
   options
 }: {
-  browserAvatars: unknown;
+  browserAvatars: InteractionBrowserAvatars | undefined;
   infoTooltip: InteractionInfoTooltip;
   options: InteractionsControllerOptions;
 }) {
@@ -218,7 +225,7 @@ function InteractionLinkAffordance({
     event: ReactMouseEvent<HTMLAnchorElement> |
       ReactFocusEvent<HTMLAnchorElement>
   ): void => {
-    options.onShowInfoTooltip(event.currentTarget, tooltipModel, null);
+    options.onShowInfoTooltip(event.currentTarget, tooltipModel, undefined);
   };
   return (
     <a

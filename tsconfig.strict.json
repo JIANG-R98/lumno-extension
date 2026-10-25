@@ -15,6 +15,7 @@
     "src/content/**/*.ts",
     "src/overlay/**/*.ts",
     "src/options/**/*.ts",
+    "src/onboarding/**/*.ts",
     "src/popup/**/*.ts"
   ],
   "exclude": [

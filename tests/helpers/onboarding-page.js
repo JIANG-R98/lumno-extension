@@ -73,6 +73,8 @@ async function createOnboardingPage(options) {
   };
   window.matchMedia = (media) => ({ matches: false, media, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
   window.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
+  // JSDOM has none; the page copies the English text for a translated language.
+  window.structuredClone = structuredClone;
   window.IntersectionObserver = class { observe() {} unobserve() {} disconnect() {} };
   window.HTMLElement.prototype.scrollIntoView = function() {};
   window.Element.prototype.animate = function() {

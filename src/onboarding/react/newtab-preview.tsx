@@ -24,7 +24,7 @@ export interface NewtabPreviewItem {
 export interface NewtabPreviewModel {
   ariaLabel: string;
   bookmarkManagerLabel: string;
-  bookmarks: NewtabPreviewItem[];
+  bookmarks: readonly NewtabPreviewItem[];
   bookmarksSectionTitle: string;
   hoverHoldMs: number;
   hoverMoveMs: number;
@@ -35,7 +35,7 @@ export interface NewtabPreviewModel {
   previousLabelTemplate: string;
   query: string;
   recentSectionTitle: string;
-  recentSites: NewtabPreviewItem[];
+  recentSites: readonly NewtabPreviewItem[];
   reducedMotion: boolean;
   searchAriaLabel: string;
   searchPlaceholder: string;

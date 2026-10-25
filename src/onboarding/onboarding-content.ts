@@ -1,9 +1,330 @@
-// @ts-nocheck
 import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
 import * as SETTINGS from '../domain/settings';
+
+// The copy one language reads; every written locale has all of it.
+interface TitleCycleItem {
+  id: string;
+  label: string;
+  tone: string;
+}
+
+interface TitleCycle {
+  prefix: string;
+  items: readonly TitleCycleItem[];
+}
+
+interface TitleLogo {
+  label: string;
+  src: string;
+}
+
+interface SlideHeadingText {
+  title: string;
+  // How the title breaks into lines; a language that wraps well leaves it out.
+  titleLines?: readonly string[];
+  body: string;
+}
+
+interface OverlayResultText {
+  type: string;
+  title: string;
+  detail?: string;
+  sourceTag?: string;
+  sourceTagKind?: string;
+  favicon?: string;
+  actionTagLabel?: string;
+  visitButtonLabel: string;
+  active?: boolean;
+  historyDeletable?: boolean;
+}
+
+interface PreviewBookmarkText {
+  title: string;
+  type: string;
+  previewUrls: readonly string[];
+}
+
+interface PreviewRecentSiteText {
+  title: string;
+  siteName: string;
+  url: string;
+  urlText: string;
+  accentRgb: readonly number[];
+}
+
+interface SiteSearchCaseText {
+  kind: string;
+  label: string;
+  triggerQuery: string;
+  modeLabel: string;
+  prefixLabel: string;
+  promptQuery: string;
+  // Left out once translated, so the typed query sizes itself.
+  promptWidth?: string;
+  favicon: string;
+  iconClass: string;
+  resultTitle: string;
+  actionLabel: string;
+  brandAccentRgb: readonly number[];
+}
+
+interface FeatureCardText {
+  art: string;
+  artSize?: { width: number; height: number };
+  tone: string;
+  title: string;
+  body: string;
+}
+
+interface OnboardingRuntimeCopy {
+  misc: Readonly<Record<
+    'infoLabel' | 'browserNameSeparator' | 'browserAvatarSuffix' | 'openLabel' | 'searchLabel' | 'goLabel' |
+    'removeHistoryLabel' | 'newtabSearchPlaceholder' | 'settingsLabel' | 'previousLabelTemplate' |
+    'nextLabelTemplate' | 'debugBookmarkCascadeLabel' | 'feedbackLabel' | 'wallpaperLabel' |
+    'siteSearchDemoAriaLabel' | 'newtabSearchPreviewAriaLabel' | 'newtabPreviewAriaLabel' |
+    'openItemAriaTemplate' | 'sectionModeRecentLabel' | 'sectionModeBookmarksLabel' | 'bookmarkManagerLabel' |
+    'pageStripAriaTemplate' | 'pageSegmentAriaTemplate' | 'featureCardAriaJoiner' | 'principlesAriaLabel' |
+    'practicalFeaturesAriaLabel',
+    string
+  >>;
+  lumnoOverlay: { query: string; results: readonly OverlayResultText[] };
+  newtabPreview: {
+    query: string;
+    sections: { bookmarks: string; recent: string };
+    bookmarks: readonly PreviewBookmarkText[];
+    recentSites: readonly PreviewRecentSiteText[];
+  };
+  siteSearchDemo: { tabHintTemplate: string; cases: readonly SiteSearchCaseText[] };
+  featureCards: readonly FeatureCardText[];
+  featureAwards: readonly { lines: readonly string[] }[];
+}
+
+interface OnboardingCopyText {
+  intro: {
+    title: string;
+    titleLines: readonly string[];
+    titleCycle: TitleCycle;
+    body: string;
+    rows: Readonly<Record<
+      'trust' | 'browser' | 'compatibility' | 'githubLabel' | 'githubTooltip' | 'browserTooltipLabel' |
+      'compatibilityTooltipLabel' | 'compatibilityTooltip' | 'browserAvatarPrefix' | 'browserAvatarSuffix',
+      string
+    >>;
+    primaryAction: string;
+  };
+  setup: SlideHeadingText & {
+    diaLabel: string;
+    diaText: string;
+    shortcutsLink: string;
+    localFileLabel: string;
+    localFileText: string;
+    detailsLink: string;
+    shortcutActionTooltip: string;
+  };
+  search: SlideHeadingText;
+  newtab: SlideHeadingText & { supportList: string; supportTooltip: string };
+  finish: SlideHeadingText & { primaryAction: string; ratingAction: string; settingsAction: string; helpLabel: string };
+  actions: { next: string; back: string; changeShortcut: string };
+  runtimeCopy: OnboardingRuntimeCopy;
+}
+
+type WrittenLocale = 'zh_CN' | 'zh_TW' | 'ja' | 'en';
+
+// Rows and actions that only apply to one browser family carry
+// browserOnly; the page hides them elsewhere (see browser-profile.ts).
+type BrowserOnly = 'chromium' | 'firefox';
+
+interface SlideCopy {
+  eyebrow: string;
+  title: string;
+  body: string;
+  note?: string;
+  titleLines?: readonly string[];
+  titleLogo?: TitleLogo;
+  titleCycle?: TitleCycle;
+}
+
+interface SlideAction {
+  actionId: string;
+  label: string;
+  icon: string;
+  tooltip?: string;
+  tooltipMaxWidth?: number;
+  browserOnly?: BrowserOnly;
+}
+
+interface SlideActions {
+  primary: SlideAction | null;
+  secondary: SlideAction | null;
+  ghost: SlideAction | null;
+}
+
+interface BrowserAvatar {
+  id: string;
+  name: string;
+  src: string;
+}
+
+interface BrowserAvatars {
+  prefix: string;
+  suffix: string;
+  browsers: readonly BrowserAvatar[];
+}
+
+interface InfoTooltip {
+  icon: string;
+  label: string;
+  type: string;
+  text: string;
+}
+
+interface LinkButton {
+  icon: string;
+  label: string;
+  tooltip: string;
+  href: string;
+}
+
+interface AccordionLink {
+  label: string;
+  href: string;
+  actionId?: string;
+}
+
+interface Accordion {
+  icon: string;
+  text: string;
+  expandedByDefault: boolean;
+  links?: readonly AccordionLink[];
+}
+
+// A row of the left panel as a slide writes it.
+interface InteractionRowSource {
+  kind: string;
+  icon: string;
+  label: string;
+  actionId?: string;
+  accordionId?: string;
+  description?: string;
+  trailingIcon?: string;
+  browserOnly?: BrowserOnly;
+  browserAvatars?: BrowserAvatars;
+  infoTooltip?: Partial<InfoTooltip>;
+  linkButton?: Partial<LinkButton>;
+  accordion?: { icon: string; text: string; expandedByDefault: boolean; links?: readonly AccordionLink[] };
+}
+
+// A row of the left panel as the page renders it.
+interface InteractionSlot {
+  id: string;
+  kind: string;
+  actionId: string;
+  accordionId?: string;
+  icon?: string;
+  label: string;
+  description: string;
+  trailingIcon?: string;
+  browserOnly?: BrowserOnly;
+  browserAvatars?: BrowserAvatars;
+  infoTooltip?: InfoTooltip;
+  linkButton?: LinkButton;
+  accordion?: Accordion;
+}
+
+interface SlideActionSource {
+  actionId: string;
+  label: string;
+  icon?: string;
+  tooltip?: string;
+  tooltipMaxWidth?: number;
+  browserOnly?: BrowserOnly;
+}
+
+interface SlideSlot {
+  id: string;
+  copy: SlideCopy;
+  visualKind: string;
+  visualVisible: boolean;
+  interactionRows?: readonly InteractionRowSource[];
+  cursorEnabled: boolean;
+  actions: { primary?: SlideActionSource; secondary?: SlideActionSource; ghost?: SlideActionSource };
+}
+
+interface OnboardingSlide {
+  id: string;
+  sequence: number;
+  copy: SlideCopy;
+  left: {
+    copySlotId: string;
+    interactionMountId: string;
+    interactionSlots: readonly InteractionSlot[];
+  };
+  visual: {
+    mountId: string;
+    kind: string;
+    renderer: string;
+    acceptsRealUi: boolean;
+    visible: boolean;
+  };
+  actions: SlideActions;
+  cursor: {
+    mountId: string;
+    enabled: boolean;
+  };
+}
+
+interface OnboardingBlueprint {
+  brand: string;
+  locale: string;
+  htmlLang: string;
+  mode: string;
+  shell: {
+    rootId: string;
+    copyPanelId: string;
+    interactionMountId: string;
+    visualStageId: string;
+    cursorLayerId: string;
+  };
+  runtimeCopy: OnboardingRuntimeCopy;
+  slides: readonly OnboardingSlide[];
+}
+
+type OnboardingDirection = 'forward' | 'back' | 'none';
+
+interface OnboardingState {
+  index: number;
+  previousIndex: number;
+  direction: OnboardingDirection;
+  count: number;
+}
+
+type OnboardingEvent =
+  | { type: 'NEXT' }
+  | { type: 'PREV' }
+  | { type: 'HOME' }
+  | { type: 'END' }
+  | { type: 'GOTO'; index: number };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+// Freezes a value and everything in it.
+function deepFreeze(value: unknown): void {
+  if (typeof value !== 'object' || value === null || Object.isFrozen(value)) {
+    return;
+  }
+  Object.values(value).forEach((child: unknown) => deepFreeze(child));
+  Object.freeze(value);
+}
+
+function frozen<T>(value: T): T {
+  deepFreeze(value);
+  return value;
+}
 // zh_CN, zh_TW, ja and en are written below; every other UI language
 // translates the English copy into src/onboarding/locales/<locale>.json.
-const SUPPORTED_LOCALES = Object.freeze(SETTINGS.UI_LOCALES.map((entry) => entry.id));
+const SUPPORTED_LOCALES: readonly string[] = Object.freeze(SETTINGS.UI_LOCALES.map((entry) => entry.id));
 // Ids, URLs, icons, sizes and the demo's brand names stay as written in
 // every language; every other string in the copy is translated.
 const UNTRANSLATED_COPY_KEYS = new Set([
@@ -12,18 +333,17 @@ const UNTRANSLATED_COPY_KEYS = new Set([
   'sourceTagKind', 'promptWidth'
 ]);
 // Translated copy by locale, filled in by registerOnboardingLocaleText().
-const TRANSLATED_LOCALE_TEXT = new Map();
+const TRANSLATED_LOCALE_TEXT = new Map<string, OnboardingCopyText>();
 const LUMNO_GITHUB_HOMEPAGE_URL = 'https://github.com/kubai087/lumno-extension';
-const EMPTY_COPY = Object.freeze({ eyebrow: '', title: '', body: '' });
 const SHORTCUTS_PAGE_URL = 'chrome://extensions/shortcuts';
 const EXTENSION_DETAILS_URL = 'chrome://extensions/?id=nkbkcafoocmnnconoijmhloecgamfcai';
 const VISUAL_MOUNT_ID = 'onboarding-visual-stage';
 const CURSOR_MOUNT_ID = 'onboarding-cursor-layer';
-const TITLE_LOGO = Object.freeze({
+const TITLE_LOGO: TitleLogo = Object.freeze({
   label: 'Lumno',
   src: '../../assets/images/lumno.png'
 });
-const BROWSER_AVATARS = Object.freeze([
+const BROWSER_AVATARS: readonly BrowserAvatar[] = Object.freeze([
   Object.freeze({ id: 'chrome', name: 'Chrome', src: '../../assets/images/browser-logos/google-chrome-2022.svg' }),
   Object.freeze({ id: 'edge', name: 'Edge', src: '../../assets/images/browser-logos/microsoft-edge-2019.svg' }),
   Object.freeze({ id: 'firefox', name: 'Firefox', src: '../../assets/images/browser-logos/firefox.svg' }),
@@ -32,7 +352,7 @@ const BROWSER_AVATARS = Object.freeze([
   Object.freeze({ id: 'comet', name: 'Comet', src: '../../assets/images/browser-logos/comet.jpg' })
 ]);
 
-const LOCALE_TEXT = Object.freeze({
+const LOCALE_TEXT: Readonly<Record<WrittenLocale, OnboardingCopyText>> = Object.freeze({
   zh_CN: Object.freeze({
     intro: Object.freeze({
       title: '让浏览器的书签一搜即达',
@@ -641,16 +961,16 @@ const LOCALE_TEXT = Object.freeze({
   })
 });
 
-function normalizeLocale(locale) {
+function normalizeLocale(locale: unknown): string {
   return SETTINGS.normalizeLocale(locale);
 }
 
-function normalizeShortcutValue(value) {
+function normalizeShortcutValue(value: unknown): string {
   return String(value || '').trim().replace(/\s*\+\s*/g, '+');
 }
 
-function getShortcutKeyLabel(keyToken, preferSymbols) {
-  const keyMapMac = {
+function getShortcutKeyLabel(keyToken: string, preferSymbols: boolean): string {
+  const keyMapMac: Record<string, string> = {
     ArrowUp: '↑',
     ArrowDown: '↓',
     ArrowLeft: '←',
@@ -674,7 +994,7 @@ function getShortcutKeyLabel(keyToken, preferSymbols) {
     BracketLeft: '[',
     BracketRight: ']'
   };
-  const keyMapDefault = {
+  const keyMapDefault: Record<string, string> = {
     ArrowUp: 'Up',
     ArrowDown: 'Down',
     ArrowLeft: 'Left',
@@ -692,12 +1012,11 @@ function getShortcutKeyLabel(keyToken, preferSymbols) {
     BracketLeft: '[',
     BracketRight: ']'
   };
-  return preferSymbols
-    ? (keyMapMac[keyToken] || keyToken)
-    : (keyMapDefault[keyToken] || keyToken);
+  const keyMap = preferSymbols ? keyMapMac : keyMapDefault;
+  return Object.hasOwn(keyMap, keyToken) ? keyMap[keyToken] : keyToken;
 }
 
-function getModifierSymbol(token) {
+function getModifierSymbol(token: string): string {
   const lower = String(token || '').toLowerCase();
   if (lower === 'command' || lower === 'cmd' || lower === 'meta' || lower === 'super' || token === '⌘') {
     return '⌘';
@@ -714,17 +1033,17 @@ function getModifierSymbol(token) {
   return '';
 }
 
-function normalizeShortcutTokenText(token) {
+function normalizeShortcutTokenText(token: string): string {
   const text = String(token || '');
   return text.length > 1 ? text.toUpperCase() : text;
 }
 
-function getCompactMacShortcutTokens(value) {
-  const compact = String(value || '').trim().replace(/\s+/g, '');
+function getCompactMacShortcutTokens(value: string): string[] | null {
+  const compact = value.trim().replace(/\s+/g, '');
   if (!compact || compact.includes('+') || !/[⌘⇧⌃⌥]/.test(compact)) {
     return null;
   }
-  const tokens = [];
+  const tokens: string[] = [];
   let index = 0;
   while (index < compact.length) {
     const symbol = getModifierSymbol(compact[index]);
@@ -742,7 +1061,7 @@ function getCompactMacShortcutTokens(value) {
   return tokens.map(normalizeShortcutTokenText);
 }
 
-function getShortcutDisplayTokens(shortcut, options) {
+function getShortcutDisplayTokens(shortcut: unknown, options?: { preferSymbols?: boolean } | null): string[] {
   const value = normalizeShortcutValue(shortcut);
   if (!value) {
     return [];
@@ -756,10 +1075,10 @@ function getShortcutDisplayTokens(shortcut, options) {
     return [];
   }
   const preferSymbols = Boolean(options && options.preferSymbols) ||
-    parts.some((part) => /^[⌘⇧⌃⌥]$/.test(String(part || ''))) ||
-    parts.some((part) => /^(?:Command|Cmd|Meta|Super)$/i.test(String(part || '')));
-  const keyToken = parts.pop();
-  const tokens = [];
+    parts.some((part) => /^[⌘⇧⌃⌥]$/.test(part)) ||
+    parts.some((part) => /^(?:Command|Cmd|Meta|Super)$/i.test(part));
+  const keyToken = parts.pop() || '';
+  const tokens: string[] = [];
   parts.forEach((token) => {
     const symbol = getModifierSymbol(token);
     if (preferSymbols && symbol) {
@@ -772,7 +1091,7 @@ function getShortcutDisplayTokens(shortcut, options) {
   return tokens.map(normalizeShortcutTokenText);
 }
 
-function formatShortcutForDisplay(shortcut, options) {
+function formatShortcutForDisplay(shortcut: unknown, options?: { preferSymbols?: boolean } | null): string {
   const tokens = getShortcutDisplayTokens(shortcut, options);
   if (tokens.length === 0) {
     return '';
@@ -781,17 +1100,16 @@ function formatShortcutForDisplay(shortcut, options) {
   return tokens.join(shouldUseCompactSymbols ? '' : '+');
 }
 
-function parseShortcutHotkey(shortcut) {
+function parseShortcutHotkey(shortcut: unknown) {
   return SHORTCUT_KEY_MATCHER.parseShortcut(normalizeShortcutValue(shortcut));
 }
 
-function shortcutHotkeyMatchesEvent(shortcut, event) {
+function shortcutHotkeyMatchesEvent(shortcut: unknown, event: KeyboardEvent): boolean {
   return SHORTCUT_KEY_MATCHER.eventMatchesShortcut(event, parseShortcutHotkey(shortcut));
 }
 
-function cloneCopy(copy) {
-  const source = copy || EMPTY_COPY;
-  const cloned = {
+function cloneCopy(source: SlideCopy): SlideCopy {
+  const cloned: SlideCopy = {
     eyebrow: source.eyebrow || '',
     title: source.title || '',
     body: source.body || ''
@@ -799,7 +1117,7 @@ function cloneCopy(copy) {
   if (source.note) {
     cloned.note = String(source.note || '');
   }
-  if (Array.isArray(source.titleLines) && source.titleLines.length > 0) {
+  if (source.titleLines && source.titleLines.length > 0) {
     cloned.titleLines = Object.freeze(source.titleLines.map((line) => String(line || '')));
   }
   const titleLogo = cloneTitleLogo(source.titleLogo);
@@ -813,7 +1131,7 @@ function cloneCopy(copy) {
   return cloned;
 }
 
-function cloneTitleLogo(titleLogo) {
+function cloneTitleLogo(titleLogo: TitleLogo | undefined): TitleLogo | null {
   const src = String(titleLogo && titleLogo.src || '').trim();
   if (!src) {
     return null;
@@ -824,8 +1142,8 @@ function cloneTitleLogo(titleLogo) {
   });
 }
 
-function cloneTitleCycle(titleCycle) {
-  if (!titleCycle || !Array.isArray(titleCycle.items) || titleCycle.items.length === 0) {
+function cloneTitleCycle(titleCycle: TitleCycle | undefined): TitleCycle | null {
+  if (!titleCycle || titleCycle.items.length === 0) {
     return null;
   }
   const items = titleCycle.items.map((item) => ({
@@ -842,17 +1160,18 @@ function cloneTitleCycle(titleCycle) {
   });
 }
 
-// Rows and actions that only apply to one browser family carry
-// browserOnly; the page hides them elsewhere (see browser-profile.ts).
-function copyBrowserOnly(source, target) {
+function copyBrowserOnly<T extends { browserOnly?: BrowserOnly }>(
+  source: { browserOnly?: BrowserOnly } | null | undefined,
+  target: T
+): T {
   if (source && (source.browserOnly === 'chromium' || source.browserOnly === 'firefox')) {
     target.browserOnly = source.browserOnly;
   }
   return target;
 }
 
-function cloneAction(action) {
-  if (!action || typeof action !== 'object') {
+function cloneAction(action: SlideActionSource | undefined): SlideAction | null {
+  if (!action) {
     return null;
   }
   const label = String(action.label || '').trim();
@@ -860,7 +1179,7 @@ function cloneAction(action) {
   if (!label || !actionId) {
     return null;
   }
-  const cloned = {
+  const cloned: SlideAction = {
     actionId,
     label,
     icon: String(action.icon || '').trim()
@@ -876,8 +1195,7 @@ function cloneAction(action) {
   return Object.freeze(copyBrowserOnly(action, cloned));
 }
 
-function cloneActions(actions) {
-  const source = actions || {};
+function cloneActions(source: SlideSlot['actions']): SlideActions {
   return Object.freeze({
     primary: cloneAction(source.primary),
     secondary: cloneAction(source.secondary),
@@ -885,8 +1203,8 @@ function cloneActions(actions) {
   });
 }
 
-function cloneBrowserAvatars(browserAvatars) {
-  if (!browserAvatars || !Array.isArray(browserAvatars.browsers) || browserAvatars.browsers.length === 0) {
+function cloneBrowserAvatars(browserAvatars: BrowserAvatars | undefined): BrowserAvatars | null {
+  if (!browserAvatars || browserAvatars.browsers.length === 0) {
     return null;
   }
   return {
@@ -900,8 +1218,8 @@ function cloneBrowserAvatars(browserAvatars) {
   };
 }
 
-function cloneInfoTooltip(infoTooltip) {
-  if (!infoTooltip || typeof infoTooltip !== 'object') {
+function cloneInfoTooltip(infoTooltip: Partial<InfoTooltip> | undefined): InfoTooltip | null {
+  if (!infoTooltip) {
     return null;
   }
   const text = String(infoTooltip.text || '').trim();
@@ -917,8 +1235,8 @@ function cloneInfoTooltip(infoTooltip) {
   };
 }
 
-function cloneLinkButton(linkButton) {
-  if (!linkButton || typeof linkButton !== 'object') {
+function cloneLinkButton(linkButton: Partial<LinkButton> | undefined): LinkButton | null {
+  if (!linkButton) {
     return null;
   }
   const href = String(linkButton.href || '').trim();
@@ -935,43 +1253,47 @@ function cloneLinkButton(linkButton) {
   };
 }
 
-function cloneAccordionLinks(links) {
-  if (!Array.isArray(links)) {
-    return [];
-  }
-  return links
-    .map((link) => {
-      const label = String(link && link.label || '').trim();
-      const href = String(link && link.href || '').trim();
-      const actionId = String(link && link.actionId || '').trim();
-      if (!label || !href || !/^(?:https?:\/\/|chrome:\/\/)/i.test(href)) {
-        return null;
-      }
-      const clonedLink = { label, href };
-      if (actionId) {
-        clonedLink.actionId = actionId;
-      }
-      return Object.freeze(clonedLink);
-    })
-    .filter(Boolean);
+function cloneAccordionLinks(links: readonly AccordionLink[] | undefined): AccordionLink[] {
+  const cloned: AccordionLink[] = [];
+  (links || []).forEach((link) => {
+    const label = String(link.label || '').trim();
+    const href = String(link.href || '').trim();
+    const actionId = String(link.actionId || '').trim();
+    if (!label || !href || !/^(?:https?:\/\/|chrome:\/\/)/i.test(href)) {
+      return;
+    }
+    const clonedLink: AccordionLink = { label, href };
+    if (actionId) {
+      clonedLink.actionId = actionId;
+    }
+    cloned.push(Object.freeze(clonedLink));
+  });
+  return cloned;
 }
 
-function getLocaleText(locale) {
+function isWrittenLocale(locale: string): locale is WrittenLocale {
+  return locale === 'zh_CN' || locale === 'zh_TW' || locale === 'ja' || locale === 'en';
+}
+
+function getLocaleText(locale: unknown): OnboardingCopyText {
   const normalized = normalizeLocale(locale);
-  return LOCALE_TEXT[normalized] || TRANSLATED_LOCALE_TEXT.get(normalized) || LOCALE_TEXT.en;
+  if (isWrittenLocale(normalized)) {
+    return LOCALE_TEXT[normalized];
+  }
+  return TRANSLATED_LOCALE_TEXT.get(normalized) || LOCALE_TEXT.en;
 }
 
 // The English copy's translatable strings, keyed by their path
 // ("intro.titleLines.0"): the source a translated locale file follows.
 // Another written locale gives its own strings, for translators to compare.
-function getOnboardingTranslationSource(locale = 'en') {
-  const source = {};
-  const walk = (value, path) => {
+function getOnboardingTranslationSource(locale = 'en'): Record<string, string> {
+  const source: Record<string, string> = {};
+  const walk = (value: unknown, path: string[]): void => {
     if (typeof value === 'string') {
       source[path.join('.')] = value;
       return;
     }
-    if (value && typeof value === 'object') {
+    if (isRecord(value)) {
       Object.keys(value).forEach((key) => {
         if (!UNTRANSLATED_COPY_KEYS.has(key)) {
           walk(value[key], path.concat(key));
@@ -979,56 +1301,49 @@ function getOnboardingTranslationSource(locale = 'en') {
       });
     }
   };
-  walk(LOCALE_TEXT[locale] || LOCALE_TEXT.en, []);
+  walk(isWrittenLocale(locale) ? LOCALE_TEXT[locale] : LOCALE_TEXT.en, []);
   return source;
 }
 
-function needsOnboardingLocaleText(locale) {
+function needsOnboardingLocaleText(locale: unknown): boolean {
   const normalized = normalizeLocale(locale);
-  return !LOCALE_TEXT[normalized] && !TRANSLATED_LOCALE_TEXT.has(normalized);
+  return !isWrittenLocale(normalized) && !TRANSLATED_LOCALE_TEXT.has(normalized);
 }
 
 // Lays a locale file's strings over the English copy. Paths the file
 // misses keep the English text.
-function registerOnboardingLocaleText(locale, translations) {
+function registerOnboardingLocaleText(locale: unknown, translations: unknown): void {
   const normalized = normalizeLocale(locale);
-  if (LOCALE_TEXT[normalized] || !translations || typeof translations !== 'object') {
+  if (isWrittenLocale(normalized) || !isRecord(translations)) {
     return;
   }
-  const text = JSON.parse(JSON.stringify(LOCALE_TEXT.en));
+  const text = structuredClone(LOCALE_TEXT.en);
   Object.keys(getOnboardingTranslationSource()).forEach((path) => {
     const value = translations[path];
     if (typeof value !== 'string' || !value) {
       return;
     }
     const keys = path.split('.');
-    const parent = keys.slice(0, -1).reduce((node, key) => node[key], text);
-    parent[keys[keys.length - 1]] = value;
+    const last = keys[keys.length - 1];
+    let parent: unknown = text;
+    keys.slice(0, -1).forEach((key) => {
+      parent = isRecord(parent) ? parent[key] : undefined;
+    });
+    if (!isRecord(parent)) {
+      return;
+    }
+    parent[last] = value;
     // The demo's typed query sizes itself from its characters once translated.
-    if (keys[keys.length - 1] === 'promptQuery') {
+    if (last === 'promptQuery') {
       delete parent.promptWidth;
     }
   });
-  TRANSLATED_LOCALE_TEXT.set(normalized, cloneDeepFrozen(text));
+  TRANSLATED_LOCALE_TEXT.set(normalized, frozen(text));
 }
 
-function cloneDeepFrozen(value) {
-  if (Array.isArray(value)) {
-    return Object.freeze(value.map(cloneDeepFrozen));
-  }
-  if (value && typeof value === 'object') {
-    const cloned = {};
-    Object.keys(value).forEach((key) => {
-      cloned[key] = cloneDeepFrozen(value[key]);
-    });
-    return Object.freeze(cloned);
-  }
-  return value;
-}
-
-function createCompatibilityRow(text, options = {}) {
-  const rows = text.intro.rows || {};
-  const row = {
+function createCompatibilityRow(text: OnboardingCopyText, options: { showDescription?: boolean } = {}): InteractionRowSource {
+  const rows = text.intro.rows;
+  const row: InteractionRowSource = {
     kind: 'compatibility-row',
     icon: 'ri-puzzle-line',
     label: rows.compatibility
@@ -1045,8 +1360,8 @@ function createCompatibilityRow(text, options = {}) {
   return Object.freeze(row);
 }
 
-function createIntroRows(text) {
-  const rows = text.intro.rows || {};
+function createIntroRows(text: OnboardingCopyText): readonly InteractionRowSource[] {
+  const rows = text.intro.rows;
   return Object.freeze([
     Object.freeze({
       kind: 'trust-row',
@@ -1078,7 +1393,7 @@ function createIntroRows(text) {
   ]);
 }
 
-function createSetupRows(text) {
+function createSetupRows(text: OnboardingCopyText): readonly InteractionRowSource[] {
   return Object.freeze([
     Object.freeze({
       kind: 'accordion-row',
@@ -1124,8 +1439,8 @@ function createSetupRows(text) {
   ]);
 }
 
-function createSlideSlots(text) {
-  const actions = text.actions || {};
+function createSlideSlots(text: OnboardingCopyText): readonly SlideSlot[] {
+  const actions = text.actions;
   return Object.freeze([
     Object.freeze({
       id: 'intro',
@@ -1267,64 +1582,54 @@ function createSlideSlots(text) {
   ]);
 }
 
-function createInteractionSlots(slot, slideId) {
-  if (Array.isArray(slot.interactionRows)) {
-    return slot.interactionRows.map((row, index) => {
-      const interactionSlot = {
-        id: `${slideId}-interaction-${index + 1}`,
-        kind: row.kind || 'info-row',
-        actionId: String(row.actionId || ''),
-        accordionId: String(row.accordionId || '').trim(),
-        icon: row.icon || '',
-        label: row.label || '',
-        description: String(row.description || '')
+function createInteractionSlots(slot: SlideSlot, slideId: string): InteractionSlot[] {
+  return (slot.interactionRows || []).map((row, index) => {
+    const interactionSlot: InteractionSlot = {
+      id: `${slideId}-interaction-${index + 1}`,
+      kind: row.kind || 'info-row',
+      actionId: String(row.actionId || ''),
+      accordionId: String(row.accordionId || '').trim(),
+      icon: row.icon || '',
+      label: row.label || '',
+      description: String(row.description || '')
+    };
+    if (row.trailingIcon) {
+      interactionSlot.trailingIcon = String(row.trailingIcon);
+    }
+    copyBrowserOnly(row, interactionSlot);
+    const browserAvatars = cloneBrowserAvatars(row.browserAvatars);
+    if (browserAvatars && browserAvatars.browsers.length > 0) {
+      interactionSlot.browserAvatars = Object.freeze({
+        prefix: browserAvatars.prefix,
+        suffix: browserAvatars.suffix,
+        browsers: Object.freeze(browserAvatars.browsers.map((browser) => Object.freeze(browser)))
+      });
+    }
+    const infoTooltip = cloneInfoTooltip(row.infoTooltip);
+    if (infoTooltip) {
+      interactionSlot.infoTooltip = Object.freeze(infoTooltip);
+    }
+    const linkButton = cloneLinkButton(row.linkButton);
+    if (linkButton) {
+      interactionSlot.linkButton = Object.freeze(linkButton);
+    }
+    if (row.accordion && typeof row.accordion === 'object') {
+      const accordionLinks = cloneAccordionLinks(row.accordion.links);
+      const accordion: Accordion = {
+        icon: String(row.accordion.icon || 'ri-arrow-left-s-line').trim() || 'ri-arrow-left-s-line',
+        text: String(row.accordion.text || ''),
+        expandedByDefault: row.accordion.expandedByDefault === true
       };
-      if (row.trailingIcon) {
-        interactionSlot.trailingIcon = String(row.trailingIcon);
+      if (accordionLinks.length > 0) {
+        accordion.links = Object.freeze(accordionLinks);
       }
-      copyBrowserOnly(row, interactionSlot);
-      const browserAvatars = cloneBrowserAvatars(row.browserAvatars);
-      if (browserAvatars && browserAvatars.browsers.length > 0) {
-        interactionSlot.browserAvatars = Object.freeze({
-          prefix: browserAvatars.prefix,
-          suffix: browserAvatars.suffix,
-          browsers: Object.freeze(browserAvatars.browsers.map((browser) => Object.freeze(browser)))
-        });
-      }
-      const infoTooltip = cloneInfoTooltip(row.infoTooltip);
-      if (infoTooltip) {
-        interactionSlot.infoTooltip = Object.freeze(infoTooltip);
-      }
-      const linkButton = cloneLinkButton(row.linkButton);
-      if (linkButton) {
-        interactionSlot.linkButton = Object.freeze(linkButton);
-      }
-      if (row.accordion && typeof row.accordion === 'object') {
-        const accordionLinks = cloneAccordionLinks(row.accordion.links);
-        const accordion = {
-          icon: String(row.accordion.icon || 'ri-arrow-left-s-line').trim() || 'ri-arrow-left-s-line',
-          text: String(row.accordion.text || ''),
-          expandedByDefault: row.accordion.expandedByDefault === true
-        };
-        if (accordionLinks.length > 0) {
-          accordion.links = Object.freeze(accordionLinks);
-        }
-        interactionSlot.accordion = Object.freeze(accordion);
-      }
-      return Object.freeze(interactionSlot);
-    });
-  }
-  const kinds = Array.isArray(slot.interactionKinds) ? slot.interactionKinds : [];
-  return kinds.map((kind, index) => Object.freeze({
-    id: `${slideId}-interaction-${index + 1}`,
-    kind,
-    actionId: index === 0 ? 'next' : '',
-    label: '',
-    description: ''
-  }));
+      interactionSlot.accordion = Object.freeze(accordion);
+    }
+    return Object.freeze(interactionSlot);
+  });
 }
 
-function createSlide(slot, index) {
+function createSlide(slot: SlideSlot, index: number): OnboardingSlide {
   return Object.freeze({
     id: slot.id,
     sequence: index + 1,
@@ -1344,22 +1649,21 @@ function createSlide(slot, index) {
     actions: cloneActions(slot.actions),
     cursor: Object.freeze({
       mountId: CURSOR_MOUNT_ID,
-      enabled: slot.cursorEnabled,
-      path: Object.freeze([])
+      enabled: slot.cursorEnabled
     })
   });
 }
 
-function getSupportedLocales() {
+function getSupportedLocales(): string[] {
   return SUPPORTED_LOCALES.slice();
 }
 
-function getOnboardingRuntimeCopy(locale) {
-  const text = getLocaleText(locale);
-  return cloneDeepFrozen(text.runtimeCopy || LOCALE_TEXT.en.runtimeCopy);
+// The copy is frozen through and through, so callers share it as it is.
+function getOnboardingRuntimeCopy(locale: unknown): OnboardingRuntimeCopy {
+  return getLocaleText(locale).runtimeCopy;
 }
 
-function getOnboardingBlueprint(locale) {
+function getOnboardingBlueprint(locale: unknown): OnboardingBlueprint {
   const normalized = normalizeLocale(locale);
   const text = getLocaleText(normalized);
   return Object.freeze({
@@ -1375,11 +1679,11 @@ function getOnboardingBlueprint(locale) {
       cursorLayerId: CURSOR_MOUNT_ID
     }),
     runtimeCopy: getOnboardingRuntimeCopy(normalized),
-    slides: Object.freeze(createSlideSlots(text).map(createSlide))
+    slides: Object.freeze(createSlideSlots(text).map((slot, index) => createSlide(slot, index)))
   });
 }
 
-function clampIndex(count, index) {
+function clampIndex(count: number, index: number): number {
   const safeCount = Math.max(0, Number.isFinite(count) ? Math.floor(count) : 0);
   if (safeCount <= 0) {
     return 0;
@@ -1388,7 +1692,7 @@ function clampIndex(count, index) {
   return Math.min(Math.max(0, numericIndex), safeCount - 1);
 }
 
-function getDirection(previousIndex, nextIndex) {
+function getDirection(previousIndex: number, nextIndex: number): OnboardingDirection {
   if (nextIndex > previousIndex) {
     return 'forward';
   }
@@ -1398,7 +1702,7 @@ function getDirection(previousIndex, nextIndex) {
   return 'none';
 }
 
-function createOnboardingState(count, initialIndex) {
+function createOnboardingState(count: number, initialIndex: number): OnboardingState {
   const safeCount = Math.max(0, Number.isFinite(count) ? Math.floor(count) : 0);
   const index = clampIndex(safeCount, initialIndex);
   return {
@@ -1409,23 +1713,24 @@ function createOnboardingState(count, initialIndex) {
   };
 }
 
-function reduceOnboardingState(state, event) {
+function reduceOnboardingState(state: OnboardingState | null, event: OnboardingEvent | null): OnboardingState {
   const current = state || createOnboardingState(0, 0);
   const count = Math.max(0, Number.isFinite(current.count) ? Math.floor(current.count) : 0);
   const currentIndex = clampIndex(count, current.index);
-  const type = event && event.type ? String(event.type) : '';
   let nextIndex = currentIndex;
 
-  if (type === 'NEXT') {
-    nextIndex = clampIndex(count, currentIndex + 1);
-  } else if (type === 'PREV') {
-    nextIndex = clampIndex(count, currentIndex - 1);
-  } else if (type === 'GOTO') {
-    nextIndex = clampIndex(count, event.index);
-  } else if (type === 'HOME') {
-    nextIndex = 0;
-  } else if (type === 'END') {
-    nextIndex = clampIndex(count, count - 1);
+  if (event) {
+    if (event.type === 'NEXT') {
+      nextIndex = clampIndex(count, currentIndex + 1);
+    } else if (event.type === 'PREV') {
+      nextIndex = clampIndex(count, currentIndex - 1);
+    } else if (event.type === 'GOTO') {
+      nextIndex = clampIndex(count, event.index);
+    } else if (event.type === 'HOME') {
+      nextIndex = 0;
+    } else if (event.type === 'END') {
+      nextIndex = clampIndex(count, count - 1);
+    }
   }
 
   return {
@@ -1436,8 +1741,8 @@ function reduceOnboardingState(state, event) {
   };
 }
 
-function getSlideByIndex(blueprint, index) {
-  const slides = blueprint && Array.isArray(blueprint.slides) ? blueprint.slides : [];
+function getSlideByIndex(blueprint: OnboardingBlueprint | null, index: number): OnboardingSlide | null {
+  const slides = blueprint ? blueprint.slides : [];
   return slides[clampIndex(slides.length, index)] || null;
 }
 
@@ -1457,4 +1762,23 @@ export {
   createOnboardingState,
   reduceOnboardingState,
   getSlideByIndex
+};
+export type {
+  Accordion,
+  AccordionLink,
+  BrowserAvatars,
+  BrowserOnly,
+  InfoTooltip,
+  InteractionSlot,
+  LinkButton,
+  OnboardingBlueprint,
+  OnboardingCopyText,
+  OnboardingDirection,
+  OnboardingEvent,
+  OnboardingRuntimeCopy,
+  OnboardingSlide,
+  OnboardingState,
+  SlideAction,
+  SlideActions,
+  SlideCopy
 };

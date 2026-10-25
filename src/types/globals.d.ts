@@ -27,6 +27,13 @@ import type { createToastApi } from '../shared/react/toast';
 import type { createTranslationHelpApi } from '../options/react/translation-help';
 import type { createWebDavListApi } from '../options/react/webdav-list';
 import type { createPopupApi } from '../popup/react/popup-view';
+import type { createActionButtonsApi } from '../onboarding/react/action-buttons';
+import type { createBodyCopyApi } from '../onboarding/react/body-copy';
+import type { createCopyHeadingApi } from '../onboarding/react/copy-heading';
+import type { createCursorLayerApi } from '../onboarding/react/cursor-layer';
+import type { createInteractionsApi } from '../onboarding/react/interactions';
+import type { createPageStripApi } from '../onboarding/react/page-strip';
+import type { createVisualSurfaceApi } from '../onboarding/react/visual-surface';
 
 declare global {
   // The traditional-to-simplified Han table as pairs of characters, set by
@@ -91,6 +98,14 @@ declare global {
   var LumnoOptionsToast: ReturnType<typeof createToastApi> | undefined;
   var LumnoOptionsTranslationHelp: ReturnType<typeof createTranslationHelpApi> | undefined;
   var LumnoOptionsWebDavList: ReturnType<typeof createWebDavListApi> | undefined;
+  // Set by the onboarding page's React islands entry.
+  var LumnoOnboardingActions: ReturnType<typeof createActionButtonsApi> | undefined;
+  var LumnoOnboardingBodyCopy: ReturnType<typeof createBodyCopyApi> | undefined;
+  var LumnoOnboardingCopyHeading: ReturnType<typeof createCopyHeadingApi> | undefined;
+  var LumnoOnboardingCursorLayer: ReturnType<typeof createCursorLayerApi> | undefined;
+  var LumnoOnboardingInteractions: ReturnType<typeof createInteractionsApi> | undefined;
+  var LumnoOnboardingPageStrip: ReturnType<typeof createPageStripApi> | undefined;
+  var LumnoOnboardingVisualSurface: ReturnType<typeof createVisualSurfaceApi> | undefined;
   // Opens the tab switcher with the context the worker sends, read as
   // untrusted; set by src/overlay/tab-switcher.ts.
   var _x_extension_toggleTabSwitcher_2026_unique_: ((context: unknown) => TabSwitcherReply) | undefined;

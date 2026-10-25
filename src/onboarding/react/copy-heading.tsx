@@ -14,7 +14,7 @@ interface TitleCycleItem {
 }
 
 interface TitleCycle {
-  items?: TitleCycleItem[];
+  items?: readonly TitleCycleItem[];
   prefix?: string;
 }
 
@@ -31,7 +31,7 @@ export interface CopyHeadingRenderModel {
   swapDurationMs: number;
   title: string;
   titleCycle?: TitleCycle | null;
-  titleLines: string[];
+  titleLines: readonly string[];
   titleLogo?: TitleLogo | null;
 }
 

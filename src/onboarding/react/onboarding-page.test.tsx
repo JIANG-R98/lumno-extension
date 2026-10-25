@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import onboardingHtml from '../onboarding.html?raw';
-import * as onboardingContentModule from '../onboarding-content';
+import * as onboardingContent from '../onboarding-content';
 import { runPageBundle } from '../../../tests/react/page-bundles';
 import { createActionButtonsApi } from './action-buttons';
 import { createBodyCopyApi } from './body-copy';
@@ -12,22 +12,6 @@ import { createPageStripApi } from './page-strip';
 import { createVisualSurfaceApi } from './visual-surface';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
 
-interface OnboardingSlide {
-  id: string;
-  visual: { kind: string; visible: boolean };
-}
-
-type Runtime = typeof globalThis & Record<string, unknown>;
-
-// Typed by hand until the module has types of its own.
-const onboardingContent: {
-  getOnboardingBlueprint(locale: string): {
-    htmlLang: string;
-    slides: OnboardingSlide[];
-  };
-} = onboardingContentModule as unknown as typeof onboardingContent;
-
-const runtime = globalThis as Runtime;
 const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
 const VISUAL_ISLAND_BY_KIND: Record<string, string> = {
   'lumno-web-wordmark-surface': 'onboarding-lumno-wordmark-surface',
@@ -99,14 +83,14 @@ async function bootOnboardingPage(stored: Record<string, unknown> = {}) {
     addEventListener() {},
     removeEventListener() {}
   }));
-  runtime.LumnoOnboardingActions = createActionButtonsApi();
-  runtime.LumnoOnboardingBodyCopy = createBodyCopyApi();
-  runtime.LumnoOnboardingCopyHeading = createCopyHeadingApi();
-  runtime.LumnoOnboardingCursorLayer = createCursorLayerApi();
-  runtime.LumnoOnboardingInteractions = createInteractionsApi();
-  runtime.LumnoOnboardingPageStrip = createPageStripApi();
-  runtime.LumnoOnboardingVisualSurface = createVisualSurfaceApi();
-  runtime.LumnoTooltipView = createTooltipViewApi();
+  globalThis.LumnoOnboardingActions = createActionButtonsApi();
+  globalThis.LumnoOnboardingBodyCopy = createBodyCopyApi();
+  globalThis.LumnoOnboardingCopyHeading = createCopyHeadingApi();
+  globalThis.LumnoOnboardingCursorLayer = createCursorLayerApi();
+  globalThis.LumnoOnboardingInteractions = createInteractionsApi();
+  globalThis.LumnoOnboardingPageStrip = createPageStripApi();
+  globalThis.LumnoOnboardingVisualSurface = createVisualSurfaceApi();
+  globalThis.LumnoTooltipView = createTooltipViewApi();
   vi.resetModules();
   await runPageBundle('onboarding-preload');
   trackListeners(document);

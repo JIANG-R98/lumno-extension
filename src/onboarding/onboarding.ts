@@ -1,12 +1,41 @@
-// @ts-nocheck
 import * as COMMUNITY_LINKS from '../platform/community-links';
 import * as LumnoExtensionRoutes from '../domain/extension-routes';
+import type { BackgroundRequest, OkReply, OverlayTab } from '../domain/messages';
 import * as NAVIGATION_DISPOSITION from '../domain/navigation-disposition';
+import type { Disposition } from '../domain/navigation-disposition';
 import * as LumnoSettings from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import { isElementNode, isHtmlElement } from '../shared/dom-guards';
+import { getHtmlElement, queryHtmlElement } from '../shared/dom-lookup';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as MODEL from './onboarding-content';
+import type {
+  OnboardingBlueprint,
+  OnboardingEvent,
+  OnboardingRuntimeCopy,
+  OnboardingSlide,
+  OnboardingState
+} from './onboarding-content';
+import type { InteractionBrowserAvatars, InteractionInfoTooltip } from './react/interactions';
+import type { NewtabPreviewItem } from './react/newtab-preview';
+import type { SiteSearchTheme } from './react/site-search-demo';
+import type { VisualSurfaceRenderModel } from './react/visual-surface';
 import * as LumnoMessaging from '../platform/messaging';
+
+type RuntimeMiscKey = keyof OnboardingRuntimeCopy['misc'];
+type SiteSearchCase = OnboardingRuntimeCopy['siteSearchDemo']['cases'][number];
+type Rgb = readonly number[];
+// The background messages the slide actions send.
+type ActionMessage =
+  | 'openExtensionShortcutsPage'
+  | 'openExtensionDetailsPage'
+  | 'openNewTab'
+  | 'openOptionsPage'
+  | 'openSiteSearchOptionsPage';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
 
 (function() {
 
@@ -26,13 +55,13 @@ import * as LumnoMessaging from '../platform/messaging';
     edge: Object.freeze([0, 120, 212]),
     firefox: Object.freeze([255, 113, 57])
   });
-  const ACTION_MESSAGE_BY_ID = Object.freeze({
-    openShortcuts: 'openExtensionShortcutsPage',
-    openExtensionDetails: 'openExtensionDetailsPage',
-    openNewtab: 'openNewTab',
-    openOptions: 'openOptionsPage',
-    openSiteSearchOptions: 'openSiteSearchOptionsPage'
-  });
+  const ACTION_MESSAGE_BY_ID: ReadonlyMap<string, ActionMessage> = new Map<string, ActionMessage>([
+    ['openShortcuts', 'openExtensionShortcutsPage'],
+    ['openExtensionDetails', 'openExtensionDetailsPage'],
+    ['openNewtab', 'openNewTab'],
+    ['openOptions', 'openOptionsPage'],
+    ['openSiteSearchOptions', 'openSiteSearchOptionsPage']
+  ]);
   let runtimeCopy = MODEL.getOnboardingRuntimeCopy('en');
   const LUMNO_WEB_WORDMARK_SRC = '../../assets/images/lumno-web-textlogo.svg';
   const LUMNO_WEB_BUTTERFLY_REST_PATH = 'M4.3248 17.7823C1.22382 14.6398 -0.116749 10.2475 0.824858 6.7097C1.02033 5.97529 1.95363 5.98287 2.27212 6.67289L4.16024 10.7637C4.38415 11.2488 4.50011 11.7767 4.50011 12.311L4.50011 16L6.24277 16C7.66705 16 9.01155 16.6576 9.88596 17.7819L11.0831 19.3211C11.5044 19.8627 11.2076 20.6668 10.5235 20.7201C8.63849 20.8671 6.85452 20.3459 4.3248 17.7823Z';
@@ -55,61 +84,23 @@ import * as LumnoMessaging from '../platform/messaging';
   const VISUAL_CANVAS_WIDTH = 704;
   const VISUAL_CANVAS_HEIGHT = 680;
 
-  function getRuntimeSection(name) {
-    const copy = runtimeCopy || {};
-    const section = copy && copy[name];
-    return section && typeof section === 'object' ? section : {};
+  function getRuntimeMiscText(key: RuntimeMiscKey, fallback: string): string {
+    return String(runtimeCopy.misc[key] || '').trim() || fallback;
   }
 
-  function getRuntimeMiscText(key, fallback) {
-    const misc = getRuntimeSection('misc');
-    const value = misc && misc[key];
-    const text = String(value || '').trim();
-    return text || fallback || '';
-  }
-
-  function formatRuntimeTemplate(template, values) {
-    const source = String(template || '');
-    const map = values || {};
-    return source.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, key) => (
-      Object.prototype.hasOwnProperty.call(map, key) ? String(map[key]) : match
+  function formatRuntimeTemplate(template: string, values: Readonly<Record<string, string | number>>): string {
+    return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, key: string) => (
+      Object.hasOwn(values, key) ? String(values[key]) : match
     ));
   }
 
-
-  function getRuntimeArray(sectionName, key) {
-    const section = getRuntimeSection(sectionName);
-    const value = key ? section[key] : section;
-    return Array.isArray(value) ? value : [];
+  function getLumnoOverlayQuery(): string {
+    return String(runtimeCopy.lumnoOverlay.query || 'extension');
   }
 
-  function getLumnoOverlayQuery() {
-    const section = getRuntimeSection('lumnoOverlay');
-    return String(section.query || 'extension');
-  }
-
-  function getLumnoOverlayResults() {
-    return getRuntimeArray('lumnoOverlay', 'results');
-  }
-
-  function getNewtabPreviewCopy() {
-    return getRuntimeSection('newtabPreview');
-  }
-
-  function getNewtabPreviewQuery() {
-    return String(getNewtabPreviewCopy().query || '');
-  }
-
-  function getNewtabPreviewBookmarks() {
-    return getRuntimeArray('newtabPreview', 'bookmarks');
-  }
-
-  function getNewtabPreviewRecentSites() {
-    return getRuntimeArray('newtabPreview', 'recentSites').map((item) => {
-      if (!item || typeof item !== 'object') {
-        return item;
-      }
-      if (String(item.url || '').trim() !== 'chromeWebStore') {
+  function getNewtabPreviewRecentSites(): NewtabPreviewItem[] {
+    return runtimeCopy.newtabPreview.recentSites.map((item) => {
+      if (item.url.trim() !== 'chromeWebStore') {
         return Object.assign({}, item);
       }
       const listing = COMMUNITY_LINKS.getStoreListing();
@@ -118,42 +109,30 @@ import * as LumnoMessaging from '../platform/messaging';
         siteName: listing.name,
         url: listing.url,
         urlText: listing.host,
-        accentRgb: STORE_ACCENT_RGB[listing.id] || item.accentRgb
+        accentRgb: STORE_ACCENT_RGB[listing.id]
       });
     });
   }
 
-  function getNewtabPreviewSectionTitle(key, fallback) {
-    const sections = getNewtabPreviewCopy().sections || {};
-    return String(sections[key] || fallback || '');
-  }
-
-  function getSiteSearchDemoCases() {
-    return getRuntimeArray('siteSearchDemo', 'cases');
-  }
-
-  function getFeatureCards() {
-    return getRuntimeArray('featureCards');
-  }
-
-  function getFeatureAwards() {
-    return getRuntimeArray('featureAwards');
+  function getNewtabPreviewSectionTitle(key: 'bookmarks' | 'recent', fallback: string): string {
+    return String(runtimeCopy.newtabPreview.sections[key] || fallback);
   }
 
   const params = new URLSearchParams(window.location.search || '');
-  const root = document.querySelector('[data-onboarding-shell]');
-  const copyPanel = document.getElementById('onboarding-copy-panel');
-  const eyebrow = document.getElementById('onboarding-eyebrow');
-  const title = document.getElementById('onboarding-title');
-  const body = document.getElementById('onboarding-body');
-  const pageStrip = document.getElementById('onboarding-page-strip');
-  const interactionSlots = document.getElementById('onboarding-interaction-slots');
-  const visualSlot = document.getElementById('onboarding-visual-slot');
-  const visualPanel = document.getElementById('onboarding-visual-panel');
-  const visualCanvas = document.getElementById('onboarding-visual-canvas');
-  const visualStage = document.getElementById('onboarding-visual-stage');
-  const cursorLayer = document.getElementById('onboarding-cursor-layer');
-  const copyActions = document.querySelector('.onboarding-copy-actions');
+  const root = queryHtmlElement(document, '[data-onboarding-shell]');
+  const copyPanel = getHtmlElement(document, 'onboarding-copy-panel');
+  const eyebrow = getHtmlElement(document, 'onboarding-eyebrow');
+  const title = getHtmlElement(document, 'onboarding-title');
+  const body = getHtmlElement(document, 'onboarding-body');
+  const pageStrip = getHtmlElement(document, 'onboarding-page-strip');
+  const interactionSlots = getHtmlElement(document, 'onboarding-interaction-slots');
+  const visualSlot = getHtmlElement(document, 'onboarding-visual-slot');
+  const visualPanel = getHtmlElement(document, 'onboarding-visual-panel');
+  const visualCanvas = getHtmlElement(document, 'onboarding-visual-canvas');
+  const visualStage = getHtmlElement(document, 'onboarding-visual-stage');
+  const cursorLayer = getHtmlElement(document, 'onboarding-cursor-layer');
+  const copyActions = queryHtmlElement(document, '.onboarding-copy-actions');
+  // Set by the React islands entry, which the page loads first.
   const onboardingPageStripApi = globalThis.LumnoOnboardingPageStrip;
   const onboardingActionsApi = globalThis.LumnoOnboardingActions;
   const onboardingBodyCopyApi = globalThis.LumnoOnboardingBodyCopy;
@@ -161,6 +140,10 @@ import * as LumnoMessaging from '../platform/messaging';
   const onboardingCursorLayerApi = globalThis.LumnoOnboardingCursorLayer;
   const onboardingInteractionsApi = globalThis.LumnoOnboardingInteractions;
   const onboardingVisualSurfaceApi = globalThis.LumnoOnboardingVisualSurface;
+  if (!onboardingPageStripApi || !onboardingActionsApi || !onboardingBodyCopyApi || !onboardingCopyHeadingApi ||
+      !onboardingCursorLayerApi || !onboardingInteractionsApi || !onboardingVisualSurfaceApi) {
+    return;
+  }
   const pageStripController = pageStrip
     ? onboardingPageStripApi.createPageStripController(pageStrip, {
       onNavigate(slideIndex) {
@@ -216,15 +199,15 @@ import * as LumnoMessaging from '../platform/messaging';
   const visualSurfaceController = visualStage
     ? onboardingVisualSurfaceApi.createVisualSurfaceController(visualStage)
     : null;
-  let blueprint = null;
-  let state = null;
+  let blueprint: OnboardingBlueprint | null = null;
+  let state: OnboardingState | null = null;
   let currentShortcutValue = getDefaultShortcutValue();
   let currentShortcutLabel = getDefaultShortcutLabel();
   let titleFitFrame = 0;
   let copySwapTimeout = 0;
   let visualScaleFrame = 0;
   let expandedInteractionAccordionId = '';
-  let visualResizeObserver = null;
+  let visualResizeObserver: ResizeObserver | null = null;
   const onboardingInfoTooltipController = LumnoTooltip.createController({
     id: '_x_extension_onboarding_info_tooltip_2026_unique_',
     className: 'onboarding-info-tooltip',
@@ -236,11 +219,11 @@ import * as LumnoMessaging from '../platform/messaging';
     maxWidth: 360
   });
 
-  function getChromeApi() {
+  function getChromeApi(): typeof chrome | null {
     return typeof chrome !== 'undefined' ? chrome : null;
   }
 
-  function syncOnboardingSlideParam(index) {
+  function syncOnboardingSlideParam(index: number): void {
     if (!window.history || typeof window.history.replaceState !== 'function' || !window.location || !window.location.href) {
       return;
     }
@@ -259,8 +242,8 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function buildRuntimePageUrl(path) {
-    const value = String(path || '').trim();
+  function buildRuntimePageUrl(path: string): string {
+    const value = path.trim();
     if (!value) {
       return '';
     }
@@ -276,7 +259,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return hash ? `${baseUrl}#${hash}` : baseUrl;
   }
 
-  function navigateOnboardingToNewtab() {
+  function navigateOnboardingToNewtab(): boolean {
     const chromeApi = getChromeApi();
     const routes = LumnoExtensionRoutes;
     let url = '';
@@ -306,15 +289,12 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function openExtensionPageTab(path, eventOrDisposition) {
+  function openExtensionPageTab(path: string, disposition: Disposition): boolean {
     const url = buildRuntimePageUrl(path);
     if (!url) {
       return false;
     }
     const chromeApi = getChromeApi();
-    const disposition = typeof eventOrDisposition === 'string'
-      ? eventOrDisposition
-      : getOpenDisposition(eventOrDisposition, 'newTab');
     if (chromeApi && chromeApi.tabs && typeof chromeApi.tabs.create === 'function') {
       try {
         chromeApi.tabs.create({ url, active: disposition !== 'backgroundTab' });
@@ -330,26 +310,16 @@ import * as LumnoMessaging from '../platform/messaging';
     return false;
   }
 
-  function openSiteSearchOptionsFallback(eventOrDisposition) {
-    return openExtensionPageTab(SITE_SEARCH_OPTIONS_PAGE_PATH, eventOrDisposition);
+  function openSiteSearchOptionsFallback(disposition: Disposition): boolean {
+    return openExtensionPageTab(SITE_SEARCH_OPTIONS_PAGE_PATH, disposition);
   }
 
-  function getOpenDisposition(event, fallback) {
-    if (typeof event === 'string') {
-      return event === 'backgroundTab' ? 'backgroundTab' : (fallback || event || 'newTab');
-    }
-    return NAVIGATION_DISPOSITION.getDisposition(event, fallback);
-  }
-
-  function openExternalTab(url, eventOrDisposition) {
-    const targetUrl = String(url || '').trim();
+  function openExternalTab(url: string, disposition: Disposition): boolean {
+    const targetUrl = url.trim();
     if (!targetUrl) {
       return false;
     }
     const chromeApi = getChromeApi();
-    const disposition = typeof eventOrDisposition === 'string'
-      ? eventOrDisposition
-      : getOpenDisposition(eventOrDisposition, 'newTab');
     if (chromeApi && chromeApi.runtime && typeof chromeApi.runtime.sendMessage === 'function') {
       try {
         LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, { action: 'createTab', url: targetUrl, disposition }, (response) => {
@@ -373,8 +343,8 @@ import * as LumnoMessaging from '../platform/messaging';
     return false;
   }
 
-  function getCssTimeMs(value, fallback) {
-    const raw = String(value || '').trim();
+  function getCssTimeMs(value: string, fallback: number): number {
+    const raw = value.trim();
     if (!raw) {
       return fallback;
     }
@@ -385,7 +355,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return raw.endsWith('s') && !raw.endsWith('ms') ? numeric * 1000 : numeric;
   }
 
-  function getTextSwapDurationMs() {
+  function getTextSwapDurationMs(): number {
     if (typeof getComputedStyle !== 'function' || !document.documentElement) {
       return TEXT_SWAP_FALLBACK_DURATION_MS;
     }
@@ -395,36 +365,36 @@ import * as LumnoMessaging from '../platform/messaging';
     );
   }
 
-  function prefersReducedMotion() {
+  function prefersReducedMotion(): boolean {
     return typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
-  function isMacPlatform() {
+  function isMacPlatform(): boolean {
     return /Mac|iPhone|iPad|iPod/i.test(String(navigator.platform || ''));
   }
 
-  function getDefaultShortcutValue() {
+  function getDefaultShortcutValue(): string {
     return isMacPlatform() ? 'Command+Shift+K' : 'Ctrl+Shift+K';
   }
 
-  function getDefaultShortcutLabel() {
+  function getDefaultShortcutLabel(): string {
     return formatShortcutForDisplay(getDefaultShortcutValue()) || getDefaultShortcutValue();
   }
 
-  function normalizeShortcutValue(value) {
-    return String(value || '').trim().replace(/\s*\+\s*/g, '+');
+  function normalizeShortcutValue(value: string): string {
+    return value.trim().replace(/\s*\+\s*/g, '+');
   }
 
-  function getShortcutDisplayTokens(shortcut) {
+  function getShortcutDisplayTokens(shortcut: string): string[] {
     return MODEL.getShortcutDisplayTokens(shortcut, { preferSymbols: isMacPlatform() });
   }
 
-  function formatShortcutForDisplay(shortcut) {
+  function formatShortcutForDisplay(shortcut: string): string {
     return MODEL.formatShortcutForDisplay(shortcut, { preferSymbols: isMacPlatform() });
   }
 
-  function loadCurrentShortcut(callback) {
+  function loadCurrentShortcut(callback: (shortcut: string) => void): void {
     const chromeApi = getChromeApi();
     const fallback = getDefaultShortcutValue();
     if (!chromeApi || !chromeApi.commands || typeof chromeApi.commands.getAll !== 'function') {
@@ -449,21 +419,17 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function shortcutHotkeyMatchesEvent(shortcut, event) {
+  function shortcutHotkeyMatchesEvent(shortcut: string, event: KeyboardEvent): boolean {
     return MODEL.shortcutHotkeyMatchesEvent(shortcut, event);
   }
 
-  function isEditableTarget(target) {
-    const element = target && target.nodeType === 1
-      ? target
-      : (target && target.parentElement ? target.parentElement : null);
-    if (!element || !element.closest) {
-      return false;
-    }
-    return Boolean(element.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]'));
+  // Key events target elements, never text nodes.
+  function isEditableTarget(target: EventTarget | null): boolean {
+    return isElementNode(target) &&
+      Boolean(target.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]'));
   }
 
-  function updateCurrentShortcut(shortcut, shouldRender) {
+  function updateCurrentShortcut(shortcut: string, shouldRender: boolean): void {
     const value = shortcut || getDefaultShortcutValue();
     const nextShortcutLabel = formatShortcutForDisplay(value) || getDefaultShortcutLabel();
     const changed = value !== currentShortcutValue || nextShortcutLabel !== currentShortcutLabel;
@@ -474,15 +440,14 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function refreshCurrentShortcut(shouldRender) {
+  function refreshCurrentShortcut(shouldRender: boolean): void {
     loadCurrentShortcut((shortcut) => {
       updateCurrentShortcut(shortcut, shouldRender);
     });
   }
 
-  function getCurrentOnboardingTab(callback) {
+  function getCurrentOnboardingTab(done: (tab: chrome.tabs.Tab | null) => void): void {
     const chromeApi = getChromeApi();
-    const done = typeof callback === 'function' ? callback : () => {};
     if (!chromeApi || !chromeApi.tabs || typeof chromeApi.tabs.getCurrent !== 'function') {
       done(null);
       return;
@@ -500,9 +465,8 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function getOnboardingTabZoomFactor(tabId, callback) {
+  function getOnboardingTabZoomFactor(tabId: number | null, done: (zoomFactor: number) => void): void {
     const chromeApi = getChromeApi();
-    const done = typeof callback === 'function' ? callback : () => {};
     if (!chromeApi || !chromeApi.tabs || typeof chromeApi.tabs.getZoom !== 'function' || typeof tabId !== 'number') {
       done(1);
       return;
@@ -521,14 +485,16 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function getOnboardingOverlayTabs(currentTabId, callback) {
+  function getOnboardingOverlayTabs(
+    currentTabId: number | null,
+    done: (tabs: readonly OverlayTab[], currentTabId: number | null) => void
+  ): void {
     const chromeApi = getChromeApi();
-    const done = typeof callback === 'function' ? callback : () => {};
     if (!chromeApi || !chromeApi.runtime || typeof chromeApi.runtime.sendMessage !== 'function') {
       done([], currentTabId);
       return;
     }
-    const request = { action: 'getTabsForOverlay' };
+    const request: BackgroundRequest<'getTabsForOverlay'> = { action: 'getTabsForOverlay' };
     if (typeof currentTabId === 'number') {
       request.currentTabId = currentTabId;
     }
@@ -549,7 +515,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function triggerOnboardingSearchOverlay() {
+  function triggerOnboardingSearchOverlay(): void {
     const toggleOverlay = window._x_extension_toggleSearchOverlay_2026_unique_;
     if (typeof toggleOverlay !== 'function') {
       return;
@@ -568,8 +534,12 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  function handleOnboardingCommandMessage(request, sender, sendResponse) {
-    if (!request || request.action !== ONBOARDING_SEARCH_OVERLAY_COMMAND_ACTION) {
+  function handleOnboardingCommandMessage(
+    request: unknown,
+    _sender: chrome.runtime.MessageSender,
+    sendResponse: (reply: OkReply) => void
+  ): boolean {
+    if (!isRecord(request) || request.action !== ONBOARDING_SEARCH_OVERLAY_COMMAND_ACTION) {
       return false;
     }
     const requestedTabId = Number.isFinite(Number(request.tabId)) ? Number(request.tabId) : null;
@@ -591,17 +561,17 @@ import * as LumnoMessaging from '../platform/messaging';
 
   // A translated language's copy ships as JSON beside this page; without
   // it the page falls back to English.
-  function loadOnboardingLocaleText(locale) {
+  function loadOnboardingLocaleText(locale: string): Promise<void> {
     if (!MODEL.needsOnboardingLocaleText(locale) || typeof fetch !== 'function') {
       return Promise.resolve();
     }
     return fetch(`locales/${locale}.json`)
       .then((response) => response.json())
-      .then((translations) => MODEL.registerOnboardingLocaleText(locale, translations))
+      .then((translations: unknown) => MODEL.registerOnboardingLocaleText(locale, translations))
       .catch(() => {});
   }
 
-  function getRuntimeLocale(callback) {
+  function getRuntimeLocale(callback: (locale: string) => void): void {
     const chromeApi = getChromeApi();
     const fromParam = params.get('locale') || params.get('lang') || '';
     if (fromParam) {
@@ -621,7 +591,7 @@ import * as LumnoMessaging from '../platform/messaging';
       storageArea.get([LANGUAGE_STORAGE_KEY], (result) => {
         const runtimeError = chromeApi.runtime ? chromeApi.runtime.lastError : null;
         const stored = !runtimeError && result ? result[LANGUAGE_STORAGE_KEY] : '';
-        const locale = stored && stored !== 'system'
+        const locale = typeof stored === 'string' && stored && stored !== 'system'
           ? stored
           : getBrowserLocale();
         callback(MODEL.normalizeLocale(locale));
@@ -631,7 +601,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function getBrowserLocale() {
+  function getBrowserLocale(): string {
     const chromeApi = getChromeApi();
     if (chromeApi && chromeApi.i18n && typeof chromeApi.i18n.getUILanguage === 'function') {
       try {
@@ -643,16 +613,14 @@ import * as LumnoMessaging from '../platform/messaging';
     return navigator.language || 'en';
   }
 
-  function getBrowserTooltipText(browserAvatars) {
-    const browsers = browserAvatars && Array.isArray(browserAvatars.browsers)
-      ? browserAvatars.browsers
-      : [];
-    return browsers.map((browser) => browser && browser.name).filter(Boolean)
+  function getBrowserTooltipText(browserAvatars: InteractionBrowserAvatars | undefined): string {
+    const browsers = browserAvatars && browserAvatars.browsers ? browserAvatars.browsers : [];
+    return browsers.map((browser) => browser.name).filter(Boolean)
       .join(getRuntimeMiscText('browserNameSeparator', ', '));
   }
 
-  function positionBrowserAvatarTooltip(element, target) {
-    if (!element || !target || typeof target.getBoundingClientRect !== 'function') {
+  function positionBrowserAvatarTooltip(element: HTMLElement | null, target: HTMLElement): void {
+    if (!element) {
       return;
     }
     element.style.setProperty('max-width', '220px');
@@ -672,26 +640,26 @@ import * as LumnoMessaging from '../platform/messaging';
     element.style.setProperty('top', `${Math.round(top)}px`);
   }
 
-  function renderInfoTooltipContent(element, infoTooltip, browserAvatars) {
+  function renderInfoTooltipContent(
+    element: HTMLElement | null,
+    infoTooltip: InteractionInfoTooltip,
+    browserAvatars: InteractionBrowserAvatars | undefined
+  ): void {
     if (!element) {
       return;
     }
     const tooltipView = globalThis.LumnoTooltipView;
-    const isBrowserAvatarTooltip =
-      infoTooltip && infoTooltip.type === 'browser-avatars';
+    const isBrowserAvatarTooltip = infoTooltip.type === 'browser-avatars';
     element.classList.toggle(
       'onboarding-browser-tooltip',
       isBrowserAvatarTooltip
     );
-    if (!isBrowserAvatarTooltip ||
-        typeof tooltipView.renderBrowserAvatarTooltip !== 'function') {
+    if (!isBrowserAvatarTooltip || !tooltipView) {
       return;
     }
     element.dataset.reactIsland = 'onboarding-info-tooltip-content';
     tooltipView.renderBrowserAvatarTooltip(element, {
-      browsers: browserAvatars && Array.isArray(browserAvatars.browsers)
-        ? browserAvatars.browsers
-        : [],
+      browsers: browserAvatars && browserAvatars.browsers ? browserAvatars.browsers : [],
       browserNameSeparator: getRuntimeMiscText(
         'browserNameSeparator',
         ', '
@@ -703,37 +671,41 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  function showOnboardingInfoTooltip(button, infoTooltip, browserAvatars) {
-    const text = String(infoTooltip && infoTooltip.text || getBrowserTooltipText(browserAvatars) || '').trim();
-    if (!button || !text) {
+  function showOnboardingInfoTooltip(
+    button: HTMLElement,
+    infoTooltip: InteractionInfoTooltip,
+    browserAvatars: InteractionBrowserAvatars | undefined
+  ): void {
+    const text = String(infoTooltip.text || getBrowserTooltipText(browserAvatars) || '').trim();
+    if (!text) {
       return;
     }
     const options = {
       placement: 'top',
       maxWidth: 360,
-      spacing: infoTooltip && infoTooltip.type === 'browser-avatars' ? 24 : 8
+      spacing: infoTooltip.type === 'browser-avatars' ? 24 : 8
     };
     const element = onboardingInfoTooltipController.show(button, text, options);
     renderInfoTooltipContent(element, infoTooltip, browserAvatars);
-    if (infoTooltip && infoTooltip.type === 'browser-avatars') {
+    if (infoTooltip.type === 'browser-avatars') {
       positionBrowserAvatarTooltip(element, button);
     } else {
       LumnoTooltip.position(element, button, options);
     }
   }
 
-  function hideOnboardingInfoTooltip() {
+  function hideOnboardingInfoTooltip(): void {
     onboardingInfoTooltipController.hide();
   }
 
-  function getActionButtonTooltipMaxWidth(button) {
-    const value = Number.parseInt(button && button.dataset && button.dataset.tooltipMaxWidth || '', 10);
+  function getActionButtonTooltipMaxWidth(button: HTMLElement): number {
+    const value = Number.parseInt(button.dataset.tooltipMaxWidth || '', 10);
     return Number.isFinite(value) && value > 0 ? value : 360;
   }
 
-  function showActionButtonTooltip(button) {
-    const text = String(button && button.dataset && button.dataset.tooltip || '').trim();
-    if (!button || !text) {
+  function showActionButtonTooltip(button: HTMLElement): void {
+    const text = String(button.dataset.tooltip || '').trim();
+    if (!text) {
       return;
     }
     const maxWidth = getActionButtonTooltipMaxWidth(button);
@@ -744,14 +716,14 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  function hideActionButtonTooltip() {
+  function hideActionButtonTooltip(): void {
     actionTooltipController.hide();
   }
 
 
 
-  function updateInteractionAccordionRows() {
-    if (!interactionSlots) {
+  function updateInteractionAccordionRows(): void {
+    if (!interactionSlotsController) {
       return;
     }
     interactionSlotsController.setExpandedAccordionId(
@@ -759,7 +731,7 @@ import * as LumnoMessaging from '../platform/messaging';
     );
   }
 
-  function toggleInteractionAccordion(accordionId) {
+  function toggleInteractionAccordion(accordionId: string | undefined): void {
     const id = String(accordionId || '').trim();
     if (!id) {
       return;
@@ -768,14 +740,12 @@ import * as LumnoMessaging from '../platform/messaging';
     updateInteractionAccordionRows();
   }
 
-  function renderInteractions(slide) {
-    if (!interactionSlots) {
+  function renderInteractions(slide: OnboardingSlide): void {
+    if (!interactionSlots || !interactionSlotsController) {
       return;
     }
     hideOnboardingInfoTooltip();
-    const slots = Array.isArray(slide.left.interactionSlots)
-      ? slide.left.interactionSlots
-      : [];
+    const slots = slide.left.interactionSlots;
     const hasAccordion = slots.some((slot) => slot.accordion && slot.accordion.text);
     interactionSlots.hidden = slots.length === 0;
     interactionSlots.dataset.visible = slots.length > 0 ? 'true' : 'false';
@@ -787,7 +757,7 @@ import * as LumnoMessaging from '../platform/messaging';
   }
 
 
-  function mixSiteSearchDemoColor(color, target, amount) {
+  function mixSiteSearchDemoColor(color: Rgb, target: Rgb, amount: number): number[] {
     return [
       Math.round(color[0] + (target[0] - color[0]) * amount),
       Math.round(color[1] + (target[1] - color[1]) * amount),
@@ -795,14 +765,12 @@ import * as LumnoMessaging from '../platform/messaging';
     ];
   }
 
-  function getSiteSearchDemoBrandAccentRgb(item) {
-    return item && Array.isArray(item.brandAccentRgb) && item.brandAccentRgb.length === 3
-      ? item.brandAccentRgb
-      : (item && Array.isArray(item.accentRgb) && item.accentRgb.length === 3 ? item.accentRgb : [59, 130, 246]);
+  function getSiteSearchDemoBrandAccentRgb(item: SiteSearchCase): Rgb {
+    return item.brandAccentRgb.length === 3 ? item.brandAccentRgb : [59, 130, 246];
   }
 
-  function getSiteSearchDemoLuminance(rgb) {
-    if (!Array.isArray(rgb) || rgb.length !== 3) {
+  function getSiteSearchDemoLuminance(rgb: Rgb): number {
+    if (rgb.length !== 3) {
       return 0;
     }
     const channels = rgb.map((value) => {
@@ -812,7 +780,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
   }
 
-  function getSiteSearchDemoReadableTextColor(bgRgb) {
+  function getSiteSearchDemoReadableTextColor(bgRgb: Rgb): string {
     const darkText = [17, 24, 39];
     const lightText = [248, 250, 252];
     const bgLum = getSiteSearchDemoLuminance(bgRgb);
@@ -823,10 +791,8 @@ import * as LumnoMessaging from '../platform/messaging';
     return contrastWithDark >= contrastWithLight ? '#111827' : '#F8FAFC';
   }
 
-  function normalizeSiteSearchDemoAccentRgb(rgb) {
-    const accentRgb = Array.isArray(rgb) && rgb.length === 3
-      ? rgb
-      : [59, 130, 246];
+  function normalizeSiteSearchDemoAccentRgb(rgb: Rgb): Rgb {
+    const accentRgb = rgb.length === 3 ? rgb : [59, 130, 246];
     const luminance = getSiteSearchDemoLuminance(accentRgb);
     if (luminance < 0.12) {
       return mixSiteSearchDemoColor(accentRgb, [255, 255, 255], 0.55);
@@ -837,11 +803,10 @@ import * as LumnoMessaging from '../platform/messaging';
     return accentRgb;
   }
 
-  function getSiteSearchDemoTheme(item) {
+  function getSiteSearchDemoTheme(item: SiteSearchCase): SiteSearchTheme {
     const accentRgb = normalizeSiteSearchDemoAccentRgb(getSiteSearchDemoBrandAccentRgb(item));
     const base = [255, 255, 255];
     const markBg = mixSiteSearchDemoColor(accentRgb, base, 0.78);
-    const tagBg = mixSiteSearchDemoColor(accentRgb, base, 0.74);
     const keyBg = mixSiteSearchDemoColor(accentRgb, base, 0.9);
     return {
       accentRgb,
@@ -849,9 +814,6 @@ import * as LumnoMessaging from '../platform/messaging';
       highlightBorder: mixSiteSearchDemoColor(accentRgb, base, 0.62),
       markBg,
       markText: getSiteSearchDemoReadableTextColor(markBg),
-      tagBg,
-      tagText: getSiteSearchDemoReadableTextColor(tagBg),
-      tagBorder: mixSiteSearchDemoColor(accentRgb, base, 0.58),
       keyBg,
       keyText: getSiteSearchDemoReadableTextColor(keyBg),
       keyBorder: mixSiteSearchDemoColor(accentRgb, base, 0.18),
@@ -864,7 +826,7 @@ import * as LumnoMessaging from '../platform/messaging';
   }
 
 
-  function getBookmarkFocusModel() {
+  function getBookmarkFocusModel(): VisualSurfaceRenderModel['bookmarkFocus'] {
     return {
       hoverLeadMs: LUMNO_OVERLAY_HOVER_LEAD_MS,
       hoverStartMs: LUMNO_OVERLAY_HOVER_START_MS,
@@ -876,17 +838,17 @@ import * as LumnoMessaging from '../platform/messaging';
       query: getLumnoOverlayQuery(),
       reducedMotion: prefersReducedMotion(),
       removeHistoryLabel: getRuntimeMiscText('removeHistoryLabel', 'Remove history item'),
-      results: getLumnoOverlayResults(),
+      results: runtimeCopy.lumnoOverlay.results,
       searchAriaLabel: 'Search Lumno demo',
       settingsLabel: getRuntimeMiscText('settingsLabel', 'Settings')
     };
   }
 
-  function getNewtabPreviewModel() {
+  function getNewtabPreviewModel(): VisualSurfaceRenderModel['newtabPreview'] {
     return {
       ariaLabel: getRuntimeMiscText('newtabPreviewAriaLabel', 'Lumno new tab preview'),
       bookmarkManagerLabel: getRuntimeMiscText('bookmarkManagerLabel', 'Open bookmark manager'),
-      bookmarks: getNewtabPreviewBookmarks(),
+      bookmarks: runtimeCopy.newtabPreview.bookmarks,
       bookmarksSectionTitle: getNewtabPreviewSectionTitle('bookmarks', 'Bookmarks'),
       hoverHoldMs: NEWTAB_PREVIEW_HOVER_HOLD_MS,
       hoverMoveMs: NEWTAB_PREVIEW_HOVER_MOVE_MS,
@@ -895,7 +857,7 @@ import * as LumnoMessaging from '../platform/messaging';
       nextLabelTemplate: getRuntimeMiscText('nextLabelTemplate', '{label} next'),
       openItemAriaTemplate: getRuntimeMiscText('openItemAriaTemplate', 'Open {title}'),
       previousLabelTemplate: getRuntimeMiscText('previousLabelTemplate', '{label} previous'),
-      query: getNewtabPreviewQuery(),
+      query: String(runtimeCopy.newtabPreview.query || ''),
       recentSectionTitle: getNewtabPreviewSectionTitle('recent', 'Recent'),
       recentSites: getNewtabPreviewRecentSites(),
       reducedMotion: prefersReducedMotion(),
@@ -909,36 +871,36 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function getVisualSurfaceModel(kind) {
+  function getVisualSurfaceModel(kind: string): VisualSurfaceRenderModel {
     return {
       ariaLabel: 'Lumno',
       bookmarkFocus: getBookmarkFocusModel(),
       butterflyDValues: LUMNO_WEB_BUTTERFLY_D_VALUES,
       butterflyRestPath: LUMNO_WEB_BUTTERFLY_REST_PATH,
-      featureAwards: getFeatureAwards(),
+      featureAwards: runtimeCopy.featureAwards,
       featureCardAriaJoiner: getRuntimeMiscText('featureCardAriaJoiner', ', '),
-      featureCards: getFeatureCards(),
+      featureCards: runtimeCopy.featureCards,
       homepagePipArtSrc: HOMEPAGE_PIP_ART_SRC,
       kind,
       newtabPreview: getNewtabPreviewModel(),
       newtabFiltersArtSrc: NEWTAB_FILTERS_ART_SRC,
       practicalFeaturesAriaLabel: getRuntimeMiscText('practicalFeaturesAriaLabel', 'Lumno practical features'),
       principlesAriaLabel: getRuntimeMiscText('principlesAriaLabel', 'Lumno principles'),
-      siteSearchCases: getSiteSearchDemoCases().map((item) => (
+      siteSearchCases: runtimeCopy.siteSearchDemo.cases.map((item) => (
         Object.assign({}, item, { theme: getSiteSearchDemoTheme(item) })
       )),
       siteSearchDemoAriaLabel: getRuntimeMiscText('siteSearchDemoAriaLabel', 'Lumno site search demo'),
       siteSearchOpenLabel: getRuntimeMiscText('openLabel', 'Open'),
       siteSearchSettingsLabel: getRuntimeMiscText('settingsLabel', 'Settings'),
       siteSearchTabHintTemplate: String(
-        getRuntimeSection('siteSearchDemo').tabHintTemplate || 'Search with {provider}'
+        runtimeCopy.siteSearchDemo.tabHintTemplate || 'Search with {provider}'
       ),
       wordmarkSrc: LUMNO_WEB_WORDMARK_SRC
     };
   }
 
-  function renderVisualSurface(slide) {
-    if (!visualStage) {
+  function renderVisualSurface(slide: OnboardingSlide): void {
+    if (!visualStage || !visualSurfaceController) {
       return;
     }
     visualSurfaceController.clear();
@@ -953,7 +915,7 @@ import * as LumnoMessaging from '../platform/messaging';
     renderCursor(slide);
   }
 
-  function prepareVisualExit(nextState) {
+  function prepareVisualExit(nextState: OnboardingState): void {
     if (!blueprint || !state || !nextState || !visualStage || prefersReducedMotion()) {
       return;
     }
@@ -975,15 +937,15 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function renderCopyActions(slide) {
-    if (!copyActions) {
+  function renderCopyActions(slide: OnboardingSlide): void {
+    if (!copyActionsController) {
       return;
     }
-    copyActionsController.render(slide.actions || {});
+    copyActionsController.render(slide.actions);
   }
 
-  function renderCursor(slide) {
-    if (!cursorLayer) {
+  function renderCursor(slide: OnboardingSlide): void {
+    if (!cursorLayerController) {
       return;
     }
     cursorLayerController.render({
@@ -992,8 +954,8 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  function renderBodyCopy(slide) {
-    if (!body) {
+  function renderBodyCopy(slide: OnboardingSlide): void {
+    if (!bodyCopyController) {
       return;
     }
     bodyCopyController.render({
@@ -1006,8 +968,8 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  function renderPageStrip() {
-    if (!pageStrip || !blueprint || !state) {
+  function renderPageStrip(): void {
+    if (!pageStrip || !pageStripController || !blueprint || !state) {
       return;
     }
     const wasPageStripHidden = pageStrip.hidden;
@@ -1042,7 +1004,7 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  function getTitleFitLines() {
+  function getTitleFitLines(): Element[] {
     if (!title) {
       return [];
     }
@@ -1050,7 +1012,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return lines.length > 0 ? lines : [title];
   }
 
-  function updateTitleFitScale() {
+  function updateTitleFitScale(): void {
     if (!title) {
       return;
     }
@@ -1074,7 +1036,7 @@ import * as LumnoMessaging from '../platform/messaging';
     title.style.setProperty('--title-fit-scale', scale.toFixed(3));
   }
 
-  function scheduleTitleFitUpdate() {
+  function scheduleTitleFitUpdate(): void {
     if (!title || typeof window.requestAnimationFrame !== 'function') {
       updateTitleFitScale();
       return;
@@ -1088,17 +1050,17 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  function isFrameScaledOnboardingLayout() {
+  function isFrameScaledOnboardingLayout(): boolean {
     return typeof window.matchMedia === 'function' &&
       window.matchMedia('(max-width: 1240px) and (min-width: 860px), (max-height: 760px) and (min-height: 560px) and (min-width: 860px)').matches;
   }
 
-  function isStackedOnboardingLayout() {
+  function isStackedOnboardingLayout(): boolean {
     return typeof window.matchMedia === 'function' &&
       window.matchMedia('(max-width: 859px), (max-height: 559px)').matches;
   }
 
-  function resetStackedLayoutScroll() {
+  function resetStackedLayoutScroll(): void {
     if (!root || !isStackedOnboardingLayout()) {
       return;
     }
@@ -1114,7 +1076,7 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  function updateOnboardingFrameScale() {
+  function updateOnboardingFrameScale(): void {
     if (!root) {
       return;
     }
@@ -1129,7 +1091,7 @@ import * as LumnoMessaging from '../platform/messaging';
     root.style.setProperty('--onboarding-frame-rendered-height', `${(ONBOARDING_FRAME_HEIGHT * scale).toFixed(2)}px`);
   }
 
-  function getCompactCopyContentHeight() {
+  function getCompactCopyContentHeight(): number {
     if (!copyPanel) {
       return 0;
     }
@@ -1137,16 +1099,17 @@ import * as LumnoMessaging from '../platform/messaging';
     const paddingTop = parseFloat(panelStyle.paddingTop) || 0;
     const paddingBottom = parseFloat(panelStyle.paddingBottom) || 0;
     const rowGap = parseFloat(panelStyle.rowGap || panelStyle.gap) || 0;
-    const rows = [
-      copyPanel.querySelector('.copy-block'),
-      copyPanel.querySelector('.interaction-slots'),
-      copyPanel.querySelector('.onboarding-copy-actions')
-    ].filter((element) => {
+    // The rows on screen.
+    const rows: HTMLElement[] = [];
+    ['.copy-block', '.interaction-slots', '.onboarding-copy-actions'].forEach((selector) => {
+      const element = queryHtmlElement(copyPanel, selector);
       if (!element || element.hidden) {
-        return false;
+        return;
       }
       const elementStyle = window.getComputedStyle(element);
-      return elementStyle.display !== 'none' && elementStyle.visibility !== 'hidden';
+      if (elementStyle.display !== 'none' && elementStyle.visibility !== 'hidden') {
+        rows.push(element);
+      }
     });
     const rowsHeight = rows.reduce((sum, element) => (
       sum + element.getBoundingClientRect().height
@@ -1154,7 +1117,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return paddingTop + paddingBottom + rowsHeight + (Math.max(0, rows.length - 1) * rowGap);
   }
 
-  function updateVisualCanvasScale() {
+  function updateVisualCanvasScale(): void {
     if (!root || !visualSlot || !visualPanel || !visualCanvas) {
       return;
     }
@@ -1186,7 +1149,7 @@ import * as LumnoMessaging from '../platform/messaging';
     root.style.setProperty('--onboarding-visual-rendered-height', `${(VISUAL_CANVAS_HEIGHT * scale).toFixed(2)}px`);
   }
 
-  function scheduleVisualCanvasScaleUpdate() {
+  function scheduleVisualCanvasScaleUpdate(): void {
     if (!visualCanvas || typeof window.requestAnimationFrame !== 'function') {
       updateVisualCanvasScale();
       return;
@@ -1201,8 +1164,8 @@ import * as LumnoMessaging from '../platform/messaging';
   }
 
 
-  function renderTitleCopy(slide) {
-    if (!title) {
+  function renderTitleCopy(slide: OnboardingSlide): void {
+    if (!title || !copyHeadingController) {
       return;
     }
     copyHeadingController.render({
@@ -1213,14 +1176,12 @@ import * as LumnoMessaging from '../platform/messaging';
       swapDurationMs: getTextSwapDurationMs(),
       title: String(slide.copy.title || ''),
       titleCycle: slide.copy.titleCycle || null,
-      titleLines: Array.isArray(slide.copy.titleLines)
-        ? slide.copy.titleLines
-        : [],
+      titleLines: slide.copy.titleLines || [],
       titleLogo: slide.copy.titleLogo || null
     });
   }
 
-  function render() {
+  function render(): void {
     if (!blueprint || !state) {
       return;
     }
@@ -1248,17 +1209,24 @@ import * as LumnoMessaging from '../platform/messaging';
     scheduleVisualCanvasScaleUpdate();
   }
 
-  function getCopySwapTargets() {
-    return [title, body].filter(Boolean);
+  function getCopySwapTargets(): HTMLElement[] {
+    const targets: HTMLElement[] = [];
+    if (title) {
+      targets.push(title);
+    }
+    if (body) {
+      targets.push(body);
+    }
+    return targets;
   }
 
-  function clearCopySwapClasses() {
+  function clearCopySwapClasses(): void {
     getCopySwapTargets().forEach((element) => {
       element.classList.remove('t-copy-swap', 'is-exit', 'is-enter-start');
     });
   }
 
-  function clearCursorTransitionStart() {
+  function clearCursorTransitionStart(): void {
     if (!root) {
       return;
     }
@@ -1267,7 +1235,7 @@ import * as LumnoMessaging from '../platform/messaging';
     root.style.removeProperty('--onboarding-cursor-transition-transform');
   }
 
-  function captureCursorTransitionStart(nextState) {
+  function captureCursorTransitionStart(nextState: OnboardingState): void {
     if (!root || !blueprint || !state || !nextState || !cursorLayer) {
       clearCursorTransitionStart();
       return;
@@ -1314,14 +1282,14 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function commitState(nextState) {
+  function commitState(nextState: OnboardingState): void {
     state = nextState;
-    syncOnboardingSlideParam(state.index);
+    syncOnboardingSlideParam(nextState.index);
     render();
     resetStackedLayoutScroll();
   }
 
-  function animateCopySwap(nextState) {
+  function animateCopySwap(nextState: OnboardingState): void {
     if (copySwapTimeout) {
       window.clearTimeout(copySwapTimeout);
       copySwapTimeout = 0;
@@ -1357,7 +1325,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }, getTextSwapDurationMs());
   }
 
-  function dispatch(action) {
+  function dispatch(action: OnboardingEvent): void {
     if (!state || !blueprint) {
       return;
     }
@@ -1369,15 +1337,16 @@ import * as LumnoMessaging from '../platform/messaging';
     animateCopySwap(nextState);
   }
 
-  function runExtensionAction(actionTarget, event) {
+  // An action by its id, or the element whose data-action names it.
+  function runExtensionAction(actionTarget: string | HTMLElement, event?: MouseEvent): void {
     const target = typeof actionTarget === 'string' ? null : actionTarget;
     const id = typeof actionTarget === 'string'
-      ? String(actionTarget || '')
-      : String(target && target.dataset && target.dataset.action || '');
+      ? actionTarget
+      : String(actionTarget.dataset.action || '');
     if (!id) {
       return;
     }
-    const disposition = getOpenDisposition(event, 'newTab');
+    const disposition = NAVIGATION_DISPOSITION.getDisposition(event, 'newTab');
     if (id === 'next') {
       dispatch({ type: 'NEXT' });
       return;
@@ -1387,7 +1356,7 @@ import * as LumnoMessaging from '../platform/messaging';
       return;
     }
     if (id === 'toggleInteractionAccordion') {
-      toggleInteractionAccordion(target && target.dataset && target.dataset.accordionId);
+      toggleInteractionAccordion(target ? target.dataset.accordionId : '');
       return;
     }
     if (id === 'openChromeWebStore') {
@@ -1407,7 +1376,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }
 
     const chromeApi = getChromeApi();
-    const messageAction = ACTION_MESSAGE_BY_ID[id];
+    const messageAction = ACTION_MESSAGE_BY_ID.get(id);
     if (!messageAction || !chromeApi || !chromeApi.runtime || typeof chromeApi.runtime.sendMessage !== 'function') {
       if (id === 'openSiteSearchOptions') {
         openSiteSearchOptionsFallback(disposition);
@@ -1431,22 +1400,23 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
+  // Click events target elements, never text nodes.
   document.addEventListener('click', (event) => {
-    const accordionLinkTarget = event.target && event.target.closest
-      ? event.target.closest('.interaction-accordion-link[data-action]')
-      : null;
-    if (accordionLinkTarget) {
+    const eventTarget = event.target;
+    if (!isElementNode(eventTarget)) {
+      return;
+    }
+    const accordionLinkTarget = eventTarget.closest('.interaction-accordion-link[data-action]');
+    if (isHtmlElement(accordionLinkTarget)) {
       event.preventDefault();
       runExtensionAction(accordionLinkTarget, event);
       return;
     }
-    if (event.target && event.target.closest && event.target.closest('.interaction-accordion-panel')) {
+    if (eventTarget.closest('.interaction-accordion-panel')) {
       return;
     }
-    const target = event.target && event.target.closest
-      ? event.target.closest('[data-action], [data-slide-target]')
-      : null;
-    if (!target) {
+    const target = eventTarget.closest('[data-action], [data-slide-target]');
+    if (!isHtmlElement(target)) {
       return;
     }
     event.preventDefault();
@@ -1461,10 +1431,10 @@ import * as LumnoMessaging from '../platform/messaging';
     if (!event || Number(event.button) !== 1) {
       return;
     }
-    const target = event.target && event.target.closest
+    const target = isElementNode(event.target)
       ? event.target.closest('.interaction-accordion-link[data-action]')
       : null;
-    if (!target) {
+    if (!isHtmlElement(target)) {
       return;
     }
     event.preventDefault();
@@ -1521,7 +1491,7 @@ import * as LumnoMessaging from '../platform/messaging';
 
   getRuntimeLocale((locale) => loadOnboardingLocaleText(locale).then(() => {
     blueprint = MODEL.getOnboardingBlueprint(locale);
-    runtimeCopy = blueprint.runtimeCopy || runtimeCopy;
+    runtimeCopy = blueprint.runtimeCopy;
     const requestedIndex = Number(params.get('slide') || 0);
     state = MODEL.createOnboardingState(blueprint.slides.length, requestedIndex);
     render();

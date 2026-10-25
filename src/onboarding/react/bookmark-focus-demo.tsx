@@ -29,7 +29,7 @@ export interface BookmarkFocusModel {
   query: string;
   reducedMotion: boolean;
   removeHistoryLabel: string;
-  results: BookmarkFocusResult[];
+  results: readonly BookmarkFocusResult[];
   searchAriaLabel: string;
   settingsLabel: string;
 }

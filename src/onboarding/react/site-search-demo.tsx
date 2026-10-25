@@ -5,7 +5,7 @@ import {
 } from 'react';
 import { RemixIcon as Icon } from '../../shared/react/remix-icon';
 
-type Rgb = number[];
+type Rgb = readonly number[];
 
 export interface SiteSearchTheme {
   accentRgb?: Rgb;
@@ -39,7 +39,7 @@ export interface SiteSearchCaseModel {
 }
 
 export interface SiteSearchDemoModel {
-  cases: SiteSearchCaseModel[];
+  cases: readonly SiteSearchCaseModel[];
   openLabel: string;
   settingsLabel: string;
   tabHintTemplate: string;

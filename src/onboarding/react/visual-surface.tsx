@@ -26,7 +26,7 @@ interface FeatureCardModel {
 }
 
 interface FeatureAwardModel {
-  lines?: string[];
+  lines?: readonly string[];
 }
 
 export interface VisualSurfaceRenderModel {
@@ -34,16 +34,16 @@ export interface VisualSurfaceRenderModel {
   bookmarkFocus?: BookmarkFocusModel;
   butterflyDValues: string;
   butterflyRestPath: string;
-  featureAwards?: FeatureAwardModel[];
+  featureAwards?: readonly FeatureAwardModel[];
   featureCardAriaJoiner?: string;
-  featureCards?: FeatureCardModel[];
+  featureCards?: readonly FeatureCardModel[];
   homepagePipArtSrc?: string;
   kind: string;
   newtabPreview?: NewtabPreviewModel;
   newtabFiltersArtSrc?: string;
   practicalFeaturesAriaLabel?: string;
   principlesAriaLabel?: string;
-  siteSearchCases?: SiteSearchCaseModel[];
+  siteSearchCases?: readonly SiteSearchCaseModel[];
   siteSearchDemoAriaLabel?: string;
   siteSearchOpenLabel?: string;
   siteSearchSettingsLabel?: string;

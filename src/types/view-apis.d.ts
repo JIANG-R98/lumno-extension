@@ -23,7 +23,7 @@ export interface BrowserAvatar {
 }
 
 export interface BrowserAvatarTooltipModel {
-  browsers?: BrowserAvatar[];
+  browsers?: readonly BrowserAvatar[];
   browserNameSeparator?: string;
   browserAvatarSuffix?: string;
 }
