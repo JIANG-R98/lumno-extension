@@ -29,9 +29,13 @@ import type { SliderControlsState } from './options-slider-controls';
 import type { ToggleControlsState } from './options-toggle-controls';
 import type { TooltipsState } from './options-tooltips';
 
-// What options.ts itself keeps beyond the modules' slices.
+// What options.ts itself keeps beyond the modules' slices, and the full
+// types of what the slices see only part of.
 interface OptionsPageState {
   providerStorageRuntime: ProviderStorageRuntime;
+  searchSourceOrderController: ReturnType<typeof createSearchSourceOrderController>;
+  panelHeightAnimator: ReturnType<typeof createPanelHeightAnimator>;
+  tooltipController: TooltipController;
 }
 
 type OptionsState =

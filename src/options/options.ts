@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
 import * as LumnoBlacklistUtils from '../domain/blacklist-utils';
 import * as COMMUNITY_LINKS from '../platform/community-links';
@@ -43,7 +42,11 @@ import * as LumnoOptionsTranslationHelpSection from './options-translation-help'
 import * as LumnoOptionsDiagnostics from './options-diagnostics';
 import * as LumnoWebDavOptions from './webdav-options';
 import * as LumnoMessaging from '../platform/messaging';
+import type { StorageChangeListener } from '../domain/storage-port';
+import type { ReadBatchMetrics } from '../platform/settings-storage';
+import { isElementNode } from '../shared/dom-guards';
 import { getHtmlElement, getHtmlTag, queryHtmlElement, queryHtmlElements, queryHtmlTags } from '../shared/dom-lookup';
+import type { LayoutMutation } from './options-panel-motion';
 import * as OPTIONS_STATE from './options-state';
 
 (function() {
@@ -52,7 +55,7 @@ import * as OPTIONS_STATE from './options-state';
     : Date.now();
   let optionsReadyMarked = false;
 
-  function markOptionsPerformance(name) {
+  function markOptionsPerformance(name: string): void {
     try {
       if (typeof performance !== 'undefined' && typeof performance.mark === 'function') {
         performance.mark(name);
@@ -202,6 +205,7 @@ import * as OPTIONS_STATE from './options-state';
   if (!panel || !optionsRoot || themeButtons.length === 0 || tabButtons.length === 0) {
     return;
   }
+  // The React views, set by the options islands bundle that loads first.
   const optionsBlacklistListApi = globalThis.LumnoOptionsBlacklistList;
   const optionsAggregateSearchListApi = globalThis.LumnoOptionsAggregateSearchList;
   const optionsFeedbackSupportApi = globalThis.LumnoOptionsFeedbackSupport;
@@ -209,6 +213,24 @@ import * as OPTIONS_STATE from './options-state';
   const optionsInfoButtonApi = globalThis.LumnoOptionsInfoButton;
   const optionsToastApi = globalThis.LumnoOptionsToast;
   const optionsSegmentedControlApi = globalThis.LumnoOptionsSegmentedControl;
+  const optionsSettingsControlsApi = globalThis.LumnoOptionsSettingsControls;
+  const optionsSettingsFormsApi = globalThis.LumnoOptionsSettingsForms;
+  const optionsSettingsNavigationApi = globalThis.LumnoOptionsSettingsNavigation;
+  const optionsShortcutReferenceApi = globalThis.LumnoOptionsShortcutReference;
+  const optionsShortcutHotkeyApi = globalThis.LumnoOptionsShortcutHotkey;
+  const optionsSiteSearchListApi = globalThis.LumnoOptionsSiteSearchList;
+  const optionsThemePickerApi = globalThis.LumnoOptionsThemePicker;
+  if (!optionsBlacklistListApi || !optionsAggregateSearchListApi || !optionsFeedbackSupportApi ||
+      !optionsTranslationHelpApi || !optionsInfoButtonApi || !optionsSegmentedControlApi ||
+      !optionsSettingsControlsApi || !optionsSettingsFormsApi || !optionsSettingsNavigationApi ||
+      !optionsShortcutReferenceApi || !optionsShortcutHotkeyApi || !optionsSiteSearchListApi || !optionsThemePickerApi) {
+    console.warn('Lumno: options views not available.');
+    return;
+  }
+  // Narrowed here, for the functions below.
+  const infoButtonApi = optionsInfoButtonApi;
+  const segmentedControlApi = optionsSegmentedControlApi;
+  const siteSearchListApi = optionsSiteSearchListApi;
 
 
 
@@ -268,7 +290,7 @@ import * as OPTIONS_STATE from './options-state';
   const localStorageArea = chrome && chrome.storage ? chrome.storage.local || null : null;
   // A closed popconfirm renders its aria-label once; applyI18n re-renders each
   // after a language change so the label follows the chosen language.
-  const popconfirmLanguageRefreshers = new Set();
+  const popconfirmLanguageRefreshers = new Set<() => void>();
 
   // The provider area, and the read batch that serves the startup reads in one go.
   const { runtime: providerStorageRuntime, area: rawStorageArea } = LumnoSettingsStorage.getProviderStorage(chrome);
@@ -415,7 +437,7 @@ import * as OPTIONS_STATE from './options-state';
     optionsState
   });
   // The keys each list shows right now, in order, for the move buttons.
-  const renderedSearchSourceKeys = {};
+  const renderedSearchSourceKeys: Record<string, string[]> = {};
 
   const {
     getLocalizedBuiltinProviderName,
@@ -591,14 +613,6 @@ import * as OPTIONS_STATE from './options-state';
     optionsState
   });
 
-
-  const optionsSettingsControlsApi = globalThis.LumnoOptionsSettingsControls;
-  const optionsSettingsFormsApi = globalThis.LumnoOptionsSettingsForms;
-  const optionsSettingsNavigationApi = globalThis.LumnoOptionsSettingsNavigation;
-  const optionsShortcutReferenceApi = globalThis.LumnoOptionsShortcutReference;
-  const optionsShortcutHotkeyApi = globalThis.LumnoOptionsShortcutHotkey;
-  const optionsSiteSearchListApi = globalThis.LumnoOptionsSiteSearchList;
-  const optionsThemePickerApi = globalThis.LumnoOptionsThemePicker;
   const shortcutDisplay = LumnoShortcutDisplay;
   const diagnosticsExport = LumnoOptionsDiagnostics.createDiagnosticsExport({
     chromeApi: chrome,
@@ -620,13 +634,13 @@ import * as OPTIONS_STATE from './options-state';
         showToast(getMessage('settings_diagnostics_export_failed', '诊断信息导出失败'), true);
       }
     ),
-    licensesLink: document.getElementById('_x_extension_open_licenses_2026_unique_'),
+    licensesLink: getHtmlTag(document, '_x_extension_open_licenses_2026_unique_', 'a'),
     getLocale: () => (optionsState.currentLanguageMode === 'system' ? getSystemLocale() : normalizeLocale(optionsState.currentLanguageMode)),
     getMessage,
     helpIconUrl: chrome && chrome.runtime && typeof chrome.runtime.getURL === 'function'
       ? chrome.runtime.getURL('assets/images/site-search/glyph-lm.png')
       : '../../assets/images/site-search/glyph-lm.png',
-    isHelpCenterSearchEnabled: () => optionsState.helpCenterSearchEnabled
+    isHelpCenterSearchEnabled: () => optionsState.helpCenterSearchEnabled === true
   });
   const translationHelpSection = LumnoOptionsTranslationHelpSection.createTranslationHelpSection({
     controller: optionsTranslationHelpApi.createTranslationHelpController(translationHelpHost),
@@ -639,8 +653,8 @@ import * as OPTIONS_STATE from './options-state';
     uiLocales: SETTINGS.UI_LOCALES,
     version: chrome?.runtime?.getManifest?.()?.version || ''
   });
-  function createOptionsInfoButtonController(host) {
-    return optionsInfoButtonApi.createInfoButtonController(host);
+  function createOptionsInfoButtonController(host: HTMLElement | null) {
+    return infoButtonApi.createInfoButtonController(host);
   }
   const restrictedActionInfoController = createOptionsInfoButtonController(restrictedActionInfoHost);
   const bookmarkRowsInfoController = createOptionsInfoButtonController(bookmarkRowsInfoHost);
@@ -662,8 +676,8 @@ import * as OPTIONS_STATE from './options-state';
         setThemeMode(mode);
       }
     });
-  function createOptionsSegmentedControlController(host, kind, onSelect) {
-    return optionsSegmentedControlApi.createSegmentedControlController(host, {
+  function createOptionsSegmentedControlController(host: HTMLElement | null, kind: string, onSelect: (value: string) => void) {
+    return segmentedControlApi.createSegmentedControlController(host, {
       kind,
       onSelect
     });
@@ -866,15 +880,16 @@ import * as OPTIONS_STATE from './options-state';
       onRemove: (...args) => handleFaviconBlacklistRemove(...args)
     });
   // Each Search sources list orders on its own; the record keys them by list.
+  // The search source order list each site search list sorts by.
   const SITE_SEARCH_ORDER_LIST_BY_KIND = Object.freeze({
     custom: 'custom',
     'builtin-engine': 'engine',
     'builtin-search': 'site',
     'builtin-ai': 'ai'
   });
-  function createSiteSearchListController(host, kind) {
+  function createSiteSearchListController(host: HTMLElement | null, kind: keyof typeof SITE_SEARCH_ORDER_LIST_BY_KIND) {
     const listId = SITE_SEARCH_ORDER_LIST_BY_KIND[kind];
-    return optionsSiteSearchListApi.createSiteSearchListController(host, {
+    return siteSearchListApi.createSiteSearchListController(host, {
       kind,
       onLocateDuplicate: locateBuiltinSiteSearchProvider,
       onMove: (fromIndex, toIndex) => optionsState.searchSourceOrderController.moveListItem(
@@ -962,24 +977,15 @@ import * as OPTIONS_STATE from './options-state';
     setSelectState: setOptionsSelectState
   });
 
-  function finishOptionsStartupStorageBatch(metrics) {
+  function finishOptionsStartupStorageBatch(metrics: ReadBatchMetrics): void {
     optionsState.optionsStartupStorageBatchPending = false;
     const root = document.documentElement;
-    const values = metrics && typeof metrics === 'object' ? metrics : {};
-    if (root) {
-      root.setAttribute(
-        'data-lumno-options-bootstrap-storage-reads',
-        String(Number.isFinite(values.underlyingReadCount) ? values.underlyingReadCount : 0)
-      );
-      root.setAttribute(
-        'data-lumno-options-bootstrap-storage-requests',
-        String(Number.isFinite(values.requestCount) ? values.requestCount : 0)
-      );
-      root.setAttribute(
-        'data-lumno-options-bootstrap-storage-keys',
-        values.keyCount === null ? 'all' : String(Number.isFinite(values.keyCount) ? values.keyCount : 0)
-      );
-    }
+    root.setAttribute('data-lumno-options-bootstrap-storage-reads', String(metrics.underlyingReadCount));
+    root.setAttribute('data-lumno-options-bootstrap-storage-requests', String(metrics.requestCount));
+    root.setAttribute(
+      'data-lumno-options-bootstrap-storage-keys',
+      metrics.keyCount === null ? 'all' : String(metrics.keyCount)
+    );
     if (optionsState.optionsStartupRefreshDeferred) {
       optionsState.optionsStartupRefreshDeferred = false;
       refreshCustomSelects({ force: true });
@@ -1039,15 +1045,15 @@ import * as OPTIONS_STATE from './options-state';
   function getActivePrimaryAreaName() {
     return optionsState.providerStorageRuntime.getActiveAreaName();
   }
-  function isPrimaryStorageAreaName(areaName) {
+  function isPrimaryStorageAreaName(areaName: string): boolean {
     return optionsState.providerStorageRuntime.isActiveAreaName(areaName);
   }
-  function addStorageChangeListener(listener) {
+  function addStorageChangeListener(listener: StorageChangeListener) {
     return LumnoSettingsStorage.addStorageChangeListener(chrome, listener);
   }
 
   const { setConditionalSettingsElementVisibility } = PANEL_MOTION;
-  function animateOptionsPanelHeight(mutateLayout) {
+  function animateOptionsPanelHeight(mutateLayout: LayoutMutation): boolean {
     return optionsState.panelHeightAnimator.animate(mutateLayout);
   }
   optionsState.searchSourceOrderController.attachListDrag(siteSearchCustomList, 'custom', getSearchSourceRowKey);
@@ -1065,11 +1071,10 @@ import * as OPTIONS_STATE from './options-state';
   });
   optionsState.searchSourceOrderController.load();
 
-  function getSearchSourceRowKey(row) {
+  function getSearchSourceRowKey(row: HTMLElement): string {
     return String(row.getAttribute('data-key') || '').toLowerCase();
   }
-  optionsState.webDavSettingsController = LumnoWebDavOptions.createController({ chromeApi: chrome, getMessage,
-      animateLayout: animateOptionsPanelHeight });
+  optionsState.webDavSettingsController = LumnoWebDavOptions.createController({ chromeApi: chrome, getMessage });
   if (searchResultSourceTypeController) {
     renderSearchResultSourceTypeControl(
       searchResultSourceTypeItems.filter((item) => item.checked).map((item) => item.value)
@@ -1109,7 +1114,7 @@ import * as OPTIONS_STATE from './options-state';
     optionsState
   });
 
-  let siteSearchRefreshTimer = null;
+  let siteSearchRefreshTimer: number | null = null;
   function renderOptionsInfoButtons() {
     const bookmarkTooltip = getMessage(
       'settings_bookmark_adaptive_count_tooltip',
@@ -1144,7 +1149,7 @@ import * as OPTIONS_STATE from './options-state';
   }
   renderOptionsInfoButtons();
 
-  function createPersistentId(prefix) {
+  function createPersistentId(prefix: string): string {
     const safePrefix = String(prefix || 'item').replace(/[^a-z0-9_-]/gi, '').toLowerCase() || 'item';
     if (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
       return `${safePrefix}-${globalThis.crypto.randomUUID()}`;
@@ -1172,19 +1177,24 @@ import * as OPTIONS_STATE from './options-state';
       languageSelect.appendChild(option);
     });
   }
-  [
+  const selectKinds: Array<[HTMLSelectElement | null, string]> = [
     [languageSelect, 'language'],
     [searchResultTabPositionSelect, 'search-result-tab-position'],
     [newtabGlassStyleSelect, 'newtab-glass-style'],
     [newtabTimeFontSelect, 'newtab-time-font'],
     [selectionQuickActionsProviderSelect, 'selection-quick-actions-provider']
-  ].forEach(([select, kind]) => {
+  ];
+  selectKinds.forEach(([select, kind]) => {
     const record = registerOptionsSelectControl(select, kind);
     if (record) {
-      renderOptionsSelectControl(select);
+      renderOptionsSelectControl(record.select);
     }
   });
-  [[overlayFontMissing, overlayFontSelect], [overlayFontFallbackMissing, overlayFontFallbackSelect]]
+  const fontNotices: Array<[HTMLElement | null, HTMLSelectElement | null]> = [
+    [overlayFontMissing, overlayFontSelect],
+    [overlayFontFallbackMissing, overlayFontFallbackSelect]
+  ];
+  fontNotices
     .forEach(([notice, select]) => {
       const button = notice && notice.querySelector('._x_extension_overlay_font_reset_2026_unique_');
       if (!button || !select) {
@@ -1196,8 +1206,9 @@ import * as OPTIONS_STATE from './options-state';
       });
     });
   [overlayFontSelect, overlayFontFallbackSelect].forEach((select) => {
-    if (registerOptionsSelectControl(select, 'overlay-font')) {
-      renderOptionsSelectControl(select);
+    const record = registerOptionsSelectControl(select, 'overlay-font');
+    if (record) {
+      renderOptionsSelectControl(record.select);
     }
   });
   getInstalledFontFamilies().then((fonts) => {
@@ -1216,7 +1227,11 @@ import * as OPTIONS_STATE from './options-state';
     renderOverlayFontMissingNotices();
   });
   // Firefox cannot list fonts; keep the rows visible but inert.
-  [[overlayFontRow, overlayFontSelect], [overlayFontFallbackRow, overlayFontFallbackSelect]]
+  const fontRows: Array<[HTMLElement | null, HTMLSelectElement | null]> = [
+    [overlayFontRow, overlayFontSelect],
+    [overlayFontFallbackRow, overlayFontFallbackSelect]
+  ];
+  fontRows
     .forEach(([row, select]) => {
       if (row && select && row.getAttribute('data-unsupported') === 'true') {
         select.disabled = true;
@@ -1326,7 +1341,7 @@ import * as OPTIONS_STATE from './options-state';
   setNewtabTimeInkTabState(optionsState.currentNewtabTimeInk);
   setNewtabGlassThemeTabState(optionsState.currentNewtabGlassTheme);
 
-  function notifyNewtabSectionsRefresh(section) {
+  function notifyNewtabSectionsRefresh(section: string): void {
     if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
       return;
     }
@@ -1414,8 +1429,10 @@ import * as OPTIONS_STATE from './options-state';
     storageArea: optionsState.storageArea,
     windowObj: window
   });
-  function loadCurrentShortcut() {
-    optionsState.fallbackShortcutSection.loadCurrentShortcut();
+  function loadCurrentShortcut(): void {
+    if (optionsState.fallbackShortcutSection) {
+      optionsState.fallbackShortcutSection.loadCurrentShortcut();
+    }
   }
   storageChanges.on(FALLBACK_SHORTCUT_STORAGE_KEY, () => loadCurrentShortcut());
 
@@ -1424,10 +1441,7 @@ import * as OPTIONS_STATE from './options-state';
     if (manifest?.version) {
       settingsVersion.textContent = `v${manifest.version}`;
     }
-    function getOpenDisposition(event, fallback) {
-      return NAVIGATION_DISPOSITION.getDisposition(event, fallback);
-    }
-    function openSettingsVersionRelease(event) {
+    function openSettingsVersionRelease(event: MouseEvent): void {
       event.preventDefault();
       event.stopPropagation();
       if (!chrome?.runtime?.sendMessage) {
@@ -1436,7 +1450,7 @@ import * as OPTIONS_STATE from './options-state';
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'openReleasePage',
         reason: 'options-version',
-        disposition: getOpenDisposition(event, 'newTab')
+        disposition: NAVIGATION_DISPOSITION.getDisposition(event, 'newTab')
       }, () => {
         if (chrome.runtime && chrome.runtime.lastError) {
           return;
@@ -1452,7 +1466,7 @@ import * as OPTIONS_STATE from './options-state';
     });
   }
 
-  function updateOverlayPageThemeAdaptationVisibility(mode) {
+  function updateOverlayPageThemeAdaptationVisibility(mode: unknown): void {
     const nextMode = mode === 'dark' || mode === 'light' ? mode : 'system';
     const visible = nextMode === 'system';
     if (!overlayPageThemeAdaptationRow) {
@@ -1465,11 +1479,13 @@ import * as OPTIONS_STATE from './options-state';
     });
   }
 
-  function setThemeMode(mode) {
-    optionsState.themeSection.setMode(mode);
+  function setThemeMode(mode: unknown): void {
+    if (optionsState.themeSection) {
+      optionsState.themeSection.setMode(mode);
+    }
   }
 
-  function playThemeOptionClickEffect(button) {
+  function playThemeOptionClickEffect(button: Element | null): void {
     THEME.playThemeOptionClickEffect(button, window);
   }
 
@@ -1485,7 +1501,9 @@ import * as OPTIONS_STATE from './options-state';
   });
   optionsState.themeSection.init();
   storageChanges.on(THEME_STORAGE_KEY, (changes) => {
-    optionsState.themeSection.applyStorageChange(changes[THEME_STORAGE_KEY].newValue);
+    if (optionsState.themeSection) {
+      optionsState.themeSection.applyStorageChange(changes[THEME_STORAGE_KEY].newValue);
+    }
   });
 
   themeButtons.forEach((button) => {
@@ -1512,7 +1530,7 @@ import * as OPTIONS_STATE from './options-state';
 
   tabButtons.forEach((button) => {
     button.addEventListener('click', function() {
-      handleSettingsTabSelection(button.getAttribute('data-tab'));
+      handleSettingsTabSelection(button.getAttribute('data-tab') || '');
     });
   });
 
@@ -1530,7 +1548,7 @@ import * as OPTIONS_STATE from './options-state';
   updateTabsStickyVisualState();
   window.addEventListener('resize', scheduleOptionsViewportLayoutRefresh, { passive: true });
   optionsState.providerStorageRuntime.ready.then(() => {
-    syncSection.migrateStorageIfNeeded(SYNC_KEYS);
+    syncSection.migrateStorageIfNeeded(SYNC_KEYS.slice());
     refreshSyncStatus();
   });
 
@@ -1725,7 +1743,7 @@ import * as OPTIONS_STATE from './options-state';
       return;
     }
     const wrap = optionsState.activePopconfirm.closest('._x_extension_popconfirm_wrap_2024_unique_');
-    if (wrap && wrap.contains(event.target)) {
+    if (wrap && isElementNode(event.target) && wrap.contains(event.target)) {
       return;
     }
     closeActivePopconfirm();
@@ -1797,10 +1815,10 @@ import * as OPTIONS_STATE from './options-state';
     const now = Date.now();
     if (optionsState.siteSearchRefreshSuppressUntil && now < optionsState.siteSearchRefreshSuppressUntil) {
       if (siteSearchRefreshTimer) {
-        clearTimeout(siteSearchRefreshTimer);
+        window.clearTimeout(siteSearchRefreshTimer);
       }
       const delay = Math.max(optionsState.siteSearchRefreshSuppressUntil - now, 0) + 40;
-      siteSearchRefreshTimer = setTimeout(() => {
+      siteSearchRefreshTimer = window.setTimeout(() => {
         siteSearchRefreshTimer = null;
         refreshSiteSearchProviders();
       }, delay);
