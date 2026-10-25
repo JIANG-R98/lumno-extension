@@ -32,8 +32,6 @@ interface NavigationDeps {
   getMessage: GetMessage;
   // Each tab's content, by its data-content.
   tabContents: Element[];
-  syncFallbackShortcutWrapWidth(): void;
-  updateFallbackShortcutWrapWidthForContent(): void;
   refreshSiteSearchProviders(): unknown;
   tabsRow: Element | null;
   optionsState: NavigationState;
@@ -56,8 +54,6 @@ function createNavigation(deps: NavigationDeps) {
   const {
     getMessage,
     tabContents,
-    syncFallbackShortcutWrapWidth,
-    updateFallbackShortcutWrapWidthForContent,
     refreshSiteSearchProviders,
     tabsRow
   } = deps;
@@ -130,14 +126,6 @@ function createNavigation(deps: NavigationDeps) {
       const isActive = content.getAttribute('data-content') === nextTabKey;
       content.setAttribute('data-active', isActive ? 'true' : 'false');
     });
-    if (nextTabKey === 'general') {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          syncFallbackShortcutWrapWidth();
-          updateFallbackShortcutWrapWidthForContent();
-        });
-      });
-    }
     const nextHash = `#${nextTabKey}`;
     if (window.location.hash !== nextHash) {
       window.history.replaceState(null, '', nextHash);
@@ -182,7 +170,6 @@ function createNavigation(deps: NavigationDeps) {
     optionsResizeFrame = window.requestAnimationFrame(() => {
       optionsResizeFrame = 0;
       updateTabsStickyVisualState();
-      syncFallbackShortcutWrapWidth();
     });
   }
 

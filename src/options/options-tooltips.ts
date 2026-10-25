@@ -1,5 +1,4 @@
-// Tooltips, toasts and the clear buttons' hover copy, the fallback
-// shortcut field width, and refreshing the custom selects.
+// Tooltips, toasts, and refreshing the custom selects.
 import { isHtmlElement } from '../shared/dom-guards';
 import type { ToastController } from '../shared/react/toast';
 import type { TooltipController } from '../shared/ui/tooltip';
@@ -18,9 +17,6 @@ interface TooltipsState {
 
 interface TooltipsDeps {
   renderSettingsForms(): void;
-  fallbackShortcutWrap: HTMLElement | null;
-  restrictedActionSelectWrap: HTMLElement | null;
-  fallbackShortcutTokens: HTMLElement | null;
   toastElement: HTMLElement | null;
   optionsSelectControlRecords: ReadonlyMap<HTMLSelectElement, SelectControlRecord>;
   renderOptionsSelectControl(select: HTMLSelectElement): void;
@@ -35,9 +31,6 @@ const TOOLTIP_OPTIONS = Object.freeze({
 function createTooltips(deps: TooltipsDeps) {
   const {
     renderSettingsForms,
-    fallbackShortcutWrap,
-    restrictedActionSelectWrap,
-    fallbackShortcutTokens,
     toastElement,
     optionsSelectControlRecords,
     renderOptionsSelectControl
@@ -47,8 +40,6 @@ function createTooltips(deps: TooltipsDeps) {
   const optionsState = deps.optionsState;
 
   let optionsCustomSelectRefreshCount = 0;
-  let fallbackShortcutBaseWidth = 0;
-  let isFallbackWidthReady = false;
 
   function showTooltipFor(target: HTMLElement | null): void {
     if (!target || !optionsState.tooltipController) {
@@ -90,49 +81,6 @@ function createTooltips(deps: TooltipsDeps) {
     optionsSelectControlRecords.forEach((_record, select) => {
       renderOptionsSelectControl(select);
     });
-    syncFallbackShortcutWrapWidth();
-  }
-
-  function syncFallbackShortcutWrapWidth(): void {
-    if (!fallbackShortcutWrap || !restrictedActionSelectWrap) {
-      return;
-    }
-    const width = Math.round(restrictedActionSelectWrap.getBoundingClientRect().width);
-    if (!Number.isFinite(width) || width <= 0) {
-      return;
-    }
-    fallbackShortcutBaseWidth = width;
-    updateFallbackShortcutWrapWidthForContent();
-  }
-
-  function updateFallbackShortcutWrapWidthForContent(): void {
-    if (!fallbackShortcutWrap) {
-      return;
-    }
-    const fallbackBase = Math.max(120, Number.isFinite(fallbackShortcutBaseWidth) ? fallbackShortcutBaseWidth : 0);
-    let nextWidth = fallbackBase || Math.round(fallbackShortcutWrap.getBoundingClientRect().width) || 180;
-    if (fallbackShortcutTokens) {
-      const tokenEls = Array.from(fallbackShortcutTokens.children);
-      if (tokenEls.length > 0) {
-        const style = window.getComputedStyle(fallbackShortcutTokens);
-        const gap = Number.parseFloat(style.columnGap || style.gap) || 0;
-        const paddingLeft = Number.parseFloat(style.paddingLeft) || 0;
-        const paddingRight = Number.parseFloat(style.paddingRight) || 0;
-        const contentWidth = tokenEls.reduce((sum, el) => sum + Math.ceil(el.getBoundingClientRect().width), 0)
-          + Math.max(0, tokenEls.length - 1) * gap;
-        const requiredWidth = Math.ceil(contentWidth + paddingLeft + paddingRight + 2);
-        nextWidth = Math.max(nextWidth, requiredWidth);
-      }
-    }
-    fallbackShortcutWrap.style.width = `${nextWidth}px`;
-    if (!isFallbackWidthReady) {
-      requestAnimationFrame(() => {
-        isFallbackWidthReady = true;
-        if (fallbackShortcutWrap) {
-          fallbackShortcutWrap.setAttribute('data-width-ready', 'true');
-        }
-      });
-    }
   }
 
   function setToastAnnouncement(errorToast: boolean): void {
@@ -176,8 +124,6 @@ function createTooltips(deps: TooltipsDeps) {
     showTooltipFor,
     initTooltips,
     refreshCustomSelects,
-    syncFallbackShortcutWrapWidth,
-    updateFallbackShortcutWrapWidthForContent,
     showToast,
     beginToast
   };

@@ -14,7 +14,6 @@ import * as AGGREGATE_SEARCH from './options-aggregate-search';
 import * as OPTIONS_BLACKLIST_SECTION from './options-blacklist-section';
 import * as LumnoOptionsBlacklist from './options-blacklist';
 import * as OPTIONS_CONTROL_EVENTS from './options-control-events';
-import * as LumnoOptionsFallbackShortcut from './options-fallback-shortcut';
 import * as LumnoOptionsFeedbackSupportSection from './options-feedback-support';
 import * as OPTIONS_FORMS from './options-forms';
 import * as OPTIONS_GENERAL_FEATURES_SECTION from './options-general-features-section';
@@ -30,9 +29,9 @@ import * as OPTIONS_SEGMENTED_TABS from './options-segmented-tabs';
 import * as OPTIONS_SELECT_CONTROLS from './options-select-controls';
 import * as SETTING_BINDINGS from './options-setting-bindings';
 import * as OPTIONS_SETTING_BINDS from './options-setting-binds';
-import * as SHORTCUT_KEYS from './options-shortcut-keys';
 import * as OPTIONS_SHORTCUT_REFERENCE from './options-shortcut-reference';
 import * as OPTIONS_SHORTCUTS_SECTION from './options-shortcuts-section';
+import * as OPTIONS_SEARCH_SHORTCUT_STATUS from './options-search-shortcut-status';
 import * as OPTIONS_SITE_SEARCH_ACTIONS from './options-site-search-actions';
 import * as OPTIONS_SITE_SEARCH_FORM from './options-site-search-form';
 import * as OPTIONS_SITE_SEARCH_LIST from './options-site-search-list';
@@ -142,13 +141,8 @@ import * as OPTIONS_STATE from './options-state';
   const restrictedActionInfoHost = getHtmlElement(document, '_x_extension_restricted_action_info_2026_unique_');
   const bookmarkRowsInfoHost = getHtmlElement(document, '_x_extension_bookmark_rows_info_2026_unique_');
   const bookmarkColumnsInfoHost = getHtmlElement(document, '_x_extension_bookmark_columns_info_2026_unique_');
-  const fallbackShortcutInput = getHtmlTag(document, '_x_extension_shortcuts_input_2024_unique_', 'input');
-  const fallbackShortcutTokens = getHtmlElement(document, '_x_extension_shortcuts_tokens_2024_unique_');
-  const fallbackShortcutWrap = queryHtmlElement(document, '._x_extension_shortcuts_hotkey_wrap_2024_unique_');
   const restrictedActionSelectWrap = getHtmlElement(document, '_x_extension_restricted_action_tabs_wrap_2024_unique_');
   const restrictedActionTabButtons = queryHtmlElements(document, 'button[data-restricted-action]');
-  const clearShortcutButton = getHtmlElement(document, '_x_extension_clear_shortcut_2024_unique_');
-  const resetShortcutButton = getHtmlElement(document, '_x_extension_reset_shortcut_2024_unique_');
   const shortcutsStatus = getHtmlElement(document, '_x_extension_shortcuts_status_2024_unique_');
   const shortcutReferenceList = getHtmlElement(document, '_x_extension_shortcut_reference_list_2026_unique_');
   const openOnboardingPageButton = getHtmlElement(document, '_x_extension_open_onboarding_page_2026_unique_');
@@ -171,12 +165,11 @@ import * as OPTIONS_STATE from './options-state';
   const optionsSettingsControlsApi = globalThis.LumnoOptionsSettingsControls;
   const optionsSettingsNavigationApi = globalThis.LumnoOptionsSettingsNavigation;
   const optionsShortcutReferenceApi = globalThis.LumnoOptionsShortcutReference;
-  const optionsShortcutHotkeyApi = globalThis.LumnoOptionsShortcutHotkey;
   const optionsThemePickerApi = globalThis.LumnoOptionsThemePicker;
   if (!optionsAccountTabApi || !optionsBlacklistTabApi || !optionsShortcutsTabApi || !optionsFeedbackSupportApi ||
       !optionsTranslationHelpApi || !optionsInfoButtonApi || !optionsSegmentedControlApi ||
       !optionsSettingsControlsApi || !optionsSettingsNavigationApi ||
-      !optionsShortcutReferenceApi || !optionsShortcutHotkeyApi || !optionsThemePickerApi) {
+      !optionsShortcutReferenceApi || !optionsThemePickerApi) {
     console.warn('Lumno: options views not available.');
     return;
   }
@@ -319,15 +312,10 @@ import * as OPTIONS_STATE from './options-state';
     showTooltipFor,
     initTooltips,
     refreshCustomSelects,
-    syncFallbackShortcutWrapWidth,
-    updateFallbackShortcutWrapWidthForContent,
     showToast,
     beginToast
   } = OPTIONS_TOOLTIPS.createTooltips({
     renderSettingsForms: (...args) => renderSettingsForms(...args),
-    fallbackShortcutWrap,
-    restrictedActionSelectWrap,
-    fallbackShortcutTokens,
     toastElement,
     optionsSelectControlRecords,
     renderOptionsSelectControl,
@@ -401,8 +389,6 @@ import * as OPTIONS_STATE from './options-state';
   } = OPTIONS_NAVIGATION.createNavigation({
     getMessage: (...args) => getMessage(...args),
     tabContents,
-    syncFallbackShortcutWrapWidth,
-    updateFallbackShortcutWrapWidthForContent,
     refreshSiteSearchProviders,
     tabsRow,
     optionsState
@@ -433,8 +419,6 @@ import * as OPTIONS_STATE from './options-state';
     renderOverlayFontMissingNotices: (...args) => renderOverlayFontMissingNotices(...args),
     formatTemplate: (...args) => formatTemplate(...args),
     formatShortcutForDisplay: (...args) => formatShortcutForDisplay(...args),
-    fallbackShortcutInput,
-    fallbackShortcutTokens,
     SETTINGS,
     LANGUAGE_STORAGE_KEY,
     localStorageArea,
@@ -548,11 +532,6 @@ import * as OPTIONS_STATE from './options-state';
   );
   const shortcutReferenceController =
     optionsShortcutReferenceApi.createShortcutReferenceController(shortcutReferenceList);
-  const shortcutHotkeyController =
-    optionsShortcutHotkeyApi.createShortcutHotkeyController(
-      fallbackShortcutTokens,
-      { onContentReady: updateFallbackShortcutWrapWidthForContent }
-    );
   const themePickerController =
     optionsThemePickerApi.createThemePickerController(themePicker, {
       onSelect(mode, button) {
@@ -1261,29 +1240,20 @@ import * as OPTIONS_STATE from './options-state';
     optionsState
   });
 
-  optionsState.fallbackShortcutSection = LumnoOptionsFallbackShortcut.createFallbackShortcutSection({
+  optionsState.searchShortcutStatus = OPTIONS_SEARCH_SHORTCUT_STATUS.createSearchShortcutStatus({
     chromeApi: chrome,
-    documentObj: document,
-    elements: {
-      clearShortcutButton,
-      fallbackShortcutInput,
-      fallbackShortcutWrap,
-      resetShortcutButton,
-      shortcutsStatus
-    },
+    isMacPlatform: optionsState.isMacPlatform,
     formatShortcutForDisplay,
     getMessage,
-    isMacPlatform: optionsState.isMacPlatform,
-    settings: SETTINGS,
-    shortcutHotkeyController,
-    shortcutKeys: SHORTCUT_KEYS,
-    showToast,
-    storageArea: optionsState.storageArea,
-    windowObj: window
+    onChange(label) {
+      if (shortcutsStatus) {
+        shortcutsStatus.textContent = label;
+      }
+    }
   });
   function loadCurrentShortcut(): void {
-    if (optionsState.fallbackShortcutSection) {
-      optionsState.fallbackShortcutSection.loadCurrentShortcut();
+    if (optionsState.searchShortcutStatus) {
+      optionsState.searchShortcutStatus.load();
     }
   }
   storageChanges.on(FALLBACK_SHORTCUT_STORAGE_KEY, () => loadCurrentShortcut());
@@ -1442,11 +1412,9 @@ import * as OPTIONS_STATE from './options-state';
     optionsState
   });
 
-  optionsState.fallbackShortcutSection.bindControls();
 
   loadCurrentShortcut();
   renderShortcutReferenceList();
-  requestAnimationFrame(syncFallbackShortcutWrapWidth);
   window.addEventListener('focus', () => {
     loadCurrentShortcut();
     renderShortcutReferenceList();

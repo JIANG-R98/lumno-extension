@@ -18,7 +18,7 @@ import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as LumnoMessaging from '../platform/messaging';
 import type { BatchedStorageArea } from '../platform/settings-storage';
 import type { createDailyQuoteSettings } from './options-daily-quote';
-import type { createFallbackShortcutSection } from './options-fallback-shortcut';
+import type { createSearchShortcutStatus } from './options-search-shortcut-status';
 import type { SettingsTabKey } from './options-navigation';
 import type { RecentMode } from './options-segmented-tabs';
 import type { createThemeSection } from './options-theme';
@@ -52,7 +52,7 @@ interface LanguageState {
   currentOverlayWidth: number | null;
   // Made as the page starts; null until then.
   webDavSettingsController: ReturnType<typeof createWebDavController> | null;
-  fallbackShortcutSection: ReturnType<typeof createFallbackShortcutSection> | null;
+  searchShortcutStatus: ReturnType<typeof createSearchShortcutStatus> | null;
   themeSection: ReturnType<typeof createThemeSection> | null;
   dailyQuoteSettings: ReturnType<typeof createDailyQuoteSettings>;
 }
@@ -61,8 +61,6 @@ interface LanguageDeps {
   renderOverlayFontMissingNotices(): void;
   formatTemplate: FormatTemplate;
   formatShortcutForDisplay(shortcut: string): string;
-  fallbackShortcutInput: HTMLInputElement | null;
-  fallbackShortcutTokens: HTMLElement | null;
   SETTINGS: Pick<typeof Settings, 'normalizeLocale' | 'localeToHtmlLang' | 'resolveSupportedLocale' |
     'isMachineTranslatedLocale'>;
   LANGUAGE_STORAGE_KEY: string;
@@ -108,8 +106,6 @@ function createLanguage(deps: LanguageDeps) {
     renderOverlayFontMissingNotices,
     formatTemplate,
     formatShortcutForDisplay,
-    fallbackShortcutInput,
-    fallbackShortcutTokens,
     SETTINGS,
     LANGUAGE_STORAGE_KEY,
     localStorageArea,
@@ -226,12 +222,6 @@ function createLanguage(deps: LanguageDeps) {
       const message = getMessage(key, fallback);
       node.setAttribute('aria-label', message);
     });
-    if (fallbackShortcutInput && fallbackShortcutTokens) {
-      fallbackShortcutTokens.setAttribute('data-placeholder', fallbackShortcutInput.getAttribute('placeholder') || '');
-      if (optionsState.fallbackShortcutSection) {
-        optionsState.fallbackShortcutSection.renderTokens();
-      }
-    }
   }
 
   function normalizeLocale(locale: unknown): string {
@@ -329,8 +319,8 @@ function createLanguage(deps: LanguageDeps) {
       renderTranslationHelp();
       refreshCustomSelects();
       refreshSyncStatus();
-      if (optionsState.fallbackShortcutSection) {
-        optionsState.fallbackShortcutSection.refreshShortcutsStatus();
+      if (optionsState.searchShortcutStatus) {
+        optionsState.searchShortcutStatus.render();
       }
       renderShortcutReferenceList();
       if (optionsState.themeSection) {

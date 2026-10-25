@@ -104,7 +104,7 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     siteSearchAiBuiltinListController: null,
     siteSearchFormController: null,
     themeSection: null,
-    fallbackShortcutSection: null,
+    searchShortcutStatus: null,
     webDavSettingsController: null,
     // Set once the daily quote rows are wired; language refreshes may run earlier.
     dailyQuoteSettings: null,
