@@ -615,7 +615,6 @@ function createInputModeController(parts, options) {
     focusModeMenuSearch: (...args) => focusModeMenuSearch(...args),
     focusModeMenuButton: (...args) => focusModeMenuButton(...args),
     requestModeMenuPinyinRuntime,
-    doc,
     getModeMenuButtons: (...args) => getModeMenuButtons(...args),
     cancelModeMenuRevealFrame,
     modeMenuCursorTooltipController,

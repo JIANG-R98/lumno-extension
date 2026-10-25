@@ -1,7 +1,67 @@
-// @ts-nocheck
 // Moving through the mode menu: its buttons, focus between the search
 // field and items, scrolling, rows and arrow-key directions, and selecting.
-function createModeMenuNavigation(deps) {
+import type { ModeMenuItem } from './types';
+
+// The controller state search-input-mode.ts shares with its modules.
+interface ModeMenuNavigationState {
+  destroyed: boolean;
+  modeMenuOpen: boolean;
+  modeMenuContent: HTMLElement;
+  modeMenuFilterQuery: string;
+}
+
+interface ModeMenuNavigationConfig {
+  // May return a promise; focus moves once it settles.
+  onModeMenuSelect?(item: ModeMenuItem): unknown;
+}
+
+interface ModeMenuNavigationDeps {
+  modeMenu: HTMLElement;
+  doc: Document;
+  input: HTMLInputElement;
+  DEFAULT_MODE_MENU_SCROLL_TOP_CONTEXT: number;
+  DEFAULT_MODE_MENU_SCROLL_BOTTOM_CONTEXT: number;
+  win: Partial<Pick<Window, 'matchMedia'>>;
+  normalizeModeMenuSearchText: (value: unknown) => string;
+  config: ModeMenuNavigationConfig;
+  refreshModeMenu: (selectedModeId?: string) => void;
+  inputModeState: ModeMenuNavigationState;
+}
+
+// Where a menu button sits, for moving by rows and columns.
+interface ButtonLayout {
+  bottom: number;
+  centerX: number;
+  centerY: number;
+  height: number;
+  index: number;
+  left: number;
+  right: number;
+  top: number;
+  width: number;
+}
+
+interface ButtonRow {
+  averageHeight: number;
+  centerY: number;
+  items: ButtonLayout[];
+}
+
+interface ModeMenuSelectOptions {
+  // Where focus goes after selecting: the input, or the item in the panel.
+  focusAfterSelect?: 'input' | 'panel';
+}
+
+function isNode(value: EventTarget | null | undefined): value is Node {
+  return value !== null && value !== undefined && 'nodeType' in value && typeof value.nodeType === 'number';
+}
+
+// A document (nodeType 9) or a shadow root (nodeType 11) has an active element.
+function isDocumentOrShadowRoot(node: Node): node is Node & DocumentOrShadowRoot {
+  return node.nodeType === 9 || node.nodeType === 11;
+}
+
+function createModeMenuNavigation(deps: ModeMenuNavigationDeps) {
   const {
     modeMenu,
     doc,
@@ -17,28 +77,27 @@ function createModeMenuNavigation(deps) {
   // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
 
-  function getAllModeMenuButtons() {
-    return Array.from(modeMenu.querySelectorAll('[role="menuitemradio"]'));
+  function getAllModeMenuButtons(): HTMLElement[] {
+    return Array.from(modeMenu.querySelectorAll<HTMLElement>('[role="menuitemradio"]'));
   }
 
-  function getModeMenuButtons() {
+  function getModeMenuButtons(): HTMLElement[] {
     return getAllModeMenuButtons().filter((button) => !button.hidden);
   }
 
-  function getModeMenuActiveElement() {
-    const rootNode = typeof modeMenu.getRootNode === 'function'
-      ? modeMenu.getRootNode()
-      : doc;
-    return rootNode && rootNode.activeElement
+  // The focused element of the menu's root: its shadow root, or the document.
+  function getModeMenuActiveElement(): Element | null {
+    const rootNode = modeMenu.getRootNode();
+    return isDocumentOrShadowRoot(rootNode) && rootNode.activeElement
       ? rootNode.activeElement
       : doc.activeElement;
   }
 
-  function setModeMenuSearchActive(active) {
+  function setModeMenuSearchActive(active: boolean): void {
     modeMenu.setAttribute('data-search-active', active ? 'true' : 'false');
   }
 
-  function focusModeMenuSearch() {
+  function focusModeMenuSearch(): boolean {
     if (inputModeState.destroyed || !inputModeState.modeMenuOpen || modeMenu.hidden) {
       return false;
     }
@@ -50,8 +109,8 @@ function createModeMenuNavigation(deps) {
     return true;
   }
 
-  function focusModeInput() {
-    if (inputModeState.destroyed || !input || typeof input.focus !== 'function') {
+  function focusModeInput(): boolean {
+    if (inputModeState.destroyed) {
       return false;
     }
     setModeMenuSearchActive(false);
@@ -59,22 +118,21 @@ function createModeMenuNavigation(deps) {
     return true;
   }
 
-  function shouldHandleModeMenuKeyEvent(event) {
+  // Whether a key event belongs to the open menu: focus or the target is in it.
+  function shouldHandleModeMenuKeyEvent(event: { target?: EventTarget | null } | null | undefined): boolean {
     if (inputModeState.destroyed || !inputModeState.modeMenuOpen || modeMenu.hidden) {
       return false;
     }
     const activeElement = getModeMenuActiveElement();
-    const eventTarget = event && event.target;
+    const eventTarget = event ? event.target : null;
     return Boolean(
       activeElement === modeMenu || modeMenu.contains(activeElement) ||
-      eventTarget === modeMenu || modeMenu.contains(eventTarget)
+      eventTarget === modeMenu || (isNode(eventTarget) && modeMenu.contains(eventTarget))
     );
   }
 
-  function scrollModeMenuButtonIntoView(button, scrollOptions) {
-    if (!button || !inputModeState.modeMenuContent ||
-        typeof button.getBoundingClientRect !== 'function' ||
-        typeof inputModeState.modeMenuContent.getBoundingClientRect !== 'function') {
+  function scrollModeMenuButtonIntoView(button: HTMLElement, scrollOptions?: { smooth?: boolean }): void {
+    if (!inputModeState.modeMenuContent) {
       return;
     }
     const buttonRect = button.getBoundingClientRect();
@@ -110,7 +168,7 @@ function createModeMenuNavigation(deps) {
     }
   }
 
-  function focusModeMenuButton(index, focusOptions) {
+  function focusModeMenuButton(index: number, focusOptions?: { smoothScroll?: boolean }): boolean {
     const buttons = getModeMenuButtons();
     if (buttons.length === 0) {
       return false;
@@ -127,7 +185,7 @@ function createModeMenuNavigation(deps) {
     return true;
   }
 
-  function focusFirstModeMenuFilterResult() {
+  function focusFirstModeMenuFilterResult(): boolean {
     const hasFilterQuery = Boolean(
       normalizeModeMenuSearchText(inputModeState.modeMenuFilterQuery)
     );
@@ -137,10 +195,8 @@ function createModeMenuNavigation(deps) {
     return focusModeMenuSearch();
   }
 
-  function getModeMenuButtonLayout(button, index) {
-    const rect = button && typeof button.getBoundingClientRect === 'function'
-      ? button.getBoundingClientRect()
-      : null;
+  function getModeMenuButtonLayout(button: HTMLElement, index: number): ButtonLayout {
+    const rect = button.getBoundingClientRect();
     const left = Number(rect && rect.left) || 0;
     const top = Number(rect && rect.top) || 0;
     const width = Number(rect && rect.width) || 0;
@@ -158,7 +214,8 @@ function createModeMenuNavigation(deps) {
     };
   }
 
-  function getModeMenuButtonRows(buttons) {
+  // The buttons grouped into rows by their vertical centers; null before layout.
+  function getModeMenuButtonRows(buttons: HTMLElement[]): ButtonRow[] | null {
     const layouts = buttons.map(getModeMenuButtonLayout);
     const hasMeasuredLayout = layouts.some((layout) => (
       layout.width > 0 && layout.height > 0
@@ -166,7 +223,7 @@ function createModeMenuNavigation(deps) {
     if (!hasMeasuredLayout) {
       return null;
     }
-    const rows = [];
+    const rows: ButtonRow[] = [];
     layouts.forEach((layout) => {
       let row = rows.find((candidate) => {
         const tolerance = Math.max(
@@ -197,7 +254,9 @@ function createModeMenuNavigation(deps) {
     return rows;
   }
 
-  function getModeMenuDirectionalIndex(buttons, currentIndex, key) {
+  // The button an arrow key moves to: along the row, or to the nearest
+  // button of the next row.
+  function getModeMenuDirectionalIndex(buttons: HTMLElement[], currentIndex: number, key: string): number {
     if (buttons.length === 0) {
       return -1;
     }
@@ -234,17 +293,16 @@ function createModeMenuNavigation(deps) {
     if (!targetRow) {
       return currentIndex;
     }
-    return targetRow.items.reduce((closest, candidate) => {
-      if (!closest) {
-        return candidate;
+    let closest: ButtonLayout | null = null;
+    for (const candidate of targetRow.items) {
+      if (!closest || Math.abs(candidate.centerX - currentItem.centerX) < Math.abs(closest.centerX - currentItem.centerX)) {
+        closest = candidate;
       }
-      const candidateDistance = Math.abs(candidate.centerX - currentItem.centerX);
-      const closestDistance = Math.abs(closest.centerX - currentItem.centerX);
-      return candidateDistance < closestDistance ? candidate : closest;
-    }, null).index;
+    }
+    return closest ? closest.index : currentIndex;
   }
 
-  function syncModeMenuSelection(modeId) {
+  function syncModeMenuSelection(modeId: string): boolean {
     const selectedModeId = String(modeId || '');
     let matched = false;
     getAllModeMenuButtons().forEach((button) => {
@@ -257,16 +315,16 @@ function createModeMenuNavigation(deps) {
     return matched;
   }
 
-  function selectModeMenuItem(item, selectionOptions) {
-    const selectOptions = selectionOptions || {};
+  function selectModeMenuItem(item: ModeMenuItem, selectionOptions?: ModeMenuSelectOptions | null): void {
+    const selectOptions: ModeMenuSelectOptions = selectionOptions || {};
     const focusAfterSelect = selectOptions.focusAfterSelect === 'panel'
       ? 'panel'
       : 'input';
-    let result = null;
+    let result: unknown = null;
     if (typeof config.onModeMenuSelect === 'function') {
       result = config.onModeMenuSelect(item);
     }
-    const syncSelectedMode = () => {
+    const syncSelectedMode = (): void => {
       if (!inputModeState.destroyed && inputModeState.modeMenuOpen && !modeMenu.hidden) {
         const selectedModeId = item && item.id ? String(item.id) : '';
         if (!syncModeMenuSelection(selectedModeId)) {
@@ -287,7 +345,7 @@ function createModeMenuNavigation(deps) {
         }
       }
     };
-    if (result && typeof result.then === 'function') {
+    if (result && typeof result === 'object' && 'then' in result && typeof result.then === 'function') {
       Promise.resolve(result).then(syncSelectedMode, syncSelectedMode);
       return;
     }
@@ -308,4 +366,13 @@ function createModeMenuNavigation(deps) {
   };
 }
 
+type ModeMenuNavigationApi = ReturnType<typeof createModeMenuNavigation>;
+
 export { createModeMenuNavigation };
+export type {
+  ModeMenuNavigationApi,
+  ModeMenuNavigationConfig,
+  ModeMenuNavigationDeps,
+  ModeMenuNavigationState,
+  ModeMenuSelectOptions
+};

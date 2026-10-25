@@ -1,7 +1,97 @@
-// @ts-nocheck
 // Opening, refreshing and closing the mode menu, and the prefix, menu and
 // document pointer and key handlers around it.
-function createModeMenuLifecycle(deps) {
+import type { CursorTooltipController } from '../../ui/cursor-tooltip';
+import type { ModeMenuEntry, ModeMenuItem, SetStyle } from './types';
+import type { ModeMenuLanguageApi } from './mode-menu-language';
+import type { ModeMenuLayoutApi } from './mode-menu-layout';
+import type { ModeMenuNavigationApi } from './mode-menu-navigation';
+import type { ModeMenuRenderApi } from './mode-menu-render';
+import type { ModeTabKeysApi } from './mode-tab-keys';
+import type { PrefixMotionApi } from './prefix-motion';
+import type { PrefixVisualApi } from './prefix-visual';
+
+type ModeMenuItemList = ReadonlyArray<ModeMenuItem | null | undefined> | null | undefined;
+
+interface ModeMenuLifecycleConfig {
+  // The menu's items, now or once loaded.
+  getModeMenuItems?(): ModeMenuItemList | PromiseLike<ModeMenuItemList>;
+}
+
+// The controller state search-input-mode.ts shares with its modules.
+interface ModeMenuLifecycleState {
+  destroyed: boolean;
+  modeMenuOpen: boolean;
+  modeMenuPending: boolean;
+  // Counts open and refresh requests, so a late answer knows it is stale.
+  modeMenuRequestId: number;
+  modeMenuFilterQuery: string;
+  renderedModeMenuEntries: ModeMenuEntry[];
+  modeMenuPinyinRuntimeReady: PromiseLike<unknown> | null | undefined;
+}
+
+interface ModeMenuLifecycleDeps {
+  config: ModeMenuLifecycleConfig;
+  refreshModeMenuLanguage: ModeMenuLanguageApi['refreshModeMenuLanguage'];
+  resetModeMenuDoubleTab: ModeTabKeysApi['resetModeMenuDoubleTab'];
+  resetModeTagRemovalConfirmation: ModeTabKeysApi['resetModeTagRemovalConfirmation'];
+  renderModeMenu: ModeMenuRenderApi['renderModeMenu'];
+  syncModeMenuQueryLift: ModeMenuRenderApi['syncModeMenuQueryLift'];
+  modeMenu: HTMLElement;
+  syncInputPlaceholder: () => void;
+  updateModeMenuFooterAlignment: PrefixVisualApi['updateModeMenuFooterAlignment'];
+  revealModeMenuSurface: ModeMenuLayoutApi['revealModeMenuSurface'];
+  container: HTMLElement;
+  siteSearchPrefix: HTMLElement;
+  setStyle: SetStyle;
+  useImportantStyles: boolean;
+  setInputModePrefixMenuOpen: PrefixMotionApi['setInputModePrefixMenuOpen'];
+  notifyModeMenuLayoutChange: () => void;
+  focusModeInput: ModeMenuNavigationApi['focusModeInput'];
+  focusModeMenuSearch: ModeMenuNavigationApi['focusModeMenuSearch'];
+  focusModeMenuButton: ModeMenuNavigationApi['focusModeMenuButton'];
+  requestModeMenuPinyinRuntime: () => unknown;
+  getModeMenuButtons: ModeMenuNavigationApi['getModeMenuButtons'];
+  cancelModeMenuRevealFrame: ModeMenuLayoutApi['cancelModeMenuRevealFrame'];
+  modeMenuCursorTooltipController: Pick<CursorTooltipController, 'hide'> | null;
+  setModeMenuSearchActive: ModeMenuNavigationApi['setModeMenuSearchActive'];
+  concealModeMenuSurface: ModeMenuLayoutApi['concealModeMenuSurface'];
+  getModeMenuActiveElement: ModeMenuNavigationApi['getModeMenuActiveElement'];
+  applyModeMenuFilter: ModeMenuRenderApi['applyModeMenuFilter'];
+  focusFirstModeMenuFilterResult: ModeMenuNavigationApi['focusFirstModeMenuFilterResult'];
+  getModeMenuDirectionalIndex: ModeMenuNavigationApi['getModeMenuDirectionalIndex'];
+  selectModeMenuItem: ModeMenuNavigationApi['selectModeMenuItem'];
+  handleModeMenuTabFocusToggle: ModeTabKeysApi['handleModeMenuTabFocusToggle'];
+  shouldHandleModeMenuKeyEvent: ModeMenuNavigationApi['shouldHandleModeMenuKeyEvent'];
+  inputModeState: ModeMenuLifecycleState;
+}
+
+// Where focus goes once the menu opens: the last item, the active one, the
+// input, or the menu itself.
+type ModeMenuFocusTarget = 'last' | 'active' | 'input' | 'none';
+
+function isPromiseLike<T>(value: T | PromiseLike<T>): value is PromiseLike<T> {
+  return Boolean(value) && typeof value === 'object' && value !== null && 'then' in value && typeof value.then === 'function';
+}
+
+function isNode(value: EventTarget | null | undefined): value is Node {
+  return value !== null && value !== undefined && 'nodeType' in value && typeof value.nodeType === 'number';
+}
+
+// nodeType 1 is an element, in whichever window the node belongs to.
+function isElement(value: EventTarget | null | undefined): value is Element {
+  return isNode(value) && value.nodeType === 1;
+}
+
+// nodeType 11 with a host is a shadow root.
+function isShadowRoot(node: Node): node is ShadowRoot {
+  return node.nodeType === 11 && 'host' in node;
+}
+
+function hasDataset(element: Element): element is Element & HTMLOrSVGElement {
+  return 'dataset' in element;
+}
+
+function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
   const {
     config,
     refreshModeMenuLanguage,
@@ -23,7 +113,6 @@ function createModeMenuLifecycle(deps) {
     focusModeMenuSearch,
     focusModeMenuButton,
     requestModeMenuPinyinRuntime,
-    doc,
     getModeMenuButtons,
     cancelModeMenuRevealFrame,
     modeMenuCursorTooltipController,
@@ -41,7 +130,7 @@ function createModeMenuLifecycle(deps) {
   // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
 
-  function openModeMenu(focusTarget) {
+  function openModeMenu(focusTarget?: ModeMenuFocusTarget): boolean | Promise<boolean> {
     if (inputModeState.destroyed || typeof config.getModeMenuItems !== 'function') {
       return false;
     }
@@ -50,7 +139,7 @@ function createModeMenuLifecycle(deps) {
     resetModeTagRemovalConfirmation();
     const requestId = ++inputModeState.modeMenuRequestId;
     inputModeState.modeMenuPending = true;
-    const finishOpen = (items) => {
+    const finishOpen = (items: ModeMenuItemList): boolean => {
       if (inputModeState.destroyed || requestId !== inputModeState.modeMenuRequestId) {
         return false;
       }
@@ -86,9 +175,7 @@ function createModeMenuLifecycle(deps) {
     };
     const items = config.getModeMenuItems();
     requestModeMenuPinyinRuntime();
-    if ((items && typeof items.then === 'function') ||
-        (inputModeState.modeMenuPinyinRuntimeReady &&
-          typeof inputModeState.modeMenuPinyinRuntimeReady.then === 'function')) {
+    if (isPromiseLike(items) || isPromiseLike(inputModeState.modeMenuPinyinRuntimeReady)) {
       modeMenu.setAttribute('aria-busy', 'true');
       return Promise.all([
         Promise.resolve(items),
@@ -110,20 +197,16 @@ function createModeMenuLifecycle(deps) {
     return finishOpen(items);
   }
 
-  function refreshModeMenu(preferredModeId) {
+  // Draws the items again, keeping focus on the same mode where it can.
+  function refreshModeMenu(preferredModeId?: string): boolean | Promise<boolean> {
     if (inputModeState.destroyed || !inputModeState.modeMenuOpen || modeMenu.hidden ||
         typeof config.getModeMenuItems !== 'function') {
       return false;
     }
-    const focusRoot = typeof modeMenu.getRootNode === 'function'
-      ? modeMenu.getRootNode()
-      : doc;
-    const activeElement = focusRoot && focusRoot.activeElement
-      ? focusRoot.activeElement
-      : doc.activeElement;
+    const activeElement = getModeMenuActiveElement();
     const focusedButton = activeElement &&
-      typeof activeElement.getAttribute === 'function' &&
-      activeElement.getAttribute('role') === 'menuitemradio'
+      activeElement.getAttribute('role') === 'menuitemradio' &&
+      hasDataset(activeElement)
       ? activeElement
       : null;
     const focusedModeId = preferredModeId
@@ -131,7 +214,7 @@ function createModeMenuLifecycle(deps) {
       : (focusedButton ? String(focusedButton.dataset.modeId || '') : '');
     const requestId = ++inputModeState.modeMenuRequestId;
     inputModeState.modeMenuPending = true;
-    const finishRefresh = (items) => {
+    const finishRefresh = (items: ModeMenuItemList): boolean => {
       if (inputModeState.destroyed || requestId !== inputModeState.modeMenuRequestId || !inputModeState.modeMenuOpen || modeMenu.hidden) {
         return false;
       }
@@ -157,9 +240,9 @@ function createModeMenuLifecycle(deps) {
       return true;
     };
     const items = config.getModeMenuItems();
-    if (items && typeof items.then === 'function') {
+    if (isPromiseLike(items)) {
       modeMenu.setAttribute('aria-busy', 'true');
-      return items.then(finishRefresh, () => {
+      return Promise.resolve(items).then(finishRefresh, () => {
         if (requestId === inputModeState.modeMenuRequestId) {
           inputModeState.modeMenuPending = false;
           modeMenu.removeAttribute('aria-busy');
@@ -170,7 +253,7 @@ function createModeMenuLifecycle(deps) {
     return finishRefresh(items);
   }
 
-  function closeModeMenu(restoreFocus) {
+  function closeModeMenu(restoreFocus?: boolean): boolean {
     if (!inputModeState.modeMenuOpen && !inputModeState.modeMenuPending && modeMenu.hidden) {
       return false;
     }
@@ -180,8 +263,7 @@ function createModeMenuLifecycle(deps) {
     resetModeTagRemovalConfirmation();
     modeMenu.removeAttribute('aria-busy');
     cancelModeMenuRevealFrame();
-    if (modeMenuCursorTooltipController &&
-        typeof modeMenuCursorTooltipController.hide === 'function') {
+    if (modeMenuCursorTooltipController) {
       modeMenuCursorTooltipController.hide();
     }
     inputModeState.modeMenuOpen = false;
@@ -195,13 +277,13 @@ function createModeMenuLifecycle(deps) {
     setStyle(siteSearchPrefix, 'z-index', '1', useImportantStyles);
     setInputModePrefixMenuOpen(false);
     notifyModeMenuLayoutChange();
-    if (restoreFocus && typeof siteSearchPrefix.focus === 'function') {
+    if (restoreFocus) {
       siteSearchPrefix.focus({ preventScroll: true });
     }
     return true;
   }
 
-  function handlePrefixClick(event) {
+  function handlePrefixClick(event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
     if (inputModeState.modeMenuOpen || inputModeState.modeMenuPending) {
@@ -211,7 +293,7 @@ function createModeMenuLifecycle(deps) {
     }
   }
 
-  function handlePrefixKeydown(event) {
+  function handlePrefixKeydown(event: KeyboardEvent): void {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       openModeMenu(event.key === 'ArrowUp' ? 'last' : 'active');
@@ -221,18 +303,17 @@ function createModeMenuLifecycle(deps) {
     }
   }
 
-  function stopModeMenuKeyEvent(event) {
+  function stopModeMenuKeyEvent(event: KeyboardEvent): void {
     event.preventDefault();
-    if (typeof event.stopImmediatePropagation === 'function') {
-      event.stopImmediatePropagation();
-    } else {
-      event.stopPropagation();
-    }
+    event.stopImmediatePropagation();
   }
 
-  function handleMenuKeydown(event) {
+  // Keys while the menu has focus: arrows, Home, End, Enter, Escape, Tab,
+  // and letters, digits and spaces typed into the filter.
+  function handleMenuKeydown(event: KeyboardEvent): boolean {
     const buttons = getModeMenuButtons();
-    const currentIndex = buttons.indexOf(getModeMenuActiveElement());
+    const activeElement = getModeMenuActiveElement();
+    const currentIndex = buttons.findIndex((button) => button === activeElement);
     if (event.key === 'Escape') {
       stopModeMenuKeyEvent(event);
       if (inputModeState.modeMenuFilterQuery) {
@@ -289,44 +370,36 @@ function createModeMenuLifecycle(deps) {
     return false;
   }
 
-  function handleModeMenuKeyEvent(event) {
+  function handleModeMenuKeyEvent(event: KeyboardEvent): boolean {
     if (!shouldHandleModeMenuKeyEvent(event)) {
       return false;
     }
     return handleMenuKeydown(event);
   }
 
-  function handleModeMenuPointerDown(event) {
+  function handleModeMenuPointerDown(event: PointerEvent): void {
     if (!inputModeState.modeMenuOpen || modeMenu.hidden) {
       return;
     }
     setModeMenuSearchActive(true);
-    const target = event && event.target;
-    const button = target && typeof target.closest === 'function'
-      ? target.closest('[role="menuitemradio"]')
-      : null;
+    const target = event.target;
+    const button = isElement(target) ? target.closest('[role="menuitemradio"]') : null;
     // Native pointer focus can scroll the panel's ancestors before click
     // returns focus to the input. All menu focus is managed with preventScroll.
-    if (event && typeof event.preventDefault === 'function') {
-      event.preventDefault();
-    }
+    event.preventDefault();
     if (button) {
       return;
     }
     focusModeMenuSearch();
   }
 
-  function handleDocumentPointerDown(event) {
-    const eventPath = event && typeof event.composedPath === 'function'
-      ? event.composedPath()
-      : [];
-    const containerRoot = typeof container.getRootNode === 'function'
-      ? container.getRootNode()
-      : null;
-    const containerRootHost = containerRoot && containerRoot.host
-      ? containerRoot.host
-      : null;
-    const isInsideModeContainer = container.contains(event.target) ||
+  // A press outside the input and its menu closes the menu. In a closed
+  // shadow root the press reaches the document as the host's.
+  function handleDocumentPointerDown(event: Event): void {
+    const eventPath = event.composedPath();
+    const containerRoot = container.getRootNode();
+    const containerRootHost = isShadowRoot(containerRoot) ? containerRoot.host : null;
+    const isInsideModeContainer = (isNode(event.target) && container.contains(event.target)) ||
       eventPath.includes(container) ||
       eventPath.includes(modeMenu) ||
       eventPath.includes(siteSearchPrefix) ||
@@ -353,4 +426,14 @@ function createModeMenuLifecycle(deps) {
   };
 }
 
+type ModeMenuLifecycleApi = ReturnType<typeof createModeMenuLifecycle>;
+
 export { createModeMenuLifecycle };
+export type {
+  ModeMenuFocusTarget,
+  ModeMenuItemList,
+  ModeMenuLifecycleApi,
+  ModeMenuLifecycleConfig,
+  ModeMenuLifecycleDeps,
+  ModeMenuLifecycleState
+};

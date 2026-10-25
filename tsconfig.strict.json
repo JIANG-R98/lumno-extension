@@ -43,6 +43,10 @@
     "src/shared/search/input-mode/prefix-visual.ts",
     "src/shared/search/input-mode/prefix-content.ts",
     "src/shared/search/input-mode/prefix-motion.ts",
-    "src/shared/search/input-mode/prefix-text.ts"
+    "src/shared/search/input-mode/prefix-text.ts",
+    "src/shared/search/input-mode/mode-menu-layout.ts",
+    "src/shared/search/input-mode/mode-menu-navigation.ts",
+    "src/shared/search/input-mode/mode-menu-render.ts",
+    "src/shared/search/input-mode/mode-menu-lifecycle.ts"
   ]
 }

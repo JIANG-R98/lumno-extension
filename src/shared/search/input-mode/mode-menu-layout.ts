@@ -1,7 +1,42 @@
-// @ts-nocheck
 // Placing the mode menu: its offset below results, fitting it in the
 // viewport, and the frames that reveal and conceal it.
-function createModeMenuLayout(deps) {
+import type * as LumnoMenuSurface from '../../ui/menu-surface';
+import type { SetStyle } from './types';
+
+// The controller state search-input-mode.ts shares with its modules.
+interface ModeMenuLayoutState {
+  destroyed: boolean;
+  modeMenuOpen: boolean;
+}
+
+interface ModeMenuLayoutConfig {
+  onModeMenuLayoutChange?(details: { menuElement: HTMLElement; open: boolean }): void;
+}
+
+// The page window, or a stand-in with the members used here.
+type ModeMenuLayoutWindow = Partial<Pick<Window,
+  'visualViewport' | 'innerHeight' | 'requestAnimationFrame' | 'cancelAnimationFrame' | 'setTimeout' | 'clearTimeout'>>;
+
+interface ModeMenuLayoutDeps {
+  setStyle: SetStyle;
+  modeMenu: HTMLElement;
+  useImportantStyles: boolean;
+  container: HTMLElement;
+  win: ModeMenuLayoutWindow | null | undefined;
+  doc: Document | null | undefined;
+  DEFAULT_MODE_MENU_VIEWPORT_BOTTOM_INSET: number;
+  config: ModeMenuLayoutConfig;
+  menuSurface: Pick<typeof LumnoMenuSurface, 'open' | 'close'>;
+  inputModeState: ModeMenuLayoutState;
+}
+
+interface FitModeMenuOptions {
+  // The viewport's bottom edge, when the surface knows it better.
+  viewportBottom?: number;
+  bottomInset?: number;
+}
+
+function createModeMenuLayout(deps: ModeMenuLayoutDeps) {
   const {
     setStyle,
     modeMenu,
@@ -18,9 +53,10 @@ function createModeMenuLayout(deps) {
   const inputModeState = deps.inputModeState;
 
   let modeMenuRevealFrame = 0;
-  let modeMenuRevealFrameKind = '';
+  let modeMenuRevealFrameKind: '' | 'animation' | 'timeout' = '';
 
-  function setModeMenuResultOffset(offset) {
+  // Moves the menu down by the height of the results shown above it.
+  function setModeMenuResultOffset(offset: unknown): void {
     const numericOffset = Number(offset);
     const nextOffset = Number.isFinite(numericOffset)
       ? Math.max(0, numericOffset)
@@ -33,8 +69,10 @@ function createModeMenuLayout(deps) {
     );
   }
 
-  function fitModeMenuWithinViewport(options) {
-    const fitOptions = options || {};
+  // Caps the menu's height to the viewport below the input; returns the
+  // space left under the menu, or null while it is closed.
+  function fitModeMenuWithinViewport(options?: FitModeMenuOptions | null): number | null {
+    const fitOptions: FitModeMenuOptions = options || {};
     const viewportMaxHeightProperty =
       '--x-lumno-search-mode-menu-viewport-max-height';
     if (inputModeState.destroyed || modeMenu.hidden || !inputModeState.modeMenuOpen) {
@@ -100,7 +138,7 @@ function createModeMenuLayout(deps) {
     );
   }
 
-  function notifyModeMenuLayoutChange() {
+  function notifyModeMenuLayoutChange(): void {
     if (typeof config.onModeMenuLayoutChange === 'function') {
       config.onModeMenuLayoutChange({
         menuElement: modeMenu,
@@ -109,7 +147,7 @@ function createModeMenuLayout(deps) {
     }
   }
 
-  function requestModeMenuFrame(callback) {
+  function requestModeMenuFrame(callback: () => void): number {
     if (win && typeof win.requestAnimationFrame === 'function') {
       return win.requestAnimationFrame(callback);
     }
@@ -120,7 +158,7 @@ function createModeMenuLayout(deps) {
     return 0;
   }
 
-  function cancelModeMenuRevealFrame() {
+  function cancelModeMenuRevealFrame(): void {
     if (!modeMenuRevealFrame || !win) {
       modeMenuRevealFrame = 0;
       modeMenuRevealFrameKind = '';
@@ -137,7 +175,7 @@ function createModeMenuLayout(deps) {
     modeMenuRevealFrameKind = '';
   }
 
-  function requestModeMenuRevealFrame(callback) {
+  function requestModeMenuRevealFrame(callback: () => void): number {
     cancelModeMenuRevealFrame();
     let completedSynchronously = false;
     const frame = requestModeMenuFrame(() => {
@@ -156,30 +194,22 @@ function createModeMenuLayout(deps) {
     return frame;
   }
 
-  function isModeMenuVisible() {
+  function isModeMenuVisible(): boolean {
     return Boolean(!inputModeState.destroyed && inputModeState.modeMenuOpen && !modeMenu.hidden);
   }
 
-  function revealModeMenuSurface() {
-    const guardedFrame = (callback) => requestModeMenuRevealFrame(() => {
+  // Plays the open motion on the next frame, unless the menu closed by then.
+  function revealModeMenuSurface(): void {
+    const guardedFrame = (callback: () => void): number => requestModeMenuRevealFrame(() => {
       if (inputModeState.modeMenuOpen && !modeMenu.hidden) {
         callback();
       }
     });
-    if (typeof menuSurface.open === 'function') {
-      menuSurface.open(modeMenu, { requestAnimationFrame: guardedFrame });
-      return;
-    }
-    modeMenu.setAttribute('data-open', 'false');
-    guardedFrame(() => modeMenu.setAttribute('data-open', 'true'));
+    menuSurface.open(modeMenu, { requestAnimationFrame: guardedFrame });
   }
 
-  function concealModeMenuSurface() {
-    if (typeof menuSurface.close === 'function') {
-      menuSurface.close(modeMenu);
-      return;
-    }
-    modeMenu.setAttribute('data-open', 'false');
+  function concealModeMenuSurface(): void {
+    menuSurface.close(modeMenu);
   }
 
   return {
@@ -193,4 +223,7 @@ function createModeMenuLayout(deps) {
   };
 }
 
+type ModeMenuLayoutApi = ReturnType<typeof createModeMenuLayout>;
+
 export { createModeMenuLayout };
+export type { FitModeMenuOptions, ModeMenuLayoutApi, ModeMenuLayoutConfig, ModeMenuLayoutDeps, ModeMenuLayoutState };
