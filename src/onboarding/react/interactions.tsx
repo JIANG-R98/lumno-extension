@@ -103,7 +103,7 @@ function LinkedText({
   onAction,
   text
 }: {
-  links: InteractionLink[];
+  links: readonly InteractionLink[];
   onAction(actionId: string, event: MouseEvent): void;
   text: string;
 }) {
@@ -362,7 +362,7 @@ function InteractionSlotCopy({
             data-open={expanded ? 'true' : 'false'}
           >
             <LinkedText
-              links={Array.isArray(accordion.links) ? accordion.links : []}
+              links={accordion.links || []}
               onAction={options.onAction}
               text={String(accordion.text)}
             />

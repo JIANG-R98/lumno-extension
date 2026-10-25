@@ -195,7 +195,9 @@ function sortList<T extends { key?: unknown } | null>(
 }
 
 function sortLocalSourceTypes(sourceTypes: readonly string[] | null | undefined, order?: { local?: unknown } | null): string[] {
-  const local = order && Array.isArray(order.local) ? order.local : LOCAL_SOURCE_TYPES;
+  const local: readonly string[] = order && Array.isArray(order.local)
+    ? order.local.filter((type): type is string => typeof type === 'string')
+    : LOCAL_SOURCE_TYPES;
   return sortByKeys(sourceTypes, local, (type: string) => type, toLocalSourceType);
 }
 

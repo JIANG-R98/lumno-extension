@@ -259,9 +259,9 @@ function createQueryIntent(deps: QueryIntentDeps) {
     return false;
   }
 
-  function classifySearchIntent(query: unknown, queryTerms: unknown): SearchIntentType {
+  function classifySearchIntent(query: unknown, queryTerms: readonly string[] | null | undefined): SearchIntentType {
     const raw = String(query || '').trim().toLowerCase();
-    const terms: string[] = Array.isArray(queryTerms) ? queryTerms.filter(Boolean) : [];
+    const terms = (queryTerms || []).filter(Boolean);
     if (looksLikeNavigationQuery(raw)) {
       return 'navigation';
     }

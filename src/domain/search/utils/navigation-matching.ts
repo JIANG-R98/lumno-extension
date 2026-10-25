@@ -1,5 +1,6 @@
 // Matching open tabs and navigation results: comparable URLs, tab match
 // URLs, direct navigation matches and promoting a strong navigation match.
+import type { BlacklistRule } from '../../blacklist-utils';
 import type { SuggestionLike } from '../types';
 import type { DirectNavigationApi } from './direct-navigation';
 import type { IntentItem, QueryIntentApi, QueryTextContext } from './query-intent';
@@ -12,7 +13,7 @@ type NavigationMatchingDeps =
   Pick<TextNormalizeApi, 'normalizeSearchText' | 'splitSearchTerms'>;
 
 interface CollectMatchesOptions extends TitleMatchOptions {
-  isUrlBlockedBySearchBlacklist?: (url: string | undefined, blacklistItems: unknown) => boolean;
+  isUrlBlockedBySearchBlacklist?: (url: string | undefined, blacklistItems: readonly BlacklistRule[]) => boolean;
 }
 
 interface DirectNavigationOptions {
@@ -51,14 +52,14 @@ function createNavigationMatching(deps: NavigationMatchingDeps) {
   function collectSearchMatches<T extends IntentItem>(
     items: readonly T[] | null | undefined,
     context: QueryTextContext,
-    searchBlacklistItems: unknown,
+    searchBlacklistItems: readonly BlacklistRule[],
     options?: CollectMatchesOptions | null
   ): T[] {
     const settings: CollectMatchesOptions = options && typeof options === 'object' ? options : {};
     const isUrlBlocked = typeof settings.isUrlBlockedBySearchBlacklist === 'function'
       ? settings.isUrlBlockedBySearchBlacklist
       : () => false;
-    return (Array.isArray(items) ? items : []).filter((item: T) => (
+    return (items || []).filter((item) => (
       matchesSearchQueryText(item, context, settings) &&
       !isUrlBlocked(item && item.url, searchBlacklistItems)
     ));

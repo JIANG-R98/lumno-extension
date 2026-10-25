@@ -78,8 +78,8 @@ type SuggestionUpdateKind = 'highlight' | 'content' | 'append' | 'structure';
 
 interface UpdateKindOptions {
   forceFullRerender?: boolean;
-  currentSuggestions?: unknown;
-  allSuggestions?: unknown;
+  currentSuggestions?: readonly DisplayedSuggestion[] | null;
+  allSuggestions?: readonly DisplayedSuggestion[] | null;
   actionContextKey?: string;
   lastRenderedActionContextKey?: string;
   includeDebugReasons?: boolean;
@@ -372,12 +372,11 @@ function getSuggestionStructureIdentity(suggestion: MaybeSuggestion): string {
 }
 
 function hasSameSuggestionSequence(
-  previous: unknown,
-  next: unknown,
+  previous: readonly DisplayedSuggestion[] | null | undefined,
+  next: readonly DisplayedSuggestion[] | null | undefined,
   compare: (previous: DisplayedSuggestion, next: DisplayedSuggestion) => boolean
 ): boolean {
-  if (!Array.isArray(previous) || !Array.isArray(next) ||
-      previous.length !== next.length) {
+  if (!previous || !next || previous.length !== next.length) {
     return false;
   }
   return previous.every((item, index) => compare(item, next[index]));
@@ -409,15 +408,15 @@ function getSuggestionUpdateKind(options?: UpdateKindOptions | null): Suggestion
   }
   const previous = config.currentSuggestions;
   const next = config.allSuggestions;
-  const isStablePrefix = sameActionContext &&
-    Array.isArray(previous) &&
-    Array.isArray(next) &&
+  const isStablePrefix = Boolean(sameActionContext &&
+    previous &&
+    next &&
     previous.length > 0 &&
     previous.length < next.length &&
-    previous.every((item: DisplayedSuggestion, index: number) => {
+    previous.every((item, index) => {
       const identity = getSuggestionStructureIdentity(item);
       return Boolean(identity && identity === getSuggestionStructureIdentity(next[index]));
-    });
+    }));
   return isStablePrefix ? 'append' : 'structure';
 }
 

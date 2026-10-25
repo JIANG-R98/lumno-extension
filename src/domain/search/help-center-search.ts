@@ -306,12 +306,18 @@ const preparedSynonyms = new WeakMap<unknown[], HelpSynonyms>();
 const vocabularies = new WeakMap<HelpIndexDoc[], string[]>();
 const EMPTY_SYNONYMS = normalizeSynonyms([]);
 
+// normalizeIndex gives every doc its lowercased forms, so an index whose
+// docs all carry them was prepared, here or in another extension page.
+function isPreparedIndex(index: readonly unknown[]): index is HelpIndexDoc[] {
+  return index.every((doc) => isRecord(doc) && Boolean(doc.lower));
+}
+
 // A raw index, or one normalizeIndex already prepared.
 function prepareIndex(index: unknown): HelpIndexDoc[] {
   if (!Array.isArray(index)) {
     return [];
   }
-  if (index.every((doc) => doc && doc.lower)) {
+  if (isPreparedIndex(index)) {
     return index;
   }
   let prepared = preparedIndexes.get(index);

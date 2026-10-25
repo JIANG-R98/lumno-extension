@@ -50,7 +50,11 @@ function createArea(name: string, values: StorageValues, listeners: Set<ChangeLi
   const writes: StorageValues[] = [];
   const pick = (keys: unknown) => {
     if (keys === null || keys === undefined) return { ...values };
-    const list = typeof keys === 'string' ? [keys] : Array.isArray(keys) ? keys : Object.keys(keys as object);
+    const list = typeof keys === 'string'
+      ? [keys]
+      : Array.isArray(keys)
+        ? keys.filter((key): key is string => typeof key === 'string')
+        : typeof keys === 'object' ? Object.keys(keys) : [];
     return Object.fromEntries(list.filter((key) => key in values).map((key) => [key, values[key]]));
   };
   const emit = (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => {

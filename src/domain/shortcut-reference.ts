@@ -270,12 +270,12 @@ function getDefaultShortcut(definition: ShortcutDefinition | null | undefined, p
   return defaults.default || '';
 }
 
-function getCommandShortcutMap(commands: unknown): Map<string, string> {
+function getCommandShortcutMap(commands: readonly CommandSnapshot[] | null | undefined): Map<string, string> {
   const map = new Map<string, string>();
-  if (!Array.isArray(commands)) {
+  if (!commands) {
     return map;
   }
-  commands.forEach((command: CommandSnapshot | null) => {
+  commands.forEach((command) => {
     if (!command || !command.name) {
       return;
     }

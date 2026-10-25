@@ -27,6 +27,12 @@ type SiteSearchProvidersDeps = Pick<DirectNavigationApi, 'normalizeHost'> & {
 // provider fields, possibly missing or malformed.
 type ProviderInput = Partial<SiteSearchProvider> | null | undefined;
 
+// Stored entries may be objects of any shape; normalizeSiteSearchProvider
+// reads each field defensively, so any object can stand in for a provider.
+function isProviderEntry(value: unknown): value is Partial<SiteSearchProvider> {
+  return Boolean(value) && typeof value === 'object';
+}
+
 function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
   const {
     normalizeHost,
@@ -347,13 +353,13 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     }
     const itemAliases = item && item.aliases;
     const baseAliases = baseProvider && baseProvider.aliases;
-    const aliasSource: string[] = Array.isArray(itemAliases)
+    const aliasSource: readonly unknown[] = Array.isArray(itemAliases)
       ? itemAliases
       : (Array.isArray(baseAliases) ? baseAliases : []);
     const provider: NormalizedSiteSearchProvider = {
       id: String((item && item.id) || (baseProvider && baseProvider.id) || '').trim(),
       key,
-      aliases: aliasSource.filter(Boolean),
+      aliases: aliasSource.filter((alias): alias is string => typeof alias === 'string' && Boolean(alias)),
       name: String((item && item.name) || (baseProvider && baseProvider.name) || key).trim() || key,
       template,
       action: String((item && item.action) || (baseProvider && baseProvider.action) || '').trim(),
@@ -378,12 +384,15 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
   }
 
   function sanitizeSiteSearchProviders(items: unknown, baseItems?: unknown): NormalizedSiteSearchProvider[] {
-    const baseMap = new Map<string, ProviderInput>((Array.isArray(baseItems) ? baseItems : []).map((item: ProviderInput): [string, ProviderInput] => [
-      String(item && item.key ? item.key : '').toLowerCase(),
+    const baseEntries: unknown[] = Array.isArray(baseItems) ? baseItems : [];
+    const baseMap = new Map<string, ProviderInput>(baseEntries.filter(isProviderEntry).map((item): [string, ProviderInput] => [
+      String(item.key || '').toLowerCase(),
       item
     ]));
-    return (Array.isArray(items) ? items : [])
-      .map((item: ProviderInput) => {
+    const entries: unknown[] = Array.isArray(items) ? items : [];
+    return entries
+      .map((entry) => {
+        const item = isProviderEntry(entry) ? entry : null;
         const key = String(item && item.key ? item.key : '').toLowerCase();
         const builtinKey = String(item && item.builtinKey ? item.builtinKey : '').toLowerCase();
         return normalizeSiteSearchProvider(item, baseMap.get(builtinKey || key));

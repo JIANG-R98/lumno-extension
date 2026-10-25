@@ -1226,9 +1226,17 @@ function parseHtmlThemeColorCandidates(html: unknown, pageUrl: unknown, preferre
   return list;
 }
 
+// A color to use, or a manifest to read one from.
+function hasThemeColorSource(candidate: ThemeCandidate | null | undefined): boolean {
+  if (!candidate) {
+    return false;
+  }
+  return 'accentRgb' in candidate ? Boolean(candidate.accentRgb) : Boolean(candidate.manifestUrl);
+}
+
 function pickBestThemeColorCandidate(candidates: ReadonlyArray<ThemeCandidate | null | undefined> | null | undefined): ThemeCandidate | null {
-  const sorted = (Array.isArray(candidates) ? candidates : [])
-    .filter((item) => item && (item.accentRgb || item.manifestUrl))
+  const sorted = (candidates || [])
+    .filter((item): item is ThemeCandidate => Boolean(item) && hasThemeColorSource(item))
     .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
   return sorted[0] || null;
 }

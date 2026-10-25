@@ -242,8 +242,9 @@ function isRuleMatch(rule: BlacklistRule | null | undefined, url: unknown): bool
   return false;
 }
 
-function isUrlBlocked(url: unknown, items: unknown): boolean {
-  const rules: BlacklistRule[] = Array.isArray(items) ? items : [];
+// Takes rules normalizeItems produced.
+function isUrlBlocked(url: unknown, items: readonly BlacklistRule[] | null | undefined): boolean {
+  const rules = items || [];
   return rules.some((rule) => isRuleMatch(rule, url));
 }
 

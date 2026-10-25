@@ -959,11 +959,8 @@ function getSearchSelectionBoost(
   return SEARCH_UTILS.getSearchSelectionBoost(item, context, stats, options);
 }
 
-function isUrlBlockedBySearchBlacklist(url: unknown, items: unknown): boolean {
-  if (BLACKLIST_UTILS.isUrlBlocked) {
-    return BLACKLIST_UTILS.isUrlBlocked(url, items);
-  }
-  return false;
+function isUrlBlockedBySearchBlacklist(url: unknown, items: readonly BlacklistRule[]): boolean {
+  return BLACKLIST_UTILS.isUrlBlocked(url, items);
 }
 
 function isSuggestionBlockedBySearchBlacklist(suggestion: SuggestionLike | null | undefined, items: readonly BlacklistRule[]): boolean {
