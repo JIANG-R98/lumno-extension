@@ -26,6 +26,11 @@ const UI_FILES = Object.freeze(['build/link-preview.js']);
 // preview to frame any other site that refuses framing.
 const FRAME_BLOCKING_HEADERS = Object.freeze(['x-frame-options', 'content-security-policy']);
 const FRAME_ANCESTORS_CSP = Object.freeze({ header: 'content-security-policy', values: ['*frame-ancestors*'] });
+// Chrome settles a rule with no response header condition when the request
+// starts, and one with such a condition when the response arrives. The
+// X-Frame-Options rule matches on its own header so that a domain allowed
+// while the request is underway (see handleFrameRedirect) still counts.
+const FRAME_OPTIONS_HEADER = Object.freeze({ header: 'x-frame-options' });
 // A site with a service worker answers the frame from the worker, and the
 // worker's own request belongs to no tab (tab id -1), so the tab's rule never
 // sees it. While previews are open, such requests to the previewed sites'
@@ -84,15 +89,29 @@ function readUrlDomain(url) {
 }
 
 // A preview's domains: the link's (and the address the frame loads it
-// through), the page the frame shows now, and those a refused page was
-// allowed for its next try.
+// through), the page the frame shows now, those the frame's loading page was
+// redirected to, and those a refused page was allowed for its next try.
 function sessionDomains(session) {
   const domains = new Set(session.linkDomains);
   if (session.committedDomain) {
     domains.add(session.committedDomain);
   }
+  session.redirectDomains.forEach((domain) => domains.add(domain));
   session.retryDomains.forEach((domain) => domains.add(domain));
   return Array.from(domains).sort();
+}
+
+// The same address apart from its fragment, which never reaches the network.
+function isSameAddress(a, b) {
+  try {
+    const left = new URL(a);
+    const right = new URL(b);
+    left.hash = '';
+    right.hash = '';
+    return left.href === right.href;
+  } catch (error) {
+    return false;
+  }
 }
 
 // Session rules accept a tab condition and outlive a suspended worker, which
@@ -139,7 +158,7 @@ function buildFrameHeaderRules(tabId, ids, domains, matchHeaders = true) {
     return [buildRemoveHeadersRule(ids[0], tabId, domains, FRAME_BLOCKING_HEADERS)];
   }
   return [
-    buildRemoveHeadersRule(ids[0], tabId, domains, ['x-frame-options']),
+    buildRemoveHeadersRule(ids[0], tabId, domains, ['x-frame-options'], [FRAME_OPTIONS_HEADER]),
     buildRemoveHeadersRule(ids[1], tabId, domains, ['content-security-policy'], [FRAME_ANCESTORS_CSP])
   ];
 }
@@ -170,11 +189,11 @@ function createLinkPreviewService(options) {
     ? config.fetch
     : (typeof fetch === 'function' ? fetch : null);
   // tabId -> { token, url, frameUrl, frameSecret, frameId, linkDomains,
-  // committedDomain, retryDomains, retries, lastFrameUrl, capture, ready,
-  // state, expiryTimer }, where state is "prepared" (pressed), "opening"
-  // (clicked, show not yet answered) or "open" (the surface shows it).
-  // frameId is the preview frame's, bound once through frameSecret; only
-  // that frame speaks for the preview.
+  // committedDomain, redirectDomains, redirectRequestId, retryDomains,
+  // retries, lastFrameUrl, capture, ready, state, expiryTimer }, where state
+  // is "prepared" (pressed), "opening" (clicked, show not yet answered) or
+  // "open" (the surface shows it). frameId is the preview frame's, bound once
+  // through frameSecret; only that frame speaks for the preview.
   const sessions = new Map();
   let tokenCounter = 0;
   // Cleared once Chrome refuses a rule that matches on a response header.
@@ -183,6 +202,8 @@ function createLinkPreviewService(options) {
   let ruleQueue = Promise.resolve();
   // Settles once the previews a suspended worker left are read back.
   let restored = Promise.resolve();
+  // The redirect listener, there only while a preview is.
+  let redirectListener = null;
 
   function readLastError() {
     return chromeApi && chromeApi.runtime ? chromeApi.runtime.lastError : null;
@@ -220,6 +241,8 @@ function createLinkPreviewService(options) {
       frameId: null,
       linkDomains: Array.from(new Set([readUrlDomain(url), readUrlDomain(frameUrl)].filter(Boolean))),
       committedDomain: '',
+      redirectDomains: [],
+      redirectRequestId: '',
       retryDomains: [],
       retries: 0,
       lastFrameUrl: frameUrl,
@@ -250,6 +273,7 @@ function createLinkPreviewService(options) {
         frameId: session.frameId,
         linkDomains: session.linkDomains,
         committedDomain: session.committedDomain,
+        redirectDomains: session.redirectDomains,
         retryDomains: session.retryDomains,
         retries: session.retries,
         lastFrameUrl: session.lastFrameUrl
@@ -280,9 +304,11 @@ function createLinkPreviewService(options) {
       }
       session.frameId = Number.isInteger(entry.frameId) ? entry.frameId : null;
       session.committedDomain = typeof entry.committedDomain === 'string' ? entry.committedDomain : '';
-      session.retryDomains = Array.isArray(entry.retryDomains)
-        ? entry.retryDomains.filter((domain) => typeof domain === 'string' && domain)
-        : [];
+      const readDomains = (list) => (Array.isArray(list)
+        ? list.filter((domain) => typeof domain === 'string' && domain)
+        : []);
+      session.redirectDomains = readDomains(entry.redirectDomains);
+      session.retryDomains = readDomains(entry.retryDomains);
       session.retries = Number(entry.retries) || 0;
       session.lastFrameUrl = isPreviewableUrl(entry.lastFrameUrl) ? entry.lastFrameUrl : session.frameUrl;
       session.state = 'open';
@@ -293,6 +319,7 @@ function createLinkPreviewService(options) {
   // Brings the tab's rules, and the workers' rule, in line with the tab's
   // preview as it stands when the update runs.
   function syncRules(tabId) {
+    watchRedirects();
     const dnr = getDnr();
     if (!dnr) {
       return Promise.resolve(false);
@@ -566,6 +593,8 @@ function createLinkPreviewService(options) {
     const { tabId, session } = found;
     const before = sessionDomains(session).join(' ');
     session.committedDomain = readUrlDomain(sender.url);
+    session.redirectDomains = [];
+    session.redirectRequestId = '';
     session.retryDomains = [];
     if (sessionDomains(session).join(' ') === before) {
       return false;
@@ -612,7 +641,9 @@ function createLinkPreviewService(options) {
     if (sessions.get(tabId) !== session) {
       return { retry: false };
     }
-    const covered = new Set(sessionDomains(session));
+    // A domain allowed on a redirect may have come too late for the load it
+    // was meant for, so it still counts as untried here.
+    const covered = new Set(session.linkDomains.concat(session.committedDomain, session.retryDomains));
     const added = [readUrlDomain(target), readUrlDomain(finalUrl)]
       .filter((domain) => domain && !covered.has(domain));
     if (!added.length) {
@@ -622,6 +653,54 @@ function createLinkPreviewService(options) {
     session.retryDomains = Array.from(new Set(session.retryDomains.concat(added)));
     const applied = await syncRules(tabId);
     return applied && sessions.get(tabId) === session ? { retry: true, url: target } : { retry: false };
+  }
+
+  // The preview frame's loading page is redirected: the domain it goes to is
+  // allowed at once, while the browser asks for the next address, so a link
+  // that passes through another site (a search engine's result, a short
+  // link) loads in one go instead of being refused and tried again. The
+  // request is the preview frame's once it is bound; before that, the first
+  // load is the one that asked for the preview's own address, followed
+  // through its redirects.
+  function handleFrameRedirect(details) {
+    if (!details || details.type !== 'sub_frame' || !Number.isInteger(details.frameId) || details.frameId <= 0) {
+      return Promise.resolve(false);
+    }
+    const tabId = details.tabId;
+    const session = sessions.get(tabId);
+    if (!session) {
+      return Promise.resolve(false);
+    }
+    const ownFrame = session.frameId !== null
+      ? details.frameId === session.frameId
+      : (Boolean(session.redirectRequestId) && details.requestId === session.redirectRequestId) ||
+        isSameAddress(details.url, session.lastFrameUrl || session.frameUrl);
+    if (!ownFrame) {
+      return Promise.resolve(false);
+    }
+    session.redirectRequestId = String(details.requestId || '');
+    const domain = readUrlDomain(details.redirectUrl);
+    if (!domain || sessionDomains(session).includes(domain)) {
+      return Promise.resolve(false);
+    }
+    session.redirectDomains = session.redirectDomains.concat(domain);
+    return syncRules(tabId);
+  }
+
+  function watchRedirects() {
+    const event = chromeApi && chromeApi.webRequest && chromeApi.webRequest.onBeforeRedirect;
+    if (!event || typeof event.addListener !== 'function') {
+      return;
+    }
+    if (sessions.size && !redirectListener) {
+      redirectListener = (details) => {
+        handleFrameRedirect(details);
+      };
+      event.addListener(redirectListener, { urls: ['http://*/*', 'https://*/*'], types: ['sub_frame'] });
+    } else if (!sessions.size && redirectListener) {
+      event.removeListener(redirectListener);
+      redirectListener = null;
+    }
   }
 
   // The surface lives in the tab's top document, so a navigation of the tab
@@ -700,7 +779,7 @@ function createLinkPreviewService(options) {
         handleTabUpdated(tabId, changeInfo);
       });
     }
-    restored = restoreSessions().catch(() => {});
+    restored = restoreSessions().catch(() => {}).then(watchRedirects);
     ruleQueue = restored;
     reconcileRules();
   }
@@ -788,6 +867,7 @@ function createLinkPreviewService(options) {
     noteFrameNavigation,
     noteFrameCommitted,
     retryRefusedFrame,
+    handleFrameRedirect,
     handleTabRemoved,
     handleTabUpdated,
     reconcileRules,

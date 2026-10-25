@@ -170,7 +170,8 @@
     "unlimitedStorage",
     "contextMenus",
     "fontSettings",
-    "declarativeNetRequestWithHostAccess"
+    "declarativeNetRequestWithHostAccess",
+    "webRequest"
   ],
   "version": "1.2.0"
 }

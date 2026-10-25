@@ -46,6 +46,17 @@ function createChromeMock(options) {
       onRemoved: { addListener() {} },
       onUpdated: { addListener() {} }
     },
+    webRequest: {
+      onBeforeRedirect: {
+        listeners: [],
+        addListener(listener, filter) {
+          this.listeners.push({ listener, filter });
+        },
+        removeListener(listener) {
+          this.listeners = this.listeners.filter((entry) => entry.listener !== listener);
+        }
+      }
+    },
     scripting: {
       executeScript(injection, callback) {
         calls.injected.push(injection);
@@ -83,8 +94,12 @@ async function testRuleScope() {
   const [frameOptionsRule, cspRule] = linkPreview.buildFrameHeaderRules(7, [2, 3], ['example.com']);
   assert.strictEqual(frameOptionsRule.id, 2);
   assert.deepStrictEqual(frameOptionsRule.condition, {
-    tabIds: [7], requestDomains: ['example.com'], resourceTypes: ['sub_frame']
-  }, 'header removal must stay limited to the previewed site\'s subframes in the previewing tab');
+    tabIds: [7],
+    requestDomains: ['example.com'],
+    resourceTypes: ['sub_frame'],
+    responseHeaders: [{ header: 'x-frame-options' }]
+  }, 'header removal must stay limited to the previewed site\'s subframes in the previewing tab, ' +
+    'and is settled on the response, so a domain allowed on a redirect reaches the page it leads to');
   assert.deepStrictEqual(frameOptionsRule.action.responseHeaders.map((entry) => entry.header), ['x-frame-options']);
   assert.strictEqual(cspRule.id, 3);
   assert.deepStrictEqual(cspRule.action.responseHeaders.map((entry) => entry.header), ['content-security-policy']);
@@ -210,6 +225,48 @@ async function testRefusedPageTriesAgainForItsRedirect() {
   service.messageHandlers.linkPreviewFrameRefused({ token }, frameSender(5, 'https://example.com/', 7),
     (value) => { refusedAnswer = value; });
   assert.deepStrictEqual(refusedAnswer, { retry: false }, 'only the top frame\'s surface asks for a retry');
+}
+
+// What the browser reports when a frame's navigation is redirected.
+function frameRedirect(tabId, frameId, requestId, url, redirectUrl) {
+  return { type: 'sub_frame', tabId, frameId, requestId, url, redirectUrl };
+}
+
+async function testRedirectAllowsItsDomainAtOnce() {
+  const { chromeApi, calls, sessionRules } = createChromeMock({ respond: surfaceResponder() });
+  const service = linkPreview.createLinkPreviewService({
+    chromeApi,
+    fetch: async () => ({ url: 'https://final.test/page' })
+  });
+  const redirects = chromeApi.webRequest.onBeforeRedirect;
+  const link = 'https://www.google.com/goto?url=abc#result';
+  await service.open({ id: 9, windowId: 1 }, link);
+  assert.strictEqual(redirects.listeners.length, 1, 'redirects are watched while a preview is up');
+  assert.deepStrictEqual(redirects.listeners[0].filter.types, ['sub_frame']);
+  await service.handleFrameRedirect(frameRedirect(9, 11, 'r0', 'https://www.google.com/other', 'https://evil.test/'));
+  await service.handleFrameRedirect(frameRedirect(9, 0, 'r9', 'https://www.google.com/goto?url=abc', 'https://evil.test/'));
+  await service.handleFrameRedirect(frameRedirect(10, 12, 'r1', 'https://www.google.com/goto?url=abc', 'https://evil.test/'));
+  assert.deepStrictEqual(allowedDomains(sessionRules, 9), ['google.com'],
+    'a redirect of another frame, the top frame or another tab allows nothing');
+  await service.handleFrameRedirect(frameRedirect(9, 12, 'r1', 'https://www.google.com/goto?url=abc', 'https://hop.test/x'));
+  await service.handleFrameRedirect(frameRedirect(9, 12, 'r1', 'https://hop.test/x', 'https://developer.mozilla.org/en'));
+  assert.deepStrictEqual(allowedDomains(sessionRules, 9), ['developer.mozilla.org', 'google.com', 'hop.test'],
+    'the preview\'s first load is followed through its redirects, so the page it lands on is not refused');
+  await bindPreviewFrame(service, calls, 9, 'https://developer.mozilla.org/en');
+  assert.deepStrictEqual(allowedDomains(sessionRules, 9), ['developer.mozilla.org', 'google.com'],
+    'once the page loads, the domains it passed through go');
+
+  await service.handleFrameRedirect(frameRedirect(9, 12, 'r2', 'https://developer.mozilla.org/a', 'https://evil.test/'));
+  assert.deepStrictEqual(allowedDomains(sessionRules, 9), ['developer.mozilla.org', 'google.com'],
+    'once the preview frame is bound, only its own redirects count');
+  await service.handleFrameRedirect(frameRedirect(9, PREVIEW_FRAME_ID, 'r3', 'https://developer.mozilla.org/a', 'https://final.test/page'));
+  assert.deepStrictEqual(allowedDomains(sessionRules, 9), ['developer.mozilla.org', 'final.test', 'google.com']);
+  const token = calls.sent[0].message.token;
+  assert.strictEqual((await service.retryRefusedFrame(9, token)).retry, true,
+    'a domain allowed on a redirect that came too late for its load is still tried once more');
+
+  await service.discard(9, token);
+  assert.strictEqual(redirects.listeners.length, 0, 'with no preview, redirects are not watched');
 }
 
 async function testReleasedPressCancels() {
@@ -887,6 +944,7 @@ async function testPreviewFrameEscape() {
   await testRulesNameThePreviewedSite();
   await testOnlyThePreviewFrameMovesTheRule();
   await testRefusedPageTriesAgainForItsRedirect();
+  await testRedirectAllowsItsDomainAtOnce();
   await testReleasedPressCancels();
   await testOpenPreviewOutlivesWorker();
   testShiftClickOpensPreview();
