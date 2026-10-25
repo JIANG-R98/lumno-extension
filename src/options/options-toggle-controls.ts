@@ -17,7 +17,6 @@ interface ToggleControlsDeps {
   optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>, 'createToggleControlController'>;
   SETTINGS: typeof Settings;
   syncNewtabShortcutSubcontrolAvailability(): void;
-  newtabOpenInNewTabToggles: HTMLInputElement[];
   getMessage: GetMessage;
 }
 
@@ -31,7 +30,6 @@ function createToggleControls(deps: ToggleControlsDeps) {
     optionsSettingsControlsApi,
     SETTINGS,
     syncNewtabShortcutSubcontrolAvailability,
-    newtabOpenInNewTabToggles,
     getMessage
   } = deps;
 
@@ -106,7 +104,6 @@ function createToggleControls(deps: ToggleControlsDeps) {
       registerOptionsToggleControl(control, entry.kind);
     }
   });
-  newtabOpenInNewTabToggles.forEach((input) => registerOptionsToggleControl(input, 'newtab-open-in-new-tab'));
 
   // Settings this browser cannot honor stay visible but disabled, with the
   // reason in a tooltip that follows the cursor: <div

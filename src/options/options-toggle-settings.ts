@@ -133,14 +133,6 @@ function getToggleSettings(settings: typeof Settings, hooks?: ToggleSettingHooks
       key: S.SIMPLE_MODE_ENABLED_STORAGE_KEY,
       normalize: S.normalizeSimpleModeEnabled,
       refreshSelects: true
-    },
-    {
-      // Shown as stored; Options never rewrites this value.
-      inputId: '_x_extension_progress_tracking_toggle_2026_unique_',
-      key: S.PROGRESS_TRACKING_ENABLED_STORAGE_KEY,
-      normalize: S.normalizeProgressTrackingEnabled,
-      repairOnLoad: false,
-      repairOnChange: false
     }
   ];
   return Object.freeze(entries.map((entry) => Object.freeze(entry)));

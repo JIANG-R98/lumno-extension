@@ -315,13 +315,15 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
     assert(newtabScripts.includes('src/domain/progress-match.ts') && newtabScripts.includes('src/domain/progress-history.ts'));
     const newtabDocument = new JSDOM(fs.readFileSync('newtab.html', 'utf8')).window.document;
     assert(newtabDocument.querySelector('link[rel="stylesheet"][href$="recent-history-dialog.css"]'), 'New Tab should style the history dialog');
-    const optionsDocument = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
-    const toggle = optionsDocument.getElementById('_x_extension_progress_tracking_toggle_2026_unique_');
+    const { createOptionsPage } = require('../helpers/options-page');
+    const options = await createOptionsPage({});
+    await options.settle(80);
+    const toggle = options.byId('_x_extension_progress_tracking_toggle_2026_unique_');
     assert.deepStrictEqual([toggle.type, toggle.checked], ['checkbox', true], 'the switch is on by default');
-    const general = optionsDocument.querySelector('[data-content="general"]');
-    const section = general.querySelector('[data-i18n="settings_general_newtab_section_title"]');
-    assert(section && general.contains(toggle) && (section.compareDocumentPosition(toggle) & 4),
+    const section = options.byId('_x_extension_general_newtab_section_2026_unique_');
+    assert(section && section.contains(toggle) && section.closest('[data-content="general"]'),
       'the switch sits in the New Tab section of General settings');
+    options.close();
     const settings = require('../../src/domain/settings.ts');
     assert.strictEqual(settings.normalizeProgressTrackingEnabled(undefined), true);
     assert.strictEqual(settings.normalizeProgressTrackingEnabled(false), false);

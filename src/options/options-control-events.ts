@@ -1,19 +1,11 @@
 // Change handlers for the page's selects, segmented controls and toggles,
 // and the buttons that open the browser's shortcut page or onboarding.
 import type * as Settings from '../domain/settings';
-import type { NewtabGlassStyle, NewtabOpenInNewTab, NewtabOpenInNewTabSurface } from '../domain/settings';
+import type { NewtabGlassStyle } from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
 import * as LumnoMessaging from '../platform/messaging';
 import type { BatchedStorageArea } from '../platform/settings-storage';
 import type { GetMessage } from './options-types';
-
-const NEWTAB_OPEN_IN_NEW_TAB_SURFACES: readonly NewtabOpenInNewTabSurface[] = ['search', 'shortcuts', 'bookmarks', 'recentSites'];
-
-// The New Tab surface a switch is for, by its data attribute.
-function readOpenInNewTabSurface(input: Element): NewtabOpenInNewTabSurface | null {
-  const value = input.getAttribute('data-newtab-open-in-new-tab-surface');
-  return NEWTAB_OPEN_IN_NEW_TAB_SURFACES.find((surface) => surface === value) || null;
-}
 
 interface ControlEventsState {
   storageArea: BatchedStorageArea | null;
@@ -38,7 +30,7 @@ interface ControlEventsDeps {
   newtabTimeFontSelect: HTMLSelectElement | null;
   SETTINGS: Pick<typeof Settings,
     'NEWTAB_GLASS_STYLE_STORAGE_KEY' | 'NEWTAB_TIME_FONT_STORAGE_KEY' | 'getNewtabTimeFont' |
-    'normalizeNewtabGlassStyle' | 'normalizeNewtabOpenInNewTab' | 'normalizeNewtabTimeFont' |
+    'normalizeNewtabGlassStyle' | 'normalizeNewtabTimeFont' |
     'normalizeOverlayFontFamily' | 'normalizeOverlayFontLabels'>;
   renderNewtabTimeFontWeightControl(value: unknown): void;
   NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY: string;
@@ -54,9 +46,6 @@ interface ControlEventsDeps {
   recentModeSelect: HTMLSelectElement | null;
   handleRecentModeSelection(value: string): void;
   recentModeTabButtons: Element[];
-  newtabOpenInNewTabToggles: HTMLInputElement[];
-  setOptionsToggleState(input: HTMLInputElement | null, checked: boolean, disabled?: boolean): void;
-  NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY: string;
   restrictedActionSelect: HTMLSelectElement | null;
   handleRestrictedActionSelection(value: string): void;
   restrictedActionTabButtons: Element[];
@@ -69,7 +58,7 @@ interface ControlEventsDeps {
   optionsState: ControlEventsState;
 }
 
-function createControlEvents(deps: ControlEventsDeps) {
+function createControlEvents(deps: ControlEventsDeps): void {
   const {
     languageSelect,
     applyLanguageMode,
@@ -96,9 +85,6 @@ function createControlEvents(deps: ControlEventsDeps) {
     recentModeSelect,
     handleRecentModeSelection,
     recentModeTabButtons,
-    newtabOpenInNewTabToggles,
-    setOptionsToggleState,
-    NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY,
     restrictedActionSelect,
     handleRestrictedActionSelection,
     restrictedActionTabButtons,
@@ -218,32 +204,6 @@ function createControlEvents(deps: ControlEventsDeps) {
       });
     });
   }
-  function setNewtabOpenInNewTabState(value: unknown): void {
-    const normalized: NewtabOpenInNewTab = SETTINGS.normalizeNewtabOpenInNewTab(value);
-    newtabOpenInNewTabToggles.forEach((input) => {
-      const surface = readOpenInNewTabSurface(input);
-      setOptionsToggleState(input, surface ? normalized[surface] : false);
-    });
-  }
-  newtabOpenInNewTabToggles.forEach((input) => {
-    input.addEventListener('change', () => {
-      const next: Partial<NewtabOpenInNewTab> = {};
-      newtabOpenInNewTabToggles.forEach((item) => {
-        const surface = readOpenInNewTabSurface(item);
-        if (surface) {
-          next[surface] = item.checked;
-        }
-      });
-      const normalized = SETTINGS.normalizeNewtabOpenInNewTab(next);
-      setNewtabOpenInNewTabState(normalized);
-      const storageArea = optionsState.storageArea;
-      if (!storageArea) {
-        return;
-      }
-      storageArea.set({ [NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY]: normalized });
-    });
-  });
-
   if (restrictedActionSelect) {
     restrictedActionSelect.addEventListener('change', () => {
       handleRestrictedActionSelection(restrictedActionSelect.value);
@@ -284,10 +244,6 @@ function createControlEvents(deps: ControlEventsDeps) {
       });
     });
   }
-
-  return {
-    setNewtabOpenInNewTabState
-  };
 }
 
 export { createControlEvents };

@@ -18,6 +18,7 @@ import * as LumnoOptionsFallbackShortcut from './options-fallback-shortcut';
 import * as LumnoOptionsFeedbackSupportSection from './options-feedback-support';
 import * as OPTIONS_FORMS from './options-forms';
 import * as OPTIONS_GENERAL_FEATURES_SECTION from './options-general-features-section';
+import * as OPTIONS_GENERAL_NEWTAB_SECTION from './options-general-newtab-section';
 import * as OPTIONS_GENERAL_SEARCH_SECTION from './options-general-search-section';
 import * as OPTIONS_LABS_SECTION from './options-labs-section';
 import * as OPTIONS_LANGUAGE from './options-language';
@@ -47,7 +48,7 @@ import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as LumnoMessaging from '../platform/messaging';
 import type { StorageChangeListener } from '../domain/storage-port';
 import type { ReadBatchMetrics } from '../platform/settings-storage';
-import { getHtmlElement, getHtmlTag, queryHtmlElement, queryHtmlElements, queryHtmlTags } from '../shared/dom-lookup';
+import { getHtmlElement, getHtmlTag, queryHtmlElement, queryHtmlElements } from '../shared/dom-lookup';
 import type { LayoutMutation } from './options-panel-motion';
 import * as OPTIONS_STATE from './options-state';
 
@@ -141,7 +142,6 @@ import * as OPTIONS_STATE from './options-state';
   const restrictedActionInfoHost = getHtmlElement(document, '_x_extension_restricted_action_info_2026_unique_');
   const bookmarkRowsInfoHost = getHtmlElement(document, '_x_extension_bookmark_rows_info_2026_unique_');
   const bookmarkColumnsInfoHost = getHtmlElement(document, '_x_extension_bookmark_columns_info_2026_unique_');
-  const newtabOpenInNewTabToggles = queryHtmlTags(document, 'input[data-newtab-open-in-new-tab-surface]', 'input');
   const fallbackShortcutInput = getHtmlTag(document, '_x_extension_shortcuts_input_2024_unique_', 'input');
   const fallbackShortcutTokens = getHtmlElement(document, '_x_extension_shortcuts_tokens_2024_unique_');
   const fallbackShortcutWrap = queryHtmlElement(document, '._x_extension_shortcuts_hotkey_wrap_2024_unique_');
@@ -226,8 +226,7 @@ import * as OPTIONS_STATE from './options-state';
     SITE_SEARCH_STORAGE_KEY,
     SITE_SEARCH_DISABLED_STORAGE_KEY,
     AGGREGATE_SEARCH_STORAGE_KEY,
-    SYNC_META_STORAGE_KEY,
-    NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY
+    SYNC_META_STORAGE_KEY
   } = SETTINGS;
   // Device-only values (the language copy, the shortcut overflow, WebDAV
   // status) and the local-to-sync migration always use chrome.storage.local,
@@ -471,6 +470,7 @@ import * as OPTIONS_STATE from './options-state';
     renderTabSections: () => {
       generalFeaturesSection.render();
       generalSearchSection.render();
+      generalNewtabSection.render();
       labsSection.render();
       blacklistSection.render();
     },
@@ -711,6 +711,13 @@ import * as OPTIONS_STATE from './options-state';
       platform: optionsState.isMacPlatform ? 'mac' : 'windows'
     }) || (optionsState.isMacPlatform ? '⌥Q' : 'Alt+Q')
   });
+  const generalNewtabSection = OPTIONS_GENERAL_NEWTAB_SECTION.createGeneralNewtabSection({
+    host: getHtmlElement(document, '_x_extension_general_newtab_section_2026_unique_'),
+    optionsSettingsControlsApi,
+    storageArea: optionsState.storageArea,
+    SETTINGS,
+    getMessage
+  });
   const generalSearchSection = OPTIONS_GENERAL_SEARCH_SECTION.createGeneralSearchSection({
     host: getHtmlElement(document, '_x_extension_general_search_section_2026_unique_'),
     optionsSettingsControlsApi,
@@ -752,7 +759,6 @@ import * as OPTIONS_STATE from './options-state';
     optionsSettingsControlsApi,
     SETTINGS,
     syncNewtabShortcutSubcontrolAvailability: (...args) => syncNewtabShortcutSubcontrolAvailability(...args),
-    newtabOpenInNewTabToggles,
     getMessage
   });
 
@@ -1398,9 +1404,7 @@ import * as OPTIONS_STATE from './options-state';
     refreshSyncStatus();
   });
 
-  const {
-    setNewtabOpenInNewTabState
-  } = OPTIONS_CONTROL_EVENTS.createControlEvents({
+  OPTIONS_CONTROL_EVENTS.createControlEvents({
     languageSelect,
     applyLanguageMode,
     newtabWidthSelect,
@@ -1426,9 +1430,6 @@ import * as OPTIONS_STATE from './options-state';
     recentModeSelect,
     handleRecentModeSelection,
     recentModeTabButtons,
-    newtabOpenInNewTabToggles,
-    setOptionsToggleState,
-    NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY,
     restrictedActionSelect,
     handleRestrictedActionSelection,
     restrictedActionTabButtons,
@@ -1459,6 +1460,7 @@ import * as OPTIONS_STATE from './options-state';
 
   generalFeaturesSection.bindSettings(settingBinder);
   generalSearchSection.bindSettings(settingBinder);
+  generalNewtabSection.bindSettings(settingBinder);
   labsSection.bindSettings(settingBinder);
   blacklistSection.bindSettings(settingBinder);
   shortcutsSection.bindSettings(settingBinder);
@@ -1544,8 +1546,6 @@ import * as OPTIONS_STATE from './options-state';
     renderNewtabTimeFontSizeControl,
     renderNewtabTimeOpacityControl,
     setNewtabTimeInkTabState,
-    NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY,
-    setNewtabOpenInNewTabState,
     TOGGLE_SETTINGS,
     toggleSettingControls,
     RESTRICTED_ACTION_STORAGE_KEY,

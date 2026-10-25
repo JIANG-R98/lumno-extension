@@ -120,8 +120,6 @@ interface SettingBindsDeps {
   renderNewtabTimeFontSizeControl(value: unknown): void;
   renderNewtabTimeOpacityControl(value: unknown): void;
   setNewtabTimeInkTabState(ink: unknown): void;
-  NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY: string;
-  setNewtabOpenInNewTabState(value: unknown): void;
   TOGGLE_SETTINGS: readonly ToggleSettingsEntry[];
   toggleSettingControls: ReadonlyMap<ToggleSettingsEntry, HTMLInputElement | null>;
   RESTRICTED_ACTION_STORAGE_KEY: string;
@@ -219,8 +217,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     renderNewtabTimeFontSizeControl,
     renderNewtabTimeOpacityControl,
     setNewtabTimeInkTabState,
-    NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY,
-    setNewtabOpenInNewTabState,
     TOGGLE_SETTINGS,
     toggleSettingControls,
     RESTRICTED_ACTION_STORAGE_KEY,
@@ -589,13 +585,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     });
   });
   loadNewtabShortcutSettings();
-  settingBinder.bindSetting({
-    key: NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabOpenInNewTab,
-    apply: setNewtabOpenInNewTabState,
-    repairOnLoad: false,
-    repairOnChange: false
-  });
   TOGGLE_SETTINGS.forEach((entry) => {
     settingBinder.bindToggle({ ...entry, input: toggleSettingControls.get(entry) || null });
   });
