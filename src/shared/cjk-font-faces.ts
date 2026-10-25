@@ -23,14 +23,23 @@ const UNICODE_RANGE = [
   'U+FE30-FE4F',
   'U+FF00-FFEF' // full-width forms
 ].join(', ');
-const LOCAL_FACES = Object.freeze({
+type CjkScript = 'zh-Hans' | 'zh-Hant' | 'ja';
+
+interface CjkFontFaceOptions {
+  family?: string | null;
+  lang?: string | null;
+  // The <style> element that holds the face; nothing is installed without it.
+  styleId?: string | null;
+}
+
+const LOCAL_FACES: Readonly<Record<CjkScript, readonly string[]>> = Object.freeze({
   'zh-Hans': ['PingFangSC-Medium'],
   'zh-Hant': ['PingFangTC-Medium'],
   ja: ['HiraginoSans-W5']
 });
 const PAGE_STYLE_ID = '_x_extension_cjk_font_faces_2026_unique_';
 
-function resolveScript(lang) {
+function resolveScript(lang: string | null | undefined): CjkScript | '' {
   const value = String(lang || '').trim().toLowerCase();
   if (value === 'ja' || value.startsWith('ja-')) {
     return 'ja';
@@ -41,11 +50,12 @@ function resolveScript(lang) {
   return '';
 }
 
-function buildFontFaceCss(family, lang) {
-  const faces = LOCAL_FACES[resolveScript(lang)];
-  if (!family || !faces) {
+function buildFontFaceCss(family: string | null | undefined, lang: string | null | undefined): string {
+  const script = resolveScript(lang);
+  if (!family || !script) {
     return '';
   }
+  const faces = LOCAL_FACES[script];
   const escapedFamily = String(family).replace(/["\\\n\r\f]/g, '\\$&');
   return [
     '@font-face {',
@@ -58,8 +68,8 @@ function buildFontFaceCss(family, lang) {
   ].join('\n');
 }
 
-function install(doc, options) {
-  const config = options || {};
+function install(doc: Document | null | undefined, options?: CjkFontFaceOptions | null): void {
+  const config: CjkFontFaceOptions = options || {};
   const host = doc && (doc.head || doc.documentElement);
   if (!host || !config.styleId) {
     return;
@@ -83,7 +93,7 @@ function install(doc, options) {
   style.textContent = css;
 }
 
-function watchDocumentLanguage(doc, family) {
+function watchDocumentLanguage(doc: Document | null | undefined, family: string): void {
   const html = doc && doc.documentElement;
   if (!html) {
     return;
@@ -95,9 +105,9 @@ function watchDocumentLanguage(doc, family) {
   }
 }
 
-function watchFromCurrentScript(doc) {
-  const script = doc && doc.currentScript;
-  const family = script && script.dataset ? script.dataset.fontFamily : '';
+function watchFromCurrentScript(doc: Document | null | undefined): void {
+  const script = doc ? doc.currentScript : null;
+  const family = script ? script.dataset.fontFamily || '' : '';
   if (family) {
     watchDocumentLanguage(doc, family);
   }
@@ -107,6 +117,7 @@ function watchFromCurrentScript(doc) {
 // its <html lang>; elsewhere there is no such script and this does nothing.
 watchFromCurrentScript(typeof document !== 'undefined' ? document : null);
 
+export type { CjkFontFaceOptions, CjkScript };
 export {
   FONT_WEIGHT_BAND,
   buildFontFaceCss,

@@ -15,24 +15,27 @@ const HEIGHT_LAYOUT_PROPERTIES = Object.freeze([
   'will-change'
 ]);
 
-function applyNaturalSuggestionsHeightLayout(container) {
-  if (!container || !container.style) {
+// The suggestions container, or a test double with the members used here.
+interface HeightLayoutTarget {
+  style: Pick<CSSStyleDeclaration, 'removeProperty' | 'setProperty'>;
+  removeAttribute(name: string): void;
+}
+
+// Drops the height animation state so the list takes its natural height at
+// once; false when there is no container to change.
+function applyNaturalSuggestionsHeightLayout(container: HeightLayoutTarget | null | undefined): boolean {
+  if (!container) {
     return false;
   }
-  if (typeof container.removeAttribute === 'function') {
-    HEIGHT_LAYOUT_ATTRIBUTES.forEach((attribute) => {
-      container.removeAttribute(attribute);
-    });
-  }
-  if (typeof container.style.removeProperty === 'function') {
-    HEIGHT_LAYOUT_PROPERTIES.forEach((property) => {
-      container.style.removeProperty(property);
-    });
-  }
-  if (typeof container.style.setProperty === 'function') {
-    container.style.setProperty('transition', 'none', 'important');
-  }
+  HEIGHT_LAYOUT_ATTRIBUTES.forEach((attribute) => {
+    container.removeAttribute(attribute);
+  });
+  HEIGHT_LAYOUT_PROPERTIES.forEach((property) => {
+    container.style.removeProperty(property);
+  });
+  container.style.setProperty('transition', 'none', 'important');
   return true;
 }
 
+export type { HeightLayoutTarget };
 export { applyNaturalSuggestionsHeightLayout };

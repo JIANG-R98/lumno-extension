@@ -1,52 +1,44 @@
-// @ts-nocheck
+// Sets <html data-lumno-motion-effects="on|off"> from the stored setting
+// before the page draws, keeps it current, and hands the first value to the
+// page script as globalThis.LumnoMotionPreferenceReady.
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import { MOTION_EFFECTS_ENABLED_STORAGE_KEY, normalizeMotionEffectsEnabled } from '../domain/settings';
 
 (function() {
-  const STORAGE_KEY = '_x_extension_motion_effects_enabled_2026_unique_';
   const root = document.documentElement;
-  const storage = chrome && chrome.storage ? chrome.storage : null;
   const providerRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chrome);
-  const storageArea = providerRuntime ? providerRuntime.area : storage && storage.sync
-    ? storage.sync
-    : (storage && storage.local ? storage.local : null);
-  const storageAreaName = storageArea && storageArea === storage.sync ? 'sync' : 'local';
-  let resolveInitialPreference = null;
-  let initialPreferenceResolved = false;
-  const initialPreferenceReady = new Promise((resolve) => {
+  const storageArea = providerRuntime.area;
+  let resolveInitialPreference: ((enabled: boolean) => void) | null = null;
+  const initialPreferenceReady = new Promise<boolean>((resolve) => {
     resolveInitialPreference = resolve;
   });
 
   globalThis.LumnoMotionPreferenceReady = initialPreferenceReady;
 
-  function applyMotionEffectsPreference(value) {
-    const enabled = value !== false;
+  function applyMotionEffectsPreference(value: unknown): void {
+    const enabled = normalizeMotionEffectsEnabled(value);
     root.setAttribute('data-lumno-motion-effects', enabled ? 'on' : 'off');
-    if (!initialPreferenceResolved) {
-      initialPreferenceResolved = true;
+    if (resolveInitialPreference) {
       resolveInitialPreference(enabled);
+      resolveInitialPreference = null;
     }
   }
 
-  if (!storageArea || typeof storageArea.get !== 'function') {
-    applyMotionEffectsPreference(true);
-    return;
-  }
-
-  storageArea.get([STORAGE_KEY], (result) => {
-    const rawValue = result ? result[STORAGE_KEY] : undefined;
-    const enabled = rawValue !== false;
+  storageArea.get([MOTION_EFFECTS_ENABLED_STORAGE_KEY], (result) => {
+    const rawValue = result ? result[MOTION_EFFECTS_ENABLED_STORAGE_KEY] : undefined;
+    const enabled = normalizeMotionEffectsEnabled(rawValue);
     applyMotionEffectsPreference(enabled);
-    if (rawValue !== enabled && typeof storageArea.set === 'function') {
-      storageArea.set({ [STORAGE_KEY]: enabled });
+    if (rawValue !== enabled) {
+      storageArea.set({ [MOTION_EFFECTS_ENABLED_STORAGE_KEY]: enabled });
     }
   });
 
-  if (storage.onChanged && typeof storage.onChanged.addListener === 'function') {
-    storage.onChanged.addListener((changes, areaName) => {
-      if ((providerRuntime ? !providerRuntime.isActiveAreaName(areaName) : areaName !== storageAreaName) || !changes || !changes[STORAGE_KEY]) {
+  if (chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (!providerRuntime.isActiveAreaName(areaName) || !changes[MOTION_EFFECTS_ENABLED_STORAGE_KEY]) {
         return;
       }
-      applyMotionEffectsPreference(changes[STORAGE_KEY].newValue);
+      applyMotionEffectsPreference(changes[MOTION_EFFECTS_ENABLED_STORAGE_KEY].newValue);
     });
   }
 })();

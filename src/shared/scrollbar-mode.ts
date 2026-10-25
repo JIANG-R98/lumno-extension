@@ -11,7 +11,9 @@
     return;
   }
 
-  function measure() {
+  const html = root;
+
+  function measure(): void {
     const probe = document.createElement('div');
     probe.setAttribute('aria-hidden', 'true');
     probe.style.cssText = [
@@ -24,12 +26,12 @@
       'visibility: hidden',
       'pointer-events: none'
     ].join(';');
-    root.appendChild(probe);
+    html.appendChild(probe);
     const width = probe.offsetWidth - probe.clientWidth;
     probe.remove();
     const mode = width > 0 ? 'classic' : 'overlay';
-    if (root.getAttribute('data-lumno-scrollbars') !== mode) {
-      root.setAttribute('data-lumno-scrollbars', mode);
+    if (html.getAttribute('data-lumno-scrollbars') !== mode) {
+      html.setAttribute('data-lumno-scrollbars', mode);
     }
   }
 

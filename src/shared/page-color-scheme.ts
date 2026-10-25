@@ -1,4 +1,17 @@
-function parseCssColor(color) {
+type PageTheme = 'dark' | 'light';
+type RgbColor = [number, number, number];
+
+function toRgb(channels: number[]): RgbColor | null {
+  if (channels.length !== 3 || !channels.every((value) => Number.isFinite(value))) {
+    return null;
+  }
+  const [red, green, blue] = channels;
+  return [red, green, blue];
+}
+
+// The red, green and blue of a hex or rgb()/rgba() color; null for any other
+// form and for a fully transparent color.
+function parseCssColor(color: unknown): RgbColor | null {
   if (!color || typeof color !== 'string') {
     return null;
   }
@@ -9,13 +22,10 @@ function parseCssColor(color) {
   if (trimmed.startsWith('#')) {
     const hex = trimmed.slice(1);
     if (hex.length === 3) {
-      const channels = hex.split('').map((value) => parseInt(value + value, 16));
-      return channels.every((value) => Number.isFinite(value)) ? channels : null;
+      return toRgb(hex.split('').map((value) => parseInt(value + value, 16)));
     }
     if (hex.length === 6) {
-      const channels = [hex.slice(0, 2), hex.slice(2, 4), hex.slice(4, 6)]
-        .map((value) => parseInt(value, 16));
-      return channels.every((value) => Number.isFinite(value)) ? channels : null;
+      return toRgb([hex.slice(0, 2), hex.slice(2, 4), hex.slice(4, 6)].map((value) => parseInt(value, 16)));
     }
     return null;
   }
@@ -38,15 +48,13 @@ function parseCssColor(color) {
     return Math.round(Number(part));
   });
   const alpha = parts.length >= 4 ? Number(parts[3]) : 1;
-  if (!channels.every((value) => Number.isFinite(value)) ||
-      !Number.isFinite(alpha) ||
-      alpha <= 0) {
+  if (!Number.isFinite(alpha) || alpha <= 0) {
     return null;
   }
-  return channels.map((value) => Math.max(0, Math.min(255, value)));
+  return toRgb(channels.map((value) => Math.max(0, Math.min(255, value))));
 }
 
-function getLuminance(rgb) {
+function getLuminance(rgb: RgbColor): number {
   const [red, green, blue] = rgb.map((value) => {
     const channel = value / 255;
     return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
@@ -54,9 +62,9 @@ function getLuminance(rgb) {
   return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
 
-function themeFromColor(color) {
+function themeFromColor(color: unknown): PageTheme | null {
   const rgb = parseCssColor(color);
-  if (!rgb || rgb.length !== 3) {
+  if (!rgb) {
     return null;
   }
   return getLuminance(rgb) < 0.42 ? 'dark' : 'light';
@@ -66,7 +74,7 @@ function themeFromColor(color) {
 // classes, background, theme-color and color-scheme, so the surfaces Lumno
 // draws over the page (tab switcher, toasts) can match it. Returns null when
 // the page gives no signal.
-function detectPageTheme(documentRef, windowRef) {
+function detectPageTheme(documentRef?: Document | null, windowRef?: Window | null): PageTheme | null {
   const doc = documentRef || globalThis.document;
   const win = windowRef || globalThis.window;
   if (!doc || !win) {
@@ -182,4 +190,5 @@ function detectPageTheme(documentRef, windowRef) {
   return null;
 }
 
+export type { PageTheme };
 export { detectPageTheme };
