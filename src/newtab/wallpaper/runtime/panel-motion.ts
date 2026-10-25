@@ -1,7 +1,38 @@
 // Appearance panel motion: resizing the panel between tabs, switching
 // source tabs and edit modes, opening and closing it, and the appearance
 // scope change animation.
-function createPanelMotion(deps) {
+import type { Translate } from '../../newtab-types';
+import type { ThemeScope, WallpaperSourceTab } from '../../react/wallpaper-panel/panel-model';
+import type * as RemoteContent from '../../remote-content';
+import type { DailyWallpapers } from './daily-wallpapers';
+import type { PanelSettings } from './panel-settings';
+import type { PanelState } from './panel-state';
+import type { WallpaperSelection } from './wallpaper-selection';
+import type { WallpaperSources } from './wallpaper-sources';
+import type { WallpaperStorage } from './wallpaper-storage';
+import type { WallpaperState } from './wallpaper-runtime-types';
+
+interface PanelMotionDeps extends
+  Pick<WallpaperStorage, 'normalizeWallpaperSourceTab' | 'getWallpaperSelectionIdForUi' | 'getWallpaperSourceTabForId'>,
+  Pick<PanelState, 'renderWallpaperPanelState' | 'getWallpaperPanelRefs' | 'getWallpaperAppearanceModeLabels'>,
+  Pick<WallpaperSelection, 'loadCustomWallpapers'>,
+  Pick<DailyWallpapers, 'loadBingCatalog' | 'showCuratedPageOfSelection'>,
+  Pick<WallpaperSources, 'getWallpaperById' | 'normalizeWallpaperMode'>,
+  Pick<PanelSettings, 'getWallpaperAppearanceOptionButtons' | 'getWallpaperAppearanceOptionMotionElement'> {
+  window: Window;
+  WALLPAPER_SOURCE_TABS: readonly WallpaperSourceTab[];
+  REMOTE_CONTENT: Pick<typeof RemoteContent, 'isDailyWallpaperId' | 'wallpaperFromId'>;
+  document: Document;
+  t: Translate;
+  getThemeScope(): string;
+  afterNextPaint(windowObj: Window, callback: () => void): void;
+  setThemeScope(scope: ThemeScope): void;
+  wallpaperState: Pick<WallpaperState,
+    'wallpaperPanel' | 'activeWallpaperTab' | 'curatedCategory' | 'bingSelectionSeq' | 'activeWallpaperMode' |
+    'wallpaperPanelOpen' | 'heldAppearanceModeLabels' | 'pendingThemeScope'>;
+}
+
+function createPanelMotion(deps: PanelMotionDeps) {
   const {
     window,
     normalizeWallpaperSourceTab,
@@ -32,12 +63,12 @@ function createPanelMotion(deps) {
   const WALLPAPER_PANEL_RESIZE_DURATION_MS = 260;
   const WALLPAPER_PANEL_RESIZE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
   let wallpaperPanelResizing = false;
-  let wallpaperPanelResizeTimer = null;
-  let wallpaperPanelResizeCleanup = null;
-  let wallpaperAppearanceAnimationTimers = [];
-  let lastSyncedWallpaperSourceId = null;
+  let wallpaperPanelResizeTimer: number | null = null;
+  let wallpaperPanelResizeCleanup: (() => void) | null = null;
+  let wallpaperAppearanceAnimationTimers: number[] = [];
+  let lastSyncedWallpaperSourceId: string | null = null;
 
-  function cleanupWallpaperPanelResize() {
+  function cleanupWallpaperPanelResize(): void {
     if (wallpaperPanelResizeTimer !== null) {
       window.clearTimeout(wallpaperPanelResizeTimer);
       wallpaperPanelResizeTimer = null;
@@ -48,21 +79,22 @@ function createPanelMotion(deps) {
     }
   }
 
-  function measureWallpaperPanelOpenHeight() {
-    if (!wallpaperState.wallpaperPanel) {
+  function measureWallpaperPanelOpenHeight(): number {
+    const panel = wallpaperState.wallpaperPanel;
+    if (!panel) {
       return 0;
     }
-    const previousHeight = wallpaperState.wallpaperPanel.style.height;
-    const previousTransition = wallpaperState.wallpaperPanel.style.transition;
-    wallpaperState.wallpaperPanel.style.transition = 'none';
-    wallpaperState.wallpaperPanel.style.height = 'auto';
-    const height = wallpaperState.wallpaperPanel.getBoundingClientRect().height;
-    wallpaperState.wallpaperPanel.style.height = previousHeight;
-    wallpaperState.wallpaperPanel.style.transition = previousTransition;
+    const previousHeight = panel.style.height;
+    const previousTransition = panel.style.transition;
+    panel.style.transition = 'none';
+    panel.style.height = 'auto';
+    const height = panel.getBoundingClientRect().height;
+    panel.style.height = previousHeight;
+    panel.style.transition = previousTransition;
     return height;
   }
 
-  function animateWallpaperPanelResize(mutate) {
+  function animateWallpaperPanelResize(mutate: () => void): void {
     if (typeof mutate !== 'function') {
       return;
     }
@@ -71,24 +103,27 @@ function createPanelMotion(deps) {
       mutate();
       return;
     }
-    const canAnimate = wallpaperState.wallpaperPanel &&
+    const resizingPanel = wallpaperState.wallpaperPanel;
+    const canAnimate = resizingPanel &&
       isWallpaperPanelOpen() &&
       !shouldReduceMotion();
-    if (!canAnimate) {
+    if (!resizingPanel || !canAnimate) {
       mutate();
       return;
     }
+    // Narrowed here, for the handlers below.
+    const panel = resizingPanel;
 
     cleanupWallpaperPanelResize();
-    const startHeight = wallpaperState.wallpaperPanel.getBoundingClientRect().height;
-    const previousHeight = wallpaperState.wallpaperPanel.style.height;
-    const previousOverflow = wallpaperState.wallpaperPanel.style.overflow;
-    const previousTransition = wallpaperState.wallpaperPanel.style.transition;
-    const previousWillChange = wallpaperState.wallpaperPanel.style.willChange;
+    const startHeight = panel.getBoundingClientRect().height;
+    const previousHeight = panel.style.height;
+    const previousOverflow = panel.style.overflow;
+    const previousTransition = panel.style.transition;
+    const previousWillChange = panel.style.willChange;
 
-    wallpaperState.wallpaperPanel.style.height = `${startHeight}px`;
-    wallpaperState.wallpaperPanel.style.overflow = 'hidden';
-    wallpaperState.wallpaperPanel.style.willChange = 'height, transform, opacity, filter';
+    panel.style.height = `${startHeight}px`;
+    panel.style.overflow = 'hidden';
+    panel.style.willChange = 'height, transform, opacity, filter';
     wallpaperPanelResizing = true;
     try {
       mutate();
@@ -98,19 +133,19 @@ function createPanelMotion(deps) {
     const endHeight = measureWallpaperPanelOpenHeight();
 
     const restorePanel = () => {
-      wallpaperState.wallpaperPanel.style.height = previousHeight;
-      wallpaperState.wallpaperPanel.style.overflow = previousOverflow;
-      wallpaperState.wallpaperPanel.style.transition = previousTransition;
-      wallpaperState.wallpaperPanel.style.willChange = previousWillChange;
-      wallpaperState.wallpaperPanel.removeEventListener('transitionend', handleTransitionEnd);
+      panel.style.height = previousHeight;
+      panel.style.overflow = previousOverflow;
+      panel.style.transition = previousTransition;
+      panel.style.willChange = previousWillChange;
+      panel.removeEventListener('transitionend', handleTransitionEnd);
       if (wallpaperPanelResizeTimer !== null) {
         window.clearTimeout(wallpaperPanelResizeTimer);
         wallpaperPanelResizeTimer = null;
       }
       wallpaperPanelResizeCleanup = null;
     };
-    function handleTransitionEnd(event) {
-      if (event && event.target === wallpaperState.wallpaperPanel && event.propertyName === 'height') {
+    function handleTransitionEnd(event: TransitionEvent): void {
+      if (event && event.target === panel && event.propertyName === 'height') {
         restorePanel();
       }
     }
@@ -121,20 +156,20 @@ function createPanelMotion(deps) {
     }
 
     wallpaperPanelResizeCleanup = restorePanel;
-    wallpaperState.wallpaperPanel.style.height = `${startHeight}px`;
-    wallpaperState.wallpaperPanel.style.transition = `height ${WALLPAPER_PANEL_RESIZE_DURATION_MS}ms ${WALLPAPER_PANEL_RESIZE_EASING}`;
-    void wallpaperState.wallpaperPanel.offsetHeight;
-    wallpaperState.wallpaperPanel.addEventListener('transitionend', handleTransitionEnd);
+    panel.style.height = `${startHeight}px`;
+    panel.style.transition = `height ${WALLPAPER_PANEL_RESIZE_DURATION_MS}ms ${WALLPAPER_PANEL_RESIZE_EASING}`;
+    void panel.offsetHeight;
+    panel.addEventListener('transitionend', handleTransitionEnd);
     requestAnimationFrame(() => {
       if (!wallpaperPanelResizeCleanup) {
         return;
       }
-      wallpaperState.wallpaperPanel.style.height = `${endHeight}px`;
+      panel.style.height = `${endHeight}px`;
     });
     wallpaperPanelResizeTimer = window.setTimeout(restorePanel, WALLPAPER_PANEL_RESIZE_DURATION_MS + 80);
   }
 
-  function setWallpaperActiveTab(tab) {
+  function setWallpaperActiveTab(tab: unknown): void {
     const nextTab = normalizeWallpaperSourceTab(tab);
     const previousTab = wallpaperState.activeWallpaperTab;
     if (previousTab !== nextTab) {
@@ -149,16 +184,17 @@ function createPanelMotion(deps) {
       renderWallpaperPanelState();
     }
     if (nextTab === 'local' && isWallpaperPanelOpen()) {
-      loadCustomWallpapers();
+      void loadCustomWallpapers();
     }
-    if (nextTab === 'bing' && previousTab !== nextTab && isWallpaperPanelOpen()) loadBingCatalog();
+    if (nextTab === 'bing' && previousTab !== nextTab && isWallpaperPanelOpen()) void loadBingCatalog();
   }
-  function showCuratedCategoryOfSelection() {
+  function showCuratedCategoryOfSelection(): void {
     const selectedId = getWallpaperSelectionIdForUi();
     const selected = getWallpaperById(selectedId);
+    const slot = REMOTE_CONTENT.isDailyWallpaperId(selectedId) ? REMOTE_CONTENT.wallpaperFromId(selectedId) : null;
     // A daily choice keeps its own category, which may be the random mix.
     const category = selected && selected.provider === 'curated'
-      ? (REMOTE_CONTENT.isDailyWallpaperId(selectedId) ? REMOTE_CONTENT.wallpaperFromId(selectedId).category : selected.category)
+      ? (slot ? slot.category : selected.category)
       : '';
     if (!category) {
       return;
@@ -168,7 +204,7 @@ function createPanelMotion(deps) {
   }
   // Follow the selection only when it moves, so storage reloads (deleting a
   // local wallpaper, syncs, theme changes) keep the tab the user is browsing.
-  function syncWallpaperSourceTabToEditMode(options) {
+  function syncWallpaperSourceTabToEditMode(options?: { force?: boolean } | null): void {
     const selectedId = getWallpaperSelectionIdForUi();
     const force = Boolean(options && options.force);
     if (!force && selectedId === lastSyncedWallpaperSourceId) {
@@ -180,7 +216,7 @@ function createPanelMotion(deps) {
     }
   }
 
-  function setWallpaperActiveMode(mode) {
+  function setWallpaperActiveMode(mode: unknown): void {
     wallpaperState.bingSelectionSeq += 1;
     const nextMode = normalizeWallpaperMode(mode);
     if (wallpaperState.activeWallpaperMode === nextMode) {
@@ -193,10 +229,10 @@ function createPanelMotion(deps) {
     playWallpaperEnterMotion(getWallpaperGridForTab(wallpaperState.activeWallpaperTab), 'enter');
   }
 
-  function isWallpaperPanelOpen() {
+  function isWallpaperPanelOpen(): boolean {
     return wallpaperState.wallpaperPanelOpen;
   }
-  function setWallpaperPanelOpenState(open) {
+  function setWallpaperPanelOpenState(open: boolean): void {
     if (!document.body) {
       return;
     }
@@ -207,7 +243,7 @@ function createPanelMotion(deps) {
     document.body.removeAttribute('data-wallpaper-panel-open');
   }
 
-  function getWallpaperAppearanceModeLabel(mode) {
+  function getWallpaperAppearanceModeLabel(mode: string): string {
     if (mode === 'light') {
       return t('settings_theme_light', 'Light');
     }
@@ -220,7 +256,7 @@ function createPanelMotion(deps) {
     return t('settings_theme_system', 'Follow system');
   }
 
-  function clearWallpaperAppearanceScopeAnimation() {
+  function clearWallpaperAppearanceScopeAnimation(): void {
     wallpaperAppearanceAnimationTimers.forEach((timerId) => {
       window.clearTimeout(timerId);
     });
@@ -242,12 +278,12 @@ function createPanelMotion(deps) {
       options.removeAttribute('data-scope-animating');
     }
   }
-  function shouldReduceMotion() {
+  function shouldReduceMotion(): boolean {
     return Boolean(window.matchMedia &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
 
-  function playWallpaperEnterMotion(element, state) {
+  function playWallpaperEnterMotion(element: HTMLElement | null | undefined, state?: string): void {
     if (!element) {
       return;
     }
@@ -263,24 +299,24 @@ function createPanelMotion(deps) {
       }
     });
   }
-  function getWallpaperGridForTab(tab) {
+  function getWallpaperGridForTab(tab: WallpaperSourceTab): HTMLElement | undefined {
     const refs = getWallpaperPanelRefs();
     if (tab === 'bing') return refs.bingPanel;
     if (tab === 'curated') return refs.curatedPanel;
     return tab === 'local' ? refs.localGrid : refs.builtInGrid;
   }
-  function getAppearanceScopeDirection(scope) {
+  function getAppearanceScopeDirection(scope: ThemeScope): number {
     return scope === 'home' ? 1 : -1;
   }
 
-  function getAppearanceOptionDelay(index, count, direction) {
+  function getAppearanceOptionDelay(index: number, count: number, direction: number): number {
     const visualIndex = direction > 0 ? (count - 1 - index) : index;
     return Math.max(0, visualIndex * 20);
   }
 
-  function animateWallpaperAppearanceScopeChange(previousScope, nextScope) {
-    const targetScope = nextScope === 'home' ? 'home' : 'global';
-    const sourceScope = previousScope === 'home' ? 'home' : 'global';
+  function animateWallpaperAppearanceScopeChange(previousScope: unknown, nextScope: unknown): void {
+    const targetScope: ThemeScope = nextScope === 'home' ? 'home' : 'global';
+    const sourceScope: ThemeScope = previousScope === 'home' ? 'home' : 'global';
     const buttons = getWallpaperAppearanceOptionButtons();
     clearWallpaperAppearanceScopeAnimation();
     if (!buttons.length || sourceScope === targetScope || shouldReduceMotion()) {
@@ -378,4 +414,7 @@ function createPanelMotion(deps) {
   };
 }
 
+type PanelMotion = ReturnType<typeof createPanelMotion>;
+
 export { createPanelMotion };
+export type { PanelMotion, PanelMotionDeps };

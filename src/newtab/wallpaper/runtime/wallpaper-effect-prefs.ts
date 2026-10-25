@@ -228,7 +228,8 @@ function createWallpaperEffectPrefs(deps: WallpaperEffectPrefsDeps) {
     return { labelKey: 'newtab_wallpaper_effect_texture', fallback: 'Texture' };
   }
 
-  function persistWallpaperEffectPrefs(partial: Partial<WallpaperEffectPrefs> | null | undefined): void {
+  // Saves a change to the edited mode's effect; each value is normalized like a stored one.
+  function persistWallpaperEffectPrefs(partial: Partial<Record<keyof WallpaperEffectPrefs, unknown>> | null | undefined): void {
     const editMode = getWallpaperEffectEditMode();
     const nextPrefs = normalizeWallpaperEffectPrefs({
       ...getWallpaperEffectPrefsForMode(editMode),

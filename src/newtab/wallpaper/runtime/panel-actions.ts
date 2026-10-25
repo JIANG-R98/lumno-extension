@@ -1,6 +1,114 @@
 // What the appearance panel's controls do: the action table the React view
 // calls, slider value inputs, and the wallpaper sources feature hint.
-function createPanelActions(deps) {
+import type * as LumnoSettings from '../../../domain/settings';
+import { isHtmlTag } from '../../../shared/dom-guards';
+import type * as LumnoFeatureHints from '../../../shared/ui/feature-hints';
+import type { FeatureHintChromeApi, FeatureHintController, FeatureHintOptions } from '../../../shared/ui/feature-hints';
+import type { Translate } from '../../newtab-types';
+import type { EffectSliderKey, GlassTheme, ThemeScope, WallpaperPanelActions } from '../../react/wallpaper-panel/panel-model';
+import type { SliderChange } from '../../react/wallpaper-panel/panel-primitives';
+import type { WallpaperViewController } from '../../react/wallpaper-view';
+import type * as RemoteContent from '../../remote-content';
+import type { QuoteRuntime } from '../../top-content/quotes';
+import type { WallpaperEffectPrefs } from '../wallpaper-effects';
+import type { CustomWallpapers } from './custom-wallpapers';
+import type { DailyWallpapers } from './daily-wallpapers';
+import type { FaviconChooser } from './favicon-chooser';
+import type { PanelMotion } from './panel-motion';
+import type { PanelSettings, SliderConfig } from './panel-settings';
+import type { CrtParameterKey, PanelState } from './panel-state';
+import type { WallpaperEffectPrefsRuntime } from './wallpaper-effect-prefs';
+import type { WallpaperOverlay } from './wallpaper-overlay';
+import type { WallpaperSelection } from './wallpaper-selection';
+import type { WallpaperSources } from './wallpaper-sources';
+import type { WallpaperStorage } from './wallpaper-storage';
+import type { WallpaperState } from './wallpaper-runtime-types';
+
+// Whether a layout change is only shown or also saved.
+type PersistOptions = { persist: boolean };
+
+// The number boxes the section runtimes' range inputs get.
+interface SliderValueInputs {
+  bindSliderValueInput(slider: HTMLInputElement): void;
+  syncSliderValueInput(slider: HTMLInputElement): void;
+}
+
+// The bookmark and site card settings, which bind to the panel's elements.
+interface SectionPanelSettings {
+  bindSettings(
+    refs: Readonly<Partial<Record<string, HTMLElement>>>,
+    view: WallpaperViewController | null,
+    sliders: SliderValueInputs
+  ): void;
+}
+
+interface PanelActionsDeps extends
+  Pick<WallpaperEffectPrefsRuntime, 'getWallpaperEffectPrefsForEditMode' | 'persistWallpaperEffectPrefs'>,
+  Pick<PanelState, 'getWallpaperStyleSliderValue' | 'getWallpaperButtonLabel' | 'renderWallpaperPanelState' |
+    'isWallpaperTileSelected' | 'getWallpaperPanelRefs'>,
+  Pick<WallpaperSources, 'getWallpaperById'>,
+  Pick<DailyWallpapers, 'clearDailyWallpaperPick' | 'selectBingWallpaper' | 'loadBingCatalog' |
+    'setCuratedDailyWallpaper' | 'selectCuratedCategory' | 'setCuratedMixCategory' | 'showMoreCuratedWallpapers' |
+    'getActiveDailyWallpaperId' | 'setDailyWallpaperPick'>,
+  Pick<WallpaperSelection, 'persistNewtabWallpaper' | 'persistWallpaperEnabled' | 'persistWallpaperModeConsistency' |
+    'primeWallpaperImage' | 'loadCustomWallpapers'>,
+  Pick<PanelMotion, 'isWallpaperPanelOpen' | 'animateWallpaperAppearanceScopeChange' | 'setWallpaperActiveMode' |
+    'setWallpaperActiveTab' | 'syncWallpaperSourceTabToEditMode' | 'setWallpaperPanelOpenState'>,
+  Pick<PanelSettings, 'persistSearchWidthFromSlider' | 'persistTopContentMode' | 'persistTimeFontWeight' |
+    'persistTimeFontSizeFromSlider' | 'persistTimeOpacityFromSlider' | 'persistTimeInk' | 'persistTimeFont' |
+    'persistTimeSecondsVisible' | 'persistTime12Hour' | 'persistShortcutColumnsFromSlider' |
+    'persistShortcutSizeFromSlider' | 'persistShortcutGapFromSlider' | 'getShortcutLayoutDefault'>,
+  Pick<CustomWallpapers, 'deleteCustomWallpaper' | 'importCustomWallpaperFile' | 'isLocalWallpaperLibraryFull' |
+    'showLocalWallpaperLimitToast' | 'setCustomWallpaperUrlFormOpen' | 'openOnlineWallpaperMenu' |
+    'submitCustomWallpaperUrl'>,
+  Pick<WallpaperStorage, 'getWallpaperSelectionIdForUi'>,
+  Pick<WallpaperOverlay, 'getResolvedWallpaperOverlayMode' | 'persistWallpaperOverlayOpacity' |
+    'getWallpaperOverlayOpacityForCurrentMode'>,
+  Pick<FaviconChooser, 'persistNewtabFavicon'> {
+  CRT_PARAMETER_PHYSICAL_MAX: Readonly<Record<CrtParameterKey, number>>;
+  getCrtParameterPercent(key: CrtParameterKey, value: unknown): number;
+  getCrtParameterPhysicalValue(key: CrtParameterKey, percent: unknown): number;
+  REMOTE_CONTENT: Pick<typeof RemoteContent, 'BING_DAILY_ID' | 'isDailyWallpaperId'>;
+  NEWTAB_WALLPAPER_DEFAULT_ID: string;
+  showTopActionTooltip(anchor: HTMLElement, text: string, options?: { placement?: string }): void;
+  hideTopActionTooltip(): void;
+  getThemeScope(): string;
+  setThemeMode(mode: string): void;
+  setInputAutoFocusEnabled(enabled: boolean): void;
+  setGlassStyle(value: string): void;
+  setGlassTheme(value: GlassTheme): void;
+  SETTINGS: Pick<typeof LumnoSettings, 'getNewtabTimeFont' | 'NEWTAB_TIME_FONT_SIZE_DEFAULT' | 'NEWTAB_TIME_OPACITY_DEFAULT'>;
+  setShortcutsVisible(visible: boolean, options: PersistOptions): void;
+  setShortcutAddVisible(visible: boolean, options: PersistOptions): void;
+  setShortcutDockMagnificationEnabled(enabled: boolean, options: PersistOptions): void;
+  shortcutSizeConfig: SliderConfig;
+  shortcutGapConfig: SliderConfig;
+  options: {
+    getQuoteRuntime?: () => Pick<QuoteRuntime, 'bindSettings'> | null | undefined;
+    getSectionPanelSettings?: () => SectionPanelSettings | null | undefined;
+  };
+  document: Document;
+  featureHints: Pick<typeof LumnoFeatureHints, 'createFeatureHint'> | null;
+  window: FeatureHintOptions['windowObj'];
+  chrome: FeatureHintChromeApi | null | undefined;
+  featureHintVisibilityGate: PromiseLike<unknown> | null;
+  t: Translate;
+  getRiSvg(id: string, sizeClass: string): string;
+  closeWallpaperPanel(): void;
+  wallpaperState: Pick<WallpaperState,
+    'currentTimeFont' | 'customWallpaperImporting' | 'customWallpaperUrlFormOpen' | 'customWallpaperUrlInvalid' |
+    'wallpaperViewController' | 'wallpaperSourcesHintController' | 'wallpaperControl' | 'wallpaperPanel' |
+    'wallpaperButton' | 'wallpaperPanelOpen' | 'activeWallpaperTab'>;
+}
+
+// The effect settings an effect slider writes to.
+type EffectParameterKey = Exclude<EffectSliderKey, 'strength' | 'size'> | 'strength' | 'crtStrength' | 'size' | 'blockSize';
+
+function isCrtParameterKey(key: EffectParameterKey): key is CrtParameterKey {
+  return key === 'crtStrength' || key === 'crtBloom' || key === 'crtRgbOffset' || key === 'crtCurvature';
+}
+
+function createPanelActions(deps: PanelActionsDeps) {
   const {
     getWallpaperEffectPrefsForEditMode,
     CRT_PARAMETER_PHYSICAL_MAX,
@@ -89,38 +197,38 @@ function createPanelActions(deps) {
 
   let wallpaperPanelRendered = false;
 
-  function setWallpaperEffectParameter(sliderKey, value, change) {
+  function setWallpaperEffectParameter(sliderKey: EffectSliderKey, value: number, change: SliderChange): void {
     const currentPrefs = getWallpaperEffectPrefsForEditMode();
-    const key = sliderKey === 'strength'
+    const key: EffectParameterKey = sliderKey === 'strength'
       ? (currentPrefs.type === 'crt' ? 'crtStrength' : 'strength')
       : sliderKey === 'size'
         ? (currentPrefs.type === 'blocks' ? 'blockSize' : 'size')
         : sliderKey;
-    const isCrtParameter = currentPrefs.type === 'crt' && CRT_PARAMETER_PHYSICAL_MAX[key];
-    const fallbackValue = isCrtParameter
-      ? getCrtParameterPercent(key, currentPrefs[key])
+    const crtKey = currentPrefs.type === 'crt' && isCrtParameterKey(key) && CRT_PARAMETER_PHYSICAL_MAX[key] ? key : null;
+    const fallbackValue = crtKey
+      ? getCrtParameterPercent(crtKey, currentPrefs[crtKey])
       : currentPrefs[key];
     const sliderValue = getWallpaperStyleSliderValue(value, fallbackValue, change, sliderKey === 'strength');
-    persistWallpaperEffectPrefs({
-      [key]: isCrtParameter ? getCrtParameterPhysicalValue(key, sliderValue) : sliderValue
-    });
+    const nextPrefs: Partial<WallpaperEffectPrefs> = {};
+    nextPrefs[key] = crtKey ? getCrtParameterPhysicalValue(crtKey, sliderValue) : sliderValue;
+    persistWallpaperEffectPrefs(nextPrefs);
   }
 
-  function setBingDailyWallpaper(enabled) {
+  function setBingDailyWallpaper(enabled: boolean): void {
     const daily = getWallpaperById(REMOTE_CONTENT.BING_DAILY_ID);
     if (enabled) {
       clearDailyWallpaperPick(REMOTE_CONTENT.BING_DAILY_ID);
-      selectBingWallpaper(REMOTE_CONTENT.BING_DAILY_ID);
+      void selectBingWallpaper(REMOTE_CONTENT.BING_DAILY_ID);
     } else if (daily && daily.dailyId) {
-      selectBingWallpaper(daily.dailyId);
+      void selectBingWallpaper(daily.dailyId);
     } else {
       // An unresolved daily photo shows the built-in default, so keep that one.
       persistNewtabWallpaper(NEWTAB_WALLPAPER_DEFAULT_ID);
     }
   }
 
-  function createWallpaperPanelActions() {
-    return Object.freeze({
+  function createWallpaperPanelActions(): WallpaperPanelActions {
+    const actions: WallpaperPanelActions = {
       togglePanel: toggleWallpaperPanel,
       showTooltip: (anchor, text) => showTopActionTooltip(anchor, text),
       hideTooltip: () => hideTopActionTooltip(),
@@ -131,7 +239,7 @@ function createPanelActions(deps) {
         }
         showTopActionTooltip(anchor, getWallpaperButtonLabel(), { placement: 'top' });
       },
-      selectThemeScope: (scope) => animateWallpaperAppearanceScopeChange(getThemeScope(), scope),
+      selectThemeScope: (scope: ThemeScope) => animateWallpaperAppearanceScopeChange(getThemeScope(), scope),
       selectThemeMode: (mode) => setThemeMode(mode),
       setSearchWidth: (value, change) => persistSearchWidthFromSlider(value, change),
       setInputAutoFocus(enabled) {
@@ -185,7 +293,7 @@ function createPanelActions(deps) {
       selectWallpaperMode: (mode) => setWallpaperActiveMode(mode),
       selectSourceTab: (tab) => setWallpaperActiveTab(tab),
       selectWallpaper: (id) => persistNewtabWallpaper(id),
-      primeWallpaper: (id) => primeWallpaperImage(id),
+      primeWallpaper: (id) => { void primeWallpaperImage(id); },
       deleteWallpaper: (id) => deleteCustomWallpaper(id),
       importWallpaperFile: (file) => importCustomWallpaperFile(file),
       toggleUrlForm() {
@@ -216,11 +324,11 @@ function createPanelActions(deps) {
           clearDailyWallpaperPick(dailyId);
         }
       },
-      refreshBing: () => loadBingCatalog(true),
+      refreshBing: () => { void loadBingCatalog(true); },
       selectBingWallpaper(id) {
         // The highlighted tile is already applied; re-clicking it should not leave daily mode.
         if (!isWallpaperTileSelected(id)) {
-          selectBingWallpaper(id, { asDailyPick: true });
+          void selectBingWallpaper(id, { asDailyPick: true });
         }
       },
       setCuratedDaily: (enabled) => setCuratedDailyWallpaper(enabled),
@@ -248,12 +356,13 @@ function createPanelActions(deps) {
       selectInkTone: (tone) => persistWallpaperEffectPrefs({ inkTone: tone }),
       setEffectParameter: setWallpaperEffectParameter,
       selectFavicon: (id) => persistNewtabFavicon(id)
-    });
+    };
+    return Object.freeze(actions);
   }
 
   // The bookmark, site card and quote sections belong to their own runtimes; they
   // bind to the panel's elements the first time it opens.
-  function bindWallpaperPanelSectionRuntimes() {
+  function bindWallpaperPanelSectionRuntimes(): void {
     if (wallpaperPanelRendered) {
       return;
     }
@@ -272,14 +381,15 @@ function createPanelActions(deps) {
 
   // Number boxes beside the section runtimes' plain range inputs: typed values
   // commit on blur or Enter, clamped and stepped like the slider.
-  function getPanelSliderValueInput(slider) {
+  function getPanelSliderValueInput(slider: HTMLInputElement | null | undefined): HTMLInputElement | null {
     const row = slider && typeof slider.closest === 'function'
       ? slider.closest('.x-nt-range-slider-row')
       : null;
-    return row ? row.querySelector('._x_extension_range_slider_value_input_2026_unique_') : null;
+    const input = row ? row.querySelector('._x_extension_range_slider_value_input_2026_unique_') : null;
+    return isHtmlTag(input, 'input') ? input : null;
   }
 
-  function syncPanelSliderValueInput(slider) {
+  function syncPanelSliderValueInput(slider: HTMLInputElement): void {
     const valueInput = getPanelSliderValueInput(slider);
     if (!valueInput) {
       return;
@@ -295,7 +405,7 @@ function createPanelActions(deps) {
     }
   }
 
-  function commitPanelSliderValueInput(slider, valueInput) {
+  function commitPanelSliderValueInput(slider: HTMLInputElement, valueInput: HTMLInputElement): void {
     const draft = String(valueInput.value || '').trim();
     const number = Number(draft);
     if (!draft || !Number.isFinite(number)) {
@@ -317,7 +427,7 @@ function createPanelActions(deps) {
     syncPanelSliderValueInput(slider);
   }
 
-  function bindPanelSliderValueInput(slider) {
+  function bindPanelSliderValueInput(slider: HTMLInputElement): void {
     const valueInput = getPanelSliderValueInput(slider);
     if (!slider || !valueInput || valueInput.dataset.sliderValueInputBound === 'true') {
       return;
@@ -348,7 +458,7 @@ function createPanelActions(deps) {
     syncPanelSliderValueInput(slider);
   }
 
-  function isFocusRoutePending() {
+  function isFocusRoutePending(): boolean {
     return Boolean(
       document.documentElement &&
       document.documentElement.getAttribute('data-nt-focus-route-pending') === 'true'
@@ -356,10 +466,11 @@ function createPanelActions(deps) {
   }
 
   // Points at the appearance button until the panel is opened once.
-  function createWallpaperSourcesFeatureHint() {
+  function createWallpaperSourcesFeatureHint(): FeatureHintController | null {
+    const control = wallpaperState.wallpaperControl;
     if (wallpaperState.wallpaperSourcesHintController ||
         isFocusRoutePending() ||
-        !wallpaperState.wallpaperControl ||
+        !control ||
         !featureHints ||
         typeof featureHints.createFeatureHint !== 'function') {
       return wallpaperState.wallpaperSourcesHintController;
@@ -377,18 +488,18 @@ function createPanelActions(deps) {
       return null;
     }
     wallpaperState.wallpaperSourcesHintController = controller;
-    wallpaperState.wallpaperControl.appendChild(controller.element);
+    control.appendChild(controller.element);
     return controller;
   }
 
-  function dismissWallpaperSourcesFeatureHint() {
+  function dismissWallpaperSourcesFeatureHint(): void {
     if (wallpaperState.wallpaperSourcesHintController &&
         typeof wallpaperState.wallpaperSourcesHintController.dismiss === 'function') {
       wallpaperState.wallpaperSourcesHintController.dismiss();
     }
   }
 
-  function openWallpaperPanel() {
+  function openWallpaperPanel(): void {
     if (!wallpaperState.wallpaperPanel || !wallpaperState.wallpaperButton) {
       return;
     }
@@ -402,11 +513,11 @@ function createPanelActions(deps) {
     renderWallpaperPanelState();
     setWallpaperPanelOpenState(true);
     if (wallpaperState.activeWallpaperTab === 'local') {
-      loadCustomWallpapers();
+      void loadCustomWallpapers();
     }
-    if (wallpaperState.activeWallpaperTab === 'bing') loadBingCatalog();
+    if (wallpaperState.activeWallpaperTab === 'bing') void loadBingCatalog();
   }
-  function toggleWallpaperPanel() {
+  function toggleWallpaperPanel(): void {
     if (isWallpaperPanelOpen()) {
       closeWallpaperPanel();
       return;
@@ -420,4 +531,7 @@ function createPanelActions(deps) {
   };
 }
 
+type PanelActions = ReturnType<typeof createPanelActions>;
+
 export { createPanelActions };
+export type { PanelActions, PanelActionsDeps, SectionPanelSettings, SliderValueInputs };
