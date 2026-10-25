@@ -1,7 +1,6 @@
 // The one state object options.ts shares with the modules split out of it:
 // each module declares the slice it reads and writes, and this type is all
 // of them together.
-import * as SETTINGS from '../domain/settings';
 import type { SiteSearchProvider } from '../domain/search/types';
 import type { BatchedStorageArea, ProviderStorageRuntime, StorageAreaFacade } from '../platform/settings-storage';
 import type { ToastController } from '../shared/react/toast';
@@ -12,14 +11,11 @@ import type { LanguageState } from './options-language';
 import type { NavigationState } from './options-navigation';
 import type { createPanelHeightAnimator } from './options-panel-motion';
 import type { createSearchSourceOrderController } from './options-search-source-order';
-import type { SegmentedTabsState } from './options-segmented-tabs';
-import type { SettingBindsState } from './options-setting-binds';
 import type { ShortcutReferenceState } from './options-shortcut-reference';
 import type { createSiteSearchModel, EnqueueOperation } from './options-site-search';
 import type { SiteSearchActionsState } from './options-site-search-actions';
 import type { SiteSearchFormState } from './options-site-search-form';
 import type { SiteSearchListState } from './options-site-search-list';
-import type { SliderControlsState } from './options-slider-controls';
 import type { TooltipsState } from './options-tooltips';
 
 // What options.ts itself keeps beyond the modules' slices, and the full
@@ -36,13 +32,10 @@ type OptionsState =
   FormsState &
   LanguageState &
   NavigationState &
-  SegmentedTabsState &
-  SettingBindsState &
   ShortcutReferenceState &
   SiteSearchActionsState &
   SiteSearchFormState &
   SiteSearchListState &
-  SliderControlsState &
   TooltipsState &
   OptionsPageState;
 
@@ -86,7 +79,6 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
 
     // Views made as the page mounts them.
     settingsNavigationController: null,
-    recentModeTabsController: null,
     siteSearchEngineBuiltinListController: null,
     siteSearchCustomListController: null,
     siteSearchBuiltinListController: null,
@@ -112,16 +104,7 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     helpCenterSearchEnabled: null,
     siteSearchProvidersLoaded: false,
     aggregateSearches: [],
-    siteSearchRefreshSuppressUntil: 0,
-
-    // Settings, at their defaults until storage answers.
-    currentRecentMode: 'most',
-    currentRecentCount: 4,
-    currentBookmarkCount: 8,
-    currentBookmarkColumns: 6,
-    currentNewtabShortcutColumns: SETTINGS.NEWTAB_SHORTCUT_COLUMNS_DEFAULT,
-    currentNewtabShortcutSize: SETTINGS.NEWTAB_SHORTCUT_SIZE_DEFAULT,
-    currentNewtabShortcutGap: SETTINGS.NEWTAB_SHORTCUT_GAP_DEFAULT
+    siteSearchRefreshSuppressUntil: 0
   };
 }
 

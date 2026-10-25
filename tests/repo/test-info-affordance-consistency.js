@@ -32,24 +32,19 @@ assert.strictEqual(rule(onboardingCss, '.interaction-info-button:hover').get('ba
     `${file} should load the same info styles`);
 });
 
-// On the page: the static hosts are mounted with the shared button, and
-// the React lists and forms use it for their own hints.
+// On the page: the React rows, lists and forms use the shared button for
+// their own hints.
 (async () => {
   const page = await createOptionsPage({});
   await page.settle(400);
   [
-    '_x_extension_restricted_action_info_2026_unique_',
-    '_x_extension_bookmark_rows_info_2026_unique_',
-    '_x_extension_bookmark_columns_info_2026_unique_'
-  ].forEach((id) => {
-    const host = page.byId(id);
-    assert.ok(host && host.querySelector(INFO), `${id} should be mounted with the shared info button`);
-  });
-  [
+    ['_x_extension_restricted_action_info_2026_unique_', 'the restricted action hint'],
     ['_x_extension_blacklist_form_2026_unique_', 'the search exclusion form'],
     ['_x_extension_favicon_blacklist_form_2026_unique_', 'the icon exclusion form'],
     ['_x_extension_site_search_builtin_list_2024_unique_', 'the site search list'],
-    ['_x_extension_overlay_page_theme_adaptation_row_2026_unique_', 'the webpage theme adaptation row']
+    ['_x_extension_overlay_page_theme_adaptation_row_2026_unique_', 'the webpage theme adaptation row'],
+    ['_x_extension_bookmark_rows_setting_row_2026_unique_', 'the bookmark rows row'],
+    ['_x_extension_bookmark_columns_setting_row_2026_unique_', 'the bookmarks per row row']
   ].forEach(([id, label]) => {
     assert.ok(page.byId(id).querySelector(INFO), `${label} should reuse the shared InfoButton`);
   });

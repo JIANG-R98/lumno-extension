@@ -8,10 +8,6 @@ function clearRuntime(): void {
   Reflect.deleteProperty(runtime, 'LumnoOptionsReactIslands');
   Reflect.deleteProperty(runtime, 'LumnoOptionsBlacklistTab');
   Reflect.deleteProperty(runtime, 'LumnoOptionsBlacklistTabReact');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsInfoButton');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsInfoButtonReact');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsSegmentedControl');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsSegmentedControlReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsNavigation');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsNavigationReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsControls');
@@ -44,14 +40,6 @@ describe('Options React islands entry', () => {
     expect(runtime.LumnoOptionsBlacklistTabReact).toBe(
       runtime.LumnoOptionsBlacklistTab
     );
-    expect(runtime.LumnoOptionsInfoButton?.implementation).toBe('react');
-    expect(runtime.LumnoOptionsInfoButtonReact).toBe(
-      runtime.LumnoOptionsInfoButton
-    );
-    expect(runtime.LumnoOptionsSegmentedControl?.implementation).toBe('react');
-    expect(runtime.LumnoOptionsSegmentedControlReact).toBe(
-      runtime.LumnoOptionsSegmentedControl
-    );
     expect(runtime.LumnoOptionsSettingsNavigation?.implementation).toBe('react');
     expect(runtime.LumnoOptionsSettingsNavigationReact).toBe(
       runtime.LumnoOptionsSettingsNavigation
@@ -68,8 +56,6 @@ describe('Options React islands entry', () => {
     );
     expect(runtime.LumnoOptionsReactIslands).toEqual({
       blacklistTab: runtime.LumnoOptionsBlacklistTab,
-      infoButton: runtime.LumnoOptionsInfoButton,
-      segmentedControl: runtime.LumnoOptionsSegmentedControl,
       settingsNavigation: runtime.LumnoOptionsSettingsNavigation,
       settingsControls: runtime.LumnoOptionsSettingsControls,
       accountTab: runtime.LumnoOptionsAccountTab,

@@ -1,5 +1,4 @@
 const assert = require('assert');
-const fs = require('fs');
 const { JSDOM } = require('jsdom');
 const settings = require('../../src/domain/settings.ts');
 const { parsePageCss } = require('../helpers/css-rules');
@@ -141,19 +140,16 @@ async function testBookmarkGridSettings() {
   assert.ok(parsePageCss('newtab.html').entries.some((entry) => /var\(--x-nt-bookmark-columns,\s*6\)/.test(entry.style.cssText)),
     'New Tab should fall back to six columns before its script runs');
 
-  const doc = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
+  const options = await createOptionsPage({});
+  await options.settle(300);
+  const doc = options.document;
   ['rows', 'columns'].forEach((kind) => {
     const row = doc.getElementById(`_x_extension_bookmark_${kind}_setting_row_2026_unique_`);
     assert.ok(row, `Settings should have a bookmark ${kind} row`);
-    const parts = [`_x_extension_bookmark_${kind}_info_2026_unique_`, `_x_extension_bookmark_${kind}_control_2026_unique_`]
-      .map((id) => doc.getElementById(id));
+    const parts = [row.querySelector('._x_extension_info_button_2026_unique_'), doc.getElementById(`_x_extension_bookmark_${kind}_control_2026_unique_`)];
     assert.ok(parts.every((part) => part && row.contains(part)), `the ${kind} row should hold its info and control`);
   });
-  assert.strictEqual(doc.querySelector('[data-i18n="settings_bookmark_columns_desc"]'), null);
   assert.strictEqual(doc.getElementById('_x_extension_bookmark_count_select_2024_unique_'), null, 'the old count select is gone');
-
-  const options = await createOptionsPage({});
-  await options.settle(300);
   const slider = (id) => options.document.getElementById(id);
   const range = (input) => input && [input.min, input.max, input.step];
   assert.deepStrictEqual(range(slider('_x_extension_bookmark_rows_slider_2026_unique_')), ['0', '8', '1']);

@@ -12,6 +12,7 @@ import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as OPTIONS_ACCOUNT_SECTION from './options-account-section';
 import * as OPTIONS_APPEARANCE_GLOBAL_SECTION from './options-appearance-global-section';
 import * as OPTIONS_DAILY_QUOTE_SECTION from './options-appearance-daily-quote-section';
+import * as OPTIONS_APPEARANCE_NEWTAB_LAYOUT_SECTION from './options-appearance-newtab-layout-section';
 import * as OPTIONS_APPEARANCE_NEWTAB_LOOK_SECTION from './options-appearance-newtab-look-section';
 import * as OPTIONS_APPEARANCE_OVERLAY_SECTION from './options-appearance-overlay-section';
 import { listInstalledFonts } from './options-installed-fonts';
@@ -19,7 +20,6 @@ import * as OPTIONS_AGGREGATE_SEARCH_LIST from './options-aggregate-search-list'
 import * as AGGREGATE_SEARCH from './options-aggregate-search';
 import * as OPTIONS_BLACKLIST_SECTION from './options-blacklist-section';
 import * as LumnoOptionsBlacklist from './options-blacklist';
-import * as OPTIONS_CONTROL_EVENTS from './options-control-events';
 import * as LumnoOptionsFeedbackSupportSection from './options-feedback-support';
 import * as OPTIONS_FORMS from './options-forms';
 import * as OPTIONS_GENERAL_FEATURES_SECTION from './options-general-features-section';
@@ -31,12 +31,9 @@ import * as OPTIONS_GENERAL_TAB from './options-general-tab';
 import * as OPTIONS_LABS_SECTION from './options-labs-section';
 import * as OPTIONS_LANGUAGE from './options-language';
 import * as OPTIONS_NAVIGATION from './options-navigation';
-import * as OPTIONS_NORMALIZERS from './options-normalizers';
 import * as PANEL_MOTION from './options-panel-motion';
 import * as LumnoOptionsSearchSourceOrder from './options-search-source-order';
-import * as OPTIONS_SEGMENTED_TABS from './options-segmented-tabs';
 import * as SETTING_BINDINGS from './options-setting-bindings';
-import * as OPTIONS_SETTING_BINDS from './options-setting-binds';
 import * as OPTIONS_SHORTCUT_REFERENCE from './options-shortcut-reference';
 import * as OPTIONS_SHORTCUTS_SECTION from './options-shortcuts-section';
 import * as OPTIONS_SEARCH_SHORTCUT_STATUS from './options-search-shortcut-status';
@@ -44,10 +41,9 @@ import * as OPTIONS_SITE_SEARCH_ACTIONS from './options-site-search-actions';
 import * as OPTIONS_SITE_SEARCH_FORM from './options-site-search-form';
 import * as OPTIONS_SITE_SEARCH_LIST from './options-site-search-list';
 import * as SITE_SEARCH from './options-site-search';
-import * as OPTIONS_SLIDER_CONTROLS from './options-slider-controls';
 import * as LumnoOptionsSyncTransfer from './options-sync-transfer';
 import * as THEME from './options-theme';
-import * as OPTIONS_TOGGLE_CONTROLS from './options-toggle-controls';
+import * as OPTIONS_UNSUPPORTED_SETTINGS from './options-unsupported-settings';
 import * as OPTIONS_TOOLTIPS from './options-tooltips';
 import * as LumnoOptionsTranslationHelpSection from './options-translation-help';
 import * as LumnoOptionsDiagnostics from './options-diagnostics';
@@ -55,7 +51,7 @@ import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as LumnoMessaging from '../platform/messaging';
 import type { StorageChangeListener } from '../domain/storage-port';
 import type { ReadBatchMetrics } from '../platform/settings-storage';
-import { getHtmlElement, getHtmlTag, queryHtmlElement, queryHtmlElements } from '../shared/dom-lookup';
+import { getHtmlElement, queryHtmlElement, queryHtmlElements } from '../shared/dom-lookup';
 import type { LayoutMutation } from './options-panel-motion';
 import * as OPTIONS_STATE from './options-state';
 
@@ -87,27 +83,6 @@ import * as OPTIONS_STATE from './options-state';
   const tabContents = queryHtmlElements(document, '._x_extension_settings_content_2024_unique_');
   const tabsContainer = getHtmlElement(document, '_x_extension_settings_tabs_2024_unique_');
   const settingsVersion = getHtmlElement(document, '_x_extension_settings_version_2024_unique_');
-  const recentModeSelect = getHtmlTag(document, '_x_extension_recent_mode_select_2024_unique_', 'select');
-  const recentModeTabButtons = queryHtmlElements(document, 'button[data-recent-mode]');
-  const recentModeTabsWrap = getHtmlElement(document, '_x_extension_recent_mode_tabs_wrap_2024_unique_');
-  const recentCountControlHost = getHtmlElement(document, '_x_extension_recent_count_control_2026_unique_');
-  const bookmarkRowsControlHost = getHtmlElement(document, '_x_extension_bookmark_rows_control_2026_unique_');
-  const bookmarkColumnsSettingRow = getHtmlElement(document, '_x_extension_bookmark_columns_setting_row_2026_unique_');
-  const bookmarkColumnsControlHost = getHtmlElement(document, '_x_extension_bookmark_columns_control_2026_unique_');
-  const bookmarkFolderIconsVisibleRow = getHtmlElement(document, '_x_extension_bookmark_folder_icons_visible_row_2026_unique_');
-  const newtabShortcutsToggle = getHtmlTag(document, '_x_extension_newtab_shortcuts_toggle_2026_unique_', 'input');
-  const newtabShortcutAddRow = getHtmlElement(document, '_x_extension_newtab_shortcut_add_row_2026_unique_');
-  const newtabShortcutAddToggle = getHtmlTag(document, '_x_extension_newtab_shortcut_add_toggle_2026_unique_', 'input');
-  const newtabShortcutDockMagnificationRow = getHtmlElement(document, '_x_extension_newtab_shortcut_dock_magnification_row_2026_unique_');
-  const newtabShortcutDockMagnificationToggle = getHtmlTag(document, '_x_extension_newtab_shortcut_dock_magnification_toggle_2026_unique_', 'input');
-  const newtabShortcutColumnsRow = getHtmlElement(document, '_x_extension_newtab_shortcut_columns_setting_row_2026_unique_');
-  const newtabShortcutColumnsControlHost = getHtmlElement(document, '_x_extension_newtab_shortcut_columns_control_2026_unique_');
-  const newtabShortcutSizeRow = getHtmlElement(document, '_x_extension_newtab_shortcut_size_setting_row_2026_unique_');
-  const newtabShortcutSizeControlHost = getHtmlElement(document, '_x_extension_newtab_shortcut_size_control_2026_unique_');
-  const newtabShortcutGapRow = getHtmlElement(document, '_x_extension_newtab_shortcut_gap_setting_row_2026_unique_');
-  const newtabShortcutGapControlHost = getHtmlElement(document, '_x_extension_newtab_shortcut_gap_control_2026_unique_');
-  const bookmarkRowsInfoHost = getHtmlElement(document, '_x_extension_bookmark_rows_info_2026_unique_');
-  const bookmarkColumnsInfoHost = getHtmlElement(document, '_x_extension_bookmark_columns_info_2026_unique_');
   const toastElement = getHtmlElement(document, '_x_extension_toast_2024_unique_');
   if (!panel || !optionsRoot || tabButtons.length === 0) {
     return;
@@ -116,48 +91,20 @@ import * as OPTIONS_STATE from './options-state';
   const optionsBlacklistTabApi = globalThis.LumnoOptionsBlacklistTab;
   const optionsAccountTabApi = globalThis.LumnoOptionsAccountTab;
   const optionsShortcutsTabApi = globalThis.LumnoOptionsShortcutsTab;
-  const optionsInfoButtonApi = globalThis.LumnoOptionsInfoButton;
   const optionsToastApi = globalThis.LumnoOptionsToast;
-  const optionsSegmentedControlApi = globalThis.LumnoOptionsSegmentedControl;
   const optionsSettingsControlsApi = globalThis.LumnoOptionsSettingsControls;
   const optionsSettingsNavigationApi = globalThis.LumnoOptionsSettingsNavigation;
   if (!optionsAccountTabApi || !optionsBlacklistTabApi || !optionsShortcutsTabApi ||
-      !optionsInfoButtonApi || !optionsSegmentedControlApi ||
       !optionsSettingsControlsApi || !optionsSettingsNavigationApi) {
     console.warn('Lumno: options views not available.');
     return;
   }
-  // Narrowed here, for the functions below.
-  const infoButtonApi = optionsInfoButtonApi;
-  const segmentedControlApi = optionsSegmentedControlApi;
 
 
 
   const {
     THEME_STORAGE_KEY,
     LANGUAGE_STORAGE_KEY,
-    RECENT_MODE_STORAGE_KEY,
-    RECENT_COUNT_STORAGE_KEY,
-    BOOKMARK_COUNT_STORAGE_KEY,
-    BOOKMARK_COLUMNS_STORAGE_KEY,
-    NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,
-    NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,
-    NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
-    NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
-    NEWTAB_SHORTCUT_WIDTH_MIN,
-    NEWTAB_SHORTCUT_WIDTH_MAX,
-    NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
-    NEWTAB_SHORTCUT_COLUMNS_MIN,
-    NEWTAB_SHORTCUT_COLUMNS_MAX,
-    NEWTAB_SHORTCUT_COLUMNS_DEFAULT,
-    NEWTAB_SHORTCUT_SIZE_STORAGE_KEY,
-    NEWTAB_SHORTCUT_SIZE_MIN,
-    NEWTAB_SHORTCUT_SIZE_MAX,
-    NEWTAB_SHORTCUT_SIZE_DEFAULT,
-    NEWTAB_SHORTCUT_GAP_STORAGE_KEY,
-    NEWTAB_SHORTCUT_GAP_MIN,
-    NEWTAB_SHORTCUT_GAP_MAX,
-    NEWTAB_SHORTCUT_GAP_DEFAULT,
     FALLBACK_SHORTCUT_STORAGE_KEY,
     SITE_SEARCH_STORAGE_KEY,
     SITE_SEARCH_DISABLED_STORAGE_KEY,
@@ -339,8 +286,8 @@ import * as OPTIONS_STATE from './options-state';
     getMessage,
     normalizeLocale,
     getSystemLocale,
-    normalizeLanguageMode,
     applyLanguageMode,
+    loadLanguageSetting,
     loadLocaleMessages
   } = OPTIONS_LANGUAGE.createLanguage({
     formatTemplate: (...args) => formatTemplate(...args),
@@ -348,20 +295,12 @@ import * as OPTIONS_STATE from './options-state';
     SETTINGS,
     LANGUAGE_STORAGE_KEY,
     localStorageArea,
-    renderOptionsInfoButtons,
+    getActivePrimaryAreaName: () => getActivePrimaryAreaName(),
     renderFeedbackSupport,
     renderTranslationHelp,
     refreshCustomSelects,
     refreshSyncStatus,
     renderShortcutReferenceList: (...args) => renderShortcutReferenceList(...args),
-    setRecentModeTabState: (...args) => setRecentModeTabState(...args),
-    renderNewtabShortcutColumnsControl: (...args) => renderNewtabShortcutColumnsControl(...args),
-    renderNewtabShortcutSizeControl: (...args) => renderNewtabShortcutSizeControl(...args),
-    renderNewtabShortcutGapControl: (...args) => renderNewtabShortcutGapControl(...args),
-    syncNewtabShortcutSubcontrolAvailability: (...args) => syncNewtabShortcutSubcontrolAvailability(...args),
-    renderRecentCountControl: (...args) => renderRecentCountControl(...args),
-    renderBookmarkRowsControl: (...args) => renderBookmarkRowsControl(...args),
-    renderBookmarkColumnsControl: (...args) => renderBookmarkColumnsControl(...args),
     renderSettingsNavigation,
     onLanguageApplied: (mode, locale) => generalGlobalSection.setLanguage(mode, locale),
     renderTabSections: () => {
@@ -374,6 +313,7 @@ import * as OPTIONS_STATE from './options-state';
       appearanceOverlaySection.render();
       appearanceNewtabLookSection.render();
       dailyQuoteSection.render();
+      appearanceNewtabLayoutSection.render();
       labsSection.render();
       blacklistSection.render();
     },
@@ -452,69 +392,6 @@ import * as OPTIONS_STATE from './options-state';
     loadLocaleMessages,
     uiLocales: SETTINGS.UI_LOCALES,
     version: chrome?.runtime?.getManifest?.()?.version || ''
-  });
-  function createOptionsInfoButtonController(host: HTMLElement | null) {
-    return infoButtonApi.createInfoButtonController(host);
-  }
-  const bookmarkRowsInfoController = createOptionsInfoButtonController(bookmarkRowsInfoHost);
-  const bookmarkColumnsInfoController = createOptionsInfoButtonController(bookmarkColumnsInfoHost);
-  function createOptionsSegmentedControlController(host: HTMLElement | null, kind: string, onSelect: (value: string) => void) {
-    return segmentedControlApi.createSegmentedControlController(host, {
-      kind,
-      onSelect
-    });
-  }
-
-  const {
-    setRecentModeTabState,
-    updateRecentModeTabsVisibility,
-    handleRecentModeSelection
-  } = OPTIONS_SEGMENTED_TABS.createSegmentedTabs({
-    getMessage,
-    animateOptionsPanelHeight,
-    setConditionalSettingsElementVisibility: (...args) => setConditionalSettingsElementVisibility(...args),
-    recentModeTabsWrap,
-    notifyNewtabSectionsRefresh,
-    recentModeSelect,
-    RECENT_MODE_STORAGE_KEY,
-    optionsState
-  });
-
-  optionsState.recentModeTabsController = createOptionsSegmentedControlController(
-    recentModeTabsWrap,
-    'recent-mode',
-    handleRecentModeSelection
-  );
-
-  const {
-    normalizeBookmarkCount,
-    normalizeRecentCount,
-    normalizeBookmarkColumns,
-    updateBookmarkColumnsSettingVisibility,
-    normalizeNewtabShortcutsVisible,
-    normalizeNewtabShortcutAddVisible,
-    normalizeNewtabShortcutDockMagnificationEnabled,
-    normalizeNewtabShortcutColumns,
-    normalizeNewtabShortcutSize,
-    normalizeNewtabShortcutGap,
-    inferNewtabShortcutColumnsFromWidth
-  } = OPTIONS_NORMALIZERS.createNormalizers({
-    SETTINGS,
-    bookmarkColumnsSettingRow,
-    animateOptionsPanelHeight,
-    setConditionalSettingsElementVisibility: (...args) => setConditionalSettingsElementVisibility(...args),
-    bookmarkFolderIconsVisibleRow,
-    NEWTAB_SHORTCUT_COLUMNS_MIN,
-    NEWTAB_SHORTCUT_COLUMNS_MAX,
-    NEWTAB_SHORTCUT_COLUMNS_DEFAULT,
-    NEWTAB_SHORTCUT_SIZE_MIN,
-    NEWTAB_SHORTCUT_SIZE_MAX,
-    NEWTAB_SHORTCUT_SIZE_DEFAULT,
-    NEWTAB_SHORTCUT_GAP_MIN,
-    NEWTAB_SHORTCUT_GAP_MAX,
-    NEWTAB_SHORTCUT_GAP_DEFAULT,
-    NEWTAB_SHORTCUT_WIDTH_MIN,
-    NEWTAB_SHORTCUT_WIDTH_MAX
   });
 
 
@@ -599,6 +476,14 @@ import * as OPTIONS_STATE from './options-state';
     localArea: localStorageArea,
     getViewportTopInset: getMenuViewportTopInset
   });
+  const appearanceNewtabLayoutHost = getHtmlElement(document, '_x_extension_appearance_newtab_layout_section_2026_unique_');
+  const appearanceNewtabLayoutSection = OPTIONS_APPEARANCE_NEWTAB_LAYOUT_SECTION.createAppearanceNewtabLayoutSection({
+    view: (handlers) => optionsSettingsControlsApi.createAppearanceNewtabLayoutSectionController(appearanceNewtabLayoutHost, handlers),
+    storageArea: optionsState.storageArea,
+    SETTINGS,
+    getMessage,
+    notifyNewtabSectionsRefresh: (section) => notifyNewtabSectionsRefresh(section)
+  });
   const labsSection = OPTIONS_LABS_SECTION.createLabsSection({
     host: queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="labs"]'),
     optionsSettingsControlsApi,
@@ -621,16 +506,7 @@ import * as OPTIONS_STATE from './options-state';
     initTooltips
   });
 
-  const {
-    setOptionsToggleState,
-    TOGGLE_SETTINGS,
-    toggleSettingControls
-  } = OPTIONS_TOGGLE_CONTROLS.createToggleControls({
-    optionsSettingsControlsApi,
-    SETTINGS,
-    syncNewtabShortcutSubcontrolAvailability: (...args) => syncNewtabShortcutSubcontrolAvailability(...args),
-    getMessage
-  });
+  OPTIONS_UNSUPPORTED_SETTINGS.markBrowserUnsupportedSettings(getMessage);
 
   optionsState.settingsNavigationController = optionsSettingsNavigationApi.createSettingsNavigationController(tabsContainer, {
       onSelect: handleSettingsTabSelection
@@ -708,8 +584,7 @@ import * as OPTIONS_STATE from './options-state';
     storageArea: optionsState.storageArea,
     writeRepairs: (values, stored) => LumnoSettingsStorage.writeSettingRepairs(chrome, optionsState.storageArea, values, stored),
     registry: storageChanges,
-    refreshCustomSelects,
-    setToggleState: setOptionsToggleState
+    refreshCustomSelects
   });
   // Device-only settings (the overlay's local fonts) stay in
   // chrome.storage.local whichever area holds the synced ones.
@@ -717,8 +592,7 @@ import * as OPTIONS_STATE from './options-state';
     area: 'local',
     storageArea: localStorageArea,
     registry: storageChanges,
-    refreshCustomSelects,
-    setToggleState: setOptionsToggleState
+    refreshCustomSelects
   });
 
   function finishOptionsStartupStorageBatch(metrics: ReadBatchMetrics): void {
@@ -796,7 +670,6 @@ import * as OPTIONS_STATE from './options-state';
     return LumnoSettingsStorage.addStorageChangeListener(chrome, listener);
   }
 
-  const { setConditionalSettingsElementVisibility } = PANEL_MOTION;
   function animateOptionsPanelHeight(mutateLayout: LayoutMutation): boolean {
     return optionsState.panelHeightAnimator.animate(mutateLayout);
   }
@@ -838,21 +711,6 @@ import * as OPTIONS_STATE from './options-state';
   });
 
   let siteSearchRefreshTimer: number | null = null;
-  function renderOptionsInfoButtons() {
-    const bookmarkTooltip = getMessage(
-      'settings_bookmark_adaptive_count_tooltip',
-      '该值为宽度充足时的最大数量，实际显示数量会根据可用空间自适应。'
-    );
-    [bookmarkRowsInfoController, bookmarkColumnsInfoController].forEach((controller) => {
-      if (controller) {
-        controller.render({
-          tooltip: bookmarkTooltip,
-          tooltipKey: 'settings_bookmark_adaptive_count_tooltip'
-        });
-      }
-    });
-  }
-  renderOptionsInfoButtons();
 
   function createPersistentId(prefix: string): string {
     const safePrefix = String(prefix || 'item').replace(/[^a-z0-9_-]/gi, '').toLowerCase() || 'item';
@@ -863,66 +721,6 @@ import * as OPTIONS_STATE from './options-state';
   }
 
 
-  const {
-    renderNewtabShortcutColumnsControl,
-    renderNewtabShortcutSizeControl,
-    renderNewtabShortcutGapControl,
-    syncNewtabShortcutSubcontrolAvailability,
-    renderBookmarkRowsControl,
-    renderRecentCountControl,
-    renderBookmarkColumnsControl
-  } = OPTIONS_SLIDER_CONTROLS.createSliderControls({
-    optionsSettingsControlsApi,
-    storageArea: optionsState.storageArea,
-    getMessage,
-    newtabShortcutColumnsControlHost,
-    normalizeNewtabShortcutColumns,
-    NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
-    NEWTAB_SHORTCUT_COLUMNS_MIN,
-    NEWTAB_SHORTCUT_COLUMNS_MAX,
-    newtabShortcutSizeControlHost,
-    normalizeNewtabShortcutSize,
-    NEWTAB_SHORTCUT_SIZE_STORAGE_KEY,
-    NEWTAB_SHORTCUT_SIZE_DEFAULT,
-    NEWTAB_SHORTCUT_SIZE_MIN,
-    NEWTAB_SHORTCUT_SIZE_MAX,
-    newtabShortcutGapControlHost,
-    normalizeNewtabShortcutGap,
-    NEWTAB_SHORTCUT_GAP_STORAGE_KEY,
-    NEWTAB_SHORTCUT_GAP_DEFAULT,
-    NEWTAB_SHORTCUT_GAP_MIN,
-    NEWTAB_SHORTCUT_GAP_MAX,
-    newtabShortcutsToggle,
-    newtabShortcutAddToggle,
-    newtabShortcutDockMagnificationToggle,
-    setOptionsToggleState,
-    newtabShortcutAddRow,
-    newtabShortcutDockMagnificationRow,
-    newtabShortcutColumnsRow,
-    newtabShortcutSizeRow,
-    newtabShortcutGapRow,
-    bookmarkRowsControlHost,
-    normalizeBookmarkCount,
-    updateBookmarkColumnsSettingVisibility,
-    BOOKMARK_COUNT_STORAGE_KEY,
-    notifyNewtabSectionsRefresh,
-    recentCountControlHost,
-    normalizeRecentCount,
-    updateRecentModeTabsVisibility,
-    RECENT_COUNT_STORAGE_KEY,
-    bookmarkColumnsControlHost,
-    normalizeBookmarkColumns,
-    BOOKMARK_COLUMNS_STORAGE_KEY,
-    optionsState
-  });
-
-  renderNewtabShortcutColumnsControl(NEWTAB_SHORTCUT_COLUMNS_DEFAULT, false);
-  renderNewtabShortcutSizeControl(NEWTAB_SHORTCUT_SIZE_DEFAULT, false);
-  renderNewtabShortcutGapControl(NEWTAB_SHORTCUT_GAP_DEFAULT, false);
-  syncNewtabShortcutSubcontrolAvailability();
-  renderRecentCountControl(4);
-  renderBookmarkRowsControl(8);
-  renderBookmarkColumnsControl(6);
 
   function renderFeedbackSupport() {
     feedbackSupportSection.render();
@@ -937,7 +735,6 @@ import * as OPTIONS_STATE from './options-state';
 
   renderTranslationHelp();
 
-  setRecentModeTabState(optionsState.currentRecentMode);
 
   function notifyNewtabSectionsRefresh(section: string): void {
     if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
@@ -1130,11 +927,6 @@ import * as OPTIONS_STATE from './options-state';
     refreshSyncStatus();
   });
 
-  OPTIONS_CONTROL_EVENTS.createControlEvents({
-    recentModeSelect,
-    handleRecentModeSelection,
-    recentModeTabButtons
-  });
 
 
   loadCurrentShortcut();
@@ -1159,56 +951,11 @@ import * as OPTIONS_STATE from './options-state';
   appearanceOverlaySection.bindSettings(settingBinder, localSettingBinder);
   appearanceNewtabLookSection.bindSettings(settingBinder);
   dailyQuoteSection.bindSettings(settingBinder, storageChanges);
+  appearanceNewtabLayoutSection.bindSettings(settingBinder);
   labsSection.bindSettings(settingBinder);
   blacklistSection.bindSettings(settingBinder);
   shortcutsSection.bindSettings(settingBinder);
-  OPTIONS_SETTING_BINDS.createSettingBinds({
-    LANGUAGE_STORAGE_KEY,
-    normalizeLanguageMode,
-    localStorageArea,
-    applyLanguageMode,
-    getActivePrimaryAreaName,
-    NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,
-    NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,
-    NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
-    NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
-    NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
-    NEWTAB_SHORTCUT_SIZE_STORAGE_KEY,
-    NEWTAB_SHORTCUT_GAP_STORAGE_KEY,
-    normalizeNewtabShortcutsVisible,
-    normalizeNewtabShortcutAddVisible,
-    normalizeNewtabShortcutDockMagnificationEnabled,
-    inferNewtabShortcutColumnsFromWidth,
-    normalizeNewtabShortcutColumns,
-    normalizeNewtabShortcutSize,
-    normalizeNewtabShortcutGap,
-    setOptionsToggleState,
-    newtabShortcutsToggle,
-    newtabShortcutAddToggle,
-    newtabShortcutDockMagnificationToggle,
-    renderNewtabShortcutColumnsControl,
-    renderNewtabShortcutSizeControl,
-    renderNewtabShortcutGapControl,
-    syncNewtabShortcutSubcontrolAvailability,
-    settingBinder,
-    RECENT_COUNT_STORAGE_KEY,
-    normalizeRecentCount,
-    renderRecentCountControl,
-    updateRecentModeTabsVisibility,
-    RECENT_MODE_STORAGE_KEY,
-    recentModeSelect,
-    setRecentModeTabState,
-    BOOKMARK_COUNT_STORAGE_KEY,
-    normalizeBookmarkCount,
-    renderBookmarkRowsControl,
-    updateBookmarkColumnsSettingVisibility,
-    BOOKMARK_COLUMNS_STORAGE_KEY,
-    normalizeBookmarkColumns,
-    renderBookmarkColumnsControl,
-    TOGGLE_SETTINGS,
-    toggleSettingControls,
-    optionsState
-  });
+  loadLanguageSetting();
 
   refreshCustomSelects();
 

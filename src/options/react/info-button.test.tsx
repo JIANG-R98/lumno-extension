@@ -1,20 +1,11 @@
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  createInfoButtonApi,
-  createInfoButtonController,
-  InfoButton,
-  type InfoButtonController
-} from './info-button';
+import { InfoButton } from './info-button';
 import { getTag } from '../../../tests/react/dom';
 import { queryHtmlElement } from '../../shared/dom-lookup';
 
-let controller: InfoButtonController | null = null;
-
 afterEach(() => {
-  act(() => controller?.destroy());
-  controller = null;
   document.body.textContent = '';
 });
 
@@ -67,17 +58,5 @@ describe('Options InfoButton', () => {
     expect(document.activeElement).toBe(button);
 
     act(() => root.unmount());
-  });
-
-  it('exposes a reusable controller for static Options hosts', () => {
-    const host = document.createElement('span');
-    document.body.appendChild(host);
-    controller = createInfoButtonController(host);
-
-    act(() => controller?.render({ tooltip: '说明' }));
-
-    expect(createInfoButtonApi().implementation).toBe('react');
-    expect(host.dataset.reactIsland).toBe('options-info-button');
-    expect(host.querySelector('.ri-information-line')).not.toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
-const { createPanelHeightAnimator, setConditionalSettingsElementVisibility } = require('../../src/options/options-panel-motion');
+const { createPanelHeightAnimator } = require('../../src/options/options-panel-motion');
 
 function setup(options) {
   const config = options || {};
@@ -110,21 +110,5 @@ function setup(options) {
   assert.strictEqual(page.animations.length, 0, JSON.stringify(options));
   assert.strictEqual(page.panel.hasAttribute('data-height-animating'), false);
 });
-
-// Conditional rows hide whole, or by display when a display value is given.
-{
-  const { document } = new JSDOM('<div id="row"></div><div id="flex"></div>').window;
-  const row = document.getElementById('row');
-  assert.strictEqual(setConditionalSettingsElementVisibility(row, false), true);
-  assert.strictEqual(row.hidden, true);
-  assert.strictEqual(row.getAttribute('aria-hidden'), 'true');
-  assert.strictEqual(setConditionalSettingsElementVisibility(row, false), false, 'no change reported twice');
-  const flex = document.getElementById('flex');
-  assert.strictEqual(setConditionalSettingsElementVisibility(flex, false, 'flex'), true);
-  assert.strictEqual(flex.style.display, 'none');
-  setConditionalSettingsElementVisibility(flex, true, 'flex');
-  assert.strictEqual(flex.style.display, 'flex');
-  assert.strictEqual(setConditionalSettingsElementVisibility(null, true), false);
-}
 
 console.log('Options panel motion tests passed.');

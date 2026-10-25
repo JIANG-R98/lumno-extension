@@ -1,8 +1,4 @@
 import { useId } from 'react';
-import {
-  createReactRootController,
-  type ReactRootController
-} from './root-controller';
 
 export interface InfoButtonRenderModel {
   className?: string;
@@ -11,8 +7,6 @@ export interface InfoButtonRenderModel {
   tooltip: string;
   tooltipKey?: string;
 }
-
-export type InfoButtonController = ReactRootController<InfoButtonRenderModel>;
 
 export function InfoButton({
   className = '',
@@ -47,23 +41,4 @@ export function InfoButton({
       {describesTooltip ? <span hidden id={descriptionId}>{tooltip}</span> : null}
     </button>
   );
-}
-
-export function createInfoButtonController(
-  host: HTMLElement | null
-): InfoButtonController {
-  if (host) {
-    host.dataset.reactIsland = 'options-info-button';
-  }
-  return createReactRootController(
-    host,
-    (model: InfoButtonRenderModel) => <InfoButton {...model} />
-  );
-}
-
-export function createInfoButtonApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createInfoButtonController
-  });
 }

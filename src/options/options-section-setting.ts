@@ -9,6 +9,8 @@ interface SectionSettingSpec<V> {
   normalize(raw: unknown): V;
   // See createSettingBinder.
   refreshSelects?: boolean;
+  // False when the section reads the key together with related keys.
+  load?: boolean;
   repairOnLoad?: boolean;
   repairOnChange?: boolean;
 }
@@ -50,6 +52,7 @@ function createSectionSetting<V>(
           onChange();
         },
         refreshSelects: spec.refreshSelects,
+        load: spec.load,
         repairOnLoad: spec.repairOnLoad,
         repairOnChange: spec.repairOnChange
       });

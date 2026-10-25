@@ -14,7 +14,6 @@ const { parseCss, parsePageCss } = require('../helpers/css-rules');
 const newtabHtml = parsePageCss('newtab.html');
 const shortcutDialogCss = parseCss(readStylesheet('src/newtab/shortcuts/shortcut-dialog.css'));
 const optionsHtml = parsePageCss('src/options/options.html');
-const optionsDocument = new (require('jsdom').JSDOM)(fs.readFileSync(path.join(repoRoot, 'src/options/options.html'), 'utf8')).window.document;
 
 const normalize = (value) => String(value || '').replace(/\s+/g, ' ').replace(/\(\s+/g, '(').replace(/\s+\)/g, ')').trim();
 
@@ -748,12 +747,6 @@ assertContains(
 // The appearance panel is a React view driven by the wallpaper runtime; its controls are
 // tested by behavior in src/newtab/react/wallpaper-view.test.tsx and
 // tests/newtab/test-newtab-wallpaper-panel.js rather than by matching source text here.
-
-assert.ok(optionsDocument.getElementById('_x_extension_newtab_shortcuts_toggle_2026_unique_'), 'Options should keep the New Tab shortcuts visibility control');
-
-assert.ok(optionsDocument.getElementById('_x_extension_newtab_shortcut_add_toggle_2026_unique_'), 'Options should keep the add shortcut visibility control');
-
-assert.ok(optionsDocument.getElementById('_x_extension_newtab_shortcut_dock_magnification_toggle_2026_unique_'), 'Options should keep the shortcut Dock magnification control');
 
 assertContains(
   newtabHtml,

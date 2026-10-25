@@ -1,6 +1,5 @@
 const assert = require('assert');
 const fs = require('fs');
-const { JSDOM } = require('jsdom');
 const settings = require('../../src/domain/settings.ts');
 const { readStylesheet } = require('../helpers/css-tokens');
 const { parseCss, parsePageCss } = require('../helpers/css-rules');
@@ -98,15 +97,12 @@ async function testIconSizesStayCentered() {
 }
 
 async function testSettings() {
-  const doc = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
-  const row = doc.getElementById('_x_extension_newtab_shortcut_columns_setting_row_2026_unique_');
-  assert.ok(row && row.querySelector('[data-i18n="settings_newtab_shortcut_columns_title"]') &&
-    row.querySelector('#_x_extension_newtab_shortcut_columns_control_2026_unique_'), 'Settings should host the per-row slider');
-  const [columns, size, gap] = ['columns', 'size', 'gap'].map((name) => doc.querySelector(`[data-i18n="settings_newtab_shortcut_${name}_title"]`));
-  assert.ok((columns.compareDocumentPosition(size) & 4) && (size.compareDocumentPosition(gap) & 4), 'size and spacing should follow shortcuts-per-row');
-
   const page = await createOptionsPage({ sync: { [COLUMNS]: 8 } });
   await page.settle(80);
+  const row = page.byId('_x_extension_newtab_shortcut_columns_setting_row_2026_unique_');
+  assert.ok(row && row.querySelector('#_x_extension_newtab_shortcut_columns_control_2026_unique_'), 'Settings should host the per-row slider');
+  const [columns, size, gap] = ['columns', 'size', 'gap'].map((name) => page.byId(`_x_extension_newtab_shortcut_${name}_setting_row_2026_unique_`));
+  assert.ok((columns.compareDocumentPosition(size) & 4) && (size.compareDocumentPosition(gap) & 4), 'size and spacing should follow shortcuts-per-row');
   const slider = page.byId('_x_extension_newtab_shortcut_columns_slider_2026_unique_');
   assert.deepStrictEqual([slider.min, slider.max, slider.step, slider.value], ['4', '16', '1', '8'], 'the slider should offer 4 to 16 per row');
   const valueInput = page.byId('_x_extension_newtab_shortcut_columns_control_2026_unique_').querySelector('input:not([type="range"])');

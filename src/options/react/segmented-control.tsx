@@ -1,7 +1,3 @@
-import {
-  createReactRootController,
-  type ReactRootController
-} from './root-controller';
 import { useRef, type KeyboardEvent } from 'react';
 import { useSegmentedIndicator } from '../../shared/react/segmented-indicator';
 import { queryHtmlTags } from '../../shared/dom-lookup';
@@ -24,14 +20,6 @@ export interface SegmentedControlRenderModel {
   items: SegmentedControlItemModel[];
   select?: SegmentedControlSelectModel;
 }
-
-export interface SegmentedControlControllerOptions {
-  kind: string;
-  onSelect(value: string): void;
-}
-
-export type SegmentedControlController =
-  ReactRootController<SegmentedControlRenderModel>;
 
 export function SegmentedControl({
   model,
@@ -138,29 +126,4 @@ export function SegmentedControl({
       ) : null}
     </>
   );
-}
-
-export function createSegmentedControlController(
-  host: HTMLElement | null,
-  options: SegmentedControlControllerOptions
-): SegmentedControlController {
-  if (host) {
-    host.dataset.reactIsland = 'options-segmented-control';
-    host.dataset.segmentedKind = options.kind;
-    // The options inside are radios; the host keeps its own aria-label.
-    host.setAttribute('role', 'radiogroup');
-  }
-  return createReactRootController(
-    host,
-    (model: SegmentedControlRenderModel) => (
-      <SegmentedControl model={model} onSelect={options.onSelect} />
-    )
-  );
-}
-
-export function createSegmentedControlApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createSegmentedControlController
-  });
 }

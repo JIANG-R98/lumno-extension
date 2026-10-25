@@ -3,9 +3,10 @@ const settings = require('../../src/domain/settings.ts');
 const { parsePageCss } = require('../helpers/css-rules');
 const { createOptionsPage } = require('../helpers/options-page');
 
-// Settings that only apply to another setting's value hide their whole row,
-// and the panel animates its height around them.
+// Settings that only apply to another setting's value fold away or hide
+// their whole row, and the panel animates its height around them.
 
+const BOOKMARK_SUBROWS = '_x_extension_bookmark_subrows_2026_unique_';
 const BOOKMARK_COLUMNS_ROW = '_x_extension_bookmark_columns_setting_row_2026_unique_';
 const RECENT_MODE_TABS = '_x_extension_recent_mode_tabs_wrap_2024_unique_';
 
@@ -30,18 +31,16 @@ async function testRowsFollowTheirSetting() {
     sync: { [settings.BOOKMARK_COUNT_STORAGE_KEY]: 0, [settings.RECENT_COUNT_STORAGE_KEY]: 0 }
   });
   await page.settle(200);
-  const shown = (id) => {
-    const element = page.byId(id);
-    return !element.hidden && element.style.display !== 'none' && element.getAttribute('aria-hidden') !== 'true';
-  };
-  assert.strictEqual(shown(BOOKMARK_COLUMNS_ROW), false, 'zero bookmark rows should hide the whole bookmarks-per-row setting');
-  assert.strictEqual(shown(RECENT_MODE_TABS), false, 'no recent sites should hide the recent-site mode');
+  const unfolded = () => page.byId(BOOKMARK_SUBROWS).getAttribute('data-expanded') === 'true';
+  assert.ok(page.byId(BOOKMARK_SUBROWS).contains(page.byId(BOOKMARK_COLUMNS_ROW)));
+  assert.strictEqual(unfolded(), false, 'zero bookmark rows should fold the whole bookmarks-per-row setting');
+  assert.strictEqual(page.byId(RECENT_MODE_TABS), null, 'no recent sites should hide the recent-site mode');
 
   page.changeStorage('sync', settings.BOOKMARK_COUNT_STORAGE_KEY, 8);
   page.changeStorage('sync', settings.RECENT_COUNT_STORAGE_KEY, 4);
   await page.settle(200);
-  assert.strictEqual(shown(BOOKMARK_COLUMNS_ROW), true, 'bookmark rows should bring back the per-row setting');
-  assert.strictEqual(shown(RECENT_MODE_TABS), true, 'recent sites should bring back their mode');
+  assert.strictEqual(unfolded(), true, 'bookmark rows should bring back the per-row setting');
+  assert.ok(page.byId(RECENT_MODE_TABS), 'recent sites should bring back their mode');
   page.close();
 }
 

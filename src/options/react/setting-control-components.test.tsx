@@ -1,47 +1,54 @@
-import { act } from 'react';
+import { act, type ReactNode } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  createRangeSliderControlController,
-  createRequiredCheckboxGroupController,
-  createSettingsControlsApi,
-  createToggleControlController,
-  type RangeSliderControlController,
-  type RequiredCheckboxGroupController,
-  type ToggleControlController
-} from './settings-controls';
+import { RangeSliderControl, type RangeSliderControlRenderModel } from './range-slider-control';
+import { RequiredCheckboxGroup, type RequiredCheckboxGroupRenderModel } from './required-checkbox-group';
+import { ToggleControl, type ToggleControlRenderModel } from './toggle-control';
 import { getTag, getTags } from '../../../tests/react/dom';
 import { queryHtmlTag } from '../../shared/dom-lookup';
 
-let controllers: Array<
-  RangeSliderControlController |
-  RequiredCheckboxGroupController |
-  ToggleControlController
-> = [];
+let roots: Root[] = [];
+
+// Draws a control into its host the way a settings row does.
+function mount<M>(host: HTMLElement, draw: (model: M) => ReactNode) {
+  const root = createRoot(host);
+  roots.push(root);
+  return { render: (model: M) => root.render(draw(model)) };
+}
+
+const mountToggle = (host: HTMLElement, options: { onChange(checked: boolean): void }) =>
+  mount(host, (model: ToggleControlRenderModel) => <ToggleControl model={model} onChange={options.onChange} />);
+
+const mountCheckboxGroup = (
+  host: HTMLElement,
+  options: { onChange(values: string[]): void; onMove?(fromIndex: number, toIndex: number): void }
+) => mount(host, (model: RequiredCheckboxGroupRenderModel) => (
+  <RequiredCheckboxGroup model={model} onChange={options.onChange} onMove={options.onMove} />
+));
+
+const mountSlider = (host: HTMLElement, options: { onInput(value: number): void }) =>
+  mount(host, (model: RangeSliderControlRenderModel) => <RangeSliderControl model={model} onInput={options.onInput} />);
 
 afterEach(() => {
-  act(() => controllers.forEach((controller) => controller.destroy()));
-  controllers = [];
+  act(() => roots.forEach((root) => root.unmount()));
+  roots = [];
   document.body.textContent = '';
 });
 
-describe('Options settings controls React islands', () => {
+describe('Options settings controls', () => {
   it('renders a controlled switch and reports changes', () => {
     const host = document.createElement('label');
     const onChange = vi.fn();
     document.body.appendChild(host);
-    const controller = createToggleControlController(host, {
-      kind: 'auto-pip',
+    const controller = mountToggle(host, {
       onChange
     });
-    controllers.push(controller);
 
     act(() => controller.render({
       checked: true,
       id: 'auto-pip'
     }));
     const input = queryHtmlTag(host, 'input', 'input');
-    expect(createSettingsControlsApi().implementation).toBe('react');
-    expect(host.dataset.reactIsland).toBe('options-toggle-control');
     expect(input?.checked).toBe(true);
 
     act(() => input?.click());
@@ -52,12 +59,10 @@ describe('Options settings controls React islands', () => {
     const host = document.createElement('div');
     const onMove = vi.fn();
     document.body.appendChild(host);
-    const controller = createRequiredCheckboxGroupController(host, {
-      kind: 'search-result-sources',
+    const controller = mountCheckboxGroup(host, {
       onChange: vi.fn(),
       onMove
     });
-    controllers.push(controller);
     const items = ['topSite', 'bookmark', 'history'].map((value) => ({
       checked: true,
       id: value,
@@ -86,11 +91,9 @@ describe('Options settings controls React islands', () => {
     const host = document.createElement('div');
     const onChange = vi.fn();
     document.body.appendChild(host);
-    const controller = createRequiredCheckboxGroupController(host, {
-      kind: 'search-result-sources',
+    const controller = mountCheckboxGroup(host, {
       onChange
     });
-    controllers.push(controller);
 
     act(() => controller.render({
       items: [
@@ -123,11 +126,9 @@ describe('Options settings controls React islands', () => {
   it('accepts adapter-driven state refreshes', () => {
     const host = document.createElement('label');
     document.body.appendChild(host);
-    const controller = createToggleControlController(host, {
-      kind: 'updates',
+    const controller = mountToggle(host, {
       onChange: vi.fn()
     });
-    controllers.push(controller);
 
     act(() => controller.render({ checked: true, id: 'updates' }));
     act(() => controller.render({ checked: false, id: 'updates' }));
@@ -139,11 +140,9 @@ describe('Options settings controls React islands', () => {
     const host = document.createElement('div');
     const onInput = vi.fn();
     document.body.appendChild(host);
-    const controller = createRangeSliderControlController(host, {
-      kind: 'bookmark-columns',
+    const controller = mountSlider(host, {
       onInput
     });
-    controllers.push(controller);
 
     act(() => controller.render({
       ariaLabel: '书签每行最多显示',
@@ -161,7 +160,6 @@ describe('Options settings controls React islands', () => {
 
     const input = queryHtmlTag(host, 'input[type="range"]', 'input');
     const valueInput = queryHtmlTag(host, 'input[type="number"]', 'input');
-    expect(host.dataset.reactIsland).toBe('options-range-slider-control');
     expect(input?.classList.contains('x-lumno-range-slider-input')).toBe(true);
     expect(input?.value).toBe('6');
     // Only the interior tick becomes a notch; the ends are implied by the track.
@@ -194,11 +192,9 @@ describe('Options settings controls React islands', () => {
     const host = document.createElement('div');
     const onInput = vi.fn();
     document.body.appendChild(host);
-    const controller = createRangeSliderControlController(host, {
-      kind: 'newtab-shortcut-columns',
+    const controller = mountSlider(host, {
       onInput
     });
-    controllers.push(controller);
 
     act(() => controller.render({
       ariaLabel: '快捷方式每行数量',
@@ -278,11 +274,9 @@ describe('Options settings controls React islands', () => {
     const host = document.createElement('div');
     const onInput = vi.fn();
     document.body.appendChild(host);
-    const controller = createRangeSliderControlController(host, {
-      kind: 'overlay-width',
+    const controller = mountSlider(host, {
       onInput
     });
-    controllers.push(controller);
 
     act(() => controller.render({
       ariaLabel: 'Width',
@@ -325,11 +319,9 @@ describe('Options settings controls React islands', () => {
   it('aligns a two-tick range to both slider endpoints', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const controller = createRangeSliderControlController(host, {
-      kind: 'search-result-display-limit',
+    const controller = mountSlider(host, {
       onInput: vi.fn()
     });
-    controllers.push(controller);
 
     act(() => controller.render({
       ariaLabel: '最多显示结果',
@@ -353,11 +345,9 @@ describe('Options settings controls React islands', () => {
     const host = document.createElement('div');
     const onInput = vi.fn();
     document.body.appendChild(host);
-    const controller = createRangeSliderControlController(host, {
-      kind: 'newtab-shortcut-size',
+    const controller = mountSlider(host, {
       onInput
     });
-    controllers.push(controller);
 
     act(() => controller.render({
       ariaLabel: '快捷方式大小',
@@ -414,11 +404,9 @@ describe('Options settings controls React islands', () => {
   it('keeps adapter-provided localized labels after an interaction rerender', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const controller = createRequiredCheckboxGroupController(host, {
-      kind: 'search-result-sources',
+    const controller = mountCheckboxGroup(host, {
       onChange: vi.fn()
     });
-    controllers.push(controller);
 
     act(() => controller.render({
       items: [

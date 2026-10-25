@@ -1,7 +1,5 @@
 const assert = require('assert');
-const settings = require('../../src/domain/settings');
 const bindings = require('../../src/options/options-setting-bindings');
-const { getToggleSettings } = require('../../src/options/options-toggle-settings');
 
 function createArea(initial) {
   const values = Object.assign({}, initial);
@@ -23,38 +21,18 @@ function createArea(initial) {
   };
 }
 
-function createInput() {
-  const listeners = [];
-  return {
-    checked: false,
-    value: '',
-    addEventListener(type, listener) {
-      assert.strictEqual(type, 'change');
-      listeners.push(listener);
-    },
-    change(next) {
-      if (typeof next === 'boolean') this.checked = next;
-      else this.value = next;
-      listeners.forEach((listener) => listener());
-    }
-  };
-}
-
 function createPage(initial, options) {
   const area = createArea(initial);
   const registry = bindings.createStorageChangeRegistry({
     isPrimaryAreaName: (name) => name === ((options && options.primary) || 'sync')
   });
   let refreshes = 0;
-  const shown = new Map();
   const binder = bindings.createSettingBinder({
     storageArea: area,
     registry,
-    refreshCustomSelects: () => { refreshes += 1; },
-    setToggleState: (input, value) => { input.checked = Boolean(value); shown.set(input, value); },
-    setSelectState: (select, value) => { select.value = String(value); shown.set(select, value); }
+    refreshCustomSelects: () => { refreshes += 1; }
   });
-  return { area, binder, registry, shown, get refreshes() { return refreshes; } };
+  return { area, binder, registry, get refreshes() { return refreshes; } };
 }
 
 // The registry runs a handler once per event for any of its keys, in
@@ -103,92 +81,6 @@ function createPage(initial, options) {
   unread.registry.dispatch({ other: { newValue: '3' } }, 'sync');
   assert.deepStrictEqual(unreadApplied, [3]);
   assert.deepStrictEqual(unread.area.writes, [{ other: 3 }], 'changes are repaired by default');
-}
-
-// Every Options switch is bound to its shared storage key and persists its
-// own changes; each entry's normalizer decides the startup value.
-{
-  const table = getToggleSettings(settings);
-  const hooks = {
-    newtabShortcutSubcontrols() {}
-  };
-  const hooked = new Map(getToggleSettings(settings, hooks).map((entry) => [entry.key, entry.afterApply]));
-  assert.strictEqual(hooked.get(settings.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY), hooks.newtabShortcutSubcontrols);
-  assert.strictEqual(hooked.get(settings.MOTION_EFFECTS_ENABLED_STORAGE_KEY), undefined);
-  const keys = table.map((entry) => entry.key);
-  assert(keys.every(Boolean), 'every switch should use a key defined in LumnoSettings');
-  assert.strictEqual(new Set(keys).size, keys.length, 'each key is bound once');
-  assert.strictEqual(new Set(table.map((entry) => entry.inputId)).size, table.length);
-  keys.forEach((key) => {
-    assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(key), `${key} should travel with Chrome Sync and export`);
-  });
-  // Sections drawn by React views bind their own switches.
-  [
-    settings.AUTO_PIP_ENABLED_STORAGE_KEY,
-    settings.TAB_SWITCHER_ENABLED_STORAGE_KEY,
-    settings.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY,
-    settings.LINK_PREVIEW_ENABLED_STORAGE_KEY,
-    settings.PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY,
-    settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
-    settings.SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY,
-    settings.SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY,
-    settings.OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
-    settings.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY,
-    settings.PROGRESS_TRACKING_ENABLED_STORAGE_KEY,
-    settings.OVERLAY_TAB_PRIORITY_STORAGE_KEY,
-    settings.UPDATE_NOTICE_ENABLED_STORAGE_KEY,
-    settings.MOTION_EFFECTS_ENABLED_STORAGE_KEY,
-    settings.SIMPLE_MODE_ENABLED_STORAGE_KEY,
-    settings.DOCUMENT_PIP_ENABLED_STORAGE_KEY,
-    settings.NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY,
-    settings.MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY,
-    settings.FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY
-  ].forEach((key) => {
-    assert(!keys.includes(key), `${key} is bound by its own tab`);
-  });
-
-  const byKey = new Map(table.map((entry) => [entry.key, entry]));
-  const expectedDefaults = new Map([
-    [settings.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY, settings.normalizeNewtabTimeSecondsVisible(undefined)]
-  ]);
-  expectedDefaults.forEach((expected, key) => {
-    assert(byKey.has(key), `${key} should be bound to a switch`);
-  });
-
-  table.forEach((entry) => {
-    const page = createPage({});
-    const input = createInput();
-    const hookCalls = [];
-    const spec = Object.assign({}, entry, { input, afterApply: (value) => hookCalls.push(value) });
-    page.binder.bindToggle(spec);
-    const startupValue = entry.normalize(undefined);
-    if (entry.load === false) {
-      assert.strictEqual(page.area.writes.length, 0, `${entry.key} is read by its section`);
-    } else {
-      assert.strictEqual(page.shown.get(input), startupValue, `${entry.key} shows its default`);
-      if (expectedDefaults.has(entry.key)) {
-        assert.strictEqual(startupValue, expectedDefaults.get(entry.key), `${entry.key} default`);
-      }
-      assert.deepStrictEqual(
-        page.area.writes,
-        entry.repairOnLoad === false ? [] : [{ [entry.key]: startupValue }],
-        `${entry.key} writes its default back unless it never repairs`
-      );
-    }
-    page.area.writes.length = 0;
-    input.change(!input.checked);
-    const expected = (entry.normalizeInput || entry.normalize)(input.checked);
-    assert.deepStrictEqual(page.area.writes, [{ [entry.key]: expected }], `${entry.key} persists switch changes`);
-    page.area.writes.length = 0;
-    page.registry.dispatch({ [entry.key]: { newValue: 'not-a-value' } }, 'sync');
-    const normalized = entry.normalize('not-a-value');
-    assert.strictEqual(page.shown.get(input), normalized, `${entry.key} follows storage changes`);
-    assert.deepStrictEqual(
-      page.area.writes,
-      entry.repairOnChange === false || normalized === 'not-a-value' ? [] : [{ [entry.key]: normalized }]
-    );
-    assert(hookCalls.length > 0, `${entry.key} runs its after hook on apply`);
-  });
 }
 
 // A binder made with area 'local' reads and writes chrome.storage.local and

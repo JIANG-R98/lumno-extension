@@ -78,8 +78,6 @@ function createStorageChangeRegistry(options?: StorageChangeRegistryOptions) {
 //   repairOnChange   false to never write back after a storage change
 //   refreshSelects   true to refresh the custom selects after applying
 //
-// bindToggle adds the control: it applies through setToggleState (then
-// spec.afterApply), and persists the control's own changes. `normalizeInput` overrides how the control's value is read.
 // A binder made with `area: 'local'` reads, writes and follows
 // chrome.storage.local (device-only settings) instead of the primary area.
 // `writeRepairs(values, stored)` replaces the write-back after the startup
@@ -91,7 +89,6 @@ interface SettingBinderOptions {
   area?: string;
   refreshCustomSelects?(): void;
   writeRepairs?(values: Record<string, unknown>, stored: Record<string, unknown>): void;
-  setToggleState?(input: HTMLInputElement, checked: boolean): void;
 }
 
 interface SettingSpec<V> {
@@ -103,12 +100,6 @@ interface SettingSpec<V> {
   repairOnLoad?: boolean;
   repairOnChange?: boolean;
   refreshSelects?: boolean;
-}
-
-interface ControlSpec<V, C> extends Omit<SettingSpec<V>, 'apply'> {
-  input: C | null;
-  afterApply?(value: V): void;
-  normalizeInput?(raw: unknown): V;
 }
 
 function createSettingBinder(config: SettingBinderOptions) {
@@ -151,43 +142,11 @@ function createSettingBinder(config: SettingBinderOptions) {
     }, registryOptions);
   }
 
-  function bindControl<V, C extends HTMLInputElement | HTMLSelectElement>(
-    spec: ControlSpec<V, C>,
-    readControl: (control: C) => unknown,
-    setControlState: (control: C, value: V) => void
-  ): void {
-    const control = spec.input;
-    const apply = (value: V): void => {
-      if (control) {
-        setControlState(control, value);
-      }
-      if (spec.afterApply) {
-        spec.afterApply(value);
-      }
-    };
-    bindSetting({ ...spec, apply });
-    if (!control) {
-      return;
-    }
-    const normalizeInput = spec.normalizeInput || spec.normalize;
-    control.addEventListener('change', () => {
-      const next = normalizeInput(readControl(control));
-      apply(next);
-      write({ [spec.key]: next });
-    });
-  }
-
-  function bindToggle(spec: ControlSpec<boolean, HTMLInputElement>): void {
-    const setToggleState = config.setToggleState || (() => {});
-    bindControl(spec, (input) => input.checked, setToggleState);
-  }
-
-  return Object.freeze({ bindSetting, bindToggle });
+  return Object.freeze({ bindSetting });
 }
 
 export { createSettingBinder, createStorageChangeRegistry };
 export type {
-  ControlSpec,
   RegistryEntryOptions,
   SettingBinderOptions,
   SettingSpec,

@@ -2,7 +2,6 @@ import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import optionsHtml from '../options.html?raw';
 import * as settingsModule from '../../domain/settings';
-import * as toggleSettingsModule from '../options-toggle-settings';
 import { runPageBundle } from '../../../tests/react/page-bundles';
 import siteSearchCatalog from '../../../assets/data/site-search.json';
 import enMessages from '../../../_locales/en/messages.json';
@@ -366,9 +365,22 @@ describe('Options page storage wiring', () => {
     expect(types()).toEqual(['topSite', 'bookmark', 'history']);
   });
 
-  it('binds every switch in the shared table to its storage key', async () => {
+  it('binds the New Tab switches of the Appearance tab to their storage keys', async () => {
     const chrome = await bootOptionsPage();
-    const entries = toggleSettingsModule.getToggleSettings(SETTINGS);
+    const switches: Array<[name: string, key: string, normalize: (value: unknown) => boolean]> = [
+      ['newtab_time_seconds', SETTINGS.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY, SETTINGS.normalizeNewtabTimeSecondsVisible],
+      ['newtab_time_12_hour', SETTINGS.NEWTAB_TIME_12_HOUR_STORAGE_KEY, SETTINGS.normalizeNewtabTime12Hour],
+      ['newtab_input_auto_focus', SETTINGS.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY, SETTINGS.normalizeNewtabInputAutoFocusEnabled],
+      ['newtab_shortcuts', SETTINGS.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY, SETTINGS.normalizeNewtabShortcutsVisible],
+      ['newtab_shortcut_add', SETTINGS.NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY, SETTINGS.normalizeNewtabShortcutAddVisible],
+      ['newtab_shortcut_dock_magnification', SETTINGS.NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
+        SETTINGS.normalizeNewtabShortcutDockMagnificationEnabled],
+      ['bookmark_folder_icons_visible', SETTINGS.BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY, SETTINGS.normalizeBookmarkFolderIconsVisible],
+      ['newtab_feedback_button_visible', SETTINGS.NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY, SETTINGS.normalizeNewtabFeedbackButtonVisible],
+      ['newtab_appearance_button_visible', SETTINGS.NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
+        SETTINGS.normalizeNewtabAppearanceButtonVisible]
+    ];
+    const entries = switches.map(([name, key, normalize]) => ({ inputId: `_x_extension_${name}_toggle_2026_unique_`, key, normalize }));
     // Sub-options stay disabled while their parent switch is off.
     const parents = [SETTINGS.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY];
     for (const entry of entries) {
@@ -384,7 +396,7 @@ describe('Options page storage wiring', () => {
         control.click();
       });
       await settle();
-      const written = (entry.normalizeInput || entry.normalize)(next);
+      const written = entry.normalize(next);
       // A value the page does not allow is repaired once its own write lands.
       expect(chrome.storage.sync.values[entry.key], `${entry.key} persists`).toBe(entry.normalize(written));
       await act(async () => {

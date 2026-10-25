@@ -1,11 +1,9 @@
 const assert = require('assert');
 const { execFileSync } = require('child_process');
 const fs = require('fs');
-const { JSDOM } = require('jsdom');
 const settings = require('../../src/domain/settings.ts');
 const settingsStorage = require('../../src/platform/settings-storage.ts');
 const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
-const { readPageSource } = require('../helpers/page-source');
 const { loadBackground, wait } = require('../helpers/background-harness');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { createOptionsPage } = require('../helpers/options-page');
@@ -22,7 +20,6 @@ assert.strictEqual(
   `i18n audit should have no unreviewed candidates:\n${auditOutput}`
 );
 
-const optionsDocument = new JSDOM(readPageSource('src/options/options.html')).window.document;
 const localeNames = ['en', 'ja', 'zh_CN', 'zh_TW'];
 const localeMessages = Object.fromEntries(localeNames.map((locale) => [
   locale,
@@ -88,17 +85,7 @@ TOPBAR_LOCAL_KEYS.forEach((key) => {
   assert(!chromeSyncKeys.includes(key), `options must not export or import local-only ${key}`);
 });
 
-// Labels are translated: static ones through data-i18n, those React draws
-// from their locale messages.
-localeNames.forEach((locale) => {
-  assert(localeMessages[locale].settings_overlay_open_tabs_default_visible_title?.message,
-    `${locale} should translate the overlay open-tabs setting label`);
-});
-const folderIconsLabel = optionsDocument.querySelector('[data-i18n="settings_bookmark_folder_icons_visible_title"]');
-assert(folderIconsLabel, 'bookmark folder icon setting label should be wired through data-i18n');
-assert(folderIconsLabel.compareDocumentPosition(optionsDocument.querySelector('[data-i18n="settings_recent_sites_title"]')) & 4,
-  'bookmark folder icon setting should appear before site cards');
-
+// The labels React draws come from their locale messages.
 localeNames.forEach((locale) => {
   assert(
     localeMessages[locale].settings_overlay_open_tabs_default_visible_title &&

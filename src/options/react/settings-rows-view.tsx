@@ -79,6 +79,7 @@ export type SettingsRowModel =
     key: string;
     rowId?: string;
     title: SettingsTitleModel;
+    disabled?: boolean;
     // The slider's frame, which the page's styles size.
     hostId: string;
     slider: RangeSliderControlRenderModel;
@@ -338,7 +339,7 @@ function SettingsRow({ row, handlers }: { row: SettingsRowModel; handlers: Setti
       );
     case 'slider':
       return (
-        <div className={getRowClassName(row)} id={row.rowId}>
+        <div className={getRowClassName(row)} id={row.rowId} {...getDisabledProps(row.disabled)}>
           <RowTitle title={row.title} />
           <div id={row.hostId}>
             <RangeSliderControl model={row.slider} onInput={(value) => handlers.onSlide?.(row.key, value)} />

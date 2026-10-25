@@ -6,29 +6,6 @@
 const HEIGHT_ANIMATION_DURATION_MS = 280;
 const HEIGHT_ANIMATION_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
-// Shows or hides one conditional setting; with visibleDisplay it toggles
-// style.display instead of hidden. Returns whether visibility changed.
-function setConditionalSettingsElementVisibility(
-  element: HTMLElement | null,
-  visible: boolean,
-  visibleDisplay?: string
-): boolean {
-  if (!element) {
-    return false;
-  }
-  const shouldShow = visible;
-  const wasVisible = visibleDisplay
-    ? element.style.display !== 'none'
-    : !element.hidden;
-  if (visibleDisplay) {
-    element.style.setProperty('display', shouldShow ? visibleDisplay : 'none');
-  } else {
-    element.hidden = !shouldShow;
-  }
-  element.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
-  return wasVisible !== shouldShow;
-}
-
 interface PanelHeightAnimatorOptions {
   // The element whose height animates.
   panel: HTMLElement;
@@ -222,5 +199,5 @@ function createPanelHeightAnimator(options: PanelHeightAnimatorOptions) {
   return Object.freeze({ animate, cancel });
 }
 
-export { createPanelHeightAnimator, setConditionalSettingsElementVisibility };
+export { createPanelHeightAnimator };
 export type { LayoutMutation, PanelHeightAnimatorOptions };

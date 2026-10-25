@@ -1,15 +1,11 @@
 import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  createSegmentedControlApi,
-  createSegmentedControlController,
-  type SegmentedControlController,
-  type SegmentedControlRenderModel
-} from './segmented-control';
+import { SegmentedControl, type SegmentedControlRenderModel } from './segmented-control';
 import { getTags, required } from '../../../tests/react/dom';
 import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
-let controllers: SegmentedControlController[] = [];
+let roots: Root[] = [];
 
 const model: SegmentedControlRenderModel = {
   activeValue: 'latest',
@@ -33,36 +29,37 @@ const model: SegmentedControlRenderModel = {
   }
 };
 
+// Draws the control in a radio group, as a settings row does.
 function createFixture() {
   const host = document.createElement('div');
+  host.setAttribute('role', 'radiogroup');
   document.body.appendChild(host);
   const onSelect = vi.fn();
-  const controller = createSegmentedControlController(host, {
-    kind: 'recent-mode',
-    onSelect
-  });
-  controllers.push(controller);
+  const root = createRoot(host);
+  roots.push(root);
+  const controller = {
+    render(next: SegmentedControlRenderModel) {
+      root.render(<SegmentedControl model={next} onSelect={onSelect} />);
+    }
+  };
   return { controller, host, onSelect };
 }
 
 afterEach(() => {
   act(() => {
-    controllers.forEach((controller) => controller.destroy());
+    roots.forEach((root) => root.unmount());
   });
-  controllers = [];
+  roots = [];
   document.body.textContent = '';
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
-describe('Options segmented control React island', () => {
+describe('Options segmented control', () => {
   it('preserves indicator, data attributes, icons, and hidden select contracts', () => {
     const { controller, host } = createFixture();
     act(() => controller.render(model));
 
-    expect(createSegmentedControlApi().implementation).toBe('react');
-    expect(host.dataset.reactIsland).toBe('options-segmented-control');
-    expect(host.dataset.segmentedKind).toBe('recent-mode');
     expect(host.querySelector('._x_extension_theme_indicator_2024_unique_'))
       .not.toBeNull();
     expect(host.querySelectorAll('[data-recent-mode]')).toHaveLength(2);
@@ -211,15 +208,5 @@ describe('Options segmented control React island', () => {
 
     expect(Array.from(getTags(host, '[role="radio"]', 'button'), (radio) => radio.tabIndex))
       .toEqual([0, -1]);
-  });
-
-  it('unmounts cleanly', () => {
-    const { controller, host } = createFixture();
-    act(() => {
-      controller.render(model);
-      controller.destroy();
-    });
-
-    expect(host.childElementCount).toBe(0);
   });
 });

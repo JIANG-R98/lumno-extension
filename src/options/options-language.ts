@@ -10,7 +10,6 @@ import * as LumnoMessaging from '../platform/messaging';
 import type { BatchedStorageArea } from '../platform/settings-storage';
 import type { createSearchShortcutStatus } from './options-search-shortcut-status';
 import type { SettingsTabKey } from './options-navigation';
-import type { RecentMode } from './options-segmented-tabs';
 import type { createThemeSection } from './options-theme';
 import type { FormatTemplate } from './options-types';
 import type { createController as createWebDavController } from './webdav-options';
@@ -22,13 +21,6 @@ interface LanguageState {
   storageArea: BatchedStorageArea | null;
   isMacPlatform: boolean;
   currentActiveSettingsTab: SettingsTabKey;
-  currentRecentMode: RecentMode;
-  currentNewtabShortcutColumns: number;
-  currentNewtabShortcutSize: number;
-  currentNewtabShortcutGap: number;
-  currentRecentCount: number;
-  currentBookmarkCount: number;
-  currentBookmarkColumns: number;
   // Made as the page starts; null until then.
   webDavSettingsController: ReturnType<typeof createWebDavController> | null;
   searchShortcutStatus: ReturnType<typeof createSearchShortcutStatus> | null;
@@ -41,20 +33,13 @@ interface LanguageDeps {
   SETTINGS: Pick<typeof Settings, 'normalizeLocale' | 'localeToHtmlLang' | 'resolveSupportedLocale'>;
   LANGUAGE_STORAGE_KEY: string;
   localStorageArea: StorageAreaLike | null;
-  renderOptionsInfoButtons(): void;
+  // 'sync' while browser sync holds the settings.
+  getActivePrimaryAreaName(): string;
   renderFeedbackSupport(): void;
   renderTranslationHelp(): void;
   refreshCustomSelects(): void;
   refreshSyncStatus(): void;
   renderShortcutReferenceList(): void;
-  setRecentModeTabState(mode: unknown): void;
-  renderNewtabShortcutColumnsControl(value: unknown, disabled?: boolean): void;
-  renderNewtabShortcutSizeControl(value: unknown, disabled?: boolean): void;
-  renderNewtabShortcutGapControl(value: unknown, disabled?: boolean): void;
-  syncNewtabShortcutSubcontrolAvailability(): void;
-  renderRecentCountControl(value: unknown): void;
-  renderBookmarkRowsControl(value: unknown): void;
-  renderBookmarkColumnsControl(value: unknown): void;
   renderSettingsNavigation(tabKey: SettingsTabKey): void;
   // Redraws the tab sections React views draw from translated copy.
   renderTabSections(): void;
@@ -72,20 +57,12 @@ function createLanguage(deps: LanguageDeps) {
     SETTINGS,
     LANGUAGE_STORAGE_KEY,
     localStorageArea,
-    renderOptionsInfoButtons,
+    getActivePrimaryAreaName,
     renderFeedbackSupport,
     renderTranslationHelp,
     refreshCustomSelects,
     refreshSyncStatus,
     renderShortcutReferenceList,
-    setRecentModeTabState,
-    renderNewtabShortcutColumnsControl,
-    renderNewtabShortcutSizeControl,
-    renderNewtabShortcutGapControl,
-    syncNewtabShortcutSubcontrolAvailability,
-    renderRecentCountControl,
-    renderBookmarkRowsControl,
-    renderBookmarkColumnsControl,
     renderSettingsNavigation,
     renderTabSections,
     onLanguageApplied,
@@ -250,7 +227,6 @@ function createLanguage(deps: LanguageDeps) {
       currentMessages = messages;
       onLanguageApplied(normalizedMode, targetLocale);
       applyI18n();
-      renderOptionsInfoButtons();
       renderFeedbackSupport();
       renderTranslationHelp();
       refreshCustomSelects();
@@ -262,14 +238,6 @@ function createLanguage(deps: LanguageDeps) {
       if (optionsState.themeSection) {
         optionsState.themeSection.render();
       }
-      setRecentModeTabState(optionsState.currentRecentMode);
-      renderNewtabShortcutColumnsControl(optionsState.currentNewtabShortcutColumns);
-      renderNewtabShortcutSizeControl(optionsState.currentNewtabShortcutSize);
-      renderNewtabShortcutGapControl(optionsState.currentNewtabShortcutGap);
-      syncNewtabShortcutSubcontrolAvailability();
-      renderRecentCountControl(optionsState.currentRecentCount);
-      renderBookmarkRowsControl(optionsState.currentBookmarkCount);
-      renderBookmarkColumnsControl(optionsState.currentBookmarkColumns);
       renderSettingsNavigation(optionsState.currentActiveSettingsTab);
       renderTabSections();
       renderSiteSearchList();
@@ -277,12 +245,52 @@ function createLanguage(deps: LanguageDeps) {
     });
   }
 
+  // Keeps a copy of the language in chrome.storage.local and moves a value
+  // found only there into the primary area. With nothing stored yet the page
+  // shows the system language without writing it, so a choice another page is
+  // still saving is not overwritten; the language change handler applies that
+  // choice once it lands.
+  function loadLanguageSetting(): void {
+    const storageArea = optionsState.storageArea;
+    if (!storageArea) {
+      return;
+    }
+    storageArea.get([LANGUAGE_STORAGE_KEY], (result) => {
+      if (result && Object.prototype.hasOwnProperty.call(result, LANGUAGE_STORAGE_KEY)) {
+        const storedRaw = result[LANGUAGE_STORAGE_KEY];
+        const stored = normalizeLanguageMode(storedRaw);
+        if (storedRaw !== stored) {
+          storageArea.set({ [LANGUAGE_STORAGE_KEY]: stored });
+        }
+        if (localStorageArea) {
+          localStorageArea.set({ [LANGUAGE_STORAGE_KEY]: stored });
+        }
+        applyLanguageMode(stored);
+        return;
+      }
+      if (getActivePrimaryAreaName() !== 'sync' || !localStorageArea) {
+        applyLanguageMode('system');
+        return;
+      }
+      localStorageArea.get([LANGUAGE_STORAGE_KEY], (localResult) => {
+        if (!localResult || !Object.prototype.hasOwnProperty.call(localResult, LANGUAGE_STORAGE_KEY)) {
+          applyLanguageMode('system');
+          return;
+        }
+        const localMode = normalizeLanguageMode(localResult[LANGUAGE_STORAGE_KEY]);
+        localStorageArea.set({ [LANGUAGE_STORAGE_KEY]: localMode });
+        storageArea.set({ [LANGUAGE_STORAGE_KEY]: localMode });
+        applyLanguageMode(localMode);
+      });
+    });
+  }
+
   return {
     getMessage,
     normalizeLocale,
     getSystemLocale,
-    normalizeLanguageMode,
     applyLanguageMode,
+    loadLanguageSetting,
     loadLocaleMessages
   };
 }

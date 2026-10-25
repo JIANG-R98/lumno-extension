@@ -9,8 +9,6 @@ import type { createOverlayShellApi } from '../overlay/react/shell';
 import type { createSearchInputApi } from '../shared/react/search-input';
 import type { ThemeVariant } from '../shared/favicon/favicon-theme';
 import type { createBlacklistTabApi } from '../options/react/blacklist-tab';
-import type { createInfoButtonApi } from '../options/react/info-button';
-import type { createSegmentedControlApi } from '../options/react/segmented-control';
 import type { createSettingsControlsApi } from '../options/react/settings-controls';
 import type { createSettingsNavigationApi } from '../options/react/settings-navigation';
 import type { createShortcutsTabApi } from '../options/react/shortcuts-tab';
@@ -105,8 +103,6 @@ declare global {
   // Set by the options page's React islands entry.
   var LumnoOptionsShortcutsTab: ReturnType<typeof createShortcutsTabApi> | undefined;
   var LumnoOptionsBlacklistTab: ReturnType<typeof createBlacklistTabApi> | undefined;
-  var LumnoOptionsInfoButton: ReturnType<typeof createInfoButtonApi> | undefined;
-  var LumnoOptionsSegmentedControl: ReturnType<typeof createSegmentedControlApi> | undefined;
   var LumnoOptionsSettingsControls: ReturnType<typeof createSettingsControlsApi> | undefined;
   var LumnoOptionsSettingsNavigation: ReturnType<typeof createSettingsNavigationApi> | undefined;
   var LumnoOptionsToast: ReturnType<typeof createToastApi> | undefined;

@@ -1,11 +1,9 @@
 const assert = require('assert');
 const fs = require('fs');
 const settings = require('../../src/domain/settings.ts');
-const { JSDOM } = require('jsdom');
 const { createNewtabPage } = require('../helpers/newtab-page');
+const { createOptionsPage } = require('../helpers/options-page');
 
-const optionsDocument = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
-const toggleSettings = require('../../src/options/options-toggle-settings.ts').getToggleSettings(settings);
 const localeNames = ['en', 'ja', 'zh_CN', 'zh_TW'];
 
 const settingsContract = [
@@ -13,27 +11,18 @@ const settingsContract = [
     constant: 'NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY',
     htmlId: '_x_extension_newtab_feedback_button_visible_toggle_2026_unique_',
     i18nKey: 'settings_newtab_feedback_button_visible_title',
-    storageKey: '_x_extension_newtab_feedback_button_visible_2026_unique_',
-    toggleKind: 'newtab-feedback-button-visible'
+    storageKey: '_x_extension_newtab_feedback_button_visible_2026_unique_'
   },
   {
     constant: 'NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY',
     htmlId: '_x_extension_newtab_appearance_button_visible_toggle_2026_unique_',
     i18nKey: 'settings_newtab_appearance_button_visible_title',
-    storageKey: '_x_extension_newtab_appearance_button_visible_2026_unique_',
-    toggleKind: 'newtab-appearance-button-visible'
+    storageKey: '_x_extension_newtab_appearance_button_visible_2026_unique_'
   }
 ];
 
 settingsContract.forEach((entry) => {
   assert.strictEqual(settings[entry.constant], entry.storageKey);
-  assert.strictEqual(optionsDocument.getElementById(entry.htmlId).checked, true, `${entry.htmlId} should default to shown`);
-  assert.ok(optionsDocument.querySelector(`[data-i18n="${entry.i18nKey}"]`));
-  const toggleEntry = toggleSettings.find((item) => item.key === entry.storageKey);
-  assert(
-    toggleEntry && toggleEntry.inputId === entry.htmlId && toggleEntry.kind === entry.toggleKind,
-    `${entry.constant} should use the shared Options toggle controller`
-  );
   localeNames.forEach((locale) => {
     const messages = JSON.parse(fs.readFileSync(`_locales/${locale}/messages.json`, 'utf8'));
     assert(
@@ -55,7 +44,22 @@ function shown(page, selector) {
   return !control.hidden && control.getAttribute('aria-hidden') === 'false' && !control.inert;
 }
 
+// In Settings: each switch defaults to shown and saves the choice.
+async function testSettingsSwitches() {
+  const page = await createOptionsPage();
+  for (const entry of settingsContract) {
+    const toggle = page.byId(entry.htmlId);
+    assert.strictEqual(toggle.checked, true, `${entry.htmlId} should default to shown`);
+    assert.strictEqual(toggle.getAttribute('data-i18n-aria-label'), entry.i18nKey);
+    await page.click(toggle);
+    await page.settle(50);
+    assert.ok(page.storage.sync.writes.some((write) => write[entry.storageKey] === false), `${entry.constant} should save the choice`);
+  }
+  page.close();
+}
+
 (async () => {
+  await testSettingsSwitches();
   for (const entry of settingsContract) {
     const others = settingsContract.filter((other) => other !== entry);
     let hiddenWhenReady = null;
