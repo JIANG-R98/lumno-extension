@@ -1,8 +1,128 @@
-// @ts-nocheck
 // Wallpaper prefs in storage: synced and local values per mode, the
 // overrides kept on one device, the preload cache the next page reads before
 // the runtime starts, and the custom wallpaper records.
-function createWallpaperStorage(deps) {
+import type { StorageAreaLike, StorageItems } from '../../../domain/storage-port';
+import type { WallpaperLocalStore } from '../../../shared/wallpaper-local-store';
+import type { ShowToast, Translate } from '../../newtab-types';
+import type { WallpaperSourceTab } from '../../react/wallpaper-panel/panel-model';
+import type * as RemoteContent from '../../remote-content';
+import type { RemoteContentClient } from '../../remote-content';
+import type { RemoteWallpaper } from '../../remote-content-types';
+import type { AdaptiveToneSampler } from '../wallpaper-adaptive-tone';
+import type * as WallpaperEffects from '../wallpaper-effects';
+import type { WallpaperEffectStoragePrefs } from '../wallpaper-effects';
+import type { WallpaperSources } from './wallpaper-sources';
+import type {
+  LocalWallpaperOverrides,
+  WallpaperItem,
+  WallpaperMode,
+  WallpaperPrefs,
+  WallpaperState
+} from './wallpaper-runtime-types';
+
+type StorageArea = Pick<StorageAreaLike, 'get' | 'set'>;
+
+// A value read from storage, and whether the key held one.
+interface StoredValue {
+  hasValue: boolean;
+  value: unknown;
+  // Read from the key online picks live under.
+  fromOnlineKey?: boolean;
+}
+
+// The synced value: one ID for both modes, or an ID per mode.
+type SyncedWallpaperValue = string | {
+  version: number;
+  sameForModes: boolean;
+  light: string;
+  dark: string;
+};
+
+// This device's value: one override for both modes, or one per mode.
+type LocalWallpaperValue = string | {
+  version: number;
+  light: string;
+  dark: string;
+};
+
+// What the preload reads for one mode to paint before the runtime starts.
+interface WallpaperPreloadEntry {
+  id: string;
+  // A bundled file, with the full image's size when known.
+  path?: string;
+  width?: number;
+  height?: number;
+  // A network image's copy in the image cache.
+  cachedImage?: { id: string; url: string };
+  // Tomorrow's copy of a daily slot, for the first tab after midnight.
+  next?: { day: string; cachedImage: { id: string; url: string } };
+  // An upload in the local wallpaper library.
+  customImage?: { id: string; key?: string };
+  luminance?: number;
+  luminanceKey?: string;
+}
+
+// How one mode's synced value resolves on this version.
+interface SyncedModeResolution {
+  id: string;
+  // An upload the synced value named, to move to this device's overrides.
+  localMigrationId: string;
+  // Whether the stored value should be rewritten.
+  sanitized: boolean;
+  // An ID this version does not know, perhaps from a newer install.
+  unrecognized?: boolean;
+}
+
+interface WallpaperStorageDeps extends Pick<WallpaperSources,
+  'normalizeWallpaperMode' | 'isCustomWallpaperId' | 'getCustomWallpaperById' | 'cloneWallpaperPrefs' |
+  'cloneLocalWallpaperOverrides' | 'normalizeNewtabWallpaperId' | 'getDefaultLocalWallpaperOverrides' |
+  'getDefaultWallpaperPrefs' | 'getWallpaperById' | 'getCachedWallpaperImage' | 'getShownWallpaperCopy' |
+  'getWallpaperRuntimePath' | 'getDisplayedWallpaperImageUrl' | 'getWallpaperImageUrl' | 'getWallpaperSample'> {
+  chrome: { runtime?: { lastError?: unknown } } | null | undefined;
+  REMOTE_CONTENT: Pick<typeof RemoteContent,
+    'wallpaperFromId' | 'isDailyWallpaperId' | 'getWallpaperProvider' | 'localDay'>;
+  isLinkWallpaperId(id: unknown): boolean;
+  NEWTAB_WALLPAPER_DEFAULT_ID: string;
+  NEWTAB_WALLPAPER_MODES: readonly WallpaperMode[];
+  storageArea: StorageArea | null;
+  NEWTAB_WALLPAPER_STORAGE_KEY: string;
+  NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY: string;
+  showToast: ShowToast;
+  t: Translate;
+  localWallpaperStorageArea: StorageArea | null;
+  NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY: string;
+  NEWTAB_WALLPAPER_MODE_DARK: 'dark';
+  NEWTAB_WALLPAPER_MODE_LIGHT: 'light';
+  // The ID older versions stored for their single upload.
+  NEWTAB_CUSTOM_WALLPAPER_ID: string;
+  NEWTAB_WALLPAPER_PREFS_STORAGE_VERSION: number;
+  // The override that turns wallpaper off on this device.
+  NEWTAB_LOCAL_WALLPAPER_DISABLED_VALUE: string;
+  document: Document;
+  WALLPAPER_SOURCE_TABS: readonly WallpaperSourceTab[];
+  getUpcomingDailyWallpaper(id: string): RemoteWallpaper | null;
+  getNextLocalDayTimestamp(timestamp: number): number;
+  remoteClient: RemoteContentClient | null;
+  window: Window;
+  PRELOAD_STORAGE_KEY: string;
+  WALLPAPER_EFFECTS: Pick<typeof WallpaperEffects, 'analyzeImageData'>;
+  NEWTAB_WALLPAPER_OVERLAY_STOPS: Readonly<Record<WallpaperMode, { top: number; mid: number; bottom: number }>>;
+  getWallpaperOverlayStopPercent(base: number, opacity: number): number;
+  PRELOAD_STORAGE_VERSION: number;
+  getEffectiveThemeMode(): string;
+  getWallpaperEffectStorageValue(): WallpaperEffectStoragePrefs;
+  localWallpaperStore: Pick<WallpaperLocalStore,
+    'normalizeRecord' | 'readAll' | 'readByIds' | 'write' | 'remove' | 'buildRecordFromFile'>;
+  wallpaperState: Pick<WallpaperState,
+    'customWallpapers' | 'currentLocalWallpaperOverrides' | 'currentWallpaperPrefs' | 'activeWallpaperMode' |
+    'wallpaperLuminances' | 'currentWallpaperId' | 'currentWallpaperOverlayOpacity'>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function createWallpaperStorage(deps: WallpaperStorageDeps) {
   const {
     chrome,
     REMOTE_CONTENT,
@@ -55,21 +175,22 @@ function createWallpaperStorage(deps) {
   // The runtime state object shared with wallpaper.ts and the other modules.
   const wallpaperState = deps.wallpaperState;
 
-  function getRawWallpaperId(value) {
-    return value && typeof value === 'object' && value.id ? value.id : value;
+  // A stored wallpaper value's ID: the value itself, or an object's id.
+  function getRawWallpaperId(value: unknown): unknown {
+    return isRecord(value) && value.id ? value.id : value;
   }
 
-  function hasStorageValue(result, key) {
+  function hasStorageValue(result: StorageItems | undefined, key: string): boolean {
     return Boolean(result && Object.prototype.hasOwnProperty.call(result, key));
   }
 
-  function readStorageValue(area, key) {
+  function readStorageValue(area: StorageArea | null | undefined, key: string): Promise<StoredValue> {
     return new Promise((resolve) => {
       if (!area || !key || typeof area.get !== 'function') {
         resolve({ hasValue: false, value: undefined });
         return;
       }
-      area.get([key], (result) => {
+      void area.get([key], (result) => {
         resolve({
           hasValue: hasStorageValue(result, key),
           value: result ? result[key] : undefined
@@ -78,29 +199,34 @@ function createWallpaperStorage(deps) {
     });
   }
 
-  function writeStorageValue(area, key, value, onError) {
+  function writeStorageValue(
+    area: StorageArea | null | undefined,
+    key: string,
+    value: unknown,
+    onError?: () => void
+  ): void {
     if (!area || !key || typeof area.set !== 'function') {
       return;
     }
-    area.set({ [key]: value }, () => {
-      if (chrome.runtime && chrome.runtime.lastError && typeof onError === 'function') {
+    void area.set({ [key]: value }, () => {
+      if (chrome && chrome.runtime && chrome.runtime.lastError && typeof onError === 'function') {
         onError();
       }
     });
   }
 
-  function isOnlineWallpaperId(value) {
+  function isOnlineWallpaperId(value: unknown): boolean {
     const id = String(getRawWallpaperId(value) || '').trim();
     return Boolean(REMOTE_CONTENT.wallpaperFromId(id)) || isLinkWallpaperId(id);
   }
 
   // Versions without online wallpapers clear IDs they do not recognize, and that clear syncs to every device.
   // Online picks therefore live in their own key, leaving a built-in stand-in under the shared key.
-  function buildSharedSyncedWallpaperValue(value) {
-    if (!value || typeof value !== 'object') {
+  function buildSharedSyncedWallpaperValue(value: unknown): unknown {
+    if (!isRecord(value)) {
       return isOnlineWallpaperId(value) ? NEWTAB_WALLPAPER_DEFAULT_ID : value;
     }
-    const shared = Object.assign({}, value);
+    const shared: Record<string, unknown> = { ...value };
     NEWTAB_WALLPAPER_MODES.forEach((mode) => {
       if (isOnlineWallpaperId(shared[mode])) {
         shared[mode] = NEWTAB_WALLPAPER_DEFAULT_ID;
@@ -111,9 +237,9 @@ function createWallpaperStorage(deps) {
 
   // The online pick only counts while the shared key still holds its stand-in; any other value
   // means an older version changed the wallpaper since, and that newer choice wins.
-  function mergeOnlineWallpaperValue(synced, online) {
+  function mergeOnlineWallpaperValue(synced: StoredValue, online: StoredValue | null | undefined): StoredValue {
     const entry = online && online.hasValue ? online.value : null;
-    if (!entry || typeof entry !== 'object' || !synced.hasValue ||
+    if (!isRecord(entry) || !synced.hasValue ||
         !getWallpaperStorageRawIds(entry.value).some(isOnlineWallpaperId) ||
         getComparableSyncedWallpaperStorageValue(entry.shared) !==
           getComparableSyncedWallpaperStorageValue(synced.value)) {
@@ -122,23 +248,23 @@ function createWallpaperStorage(deps) {
     return { hasValue: true, value: entry.value, fromOnlineKey: true };
   }
 
-  function writeSyncedWallpaperValue(value, options) {
+  function writeSyncedWallpaperValue(value: unknown, options?: { showError?: boolean } | null): void {
     if (!storageArea || typeof storageArea.set !== 'function') {
       return;
     }
     const hasOnlineWallpaper = getWallpaperStorageRawIds(value).some(isOnlineWallpaperId);
     const shared = hasOnlineWallpaper ? buildSharedSyncedWallpaperValue(value) : value;
-    storageArea.set({
+    void storageArea.set({
       [NEWTAB_WALLPAPER_STORAGE_KEY]: shared,
       [NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY]: hasOnlineWallpaper ? { value, shared } : ''
     }, () => {
-      if (chrome.runtime && chrome.runtime.lastError && options && options.showError) {
+      if (chrome && chrome.runtime && chrome.runtime.lastError && options && options.showError) {
         showToast(t('newtab_wallpaper_save_error', 'Failed to save wallpaper'), true);
       }
     });
   }
 
-  function writeLocalWallpaperValue(value, options) {
+  function writeLocalWallpaperValue(value: unknown, options?: { showError?: boolean } | null): void {
     writeStorageValue(localWallpaperStorageArea, NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY, value, () => {
       if (options && options.showError) {
         showToast(t('newtab_wallpaper_save_error', 'Failed to save wallpaper'), true);
@@ -146,8 +272,8 @@ function createWallpaperStorage(deps) {
     });
   }
 
-  function getWallpaperStorageModeValue(value, mode, fallback) {
-    if (!value || typeof value !== 'object') {
+  function getWallpaperStorageModeValue(value: unknown, mode: unknown, fallback: unknown): unknown {
+    if (!isRecord(value)) {
       return fallback;
     }
     const normalizedMode = normalizeWallpaperMode(mode);
@@ -164,8 +290,8 @@ function createWallpaperStorage(deps) {
     return fallback;
   }
 
-  function getWallpaperStorageRawIds(value) {
-    if (!value || typeof value !== 'object') {
+  function getWallpaperStorageRawIds(value: unknown): string[] {
+    if (!isRecord(value)) {
       return [String(getRawWallpaperId(value) || '').trim()].filter(Boolean);
     }
     return NEWTAB_WALLPAPER_MODES
@@ -173,15 +299,15 @@ function createWallpaperStorage(deps) {
       .filter(Boolean);
   }
 
-  function shouldWaitForCustomWallpapers(value) {
+  function shouldWaitForCustomWallpapers(value: unknown): boolean {
     return getWallpaperStorageRawIds(value).some((id) => {
       return id === NEWTAB_CUSTOM_WALLPAPER_ID || isCustomWallpaperId(id);
     });
   }
 
-  function getStoredCustomWallpaperIds(storedValues) {
-    const ids = [];
-    (Array.isArray(storedValues) ? storedValues : []).forEach((storedValue) => {
+  function getStoredCustomWallpaperIds(storedValues: ReadonlyArray<StoredValue | null | undefined> | null | undefined): string[] {
+    const ids: string[] = [];
+    (storedValues || []).forEach((storedValue) => {
       if (!storedValue || !storedValue.hasValue) {
         return;
       }
@@ -194,15 +320,15 @@ function createWallpaperStorage(deps) {
     return ids;
   }
 
-  function hasLoadedStoredCustomWallpaper(id) {
+  function hasLoadedStoredCustomWallpaper(id: string): boolean {
     if (id === NEWTAB_CUSTOM_WALLPAPER_ID) {
       return wallpaperState.customWallpapers.length > 0;
     }
     return Boolean(getCustomWallpaperById(id));
   }
 
-  function getComparableSyncedWallpaperStorageValue(value) {
-    if (!value || typeof value !== 'object') {
+  function getComparableSyncedWallpaperStorageValue(value: unknown): string {
+    if (!isRecord(value)) {
       return String(getRawWallpaperId(value) || '');
     }
     return JSON.stringify({
@@ -213,7 +339,7 @@ function createWallpaperStorage(deps) {
     });
   }
 
-  function buildSyncedWallpaperStorageValue(prefs) {
+  function buildSyncedWallpaperStorageValue(prefs: unknown): SyncedWallpaperValue {
     const normalized = cloneWallpaperPrefs(prefs);
     if (normalized.sameForModes && normalized.light === normalized.dark) {
       return normalized.light;
@@ -226,8 +352,8 @@ function createWallpaperStorage(deps) {
     };
   }
 
-  function getComparableLocalWallpaperStorageValue(value) {
-    if (!value || typeof value !== 'object') {
+  function getComparableLocalWallpaperStorageValue(value: unknown): string {
+    if (!isRecord(value)) {
       return String(getRawWallpaperId(value) || '');
     }
     return JSON.stringify({
@@ -237,7 +363,7 @@ function createWallpaperStorage(deps) {
     });
   }
 
-  function buildLocalWallpaperStorageValue(overrides, sameForModes) {
+  function buildLocalWallpaperStorageValue(overrides: unknown, sameForModes: boolean): LocalWallpaperValue {
     const normalized = cloneLocalWallpaperOverrides(overrides);
     if (sameForModes && (normalized.light || null) === (normalized.dark || null)) {
       return normalized.light || '';
@@ -252,7 +378,7 @@ function createWallpaperStorage(deps) {
     };
   }
 
-  function resolveSyncedWallpaperModeValue(raw, hasRaw) {
+  function resolveSyncedWallpaperModeValue(raw: unknown, hasRaw: boolean): SyncedModeResolution {
     const value = hasRaw ? raw : NEWTAB_WALLPAPER_DEFAULT_ID;
     if (shouldWaitForCustomWallpapers(value)) {
       const nextCustomId = normalizeNewtabWallpaperId(value);
@@ -283,13 +409,18 @@ function createWallpaperStorage(deps) {
     return {
       id: nextId,
       localMigrationId: '',
-      sanitized: !hasRaw || (value && value !== nextId)
+      sanitized: !hasRaw || Boolean(value && value !== nextId)
     };
   }
 
-  function resolveSyncedWallpaperValue(value, hasValue) {
-    const isObjectValue = Boolean(value && typeof value === 'object');
-    const sameForModes = isObjectValue ? value.sameForModes !== false : true;
+  function resolveSyncedWallpaperValue(value: unknown, hasValue: boolean): {
+    prefs: WallpaperPrefs;
+    sanitizedValue: SyncedWallpaperValue | null;
+    localMigrations: LocalWallpaperOverrides;
+  } {
+    const record = isRecord(value) ? value : null;
+    const isObjectValue = Boolean(record);
+    const sameForModes = record ? record.sameForModes !== false : true;
     const rawLight = isObjectValue
       ? getWallpaperStorageModeValue(value, NEWTAB_WALLPAPER_MODE_LIGHT, hasValue ? value : NEWTAB_WALLPAPER_DEFAULT_ID)
       : (hasValue ? value : NEWTAB_WALLPAPER_DEFAULT_ID);
@@ -300,7 +431,7 @@ function createWallpaperStorage(deps) {
     const darkResolution = sameForModes
       ? lightResolution
       : resolveSyncedWallpaperModeValue(rawDark, true);
-    const prefs = {
+    const prefs: WallpaperPrefs = {
       version: NEWTAB_WALLPAPER_PREFS_STORAGE_VERSION,
       sameForModes,
       light: lightResolution.id,
@@ -320,8 +451,8 @@ function createWallpaperStorage(deps) {
     const shouldSanitize = !hasUnrecognizedId && (!hasValue ||
       lightResolution.sanitized ||
       (!sameForModes && darkResolution.sanitized) ||
-      (isObjectValue && (
-        Number(value.version) !== NEWTAB_WALLPAPER_PREFS_STORAGE_VERSION ||
+      (record && (
+        Number(record.version) !== NEWTAB_WALLPAPER_PREFS_STORAGE_VERSION ||
         getComparableSyncedWallpaperStorageValue(value) !== getComparableSyncedWallpaperStorageValue(sanitizedValue)
       )));
     return {
@@ -331,7 +462,7 @@ function createWallpaperStorage(deps) {
     };
   }
 
-  function resolveLocalWallpaperModeValue(raw, hasRaw) {
+  function resolveLocalWallpaperModeValue(raw: unknown, hasRaw: boolean): { override: string | null; shouldClear: boolean } {
     if (!hasRaw) {
       return { override: null, shouldClear: false };
     }
@@ -349,12 +480,15 @@ function createWallpaperStorage(deps) {
     return { override: null, shouldClear: true };
   }
 
-  function resolveLocalWallpaperOverride(value, hasValue) {
+  function resolveLocalWallpaperOverride(value: unknown, hasValue: boolean): {
+    overrides: LocalWallpaperOverrides;
+    shouldClear: boolean;
+  } {
     const overrides = getDefaultLocalWallpaperOverrides();
     if (!hasValue) {
       return { overrides, shouldClear: false };
     }
-    if (!value || typeof value !== 'object') {
+    if (!isRecord(value)) {
       const resolution = resolveLocalWallpaperModeValue(value, true);
       overrides.light = resolution.override;
       overrides.dark = resolution.override;
@@ -382,20 +516,20 @@ function createWallpaperStorage(deps) {
     };
   }
 
-  function getWallpaperLocalOverrideForMode(mode) {
+  function getWallpaperLocalOverrideForMode(mode: unknown): string | null {
     const normalizedMode = normalizeWallpaperMode(mode);
     const overrides = wallpaperState.currentLocalWallpaperOverrides || getDefaultLocalWallpaperOverrides();
     return overrides[normalizedMode] || null;
   }
 
-  function getSyncedWallpaperIdForMode(mode) {
+  function getSyncedWallpaperIdForMode(mode: unknown): string {
     const normalizedMode = normalizeWallpaperMode(mode);
     const prefs = wallpaperState.currentWallpaperPrefs || getDefaultWallpaperPrefs();
     const id = prefs.sameForModes ? prefs.light : prefs[normalizedMode];
     return normalizeNewtabWallpaperId(id) || '';
   }
 
-  function getEffectiveWallpaperIdForMode(mode) {
+  function getEffectiveWallpaperIdForMode(mode: unknown): string {
     const override = getWallpaperLocalOverrideForMode(mode);
     if (override === NEWTAB_LOCAL_WALLPAPER_DISABLED_VALUE) {
       return '';
@@ -406,13 +540,13 @@ function createWallpaperStorage(deps) {
     return getSyncedWallpaperIdForMode(mode);
   }
 
-  function getResolvedWallpaperMode() {
+  function getResolvedWallpaperMode(): WallpaperMode {
     return document.body && document.body.getAttribute('data-theme') === 'dark'
       ? NEWTAB_WALLPAPER_MODE_DARK
       : NEWTAB_WALLPAPER_MODE_LIGHT;
   }
 
-  function getWallpaperEditMode() {
+  function getWallpaperEditMode(): WallpaperMode {
     if (wallpaperState.currentWallpaperPrefs && wallpaperState.currentWallpaperPrefs.sameForModes) {
       return getResolvedWallpaperMode();
     }
@@ -420,40 +554,40 @@ function createWallpaperStorage(deps) {
   }
 
   // Daily mode highlights the photo it currently resolves to.
-  function getWallpaperTileSelectionId(id) {
+  function getWallpaperTileSelectionId(id: string): string {
     if (!REMOTE_CONTENT.isDailyWallpaperId(id)) return id;
     const daily = getWallpaperById(id);
     return daily && daily.dailyId || id;
   }
 
-  function getWallpaperSelectionIdForUi() {
+  function getWallpaperSelectionIdForUi(): string {
     return getEffectiveWallpaperIdForMode(getWallpaperEditMode());
   }
 
-  function hasAnyWallpaperEnabled() {
+  function hasAnyWallpaperEnabled(): boolean {
     return NEWTAB_WALLPAPER_MODES.some((mode) => Boolean(getEffectiveWallpaperIdForMode(mode)));
   }
 
-  function normalizeWallpaperSourceTab(tab) {
-    return WALLPAPER_SOURCE_TABS.includes(tab) ? tab : 'built-in';
+  function normalizeWallpaperSourceTab(tab: unknown): WallpaperSourceTab {
+    return WALLPAPER_SOURCE_TABS.find((sourceTab) => sourceTab === tab) || 'built-in';
   }
 
-  function getWallpaperSourceTabForId(id) {
+  function getWallpaperSourceTabForId(id: unknown): WallpaperSourceTab {
     const provider = REMOTE_CONTENT.getWallpaperProvider(id);
     if (provider) return normalizeWallpaperSourceTab(provider);
     return isCustomWallpaperId(id) || isLinkWallpaperId(id) ? 'local' : 'built-in';
   }
 
-  function getWallpaperModeLabel(mode) {
+  function getWallpaperModeLabel(mode: unknown): string {
     const normalizedMode = normalizeWallpaperMode(mode);
     return normalizedMode === NEWTAB_WALLPAPER_MODE_DARK
       ? t('settings_theme_dark', 'Dark')
       : t('settings_theme_light', 'Light');
   }
 
-  function getWallpaperModePreferenceOrder() {
-    const modes = [];
-    const addMode = (mode) => {
+  function getWallpaperModePreferenceOrder(): WallpaperMode[] {
+    const modes: WallpaperMode[] = [];
+    const addMode = (mode: unknown) => {
       const normalizedMode = normalizeWallpaperMode(mode);
       if (!modes.includes(normalizedMode)) {
         modes.push(normalizedMode);
@@ -465,7 +599,7 @@ function createWallpaperStorage(deps) {
     return modes;
   }
 
-  function getFirstEnabledWallpaperIdForModes(modes) {
+  function getFirstEnabledWallpaperIdForModes(modes: readonly WallpaperMode[]): string {
     for (let i = 0; i < modes.length; i += 1) {
       const id = getEffectiveWallpaperIdForMode(modes[i]);
       if (id) {
@@ -475,7 +609,7 @@ function createWallpaperStorage(deps) {
     return '';
   }
 
-  function getCopyableWallpaperLocalOverrideForId(modes, id) {
+  function getCopyableWallpaperLocalOverrideForId(modes: readonly WallpaperMode[], id: unknown): string | null {
     const normalizedId = normalizeNewtabWallpaperId(id);
     if (!normalizedId || !isCustomWallpaperId(normalizedId)) {
       return null;
@@ -492,25 +626,29 @@ function createWallpaperStorage(deps) {
     return null;
   }
 
-  function setWallpaperPrefs(nextPrefs, nextOverrides) {
-    wallpaperState.currentWallpaperPrefs = cloneWallpaperPrefs(nextPrefs);
+  function setWallpaperPrefs(nextPrefs: unknown, nextOverrides: unknown): void {
+    const prefs = cloneWallpaperPrefs(nextPrefs);
+    wallpaperState.currentWallpaperPrefs = prefs;
     wallpaperState.currentLocalWallpaperOverrides = cloneLocalWallpaperOverrides(nextOverrides);
-    if (wallpaperState.currentWallpaperPrefs.sameForModes) {
+    if (prefs.sameForModes) {
       wallpaperState.activeWallpaperMode = getResolvedWallpaperMode();
     } else {
       wallpaperState.activeWallpaperMode = normalizeWallpaperMode(wallpaperState.activeWallpaperMode);
     }
   }
 
-  function getWritableWallpaperPrefs() {
+  function getWritableWallpaperPrefs(): WallpaperPrefs {
     return cloneWallpaperPrefs(wallpaperState.currentWallpaperPrefs);
   }
 
-  function getWritableLocalWallpaperOverrides() {
+  function getWritableLocalWallpaperOverrides(): LocalWallpaperOverrides {
     return cloneLocalWallpaperOverrides(wallpaperState.currentLocalWallpaperOverrides);
   }
 
-  function applyLocalWallpaperMigrations(overrides, migrations) {
+  function applyLocalWallpaperMigrations(
+    overrides: unknown,
+    migrations: Partial<LocalWallpaperOverrides> | null | undefined
+  ): { overrides: LocalWallpaperOverrides; changed: boolean } {
     const nextOverrides = cloneLocalWallpaperOverrides(overrides);
     let changed = false;
     NEWTAB_WALLPAPER_MODES.forEach((mode) => {
@@ -524,16 +662,17 @@ function createWallpaperStorage(deps) {
     return { overrides: nextOverrides, changed };
   }
 
-  function writeCurrentWallpaperPrefs(options) {
+  function writeCurrentWallpaperPrefs(options?: { showError?: boolean } | null): void {
     const config = options || {};
-    writeSyncedWallpaperValue(buildSyncedWallpaperStorageValue(wallpaperState.currentWallpaperPrefs), config);
+    const prefs = wallpaperState.currentWallpaperPrefs;
+    writeSyncedWallpaperValue(buildSyncedWallpaperStorageValue(prefs), config);
     writeLocalWallpaperValue(
-      buildLocalWallpaperStorageValue(wallpaperState.currentLocalWallpaperOverrides, wallpaperState.currentWallpaperPrefs.sameForModes),
+      buildLocalWallpaperStorageValue(wallpaperState.currentLocalWallpaperOverrides, prefs ? prefs.sameForModes : true),
       config
     );
   }
 
-  function getWallpaperPreloadEntryForMode(mode) {
+  function getWallpaperPreloadEntryForMode(mode: WallpaperMode): WallpaperPreloadEntry | null {
     const wallpaper = getWallpaperById(getEffectiveWallpaperIdForMode(mode));
     const entry = getWallpaperPreloadImageEntry(wallpaper);
     const luminanceKey = getWallpaperLuminanceKey(wallpaper);
@@ -541,15 +680,18 @@ function createWallpaperStorage(deps) {
     if (!entry || !isWallpaperLuminance(luminance)) {
       return entry;
     }
-    return Object.assign(entry, { luminance, luminanceKey });
+    entry.luminance = luminance;
+    entry.luminanceKey = luminanceKey;
+    return entry;
   }
 
-  function getWallpaperPreloadImageEntry(wallpaper) {
+  function getWallpaperPreloadImageEntry(wallpaper: WallpaperItem | null): WallpaperPreloadEntry | null {
     // Online photos and links cannot paint on the first frame, but the preload reads this device's
     // IndexedDB copy while the page is still parsing.
     if (wallpaper && isLinkWallpaperId(wallpaper.id)) {
-      return getCachedWallpaperImage(wallpaper.id, wallpaper.url)
-        ? { id: wallpaper.id, cachedImage: { id: wallpaper.id, url: wallpaper.url } }
+      const url = wallpaper.url || '';
+      return getCachedWallpaperImage(wallpaper.id, url)
+        ? { id: wallpaper.id, cachedImage: { id: wallpaper.id, url } }
         : null;
     }
     if (wallpaper && REMOTE_CONTENT.wallpaperFromId(wallpaper.id)) {
@@ -558,7 +700,7 @@ function createWallpaperStorage(deps) {
       const upcoming = getUpcomingDailyWallpaper(wallpaper.id);
       const next = upcoming && getCachedWallpaperImage(upcoming.id, upcoming.imageUrl);
       if (!copy && !next) return null;
-      const entry = { id: wallpaper.id };
+      const entry: WallpaperPreloadEntry = { id: wallpaper.id };
       if (copy) entry.cachedImage = { id: copy.id, url: copy.url };
       if (next) {
         entry.next = { day: REMOTE_CONTENT.localDay(getNextLocalDayTimestamp(Date.now())),
@@ -572,7 +714,7 @@ function createWallpaperStorage(deps) {
       return { id: wallpaper.id, customImage: key === wallpaper.id ? { id: wallpaper.id } : { id: wallpaper.id, key } };
     }
     const path = wallpaper ? getWallpaperRuntimePath(wallpaper) : '';
-    if (!path) {
+    if (!wallpaper || !path) {
       return null;
     }
     // The full image's size, by which the preload places samples taken from its small copy.
@@ -584,7 +726,7 @@ function createWallpaperStorage(deps) {
 
   // A daily photo keeps its catalog id while the image changes, so its luminance follows the photo
   // on screen, which is the previous copy until the new photo's is cached.
-  function getWallpaperLuminanceKey(wallpaper) {
+  function getWallpaperLuminanceKey(wallpaper: WallpaperItem | null): string {
     if (!wallpaper) {
       return '';
     }
@@ -595,29 +737,30 @@ function createWallpaperStorage(deps) {
     return copy ? copy.id : wallpaper.dailyId || wallpaper.id;
   }
 
-  function readWallpaperPreloadLuminances() {
-    const luminances = new Map();
+  function readWallpaperPreloadLuminances(): Map<string, number> {
+    const luminances = new Map<string, number>();
     try {
-      const data = JSON.parse(window.localStorage.getItem(PRELOAD_STORAGE_KEY) || 'null');
+      const data: unknown = JSON.parse(window.localStorage.getItem(PRELOAD_STORAGE_KEY) || 'null');
+      const wallpapers = isRecord(data) && isRecord(data.wallpapers) ? data.wallpapers : {};
       NEWTAB_WALLPAPER_MODES.forEach((mode) => {
-        const entry = data && data.wallpapers && data.wallpapers[mode];
-        if (entry && typeof entry.luminanceKey === 'string' && entry.luminanceKey &&
+        const entry = wallpapers[mode];
+        if (isRecord(entry) && typeof entry.luminanceKey === 'string' && entry.luminanceKey &&
             isWallpaperLuminance(entry.luminance)) {
           luminances.set(entry.luminanceKey, entry.luminance);
         }
       });
-    } catch (_error) {
+    } catch {
       // Only a head start; the next sample measures it again.
     }
     return luminances;
   }
 
-  function isWallpaperLuminance(value) {
+  function isWallpaperLuminance(value: unknown): value is number {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1;
   }
 
   // Measured from the adaptive-tone sample, which already holds the shown image at a few hundred pixels.
-  function rememberWallpaperLuminance(sampler) {
+  function rememberWallpaperLuminance(sampler: AdaptiveToneSampler | null | undefined): void {
     const wallpaper = getWallpaperById(wallpaperState.currentWallpaperId);
     const key = getWallpaperLuminanceKey(wallpaper);
     const displayedUrl = getDisplayedWallpaperImageUrl(wallpaper);
@@ -646,21 +789,20 @@ function createWallpaperStorage(deps) {
     }
   }
 
-  function getWallpaperPreloadOverlayStops() {
-    const result = {};
-    NEWTAB_WALLPAPER_MODES.forEach((mode) => {
+  function getWallpaperPreloadOverlayStops(): Record<WallpaperMode, { top: number; mid: number; bottom: number }> {
+    const stopsFor = (mode: WallpaperMode) => {
       const stops = NEWTAB_WALLPAPER_OVERLAY_STOPS[mode];
       const opacity = wallpaperState.currentWallpaperOverlayOpacity[mode];
-      result[mode] = {
+      return {
         top: Number(getWallpaperOverlayStopPercent(stops.top, opacity).toFixed(1)),
         mid: Number(getWallpaperOverlayStopPercent(stops.mid, opacity).toFixed(1)),
         bottom: Number(getWallpaperOverlayStopPercent(stops.bottom, opacity).toFixed(1))
       };
-    });
-    return result;
+    };
+    return { light: stopsFor('light'), dark: stopsFor('dark') };
   }
 
-  function writeWallpaperPreloadCache() {
+  function writeWallpaperPreloadCache(): void {
     try {
       if (!window.localStorage) {
         return;
@@ -678,12 +820,12 @@ function createWallpaperStorage(deps) {
         wallpaperEffects: getWallpaperEffectStorageValue(),
         updatedAt: Date.now()
       }));
-    } catch (e) {
+    } catch {
       // localStorage may be unavailable in constrained contexts; storage is only a fast-path cache.
     }
   }
 
-  function normalizeCustomWallpaperRecord(record) {
+  function normalizeCustomWallpaperRecord(record: unknown) {
     return localWallpaperStore.normalizeRecord(record);
   }
 
@@ -691,19 +833,19 @@ function createWallpaperStorage(deps) {
     return localWallpaperStore.readAll();
   }
 
-  function readCustomWallpaperRecordsByIds(ids) {
+  function readCustomWallpaperRecordsByIds(ids: unknown) {
     return localWallpaperStore.readByIds(ids);
   }
 
-  function writeCustomWallpaperRecord(record) {
+  function writeCustomWallpaperRecord(record: Parameters<WallpaperLocalStore['write']>[0]) {
     return localWallpaperStore.write(record);
   }
 
-  function deleteCustomWallpaperRecord(record) {
+  function deleteCustomWallpaperRecord(record: Parameters<WallpaperLocalStore['remove']>[0]) {
     return localWallpaperStore.remove(record);
   }
 
-  function buildCustomWallpaperRecordFromFile(file) {
+  function buildCustomWallpaperRecordFromFile(file: File | null | undefined) {
     return localWallpaperStore.buildRecordFromFile(file);
   }
 
@@ -750,4 +892,7 @@ function createWallpaperStorage(deps) {
   };
 }
 
+type WallpaperStorage = ReturnType<typeof createWallpaperStorage>;
+
 export { createWallpaperStorage };
+export type { StoredValue, WallpaperStorage, WallpaperStorageDeps };
