@@ -18,7 +18,9 @@
     "src/content/hotkey-listener.ts",
     "src/content/auto-pip-core.ts",
     "src/content/youtube-auto-pip.ts",
-    "src/content/site-auto-pip.ts"
+    "src/content/site-auto-pip.ts",
+    "src/content/link-preview-trigger.ts",
+    "src/content/link-preview.ts"
   ],
   "exclude": [
     "src/**/react/**"

@@ -1,8 +1,73 @@
-// @ts-nocheck
 import { toPreviewFrameUrl } from '../domain/link-preview-frame-url';
+import { PREVIEW_SURFACE_SOURCE, readPreviewFrameMessage } from '../domain/link-preview-frame-messages';
+import type { PreviewSurfaceCommand } from '../domain/link-preview-frame-messages';
+import type { BackgroundAction, BackgroundRequest, LinkPreviewOrigin } from '../domain/messages';
 import * as TOAST from '../shared/ui/toast';
+import type { ToastController, ToastShowOptions, ToastStyleGate } from '../shared/ui/toast';
 import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-state-art';
 import * as LumnoMessaging from '../platform/messaging';
+import { isNavigateEvent, readPageNavigation } from '../platform/page-navigation';
+import type { ListenerTarget } from '../platform/page-navigation';
+
+// One preview: its elements, and where it is between prewarm and close.
+interface LinkPreview {
+  token: string;
+  url: string;
+  // The address now, following links taken inside the preview.
+  currentUrl: string;
+  frameUrl: string;
+  host: HTMLDivElement;
+  root: HTMLDivElement;
+  page: HTMLDivElement;
+  shot: HTMLImageElement;
+  veil: HTMLCanvasElement;
+  surround: HTMLCanvasElement;
+  scrim: HTMLDivElement;
+  windowElement: HTMLDivElement;
+  panel: HTMLDivElement;
+  controls: HTMLDivElement;
+  frame: HTMLIFrameElement;
+  backButton: HTMLButtonElement;
+  toastElement: HTMLDivElement;
+  toastGate: Readonly<ToastStyleGate>;
+  toast: Readonly<ToastController>;
+  supportsPopover: boolean;
+  shown: boolean;
+  closing: boolean;
+  loadCount: number;
+  // A page reported in since the frame's last load event.
+  aliveSinceLoad: boolean;
+  prewarmTimer: number;
+  restoreFocus: Element | null;
+  shotDecode: Promise<boolean> | null;
+  // A real page has reported in at least once.
+  pageReported: boolean;
+  cleanups: Array<() => void>;
+}
+
+interface ShowRequest {
+  token: string;
+  url: string;
+  screenshot: string;
+  origin: LinkPreviewOrigin | null;
+}
+
+type IconName = 'close' | 'openInTab' | 'copyLink' | 'reload' | 'back';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function readOrigin(value: unknown): LinkPreviewOrigin | null {
+  return isRecord(value) && typeof value.x === 'number' && typeof value.y === 'number'
+    ? { x: value.x, y: value.y }
+    : null;
+}
+
+// HTML, SVG and MathML elements have focus(); other elements do not.
+function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
+  return 'focus' in element && typeof element.focus === 'function';
+}
 
 (function() {
   // The link preview surface, injected into a tab's top frame by
@@ -15,15 +80,13 @@ import * as LumnoMessaging from '../platform/messaging';
   // invisible and its frame starts loading. "show" follows on click with the
   // screenshot and plays the opening.
   const RUNTIME_KEY = '_x_extension_link_preview_surface_2026_unique_';
-  if (window[RUNTIME_KEY]) {
+  if (Reflect.get(window, RUNTIME_KEY)) {
     return;
   }
-  window[RUNTIME_KEY] = true;
+  Reflect.set(window, RUNTIME_KEY, true);
 
   const HOST_ID = '_x_extension_link_preview_host_2026_unique_';
   const PREVIEW_FRAME_NAME = 'lumno-link-preview';
-  const PREVIEW_MESSAGE_SOURCE = 'lumno-link-preview-frame';
-  const PREVIEW_SURFACE_SOURCE = 'lumno-link-preview-surface';
   // A prewarmed window the click never claimed (the page kept the click).
   const PREWARM_TTL_MS = 4500;
   // How long after the frame's load event a page may still report in; the
@@ -42,7 +105,7 @@ import * as LumnoMessaging from '../platform/messaging';
     'allow-storage-access-by-user-activation'
   ].join(' ');
   const FRAME_ALLOW = 'autoplay; clipboard-read; clipboard-write; encrypted-media; fullscreen; picture-in-picture; web-share';
-  const ICON_PATHS = {
+  const ICON_PATHS: Readonly<Record<IconName, string>> = {
     close: 'M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z',
     openInTab: 'M10 6v2H5v11h11v-5h2v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6zm11-3v8h-2V6.413l-7.793 7.794-1.414-1.414L17.585 5H13V3h8z',
     copyLink: 'M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1.001 1.001 0 0 1 3 21l.003-14c0-.552.45-1 1.007-1H7zM5.003 8L5 20h10V8H5.003zM9 6h8v10h2V4H9v2z',
@@ -359,11 +422,11 @@ import * as LumnoMessaging from '../platform/messaging';
   const SCRIM_TONE = 'rgba(8, 8, 12, 0.2)';
   const FEATHER_CSS_PX = 48;
 
-  let current = null;
+  let current: LinkPreview | null = null;
 
   // Samples a damped spring from 0 to 1 into a CSS linear() easing, so the
   // window can overshoot and settle on the compositor like a physical spring.
-  function createSpringEasing(stiffness, damping) {
+  function createSpringEasing(stiffness: number, damping: number): { duration: number; easing: string } {
     const step = 1 / 120;
     const samples = [0];
     let position = 0;
@@ -394,26 +457,26 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function getMessage(key, fallback) {
+  function getMessage(key: string, fallback: string): string {
     try {
       const value = chrome.i18n && chrome.i18n.getMessage ? chrome.i18n.getMessage(key) : '';
       return value || fallback;
-    } catch (error) {
+    } catch (_error) {
       return fallback;
     }
   }
 
-  function send(message) {
+  function send<A extends BackgroundAction>(message: BackgroundRequest<A>): void {
     try {
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, message, () => {
         void (chrome.runtime && chrome.runtime.lastError);
       });
-    } catch (error) {
+    } catch (_error) {
       // Ignore an extension context invalidated during reload or navigation.
     }
   }
 
-  function createIcon(name) {
+  function createIcon(name: IconName): SVGSVGElement {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 24 24');
     svg.setAttribute('aria-hidden', 'true');
@@ -423,7 +486,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return svg;
   }
 
-  function createControl(name, label, onClick) {
+  function createControl(name: IconName, label: string, onClick: () => void): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'control';
@@ -437,10 +500,10 @@ import * as LumnoMessaging from '../platform/messaging';
   // Copies the address the preview is on now, which follows links taken
   // inside it. The page's clipboard API needs a secure page; elsewhere a
   // selected field inside the window copies instead, so focus stays here.
-  function copyLink(preview) {
+  function copyLink(preview: LinkPreview): void {
     const url = preview.currentUrl || preview.url;
     const clipboard = navigator.clipboard;
-    const copied = clipboard && typeof clipboard.writeText === 'function'
+    const copied: Promise<boolean> = clipboard && typeof clipboard.writeText === 'function'
       ? Promise.resolve(clipboard.writeText(url)).then(() => true, () => copyWithSelection(preview, url))
       : Promise.resolve(copyWithSelection(preview, url));
     copied.then((ok) => {
@@ -455,7 +518,7 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  function copyWithSelection(preview, text) {
+  function copyWithSelection(preview: LinkPreview, text: string): boolean {
     const field = document.createElement('textarea');
     field.value = text;
     field.setAttribute('readonly', '');
@@ -466,14 +529,14 @@ import * as LumnoMessaging from '../platform/messaging';
     let copied = false;
     try {
       copied = document.execCommand('copy');
-    } catch (error) {
+    } catch (_error) {
       copied = false;
     }
     field.remove();
     return copied;
   }
 
-  function showToast(preview, message, options) {
+  function showToast(preview: LinkPreview, message: string, options?: ToastShowOptions): void {
     const dark = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches;
     if (dark) {
       preview.toastElement.setAttribute('data-theme', 'dark');
@@ -483,17 +546,20 @@ import * as LumnoMessaging from '../platform/messaging';
     preview.toast.show(message, options);
   }
 
-  function postToFrame(preview, type) {
+  function postToFrame(preview: LinkPreview, type: PreviewSurfaceCommand): void {
     try {
-      preview.frame.contentWindow.postMessage({ source: PREVIEW_SURFACE_SOURCE, type }, '*');
-    } catch (error) {
+      const frameWindow = preview.frame.contentWindow;
+      if (frameWindow) {
+        frameWindow.postMessage({ source: PREVIEW_SURFACE_SOURCE, type }, '*');
+      }
+    } catch (_error) {
       // The frame may be between documents.
     }
   }
 
   // Back steps through the frame's own history only; the button shows while
   // the previewed page reports it has somewhere to go back to.
-  function goBack(preview) {
+  function goBack(preview: LinkPreview): void {
     preview.root.dataset.loaded = 'false';
     postToFrame(preview, 'back');
   }
@@ -501,7 +567,7 @@ import * as LumnoMessaging from '../platform/messaging';
   // A page that reported in reloads itself, keeping its place in the
   // frame's history; Chrome's error page has no script, so it is loaded
   // again from its address.
-  function reload(preview) {
+  function reload(preview: LinkPreview): void {
     preview.root.dataset.loaded = 'false';
     if (preview.pageReported && preview.root.dataset.blocked !== 'true') {
       postToFrame(preview, 'reload');
@@ -510,15 +576,15 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function readHostLabel(url) {
+  function readHostLabel(url: string): string {
     try {
       return new URL(url).hostname.replace(/^www\./, '');
-    } catch (error) {
+    } catch (_error) {
       return '';
     }
   }
 
-  function applyHostStyle(host) {
+  function applyHostStyle(host: HTMLElement): void {
     // Inline and important, so page rules for div or [popover] cannot move it.
     host.style.cssText = [
       'all: initial',
@@ -538,7 +604,7 @@ import * as LumnoMessaging from '../platform/messaging';
     ].map((declaration) => `${declaration} !important`).join('; ');
   }
 
-  function build(token, url) {
+  function build(token: string, url: string): LinkPreview {
     const host = document.createElement('div');
     host.id = HOST_ID;
     host.setAttribute('translate', 'no');
@@ -600,7 +666,21 @@ import * as LumnoMessaging from '../platform/messaging';
 
     const controls = document.createElement('div');
     controls.className = 'controls';
-    const preview = {
+    // The window sits in the top layer, so a toast of the page's own would
+    // stay under it; this one lives in the window.
+    const toastStylesheet = document.createElement('link');
+    toastStylesheet.rel = 'stylesheet';
+    toastStylesheet.href = chrome.runtime.getURL('src/shared/ui/toast.css');
+    const toastElement = document.createElement('div');
+    toastElement.className = 'x-lumno-toast';
+    toastElement.setAttribute('data-show', 'false');
+    toastElement.setAttribute('role', 'status');
+    toastElement.setAttribute('aria-live', 'polite');
+    toastElement.style.setProperty('--x-lumno-toast-top', 'max(24px, calc(env(safe-area-inset-top) + 12px))');
+    // Last, so it comes and goes without moving the others.
+    const backButton = createControl('back', getMessage('link_preview_back', 'Back'), () => goBack(preview));
+    backButton.hidden = true;
+    const preview: LinkPreview = {
       token,
       url,
       currentUrl: url,
@@ -616,16 +696,16 @@ import * as LumnoMessaging from '../platform/messaging';
       panel,
       controls,
       frame,
+      backButton,
+      toastElement,
+      toastGate: TOAST.createToastStyleGate(toastElement, { stylesheetElement: toastStylesheet, windowObj: window }),
+      toast: TOAST.createToastController(toastElement, { windowObj: window }),
       supportsPopover,
       shown: false,
       closing: false,
       loadCount: 0,
       aliveSinceLoad: false,
       prewarmTimer: 0,
-      backButton: null,
-      toastElement: null,
-      toastGate: null,
-      toast: null,
       restoreFocus: null,
       shotDecode: null,
       pageReported: false,
@@ -644,47 +724,29 @@ import * as LumnoMessaging from '../platform/messaging';
       () => copyLink(preview)
     );
     const reloadButton = createControl('reload', getMessage('link_preview_reload', 'Reload'), () => reload(preview));
-    // Last, so it comes and goes without moving the others.
-    const backButton = createControl('back', getMessage('link_preview_back', 'Back'), () => goBack(preview));
-    backButton.hidden = true;
-    preview.backButton = backButton;
     noticeButton.addEventListener('click', () => moveToTab(preview));
     controls.append(closeButton, openInTabButton, copyLinkButton, reloadButton, backButton);
     windowElement.append(panel, controls);
-    // The window sits in the top layer, so a toast of the page's own would
-    // stay under it; this one lives in the window.
-    const toastStylesheet = document.createElement('link');
-    toastStylesheet.rel = 'stylesheet';
-    toastStylesheet.href = chrome.runtime.getURL('src/shared/ui/toast.css');
-    const toastElement = document.createElement('div');
-    toastElement.className = 'x-lumno-toast';
-    toastElement.setAttribute('data-show', 'false');
-    toastElement.setAttribute('role', 'status');
-    toastElement.setAttribute('aria-live', 'polite');
-    toastElement.style.setProperty('--x-lumno-toast-top', 'max(24px, calc(env(safe-area-inset-top) + 12px))');
-    preview.toastElement = toastElement;
-    preview.toastGate = TOAST.createToastStyleGate(toastElement, { stylesheetElement: toastStylesheet, windowObj: window });
-    preview.toast = TOAST.createToastController(toastElement, { windowObj: window });
     root.append(stage, windowElement, toastElement);
     shadow.append(style, toastStylesheet, root);
 
     // A press outside the window closes it.
     stage.addEventListener('click', () => close(preview));
     // The page under the screenshot must not scroll while the preview is up.
-    const blockScroll = (event) => event.preventDefault();
+    const blockScroll = (event: Event): void => event.preventDefault();
     root.addEventListener('wheel', blockScroll, { passive: false });
     root.addEventListener('touchmove', blockScroll, { passive: false });
 
     frame.addEventListener('load', () => handleFrameLoad(preview));
-    listen(preview, window, 'message', (event) => handleFrameMessage(preview, event));
-    listen(preview, window, 'keydown', (event) => {
+    listenWindow(preview, 'message', (event) => handleFrameMessage(preview, event));
+    listenWindow(preview, 'keydown', (event) => {
       if (preview.shown && event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
         close(preview);
       }
     }, true);
-    listen(preview, window, 'pagehide', () => {
+    listenWindow(preview, 'pagehide', () => {
       send({ action: 'linkPreviewClose', token: preview.token });
     });
 
@@ -702,50 +764,59 @@ import * as LumnoMessaging from '../platform/messaging';
     return preview;
   }
 
-  function listen(preview, target, type, listener, options) {
-    target.addEventListener(type, listener, options);
-    preview.cleanups.push(() => target.removeEventListener(type, listener, options));
+  function listenWindow<K extends keyof WindowEventMap>(
+    preview: LinkPreview,
+    type: K,
+    listener: (event: WindowEventMap[K]) => void,
+    options?: boolean | AddEventListenerOptions
+  ): void {
+    window.addEventListener(type, listener, options);
+    preview.cleanups.push(() => window.removeEventListener(type, listener, options));
+  }
+
+  function listenTarget(preview: LinkPreview, target: ListenerTarget, type: string, listener: (event: Event) => void): void {
+    target.addEventListener(type, listener);
+    preview.cleanups.push(() => target.removeEventListener(type, listener));
   }
 
   // Keys go to the preview window until the previewed page has reported in,
   // then to the page. A frame still on its initial empty document (a slow
   // site) has nothing listening, and Escape would not close the preview.
-  function focusPreviewedPage(preview) {
+  function focusPreviewedPage(preview: LinkPreview): void {
     if (!preview.shown || preview.closing || !preview.pageReported || !preview.root.matches(':focus')) {
       return;
     }
     try {
       preview.frame.focus();
-    } catch (error) {
+    } catch (_error) {
       // Focus stays on the window; Escape still closes from there.
     }
   }
 
-  function handleFrameMessage(preview, event) {
-    if (!event || event.source !== preview.frame.contentWindow) {
+  function handleFrameMessage(preview: LinkPreview, event: MessageEvent): void {
+    if (event.source !== preview.frame.contentWindow) {
       return;
     }
-    const data = event.data;
-    if (!data || data.source !== PREVIEW_MESSAGE_SOURCE) {
+    const message = readPreviewFrameMessage(event.data);
+    if (!message) {
       return;
     }
-    if (data.type === 'alive' && typeof data.url === 'string' && /^https?:\/\//i.test(data.url)) {
+    if (message.type === 'alive') {
       preview.aliveSinceLoad = true;
       preview.pageReported = true;
       focusPreviewedPage(preview);
       // Until the page moves on, the link keeps its own address where the
       // frame loads it through another (see toPreviewFrameUrl).
-      preview.currentUrl = data.url === preview.frameUrl ? preview.url : data.url;
+      preview.currentUrl = message.url === preview.frameUrl ? preview.url : message.url;
       preview.root.dataset.blocked = 'false';
-      preview.backButton.hidden = data.canGoBack !== true;
-    } else if (data.type === 'background' && typeof data.color === 'string' &&
-        /^rgba?\([\d.,\s%/]+\)$/.test(data.color)) {
-      preview.panel.style.backgroundColor = data.color;
-    } else if (data.type === 'loading') {
+      preview.backButton.hidden = !message.canGoBack;
+    } else if (message.type === 'background') {
+      preview.panel.style.backgroundColor = message.color;
+    } else if (message.type === 'loading') {
       preview.root.dataset.loaded = 'false';
-    } else if (data.type === 'loaded') {
+    } else if (message.type === 'loaded') {
       preview.root.dataset.loaded = 'true';
-    } else if (data.type === 'escape' && preview.shown) {
+    } else if (message.type === 'escape' && preview.shown) {
       close(preview);
     }
   }
@@ -754,10 +825,10 @@ import * as LumnoMessaging from '../platform/messaging';
   // event. A load nothing reported is Chrome's error page: the site refused
   // to be framed (or failed). The window says so and offers a tab; moving the
   // link to a tab on its own read as the preview being cut off by a jump.
-  function handleFrameLoad(preview) {
+  function handleFrameLoad(preview: LinkPreview): void {
     preview.loadCount += 1;
     const loadNumber = preview.loadCount;
-    setTimeout(() => {
+    window.setTimeout(() => {
       if (current !== preview || preview.closing || loadNumber !== preview.loadCount) {
         return;
       }
@@ -776,12 +847,15 @@ import * as LumnoMessaging from '../platform/messaging';
   // preview took, or a same-site page in the preview reaching out to it)
   // is held back, a scripted reload included. Back, Forward, the user's own
   // reload and the page replacing its own address in place still go through.
-  function holdPageNavigation(preview) {
-    const navigation = window.navigation;
-    if (!navigation || typeof navigation.addEventListener !== 'function') {
+  function holdPageNavigation(preview: LinkPreview): void {
+    const navigation = readPageNavigation(window);
+    if (!navigation) {
       return;
     }
-    listen(preview, navigation, 'navigate', (event) => {
+    listenTarget(preview, navigation, 'navigate', (event) => {
+      if (!isNavigateEvent(event)) {
+        return;
+      }
       const sameDocument = Boolean(event.destination && event.destination.sameDocument);
       const held = event.navigationType === 'push' ||
         (event.navigationType === 'replace' && !sameDocument) ||
@@ -792,7 +866,7 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  function fitPageToWindow(preview) {
+  function fitPageToWindow(preview: LinkPreview): void {
     preview.root.style.setProperty('--lp-window-width', `${window.innerWidth}px`);
     preview.root.style.setProperty('--lp-window-height', `${window.innerHeight}px`);
   }
@@ -801,20 +875,20 @@ import * as LumnoMessaging from '../platform/messaging';
   // is open, and gets it back when the preview goes: anything that scrolls
   // it meanwhile (the previewed page chaining its scroll past its edge, a
   // script) happens out of sight behind the screenshot.
-  function holdPageScroll(preview) {
+  function holdPageScroll(preview: LinkPreview): void {
     const left = window.scrollX;
     const top = window.scrollY;
-    const restore = () => {
+    const restore = (): void => {
       if (window.scrollX !== left || window.scrollY !== top) {
         window.scrollTo({ left, top, behavior: 'instant' });
       }
     };
-    listen(preview, window, 'scroll', restore, { passive: true });
+    listenWindow(preview, 'scroll', restore, { passive: true });
     preview.cleanups.push(restore);
   }
 
-  function teardown(preview) {
-    clearTimeout(preview.prewarmTimer);
+  function teardown(preview: LinkPreview): void {
+    window.clearTimeout(preview.prewarmTimer);
     preview.toast.destroy();
     preview.toastGate.destroy();
     preview.cleanups.splice(0).forEach((cleanup) => cleanup());
@@ -825,7 +899,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function prewarm(token, url) {
+  function prewarm(token: string, url: string): boolean {
     if (current && !current.shown) {
       teardown(current);
     }
@@ -835,7 +909,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }
     const preview = build(token, url);
     current = preview;
-    preview.prewarmTimer = setTimeout(() => {
+    preview.prewarmTimer = window.setTimeout(() => {
       if (current === preview && !preview.shown) {
         teardown(preview);
       }
@@ -843,17 +917,16 @@ import * as LumnoMessaging from '../platform/messaging';
     return true;
   }
 
-  function decodeImage(image, dataUrl) {
+  function decodeImage(image: HTMLImageElement, dataUrl: string): Promise<boolean> {
     image.src = dataUrl;
-    return (typeof image.decode === 'function' ? image.decode() : Promise.resolve())
-      .then(() => true, () => false);
+    return image.decode().then(() => true, () => false);
   }
 
   // Paints the veil: the screenshot blurred and toned, small. The blurred
   // edge would fade to transparent, so a slightly enlarged copy is painted
   // first to fill it, then the copy that lines up with the screenshot. The
   // surround gets the same picture.
-  function paintVeil(preview) {
+  function paintVeil(preview: LinkPreview): boolean {
     const image = preview.shot;
     const width = image.naturalWidth;
     const height = image.naturalHeight;
@@ -889,8 +962,8 @@ import * as LumnoMessaging from '../platform/messaging';
 
   // Fades the veil's edges out, once: a CSS mask did the same on every frame
   // the veil faded in, each time compositing the whole window offscreen.
-  function featherEdges(context, width, height, feather) {
-    const fade = (x0, y0, x1, y1, length) => {
+  function featherEdges(context: CanvasRenderingContext2D, width: number, height: number, feather: number): void {
+    const fade = (x0: number, y0: number, x1: number, y1: number, length: number): CanvasGradient => {
       const gradient = context.createLinearGradient(x0, y0, x1, y1);
       const stop = Math.min(0.5, feather / Math.max(1, length));
       gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
@@ -911,7 +984,7 @@ import * as LumnoMessaging from '../platform/messaging';
   // The screenshot usually arrives while the button is still down, so a
   // large one is decoded and its veil painted before the click, and the
   // opening starts at once.
-  function acceptScreenshot(preview, dataUrl) {
+  function acceptScreenshot(preview: LinkPreview, dataUrl: string): void {
     if (!dataUrl) {
       return;
     }
@@ -928,14 +1001,14 @@ import * as LumnoMessaging from '../platform/messaging';
   // The picture joins the invisible window as soon as it is ready, so it is
   // decoded for the GPU and uploaded before the click instead of on the
   // opening's first frame.
-  function showShot(preview) {
+  function showShot(preview: LinkPreview): void {
     fitPageToWindow(preview);
     preview.page.hidden = false;
     preview.surround.hidden = false;
     preview.root.dataset.shot = 'image';
   }
 
-  async function show(message) {
+  async function show(message: ShowRequest): Promise<boolean> {
     if (current && current.shown) {
       if (current.token === message.token) {
         return true;
@@ -949,13 +1022,13 @@ import * as LumnoMessaging from '../platform/messaging';
     if (!preview) {
       return false;
     }
-    clearTimeout(preview.prewarmTimer);
+    window.clearTimeout(preview.prewarmTimer);
     preview.shown = true;
     preview.restoreFocus = document.activeElement;
     holdPageScroll(preview);
     holdPageNavigation(preview);
     fitPageToWindow(preview);
-    listen(preview, window, 'resize', () => fitPageToWindow(preview));
+    listenWindow(preview, 'resize', () => fitPageToWindow(preview));
     acceptScreenshot(preview, message.screenshot);
     const hasShot = await (preview.shotDecode || Promise.resolve(false));
     if (current !== preview || preview.closing) {
@@ -976,15 +1049,15 @@ import * as LumnoMessaging from '../platform/messaging';
     return true;
   }
 
-  function playOpening(preview, origin) {
+  function playOpening(preview: LinkPreview, origin: LinkPreviewOrigin | null): void {
     const reduced = reducedMotionQuery.matches;
     preview.root.dataset.motion = 'moving';
     const rect = preview.windowElement.getBoundingClientRect();
     const originX = origin ? Math.min(Math.max(origin.x - rect.left, 0), rect.width) : rect.width / 2;
     const originY = origin ? Math.min(Math.max(origin.y - rect.top, 0), rect.height) : rect.height / 2;
     preview.windowElement.style.transformOrigin = `${originX}px ${originY}px`;
-    const recede = { duration: reduced ? 1 : 360, easing: 'cubic-bezier(0.2, 0.9, 0.1, 1)', fill: 'forwards' };
-    const blurIn = { duration: reduced ? 1 : 260, easing: 'cubic-bezier(0.3, 0.7, 0.2, 1)', fill: 'forwards' };
+    const recede: KeyframeAnimationOptions = { duration: reduced ? 1 : 360, easing: 'cubic-bezier(0.2, 0.9, 0.1, 1)', fill: 'forwards' };
+    const blurIn: KeyframeAnimationOptions = { duration: reduced ? 1 : 260, easing: 'cubic-bezier(0.3, 0.7, 0.2, 1)', fill: 'forwards' };
     preview.page.animate([PAGE_AT_REST, PAGE_RECEDED], recede);
     preview.shot.animate([{ opacity: 1 }, { opacity: 0 }], blurIn);
     preview.veil.animate([{ opacity: 0 }, { opacity: 1 }], blurIn);
@@ -1014,7 +1087,7 @@ import * as LumnoMessaging from '../platform/messaging';
     ], { duration: SOFT_SPRING.duration, delay: 60, easing: SOFT_SPRING.easing, fill: 'backwards' });
   }
 
-  function close(preview, closeOptions) {
+  function close(preview: LinkPreview | null, closeOptions?: { instant?: boolean }): void {
     if (!preview || preview.closing) {
       return;
     }
@@ -1022,12 +1095,13 @@ import * as LumnoMessaging from '../platform/messaging';
     send({ action: 'linkPreviewClose', token: preview.token });
     const instant = Boolean(closeOptions && closeOptions.instant) || !preview.shown;
     const restoreFocus = preview.restoreFocus;
-    const finish = () => {
-      teardown(preview);
-      if (restoreFocus && typeof restoreFocus.focus === 'function' && restoreFocus.isConnected) {
+    const closing = preview;
+    const finish = (): void => {
+      teardown(closing);
+      if (restoreFocus && restoreFocus.isConnected && isFocusable(restoreFocus)) {
         try {
           restoreFocus.focus({ preventScroll: true });
-        } catch (error) {
+        } catch (_error) {
           // The element may refuse focus now.
         }
       }
@@ -1048,22 +1122,23 @@ import * as LumnoMessaging from '../platform/messaging';
       { opacity: 1, transform: 'scale(1)' },
       { opacity: 0, transform: reduced ? 'scale(1)' : 'scale(0.92)' }
     ], { duration: reduced ? 120 : 160, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' });
-    const restore = { duration: reduced ? 1 : 280, easing: 'cubic-bezier(0.2, 0.9, 0.1, 1)', fill: 'forwards' };
-    const blurOut = { duration: reduced ? 1 : 220, easing: 'cubic-bezier(0.4, 0, 0.6, 1)', fill: 'forwards' };
+    const restore: KeyframeAnimationOptions = { duration: reduced ? 1 : 280, easing: 'cubic-bezier(0.2, 0.9, 0.1, 1)', fill: 'forwards' };
+    const blurOut: KeyframeAnimationOptions = { duration: reduced ? 1 : 220, easing: 'cubic-bezier(0.4, 0, 0.6, 1)', fill: 'forwards' };
     preview.shot.animate([{ opacity: 0 }, { opacity: 1 }], blurOut);
     preview.veil.animate([{ opacity: 1 }, { opacity: 0 }], blurOut);
     preview.scrim.animate([{ opacity: 1 }, { opacity: 0 }], blurOut);
     preview.page.animate([PAGE_RECEDED, PAGE_AT_REST], restore).finished.then(finish, finish);
   }
 
-  function moveToTab(preview) {
+  function moveToTab(preview: LinkPreview): void {
     const url = preview.currentUrl || preview.url;
     send({ action: 'linkPreviewOpenInTab', url });
     close(preview, { instant: true });
   }
 
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (!message || typeof message.action !== 'string') {
+  // Messages from the background; each answers what its PageMessages entry says.
+  chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse: (reply: unknown) => void) => {
+    if (!isRecord(message) || typeof message.action !== 'string') {
       return false;
     }
     if (message.action === 'lumnoLinkPreviewPrewarm') {
@@ -1071,10 +1146,12 @@ import * as LumnoMessaging from '../platform/messaging';
       return false;
     }
     if (message.action === 'lumnoLinkPreviewScreenshot') {
-      const accepted = Boolean(current) && !current.shown && current.token === String(message.token || '') &&
-        typeof message.screenshot === 'string' && message.screenshot.length > 0;
-      if (accepted) {
-        acceptScreenshot(current, message.screenshot);
+      const screenshot = typeof message.screenshot === 'string' ? message.screenshot : '';
+      const preview = current;
+      const accepted = Boolean(preview) && preview !== null && !preview.shown &&
+        preview.token === String(message.token || '') && screenshot.length > 0;
+      if (preview && accepted) {
+        acceptScreenshot(preview, screenshot);
       }
       sendResponse(accepted);
       return false;
@@ -1084,7 +1161,7 @@ import * as LumnoMessaging from '../platform/messaging';
         token: String(message.token || ''),
         url: String(message.url || ''),
         screenshot: typeof message.screenshot === 'string' ? message.screenshot : '',
-        origin: message.origin || null
+        origin: readOrigin(message.origin)
       }).then(sendResponse, () => sendResponse(false));
       return true;
     }

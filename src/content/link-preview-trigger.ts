@@ -1,6 +1,31 @@
-// @ts-nocheck
 import { toPreviewFrameUrl } from '../domain/link-preview-frame-url';
+import {
+  PREVIEW_FRAME_SOURCE,
+  readPreviewSurfaceCommand
+} from '../domain/link-preview-frame-messages';
+import type { PreviewFrameMessage } from '../domain/link-preview-frame-messages';
+import type { BackgroundAction, BackgroundReply, BackgroundRequest } from '../domain/messages';
 import * as LumnoMessaging from '../platform/messaging';
+import { isNavigateEvent, readPageNavigation } from '../platform/page-navigation';
+import type { ListenerTarget } from '../platform/page-navigation';
+
+// What happens to a Shift+click on a link.
+interface PreviewHandlers {
+  // The click opens the link in this frame (inside the preview itself).
+  navigatesHere: boolean;
+  prepare(href: string): void;
+  open(href: string, event: MouseEvent): void;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+// nodeType 1 is an element.
+function isElement(value: EventTarget | null | undefined): value is Element {
+  return Boolean(value) && typeof value === 'object' && value !== null &&
+    'nodeType' in value && value.nodeType === 1;
+}
 
 (function() {
   // Runs in every frame. In an ordinary frame it turns Shift+click on a link
@@ -10,32 +35,49 @@ import * as LumnoMessaging from '../platform/messaging';
   // content script runs) and passes Escape up so the preview can close.
   const RUNTIME_KEY = '_x_extension_link_preview_trigger_2026_unique_';
   const PREVIEW_FRAME_NAME = 'lumno-link-preview';
-  const PREVIEW_MESSAGE_SOURCE = 'lumno-link-preview-frame';
-  const PREVIEW_SURFACE_SOURCE = 'lumno-link-preview-surface';
-  const previousRuntime = window[RUNTIME_KEY];
-  if (previousRuntime && typeof previousRuntime.cleanup === 'function') {
+  // Left by an earlier injection, possibly of an older extension version.
+  const previousRuntime: unknown = Reflect.get(window, RUNTIME_KEY);
+  const cleanupPrevious = isRecord(previousRuntime) ? previousRuntime.cleanup : null;
+  if (typeof cleanupPrevious === 'function') {
     try {
-      previousRuntime.cleanup();
-    } catch (error) {
+      Reflect.apply(cleanupPrevious, previousRuntime, []);
+    } catch (_error) {
       // A listener from the previous extension context may already be invalid.
     }
   }
 
-  const cleanups = [];
-  function listen(target, type, listener, options) {
-    target.addEventListener(type, listener, options);
-    cleanups.push(() => target.removeEventListener(type, listener, options));
+  const cleanups: Array<() => void> = [];
+  function listenWindow<K extends keyof WindowEventMap>(
+    type: K,
+    listener: (event: WindowEventMap[K]) => void,
+    options?: boolean
+  ): void {
+    window.addEventListener(type, listener, options);
+    cleanups.push(() => window.removeEventListener(type, listener, options));
   }
 
-  function isPreviewFrame() {
+  function listenDocument<K extends keyof DocumentEventMap>(type: K, listener: (event: DocumentEventMap[K]) => void): void {
+    document.addEventListener(type, listener);
+    cleanups.push(() => document.removeEventListener(type, listener));
+  }
+
+  function listenTarget(target: ListenerTarget, type: string, listener: (event: Event) => void): void {
+    target.addEventListener(type, listener);
+    cleanups.push(() => target.removeEventListener(type, listener));
+  }
+
+  function isPreviewFrame(): boolean {
     try {
       return window.top !== window && window.name === PREVIEW_FRAME_NAME;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
 
-  function send(message, callback) {
+  function send<A extends BackgroundAction>(
+    message: BackgroundRequest<A>,
+    callback?: (response: BackgroundReply<A> | undefined) => void
+  ): void {
     try {
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, message, (response) => {
         void (chrome.runtime && chrome.runtime.lastError);
@@ -43,7 +85,7 @@ import * as LumnoMessaging from '../platform/messaging';
           callback(response);
         }
       });
-    } catch (error) {
+    } catch (_error) {
       // Ignore an extension context invalidated during reload or navigation.
     }
   }
@@ -57,24 +99,28 @@ import * as LumnoMessaging from '../platform/messaging';
   const LOCAL_PRIMARY_STORAGE_KEY = '_x_extension_local_primary_2026_unique_';
   let triggerEnabled = true;
 
-  function followEnabledSetting() {
+  function followEnabledSetting(): void {
     const storage = typeof chrome !== 'undefined' && chrome ? chrome.storage : null;
     if (!storage || !storage.local) {
       return;
     }
-    const stored = { sync: undefined, local: undefined, localPrimary: false };
-    const apply = () => {
+    const stored: { sync: unknown; local: unknown; localPrimary: boolean } = { sync: undefined, local: undefined, localPrimary: false };
+    const apply = (): void => {
       const areaName = stored.localPrimary || !storage.sync ? 'local' : 'sync';
       triggerEnabled = stored[areaName] !== false;
     };
-    const read = (area, keys, take) => {
+    const read = (
+      area: chrome.storage.StorageArea,
+      keys: string[],
+      take: (result: Record<string, unknown>) => void
+    ): void => {
       try {
         area.get(keys, (result) => {
           void (chrome.runtime && chrome.runtime.lastError);
-          take(result || {});
+          take(isRecord(result) ? result : {});
           apply();
         });
-      } catch (error) {
+      } catch (_error) {
         // Ignore an extension context invalidated during reload or navigation.
       }
     };
@@ -91,7 +137,7 @@ import * as LumnoMessaging from '../platform/messaging';
     if (!onChanged || typeof onChanged.addListener !== 'function') {
       return;
     }
-    const listener = (changes, areaName) => {
+    const listener = (changes: Record<string, chrome.storage.StorageChange>, areaName: string): void => {
       if (!changes || (areaName !== 'sync' && areaName !== 'local')) {
         return;
       }
@@ -107,7 +153,7 @@ import * as LumnoMessaging from '../platform/messaging';
     cleanups.push(() => onChanged.removeListener(listener));
   }
 
-  function isPreviewGesture(event) {
+  function isPreviewGesture(event: MouseEvent): boolean {
     return triggerEnabled &&
       Boolean(event) &&
       event.isTrusted === true &&
@@ -118,35 +164,43 @@ import * as LumnoMessaging from '../platform/messaging';
       !event.altKey;
   }
 
-  function readAnchorHref(element) {
-    if (!element || typeof element.getAttribute !== 'function') {
+  function readAnchorHref(element: EventTarget | null | undefined): string {
+    if (!isElement(element)) {
       return '';
     }
     const tagName = String(element.tagName || '').toLowerCase();
     if (tagName !== 'a' && tagName !== 'area') {
       return '';
     }
-    const href = element.href;
+    const href: unknown = Reflect.get(element, 'href');
     if (typeof href === 'string') {
       return href;
     }
     // SVG <a> exposes an SVGAnimatedString.
-    if (href && typeof href.baseVal === 'string') {
+    const baseVal: unknown = isRecord(href) ? href.baseVal : null;
+    if (typeof baseVal === 'string') {
       try {
-        return new URL(href.baseVal, document.baseURI).href;
-      } catch (error) {
+        return new URL(baseVal, document.baseURI).href;
+      } catch (_error) {
         return '';
       }
     }
     return '';
   }
 
+  function isContentEditable(element: Element): boolean {
+    return element instanceof HTMLElement && element.isContentEditable;
+  }
+
   // The link under the press, also inside open shadow roots.
-  function findPreviewTarget(event) {
-    const path = typeof event.composedPath === 'function' ? event.composedPath() : [event.target];
+  function findPreviewTarget(event: MouseEvent): string {
+    const path = event.composedPath();
     for (const element of path) {
       if (element === window || element === document) {
         break;
+      }
+      if (!isElement(element)) {
+        continue;
       }
       const href = readAnchorHref(element);
       if (!href) {
@@ -156,7 +210,7 @@ import * as LumnoMessaging from '../platform/messaging';
         }
         continue;
       }
-      if (element.hasAttribute('download') || element.isContentEditable) {
+      if (element.hasAttribute('download') || isContentEditable(element)) {
         return '';
       }
       if (isPreviewableHref(href)) {
@@ -173,8 +227,8 @@ import * as LumnoMessaging from '../platform/messaging';
   // click through script (often window.open, which a held Shift turns into
   // a new window). Such text is taken as the link when it is clickable and
   // is nothing but the address; plain text keeps Shift+click for selecting.
-  function isClickable(element) {
-    if (!element || element.nodeType !== 1 || element.isContentEditable) {
+  function isClickable(element: Element): boolean {
+    if (isContentEditable(element)) {
       return false;
     }
     if (element.getAttribute('role') === 'link' || element.hasAttribute('onclick')) {
@@ -182,7 +236,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }
     try {
       return getComputedStyle(element).cursor === 'pointer';
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
@@ -190,7 +244,7 @@ import * as LumnoMessaging from '../platform/messaging';
   // With its scheme or www., so a clickable file name (README.md) is not
   // taken for an address.
   const SHOWN_URL_PATTERN = /^(https?:\/\/|www\.)([a-z0-9-]+\.)+[a-z][a-z0-9-]+(:\d+)?([/?#]\S*)?$/i;
-  function readShownUrl(element) {
+  function readShownUrl(element: Element): string {
     const text = String(element.textContent || '').trim();
     if (!text || text.length > 2048 || !SHOWN_URL_PATTERN.test(text)) {
       return '';
@@ -198,7 +252,7 @@ import * as LumnoMessaging from '../platform/messaging';
     try {
       const href = new URL(/^https?:\/\//i.test(text) ? text : `https://${text}`).href;
       return isPreviewableHref(href) ? href : '';
-    } catch (error) {
+    } catch (_error) {
       return '';
     }
   }
@@ -209,12 +263,12 @@ import * as LumnoMessaging from '../platform/messaging';
   // theirs, and the post a page is about has nothing to preview.
   const POST_HOST_PATTERN = /(^|\.)(x|twitter)\.com$/i;
   const POST_CONTROL_SELECTOR = 'button, [role="button"], input, textarea, select, video, [contenteditable="true"]';
-  function findPostLink(path) {
+  function findPostLink(path: EventTarget[]): string {
     if (!POST_HOST_PATTERN.test(location.hostname)) {
       return '';
     }
     for (const element of path) {
-      if (!element || element.nodeType !== 1 || typeof element.matches !== 'function') {
+      if (!isElement(element)) {
         continue;
       }
       if (element.matches(POST_CONTROL_SELECTOR)) {
@@ -233,11 +287,11 @@ import * as LumnoMessaging from '../platform/messaging';
     return '';
   }
 
-  function isPreviewableHref(href) {
-    let url;
+  function isPreviewableHref(href: string): boolean {
+    let url: URL;
     try {
       url = new URL(href);
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
     if (url.protocol !== 'http:' && url.protocol !== 'https:') {
@@ -266,12 +320,12 @@ import * as LumnoMessaging from '../platform/messaging';
   // In an ordinary frame a press prepares a preview and the click opens it.
   // Inside the preview it opens the link in the preview itself, where Back
   // returns; Chrome would open a new window for it.
-  const PREVIEW_HANDLERS = Object.freeze({
+  const PREVIEW_HANDLERS: Readonly<PreviewHandlers> = Object.freeze({
     navigatesHere: false,
-    prepare(href) {
+    prepare(href: string) {
       send({ action: 'linkPreviewPrepare', url: href });
     },
-    open(href, event) {
+    open(href: string, event: MouseEvent) {
       send({
         action: 'linkPreviewOpen',
         url: href,
@@ -279,43 +333,41 @@ import * as LumnoMessaging from '../platform/messaging';
       });
     }
   });
-  const IN_PREVIEW_HANDLERS = Object.freeze({
+  const IN_PREVIEW_HANDLERS: Readonly<PreviewHandlers> = Object.freeze({
     navigatesHere: true,
     prepare() {},
-    open(href) {
+    open(href: string) {
       location.assign(toPreviewFrameUrl(href));
     }
   });
 
-  function setupTrigger(handlers) {
+  function setupTrigger(handlers: Readonly<PreviewHandlers>): void {
     let pressedHref = '';
     let guardUntil = 0;
-    const navigation = window.navigation && typeof window.navigation.addEventListener === 'function'
-      ? window.navigation
-      : null;
+    const navigation = readPageNavigation(window);
     if (navigation) {
-      listen(navigation, 'navigate', (event) => {
-        if (Date.now() < guardUntil && event.cancelable &&
+      listenTarget(navigation, 'navigate', (event) => {
+        if (isNavigateEvent(event) && Date.now() < guardUntil && event.cancelable &&
             event.navigationType !== 'traverse' && event.navigationType !== 'reload') {
           event.preventDefault();
         }
       });
     }
-    const claim = (event) => {
+    const claim = (event: Event): void => {
       guardUntil = Date.now() + NAVIGATION_GUARD_MS;
       event.stopImmediatePropagation();
     };
-    const isClaimedPress = (event) => {
+    const isClaimedPress = (event: MouseEvent): boolean => {
       const href = isPreviewGesture(event) ? findPreviewTarget(event) : '';
       return Boolean(href) && href === pressedHref;
     };
-    listen(window, 'pointerdown', (event) => {
+    listenWindow('pointerdown', (event) => {
       pressedHref = isPreviewGesture(event) ? findPreviewTarget(event) : '';
       if (pressedHref) {
         claim(event);
       }
     }, true);
-    listen(window, 'mousedown', (event) => {
+    listenWindow('mousedown', (event) => {
       const href = isPreviewGesture(event) ? findPreviewTarget(event) : '';
       if (!href) {
         pressedHref = '';
@@ -327,15 +379,15 @@ import * as LumnoMessaging from '../platform/messaging';
       event.preventDefault();
       handlers.prepare(href);
     }, true);
-    ['pointerup', 'mouseup'].forEach((type) => {
-      listen(window, type, (event) => {
-        if (isClaimedPress(event)) {
-          claim(event);
-        }
-      }, true);
-    });
+    const claimRelease = (event: MouseEvent): void => {
+      if (isClaimedPress(event)) {
+        claim(event);
+      }
+    };
+    listenWindow('pointerup', claimRelease, true);
+    listenWindow('mouseup', claimRelease, true);
     // Preventing the click also stops Chrome's Shift+click new window.
-    listen(window, 'click', (event) => {
+    listenWindow('click', (event) => {
       const wasPressed = isClaimedPress(event);
       const href = pressedHref;
       pressedHref = '';
@@ -352,10 +404,10 @@ import * as LumnoMessaging from '../platform/messaging';
     }, true);
   }
 
-  function postToPreviewSurface(message) {
+  function postToPreviewSurface(message: PreviewFrameMessage): void {
     try {
-      window.parent.postMessage(Object.assign({ source: PREVIEW_MESSAGE_SOURCE }, message), '*');
-    } catch (error) {
+      window.parent.postMessage({ source: PREVIEW_FRAME_SOURCE, ...message }, '*');
+    } catch (_error) {
       // The parent may be gone while this frame unloads.
     }
   }
@@ -373,7 +425,7 @@ import * as LumnoMessaging from '../platform/messaging';
   // browsers without the parts get a thin standard bar.
   const CORNER_CLEARANCE_PX = 16;
   const SCROLLBAR_THUMB = 'rgba(128, 128, 128, 0.45)';
-  function stylePreviewedPage() {
+  function stylePreviewedPage(): void {
     const style = document.createElement('style');
     style.textContent = [
       ':root {',
@@ -424,11 +476,11 @@ import * as LumnoMessaging from '../platform/messaging';
   // once the page has loaded and held still for a moment, and again whenever
   // it settles on another: pages paint a placeholder color while loading (X
   // starts black), and following each one flashed the window's edge.
-  function readDarkQuery() {
+  function readDarkQuery(): MediaQueryList | null {
     return typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null;
   }
 
-  function readPageBackground() {
+  function readPageBackground(): string {
     for (const element of [document.documentElement, document.body]) {
       if (!element) {
         continue;
@@ -449,11 +501,11 @@ import * as LumnoMessaging from '../platform/messaging';
   }
 
   const BACKGROUND_SETTLE_MS = 250;
-  function followPageBackground() {
+  function followPageBackground(): void {
     let reported = '';
     let loaded = document.readyState === 'complete';
     let timer = 0;
-    const report = () => {
+    const report = (): void => {
       timer = 0;
       const color = readPageBackground();
       if (color !== reported) {
@@ -463,15 +515,15 @@ import * as LumnoMessaging from '../platform/messaging';
     };
     // Also keeps pages that touch their root's attributes on every scroll
     // cheap: the style is read once a burst is over.
-    const schedule = () => {
+    const schedule = (): void => {
       if (!loaded) {
         return;
       }
-      clearTimeout(timer);
-      timer = setTimeout(report, BACKGROUND_SETTLE_MS);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(report, BACKGROUND_SETTLE_MS);
     };
     const observer = new MutationObserver(schedule);
-    const observe = () => {
+    const observe = (): void => {
       observer.observe(document.documentElement, { attributes: true });
       if (document.body) {
         observer.observe(document.body, { attributes: true });
@@ -480,21 +532,21 @@ import * as LumnoMessaging from '../platform/messaging';
     observe();
     cleanups.push(() => {
       observer.disconnect();
-      clearTimeout(timer);
+      window.clearTimeout(timer);
     });
-    listen(document, 'DOMContentLoaded', observe);
-    listen(window, 'load', () => {
+    listenDocument('DOMContentLoaded', observe);
+    listenWindow('load', () => {
       loaded = true;
       schedule();
     });
     const darkQuery = readDarkQuery();
     if (darkQuery) {
-      listen(darkQuery, 'change', schedule);
+      listenTarget(darkQuery, 'change', schedule);
     }
     schedule();
   }
 
-  function setupPreviewFrame() {
+  function setupPreviewFrame(): void {
     if (document.documentElement) {
       stylePreviewedPage();
       followPageBackground();
@@ -503,10 +555,8 @@ import * as LumnoMessaging from '../platform/messaging';
     // Back goes through the Navigation API, which cannot step out of the
     // frame, where history.back() from its first page would take the page
     // under the preview back instead.
-    const navigation = window.navigation && typeof window.navigation.addEventListener === 'function'
-      ? window.navigation
-      : null;
-    const reportLocation = () => {
+    const navigation = readPageNavigation(window);
+    const reportLocation = (): void => {
       postToPreviewSurface({
         type: 'alive',
         url: location.href,
@@ -515,32 +565,32 @@ import * as LumnoMessaging from '../platform/messaging';
     };
     reportLocation();
     if (navigation) {
-      listen(navigation, 'navigatesuccess', reportLocation);
-      listen(navigation, 'currententrychange', reportLocation);
+      listenTarget(navigation, 'navigatesuccess', reportLocation);
+      listenTarget(navigation, 'currententrychange', reportLocation);
       // The window shows the page loading again when it leaves for another
       // document (a link, Back, Shift+click); the frame's load event ends it,
       // or navigatesuccess when the page handles the navigation itself.
-      listen(navigation, 'navigate', (event) => {
-        if (!event.downloadRequest && !(event.destination && event.destination.sameDocument)) {
+      listenTarget(navigation, 'navigate', (event) => {
+        if (isNavigateEvent(event) && !event.downloadRequest && !(event.destination && event.destination.sameDocument)) {
           postToPreviewSurface({ type: 'loading' });
         }
       });
-      listen(navigation, 'navigatesuccess', () => postToPreviewSurface({ type: 'loaded' }));
+      listenTarget(navigation, 'navigatesuccess', () => postToPreviewSurface({ type: 'loaded' }));
     }
-    listen(window, 'message', (event) => {
-      const data = event.data;
-      if (event.source !== window.parent || !data || data.source !== PREVIEW_SURFACE_SOURCE) {
+    listenWindow('message', (event) => {
+      if (event.source !== window.parent) {
         return;
       }
-      if (data.type === 'back' && navigation && navigation.canGoBack) {
+      const command = readPreviewSurfaceCommand(event.data);
+      if (command === 'back' && navigation && navigation.canGoBack && typeof navigation.back === 'function') {
         const result = navigation.back();
         // A traversal the page cancels rejects both; nothing is left to do.
-        [result && result.committed, result && result.finished].forEach((promise) => {
-          if (promise && typeof promise.catch === 'function') {
+        [result.committed, result.finished].forEach((promise) => {
+          if (promise) {
             promise.catch(() => {});
           }
         });
-      } else if (data.type === 'reload') {
+      } else if (command === 'reload') {
         location.reload();
       }
     });
@@ -549,11 +599,11 @@ import * as LumnoMessaging from '../platform/messaging';
     // modal of the page keeps it. Watching in the capture phase and deciding
     // once the event has gone through the page sees presses the page stops
     // and knows whether it took them.
-    listen(window, 'keydown', (event) => {
+    listenWindow('keydown', (event) => {
       if (event.key !== 'Escape' || !event.isTrusted) {
         return;
       }
-      setTimeout(() => {
+      window.setTimeout(() => {
         if (!(event.defaultPrevented && hasOpenModal())) {
           postToPreviewSurface({ type: 'escape' });
         }
@@ -561,7 +611,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }, true);
   }
 
-  function hasOpenModal() {
+  function hasOpenModal(): boolean {
     const modals = document.querySelectorAll('dialog[open], [aria-modal="true"]');
     return Array.from(modals).some((modal) => modal.getClientRects().length > 0);
   }
@@ -574,9 +624,9 @@ import * as LumnoMessaging from '../platform/messaging';
     setupTrigger(PREVIEW_HANDLERS);
   }
 
-  window[RUNTIME_KEY] = {
+  Reflect.set(window, RUNTIME_KEY, {
     cleanup() {
       cleanups.splice(0).forEach((cleanup) => cleanup());
     }
-  };
+  });
 })();
