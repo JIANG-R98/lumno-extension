@@ -1509,7 +1509,7 @@ function createBookmarkCascadeMenuRuntime(options?: BookmarkCascadeMenuOptions) 
   // already open, `dragMode` opens it as a drop target, and `shouldOpen`
   // may still cancel it once the bookmarks are read.
   function open(
-    item: { id: unknown; title?: string } | null,
+    item: { id?: unknown; title?: string } | null,
     anchorElement: BookmarkMenuAnchor | null,
     openOptions?: { dragMode?: boolean; toggle?: boolean; shouldOpen?: () => boolean }
   ): void {

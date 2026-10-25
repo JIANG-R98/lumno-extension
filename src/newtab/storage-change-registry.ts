@@ -5,21 +5,39 @@
 // `area` says which storage area a handler listens to: 'primary' (the
 // area settings live in, sync or local; the default), 'local', 'any', or
 // a predicate on the area name.
-function createStorageChangeRegistry(options) {
+import type { StorageChanges } from '../domain/storage-port';
+
+type StorageAreaMatch = 'primary' | 'local' | 'any' | ((areaName: string) => boolean);
+
+// Returns whether it acted on the change; the registry does not read it.
+type StorageChangeHandler = (changes: StorageChanges, areaName: string) => unknown;
+
+interface StorageChangeHandlerOptions {
+  area?: StorageAreaMatch;
+}
+
+interface RegisteredHandler {
+  // null runs for every change.
+  keys: string[] | null;
+  handler: StorageChangeHandler;
+  area: StorageAreaMatch;
+}
+
+function createStorageChangeRegistry(options?: { isPrimaryArea?: (areaName: string) => boolean }) {
   const opts = options || {};
   const isPrimaryArea = typeof opts.isPrimaryArea === 'function'
     ? opts.isPrimaryArea
-    : (areaName) => areaName === 'sync';
-  const handlers = [];
+    : (areaName: string) => areaName === 'sync';
+  const handlers: RegisteredHandler[] = [];
 
-  function matchesArea(area, areaName) {
+  function matchesArea(area: StorageAreaMatch, areaName: string): boolean {
     if (typeof area === 'function') return Boolean(area(areaName));
     if (area === 'any') return true;
     if (area === 'local') return areaName === 'local';
     return isPrimaryArea(areaName);
   }
 
-  function register(keys, handler, registerOptions) {
+  function register(keys: string[] | null, handler: StorageChangeHandler, registerOptions?: StorageChangeHandlerOptions): void {
     if (typeof handler !== 'function') {
       return;
     }
@@ -31,7 +49,7 @@ function createStorageChangeRegistry(options) {
   }
 
   // `handler(changes, areaName)` runs when the change carries any of `keys`.
-  function on(keys, handler, registerOptions) {
+  function on(keys: string | readonly string[], handler: StorageChangeHandler, registerOptions?: StorageChangeHandlerOptions): void {
     const list = (Array.isArray(keys) ? keys : [keys]).filter(Boolean).map(String);
     if (list.length) {
       register(list, handler, registerOptions);
@@ -39,11 +57,11 @@ function createStorageChangeRegistry(options) {
   }
 
   // `handler(changes, areaName)` runs for every change in its area.
-  function onAny(handler, registerOptions) {
+  function onAny(handler: StorageChangeHandler, registerOptions?: StorageChangeHandlerOptions): void {
     register(null, handler, registerOptions);
   }
 
-  function dispatch(changes, areaName) {
+  function dispatch(changes: StorageChanges | null | undefined, areaName: string): void {
     if (!changes) {
       return;
     }
@@ -51,7 +69,7 @@ function createStorageChangeRegistry(options) {
       if (!matchesArea(entry.area, areaName)) {
         return;
       }
-      if (entry.keys && !entry.keys.some((key) => Object.prototype.hasOwnProperty.call(changes, key))) {
+      if (entry.keys && !entry.keys.some((key) => Object.hasOwn(changes, key))) {
         return;
       }
       try {
@@ -67,4 +85,7 @@ function createStorageChangeRegistry(options) {
   return { on, onAny, dispatch };
 }
 
+type StorageChangeRegistry = ReturnType<typeof createStorageChangeRegistry>;
+
 export { createStorageChangeRegistry };
+export type { StorageChangeHandler, StorageChangeHandlerOptions, StorageChangeRegistry };

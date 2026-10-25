@@ -30,6 +30,7 @@ interface CursorPointInput {
   ctrlKey?: boolean;
   altKey?: boolean;
   shiftKey?: boolean;
+  target?: EventTarget | null;
   relatedTarget?: EventTarget | null;
 }
 

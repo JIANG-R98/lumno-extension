@@ -259,7 +259,7 @@ function createSectionHeaders(deps) {
     pageState.bookmarkHeading.setAttribute('data-bookmark-drop-folder-id', String(pageState.bookmarkRootFolderId || '1'));
     pageState.bookmarkHeading.setAttribute('data-bookmark-drop-folder-title', rootLabel);
     pageState.bookmarkHeading.classList.toggle('x-nt-bookmarks-heading--link', nested);
-    pageState.bookmarkHeading._xCanNavigateRoot = nested;
+    pageState.bookmarkCanNavigateRoot = nested;
     if (nested) {
       pageState.bookmarkHeading.setAttribute('role', 'button');
       pageState.bookmarkHeading.setAttribute('tabindex', '0');

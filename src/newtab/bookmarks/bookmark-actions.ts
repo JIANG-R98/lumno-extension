@@ -1,9 +1,47 @@
-// @ts-nocheck
 // Bookmark actions started from the page: editing a bookmark in the
 // shortcut dialog, opening a folder as a tab group after confirmation, and
 // the bookmark context menu's copy.
+import type { BookmarkTabGroupReply } from '../../domain/messages';
 import * as LumnoMessaging from '../../platform/messaging';
-function createBookmarkActions(deps) {
+import type { SelectMenuOption } from '../../shared/react/select-menu';
+import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
+import type { ShortcutDialogOpenOptions } from '../react/shortcut-dialog';
+import type { BookmarkCascadeRuntime } from './bookmark-cascade-menu';
+import type { BookmarkContextMenuParts, BookmarkContextTarget, SelectMenuController } from './bookmark-context-menu';
+import type * as BookmarksStore from './bookmarks-store';
+import type { BookmarksRuntime } from './bookmarks-runtime';
+import type { FolderItemIcon } from './folder-item-icons';
+
+interface BookmarkActionsState {
+  bookmarkContextMenu: BookmarkContextMenuParts | null;
+  bookmarkContextMenuSelectController: SelectMenuController | null;
+  bookmarkContextMenuTarget: BookmarkContextTarget | null;
+  bookmarkCascadeRuntime: BookmarkCascadeRuntime | null;
+}
+
+interface BookmarkActionsDeps {
+  t: Translate;
+  getBookmarkContextMenuOptions(target?: BookmarkContextTarget | null): SelectMenuOption[];
+  BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE: string;
+  NEWTAB_CONTEXT_MENU_OPEN_VALUE: string;
+  BOOKMARK_CONTEXT_MENU_EDIT_VALUE: string;
+  bookmarksRuntime: BookmarksRuntime;
+  NEWTAB_BOOKMARKS_STORE: Pick<typeof BookmarksStore, 'collectFolderBookmarkUrls'>;
+  openShortcutDialog(options: ShortcutDialogOpenOptions): unknown;
+  formatMessage: FormatMessage;
+  showToast: ShowToast;
+  // Whether the open folder menu belongs to a folder shortcut.
+  isShortcutFolderAnchor(anchor: HTMLElement | null): boolean;
+  getFolderItemIcon(bookmarkId: string): FolderItemIcon | null;
+  SHORTCUT_DIALOG_MODE_EDIT: string;
+  SHORTCUT_DIALOG_ITEM_FOLDER: string;
+  SHORTCUT_DIALOG_ITEM_BOOKMARK: string;
+  getFolderItemIconUrl(bookmarkId: string, url: string): string;
+  getBrowserPageFaviconUrl(url: string): string;
+  pageState: BookmarkActionsState;
+}
+
+function createBookmarkActions(deps: BookmarkActionsDeps) {
   const {
     t,
     getBookmarkContextMenuOptions,
@@ -27,30 +65,26 @@ function createBookmarkActions(deps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  function updateBookmarkContextMenuLanguageStrings() {
+  function updateBookmarkContextMenuLanguageStrings(): void {
     if (!pageState.bookmarkContextMenu || !pageState.bookmarkContextMenuSelectController) {
       return;
     }
-    if (pageState.bookmarkContextMenu.trigger) {
-      pageState.bookmarkContextMenu.trigger.setAttribute(
-        'aria-label',
-        t('bookmarks_context_menu_label', 'Bookmark actions')
-      );
-    }
-    if (typeof pageState.bookmarkContextMenuSelectController.setOptions === 'function') {
-      pageState.bookmarkContextMenuSelectController.setOptions(
-        pageState.bookmarkContextMenu.control,
-        getBookmarkContextMenuOptions(pageState.bookmarkContextMenuTarget),
-        pageState.bookmarkContextMenuTarget && pageState.bookmarkContextMenuTarget.isFolder
-          ? BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE
-          : pageState.bookmarkContextMenuTarget
-            ? NEWTAB_CONTEXT_MENU_OPEN_VALUE
-            : BOOKMARK_CONTEXT_MENU_EDIT_VALUE
-      );
-    }
+    pageState.bookmarkContextMenu.trigger.setAttribute(
+      'aria-label',
+      t('bookmarks_context_menu_label', 'Bookmark actions')
+    );
+    pageState.bookmarkContextMenuSelectController.setOptions(
+      pageState.bookmarkContextMenu.control,
+      getBookmarkContextMenuOptions(pageState.bookmarkContextMenuTarget),
+      pageState.bookmarkContextMenuTarget && pageState.bookmarkContextMenuTarget.isFolder
+        ? BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE
+        : pageState.bookmarkContextMenuTarget
+          ? NEWTAB_CONTEXT_MENU_OPEN_VALUE
+          : BOOKMARK_CONTEXT_MENU_EDIT_VALUE
+    );
   }
 
-  function requestBookmarkFolderTabGroup(folderId, title) {
+  function requestBookmarkFolderTabGroup(folderId: string, title: string): Promise<BookmarkTabGroupReply> {
     return new Promise((resolve) => {
       if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
         resolve({ ok: false, reason: 'runtime-unavailable' });
@@ -69,7 +103,7 @@ function createBookmarkActions(deps) {
     });
   }
 
-  function openBookmarkFolderTabGroupConfirmation(target) {
+  function openBookmarkFolderTabGroupConfirmation(target: BookmarkContextTarget | null): void {
     if (!target || !target.isFolder || !target.bookmarkId) {
       return;
     }
@@ -117,7 +151,7 @@ function createBookmarkActions(deps) {
     });
   }
 
-  function openBookmarkEditor(target) {
+  function openBookmarkEditor(target: BookmarkContextTarget | null): void {
     if (!target || !target.bookmarkId) {
       return;
     }
@@ -125,8 +159,9 @@ function createBookmarkActions(deps) {
     const isFolder = Boolean(target.isFolder);
     const url = isFolder ? '' : String((node && node.url) || target.url || '');
     // Websites in a folder opened from a shortcut choose an icon like shortcuts.
-    const iconEditable = !isFolder && target.sourceKind === 'cascade' && Boolean(pageState.bookmarkCascadeRuntime) &&
-      isShortcutFolderAnchor(pageState.bookmarkCascadeRuntime.getAnchor());
+    const cascadeRuntime = pageState.bookmarkCascadeRuntime;
+    const iconEditable = !isFolder && target.sourceKind === 'cascade' && cascadeRuntime !== null &&
+      isShortcutFolderAnchor(cascadeRuntime.getAnchor());
     const icon = iconEditable ? getFolderItemIcon(target.bookmarkId) : null;
     openShortcutDialog({
       mode: SHORTCUT_DIALOG_MODE_EDIT,
@@ -153,3 +188,4 @@ function createBookmarkActions(deps) {
 }
 
 export { createBookmarkActions };
+export type { BookmarkActionsDeps, BookmarkActionsState };

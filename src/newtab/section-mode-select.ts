@@ -1,7 +1,58 @@
-// @ts-nocheck
 // The mode selects in the bookmark and recent section headers: their
 // options (view modes, recent sources) and the React select each header hosts.
-function createSectionModeSelect(deps) {
+import type { SelectMenuOption } from '../shared/react/select-menu';
+import type { TooltipShowOptions } from '../shared/ui/tooltip';
+import type { SelectMenuController } from './bookmarks/bookmark-context-menu';
+import type { Translate } from './newtab-types';
+
+// A menu entry as a header describes it, with its label by message key.
+interface SectionModeOptionSource {
+  value: string;
+  labelKey: string;
+  fallback: string;
+  action?: string;
+  iconClass?: string;
+  dividerBefore?: boolean;
+  groupTitleKey?: string;
+  groupTitleFallback?: string;
+  radio?: boolean;
+  checked?: boolean;
+  trailingIconClass?: string;
+}
+
+interface SectionModeSelectConfig {
+  id: string;
+  menuTitleKey: string;
+  menuTitleFallback?: string;
+  getValue?(): string;
+  onChange?(mode: string): void;
+  onAction?(action: string): void;
+  getOptions?(): SectionModeOptionSource[];
+  options?: SectionModeOptionSource[];
+}
+
+interface SectionModeSelect {
+  control: HTMLElement;
+  select: HTMLSelectElement;
+  trigger: HTMLButtonElement;
+  // Takes the current title, value and options again.
+  update(): void;
+}
+
+interface SectionModeSelectDeps {
+  t: Translate;
+  getEffectiveBookmarkTopbarSurfaceMode(): string;
+  isBookmarkTopbarMode(): boolean;
+  getBookmarkTopbarLayout(): string;
+  BOOKMARK_TOPBAR_LAYOUT_ACTION: string;
+  BOOKMARK_TOPBAR_SURFACE_MODE_ACTION: string;
+  BOOKMARK_TOPBAR_PICK_COLOR_ACTION: string;
+  sectionModeSelectController: SelectMenuController | null;
+  showTopActionTooltip(target: HTMLElement, text: string, options?: TooltipShowOptions): void;
+  hideTopActionTooltip(): void;
+}
+
+function createSectionModeSelect(deps: SectionModeSelectDeps) {
   const {
     t,
     getEffectiveBookmarkTopbarSurfaceMode,
@@ -20,14 +71,14 @@ function createSectionModeSelect(deps) {
   const SECTION_MODE_MENU_PORTAL_Z_INDEX = 10020;
   const SECTION_MODE_MENU_PORTAL_OFFSET_PX = 8;
 
-  function getSectionModeSelectOptions(config) {
-    const rawOptions = config && typeof config.getOptions === 'function'
+  function getSectionModeSelectOptions(config: SectionModeSelectConfig): SelectMenuOption[] {
+    const rawOptions = typeof config.getOptions === 'function'
       ? config.getOptions()
-      : (config && config.options);
+      : config.options;
     const options = Array.isArray(rawOptions) ? rawOptions : [];
     return options.map((item) => {
       const value = String(item && item.value !== undefined ? item.value : '');
-      const option = {
+      const option: SelectMenuOption = {
         value,
         label: t(item && item.labelKey, (item && item.fallback) || value)
       };
@@ -54,9 +105,9 @@ function createSectionModeSelect(deps) {
     });
   }
 
-  function getBookmarkViewModeOptions() {
+  function getBookmarkViewModeOptions(): SectionModeOptionSource[] {
     const effectiveSurfaceMode = getEffectiveBookmarkTopbarSurfaceMode();
-    const options = [
+    const options: SectionModeOptionSource[] = [
       {
         value: 'folder',
         labelKey: 'bookmark_view_mode_folder',
@@ -127,13 +178,15 @@ function createSectionModeSelect(deps) {
     return options;
   }
 
-  function createSectionModeSelect(config) {
-    if (!sectionModeSelectController || typeof sectionModeSelectController.createSelect !== 'function') {
+  function createSectionModeSelect(config: SectionModeSelectConfig): SectionModeSelect | null {
+    // Narrowed here, for the handlers below.
+    const controller = sectionModeSelectController;
+    if (!controller) {
       return null;
     }
     const currentValue = typeof config.getValue === 'function' ? config.getValue() : '';
     const title = t(config.menuTitleKey, config.menuTitleFallback || 'Display mode');
-    const created = sectionModeSelectController.createSelect({
+    const created = controller.createSelect({
       id: config.id,
       selectId: config.id ? `${config.id}_select` : '',
       className: 'x-nt-section-mode-select',
@@ -151,18 +204,18 @@ function createSectionModeSelect(deps) {
       value: currentValue,
       ariaLabel: title,
       tooltip: title,
-      onAction: typeof config.onAction === 'function'
-        ? ({ action }) => config.onAction(action)
-        : null,
+      onAction: (payload) => {
+        if (typeof config.onAction === 'function') config.onAction(payload.action);
+      },
       options: getSectionModeSelectOptions(config)
     });
+    if (!created) {
+      return null;
+    }
     const control = created.wrapper;
     const select = created.select;
     const trigger = created.trigger;
-    if (!control || !select || !trigger) {
-      return null;
-    }
-    const api = {
+    const api: SectionModeSelect = {
       control,
       select,
       trigger,
@@ -170,10 +223,8 @@ function createSectionModeSelect(deps) {
         const nextTitle = t(config.menuTitleKey, config.menuTitleFallback || 'Display mode');
         const nextValue = typeof config.getValue === 'function' ? config.getValue() : '';
         const nextOptions = getSectionModeSelectOptions(config);
-        if (typeof sectionModeSelectController.setMenuTitle === 'function') {
-          sectionModeSelectController.setMenuTitle(control, nextTitle);
-        }
-        sectionModeSelectController.setOptions(control, nextOptions, nextValue);
+        controller.setMenuTitle(control, nextTitle);
+        controller.setOptions(control, nextOptions, nextValue);
         trigger.setAttribute('aria-label', nextTitle);
         trigger.setAttribute('data-tooltip', nextTitle);
       }
@@ -185,11 +236,10 @@ function createSectionModeSelect(deps) {
       }
     });
     const showButtonTooltip = () => {
-      if (sectionModeSelectController.isOpen(control)) {
+      if (controller.isOpen(control)) {
         return;
       }
-      const placement = trigger.closest &&
-        trigger.closest('.x-nt-bookmarks-topbar')
+      const placement = trigger.closest('.x-nt-bookmarks-topbar')
         ? 'bottom'
         : 'top';
       showTopActionTooltip(
@@ -213,3 +263,4 @@ function createSectionModeSelect(deps) {
 }
 
 export { createSectionModeSelect };
+export type { SectionModeOptionSource, SectionModeSelect, SectionModeSelectConfig, SectionModeSelectDeps };

@@ -1,8 +1,82 @@
-// @ts-nocheck
 // Right-click menu for bookmark cards and folders.
+import type { Disposition } from '../../domain/navigation-disposition';
+import { isElementNode } from '../../shared/dom-guards';
+import type { SelectMenuOption } from '../../shared/react/select-menu';
 import * as LumnoNewtabDismissStack from '../dismiss-stack';
+import type { Translate } from '../newtab-types';
+import type { createSelectMenuController, SelectMenuInstance } from '../react/select-menu';
+import type { BookmarkDragSession } from './bookmark-drag';
+import type * as BookmarksStore from './bookmarks-store';
+import type { BookmarksRuntime } from './bookmarks-runtime';
 
-function createBookmarkContextMenu(deps) {
+type SelectMenuController = ReturnType<typeof createSelectMenuController>;
+
+// The bookmark a context menu was opened for.
+interface BookmarkContextTarget {
+  bookmarkId: string;
+  title: string;
+  url: string;
+  parentId: string;
+  index: number;
+  isFolder: boolean;
+  sourceKind: 'cascade' | 'card';
+  element: HTMLElement;
+}
+
+// The menu's parts: the positioned wrapper and the select it drives.
+interface BookmarkContextMenuParts {
+  control: HTMLElement;
+  select: HTMLSelectElement;
+  trigger: HTMLButtonElement;
+  menu: HTMLElement;
+}
+
+interface BookmarkContextMenuState {
+  // Made the first time a bookmark's menu opens.
+  bookmarkContextMenu: BookmarkContextMenuParts | null;
+  bookmarkContextMenuSelectController: SelectMenuController | null;
+  bookmarkContextMenuTarget: BookmarkContextTarget | null;
+  bookmarkDragState: BookmarkDragSession | null;
+}
+
+// A right-click on a bookmark card or a cascade row.
+interface BookmarkItemContextMenuEvent {
+  event: MouseEvent;
+  item: { id?: string | number; title?: string; url?: string; type?: string; parentId?: string | number; index?: number };
+  element: HTMLElement;
+  parentFolderId?: string;
+  sourceKind?: string;
+}
+
+interface ShortcutSite {
+  title: string;
+  url: string;
+}
+
+interface BookmarkContextMenuDeps {
+  bookmarksRuntime: BookmarksRuntime;
+  NEWTAB_BOOKMARKS_STORE: Pick<typeof BookmarksStore, 'collectFolderBookmarkUrls'>;
+  BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE: string;
+  t: Translate;
+  NEWTAB_CONTEXT_MENU_OPEN_VALUE: string;
+  FOLDER_COLOR_CONTEXT_MENU_VALUE: string;
+  BOOKMARK_CONTEXT_MENU_EDIT_VALUE: string;
+  openFolderColorPicker(folderId: string, title: string, sourceElement?: HTMLElement | null): Promise<void>;
+  openExternalNewTabUrl(url: string, disposition: Disposition): unknown;
+  openBookmarkEditor(target: BookmarkContextTarget): void;
+  openBookmarkFolderTabGroupConfirmation(target: BookmarkContextTarget): void;
+  deleteBookmarkFromContextTarget(target: BookmarkContextTarget): boolean;
+  hasShortcutForSite(site: ShortcutSite): boolean;
+  addSiteToShortcuts(site: ShortcutSite): unknown;
+  hasShortcutForBookmarkFolder(bookmarkId: string): boolean;
+  addBookmarkFolderToShortcuts(bookmarkId: string): Promise<boolean>;
+  closeShortcutContextMenu(): void;
+  closeRecentContextMenu(): void;
+  hideCursorTooltip(): void;
+  pageState: BookmarkContextMenuState;
+}
+
+function createBookmarkContextMenu(deps: BookmarkContextMenuDeps) {
   const {
     bookmarksRuntime,
     NEWTAB_BOOKMARKS_STORE,
@@ -35,7 +109,7 @@ function createBookmarkContextMenu(deps) {
   const BOOKMARK_CONTEXT_MENU_PORTAL_Z_INDEX = 10060;
   const BOOKMARK_CONTEXT_MENU_PORTAL_OFFSET_PX = -6;
 
-  function getBookmarkFolderOpenCount(target) {
+  function getBookmarkFolderOpenCount(target: BookmarkContextTarget | null | undefined): number {
     if (!target || !target.isFolder) {
       return 0;
     }
@@ -43,12 +117,12 @@ function createBookmarkContextMenu(deps) {
     return NEWTAB_BOOKMARKS_STORE.collectFolderBookmarkUrls(node).length;
   }
 
-  function getBookmarkShortcutSite(target) {
+  function getBookmarkShortcutSite(target: BookmarkContextTarget): ShortcutSite {
     return { title: target.title, url: target.url };
   }
 
-  function getBookmarkContextMenuOptions(target) {
-    const options = [];
+  function getBookmarkContextMenuOptions(target?: BookmarkContextTarget | null): SelectMenuOption[] {
+    const options: SelectMenuOption[] = [];
     if (target && target.isFolder) {
       options.push({
         action: BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE,
@@ -110,7 +184,7 @@ function createBookmarkContextMenu(deps) {
     return options;
   }
 
-  function isBookmarkContextMenuOpen() {
+  function isBookmarkContextMenuOpen(): boolean {
     return Boolean(
       pageState.bookmarkContextMenu &&
       pageState.bookmarkContextMenuSelectController &&
@@ -118,25 +192,22 @@ function createBookmarkContextMenu(deps) {
     );
   }
 
-  function isBookmarkContextMenuNode(node) {
-    if (!node || !pageState.bookmarkContextMenu) {
+  function isBookmarkContextMenuNode(node: EventTarget | null): boolean {
+    if (!isElementNode(node) || !pageState.bookmarkContextMenu) {
       return false;
     }
     const { control, menu } = pageState.bookmarkContextMenu;
-    return Boolean(
-      (control && (node === control || (typeof control.contains === 'function' && control.contains(node)))) ||
-      (menu && (node === menu || (typeof menu.contains === 'function' && menu.contains(node))))
-    );
+    return control.contains(node) || menu.contains(node);
   }
 
-  function clearBookmarkContextMenuTargetVisual() {
+  function clearBookmarkContextMenuTargetVisual(): void {
     const element = pageState.bookmarkContextMenuTarget && pageState.bookmarkContextMenuTarget.element;
-    if (element && typeof element.removeAttribute === 'function') {
+    if (element) {
       element.removeAttribute('data-bookmark-context-menu-open');
     }
   }
 
-  function closeBookmarkContextMenu() {
+  function closeBookmarkContextMenu(): void {
     clearBookmarkContextMenuTargetVisual();
     if (pageState.bookmarkContextMenu && pageState.bookmarkContextMenuSelectController) {
       pageState.bookmarkContextMenuSelectController.setOpen(pageState.bookmarkContextMenu.control, false);
@@ -144,14 +215,14 @@ function createBookmarkContextMenu(deps) {
     pageState.bookmarkContextMenuTarget = null;
   }
 
-  function getBookmarkContextMenuPoint(target, event) {
+  function getBookmarkContextMenuPoint(target: BookmarkContextTarget, event: MouseEvent | null | undefined): { x: number; y: number } {
     const clientX = Number(event && event.clientX);
     const clientY = Number(event && event.clientY);
     if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
       return { x: clientX, y: clientY };
     }
-    const element = target && target.element;
-    if (element && typeof element.getBoundingClientRect === 'function') {
+    const element = target.element;
+    if (element) {
       const rect = element.getBoundingClientRect();
       return {
         x: rect.left + (rect.width / 2),
@@ -161,8 +232,8 @@ function createBookmarkContextMenu(deps) {
     return { x: 0, y: 0 };
   }
 
-  function setBookmarkContextMenuPosition(target, event) {
-    if (!pageState.bookmarkContextMenu || !pageState.bookmarkContextMenu.control) {
+  function setBookmarkContextMenuPosition(target: BookmarkContextTarget, event: MouseEvent | null | undefined): void {
+    if (!pageState.bookmarkContextMenu) {
       return;
     }
     const point = getBookmarkContextMenuPoint(target, event);
@@ -170,7 +241,7 @@ function createBookmarkContextMenu(deps) {
     pageState.bookmarkContextMenu.control.style.top = `${Math.round(point.y)}px`;
   }
 
-  function handleBookmarkContextMenuAction(actionValue) {
+  function handleBookmarkContextMenuAction(actionValue: unknown): void {
     const action = String(actionValue || '');
     const target = pageState.bookmarkContextMenuTarget;
     closeBookmarkContextMenu();
@@ -206,13 +277,13 @@ function createBookmarkContextMenu(deps) {
     }
   }
 
-  function handleBookmarkContextMenuActionClick(event) {
-    const target = event && event.target;
-    const option = target && typeof target.closest === 'function'
+  function handleBookmarkContextMenuActionClick(event: MouseEvent): void {
+    const target = event.target;
+    const option = isElementNode(target)
       ? target.closest('._x_extension_select_option_2024_unique_')
       : null;
     if (!option || option.getAttribute('aria-disabled') === 'true' ||
-        !pageState.bookmarkContextMenu || !pageState.bookmarkContextMenu.menu ||
+        !pageState.bookmarkContextMenu ||
         !pageState.bookmarkContextMenu.menu.contains(option)) {
       return;
     }
@@ -220,19 +291,18 @@ function createBookmarkContextMenu(deps) {
     handleBookmarkContextMenuAction(option.getAttribute('data-value'));
   }
 
-  function handleBookmarkContextMenuDocumentPointerDown(event) {
+  function handleBookmarkContextMenuDocumentPointerDown(event: PointerEvent): void {
     if (!isBookmarkContextMenuOpen() || isBookmarkContextMenuNode(event.target)) {
       return;
     }
     closeBookmarkContextMenu();
   }
 
-  function createBookmarkContextMenu() {
-    if (!pageState.bookmarkContextMenuSelectController ||
-        typeof pageState.bookmarkContextMenuSelectController.createSelect !== 'function') {
+  function createBookmarkContextMenu(): BookmarkContextMenuParts | null {
+    if (!pageState.bookmarkContextMenuSelectController) {
       return null;
     }
-    const created = pageState.bookmarkContextMenuSelectController.createSelect({
+    const created: SelectMenuInstance | null = pageState.bookmarkContextMenuSelectController.createSelect({
       id: '_x_extension_newtab_bookmark_context_menu_2026_unique_',
       selectId: '_x_extension_newtab_bookmark_context_menu_select_2026_unique_',
       className: 'x-nt-shortcut-context-menu x-nt-bookmark-context-menu',
@@ -253,15 +323,15 @@ function createBookmarkContextMenu(deps) {
         handleBookmarkContextMenuAction(payload && payload.action);
       }
     });
+    if (!created) {
+      return null;
+    }
     const control = created.wrapper;
     const select = created.select;
     const trigger = created.trigger;
     const menu = created.menu;
-    if (!control || !select || !trigger || !menu) {
-      return null;
-    }
     trigger.tabIndex = -1;
-    const stopContextMenuEvent = (event) => {
+    const stopContextMenuEvent = (event: Event): void => {
       event.stopPropagation();
     };
     [control, trigger, menu].forEach((element) => {
@@ -278,7 +348,7 @@ function createBookmarkContextMenu(deps) {
     return { control, select, trigger, menu };
   }
 
-  function openBookmarkContextMenu(target, event) {
+  function openBookmarkContextMenu(target: BookmarkContextTarget, event: MouseEvent): void {
     if (!target || !target.bookmarkId) {
       return;
     }
@@ -292,19 +362,15 @@ function createBookmarkContextMenu(deps) {
     closeRecentContextMenu();
     closeBookmarkContextMenu();
     pageState.bookmarkContextMenuTarget = target;
-    if (target.element && typeof target.element.setAttribute === 'function') {
-      target.element.setAttribute('data-bookmark-context-menu-open', 'true');
-    }
+    target.element.setAttribute('data-bookmark-context-menu-open', 'true');
     setBookmarkContextMenuPosition(target, event);
-    if (typeof pageState.bookmarkContextMenuSelectController.setOptions === 'function') {
-      pageState.bookmarkContextMenuSelectController.setOptions(
-        pageState.bookmarkContextMenu.control,
-        getBookmarkContextMenuOptions(target),
-        target.isFolder
-          ? BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE
-          : NEWTAB_CONTEXT_MENU_OPEN_VALUE
-      );
-    }
+    pageState.bookmarkContextMenuSelectController.setOptions(
+      pageState.bookmarkContextMenu.control,
+      getBookmarkContextMenuOptions(target),
+      target.isFolder
+        ? BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE
+        : NEWTAB_CONTEXT_MENU_OPEN_VALUE
+    );
     pageState.bookmarkContextMenuSelectController.setOpen(pageState.bookmarkContextMenu.control, true);
   }
 
@@ -314,10 +380,10 @@ function createBookmarkContextMenu(deps) {
     close: () => closeBookmarkContextMenu()
   });
 
-  function handleBookmarkItemContextMenu(payload) {
-    const event = payload && payload.event;
-    const item = payload && payload.item;
-    const element = payload && payload.element;
+  function handleBookmarkItemContextMenu(payload: BookmarkItemContextMenuEvent): void {
+    const event = payload.event;
+    const item = payload.item;
+    const element = payload.element;
     if (!event || !item || !element || !item.id || pageState.bookmarkDragState) {
       return;
     }
@@ -345,3 +411,11 @@ function createBookmarkContextMenu(deps) {
 }
 
 export { createBookmarkContextMenu };
+export type {
+  BookmarkContextMenuDeps,
+  BookmarkContextMenuParts,
+  BookmarkContextMenuState,
+  BookmarkContextTarget,
+  BookmarkItemContextMenuEvent,
+  SelectMenuController
+};

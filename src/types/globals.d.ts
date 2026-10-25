@@ -55,6 +55,17 @@ import type { createWallpaperViewApi } from '../newtab/react/wallpaper-view';
 import type { createBookmarkBreadcrumbApi } from '../newtab/react/bookmark-breadcrumb';
 
 declare global {
+  // The EyeDropper API, which Chromium has and TypeScript's DOM library
+  // does not describe yet.
+  interface EyeDropperResult {
+    sRGBHex: string;
+  }
+  interface EyeDropperInstance {
+    open(options?: { signal?: AbortSignal }): Promise<EyeDropperResult>;
+  }
+  interface Window {
+    EyeDropper?: new () => EyeDropperInstance;
+  }
   // The traditional-to-simplified Han table as pairs of characters, set by
   // src/shared/search/search-han-variants.js once a page or the worker loads it.
   var LumnoSearchHanVariants: string | undefined;

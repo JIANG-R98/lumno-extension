@@ -80,6 +80,7 @@ function createPageState() {
     bookmarkRootVisibleCount: 0,
     bookmarkTitleWrap: null,
     bookmarkHeading: null,
+    bookmarkCanNavigateRoot: false,
     bookmarkModeMenu: null,
     bookmarkGrid: null,
     recentHeader: null,

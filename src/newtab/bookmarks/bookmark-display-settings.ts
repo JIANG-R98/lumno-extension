@@ -1,7 +1,59 @@
-// @ts-nocheck
 // Bookmark view mode and bookmark bar surface mode/color preferences:
 // loading, legacy migration, persistence and applying them to the page.
-function createBookmarkDisplaySettings(deps) {
+import type { StorageAreaLike, StorageChanges, StorageItems } from '../../domain/storage-port';
+import type { ShowToast, Translate } from '../newtab-types';
+import type * as BookmarksTopbar from '../react/bookmarks-topbar';
+import type { BookmarksTopbarRuntime } from '../react/bookmarks-topbar';
+import type { StorageChangeRegistry } from '../storage-change-registry';
+
+type BookmarkViewMode = 'folder' | 'list' | 'top';
+type BookmarkTopbarLayout = ReturnType<typeof BookmarksTopbar.normalizeLayout>;
+type BookmarkTopbarSurfaceMode = ReturnType<typeof BookmarksTopbar.normalizeSurfaceMode>;
+type ResolvedTheme = 'light' | 'dark';
+
+interface BookmarkDisplaySettingsState {
+  // Settles the page's wait for the view mode, once.
+  resolveInitialBookmarkViewModeReady: (() => void) | null;
+  bookmarkViewModeRevision: number;
+  bookmarkTopbarRuntime: BookmarksTopbarRuntime | null;
+}
+
+interface BookmarkDisplaySettingsDeps {
+  storageArea: StorageAreaLike | null;
+  BOOKMARK_VIEW_MODE_STORAGE_KEY: string;
+  applyBookmarkViewMode(
+    mode: BookmarkViewMode,
+    options: { expectedRevision?: number; ensureLoaded?: boolean }
+  ): { applied: boolean };
+  localStorageArea: StorageAreaLike | null;
+  isPrimaryStorageAreaName(areaName: string): boolean;
+  NEWTAB_BOOKMARKS_TOPBAR: Pick<typeof BookmarksTopbar, 'normalizeLayout' | 'normalizeSurfaceColor' | 'normalizeSurfaceMode'>;
+  // chrome.storage.local, where the bar's material and layout stay.
+  bookmarkTopbarSurfaceStorageArea: StorageAreaLike | null;
+  updateBookmarkModeMenu(): void;
+  setNewtabTopLayout(layout: BookmarkTopbarLayout): void;
+  scheduleWallpaperAdaptiveToneUpdate(): void;
+  initialThemeReadyPromise: Promise<unknown>;
+  showToast: ShowToast;
+  t: Translate;
+  BOOKMARK_TOPBAR_PICK_COLOR_ACTION: string;
+  BOOKMARK_TOPBAR_SURFACE_MODE_ACTION: string;
+  BOOKMARK_TOPBAR_LAYOUT_ACTION: string;
+  pageState: BookmarkDisplaySettingsState;
+}
+
+interface SurfaceAppearanceOptions {
+  updateMenu?: boolean;
+  scheduleTone?: boolean;
+}
+
+interface ApplyOptions extends SurfaceAppearanceOptions {
+  persist?: boolean;
+  // Ignored when another change came since this one was asked for.
+  expectedRevision?: number;
+}
+
+function createBookmarkDisplaySettings(deps: BookmarkDisplaySettingsDeps) {
   const {
     storageArea,
     BOOKMARK_VIEW_MODE_STORAGE_KEY,
@@ -40,29 +92,29 @@ function createBookmarkDisplaySettings(deps) {
   const BOOKMARK_TOPBAR_LAYOUT_STORAGE_KEY = '_x_extension_bookmark_topbar_layout_2026_unique_';
 
   const BOOKMARK_TOPBAR_RESET_COLOR_ACTION = 'reset-bookmark-topbar-color';
-  let bookmarkTopbarLayout = 'docked';
-  let bookmarkTopbarSurfaceMode = 'adaptive';
+  let bookmarkTopbarLayout: BookmarkTopbarLayout = 'docked';
+  let bookmarkTopbarSurfaceMode: BookmarkTopbarSurfaceMode = 'adaptive';
   let bookmarkTopbarSurfaceModeRevision = 0;
   let currentBookmarkTopbarSurfaceColor = '';
-  const bookmarkTopbarSurfaceColors = {
+  const bookmarkTopbarSurfaceColors: Record<ResolvedTheme, string> = {
     light: '',
     dark: ''
   };
 
-  const bookmarkTopbarSurfaceColorRevisions = {
+  const bookmarkTopbarSurfaceColorRevisions: Record<ResolvedTheme, number> = {
     light: 0,
     dark: 0
   };
 
-  function normalizeBookmarkViewMode(value) {
+  function normalizeBookmarkViewMode(value: unknown): BookmarkViewMode {
     return value === 'list' || value === 'top' ? value : 'folder';
   }
 
-  function shouldRepairBookmarkViewModeStorageValue(rawValue, normalizedValue) {
+  function shouldRepairBookmarkViewModeStorageValue(rawValue: unknown, normalizedValue: string): boolean {
     return typeof rawValue !== 'undefined' && rawValue !== normalizedValue;
   }
 
-  function persistBookmarkViewMode(value) {
+  function persistBookmarkViewMode(value: unknown): boolean {
     const mode = normalizeBookmarkViewMode(value);
     if (!storageArea || typeof storageArea.set !== 'function') {
       return false;
@@ -73,7 +125,7 @@ function createBookmarkDisplaySettings(deps) {
 
   // The page reveals after the view mode is ready; the bar's shape is read alongside it so the bar
   // never changes shape after it first appears.
-  const initialBookmarkTopbarLayoutReady = new Promise((resolve) => {
+  const initialBookmarkTopbarLayoutReady = new Promise<void>((resolve) => {
     if (!bookmarkTopbarSurfaceStorageArea ||
         typeof bookmarkTopbarSurfaceStorageArea.get !== 'function') {
       resolve();
@@ -91,7 +143,7 @@ function createBookmarkDisplaySettings(deps) {
     }
   });
 
-  function settleInitialBookmarkViewModeReady() {
+  function settleInitialBookmarkViewModeReady(): void {
     if (typeof pageState.resolveInitialBookmarkViewModeReady !== 'function') {
       return;
     }
@@ -100,7 +152,7 @@ function createBookmarkDisplaySettings(deps) {
     initialBookmarkTopbarLayoutReady.then(resolveReady);
   }
 
-  function applyInitialBookmarkViewModeValue(rawValue, source, expectedRevision) {
+  function applyInitialBookmarkViewModeValue(rawValue: unknown, source: 'primary' | 'local-fallback', expectedRevision: number): void {
     try {
       const mode = normalizeBookmarkViewMode(rawValue);
       const applyResult = applyBookmarkViewMode(mode, {
@@ -119,7 +171,7 @@ function createBookmarkDisplaySettings(deps) {
     }
   }
 
-  function loadInitialBookmarkViewMode() {
+  function loadInitialBookmarkViewMode(): void {
     if (!storageArea || typeof storageArea.get !== 'function') {
       settleInitialBookmarkViewModeReady();
       return;
@@ -160,15 +212,14 @@ function createBookmarkDisplaySettings(deps) {
     }
   }
 
-  function getBookmarkTopbarLayout() {
+  function getBookmarkTopbarLayout(): BookmarkTopbarLayout {
     return bookmarkTopbarLayout;
   }
 
-  function applyBookmarkTopbarLayout(value, options) {
-    const config = options && typeof options === 'object' ? options : {};
+  function applyBookmarkTopbarLayout(value: unknown, options?: { persist?: boolean; updateMenu?: boolean }): BookmarkTopbarLayout {
+    const config = options || {};
     bookmarkTopbarLayout = NEWTAB_BOOKMARKS_TOPBAR.normalizeLayout(value);
-    if (pageState.bookmarkTopbarRuntime &&
-        typeof pageState.bookmarkTopbarRuntime.setLayout === 'function') {
+    if (pageState.bookmarkTopbarRuntime) {
       pageState.bookmarkTopbarRuntime.setLayout(bookmarkTopbarLayout);
     }
     setNewtabTopLayout(bookmarkTopbarLayout);
@@ -182,7 +233,7 @@ function createBookmarkDisplaySettings(deps) {
     return bookmarkTopbarLayout;
   }
 
-  function handleBookmarkTopbarLayoutStorageChanges(changes, areaName) {
+  function handleBookmarkTopbarLayoutStorageChanges(changes: StorageChanges, areaName: string): boolean {
     if (areaName !== 'local' || !changes[BOOKMARK_TOPBAR_LAYOUT_STORAGE_KEY]) {
       return false;
     }
@@ -190,24 +241,24 @@ function createBookmarkDisplaySettings(deps) {
     return true;
   }
 
-  function normalizeBookmarkTopbarSurfaceColor(value) {
+  function normalizeBookmarkTopbarSurfaceColor(value: unknown): string {
     return NEWTAB_BOOKMARKS_TOPBAR.normalizeSurfaceColor(value);
   }
 
-  function isBookmarkTopbarSurfaceMode(value) {
+  function isBookmarkTopbarSurfaceMode(value: unknown): value is BookmarkTopbarSurfaceMode {
     return value === 'adaptive' ||
       value === 'clear' ||
       value === 'transparent' ||
       value === 'custom';
   }
 
-  function normalizeBookmarkTopbarSurfaceMode(value) {
+  function normalizeBookmarkTopbarSurfaceMode(value: unknown): BookmarkTopbarSurfaceMode {
     return NEWTAB_BOOKMARKS_TOPBAR.normalizeSurfaceMode(value, 'adaptive');
   }
 
   // The background picked in the menus: match the page's glass style, transparent or a custom
   // color. 'clear' (liquid glass) was a choice of its own before the style setting took it over.
-  function getEffectiveBookmarkTopbarSurfaceMode() {
+  function getEffectiveBookmarkTopbarSurfaceMode(): BookmarkTopbarSurfaceMode {
     if (bookmarkTopbarSurfaceMode === 'clear') {
       return 'adaptive';
     }
@@ -217,7 +268,7 @@ function createBookmarkDisplaySettings(deps) {
   }
 
   // The surface the bar draws: matching the style means adaptive mist, frosted or liquid glass.
-  function getAppliedBookmarkTopbarSurfaceMode() {
+  function getAppliedBookmarkTopbarSurfaceMode(): BookmarkTopbarSurfaceMode | 'frosted' {
     const selected = getEffectiveBookmarkTopbarSurfaceMode();
     if (selected !== 'adaptive') {
       return selected;
@@ -229,7 +280,7 @@ function createBookmarkDisplaySettings(deps) {
     return glassStyle === 'frosted' ? 'frosted' : 'adaptive';
   }
 
-  function persistBookmarkTopbarSurfaceMode(value) {
+  function persistBookmarkTopbarSurfaceMode(value: unknown): boolean {
     if (!bookmarkTopbarSurfaceStorageArea ||
         typeof bookmarkTopbarSurfaceStorageArea.set !== 'function') {
       return false;
@@ -240,21 +291,15 @@ function createBookmarkDisplaySettings(deps) {
     return true;
   }
 
-  function syncBookmarkTopbarSurfaceAppearance(options) {
-    const config = options && typeof options === 'object' ? options : {};
+  function syncBookmarkTopbarSurfaceAppearance(options?: SurfaceAppearanceOptions): BookmarkTopbarSurfaceMode | 'frosted' {
+    const config = options || {};
     const effectiveMode = getAppliedBookmarkTopbarSurfaceMode();
     if (pageState.bookmarkTopbarRuntime) {
-      if (typeof pageState.bookmarkTopbarRuntime.setLayout === 'function') {
-        pageState.bookmarkTopbarRuntime.setLayout(bookmarkTopbarLayout);
-      }
-      if (typeof pageState.bookmarkTopbarRuntime.setSurfaceMode === 'function') {
-        pageState.bookmarkTopbarRuntime.setSurfaceMode(effectiveMode);
-      }
-      if (typeof pageState.bookmarkTopbarRuntime.setSurfaceColor === 'function') {
-        pageState.bookmarkTopbarRuntime.setSurfaceColor(
-          effectiveMode === 'custom' ? currentBookmarkTopbarSurfaceColor : ''
-        );
-      }
+      pageState.bookmarkTopbarRuntime.setLayout(bookmarkTopbarLayout);
+      pageState.bookmarkTopbarRuntime.setSurfaceMode(effectiveMode);
+      pageState.bookmarkTopbarRuntime.setSurfaceColor(
+        effectiveMode === 'custom' ? currentBookmarkTopbarSurfaceColor : ''
+      );
     }
     if (config.updateMenu !== false) {
       updateBookmarkModeMenu();
@@ -265,9 +310,9 @@ function createBookmarkDisplaySettings(deps) {
     return effectiveMode;
   }
 
-  function applyBookmarkTopbarSurfaceMode(value, options) {
-    const config = options && typeof options === 'object' ? options : {};
-    if (Object.prototype.hasOwnProperty.call(config, 'expectedRevision') &&
+  function applyBookmarkTopbarSurfaceMode(value: unknown, options?: ApplyOptions): BookmarkTopbarSurfaceMode {
+    const config = options || {};
+    if (Object.hasOwn(config, 'expectedRevision') &&
         config.expectedRevision !== bookmarkTopbarSurfaceModeRevision) {
       return bookmarkTopbarSurfaceMode;
     }
@@ -286,9 +331,10 @@ function createBookmarkDisplaySettings(deps) {
     return nextMode;
   }
 
-  function loadInitialBookmarkTopbarSurfaceMode() {
-    if (!bookmarkTopbarSurfaceStorageArea ||
-        typeof bookmarkTopbarSurfaceStorageArea.get !== 'function') {
+  function loadInitialBookmarkTopbarSurfaceMode(): void {
+    // Narrowed here, for the callback below.
+    const surfaceArea = bookmarkTopbarSurfaceStorageArea;
+    if (!surfaceArea || typeof surfaceArea.get !== 'function') {
       return;
     }
     const expectedRevision = bookmarkTopbarSurfaceModeRevision;
@@ -296,7 +342,7 @@ function createBookmarkDisplaySettings(deps) {
       const currentThemeColorKey = getBookmarkTopbarSurfaceColorStorageKey(
         getCurrentBookmarkTopbarResolvedTheme()
       );
-      bookmarkTopbarSurfaceStorageArea.get([
+      surfaceArea.get([
         BOOKMARK_TOPBAR_SURFACE_MODE_STORAGE_KEY,
         currentThemeColorKey,
         BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY
@@ -324,23 +370,23 @@ function createBookmarkDisplaySettings(deps) {
     });
   }
 
-  function normalizeBookmarkTopbarResolvedTheme(value) {
+  function normalizeBookmarkTopbarResolvedTheme(value: unknown): ResolvedTheme {
     return value === 'dark' ? 'dark' : 'light';
   }
 
-  function getCurrentBookmarkTopbarResolvedTheme() {
+  function getCurrentBookmarkTopbarResolvedTheme(): ResolvedTheme {
     return normalizeBookmarkTopbarResolvedTheme(
       document.body ? document.body.getAttribute('data-theme') : 'light'
     );
   }
 
-  function getBookmarkTopbarSurfaceColorStorageKey(resolvedTheme) {
+  function getBookmarkTopbarSurfaceColorStorageKey(resolvedTheme: unknown): string {
     return normalizeBookmarkTopbarResolvedTheme(resolvedTheme) === 'dark'
       ? BOOKMARK_TOPBAR_SURFACE_COLOR_DARK_STORAGE_KEY
       : BOOKMARK_TOPBAR_SURFACE_COLOR_LIGHT_STORAGE_KEY;
   }
 
-  function persistBookmarkTopbarSurfaceColor(value, resolvedTheme) {
+  function persistBookmarkTopbarSurfaceColor(value: unknown, resolvedTheme?: ResolvedTheme): boolean {
     const theme = normalizeBookmarkTopbarResolvedTheme(
       resolvedTheme || getCurrentBookmarkTopbarResolvedTheme()
     );
@@ -355,12 +401,12 @@ function createBookmarkDisplaySettings(deps) {
     return true;
   }
 
-  function applyBookmarkTopbarSurfaceColor(value, options) {
-    const config = options && typeof options === 'object' ? options : {};
+  function applyBookmarkTopbarSurfaceColor(value: unknown, options?: ApplyOptions & { resolvedTheme?: ResolvedTheme }): string {
+    const config = options || {};
     const theme = normalizeBookmarkTopbarResolvedTheme(
       config.resolvedTheme || getCurrentBookmarkTopbarResolvedTheme()
     );
-    if (Object.prototype.hasOwnProperty.call(config, 'expectedRevision') &&
+    if (Object.hasOwn(config, 'expectedRevision') &&
         config.expectedRevision !== bookmarkTopbarSurfaceColorRevisions[theme]) {
       return bookmarkTopbarSurfaceColors[theme];
     }
@@ -382,7 +428,7 @@ function createBookmarkDisplaySettings(deps) {
     return color;
   }
 
-  function syncBookmarkTopbarSurfaceColorForTheme(resolvedTheme, options) {
+  function syncBookmarkTopbarSurfaceColorForTheme(resolvedTheme: unknown, options?: { updateMenu?: boolean }): string {
     const theme = normalizeBookmarkTopbarResolvedTheme(resolvedTheme);
     return applyBookmarkTopbarSurfaceColor(bookmarkTopbarSurfaceColors[theme], {
       resolvedTheme: theme,
@@ -390,7 +436,7 @@ function createBookmarkDisplaySettings(deps) {
     });
   }
 
-  function removeLegacyBookmarkTopbarSurfaceColor() {
+  function removeLegacyBookmarkTopbarSurfaceColor(): boolean {
     if (!bookmarkTopbarSurfaceStorageArea ||
         typeof bookmarkTopbarSurfaceStorageArea.remove !== 'function') {
       return false;
@@ -399,7 +445,8 @@ function createBookmarkDisplaySettings(deps) {
     return true;
   }
 
-  function migrateLegacyBookmarkTopbarSurfaceColor(value) {
+  // Moves a color saved for both themes to the theme on screen.
+  function migrateLegacyBookmarkTopbarSurfaceColor(value: unknown): void {
     const color = normalizeBookmarkTopbarSurfaceColor(value);
     if (!color) {
       removeLegacyBookmarkTopbarSurfaceColor();
@@ -427,7 +474,7 @@ function createBookmarkDisplaySettings(deps) {
     });
   }
 
-  function getBookmarkTopbarSurfaceColorStorageKeys() {
+  function getBookmarkTopbarSurfaceColorStorageKeys(): string[] {
     return [
       BOOKMARK_TOPBAR_SURFACE_COLOR_LIGHT_STORAGE_KEY,
       BOOKMARK_TOPBAR_SURFACE_COLOR_DARK_STORAGE_KEY,
@@ -435,8 +482,11 @@ function createBookmarkDisplaySettings(deps) {
     ];
   }
 
-  function applyInitialBookmarkTopbarSurfaceColors(result, readRevisions) {
-    [
+  function applyInitialBookmarkTopbarSurfaceColors(
+    result: StorageItems | null | undefined,
+    readRevisions: Record<ResolvedTheme, number>
+  ): void {
+    const entries: { key: string; resolvedTheme: ResolvedTheme }[] = [
       {
         key: BOOKMARK_TOPBAR_SURFACE_COLOR_LIGHT_STORAGE_KEY,
         resolvedTheme: 'light'
@@ -445,7 +495,8 @@ function createBookmarkDisplaySettings(deps) {
         key: BOOKMARK_TOPBAR_SURFACE_COLOR_DARK_STORAGE_KEY,
         resolvedTheme: 'dark'
       }
-    ].forEach((entry) => {
+    ];
+    entries.forEach((entry) => {
       if (bookmarkTopbarSurfaceColorRevisions[entry.resolvedTheme] !==
           readRevisions[entry.resolvedTheme]) {
         return;
@@ -461,7 +512,7 @@ function createBookmarkDisplaySettings(deps) {
     });
   }
 
-  function loadInitialBookmarkTopbarSurfaceColors() {
+  function loadInitialBookmarkTopbarSurfaceColors(): void {
     const localArea = bookmarkTopbarSurfaceStorageArea;
     if (!localArea || typeof localArea.get !== 'function') {
       return;
@@ -469,9 +520,9 @@ function createBookmarkDisplaySettings(deps) {
     const colorKeys = getBookmarkTopbarSurfaceColorStorageKeys();
     initialThemeReadyPromise.then(() => {
       localArea.get(colorKeys, (localResult) => {
-        const resolvedLocalResult = Object.assign({}, localResult || {});
-        const localUpdates = {};
-        const hasLocalLegacyColor = Object.prototype.hasOwnProperty.call(
+        const resolvedLocalResult: StorageItems = Object.assign({}, localResult || {});
+        const localUpdates: StorageItems = {};
+        const hasLocalLegacyColor = Object.hasOwn(
           resolvedLocalResult,
           BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY
         );
@@ -505,7 +556,7 @@ function createBookmarkDisplaySettings(deps) {
   }
 
   // The top bar's material and layout live in local storage only.
-  function registerStorageChangeHandlers(storageChanges) {
+  function registerStorageChangeHandlers(storageChanges: Pick<StorageChangeRegistry, 'on'>): void {
     storageChanges.on([
       BOOKMARK_TOPBAR_SURFACE_MODE_STORAGE_KEY,
       BOOKMARK_TOPBAR_SURFACE_COLOR_LIGHT_STORAGE_KEY,
@@ -515,19 +566,12 @@ function createBookmarkDisplaySettings(deps) {
     storageChanges.on(BOOKMARK_TOPBAR_LAYOUT_STORAGE_KEY, handleBookmarkTopbarLayoutStorageChanges, { area: 'local' });
   }
 
-  function handleBookmarkTopbarSurfaceColorStorageChanges(changes, areaName) {
+  function handleBookmarkTopbarSurfaceColorStorageChanges(changes: StorageChanges, areaName: string): boolean {
     if (areaName !== 'local') {
       return false;
     }
     let handled = false;
-    if (changes[BOOKMARK_TOPBAR_SURFACE_MODE_STORAGE_KEY]) {
-      handled = true;
-      applyBookmarkTopbarSurfaceMode(
-        changes[BOOKMARK_TOPBAR_SURFACE_MODE_STORAGE_KEY].newValue,
-        { updateMenu: true, scheduleTone: true }
-      );
-    }
-    [
+    const colorEntries: { key: string; resolvedTheme: ResolvedTheme }[] = [
       {
         key: BOOKMARK_TOPBAR_SURFACE_COLOR_LIGHT_STORAGE_KEY,
         resolvedTheme: 'light'
@@ -536,7 +580,15 @@ function createBookmarkDisplaySettings(deps) {
         key: BOOKMARK_TOPBAR_SURFACE_COLOR_DARK_STORAGE_KEY,
         resolvedTheme: 'dark'
       }
-    ].forEach((entry) => {
+    ];
+    if (changes[BOOKMARK_TOPBAR_SURFACE_MODE_STORAGE_KEY]) {
+      handled = true;
+      applyBookmarkTopbarSurfaceMode(
+        changes[BOOKMARK_TOPBAR_SURFACE_MODE_STORAGE_KEY].newValue,
+        { updateMenu: true, scheduleTone: true }
+      );
+    }
+    colorEntries.forEach((entry) => {
       if (!changes[entry.key]) {
         return;
       }
@@ -550,29 +602,28 @@ function createBookmarkDisplaySettings(deps) {
         persistBookmarkTopbarSurfaceColor(color, entry.resolvedTheme);
       }
     });
-    if (changes[BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY] &&
-        typeof changes[BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY].newValue !== 'undefined') {
+    const legacyChange = changes[BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY];
+    if (legacyChange && typeof legacyChange.newValue !== 'undefined') {
       handled = true;
       initialThemeReadyPromise.then(() => {
-        migrateLegacyBookmarkTopbarSurfaceColor(
-          changes[BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY].newValue
-        );
+        migrateLegacyBookmarkTopbarSurfaceColor(legacyChange.newValue);
       });
     }
     return handled;
   }
 
-  function pickBookmarkTopbarSurfaceColor() {
-    if (!window || typeof window.EyeDropper !== 'function') {
+  function pickBookmarkTopbarSurfaceColor(): Promise<boolean> {
+    const EyeDropperApi = window.EyeDropper;
+    if (typeof EyeDropperApi !== 'function') {
       showToast(t(
         'bookmark_topbar_color_unsupported',
         'Screen color picking is not supported in this browser.'
       ), true);
       return Promise.resolve(false);
     }
-    let request;
+    let request: Promise<EyeDropperResult>;
     try {
-      request = new window.EyeDropper().open();
+      request = new EyeDropperApi().open();
     } catch (error) {
       showToast(t('bookmark_topbar_color_failed', 'Could not pick a color. Try again.'), true);
       return Promise.resolve(false);
@@ -587,8 +638,8 @@ function createBookmarkDisplaySettings(deps) {
       applyBookmarkTopbarSurfaceMode('custom', { persist: true });
       showToast(t('bookmark_topbar_color_picked', 'Color picked'));
       return true;
-    }).catch((error) => {
-      if (error && error.name === 'AbortError') {
+    }).catch((error: unknown) => {
+      if (error instanceof Error && error.name === 'AbortError') {
         return false;
       }
       showToast(t('bookmark_topbar_color_failed', 'Could not pick a color. Try again.'), true);
@@ -596,13 +647,13 @@ function createBookmarkDisplaySettings(deps) {
     });
   }
 
-  function resetBookmarkTopbarSurfaceColor() {
+  function resetBookmarkTopbarSurfaceColor(): void {
     applyBookmarkTopbarSurfaceColor('', { persist: true, updateMenu: false });
     applyBookmarkTopbarSurfaceMode('adaptive', { persist: true });
     showToast(t('bookmark_topbar_color_reset_done', 'Automatic colors restored'));
   }
 
-  function handleBookmarkModeMenuAction(action) {
+  function handleBookmarkModeMenuAction(action: string): void {
     if (action === BOOKMARK_TOPBAR_PICK_COLOR_ACTION) {
       pickBookmarkTopbarSurfaceColor();
       return;
@@ -653,4 +704,13 @@ function createBookmarkDisplaySettings(deps) {
   };
 }
 
+type BookmarkDisplaySettings = ReturnType<typeof createBookmarkDisplaySettings>;
+
 export { createBookmarkDisplaySettings };
+export type {
+  BookmarkDisplaySettings,
+  BookmarkDisplaySettingsDeps,
+  BookmarkDisplaySettingsState,
+  BookmarkTopbarLayout,
+  BookmarkViewMode
+};

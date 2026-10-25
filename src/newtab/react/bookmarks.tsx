@@ -14,9 +14,11 @@ import {
   followEmptyStateArtTheme,
   getEmptyStateArtMarkup
 } from '../../shared/ui/empty-state-art';
+import type { CursorTooltipOptions } from '../../shared/ui/cursor-tooltip';
 
 type ThemeValue = unknown;
-type VisualOptions = Record<string, unknown> | undefined;
+// `instant` jumps to the end of a folder morph.
+type VisualOptions = { instant?: boolean } | undefined;
 type ActivationEvent = {
   metaKey?: boolean;
   ctrlKey?: boolean;
@@ -59,14 +61,6 @@ interface ThemeSuggestion {
   type: 'bookmark';
   url: string;
   title: string;
-}
-
-interface CursorTooltipOptions {
-  maxWidth?: number;
-  shouldShow?: (
-    target: BookmarkCardElement,
-    event?: Event
-  ) => boolean;
 }
 
 interface OpenUrlOptions {
