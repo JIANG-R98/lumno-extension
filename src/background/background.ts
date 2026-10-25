@@ -78,13 +78,13 @@ import {
   loadFirefoxBrandIcon,
   prepareShortcutKeyObserversInOpenTabs,
   recordRecentSwitcherTab,
-  registerTabSwitcherExtensionPagePortConnection,
   removeRecentSwitcherTab,
   scheduleSwitcherThumbnailCapture,
   tabSwitcherHostTabIdByWindowId,
   triggerTabSwitcherForTab,
   updateRecentSwitcherTab
 } from './tab-switcher-service';
+import { registerTabSwitcherExtensionPagePortConnection } from './tab-switcher-extension-page';
 import {
   applyPinnedTabRecoverySetting,
   flushPendingPinnedTabSnapshot,
