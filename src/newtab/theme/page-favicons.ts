@@ -1,10 +1,72 @@
 // Favicons on the page: the persisted favicon, data and site theme caches,
 // the favicon view runtime that renders icons with their fallbacks, and the
 // favicon sources suggestions and themes resolve from.
+import type { FaviconDataEntry, FaviconUrlEntry, SiteThemeEntry } from '../../domain/favicon/favicon-cache';
+import type * as FaviconUtils from '../../domain/favicon/favicon-utils';
+import type { FaviconUrlResolver, ThemeRgb } from '../../domain/favicon/favicon-utils';
 import * as NEWTAB_FAVICON_CACHE from '../../platform/favicon-cache';
+import type { FaviconCacheRuntime } from '../../platform/favicon-cache';
+import type * as FaviconTheme from '../../shared/favicon/favicon-theme';
+import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
+import type { SiteSearchProviders } from '../search/site-search-providers';
+import type { ShortcutsController } from '../shortcuts/shortcuts-controller';
 import * as NEWTAB_FAVICON_VIEW from './favicon-view';
+import type { FaviconViewRuntime } from './favicon-view';
+import type { SiteThemeResolver } from './site-theme-resolver';
+import type { ThemeSubject } from './theme-types';
 
-function createPageFavicons(deps) {
+interface PageFaviconsState {
+  faviconDataCache: Map<string, string>;
+  faviconCacheRuntime: FaviconCacheRuntime;
+  faviconViewRuntime: FaviconViewRuntime | null;
+  requestFaviconData: FaviconViewRuntime['requestFaviconData'];
+}
+
+interface PageFaviconsDeps {
+  normalizeFaviconHost(hostname: unknown): string;
+  // How long the first render waits for the favicon caches to load.
+  FAVICON_CACHE_BOOT_WAIT_MS: number;
+  isPersistableTheme: SiteThemeResolver['isPersistableTheme'];
+  normalizeAccentRgb: SiteThemeResolver['normalizeAccentRgb'];
+  parseCssColor: typeof FaviconTheme.parseCssColor;
+  getThemeSource: SiteThemeResolver['getThemeSource'];
+  isLowConfidenceTheme: SiteThemeResolver['isLowConfidenceTheme'];
+  normalizeThemeConfidence: SiteThemeResolver['normalizeThemeConfidence'];
+  FAVICON_UTILS: Pick<typeof FaviconUtils,
+    | 'createFaviconDecisionLogger'
+    | 'isAllowedFaviconProxyRequestUrl'
+    | 'isBlockedLocalFaviconUrl'
+    | 'isChromeMonogramFaviconUrl'
+    | 'isPlaceholderFaviconColor'
+    | 'createFaviconUrlResolver'>;
+  getRiSvg(id: string, sizeClass?: string): string;
+  getExtensionFaviconUrl(pageUrl: string): string;
+  getGstaticFaviconUrl(pageUrl: string): string;
+  getChromeFaviconUrl(pageUrl: string): string;
+  isOwnExtensionUrl(url: string): boolean;
+  shouldBlockFaviconForHost(hostname: string): boolean;
+  shouldAvoidDirectFaviconForHost(hostname: string): boolean;
+  isNewtabEnhancedFaviconFetchEnabled(pageUrl: string): boolean;
+  // Why icon services are off for a page: 'global-off', 'exclusion', or ''.
+  getNewtabStrictFaviconReason(pageUrl: string): string;
+  getHostFromUrl(url: string): string;
+  isFaviconProxyUrl(url: string): boolean;
+  themeHostCache: Map<string, ThemeVariant>;
+  isUrlBlockedByFaviconRequestBlacklist(url: string): boolean;
+  themeColorCache: Map<string, ThemeVariant>;
+  normalizeHost(hostname: string): string;
+  getThemeSourcePriority: SiteThemeResolver['getThemeSourcePriority'];
+  extractAverageColor(image: HTMLImageElement): ThemeRgb | null;
+  buildThemeFromAccent: SiteThemeResolver['buildThemeFromAccent'];
+  setResolvedThemeForHost: SiteThemeResolver['setResolvedThemeForHost'];
+  getShortcutFaviconCandidateUrl: ShortcutsController['getShortcutFaviconCandidateUrl'];
+  getShortcutFaviconDataUrl: ShortcutsController['getShortcutFaviconDataUrl'];
+  getProviderIcon: SiteSearchProviders['getProviderIcon'];
+  getProviderFaviconPageUrl: SiteSearchProviders['getProviderFaviconPageUrl'];
+  pageState: PageFaviconsState;
+}
+
+function createPageFavicons(deps: PageFaviconsDeps) {
   const {
     normalizeFaviconHost,
     FAVICON_CACHE_BOOT_WAIT_MS,
@@ -44,8 +106,8 @@ function createPageFavicons(deps) {
   const pageState = deps.pageState;
 
 
-  pageState.faviconDataCache = new Map();
-  const faviconDataPending = new Map();
+  pageState.faviconDataCache = new Map<string, string>();
+  const faviconDataPending = new Map<string, Promise<string | null>>();
   pageState.faviconCacheRuntime = NEWTAB_FAVICON_CACHE.createFaviconCache({
     storageArea: (chrome && chrome.storage && chrome.storage.local) ? chrome.storage.local : null,
     windowObj: window,
@@ -55,58 +117,59 @@ function createPageFavicons(deps) {
     faviconCacheBootWaitMs: FAVICON_CACHE_BOOT_WAIT_MS
   });
 
-  function isFaviconPersistLoaded() {
+  function isFaviconPersistLoaded(): boolean {
     return pageState.faviconCacheRuntime.isFaviconPersistLoaded();
   }
 
-  function isFaviconDataPersistLoaded() {
+  function isFaviconDataPersistLoaded(): boolean {
     return pageState.faviconCacheRuntime.isFaviconDataPersistLoaded();
   }
 
-  function isSiteThemePersistLoaded() {
+  function isSiteThemePersistLoaded(): boolean {
     return pageState.faviconCacheRuntime.isSiteThemePersistLoaded();
   }
 
-  function waitForFaviconCachesOrTimeout(maxWaitMs) {
+  function waitForFaviconCachesOrTimeout(maxWaitMs?: number): Promise<void> {
     return pageState.faviconCacheRuntime.waitForCachesOrTimeout(maxWaitMs);
   }
 
-  function areFaviconRenderCachesReady() {
+  function areFaviconRenderCachesReady(): boolean {
     return isFaviconPersistLoaded() && isFaviconDataPersistLoaded() && isSiteThemePersistLoaded();
   }
 
-  function waitForFaviconRenderCaches(maxWaitMs) {
+  function waitForFaviconRenderCaches(maxWaitMs?: number): Promise<void> {
     if (areFaviconRenderCachesReady()) {
       return Promise.resolve();
     }
     return waitForFaviconCachesOrTimeout(maxWaitMs);
   }
 
-  function isHostFaviconVisitDirty(hostname) {
+  function isHostFaviconVisitDirty(hostname: string): boolean {
     return pageState.faviconCacheRuntime.isHostVisitDirty(hostname);
   }
 
-  function setPersistedFaviconUrl(cacheKey, url) {
+  function setPersistedFaviconUrl(cacheKey: string, url: string): void {
     pageState.faviconCacheRuntime.setPersistedUrl(cacheKey, url);
   }
 
-  function getPersistedFaviconEntry(cacheKey) {
+  function getPersistedFaviconEntry(cacheKey: string): FaviconUrlEntry | null {
     return pageState.faviconCacheRuntime.getPersistedEntry(cacheKey);
   }
 
-  function getPersistedFaviconDataEntry(cacheKey) {
+  function getPersistedFaviconDataEntry(cacheKey: string): FaviconDataEntry | null {
     return pageState.faviconCacheRuntime.getPersistedDataEntry(cacheKey);
   }
 
-  function setPersistedFaviconData(cacheKey, dataUrl) {
+  function setPersistedFaviconData(cacheKey: string, dataUrl: string): void {
     pageState.faviconCacheRuntime.setPersistedData(cacheKey, dataUrl);
   }
 
-  function getPersistedSiteThemeEntry(hostKey) {
+  function getPersistedSiteThemeEntry(hostKey: string): SiteThemeEntry | null {
     return pageState.faviconCacheRuntime.getPersistedThemeEntry(hostKey);
   }
 
-  function setPersistedSiteThemeEntry(hostKey, theme) {
+  // Stores a theme strong enough to keep; false when it is not one.
+  function setPersistedSiteThemeEntry(hostKey: string, theme: ThemeVariant | null | undefined): boolean {
     if (!theme || !isPersistableTheme(theme)) {
       return false;
     }
@@ -123,7 +186,7 @@ function createPageFavicons(deps) {
   }
 
   const logNewtabFaviconDecision = FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'newtab' });
-  pageState.faviconViewRuntime = NEWTAB_FAVICON_VIEW.createFaviconViewRuntime({
+  const faviconViewRuntime = NEWTAB_FAVICON_VIEW.createFaviconViewRuntime({
     document,
     windowObj: window,
     chromeApi: chrome,
@@ -148,39 +211,40 @@ function createPageFavicons(deps) {
     faviconDataPending,
     hasThemeForHost: (hostKey) => Boolean(hostKey && themeHostCache.has(hostKey))
   });
-  const applyFaviconOpticalShift = pageState.faviconViewRuntime.applyFaviconOpticalShift;
-  const applyFaviconOpticalAlignment = pageState.faviconViewRuntime.applyFaviconOpticalAlignment;
-  const reportMissingIcon = pageState.faviconViewRuntime.reportMissingIcon;
-  const applyFallbackIcon = pageState.faviconViewRuntime.applyFallbackIcon;
-  pageState.requestFaviconData = pageState.faviconViewRuntime.requestFaviconData;
-  const setFaviconSrcWithAnimation = pageState.faviconViewRuntime.setFaviconSrcWithAnimation;
-  const attachFaviconData = pageState.faviconViewRuntime.attachFaviconData;
-  const preloadIcon = pageState.faviconViewRuntime.preloadIcon;
-  const warmIconCache = pageState.faviconViewRuntime.warmIconCache;
-  const attachFaviconWithFallbacks = pageState.faviconViewRuntime.attachFaviconWithFallbacks;
+  pageState.faviconViewRuntime = faviconViewRuntime;
+  const applyFaviconOpticalShift = faviconViewRuntime.applyFaviconOpticalShift;
+  const applyFaviconOpticalAlignment = faviconViewRuntime.applyFaviconOpticalAlignment;
+  const reportMissingIcon = faviconViewRuntime.reportMissingIcon;
+  const applyFallbackIcon = faviconViewRuntime.applyFallbackIcon;
+  pageState.requestFaviconData = faviconViewRuntime.requestFaviconData;
+  const setFaviconSrcWithAnimation = faviconViewRuntime.setFaviconSrcWithAnimation;
+  const attachFaviconData = faviconViewRuntime.attachFaviconData;
+  const preloadIcon = faviconViewRuntime.preloadIcon;
+  const warmIconCache = faviconViewRuntime.warmIconCache;
+  const attachFaviconWithFallbacks = faviconViewRuntime.attachFaviconWithFallbacks;
 
-  function isAllowedFaviconProxyRequestUrl(url) {
+  function isAllowedFaviconProxyRequestUrl(url: string): boolean {
     return FAVICON_UTILS.isAllowedFaviconProxyRequestUrl(url);
   }
 
-  function isBlockedLocalFaviconUrl(url) {
+  function isBlockedLocalFaviconUrl(url: string): boolean {
     const blockedByLocalRules = FAVICON_UTILS.isBlockedLocalFaviconUrl(url);
     return blockedByLocalRules ||
       (!isAllowedFaviconProxyRequestUrl(url) && isUrlBlockedByFaviconRequestBlacklist(url));
   }
 
-  function isChromeMonogramFaviconUrl(url) {
+  function isChromeMonogramFaviconUrl(url: string): boolean {
     return FAVICON_UTILS.isChromeMonogramFaviconUrl(url);
   }
 
-  function preloadThemeFromFavicon(url, dataUrl, hostOverride) {
+  function preloadThemeFromFavicon(url: string, dataUrl: string, hostOverride?: string): void {
     const cachedTheme = themeColorCache.get(url);
     if (!url || (cachedTheme && !cachedTheme._xIsDefault)) {
       return;
     }
     const hostKey = normalizeHost(hostOverride || getHostFromUrl(url));
     const useHostCache = hostKey && (Boolean(hostOverride) || !isFaviconProxyUrl(url));
-    const cachedHostTheme = useHostCache ? themeHostCache.get(hostKey) : null;
+    const cachedHostTheme = useHostCache ? themeHostCache.get(hostKey) : undefined;
     if (
       cachedHostTheme &&
       getThemeSourcePriority(getThemeSource(cachedHostTheme), cachedHostTheme) > getThemeSourcePriority('favicon')
@@ -208,9 +272,9 @@ function createPageFavicons(deps) {
   }
 
   const FAVICON_PROXY_SIZE = 128;
-  let pageFaviconUrlResolver = null;
+  let pageFaviconUrlResolver: FaviconUrlResolver | null = null;
 
-  function getPageFaviconUrlResolver() {
+  function getPageFaviconUrlResolver(): FaviconUrlResolver {
     if (!pageFaviconUrlResolver) {
       pageFaviconUrlResolver = FAVICON_UTILS.createFaviconUrlResolver({
         chromeApi: chrome,
@@ -225,20 +289,18 @@ function createPageFavicons(deps) {
     return pageFaviconUrlResolver;
   }
 
-  function getThemeSourceForSuggestion(suggestion) {
+  function getThemeSourceForSuggestion(suggestion: ThemeSubject | null | undefined): string {
     if (suggestion && suggestion.type === 'shortcut') {
-      return getShortcutFaviconCandidateUrl(suggestion.url) || getShortcutFaviconDataUrl(suggestion.url);
-    }
-    if (suggestion && suggestion.provider) {
-      const resolver = getPageFaviconUrlResolver();
-      return resolver ? resolver.resolveFaviconSource(
-        getProviderIcon(suggestion.provider), getProviderFaviconPageUrl(suggestion.provider)
-      ) : '';
+      const url = suggestion.url || '';
+      return getShortcutFaviconCandidateUrl(url) || getShortcutFaviconDataUrl(url);
     }
     const resolver = getPageFaviconUrlResolver();
-    return resolver
-      ? resolver.resolveFaviconSource(suggestion && suggestion.favicon, suggestion && suggestion.url)
-      : '';
+    if (suggestion && suggestion.provider) {
+      return resolver.resolveFaviconSource(
+        getProviderIcon(suggestion.provider), getProviderFaviconPageUrl(suggestion.provider)
+      );
+    }
+    return resolver.resolveFaviconSource(suggestion && suggestion.favicon, suggestion && suggestion.url);
   }
 
   return {
@@ -262,4 +324,7 @@ function createPageFavicons(deps) {
   };
 }
 
+type PageFavicons = ReturnType<typeof createPageFavicons>;
+
 export { createPageFavicons };
+export type { PageFavicons, PageFaviconsDeps, PageFaviconsState };
