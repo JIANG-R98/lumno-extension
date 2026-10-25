@@ -2,7 +2,6 @@
 // button, close other tabs, the input's right padding, and which action
 // buttons the page shows.
 import type * as ExtensionRoutes from '../../domain/extension-routes';
-import type { Disposition } from '../../domain/navigation-disposition';
 import type * as SearchUtils from '../../domain/search/search-utils';
 import type { SiteSearchProvider } from '../../domain/search/types';
 import type { StorageAreaLike, StorageItems } from '../../domain/storage-port';
@@ -13,6 +12,7 @@ import type { InputModeController } from '../../shared/search/search-input-mode'
 import type * as FeatureHints from '../../shared/ui/feature-hints';
 import type { FeatureHintController } from '../../shared/ui/feature-hints';
 import type { BindCursorTooltip, FormatMessage, Translate } from '../newtab-types';
+import type { PageNavigation } from '../page-navigation';
 
 interface SearchBoxControlsState {
   inputParts: SearchInputParts | null;
@@ -46,7 +46,7 @@ interface SearchBoxControlsDeps {
   helpCenterAskHintSettled: Promise<boolean>;
   t: Translate;
   getRiSvg(id: string, sizeClass: string): string;
-  getOpenDisposition(event: MouseEvent | string | null | undefined, fallback?: Disposition): Disposition;
+  getOpenDisposition: PageNavigation['getOpenDisposition'];
   searchInput: HTMLInputElement;
   closeFeedbackPopover(): void;
   closeWallpaperPanel(): void;

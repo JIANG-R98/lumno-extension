@@ -365,7 +365,15 @@ function createModeCommands(deps: ModeCommandsDeps) {
     });
   }
 
-  function setWebAppearanceMode(mode: WebAppearanceMode): void {
+  function isWebAppearanceMode(value: unknown): value is WebAppearanceMode {
+    return value === 'auto' || value === 'light' || value === 'dark';
+  }
+
+  // Takes the mode a suggestion carries; anything else is ignored.
+  function setWebAppearanceMode(mode: unknown): void {
+    if (!isWebAppearanceMode(mode)) {
+      return;
+    }
     // Show the choice at once; the reply carries what Firefox kept.
     webAppearanceState = { ...webAppearanceState, mode };
     refreshWebAppearanceCommand();

@@ -1,5 +1,7 @@
 // Window resizes: re-measures the layout once per frame, and once more
 // after the resize settles, without animating the blocks.
+import type { RecentSite } from '../domain/recent-sites-store';
+import type { SectionLoaders } from './section-loaders';
 
 // A card's place on screen before a layout change.
 type CardLayout = Map<HTMLElement, { left: number; top: number }>;
@@ -7,7 +9,7 @@ type CardLayout = Map<HTMLElement, { left: number; top: number }>;
 interface PageResizeState {
   recentLoadedOnce: boolean;
   bookmarkLoadedOnce: boolean;
-  recentSourceItems: readonly unknown[];
+  recentSourceItems: RecentSite[];
   newtabReadyViewportRevision: number;
   // Holds the search box in place while the window is being resized.
   newtabResizeLayoutLocked: boolean;
@@ -31,7 +33,7 @@ interface PageResizeDeps {
   positionBookmarkCascadeLevels(): void;
   updateSuggestionsFloatingLayout(): void;
   cancelRecentResizeLayoutAnimations(): void;
-  renderRecentSites(items: readonly unknown[]): void;
+  renderRecentSites: SectionLoaders['renderRecentSites'];
   animateRecentResizeLayout(fromPositions: CardLayout | null): void;
   scheduleNewtabReadyAfterViewportSettle(): void;
   pageState: PageResizeState;

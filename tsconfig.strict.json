@@ -22,6 +22,7 @@
     "src/newtab/drag-click-guard.ts",
     "src/newtab/layout.ts",
     "src/newtab/layout-motion.ts",
+    "src/newtab/newtab.ts",
     "src/newtab/newtab-types.ts",
     "src/newtab/remote-content.ts",
     "src/newtab/remote-content-types.ts",

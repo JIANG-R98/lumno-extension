@@ -27,6 +27,9 @@ interface SiteThemeResolverState {
 }
 
 // Applies a theme to an element that shows a site.
+// A theme as the card and suggestion views hold it: possibly partial, where
+// a missing color clears its variable.
+type ViewTheme = Partial<ThemeVariant> | null | undefined;
 type ApplyElementTheme<E> = (element: E, theme: ThemeVariant, host: string) => void;
 
 interface SiteThemeResolverDeps {
@@ -163,7 +166,7 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
   const siteThemeRequestPending = new Map<string, Promise<ThemeResult | null>>();
   const themeFaviconCandidateRequestPending = new Map<string, Promise<string[]>>();
 
-  function getHighlightColors(theme: ThemeVariant): { bg: string; border: string } {
+  function getHighlightColors(theme: ViewTheme): { bg: string; border: string } {
     const resolvedTheme = getThemeForMode(theme);
     if (!resolvedTheme || !resolvedTheme._xIsBrand) {
       return {
@@ -172,8 +175,8 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
       };
     }
     return {
-      bg: resolvedTheme.highlightBg,
-      border: resolvedTheme.highlightBorder
+      bg: resolvedTheme.highlightBg || '',
+      border: resolvedTheme.highlightBorder || ''
     };
   }
 
@@ -928,7 +931,7 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
     return defaultTheme;
   }
 
-  function shouldUseUrlFallbackThemeForSuggestion(suggestion: ThemeSubject | null | undefined, theme: ThemeVariant | null | undefined): boolean {
+  function shouldUseUrlFallbackThemeForSuggestion(suggestion: ThemeSubject | null | undefined, theme: ViewTheme): boolean {
     if (!suggestion || !shouldUseBrandTheme(suggestion)) {
       return false;
     }
@@ -1048,7 +1051,7 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
     });
   }
 
-  function getHoverColors(theme: ThemeVariant | null | undefined): HoverColors {
+  function getHoverColors(theme: ViewTheme): HoverColors {
     return NEWTAB_FAVICON_THEME.getHoverColors(theme, {
       defaultTheme,
       isDarkMode: isNewtabDarkMode
@@ -1069,20 +1072,20 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
       };
   }
 
-  function applyThemeVariables(target: HTMLElement, theme: ThemeVariant | null | undefined): void {
+  function applyThemeVariables(target: HTMLElement, theme: ViewTheme): void {
     if (!theme) {
       return;
     }
     const resolvedTheme = getThemeForMode(theme);
-    target.style.setProperty('--x-ext-mark-bg', resolvedTheme.markBg);
-    target.style.setProperty('--x-ext-mark-text', resolvedTheme.markText);
-    target.style.setProperty('--x-ext-tag-bg', resolvedTheme.tagBg);
-    target.style.setProperty('--x-ext-tag-text', resolvedTheme.tagText);
-    target.style.setProperty('--x-ext-tag-border', resolvedTheme.tagBorder);
-    target.style.setProperty('--x-ext-key-bg', resolvedTheme.keyBg);
-    target.style.setProperty('--x-ext-key-text', resolvedTheme.keyText);
-    target.style.setProperty('--x-ext-key-border', resolvedTheme.keyBorder);
-    target.style.setProperty('--x-ext-icon-color', resolvedTheme.accent);
+    target.style.setProperty('--x-ext-mark-bg', resolvedTheme.markBg || '');
+    target.style.setProperty('--x-ext-mark-text', resolvedTheme.markText || '');
+    target.style.setProperty('--x-ext-tag-bg', resolvedTheme.tagBg || '');
+    target.style.setProperty('--x-ext-tag-text', resolvedTheme.tagText || '');
+    target.style.setProperty('--x-ext-tag-border', resolvedTheme.tagBorder || '');
+    target.style.setProperty('--x-ext-key-bg', resolvedTheme.keyBg || '');
+    target.style.setProperty('--x-ext-key-text', resolvedTheme.keyText || '');
+    target.style.setProperty('--x-ext-key-border', resolvedTheme.keyBorder || '');
+    target.style.setProperty('--x-ext-icon-color', resolvedTheme.accent || '');
     const highlight = getHighlightColors(theme);
     const hover: { bg: string; border: string } = resolvedTheme._xIsBrand
       ? getHoverColors(theme)
@@ -1094,7 +1097,7 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
     target.style.setProperty('--x-nt-suggestion-hover-bg', hover.bg);
   }
 
-  function applyMarkVariables(target: HTMLElement, theme: ThemeVariant | null | undefined, active: boolean): void {
+  function applyMarkVariables(target: HTMLElement, theme: ViewTheme, active: boolean): void {
     if (!theme) {
       return;
     }
@@ -1105,8 +1108,8 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
     const markText = active
       ? resolvedTheme.activeMarkText || resolvedTheme.markText
       : resolvedTheme.markText;
-    target.style.setProperty('--x-ext-mark-bg', markBg);
-    target.style.setProperty('--x-ext-mark-text', markText);
+    target.style.setProperty('--x-ext-mark-bg', markBg || '');
+    target.style.setProperty('--x-ext-mark-text', markText || '');
   }
 
   return {

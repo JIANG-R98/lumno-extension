@@ -794,7 +794,6 @@ function createFaviconViewRuntime(options?: FaviconViewRuntimeOptions | null) {
   return {
     applyFaviconOpticalShift,
     applyFaviconOpticalAlignment,
-    reportMissingIcon,
     applyFallbackIcon,
     refreshFallbackIcons,
     requestFaviconData,

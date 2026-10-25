@@ -48,7 +48,6 @@ interface SiteSearchProvidersDeps {
     | 'isInteractiveSiteSearchProvider'
     | 'mergeCustomProviders'
     | 'getSiteSearchProviderDisplayNameMessage'
-    | 'findProviderForSiteSearchSuggestion'
     | 'getInlineSiteSearchCandidate'
     | 'promoteStrongNavigationMatch'
     | 'getKeywordSearchSuggestionState'
@@ -133,7 +132,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
       : url;
   }
 
-  function isAiSiteSearchProvider(provider: SiteSearchProvider | null | undefined): boolean {
+  function isAiSiteSearchProvider(provider: Partial<SiteSearchProvider> | null | undefined): boolean {
     return SEARCH_UTILS.isAiSiteSearchProvider(provider);
   }
 
@@ -370,7 +369,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     return AGGREGATE_SEARCH_STORE.createScopeProvider(definition);
   }
 
-  function getSiteSearchDisplayName(provider: SiteSearchProvider | null | undefined): string {
+  function getSiteSearchDisplayName(provider: Partial<SiteSearchProvider> | null | undefined): string {
     if (!provider) {
       return t('site_search_default', '站内');
     }
@@ -409,13 +408,6 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     return getSiteSearchDisplayName(provider) || formatMessage('search_in_site', '在 {site} 中搜索', {
       site: provider && provider.name ? provider.name : ''
     });
-  }
-
-  function findProviderForSuggestionMatch(
-    ...args: Parameters<typeof SearchUtils.findProviderForSiteSearchSuggestion>
-  ): ReturnType<typeof SearchUtils.findProviderForSiteSearchSuggestion> {
-    const [suggestion, providers] = args;
-    return SEARCH_UTILS.findProviderForSiteSearchSuggestion(suggestion, providers);
   }
 
   function getInlineSiteSearchCandidate(
@@ -582,7 +574,6 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     getSiteSearchDisplayName,
     getSiteSearchActionTitle,
     getSiteSearchPrefixText,
-    findProviderForSuggestionMatch,
     getInlineSiteSearchCandidate,
     promoteStrongNavigationMatch,
     getKeywordSearchSuggestionState,

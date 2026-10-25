@@ -215,7 +215,6 @@ function createPageFavicons(deps: PageFaviconsDeps) {
   pageState.faviconViewRuntime = faviconViewRuntime;
   const applyFaviconOpticalShift = faviconViewRuntime.applyFaviconOpticalShift;
   const applyFaviconOpticalAlignment = faviconViewRuntime.applyFaviconOpticalAlignment;
-  const reportMissingIcon = faviconViewRuntime.reportMissingIcon;
   const applyFallbackIcon = faviconViewRuntime.applyFallbackIcon;
   pageState.requestFaviconData = faviconViewRuntime.requestFaviconData;
   const setFaviconSrcWithAnimation = faviconViewRuntime.setFaviconSrcWithAnimation;
@@ -305,6 +304,7 @@ function createPageFavicons(deps: PageFaviconsDeps) {
   }
 
   return {
+    faviconCacheRuntime,
     areFaviconRenderCachesReady,
     waitForFaviconRenderCaches,
     isHostFaviconVisitDirty,
@@ -313,7 +313,6 @@ function createPageFavicons(deps: PageFaviconsDeps) {
     setPersistedSiteThemeEntry,
     applyFaviconOpticalShift,
     applyFaviconOpticalAlignment,
-    reportMissingIcon,
     applyFallbackIcon,
     setFaviconSrcWithAnimation,
     attachFaviconData,

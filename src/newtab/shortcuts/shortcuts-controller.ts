@@ -37,11 +37,11 @@ import type {
 import type { BindTooltip, FormatMessage, SendRuntimeMessage, ShowToast, Translate } from '../newtab-types';
 import type { PageStructureRuntime } from '../react/page-structure';
 import type {
-  createShortcutDialogApi,
   OnlineShortcutIcon,
   ShortcutDialogController,
   ShortcutDialogPayload
 } from '../react/shortcut-dialog';
+import type { createShortcutDialogApi } from '../react/shortcut-dialog-lazy';
 import type { createShortcutsViewApi, ShortcutsViewController, ShortcutsViewOptions } from '../react/shortcuts';
 import type { ShortcutContextMenu } from './shortcut-context-menu';
 import type { ShortcutDock } from './shortcut-dock';
@@ -1937,7 +1937,8 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     updateShortcutLanguageStrings();
   }
 
-  function createShortcutDialogComponent(): ShortcutDialogController | null {
+  // The dialog module loads on first use.
+  function createShortcutDialogComponent(): Promise<ShortcutDialogController | null> {
     return NEWTAB_SHORTCUT_DIALOG.createShortcutDialog({
       documentObj: document,
       windowObj: window,

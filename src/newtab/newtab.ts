@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as BLACKLIST_UTILS from '../domain/blacklist-utils';
 import * as FOLDER_REFERENCES from '../domain/bookmark-folder-reference';
 import * as FOLDER_BINDINGS from '../platform/bookmark-folder-bindings';
@@ -103,6 +102,24 @@ import * as NEWTAB_TOP_CONTENT_RUNTIME from './top-content/top-content';
 import * as NEWTAB_URL_POLICY from './url-policy';
 import * as NEWTAB_VIEWPORT_INSETS from './viewport-insets';
 import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page';
+import { isNode } from '../shared/dom-guards';
+import type { BackgroundAction, BackgroundReply, BackgroundRequest } from '../domain/messages';
+import type { Disposition } from '../domain/navigation-disposition';
+import type { SearchActionModel, SearchActionModelOptions } from '../domain/search/suggestion-action-model';
+import type { ThemeMode } from '../domain/settings';
+import type { SuggestionElement } from '../shared/react/search/suggestion-list/types';
+import type { BookmarkCardElement } from './react/bookmarks';
+import type { RecentCardElement } from './react/recent-sites';
+import type { ShortcutTileElement } from './react/shortcuts';
+
+// The New Tab's React islands entry, which loads first, sets the island
+// globals this page builds on.
+function requireIslandApi<T>(api: T | undefined, name: string): T {
+  if (!api) {
+    throw new Error(`The New Tab ${name} island is unavailable.`);
+  }
+  return api;
+}
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoMessaging from '../platform/messaging';
 
@@ -175,12 +192,12 @@ import * as LumnoMessaging from '../platform/messaging';
   const storageAreaName = providerStorageRuntime ? providerStorageRuntime.name : (rawStorageArea
     ? (rawStorageArea === (chrome && chrome.storage ? chrome.storage.sync : null) ? 'sync' : 'local')
     : null);
-  function isPrimaryStorageAreaName(areaName) {
+  function isPrimaryStorageAreaName(areaName: string): boolean {
     return providerStorageRuntime
       ? providerStorageRuntime.isActiveAreaName(areaName)
       : Boolean(storageAreaName) && areaName === storageAreaName;
   }
-  function getExtensionResourceUrl(resourcePath) {
+  function getExtensionResourceUrl(resourcePath: unknown): string {
     const normalizedPath = String(resourcePath || '').replace(/^\/+/, '');
     if (chrome && chrome.runtime && typeof chrome.runtime.getURL === 'function') {
       return chrome.runtime.getURL(normalizedPath);
@@ -188,7 +205,10 @@ import * as LumnoMessaging from '../platform/messaging';
     const baseUrl = document.baseURI || window.location.href;
     return new URL(`../../${normalizedPath}`, baseUrl).href;
   }
-  function sendRuntimeMessage(message, callback) {
+  function sendRuntimeMessage<A extends BackgroundAction>(
+    message: BackgroundRequest<A>,
+    callback?: (reply: BackgroundReply<A> | undefined) => void
+  ): boolean {
     if (typeof chrome === 'undefined' ||
         !chrome.runtime ||
         typeof chrome.runtime.sendMessage !== 'function') {
@@ -197,7 +217,7 @@ import * as LumnoMessaging from '../platform/messaging';
     try {
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, message, callback);
       return true;
-    } catch (_error) {
+    } catch {
       return false;
     }
   }
@@ -251,7 +271,6 @@ import * as LumnoMessaging from '../platform/messaging';
   const NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY =
     SETTINGS.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY ||
     '_x_extension_newtab_time_font_weight_2026_unique_';
-  const NEWTAB_TIME_FONT_WEIGHT_DEFAULT = Number(SETTINGS.NEWTAB_TIME_FONT_WEIGHT_DEFAULT) || 320;
   const NEWTAB_TIME_FONT_SIZE_STORAGE_KEY = SETTINGS.NEWTAB_TIME_FONT_SIZE_STORAGE_KEY ||
     '_x_extension_newtab_time_font_size_2026_unique_';
   const NEWTAB_TIME_OPACITY_STORAGE_KEY = SETTINGS.NEWTAB_TIME_OPACITY_STORAGE_KEY ||
@@ -292,7 +311,7 @@ import * as LumnoMessaging from '../platform/messaging';
   const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_';
   const COMMUNITY_LINKS = LumnoCommunityLinks;
   const LUMNO_FEEDBACK_LINKS_FALLBACK = COMMUNITY_LINKS.FALLBACK_LINKS;
-  const NEWTAB_BOOKMARKS_TOPBAR = globalThis.LumnoNewtabBookmarksTopbar;
+  const NEWTAB_BOOKMARKS_TOPBAR = requireIslandApi(globalThis.LumnoNewtabBookmarksTopbar, 'bookmarks bar');
   const BOOKMARK_TOPBAR_HEIGHT_PX = Math.max(
     0,
     Number(NEWTAB_BOOKMARKS_TOPBAR.HEIGHT_PX) || 36
@@ -301,14 +320,14 @@ import * as LumnoMessaging from '../platform/messaging';
   // The folder color dialog handles its own Escape.
   const dismissStack = LumnoNewtabDismissStack.getDismissStack();
   dismissStack.setShouldIgnore(() => Boolean(pageState.folderColorPicker && pageState.folderColorPicker.isOpen()));
-  const NEWTAB_TOAST = globalThis.LumnoNewtabToast;
-  const NEWTAB_SHORTCUT_DIALOG = globalThis.LumnoNewtabShortcutDialog;
-  const NEWTAB_SHORTCUTS_VIEW = globalThis.LumnoNewtabShortcutsView;
-  const NEWTAB_FEEDBACK_CONTROL = globalThis.LumnoNewtabFeedbackControl;
+  const NEWTAB_TOAST = requireIslandApi(globalThis.LumnoNewtabToast, 'toast');
+  const NEWTAB_SHORTCUT_DIALOG = requireIslandApi(globalThis.LumnoNewtabShortcutDialog, 'shortcut dialog');
+  const NEWTAB_SHORTCUTS_VIEW = requireIslandApi(globalThis.LumnoNewtabShortcutsView, 'shortcuts view');
+  const NEWTAB_FEEDBACK_CONTROL = requireIslandApi(globalThis.LumnoNewtabFeedbackControl, 'feedback control');
 
   // Text set once at startup may be read before the chosen language loads;
   // controls register here to re-read it whenever the language is applied.
-  const languageChangeListeners = [];
+  const languageChangeListeners: Array<() => void> = [];
 
   const {
     onLanguageChange,
@@ -347,11 +366,11 @@ import * as LumnoMessaging from '../platform/messaging';
     pageState
   });
 
-  const NEWTAB_SELECT_MENU = globalThis.LumnoNewtabSelectMenu;
-  const NEWTAB_TOP_CONTENT = globalThis.LumnoNewtabTopContent;
-  const NEWTAB_PAGE_STRUCTURE = globalThis.LumnoNewtabPageStructure;
+  const NEWTAB_SELECT_MENU = requireIslandApi(globalThis.LumnoNewtabSelectMenu, 'select menu');
+  const NEWTAB_TOP_CONTENT = requireIslandApi(globalThis.LumnoNewtabTopContent, 'top content');
+  const NEWTAB_PAGE_STRUCTURE = requireIslandApi(globalThis.LumnoNewtabPageStructure, 'page structure');
   const SITE_DISPLAY_NAME_OPTIONS = Object.freeze({
-    getBrandName(brandHost, fallback) {
+    getBrandName(brandHost: string, fallback: string): string {
       if (brandHost === 'mp.weixin.qq.com') {
         return t('site_brand_wechat_official', '微信公众号');
       }
@@ -362,9 +381,9 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   });
   const getFigmaFolderSvg = NEWTAB_BOOKMARK_FOLDER_ICON.getFigmaFolderSvg;
-  function initFolderPathMorph(icon) {
+  function initFolderPathMorph(icon: Element | null | undefined): void {
     NEWTAB_BOOKMARK_FOLDER_ICON.initFolderPathMorph(icon);
-    applySavedFolderColor(icon);
+    applySavedFolderColor(icon || null);
   }
   const playFolderPathMorph = NEWTAB_BOOKMARK_FOLDER_ICON.playFolderPathMorph;
   const setFolderPathMorphState = NEWTAB_BOOKMARK_FOLDER_ICON.setFolderPathMorphState;
@@ -403,7 +422,7 @@ import * as LumnoMessaging from '../platform/messaging';
     pageState
   });
   const MAX_NEWTAB_SHORTCUTS = NEWTAB_SHORTCUTS_STORE.DEFAULT_MAX_SHORTCUTS;
-  const shortcutTiles = [];
+  const shortcutTiles: ShortcutTileElement[] = [];
   const SHORTCUT_DIALOG_MODE_EDIT = NEWTAB_SHORTCUT_DIALOG.MODE_EDIT || 'edit';
   const folderColorApi = globalThis.LumnoNewtabFolderColorPicker;
   const FOLDER_COLOR_PRESETS_STORAGE_KEY = SETTINGS.BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY ||
@@ -591,7 +610,7 @@ import * as LumnoMessaging from '../platform/messaging';
   const NEWTAB_SHORTCUTS_STORAGE_KEYS = NEWTAB_SHORTCUTS_STORE.SHORTCUT_STORAGE_KEYS;
   const pageSearchParams = new URLSearchParams(window.location.search || '');
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  const initialThemeReadyPromise = new Promise((resolve) => {
+  const initialThemeReadyPromise = new Promise<void>((resolve) => {
     pageState.resolveInitialThemeReady = resolve;
   });
 
@@ -628,60 +647,23 @@ import * as LumnoMessaging from '../platform/messaging';
     BOOKMARK_TOPBAR_LAYOUT_ACTION,
     pageState
   });
-  const initialLanguageReadyPromise = new Promise((resolve) => {
+  const initialLanguageReadyPromise = new Promise<void>((resolve) => {
     pageState.resolveInitialLanguageReady = resolve;
   });
-  pageState.resolveInitialBookmarkViewModeReady = null;
-  const initialBookmarkViewModeReadyPromise = new Promise((resolve) => {
+  const initialBookmarkViewModeReadyPromise = new Promise<void>((resolve) => {
     pageState.resolveInitialBookmarkViewModeReady = resolve;
     if (!storageArea) {
       resolve();
     }
   });
-  const recentCards = [];
-  const bookmarkCards = [];
-  const suggestionItems = [];
-  // Progress tracking (Labs): the switch and the versions tracked cards left.
-  pageState.progressTrackingEnabled = false;
-  pageState.initialPinnedRecentSitesReadyTask = Promise.resolve([]);
-  pageState.initialHiddenRecentSitesReadyTask = Promise.resolve([]);
-  pageState.currentMessages = null;
-  pageState.currentLanguageMode = 'system';
-  pageState.currentResolvedLocale = null;
-  let toastElement = null;
-  pageState.toastController = null;
-  const newtabEntryAnimationReadyPromise = new Promise((resolve) => {
+  const recentCards: RecentCardElement[] = [];
+  const bookmarkCards: BookmarkCardElement[] = [];
+  const suggestionItems: SuggestionElement[] = [];
+  const newtabEntryAnimationReadyPromise = new Promise<void>((resolve) => {
     pageState.resolveNewtabEntryAnimationReady = resolve;
   });
-  pageState.bookmarkViewModeRevision = 0;
-  pageState.feedbackControl = null;
-  pageState.feedbackReactController = null;
-  pageState.feedbackButton = null;
   pageState.feedbackLinks = LUMNO_FEEDBACK_LINKS_FALLBACK;
-  pageState.newtabTimeFontWeight = NEWTAB_TIME_FONT_WEIGHT_DEFAULT;
-  pageState.newtabTimeFontSize = Number(SETTINGS.NEWTAB_TIME_FONT_SIZE_DEFAULT) || 54;
-  pageState.newtabTimeOpacity = Number(SETTINGS.NEWTAB_TIME_OPACITY_DEFAULT) || 100;
-  pageState.newtabTimeInk = SETTINGS.NEWTAB_TIME_INK_DEFAULT || 'auto';
-  pageState.newtabTimeFont = SETTINGS.NEWTAB_TIME_FONT_DEFAULT || 'open-sans';
-  pageState.bookmarkCascadeRuntime = null;
-  pageState.bookmarkTopbarRuntime = null;
-  pageState.bookmarkDragState = null;
   const bookmarkMoveHistory = NEWTAB_BOOKMARK_MOVE_HISTORY.createBookmarkMoveHistory({ maxEntries: 30 });
-  pageState.bookmarkContextMenu = null;
-  pageState.bookmarkContextMenuTarget = null;
-  pageState.recentContextMenu = null;
-  pageState.recentContextMenuTarget = null;
-  pageState.shortcutSection = null;
-  pageState.shortcutGrid = null;
-  pageState.addShortcutButton = null;
-  pageState.shortcutDialogController = null;
-  pageState.recentHistoryDialogController = null;
-  pageState.shortcutContextMenu = null;
-  pageState.shortcutContextMenuTarget = null;
-  pageState.newtabShortcuts = [];
-  pageState.newtabShortcutColumns = NEWTAB_SHORTCUT_COLUMNS_DEFAULT;
-  pageState.newtabShortcutSize = NEWTAB_SHORTCUT_SIZE_DEFAULT;
-  pageState.newtabShortcutGap = NEWTAB_SHORTCUT_GAP_DEFAULT;
 
   const {
     isShortcutContextMenuOpen,
@@ -745,10 +727,7 @@ import * as LumnoMessaging from '../platform/messaging';
     pageState
   });
 
-  pageState.shortcutDockPendingPointerX = Number.NaN;
-  // Set once the recent-card drag runtime exists; earlier helpers ask it lazily.
-  pageState.recentCardDragRuntime = null;
-  const shortcutGroupHeaders = [];
+  const shortcutGroupHeaders: HTMLElement[] = [];
   const LEGACY_FOLDER_COLORS_STORAGE_KEY = NEWTAB_BOOKMARK_FOLDER_ICON.FOLDER_COLORS_STORAGE_KEY;
   const FOLDER_COLOR_REFS_STORAGE_KEY = NEWTAB_BOOKMARK_FOLDER_ICON.FOLDER_COLOR_REFS_STORAGE_KEY;
 
@@ -773,7 +752,6 @@ import * as LumnoMessaging from '../platform/messaging';
     getSiteSearchDisplayName,
     getSiteSearchActionTitle,
     getSiteSearchPrefixText,
-    findProviderForSuggestionMatch,
     getInlineSiteSearchCandidate,
     promoteStrongNavigationMatch,
     getKeywordSearchSuggestionState,
@@ -862,7 +840,6 @@ import * as LumnoMessaging from '../platform/messaging';
   } = NEWTAB_SITE_THEME_RESOLVER.createSiteThemeResolver({
     NEWTAB_FAVICON_THEME,
     FAVICON_UTILS,
-    getExtensionResourceUrl,
     normalizeHost,
     parseCssColor,
     defaultAccentColor,
@@ -929,8 +906,6 @@ import * as LumnoMessaging from '../platform/messaging';
     EXTENSION_ROUTES,
     t,
     getPageFaviconUrlResolver: (...args) => getPageFaviconUrlResolver(...args),
-    normalizeFaviconHost,
-    getExtensionResourceUrl,
     FAVICON_UTILS,
     BLACKLIST_UTILS,
     SETTINGS,
@@ -939,7 +914,7 @@ import * as LumnoMessaging from '../platform/messaging';
     FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
     FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
     SEARCH_UTILS,
-    getBrowserIconUrl: pageState.firefoxBrowserIcons ? pageState.firefoxBrowserIcons.get : null,
+    getBrowserIconUrl: pageState.firefoxBrowserIcons ? pageState.firefoxBrowserIcons.get : undefined,
     pageState
   });
 
@@ -1000,7 +975,6 @@ import * as LumnoMessaging from '../platform/messaging';
     hideCursorTooltip: (...args) => hideCursorTooltip(...args),
     hideTopActionTooltip: (...args) => hideTopActionTooltip(...args),
     normalizeHost,
-    getHostFromUrl,
     getCanonicalPageUrlForFavicon,
     sanitizeDisplayText,
     getSiteDisplayName,
@@ -1080,8 +1054,6 @@ import * as LumnoMessaging from '../platform/messaging';
     storageKey: SITE_SEARCH_ICON_CACHE_STORAGE_KEY,
     ...siteSearchIconCacheOptions
   });
-  pageState.siteSearchIconCache = {};
-  pageState.siteSearchIconCacheLoaded = false;
 
   function loadSiteSearchIconCache() {
     if (pageState.siteSearchIconCacheLoaded) {
@@ -1113,7 +1085,7 @@ import * as LumnoMessaging from '../platform/messaging';
       documentObj: document,
       windowObj: window,
       onBeforeOpen: (...args) => hideTopActionTooltip(...args),
-      getViewportTopInset: (...args) => getNewtabViewportTopPaddingPx(...args)
+      getViewportTopInset: () => getNewtabViewportTopPaddingPx()
     });
   pageState.shortcutContextMenuSelectController = NEWTAB_SELECT_MENU.createController({
       documentObj: document,
@@ -1122,7 +1094,7 @@ import * as LumnoMessaging from '../platform/messaging';
         hideShortcutTooltip();
         hideTopActionTooltip();
       },
-      getViewportTopInset: (...args) => getNewtabViewportTopPaddingPx(...args)
+      getViewportTopInset: () => getNewtabViewportTopPaddingPx()
     });
   pageState.bookmarkContextMenuSelectController = NEWTAB_SELECT_MENU.createController({
       documentObj: document,
@@ -1131,7 +1103,7 @@ import * as LumnoMessaging from '../platform/messaging';
         hideCursorTooltip();
         hideTopActionTooltip();
       },
-      getViewportTopInset: (...args) => getNewtabViewportTopPaddingPx(...args)
+      getViewportTopInset: () => getNewtabViewportTopPaddingPx()
     });
   pageState.recentContextMenuSelectController = NEWTAB_SELECT_MENU.createController({
       documentObj: document,
@@ -1140,7 +1112,7 @@ import * as LumnoMessaging from '../platform/messaging';
         hideCursorTooltip();
         hideTopActionTooltip();
       },
-      getViewportTopInset: (...args) => getNewtabViewportTopPaddingPx(...args)
+      getViewportTopInset: () => getNewtabViewportTopPaddingPx()
     });
 
   const {
@@ -1256,7 +1228,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   };
   const NEWTAB_SEARCH_WIDTH_CONFIG = NEWTAB_LAYOUT.SEARCH_WIDTH_CONFIG;
-  toastElement = document.getElementById('_x_extension_toast_2024_unique_');
+  const toastElement = document.getElementById('_x_extension_toast_2024_unique_');
   pageState.toastController = NEWTAB_TOAST.createToastController(toastElement, { windowObj: window });
 
 
@@ -1409,7 +1381,7 @@ import * as LumnoMessaging from '../platform/messaging';
     pageState
   });
 
-  function resolveTheme(mode, mediaMatchesOverride) {
+  function resolveTheme(mode: ThemeMode, mediaMatchesOverride?: boolean | null): 'light' | 'dark' {
     if (mode === 'dark') {
       return 'dark';
     }
@@ -1422,7 +1394,10 @@ import * as LumnoMessaging from '../platform/messaging';
     return mediaQuery.matches ? 'dark' : 'light';
   }
 
-  function addMediaQueryChangeListener(queryList, listener) {
+  function addMediaQueryChangeListener(
+    queryList: MediaQueryList,
+    listener: (event: MediaQueryListEvent) => void
+  ): boolean {
     if (!queryList || typeof listener !== 'function') {
       return false;
     }
@@ -1437,7 +1412,10 @@ import * as LumnoMessaging from '../platform/messaging';
     return false;
   }
 
-  function removeMediaQueryChangeListener(queryList, listener) {
+  function removeMediaQueryChangeListener(
+    queryList: MediaQueryList,
+    listener: (event: MediaQueryListEvent) => void
+  ): void {
     if (!queryList || typeof listener !== 'function') {
       return;
     }
@@ -1450,9 +1428,9 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function migrateStorageIfNeeded(keys, providerReady) {
+  function migrateStorageIfNeeded(keys: string[], providerReady?: boolean): void {
     if (providerStorageRuntime && !providerReady) {
-      providerStorageRuntime.ready.then(() => migrateStorageIfNeeded(keys, true));
+      void providerStorageRuntime.ready.then(() => migrateStorageIfNeeded(keys, true));
       return;
     }
     if (!storageArea || !chrome || !chrome.storage || !chrome.storage.local) {
@@ -1464,7 +1442,7 @@ import * as LumnoMessaging from '../platform/messaging';
     LumnoSettingsStorage.migrateLocalSettingsToSync(chrome.storage.local, storageArea, keys);
   }
 
-  function getRiSvg(id, sizeClass, extraClass) {
+  function getRiSvg(id: string, sizeClass?: string, extraClass?: string): string {
     const size = sizeClass || 'ri-size-16';
     const extra = extraClass ? ` ${extraClass}` : '';
     return `<i class="ri-icon ${size}${extra} ${id}" aria-hidden="true"></i>`;
@@ -1888,21 +1866,9 @@ import * as LumnoMessaging from '../platform/messaging';
       storageChanges: chrome && chrome.storage ? chrome.storage.onChanged : null,
       storageAreaName: 'local'
     });
-  function isImeCompositionEvent(event) {
+  function isImeCompositionEvent(event: KeyboardEvent): boolean {
     return imeKeyGuard.shouldIgnoreKeydown(event);
   }
-  pageState.siteSearchState = null;
-  pageState.localSearchScopeState = null;
-  pageState.siteSearchProvidersCache = null;
-  pageState.siteSearchProvidersLoadVersion = 0;
-  pageState.aggregateSearchesCache = null;
-  pageState.aggregateSearchesLoadPromise = null;
-  pageState.aggregateSearchesLoadVersion = 0;
-  pageState.enabledSearchResultSourceTypes = ['topSite', 'bookmark', 'history'];
-  pageState.searchResultDisplayLimit = 10;
-  pageState.newtabOpenInNewTab = SETTINGS.normalizeNewtabOpenInNewTab(null);
-  pageState.faviconRequestBlacklistItems = [];
-  pageState.faviconEnhancedFetchEnabled = false;
 
   NEWTAB_SEARCH_SETTINGS_SYNC.createSearchSettingsSync({
     loadDefaultSearchEngineState,
@@ -2004,6 +1970,7 @@ import * as LumnoMessaging from '../platform/messaging';
   ]);
 
   const {
+    faviconCacheRuntime,
     areFaviconRenderCachesReady,
     waitForFaviconRenderCaches,
     isHostFaviconVisitDirty,
@@ -2012,7 +1979,6 @@ import * as LumnoMessaging from '../platform/messaging';
     setPersistedSiteThemeEntry,
     applyFaviconOpticalShift,
     applyFaviconOpticalAlignment,
-    reportMissingIcon,
     applyFallbackIcon,
     setFaviconSrcWithAnimation,
     attachFaviconData,
@@ -2243,8 +2209,7 @@ import * as LumnoMessaging from '../platform/messaging';
     BOOKMARK_TOPBAR_PICK_COLOR_ACTION,
     sectionModeSelectController,
     showTopActionTooltip,
-    hideTopActionTooltip,
-    pageState
+    hideTopActionTooltip
   });
 
   const {
@@ -2304,7 +2269,7 @@ import * as LumnoMessaging from '../platform/messaging';
     getExtensionResourceUrl,
     sendRuntimeMessage,
     shortcutFaviconStore,
-    faviconCacheRuntime: pageState.faviconCacheRuntime,
+    faviconCacheRuntime,
     FAVICON_UTILS,
     getPersistedFaviconDataEntry,
     t,
@@ -2598,20 +2563,20 @@ import * as LumnoMessaging from '../platform/messaging';
     pageState
   });
 
-  pageState.bookmarkPagerPrevButton.addEventListener('click', () => {
+  pageStructureRuntime.bookmark.previousButton.addEventListener('click', () => {
     if (pageState.bookmarkCurrentPage <= 0) {
       return;
     }
     switchBookmarkPage(pageState.bookmarkCurrentPage - 1);
   });
-  pageState.bookmarkPagerNextButton.addEventListener('click', () => {
+  pageStructureRuntime.bookmark.nextButton.addEventListener('click', () => {
     const pageCount = getBookmarkPageCount();
     if (pageState.bookmarkCurrentPage >= (pageCount - 1)) {
       return;
     }
     switchBookmarkPage(pageState.bookmarkCurrentPage + 1);
   });
-  pageState.bookmarkOpenManagerButton.addEventListener('click', () => {
+  pageStructureRuntime.bookmark.managerButton.addEventListener('click', () => {
     if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
       return;
     }
@@ -2817,13 +2782,13 @@ import * as LumnoMessaging from '../platform/messaging';
   };
 
   // Kick off favicon cache warmup early; theme tint work flushes when storage is ready.
-  pageState.faviconCacheRuntime.ensureCachesReady().then(() => {
+  void faviconCacheRuntime.ensureCachesReady().then(() => {
     scheduleThemeResolutionFlush(0);
     refreshThemeAwareFavicons();
     scheduleThemeAwareFaviconRescue();
   });
 
-  function getSiteDisplayName(hostname, title) {
+  function getSiteDisplayName(hostname: string, title?: string): string {
     return SITE_DISPLAY_NAME.getSiteDisplayName(
       hostname,
       title,
@@ -3029,7 +2994,6 @@ import * as LumnoMessaging from '../platform/messaging';
     getAutocompleteCandidate,
     getUrlDisplay,
     getDirectNavigationUrl,
-    findProviderForSuggestionMatch,
     clearAutocomplete,
     applyAutocomplete,
     getLocalSearchScopeCandidate,
@@ -3055,7 +3019,7 @@ import * as LumnoMessaging from '../platform/messaging';
     handleGlobalTypingFocus
   } = NEWTAB_INPUT_FOCUS.createInputFocus({
     SHORTCUT_KEY_MATCHER,
-    prepareFocusReload: () => Boolean(pageState.focusResume) && pageState.focusResume.prepareFocusReload(),
+    prepareFocusReload: () => (pageState.focusResume ? pageState.focusResume.prepareFocusReload() : false),
     refreshTabsIfIdle,
     initialNewtabInputAutoFocusReadyTask,
     isImeCompositionEvent,
@@ -3126,8 +3090,8 @@ import * as LumnoMessaging from '../platform/messaging';
 
   // Result labels follow where a plain click goes: 「前往」 in this tab, 「新开」 in a new one.
   const newtabSuggestionActionModel = Object.assign({}, SUGGESTION_ACTION_MODEL, {
-    createSearchActionModel(input) {
-      const openInNewTab = pageState.newtabOpenInNewTab.search === true;
+    createSearchActionModel(input?: SearchActionModelOptions | null): SearchActionModel {
+      const openInNewTab = Boolean(pageState.newtabOpenInNewTab && pageState.newtabOpenInNewTab.search === true);
       const model = SUGGESTION_ACTION_MODEL.createSearchActionModel({
         ...input,
         enterAction: openInNewTab ? 'openNewTab' : 'go'
@@ -3139,6 +3103,7 @@ import * as LumnoMessaging from '../platform/messaging';
   });
 
   const {
+    inputParts,
     searchInput,
     rightIcon,
     setSearchScopeIconEnabled
@@ -3166,7 +3131,6 @@ import * as LumnoMessaging from '../platform/messaging';
     applyFallbackIcon,
     setFaviconSrcWithAnimation,
     attachFaviconWithFallbacks,
-    reportMissingIcon,
     preloadIcon,
     getChromeFaviconUrl,
     getBrowserPageFaviconUrl,
@@ -3226,14 +3190,8 @@ import * as LumnoMessaging from '../platform/messaging';
     pageState
   });
 
-  function openWordmarkUrl(event) {
-    if (event && typeof event.preventDefault === 'function') {
-      event.preventDefault();
-    }
-    if (event && typeof event.stopPropagation === 'function') {
-      event.stopPropagation();
-    }
-    openExternalNewTabUrl(COMMUNITY_LINKS.getStoreListing().url, event);
+  function openWordmarkUrl(disposition: Disposition): void {
+    openExternalNewTabUrl(COMMUNITY_LINKS.getStoreListing().url, disposition);
   }
   const shouldAnimateWordmarkEntry = !shouldSkipNewtabEntryMotion();
   pageState.topContentContainer = document.createElement('div');
@@ -3465,7 +3423,7 @@ import * as LumnoMessaging from '../platform/messaging';
     if (!isFeedbackPopoverOpen()) {
       return;
     }
-    const target = event && event.target ? event.target : null;
+    const target = isNode(event.target) ? event.target : null;
     if (pageState.feedbackControl && (target === pageState.feedbackControl || pageState.feedbackControl.contains(target))) {
       return;
     }
@@ -3475,7 +3433,7 @@ import * as LumnoMessaging from '../platform/messaging';
     if (!isWallpaperPanelOpen()) {
       return;
     }
-    const target = event && event.target ? event.target : null;
+    const target = isNode(event.target) ? event.target : null;
     if (pageState.wallpaperRuntime && pageState.wallpaperRuntime.containsTarget(target)) {
       return;
     }
@@ -3485,7 +3443,7 @@ import * as LumnoMessaging from '../platform/messaging';
     isOpen: isWallpaperPanelOpen,
     close: () => {
       // Escape dismisses an open filter menu before it closes the whole panel.
-      if (pageState.wallpaperRuntime.closeOpenMenu()) {
+      if (pageState.wallpaperRuntime && pageState.wallpaperRuntime.closeOpenMenu()) {
         return;
       }
       closeWallpaperPanel({ restoreFocus: true });
@@ -3493,8 +3451,8 @@ import * as LumnoMessaging from '../platform/messaging';
   });
 
   document.body.insertBefore(pageState.topContentContainer, root);
-  pageState.searchLayer.appendChild(pageState.inputParts.container);
-  root.appendChild(pageState.searchLayer);
+  pageStructureRuntime.searchLayer.appendChild(inputParts.container);
+  root.appendChild(pageStructureRuntime.searchLayer);
   const newtabUpdateNoticeAnchor = root.nextSibling;
   if (pageState.shortcutSection) {
     document.body.insertBefore(pageState.shortcutSection, newtabUpdateNoticeAnchor);
@@ -3526,7 +3484,7 @@ import * as LumnoMessaging from '../platform/messaging';
       ? suggestionsSurface
       : newtabUpdateNoticeAnchor;
     document.body.insertBefore(pageState.engagementNoticeController.element, engagementNoticeAnchor);
-    if (String(pageState.inputParts.input.value || '').trim() &&
+    if (String(inputParts.input.value || '').trim() &&
         typeof pageState.engagementNoticeController.recordMeaningfulUse === 'function') {
       pageState.engagementNoticeController.recordMeaningfulUse();
     }

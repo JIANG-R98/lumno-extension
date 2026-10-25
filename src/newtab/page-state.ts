@@ -3,7 +3,6 @@
 // object to every module as `pageState`; properties whose first value
 // depends on settings or other modules are set where that value exists.
 import * as SETTINGS from '../domain/settings';
-import type { NewtabWidthMode } from '../domain/settings';
 import type { AppearanceModesState } from './appearance-modes';
 import type { BookmarkActionsState } from './bookmarks/bookmark-actions';
 import type { BookmarkCascadeActionsState } from './bookmarks/bookmark-cascade-actions';
@@ -31,7 +30,7 @@ import type { PageNavigationState } from './page-navigation';
 import type { PageNoticesState } from './page-notices';
 import type { PagePreferencesState } from './page-preferences';
 import type { PageResizeState } from './page-resize';
-import type { RecentCardDragState } from './recent/recent-card-drag';
+import type { RecentCardDrag, RecentCardDragState } from './recent/recent-card-drag';
 import type { RecentSectionState } from './recent/recent-section';
 import type { RecentSitesControllerState } from './recent/recent-sites-controller';
 import type { RecentSourcesState } from './recent/recent-sources';
@@ -59,21 +58,16 @@ import type { SiteThemeResolverState } from './theme/site-theme-resolver';
 import type { SuggestionsControllerState } from './search/suggestions-controller';
 import type { SuggestionsLayoutState } from './search/suggestions-layout';
 import type { TooltipBindingsState } from './tooltip-bindings';
+import type { QuoteRuntime } from './top-content/quotes';
 import type { TopContentState } from './top-content/top-content';
 import type { UrlPolicyState } from './url-policy';
 import type { WallpaperPageState } from './wallpaper/wallpaper-page';
 
-// Page state the modules typed so far do not declare yet: the theme and
-// language startup, layout and the site search icon cache.
+// The page state newtab.ts reads and writes itself, beyond what it hands
+// the modules.
 interface PageCoreState {
-  resolveInitialThemeReady: (() => void) | null;
-  resolveInitialLanguageReady: (() => void) | null;
-  currentRecentCount: number;
-  currentBookmarkColumns: number;
-  siteSearchIconCacheLoadPromise: Promise<unknown> | null;
-  siteSearchIconCacheRevision: number;
-  currentNewtabWidthMode: NewtabWidthMode;
-  currentNewtabSearchWidth: number | null;
+  recentCardDragRuntime: RecentCardDrag | null;
+  quoteRuntime: QuoteRuntime | null;
 }
 
 // Every module's view of the page state, together.
@@ -330,7 +324,8 @@ function createPageState(): NewtabPageState {
     currentLanguageMode: 'system',
     recentLoadedOnce: false,
     recentRenderSignature: '',
-    progressTrackingEnabled: SETTINGS.normalizeProgressTrackingEnabled(undefined),
+    // Progress tracking (Labs) stays off until its stored switch is read.
+    progressTrackingEnabled: false,
     enabledSearchResultSourceTypes: ['topSite', 'bookmark', 'history'],
     searchResultDisplayLimit: 10,
     newtabOpenInNewTab: SETTINGS.normalizeNewtabOpenInNewTab(null),

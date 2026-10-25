@@ -3,17 +3,14 @@
 import type * as NavigationDisposition from '../domain/navigation-disposition';
 import type { Disposition, OpenEvent } from '../domain/navigation-disposition';
 import type { NewtabOpenInNewTab, NewtabOpenInNewTabSurface } from '../domain/settings';
+import type { ShortcutItem, VisibleShortcutItem } from '../domain/shortcuts-store';
 import * as LumnoMessaging from '../platform/messaging';
 import type { BookmarksRuntime } from './bookmarks/bookmarks-runtime';
 import type { BookmarkNode } from './bookmarks/bookmarks-store';
 import type { ShowToast, Translate } from './newtab-types';
 
 // A shortcut as the page opens it: a site, or a bookmark folder.
-interface OpenableShortcut {
-  id: string;
-  type?: string;
-  url?: string;
-}
+type OpenableShortcut = ShortcutItem | VisibleShortcutItem;
 
 // A suggestion whose choice counts toward its future ranking.
 interface SelectableSuggestion {
@@ -175,7 +172,7 @@ function createPageNavigation(deps: PageNavigationDeps) {
       });
       return;
     }
-    if (!shortcut || !shortcut.url) {
+    if (!shortcut || !('url' in shortcut) || !shortcut.url) {
       return;
     }
     openUrlFromNewtabCard(shortcut.url, {

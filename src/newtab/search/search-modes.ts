@@ -9,7 +9,7 @@ import type { LocalSearchScope, SearchSourceType, SiteSearchProvider } from '../
 import type { SearchInputParts } from '../../shared/react/search-input';
 import type { Suggestion } from '../../shared/react/search/suggestion-list/types';
 import type { InputModeController } from '../../shared/search/search-input-mode';
-import type { InputModeTheme, ModeMenuItem } from '../../shared/search/input-mode/types';
+import type { InputModeProvider, InputModeTheme, ModeMenuItem } from '../../shared/search/input-mode/types';
 import type { FormatMessage, Translate } from '../newtab-types';
 import type { DefaultSearchEngineState } from './default-search-engine';
 import type { SearchModeController } from './search-mode-controller';
@@ -414,9 +414,11 @@ function createSearchModes(deps: SearchModesDeps) {
     }
   }
 
-  function getLocalSearchScopeTabHintProvider(scope: ActiveLocalScope): { name: string; tabHintLabel: string } {
+  // The Tab hint names the scope as a provider would, keyed like its mode.
+  function getLocalSearchScopeTabHintProvider(scope: ActiveLocalScope): InputModeProvider {
     const source = getLocalSearchScopeLabel(scope);
     return {
+      key: `local:${scope.sourceType}`,
       name: source,
       tabHintLabel: formatMessage(
         'local_search_tab_hint',

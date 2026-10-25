@@ -73,7 +73,6 @@ interface SearchBoxDeps {
   applyFallbackIcon: ViewOption<'applyFallbackIcon'>;
   setFaviconSrcWithAnimation: ViewOption<'setFaviconSrcWithAnimation'>;
   attachFaviconWithFallbacks: ViewOption<'attachFaviconWithFallbacks'>;
-  reportMissingIcon: ViewOption<'reportMissingIcon'>;
   preloadIcon: ViewOption<'preloadIcon'>;
   getChromeFaviconUrl: ViewOption<'getChromeFaviconUrl'>;
   getBrowserPageFaviconUrl: ViewOption<'getBrowserPageFaviconUrl'>;
@@ -166,7 +165,6 @@ function createSearchBox(deps: SearchBoxDeps) {
     applyFallbackIcon,
     setFaviconSrcWithAnimation,
     attachFaviconWithFallbacks,
-    reportMissingIcon,
     preloadIcon,
     getChromeFaviconUrl,
     getBrowserPageFaviconUrl,
@@ -287,7 +285,6 @@ function createSearchBox(deps: SearchBoxDeps) {
     applyFallbackIcon,
     setFaviconSrcWithAnimation,
     attachFaviconWithFallbacks,
-    reportMissingIcon,
     preloadIcon,
     getChromeFaviconUrl,
     getBrowserPageFaviconUrl,
@@ -693,6 +690,7 @@ function createSearchBox(deps: SearchBoxDeps) {
   }
 
   return {
+    inputParts,
     searchInput,
     rightIcon,
     setSearchScopeIconEnabled

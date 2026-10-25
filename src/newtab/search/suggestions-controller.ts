@@ -18,6 +18,7 @@ import type {
 } from '../../shared/react/search/suggestion-list/types';
 import type * as SuggestionNavigation from '../../shared/search/suggestion-navigation';
 import type { AppearanceModes } from '../appearance-modes';
+import type { ModeCommands } from '../mode-commands';
 import type { FormatMessage, NewtabThemeMode, NewtabThemeScope, SendRuntimeMessage, Translate } from '../newtab-types';
 import type * as DirectNavigationSettle from './direct-navigation-settle';
 import type { SearchAutocomplete } from './search-autocomplete';
@@ -71,9 +72,9 @@ interface SuggestionsControllerDeps {
   SUGGESTION_ACTION_MODEL: Pick<typeof SuggestionActionModel, 'getSuggestionUpdateKind' | 'getActionContextKey'>;
   activateSiteSearch: SearchModes['activateSiteSearch'];
   focusSearchInputPreservingScroll(): boolean;
-  setVisibleThemeMode(mode: string | undefined): void;
-  setZenModeEnabled(enabled: boolean | undefined): void;
-  setWebAppearanceMode(mode: string | undefined): void;
+  setVisibleThemeMode: ModeCommands['setVisibleThemeMode'];
+  setZenModeEnabled: ModeCommands['setZenModeEnabled'];
+  setWebAppearanceMode: ModeCommands['setWebAppearanceMode'];
   shouldSwitchMatchedTabSuggestion: SearchNavigation['shouldSwitchMatchedTabSuggestion'];
   openMatchedTabSuggestion: SearchNavigation['openMatchedTabSuggestion'];
   runSiteSearchProviderQuery: SiteSearchProviders['runSiteSearchProviderQuery'];
@@ -136,7 +137,7 @@ interface SuggestionsControllerDeps {
   clearAutocomplete: SearchAutocomplete['clearAutocomplete'];
   applyAutocomplete: SearchAutocomplete['applyAutocomplete'];
   getLocalSearchScopeCandidate: SiteSearchProviders['getLocalSearchScopeCandidate'];
-  setSiteSearchTabHint(provider: SiteSearchProvider | { name: string; tabHintLabel: string } | null): void;
+  setSiteSearchTabHint: SearchModeController['setSiteSearchTabHint'];
   getLocalSearchScopeTabHintProvider: SearchModes['getLocalSearchScopeTabHintProvider'];
   // The rows the list shows; `uncapped` keeps every command.
   limitSuggestionsForDisplay(list: Suggestion[], options: { uncapped: boolean }): Suggestion[];

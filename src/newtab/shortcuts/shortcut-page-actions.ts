@@ -59,7 +59,7 @@ interface ShortcutPageActionsDeps {
   formatMessage: FormatMessage;
   updateBookmarkContextMenuLanguageStrings(): void;
   updateRecentContextMenuLanguageStrings(): void;
-  createShortcutDialogComponent(): ShortcutDialogController | null | Promise<ShortcutDialogController | null>;
+  createShortcutDialogComponent(): Promise<ShortcutDialogController | null>;
   showToast: ShowToast;
   // The tiles drawn now, kept in DOM order.
   shortcutTiles: HTMLElement[];
@@ -303,7 +303,7 @@ function createShortcutPageActions(deps: ShortcutPageActionsDeps) {
     try {
       if (!pageState.shortcutDialogController) {
         if (!shortcutDialogLoadPromise) {
-          shortcutDialogLoadPromise = Promise.resolve(createShortcutDialogComponent()).then((controller) => {
+          shortcutDialogLoadPromise = createShortcutDialogComponent().then((controller) => {
             if (!controller) throw new Error('Shortcut dialog unavailable');
             pageState.shortcutDialogController = controller;
             controller.mount(document.body);

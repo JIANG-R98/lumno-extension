@@ -251,7 +251,6 @@ export interface SuggestionsViewOptions {
     explicitUrl: string,
     options?: { includeChromeFallback?: boolean; allowRemoteImage?: boolean }
   ) => FaviconCandidates;
-  reportMissingIcon?: (...args: unknown[]) => void;
   preloadIcon?: (favicon: string, url: string) => void;
   setSuggestionsVisible?: (visible: boolean) => void;
   onSetSelectedIndex?: (index: number) => void;

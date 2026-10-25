@@ -15,7 +15,7 @@ interface SliderConfig {
 
 interface SearchWidthConfig extends SliderConfig {
   // The widths the slider settles on near them, and how near (px).
-  snapPoints?: number[];
+  snapPoints?: readonly number[];
   snapThreshold?: number;
 }
 

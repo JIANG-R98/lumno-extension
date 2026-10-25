@@ -10,7 +10,7 @@ import type { SearchInputParts } from '../../shared/react/search-input';
 import type { Suggestion } from '../../shared/react/search/suggestion-list/types';
 import * as SEARCH_INPUT_MODE from '../../shared/search/search-input-mode';
 import type { InputModeConfig, InputModeController } from '../../shared/search/search-input-mode';
-import type { InputModeTheme } from '../../shared/search/input-mode/types';
+import type { InputModeProvider, InputModeTheme } from '../../shared/search/input-mode/types';
 import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
 import type { ActiveLocalScope, RenderSuggestions } from './search-types';
 
@@ -143,7 +143,7 @@ function createSearchModeController(deps: SearchModeControllerDeps) {
     throw new Error('Search results container unavailable');
   }
 
-  function setSiteSearchTabHint(provider: SiteSearchProvider | null): void {
+  function setSiteSearchTabHint(provider: InputModeProvider | null): void {
     if (pageState.inputModeController) {
       pageState.inputModeController.setTabHintVisible(true, provider);
     }
