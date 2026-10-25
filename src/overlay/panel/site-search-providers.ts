@@ -39,7 +39,8 @@ interface SiteSearchProvidersState {
     pageUrl: string,
     hostKey: string,
     fallbackUrl: string,
-    onFailed: () => void
+    onFailed: () => void,
+    sourceOptions?: { allowRemoteImage: boolean }
   ): void;
 }
 
@@ -110,11 +111,11 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     return provider ? SEARCH_UTILS.withHelpCenterLocale(url, provider, getHelpCenterLocale()) : url;
   }
 
-  function isAiSiteSearchProvider(provider: SiteSearchProvider | null): boolean {
+  function isAiSiteSearchProvider(provider: Partial<SiteSearchProvider> | null | undefined): boolean {
     return SEARCH_UTILS.isAiSiteSearchProvider(provider);
   }
 
-  function isSearchEngineSiteSearchProvider(provider: SiteSearchProvider | null): boolean {
+  function isSearchEngineSiteSearchProvider(provider: Partial<SiteSearchProvider> | null | undefined): boolean {
     return SEARCH_UTILS.isSearchEngineSiteSearchProvider(provider);
   }
 
@@ -212,7 +213,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     }
   }
 
-  function getProviderIcon(provider: SiteSearchProvider): string {
+  function getProviderIcon(provider: Partial<SiteSearchProvider>): string {
     const resolver = getOverlayFaviconUrlResolver();
     if (!resolver) {
       return '';
@@ -241,7 +242,10 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     return '';
   }
 
-  function getPageRenderableProviderIcon(provider: SiteSearchProvider): string {
+  function getPageRenderableProviderIcon(provider: Partial<SiteSearchProvider> | null | undefined): string {
+    if (!provider) {
+      return '';
+    }
     return toPageRenderableIconUrl(getProviderIcon(provider), SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider));
   }
 

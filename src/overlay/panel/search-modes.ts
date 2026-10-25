@@ -34,7 +34,7 @@ interface SearchModesDeps {
     'getSiteSearchProviderDisplayNameMessage' | 'getInlineSiteSearchCandidate' | 'promoteStrongNavigationMatch' |
     'getKeywordSearchSuggestionState' | 'getSiteSearchTriggerCandidate' | 'findLocalSearchScope'>;
   isAggregateSearchProvider(provider: Partial<SiteSearchProvider> | null): boolean;
-  isAiSiteSearchProvider(provider: SiteSearchProvider | null): boolean;
+  isAiSiteSearchProvider(provider: Partial<SiteSearchProvider> | null | undefined): boolean;
   getDirectNavigationUrl(rawQuery: string): unknown;
   getUrlDisplay(url: string | undefined): string;
   cancelPendingOverlaySuggestionRequests(): void;
@@ -152,7 +152,7 @@ function createSearchModes(deps: SearchModesDeps) {
     }
   }
 
-  function getSiteSearchDisplayName(provider: SiteSearchProvider | null): string {
+  function getSiteSearchDisplayName(provider: Partial<SiteSearchProvider> | null | undefined): string {
     if (!provider) {
       return t('site_search_default', '站内');
     }
@@ -184,7 +184,7 @@ function createSearchModes(deps: SearchModesDeps) {
       : formatMessage('search_in_site', '在 {site} 中搜索', { site });
   }
 
-  function getSiteSearchPrefixText(provider: SiteSearchProvider | null): string {
+  function getSiteSearchPrefixText(provider: Partial<SiteSearchProvider> | null | undefined): string {
     if (isAiSiteSearchProvider(provider)) {
       return getSiteSearchDisplayName(provider);
     }

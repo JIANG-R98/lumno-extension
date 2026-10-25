@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as FAVICON_THEME from '../shared/favicon/favicon-theme';
 import * as COMMUNITY_LINKS from '../platform/community-links';
 import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
@@ -47,11 +46,15 @@ import * as PANEL_SUGGESTIONS_RENDER from './panel/suggestions-render';
 import * as PANEL_TAB_MATCHING from './panel/tab-matching';
 import * as OVERLAY_CONTEXT from './overlay-context';
 import * as OVERLAY_STATE from './overlay-state';
+import type { CachedIconMap } from '../domain/favicon/shortcut-favicon';
+import type { OverlaySizePreset } from './lifecycle';
+import type { StorageChangeListener } from './panel/types';
+import type { ThemeMode } from '../domain/settings';
+import type { SuggestionElement } from '../shared/react/search/suggestion-list/types';
+import type { NumberShortcutOptions } from '../shared/search/suggestion-navigation';
 import * as LumnoOverlayRuntime from './runtime';
 import * as LumnoOverlaySiteFixes from './site-fixes';
 import * as LumnoMessaging from '../platform/messaging';
-
-'use strict';
 
 window._x_extension_search_overlay_runtime_version_2026_unique_ =
   '2026-10-20-search-title-units-v17';
@@ -62,6 +65,12 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const overlayRuntime = LumnoOverlayRuntime;
   if (!overlayRuntime.STORAGE_KEYS) {
     console.warn('Lumno: overlay runtime helper not available.');
+    return;
+  }
+  // Set by the overlay's React bundle, which the worker injects first.
+  const overlayShell = globalThis.LumnoOverlayShell;
+  if (!overlayShell) {
+    console.warn('Lumno: overlay shell not available.');
     return;
   }
   const openOptions = OVERLAY_CONTEXT.readOverlayOpenOptions(overlayContext, Date.now());
@@ -78,14 +87,14 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const documentPipSupported = 'documentPictureInPicture' in window;
   // Made once the modules it relies on exist; the state reaches it through
   // the functions below.
-  let overlayFaviconRuntime = null;
+  let overlayFaviconRuntime: ReturnType<typeof LumnoOverlayFaviconView.createOverlayFaviconViewRuntime> | null = null;
 
   // Panel state shared with the parts of this panel in overlay/panel/: each
   // receives this one object as `overlayState` and reads and writes the same
   // properties this function does.
   const overlayState = OVERLAY_STATE.createOverlayState({
     storageArea: storageRuntime.area,
-    storageChangeListeners: overlayLifecycle.createChromeEventListenerRegistry(
+    storageChangeListeners: overlayLifecycle.createChromeEventListenerRegistry<StorageChangeListener>(
       chrome && chrome.storage ? chrome.storage.onChanged : null
     ),
     // Teardown steps owned by this invocation's overlay session. Controllers
@@ -154,8 +163,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
   const OVERLAY_PANEL_ID = '_x_extension_overlay_2024_unique_';
 
-  const overlayShell = globalThis.LumnoOverlayShell;
-
   const {
     getOrCreateOverlayContextToken,
     getOverlayMountHost,
@@ -198,16 +205,16 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
 
 
 
-  const suggestionItems = [];
+  const suggestionItems: SuggestionElement[] = [];
 
-  const numberShortcutOptions = {
+  const numberShortcutOptions: NumberShortcutOptions = {
     onHoldStart: function() {
       showOverlayToast(t(
         'search_number_jump_release_hint',
         'Release to show numbers'
       ), false, { duration: 0 });
     },
-    onHoldEnd: (...args) => hideOverlayToast(...args),
+    onHoldEnd: () => hideOverlayToast(),
     instantActive: () => overlayState.numberShortcutInstantEnabled
   };
 
@@ -216,7 +223,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const overlayStorageKeys = overlayRuntime.STORAGE_KEYS;
   const THEME_STORAGE_KEY = overlayStorageKeys.themeMode;
 
-  const applyOverlayTheme = (mode) => {
+  const applyOverlayTheme = (mode: ThemeMode): void => {
     overlayState.overlayThemeMode = mode;
     const previousResolvedTheme = overlayState.overlay ? overlayState.overlay.getAttribute('data-theme') : '';
     applyOverlayThemeVariables(overlayState.overlay, mode);
@@ -237,22 +244,22 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     }
     syncOverlayPageThemeObservation();
     if (mode === 'system') {
-      if (!overlayState.overlayThemeListenerAttached) {
-        overlayState.overlayThemeMediaListener = function() {
+      if (!overlayState.overlayThemeMediaListener) {
+        const listener = () => {
           if (overlayState.overlayThemeMode === 'system') {
-            // 仅更新容器变量会导致建议项主题变量滞后，系统主题切换时完整刷新。
+            // Re-apply in full: updating only the panel's variables would leave
+            // the rows on the previous scheme's colors.
             applyOverlayTheme('system');
           }
         };
-        overlayState.overlayMediaQuery.addEventListener('change', overlayState.overlayThemeMediaListener);
-        overlayState.overlayThemeListenerAttached = true;
+        overlayState.overlayThemeMediaListener = listener;
+        overlayState.overlayMediaQuery.addEventListener('change', listener);
       }
       return;
     }
-    if (overlayState.overlayThemeListenerAttached) {
+    if (overlayState.overlayThemeMediaListener) {
       overlayState.overlayMediaQuery.removeEventListener('change', overlayState.overlayThemeMediaListener);
       overlayState.overlayThemeMediaListener = null;
-      overlayState.overlayThemeListenerAttached = false;
     }
   };
 
@@ -652,7 +659,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const overlayFaviconView = LumnoOverlayFaviconView;
   const overlaySiteFixes = LumnoOverlaySiteFixes;
   const addOverlaySessionCleanup = overlayState.overlaySessionCleanups.add;
-  function isLocalFileLikeOverlayUrl(url) {
+  function isLocalFileLikeOverlayUrl(url: string): boolean {
     if (!url) {
       return false;
     }
@@ -705,7 +712,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   });
 
   const overlayAntiTranslateGuard = overlayLifecycle.createAntiTranslateGuard(window, {
-    applyNoTranslate: (...args) => applyNoTranslate(...args),
     applyNoTranslateDeep: (...args) => applyNoTranslateDeep(...args),
     restoreProtectedNode: (...args) => restoreProtectedNode(...args),
     restoreProtectedAncestors: (...args) => restoreProtectedAncestors(...args)
@@ -722,8 +728,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     pauseOverlayAntiTranslateObserverForMutationBurst,
     startOverlayAntiTranslateObserver
   } = PANEL_PAGE_GUARDS.createPageGuards({
-    overlayAntiTranslateGuard,
-    overlayState
+    overlayAntiTranslateGuard
   });
   const LANGUAGE_STORAGE_KEY = overlayStorageKeys.language;
   const DEFAULT_SEARCH_ENGINE_STORAGE_KEY = overlayStorageKeys.defaultSearchEngine;
@@ -763,10 +768,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const OVERLAY_TAB_PRIORITY_STORAGE_KEY = overlayStorageKeys.overlayTabPriority;
   const TAB_RANK_SCORE_DEBUG_STORAGE_KEY = overlayStorageKeys.tabRankScoreDebug;
   const storageAreaName = storageRuntime.name;
-  function isPrimaryStorageAreaName(areaName) {
-    return typeof storageRuntime.isActiveAreaName === 'function'
-      ? storageRuntime.isActiveAreaName(areaName)
-      : Boolean(storageAreaName) && areaName === storageAreaName;
+  function isPrimaryStorageAreaName(areaName: string): boolean {
+    return storageRuntime.isActiveAreaName(areaName);
   }
   const localStorageArea = chrome && chrome.storage && chrome.storage.local
     ? chrome.storage.local
@@ -796,7 +799,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY,
       MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY
     ]
-  ).catch(() => ({}));
+  );
   const initialOverlayEnterAnimationReady = initialOverlaySettingsReady.then((result) => {
     overlayState.overlayEnterAnimation = SETTINGS.normalizeOverlayEnterAnimation(
       result[OVERLAY_ENTER_ANIMATION_STORAGE_KEY]
@@ -856,7 +859,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     overlayState
   });
 
-  function normalizeOverlayPageThemeAdaptationEnabled(value) {
+  function normalizeOverlayPageThemeAdaptationEnabled(value: unknown): boolean {
     return SETTINGS.normalizeOverlayPageThemeAdaptationEnabled(value);
   }
 
@@ -880,7 +883,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     SEARCH_UTILS,
     overlayState
   });
-  const setInputScopedStyle = (element, property, value) => {
+  const setInputScopedStyle = (element: HTMLElement | null, property: string, value: string): void => {
     if (!element) {
       return;
     }
@@ -1026,9 +1029,9 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     if (!host || document.getElementById(styleId)) {
       return;
     }
-    const toCssUrl = (assetPath) => {
+    const toCssUrl = (assetPath: string): string => {
       const url = overlayRuntime.getRuntimeUrl(chrome, assetPath);
-      return `url("${String(url).replace(/["\\\n\r\f]/g, '\\$&')}")`;
+      return `url("${url.replace(/["\\\n\r\f]/g, '\\$&')}")`;
     };
     const style = document.createElement('style');
     style.id = styleId;
@@ -1057,7 +1060,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
 
   ensureOverlayFontFaces();
 
-  function getOverlaySizePreset(mode) {
+  function getOverlaySizePreset(mode: unknown): OverlaySizePreset {
     const normalizedMode = SETTINGS.normalizeOverlaySizeMode(mode);
     if (normalizedMode === 'compact') {
       return { width: 680, maxHeightVh: 72, uiScale: 0.94 };
@@ -1068,13 +1071,13 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     return { width: 760, maxHeightVh: 75, uiScale: 1 };
   }
 
-  function getRiSvg(id, sizeClass, extraClass) {
+  function getRiSvg(id: string, sizeClass?: string, extraClass?: string): string {
     const size = sizeClass || 'ri-size-16';
     const extra = extraClass ? ` ${extraClass}` : '';
     return '<i class="ri-icon ' + size + extra + ' ' + id + '" aria-hidden="true"></i>';
   }
 
-  function startOverlayViewportSizeSync(overlayElement) {
+  function startOverlayViewportSizeSync(overlayElement: HTMLElement): void {
     overlayState.overlayViewportSizeSync.start(overlayElement);
     overlayState.overlayNoticeLayer.sync(overlayElement);
   }
@@ -1138,8 +1141,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   setOverlayMountVisibility(overlayHost, true);
   applyNoTranslate(overlayState.overlay);
 
-  // 使用系统字体，避免外链字体依赖。
-
   overlayShell.appendOverlayStyleNodes(document, {
     root: overlayState.overlayStyleRoot,
     remixIconCssUrl: RI_CSS_URL,
@@ -1162,13 +1163,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   overlayToastElement.setAttribute('data-show', 'false');
   overlayToastElement.setAttribute('role', 'status');
   overlayToastElement.setAttribute('aria-live', 'polite');
-  const overlayToastStyleRoot = overlayState.overlayStyleRoot || document;
-  const overlayToastStylesheet = overlayToastStyleRoot &&
-      typeof overlayToastStyleRoot.getElementById === 'function'
-    ? overlayToastStyleRoot.getElementById('_x_extension_toast_style_2026_unique_')
-    : (overlayToastStyleRoot && typeof overlayToastStyleRoot.querySelector === 'function'
-      ? overlayToastStyleRoot.querySelector('#_x_extension_toast_style_2026_unique_')
-      : null);
+  const overlayToastStylesheet = (overlayState.overlayStyleRoot || document)
+    .getElementById('_x_extension_toast_style_2026_unique_');
   const overlayToastStyleGate = OVERLAY_TOAST.createToastStyleGate(
     overlayToastElement,
     {
@@ -1210,7 +1206,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   ).catch(() => {});
 
   overlayState.inputUsesIsolatedStyles = Boolean(overlayState.overlayStyleRoot);
-  overlayState.inputParts = globalThis._x_extension_createSearchInput_2024_unique_({
+  const inputParts = globalThis._x_extension_createSearchInput_2024_unique_({
     styleRoot: overlayState.overlayStyleRoot,
     useIsolatedStyles: overlayState.inputUsesIsolatedStyles,
     useInlineBaseStyles: !overlayState.inputUsesIsolatedStyles,
@@ -1218,7 +1214,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     inputId: '_x_extension_search_input_2024_unique_',
     iconId: '_x_extension_search_icon_2024_unique_',
     containerId: '_x_extension_input_container_2024_unique_',
-    rightIconUrl: chrome.runtime.getURL('assets/images/lumno-input-light.png'),
     containerStyleOverrides: {
       height: '56px',
       'min-height': '56px',
@@ -1271,7 +1266,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     },
     showUnderlineWhenEmpty: true
   });
-  overlayState.searchInput = overlayState.inputParts.input;
+  overlayState.inputParts = inputParts;
+  overlayState.searchInput = inputParts.input;
   applyOverlayInputExtensionIsolation(overlayState.searchInput);
   overlayState.inputContainer = overlayState.inputParts.container;
   const searchScopeIcon = overlayState.inputParts.icon;
@@ -1303,7 +1299,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   applyNoTranslate(overlayState.searchInput);
   applyNoTranslate(overlayState.inputContainer);
   applyNoTranslate(overlayState.rightIcon);
-  overlayState.topActionTooltipController = LumnoTooltip.createController({
+  const topActionTooltipController = LumnoTooltip.createController({
     documentObj: document,
     windowObj: window,
     id: '_x_extension_top_action_tooltip_2026_unique_',
@@ -1313,7 +1309,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     maxWidth: 420,
     decorateElement: applyNoTranslate
   });
-  overlayState.overlayCursorTooltipController = LumnoCursorTooltip.createController({
+  overlayState.topActionTooltipController = topActionTooltipController;
+  const overlayCursorTooltipController = LumnoCursorTooltip.createController({
     documentObj: document,
     windowObj: window,
     id: '_x_extension_overlay_cursor_tooltip_2026_unique_',
@@ -1325,6 +1322,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     offsetY: 16,
     decorateElement: applyNoTranslate
   });
+  overlayState.overlayCursorTooltipController = overlayCursorTooltipController;
   const overlayModeMenuCursorTooltipController = LumnoCursorTooltip.createController({
     documentObj: document,
     windowObj: window,
@@ -1340,15 +1338,15 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     }
   });
   addOverlaySessionCleanup(() => {
-    overlayState.topActionTooltipController.destroy();
-    overlayState.overlayCursorTooltipController.destroy();
+    topActionTooltipController.destroy();
+    overlayCursorTooltipController.destroy();
     overlayModeMenuCursorTooltipController.destroy();
   });
-  const bindInputActionCursorTooltip = (button, getText) => {
+  const bindInputActionCursorTooltip = (button: HTMLElement | null, getText: () => string): void => {
     if (!button) {
       return;
     }
-    overlayState.overlayCursorTooltipController.bind(button, getText, {
+    overlayCursorTooltipController.bind(button, getText, {
       boundaryElement: overlayState.overlay,
       positionMode: 'absolute',
       maxWidth: 420,
@@ -1358,38 +1356,50 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     });
   };
   const hideInputActionCursorTooltip = () => {
-    overlayState.overlayCursorTooltipController.hide();
+    overlayCursorTooltipController.hide();
   };
-  overlayState.closeOtherTabsButton = overlayState.inputParts.secondaryAction;
+  const closeOtherTabsButton = overlayState.inputParts.secondaryAction;
+  overlayState.closeOtherTabsButton = closeOtherTabsButton;
   overlayState.searchClearButton = overlayState.inputParts.clearAction;
   const resetCloseOtherTabsButtonVisualState = () => {
-    overlayState.closeOtherTabsButton.removeAttribute('data-hover-active');
+    if (closeOtherTabsButton) {
+      closeOtherTabsButton.removeAttribute('data-hover-active');
+    }
   };
-  resetCloseOtherTabsButtonVisualState();
-  overlayState.closeOtherTabsButton.addEventListener('mouseenter', () => {
-    overlayState.closeOtherTabsButton.setAttribute('data-hover-active', 'true');
-  });
-  overlayState.closeOtherTabsButton.addEventListener('mouseleave', resetCloseOtherTabsButtonVisualState);
-  overlayState.closeOtherTabsButton.addEventListener('blur', resetCloseOtherTabsButtonVisualState);
-  overlayState.closeOtherTabsButton.addEventListener('pointerup', resetCloseOtherTabsButtonVisualState);
-  overlayState.closeOtherTabsButton.addEventListener('pointercancel', resetCloseOtherTabsButtonVisualState);
+  if (closeOtherTabsButton) {
+    resetCloseOtherTabsButtonVisualState();
+    closeOtherTabsButton.addEventListener('mouseenter', () => {
+      closeOtherTabsButton.setAttribute('data-hover-active', 'true');
+    });
+    closeOtherTabsButton.addEventListener('mouseleave', resetCloseOtherTabsButtonVisualState);
+    closeOtherTabsButton.addEventListener('blur', resetCloseOtherTabsButtonVisualState);
+    closeOtherTabsButton.addEventListener('pointerup', resetCloseOtherTabsButtonVisualState);
+    closeOtherTabsButton.addEventListener('pointercancel', resetCloseOtherTabsButtonVisualState);
+    bindInputActionCursorTooltip(
+      closeOtherTabsButton,
+      () => t('overlay_close_other_tabs_tooltip', '关闭其他标签页')
+    );
+    // The click opens the popconfirm; confirmCloseOtherTabs runs once it is confirmed.
+    closeOtherTabsButton.addEventListener('click', hideInputActionCursorTooltip);
+  }
   overlayState.modeBadge = overlayState.inputParts.modeBadge;
 
-  overlayState.suggestionsContainer = document.createElement('div');
-  applyNoTranslate(overlayState.suggestionsContainer);
-  overlayState.suggestionsContainer.id = '_x_extension_suggestions_container_2024_unique_';
-  overlayState.suggestionsContainer.className = 'x-ov-suggestions-container';
-  overlayState.suggestionsContainer.addEventListener('wheel', function(event) {
-    SUGGESTION_NAVIGATION.preventNumberShortcutWheel(event, overlayState.suggestionsContainer);
+  const suggestionsContainer = document.createElement('div');
+  overlayState.suggestionsContainer = suggestionsContainer;
+  applyNoTranslate(suggestionsContainer);
+  suggestionsContainer.id = '_x_extension_suggestions_container_2024_unique_';
+  suggestionsContainer.className = 'x-ov-suggestions-container';
+  suggestionsContainer.addEventListener('wheel', function(event) {
+    SUGGESTION_NAVIGATION.preventNumberShortcutWheel(event, suggestionsContainer);
   }, { passive: false });
   overlayState.overlay.addEventListener('pointerdown', function() {
-    SUGGESTION_NAVIGATION.cancelNumberShortcuts(overlayState.suggestionsContainer);
+    SUGGESTION_NAVIGATION.cancelNumberShortcuts(suggestionsContainer);
   }, true);
-  overlayState.suggestionsContainer.addEventListener('animationend', (event) => {
-    if (!event || event.animationName !== '_x_ov_scope_result_enter_2026_unique_') {
+  suggestionsContainer.addEventListener('animationend', (event) => {
+    if (event.animationName !== '_x_ov_scope_result_enter_2026_unique_') {
       return;
     }
-    overlayState.suggestionsContainer.setAttribute('data-scope-result-enter', 'done');
+    suggestionsContainer.setAttribute('data-scope-result-enter', 'done');
   });
   overlayState.inputDivider = overlayState.inputParts.divider;
   overlayState.overlayWheelIsolationHandler = createOverlayWheelIsolationHandler(overlayState.overlay);
@@ -1405,78 +1415,60 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     'shortcut_reference_search_open_scope_menu_title',
     '打开搜索范围面板'
   );
-  const setSearchScopeIconVisualState = (active) => {
-    if (!searchScopeIcon) {
-      return;
-    }
+  const setSearchScopeIconVisualState = (active: boolean): void => {
     const enabled = searchScopeIcon.getAttribute('aria-disabled') !== 'true';
     searchScopeIcon.dataset.hoverActive = active && enabled ? 'true' : 'false';
   };
-  const setSearchScopeIconEnabled = (enabled) => {
-    if (!searchScopeIcon) {
-      return;
-    }
-    const nextEnabled = enabled !== false;
-    searchScopeIcon.setAttribute('aria-disabled', nextEnabled ? 'false' : 'true');
-    searchScopeIcon.setAttribute('tabindex', nextEnabled ? '0' : '-1');
+  const setSearchScopeIconEnabled = (enabled: boolean): void => {
+    searchScopeIcon.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+    searchScopeIcon.setAttribute('tabindex', enabled ? '0' : '-1');
     searchScopeIcon.setAttribute('aria-label', searchScopeTooltipText());
-    if (nextEnabled) {
+    if (enabled) {
       searchScopeIcon.setAttribute('data-tooltip', searchScopeTooltipText());
       return;
     }
     searchScopeIcon.removeAttribute('data-tooltip');
     hideInputActionCursorTooltip();
     setSearchScopeIconVisualState(false);
-    if (typeof searchScopeIcon.blur === 'function') {
-      searchScopeIcon.blur();
-    }
+    searchScopeIcon.blur();
   };
-  const activateSearchScopeIcon = (event) => {
-    if (!searchScopeIcon || searchScopeIcon.getAttribute('aria-disabled') === 'true') {
+  const activateSearchScopeIcon = (event: Event): void => {
+    if (searchScopeIcon.getAttribute('aria-disabled') === 'true') {
       return;
     }
-    if (event && typeof event.preventDefault === 'function') {
-      event.preventDefault();
-    }
-    if (event && typeof event.stopPropagation === 'function') {
-      event.stopPropagation();
-    }
+    event.preventDefault();
+    event.stopPropagation();
     hideInputActionCursorTooltip();
     setSearchScopeIconVisualState(false);
-    if (overlayState.inputModeController &&
-        typeof overlayState.inputModeController.resetModeMenuDoubleTab === 'function') {
+    if (overlayState.inputModeController) {
       overlayState.inputModeController.resetModeMenuDoubleTab();
     }
     openSearchModeMenuFromDoubleTab();
-    if (searchScopeIcon && typeof searchScopeIcon.blur === 'function') {
-      searchScopeIcon.blur();
-    }
+    searchScopeIcon.blur();
   };
-  if (searchScopeIcon) {
-    searchScopeIcon.dataset.searchScopeAction = 'true';
-    searchScopeIcon.setAttribute('role', 'button');
-    setSearchScopeIconEnabled(true);
-    setSearchScopeIconVisualState(false);
-    searchScopeIcon.addEventListener('mouseenter', () => {
-      setSearchScopeIconVisualState(true);
+  searchScopeIcon.dataset.searchScopeAction = 'true';
+  searchScopeIcon.setAttribute('role', 'button');
+  setSearchScopeIconEnabled(true);
+  setSearchScopeIconVisualState(false);
+  searchScopeIcon.addEventListener('mouseenter', () => {
+    setSearchScopeIconVisualState(true);
+  });
+  searchScopeIcon.addEventListener('focus', () => {
+    setSearchScopeIconVisualState(true);
+  });
+  ['mouseleave', 'blur', 'pointerup', 'pointercancel'].forEach((type) => {
+    searchScopeIcon.addEventListener(type, () => {
+      setSearchScopeIconVisualState(false);
     });
-    searchScopeIcon.addEventListener('focus', () => {
-      setSearchScopeIconVisualState(true);
-    });
-    ['mouseleave', 'blur', 'pointerup', 'pointercancel'].forEach((type) => {
-      searchScopeIcon.addEventListener(type, () => {
-        setSearchScopeIconVisualState(false);
-      });
-    });
-    searchScopeIcon.addEventListener('click', activateSearchScopeIcon);
-    searchScopeIcon.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') {
-        return;
-      }
-      activateSearchScopeIcon(event);
-    });
-    bindInputActionCursorTooltip(searchScopeIcon, searchScopeTooltipText);
-  }
+  });
+  searchScopeIcon.addEventListener('click', activateSearchScopeIcon);
+  searchScopeIcon.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+    activateSearchScopeIcon(event);
+  });
+  bindInputActionCursorTooltip(searchScopeIcon, searchScopeTooltipText);
 
   if (overlayState.rightIcon) {
     const settingsTooltipText = () => formatMessage('command_settings', '打开设置', { name: 'Lumno' });
@@ -1498,12 +1490,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       }
     });
   }
-  if (overlayState.closeOtherTabsButton) {
-    const closeOtherTooltipText = () => t('overlay_close_other_tabs_tooltip', '关闭其他标签页');
-    bindInputActionCursorTooltip(overlayState.closeOtherTabsButton, closeOtherTooltipText);
-    // The click opens the popconfirm; confirmCloseOtherTabs runs once it is confirmed.
-    overlayState.closeOtherTabsButton.addEventListener('click', hideInputActionCursorTooltip);
-  }
 
   function getCloseOtherTabsConfirmCopy() {
     return {
@@ -1514,12 +1500,14 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     };
   }
 
-  function confirmCloseOtherTabs(event) {
-    if (!event || event.isTrusted !== true) {
+  function confirmCloseOtherTabs(event: MouseEvent): void {
+    if (event.isTrusted !== true) {
       return;
     }
     // The confirm button is going away with its bubble; keep typing in the field.
-    overlayState.searchInput.focus({ preventScroll: true });
+    if (overlayState.searchInput) {
+      overlayState.searchInput.focus({ preventScroll: true });
+    }
     LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'closeOtherTabsForOverlay' }, (response) => {
       resetCloseOtherTabsButtonVisualState();
       if (!response || response.ok !== true) {
@@ -1533,17 +1521,13 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     });
   }
 
-  // Add focus styles
+  // Focusing the input hands the selection back to it.
   overlayState.searchInput.addEventListener('focus', function() {
     overlayState.selectedIndex = -1;
     updateSelection();
   });
 
-  overlayState.searchInput.addEventListener('blur', function() {
-    // Don't change selectedIndex here to allow keyboard navigation
-  });
-
-  function isImeCompositionEvent(event) {
+  function isImeCompositionEvent(event: KeyboardEvent): boolean {
     return overlayState.imeKeyGuard.shouldIgnoreKeydown(event);
   }
   const defaultPlaceholder = overlayState.searchInput.placeholder;
@@ -1553,7 +1537,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     storageKey: SITE_SEARCH_ICON_CACHE_STORAGE_KEY,
     ...siteSearchIconCacheOptions
   });
-  let siteSearchIconCacheLoadPromise = null;
+  let siteSearchIconCacheLoadPromise: Promise<CachedIconMap> | null = null;
   let siteSearchIconCacheRevision = 0;
 
   function loadSiteSearchIconCache() {
@@ -1567,7 +1551,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     siteSearchIconCacheLoadPromise = siteSearchIconStore.readAll()
       .then((cache) => {
         if (siteSearchIconCacheRevision === loadRevision) {
-          overlayState.siteSearchIconCache = cache && typeof cache === 'object' ? cache : {};
+          overlayState.siteSearchIconCache = cache;
         }
         overlayState.siteSearchIconCacheLoaded = true;
         return overlayState.siteSearchIconCache;
@@ -1630,12 +1614,12 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const rgbToCss = FAVICON_THEME.rgbToCss;
 
 
-  const initialOverlayThemeReady = initialOverlaySettingsReady.then((result) => {
+  const initialOverlayThemeReady = initialOverlaySettingsReady.then((result): ThemeMode => {
     if (!overlayState.storageArea) {
       applyOverlayTheme('system');
       return 'system';
     }
-    const initialThemeMode = result[THEME_STORAGE_KEY] || 'system';
+    const initialThemeMode = SETTINGS.normalizeThemeMode(result[THEME_STORAGE_KEY]);
     const rawAdaptationEnabled = result[OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY];
     overlayState.overlayPageThemeAdaptationEnabled = normalizeOverlayPageThemeAdaptationEnabled(
       rawAdaptationEnabled
@@ -1704,7 +1688,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   });
 
   function rerenderReplacedFaviconRows() {
-    const failedSlots = Array.from(overlayState.suggestionsContainer.querySelectorAll(
+    const failedSlots = Array.from(suggestionsContainer.querySelectorAll(
       '[data-favicon-failed="true"]'
     ));
     if (failedSlots.length === 0) {
@@ -1716,7 +1700,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     return true;
   }
 
-  overlayState.inputModeController = SEARCH_INPUT_MODE.createInputModeController(overlayState.inputParts, {
+  overlayState.inputModeController = SEARCH_INPUT_MODE.createInputModeController(inputParts, {
     surface: 'overlay',
     useImportantStyles: !overlayState.inputUsesIsolatedStyles,
     prefixTransition: inputModePrefixTransition,
@@ -1727,7 +1711,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     rightReserveBase: 92,
     rightAnchorOffset: 86,
     // The clear button adds a 30px slot plus a 6px gap left of the close-other-tabs button.
-    getExtraRightInset: () => (overlayState.inputParts.syncClearAction() ? 36 : 0),
+    getExtraRightInset: () => (inputParts.syncClearAction() ? 36 : 0),
     baseInputPaddingLeft: 50,
     setInputStyle: setInputScopedStyle,
     applyNoTranslate,
@@ -1800,7 +1784,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
 
   getSiteSearchProviders();
   getAggregateSearches().then(() => {
-    if (overlayState.inputModeController && typeof overlayState.inputModeController.refreshModeMenu === 'function') {
+    if (overlayState.inputModeController) {
       overlayState.inputModeController.refreshModeMenu();
     }
     if (overlayState.searchInput && overlayState.searchInput.value) {
@@ -1822,8 +1806,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     }
     // A new order from Settings or another surface reaches an open scope
     // panel now; a closed one reads it when it opens.
-    if (changes[SEARCH_SOURCE_ORDER_STORAGE_KEY] &&
-        overlayState.inputModeController && typeof overlayState.inputModeController.refreshModeMenu === 'function') {
+    if (changes[SEARCH_SOURCE_ORDER_STORAGE_KEY] && overlayState.inputModeController) {
       overlayState.inputModeController.refreshModeMenu();
     }
     if (changes[AGGREGATE_SEARCH_STORAGE_KEY]) {
@@ -1832,15 +1815,14 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       overlayState.aggregateSearchesCache = AGGREGATE_SEARCH_STORE.normalizeAggregateSearches(
         changes[AGGREGATE_SEARCH_STORAGE_KEY].newValue
       );
-      if (isAggregateSearchProvider(overlayState.siteSearchState)) {
-        const currentId = String(overlayState.siteSearchState.aggregateId || '');
+      const activeProvider = overlayState.siteSearchState;
+      if (activeProvider && isAggregateSearchProvider(activeProvider)) {
+        const currentId = String(activeProvider.aggregateId || '');
         const updatedDefinition = overlayState.aggregateSearchesCache.find(
           (item) => String(item && item.id ? item.id : '') === currentId
         );
-        const updatedProvider = isAggregateSearchDefinitionAvailable(
-          updatedDefinition,
-          getSearchModeProviders()
-        )
+        const updatedProvider = updatedDefinition &&
+          isAggregateSearchDefinitionAvailable(updatedDefinition, getSearchModeProviders())
           ? AGGREGATE_SEARCH_STORE.createScopeProvider(updatedDefinition)
           : null;
         if (updatedProvider) {
@@ -1850,7 +1832,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
           clearSiteSearch();
         }
       }
-      if (overlayState.inputModeController && typeof overlayState.inputModeController.refreshModeMenu === 'function') {
+      if (overlayState.inputModeController) {
         overlayState.inputModeController.refreshModeMenu();
       }
       if (overlayState.latestOverlayQuery) {
@@ -1868,15 +1850,18 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       if (providerReload.version !== overlayState.siteSearchProvidersLoadVersion) {
         return;
       }
-      if (isAggregateSearchProvider(overlayState.siteSearchState)) {
+      const activeProvider = overlayState.siteSearchState;
+      if (activeProvider && isAggregateSearchProvider(activeProvider)) {
+        const activeId = String(activeProvider.aggregateId || '');
         const activeDefinition = (overlayState.aggregateSearchesCache || []).find((item) => (
-          String(item && item.id ? item.id : '') === String(overlayState.siteSearchState.aggregateId || '')
+          String(item && item.id ? item.id : '') === activeId
         ));
-        if (!isAggregateSearchDefinitionAvailable(activeDefinition, overlayState.siteSearchProvidersCache)) {
+        if (!activeDefinition ||
+            !isAggregateSearchDefinitionAvailable(activeDefinition, overlayState.siteSearchProvidersCache)) {
           clearSiteSearch();
         }
       }
-      if (overlayState.inputModeController && typeof overlayState.inputModeController.refreshModeMenu === 'function') {
+      if (overlayState.inputModeController) {
         overlayState.inputModeController.refreshModeMenu();
       }
       if (overlayState.latestOverlayQuery) {
@@ -1907,7 +1892,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
         }
       }).catch(() => {});
     }
-    if (overlayState.inputModeController && typeof overlayState.inputModeController.refreshModeMenu === 'function') {
+    if (overlayState.inputModeController) {
       overlayState.inputModeController.refreshModeMenu();
     }
     if (overlayState.latestOverlayQuery) {
@@ -1921,7 +1906,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   overlayState.inputContainer.addEventListener('compositionstart', handleSearchInputCompositionStart, true);
   overlayState.inputContainer.addEventListener('compositionend', handleSearchInputCompositionEnd, true);
   overlayState.inputContainer.addEventListener('input', handleSearchInputEvent, true);
-  const handleOverlayLoadingSessionSelection = (event) => {
+  const handleOverlayLoadingSessionSelection = (event: Event): void => {
     notifyOverlayLoadingSession(syncLiveSearchInputFromEvent(event));
   };
   overlayState.inputContainer.addEventListener('select', handleOverlayLoadingSessionSelection, true);
@@ -1929,13 +1914,15 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   overlayState.inputContainer.addEventListener('pointerup', handleOverlayLoadingSessionSelection, true);
 
   // Add click outside to close functionality
-  overlayState.clickOutsideHandler = function(e) {
-    const eventPath = e && typeof e.composedPath === 'function' ? e.composedPath() : [];
-    const clickedInsideOverlay = overlayState.overlay.contains(e.target) ||
-      eventPath.includes(overlayState.overlay) ||
-      eventPath.includes(overlayState.overlay._lumnoOverlayHost);
+  overlayState.clickOutsideHandler = function(event) {
+    const overlay = overlayState.overlay;
+    if (!overlay) {
+      return;
+    }
+    const eventPath = event.composedPath();
+    const clickedInsideOverlay = eventPath.includes(overlay) || eventPath.includes(overlayHost);
     if (!clickedInsideOverlay) {
-      closeOverlayWithMotion(overlayState.overlay);
+      closeOverlayWithMotion(overlay);
     }
   };
   document.addEventListener('click', overlayState.clickOutsideHandler);
@@ -2060,8 +2047,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   startOverlayAntiTranslateObserver(overlayState.overlay);
 
   function focusOverlayInputForReveal() {
-    if (!overlayState.searchInput || !overlayState.searchInput.isConnected ||
-        typeof overlayState.searchInput.focus !== 'function') {
+    if (!overlayState.searchInput || !overlayState.searchInput.isConnected) {
       return;
     }
     if (initialLoadingSession && initialLoadingSession.focused === false) {
@@ -2075,36 +2061,31 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     overlayState.initialFaviconEnhancedFetchReady,
     initialSimpleModeReady
   ]).then(() => initialSearchResultDisplayLimitReady).then(() => {
-    if (!overlayState.overlay || !overlayState.overlay.isConnected) {
+    const searchInput = overlayState.searchInput;
+    if (!overlayState.overlay || !overlayState.overlay.isConnected || !searchInput) {
       return false;
     }
     if (initialLoadingSession || initialPrefillQuery) {
       const initialInputValue = initialLoadingSession
         ? initialLoadingSession.inputValue
         : initialPrefillQuery;
-      overlayState.searchInput.value = initialInputValue;
-      if (typeof overlayState.searchInput.setSelectionRange === 'function') {
-        const selectionStart = initialLoadingSession
-          ? initialLoadingSession.selectionStart
-          : initialInputValue.length;
-        const selectionEnd = initialLoadingSession
-          ? initialLoadingSession.selectionEnd
-          : initialInputValue.length;
-        const selectionDirection = initialLoadingSession
-          ? initialLoadingSession.selectionDirection
-          : 'none';
-        overlayState.searchInput.setSelectionRange(
-          selectionStart,
-          selectionEnd,
-          selectionDirection
-        );
-      }
+      searchInput.value = initialInputValue;
+      const selectionStart = initialLoadingSession
+        ? initialLoadingSession.selectionStart
+        : initialInputValue.length;
+      const selectionEnd = initialLoadingSession
+        ? initialLoadingSession.selectionEnd
+        : initialInputValue.length;
+      const selectionDirection = initialLoadingSession
+        ? initialLoadingSession.selectionDirection
+        : 'none';
+      searchInput.setSelectionRange(selectionStart, selectionEnd, selectionDirection);
       overlayState.latestRawInputValue = initialInputValue;
       overlayState.latestOverlayQuery = initialInputValue.trim();
       updateModeBadge(initialInputValue);
       overlayState.suppressOverlayLoadingSessionNotification = true;
       try {
-        overlayState.searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
       } finally {
         overlayState.suppressOverlayLoadingSessionNotification = false;
       }
@@ -2116,13 +2097,12 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     });
   }).catch(() => false);
 
-  const revealOverlay = (options) => {
+  const revealOverlay = (options: { forceInstant: boolean }): void => {
     if (!overlayState.overlay || !overlayState.overlay.isConnected) {
       return;
     }
-    const revealOptions = options && typeof options === 'object' ? options : {};
     setOverlayMountVisibility(overlayHost, false);
-    if (overlayState.overlayRevealGate && typeof overlayState.overlayRevealGate.release === 'function') {
+    if (overlayState.overlayRevealGate) {
       overlayState.overlayRevealGate.release();
     }
     // The style gate has just released the result surface, so take one last
@@ -2132,7 +2112,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     // the command bar is visually released, instead of after the entry
     // motion has already started.
     focusOverlayInputForReveal();
-    const reduceMotion = revealOptions.forceInstant === true ||
+    const reduceMotion = options.forceInstant ||
       shouldSkipOverlayEntryMotion();
     const revealTransform = getOverlayEnterAnimationRevealTransform();
     if (reduceMotion) {
@@ -2149,7 +2129,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       });
     }
   };
-  const revealReady = overlayState.overlayRevealGate && typeof overlayState.overlayRevealGate.waitUntilReady === 'function'
+  const revealReady = overlayState.overlayRevealGate
     ? overlayState.overlayRevealGate.waitUntilReady()
     : Promise.resolve({ ok: true, reason: 'no-site-fix' });
   Promise.all([

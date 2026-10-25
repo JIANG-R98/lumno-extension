@@ -108,7 +108,6 @@ export interface ModeTheme {
   tagBg?: string;
   tagText?: string;
   tagBorder?: string;
-  [key: string]: unknown;
 }
 
 export interface SuggestionActionTagElement extends HTMLSpanElement {

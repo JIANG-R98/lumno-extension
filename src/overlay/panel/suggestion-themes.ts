@@ -9,7 +9,7 @@ interface SuggestionThemesState {
   defaultTheme: ThemeVariant;
   isBlockedLocalFaviconUrl(url: string): boolean;
   // A favicon service's image as a data: URL; empty or null when there is none.
-  requestFaviconData(url: string): Promise<string | null>;
+  requestFaviconData(url: string, pageUrl?: string): Promise<string | null>;
 }
 
 interface SuggestionThemesDeps {
@@ -25,7 +25,7 @@ interface SuggestionThemesDeps {
   buildTheme(rgb: unknown): ThemeVariant;
   defaultAccentColor: ThemeRgb;
   shouldBlockOverlayFaviconForHost(hostname: string): boolean;
-  getProviderIcon(provider: SiteSearchProvider): string;
+  getProviderIcon(provider: Partial<SiteSearchProvider>): string;
   getThemeForMode<T extends ThemeLike>(theme: T): T | ThemeVariant;
   overlayState: SuggestionThemesState;
 }
@@ -35,7 +35,7 @@ interface ThemedSuggestion {
   type?: string;
   url?: string;
   favicon?: string;
-  provider?: SiteSearchProvider | null;
+  provider?: Partial<SiteSearchProvider> | null;
 }
 
 // Accent colors for suggestions: brand accents, favicon sources and
@@ -361,7 +361,7 @@ function createSuggestionThemes(deps: SuggestionThemesDeps) {
     });
   }
 
-  function getProviderThemeHost(provider: SiteSearchProvider): string {
+  function getProviderThemeHost(provider: Partial<SiteSearchProvider> | null | undefined): string {
     return SEARCH_UTILS.normalizeHostIdentity(SEARCH_UTILS.getSiteSearchProviderHost(provider));
   }
 
@@ -383,7 +383,7 @@ function createSuggestionThemes(deps: SuggestionThemesDeps) {
     return brandTheme;
   }
 
-  function getThemeForProvider(provider: SiteSearchProvider): Promise<ThemeVariant> {
+  function getThemeForProvider(provider: Partial<SiteSearchProvider>): Promise<ThemeVariant> {
     const hostKey = getProviderThemeHost(provider);
     const providerPageUrl = SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider);
     const resolver = getOverlayFaviconUrlResolver();

@@ -23,7 +23,7 @@ interface ViewportSizeSyncConfig {
 interface MountConnectionGuardConfig {
   getMountParent?(doc: Document): Element | null;
   // Runs after the host was put back into the page.
-  onRestore?(host: Element, parent: Element): void;
+  onRestore?(host: HTMLElement, parent: Element): void;
 }
 
 // The page guards' hooks the anti-translate guard calls.
@@ -321,7 +321,7 @@ function createMountConnectionGuard(win?: HostWindow | null, config?: MountConne
   const RESTORE_RETRY_MS = 16;
 
   let active = false;
-  let mountHost: Element | null = null;
+  let mountHost: HTMLElement | null = null;
   let documentObserver: MutationObserver | null = null;
   let parentObserver: MutationObserver | null = null;
   let observedParent: Node | null = null;
@@ -436,7 +436,7 @@ function createMountConnectionGuard(win?: HostWindow | null, config?: MountConne
     }
   }
 
-  function start(host: Element | null): void {
+  function start(host: HTMLElement | null): void {
     stop();
     if (!host) {
       return;

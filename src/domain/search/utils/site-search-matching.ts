@@ -56,7 +56,7 @@ function createSiteSearchMatching(deps: SiteSearchMatchingDeps) {
     return getUrlHost(suggestion && suggestion.url);
   }
 
-  function getSiteSearchProviderHost(provider: MaybeProvider): string {
+  function getSiteSearchProviderHost(provider: Pick<Partial<SiteSearchProvider>, 'template'> | null | undefined): string {
     if (!provider || !provider.template) {
       return '';
     }

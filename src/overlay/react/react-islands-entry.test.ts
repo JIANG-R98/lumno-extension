@@ -8,10 +8,6 @@ type OverlayRuntime = typeof globalThis & {
     suggestions?: { implementation?: string };
     tabSwitcher?: { implementation?: string };
   };
-  LumnoOverlayShell?: {
-    createOverlayMount?(): unknown;
-    implementation?: string;
-  };
   LumnoOverlayShellReact?: {
     implementation?: string;
   };
@@ -64,9 +60,8 @@ afterEach(() => {
 
 describe('Overlay React islands entry', () => {
   it('upgrades the legacy shell and search-input globals synchronously', async () => {
-    runtime.LumnoOverlayShell = {
-      createOverlayMount: vi.fn()
-    };
+    // A shell left by an older build of the overlay script.
+    Reflect.set(runtime, 'LumnoOverlayShell', { createOverlayMount: vi.fn() });
 
     await import('./react-islands-entry');
 
@@ -103,9 +98,8 @@ describe('Overlay React islands entry', () => {
   });
 
   it('reuses installed APIs when the injected bundle runs again', async () => {
-    runtime.LumnoOverlayShell = {
-      createOverlayMount: vi.fn()
-    };
+    // A shell left by an older build of the overlay script.
+    Reflect.set(runtime, 'LumnoOverlayShell', { createOverlayMount: vi.fn() });
     await import('./react-islands-entry');
     const firstIslands = runtime.LumnoOverlayReactIslands;
     const firstShell = runtime.LumnoOverlayShell;

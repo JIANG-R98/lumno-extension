@@ -1,5 +1,6 @@
 // Shapes the input mode controller (search-input-mode.ts) hands to several
 // of its modules here.
+import type { ThemeRgb } from '../../../domain/favicon/favicon-utils';
 import type { AggregateSearch } from '../../../domain/search/aggregate-search-store';
 import type { SearchSourceType, SearchTextIndex, SiteSearchProvider } from '../../../domain/search/types';
 
@@ -41,7 +42,7 @@ type Rgb = number[];
 // icon for a site search). Only these fields are read here.
 interface InputModeTheme {
   accent?: string;
-  accentRgb?: Rgb | null;
+  accentRgb?: ThemeRgb;
   // The caret color while the mode is on.
   placeholderText?: string;
 }

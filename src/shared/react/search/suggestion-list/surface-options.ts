@@ -3,9 +3,7 @@
 import type {
   QueryStore,
   NormalizedOptions,
-  SuggestionsViewOptions,
-  ModeTheme,
-  ThemeValue
+  SuggestionsViewOptions
 } from './types';
 
 export function createQueryStore(): QueryStore {
@@ -228,7 +226,7 @@ export function normalizeOptions(
     shouldUseUrlFallbackThemeForSuggestion:
       raw.shouldUseUrlFallbackThemeForSuggestion || (() => false),
     getThemeForMode:
-      raw.getThemeForMode || ((theme) => (theme || defaultTheme) as ModeTheme),
+      raw.getThemeForMode || ((theme) => theme || defaultTheme),
     getHoverColors,
     getHighlightColors: raw.getHighlightColors || getHoverColors,
     getNeutralHoverActionColors:
@@ -286,7 +284,7 @@ export function normalizeOptions(
       raw.getDefaultSearchEngineThemeUrl || (() => ''),
     getBrandAccentForUrl: raw.getBrandAccentForUrl || (() => null),
     buildThemeFromAccent:
-      raw.buildThemeFromAccent || ((theme) => (theme || defaultTheme) as ThemeValue),
+      raw.buildThemeFromAccent || (() => null),
     isBrowserNewtabUrl,
     isBrowserInternalUrl,
     defaultTheme,

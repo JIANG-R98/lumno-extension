@@ -48,7 +48,7 @@ interface SlashCommandsState {
   documentPipEnabled: boolean;
   // Shows the theme mode while a /mode or /appearance command is typed.
   modeBadge: HTMLElement | null;
-  overlayThemeMode: string;
+  overlayThemeMode: ThemeMode;
   overlayMediaQuery: MediaQueryList;
   searchInput: HTMLInputElement | null;
 }

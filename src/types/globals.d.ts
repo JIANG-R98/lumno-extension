@@ -6,6 +6,9 @@ import type * as SearchSourceOrder from '../domain/search/search-source-order';
 import type { SuggestionsViewController, SuggestionsViewOptions } from '../shared/react/search/suggestion-list/types';
 import type { TabSwitcherViewController, TabSwitcherViewOptions } from '../shared/react/tab-switcher';
 import type { TabSwitcherReply } from '../overlay/tab-switcher-host';
+import type { createOverlayShellApi } from '../overlay/react/shell';
+import type { createSearchInputApi } from '../shared/react/search-input';
+import type { ThemeVariant } from '../shared/favicon/favicon-theme';
 
 declare global {
   // The traditional-to-simplified Han table as pairs of characters, set by
@@ -25,9 +28,25 @@ declare global {
   var _x_extension_shortcut_rules_promise_2024_unique_: Promise<ShortcutRule[]> | undefined;
   // Whether this page's search overlay is open, for the next toggle.
   var _x_extension_search_overlay_open_2026_unique_: boolean | undefined;
+  // The overlay script's build, which the worker compares before reusing it.
+  var _x_extension_search_overlay_runtime_version_2026_unique_: string | undefined;
+  // Opens or closes the search overlay with the window's tabs and the open
+  // context the worker sends, both read as untrusted; set by
+  // src/overlay/search-panel.ts.
+  var _x_extension_toggleSearchOverlay_2026_unique_: ((tabs: unknown, context: unknown) => void) | undefined;
+  // Site themes and favicon data the overlay resolved, kept across openings
+  // in the same page; the new tab page keeps the theme caches the same way.
+  var _x_extension_theme_color_cache_2024_unique_: Map<string, ThemeVariant> | undefined;
+  var _x_extension_theme_host_cache_2024_unique_: Map<string, ThemeVariant> | undefined;
+  var _x_extension_overlay_favicon_data_cache_2026_unique_: Map<string, string> | undefined;
+  var _x_extension_overlay_favicon_data_pending_2026_unique_: Map<string, Promise<string | null>> | undefined;
+  var _x_extension_overlay_icon_preload_cache_2026_unique_: Map<string, HTMLImageElement> | undefined;
   // Undo and redo of mode menu moves, kept across openings of the overlay.
   var __lumnoSearchSourceOrderHistory2026: ReturnType<typeof SearchSourceOrder.createHistory> | undefined;
+  // Set by the React islands entry of the overlay and of the new tab page.
+  var _x_extension_createSearchInput_2024_unique_: ReturnType<typeof createSearchInputApi>['createSearchInput'] | undefined;
   // Set by the overlay's React islands entry.
+  var LumnoOverlayShell: ReturnType<typeof createOverlayShellApi> | undefined;
   var LumnoOverlaySuggestionsView: {
     createSuggestionsView(options?: SuggestionsViewOptions): SuggestionsViewController;
   } | undefined;

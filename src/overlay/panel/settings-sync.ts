@@ -4,7 +4,8 @@ import type { OverlayTab } from '../../domain/messages';
 import type * as SearchUtils from '../../domain/search/search-utils';
 import type { LocalSearchScope, SearchEngineState, SearchSourceType } from '../../domain/search/types';
 import type * as Settings from '../../domain/settings';
-import type { OverlaySizeMode, SearchResultPriority } from '../../domain/settings';
+import { normalizeThemeMode } from '../../domain/settings';
+import type { OverlaySizeMode, SearchResultPriority, ThemeMode } from '../../domain/settings';
 import type { StorageAreaFacade } from '../../platform/settings-storage';
 import type * as SuggestionNavigation from '../../shared/search/suggestion-navigation';
 import type * as OverlayRuntime from '../runtime';
@@ -30,7 +31,7 @@ interface SettingsSyncState<Row, Provider> {
   openTabsSearchModeActive: boolean;
   siteSearchState: Provider | null;
   localSearchScopeState: LocalSearchScope | null;
-  overlayThemeMode: string;
+  overlayThemeMode: ThemeMode;
   overlayPageThemeAdaptationEnabled: boolean;
   overlaySearchEngineState: SearchEngineState | null;
   overlaySearchEngineStateReady: Promise<SearchEngineState | null>;
@@ -91,7 +92,7 @@ interface SettingsSyncDeps<Row, Provider, Theme> {
   isPrimaryStorageAreaName(areaName: string): boolean;
   updateSearchSuggestions(rows: Row[], query: string, options?: { forceFullRerender?: boolean }): void;
   requestOverlaySearchSuggestions(query: string): void;
-  applyOverlayTheme(mode: unknown): void;
+  applyOverlayTheme(mode: ThemeMode): void;
   applyLanguageMode(mode: unknown): void;
   applyOverlayFontFamily(overlayElement: HTMLElement | null): void;
   loadOverlaySearchEngineState(onReload: () => void): Promise<SearchEngineState | null>;
@@ -213,7 +214,7 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
     }
     const themeChange = changes[THEME_STORAGE_KEY];
     const nextMode = themeChange
-      ? themeChange.newValue || 'system'
+      ? normalizeThemeMode(themeChange.newValue)
       : overlayState.overlayThemeMode;
     applyOverlayTheme(nextMode);
   });

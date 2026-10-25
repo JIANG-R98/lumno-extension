@@ -8,6 +8,8 @@ import type * as SearchUtils from '../../domain/search/search-utils';
 import type * as SuggestionActionModel from '../../domain/search/suggestion-action-model';
 import type { LocalSearchScope, SiteSearchProvider, SuggestionLike } from '../../domain/search/types';
 import type * as Settings from '../../domain/settings';
+import { normalizeThemeMode } from '../../domain/settings';
+import type { ThemeMode } from '../../domain/settings';
 import { readShortcutRules } from '../../domain/shortcut-rules-reader';
 import * as BROWSER_PROFILE from '../../platform/browser-profile';
 import type * as CommunityLinks from '../../platform/community-links';
@@ -48,7 +50,7 @@ interface SuggestionSourcesState {
   defaultSiteSearchProviders: SiteSearchProvider[];
   aggregateSearchesCache: AggregateSearch[] | null;
   overlayLanguageMode: string;
-  overlayThemeMode: string;
+  overlayThemeMode: ThemeMode;
   simpleModeEnabled: boolean;
   overlaySearchResultPriorityMode: string;
   overlaySearchResultDisplayLimit: number;
@@ -77,7 +79,7 @@ interface SuggestionSourcesDeps {
   isSlashCommandInput(input: string): boolean;
   isModeCommand(input: string): boolean;
   THEME_STORAGE_KEY: string;
-  applyOverlayTheme(mode: unknown): void;
+  applyOverlayTheme(mode: ThemeMode): void;
   buildDefaultSearchUrlForOverlay(query: string): string;
   getDefaultSearchEngineFaviconUrlForOverlay(): string;
   getCommandMatches(rawInput: string): SlashCommand[];
@@ -411,7 +413,7 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
     if (modeCommandActive) {
       if (overlayState.storageArea) {
         void overlayState.storageArea.get([THEME_STORAGE_KEY], (result) => {
-          const storedMode = (result ? result[THEME_STORAGE_KEY] : undefined) || 'system';
+          const storedMode = normalizeThemeMode(result ? result[THEME_STORAGE_KEY] : undefined);
           if (storedMode !== overlayState.overlayThemeMode && query === overlayState.latestOverlayQuery) {
             applyOverlayTheme(storedMode);
             updateSearchSuggestions([], query);

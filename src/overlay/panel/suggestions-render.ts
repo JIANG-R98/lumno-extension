@@ -30,7 +30,7 @@ type ViewOption<K extends keyof SuggestionsViewOptions> = NonNullable<Suggestion
 
 interface SuggestionsRenderState {
   overlay: HTMLElement | null;
-  overlayStyleRoot: Node | null;
+  overlayStyleRoot: ShadowRoot | null;
   searchInput: HTMLInputElement | null;
   suggestionsContainer: HTMLElement | null;
   inputModeController: Pick<InputModeController, 'isModeMenuVisible' | 'menuElement'> | null;
@@ -64,7 +64,7 @@ interface SuggestionsRenderState {
     hostKey: string,
     fallbackUrl: string,
     onFailed: () => void,
-    sourceOptions: { allowRemoteImage: boolean }
+    sourceOptions?: { allowRemoteImage: boolean }
   ): void;
   applyFaviconOpticalAlignment: ViewOption<'applyFaviconOpticalAlignment'>;
   preloadIcon: ViewOption<'preloadIcon'>;

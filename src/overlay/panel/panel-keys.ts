@@ -42,7 +42,7 @@ interface PanelKeysState {
   selectedIndex: number;
   latestRawInputValue: string;
   latestOverlayQuery: string;
-  overlayThemeMode: string;
+  overlayThemeMode: ThemeMode;
   prioritizeCurrentPageMatch: boolean;
   currentOverlayTabId: number | null;
   // Enter on the first result switches to its open tab.

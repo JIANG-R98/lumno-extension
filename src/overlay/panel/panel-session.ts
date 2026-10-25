@@ -26,7 +26,6 @@ interface PanelSessionState {
   clickOutsideHandler: ((event: MouseEvent) => void) | null;
   overlayMediaQuery: MediaQueryList;
   overlayThemeMediaListener: ((event: MediaQueryListEvent) => void) | null;
-  overlayThemeListenerAttached: boolean;
   overlayScrollPauseHandler: ((event: Event) => void) | null;
   inputModeController: Pick<InputModeController, 'destroy'> | null;
   inputHistoryController: { destroy?(): void } | null;
@@ -454,7 +453,6 @@ function createPanelSession(deps: PanelSessionDeps) {
       overlayState.overlayMediaQuery.removeEventListener('change', overlayState.overlayThemeMediaListener);
       overlayState.overlayThemeMediaListener = null;
     }
-    overlayState.overlayThemeListenerAttached = false;
     if (overlayState.overlayScrollPauseHandler) {
       window.removeEventListener('scroll', overlayState.overlayScrollPauseHandler, true);
       window.removeEventListener('wheel', overlayState.overlayScrollPauseHandler, true);

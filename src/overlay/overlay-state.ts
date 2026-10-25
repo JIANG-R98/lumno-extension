@@ -172,7 +172,6 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
     overlayCursorTooltipController: null,
     overlayPageThemeObserver: null,
     overlayThemeMediaListener: null,
-    overlayThemeListenerAttached: false,
     clickOutsideHandler: null,
     overlayScrollPauseHandler: null,
     overlayWheelIsolationHandler: null,

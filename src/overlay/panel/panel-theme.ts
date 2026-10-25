@@ -2,6 +2,7 @@
 // watching the page for theme changes, the font family, and the CSS
 // variables the panel draws with.
 import type * as Settings from '../../domain/settings';
+import type { ThemeMode } from '../../domain/settings';
 import type * as FaviconTheme from '../../shared/favicon/favicon-theme';
 import type { HoverColors, ThemeLike, ThemeVariant } from '../../shared/favicon/favicon-theme';
 import * as LumnoOverlayPageTheme from '../page-theme';
@@ -12,7 +13,7 @@ type PageThemeObserver = ReturnType<typeof LumnoOverlayPageTheme.createPageTheme
 interface PanelThemeState {
   overlay: HTMLElement | null;
   overlayMediaQuery: MediaQueryList;
-  overlayThemeMode: string;
+  overlayThemeMode: ThemeMode;
   overlayPageThemeAdaptationEnabled: boolean;
   overlayPageThemeObserver: PageThemeObserver | null;
   overlayFontFamily: string;
@@ -24,7 +25,7 @@ interface PanelThemeDeps {
   // Reads a CSS color as an [r, g, b] triple.
   parseCssColor(color: string): number[] | null;
   stopOverlayPageThemeObserver(): void;
-  applyOverlayTheme(mode: unknown): void;
+  applyOverlayTheme(mode: ThemeMode): void;
   SETTINGS: Pick<typeof Settings, 'getOverlayFontFamilyCssValue'>;
   OVERLAY_FONT_FAMILY_CSS_VAR: string;
   FAVICON_THEME: Pick<typeof FaviconTheme, 'getThemeForMode' | 'getHoverColors'>;
@@ -72,7 +73,7 @@ function createPanelTheme(deps: PanelThemeDeps) {
 
   const overlayPageTheme = LumnoOverlayPageTheme;
 
-  function getHighlightColors(theme: ThemeVariant | null): { bg: string; border: string } {
+  function getHighlightColors(theme: Partial<ThemeVariant> | null): { bg?: string; border?: string } {
     const resolvedTheme = getThemeForMode(theme);
     if (!resolvedTheme || !resolvedTheme._xIsBrand) {
       return {
