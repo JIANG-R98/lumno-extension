@@ -15,8 +15,10 @@ import {
   getEmptyStateArtMarkup
 } from '../../shared/ui/empty-state-art';
 import type { CursorTooltipOptions } from '../../shared/ui/cursor-tooltip';
+import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 
-type ThemeValue = unknown;
+// A site's theme as the page resolves it; the view passes it through.
+type ThemeValue = Partial<ThemeVariant> | null;
 // `instant` jumps to the end of a folder morph.
 type VisualOptions = { instant?: boolean } | undefined;
 type ActivationEvent = {
@@ -894,8 +896,9 @@ function BookmarkCard({
           if (!card.isConnected) {
             return;
           }
-          card._xTheme = theme || card._xTheme;
-          options.applyCardTheme(card, card._xTheme, host);
+          const nextTheme = theme || card._xTheme || null;
+          card._xTheme = nextTheme;
+          options.applyCardTheme(card, nextTheme, host);
         },
         { priority: index < 4 ? 0 : 2 }
       );

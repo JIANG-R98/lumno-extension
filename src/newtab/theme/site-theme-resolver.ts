@@ -5,7 +5,7 @@ import type * as FaviconUtils from '../../domain/favicon/favicon-utils';
 import type { FaviconUrlResolver, ThemeRgb } from '../../domain/favicon/favicon-utils';
 import type { SiteSearchProvider } from '../../domain/search/types';
 import type * as FaviconTheme from '../../shared/favicon/favicon-theme';
-import type { HoverColors, ThemeVariant } from '../../shared/favicon/favicon-theme';
+import type { HoverColors, ThemeLike, ThemeVariant } from '../../shared/favicon/favicon-theme';
 import type { FaviconCacheRuntime } from '../../platform/favicon-cache';
 import * as LumnoMessaging from '../../platform/messaging';
 import type { SuggestionElement } from '../../shared/react/search/suggestion-list/types';
@@ -235,7 +235,7 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
     return 'fallback';
   }
 
-  function getThemeSourcePriority(source: unknown, theme?: ThemeVariant | null): number {
+  function getThemeSourcePriority(source: unknown, theme?: ThemeLike | null): number {
     const value = normalizeThemeSource(source);
     if (value === 'brand') {
       return 40;
@@ -258,7 +258,7 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
     return 10;
   }
 
-  function getThemeSource(theme: ThemeVariant | null | undefined): ThemeSource {
+  function getThemeSource(theme: ThemeLike | null | undefined): ThemeSource {
     if (!theme) {
       return 'fallback';
     }
@@ -301,7 +301,7 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
     return theme;
   }
 
-  function isLowConfidenceTheme(theme: ThemeVariant | null | undefined): boolean {
+  function isLowConfidenceTheme(theme: ThemeLike | null | undefined): boolean {
     if (!theme) {
       return false;
     }
@@ -314,7 +314,7 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
     return theme._xThemeNeutral === true || confidence === 'neutral';
   }
 
-  function isPersistableTheme(theme: ThemeVariant | null | undefined): boolean {
+  function isPersistableTheme(theme: ThemeLike | null | undefined): boolean {
     const source = getThemeSource(theme);
     return source === 'brand' ||
       source === 'mask-icon' ||
@@ -1037,7 +1037,7 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
     return isNewtabDarkMode() ? 'dark' : 'light';
   }
 
-  function getThemeForMode(theme: ThemeVariant | null | undefined): ThemeVariant {
+  function getThemeForMode<T extends ThemeLike>(theme: T | null | undefined): T | ThemeVariant {
     return NEWTAB_FAVICON_THEME.getThemeForMode(theme, {
       defaultTheme,
       isDarkMode: isNewtabDarkMode

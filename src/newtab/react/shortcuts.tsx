@@ -18,8 +18,10 @@ import {
   type IconPlateColors,
   type IconPlateInput
 } from './shortcut-dialog-helpers';
+import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 
-type ThemeValue = unknown;
+// A site's theme as the page resolves it; the view passes it through.
+type ThemeValue = Partial<ThemeVariant> | null;
 
 export type { ShortcutGroup, VisibleShortcutItem };
 

@@ -1,5 +1,38 @@
 // Accent colors for recent cards, bookmark cards and shortcut icons.
-function createCardThemes(deps) {
+import type { ThemeRgb } from '../../domain/favicon/favicon-utils';
+import type * as FaviconTheme from '../../shared/favicon/favicon-theme';
+import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
+import type { BookmarkCardElement } from '../react/bookmarks';
+import type { SiteThemeResolver } from './site-theme-resolver';
+
+// A theme as a card or tile holds it; parts may be missing.
+type CardTheme = Partial<ThemeVariant> | null | undefined;
+
+interface CardThemesState {
+  recentMouseInsideSection: boolean;
+  recentMouseLeftAt: number;
+}
+
+interface CardThemesDeps {
+  buildFallbackThemeForHost: typeof FaviconTheme.buildFallbackThemeForHost;
+  defaultTheme: ThemeVariant;
+  getThemeForMode: SiteThemeResolver['getThemeForMode'];
+  parseCssColor: typeof FaviconTheme.parseCssColor;
+  defaultAccentColor: ThemeRgb;
+  mixColor: typeof FaviconTheme.mixColor;
+  rgbToCss: typeof FaviconTheme.rgbToCss;
+  rgbToCssParts: typeof FaviconTheme.rgbToCssParts;
+  rgbToCssAlpha: typeof FaviconTheme.rgbToCssAlpha;
+  normalizeAccentRgb: SiteThemeResolver['normalizeAccentRgb'];
+  getReadableTextColor: typeof FaviconTheme.getReadableTextColor;
+  getThemeSource: SiteThemeResolver['getThemeSource'];
+  normalizeThemeConfidence: SiteThemeResolver['normalizeThemeConfidence'];
+  isLowConfidenceTheme: SiteThemeResolver['isLowConfidenceTheme'];
+  scheduleWallpaperAdaptiveToneUpdate(): void;
+  pageState: CardThemesState;
+}
+
+function createCardThemes(deps: CardThemesDeps) {
   const {
     buildFallbackThemeForHost,
     defaultTheme,
@@ -23,10 +56,15 @@ function createCardThemes(deps) {
 
   const BOOKMARK_HOVER_RECENT_TRANSFER_WINDOW_MS = 220;
 
-  function getRecentCardColors(theme, host) {
+  // The tinted colors of a card or tile from the site's accent.
+  function getAccentRgb(theme: CardTheme, host: string): ThemeRgb {
     const fallbackTheme = theme || buildFallbackThemeForHost(host) || defaultTheme;
     const resolvedTheme = getThemeForMode(fallbackTheme);
-    const accentRgb = resolvedTheme.accentRgb || parseCssColor(resolvedTheme.accent) || defaultAccentColor;
+    return resolvedTheme.accentRgb || parseCssColor(resolvedTheme.accent) || defaultAccentColor;
+  }
+
+  function getRecentCardColors(theme: CardTheme, host: string) {
+    const accentRgb = getAccentRgb(theme, host);
     const isDark = document.body && document.body.getAttribute('data-theme') === 'dark';
     const accentEmphasis = mixColor(accentRgb, [0, 0, 0], isDark ? 0.1 : 0.18);
     const baseTarget = isDark ? [22, 22, 22] : [255, 255, 255];
@@ -43,10 +81,7 @@ function createCardThemes(deps) {
     };
   }
 
-  function applyRecentCardTheme(card, theme, host) {
-    if (!card) {
-      return;
-    }
+  function applyRecentCardTheme(card: HTMLElement, theme: CardTheme, host: string): void {
     const colors = getRecentCardColors(theme, host);
     card.style.setProperty('--x-nt-recent-card-color', colors.base);
     card.style.setProperty('--x-nt-recent-card-border-color', colors.border);
@@ -56,10 +91,8 @@ function createCardThemes(deps) {
     card.style.setProperty('--x-nt-recent-accent-border', colors.accentBorder);
   }
 
-  function getBookmarkCardColors(theme, host) {
-    const fallbackTheme = theme || buildFallbackThemeForHost(host) || defaultTheme;
-    const resolvedTheme = getThemeForMode(fallbackTheme);
-    const accentRgb = resolvedTheme.accentRgb || parseCssColor(resolvedTheme.accent) || defaultAccentColor;
+  function getBookmarkCardColors(theme: CardTheme, host: string) {
+    const accentRgb = getAccentRgb(theme, host);
     const isDark = document.body && document.body.getAttribute('data-theme') === 'dark';
     const baseTarget = isDark ? [24, 24, 24] : [255, 255, 255];
     const base = mixColor(accentRgb, baseTarget, isDark ? 0.9 : 0.94);
@@ -78,10 +111,7 @@ function createCardThemes(deps) {
     };
   }
 
-  function applyBookmarkCardTheme(card, theme, host) {
-    if (!card) {
-      return;
-    }
+  function applyBookmarkCardTheme(card: BookmarkCardElement, theme: CardTheme, host: string): void {
     if (card._xNoThemeTint) {
       card.style.removeProperty('--x-nt-bookmark-card-color');
       card.style.removeProperty('--x-nt-bookmark-card-hover-color');
@@ -99,7 +129,7 @@ function createCardThemes(deps) {
     card.style.setProperty('--x-nt-bookmark-shadow-rgb', colors.shadowRgb);
   }
 
-  function getShortcutIconColors(theme, host) {
+  function getShortcutIconColors(theme: CardTheme, host: string) {
     const fallbackTheme = theme || buildFallbackThemeForHost(host) || defaultTheme;
     const resolvedTheme = getThemeForMode(fallbackTheme);
     const accentRgb = normalizeAccentRgb(resolvedTheme.accentRgb || parseCssColor(resolvedTheme.accent)) || defaultAccentColor;
@@ -112,7 +142,7 @@ function createCardThemes(deps) {
     };
   }
 
-  function isShortcutThemeDefaultForWallpaper(theme) {
+  function isShortcutThemeDefaultForWallpaper(theme: CardTheme): boolean {
     if (theme && theme._xIsCustomShortcutIcon) {
       return false;
     }
@@ -128,10 +158,7 @@ function createCardThemes(deps) {
     return isLowConfidenceTheme(theme);
   }
 
-  function applyShortcutTileTheme(tile, theme, host) {
-    if (!tile) {
-      return;
-    }
+  function applyShortcutTileTheme(tile: HTMLElement, theme: CardTheme, host: string): void {
     const fallbackTheme = theme || buildFallbackThemeForHost(host) || defaultTheme;
     const isDefaultTheme = isShortcutThemeDefaultForWallpaper(fallbackTheme);
     const colors = getShortcutIconColors(theme, host);
@@ -144,7 +171,7 @@ function createCardThemes(deps) {
     scheduleWallpaperAdaptiveToneUpdate();
   }
 
-  function shouldDelayBookmarkHoverFromRecent(pointerType) {
+  function shouldDelayBookmarkHoverFromRecent(pointerType?: string): boolean {
     if (pointerType && pointerType !== 'mouse') {
       return false;
     }
@@ -165,4 +192,7 @@ function createCardThemes(deps) {
   };
 }
 
+type CardThemes = ReturnType<typeof createCardThemes>;
+
 export { createCardThemes };
+export type { CardThemes, CardThemesDeps, CardThemesState };

@@ -11,9 +11,11 @@ import { createRoot, type Root } from 'react-dom/client';
 import { useExclusiveAsyncAction } from '../../shared/react/use-exclusive-async-action';
 import { isElementTextTruncated } from '../../shared/react/text-overflow';
 import type { RecentSite } from '../../domain/recent-sites-store';
+import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 
 type Translate = (key: string, fallback: string) => string;
-type ThemeValue = unknown;
+// A site's theme as the page resolves it; the view passes it through.
+type ThemeValue = Partial<ThemeVariant> | null;
 
 export type { RecentSite };
 
