@@ -1,5 +1,39 @@
 // Inline autocomplete for the search input.
-function createSearchAutocomplete(deps) {
+import type { SiteSearchProvider } from '../../domain/search/types';
+import type { SearchInputParts } from '../../shared/react/search-input';
+import type { Suggestion } from '../../shared/react/search/suggestion-list/types';
+import type { AutocompleteState } from './search-types';
+import type { SiteSearchProviders } from './site-search-providers';
+
+interface SearchAutocompleteState {
+  inputParts: SearchInputParts | null;
+  autocompleteState: AutocompleteState | null;
+  latestQuery: string;
+  latestRawQuery: string;
+  searchResultPriorityMode: string;
+  // When the user last deleted text; autocomplete holds off right after.
+  lastDeletionAt: number;
+  siteSearchState: SiteSearchProvider | null;
+}
+
+interface SearchAutocompleteDeps {
+  getUrlDisplay(url: string | undefined): string;
+  isEnglishQuery(query: string): boolean;
+  getKeywordSearchSuggestionState: SiteSearchProviders['getKeywordSearchSuggestionState'];
+  pageState: SearchAutocompleteState;
+}
+
+// A completion and what it completes to.
+interface AutocompleteCandidate {
+  completion: string;
+  url: string;
+  title: string;
+  type: 'command' | 'url' | 'title';
+}
+
+type SuggestionList = readonly (Suggestion | null | undefined)[];
+
+function createSearchAutocomplete(deps: SearchAutocompleteDeps) {
   const {
     getUrlDisplay,
     isEnglishQuery,
@@ -9,8 +43,8 @@ function createSearchAutocomplete(deps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  function getAutocompleteCandidate(allSuggestions, rawQuery) {
-    if (!Array.isArray(allSuggestions) || !rawQuery) {
+  function getAutocompleteCandidate(allSuggestions: SuggestionList | null | undefined, rawQuery: string): AutocompleteCandidate | null {
+    if (!allSuggestions || !rawQuery) {
       return null;
     }
     const rawLower = rawQuery.toLowerCase();
@@ -35,7 +69,7 @@ function createSearchAutocomplete(deps) {
               type: 'command'
             };
           }
-          const aliases = Array.isArray(suggestion.commandAliases) ? suggestion.commandAliases : [];
+          const aliases = suggestion.commandAliases || [];
           for (let aliasIndex = 0; aliasIndex < aliases.length; aliasIndex += 1) {
             const alias = String(aliases[aliasIndex] || '').toLowerCase();
             if (alias && alias.startsWith(rawLower)) {
@@ -71,8 +105,8 @@ function createSearchAutocomplete(deps) {
     return null;
   }
 
-  function getDomainPrefixCandidate(allSuggestions, rawQuery) {
-    if (!Array.isArray(allSuggestions) || !rawQuery) {
+  function getDomainPrefixCandidate(allSuggestions: SuggestionList | null | undefined, rawQuery: string): AutocompleteCandidate | null {
+    if (!allSuggestions || !rawQuery) {
       return null;
     }
     const rawLower = rawQuery.toLowerCase();
@@ -98,7 +132,7 @@ function createSearchAutocomplete(deps) {
     return null;
   }
 
-  function getAutocompleteCandidateFromSuggestion(suggestion, rawQuery) {
+  function getAutocompleteCandidateFromSuggestion(suggestion: Suggestion | null | undefined, rawQuery: string): AutocompleteCandidate | null {
     if (!suggestion || !rawQuery || suggestion.type === 'newtab') {
       return null;
     }
@@ -113,7 +147,7 @@ function createSearchAutocomplete(deps) {
           type: 'command'
         };
       }
-      const aliases = Array.isArray(suggestion.commandAliases) ? suggestion.commandAliases : [];
+      const aliases = suggestion.commandAliases || [];
       for (let aliasIndex = 0; aliasIndex < aliases.length; aliasIndex += 1) {
         const alias = String(aliases[aliasIndex] || '');
         if (alias.toLowerCase().startsWith(rawLower)) {
@@ -150,18 +184,18 @@ function createSearchAutocomplete(deps) {
     return null;
   }
 
-  function clearAutocomplete() {
+  function clearAutocomplete(): void {
     pageState.autocompleteState = null;
   }
 
-  function restoreUserAuthoredSearchInput() {
+  // Puts back the text as typed in place of a completion; false when none
+  // was showing.
+  function restoreUserAuthoredSearchInput(): boolean {
     if (!pageState.autocompleteState || !pageState.autocompleteState.completion) {
       return false;
     }
-    const rawQuery = typeof pageState.autocompleteState.rawQuery === 'string'
-      ? pageState.autocompleteState.rawQuery
-      : String(pageState.latestRawQuery || '');
-    if (pageState.inputParts && pageState.inputParts.input && pageState.inputParts.input.value !== rawQuery) {
+    const rawQuery = pageState.autocompleteState.rawQuery;
+    if (pageState.inputParts && pageState.inputParts.input.value !== rawQuery) {
       pageState.inputParts.input.value = rawQuery;
       pageState.inputParts.input.setSelectionRange(rawQuery.length, rawQuery.length);
     }
@@ -171,8 +205,8 @@ function createSearchAutocomplete(deps) {
     return true;
   }
 
-  function dismissAutocompletePreviewOnNonTabKey(event) {
-    if (!event || event.key === 'Tab') {
+  function dismissAutocompletePreviewOnNonTabKey(event: Pick<KeyboardEvent, 'key'>): boolean {
+    if (event.key === 'Tab') {
       return false;
     }
     const isModifierOnly = event.key === 'Shift' || event.key === 'Control' || event.key === 'Alt' || event.key === 'Meta';
@@ -182,13 +216,20 @@ function createSearchAutocomplete(deps) {
     return restoreUserAuthoredSearchInput();
   }
 
-  function applyAutocomplete(allSuggestions, primarySuggestion, primaryHighlightReason) {
+  // Shows the completion the suggestions give for the typed text, keeping
+  // to the first row when the list highlights it for a reason.
+  function applyAutocomplete(
+    allSuggestions: SuggestionList | null | undefined,
+    primarySuggestion?: Suggestion | null,
+    primaryHighlightReason?: string
+  ): void {
     const rawQuery = pageState.latestRawQuery;
     const trimmedQuery = rawQuery.trim();
+    const inputParts = pageState.inputParts;
     if (pageState.searchResultPriorityMode === 'search') {
-      if (pageState.inputParts && pageState.inputParts.input && pageState.inputParts.input.value !== rawQuery) {
-        pageState.inputParts.input.value = rawQuery;
-        pageState.inputParts.input.setSelectionRange(rawQuery.length, rawQuery.length);
+      if (inputParts && inputParts.input.value !== rawQuery) {
+        inputParts.input.value = rawQuery;
+        inputParts.input.setSelectionRange(rawQuery.length, rawQuery.length);
       }
       clearAutocomplete();
       return;
@@ -205,12 +246,13 @@ function createSearchAutocomplete(deps) {
       clearAutocomplete();
       return;
     }
-    if (!allSuggestions || !Array.isArray(allSuggestions)) {
+    if (!allSuggestions || !inputParts) {
       clearAutocomplete();
       return;
     }
-    if (pageState.inputParts.input.selectionStart !== pageState.inputParts.input.value.length ||
-        pageState.inputParts.input.selectionEnd !== pageState.inputParts.input.value.length) {
+    const input = inputParts.input;
+    if (input.selectionStart !== input.value.length ||
+        input.selectionEnd !== input.value.length) {
       return;
     }
     const shouldForcePrimaryAlignment = Boolean(
@@ -219,7 +261,7 @@ function createSearchAutocomplete(deps) {
       primaryHighlightReason !== 'autocomplete' &&
       primaryHighlightReason !== 'default'
     );
-    let candidate = null;
+    let candidate: AutocompleteCandidate | null = null;
     if (primarySuggestion) {
       candidate = getAutocompleteCandidateFromSuggestion(primarySuggestion, rawQuery);
     }
@@ -228,7 +270,9 @@ function createSearchAutocomplete(deps) {
       return;
     }
     if (!candidate) {
-      const autocompleteSuggestions = getKeywordSearchSuggestionState(allSuggestions).autocompleteSuggestions;
+      const autocompleteSuggestions = getKeywordSearchSuggestionState(
+        allSuggestions.filter((item): item is Suggestion => Boolean(item))
+      ).autocompleteSuggestions;
       candidate = getDomainPrefixCandidate(autocompleteSuggestions, rawQuery) ||
         getAutocompleteCandidate(autocompleteSuggestions, rawQuery);
     }
@@ -251,15 +295,15 @@ function createSearchAutocomplete(deps) {
     // The typed part stays as typed: "4A" completes to "4Anet.com", not
     // the candidate's own "4anet.com".
     const displayText = rawQuery + candidate.completion.slice(rawQuery.length);
-    pageState.inputParts.input.value = displayText;
-    pageState.inputParts.input.setSelectionRange(rawQuery.length, displayText.length);
+    input.value = displayText;
+    input.setSelectionRange(rawQuery.length, displayText.length);
     pageState.autocompleteState = {
       completion: displayText,
       displayText: displayText,
       url: candidate.url || '',
       rawQuery: rawQuery,
       title: candidate.title || '',
-      type: candidate.type || ''
+      type: candidate.type
     };
   }
 
@@ -272,4 +316,7 @@ function createSearchAutocomplete(deps) {
   };
 }
 
+type SearchAutocomplete = ReturnType<typeof createSearchAutocomplete>;
+
 export { createSearchAutocomplete };
+export type { AutocompleteCandidate, SearchAutocomplete, SearchAutocompleteDeps, SearchAutocompleteState };

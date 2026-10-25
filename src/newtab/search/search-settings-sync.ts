@@ -1,7 +1,87 @@
 // Search settings that can change while the page is open: the default
 // engine, result priority, sources and limit, open-in-new-tab, number
 // shortcuts, simple mode and the search and favicon blacklists.
-function createSearchSettingsSync(deps) {
+import type { BlacklistRule } from '../../domain/blacklist-utils';
+import type * as SearchUtils from '../../domain/search/search-utils';
+import type { SearchSourceType, SiteSearchProvider } from '../../domain/search/types';
+import type * as Settings from '../../domain/settings';
+import type { NewtabOpenInNewTab, SearchResultPriority } from '../../domain/settings';
+import type { Suggestion } from '../../shared/react/search/suggestion-list/types';
+import type * as SuggestionNavigation from '../../shared/search/suggestion-navigation';
+import type { InputModeController } from '../../shared/search/search-input-mode';
+import type { InputModeTheme } from '../../shared/search/input-mode/types';
+import type { StorageChangeRegistry } from '../storage-change-registry';
+import { readStoredSearchEngineState } from './default-search-engine';
+import type { DefaultSearchEngineState } from './default-search-engine';
+import type { SearchModeController } from './search-mode-controller';
+import type { ActiveLocalScope, RenderSuggestions, RequestSuggestions } from './search-types';
+
+interface SearchSettingsSyncState {
+  defaultSearchEngineState: DefaultSearchEngineState;
+  searchResultPriorityMode: string;
+  enabledSearchResultSourceTypes: SearchSourceType[];
+  localSearchScopeState: ActiveLocalScope | null;
+  searchResultDisplayLimit: number;
+  latestQuery: string;
+  lastSuggestionResponse: Suggestion[];
+  newtabOpenInNewTab: NewtabOpenInNewTab;
+  numberShortcutInstantEnabled: boolean;
+  suggestionsContainer: HTMLElement | null;
+  macosCtrlSuggestionNavigationEnabled: boolean;
+  simpleModeEnabled: boolean;
+  openTabQuickSwitchEnabled: boolean;
+  searchBlacklistItems: BlacklistRule[];
+  faviconRequestBlacklistItems: BlacklistRule[];
+  faviconEnhancedFetchEnabled: boolean;
+  // Bumped when the favicon policy changes, so requests made before it are
+  // dropped.
+  shortcutFaviconPolicyRevision: number;
+  inputModeController: Pick<InputModeController, 'refreshModeMenu'> | null;
+  siteSearchState: SiteSearchProvider | null;
+}
+
+interface SearchSettingsSyncDeps {
+  loadDefaultSearchEngineState(): void;
+  storageChanges: Pick<StorageChangeRegistry, 'on'>;
+  DEFAULT_SEARCH_ENGINE_STORAGE_KEY: string;
+  SEARCH_UTILS: Pick<typeof SearchUtils, 'isRetiredSearchEngineState'>;
+  SEARCH_RESULT_PRIORITY_STORAGE_KEY: string;
+  normalizeSearchResultPriority(value: unknown): SearchResultPriority;
+  SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY: string;
+  normalizeEnabledSearchResultSourceTypes(value: unknown): SearchSourceType[];
+  clearLocalSearchScope(): boolean;
+  SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY: string;
+  normalizeSearchResultDisplayLimit(value: unknown): number;
+  renderSuggestions: RenderSuggestions;
+  NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY: string;
+  SETTINGS: Pick<typeof Settings, 'normalizeNewtabOpenInNewTab'>;
+  NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY: string;
+  normalizeNumberShortcutInstantEnabled(value: unknown): boolean;
+  SUGGESTION_NAVIGATION: Pick<typeof SuggestionNavigation, 'cancelNumberShortcuts'>;
+  MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY: string;
+  normalizeMacosCtrlSuggestionNavigationEnabled(value: unknown): boolean;
+  SIMPLE_MODE_ENABLED_STORAGE_KEY: string;
+  normalizeSimpleModeEnabled(value: unknown): boolean;
+  OVERLAY_TAB_PRIORITY_STORAGE_KEY: string;
+  normalizeOverlayTabPriorityMode(value: unknown): boolean;
+  requestSuggestions: RequestSuggestions;
+  SEARCH_BLACKLIST_STORAGE_KEY: string;
+  normalizeSearchBlacklistItems(value: unknown): BlacklistRule[];
+  markRecentDataDirty(): void;
+  scheduleRecentReloadIfVisible(): void;
+  FAVICON_REQUEST_BLACKLIST_STORAGE_KEY: string;
+  normalizeFaviconRequestBlacklistItems(value: unknown): BlacklistRule[];
+  scheduleBookmarkReloadIfVisible(): void;
+  refreshThemeAwareFavicons?(): void;
+  FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY: string;
+  normalizeFaviconEnhancedFetchEnabled(value: unknown): boolean;
+  renderShortcuts(): void;
+  setSiteSearchPrefix: SearchModeController['setSiteSearchPrefix'];
+  getImmediateThemeForSuggestion(suggestion: { provider: SiteSearchProvider }): InputModeTheme;
+  pageState: SearchSettingsSyncState;
+}
+
+function createSearchSettingsSync(deps: SearchSettingsSyncDeps): void {
   const {
     loadDefaultSearchEngineState,
     storageChanges,
@@ -47,9 +127,11 @@ function createSearchSettingsSync(deps) {
 
   loadDefaultSearchEngineState();
   storageChanges.on(DEFAULT_SEARCH_ENGINE_STORAGE_KEY, (changes) => {
-    const nextValue = changes[DEFAULT_SEARCH_ENGINE_STORAGE_KEY].newValue;
-    if (nextValue && nextValue.id &&
-        (!SEARCH_UTILS.isRetiredSearchEngineState(nextValue))) {
+    const nextValue = readStoredSearchEngineState(
+      changes[DEFAULT_SEARCH_ENGINE_STORAGE_KEY].newValue,
+      SEARCH_UTILS.isRetiredSearchEngineState
+    );
+    if (nextValue) {
       pageState.defaultSearchEngineState = nextValue;
     }
   });
@@ -113,7 +195,7 @@ function createSearchSettingsSync(deps) {
     markRecentDataDirty();
     scheduleRecentReloadIfVisible();
     scheduleBookmarkReloadIfVisible();
-    if (typeof refreshThemeAwareFavicons === 'function') {
+    if (refreshThemeAwareFavicons) {
       refreshThemeAwareFavicons();
     }
   });
@@ -124,7 +206,7 @@ function createSearchSettingsSync(deps) {
     markRecentDataDirty();
     scheduleRecentReloadIfVisible();
     scheduleBookmarkReloadIfVisible();
-    if (typeof refreshThemeAwareFavicons === 'function') {
+    if (refreshThemeAwareFavicons) {
       refreshThemeAwareFavicons();
     }
   });
@@ -151,8 +233,7 @@ function createSearchSettingsSync(deps) {
       requestSuggestions(pageState.latestQuery, { immediate: true });
     }
   });
-
-  return {};
 }
 
 export { createSearchSettingsSync };
+export type { SearchSettingsSyncDeps, SearchSettingsSyncState };

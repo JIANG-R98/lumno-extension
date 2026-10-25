@@ -28,6 +28,8 @@ interface DisplayedSuggestion extends SuggestionLike {
   detail?: string;
   recommended?: boolean;
   commandText?: string;
+  // The other words that type a command row's command.
+  commandAliases?: string[];
   provider?: DisplayedProvider | null;
   searchQuery?: string;
   forceSearch?: boolean;

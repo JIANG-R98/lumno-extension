@@ -1,9 +1,63 @@
 // Site search providers and aggregate searches while the page is open:
 // their first load, restoring a search the shortcut's reload interrupted,
 // and refreshing both when their storage changes.
+import type * as AggregateSearchStore from '../../domain/search/aggregate-search-store';
+import type { AggregateSearch } from '../../domain/search/aggregate-search-store';
+import type { SiteSearchProvider } from '../../domain/search/types';
+import type { StorageAreaLike } from '../../domain/storage-port';
+import type { Suggestion } from '../../shared/react/search/suggestion-list/types';
+import type { InputModeController } from '../../shared/search/search-input-mode';
+import type { InputModeTheme } from '../../shared/search/input-mode/types';
 import * as LumnoNewtabFocusResume from '../focus-resume';
+import type { StorageChangeRegistry } from '../storage-change-registry';
+import type { SearchModeController } from './search-mode-controller';
+import type { SearchModes } from './search-modes';
+import { getAggregateSearchId } from './search-types';
+import type { RequestSuggestions } from './search-types';
+import type { SiteSearchProviders } from './site-search-providers';
 
-function createSiteSearchRuntime(deps) {
+interface SiteSearchRuntimeState {
+  // Carries the search across the reload the search shortcut makes.
+  focusResume: { resume(ready: Promise<unknown>): void } | null;
+  inputModeController: Pick<InputModeController, 'refreshModeMenu'> | null;
+  latestQuery: string;
+  AGGREGATE_SEARCH_STORAGE_KEY: string;
+  aggregateSearchesLoadVersion: number;
+  aggregateSearchesLoadPromise: Promise<AggregateSearch[]> | null;
+  aggregateSearchesCache: AggregateSearch[] | null;
+  siteSearchState: SiteSearchProvider | null;
+  siteSearchProvidersLoadVersion: number;
+  siteSearchProvidersCache: SiteSearchProvider[] | null;
+}
+
+interface SiteSearchRuntimeDeps {
+  getSiteSearchProviders: SiteSearchProviders['getSiteSearchProviders'];
+  getAggregateSearches: SiteSearchProviders['getAggregateSearches'];
+  isAggregateSearchProvider: SiteSearchProviders['isAggregateSearchProvider'];
+  getSearchModeProviderId: SiteSearchProviders['getSearchModeProviderId'];
+  getSearchModeProviders: SearchModes['getSearchModeProviders'];
+  isAggregateSearchDefinitionAvailable: SearchModes['isAggregateSearchDefinitionAvailable'];
+  createAggregateSearchScopeProvider: SiteSearchProviders['createAggregateSearchScopeProvider'];
+  activateSiteSearch: SearchModes['activateSiteSearch'];
+  activateLocalSearchScope: SearchModes['activateLocalSearchScope'];
+  restoreSearchModeQuery: SearchModes['restoreSearchModeQuery'];
+  showSuggestionSnapshot(suggestions: Suggestion[], query: string, selectedIndex: number): unknown;
+  focusSearchInputPreservingScroll(): boolean;
+  requestSuggestions: RequestSuggestions;
+  storageChanges: Pick<StorageChangeRegistry, 'on'>;
+  SETTINGS: { SEARCH_SOURCE_ORDER_STORAGE_KEY: string };
+  SITE_SEARCH_STORAGE_KEY: string;
+  SITE_SEARCH_DISABLED_STORAGE_KEY: string;
+  AGGREGATE_SEARCH_STORE: Pick<typeof AggregateSearchStore, 'normalizeAggregateSearches'>;
+  setSiteSearchPrefix: SearchModeController['setSiteSearchPrefix'];
+  defaultTheme: InputModeTheme;
+  clearSiteSearch: SearchModes['clearSiteSearch'];
+  storageArea: StorageAreaLike | null;
+  reloadSiteSearchProvidersFromStorage: SiteSearchProviders['reloadSiteSearchProvidersFromStorage'];
+  pageState: SiteSearchRuntimeState;
+}
+
+function createSiteSearchRuntime(deps: SiteSearchRuntimeDeps): void {
   const {
     getSiteSearchProviders,
     getAggregateSearches,
@@ -36,13 +90,13 @@ function createSiteSearchRuntime(deps) {
   const siteSearchProvidersReady = Promise.all([getSiteSearchProviders(), getAggregateSearches()]);
 
   // Search modes are saved by id: a provider's, or its aggregate search's.
-  function getSiteSearchSnapshotId(provider) {
+  function getSiteSearchSnapshotId(provider: SiteSearchProvider): string {
     return isAggregateSearchProvider(provider)
-      ? `aggregate:${provider.aggregateId}`
+      ? `aggregate:${getAggregateSearchId(provider)}`
       : getSearchModeProviderId(provider);
   }
 
-  function findSiteSearchBySnapshotId(id) {
+  function findSiteSearchBySnapshotId(id: unknown): SiteSearchProvider | null {
     const providers = getSearchModeProviders();
     if (!String(id).startsWith('aggregate:')) {
       return providers.find((provider) => getSearchModeProviderId(provider) === id) || null;
@@ -55,7 +109,7 @@ function createSiteSearchRuntime(deps) {
       : null;
   }
 
-  pageState.focusResume = LumnoNewtabFocusResume.createFocusResume({
+  const focusResume = LumnoNewtabFocusResume.createFocusResume({
     getSiteSearchSnapshotId,
     findSiteSearchBySnapshotId,
     activateSiteSearch,
@@ -65,10 +119,11 @@ function createSiteSearchRuntime(deps) {
     focusSearchInputPreservingScroll,
     pageState
   });
-  pageState.focusResume.resume(siteSearchProvidersReady);
+  pageState.focusResume = focusResume;
+  focusResume.resume(siteSearchProvidersReady);
 
-  getAggregateSearches().then(() => {
-    if (pageState.inputModeController && typeof pageState.inputModeController.refreshModeMenu === 'function') {
+  void getAggregateSearches().then(() => {
+    if (pageState.inputModeController) {
       pageState.inputModeController.refreshModeMenu();
     }
     if (pageState.latestQuery) {
@@ -79,7 +134,7 @@ function createSiteSearchRuntime(deps) {
   // A new order from Settings or another tab reaches an open scope panel now;
   // a closed one reads it when it opens.
   storageChanges.on(SETTINGS.SEARCH_SOURCE_ORDER_STORAGE_KEY, () => {
-    if (pageState.inputModeController && typeof pageState.inputModeController.refreshModeMenu === 'function') {
+    if (pageState.inputModeController) {
       pageState.inputModeController.refreshModeMenu();
     }
   });
@@ -95,9 +150,10 @@ function createSiteSearchRuntime(deps) {
       pageState.aggregateSearchesCache = AGGREGATE_SEARCH_STORE.normalizeAggregateSearches(
         changes[pageState.AGGREGATE_SEARCH_STORAGE_KEY].newValue
       );
+      const aggregates = pageState.aggregateSearchesCache;
       if (isAggregateSearchProvider(pageState.siteSearchState)) {
-        const currentId = String(pageState.siteSearchState.aggregateId || '');
-        const updatedDefinition = pageState.aggregateSearchesCache.find(
+        const currentId = getAggregateSearchId(pageState.siteSearchState);
+        const updatedDefinition = aggregates.find(
           (item) => String(item && item.id ? item.id : '') === currentId
         );
         const updatedProvider = isAggregateSearchDefinitionAvailable(
@@ -113,7 +169,7 @@ function createSiteSearchRuntime(deps) {
           clearSiteSearch();
         }
       }
-      if (pageState.inputModeController && typeof pageState.inputModeController.refreshModeMenu === 'function') {
+      if (pageState.inputModeController) {
         pageState.inputModeController.refreshModeMenu();
       }
       if (pageState.latestQuery) {
@@ -127,19 +183,20 @@ function createSiteSearchRuntime(deps) {
       return;
     }
     const providerReload = reloadSiteSearchProvidersFromStorage();
-    providerReload.promise.then(() => {
+    void providerReload.promise.then(() => {
       if (providerReload.version !== pageState.siteSearchProvidersLoadVersion) {
         return;
       }
       if (isAggregateSearchProvider(pageState.siteSearchState)) {
+        const activeId = getAggregateSearchId(pageState.siteSearchState);
         const activeDefinition = (pageState.aggregateSearchesCache || []).find((item) => (
-          String(item && item.id ? item.id : '') === String(pageState.siteSearchState.aggregateId || '')
+          String(item && item.id ? item.id : '') === activeId
         ));
         if (!isAggregateSearchDefinitionAvailable(activeDefinition, pageState.siteSearchProvidersCache)) {
           clearSiteSearch();
         }
       }
-      if (pageState.inputModeController && typeof pageState.inputModeController.refreshModeMenu === 'function') {
+      if (pageState.inputModeController) {
         pageState.inputModeController.refreshModeMenu();
       }
       if (pageState.latestQuery) {
@@ -147,8 +204,7 @@ function createSiteSearchRuntime(deps) {
       }
     });
   });
-
-  return {};
 }
 
 export { createSiteSearchRuntime };
+export type { SiteSearchRuntimeDeps, SiteSearchRuntimeState };

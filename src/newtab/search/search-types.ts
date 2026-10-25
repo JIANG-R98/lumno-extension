@@ -19,6 +19,18 @@ type RenderSuggestions = (suggestions: Suggestion[], query: string) => unknown;
 // picked in the mode menu, which has only its source.
 type ActiveLocalScope = Pick<LocalSearchScope, 'sourceType'> & Partial<Pick<LocalSearchScope, 'trigger' | 'key'>>;
 
+// The completion inline autocomplete shows after the typed text.
+interface AutocompleteState {
+  // The input's text with the completion: the typed part as typed.
+  completion: string;
+  displayText: string;
+  url: string;
+  // The text as typed, to put back.
+  rawQuery: string;
+  title: string;
+  type: string;
+}
+
 // The aggregate search a search mode stands for; '' for a site search.
 function getAggregateSearchId(provider: SiteSearchProvider | null | undefined): string {
   if (!provider || !('aggregateId' in provider)) {
@@ -29,4 +41,4 @@ function getAggregateSearchId(provider: SiteSearchProvider | null | undefined): 
 }
 
 export { getAggregateSearchId };
-export type { ActiveLocalScope, RenderSuggestions, RequestSuggestions, RequestSuggestionsOptions };
+export type { ActiveLocalScope, AutocompleteState, RenderSuggestions, RequestSuggestions, RequestSuggestionsOptions };
