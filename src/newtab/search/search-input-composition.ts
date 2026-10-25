@@ -3,6 +3,7 @@
 import type { SuggestionLike } from '../../domain/search/types';
 import type { createImeKeyGuard } from '../../domain/search/ime-key-guard';
 import type { DirectNavigationSettleController } from './direct-navigation-settle';
+import type { RequestSuggestions } from './search-types';
 
 interface SearchInputCompositionState {
   inputParts: { input: HTMLInputElement };
@@ -14,13 +15,6 @@ interface SearchInputCompositionState {
   latestRawQuery: string;
 }
 
-interface RequestSuggestionsOptions {
-  // Skip the wait before asking for remote suggestions.
-  immediate?: boolean;
-  // Show a direct address only once the open tabs have been matched.
-  deferInitialDirectNavigationRender?: boolean;
-}
-
 interface SearchInputCompositionDeps {
   directNavigationSettleController: Pick<DirectNavigationSettleController<unknown>, 'cancel'>;
   imeKeyGuard: Pick<ReturnType<typeof createImeKeyGuard>, 'markCompositionStart' | 'markCompositionEnd' | 'markKeyUp'>;
@@ -29,7 +23,7 @@ interface SearchInputCompositionDeps {
   // The address the query is, as a suggestion; null when it is not one.
   getDirectUrlSuggestion(query: string): SuggestionLike | null;
   renderPendingSuggestions(query: string): unknown;
-  requestSuggestions(query: string, options?: RequestSuggestionsOptions): unknown;
+  requestSuggestions: RequestSuggestions;
   pageState: SearchInputCompositionState;
 }
 
@@ -99,4 +93,4 @@ function createSearchInputComposition(deps: SearchInputCompositionDeps): void {
 }
 
 export { createSearchInputComposition };
-export type { RequestSuggestionsOptions, SearchInputCompositionDeps, SearchInputCompositionState };
+export type { SearchInputCompositionDeps, SearchInputCompositionState };

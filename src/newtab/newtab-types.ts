@@ -17,6 +17,30 @@ type SendRuntimeMessage = <A extends BackgroundAction>(
   callback?: (reply: BackgroundReply<A> | undefined) => void
 ) => boolean;
 
+// How a favicon image loads: the address to try first, the fallbacks after
+// it, and what happens when none loads.
+interface FaviconAttachOptions {
+  primaryUrl?: string;
+  fallbackUrl?: string;
+  // The browser's icon for the page.
+  browserUrl?: string;
+  // An icon saved for this exact page.
+  pageSpecificUrl?: string;
+  // Load an icon from another site's address directly.
+  allowRemoteImage?: boolean;
+  skipPersisted?: boolean;
+  sourceProfile?: 'shortcut';
+  onUnavailable?: () => void;
+}
+
+// Shows the page's favicon in the image, trying fallbacks in turn.
+type AttachFaviconWithFallbacks = (
+  image: HTMLImageElement,
+  pageUrl: string,
+  host: string,
+  options?: FaviconAttachOptions
+) => void;
+
 // Shows a toast; isError marks it as a failure.
 type ShowToast = (message: string, isError?: boolean, options?: ToastShowOptions) => void;
 
@@ -46,9 +70,11 @@ interface ContextMenuParts {
 }
 
 export type {
+  AttachFaviconWithFallbacks,
   BindCursorTooltip,
   BindTooltip,
   ContextMenuParts,
+  FaviconAttachOptions,
   FormatMessage,
   SelectMenuController,
   SendRuntimeMessage,

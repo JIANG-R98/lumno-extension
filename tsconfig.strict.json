@@ -30,6 +30,8 @@
     "src/newtab/search/default-search-engine.ts",
     "src/newtab/search/direct-navigation-settle.ts",
     "src/newtab/search/search-input-composition.ts",
+    "src/newtab/search/search-types.ts",
+    "src/newtab/search/site-search-providers.ts",
     "src/newtab/search/suggestions-layout.ts",
     "src/newtab/shortcuts/**/*.ts"
   ],
