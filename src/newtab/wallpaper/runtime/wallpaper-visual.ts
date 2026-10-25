@@ -1,8 +1,33 @@
-// @ts-nocheck
 // Putting a wallpaper on screen: CSS-safe image URLs, waiting for images
 // to decode, the cross-fade transition layer, and the visual refresh that
 // applies the current wallpaper, overlay and effect.
-function createWallpaperVisual(deps) {
+import type { AdaptiveToneTarget } from '../wallpaper-adaptive-tone';
+import type { PreloadObjectUrl, WallpaperEffectPreloadRuntime } from '../wallpaper-preload-types';
+import type { WallpaperOverlay } from './wallpaper-overlay';
+import type { WallpaperSources } from './wallpaper-sources';
+import type { WallpaperItem, WallpaperOverlayStops, WallpaperState } from './wallpaper-runtime-types';
+
+interface WallpaperVisualDeps extends
+  Pick<WallpaperOverlay, 'getResolvedWallpaperOverlayMode' | 'getWallpaperOverlayOpacityForCurrentMode' | 'getWallpaperOverlayStopPercent'>,
+  Pick<WallpaperSources, 'isNetworkWallpaperImageUrl' | 'getDisplayedWallpaperImageUrl' | 'getWallpaperSample'> {
+  document: Document;
+  window: Window;
+  NEWTAB_WALLPAPER_OVERLAY_STOPS: WallpaperOverlayStops;
+  // The page's own tone targets; the wallpaper button is added to them.
+  getAdaptiveToneTargets?: () => ReadonlyArray<AdaptiveToneTarget | null | undefined>;
+  chrome: { runtime?: { getURL?: (path: string) => string } } | null | undefined;
+  windowObj: Window & typeof globalThis;
+  wallpaperNetworkImageStates: Map<string, 'loaded' | 'failed'>;
+  shouldReduceMotion(): boolean;
+  wallpaperEffectPreload: WallpaperEffectPreloadRuntime | null;
+  refreshWallpaperAdaptiveSampler(): void;
+  afterNextPaint(windowObj: Window, callback: () => void): void;
+  wallpaperState: Pick<WallpaperState,
+    'wallpaperButton' | 'wallpaperEffects' | 'appliedWallpaperVisualUrl' | 'appliedWallpaperVisualActive' |
+    'wallpaperVisualSeq'>;
+}
+
+function createWallpaperVisual(deps: WallpaperVisualDeps) {
   const {
     document,
     window,
@@ -32,10 +57,10 @@ function createWallpaperVisual(deps) {
   const WALLPAPER_IMAGE_READY_CACHE_LIMIT = 8;
   const WALLPAPER_NETWORK_IMAGE_TIMEOUT_MS = 8000;
   let wallpaperVisualRefreshTimer = 0;
-  const wallpaperImageReadyCache = new Map();
+  const wallpaperImageReadyCache = new Map<string, Promise<void>>();
 
   // Used by overlay math; adaptive image sampling lives in wallpaper-adaptive-tone.ts.
-  function clampNumber(value, min, max) {
+  function clampNumber(value: unknown, min: number, max: number): number {
     const number = Number(value);
     if (!Number.isFinite(number)) {
       return min;
@@ -43,7 +68,7 @@ function createWallpaperVisual(deps) {
     return Math.min(max, Math.max(min, number));
   }
 
-  function getViewportSize() {
+  function getViewportSize(): { width: number; height: number } {
     const docEl = document.documentElement;
     return {
       width: Math.max(1, window.innerWidth || (docEl ? docEl.clientWidth : 0) || 1),
@@ -51,7 +76,7 @@ function createWallpaperVisual(deps) {
     };
   }
 
-  function getWallpaperOverlayAlphaAtViewportY(viewportY) {
+  function getWallpaperOverlayAlphaAtViewportY(viewportY: number): number {
     const mode = getResolvedWallpaperOverlayMode();
     const stops = NEWTAB_WALLPAPER_OVERLAY_STOPS[mode] || NEWTAB_WALLPAPER_OVERLAY_STOPS.light;
     const opacity = getWallpaperOverlayOpacityForCurrentMode();
@@ -66,11 +91,11 @@ function createWallpaperVisual(deps) {
     return midAlpha + ((bottomAlpha - midAlpha) * ((position - 0.42) / 0.58));
   }
 
-  function getWallpaperAdaptiveToneTargets() {
+  function getWallpaperAdaptiveToneTargets(): Array<AdaptiveToneTarget | null | undefined> {
     const externalTargets = typeof getAdaptiveToneTargets === 'function'
       ? getAdaptiveToneTargets()
       : [];
-    const targets = Array.isArray(externalTargets) ? externalTargets.slice() : [];
+    const targets = (externalTargets || []).slice();
     targets.push({
       element: wallpaperState.wallpaperButton,
       sampleElement: wallpaperState.wallpaperButton,
@@ -81,14 +106,14 @@ function createWallpaperVisual(deps) {
     return targets;
   }
 
-  function refreshWallpaperEffects() {
+  function refreshWallpaperEffects(): Promise<void> {
     if (wallpaperState.wallpaperEffects) {
       return wallpaperState.wallpaperEffects.refresh();
     }
     return Promise.resolve();
   }
 
-  function getRuntimeAssetUrl(path) {
+  function getRuntimeAssetUrl(path: unknown): string {
     const value = String(path || '').trim();
     if (!value) {
       return '';
@@ -99,7 +124,7 @@ function createWallpaperVisual(deps) {
     return `../../${value}`;
   }
 
-  function getCssUrlValue(url) {
+  function getCssUrlValue(url: unknown): string {
     const safe = String(url || '')
       .replace(/\\/g, '\\\\')
       .replace(/"/g, '\\"')
@@ -113,15 +138,15 @@ function createWallpaperVisual(deps) {
   // there costs ~10ms per recalc while the page builds; and Chrome drops a custom property longer
   // than 2 MB, which uploads stored before that was capped can exceed. Matches wallpaper-preload.ts.
   const WALLPAPER_CSS_INLINE_URL_MAX_LENGTH = 32 * 1024;
-  let wallpaperCssObjectUrl = { source: '', url: '' };
+  let wallpaperCssObjectUrl: PreloadObjectUrl = { source: '', url: '' };
 
-  function dataUrlToObjectUrl(dataUrl) {
+  function dataUrlToObjectUrl(dataUrl: string): string {
     const comma = dataUrl.indexOf(',');
     const meta = dataUrl.slice(5, comma);
     const isBase64 = /;base64$/i.test(meta);
     const type = meta.replace(/;base64$/i, '') || 'application/octet-stream';
     const payload = dataUrl.slice(comma + 1);
-    let bytes;
+    let bytes: Uint8Array<ArrayBuffer>;
     if (isBase64 && typeof Uint8Array.fromBase64 === 'function') {
       bytes = Uint8Array.fromBase64(payload);
     } else if (isBase64) {
@@ -136,7 +161,7 @@ function createWallpaperVisual(deps) {
     return windowObj.URL.createObjectURL(new windowObj.Blob([bytes], { type }));
   }
 
-  function releaseWallpaperCssObjectUrl() {
+  function releaseWallpaperCssObjectUrl(): void {
     const previous = wallpaperCssObjectUrl.url;
     wallpaperCssObjectUrl = { source: '', url: '' };
     if (previous) {
@@ -146,7 +171,7 @@ function createWallpaperVisual(deps) {
     }
   }
 
-  function getCssSafeWallpaperUrl(url) {
+  function getCssSafeWallpaperUrl(url: unknown): string {
     const value = String(url || '');
     if (wallpaperCssObjectUrl.source && wallpaperCssObjectUrl.source === value) {
       return wallpaperCssObjectUrl.url;
@@ -170,7 +195,7 @@ function createWallpaperVisual(deps) {
     let objectUrl = '';
     try {
       objectUrl = dataUrlToObjectUrl(value);
-    } catch (_error) {
+    } catch {
       releaseWallpaperCssObjectUrl();
       return value;
     }
@@ -181,10 +206,10 @@ function createWallpaperVisual(deps) {
 
   // The preload decoded the small copy of the wallpaper it painted; the first sample uses that
   // image. Taken once, so the page does not keep it alive after the wallpaper changes.
-  function takePreloadedDecodedImage(url) {
+  function takePreloadedDecodedImage(url: string): Promise<HTMLImageElement | null> | null {
     const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
     const decoded = wallpaperPreload && wallpaperPreload.decodedImage;
-    if (!decoded) {
+    if (!wallpaperPreload || !decoded) {
       return null;
     }
     wallpaperPreload.decodedImage = null;
@@ -193,17 +218,17 @@ function createWallpaperVisual(deps) {
       : null;
   }
 
-  function takePreloadedCssObjectUrl() {
+  function takePreloadedCssObjectUrl(): PreloadObjectUrl | null {
     const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
     const handed = wallpaperPreload && wallpaperPreload.cssObjectUrl;
-    if (!handed || !handed.source || !handed.url) {
+    if (!wallpaperPreload || !handed || !handed.source || !handed.url) {
       return null;
     }
     wallpaperPreload.cssObjectUrl = null;
     return { source: String(handed.source), url: String(handed.url) };
   }
 
-  function cacheWallpaperImageReady(url, promise) {
+  function cacheWallpaperImageReady(url: string, promise: Promise<void>): void {
     if (!url || !promise) {
       return;
     }
@@ -213,11 +238,14 @@ function createWallpaperVisual(deps) {
     wallpaperImageReadyCache.set(url, promise);
     while (wallpaperImageReadyCache.size > WALLPAPER_IMAGE_READY_CACHE_LIMIT) {
       const firstKey = wallpaperImageReadyCache.keys().next().value;
+      if (firstKey === undefined) {
+        break;
+      }
       wallpaperImageReadyCache.delete(firstKey);
     }
   }
 
-  function waitForWallpaperImageReady(url) {
+  function waitForWallpaperImageReady(url: unknown): Promise<void> {
     const imageUrl = String(url || '').trim();
     if (!imageUrl) {
       return Promise.resolve();
@@ -227,11 +255,11 @@ function createWallpaperVisual(deps) {
       return cached;
     }
     const isNetwork = isNetworkWallpaperImageUrl(imageUrl);
-    const load = () => new Promise((resolve) => {
+    const load = () => new Promise<void>((resolve) => {
       const image = new Image();
       let timer = 0;
       let settled = false;
-      const finish = (loaded) => {
+      const finish = (loaded: boolean) => {
         if (settled) {
           return;
         }
@@ -265,16 +293,16 @@ function createWallpaperVisual(deps) {
   }
 
   // Network images start after the page has loaded, so they never hold the tab's spinner.
-  function waitForDocumentLoad() {
+  function waitForDocumentLoad(): Promise<void> {
     if (!document || typeof document.readyState !== 'string' || document.readyState === 'complete') {
       return Promise.resolve();
     }
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       window.addEventListener('load', () => resolve(), { once: true });
     });
   }
 
-  function createWallpaperTransitionLayer() {
+  function createWallpaperTransitionLayer(): HTMLDivElement | null {
     if (!document.body ||
         document.body.getAttribute('data-nt-enter') !== 'done' ||
         shouldReduceMotion()) {
@@ -315,7 +343,7 @@ function createWallpaperVisual(deps) {
     return layer;
   }
 
-  function releaseWallpaperTransitionLayer(layer) {
+  function releaseWallpaperTransitionLayer(layer: HTMLElement | null | undefined): void {
     if (!layer || !layer.parentNode) {
       return;
     }
@@ -331,7 +359,7 @@ function createWallpaperVisual(deps) {
     });
   }
 
-  function applyWallpaperVisualState(wallpaper) {
+  function applyWallpaperVisualState(wallpaper: WallpaperItem | null | undefined): string {
     const target = document.documentElement;
     const imageUrl = wallpaper ? getDisplayedWallpaperImageUrl(wallpaper) : '';
     const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
@@ -357,15 +385,15 @@ function createWallpaperVisual(deps) {
     return imageUrl;
   }
 
-  function runWallpaperVisualRefresh(seq) {
+  function runWallpaperVisualRefresh(seq: number): void {
     if (seq !== wallpaperState.wallpaperVisualSeq) {
       return;
     }
     refreshWallpaperAdaptiveSampler();
-    refreshWallpaperEffects();
+    void refreshWallpaperEffects();
   }
 
-  function scheduleWallpaperVisualRefresh(seq) {
+  function scheduleWallpaperVisualRefresh(seq: number): void {
     if (wallpaperVisualRefreshTimer) {
       window.clearTimeout(wallpaperVisualRefreshTimer);
       wallpaperVisualRefreshTimer = 0;
@@ -391,4 +419,7 @@ function createWallpaperVisual(deps) {
   };
 }
 
+type WallpaperVisual = ReturnType<typeof createWallpaperVisual>;
+
 export { createWallpaperVisual };
+export type { WallpaperVisual, WallpaperVisualDeps };

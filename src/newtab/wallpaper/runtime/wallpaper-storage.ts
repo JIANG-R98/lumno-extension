@@ -16,6 +16,7 @@ import type {
   LocalWallpaperOverrides,
   WallpaperItem,
   WallpaperMode,
+  WallpaperOverlayStops,
   WallpaperPrefs,
   WallpaperState
 } from './wallpaper-runtime-types';
@@ -106,7 +107,7 @@ interface WallpaperStorageDeps extends Pick<WallpaperSources,
   window: Window;
   PRELOAD_STORAGE_KEY: string;
   WALLPAPER_EFFECTS: Pick<typeof WallpaperEffects, 'analyzeImageData'>;
-  NEWTAB_WALLPAPER_OVERLAY_STOPS: Readonly<Record<WallpaperMode, { top: number; mid: number; bottom: number }>>;
+  NEWTAB_WALLPAPER_OVERLAY_STOPS: WallpaperOverlayStops;
   getWallpaperOverlayStopPercent(base: number, opacity: number): number;
   PRELOAD_STORAGE_VERSION: number;
   getEffectiveThemeMode(): string;

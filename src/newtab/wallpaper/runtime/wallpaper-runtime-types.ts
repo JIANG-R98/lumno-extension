@@ -73,6 +73,9 @@ interface DailyWallpaperPicks {
 
 type AppearanceMode = 'system' | 'light' | 'dark';
 
+// The overlay's base opacity (percent) at the top, middle and bottom, per mode.
+type WallpaperOverlayStops = Readonly<Record<WallpaperMode, Readonly<{ top: number; mid: number; bottom: number }>>>;
+
 // Saves one setting after its slider settles; a final change saves at once.
 type DebouncedSaver = (key: string, write: () => void, options?: { final?: boolean } | null) => void;
 
@@ -142,6 +145,7 @@ export type {
   LocalWallpaperOverrides,
   WallpaperItem,
   WallpaperMode,
+  WallpaperOverlayStops,
   WallpaperPrefs,
   WallpaperState
 };
