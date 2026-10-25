@@ -1,14 +1,82 @@
-// @ts-nocheck
 import * as LumnoFaviconUtils from '../domain/favicon/favicon-utils';
+import type { FaviconChromeApi, FaviconDecisionLogger, FaviconPlanCandidate } from '../domain/favicon/favicon-utils';
 import * as LumnoFaviconViewCore from '../shared/favicon/favicon-view-core';
+import type { FallbackIconNode, FaviconImage, FaviconViewCoreOptions, FaviconViewWindow, FaviconWarmItem } from '../shared/favicon/favicon-view-core';
 import * as LumnoMessaging from '../platform/messaging';
+import type { MessageRuntime } from '../platform/messaging';
 
-function noop() {}
+// An overlay favicon image and the attach session state kept on it.
+type OverlayFaviconImage = FaviconImage & {
+  // Raised by each attach, so callbacks of an older attach stop.
+  _xOverlayThemeFaviconSession?: number;
+  _xOverlayThemeFaviconLoadTimer?: number | null;
+  _xOverlayThemeFaviconCandidateToken?: number;
+  _xOverlayThemeFaviconErrorHandler?: (() => void) | null;
+};
 
-function createOverlayFaviconViewRuntime(options) {
-  const config = options || {};
+type OverlayFaviconWindow = FaviconViewWindow & Partial<Pick<Window, 'setTimeout' | 'clearTimeout'>>;
+
+interface OverlayFaviconViewOptions {
+  document?: Document | null;
+  windowObj?: OverlayFaviconWindow | null;
+  chromeApi?: (FaviconChromeApi & { runtime?: FaviconChromeApi['runtime'] & MessageRuntime }) | null;
+  getRiSvg?(id: string, sizeClass: string): string;
+  getHostFromUrl?(url: string): string;
+  getExtensionFaviconUrl?(pageUrl: string): string;
+  getGstaticFaviconUrl?(pageUrl: string): string;
+  getChromeFaviconUrl?(pageUrl: string): string;
+  shouldBlockFaviconForHost?(host: string): boolean;
+  shouldAvoidDirectFaviconForHost?(host: string): boolean;
+  // Hosts whose icons the page under the overlay must not load directly.
+  shouldBlockOverlayFaviconForHost?(host: string): boolean;
+  isEnhancedFaviconFetchEnabled?(pageUrl: string): boolean;
+  getStrictFaviconReason?(pageUrl: string): string;
+  logFaviconDecision?: FaviconDecisionLogger;
+  isFaviconProxyUrl?(url: string): boolean;
+  isBlockedLocalFaviconUrl?(url: string): boolean;
+  isChromeMonogramFaviconUrl?(url: string): boolean;
+  preloadThemeFromFavicon?(url: string, dataUrl: string, hostOverride?: string): void;
+  hasThemeForHost?(hostKey: string): boolean;
+  getOverlayPanel?(): Element | null;
+  // The list's rows, which re-render with their icons on a policy change.
+  getSuggestionRowsRoot?(): Element | null;
+  rerenderReplacedFaviconRows?(): boolean;
+  setPersistedFaviconUrl?(key: string, url: string): void;
+  setPersistedFaviconData?(key: string, dataUrl: string): void;
+  requestFaviconData?(url: string, pageUrl?: string): Promise<string | null> | string | null;
+  detectDefaultExtensionFavicon?: FaviconViewCoreOptions['detectDefaultExtensionFavicon'];
+  faviconDataCache?: Map<string, string>;
+  faviconDataPending?: Map<string, Promise<string | null>>;
+  iconPreloadCache?: Map<string, HTMLImageElement>;
+  faviconFallbackNodeMap?: WeakMap<FaviconImage, FallbackIconNode>;
+  faviconCandidateLoadTimeoutMs?: number;
+}
+
+// One attach of a page's icon: the sources to try and the session it
+// belongs to.
+interface FaviconAttachState {
+  pageUrl: string;
+  hostKey: string;
+  rawFallbackUrl: string;
+  fallbackUrl: string;
+  primaryUrl: string;
+  allowRemoteImage: boolean;
+  extensionFavicon: string;
+  browserUrl: string;
+  gstaticFavicon: string;
+  previousWorkingSrc: string;
+  hasFailedHandler: boolean;
+  handleFailed(): void;
+  isSessionCurrent(): boolean;
+  isSessionMounted(): boolean;
+}
+
+function noop(): void {}
+
+function createOverlayFaviconViewRuntime(options?: OverlayFaviconViewOptions | null) {
+  const config: OverlayFaviconViewOptions = options || {};
   const doc = config.document || (typeof document !== 'undefined' ? document : null);
-  const win = config.windowObj || (typeof window !== 'undefined' ? window : {});
+  const win: OverlayFaviconWindow = config.windowObj || (typeof window !== 'undefined' ? window : {});
   const chromeApi = config.chromeApi || (typeof chrome !== 'undefined' ? chrome : {});
   const getRiSvg = typeof config.getRiSvg === 'function' ? config.getRiSvg : (() => '');
   const getHostFromUrl = typeof config.getHostFromUrl === 'function' ? config.getHostFromUrl : (() => '');
@@ -37,11 +105,13 @@ function createOverlayFaviconViewRuntime(options) {
     : (() => false);
   const isChromeMonogramFaviconUrl = typeof config.isChromeMonogramFaviconUrl === 'function'
     ? config.isChromeMonogramFaviconUrl
-    : ((url) => /^chrome:\/\/favicon2\//i.test(String(url || '').trim()));
+    : ((url: string) => /^chrome:\/\/favicon2\//i.test(String(url || '').trim()));
   const preloadThemeFromFavicon = typeof config.preloadThemeFromFavicon === 'function' ? config.preloadThemeFromFavicon : noop;
   const hasThemeForHost = typeof config.hasThemeForHost === 'function' ? config.hasThemeForHost : (() => false);
-  const getOverlayPanel = typeof config.getOverlayPanel === 'function' ? config.getOverlayPanel : (() => null);
-  const getSuggestionRowsRoot = typeof config.getSuggestionRowsRoot === 'function'
+  const getOverlayPanel: () => Element | null = typeof config.getOverlayPanel === 'function'
+    ? config.getOverlayPanel
+    : (() => null);
+  const getSuggestionRowsRoot: () => Element | null = typeof config.getSuggestionRowsRoot === 'function'
     ? config.getSuggestionRowsRoot
     : (() => null);
   const rerenderReplacedFaviconRows = typeof config.rerenderReplacedFaviconRows === 'function'
@@ -56,16 +126,27 @@ function createOverlayFaviconViewRuntime(options) {
   const requestFaviconDataFromBackground = typeof config.requestFaviconData === 'function'
     ? config.requestFaviconData
     : null;
-  const faviconDataCache = config.faviconDataCache || new Map();
-  const faviconDataPending = config.faviconDataPending || new Map();
-  const iconPreloadCache = config.iconPreloadCache || new Map();
-  const setTimer = typeof win.setTimeout === 'function' ? win.setTimeout.bind(win) : setTimeout;
-  const clearTimer = typeof win.clearTimeout === 'function' ? win.clearTimeout.bind(win) : clearTimeout;
-  const faviconCandidateLoadTimeoutMs = Number.isFinite(config.faviconCandidateLoadTimeoutMs)
-    ? Math.max(0, config.faviconCandidateLoadTimeoutMs)
+  const faviconDataCache: Map<string, string> = config.faviconDataCache || new Map();
+  const faviconDataPending: Map<string, Promise<string | null>> = config.faviconDataPending || new Map();
+  const iconPreloadCache: Map<string, HTMLImageElement> = config.iconPreloadCache || new Map();
+  const windowSetTimeout = win.setTimeout;
+  const windowClearTimeout = win.clearTimeout;
+  const setTimer = (callback: () => void, delay: number): number => (
+    typeof windowSetTimeout === 'function' ? windowSetTimeout.call(win, callback, delay) : window.setTimeout(callback, delay)
+  );
+  const clearTimer = (id: number): void => {
+    if (typeof windowClearTimeout === 'function') {
+      windowClearTimeout.call(win, id);
+    } else {
+      window.clearTimeout(id);
+    }
+  };
+  const configuredTimeoutMs = config.faviconCandidateLoadTimeoutMs;
+  const faviconCandidateLoadTimeoutMs = typeof configuredTimeoutMs === 'number' && Number.isFinite(configuredTimeoutMs)
+    ? Math.max(0, configuredTimeoutMs)
     : 2600;
   const faviconUtils = LumnoFaviconUtils;
-  function isSourceAllowedByEnhancedFetchPolicy(url, pageUrl) {
+  function isSourceAllowedByEnhancedFetchPolicy(url: string, pageUrl: string): boolean {
     return faviconUtils.isFaviconSourceAllowedByEnhancedFetchPolicy(
       url,
       isEnhancedFaviconFetchEnabled(pageUrl || url),
@@ -121,7 +202,7 @@ function createOverlayFaviconViewRuntime(options) {
     canReuseCurrentFavicon
   } = faviconViewCore;
 
-  function setFaviconVisibility(img, visibility) {
+  function setFaviconVisibility(img: FaviconImage | null, visibility: string): void {
     if (!img) {
       return;
     }
@@ -132,12 +213,15 @@ function createOverlayFaviconViewRuntime(options) {
     }
   }
 
-  function createFallbackIconNode(img) {
-    const node = doc.createElement('span');
+  function createFallbackIconNode(img: FaviconImage): FallbackIconNode {
+    const ownerDocument = doc || document;
+    const node = ownerDocument.createElement('span');
     node.className = 'x-ov-suggestion-inline-icon x-ov-suggestion-favicon-fallback _x_extension_overlay_favicon_fallback_2026_unique_';
     node.innerHTML = getRiSvg('ri-link', 'ri-size-16');
     setFallbackNodeVisible(node, true);
-    img.parentElement.insertBefore(node, img.nextSibling);
+    if (img.parentElement) {
+      img.parentElement.insertBefore(node, img.nextSibling);
+    }
     return node;
   }
 
@@ -155,50 +239,57 @@ function createOverlayFaviconViewRuntime(options) {
     setTimer
   });
 
-  function getSafeOverlayFaviconCandidateUrl(value, pageUrl, candidateKind, sourceOptions) {
+  function getSafeOverlayFaviconCandidateUrl(
+    value: unknown,
+    pageUrl?: string,
+    candidateKind?: string,
+    sourceOptions?: { allowRemoteImage?: boolean } | null
+  ): string {
     return faviconUrlResolver.getSafeFaviconCandidateUrl(value, pageUrl, candidateKind, sourceOptions);
   }
 
-  function isBrowserInternalPageUrl(url) {
+  function isBrowserInternalPageUrl(url: string): boolean {
     return faviconUrlResolver.isBrowserInternalPageUrl(url);
   }
 
-  function isBlockedOverlayFaviconUrl(url) {
+  function isBlockedOverlayFaviconUrl(url: string): boolean {
     return faviconUrlResolver.isBlockedFaviconUrl(url);
   }
 
-  function getRuntimeExtensionFaviconUrl(pageUrl) {
+  function getRuntimeExtensionFaviconUrl(pageUrl: string): string {
     return getSafeOverlayFaviconCandidateUrl(getRuntimeExtensionFaviconDataSourceUrl(pageUrl));
   }
 
-  function getRuntimeExtensionFaviconDataSourceUrl(pageUrl) {
+  function getRuntimeExtensionFaviconDataSourceUrl(pageUrl: string): string {
     return isBrowserInternalPageUrl(pageUrl)
       ? faviconUrlResolver.getBrowserPageFaviconUrl(pageUrl)
       : faviconUrlResolver.getExtensionFaviconUrl(pageUrl);
   }
 
-  function getRuntimeGstaticFaviconUrl(pageUrl) {
+  function getRuntimeGstaticFaviconUrl(pageUrl: string): string {
     return getSafeOverlayFaviconCandidateUrl(getRuntimeGstaticFaviconDataSourceUrl(pageUrl));
   }
 
-  function getRuntimeGstaticFaviconDataSourceUrl(pageUrl) {
+  function getRuntimeGstaticFaviconDataSourceUrl(pageUrl: string): string {
     return faviconDataSourceResolver.getSafeFaviconCandidateUrl(
       faviconDataSourceResolver.getGstaticFaviconUrl(pageUrl), pageUrl, 'third-party-proxy'
     );
   }
 
-  function getRuntimeChromeFaviconUrl(pageUrl) {
+  function getRuntimeChromeFaviconUrl(pageUrl: string): string {
     return faviconUrlResolver.getChromeFaviconUrl(pageUrl);
   }
 
-  function requestFaviconData(url, pageUrl) {
+  function requestFaviconData(url: string, pageUrl: string): Promise<string | null> {
     if (!isSourceAllowedByEnhancedFetchPolicy(url, pageUrl)) {
       return Promise.resolve(null);
     }
     return faviconViewCore.requestFaviconData(url, pageUrl);
   }
 
-  function requestFaviconDataBypassingOverlayBlock(url, pageUrl) {
+  // An icon's data from the worker even on a host whose icons the page must
+  // not load: the page then only renders local bytes.
+  function requestFaviconDataBypassingOverlayBlock(url: string, pageUrl: string): Promise<string | null> {
     const sourceUrl = faviconDataSourceResolver.getSafeFaviconCandidateUrl(url, pageUrl || url, 'blocked-data');
     if (!sourceUrl) {
       return Promise.resolve(null);
@@ -212,14 +303,16 @@ function createOverlayFaviconViewRuntime(options) {
     if (!isBlockedOverlayFaviconUrl(sourceUrl)) {
       return requestFaviconData(sourceUrl, pageUrl);
     }
-    if (faviconDataCache.has(sourceUrl)) {
-      return Promise.resolve(faviconDataCache.get(sourceUrl));
+    const cachedData = faviconDataCache.get(sourceUrl);
+    if (cachedData) {
+      return Promise.resolve(cachedData);
     }
-    if (faviconDataPending.has(sourceUrl)) {
-      return faviconDataPending.get(sourceUrl);
+    const pendingData = faviconDataPending.get(sourceUrl);
+    if (pendingData) {
+      return pendingData;
     }
-    const promise = new Promise((resolve) => {
-      const finish = (dataUrl) => {
+    const promise = new Promise<string | null>((resolve) => {
+      const finish = (dataUrl: unknown): void => {
         const value = String(dataUrl || '').trim();
         if (value && value.startsWith('data:')) {
           faviconViewCore.cacheFaviconData(sourceUrl, value);
@@ -234,11 +327,12 @@ function createOverlayFaviconViewRuntime(options) {
           .catch(() => finish(''));
         return;
       }
-      if (!chromeApi.runtime || typeof chromeApi.runtime.sendMessage !== 'function') {
+      const runtime = chromeApi.runtime;
+      if (!runtime || typeof runtime.sendMessage !== 'function') {
         finish('');
         return;
       }
-      LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, {
+      LumnoMessaging.sendBackgroundMessage(runtime, {
         action: 'getFaviconData',
         url: sourceUrl,
         pageUrl: pageUrl || ''
@@ -256,12 +350,12 @@ function createOverlayFaviconViewRuntime(options) {
     return promise;
   }
 
-  function getLastWorkingFaviconSrc(img) {
+  function getLastWorkingFaviconSrc(img: FaviconImage): string {
     const source = faviconViewCore.getLastWorkingFaviconSrc(img);
     return isBackgroundFetchedFavicon(source) ? (faviconDataCache.get(source) || '') : source;
   }
 
-  function restoreWorkingFaviconOrFail(img, previousSrc, onFailed) {
+  function restoreWorkingFaviconOrFail(img: FaviconImage, previousSrc: string, onFailed: () => void) {
     return faviconViewCore.restoreWorkingFaviconOrFallback(img, previousSrc, {
       removeFallbackNode: removeFallbackIconNode,
       onFailed,
@@ -269,7 +363,14 @@ function createOverlayFaviconViewRuntime(options) {
     });
   }
 
-  function createOverlayThemeAwareFaviconState(img, pageUrl, hostKey, fallbackUrl, onFailed, sourceOptions) {
+  function createOverlayThemeAwareFaviconState(
+    img: OverlayFaviconImage,
+    pageUrl: string,
+    hostKey: string,
+    fallbackUrl: string,
+    onFailed: (() => void) | null,
+    sourceOptions: { allowRemoteImage?: boolean } | null
+  ): FaviconAttachState {
     img._xOverlayThemeFaviconSession = (img._xOverlayThemeFaviconSession || 0) + 1;
     const session = img._xOverlayThemeFaviconSession;
     const normalizedHostKey = hostKey || getHostFromUrl(pageUrl);
@@ -284,7 +385,7 @@ function createOverlayFaviconViewRuntime(options) {
       (!faviconUtils.isSafeVirtualFaviconRequestUrl(rawFallbackUrl) ||
         new URL(rawFallbackUrl).searchParams.get('fallbackToHost') === '0')
     );
-    const cachedFallbackData = canReuseCachedData ? faviconDataCache.get(rawFallbackUrl) : '';
+    const cachedFallbackData = canReuseCachedData ? faviconDataCache.get(rawFallbackUrl) || '' : '';
     const safeFallbackUrl = getSafeOverlayFaviconCandidateUrl(rawFallbackUrl, pageUrl, 'primary', sourceOptions) ||
       getSafeOverlayFaviconCandidateUrl(cachedFallbackData, pageUrl, 'cached-data');
     const previousSrc = getLastWorkingFaviconSrc(img);
@@ -319,9 +420,9 @@ function createOverlayFaviconViewRuntime(options) {
     };
   }
 
-  function buildBlockedOverlayFaviconDataSourcePlan(state) {
-    const unique = [];
-    const seen = new Set();
+  function buildBlockedOverlayFaviconDataSourcePlan(state: FaviconAttachState): string[] {
+    const unique: string[] = [];
+    const seen = new Set<string>();
     [
       state.rawFallbackUrl,
       getRuntimeExtensionFaviconDataSourceUrl(state.pageUrl),
@@ -337,7 +438,7 @@ function createOverlayFaviconViewRuntime(options) {
     return unique;
   }
 
-  function attachBlockedOverlayFaviconData(img, state) {
+  function attachBlockedOverlayFaviconData(img: OverlayFaviconImage, state: FaviconAttachState): void {
     const candidates = buildBlockedOverlayFaviconDataSourcePlan(state);
     if (candidates.length === 0) {
       finalizeOverlayOwnedFaviconFailure(img, state);
@@ -380,7 +481,7 @@ function createOverlayFaviconViewRuntime(options) {
     tryNext();
   }
 
-  function syncOverlayThemeAwareFaviconAttributes(img, state) {
+  function syncOverlayThemeAwareFaviconAttributes(img: OverlayFaviconImage, state: FaviconAttachState): void {
     img.setAttribute('data-x-ov-theme-favicon', '1');
     img.setAttribute('data-x-ov-favicon-page-url', state.pageUrl);
     img.setAttribute('data-x-ov-favicon-host', state.hostKey);
@@ -389,19 +490,20 @@ function createOverlayFaviconViewRuntime(options) {
     img.removeAttribute('data-x-ov-favicon-cache-key');
   }
 
-  function buildOverlayThemeAwareFaviconCandidatePlan(state) {
+  function buildOverlayThemeAwareFaviconCandidatePlan(state: FaviconAttachState): FaviconPlanCandidate[] {
     return faviconUrlResolver.buildFaviconCandidatePlan(state);
   }
 
-  function clearOverlayCandidateLoadTimer(img) {
-    if (!img || img._xOverlayThemeFaviconLoadTimer === null || img._xOverlayThemeFaviconLoadTimer === undefined) {
+  function clearOverlayCandidateLoadTimer(img: OverlayFaviconImage | null): void {
+    const timer = img ? img._xOverlayThemeFaviconLoadTimer : null;
+    if (!img || timer === null || timer === undefined) {
       return;
     }
-    clearTimer(img._xOverlayThemeFaviconLoadTimer);
+    clearTimer(timer);
     img._xOverlayThemeFaviconLoadTimer = null;
   }
 
-  function isOverlayCandidateLoaded(img, nextUrl) {
+  function isOverlayCandidateLoaded(img: OverlayFaviconImage, nextUrl: string): boolean {
     if (!img || !nextUrl) {
       return false;
     }
@@ -412,7 +514,8 @@ function createOverlayFaviconViewRuntime(options) {
     return Boolean(img.complete && img.naturalWidth > 0);
   }
 
-  function scheduleOverlayCandidateLoadTimer(img, state, nextUrl) {
+  // Treats a candidate that has not loaded within the timeout as failed.
+  function scheduleOverlayCandidateLoadTimer(img: OverlayFaviconImage, state: FaviconAttachState, nextUrl: string): void {
     if (!img || !state || !nextUrl || faviconCandidateLoadTimeoutMs <= 0) {
       return;
     }
@@ -440,7 +543,13 @@ function createOverlayFaviconViewRuntime(options) {
     }, faviconCandidateLoadTimeoutMs);
   }
 
-  function tryApplyOverlayThemeAwareFaviconCandidate(img, state, tried, candidate) {
+  // Shows one candidate; false when it was tried already or cannot show.
+  function tryApplyOverlayThemeAwareFaviconCandidate(
+    img: OverlayFaviconImage,
+    state: FaviconAttachState,
+    tried: Set<string>,
+    candidate: FaviconPlanCandidate
+  ): boolean {
     const nextUrl = candidate && candidate.url ? String(candidate.url) : '';
     if (!nextUrl || !img || !state.isSessionCurrent()) {
       return false;
@@ -477,10 +586,10 @@ function createOverlayFaviconViewRuntime(options) {
         if (currentSrc !== nextUrl) {
           return;
         }
-        const defaultCheckPromise = faviconProxyCheckKind === 'extension'
+        const defaultCheckPromise: Promise<boolean> = faviconProxyCheckKind === 'extension'
           ? faviconViewCore.detectDefaultExtensionFavicon(img, nextUrl)
           : faviconViewCore.requestFaviconData(nextUrl, state.pageUrl).then((dataUrl) => !dataUrl);
-        defaultCheckPromise.catch(() => false).then((isDefault) => {
+        void defaultCheckPromise.catch(() => false).then((isDefault) => {
           if (!img || !state.isSessionCurrent() || img._xOverlayThemeFaviconCandidateToken !== candidateToken) {
             return;
           }
@@ -541,16 +650,16 @@ function createOverlayFaviconViewRuntime(options) {
   // extension background: the host page only renders local image bytes, never
   // connects to a service, and the _favicon endpoint stays unreachable from
   // web pages (it would reveal which sites the user has visited).
-  function isBackgroundFetchedFavicon(url) {
+  function isBackgroundFetchedFavicon(url: string): boolean {
     return (/^https:\/\//i.test(String(url || '')) && faviconUtils.isFaviconProxyUrl(url)) ||
       faviconUtils.isExtensionFaviconEndpointUrl(url);
   }
 
-  function attachBackgroundFaviconCandidate(img, state, sourceUrl) {
+  function attachBackgroundFaviconCandidate(img: OverlayFaviconImage, state: FaviconAttachState, sourceUrl: string): void {
     const token = img._xOverlayThemeFaviconCandidateToken;
     let settled = false;
     showPendingFallbackIcon(img);
-    const finish = (value) => {
+    const finish = (value: string | null): void => {
       if (settled) {
         return;
       }
@@ -580,10 +689,10 @@ function createOverlayFaviconViewRuntime(options) {
     if (faviconCandidateLoadTimeoutMs > 0) {
       img._xOverlayThemeFaviconLoadTimer = setTimer(() => finish(null), faviconCandidateLoadTimeoutMs);
     }
-    requestFaviconData(sourceUrl, state.pageUrl).then(finish).catch(() => finish(null));
+    void requestFaviconData(sourceUrl, state.pageUrl).then(finish).catch(() => finish(null));
   }
 
-  function finalizeOverlayOwnedFaviconFailure(img, state) {
+  function finalizeOverlayOwnedFaviconFailure(img: OverlayFaviconImage, state: FaviconAttachState): void {
     clearOverlayCandidateLoadTimer(img);
     if (state.hasFailedHandler) {
       removeFallbackIconNode(img);
@@ -593,26 +702,36 @@ function createOverlayFaviconViewRuntime(options) {
     applyFallbackIcon(img);
   }
 
-  function finalizeOverlayDefaultProxyFaviconFailure(img, state) {
+  function finalizeOverlayDefaultProxyFaviconFailure(img: OverlayFaviconImage, state: FaviconAttachState): void {
     finalizeOverlayOwnedFaviconFailure(img, state);
   }
 
-  function finalizeOverlayThemeAwareFaviconFailure(img, state) {
+  function finalizeOverlayThemeAwareFaviconFailure(img: OverlayFaviconImage, state: FaviconAttachState): void {
     clearOverlayCandidateLoadTimer(img);
     restoreWorkingFaviconOrFail(img, state.previousWorkingSrc, state.handleFailed);
   }
 
-  function attachResolvedFaviconWithFallbacks(img, pageUrl, hostKey, fallbackUrl, onFailed, sourceOptions) {
+  // Shows a page's icon in img, trying each candidate source in turn; on
+  // hosts the page must not load icons from, only worker-fetched data.
+  function attachResolvedFaviconWithFallbacks(
+    img: OverlayFaviconImage | null,
+    pageUrl: string,
+    hostKey: string,
+    fallbackUrl: string,
+    onFailed?: (() => void) | null,
+    sourceOptions?: { allowRemoteImage?: boolean } | null
+  ): void {
     if (!img) {
       return;
     }
-    if (img._xOverlayThemeFaviconErrorHandler) {
-      img.removeEventListener('error', img._xOverlayThemeFaviconErrorHandler);
+    const previousErrorHandler = img._xOverlayThemeFaviconErrorHandler;
+    if (previousErrorHandler) {
+      img.removeEventListener('error', previousErrorHandler);
       img._xOverlayThemeFaviconErrorHandler = null;
     }
     clearOverlayCandidateLoadTimer(img);
 
-    const state = createOverlayThemeAwareFaviconState(img, pageUrl, hostKey, fallbackUrl, onFailed, sourceOptions);
+    const state = createOverlayThemeAwareFaviconState(img, pageUrl, hostKey, fallbackUrl, onFailed || null, sourceOptions || null);
     if (state.hostKey &&
         shouldBlockOverlayFaviconForHost(state.hostKey) &&
         !isBrowserInternalPageUrl(state.pageUrl)) {
@@ -622,7 +741,7 @@ function createOverlayFaviconViewRuntime(options) {
     }
     syncOverlayThemeAwareFaviconAttributes(img, state);
     const candidates = buildOverlayThemeAwareFaviconCandidatePlan(state);
-    const tried = new Set();
+    const tried = new Set<string>();
     let candidateIndex = 0;
 
     const tryNextAvailableCandidate = () => {
@@ -655,13 +774,14 @@ function createOverlayFaviconViewRuntime(options) {
     }
   }
 
-  function refreshOverlayThemeAwareFavicons(optionsArg) {
+  // Attaches every themed icon in the panel again, as after a policy change.
+  function refreshOverlayThemeAwareFavicons(optionsArg?: { skipWithin?: Element | null } | null): void {
     const overlay = getOverlayPanel();
     if (!overlay) {
       return;
     }
     const skipWithin = optionsArg && optionsArg.skipWithin ? optionsArg.skipWithin : null;
-    overlay.querySelectorAll('img[data-x-ov-theme-favicon="1"]').forEach((img) => {
+    overlay.querySelectorAll<HTMLImageElement>('img[data-x-ov-theme-favicon="1"]').forEach((img) => {
       if (!img || !img.isConnected) {
         return;
       }
@@ -680,11 +800,11 @@ function createOverlayFaviconViewRuntime(options) {
     });
   }
 
-  function refreshOverlayFaviconsForPolicyChange() {
+  function refreshOverlayFaviconsForPolicyChange(): boolean {
     let rowsRerendered = false;
     try {
       rowsRerendered = rerenderReplacedFaviconRows() === true;
-    } catch (e) {
+    } catch (_error) {
       rowsRerendered = false;
     }
     refreshOverlayThemeAwareFavicons({
@@ -693,18 +813,18 @@ function createOverlayFaviconViewRuntime(options) {
     return rowsRerendered;
   }
 
-  function attachFaviconData(img, url, hostOverride, pageUrl) {
+  function attachFaviconData(img: FaviconImage | null, url: string, hostOverride?: string, pageUrl?: string): void {
     const safeUrl = getSafeOverlayFaviconCandidateUrl(url, pageUrl || url, 'data');
     if (safeUrl) {
       faviconViewCore.attachFaviconData(img, safeUrl, hostOverride, pageUrl || url);
     }
   }
 
-  function preloadIcon(url, pageUrl) {
+  function preloadIcon(url: string, pageUrl?: string): void {
     const safeUrl = faviconUrlResolver.resolveFaviconSource(url, pageUrl || '');
     if (safeUrl) {
       if (isBackgroundFetchedFavicon(safeUrl)) {
-        requestFaviconData(safeUrl, pageUrl).then((dataUrl) => {
+        requestFaviconData(safeUrl, pageUrl || '').then((dataUrl) => {
           if (dataUrl) {
             preloadThemeFromFavicon(safeUrl, dataUrl, getHostFromUrl(pageUrl || ''));
           }
@@ -715,7 +835,9 @@ function createOverlayFaviconViewRuntime(options) {
     }
   }
 
-  function warmIconCache(list) {
+  // Loads the rows' icons ahead of rendering; worker-fetched icons warm as
+  // data instead.
+  function warmIconCache(list: ReadonlyArray<FaviconWarmItem | null> | null): void {
     if (!Array.isArray(list)) {
       return;
     }
@@ -751,3 +873,4 @@ function createOverlayFaviconViewRuntime(options) {
 }
 
 export { createOverlayFaviconViewRuntime };
+export type { OverlayFaviconImage, OverlayFaviconViewOptions };

@@ -1,32 +1,73 @@
-// @ts-nocheck
-function isTrustedKeyEvent(event) {
-  return Boolean(event) && event.isTrusted === true;
+// The overlay's mount: its shadow host, its panel and their document.
+interface OverlayKeyMount {
+  document?: Document | null;
+  host?: EventTarget | null;
+  panel?: EventTarget | null;
+}
+
+// The overlay's state queries and actions the router calls.
+interface OverlayKeyRouterHandlers {
+  isTrustedEvent?(event: KeyboardEvent): boolean;
+  isOverlayConnected?(): boolean;
+  getMount?(): OverlayKeyMount | null;
+  isSearchInputActive?(): boolean;
+  shouldHandleModeMenuKey?(event: KeyboardEvent): boolean;
+  isImeComposition?(event: KeyboardEvent): boolean;
+  syncModifiers?(event: KeyboardEvent): void;
+  handleNumberShortcut?(event: KeyboardEvent): boolean;
+  getSuggestionNavigationKey?(event: KeyboardEvent): string;
+  handleInputKeydown?(event: KeyboardEvent): void;
+  handleModeMenuKey?(event: KeyboardEvent): boolean;
+  handleTab?(event: KeyboardEvent): void;
+  handleOverlayKeydown?(event: KeyboardEvent): void;
+  handleOverlayKeyup?(event: KeyboardEvent): void;
+  onKeyUp?(event: KeyboardEvent): void;
+  onEscapeOutside?(event: KeyboardEvent): void;
+  onBlur?(): void;
+}
+
+function isTrustedKeyEvent(event: KeyboardEvent | null): boolean {
+  return event !== null && event.isTrusted === true;
+}
+
+// A document from any window, recognized by its node type.
+function isDocumentLike(value: unknown): value is Document {
+  return typeof value === 'object' && value !== null && 'nodeType' in value && value.nodeType === 9;
+}
+
+function getOwnerDocument(target: EventTarget | null): Document | null {
+  if (!target || !('ownerDocument' in target)) {
+    return null;
+  }
+  const ownerDocument = target.ownerDocument;
+  return isDocumentLike(ownerDocument) ? ownerDocument : null;
 }
 
 // A page-level key listener must only act on keys meant for the overlay:
 // keys from inside its mount host, or keys sent while nothing on the page
 // holds focus (they then target the body or the document). A focused
 // host-page control - including an editable body - keeps its own keys.
-function isOverlayKeyEvent(event, mount) {
+function isOverlayKeyEvent(event: KeyboardEvent | null, mount: OverlayKeyMount | null | undefined): boolean {
   if (!event) {
     return false;
   }
-  const config = mount && typeof mount === 'object' ? mount : {};
+  const config: OverlayKeyMount = mount && typeof mount === 'object' ? mount : {};
   const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
   if ((config.host && path.includes(config.host)) ||
       (config.panel && path.includes(config.panel))) {
     return true;
   }
   const target = event.target;
-  const doc = config.document || (target && target.ownerDocument) || null;
+  const doc = config.document || getOwnerDocument(target);
   if (!target || target === doc || (doc && target === doc.defaultView)) {
     return true;
   }
   if (doc && (target === doc.body || target === doc.documentElement)) {
-    const editableAttribute = typeof target.getAttribute === 'function'
-      ? target.getAttribute('contenteditable')
+    const root = target === doc.body ? doc.body : doc.documentElement;
+    const editableAttribute = typeof root.getAttribute === 'function'
+      ? root.getAttribute('contenteditable')
       : null;
-    const editable = target.isContentEditable === true ||
+    const editable = root.isContentEditable === true ||
       String(doc.designMode || '').toLowerCase() === 'on' ||
       (editableAttribute !== null && editableAttribute.toLowerCase() !== 'false');
     return !editable;
@@ -48,49 +89,45 @@ function isOverlayKeyEvent(event, mount) {
 // - window blur: modifier tracking resets.
 // Synthetic (untrusted) events never drive the overlay. `handlers` supplies
 // the overlay's state queries and actions.
-function createOverlayKeyRouter(win, handlers) {
+function createOverlayKeyRouter(win: Window, handlers?: OverlayKeyRouterHandlers | null) {
   const doc = win.document;
-  const config = handlers && typeof handlers === 'object' ? handlers : {};
+  const config: OverlayKeyRouterHandlers = handlers && typeof handlers === 'object' ? handlers : {};
   const isTrustedEvent = typeof config.isTrustedEvent === 'function'
     ? config.isTrustedEvent
     : isTrustedKeyEvent;
   let started = false;
 
-  function call(name, event) {
-    return typeof config[name] === 'function' ? config[name](event) : undefined;
-  }
-
-  function handleCapturedKey(event) {
+  function handleCapturedKey(event: KeyboardEvent): void {
     if (!isTrustedEvent(event)) {
       if (event && typeof event.stopImmediatePropagation === 'function') {
         event.stopImmediatePropagation();
       }
       return;
     }
-    if (!call('isOverlayConnected')) {
+    if (!config.isOverlayConnected?.()) {
       return;
     }
     if (event.type === 'keyup') {
-      call('onKeyUp', event);
+      config.onKeyUp?.(event);
     }
-    const searchInputActive = Boolean(call('isSearchInputActive'));
-    const modeMenuActive = Boolean(call('shouldHandleModeMenuKey', event));
+    const searchInputActive = Boolean(config.isSearchInputActive?.());
+    const modeMenuActive = Boolean(config.shouldHandleModeMenuKey?.(event));
     if (!searchInputActive && !modeMenuActive) {
       return;
     }
-    if (call('isImeComposition', event)) {
+    if (config.isImeComposition?.(event)) {
       event.stopImmediatePropagation();
       return;
     }
-    call('syncModifiers', event);
+    config.syncModifiers?.(event);
     if ((event.type === 'keydown' || event.type === 'keyup') &&
-        call('handleNumberShortcut', event)) {
+        config.handleNumberShortcut?.(event)) {
       event.stopImmediatePropagation();
       return;
     }
     if (event.type === 'keydown' && searchInputActive &&
-        call('getSuggestionNavigationKey', event)) {
-      call('handleInputKeydown', event);
+        config.getSuggestionNavigationKey?.(event)) {
+      config.handleInputKeydown?.(event);
       event.stopImmediatePropagation();
       return;
     }
@@ -105,50 +142,50 @@ function createOverlayKeyRouter(win, handlers) {
       return;
     }
     if (event.type === 'keydown') {
-      if (!modeMenuActive || call('handleModeMenuKey', event) !== true) {
-        call('handleInputKeydown', event);
+      if (!modeMenuActive || config.handleModeMenuKey?.(event) !== true) {
+        config.handleInputKeydown?.(event);
       }
     } else if (event.type === 'keyup') {
-      call('syncModifiers', event);
+      config.syncModifiers?.(event);
     }
     event.stopImmediatePropagation();
   }
 
-  function handleCapturedTab(event) {
+  function handleCapturedTab(event: KeyboardEvent): void {
     if (!isTrustedEvent(event) || event.key !== 'Tab') {
       return;
     }
-    if (!call('isSearchInputActive')) {
+    if (!config.isSearchInputActive?.()) {
       return;
     }
-    call('handleTab', event);
+    config.handleTab?.(event);
   }
 
-  function handleDocumentKeydown(event) {
+  function handleDocumentKeydown(event: KeyboardEvent): void {
     if (!isTrustedEvent(event)) {
       return;
     }
-    if (!isOverlayKeyEvent(event, call('getMount'))) {
+    if (!isOverlayKeyEvent(event, config.getMount?.())) {
       if (event.key === 'Escape') {
-        call('onEscapeOutside', event);
+        config.onEscapeOutside?.(event);
       }
       return;
     }
-    call('handleOverlayKeydown', event);
+    config.handleOverlayKeydown?.(event);
   }
 
-  function handleDocumentKeyup(event) {
-    if (!isTrustedEvent(event) || !isOverlayKeyEvent(event, call('getMount'))) {
+  function handleDocumentKeyup(event: KeyboardEvent): void {
+    if (!isTrustedEvent(event) || !isOverlayKeyEvent(event, config.getMount?.())) {
       return;
     }
-    call('handleOverlayKeyup', event);
+    config.handleOverlayKeyup?.(event);
   }
 
-  function handleBlur() {
-    call('onBlur');
+  function handleBlur(): void {
+    config.onBlur?.();
   }
 
-  function start() {
+  function start(): void {
     if (started) {
       return;
     }
@@ -162,7 +199,7 @@ function createOverlayKeyRouter(win, handlers) {
     win.addEventListener('blur', handleBlur);
   }
 
-  function stop() {
+  function stop(): void {
     if (!started) {
       return;
     }
@@ -184,3 +221,4 @@ function createOverlayKeyRouter(win, handlers) {
 }
 
 export { createOverlayKeyRouter, isOverlayKeyEvent };
+export type { OverlayKeyMount, OverlayKeyRouterHandlers };

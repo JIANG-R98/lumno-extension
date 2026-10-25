@@ -1,11 +1,69 @@
-// @ts-nocheck
+// A host-specific fix: on matching sites the panel waits for its styles.
+interface SiteFix {
+  id: string;
+  hosts?: readonly string[];
+  waitForStyleSheets?: boolean;
+  styleIds: readonly string[];
+  maxWaitMs: number;
+}
+
+// The window the gate reads its host and timers from.
+interface SiteFixWindow {
+  location?: { hostname?: string };
+  setTimeout?: Window['setTimeout'];
+  clearTimeout?: Window['clearTimeout'];
+  requestAnimationFrame?: Window['requestAnimationFrame'];
+  cancelAnimationFrame?: Window['cancelAnimationFrame'];
+}
+
+// What the gate needs of a <link rel="stylesheet">.
+interface StylesheetLink {
+  sheet?: unknown;
+  dataset?: Record<string, string | undefined>;
+  addEventListener(type: 'load' | 'error', listener: () => void, options?: AddEventListenerOptions): void;
+  removeEventListener(type: 'load' | 'error', listener: () => void): void;
+}
+
+// Where the panel's style links live: its shadow root.
+interface StyleRoot {
+  getElementById?(id: string): unknown;
+  querySelector?(selectors: string): unknown;
+}
+
+// What the gate needs of the panel.
+interface RevealOverlay {
+  style?: { setProperty?(name: string, value: string, priority?: string): void; removeProperty(name: string): unknown };
+  setAttribute(name: string, value: string): void;
+  removeAttribute?(name: string): void;
+}
+
+interface RevealResult {
+  ok: boolean;
+  reason: string;
+}
+
+interface RevealGateOptions {
+  overlay?: RevealOverlay | null;
+  styleRoot?: StyleRoot | null;
+  styleIds?: string[];
+  maxWaitMs?: number;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function isStyleRoot(value: unknown): value is StyleRoot {
+  return isRecord(value) && (typeof value.getElementById === 'function' || typeof value.querySelector === 'function');
+}
+
 const OVERLAY_STYLE_IDS = Object.freeze({
   input: '_x_extension_input_component_style_2026_unique_',
   suggestions: '_x_extension_overlay_suggestions_style_2026_unique_'
 });
 const OVERLAY_STYLE_FALLBACK_ATTRIBUTE = 'data-lumno-site-fix-style-fallback';
 
-const OVERLAY_STYLE_REVEAL_POLICY = Object.freeze({
+const OVERLAY_STYLE_REVEAL_POLICY: Readonly<SiteFix> = Object.freeze({
   id: 'overlay-critical-style-reveal',
   waitForStyleSheets: true,
   styleIds: Object.freeze([
@@ -15,22 +73,22 @@ const OVERLAY_STYLE_REVEAL_POLICY = Object.freeze({
   maxWaitMs: 80
 });
 
-const SITE_FIXES = Object.freeze([]);
+const SITE_FIXES: readonly SiteFix[] = Object.freeze([]);
 
-function normalizeHostname(value) {
+function normalizeHostname(value: unknown): string {
   return String(value || '')
     .trim()
     .replace(/\.$/, '')
     .toLowerCase();
 }
 
-function getWindowHostname(win) {
+function getWindowHostname(win?: SiteFixWindow | null): string {
   const targetWindow = win || (typeof window !== 'undefined' ? window : null);
   const locationLike = targetWindow && targetWindow.location ? targetWindow.location : null;
   return normalizeHostname(locationLike && locationLike.hostname ? locationLike.hostname : '');
 }
 
-function hostMatchesRule(hostname, rule) {
+function hostMatchesRule(hostname: string, rule: string): boolean {
   const host = normalizeHostname(hostname);
   const normalizedRule = normalizeHostname(rule);
   if (!host || !normalizedRule) {
@@ -39,7 +97,7 @@ function hostMatchesRule(hostname, rule) {
   return host === normalizedRule || host.endsWith(`.${normalizedRule}`);
 }
 
-function getActiveFixes(win) {
+function getActiveFixes(win?: SiteFixWindow | null): SiteFix[] {
   const hostname = getWindowHostname(win);
   if (!hostname) {
     return [];
@@ -50,11 +108,11 @@ function getActiveFixes(win) {
   });
 }
 
-function escapeAttributeValue(value) {
+function escapeAttributeValue(value: string): string {
   return String(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
-function findById(rootNode, id) {
+function findById(rootNode: StyleRoot | null, id: string): unknown {
   if (!rootNode || !id) {
     return null;
   }
@@ -67,15 +125,17 @@ function findById(rootNode, id) {
   return null;
 }
 
-function isStylesheetLink(node) {
-  if (!node || typeof node.getAttribute !== 'function') {
+function isStylesheetLink(node: unknown): node is StylesheetLink {
+  if (!isRecord(node) || typeof node.getAttribute !== 'function' ||
+      typeof node.addEventListener !== 'function' || typeof node.removeEventListener !== 'function') {
     return false;
   }
-  const rel = String(node.getAttribute('rel') || node.rel || '').toLowerCase();
+  const relAttribute: unknown = Reflect.apply(node.getAttribute, node, ['rel']);
+  const rel = String(relAttribute || node.rel || '').toLowerCase();
   return rel.split(/\s+/).includes('stylesheet');
 }
 
-function isStylesheetLoaded(link) {
+function isStylesheetLoaded(link: StylesheetLink | null): boolean {
   if (!link) {
     return true;
   }
@@ -86,21 +146,21 @@ function isStylesheetLoaded(link) {
     if (link.sheet) {
       return true;
     }
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
   return false;
 }
 
-function markStylesheetReady(link) {
+function markStylesheetReady(link: StylesheetLink): void {
   if (link && link.dataset) {
     link.dataset.lumnoStylesheetReady = 'true';
   }
 }
 
-function collectStyleLinks(rootNode, styleIds) {
+function collectStyleLinks(rootNode: StyleRoot, styleIds: readonly string[]): StylesheetLink[] {
   const ids = Array.isArray(styleIds) ? styleIds : [];
-  const links = [];
+  const links: StylesheetLink[] = [];
   ids.forEach((id) => {
     const link = findById(rootNode, id);
     if (isStylesheetLink(link) && !links.includes(link)) {
@@ -110,11 +170,18 @@ function collectStyleLinks(rootNode, styleIds) {
   return links;
 }
 
-function getTimerWindow(win) {
+function getTimerWindow(win?: SiteFixWindow | null): SiteFixWindow | null {
   return win || (typeof window !== 'undefined' ? window : null);
 }
 
-function waitForStyleLinks(win, links, maxWaitMs, onAllLoaded) {
+// Resolves once every link loaded, or with ok false on an error or when
+// maxWaitMs ran out; onAllLoaded still runs if they load later.
+function waitForStyleLinks(
+  win: SiteFixWindow | null | undefined,
+  links: StylesheetLink[],
+  maxWaitMs: number,
+  onAllLoaded?: () => void
+): Promise<RevealResult> {
   const targetWindow = getTimerWindow(win);
   const pendingLinks = (Array.isArray(links) ? links : []).filter((link) => !isStylesheetLoaded(link));
   if (pendingLinks.length === 0) {
@@ -124,19 +191,20 @@ function waitForStyleLinks(win, links, maxWaitMs, onAllLoaded) {
     }
     return Promise.resolve({ ok: true, reason: 'already-loaded' });
   }
-  if (!targetWindow || typeof targetWindow.setTimeout !== 'function') {
+  const setTimer = targetWindow ? targetWindow.setTimeout : undefined;
+  if (!targetWindow || typeof setTimer !== 'function') {
     return Promise.resolve({ ok: false, reason: 'timer-unavailable' });
   }
 
   return new Promise((resolve) => {
     let initialResultSettled = false;
     let remaining = pendingLinks.length;
-    let timer = null;
-    let raf = null;
-    const cleanups = [];
-    const readyLinks = new Set();
+    let timer: number | null = null;
+    let raf: number | null = null;
+    const cleanups: Array<() => void> = [];
+    const readyLinks = new Set<StylesheetLink>();
 
-    const settleInitialResult = (ok, reason) => {
+    const settleInitialResult = (ok: boolean, reason: string): void => {
       if (initialResultSettled) {
         return;
       }
@@ -152,7 +220,7 @@ function waitForStyleLinks(win, links, maxWaitMs, onAllLoaded) {
       resolve({ ok: Boolean(ok), reason: reason || (ok ? 'loaded' : 'unknown') });
     };
 
-    const handleReady = (link, reason) => {
+    const handleReady = (link: StylesheetLink, reason: string): void => {
       if (readyLinks.has(link)) {
         return;
       }
@@ -197,7 +265,7 @@ function waitForStyleLinks(win, links, maxWaitMs, onAllLoaded) {
 
     const waitMs = Math.max(0, Number(maxWaitMs) || 0);
     if (waitMs > 0) {
-      timer = targetWindow.setTimeout(() => {
+      timer = setTimer.call(targetWindow, () => {
         // Keep load listeners alive after the first-frame budget expires:
         // the panel can reveal with its safe fallback now and upgrade as soon
         // as the real stylesheets finish loading.
@@ -207,20 +275,23 @@ function waitForStyleLinks(win, links, maxWaitMs, onAllLoaded) {
   });
 }
 
-function setOverlayDeferredVisibility(overlay, enabled, fixId) {
-  if (!overlay || !overlay.style || typeof overlay.style.setProperty !== 'function') {
+function setOverlayDeferredVisibility(overlay: RevealOverlay, enabled: boolean, fixId: string): void {
+  const style = overlay ? overlay.style : undefined;
+  if (!style || typeof style.setProperty !== 'function') {
     return;
   }
   if (enabled) {
     overlay.setAttribute('data-lumno-site-fix-reveal', fixId || 'waiting');
-    overlay.style.setProperty('visibility', 'hidden', 'important');
+    style.setProperty('visibility', 'hidden', 'important');
     return;
   }
-  overlay.removeAttribute('data-lumno-site-fix-reveal');
-  overlay.style.removeProperty('visibility');
+  if (typeof overlay.removeAttribute === 'function') {
+    overlay.removeAttribute('data-lumno-site-fix-reveal');
+  }
+  style.removeProperty('visibility');
 }
 
-function setOverlayStyleFallback(overlay, enabled, fixId) {
+function setOverlayStyleFallback(overlay: RevealOverlay, enabled: boolean, fixId: string): void {
   if (!overlay || typeof overlay.setAttribute !== 'function') {
     return;
   }
@@ -233,7 +304,7 @@ function setOverlayStyleFallback(overlay, enabled, fixId) {
   }
 }
 
-function createNoopRevealGate() {
+function createNoopRevealGate(): RevealGate {
   return Object.freeze({
     active: false,
     fixId: '',
@@ -243,17 +314,22 @@ function createNoopRevealGate() {
   });
 }
 
-function createOverlayRevealGate(win, options) {
-  const settings = options && typeof options === 'object' ? options : {};
+// Keeps the panel hidden until its stylesheets load, for at most the
+// fix's wait; past that it shows with the inline fallback styles.
+function createOverlayRevealGate(win?: SiteFixWindow | null, options?: RevealGateOptions | null): RevealGate {
+  const settings: RevealGateOptions = options && typeof options === 'object' ? options : {};
   const activeFix = getActiveFixes(win).find((fix) => fix && fix.waitForStyleSheets) ||
     OVERLAY_STYLE_REVEAL_POLICY;
 
   const overlay = settings.overlay || null;
-  const styleRoot = settings.styleRoot ||
-    (overlay && overlay._lumnoOverlayRoot ? overlay._lumnoOverlayRoot : null);
+  const shadowRoot: unknown = overlay ? Reflect.get(overlay, '_lumnoOverlayRoot') : null;
+  const styleRoot = settings.styleRoot || (isStyleRoot(shadowRoot) ? shadowRoot : null);
   if (!overlay || !styleRoot) {
     return createNoopRevealGate();
   }
+  // Narrowed here, for the functions below.
+  const panel: RevealOverlay = overlay;
+  const root: StyleRoot = styleRoot;
 
   const styleIds = Array.isArray(settings.styleIds) && settings.styleIds.length > 0
     ? settings.styleIds
@@ -263,28 +339,28 @@ function createOverlayRevealGate(win, options) {
     : activeFix.maxWaitMs;
   let released = false;
   let stylesReady = false;
-  let waitPromise = null;
+  let waitPromise: Promise<RevealResult & { fixId: string }> | null = null;
 
-  setOverlayDeferredVisibility(overlay, true, activeFix.id);
+  setOverlayDeferredVisibility(panel, true, activeFix.id);
 
-  function release() {
+  function release(): void {
     if (released) {
       return;
     }
     released = true;
-    setOverlayStyleFallback(overlay, !stylesReady, activeFix.id);
-    setOverlayDeferredVisibility(overlay, false, activeFix.id);
+    setOverlayStyleFallback(panel, !stylesReady, activeFix.id);
+    setOverlayDeferredVisibility(panel, false, activeFix.id);
   }
 
-  function cancel() {
+  function cancel(): void {
     released = true;
-    setOverlayDeferredVisibility(overlay, false, activeFix.id);
-    setOverlayStyleFallback(overlay, false, activeFix.id);
+    setOverlayDeferredVisibility(panel, false, activeFix.id);
+    setOverlayStyleFallback(panel, false, activeFix.id);
   }
 
-  function waitUntilReady() {
+  function waitUntilReady(): Promise<RevealResult & { fixId: string }> {
     if (!waitPromise) {
-      const links = collectStyleLinks(styleRoot, styleIds);
+      const links = collectStyleLinks(root, styleIds);
       if (links.length === 0) {
         waitPromise = Promise.resolve({
           ok: false,
@@ -296,7 +372,7 @@ function createOverlayRevealGate(win, options) {
         // Adding paint frames here would delay every overlay reveal without extra protection.
         waitPromise = waitForStyleLinks(win, links, maxWaitMs, () => {
           stylesReady = true;
-          setOverlayStyleFallback(overlay, false, activeFix.id);
+          setOverlayStyleFallback(panel, false, activeFix.id);
         }).then((result) => ({
           ok: Boolean(result && result.ok),
           reason: result && result.reason ? result.reason : 'unknown',
@@ -316,6 +392,15 @@ function createOverlayRevealGate(win, options) {
   });
 }
 
+// The panel's reveal gate; inactive where nothing needs to wait.
+interface RevealGate {
+  readonly active: boolean;
+  readonly fixId: string;
+  waitUntilReady(): Promise<RevealResult & { fixId?: string }>;
+  release(): void;
+  cancel(): void;
+}
+
 export {
   OVERLAY_STYLE_IDS,
   OVERLAY_STYLE_REVEAL_POLICY,
@@ -324,3 +409,4 @@ export {
   getActiveFixes,
   hostMatchesRule
 };
+export type { RevealGate, RevealGateOptions, RevealOverlay, SiteFix, StyleRoot, StylesheetLink };
