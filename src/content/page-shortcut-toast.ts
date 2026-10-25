@@ -1,5 +1,6 @@
-// @ts-nocheck
 import * as TOAST from '../shared/ui/toast';
+import type { ToastController, ToastStyleGate } from '../shared/ui/toast';
+import type { PageShortcutToastOptions } from '../types/content-apis';
 
 (function() {
   if (window.__lumnoPageShortcutToast2026) {
@@ -10,14 +11,19 @@ import * as TOAST from '../shared/ui/toast';
   // Toast lives in its own shadow root so page styles cannot reach it.
   const TOAST_HOST_ID = '__lumno_page_shortcut_toast_2026__';
   const TOAST_Z_INDEX = '2147483646';
-  const state = {
+  const state: {
+    host: HTMLElement | null;
+    element: HTMLElement | null;
+    controller: Readonly<ToastController> | null;
+    styleGate: Readonly<ToastStyleGate> | null;
+  } = {
     host: null,
     element: null,
     controller: null,
     styleGate: null
   };
 
-  function applyNoTranslate(element) {
+  function applyNoTranslate<T extends HTMLElement>(element: T): T {
     element.setAttribute('translate', 'no');
     element.setAttribute('lang', 'zxx');
     element.setAttribute('notranslate', '');
@@ -26,18 +32,18 @@ import * as TOAST from '../shared/ui/toast';
     return element;
   }
 
-  function isDarkTheme(themeMode) {
+  function isDarkTheme(themeMode: string | undefined): boolean {
     if (themeMode === 'dark' || themeMode === 'light') {
       return themeMode === 'dark';
     }
     return Boolean(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
   }
 
-  function ensureToast() {
+  function ensureToast(): boolean {
     if (state.host && state.host.isConnected && state.controller) {
       return true;
     }
-    if (!TOAST || typeof TOAST.createToastController !== 'function' || !document.documentElement) {
+    if (!document.documentElement) {
       return false;
     }
     if (state.controller) state.controller.destroy();
@@ -74,12 +80,12 @@ import * as TOAST from '../shared/ui/toast';
     return true;
   }
 
-  function show(message, options) {
+  function show(message: string, options?: PageShortcutToastOptions | null): boolean {
     const text = String(message || '').trim();
-    if (!text || !ensureToast()) {
+    if (!text || !ensureToast() || !state.element || !state.controller) {
       return false;
     }
-    const settings = options && typeof options === 'object' ? options : {};
+    const settings: PageShortcutToastOptions = options || {};
     const error = settings.error === true;
     if (isDarkTheme(settings.themeMode)) {
       state.element.setAttribute('data-theme', 'dark');

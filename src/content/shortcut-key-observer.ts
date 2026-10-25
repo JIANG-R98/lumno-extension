@@ -1,27 +1,52 @@
+// Watches keys in every frame: the show-search shortcut as a fallback for
+// pages the browser command does not reach, and the release of the tab
+// switcher's modifier, which commits the switch.
 import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
+import type { KeyDescriptor, ShortcutSpec } from '../domain/shortcut-key-matcher';
+import type { PageReply } from '../domain/messages';
 import * as LumnoMessaging from '../platform/messaging';
+
+// What an observer hands the one replacing it.
+interface ObserverState {
+  showSearchShortcut: string;
+  showSearchShortcutRefreshedAt: number;
+  showSearchShortcutResolved: boolean;
+  armedReleaseKeys: string[];
+  trustedKeydowns: Array<[string, number]>;
+  trustedReleases: Array<[string, number]>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
 
 (function() {
   const RUNTIME_KEY = '_x_extension_shortcut_key_observer_2026_unique_';
-  const previousRuntime = window[RUNTIME_KEY];
+  // Left by an earlier injection, possibly of an older extension version.
+  const previousRuntime: unknown = Reflect.get(window, RUNTIME_KEY);
   // The background injects this script again into frames that may already run
   // it: on every tab switcher command and after an extension reload or update.
   // The replacement takes over the running observer's state, so a modifier
   // release buffered moments before still commits the switcher, and it asks
   // the worker nothing the previous observer already knew.
-  let inheritedState = null;
-  if (previousRuntime) {
+  let inheritedState: unknown = null;
+  if (isRecord(previousRuntime)) {
+    const { exportState: exportPrevious, cleanup: cleanupPrevious } = previousRuntime;
     try {
-      inheritedState = typeof previousRuntime.exportState === 'function'
-        ? previousRuntime.exportState()
+      inheritedState = typeof exportPrevious === 'function'
+        ? Reflect.apply(exportPrevious, previousRuntime, [])
         : null;
-    } catch (error) {
+    } catch (_error) {
       inheritedState = null;
     }
-    if (typeof previousRuntime.cleanup === 'function') {
+    if (typeof cleanupPrevious === 'function') {
       try {
-        previousRuntime.cleanup();
-      } catch (error) {
+        Reflect.apply(cleanupPrevious, previousRuntime, []);
+      } catch (_error) {
         // A listener from the previous extension context may already be invalid.
       }
     }
@@ -37,16 +62,16 @@ import * as LumnoMessaging from '../platform/messaging';
   const SHOW_SEARCH_SHORTCUT_REFRESH_MIN_INTERVAL_MS = 2000;
   const RELEASE_REPLAY_WINDOW_MS = 5000;
   let showSearchShortcutRaw = '';
-  let showSearchShortcutSpec = null;
+  let showSearchShortcutSpec: ShortcutSpec | null = null;
   let showSearchShortcutRefreshedAt = 0;
   // Whether the background has answered; until then a replacement asks again
   // instead of inheriting a request whose answer reaches the old observer.
   let showSearchShortcutResolved = false;
-  let armedReleaseKeys = [];
-  const recentTrustedKeydownAtByKey = new Map();
-  const recentTrustedReleaseAtByKey = new Map();
+  let armedReleaseKeys: string[] = [];
+  const recentTrustedKeydownAtByKey = new Map<string, number>();
+  const recentTrustedReleaseAtByKey = new Map<string, number>();
 
-  function notifyTopFrameDocumentStarted() {
+  function notifyTopFrameDocumentStarted(): void {
     if (window.top !== window) {
       return;
     }
@@ -59,37 +84,38 @@ import * as LumnoMessaging from '../platform/messaging';
       }, () => {
         void (chrome.runtime && chrome.runtime.lastError);
       });
-    } catch (error) {
+    } catch (_error) {
       // Ignore an extension context invalidated while this Document commits.
     }
   }
 
-  function adoptInheritedState(state) {
-    if (!state || typeof state !== 'object') {
+  function adoptEventTimes(entries: unknown, eventsByKey: Map<string, number>): void {
+    (Array.isArray(entries) ? entries : []).forEach((entry: unknown) => {
+      if (Array.isArray(entry) && typeof entry[0] === 'string' && isFiniteNumber(entry[1])) {
+        eventsByKey.set(entry[0], entry[1]);
+      }
+    });
+  }
+
+  // Takes over what the previous observer knew; its shape is read field by field.
+  function adoptInheritedState(state: unknown): void {
+    if (!isRecord(state)) {
       return;
     }
     if (state.showSearchShortcutResolved === true && typeof state.showSearchShortcut === 'string') {
       applyShowSearchShortcut(state.showSearchShortcut);
-      if (Number.isFinite(state.showSearchShortcutRefreshedAt)) {
+      if (isFiniteNumber(state.showSearchShortcutRefreshedAt)) {
         showSearchShortcutRefreshedAt = state.showSearchShortcutRefreshedAt;
       }
     }
     if (Array.isArray(state.armedReleaseKeys)) {
       armedReleaseKeys = state.armedReleaseKeys.map(normalizeReleaseKey).filter(Boolean);
     }
-    [
-      [state.trustedKeydowns, recentTrustedKeydownAtByKey],
-      [state.trustedReleases, recentTrustedReleaseAtByKey]
-    ].forEach(([entries, eventsByKey]) => {
-      (Array.isArray(entries) ? entries : []).forEach((entry) => {
-        if (Array.isArray(entry) && typeof entry[0] === 'string' && Number.isFinite(entry[1])) {
-          eventsByKey.set(entry[0], entry[1]);
-        }
-      });
-    });
+    adoptEventTimes(state.trustedKeydowns, recentTrustedKeydownAtByKey);
+    adoptEventTimes(state.trustedReleases, recentTrustedReleaseAtByKey);
   }
 
-  function exportState() {
+  function exportState(): ObserverState {
     return {
       showSearchShortcut: showSearchShortcutRaw,
       showSearchShortcutRefreshedAt,
@@ -100,14 +126,14 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function applyShowSearchShortcut(shortcut) {
+  function applyShowSearchShortcut(shortcut: unknown): void {
     const nextShortcut = String(shortcut || '').trim();
     showSearchShortcutRaw = nextShortcut;
     showSearchShortcutResolved = true;
     showSearchShortcutSpec = SHORTCUT_KEY_MATCHER.parseShortcut(nextShortcut);
   }
 
-  function refreshShowSearchShortcut() {
+  function refreshShowSearchShortcut(): void {
     const now = Date.now();
     if ((now - showSearchShortcutRefreshedAt) < SHOW_SEARCH_SHORTCUT_REFRESH_MIN_INTERVAL_MS) {
       return;
@@ -127,12 +153,16 @@ import * as LumnoMessaging from '../platform/messaging';
         }
         applyShowSearchShortcut(nextShortcut);
       });
-    } catch (error) {
+    } catch (_error) {
       // Ignore an extension context invalidated during reload or navigation.
     }
   }
 
-  function relayUnresolvedShowSearchShortcut(event, descriptor) {
+  // Before the shortcut is known, the background checks the keys itself.
+  function relayUnresolvedShowSearchShortcut(descriptor: KeyDescriptor | null): void {
+    if (!descriptor) {
+      return;
+    }
     if (!SHORTCUT_KEY_MATCHER.canBeChromeCommandShortcut(descriptor)) {
       return;
     }
@@ -153,19 +183,19 @@ import * as LumnoMessaging from '../platform/messaging';
           applyShowSearchShortcut(response.shortcut);
         }
       });
-    } catch (error) {
+    } catch (_error) {
       // Ignore an extension context invalidated during reload or navigation.
     }
   }
 
-  function relayShowSearchShortcut(event) {
+  function relayShowSearchShortcut(event: KeyboardEvent): void {
     if (!event || event.isTrusted !== true || event.isComposing || event.repeat) {
       return;
     }
     rememberTrustedShortcutKeydown(event);
     const descriptor = SHORTCUT_KEY_MATCHER.describeKeyboardEvent(event);
     if (!showSearchShortcutSpec) {
-      relayUnresolvedShowSearchShortcut(event, descriptor);
+      relayUnresolvedShowSearchShortcut(descriptor);
       return;
     }
     if (!SHORTCUT_KEY_MATCHER.descriptorMatchesShortcut(descriptor, showSearchShortcutSpec)) {
@@ -183,17 +213,17 @@ import * as LumnoMessaging from '../platform/messaging';
       }, () => {
         void (chrome.runtime && chrome.runtime.lastError);
       });
-    } catch (error) {
+    } catch (_error) {
       // Ignore an extension context invalidated during reload or navigation.
     }
   }
 
-  function normalizeReleaseKey(value) {
+  function normalizeReleaseKey(value: unknown): string {
     const key = String(value || '');
     return key.length === 1 ? key.toLowerCase() : key;
   }
 
-  function normalizeReleaseCode(value) {
+  function normalizeReleaseCode(value: unknown): string {
     const code = String(value || '');
     if (/^Key[A-Z]$/.test(code)) {
       return code.slice(3).toLowerCase();
@@ -201,7 +231,7 @@ import * as LumnoMessaging from '../platform/messaging';
     if (/^Digit\d$/.test(code)) {
       return code.slice(5);
     }
-    const aliases = {
+    const aliases: Readonly<Record<string, string>> = {
       Backquote: '`',
       Backslash: '\\',
       BracketLeft: '[',
@@ -214,17 +244,17 @@ import * as LumnoMessaging from '../platform/messaging';
       Semicolon: ';',
       Slash: '/'
     };
-    return aliases[code] || '';
+    return Object.prototype.hasOwnProperty.call(aliases, code) ? aliases[code] : '';
   }
 
-  function getShortcutReleaseCandidates(event) {
+  function getShortcutReleaseCandidates(event: KeyboardEvent): string[] {
     return Array.from(new Set([
       normalizeReleaseKey(event && event.key),
       normalizeReleaseCode(event && event.code)
     ].filter(Boolean)));
   }
 
-  function getShortcutKeydownCandidates(event) {
+  function getShortcutKeydownCandidates(event: KeyboardEvent): string[] {
     const candidates = getShortcutReleaseCandidates(event);
     if (event && event.altKey) {
       candidates.push('Alt');
@@ -241,7 +271,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return Array.from(new Set(candidates));
   }
 
-  function pruneTrustedShortcutEvents(now) {
+  function pruneTrustedShortcutEvents(now: number): void {
     [recentTrustedKeydownAtByKey, recentTrustedReleaseAtByKey].forEach((eventsByKey) => {
       eventsByKey.forEach((observedAt, key) => {
         if ((now - observedAt) > RELEASE_REPLAY_WINDOW_MS) {
@@ -251,7 +281,7 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  function rememberTrustedShortcutKeydown(event) {
+  function rememberTrustedShortcutKeydown(event: KeyboardEvent): void {
     const pressedAt = Date.now();
     pruneTrustedShortcutEvents(pressedAt);
     getShortcutKeydownCandidates(event).forEach((key) => {
@@ -259,12 +289,12 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  function getReleasedShortcutKey(event) {
+  function getReleasedShortcutKey(event: KeyboardEvent): string {
     return getShortcutReleaseCandidates(event)
       .find((key) => armedReleaseKeys.includes(key)) || '';
   }
 
-  function rememberTrustedShortcutRelease(event) {
+  function rememberTrustedShortcutRelease(event: KeyboardEvent): void {
     const releasedAt = Date.now();
     pruneTrustedShortcutEvents(releasedAt);
     getShortcutReleaseCandidates(event).forEach((key) => {
@@ -272,7 +302,9 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  function getBufferedReleasedShortcutKey(keys, commandStartedAt) {
+  // A modifier released just before the switcher command arrived: its
+  // keyup came first, so the release is replayed from what was heard.
+  function getBufferedReleasedShortcutKey(keys: string[], commandStartedAt: unknown): string {
     const startedAt = Number(commandStartedAt);
     if (!Number.isFinite(startedAt) || startedAt <= 0) {
       return '';
@@ -280,7 +312,7 @@ import * as LumnoMessaging from '../platform/messaging';
     const now = Date.now();
     return keys.find((key) => {
       const observedAt = recentTrustedReleaseAtByKey.get(key);
-      if (!Number.isFinite(observedAt) ||
+      if (!isFiniteNumber(observedAt) ||
           (now - observedAt) > RELEASE_REPLAY_WINDOW_MS) {
         return false;
       }
@@ -288,14 +320,14 @@ import * as LumnoMessaging from '../platform/messaging';
         return true;
       }
       const keydownAt = recentTrustedKeydownAtByKey.get(key);
-      return Number.isFinite(keydownAt) &&
+      return isFiniteNumber(keydownAt) &&
         keydownAt <= observedAt &&
         (observedAt - keydownAt) <= RELEASE_REPLAY_WINDOW_MS &&
         (startedAt - observedAt) <= RELEASE_REPLAY_WINDOW_MS;
     }) || '';
   }
 
-  function relayTabSwitcherShortcutRelease(key) {
+  function relayTabSwitcherShortcutRelease(key: string): void {
     if (!key) {
       return;
     }
@@ -309,16 +341,21 @@ import * as LumnoMessaging from '../platform/messaging';
       }, () => {
         void (chrome.runtime && chrome.runtime.lastError);
       });
-    } catch (error) {
+    } catch (_error) {
       // Ignore stale extension contexts while a tab or the extension reloads.
     }
   }
 
-  const runtimeMessageListener = (request, _sender, sendResponse) => {
-      if (!request || request.action !== 'armTabSwitcherShortcutRelease') {
+  const runtimeMessageListener = (
+    request: unknown,
+    _sender: chrome.runtime.MessageSender,
+    sendResponse: (reply: PageReply<'armTabSwitcherShortcutRelease'>) => void
+  ): void => {
+      if (!isRecord(request) || request.action !== 'armTabSwitcherShortcutRelease') {
         return;
       }
-      armedReleaseKeys = (Array.isArray(request.keys) ? request.keys : [request.key])
+      const keys: unknown[] = Array.isArray(request.keys) ? request.keys : [request.key];
+      armedReleaseKeys = keys
         .map(normalizeReleaseKey)
         .filter(Boolean);
       const bufferedKey = getBufferedReleasedShortcutKey(
@@ -335,7 +372,7 @@ import * as LumnoMessaging from '../platform/messaging';
     chrome.runtime.onMessage.addListener(runtimeMessageListener);
   }
 
-  function notifyTabSwitcherShortcutModifierReleased(event) {
+  function notifyTabSwitcherShortcutModifierReleased(event: KeyboardEvent): void {
     if (!event || event.isTrusted !== true) {
       return;
     }
@@ -350,7 +387,7 @@ import * as LumnoMessaging from '../platform/messaging';
   // Element focus does not bubble, so a non-capturing listener on window hears
   // only the window itself gaining focus, the one focus that can follow a
   // shortcut edit.
-  const refreshShowSearchShortcutOnFocus = (event) => {
+  const refreshShowSearchShortcutOnFocus = (event: FocusEvent): void => {
     if (event && event.target !== window) {
       return;
     }
@@ -358,14 +395,14 @@ import * as LumnoMessaging from '../platform/messaging';
   };
   // Every frame of a tab becomes visible together; the top frame speaks for
   // the tab and a subframe refreshes when its own window takes focus.
-  const refreshShowSearchShortcutOnVisibility = () => {
+  const refreshShowSearchShortcutOnVisibility = (): void => {
     if (window.top === window && document.visibilityState === 'visible') {
       refreshShowSearchShortcut();
     }
   };
   // A page restored from the back/forward cache keeps this script's state
   // from before it was cached, without running the startup request again.
-  const refreshShowSearchShortcutOnPageShow = (event) => {
+  const refreshShowSearchShortcutOnPageShow = (event: PageTransitionEvent): void => {
     if (event && event.persisted === true) {
       refreshShowSearchShortcut();
     }
@@ -390,7 +427,7 @@ import * as LumnoMessaging from '../platform/messaging';
   window.addEventListener('focus', refreshShowSearchShortcutOnFocus);
   window.addEventListener('pageshow', refreshShowSearchShortcutOnPageShow);
   document.addEventListener('visibilitychange', refreshShowSearchShortcutOnVisibility, true);
-  window[RUNTIME_KEY] = Object.freeze({
+  Reflect.set(window, RUNTIME_KEY, Object.freeze({
     exportState,
     cleanup() {
       window.removeEventListener('keydown', relayShowSearchShortcut, true);
@@ -402,10 +439,10 @@ import * as LumnoMessaging from '../platform/messaging';
           typeof chrome.runtime.onMessage.removeListener === 'function') {
         try {
           chrome.runtime.onMessage.removeListener(runtimeMessageListener);
-        } catch (error) {
+        } catch (_error) {
           // Ignore a listener that belongs to an invalidated extension context.
         }
       }
     }
-  });
+  }));
 })();

@@ -1,19 +1,36 @@
-// @ts-nocheck
+// Answers the copy-page-URL command: copies the address and confirms it
+// with a toast in the page, in the chosen language and the page's theme.
 import * as PAGE_COLOR_SCHEME from '../shared/page-color-scheme';
+import type { PageTheme } from '../shared/page-color-scheme';
 import * as SETTINGS from '../domain/settings';
+import type { LocaleMessage, PageReply } from '../domain/messages';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoMessaging from '../platform/messaging';
+
+type ToastMessages = Record<string, LocaleMessage>;
+
+interface PageToastParts {
+  host: HTMLElement;
+  toast: HTMLElement;
+  text: HTMLElement;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
 
 (function() {
   // The background injects this script on the first copy-URL command in a tab
   // and again after an extension reload or update, when the earlier copy
   // belongs to a context that can no longer answer; the newest copy listens.
   const RUNTIME_KEY = '_x_extension_hotkey_listener_2024_unique_';
-  const previousRuntime = window[RUNTIME_KEY];
-  if (previousRuntime && typeof previousRuntime.cleanup === 'function') {
+  // Left by an earlier injection, possibly of an older extension version.
+  const previousRuntime: unknown = Reflect.get(window, RUNTIME_KEY);
+  const cleanupPrevious = isRecord(previousRuntime) ? previousRuntime.cleanup : null;
+  if (typeof cleanupPrevious === 'function') {
     try {
-      previousRuntime.cleanup();
-    } catch (error) {
+      Reflect.apply(cleanupPrevious, previousRuntime, []);
+    } catch (_error) {
       // A listener from the previous extension context may already be invalid.
     }
   }
@@ -26,37 +43,26 @@ import * as LumnoMessaging from '../platform/messaging';
     'copy_page_url_success',
     'copy_page_url_failed_permission'
   ]);
-  const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
-  const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
-  const providerStorageRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chrome);
-  const storageArea = providerStorageRuntime
-    ? providerStorageRuntime.area
-    : ((chrome && chrome.storage && chrome.storage.sync)
-        ? chrome.storage.sync
-        : (chrome && chrome.storage ? chrome.storage.local : null));
-  let pageToastTimer = null;
-  let pageToastParts = null;
+  const storageArea = LumnoSettingsStorage.createProviderStorageRuntime(chrome).area;
+  let pageToastTimer: number | null = null;
+  let pageToastParts: PageToastParts | null = null;
   // Toast strings by locale, fetched only when a toast in a user-chosen
   // language is first shown. chrome.i18n already serves the browser language.
-  const toastMessagesByLocale = new Map();
+  const toastMessagesByLocale = new Map<string, ToastMessages>();
 
-  function applyNoTranslate(element) {
-    if (!element || typeof element.setAttribute !== 'function') {
-      return element;
-    }
+  function applyNoTranslate<T extends Element>(element: T): T {
     element.setAttribute('translate', 'no');
     element.setAttribute('lang', 'zxx');
     element.setAttribute('notranslate', '');
     element.setAttribute('data-no-translate', 'true');
-    if (element.classList) {
-      element.classList.add('notranslate');
-    }
+    element.classList.add('notranslate');
     return element;
   }
 
-  function getMessage(messages, key, fallback) {
-    if (messages && messages[key] && messages[key].message) {
-      return messages[key].message;
+  function getMessage(messages: ToastMessages | null, key: string, fallback: string): string {
+    const entry = messages && Object.prototype.hasOwnProperty.call(messages, key) ? messages[key] : null;
+    if (entry && entry.message) {
+      return entry.message;
     }
     try {
       if (chrome && chrome.i18n && typeof chrome.i18n.getMessage === 'function') {
@@ -65,17 +71,14 @@ import * as LumnoMessaging from '../platform/messaging';
           return value;
         }
       }
-    } catch (e) {
+    } catch (_error) {
       // Ignore i18n failures in page context.
     }
     return fallback;
   }
 
   // Resolves 'system' when the setting is unset or storage is unavailable.
-  function readStoredMode(storageKey) {
-    if (!storageArea || typeof storageArea.get !== 'function') {
-      return Promise.resolve('system');
-    }
+  function readStoredMode(storageKey: string): Promise<string> {
     return new Promise((resolve) => {
       try {
         storageArea.get([storageKey], (result) => {
@@ -87,26 +90,24 @@ import * as LumnoMessaging from '../platform/messaging';
             ? String(result[storageKey])
             : 'system');
         });
-      } catch (e) {
+      } catch (_error) {
         resolve('system');
       }
     });
   }
 
-  function readLanguageMode() {
-    return readStoredMode(LANGUAGE_STORAGE_KEY);
+  function readLanguageMode(): Promise<string> {
+    return readStoredMode(SETTINGS.LANGUAGE_STORAGE_KEY);
   }
 
   // Like the tab switcher: the page's own light or dark look first, then the
   // Lumno theme setting, then the system.
-  function resolvePageToastTheme() {
-    const pageTheme = PAGE_COLOR_SCHEME
-      ? PAGE_COLOR_SCHEME.detectPageTheme(document, window)
-      : null;
+  function resolvePageToastTheme(): Promise<PageTheme> {
+    const pageTheme = PAGE_COLOR_SCHEME.detectPageTheme(document, window);
     if (pageTheme) {
       return Promise.resolve(pageTheme);
     }
-    return readStoredMode(THEME_STORAGE_KEY).then((mode) => {
+    return readStoredMode(SETTINGS.THEME_STORAGE_KEY).then((mode): PageTheme => {
       const normalized = String(mode || '').trim().toLowerCase();
       if (normalized === 'dark' || normalized === 'light') {
         return normalized;
@@ -118,13 +119,13 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  function requestToastMessages(locale) {
+  function requestToastMessages(locale: string): Promise<ToastMessages | null> {
     return new Promise((resolve) => {
       try {
         LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
           action: 'getLocaleMessages',
           locale,
-          keys: PAGE_TOAST_MESSAGE_KEYS
+          keys: PAGE_TOAST_MESSAGE_KEYS.slice()
         }, (response) => {
           if (chrome.runtime && chrome.runtime.lastError) {
             resolve(null);
@@ -132,20 +133,21 @@ import * as LumnoMessaging from '../platform/messaging';
           }
           resolve(response && response.messages ? response.messages : null);
         });
-      } catch (e) {
+      } catch (_error) {
         resolve(null);
       }
     });
   }
 
-  function loadToastMessages() {
+  function loadToastMessages(): Promise<ToastMessages | null> {
     return readLanguageMode().then((languageMode) => {
       if (!languageMode || languageMode === 'system') {
         return null;
       }
       const locale = SETTINGS.normalizeLocale(languageMode);
-      if (toastMessagesByLocale.has(locale)) {
-        return toastMessagesByLocale.get(locale);
+      const cached = toastMessagesByLocale.get(locale);
+      if (cached) {
+        return cached;
       }
       return requestToastMessages(locale).then((messages) => {
         if (messages) {
@@ -295,7 +297,7 @@ import * as LumnoMessaging from '../platform/messaging';
   // declared on the page, under a Lumno-only family name. Linking
   // remixicon.css instead would let its "[class^=ri-]" rule restyle the page's
   // own elements; the toast draws its one glyph inside its shadow root.
-  function ensurePageToastFontFace() {
+  function ensurePageToastFontFace(): void {
     const host = document.head || document.documentElement;
     if (!host || document.getElementById(PAGE_TOAST_FONT_FACE_STYLE_ID) ||
         !chrome || !chrome.runtime || typeof chrome.runtime.getURL !== 'function') {
@@ -315,7 +317,7 @@ import * as LumnoMessaging from '../platform/messaging';
     host.appendChild(style);
   }
 
-  function ensurePageToast() {
+  function ensurePageToast(): PageToastParts | null {
     if (pageToastParts && pageToastParts.host.isConnected) {
       return pageToastParts;
     }
@@ -326,7 +328,7 @@ import * as LumnoMessaging from '../platform/messaging';
     ensurePageToastFontFace();
     const host = document.createElement('div');
     host.id = PAGE_TOAST_ID;
-    [
+    const hostStyles: Array<[property: string, value: string]> = [
       ['all', 'initial'],
       ['position', 'fixed'],
       ['top', '0'],
@@ -334,7 +336,8 @@ import * as LumnoMessaging from '../platform/messaging';
       ['width', '0'],
       ['height', '0'],
       ['z-index', '2147483647']
-    ].forEach(([property, value]) => {
+    ];
+    hostStyles.forEach(([property, value]) => {
       host.style.setProperty(property, value, 'important');
     });
     applyNoTranslate(host);
@@ -360,7 +363,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return pageToastParts;
   }
 
-  function showPageToast(message, isError, theme) {
+  function showPageToast(message: string, isError: boolean, theme: PageTheme): void {
     const parts = ensurePageToast();
     if (!parts) {
       return;
@@ -390,16 +393,16 @@ import * as LumnoMessaging from '../platform/messaging';
     }, PAGE_TOAST_SHOW_DURATION_MS);
   }
 
-  function showLocalizedPageToast(pickMessage, isError) {
+  function showLocalizedPageToast(pickMessage: (messages: ToastMessages | null) => string, isError: boolean): Promise<void> {
     return Promise.all([
       loadToastMessages().catch(() => null),
-      resolvePageToastTheme().catch(() => 'light')
+      resolvePageToastTheme().catch((): PageTheme => 'light')
     ]).then(([messages, theme]) => {
       showPageToast(pickMessage(messages), isError, theme);
     });
   }
 
-  function fallbackCopyText(text) {
+  function fallbackCopyText(text: string): boolean {
     const value = String(text || '');
     if (!value || !document.body) {
       return false;
@@ -416,14 +419,14 @@ import * as LumnoMessaging from '../platform/messaging';
     let copied = false;
     try {
       copied = document.execCommand('copy');
-    } catch (e) {
+    } catch (_error) {
       copied = false;
     }
     document.body.removeChild(textarea);
     return copied;
   }
 
-  async function copyCurrentPageUrl() {
+  async function copyCurrentPageUrl(): Promise<'copied' | 'failed-retry' | 'failed-permission'> {
     const url = location && location.href ? location.href : '';
     if (!url) {
       return 'failed-retry';
@@ -435,14 +438,14 @@ import * as LumnoMessaging from '../platform/messaging';
         throw new Error('fallback-copy-failed');
       }
       return 'copied';
-    } catch (error) {
+    } catch (_error) {
       return fallbackCopyText(url) ? 'copied' : 'failed-permission';
     }
   }
 
   // The copy runs first, while the page still holds the command's focus; the
   // toast strings are resolved afterwards.
-  async function copyCurrentPageUrlWithToast() {
+  async function copyCurrentPageUrlWithToast(): Promise<boolean> {
     const result = await copyCurrentPageUrl();
     if (result === 'copied') {
       await showLocalizedPageToast((messages) => getMessage(messages, 'copy_page_url_success', '已复制当前页面链接'), false);
@@ -459,8 +462,12 @@ import * as LumnoMessaging from '../platform/messaging';
   // This script only answers the copy-URL command: the search shortcut lives in
   // shortcut-key-observer.js and switcher thumbnails follow the browser's own
   // tab events, so nothing here messages the background on its own.
-  const runtimeMessageListener = (request, sender, sendResponse) => {
-    if (!request || request.action !== 'copyCurrentPageUrlFromCommand') {
+  const runtimeMessageListener = (
+    request: unknown,
+    _sender: chrome.runtime.MessageSender,
+    sendResponse: (reply: PageReply<'copyCurrentPageUrlFromCommand'>) => void
+  ): boolean | void => {
+    if (!isRecord(request) || request.action !== 'copyCurrentPageUrlFromCommand') {
       return;
     }
     copyCurrentPageUrlWithToast().then((ok) => {
@@ -473,7 +480,7 @@ import * as LumnoMessaging from '../platform/messaging';
   if (chrome && chrome.runtime && chrome.runtime.onMessage) {
     chrome.runtime.onMessage.addListener(runtimeMessageListener);
   }
-  window[RUNTIME_KEY] = Object.freeze({
+  Reflect.set(window, RUNTIME_KEY, Object.freeze({
     cleanup() {
       if (pageToastTimer) {
         window.clearTimeout(pageToastTimer);
@@ -487,10 +494,10 @@ import * as LumnoMessaging from '../platform/messaging';
           typeof chrome.runtime.onMessage.removeListener === 'function') {
         try {
           chrome.runtime.onMessage.removeListener(runtimeMessageListener);
-        } catch (error) {
+        } catch (_error) {
           // Ignore a listener that belongs to an invalidated extension context.
         }
       }
     }
-  });
+  }));
 })();

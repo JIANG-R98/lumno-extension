@@ -11,7 +11,11 @@
     "src/platform/**/*.ts",
     "src/types/**/*.d.ts",
     "src/background/**/*.ts",
-    "src/shared/**/*.ts"
+    "src/shared/**/*.ts",
+    "src/content/auto-pip-blacklist.ts",
+    "src/content/page-shortcut-toast.ts",
+    "src/content/shortcut-key-observer.ts",
+    "src/content/hotkey-listener.ts"
   ],
   "exclude": [
     "src/**/react/**"

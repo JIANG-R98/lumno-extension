@@ -1,5 +1,6 @@
 // Values scripts hand each other on globalThis.
 import type { FeatureHintViewApi, TooltipViewApi } from './view-apis';
+import type { AutoPipBlacklist, PageShortcutToastApi } from './content-apis';
 
 declare global {
   // The traditional-to-simplified Han table as pairs of characters, set by
@@ -10,5 +11,8 @@ declare global {
   // Set by the React islands entry of each page that has React.
   var LumnoTooltipView: TooltipViewApi | undefined;
   var LumnoFeatureHintView: FeatureHintViewApi | undefined;
+  // Left by content scripts once they have run in a page.
+  var __lumnoAutoPipBlacklist2026: AutoPipBlacklist | undefined;
+  var __lumnoPageShortcutToast2026: Readonly<PageShortcutToastApi> | undefined;
 }
 

@@ -1,4 +1,5 @@
-// @ts-nocheck
+// The sites where automatic picture-in-picture stays off (shopping and
+// social feeds play muted previews there), for site-auto-pip.ts.
 (function () {
   if (window.__lumnoAutoPipBlacklist2026) {
     return;
