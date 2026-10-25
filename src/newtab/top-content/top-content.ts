@@ -1,8 +1,55 @@
-// @ts-nocheck
 // The wordmark/clock area above the search box. Moving the blocks around
 // it when it shows, hides or changes height is layout-motion.ts's job.
+import type * as LumnoSettings from '../../domain/settings';
+import type { NewtabTimeInk, NewtabTopContentMode } from '../../domain/settings';
+import type * as LumnoCommunityLinks from '../../platform/community-links';
 import * as LumnoSettingsStorage from '../../platform/settings-storage';
-function createTopContentRuntime(deps) {
+import { queryHtmlElement } from '../../shared/dom-lookup';
+import type { TopContentController } from '../react/wordmark';
+
+// A card's place on screen before a layout change.
+type LayoutPosition = { left: number; top: number };
+
+interface TopContentState {
+  newtabTopContentMode: NewtabTopContentMode;
+  newtabTimeFont: string;
+  newtabTimeFontSize: number;
+  newtabTimeFontWeight: number;
+  newtabTimeInk: NewtabTimeInk;
+  newtabTimeOpacity: number;
+  newtabTimeSecondsVisible: boolean;
+  newtabTime12Hour: boolean;
+  zenModeEnabled: boolean;
+  topContentContainer: HTMLElement | null;
+  topContentController: TopContentController | null;
+  wordmarkImageEl: HTMLImageElement | null;
+  // Refreshes the clock controls of the appearance panel.
+  wallpaperRuntime: {
+    updateTimeSecondsVisibleUi?(): void;
+    updateTimeFontWeightUi?(): void;
+  } | null;
+}
+
+interface TopContentDeps {
+  COMMUNITY_LINKS: Pick<typeof LumnoCommunityLinks, 'getStoreListing'>;
+  recentCards: readonly HTMLElement[];
+  SETTINGS: Pick<typeof LumnoSettings,
+    'NEWTAB_TIME_FONT_SIZE_DEFAULT' | 'normalizeNewtabTimeFontSize' | 'getNewtabTimeFont' |
+    'getNewtabTimeFontTracking' | 'resolveNewtabTimeFontWeight' | 'normalizeNewtabTimeOpacity' |
+    'normalizeNewtabTimeInk' | 'normalizeNewtabTime12Hour'>;
+  updateSearchEntryLayout(): void;
+  updateSuggestionsFloatingLayout(): void;
+  scheduleWallpaperAdaptiveToneUpdate(): void;
+  normalizeNewtabTopContentMode(value: unknown): NewtabTopContentMode;
+  normalizeNewtabTimeFontWeight(value: unknown): number;
+  normalizeNewtabTimeFont(value: unknown): string;
+  normalizeNewtabTimeSecondsVisible(value: unknown): boolean;
+  // The ink a fixed clock color draws in, or '' when it follows the page.
+  getFixedTimeInk(): Exclude<NewtabTimeInk, 'auto'> | '';
+  pageState: TopContentState;
+}
+
+function createTopContentRuntime(deps: TopContentDeps) {
   const {
     COMMUNITY_LINKS,
     recentCards,
@@ -20,8 +67,8 @@ function createTopContentRuntime(deps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  let wordmarkSolidEl = null;
-  const recentResizeLayoutAnimations = new Set();
+  let wordmarkSolidEl: HTMLSpanElement | null = null;
+  const recentResizeLayoutAnimations = new Set<Animation>();
   let wordmarkEntryTransitionTimer = 0;
   const WORDMARK_ENTRY_ANIMATION_TOTAL_MS = 260;
   const WORDMARK_WALLPAPER_COVER_DARK_OPACITY = '0.32';
@@ -34,7 +81,7 @@ function createTopContentRuntime(deps) {
   const TOP_CONTENT_MAX_HEIGHT_PX = 74;
   const TOP_CONTENT_DEFAULT_TIME_FONT_SIZE = Number(SETTINGS.NEWTAB_TIME_FONT_SIZE_DEFAULT) || 54;
 
-  function getTopContentMaxHeight() {
+  function getTopContentMaxHeight(): number {
     if (pageState.newtabTopContentMode !== 'time') {
       return TOP_CONTENT_MAX_HEIGHT_PX;
     }
@@ -45,8 +92,8 @@ function createTopContentRuntime(deps) {
     );
   }
 
-  function captureRecentCardLayout() {
-    const positions = new Map();
+  function captureRecentCardLayout(): Map<HTMLElement, LayoutPosition> {
+    const positions = new Map<HTMLElement, LayoutPosition>();
     recentCards.forEach((card) => {
       if (!card || !card.isConnected || typeof card.getBoundingClientRect !== 'function') {
         return;
@@ -61,19 +108,19 @@ function createTopContentRuntime(deps) {
     return positions;
   }
 
-  function cancelRecentResizeLayoutAnimations() {
+  function cancelRecentResizeLayoutAnimations(): void {
     recentResizeLayoutAnimations.forEach((animation) => animation.cancel());
     recentResizeLayoutAnimations.clear();
   }
 
-  function prefersSystemReducedMotion() {
+  function prefersSystemReducedMotion(): boolean {
     return Boolean(
       window.matchMedia &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
     );
   }
 
-  function shouldSkipNewtabEntryMotion() {
+  function shouldSkipNewtabEntryMotion(): boolean {
     // The search shortcut's focus reload replaces a page already on screen.
     if (document.documentElement &&
         document.documentElement.getAttribute('data-nt-focus-resume') === 'true') {
@@ -84,7 +131,7 @@ function createTopContentRuntime(deps) {
     return LumnoSettingsStorage.shouldSkipEntryMotion(window, motionEffectsEnabled);
   }
 
-  function shouldAnimateNewtabLayoutShift() {
+  function shouldAnimateNewtabLayoutShift(): boolean {
     const body = document.body;
     return Boolean(
       body &&
@@ -95,7 +142,10 @@ function createTopContentRuntime(deps) {
     );
   }
 
-  function animateLayoutShift(fromPositions, animations) {
+  function animateLayoutShift(
+    fromPositions: ReadonlyMap<Element, LayoutPosition> | null | undefined,
+    animations: Set<Animation>
+  ): void {
     if (!fromPositions || fromPositions.size === 0) {
       return;
     }
@@ -132,18 +182,19 @@ function createTopContentRuntime(deps) {
     });
   }
 
-  function animateRecentResizeLayout(fromPositions) {
+  function animateRecentResizeLayout(fromPositions: ReadonlyMap<Element, LayoutPosition> | null | undefined): void {
     animateLayoutShift(fromPositions, recentResizeLayoutAnimations);
   }
 
-  function applyNewtabTopContentVisibility(options) {
-    if (!pageState.topContentContainer) {
+  function applyNewtabTopContentVisibility(options?: { contentChanged?: boolean } | null): void {
+    const container = pageState.topContentContainer;
+    if (!container) {
       return;
     }
     const transitionOptions = options || {};
     const body = document.body;
     const nextVisible = Boolean(pageState.newtabTopContentMode !== 'off' && !pageState.zenModeEnabled);
-    const wasVisible = pageState.topContentContainer.getAttribute('data-visible') !== 'false';
+    const wasVisible = container.getAttribute('data-visible') !== 'false';
     const stateChanged = wasVisible !== nextVisible;
     const layoutChanged = stateChanged || Boolean(transitionOptions.contentChanged);
     const suggestionsOpen = Boolean(
@@ -156,24 +207,24 @@ function createTopContentRuntime(deps) {
       !suggestionsOpen &&
       !prefersSystemReducedMotion()
     );
-    pageState.topContentContainer.setAttribute('data-visible', nextVisible ? 'true' : 'false');
-    pageState.topContentContainer.style.setProperty('display', 'flex');
-    pageState.topContentContainer.style.setProperty('transition', 'none');
+    container.setAttribute('data-visible', nextVisible ? 'true' : 'false');
+    container.style.setProperty('display', 'flex');
+    container.style.setProperty('transition', 'none');
     if (nextVisible) {
-      pageState.topContentContainer.style.removeProperty('height');
+      container.style.removeProperty('height');
     } else {
-      pageState.topContentContainer.style.setProperty('height', '0px');
+      container.style.setProperty('height', '0px');
     }
-    pageState.topContentContainer.style.setProperty('max-height', nextVisible ? `${getTopContentMaxHeight()}px` : '0');
-    pageState.topContentContainer.style.setProperty('margin-bottom', nextVisible ? '28px' : '0');
-    pageState.topContentContainer.style.setProperty('opacity', nextVisible ? '1' : '0');
-    pageState.topContentContainer.style.removeProperty('transform');
-    pageState.topContentContainer.style.setProperty('pointer-events', nextVisible ? 'auto' : 'none');
-    pageState.topContentContainer.inert = !nextVisible;
+    container.style.setProperty('max-height', nextVisible ? `${getTopContentMaxHeight()}px` : '0');
+    container.style.setProperty('margin-bottom', nextVisible ? '28px' : '0');
+    container.style.setProperty('opacity', nextVisible ? '1' : '0');
+    container.style.removeProperty('transform');
+    container.style.setProperty('pointer-events', nextVisible ? 'auto' : 'none');
+    container.inert = !nextVisible;
     if (nextVisible) {
-      pageState.topContentContainer.removeAttribute('aria-hidden');
+      container.removeAttribute('aria-hidden');
     } else {
-      pageState.topContentContainer.setAttribute('aria-hidden', 'true');
+      container.setAttribute('aria-hidden', 'true');
     }
     if (stateChanged && !nextVisible) {
       finishWordmarkEntryAnimation();
@@ -185,7 +236,7 @@ function createTopContentRuntime(deps) {
     scheduleWallpaperAdaptiveToneUpdate();
   }
 
-  function finishWordmarkEntryAnimation() {
+  function finishWordmarkEntryAnimation(): void {
     if (wordmarkEntryTransitionTimer) {
       window.clearTimeout(wordmarkEntryTransitionTimer);
       wordmarkEntryTransitionTimer = 0;
@@ -195,31 +246,32 @@ function createTopContentRuntime(deps) {
     }
   }
 
-  function restartWordmarkEntryAnimation() {
-    if (!pageState.topContentContainer) {
+  function restartWordmarkEntryAnimation(): void {
+    const container = pageState.topContentContainer;
+    if (!container) {
       return;
     }
     if (prefersSystemReducedMotion()) {
       finishWordmarkEntryAnimation();
       return;
     }
-    const wordmarkContent = pageState.topContentContainer.querySelector('.x-nt-wordmark-content');
+    const wordmarkContent = queryHtmlElement(container, '.x-nt-wordmark-content');
     if (wordmarkEntryTransitionTimer) {
       window.clearTimeout(wordmarkEntryTransitionTimer);
       wordmarkEntryTransitionTimer = 0;
     }
-    pageState.topContentContainer.setAttribute('data-enter', 'done');
+    container.setAttribute('data-enter', 'done');
     if (wordmarkContent) {
       void wordmarkContent.offsetWidth;
     }
-    pageState.topContentContainer.setAttribute('data-enter', 'run');
+    container.setAttribute('data-enter', 'run');
     wordmarkEntryTransitionTimer = window.setTimeout(
       finishWordmarkEntryAnimation,
       WORDMARK_ENTRY_ANIMATION_TOTAL_MS
     );
   }
 
-  function getWordmarkSolidFill(wallpaperActive, wallpaperInk, theme) {
+  function getWordmarkSolidFill(wallpaperActive: boolean, wallpaperInk: string | null, theme: string | null): string {
     // A fixed clock ink keeps its tone off the wallpaper too (the adaptive
     // tone already sampled it in that ink on a wallpaper).
     const fixedInk = getFixedTimeInk();
@@ -235,14 +287,14 @@ function createTopContentRuntime(deps) {
     return theme === 'dark' ? 'rgb(248 250 252)' : 'rgb(31 41 55)';
   }
 
-  function applyWordmarkSolidFill(fill) {
+  function applyWordmarkSolidFill(fill: string): void {
     if (!pageState.topContentContainer) {
       return;
     }
     pageState.topContentContainer.style.setProperty('--x-nt-wordmark-solid-fill', fill);
   }
 
-  function applyWordmarkSolidLayerVisible(visible) {
+  function applyWordmarkSolidLayerVisible(visible: boolean): void {
     if (!wordmarkSolidEl) {
       return;
     }
@@ -252,7 +304,7 @@ function createTopContentRuntime(deps) {
     );
   }
 
-  function applyWordmarkThemeAppearance(resolvedTheme) {
+  function applyWordmarkThemeAppearance(resolvedTheme?: string | null): void {
     const theme = resolvedTheme || (document.body ? document.body.getAttribute('data-theme') : 'light');
     const wallpaperActive = document.body &&
       document.body.getAttribute('data-wallpaper-active') === 'true';
@@ -260,7 +312,8 @@ function createTopContentRuntime(deps) {
       ? pageState.topContentContainer.getAttribute('data-wallpaper-ink')
       : '';
     applyWordmarkSolidFill(getWordmarkSolidFill(wallpaperActive, wallpaperInk, theme));
-    if (!pageState.wordmarkImageEl) {
+    const image = pageState.wordmarkImageEl;
+    if (!image) {
       return;
     }
     const lightSrc = '../../assets/images/lumno-wordmark.svg';
@@ -271,11 +324,11 @@ function createTopContentRuntime(deps) {
       if (wallpaperOverlayCover) {
         applyWordmarkSolidLayerVisible(false);
         const themeSrc = theme === 'dark' ? darkSrc : lightSrc;
-        if (pageState.wordmarkImageEl.getAttribute('src') !== themeSrc) {
-          pageState.wordmarkImageEl.setAttribute('src', themeSrc);
+        if (image.getAttribute('src') !== themeSrc) {
+          image.setAttribute('src', themeSrc);
         }
         applyWordmarkSolidFill(getWordmarkSolidFill(false, '', theme));
-        pageState.wordmarkImageEl.style.setProperty(
+        image.style.setProperty(
           'opacity',
           theme === 'dark'
             ? WORDMARK_WALLPAPER_COVER_DARK_OPACITY
@@ -284,36 +337,37 @@ function createTopContentRuntime(deps) {
         return;
       }
       const wallpaperSrc = wallpaperInk === 'dark' ? lightSrc : darkSrc;
-      if (pageState.wordmarkImageEl.getAttribute('src') !== wallpaperSrc) {
-        pageState.wordmarkImageEl.setAttribute('src', wallpaperSrc);
+      if (image.getAttribute('src') !== wallpaperSrc) {
+        image.setAttribute('src', wallpaperSrc);
       }
       applyWordmarkSolidFill(getWordmarkSolidFill(true, wallpaperInk, theme));
       applyWordmarkSolidLayerVisible(true);
-      pageState.wordmarkImageEl.style.setProperty('opacity', '0');
+      image.style.setProperty('opacity', '0');
       return;
     }
     applyWordmarkSolidLayerVisible(false);
     if (theme === 'dark') {
-      if (pageState.wordmarkImageEl.getAttribute('src') !== darkSrc) {
-        pageState.wordmarkImageEl.setAttribute('src', darkSrc);
+      if (image.getAttribute('src') !== darkSrc) {
+        image.setAttribute('src', darkSrc);
       }
       applyWordmarkSolidFill(getWordmarkSolidFill(false, '', theme));
-      pageState.wordmarkImageEl.style.setProperty('opacity', '0.9');
+      image.style.setProperty('opacity', '0.9');
       return;
     }
-    if (pageState.wordmarkImageEl.getAttribute('src') !== lightSrc) {
-      pageState.wordmarkImageEl.setAttribute('src', lightSrc);
+    if (image.getAttribute('src') !== lightSrc) {
+      image.setAttribute('src', lightSrc);
     }
     applyWordmarkSolidFill(getWordmarkSolidFill(false, '', theme));
-    pageState.wordmarkImageEl.style.setProperty('opacity', '0.82');
+    image.style.setProperty('opacity', '0.82');
   }
 
-  function renderNewtabTopContent(animateEntry) {
-    if (!pageState.topContentController) {
+  function renderNewtabTopContent(animateEntry?: boolean): void {
+    const controller = pageState.topContentController;
+    if (!controller) {
       return;
     }
     const timeFont = SETTINGS.getNewtabTimeFont(pageState.newtabTimeFont);
-    pageState.topContentController.render({
+    controller.render({
       animateEntry: Boolean(animateEntry),
       ariaLabel: `Lumno ${COMMUNITY_LINKS.getStoreListing().name}`,
       font: {
@@ -333,13 +387,13 @@ function createTopContentRuntime(deps) {
       showSeconds: pageState.newtabTimeSecondsVisible,
       twelveHour: pageState.newtabTime12Hour
     });
-    pageState.wordmarkImageEl = pageState.topContentController.getImage();
-    wordmarkSolidEl = pageState.topContentController.getSolid();
+    pageState.wordmarkImageEl = controller.getImage();
+    wordmarkSolidEl = controller.getSolid();
     applyWordmarkThemeAppearance();
     scheduleWallpaperAdaptiveToneUpdate();
   }
 
-  function setNewtabTopContentMode(value) {
+  function setNewtabTopContentMode(value: unknown): void {
     const nextMode = normalizeNewtabTopContentMode(value);
     const contentChanged = nextMode !== pageState.newtabTopContentMode;
     if (!contentChanged) {
@@ -352,19 +406,19 @@ function createTopContentRuntime(deps) {
     applyNewtabTopContentVisibility({ contentChanged });
   }
 
-  function updateNewtabTimeSecondsVisibleUi() {
+  function updateNewtabTimeSecondsVisibleUi(): void {
     if (pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.updateTimeSecondsVisibleUi === 'function') {
       pageState.wallpaperRuntime.updateTimeSecondsVisibleUi();
     }
   }
 
-  function updateNewtabTimePanelUi() {
+  function updateNewtabTimePanelUi(): void {
     if (pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.updateTimeFontWeightUi === 'function') {
       pageState.wallpaperRuntime.updateTimeFontWeightUi();
     }
   }
 
-  function setNewtabTimeFontWeight(value) {
+  function setNewtabTimeFontWeight(value: unknown): number {
     const nextValue = normalizeNewtabTimeFontWeight(value);
     const changed = nextValue !== pageState.newtabTimeFontWeight;
     pageState.newtabTimeFontWeight = nextValue;
@@ -375,7 +429,7 @@ function createTopContentRuntime(deps) {
     return nextValue;
   }
 
-  function setNewtabTimeFontSize(value) {
+  function setNewtabTimeFontSize(value: unknown): number {
     const nextValue = SETTINGS.normalizeNewtabTimeFontSize(value);
     const changed = nextValue !== pageState.newtabTimeFontSize;
     pageState.newtabTimeFontSize = nextValue;
@@ -392,7 +446,7 @@ function createTopContentRuntime(deps) {
     return nextValue;
   }
 
-  function setNewtabTimeInk(value) {
+  function setNewtabTimeInk(value: unknown): NewtabTimeInk {
     const nextValue = SETTINGS.normalizeNewtabTimeInk(value);
     const changed = nextValue !== pageState.newtabTimeInk;
     pageState.newtabTimeInk = nextValue;
@@ -404,7 +458,7 @@ function createTopContentRuntime(deps) {
     return nextValue;
   }
 
-  function setNewtabTimeOpacity(value) {
+  function setNewtabTimeOpacity(value: unknown): number {
     const nextValue = SETTINGS.normalizeNewtabTimeOpacity(value);
     const changed = nextValue !== pageState.newtabTimeOpacity;
     pageState.newtabTimeOpacity = nextValue;
@@ -417,7 +471,7 @@ function createTopContentRuntime(deps) {
 
   // Starts loading the face so the clock never draws in a fallback; the
   // promise settles once the face is usable (or failed to load).
-  function loadNewtabTimeFont(fontId) {
+  function loadNewtabTimeFont(fontId: unknown): Promise<boolean> {
     const timeFont = SETTINGS.getNewtabTimeFont(fontId);
     if (!document.fonts || typeof document.fonts.load !== 'function') {
       return Promise.resolve(true);
@@ -427,12 +481,12 @@ function createTopContentRuntime(deps) {
       .then(() => true, () => true);
   }
 
-  function setNewtabTimeFont(value) {
+  function setNewtabTimeFont(value: unknown): string {
     const nextValue = normalizeNewtabTimeFont(value);
     const changed = nextValue !== pageState.newtabTimeFont;
     pageState.newtabTimeFont = nextValue;
     if (changed && pageState.newtabTopContentMode === 'time') {
-      loadNewtabTimeFont(nextValue).then(() => {
+      void loadNewtabTimeFont(nextValue).then(() => {
         if (pageState.newtabTimeFont === nextValue && pageState.newtabTopContentMode === 'time') {
           renderNewtabTopContent(false);
         }
@@ -442,7 +496,7 @@ function createTopContentRuntime(deps) {
     return nextValue;
   }
 
-  function setNewtabTime12Hour(value) {
+  function setNewtabTime12Hour(value: unknown): boolean {
     const nextValue = SETTINGS.normalizeNewtabTime12Hour(value);
     const changed = nextValue !== pageState.newtabTime12Hour;
     pageState.newtabTime12Hour = nextValue;
@@ -453,7 +507,7 @@ function createTopContentRuntime(deps) {
     return nextValue;
   }
 
-  function setNewtabTimeSecondsVisible(value) {
+  function setNewtabTimeSecondsVisible(value: unknown): boolean {
     const nextValue = normalizeNewtabTimeSecondsVisible(value);
     const changed = nextValue !== pageState.newtabTimeSecondsVisible;
     pageState.newtabTimeSecondsVisible = nextValue;
@@ -486,4 +540,7 @@ function createTopContentRuntime(deps) {
   };
 }
 
+type TopContentRuntime = ReturnType<typeof createTopContentRuntime>;
+
 export { createTopContentRuntime };
+export type { TopContentDeps, TopContentRuntime, TopContentState };
