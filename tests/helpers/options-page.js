@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const { extensionFilePath } = require('../../scripts/build/extension-output');
 const esbuild = require('esbuild');
+const { BUNDLE_TSCONFIG_RAW } = require('./bundle-tsconfig');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript } = require('./module-script');
 const { trackListeners } = require('./trusted-events');
@@ -25,6 +26,7 @@ function reactEntryScript(file) {
   if (!reactEntryCache.has(file)) {
     const result = esbuild.buildSync({
       absWorkingDir: repoRoot,
+      tsconfigRaw: BUNDLE_TSCONFIG_RAW,
       entryPoints: [extensionFilePath(file)],
       bundle: true,
       format: 'iife',

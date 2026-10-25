@@ -13,6 +13,7 @@ const { execFileSync } = require('child_process');
 const esbuild = require('esbuild');
 const { BUNDLES } = require('../../scripts/build/bundles');
 const { resolveSourceFile } = require('../../scripts/node/register-typescript');
+const { BUNDLE_TSCONFIG_RAW } = require('./bundle-tsconfig');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const cache = new Map();
@@ -28,6 +29,7 @@ function build(entry, globalName) {
   if (!cache.has(key)) {
     const result = esbuild.buildSync({
       absWorkingDir: repoRoot,
+      tsconfigRaw: BUNDLE_TSCONFIG_RAW,
       entryPoints: [entry],
       bundle: true,
       format: 'iife',

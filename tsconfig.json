@@ -3,16 +3,17 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": false,
-    "strict": false,
+    "strict": true,
     "types": [
-      "chrome"
+      "chrome",
+      "vite/client"
     ]
   },
   "include": [
     "src/**/*"
   ],
   "exclude": [
-    "src/react/**",
-    "src/**/react/**"
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx"
   ]
 }

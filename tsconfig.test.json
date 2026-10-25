@@ -9,8 +9,8 @@
     ]
   },
   "include": [
-    "src/**/react/**/*.ts",
-    "src/**/react/**/*.tsx",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
     "tests/react/**/*.ts",
     "vite.config.mjs",
     "vite.overlay.config.mjs",

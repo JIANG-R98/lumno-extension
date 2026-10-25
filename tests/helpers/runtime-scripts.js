@@ -8,6 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const esbuild = require('esbuild');
+const { BUNDLE_TSCONFIG_RAW } = require('./bundle-tsconfig');
 const { execFileSync } = require('child_process');
 const { BUNDLES, BUNDLE_DIRECTORY } = require('../../scripts/build/bundles');
 
@@ -33,6 +34,7 @@ function getBundleFiles(name) {
   if (!bundleModules.has(name)) {
     const result = esbuild.buildSync({
       absWorkingDir: repoRoot,
+      tsconfigRaw: BUNDLE_TSCONFIG_RAW,
       stdin: {
         contents: getBundle(name).files.map((file) => `import './${file}';`).join('\n'),
         resolveDir: repoRoot,

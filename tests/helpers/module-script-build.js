@@ -7,6 +7,7 @@
 const path = require('path');
 const esbuild = require('esbuild');
 const { resolveSourceFile } = require('../../scripts/node/register-typescript');
+const { BUNDLE_TSCONFIG_RAW } = require('./bundle-tsconfig');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const { entry, globalName, stubs } = JSON.parse(process.argv[2]);
@@ -14,6 +15,7 @@ const stubbed = new Map(Object.entries(stubs).map(([file, name]) => [resolveSour
 
 esbuild.build({
   absWorkingDir: repoRoot,
+  tsconfigRaw: BUNDLE_TSCONFIG_RAW,
   entryPoints: [entry],
   bundle: true,
   format: 'iife',
