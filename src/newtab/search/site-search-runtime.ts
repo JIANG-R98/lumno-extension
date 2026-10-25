@@ -9,6 +9,7 @@ import type { Suggestion } from '../../shared/react/search/suggestion-list/types
 import type { InputModeController } from '../../shared/search/search-input-mode';
 import type { InputModeTheme } from '../../shared/search/input-mode/types';
 import * as LumnoNewtabFocusResume from '../focus-resume';
+import type { FocusResume, FocusResumeState } from '../focus-resume';
 import type { StorageChangeRegistry } from '../storage-change-registry';
 import type { SearchModeController } from './search-mode-controller';
 import type { SearchModes } from './search-modes';
@@ -16,9 +17,9 @@ import { getAggregateSearchId } from './search-types';
 import type { RequestSuggestions } from './search-types';
 import type { SiteSearchProviders } from './site-search-providers';
 
-interface SiteSearchRuntimeState {
+interface SiteSearchRuntimeState extends FocusResumeState {
   // Carries the search across the reload the search shortcut makes.
-  focusResume: { resume(ready: Promise<unknown>): void } | null;
+  focusResume: FocusResume | null;
   inputModeController: Pick<InputModeController, 'refreshModeMenu'> | null;
   latestQuery: string;
   AGGREGATE_SEARCH_STORAGE_KEY: string;
@@ -41,7 +42,7 @@ interface SiteSearchRuntimeDeps {
   activateSiteSearch: SearchModes['activateSiteSearch'];
   activateLocalSearchScope: SearchModes['activateLocalSearchScope'];
   restoreSearchModeQuery: SearchModes['restoreSearchModeQuery'];
-  showSuggestionSnapshot(suggestions: Suggestion[], query: string, selectedIndex: number): unknown;
+  showSuggestionSnapshot(suggestions: Suggestion[], query: string, selectedIndex: number): Promise<void>;
   focusSearchInputPreservingScroll(): boolean;
   requestSuggestions: RequestSuggestions;
   storageChanges: Pick<StorageChangeRegistry, 'on'>;
@@ -120,7 +121,7 @@ function createSiteSearchRuntime(deps: SiteSearchRuntimeDeps): void {
     pageState
   });
   pageState.focusResume = focusResume;
-  focusResume.resume(siteSearchProvidersReady);
+  void focusResume.resume(siteSearchProvidersReady);
 
   void getAggregateSearches().then(() => {
     if (pageState.inputModeController) {

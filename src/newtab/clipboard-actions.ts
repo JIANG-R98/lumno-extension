@@ -1,8 +1,19 @@
-// @ts-nocheck
 // Copying a bookmark's or a search result's URL to the clipboard (with
 // the textarea fallback where the async clipboard is unavailable) and the
 // page toast that confirms it.
-function createClipboardActions(deps) {
+import type { ToastController, ToastTask } from '../shared/react/toast';
+import type { ShowToast, Translate } from './newtab-types';
+
+interface ClipboardActionsState {
+  toastController: Partial<Pick<ToastController, 'show' | 'hide' | 'begin'>> | null;
+}
+
+interface ClipboardActionsDeps {
+  t: Translate;
+  pageState: ClipboardActionsState;
+}
+
+function createClipboardActions(deps: ClipboardActionsDeps) {
   const {
     t
   } = deps;
@@ -10,34 +21,35 @@ function createClipboardActions(deps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  function hideToast() {
+  function hideToast(): void {
     if (pageState.toastController && typeof pageState.toastController.hide === 'function') {
       pageState.toastController.hide();
     }
   }
 
-  function showToast(message, isError, options) {
+  const showToast: ShowToast = (message, isError, options) => {
     if (pageState.toastController && typeof pageState.toastController.show === 'function') {
-      pageState.toastController.show(message, Object.assign({}, options, {
+      pageState.toastController.show(message, {
+        ...options,
         error: Boolean(isError)
-      }));
+      });
     }
-  }
+  };
 
   // A task that may run long: its loading Toast turns into the result in place.
-  function beginToast(message) {
+  function beginToast(message: string): ToastTask {
     if (pageState.toastController && typeof pageState.toastController.begin === 'function') {
       return pageState.toastController.begin(message);
     }
     return {
       update() {},
-      done(result) { if (result) showToast(result, false); },
-      fail(result) { if (result) showToast(result, true); },
+      done(result) { if (result) showToast(String(result), false); },
+      fail(result) { if (result) showToast(String(result), true); },
       cancel() {}
     };
   }
 
-  function fallbackCopyText(text) {
+  function fallbackCopyText(text: unknown): boolean {
     if (!document || !document.body || typeof document.execCommand !== 'function') {
       return false;
     }
@@ -53,17 +65,17 @@ function createClipboardActions(deps) {
     let copied = false;
     try {
       copied = document.execCommand('copy');
-    } catch (error) {
+    } catch {
       copied = false;
     }
     textarea.remove();
-    if (activeElement && typeof activeElement.focus === 'function') {
+    if (activeElement && 'focus' in activeElement && typeof activeElement.focus === 'function') {
       activeElement.focus({ preventScroll: true });
     }
     return copied;
   }
 
-  function copyTextToClipboard(text) {
+  function copyTextToClipboard(text: unknown): Promise<unknown> {
     const value = String(text || '');
     const clipboard = window.navigator && window.navigator.clipboard;
     if (clipboard && typeof clipboard.writeText === 'function') {
@@ -79,7 +91,7 @@ function createClipboardActions(deps) {
       : Promise.reject(new Error('clipboard-write-failed'));
   }
 
-  function copyBookmarkUrl(url) {
+  function copyBookmarkUrl(url: unknown): Promise<boolean> {
     const value = String(url || '').trim();
     if (!value) {
       showToast(t('bookmarks_copy_url_failed', 'Couldn’t copy the link. Try again.'), true);
@@ -94,7 +106,7 @@ function createClipboardActions(deps) {
     });
   }
 
-  function copySearchResultUrl(url) {
+  function copySearchResultUrl(url: unknown): Promise<boolean> {
     const value = String(url || '').trim();
     if (!value) {
       showToast(t('search_copy_url_failed', 'Couldn’t copy the result link. Try again.'), true);
@@ -118,4 +130,7 @@ function createClipboardActions(deps) {
   };
 }
 
+type ClipboardActions = ReturnType<typeof createClipboardActions>;
+
 export { createClipboardActions };
+export type { ClipboardActions, ClipboardActionsDeps, ClipboardActionsState };

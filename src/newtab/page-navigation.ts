@@ -1,7 +1,51 @@
 // Opening URLs, bookmarks, shortcuts and searches from the New Tab with the
 // right tab disposition.
+import type * as NavigationDisposition from '../domain/navigation-disposition';
+import type { Disposition, OpenEvent } from '../domain/navigation-disposition';
+import type { NewtabOpenInNewTab, NewtabOpenInNewTabSurface } from '../domain/settings';
 import * as LumnoMessaging from '../platform/messaging';
-function createPageNavigation(deps) {
+import type { BookmarksRuntime } from './bookmarks/bookmarks-runtime';
+import type { BookmarkNode } from './bookmarks/bookmarks-store';
+import type { ShowToast, Translate } from './newtab-types';
+
+// A shortcut as the page opens it: a site, or a bookmark folder.
+interface OpenableShortcut {
+  id: string;
+  type?: string;
+  url?: string;
+}
+
+// A suggestion whose choice counts toward its future ranking.
+interface SelectableSuggestion {
+  url?: string;
+  title?: string;
+  type?: string;
+  provider?: unknown;
+  forceSearch?: boolean;
+}
+
+interface PageNavigationState {
+  numberShortcutInstantEnabled: boolean;
+  newtabOpenInNewTab: NewtabOpenInNewTab | null;
+  latestRawQuery: string;
+  inputParts: { input: HTMLInputElement } | null;
+}
+
+interface PageNavigationDeps {
+  NAVIGATION_DISPOSITION: Pick<typeof NavigationDisposition, 'isMiddleClick' | 'isBackgroundOpenEvent' | 'getDisposition'>;
+  getShortcutTileById(id: string): HTMLElement | null;
+  bookmarksRuntime: Pick<BookmarksRuntime, 'ensureReady' | 'getNode'>;
+  getShortcutFolderId(shortcut: OpenableShortcut): string;
+  showToast: ShowToast;
+  t: Translate;
+  openBookmarkCascadeMenu(folder: BookmarkNode & { type: 'folder' }, anchor: HTMLElement | null): void;
+  navigateBookmarkFolder(id: string): void;
+  getDirectNavigationUrl(query: string): string;
+  buildDefaultSearchUrl(query: string): string;
+  pageState: PageNavigationState;
+}
+
+function createPageNavigation(deps: PageNavigationDeps) {
   const {
     NAVIGATION_DISPOSITION,
     getShortcutTileById,
@@ -18,7 +62,7 @@ function createPageNavigation(deps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  function navigateToUrl(url) {
+  function navigateToUrl(url: string | null | undefined): void {
     if (!url) {
       return;
     }
@@ -39,25 +83,25 @@ function createPageNavigation(deps) {
     }
   }
 
-  function isMiddleClick(event) {
+  function isMiddleClick(event: OpenEvent | null | undefined): boolean {
     return NAVIGATION_DISPOSITION.isMiddleClick(event);
   }
 
-  function isBackgroundOpenEvent(event) {
+  function isBackgroundOpenEvent(event: OpenEvent | null | undefined): boolean {
     if (pageState.numberShortcutInstantEnabled) {
       return isMiddleClick(event);
     }
     return NAVIGATION_DISPOSITION.isBackgroundOpenEvent(event);
   }
 
-  function getOpenDisposition(event, fallback) {
+  function getOpenDisposition(event: OpenEvent | Disposition | null | undefined, fallback?: Disposition): Disposition {
     if (typeof event === 'string') {
       return event === 'backgroundTab' ? 'backgroundTab' : (fallback || event || 'newTab');
     }
     return NAVIGATION_DISPOSITION.getDisposition(event, fallback);
   }
 
-  function openExternalNewTabUrl(url, eventOrDisposition) {
+  function openExternalNewTabUrl(url: string | null | undefined, eventOrDisposition?: OpenEvent | Disposition | null): boolean {
     if (!url) {
       return false;
     }
@@ -82,17 +126,24 @@ function createPageNavigation(deps) {
 
   // A plain click opens in the current tab unless the surface's "open in a new
   // tab" setting is on; a background-open click wins either way.
-  function getSurfaceOpenDisposition(surface, openInBackgroundTab) {
+  function getSurfaceOpenDisposition(surface: string | undefined, openInBackgroundTab: unknown): Disposition {
     if (openInBackgroundTab) {
       return 'backgroundTab';
     }
     const prefs = pageState.newtabOpenInNewTab;
-    return prefs && prefs[surface] === true ? 'newTab' : 'currentTab';
+    return prefs && isOpenInNewTabSurface(surface) && prefs[surface] === true ? 'newTab' : 'currentTab';
+  }
+
+  function isOpenInNewTabSurface(surface: string | undefined): surface is NewtabOpenInNewTabSurface {
+    return surface === 'search' || surface === 'shortcuts' || surface === 'bookmarks' || surface === 'recentSites';
   }
 
   // Returns where the URL went, so a card can tell whether the New Tab is
   // navigating away or staying behind.
-  function openUrlFromNewtabCard(url, options) {
+  function openUrlFromNewtabCard(
+    url: string | null | undefined,
+    options?: { surface?: string; openInBackgroundTab?: boolean } | null
+  ): Disposition | '' {
     if (!url) {
       return '';
     }
@@ -111,10 +162,10 @@ function createPageNavigation(deps) {
     return 'currentTab';
   }
 
-  function openShortcutUrl(shortcut, event) {
+  function openShortcutUrl(shortcut: OpenableShortcut | null | undefined, event?: OpenEvent | null): void {
     if (shortcut && shortcut.type === 'folder') {
       const tile = getShortcutTileById(shortcut.id);
-      bookmarksRuntime.ensureReady(false).then((ready) => {
+      void bookmarksRuntime.ensureReady(false).then((ready) => {
         const node = ready && bookmarksRuntime.getNode(getShortcutFolderId(shortcut));
         if (!node || node.url) {
           showToast(t('newtab_shortcuts_folder_missing', 'This bookmark folder is no longer available.'), true);
@@ -133,7 +184,7 @@ function createPageNavigation(deps) {
     });
   }
 
-  function recordSearchSuggestionSelection(suggestion, rawQuery) {
+  function recordSearchSuggestionSelection(suggestion: SelectableSuggestion | null | undefined, rawQuery?: string): void {
     if (!suggestion || suggestion.forceSearch || suggestion.provider || !suggestion.url ||
         !chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
       return;
@@ -156,7 +207,7 @@ function createPageNavigation(deps) {
     });
   }
 
-  function openBookmarkFolder(nodeId) {
+  function openBookmarkFolder(nodeId: unknown): void {
     const id = String(nodeId || '').trim();
     if (!id) {
       return;
@@ -164,7 +215,7 @@ function createPageNavigation(deps) {
     navigateBookmarkFolder(id);
   }
 
-  function markCurrentTabForSearchTracking() {
+  function markCurrentTabForSearchTracking(): void {
     if (!chrome || !chrome.tabs || !chrome.tabs.getCurrent || !chrome.runtime || !chrome.runtime.sendMessage) {
       return;
     }
@@ -175,7 +226,7 @@ function createPageNavigation(deps) {
     });
   }
 
-  function runBrowserSearch(query, disposition, onFail) {
+  function runBrowserSearch(query: string, disposition: Parameters<typeof chrome.search.query>[0]['disposition'], onFail?: () => void): boolean {
     if (chrome && chrome.search && typeof chrome.search.query === 'function') {
       try {
         chrome.search.query({ text: query, disposition: disposition || 'CURRENT_TAB' }, () => {
@@ -184,7 +235,7 @@ function createPageNavigation(deps) {
           }
         });
         return true;
-      } catch (e) {
+      } catch {
         if (typeof onFail === 'function') {
           onFail();
         }
@@ -194,7 +245,7 @@ function createPageNavigation(deps) {
     return false;
   }
 
-  function navigateToQuery(query, forceSearch, disposition) {
+  function navigateToQuery(query: string, forceSearch?: boolean, disposition?: Disposition): void {
     if (disposition && disposition !== 'currentTab' &&
         chrome && chrome.runtime && typeof chrome.runtime.sendMessage === 'function') {
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
@@ -238,4 +289,7 @@ function createPageNavigation(deps) {
   };
 }
 
+type PageNavigation = ReturnType<typeof createPageNavigation>;
+
 export { createPageNavigation };
+export type { PageNavigation, PageNavigationDeps, PageNavigationState };

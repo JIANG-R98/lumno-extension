@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The search shortcut reloads New Tab to take keyboard focus from the
 // address bar (see input-focus.ts). This carries the page across that
 // reload: the query, its search mode and the results on screen. A
@@ -26,19 +25,95 @@ animation-duration: 0s !important;
 animation-delay: 0s !important;
 }`;
 
-let heldTransition = null;
+import type { SearchSourceType, SiteSearchProvider } from '../domain/search/types';
+import type { Suggestion } from '../shared/react/search/suggestion-list/types';
+import type { ActiveLocalScope } from './search/search-types';
+
+// The search on screen, carried across the focus reload.
+interface SearchSnapshot {
+  savedAt: number;
+  rawQuery: string;
+  siteSearchId: string;
+  localSourceType: SearchSourceType | '';
+  suggestions: Suggestion[];
+  selectedIndex: number;
+}
+
+// The view transition holding the old page's last frame.
+interface HeldTransition {
+  skipTransition(): void;
+}
+
+interface FocusResumeState {
+  inputParts: { input: HTMLInputElement } | null;
+  latestRawQuery: string;
+  siteSearchState: SiteSearchProvider | null;
+  localSearchScopeState: ActiveLocalScope | null;
+  lastSuggestionResponse: Suggestion[];
+  selectedIndex: number;
+}
+
+interface FocusResumeDeps {
+  getSiteSearchSnapshotId(provider: SiteSearchProvider): string;
+  findSiteSearchBySnapshotId(id: string): SiteSearchProvider | null;
+  activateSiteSearch(provider: SiteSearchProvider, options: { preserveResults: boolean; animatePrefix: boolean }): void;
+  activateLocalSearchScope(scope: ActiveLocalScope, options: { preserveResults: boolean }): unknown;
+  restoreSearchModeQuery(rawQuery: string): void;
+  showSuggestionSnapshot(suggestions: Suggestion[], query: string, selectedIndex: number): Promise<void>;
+  focusSearchInputPreservingScroll(): void;
+  pageState: FocusResumeState;
+}
+
+let heldTransition: HeldTransition | null = null;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function isSearchSourceType(value: unknown): value is SearchSourceType {
+  return value === 'history' || value === 'bookmark' || value === 'topSite';
+}
+
+// A result row saved before the reload, read back as untrusted.
+function isSavedSuggestion(value: unknown): value is Suggestion {
+  return isRecord(value) &&
+    (value.type === undefined || typeof value.type === 'string') &&
+    (value.url === undefined || typeof value.url === 'string') &&
+    (value.title === undefined || typeof value.title === 'string');
+}
+
+function isHeldTransition(value: unknown): value is HeldTransition {
+  return isRecord(value) && typeof value.skipTransition === 'function';
+}
+
+// A snapshot read back from storage; null when it is not one.
+function readSearchSnapshot(value: unknown): SearchSnapshot | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const suggestions: unknown[] = Array.isArray(value.suggestions) ? value.suggestions : [];
+  const selectedIndex = value.selectedIndex;
+  return {
+    savedAt: Number(value.savedAt),
+    rawQuery: typeof value.rawQuery === 'string' ? value.rawQuery : '',
+    siteSearchId: typeof value.siteSearchId === 'string' ? value.siteSearchId : '',
+    localSourceType: isSearchSourceType(value.localSourceType) ? value.localSourceType : '',
+    suggestions: suggestions.filter(isSavedSuggestion),
+    selectedIndex: typeof selectedIndex === 'number' && Number.isInteger(selectedIndex) ? selectedIndex : -1
+  };
+}
 
 // Chrome reloads the same tab, so session storage carries the search.
 // Firefox swaps in a new tab, which shares only local storage.
-function getStorage() {
+function getStorage(): Storage | null {
   try {
     return globalThis.location.protocol === 'moz-extension:' ? globalThis.localStorage : globalThis.sessionStorage;
-  } catch (_error) {
+  } catch {
     return null;
   }
 }
 
-function readSnapshot(consume) {
+function readSnapshot(consume: boolean): SearchSnapshot | null {
   const storage = getStorage();
   if (!storage) {
     return null;
@@ -51,15 +126,15 @@ function readSnapshot(consume) {
     if (consume) {
       storage.removeItem(STORAGE_KEY);
     }
-    const snapshot = JSON.parse(raw);
+    const snapshot = readSearchSnapshot(JSON.parse(raw));
     const age = Date.now() - Number(snapshot && snapshot.savedAt);
     return age >= 0 && age <= MAX_AGE_MS ? snapshot : null;
-  } catch (_error) {
+  } catch {
     return null;
   }
 }
 
-function saveSnapshot(snapshot) {
+function saveSnapshot(snapshot: SearchSnapshot | null): boolean {
   const storage = getStorage();
   if (!storage || !snapshot) {
     return false;
@@ -67,12 +142,12 @@ function saveSnapshot(snapshot) {
   try {
     storage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
     return true;
-  } catch (_error) {
+  } catch {
     return false;
   }
 }
 
-function addTransitionStyle(cssText) {
+function addTransitionStyle(cssText: string): void {
   const head = document.head || document.documentElement;
   if (!head || document.querySelector(`style[${VIEW_TRANSITION_STYLE_ATTRIBUTE}]`)) {
     return;
@@ -85,7 +160,7 @@ function addTransitionStyle(cssText) {
 
 // Runs in the head of the reloaded page, before its first frame. Marks the
 // load as a resume and keeps the old frame up while the page rebuilds.
-function prepareResumeLoad() {
+function prepareResumeLoad(): boolean {
   const documentElement = document.documentElement;
   if (!documentElement || !readSnapshot(false)) {
     return false;
@@ -97,12 +172,13 @@ function prepareResumeLoad() {
   documentElement.setAttribute('data-nt-focus-resume-settling', 'true');
   addTransitionStyle(INCOMING_TRANSITION_CSS);
   globalThis.addEventListener('pagereveal', (event) => {
-    heldTransition = event && event.viewTransition ? event.viewTransition : null;
+    const transition = event && 'viewTransition' in event ? event.viewTransition : null;
+    heldTransition = isHeldTransition(transition) ? transition : null;
   }, { once: true });
   return true;
 }
 
-function createFocusResume(deps) {
+function createFocusResume(deps: FocusResumeDeps) {
   const {
     getSiteSearchSnapshotId,
     findSiteSearchBySnapshotId,
@@ -116,7 +192,7 @@ function createFocusResume(deps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  function captureSearch() {
+  function captureSearch(): SearchSnapshot {
     const input = pageState.inputParts && pageState.inputParts.input;
     const value = input ? String(input.value || '') : '';
     // Inline autocomplete writes its completion into the input; keep what
@@ -127,13 +203,13 @@ function createFocusResume(deps) {
       rawQuery: typed && value.startsWith(typed) ? typed : value,
       siteSearchId: pageState.siteSearchState ? getSiteSearchSnapshotId(pageState.siteSearchState) : '',
       localSourceType: pageState.localSearchScopeState ? pageState.localSearchScopeState.sourceType : '',
-      suggestions: Array.isArray(pageState.lastSuggestionResponse) ? pageState.lastSuggestionResponse : [],
+      suggestions: pageState.lastSuggestionResponse || [],
       selectedIndex: Number.isInteger(pageState.selectedIndex) ? pageState.selectedIndex : -1
     };
   }
 
   // Called right before the focus reload.
-  function prepareFocusReload() {
+  function prepareFocusReload(): boolean {
     const saved = saveSnapshot(captureSearch());
     if (saved) {
       addTransitionStyle(OUTGOING_TRANSITION_CSS);
@@ -141,10 +217,10 @@ function createFocusResume(deps) {
     return saved;
   }
 
-  function restoreSearch(snapshot) {
+  function restoreSearch(snapshot: SearchSnapshot): Promise<void> | undefined {
     const input = pageState.inputParts && pageState.inputParts.input;
     if (!input) {
-      return;
+      return undefined;
     }
     // Each mode clears the input, so the mode goes first.
     if (snapshot.localSourceType) {
@@ -159,33 +235,29 @@ function createFocusResume(deps) {
     let rendered = Promise.resolve();
     if (rawQuery) {
       restoreSearchModeQuery(rawQuery);
-      rendered = showSuggestionSnapshot(
-        Array.isArray(snapshot.suggestions) ? snapshot.suggestions : [],
-        rawQuery.trim(),
-        Number.isInteger(snapshot.selectedIndex) ? snapshot.selectedIndex : -1
-      );
+      rendered = showSuggestionSnapshot(snapshot.suggestions, rawQuery.trim(), snapshot.selectedIndex);
     }
     // The shortcut selects the query, as it does when the page has focus.
     try {
       input.select();
-    } catch (_error) {
+    } catch {
       // Ignore selection failures.
     }
     return rendered;
   }
 
-  function nextFrame() {
-    return new Promise((resolve) => {
+  function nextFrame(): Promise<void> {
+    return new Promise<void>((resolve) => {
       if (typeof globalThis.requestAnimationFrame === 'function') {
         globalThis.requestAnimationFrame(() => resolve());
       } else {
-        globalThis.setTimeout(resolve, 16);
+        globalThis.setTimeout(() => resolve(), 16);
       }
     });
   }
 
-  function whenPageReady() {
-    return new Promise((resolve) => {
+  function whenPageReady(): Promise<void> {
+    return new Promise<void>((resolve) => {
       const body = document.body;
       if (!body || body.getAttribute('data-nt-ready') === '1' || typeof globalThis.MutationObserver !== 'function') {
         resolve();
@@ -201,7 +273,7 @@ function createFocusResume(deps) {
     });
   }
 
-  function reveal() {
+  function reveal(): void {
     const documentElement = document.documentElement;
     if (!documentElement || documentElement.getAttribute('data-nt-focus-route-pending') !== 'true') {
       return;
@@ -216,13 +288,13 @@ function createFocusResume(deps) {
     }
     // A hidden input cannot take focus, so focus waits for the reveal.
     focusSearchInputPreservingScroll();
-    nextFrame().then(nextFrame).then(() => {
+    void nextFrame().then(nextFrame).then(() => {
       documentElement.removeAttribute('data-nt-focus-resume-settling');
     });
   }
 
   // providersReady resolves once the site search providers can be looked up.
-  function resume(providersReady) {
+  function resume(providersReady: PromiseLike<unknown> | null | undefined): Promise<boolean> {
     const documentElement = document.documentElement;
     if (!documentElement || documentElement.getAttribute('data-nt-focus-resume') !== 'true') {
       return Promise.resolve(false);
@@ -252,4 +324,7 @@ function createFocusResume(deps) {
   };
 }
 
+type FocusResume = ReturnType<typeof createFocusResume>;
+
 export { prepareResumeLoad, createFocusResume };
+export type { FocusResume, FocusResumeDeps, FocusResumeState, SearchSnapshot };

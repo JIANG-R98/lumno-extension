@@ -1,7 +1,33 @@
 // Focusing the search input: shortcut-triggered focus, typing anywhere on the
 // page and auto-focus recovery.
+import type * as ShortcutKeyMatcher from '../domain/shortcut-key-matcher';
+import type { ShortcutSpec } from '../domain/shortcut-key-matcher';
 import * as LumnoMessaging from '../platform/messaging';
-function createInputFocus(deps) {
+
+interface InputFocusState {
+  inputParts: { input: HTMLInputElement } | null;
+  newtabInputAutoFocusEnabled: boolean;
+  folderColorPicker: { isOpen(): boolean } | null;
+  inputModeController: { shouldHandleModeMenuKeyEvent?: (event: KeyboardEvent) => boolean } | null;
+  searchScopeIcon: HTMLElement | null;
+}
+
+interface InputFocusDeps {
+  SHORTCUT_KEY_MATCHER: Pick<typeof ShortcutKeyMatcher, 'parseShortcut' | 'eventMatchesShortcut'>;
+  // Saves the search on screen before the focus reload; false when it could not.
+  prepareFocusReload?: () => boolean;
+  refreshTabsIfIdle(): void;
+  // Settles once the auto-focus setting is read.
+  initialNewtabInputAutoFocusReadyTask: PromiseLike<unknown>;
+  isImeCompositionEvent(event: KeyboardEvent): boolean;
+  pageState: InputFocusState;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function createInputFocus(deps: InputFocusDeps) {
   const {
     SHORTCUT_KEY_MATCHER,
     prepareFocusReload,
@@ -14,21 +40,21 @@ function createInputFocus(deps) {
   const pageState = deps.pageState;
 
   let fallbackShortcutRaw = '';
-  let fallbackShortcutSpec = null;
+  let fallbackShortcutSpec: ShortcutSpec | null = null;
   let fallbackShortcutRefreshAt = 0;
 
-  function isEditableElement(el) {
+  function isEditableElement(el: EventTarget | null | undefined): boolean {
     if (!el) {
       return false;
     }
-    const tagName = el.tagName ? el.tagName.toLowerCase() : '';
+    const tagName = 'tagName' in el && typeof el.tagName === 'string' ? el.tagName.toLowerCase() : '';
     if (tagName === 'input' || tagName === 'textarea') {
       return true;
     }
-    return Boolean(el.isContentEditable);
+    return 'isContentEditable' in el && Boolean(el.isContentEditable);
   }
 
-  function refreshFallbackShortcut(force) {
+  function refreshFallbackShortcut(force: boolean): void {
     const now = Date.now();
     if (!force && (now - fallbackShortcutRefreshAt) < 15000) {
       return;
@@ -48,24 +74,25 @@ function createInputFocus(deps) {
         fallbackShortcutRaw = nextShortcut;
         fallbackShortcutSpec = SHORTCUT_KEY_MATCHER.parseShortcut(nextShortcut);
       });
-    } catch (e) {
+    } catch {
       // Ignore runtime bridge failures.
     }
   }
 
-  function focusSearchInputPreservingScroll() {
-    if (!pageState.inputParts || !pageState.inputParts.input) {
+  function focusSearchInputPreservingScroll(): boolean {
+    const input = pageState.inputParts && pageState.inputParts.input;
+    if (!input) {
       return false;
     }
     try {
-      pageState.inputParts.input.focus({ preventScroll: true });
-    } catch (error) {
-      pageState.inputParts.input.focus();
+      input.focus({ preventScroll: true });
+    } catch {
+      input.focus();
     }
-    return document.activeElement === pageState.inputParts.input;
+    return document.activeElement === input;
   }
 
-  function tryFocusSearchInput(force) {
+  function tryFocusSearchInput(force: boolean): boolean {
     if (!pageState.inputParts || !pageState.inputParts.input) {
       return false;
     }
@@ -84,13 +111,14 @@ function createInputFocus(deps) {
     return focusSearchInputPreservingScroll();
   }
 
-  function activateNewtabShortcutFocus() {
-    if (!tryFocusSearchInput(true)) {
+  function activateNewtabShortcutFocus(): boolean {
+    const input = pageState.inputParts && pageState.inputParts.input;
+    if (!input || !tryFocusSearchInput(true)) {
       return false;
     }
     try {
-      pageState.inputParts.input.select();
-    } catch (e) {
+      input.select();
+    } catch {
       // Ignore selection failures.
     }
     return true;
@@ -99,7 +127,7 @@ function createInputFocus(deps) {
   // A New Tab opens with keyboard focus in the address bar, and focus()
   // inside the page cannot take it from there. Reopen the page on the focus
   // route, which hands focus to the page the way input auto-focus does.
-  function reopenOnFocusRoute() {
+  function reopenOnFocusRoute(): void {
     // The reloaded page brings back the query and its results.
     if (typeof prepareFocusReload === 'function') {
       prepareFocusReload();
@@ -109,7 +137,7 @@ function createInputFocus(deps) {
         LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'swapNewtabForFocus' }, () => {
           void chrome.runtime.lastError;
         });
-      } catch (e) {
+      } catch {
         // Leave the page as it is when the background is unavailable.
       }
       return;
@@ -119,11 +147,14 @@ function createInputFocus(deps) {
     window.location.replace(url.href);
   }
 
-  function isShortcutCommandSource(source) {
+  function isShortcutCommandSource(source: unknown): boolean {
     return source === 'commands' || source === 'commands-prefill';
   }
 
-  function handleFocusInputMessage(message, sendResponse) {
+  function handleFocusInputMessage(
+    message: Record<string, unknown>,
+    sendResponse: (reply: { ok: boolean; reopened?: boolean }) => void
+  ): boolean {
     if (document.hasFocus() || !isShortcutCommandSource(message.source)) {
       sendResponse({ ok: activateNewtabShortcutFocus() });
       return false;
@@ -138,25 +169,25 @@ function createInputFocus(deps) {
         sendResponse({ ok: true, reopened: true });
         reopenOnFocusRoute();
       });
-    } catch (e) {
+    } catch {
       return false;
     }
     return true;
   }
 
   if (chrome && chrome.runtime && chrome.runtime.onMessage && typeof chrome.runtime.onMessage.addListener === 'function') {
-    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-      if (!message || message.action !== 'lumno:newtab-focus-input') {
-        return;
+    chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+      if (!isRecord(message) || message.action !== 'lumno:newtab-focus-input') {
+        return undefined;
       }
       if (document.visibilityState !== 'visible') {
-        return;
+        return undefined;
       }
       return handleFocusInputMessage(message, sendResponse);
     });
   }
 
-  function scheduleAutoFocusRecovery() {
+  function scheduleAutoFocusRecovery(): void {
     const hasExplicitFocusHint = window.location.search.includes('focus=1') ||
       window.location.hash.includes('focus');
     let forceInitialFocusPending = hasExplicitFocusHint;
@@ -174,7 +205,7 @@ function createInputFocus(deps) {
           url.hash = '';
         }
         window.history.replaceState(window.history.state, '', url.toString());
-      } catch (_error) {
+      } catch {
         // Keep focus recovery independent from address cleanup failures.
       }
     };
@@ -238,13 +269,13 @@ function createInputFocus(deps) {
     }, true);
   }
 
-  initialNewtabInputAutoFocusReadyTask.then(() => {
+  void Promise.resolve(initialNewtabInputAutoFocusReadyTask).then(() => {
     scheduleAutoFocusRecovery();
   });
 
   refreshFallbackShortcut(true);
 
-  function handleGlobalTypingFocus(event) {
+  function handleGlobalTypingFocus(event: KeyboardEvent): void {
     if (pageState.folderColorPicker && pageState.folderColorPicker.isOpen()) return;
     if (!event || event.defaultPrevented) {
       return;
@@ -269,7 +300,8 @@ function createInputFocus(deps) {
     if (pageState.searchScopeIcon && activeElement === pageState.searchScopeIcon) {
       return;
     }
-    if (activeElement === pageState.inputParts.input || isEditableElement(activeElement)) {
+    const input = pageState.inputParts && pageState.inputParts.input;
+    if (!input || activeElement === input || isEditableElement(activeElement)) {
       return;
     }
     if (isImeCompositionEvent(event)) {
@@ -281,19 +313,19 @@ function createInputFocus(deps) {
       return;
     }
     focusSearchInputPreservingScroll();
-    const currentValue = pageState.inputParts.input.value || '';
+    const currentValue = input.value || '';
     if (key === 'Backspace') {
       if (currentValue) {
-        pageState.inputParts.input.value = currentValue.slice(0, -1);
-        pageState.inputParts.input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.value = currentValue.slice(0, -1);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
       }
       event.preventDefault();
       return;
     }
     if (key.length === 1) {
-      pageState.inputParts.input.value = currentValue + key;
-      pageState.inputParts.input.setSelectionRange(pageState.inputParts.input.value.length, pageState.inputParts.input.value.length);
-      pageState.inputParts.input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.value = currentValue + key;
+      input.setSelectionRange(input.value.length, input.value.length);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
       event.preventDefault();
     }
   }
@@ -306,4 +338,7 @@ function createInputFocus(deps) {
   };
 }
 
+type InputFocus = ReturnType<typeof createInputFocus>;
+
 export { createInputFocus };
+export type { InputFocus, InputFocusDeps, InputFocusState };

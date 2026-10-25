@@ -1,4 +1,5 @@
-// @ts-nocheck
+// Routes a New Tab to the focus route, where the search box can take
+// keyboard focus from the address bar, when input auto-focus is on.
 import * as LumnoSettings from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoNewtabFocusResume from './focus-resume';
@@ -30,9 +31,9 @@ import * as LumnoMessaging from '../platform/messaging';
   const storageKey = settings.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY ||
     '_x_extension_newtab_input_auto_focus_enabled_2026_unique_';
   const normalizeEnabled = settings.normalizeNewtabInputAutoFocusEnabled;
-  const chromeApi = window.chrome || (typeof chrome !== 'undefined' ? chrome : null);
+  const chromeApi = window.chrome || null;
 
-  function revealPage() {
+  function revealPage(): void {
     if (documentElement) {
       documentElement.removeAttribute('data-nt-focus-route-pending');
     }
@@ -41,19 +42,23 @@ import * as LumnoMessaging from '../platform/messaging';
   // Firefox keeps URL-bar focus through same-tab navigation on the New Tab
   // page, so the background swaps in a fresh #focus tab instead. Wait until
   // shown: Firefox preloads this page hidden before it becomes a tab.
-  function swapTabWhenVisible() {
+  function swapTabWhenVisible(): void {
     const requestSwap = () => {
       if (document.visibilityState !== 'visible') {
         return;
       }
       document.removeEventListener('visibilitychange', requestSwap);
+      if (!chromeApi) {
+        revealPage();
+        return;
+      }
       try {
         LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, { action: 'swapNewtabForFocus' }, (response) => {
           if (chromeApi.runtime.lastError || !response || !response.ok || !response.removed) {
             revealPage();
           }
         });
-      } catch (_error) {
+      } catch {
         revealPage();
       }
     };
@@ -61,7 +66,7 @@ import * as LumnoMessaging from '../platform/messaging';
     requestSwap();
   }
 
-  function redirectToFocusRoute() {
+  function redirectToFocusRoute(): void {
     if (locationUrl.protocol === 'moz-extension:') {
       swapTabWhenVisible();
       return;
@@ -70,7 +75,7 @@ import * as LumnoMessaging from '../platform/messaging';
     window.location.replace(locationUrl.href);
   }
 
-  function settle(enabled) {
+  function settle(enabled: unknown): void {
     LumnoSettingsStorage.cacheNewtabInputAutoFocusEnabled(enabled);
     if (!normalizeEnabled(enabled)) {
       revealPage();
@@ -81,12 +86,12 @@ import * as LumnoMessaging from '../platform/messaging';
 
   // The choice the last New Tab saw routes this one at once, before the page loads any further. The
   // focused page reads storage and corrects the copy if the setting changed on another device.
-  let cachedEnabled = null;
+  let cachedEnabled: string | null = null;
   try {
     cachedEnabled = window.localStorage
       ? window.localStorage.getItem(settings.NEWTAB_INPUT_AUTO_FOCUS_CACHE_KEY)
       : null;
-  } catch (_error) {
+  } catch {
     cachedEnabled = null;
   }
   if (cachedEnabled === 'true') {
@@ -95,19 +100,17 @@ import * as LumnoMessaging from '../platform/messaging';
   }
 
   const providerRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
-  const storage = providerRuntime ? providerRuntime.area : chromeApi && chromeApi.storage
-    ? (chromeApi.storage.sync || chromeApi.storage.local)
-    : null;
+  const storage = providerRuntime.area;
   if (!storage || typeof storage.get !== 'function') {
     settle(false);
     return;
   }
 
   try {
-    storage.get([storageKey], (result) => {
+    void storage.get([storageKey], (result) => {
       settle(result && result[storageKey]);
     });
-  } catch (_error) {
+  } catch {
     settle(false);
   }
 })();
