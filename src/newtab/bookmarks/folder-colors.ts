@@ -259,5 +259,7 @@ function createFolderColors(deps: FolderColorsDeps) {
   };
 }
 
+type FolderColors = ReturnType<typeof createFolderColors>;
+
 export { createFolderColors };
-export type { FolderColorPicker, FolderColorsDeps, FolderColorsState };
+export type { FolderColorPicker, FolderColors, FolderColorsDeps, FolderColorsState };

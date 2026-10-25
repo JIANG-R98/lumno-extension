@@ -1,12 +1,202 @@
-// @ts-nocheck
 // Keeps an open New Tab in step with settings changed elsewhere (Settings,
 // another tab, sync): one listener per storage key on the shared change
 // registry, and the runtime messages that ask the page to refresh a section.
-import * as LumnoNewtabRemoteContent from './remote-content';
-import * as LumnoNewtabStorageChangeRegistry from './storage-change-registry';
+import type * as FolderReferences from '../domain/bookmark-folder-reference';
+import type * as ShortcutFavicon from '../domain/favicon/shortcut-favicon';
+import type { CachedIconMap, IconCacheOptions } from '../domain/favicon/shortcut-favicon';
+import type * as ProgressHistory from '../domain/progress-history';
+import type { ProgressHistoryMap } from '../domain/progress-history';
+import type { HiddenRecentSite, RecentSite } from '../domain/recent-sites-store';
+import type { SiteSearchProvider } from '../domain/search/types';
+import type * as LumnoSettings from '../domain/settings';
+import type { NewtabWidthMode, ThemeMode } from '../domain/settings';
+import type { StorageAreaLike } from '../domain/storage-port';
+import type { FolderBindingRuntime } from '../platform/bookmark-folder-bindings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import type { ThemeVariant } from '../shared/favicon/favicon-theme';
+import type { InputModeController } from '../shared/search/search-input-mode';
+import type { AppearanceModes } from './appearance-modes';
+import type { BookmarkDisplaySettings } from './bookmarks/bookmark-display-settings';
+import type * as BookmarkFolderIcon from './bookmarks/bookmark-folder-icon';
+import type { FolderColorRefs } from './bookmarks/bookmark-folder-icon';
+import type { BookmarkPager } from './bookmarks/bookmark-pager';
+import type { FolderColors } from './bookmarks/folder-colors';
+import type { ModeCommands } from './mode-commands';
+import type { NewtabThemeMode, NewtabThemeScope } from './newtab-types';
+import type { PageLayout } from './page-layout';
+import type { PagePreferences } from './page-preferences';
+import type { BookmarksViewController } from './react/bookmarks';
+import type { RecentHistoryDialogController } from './react/recent-history-dialog';
+import type { RecentSitesController } from './recent/recent-sites-controller';
+import * as LumnoNewtabRemoteContent from './remote-content';
+import type { SearchBoxControls } from './search/search-box-controls';
+import type { SearchModeController } from './search/search-mode-controller';
+import type { SuggestionsController } from './search/suggestions-controller';
+import type { SectionHeaders } from './section-headers';
+import type { SectionLoaders } from './section-loaders';
+import type { ShortcutDock } from './shortcuts/shortcut-dock';
+import type * as ShortcutIconStore from './shortcuts/shortcut-icon-store';
+import type { ShortcutIconMap } from './shortcuts/shortcut-icon-store';
+import type { ShortcutsController } from './shortcuts/shortcuts-controller';
+import * as LumnoNewtabStorageChangeRegistry from './storage-change-registry';
+import type { GlassSurfaces } from './theme/glass-surfaces';
+import type { SiteThemeResolver } from './theme/site-theme-resolver';
+import type { TopContentRuntime } from './top-content/top-content';
+import type { WallpaperRuntime } from './wallpaper/wallpaper';
+import type { WallpaperPage } from './wallpaper/wallpaper-page';
 
-function createSettingsSync(deps) {
+interface SettingsSyncState {
+  currentBookmarkCount: number;
+  currentBookmarkColumns: number;
+  bookmarkCurrentPage: number;
+  bookmarkFolderIconsVisible: boolean;
+  bookmarksView: Pick<BookmarksViewController, 'setFolderIconsVisible'> | null;
+  folderColorRefs: FolderColorRefs;
+  currentRecentCount: number;
+  currentRecentMode: string;
+  pinnedRecentSites: RecentSite[];
+  hiddenRecentSites: HiddenRecentSite[];
+  recentSourceItems: RecentSite[];
+  recentRenderSignature: string;
+  progressTrackingEnabled: boolean;
+  progressHistoryMap: ProgressHistoryMap;
+  recentHistoryDialogController: Pick<RecentHistoryDialogController, 'close'> | null;
+  newtabShortcutIcons: ShortcutIconMap;
+  newtabShortcutFavicons: CachedIconMap;
+  // Favicons fetched on this page and not stored yet.
+  shortcutFaviconPendingCacheEntries: CachedIconMap;
+  shortcutPersistenceInFlightCount: number;
+  siteSearchIconCache: CachedIconMap;
+  siteSearchIconCacheLoaded: boolean;
+  siteSearchIconCacheRevision: number;
+  siteSearchIconCacheLoadPromise: Promise<unknown> | null;
+  siteSearchState: SiteSearchProvider | null;
+  inputModeController: Pick<InputModeController, 'refreshModeMenu'> | null;
+  latestQuery: string;
+  tabRankScoreDebugEnabled: boolean;
+  wallpaperRuntime: Pick<WallpaperRuntime, 'handleStorageChange' | 'updateSearchWidthUi'> | null;
+  globalThemeMode: ThemeMode;
+  newtabThemeMode: NewtabThemeMode;
+  newtabThemeScope: NewtabThemeScope;
+  newtabInputAutoFocusEnabled: boolean;
+  currentNewtabWidthMode: NewtabWidthMode;
+  currentNewtabSearchWidth: number | null;
+  newtabFeedbackButtonVisible: boolean;
+  newtabAppearanceButtonVisible: boolean;
+  zenModeEnabled: boolean;
+  newtabShortcutsVisible: boolean;
+  newtabShortcutAddVisible: boolean;
+  newtabShortcutDockMagnificationEnabled: boolean;
+  newtabShortcutColumns: number;
+  newtabShortcutSize: number;
+  newtabShortcutGap: number;
+}
+
+interface SettingsSyncDeps extends
+  Pick<PagePreferences,
+    'normalizeBookmarkCount' | 'normalizeBookmarkColumns' | 'getBookmarkLimit' | 'normalizeBookmarkFolderIconsVisible' |
+    'normalizeNewtabInputAutoFocusEnabled' | 'updateNewtabInputAutoFocusUi' | 'normalizeNewtabWidthMode' |
+    'normalizeNewtabSearchWidth' | 'normalizeNewtabTopContentMode' | 'normalizeNewtabTimeFontWeight' |
+    'normalizeNewtabTimeFont' | 'normalizeNewtabTimeSecondsVisible' | 'normalizeNewtabFeedbackButtonVisible' |
+    'normalizeNewtabAppearanceButtonVisible' | 'normalizeZenModeEnabled' | 'normalizeNewtabShortcutsVisible' |
+    'updateNewtabShortcutPreferencesUi' | 'normalizeNewtabShortcutAddVisible' |
+    'normalizeNewtabShortcutDockMagnificationEnabled' | 'normalizeNewtabShortcutColumns' |
+    'normalizeNewtabShortcutSize' | 'normalizeNewtabShortcutGap' | 'normalizeTabRankScoreDebugMode'>,
+  Pick<SectionLoaders,
+    'markBookmarkDataDirty' | 'loadBookmarks' | 'markRecentDataDirty' | 'loadRecentSites' | 'renderRecentSites'>,
+  Pick<PageLayout,
+    'keepBookmarkPageAnchorAfterLimitChange' | 'applyBookmarkGridColumns' | 'updateBookmarkSectionPosition' |
+    'normalizeRecentCount' | 'normalizeRecentMode' | 'applyNewtabWidthMode' | 'applyRecentGridColumns' |
+    'updateNewtabSearchWidthLayout' | 'applyNewtabShortcutsVisibility' | 'applyNewtabShortcutColumns' |
+    'applyNewtabShortcutLayoutPreferences'>,
+  Pick<BookmarkPager, 'renderCurrentBookmarkPage' | 'updateBookmarkGridHeightLock'>,
+  Pick<BookmarkDisplaySettings,
+    'normalizeBookmarkViewMode' | 'shouldRepairBookmarkViewModeStorageValue' | 'persistBookmarkViewMode'>,
+  Pick<SectionHeaders, 'updateRecentModeMenu' | 'updateRecentHeading' | 'applyBookmarkViewMode'>,
+  Pick<RecentSitesController, 'normalizePinnedRecentSites' | 'normalizeHiddenRecentSites'>,
+  Pick<ShortcutsController, 'renderShortcuts' | 'isShortcutSyncStorageActive' | 'scheduleShortcutStorageReload'>,
+  Pick<ShortcutDock, 'applyNewtabShortcutDockMagnification'>,
+  Pick<FolderColors, 'syncFolderColorsWithBookmarks'>,
+  Pick<SearchModeController, 'setSiteSearchPrefix'>,
+  Pick<SiteThemeResolver, 'getThemeForProvider'>,
+  Pick<SuggestionsController, 'requestSuggestions' | 'requestTabsAndRender'>,
+  Pick<AppearanceModes,
+    'normalizeThemeMode' | 'isNewtabThemeFollowingGlobal' | 'applyScopedThemeMode' | 'normalizeNewtabThemeMode' |
+    'normalizeNewtabThemeScope' | 'applyLanguageMode'>,
+  Pick<WallpaperPage, 'updateWallpaperAppearanceSelectionUi' | 'updateWallpaperLanguageStrings'>,
+  Pick<ModeCommands, 'updateModeCommandSuggestions' | 'updateZenCommandSuggestions' | 'applyZenMode'>,
+  Pick<TopContentRuntime,
+    'setNewtabTopContentMode' | 'setNewtabTimeFontWeight' | 'setNewtabTimeFontSize' | 'setNewtabTimeOpacity' |
+    'setNewtabTimeInk' | 'setNewtabTimeFont' | 'setNewtabTimeSecondsVisible' | 'setNewtabTime12Hour'>,
+  Pick<GlassSurfaces, 'applyNewtabGlassStyle' | 'applyNewtabGlassTheme'>,
+  Pick<SearchBoxControls, 'applyNewtabActionButtonVisibility'> {
+  registerBookmarkDisplayStorageChanges: BookmarkDisplaySettings['registerStorageChangeHandlers'];
+  SETTINGS: Pick<typeof LumnoSettings,
+    'normalizeNewtabTimeFontSize' | 'normalizeNewtabTimeOpacity' | 'normalizeNewtabTimeInk' |
+    'normalizeNewtabTime12Hour'>;
+  settingsRuntimeApi: Pick<typeof LumnoSettings,
+    'ASSET_REVISION_STORAGE_KEY' | 'PROGRESS_TRACKING_ENABLED_STORAGE_KEY' | 'normalizeProgressTrackingEnabled'>;
+  storageArea: StorageAreaLike | null;
+  // Whether changes in this storage area are this page's settings.
+  isPrimaryStorageAreaName(areaName: string): boolean;
+  FOLDER_REFERENCES: Pick<typeof FolderReferences, 'BINDINGS_KEY'>;
+  shortcutFolderRuntime: Pick<FolderBindingRuntime, 'accept'>;
+  NEWTAB_BOOKMARK_FOLDER_ICON: Pick<typeof BookmarkFolderIcon, 'normalizeFolderColorRefs'>;
+  NEWTAB_SHORTCUT_ICON_STORE: Pick<typeof ShortcutIconStore, 'normalizeIconMap'>;
+  SHORTCUT_FAVICON: Pick<typeof ShortcutFavicon, 'normalizeCacheMap'>;
+  siteSearchIconCacheOptions: Readonly<IconCacheOptions>;
+  defaultTheme: ThemeVariant;
+  PROGRESS_HISTORY: Pick<typeof ProgressHistory, 'STORAGE_KEY' | 'normalizeHistoryMap'>;
+  NEWTAB_SHORTCUTS_STORAGE_KEYS: readonly string[];
+  FOLDER_COLOR_REFS_STORAGE_KEY: string;
+  NEWTAB_SHORTCUT_ICONS_STORAGE_KEY: string;
+  NEWTAB_SHORTCUT_FAVICON_CACHE_STORAGE_KEY: string;
+  SITE_SEARCH_ICON_CACHE_STORAGE_KEY: string;
+  NEWTAB_SHORTCUTS_LOCAL_OVERFLOW_STORAGE_KEY: string;
+  NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY: string;
+  THEME_STORAGE_KEY: string;
+  NEWTAB_THEME_MODE_STORAGE_KEY: string;
+  NEWTAB_THEME_SCOPE_STORAGE_KEY: string;
+  LANGUAGE_STORAGE_KEY: string;
+  NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY: string;
+  RECENT_COUNT_STORAGE_KEY: string;
+  NEWTAB_WIDTH_MODE_STORAGE_KEY: string;
+  NEWTAB_SEARCH_WIDTH_STORAGE_KEY: string;
+  NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY: string;
+  NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY: string;
+  NEWTAB_TIME_FONT_SIZE_STORAGE_KEY: string;
+  NEWTAB_TIME_OPACITY_STORAGE_KEY: string;
+  NEWTAB_TIME_INK_STORAGE_KEY: string;
+  NEWTAB_TIME_FONT_STORAGE_KEY: string;
+  NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY: string;
+  NEWTAB_TIME_12_HOUR_STORAGE_KEY: string;
+  NEWTAB_GLASS_STYLE_STORAGE_KEY: string;
+  NEWTAB_GLASS_THEME_STORAGE_KEY: string;
+  NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY: string;
+  NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY: string;
+  NEWTAB_ZEN_MODE_STORAGE_KEY: string;
+  NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY: string;
+  NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY: string;
+  NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY: string;
+  NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY: string;
+  NEWTAB_SHORTCUT_SIZE_STORAGE_KEY: string;
+  NEWTAB_SHORTCUT_GAP_STORAGE_KEY: string;
+  RECENT_MODE_STORAGE_KEY: string;
+  BOOKMARK_VIEW_MODE_STORAGE_KEY: string;
+  BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY: string;
+  BOOKMARK_COUNT_STORAGE_KEY: string;
+  BOOKMARK_COLUMNS_STORAGE_KEY: string;
+  TAB_RANK_SCORE_DEBUG_STORAGE_KEY: string;
+  PINNED_RECENT_SITES_STORAGE_KEY: string;
+  HIDDEN_RECENT_SITES_STORAGE_KEY: string;
+  pageState: SettingsSyncState;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function createSettingsSync(deps: SettingsSyncDeps) {
   const {
     SETTINGS,
     normalizeBookmarkCount,
@@ -148,14 +338,14 @@ function createSettingsSync(deps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  function addStorageChangeListener(listener) {
+  function addStorageChangeListener(listener: Parameters<typeof LumnoSettingsStorage.addStorageChangeListener>[1]) {
     return LumnoSettingsStorage.addStorageChangeListener(chrome, listener);
   }
 
   // Bookmark and site-card preferences arrive from storage (Options page, other tabs) and from
   // the appearance panel, which previews a value here before saving it; an unchanged value
   // leaves the section alone.
-  function applyBookmarkCountPreference(value) {
+  function applyBookmarkCountPreference(value: unknown): void {
     const nextCount = normalizeBookmarkCount(value);
     if (nextCount === pageState.currentBookmarkCount) {
       return;
@@ -163,10 +353,10 @@ function createSettingsSync(deps) {
     pageState.currentBookmarkCount = nextCount;
     pageState.bookmarkCurrentPage = 0;
     markBookmarkDataDirty();
-    loadBookmarks({ force: true });
+    void loadBookmarks({ force: true });
   }
 
-  function applyBookmarkColumnsPreference(value) {
+  function applyBookmarkColumnsPreference(value: unknown): void {
     const nextColumns = normalizeBookmarkColumns(value);
     if (nextColumns === pageState.currentBookmarkColumns) {
       return;
@@ -180,27 +370,32 @@ function createSettingsSync(deps) {
     updateBookmarkSectionPosition();
   }
 
-  function applyBookmarkFolderIconsVisiblePreference(value) {
+  function applyBookmarkFolderIconsVisiblePreference(value: unknown): void {
     pageState.bookmarkFolderIconsVisible = normalizeBookmarkFolderIconsVisible(value);
-    if (pageState.bookmarksView && typeof pageState.bookmarksView.setFolderIconsVisible === 'function') {
+    if (pageState.bookmarksView) {
       pageState.bookmarksView.setFolderIconsVisible(pageState.bookmarkFolderIconsVisible);
     }
   }
 
-  function applyRecentCountPreference(value) {
+  function applyRecentCountPreference(value: unknown): void {
     const nextCount = normalizeRecentCount(value);
     if (nextCount === pageState.currentRecentCount) {
       return;
     }
     pageState.currentRecentCount = nextCount;
     markRecentDataDirty();
-    loadRecentSites({ force: true });
+    void loadRecentSites({ force: true });
   }
 
-  function setSectionPreference(storageKey, value, apply, options) {
+  function setSectionPreference<T>(
+    storageKey: string,
+    value: T,
+    apply: (value: T) => void,
+    options?: { persist?: boolean } | null
+  ): void {
     apply(value);
     if (options && options.persist === true && storageArea) {
-      storageArea.set({ [storageKey]: value });
+      void storageArea.set({ [storageKey]: value });
     }
   }
 
@@ -217,7 +412,7 @@ function createSettingsSync(deps) {
   }, { area: 'local' });
   storageChanges.on(FOLDER_COLOR_REFS_STORAGE_KEY, (changes) => {
     pageState.folderColorRefs = NEWTAB_BOOKMARK_FOLDER_ICON.normalizeFolderColorRefs(changes[FOLDER_COLOR_REFS_STORAGE_KEY].newValue);
-    syncFolderColorsWithBookmarks(false).catch(() => {});
+    void syncFolderColorsWithBookmarks(false).catch(() => {});
   });
   storageChanges.on(NEWTAB_SHORTCUT_ICONS_STORAGE_KEY, (changes) => {
     pageState.newtabShortcutIcons = NEWTAB_SHORTCUT_ICON_STORE.normalizeIconMap(
@@ -226,8 +421,9 @@ function createSettingsSync(deps) {
     renderShortcuts();
   }, { area: 'local' });
   storageChanges.on(NEWTAB_SHORTCUT_FAVICON_CACHE_STORAGE_KEY, (changes) => {
+    const storedFavicons = changes[NEWTAB_SHORTCUT_FAVICON_CACHE_STORAGE_KEY].newValue;
     pageState.newtabShortcutFavicons = SHORTCUT_FAVICON.normalizeCacheMap({
-      ...(changes[NEWTAB_SHORTCUT_FAVICON_CACHE_STORAGE_KEY].newValue || {}),
+      ...(isRecord(storedFavicons) ? storedFavicons : {}),
       ...pageState.shortcutFaviconPendingCacheEntries
     });
     renderShortcuts();
@@ -244,13 +440,13 @@ function createSettingsSync(deps) {
     if (pageState.siteSearchState && pageState.inputModeController) {
       const activeProvider = pageState.siteSearchState;
       setSiteSearchPrefix(activeProvider, defaultTheme);
-      getThemeForProvider(activeProvider).then((theme) => {
+      void getThemeForProvider(activeProvider).then((theme) => {
         if (pageState.siteSearchState === activeProvider) {
           setSiteSearchPrefix(activeProvider, theme);
         }
       }).catch(() => {});
     }
-    if (pageState.inputModeController && typeof pageState.inputModeController.refreshModeMenu === 'function') {
+    if (pageState.inputModeController) {
       pageState.inputModeController.refreshModeMenu();
     }
     if (pageState.latestQuery) {
@@ -317,17 +513,17 @@ function createSettingsSync(deps) {
     const nextMode = normalizeNewtabWidthMode(rawMode);
     pageState.currentNewtabWidthMode = nextMode;
     if (storageArea && rawMode !== nextMode) {
-      storageArea.set({ [NEWTAB_WIDTH_MODE_STORAGE_KEY]: nextMode });
+      void storageArea.set({ [NEWTAB_WIDTH_MODE_STORAGE_KEY]: nextMode });
     }
     applyNewtabWidthMode();
-    if (pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.updateSearchWidthUi === 'function') {
+    if (pageState.wallpaperRuntime) {
       pageState.wallpaperRuntime.updateSearchWidthUi();
     }
     const recentColumnsChanged = applyRecentGridColumns();
     const bookmarkColumnsChanged = applyBookmarkGridColumns();
     if (recentColumnsChanged) {
       markRecentDataDirty();
-      loadRecentSites({ force: true });
+      void loadRecentSites({ force: true });
     }
     if (bookmarkColumnsChanged) {
       keepBookmarkPageAnchorAfterLimitChange(previousBookmarkLimit);
@@ -340,7 +536,7 @@ function createSettingsSync(deps) {
     const rawWidth = changes[NEWTAB_SEARCH_WIDTH_STORAGE_KEY].newValue;
     pageState.currentNewtabSearchWidth = normalizeNewtabSearchWidth(rawWidth, { allowNull: true });
     updateNewtabSearchWidthLayout();
-    if (pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.updateSearchWidthUi === 'function') {
+    if (pageState.wallpaperRuntime) {
       pageState.wallpaperRuntime.updateSearchWidthUi();
     }
   });
@@ -348,7 +544,7 @@ function createSettingsSync(deps) {
     const raw = changes[NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY].newValue;
     const nextValue = normalizeNewtabTopContentMode(raw);
     if (storageArea && raw !== nextValue) {
-      storageArea.set({ [NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY]: nextValue });
+      void storageArea.set({ [NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY]: nextValue });
     }
     setNewtabTopContentMode(nextValue);
   });
@@ -356,7 +552,7 @@ function createSettingsSync(deps) {
     const raw = changes[NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY].newValue;
     const nextValue = normalizeNewtabTimeFontWeight(raw);
     if (storageArea && raw !== nextValue) {
-      storageArea.set({ [NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY]: nextValue });
+      void storageArea.set({ [NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY]: nextValue });
     }
     setNewtabTimeFontWeight(nextValue);
   });
@@ -364,7 +560,7 @@ function createSettingsSync(deps) {
     const raw = changes[NEWTAB_TIME_FONT_SIZE_STORAGE_KEY].newValue;
     const nextValue = SETTINGS.normalizeNewtabTimeFontSize(raw);
     if (storageArea && raw !== undefined && raw !== nextValue) {
-      storageArea.set({ [NEWTAB_TIME_FONT_SIZE_STORAGE_KEY]: nextValue });
+      void storageArea.set({ [NEWTAB_TIME_FONT_SIZE_STORAGE_KEY]: nextValue });
     }
     setNewtabTimeFontSize(nextValue);
   });
@@ -372,7 +568,7 @@ function createSettingsSync(deps) {
     const raw = changes[NEWTAB_TIME_OPACITY_STORAGE_KEY].newValue;
     const nextValue = SETTINGS.normalizeNewtabTimeOpacity(raw);
     if (storageArea && raw !== undefined && raw !== nextValue) {
-      storageArea.set({ [NEWTAB_TIME_OPACITY_STORAGE_KEY]: nextValue });
+      void storageArea.set({ [NEWTAB_TIME_OPACITY_STORAGE_KEY]: nextValue });
     }
     setNewtabTimeOpacity(nextValue);
   });
@@ -380,7 +576,7 @@ function createSettingsSync(deps) {
     const raw = changes[NEWTAB_TIME_INK_STORAGE_KEY].newValue;
     const nextValue = SETTINGS.normalizeNewtabTimeInk(raw);
     if (storageArea && raw !== undefined && raw !== nextValue) {
-      storageArea.set({ [NEWTAB_TIME_INK_STORAGE_KEY]: nextValue });
+      void storageArea.set({ [NEWTAB_TIME_INK_STORAGE_KEY]: nextValue });
     }
     setNewtabTimeInk(nextValue);
   });
@@ -388,7 +584,7 @@ function createSettingsSync(deps) {
     const raw = changes[NEWTAB_TIME_FONT_STORAGE_KEY].newValue;
     const nextValue = normalizeNewtabTimeFont(raw);
     if (storageArea && raw !== nextValue) {
-      storageArea.set({ [NEWTAB_TIME_FONT_STORAGE_KEY]: nextValue });
+      void storageArea.set({ [NEWTAB_TIME_FONT_STORAGE_KEY]: nextValue });
     }
     setNewtabTimeFont(nextValue);
   });
@@ -396,7 +592,7 @@ function createSettingsSync(deps) {
     const raw = changes[NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY].newValue;
     const nextValue = normalizeNewtabTimeSecondsVisible(raw);
     if (storageArea && raw !== nextValue) {
-      storageArea.set({ [NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY]: nextValue });
+      void storageArea.set({ [NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY]: nextValue });
     }
     setNewtabTimeSecondsVisible(nextValue);
   });
@@ -404,7 +600,7 @@ function createSettingsSync(deps) {
     const raw = changes[NEWTAB_TIME_12_HOUR_STORAGE_KEY].newValue;
     const nextValue = SETTINGS.normalizeNewtabTime12Hour(raw);
     if (storageArea && raw !== undefined && raw !== nextValue) {
-      storageArea.set({ [NEWTAB_TIME_12_HOUR_STORAGE_KEY]: nextValue });
+      void storageArea.set({ [NEWTAB_TIME_12_HOUR_STORAGE_KEY]: nextValue });
     }
     setNewtabTime12Hour(nextValue);
   });
@@ -418,7 +614,7 @@ function createSettingsSync(deps) {
     const raw = changes[NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY].newValue;
     pageState.newtabFeedbackButtonVisible = normalizeNewtabFeedbackButtonVisible(raw);
     if (storageArea && raw !== pageState.newtabFeedbackButtonVisible) {
-      storageArea.set({
+      void storageArea.set({
         [NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY]: pageState.newtabFeedbackButtonVisible
       });
     }
@@ -428,7 +624,7 @@ function createSettingsSync(deps) {
     const raw = changes[NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY].newValue;
     pageState.newtabAppearanceButtonVisible = normalizeNewtabAppearanceButtonVisible(raw);
     if (storageArea && raw !== pageState.newtabAppearanceButtonVisible) {
-      storageArea.set({
+      void storageArea.set({
         [NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY]: pageState.newtabAppearanceButtonVisible
       });
     }
@@ -444,7 +640,7 @@ function createSettingsSync(deps) {
     const nextValue = normalizeNewtabShortcutsVisible(raw);
     pageState.newtabShortcutsVisible = nextValue;
     if (storageArea && raw !== nextValue) {
-      storageArea.set({ [NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY]: nextValue });
+      void storageArea.set({ [NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY]: nextValue });
     }
     applyNewtabShortcutsVisibility();
     updateNewtabShortcutPreferencesUi();
@@ -454,7 +650,7 @@ function createSettingsSync(deps) {
     const nextValue = normalizeNewtabShortcutAddVisible(raw);
     pageState.newtabShortcutAddVisible = nextValue;
     if (storageArea && raw !== nextValue) {
-      storageArea.set({ [NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY]: nextValue });
+      void storageArea.set({ [NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY]: nextValue });
     }
     renderShortcuts();
     updateNewtabShortcutPreferencesUi();
@@ -464,7 +660,7 @@ function createSettingsSync(deps) {
     const nextValue = normalizeNewtabShortcutDockMagnificationEnabled(raw);
     pageState.newtabShortcutDockMagnificationEnabled = nextValue;
     if (storageArea && raw !== nextValue) {
-      storageArea.set({ [NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY]: nextValue });
+      void storageArea.set({ [NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY]: nextValue });
     }
     applyNewtabShortcutDockMagnification();
     updateNewtabShortcutPreferencesUi();
@@ -474,7 +670,7 @@ function createSettingsSync(deps) {
     const nextValue = normalizeNewtabShortcutColumns(raw);
     pageState.newtabShortcutColumns = nextValue;
     if (storageArea && raw !== nextValue) {
-      storageArea.set({ [NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY]: nextValue });
+      void storageArea.set({ [NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY]: nextValue });
     }
     applyNewtabShortcutColumns();
     updateBookmarkSectionPosition({
@@ -488,7 +684,7 @@ function createSettingsSync(deps) {
     const nextValue = normalizeNewtabShortcutSize(raw);
     pageState.newtabShortcutSize = nextValue;
     if (storageArea && raw !== nextValue) {
-      storageArea.set({ [NEWTAB_SHORTCUT_SIZE_STORAGE_KEY]: nextValue });
+      void storageArea.set({ [NEWTAB_SHORTCUT_SIZE_STORAGE_KEY]: nextValue });
     }
     applyNewtabShortcutLayoutPreferences();
     updateBookmarkSectionPosition({
@@ -502,7 +698,7 @@ function createSettingsSync(deps) {
     const nextValue = normalizeNewtabShortcutGap(raw);
     pageState.newtabShortcutGap = nextValue;
     if (storageArea && raw !== nextValue) {
-      storageArea.set({ [NEWTAB_SHORTCUT_GAP_STORAGE_KEY]: nextValue });
+      void storageArea.set({ [NEWTAB_SHORTCUT_GAP_STORAGE_KEY]: nextValue });
     }
     applyNewtabShortcutLayoutPreferences();
     updateBookmarkSectionPosition({
@@ -520,7 +716,7 @@ function createSettingsSync(deps) {
       updateRecentHeading();
       updateRecentModeMenu();
       markRecentDataDirty();
-      loadRecentSites({ force: true });
+      void loadRecentSites({ force: true });
     }
   });
   storageChanges.on(BOOKMARK_VIEW_MODE_STORAGE_KEY, (changes) => {
@@ -535,7 +731,7 @@ function createSettingsSync(deps) {
     const raw = changes[BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY].newValue;
     const nextValue = normalizeBookmarkFolderIconsVisible(raw);
     if (storageArea && raw !== nextValue) {
-      storageArea.set({ [BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY]: nextValue });
+      void storageArea.set({ [BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY]: nextValue });
     }
     applyBookmarkFolderIconsVisiblePreference(nextValue);
   });
@@ -543,7 +739,7 @@ function createSettingsSync(deps) {
     const raw = changes[BOOKMARK_COUNT_STORAGE_KEY].newValue;
     const nextCount = normalizeBookmarkCount(raw);
     if (storageArea && raw !== nextCount) {
-      storageArea.set({ [BOOKMARK_COUNT_STORAGE_KEY]: nextCount });
+      void storageArea.set({ [BOOKMARK_COUNT_STORAGE_KEY]: nextCount });
     }
     applyBookmarkCountPreference(nextCount);
   });
@@ -551,7 +747,7 @@ function createSettingsSync(deps) {
     const raw = changes[BOOKMARK_COLUMNS_STORAGE_KEY].newValue;
     const nextColumns = normalizeBookmarkColumns(raw);
     if (storageArea && raw !== nextColumns) {
-      storageArea.set({ [BOOKMARK_COLUMNS_STORAGE_KEY]: nextColumns });
+      void storageArea.set({ [BOOKMARK_COLUMNS_STORAGE_KEY]: nextColumns });
     }
     applyBookmarkColumnsPreference(nextColumns);
   });
@@ -588,19 +784,19 @@ function createSettingsSync(deps) {
   });
 
   if (chrome && chrome.runtime && chrome.runtime.onMessage && typeof chrome.runtime.onMessage.addListener === 'function') {
-    chrome.runtime.onMessage.addListener((message) => {
-      if (!message) {
+    chrome.runtime.onMessage.addListener((message: unknown) => {
+      if (!isRecord(message)) {
         return;
       }
       if (message.action !== 'lumno:newtab-refresh-sections') return;
       const section = message.section || 'all';
       if (section === 'recent' || section === 'all') {
         markRecentDataDirty();
-        loadRecentSites({ force: true });
+        void loadRecentSites({ force: true });
       }
       if (section === 'bookmarks' || section === 'all') {
         markBookmarkDataDirty();
-        loadBookmarks({ force: true });
+        void loadBookmarks({ force: true });
       }
     });
   }
@@ -615,4 +811,7 @@ function createSettingsSync(deps) {
   };
 }
 
+type SettingsSync = ReturnType<typeof createSettingsSync>;
+
 export { createSettingsSync };
+export type { SettingsSync, SettingsSyncDeps, SettingsSyncState };

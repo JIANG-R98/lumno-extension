@@ -50,6 +50,7 @@
     "src/newtab/page-state.ts",
     "src/newtab/section-panel-settings.ts",
     "src/newtab/section-reload.ts",
+    "src/newtab/settings-sync.ts",
     "src/newtab/startup-preferences.ts",
     "src/newtab/startup-storage.ts",
     "src/newtab/tooltip-bindings.ts",

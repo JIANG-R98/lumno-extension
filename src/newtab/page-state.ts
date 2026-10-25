@@ -46,6 +46,7 @@ import type { SearchSettingsSyncState } from './search/search-settings-sync';
 import type { SectionHeadersState } from './section-headers';
 import type { SectionLoadersState } from './section-loaders';
 import type { SectionReloadState } from './section-reload';
+import type { SettingsSyncState } from './settings-sync';
 import type { ShortcutContextMenuState } from './shortcuts/shortcut-context-menu';
 import type { ShortcutDockState } from './shortcuts/shortcut-dock';
 import type { ShortcutDragState } from './shortcuts/shortcut-drag';
@@ -120,6 +121,7 @@ type NewtabPageState =
   SectionHeadersState &
   SectionLoadersState &
   SectionReloadState &
+  SettingsSyncState &
   ShortcutContextMenuState &
   ShortcutDockState &
   ShortcutDragState &
