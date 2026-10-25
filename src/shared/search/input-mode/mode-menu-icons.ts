@@ -1,7 +1,51 @@
-// @ts-nocheck
 // Mode menu icons: provider icons with their theme, built-in line icons
 // and glyphs.
-function createModeMenuIcons(deps) {
+import type { CursorTooltipController } from '../../ui/cursor-tooltip';
+import type {
+  AttachFaviconData,
+  AttachProviderIcon,
+  GetThemeForProvider,
+  InputModeTheme,
+  ModeMenuItem,
+  ResolveProviderIconUrl,
+  Rgb,
+  SetStyle
+} from './types';
+import type { SiteSearchProvider } from '../../../domain/search/types';
+
+// The controller state search-input-mode.ts shares with its modules.
+interface ModeMenuIconsState {
+  destroyed: boolean;
+  modeMenuContent: HTMLElement;
+}
+
+interface ModeMenuIconsDeps {
+  modeMenuCursorTooltipController: Pick<CursorTooltipController, 'hide'> | null;
+  getThemeForMode: (theme: InputModeTheme) => InputModeTheme | null | undefined;
+  defaultTheme: InputModeTheme;
+  parseCssColor: (color: unknown) => Rgb | null;
+  defaultAccentColor: Rgb;
+  mixRgb: (source: Rgb, target: Rgb, targetWeight: number) => Rgb;
+  isDarkMode: () => unknown;
+  getAccessibleThemeFocusRingRgb: (accentRgb: Rgb, backgroundRgb: Rgb) => Rgb;
+  setStyle: SetStyle;
+  rgbToCss: (rgb: Rgb) => string;
+  useImportantStyles: boolean;
+  getBuiltInSurfaceColor: () => string;
+  getModeMenuLineIconPaths: (iconName: string) => readonly string[] | null;
+  createSvgElement: (tagName: string) => Element;
+  doc: Document;
+  getThemeForProvider: GetThemeForProvider | null;
+  resolveProviderIconUrl: ResolveProviderIconUrl;
+  removeProviderIconRuntimeFallbacks: (wrap: HTMLElement) => void;
+  getProviderThemeHost: (provider: SiteSearchProvider) => string | null | undefined;
+  attachProviderIcon: AttachProviderIcon | null;
+  preferDirectProviderIcons: boolean;
+  attachFaviconData: AttachFaviconData | null;
+  inputModeState: ModeMenuIconsState;
+}
+
+function createModeMenuIcons(deps: ModeMenuIconsDeps) {
   const {
     modeMenuCursorTooltipController,
     getThemeForMode,
@@ -30,9 +74,8 @@ function createModeMenuIcons(deps) {
   // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
 
-  function clearModeMenuContents() {
-    if (modeMenuCursorTooltipController &&
-        typeof modeMenuCursorTooltipController.hide === 'function') {
+  function clearModeMenuContents(): void {
+    if (modeMenuCursorTooltipController) {
       modeMenuCursorTooltipController.hide();
     }
     while (inputModeState.modeMenuContent.firstChild) {
@@ -40,10 +83,11 @@ function createModeMenuIcons(deps) {
     }
   }
 
-  function applyModeMenuIconTheme(wrap, menuItem, theme) {
-    if (!wrap) {
-      return;
-    }
+  function applyModeMenuIconTheme(
+    wrap: HTMLElement,
+    menuItem: HTMLElement | null | undefined,
+    theme: InputModeTheme | null | undefined
+  ): void {
     const resolvedTheme = theme ? getThemeForMode(theme) : defaultTheme;
     const resolvedAccentRgb = resolvedTheme && (
       resolvedTheme.accentRgb || parseCssColor(resolvedTheme.accent)
@@ -83,7 +127,7 @@ function createModeMenuIcons(deps) {
     }
   }
 
-  function applyModeMenuBuiltInIconTheme(wrap, menuItem) {
+  function applyModeMenuBuiltInIconTheme(wrap: HTMLElement, menuItem: HTMLElement | null | undefined): void {
     const surfaceColor = getBuiltInSurfaceColor();
     const darkMode = Boolean(isDarkMode());
     const selectedBackground = `color-mix(in srgb, ${surfaceColor} ${darkMode ? 16 : 11}%, transparent)`;
@@ -109,7 +153,8 @@ function createModeMenuIcons(deps) {
     }
   }
 
-  function renderModeLineIconSvg(svg, lineIconName, strokeWidth) {
+  // Draws a built-in line icon into the svg; false when there is no such icon.
+  function renderModeLineIconSvg(svg: Element | null | undefined, lineIconName: string, strokeWidth?: string): boolean {
     const lineIconPaths = getModeMenuLineIconPaths(lineIconName);
     if (!svg || !lineIconPaths) {
       return false;
@@ -133,7 +178,7 @@ function createModeMenuIcons(deps) {
     return true;
   }
 
-  function createModeMenuGlyph(item) {
+  function createModeMenuGlyph(item: ModeMenuItem): Element {
     const lineIconName = item.menuIconName ? String(item.menuIconName).trim() : '';
     const svg = createSvgElement('svg');
     if (renderModeLineIconSvg(svg, lineIconName, '1.65')) {
@@ -145,7 +190,7 @@ function createModeMenuIcons(deps) {
     return glyph;
   }
 
-  function setModeMenuGlyphHidden(glyph, hidden) {
+  function setModeMenuGlyphHidden(glyph: Element, hidden: boolean): void {
     if (hidden) {
       glyph.setAttribute('hidden', '');
       return;
@@ -153,7 +198,7 @@ function createModeMenuIcons(deps) {
     glyph.removeAttribute('hidden');
   }
 
-  function createModeMenuIcon(item, menuItem) {
+  function createModeMenuIcon(item: ModeMenuItem, menuItem: HTMLElement | null | undefined): HTMLSpanElement {
     const lineIconName = item.menuIconName ? String(item.menuIconName).trim() : '';
     const isBuiltInLineIcon = Boolean(getModeMenuLineIconPaths(lineIconName));
     const wrap = doc.createElement('span');
@@ -174,7 +219,7 @@ function createModeMenuIcons(deps) {
       applyModeMenuIconTheme(wrap, menuItem, item.theme || defaultTheme);
     }
     if (item.provider && getThemeForProvider) {
-      Promise.resolve(getThemeForProvider(item.provider)).then((theme) => {
+      Promise.resolve(getThemeForProvider(item.provider)).then((theme: InputModeTheme | null | undefined) => {
         if (!inputModeState.destroyed && wrap.isConnected && theme) {
           applyModeMenuIconTheme(wrap, menuItem, theme);
         }
@@ -186,7 +231,7 @@ function createModeMenuIcons(deps) {
       image.alt = '';
       image.decoding = 'async';
       image.referrerPolicy = 'no-referrer';
-      const showFallback = () => {
+      const showFallback = (): void => {
         wrap.setAttribute('data-icon-state', 'fallback');
         removeProviderIconRuntimeFallbacks(wrap);
         image.remove();
@@ -210,7 +255,7 @@ function createModeMenuIcons(deps) {
             prefixText: String(item.label || ''),
             provider
           }) === true;
-        } catch (e) {
+        } catch (_error) {
           handledByProviderIconRuntime = false;
         }
       }
@@ -232,4 +277,7 @@ function createModeMenuIcons(deps) {
   };
 }
 
+type ModeMenuIconsApi = ReturnType<typeof createModeMenuIcons>;
+
 export { createModeMenuIcons };
+export type { ModeMenuIconsApi, ModeMenuIconsDeps, ModeMenuIconsState };

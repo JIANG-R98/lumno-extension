@@ -1,0 +1,138 @@
+// Shapes the input mode controller (search-input-mode.ts) hands to several
+// of its modules here.
+import type { SearchTextIndex, SiteSearchProvider } from '../../../domain/search/types';
+
+// Message text by key, with {name} placeholders filled from values.
+type FormatMessage = (key: string, fallback: string, values?: Record<string, string | number>) => string;
+
+type CssDeclaration = [property: string, value: string];
+
+// An inline style text from declarations, each !important when asked.
+type CssText = (pairs: CssDeclaration[], useImportantStyles: boolean) => string;
+
+// Sets one style property, !important when asked; ignores a missing element.
+type SetStyle = (
+  element: ElementCSSInlineStyle | null | undefined,
+  property: string,
+  value: string,
+  useImportantStyles: boolean
+) => void;
+
+// Whether an element shows: its data-visible, else its display.
+type IsElementVisible = (element: Element | null | undefined) => boolean;
+
+// The surface's CSS custom properties the mode tag and menu draw with.
+interface InputModeVars {
+  tagBg: string;
+  tagText: string;
+  panelBorder: string;
+  panelBg: string;
+  panelText: string;
+  panelShadow: string;
+  panelRadius: string;
+  panelGap: string;
+}
+
+// Red, green and blue, 0-255.
+type Rgb = number[];
+
+// A search mode's colors, as the surface works them out (from the site's
+// icon for a site search). Only these fields are read here.
+interface InputModeTheme {
+  accent?: string;
+  accentRgb?: Rgb | null;
+  // The caret color while the mode is on.
+  placeholderText?: string;
+}
+
+// An entry of the mode menu, as the surface lists it.
+interface ModeMenuItem {
+  id: string;
+  label: string;
+  // The group title it sits under; a new title starts where it changes.
+  group?: string;
+  // The group's key when the surface lets groups move.
+  groupKey?: string;
+  active?: boolean;
+  // The list it reorders within ('pinned' items do not drag).
+  orderList?: string;
+  // More text the filter matches.
+  searchTerms?: string[];
+  provider?: SiteSearchProvider | null;
+  // A built-in line icon (bookmark, browser, history, star).
+  menuIconName?: string;
+  // A Remix icon class for the glyph.
+  iconClass?: string;
+  isAi?: boolean;
+  theme?: InputModeTheme | null;
+  iconUrl?: string;
+}
+
+// Where a run of a label's characters starts and ends.
+interface ModeMenuRange {
+  start: number;
+  end: number;
+}
+
+// What the filter matches an item against.
+interface ModeMenuSearchIndex {
+  // The normalized label, one character per entry of labelMap.
+  label: string;
+  // The label range each normalized character came from.
+  labelMap: Readonly<ModeMenuRange>[];
+  units: SearchTextIndex | null;
+  searchTerms: string[];
+}
+
+interface ModeMenuMatch {
+  matched: boolean;
+  ranges: ModeMenuRange[];
+}
+
+// An item as the menu drew it.
+interface ModeMenuEntry {
+  button: HTMLButtonElement;
+  group: string;
+  item: ModeMenuItem;
+  label: HTMLElement;
+  labelText: string;
+  searchIndex: Readonly<ModeMenuSearchIndex>;
+}
+
+// Draws a provider's icon into the image through the surface's icon
+// runtime; true when the runtime took it over.
+type AttachProviderIcon = (image: HTMLImageElement, details: {
+  iconHost: string;
+  iconUrl: string;
+  onIconUnavailable: () => void;
+  prefixText: string;
+  provider: SiteSearchProvider;
+}) => unknown;
+
+// Swaps the image to the icon's cached data URL once there is one.
+type AttachFaviconData = (image: HTMLImageElement, iconUrl: string, iconHost: string) => void;
+
+type ResolveProviderIconUrl = (provider: SiteSearchProvider | null | undefined, iconUrl: string) => string | null | undefined;
+
+type GetThemeForProvider = (provider: SiteSearchProvider) =>
+  InputModeTheme | null | undefined | PromiseLike<InputModeTheme | null | undefined>;
+
+export type {
+  AttachFaviconData,
+  AttachProviderIcon,
+  CssDeclaration,
+  CssText,
+  FormatMessage,
+  GetThemeForProvider,
+  InputModeTheme,
+  InputModeVars,
+  IsElementVisible,
+  ModeMenuEntry,
+  ModeMenuItem,
+  ModeMenuMatch,
+  ModeMenuRange,
+  ModeMenuSearchIndex,
+  ResolveProviderIconUrl,
+  Rgb,
+  SetStyle
+};

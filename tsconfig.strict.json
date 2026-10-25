@@ -33,6 +33,12 @@
     "src/shared/search/site-search-store.ts",
     "src/shared/search/suggestion-navigation.ts",
     "src/shared/pip-main-world.ts",
-    "src/shared/favicon/favicon-view-core.ts"
+    "src/shared/favicon/favicon-view-core.ts",
+    "src/shared/search/input-mode/types.ts",
+    "src/shared/search/input-mode/mode-tab-keys.ts",
+    "src/shared/search/input-mode/mode-menu-language.ts",
+    "src/shared/search/input-mode/mode-menu-search.ts",
+    "src/shared/search/input-mode/mode-menu-icons.ts",
+    "src/shared/search/input-mode/controller-dom.ts"
   ]
 }

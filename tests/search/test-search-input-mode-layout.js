@@ -83,6 +83,24 @@ class FakeElement {
     return child;
   }
 
+  insertBefore(child, reference) {
+    if (child.parentNode) {
+      child.parentNode.removeChild(child);
+    }
+    child.parentNode = this;
+    const index = this.children.indexOf(reference);
+    if (index < 0) {
+      this.children.push(child);
+    } else {
+      this.children.splice(index, 0, child);
+    }
+    return child;
+  }
+
+  querySelector() {
+    return null;
+  }
+
   removeChild(child) {
     this.children = this.children.filter((candidate) => candidate !== child);
     child.parentNode = null;

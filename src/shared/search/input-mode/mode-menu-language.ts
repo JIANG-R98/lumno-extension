@@ -1,7 +1,47 @@
-// @ts-nocheck
 // The mode menu's copy: the filter query line and the footer hints in the
 // current language, and the site search Tab hint element.
-function createModeMenuLanguage(deps) {
+import type * as LumnoShortcutDisplay from '../../../domain/shortcut-display';
+import type { NavigatorLike } from '../../../domain/shortcut-display';
+import type { CssText, FormatMessage, InputModeVars } from './types';
+
+// The controller state search-input-mode.ts shares with its modules.
+interface ModeMenuLanguageState {
+  modeMenuFilterQuery: string;
+  modeMenuFooterFilterText: HTMLElement;
+  modeMenuFooterNavigationKey: HTMLElement;
+  modeMenuFooterNavigationText: HTMLElement;
+  modeMenuFooterSelectKey: HTMLElement;
+  modeMenuFooterSelectText: HTMLElement;
+  modeMenuFooterInputKey: HTMLElement;
+  modeMenuFooterInputText: HTMLElement;
+  modeMenuFooterKey: HTMLElement;
+  modeMenuFooterText: HTMLElement;
+}
+
+interface ModeMenuLanguageConfig {
+  navigatorLike?: NavigatorLike | null;
+}
+
+interface ModeMenuLanguageDeps {
+  formatMessage: FormatMessage;
+  doc: Document;
+  shortcutDisplayApi: Pick<typeof LumnoShortcutDisplay, 'formatShortcutReference'>;
+  config: ModeMenuLanguageConfig;
+  win: { navigator?: NavigatorLike } | null | undefined;
+  syncInputPlaceholder: () => void;
+  siteSearchTabHint: HTMLElement;
+  tabHintId: string;
+  siteSearchTabHintKey: HTMLElement;
+  siteSearchTabHintText: HTMLElement;
+  cssText: CssText;
+  rightAnchorOffset: number;
+  vars: InputModeVars;
+  INPUT_FONT_STACK: string;
+  useImportantStyles: boolean;
+  inputModeState: ModeMenuLanguageState;
+}
+
+function createModeMenuLanguage(deps: ModeMenuLanguageDeps) {
   const {
     formatMessage,
     doc,
@@ -23,7 +63,7 @@ function createModeMenuLanguage(deps) {
   // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
 
-  function renderModeMenuFilterQuery(query) {
+  function renderModeMenuFilterQuery(query: string): void {
     const queryToken = '\uF8FFLUMNO_MODE_MENU_QUERY\uF8FF';
     const localizedQuery = formatMessage(
       'search_scope_menu_filter_query',
@@ -58,7 +98,7 @@ function createModeMenuLanguage(deps) {
       );
     }
   }
-  function refreshModeMenuFilterText() {
+  function refreshModeMenuFilterText(): void {
     if (inputModeState.modeMenuFilterQuery) {
       renderModeMenuFilterQuery(inputModeState.modeMenuFilterQuery);
     } else {
@@ -68,7 +108,7 @@ function createModeMenuLanguage(deps) {
       );
     }
   }
-  function refreshModeMenuLanguage() {
+  function refreshModeMenuLanguage(): void {
     inputModeState.modeMenuFooterNavigationKey.textContent = '\u2190\u2191\u2193\u2192';
     inputModeState.modeMenuFooterNavigationText.textContent = formatMessage(
       'search_scope_menu_navigation_hint',
@@ -84,12 +124,9 @@ function createModeMenuLanguage(deps) {
       'search_scope_menu_focus_toggle_hint',
       'Switch focus'
     );
-    inputModeState.modeMenuFooterKey.textContent =
-      typeof shortcutDisplayApi.formatShortcutReference === 'function'
-        ? shortcutDisplayApi.formatShortcutReference('Tab Tab', {
-          navigatorLike: config.navigatorLike || (win && win.navigator)
-        })
-        : 'Tab Tab';
+    inputModeState.modeMenuFooterKey.textContent = shortcutDisplayApi.formatShortcutReference('Tab Tab', {
+      navigatorLike: config.navigatorLike || (win && win.navigator)
+    });
     inputModeState.modeMenuFooterText.textContent = formatMessage(
       'search_scope_menu_shortcut_hint',
       'Open panel'
@@ -138,4 +175,7 @@ function createModeMenuLanguage(deps) {
   };
 }
 
+type ModeMenuLanguageApi = ReturnType<typeof createModeMenuLanguage>;
+
 export { createModeMenuLanguage };
+export type { ModeMenuLanguageApi, ModeMenuLanguageConfig, ModeMenuLanguageDeps, ModeMenuLanguageState };

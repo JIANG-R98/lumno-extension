@@ -1,7 +1,79 @@
-// @ts-nocheck
 // Builds the controller's elements: the mode prefix with its icon, glyph
 // and chevron, the mode menu surface with its content and footer hints.
-function createControllerDom(deps) {
+import type * as LumnoMenuSurface from '../../ui/menu-surface';
+import type { CssDeclaration, CssText, InputModeVars, SetStyle } from './types';
+
+// The controller state search-input-mode.ts shares with its modules: the
+// menu parts this module finds or creates.
+interface ControllerDomState {
+  modeMenuContent: HTMLElement;
+  modeMenuFooter: HTMLElement;
+  modeMenuFooterFilterText: HTMLElement;
+  modeMenuFooterNavigationKey: HTMLElement;
+  modeMenuFooterNavigationText: HTMLElement;
+  modeMenuFooterSelectKey: HTMLElement;
+  modeMenuFooterSelectText: HTMLElement;
+  modeMenuFooterInputKey: HTMLElement;
+  modeMenuFooterInputText: HTMLElement;
+  modeMenuFooterKey: HTMLElement;
+  modeMenuFooterText: HTMLElement;
+}
+
+interface ControllerDomDeps {
+  siteSearchPrefix: HTMLElement;
+  siteSearchPrefixIcon: HTMLElement;
+  siteSearchPrefixText: HTMLElement;
+  siteSearchTabHint: HTMLElement;
+  siteSearchTabHintKey: HTMLElement;
+  siteSearchTabHintText: HTMLElement;
+  prefixId: string;
+  siteSearchPrefixIconFrame: HTMLElement;
+  siteSearchPrefixGlyph: HTMLElement;
+  siteSearchPrefixLineIcon: SVGElement;
+  cssText: CssText;
+  useImportantStyles: boolean;
+  siteSearchPrefixChevron: HTMLElement;
+  siteSearchPrefixCurrent: HTMLElement;
+  siteSearchPrefixCurrentText: HTMLElement;
+  DEFAULT_PREFIX_ITEM_GAP_PX: number;
+  INPUT_FONT_STACK: string;
+  prefixTransition: string;
+  setStyle: SetStyle;
+  modeMenu: HTMLElement;
+  menuSurfaceClass: string;
+  menuSurface: Pick<typeof LumnoMenuSurface, 'apply'>;
+  surface: 'newtab' | 'overlay';
+  vars: InputModeVars;
+  container: HTMLElement;
+  applyNoTranslate: <T extends Element>(element: T) => T;
+  doc: Document;
+  inputModeState: ControllerDomState;
+}
+
+// The footer's hints: filter text, then Move, Switch, Switch focus and
+// Open panel, each a key and its words.
+interface FooterParts {
+  filterText: HTMLElement;
+  actions: HTMLElement;
+  navigationHint: HTMLElement;
+  navigationKey: HTMLElement;
+  navigationText: HTMLElement;
+  selectHint: HTMLElement;
+  selectKey: HTMLElement;
+  selectText: HTMLElement;
+  inputHint: HTMLElement;
+  inputKey: HTMLElement;
+  inputText: HTMLElement;
+  shortcutHint: HTMLElement;
+  shortcutKey: HTMLElement;
+  shortcutText: HTMLElement;
+}
+
+function findPart(root: HTMLElement, attribute: string): HTMLElement | null {
+  return root.querySelector<HTMLElement>(`[${attribute}]`);
+}
+
+function createControllerDom(deps: ControllerDomDeps): void {
   const {
     siteSearchPrefix,
     siteSearchPrefixIcon,
@@ -35,6 +107,67 @@ function createControllerDom(deps) {
   // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
 
+  function createPart(tagName: 'div' | 'span', className: string, attribute: string): HTMLElement {
+    const element = applyNoTranslate(doc.createElement(tagName));
+    element.className = className;
+    element.setAttribute(attribute, '');
+    return element;
+  }
+
+  // The parts a rendered footer already has; null when any is missing.
+  function readFooterParts(footer: HTMLElement): FooterParts | null {
+    const read = (name: string): HTMLElement | null => findPart(footer, `data-search-input-mode-menu-footer-${name}`);
+    const filterText = read('filter-text');
+    const actions = read('actions');
+    const navigationHint = read('navigation-hint');
+    const navigationKey = read('navigation-key');
+    const navigationText = read('navigation-text');
+    const selectHint = read('select-hint');
+    const selectKey = read('select-key');
+    const selectText = read('select-text');
+    const inputHint = read('input-hint');
+    const inputKey = read('input-key');
+    const inputText = read('input-text');
+    const shortcutHint = read('shortcut-hint');
+    const shortcutKey = read('key');
+    const shortcutText = read('text');
+    if (!filterText || !actions || !navigationHint || !navigationKey || !navigationText ||
+        !selectHint || !selectKey || !selectText || !inputHint || !inputKey || !inputText ||
+        !shortcutHint || !shortcutKey || !shortcutText) {
+      return null;
+    }
+    return {
+      filterText, actions, navigationHint, navigationKey, navigationText, selectHint, selectKey, selectText,
+      inputHint, inputKey, inputText, shortcutHint, shortcutKey, shortcutText
+    };
+  }
+
+  function createFooterParts(): FooterParts {
+    const footerClass = 'x-lumno-search-input-mode__menu-footer';
+    const attribute = (name: string): string => `data-search-input-mode-menu-footer-${name}`;
+    const hint = (name: string): HTMLElement => createPart(
+      'span',
+      `${footerClass}-hint ${footerClass}-hint--${name}`,
+      attribute(`${name}-hint`)
+    );
+    return {
+      filterText: createPart('span', `${footerClass}-filter-text`, attribute('filter-text')),
+      actions: createPart('span', `${footerClass}-actions`, attribute('actions')),
+      navigationHint: hint('navigation'),
+      navigationKey: createPart('span', `${footerClass}-key ${footerClass}-key--arrows`, attribute('navigation-key')),
+      navigationText: createPart('span', `${footerClass}-text`, attribute('navigation-text')),
+      selectHint: hint('select'),
+      selectKey: createPart('span', `${footerClass}-key`, attribute('select-key')),
+      selectText: createPart('span', `${footerClass}-text`, attribute('select-text')),
+      inputHint: hint('input'),
+      inputKey: createPart('span', `${footerClass}-key`, attribute('input-key')),
+      inputText: createPart('span', `${footerClass}-text`, attribute('input-text')),
+      shortcutHint: hint('shortcut'),
+      shortcutKey: createPart('span', `${footerClass}-key`, attribute('key')),
+      shortcutText: createPart('span', `${footerClass}-text`, attribute('text'))
+    };
+  }
+
   if (!siteSearchPrefix || !siteSearchPrefixIcon || !siteSearchPrefixText ||
       !siteSearchTabHint || !siteSearchTabHintKey || !siteSearchTabHintText) {
     throw new Error('createInputModeController requires React input mode parts');
@@ -51,31 +184,18 @@ function createControllerDom(deps) {
   siteSearchPrefixIconFrame.className = 'x-lumno-search-input-mode__prefix-icon-frame';
   siteSearchPrefixIconFrame.setAttribute('data-search-input-mode-prefix-icon-frame', '');
   if (!siteSearchPrefixIconFrame.parentNode) {
-    if (siteSearchPrefixIcon.parentNode) {
-      const iconParent = siteSearchPrefixIcon.parentNode;
-      if (typeof iconParent.insertBefore === 'function') {
-        iconParent.insertBefore(siteSearchPrefixIconFrame, siteSearchPrefixIcon);
-      } else {
-        if (typeof iconParent.removeChild === 'function') {
-          iconParent.removeChild(siteSearchPrefixIcon);
-        }
-        iconParent.appendChild(siteSearchPrefixIconFrame);
-      }
-    } else if (typeof siteSearchPrefix.insertBefore === 'function') {
-      siteSearchPrefix.insertBefore(siteSearchPrefixIconFrame, siteSearchPrefixText);
+    const iconParent = siteSearchPrefixIcon.parentNode;
+    if (iconParent) {
+      iconParent.insertBefore(siteSearchPrefixIconFrame, siteSearchPrefixIcon);
     } else {
-      siteSearchPrefix.appendChild(siteSearchPrefixIconFrame);
+      siteSearchPrefix.insertBefore(siteSearchPrefixIconFrame, siteSearchPrefixText);
     }
   }
   if (siteSearchPrefixIcon.parentNode !== siteSearchPrefixIconFrame) {
     siteSearchPrefixIconFrame.appendChild(siteSearchPrefixIcon);
   }
   if (!siteSearchPrefixGlyph.parentNode) {
-    if (typeof siteSearchPrefix.insertBefore === 'function') {
-      siteSearchPrefix.insertBefore(siteSearchPrefixGlyph, siteSearchPrefixText);
-    } else {
-      siteSearchPrefix.appendChild(siteSearchPrefixGlyph);
-    }
+    siteSearchPrefix.insertBefore(siteSearchPrefixGlyph, siteSearchPrefixText);
   }
   siteSearchPrefixLineIcon.setAttribute('aria-hidden', 'true');
   siteSearchPrefixLineIcon.setAttribute('class', 'x-lumno-search-input-mode__prefix-line-icon');
@@ -87,29 +207,18 @@ function createControllerDom(deps) {
     ['flex', '0 0 16px']
   ], useImportantStyles);
   if (!siteSearchPrefixLineIcon.parentNode) {
-    if (typeof siteSearchPrefix.insertBefore === 'function') {
-      siteSearchPrefix.insertBefore(siteSearchPrefixLineIcon, siteSearchPrefixText);
-    } else {
-      siteSearchPrefix.appendChild(siteSearchPrefixLineIcon);
-    }
+    siteSearchPrefix.insertBefore(siteSearchPrefixLineIcon, siteSearchPrefixText);
   }
   if (!siteSearchPrefixChevron.parentNode) {
     siteSearchPrefix.appendChild(siteSearchPrefixChevron);
   }
   if (!siteSearchPrefixCurrent.parentNode) {
-    if (typeof siteSearchPrefix.insertBefore === 'function') {
-      siteSearchPrefix.insertBefore(siteSearchPrefixCurrent, siteSearchPrefixChevron);
-    } else {
-      siteSearchPrefix.appendChild(siteSearchPrefixCurrent);
-    }
+    siteSearchPrefix.insertBefore(siteSearchPrefixCurrent, siteSearchPrefixChevron);
   }
   if (!siteSearchPrefixCurrentText.parentNode) {
     siteSearchPrefixCurrent.appendChild(siteSearchPrefixCurrentText);
   }
-  if (siteSearchPrefixCurrentText.style &&
-      typeof siteSearchPrefixCurrentText.style.setProperty === 'function') {
-    siteSearchPrefixCurrentText.style.setProperty('display', 'inline-block');
-  }
+  siteSearchPrefixCurrentText.style.setProperty('display', 'inline-block');
   siteSearchPrefixCurrent.setAttribute('aria-hidden', 'true');
   siteSearchPrefixCurrent.setAttribute('data-search-input-mode-current', '');
   siteSearchPrefixCurrentText.setAttribute('data-search-input-mode-current-text', '');
@@ -159,9 +268,7 @@ function createControllerDom(deps) {
   setStyle(siteSearchPrefix, 'padding', '0 6px', useImportantStyles);
   modeMenu.id = `${prefixId}-menu`;
   modeMenu.className = `x-lumno-search-input-mode__menu ${menuSurfaceClass}`;
-  if (typeof menuSurface.apply === 'function') {
-    menuSurface.apply(modeMenu);
-  }
+  menuSurface.apply(modeMenu);
   modeMenu.setAttribute('data-surface', surface);
   modeMenu.setAttribute('data-filtered', 'false');
   modeMenu.setAttribute('data-search-active', 'false');
@@ -174,7 +281,7 @@ function createControllerDom(deps) {
   const modeMenuClosedTransform = surface === 'newtab'
     ? `${modeMenuPositionTransform} scale(0.96, 0.86)`
     : 'translateY(calc(var(--x-lumno-search-mode-menu-result-offset, 0px) + var(--x-lumno-search-mode-menu-lift, 0px) - 6px)) scale(0.96, 0.86)';
-  const modeMenuStyles = [
+  const modeMenuStyles: CssDeclaration[] = [
     ['position', 'absolute'],
     ['left', modeMenuEdgeOffset],
     ['right', modeMenuEdgeOffset],
@@ -206,213 +313,63 @@ function createControllerDom(deps) {
   if (!modeMenu.parentNode) {
     container.appendChild(modeMenu);
   }
-  inputModeState.modeMenuContent = typeof modeMenu.querySelector === 'function'
-    ? modeMenu.querySelector('[data-search-input-mode-menu-content]')
-    : null;
-  inputModeState.modeMenuFooter = typeof modeMenu.querySelector === 'function'
-    ? modeMenu.querySelector('[data-search-input-mode-menu-footer]')
-    : null;
-  if (!inputModeState.modeMenuContent || !inputModeState.modeMenuFooter) {
+  const foundContent = findPart(modeMenu, 'data-search-input-mode-menu-content');
+  const foundFooter = findPart(modeMenu, 'data-search-input-mode-menu-footer');
+  let modeMenuContent: HTMLElement;
+  let modeMenuFooter: HTMLElement;
+  if (foundContent && foundFooter) {
+    modeMenuContent = foundContent;
+    modeMenuFooter = foundFooter;
+  } else {
     while (modeMenu.firstChild) {
       modeMenu.removeChild(modeMenu.firstChild);
     }
-    inputModeState.modeMenuContent = applyNoTranslate(doc.createElement('div'));
-    inputModeState.modeMenuContent.className = 'x-lumno-search-input-mode__menu-content';
-    inputModeState.modeMenuContent.setAttribute('data-search-input-mode-menu-content', '');
-    inputModeState.modeMenuContent.setAttribute('role', 'presentation');
-    inputModeState.modeMenuFooter = applyNoTranslate(doc.createElement('div'));
-    inputModeState.modeMenuFooter.className = 'x-lumno-search-input-mode__menu-footer';
-    inputModeState.modeMenuFooter.setAttribute('data-search-input-mode-menu-footer', '');
-    inputModeState.modeMenuFooter.setAttribute('role', 'presentation');
-    inputModeState.modeMenuFooter.setAttribute('aria-hidden', 'true');
-    modeMenu.appendChild(inputModeState.modeMenuContent);
-    modeMenu.appendChild(inputModeState.modeMenuFooter);
+    modeMenuContent = createPart('div', 'x-lumno-search-input-mode__menu-content', 'data-search-input-mode-menu-content');
+    modeMenuContent.setAttribute('role', 'presentation');
+    modeMenuFooter = createPart('div', 'x-lumno-search-input-mode__menu-footer', 'data-search-input-mode-menu-footer');
+    modeMenuFooter.setAttribute('role', 'presentation');
+    modeMenuFooter.setAttribute('aria-hidden', 'true');
+    modeMenu.appendChild(modeMenuContent);
+    modeMenu.appendChild(modeMenuFooter);
   }
-  inputModeState.modeMenuFooterKey = typeof inputModeState.modeMenuFooter.querySelector === 'function'
-    ? inputModeState.modeMenuFooter.querySelector('[data-search-input-mode-menu-footer-key]')
-    : null;
-  inputModeState.modeMenuFooterText = typeof inputModeState.modeMenuFooter.querySelector === 'function'
-    ? inputModeState.modeMenuFooter.querySelector('[data-search-input-mode-menu-footer-text]')
-    : null;
-  inputModeState.modeMenuFooterFilterText = typeof inputModeState.modeMenuFooter.querySelector === 'function'
-    ? inputModeState.modeMenuFooter.querySelector('[data-search-input-mode-menu-footer-filter-text]')
-    : null;
-  let modeMenuFooterActions = typeof inputModeState.modeMenuFooter.querySelector === 'function'
-    ? inputModeState.modeMenuFooter.querySelector('[data-search-input-mode-menu-footer-actions]')
-    : null;
-  let modeMenuFooterNavigationHint = typeof inputModeState.modeMenuFooter.querySelector === 'function'
-    ? inputModeState.modeMenuFooter.querySelector('[data-search-input-mode-menu-footer-navigation-hint]')
-    : null;
-  let modeMenuFooterSelectHint = typeof inputModeState.modeMenuFooter.querySelector === 'function'
-    ? inputModeState.modeMenuFooter.querySelector('[data-search-input-mode-menu-footer-select-hint]')
-    : null;
-  inputModeState.modeMenuFooterNavigationKey = typeof inputModeState.modeMenuFooter.querySelector === 'function'
-    ? inputModeState.modeMenuFooter.querySelector('[data-search-input-mode-menu-footer-navigation-key]')
-    : null;
-  inputModeState.modeMenuFooterNavigationText = typeof inputModeState.modeMenuFooter.querySelector === 'function'
-    ? inputModeState.modeMenuFooter.querySelector('[data-search-input-mode-menu-footer-navigation-text]')
-    : null;
-  inputModeState.modeMenuFooterSelectKey = typeof inputModeState.modeMenuFooter.querySelector === 'function'
-    ? inputModeState.modeMenuFooter.querySelector('[data-search-input-mode-menu-footer-select-key]')
-    : null;
-  inputModeState.modeMenuFooterSelectText = typeof inputModeState.modeMenuFooter.querySelector === 'function'
-    ? inputModeState.modeMenuFooter.querySelector('[data-search-input-mode-menu-footer-select-text]')
-    : null;
-  let modeMenuFooterShortcutHint = typeof inputModeState.modeMenuFooter.querySelector === 'function'
-    ? inputModeState.modeMenuFooter.querySelector('[data-search-input-mode-menu-footer-shortcut-hint]')
-    : null;
-  let modeMenuFooterInputHint = typeof inputModeState.modeMenuFooter.querySelector === 'function'
-    ? inputModeState.modeMenuFooter.querySelector('[data-search-input-mode-menu-footer-input-hint]')
-    : null;
-  inputModeState.modeMenuFooterInputKey = typeof inputModeState.modeMenuFooter.querySelector === 'function'
-    ? inputModeState.modeMenuFooter.querySelector('[data-search-input-mode-menu-footer-input-key]')
-    : null;
-  inputModeState.modeMenuFooterInputText = typeof inputModeState.modeMenuFooter.querySelector === 'function'
-    ? inputModeState.modeMenuFooter.querySelector('[data-search-input-mode-menu-footer-input-text]')
-    : null;
-  if (!inputModeState.modeMenuFooterKey || !inputModeState.modeMenuFooterText || !inputModeState.modeMenuFooterFilterText ||
-      !modeMenuFooterActions || !modeMenuFooterNavigationHint ||
-      !modeMenuFooterSelectHint ||
-      !inputModeState.modeMenuFooterNavigationKey || !inputModeState.modeMenuFooterNavigationText ||
-      !inputModeState.modeMenuFooterSelectKey || !inputModeState.modeMenuFooterSelectText ||
-      !modeMenuFooterShortcutHint || !modeMenuFooterInputHint ||
-      !inputModeState.modeMenuFooterInputKey || !inputModeState.modeMenuFooterInputText) {
-    while (inputModeState.modeMenuFooter.firstChild) {
-      inputModeState.modeMenuFooter.removeChild(inputModeState.modeMenuFooter.firstChild);
+  inputModeState.modeMenuContent = modeMenuContent;
+  inputModeState.modeMenuFooter = modeMenuFooter;
+
+  let footer = readFooterParts(modeMenuFooter);
+  if (!footer) {
+    while (modeMenuFooter.firstChild) {
+      modeMenuFooter.removeChild(modeMenuFooter.firstChild);
     }
-    inputModeState.modeMenuFooterFilterText = applyNoTranslate(doc.createElement('span'));
-    inputModeState.modeMenuFooterFilterText.className =
-      'x-lumno-search-input-mode__menu-footer-filter-text';
-    inputModeState.modeMenuFooterFilterText.setAttribute(
-      'data-search-input-mode-menu-footer-filter-text',
-      ''
-    );
-    modeMenuFooterActions = applyNoTranslate(doc.createElement('span'));
-    modeMenuFooterActions.className =
-      'x-lumno-search-input-mode__menu-footer-actions';
-    modeMenuFooterActions.setAttribute(
-      'data-search-input-mode-menu-footer-actions',
-      ''
-    );
-    modeMenuFooterNavigationHint = applyNoTranslate(doc.createElement('span'));
-    modeMenuFooterNavigationHint.className =
-      'x-lumno-search-input-mode__menu-footer-hint x-lumno-search-input-mode__menu-footer-hint--navigation';
-    modeMenuFooterNavigationHint.setAttribute(
-      'data-search-input-mode-menu-footer-navigation-hint',
-      ''
-    );
-    inputModeState.modeMenuFooterNavigationKey = applyNoTranslate(doc.createElement('span'));
-    inputModeState.modeMenuFooterNavigationKey.className =
-      'x-lumno-search-input-mode__menu-footer-key x-lumno-search-input-mode__menu-footer-key--arrows';
-    inputModeState.modeMenuFooterNavigationKey.setAttribute(
-      'data-search-input-mode-menu-footer-navigation-key',
-      ''
-    );
-    inputModeState.modeMenuFooterNavigationText = applyNoTranslate(doc.createElement('span'));
-    inputModeState.modeMenuFooterNavigationText.className =
-      'x-lumno-search-input-mode__menu-footer-text';
-    inputModeState.modeMenuFooterNavigationText.setAttribute(
-      'data-search-input-mode-menu-footer-navigation-text',
-      ''
-    );
-    modeMenuFooterSelectHint = applyNoTranslate(doc.createElement('span'));
-    modeMenuFooterSelectHint.className =
-      'x-lumno-search-input-mode__menu-footer-hint x-lumno-search-input-mode__menu-footer-hint--select';
-    modeMenuFooterSelectHint.setAttribute(
-      'data-search-input-mode-menu-footer-select-hint',
-      ''
-    );
-    inputModeState.modeMenuFooterSelectKey = applyNoTranslate(doc.createElement('span'));
-    inputModeState.modeMenuFooterSelectKey.className =
-      'x-lumno-search-input-mode__menu-footer-key';
-    inputModeState.modeMenuFooterSelectKey.setAttribute(
-      'data-search-input-mode-menu-footer-select-key',
-      ''
-    );
-    inputModeState.modeMenuFooterSelectText = applyNoTranslate(doc.createElement('span'));
-    inputModeState.modeMenuFooterSelectText.className =
-      'x-lumno-search-input-mode__menu-footer-text';
-    inputModeState.modeMenuFooterSelectText.setAttribute(
-      'data-search-input-mode-menu-footer-select-text',
-      ''
-    );
-    modeMenuFooterInputHint = applyNoTranslate(doc.createElement('span'));
-    modeMenuFooterInputHint.className =
-      'x-lumno-search-input-mode__menu-footer-hint x-lumno-search-input-mode__menu-footer-hint--input';
-    modeMenuFooterInputHint.setAttribute(
-      'data-search-input-mode-menu-footer-input-hint',
-      ''
-    );
-    inputModeState.modeMenuFooterInputKey = applyNoTranslate(doc.createElement('span'));
-    inputModeState.modeMenuFooterInputKey.className =
-      'x-lumno-search-input-mode__menu-footer-key';
-    inputModeState.modeMenuFooterInputKey.setAttribute(
-      'data-search-input-mode-menu-footer-input-key',
-      ''
-    );
-    inputModeState.modeMenuFooterInputText = applyNoTranslate(doc.createElement('span'));
-    inputModeState.modeMenuFooterInputText.className =
-      'x-lumno-search-input-mode__menu-footer-text';
-    inputModeState.modeMenuFooterInputText.setAttribute(
-      'data-search-input-mode-menu-footer-input-text',
-      ''
-    );
-    modeMenuFooterShortcutHint = applyNoTranslate(doc.createElement('span'));
-    modeMenuFooterShortcutHint.className =
-      'x-lumno-search-input-mode__menu-footer-hint x-lumno-search-input-mode__menu-footer-hint--shortcut';
-    modeMenuFooterShortcutHint.setAttribute(
-      'data-search-input-mode-menu-footer-shortcut-hint',
-      ''
-    );
-    inputModeState.modeMenuFooterKey = applyNoTranslate(doc.createElement('span'));
-    inputModeState.modeMenuFooterKey.className = 'x-lumno-search-input-mode__menu-footer-key';
-    inputModeState.modeMenuFooterKey.setAttribute(
-      'data-search-input-mode-menu-footer-key',
-      ''
-    );
-    inputModeState.modeMenuFooterText = applyNoTranslate(doc.createElement('span'));
-    inputModeState.modeMenuFooterText.className = 'x-lumno-search-input-mode__menu-footer-text';
-    inputModeState.modeMenuFooterText.setAttribute(
-      'data-search-input-mode-menu-footer-text',
-      ''
-    );
-    inputModeState.modeMenuFooter.appendChild(inputModeState.modeMenuFooterFilterText);
-    modeMenuFooterNavigationHint.appendChild(inputModeState.modeMenuFooterNavigationKey);
-    modeMenuFooterNavigationHint.appendChild(inputModeState.modeMenuFooterNavigationText);
-    modeMenuFooterSelectHint.appendChild(inputModeState.modeMenuFooterSelectKey);
-    modeMenuFooterSelectHint.appendChild(inputModeState.modeMenuFooterSelectText);
-    modeMenuFooterInputHint.appendChild(inputModeState.modeMenuFooterInputKey);
-    modeMenuFooterInputHint.appendChild(inputModeState.modeMenuFooterInputText);
-    modeMenuFooterShortcutHint.appendChild(inputModeState.modeMenuFooterKey);
-    modeMenuFooterShortcutHint.appendChild(inputModeState.modeMenuFooterText);
-    modeMenuFooterActions.appendChild(modeMenuFooterNavigationHint);
-    modeMenuFooterActions.appendChild(modeMenuFooterSelectHint);
-    modeMenuFooterActions.appendChild(modeMenuFooterInputHint);
-    modeMenuFooterActions.appendChild(modeMenuFooterShortcutHint);
-    inputModeState.modeMenuFooter.appendChild(modeMenuFooterActions);
+    footer = createFooterParts();
   }
-  const legacyModeMenuFooterDivider = typeof inputModeState.modeMenuFooter.querySelector === 'function'
-    ? inputModeState.modeMenuFooter.querySelector('.x-lumno-search-input-mode__menu-footer-divider')
-    : null;
+  const legacyModeMenuFooterDivider = modeMenuFooter.querySelector('.x-lumno-search-input-mode__menu-footer-divider');
   if (legacyModeMenuFooterDivider) {
     legacyModeMenuFooterDivider.remove();
   }
-  inputModeState.modeMenuFooter.appendChild(inputModeState.modeMenuFooterFilterText);
-  modeMenuFooterNavigationHint.appendChild(inputModeState.modeMenuFooterNavigationKey);
-  modeMenuFooterNavigationHint.appendChild(inputModeState.modeMenuFooterNavigationText);
-  modeMenuFooterSelectHint.appendChild(inputModeState.modeMenuFooterSelectKey);
-  modeMenuFooterSelectHint.appendChild(inputModeState.modeMenuFooterSelectText);
-  modeMenuFooterInputHint.appendChild(inputModeState.modeMenuFooterInputKey);
-  modeMenuFooterInputHint.appendChild(inputModeState.modeMenuFooterInputText);
-  modeMenuFooterShortcutHint.appendChild(inputModeState.modeMenuFooterKey);
-  modeMenuFooterShortcutHint.appendChild(inputModeState.modeMenuFooterText);
-  modeMenuFooterActions.appendChild(modeMenuFooterNavigationHint);
-  modeMenuFooterActions.appendChild(modeMenuFooterSelectHint);
-  modeMenuFooterActions.appendChild(modeMenuFooterInputHint);
-  modeMenuFooterActions.appendChild(modeMenuFooterShortcutHint);
-  inputModeState.modeMenuFooter.appendChild(modeMenuFooterActions);
-
-  return {};
+  modeMenuFooter.appendChild(footer.filterText);
+  footer.navigationHint.appendChild(footer.navigationKey);
+  footer.navigationHint.appendChild(footer.navigationText);
+  footer.selectHint.appendChild(footer.selectKey);
+  footer.selectHint.appendChild(footer.selectText);
+  footer.inputHint.appendChild(footer.inputKey);
+  footer.inputHint.appendChild(footer.inputText);
+  footer.shortcutHint.appendChild(footer.shortcutKey);
+  footer.shortcutHint.appendChild(footer.shortcutText);
+  footer.actions.appendChild(footer.navigationHint);
+  footer.actions.appendChild(footer.selectHint);
+  footer.actions.appendChild(footer.inputHint);
+  footer.actions.appendChild(footer.shortcutHint);
+  modeMenuFooter.appendChild(footer.actions);
+  inputModeState.modeMenuFooterFilterText = footer.filterText;
+  inputModeState.modeMenuFooterNavigationKey = footer.navigationKey;
+  inputModeState.modeMenuFooterNavigationText = footer.navigationText;
+  inputModeState.modeMenuFooterSelectKey = footer.selectKey;
+  inputModeState.modeMenuFooterSelectText = footer.selectText;
+  inputModeState.modeMenuFooterInputKey = footer.inputKey;
+  inputModeState.modeMenuFooterInputText = footer.inputText;
+  inputModeState.modeMenuFooterKey = footer.shortcutKey;
+  inputModeState.modeMenuFooterText = footer.shortcutText;
 }
 
 export { createControllerDom };
+export type { ControllerDomDeps, ControllerDomState };
