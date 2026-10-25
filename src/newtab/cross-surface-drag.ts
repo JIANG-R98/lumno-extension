@@ -129,6 +129,13 @@ type DragDropTarget =
   | ShortcutStackTarget
   | BlockedDropTarget;
 
+// A drop target that names a bookmark folder to drop into.
+type BookmarkFolderDropTarget = Extract<DragDropTarget, { folderId: string }>;
+
+function hasBookmarkFolder(target: DragDropTarget): target is BookmarkFolderDropTarget {
+  return 'folderId' in target;
+}
+
 // What every drag over the bookmarks keeps, whichever surface it started on.
 interface SurfaceDragState {
   isDragging: boolean;
@@ -454,6 +461,7 @@ export {
   prefersReducedMotion,
   getInsertionGapNeighbors,
   getRowInsertionSlot,
+  hasBookmarkFolder,
   isBookmarkFolderDropTarget,
   setInsertionGap,
   planBookmarkToShortcut,
@@ -463,6 +471,7 @@ export {
 };
 export type {
   BlockedDropTarget,
+  BookmarkFolderDropTarget,
   CascadeDropTarget,
   DragDropTarget,
   FolderDropTarget,

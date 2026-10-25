@@ -9,6 +9,7 @@ import type { BookmarkDragController } from '../bookmarks/bookmark-drag-controll
 import type * as MoveHistory from '../bookmarks/bookmark-move-history';
 import type { BookmarkMoveHistory } from '../bookmarks/bookmark-move-history';
 import type { BookmarksRuntime } from '../bookmarks/bookmarks-runtime';
+import { hasBookmarkFolder } from '../cross-surface-drag';
 import type * as CrossSurfaceDrag from '../cross-surface-drag';
 import type { DragDropTarget, LayoutRect, ShortcutStackTarget, SurfaceDragState } from '../cross-surface-drag';
 import * as LumnoNewtabDismissStack from '../dismiss-stack';
@@ -148,13 +149,6 @@ interface ShortcutDragLift {
 
 // Where a tile goes: beside an anchor, or at an index among the tiles.
 type TileMoveSlot = Pick<ShortcutInsertionSlot, 'anchorTile' | 'markerPosition'>;
-
-// A drop target that names a bookmark folder to move the shortcut into.
-type BookmarkFolderDropTarget = Extract<DragDropTarget, { folderId: string }>;
-
-function hasBookmarkFolder(target: DragDropTarget): target is BookmarkFolderDropTarget {
-  return 'folderId' in target;
-}
 
 function createShortcutDrag(deps: ShortcutDragDeps) {
   const {
