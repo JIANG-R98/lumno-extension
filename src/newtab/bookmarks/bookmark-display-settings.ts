@@ -621,10 +621,15 @@ function createBookmarkDisplaySettings(deps: BookmarkDisplaySettingsDeps) {
       ), true);
       return Promise.resolve(false);
     }
-    let request: Promise<EyeDropperResult>;
-    try {
-      request = new EyeDropperApi().open();
-    } catch (error) {
+    const openPicker = () => {
+      try {
+        return new EyeDropperApi().open();
+      } catch {
+        return null;
+      }
+    };
+    const request = openPicker();
+    if (!request) {
       showToast(t('bookmark_topbar_color_failed', 'Could not pick a color. Try again.'), true);
       return Promise.resolve(false);
     }
