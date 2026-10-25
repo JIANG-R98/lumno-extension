@@ -68,6 +68,12 @@ const TYPE_ASSERTING_QUERY = {
   message: 'Look the element up through a guarded lookup instead of asserting its type.'
 };
 
+// React rewrites innerHTML whenever this object is a new one.
+const INLINE_INNER_HTML = {
+  selector: "JSXAttribute[name.name='dangerouslySetInnerHTML'] > JSXExpressionContainer > ObjectExpression",
+  message: 'Pass innerHtml(markup) from shared/react/inner-html, so unchanged markup stays in place.'
+};
+
 export default tseslint.config(
   {
     ignores: [
@@ -147,7 +153,7 @@ export default tseslint.config(
       // Types are narrowed, never asserted.
       '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
       '@typescript-eslint/no-non-null-assertion': 'error',
-      'no-restricted-syntax': ['error', TYPE_ASSERTING_QUERY]
+      'no-restricted-syntax': ['error', TYPE_ASSERTING_QUERY, INLINE_INNER_HTML]
     }
   },
   {
