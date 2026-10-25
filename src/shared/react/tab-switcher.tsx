@@ -14,7 +14,6 @@ export interface TabSwitcherTab {
   thumbnailStatus?: string;
   thumbnailReason?: string;
   accentRgb?: unknown;
-  [key: string]: unknown;
 }
 
 export interface TabSwitcherThumbnailUpdate {

@@ -1,34 +1,139 @@
-// @ts-nocheck
 import * as PAGE_COLOR_SCHEME from '../shared/page-color-scheme';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import type { TabSwitcherTab, TabSwitcherThumbnailUpdate } from '../shared/react/tab-switcher';
 import * as TOAST from '../shared/ui/toast';
 import * as LumnoMessaging from '../platform/messaging';
+import { TAB_SWITCHER_HOST_ID, getTabSwitcherHost } from './tab-switcher-host';
+import type { TabSwitcherHost, TabSwitcherReply } from './tab-switcher-host';
+
+// The context the worker opens the switcher with, as read from its message.
+interface OpenContext {
+  tabs: TabSwitcherTab[];
+  selectedIndex: unknown;
+  // The page's zoom, which the switcher undoes to keep its size.
+  tabZoomFactor: unknown;
+  advanceOnExisting: boolean;
+  suppressInitialShortcutAdvance: boolean;
+  shortcut: unknown;
+}
+
+type ModifierFlag = 'altKey' | 'ctrlKey' | 'metaKey' | 'shiftKey';
+
+interface ShortcutModifier {
+  eventKey: string;
+  flag: ModifierFlag;
+}
+
+// The shortcut that opens the switcher: its trigger key and the modifier
+// whose release switches to the selected tab.
+interface ParsedShortcut {
+  triggerKey: string;
+  commitModifierEventKey: string;
+  commitModifierFlag: ModifierFlag | '';
+}
+
+interface SwitcherToast {
+  element: HTMLDivElement;
+  show(message: string, isError: boolean): void;
+  destroy(): void;
+}
+
+type SwitcherTheme = 'dark' | 'light';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function readTab(value: unknown): TabSwitcherTab | null {
+  if (!isRecord(value) || typeof value.id !== 'number') {
+    return null;
+  }
+  const tab: TabSwitcherTab = { id: value.id, accentRgb: value.accentRgb };
+  if (typeof value.windowId === 'number') {
+    tab.windowId = value.windowId;
+  } else if (value.windowId === null) {
+    tab.windowId = null;
+  }
+  if (typeof value.title === 'string') {
+    tab.title = value.title;
+  }
+  if (typeof value.url === 'string') {
+    tab.url = value.url;
+  }
+  if (typeof value.favIconUrl === 'string') {
+    tab.favIconUrl = value.favIconUrl;
+  }
+  if (typeof value.thumbnail === 'string') {
+    tab.thumbnail = value.thumbnail;
+  }
+  if (typeof value.thumbnailStatus === 'string') {
+    tab.thumbnailStatus = value.thumbnailStatus;
+  }
+  if (typeof value.thumbnailReason === 'string') {
+    tab.thumbnailReason = value.thumbnailReason;
+  }
+  return tab;
+}
+
+// At most five tabs with an id; the rest of the context as sent.
+function readOpenContext(value: unknown): OpenContext {
+  const context = isRecord(value) ? value : {};
+  const tabs = Array.isArray(context.tabs)
+    ? context.tabs.map(readTab).filter((tab): tab is TabSwitcherTab => tab !== null).slice(0, 5)
+    : [];
+  return {
+    tabs,
+    selectedIndex: context.selectedIndex,
+    tabZoomFactor: context.tabZoomFactor,
+    advanceOnExisting: context.advanceOnExisting === true,
+    suppressInitialShortcutAdvance: context.suppressInitialShortcutAdvance === true,
+    shortcut: context.shortcut
+  };
+}
+
+function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
+  const update: TabSwitcherThumbnailUpdate = {};
+  if (!isRecord(value)) {
+    return update;
+  }
+  if (typeof value.tabId === 'number') {
+    update.tabId = value.tabId;
+  }
+  if (typeof value.url === 'string') {
+    update.url = value.url;
+  }
+  if (typeof value.thumbnail === 'string') {
+    update.thumbnail = value.thumbnail;
+  }
+  if (typeof value.thumbnailStatus === 'string') {
+    update.thumbnailStatus = value.thumbnailStatus;
+  }
+  if (typeof value.thumbnailReason === 'string') {
+    update.thumbnailReason = value.thumbnailReason;
+  }
+  return update;
+}
 
 (function() {
   'use strict';
 
-  const HOST_ID = '_x_extension_tab_switcher_host_2026_unique_';
   const PANEL_ID = '_x_extension_tab_switcher_panel_2026_unique_';
   const TAB_SWITCHER_ADVANCE_EVENT = '_x_extension_tab_switcher_advance_command_2026_unique_';
   const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
+  const MESSAGE_LISTENER_KEY = '_x_extension_tab_switcher_runtime_message_listener_2026_unique_';
   const chromeApi = typeof chrome !== 'undefined' ? chrome : null;
   const switcherThemeMediaQuery = typeof window.matchMedia === 'function'
     ? window.matchMedia('(prefers-color-scheme: dark)')
     : null;
   const providerRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
-  const switcherThemeStorageArea = providerRuntime ? providerRuntime.area : (chromeApi && chromeApi.storage && chromeApi.storage.sync)
-    ? chromeApi.storage.sync
-    : (chromeApi && chromeApi.storage ? chromeApi.storage.local : null);
-  const switcherThemeStorageAreaName = switcherThemeStorageArea
-    ? (switcherThemeStorageArea === (chromeApi && chromeApi.storage ? chromeApi.storage.sync : null) ? 'sync' : 'local')
-    : null;
+  const switcherThemeStorageArea = providerRuntime.area;
 
-  function handleExistingSwitcher(context) {
-    const existingHost = document.getElementById(HOST_ID);
+  function handleExistingSwitcher(context: OpenContext): boolean {
+    const existingHost = getTabSwitcherHost(document);
     if (!existingHost) {
       return false;
     }
-    if (context && context.advanceOnExisting === true && typeof existingHost._lumnoTabSwitcherAdvance === 'function') {
+    if (context.advanceOnExisting && typeof existingHost._lumnoTabSwitcherAdvance === 'function') {
       existingHost._lumnoTabSwitcherAdvance();
       return true;
     }
@@ -40,23 +145,23 @@ import * as LumnoMessaging from '../platform/messaging';
     return true;
   }
 
-  function getMessage(key, fallback) {
+  function getMessage(key: string, fallback: string): string {
     try {
       if (chrome && chrome.i18n && typeof chrome.i18n.getMessage === 'function') {
         return chrome.i18n.getMessage(key) || fallback;
       }
-    } catch (error) {
+    } catch (_error) {
       // Ignore i18n failures in page context.
     }
     return fallback;
   }
 
-  function sanitizeText(value, fallback) {
+  function sanitizeText(value: unknown, fallback?: string): string {
     const text = String(value || '').replace(/\s+/g, ' ').trim();
     return text || fallback || '';
   }
 
-  function getHostLabel(url) {
+  function getHostLabel(url: string): string {
     try {
       const parsed = new URL(url);
       // An extension page's host is an opaque ID (a per-install UUID in Firefox).
@@ -64,19 +169,20 @@ import * as LumnoMessaging from '../platform/messaging';
         return getMessage('extension_page_label', 'Extension page');
       }
       return parsed.hostname.replace(/^www\./i, '');
-    } catch (error) {
+    } catch (_error) {
       return '';
     }
   }
 
   // Closing sits where the platform puts window controls: top-left on macOS,
   // top-right on Windows.
-  function getCloseButtonPlacement() {
-    const nav = window.navigator || {};
+  function getCloseButtonPlacement(): 'left' | 'right' {
+    const nav = window.navigator;
+    const userAgentData: unknown = nav ? Reflect.get(nav, 'userAgentData') : null;
     const candidates = [
-      nav.userAgentData && nav.userAgentData.platform,
-      nav.platform,
-      nav.userAgent
+      isRecord(userAgentData) ? userAgentData.platform : '',
+      nav ? nav.platform : '',
+      nav ? nav.userAgent : ''
     ];
     for (let i = 0; i < candidates.length; i += 1) {
       const value = String(candidates[i] || '').toLowerCase();
@@ -90,16 +196,20 @@ import * as LumnoMessaging from '../platform/messaging';
     return 'left';
   }
 
-  function updateOpenSwitcherThumbnailFromMessage(request) {
-    const host = document.getElementById(HOST_ID);
+  function updateOpenSwitcherThumbnailFromMessage(request: unknown): TabSwitcherReply {
+    const host = getTabSwitcherHost(document);
     if (!host || typeof host._lumnoTabSwitcherUpdateThumbnail !== 'function') {
       return { ok: false, reason: 'tab_switcher_host_missing' };
     }
     return host._lumnoTabSwitcherUpdateThumbnail(request) || { ok: true };
   }
 
-  function advanceOpenSwitcherFromMessage(request) {
-    const host = document.getElementById(HOST_ID);
+  function advanceOpenSwitcherFromMessage(request: Record<string, unknown>): TabSwitcherReply & {
+    open: boolean;
+    advanced: boolean;
+    suppressed: boolean;
+  } {
+    const host = getTabSwitcherHost(document);
     if (!host || typeof host._lumnoTabSwitcherAdvance !== 'function') {
       return {
         ok: true,
@@ -108,7 +218,7 @@ import * as LumnoMessaging from '../platform/messaging';
         suppressed: false
       };
     }
-    const didAdvance = host._lumnoTabSwitcherAdvance(request && request.offset);
+    const didAdvance = host._lumnoTabSwitcherAdvance(request.offset);
     return {
       ok: true,
       open: true,
@@ -117,8 +227,8 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function commitOpenSwitcherFromShortcutReleaseMessage() {
-    const host = document.getElementById(HOST_ID);
+  function commitOpenSwitcherFromShortcutReleaseMessage(): TabSwitcherReply & { committed: boolean } {
+    const host = getTabSwitcherHost(document);
     if (!host || typeof host._lumnoTabSwitcherCommitFromShortcutRelease !== 'function') {
       return { ok: false, committed: false };
     }
@@ -128,31 +238,35 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function openSwitcherFromMessage(request) {
+  function openSwitcherFromMessage(request: Record<string, unknown>): TabSwitcherReply {
     const toggle = window._x_extension_toggleTabSwitcher_2026_unique_;
     if (typeof toggle !== 'function') {
       return { ok: false, reason: 'tab_switcher_missing' };
     }
-    const result = toggle(request && request.context);
+    const result = toggle(request.context);
     return result && typeof result === 'object'
       ? result
       : { ok: true };
   }
 
   if (chromeApi && chromeApi.runtime && chromeApi.runtime.onMessage) {
-    const previousRuntimeMessageListener =
-      window._x_extension_tab_switcher_runtime_message_listener_2026_unique_;
+    // A copy of this script injected earlier in the page left its listener.
+    const previousRuntimeMessageListener: unknown = Reflect.get(window, MESSAGE_LISTENER_KEY);
     if (typeof previousRuntimeMessageListener === 'function' &&
         typeof chromeApi.runtime.onMessage.removeListener === 'function') {
       try {
-        chromeApi.runtime.onMessage.removeListener(previousRuntimeMessageListener);
-      } catch (error) {
+        Reflect.apply(chromeApi.runtime.onMessage.removeListener, chromeApi.runtime.onMessage, [previousRuntimeMessageListener]);
+      } catch (_error) {
         // The previous extension context may have been invalidated after a reload.
       }
     }
-    const runtimeMessageListener = (request, _sender, sendResponse) => {
-      if (!request) {
-        return;
+    const runtimeMessageListener = (
+      request: unknown,
+      _sender: chrome.runtime.MessageSender,
+      sendResponse: (reply: TabSwitcherReply) => void
+    ): boolean => {
+      if (!isRecord(request)) {
+        return false;
       }
       if (request.action === 'updateTabSwitcherThumbnail') {
         sendResponse(updateOpenSwitcherThumbnailFromMessage(request));
@@ -167,17 +281,16 @@ import * as LumnoMessaging from '../platform/messaging';
         return true;
       }
       if (request.action !== 'openTabSwitcherFromCommand') {
-        return;
+        return false;
       }
       sendResponse(openSwitcherFromMessage(request));
       return true;
     };
-    window._x_extension_tab_switcher_runtime_message_listener_2026_unique_ =
-      runtimeMessageListener;
+    Reflect.set(window, MESSAGE_LISTENER_KEY, runtimeMessageListener);
     chromeApi.runtime.onMessage.addListener(runtimeMessageListener);
   }
 
-  function clampSelectedIndex(index, length) {
+  function clampSelectedIndex(index: unknown, length: number): number {
     if (length <= 0) {
       return 0;
     }
@@ -185,14 +298,14 @@ import * as LumnoMessaging from '../platform/messaging';
     return ((normalized % length) + length) % length;
   }
 
-  function normalizeAdvanceOffset(value) {
+  function normalizeAdvanceOffset(value: unknown): number {
     const offset = Math.trunc(Number(value));
     return Number.isFinite(offset) && offset !== 0 ? offset : 1;
   }
 
-  function normalizeTabSwitcherShortcutKey(value) {
+  function normalizeTabSwitcherShortcutKey(value: unknown): string {
     const key = String(value || '').trim().toLowerCase();
-    const aliases = {
+    const aliases: Record<string, string> = {
       comma: ',',
       period: '.',
       slash: '/',
@@ -205,7 +318,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return aliases[key] || key;
   }
 
-  function normalizeTabSwitcherShortcutCode(value) {
+  function normalizeTabSwitcherShortcutCode(value: unknown): string {
     const code = String(value || '');
     if (/^Key[A-Z]$/.test(code)) {
       return code.slice(3).toLowerCase();
@@ -213,7 +326,7 @@ import * as LumnoMessaging from '../platform/messaging';
     if (/^Digit\d$/.test(code)) {
       return code.slice(5);
     }
-    const aliases = {
+    const aliases: Record<string, string> = {
       Backquote: '`',
       Backslash: '\\',
       BracketLeft: '[',
@@ -229,7 +342,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return aliases[code] || '';
   }
 
-  function getTabSwitcherShortcutModifier(value) {
+  function getTabSwitcherShortcutModifier(value: string): ShortcutModifier | null {
     const token = String(value || '').trim().toLowerCase();
     if (token === 'alt' || token === 'option') {
       return { eventKey: 'Alt', flag: 'altKey' };
@@ -246,7 +359,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return null;
   }
 
-  function parseTabSwitcherShortcut(value) {
+  function parseTabSwitcherShortcut(value: unknown): ParsedShortcut {
     const shortcutText = String(value || 'Alt+Q').trim();
     const parts = shortcutText
       .split('+')
@@ -257,8 +370,8 @@ import * as LumnoMessaging from '../platform/messaging';
       ? shortcutText.replace(/[⌥⌃⌘⇧]/g, '').replace(/^\++/, '').trim()
       : '';
     const triggerKey = normalizeTabSwitcherShortcutKey(symbolTrigger || parts.pop() || 'Q');
-    const modifiers = hasSymbolModifiers
-      ? Array.from(shortcutText).map((token) => {
+    const modifiers: ShortcutModifier[] = (hasSymbolModifiers
+      ? Array.from(shortcutText).map((token): ShortcutModifier | null => {
         if (token === '⌥') {
           return { eventKey: 'Alt', flag: 'altKey' };
         }
@@ -272,8 +385,8 @@ import * as LumnoMessaging from '../platform/messaging';
           return { eventKey: 'Shift', flag: 'shiftKey' };
         }
         return null;
-      }).filter(Boolean)
-      : parts.map(getTabSwitcherShortcutModifier).filter(Boolean);
+      })
+      : parts.map(getTabSwitcherShortcutModifier)).filter((modifier): modifier is ShortcutModifier => modifier !== null);
     const commitModifier = modifiers.find((modifier) => modifier.eventKey !== 'Shift') || modifiers[0] || null;
     return {
       triggerKey,
@@ -282,7 +395,7 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function isTabSwitcherShortcutTriggerEvent(shortcut, event) {
+  function isTabSwitcherShortcutTriggerEvent(shortcut: ParsedShortcut, event: KeyboardEvent): boolean {
     const eventKeys = [
       normalizeTabSwitcherShortcutKey(event && event.key),
       normalizeTabSwitcherShortcutCode(event && event.code)
@@ -290,20 +403,21 @@ import * as LumnoMessaging from '../platform/messaging';
     return eventKeys.includes(shortcut.triggerKey);
   }
 
-  function isTabSwitcherCommitModifierPressed(shortcut, event) {
+  function isTabSwitcherCommitModifierPressed(shortcut: ParsedShortcut, event: KeyboardEvent): boolean {
     return Boolean(shortcut.commitModifierFlag && event && event[shortcut.commitModifierFlag] === true);
   }
 
-  function normalizeSwitcherThemeMode(mode) {
+  function normalizeSwitcherThemeMode(mode: unknown): 'dark' | 'light' | 'system' {
     const value = String(mode || '').trim().toLowerCase();
     return value === 'dark' || value === 'light' ? value : 'system';
   }
 
-  function getSystemSwitcherTheme() {
+  function getSystemSwitcherTheme(): SwitcherTheme {
     return switcherThemeMediaQuery && switcherThemeMediaQuery.matches ? 'dark' : 'light';
   }
 
-  function resolveSwitcherTheme(mode) {
+  // The page's own theme first, then the setting, then the system's.
+  function resolveSwitcherTheme(mode: unknown): SwitcherTheme {
     const normalized = normalizeSwitcherThemeMode(mode);
     const pageTheme = PAGE_COLOR_SCHEME.detectPageTheme(document, window);
     if (pageTheme) {
@@ -315,7 +429,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return getSystemSwitcherTheme();
   }
 
-  function applySwitcherTheme(panel, mode, toastElement) {
+  function applySwitcherTheme(panel: HTMLElement | null, mode: unknown, toastElement: HTMLElement | null): void {
     if (!panel) {
       return;
     }
@@ -331,7 +445,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function createSwitcherThemeController(panel, toastElement) {
+  function createSwitcherThemeController(panel: HTMLElement, toastElement: HTMLElement | null) {
     const themeAttrFilter = [
       'class',
       'style',
@@ -346,21 +460,21 @@ import * as LumnoMessaging from '../platform/messaging';
       'light',
       'data-bs-theme'
     ];
-    let switcherThemeMode = 'system';
-    let themeStorageListener = null;
-    let themeMediaListener = null;
-    let pageThemeObserver = null;
-    let pageThemeSyncRaf = null;
+    let switcherThemeMode: 'dark' | 'light' | 'system' = 'system';
+    let themeStorageListener: ((changes: Record<string, chrome.storage.StorageChange>, areaName: string) => void) | null = null;
+    let themeMediaListener: (() => void) | null = null;
+    let pageThemeObserver: MutationObserver | null = null;
+    let pageThemeSyncRaf: number | null = null;
     let destroyed = false;
     let started = false;
 
-    function refreshSwitcherTheme() {
+    function refreshSwitcherTheme(): void {
       if (!destroyed) {
         applySwitcherTheme(panel, switcherThemeMode, toastElement);
       }
     }
 
-    function schedulePageThemeSync() {
+    function schedulePageThemeSync(): void {
       if (pageThemeSyncRaf !== null) {
         return;
       }
@@ -373,7 +487,7 @@ import * as LumnoMessaging from '../platform/messaging';
       });
     }
 
-    function stopPageThemeObserver() {
+    function stopPageThemeObserver(): void {
       if (pageThemeSyncRaf !== null) {
         cancelAnimationFrame(pageThemeSyncRaf);
         pageThemeSyncRaf = null;
@@ -384,30 +498,31 @@ import * as LumnoMessaging from '../platform/messaging';
       }
     }
 
-    function startPageThemeObserver() {
+    function startPageThemeObserver(): void {
       if (pageThemeObserver || switcherThemeMode !== 'system' || typeof MutationObserver !== 'function') {
         return;
       }
-      pageThemeObserver = new MutationObserver(() => {
+      const observer = new MutationObserver(() => {
         schedulePageThemeSync();
       });
+      pageThemeObserver = observer;
       const docEl = document.documentElement;
       if (docEl) {
-        pageThemeObserver.observe(docEl, {
+        observer.observe(docEl, {
           attributes: true,
           attributeFilter: themeAttrFilter
         });
       }
       const body = document.body;
       if (body) {
-        pageThemeObserver.observe(body, {
+        observer.observe(body, {
           attributes: true,
           attributeFilter: themeAttrFilter
         });
       }
       const head = document.head;
       if (head) {
-        pageThemeObserver.observe(head, {
+        observer.observe(head, {
           childList: true,
           subtree: true,
           attributes: true,
@@ -417,7 +532,7 @@ import * as LumnoMessaging from '../platform/messaging';
       schedulePageThemeSync();
     }
 
-    function removeThemeMediaListener() {
+    function removeThemeMediaListener(): void {
       if (!themeMediaListener || !switcherThemeMediaQuery) {
         return;
       }
@@ -429,23 +544,24 @@ import * as LumnoMessaging from '../platform/messaging';
       themeMediaListener = null;
     }
 
-    function installThemeMediaListener() {
+    function installThemeMediaListener(): void {
       if (!switcherThemeMediaQuery || themeMediaListener) {
         return;
       }
-      themeMediaListener = () => {
+      const listener = (): void => {
         if (switcherThemeMode === 'system') {
           refreshSwitcherTheme();
         }
       };
+      themeMediaListener = listener;
       if (typeof switcherThemeMediaQuery.addEventListener === 'function') {
-        switcherThemeMediaQuery.addEventListener('change', themeMediaListener);
+        switcherThemeMediaQuery.addEventListener('change', listener);
       } else if (typeof switcherThemeMediaQuery.addListener === 'function') {
-        switcherThemeMediaQuery.addListener(themeMediaListener);
+        switcherThemeMediaQuery.addListener(listener);
       }
     }
 
-    function setSwitcherThemeMode(mode) {
+    function setSwitcherThemeMode(mode: unknown): void {
       switcherThemeMode = normalizeSwitcherThemeMode(mode);
       refreshSwitcherTheme();
       if (switcherThemeMode === 'system') {
@@ -457,7 +573,7 @@ import * as LumnoMessaging from '../platform/messaging';
       removeThemeMediaListener();
     }
 
-    function start() {
+    function start(): void {
       if (started) {
         return;
       }
@@ -465,27 +581,30 @@ import * as LumnoMessaging from '../platform/messaging';
       destroyed = false;
       setSwitcherThemeMode('system');
       if (switcherThemeStorageArea && typeof switcherThemeStorageArea.get === 'function') {
-        switcherThemeStorageArea.get([THEME_STORAGE_KEY], (result) => {
+        void switcherThemeStorageArea.get([THEME_STORAGE_KEY], (result) => {
           if (!destroyed) {
-            setSwitcherThemeMode(result && result[THEME_STORAGE_KEY]);
+            setSwitcherThemeMode(result ? result[THEME_STORAGE_KEY] : undefined);
           }
         });
       }
       if (chromeApi && chromeApi.storage && chromeApi.storage.onChanged) {
-        themeStorageListener = (changes, areaName) => {
-          if (providerRuntime ? !providerRuntime.isActiveAreaName(areaName) : switcherThemeStorageAreaName && areaName !== switcherThemeStorageAreaName) {
+        const listener = (changes: Record<string, chrome.storage.StorageChange>, areaName: string): void => {
+          if (!providerRuntime.isActiveAreaName(areaName)) {
             return;
           }
-          if (!changes || !changes[THEME_STORAGE_KEY]) {
+          const themeChange = changes ? changes[THEME_STORAGE_KEY] : undefined;
+          if (!themeChange) {
             return;
           }
-          setSwitcherThemeMode(changes[THEME_STORAGE_KEY].newValue);
+          const nextMode: unknown = themeChange.newValue;
+          setSwitcherThemeMode(nextMode);
         };
-        chromeApi.storage.onChanged.addListener(themeStorageListener);
+        themeStorageListener = listener;
+        chromeApi.storage.onChanged.addListener(listener);
       }
     }
 
-    function destroy() {
+    function destroy(): void {
       destroyed = true;
       started = false;
       if (themeStorageListener && chromeApi && chromeApi.storage && chromeApi.storage.onChanged) {
@@ -503,7 +622,7 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function getThumbnailStatus(tab, thumbnail) {
+  function getThumbnailStatus(tab: TabSwitcherTab, thumbnail: string): string {
     const status = String(tab && tab.thumbnailStatus ? tab.thumbnailStatus : '').trim().toLowerCase();
     if (status === 'ok' ||
         status === 'pending' ||
@@ -515,7 +634,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return thumbnail && thumbnail.startsWith('data:image/') ? 'ok' : 'missing';
   }
 
-  function normalizeAccentCss(value) {
+  function normalizeAccentCss(value: unknown): string {
     if (!Array.isArray(value) || value.length !== 3) {
       return '';
     }
@@ -526,12 +645,12 @@ import * as LumnoMessaging from '../platform/messaging';
     return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
   }
 
-  function formatSwitcherScale(value) {
+  function formatSwitcherScale(value: number): string {
     const rounded = Math.round(value * 1000) / 1000;
     return String(rounded);
   }
 
-  function getSwitcherVisualViewportScale(win) {
+  function getSwitcherVisualViewportScale(win: Window): number {
     const visualViewport = win && win.visualViewport ? win.visualViewport : null;
     const scale = visualViewport && Number.isFinite(Number(visualViewport.scale))
       ? Number(visualViewport.scale)
@@ -539,7 +658,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return scale > 0 ? scale : 1;
   }
 
-  function getSwitcherViewportComfortScale(win) {
+  function getSwitcherViewportComfortScale(win: Window): number {
     const visualViewport = win && win.visualViewport ? win.visualViewport : null;
     const width = visualViewport && Number.isFinite(Number(visualViewport.width))
       ? Number(visualViewport.width)
@@ -556,8 +675,9 @@ import * as LumnoMessaging from '../platform/messaging';
     return 1;
   }
 
-  function applySwitcherViewportPlacement(panel, win) {
-    if (!panel || !panel.style) {
+  // Centers the panel in the visual viewport, which pinch zoom moves.
+  function applySwitcherViewportPlacement(panel: HTMLElement | null, win: Window): void {
+    if (!panel) {
       return;
     }
     const targetWindow = win || window;
@@ -586,7 +706,8 @@ import * as LumnoMessaging from '../platform/messaging';
     );
   }
 
-  function applySwitcherZoomCompensation(panel, tabZoomFactor, visualViewportScale) {
+  // Keeps the panel's size at any page or pinch zoom.
+  function applySwitcherZoomCompensation(panel: HTMLElement | null, tabZoomFactor: unknown, visualViewportScale: number): void {
     if (!panel) {
       return;
     }
@@ -603,7 +724,7 @@ import * as LumnoMessaging from '../platform/messaging';
     panel.style.setProperty('--x-tab-switcher-visible-scale', formatSwitcherScale(visibleScale));
   }
 
-  function buildStyles() {
+  function buildStyles(): string {
     return `
       :host {
         all: initial;
@@ -990,10 +1111,7 @@ import * as LumnoMessaging from '../platform/messaging';
 
   // The shared Toast at the top of the screen, inside the switcher's shadow
   // root so it lives and goes with the switcher.
-  function createSwitcherToast(shadow) {
-    if (!TOAST || typeof TOAST.createToastController !== 'function') {
-      return null;
-    }
+  function createSwitcherToast(shadow: ShadowRoot | HTMLElement): SwitcherToast {
     const stylesheet = document.createElement('link');
     stylesheet.rel = 'stylesheet';
     stylesheet.href = chrome.runtime.getURL('src/shared/ui/toast.css');
@@ -1012,7 +1130,7 @@ import * as LumnoMessaging from '../platform/messaging';
     const controller = TOAST.createToastController(element, { windowObj: window });
     return {
       element,
-      show(message, isError) {
+      show(message: string, isError: boolean): void {
         element.setAttribute('role', isError ? 'alert' : 'status');
         element.setAttribute('aria-live', isError ? 'assertive' : 'polite');
         controller.show(message, { error: Boolean(isError) });
@@ -1024,14 +1142,12 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  window._x_extension_toggleTabSwitcher_2026_unique_ = function(rawContext) {
-    const context = rawContext && typeof rawContext === 'object' ? rawContext : {};
+  window._x_extension_toggleTabSwitcher_2026_unique_ = function(rawContext: unknown): TabSwitcherReply {
+    const context = readOpenContext(rawContext);
     if (handleExistingSwitcher(context)) {
       return { ok: true, reason: 'already-open' };
     }
-    const tabs = Array.isArray(context.tabs)
-      ? context.tabs.filter((tab) => tab && typeof tab.id === 'number').slice(0, 5)
-      : [];
+    const tabs = context.tabs;
     if (!tabs.length) {
       return { ok: false, reason: 'empty' };
     }
@@ -1042,8 +1158,8 @@ import * as LumnoMessaging from '../platform/messaging';
     }
     const shortcut = parseTabSwitcherShortcut(context.shortcut);
 
-    const host = document.createElement('div');
-    host.id = HOST_ID;
+    const host: TabSwitcherHost = document.createElement('div');
+    host.id = TAB_SWITCHER_HOST_ID;
     host.style.cssText = [
       'all: initial !important',
       'position: fixed !important',
@@ -1059,7 +1175,7 @@ import * as LumnoMessaging from '../platform/messaging';
 
     let selectedIndex = clampSelectedIndex(context.selectedIndex, tabs.length);
     let allowRelayedShortcutReleaseActivation = false;
-    let tabSwitcherReactView = tabSwitcherReactViewApi.createTabSwitcherView({
+    let tabSwitcherReactView: ReturnType<typeof tabSwitcherReactViewApi.createTabSwitcherView> | null = tabSwitcherReactViewApi.createTabSwitcherView({
       document,
       root: shadow,
       panelId: PANEL_ID,
@@ -1091,34 +1207,36 @@ import * as LumnoMessaging from '../platform/messaging';
         closeTabAt(index);
       }
     });
-    const panel = tabSwitcherReactView.panel;
-    if (!panel) {
+    const view = tabSwitcherReactView;
+    const viewPanel = view.panel;
+    if (!viewPanel) {
       host.remove();
       return { ok: false, reason: 'react-view-unavailable' };
     }
+    // Narrowed here, for the functions below.
+    const panel: HTMLElement = viewPanel;
     applySwitcherViewportPlacement(panel, window);
     applySwitcherZoomCompensation(panel, context.tabZoomFactor, getSwitcherVisualViewportScale(window));
 
-    function syncSwitcherZoomCompensation() {
+    function syncSwitcherZoomCompensation(): void {
       applySwitcherViewportPlacement(panel, window);
       applySwitcherZoomCompensation(panel, context.tabZoomFactor, getSwitcherVisualViewportScale(window));
     }
 
     const switcherToast = createSwitcherToast(shadow);
-    const switcherThemeController = createSwitcherThemeController(
-      panel,
-      switcherToast ? switcherToast.element : null
-    );
+    const switcherThemeController = createSwitcherThemeController(panel, switcherToast.element);
     switcherThemeController.start();
 
     let didRequestSwitch = false;
-    let suppressInitialShortcutAdvanceUntilTriggerKeyup = context.suppressInitialShortcutAdvance === true;
+    let suppressInitialShortcutAdvanceUntilTriggerKeyup = context.suppressInitialShortcutAdvance;
 
-    function renderSelection() {
-      tabSwitcherReactView.updateSelection(selectedIndex);
+    function renderSelection(): void {
+      if (tabSwitcherReactView) {
+        tabSwitcherReactView.updateSelection(selectedIndex);
+      }
     }
 
-    function close() {
+    function close(): void {
       const cleanup = host._lumnoTabSwitcherCleanup;
       if (typeof cleanup === 'function') {
         cleanup();
@@ -1126,7 +1244,7 @@ import * as LumnoMessaging from '../platform/messaging';
       host.remove();
     }
 
-    function switchToSelected() {
+    function switchToSelected(): boolean {
       if (didRequestSwitch) {
         return false;
       }
@@ -1146,22 +1264,20 @@ import * as LumnoMessaging from '../platform/messaging';
       return true;
     }
 
-    const closingTabIds = new Set();
+    const closingTabIds = new Set<number>();
 
-    function showSwitcherToast(message, isError) {
-      if (switcherToast) {
-        switcherToast.show(message, isError);
-      }
+    function showSwitcherToast(message: string, isError: boolean): void {
+      switcherToast.show(message, isError);
     }
 
-    function closeTabAt(index) {
+    function closeTabAt(index: number): void {
       const tab = tabs[index];
       if (didRequestSwitch || !tab || typeof tab.id !== 'number' || closingTabIds.has(tab.id)) {
         return;
       }
       const tabId = tab.id;
       closingTabIds.add(tabId);
-      tabSwitcherReactView.setTabClosing(tabId, true);
+      view.setTabClosing(tabId, true);
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'closeTabFromTabSwitcher', tabId }, (response) => {
         const lastError = chrome.runtime && chrome.runtime.lastError;
         closingTabIds.delete(tabId);
@@ -1191,7 +1307,8 @@ import * as LumnoMessaging from '../platform/messaging';
       });
     }
 
-    function clickSelectedCardFromShortcutRelease() {
+    // Clicks the selected card, so the switch runs as a trusted click would.
+    function clickSelectedCardFromShortcutRelease(): boolean {
       const buttons = tabSwitcherReactView && Array.isArray(tabSwitcherReactView.buttons)
         ? tabSwitcherReactView.buttons
         : [];
@@ -1209,37 +1326,37 @@ import * as LumnoMessaging from '../platform/messaging';
       return !wasRequested && didRequestSwitch;
     }
 
-    function selectByOffset(offset) {
+    function selectByOffset(offset: number): void {
       selectedIndex = clampSelectedIndex(selectedIndex + offset, tabs.length);
       renderSelection();
     }
 
-    function shouldSuppressInitialShortcutAdvance() {
+    function shouldSuppressInitialShortcutAdvance(): boolean {
       return suppressInitialShortcutAdvanceUntilTriggerKeyup;
     }
 
-    function advanceSelectionFromShortcut(offset) {
+    function advanceSelectionFromShortcut(offset: number): boolean {
       suppressInitialShortcutAdvanceUntilTriggerKeyup = false;
       selectByOffset(offset);
       return true;
     }
 
-    host._lumnoTabSwitcherAdvance = function(offset) {
+    host._lumnoTabSwitcherAdvance = function(offset?: unknown): boolean {
       return advanceSelectionFromShortcut(normalizeAdvanceOffset(offset));
     };
-    host._lumnoTabSwitcherCommitFromShortcutRelease = function() {
+    host._lumnoTabSwitcherCommitFromShortcutRelease = function(): boolean {
       return clickSelectedCardFromShortcutRelease();
     };
 
-    function handleExternalAdvance(event) {
+    function handleExternalAdvance(event: Event): void {
       if (didRequestSwitch) {
         return;
       }
-      const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : {};
-      advanceSelectionFromShortcut(normalizeAdvanceOffset(detail.offset));
+      const detail: unknown = 'detail' in event ? event.detail : null;
+      advanceSelectionFromShortcut(normalizeAdvanceOffset(isRecord(detail) ? detail.offset : undefined));
     }
 
-    function stopHandledKeyEvent(event) {
+    function stopHandledKeyEvent(event: Event | null): void {
       if (!event) {
         return;
       }
@@ -1250,7 +1367,7 @@ import * as LumnoMessaging from '../platform/messaging';
       event.stopPropagation();
     }
 
-    function handleKeydown(event) {
+    function handleKeydown(event: KeyboardEvent): void {
       if (!event || event.isTrusted !== true) {
         return;
       }
@@ -1289,7 +1406,7 @@ import * as LumnoMessaging from '../platform/messaging';
       }
     }
 
-    function handleKeyup(event) {
+    function handleKeyup(event: KeyboardEvent): void {
       if (!event || event.isTrusted !== true) {
         return;
       }
@@ -1306,15 +1423,16 @@ import * as LumnoMessaging from '../platform/messaging';
       }
     }
 
-    function handlePointerDown(event) {
+    function handlePointerDown(event: PointerEvent): void {
       const path = event && typeof event.composedPath === 'function' ? event.composedPath() : [];
-      if (!path.includes(host) && !panel.contains(event.target)) {
+      const target = event.target;
+      if (!path.includes(host) && !(target instanceof Node && panel.contains(target))) {
         close();
       }
     }
 
-    host._lumnoTabSwitcherUpdateThumbnail = function(update) {
-      return tabSwitcherReactView.updateThumbnail(update);
+    host._lumnoTabSwitcherUpdateThumbnail = function(update: unknown): TabSwitcherReply {
+      return view.updateThumbnail(readThumbnailUpdate(update));
     };
     document.documentElement.appendChild(host);
 
@@ -1331,9 +1449,7 @@ import * as LumnoMessaging from '../platform/messaging';
       document.removeEventListener('pointerdown', handlePointerDown, true);
       document.removeEventListener(TAB_SWITCHER_ADVANCE_EVENT, handleExternalAdvance, true);
       switcherThemeController.destroy();
-      if (switcherToast) {
-        switcherToast.destroy();
-      }
+      switcherToast.destroy();
       if (tabSwitcherReactView) {
         tabSwitcherReactView.destroy();
         tabSwitcherReactView = null;

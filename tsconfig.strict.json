@@ -43,7 +43,10 @@
     "src/overlay/panel/suggestions-render.ts",
     "src/overlay/keyboard.ts",
     "src/overlay/site-fixes.ts",
-    "src/overlay/favicon-view.ts"
+    "src/overlay/favicon-view.ts",
+    "src/overlay/tab-switcher-page-bridge.ts",
+    "src/overlay/tab-switcher-host.ts",
+    "src/overlay/tab-switcher.ts"
   ],
   "exclude": [
     "src/**/react/**"

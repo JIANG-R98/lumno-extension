@@ -4,6 +4,8 @@ import type { AutoPipBlacklist, DocumentPipPickerApi, PageShortcutToastApi } fro
 import type { ShortcutRule } from '../domain/messages';
 import type * as SearchSourceOrder from '../domain/search/search-source-order';
 import type { SuggestionsViewController, SuggestionsViewOptions } from '../shared/react/search/suggestion-list/types';
+import type { TabSwitcherViewController, TabSwitcherViewOptions } from '../shared/react/tab-switcher';
+import type { TabSwitcherReply } from '../overlay/tab-switcher-host';
 
 declare global {
   // The traditional-to-simplified Han table as pairs of characters, set by
@@ -29,5 +31,11 @@ declare global {
   var LumnoOverlaySuggestionsView: {
     createSuggestionsView(options?: SuggestionsViewOptions): SuggestionsViewController;
   } | undefined;
+  var LumnoOverlayTabSwitcherView: {
+    createTabSwitcherView(options?: TabSwitcherViewOptions): TabSwitcherViewController;
+  } | undefined;
+  // Opens the tab switcher with the context the worker sends, read as
+  // untrusted; set by src/overlay/tab-switcher.ts.
+  var _x_extension_toggleTabSwitcher_2026_unique_: ((context: unknown) => TabSwitcherReply) | undefined;
 }
 
