@@ -4,13 +4,8 @@ const settings = require('../../src/domain/settings.ts');
 const shortcutsStore = require('../../src/domain/shortcuts-store.ts');
 const layout = require('../../src/newtab/layout.ts');
 
-// The New Tab's fixed configuration: icon markup, brand names, the width
-// modes and the preferences moved into browser sync.
-
-assert.strictEqual(config.getRiSvg('ri-search-line'),
-  '<i class="ri-icon ri-size-16 ri-search-line" aria-hidden="true"></i>');
-assert.strictEqual(config.getRiSvg('ri-close-line', 'ri-size-12', 'is-muted'),
-  '<i class="ri-icon ri-size-12 is-muted ri-close-line" aria-hidden="true"></i>');
+// The New Tab's fixed configuration: brand names, the width modes and the
+// preferences moved into browser sync.
 
 const translated = [];
 const siteNames = config.createSiteDisplayNameOptions((key, fallback) => {

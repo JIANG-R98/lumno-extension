@@ -140,13 +140,6 @@ const SYNCED_PAGE_STORAGE_KEYS: readonly string[] = Object.freeze([
   LumnoSettings.NEWTAB_SHORTCUT_GAP_STORAGE_KEY
 ]);
 
-// Remix Icon markup; the icon font draws `id`.
-function getRiSvg(id: string, sizeClass?: string, extraClass?: string): string {
-  const size = sizeClass || 'ri-size-16';
-  const extra = extraClass ? ` ${extraClass}` : '';
-  return `<i class="ri-icon ${size}${extra} ${id}" aria-hidden="true"></i>`;
-}
-
 // Sites whose brand reads better under its local name than its host.
 function createSiteDisplayNameOptions(t: Translate): Readonly<SiteDisplayNameOptions> {
   return Object.freeze({
@@ -186,7 +179,6 @@ export {
   SHORTCUT_GROUP_MENU_VALUES,
   SYNCED_PAGE_STORAGE_KEYS,
   WORDMARK_ENTRY_ANIMATION_NAME,
-  createSiteDisplayNameOptions,
-  getRiSvg
+  createSiteDisplayNameOptions
 };
 export type { NewtabWidthModeConfig, SiteDisplayNameOptions };

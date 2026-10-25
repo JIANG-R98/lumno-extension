@@ -123,5 +123,40 @@ function readOverlayTabs(value: unknown): OverlayTab[] {
     : [];
 }
 
-export { readOverlayOpenOptions, readOverlayTabs };
+function isFileOrPdfPath(url: URL): boolean {
+  return url.protocol.toLowerCase() === 'file:' || url.pathname.toLowerCase().endsWith('.pdf');
+}
+
+function mentionsFileOrPdf(text: string): boolean {
+  const lower = text.toLowerCase();
+  return lower.startsWith('file://') || lower.includes('.pdf');
+}
+
+// A local file or a PDF, also one a viewer shows through its src parameter.
+// On these the overlay does not undo the tab's zoom (see lifecycle.ts).
+function isLocalFileLikeUrl(url: string): boolean {
+  if (!url) {
+    return false;
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch (_error) {
+    return mentionsFileOrPdf(url);
+  }
+  if (isFileOrPdfPath(parsed)) {
+    return true;
+  }
+  const srcParam = parsed.searchParams.get('src');
+  if (!srcParam) {
+    return false;
+  }
+  try {
+    return isFileOrPdfPath(new URL(srcParam));
+  } catch (_error) {
+    return mentionsFileOrPdf(srcParam);
+  }
+}
+
+export { isLocalFileLikeUrl, readOverlayOpenOptions, readOverlayTabs };
 export type { OverlayOpenOptions };

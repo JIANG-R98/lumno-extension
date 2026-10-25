@@ -42,6 +42,7 @@ import * as WALLPAPER_WALLPAPER_VISUAL from './runtime/wallpaper-visual';
 import * as WALLPAPER_ADAPTIVE_TONE from './wallpaper-adaptive-tone';
 import * as WALLPAPER_EFFECTS from './wallpaper-effects';
 import * as WALLPAPER_LOCAL_STORE from '../../shared/wallpaper-local-store';
+import { getRiSvg as getDefaultRiSvg } from '../../shared/ui/remix-icon';
 
 const DEFAULT_STORAGE_KEYS = {
   wallpaper: SETTINGS.NEWTAB_WALLPAPER_STORAGE_KEY,
@@ -400,12 +401,7 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
     typeof options.featureHintVisibilityGate.then === 'function'
     ? options.featureHintVisibilityGate
     : null;
-  const getRiSvg = typeof options.getRiSvg === 'function'
-    ? options.getRiSvg
-    : function(id: string, sizeClass?: string) {
-      const size = sizeClass || 'ri-size-16';
-      return '<i class="ri-icon ' + size + ' ' + id + '" aria-hidden="true"></i>';
-    };
+  const getRiSvg = typeof options.getRiSvg === 'function' ? options.getRiSvg : getDefaultRiSvg;
   const showToast: ShowToast = typeof options.showToast === 'function' ? options.showToast : function() {};
   const beginToast = typeof options.beginToast === 'function'
     ? options.beginToast

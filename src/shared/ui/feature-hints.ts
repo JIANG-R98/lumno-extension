@@ -4,6 +4,7 @@
 // (globalThis.LumnoFeatureHintView).
 import '../../domain/navigation-disposition';
 import * as LumnoShortcutDisplay from '../../domain/shortcut-display';
+import { getRiSvg as getDefaultRiSvg } from './remix-icon';
 import type { NavigatorLike } from '../../domain/shortcut-display';
 import type { StorageAreaLike } from '../../domain/storage-port';
 import type { FeatureHintViewController, FeatureHintViewLabels } from '../../types/view-apis';
@@ -301,11 +302,6 @@ function getMessage(t: Translate | null, key: string | undefined, fallback: stri
 
 function formatShortcutText(text: string, shortcut: string, navigatorLike: NavigatorLike | null): string {
   return LumnoShortcutDisplay.formatShortcutTemplate(text, shortcut, { navigatorLike });
-}
-
-function getDefaultRiSvg(id: string, sizeClass: string): string {
-  const size = sizeClass || 'ri-size-16';
-  return '<i class="ri-icon ' + size + ' ' + id + '" aria-hidden="true"></i>';
 }
 
 function getDomIdPart(id: string | undefined): string {

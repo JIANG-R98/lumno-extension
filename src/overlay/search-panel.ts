@@ -15,6 +15,7 @@ import * as SUGGESTION_NAVIGATION from '../shared/search/suggestion-navigation';
 import * as SUGGESTIONS_HEIGHT_LAYOUT from '../shared/search/suggestions-height-layout';
 import * as SETTINGS from '../domain/settings';
 import * as LumnoCursorTooltip from '../shared/ui/cursor-tooltip';
+import { getRiSvg } from '../shared/ui/remix-icon';
 import * as OVERLAY_TOAST from '../shared/ui/toast';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as LumnoOverlayFaviconView from './favicon-view';
@@ -83,7 +84,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const ensureOverlayOpen = openOptions.ensureOpen;
   const initialOverlayOpenStartedAt = openOptions.openedAt;
   const initialLoadingSession = openOptions.loadingSession;
-  const shouldIgnoreTabZoomCompensation = isLocalFileLikeOverlayUrl(openOptions.currentTabUrl);
+  const shouldIgnoreTabZoomCompensation = OVERLAY_CONTEXT.isLocalFileLikeUrl(openOptions.currentTabUrl);
   const storageRuntime = overlayRuntime.getStorageArea(chrome);
   // Web clip needs Document Picture-in-Picture, which Firefox does not ship.
   const documentPipSupported = 'documentPictureInPicture' in window;
@@ -189,8 +190,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   });
 
   overlayState.overlayContextToken = getOrCreateOverlayContextToken();
-  const SEARCH_SOURCE_ORDER_STORAGE_KEY = (SEARCH_SOURCE_ORDER && SEARCH_SOURCE_ORDER.STORAGE_KEY) ||
-    '_x_extension_search_source_order_2026_unique_';
+  const SEARCH_SOURCE_ORDER_STORAGE_KEY = SEARCH_SOURCE_ORDER.STORAGE_KEY;
 
 
   const {
@@ -563,9 +563,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   });
   const SITE_SEARCH_STORAGE_KEY = overlayStorageKeys.siteSearchCustom;
   const SITE_SEARCH_DISABLED_STORAGE_KEY = overlayStorageKeys.siteSearchDisabled;
-  const AGGREGATE_SEARCH_STORAGE_KEY = overlayStorageKeys.aggregateSearches ||
-    AGGREGATE_SEARCH_STORE.STORAGE_KEY ||
-    '_x_extension_aggregate_searches_2026_unique_';
+  const AGGREGATE_SEARCH_STORAGE_KEY = overlayStorageKeys.aggregateSearches;
 
   const faviconDataCache = window._x_extension_overlay_favicon_data_cache_2026_unique_ || new Map();
   const siteSearchIconCacheOptions = SHORTCUT_FAVICON.SITE_SEARCH_CACHE_OPTIONS || {
@@ -663,41 +661,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const overlayFaviconView = LumnoOverlayFaviconView;
   const overlaySiteFixes = LumnoOverlaySiteFixes;
   const addOverlaySessionCleanup = overlayState.overlaySessionCleanups.add;
-  function isLocalFileLikeOverlayUrl(url: string): boolean {
-    if (!url) {
-      return false;
-    }
-    try {
-      const parsed = new URL(url);
-      const protocol = String(parsed.protocol || '').toLowerCase();
-      if (protocol === 'file:') {
-        return true;
-      }
-      const pathname = String(parsed.pathname || '').toLowerCase();
-      const srcParam = parsed.searchParams ? parsed.searchParams.get('src') : '';
-      if (pathname.endsWith('.pdf')) {
-        return true;
-      }
-      if (srcParam) {
-        try {
-          const nested = new URL(srcParam);
-          if (String(nested.protocol || '').toLowerCase() === 'file:') {
-            return true;
-          }
-          if (String(nested.pathname || '').toLowerCase().endsWith('.pdf')) {
-            return true;
-          }
-        } catch (e) {
-          if (String(srcParam).toLowerCase().startsWith('file://') || String(srcParam).toLowerCase().includes('.pdf')) {
-            return true;
-          }
-        }
-      }
-    } catch (e) {
-      return String(url).toLowerCase().startsWith('file://') || String(url).toLowerCase().includes('.pdf');
-    }
-    return false;
-  }
   const overlayFrameTracker = overlayLifecycle.createFrameTracker(window);
 
   const {
@@ -737,39 +700,26 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const LANGUAGE_STORAGE_KEY = overlayStorageKeys.language;
   const DEFAULT_SEARCH_ENGINE_STORAGE_KEY = overlayStorageKeys.defaultSearchEngine;
   const OVERLAY_MODE_MENU_DOUBLE_TAB_DURATION_MS = 700;
-  const SITE_SEARCH_ICON_CACHE_STORAGE_KEY = overlayStorageKeys.siteSearchIconCache ||
-    SHORTCUT_FAVICON.SITE_SEARCH_STORAGE_KEY ||
-    '_x_extension_site_search_icon_cache_canonical_2026_unique_';
+  const SITE_SEARCH_ICON_CACHE_STORAGE_KEY = overlayStorageKeys.siteSearchIconCache;
   const DOCUMENT_PIP_ENABLED_STORAGE_KEY = overlayStorageKeys.documentPipEnabled;
   const SEARCH_RESULT_PRIORITY_STORAGE_KEY = overlayStorageKeys.searchResultPriority;
   const SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY = overlayStorageKeys.searchResultSourceTypes;
-  const SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY = overlayStorageKeys.searchResultDisplayLimit ||
-    '_x_extension_search_result_display_limit_2026_unique_';
+  const SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY = overlayStorageKeys.searchResultDisplayLimit;
   const SEARCH_BLACKLIST_STORAGE_KEY = overlayStorageKeys.searchBlacklist;
   const FAVICON_REQUEST_BLACKLIST_STORAGE_KEY = overlayStorageKeys.faviconRequestBlacklist;
   const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = overlayStorageKeys.faviconEnhancedFetchEnabled;
   const OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY = overlayStorageKeys.overlayOpenTabsDefaultVisible;
   const OVERLAY_SIZE_MODE_STORAGE_KEY = overlayStorageKeys.overlaySizeMode;
   const OVERLAY_WIDTH_STORAGE_KEY = overlayStorageKeys.overlayWidth;
-  const OVERLAY_ENTER_ANIMATION_STORAGE_KEY = overlayStorageKeys.overlayEnterAnimation ||
-    '_x_extension_overlay_enter_animation_2026_unique_';
-  const OVERLAY_FONT_FAMILY_STORAGE_KEY = overlayStorageKeys.overlayFontFamily ||
-    '_x_extension_overlay_font_family_2026_unique_';
-  const OVERLAY_FONT_FALLBACK_STORAGE_KEY = overlayStorageKeys.overlayFontFallback ||
-    '_x_extension_overlay_font_fallback_2026_unique_';
-  const OVERLAY_FONT_FAMILY_CSS_VAR = SETTINGS.OVERLAY_FONT_FAMILY_CSS_VAR || '--lumno-font-sans';
-  const OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY =
-    overlayStorageKeys.overlayPageThemeAdaptationEnabled ||
-    '_x_extension_overlay_page_theme_adaptation_enabled_2026_unique_';
-  const MOTION_EFFECTS_ENABLED_STORAGE_KEY = overlayStorageKeys.motionEffectsEnabled ||
-    '_x_extension_motion_effects_enabled_2026_unique_';
-  const SIMPLE_MODE_ENABLED_STORAGE_KEY = overlayStorageKeys.simpleModeEnabled ||
-    '_x_extension_simple_mode_enabled_2026_unique_';
-  const NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY = overlayStorageKeys.numberShortcutInstantEnabled ||
-    '_x_extension_number_shortcut_instant_enabled_2026_unique_';
-  const MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY =
-    overlayStorageKeys.macosCtrlSuggestionNavigationEnabled ||
-    '_x_extension_macos_ctrl_suggestion_navigation_enabled_2026_unique_';
+  const OVERLAY_ENTER_ANIMATION_STORAGE_KEY = overlayStorageKeys.overlayEnterAnimation;
+  const OVERLAY_FONT_FAMILY_STORAGE_KEY = overlayStorageKeys.overlayFontFamily;
+  const OVERLAY_FONT_FALLBACK_STORAGE_KEY = overlayStorageKeys.overlayFontFallback;
+  const OVERLAY_FONT_FAMILY_CSS_VAR = SETTINGS.OVERLAY_FONT_FAMILY_CSS_VAR;
+  const OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY = overlayStorageKeys.overlayPageThemeAdaptationEnabled;
+  const MOTION_EFFECTS_ENABLED_STORAGE_KEY = overlayStorageKeys.motionEffectsEnabled;
+  const SIMPLE_MODE_ENABLED_STORAGE_KEY = overlayStorageKeys.simpleModeEnabled;
+  const NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY = overlayStorageKeys.numberShortcutInstantEnabled;
+  const MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY = overlayStorageKeys.macosCtrlSuggestionNavigationEnabled;
   const OVERLAY_TAB_PRIORITY_STORAGE_KEY = overlayStorageKeys.overlayTabPriority;
   const TAB_RANK_SCORE_DEBUG_STORAGE_KEY = overlayStorageKeys.tabRankScoreDebug;
   const storageAreaName = storageRuntime.name;
@@ -1055,12 +1005,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     const preset = SETTINGS.getOverlaySizePreset(mode);
     const customWidth = SETTINGS.normalizeOverlayWidth(overlayState.overlayCustomWidth);
     return customWidth ? { ...preset, width: customWidth } : preset;
-  }
-
-  function getRiSvg(id: string, sizeClass?: string, extraClass?: string): string {
-    const size = sizeClass || 'ri-size-16';
-    const extra = extraClass ? ` ${extraClass}` : '';
-    return '<i class="ri-icon ' + size + extra + ' ' + id + '" aria-hidden="true"></i>';
   }
 
   function startOverlayViewportSizeSync(overlayElement: HTMLElement): void {

@@ -191,9 +191,9 @@ import {
   SHORTCUT_GROUP_MENU_VALUES,
   SYNCED_PAGE_STORAGE_KEYS,
   WORDMARK_ENTRY_ANIMATION_NAME,
-  createSiteDisplayNameOptions,
-  getRiSvg
+  createSiteDisplayNameOptions
 } from './newtab-config';
+import { getRiSvg } from '../shared/ui/remix-icon';
 import type { BackgroundAction, BackgroundReply, BackgroundRequest } from '../domain/messages';
 import type { Disposition } from '../domain/navigation-disposition';
 import type { SearchActionModel, SearchActionModelOptions } from '../domain/search/suggestion-action-model';
