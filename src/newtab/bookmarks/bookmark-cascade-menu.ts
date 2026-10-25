@@ -1,5 +1,178 @@
-// @ts-nocheck
 import * as LumnoNewtabDismissStack from '../dismiss-stack';
+import type { DismissStack } from '../dismiss-stack';
+import type { BindCursorTooltip, Translate } from '../newtab-types';
+import type { CascadeItemView, CascadeLevelView, createBookmarkCascadeViewApi } from '../react/bookmark-cascade-view';
+import { isHtmlElement, isHtmlTag, isNode } from '../../shared/dom-guards';
+import { queryHtmlElements } from '../../shared/dom-lookup';
+import type * as MenuSurface from '../../shared/ui/menu-surface';
+import type { TooltipController } from '../../shared/ui/tooltip';
+import type * as CascadePosition from './bookmark-cascade-position';
+import type { Point, PointLike, Rect, RootPlacement, SubmenuPlacement } from './bookmark-cascade-position';
+import type { BookmarkItem } from './bookmarks-store';
+
+// An element the menu opens from. The view that drew it may hook in to
+// show it as active while its menu is open.
+type BookmarkMenuAnchor = HTMLElement & {
+  _xSetBookmarkMenuVisualActive?: (active: boolean, options?: { instant?: boolean }) => void;
+};
+
+// The parts of the window the menu uses; tests pass their own.
+interface CascadeWindow {
+  innerWidth?: number;
+  innerHeight?: number;
+  performance?: { now(): number };
+  setTimeout?(callback: () => void, delay: number): number;
+  clearTimeout?(timerId: number): void;
+  requestAnimationFrame?(callback: () => void): number;
+  matchMedia?(query: string): { matches: boolean };
+  getComputedStyle?(element: Element): { transform: string };
+}
+
+// Pulling the rows on either side of an insertion point apart.
+interface InsertionGapApi {
+  getInsertionGapNeighbors(
+    items: Element[],
+    anchor: Element | null,
+    markerPosition: string
+  ): { before: Element | null; after: Element | null };
+  setInsertionGap(owner: object, before: Element | null, after: Element | null): void;
+}
+
+interface CascadeItemEventDetail {
+  event: Event;
+  item: BookmarkItem;
+  element: HTMLButtonElement;
+  parentFolderId: string;
+}
+
+interface CascadeOpenUrlOptions {
+  openInBackgroundTab: boolean;
+  anchor: BookmarkMenuAnchor | null;
+}
+
+interface FaviconFallbackOptions {
+  primaryUrl: string;
+  browserUrl: string;
+}
+
+interface BookmarkCascadeMenuOptions {
+  documentObj?: Document | null;
+  windowObj?: CascadeWindow | null;
+  dismissStack?: DismissStack | null;
+  positionUtils?: Partial<typeof CascadePosition>;
+  crossSurfaceDrag?: InsertionGapApi | null;
+  menuSurface?: Partial<Pick<typeof MenuSurface, 'applyContentWidth' | 'open' | 'close'>> | null;
+  view?: ReturnType<typeof createBookmarkCascadeViewApi> | null;
+  t?: Translate;
+  sanitizeDisplayText?(value: unknown): string;
+  getHostFromUrl?(url: string): string;
+  getSiteDisplayName?(host: string, title: string): string;
+  getUrlDisplay?(url: string): string;
+  getRiSvg?(icon: string, className: string): string;
+  getFigmaFolderSvg?(suffix: string, folderId?: string): string;
+  initFolderPathMorph?(icon: Element): void;
+  playFolderPathMorph?(icon: Element, toHover: boolean): void;
+  attachFaviconWithFallbacks?(image: HTMLImageElement, url: string, host: string, options: FaviconFallbackOptions): void;
+  // An icon chosen for the site, or ''.
+  getItemIconUrl?(item: BookmarkItem, anchor: BookmarkMenuAnchor | null): string;
+  isLocalNetworkHost?(host: string): boolean;
+  getChromeFaviconUrl?(url: string): string;
+  getBrowserPageFaviconUrl?(url: string): string;
+  ensureReady?(forceReload: boolean): Promise<boolean>;
+  getItems?(folderId: string): readonly BookmarkItem[];
+  navigateToUrl?(url: string): void;
+  openUrl?(url: string, options: CascadeOpenUrlOptions): void;
+  bindCursorTooltip?: BindCursorTooltip;
+  hideCursorTooltip?(): void;
+  hideTopActionTooltip?(): void;
+  copyTooltipController?: Pick<TooltipController, 'show' | 'hide'> | null;
+  copyUrl?(url: string): unknown;
+  shouldSuppressHover?(target: Element, event: Event | PointLike | null): boolean;
+  onItemPointerDown?(detail: CascadeItemEventDetail): void;
+  onItemContextMenu?(detail: CascadeItemEventDetail & { sourceKind: 'cascade' }): void;
+  // True right after a press on an open context menu, so it does not open
+  // the item underneath.
+  isActivationSuppressed?(): boolean;
+  shouldKeepOpenForExternalNode?(node: EventTarget | null): boolean;
+  getViewportTopPadding?(): number;
+}
+
+interface CascadeLevelEntry {
+  folderId: string;
+  folderTitle: string;
+  levelIndex: number;
+  levelElement: HTMLElement;
+  // The anchor for the root level; the folder row for a submenu.
+  triggerElement: HTMLElement | null;
+  parentLevelElement: HTMLElement | null;
+  viewController: CascadeLevelView;
+  activeButton?: HTMLElement | null;
+  placement?: RootPlacement | SubmenuPlacement;
+}
+
+interface HoverIntentTask {
+  levelIndex: number;
+  triggerElement: HTMLElement;
+  allowWhenSuppressed?: boolean;
+  run: () => void;
+  // Until then the pointer may still be on its way to an open submenu.
+  safeUntil?: number;
+}
+
+// A pointer position and how it was given, for hover intent.
+type HoverPointer = PointLike & { pointerType?: string };
+
+interface CascadeItemAction {
+  item: BookmarkItem;
+  isFolder: boolean;
+  openNestedLevel(options?: { focusChild?: boolean }): void;
+  activateLeafItem(): void;
+  navigateLeafItem(event: Event): void;
+}
+
+type CascadeMarkerPosition = 'before' | 'after';
+
+interface CascadeRefreshOptions {
+  // The row that was dragged slides from where it was dropped.
+  draggedBookmarkId?: string;
+  draggedRect?: Rect | null;
+}
+
+type CascadeDropMatch =
+  | {
+    kind: 'insertion';
+    entry: CascadeLevelEntry;
+    // The row the marker sits by; none in an empty level.
+    button?: HTMLElement;
+    folderId: string;
+    index: number;
+    element: HTMLElement | null;
+    markerElement: HTMLElement | null;
+    markerPosition: CascadeMarkerPosition;
+  }
+  | {
+    kind: 'cascade';
+    entry: CascadeLevelEntry;
+    button: HTMLElement;
+    folderId: string;
+    title: string;
+    element: HTMLElement;
+  };
+
+// Where a drag over the menu would drop: into a folder row, or between
+// two rows; 'blocked' over the menu where nothing takes the drop.
+type CascadeDragTarget =
+  | {
+    kind: 'insertion' | 'cascade';
+    surface: 'cascade';
+    folderId: string;
+    title: string;
+    index?: number;
+    element: HTMLElement | null;
+    markerElement: HTMLElement | null;
+    markerPosition: CascadeMarkerPosition | '';
+  }
+  | { kind: 'blocked'; surface: 'cascade' };
 
 const BOOKMARK_CASCADE_MENU_MIN_WIDTH_PX = 210;
 const BOOKMARK_CASCADE_MENU_MAX_WIDTH_PX = 260;
@@ -15,126 +188,92 @@ const BOOKMARK_CASCADE_FOLDER_DROP_MAX_RATIO = 0.62;
 const BOOKMARK_CASCADE_REORDER_ANIMATION_MS = 180;
 const BOOKMARK_CASCADE_REORDER_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
-function noop() {}
+function noop(): void {}
 
 const DISMISS_LAYER_KEY = 'bookmark-cascade-menu';
 
 // The page passes its shared dismiss stack; on its own (tests) the menu
 // keeps a stack of one for its document.
-function createOwnDismissStack(documentObj) {
-  const dismissApi = LumnoNewtabDismissStack;
-  return dismissApi && documentObj ? dismissApi.createDismissStack({ documentObj }) : null;
+function createOwnDismissStack(documentObj: Document | null): DismissStack | null {
+  return documentObj ? LumnoNewtabDismissStack.createDismissStack({ documentObj }) : null;
 }
 
-function getOption(options, key, fallback) {
-  if (options && Object.prototype.hasOwnProperty.call(options, key)) {
-    return options[key];
-  }
-  return fallback;
-}
-
-function getFunction(options, key, fallback) {
-  const value = getOption(options, key, fallback || noop);
-  return typeof value === 'function' ? value : (fallback || noop);
-}
-
-function createBookmarkCascadeMenuRuntime(options) {
+function createBookmarkCascadeMenuRuntime(options?: BookmarkCascadeMenuOptions) {
   const config = options || {};
-  const documentObj = getOption(config, 'documentObj', typeof document !== 'undefined' ? document : null);
-  const windowObj = getOption(config, 'windowObj', typeof window !== 'undefined' ? window : null);
-  const dismissStack = getOption(config, 'dismissStack', null) || createOwnDismissStack(documentObj);
-  const positionUtils = getOption(config, 'positionUtils', {});
-  const crossSurfaceDrag = getOption(config, 'crossSurfaceDrag', null);
+  // An option given as null stays null; one left out takes the default.
+  const documentObj = Object.hasOwn(config, 'documentObj')
+    ? config.documentObj || null
+    : (typeof document !== 'undefined' ? document : null);
+  const windowObj: CascadeWindow | null = Object.hasOwn(config, 'windowObj')
+    ? config.windowObj || null
+    : (typeof window !== 'undefined' ? window : null);
+  const dismissStack = config.dismissStack || createOwnDismissStack(documentObj);
+  const positionUtils = config.positionUtils || {};
+  const crossSurfaceDrag = config.crossSurfaceDrag || null;
   const insertionGapOwner = {};
-  const menuSurface = getOption(config, 'menuSurface', null);
-  const view = getOption(config, 'view', null);
-  const t = getFunction(config, 't', function(_key, fallback) {
-    return fallback || '';
-  });
-  const sanitizeDisplayText = getFunction(config, 'sanitizeDisplayText', function(value) {
-    return String(value || '');
-  });
-  const getHostFromUrl = getFunction(config, 'getHostFromUrl', function() {
-    return '';
-  });
-  const getSiteDisplayName = getFunction(config, 'getSiteDisplayName', function(_host, title) {
-    return title || '';
-  });
-  const getUrlDisplay = getFunction(config, 'getUrlDisplay', function(url) {
-    return url || '';
-  });
-  const getRiSvg = getFunction(config, 'getRiSvg', function() {
-    return '';
-  });
-  const getFigmaFolderSvg = getFunction(config, 'getFigmaFolderSvg', function() {
-    return '';
-  });
-  const initFolderPathMorph = getFunction(config, 'initFolderPathMorph');
-  const playFolderPathMorph = getFunction(config, 'playFolderPathMorph');
-  const attachFaviconWithFallbacks = getFunction(config, 'attachFaviconWithFallbacks');
-  const getItemIconUrl = getFunction(config, 'getItemIconUrl', function() {
-    return '';
-  });
-  const isLocalNetworkHost = getFunction(config, 'isLocalNetworkHost', function() {
-    return false;
-  });
-  const getChromeFaviconUrl = getFunction(config, 'getChromeFaviconUrl', function() {
-    return '';
-  });
-  const getBrowserPageFaviconUrl = getFunction(config, 'getBrowserPageFaviconUrl', function() {
-    return '';
-  });
-  const ensureReady = getFunction(config, 'ensureReady', function() {
-    return Promise.resolve(false);
-  });
-  const getItems = getFunction(config, 'getItems', function() {
-    return [];
-  });
-  const navigateToUrl = getFunction(config, 'navigateToUrl');
-  const openUrl = getFunction(config, 'openUrl', function(url) {
-    navigateToUrl(url);
-  });
-  const bindCursorTooltip = getFunction(config, 'bindCursorTooltip');
-  const hideCursorTooltip = getFunction(config, 'hideCursorTooltip');
-  const hideTopActionTooltip = getFunction(config, 'hideTopActionTooltip');
-  const copyTooltipController = getOption(config, 'copyTooltipController', null);
-  const copyUrl = getFunction(config, 'copyUrl', function() {
-    return Promise.resolve(false);
-  });
-  const shouldSuppressHover = getFunction(config, 'shouldSuppressHover', function() {
-    return false;
-  });
-  const onItemPointerDown = getFunction(config, 'onItemPointerDown');
-  const onItemContextMenu = getFunction(config, 'onItemContextMenu');
-  // True right after a press on an open context menu, so it does not open
-  // the item underneath.
-  const isActivationSuppressed = getFunction(config, 'isActivationSuppressed', function() {
-    return false;
-  });
-  const shouldKeepOpenForExternalNode = getFunction(config, 'shouldKeepOpenForExternalNode', function() {
-    return false;
-  });
-  const getViewportTopPadding = getFunction(config, 'getViewportTopPadding', function() {
-    return 8;
-  });
+  const menuSurface = config.menuSurface || null;
+  const view = config.view || null;
+  const t: Translate = config.t || ((_key, fallback) => fallback || '');
+  const sanitizeDisplayText = config.sanitizeDisplayText || ((value: unknown) => String(value || ''));
+  const getHostFromUrl = config.getHostFromUrl || (() => '');
+  const getSiteDisplayName = config.getSiteDisplayName || ((_host: string, title: string) => title || '');
+  const getUrlDisplay = config.getUrlDisplay || ((url: string) => url || '');
+  const getRiSvg = config.getRiSvg || (() => '');
+  const getFigmaFolderSvg = config.getFigmaFolderSvg || (() => '');
+  const initFolderPathMorph = config.initFolderPathMorph || noop;
+  const playFolderPathMorph = config.playFolderPathMorph || noop;
+  const attachFaviconWithFallbacks = config.attachFaviconWithFallbacks || noop;
+  const getItemIconUrl = config.getItemIconUrl || (() => '');
+  const isLocalNetworkHost = config.isLocalNetworkHost || (() => false);
+  const getChromeFaviconUrl = config.getChromeFaviconUrl || (() => '');
+  const getBrowserPageFaviconUrl = config.getBrowserPageFaviconUrl || (() => '');
+  const ensureReady = config.ensureReady || (() => Promise.resolve(false));
+  const getItems = config.getItems || (() => []);
+  const navigateToUrl = config.navigateToUrl || noop;
+  const openUrl = config.openUrl || ((url: string) => navigateToUrl(url));
+  const bindCursorTooltip: BindCursorTooltip = config.bindCursorTooltip || (() => null);
+  const hideCursorTooltip = config.hideCursorTooltip || noop;
+  const hideTopActionTooltip = config.hideTopActionTooltip || noop;
+  const copyTooltipController = config.copyTooltipController || null;
+  const copyUrl = config.copyUrl || (() => Promise.resolve(false));
+  const shouldSuppressHover = config.shouldSuppressHover || (() => false);
+  const onItemPointerDown = config.onItemPointerDown || noop;
+  const onItemContextMenu = config.onItemContextMenu || noop;
+  const isActivationSuppressed = config.isActivationSuppressed || (() => false);
+  const shouldKeepOpenForExternalNode = config.shouldKeepOpenForExternalNode || (() => false);
+  const getViewportTopPadding = config.getViewportTopPadding || (() => 8);
 
-  let bookmarkCascadeMenu = null;
-  let bookmarkCascadeAnchor = null;
-  let bookmarkCascadeOpenRequest = null;
-  let bookmarkCascadeLevels = [];
-  let bookmarkCascadePointer = null;
-  let bookmarkCascadePreviousPointer = null;
+  let bookmarkCascadeMenu: HTMLElement | null = null;
+  let bookmarkCascadeAnchor: BookmarkMenuAnchor | null = null;
+  let bookmarkCascadeOpenRequest: { folderId: string; anchorElement: BookmarkMenuAnchor; dragMode: boolean } | null = null;
+  let bookmarkCascadeLevels: CascadeLevelEntry[] = [];
+  let bookmarkCascadePointer: Point | null = null;
+  let bookmarkCascadePreviousPointer: Point | null = null;
   let bookmarkCascadeHoverIntentTimer = 0;
-  let bookmarkCascadeHoverIntentTask = null;
+  let bookmarkCascadeHoverIntentTask: HoverIntentTask | null = null;
   let bookmarkCascadeCloseTimer = 0;
   let bookmarkCascadeKeyboardLevelIndex = 0;
   let bookmarkCascadeDragMode = false;
   let bookmarkCascadeRefreshInProgress = false;
-  let bookmarkCascadeDragTargetButton = null;
-  let bookmarkCascadeDragInsertionElement = null;
-  const bookmarkCascadeItemActions = new WeakMap();
+  let bookmarkCascadeDragTargetButton: HTMLElement | null = null;
+  let bookmarkCascadeDragInsertionElement: HTMLElement | null = null;
+  const bookmarkCascadeItemActions = new WeakMap<Element, CascadeItemAction>();
+  // The timer that ends each row's reorder animation.
+  const rowLayoutAnimationTimers = new WeakMap<HTMLElement, number>();
 
-  function setBookmarkCascadeDragMode(enabled) {
+  function setAnchorVisualActive(anchor: BookmarkMenuAnchor | null, active: boolean, visualOptions?: { instant?: boolean }): void {
+    if (anchor && typeof anchor._xSetBookmarkMenuVisualActive === 'function') {
+      anchor._xSetBookmarkMenuVisualActive(active, visualOptions);
+    }
+  }
+
+  // A cascade row's wrapper around its button.
+  function getRow(button: Element): HTMLElement | null {
+    const row = button.closest('.x-nt-bookmark-cascade-row');
+    return isHtmlElement(row) ? row : null;
+  }
+
+  function setBookmarkCascadeDragMode(enabled: boolean): boolean {
     bookmarkCascadeDragMode = enabled === true;
     if (bookmarkCascadeMenu) {
       if (bookmarkCascadeDragMode) {
@@ -151,13 +290,13 @@ function createBookmarkCascadeMenuRuntime(options) {
     return bookmarkCascadeDragMode;
   }
 
-  function getNow() {
+  function getNow(): number {
     return windowObj && windowObj.performance && typeof windowObj.performance.now === 'function'
       ? windowObj.performance.now()
       : Date.now();
   }
 
-  function requestFrame(callback) {
+  function requestFrame(callback: () => void): number {
     if (windowObj && typeof windowObj.requestAnimationFrame === 'function') {
       return windowObj.requestAnimationFrame(callback);
     }
@@ -167,19 +306,19 @@ function createBookmarkCascadeMenuRuntime(options) {
     return 0;
   }
 
-  function setTimer(callback, delay) {
+  function setTimer(callback: () => void, delay: number): number {
     return windowObj && typeof windowObj.setTimeout === 'function'
       ? windowObj.setTimeout(callback, delay)
       : 0;
   }
 
-  function clearTimer(timerId) {
+  function clearTimer(timerId: number): void {
     if (timerId && windowObj && typeof windowObj.clearTimeout === 'function') {
       windowObj.clearTimeout(timerId);
     }
   }
 
-  function getBookmarkCascadePointFromEvent(event) {
+  function getBookmarkCascadePointFromEvent(event: PointLike | null | undefined): Point | null {
     if (!event) {
       return null;
     }
@@ -191,7 +330,7 @@ function createBookmarkCascadeMenuRuntime(options) {
     return { x, y };
   }
 
-  function updateBookmarkCascadePointer(event) {
+  function updateBookmarkCascadePointer(event: PointLike | null | undefined): Point | null {
     const point = getBookmarkCascadePointFromEvent(event);
     if (!point) {
       return bookmarkCascadePointer;
@@ -205,11 +344,14 @@ function createBookmarkCascadeMenuRuntime(options) {
     return bookmarkCascadePointer;
   }
 
-  function isBookmarkCascadeHoverSuppressed(target, event) {
+  function isBookmarkCascadeHoverSuppressed(target: Element, event: Event | PointLike | null): boolean {
     return shouldSuppressHover(target, event) === true;
   }
 
-  function isPointInsideRect(point, rect) {
+  function isPointInsideRect(
+    point: Point | null,
+    rect: Pick<Rect, 'left' | 'right' | 'top' | 'bottom'> | null
+  ): boolean {
     return Boolean(
       point &&
       rect &&
@@ -220,23 +362,23 @@ function createBookmarkCascadeMenuRuntime(options) {
     );
   }
 
-  function getBookmarkCascadeLevelEntry(levelIndex) {
-    const safeLevelIndex = Math.max(0, Number.parseInt(levelIndex, 10) || 0);
+  function getBookmarkCascadeLevelEntry(levelIndex: number): CascadeLevelEntry | null {
+    const safeLevelIndex = Math.max(0, Math.floor(levelIndex) || 0);
     return bookmarkCascadeLevels.find((entry) => entry && entry.levelIndex === safeLevelIndex) || null;
   }
 
-  function getBookmarkCascadeLevelEntryByElement(levelElement) {
+  function getBookmarkCascadeLevelEntryByElement(levelElement: Element | null): CascadeLevelEntry | null {
     if (!levelElement) {
       return null;
     }
     return bookmarkCascadeLevels.find((entry) => entry && entry.levelElement === levelElement) || null;
   }
 
-  function getBookmarkCascadeSubmenuSide(entry, childRect) {
+  function getBookmarkCascadeSubmenuSide(entry: CascadeLevelEntry | null, childRect: Rect | null): 'left' | 'right' {
     if (!entry) {
       return 'right';
     }
-    if (entry.placement && entry.placement.side) {
+    if (entry.placement && 'side' in entry.placement) {
       return entry.placement.side === 'left' ? 'left' : 'right';
     }
     const attrSide = entry.levelElement ? entry.levelElement.getAttribute('data-side') : '';
@@ -251,12 +393,12 @@ function createBookmarkCascadeMenuRuntime(options) {
     return 'right';
   }
 
-  function buildBookmarkCascadeSafeTriangleForLevel(levelIndex, pointer) {
+  function buildBookmarkCascadeSafeTriangleForLevel(levelIndex: number, pointer: Point | null): Point[] | null {
     if (typeof positionUtils.buildCascadeSafeTriangle !== 'function') {
       return null;
     }
     const parentEntry = getBookmarkCascadeLevelEntry(levelIndex);
-    const childEntry = getBookmarkCascadeLevelEntry(Number(levelIndex) + 1);
+    const childEntry = getBookmarkCascadeLevelEntry(levelIndex + 1);
     if (!parentEntry || !parentEntry.activeButton || !childEntry || !childEntry.levelElement) {
       return null;
     }
@@ -271,7 +413,7 @@ function createBookmarkCascadeMenuRuntime(options) {
     });
   }
 
-  function isBookmarkCascadePointNearSubmenuEdge(point, parentRect, side) {
+  function isBookmarkCascadePointNearSubmenuEdge(point: Point | null, parentRect: Rect | null, side: 'left' | 'right'): boolean {
     if (!point || !parentRect || parentRect.width <= 0) {
       return false;
     }
@@ -284,7 +426,8 @@ function createBookmarkCascadeMenuRuntime(options) {
       : point.x >= parentRect.right - edgeZone;
   }
 
-  function shouldProtectBookmarkCascadeLevel(levelIndex, point) {
+  // Whether the pointer may be on its way into the level's open submenu.
+  function shouldProtectBookmarkCascadeLevel(levelIndex: number, point?: Point | null): boolean {
     if (typeof positionUtils.isPointInsideCascadeSafeTriangle !== 'function') {
       return false;
     }
@@ -293,7 +436,7 @@ function createBookmarkCascadeMenuRuntime(options) {
       return false;
     }
     const parentEntry = getBookmarkCascadeLevelEntry(levelIndex);
-    const childEntry = getBookmarkCascadeLevelEntry(Number(levelIndex) + 1);
+    const childEntry = getBookmarkCascadeLevelEntry(levelIndex + 1);
     if (!parentEntry || !parentEntry.activeButton || !childEntry || !childEntry.levelElement) {
       return false;
     }
@@ -313,15 +456,15 @@ function createBookmarkCascadeMenuRuntime(options) {
     return positionUtils.isPointInsideCascadeSafeTriangle(currentPoint, triangle);
   }
 
-  function getBookmarkCascadeViewport() {
-    const docElement = documentObj ? (documentObj.documentElement || {}) : {};
+  function getBookmarkCascadeViewport(): { width: number; height: number } {
+    const docElement = documentObj ? documentObj.documentElement : null;
     return {
-      width: (windowObj && windowObj.innerWidth) || docElement.clientWidth || 0,
-      height: (windowObj && windowObj.innerHeight) || docElement.clientHeight || 0
+      width: (windowObj && windowObj.innerWidth) || (docElement && docElement.clientWidth) || 0,
+      height: (windowObj && windowObj.innerHeight) || (docElement && docElement.clientHeight) || 0
     };
   }
 
-  function cancelBookmarkCascadeHoverIntent() {
+  function cancelBookmarkCascadeHoverIntent(): void {
     if (bookmarkCascadeHoverIntentTimer) {
       clearTimer(bookmarkCascadeHoverIntentTimer);
       bookmarkCascadeHoverIntentTimer = 0;
@@ -332,14 +475,14 @@ function createBookmarkCascadeMenuRuntime(options) {
     bookmarkCascadeHoverIntentTask = null;
   }
 
-  function cancelBookmarkCascadeHoverIntentFor(triggerElement) {
+  function cancelBookmarkCascadeHoverIntentFor(triggerElement: HTMLElement): void {
     if (bookmarkCascadeHoverIntentTask &&
         bookmarkCascadeHoverIntentTask.triggerElement === triggerElement) {
       cancelBookmarkCascadeHoverIntent();
     }
   }
 
-  function runBookmarkCascadeHoverIntentTask() {
+  function runBookmarkCascadeHoverIntentTask(): void {
     const task = bookmarkCascadeHoverIntentTask;
     bookmarkCascadeHoverIntentTimer = 0;
     if (!task || !bookmarkCascadeMenu || !task.triggerElement || !task.triggerElement.isConnected) {
@@ -353,11 +496,10 @@ function createBookmarkCascadeMenuRuntime(options) {
     }
     const point = bookmarkCascadePointer;
     const triggerRect = getBookmarkCascadeElementRect(task.triggerElement);
-    const triggerHovered = typeof task.triggerElement.matches === 'function' &&
-      task.triggerElement.matches(':hover');
+    const triggerHovered = task.triggerElement.matches(':hover');
     const pointInsideTrigger = point && triggerRect && isPointInsideRect(point, triggerRect);
     const now = getNow();
-    const safeRemaining = Number.isFinite(task.safeUntil) ? task.safeUntil - now : 0;
+    const safeRemaining = task.safeUntil !== undefined && Number.isFinite(task.safeUntil) ? task.safeUntil - now : 0;
     if (shouldProtectBookmarkCascadeLevel(task.levelIndex, point) && safeRemaining > 0) {
       const recheckDelay = Math.max(16, Math.min(BOOKMARK_CASCADE_SAFE_RECHECK_MS, safeRemaining));
       bookmarkCascadeHoverIntentTimer = setTimer(
@@ -375,10 +517,7 @@ function createBookmarkCascadeMenuRuntime(options) {
     run();
   }
 
-  function scheduleBookmarkCascadeHoverIntent(task, event) {
-    if (!task || typeof task.run !== 'function') {
-      return;
-    }
+  function scheduleBookmarkCascadeHoverIntent(task: HoverIntentTask, event: PointerEvent | HoverPointer | null): void {
     if (!task.allowWhenSuppressed && isBookmarkCascadeHoverSuppressed(task.triggerElement, event)) {
       cancelBookmarkCascadeHoverIntent();
       setBookmarkCascadeItemHoverSuppressed(task.triggerElement, true);
@@ -396,20 +535,19 @@ function createBookmarkCascadeMenuRuntime(options) {
     const scheduledAt = getNow();
     bookmarkCascadeHoverIntentTask = {
       ...task,
-      type: 'hover',
       safeUntil: scheduledAt + BOOKMARK_CASCADE_SAFE_MAX_MS
     };
     bookmarkCascadeHoverIntentTimer = setTimer(runBookmarkCascadeHoverIntentTask, delayMs);
   }
 
-  function cancelBookmarkCascadeDelayedClose() {
+  function cancelBookmarkCascadeDelayedClose(): void {
     if (bookmarkCascadeCloseTimer) {
       clearTimer(bookmarkCascadeCloseTimer);
       bookmarkCascadeCloseTimer = 0;
     }
   }
 
-  function scheduleBookmarkCascadeDelayedClose() {
+  function scheduleBookmarkCascadeDelayedClose(): void {
     if (!bookmarkCascadeMenu || bookmarkCascadeDragMode || bookmarkCascadeCloseTimer) {
       return;
     }
@@ -419,7 +557,7 @@ function createBookmarkCascadeMenuRuntime(options) {
     }, BOOKMARK_CASCADE_CLOSE_DELAY_MS);
   }
 
-  function isBookmarkCascadePointInsideInteractiveArea(point) {
+  function isBookmarkCascadePointInsideInteractiveArea(point: Point | null): boolean {
     if (!point || !bookmarkCascadeMenu) {
       return false;
     }
@@ -455,7 +593,7 @@ function createBookmarkCascadeMenuRuntime(options) {
     return false;
   }
 
-  function handleBookmarkCascadeDocumentPointerMove(event) {
+  function handleBookmarkCascadeDocumentPointerMove(event: PointerEvent): void {
     if (!bookmarkCascadeMenu) {
       return;
     }
@@ -467,18 +605,16 @@ function createBookmarkCascadeMenuRuntime(options) {
     scheduleBookmarkCascadeDelayedClose();
   }
 
-  function cancelBookmarkCascadeOpenRequest() {
+  function cancelBookmarkCascadeOpenRequest(): void {
     const pendingAnchor = bookmarkCascadeOpenRequest && bookmarkCascadeOpenRequest.anchorElement;
     bookmarkCascadeOpenRequest = null;
     if (pendingAnchor && pendingAnchor !== bookmarkCascadeAnchor) {
       pendingAnchor.setAttribute('aria-expanded', 'false');
-      if (typeof pendingAnchor._xSetBookmarkMenuVisualActive === 'function') {
-        pendingAnchor._xSetBookmarkMenuVisualActive(false);
-      }
+      setAnchorVisualActive(pendingAnchor, false);
     }
   }
 
-  function prefersReducedMotion() {
+  function prefersReducedMotion(): boolean {
     return Boolean(windowObj && typeof windowObj.matchMedia === 'function' &&
       windowObj.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
@@ -487,14 +623,14 @@ function createBookmarkCascadeMenuRuntime(options) {
   // while the shortcuts settle around the site that left or joined it. It
   // takes no pointer and is no longer the open menu while it fades.
   const BOOKMARK_CASCADE_CLOSE_MS = 220;
-  function foldBookmarkCascadeMenuAway(menu) {
+  function foldBookmarkCascadeMenuAway(menu: HTMLElement): void {
     menu.setAttribute('data-closing', 'true');
     menu.setAttribute('aria-hidden', 'true');
     // A drag-mode or refreshing menu holds its levels still; this one moves.
     menu.removeAttribute('data-drag-mode');
     menu.removeAttribute('data-refreshing');
     menu.style.pointerEvents = 'none';
-    Array.from(menu.querySelectorAll('[data-open="true"]')).forEach((level) => {
+    queryHtmlElements(menu, '[data-open="true"]').forEach((level) => {
       if (menuSurface && typeof menuSurface.close === 'function') {
         menuSurface.close(level);
       } else {
@@ -511,14 +647,15 @@ function createBookmarkCascadeMenuRuntime(options) {
     }
   }
 
-  function close(closeOptions) {
+  // `{ animate: true }` folds the menu away rather than removing it at once.
+  function close(closeOptions?: { animate?: boolean; restoreFocus?: boolean }): void {
     const optionsForClose = closeOptions || {};
     cancelBookmarkCascadeOpenRequest();
     cancelBookmarkCascadeHoverIntent();
     cancelBookmarkCascadeDelayedClose();
     hideCursorTooltip();
     hideTopActionTooltip();
-    if (copyTooltipController && typeof copyTooltipController.hide === 'function') {
+    if (copyTooltipController) {
       copyTooltipController.hide();
     }
     bookmarkCascadeKeyboardLevelIndex = 0;
@@ -527,9 +664,7 @@ function createBookmarkCascadeMenuRuntime(options) {
     bookmarkCascadeDragMode = false;
     if (anchorToRestore) {
       anchorToRestore.setAttribute('aria-expanded', 'false');
-      if (typeof anchorToRestore._xSetBookmarkMenuVisualActive === 'function') {
-        anchorToRestore._xSetBookmarkMenuVisualActive(false);
-      }
+      setAnchorVisualActive(anchorToRestore, false);
     }
     bookmarkCascadeAnchor = null;
     bookmarkCascadeLevels = [];
@@ -545,7 +680,7 @@ function createBookmarkCascadeMenuRuntime(options) {
     setDocumentListenersAttached(false);
     bookmarkCascadePointer = null;
     bookmarkCascadePreviousPointer = null;
-    if (optionsForClose.restoreFocus && anchorToRestore && typeof anchorToRestore.focus === 'function') {
+    if (optionsForClose.restoreFocus && anchorToRestore) {
       try {
         anchorToRestore.focus({ preventScroll: true });
       } catch (error) {
@@ -554,14 +689,17 @@ function createBookmarkCascadeMenuRuntime(options) {
     }
   }
 
-  function getBookmarkCascadeElementRect(element, rectOptions) {
-    if (!element || typeof element.getBoundingClientRect !== 'function') {
+  function getBookmarkCascadeElementRect(
+    element: HTMLElement | null,
+    rectOptions?: { ignoreElementTranslate?: boolean }
+  ): Rect | null {
+    if (!element) {
       return null;
     }
     const rect = element.getBoundingClientRect();
     const width = element.offsetWidth || rect.width || 0;
     const height = element.offsetHeight || rect.height || 0;
-    const normalizeMeasuredRect = (sourceRect) => ({
+    const normalizeMeasuredRect = (sourceRect: Pick<Rect, 'left' | 'top'>): Rect => ({
       left: sourceRect.left,
       right: sourceRect.left + width,
       top: sourceRect.top,
@@ -583,7 +721,7 @@ function createBookmarkCascadeMenuRuntime(options) {
     return normalizeMeasuredRect(rect);
   }
 
-  function applyBookmarkCascadeLevelSurface(levelElement) {
+  function applyBookmarkCascadeLevelSurface(levelElement: HTMLElement): void {
     if (!levelElement) {
       return;
     }
@@ -600,14 +738,9 @@ function createBookmarkCascadeMenuRuntime(options) {
     levelElement.style.setProperty('--x-extension-menu-surface-max-width', `${BOOKMARK_CASCADE_MENU_MAX_WIDTH_PX}px`);
   }
 
-  function lockBookmarkCascadeLevelWidth(levelElement) {
-    if (!levelElement || !levelElement.style || typeof levelElement.style.setProperty !== 'function') {
-      return 0;
-    }
-    const rect = typeof levelElement.getBoundingClientRect === 'function'
-      ? levelElement.getBoundingClientRect()
-      : null;
-    const measuredWidth = Number(levelElement.offsetWidth) || Number(rect && rect.width) || 0;
+  function lockBookmarkCascadeLevelWidth(levelElement: HTMLElement): number {
+    const rect = levelElement.getBoundingClientRect();
+    const measuredWidth = Number(levelElement.offsetWidth) || Number(rect.width) || 0;
     if (!Number.isFinite(measuredWidth) || measuredWidth <= 0) {
       return 0;
     }
@@ -616,7 +749,7 @@ function createBookmarkCascadeMenuRuntime(options) {
     return lockedWidth;
   }
 
-  function openBookmarkCascadeLevelSurface(levelElement) {
+  function openBookmarkCascadeLevelSurface(levelElement: HTMLElement): void {
     if (!levelElement) {
       return;
     }
@@ -631,24 +764,18 @@ function createBookmarkCascadeMenuRuntime(options) {
     levelElement.setAttribute('data-open', 'true');
   }
 
-  function applyBookmarkCascadePlacement(levelElement, placement) {
-    if (!levelElement || !placement) {
-      return;
-    }
+  function applyBookmarkCascadePlacement(levelElement: HTMLElement, placement: RootPlacement | SubmenuPlacement): void {
     levelElement.style.setProperty('left', `${Math.round(placement.left)}px`);
     levelElement.style.setProperty('top', `${Math.round(placement.top)}px`);
-    if (placement.side) {
+    if ('side' in placement) {
       levelElement.setAttribute('data-side', placement.side);
-    }
-    if (placement.horizontal) {
+    } else {
       levelElement.setAttribute('data-horizontal', placement.horizontal);
-    }
-    if (placement.vertical) {
       levelElement.setAttribute('data-vertical', placement.vertical);
     }
   }
 
-  function positionBookmarkCascadeLevel(entry) {
+  function positionBookmarkCascadeLevel(entry: CascadeLevelEntry): void {
     if (!entry || !entry.levelElement || !bookmarkCascadeMenu) {
       return;
     }
@@ -695,7 +822,7 @@ function createBookmarkCascadeMenuRuntime(options) {
     applyBookmarkCascadePlacement(entry.levelElement, placement);
   }
 
-  function positionBookmarkCascadeLevels() {
+  function positionBookmarkCascadeLevels(): void {
     if (!bookmarkCascadeMenu || bookmarkCascadeLevels.length === 0) {
       return;
     }
@@ -704,29 +831,27 @@ function createBookmarkCascadeMenuRuntime(options) {
     });
   }
 
-  function getBookmarkCascadeItems(folderId) {
+  function getBookmarkCascadeItems(folderId: unknown): readonly BookmarkItem[] {
     const id = String(folderId || '');
     const items = id ? getItems(id) : [];
     return Array.isArray(items) ? items : [];
   }
 
-  function clearBookmarkCascadeLevelsFrom(levelIndex) {
+  function clearBookmarkCascadeLevelsFrom(levelIndex: number): void {
     if (!bookmarkCascadeMenu) {
       return;
     }
-    const safeLevelIndex = Math.max(0, Number.parseInt(levelIndex, 10) || 0);
+    const safeLevelIndex = Math.max(0, Math.floor(levelIndex) || 0);
     bookmarkCascadeLevels = bookmarkCascadeLevels.filter((entry) => {
-      const shouldRemove = entry && Number(entry.levelIndex) >= safeLevelIndex;
+      const shouldRemove = entry.levelIndex >= safeLevelIndex;
       if (shouldRemove && entry.triggerElement &&
           entry.triggerElement.getAttribute('aria-haspopup') === 'menu') {
         entry.triggerElement.setAttribute('aria-expanded', 'false');
         const icon = entry.triggerElement.querySelector('.x-nt-bookmark-cascade-icon--folder');
         if (icon) playFolderPathMorph(icon, entry.triggerElement.getAttribute('data-active') === 'true');
       }
-      if (shouldRemove && entry.levelElement && entry.levelElement.parentNode) {
-        if (entry.viewController && typeof entry.viewController.destroy === 'function') {
-          entry.viewController.destroy();
-        }
+      if (shouldRemove && entry.levelElement.parentNode) {
+        entry.viewController.destroy();
         entry.levelElement.parentNode.removeChild(entry.levelElement);
       }
       return !shouldRemove;
@@ -735,35 +860,30 @@ function createBookmarkCascadeMenuRuntime(options) {
       bookmarkCascadeKeyboardLevelIndex = Math.max(0, safeLevelIndex - 1);
     }
     if (bookmarkCascadeHoverIntentTask &&
-        Number(bookmarkCascadeHoverIntentTask.levelIndex) >= safeLevelIndex) {
+        bookmarkCascadeHoverIntentTask.levelIndex >= safeLevelIndex) {
       cancelBookmarkCascadeHoverIntent();
     }
   }
 
-  function getBookmarkCascadeLevelItems(levelElement) {
-    if (!levelElement || typeof levelElement.querySelectorAll !== 'function') {
+  function getBookmarkCascadeLevelItems(levelElement: HTMLElement | null | undefined): HTMLElement[] {
+    if (!levelElement) {
       return [];
     }
-    return Array.from(levelElement.querySelectorAll('.x-nt-bookmark-cascade-item'));
+    return queryHtmlElements(levelElement, '.x-nt-bookmark-cascade-item');
   }
 
-  function getBookmarkCascadeRowAnimationKey(entry, button) {
-    if (!entry || !button || typeof button.getAttribute !== 'function') {
-      return '';
-    }
+  function getBookmarkCascadeRowAnimationKey(entry: CascadeLevelEntry, button: HTMLElement): string {
     const folderId = String(entry.folderId || '');
     const bookmarkId = String(button.getAttribute('data-bookmark-id') || '');
     return folderId && bookmarkId ? `${folderId}::${bookmarkId}` : '';
   }
 
-  function getBookmarkCascadeRowRectMap() {
-    const rects = new Map();
+  function getBookmarkCascadeRowRectMap(): Map<string, Rect> {
+    const rects = new Map<string, Rect>();
     bookmarkCascadeLevels.forEach((entry) => {
-      getBookmarkCascadeLevelItems(entry && entry.levelElement).forEach((button) => {
+      getBookmarkCascadeLevelItems(entry.levelElement).forEach((button) => {
         const key = getBookmarkCascadeRowAnimationKey(entry, button);
-        const row = typeof button.closest === 'function'
-          ? button.closest('.x-nt-bookmark-cascade-row')
-          : null;
+        const row = getRow(button);
         const rect = getBookmarkCascadeElementRect(row || button);
         if (key && rect) {
           rects.set(key, rect);
@@ -773,36 +893,35 @@ function createBookmarkCascadeMenuRuntime(options) {
     return rects;
   }
 
-  function clearBookmarkCascadeRowLayoutAnimation(row) {
-    if (!row || !row.style) {
-      return;
-    }
-    if (row._xBookmarkCascadeLayoutAnimationTimer) {
-      clearTimer(row._xBookmarkCascadeLayoutAnimationTimer);
-      row._xBookmarkCascadeLayoutAnimationTimer = 0;
+  function clearBookmarkCascadeRowLayoutAnimation(row: HTMLElement): void {
+    const timer = rowLayoutAnimationTimers.get(row);
+    if (timer) {
+      clearTimer(timer);
+      rowLayoutAnimationTimers.delete(row);
     }
     row.style.removeProperty('transition');
     row.style.removeProperty('transform');
     row.style.removeProperty('will-change');
   }
 
-  function playBookmarkCascadeRowLayoutAnimation(beforeRects, animationOptions) {
-    if (!(beforeRects instanceof Map) || !bookmarkCascadeMenu) {
+  // Rows that moved slide from where they were; a dragged row from where it
+  // was dropped.
+  function playBookmarkCascadeRowLayoutAnimation(
+    beforeRects: ReadonlyMap<string, Rect>,
+    animationOptions?: CascadeRefreshOptions
+  ): boolean {
+    if (!bookmarkCascadeMenu) {
       return false;
     }
-    const optionsForAnimation = animationOptions && typeof animationOptions === 'object'
-      ? animationOptions
-      : {};
+    const optionsForAnimation = animationOptions || {};
     const draggedBookmarkId = String(optionsForAnimation.draggedBookmarkId || '');
     const draggedRect = optionsForAnimation.draggedRect || null;
-    const shifts = [];
+    const shifts: { row: HTMLElement; dx: number; dy: number }[] = [];
     bookmarkCascadeLevels.forEach((entry) => {
-      getBookmarkCascadeLevelItems(entry && entry.levelElement).forEach((button) => {
+      getBookmarkCascadeLevelItems(entry.levelElement).forEach((button) => {
         const bookmarkId = String(button.getAttribute('data-bookmark-id') || '');
         const key = getBookmarkCascadeRowAnimationKey(entry, button);
-        const row = typeof button.closest === 'function'
-          ? button.closest('.x-nt-bookmark-cascade-row')
-          : null;
+        const row = getRow(button);
         const before = bookmarkId && bookmarkId === draggedBookmarkId && draggedRect
           ? draggedRect
           : beforeRects.get(key);
@@ -839,47 +958,38 @@ function createBookmarkCascadeMenuRuntime(options) {
           `transform ${BOOKMARK_CASCADE_REORDER_ANIMATION_MS}ms ${BOOKMARK_CASCADE_REORDER_EASING}`
         );
         row.style.setProperty('transform', 'translate3d(0, 0, 0)');
-        row._xBookmarkCascadeLayoutAnimationTimer = setTimer(() => {
-          row._xBookmarkCascadeLayoutAnimationTimer = 0;
+        rowLayoutAnimationTimers.set(row, setTimer(() => {
+          rowLayoutAnimationTimers.delete(row);
           clearBookmarkCascadeRowLayoutAnimation(row);
-        }, BOOKMARK_CASCADE_REORDER_ANIMATION_MS + 80);
+        }, BOOKMARK_CASCADE_REORDER_ANIMATION_MS + 80));
       });
     });
     return true;
   }
 
-  function getBookmarkCascadeActiveItem(levelElement) {
-    if (!levelElement || typeof levelElement.querySelector !== 'function') {
-      return null;
-    }
-    return levelElement.querySelector('.x-nt-bookmark-cascade-item[data-active="true"]');
+  function getBookmarkCascadeActiveItem(levelElement: HTMLElement): HTMLElement | null {
+    const item = levelElement.querySelector('.x-nt-bookmark-cascade-item[data-active="true"]');
+    return isHtmlElement(item) ? item : null;
   }
 
-  function setBookmarkCascadeItemHoverSuppressed(itemButton, suppressed) {
-    if (!itemButton || typeof itemButton.setAttribute !== 'function') {
+  function setBookmarkCascadeItemHoverSuppressed(itemButton: HTMLElement | null, suppressed: boolean): void {
+    if (!itemButton) {
       return;
     }
     if (suppressed) {
       itemButton.setAttribute('data-hover-suppressed', 'true');
       return;
     }
-    if (typeof itemButton.removeAttribute === 'function') {
-      itemButton.removeAttribute('data-hover-suppressed');
-    } else {
-      itemButton.setAttribute('data-hover-suppressed', 'false');
-    }
+    itemButton.removeAttribute('data-hover-suppressed');
   }
 
-  function clearBookmarkCascadeLevelHoverSuppression(levelElement) {
+  function clearBookmarkCascadeLevelHoverSuppression(levelElement: HTMLElement): void {
     getBookmarkCascadeLevelItems(levelElement).forEach((button) => {
       setBookmarkCascadeItemHoverSuppressed(button, false);
     });
   }
 
-  function focusBookmarkCascadeItem(itemButton) {
-    if (!itemButton || typeof itemButton.focus !== 'function') {
-      return;
-    }
+  function focusBookmarkCascadeItem(itemButton: HTMLElement): void {
     try {
       itemButton.focus({ preventScroll: true });
     } catch (error) {
@@ -887,10 +997,11 @@ function createBookmarkCascadeMenuRuntime(options) {
     }
   }
 
-  function setBookmarkCascadeLevelActiveItem(levelElement, activeButton, options) {
-    if (!levelElement) {
-      return;
-    }
+  function setBookmarkCascadeLevelActiveItem(
+    levelElement: HTMLElement,
+    activeButton: HTMLElement | null,
+    options?: { focus?: boolean }
+  ): void {
     getBookmarkCascadeLevelItems(levelElement).forEach((button) => {
       const active = button === activeButton;
       const submenuOpen = bookmarkCascadeLevels.some((entry) => entry.triggerElement === button);
@@ -917,7 +1028,11 @@ function createBookmarkCascadeMenuRuntime(options) {
     }
   }
 
-  function clearBookmarkCascadePointerActiveItem(levelElement, nextButton, event) {
+  function clearBookmarkCascadePointerActiveItem(
+    levelElement: HTMLElement,
+    nextButton: HTMLElement | null,
+    event: PointerEvent
+  ): void {
     const entry = getBookmarkCascadeLevelEntryByElement(levelElement);
     const activeButton = entry ? entry.activeButton : null;
     if (!entry || !activeButton || activeButton === nextButton) {
@@ -942,7 +1057,7 @@ function createBookmarkCascadeMenuRuntime(options) {
     entry.activeButton = null;
   }
 
-  function selectFirstBookmarkCascadeItemInLevel(levelIndex, options) {
+  function selectFirstBookmarkCascadeItemInLevel(levelIndex: number, options?: { focus?: boolean }): boolean {
     const entry = getBookmarkCascadeLevelEntry(levelIndex);
     const firstItem = entry ? getBookmarkCascadeLevelItems(entry.levelElement)[0] : null;
     if (!entry || !firstItem) {
@@ -952,7 +1067,7 @@ function createBookmarkCascadeMenuRuntime(options) {
     return true;
   }
 
-  function getBookmarkCascadeKeyboardEntry() {
+  function getBookmarkCascadeKeyboardEntry(): CascadeLevelEntry | null {
     const activeElement = documentObj ? documentObj.activeElement : null;
     if (bookmarkCascadeMenu && activeElement && bookmarkCascadeMenu.contains(activeElement)) {
       for (let index = bookmarkCascadeLevels.length - 1; index >= 0; index -= 1) {
@@ -967,7 +1082,7 @@ function createBookmarkCascadeMenuRuntime(options) {
       null;
   }
 
-  function moveBookmarkCascadeKeyboardSelection(direction) {
+  function moveBookmarkCascadeKeyboardSelection(direction: number): boolean {
     const entry = getBookmarkCascadeKeyboardEntry();
     const items = entry ? getBookmarkCascadeLevelItems(entry.levelElement) : [];
     if (!entry || items.length === 0) {
@@ -987,7 +1102,7 @@ function createBookmarkCascadeMenuRuntime(options) {
     return true;
   }
 
-  function enterBookmarkCascadeKeyboardSubmenu() {
+  function enterBookmarkCascadeKeyboardSubmenu(): boolean {
     const entry = getBookmarkCascadeKeyboardEntry();
     if (!entry) {
       return false;
@@ -996,14 +1111,14 @@ function createBookmarkCascadeMenuRuntime(options) {
       getBookmarkCascadeActiveItem(entry.levelElement) ||
       getBookmarkCascadeLevelItems(entry.levelElement)[0];
     const action = activeItem ? bookmarkCascadeItemActions.get(activeItem) : null;
-    if (!action || !action.isFolder || typeof action.openNestedLevel !== 'function') {
+    if (!action || !action.isFolder) {
       return false;
     }
     action.openNestedLevel({ focusChild: true });
     return true;
   }
 
-  function leaveBookmarkCascadeKeyboardSubmenu() {
+  function leaveBookmarkCascadeKeyboardSubmenu(): boolean {
     const entry = getBookmarkCascadeKeyboardEntry();
     if (!entry || entry.levelIndex <= 0) {
       return false;
@@ -1020,22 +1135,22 @@ function createBookmarkCascadeMenuRuntime(options) {
     return true;
   }
 
-  function isBookmarkCascadeKeyboardTarget(target) {
+  function isBookmarkCascadeKeyboardTarget(target: EventTarget | null): boolean {
     if (!target) {
       return true;
     }
-    if (bookmarkCascadeMenu && bookmarkCascadeMenu.contains(target)) {
+    const node = isNode(target) ? target : null;
+    if (bookmarkCascadeMenu && bookmarkCascadeMenu.contains(node)) {
       return true;
     }
     if (bookmarkCascadeAnchor &&
-        (target === bookmarkCascadeAnchor ||
-          (typeof bookmarkCascadeAnchor.contains === 'function' && bookmarkCascadeAnchor.contains(target)))) {
+        (target === bookmarkCascadeAnchor || bookmarkCascadeAnchor.contains(node))) {
       return true;
     }
-    return documentObj && (target === documentObj.body || target === documentObj.documentElement);
+    return Boolean(documentObj && (target === documentObj.body || target === documentObj.documentElement));
   }
 
-  function handleBookmarkCascadeKeyboardNavigation(event) {
+  function handleBookmarkCascadeKeyboardNavigation(event: KeyboardEvent): boolean {
     if (!event || !bookmarkCascadeMenu || !isBookmarkCascadeKeyboardTarget(event.target)) {
       return false;
     }
@@ -1053,13 +1168,11 @@ function createBookmarkCascadeMenuRuntime(options) {
       return false;
     }
     event.preventDefault();
-    if (typeof event.stopPropagation === 'function') {
-      event.stopPropagation();
-    }
+    event.stopPropagation();
     return true;
   }
 
-  function getBrowserFaviconCandidateForBookmark(url, host) {
+  function getBrowserFaviconCandidateForBookmark(url: string, host: string): string {
     const pageUrl = String(url || '').trim();
     if (!pageUrl) {
       return '';
@@ -1074,15 +1187,19 @@ function createBookmarkCascadeMenuRuntime(options) {
       : '';
   }
 
-  function getPrimaryFaviconCandidateForBookmark(url) {
+  function getPrimaryFaviconCandidateForBookmark(url: string): string {
     return getBrowserPageFaviconUrl(url);
   }
 
-  function shouldOpenUrlInBackground(event) {
-    return Boolean(event && (event.metaKey || event.ctrlKey || Number(event.button) === 1));
+  function shouldOpenUrlInBackground(event: Event | { metaKey?: boolean; ctrlKey?: boolean } | null | undefined): boolean {
+    if (!event) {
+      return false;
+    }
+    const button = 'button' in event ? Number(event.button) : 0;
+    return Boolean(('metaKey' in event && event.metaKey) || ('ctrlKey' in event && event.ctrlKey) || button === 1);
   }
 
-  function openBookmarkCascadeUrl(url, event, anchor) {
+  function openBookmarkCascadeUrl(url: string, event: Event, anchor: BookmarkMenuAnchor | null): void {
     openUrl(url, {
       openInBackgroundTab: shouldOpenUrlInBackground(event),
       anchor
@@ -1090,8 +1207,13 @@ function createBookmarkCascadeMenuRuntime(options) {
   }
 
 
-  function createBookmarkCascadeCopyTrigger(itemRow, item, activateLeafItem, copyButton) {
-    if (!itemRow || !item || !item.url || !copyButton) {
+  function createBookmarkCascadeCopyTrigger(
+    itemRow: HTMLElement,
+    item: BookmarkItem,
+    activateLeafItem: () => void,
+    copyButton: HTMLButtonElement | null
+  ): HTMLButtonElement | null {
+    if (!item.url || !copyButton) {
       return null;
     }
     const copyLabel = t('bookmarks_copy_url', 'Copy link');
@@ -1099,7 +1221,7 @@ function createBookmarkCascadeMenuRuntime(options) {
       cancelBookmarkCascadeHoverIntent();
       hideCursorTooltip();
       activateLeafItem();
-      if (copyTooltipController && typeof copyTooltipController.show === 'function') {
+      if (copyTooltipController) {
         copyTooltipController.show(copyButton, copyLabel, {
           placement: 'top',
           maxWidth: 200,
@@ -1108,7 +1230,7 @@ function createBookmarkCascadeMenuRuntime(options) {
       }
     };
     const hideCopyTooltip = () => {
-      if (copyTooltipController && typeof copyTooltipController.hide === 'function') {
+      if (copyTooltipController) {
         copyTooltipController.hide();
       }
     };
@@ -1133,11 +1255,19 @@ function createBookmarkCascadeMenuRuntime(options) {
     return copyButton;
   }
 
-  function renderBookmarkCascadeMenuLevel(folderId, levelIndex, triggerElement, parentLevelElement, folderTitle) {
-    if (!bookmarkCascadeMenu || !documentObj) {
-      return;
+  function renderBookmarkCascadeMenuLevel(
+    folderId: string,
+    levelIndex: number,
+    triggerElement: HTMLElement | null,
+    parentLevelElement: HTMLElement | null,
+    folderTitle: string
+  ): CascadeLevelEntry | null {
+    // Narrowed here, for the item handlers below.
+    const menu = bookmarkCascadeMenu;
+    if (!menu || !documentObj || !view) {
+      return null;
     }
-    const safeLevelIndex = Math.max(0, Number.parseInt(levelIndex, 10) || 0);
+    const safeLevelIndex = Math.max(0, Math.floor(levelIndex) || 0);
     clearBookmarkCascadeLevelsFrom(safeLevelIndex);
     const items = getBookmarkCascadeItems(folderId).filter((item) => {
       return Boolean(item && (item.url || item.type === 'folder'));
@@ -1168,7 +1298,10 @@ function createBookmarkCascadeMenuRuntime(options) {
       }
       const isFolder = item.type === 'folder';
       const titleText = item.title || (item.url ? getUrlDisplay(item.url) : t('bookmarks_heading', 'Bookmarks'));
-      const itemView = viewController.items[index];
+      const itemView: CascadeItemView | undefined = viewController.items[index];
+      if (!itemView) {
+        return;
+      }
       const itemRow = itemView.row;
       const itemButton = itemView.button;
       itemButton.addEventListener('dragstart', (event) => {
@@ -1196,7 +1329,7 @@ function createBookmarkCascadeMenuRuntime(options) {
       if (icon) {
         if (isFolder) {
           initFolderPathMorph(icon);
-        } else {
+        } else if (isHtmlTag(icon, 'img')) {
           const themeUrl = item.themeUrl || item.url || '';
           const host = item.host || getHostFromUrl(themeUrl) || '';
           const siteName = getSiteDisplayName(host, item.title);
@@ -1217,7 +1350,7 @@ function createBookmarkCascadeMenuRuntime(options) {
         }
       }
 
-      const openNestedLevel = (openOptions) => {
+      const openNestedLevel = (openOptions?: { focusChild?: boolean }): void => {
         if (!isFolder) {
           return;
         }
@@ -1246,7 +1379,7 @@ function createBookmarkCascadeMenuRuntime(options) {
         clearBookmarkCascadeLevelsFrom(safeLevelIndex + 1);
       };
 
-      const navigateLeafItem = (event) => {
+      const navigateLeafItem = (event: Event): void => {
         cancelBookmarkCascadeHoverIntent();
         hideCursorTooltip();
         // Closing the menu clears its anchor.
@@ -1275,7 +1408,7 @@ function createBookmarkCascadeMenuRuntime(options) {
           scheduleBookmarkCascadeHoverIntent({
             levelIndex: safeLevelIndex,
             triggerElement: itemButton,
-            run: openNestedLevel
+            run: () => openNestedLevel()
           }, event);
         });
         itemButton.addEventListener('pointerleave', (event) => {
@@ -1322,9 +1455,7 @@ function createBookmarkCascadeMenuRuntime(options) {
           }, event);
         });
         itemButton.addEventListener('pointerleave', (event) => {
-          if (event && event.relatedTarget &&
-              typeof itemRow.contains === 'function' &&
-              itemRow.contains(event.relatedTarget)) {
+          if (isNode(event.relatedTarget) && itemRow.contains(event.relatedTarget)) {
             return;
           }
           cancelBookmarkCascadeHoverIntentFor(itemButton);
@@ -1367,9 +1498,9 @@ function createBookmarkCascadeMenuRuntime(options) {
       }
     });
 
-    bookmarkCascadeMenu.appendChild(levelElement);
+    menu.appendChild(levelElement);
     lockBookmarkCascadeLevelWidth(levelElement);
-    const entry = {
+    const entry: CascadeLevelEntry = {
       folderId: String(folderId || ''),
       folderTitle: String(folderTitle || ''),
       levelIndex: safeLevelIndex,
@@ -1384,10 +1515,18 @@ function createBookmarkCascadeMenuRuntime(options) {
     return entry;
   }
 
-  function open(item, anchorElement, openOptions) {
-    const optionsForOpen = openOptions && typeof openOptions === 'object' ? openOptions : {};
+  // Opens the folder's menu from the anchor; `toggle` closes it when it is
+  // already open, `dragMode` opens it as a drop target, and `shouldOpen`
+  // may still cancel it once the bookmarks are read.
+  function open(
+    item: { id: unknown; title?: string } | null,
+    anchorElement: BookmarkMenuAnchor | null,
+    openOptions?: { dragMode?: boolean; toggle?: boolean; shouldOpen?: () => boolean }
+  ): void {
+    const optionsForOpen = openOptions || {};
     const dragMode = optionsForOpen.dragMode === true;
     const folderId = String(item && item.id || '').trim();
+    const folderTitle = String(item && item.title || '');
     if (!folderId || !anchorElement || !documentObj || !documentObj.body) {
       return;
     }
@@ -1407,9 +1546,7 @@ function createBookmarkCascadeMenuRuntime(options) {
       return;
     }
     if (!dragMode && isBookmarkCascadeHoverSuppressed(anchorElement, null)) {
-      if (typeof anchorElement._xSetBookmarkMenuVisualActive === 'function') {
-        anchorElement._xSetBookmarkMenuVisualActive(false);
-      }
+      setAnchorVisualActive(anchorElement, false);
       return;
     }
     cancelBookmarkCascadeOpenRequest();
@@ -1424,15 +1561,11 @@ function createBookmarkCascadeMenuRuntime(options) {
         return;
       }
       if (!dragMode && isBookmarkCascadeHoverSuppressed(anchorElement, null)) {
-        if (typeof anchorElement._xSetBookmarkMenuVisualActive === 'function') {
-          anchorElement._xSetBookmarkMenuVisualActive(false);
-        }
+        setAnchorVisualActive(anchorElement, false);
         return;
       }
-      if (!ready || !anchorElement.isConnected) {
-        if (typeof anchorElement._xSetBookmarkMenuVisualActive === 'function') {
-          anchorElement._xSetBookmarkMenuVisualActive(false);
-        }
+      if (!ready || !anchorElement.isConnected || !view || !documentObj.body) {
+        setAnchorVisualActive(anchorElement, false);
         return;
       }
       if (isBookmarkCascadeMenuOpenFor(folderId, anchorElement, dragMode)) {
@@ -1443,29 +1576,28 @@ function createBookmarkCascadeMenuRuntime(options) {
       }
       close();
       bookmarkCascadeAnchor = anchorElement;
-      bookmarkCascadeAnchor.setAttribute('aria-expanded', 'true');
-      if (typeof bookmarkCascadeAnchor._xSetBookmarkMenuVisualActive === 'function') {
-        bookmarkCascadeAnchor._xSetBookmarkMenuVisualActive(true);
-      }
-      bookmarkCascadeMenu = view.createMenu(documentObj);
-      bookmarkCascadeMenu.setAttribute('role', 'menu');
+      anchorElement.setAttribute('aria-expanded', 'true');
+      setAnchorVisualActive(anchorElement, true);
+      const menu = view.createMenu(documentObj);
+      bookmarkCascadeMenu = menu;
+      menu.setAttribute('role', 'menu');
       setDocumentListenersAttached(true);
       setBookmarkCascadeDragMode(dragMode);
-      documentObj.body.appendChild(bookmarkCascadeMenu);
+      documentObj.body.appendChild(menu);
       bookmarkCascadeKeyboardLevelIndex = 0;
-      renderBookmarkCascadeMenuLevel(folderId, 0, anchorElement, null, item.title);
+      renderBookmarkCascadeMenuLevel(folderId, 0, anchorElement, null, folderTitle);
       if (!dragMode) {
         selectFirstBookmarkCascadeItemInLevel(0, { focus: true });
       }
     });
   }
 
-  function getBookmarkCascadeRootFolderId() {
+  function getBookmarkCascadeRootFolderId(): string {
     const rootEntry = getBookmarkCascadeLevelEntry(0);
     return rootEntry ? String(rootEntry.folderId || '') : '';
   }
 
-  function isBookmarkCascadeMenuOpenFor(folderId, anchorElement, dragMode) {
+  function isBookmarkCascadeMenuOpenFor(folderId: string, anchorElement: HTMLElement, dragMode: boolean): boolean {
     return Boolean(
       bookmarkCascadeMenu &&
       bookmarkCascadeAnchor === anchorElement &&
@@ -1474,7 +1606,12 @@ function createBookmarkCascadeMenuRuntime(options) {
     );
   }
 
-  function rebindBookmarkCascadeAnchor(anchorElement, rebindOptions) {
+  // Moves the open menu to a new anchor for the same folder, e.g. once the
+  // card it opened from was drawn again.
+  function rebindBookmarkCascadeAnchor(
+    anchorElement: BookmarkMenuAnchor | null,
+    rebindOptions?: { instant?: boolean }
+  ): boolean {
     if (!bookmarkCascadeMenu || !anchorElement || !anchorElement.isConnected) {
       return false;
     }
@@ -1489,32 +1626,29 @@ function createBookmarkCascadeMenuRuntime(options) {
     const previousAnchor = bookmarkCascadeAnchor;
     if (previousAnchor && previousAnchor !== anchorElement) {
       previousAnchor.setAttribute('aria-expanded', 'false');
-      if (typeof previousAnchor._xSetBookmarkMenuVisualActive === 'function') {
-        previousAnchor._xSetBookmarkMenuVisualActive(false, visualOptions);
-      }
+      setAnchorVisualActive(previousAnchor, false, visualOptions);
     }
     bookmarkCascadeAnchor = anchorElement;
-    bookmarkCascadeAnchor.setAttribute('aria-expanded', 'true');
-    if (typeof bookmarkCascadeAnchor._xSetBookmarkMenuVisualActive === 'function') {
-      bookmarkCascadeAnchor._xSetBookmarkMenuVisualActive(true, visualOptions);
-    }
+    anchorElement.setAttribute('aria-expanded', 'true');
+    setAnchorVisualActive(anchorElement, true, visualOptions);
     const rootEntry = getBookmarkCascadeLevelEntry(0);
     if (rootEntry) {
-      rootEntry.triggerElement = bookmarkCascadeAnchor;
+      rootEntry.triggerElement = anchorElement;
     }
     positionBookmarkCascadeLevels();
     return true;
   }
 
-  function refreshBookmarkCascadeMenu(refreshOptions) {
+  // Draws the open levels again from fresh bookmarks, keeping the open path.
+  function refreshBookmarkCascadeMenu(refreshOptions?: CascadeRefreshOptions): Promise<boolean> {
     if (!bookmarkCascadeMenu || !bookmarkCascadeAnchor || bookmarkCascadeLevels.length === 0) {
       return Promise.resolve(false);
     }
     const menuAtRefreshStart = bookmarkCascadeMenu;
     const rowRectsBeforeRefresh = getBookmarkCascadeRowRectMap();
     const openPath = bookmarkCascadeLevels.map((entry) => ({
-      folderId: String((entry && entry.folderId) || ''),
-      folderTitle: String((entry && entry.folderTitle) || '')
+      folderId: entry.folderId,
+      folderTitle: entry.folderTitle
     }));
     // The caller invalidates the shared runtime before refreshing. Reuse the
     // in-flight reload so the cascade and card surface cannot cancel each other.
@@ -1532,7 +1666,7 @@ function createBookmarkCascadeMenuRuntime(options) {
       cancelBookmarkCascadeDelayedClose();
       clearBookmarkCascadeDragTarget();
       bookmarkCascadeRefreshInProgress = true;
-      bookmarkCascadeMenu.setAttribute('data-refreshing', 'true');
+      menuAtRefreshStart.setAttribute('data-refreshing', 'true');
       try {
         clearBookmarkCascadeLevelsFrom(0);
         anchorAtRefresh.setAttribute('aria-expanded', 'true');
@@ -1567,14 +1701,14 @@ function createBookmarkCascadeMenuRuntime(options) {
         bookmarkCascadeRefreshInProgress = false;
         requestFrame(() => {
           if (bookmarkCascadeMenu === menuAtRefreshStart) {
-            bookmarkCascadeMenu.removeAttribute('data-refreshing');
+            menuAtRefreshStart.removeAttribute('data-refreshing');
           }
         });
       }
     });
   }
 
-  function getBookmarkCascadeDragDropTargetAtPoint(point) {
+  function getBookmarkCascadeDragDropTargetAtPoint(point: Point | null): CascadeDropMatch | null {
     if (!point || !bookmarkCascadeMenu) {
       return null;
     }
@@ -1586,9 +1720,7 @@ function createBookmarkCascadeMenuRuntime(options) {
           element: null, markerElement: null, markerPosition: 'before' };
       }
       const rows = buttons.map((button) => {
-        const row = typeof button.closest === 'function'
-          ? button.closest('.x-nt-bookmark-cascade-row')
-          : null;
+        const row = getRow(button);
         return {
           button,
           row,
@@ -1653,18 +1785,22 @@ function createBookmarkCascadeMenuRuntime(options) {
   }
 
   // Leans the rows above and below an insertion point apart.
-  function syncBookmarkCascadeInsertionGap(row, markerPosition, levelElement) {
-    if (!crossSurfaceDrag || typeof crossSurfaceDrag.setInsertionGap !== 'function') {
+  function syncBookmarkCascadeInsertionGap(
+    row: HTMLElement | null,
+    markerPosition: string,
+    levelElement?: HTMLElement | null
+  ): void {
+    if (!crossSurfaceDrag) {
       return;
     }
     const rows = row && levelElement
-      ? getBookmarkCascadeLevelItems(levelElement).map((button) => button.closest('.x-nt-bookmark-cascade-row') || button)
+      ? getBookmarkCascadeLevelItems(levelElement).map((button) => getRow(button) || button)
       : [];
     const { before, after } = crossSurfaceDrag.getInsertionGapNeighbors(rows, row, markerPosition);
     crossSurfaceDrag.setInsertionGap(insertionGapOwner, before, after);
   }
 
-  function clearBookmarkCascadeDragTarget() {
+  function clearBookmarkCascadeDragTarget(): void {
     if (bookmarkCascadeDragTargetButton) {
       bookmarkCascadeDragTargetButton.removeAttribute('data-bookmark-drop-target');
     }
@@ -1676,7 +1812,9 @@ function createBookmarkCascadeMenuRuntime(options) {
     bookmarkCascadeDragInsertionElement = null;
   }
 
-  function updateBookmarkCascadeDragPointer(pointInput) {
+  // Follows a drag over the open menu: marks the row it would drop on and
+  // opens a folder it rests over.
+  function updateBookmarkCascadeDragPointer(pointInput: PointLike | null | undefined): CascadeDragTarget | null {
     if (!bookmarkCascadeMenu || !bookmarkCascadeDragMode) {
       return null;
     }
@@ -1722,17 +1860,17 @@ function createBookmarkCascadeMenuRuntime(options) {
       syncBookmarkCascadeInsertionGap(
         bookmarkCascadeDragInsertionElement,
         nextInsertionPosition,
-        match.entry && match.entry.levelElement
+        match.entry.levelElement
       );
       const action = match.kind === 'cascade'
         ? bookmarkCascadeItemActions.get(match.button)
         : null;
-      if (action && action.isFolder) {
+      if (action && action.isFolder && match.kind === 'cascade') {
         scheduleBookmarkCascadeHoverIntent({
           levelIndex: match.entry.levelIndex,
           triggerElement: match.button,
           allowWhenSuppressed: true,
-          run: action.openNestedLevel
+          run: () => action.openNestedLevel()
         }, {
           clientX: point.x,
           clientY: point.y,
@@ -1749,25 +1887,36 @@ function createBookmarkCascadeMenuRuntime(options) {
         cancelBookmarkCascadeHoverIntent();
       }
     }
-    return {
-      folderId: match.folderId,
-      title: match.title || '',
-      index: match.index,
-      element: match.element,
-      markerElement: match.markerElement || null,
-      markerPosition: match.markerPosition || '',
-      kind: match.kind,
-      surface: 'cascade'
-    };
+    return match.kind === 'cascade'
+      ? {
+        folderId: match.folderId,
+        title: match.title,
+        element: match.element,
+        markerElement: null,
+        markerPosition: '',
+        kind: match.kind,
+        surface: 'cascade'
+      }
+      : {
+        folderId: match.folderId,
+        title: '',
+        index: match.index,
+        element: match.element,
+        markerElement: match.markerElement,
+        markerPosition: match.markerPosition,
+        kind: match.kind,
+        surface: 'cascade'
+      };
   }
 
-  function handleDocumentPointerDown(event) {
+  function handleDocumentPointerDown(event: PointerEvent): void {
     if (!bookmarkCascadeMenu) {
       return;
     }
-    const target = event && event.target ? event.target : null;
-    if (bookmarkCascadeMenu.contains(target) ||
-        (bookmarkCascadeAnchor && (target === bookmarkCascadeAnchor || bookmarkCascadeAnchor.contains(target))) ||
+    const target = event.target;
+    const node = isNode(target) ? target : null;
+    if (bookmarkCascadeMenu.contains(node) ||
+        (bookmarkCascadeAnchor && (target === bookmarkCascadeAnchor || bookmarkCascadeAnchor.contains(node))) ||
         shouldKeepOpenForExternalNode(target)) {
       return;
     }
@@ -1776,8 +1925,8 @@ function createBookmarkCascadeMenuRuntime(options) {
 
   // Escape goes through the page's dismiss stack, so it closes this menu
   // only when the menu is the top layer.
-  function handleDocumentKeyDown(event) {
-    if (!event || !bookmarkCascadeMenu) {
+  function handleDocumentKeyDown(event: KeyboardEvent): void {
+    if (!bookmarkCascadeMenu) {
       return;
     }
     handleBookmarkCascadeKeyboardNavigation(event);
@@ -1792,18 +1941,20 @@ function createBookmarkCascadeMenuRuntime(options) {
 
   // The document listeners exist only while a menu is open.
   let documentListenersAttached = false;
-  function setDocumentListenersAttached(attached) {
+  function setDocumentListenersAttached(attached: boolean): void {
     if (attached === documentListenersAttached || !documentObj) {
       return;
     }
-    const method = attached ? 'addEventListener' : 'removeEventListener';
-    if (typeof documentObj[method] !== 'function') {
-      return;
-    }
     documentListenersAttached = attached;
-    documentObj[method]('pointerdown', handleDocumentPointerDown, true);
-    documentObj[method]('pointermove', handleBookmarkCascadeDocumentPointerMove, true);
-    documentObj[method]('keydown', handleDocumentKeyDown, true);
+    if (attached) {
+      documentObj.addEventListener('pointerdown', handleDocumentPointerDown, true);
+      documentObj.addEventListener('pointermove', handleBookmarkCascadeDocumentPointerMove, true);
+      documentObj.addEventListener('keydown', handleDocumentKeyDown, true);
+    } else {
+      documentObj.removeEventListener('pointerdown', handleDocumentPointerDown, true);
+      documentObj.removeEventListener('pointermove', handleBookmarkCascadeDocumentPointerMove, true);
+      documentObj.removeEventListener('keydown', handleDocumentKeyDown, true);
+    }
   }
 
   return Object.freeze({
@@ -1822,4 +1973,14 @@ function createBookmarkCascadeMenuRuntime(options) {
   });
 }
 
+type BookmarkCascadeRuntime = ReturnType<typeof createBookmarkCascadeMenuRuntime>;
+
 export { createBookmarkCascadeMenuRuntime };
+export type {
+  BookmarkCascadeMenuOptions,
+  BookmarkCascadeRuntime,
+  BookmarkMenuAnchor,
+  CascadeDragTarget,
+  CascadeItemEventDetail,
+  CascadeRefreshOptions
+};

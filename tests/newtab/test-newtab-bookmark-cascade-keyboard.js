@@ -51,6 +51,8 @@ function createFakeElement(tagName, ownerDocument) {
   let rect = { left: 0, top: 0, width: 210, height: 32 };
   const element = {
     tagName: String(tagName || '').toUpperCase(),
+    localName: String(tagName || '').toLowerCase(),
+    namespaceURI: 'http://www.w3.org/1999/xhtml',
     nodeType: 1,
     children,
     childNodes: children,
@@ -179,6 +181,16 @@ function createFakeElement(tagName, ownerDocument) {
         return false;
       }
       return true;
+    },
+    closest(selector) {
+      let node = element;
+      while (node && node.matches) {
+        if (node.matches(selector)) {
+          return node;
+        }
+        node = node.parentNode;
+      }
+      return null;
     },
     contains(target) {
       if (target === element) {

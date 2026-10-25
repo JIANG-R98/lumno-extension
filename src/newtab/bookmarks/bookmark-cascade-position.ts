@@ -1,9 +1,63 @@
-function toFiniteNumber(value, fallback) {
+// Where the bookmark cascade menu and its submenus open, and the triangle
+// the pointer may cross towards an open submenu without closing it.
+
+// A DOMRect, or as much of one as a caller has.
+type RectLike = Partial<Pick<DOMRect, 'left' | 'top' | 'right' | 'bottom' | 'width' | 'height'>>;
+
+interface Rect {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  width: number;
+  height: number;
+}
+
+interface Point {
+  x: number;
+  y: number;
+}
+
+// A point, or a pointer event's client position.
+interface PointLike {
+  x?: number;
+  y?: number;
+  clientX?: number;
+  clientY?: number;
+}
+
+interface ViewportSize {
+  width?: number;
+  height?: number;
+}
+
+interface PlacementOptions {
+  viewport?: ViewportSize;
+  // The gap to the anchor or parent level.
+  spacing?: number;
+  viewportPadding?: number;
+  viewportTopPadding?: number;
+}
+
+interface RootPlacement {
+  left: number;
+  top: number;
+  horizontal: 'left' | 'right';
+  vertical: 'below' | 'above';
+}
+
+interface SubmenuPlacement {
+  left: number;
+  top: number;
+  side: 'left' | 'right';
+}
+
+function toFiniteNumber(value: unknown, fallback: number): number {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
 }
 
-function normalizeRect(rect) {
+function normalizeRect(rect: RectLike | null | undefined): Rect {
   const source = rect || {};
   const left = toFiniteNumber(source.left, 0);
   const top = toFiniteNumber(source.top, 0);
@@ -14,7 +68,7 @@ function normalizeRect(rect) {
   return { left, right, top, bottom, width, height };
 }
 
-function normalizeViewport(viewport) {
+function normalizeViewport(viewport: ViewportSize | null | undefined): { width: number; height: number } {
   const source = viewport || {};
   return {
     width: Math.max(0, toFiniteNumber(source.width, 0)),
@@ -22,10 +76,10 @@ function normalizeViewport(viewport) {
   };
 }
 
-function normalizePoint(point) {
+function normalizePoint(point: PointLike | null | undefined): Point | null {
   const source = point || {};
-  const x = Object.prototype.hasOwnProperty.call(source, 'x') ? source.x : source.clientX;
-  const y = Object.prototype.hasOwnProperty.call(source, 'y') ? source.y : source.clientY;
+  const x = Object.hasOwn(source, 'x') ? source.x : source.clientX;
+  const y = Object.hasOwn(source, 'y') ? source.y : source.clientY;
   const normalizedX = Number(x);
   const normalizedY = Number(y);
   if (!Number.isFinite(normalizedX) || !Number.isFinite(normalizedY)) {
@@ -34,14 +88,14 @@ function normalizePoint(point) {
   return { x: normalizedX, y: normalizedY };
 }
 
-function clamp(value, min, max) {
+function clamp(value: number, min: number, max: number): number {
   if (max < min) {
     return min;
   }
   return Math.max(min, Math.min(value, max));
 }
 
-function roundPlacement(placement) {
+function roundPlacement<T extends { left: number; top: number }>(placement: T): T {
   return {
     ...placement,
     left: Math.round(placement.left),
@@ -49,7 +103,7 @@ function roundPlacement(placement) {
   };
 }
 
-function parseCssTransformTranslate(transform) {
+function parseCssTransformTranslate(transform: unknown): Point {
   const text = typeof transform === 'string' ? transform.trim() : '';
   if (!text || text === 'none') {
     return { x: 0, y: 0 };
@@ -73,7 +127,8 @@ function parseCssTransformTranslate(transform) {
   return { x: 0, y: 0 };
 }
 
-function getTranslateNeutralRect(rect, transform) {
+// The rect without the translation in the element's transform.
+function getTranslateNeutralRect(rect: RectLike | null | undefined, transform: unknown): Rect {
   const source = normalizeRect(rect);
   const translate = parseCssTransformTranslate(transform);
   return {
@@ -86,8 +141,7 @@ function getTranslateNeutralRect(rect, transform) {
   };
 }
 
-function getPlacementOptions(options) {
-  const source = options || {};
+function getPlacementOptions(source: PlacementOptions): { spacing: number; padding: number; topPadding: number } {
   const padding = Math.max(0, toFiniteNumber(source.viewportPadding, 8));
   return {
     spacing: toFiniteNumber(source.spacing, 8),
@@ -99,7 +153,9 @@ function getPlacementOptions(options) {
   };
 }
 
-function placeRootCascadeMenu(options) {
+function placeRootCascadeMenu(
+  options?: PlacementOptions & { anchorRect?: RectLike; menuRect?: RectLike }
+): RootPlacement {
   const source = options || {};
   const anchor = normalizeRect(source.anchorRect);
   const menu = normalizeRect(source.menuRect);
@@ -109,7 +165,7 @@ function placeRootCascadeMenu(options) {
   const maxTop = viewport.height - menu.height - padding;
 
   let left = anchor.left;
-  let horizontal = 'left';
+  let horizontal: RootPlacement['horizontal'] = 'left';
   if (left + menu.width > viewport.width - padding) {
     const rightAlignedLeft = anchor.right - menu.width;
     horizontal = 'right';
@@ -122,13 +178,15 @@ function placeRootCascadeMenu(options) {
   const belowTop = anchor.bottom + spacing;
   const aboveTop = anchor.top - spacing - menu.height;
   const shouldOpenBelow = availableBelow >= menu.height || availableBelow >= availableAbove;
-  const vertical = shouldOpenBelow ? 'below' : 'above';
+  const vertical: RootPlacement['vertical'] = shouldOpenBelow ? 'below' : 'above';
   const top = clamp(shouldOpenBelow ? belowTop : aboveTop, topPadding, maxTop);
 
   return roundPlacement({ left, top, horizontal, vertical });
 }
 
-function placeCascadeSubmenu(options) {
+function placeCascadeSubmenu(
+  options?: PlacementOptions & { parentLevelRect?: RectLike; triggerRect?: RectLike; menuRect?: RectLike }
+): SubmenuPlacement {
   const source = options || {};
   const parentLevel = normalizeRect(source.parentLevelRect);
   const trigger = normalizeRect(source.triggerRect);
@@ -145,7 +203,7 @@ function placeCascadeSubmenu(options) {
   const roomRight = Math.max(0, viewport.width - padding - rightLeft);
   const roomLeft = Math.max(0, parentLevel.left - spacing - padding);
 
-  let side = 'right';
+  let side: SubmenuPlacement['side'] = 'right';
   let left = rightLeft;
   if (!fitsRight && (fitsLeft || roomLeft > roomRight)) {
     side = 'left';
@@ -159,7 +217,9 @@ function placeCascadeSubmenu(options) {
   });
 }
 
-function buildCascadeSafeTriangle(options) {
+function buildCascadeSafeTriangle(
+  options?: { pointer?: PointLike | null; submenuRect?: RectLike; side?: string }
+): Point[] | null {
   const source = options || {};
   const pointer = normalizePoint(source.pointer);
   const submenu = normalizeRect(source.submenuRect);
@@ -175,18 +235,21 @@ function buildCascadeSafeTriangle(options) {
   ];
 }
 
-function getTriangleArea(a, b, c) {
+function getTriangleArea(a: Point, b: Point, c: Point): number {
   return Math.abs(
     ((b.x - a.x) * (c.y - a.y)) -
     ((c.x - a.x) * (b.y - a.y))
   );
 }
 
-function getPointSign(point, a, b) {
+function getPointSign(point: Point, a: Point, b: Point): number {
   return ((point.x - b.x) * (a.y - b.y)) - ((a.x - b.x) * (point.y - b.y));
 }
 
-function isPointInsideCascadeSafeTriangle(point, triangle) {
+function isPointInsideCascadeSafeTriangle(
+  point: PointLike | null | undefined,
+  triangle: readonly PointLike[] | null | undefined
+): boolean {
   const normalizedPoint = normalizePoint(point);
   if (!normalizedPoint || !Array.isArray(triangle) || triangle.length < 3) {
     return false;
@@ -212,3 +275,4 @@ export {
   placeRootCascadeMenu,
   placeCascadeSubmenu
 };
+export type { Point, PointLike, Rect, RectLike, RootPlacement, SubmenuPlacement };

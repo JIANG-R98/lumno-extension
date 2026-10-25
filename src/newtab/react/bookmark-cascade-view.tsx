@@ -16,7 +16,7 @@ export interface CascadeLevelView {
   items: CascadeItemView[];
 }
 
-interface CascadeItem {
+export interface CascadeItem {
   host?: string;
   id?: string | number;
   index?: number;
@@ -25,6 +25,21 @@ interface CascadeItem {
   title?: string;
   type?: string;
   url?: string;
+}
+
+export interface CascadeLevelConfig {
+  documentObj?: Document;
+  levelIndex: number;
+  folderId: string;
+  folderTitle: string;
+  items: readonly CascadeItem[];
+  sanitizeDisplayText?(value: unknown): string;
+  getFigmaFolderSvg?(suffix: string, folderId?: string): string;
+  getRiSvg?(icon: string, className: string): string;
+  getUrlDisplay?(url: string): string;
+  copyLabel?: string;
+  emptyLabel?: string;
+  siteIconAlt?: string;
 }
 
 function CascadeLevel({
@@ -48,7 +63,7 @@ function CascadeLevel({
   getFigmaFolderSvg(suffix: string, folderId?: string): string;
   getRiSvg(icon: string, className: string): string;
   getUrlDisplay(url: string): string;
-  items: CascadeItem[];
+  items: readonly CascadeItem[];
   levelIndex: number;
   register(content: HTMLDivElement, items: CascadeItemView[]): void;
   sanitizeDisplayText(value: unknown): string;
@@ -196,9 +211,9 @@ export function createCascadeMenu(documentObj: Document = document) {
   return element;
 }
 
-export function createCascadeLevel(config: Record<string, any>): CascadeLevelView {
+export function createCascadeLevel(config: CascadeLevelConfig): CascadeLevelView {
   const documentObj: Document = config.documentObj || document;
-  const levelIndex = Math.max(0, Number.parseInt(config.levelIndex, 10) || 0);
+  const levelIndex = Math.max(0, Math.floor(Number(config.levelIndex)) || 0);
   const element = documentObj.createElement('div');
   element.className = `x-nt-bookmark-cascade-level${
     levelIndex > 0 ? ' x-nt-bookmark-cascade-submenu' : ''

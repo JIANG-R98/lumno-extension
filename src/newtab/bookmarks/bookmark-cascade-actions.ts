@@ -1,6 +1,28 @@
 // Opening, closing and positioning the bookmark cascade menu, and the
 // top-level bookmarks local search matches against.
-function createBookmarkCascadeActions(deps) {
+import type { Translate } from '../newtab-types';
+import type { BookmarkCascadeRuntime } from './bookmark-cascade-menu';
+import type { BookmarkItem, BookmarkPathEntry } from './bookmarks-store';
+import type { BookmarksRuntime } from './bookmarks-runtime';
+
+interface BookmarkCascadeActionsState {
+  // Made with the bookmark section.
+  bookmarkCascadeRuntime: BookmarkCascadeRuntime | null;
+  bookmarkCurrentFolderId: string;
+  bookmarkRootFolderId: string;
+  bookmarkFolderPath: BookmarkPathEntry[];
+}
+
+interface BookmarkCascadeActionsDeps {
+  bookmarksRuntime: BookmarksRuntime;
+  t: Translate;
+  pageState: BookmarkCascadeActionsState;
+}
+
+type CascadeOpenArgs = Parameters<BookmarkCascadeRuntime['open']>;
+type CascadeCloseOptions = Parameters<BookmarkCascadeRuntime['close']>[0];
+
+function createBookmarkCascadeActions(deps: BookmarkCascadeActionsDeps) {
   const {
     bookmarksRuntime,
     t
@@ -9,7 +31,7 @@ function createBookmarkCascadeActions(deps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  function openBookmarkCascadeMenu(item, anchorElement, options) {
+  function openBookmarkCascadeMenu(item: CascadeOpenArgs[0], anchorElement: CascadeOpenArgs[1], options?: CascadeOpenArgs[2]): void {
     if (pageState.bookmarkCascadeRuntime) {
       pageState.bookmarkCascadeRuntime.open(item, anchorElement, {
         ...options,
@@ -19,20 +41,20 @@ function createBookmarkCascadeActions(deps) {
   }
 
   // `{ animate: true }` folds the menu away rather than removing it at once.
-  function closeBookmarkCascadeMenu(options) {
+  function closeBookmarkCascadeMenu(options?: CascadeCloseOptions): void {
     if (pageState.bookmarkCascadeRuntime) {
       pageState.bookmarkCascadeRuntime.close(options);
     }
   }
 
-  function positionBookmarkCascadeLevels() {
+  function positionBookmarkCascadeLevels(): void {
     if (pageState.bookmarkCascadeRuntime) {
       pageState.bookmarkCascadeRuntime.positionLevels();
     }
   }
 
-  function getTopBookmarks(limit, folderId) {
-    const parsedLimit = Number.parseInt(limit, 10);
+  function getTopBookmarks(limit: number, folderId?: string): Promise<BookmarkItem[]> {
+    const parsedLimit = Math.floor(limit);
     const safeLimit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 0;
     return bookmarksRuntime.readFolder(
       folderId || pageState.bookmarkCurrentFolderId || pageState.bookmarkRootFolderId,
@@ -59,3 +81,4 @@ function createBookmarkCascadeActions(deps) {
 }
 
 export { createBookmarkCascadeActions };
+export type { BookmarkCascadeActionsDeps, BookmarkCascadeActionsState };

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // One Escape press dismisses one layer: the open layer that opened last,
 // or a layer with a higher priority (an active drag) whenever it is open.
 //
@@ -7,16 +6,41 @@
 // are open at the start of every press, key press, hover change and focus
 // change (capture phase, before the event can open anything), so a layer
 // that opened since then counts as opened after every layer already seen.
-function createDismissStack(options) {
+interface DismissLayer {
+  isOpen(): boolean;
+  close(event?: KeyboardEvent | null): void;
+  // A layer with a higher priority is dismissed first whenever it is open.
+  priority?: number;
+}
+
+interface RegisteredLayer {
+  key: string;
+  isOpen(): boolean;
+  close(event?: KeyboardEvent | null): void;
+  priority: number;
+  registeredAt: number;
+  open: boolean;
+  openedAt: number;
+}
+
+type DismissIgnore = (event: KeyboardEvent) => boolean;
+
+interface DismissStackOptions {
+  documentObj?: Document | null;
+  // Escape presses it returns true for are left alone.
+  shouldIgnore?: DismissIgnore;
+}
+
+function createDismissStack(options?: DismissStackOptions) {
   const opts = options || {};
   const documentObj = opts.documentObj || (typeof document !== 'undefined' ? document : null);
-  const layers = new Map();
+  const layers = new Map<string, RegisteredLayer>();
   let openCount = 0;
   let registerCount = 0;
   let listening = false;
-  let shouldIgnore = typeof opts.shouldIgnore === 'function' ? opts.shouldIgnore : null;
+  let shouldIgnore: DismissIgnore | null = typeof opts.shouldIgnore === 'function' ? opts.shouldIgnore : null;
 
-  function isLayerOpen(layer) {
+  function isLayerOpen(layer: RegisteredLayer): boolean {
     try {
       return Boolean(layer.isOpen());
     } catch (_error) {
@@ -25,7 +49,7 @@ function createDismissStack(options) {
   }
 
   // Layers seen opening in the same refresh keep their registration order.
-  function refresh() {
+  function refresh(): void {
     layers.forEach((layer) => {
       const open = isLayerOpen(layer);
       if (open && !layer.open) {
@@ -36,12 +60,12 @@ function createDismissStack(options) {
     });
   }
 
-  function getTopLayer() {
+  function getTopLayer(): RegisteredLayer | null {
     refresh();
-    let top = null;
-    layers.forEach((layer) => {
+    let top: RegisteredLayer | null = null;
+    for (const layer of layers.values()) {
       if (!layer.open) {
-        return;
+        continue;
       }
       if (!top || layer.priority > top.priority ||
           (layer.priority === top.priority &&
@@ -49,11 +73,11 @@ function createDismissStack(options) {
               (layer.openedAt === top.openedAt && layer.registeredAt > top.registeredAt)))) {
         top = layer;
       }
-    });
+    }
     return top;
   }
 
-  function dismissTop(event) {
+  function dismissTop(event?: KeyboardEvent | null): boolean {
     const top = getTopLayer();
     if (!top) {
       return false;
@@ -61,16 +85,16 @@ function createDismissStack(options) {
     // Nothing else sees this Escape, not even a listener on the document
     // added later by a menu underneath.
     if (event) {
-      if (typeof event.preventDefault === 'function') event.preventDefault();
-      if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-      if (typeof event.stopPropagation === 'function') event.stopPropagation();
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      event.stopPropagation();
     }
     top.close(event);
     refresh();
     return true;
   }
 
-  function handleKeyDown(event) {
+  function handleKeyDown(event: KeyboardEvent | null | undefined): void {
     if (!event || event.key !== 'Escape' || event.defaultPrevented || event.isComposing ||
         (shouldIgnore && shouldIgnore(event))) {
       refresh();
@@ -79,7 +103,7 @@ function createDismissStack(options) {
     dismissTop(event);
   }
 
-  function listen() {
+  function listen(): void {
     if (listening || !documentObj || typeof documentObj.addEventListener !== 'function') {
       return;
     }
@@ -92,7 +116,7 @@ function createDismissStack(options) {
 
   // Registers (or replaces) the layer `key`; `isOpen()` says whether it
   // is showing, `close(event)` dismisses it.
-  function register(key, layer) {
+  function register(key: string, layer: DismissLayer): void {
     if (!key || !layer || typeof layer.close !== 'function' || typeof layer.isOpen !== 'function') {
       return;
     }
@@ -110,7 +134,7 @@ function createDismissStack(options) {
     listen();
   }
 
-  function setShouldIgnore(predicate) {
+  function setShouldIgnore(predicate: DismissIgnore | null): void {
     shouldIgnore = typeof predicate === 'function' ? predicate : null;
   }
 
@@ -127,8 +151,10 @@ function createDismissStack(options) {
   };
 }
 
-let sharedStack = null;
-function getDismissStack() {
+type DismissStack = ReturnType<typeof createDismissStack>;
+
+let sharedStack: DismissStack | null = null;
+function getDismissStack(): DismissStack {
   if (!sharedStack) {
     sharedStack = createDismissStack();
   }
@@ -136,3 +162,4 @@ function getDismissStack() {
 }
 
 export { createDismissStack, getDismissStack };
+export type { DismissLayer, DismissStack };

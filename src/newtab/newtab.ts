@@ -2537,7 +2537,6 @@ import * as LumnoMessaging from '../platform/messaging';
     getFolderItemIconUrl,
     bookmarksRuntime,
     bookmarkCascadeCopyTooltipController,
-    showTopActionTooltip,
     hideTopActionTooltip,
     handleBookmarkCascadeItemPointerDown,
     isBookmarkContextMenuNode,

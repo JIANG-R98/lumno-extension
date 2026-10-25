@@ -1,5 +1,6 @@
 // Types the New Tab shares with the modules split out of it.
 import type { ToastShowOptions } from '../shared/react/toast';
+import type { CursorTooltipOptions, CursorTooltipTextSource } from '../shared/ui/cursor-tooltip';
 import type { TooltipBindOptions, TooltipTextSource } from '../shared/ui/tooltip';
 
 // A message by key from the page language; fallback when it has none.
@@ -18,4 +19,11 @@ type BindTooltip = (
   options?: TooltipBindOptions
 ) => HTMLElement | null;
 
-export type { BindTooltip, FormatMessage, ShowToast, Translate };
+// Binds a tooltip that follows the pointer to the target.
+type BindCursorTooltip = (
+  target: HTMLElement | null,
+  getText: CursorTooltipTextSource,
+  options?: CursorTooltipOptions
+) => HTMLElement | null;
+
+export type { BindCursorTooltip, BindTooltip, FormatMessage, ShowToast, Translate };

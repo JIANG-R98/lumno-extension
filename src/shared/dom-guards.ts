@@ -3,6 +3,11 @@
 const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml';
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 
+// Any DOM node: an element, text, a document.
+function isNode(value: EventTarget | Node | null | undefined): value is Node {
+  return value !== null && value !== undefined && 'nodeType' in value && typeof value.nodeType === 'number';
+}
+
 function isElementNode(value: EventTarget | Node | null | undefined): value is Element {
   return value !== null && value !== undefined && 'nodeType' in value && value.nodeType === 1;
 }
@@ -25,4 +30,4 @@ function isSvgElement(value: EventTarget | Node | null | undefined): value is SV
   return isElementNode(value) && value.namespaceURI === SVG_NAMESPACE;
 }
 
-export { isElementNode, isHtmlElement, isHtmlTag, isSvgElement };
+export { isElementNode, isHtmlElement, isHtmlTag, isNode, isSvgElement };
