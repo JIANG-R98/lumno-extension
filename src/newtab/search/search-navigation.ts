@@ -11,7 +11,7 @@ import type { SearchInputParts } from '../../shared/react/search-input';
 import type { Suggestion, SuggestionElement } from '../../shared/react/search/suggestion-list/types';
 import type { FormatMessage } from '../newtab-types';
 import type { SearchModes } from './search-modes';
-import type { ActiveLocalScope, AutocompleteState, InlineSearchState, RenderSuggestions } from './search-types';
+import type { ActiveLocalScope, AutocompleteState, InlineSearchState, RenderSuggestions, SlashCommand } from './search-types';
 import type { SiteSearchProviders } from './site-search-providers';
 
 interface SearchNavigationState {
@@ -32,7 +32,7 @@ interface SearchNavigationState {
 
 // A slash command the typed text names, and the text that completes it.
 interface CommandMatch {
-  command: { type: string };
+  command: SlashCommand;
   completion: string;
 }
 
@@ -637,4 +637,4 @@ function getNextSuggestionIndex(
 type SearchNavigation = ReturnType<typeof createSearchNavigation>;
 
 export { createSearchNavigation, getNextSuggestionIndex };
-export type { SearchNavigation, SearchNavigationDeps, SearchNavigationState };
+export type { CommandMatch, SearchNavigation, SearchNavigationDeps, SearchNavigationState };

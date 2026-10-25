@@ -381,7 +381,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     return provider.name || provider.key || t('site_search_default', '站内');
   }
 
-  function getSiteSearchActionTitle(provider: SiteSearchProvider | null | undefined, query: string): string {
+  function getSiteSearchActionTitle(provider: SiteSearchProvider | null | undefined, query?: string): string {
     const site = getSiteSearchDisplayName(provider);
     const queryText = String(query || '').trim();
     if (isAggregateSearchProvider(provider)) {

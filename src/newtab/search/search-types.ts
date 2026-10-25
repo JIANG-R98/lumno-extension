@@ -31,6 +31,15 @@ interface AutocompleteState {
   type: string;
 }
 
+// A slash command the input offers.
+interface SlashCommand {
+  type: string;
+  primary: string;
+  aliases: string[];
+  // Offered only where the browser has a website appearance setting.
+  requiresWebAppearance?: boolean;
+}
+
 // The site search or site the typed text leads to without a mode, shown
 // as the first suggestion.
 interface InlineSearchState {
@@ -58,5 +67,6 @@ export type {
   InlineSearchState,
   RenderSuggestions,
   RequestSuggestions,
-  RequestSuggestionsOptions
+  RequestSuggestionsOptions,
+  SlashCommand
 };
