@@ -1,19 +1,124 @@
-// @ts-nocheck
-function noop() {}
+// Wallpaper-adaptive tones: samples the wallpaper under each text, icon and
+// glass surface of the New Tab page and sets the ink and colors that read on it.
+import type { WallpaperSample } from './wallpaper-effects';
 
-function getOption(options, key, fallback) {
-  if (options && Object.prototype.hasOwnProperty.call(options, key)) {
-    return options[key];
-  }
-  return fallback;
+type ToneInk = 'light' | 'dark';
+type ThemeMode = 'light' | 'dark';
+
+interface RgbColor {
+  red: number;
+  green: number;
+  blue: number;
 }
 
-function getFunction(options, key, fallback) {
-  const value = getOption(options, key, fallback || noop);
-  return typeof value === 'function' ? value : (fallback || noop);
+// A translucent color, alpha 0-1.
+interface Tone {
+  color: RgbColor;
+  alpha: number;
 }
 
-function clampNumber(value, min, max) {
+// What a glass plate needs: its ink, tint density (0-1) and how much of the
+// material's saturation boost to keep.
+interface GlassAdaptation {
+  ink: ToneInk;
+  density: number;
+  saturate: number;
+}
+
+// Something with a box on screen to sample under.
+type SampleSource = Pick<Element, 'getBoundingClientRect'>;
+
+interface ScreenRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
+}
+
+type SampleRect = Pick<ScreenRect, 'left' | 'top' | 'width' | 'height'>;
+
+// An element the tone is set on, and how it samples the wallpaper.
+interface AdaptiveToneTarget {
+  element: HTMLElement | null | undefined;
+  // The element (or elements, read as one box) whose wallpaper is sampled.
+  sampleElement?: SampleSource | Array<SampleSource | null | undefined> | null;
+  // Targets in one group read one sample and keep one ink.
+  toneGroup?: string;
+  // The smallest area sampled around the element, in px.
+  minWidth?: number;
+  minHeight?: number;
+  disabled?: boolean;
+  // An ink the user fixed for this target.
+  ink?: ToneInk | '';
+  // Icon buttons sample more points and get a solid fill while pointed at.
+  iconButton?: boolean;
+  // Samples the wallpaper without the overlay mask over it.
+  ignoreOverlay?: boolean;
+  surface?: 'topbar';
+  // A top bar keeps the light or dark family of a strong mask.
+  preferOverlayPolarity?: boolean;
+  forcedIconBackground?: 'shortcut-fallback' | 'shortcut-add' | 'default-theme';
+  // A glass plate: it gets a glass ink and tint density instead.
+  glass?: boolean;
+  glassGroup?: string;
+  // A glass surface whose ink follows the theme.
+  themeInk?: boolean;
+  // A glass surface whose controls switch to the dark palette with light ink.
+  paletteSwap?: boolean;
+}
+
+// The wallpaper under a target, as shown: its mean luminance and color, how
+// much overlay covers it, and how far its brightest and darkest points differ.
+interface ToneSample {
+  luminance: number;
+  color: RgbColor;
+  overlayAlpha: number;
+  textureContrast: number;
+}
+
+// The shown image drawn into a small canvas, with how its pixels map onto
+// the full image.
+interface AdaptiveToneSampler {
+  url: string;
+  canvas: HTMLCanvasElement;
+  context: CanvasRenderingContext2D;
+  imageData: Uint8ClampedArray | null;
+  naturalWidth: number;
+  naturalHeight: number;
+  sampleScaleX: number;
+  sampleScaleY: number;
+}
+
+// The page the tones are set on and the wallpaper they are sampled from. W is
+// the page's wallpaper record, which the tone only hands back to it.
+interface WallpaperAdaptiveToneOptions<W> {
+  documentObj?: Document;
+  windowObj?: Window;
+  getTargets?: () => ReadonlyArray<AdaptiveToneTarget | null | undefined>;
+  getCurrentWallpaper?: () => W | null | undefined;
+  getWallpaperImageUrl?: (wallpaper: W) => string;
+  // The sampler is only a few hundred pixels across, so it reads the small
+  // copy instead of decoding the full wallpaper.
+  getWallpaperSample?: (wallpaper: W) => WallpaperSample | null | undefined;
+  // How opaque the overlay mask is at a viewport height, 0-1.
+  getOverlayAlphaAtViewportY?: (viewportY: number) => number;
+  // The mask's luminance: 0 black, 1 white.
+  getOverlayLuminance?: () => number;
+  getEffectLuminanceAtViewport?: (viewportX: number, viewportY: number, baseLuminance: number) => number | null | undefined;
+  applyWordmarkThemeAppearance?: () => void;
+  // Hears each new sampler, whose canvas holds the shown image scaled down.
+  onSamplerReady?: (sampler: AdaptiveToneSampler) => void;
+  // An image another script already loaded and decoded to sample this URL's
+  // wallpaper (the wallpaper preload's small copy), or null.
+  getPreloadedImage?: (url: string) => PromiseLike<HTMLImageElement | null> | null | undefined;
+}
+
+// The global timers with the DOM's numeric ids.
+const globalTimers: Pick<Window, 'setTimeout' | 'clearTimeout'> = globalThis;
+
+function clampNumber(value: unknown, min: number, max: number): number {
   const number = Number(value);
   if (!Number.isFinite(number)) {
     return min;
@@ -61,8 +166,8 @@ const WORDMARK_NEUTRAL_HUE = 215;
 // WCAG AA for small text, and for the secondary text set in the muted ink.
 const ADAPTIVE_INK_MIN_CONTRAST = 4.5;
 const ADAPTIVE_INK_MUTED_MIN_CONTRAST = 3;
-const TONE_LIGHT_TARGET = { red: 248, green: 250, blue: 252 };
-const TONE_DARK_TARGET = { red: 15, green: 23, blue: 42 };
+const TONE_LIGHT_TARGET: RgbColor = { red: 248, green: 250, blue: 252 };
+const TONE_DARK_TARGET: RgbColor = { red: 15, green: 23, blue: 42 };
 const TOPBAR_MASK_POLARITY_MIN_ALPHA = 0.36;
 // Chrome drops a hidden window's last frame (a minimized one, say) and, once the window is shown
 // again, fills it with the page's background color until the wallpaper is drawn anew. The wallpaper
@@ -71,32 +176,32 @@ const TOPBAR_MASK_POLARITY_MIN_ALPHA = 0.36;
 const PAGE_BASE_COLOR_PROP = '--x-nt-wallpaper-base-color';
 const PAGE_BASE_COLOR_COLUMNS = 8;
 const PAGE_BASE_COLOR_ROWS = 6;
-const BLACK = { red: 0, green: 0, blue: 0 };
-const WHITE = { red: 255, green: 255, blue: 255 };
+const BLACK: RgbColor = { red: 0, green: 0, blue: 0 };
+const WHITE: RgbColor = { red: 255, green: 255, blue: 255 };
 
-function mixNumber(start, end, amount) {
+function mixNumber(start: number, end: number, amount: number): number {
   return start + ((end - start) * clampNumber(amount, 0, 1));
 }
 
-function mixChannel(start, end, amount) {
+function mixChannel(start: number, end: number, amount: number): number {
   return Math.round(mixNumber(start, end, amount));
 }
 
-function formatRgb(red, green, blue, alphaPercent) {
+function formatRgb(red: number, green: number, blue: number, alphaPercent: number): string {
   return `rgb(${red} ${green} ${blue} / ${Math.round(alphaPercent)}%)`;
 }
 
-function formatSolidRgb(color) {
+function formatSolidRgb(color: RgbColor): string {
   return `rgb(${Math.round(color.red)} ${Math.round(color.green)} ${Math.round(color.blue)})`;
 }
 
-function getColorLuminance(color) {
+function getColorLuminance(color: RgbColor): number {
   return ((color.red * 0.299) + (color.green * 0.587) + (color.blue * 0.114)) / 255;
 }
 
-function getRelativeLuminance(color) {
+function getRelativeLuminance(color: Partial<RgbColor> | null | undefined): number {
   const resolvedColor = getValidToneColor(color);
-  function linearize(channel) {
+  function linearize(channel: number): number {
     const value = clampNumber(channel, 0, 255) / 255;
     return value <= 0.04045
       ? value / 12.92
@@ -107,7 +212,10 @@ function getRelativeLuminance(color) {
     (0.0722 * linearize(resolvedColor.blue));
 }
 
-function getContrastRatio(firstColor, secondColor) {
+function getContrastRatio(
+  firstColor: Partial<RgbColor> | null | undefined,
+  secondColor: Partial<RgbColor> | null | undefined
+): number {
   const firstLuminance = getRelativeLuminance(firstColor);
   const secondLuminance = getRelativeLuminance(secondColor);
   const lighter = Math.max(firstLuminance, secondLuminance);
@@ -115,7 +223,7 @@ function getContrastRatio(firstColor, secondColor) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-function mixColor(color, target, amount) {
+function mixColor(color: RgbColor, target: RgbColor, amount: number): RgbColor {
   return {
     red: mixChannel(color.red, target.red, amount),
     green: mixChannel(color.green, target.green, amount),
@@ -124,7 +232,7 @@ function mixColor(color, target, amount) {
 }
 
 // Moves a color toward black or white until it has the given luminance, keeping its hue.
-function matchColorLuminance(color, luminance) {
+function matchColorLuminance(color: RgbColor, luminance: number): RgbColor {
   const current = getColorLuminance(color);
   const target = clampNumber(luminance, 0, 1);
   if (target < current) {
@@ -136,31 +244,31 @@ function matchColorLuminance(color, luminance) {
   return color;
 }
 
-function smoothstep(value) {
+function smoothstep(value: number): number {
   const amount = clampNumber(value, 0, 1);
   return amount * amount * (3 - (2 * amount));
 }
 
-function setStyleProperty(element, name, value) {
+function setStyleProperty(element: HTMLElement, name: string, value: string): void {
   if (element.style.getPropertyValue(name) === value) {
     return;
   }
   element.style.setProperty(name, value);
 }
 
-function clearAdaptiveToneStyles(element) {
+function clearAdaptiveToneStyles(element: HTMLElement): void {
   adaptiveToneStyleProps.forEach((prop) => {
     element.style.removeProperty(prop);
   });
 }
 
-function getWallpaperOffWordmarkColor(overlayLuminance) {
+function getWallpaperOffWordmarkColor(overlayLuminance: number): RgbColor {
   return overlayLuminance >= 0.5
     ? { red: 242, green: 242, blue: 242 }
     : { red: 38, green: 38, blue: 38 };
 }
 
-function rgbToHsl(color) {
+function rgbToHsl(color: RgbColor): { hue: number; saturation: number; lightness: number } {
   const red = clampNumber(color.red, 0, 255) / 255;
   const green = clampNumber(color.green, 0, 255) / 255;
   const blue = clampNumber(color.blue, 0, 255) / 255;
@@ -172,7 +280,7 @@ function rgbToHsl(color) {
     return { hue: 0, saturation: 0, lightness };
   }
   const saturation = delta / (1 - Math.abs((2 * lightness) - 1));
-  let hue;
+  let hue: number;
   if (max === red) {
     hue = ((green - blue) / delta) % 6;
   } else if (max === green) {
@@ -183,7 +291,7 @@ function rgbToHsl(color) {
   return { hue: ((hue * 60) + 360) % 360, saturation: clampNumber(saturation, 0, 1), lightness };
 }
 
-function hslToRgb(hue, saturation, lightness) {
+function hslToRgb(hue: number, saturation: number, lightness: number): RgbColor {
   const chroma = (1 - Math.abs((2 * lightness) - 1)) * saturation;
   const segment = ((hue % 360) + 360) % 360 / 60;
   const second = chroma * (1 - Math.abs((segment % 2) - 1));
@@ -203,7 +311,7 @@ function hslToRgb(hue, saturation, lightness) {
 
 // The hue the wordmark ink and its shadow borrow from the wallpaper, with a
 // restrained saturation so the ink reads as a tinted neutral, not a color.
-function getWordmarkTint(color) {
+function getWordmarkTint(color: RgbColor): { hue: number; saturation: number } {
   const hsl = rgbToHsl(color);
   if (hsl.saturation < WORDMARK_NEUTRAL_SATURATION) {
     return { hue: WORDMARK_NEUTRAL_HUE, saturation: 0.14 };
@@ -211,7 +319,15 @@ function getWordmarkTint(color) {
   return { hue: hsl.hue, saturation: clampNumber(hsl.saturation * 0.6, 0.12, 0.38) };
 }
 
-function getWordmarkInkColor(color, luminance, ink, overlayAlpha, overlayLuminance, textureContrast, effectType) {
+function getWordmarkInkColor(
+  color: Partial<RgbColor> | null | undefined,
+  luminance: number,
+  ink: string,
+  overlayAlpha: number,
+  overlayLuminance: number,
+  textureContrast: number | null | undefined,
+  effectType: string | null | undefined
+): RgbColor {
   const resolvedOverlayAlpha = clampNumber(overlayAlpha, 0, 1);
   if (isWallpaperOverlayCovered(resolvedOverlayAlpha)) {
     return getWallpaperOffWordmarkColor(clampNumber(overlayLuminance, 0, 1));
@@ -232,7 +348,7 @@ function getWordmarkInkColor(color, luminance, ink, overlayAlpha, overlayLuminan
   const minimumContrast = dark
     ? (highTexture ? WORDMARK_DARK_INK_TEXTURED_CONTRAST : WORDMARK_DARK_INK_CONTRAST)
     : (highTexture ? WORDMARK_LIGHT_INK_TEXTURED_CONTRAST : WORDMARK_LIGHT_INK_CONTRAST);
-  const inkAt = (amount) => hslToRgb(tint.hue, saturation, mixNumber(gentlest, extreme, amount));
+  const inkAt = (amount: number) => hslToRgb(tint.hue, saturation, mixNumber(gentlest, extreme, amount));
   // The ink keeps the wallpaper's hue and settles only its lightness: the
   // gentlest lightness that reaches the floor, or the extreme when none does
   // (mid tones, where the shadow carries the rest).
@@ -252,7 +368,7 @@ function getWordmarkInkColor(color, luminance, ink, overlayAlpha, overlayLuminan
   return inkAt(high);
 }
 
-function mixColorToMaxLuminance(color, target, maxLuminance) {
+function mixColorToMaxLuminance(color: RgbColor, target: RgbColor, maxLuminance: number): RgbColor {
   let low = 0;
   let high = 1;
   let best = color;
@@ -269,7 +385,7 @@ function mixColorToMaxLuminance(color, target, maxLuminance) {
   return best;
 }
 
-function mixColorToMinLuminance(color, target, minLuminance) {
+function mixColorToMinLuminance(color: RgbColor, target: RgbColor, minLuminance: number): RgbColor {
   let low = 0;
   let high = 1;
   let best = color;
@@ -286,18 +402,26 @@ function mixColorToMinLuminance(color, target, minLuminance) {
   return best;
 }
 
-function isTexturedWallpaperEffect(effectType) {
+function isTexturedWallpaperEffect(effectType: string | null | undefined): boolean {
   return effectType === 'ascii' || effectType === 'dither' || effectType === 'halftone';
 }
 
-function isHighTextureTone(textureContrast, effectType, threshold) {
+function isHighTextureTone(
+  textureContrast: number | null | undefined,
+  effectType: string | null | undefined,
+  threshold: number
+): boolean {
   return isTexturedWallpaperEffect(effectType) ||
-    (Number.isFinite(textureContrast) && textureContrast >= threshold);
+    (typeof textureContrast === 'number' && Number.isFinite(textureContrast) && textureContrast >= threshold);
 }
 
 // How much help ink needs beyond its color: busy textures and mid tones near
 // the light/dark threshold are where a flat color alone stops reading.
-function getToneProtection(luminance, textureContrast, effectType) {
+function getToneProtection(
+  luminance: number,
+  textureContrast: number | null | undefined,
+  effectType: string | null | undefined
+): number {
   const textureRisk = isHighTextureTone(textureContrast, effectType, 0.16)
     ? 1
     : clampNumber((Number(textureContrast) || 0) / 0.2, 0, 1);
@@ -305,11 +429,11 @@ function getToneProtection(luminance, textureContrast, effectType) {
   return Math.max(textureRisk, middleLuminanceRisk * 0.5);
 }
 
-function isWallpaperOverlayCovered(overlayAlpha) {
+function isWallpaperOverlayCovered(overlayAlpha: number): boolean {
   return clampNumber(overlayAlpha, 0, 1) >= 0.995;
 }
 
-function chooseSurfaceInk(overlayAlpha, overlayLuminance, fallbackInk) {
+function chooseSurfaceInk(overlayAlpha: number, overlayLuminance: number, fallbackInk: ToneInk): ToneInk {
   // Once the mask is visually strong enough to establish the top edge, keep
   // the material in the same light/dark family as that mask. Otherwise a
   // bright wallpaper under a black mask can land exactly on the generic ink
@@ -320,7 +444,12 @@ function chooseSurfaceInk(overlayAlpha, overlayLuminance, fallbackInk) {
   return fallbackInk;
 }
 
-function shouldUseIconSolidBackground(luminance, overlayAlpha, textureContrast, effectType) {
+function shouldUseIconSolidBackground(
+  luminance: number,
+  overlayAlpha: number,
+  textureContrast: number,
+  effectType: string
+): boolean {
   if (clampNumber(overlayAlpha, 0, 1) >= 0.9) {
     return false;
   }
@@ -330,12 +459,8 @@ function shouldUseIconSolidBackground(luminance, overlayAlpha, textureContrast, 
   return luminance > 0.08 && luminance < 0.96;
 }
 
-function getIconSolidBackgroundColor(color, luminance, ink, hover) {
-  const baseColor = color && Number.isFinite(color.red) &&
-    Number.isFinite(color.green) &&
-    Number.isFinite(color.blue)
-    ? color
-    : { red: 128, green: 140, blue: 156 };
+function getIconSolidBackgroundColor(color: RgbColor, luminance: number, ink: ToneInk, hover: boolean): RgbColor {
+  const baseColor = getValidToneColor(color);
   const middleRisk = 1 - Math.min(1, Math.abs(luminance - 0.54) / 0.34);
   const hoverLift = hover ? 0.08 : 0;
   if (ink === 'dark') {
@@ -346,27 +471,31 @@ function getIconSolidBackgroundColor(color, luminance, ink, hover) {
   return mixColor(baseColor, { red: 15, green: 23, blue: 42 }, amount);
 }
 
-function getIconSolidForegroundColor(backgroundColor) {
+function getIconSolidForegroundColor(backgroundColor: RgbColor): RgbColor {
   return getColorLuminance(backgroundColor) >= 0.56
     ? { red: 30, green: 41, blue: 59 }
     : { red: 248, green: 250, blue: 252 };
 }
 
-function getColorChroma(color) {
+function getColorChroma(color: RgbColor): number {
   const max = Math.max(color.red, color.green, color.blue);
   const min = Math.min(color.red, color.green, color.blue);
   return (max - min) / 255;
 }
 
-function getValidToneColor(color) {
-  return color && Number.isFinite(color.red) &&
-    Number.isFinite(color.green) &&
-    Number.isFinite(color.blue)
-    ? color
-    : { red: 128, green: 140, blue: 156 };
+function isFiniteChannel(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
 }
 
-function getShortcutUrlBaseSurfaceColor(color, localLuminance, ink) {
+// The color itself when all its channels are numbers, else a neutral slate.
+function getValidToneColor(color: Partial<RgbColor> | null | undefined): RgbColor {
+  if (color && isFiniteChannel(color.red) && isFiniteChannel(color.green) && isFiniteChannel(color.blue)) {
+    return { red: color.red, green: color.green, blue: color.blue };
+  }
+  return { red: 128, green: 140, blue: 156 };
+}
+
+function getShortcutUrlBaseSurfaceColor(color: RgbColor, localLuminance: number, ink: ToneInk): RgbColor {
   const baseColor = getValidToneColor(color);
   const surfaceLuminance = clampNumber(localLuminance, 0, 1);
   const hueStrength = smoothstep((getColorChroma(baseColor) - 0.035) / 0.24);
@@ -424,7 +553,7 @@ function getShortcutUrlBaseSurfaceColor(color, localLuminance, ink) {
   );
 }
 
-function getShortcutUrlSurfaceColor(color, localLuminance, ink) {
+function getShortcutUrlSurfaceColor(color: RgbColor, localLuminance: number, ink: ToneInk): RgbColor {
   const baseSurfaceColor = getShortcutUrlBaseSurfaceColor(color, localLuminance, ink);
   const backgroundLuminance = getColorLuminance(baseSurfaceColor);
   if (ink === 'light') {
@@ -439,7 +568,7 @@ function getShortcutUrlSurfaceColor(color, localLuminance, ink) {
   return mixColor(baseSurfaceColor, target, backgroundLuminance >= 0.56 ? 0.34 : 0.22);
 }
 
-function getShortcutAddSurfaceColor(urlSurfaceColor, ink) {
+function getShortcutAddSurfaceColor(urlSurfaceColor: RgbColor, ink: ToneInk): RgbColor {
   const backgroundLuminance = getColorLuminance(urlSurfaceColor);
   if (ink === 'light') {
     const target = backgroundLuminance >= 0.32
@@ -453,11 +582,11 @@ function getShortcutAddSurfaceColor(urlSurfaceColor, ink) {
   return mixColor(urlSurfaceColor, target, backgroundLuminance >= 0.56 ? 0.28 : 0.18);
 }
 
-function getForcedShortcutSurfaceInk(ink, themeMode) {
+function getForcedShortcutSurfaceInk(ink: ToneInk, themeMode: ThemeMode): ToneInk {
   return themeMode === 'dark' ? 'light' : ink;
 }
 
-function shouldApplyForcedIconBackground(element, mode) {
+function shouldApplyForcedIconBackground(element: HTMLElement | null | undefined, mode: string): boolean {
   if (!element) {
     return false;
   }
@@ -470,7 +599,7 @@ function shouldApplyForcedIconBackground(element, mode) {
   return true;
 }
 
-function clearForcedIconBackgroundStyles(element) {
+function clearForcedIconBackgroundStyles(element: HTMLElement | null | undefined): void {
   if (!element) {
     return;
   }
@@ -483,7 +612,14 @@ function clearForcedIconBackgroundStyles(element) {
   element.style.removeProperty('--x-nt-shortcut-add-color');
 }
 
-function applyForcedIconBackgroundStyles(element, luminance, ink, color, mode, themeMode) {
+function applyForcedIconBackgroundStyles(
+  element: HTMLElement,
+  luminance: number,
+  ink: ToneInk,
+  color: RgbColor,
+  mode: string,
+  themeMode: ThemeMode
+): void {
   if (!shouldApplyForcedIconBackground(element, mode)) {
     clearForcedIconBackgroundStyles(element);
     return;
@@ -512,7 +648,15 @@ function applyForcedIconBackgroundStyles(element, luminance, ink, color, mode, t
     formatSolidRgb(getIconSolidForegroundColor(urlSurfaceColor)));
 }
 
-function applyIconSolidBackgroundStyles(element, luminance, ink, color, overlayAlpha, textureContrast, effectType) {
+function applyIconSolidBackgroundStyles(
+  element: HTMLElement | null | undefined,
+  luminance: number,
+  ink: ToneInk,
+  color: RgbColor,
+  overlayAlpha: number,
+  textureContrast: number,
+  effectType: string
+): void {
   if (!element) {
     return;
   }
@@ -537,7 +681,7 @@ function applyIconSolidBackgroundStyles(element, luminance, ink, color, overlayA
     formatSolidRgb(getIconSolidForegroundColor(hoverBackgroundColor)));
 }
 
-function applyWordmarkToneStyles(element, ink, wordmarkInk, protection, color) {
+function applyWordmarkToneStyles(element: HTMLElement, ink: ToneInk, protection: number, color: RgbColor): void {
   // The shadow follows the ink family, a fixed one included. Light ink gets a soft,
   // diffuse shadow in a deep tone of the wallpaper's own hue, so it lifts
   // the ink without a grey smudge; dark ink has no offset shadow at all, only
@@ -558,7 +702,7 @@ function applyWordmarkToneStyles(element, ink, wordmarkInk, protection, color) {
 
 // A translucent tone is seen blended with the wallpaper behind it, so its contrast
 // is measured on that blend rather than on the tone's own color.
-function getTranslucentToneContrast(tone, backgroundColor) {
+function getTranslucentToneContrast(tone: Tone, backgroundColor: RgbColor): number {
   return getContrastRatio(
     mixColor(backgroundColor, tone.color, clampNumber(tone.alpha, 0, 1)),
     backgroundColor
@@ -569,9 +713,14 @@ function getTranslucentToneContrast(tone, backgroundColor) {
 // muted ink 3:1 against the sampled background. A tone that falls short moves
 // toward the opaque extreme of its ink family. The family itself is settled
 // beforehand by chooseReadableInk, so every adaptive style stays in one family.
-function ensureTranslucentToneReadable(tone, backgroundColor, ink, minimumContrast) {
+function ensureTranslucentToneReadable(
+  tone: Partial<Tone> | null | undefined,
+  backgroundColor: RgbColor,
+  ink: string,
+  minimumContrast: number
+): Tone {
   const background = getValidToneColor(backgroundColor);
-  const start = {
+  const start: Tone = {
     color: getValidToneColor(tone && tone.color),
     alpha: clampNumber(tone && tone.alpha, 0, 1)
   };
@@ -581,13 +730,13 @@ function ensureTranslucentToneReadable(tone, backgroundColor, ink, minimumContra
   const target = ink === 'dark' ? TONE_DARK_TARGET : TONE_LIGHT_TARGET;
   // Both the color and its opacity move toward the extreme, so contrast grows
   // monotonically and a binary search finds the gentlest tone that reads.
-  const candidateAt = (amount) => ({
+  const candidateAt = (amount: number): Tone => ({
     color: mixColor(start.color, target, amount),
     alpha: mixNumber(start.alpha, 1, amount)
   });
   let low = 0;
   let high = 1;
-  let best = { color: target, alpha: 1 };
+  let best: Tone = { color: target, alpha: 1 };
   for (let index = 0; index < 12; index += 1) {
     const amount = (low + high) / 2;
     const candidate = candidateAt(amount);
@@ -602,7 +751,11 @@ function ensureTranslucentToneReadable(tone, backgroundColor, ink, minimumContra
 }
 
 // Filters repaint the wallpaper, so their luminance stands in for the sampled color.
-function getAdaptiveToneBackground(luminance, color, effectType) {
+function getAdaptiveToneBackground(
+  luminance: number,
+  color: Partial<RgbColor> | null | undefined,
+  effectType: string | null | undefined
+): RgbColor {
   return effectType && effectType !== 'none'
     ? {
         red: clampNumber(luminance, 0, 1) * 255,
@@ -616,7 +769,12 @@ function getAdaptiveToneBackground(luminance, color, effectType) {
 // tones the family they keep may be unable to reach the small-text floor even
 // fully opaque; then the other family is used when it reads better, and
 // data-wallpaper-ink, hover and shadow styles all follow that choice.
-function chooseReadableInk(ink, luminance, color, effectType) {
+function chooseReadableInk(
+  ink: ToneInk,
+  luminance: number,
+  color: Partial<RgbColor> | null | undefined,
+  effectType: string | null | undefined
+): ToneInk {
   const background = getAdaptiveToneBackground(luminance, color, effectType);
   const own = getContrastRatio(ink === 'dark' ? TONE_DARK_TARGET : TONE_LIGHT_TARGET, background);
   if (own >= ADAPTIVE_INK_MIN_CONTRAST) {
@@ -627,11 +785,16 @@ function chooseReadableInk(ink, luminance, color, effectType) {
 }
 
 // Ink and muted ink for adaptive text, with the contrast floor applied.
-function getAdaptiveInkTones(luminance, ink, color, effectType) {
+function getAdaptiveInkTones(
+  luminance: number,
+  ink: string,
+  color: Partial<RgbColor> | null | undefined,
+  effectType: string | null | undefined
+) {
   const background = getAdaptiveToneBackground(luminance, color, effectType);
-  let inkTone;
-  let mutedTone;
-  let amount;
+  let inkTone: Tone;
+  let mutedTone: Tone;
+  let amount: number;
   if (ink === 'dark') {
     amount = clampNumber((luminance - 0.52) / 0.42, 0, 1);
     inkTone = {
@@ -662,11 +825,20 @@ function getAdaptiveInkTones(luminance, ink, color, effectType) {
   };
 }
 
-function formatToneRgb(tone) {
+function formatToneRgb(tone: Tone): string {
   return formatRgb(tone.color.red, tone.color.green, tone.color.blue, tone.alpha * 100);
 }
 
-function applyAdaptiveToneStyles(element, luminance, ink, color, overlayAlpha, overlayLuminance, textureContrast, effectType) {
+function applyAdaptiveToneStyles(
+  element: HTMLElement | null | undefined,
+  luminance: number,
+  ink: ToneInk,
+  color: RgbColor,
+  overlayAlpha: number,
+  overlayLuminance: number,
+  textureContrast: number,
+  effectType: string
+): void {
   if (!element || !Number.isFinite(luminance)) {
     return;
   }
@@ -681,7 +853,7 @@ function applyAdaptiveToneStyles(element, luminance, ink, color, overlayAlpha, o
     effectType
   );
   setStyleProperty(element, '--x-nt-wallpaper-wordmark-ink', formatSolidRgb(wordmarkInk));
-  applyWordmarkToneStyles(element, ink, wordmarkInk, protection, color);
+  applyWordmarkToneStyles(element, ink, protection, color);
   const tones = getAdaptiveInkTones(luminance, ink, color, effectType);
   const amount = tones.amount;
   const hover = tones.hoverColor;
@@ -703,7 +875,14 @@ function applyAdaptiveToneStyles(element, luminance, ink, color, overlayAlpha, o
     formatRgb(15, 23, 42, Math.max(mixNumber(12, 22, amount), mixNumber(12, 26, protection))));
 }
 
-function applySurfaceToneStyles(element, luminance, ink, color, textureContrast, effectType) {
+function applySurfaceToneStyles(
+  element: HTMLElement,
+  luminance: number,
+  ink: ToneInk,
+  color: RgbColor,
+  textureContrast: number,
+  effectType: string
+): void {
   const sourceColor = getValidToneColor(color);
   const neutralColor = ink === 'dark'
     ? { red: 248, green: 250, blue: 252 }
@@ -744,12 +923,20 @@ function applySurfaceToneStyles(element, luminance, ink, color, textureContrast,
 //   the plate turns the wallpaper's own color up to a flat blue or orange.
 // groupLuminance, when given, decides the ink for a whole row of plates so neighbors never mix.
 // fixedInk pins the ink for surfaces whose controls are styled per theme (the Appearance panel, menus).
-function getGlassAdaptation(luminance, textureContrast, color, themeMode, previousInk, groupLuminance, fixedInk) {
+function getGlassAdaptation(
+  luminance: number,
+  textureContrast: number,
+  color: Partial<RgbColor> | null | undefined,
+  themeMode: string,
+  previousInk: string | null,
+  groupLuminance?: number | null,
+  fixedInk?: string
+): GlassAdaptation {
   const lum = clampNumber(Number(luminance) || 0, 0, 1);
   const texture = clampNumber(Number(textureContrast) || 0, 0, 1);
   const chroma = clampNumber(getColorChroma(getValidToneColor(color)), 0, 1);
   const inkLuminance = Number.isFinite(groupLuminance) ? clampNumber(groupLuminance, 0, 1) : lum;
-  let ink = 'light';
+  let ink: ToneInk = 'light';
   if (fixedInk === 'light' || fixedInk === 'dark') {
     ink = fixedInk;
   } else if (themeMode !== 'dark') {
@@ -764,7 +951,7 @@ function getGlassAdaptation(luminance, textureContrast, color, themeMode, previo
   return { ink, density, saturate };
 }
 
-function applyGlassAdaptationStyles(element, adaptation) {
+function applyGlassAdaptationStyles(element: HTMLElement, adaptation: GlassAdaptation): void {
   if (element.getAttribute('data-glass-ink') !== adaptation.ink) {
     element.setAttribute('data-glass-ink', adaptation.ink);
   }
@@ -772,7 +959,7 @@ function applyGlassAdaptationStyles(element, adaptation) {
   setStyleProperty(element, '--x-nt-glass-saturate', adaptation.saturate.toFixed(3));
 }
 
-function clearGlassAdaptationStyles(element) {
+function clearGlassAdaptationStyles(element: HTMLElement): void {
   element.removeAttribute('data-glass-ink');
   element.removeAttribute('data-glass-ink-theme');
   element.style.removeProperty('--x-nt-glass-density');
@@ -781,60 +968,39 @@ function clearGlassAdaptationStyles(element) {
 
 const GLASS_INK_HINT_STORAGE_KEY = '_x_extension_newtab_glass_ink_hint_2026_unique_';
 
-function createWallpaperAdaptiveTone(options) {
-  const documentObj = getOption(options, 'documentObj', globalThis.document);
-  const windowObj = getOption(options, 'windowObj', globalThis.window);
-  const getTargets = getFunction(options, 'getTargets', function() {
-    return [];
-  });
-  const getCurrentWallpaper = getFunction(options, 'getCurrentWallpaper', function() {
-    return null;
-  });
-  const getWallpaperImageUrl = getFunction(options, 'getWallpaperImageUrl', function() {
-    return '';
-  });
-  // A small copy of the same image, cropped the same way, as { url, width, height } with the full
-  // image's width and height (0 when unknown), or null. The sampler is only a few hundred pixels
-  // across, so it reads this copy instead of decoding the full wallpaper.
-  const getWallpaperSample = getFunction(options, 'getWallpaperSample', function() {
-    return null;
-  });
-  const getOverlayAlphaAtViewportY = getFunction(options, 'getOverlayAlphaAtViewportY', function() {
-    return 0;
-  });
-  const getOverlayLuminance = getFunction(options, 'getOverlayLuminance', function() {
-    return 1;
-  });
-  const getEffectLuminanceAtViewport = getFunction(options, 'getEffectLuminanceAtViewport', function() {
-    return null;
-  });
-  const applyWordmarkThemeAppearance = getFunction(options, 'applyWordmarkThemeAppearance');
-  // Hears each new sampler, whose canvas holds the shown image scaled down.
-  const onSamplerReady = getFunction(options, 'onSamplerReady');
-  // An image another script already loaded and decoded to sample this URL's wallpaper (the wallpaper
-  // preload's small copy), or null.
-  const getPreloadedImage = getFunction(options, 'getPreloadedImage', function() {
-    return null;
-  });
+function createWallpaperAdaptiveTone<W>(options?: WallpaperAdaptiveToneOptions<W> | null) {
+  const config: WallpaperAdaptiveToneOptions<W> = options || {};
+  const documentObj = config.documentObj || globalThis.document;
+  const windowObj = config.windowObj || globalThis.window;
+  const getTargets = config.getTargets || (() => []);
+  const getCurrentWallpaper = config.getCurrentWallpaper || (() => null);
+  const getWallpaperImageUrl = config.getWallpaperImageUrl || (() => '');
+  const getWallpaperSample = config.getWallpaperSample || (() => null);
+  const getOverlayAlphaAtViewportY = config.getOverlayAlphaAtViewportY || (() => 0);
+  const getOverlayLuminance = config.getOverlayLuminance || (() => 1);
+  const getEffectLuminanceAtViewport = config.getEffectLuminanceAtViewport || (() => null);
+  const applyWordmarkThemeAppearance = config.applyWordmarkThemeAppearance || (() => {});
+  const onSamplerReady = config.onSamplerReady || (() => {});
+  const getPreloadedImage = config.getPreloadedImage || (() => null);
 
-  let sampler = null;
+  let sampler: AdaptiveToneSampler | null = null;
   let pendingImageUrl = '';
   let loadToken = 0;
   let toneFrame = 0;
-  let settledWaiters = [];
+  let settledWaiters: Array<() => void> = [];
 
   // Resolves once no wallpaper image is still loading for a sample: the shown wallpaper's tones
   // are on the page, or there is nothing to sample.
-  function whenSettled() {
+  function whenSettled(): Promise<void> {
     if (!pendingImageUrl) {
       return Promise.resolve();
     }
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       settledWaiters.push(resolve);
     });
   }
 
-  function notifySettled() {
+  function notifySettled(): void {
     if (pendingImageUrl || settledWaiters.length === 0) {
       return;
     }
@@ -843,28 +1009,28 @@ function createWallpaperAdaptiveTone(options) {
     waiters.forEach((resolve) => resolve());
   }
 
-  function getDocumentThemeMode() {
+  function getDocumentThemeMode(): ThemeMode {
     return documentObj && documentObj.body && documentObj.body.getAttribute('data-theme') === 'dark'
       ? 'dark'
       : 'light';
   }
 
-  function requestFrame(callback) {
+  function requestFrame(callback: () => void): number {
     if (windowObj && typeof windowObj.requestAnimationFrame === 'function') {
       return windowObj.requestAnimationFrame(callback);
     }
-    return setTimeout(callback, 16);
+    return globalTimers.setTimeout(callback, 16);
   }
 
-  function cancelFrame(id) {
+  function cancelFrame(id: number): void {
     if (windowObj && typeof windowObj.cancelAnimationFrame === 'function') {
       windowObj.cancelAnimationFrame(id);
       return;
     }
-    clearTimeout(id);
+    globalTimers.clearTimeout(id);
   }
 
-  function getViewportSize() {
+  function getViewportSize(): { width: number; height: number } {
     const docEl = documentObj.documentElement;
     return {
       width: Math.max(1, windowObj.innerWidth || (docEl ? docEl.clientWidth : 0) || 1),
@@ -872,12 +1038,11 @@ function createWallpaperAdaptiveTone(options) {
     };
   }
 
-  function getToneTargets() {
-    const targets = getTargets();
-    return Array.isArray(targets) ? targets : [];
+  function getToneTargets(): ReadonlyArray<AdaptiveToneTarget | null | undefined> {
+    return getTargets() || [];
   }
 
-  function clearTargetTone(element) {
+  function clearTargetTone(element: HTMLElement | null | undefined): void {
     if (!element) {
       return;
     }
@@ -890,14 +1055,14 @@ function createWallpaperAdaptiveTone(options) {
     clearGlassAdaptationStyles(element);
   }
 
-  function cancelScheduledApply() {
+  function cancelScheduledApply(): void {
     if (toneFrame) {
       cancelFrame(toneFrame);
       toneFrame = 0;
     }
   }
 
-  function clear(options) {
+  function clear(options?: { updateWordmark?: boolean } | null): void {
     cancelScheduledApply();
     getToneTargets().forEach((target) => {
       if (!target || !target.element) {
@@ -915,13 +1080,13 @@ function createWallpaperAdaptiveTone(options) {
 
   // A target may sample several elements at once; it then reads the box around all of them
   // that lies on screen, so a row scrolled partly out of view centers on what is shown.
-  function getTargetSampleBounds(sampleElement) {
+  function getTargetSampleBounds(sampleElement: NonNullable<AdaptiveToneTarget['sampleElement']>): ScreenRect | null {
     const elements = (Array.isArray(sampleElement) ? sampleElement : [sampleElement])
-      .filter((element) => element && typeof element.getBoundingClientRect === 'function');
+      .filter((element): element is SampleSource => Boolean(element) && typeof element?.getBoundingClientRect === 'function');
     const viewport = elements.length > 1 ? getViewportSize() : null;
     const rects = elements
       .map((element) => element.getBoundingClientRect())
-      .map((rect) => {
+      .map((rect): ScreenRect => {
         if (!viewport) {
           return rect;
         }
@@ -942,7 +1107,7 @@ function createWallpaperAdaptiveTone(options) {
     return { left, top, right, bottom, width: right - left, height: bottom - top };
   }
 
-  function getSampleRect(rect, target) {
+  function getSampleRect(rect: ScreenRect, target: AdaptiveToneTarget): SampleRect {
     const viewport = getViewportSize();
     // Glass blurs only what lies under its own plate.
     if (target && target.glass) {
@@ -966,19 +1131,19 @@ function createWallpaperAdaptiveTone(options) {
 
   // Loads the image that samples url's wallpaper: its small copy at sampleUrl when there is one,
   // falling back to the full image.
-  function loadImage(url, sampleUrl) {
+  function loadImage(url: string, sampleUrl: string): Promise<HTMLImageElement> {
     const loadFromUrls = () => (sampleUrl && sampleUrl !== url
       ? loadImageFromUrl(sampleUrl).catch(() => loadImageFromUrl(url))
       : loadImageFromUrl(url));
     const preloaded = getPreloadedImage(url);
     if (preloaded && typeof preloaded.then === 'function') {
-      return preloaded.then((image) => image || loadFromUrls(), loadFromUrls);
+      return Promise.resolve(preloaded).then((image) => image || loadFromUrls(), loadFromUrls);
     }
     return loadFromUrls();
   }
 
-  function loadImageFromUrl(url) {
-    return new Promise((resolve, reject) => {
+  function loadImageFromUrl(url: string): Promise<HTMLImageElement> {
+    return new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new Image();
       image.decoding = 'async';
       // Online wallpapers allow CORS; requesting it keeps the canvas readable for pixel sampling.
@@ -1003,7 +1168,11 @@ function createWallpaperAdaptiveTone(options) {
 
   // Scales the photo down to the sample size off the main thread; drawing the full image into
   // the sample canvas there took tens of milliseconds while the New Tab was opening.
-  function scaleImageForSampling(image, width, height) {
+  function scaleImageForSampling(
+    image: HTMLImageElement,
+    width: number,
+    height: number
+  ): Promise<HTMLImageElement | ImageBitmap> {
     if (!windowObj || typeof windowObj.createImageBitmap !== 'function') {
       return Promise.resolve(image);
     }
@@ -1016,26 +1185,37 @@ function createWallpaperAdaptiveTone(options) {
 
   // When image is the wallpaper's small copy, sample's width and height are the full image's: the
   // samples then land where they would on the full image.
-  function createSampler(image, url, sample) {
+  function createSampler(
+    image: HTMLImageElement,
+    url: string,
+    sample: WallpaperSample | null | undefined
+  ): Promise<AdaptiveToneSampler | null> {
     const imageWidth = Math.max(1, image.naturalWidth || image.width || 1);
     const imageHeight = Math.max(1, image.naturalHeight || image.height || 1);
-    const isSampleCopy = Boolean(sample && sample.width > 0 && sample.height > 0 &&
-      (image.currentSrc || image.src) === sample.url);
-    const naturalWidth = isSampleCopy ? sample.width : imageWidth;
-    const naturalHeight = isSampleCopy ? sample.height : imageHeight;
+    const fullSize = sample && sample.width > 0 && sample.height > 0 &&
+      (image.currentSrc || image.src) === sample.url ? sample : null;
+    const naturalWidth = fullSize ? fullSize.width : imageWidth;
+    const naturalHeight = fullSize ? fullSize.height : imageHeight;
     const sampleScale = Math.min(1, 420 / naturalWidth, 260 / naturalHeight);
     const width = Math.max(1, Math.round(naturalWidth * sampleScale));
     const height = Math.max(1, Math.round(naturalHeight * sampleScale));
     return scaleImageForSampling(image, width, height).then((source) => {
       const sampler = drawSampler(source, url, width, height, naturalWidth, naturalHeight);
-      if (source !== image && typeof source.close === 'function') {
+      if (source !== image && 'close' in source && typeof source.close === 'function') {
         source.close();
       }
       return sampler;
     });
   }
 
-  function drawSampler(source, url, width, height, naturalWidth, naturalHeight) {
+  function drawSampler(
+    source: HTMLImageElement | ImageBitmap,
+    url: string,
+    width: number,
+    height: number,
+    naturalWidth: number,
+    naturalHeight: number
+  ): AdaptiveToneSampler | null {
     const canvas = documentObj.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
@@ -1044,10 +1224,10 @@ function createWallpaperAdaptiveTone(options) {
       return null;
     }
     context.drawImage(source, 0, 0, canvas.width, canvas.height);
-    let imageData = null;
+    let imageData: Uint8ClampedArray | null = null;
     try {
       imageData = context.getImageData(0, 0, canvas.width, canvas.height).data;
-    } catch (e) {
+    } catch {
       imageData = null;
     }
     return {
@@ -1062,7 +1242,7 @@ function createWallpaperAdaptiveTone(options) {
     };
   }
 
-  function getRenderedMetrics(sourceSampler) {
+  function getRenderedMetrics(sourceSampler: AdaptiveToneSampler): { scale: number; offsetX: number; offsetY: number } {
     const viewport = getViewportSize();
     const scale = Math.max(
       viewport.width / sourceSampler.naturalWidth,
@@ -1077,11 +1257,11 @@ function createWallpaperAdaptiveTone(options) {
     };
   }
 
-  function applyOverlayToLuminance(luminance, alpha, overlayLuminance) {
+  function applyOverlayToLuminance(luminance: number, alpha: number, overlayLuminance: number): number {
     return (luminance * (1 - alpha)) + (overlayLuminance * alpha);
   }
 
-  function applyOverlayToColor(color, alpha, overlayLuminance) {
+  function applyOverlayToColor(color: RgbColor, alpha: number, overlayLuminance: number): { color: RgbColor; alpha: number } {
     const overlayColor = overlayLuminance >= 0.5
       ? { red: 255, green: 255, blue: 255 }
       : { red: 0, green: 0, blue: 0 };
@@ -1091,7 +1271,7 @@ function createWallpaperAdaptiveTone(options) {
     };
   }
 
-  function getPixelColor(sourceSampler, x, y) {
+  function getPixelColor(sourceSampler: AdaptiveToneSampler, x: number, y: number): RgbColor & { alpha: number } {
     let red = 255;
     let green = 255;
     let blue = 255;
@@ -1117,7 +1297,12 @@ function createWallpaperAdaptiveTone(options) {
     };
   }
 
-  function getSamplePixelAtViewport(sourceSampler, metrics, viewportX, viewportY) {
+  function getSamplePixelAtViewport(
+    sourceSampler: AdaptiveToneSampler,
+    metrics: { scale: number; offsetX: number; offsetY: number },
+    viewportX: number,
+    viewportY: number
+  ): RgbColor & { alpha: number } {
     const sourceX = ((viewportX - metrics.offsetX) / metrics.scale) * sourceSampler.sampleScaleX;
     const sourceY = ((viewportY - metrics.offsetY) / metrics.scale) * sourceSampler.sampleScaleY;
     return getPixelColor(
@@ -1129,7 +1314,7 @@ function createWallpaperAdaptiveTone(options) {
 
   // The mean color of the whole screen as shown; null for a see-through wallpaper, whose clear
   // parts show the page color itself.
-  function samplePageBaseColor(sourceSampler, overlayLuminance, effectType) {
+  function samplePageBaseColor(sourceSampler: AdaptiveToneSampler, overlayLuminance: number, effectType: string): RgbColor | null {
     const viewport = getViewportSize();
     const metrics = getRenderedMetrics(sourceSampler);
     const total = { red: 0, green: 0, blue: 0 };
@@ -1144,7 +1329,7 @@ function createWallpaperAdaptiveTone(options) {
         const effectLuminance = effectType && effectType !== 'none'
           ? getEffectLuminanceAtViewport(viewportX, viewportY, getColorLuminance(sourceColor))
           : null;
-        const effectColor = Number.isFinite(effectLuminance)
+        const effectColor = typeof effectLuminance === 'number' && Number.isFinite(effectLuminance)
           ? matchColorLuminance(sourceColor, effectLuminance)
           : sourceColor;
         const overlayAlpha = clampNumber(getOverlayAlphaAtViewportY(viewportY), 0, 1);
@@ -1162,11 +1347,11 @@ function createWallpaperAdaptiveTone(options) {
     };
   }
 
-  function applyPageBaseColor(sourceSampler, overlayLuminance, effectType) {
-    let color = null;
+  function applyPageBaseColor(sourceSampler: AdaptiveToneSampler, overlayLuminance: number, effectType: string): void {
+    let color: RgbColor | null = null;
     try {
       color = samplePageBaseColor(sourceSampler, overlayLuminance, effectType);
-    } catch (e) {
+    } catch {
       color = null;
     }
     if (color) {
@@ -1176,7 +1361,13 @@ function createWallpaperAdaptiveTone(options) {
     }
   }
 
-  function sampleToneForRect(sourceSampler, rect, target, overlayLuminance, effectType) {
+  function sampleToneForRect(
+    sourceSampler: AdaptiveToneSampler | null,
+    rect: SampleRect | null,
+    target: AdaptiveToneTarget,
+    overlayLuminance: number,
+    effectType: string
+  ): ToneSample | null {
     if (!sourceSampler || !sourceSampler.canvas || !sourceSampler.context || !rect) {
       return null;
     }
@@ -1188,7 +1379,7 @@ function createWallpaperAdaptiveTone(options) {
     const ys = isIconButton
       ? [0.12, 0.32, 0.5, 0.68, 0.88]
       : [0.24, 0.5, 0.76];
-    const values = [];
+    const values: Array<{ luminance: number; color: RgbColor; overlayAlpha: number }> = [];
     const ignoresOverlay = Boolean(target && target.ignoreOverlay);
     try {
       ys.forEach((yRatio) => {
@@ -1200,7 +1391,9 @@ function createWallpaperAdaptiveTone(options) {
           const effectLuminance = effectType && effectType !== 'none'
             ? getEffectLuminanceAtViewport(viewportX, viewportY, sourceLuminance)
             : null;
-          const resolvedLuminance = Number.isFinite(effectLuminance) ? effectLuminance : sourceLuminance;
+          const resolvedLuminance = typeof effectLuminance === 'number' && Number.isFinite(effectLuminance)
+            ? effectLuminance
+            : sourceLuminance;
           const overlayAlpha = ignoresOverlay
             ? 0
             : clampNumber(getOverlayAlphaAtViewportY(viewportY), 0, 1);
@@ -1216,7 +1409,7 @@ function createWallpaperAdaptiveTone(options) {
           });
         });
       });
-    } catch (e) {
+    } catch {
       return null;
     }
     if (values.length === 0) {
@@ -1253,7 +1446,7 @@ function createWallpaperAdaptiveTone(options) {
     };
   }
 
-  function chooseInk(luminance, currentInk) {
+  function chooseInk(luminance: number, currentInk: string | null): ToneInk {
     if (!Number.isFinite(luminance)) {
       return currentInk === 'dark' || currentInk === 'light' ? currentInk : 'light';
     }
@@ -1266,7 +1459,7 @@ function createWallpaperAdaptiveTone(options) {
     return luminance >= 0.56 ? 'dark' : 'light';
   }
 
-  function apply(options) {
+  function apply(options?: { resetInk?: boolean } | null): void {
     const config = options || {};
     if (!getCurrentWallpaper() ||
         !sampler ||
@@ -1281,14 +1474,16 @@ function createWallpaperAdaptiveTone(options) {
     const overlayLuminance = clampNumber(getOverlayLuminance(), 0, 1);
     const themeMode = getDocumentThemeMode();
     applyPageBaseColor(sampler, overlayLuminance, effectType);
-    const glassSamples = [];
+    const glassSamples: Array<{ target: AdaptiveToneTarget & { element: HTMLElement }; sample: ToneSample }> = [];
     // Targets in one tone group read a single sample over all their elements and
     // keep one ink, so a caption never takes a different color from its heading.
-    const toneGroups = new Map();
+    const toneGroups = new Map<string, { sample: ToneSample | null; ink: ToneInk }>();
     getToneTargets().forEach((target) => {
       if (!target || !target.element) {
         return;
       }
+      // Narrowed here, for the samples below.
+      const element = target.element;
       if (target.disabled === true) {
         clearTargetTone(target.element);
         return;
@@ -1311,21 +1506,22 @@ function createWallpaperAdaptiveTone(options) {
       const sample = shared
         ? shared.sample
         : sampleToneForRect(sampler, getSampleRect(rect, target), target, overlayLuminance, effectType);
-      const luminance = sample ? sample.luminance : null;
+      const sampled = sample && Number.isFinite(sample.luminance) ? sample : null;
       if (target.glass) {
-        if (Number.isFinite(luminance)) {
-          glassSamples.push({ target, sample });
+        if (sampled) {
+          glassSamples.push({ target: { ...target, element }, sample: sampled });
         } else {
-          clearGlassAdaptationStyles(target.element);
+          clearGlassAdaptationStyles(element);
         }
         return;
       }
-      if (!Number.isFinite(luminance)) {
-        target.element.removeAttribute('data-wallpaper-overlay-cover');
-        clearForcedIconBackgroundStyles(target.element);
-        clearAdaptiveToneStyles(target.element);
+      if (!sampled) {
+        element.removeAttribute('data-wallpaper-overlay-cover');
+        clearForcedIconBackgroundStyles(element);
+        clearAdaptiveToneStyles(element);
         return;
       }
+      const luminance = sampled.luminance;
       const currentInk = config.resetInk === true
         ? null
         : target.element.getAttribute('data-wallpaper-ink');
@@ -1333,17 +1529,17 @@ function createWallpaperAdaptiveTone(options) {
         ? shared.ink
         : target.surface === 'topbar' && target.preferOverlayPolarity === true
           ? chooseSurfaceInk(
-              sample.overlayAlpha,
+              sampled.overlayAlpha,
               overlayLuminance,
               chooseInk(luminance, currentInk)
             )
-          : chooseReadableInk(chooseInk(luminance, currentInk), luminance, sample.color, effectType);
+          : chooseReadableInk(chooseInk(luminance, currentInk), luminance, sampled.color, effectType);
       // An ink the user fixed (the clock's) is its own; the rest of its group keeps the sampled one.
       const nextInk = target.ink || sampledInk;
       if (target.toneGroup && !shared) {
         toneGroups.set(target.toneGroup, { sample, ink: sampledInk });
       }
-      const overlayCovered = isWallpaperOverlayCovered(sample.overlayAlpha);
+      const overlayCovered = isWallpaperOverlayCovered(sampled.overlayAlpha);
       target.element.setAttribute('data-wallpaper-ink', nextInk);
       target.element.setAttribute('data-wallpaper-overlay-cover', overlayCovered ? 'true' : 'false');
       target.element.style.setProperty('--x-nt-wallpaper-local-luma', luminance.toFixed(3));
@@ -1351,10 +1547,10 @@ function createWallpaperAdaptiveTone(options) {
         target.element,
         luminance,
         nextInk,
-        sample.color,
-        sample.overlayAlpha,
+        sampled.color,
+        sampled.overlayAlpha,
         overlayLuminance,
-        sample.textureContrast,
+        sampled.textureContrast,
         effectType
       );
       if (target.surface === 'topbar') {
@@ -1362,8 +1558,8 @@ function createWallpaperAdaptiveTone(options) {
           target.element,
           luminance,
           nextInk,
-          sample.color,
-          sample.textureContrast,
+          sampled.color,
+          sampled.textureContrast,
           effectType
         );
       }
@@ -1372,9 +1568,9 @@ function createWallpaperAdaptiveTone(options) {
           target.element,
           luminance,
           nextInk,
-          sample.color,
-          sample.overlayAlpha,
-          sample.textureContrast,
+          sampled.color,
+          sampled.overlayAlpha,
+          sampled.textureContrast,
           effectType
         );
       } else {
@@ -1385,7 +1581,7 @@ function createWallpaperAdaptiveTone(options) {
           target.element,
           luminance,
           nextInk,
-          sample.color,
+          sampled.color,
           target.forcedIconBackground,
           themeMode
         );
@@ -1400,8 +1596,11 @@ function createWallpaperAdaptiveTone(options) {
   // The whole page reads in one ink, chosen from the mean brightness under all its glass, so no
   // plate or menu stays white beside dark ones; each still sets its own tint density from what lies
   // under it, so a plate over a brighter patch thickens rather than flipping.
-  function applyGlassSamples(entries, themeMode) {
-    const inkCounts = { light: 0, dark: 0 };
+  function applyGlassSamples(
+    entries: ReadonlyArray<{ target: AdaptiveToneTarget & { element: HTMLElement }; sample: ToneSample }>,
+    themeMode: ThemeMode
+  ): void {
+    const inkCounts: Record<ToneInk, number> = { light: 0, dark: 0 };
     if (entries.length === 0) {
       return;
     }
@@ -1441,7 +1640,7 @@ function createWallpaperAdaptiveTone(options) {
   }
 
   // The ink most plates settled on, for the next page to open in (newtab.js reads it back).
-  function rememberGlassInkHint(inkCounts) {
+  function rememberGlassInkHint(inkCounts: Record<ToneInk, number>): void {
     if (!documentObj.body || inkCounts.light + inkCounts.dark === 0) {
       return;
     }
@@ -1453,12 +1652,12 @@ function createWallpaperAdaptiveTone(options) {
       if (windowObj.localStorage.getItem(GLASS_INK_HINT_STORAGE_KEY) !== hint) {
         windowObj.localStorage.setItem(GLASS_INK_HINT_STORAGE_KEY, hint);
       }
-    } catch (_error) {
+    } catch {
       // localStorage is only a head start; the sample corrects the ink either way.
     }
   }
 
-  function schedule() {
+  function schedule(): void {
     if (!getCurrentWallpaper() || !sampler || pendingImageUrl) {
       return;
     }
@@ -1473,7 +1672,7 @@ function createWallpaperAdaptiveTone(options) {
     });
   }
 
-  function refresh() {
+  function refresh(): void {
     const wallpaper = getCurrentWallpaper();
     const imageUrl = wallpaper ? getWallpaperImageUrl(wallpaper) : '';
     if (!wallpaper || !imageUrl) {
@@ -1533,6 +1732,8 @@ function createWallpaperAdaptiveTone(options) {
   };
 }
 
+type WallpaperAdaptiveTone = ReturnType<typeof createWallpaperAdaptiveTone>;
+
 export {
   GLASS_INK_HINT_STORAGE_KEY,
   createWallpaperAdaptiveTone,
@@ -1542,4 +1743,13 @@ export {
   getWordmarkInkColor,
   getContrastRatio,
   getTranslucentToneContrast
+};
+export type {
+  AdaptiveToneSampler,
+  AdaptiveToneTarget,
+  GlassAdaptation,
+  RgbColor,
+  ToneInk,
+  WallpaperAdaptiveTone,
+  WallpaperAdaptiveToneOptions
 };
