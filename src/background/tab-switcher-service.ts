@@ -9,6 +9,26 @@
 // the functions here.
 
 import * as RECENT_TAB_SWITCHER from './recent-tab-switcher';
+import {
+  getDefaultSwitcherSelectedIndex,
+  getFailedOpenTabSwitcherState,
+  getSwitcherRegistrableThemeHost,
+  getSwitcherThemeHostCandidates,
+  getSwitcherThumbnailStatusForFailureReason,
+  getTabSwitcherHeadSignature,
+  getTabSwitcherThumbnailStorageKey,
+  getThumbnailPersistSignature,
+  isSwitcherThumbnailRefreshNeeded,
+  normalizeOpenTabSwitcherStateResponse,
+  normalizeOpenTabSwitcherStateScriptResults,
+  normalizeTabSwitcherCommitResponse,
+  normalizeTabSwitcherCommitScriptResults,
+  normalizeTabSwitcherHostOkResponse,
+  normalizeTabSwitcherHostOkScriptResults,
+  readScriptResults,
+  readTabSwitcherThumbnailStatus
+} from '../domain/tab-switcher-model';
+import type { OpenSwitcherState, SwitcherOffset } from '../domain/tab-switcher-model';
 import * as BROWSER_PROFILE from '../platform/browser-profile';
 import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as NEWTAB_FAVICON_THEME from '../shared/favicon/favicon-theme';
@@ -54,7 +74,6 @@ import type {
   SiteThemeColor,
   TabSwitcherContext,
   TabSwitcherItem,
-  TabSwitcherThumbnailStatus,
   TabSwitcherThumbnailUpdate
 } from '../domain/messages';
 
@@ -100,11 +119,6 @@ type HostAction = Extract<PageAction,
   | 'openTabSwitcherFromCommand'
   | 'advanceOpenTabSwitcherFromCommand'
   | 'armTabSwitcherShortcutRelease'>;
-
-interface OpenSwitcherState {
-  ok: boolean;
-  open: boolean;
-}
 
 // How a host message is delivered and read: by message, or failing that by
 // running scriptFunc in the page.
@@ -154,9 +168,6 @@ interface InjectContext {
   onOpenComplete: (ok: boolean, reason: string) => void;
 }
 
-// 1 moves to older tabs, -1 back toward newer ones.
-type SwitcherOffset = 1 | -1;
-
 // The keys bound to the switcher commands; reverse is '' while unbound.
 interface TabSwitcherShortcuts {
   forward: string;
@@ -176,11 +187,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
-}
-
-function readTabSwitcherThumbnailStatus(value: unknown): TabSwitcherThumbnailStatus {
-  return value === 'ok' || value === 'pending' || value === 'missing' || value === 'stale' ||
-    value === 'failed' || value === 'restricted' ? value : '';
 }
 
 // The recent-tab list and its thumbnails, kept in session storage.
@@ -477,56 +483,6 @@ function commitOpenTabSwitcherFromShortcutReleaseInPage(hostId: string): { ok: b
     ok: true,
     committed: Reflect.apply(commit, host, []) === true
   };
-}
-
-function getFailedOpenTabSwitcherState(): OpenSwitcherState {
-  return { ok: false, open: false };
-}
-
-function normalizeTabSwitcherHostOkResponse(response: unknown): boolean | null {
-  return isRecord(response) && response.ok === true ? true : null;
-}
-
-function normalizeTabSwitcherCommitResponse(response: unknown): boolean | null {
-  if (!isRecord(response) || response.ok !== true || typeof response.committed !== 'boolean') {
-    return null;
-  }
-  return response.committed === true;
-}
-
-function normalizeOpenTabSwitcherStateResponse(response: unknown): OpenSwitcherState | null {
-  if (!isRecord(response) || response.ok !== true || typeof response.open !== 'boolean') {
-    return null;
-  }
-  return {
-    ok: true,
-    open: response.open === true
-  };
-}
-
-// The results of the page script in each frame, as the page produced them.
-function readScriptResults(results: unknown): Record<string, unknown>[] {
-  const items: unknown[] = Array.isArray(results) ? results : [];
-  return items.flatMap((item) => (isRecord(item) && isRecord(item.result) ? [item.result] : []));
-}
-
-function normalizeTabSwitcherHostOkScriptResults(results: unknown): boolean | null {
-  return readScriptResults(results).some((result) => result.ok === true) ? true : null;
-}
-
-function normalizeTabSwitcherCommitScriptResults(results: unknown): boolean | null {
-  const result = readScriptResults(results).find((item) => item.ok === true && typeof item.committed === 'boolean');
-  return result ? result.committed === true : null;
-}
-
-function normalizeOpenTabSwitcherStateScriptResults(results: unknown): OpenSwitcherState | null {
-  const result = readScriptResults(results).find((item) => item.ok === true && typeof item.open === 'boolean');
-  return result
-    ? {
-      ok: true,
-      open: result.open === true
-    }
-    : null;
 }
 
 function runTabSwitcherHostScript<T, A extends unknown[]>(
@@ -1083,31 +1039,8 @@ function getTabSwitcherStateStorageArea(): chrome.storage.StorageArea | null {
 // only the keys that changed. Saving every thumbnail on each tab switch
 // rewrote ~150 KB, and storage.onChanged delivered the old and new copies to
 // every open extension page.
-const TAB_SWITCHER_THUMBNAIL_KEY_PREFIX = '_x_extension_tab_switcher_thumbnail_2026_unique_:';
 let persistedTabSwitcherHeadSignature = '';
 const persistedThumbnailSignatureByTabId = new Map<number, string>();
-
-function getTabSwitcherThumbnailStorageKey(tabId: unknown): string {
-  return `${TAB_SWITCHER_THUMBNAIL_KEY_PREFIX}${tabId}`;
-}
-
-// What decides whether a stored thumbnail entry needs writing again.
-function getThumbnailPersistSignature(entry: {
-  updatedAt?: unknown; capturedAt?: unknown; status?: unknown; url?: unknown; reason?: unknown; dataUrl?: unknown;
-}): string {
-  return [
-    entry.updatedAt,
-    entry.capturedAt,
-    entry.status,
-    entry.url,
-    entry.reason,
-    typeof entry.dataUrl === 'string' ? entry.dataUrl.length : 0
-  ].join('|');
-}
-
-function getTabSwitcherHeadSignature(head: { stack?: unknown; thumbnailTabIds?: unknown }): string {
-  return JSON.stringify([head.stack, head.thumbnailTabIds]);
-}
 
 function readTabSwitcherStorage(storageArea: chrome.storage.StorageArea, keys: string[]): Promise<Record<string, unknown> | null> {
   return new Promise((resolve) => {
@@ -1309,20 +1242,6 @@ function getSwitcherThumbnailStateForPayload(tab: SwitcherTab & { id: number }, 
   return recentTabTracker.getThumbnailState(tab.id, url);
 }
 
-function isSwitcherThumbnailRefreshNeeded(state: { status?: unknown; dataUrl?: unknown } | null | undefined): boolean {
-  const status = String(state && state.status ? state.status : '').trim().toLowerCase();
-  if (status === 'restricted' || status === 'pending') {
-    return false;
-  }
-  if (status === 'missing' || status === 'stale' || status === 'failed') {
-    return true;
-  }
-  if (status === 'ok') {
-    return !(state && typeof state.dataUrl === 'string' && state.dataUrl.startsWith('data:image/'));
-  }
-  return !status;
-}
-
 // Opening the switcher takes a fresh shot of the current tab, unless the page
 // is still loading or Chrome's two-captures-per-second limit would refuse it.
 function shouldPreCaptureActiveSwitcherThumbnailBeforePayload(tab: chrome.tabs.Tab): boolean {
@@ -1477,58 +1396,6 @@ function buildSwitcherTabFavicon(tab: SwitcherTab, url: string): string {
   }
   const resolver = getBackgroundFaviconUrlResolver();
   return resolver ? resolver.resolveFaviconSource(tab && tab.favIconUrl, resolved) : '';
-}
-
-function getSwitcherRegistrableThemeHost(host: unknown): string {
-  const normalizedHost = normalizeFaviconHost(host);
-  if (!normalizedHost ||
-      normalizedHost === 'localhost' ||
-      normalizedHost.endsWith('.localhost') ||
-      /^\d{1,3}(?:\.\d{1,3}){3}$/.test(normalizedHost) ||
-      normalizedHost.includes(':')) {
-    return normalizedHost;
-  }
-  const labels = normalizedHost.split('.').filter(Boolean);
-  if (labels.length <= 2) {
-    return normalizedHost;
-  }
-  const suffix = labels.slice(-2).join('.');
-  const multipartSuffixes = new Set([
-    'co.uk',
-    'com.au',
-    'com.br',
-    'com.cn',
-    'com.hk',
-    'com.sg',
-    'co.jp',
-    'co.kr',
-    'co.nz',
-    'com.tw',
-    'org.uk',
-    'net.au'
-  ]);
-  const tailLength = multipartSuffixes.has(suffix) && labels.length >= 3 ? 3 : 2;
-  return labels.slice(-tailLength).join('.');
-}
-
-function getSwitcherThemeHostCandidates(host: unknown): string[] {
-  const normalizedHost = normalizeFaviconHost(host);
-  const candidates: string[] = [];
-  const addCandidate = (candidate: unknown): void => {
-    const normalized = normalizeFaviconHost(candidate);
-    if (normalized && !candidates.includes(normalized)) {
-      candidates.push(normalized);
-    }
-  };
-  const sharedHost = getSwitcherRegistrableThemeHost(normalizedHost);
-  addCandidate(sharedHost);
-  if (normalizedHost === 'app.dodopayments.com' ||
-      normalizedHost === 'customer.dodopayments.com' ||
-      normalizedHost === 'checkout.dodopayments.com') {
-    addCandidate('dodopayments.com');
-  }
-  addCandidate(normalizedHost);
-  return candidates;
 }
 
 function getCachedSiteThemeColorForSwitcher(host: unknown, origin: unknown): SiteThemeColor | null {
@@ -1798,22 +1665,6 @@ function logSwitcherThumbnailCaptureFailure(tab: SwitcherTab | null | undefined,
     reason: failureReason || 'unknown',
     requestReason: requestReason || ''
   });
-}
-
-function getSwitcherThumbnailStatusForFailureReason(reason: string): 'restricted' | 'failed' {
-  const text = String(reason || '').toLowerCase();
-  if (text.includes('restricted') ||
-      text.includes('permission') ||
-      text.includes('not allowed') ||
-      text.includes('not permitted') ||
-      text.includes('cannot access') ||
-      text.includes('chrome://') ||
-      text.includes('web store') ||
-      text.includes('unsupported-protocol') ||
-      text.includes('untracked-tab')) {
-    return 'restricted';
-  }
-  return 'failed';
 }
 
 function logSwitcherThumbnailCaptureSuccess(tab: SwitcherTab, requestReason: string): void {
@@ -2192,35 +2043,6 @@ function getRecentTabsForSwitcher(
     .getRecentTabs(normalizedTabs, { limit: TAB_SWITCHER_LIMIT })
     .map((tab) => normalizeSwitcherTabForPayload(tab, currentTabId))
     .filter((item): item is TabSwitcherItem => item !== null);
-}
-
-function getDefaultSwitcherSelectedIndex(
-  items: readonly TabSwitcherItem[],
-  currentTabId: number | undefined,
-  offset: SwitcherOffset
-): number {
-  const list = Array.isArray(items) ? items : [];
-  if (list.length <= 0) {
-    return 0;
-  }
-  if (list.length === 1) {
-    return 0;
-  }
-  if (typeof currentTabId !== 'number') {
-    return 0;
-  }
-  const currentIndex = list.findIndex((item) => item && item.id === currentTabId);
-  if (offset < 0) {
-    // Reverse opens on the oldest tab, wrapping back from the current one.
-    return currentIndex >= 0 ? (currentIndex - 1 + list.length) % list.length : list.length - 1;
-  }
-  if (currentIndex === 0) {
-    return 1;
-  }
-  if (currentIndex > 0) {
-    return currentIndex;
-  }
-  return 0;
 }
 
 export function focusWindowAndActivateTab(
