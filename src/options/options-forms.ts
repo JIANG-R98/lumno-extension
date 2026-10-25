@@ -5,11 +5,11 @@ import type { SiteSearchProvider } from '../domain/search/types';
 import type { createSiteSearchModel } from './options-site-search';
 import type { GetMessage } from './options-types';
 import type { SiteSearchProviderDraft, SiteSearchSaveResult } from './react/site-search-list';
-import type { SiteSearchFormController, SiteSearchFormRenderModel } from './react/settings-forms';
+import type { SiteSearchFormRenderModel } from './react/settings-forms';
 
 interface FormsState {
   // Made once the page has mounted its React views.
-  siteSearchFormController: Pick<SiteSearchFormController, 'render'> | null;
+  siteSearchFormController: { render(model: SiteSearchFormRenderModel): void } | null;
   siteSearchModel: Pick<ReturnType<typeof createSiteSearchModel>, 'addCustomSiteSearchProvider'>;
   customSiteSearchProviders: SiteSearchProvider[];
   customSiteSearchProviderIdsReady: boolean;

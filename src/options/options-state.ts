@@ -13,14 +13,13 @@ import type { LanguageState } from './options-language';
 import type { NavigationState } from './options-navigation';
 import type { NormalizersState } from './options-normalizers';
 import type { createPanelHeightAnimator } from './options-panel-motion';
-import type { PopconfirmState } from './options-popconfirm';
 import type { createSearchSourceOrderController } from './options-search-source-order';
 import type { SegmentedTabsState } from './options-segmented-tabs';
 import type { SelectControlsState } from './options-select-controls';
 import type { SettingBindsState } from './options-setting-binds';
 import type { ShortcutReferenceState } from './options-shortcut-reference';
 import type { createSiteSearchModel, EnqueueOperation } from './options-site-search';
-import type { SiteSearchEventsState } from './options-site-search-events';
+import type { SiteSearchActionsState } from './options-site-search-actions';
 import type { SiteSearchFormState } from './options-site-search-form';
 import type { SiteSearchListState } from './options-site-search-list';
 import type { SliderControlsState } from './options-slider-controls';
@@ -43,12 +42,11 @@ type OptionsState =
   LanguageState &
   NavigationState &
   NormalizersState &
-  PopconfirmState &
   SegmentedTabsState &
   SelectControlsState &
   SettingBindsState &
   ShortcutReferenceState &
-  SiteSearchEventsState &
+  SiteSearchActionsState &
   SiteSearchFormState &
   SiteSearchListState &
   SliderControlsState &
@@ -121,7 +119,6 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     currentActiveSettingsTab: 'general',
     // A linked setting to scroll to once the lists have rendered.
     pendingOptionsScrollTarget: '',
-    activePopconfirm: null,
 
     // Site searches and aggregate searches, empty until read.
     defaultSiteSearchProviders: [],

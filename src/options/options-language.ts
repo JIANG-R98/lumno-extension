@@ -62,7 +62,6 @@ interface LanguageState {
 
 interface LanguageDeps {
   renderOverlayFontMissingNotices(): void;
-  popconfirmLanguageRefreshers: Set<() => void>;
   formatTemplate: FormatTemplate;
   formatShortcutForDisplay(shortcut: string): string;
   fallbackShortcutInput: HTMLInputElement | null;
@@ -78,9 +77,6 @@ interface LanguageDeps {
   renderFeedbackSupport(): void;
   renderTranslationHelp(): void;
   refreshCustomSelects(): void;
-  updateBuiltinResetTooltip(): void;
-  updateCustomClearTooltip(): void;
-  updateAggregateSearchClearTooltip(): void;
   refreshSyncStatus(): void;
   renderShortcutReferenceList(): void;
   setNewtabWidthTabState(mode: unknown): void;
@@ -115,7 +111,6 @@ interface LanguageDeps {
 function createLanguage(deps: LanguageDeps) {
   const {
     renderOverlayFontMissingNotices,
-    popconfirmLanguageRefreshers,
     formatTemplate,
     formatShortcutForDisplay,
     fallbackShortcutInput,
@@ -130,9 +125,6 @@ function createLanguage(deps: LanguageDeps) {
     renderFeedbackSupport,
     renderTranslationHelp,
     refreshCustomSelects,
-    updateBuiltinResetTooltip,
-    updateCustomClearTooltip,
-    updateAggregateSearchClearTooltip,
     refreshSyncStatus,
     renderShortcutReferenceList,
     setNewtabWidthTabState,
@@ -191,7 +183,6 @@ function createLanguage(deps: LanguageDeps) {
   function applyI18n(): void {
     if (optionsState.webDavSettingsController) optionsState.webDavSettingsController.render();
     renderOverlayFontMissingNotices();
-    popconfirmLanguageRefreshers.forEach((refresh) => refresh());
     const browserName = LumnoBrowserProfile.getBrowserInternalProfile(navigator).name || 'Chrome';
     const templateValues = {
       name: 'Lumno',
@@ -345,9 +336,6 @@ function createLanguage(deps: LanguageDeps) {
       renderFeedbackSupport();
       renderTranslationHelp();
       refreshCustomSelects();
-      updateBuiltinResetTooltip();
-      updateCustomClearTooltip();
-      updateAggregateSearchClearTooltip();
       refreshSyncStatus();
       if (optionsState.fallbackShortcutSection) {
         optionsState.fallbackShortcutSection.refreshShortcutsStatus();

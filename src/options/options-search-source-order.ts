@@ -1,8 +1,8 @@
-// Search sources order on the Options page: the search panel group chips at
-// the top of Search sources, the per-list moves of the provider and aggregate
-// lists, and the browser content order on the result type checkboxes. All of
-// them edit one synced record (search-source-order.ts); the page re-renders
-// its lists through `onChange`.
+// Search sources order on the Options page: the order of the search panel
+// groups, the per-list moves of the provider and aggregate lists, and the
+// browser content order on the result type checkboxes. All of them edit one
+// synced record (search-source-order.ts); the page re-renders its chips and
+// lists through `onChange`.
 
 import * as ORDER from '../domain/search/search-source-order';
 import type { SearchSourceOrder } from '../domain/search/search-source-order';
@@ -11,8 +11,6 @@ import * as SORTABLE from '../shared/ui/sortable-drag';
 import type { GetMessage } from './options-types';
 
 interface SearchSourceOrderConfig {
-  // Where the search panel group chips go.
-  groupHost?: HTMLElement | null;
   getMessage?: GetMessage;
   showToast?(message: string, isError?: boolean): void;
   // The stored record, as storage holds it.
@@ -28,7 +26,6 @@ type HistoryDirection = 'undo' | 'redo';
 
 function createSearchSourceOrderController(options: SearchSourceOrderConfig) {
   const getMessage: GetMessage = options.getMessage || ((_key, fallback) => fallback);
-  const groupHost = options.groupHost || null;
   let order = ORDER.normalizeOrder(null);
   let writeQueue: Promise<unknown> = Promise.resolve();
   const detachers: Array<() => void> = [];
@@ -38,7 +35,6 @@ function createSearchSourceOrderController(options: SearchSourceOrderConfig) {
     if (options.onChange) {
       options.onChange(order);
     }
-    renderGroupChips();
   }
 
   function accept(value: unknown): void {
@@ -172,62 +168,14 @@ function createSearchSourceOrderController(options: SearchSourceOrderConfig) {
     return getMessage('search_scope_group_local', '浏览器内容');
   }
 
-  function renderGroupChips(): void {
-    if (!groupHost) {
-      return;
-    }
-    const doc = groupHost.ownerDocument;
-    const focusedGroup = doc.activeElement && groupHost.contains(doc.activeElement)
-      ? doc.activeElement.getAttribute('data-group')
-      : '';
-    groupHost.textContent = '';
-    order.groups.forEach((group, index) => {
-      const chip = doc.createElement('div');
-      chip.className = '_x_extension_order_chip_2026_unique_';
-      chip.setAttribute('role', 'listitem');
-      chip.setAttribute('tabindex', '0');
-      chip.setAttribute('data-sortable', 'true');
-      chip.setAttribute('data-group', group);
-      const label = getGroupLabel(group);
-      chip.setAttribute('aria-label', label);
-      chip.setAttribute(
-        'aria-description',
-        getMessage('settings_search_source_order_keyboard_hint', '按 Alt + 左右方向键调整位置')
-      );
-      const grip = doc.createElement('i');
-      grip.className = 'ri-icon ri-size-14 ri-draggable';
-      grip.setAttribute('aria-hidden', 'true');
-      const text = doc.createElement('span');
-      text.textContent = label;
-      chip.append(grip, text);
-      chip.addEventListener('keydown', (event) => {
-        if (!event.altKey || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) {
-          return;
-        }
-        event.preventDefault();
-        const target = index + (event.key === 'ArrowLeft' ? -1 : 1);
-        if (target >= 0 && target < order.groups.length) {
-          moveGroup(index, target);
-        }
-      });
-      groupHost.appendChild(chip);
-    });
-    if (focusedGroup) {
-      const chip = groupHost.querySelector(`[data-group="${focusedGroup}"]`);
-      if (isHtmlElement(chip)) {
-        chip.focus({ preventScroll: true });
-      }
-    }
-  }
-
   // Drag for one container. Rows reorder only among their own siblings, and
   // a list with an open editor stays put so heights cannot shift mid-drag.
   function attachDrag(
     host: HTMLElement | null,
     onReorder: (fromIndex: number, toIndex: number, peers: HTMLElement[]) => void
-  ): void {
+  ): () => void {
     if (!host) {
-      return;
+      return () => {};
     }
     const detach = SORTABLE.attach(host, {
       itemSelector: '[data-sortable="true"]',
@@ -237,29 +185,42 @@ function createSearchSourceOrderController(options: SearchSourceOrderConfig) {
       onReorder: (_item, fromIndex, toIndex, peers) => onReorder(fromIndex, toIndex, peers)
     });
     detachers.push(detach);
+    return () => {
+      const index = detachers.indexOf(detach);
+      if (index >= 0) {
+        detachers.splice(index, 1);
+      }
+      detach();
+    };
   }
 
-  function attachListDrag(host: HTMLElement | null, listId: string, getKey: (row: HTMLElement) => string): void {
-    attachDrag(host, (fromIndex, toIndex, peers) => {
+  // Each returns the function that takes its drag off again.
+  function attachListDrag(host: HTMLElement | null, listId: string, getKey: (row: HTMLElement) => string): () => void {
+    return attachDrag(host, (fromIndex, toIndex, peers) => {
       moveListItem(listId, peers.map(getKey), fromIndex, toIndex);
     });
   }
 
-  function attachLocalDrag(host: HTMLElement | null): void {
-    attachDrag(host, (fromIndex, toIndex, peers) => {
+  function attachLocalDrag(host: HTMLElement | null): () => void {
+    return attachDrag(host, (fromIndex, toIndex, peers) => {
       moveLocal(peers.map((peer) => peer.getAttribute('data-value') || ''), fromIndex, toIndex);
     });
   }
 
-  attachDrag(groupHost, (fromIndex, toIndex) => moveGroup(fromIndex, toIndex));
+  function attachGroupDrag(host: HTMLElement | null): () => void {
+    return attachDrag(host, (fromIndex, toIndex) => moveGroup(fromIndex, toIndex));
+  }
 
   return Object.freeze({
     accept,
+    attachGroupDrag,
     attachListDrag,
     attachLocalDrag,
+    getGroupLabel,
     getOrder: (): SearchSourceOrder => order,
     isLocalDefault,
     load,
+    moveGroup,
     moveListItem,
     moveLocal,
     redo: () => stepHistory('redo'),

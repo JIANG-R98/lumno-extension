@@ -1,10 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
-const { JSDOM } = require('jsdom');
 
 const settings = require('../../src/domain/settings.ts');
 const store = require('../../src/domain/search/aggregate-search-store.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
+const { createOptionsPage } = require('../helpers/options-page');
 
 // One setting in the aggregate search section decides whether an aggregate search gathers the tabs
 // it opens into a tab group. The editor's default names and placeholders are
@@ -13,8 +13,10 @@ const { loadBackground, wait } = require('../helpers/background-harness');
 const TOGGLE = '_x_extension_aggregate_search_auto_group_toggle_2026_unique_';
 const AUTO_GROUP = settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY;
 
-function testMarkup() {
-  const doc = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
+async function testMarkup() {
+  const page = await createOptionsPage({});
+  await page.settle(150);
+  const doc = page.document;
   const toggle = doc.getElementById(TOGGLE);
   assert.ok(toggle && toggle.closest('#_x_extension_aggregate_search_group_2026_unique_'),
     'the aggregate tab-group setting should live with the aggregate searches');
@@ -23,9 +25,11 @@ function testMarkup() {
   assert.strictEqual(toggle.checked, true, 'grouping should default to on');
   // The section heading names aggregate search, so the row drops it; the
   // switch's accessible name keeps it for screen readers moving by control.
-  assert.ok(doc.querySelector('#_x_extension_aggregate_search_group_2026_unique_ [data-i18n="settings_aggregate_search_auto_group_short_title"]'));
-  assert.strictEqual(toggle.getAttribute('data-i18n-aria-label'), 'settings_aggregate_search_auto_group_title');
+  const row = toggle.closest('._x_extension_setting_row_2024_unique_');
+  assert.strictEqual(row.querySelector('._x_extension_setting_title_2024_unique_ span').textContent, '自动创建标签页组');
+  assert.strictEqual(toggle.getAttribute('aria-label'), '聚合搜索自动创建标签页组');
   assert.strictEqual(AUTO_GROUP, '_x_extension_aggregate_search_auto_group_enabled_2026_unique_');
+  page.close();
 }
 
 // The worker reads the setting for every run, so a change made in Settings
@@ -82,7 +86,7 @@ function testCopy() {
 }
 
 (async () => {
-  testMarkup();
+  await testMarkup();
   await testWorkerReadsTheSettingEachRun();
   testCopy();
   console.log('aggregate search global setting tests passed');

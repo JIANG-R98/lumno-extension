@@ -17,7 +17,7 @@ interface NormalizersDeps {
     'normalizeNewtabTimeFontWeight' | 'normalizeNewtabShortcutsVisible' | 'normalizeNewtabShortcutAddVisible' |
     'normalizeNewtabShortcutDockMagnificationEnabled' | 'normalizeNewtabShortcutColumns' |
     'normalizeNewtabShortcutSize' | 'normalizeNewtabShortcutGap' | 'inferNewtabShortcutColumnsFromWidth' |
-    'normalizeAggregateSearchAutoGroupEnabled' | 'normalizeSearchResultPriority' |
+    'normalizeSearchResultPriority' |
     'normalizeSearchResultDisplayLimit' | 'normalizeSearchResultSourceType' | 'normalizeSearchResultSourceTypes'>;
   bookmarkColumnsSettingRow: HTMLElement | null;
   bookmarkFolderIconsVisibleRow: HTMLElement | null;
@@ -161,10 +161,6 @@ function createNormalizers(deps: NormalizersDeps) {
     });
   }
 
-  function normalizeAggregateSearchAutoGroupEnabled(value: unknown) {
-    return SETTINGS.normalizeAggregateSearchAutoGroupEnabled(value);
-  }
-
   function normalizeSearchResultPriority(value: unknown) {
     return SETTINGS.normalizeSearchResultPriority(value);
   }
@@ -227,7 +223,6 @@ function createNormalizers(deps: NormalizersDeps) {
     normalizeNewtabShortcutSize,
     normalizeNewtabShortcutGap,
     inferNewtabShortcutColumnsFromWidth,
-    normalizeAggregateSearchAutoGroupEnabled,
     normalizeSearchResultPriority,
     normalizeSearchResultDisplayLimit,
     normalizeSearchResultSourceTypes,

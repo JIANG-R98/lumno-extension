@@ -15,7 +15,7 @@ import type {
   AggregateSearchCopyModel,
   AggregateSearchDraft,
   AggregateSearchItemModel,
-  AggregateSearchListController,
+  AggregateSearchListRenderModel,
   AggregateSearchProviderOptionModel,
   AggregateSearchSaveResult
 } from './react/aggregate-search-list';
@@ -43,9 +43,7 @@ interface AggregateSearchListDeps {
   getSiteSearchItemIconUrl(item: SiteSearchProvider | null): string;
   getLocalizedBuiltinProviderName(item: SiteSearchProvider | null): string;
   formatTemplate: FormatTemplate;
-  aggregateSearchListController: Pick<AggregateSearchListController, 'render'> | null;
-  syncClearButtonAvailability(button: HTMLButtonElement | null, hasItems: boolean): void;
-  aggregateSearchClearButton: HTMLButtonElement | null;
+  aggregateSearchListController: { render(model: AggregateSearchListRenderModel): void } | null;
   // The keys each list shows right now, in order, for the move buttons.
   renderedSearchSourceKeys: Record<string, string[]>;
   getSearchSourceReorderCopy(): ReorderCopyModel;
@@ -76,8 +74,6 @@ function createAggregateSearchList(deps: AggregateSearchListDeps) {
     getLocalizedBuiltinProviderName,
     formatTemplate,
     aggregateSearchListController,
-    syncClearButtonAvailability,
-    aggregateSearchClearButton,
     renderedSearchSourceKeys,
     getSearchSourceReorderCopy,
     AGGREGATE_SEARCH_STORAGE_KEY,
@@ -258,7 +254,6 @@ function createAggregateSearchList(deps: AggregateSearchListDeps) {
     if (!aggregateSearchListController) {
       return;
     }
-    syncClearButtonAvailability(aggregateSearchClearButton, optionsState.aggregateSearches.length > 0);
     const ordered = optionsState.searchSourceOrderController.sortList(
       optionsState.aggregateSearches,
       'aggregate',

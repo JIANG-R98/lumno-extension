@@ -65,12 +65,6 @@ interface SettingBindsDeps {
   renderNewtabShortcutSizeControl(value: unknown, disabled?: boolean): void;
   renderNewtabShortcutGapControl(value: unknown, disabled?: boolean): void;
   syncNewtabShortcutSubcontrolAvailability(): void;
-  AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY: string;
-  AGGREGATE_SEARCH_STORAGE_KEY: string;
-  deriveLegacyAggregateSearchAutoGroupEnabled(value: unknown): boolean;
-  normalizeAggregateSearchAutoGroupEnabled(value: unknown): boolean;
-  aggregateSearchAutoGroupToggle: HTMLInputElement | null;
-  refreshCustomSelects(): void;
   SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY: string;
   normalizeSearchResultSourceTypes(value: unknown): SearchSourceType[];
   setSearchResultSourceTypeState(value: unknown): void;
@@ -186,12 +180,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     renderNewtabShortcutSizeControl,
     renderNewtabShortcutGapControl,
     syncNewtabShortcutSubcontrolAvailability,
-    AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
-    AGGREGATE_SEARCH_STORAGE_KEY,
-    deriveLegacyAggregateSearchAutoGroupEnabled,
-    normalizeAggregateSearchAutoGroupEnabled,
-    aggregateSearchAutoGroupToggle,
-    refreshCustomSelects,
     SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
     normalizeSearchResultSourceTypes,
     setSearchResultSourceTypeState,
@@ -368,30 +356,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
       if (Object.keys(repairs).length > 0) {
         storageArea.set(repairs);
       }
-    });
-  }
-
-  // Older installs have aggregate searches but no auto-group choice; it is
-  // derived from those searches the first time.
-  function loadAggregateSearchAutoGroupSetting(): void {
-    const storageArea = optionsState.storageArea;
-    if (!storageArea) {
-      return;
-    }
-    storageArea.get([
-      AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
-      AGGREGATE_SEARCH_STORAGE_KEY
-    ], (items) => {
-      const result = items || {};
-      const rawValue = result[AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY];
-      const stored = typeof rawValue === 'undefined'
-        ? deriveLegacyAggregateSearchAutoGroupEnabled(result[AGGREGATE_SEARCH_STORAGE_KEY])
-        : normalizeAggregateSearchAutoGroupEnabled(rawValue);
-      setOptionsToggleState(aggregateSearchAutoGroupToggle, stored);
-      if (rawValue !== stored) {
-        storageArea.set({ [AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY]: stored });
-      }
-      refreshCustomSelects();
     });
   }
 
@@ -715,7 +679,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
       settingBinder.bindToggle({ ...entry, input: isHtmlTag(control, 'input') ? control : null });
     }
   });
-  loadAggregateSearchAutoGroupSetting();
   settingBinder.bindSetting({
     key: RESTRICTED_ACTION_STORAGE_KEY,
     // "lumno" is the old name of the default action.

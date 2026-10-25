@@ -6,8 +6,6 @@ const runtime = globalThis;
 function clearRuntime(): void {
   Reflect.deleteProperty(runtime, 'LumnoOptionsReactBootstrap');
   Reflect.deleteProperty(runtime, 'LumnoOptionsReactIslands');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsAggregateSearchList');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsAggregateSearchListReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsBlacklistTab');
   Reflect.deleteProperty(runtime, 'LumnoOptionsBlacklistTabReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsFeedbackSupport');
@@ -15,8 +13,6 @@ function clearRuntime(): void {
   Reflect.deleteProperty(runtime, 'LumnoOptionsTranslationHelp');
   Reflect.deleteProperty(runtime, 'LumnoOptionsInfoButton');
   Reflect.deleteProperty(runtime, 'LumnoOptionsInfoButtonReact');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsPopconfirm');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsPopconfirmReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSegmentedControl');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSegmentedControlReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSelectControl');
@@ -25,15 +21,12 @@ function clearRuntime(): void {
   Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsNavigationReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsControls');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsControlsReact');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsForms');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsFormsReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsShortcutReference');
   Reflect.deleteProperty(runtime, 'LumnoOptionsShortcutReferenceReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsShortcutHotkey');
   Reflect.deleteProperty(runtime, 'LumnoOptionsShortcutHotkeyReact');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsSiteSearchList');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsSiteSearchListReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsAccountTab');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsShortcutsTab');
   Reflect.deleteProperty(runtime, 'LumnoOptionsThemePicker');
   Reflect.deleteProperty(runtime, 'LumnoOptionsThemePickerReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsToast');
@@ -48,7 +41,7 @@ afterEach(() => {
 });
 
 describe('Options React islands entry', () => {
-  it('installs the Popconfirm and Toast APIs and marks the bootstrap ready', async () => {
+  it('installs the views the page uses and marks the bootstrap ready', async () => {
     runtime.LumnoOptionsReactBootstrap = {
       reactReady: false
     };
@@ -56,10 +49,8 @@ describe('Options React islands entry', () => {
     await import('./options-islands-entry');
 
     expect(runtime.LumnoOptionsReactBootstrap.reactReady).toBe(true);
-    expect(runtime.LumnoOptionsAggregateSearchList?.implementation).toBe('react');
-    expect(runtime.LumnoOptionsAggregateSearchListReact).toBe(
-      runtime.LumnoOptionsAggregateSearchList
-    );
+    expect(runtime.LumnoOptionsAccountTab?.implementation).toBe('react');
+    expect(runtime.LumnoOptionsShortcutsTab?.implementation).toBe('react');
     expect(runtime.LumnoOptionsBlacklistTab?.implementation).toBe('react');
     expect(runtime.LumnoOptionsBlacklistTabReact).toBe(
       runtime.LumnoOptionsBlacklistTab
@@ -71,10 +62,6 @@ describe('Options React islands entry', () => {
     expect(runtime.LumnoOptionsInfoButton?.implementation).toBe('react');
     expect(runtime.LumnoOptionsInfoButtonReact).toBe(
       runtime.LumnoOptionsInfoButton
-    );
-    expect(runtime.LumnoOptionsPopconfirm?.implementation).toBe('react');
-    expect(runtime.LumnoOptionsPopconfirmReact).toBe(
-      runtime.LumnoOptionsPopconfirm
     );
     expect(runtime.LumnoOptionsSegmentedControl?.implementation).toBe('react');
     expect(runtime.LumnoOptionsSegmentedControlReact).toBe(
@@ -92,10 +79,6 @@ describe('Options React islands entry', () => {
     expect(runtime.LumnoOptionsSettingsControlsReact).toBe(
       runtime.LumnoOptionsSettingsControls
     );
-    expect(runtime.LumnoOptionsSettingsForms?.implementation).toBe('react');
-    expect(runtime.LumnoOptionsSettingsFormsReact).toBe(
-      runtime.LumnoOptionsSettingsForms
-    );
     expect(runtime.LumnoOptionsShortcutReference?.implementation).toBe('react');
     expect(runtime.LumnoOptionsShortcutReferenceReact).toBe(
       runtime.LumnoOptionsShortcutReference
@@ -103,10 +86,6 @@ describe('Options React islands entry', () => {
     expect(runtime.LumnoOptionsShortcutHotkey?.implementation).toBe('react');
     expect(runtime.LumnoOptionsShortcutHotkeyReact).toBe(
       runtime.LumnoOptionsShortcutHotkey
-    );
-    expect(runtime.LumnoOptionsSiteSearchList?.implementation).toBe('react');
-    expect(runtime.LumnoOptionsSiteSearchListReact).toBe(
-      runtime.LumnoOptionsSiteSearchList
     );
     expect(runtime.LumnoOptionsThemePicker?.implementation).toBe('react');
     expect(runtime.LumnoOptionsThemePickerReact).toBe(
@@ -120,20 +99,17 @@ describe('Options React islands entry', () => {
       runtime.LumnoOverlayTabSwitcherView
     );
     expect(runtime.LumnoOptionsReactIslands).toEqual({
-      aggregateSearchList: runtime.LumnoOptionsAggregateSearchList,
       blacklistTab: runtime.LumnoOptionsBlacklistTab,
       feedbackSupport: runtime.LumnoOptionsFeedbackSupport,
       infoButton: runtime.LumnoOptionsInfoButton,
-      popconfirm: runtime.LumnoOptionsPopconfirm,
       segmentedControl: runtime.LumnoOptionsSegmentedControl,
       selectControl: runtime.LumnoOptionsSelectControl,
       settingsNavigation: runtime.LumnoOptionsSettingsNavigation,
       settingsControls: runtime.LumnoOptionsSettingsControls,
-      settingsForms: runtime.LumnoOptionsSettingsForms,
       shortcutReference: runtime.LumnoOptionsShortcutReference,
       shortcutHotkey: runtime.LumnoOptionsShortcutHotkey,
-      siteSearchList: runtime.LumnoOptionsSiteSearchList,
       accountTab: runtime.LumnoOptionsAccountTab,
+      shortcutsTab: runtime.LumnoOptionsShortcutsTab,
       themePicker: runtime.LumnoOptionsThemePicker,
       translationHelp: runtime.LumnoOptionsTranslationHelp,
       toast: runtime.LumnoOptionsToast,

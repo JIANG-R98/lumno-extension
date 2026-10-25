@@ -22,7 +22,6 @@ import * as OPTIONS_LANGUAGE from './options-language';
 import * as OPTIONS_NAVIGATION from './options-navigation';
 import * as OPTIONS_NORMALIZERS from './options-normalizers';
 import * as PANEL_MOTION from './options-panel-motion';
-import * as OPTIONS_POPCONFIRM from './options-popconfirm';
 import * as LumnoOptionsSearchSourceOrder from './options-search-source-order';
 import * as OPTIONS_SEGMENTED_TABS from './options-segmented-tabs';
 import * as OPTIONS_SELECT_CONTROLS from './options-select-controls';
@@ -30,7 +29,8 @@ import * as SETTING_BINDINGS from './options-setting-bindings';
 import * as OPTIONS_SETTING_BINDS from './options-setting-binds';
 import * as SHORTCUT_KEYS from './options-shortcut-keys';
 import * as OPTIONS_SHORTCUT_REFERENCE from './options-shortcut-reference';
-import * as OPTIONS_SITE_SEARCH_EVENTS from './options-site-search-events';
+import * as OPTIONS_SHORTCUTS_SECTION from './options-shortcuts-section';
+import * as OPTIONS_SITE_SEARCH_ACTIONS from './options-site-search-actions';
 import * as OPTIONS_SITE_SEARCH_FORM from './options-site-search-form';
 import * as OPTIONS_SITE_SEARCH_LIST from './options-site-search-list';
 import * as SITE_SEARCH from './options-site-search';
@@ -45,7 +45,6 @@ import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as LumnoMessaging from '../platform/messaging';
 import type { StorageChangeListener } from '../domain/storage-port';
 import type { ReadBatchMetrics } from '../platform/settings-storage';
-import { isElementNode } from '../shared/dom-guards';
 import { getHtmlElement, getHtmlTag, queryHtmlElement, queryHtmlElements, queryHtmlTags } from '../shared/dom-lookup';
 import type { LayoutMutation } from './options-panel-motion';
 import * as OPTIONS_STATE from './options-state';
@@ -108,7 +107,6 @@ import * as OPTIONS_STATE from './options-state';
   const searchResultDisplayLimitControlHost = getHtmlElement(document, '_x_extension_search_result_display_limit_control_2026_unique_');
   const overlayWidthControlHost = getHtmlElement(document, '_x_extension_overlay_width_control_2026_unique_');
   const bookmarkFolderIconsVisibleRow = getHtmlElement(document, '_x_extension_bookmark_folder_icons_visible_row_2026_unique_');
-  const aggregateSearchAutoGroupToggle = getHtmlTag(document, '_x_extension_aggregate_search_auto_group_toggle_2026_unique_', 'input');
   const tabSwitcherToggle = getHtmlTag(document, '_x_extension_tab_switcher_toggle_2026_unique_', 'input');
   const tabSwitcherSubrows = getHtmlElement(document, '_x_extension_tab_switcher_subrows_2026_unique_');
   const selectionQuickActionsToggle = getHtmlTag(document, '_x_extension_selection_quick_actions_toggle_2026_unique_', 'input');
@@ -171,16 +169,6 @@ import * as OPTIONS_STATE from './options-state';
   const feedbackSupportHost = getHtmlElement(document, '_x_extension_feedback_support_2026_unique_');
   const translationHelpHost = getHtmlElement(document, '_x_extension_translation_help_2026_unique_');
   const openShortcutsPageButton = getHtmlElement(document, '_x_extension_open_shortcuts_page_2026_unique_');
-  const siteSearchEngineBuiltinList = getHtmlElement(document, '_x_extension_search_engine_builtin_list_2026_unique_');
-  const aggregateSearchList = getHtmlElement(document, '_x_extension_aggregate_search_list_2026_unique_');
-  const aggregateSearchClearButton = getHtmlTag(document, '_x_extension_aggregate_search_clear_2026_unique_', 'button');
-  const siteSearchCustomList = getHtmlElement(document, '_x_extension_site_search_custom_list_2024_unique_');
-  const siteSearchBuiltinList = getHtmlElement(document, '_x_extension_site_search_builtin_list_2024_unique_');
-  const siteSearchAiGroup = getHtmlElement(document, '_x_extension_site_search_ai_group_2026_unique_');
-  const siteSearchAiBuiltinList = getHtmlElement(document, '_x_extension_site_search_ai_builtin_list_2026_unique_');
-  const siteSearchForm = queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="shortcuts"] ._x_extension_shortcut_form_2024_unique_');
-  const builtinResetButton = getHtmlElement(document, '_x_extension_builtin_reset_2024_unique_');
-  const customClearButton = getHtmlTag(document, '_x_extension_custom_clear_2024_unique_', 'button');
   const toastElement = getHtmlElement(document, '_x_extension_toast_2024_unique_');
   if (!panel || !optionsRoot || themeButtons.length === 0 || tabButtons.length === 0) {
     return;
@@ -188,30 +176,27 @@ import * as OPTIONS_STATE from './options-state';
   // The React views, set by the options islands bundle that loads first.
   const optionsBlacklistTabApi = globalThis.LumnoOptionsBlacklistTab;
   const optionsAccountTabApi = globalThis.LumnoOptionsAccountTab;
-  const optionsAggregateSearchListApi = globalThis.LumnoOptionsAggregateSearchList;
+  const optionsShortcutsTabApi = globalThis.LumnoOptionsShortcutsTab;
   const optionsFeedbackSupportApi = globalThis.LumnoOptionsFeedbackSupport;
   const optionsTranslationHelpApi = globalThis.LumnoOptionsTranslationHelp;
   const optionsInfoButtonApi = globalThis.LumnoOptionsInfoButton;
   const optionsToastApi = globalThis.LumnoOptionsToast;
   const optionsSegmentedControlApi = globalThis.LumnoOptionsSegmentedControl;
   const optionsSettingsControlsApi = globalThis.LumnoOptionsSettingsControls;
-  const optionsSettingsFormsApi = globalThis.LumnoOptionsSettingsForms;
   const optionsSettingsNavigationApi = globalThis.LumnoOptionsSettingsNavigation;
   const optionsShortcutReferenceApi = globalThis.LumnoOptionsShortcutReference;
   const optionsShortcutHotkeyApi = globalThis.LumnoOptionsShortcutHotkey;
-  const optionsSiteSearchListApi = globalThis.LumnoOptionsSiteSearchList;
   const optionsThemePickerApi = globalThis.LumnoOptionsThemePicker;
-  if (!optionsAccountTabApi || !optionsBlacklistTabApi || !optionsAggregateSearchListApi || !optionsFeedbackSupportApi ||
+  if (!optionsAccountTabApi || !optionsBlacklistTabApi || !optionsShortcutsTabApi || !optionsFeedbackSupportApi ||
       !optionsTranslationHelpApi || !optionsInfoButtonApi || !optionsSegmentedControlApi ||
-      !optionsSettingsControlsApi || !optionsSettingsFormsApi || !optionsSettingsNavigationApi ||
-      !optionsShortcutReferenceApi || !optionsShortcutHotkeyApi || !optionsSiteSearchListApi || !optionsThemePickerApi) {
+      !optionsSettingsControlsApi || !optionsSettingsNavigationApi ||
+      !optionsShortcutReferenceApi || !optionsShortcutHotkeyApi || !optionsThemePickerApi) {
     console.warn('Lumno: options views not available.');
     return;
   }
   // Narrowed here, for the functions below.
   const infoButtonApi = optionsInfoButtonApi;
   const segmentedControlApi = optionsSegmentedControlApi;
-  const siteSearchListApi = optionsSiteSearchListApi;
 
 
 
@@ -259,7 +244,6 @@ import * as OPTIONS_STATE from './options-state';
     SITE_SEARCH_STORAGE_KEY,
     SITE_SEARCH_DISABLED_STORAGE_KEY,
     AGGREGATE_SEARCH_STORAGE_KEY,
-    AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
     SYNC_META_STORAGE_KEY,
     NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY
   } = SETTINGS;
@@ -267,9 +251,6 @@ import * as OPTIONS_STATE from './options-state';
   // status) and the local-to-sync migration always use chrome.storage.local,
   // whichever area holds the synced settings.
   const localStorageArea = chrome && chrome.storage ? chrome.storage.local || null : null;
-  // A closed popconfirm renders its aria-label once; applyI18n re-renders each
-  // after a language change so the label follows the chosen language.
-  const popconfirmLanguageRefreshers = new Set<() => void>();
 
   // The provider area, and the read batch that serves the startup reads in one go.
   const { runtime: providerStorageRuntime, area: rawStorageArea } = LumnoSettingsStorage.getProviderStorage(chrome);
@@ -298,7 +279,6 @@ import * as OPTIONS_STATE from './options-state';
       windowObj: window
     }),
     searchSourceOrderController: LumnoOptionsSearchSourceOrder.createSearchSourceOrderController({
-      groupHost: getHtmlElement(document, '_x_extension_search_source_group_order_2026_unique_'),
       getMessage: (key, fallback) => getMessage(key, fallback),
       showToast: (message, isError) => showToast(message, isError),
       read: () => LumnoSettingsStorage.readStorageValue(startupStorageReadBatch.area, chrome, SEARCH_SOURCE_ORDER_STORAGE_KEY),
@@ -359,9 +339,6 @@ import * as OPTIONS_STATE from './options-state';
     refreshCustomSelects,
     syncFallbackShortcutWrapWidth,
     updateFallbackShortcutWrapWidthForContent,
-    updateBuiltinResetTooltip,
-    updateCustomClearTooltip,
-    updateAggregateSearchClearTooltip,
     showToast,
     beginToast
   } = OPTIONS_TOOLTIPS.createTooltips({
@@ -369,10 +346,6 @@ import * as OPTIONS_STATE from './options-state';
     fallbackShortcutWrap,
     restrictedActionSelectWrap,
     fallbackShortcutTokens,
-    builtinResetButton,
-    getMessage: (...args) => getMessage(...args),
-    customClearButton,
-    aggregateSearchClearButton,
     toastElement,
     optionsSelectControlRecords,
     renderOptionsSelectControl,
@@ -424,12 +397,6 @@ import * as OPTIONS_STATE from './options-state';
     showToast,
     getActiveBuiltinSiteSearchProviders: (...args) => getActiveBuiltinSiteSearchProviders(...args),
     renderFeedbackSupport,
-    siteSearchEngineBuiltinList,
-    siteSearchCustomList,
-    siteSearchBuiltinList,
-    syncClearButtonAvailability: (...args) => syncClearButtonAvailability(...args),
-    customClearButton,
-    siteSearchAiBuiltinList,
     initTooltips,
     scrollToOptionsTarget: (...args) => scrollToOptionsTarget(...args),
     normalizeSiteSearchProvider,
@@ -456,24 +423,20 @@ import * as OPTIONS_STATE from './options-state';
     updateFallbackShortcutWrapWidthForContent,
     refreshSiteSearchProviders,
     tabsRow,
-    siteSearchAiGroup,
-    siteSearchAiBuiltinList,
     optionsState
   });
 
-  const {
-    closeActivePopconfirm,
-    syncClearButtonAvailability,
-    attachPopconfirm,
-    removeSiteSearchItem
-  } = OPTIONS_POPCONFIRM.createPopconfirm({
+  const siteSearchActions = OPTIONS_SITE_SEARCH_ACTIONS.createSiteSearchActions({
     getMessage: (...args) => getMessage(...args),
-    popconfirmLanguageRefreshers,
-    saveDisabledSiteSearchKeys,
-    refreshSiteSearchProviders,
-    showToast,
     getSiteSearchBuiltinKey: (...args) => getSiteSearchBuiltinKey(...args),
     saveSiteSearchProviderState,
+    saveDisabledSiteSearchKeys,
+    refreshSiteSearchProviders,
+    renderSiteSearchList,
+    renderAggregateSearchList: () => renderAggregateSearchList(),
+    showToast,
+    loadDefaultSiteSearchProviders,
+    loadCustomSiteSearchProviders,
     optionsState
   });
 
@@ -486,7 +449,6 @@ import * as OPTIONS_STATE from './options-state';
     loadLocaleMessages
   } = OPTIONS_LANGUAGE.createLanguage({
     renderOverlayFontMissingNotices: (...args) => renderOverlayFontMissingNotices(...args),
-    popconfirmLanguageRefreshers,
     formatTemplate: (...args) => formatTemplate(...args),
     formatShortcutForDisplay: (...args) => formatShortcutForDisplay(...args),
     fallbackShortcutInput,
@@ -501,9 +463,6 @@ import * as OPTIONS_STATE from './options-state';
     renderFeedbackSupport,
     renderTranslationHelp,
     refreshCustomSelects,
-    updateBuiltinResetTooltip,
-    updateCustomClearTooltip,
-    updateAggregateSearchClearTooltip,
     refreshSyncStatus,
     renderShortcutReferenceList: (...args) => renderShortcutReferenceList(...args),
     setNewtabWidthTabState: (...args) => setNewtabWidthTabState(...args),
@@ -702,7 +661,6 @@ import * as OPTIONS_STATE from './options-state';
     normalizeNewtabShortcutSize,
     normalizeNewtabShortcutGap,
     inferNewtabShortcutColumnsFromWidth,
-    normalizeAggregateSearchAutoGroupEnabled,
     normalizeSearchResultPriority,
     normalizeSearchResultDisplayLimit,
     normalizeSearchResultSourceTypes,
@@ -835,57 +793,56 @@ import * as OPTIONS_STATE from './options-state';
     });
   // Each Search sources list orders on its own; the record keys them by list.
   // The search source order list each site search list sorts by.
-  const SITE_SEARCH_ORDER_LIST_BY_KIND = Object.freeze({
-    custom: 'custom',
-    'builtin-engine': 'engine',
-    'builtin-search': 'site',
-    'builtin-ai': 'ai'
-  });
-  function createSiteSearchListController(host: HTMLElement | null, kind: keyof typeof SITE_SEARCH_ORDER_LIST_BY_KIND) {
-    const listId = SITE_SEARCH_ORDER_LIST_BY_KIND[kind];
-    return siteSearchListApi.createSiteSearchListController(host, {
-      kind,
+  function getSiteSearchListOptions(listId: 'custom' | 'site' | 'ai' | 'engine') {
+    return {
       onLocateDuplicate: locateBuiltinSiteSearchProvider,
-      onMove: (fromIndex, toIndex) => optionsState.searchSourceOrderController.moveListItem(
+      onMove: (fromIndex: number, toIndex: number) => optionsState.searchSourceOrderController.moveListItem(
         listId,
         renderedSearchSourceKeys[listId] || [],
         fromIndex,
         toIndex
       ),
-      onRemove: removeSiteSearchItem,
+      onRemove: (key: string, isBuiltin: boolean) => siteSearchActions.removeSiteSearchItem(key, isBuiltin),
       onSave: handleSiteSearchProviderSave
-    });
+    };
   }
-  optionsState.siteSearchCustomListController = createSiteSearchListController(
-    siteSearchCustomList,
-    'custom'
-  );
-  optionsState.siteSearchEngineBuiltinListController = createSiteSearchListController(
-    siteSearchEngineBuiltinList,
-    'builtin-engine'
-  );
-  optionsState.siteSearchBuiltinListController = createSiteSearchListController(
-    siteSearchBuiltinList,
-    'builtin-search'
-  );
-  optionsState.siteSearchAiBuiltinListController = createSiteSearchListController(
-    siteSearchAiBuiltinList,
-    'builtin-ai'
-  );
-  const aggregateSearchListController =
-    optionsAggregateSearchListApi.createAggregateSearchListController(aggregateSearchList, {
-      onMove: (fromIndex, toIndex) => optionsState.searchSourceOrderController.moveListItem(
-        'aggregate',
-        renderedSearchSourceKeys.aggregate || [],
-        fromIndex,
-        toIndex
-      ),
-      onRemove: (...args) => handleAggregateSearchRemove(...args),
-      onSave: (...args) => handleAggregateSearchSave(...args)
-    });
-  optionsState.siteSearchFormController = optionsSettingsFormsApi.createSiteSearchFormController(siteSearchForm, {
-      onSave: handleReactSiteSearchFormSave
-    });
+  const shortcutsSection = OPTIONS_SHORTCUTS_SECTION.createShortcutsSection({
+    host: queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="shortcuts"]'),
+    shortcutsTabApi: optionsShortcutsTabApi,
+    getMessage,
+    orderController: optionsState.searchSourceOrderController,
+    storageArea: optionsState.storageArea,
+    SETTINGS,
+    deriveLegacyAutoGroupEnabled: (value) => deriveLegacyAggregateSearchAutoGroupEnabled(value),
+    refreshCustomSelects,
+    initTooltips,
+    handlers: {
+      custom: getSiteSearchListOptions('custom'),
+      sites: getSiteSearchListOptions('site'),
+      ai: getSiteSearchListOptions('ai'),
+      engines: getSiteSearchListOptions('engine'),
+      aggregate: {
+        onMove: (fromIndex, toIndex) => optionsState.searchSourceOrderController.moveListItem(
+          'aggregate',
+          renderedSearchSourceKeys.aggregate || [],
+          fromIndex,
+          toIndex
+        ),
+        onRemove: (id) => handleAggregateSearchRemove(id),
+        onSave: (id, draft) => handleAggregateSearchSave(id, draft)
+      },
+      onAddSiteSearch: handleReactSiteSearchFormSave,
+      onClearCustom: () => siteSearchActions.clearCustomSiteSearches(),
+      onClearAggregates: () => handleAggregateSearchClear(),
+      onResetBuiltin: () => siteSearchActions.resetBuiltinSiteSearches()
+    }
+  });
+  optionsState.siteSearchCustomListController = shortcutsSection.customList;
+  optionsState.siteSearchEngineBuiltinListController = shortcutsSection.enginesList;
+  optionsState.siteSearchBuiltinListController = shortcutsSection.sitesList;
+  optionsState.siteSearchAiBuiltinListController = shortcutsSection.aiList;
+  const aggregateSearchListController = shortcutsSection.aggregateList;
+  optionsState.siteSearchFormController = shortcutsSection.form;
 
   const {
     getActiveBuiltinSiteSearchProviders,
@@ -1001,24 +958,12 @@ import * as OPTIONS_STATE from './options-state';
   function animateOptionsPanelHeight(mutateLayout: LayoutMutation): boolean {
     return optionsState.panelHeightAnimator.animate(mutateLayout);
   }
-  optionsState.searchSourceOrderController.attachListDrag(siteSearchCustomList, 'custom', getSearchSourceRowKey);
-  optionsState.searchSourceOrderController.attachListDrag(siteSearchEngineBuiltinList, 'engine', getSearchSourceRowKey);
-  optionsState.searchSourceOrderController.attachListDrag(siteSearchBuiltinList, 'site', getSearchSourceRowKey);
-  optionsState.searchSourceOrderController.attachListDrag(siteSearchAiBuiltinList, 'ai', getSearchSourceRowKey);
-  optionsState.searchSourceOrderController.attachListDrag(
-    aggregateSearchList,
-    'aggregate',
-    (row) => row.getAttribute('data-aggregate-id') || ''
-  );
   optionsState.searchSourceOrderController.attachLocalDrag(searchResultSourceTypeGroupHost);
   storageChanges.on(SEARCH_SOURCE_ORDER_STORAGE_KEY, (changes) => {
     optionsState.searchSourceOrderController.accept(changes[SEARCH_SOURCE_ORDER_STORAGE_KEY].newValue);
   });
   optionsState.searchSourceOrderController.load();
 
-  function getSearchSourceRowKey(row: HTMLElement): string {
-    return String(row.getAttribute('data-key') || '').toLowerCase();
-  }
   if (searchResultSourceTypeController) {
     renderSearchResultSourceTypeControl(
       searchResultSourceTypeItems.filter((item) => item.checked).map((item) => item.value)
@@ -1044,8 +989,6 @@ import * as OPTIONS_STATE from './options-state';
     getLocalizedBuiltinProviderName,
     formatTemplate,
     aggregateSearchListController,
-    syncClearButtonAvailability,
-    aggregateSearchClearButton,
     renderedSearchSourceKeys,
     getSearchSourceReorderCopy,
     AGGREGATE_SEARCH_STORAGE_KEY,
@@ -1573,6 +1516,7 @@ import * as OPTIONS_STATE from './options-state';
 
   labsSection.bindSettings(settingBinder);
   blacklistSection.bindSettings(settingBinder);
+  shortcutsSection.bindSettings(settingBinder);
   OPTIONS_SETTING_BINDS.createSettingBinds({
     LANGUAGE_STORAGE_KEY,
     normalizeLanguageMode,
@@ -1601,12 +1545,6 @@ import * as OPTIONS_STATE from './options-state';
     renderNewtabShortcutSizeControl,
     renderNewtabShortcutGapControl,
     syncNewtabShortcutSubcontrolAvailability,
-    AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
-    AGGREGATE_SEARCH_STORAGE_KEY,
-    deriveLegacyAggregateSearchAutoGroupEnabled,
-    normalizeAggregateSearchAutoGroupEnabled,
-    aggregateSearchAutoGroupToggle,
-    refreshCustomSelects,
     SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
     normalizeSearchResultSourceTypes,
     setSearchResultSourceTypeState,
@@ -1691,26 +1629,6 @@ import * as OPTIONS_STATE from './options-state';
 
   refreshCustomSelects();
 
-  document.addEventListener('click', (event) => {
-    if (!optionsState.activePopconfirm) {
-      return;
-    }
-    const wrap = optionsState.activePopconfirm.closest('._x_extension_popconfirm_wrap_2024_unique_');
-    if (wrap && isElementNode(event.target) && wrap.contains(event.target)) {
-      return;
-    }
-    closeActivePopconfirm();
-  });
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape' || !optionsState.activePopconfirm) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    closeActivePopconfirm({ restoreFocus: true });
-  });
-
   storageChanges.on(AGGREGATE_SEARCH_STORAGE_KEY, (changes) => {
     getAggregateSearchStateCoordinator().applyStorageChange(
       changes[AGGREGATE_SEARCH_STORAGE_KEY].newValue
@@ -1736,30 +1654,9 @@ import * as OPTIONS_STATE from './options-state';
     refreshSiteSearchProviders();
   });
 
-  if (siteSearchEngineBuiltinList && siteSearchCustomList && siteSearchBuiltinList) {
-    refreshSiteSearchProviders();
-  }
-  if (aggregateSearchList) {
-    // Load failures are reported through onLoadError.
-    refreshAggregateSearches().catch(() => {});
-  }
-
-  OPTIONS_SITE_SEARCH_EVENTS.createSiteSearchEvents({
-    getMessage,
-    getSiteSearchBuiltinKey,
-    saveSiteSearchProviderState,
-    renderSiteSearchList,
-    showToast,
-    builtinResetButton,
-    attachPopconfirm,
-    loadDefaultSiteSearchProviders,
-    loadCustomSiteSearchProviders,
-    renderAggregateSearchList,
-    customClearButton,
-    aggregateSearchClearButton,
-    handleAggregateSearchClear,
-    optionsState
-  });
+  refreshSiteSearchProviders();
+  // Load failures are reported through onLoadError.
+  refreshAggregateSearches().catch(() => {});
 
   addStorageChangeListener(storageChanges.dispatch);
 })();

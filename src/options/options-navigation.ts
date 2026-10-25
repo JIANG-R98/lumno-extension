@@ -36,8 +36,6 @@ interface NavigationDeps {
   updateFallbackShortcutWrapWidthForContent(): void;
   refreshSiteSearchProviders(): unknown;
   tabsRow: Element | null;
-  siteSearchAiGroup: Element | null;
-  siteSearchAiBuiltinList: Element | null;
   optionsState: NavigationState;
 }
 
@@ -61,9 +59,7 @@ function createNavigation(deps: NavigationDeps) {
     syncFallbackShortcutWrapWidth,
     updateFallbackShortcutWrapWidthForContent,
     refreshSiteSearchProviders,
-    tabsRow,
-    siteSearchAiGroup,
-    siteSearchAiBuiltinList
+    tabsRow
   } = deps;
 
   // The page state object shared with options.js and the other modules.
@@ -217,9 +213,7 @@ function createNavigation(deps: NavigationDeps) {
     if (targetKey !== OPTIONS_TARGET_SITE_SEARCH_AI) {
       return null;
     }
-    return siteSearchAiGroup || (siteSearchAiBuiltinList
-      ? siteSearchAiBuiltinList.closest('._x_extension_shortcut_group_2024_unique_')
-      : null);
+    return document.getElementById('_x_extension_site_search_ai_group_2026_unique_');
   }
 
   function scrollToOptionsTarget(targetKey: string, options?: ScrollToTargetOptions): boolean {

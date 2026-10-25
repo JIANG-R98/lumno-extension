@@ -198,15 +198,6 @@ function getToggleSettings(settings: typeof Settings, hooks?: ToggleSettingHooks
       refreshSelects: true
     },
     {
-      // Read together with the aggregate searches it is derived from.
-      inputId: '_x_extension_aggregate_search_auto_group_toggle_2026_unique_',
-      kind: 'aggregate-search-auto-group',
-      key: S.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
-      normalize: S.normalizeAggregateSearchAutoGroupEnabled,
-      refreshSelects: true,
-      load: false
-    },
-    {
       inputId: '_x_extension_pinned_tab_recovery_toggle_2026_unique_',
       kind: 'pinned-tab-recovery',
       key: S.PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY,

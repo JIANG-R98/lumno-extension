@@ -1,16 +1,15 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  createAggregateSearchListApi,
-  createAggregateSearchListController,
+  AggregateSearchList,
   getNextAggregateSearchDefaultName,
-  type AggregateSearchListController,
   type AggregateSearchListRenderModel
 } from './aggregate-search-list';
+import { createReactRootController, type ReactRootController } from './root-controller';
 import { getElement, getElements, getTag, getTags } from '../../../tests/react/dom';
 import { closestHtmlElement, queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
-let controllers: AggregateSearchListController[] = [];
+let controllers: Array<ReactRootController<AggregateSearchListRenderModel>> = [];
 
 const model: AggregateSearchListRenderModel = {
   copy: {
@@ -74,7 +73,10 @@ function createFixture(renderModel = model) {
     onRemove: vi.fn().mockResolvedValue(undefined),
     onSave: vi.fn().mockResolvedValue({ ok: true })
   };
-  const controller = createAggregateSearchListController(host, options);
+  const controller = createReactRootController(
+    host,
+    (value: AggregateSearchListRenderModel) => <AggregateSearchList model={value} options={options} />
+  );
   controllers.push(controller);
   act(() => controller.render(renderModel));
   return { controller, host, options };
@@ -146,12 +148,10 @@ afterEach(() => {
   document.body.textContent = '';
 });
 
-describe('Options aggregate-search React island', () => {
+describe('Options aggregate-search list', () => {
   it('prefills and saves the first default name without a placeholder', async () => {
     const { host, options } = createFixture();
 
-    expect(createAggregateSearchListApi().implementation).toBe('react');
-    expect(host.dataset.reactIsland).toBe('options-aggregate-search-list');
     expect(host.querySelector(
       '._x_extension_settings_placeholder_2024_unique_'
     )).toBeNull();

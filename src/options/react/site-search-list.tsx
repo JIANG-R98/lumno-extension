@@ -1,9 +1,5 @@
 import { useRef, useState } from 'react';
 import {
-  createReactRootController,
-  type ReactRootController
-} from './root-controller';
-import {
   getAsyncErrorMessage,
   useExclusiveAsyncAction
 } from '../../shared/react/use-exclusive-async-action';
@@ -129,8 +125,7 @@ export interface SiteSearchSaveResult {
   ok: boolean;
 }
 
-export interface SiteSearchListControllerOptions {
-  kind: string;
+export interface SiteSearchListOptions {
   onLocateDuplicate(template: string): void;
   // Present on lists the reader can order; rows then drag and show move buttons.
   onMove?(fromIndex: number, toIndex: number): void;
@@ -142,8 +137,6 @@ export interface SiteSearchListControllerOptions {
   ): SiteSearchSaveResult | Promise<SiteSearchSaveResult>;
 }
 
-export type SiteSearchListController =
-  ReactRootController<SiteSearchListRenderModel>;
 
 function RequiredLabel({
   children
@@ -299,12 +292,12 @@ function ProviderEditor({
   );
 }
 
-function SiteSearchList({
+export function SiteSearchList({
   model,
   options
 }: {
   model: SiteSearchListRenderModel;
-  options: SiteSearchListControllerOptions;
+  options: SiteSearchListOptions;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -427,27 +420,4 @@ function SiteSearchList({
       })}
     </>
   );
-}
-
-export function createSiteSearchListController(
-  host: HTMLElement | null,
-  options: SiteSearchListControllerOptions
-): SiteSearchListController {
-  if (host) {
-    host.dataset.reactIsland = 'options-site-search-list';
-    host.dataset.providerKind = options.kind;
-  }
-  return createReactRootController(
-    host,
-    (model: SiteSearchListRenderModel) => (
-      <SiteSearchList model={model} options={options} />
-    )
-  );
-}
-
-export function createSiteSearchListApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createSiteSearchListController
-  });
 }

@@ -4,7 +4,7 @@ import { isHtmlElement } from '../shared/dom-guards';
 import type { ToastController } from '../shared/react/toast';
 import type { TooltipController } from '../shared/ui/tooltip';
 import type { SelectControlRecord } from './options-select-controls';
-import type { GetMessage, ToastTask } from './options-types';
+import type { ToastTask } from './options-types';
 
 interface TooltipsState {
   // While the startup read batch is pending, select refreshes wait for it.
@@ -21,10 +21,6 @@ interface TooltipsDeps {
   fallbackShortcutWrap: HTMLElement | null;
   restrictedActionSelectWrap: HTMLElement | null;
   fallbackShortcutTokens: HTMLElement | null;
-  builtinResetButton: HTMLElement | null;
-  getMessage: GetMessage;
-  customClearButton: HTMLButtonElement | null;
-  aggregateSearchClearButton: HTMLButtonElement | null;
   toastElement: HTMLElement | null;
   optionsSelectControlRecords: ReadonlyMap<HTMLSelectElement, SelectControlRecord>;
   renderOptionsSelectControl(select: HTMLSelectElement): void;
@@ -42,10 +38,6 @@ function createTooltips(deps: TooltipsDeps) {
     fallbackShortcutWrap,
     restrictedActionSelectWrap,
     fallbackShortcutTokens,
-    builtinResetButton,
-    getMessage,
-    customClearButton,
-    aggregateSearchClearButton,
     toastElement,
     optionsSelectControlRecords,
     renderOptionsSelectControl
@@ -143,36 +135,6 @@ function createTooltips(deps: TooltipsDeps) {
     }
   }
 
-  function updateBuiltinResetTooltip(): void {
-    if (!builtinResetButton) {
-      return;
-    }
-    const text = getMessage('shortcuts_reset_builtin', '重置为初始列表');
-    builtinResetButton.removeAttribute('title');
-    builtinResetButton.setAttribute('aria-label', text);
-    builtinResetButton.setAttribute('data-tooltip', text);
-  }
-
-  function updateCustomClearTooltip(): void {
-    if (!customClearButton) {
-      return;
-    }
-    const text = getMessage('shortcuts_clear_custom', '清空自定义');
-    customClearButton.removeAttribute('title');
-    customClearButton.setAttribute('aria-label', text);
-    customClearButton.setAttribute('data-tooltip', text);
-  }
-
-  function updateAggregateSearchClearTooltip(): void {
-    if (!aggregateSearchClearButton) {
-      return;
-    }
-    const text = getMessage('aggregate_search_clear', '清空聚合搜索');
-    aggregateSearchClearButton.removeAttribute('title');
-    aggregateSearchClearButton.setAttribute('aria-label', text);
-    aggregateSearchClearButton.setAttribute('data-tooltip', text);
-  }
-
   function setToastAnnouncement(errorToast: boolean): void {
     if (toastElement) {
       toastElement.setAttribute('role', errorToast ? 'alert' : 'status');
@@ -216,9 +178,6 @@ function createTooltips(deps: TooltipsDeps) {
     refreshCustomSelects,
     syncFallbackShortcutWrapWidth,
     updateFallbackShortcutWrapWidthForContent,
-    updateBuiltinResetTooltip,
-    updateCustomClearTooltip,
-    updateAggregateSearchClearTooltip,
     showToast,
     beginToast
   };

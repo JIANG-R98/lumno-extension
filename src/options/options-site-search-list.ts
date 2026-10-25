@@ -16,8 +16,8 @@ import type { EnqueueOperation, PreparedSiteSearchProviders, SiteSearchProviderS
 import type { GetMessage } from './options-types';
 import type { ReorderCopyModel } from './react/reorder-buttons';
 import type {
-  SiteSearchListController,
   SiteSearchListCopyModel,
+  SiteSearchListRenderModel,
   SiteSearchProviderDraft,
   SiteSearchProviderItemModel,
   SiteSearchSaveResult
@@ -26,7 +26,7 @@ import type {
 // A provider as a list shows it: built-in or custom.
 type ListedSiteSearchProvider = SiteSearchProvider & { _xIsCustom: boolean };
 
-type SiteSearchListControllerRef = Pick<SiteSearchListController, 'render'> | null;
+type SiteSearchListControllerRef = { render(model: SiteSearchListRenderModel): void } | null;
 
 interface SiteSearchListState {
   searchSourceOrderController: Pick<ReturnType<typeof createSearchSourceOrderController>, 'sortList'>;
@@ -69,12 +69,6 @@ interface SiteSearchListDeps {
   showToast(message: string, isError?: boolean): void;
   getActiveBuiltinSiteSearchProviders: typeof SiteSearch.getActiveBuiltinSiteSearchProviders;
   renderFeedbackSupport(): void;
-  siteSearchEngineBuiltinList: HTMLElement | null;
-  siteSearchCustomList: HTMLElement | null;
-  siteSearchBuiltinList: HTMLElement | null;
-  siteSearchAiBuiltinList: HTMLElement | null;
-  syncClearButtonAvailability(button: HTMLButtonElement | null, hasItems: boolean): void;
-  customClearButton: HTMLButtonElement | null;
   initTooltips(): void;
   scrollToOptionsTarget(targetKey: string, options?: ScrollToTargetOptions): boolean;
   normalizeSiteSearchProvider(
@@ -109,12 +103,6 @@ function createSiteSearchList(deps: SiteSearchListDeps) {
     showToast,
     getActiveBuiltinSiteSearchProviders,
     renderFeedbackSupport,
-    siteSearchEngineBuiltinList,
-    siteSearchCustomList,
-    siteSearchBuiltinList,
-    syncClearButtonAvailability,
-    customClearButton,
-    siteSearchAiBuiltinList,
     initTooltips,
     scrollToOptionsTarget,
     normalizeSiteSearchProvider,
@@ -355,9 +343,6 @@ function createSiteSearchList(deps: SiteSearchListDeps) {
 
   function renderSiteSearchList(): void {
     syncHelpCenterSearchEnabled();
-    if (!siteSearchEngineBuiltinList || !siteSearchCustomList || !siteSearchBuiltinList) {
-      return;
-    }
     const customKeys = new Set(
       optionsState.customSiteSearchProviders.map((item) =>
         String(item.key || '').toLowerCase()
@@ -409,7 +394,6 @@ function createSiteSearchList(deps: SiteSearchListDeps) {
       builtinTemplateSet,
       'engine'
     );
-    syncClearButtonAvailability(customClearButton, customItems.length > 0);
     renderSiteSearchListController(
       optionsState.siteSearchCustomListController,
       customItems,
@@ -424,15 +408,13 @@ function createSiteSearchList(deps: SiteSearchListDeps) {
       builtinTemplateSet,
       'site'
     );
-    if (siteSearchAiBuiltinList) {
-      renderSiteSearchListController(
-        optionsState.siteSearchAiBuiltinListController,
-        aiItems,
-        getMessage('shortcuts_empty_ai', '暂无内置 AI 搜索'),
-        builtinTemplateSet,
-        'ai'
-      );
-    }
+    renderSiteSearchListController(
+      optionsState.siteSearchAiBuiltinListController,
+      aiItems,
+      getMessage('shortcuts_empty_ai', '暂无内置 AI 搜索'),
+      builtinTemplateSet,
+      'ai'
+    );
     initTooltips();
     if (
       optionsState.pendingOptionsScrollTarget &&
@@ -582,9 +564,6 @@ function createSiteSearchList(deps: SiteSearchListDeps) {
 
   function refreshSiteSearchProviders(): Promise<unknown> {
     syncHelpCenterSearchEnabled();
-    if (!siteSearchEngineBuiltinList || !siteSearchCustomList || !siteSearchBuiltinList) {
-      return Promise.resolve();
-    }
     if (optionsState.defaultSiteSearchProviders.length === 0) {
       optionsState.defaultSiteSearchProviders = optionsState.fallbackSiteSearchProviders.slice();
       renderSiteSearchList();

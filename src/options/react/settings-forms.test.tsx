@@ -2,11 +2,11 @@ import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   BlacklistForm,
-  createSettingsFormsApi,
-  createSiteSearchFormController,
+  SiteSearchForm,
   type BlacklistFormRenderModel,
   type BlacklistFormSaveHandler,
-  type SiteSearchFormRenderModel
+  type SiteSearchFormRenderModel,
+  type SiteSearchFormSaveHandler
 } from './settings-forms';
 import { createReactRootController } from './root-controller';
 import { getElement, getTags } from '../../../tests/react/dom';
@@ -79,6 +79,21 @@ const blacklistModel: BlacklistFormRenderModel = {
 
 const BLACKLIST_FORM_ID = 'blacklist-form';
 
+// A site search form drawn in a host; its frame carries the open state.
+function createSiteSearchFormFixture(onSave: SiteSearchFormSaveHandler, attach = true) {
+  const host = document.createElement('div');
+  if (attach) {
+    document.body.appendChild(host);
+  }
+  const controller = createReactRootController(
+    host,
+    (value: SiteSearchFormRenderModel) => <SiteSearchForm model={value} onSave={onSave} />
+  );
+  controllers.push(controller);
+  act(() => controller.render(siteModel));
+  return { host, frame: () => getElement(host, '._x_extension_shortcut_form_2024_unique_') };
+}
+
 // A blacklist form drawn in a host, re-rendered with a new reset version on demand.
 function createBlacklistFormFixture(onSave: BlacklistFormSaveHandler, attach = true) {
   const host = document.createElement('div');
@@ -110,14 +125,10 @@ afterEach(() => {
   document.body.textContent = '';
 });
 
-describe('Options settings form React islands', () => {
+describe('Options settings forms', () => {
   it('inserts the query token and submits a site-search draft', async () => {
-    const host = document.createElement('div');
     const onSave = vi.fn().mockResolvedValue({ ok: true });
-    document.body.appendChild(host);
-    const controller = createSiteSearchFormController(host, { onSave });
-    controllers.push(controller);
-    act(() => controller.render(siteModel));
+    const { host } = createSiteSearchFormFixture(onSave);
 
     const buttons = getTags(host, 'button:not(._x_extension_info_button_2026_unique_)', 'button');
     act(() => buttons[0]?.click());
@@ -136,7 +147,6 @@ describe('Options settings form React islands', () => {
       await Promise.resolve();
     });
 
-    expect(createSettingsFormsApi().implementation).toBe('react');
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
       key: 'yt',
       category: 'site',
@@ -145,12 +155,8 @@ describe('Options settings form React islands', () => {
   });
 
   it('stores the selected search-engine placement in the custom draft', async () => {
-    const host = document.createElement('div');
     const onSave = vi.fn().mockResolvedValue({ ok: true });
-    document.body.appendChild(host);
-    const controller = createSiteSearchFormController(host, { onSave });
-    controllers.push(controller);
-    act(() => controller.render(siteModel));
+    const { host } = createSiteSearchFormFixture(onSave);
 
     const categoryControl = queryHtmlElement(host, '._x_extension_site_search_category_tabs_2026_unique_');
     expect(categoryControl?.getAttribute('role')).toBe('group');
@@ -179,12 +185,10 @@ describe('Options settings form React islands', () => {
   });
 
   it('shows site-search validation errors without collapsing', async () => {
-    const host = document.createElement('div');
-    const controller = createSiteSearchFormController(host, {
-      onSave: vi.fn().mockResolvedValue({ ok: false, error: '请填写触发词。' })
-    });
-    controllers.push(controller);
-    act(() => controller.render(siteModel));
+    const { host, frame } = createSiteSearchFormFixture(
+      vi.fn().mockResolvedValue({ ok: false, error: '请填写触发词。' }),
+      false
+    );
     const buttons = getTags(host, 'button:not(._x_extension_info_button_2026_unique_)', 'button');
     act(() => buttons[0]?.click());
     await act(async () => {
@@ -192,18 +196,16 @@ describe('Options settings form React islands', () => {
       await Promise.resolve();
     });
 
-    expect(host.dataset.expanded).toBe('true');
+    expect(frame().dataset.expanded).toBe('true');
     expect(host.querySelector('._x_extension_shortcut_error_2024_unique_')?.textContent)
       .toBe('请填写触发词。');
   });
 
   it('recovers when an unexpected site-search save error rejects', async () => {
-    const host = document.createElement('div');
-    const controller = createSiteSearchFormController(host, {
-      onSave: vi.fn().mockRejectedValue(new Error('Storage unavailable'))
-    });
-    controllers.push(controller);
-    act(() => controller.render(siteModel));
+    const { host, frame } = createSiteSearchFormFixture(
+      vi.fn().mockRejectedValue(new Error('Storage unavailable')),
+      false
+    );
     const buttons = getTags(host, 'button:not(._x_extension_info_button_2026_unique_)', 'button');
     act(() => buttons[0]?.click());
 
@@ -212,7 +214,7 @@ describe('Options settings form React islands', () => {
       await Promise.resolve();
     });
 
-    expect(host.dataset.expanded).toBe('true');
+    expect(frame().dataset.expanded).toBe('true');
     expect(queryHtmlTag(host, '#_x_extension_site_search_add_2024_unique_', 'button')?.disabled).toBe(false);
     expect(host.querySelector('._x_extension_shortcut_error_2024_unique_')?.textContent)
       .toBe('Storage unavailable');

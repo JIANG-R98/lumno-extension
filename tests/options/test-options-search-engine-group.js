@@ -17,9 +17,8 @@ async function testMarkup() {
   await page.settle(200);
   const doc = page.document;
   const engineGroup = doc.getElementById('_x_extension_search_engine_group_2026_unique_');
-  const customGroup = doc.querySelector('[data-i18n="shortcuts_group_custom"]');
-  const siteGroup = Array.from(doc.querySelectorAll('[data-i18n="search_scope_group_sites"]'))
-    .find((node) => customGroup.compareDocumentPosition(node) & 4);
+  const customGroup = doc.getElementById('_x_extension_site_search_custom_list_2024_unique_');
+  const siteGroup = doc.getElementById('_x_extension_site_search_builtin_list_2024_unique_');
   const aiGroup = doc.getElementById('_x_extension_site_search_ai_group_2026_unique_');
   const before = (first, second) => Boolean(first && second && (first.compareDocumentPosition(second) & 4));
   assert.ok(engineGroup, 'Options should render a dedicated search-engine group');

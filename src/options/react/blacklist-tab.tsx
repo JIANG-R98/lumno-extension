@@ -1,19 +1,13 @@
 import { BlacklistList, type BlacklistListRenderModel, type BlacklistSaveHandler } from './blacklist-list';
 import { InfoButton } from './info-button';
-import { InlinePopconfirm } from './inline-popconfirm';
+import { GroupActionConfirm, type GroupActionConfirmModel } from './group-action-confirm';
 import { createReactRootController, type ReactRootController } from './root-controller';
 import { SettingDivider, SettingSwitch } from './setting-rows';
 import { BlacklistForm, type BlacklistFormRenderModel, type BlacklistFormSaveHandler } from './settings-forms';
 import type { ToggleControlRenderModel } from './toggle-control';
 
 // The clear-all button of a list and the confirmation it asks for.
-export interface BlacklistClearModel {
-  label: string;
-  confirmMessage: string;
-  confirmMessageKey: string;
-  cancelLabel: string;
-  confirmLabel: string;
-}
+export type BlacklistClearModel = GroupActionConfirmModel;
 
 // One rule list: its rules, its add form and its clear-all button.
 export interface BlacklistGroupModel {
@@ -57,21 +51,7 @@ function BlacklistClearButton({
   onConfirm(): void | Promise<void>;
 }) {
   return (
-    <InlinePopconfirm
-      copy={{
-        cancelLabel: model.cancelLabel,
-        confirmLabel: model.confirmLabel,
-        message: model.confirmMessage,
-        messageKey: model.confirmMessageKey
-      }}
-      onConfirm={onConfirm}
-      triggerAriaLabel={model.label}
-      triggerClassName="_x_extension_shortcut_group_action_2024_unique_"
-      triggerDisabled={disabled}
-      triggerIconClass="ri-icon ri-size-14 ri-delete-bin-4-line"
-      triggerId={id}
-      triggerTooltip={model.label}
-    />
+    <GroupActionConfirm disabled={disabled} iconClass="ri-delete-bin-4-line" id={id} model={model} onConfirm={onConfirm} />
   );
 }
 

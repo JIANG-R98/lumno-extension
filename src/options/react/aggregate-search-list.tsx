@@ -1,8 +1,4 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import {
-  createReactRootController,
-  type ReactRootController
-} from './root-controller';
 import { InlinePopconfirm } from './inline-popconfirm';
 import {
   getAsyncErrorMessage,
@@ -75,7 +71,7 @@ export interface AggregateSearchSaveResult {
   ok: boolean;
 }
 
-export interface AggregateSearchListControllerOptions {
+export interface AggregateSearchListOptions {
   // Present when the reader can order the list; rows then drag and show move buttons.
   onMove?(fromIndex: number, toIndex: number): void;
   onRemove(id: string): void | Promise<void>;
@@ -85,8 +81,6 @@ export interface AggregateSearchListControllerOptions {
   ): AggregateSearchSaveResult | Promise<AggregateSearchSaveResult>;
 }
 
-export type AggregateSearchListController =
-  ReactRootController<AggregateSearchListRenderModel>;
 
 type AggregateSearchEditorErrorField = 'key' | 'name' | 'save' | 'sources';
 
@@ -457,12 +451,12 @@ function AggregateSearchEditor({
   );
 }
 
-function AggregateSearchList({
+export function AggregateSearchList({
   model,
   options
 }: {
   model: AggregateSearchListRenderModel;
-  options: AggregateSearchListControllerOptions;
+  options: AggregateSearchListOptions;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [focusTarget, setFocusTarget] = useState<
@@ -618,26 +612,4 @@ function AggregateSearchList({
       </div>
     </>
   );
-}
-
-export function createAggregateSearchListController(
-  host: HTMLElement | null,
-  options: AggregateSearchListControllerOptions
-): AggregateSearchListController {
-  if (host) {
-    host.dataset.reactIsland = 'options-aggregate-search-list';
-  }
-  return createReactRootController(
-    host,
-    (model: AggregateSearchListRenderModel) => (
-      <AggregateSearchList model={model} options={options} />
-    )
-  );
-}
-
-export function createAggregateSearchListApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createAggregateSearchListController
-  });
 }

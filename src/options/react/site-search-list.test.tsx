@@ -1,15 +1,24 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  createSiteSearchListApi,
-  createSiteSearchListController,
-  type SiteSearchListController,
+  SiteSearchList,
+  type SiteSearchListOptions,
   type SiteSearchListRenderModel
 } from './site-search-list';
+import { createReactRootController, type ReactRootController } from './root-controller';
 import { getTags } from '../../../tests/react/dom';
 import { queryHtmlTag } from '../../shared/dom-lookup';
 
-let controllers: SiteSearchListController[] = [];
+let controllers: Array<ReactRootController<SiteSearchListRenderModel>> = [];
+
+function renderList(host: HTMLElement, options: SiteSearchListOptions): ReactRootController<SiteSearchListRenderModel> {
+  const controller = createReactRootController(
+    host,
+    (value: SiteSearchListRenderModel) => <SiteSearchList model={value} options={options} />
+  );
+  controllers.push(controller);
+  return controller;
+}
 
 const model: SiteSearchListRenderModel = {
   copy: {
@@ -59,13 +68,11 @@ function createFixture() {
   const host = document.createElement('div');
   document.body.appendChild(host);
   const options = {
-    kind: 'custom',
     onLocateDuplicate: vi.fn(),
     onRemove: vi.fn(),
     onSave: vi.fn().mockResolvedValue({ ok: true })
   };
-  const controller = createSiteSearchListController(host, options);
-  controllers.push(controller);
+  const controller = renderList(host, options);
   return { controller, host, options };
 }
 
@@ -77,19 +84,17 @@ afterEach(() => {
   document.body.textContent = '';
 });
 
-describe('Options site-search list React island', () => {
+describe('Options site-search list', () => {
   it('shows move buttons and marks rows sortable only on orderable lists', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const onMove = vi.fn();
-    const controller = createSiteSearchListController(host, {
-      kind: 'builtin-search',
+    const controller = renderList(host, {
       onLocateDuplicate: vi.fn(),
       onMove,
       onRemove: vi.fn(),
       onSave: vi.fn().mockResolvedValue({ ok: true })
     });
-    controllers.push(controller);
     const second = { ...model.items[0], id: 'builtin:yt', isBuiltin: true, key: 'yt', name: 'YouTube' };
     act(() => controller.render({
       ...model,
@@ -114,13 +119,10 @@ describe('Options site-search list React island', () => {
     expect(host.querySelector('[data-sortable]')).toBeNull();
   });
 
-  it('renders provider metadata, legacy classes, and host contracts', () => {
+  it('renders provider metadata and legacy classes', () => {
     const { controller, host } = createFixture();
     act(() => controller.render(model));
 
-    expect(createSiteSearchListApi().implementation).toBe('react');
-    expect(host.dataset.reactIsland).toBe('options-site-search-list');
-    expect(host.dataset.providerKind).toBe('custom');
     expect(host.querySelector('[data-provider-id="custom:ex"]')).not.toBeNull();
     expect(host.querySelector('._x_extension_shortcut_item_meta_2024_unique_')
       ?.textContent).toContain('{query}');

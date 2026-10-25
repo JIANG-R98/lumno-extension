@@ -72,7 +72,7 @@ const pageEntryRunsAfterBridge = (page, reactEntry, entry) => {
   assert(pageEntryRunsAfterBridge(page, reactEntry, entry), `${page} should connect its bridge between the React entry and the page entry`);
 });
 assert(
-  ['account', 'blacklist', 'labs'].every((tab) => {
+  ['account', 'shortcuts', 'blacklist', 'labs'].every((tab) => {
     const host = new JSDOM(optionsHtml).window.document.querySelector(`[data-content="${tab}"]`);
     return host && host.children.length === 0;
   }),
@@ -189,10 +189,10 @@ async function testPages() {
   const options = await createOptionsPage({});
   await options.settle(300);
   assert.deepStrictEqual(missing(options.window, [
-    'LumnoOptionsToastReact', 'LumnoOptionsBlacklistTabReact', 'LumnoOptionsPopconfirmReact', 'LumnoOptionsSegmentedControlReact',
-    'LumnoOptionsSelectControlReact', 'LumnoOptionsSettingsNavigationReact', 'LumnoOptionsSettingsControlsReact',
-    'LumnoOptionsSettingsFormsReact', 'LumnoOptionsShortcutReferenceReact', 'LumnoOptionsShortcutHotkeyReact',
-    'LumnoOptionsSiteSearchListReact', 'LumnoOptionsThemePickerReact', 'LumnoOptionsReactIslands', 'LumnoOverlayTabSwitcherViewReact'
+    'LumnoOptionsToastReact', 'LumnoOptionsAccountTab', 'LumnoOptionsBlacklistTabReact', 'LumnoOptionsShortcutsTab',
+    'LumnoOptionsSegmentedControlReact', 'LumnoOptionsSelectControlReact', 'LumnoOptionsSettingsNavigationReact',
+    'LumnoOptionsSettingsControlsReact', 'LumnoOptionsShortcutReferenceReact', 'LumnoOptionsShortcutHotkeyReact',
+    'LumnoOptionsThemePickerReact', 'LumnoOptionsReactIslands', 'LumnoOverlayTabSwitcherViewReact'
   ]), [], 'Options should install every migrated React API');
   assert.ok(options.document.querySelectorAll('[data-react-island]').length > 5, 'and render through them');
   options.close();

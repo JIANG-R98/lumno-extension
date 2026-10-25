@@ -1,8 +1,4 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import {
-  createReactRootController,
-  type ReactRootController
-} from './root-controller';
 import type { BlacklistMatchMode } from './blacklist-list';
 import {
   SiteSearchProviderCategoryControl,
@@ -38,12 +34,8 @@ export interface SiteSearchFormRenderModel {
   copy: SiteSearchFormCopyModel;
 }
 
-export interface SiteSearchFormControllerOptions {
-  onSave(draft: SiteSearchProviderDraft): SiteSearchSaveResult | Promise<SiteSearchSaveResult>;
-}
-
-export type SiteSearchFormController =
-  ReactRootController<SiteSearchFormRenderModel>;
+export type SiteSearchFormSaveHandler =
+  (draft: SiteSearchProviderDraft) => SiteSearchSaveResult | Promise<SiteSearchSaveResult>;
 
 export interface BlacklistFormModeCopyModel {
   label: string;
@@ -78,38 +70,31 @@ export type BlacklistFormSaveHandler = (
   modes: BlacklistMatchMode[]
 ) => BlacklistFormSaveResult | Promise<BlacklistFormSaveResult>;
 
-// A form in a host the adapter owns mirrors its open state onto that host;
-// one that draws its own frame passes none. Opening focuses the first field;
-// closing hands focus back to the Add trigger, which only becomes visible
-// once the form has collapsed.
+// Opening focuses the first field; closing hands focus back to the Add
+// trigger, which only becomes visible once the form has collapsed.
 function useAccordionForm(
-  host: HTMLElement | null,
   expanded: boolean,
   fieldRef: RefObject<HTMLInputElement | null>,
   triggerRef: RefObject<HTMLButtonElement | null>
 ) {
   const wasExpanded = useRef(expanded);
   useEffect(() => {
-    if (host) {
-      host.dataset.expanded = expanded ? 'true' : 'false';
-    }
     if (expanded) {
       fieldRef.current?.focus();
     } else if (wasExpanded.current) {
       triggerRef.current?.focus();
     }
     wasExpanded.current = expanded;
-  }, [expanded, fieldRef, host, triggerRef]);
+  }, [expanded, fieldRef, triggerRef]);
 }
 
-function SiteSearchForm({
-  host,
+// The custom site search add form, in its own frame.
+export function SiteSearchForm({
   model,
   onSave
 }: {
-  host: HTMLElement | null;
   model: SiteSearchFormRenderModel;
-  onSave(draft: SiteSearchProviderDraft): SiteSearchSaveResult | Promise<SiteSearchSaveResult>;
+  onSave: SiteSearchFormSaveHandler;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
@@ -126,7 +111,7 @@ function SiteSearchForm({
   const saveAction = useExclusiveAsyncAction(onSave);
   const saving = saveAction.pending;
 
-  useAccordionForm(host, expanded, keyInputRef, triggerRef);
+  useAccordionForm(expanded, keyInputRef, triggerRef);
 
   const updateDraft = (field: keyof SiteSearchProviderDraft, value: string) => {
     setError('');
@@ -141,7 +126,10 @@ function SiteSearchForm({
   const close = () => setExpanded(false);
 
   return (
-    <>
+    <div
+      className="_x_extension_shortcut_form_2024_unique_"
+      data-expanded={expanded ? 'true' : 'false'}
+    >
       <div className="_x_extension_shortcut_form_trigger_2024_unique_">
         <button
           aria-expanded={expanded}
@@ -306,7 +294,7 @@ function SiteSearchForm({
           {error}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -336,7 +324,7 @@ export function BlacklistForm({
     [mode, model.copy.modes]
   );
 
-  useAccordionForm(null, expanded, inputRef, triggerRef);
+  useAccordionForm(expanded, inputRef, triggerRef);
 
   useEffect(() => {
     setExpanded(false);
@@ -481,26 +469,4 @@ export function BlacklistForm({
       </div>
     </div>
   );
-}
-
-export function createSiteSearchFormController(
-  host: HTMLElement | null,
-  options: SiteSearchFormControllerOptions
-): SiteSearchFormController {
-  if (host) {
-    host.dataset.reactIsland = 'options-site-search-form';
-  }
-  return createReactRootController(
-    host,
-    (model: SiteSearchFormRenderModel) => (
-      <SiteSearchForm host={host} model={model} onSave={options.onSave} />
-    )
-  );
-}
-
-export function createSettingsFormsApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createSiteSearchFormController
-  });
 }

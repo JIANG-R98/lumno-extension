@@ -1,6 +1,5 @@
 const assert = require('assert');
 const fs = require('fs');
-const { JSDOM } = require('jsdom');
 const settings = require('../../src/domain/settings.ts');
 const aggregateStore = require('../../src/domain/search/aggregate-search-store.ts');
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
@@ -141,10 +140,12 @@ async function testNewAggregatesAppearWithoutReload(name) {
 }
 
 async function testSettings() {
-  const doc = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
+  const page = await createOptionsPage({ sync: { [AGGREGATES]: DEFINITIONS } });
+  await page.settle(150);
+  const doc = page.document;
   const order = [
     '#_x_extension_site_search_custom_list_2024_unique_',
-    '._x_extension_shortcut_form_2024_unique_',
+    '[data-content="shortcuts"] ._x_extension_shortcuts_section_2024_unique_ > ._x_extension_shortcut_form_2024_unique_',
     '#_x_extension_aggregate_search_group_2026_unique_',
     '#_x_extension_site_search_builtin_list_2024_unique_'
   ].map((selector) => doc.querySelector(selector));
@@ -157,8 +158,6 @@ async function testSettings() {
     'aggregate search should have the same header clear action as custom search');
   assert.ok(doc.getElementById('_x_extension_aggregate_search_list_2026_unique_'), 'Settings should mount the aggregate editor');
 
-  const page = await createOptionsPage({ sync: { [AGGREGATES]: DEFINITIONS } });
-  await page.settle(150);
   await page.click(page.byId('_x_extension_aggregate_search_clear_2026_unique_'));
   await page.settle(60);
   assert.ok(!page.storage.sync.writes.some((write) => Object.hasOwn(write, AGGREGATES)), 'clearing should ask for confirmation first');
