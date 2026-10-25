@@ -14,7 +14,7 @@ import type { FormatMessage, Translate } from '../newtab-types';
 import type { DefaultSearchEngineState } from './default-search-engine';
 import type { SearchModeController } from './search-mode-controller';
 import { getAggregateSearchId } from './search-types';
-import type { ActiveLocalScope, AutocompleteState } from './search-types';
+import type { ActiveLocalScope, AutocompleteState, InlineSearchState } from './search-types';
 import type { SiteSearchProviders } from './site-search-providers';
 
 // A site search the typed text turns into on Tab.
@@ -39,8 +39,7 @@ interface SearchModesState {
   siteSearchTriggerState: SiteSearchTrigger | null;
   localSearchScopeState: ActiveLocalScope | null;
   localSearchScopeTriggerState: LocalScopeTrigger | null;
-  // The site search the typed text runs inline, until a mode replaces it.
-  inlineSearchState: unknown;
+  inlineSearchState: InlineSearchState | null;
   autocompleteState: AutocompleteState | null;
   enabledSearchResultSourceTypes: SearchSourceType[];
   currentSuggestions: Suggestion[];

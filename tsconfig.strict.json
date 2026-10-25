@@ -35,6 +35,7 @@
     "src/newtab/search/search-input-composition.ts",
     "src/newtab/search/search-mode-controller.ts",
     "src/newtab/search/search-modes.ts",
+    "src/newtab/search/search-navigation.ts",
     "src/newtab/search/search-settings-sync.ts",
     "src/newtab/search/search-types.ts",
     "src/newtab/search/site-search-providers.ts",

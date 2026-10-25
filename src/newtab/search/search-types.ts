@@ -31,6 +31,17 @@ interface AutocompleteState {
   type: string;
 }
 
+// The site search or site the typed text leads to without a mode, shown
+// as the first suggestion.
+interface InlineSearchState {
+  url?: string;
+  provider?: SiteSearchProvider | null;
+  query: string;
+  rawInput: string;
+  // The list highlights it, so Enter runs it.
+  isAuto: boolean;
+}
+
 // The aggregate search a search mode stands for; '' for a site search.
 function getAggregateSearchId(provider: SiteSearchProvider | null | undefined): string {
   if (!provider || !('aggregateId' in provider)) {
@@ -41,4 +52,11 @@ function getAggregateSearchId(provider: SiteSearchProvider | null | undefined): 
 }
 
 export { getAggregateSearchId };
-export type { ActiveLocalScope, AutocompleteState, RenderSuggestions, RequestSuggestions, RequestSuggestionsOptions };
+export type {
+  ActiveLocalScope,
+  AutocompleteState,
+  InlineSearchState,
+  RenderSuggestions,
+  RequestSuggestions,
+  RequestSuggestionsOptions
+};
