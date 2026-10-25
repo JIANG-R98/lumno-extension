@@ -314,10 +314,13 @@ function createWallpaperEffectPrefs(deps: WallpaperEffectPrefsDeps) {
   function waitForInitialWallpaperTone(): Promise<void> {
     return wallpaperState.initialWallpaperReadyPromise.then(() => new Promise<void>((resolve) => {
       const timer = window.setTimeout(resolve, WALLPAPER_TONE_REVEAL_WAIT_MAX_MS);
-      void wallpaperState.wallpaperAdaptiveTone.whenSettled().then(() => {
-        window.clearTimeout(timer);
-        resolve();
-      });
+      const adaptiveTone = wallpaperState.wallpaperAdaptiveTone;
+      if (adaptiveTone) {
+        void adaptiveTone.whenSettled().then(() => {
+          window.clearTimeout(timer);
+          resolve();
+        });
+      }
     }));
   }
 

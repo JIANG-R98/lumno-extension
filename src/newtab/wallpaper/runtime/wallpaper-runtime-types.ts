@@ -118,7 +118,8 @@ interface WallpaperState {
   pendingThemeScope: ThemeScope | null;
   saveSliderSetting: DebouncedSaver;
   saveWallpaperStyleSetting: DebouncedSaver;
-  wallpaperAdaptiveTone: WallpaperAdaptiveTone;
+  // Created once the runtime's parts exist.
+  wallpaperAdaptiveTone: WallpaperAdaptiveTone | null;
   wallpaperButton: HTMLButtonElement | null;
   wallpaperControl: HTMLDivElement | null;
   wallpaperEffects: WallpaperEffects | null;

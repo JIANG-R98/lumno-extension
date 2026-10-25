@@ -631,8 +631,8 @@ function createCustomWallpapers(deps: CustomWallpapersDeps) {
     return Boolean(onlineWallpaperMenu && onlineWallpaperMenu.controller.isOpen(onlineWallpaperMenu.control));
   }
 
-  function isOnlineWallpaperMenuNode(node: EventTarget | Node | null | undefined): boolean {
-    return Boolean(isNode(node) && onlineWallpaperMenu &&
+  function isOnlineWallpaperMenuNode(node: Node | null | undefined): boolean {
+    return Boolean(node && onlineWallpaperMenu &&
       (onlineWallpaperMenu.control.contains(node) || onlineWallpaperMenu.menu.contains(node)));
   }
 
@@ -704,7 +704,7 @@ function createCustomWallpapers(deps: CustomWallpapersDeps) {
       element.addEventListener('contextmenu', (event) => event.preventDefault());
     });
     document.addEventListener('pointerdown', (event) => {
-      if (onlineWallpaperMenuTarget && !isOnlineWallpaperMenuNode(event.target)) {
+      if (onlineWallpaperMenuTarget && !isOnlineWallpaperMenuNode(isNode(event.target) ? event.target : null)) {
         closeOnlineWallpaperMenu();
       }
     }, true);

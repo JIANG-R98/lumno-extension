@@ -51,7 +51,8 @@
     "src/newtab/wallpaper/wallpaper-effects.ts",
     "src/newtab/wallpaper/wallpaper-effect-preload.ts",
     "src/newtab/wallpaper/wallpaper-preload.ts",
-    "src/newtab/wallpaper/wallpaper-preload-types.ts"
+    "src/newtab/wallpaper/wallpaper-preload-types.ts",
+    "src/newtab/wallpaper/wallpaper.ts"
   ],
   "exclude": [
     "src/**/react/**"
