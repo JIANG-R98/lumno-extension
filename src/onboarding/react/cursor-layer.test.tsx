@@ -1,40 +1,41 @@
 import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  createCursorLayerApi,
-  createCursorLayerController,
-  type CursorLayerController
-} from './cursor-layer';
+import { CursorLayer, type CursorLayerRenderModel } from './cursor-layer';
+import { getElement } from '../../../tests/react/dom';
 
-let controllers: CursorLayerController[] = [];
+let roots: Root[] = [];
 
+// Draws a disabled cursor first, so its layer is in place.
 function createFixture() {
-  const host = document.createElement('div');
-  host.id = 'onboarding-cursor-layer';
-  host.className = 'cursor-layer';
-  document.body.appendChild(host);
-  const controller = createCursorLayerController(host);
-  controllers.push(controller);
-  return { controller, host };
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  roots.push(root);
+  const controller = {
+    render(model: CursorLayerRenderModel) {
+      root.render(<CursorLayer model={model} />);
+    }
+  };
+  act(() => controller.render({ enabled: false, mode: '' }));
+  return { controller, host: getElement(container, '#onboarding-cursor-layer') };
 }
 
 afterEach(() => {
   act(() => {
-    controllers.forEach((controller) => controller.destroy());
+    roots.forEach((root) => root.unmount());
   });
-  controllers = [];
+  roots = [];
   document.body.textContent = '';
 });
 
-describe('Onboarding cursor layer React island', () => {
+describe('Onboarding cursor layer', () => {
   it('renders the existing cursor SVG and animation mode contract', () => {
     const { controller, host } = createFixture();
     act(() => {
       controller.render({ enabled: true, mode: 'setup' });
     });
 
-    expect(createCursorLayerApi().implementation).toBe('react');
-    expect(host.dataset.reactIsland).toBe('onboarding-cursor-layer');
     expect(host.dataset.cursorEnabled).toBe('true');
     expect(host.dataset.cursorMode).toBe('setup');
     expect(host.querySelectorAll('.demo-cursor')).toHaveLength(1);

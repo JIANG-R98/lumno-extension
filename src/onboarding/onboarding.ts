@@ -125,13 +125,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   const visualSlot = getHtmlElement(document, 'onboarding-visual-slot');
   const visualPanel = getHtmlElement(document, 'onboarding-visual-panel');
   const visualCanvas = getHtmlElement(document, 'onboarding-visual-canvas');
-  const visualStage = getHtmlElement(document, 'onboarding-visual-stage');
-  const cursorLayer = getHtmlElement(document, 'onboarding-cursor-layer');
   // Set by the React islands entry, which the page loads first.
   const onboardingCopyPanelApi = globalThis.LumnoOnboardingCopyPanel;
-  const onboardingCursorLayerApi = globalThis.LumnoOnboardingCursorLayer;
-  const onboardingVisualSurfaceApi = globalThis.LumnoOnboardingVisualSurface;
-  if (!onboardingCopyPanelApi || !onboardingCursorLayerApi || !onboardingVisualSurfaceApi) {
+  const onboardingVisualPanelApi = globalThis.LumnoOnboardingVisualPanel;
+  if (!onboardingCopyPanelApi || !onboardingVisualPanelApi) {
     return;
   }
   const copyPanelController = onboardingCopyPanelApi.createCopyPanelController(copyPanel, {
@@ -160,12 +157,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       hideOnboardingInfoTooltip();
     }
   });
-  const cursorLayerController = cursorLayer
-    ? onboardingCursorLayerApi.createCursorLayerController(cursorLayer)
-    : null;
-  const visualSurfaceController = visualStage
-    ? onboardingVisualSurfaceApi.createVisualSurfaceController(visualStage)
-    : null;
+  const visualPanelController = onboardingVisualPanelApi.createVisualPanelController(visualCanvas);
   let blueprint: OnboardingBlueprint | null = null;
   let state: OnboardingState | null = null;
   let currentShortcutValue = getDefaultShortcutValue();
@@ -176,6 +168,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   let expandedInteractionAccordionId = '';
   // The title and body's place in a slide change.
   let copySwap: CopySwapPhase = null;
+  // The visual blurs out ahead of some slide changes.
+  let visualExiting = false;
   // The step strip shows from the second slide on and slides in when it
   // appears; this is the slide it last drew.
   let pageStripIndex = -1;
@@ -847,24 +841,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     };
   }
 
-  function renderVisualSurface(slide: OnboardingSlide): void {
-    if (!visualStage || !visualSurfaceController) {
-      return;
-    }
-    visualSurfaceController.clear();
-    visualStage.classList.remove('is-visual-exit');
-    if (cursorLayer) {
-      cursorLayer.classList.remove('is-visual-exit');
-    }
-    visualStage.dataset.visualKind = slide.visual.kind;
-    if (slide.visual.visible) {
-      visualSurfaceController.render(getVisualSurfaceModel(slide.visual.kind));
-    }
-    renderCursor(slide);
+  function renderVisualPanel(slide: OnboardingSlide): void {
+    visualPanelController.render({
+      slideId: slide.id,
+      kind: slide.visual.kind,
+      surface: slide.visual.visible ? getVisualSurfaceModel(slide.visual.kind) : null,
+      cursor: {
+        enabled: slide.cursor.enabled,
+        mode: slide.cursor.enabled ? slide.id : ''
+      },
+      exiting: visualExiting
+    });
   }
 
   function prepareVisualExit(nextState: OnboardingState): void {
-    if (!blueprint || !state || !nextState || !visualStage || prefersReducedMotion()) {
+    if (!blueprint || !state || !nextState || prefersReducedMotion()) {
       return;
     }
     const currentSlide = MODEL.getSlideByIndex(blueprint, state.index);
@@ -876,23 +867,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       nextSlide.visual &&
       currentSlide.visual.kind === 'bookmark-focus-surface' &&
       nextSlide.visual.kind === 'lumno-web-wordmark-surface';
-    if (!shouldBlurOut) {
+    if (!shouldBlurOut || !currentSlide) {
       return;
     }
-    visualStage.classList.add('is-visual-exit');
-    if (cursorLayer) {
-      cursorLayer.classList.add('is-visual-exit');
-    }
-  }
-
-  function renderCursor(slide: OnboardingSlide): void {
-    if (!cursorLayerController) {
-      return;
-    }
-    cursorLayerController.render({
-      enabled: slide.cursor.enabled,
-      mode: slide.cursor.enabled ? slide.id : ''
-    });
+    visualExiting = true;
+    renderVisualPanel(currentSlide);
   }
 
   function getCopyPanelModel(slide: OnboardingSlide, slideCount: number, index: number): CopyPanelModel {
@@ -1145,7 +1124,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     document.title = `${blueprint.brand} Onboarding`;
 
     renderCopyPanel();
-    renderVisualSurface(slide);
+    // A new slide brings its visual in whole.
+    visualExiting = false;
+    renderVisualPanel(slide);
     scheduleVisualCanvasScaleUpdate();
   }
 
@@ -1160,6 +1141,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   }
 
   function captureCursorTransitionStart(nextState: OnboardingState): void {
+    const cursorLayer = getHtmlElement(document, 'onboarding-cursor-layer');
     if (!root || !blueprint || !state || !nextState || !cursorLayer) {
       clearCursorTransitionStart();
       return;

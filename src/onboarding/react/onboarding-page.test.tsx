@@ -4,14 +4,13 @@ import onboardingHtml from '../onboarding.html?raw';
 import * as onboardingContent from '../onboarding-content';
 import { runPageBundle } from '../../../tests/react/page-bundles';
 import { createCopyPanelApi } from './copy-panel';
-import { createCursorLayerApi } from './cursor-layer';
-import { createVisualSurfaceApi } from './visual-surface';
+import { createVisualPanelApi } from './visual-panel';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
 import { expectElement, getElements, required } from '../../../tests/react/dom';
 import { queryHtmlTag } from '../../shared/dom-lookup';
 
 const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
-const VISUAL_ISLAND_BY_KIND: Record<string, string> = {
+const VISUAL_SURFACE_BY_KIND: Record<string, string> = {
   'lumno-web-wordmark-surface': 'onboarding-lumno-wordmark-surface',
   'bookmark-focus-surface': 'onboarding-bookmark-focus-surface',
   'newtab-preview-surface': 'onboarding-newtab-preview-surface',
@@ -82,8 +81,7 @@ async function bootOnboardingPage(stored: Record<string, unknown> = {}) {
     removeEventListener() {}
   }));
   globalThis.LumnoOnboardingCopyPanel = createCopyPanelApi();
-  globalThis.LumnoOnboardingCursorLayer = createCursorLayerApi();
-  globalThis.LumnoOnboardingVisualSurface = createVisualSurfaceApi();
+  globalThis.LumnoOnboardingVisualPanel = createVisualPanelApi();
   globalThis.LumnoTooltipView = createTooltipViewApi();
   vi.resetModules();
   await runPageBundle('onboarding-preload');
@@ -95,7 +93,7 @@ async function bootOnboardingPage(stored: Record<string, unknown> = {}) {
   return {
     chrome,
     root: expectElement(document.getElementById('onboarding-root')),
-    stage: expectElement(document.getElementById('onboarding-visual-stage'))
+    stage: () => expectElement(document.getElementById('onboarding-visual-stage'))
   };
 }
 
@@ -134,15 +132,15 @@ describe('Onboarding page runtime', () => {
       const slide = blueprint.slides[index];
       expect(root.dataset.activeIndex).toBe(String(index));
       expect(root.dataset.activeSlide).toBe(slide.id);
-      expect(stage.dataset.visualKind).toBe(slide.visual.kind);
-      const islands = Array.from(
-        getElements(stage, ':scope > [data-react-island]'),
-        (node) => node.dataset.reactIsland
+      expect(stage().dataset.visualKind).toBe(slide.visual.kind);
+      const surfaces = Array.from(
+        getElements(stage(), ':scope > [data-visual-surface]'),
+        (node) => node.dataset.visualSurface
       );
-      expect(islands).toEqual(
-        slide.visual.visible ? [VISUAL_ISLAND_BY_KIND[slide.visual.kind]] : []
+      expect(surfaces).toEqual(
+        slide.visual.visible ? [VISUAL_SURFACE_BY_KIND[slide.visual.kind]] : []
       );
-      expect(stage.firstElementChild?.childElementCount).toBeGreaterThan(0);
+      expect(stage().firstElementChild?.childElementCount).toBeGreaterThan(0);
 
       if (index === 0) {
         // The React action button advances exactly one slide.

@@ -6,10 +6,8 @@ const runtime = globalThis;
 function clearRuntime(): void {
   Reflect.deleteProperty(runtime, 'LumnoOnboardingCopyPanel');
   Reflect.deleteProperty(runtime, 'LumnoOnboardingCopyPanelReact');
-  Reflect.deleteProperty(runtime, 'LumnoOnboardingCursorLayer');
-  Reflect.deleteProperty(runtime, 'LumnoOnboardingCursorLayerReact');
-  Reflect.deleteProperty(runtime, 'LumnoOnboardingVisualSurface');
-  Reflect.deleteProperty(runtime, 'LumnoOnboardingVisualSurfaceReact');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingVisualPanel');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingVisualPanelReact');
   Reflect.deleteProperty(runtime, 'LumnoOnboardingReactBootstrap');
   Reflect.deleteProperty(runtime, 'LumnoOnboardingReactIslands');
 }
@@ -32,18 +30,13 @@ describe('Onboarding React islands entry', () => {
     expect(runtime.LumnoOnboardingCopyPanelReact).toBe(
       runtime.LumnoOnboardingCopyPanel
     );
-    expect(runtime.LumnoOnboardingVisualSurface?.implementation).toBe('react');
-    expect(runtime.LumnoOnboardingVisualSurfaceReact).toBe(
-      runtime.LumnoOnboardingVisualSurface
-    );
-    expect(runtime.LumnoOnboardingCursorLayer?.implementation).toBe('react');
-    expect(runtime.LumnoOnboardingCursorLayerReact).toBe(
-      runtime.LumnoOnboardingCursorLayer
+    expect(runtime.LumnoOnboardingVisualPanel?.implementation).toBe('react');
+    expect(runtime.LumnoOnboardingVisualPanelReact).toBe(
+      runtime.LumnoOnboardingVisualPanel
     );
     expect(runtime.LumnoOnboardingReactIslands).toEqual({
       copyPanel: runtime.LumnoOnboardingCopyPanel,
-      cursorLayer: runtime.LumnoOnboardingCursorLayer,
-      visualSurface: runtime.LumnoOnboardingVisualSurface
+      visualPanel: runtime.LumnoOnboardingVisualPanel
     });
   });
 });

@@ -1,22 +1,32 @@
 import { act } from 'react';
+import { flushSync } from 'react-dom';
+import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  createVisualSurfaceApi,
-  createVisualSurfaceController,
-  type VisualSurfaceController,
-  type VisualSurfaceRenderModel
-} from './visual-surface';
+import { VisualSurface, type VisualSurfaceRenderModel } from './visual-surface';
 import { getElements, required } from '../../../tests/react/dom';
 import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
-let controllers: VisualSurfaceController[] = [];
+let roots: Root[] = [];
 
+// Draws each model as a fresh demo in a stage, the way a new slide does,
+// and reports whether a surface was drawn.
 function createFixture() {
   const stage = document.createElement('div');
   stage.id = 'onboarding-visual-stage';
   document.body.appendChild(stage);
-  const controller = createVisualSurfaceController(stage);
-  controllers.push(controller);
+  const root = createRoot(stage);
+  roots.push(root);
+  let renders = 0;
+  const controller = {
+    render(model: VisualSurfaceRenderModel): boolean {
+      renders += 1;
+      flushSync(() => root.render(<VisualSurface key={renders} model={model} />));
+      return stage.childElementCount > 0;
+    },
+    clear(): void {
+      flushSync(() => root.render(null));
+    }
+  };
   return { controller, stage };
 }
 
@@ -100,14 +110,14 @@ function createModel(
 
 afterEach(() => {
   act(() => {
-    controllers.forEach((controller) => controller.destroy());
+    roots.forEach((root) => root.unmount());
   });
-  controllers = [];
+  roots = [];
   document.body.textContent = '';
   vi.useRealTimers();
 });
 
-describe('Onboarding visual surface React island', () => {
+describe('Onboarding visual surface', () => {
   it('renders the Lumno wordmark and both SVG wing animations', () => {
     const { controller, stage } = createFixture();
     let handled = false;
@@ -115,10 +125,9 @@ describe('Onboarding visual surface React island', () => {
       handled = controller.render(createModel());
     });
 
-    expect(createVisualSurfaceApi().implementation).toBe('react');
     expect(handled).toBe(true);
     const surface = queryHtmlElement(stage, '.lumno-web-wordmark-surface');
-    expect(surface?.dataset.reactIsland).toBe(
+    expect(surface?.dataset.visualSurface).toBe(
       'onboarding-lumno-wordmark-surface'
     );
     expect(surface?.getAttribute('aria-label')).toBe('Lumno');
@@ -162,7 +171,7 @@ describe('Onboarding visual surface React island', () => {
     });
 
     const surface = queryHtmlElement(stage, '.newtab-preview-surface');
-    expect(surface?.dataset.reactIsland).toBe(
+    expect(surface?.dataset.visualSurface).toBe(
       'onboarding-newtab-preview-surface'
     );
     expect(surface?.dataset.previewHover).toBe('idle');
@@ -270,7 +279,7 @@ describe('Onboarding visual surface React island', () => {
     });
 
     const surface = queryHtmlElement(stage, '.feature-cards-surface');
-    expect(surface?.dataset.reactIsland).toBe(
+    expect(surface?.dataset.visualSurface).toBe(
       'onboarding-feature-cards-surface'
     );
     expect(surface?.getAttribute('aria-label')).toBe('Practical features');
@@ -299,7 +308,7 @@ describe('Onboarding visual surface React island', () => {
     expect(blank?.dataset.artHeight).toBe('96');
   });
 
-  it('unmounts the React root before a legacy scene replaces the stage', () => {
+  it('draws nothing once cleared', () => {
     const { controller, stage } = createFixture();
     act(() => {
       controller.render(createModel());
@@ -307,7 +316,7 @@ describe('Onboarding visual surface React island', () => {
     });
 
     expect(stage.childElementCount).toBe(0);
-    expect(stage.querySelector('[data-react-island]')).toBeNull();
+    expect(stage.querySelector('[data-visual-surface]')).toBeNull();
   });
 
   it('renders themed site-search cases, typing tokens, and query highlights', () => {
@@ -363,7 +372,7 @@ describe('Onboarding visual surface React island', () => {
     });
 
     const surface = queryHtmlElement(stage, '.site-search-demo-surface');
-    expect(surface?.dataset.reactIsland).toBe(
+    expect(surface?.dataset.visualSurface).toBe(
       'onboarding-site-search-demo-surface'
     );
     expect(surface?.getAttribute('aria-label')).toBe(
@@ -453,7 +462,7 @@ describe('Onboarding visual surface React island', () => {
     });
 
     const surface = queryHtmlElement(stage, '.bookmark-focus-ui');
-    expect(surface?.dataset.reactIsland).toBe(
+    expect(surface?.dataset.visualSurface).toBe(
       'onboarding-bookmark-focus-surface'
     );
     expect(surface?.querySelectorAll('.surface-rail-dot')).toHaveLength(3);

@@ -1,5 +1,4 @@
-import { flushSync } from 'react-dom';
-import { createRoot, type Root } from 'react-dom/client';
+import { useState, type ReactNode } from 'react';
 import {
   BookmarkFocusDemo,
   type BookmarkFocusModel
@@ -48,12 +47,6 @@ export interface VisualSurfaceRenderModel {
   siteSearchSettingsLabel?: string;
   siteSearchTabHintTemplate?: string;
   wordmarkSrc: string;
-}
-
-export interface VisualSurfaceController {
-  render(model: VisualSurfaceRenderModel): boolean;
-  clear(): void;
-  destroy(): void;
 }
 
 function ButterflyWing({
@@ -304,179 +297,77 @@ function FeatureCardsSurface({
   );
 }
 
-export function createVisualSurfaceController(
-  stage: HTMLElement | null
-): VisualSurfaceController {
-  let currentHost: HTMLElement | null = null;
-  let currentRoot: Root | null = null;
-  let destroyed = false;
-
-  function clear(): void {
-    if (currentRoot) {
-      flushSync(() => {
-        currentRoot?.unmount();
-      });
-      currentRoot = null;
-    }
-    currentHost?.remove();
-    currentHost = null;
+// How each kind of surface is framed: its class, accessible name and the
+// name tests and styles know it by.
+function getSurfaceLook(model: VisualSurfaceRenderModel): { className: string; ariaLabel?: string; name: string } | null {
+  switch (model.kind) {
+    case 'lumno-web-wordmark-surface':
+      return {
+        className: 'lumno-web-wordmark-surface',
+        ariaLabel: String(model.ariaLabel || 'Lumno'),
+        name: 'onboarding-lumno-wordmark-surface'
+      };
+    case 'feature-cards-surface':
+      return {
+        className: 'feature-cards-surface',
+        ariaLabel: String(model.practicalFeaturesAriaLabel || 'Lumno practical features'),
+        name: 'onboarding-feature-cards-surface'
+      };
+    case 'site-search-demo-surface':
+      return {
+        className: 'site-search-demo-surface',
+        ariaLabel: String(model.siteSearchDemoAriaLabel || 'Lumno site search demo'),
+        name: 'onboarding-site-search-demo-surface'
+      };
+    case 'newtab-preview-surface':
+      return model.newtabPreview
+        ? {
+          className: 'newtab-preview-surface',
+          ariaLabel: String(model.newtabPreview.ariaLabel || 'Lumno new tab preview'),
+          name: 'onboarding-newtab-preview-surface'
+        }
+        : null;
+    case 'bookmark-focus-surface':
+      return { className: 'bookmark-focus-ui', name: 'onboarding-bookmark-focus-surface' };
+    default:
+      return null;
   }
-
-  function render(model: VisualSurfaceRenderModel): boolean {
-    if (destroyed || !stage) {
-      return false;
-    }
-    if (
-      model.kind !== 'lumno-web-wordmark-surface' &&
-      model.kind !== 'feature-cards-surface' &&
-      model.kind !== 'site-search-demo-surface' &&
-      model.kind !== 'bookmark-focus-surface' &&
-      model.kind !== 'newtab-preview-surface'
-    ) {
-      clear();
-      return false;
-    }
-    if (
-      model.kind === 'newtab-preview-surface' &&
-      !model.newtabPreview
-    ) {
-      clear();
-      return false;
-    }
-    clear();
-    const hostElement = document.createElement('div');
-    currentHost = hostElement;
-    const isWordmark = model.kind === 'lumno-web-wordmark-surface';
-    const isFeatureCards = model.kind === 'feature-cards-surface';
-    const isSiteSearch = model.kind === 'site-search-demo-surface';
-    const isNewtabPreview = model.kind === 'newtab-preview-surface';
-    hostElement.className = isWordmark
-      ? 'lumno-web-wordmark-surface'
-      : (
-          isFeatureCards
-            ? 'feature-cards-surface'
-            : (
-                isSiteSearch
-                  ? 'site-search-demo-surface'
-                  : (
-                      isNewtabPreview
-                        ? 'newtab-preview-surface'
-                        : 'bookmark-focus-ui'
-                    )
-              )
-        );
-    if (isWordmark || isFeatureCards || isSiteSearch || isNewtabPreview) {
-      hostElement.setAttribute(
-        'aria-label',
-        isWordmark
-          ? String(model.ariaLabel || 'Lumno')
-          : (
-              isFeatureCards
-                ? String(
-                    model.practicalFeaturesAriaLabel ||
-                      'Lumno practical features'
-                  )
-                : (
-                    isSiteSearch
-                      ? String(
-                          model.siteSearchDemoAriaLabel ||
-                            'Lumno site search demo'
-                        )
-                      : String(
-                          model.newtabPreview?.ariaLabel ||
-                            'Lumno new tab preview'
-                        )
-                  )
-            )
-      );
-    }
-    hostElement.setAttribute(
-      'data-react-island',
-      isWordmark
-        ? 'onboarding-lumno-wordmark-surface'
-        : (
-            isFeatureCards
-              ? 'onboarding-feature-cards-surface'
-              : (
-                  isSiteSearch
-                    ? 'onboarding-site-search-demo-surface'
-                    : (
-                        isNewtabPreview
-                          ? 'onboarding-newtab-preview-surface'
-                          : 'onboarding-bookmark-focus-surface'
-                      )
-                )
-          )
-    );
-    stage.appendChild(hostElement);
-    currentRoot = createRoot(hostElement);
-    flushSync(() => {
-      currentRoot?.render(
-        isWordmark
-          ? <LumnoWordmarkSurface model={model} />
-          : (
-              isFeatureCards
-                ? <FeatureCardsSurface model={model} />
-                : (
-                    isSiteSearch
-                      ? (
-                          <SiteSearchDemoSurface
-                            model={{
-                              cases: Array.isArray(model.siteSearchCases)
-                                ? model.siteSearchCases
-                                : [],
-                              openLabel: String(
-                                model.siteSearchOpenLabel || 'Open'
-                              ),
-                              settingsLabel: String(
-                                model.siteSearchSettingsLabel || 'Settings'
-                              ),
-                              tabHintTemplate: String(
-                                model.siteSearchTabHintTemplate ||
-                                  'Search with {provider}'
-                              )
-                            }}
-                          />
-                        )
-                      : isNewtabPreview && model.newtabPreview
-                        ? (
-                            <NewtabPreview
-                              model={model.newtabPreview}
-                              surface={hostElement}
-                            />
-                          )
-                        : (
-                            model.bookmarkFocus
-                              ? (
-                                  <BookmarkFocusDemo
-                                    model={model.bookmarkFocus}
-                                  />
-                                )
-                              : null
-                          )
-                  )
-            )
-      );
-    });
-    return true;
-  }
-
-  return Object.freeze({
-    render,
-    clear,
-    destroy() {
-      if (destroyed) {
-        return;
-      }
-      clear();
-      destroyed = true;
-    }
-  });
 }
 
-export function createVisualSurfaceApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createVisualSurfaceController
-  });
+function SurfaceContent({ model, surface }: { model: VisualSurfaceRenderModel; surface: HTMLElement }): ReactNode {
+  switch (model.kind) {
+    case 'lumno-web-wordmark-surface':
+      return <LumnoWordmarkSurface model={model} />;
+    case 'feature-cards-surface':
+      return <FeatureCardsSurface model={model} />;
+    case 'site-search-demo-surface':
+      return (
+        <SiteSearchDemoSurface
+          model={{
+            cases: Array.isArray(model.siteSearchCases) ? model.siteSearchCases : [],
+            openLabel: String(model.siteSearchOpenLabel || 'Open'),
+            settingsLabel: String(model.siteSearchSettingsLabel || 'Settings'),
+            tabHintTemplate: String(model.siteSearchTabHintTemplate || 'Search with {provider}')
+          }}
+        />
+      );
+    case 'newtab-preview-surface':
+      return model.newtabPreview ? <NewtabPreview model={model.newtabPreview} surface={surface} /> : null;
+    default:
+      return model.bookmarkFocus ? <BookmarkFocusDemo model={model.bookmarkFocus} /> : null;
+  }
+}
+
+// The demo a slide shows beside its copy; nothing for a kind it does not know.
+export function VisualSurface({ model }: { model: VisualSurfaceRenderModel }) {
+  const [surface, setSurface] = useState<HTMLDivElement | null>(null);
+  const look = getSurfaceLook(model);
+  if (!look) {
+    return null;
+  }
+  return (
+    <div aria-label={look.ariaLabel} className={look.className} data-visual-surface={look.name} ref={setSurface}>
+      {surface ? <SurfaceContent model={model} surface={surface} /> : null}
+    </div>
+  );
 }
