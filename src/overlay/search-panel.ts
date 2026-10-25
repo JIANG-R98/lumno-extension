@@ -1105,6 +1105,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   ).catch(() => {});
 
   const inputParts = globalThis._x_extension_createSearchInput_2024_unique_({
+    container: overlayMount.inputContainer,
     styleRoot: overlayStyleRoot,
     placeholder: t('overlay_search_placeholder', t('search_placeholder', overlayState.defaultPlaceholderText)),
     inputId: '_x_extension_search_input_2024_unique_',
@@ -1259,11 +1260,9 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   });
   overlayState.modeBadge = overlayState.inputParts.modeBadge;
 
-  const suggestionsContainer = document.createElement('div');
+  const suggestionsContainer = overlayMount.suggestionsContainer;
   overlayState.suggestionsContainer = suggestionsContainer;
   applyNoTranslate(suggestionsContainer);
-  suggestionsContainer.id = '_x_extension_suggestions_container_2024_unique_';
-  suggestionsContainer.className = 'x-ov-suggestions-container';
   suggestionsContainer.addEventListener('wheel', function(event) {
     SUGGESTION_NAVIGATION.preventNumberShortcutWheel(event, suggestionsContainer);
   }, { passive: false });
@@ -1786,8 +1785,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   overlayState.overlayKeyRouter = overlayKeyRouter;
   addOverlaySessionCleanup(() => overlayKeyRouter.stop());
 
-  overlayState.overlay.appendChild(overlayState.inputContainer);
-  overlayState.overlay.appendChild(overlayState.suggestionsContainer);
   if (!shouldShowOpenTabsForEmptyQuery()) {
     clearDefaultOpenTabsSuggestions();
   }

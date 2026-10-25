@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useRef, useSyncExternalStore } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { createRenderStore, type RenderStore } from '../../shared/react/render-store';
@@ -10,6 +10,7 @@ type OverlayShellOptions = Record<string, unknown> & {
   featureHintsCssUrl?: string;
   hostId?: string;
   id?: string;
+  suggestionsContainerId?: string;
   maxHeightVh?: number;
   overlaySuggestionsCssUrl?: string;
   remixBrush2IconSvgUrl?: string;
@@ -26,6 +27,9 @@ type OverlayShellOptions = Record<string, unknown> & {
 interface OverlayMount {
   host: HTMLElement;
   panel: HTMLElement;
+  // Where the search input mounts, and the results list below it.
+  inputContainer: HTMLDivElement;
+  suggestionsContainer: HTMLDivElement;
   root: ShadowRoot;
   view: OverlayPanelView;
 }
@@ -586,17 +590,28 @@ export interface OverlayPanelView {
   render(model: OverlayPanelModel): void;
 }
 
+// The panel's parts once it mounted.
+interface OverlayPanelParts {
+  panel: HTMLDivElement;
+  inputContainer: HTMLDivElement;
+  suggestionsContainer: HTMLDivElement;
+}
+
 function OverlayPanel({
   id,
+  suggestionsContainerId,
   declarations,
   onMount,
   store
 }: {
   id: string;
+  suggestionsContainerId: string;
   declarations: StyleDeclaration[];
-  onMount(panel: HTMLDivElement): void;
+  onMount(parts: OverlayPanelParts): void;
   store: RenderStore<OverlayPanelModel>;
 }) {
+  const inputContainerRef = useRef<HTMLDivElement>(null);
+  const suggestionsContainerRef = useRef<HTMLDivElement>(null);
   const model = useSyncExternalStore(store.subscribe, store.getSnapshot);
   // Runs once: the static look goes on beside the theme's properties.
   const mountPanel = useCallback((panel: HTMLDivElement | null) => {
@@ -606,7 +621,12 @@ function OverlayPanel({
     declarations.forEach(([property, value, priority]) => {
       panel.style.setProperty(property, value, priority || '');
     });
-    onMount(panel);
+    // Children attach their refs before their parent does.
+    const inputContainer = inputContainerRef.current;
+    const suggestionsContainer = suggestionsContainerRef.current;
+    if (inputContainer && suggestionsContainer) {
+      onMount({ panel, inputContainer, suggestionsContainer });
+    }
   }, [declarations, onMount]);
   return (
     <div
@@ -616,7 +636,15 @@ function OverlayPanel({
       id={id}
       ref={mountPanel}
       style={model.vars}
-    />
+    >
+      {/* The search input mounts its own React root here. */}
+      <div data-lumno-overlay-input="" ref={inputContainerRef} />
+      <div
+        className="x-ov-suggestions-container"
+        id={suggestionsContainerId}
+        ref={suggestionsContainerRef}
+      />
+    </div>
   );
 }
 
@@ -647,9 +675,9 @@ export function createOverlayShellApi() {
       root: shadowRoot
     });
 
-    let panel: OverlayPanelElement | null = null;
-    const registerPanel = (nextPanel: HTMLDivElement) => {
-      panel = nextPanel;
+    const mounted: { parts: OverlayPanelParts | null } = { parts: null };
+    const registerPanel = (parts: OverlayPanelParts) => {
+      mounted.parts = parts;
     };
     const store = createRenderStore<OverlayPanelModel>({ theme: '', vars: {} });
     const reactRoot = createRoot(shadowRoot);
@@ -662,21 +690,32 @@ export function createOverlayShellApi() {
           )}
           onMount={registerPanel}
           store={store}
+          suggestionsContainerId={String(
+            options.suggestionsContainerId || '_x_extension_suggestions_container_2024_unique_'
+          )}
         />
       );
     });
-    if (!panel) {
+    const parts = mounted.parts;
+    if (!parts) {
       reactRoot.unmount();
       return null;
     }
 
-    const mountedPanel: OverlayPanelElement = panel;
+    const mountedPanel: OverlayPanelElement = parts.panel;
     mountedPanel._lumnoOverlayHost = host;
     mountedPanel._lumnoOverlayRoot = shadowRoot;
     roots.set(host, reactRoot);
     panels.set(host, mountedPanel);
     const view: OverlayPanelView = { render: store.render };
-    return { host, panel: mountedPanel, root: shadowRoot, view };
+    return {
+      host,
+      panel: mountedPanel,
+      inputContainer: parts.inputContainer,
+      suggestionsContainer: parts.suggestionsContainer,
+      root: shadowRoot,
+      view
+    };
   }
 
   return Object.freeze({

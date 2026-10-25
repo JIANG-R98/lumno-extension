@@ -84,6 +84,9 @@ function useButtonTooltip<T extends HTMLElement>(tooltip: SearchInputTooltip | n
 }
 
 export interface SearchInputConfig {
+  // An empty element the surface's own view drew for the input; a new one
+  // otherwise.
+  container?: HTMLDivElement;
   clearAction?: {
     ariaLabel?: string;
     html?: string;
@@ -634,7 +637,7 @@ export function createSearchInput(
   config: SearchInputConfig = {}
 ): SearchInputParts {
   ensureStyles(config);
-  const container = document.createElement('div');
+  const container = config.container || document.createElement('div');
   container.id =
     config.containerId || '_x_extension_input_container_2024_unique_';
   container.className = CLASSES.container;

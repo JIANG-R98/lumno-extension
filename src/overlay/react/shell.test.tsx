@@ -48,6 +48,10 @@ describe('Overlay React shell', () => {
     expect(mount.panel.style.getPropertyValue('transform')).toBe(
       'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1))'
     );
+    expect(Array.from(mount.panel.children)).toEqual([mount.inputContainer, mount.suggestionsContainer]);
+    expect(mount.inputContainer.childElementCount).toBe(0);
+    expect(mount.suggestionsContainer.id).toBe('_x_extension_suggestions_container_2024_unique_');
+    expect(mount.suggestionsContainer.className).toBe('x-ov-suggestions-container');
     expect(mount.host.getAttribute('popover')).toBe('manual');
     expect(mount.root?.querySelectorAll('#overlay-panel')).toHaveLength(1);
     expect(

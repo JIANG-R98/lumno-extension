@@ -70,6 +70,16 @@ describe('Shared search input React island', () => {
     expect(parts.modeTabHintText.parentElement).toBe(parts.modeTabHint);
   });
 
+  it('mounts into the element the surface drew for it', () => {
+    const container = document.createElement('div');
+    const parts = create({ container, containerId: 'given' });
+
+    expect(parts.container).toBe(container);
+    expect(container.id).toBe('given');
+    expect(container.dataset.reactIsland).toBe('shared-search-input');
+    expect(parts.input.parentElement).toBe(container);
+  });
+
   it('bridges native input, focus, blur, and keyboard events', () => {
     const onBlur = vi.fn();
     const onFocus = vi.fn();

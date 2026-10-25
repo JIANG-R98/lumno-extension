@@ -4,6 +4,7 @@
 // the panel.
 import * as LumnoSettingsStorage from '../../platform/settings-storage';
 import * as LumnoMessaging from '../../platform/messaging';
+import type { SearchInputParts } from '../../shared/react/search-input';
 import type { EngagementNoticeController } from '../../shared/engagement-notice';
 import type { SuggestionsViewController } from '../../shared/react/search/suggestion-list/types';
 import type { InputModeController } from '../../shared/search/search-input-mode';
@@ -23,6 +24,7 @@ interface PanelSessionState {
   overlayRevealGate: { cancel?(): void } | null;
   overlayWheelIsolationHandler: ((event: WheelEvent) => void) | null;
   overlaySuggestionsView: Pick<SuggestionsViewController, 'destroy'> | null;
+  inputParts: SearchInputParts | null;
   clickOutsideHandler: ((event: MouseEvent) => void) | null;
   overlayMediaQuery: MediaQueryList;
   overlayThemeMediaListener: ((event: MediaQueryListEvent) => void) | null;
@@ -426,6 +428,11 @@ function createPanelSession(deps: PanelSessionDeps) {
       }
       if (overlayState.overlaySuggestionsView && typeof overlayState.overlaySuggestionsView.destroy === 'function') {
         overlayState.overlaySuggestionsView.destroy();
+      }
+      // The search input's own root, before the panel it sits in goes.
+      const searchInputApi = globalThis.LumnoSearchInputUI;
+      if (overlayState.inputParts && searchInputApi) {
+        searchInputApi.destroySearchInput(overlayState.inputParts);
       }
       const mountHost = getOverlayMountHost(overlayElement);
       overlayShell.destroyOverlayMount(mountHost);
