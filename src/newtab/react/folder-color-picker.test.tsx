@@ -2,6 +2,7 @@ import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createFolderColorPicker } from './folder-color-picker';
 import { parseFolderColor, folderColorToRgb } from './folder-color';
+import { getElement, getTag, getTags } from '../../../tests/react/dom';
 
 let picker: ReturnType<typeof createFolderColorPicker> | undefined;
 afterEach(() => { act(() => picker?.destroy()); picker = undefined; document.body.innerHTML = ''; });
@@ -13,7 +14,7 @@ function setup(overrides: Parameters<typeof createFolderColorPicker>[0] = {}) {
   });
   return picker!;
 }
-function input(index: number) { return document.querySelectorAll<HTMLInputElement>('input')[index]; }
+function input(index: number) { return getTags(document, 'input', 'input')[index]; }
 function enter(index: number, value: string) {
   act(() => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input(index), value);
@@ -21,17 +22,17 @@ function enter(index: number, value: string) {
   });
 }
 function chooseFormat(value: 'hex' | 'rgb') {
-  act(() => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-format button')!.click());
-  act(() => document.querySelector<HTMLElement>(`.x-nt-folder-color-format-menu [data-value="${value}"]`)!.click());
+  act(() => getTag(document, '.x-nt-folder-color-format button', 'button').click());
+  act(() => getElement(document, `.x-nt-folder-color-format-menu [data-value="${value}"]`).click());
 }
 function button(text: string) {
-  const result = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find((item) => item.textContent === text);
+  const result = Array.from(getTags(document, 'button', 'button')).find((item) => item.textContent === text);
   if (!result) throw new Error(`Missing button ${text}`);
   return result;
 }
 function swatch(group: 'presets' | 'saved', color: string) {
   const selector = group === 'presets' ? `[data-color="${color}"]` : `[aria-label="${color}"]`;
-  return document.querySelector<HTMLButtonElement>(`.x-nt-folder-color-${group} .x-nt-folder-color-swatch${selector}`)!;
+  return getTag(document, `.x-nt-folder-color-${group} .x-nt-folder-color-swatch${selector}`, 'button');
 }
 
 describe('folder color values', () => {
@@ -55,7 +56,7 @@ describe('folder color picker', () => {
     expect(preview).toHaveBeenLastCalledWith('123', '#EF4444');
     expect(document.querySelectorAll('input')).toHaveLength(1);
     chooseFormat('rgb');
-    expect(Array.from(document.querySelectorAll<HTMLInputElement>('input')).map((element) => element.value)).toEqual(['239', '68', '68']);
+    expect(Array.from(getTags(document, 'input', 'input')).map((element) => element.value)).toEqual(['239', '68', '68']);
     enter(0, '12'); enter(1, '34'); enter(2, '56');
     expect(preview).toHaveBeenLastCalledWith('123', '#0C2238');
     enter(1, '999');
@@ -64,7 +65,7 @@ describe('folder color picker', () => {
     expect(preview).toHaveBeenLastCalledWith('123', '#0C2238');
     act(() => swatch('presets', '#5393FF').click());
     expect(button('Save').disabled).toBe(false);
-    expect(Array.from(document.querySelectorAll<HTMLInputElement>('input')).map((element) => element.value)).toEqual(['83', '147', '255']);
+    expect(Array.from(getTags(document, 'input', 'input')).map((element) => element.value)).toEqual(['83', '147', '255']);
     enter(0, '12'); enter(1, '34'); enter(2, '56');
     chooseFormat('hex');
     expect(input(0).value).toBe('#0C2238');
@@ -92,7 +93,7 @@ describe('folder color picker', () => {
   });
   it('closes the format menu before the dialog when Escape is pressed', () => {
     setup();
-    const trigger = document.querySelector<HTMLButtonElement>('.x-nt-folder-color-format button')!;
+    const trigger = getTag(document, '.x-nt-folder-color-format button', 'button');
     act(() => trigger.click());
     act(() => trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
     expect(picker!.isOpen()).toBe(true);
@@ -104,14 +105,14 @@ describe('folder color picker', () => {
     const submit = vi.fn(async () => {});
     setup({ onSubmit: submit });
     enter(0, '#f80');
-    await act(async () => { document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    await act(async () => { getElement(document, 'form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     expect(submit).toHaveBeenLastCalledWith('123', '#FF8800');
     expect(picker!.isOpen()).toBe(false);
     act(() => picker!.open({ folderId: '123', title: 'Design', color: '#FF8800' }));
     act(() => swatch('presets', '#5393FF').click());
     expect(swatch('presets', '#5393FF').getAttribute('aria-label')).toBe('Default color');
     expect(input(0).value).toBe('#5393FF');
-    await act(async () => { document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    await act(async () => { getElement(document, 'form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     expect(submit).toHaveBeenLastCalledWith('123', null);
   });
   it('takes presets, a default swatch and an image preview from other callers', async () => {
@@ -124,9 +125,9 @@ describe('folder color picker', () => {
         labels: { dialog: 'Background color', picker: 'Background color', defaultColor: 'From the icon' }
       });
     });
-    expect(document.querySelector('[role="dialog"]')!.getAttribute('aria-label')).toBe('Background color');
-    const preview = document.querySelector<HTMLElement>('.x-nt-folder-color-plate-preview')!;
-    expect(preview.querySelector('img')!.getAttribute('src')).toBe('data:image/png;base64,bG9nbw==');
+    expect(getElement(document, '[role="dialog"]').getAttribute('aria-label')).toBe('Background color');
+    const preview = getElement(document, '.x-nt-folder-color-plate-preview');
+    expect(getElement(preview, 'img').getAttribute('src')).toBe('data:image/png;base64,bG9nbw==');
     expect(preview.style.backgroundColor).toBe('rgb(253, 237, 234)');
     expect(Array.from(document.querySelectorAll('.x-nt-folder-color-presets .x-nt-folder-color-swatch[data-color]'))
       .map((element) => element.getAttribute('data-color'))).toEqual(['#FDEDEA', '#F8C9C0', '#FFFFFF']);
@@ -136,23 +137,23 @@ describe('folder color picker', () => {
     expect(document.querySelector('.x-nt-folder-color-presets .x-nt-folder-color-add')).not.toBeNull();
     act(() => swatch('presets', '#FFFFFF').click());
     expect(preview.style.backgroundColor).toBe('rgb(255, 255, 255)');
-    await act(async () => { document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    await act(async () => { getElement(document, 'form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     expect(submit).toHaveBeenLastCalledWith('shortcut-icon-plate', '#FFFFFF');
     act(() => picker!.open({ folderId: 'shortcut-icon-plate', title: 'Shopee', color: '#FFFFFF', presets: ['#FDEDEA', '#FFFFFF'] }));
     act(() => swatch('presets', '#FDEDEA').click());
-    await act(async () => { document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    await act(async () => { getElement(document, 'form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     expect(submit).toHaveBeenLastCalledWith('shortcut-icon-plate', null);
     // Opened while the plate follows the icon, saving untouched keeps following it.
     act(() => picker!.open({ folderId: 'shortcut-icon-plate', title: 'Shopee', color: '', presets: ['#FDEDEA', '#FFFFFF'] }));
     expect(swatch('presets', '#FDEDEA').getAttribute('aria-pressed')).toBe('true');
-    await act(async () => { document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    await act(async () => { getElement(document, 'form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     expect(submit).toHaveBeenLastCalledWith('shortcut-icon-plate', null);
   });
   it('animates in on the next frame and fades out before unmounting', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame'] });
     try {
       setup();
-      const backdrop = document.querySelector('.x-nt-folder-color-backdrop')!;
+      const backdrop = getElement(document, '.x-nt-folder-color-backdrop');
       expect(backdrop.getAttribute('data-open')).toBe('false');
       act(() => { vi.advanceTimersToNextFrame(); });
       expect(backdrop.getAttribute('data-open')).toBe('true');
@@ -181,9 +182,9 @@ describe('folder color picker', () => {
   });
   it('keeps the picker open and allows retry when storage fails', async () => {
     setup({ onSubmit: async () => { throw new Error('Storage failed'); } });
-    await act(async () => { document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    await act(async () => { getElement(document, 'form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     expect(picker!.isOpen()).toBe(true);
-    expect(document.querySelector('[role="alert"]')!.textContent).toContain('Could not save');
+    expect(getElement(document, '[role="alert"]').textContent).toContain('Could not save');
     expect(button('Save').disabled).toBe(false);
   });
   it('animates the preview on hover while preserving its current color', () => {
@@ -191,7 +192,7 @@ describe('folder color picker', () => {
     const preview = vi.fn();
     setup({ animateFolderIcon: animate, onPreview: preview });
     enter(0, '#22c55e');
-    const icon = document.querySelector('.x-nt-folder-color-preview')!;
+    const icon = getElement(document, '.x-nt-folder-color-preview');
     act(() => icon.dispatchEvent(new PointerEvent('pointerover', { bubbles: true })));
     expect(animate).toHaveBeenLastCalledWith(icon, true);
     act(() => icon.dispatchEvent(new PointerEvent('pointerout', { bubbles: true })));
@@ -206,17 +207,17 @@ describe('folder color picker', () => {
     const options = { readSavedColors: async () => stored, saveSavedColors, onSubmit };
     await act(async () => { setup(options); });
     enter(0, '#3a2a5f');
-    await act(async () => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.click());
+    await act(async () => getTag(document, '.x-nt-folder-color-add', 'button').click());
     expect(saveSavedColors).toHaveBeenLastCalledWith(['#3A2A5F']);
     expect(onSubmit).not.toHaveBeenCalled();
-    expect(document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.disabled).toBe(true);
+    expect(getTag(document, '.x-nt-folder-color-add', 'button').disabled).toBe(true);
     chooseFormat('rgb');
     enter(0, '12'); enter(1, '34'); enter(2, '56');
-    await act(async () => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.click());
+    await act(async () => getTag(document, '.x-nt-folder-color-add', 'button').click());
     expect(stored).toEqual(['#3A2A5F', '#0C2238']);
     act(() => button('Cancel').click());
     await act(async () => picker!.open({ folderId: '456', title: 'Other folder' }));
-    act(() => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-saved button[aria-label="#3A2A5F"]')!.click());
+    act(() => getTag(document, '.x-nt-folder-color-saved button[aria-label="#3A2A5F"]', 'button').click());
     expect(input(0).value).toBe('#3A2A5F');
     act(() => picker!.destroy());
     await act(async () => { setup(options); });
@@ -225,7 +226,7 @@ describe('folder color picker', () => {
   it('only saves colors that are not already presets or saved', async () => {
     const saveSavedColors = vi.fn(async () => {});
     setup({ saveSavedColors });
-    const add = () => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!;
+    const add = () => getTag(document, '.x-nt-folder-color-add', 'button');
     act(() => swatch('presets', '#8B5CF6').click());
     expect(add().disabled).toBe(true);
     enter(0, '#8b5cf6');
@@ -277,11 +278,11 @@ describe('folder color picker', () => {
     const onSubmit = vi.fn(async () => {});
     setup({ saveSavedColors, onSubmit });
     enter(0, '#123456');
-    await act(async () => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.click());
+    await act(async () => getTag(document, '.x-nt-folder-color-add', 'button').click());
     expect(document.querySelectorAll('.x-nt-folder-color-saved-item')).toHaveLength(0);
-    await act(async () => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.click());
+    await act(async () => getTag(document, '.x-nt-folder-color-add', 'button').click());
     expect(swatch('saved', '#123456').getAttribute('aria-pressed')).toBe('true');
-    await act(async () => { document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    await act(async () => { getElement(document, 'form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     expect(onSubmit).toHaveBeenLastCalledWith('123', '#123456');
   });
   it('normalizes stored colors, removes duplicates and limits the saved row to eight colors', async () => {
@@ -298,25 +299,25 @@ describe('folder color picker', () => {
     let resolveRead!: (colors: string[]) => void;
     const saveSavedColors = vi.fn(async () => {});
     setup({ readSavedColors: () => new Promise<string[]>((resolve) => { resolveRead = resolve; }), saveSavedColors });
-    expect(document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.disabled).toBe(true);
+    expect(getTag(document, '.x-nt-folder-color-add', 'button').disabled).toBe(true);
     await act(async () => {});
     enter(0, 'invalid');
     await act(async () => { resolveRead(['#ABCDEF']); });
-    expect(document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.disabled).toBe(true);
-    act(() => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.click());
+    expect(getTag(document, '.x-nt-folder-color-add', 'button').disabled).toBe(true);
+    act(() => getTag(document, '.x-nt-folder-color-add', 'button').click());
     expect(saveSavedColors).not.toHaveBeenCalled();
     enter(0, '#abc');
-    expect(document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.disabled).toBe(false);
+    expect(getTag(document, '.x-nt-folder-color-add', 'button').disabled).toBe(false);
   });
   it('keeps failed palette writes out of the row and allows retry', async () => {
     const saveSavedColors = vi.fn().mockRejectedValueOnce(new Error('Storage failed')).mockResolvedValue(undefined);
     setup({ saveSavedColors });
     enter(0, '#123456');
-    await act(async () => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.click());
-    expect(document.querySelector('[role="alert"]')!.textContent).toContain('Could not save this color');
+    await act(async () => getTag(document, '.x-nt-folder-color-add', 'button').click());
+    expect(getElement(document, '[role="alert"]').textContent).toContain('Could not save this color');
     expect(document.querySelectorAll('.x-nt-folder-color-saved-item')).toHaveLength(0);
-    expect(document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.disabled).toBe(false);
-    await act(async () => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.click());
+    expect(getTag(document, '.x-nt-folder-color-add', 'button').disabled).toBe(false);
+    await act(async () => getTag(document, '.x-nt-folder-color-add', 'button').click());
     expect(saveSavedColors).toHaveBeenLastCalledWith(['#123456']);
     expect(document.querySelectorAll('.x-nt-folder-color-saved-item')).toHaveLength(1);
     expect(picker!.isOpen()).toBe(true);
@@ -324,9 +325,9 @@ describe('folder color picker', () => {
   it('prevents overwriting an unreadable saved palette with an empty row', async () => {
     const saveSavedColors = vi.fn(async () => {});
     await act(async () => { setup({ readSavedColors: async () => { throw new Error('Read failed'); }, saveSavedColors }); });
-    expect(document.querySelector('[role="alert"]')!.textContent).toContain('Could not load saved colors');
-    expect(document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.disabled).toBe(true);
-    act(() => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.click());
+    expect(getElement(document, '[role="alert"]').textContent).toContain('Could not load saved colors');
+    expect(getTag(document, '.x-nt-folder-color-add', 'button').disabled).toBe(true);
+    act(() => getTag(document, '.x-nt-folder-color-add', 'button').click());
     expect(saveSavedColors).not.toHaveBeenCalled();
     expect(button('Save').disabled).toBe(false);
   });
@@ -336,35 +337,35 @@ describe('folder color picker', () => {
     const saveSavedColors = vi.fn(async (colors: string[]) => { stored = [...colors]; });
     const options = { readSavedColors: async () => stored, saveSavedColors, onPreview: preview };
     await act(async () => { setup(options); });
-    act(() => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-saved-item button[aria-label="#123456"]')!.click());
+    act(() => getTag(document, '.x-nt-folder-color-saved-item button[aria-label="#123456"]', 'button').click());
     const calls = preview.mock.calls.length;
-    await act(async () => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-saved-item[data-color="#123456"] .x-nt-folder-color-remove')!.click());
+    await act(async () => getTag(document, '.x-nt-folder-color-saved-item[data-color="#123456"] .x-nt-folder-color-remove', 'button').click());
     expect(stored).toHaveLength(7);
     expect(stored).not.toContain('#123456');
     expect(input(0).value).toBe('#123456');
     expect(preview).toHaveBeenCalledTimes(calls);
     expect(document.querySelector('.x-nt-folder-color-saved-item[data-color="#123456"]')).toBeNull();
-    expect(document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.disabled).toBe(false);
+    expect(getTag(document, '.x-nt-folder-color-add', 'button').disabled).toBe(false);
     act(() => button('Cancel').click());
     await act(async () => picker!.open({ folderId: '456', title: 'Other folder' }));
     expect(document.querySelector('.x-nt-folder-color-saved-item[data-color="#123456"]')).toBeNull();
     while (stored.length) {
-      await act(async () => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-remove')!.click());
+      await act(async () => getTag(document, '.x-nt-folder-color-remove', 'button').click());
     }
     expect(saveSavedColors).toHaveBeenLastCalledWith([]);
     expect(document.querySelectorAll('.x-nt-folder-color-saved-item')).toHaveLength(0);
     // The default color cannot be saved, so focus falls back to its selected swatch.
-    expect(document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.disabled).toBe(true);
+    expect(getTag(document, '.x-nt-folder-color-add', 'button').disabled).toBe(true);
     expect(document.activeElement).toBe(swatch('presets', '#5393FF'));
     expect(document.querySelectorAll('.x-nt-folder-color-presets .x-nt-folder-color-swatch')).toHaveLength(8);
   });
   it('retains a saved color when deletion fails and allows retry', async () => {
     const saveSavedColors = vi.fn().mockRejectedValueOnce(new Error('Storage failed')).mockResolvedValue(undefined);
     await act(async () => { setup({ readSavedColors: async () => ['#123456'], saveSavedColors }); });
-    await act(async () => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-remove')!.click());
-    expect(document.querySelector('[role="alert"]')!.textContent).toContain('Could not delete this color');
+    await act(async () => getTag(document, '.x-nt-folder-color-remove', 'button').click());
+    expect(getElement(document, '[role="alert"]').textContent).toContain('Could not delete this color');
     expect(document.querySelector('.x-nt-folder-color-saved-item[data-color="#123456"]')).not.toBeNull();
-    await act(async () => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-remove')!.click());
+    await act(async () => getTag(document, '.x-nt-folder-color-remove', 'button').click());
     expect(saveSavedColors).toHaveBeenLastCalledWith([]);
     expect(document.querySelectorAll('.x-nt-folder-color-saved-item')).toHaveLength(0);
     expect(picker!.isOpen()).toBe(true);

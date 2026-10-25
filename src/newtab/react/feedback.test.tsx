@@ -6,6 +6,7 @@ import {
   type FeedbackControlController,
   type FeedbackControlModel
 } from './feedback';
+import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 const baseModel: FeedbackControlModel = {
   buttonLabel: 'Send feedback',
@@ -62,9 +63,7 @@ afterEach(() => {
 describe('New Tab feedback React island', () => {
   it('owns the legacy feedback host and exposes synchronous open controls', () => {
     const { controller, host, options } = createController();
-    const button = host.querySelector<HTMLButtonElement>(
-      '.x-nt-feedback-button'
-    );
+    const button = queryHtmlTag(host, '.x-nt-feedback-button', 'button');
 
     expect(createFeedbackControlApi().implementation).toBe('react');
     expect(host.dataset.reactIsland).toBe('newtab-feedback-control');
@@ -87,13 +86,13 @@ describe('New Tab feedback React island', () => {
     act(() => controller.setOpen(true));
 
     expect(
-      host.querySelector<HTMLAnchorElement>('a[href*="x.com"]')?.href
+      queryHtmlTag(host, 'a[href*="x.com"]', 'a')?.href
     ).toBe(baseModel.xUrl);
     expect(
-      host.querySelector<HTMLAnchorElement>('a[href*="github.com"]')?.href
+      queryHtmlTag(host, 'a[href*="github.com"]', 'a')?.href
     ).toBe(baseModel.githubIssueUrl);
     expect(
-      host.querySelector<HTMLAnchorElement>('a[href*="chromewebstore"]')?.href
+      queryHtmlTag(host, 'a[href*="chromewebstore"]', 'a')?.href
     ).toBe(baseModel.chromeReviewUrl);
     // The menu's X button already covers it, so there is no separate community button.
     expect(host.querySelector('.x-nt-feedback-action-community')).toBeNull();
@@ -116,26 +115,23 @@ describe('New Tab feedback React island', () => {
     );
     act(() => controller.setOpen(true));
 
-    const community = host.querySelector<HTMLButtonElement>(
-      '.x-nt-feedback-action-community'
-    );
+    const community = queryHtmlTag(host, '.x-nt-feedback-action-community', 'button');
     act(() => community?.click());
 
     expect(host.dataset.detailOpen).toBe('true');
     expect(
-      host.querySelector<HTMLElement>('.x-nt-feedback-detail')?.hidden
+      queryHtmlElement(host, '.x-nt-feedback-detail')?.hidden
     ).toBe(false);
 
     await act(async () => {
-      host
-        .querySelector<HTMLButtonElement>('.x-nt-feedback-detail-refresh')
+      queryHtmlTag(host, '.x-nt-feedback-detail-refresh', 'button')
         ?.click();
       await Promise.resolve();
     });
 
     expect(onRefreshQr).toHaveBeenCalledTimes(1);
     expect(
-      host.querySelector<HTMLImageElement>('.x-nt-feedback-qr-image')?.src
+      queryHtmlTag(host, '.x-nt-feedback-qr-image', 'img')?.src
     ).toBe(refreshedUrl);
   });
 
@@ -157,7 +153,7 @@ describe('New Tab feedback React island', () => {
     expect(wechat.controller.isOpen()).toBe(true);
     expect(wechat.host.dataset.detailOpen).toBe('true');
     expect(
-      wechat.host.querySelector<HTMLElement>('.x-nt-feedback-detail')?.hidden
+      queryHtmlElement(wechat.host, '.x-nt-feedback-detail')?.hidden
     ).toBe(false);
   });
 

@@ -3,8 +3,8 @@ import { isElementTextTruncated } from './text-overflow';
 
 function createMeasuredElement(
   dimensions: Partial<Pick<HTMLElement, 'clientHeight' | 'clientWidth' | 'scrollHeight' | 'scrollWidth'>>
-): HTMLElement {
-  return dimensions as HTMLElement;
+): Pick<HTMLElement, 'clientHeight' | 'clientWidth' | 'scrollHeight' | 'scrollWidth'> {
+  return { clientHeight: 0, clientWidth: 0, scrollHeight: 0, scrollWidth: 0, ...dimensions };
 }
 
 describe('text overflow', () => {

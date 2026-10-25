@@ -6,6 +6,8 @@ import {
   type SettingsNavigationController,
   type SettingsNavigationRenderModel
 } from './settings-navigation';
+import { getElement } from '../../../tests/react/dom';
+import { queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: SettingsNavigationController[] = [];
 
@@ -65,7 +67,7 @@ describe('Options settings navigation React island', () => {
     const { controller, host, onSelect } = createFixture();
     act(() => {
       controller.render(model);
-      host.querySelector<HTMLButtonElement>('[data-tab="appearance"]')?.click();
+      queryHtmlTag(host, '[data-tab="appearance"]', 'button')?.click();
     });
 
     expect(onSelect).toHaveBeenCalledTimes(1);
@@ -110,7 +112,7 @@ describe('Options settings navigation React island', () => {
     expect(host.dataset.overflowStart).toBe('false');
     expect(host.dataset.overflowEnd).toBe('true');
 
-    const appearance = () => host.querySelector<HTMLElement>('[data-tab="appearance"]')!;
+    const appearance = () => getElement(host, '[data-tab="appearance"]');
     act(() => controller.render({ ...model, activeKey: 'appearance' }));
     Object.defineProperty(appearance(), 'offsetLeft', { configurable: true, value: 500 });
     Object.defineProperty(appearance(), 'offsetWidth', { configurable: true, value: 80 });

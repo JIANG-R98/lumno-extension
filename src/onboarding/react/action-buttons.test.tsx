@@ -5,6 +5,7 @@ import {
   createActionButtonsController,
   type ActionButtonsController
 } from './action-buttons';
+import { queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: ActionButtonsController[] = [];
 
@@ -99,7 +100,7 @@ describe('Onboarding action buttons React island', () => {
         }
       });
     });
-    const button = host.querySelector<HTMLButtonElement>('button');
+    const button = queryHtmlTag(host, 'button', 'button');
     if (!button) {
       throw new Error('fixture action button is missing');
     }

@@ -5,6 +5,7 @@ import {
   createPopconfirmController,
   type PopconfirmController
 } from './popconfirm';
+import { getTags } from '../../../tests/react/dom';
 
 let controllers: PopconfirmController[] = [];
 
@@ -99,8 +100,8 @@ describe('Options Popconfirm React island', () => {
         messageKey: 'confirm_continue',
         open: true
       });
-      host.querySelectorAll<HTMLButtonElement>('button')[0]?.click();
-      host.querySelectorAll<HTMLButtonElement>('button')[1]?.click();
+      getTags(host, 'button', 'button')[0]?.click();
+      getTags(host, 'button', 'button')[1]?.click();
     });
 
     expect(options.onCancel).toHaveBeenCalledTimes(1);

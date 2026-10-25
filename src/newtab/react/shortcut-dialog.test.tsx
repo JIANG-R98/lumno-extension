@@ -7,6 +7,8 @@ import {
   type ShortcutDialogOptions,
   type ShortcutDialogPayload
 } from './shortcut-dialog';
+import { getElement, getTag, getTags } from '../../../tests/react/dom';
+import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 let frameCallbacks: Map<number, FrameRequestCallback>;
 let nextFrameId: number;
@@ -28,17 +30,17 @@ function setInputValue(input: HTMLInputElement, value: string): void {
 }
 
 function iconSourceSelect(controller: ShortcutDialogController): HTMLSelectElement {
-  return controller.element.querySelector<HTMLSelectElement>('.x-nt-shortcut-icon-source-select select')!;
+  return getTag(controller.element, '.x-nt-shortcut-icon-source-select select', 'select');
 }
 
 function iconSourceTrigger(controller: ShortcutDialogController): HTMLButtonElement {
-  return controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-source-select button')!;
+  return getTag(controller.element, '.x-nt-shortcut-icon-source-select button', 'button');
 }
 
 function chooseIconSource(controller: ShortcutDialogController, source: string): void {
   const trigger = iconSourceTrigger(controller);
   if (trigger.getAttribute('aria-expanded') !== 'true') trigger.click();
-  const option = controller.element.querySelector<HTMLElement>(`[role="option"][data-value="${source}"]`);
+  const option = queryHtmlElement(controller.element, `[role="option"][data-value="${source}"]`);
   if (!option) throw new Error(`Expected icon source option: ${source}`);
   option.click();
 }
@@ -149,9 +151,7 @@ describe('shortcut dialog React island', () => {
       });
     });
 
-    const inputs = controller.element.querySelectorAll<HTMLInputElement>(
-      'input[type="text"]'
-    );
+    const inputs = getTags(controller.element, 'input[type="text"]', 'input');
     expect(controller.element.hidden).toBe(false);
     expect(document.activeElement).toBe(inputs[0]);
 
@@ -223,13 +223,13 @@ describe('shortcut dialog React island', () => {
         shortcut: { id: 'shopee', title: 'Shopee', url: 'https://shopee.example/', iconPlate: 'on' }
       });
     });
-    const preview = controller.element.querySelector<HTMLElement>('.x-nt-shortcut-online-icon-preview .x-nt-shortcut-icon-plate-preview')!;
+    const preview = getElement(controller.element, '.x-nt-shortcut-online-icon-preview .x-nt-shortcut-icon-plate-preview');
     expect(preview.dataset.iconPlate).toBe('true');
     act(() => {
-      preview.querySelector('img')!.dispatchEvent(new Event('load'));
+      getElement(preview, 'img').dispatchEvent(new Event('load'));
     });
     expect(preview.style.getPropertyValue('--x-nt-shortcut-icon-plate-light')).toBe('rgb(253, 236, 231)');
-    const swatches = Array.from(controller.element.querySelectorAll<HTMLButtonElement>('.x-nt-shortcut-icon-plate-swatch'));
+    const swatches = Array.from(getTags(controller.element, '.x-nt-shortcut-icon-plate-swatch', 'button'));
     expect(swatches.map((swatch) => swatch.getAttribute('aria-label'))).toEqual(['From the icon', '#FDECE7', '#FFFFFF']);
     expect(swatches[0].getAttribute('aria-pressed')).toBe('true');
     act(() => {
@@ -261,9 +261,9 @@ describe('shortcut dialog React island', () => {
       controller.open({ mode: 'edit', shortcut: { id: 'shopee', title: 'Shopee', url: 'https://shopee.example/' } });
     });
     act(() => {
-      controller.element.querySelector('.x-nt-shortcut-online-icon-preview img')!.dispatchEvent(new Event('load'));
+      getElement(controller.element, '.x-nt-shortcut-online-icon-preview img').dispatchEvent(new Event('load'));
     });
-    const custom = () => controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-plate-custom')!;
+    const custom = () => getTag(controller.element, '.x-nt-shortcut-icon-plate-custom', 'button');
     await act(async () => { custom().click(); });
     expect(pickIconPlateColor).toHaveBeenLastCalledWith(expect.objectContaining({
       title: 'Shopee',
@@ -300,8 +300,8 @@ describe('shortcut dialog React island', () => {
     act(() => {
       controller.open({ mode: 'edit', shortcut: { id: 'gh', title: 'GitHub', url: 'https://github.com/' } });
     });
-    const toggle = controller.element.querySelector<HTMLInputElement>('.x-nt-shortcut-icon-plate-toggle input[role="switch"]')!;
-    const image = controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')!;
+    const toggle = getTag(controller.element, '.x-nt-shortcut-icon-plate-toggle input[role="switch"]', 'input');
+    const image = getTag(controller.element, '.x-nt-shortcut-online-icon-preview img', 'img');
     act(() => {
       image.dispatchEvent(new Event('load'));
     });
@@ -332,9 +332,7 @@ describe('shortcut dialog React island', () => {
       controller.open({ sourceElement: backgroundButton });
     });
 
-    const nameInput = controller.element.querySelector<HTMLInputElement>(
-      'input[type="text"]'
-    );
+    const nameInput = queryHtmlTag(controller.element, 'input[type="text"]', 'input');
     expect(document.activeElement).toBe(nameInput);
     expect(pageContent.hasAttribute('inert')).toBe(true);
 
@@ -363,20 +361,20 @@ describe('shortcut dialog React island', () => {
       getOnlineIconUrl: (url) => url ? 'data:image/png;base64,b25saW5l' : ''
     });
     act(() => { controller.open(); flushAnimationFrames(); });
-    const previousForm = controller.element.querySelector('form')!;
-    const previousInputs = previousForm.querySelectorAll<HTMLInputElement>('input[type="text"]');
+    const previousForm = getElement(controller.element, 'form');
+    const previousInputs = getTags(previousForm, 'input[type="text"]', 'input');
     act(() => {
       setInputValue(previousInputs[0], 'Abandoned shortcut');
       setInputValue(previousInputs[1], 'https://example.com/');
     });
     act(() => chooseIconSource(controller, 'custom'));
-    const fileInput = controller.element.querySelector<HTMLInputElement>('.x-nt-shortcut-icon-input')!;
+    const fileInput = getTag(controller.element, '.x-nt-shortcut-icon-input', 'input');
     Object.defineProperty(fileInput, 'files', {
       configurable: true,
       value: [new File(['icon'], 'icon.png', { type: 'image/png' })]
     });
     await act(async () => fileInput.dispatchEvent(new Event('change', { bubbles: true })));
-    expect(controller.element.querySelector<HTMLElement>('.x-nt-shortcut-icon-upload-tile')?.dataset.hasIcon).toBe('true');
+    expect(queryHtmlElement(controller.element, '.x-nt-shortcut-icon-upload-tile')?.dataset.hasIcon).toBe('true');
     act(() => {
       controller.setError('Previous validation error');
       controller.setIconError('Previous icon error');
@@ -385,7 +383,7 @@ describe('shortcut dialog React island', () => {
 
     act(() => {
       if (closeMethod === 'cancel') {
-        controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-dialog-button--secondary')!.click();
+        getTag(controller.element, '.x-nt-shortcut-dialog-button--secondary', 'button').click();
       } else if (closeMethod === 'Escape') {
         sourceKey(controller, 'Escape');
       } else {
@@ -396,7 +394,7 @@ describe('shortcut dialog React island', () => {
     expect(controller.getState().open).toBe(false);
     act(() => { controller.open(); flushAnimationFrames(); vi.advanceTimersByTime(180); });
 
-    const inputs = controller.element.querySelectorAll<HTMLInputElement>('input[type="text"]');
+    const inputs = getTags(controller.element, 'input[type="text"]', 'input');
     expect(previousForm.isConnected).toBe(false);
     expect(Array.from(inputs, (input) => input.value)).toEqual(['', '']);
     expect(document.activeElement).toBe(inputs[0]);
@@ -407,11 +405,11 @@ describe('shortcut dialog React island', () => {
     expect(controller.element.querySelector('.x-nt-shortcut-online-icon-preview img')).toBeNull();
     expect(controller.element.querySelector('.x-nt-shortcut-error')?.textContent).toBe('');
     expect(controller.element.querySelector('.x-nt-shortcut-icon-error')?.textContent).toBe('');
-    const refresh = controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')!;
+    const refresh = getTag(controller.element, '.x-nt-shortcut-icon-refresh', 'button');
     expect(refresh.textContent).toBe('Refresh');
     expect(refresh.disabled).toBe(true);
     act(() => chooseIconSource(controller, 'custom'));
-    expect(controller.element.querySelector<HTMLElement>('.x-nt-shortcut-icon-upload-tile')?.dataset.hasIcon).toBe('false');
+    expect(queryHtmlElement(controller.element, '.x-nt-shortcut-icon-upload-tile')?.dataset.hasIcon).toBe('false');
   });
 
   it('ignores edit data and source preferences when opening a new add form', () => {
@@ -420,7 +418,7 @@ describe('shortcut dialog React island', () => {
     act(() => controller.open({ mode: 'edit', shortcut }));
     expect(iconSourceSelect(controller).value).toBe('service');
     act(() => { controller.close(); controller.open({ mode: 'add', shortcut }); flushAnimationFrames(); });
-    expect(Array.from(controller.element.querySelectorAll<HTMLInputElement>('input[type="text"]'), (input) => input.value)).toEqual(['', '']);
+    expect(Array.from(getTags(controller.element, 'input[type="text"]', 'input'), (input) => input.value)).toEqual(['', '']);
     expect(iconSourceSelect(controller).value).toBe('cache');
     expect(controller.getState().editingId).toBe('');
   });
@@ -431,7 +429,7 @@ describe('shortcut dialog React island', () => {
       prepareIconFile: () => new Promise<{ dataUrl: string }>((resolve) => uploads.push(resolve))
     });
     const upload = () => {
-      const input = controller.element.querySelector<HTMLInputElement>('.x-nt-shortcut-icon-input')!;
+      const input = getTag(controller.element, '.x-nt-shortcut-icon-input', 'input');
       Object.defineProperty(input, 'files', {
         configurable: true,
         value: [new File(['icon'], 'icon.png', { type: 'image/png' })]
@@ -441,12 +439,12 @@ describe('shortcut dialog React island', () => {
     act(() => controller.open());
     act(() => chooseIconSource(controller, 'custom'));
     act(upload);
-    act(() => controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-dialog-button--secondary')!.click());
+    act(() => getTag(controller.element, '.x-nt-shortcut-dialog-button--secondary', 'button').click());
     act(() => controller.open());
     act(() => chooseIconSource(controller, 'custom'));
     act(upload);
     await act(async () => uploads[0]({ dataUrl: 'data:image/png;base64,c3RhbGU=' }));
-    const tile = controller.element.querySelector<HTMLElement>('.x-nt-shortcut-icon-upload-tile')!;
+    const tile = getElement(controller.element, '.x-nt-shortcut-icon-upload-tile');
     expect(tile.dataset.hasIcon).toBe('false');
     expect(tile.dataset.loading).toBe('true');
     await act(async () => uploads[1]({ dataUrl: 'data:image/png;base64,bmV3' }));
@@ -475,9 +473,7 @@ describe('shortcut dialog React island', () => {
       flushAnimationFrames();
     });
 
-    let inputs = controller.element.querySelectorAll<HTMLInputElement>(
-      'input[type="text"]'
-    );
+    let inputs = getTags(controller.element, 'input[type="text"]', 'input');
     expect(controller.getState().itemType).toBe('bookmark');
     expect(inputs).toHaveLength(2);
     expect(inputs[0].value).toBe('Docs');
@@ -509,9 +505,7 @@ describe('shortcut dialog React island', () => {
       flushAnimationFrames();
     });
 
-    inputs = controller.element.querySelectorAll<HTMLInputElement>(
-      'input[type="text"]'
-    );
+    inputs = getTags(controller.element, 'input[type="text"]', 'input');
     expect(controller.getState().itemType).toBe('folder');
     expect(inputs).toHaveLength(1);
     expect(inputs[0].value).toBe('Research');
@@ -585,9 +579,9 @@ describe('shortcut dialog React island', () => {
       shortcut: { id: 'bookmark-two', title: 'Docs', url: fresh.pageUrl }
     }));
     expect(iconSourceSelect(controller).value).toBe('cache');
-    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.src).toBe(preview);
+    expect(queryHtmlTag(controller.element, '.x-nt-shortcut-online-icon-preview img', 'img')?.src).toBe(preview);
     await act(async () => {
-      controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')?.click();
+      queryHtmlTag(controller.element, '.x-nt-shortcut-icon-refresh', 'button')?.click();
     });
     await act(async () => { await controller.submit(); });
     expect(onSubmit).toHaveBeenLastCalledWith(expect.objectContaining({
@@ -665,9 +659,7 @@ describe('shortcut dialog React island', () => {
     act(() => {
       chooseIconSource(controller, 'custom');
     });
-    const fileInput = controller.element.querySelector<HTMLInputElement>(
-      '.x-nt-shortcut-icon-input'
-    );
+    const fileInput = queryHtmlTag(controller.element, '.x-nt-shortcut-icon-input', 'input');
     if (!fileInput) {
       throw new Error('Expected the shortcut icon input to exist.');
     }
@@ -682,9 +674,7 @@ describe('shortcut dialog React island', () => {
       await Promise.resolve();
     });
 
-    const uploadTile = controller.element.querySelector<HTMLElement>(
-      '.x-nt-shortcut-icon-upload-tile'
-    );
+    const uploadTile = queryHtmlElement(controller.element, '.x-nt-shortcut-icon-upload-tile');
     expect(uploadTile?.dataset.hasIcon).toBe('true');
     expect(uploadTile?.getAttribute('aria-label')).toBe('Replace image');
 
@@ -713,13 +703,13 @@ describe('shortcut dialog React island', () => {
     const controller = createController(onSubmit, { getOnlineIconUrl: () => initial, refreshOnlineIcon });
     act(() => controller.open({ mode: 'edit', shortcut: { id: 'one', url: fresh.pageUrl } }));
     expect(iconSourceSelect(controller).value).toBe('cache');
-    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.src).toBe(initial);
+    expect(queryHtmlTag(controller.element, '.x-nt-shortcut-online-icon-preview img', 'img')?.src).toBe(initial);
     expect(controller.element.querySelector('.x-nt-shortcut-icon-upload-tile')).toBeNull();
     await act(async () => {
-      controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')?.click();
+      queryHtmlTag(controller.element, '.x-nt-shortcut-icon-refresh', 'button')?.click();
     });
     expect(refreshOnlineIcon).toHaveBeenCalledWith(fresh.pageUrl, 'cache');
-    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.src).toBe(fresh.dataUrl);
+    expect(queryHtmlTag(controller.element, '.x-nt-shortcut-online-icon-preview img', 'img')?.src).toBe(fresh.dataUrl);
     expect(onSubmit).not.toHaveBeenCalled();
     await act(async () => { await controller.submit(); });
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ onlineIcon: fresh, iconAction: 'keep' }));
@@ -734,7 +724,7 @@ describe('shortcut dialog React island', () => {
     expect(iconSourceSelect(controller).value).toBe('custom');
     await act(async () => chooseIconSource(controller, 'cache'));
     act(() => chooseIconSource(controller, 'custom'));
-    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-icon-upload-tile img')?.src).toBe('data:image/png;base64,Y3VzdG9t');
+    expect(queryHtmlTag(controller.element, '.x-nt-shortcut-icon-upload-tile img', 'img')?.src).toBe('data:image/png;base64,Y3VzdG9t');
     await act(async () => chooseIconSource(controller, 'cache'));
     await act(async () => { await controller.submit(); });
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ iconAction: 'remove', iconDataUrl: '' }));
@@ -746,12 +736,12 @@ describe('shortcut dialog React island', () => {
     const onSubmit = vi.fn((_payload: Readonly<ShortcutDialogPayload>) => true);
     const controller = createController(onSubmit, { getOnlineIconUrl: (url) => url ? 'data:image/png;base64,b2xk' : '', refreshOnlineIcon });
     act(() => controller.open({ mode: 'edit', shortcut: { id: 'one', url: 'https://example.com/' } }));
-    act(() => controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')?.click());
-    expect(controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-dialog-button--primary')?.disabled).toBe(true);
-    act(() => setInputValue(controller.element.querySelectorAll<HTMLInputElement>('input[type="text"]')[1], 'https://second.example/'));
+    act(() => queryHtmlTag(controller.element, '.x-nt-shortcut-icon-refresh', 'button')?.click());
+    expect(queryHtmlTag(controller.element, '.x-nt-shortcut-dialog-button--primary', 'button')?.disabled).toBe(true);
+    act(() => setInputValue(getTags(controller.element, 'input[type="text"]', 'input')[1], 'https://second.example/'));
     await act(async () => requests[0]({ dataUrl: 'data:image/png;base64,c3RhbGU=', pageUrl: 'https://example.com/' }));
-    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.src).toBe('data:image/png;base64,b2xk');
-    act(() => controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')?.click());
+    expect(queryHtmlTag(controller.element, '.x-nt-shortcut-online-icon-preview img', 'img')?.src).toBe('data:image/png;base64,b2xk');
+    act(() => queryHtmlTag(controller.element, '.x-nt-shortcut-icon-refresh', 'button')?.click());
     act(() => {
       controller.close();
       controller.open({ mode: 'edit', shortcut: { id: 'two', url: 'https://third.example/' } });
@@ -769,9 +759,9 @@ describe('shortcut dialog React island', () => {
       refreshOnlineIcon: async () => null
     });
     act(() => controller.open({ mode: 'edit', shortcut: { id: 'one', url: 'https://example.com/' } }));
-    await act(async () => controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')?.click());
+    await act(async () => queryHtmlTag(controller.element, '.x-nt-shortcut-icon-refresh', 'button')?.click());
     expect(controller.element.querySelector('.x-nt-shortcut-icon-error')?.textContent).toContain('No cached icon');
-    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.src).toBe('data:image/png;base64,b2xk');
+    expect(queryHtmlTag(controller.element, '.x-nt-shortcut-online-icon-preview img', 'img')?.src).toBe('data:image/png;base64,b2xk');
     act(() => chooseIconSource(controller, 'custom'));
     await act(async () => { expect(await controller.submit()).toBe(false); });
     expect(onSubmit).not.toHaveBeenCalled();
@@ -804,8 +794,8 @@ describe('shortcut dialog React island', () => {
       refreshOnlineIcon: async (pageUrl) => ({ dataUrl: 'data:image/png;base64,aWNvbg==', pageUrl })
     });
     act(() => controller.open({ mode: 'edit', shortcut: { id: 'one', url: 'https://example.com/' } }));
-    await act(async () => controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')!.click());
-    const refresh = controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')!;
+    await act(async () => getTag(controller.element, '.x-nt-shortcut-icon-refresh', 'button').click());
+    const refresh = getTag(controller.element, '.x-nt-shortcut-icon-refresh', 'button');
     expect(refresh.textContent).toBe('Icon acquired');
     expect(refresh.dataset.success).toBe('true');
     expect(refresh.querySelector('.ri-check-line')).not.toBeNull();
@@ -830,11 +820,11 @@ describe('shortcut dialog React island', () => {
     expect(Array.from(iconSourceSelect(controller).options, (option) => option.value)).toEqual(['service', 'favicon-is', 'cache', 'custom']);
     await act(async () => chooseIconSource(controller, 'service'));
     expect(refreshOnlineIcon).toHaveBeenCalledWith('https://example.com/', 'service');
-    const hint = controller.element.querySelector('.x-nt-shortcut-icon-source-hint')!;
+    const hint = getElement(controller.element, '.x-nt-shortcut-icon-source-hint');
     expect(hint.previousElementSibling?.classList.contains('x-nt-shortcut-icon-source-select')).toBe(true);
     expect(hint.textContent).toContain('site domain');
-    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.src).toBe('data:image/png;base64,b2xk');
-    expect(controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-dialog-button--primary')?.disabled).toBe(true);
+    expect(queryHtmlTag(controller.element, '.x-nt-shortcut-online-icon-preview img', 'img')?.src).toBe('data:image/png;base64,b2xk');
+    expect(queryHtmlTag(controller.element, '.x-nt-shortcut-dialog-button--primary', 'button')?.disabled).toBe(true);
     await act(async () => expect(await controller.submit()).toBe(false));
     expect(onSubmit).not.toHaveBeenCalled();
     act(() => chooseIconSource(controller, 'cache'));
@@ -856,7 +846,7 @@ describe('shortcut dialog React island', () => {
     await act(async () => chooseIconSource(controller, 'favicon-is'));
     expect(refreshOnlineIcon).toHaveBeenCalledWith(shortcut.url, 'favicon-is');
     expect(iconSourceSelect(controller).value).toBe('favicon-is');
-    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.src)
+    expect(queryHtmlTag(controller.element, '.x-nt-shortcut-online-icon-preview img', 'img')?.src)
       .toBe('data:image/png;base64,ZmF2aWNvbi1pcw==');
     await act(async () => controller.submit());
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
@@ -872,8 +862,8 @@ describe('shortcut dialog React island', () => {
     });
     act(() => controller.open({ mode: 'edit', shortcut: { id: 'one', url: 'https://example.com/', iconSource: 'service' } }));
     expect(iconSourceSelect(controller).value).toBe('service');
-    expect(iconSourceSelect(controller).querySelector<HTMLOptionElement>('option[value="service"]')?.disabled).toBe(true);
-    expect(controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')?.disabled).toBe(true);
+    expect(queryHtmlTag(iconSourceSelect(controller), 'option[value="service"]', 'option')?.disabled).toBe(true);
+    expect(queryHtmlTag(controller.element, '.x-nt-shortcut-icon-refresh', 'button')?.disabled).toBe(true);
     act(() => { iconSourceTrigger(controller).focus(); sourceKey(controller, 'ArrowDown'); });
     act(() => sourceKey(controller, 'ArrowDown'));
     await act(async () => sourceKey(controller, 'Enter'));
@@ -895,7 +885,7 @@ describe('shortcut dialog React island', () => {
     expect(controller.element.getAttribute('aria-modal')).toBe('true');
     expect(controller.element.contains(controller.element.querySelector('[role="listbox"]'))).toBe(true);
     act(() => chooseIconSource(controller, 'builtin'));
-    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.getAttribute('src')).toBe(builtinUrl);
+    expect(queryHtmlTag(controller.element, '.x-nt-shortcut-online-icon-preview img', 'img')?.getAttribute('src')).toBe(builtinUrl);
     expect(controller.element.querySelector('.x-nt-shortcut-icon-refresh')).toBeNull();
     expect(controller.element.querySelector('.x-nt-shortcut-icon-source-hint')?.textContent).toContain('Lumno’s built-in high-quality icons');
     expect(refreshOnlineIcon).not.toHaveBeenCalled();
@@ -905,7 +895,7 @@ describe('shortcut dialog React island', () => {
 
     act(() => controller.open({ mode: 'edit', shortcut: { id: 'one', url: 'https://github.com/project', iconSource: 'builtin' } }));
     expect(iconSourceSelect(controller).value).toBe('builtin');
-    const urlInput = controller.element.querySelectorAll<HTMLInputElement>('input[type="text"]')[1];
+    const urlInput = getTags(controller.element, 'input[type="text"]', 'input')[1];
     act(() => setInputValue(urlInput, 'https://github.com.evil.test/'));
     expect(iconSourceSelect(controller).value).toBe('cache');
     expect(iconSourceSelect(controller).querySelector('option[value="builtin"]')).toBeNull();
@@ -922,10 +912,10 @@ describe('shortcut dialog React island', () => {
       id: 'one', url: 'https://github.com/', iconDataUrl: 'data:image/png;base64,Y3VzdG9t'
     } }));
     act(() => chooseIconSource(controller, 'builtin'));
-    const urlInput = controller.element.querySelectorAll<HTMLInputElement>('input[type="text"]')[1];
+    const urlInput = getTags(controller.element, 'input[type="text"]', 'input')[1];
     act(() => setInputValue(urlInput, 'https://developer.mozilla.org/'));
     expect(iconSourceSelect(controller).value).toBe('builtin');
-    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.getAttribute('src')).toBe('/mdn.png');
+    expect(queryHtmlTag(controller.element, '.x-nt-shortcut-online-icon-preview img', 'img')?.getAttribute('src')).toBe('/mdn.png');
     await act(async () => controller.submit());
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ iconSource: 'builtin', iconAction: 'remove', iconDataUrl: '' }));
   });
@@ -941,12 +931,8 @@ describe('shortcut dialog React island', () => {
       flushAnimationFrames();
     });
 
-    const nameInput = controller.element.querySelector<HTMLInputElement>(
-      'input[type="text"]'
-    );
-    const doneButton = controller.element.querySelector<HTMLButtonElement>(
-      '.x-nt-shortcut-dialog-button--primary'
-    );
+    const nameInput = queryHtmlTag(controller.element, 'input[type="text"]', 'input');
+    const doneButton = queryHtmlTag(controller.element, '.x-nt-shortcut-dialog-button--primary', 'button');
     doneButton?.focus();
     const tabEvent = new KeyboardEvent('keydown', {
       key: 'Tab',
@@ -1003,12 +989,8 @@ describe('shortcut dialog React island', () => {
       flushAnimationFrames();
     });
 
-    const cancelButton = controller.element.querySelector<HTMLButtonElement>(
-      '.x-nt-shortcut-dialog-button--secondary'
-    );
-    const confirmButton = controller.element.querySelector<HTMLButtonElement>(
-      '.x-nt-shortcut-dialog-button--primary'
-    );
+    const cancelButton = queryHtmlTag(controller.element, '.x-nt-shortcut-dialog-button--secondary', 'button');
+    const confirmButton = queryHtmlTag(controller.element, '.x-nt-shortcut-dialog-button--primary', 'button');
     expect(controller.element.querySelectorAll('input')).toHaveLength(0);
     expect(
       controller.element.querySelector('.x-nt-shortcut-dialog-title')?.textContent

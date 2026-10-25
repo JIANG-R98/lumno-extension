@@ -5,6 +5,7 @@ import {
   createInteractionsController,
   type InteractionsController
 } from './interactions';
+import { queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: InteractionsController[] = [];
 
@@ -101,10 +102,10 @@ describe('Onboarding interactions React island', () => {
     expect(host.querySelectorAll('.interaction-slot')).toHaveLength(2);
     expect(host.querySelector('.ri-shield-check-line')).not.toBeNull();
     expect(
-      host.querySelector<HTMLAnchorElement>('.interaction-link-button')?.href
+      queryHtmlTag(host, '.interaction-link-button', 'a')?.href
     ).toBe('https://github.com/example/project');
     expect(
-      host.querySelector<HTMLButtonElement>('button.interaction-info-button')
+      queryHtmlTag(host, 'button.interaction-info-button', 'button')
         ?.dataset.tooltipType
     ).toBe('browser-avatars');
   });
@@ -133,9 +134,7 @@ describe('Onboarding interactions React island', () => {
       }
     ]);
 
-    const trigger = host.querySelector<HTMLButtonElement>(
-      '.interaction-accordion-trigger'
-    );
+    const trigger = queryHtmlTag(host, '.interaction-accordion-trigger', 'button');
     act(() => {
       trigger?.click();
     });
@@ -192,12 +191,8 @@ describe('Onboarding interactions React island', () => {
     );
 
     act(() => {
-      host.querySelector<HTMLAnchorElement>(
-        '.interaction-accordion-link'
-      )?.click();
-      host.querySelector<HTMLButtonElement>(
-        '.interaction-slot[data-action="next"]'
-      )?.click();
+      queryHtmlTag(host, '.interaction-accordion-link', 'a')?.click();
+      queryHtmlTag(host, '.interaction-slot[data-action="next"]', 'button')?.click();
     });
 
     expect(options.onAction.mock.calls.map((call) => call[0])).toEqual([
@@ -220,9 +215,7 @@ describe('Onboarding interactions React island', () => {
         }
       }
     ]);
-    const button = host.querySelector<HTMLButtonElement>(
-      '.interaction-info-button'
-    );
+    const button = queryHtmlTag(host, '.interaction-info-button', 'button');
     if (!button) {
       throw new Error('fixture info button is missing');
     }

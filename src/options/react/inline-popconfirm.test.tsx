@@ -2,6 +2,8 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { InlinePopconfirm } from './inline-popconfirm';
+import { getTags } from '../../../tests/react/dom';
+import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 let roots: Root[] = [];
 
@@ -30,13 +32,11 @@ function createFixture(onConfirm = vi.fn().mockResolvedValue(undefined)) {
 }
 
 function getTrigger(host: HTMLElement) {
-  return host.querySelector<HTMLButtonElement>('.remove-trigger');
+  return queryHtmlTag(host, '.remove-trigger', 'button');
 }
 
 function getActions(host: HTMLElement) {
-  return host.querySelectorAll<HTMLButtonElement>(
-    '._x_extension_popconfirm_actions_2024_unique_ button'
-  );
+  return getTags(host, '._x_extension_popconfirm_actions_2024_unique_ button', 'button');
 }
 
 afterEach(() => {
@@ -49,9 +49,7 @@ describe('Options inline Popconfirm', () => {
   it('does not leave hidden actions in the tab order and restores focus on cancel', () => {
     const { host } = createFixture();
     const trigger = getTrigger(host);
-    const popconfirm = host.querySelector<HTMLElement>(
-      '._x_extension_popconfirm_2024_unique_'
-    );
+    const popconfirm = queryHtmlElement(host, '._x_extension_popconfirm_2024_unique_');
 
     expect(popconfirm?.dataset.open).toBe('false');
     expect(popconfirm?.getAttribute('aria-hidden')).toBe('true');

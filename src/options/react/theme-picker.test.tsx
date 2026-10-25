@@ -6,6 +6,7 @@ import {
   type ThemePickerController,
   type ThemePickerRenderModel
 } from './theme-picker';
+import { queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: ThemePickerController[] = [];
 
@@ -68,7 +69,7 @@ describe('Options theme picker React island', () => {
     const { controller, host, onSelect } = createFixture();
     act(() => {
       controller.render(model);
-      host.querySelector<HTMLButtonElement>('[data-mode="dark"]')?.click();
+      queryHtmlTag(host, '[data-mode="dark"]', 'button')?.click();
     });
 
     expect(onSelect).toHaveBeenCalledTimes(1);

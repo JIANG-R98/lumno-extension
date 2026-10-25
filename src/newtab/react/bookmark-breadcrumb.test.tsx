@@ -4,6 +4,7 @@ import {
   createBookmarkBreadcrumbApi,
   createBookmarkBreadcrumbController
 } from './bookmark-breadcrumb';
+import { getTags } from '../../../tests/react/dom';
 
 let destroy: (() => void) | null = null;
 
@@ -32,7 +33,7 @@ describe('New Tab bookmark breadcrumb', () => {
     expect(host.dataset.reactIsland).toBe('newtab-bookmark-breadcrumb');
     expect(host.style.display).toBe('inline-flex');
     expect(host.querySelectorAll('.x-nt-bookmarks-crumb-item')).toHaveLength(2);
-    const buttons = host.querySelectorAll<HTMLButtonElement>('button');
+    const buttons = getTags(host, 'button', 'button');
     expect(buttons).toHaveLength(2);
     expect(buttons[1]?.disabled).toBe(true);
     expect(buttons[1]?.dataset.bookmarkDropFolderId).toBe('docs');

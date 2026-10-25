@@ -1,6 +1,7 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createPageNoticeApi, renderPageNotice } from './page-notice';
+import { queryHtmlTag } from '../../shared/dom-lookup';
 
 afterEach(() => {
   document.body.innerHTML = '';
@@ -33,14 +34,12 @@ describe('New Tab React page notice', () => {
       'newtab-page-notice'
     );
     act(() => {
-      noticeController.element
-        .querySelector<HTMLButtonElement>('.x-nt-page-notice-primary')
+      queryHtmlTag(noticeController.element, '.x-nt-page-notice-primary', 'button')
         ?.click();
     });
     expect(openExtensionDetailsPage).toHaveBeenCalledTimes(1);
     act(() => {
-      noticeController.element
-        .querySelector<HTMLButtonElement>('.x-nt-page-notice-close')
+      queryHtmlTag(noticeController.element, '.x-nt-page-notice-close', 'button')
         ?.click();
     });
     expect(onClose).toHaveBeenCalledTimes(1);

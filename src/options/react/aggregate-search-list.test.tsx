@@ -7,6 +7,8 @@ import {
   type AggregateSearchListController,
   type AggregateSearchListRenderModel
 } from './aggregate-search-list';
+import { getElements, getTags } from '../../../tests/react/dom';
+import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: AggregateSearchListController[] = [];
 
@@ -92,14 +94,12 @@ function setInputValue(input: HTMLInputElement | null, value: string) {
 const OPEN_EDITOR = '[data-expanded="true"] ._x_extension_aggregate_search_editor_2026_unique_';
 
 function getOpenEditor(host: HTMLElement) {
-  return host.querySelector<HTMLElement>(OPEN_EDITOR);
+  return queryHtmlElement(host, OPEN_EDITOR);
 }
 
 function expectNoOpenEditor(host: HTMLElement) {
   expect(getOpenEditor(host)).toBeNull();
-  host.querySelectorAll<HTMLElement>(
-    '._x_extension_aggregate_search_editor_2026_unique_'
-  ).forEach((editor) => expect(editor.hasAttribute('inert')).toBe(true));
+  getElements(host, '._x_extension_aggregate_search_editor_2026_unique_').forEach((editor) => expect(editor.hasAttribute('inert')).toBe(true));
 }
 
 async function clickSave(host: HTMLElement) {
@@ -123,9 +123,7 @@ function createDeferred<T>() {
 
 function openAddEditorWithValidDraft(host: HTMLElement) {
   act(() => {
-    host.querySelector<HTMLButtonElement>(
-      '._x_extension_aggregate_search_add_2026_unique_'
-    )?.click();
+    queryHtmlTag(host, '._x_extension_aggregate_search_add_2026_unique_', 'button')?.click();
   });
   const editor = getOpenEditor(host);
   act(() => {
@@ -159,9 +157,7 @@ describe('Options aggregate-search React island', () => {
     expect(host.querySelector(
       '._x_extension_settings_placeholder_2024_unique_'
     )).toBeNull();
-    const addButton = host.querySelector<HTMLButtonElement>(
-      '._x_extension_aggregate_search_add_2026_unique_'
-    );
+    const addButton = queryHtmlTag(host, '._x_extension_aggregate_search_add_2026_unique_', 'button');
     const addForm = addButton?.closest<HTMLElement>(
       '._x_extension_shortcut_form_2024_unique_'
     );
@@ -179,15 +175,11 @@ describe('Options aggregate-search React island', () => {
     )).toBe(addForm?.querySelector(
       '._x_extension_shortcut_form_fields_2024_unique_'
     ));
-    const nameInput = host.querySelector<HTMLInputElement>(
-      '[data-aggregate-field="name"]'
-    );
+    const nameInput = queryHtmlTag(host, '[data-aggregate-field="name"]', 'input');
     expect(nameInput?.maxLength).toBe(80);
     expect(nameInput?.value).toBe('聚合搜索');
     expect(nameInput?.hasAttribute('placeholder')).toBe(false);
-    const keyInput = host.querySelector<HTMLInputElement>(
-      '[data-aggregate-field="key"]'
-    );
+    const keyInput = queryHtmlTag(host, '[data-aggregate-field="key"]', 'input');
     expect(keyInput?.maxLength).toBe(32);
     expect(keyInput?.placeholder).toBe(model.copy.keyPlaceholder);
     act(() => setInputValue(keyInput, 'all'));
@@ -195,9 +187,9 @@ describe('Options aggregate-search React island', () => {
       '._x_extension_shortcut_save_2024_unique_'
     )?.textContent).toBe(model.copy.addLabel);
     act(() => {
-      host.querySelector<HTMLInputElement>('[data-source-ref="builtin:gg"]')
+      queryHtmlTag(host, '[data-source-ref="builtin:gg"]', 'input')
         ?.click();
-      host.querySelector<HTMLInputElement>('[data-source-ref="builtin:gh"]')
+      queryHtmlTag(host, '[data-source-ref="builtin:gh"]', 'input')
         ?.click();
     });
     await clickSave(host);
@@ -238,9 +230,7 @@ describe('Options aggregate-search React island', () => {
   it('shows trigger, required-name, and minimum-source validation before saving', async () => {
     const { host, options } = createFixture();
     act(() => {
-      host.querySelector<HTMLButtonElement>(
-        '._x_extension_aggregate_search_add_2026_unique_'
-      )?.click();
+      queryHtmlTag(host, '._x_extension_aggregate_search_add_2026_unique_', 'button')?.click();
     });
     await clickSave(host);
     expect(host.querySelector('[role="alert"]')?.textContent)
@@ -250,7 +240,7 @@ describe('Options aggregate-search React island', () => {
 
     act(() => {
       setInputValue(
-        host.querySelector<HTMLInputElement>('[data-aggregate-field="key"]'),
+        queryHtmlTag(host, '[data-aggregate-field="key"]', 'input'),
         'two words'
       );
     });
@@ -260,11 +250,11 @@ describe('Options aggregate-search React island', () => {
 
     act(() => {
       setInputValue(
-        host.querySelector<HTMLInputElement>('[data-aggregate-field="key"]'),
+        queryHtmlTag(host, '[data-aggregate-field="key"]', 'input'),
         'tech'
       );
       setInputValue(
-        host.querySelector<HTMLInputElement>('[data-aggregate-field="name"]'),
+        queryHtmlTag(host, '[data-aggregate-field="name"]', 'input'),
         ''
       );
     });
@@ -277,10 +267,10 @@ describe('Options aggregate-search React island', () => {
 
     act(() => {
       setInputValue(
-        host.querySelector<HTMLInputElement>('[data-aggregate-field="name"]'),
+        queryHtmlTag(host, '[data-aggregate-field="name"]', 'input'),
         '技术检索'
       );
-      host.querySelector<HTMLInputElement>('[data-source-ref="builtin:gg"]')
+      queryHtmlTag(host, '[data-source-ref="builtin:gg"]', 'input')
         ?.click();
     });
     await clickSave(host);
@@ -303,22 +293,20 @@ describe('Options aggregate-search React island', () => {
     };
     const { host } = createFixture(limitModel);
     act(() => {
-      host.querySelector<HTMLButtonElement>(
-        '._x_extension_aggregate_search_add_2026_unique_'
-      )?.click();
+      queryHtmlTag(host, '._x_extension_aggregate_search_add_2026_unique_', 'button')?.click();
     });
     act(() => {
-      host.querySelector<HTMLInputElement>('[data-source-ref="builtin:gg"]')
+      queryHtmlTag(host, '[data-source-ref="builtin:gg"]', 'input')
         ?.click();
-      host.querySelector<HTMLInputElement>('[data-source-ref="builtin:gh"]')
+      queryHtmlTag(host, '[data-source-ref="builtin:gh"]', 'input')
         ?.click();
     });
     act(() => {
-      host.querySelector<HTMLInputElement>('[data-source-ref="custom:docs"]')
+      queryHtmlTag(host, '[data-source-ref="custom:docs"]', 'input')
         ?.click();
     });
 
-    expect(host.querySelector<HTMLInputElement>('[data-source-ref="custom:docs"]')
+    expect(queryHtmlTag(host, '[data-source-ref="custom:docs"]', 'input')
       ?.checked).toBe(false);
     expect(host.querySelector('[role="alert"]')?.textContent).toBe('最多 2 个');
     expect(host.querySelector('._x_extension_aggregate_search_count_2026_unique_')
@@ -335,9 +323,7 @@ describe('Options aggregate-search React island', () => {
     expect(host.querySelector('[role="alert"]')?.textContent)
       .toBe('存储暂时不可用');
     expect(host.querySelector('[data-aggregate-field="name"]')).not.toBeNull();
-    expect(host.querySelector<HTMLButtonElement>(
-      '._x_extension_shortcut_save_2024_unique_'
-    )?.disabled).toBe(false);
+    expect(queryHtmlTag(host, '._x_extension_shortcut_save_2024_unique_', 'button')?.disabled).toBe(false);
   });
 
   it('keeps the editor open and shows an unsuccessful save result', async () => {
@@ -360,9 +346,7 @@ describe('Options aggregate-search React island', () => {
     const { host, options } = createFixture();
     options.onSave.mockReturnValueOnce(deferred.promise);
     openAddEditorWithValidDraft(host);
-    const saveButton = host.querySelector<HTMLButtonElement>(
-      '._x_extension_shortcut_save_2024_unique_'
-    );
+    const saveButton = queryHtmlTag(host, '._x_extension_shortcut_save_2024_unique_', 'button');
 
     await act(async () => {
       saveButton?.click();
@@ -397,9 +381,7 @@ describe('Options aggregate-search React island', () => {
     };
     const { controller, host, options } = createFixture(initialModel);
     act(() => {
-      host.querySelector<HTMLButtonElement>(
-        '._x_extension_shortcut_edit_2024_unique_'
-      )?.click();
+      queryHtmlTag(host, '._x_extension_shortcut_edit_2024_unique_', 'button')?.click();
     });
 
     act(() => controller.render({
@@ -408,9 +390,7 @@ describe('Options aggregate-search React island', () => {
         (provider) => provider.sourceRef !== 'custom:docs'
       )
     }));
-    const unavailableInput = host.querySelector<HTMLInputElement>(
-      '[data-source-ref="custom:docs"]'
-    );
+    const unavailableInput = queryHtmlTag(host, '[data-source-ref="custom:docs"]', 'input');
     expect(unavailableInput?.checked).toBe(true);
     expect(unavailableInput?.disabled).toBe(false);
     expect(unavailableInput?.closest('label')?.dataset.available).toBe('false');
@@ -421,7 +401,7 @@ describe('Options aggregate-search React island', () => {
 
     act(() => {
       unavailableInput?.click();
-      host.querySelector<HTMLInputElement>('[data-source-ref="builtin:gh"]')
+      queryHtmlTag(host, '[data-source-ref="builtin:gh"]', 'input')
         ?.click();
     });
     await clickSave(host);
@@ -445,12 +425,8 @@ describe('Options aggregate-search React island', () => {
       ...model,
       items: [item]
     });
-    const editButton = host.querySelector<HTMLButtonElement>(
-      '._x_extension_shortcut_edit_2024_unique_'
-    );
-    const addButton = host.querySelector<HTMLButtonElement>(
-      '._x_extension_aggregate_search_add_2026_unique_'
-    );
+    const editButton = queryHtmlTag(host, '._x_extension_shortcut_edit_2024_unique_', 'button');
+    const addButton = queryHtmlTag(host, '._x_extension_aggregate_search_add_2026_unique_', 'button');
 
     act(() => editButton?.click());
     const editCancelButton = getOpenEditor(host)?.querySelector<HTMLButtonElement>(
@@ -511,9 +487,7 @@ describe('Options aggregate-search React island', () => {
     });
 
     const confirmRemoval = async (itemId: string) => {
-      const card = host.querySelector<HTMLElement>(
-        `[data-aggregate-id="${itemId}"]`
-      );
+      const card = queryHtmlElement(host, `[data-aggregate-id="${itemId}"]`);
       act(() => card?.querySelector<HTMLButtonElement>(
         '._x_extension_shortcut_remove_2024_unique_'
       )?.click());
@@ -553,9 +527,7 @@ describe('Options aggregate-search React island', () => {
       sourceSummary: '2 个搜索源'
     };
     const { host } = createFixture({ ...model, items: [item] });
-    const editButton = host.querySelector<HTMLButtonElement>(
-      '._x_extension_shortcut_edit_2024_unique_'
-    );
+    const editButton = queryHtmlTag(host, '._x_extension_shortcut_edit_2024_unique_', 'button');
     expect(document.activeElement).toBe(document.body);
 
     act(() => editButton?.click());
@@ -592,32 +564,30 @@ describe('Options aggregate-search React island', () => {
       ...model,
       items: [item]
     });
-    const aggregateCard = host.querySelector<HTMLElement>('[data-aggregate-id="aggregate:tech"]');
+    const aggregateCard = queryHtmlElement(host, '[data-aggregate-id="aggregate:tech"]');
     expect(aggregateCard?.dataset.expanded).toBe('false');
     expect(aggregateCard?.querySelector<HTMLElement>(
       '._x_extension_shortcut_editor_2024_unique_'
     )?.hasAttribute('inert')).toBe(true);
 
     act(() => {
-      host.querySelector<HTMLButtonElement>(
-        '._x_extension_shortcut_edit_2024_unique_'
-      )?.click();
+      queryHtmlTag(host, '._x_extension_shortcut_edit_2024_unique_', 'button')?.click();
     });
     expect(aggregateCard?.querySelector<HTMLButtonElement>(
       '._x_extension_shortcut_editor_actions_2024_unique_ ._x_extension_shortcut_save_2024_unique_'
     )?.textContent).toBe(model.copy.saveLabel);
     act(() => {
       setInputValue(
-        host.querySelector<HTMLInputElement>('[data-aggregate-field="name"]'),
+        queryHtmlTag(host, '[data-aggregate-field="name"]', 'input'),
         '开发检索'
       );
       setInputValue(
-        host.querySelector<HTMLInputElement>('[data-aggregate-field="key"]'),
+        queryHtmlTag(host, '[data-aggregate-field="key"]', 'input'),
         'dev'
       );
-      host.querySelector<HTMLInputElement>('[data-source-ref="builtin:gh"]')
+      queryHtmlTag(host, '[data-source-ref="builtin:gh"]', 'input')
         ?.click();
-      host.querySelector<HTMLInputElement>('[data-source-ref="custom:docs"]')
+      queryHtmlTag(host, '[data-source-ref="custom:docs"]', 'input')
         ?.click();
     });
     await clickSave(host);
@@ -629,13 +599,9 @@ describe('Options aggregate-search React island', () => {
     });
 
     act(() => {
-      host.querySelector<HTMLButtonElement>(
-        '._x_extension_shortcut_remove_2024_unique_'
-      )?.click();
+      queryHtmlTag(host, '._x_extension_shortcut_remove_2024_unique_', 'button')?.click();
     });
-    const confirmButtons = host.querySelectorAll<HTMLButtonElement>(
-      '._x_extension_popconfirm_actions_2024_unique_ button'
-    );
+    const confirmButtons = getTags(host, '._x_extension_popconfirm_actions_2024_unique_ button', 'button');
     await act(async () => {
       confirmButtons[1]?.click();
       await Promise.resolve();

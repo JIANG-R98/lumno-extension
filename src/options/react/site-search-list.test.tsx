@@ -6,6 +6,8 @@ import {
   type SiteSearchListController,
   type SiteSearchListRenderModel
 } from './site-search-list';
+import { getTags } from '../../../tests/react/dom';
+import { queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: SiteSearchListController[] = [];
 
@@ -97,8 +99,8 @@ describe('Options site-search list React island', () => {
 
     const rows = host.querySelectorAll('._x_extension_shortcut_item_2024_unique_');
     expect(Array.from(rows).map((row) => row.getAttribute('data-sortable'))).toEqual(['true', 'true']);
-    const up = host.querySelectorAll<HTMLButtonElement>('[data-move="up"]');
-    const down = host.querySelectorAll<HTMLButtonElement>('[data-move="down"]');
+    const up = getTags(host, '[data-move="up"]', 'button');
+    const down = getTags(host, '[data-move="down"]', 'button');
     expect(up[0]?.disabled).toBe(true);
     expect(down[1]?.disabled).toBe(true);
     expect(down[0]?.getAttribute('aria-label')).toBe('下移');
@@ -157,10 +159,10 @@ describe('Options site-search list React island', () => {
     const { controller, host, options } = createFixture();
     act(() => controller.render(model));
     act(() => {
-      host.querySelector<HTMLButtonElement>('._x_extension_shortcut_edit_2024_unique_')
+      queryHtmlTag(host, '._x_extension_shortcut_edit_2024_unique_', 'button')
         ?.click();
     });
-    const nameInput = host.querySelector<HTMLInputElement>('[data-provider-field="name"]');
+    const nameInput = queryHtmlTag(host, '[data-provider-field="name"]', 'input');
     act(() => {
       if (nameInput) {
         const valueSetter = Object.getOwnPropertyDescriptor(
@@ -170,13 +172,11 @@ describe('Options site-search list React island', () => {
         valueSetter?.call(nameInput, 'Updated');
         nameInput.dispatchEvent(new Event('input', { bubbles: true }));
       }
-      host.querySelector<HTMLButtonElement>('[data-site-search-category="searchEngine"]')
+      queryHtmlTag(host, '[data-site-search-category="searchEngine"]', 'button')
         ?.click();
     });
     await act(async () => {
-      host.querySelector<HTMLButtonElement>(
-        '._x_extension_shortcut_editor_2024_unique_ ._x_extension_shortcut_submit_primary_2024_unique_'
-      )?.click();
+      queryHtmlTag(host, '._x_extension_shortcut_editor_2024_unique_ ._x_extension_shortcut_submit_primary_2024_unique_', 'button')?.click();
       await Promise.resolve();
     });
 
@@ -192,13 +192,11 @@ describe('Options site-search list React island', () => {
     options.onSave.mockResolvedValue({ ok: false, error: '触发词不能为空' });
     act(() => controller.render(model));
     act(() => {
-      host.querySelector<HTMLButtonElement>('._x_extension_shortcut_edit_2024_unique_')
+      queryHtmlTag(host, '._x_extension_shortcut_edit_2024_unique_', 'button')
         ?.click();
     });
     await act(async () => {
-      host.querySelector<HTMLButtonElement>(
-        '._x_extension_shortcut_editor_2024_unique_ ._x_extension_shortcut_submit_primary_2024_unique_'
-      )?.click();
+      queryHtmlTag(host, '._x_extension_shortcut_editor_2024_unique_ ._x_extension_shortcut_submit_primary_2024_unique_', 'button')?.click();
       await Promise.resolve();
     });
 
@@ -211,14 +209,12 @@ describe('Options site-search list React island', () => {
     const { controller, host, options } = createFixture();
     act(() => controller.render(model));
     act(() => {
-      host.querySelector<HTMLButtonElement>('._x_extension_shortcut_badge_warn_2024_unique_')
+      queryHtmlTag(host, '._x_extension_shortcut_badge_warn_2024_unique_', 'button')
         ?.click();
-      host.querySelector<HTMLButtonElement>('._x_extension_shortcut_remove_2024_unique_')
+      queryHtmlTag(host, '._x_extension_shortcut_remove_2024_unique_', 'button')
         ?.click();
     });
-    const confirmButtons = host.querySelectorAll<HTMLButtonElement>(
-      '._x_extension_popconfirm_actions_2024_unique_ button'
-    );
+    const confirmButtons = getTags(host, '._x_extension_popconfirm_actions_2024_unique_ button', 'button');
     await act(async () => {
       confirmButtons[1]?.click();
       await Promise.resolve();

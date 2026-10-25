@@ -9,6 +9,8 @@ import {
   type SiteSearchFormController,
   type SiteSearchFormRenderModel
 } from './settings-forms';
+import { getTags } from '../../../tests/react/dom';
+import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: Array<BlacklistFormController | SiteSearchFormController> = [];
 
@@ -90,9 +92,9 @@ describe('Options settings form React islands', () => {
     controllers.push(controller);
     act(() => controller.render(siteModel));
 
-    const buttons = host.querySelectorAll<HTMLButtonElement>('button:not(._x_extension_info_button_2026_unique_)');
+    const buttons = getTags(host, 'button:not(._x_extension_info_button_2026_unique_)', 'button');
     act(() => buttons[0]?.click());
-    const inputs = host.querySelectorAll<HTMLInputElement>('input');
+    const inputs = getTags(host, 'input', 'input');
     act(() => {
       const setter = Object.getOwnPropertyDescriptor(
         HTMLInputElement.prototype,
@@ -103,9 +105,7 @@ describe('Options settings form React islands', () => {
       buttons[1]?.click();
     });
     await act(async () => {
-      host.querySelector<HTMLButtonElement>(
-        '#_x_extension_site_search_add_2024_unique_'
-      )?.click();
+      queryHtmlTag(host, '#_x_extension_site_search_add_2024_unique_', 'button')?.click();
       await Promise.resolve();
     });
 
@@ -125,9 +125,7 @@ describe('Options settings form React islands', () => {
     controllers.push(controller);
     act(() => controller.render(siteModel));
 
-    const categoryControl = host.querySelector<HTMLElement>(
-      '._x_extension_site_search_category_tabs_2026_unique_'
-    );
+    const categoryControl = queryHtmlElement(host, '._x_extension_site_search_category_tabs_2026_unique_');
     expect(categoryControl?.getAttribute('role')).toBe('group');
     expect(
       categoryControl?.querySelector('[data-site-search-category="site"]')
@@ -135,8 +133,8 @@ describe('Options settings form React islands', () => {
     ).toBe('true');
 
     act(() => {
-      host.querySelector<HTMLButtonElement>('button')?.click();
-      host.querySelector<HTMLButtonElement>('[data-site-search-category="searchEngine"]')
+      queryHtmlTag(host, 'button', 'button')?.click();
+      queryHtmlTag(host, '[data-site-search-category="searchEngine"]', 'button')
         ?.click();
     });
     expect(
@@ -144,9 +142,7 @@ describe('Options settings form React islands', () => {
         ?.getAttribute('aria-pressed')
     ).toBe('true');
     await act(async () => {
-      host.querySelector<HTMLButtonElement>(
-        '#_x_extension_site_search_add_2024_unique_'
-      )?.click();
+      queryHtmlTag(host, '#_x_extension_site_search_add_2024_unique_', 'button')?.click();
       await Promise.resolve();
     });
 
@@ -162,12 +158,10 @@ describe('Options settings form React islands', () => {
     });
     controllers.push(controller);
     act(() => controller.render(siteModel));
-    const buttons = host.querySelectorAll<HTMLButtonElement>('button:not(._x_extension_info_button_2026_unique_)');
+    const buttons = getTags(host, 'button:not(._x_extension_info_button_2026_unique_)', 'button');
     act(() => buttons[0]?.click());
     await act(async () => {
-      host.querySelector<HTMLButtonElement>(
-        '#_x_extension_site_search_add_2024_unique_'
-      )?.click();
+      queryHtmlTag(host, '#_x_extension_site_search_add_2024_unique_', 'button')?.click();
       await Promise.resolve();
     });
 
@@ -183,20 +177,16 @@ describe('Options settings form React islands', () => {
     });
     controllers.push(controller);
     act(() => controller.render(siteModel));
-    const buttons = host.querySelectorAll<HTMLButtonElement>('button:not(._x_extension_info_button_2026_unique_)');
+    const buttons = getTags(host, 'button:not(._x_extension_info_button_2026_unique_)', 'button');
     act(() => buttons[0]?.click());
 
     await act(async () => {
-      host.querySelector<HTMLButtonElement>(
-        '#_x_extension_site_search_add_2024_unique_'
-      )?.click();
+      queryHtmlTag(host, '#_x_extension_site_search_add_2024_unique_', 'button')?.click();
       await Promise.resolve();
     });
 
     expect(host.dataset.expanded).toBe('true');
-    expect(host.querySelector<HTMLButtonElement>(
-      '#_x_extension_site_search_add_2024_unique_'
-    )?.disabled).toBe(false);
+    expect(queryHtmlTag(host, '#_x_extension_site_search_add_2024_unique_', 'button')?.disabled).toBe(false);
     expect(host.querySelector('._x_extension_shortcut_error_2024_unique_')?.textContent)
       .toBe('Storage unavailable');
   });
@@ -211,11 +201,11 @@ describe('Options settings form React islands', () => {
     });
     controllers.push(controller);
     act(() => controller.render(blacklistModel));
-    const buttons = host.querySelectorAll<HTMLButtonElement>('button:not(._x_extension_info_button_2026_unique_)');
-    const checkboxes = host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+    const buttons = getTags(host, 'button:not(._x_extension_info_button_2026_unique_)', 'button');
+    const checkboxes = getTags(host, 'input[type="checkbox"]', 'input');
     act(() => buttons[0]?.click());
     act(() => checkboxes[0]?.click());
-    const textInput = host.querySelector<HTMLInputElement>('input:not([type="checkbox"])');
+    const textInput = queryHtmlTag(host, 'input:not([type="checkbox"])', 'input');
     act(() => {
       const setter = Object.getOwnPropertyDescriptor(
         HTMLInputElement.prototype,
@@ -241,7 +231,7 @@ describe('Options settings form React islands', () => {
     });
     controllers.push(controller);
     act(() => controller.render(blacklistModel));
-    const buttons = host.querySelectorAll<HTMLButtonElement>('button:not(._x_extension_info_button_2026_unique_)');
+    const buttons = getTags(host, 'button:not(._x_extension_info_button_2026_unique_)', 'button');
     act(() => buttons[0]?.click());
     await act(async () => {
       buttons[2]?.click();
@@ -262,8 +252,8 @@ describe('Options settings form React islands', () => {
     });
     controllers.push(controller);
     act(() => controller.render(blacklistModel));
-    const openButton = host.querySelector<HTMLButtonElement>('button');
-    const textInput = host.querySelector<HTMLInputElement>('input:not([type="checkbox"])');
+    const openButton = queryHtmlTag(host, 'button', 'button');
+    const textInput = queryHtmlTag(host, 'input:not([type="checkbox"])', 'input');
 
     act(() => openButton?.click());
     act(() => {
@@ -277,9 +267,9 @@ describe('Options settings form React islands', () => {
     act(() => controller.reset());
 
     expect(host.dataset.expanded).toBe('false');
-    expect(host.querySelector<HTMLInputElement>('input:not([type="checkbox"])')?.value)
+    expect(queryHtmlTag(host, 'input:not([type="checkbox"])', 'input')?.value)
       .toBe('');
-    expect(host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')[2]?.checked)
+    expect(getTags(host, 'input[type="checkbox"]', 'input')[2]?.checked)
       .toBe(true);
   });
 
@@ -292,12 +282,10 @@ describe('Options settings form React islands', () => {
     });
     controllers.push(controller);
     act(() => controller.render(blacklistModel));
-    const openButton = host.querySelector<HTMLButtonElement>('button');
-    const fields = host.querySelector<HTMLElement>('._x_extension_shortcut_form_fields_2024_unique_');
-    const textInput = host.querySelector<HTMLInputElement>('input:not([type="checkbox"])');
-    const cancelButton = host.querySelector<HTMLButtonElement>(
-      '._x_extension_shortcut_secondary_2024_unique_'
-    );
+    const openButton = queryHtmlTag(host, 'button', 'button');
+    const fields = queryHtmlElement(host, '._x_extension_shortcut_form_fields_2024_unique_');
+    const textInput = queryHtmlTag(host, 'input:not([type="checkbox"])', 'input');
+    const cancelButton = queryHtmlTag(host, '._x_extension_shortcut_secondary_2024_unique_', 'button');
     expect(fields?.hasAttribute('inert')).toBe(true);
     expect(cancelButton?.style.display).toBe('');
 

@@ -5,6 +5,8 @@ import {
   createSelectControlController,
   type SelectControlController
 } from './select-control';
+import { getElement, getElements, getTag } from '../../../tests/react/dom';
+import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: SelectControlController[] = [];
 
@@ -36,7 +38,7 @@ describe('Options select control React island', () => {
     expect(host.querySelector('._x_extension_select_label_2024_unique_')?.textContent)
       .toBe('跟随系统');
     expect(host.querySelectorAll('[role="option"]')).toHaveLength(2);
-    expect(host.querySelector<HTMLImageElement>('._x_extension_select_value_icon_2026_unique_')?.src)
+    expect(queryHtmlTag(host, '._x_extension_select_value_icon_2026_unique_', 'img')?.src)
       .toContain('/system.png');
     expect(host.querySelectorAll('._x_extension_select_option_icon_2026_unique_'))
       .toHaveLength(2);
@@ -54,7 +56,7 @@ describe('Options select control React island', () => {
     act(() => controller.render({ disabled: true, id: 'provider', items, value: 'system' }));
 
     expect(host.dataset.disabled).toBe('true');
-    expect(host.querySelector<HTMLButtonElement>('button')?.disabled).toBe(true);
+    expect(queryHtmlTag(host, 'button', 'button')?.disabled).toBe(true);
   });
 
   it('opens the menu and reports a selected value', () => {
@@ -69,10 +71,10 @@ describe('Options select control React island', () => {
     act(() => controller.render({ id: 'language', items, value: 'system' }));
 
     act(() => {
-      host.querySelector<HTMLButtonElement>('button')?.click();
+      queryHtmlTag(host, 'button', 'button')?.click();
     });
     expect(host.dataset.open).toBe('true');
-    const options = host.querySelectorAll<HTMLElement>('[role="option"]');
+    const options = getElements(host, '[role="option"]');
     act(() => options[1]?.click());
 
     expect(onSelect).toHaveBeenCalledWith('zh-CN');
@@ -103,15 +105,15 @@ describe('Options select control React island', () => {
     }));
 
     act(() => {
-      host.querySelector<HTMLButtonElement>('button')?.click();
+      queryHtmlTag(host, 'button', 'button')?.click();
     });
-    const search = host.querySelector<HTMLInputElement>('input[type="text"]');
+    const search = queryHtmlTag(host, 'input[type="text"]', 'input');
     expect(search?.placeholder).toBe('Search fonts');
     // Styled as the settings page's own text field.
     expect(search?.classList.contains('_x_extension_shortcut_input_2024_unique_')).toBe(true);
     expect(host.querySelectorAll('[role="option"]')).toHaveLength(3);
     // The field is a combobox that owns a listbox holding only the options.
-    const listbox = host.querySelector<HTMLElement>('[role="listbox"]');
+    const listbox = queryHtmlElement(host, '[role="listbox"]');
     expect(search?.getAttribute('role')).toBe('combobox');
     expect(search?.getAttribute('aria-expanded')).toBe('true');
     expect(search?.getAttribute('aria-controls')).toBe(listbox?.id);
@@ -131,7 +133,7 @@ describe('Options select control React island', () => {
       });
     };
     typeFilter('ping');
-    const visible = host.querySelectorAll<HTMLElement>('[role="option"]');
+    const visible = getElements(host, '[role="option"]');
     expect(visible).toHaveLength(1);
     expect(visible[0]?.querySelector('._x_extension_select_option_label_2026_unique_')?.textContent)
       .toBe('PingFang SC');
@@ -169,9 +171,9 @@ describe('Options select control React island', () => {
     }));
 
     act(() => {
-      host.querySelector<HTMLButtonElement>('button')?.click();
+      queryHtmlTag(host, 'button', 'button')?.click();
     });
-    const search = host.querySelector<HTMLInputElement>('input[type="text"]')!;
+    const search = getTag(host, 'input[type="text"]', 'input');
     expect(document.activeElement).toBe(search);
     act(() => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(search, 'ping');
@@ -196,13 +198,13 @@ describe('Options select control React island', () => {
 
     // A reopened menu starts from the whole list again.
     act(() => {
-      host.querySelector<HTMLButtonElement>('button')?.click();
+      queryHtmlTag(host, 'button', 'button')?.click();
     });
     expect(host.querySelectorAll('[role="option"]')).toHaveLength(4);
 
     // Tabbing out of the filter closes the menu behind it.
     act(() => {
-      host.querySelector<HTMLInputElement>('input[type="text"]')!
+      getTag(host, 'input[type="text"]', 'input')
         .dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Tab' }));
     });
     expect(host.dataset.open).toBe('false');
@@ -232,11 +234,11 @@ describe('Options select control React island', () => {
       });
       controllers.push(controller);
       act(() => controller.render({ id: `font-${triggerTop}`, items, value: '' }));
-      const trigger = host.querySelector<HTMLButtonElement>('button')!;
+      const trigger = getTag(host, 'button', 'button');
       trigger.getBoundingClientRect = () => new DOMRect(400, triggerTop, 280, 32);
       act(() => trigger.click());
-      const menu = host.querySelector<HTMLElement>('._x_extension_select_menu_2024_unique_')!;
-      const search = host.querySelector<HTMLInputElement>('input[type="text"]')!;
+      const menu = getElement(host, '._x_extension_select_menu_2024_unique_');
+      const search = getTag(host, 'input[type="text"]', 'input');
       const type = (text: string) => act(() => {
         Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(search, text);
         search.dispatchEvent(new Event('input', { bubbles: true }));
@@ -293,7 +295,7 @@ describe('Options select control React island', () => {
     controllers.push(controller);
     act(() => controller.render({ id: 'language', items, value: 'system' }));
 
-    const trigger = host.querySelector<HTMLButtonElement>('button')!;
+    const trigger = getTag(host, 'button', 'button');
     trigger.focus();
     const press = (key: string) => act(() => {
       trigger.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key }));
@@ -318,7 +320,7 @@ describe('Options select control React island', () => {
     controllers.push(controller);
     act(() => controller.render({ id: 'language', items, value: 'system' }));
 
-    act(() => host.querySelector<HTMLButtonElement>('button')?.click());
+    act(() => queryHtmlTag(host, 'button', 'button')?.click());
     act(() => {
       document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
     });
@@ -339,7 +341,7 @@ describe('Options select control React island', () => {
       value: 'zh-CN'
     }));
 
-    const trigger = host.querySelector<HTMLButtonElement>('button')!;
+    const trigger = getTag(host, 'button', 'button');
     expect(trigger.getAttribute('aria-labelledby')).toBe('language_title language_control_value');
     expect(trigger.hasAttribute('aria-label')).toBe(false);
     expect(document.getElementById('language_control_value')?.textContent).toBe('简体中文');

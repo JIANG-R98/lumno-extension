@@ -4,6 +4,7 @@ import {
   createFeatureHintView,
   type FeatureHintViewController
 } from './feature-hint-view';
+import { queryHtmlTag } from '../dom-lookup';
 
 let controllers: FeatureHintViewController[] = [];
 
@@ -160,9 +161,7 @@ describe('Feature hint React view', () => {
 
     expect(view.badge.dataset.brand).toBe('lumno');
     expect(
-      view.badge.querySelector<HTMLImageElement>(
-        '.x-lumno-feature-hint__brand-icon img'
-      )?.getAttribute('src')
+      queryHtmlTag(view.badge, '.x-lumno-feature-hint__brand-icon img', 'img')?.getAttribute('src')
     ).toBe('/lumno.png');
     expect(
       view.element.querySelector('.x-lumno-feature-hint__sentence')?.textContent

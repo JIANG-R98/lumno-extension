@@ -9,6 +9,8 @@ import {
   type SuggestionsViewController,
   type SuggestionsViewOptions
 } from './suggestions';
+import { expectTag, getElements, getTag, getTags } from '../../../../tests/react/dom';
+import { queryHtmlElement } from '../../dom-lookup';
 
 let views: SuggestionsViewController[] = [];
 const sharedSuggestionActionModel: NonNullable<SuggestionsViewOptions['actionModel']> =
@@ -196,9 +198,7 @@ describe('Suggestions React island', () => {
         ? '--x-ov-suggestion-source-tag'
         : '--x-nt-suggestion-tag';
       const tokenPrefix = surface === 'overlay' ? '--x-ov' : '--x-nt';
-      const tags = items.map((item) => item.querySelector<HTMLElement>(
-        '[data-tag-type]'
-      ));
+      const tags = items.map((item) => queryHtmlElement(item, '[data-tag-type]'));
 
       expect(tags.map((tag) => tag?.style.getPropertyValue(
         `${propertyPrefix}-bg`
@@ -329,7 +329,7 @@ describe('Suggestions React island', () => {
         }]
       });
     });
-    const card = () => host.querySelector<HTMLElement>('._x_extension_help_passage_2026_unique_');
+    const card = () => queryHtmlElement(host, '._x_extension_help_passage_2026_unique_');
     expect(card()).toBeNull();
 
     act(() => passageView.updateSelection(0));
@@ -413,9 +413,7 @@ describe('Suggestions React island', () => {
       items[0].style.getPropertyValue('--x-ov-suggestion-row-bg')
     ).toBe('var(--x-ov-hover-bg, #F3F4F6)');
 
-    const utilityButton = items[0].querySelector<HTMLButtonElement>(
-      '.x-ov-suggestion-utility-button'
-    ) as HTMLButtonElement;
+    const utilityButton = getTag(items[0], '.x-ov-suggestion-utility-button', 'button');
     act(() => {
       items[0].dispatchEvent(new MouseEvent('mouseover', {
         bubbles: true
@@ -1049,10 +1047,8 @@ describe('Suggestions React island', () => {
       }]);
     });
     const row = items[0];
-    const button = row._xSwitchButton as HTMLButtonElement;
-    const copyButton = row.querySelector(
-      '.x-nt-suggestion-utility-button'
-    ) as HTMLButtonElement;
+    const button = expectTag(row._xSwitchButton, 'button');
+    const copyButton = getTag(row, '.x-nt-suggestion-utility-button', 'button');
     act(() => {
       row.dispatchEvent(new MouseEvent('mouseover', {
         bubbles: true
@@ -1278,7 +1274,7 @@ describe('Suggestions React island', () => {
     };
     render(view, [suggestion]);
     const button =
-      items[0]._xHistoryDeleteButton as HTMLButtonElement;
+      expectTag(items[0]._xHistoryDeleteButton, 'button');
 
     act(() => {
       button.dispatchEvent(new MouseEvent('click', {
@@ -1314,14 +1310,10 @@ describe('Suggestions React island', () => {
     };
     render(view, [suggestion]);
     const row = items[0];
-    const utilityButtons = row.querySelectorAll<HTMLButtonElement>(
-      '.x-nt-suggestion-utility-button'
-    );
+    const utilityButtons = getTags(row, '.x-nt-suggestion-utility-button', 'button');
     const copyButton = utilityButtons[0];
-    const deleteButton = row._xHistoryDeleteButton as HTMLButtonElement;
-    const utilitySlots = Array.from(row.querySelectorAll<HTMLElement>(
-      '.x-nt-suggestion-utility-slot'
-    ));
+    const deleteButton = expectTag(row._xHistoryDeleteButton, 'button');
+    const utilitySlots = Array.from(getElements(row, '.x-nt-suggestion-utility-slot'));
 
     expect(utilitySlots.map((slot) => slot.dataset.leading)).toEqual([
       'true',
@@ -1612,8 +1604,8 @@ describe('Suggestions React island', () => {
     });
 
     const row = items[0];
-    const visitButton = row._xVisitButton as HTMLButtonElement;
-    const historyTag = row._xHistoryTag as HTMLSpanElement;
+    const visitButton = expectTag(row._xVisitButton, 'button');
+    const historyTag = expectTag(row._xHistoryTag, 'span');
 
     expect(row.style.getPropertyValue('--x-ext-mark-bg')).toBe(
       'var(--x-ov-neutral-mark-bg, #E5E7EB)'

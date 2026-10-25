@@ -6,6 +6,8 @@ import {
   type SegmentedControlController,
   type SegmentedControlRenderModel
 } from './segmented-control';
+import { getTags } from '../../../tests/react/dom';
+import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: SegmentedControlController[] = [];
 
@@ -71,8 +73,8 @@ describe('Options segmented control React island', () => {
     const { controller, host, onSelect } = createFixture();
     act(() => controller.render(model));
     act(() => {
-      host.querySelector<HTMLButtonElement>('[data-recent-mode="most"]')?.click();
-      const select = host.querySelector<HTMLSelectElement>('select');
+      queryHtmlTag(host, '[data-recent-mode="most"]', 'button')?.click();
+      const select = queryHtmlTag(host, 'select', 'select');
       if (select) {
         select.value = 'most';
         select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -149,9 +151,7 @@ describe('Options segmented control React island', () => {
     });
 
     act(() => controller.render(model));
-    const indicator = host.querySelector<HTMLElement>(
-      '._x_extension_theme_indicator_2024_unique_'
-    );
+    const indicator = queryHtmlElement(host, '._x_extension_theme_indicator_2024_unique_');
     expect(indicator?.dataset.ready).toBe('false');
     expect(host.querySelector('[data-recent-mode="latest"]')?.getAttribute('data-active'))
       .toBe('true');
@@ -168,14 +168,14 @@ describe('Options segmented control React island', () => {
     const { controller, host, onSelect } = createFixture();
     act(() => controller.render(model));
 
-    const latest = host.querySelector<HTMLButtonElement>('[data-recent-mode="latest"]');
+    const latest = queryHtmlTag(host, '[data-recent-mode="latest"]', 'button');
     act(() => {
       latest?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' }));
     });
     expect(onSelect).toHaveBeenCalledWith('most');
 
     act(() => controller.render({ ...model, disabled: true }));
-    expect(host.querySelector<HTMLButtonElement>('[data-recent-mode="latest"]')?.disabled)
+    expect(queryHtmlTag(host, '[data-recent-mode="latest"]', 'button')?.disabled)
       .toBe(true);
     expect(host.querySelector('select')?.disabled).toBe(true);
   });
@@ -192,7 +192,7 @@ describe('Options segmented control React island', () => {
     act(() => controller.render(model));
 
     expect(host.getAttribute('role')).toBe('radiogroup');
-    const radios = () => Array.from(host.querySelectorAll<HTMLButtonElement>('[role="radio"]'));
+    const radios = () => Array.from(getTags(host, '[role="radio"]', 'button'));
     expect(radios()).toHaveLength(2);
     expect(radios().map((radio) => radio.getAttribute('aria-checked'))).toEqual(['true', 'false']);
     expect(radios().map((radio) => radio.tabIndex)).toEqual([0, -1]);
@@ -219,7 +219,7 @@ describe('Options segmented control React island', () => {
     const { controller, host } = createFixture();
     act(() => controller.render({ ...model, activeValue: 'unknown' }));
 
-    expect(Array.from(host.querySelectorAll<HTMLButtonElement>('[role="radio"]'), (radio) => radio.tabIndex))
+    expect(Array.from(getTags(host, '[role="radio"]', 'button'), (radio) => radio.tabIndex))
       .toEqual([0, -1]);
   });
 

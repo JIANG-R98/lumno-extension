@@ -2,6 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
 import { LinkButton } from './link-button';
+import { getTag } from '../../../tests/react/dom';
 
 let roots: Root[] = [];
 
@@ -25,7 +26,7 @@ describe('LinkButton', () => {
     const host = render(
       <LinkButton className="extra" href="/options#appearance">More settings</LinkButton>
     );
-    const link = host.querySelector('a')!;
+    const link = getTag(host, 'a', 'a');
     expect(link.className).toBe('x-lumno-link-button extra');
     expect(link.hasAttribute('target')).toBe(false);
     expect(link.querySelector('.x-lumno-link-button__label')?.textContent).toBe('More settings');
@@ -45,7 +46,7 @@ describe('LinkButton', () => {
         GitHub
       </LinkButton>
     );
-    const link = host.querySelector('a')!;
+    const link = getTag(host, 'a', 'a');
     expect(link.target).toBe('_blank');
     expect(link.rel).toBe('noopener noreferrer');
     expect(link.firstElementChild?.classList.contains('ri-github-line')).toBe(true);

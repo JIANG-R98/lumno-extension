@@ -7,6 +7,8 @@ import {
   InfoButton,
   type InfoButtonController
 } from './info-button';
+import { getTag } from '../../../tests/react/dom';
+import { queryHtmlElement } from '../../shared/dom-lookup';
 
 let controller: InfoButtonController | null = null;
 
@@ -30,9 +32,7 @@ describe('Options InfoButton', () => {
       />
     ));
 
-    const button = host.querySelector<HTMLElement>(
-      '._x_extension_info_button_2026_unique_'
-    );
+    const button = queryHtmlElement(host, '._x_extension_info_button_2026_unique_');
     expect(button?.classList.contains('custom-info')).toBe(true);
     expect(button?.getAttribute('data-tooltip')).toBe('关闭后的行为说明');
     expect(button?.getAttribute('data-i18n-tooltip')).toBe('settings_example_tooltip');
@@ -55,7 +55,7 @@ describe('Options InfoButton', () => {
 
     act(() => root.render(<InfoButton label="Template help" tooltip="Use %s for the query" />));
 
-    const button = host.querySelector<HTMLButtonElement>('button')!;
+    const button = getTag(host, 'button', 'button');
     expect(button.getAttribute('aria-label')).toBe('Template help');
     const description = document.getElementById(button.getAttribute('aria-describedby') || '');
     expect(description?.textContent).toBe('Use %s for the query');

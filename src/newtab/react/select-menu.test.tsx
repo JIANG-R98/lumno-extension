@@ -7,6 +7,8 @@ import {
   type SelectMenuConfig,
   type SelectMenuInstance
 } from './select-menu';
+import { getElements } from '../../../tests/react/dom';
+import { queryHtmlElement } from '../../shared/dom-lookup';
 
 type Controller = ReturnType<typeof createSelectMenuController>;
 const mounted: Array<{ controller: Controller; host: HTMLElement }> = [];
@@ -77,7 +79,7 @@ describe('New Tab select menu React island', () => {
     expect(instance.menu.parentElement).toBe(modal);
     act(() => controller.setOpen(instance.wrapper, true));
     expect(instance.menu.dataset.open).toBe('true');
-    act(() => instance.menu.querySelector<HTMLElement>('[data-value="list"]')?.click());
+    act(() => queryHtmlElement(instance.menu, '[data-value="list"]')?.click());
     expect(instance.select.value).toBe('list');
   });
 
@@ -172,7 +174,7 @@ describe('New Tab select menu React island', () => {
       expect(getComputedStyle(instance.menu).opacity).toBe('0');
       act(() => controller.setOpen(instance.wrapper, true));
       expect(getComputedStyle(instance.menu).opacity).toBe('1');
-      act(() => instance.menu.querySelector<HTMLElement>('[data-value="list"]')?.click());
+      act(() => queryHtmlElement(instance.menu, '[data-value="list"]')?.click());
       expect(instance.select.value).toBe('list');
       expect(getComputedStyle(instance.menu).opacity).toBe('0');
       expect(getComputedStyle(instance.menu).pointerEvents).toBe('none');
@@ -246,8 +248,7 @@ describe('New Tab select menu React island', () => {
     act(() => controller.setOpen(instance.wrapper, true));
 
     act(() => {
-      instance.menu
-        .querySelector<HTMLElement>('[data-value="list"]')
+      queryHtmlElement(instance.menu, '[data-value="list"]')
         ?.click();
     });
 
@@ -279,8 +280,7 @@ describe('New Tab select menu React island', () => {
     });
     act(() => controller.setOpen(instance.wrapper, true));
     act(() => {
-      instance.menu
-        .querySelector<HTMLElement>('[data-value="__pick__"]')
+      queryHtmlElement(instance.menu, '[data-value="__pick__"]')
         ?.click();
     });
     expect(onAction).toHaveBeenCalledWith(
@@ -322,13 +322,9 @@ describe('New Tab select menu React island', () => {
       ]
     });
 
-    const titles = instance.menu.querySelectorAll<HTMLElement>(
-      '._x_extension_select_menu_title_2024_unique_'
-    );
+    const titles = getElements(instance.menu, '._x_extension_select_menu_title_2024_unique_');
     const groupTitle = titles[1];
-    const option = instance.menu.querySelector<HTMLElement>(
-      '[data-value="__surface_adaptive__"]'
-    );
+    const option = queryHtmlElement(instance.menu, '[data-value="__surface_adaptive__"]');
     expect(titles).toHaveLength(2);
     expect(groupTitle?.textContent).toBe('Bar background');
     expect(groupTitle?.previousElementSibling?.getAttribute('role')).toBe(
@@ -421,15 +417,9 @@ describe('New Tab select menu React island', () => {
       ]
     });
 
-    const adaptive = instance.menu.querySelector<HTMLElement>(
-      '[data-value="__surface_adaptive__"]'
-    );
-    const clear = instance.menu.querySelector<HTMLElement>(
-      '[data-value="__surface_clear__"]'
-    );
-    const custom = instance.menu.querySelector<HTMLElement>(
-      '[data-value="__surface_custom__"]'
-    );
+    const adaptive = queryHtmlElement(instance.menu, '[data-value="__surface_adaptive__"]');
+    const clear = queryHtmlElement(instance.menu, '[data-value="__surface_clear__"]');
+    const custom = queryHtmlElement(instance.menu, '[data-value="__surface_custom__"]');
     expect(instance.menu.getAttribute('role')).toBe('menu');
     expect(instance.menu.querySelector('[role="separator"]')).not.toBeNull();
     expect(adaptive?.getAttribute('role')).toBe('menuitemradio');
@@ -440,7 +430,7 @@ describe('New Tab select menu React island', () => {
     expect(custom?.querySelector('.ri-dropper-line')).not.toBeNull();
     expect(custom?.querySelector('.ri-check-line')).toBeNull();
 
-    const selectedCustom = createMenu({
+    const selectedCustom = queryHtmlElement(createMenu({
       ...baseConfig,
       id: 'selected-custom-menu',
       options: [
@@ -454,9 +444,7 @@ describe('New Tab select menu React island', () => {
         }
       ],
       selectId: 'selected-custom-menu-select'
-    }).instance.menu.querySelector<HTMLElement>(
-      '[data-value="__selected_surface_custom__"]'
-    );
+    }).instance.menu, '[data-value="__selected_surface_custom__"]');
     expect(selectedCustom?.querySelector('.ri-check-line')).toBeNull();
     expect(selectedCustom?.querySelector('.ri-dropper-line')).not.toBeNull();
   });
@@ -503,12 +491,8 @@ describe('New Tab select menu React island', () => {
     });
     act(() => controller.setOpen(instance.wrapper, true));
 
-    const disabledOption = instance.menu.querySelector<HTMLElement>(
-      '[data-value="__disabled__"]'
-    );
-    const editOption = instance.menu.querySelector<HTMLElement>(
-      '[data-value="__edit__"]'
-    );
+    const disabledOption = queryHtmlElement(instance.menu, '[data-value="__disabled__"]');
+    const editOption = queryHtmlElement(instance.menu, '[data-value="__edit__"]');
     expect(disabledOption?.getAttribute('aria-disabled')).toBe('true');
     expect(instance.menu.querySelector('[data-active="true"]')).toBeNull();
 

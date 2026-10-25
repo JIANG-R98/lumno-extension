@@ -6,6 +6,8 @@ import {
   type VisualSurfaceController,
   type VisualSurfaceRenderModel
 } from './visual-surface';
+import { getElements } from '../../../tests/react/dom';
+import { queryHtmlElement } from '../../shared/dom-lookup';
 
 let controllers: VisualSurfaceController[] = [];
 
@@ -115,9 +117,7 @@ describe('Onboarding visual surface React island', () => {
 
     expect(createVisualSurfaceApi().implementation).toBe('react');
     expect(handled).toBe(true);
-    const surface = stage.querySelector<HTMLElement>(
-      '.lumno-web-wordmark-surface'
-    );
+    const surface = queryHtmlElement(stage, '.lumno-web-wordmark-surface');
     expect(surface?.dataset.reactIsland).toBe(
       'onboarding-lumno-wordmark-surface'
     );
@@ -161,9 +161,7 @@ describe('Onboarding visual surface React island', () => {
       }));
     });
 
-    const surface = stage.querySelector<HTMLElement>(
-      '.newtab-preview-surface'
-    );
+    const surface = queryHtmlElement(stage, '.newtab-preview-surface');
     expect(surface?.dataset.reactIsland).toBe(
       'onboarding-newtab-preview-surface'
     );
@@ -233,7 +231,7 @@ describe('Onboarding visual surface React island', () => {
     });
 
     expect(
-      stage.querySelector<HTMLElement>('.newtab-preview-surface')
+      queryHtmlElement(stage, '.newtab-preview-surface')
         ?.dataset.previewHover
     ).toBe('idle');
     expect(vi.getTimerCount()).toBe(0);
@@ -273,9 +271,7 @@ describe('Onboarding visual surface React island', () => {
       }));
     });
 
-    const surface = stage.querySelector<HTMLElement>(
-      '.feature-cards-surface'
-    );
+    const surface = queryHtmlElement(stage, '.feature-cards-surface');
     expect(surface?.dataset.reactIsland).toBe(
       'onboarding-feature-cards-surface'
     );
@@ -372,9 +368,7 @@ describe('Onboarding visual surface React island', () => {
       }));
     });
 
-    const surface = stage.querySelector<HTMLElement>(
-      '.site-search-demo-surface'
-    );
+    const surface = queryHtmlElement(stage, '.site-search-demo-surface');
     expect(surface?.dataset.reactIsland).toBe(
       'onboarding-site-search-demo-surface'
     );
@@ -468,7 +462,7 @@ describe('Onboarding visual surface React island', () => {
       }));
     });
 
-    const surface = stage.querySelector<HTMLElement>('.bookmark-focus-ui');
+    const surface = queryHtmlElement(stage, '.bookmark-focus-ui');
     expect(surface?.dataset.reactIsland).toBe(
       'onboarding-bookmark-focus-surface'
     );
@@ -545,9 +539,7 @@ describe('Onboarding visual surface React island', () => {
       }));
     });
 
-    const rows = stage.querySelectorAll<HTMLElement>(
-      '.lumno-overlay-result'
-    );
+    const rows = getElements(stage, '.lumno-overlay-result');
     expect(rows[0]?.dataset.active).toBe('true');
     expect(rows[1]?.dataset.active).toBe('false');
     expect(vi.getTimerCount()).toBe(0);

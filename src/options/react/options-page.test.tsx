@@ -9,6 +9,8 @@ import enMessages from '../../../_locales/en/messages.json';
 import jaMessages from '../../../_locales/ja/messages.json';
 import zhCnMessages from '../../../_locales/zh_CN/messages.json';
 import zhTwMessages from '../../../_locales/zh_TW/messages.json';
+import { expectElement, expectTag, getElement, getTag, getTags } from '../../../tests/react/dom';
+import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 // Boots the real Options page (markup, its preload bundle, React islands and
 // page bundle) against an in-memory chrome.storage, so the page's storage
@@ -185,7 +187,7 @@ async function bootOptionsPage(
 }
 
 function toggle(id: string): HTMLInputElement {
-  return document.getElementById(id) as HTMLInputElement;
+  return expectTag(document.getElementById(id), 'input');
 }
 
 afterEach(() => {
@@ -259,7 +261,7 @@ describe('Options page storage wiring', () => {
     await settle();
     expect(document.documentElement.lang).toBe('ja');
 
-    const list = document.getElementById('_x_extension_aggregate_search_list_2026_unique_') as HTMLElement;
+    const list = expectElement(document.getElementById('_x_extension_aggregate_search_list_2026_unique_'));
     expect(list.textContent).not.toContain('Synced tech');
     await act(async () => {
       chrome.storage.sync.externalSet({
@@ -293,9 +295,7 @@ describe('Options page storage wiring', () => {
     expect(chips()).toEqual(['local', 'ai', 'aggregate', 'engine', 'site']);
     expect(types()).toEqual(['history', 'topSite', 'bookmark']);
 
-    const firstDown = document.querySelector<HTMLButtonElement>(
-      '#_x_extension_site_search_builtin_list_2024_unique_ > [data-key] [data-move="down"]'
-    );
+    const firstDown = queryHtmlTag(document, '#_x_extension_site_search_builtin_list_2024_unique_ > [data-key] [data-move="down"]', 'button');
     await act(async () => {
       firstDown?.click();
     });
@@ -306,9 +306,7 @@ describe('Options page storage wiring', () => {
     expect(stored.groups).toEqual(['local', 'ai', 'aggregate', 'engine', 'site']);
 
     // A second move, then consecutive undos and redos from the keyboard.
-    const secondDown = document.querySelectorAll<HTMLButtonElement>(
-      '#_x_extension_site_search_builtin_list_2024_unique_ > [data-key] [data-move="down"]'
-    )[1];
+    const secondDown = getTags(document, '#_x_extension_site_search_builtin_list_2024_unique_ > [data-key] [data-move="down"]', 'button')[1];
     await act(async () => {
       secondDown?.click();
     });
@@ -380,12 +378,12 @@ describe('Options page storage wiring', () => {
       expect(control, entry.inputId).toBeTruthy();
       if (entry.control === 'select') {
         const option = Array.from(control.options).map((item) => item.value).find((value) => value !== control.value);
-        const host = control.closest('._x_extension_custom_select_2024_unique_') as HTMLElement;
+        const host = expectElement(control.closest('._x_extension_custom_select_2024_unique_'));
         await act(async () => {
-          host.querySelector<HTMLButtonElement>('button')?.click();
+          queryHtmlTag(host, 'button', 'button')?.click();
         });
         await act(async () => {
-          host.querySelector<HTMLElement>(`[data-value="${option}"]`)?.click();
+          queryHtmlElement(host, `[data-value="${option}"]`)?.click();
         });
         await settle();
         expect(chrome.storage.sync.values[entry.key], entry.key).toBe(entry.normalize(option));
@@ -410,7 +408,7 @@ describe('Options page storage wiring', () => {
   it('runs each switch\'s follow-up, such as locking the selection provider while it is off', async () => {
     const settings = SETTINGS;
     const chrome = await bootOptionsPage({ [settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY]: true });
-    const provider = document.getElementById('_x_extension_selection_quick_actions_provider_select_2026_unique_') as HTMLSelectElement;
+    const provider = expectTag(document.getElementById('_x_extension_selection_quick_actions_provider_select_2026_unique_'), 'select');
     expect(provider.disabled).toBe(false);
     await act(async () => {
       chrome.storage.sync.externalSet({ [settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY]: false });
@@ -466,9 +464,7 @@ describe('Options page storage wiring', () => {
     const settings = SETTINGS;
     const chrome = await bootOptionsPage({ [settings.OVERLAY_ENTER_ANIMATION_STORAGE_KEY]: 'bounce' });
     const key = settings.OVERLAY_ENTER_ANIMATION_STORAGE_KEY;
-    const button = (value: string) => document.querySelector(
-      `#_x_extension_overlay_enter_animation_tabs_wrap_2026_unique_ button[data-overlay-enter-animation="${value}"]`
-    ) as HTMLButtonElement;
+    const button = (value: string) => getTag(document, `#_x_extension_overlay_enter_animation_tabs_wrap_2026_unique_ button[data-overlay-enter-animation="${value}"]`, 'button');
     expect(chrome.storage.sync.values[key]).toBe('elastic');
     expect(button('elastic').getAttribute('aria-checked')).toBe('true');
     await act(async () => {
@@ -500,17 +496,17 @@ describe('Options page storage wiring', () => {
       const settings = SETTINGS;
       const messages = LOCALE_MESSAGES[locale];
       const chrome = await bootOptionsPage({ [settings.LANGUAGE_STORAGE_KEY]: locale.replace('_', '-') });
-      const select = document.getElementById('_x_extension_search_result_tab_position_select_2026_unique_') as HTMLSelectElement;
-      const host = select.closest('._x_extension_custom_select_2024_unique_') as HTMLElement;
+      const select = expectTag(document.getElementById('_x_extension_search_result_tab_position_select_2026_unique_'), 'select');
+      const host = expectElement(select.closest('._x_extension_custom_select_2024_unique_'));
       const label = () => host.querySelector('._x_extension_select_label_2024_unique_')?.textContent;
       await vi.waitFor(() => {
         expect(label()).toBe(messages.search_result_tab_position_end.message);
       });
       expect(host.dataset.selectKind).toBe('search-result-tab-position');
       await act(async () => {
-        host.querySelector<HTMLButtonElement>('button')?.click();
+        queryHtmlTag(host, 'button', 'button')?.click();
       });
-      const menu = host.querySelector<HTMLElement>('[role="listbox"]')!;
+      const menu = getElement(host, '[role="listbox"]');
       // The auto-width wrapper must not pin longer localized options to the trigger width.
       expect(menu.dataset.menuSurfaceWidth).toBe('content');
       expect(menu.style.getPropertyValue('--x-extension-menu-surface-min-width')).toBe('100%');
@@ -523,7 +519,7 @@ describe('Options page storage wiring', () => {
           messages.search_result_tab_position_before_current.message
         ]);
       await act(async () => {
-        host.querySelector<HTMLElement>('[data-value="beforeCurrent"]')?.click();
+        queryHtmlElement(host, '[data-value="beforeCurrent"]')?.click();
       });
       await settle();
       expect(chrome.storage.sync.values[settings.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY]).toBe('beforeCurrent');
@@ -540,7 +536,7 @@ describe('Options page storage wiring', () => {
   it('imports a settings file into storage and stamps it as an import', async () => {
     const settings = SETTINGS;
     const chrome = await bootOptionsPage();
-    const input = document.getElementById('_x_extension_sync_import_input_2024_unique_') as HTMLInputElement;
+    const input = expectTag(document.getElementById('_x_extension_sync_import_input_2024_unique_'), 'input');
     const file = new File([JSON.stringify({
       version: 1,
       data: {

@@ -7,6 +7,7 @@ import {
   renderCursorTag,
   renderTooltipText
 } from './tooltip-view';
+import { expectTag } from '../../../tests/react/dom';
 
 let elements: HTMLElement[] = [];
 
@@ -33,8 +34,8 @@ describe('Tooltip React view', () => {
     });
     expect(tooltip).not.toBeNull();
     expect(tag).not.toBeNull();
-    const tooltipElement = tooltip as unknown as HTMLDivElement;
-    const tagElement = tag as unknown as HTMLDivElement;
+    const tooltipElement = expectTag(tooltip as unknown, 'div');
+    const tagElement = expectTag(tag as unknown, 'div');
     elements.push(tooltipElement, tagElement);
     document.body.append(tooltipElement, tagElement);
 

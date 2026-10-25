@@ -5,6 +5,8 @@ import '../search/search-han-variants.js';
 import * as searchInputModeModule from '../search/search-input-mode';
 import * as faviconUtils from '../../domain/favicon/favicon-utils';
 import type { ModeMenuItem } from '../search/input-mode/types';
+import { expectSvg, getElements, getTags } from '../../../tests/react/dom';
+import { queryHtmlElement, queryHtmlTag } from '../dom-lookup';
 
 Object.assign(globalThis, {
   pinyinPro: {
@@ -740,9 +742,7 @@ describe('Shared search scope menu', () => {
     expect(controller.openModeMenu()).toBe(true);
     expect(parts.modePrefix.getAttribute('aria-expanded')).toBe('true');
     const menuItems = Array.from(
-      controller.menuElement.querySelectorAll<HTMLButtonElement>(
-        '[role="menuitemradio"]'
-      )
+      getTags(controller.menuElement, '[role="menuitemradio"]', 'button')
     );
     expect(menuItems).toHaveLength(2);
     expect(menuItems[0].getAttribute('aria-checked')).toBe('true');
@@ -762,9 +762,7 @@ describe('Shared search scope menu', () => {
     expect(controller.menuElement.hidden).toBe(false);
     expect(parts.modePrefix.getAttribute('aria-expanded')).toBe('true');
     const refreshedMenuItems = Array.from(
-      controller.menuElement.querySelectorAll<HTMLButtonElement>(
-        '[role="menuitemradio"]'
-      )
+      getTags(controller.menuElement, '[role="menuitemradio"]', 'button')
     );
     expect(refreshedMenuItems[0].getAttribute('aria-checked')).toBe('false');
     expect(refreshedMenuItems[1].getAttribute('aria-checked')).toBe('true');
@@ -804,9 +802,7 @@ describe('Shared search scope menu', () => {
 
     expect(controller.openModeMenu()).toBe(true);
     const buttons = Array.from(
-      controller.menuElement.querySelectorAll<HTMLButtonElement>(
-        '[role="menuitemradio"]'
-      )
+      getTags(controller.menuElement, '[role="menuitemradio"]', 'button')
     );
     buttons.forEach((button, index) => {
       const column = index % 3;
@@ -879,13 +875,9 @@ describe('Shared search scope menu', () => {
     );
 
     expect(controller.openModeMenu('none')).toBe(true);
-    const menuContent = controller.menuElement.querySelector<HTMLElement>(
-      '[data-search-input-mode-menu-content]'
-    );
+    const menuContent = queryHtmlElement(controller.menuElement, '[data-search-input-mode-menu-content]');
     const buttons = Array.from(
-      controller.menuElement.querySelectorAll<HTMLButtonElement>(
-        '[role="menuitemradio"]'
-      )
+      getTags(controller.menuElement, '[role="menuitemradio"]', 'button')
     );
     expect(menuContent).not.toBeNull();
     menuContent!.getBoundingClientRect = () => ({
@@ -1003,9 +995,7 @@ describe('Shared search scope menu', () => {
       return event;
     };
     const getVisibleLabels = () => Array.from(
-      controller.menuElement.querySelectorAll<HTMLButtonElement>(
-        '[role="menuitemradio"]'
-      )
+      getTags(controller.menuElement, '[role="menuitemradio"]', 'button')
     ).filter((button) => !button.hidden).map((button) => (
       button.querySelector('.x-lumno-search-input-mode__menu-label')?.textContent
     ));
@@ -1030,9 +1020,7 @@ describe('Shared search scope menu', () => {
     expect(parts.input.value).toBe('');
     expect(getVisibleLabels()).toEqual(['豆瓣', '豆包']);
     const filteredItems = Array.from(
-      controller.menuElement.querySelectorAll<HTMLButtonElement>(
-        '[role="menuitemradio"]'
-      )
+      getTags(controller.menuElement, '[role="menuitemradio"]', 'button')
     ).filter((button) => !button.hidden);
     expect(document.activeElement).toBe(filteredItems[0]);
     expect(
@@ -1045,9 +1033,7 @@ describe('Shared search scope menu', () => {
     expect(document.activeElement).toBe(filteredItems[1]);
     pressMenuKey('Enter');
     const allMenuItems = Array.from(
-      controller.menuElement.querySelectorAll<HTMLButtonElement>(
-        '[role="menuitemradio"]'
-      )
+      getTags(controller.menuElement, '[role="menuitemradio"]', 'button')
     );
     expect(allMenuItems[0].getAttribute('aria-checked')).toBe('false');
     expect(filteredItems[1].getAttribute('aria-checked')).toBe('true');
@@ -1097,9 +1083,7 @@ describe('Shared search scope menu', () => {
     expect(getVisibleLabels()).toEqual([]);
     expect(document.activeElement).toBe(controller.menuElement);
     expect(
-      controller.menuElement.querySelector<HTMLElement>(
-        '.x-lumno-search-input-mode__menu-empty'
-      )?.hidden
+      queryHtmlElement(controller.menuElement, '.x-lumno-search-input-mode__menu-empty')?.hidden
     ).toBe(false);
     controller.destroy();
   });
@@ -1185,9 +1169,7 @@ describe('Shared search scope menu', () => {
         key
       }));
     });
-    const item = controller.menuElement.querySelector<HTMLButtonElement>(
-      '[role="menuitemradio"]'
-    );
+    const item = queryHtmlTag(controller.menuElement, '[role="menuitemradio"]', 'button');
     expect(item?.hidden).toBe(false);
     expect(
       item?.querySelector('.x-lumno-search-input-mode__menu-match')?.textContent
@@ -1210,9 +1192,7 @@ describe('Shared search scope menu', () => {
       }
     );
     expect(controller.openModeMenu('none')).toBe(true);
-    const item = controller.menuElement.querySelector<HTMLButtonElement>(
-      '[role="menuitemradio"]'
-    );
+    const item = queryHtmlTag(controller.menuElement, '[role="menuitemradio"]', 'button');
     const typeFilter = (value: string) => {
       controller.menuElement.dispatchEvent(new KeyboardEvent('keydown', {
         bubbles: true,
@@ -1260,9 +1240,7 @@ describe('Shared search scope menu', () => {
         key
       }));
     });
-    const items = Array.from(controller.menuElement.querySelectorAll<HTMLButtonElement>(
-      '[role="menuitemradio"]'
-    ));
+    const items = Array.from(getTags(controller.menuElement, '[role="menuitemradio"]', 'button'));
     expect(controller.getModeMenuFilterQuery()).toBe('янд');
     expect(items.map((item) => item.hidden)).toEqual([false, true]);
     expect(
@@ -1292,9 +1270,7 @@ describe('Shared search scope menu', () => {
         key
       }));
     });
-    const item = controller.menuElement.querySelector<HTMLButtonElement>(
-      '[role="menuitemradio"]'
-    );
+    const item = queryHtmlTag(controller.menuElement, '[role="menuitemradio"]', 'button');
     expect(item?.hidden).toBe(false);
     expect(
       item?.querySelector('.x-lumno-search-input-mode__menu-match')?.textContent
@@ -1344,14 +1320,10 @@ describe('Shared search scope menu', () => {
       )
     ).toHaveLength(0);
     const builtInCards = Array.from(
-      controller.menuElement.querySelectorAll<HTMLElement>(
-        '.x-lumno-search-input-mode__menu-icon[data-icon-kind="builtin"]'
-      )
+      getElements(controller.menuElement, '.x-lumno-search-input-mode__menu-icon[data-icon-kind="builtin"]')
     );
     const builtInItems = Array.from(
-      controller.menuElement.querySelectorAll<HTMLElement>(
-        '.x-lumno-search-input-mode__menu-item'
-      )
+      getElements(controller.menuElement, '.x-lumno-search-input-mode__menu-item')
     );
     expect(builtInCards).toHaveLength(4);
     expect(
@@ -1402,12 +1374,8 @@ describe('Shared search scope menu', () => {
     controller.setPrefixText('Open tabs', {}, { menuIconName: 'browser' });
     controller.openModeMenu();
 
-    const card = controller.menuElement.querySelector<HTMLElement>(
-      '.x-lumno-search-input-mode__menu-icon[data-icon-kind="builtin"]'
-    );
-    const menuItem = controller.menuElement.querySelector<HTMLElement>(
-      '.x-lumno-search-input-mode__menu-item'
-    );
+    const card = queryHtmlElement(controller.menuElement, '.x-lumno-search-input-mode__menu-icon[data-icon-kind="builtin"]');
+    const menuItem = queryHtmlElement(controller.menuElement, '.x-lumno-search-input-mode__menu-item');
     expect(card?.style.getPropertyValue('--x-lumno-search-mode-icon-bg')).toBe('');
     expect(card?.style.getPropertyValue('--x-lumno-search-mode-icon-active-bg')).toBe('');
     expect(card?.style.getPropertyValue('--x-lumno-search-mode-icon-color')).toBe(
@@ -1495,9 +1463,7 @@ describe('Shared search scope menu', () => {
       modeId: 'openTabs'
     });
     controller.openModeMenu();
-    const menuItem = controller.menuElement.querySelector<HTMLButtonElement>(
-      '[role="menuitemradio"]'
-    );
+    const menuItem = queryHtmlTag(controller.menuElement, '[role="menuitemradio"]', 'button');
     expect(menuItem).not.toBeNull();
 
     const enterEvent = new KeyboardEvent('keydown', {
@@ -1725,11 +1691,8 @@ describe('Shared search scope menu', () => {
         iconAnimation as unknown as Animation
     );
     const controller = LumnoSearchInputMode.createInputModeController(parts);
-    const lineIcon = parts.modePrefix.querySelector<HTMLElement>(
-      '[data-search-input-mode-line-icon]'
-    );
-    expect(lineIcon).not.toBeNull();
-    Object.defineProperty(lineIcon as HTMLElement, 'animate', {
+    const lineIcon = expectSvg(parts.modePrefix.querySelector('[data-search-input-mode-line-icon]'), 'line icon');
+    Object.defineProperty(lineIcon, 'animate', {
       configurable: true,
       value: animateIcon
     });
@@ -1755,7 +1718,7 @@ describe('Shared search scope menu', () => {
       easing: 'cubic-bezier(0.16, 1, 0.3, 1)'
     });
     animation.onfinish?.();
-    expect(lineIcon?.style.display).toBe('inline-flex');
+    expect(lineIcon.style.display).toBe('inline-flex');
     expect(parts.modePrefixGlyph.style.display).toBe('none');
     expect(animateIcon).toHaveBeenCalledWith([
       { opacity: 0.45, offset: 0, transform: 'scale(0.84)' },
@@ -1995,9 +1958,7 @@ describe('Shared search scope menu', () => {
       parts,
       { surface: 'overlay' }
     );
-    const currentText = parts.modePrefixCurrent.querySelector<HTMLElement>(
-      '[data-search-input-mode-current-text]'
-    );
+    const currentText = queryHtmlElement(parts.modePrefixCurrent, '[data-search-input-mode-current-text]');
     controller.setPrefixText('Google', {}, { modeId: 'provider:google' });
 
     expect(currentText?.style.display).toBe('inline-block');
@@ -2269,9 +2230,7 @@ describe('Shared search scope menu', () => {
     controller.setPrefixText('Search everything');
     controller.openModeMenu();
     const menuItems = Array.from(
-      controller.menuElement.querySelectorAll<HTMLButtonElement>(
-        '[role="menuitemradio"]'
-      )
+      getTags(controller.menuElement, '[role="menuitemradio"]', 'button')
     );
 
     expect(controller.menuElement.style.left).toBe('-6px');
@@ -2457,9 +2416,7 @@ describe('Shared search scope menu', () => {
     controller.setPrefixText('微信公众号');
     controller.openModeMenu();
 
-    const item = controller.menuElement.querySelector<HTMLButtonElement>(
-      '[role="menuitemradio"]'
-    );
+    const item = queryHtmlTag(controller.menuElement, '[role="menuitemradio"]', 'button');
     const label = item?.querySelector<HTMLElement>(
       '.x-lumno-search-input-mode__menu-label'
     );
@@ -2600,13 +2557,9 @@ describe('Shared search scope menu', () => {
       controller.menuElement.querySelector('.x-nt-favicon-fallback')
     ).toBeNull();
     expect(
-      controller.menuElement.querySelector<HTMLElement>(
-        '.x-lumno-search-input-mode__menu-favicon-mask > i'
-      )?.hidden
+      queryHtmlElement(controller.menuElement, '.x-lumno-search-input-mode__menu-favicon-mask > i')?.hidden
     ).toBe(true);
-    const faviconMask = controller.menuElement.querySelector<HTMLElement>(
-      '.x-lumno-search-input-mode__menu-favicon-mask'
-    );
+    const faviconMask = queryHtmlElement(controller.menuElement, '.x-lumno-search-input-mode__menu-favicon-mask');
     expect(faviconMask).not.toBeNull();
     expect(faviconMask?.querySelector('img')?.parentElement).toBe(faviconMask);
     controller.destroy();
@@ -2701,12 +2654,8 @@ describe('Shared search scope menu', () => {
     controller.openModeMenu();
     await Promise.resolve();
 
-    const icon = controller.menuElement.querySelector<HTMLElement>(
-      '.x-lumno-search-input-mode__menu-icon'
-    );
-    const menuItem = controller.menuElement.querySelector<HTMLElement>(
-      '.x-lumno-search-input-mode__menu-item'
-    );
+    const icon = queryHtmlElement(controller.menuElement, '.x-lumno-search-input-mode__menu-icon');
+    const menuItem = queryHtmlElement(controller.menuElement, '.x-lumno-search-input-mode__menu-item');
     const label = menuItem?.querySelector<HTMLElement>(
       '.x-lumno-search-input-mode__menu-label'
     );

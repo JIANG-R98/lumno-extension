@@ -9,6 +9,8 @@ import {
   type RecentSitesViewController,
   type RecentSitesViewOptions
 } from './recent-sites';
+import { expectElement } from '../../../tests/react/dom';
+import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 let views: RecentSitesViewController[] = [];
 
@@ -140,7 +142,7 @@ describe('Recent Sites React island', () => {
     })];
 
     const result = renderItems(view, items);
-    const grid = options.grid as HTMLElement;
+    const grid = expectElement(options.grid);
     const card = grid.querySelector<RecentCardElement>('.x-nt-recent-card');
 
     expect(result).toEqual({
@@ -222,13 +224,9 @@ describe('Recent Sites React island', () => {
       url: browserPageUrl
     })]);
 
-    const grid = options.grid as HTMLElement;
-    const image = grid.querySelector<HTMLImageElement>(
-      '.x-nt-recent-favicon'
-    );
-    const fallback = grid.querySelector<HTMLElement>(
-      '._x_extension_favicon_fallback_2024_unique_'
-    );
+    const grid = expectElement(options.grid);
+    const image = queryHtmlTag(grid, '.x-nt-recent-favicon', 'img');
+    const fallback = queryHtmlElement(grid, '._x_extension_favicon_fallback_2024_unique_');
 
     expect(image?.hasAttribute('src')).toBe(false);
     expect(image?.dataset.faviconPlaceholder).toBe('true');
@@ -422,11 +420,11 @@ describe('Recent Sites React island', () => {
       site({ title: 'Example', url: 'https://example.com/' })
     ]);
     const [tracked, available, plain] = view.getCards();
-    const trackedButton = tracked.querySelector<HTMLButtonElement>('.x-nt-recent-track');
+    const trackedButton = queryHtmlTag(tracked, '.x-nt-recent-track', 'button');
     expect(trackedButton?.getAttribute('aria-pressed')).toBe('true');
     expect(trackedButton?.classList.contains('x-nt-recent-track--active')).toBe(true);
     expect(trackedButton?.querySelector('.ri-radar-fill')).not.toBeNull();
-    const availableButton = available.querySelector<HTMLButtonElement>('.x-nt-recent-track');
+    const availableButton = queryHtmlTag(available, '.x-nt-recent-track', 'button');
     expect(availableButton?.getAttribute('aria-pressed')).toBe('false');
     expect(availableButton?.querySelector('.ri-radar-line')).not.toBeNull();
     expect(plain.querySelector('.x-nt-recent-track')).toBeNull();

@@ -6,6 +6,8 @@ import {
   type BlacklistListController,
   type BlacklistListRenderModel
 } from './blacklist-list';
+import { getTags } from '../../../tests/react/dom';
+import { queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: BlacklistListController[] = [];
 
@@ -82,19 +84,15 @@ describe('Options blacklist list React island', () => {
     const { controller, host, onSave } = createFixture();
     act(() => controller.render(model));
     act(() => {
-      host.querySelector<HTMLButtonElement>('._x_extension_shortcut_edit_2024_unique_')
+      queryHtmlTag(host, '._x_extension_shortcut_edit_2024_unique_', 'button')
         ?.click();
     });
-    const modeInputs = host.querySelectorAll<HTMLInputElement>(
-      '._x_extension_checkbox_group_2026_unique_ input'
-    );
+    const modeInputs = getTags(host, '._x_extension_checkbox_group_2026_unique_ input', 'input');
     act(() => modeInputs[0]?.click());
     expect(Array.from(modeInputs).map((input) => input.checked))
       .toEqual([true, false, false]);
     await act(async () => {
-      host.querySelector<HTMLButtonElement>(
-        '._x_extension_shortcut_editor_2024_unique_ ._x_extension_shortcut_submit_primary_2024_unique_'
-      )?.click();
+      queryHtmlTag(host, '._x_extension_shortcut_editor_2024_unique_ ._x_extension_shortcut_submit_primary_2024_unique_', 'button')?.click();
       await Promise.resolve();
     });
 
@@ -110,13 +108,11 @@ describe('Options blacklist list React island', () => {
     onSave.mockResolvedValue({ ok: false, error: '请输入网站域名。' });
     act(() => controller.render(model));
     act(() => {
-      host.querySelector<HTMLButtonElement>('._x_extension_shortcut_edit_2024_unique_')
+      queryHtmlTag(host, '._x_extension_shortcut_edit_2024_unique_', 'button')
         ?.click();
     });
     await act(async () => {
-      host.querySelector<HTMLButtonElement>(
-        '._x_extension_shortcut_editor_2024_unique_ ._x_extension_shortcut_submit_primary_2024_unique_'
-      )?.click();
+      queryHtmlTag(host, '._x_extension_shortcut_editor_2024_unique_ ._x_extension_shortcut_submit_primary_2024_unique_', 'button')?.click();
       await Promise.resolve();
     });
 
@@ -130,14 +126,12 @@ describe('Options blacklist list React island', () => {
     act(() => controller.render({ ...model, editable: false }));
     expect(host.querySelector('._x_extension_shortcut_edit_2024_unique_')).toBeNull();
     act(() => {
-      host.querySelector<HTMLButtonElement>('._x_extension_shortcut_remove_2024_unique_')
+      queryHtmlTag(host, '._x_extension_shortcut_remove_2024_unique_', 'button')
         ?.click();
     });
     expect(host.querySelector('._x_extension_popconfirm_2024_unique_')
       ?.getAttribute('data-open')).toBe('true');
-    const confirmButtons = host.querySelectorAll<HTMLButtonElement>(
-      '._x_extension_popconfirm_actions_2024_unique_ button'
-    );
+    const confirmButtons = getTags(host, '._x_extension_popconfirm_actions_2024_unique_ button', 'button');
     await act(async () => {
       confirmButtons[1]?.click();
       await Promise.resolve();
@@ -148,9 +142,7 @@ describe('Options blacklist list React island', () => {
   it('closes inline confirmation with Escape and restores trigger focus', () => {
     const { controller, host } = createFixture(false);
     act(() => controller.render({ ...model, editable: false }));
-    const trigger = host.querySelector<HTMLButtonElement>(
-      '._x_extension_shortcut_remove_2024_unique_'
-    );
+    const trigger = queryHtmlTag(host, '._x_extension_shortcut_remove_2024_unique_', 'button');
     act(() => trigger?.click());
     act(() => {
       document.dispatchEvent(new KeyboardEvent('keydown', {
@@ -178,13 +170,9 @@ describe('Options blacklist list React island', () => {
     controllers.push(controller);
     act(() => controller.render({ ...model, editable: false }));
     act(() => {
-      host.querySelector<HTMLButtonElement>(
-        '._x_extension_shortcut_remove_2024_unique_'
-      )?.click();
+      queryHtmlTag(host, '._x_extension_shortcut_remove_2024_unique_', 'button')?.click();
     });
-    const confirmButton = host.querySelectorAll<HTMLButtonElement>(
-      '._x_extension_popconfirm_actions_2024_unique_ button'
-    )[1];
+    const confirmButton = getTags(host, '._x_extension_popconfirm_actions_2024_unique_ button', 'button')[1];
 
     act(() => {
       confirmButton?.click();

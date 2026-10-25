@@ -7,6 +7,7 @@ import {
   type FeedbackSupportController,
   type FeedbackSupportRenderModel
 } from './feedback-support';
+import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: FeedbackSupportController[] = [];
 
@@ -83,9 +84,7 @@ describe('Options feedback support React island', () => {
     const { controller, host } = createFixture();
     act(() => controller.render(model));
 
-    const community = host.querySelector<HTMLAnchorElement>(
-      '[data-feedback-support="community"]'
-    );
+    const community = queryHtmlTag(host, '[data-feedback-support="community"]', 'a');
     expect(community?.href).toBe('https://example.com/qrcode.JPG');
     expect(community?.target).toBe('_blank');
     expect(community?.rel).toContain('noopener');
@@ -110,7 +109,7 @@ describe('Options feedback support React island', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].nextElementSibling?.tagName).toBe('NAV');
     expect(rows[0].querySelector('._x_extension_setting_title_2024_unique_')?.textContent).toBe('帮助中心');
-    const link = rows[0].querySelector<HTMLAnchorElement>('[data-feedback-support="help-center"]');
+    const link = queryHtmlTag(rows[0], '[data-feedback-support="help-center"]', 'a');
     expect(link?.href).toBe('https://lumno.kubai.design/help/what-is-lumno/');
     expect(link?.target).toBe('_blank');
     expect(link?.textContent).toBe('访问帮助中心');
@@ -188,7 +187,7 @@ describe('Options feedback support React island', () => {
     expect(trigger?.querySelector('[data-i18n="settings_help_center_ask_action"]')?.textContent).toBe('在搜索框里直接提问');
     expect(description?.firstChild?.textContent).toBe('用法都在这里，也可以');
     expect(description?.lastChild?.textContent).toBe('。');
-    const popover = host.querySelector<HTMLElement>('[role="tooltip"]');
+    const popover = queryHtmlElement(host, '[role="tooltip"]');
     expect(popover?.dataset.open).toBe('false');
     expect(trigger?.getAttribute('aria-describedby')).toBe(popover?.id);
 
@@ -288,10 +287,10 @@ describe('Options feedback support React island', () => {
         : item)
     }));
 
-    const trigger = host.querySelector<HTMLButtonElement>('button[data-feedback-support="community"]');
+    const trigger = queryHtmlTag(host, 'button[data-feedback-support="community"]', 'button');
     expect(trigger?.classList.contains('_x_extension_feedback_support_link_2026_unique_')).toBe(true);
     expect(trigger?.querySelector('.ri-qr-code-line')).not.toBeNull();
-    const popover = host.querySelector<HTMLElement>('[role="dialog"]');
+    const popover = queryHtmlElement(host, '[role="dialog"]');
     expect(trigger?.getAttribute('aria-expanded')).toBe('false');
     expect(popover?.dataset.open).toBe('false');
     expect(popover?.querySelector('img')?.getAttribute('src')).toBe('https://example.com/qrcode.webp');

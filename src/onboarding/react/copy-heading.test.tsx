@@ -6,6 +6,7 @@ import {
   type CopyHeadingController,
   type CopyHeadingRenderModel
 } from './copy-heading';
+import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: CopyHeadingController[] = [];
 
@@ -84,7 +85,7 @@ describe('Onboarding copy heading React island', () => {
     expect(title.getAttribute('aria-label')).toBe('Meet Lumno');
     expect(title.querySelectorAll('.title-line')).toHaveLength(2);
     expect(title.querySelector('.title-break')).not.toBeNull();
-    const logo = title.querySelector<HTMLImageElement>('.title-logo-mark');
+    const logo = queryHtmlTag(title, '.title-logo-mark', 'img');
     expect(logo?.getAttribute('src')).toBe('/assets/lumno.svg');
     expect(logo?.title).toBe('Lumno');
     expect(logo?.getAttribute('aria-hidden')).toBe('true');
@@ -104,12 +105,8 @@ describe('Onboarding copy heading React island', () => {
       },
       titleLines: ['Search bookmarks', 'from anywhere']
     });
-    const getText = () => title.querySelector<HTMLElement>(
-      '[data-title-rotator-text]'
-    );
-    const getRotator = () => title.querySelector<HTMLElement>(
-      '[data-title-rotator]'
-    );
+    const getText = () => queryHtmlElement(title, '[data-title-rotator-text]');
+    const getRotator = () => queryHtmlElement(title, '[data-title-rotator]');
 
     expect(getText()?.textContent).toBe('bookmarks');
     expect(getRotator()?.dataset.tone).toBe('bookmark');

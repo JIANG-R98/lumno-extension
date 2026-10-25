@@ -9,6 +9,8 @@ import {
   type RequiredCheckboxGroupController,
   type ToggleControlController
 } from './settings-controls';
+import { getTags } from '../../../tests/react/dom';
+import { queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: Array<
   RangeSliderControlController |
@@ -37,7 +39,7 @@ describe('Options settings controls React islands', () => {
       checked: true,
       id: 'auto-pip'
     }));
-    const input = host.querySelector<HTMLInputElement>('input');
+    const input = queryHtmlTag(host, 'input', 'input');
     expect(createSettingsControlsApi().implementation).toBe('react');
     expect(host.dataset.reactIsland).toBe('options-toggle-control');
     expect(input?.checked).toBe(true);
@@ -67,7 +69,7 @@ describe('Options settings controls React islands', () => {
     act(() => controller.render({ items, sortable: true }));
     const labels = host.querySelectorAll('label');
     expect(Array.from(labels).map((label) => label.getAttribute('data-sortable'))).toEqual(['true', 'true', 'true']);
-    const inputs = host.querySelectorAll<HTMLInputElement>('input');
+    const inputs = getTags(host, 'input', 'input');
     act(() => {
       inputs[1]?.dispatchEvent(new KeyboardEvent('keydown', { altKey: true, bubbles: true, key: 'ArrowLeft' }));
       inputs[1]?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowLeft' }));
@@ -108,7 +110,7 @@ describe('Options settings controls React islands', () => {
         }
       ]
     }));
-    const inputs = host.querySelectorAll<HTMLInputElement>('input');
+    const inputs = getTags(host, 'input', 'input');
 
     act(() => inputs[0]?.click());
     expect(inputs[0]?.checked).toBe(true);
@@ -130,7 +132,7 @@ describe('Options settings controls React islands', () => {
     act(() => controller.render({ checked: true, id: 'updates' }));
     act(() => controller.render({ checked: false, id: 'updates' }));
 
-    expect(host.querySelector<HTMLInputElement>('input')?.checked).toBe(false);
+    expect(queryHtmlTag(host, 'input', 'input')?.checked).toBe(false);
   });
 
   it('renders the shared range slider and reports every integer step', () => {
@@ -157,8 +159,8 @@ describe('Options settings controls React islands', () => {
       value: 6
     }));
 
-    const input = host.querySelector<HTMLInputElement>('input[type="range"]');
-    const valueInput = host.querySelector<HTMLInputElement>('input[type="number"]');
+    const input = queryHtmlTag(host, 'input[type="range"]', 'input');
+    const valueInput = queryHtmlTag(host, 'input[type="number"]', 'input');
     expect(host.dataset.reactIsland).toBe('options-range-slider-control');
     expect(input?.classList.contains('x-lumno-range-slider-input')).toBe(true);
     expect(input?.value).toBe('6');
@@ -213,8 +215,8 @@ describe('Options settings controls React islands', () => {
       value: 10
     }));
 
-    const slider = host.querySelector<HTMLInputElement>('input[type="range"]');
-    const valueInput = host.querySelector<HTMLInputElement>('input[type="number"]');
+    const slider = queryHtmlTag(host, 'input[type="range"]', 'input');
+    const valueInput = queryHtmlTag(host, 'input[type="number"]', 'input');
     const setNativeInputValue = (input: HTMLInputElement, next: string) => {
       Object.getOwnPropertyDescriptor(
         window.HTMLInputElement.prototype,
@@ -294,7 +296,7 @@ describe('Options settings controls React islands', () => {
       value: 10
     }));
 
-    const slider = host.querySelector<HTMLInputElement>('input[type="range"]');
+    const slider = queryHtmlTag(host, 'input[type="range"]', 'input');
     expect(slider?.classList.contains('x-range-slider-input')).toBe(true);
     expect(slider?.style.getPropertyValue('--x-range-slider-marks')).toBe('');
   });
@@ -327,9 +329,9 @@ describe('Options settings controls React islands', () => {
       valueSuffix: ' px'
     }));
 
-    const slider = host.querySelector<HTMLInputElement>('input[type="range"]');
-    const reset = host.querySelector<HTMLButtonElement>('#newtab-shortcut-size-reset');
-    const valueInput = host.querySelector<HTMLInputElement>('input[type="number"]');
+    const slider = queryHtmlTag(host, 'input[type="range"]', 'input');
+    const reset = queryHtmlTag(host, '#newtab-shortcut-size-reset', 'button');
+    const valueInput = queryHtmlTag(host, 'input[type="number"]', 'input');
     expect(reset?.getAttribute('aria-label')).toBe('恢复默认大小');
     expect(reset?.querySelector('.ri-reset-left-line')).not.toBeNull();
     expect(reset?.querySelector('.ri-size-14')).not.toBeNull();
@@ -388,7 +390,7 @@ describe('Options settings controls React islands', () => {
         }
       ]
     }));
-    const inputs = host.querySelectorAll<HTMLInputElement>('input');
+    const inputs = getTags(host, 'input', 'input');
 
     act(() => inputs[1]?.click());
 

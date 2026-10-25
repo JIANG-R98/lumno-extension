@@ -11,6 +11,8 @@ import { createInteractionsApi } from './interactions';
 import { createPageStripApi } from './page-strip';
 import { createVisualSurfaceApi } from './visual-surface';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
+import { expectElement, getElements } from '../../../tests/react/dom';
+import { queryHtmlTag } from '../../shared/dom-lookup';
 
 const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
 const VISUAL_ISLAND_BY_KIND: Record<string, string> = {
@@ -100,8 +102,8 @@ async function bootOnboardingPage(stored: Record<string, unknown> = {}) {
   });
   return {
     chrome,
-    root: document.getElementById('onboarding-root') as HTMLElement,
-    stage: document.getElementById('onboarding-visual-stage') as HTMLElement
+    root: expectElement(document.getElementById('onboarding-root')),
+    stage: expectElement(document.getElementById('onboarding-visual-stage'))
   };
 }
 
@@ -142,7 +144,7 @@ describe('Onboarding page runtime', () => {
       expect(root.dataset.activeSlide).toBe(slide.id);
       expect(stage.dataset.visualKind).toBe(slide.visual.kind);
       const islands = Array.from(
-        stage.querySelectorAll<HTMLElement>(':scope > [data-react-island]'),
+        getElements(stage, ':scope > [data-react-island]'),
         (node) => node.dataset.reactIsland
       );
       expect(islands).toEqual(
@@ -153,8 +155,7 @@ describe('Onboarding page runtime', () => {
       if (index === 0) {
         // The React action button advances exactly one slide.
         act(() => {
-          document
-            .querySelector<HTMLButtonElement>('.onboarding-action-button--primary')
+          queryHtmlTag(document, '.onboarding-action-button--primary', 'button')
             ?.click();
         });
       } else {
@@ -178,9 +179,7 @@ describe('Onboarding page runtime', () => {
     });
     expect(root.dataset.activeSlide).toBe('setup');
 
-    const link = document.querySelector<HTMLAnchorElement>(
-      '.interaction-accordion-link[data-action="openShortcuts"]'
-    );
+    const link = queryHtmlTag(document, '.interaction-accordion-link[data-action="openShortcuts"]', 'a');
     expect(link).toBeTruthy();
     act(() => {
       link!.click();

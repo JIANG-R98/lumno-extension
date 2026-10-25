@@ -9,6 +9,8 @@ import {
   type WallpaperPanelState,
   type WallpaperViewController
 } from './wallpaper-view';
+import { expectElement, expectTag, getElement, getElements, getTag, getTags } from '../../../tests/react/dom';
+import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 let controller: WallpaperViewController | null = null;
 
@@ -112,10 +114,8 @@ describe('New Tab React wallpaper view', () => {
     const host = refs().glassStyleSelectHost;
     const select = host.querySelector('select');
     expect(select?.value).toBe('none');
-    act(() => host.querySelector<HTMLButtonElement>('button')!.click());
-    const liquid = document.querySelector<HTMLElement>(
-      '[data-react-select-owner="x-nt-glass-style"] [data-value="liquid"]'
-    );
+    act(() => getTag(host, 'button', 'button').click());
+    const liquid = queryHtmlElement(document, '[data-react-select-owner="x-nt-glass-style"] [data-value="liquid"]');
     act(() => liquid?.click());
     expect(actions.setGlassStyle).toHaveBeenCalledWith('liquid');
     state.glassStyle.value = 'frosted';
@@ -141,7 +141,7 @@ describe('New Tab React wallpaper view', () => {
     expect(refs().glassThemeRow.hidden).toBe(false);
     expect(refs().glassThemeTitle.textContent).toBe('Material theme');
     expect(refs().glassThemeTabs.querySelector('[data-newtab-glass-theme="follow"]')?.getAttribute('aria-pressed')).toBe('true');
-    act(() => refs().glassThemeTabs.querySelector<HTMLElement>('[data-newtab-glass-theme="dark"]')!.click());
+    act(() => getElement(refs().glassThemeTabs, '[data-newtab-glass-theme="dark"]').click());
     expect(actions.selectGlassTheme).toHaveBeenCalledWith('dark');
   });
 
@@ -149,7 +149,7 @@ describe('New Tab React wallpaper view', () => {
     const { state } = createState();
     state.theme.modes[0].badgeUrl = '/lumno.png';
     mount(state);
-    const badges = refs().appearanceOptions.querySelectorAll<HTMLImageElement>('.x-nt-appearance-badge');
+    const badges = getTags(refs().appearanceOptions, '.x-nt-appearance-badge', 'img');
     expect(badges).toHaveLength(1);
     expect(badges[0].closest('[data-theme-mode]')?.getAttribute('data-theme-mode')).toBe('system');
     expect(badges[0].getAttribute('src')).toBe('/lumno.png');
@@ -184,9 +184,7 @@ describe('New Tab React wallpaper view', () => {
     const quotePositionHost = refs().quotePositionSelectHost;
     expect(quotePositionHost.classList.contains('_x_extension_custom_select_2024_unique_')).toBe(true);
     expect(quotePositionHost.querySelector('select')?.value).toBe('search');
-    const topOption = document.querySelector<HTMLElement>(
-      '[data-react-select-owner="x-nt-quote-position"] [data-value="top"]'
-    );
+    const topOption = queryHtmlElement(document, '[data-react-select-owner="x-nt-quote-position"] [data-value="top"]');
     expect(view.containsSelectMenuTarget(topOption)).toBe(true);
     act(() => {
       topOption?.click();
@@ -194,7 +192,7 @@ describe('New Tab React wallpaper view', () => {
     expect(onQuotePositionChange).toHaveBeenCalledWith('top');
     expect(refs().quoteInfoButton.previousElementSibling).toBe(refs().quoteAccordionTrigger);
     const sectionTriggers = Array.from(
-      view.control.querySelectorAll<HTMLButtonElement>('.x-nt-section-trigger')
+      getTags(view.control, '.x-nt-section-trigger', 'button')
     );
     expect(sectionTriggers.map((trigger) => trigger.dataset.wallpaperRef)).toEqual([
       'themeSectionTrigger',
@@ -229,11 +227,11 @@ describe('New Tab React wallpaper view', () => {
     expect(refs().bingRefresh.closest('.x-nt-overlay-control-header')).not.toBeNull();
     expect(refs().effectSelectHost.closest('.x-nt-appearance-setting-row'))
       .toBe(refs().effectLabel.parentElement);
-    const sliderRows = view.control.querySelectorAll<HTMLElement>('.x-nt-range-slider-row');
+    const sliderRows = getElements(view.control, '.x-nt-range-slider-row');
     expect(sliderRows).toHaveLength(18);
     sliderRows.forEach((row) => {
-      const slider = row.querySelector<HTMLInputElement>('input[type="range"]');
-      const valueInput = row.querySelector<HTMLInputElement>('input[type="number"]');
+      const slider = queryHtmlTag(row, 'input[type="range"]', 'input');
+      const valueInput = queryHtmlTag(row, 'input[type="number"]', 'input');
       expect(slider).not.toBeNull();
       expect(row.classList.contains('x-range-slider-field')).toBe(true);
       expect(valueInput?.max).toBe(slider?.max);
@@ -310,41 +308,41 @@ describe('New Tab React wallpaper view', () => {
     expect(refs().topContentTimeTab.dataset.active).toBe('true');
     expect(refs().topContentBrandTab.dataset.active).toBe('false');
     expect(refs().topContentWeightControl.hidden).toBe(false);
-    expect((refs().topContentWeightSlider as HTMLInputElement).value).toBe('600');
-    const weightReset = refs().topContentWeightResetButton as HTMLButtonElement;
+    expect((expectTag(refs().topContentWeightSlider, 'input')).value).toBe('600');
+    const weightReset = expectTag(refs().topContentWeightResetButton, 'button');
     expect(weightReset.disabled).toBe(false);
     expect(weightReset.getAttribute('aria-label')).toBe('Reset time font weight');
     act(() => weightReset.click());
     expect(next.actions.resetTimeFontWeight).toHaveBeenCalled();
     expect(refs().topContentSizeControl.hidden).toBe(false);
-    expect((refs().topContentSizeSlider as HTMLInputElement).value).toBe('80');
-    const sizeReset = refs().topContentSizeResetButton as HTMLButtonElement;
+    expect((expectTag(refs().topContentSizeSlider, 'input')).value).toBe('80');
+    const sizeReset = expectTag(refs().topContentSizeResetButton, 'button');
     expect(sizeReset.disabled).toBe(false);
     expect(sizeReset.getAttribute('aria-label')).toBe('Reset time size');
     act(() => sizeReset.click());
     expect(next.actions.resetTimeFontSize).toHaveBeenCalled();
     expect(refs().topContentOpacitySlider.getAttribute('aria-valuetext')).toBe('100%');
     expect(refs().topContentOpacitySlider.closest('.x-nt-range-slider-row')?.getAttribute('data-value-suffix')).toBe('%');
-    expect((refs().topContentOpacityResetButton as HTMLButtonElement).disabled).toBe(true);
+    expect((expectTag(refs().topContentOpacityResetButton, 'button')).disabled).toBe(true);
     expect(refs().topContentInkRow.hidden).toBe(false);
     expect(refs().topContentInkTitle.textContent).toBe('Time color');
     expect(refs().topContentInkTabs.querySelector('[data-newtab-time-ink="dark"]')?.getAttribute('aria-pressed')).toBe('true');
-    act(() => refs().topContentInkTabs.querySelector<HTMLElement>('[data-newtab-time-ink="light"]')!.click());
+    act(() => getElement(refs().topContentInkTabs, '[data-newtab-time-ink="light"]').click());
     expect(next.actions.selectTimeInk).toHaveBeenCalledWith('light');
-    expect((refs().topContentSecondsToggle as HTMLInputElement).checked).toBe(true);
+    expect((expectTag(refs().topContentSecondsToggle, 'input')).checked).toBe(true);
     expect(refs().topContentTwelveHourRow.hidden).toBe(false);
     expect(refs().topContentTwelveHourTitle.textContent).toBe('12-hour clock');
-    expect((refs().topContentTwelveHourToggle as HTMLInputElement).checked).toBe(false);
-    act(() => (refs().topContentTwelveHourToggle as HTMLInputElement).click());
+    expect((expectTag(refs().topContentTwelveHourToggle, 'input')).checked).toBe(false);
+    act(() => (expectTag(refs().topContentTwelveHourToggle, 'input')).click());
     expect(next.actions.setTime12Hour).toHaveBeenCalledWith(true);
-    expect((refs().overlaySlider as HTMLInputElement).value).toBe('72');
-    expect((refs().overlaySliderValueInput as HTMLInputElement).value).toBe('72');
+    expect((expectTag(refs().overlaySlider, 'input')).value).toBe('72');
+    expect((expectTag(refs().overlaySliderValueInput, 'input')).value).toBe('72');
     expect(refs().effectSpacingControl.dataset.visible).toBe('true');
     expect(refs().effectSpacingSlider.getAttribute('aria-valuetext')).toBe('40%');
     expect(refs().effectSpacingSlider.closest('.x-nt-range-slider-row')?.getAttribute('data-value-suffix')).toBe('%');
     expect(refs().effectSizeSlider.parentElement?.dataset.disabled).toBe('true');
     const selectedTiles = Array.from(
-      refs().builtInGrid.querySelectorAll<HTMLElement>('.x-nt-wallpaper-tile'),
+      getElements(refs().builtInGrid, '.x-nt-wallpaper-tile'),
       (tile) => [tile.dataset.wallpaperId, tile.dataset.selected, tile.getAttribute('aria-pressed')]
     );
     expect(selectedTiles).toEqual([['coast', 'false', 'false'], ['field', 'true', 'true']]);
@@ -369,54 +367,54 @@ describe('New Tab React wallpaper view', () => {
       };
     });
     mount(state);
-    act(() => (refs().button as HTMLButtonElement).click());
+    act(() => (expectTag(refs().button, 'button')).click());
     expect(actions.togglePanel).toHaveBeenCalledTimes(1);
-    act(() => refs().builtInGrid.querySelector<HTMLElement>('[data-wallpaper-id="field"]')!.click());
+    act(() => getElement(refs().builtInGrid, '[data-wallpaper-id="field"]').click());
     expect(actions.selectWallpaper).toHaveBeenCalledWith('field');
-    const customTile = refs().localGrid.querySelector<HTMLElement>('[data-wallpaper-id="custom-1"]')!;
-    act(() => customTile.querySelector<HTMLElement>('.x-nt-wallpaper-delete-button')!.click());
+    const customTile = getElement(refs().localGrid, '[data-wallpaper-id="custom-1"]');
+    act(() => getElement(customTile, '.x-nt-wallpaper-delete-button').click());
     expect(actions.deleteWallpaper).toHaveBeenCalledWith('custom-1');
     expect(actions.selectWallpaper).toHaveBeenCalledTimes(1);
     key(customTile, 'Enter');
     expect(actions.selectWallpaper).toHaveBeenLastCalledWith('custom-1');
-    act(() => refs().bingItemsHost.querySelector<HTMLElement>('[data-wallpaper-id="bing-1"]')!.click());
+    act(() => getElement(refs().bingItemsHost, '[data-wallpaper-id="bing-1"]').click());
     expect(actions.selectBingWallpaper).toHaveBeenCalledWith('bing-1');
     act(() => {
-      refs().bingItemsHost.querySelector('[data-wallpaper-id="bing-1"]')!
+      getElement(refs().bingItemsHost, '[data-wallpaper-id="bing-1"]')
         .dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
     });
     expect(actions.showTooltip).toHaveBeenCalledWith(expect.any(HTMLElement), 'Bridge · 2026-10-01');
     actions.hideTooltip.mockClear();
     act(() => {
-      refs().panel.querySelector('.x-nt-wallpaper-panel-scroll')!.dispatchEvent(new Event('scroll'));
+      getElement(refs().panel, '.x-nt-wallpaper-panel-scroll').dispatchEvent(new Event('scroll'));
     });
     expect(actions.hideTooltip).toHaveBeenCalled();
-    act(() => refs().curatedItemsHost.querySelector<HTMLElement>('[data-wallpaper-id="picsum-28"]')!.click());
+    act(() => getElement(refs().curatedItemsHost, '[data-wallpaper-id="picsum-28"]').click());
     expect(actions.selectCuratedWallpaper).toHaveBeenCalledWith('picsum-28');
-    act(() => refs().curatedCategoryTabs.querySelector<HTMLElement>('[data-curated-category="city"]')!.click());
+    act(() => getElement(refs().curatedCategoryTabs, '[data-curated-category="city"]').click());
     expect(actions.selectCuratedCategory).toHaveBeenCalledWith('city');
-    act(() => (refs().enabledToggle as HTMLInputElement).click());
+    act(() => (expectTag(refs().enabledToggle, 'input')).click());
     expect(actions.setWallpaperEnabled).toHaveBeenCalledWith(false);
-    act(() => (refs().modeSyncToggle as HTMLInputElement).click());
+    act(() => (expectTag(refs().modeSyncToggle, 'input')).click());
     expect(actions.setModeSync).toHaveBeenCalledWith(false);
-    act(() => (refs().bingDailyToggle as HTMLInputElement).click());
+    act(() => (expectTag(refs().bingDailyToggle, 'input')).click());
     expect(actions.setBingDaily).toHaveBeenCalledWith(true);
-    act(() => (refs().bingRefresh as HTMLButtonElement).click());
+    act(() => (expectTag(refs().bingRefresh, 'button')).click());
     expect(actions.refreshBing).toHaveBeenCalled();
-    act(() => refs().appearanceScopeTabs.querySelector<HTMLElement>('[data-theme-scope="home"]')!.click());
+    act(() => getElement(refs().appearanceScopeTabs, '[data-theme-scope="home"]').click());
     expect(actions.selectThemeScope).toHaveBeenCalledWith('home');
-    act(() => refs().appearanceOptions.querySelector<HTMLElement>('[data-theme-mode="dark"]')!.click());
+    act(() => getElement(refs().appearanceOptions, '[data-theme-mode="dark"]').click());
     expect(actions.selectThemeMode).toHaveBeenCalledWith('dark');
-    act(() => refs().effectInkToneOptions.querySelector<HTMLElement>('[data-wallpaper-effect-ink-tone="light"]')!.click());
+    act(() => getElement(refs().effectInkToneOptions, '[data-wallpaper-effect-ink-tone="light"]').click());
     expect(actions.selectInkTone).toHaveBeenCalledWith('light');
-    act(() => refs().faviconOptions.querySelector<HTMLElement>('[data-newtab-favicon-id="alternate"]')!.click());
+    act(() => getElement(refs().faviconOptions, '[data-newtab-favicon-id="alternate"]').click());
     expect(actions.selectFavicon).toHaveBeenCalledWith('alternate');
     act(() => refs().topContentTimeTab.click());
     expect(actions.selectTopContent).toHaveBeenCalledWith('time');
-    act(() => (refs().inputAutoFocusToggle as HTMLInputElement).click());
+    act(() => (expectTag(refs().inputAutoFocusToggle, 'input')).click());
     expect(actions.setInputAutoFocus).toHaveBeenCalledWith(true);
     const file = new File(['x'], 'photo.png', { type: 'image/png' });
-    const fileInput = refs().customInput as HTMLInputElement;
+    const fileInput = expectTag(refs().customInput, 'input');
     Object.defineProperty(fileInput, 'files', { configurable: true, value: [file] });
     act(() => {
       fileInput.dispatchEvent(new Event('change', { bubbles: true }));
@@ -434,7 +432,7 @@ describe('New Tab React wallpaper view', () => {
       draft.wallpaper.local.upload.full = true;
     });
     mount(state);
-    const tile = refs().curatedItemsHost.querySelector<HTMLElement>('[data-wallpaper-id="picsum-28"]')!;
+    const tile = getElement(refs().curatedItemsHost, '[data-wallpaper-id="picsum-28"]');
     const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 60 });
     act(() => {
       tile.dispatchEvent(event);
@@ -442,7 +440,7 @@ describe('New Tab React wallpaper view', () => {
     expect(event.defaultPrevented).toBe(true);
     expect(actions.hideTooltip).toHaveBeenCalled();
     expect(actions.openOnlineWallpaperMenu).toHaveBeenCalledWith('picsum-28', tile, { x: 40, y: 60 });
-    const fileInput = refs().customInput as HTMLInputElement;
+    const fileInput = expectTag(refs().customInput, 'input');
     const pick = vi.spyOn(fileInput, 'click');
     act(() => refs().uploadTile.click());
     expect(actions.showLocalWallpaperLimit).toHaveBeenCalled();
@@ -461,9 +459,7 @@ describe('New Tab React wallpaper view', () => {
     const host = refs().effectSelectHost;
     expect(host.querySelector('select')?.value).toBe('none');
     expect(host.querySelector('._x_extension_select_label_2024_unique_')?.textContent).toBe('Off');
-    const grainOption = document.querySelector<HTMLElement>(
-      '[data-react-select-owner="x-nt-wallpaper-effect"] [data-value="grain"]'
-    );
+    const grainOption = queryHtmlElement(document, '[data-react-select-owner="x-nt-wallpaper-effect"] [data-value="grain"]');
     expect(controller!.containsSelectMenuTarget(grainOption)).toBe(true);
     act(() => grainOption?.click());
     expect(actions.selectEffect).toHaveBeenCalledWith('grain');
@@ -486,8 +482,8 @@ describe('New Tab React wallpaper view', () => {
     const host = refs().curatedMixSelectHost;
     expect(host.closest('.x-nt-overlay-control-header')?.contains(refs().curatedRefresh)).toBe(true);
     expect(host.querySelector('._x_extension_select_label_2024_unique_')?.textContent).toBe('2 categories');
-    act(() => host.querySelector<HTMLButtonElement>('button')!.click());
-    const city = document.querySelector<HTMLElement>('[data-react-select-owner="x-nt-curated-mix"] [data-value="city"]')!;
+    act(() => getTag(host, 'button', 'button').click());
+    const city = getElement(document, '[data-react-select-owner="x-nt-curated-mix"] [data-value="city"]');
     expect(city.getAttribute('role')).toBe('menuitemcheckbox');
     expect(city.getAttribute('aria-checked')).toBe('false');
     expect(controller!.containsSelectMenuTarget(city)).toBe(true);
@@ -507,7 +503,7 @@ describe('New Tab React wallpaper view', () => {
   it('moves between source tabs with the arrow keys as one tab stop', () => {
     const { actions, state } = createState();
     mount(state);
-    const tabs = Array.from(refs().tabs.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    const tabs = Array.from(getTags(refs().tabs, '[role="tab"]', 'button'));
     expect(refs().tabs.getAttribute('role')).toBe('tablist');
     expect(tabs.map((tab) => [tab.dataset.wallpaperTab, tab.tabIndex, tab.getAttribute('aria-selected')])).toEqual([
       ['built-in', 0, 'true'],
@@ -551,7 +547,7 @@ describe('New Tab React wallpaper view', () => {
   it('slides the segmented indicator under the selected option', () => {
     // jsdom has no layout: give each source tab a box from its position in the row.
     const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
-      const tab = (this as HTMLElement).dataset?.wallpaperTab;
+      const tab = (expectElement(this)).dataset?.wallpaperTab;
       const index = ['built-in', 'local', 'bing', 'curated'].indexOf(tab || '');
       const left = index >= 0 ? 10 + index * 60 : 0;
       const width = index >= 0 ? 56 : 300;
@@ -587,7 +583,7 @@ describe('New Tab React wallpaper view', () => {
     rerender(split);
     expect(refs().modeRow.dataset.visible).toBe('true');
     expect(refs().modeRow.getAttribute('aria-hidden')).toBe('false');
-    expect((refs().modeSyncToggle as HTMLInputElement).checked).toBe(false);
+    expect((expectTag(refs().modeSyncToggle, 'input')).checked).toBe(false);
     expect(refs().darkModeTab.getAttribute('aria-selected')).toBe('true');
     expect(refs().darkModeTab.tabIndex).toBe(0);
     expect(refs().lightModeTab.tabIndex).toBe(-1);
@@ -600,9 +596,9 @@ describe('New Tab React wallpaper view', () => {
       draft.shortcuts.columns = { ...draft.shortcuts.columns, value: 10 };
     });
     mount(state);
-    act(() => (refs().shortcutsAccordionTrigger as HTMLButtonElement).click());
-    const slider = refs().shortcutColumnsSlider as HTMLInputElement;
-    const valueInput = refs().shortcutColumnsSliderValueInput as HTMLInputElement;
+    act(() => (expectTag(refs().shortcutsAccordionTrigger, 'button')).click());
+    const slider = expectTag(refs().shortcutColumnsSlider, 'input');
+    const valueInput = expectTag(refs().shortcutColumnsSliderValueInput, 'input');
     expect([slider.min, slider.max, slider.step, slider.value]).toEqual(['4', '16', '1', '10']);
     const marks = slider.style.getPropertyValue('--x-range-slider-marks');
     expect(marks.match(/linear-gradient/g)).toHaveLength(2);
@@ -657,7 +653,7 @@ describe('New Tab React wallpaper view', () => {
       draft.search.timeWeight = { ...draft.search.timeWeight, visible: true };
     });
     mount(state);
-    const valueInput = refs().topContentWeightSliderValueInput as HTMLInputElement;
+    const valueInput = expectTag(refs().topContentWeightSliderValueInput, 'input');
     act(() => valueInput.focus());
     typeInto(valueInput, '5');
     expect(valueInput.value).toBe('5');
@@ -678,7 +674,7 @@ describe('New Tab React wallpaper view', () => {
       draft.wallpaper.overlay = { ...draft.wallpaper.overlay, value: 64 };
     });
     mount(state);
-    const slider = refs().overlaySlider as HTMLInputElement;
+    const slider = expectTag(refs().overlaySlider, 'input');
     act(() => {
       slider.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
     });
@@ -698,23 +694,23 @@ describe('New Tab React wallpaper view', () => {
   it('folds the shortcut details and keeps them folded while shortcuts are off', () => {
     const { actions, state } = createState();
     mount(state);
-    const trigger = refs().shortcutsAccordionTrigger as HTMLButtonElement;
+    const trigger = expectTag(refs().shortcutsAccordionTrigger, 'button');
     const details = refs().shortcutsDetails;
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
     expect(details.getAttribute('role')).toBe('region');
     expect(details.hidden).toBe(true);
-    expect((refs().shortcutAddToggle as HTMLInputElement).disabled).toBe(true);
-    expect((refs().shortcutColumnsSlider as HTMLInputElement).disabled).toBe(true);
-    expect((refs().shortcutColumnsSliderValueInput as HTMLInputElement).disabled).toBe(true);
+    expect((expectTag(refs().shortcutAddToggle, 'input')).disabled).toBe(true);
+    expect((expectTag(refs().shortcutColumnsSlider, 'input')).disabled).toBe(true);
+    expect((expectTag(refs().shortcutColumnsSliderValueInput, 'input')).disabled).toBe(true);
     act(() => trigger.click());
     expect(trigger.getAttribute('aria-expanded')).toBe('true');
     expect(details.hidden).toBe(false);
-    expect((refs().shortcutAddToggle as HTMLInputElement).disabled).toBe(false);
-    expect((refs().shortcutDockMagnificationToggle as HTMLInputElement).disabled).toBe(false);
-    expect((refs().shortcutColumnsSlider as HTMLInputElement).disabled).toBe(false);
-    act(() => (refs().shortcutAddToggle as HTMLInputElement).click());
+    expect((expectTag(refs().shortcutAddToggle, 'input')).disabled).toBe(false);
+    expect((expectTag(refs().shortcutDockMagnificationToggle, 'input')).disabled).toBe(false);
+    expect((expectTag(refs().shortcutColumnsSlider, 'input')).disabled).toBe(false);
+    act(() => (expectTag(refs().shortcutAddToggle, 'input')).click());
     expect(actions.setShortcutAddVisible).toHaveBeenCalledWith(false);
-    const sizeReset = refs().shortcutSizeResetButton as HTMLButtonElement;
+    const sizeReset = expectTag(refs().shortcutSizeResetButton, 'button');
     expect(sizeReset.disabled).toBe(true);
     expect(sizeReset.parentElement?.classList.contains('x-range-slider-field-label')).toBe(true);
 
@@ -747,7 +743,7 @@ describe('New Tab React wallpaper view', () => {
       draft.shortcuts.toggle = { checked: false, label: 'Shortcuts' };
     });
     mount(state);
-    act(() => (refs().shortcutsToggle as HTMLInputElement).click());
+    act(() => (expectTag(refs().shortcutsToggle, 'input')).click());
     expect(actions.setShortcutsVisible).toHaveBeenCalledWith(true);
     const { state: shortcutsOn } = createState();
     shortcutsOn.actions = actions;
@@ -763,7 +759,7 @@ describe('New Tab React wallpaper view', () => {
     });
     wallpaperOff.actions = actions;
     rerender(wallpaperOff);
-    act(() => (refs().enabledToggle as HTMLInputElement).click());
+    act(() => (expectTag(refs().enabledToggle, 'input')).click());
     expect(actions.setWallpaperEnabled).toHaveBeenCalledWith(true);
     rerender(shortcutsOn);
     expect(refs().body.getAttribute('data-visible')).toBe('true');
@@ -801,7 +797,7 @@ describe('New Tab React wallpaper view', () => {
     expect(refs().urlForm.hidden).toBe(false);
     expect(refs().urlTile.getAttribute('aria-expanded')).toBe('true');
     expect(refs().urlTile.getAttribute('aria-controls')).toBe(refs().urlForm.id);
-    const input = refs().urlInput as HTMLInputElement;
+    const input = expectTag(refs().urlInput, 'input');
     typeInto(input, 'https://example.com/a.jpg');
     act(() => {
       refs().urlForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
@@ -843,7 +839,7 @@ describe('New Tab React wallpaper view', () => {
       expect(body.hidden).toBe(true);
       expect(toggle.getAttribute('role')).toBe('switch');
     });
-    const rows = refs().bookmarkRowsSlider as HTMLInputElement;
+    const rows = expectTag(refs().bookmarkRowsSlider, 'input');
     expect([rows.min, rows.max, rows.step]).toEqual(['1', '8', '1']);
     expect(Array.from(refs().recentRowsTabs.querySelectorAll('button'), (button) => button.textContent))
       .toEqual(['1', '2']);
@@ -869,14 +865,10 @@ describe('New Tab React wallpaper view', () => {
       });
     });
     expect(refs().bookmarkViewModeSelectHost.querySelector('select')?.value).toBe('folder');
-    const topOption = document.querySelector<HTMLElement>(
-      '[data-react-select-owner="x-nt-bookmark-view-mode"] [data-value="top"]'
-    );
+    const topOption = queryHtmlElement(document, '[data-react-select-owner="x-nt-bookmark-view-mode"] [data-value="top"]');
     act(() => topOption?.click());
     expect(onViewModeChange).toHaveBeenCalledWith('top');
-    const customOption = document.querySelector<HTMLElement>(
-      '[data-react-select-owner="x-nt-bookmark-topbar-surface"] [data-value="custom"]'
-    );
+    const customOption = queryHtmlElement(document, '[data-react-select-owner="x-nt-bookmark-topbar-surface"] [data-value="custom"]');
     act(() => customOption?.click());
     expect(onSurfaceChange).toHaveBeenCalledWith('custom');
     // Declined until the picker returns a color.
@@ -898,7 +890,7 @@ describe('New Tab React wallpaper view', () => {
     });
     mount(state);
     expect(controller!.closeOpenSelect()).toBe(false);
-    act(() => refs().effectSelectHost.querySelector<HTMLButtonElement>('button')!.click());
+    act(() => getTag(refs().effectSelectHost, 'button', 'button').click());
     expect(refs().effectSelectHost.dataset.open).toBe('true');
     let closed = false;
     act(() => {
@@ -914,7 +906,7 @@ describe('New Tab React wallpaper view', () => {
       draft.shortcuts.gap = { ...draft.shortcuts.gap, value: 0 };
     });
     mount(state);
-    expect((refs().shortcutGapSlider as HTMLInputElement).value).toBe('0');
-    expect((refs().shortcutGapSliderValueInput as HTMLInputElement).value).toBe('0');
+    expect((expectTag(refs().shortcutGapSlider, 'input')).value).toBe('0');
+    expect((expectTag(refs().shortcutGapSliderValueInput, 'input')).value).toBe('0');
   });
 });

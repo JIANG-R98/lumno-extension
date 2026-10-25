@@ -3,8 +3,11 @@ export interface TextOverflowOptions {
   vertical?: boolean;
 }
 
+// The sizes the check reads, which any element has.
+type MeasuredElement = Pick<HTMLElement, 'clientHeight' | 'clientWidth' | 'scrollHeight' | 'scrollWidth'>;
+
 export function isElementTextTruncated(
-  element: HTMLElement | null,
+  element: MeasuredElement | null,
   options: TextOverflowOptions = {}
 ): boolean {
   if (!element) {

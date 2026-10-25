@@ -6,6 +6,8 @@ import {
   type TopContentClockFont,
   type TopContentController
 } from './wordmark';
+import { getElement, getElements } from '../../../tests/react/dom';
+import { queryHtmlElement } from '../../shared/dom-lookup';
 
 let controllers: TopContentController[] = [];
 
@@ -89,7 +91,7 @@ describe('New Tab top-content React island', () => {
 
   it('renders a single-line animated hour and minute clock by default', () => {
     const { controller, host } = createController(true, 'time');
-    const clock = host.querySelector<HTMLElement>('time.x-nt-time-mark');
+    const clock = queryHtmlElement(host, 'time.x-nt-time-mark');
 
     expect(controller.getContent()).toBe(clock);
     expect(clock?.getAttribute('datetime')).toMatch(/^\d{2}:\d{2}$/);
@@ -107,7 +109,7 @@ describe('New Tab top-content React island', () => {
 
   it('applies a custom variable-font weight to the clock', () => {
     const { host } = createController(true, 'time', false, 650);
-    const clock = host.querySelector<HTMLElement>('time.x-nt-time-mark');
+    const clock = queryHtmlElement(host, 'time.x-nt-time-mark');
 
     expect(clock?.style.fontWeight).toBe('650');
     expect(clock?.style.letterSpacing).toBe('-0.043em');
@@ -122,7 +124,7 @@ describe('New Tab top-content React island', () => {
       stretch: '',
       tracking: 0
     });
-    const clock = host.querySelector<HTMLElement>('time.x-nt-time-mark');
+    const clock = queryHtmlElement(host, 'time.x-nt-time-mark');
 
     expect(clock?.dataset.timeFont).toBe('bitcount');
     expect(clock?.style.fontFamily).toContain('Lumno Clock Bitcount');
@@ -142,7 +144,7 @@ describe('New Tab top-content React island', () => {
       stretch: '86%',
       tracking: null
     });
-    const clock = host.querySelector<HTMLElement>('time.x-nt-time-mark');
+    const clock = queryHtmlElement(host, 'time.x-nt-time-mark');
 
     expect(clock?.style.fontStretch).toBe('86%');
     expect(clock?.style.letterSpacing).toBe('-0.043em');
@@ -160,7 +162,7 @@ describe('New Tab top-content React island', () => {
 
     cases.forEach(([fontWeight, expectedLetterSpacing]) => {
       const { host } = createController(true, 'time', false, fontWeight);
-      const clock = host.querySelector<HTMLElement>('time.x-nt-time-mark');
+      const clock = queryHtmlElement(host, 'time.x-nt-time-mark');
 
       expect(clock?.style.fontWeight).toBe(String(fontWeight));
       expect(clock?.style.letterSpacing).toBe(expectedLetterSpacing);
@@ -188,12 +190,12 @@ describe('New Tab top-content React island', () => {
           twelveHour
         });
       });
-      return host.querySelector<HTMLElement>('time.x-nt-time-mark')!;
+      return getElement(host, 'time.x-nt-time-mark');
     };
 
     const english = render('en-US', true);
-    const englishDigits = english.querySelector('[aria-hidden="true"]')!;
-    const englishPeriod = english.querySelector<HTMLElement>('.x-nt-time-day-period');
+    const englishDigits = getElement(english, '[aria-hidden="true"]');
+    const englishPeriod = queryHtmlElement(english, '.x-nt-time-day-period');
     expect(english.dataset.twelveHour).toBe('true');
     expect(english.getAttribute('datetime')).toBe('21:05');
     expect(english.getAttribute('aria-label')).toMatch(/^9:05\sPM$/);
@@ -203,9 +205,9 @@ describe('New Tab top-content React island', () => {
     expect(englishDigits.lastElementChild).toBe(englishPeriod);
 
     const chinese = render('zh-CN', true);
-    const chinesePeriod = chinese.querySelector<HTMLElement>('.x-nt-time-day-period');
+    const chinesePeriod = queryHtmlElement(chinese, '.x-nt-time-day-period');
     expect(chinesePeriod?.textContent).toBe('PM');
-    expect(chinese.querySelector('[aria-hidden="true"]')!.lastElementChild).toBe(chinesePeriod);
+    expect(getElement(chinese, '[aria-hidden="true"]').lastElementChild).toBe(chinesePeriod);
 
     const twentyFourHour = render('en-US', false);
     expect(twentyFourHour.dataset.twelveHour).toBe('false');
@@ -219,7 +221,7 @@ describe('New Tab top-content React island', () => {
       'time',
       true
     );
-    const clock = host.querySelector<HTMLElement>('time.x-nt-time-mark');
+    const clock = queryHtmlElement(host, 'time.x-nt-time-mark');
     const seconds = clock?.querySelector<HTMLElement>(
       '.x-nt-time-seconds-value'
     );
@@ -261,7 +263,7 @@ describe('New Tab top-content React island', () => {
       const { host } = createController(false, 'time', true);
       const getDigits = () =>
         Array.from(
-          host.querySelectorAll<HTMLElement>('.x-nt-time-seconds-digit')
+          getElements(host, '.x-nt-time-seconds-digit')
         );
       const initialDigits = getDigits();
 
@@ -314,7 +316,7 @@ describe('New Tab top-content React island', () => {
       setVisibilityState('visible');
       const { host } = createController(false, 'time', true);
       const getSeconds = () =>
-        host.querySelector<HTMLElement>('.x-nt-time-seconds-value')
+        queryHtmlElement(host, '.x-nt-time-seconds-value')
           ?.textContent;
 
       expect(getSeconds()).toBe('10');

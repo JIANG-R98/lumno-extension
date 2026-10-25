@@ -6,6 +6,7 @@ import {
   destroySearchInput,
   type SearchInputParts
 } from './search-input';
+import { getElement, getTags } from '../../../tests/react/dom';
 
 let inputs: SearchInputParts[] = [];
 
@@ -183,9 +184,7 @@ describe('Shared search input React island', () => {
       }
     });
     const trigger = parts.secondaryAction!;
-    const popconfirm = parts.container.querySelector<HTMLElement>(
-      '.x-lumno-search-input__popconfirm'
-    )!;
+    const popconfirm = getElement(parts.container, '.x-lumno-search-input__popconfirm');
 
     expect(trigger.getAttribute('aria-haspopup')).toBe('dialog');
     expect(trigger.getAttribute('aria-controls')).toBe(popconfirm.id);
@@ -199,7 +198,7 @@ describe('Shared search input React island', () => {
     expect(onConfirm).not.toHaveBeenCalled();
 
     // No Cancel button: the action button itself closes the bubble again.
-    const buttons = popconfirm.querySelectorAll<HTMLButtonElement>('button');
+    const buttons = getTags(popconfirm, 'button', 'button');
     expect(buttons).toHaveLength(1);
     const [confirm] = Array.from(buttons);
     expect(confirm.dataset.i18n).toBe('close_confirm_button');
@@ -231,9 +230,7 @@ describe('Shared search input React island', () => {
       }
     });
     const trigger = parts.secondaryAction!;
-    const popconfirm = parts.container.querySelector<HTMLElement>(
-      '.x-lumno-search-input__popconfirm'
-    )!;
+    const popconfirm = getElement(parts.container, '.x-lumno-search-input__popconfirm');
     document.addEventListener('keydown', onDocumentKeyDown);
 
     act(() => trigger.click());

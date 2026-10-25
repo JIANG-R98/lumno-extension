@@ -1,6 +1,8 @@
 import { act } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { createPopupController, type PopupHandlers, type PopupModel } from './popup-view';
+import { getTags } from '../../../tests/react/dom';
+import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 function createModel(overrides: Partial<PopupModel> = {}): PopupModel {
   return {
@@ -91,9 +93,9 @@ describe('Toolbar popup', () => {
     expect(host.querySelector('.x-lumno-popup__page-host')?.textContent).toBe('www.bilibili.com');
     expect(host.querySelector('.x-lumno-popup__page-icon img')?.getAttribute('src')).toBe('icon.png');
 
-    const group = host.querySelector<HTMLElement>('.x-lumno-popup__actions');
+    const group = queryHtmlElement(host, '.x-lumno-popup__actions');
     expect(group?.dataset.count).toBe('4');
-    const buttons = Array.from(host.querySelectorAll<HTMLButtonElement>('.x-lumno-popup__action'));
+    const buttons = Array.from(getTags(host, '.x-lumno-popup__action', 'button'));
     expect(buttons.map((button) => button.dataset.action)).toEqual(['search', 'copy', 'shortcut', 'clip']);
     expect(buttons[0].textContent).toBe('Open command bar');
     expect(buttons[0].dataset.tooltip).toBe('⇧⌘K');
@@ -123,10 +125,10 @@ describe('Toolbar popup', () => {
     };
     const base = createModel();
     const { host, handlers, controller } = mount({ ...base, actions: [...base.actions, pip] });
-    expect(host.querySelector<HTMLElement>('.x-lumno-popup__actions')?.dataset.count).toBe('5');
-    const cell = host.querySelector<HTMLElement>('[data-action="pip"]')?.parentElement;
+    expect(queryHtmlElement(host, '.x-lumno-popup__actions')?.dataset.count).toBe('5');
+    const cell = queryHtmlElement(host, '[data-action="pip"]')?.parentElement;
     expect(cell?.dataset.hasMenu).toBe('true');
-    expect(host.querySelector<HTMLButtonElement>('[data-action="pip"]')?.disabled).toBe(true);
+    expect(queryHtmlTag(host, '[data-action="pip"]', 'button')?.disabled).toBe(true);
     const chevron = cell?.querySelector<HTMLButtonElement>('.x-lumno-popup__action-menu');
     expect(chevron?.disabled).toBe(false);
     expect(chevron?.getAttribute('aria-expanded')).toBe('false');
@@ -144,7 +146,7 @@ describe('Toolbar popup', () => {
         rows: [{ kind: 'switch', id: 'autoPip', label: 'Auto picture-in-picture', hint: 'A playing video floats when you switch tabs', checked: true }]
       }
     }));
-    const panel = host.querySelector<HTMLElement>('.x-lumno-popup__action-panel');
+    const panel = queryHtmlElement(host, '.x-lumno-popup__action-panel');
     expect(panel?.id).toBe(chevron?.getAttribute('aria-controls'));
     expect(panel?.querySelector('.x-lumno-popup__row-hint')?.textContent).toBe('A playing video floats when you switch tabs');
     const toggle = panel?.querySelector<HTMLInputElement>('input[role="switch"]');
@@ -179,7 +181,7 @@ describe('Toolbar popup', () => {
 
   it('shows an error notice', () => {
     const { host } = mount(createModel({ notice: { text: 'Couldn’t copy the link.', tone: 'error' } }));
-    const notice = host.querySelector<HTMLElement>('.x-lumno-popup__notice');
+    const notice = queryHtmlElement(host, '.x-lumno-popup__notice');
     expect(notice?.getAttribute('role')).toBe('status');
     expect(notice?.dataset.tone).toBe('error');
   });
@@ -189,18 +191,18 @@ describe('Toolbar popup', () => {
     expect(Array.from(host.querySelectorAll('.x-lumno-popup__section-title')).map((title) => title.textContent))
       .toEqual(['Command bar', 'General']);
 
-    const selection = host.querySelector<HTMLInputElement>('[data-setting="selectionQuickActions"] input[role="switch"]');
+    const selection = queryHtmlTag(host, '[data-setting="selectionQuickActions"] input[role="switch"]', 'input');
     expect(selection?.checked).toBe(false);
     expect(host.querySelector(`label[for="${selection?.id}"]`)?.textContent).toBe('Selection quick actions');
     act(() => selection?.click());
     expect(handlers.onSwitch).toHaveBeenCalledWith('selectionQuickActions', true);
 
-    const sizes = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-setting="overlaySize"] [role="radio"]'));
+    const sizes = Array.from(getTags(host, '[data-setting="overlaySize"] [role="radio"]', 'button'));
     expect(sizes.map((option) => option.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
     act(() => sizes[2].click());
     expect(handlers.onSelect).toHaveBeenCalledWith('overlaySize', 'large');
 
-    const themes = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-setting="theme"] [role="radio"]'));
+    const themes = Array.from(getTags(host, '[data-setting="theme"] [role="radio"]', 'button'));
     expect(themes.map((option) => option.tabIndex)).toEqual([-1, -1, 0]);
     act(() => {
       themes[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -212,7 +214,7 @@ describe('Toolbar popup', () => {
     const { host, handlers } = mount(createModel({
       settings: { ...createModel().settings, expanded: false }
     }));
-    const toggle = host.querySelector<HTMLButtonElement>('.x-lumno-popup__settings-toggle');
+    const toggle = queryHtmlTag(host, '.x-lumno-popup__settings-toggle', 'button');
     expect(toggle?.textContent).toBe('Quick settings');
     expect(toggle?.querySelectorAll('.ri-icon')).toHaveLength(1);
     expect(toggle?.getAttribute('aria-expanded')).toBe('false');
@@ -226,7 +228,7 @@ describe('Toolbar popup', () => {
       sync: { label: 'WebDAV sync failed', tone: 'error' }
     }));
     expect(host.querySelector('.x-lumno-popup__version')?.textContent).toBe('Lumno 1.1.3');
-    const links = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-link]'));
+    const links = Array.from(getTags(host, '[data-link]', 'button'));
     expect(links.map((link) => [link.getAttribute('aria-label'), link.dataset.tooltip, link.textContent]))
       .toEqual([
         ['What’s new', 'What’s new', ''],
@@ -234,7 +236,7 @@ describe('Toolbar popup', () => {
         ['Shortcuts', 'Shortcuts', ''],
         ['Settings', 'Settings', '']
       ]);
-    const sync = host.querySelector<HTMLButtonElement>('.x-lumno-popup__sync');
+    const sync = queryHtmlTag(host, '.x-lumno-popup__sync', 'button');
     expect(sync?.getAttribute('aria-label')).toBe('WebDAV sync failed');
     expect(sync?.dataset.tone).toBe('error');
     expect(sync?.querySelector('.ri-error-warning-line')).not.toBeNull();
@@ -247,7 +249,7 @@ describe('Toolbar popup', () => {
 
   it('shows a throttled sync as waiting', () => {
     const { host } = mount(createModel({ sync: { label: 'WebDAV waiting to retry', tone: 'waiting' } }));
-    const sync = host.querySelector<HTMLButtonElement>('.x-lumno-popup__sync');
+    const sync = queryHtmlTag(host, '.x-lumno-popup__sync', 'button');
     expect(sync?.dataset.tone).toBe('waiting');
     expect(sync?.querySelector('.ri-time-line')).not.toBeNull();
   });

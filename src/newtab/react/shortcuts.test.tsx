@@ -9,6 +9,8 @@ import {
   type ShortcutsViewController,
   type ShortcutsViewOptions
 } from './shortcuts';
+import { expectElement, getElement, getTag, required } from '../../../tests/react/dom';
+import { queryHtmlTag } from '../../shared/dom-lookup';
 
 let views: ShortcutsViewController[] = [];
 
@@ -101,7 +103,7 @@ describe('Shortcuts React island', () => {
       queueThemeForTarget
     });
     renderItems(view, [folderEntry]);
-    const tile = options.grid!.querySelector<HTMLButtonElement>('[data-shortcut-id="folder-entry"]')!;
+    const tile = getTag(options.grid!, '[data-shortcut-id="folder-entry"]', 'button');
     expect(tile.getAttribute('aria-haspopup')).toBe('menu');
     expect(tile.getAttribute('data-bookmark-drop-folder-id')).toBe('42');
     expect(tile.querySelector('[data-folder-icon]')).not.toBeNull();
@@ -126,7 +128,7 @@ describe('Shortcuts React island', () => {
     });
     const folder = folderEntry;
     renderItems(view, [folder]);
-    const path = options.grid!.querySelector('path')!;
+    const path = required(required(options.grid, 'grid').querySelector('path'), 'path');
     path.setAttribute('d', 'M9 13');
     renderItems(view, [folder]);
     renderItems(view, [{ ...folder, title: 'Design renamed' }]);
@@ -191,7 +193,7 @@ describe('Shortcuts React island', () => {
       title: 'Docs',
       url: 'https://example.com/docs'
     })]);
-    const grid = options.grid as HTMLElement;
+    const grid = expectElement(options.grid);
     const tile = view.getTiles()[0];
 
     expect(createShortcutsViewApi().implementation).toBe('react');
@@ -392,7 +394,7 @@ describe('Shortcuts React island', () => {
       url: 'https://example.com/'
     })]);
     const tile = view.getTiles()[0];
-    const image = tile.querySelector<HTMLImageElement>('.x-nt-shortcut-favicon');
+    const image = queryHtmlTag(tile, '.x-nt-shortcut-favicon', 'img');
 
     expect(tile.dataset.shortcutCustomIcon).toBe('true');
     expect(image?.src).toContain('data:image/png;base64,Y3VzdG9t');
@@ -425,7 +427,7 @@ describe('Shortcuts React island', () => {
           ? { light: 'rgb(253, 236, 231)', dark: 'rgb(80, 40, 30)', custom: false } : null)
     });
     renderItems(view, [site({ id: 'shopee', title: 'Shopee', url: 'https://shopee.example/' })]);
-    const mask = () => view.getTiles()[0].querySelector<HTMLElement>('.x-nt-shortcut-favicon-mask')!;
+    const mask = () => getElement(view.getTiles()[0], '.x-nt-shortcut-favicon-mask');
     expect(mask().dataset.iconPlate).toBe('true');
     expect(mask().style.getPropertyValue('--x-nt-shortcut-icon-plate-light')).toBe('rgb(253, 236, 231)');
 
@@ -453,19 +455,19 @@ describe('Shortcuts React island', () => {
     });
     renderItems(view, [site({ id: 'shopee', title: 'Shopee', url: 'https://shopee.example/' })]);
     const tile = view.getTiles()[0];
-    const image = tile.querySelector<HTMLImageElement>('img')!;
+    const image = getTag(tile, 'img', 'img');
     act(() => {
       image.dispatchEvent(new Event('load'));
     });
     expect(analyze).not.toHaveBeenCalled();
-    expect(tile.querySelector<HTMLElement>('.x-nt-shortcut-favicon-mask')!.dataset.iconPlate).toBeUndefined();
+    expect(getElement(tile, '.x-nt-shortcut-favicon-mask').dataset.iconPlate).toBeUndefined();
     // The runtime's own load handler runs after React's and clears the mark.
     await act(async () => {
       image.removeAttribute('data-favicon-placeholder');
       await Promise.resolve();
     });
     expect(analyze).toHaveBeenCalledTimes(1);
-    expect(tile.querySelector<HTMLElement>('.x-nt-shortcut-favicon-mask')!.dataset.iconPlate).toBe('true');
+    expect(getElement(tile, '.x-nt-shortcut-favicon-mask').dataset.iconPlate).toBe('true');
   });
 
   it('uses bundled artwork without acquiring an icon from the browser or a remote service', () => {
@@ -577,8 +579,7 @@ describe('Shortcuts React island', () => {
       url: developerConsoleUrl
     })]);
 
-    const image = view.getTiles()[0]
-      .querySelector<HTMLImageElement>('.x-nt-shortcut-favicon');
+    const image = queryHtmlTag(view.getTiles()[0], '.x-nt-shortcut-favicon', 'img');
     expect(image?.getAttribute('src')).toBeNull();
     expect(attachFavicon).toHaveBeenCalledWith(
       image,
@@ -653,7 +654,7 @@ describe('Shortcuts React island', () => {
     renderItems(view, [first, second]);
     const firstTile = view.getTiles()[0];
     const secondTile = view.getTiles()[1];
-    const grid = options.grid as HTMLElement;
+    const grid = expectElement(options.grid);
 
     grid.insertBefore(secondTile, firstTile);
     renderItems(view, [second, first]);
@@ -681,7 +682,7 @@ describe('Shortcuts React island', () => {
         groupHeaders,
         getGroupPlaceholder: () => 'Add a title'
       });
-      const grid = options.grid as HTMLElement;
+      const grid = expectElement(options.grid);
       renderItems(view, items, { grouped: true, groups });
 
       expect(grid.getAttribute('data-shortcut-grouped')).toBe('true');
@@ -701,12 +702,12 @@ describe('Shortcuts React island', () => {
     it('gives an empty group a slot that adds to it and stands in for an empty last group\'s add tile', () => {
       const onGroupAdd = vi.fn();
       const { view, options } = createView({ onGroupAdd, getGroupEmptyLabel: () => 'Add site' });
-      const grid = options.grid as HTMLElement;
+      const grid = expectElement(options.grid);
       const withEmpty = [...groups, { id: 'empty', title: 'Empty' }];
       renderItems(view, items, { grouped: true, groups: withEmpty });
 
       expect(childSummary(grid)).toEqual(['#g0', 'a', '#work', 'b', 'c', '#empty', 'add', 'add']);
-      const slot = grid.querySelector<HTMLButtonElement>('.x-nt-shortcut-group-empty')!;
+      const slot = getTag(grid, '.x-nt-shortcut-group-empty', 'button');
       expect(slot.dataset.shortcutGroupId).toBe('empty');
       expect(slot.getAttribute('aria-label')).toBe('Add site');
       expect(view.getAddButton()?.hidden).toBe(true);
@@ -720,7 +721,7 @@ describe('Shortcuts React island', () => {
 
     it('hugs the longest group row so short groups stay centered', () => {
       const { view, options } = createView({ maxShortcuts: 50 });
-      const grid = options.grid as HTMLElement;
+      const grid = expectElement(options.grid);
       const columns = () => grid.style.getPropertyValue('--x-nt-shortcut-grouped-columns');
 
       renderItems(view, items, { grouped: true, groups });
@@ -735,7 +736,7 @@ describe('Shortcuts React island', () => {
 
     it('fits the grouped grid to the longest row as a dragged tile joins or leaves it', () => {
       const { view, options } = createView({ maxShortcuts: 50 });
-      const grid = options.grid as HTMLElement;
+      const grid = expectElement(options.grid);
       const columns = () => grid.style.getPropertyValue('--x-nt-shortcut-grouped-columns');
       const others = [
         site({ id: 'd', title: 'D', url: 'https://d.example/', groupId: 'g0' }),
@@ -774,8 +775,8 @@ describe('Shortcuts React island', () => {
       const onGroupMenu = vi.fn();
       const { view, options } = createView({ onGroupMenu, getGroupActionsLabel: (title) => `${title} actions` });
       renderItems(view, items, { grouped: true, groups });
-      const header = (options.grid as HTMLElement).querySelector<HTMLElement>('[data-shortcut-group-id="work"]')!;
-      const more = header.querySelector<HTMLButtonElement>('.x-nt-shortcut-group-more')!;
+      const header = getElement((options.grid as HTMLElement), '[data-shortcut-group-id="work"]');
+      const more = getTag(header, '.x-nt-shortcut-group-more', 'button');
 
       expect(more.getAttribute('aria-label')).toBe('工作 actions');
       act(() => { more.click(); });
@@ -789,14 +790,14 @@ describe('Shortcuts React island', () => {
     it('asks to rename a group from a double-clicked title or an untitled group\'s placeholder', () => {
       const onGroupRename = vi.fn();
       const { view, options } = createView({ onGroupRename });
-      const grid = options.grid as HTMLElement;
+      const grid = expectElement(options.grid);
       renderItems(view, items, { grouped: true, groups });
 
-      const title = grid.querySelector<HTMLElement>('[data-shortcut-group-id="work"] .x-nt-shortcut-group-title')!;
+      const title = getElement(grid, '[data-shortcut-group-id="work"] .x-nt-shortcut-group-title');
       act(() => { title.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })); });
       expect(onGroupRename).toHaveBeenLastCalledWith('work', title);
 
-      const placeholder = grid.querySelector<HTMLButtonElement>('.x-nt-shortcut-group-title--placeholder')!;
+      const placeholder = getTag(grid, '.x-nt-shortcut-group-title--placeholder', 'button');
       act(() => { placeholder.click(); });
       expect(onGroupRename).toHaveBeenLastCalledWith('g0', placeholder);
       expect(grid.querySelector('input')).toBeNull();

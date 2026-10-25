@@ -10,6 +10,8 @@ import {
   type BookmarksViewController,
   type BookmarksViewOptions
 } from './bookmarks';
+import { expectElement, required } from '../../../tests/react/dom';
+import { queryHtmlTag } from '../../shared/dom-lookup';
 
 let views: BookmarksViewController[] = [];
 
@@ -186,7 +188,7 @@ describe('Bookmarks React island', () => {
 
     const initial = renderItems(view, [first, second]);
     const initialCards = view.getCards().slice();
-    const grid = options.grid as HTMLElement;
+    const grid = expectElement(options.grid);
 
     expect(initial.changed).toBe(true);
     expect(grid.dataset.reactIsland).toBe('bookmarks');
@@ -311,7 +313,7 @@ describe('Bookmarks React island', () => {
     const folder: BookmarkItem = { id: 'design', parentId: '1', index: 0, type: 'folder', title: 'Design' };
     renderItems(view, [folder], { viewMode: 'top', menuMode: true });
     const card = view.getCards()[0];
-    const path = card.querySelector('path')!;
+    const path = required(card.querySelector('path'), 'path');
     card.setAttribute('aria-expanded', 'true');
     card._xSetBookmarkMenuVisualActive?.(true);
     path.setAttribute('d', 'M9 13');
@@ -407,9 +409,7 @@ describe('Bookmarks React island', () => {
       url: 'https://example.com/docs'
     }]);
     const card = view.getCards()[0];
-    const copyButton = card.querySelector<HTMLButtonElement>(
-      '.x-nt-bookmark-copy-action'
-    );
+    const copyButton = queryHtmlTag(card, '.x-nt-bookmark-copy-action', 'button');
 
     act(() => {
       card.dispatchEvent(new MouseEvent('click', {

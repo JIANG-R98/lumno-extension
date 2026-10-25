@@ -4,6 +4,8 @@ import {
   createRecentHistoryDialog,
   type RecentHistoryDialogController
 } from './recent-history-dialog';
+import { expectTag, getTags } from '../../../tests/react/dom';
+import { queryHtmlTag } from '../../shared/dom-lookup';
 
 let controller: RecentHistoryDialogController | null = null;
 
@@ -42,7 +44,7 @@ describe('recent change history dialog', () => {
     expect(Array.from(document.querySelectorAll('.x-nt-recent-history-version')).map((node) => node.textContent))
       .toEqual(expect.arrayContaining([expect.stringContaining('Episode B'), expect.stringContaining('Episode A')]));
 
-    const buttons = document.querySelectorAll<HTMLButtonElement>('[data-history-index]');
+    const buttons = getTags(document, '[data-history-index]', 'button');
     expect(buttons[0].closest('.x-nt-recent-history-version-actions')?.querySelector('time')).not.toBeNull();
     await act(async () => buttons[1].click());
     expect(restore).toHaveBeenCalledWith(
@@ -74,8 +76,8 @@ describe('recent change history dialog', () => {
       });
     });
 
-    const host = controller?.element as HTMLDivElement;
-    const restoreButton = host.querySelector<HTMLButtonElement>('[data-history-index="0"]');
+    const host = expectTag(controller?.element, 'div');
+    const restoreButton = queryHtmlTag(host, '[data-history-index="0"]', 'button');
     await act(async () => restoreButton?.click());
     expect(host.hidden).toBe(false);
     expect(host.dataset.state).toBe('restored');

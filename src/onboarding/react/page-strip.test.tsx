@@ -5,6 +5,7 @@ import {
   createPageStripController,
   type PageStripController
 } from './page-strip';
+import { getTags } from '../../../tests/react/dom';
 
 let controllers: PageStripController[] = [];
 
@@ -49,7 +50,7 @@ describe('Onboarding page strip React island', () => {
     renderPage(controller);
 
     const segments = Array.from(
-      host.querySelectorAll<HTMLButtonElement>('.page-strip-segment')
+      getTags(host, '.page-strip-segment', 'button')
     );
     expect(createPageStripApi().implementation).toBe('react');
     expect(host.dataset.reactIsland).toBe('onboarding-page-strip');
@@ -89,7 +90,7 @@ describe('Onboarding page strip React island', () => {
     renderPage(controller);
 
     act(() => {
-      host.querySelectorAll<HTMLButtonElement>('button')[2].click();
+      getTags(host, 'button', 'button')[2].click();
     });
 
     expect(onNavigate).toHaveBeenCalledTimes(1);

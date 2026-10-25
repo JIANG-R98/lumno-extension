@@ -5,6 +5,8 @@ import {
   createTabSwitcherViewApi,
   type TabSwitcherViewController
 } from './tab-switcher';
+import { getTags } from '../../../tests/react/dom';
+import { closestHtmlElement, queryHtmlTag } from '../dom-lookup';
 
 let controllers: TabSwitcherViewController[] = [];
 
@@ -136,17 +138,13 @@ describe('Overlay tab switcher React island', () => {
       first.querySelectorAll('img[data-kind="thumbnail"]')
     ).toHaveLength(1);
     expect(
-      first.querySelector<HTMLImageElement>(
-        'img[data-kind="thumbnail"]'
-      )?.src
+      queryHtmlTag(first, 'img[data-kind="thumbnail"]', 'img')?.src
     ).toContain('bmV3');
   });
 
   it('closes a card from its own close button without activating it', () => {
     const { controller, shadow, onActivate, onClose } = createView();
-    const closeButtons = shadow.querySelectorAll<HTMLButtonElement>(
-      '.x-tab-switcher-close'
-    );
+    const closeButtons = getTags(shadow, '.x-tab-switcher-close', 'button');
 
     expect(controller.panel?.dataset.closePlacement).toBe('left');
     expect(closeButtons).toHaveLength(2);
@@ -163,7 +161,7 @@ describe('Overlay tab switcher React island', () => {
     });
     expect(closeButtons[1].disabled).toBe(true);
     expect(
-      closeButtons[1].closest<HTMLElement>('.x-tab-switcher-item')
+      closestHtmlElement(closeButtons[1], '.x-tab-switcher-item')
         ?.dataset.closing
     ).toBe('true');
 

@@ -6,6 +6,8 @@ import {
   type BodyCopyController,
   type BodyCopyRenderModel
 } from './body-copy';
+import { getElements } from '../../../tests/react/dom';
+import { queryHtmlElement } from '../../shared/dom-lookup';
 
 let controllers: BodyCopyController[] = [];
 
@@ -60,7 +62,7 @@ describe('Onboarding body copy React island', () => {
       'Search from any page.'
     );
     expect(
-      host.querySelector<HTMLElement>('#onboarding-shortcut-label')?.hidden
+      queryHtmlElement(host, '#onboarding-shortcut-label')?.hidden
     ).toBe(true);
     expect(host.querySelector('#onboarding-body-suffix')?.textContent).toBe('');
     expect(host.querySelector('#onboarding-body-note')?.textContent).toBe(
@@ -77,11 +79,9 @@ describe('Onboarding body copy React island', () => {
       value: 'Press {shortcut} to open Lumno.'
     });
 
-    const shortcut = host.querySelector<HTMLElement>(
-      '#onboarding-shortcut-label'
-    );
+    const shortcut = queryHtmlElement(host, '#onboarding-shortcut-label');
     const keycaps = Array.from(
-      host.querySelectorAll<HTMLElement>('.shortcut-keycap')
+      getElements(host, '.shortcut-keycap')
     );
 
     expect(shortcut?.hidden).toBe(false);
