@@ -4,7 +4,7 @@ import * as Settings from '../domain/settings';
 import type { StorageItems } from '../domain/storage-port';
 import { createGeneralShortcutsSection } from './options-general-shortcuts-section';
 import type { SettingSpec } from './options-setting-bindings';
-import { createSettingsControlsApi } from './react/settings-controls';
+import { createGeneralShortcutsSectionController } from './react/general-shortcuts-section';
 import { getElement, getTag, getTags } from '../../tests/react/dom';
 
 const sections: Array<{ destroy(): void }> = [];
@@ -16,8 +16,7 @@ function setUp(response: unknown = { ok: true }) {
   const sent: unknown[] = [];
   const toasts: Array<[string, boolean]> = [];
   const section = createGeneralShortcutsSection({
-    host,
-    optionsSettingsControlsApi: createSettingsControlsApi(),
+    view: (handlers) => createGeneralShortcutsSectionController(host, handlers),
     storageArea: { set: (items) => writes.push(items) },
     SETTINGS: Settings,
     runtime: {

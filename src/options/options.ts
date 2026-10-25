@@ -21,6 +21,7 @@ import * as OPTIONS_GENERAL_GLOBAL_SECTION from './options-general-global-sectio
 import * as OPTIONS_GENERAL_NEWTAB_SECTION from './options-general-newtab-section';
 import * as OPTIONS_GENERAL_SEARCH_SECTION from './options-general-search-section';
 import * as OPTIONS_GENERAL_SHORTCUTS_SECTION from './options-general-shortcuts-section';
+import * as OPTIONS_GENERAL_TAB from './options-general-tab';
 import * as OPTIONS_LABS_SECTION from './options-labs-section';
 import * as OPTIONS_LANGUAGE from './options-language';
 import * as OPTIONS_NAVIGATION from './options-navigation';
@@ -476,9 +477,11 @@ import * as OPTIONS_STATE from './options-state';
     navigatorObj: navigator,
     settingKeys: SETTINGS.CHROME_SYNC_STORAGE_KEYS
   });
+  const generalTab = OPTIONS_GENERAL_TAB.createGeneralTab(optionsSettingsControlsApi.createGeneralTabController(
+    queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="general"]')
+  ));
   const generalGlobalSection = OPTIONS_GENERAL_GLOBAL_SECTION.createGeneralGlobalSection({
-    host: getHtmlElement(document, '_x_extension_general_global_section_2026_unique_'),
-    optionsSettingsControlsApi,
+    view: generalTab.global,
     storageArea: optionsState.storageArea,
     SETTINGS,
     runtime: chrome.runtime,
@@ -660,8 +663,7 @@ import * as OPTIONS_STATE from './options-state';
   // Drawn before the switches below are set up, which mark the rows this
   // browser cannot honor.
   const generalFeaturesSection = OPTIONS_GENERAL_FEATURES_SECTION.createGeneralFeaturesSection({
-    host: getHtmlElement(document, '_x_extension_general_features_section_2026_unique_'),
-    optionsSettingsControlsApi,
+    view: generalTab.features,
     storageArea: optionsState.storageArea,
     SETTINGS,
     getMessage,
@@ -673,8 +675,7 @@ import * as OPTIONS_STATE from './options-state';
     }) || (optionsState.isMacPlatform ? '⌥Q' : 'Alt+Q')
   });
   const generalShortcutsSection = OPTIONS_GENERAL_SHORTCUTS_SECTION.createGeneralShortcutsSection({
-    host: getHtmlElement(document, '_x_extension_general_shortcuts_section_2026_unique_'),
-    optionsSettingsControlsApi,
+    view: generalTab.shortcuts,
     storageArea: optionsState.storageArea,
     SETTINGS,
     runtime: chrome.runtime,
@@ -682,15 +683,13 @@ import * as OPTIONS_STATE from './options-state';
     showToast
   });
   const generalNewtabSection = OPTIONS_GENERAL_NEWTAB_SECTION.createGeneralNewtabSection({
-    host: getHtmlElement(document, '_x_extension_general_newtab_section_2026_unique_'),
-    optionsSettingsControlsApi,
+    view: generalTab.newtab,
     storageArea: optionsState.storageArea,
     SETTINGS,
     getMessage
   });
   const generalSearchSection = OPTIONS_GENERAL_SEARCH_SECTION.createGeneralSearchSection({
-    host: getHtmlElement(document, '_x_extension_general_search_section_2026_unique_'),
-    optionsSettingsControlsApi,
+    view: generalTab.search,
     storageArea: optionsState.storageArea,
     SETTINGS,
     orderController: optionsState.searchSourceOrderController,

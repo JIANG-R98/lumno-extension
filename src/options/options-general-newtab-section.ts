@@ -4,13 +4,13 @@
 import type * as Settings from '../domain/settings';
 import type { NewtabOpenInNewTab, NewtabOpenInNewTabSurface } from '../domain/settings';
 import { createSectionSetting, type SectionSettingBinder, type SectionSettingStorage } from './options-section-setting';
+import type { SectionView } from './options-general-tab';
 import type { GetMessage } from './options-types';
-import type { createSettingsControlsApi } from './react/settings-controls';
-import type { SettingsRowModel } from './react/settings-rows-view';
+import type { SettingsRowModel, SettingsRowsHandlers, SettingsSectionModel } from './react/settings-rows-view';
 
 interface GeneralNewtabSectionDeps {
-  host: HTMLElement | null;
-  optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>, 'createSettingsSectionController'>;
+  // Draws the section; the General tab hands over its part of the tab's view.
+  view(handlers: SettingsRowsHandlers): SectionView<SettingsSectionModel>;
   storageArea: SectionSettingStorage | null;
   SETTINGS: Pick<typeof Settings,
     'PROGRESS_TRACKING_ENABLED_STORAGE_KEY' | 'NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY' |
@@ -27,7 +27,7 @@ const OPEN_IN_NEW_TAB_SURFACES: ReadonlyArray<{ surface: NewtabOpenInNewTabSurfa
 ];
 
 function createGeneralNewtabSection(deps: GeneralNewtabSectionDeps) {
-  const { host, optionsSettingsControlsApi, storageArea, SETTINGS, getMessage } = deps;
+  const { view, storageArea, SETTINGS, getMessage } = deps;
 
   const render = (): void => controller.render({ rows: getRows() });
   // Both are shown as stored; Options never rewrites them on its own.
@@ -44,7 +44,7 @@ function createGeneralNewtabSection(deps: GeneralNewtabSectionDeps) {
     repairOnChange: false
   }, storageArea, () => render());
 
-  const controller = optionsSettingsControlsApi.createSettingsSectionController(host, {
+  const controller = view({
     onToggle(key, checked) {
       if (key === progressTracking.storageKey) {
         progressTracking.change(checked);

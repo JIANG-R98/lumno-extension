@@ -8,14 +8,14 @@ import type { StorageItems } from '../domain/storage-port';
 import * as LumnoMessaging from '../platform/messaging';
 import type { MessageRuntime } from '../platform/messaging';
 import { createSectionSetting, type SectionSettingBinder } from './options-section-setting';
+import type { SectionView } from './options-general-tab';
 import type { GetMessage } from './options-types';
-import type { GeneralShortcutsSectionModel } from './react/general-shortcuts-section';
-import type { createSettingsControlsApi } from './react/settings-controls';
+import type { GeneralShortcutsSectionHandlers, GeneralShortcutsSectionModel } from './react/general-shortcuts-section';
 import type { ShortcutReferenceRenderModel } from './react/shortcut-reference';
 
 interface GeneralShortcutsSectionDeps {
-  host: HTMLElement | null;
-  optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>, 'createGeneralShortcutsSectionController'>;
+  // Draws the section; the General tab hands over its part of the tab's view.
+  view(handlers: GeneralShortcutsSectionHandlers): SectionView<GeneralShortcutsSectionModel>;
   storageArea: { set(items: StorageItems): unknown } | null;
   SETTINGS: Pick<typeof Settings,
     'RESTRICTED_ACTION_STORAGE_KEY' | 'RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY' |
@@ -31,7 +31,7 @@ function normalizeRestrictedAction(value: unknown): RestrictedAction {
 }
 
 function createGeneralShortcutsSection(deps: GeneralShortcutsSectionDeps) {
-  const { host, optionsSettingsControlsApi, storageArea, SETTINGS, runtime, getMessage, showToast } = deps;
+  const { view, storageArea, SETTINGS, runtime, getMessage, showToast } = deps;
 
   const render = (): void => controller.render(getModel());
   const restrictedAction = createSectionSetting({
@@ -50,7 +50,7 @@ function createGeneralShortcutsSection(deps: GeneralShortcutsSectionDeps) {
 
   const showError = (): void => showToast(getMessage('toast_error', '操作失败，请重试。'), true);
 
-  const controller = optionsSettingsControlsApi.createGeneralShortcutsSectionController(host, {
+  const controller = view({
     onOpenShortcutsPage() {
       LumnoMessaging.sendBackgroundMessage(runtime, { action: 'openExtensionShortcutsPage' }, (response) => {
         if (runtime.lastError || !response || response.ok === false) {

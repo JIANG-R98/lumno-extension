@@ -11,8 +11,7 @@ import {
 import { ToggleControl, type ToggleControlRenderModel } from './toggle-control';
 import { createSettingToggleRowsController } from './setting-rows';
 import { createSettingsSectionController } from './settings-rows-view';
-import { createGeneralGlobalSectionController } from './general-global-section';
-import { createGeneralShortcutsSectionController } from './general-shortcuts-section';
+import { createGeneralTabController } from './general-tab';
 
 export type { RangeSliderControlRenderModel, RequiredCheckboxGroupRenderModel, RequiredCheckboxItemModel, ToggleControlRenderModel };
 
@@ -96,8 +95,7 @@ export function createRangeSliderControlController(
 export function createSettingsControlsApi() {
   return Object.freeze({
     implementation: 'react',
-    createGeneralGlobalSectionController,
-    createGeneralShortcutsSectionController,
+    createGeneralTabController,
     createRangeSliderControlController,
     createRequiredCheckboxGroupController,
     createSettingToggleRowsController,

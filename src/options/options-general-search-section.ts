@@ -6,14 +6,14 @@ import type { SearchSourceType } from '../domain/search/types';
 import type * as Settings from '../domain/settings';
 import type { StorageItems } from '../domain/storage-port';
 import { createSectionSetting, type SectionSettingBinder } from './options-section-setting';
+import type { SectionView } from './options-general-tab';
 import type { createSearchSourceOrderController } from './options-search-source-order';
 import type { GetMessage } from './options-types';
-import type { createSettingsControlsApi } from './react/settings-controls';
-import type { SettingsRowModel } from './react/settings-rows-view';
+import type { SettingsRowModel, SettingsRowsHandlers, SettingsSectionModel } from './react/settings-rows-view';
 
 interface GeneralSearchSectionDeps {
-  host: HTMLElement | null;
-  optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>, 'createSettingsSectionController'>;
+  // Draws the section; the General tab hands over its part of the tab's view.
+  view(handlers: SettingsRowsHandlers): SectionView<SettingsSectionModel>;
   storageArea: {
     get(keys: string[], callback: (items: StorageItems | undefined) => void): unknown;
     set(items: StorageItems): unknown;
@@ -41,8 +41,7 @@ const SOURCE_TYPES: ReadonlyArray<{ value: SearchSourceType; id: string; labelKe
 
 function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
   const {
-    host,
-    optionsSettingsControlsApi,
+    view,
     storageArea,
     SETTINGS,
     orderController,
@@ -94,7 +93,7 @@ function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
     return orderController.sortLocalSourceTypes(SOURCE_TYPES.map((item) => item.value));
   }
 
-  const controller = optionsSettingsControlsApi.createSettingsSectionController(host, {
+  const controller = view({
     onToggle(key, checked) {
       toggles.find((entry) => entry.storageKey === key)?.change(checked);
     },

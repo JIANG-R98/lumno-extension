@@ -4,7 +4,7 @@ import * as Settings from '../domain/settings';
 import type { StorageItems } from '../domain/storage-port';
 import { createGeneralGlobalSection } from './options-general-global-section';
 import type { SettingSpec } from './options-setting-bindings';
-import { createSettingsControlsApi } from './react/settings-controls';
+import { createGeneralGlobalSectionController } from './react/general-global-section';
 import { getElement, getTag, getTags } from '../../tests/react/dom';
 
 const sections: Array<{ destroy(): void }> = [];
@@ -18,8 +18,7 @@ function setUp() {
   const sent: unknown[] = [];
   const applyLanguage = vi.fn();
   const section = createGeneralGlobalSection({
-    host,
-    optionsSettingsControlsApi: createSettingsControlsApi(),
+    view: (handlers) => createGeneralGlobalSectionController(host, handlers),
     storageArea: { set: (items) => writes.push(items) },
     SETTINGS: Settings,
     runtime: {

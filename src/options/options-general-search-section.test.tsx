@@ -4,7 +4,7 @@ import * as Settings from '../domain/settings';
 import type { StorageItems } from '../domain/storage-port';
 import { createGeneralSearchSection } from './options-general-search-section';
 import type { SettingSpec } from './options-setting-bindings';
-import { createSettingsControlsApi } from './react/settings-controls';
+import { createSettingsSectionController } from './react/settings-rows-view';
 import { getElement, getTag, getTags } from '../../tests/react/dom';
 
 const sections: Array<{ destroy(): void }> = [];
@@ -35,8 +35,7 @@ function setUp(stored: StorageItems = {}) {
   };
   const hideTooltip = vi.fn();
   const section = createGeneralSearchSection({
-    host,
-    optionsSettingsControlsApi: createSettingsControlsApi(),
+    view: (handlers) => createSettingsSectionController(host, handlers),
     storageArea: {
       get: (keys, callback) => callback(Object.fromEntries(keys.filter((key) => key in stored).map((key) => [key, stored[key]]))),
       set: (items) => writes.push(items)

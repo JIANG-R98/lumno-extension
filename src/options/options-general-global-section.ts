@@ -7,15 +7,15 @@ import type { StorageItems } from '../domain/storage-port';
 import * as LumnoMessaging from '../platform/messaging';
 import type { MessageRuntime } from '../platform/messaging';
 import { createSectionSetting, type SectionSettingBinder } from './options-section-setting';
+import type { SectionView } from './options-general-tab';
 import type { GetMessage } from './options-types';
 import type { FeedbackSupportRenderModel } from './react/feedback-support';
-import type { GeneralGlobalSectionModel } from './react/general-global-section';
-import type { createSettingsControlsApi } from './react/settings-controls';
+import type { GeneralGlobalSectionHandlers, GeneralGlobalSectionModel } from './react/general-global-section';
 import type { TranslationHelpRenderModel } from './react/translation-help';
 
 interface GeneralGlobalSectionDeps {
-  host: HTMLElement | null;
-  optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>, 'createGeneralGlobalSectionController'>;
+  // Draws the section; the General tab hands over its part of the tab's view.
+  view(handlers: GeneralGlobalSectionHandlers): SectionView<GeneralGlobalSectionModel>;
   storageArea: { set(items: StorageItems): unknown } | null;
   SETTINGS: Pick<typeof Settings,
     'UPDATE_NOTICE_ENABLED_STORAGE_KEY' | 'UI_LOCALES' | 'normalizeUpdateNoticeEnabled' | 'isMachineTranslatedLocale'>;
@@ -31,8 +31,7 @@ const LANGUAGE_SELECT_ID = '_x_extension_language_select_2024_unique_';
 
 function createGeneralGlobalSection(deps: GeneralGlobalSectionDeps) {
   const {
-    host,
-    optionsSettingsControlsApi,
+    view,
     storageArea,
     SETTINGS,
     runtime,
@@ -54,7 +53,7 @@ function createGeneralGlobalSection(deps: GeneralGlobalSectionDeps) {
   let languageMode = 'system';
   let languageLocale = '';
 
-  const controller = optionsSettingsControlsApi.createGeneralGlobalSectionController(host, {
+  const controller = view({
     onOpenOnboarding() {
       LumnoMessaging.sendBackgroundMessage(runtime, { action: 'openOnboardingPage' }, (response) => {
         if (runtime.lastError || !response || response.ok === false) {

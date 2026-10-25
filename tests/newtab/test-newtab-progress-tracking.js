@@ -320,8 +320,10 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
     await options.settle(80);
     const toggle = options.byId('_x_extension_progress_tracking_toggle_2026_unique_');
     assert.deepStrictEqual([toggle.type, toggle.checked], ['checkbox', true], 'the switch is on by default');
-    const section = options.byId('_x_extension_general_newtab_section_2026_unique_');
-    assert(section && section.contains(toggle) && section.closest('[data-content="general"]'),
+    const general = options.document.querySelector('[data-content="general"]');
+    const heading = Array.from(general.querySelectorAll('._x_extension_section_title_2024_unique_'))
+      .find((node) => node.textContent === '新标签页设置');
+    assert(heading && general.contains(toggle) && (heading.compareDocumentPosition(toggle) & 4),
       'the switch sits in the New Tab section of General settings');
     options.close();
     const settings = require('../../src/domain/settings.ts');

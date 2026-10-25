@@ -4,13 +4,13 @@
 // the rows; this keeps their values in step with storage.
 import type * as Settings from '../domain/settings';
 import { createSectionSetting, type SectionSettingBinder, type SectionSettingStorage } from './options-section-setting';
+import type { SectionView } from './options-general-tab';
 import type { GetMessage } from './options-types';
-import type { createSettingsControlsApi } from './react/settings-controls';
-import type { SettingsLinkModel, SettingsRowModel } from './react/settings-rows-view';
+import type { SettingsLinkModel, SettingsRowModel, SettingsRowsHandlers, SettingsSectionModel } from './react/settings-rows-view';
 
 interface GeneralFeaturesSectionDeps {
-  host: HTMLElement | null;
-  optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>, 'createSettingsSectionController'>;
+  // Draws the section; the General tab hands over its part of the tab's view.
+  view(handlers: SettingsRowsHandlers): SectionView<SettingsSectionModel>;
   storageArea: SectionSettingStorage | null;
   SETTINGS: Pick<typeof Settings,
     'AUTO_PIP_ENABLED_STORAGE_KEY' | 'TAB_SWITCHER_ENABLED_STORAGE_KEY' |
@@ -51,8 +51,7 @@ const AUTO_PIP_UNSUPPORTED_BROWSER = 'firefox';
 
 function createGeneralFeaturesSection(deps: GeneralFeaturesSectionDeps) {
   const {
-    host,
-    optionsSettingsControlsApi,
+    view,
     storageArea,
     SETTINGS,
     getMessage,
@@ -92,7 +91,7 @@ function createGeneralFeaturesSection(deps: GeneralFeaturesSectionDeps) {
   // Shown once the tab switcher's shortcut is known.
   let ctrlTabLink: SettingsLinkModel | null = null;
 
-  const controller = optionsSettingsControlsApi.createSettingsSectionController(host, {
+  const controller = view({
     onToggle(key, checked) {
       const target = toggles.find((entry) => entry.storageKey === key);
       if (!target || (target === autoPip && autoPipUnsupported)) {

@@ -4,7 +4,7 @@ import * as Settings from '../domain/settings';
 import type { StorageItems } from '../domain/storage-port';
 import { createGeneralNewtabSection } from './options-general-newtab-section';
 import type { SettingSpec } from './options-setting-bindings';
-import { createSettingsControlsApi } from './react/settings-controls';
+import { createSettingsSectionController } from './react/settings-rows-view';
 import { getTag, getTags } from '../../tests/react/dom';
 
 const sections: Array<{ destroy(): void }> = [];
@@ -16,8 +16,7 @@ function setUp() {
   document.body.appendChild(host);
   const writes: StorageItems[] = [];
   const section = createGeneralNewtabSection({
-    host,
-    optionsSettingsControlsApi: createSettingsControlsApi(),
+    view: (handlers) => createSettingsSectionController(host, handlers),
     storageArea: { set: (items) => writes.push(items) },
     SETTINGS: Settings,
     getMessage: (_key, fallback) => fallback
