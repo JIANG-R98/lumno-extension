@@ -178,17 +178,7 @@ import * as OPTIONS_STATE from './options-state';
   const siteSearchBuiltinList = getHtmlElement(document, '_x_extension_site_search_builtin_list_2024_unique_');
   const siteSearchAiGroup = getHtmlElement(document, '_x_extension_site_search_ai_group_2026_unique_');
   const siteSearchAiBuiltinList = getHtmlElement(document, '_x_extension_site_search_ai_builtin_list_2026_unique_');
-  const siteSearchKeyInput = getHtmlTag(document, '_x_extension_site_search_key_2024_unique_', 'input');
-  const siteSearchNameInput = getHtmlTag(document, '_x_extension_site_search_name_2024_unique_', 'input');
-  const siteSearchTemplateInput = getHtmlTag(document, '_x_extension_site_search_template_2024_unique_', 'input');
-  const siteSearchInsertQueryButton = getHtmlElement(document, '_x_extension_site_search_insert_query_2026_unique_');
-  const siteSearchAliasInput = getHtmlTag(document, '_x_extension_site_search_alias_2024_unique_', 'input');
-  const siteSearchCategoryButtons = queryHtmlElements(document, 'button[data-site-search-category]');
   const siteSearchForm = queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="shortcuts"] ._x_extension_shortcut_form_2024_unique_');
-  const siteSearchFormTrigger = getHtmlElement(document, '_x_extension_site_search_expand_2024_unique_');
-  const siteSearchAddButton = getHtmlElement(document, '_x_extension_site_search_add_2024_unique_');
-  const siteSearchCancelButton = getHtmlElement(document, '_x_extension_site_search_cancel_2024_unique_');
-  const siteSearchError = getHtmlElement(document, '_x_extension_site_search_error_2024_unique_');
   const builtinResetButton = getHtmlElement(document, '_x_extension_builtin_reset_2024_unique_');
   const customClearButton = getHtmlTag(document, '_x_extension_custom_clear_2024_unique_', 'button');
   const toastElement = getHtmlElement(document, '_x_extension_toast_2024_unique_');
@@ -397,27 +387,9 @@ import * as OPTIONS_STATE from './options-state';
     isSearchEngineSiteSearchProvider,
     normalizeSiteSearchProvider,
     findSiteSearchKeyConflict,
-    setSiteSearchError,
-    setLegacySiteSearchDraftCategory,
-    setSiteSearchFormExpanded,
-    setEditingState,
-    insertSiteSearchQueryToken,
-    attachSaveButtonAnimation,
-    suspendSiteSearchRefresh,
-    resetSiteSearchForm
+    suspendSiteSearchRefresh
   } = OPTIONS_SITE_SEARCH_FORM.createSiteSearchForm({
     SEARCH_UTILS,
-    siteSearchError,
-    siteSearchCategoryButtons,
-    siteSearchForm,
-    siteSearchFormTrigger,
-    siteSearchCancelButton,
-    getMessage: (...args) => getMessage(...args),
-    siteSearchKeyInput,
-    siteSearchAddButton,
-    siteSearchTemplateInput,
-    siteSearchNameInput,
-    siteSearchAliasInput,
     optionsState
   });
   // The keys each list shows right now, in order, for the move buttons.
@@ -499,7 +471,6 @@ import * as OPTIONS_STATE from './options-state';
     popconfirmLanguageRefreshers,
     saveDisabledSiteSearchKeys,
     refreshSiteSearchProviders,
-    resetSiteSearchForm,
     showToast,
     getSiteSearchBuiltinKey: (...args) => getSiteSearchBuiltinKey(...args),
     saveSiteSearchProviderState,
@@ -530,7 +501,6 @@ import * as OPTIONS_STATE from './options-state';
     renderFeedbackSupport,
     renderTranslationHelp,
     refreshCustomSelects,
-    setEditingState,
     updateBuiltinResetTooltip,
     updateCustomClearTooltip,
     updateAggregateSearchClearTooltip,
@@ -919,8 +889,7 @@ import * as OPTIONS_STATE from './options-state';
 
   const {
     getActiveBuiltinSiteSearchProviders,
-    getSiteSearchBuiltinKey,
-    normalizeAliases
+    getSiteSearchBuiltinKey
   } = SITE_SEARCH;
   const aggregateSearchModel = AGGREGATE_SEARCH.createAggregateSearchModel({
     aggregateSearchStore: AGGREGATE_SEARCH_STORE
@@ -1742,8 +1711,6 @@ import * as OPTIONS_STATE from './options-state';
     closeActivePopconfirm({ restoreFocus: true });
   });
 
-  setSiteSearchFormExpanded(false);
-
   storageChanges.on(AGGREGATE_SEARCH_STORAGE_KEY, (changes) => {
     getAggregateSearchStateCoordinator().applyStorageChange(
       changes[AGGREGATE_SEARCH_STORAGE_KEY].newValue
@@ -1778,32 +1745,10 @@ import * as OPTIONS_STATE from './options-state';
   }
 
   OPTIONS_SITE_SEARCH_EVENTS.createSiteSearchEvents({
-    siteSearchCancelButton,
-    resetSiteSearchForm,
-    siteSearchFormTrigger,
-    setSiteSearchFormExpanded,
-    siteSearchInsertQueryButton,
-    insertSiteSearchQueryToken,
-    siteSearchCategoryButtons,
-    setLegacySiteSearchDraftCategory,
-    siteSearchAddButton,
-    attachSaveButtonAnimation,
-    suspendSiteSearchRefresh,
-    setSiteSearchError,
-    siteSearchKeyInput,
-    siteSearchNameInput,
-    siteSearchTemplateInput,
-    normalizeAliases,
-    siteSearchAliasInput,
     getMessage,
-    findSiteSearchKeyConflict,
-    normalizeSiteSearchTemplate,
     getSiteSearchBuiltinKey,
-    normalizeSiteSearchProvider,
-    createPersistentId,
     saveSiteSearchProviderState,
     renderSiteSearchList,
-    refreshSiteSearchProviders,
     showToast,
     builtinResetButton,
     attachPopconfirm,

@@ -32,7 +32,6 @@ interface LanguageState {
   currentLanguageMode: string;
   storageArea: BatchedStorageArea | null;
   isMacPlatform: boolean;
-  editingSiteSearchKey: string | null;
   currentActiveSettingsTab: SettingsTabKey;
   currentNewtabWidthMode: NewtabWidthMode;
   currentOverlaySizeMode: OverlaySizeMode;
@@ -79,7 +78,6 @@ interface LanguageDeps {
   renderFeedbackSupport(): void;
   renderTranslationHelp(): void;
   refreshCustomSelects(): void;
-  setEditingState(key: string | null): void;
   updateBuiltinResetTooltip(): void;
   updateCustomClearTooltip(): void;
   updateAggregateSearchClearTooltip(): void;
@@ -132,7 +130,6 @@ function createLanguage(deps: LanguageDeps) {
     renderFeedbackSupport,
     renderTranslationHelp,
     refreshCustomSelects,
-    setEditingState,
     updateBuiltinResetTooltip,
     updateCustomClearTooltip,
     updateAggregateSearchClearTooltip,
@@ -348,7 +345,6 @@ function createLanguage(deps: LanguageDeps) {
       renderFeedbackSupport();
       renderTranslationHelp();
       refreshCustomSelects();
-      setEditingState(optionsState.editingSiteSearchKey);
       updateBuiltinResetTooltip();
       updateCustomClearTooltip();
       updateAggregateSearchClearTooltip();

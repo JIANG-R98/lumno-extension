@@ -133,9 +133,6 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     helpCenterSearchEnabled: null,
     siteSearchProvidersLoaded: false,
     aggregateSearches: [],
-    editingSiteSearchKey: null,
-    siteSearchDraftCategory: 'site',
-    siteSearchFormExpanded: false,
     siteSearchRefreshSuppressUntil: 0,
 
     // Settings, at their defaults until storage answers.

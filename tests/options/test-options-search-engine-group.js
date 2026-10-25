@@ -1,10 +1,8 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { JSDOM } = require('jsdom');
 const SHORTCUT_FAVICON = require('../../src/domain/favicon/shortcut-favicon.ts');
 const { createOptionsPage } = require('../helpers/options-page');
-const { readPageSource } = require('../helpers/page-source');
 
 // Built-in search engines get their own group in Settings, after the custom
 // entry, site search and AI search. (New Tab and the overlay group them the
@@ -14,8 +12,10 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const ENGINE_LIST_ID = '_x_extension_search_engine_builtin_list_2026_unique_';
 const builtins = JSON.parse(fs.readFileSync(path.join(repoRoot, 'assets/data/site-search.json'), 'utf8')).items;
 
-function testMarkup() {
-  const doc = new JSDOM(readPageSource('src/options/options.html')).window.document;
+async function testMarkup() {
+  const page = await createOptionsPage({});
+  await page.settle(200);
+  const doc = page.document;
   const engineGroup = doc.getElementById('_x_extension_search_engine_group_2026_unique_');
   const customGroup = doc.querySelector('[data-i18n="shortcuts_group_custom"]');
   const siteGroup = Array.from(doc.querySelectorAll('[data-i18n="search_scope_group_sites"]'))
@@ -32,6 +32,7 @@ function testMarkup() {
   const tabs = doc.querySelector('._x_extension_site_search_category_tabs_2026_unique_, [class*="_x_extension_site_search_category_tabs_2026_unique_"]');
   assert.ok(tabs && tabs.getAttribute('role') === 'group', 'the custom provider group selector should be a button group');
   assert.deepStrictEqual(Array.from(tabs.querySelectorAll('[aria-pressed]')).map((button) => button.getAttribute('aria-pressed')).slice(0, 2), ['true', 'false']);
+  page.close();
 }
 
 async function testEnginesListOnTheirOwn() {
@@ -64,7 +65,7 @@ async function testEnginesListOnTheirOwn() {
 });
 
 (async () => {
-  testMarkup();
+  await testMarkup();
   await testEnginesListOnTheirOwn();
   console.log('options search-engine group tests passed');
   process.exit(0);

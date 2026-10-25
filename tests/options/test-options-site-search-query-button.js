@@ -1,13 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { JSDOM } = require('jsdom');
 const { parsePageCss } = require('../helpers/css-rules');
 const { createOptionsPage } = require('../helpers/options-page');
-const { readPageSource } = require('../helpers/page-source');
 
 const repoRoot = path.join(__dirname, '..', '..');
-const optionsDocument = new JSDOM(readPageSource('src/options/options.html')).window.document;
 const optionsCss = parsePageCss('src/options/options.html');
 
 const buttonId = '_x_extension_site_search_insert_query_2026_unique_';
@@ -23,7 +20,10 @@ function rule(selector) {
   return found;
 }
 
-function testMarkupAndStyles() {
+async function testMarkupAndStyles() {
+  const page = await createOptionsPage({});
+  await page.settle(200);
+  const optionsDocument = page.document;
   const button = optionsDocument.getElementById(buttonId);
   const header = button && button.closest(`.${templateHeaderClass}`);
   assert.ok(header && header.classList.contains('_x_extension_shortcut_label_row_2024_unique_') &&
@@ -33,6 +33,7 @@ function testMarkupAndStyles() {
   assert.strictEqual(button.querySelector('span[data-i18n="shortcuts_insert_query"]').textContent, '插入查询变量');
   assert.ok(button.querySelector('i.ri-icon.ri-size-14.ri-add-line'));
   assert.ok(optionsDocument.getElementById(templateInputId), 'the query insert button should live beside the template input it edits');
+  page.close();
 
   const headerRule = rule(`.${templateHeaderClass}`);
   assert.deepStrictEqual([headerRule.get('justify-content'), headerRule.get('width')], ['space-between', '100%'],
@@ -88,7 +89,7 @@ Object.entries(expectedMessages).forEach(([locale, message]) => {
 });
 
 (async () => {
-  testMarkupAndStyles();
+  await testMarkupAndStyles();
   await testInsertsTheQueryToken();
   console.log('options site search query button tests passed');
   process.exit(0);

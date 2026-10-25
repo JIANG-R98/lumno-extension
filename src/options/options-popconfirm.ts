@@ -12,7 +12,6 @@ interface PopconfirmState {
   disabledSiteSearchKeys: Set<string>;
   customSiteSearchProviders: SiteSearchProvider[];
   customSiteSearchProviderIdsReady: boolean;
-  editingSiteSearchKey: string | null;
 }
 
 interface PopconfirmDeps {
@@ -21,7 +20,6 @@ interface PopconfirmDeps {
   popconfirmLanguageRefreshers: Set<() => void>;
   saveDisabledSiteSearchKeys(keys: Iterable<string>): Promise<unknown>;
   refreshSiteSearchProviders(): unknown;
-  resetSiteSearchForm(): void;
   showToast(message: string, isError?: boolean): void;
   getSiteSearchBuiltinKey: typeof SiteSearch.getSiteSearchBuiltinKey;
   saveSiteSearchProviderState(items: readonly SiteSearchProvider[], keys: Iterable<string>): Promise<unknown>;
@@ -39,7 +37,6 @@ function createPopconfirm(deps: PopconfirmDeps) {
     popconfirmLanguageRefreshers,
     saveDisabledSiteSearchKeys,
     refreshSiteSearchProviders,
-    resetSiteSearchForm,
     showToast,
     getSiteSearchBuiltinKey,
     saveSiteSearchProviderState
@@ -184,9 +181,6 @@ function createPopconfirm(deps: PopconfirmDeps) {
       return saveDisabledSiteSearchKeys(nextDisabledKeys).then(() => {
         optionsState.disabledSiteSearchKeys = nextDisabledKeys;
         refreshSiteSearchProviders();
-        if (optionsState.editingSiteSearchKey === key) {
-          resetSiteSearchForm();
-        }
         showToast(getMessage('toast_removed', '已移除'), false);
       }).catch(() => {
         showToast(getMessage('toast_error', '操作失败，请重试。'), true);
@@ -208,9 +202,6 @@ function createPopconfirm(deps: PopconfirmDeps) {
       optionsState.customSiteSearchProviderIdsReady = true;
       optionsState.disabledSiteSearchKeys = nextDisabledKeys;
       refreshSiteSearchProviders();
-      if (optionsState.editingSiteSearchKey === key) {
-        resetSiteSearchForm();
-      }
       showToast(getMessage('toast_removed', '已移除'), false);
     }).catch(() => {
       showToast(getMessage('toast_error', '操作失败，请重试。'), true);
