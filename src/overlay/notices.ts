@@ -1,4 +1,19 @@
-function getNoticeElement(controller) {
+// What the layer needs of an update or engagement notice controller.
+interface LayerNotice {
+  element: HTMLElement | null;
+  // Counts one showing of the update notice.
+  recordExposure?(): void;
+}
+
+interface NoticeLayerConfig {
+  getUpdateNotice?(): LayerNotice | null;
+  getEngagementNotice?(): LayerNotice | null;
+  // The panel's size preset, for its width before the panel has one.
+  getSizePreset?(): { width?: number } | null;
+  decorate?(element: HTMLElement): void;
+}
+
+function getNoticeElement(controller: LayerNotice | null): HTMLElement | null {
   return controller && controller.element ? controller.element : null;
 }
 
@@ -6,14 +21,14 @@ function getNoticeElement(controller) {
 // They mount beside the panel (never inside it, so they take no part in its
 // layout), follow its width, position, viewport scale and theme, and stop
 // listening when the overlay closes.
-function createNoticeLayer(win, config) {
-  const settings = config && typeof config === 'object' ? config : {};
+function createNoticeLayer(win: Window, config?: NoticeLayerConfig | null) {
+  const settings: NoticeLayerConfig = config && typeof config === 'object' ? config : {};
   const doc = win.document;
-  let frameListener = null;
-  let frameViewport = null;
-  let mountTimer = null;
+  let frameListener: (() => void) | null = null;
+  let frameViewport: VisualViewport | null = null;
+  let mountTimer: number | null = null;
 
-  function getNotices() {
+  function getNotices(): { update: LayerNotice | null; engagement: LayerNotice | null } {
     return {
       update: typeof settings.getUpdateNotice === 'function' ? settings.getUpdateNotice() : null,
       engagement: typeof settings.getEngagementNotice === 'function'
@@ -22,18 +37,19 @@ function createNoticeLayer(win, config) {
     };
   }
 
-  function decorate(element) {
+  function decorate(element: HTMLElement): void {
     if (typeof settings.decorate === 'function') {
       settings.decorate(element);
     }
   }
 
-  function sync(panel) {
+  // Matches the notices' frame and theme to the panel's.
+  function sync(panel: HTMLElement | null): void {
     const notices = getNotices();
     const elements = [
       getNoticeElement(notices.update),
       getNoticeElement(notices.engagement)
-    ].filter(Boolean);
+    ].filter((element): element is HTMLElement => element !== null);
     if (elements.length === 0 || !panel) {
       return;
     }
@@ -52,51 +68,52 @@ function createNoticeLayer(win, config) {
       element.style.setProperty('left', left, 'important');
       element.style.setProperty('top', top, 'important');
       element.style.setProperty('--x-ov-visible-scale', visibleScale, 'important');
-      if (typeof element.style.removeProperty === 'function') {
-        element.style.removeProperty('zoom');
-      }
+      element.style.removeProperty('zoom');
       element.setAttribute('data-theme', panel.getAttribute('data-theme') || '');
     });
   }
 
-  function stopFrameSync() {
+  function stopFrameSync(): void {
     if (!frameListener) {
       return;
     }
     win.removeEventListener('resize', frameListener);
-    if (frameViewport && typeof frameViewport.removeEventListener === 'function') {
+    if (frameViewport) {
       frameViewport.removeEventListener('resize', frameListener);
     }
     frameListener = null;
     frameViewport = null;
   }
 
-  function startFrameSync(panel) {
+  function startFrameSync(panel: HTMLElement | null): void {
     stopFrameSync();
     if (!panel) {
       return;
     }
-    frameListener = () => {
+    const listener = (): void => {
       sync(panel);
     };
-    win.addEventListener('resize', frameListener, { passive: true });
-    if (win.visualViewport && typeof win.visualViewport.addEventListener === 'function') {
-      win.visualViewport.addEventListener('resize', frameListener, { passive: true });
+    frameListener = listener;
+    win.addEventListener('resize', listener, { passive: true });
+    if (win.visualViewport) {
+      win.visualViewport.addEventListener('resize', listener, { passive: true });
       frameViewport = win.visualViewport;
     }
     sync(panel);
   }
 
-  function insertAbovePanel(element, panel, styleRoot) {
+  // Into the panel's style root, just before the panel; into the page's
+  // body where there is none.
+  function insertAbovePanel(element: HTMLElement, panel: HTMLElement, styleRoot: Node | null): void {
     decorate(element);
-    if (styleRoot && typeof styleRoot.insertBefore === 'function') {
+    if (styleRoot) {
       styleRoot.insertBefore(element, panel);
     } else if (doc.body) {
       doc.body.appendChild(element);
     }
   }
 
-  function shouldAnimateMount(element) {
+  function shouldAnimateMount(element: HTMLElement): boolean {
     if (element.getAttribute('data-visible') !== 'true') {
       return false;
     }
@@ -106,10 +123,11 @@ function createNoticeLayer(win, config) {
   // Mounts the update notice (counting one exposure) and then the
   // engagement notice. A visible update notice blurs in: it carries
   // data-overlay-mounting for two frames after insertion.
-  function mount(panel, styleRoot) {
+  function mount(panel: HTMLElement, styleRoot: Node | null): void {
     const notices = getNotices();
-    const noticeElement = getNoticeElement(notices.update);
-    if (!noticeElement || noticeElement.parentNode) {
+    const update = notices.update;
+    const noticeElement = getNoticeElement(update);
+    if (!update || !noticeElement || noticeElement.parentNode) {
       return;
     }
     const animateMount = shouldAnimateMount(noticeElement);
@@ -117,11 +135,11 @@ function createNoticeLayer(win, config) {
       noticeElement.setAttribute('data-overlay-mounting', 'true');
     }
     insertAbovePanel(noticeElement, panel, styleRoot);
-    if (typeof notices.update.recordExposure === 'function') {
-      notices.update.recordExposure();
+    if (typeof update.recordExposure === 'function') {
+      update.recordExposure();
     }
     sync(panel);
-    const finishMountAnimation = () => {
+    const finishMountAnimation = (): void => {
       noticeElement.removeAttribute('data-overlay-mounting');
     };
     if (animateMount) {
@@ -138,14 +156,14 @@ function createNoticeLayer(win, config) {
     }
   }
 
-  function clearMountTimer() {
+  function clearMountTimer(): void {
     if (mountTimer !== null) {
       win.clearTimeout(mountTimer);
       mountTimer = null;
     }
   }
 
-  function scheduleMount(panel, styleRoot, delayMs) {
+  function scheduleMount(panel: HTMLElement | null, styleRoot: Node | null, delayMs: number): void {
     clearMountTimer();
     mountTimer = win.setTimeout(() => {
       mountTimer = null;
@@ -156,7 +174,7 @@ function createNoticeLayer(win, config) {
     }, Math.max(0, Number(delayMs) || 0));
   }
 
-  function stop() {
+  function stop(): void {
     stopFrameSync();
     clearMountTimer();
   }
@@ -171,3 +189,4 @@ function createNoticeLayer(win, config) {
 }
 
 export { createNoticeLayer };
+export type { LayerNotice, NoticeLayerConfig };

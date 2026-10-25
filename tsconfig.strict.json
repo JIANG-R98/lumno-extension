@@ -20,7 +20,10 @@
     "src/overlay/panel/page-guards.ts",
     "src/overlay/panel/result-activation.ts",
     "src/overlay/panel/slash-commands.ts",
-    "src/overlay/panel/tab-matching.ts"
+    "src/overlay/panel/tab-matching.ts",
+    "src/overlay/notices.ts",
+    "src/overlay/panel/settings-sync.ts",
+    "src/overlay/panel/suggestion-themes.ts"
   ],
   "exclude": [
     "src/**/react/**"

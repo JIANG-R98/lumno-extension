@@ -1,6 +1,46 @@
+import type * as FaviconUtils from '../../domain/favicon/favicon-utils';
+import type { FaviconUrlResolver, ThemeRgb } from '../../domain/favicon/favicon-utils';
+import type * as ShortcutFavicon from '../../domain/favicon/shortcut-favicon';
+import type * as SearchUtils from '../../domain/search/search-utils';
+import type { SiteSearchProvider } from '../../domain/search/types';
+import type { ThemeLike, ThemeVariant } from '../../shared/favicon/favicon-theme';
+
+interface SuggestionThemesState {
+  defaultTheme: ThemeVariant;
+  isBlockedLocalFaviconUrl(url: string): boolean;
+  // A favicon service's image as a data: URL, or '' when there is none.
+  requestFaviconData(url: string): Promise<string>;
+}
+
+interface SuggestionThemesDeps {
+  FAVICON_UTILS: Pick<typeof FaviconUtils, 'setBoundedCacheEntry' | 'isFaviconProxyUrl' | 'isChromeMonogramFaviconUrl'>;
+  SEARCH_UTILS: Pick<typeof SearchUtils, 'normalizeHostIdentity' | 'getSiteSearchProviderHost'>;
+  SHORTCUT_FAVICON: Pick<typeof ShortcutFavicon, 'getSiteSearchProviderPageUrl'>;
+  // Themes by icon address and by host, kept across panel sessions.
+  themeColorCache: Map<string, ThemeVariant>;
+  themeHostCache: Map<string, ThemeVariant>;
+  // Favicon images already fetched, as data: URLs by address.
+  faviconDataCache: Map<string, string>;
+  getOverlayFaviconUrlResolver(): FaviconUrlResolver | null;
+  buildTheme(rgb: unknown): ThemeVariant;
+  defaultAccentColor: ThemeRgb;
+  shouldBlockOverlayFaviconForHost(hostname: string): boolean;
+  getProviderIcon(provider: SiteSearchProvider): string;
+  getThemeForMode(theme: ThemeLike): ThemeVariant;
+  overlayState: SuggestionThemesState;
+}
+
+// What a row's theme depends on.
+interface ThemedSuggestion {
+  type?: string;
+  url?: string;
+  favicon?: string;
+  provider?: SiteSearchProvider | null;
+}
+
 // Accent colors for suggestions: brand accents, favicon sources and
 // their average color, and the theme each suggestion row and mark uses.
-function createSuggestionThemes(deps) {
+function createSuggestionThemes(deps: SuggestionThemesDeps) {
   const {
     FAVICON_UTILS,
     themeColorCache,
@@ -21,7 +61,7 @@ function createSuggestionThemes(deps) {
 
   const OVERLAY_THEME_COLOR_CACHE_MAX_ENTRIES = 384;
   const OVERLAY_THEME_HOST_CACHE_MAX_ENTRIES = 256;
-  function cacheOverlayThemeColor(key, value) {
+  function cacheOverlayThemeColor(key: string, value: ThemeVariant): ThemeVariant {
     return FAVICON_UTILS.setBoundedCacheEntry(
       themeColorCache,
       key,
@@ -29,7 +69,7 @@ function createSuggestionThemes(deps) {
       OVERLAY_THEME_COLOR_CACHE_MAX_ENTRIES
     );
   }
-  function cacheOverlayThemeHost(key, value) {
+  function cacheOverlayThemeHost(key: string, value: ThemeVariant): ThemeVariant {
     return FAVICON_UTILS.setBoundedCacheEntry(
       themeHostCache,
       key,
@@ -37,7 +77,7 @@ function createSuggestionThemes(deps) {
       OVERLAY_THEME_HOST_CACHE_MAX_ENTRIES
     );
   }
-  const brandAccentMap = {
+  const brandAccentMap: Record<string, number[]> = {
     'github.com': [36, 41, 46],
     'docs.github.com': [36, 41, 46],
     'douban.com': [0, 181, 29],
@@ -71,29 +111,29 @@ function createSuggestionThemes(deps) {
     'twitter.com': [29, 161, 242]
   };
 
-  function getExtensionFaviconUrl(pageUrl) {
+  function getExtensionFaviconUrl(pageUrl: string): string {
     const resolver = getOverlayFaviconUrlResolver();
     return resolver ? resolver.getExtensionFaviconUrl(pageUrl) : '';
   }
 
-  function getGstaticFaviconUrl(pageUrl) {
+  function getGstaticFaviconUrl(pageUrl: string): string {
     const resolver = getOverlayFaviconUrlResolver();
     return resolver
       ? resolver.getSafeFaviconCandidateUrl(resolver.getGstaticFaviconUrl(pageUrl))
       : '';
   }
 
-  function getChromeFaviconUrl(pageUrl) {
+  function getChromeFaviconUrl(pageUrl: string): string {
     const resolver = getOverlayFaviconUrlResolver();
     return resolver ? resolver.getChromeFaviconUrl(pageUrl) : '';
   }
 
-  function getPageFaviconCandidateUrl(pageUrl) {
+  function getPageFaviconCandidateUrl(pageUrl: string): string {
     const resolver = getOverlayFaviconUrlResolver();
     return resolver ? resolver.getPageFaviconCandidateUrl(pageUrl) : '';
   }
 
-  function getBrandAccentForHost(hostname) {
+  function getBrandAccentForHost(hostname: string): number[] | null {
     const host = String(hostname || '').toLowerCase();
     if (!host) {
       return null;
@@ -105,19 +145,20 @@ function createSuggestionThemes(deps) {
     return entry ? brandAccentMap[entry] : null;
   }
 
-  function getBrandAccentForUrl(url) {
+  function getBrandAccentForUrl(url: string): number[] | null {
     if (!url) {
       return null;
     }
     try {
       const hostname = SEARCH_UTILS.normalizeHostIdentity(new URL(url).hostname);
       return getBrandAccentForHost(hostname);
-    } catch (e) {
+    } catch (_error) {
       return null;
     }
   }
 
-  function buildFallbackThemeForHost(hostname) {
+  // The default accent, marked as standing in for a site's own color.
+  function buildFallbackThemeForHost(hostname: string): ThemeVariant {
     const theme = buildTheme(defaultAccentColor);
     theme._xIsDefault = true;
     theme._xIsBrand = false;
@@ -126,18 +167,19 @@ function createSuggestionThemes(deps) {
     return theme;
   }
 
-  function getHostFromUrl(url) {
+  function getHostFromUrl(url: string): string {
     if (!url) {
       return '';
     }
     try {
       return SEARCH_UTILS.normalizeHostIdentity(new URL(url).hostname);
-    } catch (e) {
+    } catch (_error) {
       return '';
     }
   }
 
-  function extractAverageColor(image) {
+  // The average of an icon's opaque, not nearly white pixels.
+  function extractAverageColor(image: HTMLImageElement): number[] | null {
     const size = 16;
     const canvas = document.createElement('canvas');
     canvas.width = size;
@@ -190,22 +232,24 @@ function createSuggestionThemes(deps) {
         Math.round(g / count),
         Math.round(b / count)
       ];
-    } catch (e) {
+    } catch (_error) {
       return null;
     }
   }
 
-  function isFaviconProxyUrl(url) {
+  function isFaviconProxyUrl(url: string): boolean {
     return FAVICON_UTILS.isFaviconProxyUrl(url);
   }
 
-  function isChromeMonogramFaviconUrl(url) {
+  function isChromeMonogramFaviconUrl(url: string): boolean {
     return FAVICON_UTILS.isChromeMonogramFaviconUrl(url);
   }
 
-  function getThemeFromUrl(url, hostOverride) {
+  // The theme of an icon: from the caches, a brand accent, or the icon's
+  // average color once it loads.
+  function getThemeFromUrl(sourceUrl: string, hostOverride?: string): Promise<ThemeVariant> {
     const resolver = getOverlayFaviconUrlResolver();
-    url = resolver ? resolver.getSafeFaviconCandidateUrl(url, '', 'theme') : '';
+    const url = resolver ? resolver.getSafeFaviconCandidateUrl(sourceUrl, '', 'theme') : '';
     if (!url) {
       return Promise.resolve(overlayState.defaultTheme);
     }
@@ -215,12 +259,14 @@ function createSuggestionThemes(deps) {
       return Promise.resolve(fallbackTheme || overlayState.defaultTheme);
     }
     const isProxy = isFaviconProxyUrl(url);
-    const useHostCache = hostKey && (!isProxy || Boolean(hostOverride));
-    if (useHostCache && themeHostCache.has(hostKey)) {
-      return Promise.resolve(themeHostCache.get(hostKey));
+    const useHostCache = Boolean(hostKey) && (!isProxy || Boolean(hostOverride));
+    const cachedHostTheme = useHostCache ? themeHostCache.get(hostKey) : undefined;
+    if (cachedHostTheme) {
+      return Promise.resolve(cachedHostTheme);
     }
-    if (themeColorCache.has(url)) {
-      return Promise.resolve(themeColorCache.get(url));
+    const cachedUrlTheme = themeColorCache.get(url);
+    if (cachedUrlTheme) {
+      return Promise.resolve(cachedUrlTheme);
     }
     const brandAccent = (isProxy && hostOverride) ? null : getBrandAccentForUrl(url);
     if (brandAccent) {
@@ -234,7 +280,7 @@ function createSuggestionThemes(deps) {
     }
     const cachedFaviconData = faviconDataCache.get(url);
     if (cachedFaviconData) {
-      return new Promise((resolve) => {
+      return new Promise<ThemeVariant>((resolve) => {
         const image = new Image();
         image.onload = function() {
           const avg = extractAverageColor(image);
@@ -264,7 +310,7 @@ function createSuggestionThemes(deps) {
           cacheOverlayThemeColor(url, overlayState.defaultTheme);
           return overlayState.defaultTheme;
         }
-        return new Promise((resolve) => {
+        return new Promise<ThemeVariant>((resolve) => {
           const image = new Image();
           image.onload = function() {
             const avg = extractAverageColor(image);
@@ -289,7 +335,7 @@ function createSuggestionThemes(deps) {
         });
       });
     }
-    return new Promise((resolve) => {
+    return new Promise<ThemeVariant>((resolve) => {
       const image = new Image();
       image.crossOrigin = 'anonymous';
       image.onload = function() {
@@ -315,11 +361,11 @@ function createSuggestionThemes(deps) {
     });
   }
 
-  function getProviderThemeHost(provider) {
+  function getProviderThemeHost(provider: SiteSearchProvider): string {
     return SEARCH_UTILS.normalizeHostIdentity(SEARCH_UTILS.getSiteSearchProviderHost(provider));
   }
 
-  function buildAndCacheBrandThemeForHost(hostKey, iconUrl) {
+  function buildAndCacheBrandThemeForHost(hostKey: string, iconUrl: string): ThemeVariant | null {
     const normalizedHost = SEARCH_UTILS.normalizeHostIdentity(hostKey);
     if (!normalizedHost) {
       return null;
@@ -337,16 +383,18 @@ function createSuggestionThemes(deps) {
     return brandTheme;
   }
 
-  function getThemeForProvider(provider) {
+  function getThemeForProvider(provider: SiteSearchProvider): Promise<ThemeVariant> {
     const hostKey = getProviderThemeHost(provider);
     const providerPageUrl = SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider);
     const resolver = getOverlayFaviconUrlResolver();
     const iconUrl = resolver ? resolver.resolveFaviconSource(getProviderIcon(provider), providerPageUrl) : '';
-    if (hostKey && themeHostCache.has(hostKey)) {
-      return Promise.resolve(themeHostCache.get(hostKey));
+    const cachedHostTheme = hostKey ? themeHostCache.get(hostKey) : undefined;
+    if (cachedHostTheme) {
+      return Promise.resolve(cachedHostTheme);
     }
-    if (iconUrl && themeColorCache.has(iconUrl)) {
-      return Promise.resolve(themeColorCache.get(iconUrl));
+    const cachedIconTheme = iconUrl ? themeColorCache.get(iconUrl) : undefined;
+    if (cachedIconTheme) {
+      return Promise.resolve(cachedIconTheme);
     }
     const brandTheme = buildAndCacheBrandThemeForHost(hostKey, iconUrl);
     if (brandTheme) {
@@ -355,18 +403,19 @@ function createSuggestionThemes(deps) {
     return getThemeFromUrl(iconUrl, hostKey);
   }
 
-  function shouldUseBrandTheme(suggestion) {
+  // Search actions and commands keep the neutral theme.
+  function shouldUseBrandTheme(suggestion: ThemedSuggestion | null): suggestion is ThemedSuggestion {
     if (!suggestion) {
       return false;
     }
     const neutralTypes = ['googleSuggest', 'newtab', 'modeSwitch', 'zenSwitch', 'webAppearanceSwitch', 'chatgpt', 'perplexity', 'commandNewTab', 'commandSettings', 'commandOpenTabs', 'commandCopyUrl', 'commandDocumentPip'];
-    if (neutralTypes.includes(suggestion.type)) {
+    if (neutralTypes.includes(suggestion.type || '')) {
       return false;
     }
     return true;
   }
 
-  function getThemeForSuggestion(suggestion) {
+  function getThemeForSuggestion(suggestion: ThemedSuggestion | null): Promise<ThemeVariant> {
     if (!shouldUseBrandTheme(suggestion)) {
       return Promise.resolve(overlayState.defaultTheme);
     }
@@ -390,18 +439,21 @@ function createSuggestionThemes(deps) {
     return getThemeFromUrl(getThemeSourceForSuggestion(suggestion), hostKey);
   }
 
-  function getImmediateThemeForSuggestion(suggestion) {
+  // The theme known now, without loading any icon; null when none is.
+  function getImmediateThemeForSuggestion(suggestion: ThemedSuggestion | null): ThemeVariant | null {
     if (!shouldUseBrandTheme(suggestion)) {
       return overlayState.defaultTheme;
     }
     if (suggestion && suggestion.provider) {
       const hostKey = getProviderThemeHost(suggestion.provider);
       const iconUrl = getProviderIcon(suggestion.provider);
-      if (hostKey && themeHostCache.has(hostKey)) {
-        return themeHostCache.get(hostKey);
+      const cachedHostTheme = hostKey ? themeHostCache.get(hostKey) : undefined;
+      if (cachedHostTheme) {
+        return cachedHostTheme;
       }
-      if (iconUrl && themeColorCache.has(iconUrl)) {
-        return themeColorCache.get(iconUrl);
+      const cachedIconTheme = iconUrl ? themeColorCache.get(iconUrl) : undefined;
+      if (cachedIconTheme) {
+        return cachedIconTheme;
       }
       const brandTheme = buildAndCacheBrandThemeForHost(hostKey, iconUrl);
       if (brandTheme) {
@@ -414,11 +466,13 @@ function createSuggestionThemes(deps) {
     }
     if (suggestion && suggestion.url) {
       const hostKey = getHostFromUrl(suggestion.url);
-      if (hostKey && themeHostCache.has(hostKey)) {
-        return themeHostCache.get(hostKey);
+      const cachedHostTheme = hostKey ? themeHostCache.get(hostKey) : undefined;
+      if (cachedHostTheme) {
+        return cachedHostTheme;
       }
-      if (themeColorCache.has(suggestion.url)) {
-        return themeColorCache.get(suggestion.url);
+      const cachedUrlTheme = themeColorCache.get(suggestion.url);
+      if (cachedUrlTheme) {
+        return cachedUrlTheme;
       }
       const brandAccent = getBrandAccentForUrl(suggestion.url);
       if (brandAccent) {
@@ -434,7 +488,7 @@ function createSuggestionThemes(deps) {
     return null;
   }
 
-  function applyThemeVariables(target, theme) {
+  function applyThemeVariables(target: HTMLElement | null, theme: ThemeLike | null): void {
     if (!target || !theme) {
       return;
     }
@@ -450,7 +504,7 @@ function createSuggestionThemes(deps) {
     target.style.setProperty('--x-ext-icon-color', resolvedTheme.accent);
   }
 
-  function applyMarkVariables(target, theme, active) {
+  function applyMarkVariables(target: HTMLElement | null, theme: ThemeLike | null, active: boolean): void {
     if (!target || !theme) {
       return;
     }
@@ -465,12 +519,13 @@ function createSuggestionThemes(deps) {
     target.style.setProperty('--x-ext-mark-text', markText);
   }
 
-  function preloadThemeFromFavicon(url, dataUrl, hostOverride) {
+  // Works out an icon's theme ahead of time from its fetched image.
+  function preloadThemeFromFavicon(url: string, dataUrl: string, hostOverride?: string): void {
     if (!url || themeColorCache.has(url)) {
       return;
     }
     const hostKey = hostOverride || getHostFromUrl(url);
-    const useHostCache = hostKey && (Boolean(hostOverride) || !isFaviconProxyUrl(url));
+    const useHostCache = Boolean(hostKey) && (Boolean(hostOverride) || !isFaviconProxyUrl(url));
     if (useHostCache && themeHostCache.has(hostKey)) {
       return;
     }
@@ -494,7 +549,7 @@ function createSuggestionThemes(deps) {
     image.src = dataUrl;
   }
 
-  function getThemeSourceForSuggestion(suggestion) {
+  function getThemeSourceForSuggestion(suggestion: ThemedSuggestion): string {
     if (suggestion && suggestion.provider) {
       const resolver = getOverlayFaviconUrlResolver();
       return resolver ? resolver.resolveFaviconSource(
@@ -503,7 +558,7 @@ function createSuggestionThemes(deps) {
     }
     const resolver = getOverlayFaviconUrlResolver();
     return resolver
-      ? resolver.resolveFaviconSource(suggestion && suggestion.favicon, suggestion && suggestion.url)
+      ? resolver.resolveFaviconSource(suggestion.favicon, suggestion.url)
       : '';
   }
 
@@ -527,3 +582,4 @@ function createSuggestionThemes(deps) {
 }
 
 export { createSuggestionThemes };
+export type { SuggestionThemesDeps, SuggestionThemesState, ThemedSuggestion };
