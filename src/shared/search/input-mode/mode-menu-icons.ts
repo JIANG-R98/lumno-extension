@@ -3,7 +3,6 @@
 import type { CursorTooltipController } from '../../ui/cursor-tooltip';
 import type {
   AttachFaviconData,
-  AttachProviderIcon,
   GetThemeForProvider,
   InputModeTheme,
   ModeMenuItem,
@@ -36,10 +35,7 @@ interface ModeMenuIconsDeps {
   doc: Document;
   getThemeForProvider: GetThemeForProvider | null;
   resolveProviderIconUrl: ResolveProviderIconUrl;
-  removeProviderIconRuntimeFallbacks: (wrap: HTMLElement) => void;
   getProviderThemeHost: (provider: SiteSearchProvider) => string | null | undefined;
-  attachProviderIcon: AttachProviderIcon | null;
-  preferDirectProviderIcons: boolean;
   attachFaviconData: AttachFaviconData | null;
   inputModeState: ModeMenuIconsState;
 }
@@ -62,10 +58,7 @@ function createModeMenuIcons(deps: ModeMenuIconsDeps) {
     doc,
     getThemeForProvider,
     resolveProviderIconUrl,
-    removeProviderIconRuntimeFallbacks,
     getProviderThemeHost,
-    attachProviderIcon,
-    preferDirectProviderIcons,
     attachFaviconData
   } = deps;
 
@@ -225,38 +218,20 @@ function createModeMenuIcons(deps: ModeMenuIconsDeps) {
       image.referrerPolicy = 'no-referrer';
       const showFallback = (): void => {
         wrap.setAttribute('data-icon-state', 'fallback');
-        removeProviderIconRuntimeFallbacks(wrap);
         image.remove();
         setModeMenuGlyphHidden(glyph, false);
       };
       image.addEventListener('load', () => {
         wrap.setAttribute('data-icon-state', 'resolved');
-        removeProviderIconRuntimeFallbacks(wrap);
         setModeMenuGlyphHidden(glyph, true);
       }, { once: true });
       faviconMask.appendChild(image);
       const provider = item.provider || null;
       const iconHost = provider ? String(getProviderThemeHost(provider) || '').trim() : '';
-      let handledByProviderIconRuntime = false;
-      if (attachProviderIcon && provider && !preferDirectProviderIcons) {
-        try {
-          handledByProviderIconRuntime = attachProviderIcon(image, {
-            iconHost,
-            iconUrl,
-            onIconUnavailable: showFallback,
-            prefixText: String(item.label || ''),
-            provider
-          }) === true;
-        } catch (_error) {
-          handledByProviderIconRuntime = false;
-        }
-      }
-      if (!handledByProviderIconRuntime) {
-        image.addEventListener('error', showFallback, { once: true });
-        image.src = iconUrl;
-        if (attachFaviconData && !iconUrl.startsWith('data:')) {
-          attachFaviconData(image, iconUrl, iconHost);
-        }
+      image.addEventListener('error', showFallback, { once: true });
+      image.src = iconUrl;
+      if (attachFaviconData && !iconUrl.startsWith('data:')) {
+        attachFaviconData(image, iconUrl, iconHost);
       }
     }
     return wrap;

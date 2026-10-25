@@ -1,3 +1,4 @@
+import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // The Han variant table is a classic script that leaves a global.
@@ -105,7 +106,6 @@ describe('Shared search scope menu', () => {
     const controller = LumnoSearchInputMode.createInputModeController(parts, {
       // These callers deliberately retain a URL chosen before settings changed.
       getProviderIcon: () => iconUrl,
-      preferDirectProviderIcons: true,
       resolveProviderIconUrl: (_provider, source) => (
         resolver.getProviderFaviconUrl(pageUrl, source)
       ),
@@ -1391,19 +1391,7 @@ describe('Shared search scope menu', () => {
 
   it('keeps the built-in tag SVG when an earlier provider favicon fails late', () => {
     const parts = createModeParts();
-    const unavailableCallbacks: Array<() => void> = [];
-    const controller = LumnoSearchInputMode.createInputModeController(
-      parts,
-      {
-        attachProviderIcon: (
-          _image: HTMLImageElement,
-          context: { onIconUnavailable: () => void }
-        ) => {
-          unavailableCallbacks.push(context.onIconUnavailable);
-          return true;
-        }
-      }
-    );
+    const controller = LumnoSearchInputMode.createInputModeController(parts, {});
 
     controller.setPrefixText('YouTube', {}, {
       iconClass: 'ri-global-line',
@@ -1414,8 +1402,7 @@ describe('Shared search scope menu', () => {
       menuIconName: 'bookmark',
       modeId: 'local:bookmark'
     });
-    expect(unavailableCallbacks).toHaveLength(1);
-    unavailableCallbacks[0]?.();
+    parts.modePrefixIcon.dispatchEvent(new Event('error'));
 
     const prefixGlyph = expectSvg(parts.modePrefix.querySelector('[data-search-input-mode-line-icon]'), 'prefix glyph');
     expect(prefixGlyph?.dataset.iconName).toBe('bookmark');
@@ -2443,29 +2430,17 @@ describe('Shared search scope menu', () => {
     overlayController.destroy();
   });
 
-  it('routes provider menu icons through the favicon fallback runtime', () => {
+  it('shows a provider menu icon in place of its glyph once it loads', () => {
     const parts = createModeParts();
     const provider = {
       key: 'tb',
       template: 'https://s.taobao.com/search?q={query}'
     };
-    const attachProviderIcon = vi.fn(
-      (
-        image: HTMLImageElement,
-        context: { iconUrl: string; onIconUnavailable: () => void }
-      ) => {
-        const runtimeFallback = document.createElement('span');
-        runtimeFallback.className = 'x-nt-favicon-fallback';
-        image.parentElement?.appendChild(runtimeFallback);
-        image.src = context.iconUrl;
-        image.dispatchEvent(new Event('load'));
-        return true;
-      }
-    );
+    const attachFaviconData = vi.fn();
     const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
-        attachProviderIcon,
+        attachFaviconData,
         getModeMenuItems: () => [{
           active: true,
           iconClass: 'ri-global-line',
@@ -2481,20 +2456,17 @@ describe('Shared search scope menu', () => {
     controller.setPrefixText('Taobao');
     controller.openModeMenu();
 
-    expect(attachProviderIcon).toHaveBeenCalledTimes(1);
-    expect(attachProviderIcon.mock.calls[0][1]).toMatchObject({
-      iconHost: 'taobao.com',
-      iconUrl: 'https://www.taobao.com/favicon.ico',
-      provider
+    const image = getTags(controller.menuElement, 'img', 'img')[0];
+    expect(image.getAttribute('src')).toBe('https://www.taobao.com/favicon.ico');
+    expect(attachFaviconData).toHaveBeenCalledWith(image, 'https://www.taobao.com/favicon.ico', 'taobao.com');
+    act(() => {
+      image.dispatchEvent(new Event('load'));
     });
     expect(
       controller.menuElement.querySelector(
         '.x-lumno-search-input-mode__menu-icon'
       )?.getAttribute('data-icon-state')
     ).toBe('resolved');
-    expect(
-      controller.menuElement.querySelector('.x-nt-favicon-fallback')
-    ).toBeNull();
     expect(
       queryHtmlElement(controller.menuElement, '.x-lumno-search-input-mode__menu-favicon-mask > i')?.hidden
     ).toBe(true);
@@ -2512,14 +2484,11 @@ describe('Shared search scope menu', () => {
       template: 'https://www.youtube.com/results?search_query={query}'
     };
     const canonicalIcon = 'data:image/png;base64,eW91dHViZQ==';
-    const attachProviderIcon = vi.fn(() => true);
     const attachFaviconData = vi.fn();
     const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         attachFaviconData,
-        attachProviderIcon,
-        preferDirectProviderIcons: true,
         getProviderIcon: () => canonicalIcon,
         getModeMenuItems: () => [{
           active: true,
@@ -2539,7 +2508,6 @@ describe('Shared search scope menu', () => {
     expect(
       controller.menuElement.querySelector('img')?.getAttribute('src')
     ).toBe(canonicalIcon);
-    expect(attachProviderIcon).not.toHaveBeenCalled();
     expect(attachFaviconData).not.toHaveBeenCalled();
     controller.destroy();
   });
@@ -2627,17 +2595,6 @@ describe('Shared search scope menu', () => {
     const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
-        attachProviderIcon: (
-          image: HTMLImageElement,
-          context: { onIconUnavailable: () => void }
-        ) => {
-          const runtimeFallback = document.createElement('span');
-          runtimeFallback.className =
-            'x-nt-favicon-fallback _x_extension_favicon_fallback_2024_unique_';
-          image.parentElement?.appendChild(runtimeFallback);
-          context.onIconUnavailable();
-          return true;
-        },
         getModeMenuItems: () => [{
           active: true,
           iconClass: 'ri-global-line',
@@ -2651,6 +2608,9 @@ describe('Shared search scope menu', () => {
     );
     controller.setPrefixText('Missing');
     controller.openModeMenu();
+    act(() => {
+      getTags(controller.menuElement, 'img', 'img')[0].dispatchEvent(new Event('error'));
+    });
 
     const icon = controller.menuElement.querySelector(
       '.x-lumno-search-input-mode__menu-icon'
@@ -2659,7 +2619,6 @@ describe('Shared search scope menu', () => {
     expect(icon?.querySelectorAll('i')).toHaveLength(1);
     expect(icon?.querySelector('i')?.classList.contains('ri-size-24')).toBe(true);
     expect(icon?.querySelector('img')).toBeNull();
-    expect(icon?.querySelector('.x-nt-favicon-fallback')).toBeNull();
     controller.destroy();
   });
 

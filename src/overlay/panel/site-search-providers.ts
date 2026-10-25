@@ -34,14 +34,6 @@ interface SiteSearchProvidersState {
   siteSearchIconCacheLoaded: boolean;
   // A favicon as a data: URL from the worker; empty or null when there is none.
   requestFaviconData(url: string, pageUrl?: string): Promise<string | null>;
-  attachResolvedFaviconWithFallbacks(
-    image: HTMLImageElement,
-    pageUrl: string,
-    hostKey: string,
-    fallbackUrl: string,
-    onFailed: () => void,
-    sourceOptions?: { allowRemoteImage: boolean }
-  ): void;
 }
 
 interface SiteSearchProvidersDeps {
@@ -50,7 +42,7 @@ interface SiteSearchProvidersDeps {
     'isInteractiveSiteSearchProvider' | 'mergeCustomProviders'>;
   AGGREGATE_SEARCH_STORE: Pick<typeof AggregateSearchStore, 'isAggregateSearchProvider'>;
   SHORTCUT_FAVICON: Pick<typeof ShortcutFavicon, 'getSiteSearchProviderIcon' | 'getSiteSearchProviderPageUrl'>;
-  FAVICON_UTILS: Pick<typeof FaviconUtils, 'isExtensionFaviconEndpointUrl' | 'getCanonicalPageUrlForFavicon'>;
+  FAVICON_UTILS: Pick<typeof FaviconUtils, 'isExtensionFaviconEndpointUrl'>;
   getHelpCenterLocale(): string;
   showOverlayToast(message: string, isError?: boolean): void;
   t: Translate;
@@ -60,20 +52,11 @@ interface SiteSearchProvidersDeps {
   siteSearchIconCacheOptions: SiteSearchIconOptions;
   // Favicon images already fetched, as data: URLs by address.
   faviconDataCache: Map<string, string>;
-  getHostFromUrl(url: string): string;
   SITE_SEARCH_STORAGE_KEY: string;
   SITE_SEARCH_DISABLED_STORAGE_KEY: string;
   AGGREGATE_SEARCH_STORAGE_KEY: string;
   getStorageValuesAsync(keys: string[]): Promise<Record<string, unknown>>;
   overlayState: SiteSearchProvidersState;
-}
-
-// What the input mode controller passes when it shows a provider's icon.
-interface ProviderIconContext {
-  iconUrl?: string;
-  iconHost?: string;
-  provider?: SiteSearchProvider | null;
-  onIconUnavailable?(): void;
 }
 
 function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
@@ -90,7 +73,6 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     siteSearchIconCacheOptions,
     FAVICON_UTILS,
     faviconDataCache,
-    getHostFromUrl,
     SITE_SEARCH_STORAGE_KEY,
     SITE_SEARCH_DISABLED_STORAGE_KEY,
     getStorageValuesAsync,
@@ -249,47 +231,6 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     return toPageRenderableIconUrl(getProviderIcon(provider), SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider));
   }
 
-  function getProviderIconAttachPageUrl(provider: SiteSearchProvider | null, iconUrl: string, iconHost: string): string {
-    const providerPageUrl = SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider);
-    if (providerPageUrl) {
-      return providerPageUrl;
-    }
-    const canonicalIconPageUrl = FAVICON_UTILS.getCanonicalPageUrlForFavicon(iconUrl);
-    if (canonicalIconPageUrl && canonicalIconPageUrl !== iconUrl) {
-      return canonicalIconPageUrl;
-    }
-    const host = String(iconHost || '').trim();
-    return host ? `https://${host}/` : '';
-  }
-
-  // Loads a provider's favicon into icon, with the usual fallbacks; false
-  // when there is nothing to load.
-  function attachInputModeProviderIcon(icon: HTMLImageElement | null, context: ProviderIconContext | null): boolean {
-    const iconUrl = context && context.iconUrl ? String(context.iconUrl).trim() : '';
-    if (!icon || !iconUrl || iconUrl.startsWith('data:') || /^(?:chrome|moz)-extension:/i.test(iconUrl)) {
-      return false;
-    }
-    const iconHost = context && context.iconHost ? String(context.iconHost).trim() : '';
-    const pageUrl = getProviderIconAttachPageUrl(
-      context && context.provider ? context.provider : null,
-      iconUrl,
-      iconHost
-    );
-    if (!pageUrl) {
-      return false;
-    }
-    const hostKey = iconHost || getHostFromUrl(pageUrl);
-    const image = icon;
-    overlayState.attachResolvedFaviconWithFallbacks(image, pageUrl, hostKey, iconUrl, () => {
-      if (context && typeof context.onIconUnavailable === 'function') {
-        context.onIconUnavailable();
-        return;
-      }
-      image.remove();
-    });
-    return true;
-  }
-
   // Starts a load of the providers; a newer load, or an invalidating one,
   // wins over any still running.
   function beginSiteSearchProviderLoad(
@@ -408,7 +349,6 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     getProviderIcon,
     toPageRenderableIconUrl,
     getPageRenderableProviderIcon,
-    attachInputModeProviderIcon,
     getSiteSearchProviders,
     reloadSiteSearchProvidersFromStorage,
     getAggregateSearches
@@ -416,4 +356,4 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
 }
 
 export { createSiteSearchProviders };
-export type { ProviderIconContext, SiteSearchProvidersDeps, SiteSearchProvidersState };
+export type { SiteSearchProvidersDeps, SiteSearchProvidersState };

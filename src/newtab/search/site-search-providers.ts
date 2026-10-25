@@ -21,8 +21,7 @@ import type { StorageAreaLike } from '../../domain/storage-port';
 import * as LumnoAggregateSearchStorage from '../../platform/aggregate-search-storage';
 import * as LumnoMessaging from '../../platform/messaging';
 import type * as SiteSearchStore from '../../shared/search/site-search-store';
-import type { AttachProviderIcon } from '../../shared/search/input-mode/types';
-import type { AttachFaviconWithFallbacks, FormatMessage, ShowToast, Translate } from '../newtab-types';
+import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
 import { getAggregateSearchId } from './search-types';
 import type { ActiveLocalScope } from './search-types';
 
@@ -63,11 +62,6 @@ interface SiteSearchProvidersDeps {
   getPageFaviconUrlResolver(): Pick<FaviconUrlResolver, 'getProviderFaviconUrl'> | null;
   siteSearchIconCacheOptions: Readonly<IconCacheOptions>;
   getExtensionResourceUrl(resourcePath: string): string;
-  getCanonicalPageUrlForFavicon(url: string): string;
-  getHostFromUrl(url: string): string;
-  getPageFaviconRenderCandidates: FaviconUrlResolver['getPageFaviconRenderCandidates'];
-  isFaviconProxyUrl(url: string): boolean;
-  attachFaviconWithFallbacks: AttachFaviconWithFallbacks;
   SITE_SEARCH_STORE: Pick<typeof SiteSearchStore, 'loadSiteSearchProviders' | 'getStorageValues' | 'mergeStoredProviders'>;
   storageArea: StorageAreaLike | null;
   SITE_SEARCH_STORAGE_KEY: string;
@@ -99,11 +93,6 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     getPageFaviconUrlResolver,
     siteSearchIconCacheOptions,
     getExtensionResourceUrl,
-    getCanonicalPageUrlForFavicon,
-    getHostFromUrl,
-    getPageFaviconRenderCandidates,
-    isFaviconProxyUrl,
-    attachFaviconWithFallbacks,
     SITE_SEARCH_STORE,
     storageArea,
     SITE_SEARCH_STORAGE_KEY,
@@ -220,43 +209,6 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     );
     return resolver.getProviderFaviconUrl(getProviderFaviconPageUrl(provider), iconUrl);
   }
-
-  function getProviderIconAttachPageUrl(provider: SiteSearchProvider | null, iconUrl: string, iconHost: string): string {
-    const providerPageUrl = getProviderFaviconPageUrl(provider);
-    if (providerPageUrl) {
-      return providerPageUrl;
-    }
-    const canonicalIconPageUrl = getCanonicalPageUrlForFavicon(iconUrl);
-    if (canonicalIconPageUrl && canonicalIconPageUrl !== iconUrl) {
-      return canonicalIconPageUrl;
-    }
-    const host = String(iconHost || '').trim();
-    return host ? `https://${host}/` : '';
-  }
-
-  const attachInputModeProviderIcon: AttachProviderIcon = (icon, context) => {
-    const iconUrl = context.iconUrl ? String(context.iconUrl).trim() : '';
-    if (!iconUrl || iconUrl.startsWith('data:')) {
-      return false;
-    }
-    const iconHost = context.iconHost ? String(context.iconHost).trim() : '';
-    const pageUrl = getProviderIconAttachPageUrl(context.provider, iconUrl, iconHost);
-    if (!pageUrl) {
-      return false;
-    }
-    const hostKey = iconHost || getHostFromUrl(pageUrl);
-    const candidates = getPageFaviconRenderCandidates(pageUrl, iconUrl, { allowRemoteImage: true });
-    const primaryUrl = isFaviconProxyUrl(iconUrl)
-      ? (candidates.primaryUrl || iconUrl)
-      : iconUrl;
-    attachFaviconWithFallbacks(icon, pageUrl, hostKey, {
-      primaryUrl,
-      allowRemoteImage: true,
-      browserUrl: candidates.browserUrl || '',
-      onUnavailable: context.onIconUnavailable
-    });
-    return true;
-  };
 
   // Starts loading the providers with `loader`; `invalidate` drops the
   // load running now.
@@ -566,7 +518,6 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     runSiteSearchProviderQuery,
     getProviderFaviconPageUrl,
     getProviderIcon,
-    attachInputModeProviderIcon,
     getSiteSearchProviders,
     reloadSiteSearchProvidersFromStorage,
     getAggregateSearches,

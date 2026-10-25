@@ -108,16 +108,6 @@ interface ModeMenuEntry {
   searchIndex: Readonly<ModeMenuSearchIndex>;
 }
 
-// Draws a provider's icon into the image through the surface's icon
-// runtime; true when the runtime took it over.
-type AttachProviderIcon = (image: HTMLImageElement, details: {
-  iconHost: string;
-  iconUrl: string;
-  onIconUnavailable: () => void;
-  prefixText: string;
-  provider: SiteSearchProvider | null;
-}) => unknown;
-
 // Swaps the image to the icon's cached data URL once there is one.
 type AttachFaviconData = (image: HTMLImageElement, iconUrl: string, iconHost: string) => void;
 
@@ -152,7 +142,6 @@ type GetThemeForProvider = (provider: SiteSearchProvider) =>
 
 export type {
   AttachFaviconData,
-  AttachProviderIcon,
   CssDeclaration,
   CssText,
   FormatMessage,

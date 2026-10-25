@@ -306,18 +306,6 @@ function createPrefixText(deps: PrefixTextDeps) {
   }
 
   // Removes the fallback icons the surfaces' icon runtimes leave beside an image.
-  function removeProviderIconRuntimeFallbacks(parent: ParentNode | null | undefined): void {
-    if (!parent) {
-      return;
-    }
-    parent.querySelectorAll(
-      '._x_extension_favicon_fallback_2024_unique_, ' +
-      '._x_extension_overlay_favicon_fallback_2026_unique_, ' +
-      '.x-nt-favicon-fallback, ' +
-      '.x-ov-suggestion-favicon-fallback'
-    ).forEach((node) => node.remove());
-  }
-
   function renderTabHint(provider: InputModeProvider | null | undefined): void {
     const site = getSiteSearchDisplayName(provider);
     const explicitLabel = provider && provider.tabHintLabel
@@ -402,7 +390,6 @@ function createPrefixText(deps: PrefixTextDeps) {
     setPrefixText,
     setProviderPrefix,
     clearProviderPrefix,
-    removeProviderIconRuntimeFallbacks,
     setTabHintVisible
   };
 }

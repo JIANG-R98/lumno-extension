@@ -35,7 +35,6 @@ import type { PrefixTextConfig, PrefixTextState } from './input-mode/prefix-text
 import type { PrefixVisualConfig, PrefixVisualState } from './input-mode/prefix-visual';
 import type {
   AttachFaviconData,
-  AttachProviderIcon,
   CssDeclaration,
   FormatMessage,
   GetThemeForProvider,
@@ -86,9 +85,6 @@ interface InputModeOwnConfig {
   getThemeForProvider?: GetThemeForProvider;
   isAiSiteSearchProvider?: (provider: InputModeProvider | null | undefined) => boolean;
   attachFaviconData?: AttachFaviconData;
-  attachProviderIcon?: AttachProviderIcon;
-  // Load provider icons straight away instead of through the icon runtime.
-  preferDirectProviderIcons?: boolean;
   isDarkMode?: () => unknown;
   parseCssColor?: (color: unknown) => Rgb | null;
   rgbToCss?: (rgb: Rgb) => string;
@@ -445,10 +441,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
   const attachFaviconData = typeof config.attachFaviconData === 'function'
     ? config.attachFaviconData
     : null;
-  const attachProviderIcon = typeof config.attachProviderIcon === 'function'
-    ? config.attachProviderIcon
-    : null;
-  const preferDirectProviderIcons = config.preferDirectProviderIcons === true;
   const isDarkMode = typeof config.isDarkMode === 'function'
     ? config.isDarkMode
     : () => false;
@@ -898,10 +890,7 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     doc,
     getThemeForProvider,
     resolveProviderIconUrl,
-    removeProviderIconRuntimeFallbacks: (...args) => removeProviderIconRuntimeFallbacks(...args),
     getProviderThemeHost,
-    attachProviderIcon,
-    preferDirectProviderIcons,
     attachFaviconData,
     inputModeState
   });
@@ -931,10 +920,7 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     renderModeLineIconSvg,
     siteSearchPrefixIcon,
     cssText,
-    removeProviderIconRuntimeFallbacks: (...args) => removeProviderIconRuntimeFallbacks(...args),
     updatePrefixLayout,
-    attachProviderIcon,
-    preferDirectProviderIcons,
     attachFaviconData,
     siteSearchPrefixCurrentText,
     siteSearchPrefixCurrent,
@@ -973,7 +959,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     setPrefixText,
     setProviderPrefix,
     clearProviderPrefix,
-    removeProviderIconRuntimeFallbacks,
     setTabHintVisible
   } = INPUT_MODE_PREFIX_TEXT.createPrefixText({
     config,

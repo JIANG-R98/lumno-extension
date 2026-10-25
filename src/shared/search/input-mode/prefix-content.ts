@@ -2,7 +2,6 @@
 // the previous icon, and measuring and setting its text and icon.
 import type {
   AttachFaviconData,
-  AttachProviderIcon,
   CssText,
   FormatMessage,
   IsElementVisible,
@@ -35,10 +34,7 @@ interface PrefixContentDeps {
   renderModeLineIconSvg: (svg: Element | null | undefined, lineIconName: string, strokeWidth?: string) => boolean;
   siteSearchPrefixIcon: HTMLImageElement;
   cssText: CssText;
-  removeProviderIconRuntimeFallbacks: (root: HTMLElement) => void;
   updatePrefixLayout: () => void;
-  attachProviderIcon: AttachProviderIcon | null;
-  preferDirectProviderIcons: boolean;
   attachFaviconData: AttachFaviconData | null;
   siteSearchPrefixCurrentText: HTMLElement;
   siteSearchPrefixCurrent: HTMLElement;
@@ -79,10 +75,7 @@ function createPrefixContent(deps: PrefixContentDeps) {
     renderModeLineIconSvg,
     siteSearchPrefixIcon,
     cssText,
-    removeProviderIconRuntimeFallbacks,
     updatePrefixLayout,
-    attachProviderIcon,
-    preferDirectProviderIcons,
     attachFaviconData,
     siteSearchPrefixCurrentText,
     siteSearchPrefixCurrent,
@@ -371,7 +364,6 @@ function createPrefixContent(deps: PrefixContentDeps) {
         if (contentRevision !== inputModeState.inputModePrefixContentRevision) {
           return;
         }
-        removeProviderIconRuntimeFallbacks(siteSearchPrefix);
         setStyle(siteSearchPrefixIconFrame, 'display', 'none');
         setStyle(icon, 'display', 'none');
         icon.removeAttribute('src');
@@ -379,26 +371,10 @@ function createPrefixContent(deps: PrefixContentDeps) {
         updatePrefixLayout();
       };
       const iconHost = contentOptions && contentOptions.iconHost ? String(contentOptions.iconHost || '').trim() : '';
-      let handledByProviderIconRuntime = false;
-      if (attachProviderIcon && !preferDirectProviderIcons) {
-        try {
-          handledByProviderIconRuntime = attachProviderIcon(icon, {
-            iconHost,
-            iconUrl,
-            onIconUnavailable: removeUnavailableIcon,
-            prefixText,
-            provider: contentOptions && contentOptions.provider ? contentOptions.provider : null
-          }) === true;
-        } catch (_error) {
-          handledByProviderIconRuntime = false;
-        }
-      }
-      if (!handledByProviderIconRuntime) {
-        icon.addEventListener('error', removeUnavailableIcon, { once: true });
-        icon.src = iconUrl;
-        if (attachFaviconData && !iconUrl.startsWith('data:')) {
-          attachFaviconData(icon, iconUrl, iconHost);
-        }
+      icon.addEventListener('error', removeUnavailableIcon, { once: true });
+      icon.src = iconUrl;
+      if (attachFaviconData && !iconUrl.startsWith('data:')) {
+        attachFaviconData(icon, iconUrl, iconHost);
       }
     } else if (!hasBuiltInLineIcon) {
       setStyle(siteSearchPrefixIconFrame, 'display', 'none');
