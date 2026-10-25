@@ -549,7 +549,7 @@
     "message": "Utiliser dans Dia"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "Dans Dia, en raison des limitations du navigateur, les fonctionnalités Nouvel onglet de Lumno sont temporairement indisponibles, mais la barre de commandes fonctionne normalement.\n\nSi le raccourci clavier ne fonctionne pas dans Dia, cliquez sur le bouton en bas à droite pour ouvrir la page des raccourcis du navigateur, puis passez «\u00a0Open command bar\u00a0» de In Dia à Global."
+    "message": "Dia ne permet pas aux extensions de remplacer le nouvel onglet, donc le Nouvel onglet de Lumno n'y est pas disponible. La barre de commandes fonctionne normalement.\n\nPour ouvrir la barre de commandes avec ⌘T\u00a0: les raccourcis de Dia sont prioritaires, donc ouvrez d'abord Settings → Shortcuts dans Dia et remplacez le ⌘T de «\u00a0New Tab\u00a0» par une autre touche. Cliquez ensuite sur le bouton en bas à droite et définissez «\u00a0Open command bar\u00a0» sur ⌘T.\n\nSi le raccourci clavier ne répond pas dans Dia, passez sa portée de In Dia à Global."
   },
   "settings_shortcuts_section_title": {
     "message": "Raccourcis clavier"

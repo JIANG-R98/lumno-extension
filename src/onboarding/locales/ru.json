@@ -24,7 +24,7 @@
   "setup.titleLines.1": "как родная",
   "setup.body": "Нажмите {shortcut}, чтобы открыть Lumno где угодно.",
   "setup.diaLabel": "Пользуетесь Dia?",
-  "setup.diaText": "Если сочетание клавиш не срабатывает в Dia, нажмите «Настроить быстрые клавиши» и для «Open command bar» замените «In Dia» на «Global».",
+  "setup.diaText": "Для ⌘T сначала смените «New Tab» в Settings → Shortcuts в Dia, затем нажмите «Настроить быстрые клавиши» и назначьте ⌘T для «Open command bar». Не срабатывает — выберите «Global» вместо «In Dia».",
   "setup.shortcutsLink": "Настроить быстрые клавиши",
   "setup.localFileLabel": "Работаете с локальными файлами?",
   "setup.localFileText": "Нажмите «Сведения о расширении», разрешите Lumno открывать локальные файлы по ссылкам, затем обновите вкладку с PDF или HTML.",

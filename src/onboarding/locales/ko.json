@@ -24,7 +24,7 @@
   "setup.titleLines.1": "커맨드 바",
   "setup.body": "어디서든 {shortcut} 키를 눌러 Lumno를 여세요.",
   "setup.diaLabel": "Dia를 사용 중이신가요?",
-  "setup.diaText": "Dia에서 단축키가 반응하지 않으면 '단축키 설정 열기'를 클릭하고 \"Open command bar\"를 \"In Dia\"에서 \"Global\"로 변경하세요.",
+  "setup.diaText": "Dia에서는 Lumno 새 탭을 쓸 수 없지만 커맨드 바는 작동합니다. ⌘T를 쓰려면 먼저 Dia의 Settings → Shortcuts에서 \"New Tab\" 단축키를 바꾼 뒤, '단축키 설정 열기'를 클릭해 \"Open command bar\"를 ⌘T로 설정하세요. 반응이 없으면 \"In Dia\"를 \"Global\"로 바꾸세요.",
   "setup.shortcutsLink": "단축키 설정 열기",
   "setup.localFileLabel": "로컬 파일에서 사용하시나요?",
   "setup.localFileText": "'확장 프로그램 세부정보 열기'를 클릭해 Lumno의 파일 URL 액세스를 허용한 후 PDF 또는 HTML 탭을 새로고침하세요.",

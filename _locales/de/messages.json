@@ -549,7 +549,7 @@
     "message": "In Dia verwenden"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "In Dia sind die Neuer-Tab-Funktionen von Lumno aufgrund von Browsereinschränkungen vorübergehend nicht verfügbar, die Befehlsleiste funktioniert aber normal.\n\nWenn die Tastenkombination in Dia nicht funktioniert, klicken Sie unten rechts auf die Schaltfläche, um die Tastenkombinationen des Browsers zu öffnen, und ändern Sie „Befehlsleiste öffnen“ von In Dia zu Global."
+    "message": "Dia erlaubt Erweiterungen nicht, den neuen Tab zu ersetzen, daher ist Lumnos Neuer Tab dort nicht verfügbar. Die Befehlsleiste funktioniert normal.\n\nBefehlsleiste mit ⌘T öffnen: Die Tastenkombinationen von Dia haben Vorrang. Ändern Sie daher zuerst in Dia unter Settings → Shortcuts „New Tab“ von ⌘T auf eine andere Taste. Klicken Sie dann unten rechts auf die Schaltfläche und legen Sie „Befehlsleiste öffnen“ auf ⌘T fest.\n\nWenn die Tastenkombination in Dia nicht reagiert, ändern Sie den Bereich von In Dia zu Global."
   },
   "settings_shortcuts_section_title": {
     "message": "Tastenkombination"

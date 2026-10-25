@@ -24,7 +24,7 @@
   "setup.titleLines.1": "die sich nativ anfühlt",
   "setup.body": "Drücken Sie {shortcut}, um Lumno überall zu öffnen.",
   "setup.diaLabel": "Sie nutzen Dia?",
-  "setup.diaText": "Wenn die Tastenkombination in Dia nicht reagiert, klicken Sie auf „Tastenkombinationen öffnen“ und ändern Sie „Befehlsleiste öffnen“ von „In Dia“ zu „Global“.",
+  "setup.diaText": "Für ⌘T belegen Sie zuerst „New Tab“ in Dias Settings → Shortcuts um, klicken auf „Tastenkombinationen öffnen“ und setzen „Befehlsleiste öffnen“ auf ⌘T. Reagiert sie nicht: „Global“ statt „In Dia“.",
   "setup.shortcutsLink": "Tastenkombinationen öffnen",
   "setup.localFileLabel": "Arbeiten Sie mit lokalen Dateien?",
   "setup.localFileText": "Klicken Sie auf „Erweiterungsdetails öffnen“, erlauben Sie Lumno den Zugriff auf Datei-URLs und aktualisieren Sie dann den PDF- oder HTML-Tab.",

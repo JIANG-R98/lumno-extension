@@ -549,7 +549,7 @@
     "message": "Usar no Dia"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "No Dia, por limitações do navegador, os recursos de Nova guia do Lumno estão temporariamente indisponíveis, mas a barra de comandos funciona normalmente.\n\nSe o atalho não funcionar no Dia, clique no botão no canto inferior direito para abrir a página de atalhos do navegador e mude \"Open command bar\" de In Dia para Global."
+    "message": "O Dia não permite que extensões substituam a nova guia, então a Nova guia do Lumno não está disponível nele. A barra de comandos funciona normalmente.\n\nPara abrir a barra de comandos com ⌘T: os atalhos do próprio Dia têm prioridade, então primeiro abra Settings → Shortcuts no Dia e troque o ⌘T de \"New Tab\" por outra tecla. Depois clique no botão no canto inferior direito e defina \"Open command bar\" como ⌘T.\n\nSe o atalho não responder no Dia, mude o escopo de In Dia para Global."
   },
   "settings_shortcuts_section_title": {
     "message": "Configurações de atalho"

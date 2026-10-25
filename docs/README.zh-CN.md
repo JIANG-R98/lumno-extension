@@ -172,7 +172,7 @@ Lumno 为 Chromium 浏览器开发，同时提供 Firefox 版。Zen、LibreWolf�
 | 「前往快捷键设置」 | 表现不同 | 打开附加组件管理器，需在齿轮菜单中选择「管理扩展快捷键」 |
 | 设置同步 | 表现不同 | 使用 Firefox 同步而非 Chrome 同步。WebDAV 同步可在 Chrome 与 Firefox 之间进行，包括同一台电脑上同时打开两者 |
 
-**Chromium 系浏览器。** Brave、Arc、Vivaldi、Opera 等使用 Chrome 应用商店的版本，功能与 Chrome 相同，但部分浏览器会占用或改写扩展快捷键。在 Dia 中，新标签页功能暂不可用，聚焦搜索可正常使用；如果快捷键无效，请在浏览器的快捷键设置中把「Open command bar」从 In Dia 改为 Global。
+**Chromium 系浏览器。** Brave、Arc、Vivaldi、Opera 等使用 Chrome 应用商店的版本，功能与 Chrome 相同，但部分浏览器会占用或改写扩展快捷键。在 Dia 中，新标签页功能暂不可用，聚焦搜索可正常使用。Dia 自带快捷键优先，想用 ⌘T 唤起聚焦搜索，需先在 Dia 的 Settings → Shortcuts 中把「New Tab」的 ⌘T 改成其他按键，再到浏览器的扩展快捷键页面把「Open command bar」设为 ⌘T；如果快捷键无效，请在同一页面把它从 In Dia 改为 Global。
 
 ## 隐私
 

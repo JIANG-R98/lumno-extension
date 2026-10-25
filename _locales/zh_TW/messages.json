@@ -549,7 +549,7 @@
     "message": "在 Dia 中使用"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "在 Dia 環境下，受瀏覽器限制，Lumno 的新分頁功能暫不可用，但聚焦搜尋功能仍可正常運作。\n\n若快速鍵在 Dia 中不可用，請點按下方右側按鈕進入瀏覽器的快速鍵設定頁面，將「Open command bar」從 In Dia 改成 Global。"
+    "message": "Dia 不允許擴充功能取代新分頁，所以 Lumno 的新分頁在 Dia 中暫不可用，聚焦搜尋可以正常使用。\n\n想用 ⌘T 叫出聚焦搜尋：Dia 內建快速鍵的優先順序較高，請先在 Dia 的 Settings → Shortcuts 中，把「New Tab」的 ⌘T 改成其他按鍵，再點按下方右側按鈕，將「Open command bar」設為 ⌘T。\n\n若快速鍵在 Dia 中沒有反應，請將其作用範圍從 In Dia 改成 Global。"
   },
   "settings_shortcuts_section_title": {
     "message": "快速鍵設定"

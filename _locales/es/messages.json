@@ -549,7 +549,7 @@
     "message": "Usar en Dia"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "En Dia, por limitaciones del navegador, las funciones de Nueva pestaña de Lumno no están disponibles por ahora, pero la barra de comandos funciona con normalidad.\n\nSi la combinación de teclas no funciona en Dia, haz clic en el botón de abajo a la derecha para abrir la página de combinaciones de teclas del navegador y cambia «Abrir la barra de comandos» de In Dia a Global."
+    "message": "Dia no permite que las extensiones reemplacen la nueva pestaña, así que la Nueva pestaña de Lumno no está disponible ahí. La barra de comandos funciona con normalidad.\n\nPara abrir la barra de comandos con ⌘T: los atajos propios de Dia tienen prioridad, así que primero abre Settings → Shortcuts en Dia y cambia «New Tab» de ⌘T a otra tecla. Luego haz clic en el botón de abajo a la derecha y asigna ⌘T a «Abrir la barra de comandos».\n\nSi la combinación de teclas no responde en Dia, cambia su ámbito de In Dia a Global."
   },
   "settings_shortcuts_section_title": {
     "message": "Combinaciones de teclas"

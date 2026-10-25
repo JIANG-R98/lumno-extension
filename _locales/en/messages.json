@@ -549,7 +549,7 @@
     "message": "Use in Dia"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "In Dia, due to browser limitations, Lumno's New Tab features are temporarily unavailable, but the command bar still works normally.\n\nIf the shortcut does not work in Dia, click the button on the lower right to open the browser shortcut settings page, then change \"Open command bar\" from In Dia to Global."
+    "message": "Dia doesn't allow extensions to replace the new tab, so Lumno's New Tab isn't available there. The command bar works normally.\n\nTo open the command bar with ⌘T: Dia's own shortcuts take priority, so first open Dia's Settings → Shortcuts and change \"New Tab\" from ⌘T to another key. Then click the button on the lower right and set \"Open command bar\" to ⌘T.\n\nIf the shortcut doesn't respond in Dia, change its scope from In Dia to Global."
   },
   "settings_shortcuts_section_title": {
     "message": "Shortcut Settings"

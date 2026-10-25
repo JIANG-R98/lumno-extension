@@ -172,7 +172,7 @@ Lumno is built for Chromium browsers and also ships a Firefox build. Browsers bu
 | "Open shortcut settings" | Works differently | Opens the Add-ons Manager; choose **Manage Extension Shortcuts** from the gear menu |
 | Settings sync | Works differently | Uses Firefox Sync instead of Chrome sync. WebDAV sync works across Chrome and Firefox, including both open on the same computer |
 
-**Chromium-based browsers.** Brave, Arc, Vivaldi, Opera and others use the Chrome Web Store build with the same features as Chrome, though some reserve or remap extension shortcuts. In Dia, the New Tab page is unavailable but the command bar works; if its shortcut does nothing, set "Open command bar" from **In Dia** to **Global** in the browser's shortcut settings.
+**Chromium-based browsers.** Brave, Arc, Vivaldi, Opera and others use the Chrome Web Store build with the same features as Chrome, though some reserve or remap extension shortcuts. In Dia, the New Tab page is unavailable but the command bar works. Dia's own shortcuts take priority, so to open the command bar with ⌘T, first change Dia's "New Tab" shortcut away from ⌘T in Dia's Settings → Shortcuts, then set "Open command bar" to ⌘T on the browser's extension shortcuts page. If the shortcut does nothing, change its scope there from **In Dia** to **Global**.
 
 ## Privacy
 

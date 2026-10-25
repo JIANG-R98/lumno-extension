@@ -9,7 +9,7 @@ const COMPATIBILITY_TOOLTIP =
 const SHORTCUT_ACTION_TOOLTIP =
   '由于浏览器限制，请在浏览器的扩展快捷键页面修改 Lumno 的快捷键，点击前往。';
 const DIA_BROWSER_DISCLOSURE_TEXT =
-  '在 Dia 中，若聚焦搜索浮窗的快捷键不可用，请进入浏览器的快捷键设置页面，将“Open command bar”从“In Dia”改为“Global”。';
+  'Dia 不支持扩展替换新标签页，但聚焦搜索可以正常使用。想用 ⌘T 唤起：Dia 自带快捷键优先，请先在 Dia 的 Settings → Shortcuts 中把“New Tab”的 ⌘T 改成其他按键，再进入浏览器的快捷键设置页面，将“Open command bar”设为 ⌘T。若快捷键没有反应，将其从“In Dia”改为“Global”。';
 const SHORTCUTS_PAGE_URL = 'chrome://extensions/shortcuts';
 const LOCAL_FILE_ACCORDION_TEXT =
   '请前往扩展程序详情页，为 Lumno 开启“允许访问文件网址”，开启后刷新对应标签页。';

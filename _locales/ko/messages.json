@@ -549,7 +549,7 @@
     "message": "Dia에서 사용"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "Dia에서는 브라우저 제한으로 인해 Lumno의 새 탭 기능을 일시적으로 사용할 수 없지만, 커맨드 바는 정상적으로 작동합니다.\n\nDia에서 단축키가 작동하지 않으면 오른쪽 아래 버튼을 클릭해 브라우저 단축키 설정 페이지를 열고, \"Open command bar\"를 In Dia에서 Global로 변경하세요."
+    "message": "Dia는 확장 프로그램이 새 탭을 바꾸는 것을 허용하지 않아 Lumno의 새 탭을 사용할 수 없습니다. 커맨드 바는 정상적으로 작동합니다.\n\n⌘T로 커맨드 바를 열려면: Dia 자체 단축키가 우선 적용되므로, 먼저 Dia의 Settings → Shortcuts에서 \"New Tab\"의 ⌘T를 다른 키로 바꾸세요. 그다음 오른쪽 아래 버튼을 클릭해 \"Open command bar\"를 ⌘T로 설정하세요.\n\nDia에서 단축키가 반응하지 않으면 범위를 In Dia에서 Global로 변경하세요."
   },
   "settings_shortcuts_section_title": {
     "message": "단축키 설정"

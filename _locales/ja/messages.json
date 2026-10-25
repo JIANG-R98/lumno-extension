@@ -549,7 +549,7 @@
     "message": "Diaで使用"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "Diaではブラウザ制限により、Lumnoの新しいタブ機能は現在利用できませんが、検索バーは通常どおり使えます。\n\nDiaでキーが使えない場合は、右下のボタンからブラウザのキー設定を開き、「Open command bar」をIn DiaからGlobalに変更してください。"
+    "message": "Diaでは拡張機能による新しいタブの置き換えが許可されていないため、Lumnoの新しいタブは利用できません。検索バーは通常どおり使えます。\n\n⌘Tで検索バーを開くには：Dia自体のキー設定が優先されるため、まずDiaのSettings → Shortcutsで「New Tab」の⌘Tを別のキーに変更します。次に右下のボタンから「Open command bar」を⌘Tに設定してください。\n\nDiaでキーが反応しない場合は、範囲をIn DiaからGlobalに変更してください。"
   },
   "settings_shortcuts_section_title": {
     "message": "キー設定"

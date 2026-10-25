@@ -549,7 +549,7 @@
     "message": "在 Dia 中使用"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "在 Dia 环境下，受浏览器限制，Lumno 的新标签页功能暂不可用，但聚焦搜索功能仍可正常运行。\n\n若快捷键在 Dia 中不可用，请点击下方右侧按钮进入浏览器的快捷键设置页面，将「Open command bar」从 In Dia 改成 Global。"
+    "message": "Dia 不允许扩展替换新标签页，所以 Lumno 的新标签页在 Dia 中暂不可用，聚焦搜索可以正常使用。\n\n想用 ⌘T 唤起聚焦搜索：Dia 自带快捷键的优先级更高，请先在 Dia 的 Settings → Shortcuts 中，把「New Tab」的 ⌘T 改成其他按键，再点击下方右侧按钮，将「Open command bar」设为 ⌘T。\n\n若快捷键在 Dia 中没有反应，请将其作用范围从 In Dia 改成 Global。"
   },
   "settings_shortcuts_section_title": {
     "message": "快捷键设置"
