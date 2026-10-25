@@ -836,17 +836,6 @@ function assertBrandMarkCopy() {
   assert.strictEqual(search.seconds.title, expected.zh_CN.seconds);
   assert.strictEqual(search.seconds.toggle.label, expected.zh_CN.seconds);
   assert.strictEqual(search.seconds.visible, true);
-
-  // Options offers the same choices.
-  const optionsDocument = new JSDOM(readPageSource('src/options/options.html')).window.document;
-  assert.deepStrictEqual(
-    Array.from(optionsDocument.querySelectorAll('[data-newtab-top-content]')).map((node) => node.getAttribute('data-newtab-top-content')),
-    ['brand', 'time', 'off']
-  );
-  ['_x_extension_newtab_time_font_weight_row_2026_unique_', '_x_extension_newtab_time_seconds_row_2026_unique_',
-    '_x_extension_newtab_time_seconds_toggle_2026_unique_'].forEach((id) => {
-    assert.ok(optionsDocument.querySelector(`#${id}, .${id}`), `Options should include ${id}`);
-  });
 }
 
 function assertThemeAwareAlternateFaviconAsset() {

@@ -1,16 +1,10 @@
-// The page's sliders: clock weight, size and opacity, shortcut columns,
-// size and gap, bookmark rows and columns and the recent count, each with
-// its React control.
-import type * as Settings from '../domain/settings';
+// The page's sliders: shortcut columns, size and gap, bookmark rows and
+// columns and the recent count, each with its React control.
 import type { StorageAreaLike } from '../domain/storage-port';
 import type { GetMessage } from './options-types';
 import type { createSettingsControlsApi } from './react/settings-controls';
 
 interface SliderControlsState {
-  currentNewtabTimeFont: string;
-  currentNewtabTimeFontWeight: number;
-  currentNewtabTimeFontSize: number;
-  currentNewtabTimeOpacity: number;
   currentNewtabShortcutColumns: number;
   currentNewtabShortcutSize: number;
   currentNewtabShortcutGap: number;
@@ -22,17 +16,7 @@ interface SliderControlsState {
 interface SliderControlsDeps {
   optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>, 'createRangeSliderControlController'>;
   storageArea: StorageAreaLike | null;
-  SETTINGS: Pick<typeof Settings,
-    'NEWTAB_TIME_FONT_SIZE_DEFAULT' | 'NEWTAB_TIME_FONT_SIZE_MAX' | 'NEWTAB_TIME_FONT_SIZE_MIN' |
-    'NEWTAB_TIME_FONT_SIZE_STORAGE_KEY' | 'NEWTAB_TIME_OPACITY_DEFAULT' | 'NEWTAB_TIME_OPACITY_MAX' |
-    'NEWTAB_TIME_OPACITY_MIN' | 'NEWTAB_TIME_OPACITY_STORAGE_KEY' | 'getNewtabTimeFont' |
-    'normalizeNewtabTimeFontSize' | 'normalizeNewtabTimeOpacity' | 'resolveNewtabTimeFontWeight'>;
   getMessage: GetMessage;
-  newtabTimeFontWeightControlHost: HTMLElement | null;
-  normalizeNewtabTimeFontWeight(value: unknown): number;
-  NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY: string;
-  newtabTimeFontSizeControlHost: HTMLElement | null;
-  newtabTimeOpacityControlHost: HTMLElement | null;
   newtabShortcutColumnsControlHost: HTMLElement | null;
   normalizeNewtabShortcutColumns(value: unknown): number;
   NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY: string;
@@ -77,14 +61,8 @@ interface SliderControlsDeps {
 function createSliderControls(deps: SliderControlsDeps) {
   const {
     optionsSettingsControlsApi,
-    newtabTimeFontWeightControlHost,
-    normalizeNewtabTimeFontWeight,
     storageArea,
-    NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
-    SETTINGS,
     getMessage,
-    newtabTimeFontSizeControlHost,
-    newtabTimeOpacityControlHost,
     newtabShortcutColumnsControlHost,
     normalizeNewtabShortcutColumns,
     NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
@@ -128,115 +106,6 @@ function createSliderControls(deps: SliderControlsDeps) {
   // The page state object shared with options.js and the other modules.
   const optionsState = deps.optionsState;
 
-  const newtabTimeFontWeightController =
-    optionsSettingsControlsApi.createRangeSliderControlController(
-      newtabTimeFontWeightControlHost,
-      {
-        kind: 'newtab-time-font-weight',
-        onInput(value) {
-          const nextWeight = normalizeNewtabTimeFontWeight(value);
-          optionsState.currentNewtabTimeFontWeight = nextWeight;
-          if (storageArea) {
-            storageArea.set({ [NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY]: nextWeight });
-          }
-        }
-      }
-    );
-  function renderNewtabTimeFontWeightControl(value: unknown): void {
-    optionsState.currentNewtabTimeFontWeight = normalizeNewtabTimeFontWeight(value);
-    // The slider spans the range the chosen face draws well.
-    const timeFont = SETTINGS.getNewtabTimeFont(optionsState.currentNewtabTimeFont);
-    newtabTimeFontWeightController.render({
-      ariaLabel: getMessage('newtab_time_font_weight_title', 'Time font weight'),
-      defaultValue: timeFont.defaultWeight,
-      id: '_x_extension_newtab_time_font_weight_slider_2026_unique_',
-      min: timeFont.minWeight,
-      max: timeFont.maxWeight,
-      resetAriaLabel: getMessage(
-        'newtab_time_font_weight_reset',
-        'Reset time font weight'
-      ),
-      resetButtonId: '_x_extension_newtab_time_font_weight_reset_2026_unique_',
-      step: 1,
-      ticks: [
-        { align: 'start', label: String(timeFont.minWeight) },
-        { label: String(Math.round((timeFont.minWeight + timeFont.maxWeight) / 2)) },
-        { align: 'end', label: String(timeFont.maxWeight) }
-      ],
-      value: SETTINGS.resolveNewtabTimeFontWeight(timeFont.id, optionsState.currentNewtabTimeFontWeight)
-    });
-  }
-  const newtabTimeFontSizeController =
-    optionsSettingsControlsApi.createRangeSliderControlController(
-      newtabTimeFontSizeControlHost,
-      {
-        kind: 'newtab-time-font-size',
-        onInput(value) {
-          optionsState.currentNewtabTimeFontSize = SETTINGS.normalizeNewtabTimeFontSize(value);
-          if (storageArea) {
-            storageArea.set({ [SETTINGS.NEWTAB_TIME_FONT_SIZE_STORAGE_KEY]: optionsState.currentNewtabTimeFontSize });
-          }
-        }
-      }
-    );
-  function renderNewtabTimeFontSizeControl(value: unknown): void {
-    optionsState.currentNewtabTimeFontSize = SETTINGS.normalizeNewtabTimeFontSize(value);
-    const min = SETTINGS.NEWTAB_TIME_FONT_SIZE_MIN;
-    const max = SETTINGS.NEWTAB_TIME_FONT_SIZE_MAX;
-    const defaultValue = SETTINGS.NEWTAB_TIME_FONT_SIZE_DEFAULT;
-    newtabTimeFontSizeController.render({
-      ariaLabel: getMessage('newtab_time_font_size_title', 'Time size'),
-      defaultValue,
-      id: '_x_extension_newtab_time_font_size_slider_2026_unique_',
-      min,
-      max,
-      resetAriaLabel: getMessage('newtab_time_font_size_reset', 'Reset time size'),
-      resetButtonId: '_x_extension_newtab_time_font_size_reset_2026_unique_',
-      step: 1,
-      ticks: [
-        { align: 'start', label: String(min) },
-        { label: String(defaultValue), percent: ((defaultValue - min) / (max - min)) * 100 },
-        { align: 'end', label: String(max) }
-      ],
-      value: optionsState.currentNewtabTimeFontSize,
-      valueSuffix: ' px'
-    });
-  }
-  const newtabTimeOpacityController =
-    optionsSettingsControlsApi.createRangeSliderControlController(
-      newtabTimeOpacityControlHost,
-      {
-        kind: 'newtab-time-opacity',
-        onInput(value) {
-          optionsState.currentNewtabTimeOpacity = SETTINGS.normalizeNewtabTimeOpacity(value);
-          if (storageArea) {
-            storageArea.set({ [SETTINGS.NEWTAB_TIME_OPACITY_STORAGE_KEY]: optionsState.currentNewtabTimeOpacity });
-          }
-        }
-      }
-    );
-  function renderNewtabTimeOpacityControl(value: unknown): void {
-    optionsState.currentNewtabTimeOpacity = SETTINGS.normalizeNewtabTimeOpacity(value);
-    const min = SETTINGS.NEWTAB_TIME_OPACITY_MIN;
-    const max = SETTINGS.NEWTAB_TIME_OPACITY_MAX;
-    newtabTimeOpacityController.render({
-      ariaLabel: getMessage('newtab_time_opacity_title', 'Time opacity'),
-      defaultValue: SETTINGS.NEWTAB_TIME_OPACITY_DEFAULT,
-      id: '_x_extension_newtab_time_opacity_slider_2026_unique_',
-      min,
-      max,
-      resetAriaLabel: getMessage('newtab_time_opacity_reset', 'Reset time opacity'),
-      resetButtonId: '_x_extension_newtab_time_opacity_reset_2026_unique_',
-      step: 1,
-      ticks: [
-        { align: 'start', label: `${min}%` },
-        { label: `${Math.round((min + max) / 2)}%` },
-        { align: 'end', label: `${max}%` }
-      ],
-      value: optionsState.currentNewtabTimeOpacity,
-      valueSuffix: '%'
-    });
-  }
   const newtabShortcutColumnsController =
     optionsSettingsControlsApi.createRangeSliderControlController(
       newtabShortcutColumnsControlHost,
@@ -478,9 +347,6 @@ function createSliderControls(deps: SliderControlsDeps) {
     });
   }
   return {
-    renderNewtabTimeFontWeightControl,
-    renderNewtabTimeFontSizeControl,
-    renderNewtabTimeOpacityControl,
     renderNewtabShortcutColumnsControl,
     renderNewtabShortcutSizeControl,
     renderNewtabShortcutGapControl,

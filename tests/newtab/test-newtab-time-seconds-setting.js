@@ -9,7 +9,6 @@ const { createNewtabPage } = require('../helpers/newtab-page');
 // The New Tab clock's font, weight and seconds: the settings themselves,
 // their rows in Settings, and the clock that follows them.
 
-const optionsDocument = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
 const newtabDocument = new JSDOM(fs.readFileSync('newtab.html', 'utf8')).window.document;
 
 assert.strictEqual(
@@ -97,7 +96,11 @@ assert(
 const ROW_IDS = ['font', 'font_weight', 'font_size', 'opacity', 'ink', 'seconds', '12_hour']
   .map((name) => `_x_extension_newtab_time_${name}_row_2026_unique_`);
 
-function testSettingsMarkup() {
+const TIME_SUBROWS = '_x_extension_newtab_time_subrows_2026_unique_';
+
+async function testSettingsMarkup() {
+  const page = await createOptionsPage({ sync: { [settings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY]: settings.NEWTAB_TOP_CONTENT_BRAND } });
+  const optionsDocument = page.document;
   const order = [
     '_x_extension_newtab_top_content_tabs_wrap_2026_unique_',
     '_x_extension_newtab_time_font_row_2026_unique_',
@@ -109,22 +112,26 @@ function testSettingsMarkup() {
     assert.ok(order[index].compareDocumentPosition(element) & 4,
       'Settings should place time font, weight and seconds in order right after the top-content selector');
   });
+  const subrows = page.byId(TIME_SUBROWS);
+  assert.deepStrictEqual([subrows.getAttribute('data-expanded'), subrows.hasAttribute('inert')], ['false', true], 'the clock options should start folded');
   ['font', 'font_weight', 'seconds', '12_hour'].forEach((name) => {
-    const row = optionsDocument.getElementById(`_x_extension_newtab_time_${name}_row_2026_unique_`);
-    assert.deepStrictEqual([row.hidden, row.getAttribute('aria-hidden')], [true, 'true'], `${name} should start hidden`);
+    assert.ok(subrows.contains(optionsDocument.getElementById(`_x_extension_newtab_time_${name}_row_2026_unique_`)),
+      `${name} should fold with the clock options`);
   });
   assert.strictEqual(optionsDocument.getElementById('_x_extension_newtab_time_seconds_toggle_2026_unique_').type, 'checkbox');
   const twelveHour = optionsDocument.getElementById('_x_extension_newtab_time_12_hour_toggle_2026_unique_');
   assert.deepStrictEqual([twelveHour.type, twelveHour.getAttribute('data-i18n-aria-label')], ['checkbox', 'newtab_time_12_hour_title']);
+  page.close();
 }
 
 async function testSettingsShowTheTimeRowsForTheClock() {
   const page = await createOptionsPage({ sync: { [settings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY]: settings.NEWTAB_TOP_CONTENT_BRAND } });
-  const rows = () => ROW_IDS.map((id) => page.byId(id).hidden);
-  assert.deepStrictEqual(rows(), ROW_IDS.map(() => true), 'the clock options stay hidden while New Tab shows the wordmark');
+  const subrows = page.byId(TIME_SUBROWS);
+  assert.ok(ROW_IDS.every((id) => subrows.contains(page.byId(id))));
+  assert.strictEqual(subrows.getAttribute('data-expanded'), 'false', 'the clock options stay folded while New Tab shows the wordmark');
   await page.click(page.document.querySelector('#_x_extension_newtab_top_content_tabs_wrap_2026_unique_ [data-newtab-top-content="time"]'));
   await page.settle(400);
-  assert.deepStrictEqual(rows(), ROW_IDS.map(() => false), 'choosing the clock should reveal its options');
+  assert.strictEqual(subrows.getAttribute('data-expanded'), 'true', 'choosing the clock should reveal its options');
   const slider = page.document.querySelector('#_x_extension_newtab_time_font_weight_row_2026_unique_ input[type="range"]');
   const font = settings.NEWTAB_TIME_FONTS.find((item) => item.id === settings.normalizeNewtabTimeFont(undefined));
   assert.deepStrictEqual([slider.min, slider.max, slider.step, slider.value],
@@ -193,7 +200,7 @@ function testCopy() {
 }
 
 (async () => {
-  testSettingsMarkup();
+  await testSettingsMarkup();
   await testSettingsShowTheTimeRowsForTheClock();
   await testClockFollowsTheSettings();
   testSecondsSwap();

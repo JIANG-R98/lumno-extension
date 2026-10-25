@@ -1,18 +1,18 @@
 const assert = require('assert');
-const fs = require('fs');
-const { JSDOM } = require('jsdom');
 const settings = require('../../src/domain/settings.ts');
 const { createNewtabPage, INPUT_ID } = require('../helpers/newtab-page');
+const { createOptionsPage } = require('../helpers/options-page');
 
 // Whether New Tab puts the cursor in its search box when it opens. Off by
 // default, so the browser's address bar keeps focus.
 
 const KEY = settings.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY;
 
-function testSettingsMarkup() {
-  const doc = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
-  const topContent = doc.querySelector('[data-i18n="settings_newtab_wordmark_title"]');
-  const autoFocus = doc.querySelector('[data-i18n="newtab_input_auto_focus_title"]');
+async function testSettingsMarkup() {
+  const page = await createOptionsPage();
+  const doc = page.document;
+  const topContent = doc.getElementById('_x_extension_newtab_top_content_tabs_wrap_2026_unique_');
+  const autoFocus = doc.getElementById('_x_extension_newtab_input_auto_focus_toggle_2026_unique_');
   assert.ok(topContent && autoFocus && (topContent.compareDocumentPosition(autoFocus) & 4),
     'input auto-focus should sit below the New Tab top-content setting');
   const toggle = doc.getElementById('_x_extension_newtab_input_auto_focus_toggle_2026_unique_');
@@ -22,6 +22,7 @@ function testSettingsMarkup() {
     'Settings should keep a second entry for the shared New Tab shortcuts switch');
   assert.strictEqual(KEY, '_x_extension_newtab_input_auto_focus_enabled_2026_unique_');
   assert.ok(settings.CHROME_SYNC_STORAGE_KEYS.includes(KEY), 'the preference should sync');
+  page.close();
 }
 
 // Chrome keeps the address bar focused on a fresh New Tab, so with auto-focus
@@ -97,7 +98,7 @@ async function testTheFocusHintIsUsedOnce() {
 }
 
 (async () => {
-  testSettingsMarkup();
+  await testSettingsMarkup();
   await testNewTabFollowsTheSetting();
   await testTheFocusHintIsUsedOnce();
   console.log('newtab input auto-focus setting tests passed');

@@ -10,6 +10,7 @@ import * as LumnoShortcutDisplay from '../domain/shortcut-display';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as OPTIONS_ACCOUNT_SECTION from './options-account-section';
 import * as OPTIONS_APPEARANCE_GLOBAL_SECTION from './options-appearance-global-section';
+import * as OPTIONS_APPEARANCE_NEWTAB_LOOK_SECTION from './options-appearance-newtab-look-section';
 import * as OPTIONS_APPEARANCE_OVERLAY_SECTION from './options-appearance-overlay-section';
 import { listInstalledFonts } from './options-installed-fonts';
 import * as OPTIONS_AGGREGATE_SEARCH_LIST from './options-aggregate-search-list';
@@ -89,26 +90,10 @@ import * as OPTIONS_STATE from './options-state';
   const recentModeTabButtons = queryHtmlElements(document, 'button[data-recent-mode]');
   const recentModeTabsWrap = getHtmlElement(document, '_x_extension_recent_mode_tabs_wrap_2024_unique_');
   const recentCountControlHost = getHtmlElement(document, '_x_extension_recent_count_control_2026_unique_');
-  const newtabWidthSelect = getHtmlTag(document, '_x_extension_newtab_width_select_2026_unique_', 'select');
-  const newtabWidthTabsWrap = getHtmlElement(document, '_x_extension_newtab_width_tabs_wrap_2026_unique_');
-  const newtabWidthTabButtons = queryHtmlElements(document, 'button[data-newtab-width]');
   const bookmarkRowsControlHost = getHtmlElement(document, '_x_extension_bookmark_rows_control_2026_unique_');
   const bookmarkColumnsSettingRow = getHtmlElement(document, '_x_extension_bookmark_columns_setting_row_2026_unique_');
   const bookmarkColumnsControlHost = getHtmlElement(document, '_x_extension_bookmark_columns_control_2026_unique_');
   const bookmarkFolderIconsVisibleRow = getHtmlElement(document, '_x_extension_bookmark_folder_icons_visible_row_2026_unique_');
-  const newtabTopContentTabsWrap = getHtmlElement(document, '_x_extension_newtab_top_content_tabs_wrap_2026_unique_');
-  const newtabTimeFontRow = getHtmlElement(document, '_x_extension_newtab_time_font_row_2026_unique_');
-  const newtabTimeFontSelect = getHtmlTag(document, '_x_extension_newtab_time_font_select_2026_unique_', 'select');
-  const newtabTimeFontWeightRow = getHtmlElement(document, '_x_extension_newtab_time_font_weight_row_2026_unique_');
-  const newtabTimeFontWeightControlHost = getHtmlElement(document, '_x_extension_newtab_time_font_weight_control_2026_unique_');
-  const newtabTimeFontSizeRow = getHtmlElement(document, '_x_extension_newtab_time_font_size_row_2026_unique_');
-  const newtabTimeFontSizeControlHost = getHtmlElement(document, '_x_extension_newtab_time_font_size_control_2026_unique_');
-  const newtabTimeOpacityRow = getHtmlElement(document, '_x_extension_newtab_time_opacity_row_2026_unique_');
-  const newtabTimeOpacityControlHost = getHtmlElement(document, '_x_extension_newtab_time_opacity_control_2026_unique_');
-  const newtabTimeInkRow = getHtmlElement(document, '_x_extension_newtab_time_ink_row_2026_unique_');
-  const newtabTimeInkTabsWrap = getHtmlElement(document, '_x_extension_newtab_time_ink_tabs_wrap_2026_unique_');
-  const newtabTimeSecondsRow = getHtmlElement(document, '_x_extension_newtab_time_seconds_row_2026_unique_');
-  const newtabTime12HourRow = getHtmlElement(document, '_x_extension_newtab_time_12_hour_row_2026_unique_');
   const newtabShortcutsToggle = getHtmlTag(document, '_x_extension_newtab_shortcuts_toggle_2026_unique_', 'input');
   const newtabShortcutAddRow = getHtmlElement(document, '_x_extension_newtab_shortcut_add_row_2026_unique_');
   const newtabShortcutAddToggle = getHtmlTag(document, '_x_extension_newtab_shortcut_add_toggle_2026_unique_', 'input');
@@ -120,9 +105,6 @@ import * as OPTIONS_STATE from './options-state';
   const newtabShortcutSizeControlHost = getHtmlElement(document, '_x_extension_newtab_shortcut_size_control_2026_unique_');
   const newtabShortcutGapRow = getHtmlElement(document, '_x_extension_newtab_shortcut_gap_setting_row_2026_unique_');
   const newtabShortcutGapControlHost = getHtmlElement(document, '_x_extension_newtab_shortcut_gap_control_2026_unique_');
-  const newtabGlassStyleSelect = getHtmlTag(document, '_x_extension_newtab_glass_style_select_2026_unique_', 'select');
-  const newtabGlassThemeRow = getHtmlElement(document, '_x_extension_newtab_glass_theme_row_2026_unique_');
-  const newtabGlassThemeTabsWrap = getHtmlElement(document, '_x_extension_newtab_glass_theme_tabs_wrap_2026_unique_');
   const bookmarkRowsInfoHost = getHtmlElement(document, '_x_extension_bookmark_rows_info_2026_unique_');
   const bookmarkColumnsInfoHost = getHtmlElement(document, '_x_extension_bookmark_columns_info_2026_unique_');
   const toastElement = getHtmlElement(document, '_x_extension_toast_2024_unique_');
@@ -155,7 +137,6 @@ import * as OPTIONS_STATE from './options-state';
     LANGUAGE_STORAGE_KEY,
     RECENT_MODE_STORAGE_KEY,
     RECENT_COUNT_STORAGE_KEY,
-    NEWTAB_WIDTH_MODE_STORAGE_KEY,
     BOOKMARK_COUNT_STORAGE_KEY,
     BOOKMARK_COLUMNS_STORAGE_KEY,
     NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,
@@ -176,9 +157,6 @@ import * as OPTIONS_STATE from './options-state';
     NEWTAB_SHORTCUT_GAP_MIN,
     NEWTAB_SHORTCUT_GAP_MAX,
     NEWTAB_SHORTCUT_GAP_DEFAULT,
-    NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
-    NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
-    NEWTAB_TIME_FONT_WEIGHT_DEFAULT,
     FALLBACK_SHORTCUT_STORAGE_KEY,
     SITE_SEARCH_STORAGE_KEY,
     SITE_SEARCH_DISABLED_STORAGE_KEY,
@@ -382,14 +360,7 @@ import * as OPTIONS_STATE from './options-state';
     refreshCustomSelects,
     refreshSyncStatus,
     renderShortcutReferenceList: (...args) => renderShortcutReferenceList(...args),
-    setNewtabWidthTabState: (...args) => setNewtabWidthTabState(...args),
     setRecentModeTabState: (...args) => setRecentModeTabState(...args),
-    setNewtabTopContentTabState: (...args) => setNewtabTopContentTabState(...args),
-    renderNewtabTimeFontWeightControl: (...args) => renderNewtabTimeFontWeightControl(...args),
-    renderNewtabTimeFontSizeControl: (...args) => renderNewtabTimeFontSizeControl(...args),
-    renderNewtabTimeOpacityControl: (...args) => renderNewtabTimeOpacityControl(...args),
-    setNewtabTimeInkTabState: (...args) => setNewtabTimeInkTabState(...args),
-    setNewtabGlassThemeTabState: (...args) => setNewtabGlassThemeTabState(...args),
     renderNewtabShortcutColumnsControl: (...args) => renderNewtabShortcutColumnsControl(...args),
     renderNewtabShortcutSizeControl: (...args) => renderNewtabShortcutSizeControl(...args),
     renderNewtabShortcutGapControl: (...args) => renderNewtabShortcutGapControl(...args),
@@ -407,6 +378,7 @@ import * as OPTIONS_STATE from './options-state';
       generalShortcutsSection.render();
       appearanceGlobalSection.render();
       appearanceOverlaySection.render();
+      appearanceNewtabLookSection.render();
       labsSection.render();
       blacklistSection.render();
     },
@@ -500,37 +472,14 @@ import * as OPTIONS_STATE from './options-state';
 
   const {
     setRecentModeTabState,
-    setNewtabWidthTabState,
-    setNewtabTopContentTabState,
-    setNewtabTimeInkTabState,
-    setNewtabGlassThemeTabState,
-    syncNewtabGlassThemeVisibility,
     updateRecentModeTabsVisibility,
-    handleNewtabWidthSelection,
-    handleNewtabTopContentSelection,
-    handleNewtabGlassThemeSelection,
-    handleNewtabTimeInkSelection,
     handleRecentModeSelection
   } = OPTIONS_SEGMENTED_TABS.createSegmentedTabs({
     getMessage,
-    normalizeNewtabWidthMode: (...args) => normalizeNewtabWidthMode(...args),
-    normalizeNewtabTopContentMode: (...args) => normalizeNewtabTopContentMode(...args),
-    SETTINGS,
     animateOptionsPanelHeight,
     setConditionalSettingsElementVisibility: (...args) => setConditionalSettingsElementVisibility(...args),
-    newtabGlassThemeRow,
-    newtabTimeFontRow,
-    newtabTimeFontWeightRow,
-    newtabTimeFontSizeRow,
-    newtabTimeOpacityRow,
-    newtabTimeInkRow,
-    newtabTimeSecondsRow,
-    newtabTime12HourRow,
     recentModeTabsWrap,
-    newtabWidthSelect,
-    NEWTAB_WIDTH_MODE_STORAGE_KEY,
     notifyNewtabSectionsRefresh,
-    NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
     recentModeSelect,
     RECENT_MODE_STORAGE_KEY,
     optionsState
@@ -546,10 +495,7 @@ import * as OPTIONS_STATE from './options-state';
     normalizeBookmarkCount,
     normalizeRecentCount,
     normalizeBookmarkColumns,
-    normalizeNewtabWidthMode,
     updateBookmarkColumnsSettingVisibility,
-    normalizeNewtabTopContentMode,
-    normalizeNewtabTimeFontWeight,
     normalizeNewtabShortcutsVisible,
     normalizeNewtabShortcutAddVisible,
     normalizeNewtabShortcutDockMagnificationEnabled,
@@ -576,26 +522,6 @@ import * as OPTIONS_STATE from './options-state';
     NEWTAB_SHORTCUT_WIDTH_MAX
   });
 
-  optionsState.newtabWidthTabsController = createOptionsSegmentedControlController(
-    newtabWidthTabsWrap,
-    'newtab-width',
-    handleNewtabWidthSelection
-  );
-  optionsState.newtabTopContentTabsController = createOptionsSegmentedControlController(
-    newtabTopContentTabsWrap,
-    'newtab-top-content',
-    handleNewtabTopContentSelection
-  );
-  optionsState.newtabTimeInkTabsController = createOptionsSegmentedControlController(
-    newtabTimeInkTabsWrap,
-    'newtab-time-ink',
-    handleNewtabTimeInkSelection
-  );
-  optionsState.newtabGlassThemeTabsController = createOptionsSegmentedControlController(
-    newtabGlassThemeTabsWrap,
-    'newtab-glass-theme',
-    handleNewtabGlassThemeSelection
-  );
 
   // Drawn before the switches below are set up, which mark the rows this
   // browser cannot honor.
@@ -655,6 +581,15 @@ import * as OPTIONS_STATE from './options-state';
     formatTemplate: (text, params) => formatTemplate(text, params),
     browserFamily: document.documentElement.getAttribute('data-browser-family') || '',
     listInstalledFonts,
+    getViewportTopInset: getMenuViewportTopInset
+  });
+  const appearanceNewtabLookHost = getHtmlElement(document, '_x_extension_appearance_newtab_look_section_2026_unique_');
+  const appearanceNewtabLookSection = OPTIONS_APPEARANCE_NEWTAB_LOOK_SECTION.createAppearanceNewtabLookSection({
+    view: (handlers) => optionsSettingsControlsApi.createSettingsSectionController(appearanceNewtabLookHost, handlers),
+    storageArea: optionsState.storageArea,
+    SETTINGS,
+    getMessage,
+    notifyNewtabSectionsRefresh: (section) => notifyNewtabSectionsRefresh(section),
     getViewportTopInset: getMenuViewportTopInset
   });
   const labsSection = OPTIONS_LABS_SECTION.createLabsSection({
@@ -921,31 +856,8 @@ import * as OPTIONS_STATE from './options-state';
     return `${safePrefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
   }
 
-  // Face names are proper names, so the list comes straight from settings.
-  if (newtabTimeFontSelect) {
-    SETTINGS.NEWTAB_TIME_FONTS.forEach((font) => {
-      const option = document.createElement('option');
-      option.value = font.id;
-      option.textContent = font.label;
-      newtabTimeFontSelect.appendChild(option);
-    });
-    newtabTimeFontSelect.value = optionsState.currentNewtabTimeFont;
-  }
-  const selectKinds: Array<[HTMLSelectElement | null, string]> = [
-    [newtabGlassStyleSelect, 'newtab-glass-style'],
-    [newtabTimeFontSelect, 'newtab-time-font']
-  ];
-  selectKinds.forEach(([select, kind]) => {
-    const record = registerOptionsSelectControl(select, kind);
-    if (record) {
-      renderOptionsSelectControl(record.select);
-    }
-  });
 
   const {
-    renderNewtabTimeFontWeightControl,
-    renderNewtabTimeFontSizeControl,
-    renderNewtabTimeOpacityControl,
     renderNewtabShortcutColumnsControl,
     renderNewtabShortcutSizeControl,
     renderNewtabShortcutGapControl,
@@ -955,14 +867,8 @@ import * as OPTIONS_STATE from './options-state';
     renderBookmarkColumnsControl
   } = OPTIONS_SLIDER_CONTROLS.createSliderControls({
     optionsSettingsControlsApi,
-    newtabTimeFontWeightControlHost,
-    normalizeNewtabTimeFontWeight,
     storageArea: optionsState.storageArea,
-    NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
-    SETTINGS,
     getMessage,
-    newtabTimeFontSizeControlHost,
-    newtabTimeOpacityControlHost,
     newtabShortcutColumnsControlHost,
     normalizeNewtabShortcutColumns,
     NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
@@ -1004,9 +910,6 @@ import * as OPTIONS_STATE from './options-state';
     optionsState
   });
 
-  renderNewtabTimeFontWeightControl(NEWTAB_TIME_FONT_WEIGHT_DEFAULT);
-  renderNewtabTimeFontSizeControl(SETTINGS.NEWTAB_TIME_FONT_SIZE_DEFAULT);
-  renderNewtabTimeOpacityControl(SETTINGS.NEWTAB_TIME_OPACITY_DEFAULT);
   renderNewtabShortcutColumnsControl(NEWTAB_SHORTCUT_COLUMNS_DEFAULT, false);
   renderNewtabShortcutSizeControl(NEWTAB_SHORTCUT_SIZE_DEFAULT, false);
   renderNewtabShortcutGapControl(NEWTAB_SHORTCUT_GAP_DEFAULT, false);
@@ -1028,11 +931,7 @@ import * as OPTIONS_STATE from './options-state';
 
   renderTranslationHelp();
 
-  setNewtabWidthTabState(optionsState.currentNewtabWidthMode);
   setRecentModeTabState(optionsState.currentRecentMode);
-  setNewtabTopContentTabState(optionsState.currentNewtabTopContentMode);
-  setNewtabTimeInkTabState(optionsState.currentNewtabTimeInk);
-  setNewtabGlassThemeTabState(optionsState.currentNewtabGlassTheme);
 
   function notifyNewtabSectionsRefresh(section: string): void {
     if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
@@ -1226,20 +1125,9 @@ import * as OPTIONS_STATE from './options-state';
   });
 
   OPTIONS_CONTROL_EVENTS.createControlEvents({
-    newtabWidthSelect,
-    handleNewtabWidthSelection,
-    newtabWidthTabButtons,
-    newtabTimeFontSelect,
-    SETTINGS,
-    renderNewtabTimeFontWeightControl,
-    NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
-    refreshCustomSelects,
-    newtabGlassStyleSelect,
-    syncNewtabGlassThemeVisibility,
     recentModeSelect,
     handleRecentModeSelection,
-    recentModeTabButtons,
-    optionsState
+    recentModeTabButtons
   });
 
 
@@ -1263,6 +1151,7 @@ import * as OPTIONS_STATE from './options-state';
   generalShortcutsSection.bindSettings(settingBinder);
   appearanceGlobalSection.bindSettings(settingBinder);
   appearanceOverlaySection.bindSettings(settingBinder, localSettingBinder);
+  appearanceNewtabLookSection.bindSettings(settingBinder);
   labsSection.bindSettings(settingBinder);
   blacklistSection.bindSettings(settingBinder);
   shortcutsSection.bindSettings(settingBinder);
@@ -1300,14 +1189,7 @@ import * as OPTIONS_STATE from './options-state';
     normalizeRecentCount,
     renderRecentCountControl,
     updateRecentModeTabsVisibility,
-    NEWTAB_WIDTH_MODE_STORAGE_KEY,
-    normalizeNewtabWidthMode,
-    newtabWidthSelect,
-    setNewtabWidthTabState,
     SETTINGS,
-    newtabGlassStyleSelect,
-    syncNewtabGlassThemeVisibility,
-    setNewtabGlassThemeTabState,
     getMessage,
     showToast,
     createOptionsSegmentedControlController,
@@ -1325,16 +1207,6 @@ import * as OPTIONS_STATE from './options-state';
     BOOKMARK_COLUMNS_STORAGE_KEY,
     normalizeBookmarkColumns,
     renderBookmarkColumnsControl,
-    NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
-    normalizeNewtabTopContentMode,
-    setNewtabTopContentTabState,
-    newtabTimeFontSelect,
-    renderNewtabTimeFontWeightControl,
-    NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
-    normalizeNewtabTimeFontWeight,
-    renderNewtabTimeFontSizeControl,
-    renderNewtabTimeOpacityControl,
-    setNewtabTimeInkTabState,
     TOGGLE_SETTINGS,
     toggleSettingControls,
     registerOptionsSelectControl,

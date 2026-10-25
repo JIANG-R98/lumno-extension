@@ -57,6 +57,7 @@ export type SettingsRowModel =
     key: string;
     rowId?: string;
     title: SettingsTitleModel;
+    description?: string;
     disabled?: boolean;
     select: SelectControlRenderModel;
     searchable?: boolean;
@@ -66,9 +67,11 @@ export type SettingsRowModel =
     key: string;
     rowId?: string;
     title: SettingsTitleModel;
+    description?: string;
     // The option group's own id and accessible name.
     groupId: string;
     ariaLabel: string;
+    groupClassName?: string;
     segmented: SegmentedControlRenderModel;
   })
   | (SettingsRowLook & {
@@ -145,7 +148,16 @@ function RowTitle({ title, description, action }: { title: SettingsTitleModel; d
   return (
     <div>
       <SettingTitle action={action} badge={title.badge} id={title.id} info={title.info} title={title.text} />
-      {description ? <p className="_x_extension_setting_desc_2024_unique_">{description}</p> : null}
+      {description ? (
+        <p
+          className={description.includes('\n')
+            // Keeps the description's own line breaks.
+            ? '_x_extension_setting_desc_2024_unique_ _x_extension_setting_desc_lines_2026_unique_'
+            : '_x_extension_setting_desc_2024_unique_'}
+        >
+          {description}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -298,7 +310,7 @@ function SettingsRow({ row, handlers }: { row: SettingsRowModel; handlers: Setti
     case 'select':
       return (
         <div className={getRowClassName(row)} id={row.rowId} {...getDisabledProps(row.disabled)}>
-          <RowTitle title={row.title} />
+          <RowTitle description={row.description} title={row.title} />
           <SettingSelect
             model={row.select}
             options={{
@@ -312,10 +324,11 @@ function SettingsRow({ row, handlers }: { row: SettingsRowModel; handlers: Setti
     case 'segmented':
       return (
         <div className={getRowClassName(row)} id={row.rowId}>
-          <RowTitle title={row.title} />
+          <RowTitle description={row.description} title={row.title} />
           <div
             aria-label={row.ariaLabel}
-            className="_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_"
+            className={['_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_', row.groupClassName]
+              .filter(Boolean).join(' ')}
             id={row.groupId}
             role="radiogroup"
           >

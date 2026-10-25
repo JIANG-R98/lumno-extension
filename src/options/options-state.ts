@@ -7,7 +7,6 @@ import type { BatchedStorageArea, ProviderStorageRuntime, StorageAreaFacade } fr
 import type { ToastController } from '../shared/react/toast';
 import type { TooltipController } from '../shared/ui/tooltip';
 import type { AggregateSearchListState } from './options-aggregate-search-list';
-import type { ControlEventsState } from './options-control-events';
 import type { FormsState } from './options-forms';
 import type { LanguageState } from './options-language';
 import type { NavigationState } from './options-navigation';
@@ -34,7 +33,6 @@ interface OptionsPageState {
 
 type OptionsState =
   AggregateSearchListState &
-  ControlEventsState &
   FormsState &
   LanguageState &
   NavigationState &
@@ -89,10 +87,6 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     // Views made as the page mounts them.
     settingsNavigationController: null,
     recentModeTabsController: null,
-    newtabWidthTabsController: null,
-    newtabTopContentTabsController: null,
-    newtabTimeInkTabsController: null,
-    newtabGlassThemeTabsController: null,
     siteSearchEngineBuiltinListController: null,
     siteSearchCustomListController: null,
     siteSearchBuiltinListController: null,
@@ -124,18 +118,9 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
 
     // Settings, at their defaults until storage answers.
     currentRecentMode: 'most',
-    currentNewtabWidthMode: 'wide',
     currentRecentCount: 4,
     currentBookmarkCount: 8,
     currentBookmarkColumns: 6,
-    currentNewtabTopContentMode: 'brand',
-    currentNewtabTimeFontWeight: SETTINGS.NEWTAB_TIME_FONT_WEIGHT_DEFAULT,
-    currentNewtabTimeFontSize: SETTINGS.NEWTAB_TIME_FONT_SIZE_DEFAULT,
-    currentNewtabTimeOpacity: SETTINGS.NEWTAB_TIME_OPACITY_DEFAULT,
-    currentNewtabTimeInk: SETTINGS.NEWTAB_TIME_INK_DEFAULT,
-    currentNewtabGlassStyle: 'none',
-    currentNewtabGlassTheme: 'follow',
-    currentNewtabTimeFont: SETTINGS.NEWTAB_TIME_FONT_DEFAULT,
     currentNewtabShortcutColumns: SETTINGS.NEWTAB_SHORTCUT_COLUMNS_DEFAULT,
     currentNewtabShortcutSize: SETTINGS.NEWTAB_SHORTCUT_SIZE_DEFAULT,
     currentNewtabShortcutGap: SETTINGS.NEWTAB_SHORTCUT_GAP_DEFAULT

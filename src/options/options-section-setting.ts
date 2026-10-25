@@ -27,6 +27,8 @@ interface SectionSetting<V> {
   bind(binder: SectionSettingBinder): void;
   // The reader's own change: shown at once and saved.
   change(next: V): void;
+  // Shown at once; the caller saves it together with other settings.
+  show(next: V): void;
 }
 
 // Until storage answers, the value is what the normalizer makes of nothing.
@@ -58,6 +60,10 @@ function createSectionSetting<V>(
       if (storageArea) {
         storageArea.set({ [spec.storageKey]: next });
       }
+    },
+    show(next) {
+      value = next;
+      onChange();
     }
   };
 }

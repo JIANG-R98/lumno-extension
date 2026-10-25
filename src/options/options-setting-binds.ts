@@ -2,11 +2,6 @@
 // the setting binder entries for each section, including the daily quote.
 import * as CUSTOM_QUOTES from '../domain/custom-quotes';
 import type * as Settings from '../domain/settings';
-import type {
-  NewtabGlassStyle,
-  NewtabTopContentMode,
-  NewtabWidthMode
-} from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
 import type { BatchedStorageArea } from '../platform/settings-storage';
 import * as LumnoOptionsDailyQuote from './options-daily-quote';
@@ -23,9 +18,6 @@ type SettingBinder = ReturnType<typeof createSettingBinder>;
 interface SettingBindsState {
   storageArea: BatchedStorageArea | null;
   dailyQuoteSettings: ReturnType<typeof LumnoOptionsDailyQuote.createDailyQuoteSettings>;
-  currentNewtabGlassStyle: NewtabGlassStyle;
-  currentNewtabTimeFont: string;
-  currentNewtabTimeFontWeight: number;
 }
 
 interface SettingBindsDeps {
@@ -62,14 +54,7 @@ interface SettingBindsDeps {
   normalizeRecentCount(value: unknown): number;
   renderRecentCountControl(value: unknown): void;
   updateRecentModeTabsVisibility(countValue: unknown): void;
-  NEWTAB_WIDTH_MODE_STORAGE_KEY: string;
-  normalizeNewtabWidthMode(value: unknown): NewtabWidthMode;
-  newtabWidthSelect: HTMLSelectElement | null;
-  setNewtabWidthTabState(mode: unknown): void;
   SETTINGS: typeof Settings;
-  newtabGlassStyleSelect: HTMLSelectElement | null;
-  syncNewtabGlassThemeVisibility(): void;
-  setNewtabGlassThemeTabState(theme: unknown): void;
   getMessage: GetMessage;
   showToast(message: string, isError?: boolean): void;
   createOptionsSegmentedControlController(
@@ -91,16 +76,6 @@ interface SettingBindsDeps {
   BOOKMARK_COLUMNS_STORAGE_KEY: string;
   normalizeBookmarkColumns(value: unknown): number;
   renderBookmarkColumnsControl(value: unknown): void;
-  NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY: string;
-  normalizeNewtabTopContentMode(value: unknown): NewtabTopContentMode;
-  setNewtabTopContentTabState(mode: unknown): void;
-  newtabTimeFontSelect: HTMLSelectElement | null;
-  renderNewtabTimeFontWeightControl(value: unknown): void;
-  NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY: string;
-  normalizeNewtabTimeFontWeight(value: unknown): number;
-  renderNewtabTimeFontSizeControl(value: unknown): void;
-  renderNewtabTimeOpacityControl(value: unknown): void;
-  setNewtabTimeInkTabState(ink: unknown): void;
   TOGGLE_SETTINGS: readonly ToggleSettingsEntry[];
   toggleSettingControls: ReadonlyMap<ToggleSettingsEntry, HTMLInputElement | null>;
   registerOptionsSelectControl(select: HTMLSelectElement | null, kind: string): SelectControlRecord | null;
@@ -144,14 +119,7 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     normalizeRecentCount,
     renderRecentCountControl,
     updateRecentModeTabsVisibility,
-    NEWTAB_WIDTH_MODE_STORAGE_KEY,
-    normalizeNewtabWidthMode,
-    newtabWidthSelect,
-    setNewtabWidthTabState,
     SETTINGS,
-    newtabGlassStyleSelect,
-    syncNewtabGlassThemeVisibility,
-    setNewtabGlassThemeTabState,
     getMessage,
     showToast,
     createOptionsSegmentedControlController,
@@ -169,16 +137,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     BOOKMARK_COLUMNS_STORAGE_KEY,
     normalizeBookmarkColumns,
     renderBookmarkColumnsControl,
-    NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
-    normalizeNewtabTopContentMode,
-    setNewtabTopContentTabState,
-    newtabTimeFontSelect,
-    renderNewtabTimeFontWeightControl,
-    NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
-    normalizeNewtabTimeFontWeight,
-    renderNewtabTimeFontSizeControl,
-    renderNewtabTimeOpacityControl,
-    setNewtabTimeInkTabState,
     TOGGLE_SETTINGS,
     toggleSettingControls,
     registerOptionsSelectControl,
@@ -295,39 +253,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     repairOnChange: false,
     refreshSelects: true
   });
-  settingBinder.bindSetting({
-    key: NEWTAB_WIDTH_MODE_STORAGE_KEY,
-    normalize: normalizeNewtabWidthMode,
-    apply(mode) {
-      if (newtabWidthSelect) {
-        newtabWidthSelect.value = mode;
-      }
-      setNewtabWidthTabState(mode);
-    },
-    repairOnChange: false,
-    refreshSelects: true
-  });
-  settingBinder.bindSetting({
-    key: SETTINGS.NEWTAB_GLASS_STYLE_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabGlassStyle,
-    apply(style) {
-      if (newtabGlassStyleSelect) {
-        newtabGlassStyleSelect.value = style;
-      }
-      optionsState.currentNewtabGlassStyle = style;
-      syncNewtabGlassThemeVisibility();
-    },
-    repairOnLoad: false,
-    repairOnChange: false,
-    refreshSelects: true
-  });
-  settingBinder.bindSetting({
-    key: SETTINGS.NEWTAB_GLASS_THEME_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabGlassTheme,
-    apply: setNewtabGlassThemeTabState,
-    repairOnLoad: false,
-    repairOnChange: false
-  });
   // The daily quote mirrors the quote section of New Tab's appearance panel.
   optionsState.dailyQuoteSettings = LumnoOptionsDailyQuote.createDailyQuoteSettings({
     settings: SETTINGS,
@@ -397,53 +322,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     apply: renderBookmarkColumnsControl,
     repairOnChange: false,
     refreshSelects: true
-  });
-  settingBinder.bindSetting({
-    key: NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
-    normalize: normalizeNewtabTopContentMode,
-    apply: setNewtabTopContentTabState,
-    refreshSelects: true
-  });
-  settingBinder.bindSetting({
-    key: SETTINGS.NEWTAB_TIME_FONT_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabTimeFont,
-    apply(font) {
-      optionsState.currentNewtabTimeFont = font;
-      if (newtabTimeFontSelect) {
-        newtabTimeFontSelect.value = font;
-      }
-      renderNewtabTimeFontWeightControl(optionsState.currentNewtabTimeFontWeight);
-    },
-    repairOnLoad: false,
-    repairOnChange: false,
-    refreshSelects: true
-  });
-  settingBinder.bindSetting({
-    key: NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
-    normalize: normalizeNewtabTimeFontWeight,
-    apply: renderNewtabTimeFontWeightControl
-  });
-  // Unset stays unset, so opening Options does not write the defaults.
-  settingBinder.bindSetting({
-    key: SETTINGS.NEWTAB_TIME_FONT_SIZE_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabTimeFontSize,
-    apply: renderNewtabTimeFontSizeControl,
-    repairOnLoad: false,
-    repairOnChange: false
-  });
-  settingBinder.bindSetting({
-    key: SETTINGS.NEWTAB_TIME_OPACITY_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabTimeOpacity,
-    apply: renderNewtabTimeOpacityControl,
-    repairOnLoad: false,
-    repairOnChange: false
-  });
-  settingBinder.bindSetting({
-    key: SETTINGS.NEWTAB_TIME_INK_STORAGE_KEY,
-    normalize: SETTINGS.normalizeNewtabTimeInk,
-    apply: setNewtabTimeInkTabState,
-    repairOnLoad: false,
-    repairOnChange: false
   });
   const shortcutSliders: Array<[string, (value: unknown) => number, (value: unknown, disabled?: boolean) => void]> = [
     [NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY, normalizeNewtabShortcutColumns, renderNewtabShortcutColumnsControl],

@@ -5,9 +5,7 @@ import type { LayoutMutation } from './options-panel-motion';
 
 interface NormalizersDeps {
   SETTINGS: Pick<typeof Settings,
-    'normalizeBookmarkCount' | 'normalizeBookmarkColumns' | 'normalizeNewtabWidthMode' |
-    'normalizeNewtabTopContentMode' |
-    'normalizeNewtabTimeFontWeight' | 'normalizeNewtabShortcutsVisible' | 'normalizeNewtabShortcutAddVisible' |
+    'normalizeBookmarkCount' | 'normalizeBookmarkColumns' | 'normalizeNewtabShortcutsVisible' | 'normalizeNewtabShortcutAddVisible' |
     'normalizeNewtabShortcutDockMagnificationEnabled' | 'normalizeNewtabShortcutColumns' |
     'normalizeNewtabShortcutSize' | 'normalizeNewtabShortcutGap' | 'inferNewtabShortcutColumnsFromWidth'>;
   bookmarkColumnsSettingRow: HTMLElement | null;
@@ -63,10 +61,6 @@ function createNormalizers(deps: NormalizersDeps) {
     return SETTINGS.normalizeBookmarkColumns(value);
   }
 
-  function normalizeNewtabWidthMode(value: unknown) {
-    return SETTINGS.normalizeNewtabWidthMode(value);
-  }
-
   function updateBookmarkColumnsSettingVisibility(countValue: unknown): void {
     if (!bookmarkColumnsSettingRow) {
       return;
@@ -78,14 +72,6 @@ function createNormalizers(deps: NormalizersDeps) {
       const folderIconsChanged = setConditionalSettingsElementVisibility(bookmarkFolderIconsVisibleRow, !shouldHide);
       return columnsChanged || folderIconsChanged;
     });
-  }
-
-  function normalizeNewtabTopContentMode(value: unknown) {
-    return SETTINGS.normalizeNewtabTopContentMode(value);
-  }
-
-  function normalizeNewtabTimeFontWeight(value: unknown) {
-    return SETTINGS.normalizeNewtabTimeFontWeight(value);
   }
 
   function normalizeNewtabShortcutsVisible(value: unknown) {
@@ -137,10 +123,7 @@ function createNormalizers(deps: NormalizersDeps) {
     normalizeBookmarkCount,
     normalizeRecentCount,
     normalizeBookmarkColumns,
-    normalizeNewtabWidthMode,
     updateBookmarkColumnsSettingVisibility,
-    normalizeNewtabTopContentMode,
-    normalizeNewtabTimeFontWeight,
     normalizeNewtabShortcutsVisible,
     normalizeNewtabShortcutAddVisible,
     normalizeNewtabShortcutDockMagnificationEnabled,

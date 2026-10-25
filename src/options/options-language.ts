@@ -3,12 +3,6 @@
 import { readLocaleMessages } from '../domain/locale-messages';
 import type { LocaleMessage } from '../domain/messages';
 import type * as Settings from '../domain/settings';
-import type {
-  NewtabGlassTheme,
-  NewtabTimeInk,
-  NewtabTopContentMode,
-  NewtabWidthMode
-} from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
 import { isHtmlTag } from '../shared/dom-guards';
 import * as LumnoBrowserProfile from '../platform/browser-profile';
@@ -29,14 +23,7 @@ interface LanguageState {
   storageArea: BatchedStorageArea | null;
   isMacPlatform: boolean;
   currentActiveSettingsTab: SettingsTabKey;
-  currentNewtabWidthMode: NewtabWidthMode;
   currentRecentMode: RecentMode;
-  currentNewtabTopContentMode: NewtabTopContentMode;
-  currentNewtabTimeFontWeight: number;
-  currentNewtabTimeFontSize: number;
-  currentNewtabTimeOpacity: number;
-  currentNewtabTimeInk: NewtabTimeInk;
-  currentNewtabGlassTheme: NewtabGlassTheme;
   currentNewtabShortcutColumns: number;
   currentNewtabShortcutSize: number;
   currentNewtabShortcutGap: number;
@@ -62,14 +49,7 @@ interface LanguageDeps {
   refreshCustomSelects(): void;
   refreshSyncStatus(): void;
   renderShortcutReferenceList(): void;
-  setNewtabWidthTabState(mode: unknown): void;
   setRecentModeTabState(mode: unknown): void;
-  setNewtabTopContentTabState(mode: unknown): void;
-  renderNewtabTimeFontWeightControl(value: unknown): void;
-  renderNewtabTimeFontSizeControl(value: unknown): void;
-  renderNewtabTimeOpacityControl(value: unknown): void;
-  setNewtabTimeInkTabState(ink: unknown): void;
-  setNewtabGlassThemeTabState(theme: unknown): void;
   renderNewtabShortcutColumnsControl(value: unknown, disabled?: boolean): void;
   renderNewtabShortcutSizeControl(value: unknown, disabled?: boolean): void;
   renderNewtabShortcutGapControl(value: unknown, disabled?: boolean): void;
@@ -100,14 +80,7 @@ function createLanguage(deps: LanguageDeps) {
     refreshCustomSelects,
     refreshSyncStatus,
     renderShortcutReferenceList,
-    setNewtabWidthTabState,
     setRecentModeTabState,
-    setNewtabTopContentTabState,
-    renderNewtabTimeFontWeightControl,
-    renderNewtabTimeFontSizeControl,
-    renderNewtabTimeOpacityControl,
-    setNewtabTimeInkTabState,
-    setNewtabGlassThemeTabState,
     renderNewtabShortcutColumnsControl,
     renderNewtabShortcutSizeControl,
     renderNewtabShortcutGapControl,
@@ -291,14 +264,7 @@ function createLanguage(deps: LanguageDeps) {
       if (optionsState.themeSection) {
         optionsState.themeSection.render();
       }
-      setNewtabWidthTabState(optionsState.currentNewtabWidthMode);
       setRecentModeTabState(optionsState.currentRecentMode);
-      setNewtabTopContentTabState(optionsState.currentNewtabTopContentMode);
-      renderNewtabTimeFontWeightControl(optionsState.currentNewtabTimeFontWeight);
-      renderNewtabTimeFontSizeControl(optionsState.currentNewtabTimeFontSize);
-      renderNewtabTimeOpacityControl(optionsState.currentNewtabTimeOpacity);
-      setNewtabTimeInkTabState(optionsState.currentNewtabTimeInk);
-      setNewtabGlassThemeTabState(optionsState.currentNewtabGlassTheme);
       if (optionsState.dailyQuoteSettings) {
         optionsState.dailyQuoteSettings.updateLanguage();
       }
