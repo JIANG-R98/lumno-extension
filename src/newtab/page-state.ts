@@ -3,6 +3,7 @@
 // object to every module as `pageState`; properties whose first value
 // depends on settings or other modules are set where that value exists.
 import * as SETTINGS from '../domain/settings';
+import type { NewtabWidthMode } from '../domain/settings';
 import type { AppearanceModesState } from './appearance-modes';
 import type { BookmarkActionsState } from './bookmarks/bookmark-actions';
 import type { BookmarkCascadeActionsState } from './bookmarks/bookmark-cascade-actions';
@@ -25,6 +26,7 @@ import type { ModeCommandsState } from './mode-commands';
 import type { PageFaviconsState } from './theme/page-favicons';
 import type { PageKeyboardState } from './page-keyboard';
 import type { PageLanguageState } from './page-language';
+import type { PageLayoutState } from './page-layout';
 import type { PageNavigationState } from './page-navigation';
 import type { PageNoticesState } from './page-notices';
 import type { PagePreferencesState } from './page-preferences';
@@ -67,7 +69,7 @@ interface PageCoreState {
   currentBookmarkColumns: number;
   siteSearchIconCacheLoadPromise: Promise<unknown> | null;
   siteSearchIconCacheRevision: number;
-  currentNewtabWidthMode: string;
+  currentNewtabWidthMode: NewtabWidthMode;
   currentNewtabSearchWidth: number | null;
 }
 
@@ -96,6 +98,7 @@ type NewtabPageState =
   PageFaviconsState &
   PageKeyboardState &
   PageLanguageState &
+  PageLayoutState &
   PageNavigationState &
   PageNoticesState &
   PagePreferencesState &

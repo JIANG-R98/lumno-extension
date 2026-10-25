@@ -1,14 +1,14 @@
 // Where the suggestion list sits: shown or hidden, floating under the
 // search box, and offset below an open search mode menu.
 import type { InputModeController } from '../../shared/search/search-input-mode';
+import type { LayoutController } from '../layout';
 import type { LayoutMotion } from '../layout-motion';
-import type { DockLayoutController } from '../react/dock';
 
 interface SuggestionsLayoutState {
   suggestionsContainer: HTMLElement | null;
   inputModeController: Pick<InputModeController, 'setModeMenuResultOffset' | 'fitModeMenuWithinViewport'> | null;
   layoutMotion: Pick<LayoutMotion, 'cancelAll'> | null;
-  layoutController: Pick<DockLayoutController, 'setSuggestionsVisible' | 'updateSuggestionsFloatingLayout'> | null;
+  layoutController: Pick<LayoutController, 'setSuggestionsVisible' | 'updateSuggestionsFloatingLayout'> | null;
 }
 
 interface SuggestionsLayoutDeps {
@@ -62,14 +62,14 @@ function createSuggestionsLayout(deps: SuggestionsLayoutDeps) {
     if (visible && pageState.layoutMotion) {
       pageState.layoutMotion.cancelAll();
     }
-    if (pageState.layoutController && pageState.layoutController.setSuggestionsVisible) {
+    if (pageState.layoutController) {
       pageState.layoutController.setSuggestionsVisible(visible);
     }
     syncSearchModeMenuResultOffset();
   }
 
   function updateSuggestionsFloatingLayout(): void {
-    if (pageState.layoutController && pageState.layoutController.updateSuggestionsFloatingLayout) {
+    if (pageState.layoutController) {
       pageState.layoutController.updateSuggestionsFloatingLayout();
     }
   }

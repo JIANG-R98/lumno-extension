@@ -5,10 +5,12 @@ import type * as ProgressHistory from '../domain/progress-history';
 import type { ProgressHistoryMap } from '../domain/progress-history';
 import type { HiddenRecentSite, RecentSite } from '../domain/recent-sites-store';
 import type * as LumnoSettings from '../domain/settings';
+import type { NewtabWidthMode } from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import type { AppearanceModes } from './appearance-modes';
 import type { BookmarkDisplaySettings } from './bookmarks/bookmark-display-settings';
+import type { PageLayout } from './page-layout';
 import type { PagePreferences } from './page-preferences';
 import type { BookmarksViewController } from './react/bookmarks';
 import type { RecentSitesController } from './recent/recent-sites-controller';
@@ -28,7 +30,7 @@ interface StartupPreferencesState {
   initialHiddenRecentSitesReadyTask: Promise<HiddenRecentSite[]>;
   currentRecentCount: number;
   currentRecentMode: string;
-  currentNewtabWidthMode: string;
+  currentNewtabWidthMode: NewtabWidthMode;
   currentNewtabSearchWidth: number | null;
   newtabTimeFont: string;
   bookmarkLoadedOnce: boolean;
@@ -51,6 +53,9 @@ interface StartupPreferencesDeps extends
     'setNewtabTimeInk' | 'setNewtabTimeSecondsVisible' | 'setNewtabTime12Hour' | 'setNewtabTopContentMode'>,
   Pick<RecentSitesController, 'readPinnedRecentSites' | 'readHiddenRecentSites'>,
   Pick<AppearanceModes, 'bootstrapInitialLanguageMode'>,
+  Pick<PageLayout,
+    'normalizeRecentCount' | 'normalizeRecentMode' | 'applyNewtabWidthMode' | 'applyRecentGridColumns' |
+    'applyBookmarkGridColumns' | 'keepBookmarkPageAnchorAfterLimitChange' | 'updateBookmarkSectionPosition'>,
   Pick<BookmarkDisplaySettings,
     'loadInitialBookmarkViewMode' | 'loadInitialBookmarkTopbarSurfaceColors' |
     'loadInitialBookmarkTopbarSurfaceMode'> {
@@ -60,20 +65,12 @@ interface StartupPreferencesDeps extends
     'PROGRESS_TRACKING_ENABLED_STORAGE_KEY' | 'normalizeProgressTrackingEnabled'>;
   PROGRESS_HISTORY: Pick<typeof ProgressHistory, 'STORAGE_KEY' | 'normalizeHistoryMap'>;
   renderRecentSites(items: RecentSite[]): void;
-  normalizeRecentCount(value: unknown): number;
-  normalizeRecentMode(value: unknown, fallback: string): string;
   markRecentDataDirty(): void;
   loadRecentSites(options?: { force?: boolean }): void;
   updateRecentHeading(): void;
   updateRecentModeMenu(): void;
-  applyNewtabWidthMode(): void;
-  // Both report whether the column count changed.
-  applyRecentGridColumns(): boolean;
-  applyBookmarkGridColumns(): boolean;
-  keepBookmarkPageAnchorAfterLimitChange(previousLimit: number): void;
   renderCurrentBookmarkPage(): void;
   updateBookmarkGridHeightLock(): void;
-  updateBookmarkSectionPosition(): void;
   markBookmarkDataDirty(): void;
   loadBookmarks(): void;
   RECENT_COUNT_STORAGE_KEY: string;

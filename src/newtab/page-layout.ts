@@ -1,8 +1,84 @@
-// @ts-nocheck
 // Page geometry: bookmark and recent grid column counts, the width modes
 // and search width, shortcut grid sizing, which content sections show, and
 // the search entry's vertical position as the viewport changes.
-function createPageLayout(deps) {
+import type * as RecentSitesStore from '../domain/recent-sites-store';
+import type { NewtabWidthMode } from '../domain/settings';
+import type { StorageAreaLike } from '../domain/storage-port';
+import type * as LumnoNewtabLayout from './layout';
+import type { LayoutController, SearchEntryLayoutOptions, WidthModeConfig } from './layout';
+import type { LayoutMotion } from './layout-motion';
+import type { PagePreferences } from './page-preferences';
+import type { RecentSitesController } from './recent/recent-sites-controller';
+import type { SuggestionsLayout } from './search/suggestions-layout';
+import type { ShortcutContextMenu } from './shortcuts/shortcut-context-menu';
+import type { ShortcutDock } from './shortcuts/shortcut-dock';
+import type { ShortcutPageActions } from './shortcuts/shortcut-page-actions';
+import type { ShortcutsController } from './shortcuts/shortcuts-controller';
+import type { WallpaperRuntime } from './wallpaper/wallpaper';
+
+interface NewtabWidthModeConfig extends WidthModeConfig {
+  searchMaxWidth: number;
+  contentMaxWidth: number;
+  recentMaxColumns: number;
+}
+
+interface ViewportSnapshot {
+  width: number;
+  height: number;
+}
+
+interface PageLayoutState {
+  currentNewtabWidthMode: NewtabWidthMode;
+  currentNewtabSearchWidth: number | null;
+  currentBookmarkColumns: number;
+  currentRecentCount: number;
+  bookmarkGrid: HTMLElement | null;
+  bookmarkCurrentPage: number;
+  recentGrid: HTMLElement | null;
+  recentSection: HTMLElement | null;
+  recentMouseInsideSection: boolean;
+  recentMouseLeftAt: number;
+  shortcutGrid: HTMLElement | null;
+  shortcutSection: HTMLElement | null;
+  newtabShortcuts: readonly unknown[];
+  newtabShortcutColumns: number;
+  newtabShortcutSize: number;
+  newtabShortcutGap: number;
+  newtabShortcutsVisible: boolean;
+  newtabShortcutAddVisible: boolean;
+  zenModeEnabled: boolean;
+  newtabResizeLayoutLocked: boolean;
+  layoutController: Pick<LayoutController,
+    'applyWidthMode' | 'updateBottomDockLayout' | 'updateSearchEntryLayout'> | null;
+  layoutMotion: Pick<LayoutMotion, 'commit'> | null;
+  wallpaperRuntime: Pick<WallpaperRuntime, 'updateSearchWidthUi'> | null;
+}
+
+interface PageLayoutDeps extends
+  Pick<PagePreferences,
+    'normalizeBookmarkColumns' | 'normalizeNewtabWidthMode' | 'normalizeNewtabSearchWidth' | 'getBookmarkLimit' |
+    'normalizeNewtabShortcutSize' | 'normalizeNewtabShortcutGap'>,
+  Pick<SuggestionsLayout, 'updateSuggestionsFloatingLayout'>,
+  Pick<RecentSitesController, 'closeRecentContextMenu'>,
+  Pick<ShortcutsController, 'getVisibleShortcuts'>,
+  Pick<ShortcutDock, 'resetShortcutDockHover'>,
+  Pick<ShortcutContextMenu, 'closeShortcutContextMenu'>,
+  Pick<ShortcutPageActions, 'closeShortcutDialog'> {
+  NEWTAB_RECENT_STORE: Pick<typeof RecentSitesStore, 'normalizeRecentCount'>;
+  NEWTAB_LAYOUT: Pick<typeof LumnoNewtabLayout, 'getAdaptiveGridColumnCount' | 'CONTENT_MAX_WIDTH_PX'>;
+  NEWTAB_MOBILE_FLOW_BREAKPOINT_PX: number;
+  NEWTAB_WIDTH_MODE_CONFIGS: Record<NewtabWidthMode, NewtabWidthModeConfig>;
+  NEWTAB_SEARCH_WIDTH_CONFIG: typeof LumnoNewtabLayout.SEARCH_WIDTH_CONFIG;
+  RECENT_CARD_TARGET_WIDTH_PX: number;
+  RECENT_GRID_GAP_PX: number;
+  MAX_NEWTAB_SHORTCUTS: number;
+  storageArea: StorageAreaLike | null;
+  NEWTAB_SEARCH_WIDTH_STORAGE_KEY: string;
+  scheduleWallpaperAdaptiveToneUpdate(): void;
+  pageState: PageLayoutState;
+}
+
+function createPageLayout(deps: PageLayoutDeps) {
   const {
     NEWTAB_RECENT_STORE,
     normalizeBookmarkColumns,
@@ -40,18 +116,18 @@ function createPageLayout(deps) {
   const BOOKMARK_GRID_GAP_PX = 12;
   let currentRecentGridColumns = 4;
 
-  function normalizeRecentCount(value) {
+  function normalizeRecentCount(value: unknown): number {
     return NEWTAB_RECENT_STORE.normalizeRecentCount(value);
   }
 
-  function normalizeRecentMode(value, fallback) {
+  function normalizeRecentMode(value: unknown, fallback?: unknown): 'latest' | 'most' {
     if (value === 'latest' || value === 'most') {
       return value;
     }
     return fallback === 'latest' || fallback === 'most' ? fallback : 'latest';
   }
 
-  function getBookmarkGridColumnCount() {
+  function getBookmarkGridColumnCount(): number {
     const config = getNewtabWidthModeConfig();
     const maxColumns = Math.max(2, normalizeBookmarkColumns(pageState.currentBookmarkColumns));
     return NEWTAB_LAYOUT.getAdaptiveGridColumnCount({
@@ -68,22 +144,20 @@ function createPageLayout(deps) {
     });
   }
 
-  function getNewtabWidthModeBaseConfig() {
+  function getNewtabWidthModeBaseConfig(): NewtabWidthModeConfig {
     return NEWTAB_WIDTH_MODE_CONFIGS[normalizeNewtabWidthMode(pageState.currentNewtabWidthMode)] || NEWTAB_WIDTH_MODE_CONFIGS.wide;
   }
 
-  function getEffectiveNewtabSearchWidth() {
+  function getEffectiveNewtabSearchWidth(): number {
     const customWidth = normalizeNewtabSearchWidth(pageState.currentNewtabSearchWidth, { allowNull: true });
     return customWidth || getNewtabWidthModeBaseConfig().searchMaxWidth || NEWTAB_SEARCH_WIDTH_CONFIG.fallback;
   }
 
-  function getNewtabWidthModeConfig() {
-    return Object.assign({}, getNewtabWidthModeBaseConfig(), {
-      searchMaxWidth: getEffectiveNewtabSearchWidth()
-    });
+  function getNewtabWidthModeConfig(): NewtabWidthModeConfig {
+    return { ...getNewtabWidthModeBaseConfig(), searchMaxWidth: getEffectiveNewtabSearchWidth() };
   }
 
-  function getRecentGridColumnCount() {
+  function getRecentGridColumnCount(): number {
     const config = getNewtabWidthModeConfig();
     const maxColumns = Math.max(4, Number(config.recentMaxColumns || 4));
     return NEWTAB_LAYOUT.getAdaptiveGridColumnCount({
@@ -100,7 +174,7 @@ function createPageLayout(deps) {
     });
   }
 
-  function getRecentLimit() {
+  function getRecentLimit(): number {
     const normalized = normalizeRecentCount(pageState.currentRecentCount);
     if (normalized <= 0) {
       return 0;
@@ -109,7 +183,7 @@ function createPageLayout(deps) {
     return rows * Math.max(1, getRecentGridColumnCount());
   }
 
-  function getRecentSourceLimit() {
+  function getRecentSourceLimit(): number {
     const normalized = normalizeRecentCount(pageState.currentRecentCount);
     if (normalized <= 0) {
       return 0;
@@ -120,7 +194,8 @@ function createPageLayout(deps) {
     return rows * maxColumns;
   }
 
-  function applyBookmarkGridColumns() {
+  // Reports whether the column count changed.
+  function applyBookmarkGridColumns(): boolean {
     if (!pageState.bookmarkGrid) {
       return false;
     }
@@ -130,14 +205,15 @@ function createPageLayout(deps) {
     return previousColumns !== columns;
   }
 
-  function keepBookmarkPageAnchorAfterLimitChange(previousLimit) {
-    const prev = Math.max(1, Number.parseInt(previousLimit, 10) || 1);
+  function keepBookmarkPageAnchorAfterLimitChange(previousLimit: number): void {
+    const prev = Math.max(1, Number.parseInt(String(previousLimit), 10) || 1);
     const next = Math.max(1, getBookmarkLimit());
     const firstVisibleIndex = Math.max(0, pageState.bookmarkCurrentPage * prev);
     pageState.bookmarkCurrentPage = Math.floor(firstVisibleIndex / next);
   }
 
-  function applyRecentGridColumns() {
+  // Reports whether the column count changed.
+  function applyRecentGridColumns(): boolean {
     if (!pageState.recentGrid) {
       return false;
     }
@@ -148,34 +224,35 @@ function createPageLayout(deps) {
     return changed;
   }
 
-  function applyNewtabWidthMode() {
-    if (pageState.layoutController && typeof pageState.layoutController.applyWidthMode === 'function') {
+  function applyNewtabWidthMode(): void {
+    if (pageState.layoutController) {
       pageState.layoutController.applyWidthMode(getNewtabWidthModeConfig());
     }
   }
 
-  function updateNewtabSearchWidthLayout() {
+  function updateNewtabSearchWidthLayout(): void {
     applyNewtabWidthMode();
     updateSuggestionsFloatingLayout();
     updateBookmarkSectionPosition();
   }
 
-  function setNewtabSearchWidth(value, options) {
+  // Reports whether the width changed.
+  function setNewtabSearchWidth(value: unknown, options?: { allowNull?: boolean; persist?: boolean }): boolean {
     const config = options || {};
     const nextWidth = normalizeNewtabSearchWidth(value, { allowNull: Boolean(config.allowNull) });
     const changed = pageState.currentNewtabSearchWidth !== nextWidth;
     pageState.currentNewtabSearchWidth = nextWidth;
     updateNewtabSearchWidthLayout();
-    if (pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.updateSearchWidthUi === 'function') {
+    if (pageState.wallpaperRuntime) {
       pageState.wallpaperRuntime.updateSearchWidthUi();
     }
     if (config.persist && storageArea && nextWidth !== null) {
-      storageArea.set({ [NEWTAB_SEARCH_WIDTH_STORAGE_KEY]: nextWidth });
+      void storageArea.set({ [NEWTAB_SEARCH_WIDTH_STORAGE_KEY]: nextWidth });
     }
     return changed;
   }
 
-  function setContentSectionVisible(section, visible) {
+  function setContentSectionVisible(section: HTMLElement | null, visible: boolean): void {
     if (!section) {
       return;
     }
@@ -187,11 +264,11 @@ function createPageLayout(deps) {
     scheduleWallpaperAdaptiveToneUpdate();
   }
 
-  function isContentSectionVisible(section) {
+  function isContentSectionVisible(section: Element | null | undefined): boolean {
     return Boolean(section && section.getAttribute('data-visible') === 'true');
   }
 
-  function applyNewtabShortcutLayoutPreferences() {
+  function applyNewtabShortcutLayoutPreferences(): void {
     if (!document.documentElement || !document.documentElement.style) {
       return;
     }
@@ -212,13 +289,13 @@ function createPageLayout(deps) {
     applyNewtabShortcutColumns();
   }
 
-  function roundToParityOf(value, reference) {
+  function roundToParityOf(value: number, reference: number): number {
     const floor = Math.floor(value);
     const lower = (floor - reference) % 2 === 0 ? floor : floor - 1;
     return value - lower <= 1 ? lower : lower + 2;
   }
 
-  function applyNewtabShortcutColumns() {
+  function applyNewtabShortcutColumns(): void {
     if (!document.documentElement || !document.documentElement.style) {
       return;
     }
@@ -250,7 +327,7 @@ function createPageLayout(deps) {
     );
   }
 
-  function applyNewtabShortcutsVisibility() {
+  function applyNewtabShortcutsVisibility(): void {
     if (!pageState.shortcutSection) {
       return;
     }
@@ -267,7 +344,7 @@ function createPageLayout(deps) {
     }
   }
 
-  function getCurrentSearchEntryPaddingTop() {
+  function getCurrentSearchEntryPaddingTop(): number | null {
     if (!document.body || !document.body.style) {
       return null;
     }
@@ -275,33 +352,33 @@ function createPageLayout(deps) {
     return Number.isFinite(value) ? Math.round(value) : null;
   }
 
-  function getSearchEntryViewportSnapshot() {
+  function getSearchEntryViewportSnapshot(): ViewportSnapshot {
     return {
       width: Math.max(0, Math.round(window.innerWidth || 0)),
       height: Math.max(0, Math.round(window.innerHeight || 0))
     };
   }
 
-  function hasSearchEntryViewportChanged(referenceViewport) {
+  function hasSearchEntryViewportChanged(referenceViewport?: Partial<ViewportSnapshot> | null): boolean {
     const currentViewport = getSearchEntryViewportSnapshot();
     const reference = referenceViewport || {};
     return Math.abs(currentViewport.width - (Number(reference.width) || 0)) > 1 ||
       Math.abs(currentViewport.height - (Number(reference.height) || 0)) > 1;
   }
 
-  function rememberSearchEntryViewport() {
+  function rememberSearchEntryViewport(): void {
     const viewport = getSearchEntryViewportSnapshot();
     searchEntryLastVisibleViewportWidth = viewport.width;
     searchEntryLastVisibleViewportHeight = viewport.height;
   }
 
-  function hasSearchEntryViewportChangedSinceLastVisible() {
+  function hasSearchEntryViewportChangedSinceLastVisible(): boolean {
     const viewport = getSearchEntryViewportSnapshot();
     return Math.abs(viewport.width - searchEntryLastVisibleViewportWidth) > 1 ||
       Math.abs(viewport.height - searchEntryLastVisibleViewportHeight) > 1;
   }
 
-  function beginSearchEntryRestoreLayoutLock() {
+  function beginSearchEntryRestoreLayoutLock(): void {
     if (!document.body ||
         document.body.getAttribute('data-nt-ready') !== '1' ||
         hasSearchEntryViewportChangedSinceLastVisible() ||
@@ -311,7 +388,7 @@ function createPageLayout(deps) {
     searchEntryRestoreLayoutLockUntil = Date.now() + RESTORE_SEARCH_LAYOUT_LOCK_MS;
   }
 
-  function shouldPreserveSearchEntryLayout() {
+  function shouldPreserveSearchEntryLayout(): boolean {
     if (!searchEntryRestoreLayoutLockUntil || Date.now() > searchEntryRestoreLayoutLockUntil) {
       searchEntryRestoreLayoutLockUntil = 0;
       return false;
@@ -323,9 +400,11 @@ function createPageLayout(deps) {
     return true;
   }
 
-  function updateBookmarkSectionPosition(options) {
+  function updateBookmarkSectionPosition(
+    options?: { preserveSearchEntryLayout?: boolean; stabilizeDockDensity?: boolean }
+  ): void {
     const layoutOptions = options || {};
-    if (pageState.layoutController && typeof pageState.layoutController.updateBottomDockLayout === 'function') {
+    if (pageState.layoutController) {
       pageState.layoutController.updateBottomDockLayout({
         preserveSearchEntryLayout: Boolean(layoutOptions.preserveSearchEntryLayout) ||
           pageState.newtabResizeLayoutLocked ||
@@ -345,8 +424,8 @@ function createPageLayout(deps) {
     scheduleWallpaperAdaptiveToneUpdate();
   }
 
-  function updateSearchEntryLayout(options) {
-    if (pageState.layoutController && typeof pageState.layoutController.updateSearchEntryLayout === 'function') {
+  function updateSearchEntryLayout(options?: SearchEntryLayoutOptions): void {
+    if (pageState.layoutController) {
       pageState.layoutController.updateSearchEntryLayout(options);
     }
     if (pageState.layoutMotion) {
@@ -381,4 +460,7 @@ function createPageLayout(deps) {
   };
 }
 
+type PageLayout = ReturnType<typeof createPageLayout>;
+
 export { createPageLayout };
+export type { PageLayout, PageLayoutDeps, PageLayoutState };

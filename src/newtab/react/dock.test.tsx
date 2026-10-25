@@ -57,8 +57,8 @@ describe('New Tab bottom dock React island', () => {
       })
     );
 
-    runtime.updateLayout({ reason: 'test' });
-    expect(updateBottomDockLayout).toHaveBeenCalledWith({ reason: 'test' });
+    runtime.updateLayout({ stabilizeDockDensity: true });
+    expect(updateBottomDockLayout).toHaveBeenCalledWith({ stabilizeDockDensity: true });
   });
 
   it('keeps the scroll subscription contract', () => {
@@ -68,7 +68,7 @@ describe('New Tab bottom dock React island', () => {
       holder.value = createBottomDockRuntime({
         bookmarkSection: document.createElement('section'),
         documentObj: document,
-        layoutRuntime: { createLayoutController: () => ({}) },
+        layoutRuntime: { createLayoutController: () => ({ updateBottomDockLayout() {} }) },
         recentSection: document.createElement('section'),
         windowObj: window
       });

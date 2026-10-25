@@ -1,8 +1,9 @@
 // Creates the bottom shortcut dock and the layout motion that moves the
 // page's blocks when the dock, sections or search entry change size.
 import * as LumnoNewtabLayoutMotion from '../layout-motion';
+import type { LayoutController } from '../layout';
 import type { LayoutMotion } from '../layout-motion';
-import type { BottomDockRuntimeConfig, DockLayoutController } from '../react/dock';
+import type { BottomDockRuntimeConfig } from '../react/dock';
 
 // A part of the page that may show an element of its own.
 type ElementOwner = { element?: HTMLElement | null } | null;
@@ -18,14 +19,14 @@ interface BottomDockRuntimeState {
   updateNoticeController: ElementOwner;
   engagementNoticeController: ElementOwner;
   bottomDockScroller: HTMLElement | null;
-  layoutController: DockLayoutController | null;
+  layoutController: LayoutController | null;
   layoutMotion: LayoutMotion | null;
   // While the window is resized the layout does not animate.
   newtabResizeLayoutLocked: boolean;
 }
 
 interface BottomDockRuntimeDeps {
-  NEWTAB_LAYOUT: BottomDockRuntimeConfig['layoutRuntime'];
+  NEWTAB_LAYOUT: BottomDockRuntimeConfig<LayoutController>['layoutRuntime'];
   root: HTMLElement;
   bookmarkSection: HTMLElement | null;
   suggestionsSurface: HTMLElement | null;
@@ -59,9 +60,6 @@ function createBottomDockRuntime(deps: BottomDockRuntimeDeps) {
   if (!NEWTAB_DOCK || !bookmarkSection || !recentSection) {
     throw new Error('The New Tab dock, bookmark or recent section is unavailable.');
   }
-  // A heading mode menu opens once the mouse rests on the heading, so a pointer passing over
-  // it does not flash the menu, and waits a moment before closing so the pointer can cross
-  // the gap into the menu.
   const SEARCH_LAYOUT_MIN_TOP_PX = 28;
   const SEARCH_LAYOUT_MIN_BOTTOM_PX = 20;
   const SEARCH_LAYOUT_UPSHIFT_RATIO = 0.06;

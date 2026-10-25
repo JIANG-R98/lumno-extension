@@ -1,6 +1,12 @@
 import { useLayoutEffect, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
+import type {
+  BottomDockLayoutOptions,
+  ElementSource,
+  LayoutConstants,
+  LayoutControllerOptions
+} from '../layout';
 
 export const DOCK_IDS = Object.freeze({
   bottomDock: '_x_extension_newtab_bottom_dock_2024_unique_',
@@ -44,49 +50,21 @@ function Dock({
   );
 }
 
-// An element, or a function that reads it when the layout runs.
-type ElementSource = HTMLElement | null | undefined | (() => HTMLElement | null | undefined);
-
-type DockLayoutConstants = typeof DEFAULT_DOCK_LAYOUT_CONSTANTS & Partial<Record<string, number>>;
-
-// What the layout controller lays out; see LumnoNewtabLayout.
-export interface DockLayoutControllerOptions {
-  documentObj: Document;
-  windowObj: Window;
-  root: ElementSource;
-  searchLayer: ElementSource;
-  // The search input's parts; the layout reads their container.
-  inputParts?: () => { container?: HTMLElement | null } | null | undefined;
-  topContentContainer: ElementSource;
-  shortcutSection: ElementSource;
-  quoteSection: ElementSource;
-  bottomDock: HTMLElement;
-  bookmarkSection: ElementSource;
-  recentSection: ElementSource;
-  sectionSafeCorridor: HTMLElement;
-  suggestionsContainer: ElementSource;
-  suggestionsSurface: ElementSource;
-  suggestionsOutline: ElementSource;
-  getTopInsetPx?: () => number;
-  constants: DockLayoutConstants;
+// What the dock needs of the layout controller it creates; see
+// LumnoNewtabLayout. The dock hands the controller back as it got it.
+export interface DockLayoutAdapter {
+  updateBottomDockLayout(options?: BottomDockLayoutOptions): void;
 }
 
-export interface DockLayoutController {
-  updateBottomDockLayout?(callbacks?: unknown): void;
-  // Floats the suggestion list under the search box while it shows.
-  setSuggestionsVisible?(visible: boolean): void;
-  updateSuggestionsFloatingLayout?(): void;
-}
-
-export interface BottomDockRuntimeConfig {
+export interface BottomDockRuntimeConfig<C extends DockLayoutAdapter = DockLayoutAdapter> {
   documentObj?: Document;
   windowObj?: Window;
   layoutRuntime: {
-    createLayoutController(options: DockLayoutControllerOptions): DockLayoutController;
+    createLayoutController(options: LayoutControllerOptions): C;
   };
   root?: ElementSource;
   searchLayer?: ElementSource;
-  inputParts?: DockLayoutControllerOptions['inputParts'];
+  inputParts?: LayoutControllerOptions['inputParts'];
   topContentContainer?: ElementSource;
   shortcutSection?: ElementSource;
   quoteSection?: ElementSource;
@@ -96,25 +74,27 @@ export interface BottomDockRuntimeConfig {
   suggestionsSurface?: ElementSource;
   suggestionsOutline?: ElementSource;
   getTopInsetPx?: () => number;
-  constants?: Partial<Record<string, number>>;
+  constants?: LayoutConstants;
 }
 
-export interface DockRuntime {
-  appendSections(): DockRuntime;
+export interface DockRuntime<C extends DockLayoutAdapter = DockLayoutAdapter> {
+  appendSections(): DockRuntime<C>;
   destroy(): void;
   element: HTMLDivElement;
-  layoutController: DockLayoutController;
-  mount(parent?: HTMLElement | null): DockRuntime;
+  layoutController: C;
+  mount(parent?: HTMLElement | null): DockRuntime<C>;
   onScroll(
     listener: EventListenerOrEventListenerObject,
     options?: AddEventListenerOptions | boolean
-  ): DockRuntime;
+  ): DockRuntime<C>;
   scroller: HTMLDivElement;
   sectionSafeCorridor: HTMLDivElement;
-  updateLayout(callbacks?: unknown): void;
+  updateLayout(options?: BottomDockLayoutOptions): void;
 }
 
-export function createBottomDockRuntime(config: BottomDockRuntimeConfig): DockRuntime {
+export function createBottomDockRuntime<C extends DockLayoutAdapter>(
+  config: BottomDockRuntimeConfig<C>
+): DockRuntime<C> {
   const documentObj: Document = config.documentObj || document;
   const windowObj: Window = config.windowObj || window;
   const layoutRuntime = config.layoutRuntime;
@@ -159,7 +139,7 @@ export function createBottomDockRuntime(config: BottomDockRuntimeConfig): DockRu
     }
   });
   let destroyed = false;
-  const runtime: DockRuntime = {
+  const runtime: DockRuntime<C> = {
     appendSections() {
       scroller.appendChild(config.bookmarkSection);
       scroller.appendChild(sectionSafeCorridor);
@@ -186,8 +166,8 @@ export function createBottomDockRuntime(config: BottomDockRuntimeConfig): DockRu
     },
     scroller,
     sectionSafeCorridor,
-    updateLayout(callbacks) {
-      layoutController.updateBottomDockLayout?.(callbacks);
+    updateLayout(options) {
+      layoutController.updateBottomDockLayout(options);
     }
   };
   return runtime;

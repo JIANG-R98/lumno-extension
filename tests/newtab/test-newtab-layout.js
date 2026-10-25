@@ -77,6 +77,8 @@ class FakeClassList {
 class FakeElement {
   constructor(options) {
     const config = options || {};
+    this.nodeType = 1;
+    this.namespaceURI = 'http://www.w3.org/1999/xhtml';
     this.style = new FakeStyle();
     this.classList = new FakeClassList();
     this.attributes = new Map();

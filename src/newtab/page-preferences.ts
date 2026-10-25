@@ -3,6 +3,7 @@
 import type * as LumnoSettings from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import type { PageLayout } from './page-layout';
 import type { WallpaperRuntime } from './wallpaper/wallpaper';
 
 // Whether a change is only shown or also saved.
@@ -24,6 +25,11 @@ interface PagePreferencesState {
 }
 
 interface PagePreferencesDeps {
+  applyNewtabShortcutsVisibility: PageLayout['applyNewtabShortcutsVisibility'];
+  updateBookmarkSectionPosition: PageLayout['updateBookmarkSectionPosition'];
+  applyNewtabShortcutColumns: PageLayout['applyNewtabShortcutColumns'];
+  applyNewtabShortcutLayoutPreferences: PageLayout['applyNewtabShortcutLayoutPreferences'];
+  getBookmarkGridColumnCount: PageLayout['getBookmarkGridColumnCount'];
   SETTINGS: Pick<typeof LumnoSettings,
     'inferNewtabShortcutColumnsFromWidth' | 'normalizeBookmarkColumns' | 'normalizeBookmarkCount' |
     'normalizeBookmarkFolderIconsVisible' | 'normalizeMacosCtrlSuggestionNavigationEnabled' |
@@ -51,23 +57,18 @@ interface PagePreferencesDeps {
   NEWTAB_SHORTCUT_WIDTH_MAX: number;
   storageArea: Pick<StorageAreaLike, 'get' | 'set'> | null;
   NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY: string;
-  applyNewtabShortcutsVisibility(): void;
-  updateBookmarkSectionPosition(options?: { preserveSearchEntryLayout?: boolean; stabilizeDockDensity?: boolean }): void;
   NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY: string;
   renderShortcuts(): void;
   NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY: string;
   applyNewtabShortcutDockMagnification(): void;
   scheduleWallpaperAdaptiveToneUpdate(): void;
   NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY: string;
-  applyNewtabShortcutColumns(): void;
   NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY: string;
-  applyNewtabShortcutLayoutPreferences(): void;
   NEWTAB_SHORTCUT_SIZE_STORAGE_KEY: string;
   NEWTAB_SHORTCUT_GAP_STORAGE_KEY: string;
   NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY: string;
   SIMPLE_MODE_ENABLED_STORAGE_KEY: string;
   MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY: string;
-  getBookmarkGridColumnCount(): number;
   pageState: PagePreferencesState;
 }
 

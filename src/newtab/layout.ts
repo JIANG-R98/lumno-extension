@@ -1,10 +1,108 @@
-// @ts-nocheck
+import { queryHtmlElement } from '../shared/dom-lookup';
 import * as SUGGESTIONS_HEIGHT_LAYOUT from '../shared/search/suggestions-height-layout';
 import { isPinchZoomed } from './viewport-insets';
 
+type DockDensity = 'mobile' | 'tiny' | 'compact' | 'default';
+
+// An element, or a function that reads it when the layout runs.
+type ElementSource<T = HTMLElement> = T | null | undefined | (() => T | null | undefined);
+
+type LayoutConstantName =
+  | 'minTopPx' | 'minBottomPx' | 'upshiftRatio' | 'upshiftMinPx' | 'upshiftMaxPx'
+  | 'contentSectionsExtraUpshiftPx' | 'emptySectionsExtraUpshiftPx'
+  | 'narrowViewportMinWidthPx' | 'narrowViewportMaxWidthPx' | 'narrowTopInsetPx' | 'narrowTopInsetTransitionPx'
+  | 'shortViewportMaxHeightPx' | 'shortMinTopPx' | 'occupiedTopUpshiftMaxPx'
+  | 'bottomDockTopReservePx' | 'compactDockViewportMaxHeightPx' | 'compactDockSearchGapPx'
+  | 'compactDockShortcutGapPx' | 'compactDockMinTopReservePx'
+  | 'shortcutAreaDockGapPx' | 'shortcutAreaMinHeightPx' | 'shortcutAreaMinDockHeightPx'
+  | 'mobileFlowBreakpointPx' | 'mobileMinTopPx' | 'mobileUpshiftRatio' | 'mobileMinTopGapPx'
+  | 'suggestionsBottomInsetPx' | 'scrollbarControlGapPx' | 'scrollbarMinTrackPx';
+
+type LayoutConstants = Partial<Record<LayoutConstantName, number>>;
+
+// The search input's parts; the layout reads their container.
+interface SearchInputPartsLike {
+  container?: HTMLElement | null;
+}
+
+// What the layout controller lays out.
+interface LayoutControllerOptions {
+  documentObj?: Document;
+  windowObj?: Window;
+  root?: ElementSource;
+  searchLayer?: ElementSource;
+  inputParts?: ElementSource<SearchInputPartsLike>;
+  topContentContainer?: ElementSource;
+  shortcutSection?: ElementSource;
+  quoteSection?: ElementSource;
+  bottomDock?: ElementSource;
+  bookmarkSection?: ElementSource;
+  recentSection?: ElementSource;
+  sectionSafeCorridor?: ElementSource;
+  suggestionsContainer?: ElementSource;
+  suggestionsSurface?: ElementSource;
+  suggestionsOutline?: ElementSource;
+  // The height the bookmark top bar takes at the top of the page.
+  getTopInsetPx?: () => number;
+  constants?: LayoutConstants;
+}
+
+interface SearchEntryLayoutOptions {
+  // Keeps the search entry where it is when it already has a position.
+  preserveCurrentTop?: boolean;
+}
+
+interface BottomDockLayoutOptions {
+  preserveSearchEntryLayout?: boolean;
+  // Holds the dock at its denser density until a live change settles.
+  stabilizeDockDensity?: boolean;
+  onRecentHidden?(): void;
+}
+
+interface WidthModeConfig {
+  searchMaxWidth?: number;
+  contentMaxWidth?: number;
+}
+
+interface DockDensityOptions {
+  mobileFlow?: boolean;
+  holdPromotion?: boolean;
+  isPromotionStable?: (candidate: DockDensity) => boolean;
+}
+
+interface ResponsiveWidthOptions {
+  viewportWidth?: number;
+  viewportRatio?: number;
+  contentMaxWidth?: number;
+}
+
+interface AdaptiveGridOptions extends ResponsiveWidthOptions {
+  mobileBreakpointPx?: number;
+  mobileColumns?: number;
+  compactBreakpointPx?: number;
+  compactColumns?: number;
+  minColumns?: number;
+  maxColumns?: number;
+  targetColumnWidth?: number;
+  gap?: number;
+}
+
+interface SettledRect {
+  top: number;
+  bottom: number;
+  height: number;
+}
+
+interface FixedFrame {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 // New Tab widths, defined once. The standard search box and the content
-// column; the search width slider runs from 640 (since 508a5c0 widened
-// its range) to the content width and snaps to these points.
+// column; the search width slider runs from 640 to the content width and
+// snaps to these points.
 const STANDARD_SEARCH_MAX_WIDTH_PX = 720;
 const CONTENT_MAX_WIDTH_PX = 1040;
 const SEARCH_WIDTH_CONFIG = Object.freeze({
@@ -15,24 +113,31 @@ const SEARCH_WIDTH_CONFIG = Object.freeze({
   snapThreshold: 14
 });
 
-function resolveElement(value) {
+function resolveElement(value: ElementSource): HTMLElement | null {
   if (typeof value === 'function') {
-    return value();
+    return value() || null;
   }
   return value || null;
 }
 
-function getOptionNumber(options, key, fallback) {
-  const value = Number(options && options[key]);
+function resolveInputParts(value: ElementSource<SearchInputPartsLike>): SearchInputPartsLike | null {
+  if (typeof value === 'function') {
+    return value() || null;
+  }
+  return value || null;
+}
+
+function getOptionNumber(options: LayoutConstants, key: LayoutConstantName, fallback: number): number {
+  const value = Number(options[key]);
   return Number.isFinite(value) ? value : fallback;
 }
 
-function getFiniteNumber(value, fallback) {
+function getFiniteNumber(value: unknown, fallback: number): number {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
 }
 
-function getDockDensityRank(density) {
+function getDockDensityRank(density: string | null | undefined): number {
   if (density === 'tiny') {
     return 2;
   }
@@ -53,7 +158,11 @@ function getDockDensityRank(density) {
 //     or a layout preference change), and otherwise happens only if the
 //     roomier density would still measure as itself
 //     (`isPromotionStable(candidate)`), so it cannot flip back.
-function nextDockDensity(previous, measured, options) {
+function nextDockDensity(
+  previous: string | null | undefined,
+  measured: DockDensity,
+  options?: DockDensityOptions
+): string {
   const opts = options || {};
   if (opts.mobileFlow) {
     return 'mobile';
@@ -70,14 +179,14 @@ function nextDockDensity(previous, measured, options) {
     : measured;
 }
 
-function getGridContentWidthForColumns(columnCount, columnWidth, gap) {
+function getGridContentWidthForColumns(columnCount: number, columnWidth: number, gap: number): number {
   const columns = Math.max(1, Math.floor(getFiniteNumber(columnCount, 1)));
   const trackWidth = Math.max(1, getFiniteNumber(columnWidth, 1));
   const gapWidth = Math.max(0, getFiniteNumber(gap, 0));
   return Math.ceil((columns * trackWidth) + (Math.max(0, columns - 1) * gapWidth));
 }
 
-function getResponsiveContentWidth(options) {
+function getResponsiveContentWidth(options?: ResponsiveWidthOptions): number {
   const config = options || {};
   const viewportWidth = Math.max(0, getFiniteNumber(config.viewportWidth, 0));
   const viewportRatio = Math.max(0, getFiniteNumber(config.viewportRatio, 0.96));
@@ -88,7 +197,7 @@ function getResponsiveContentWidth(options) {
   return Math.max(0, Math.min(Math.floor(viewportWidth * viewportRatio), contentMaxWidth));
 }
 
-function getAdaptiveGridColumnCount(options) {
+function getAdaptiveGridColumnCount(options?: AdaptiveGridOptions): number {
   const config = options || {};
   const viewportWidth = Math.max(0, getFiniteNumber(config.viewportWidth, 0));
   const mobileBreakpointPx = Math.max(0, getFiniteNumber(config.mobileBreakpointPx, 0));
@@ -108,11 +217,11 @@ function getAdaptiveGridColumnCount(options) {
   return Math.max(minColumns, Math.min(maxColumns, idealColumns || minColumns));
 }
 
-function createLayoutController(options) {
-  options = options || {};
-  const documentObj = options && options.documentObj ? options.documentObj : document;
-  const windowObj = options && options.windowObj ? options.windowObj : window;
-  const constants = (options && options.constants) || {};
+function createLayoutController(layoutOptions?: LayoutControllerOptions) {
+  const options = layoutOptions || {};
+  const documentObj = options.documentObj || document;
+  const windowObj = options.windowObj || window;
+  const constants = options.constants || {};
   const minTopPx = getOptionNumber(constants, 'minTopPx', 28);
   const minBottomPx = getOptionNumber(constants, 'minBottomPx', 20);
   const upshiftRatio = getOptionNumber(constants, 'upshiftRatio', 0.06);
@@ -158,72 +267,74 @@ function createLayoutController(options) {
     : function() {
       return 0;
     };
+  // Shortcut sections whose scroll already updates their edge fades.
+  const edgeTrackedSections = new WeakSet<HTMLElement>();
 
-  function getRoot() {
+  function getRoot(): HTMLElement | null {
     return resolveElement(options.root);
   }
 
-  function getSearchLayer() {
+  function getSearchLayer(): HTMLElement | null {
     return resolveElement(options.searchLayer);
   }
 
-  function getInputParts() {
-    return resolveElement(options.inputParts);
+  function getInputParts(): SearchInputPartsLike | null {
+    return resolveInputParts(options.inputParts);
   }
 
-  function getTopContentContainer() {
+  function getTopContentContainer(): HTMLElement | null {
     return resolveElement(options.topContentContainer);
   }
 
-  function getBottomDock() {
+  function getBottomDock(): HTMLElement | null {
     return resolveElement(options.bottomDock);
   }
 
-  function getShortcutSection() {
+  function getShortcutSection(): HTMLElement | null {
     return resolveElement(options.shortcutSection);
   }
 
-  function getInlineQuoteSection() {
+  function getInlineQuoteSection(): HTMLElement | null {
     const element = resolveElement(options.quoteSection);
     const position = element && element.getAttribute('data-position');
     return element && !element.hidden && (position === 'search' || position === 'input') ? element : null;
   }
 
-  function getTopQuoteSection() {
+  function getTopQuoteSection(): HTMLElement | null {
     const element = resolveElement(options.quoteSection);
     return element && !element.hidden && element.getAttribute('data-position') === 'top' ? element : null;
   }
 
-  function getBookmarkSection() {
+  function getBookmarkSection(): HTMLElement | null {
     return resolveElement(options.bookmarkSection);
   }
 
-  function getRecentSection() {
+  function getRecentSection(): HTMLElement | null {
     return resolveElement(options.recentSection);
   }
 
-  function getSectionSafeCorridor() {
+  function getSectionSafeCorridor(): HTMLElement | null {
     return resolveElement(options.sectionSafeCorridor);
   }
 
-  function getSuggestionsContainer() {
+  function getSuggestionsContainer(): HTMLElement | null {
     return resolveElement(options.suggestionsContainer);
   }
 
-  function getSuggestionsSurface() {
+  function getSuggestionsSurface(): HTMLElement | null {
     return resolveElement(options.suggestionsSurface);
   }
 
-  function getSuggestionsOutline() {
+  function getSuggestionsOutline(): HTMLElement | null {
     return resolveElement(options.suggestionsOutline);
   }
 
-  function isMobileFlowViewport() {
+  function isMobileFlowViewport(): boolean {
     const viewportWidth = Math.max(0, windowObj.innerWidth || 0);
     return mobileFlowBreakpointPx > 0 && viewportWidth <= mobileFlowBreakpointPx;
   }
 
-  function setBooleanAttribute(element, name, value) {
+  function setBooleanAttribute(element: Element | null | undefined, name: string, value: boolean): void {
     if (!element || typeof element.setAttribute !== 'function') {
       return;
     }
@@ -233,16 +344,16 @@ function createLayoutController(options) {
   // The open plate shows and hides in one frame, so the search box hands its
   // edge and shadow over in that same frame: its focus shadow transition
   // would otherwise cross-fade them with the plate's.
-  function setSuggestionsOpenState(open) {
-    const body = documentObj && documentObj.body;
+  function setSuggestionsOpenState(open: boolean): void {
+    const body = documentObj.body;
     const root = getRoot();
-    const rootStyle = root && root.style;
     const changed = Boolean(body) &&
       body.getAttribute(suggestionsOpenAttribute) !== (open ? 'true' : 'false');
-    if (!changed || !rootStyle || typeof windowObj.getComputedStyle !== 'function') {
+    if (!changed || !root || !root.style || typeof windowObj.getComputedStyle !== 'function') {
       setBooleanAttribute(body, suggestionsOpenAttribute, Boolean(open));
       return;
     }
+    const rootStyle = root.style;
     const inlineTransition = rootStyle.getPropertyValue('transition');
     rootStyle.setProperty('transition', 'none');
     setBooleanAttribute(body, suggestionsOpenAttribute, Boolean(open));
@@ -254,14 +365,14 @@ function createLayoutController(options) {
     }
   }
 
-  function setPixelStyle(element, property, value) {
+  function setPixelStyle(element: HTMLElement | null | undefined, property: string, value: number): void {
     if (!element || !element.style) {
       return;
     }
     element.style.setProperty(property, `${Math.round(value)}px`);
   }
 
-  function setFixedFrame(element, frame) {
+  function setFixedFrame(element: HTMLElement | null, frame: FixedFrame | null): void {
     if (!element || !frame) {
       return;
     }
@@ -271,7 +382,7 @@ function createLayoutController(options) {
     setPixelStyle(element, 'height', frame.height);
   }
 
-  function updateSuggestionsSurfaceFrame() {
+  function updateSuggestionsSurfaceFrame(): void {
     const suggestionsContainer = getSuggestionsContainer();
     const inputParts = getInputParts();
     if (!suggestionsContainer || !inputParts || !inputParts.container) {
@@ -299,7 +410,7 @@ function createLayoutController(options) {
     setFixedFrame(suggestionsOutline, surfaceFrame);
   }
 
-  function commitSuggestionsNaturalHeightAfterRender() {
+  function commitSuggestionsNaturalHeightAfterRender(): boolean {
     const suggestionsContainer = getSuggestionsContainer();
     if (!suggestionsContainer) {
       return false;
@@ -318,7 +429,7 @@ function createLayoutController(options) {
     return true;
   }
 
-  function applyWidthMode(config) {
+  function applyWidthMode(config?: WidthModeConfig | null): void {
     const rawSearchMax = Number(config && config.searchMaxWidth);
     const searchMax = Number.isFinite(rawSearchMax) ? Math.max(1, rawSearchMax) : STANDARD_SEARCH_MAX_WIDTH_PX;
     const contentMax = Math.max(CONTENT_MAX_WIDTH_PX, Number((config && config.contentMaxWidth) || CONTENT_MAX_WIDTH_PX));
@@ -328,7 +439,7 @@ function createLayoutController(options) {
     }
   }
 
-  function getElementOuterHeight(element) {
+  function getElementOuterHeight(element: HTMLElement | null): number {
     if (!element) {
       return 0;
     }
@@ -348,7 +459,7 @@ function createLayoutController(options) {
     return Math.max(0, targetHeight + marginTop + marginBottom);
   }
 
-  function isSectionVisible(section) {
+  function isSectionVisible(section: HTMLElement | null): boolean {
     if (!section) {
       return false;
     }
@@ -364,7 +475,7 @@ function createLayoutController(options) {
     return section.style.getPropertyValue('display') !== 'none';
   }
 
-  function getDockDensityForAvailableHeight(availableHeight, mobileFlow) {
+  function getDockDensityForAvailableHeight(availableHeight: number, mobileFlow: boolean): DockDensity {
     if (mobileFlow) {
       return 'mobile';
     }
@@ -377,13 +488,13 @@ function createLayoutController(options) {
     return 'default';
   }
 
-  function isCompactDockViewport(viewportHeight) {
+  function isCompactDockViewport(viewportHeight: number): boolean {
     return compactDockViewportMaxHeightPx > 0 && viewportHeight <= compactDockViewportMaxHeightPx;
   }
 
   // A block's box without the translate layout motion may be playing on
   // it, so a pass during a move measures where the block settles.
-  function getSettledRect(element) {
+  function getSettledRect(element: Element): SettledRect {
     const rect = element.getBoundingClientRect();
     let shiftY = 0;
     if (typeof windowObj.getComputedStyle === 'function') {
@@ -400,8 +511,11 @@ function createLayoutController(options) {
 
   // How far the dock's scroller, which takes the clicks, reaches above the
   // dock (its top padding is room for hovered cards).
-  function getBottomDockScrollerBleed(bottomDock) {
-    const scroller = bottomDock && bottomDock.firstElementChild;
+  function getBottomDockScrollerBleed(bottomDock: HTMLElement | null): number {
+    if (!bottomDock) {
+      return 0;
+    }
+    const scroller = bottomDock.firstElementChild;
     if (!scroller || typeof scroller.getBoundingClientRect !== 'function') {
       return 0;
     }
@@ -410,7 +524,7 @@ function createLayoutController(options) {
       (Number(scroller.getBoundingClientRect().top) || 0));
   }
 
-  function getBottomDockTopReserve(viewportHeight) {
+  function getBottomDockTopReserve(viewportHeight: number): number {
     let topReserve = bottomDockTopReservePx;
     const shortcutSection = getShortcutSection();
     if (!isCompactDockViewport(viewportHeight)) {
@@ -418,7 +532,7 @@ function createLayoutController(options) {
       // its minimum height; past that (a row or two of shortcuts under a
       // clock and a quote, over many bookmarks) the dock stops instead, or
       // its scroller would cover the shortcuts and take their clicks.
-      if (isSectionVisible(shortcutSection)) {
+      if (shortcutSection && isSectionVisible(shortcutSection)) {
         const shortcutRect = getSettledRect(shortcutSection);
         if (shortcutRect.bottom > 0) {
           topReserve = Math.max(topReserve, Math.ceil(
@@ -446,7 +560,7 @@ function createLayoutController(options) {
       compactTopReserve = Math.max(compactTopReserve,
         Math.ceil(getSettledRect(quoteSection).bottom + shortcutGap));
     }
-    if (isSectionVisible(shortcutSection)) {
+    if (shortcutSection && isSectionVisible(shortcutSection)) {
       const shortcutBottom = getSettledRect(shortcutSection).bottom;
       if (shortcutBottom > 0) {
         compactTopReserve = Math.max(
@@ -459,7 +573,7 @@ function createLayoutController(options) {
     return topReserve;
   }
 
-  function restoreAttribute(element, name, value) {
+  function restoreAttribute(element: Element | null, name: string, value: string | null | undefined): void {
     if (!element || typeof element.setAttribute !== 'function') {
       return;
     }
@@ -473,11 +587,11 @@ function createLayoutController(options) {
   }
 
   function isDockDensityPromotionStable(
-    body,
-    bottomDock,
-    candidateDensity,
-    viewportHeight
-  ) {
+    body: HTMLElement | null,
+    bottomDock: HTMLElement | null,
+    candidateDensity: DockDensity,
+    viewportHeight: number
+  ): boolean {
     if (!body || !bottomDock || !candidateDensity) {
       return true;
     }
@@ -498,7 +612,7 @@ function createLayoutController(options) {
     return resolvedDensity === candidateDensity;
   }
 
-  function getCssPixelValue(style, property) {
+  function getCssPixelValue(style: CSSStyleDeclaration | null | undefined, property: string): number {
     if (!style || !property) {
       return 0;
     }
@@ -506,7 +620,7 @@ function createLayoutController(options) {
     return Number.isFinite(value) ? value : 0;
   }
 
-  function getVerticalFrameHeight(element, options) {
+  function getVerticalFrameHeight(element: Element | null, options?: { includeMargin?: boolean }): number {
     if (!element) {
       return 0;
     }
@@ -528,7 +642,7 @@ function createLayoutController(options) {
       getCssPixelValue(style, 'margin-bottom');
   }
 
-  function getElementMinHeight(element) {
+  function getElementMinHeight(element: Element | null): number {
     if (!element) {
       return 0;
     }
@@ -539,7 +653,7 @@ function createLayoutController(options) {
     return getCssPixelValue(style, 'min-height');
   }
 
-  function getSearchEntryBlockHeight() {
+  function getSearchEntryBlockHeight(): number {
     const root = getRoot();
     const inputParts = getInputParts();
     const searchLayer = getSearchLayer();
@@ -557,7 +671,7 @@ function createLayoutController(options) {
     return Math.max(55, rootMinHeight, rootFrameHeight + searchLayerBaseHeight);
   }
 
-  function getCurrentBodyPaddingTop(body) {
+  function getCurrentBodyPaddingTop(body: HTMLElement | null | undefined): number | null {
     if (!body || !body.style) {
       return null;
     }
@@ -566,7 +680,7 @@ function createLayoutController(options) {
     return Number.isFinite(value) ? Math.round(value) : null;
   }
 
-  function isSearchEntryEngaged(body) {
+  function isSearchEntryEngaged(body: HTMLElement): boolean {
     if (body.getAttribute && body.getAttribute(suggestionsOpenAttribute) === 'true') {
       return true;
     }
@@ -582,7 +696,7 @@ function createLayoutController(options) {
   // bottom (CSS margin-top: auto) and the logo, search and shortcuts are centered
   // in the space above it. Content taller than the screen falls back to the minimum
   // top inset and scrolls.
-  function updateMobileSearchEntryLayout(body, layoutOptions) {
+  function updateMobileSearchEntryLayout(body: HTMLElement, layoutOptions?: SearchEntryLayoutOptions): void {
     const viewportHeight = Math.max(0, windowObj.innerHeight || 0);
     if (viewportHeight <= 0) {
       return;
@@ -623,7 +737,7 @@ function createLayoutController(options) {
   }
 
   // Marks the edges with rows beyond them, which the section fades out.
-  function updateShortcutAreaEdges(section) {
+  function updateShortcutAreaEdges(section: HTMLElement): void {
     const scrollable = section.getAttribute('data-shortcuts-scrollable') === 'true';
     const top = Number(section.scrollTop) || 0;
     const rest = (Number(section.scrollHeight) || 0) - (Number(section.clientHeight) || 0) - top;
@@ -634,13 +748,13 @@ function createLayoutController(options) {
   // The section scrolls only when its grid is taller than the room above
   // the dock. Mobile flow scrolls the page instead. Returns whether the
   // limit changed, since the dock's own reserve can depend on it.
-  function updateShortcutAreaLimit() {
+  function updateShortcutAreaLimit(): boolean {
     const section = getShortcutSection();
     if (!section || !section.style || typeof section.getBoundingClientRect !== 'function') {
       return false;
     }
     const grid = typeof section.querySelector === 'function'
-      ? section.querySelector('.x-nt-shortcuts-grid')
+      ? queryHtmlElement(section, '.x-nt-shortcuts-grid')
       : null;
     const bottomDock = getBottomDock();
     const viewportHeight = Math.max(0, windowObj.innerHeight || 0);
@@ -673,8 +787,8 @@ function createLayoutController(options) {
         limit = Math.floor(Math.max(shortcutAreaMinHeightPx, room));
       }
     }
-    if (!section._xShortcutAreaEdgesBound && typeof section.addEventListener === 'function') {
-      section._xShortcutAreaEdgesBound = true;
+    if (!edgeTrackedSections.has(section) && typeof section.addEventListener === 'function') {
+      edgeTrackedSections.add(section);
       section.addEventListener('scroll', () => updateShortcutAreaEdges(section), { passive: true });
     }
     const previous = section.style.getPropertyValue('--x-nt-shortcuts-max-height');
@@ -698,13 +812,13 @@ function createLayoutController(options) {
     return true;
   }
 
-  function updateSearchEntryLayout(layoutOptions) {
+  function updateSearchEntryLayout(layoutOptions?: SearchEntryLayoutOptions): void {
     positionSearchEntry(layoutOptions);
     updateShortcutAreaLimit();
   }
 
-  function positionSearchEntry(layoutOptions) {
-    const body = documentObj && documentObj.body;
+  function positionSearchEntry(layoutOptions?: SearchEntryLayoutOptions): void {
+    const body = documentObj.body;
     const root = getRoot();
     if (!body || !root) {
       return;
@@ -811,7 +925,7 @@ function createLayoutController(options) {
     body.style.setProperty('padding-top', `${nextTop}px`, 'important');
   }
 
-  function setStylePixels(element, property, value) {
+  function setStylePixels(element: HTMLElement | null, property: string, value: number): void {
     if (!element || !element.style || typeof element.style.setProperty !== 'function') {
       return;
     }
@@ -824,7 +938,7 @@ function createLayoutController(options) {
   // The dock reserves a stable scrollbar gutter beside the cards. Feed its
   // width back to CSS so the cards keep the dock's width, and end the track
   // above the corner controls when they sit over the scrollbar.
-  function updateBottomDockScrollbarInsets(scroller, mobileFlow) {
+  function updateBottomDockScrollbarInsets(scroller: HTMLElement | null, mobileFlow: boolean): void {
     if (!scroller || typeof scroller.getBoundingClientRect !== 'function') {
       return;
     }
@@ -851,14 +965,15 @@ function createLayoutController(options) {
     setStylePixels(scroller, '--x-nt-bottom-dock-scrollbar-end-inset', endInset);
   }
 
-  function layoutBottomDockPass(callbacks) {
-    const body = documentObj && documentObj.body;
+  // Returns whether the pass changed what it measured.
+  function layoutBottomDockPass(callbacks?: BottomDockLayoutOptions): boolean {
+    const body = documentObj.body;
     const bookmarkSection = getBookmarkSection();
     const recentSection = getRecentSection();
     const bottomDock = getBottomDock();
     const sectionSafeCorridor = getSectionSafeCorridor();
     if (!body || !bookmarkSection || !recentSection || !bottomDock || !sectionSafeCorridor) {
-      return;
+      return false;
     }
     const viewportHeight = Math.max(0, windowObj.innerHeight || 0);
     const mobileFlow = isMobileFlowViewport();
@@ -908,7 +1023,7 @@ function createLayoutController(options) {
   // where it is and only make the dock denser, so this settles within the
   // call instead of over painted frames.
   const BOTTOM_DOCK_LAYOUT_MAX_PASSES = 3;
-  function updateBottomDockLayout(callbacks) {
+  function updateBottomDockLayout(callbacks?: BottomDockLayoutOptions): void {
     let passOptions = callbacks;
     for (let pass = 0; pass < BOTTOM_DOCK_LAYOUT_MAX_PASSES; pass += 1) {
       if (!layoutBottomDockPass(passOptions)) {
@@ -919,7 +1034,7 @@ function createLayoutController(options) {
     updateSuggestionsFloatingLayout();
   }
 
-  function setSuggestionsVisible(visible) {
+  function setSuggestionsVisible(visible: boolean): void {
     const shouldShow = Boolean(visible);
     const suggestionsContainer = getSuggestionsContainer();
     const suggestionsSurface = getSuggestionsSurface();
@@ -941,7 +1056,7 @@ function createLayoutController(options) {
     }
   }
 
-  function updateSuggestionsFloatingLayout() {
+  function updateSuggestionsFloatingLayout(): void {
     const suggestionsContainer = getSuggestionsContainer();
     const inputParts = getInputParts();
     if (!suggestionsContainer || !inputParts || !inputParts.container) {
@@ -984,6 +1099,8 @@ function createLayoutController(options) {
   };
 }
 
+type LayoutController = ReturnType<typeof createLayoutController>;
+
 export {
   STANDARD_SEARCH_MAX_WIDTH_PX,
   CONTENT_MAX_WIDTH_PX,
@@ -993,4 +1110,14 @@ export {
   getAdaptiveGridColumnCount,
   getGridContentWidthForColumns,
   getResponsiveContentWidth
+};
+export type {
+  BottomDockLayoutOptions,
+  DockDensity,
+  ElementSource,
+  LayoutConstants,
+  LayoutController,
+  LayoutControllerOptions,
+  SearchEntryLayoutOptions,
+  WidthModeConfig
 };
