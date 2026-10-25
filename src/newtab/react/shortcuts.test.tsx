@@ -1,15 +1,24 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ShortcutLink, VisibleShortcutFolder } from '../../domain/shortcuts-store';
 import {
   createShortcutsView,
   createShortcutsViewApi,
-  type ShortcutItem,
+  type VisibleShortcutItem,
   type ShortcutsLayout,
   type ShortcutsViewController,
   type ShortcutsViewOptions
 } from './shortcuts';
 
 let views: ShortcutsViewController[] = [];
+
+// A link shortcut; its host stays empty unless given, so tiles read it
+// from getHostFromUrl.
+function site(fields: Omit<ShortcutLink, 'host'> & { host?: string }): ShortcutLink {
+  return { host: '', ...fields };
+}
+
+const folderEntry: VisibleShortcutFolder = { id: 'folder-entry', type: 'folder', folderId: '42', title: 'Design' };
 
 function createOptions(
   overrides: Partial<ShortcutsViewOptions> = {}
@@ -19,7 +28,7 @@ function createOptions(
   return {
     grid,
     tiles: [],
-    getShortcutTitle: (shortcut) => String(shortcut.title || shortcut.host || ''),
+    getShortcutTitle: (shortcut) => shortcut.title || ('host' in shortcut ? shortcut.host : ''),
     getHostFromUrl: () => 'example.com',
     getShortcutIconDataUrl: () => '',
     getShortcutFaviconCandidateUrl: () => '',
@@ -61,7 +70,7 @@ function createView(
 
 function renderItems(
   view: ShortcutsViewController,
-  items: ShortcutItem[],
+  items: VisibleShortcutItem[],
   layout?: ShortcutsLayout
 ): { count: number } {
   let result = { count: 0 };
@@ -91,7 +100,7 @@ describe('Shortcuts React island', () => {
       initFolderIcon, animateFolderIcon, openShortcut, resolveShortcutFaviconDataUrl,
       queueThemeForTarget
     });
-    renderItems(view, [{ id: 'folder-entry', type: 'folder', folderId: '42', title: 'Design' }]);
+    renderItems(view, [folderEntry]);
     const tile = options.grid!.querySelector<HTMLButtonElement>('[data-shortcut-id="folder-entry"]')!;
     expect(tile.getAttribute('aria-haspopup')).toBe('menu');
     expect(tile.getAttribute('data-bookmark-drop-folder-id')).toBe('42');
@@ -115,7 +124,7 @@ describe('Shortcuts React island', () => {
     const { view, options } = createView({
       getFolderIconSvg: () => '<svg><path data-folder-part="upper-body" d="M0 0" /></svg>'
     });
-    const folder = { id: 'folder-entry', type: 'folder', folderId: '42', title: 'Design' };
+    const folder = folderEntry;
     renderItems(view, [folder]);
     const path = options.grid!.querySelector('path')!;
     path.setAttribute('d', 'M9 13');
@@ -131,7 +140,7 @@ describe('Shortcuts React island', () => {
       getFolderIconSvg: () => '<svg data-folder-icon="true"></svg>',
       animateFolderIcon
     });
-    renderItems(view, [{ id: 'folder-entry', type: 'folder', folderId: '42', title: 'Design' }]);
+    renderItems(view, [folderEntry]);
     const tile = view.getTiles()[0];
     const icon = tile.querySelector('.x-nt-shortcut-icon');
     tile.setAttribute('data-shortcut-context-menu-open', 'true');
@@ -151,7 +160,7 @@ describe('Shortcuts React island', () => {
   it('keeps an open folder contents menu expanded when its context menu closes', () => {
     const animateFolderIcon = vi.fn();
     const { view } = createView({ animateFolderIcon });
-    renderItems(view, [{ id: 'folder-entry', type: 'folder', folderId: '42', title: 'Design' }]);
+    renderItems(view, [folderEntry]);
     const tile = view.getTiles()[0];
     tile.setAttribute('aria-expanded', 'true');
     tile._xSetBookmarkMenuVisualActive!(true);
@@ -177,11 +186,11 @@ describe('Shortcuts React island', () => {
       applyShortcutTileTheme: applyTheme,
       bindTooltip
     });
-    const result = renderItems(view, [{
+    const result = renderItems(view, [site({
       id: 'docs',
       title: 'Docs',
       url: 'https://example.com/docs'
-    }]);
+    })]);
     const grid = options.grid as HTMLElement;
     const tile = view.getTiles()[0];
 
@@ -221,11 +230,11 @@ describe('Shortcuts React island', () => {
       onAdd,
       onAddContextMenu
     });
-    renderItems(view, [{
+    renderItems(view, [site({
       id: 'docs',
       title: 'Docs',
       url: 'https://example.com/docs'
-    }]);
+    })]);
     const tile = view.getTiles()[0];
 
     act(() => {
@@ -263,11 +272,11 @@ describe('Shortcuts React island', () => {
       openShortcut,
       isActivationSuppressed: () => suppressed
     });
-    renderItems(view, [{
+    renderItems(view, [site({
       id: 'docs',
       title: 'Docs',
       url: 'https://example.com/docs'
-    }]);
+    })]);
     const tile = view.getTiles()[0];
     const press = () => {
       act(() => {
@@ -292,8 +301,8 @@ describe('Shortcuts React island', () => {
     const openShortcut = vi.fn();
     const { view } = createView({ moveShortcut, openShortcut });
     renderItems(view, [
-      { id: 'docs', title: 'Docs', url: 'https://example.com/docs' },
-      { id: 'mail', title: 'Mail', url: 'https://example.com/mail' }
+      site({ id: 'docs', title: 'Docs', url: 'https://example.com/docs' }),
+      site({ id: 'mail', title: 'Mail', url: 'https://example.com/mail' })
     ]);
     const tile = view.getTiles()[0];
     const press = (key: string, init: KeyboardEventInit = {}) => {
@@ -319,19 +328,19 @@ describe('Shortcuts React island', () => {
       getAddVisible: () => addVisible
     });
 
-    renderItems(view, [{
+    renderItems(view, [site({
       id: 'docs',
       title: 'Docs',
       url: 'https://example.com/docs'
-    }]);
+    })]);
     expect(view.getAddButton()?.hidden).toBe(true);
 
     addVisible = true;
-    renderItems(view, [{
+    renderItems(view, [site({
       id: 'docs',
       title: 'Docs',
       url: 'https://example.com/docs'
-    }]);
+    })]);
     expect(view.getAddButton()?.hidden).toBe(false);
   });
 
@@ -340,26 +349,26 @@ describe('Shortcuts React island', () => {
       maxShortcuts: 2
     });
     renderItems(view, [
-      {
+      site({
         id: 'one',
         title: 'One',
         url: 'https://one.example/'
-      },
-      {
+      }),
+      site({
         id: 'two',
         title: 'Two',
         url: 'https://two.example/'
-      }
+      })
     ]);
 
     expect(view.getTiles()).toHaveLength(2);
     expect(view.getAddButton()?.hidden).toBe(true);
 
-    renderItems(view, [{
+    renderItems(view, [site({
       id: 'one',
       title: 'One',
       url: 'https://one.example/'
-    }]);
+    })]);
 
     expect(view.getAddButton()?.hidden).toBe(false);
   });
@@ -377,11 +386,11 @@ describe('Shortcuts React island', () => {
       getImmediateThemeForSuggestion: getImmediateTheme,
       queueThemeForTarget: queueTheme
     });
-    renderItems(view, [{
+    renderItems(view, [site({
       id: 'custom',
       title: 'Custom',
       url: 'https://example.com/'
-    }]);
+    })]);
     const tile = view.getTiles()[0];
     const image = tile.querySelector<HTMLImageElement>('.x-nt-shortcut-favicon');
 
@@ -415,17 +424,17 @@ describe('Shortcuts React island', () => {
         mode !== 'off' && eligible !== false && (mode === 'on' || analysis?.transparent)
           ? { light: 'rgb(253, 236, 231)', dark: 'rgb(80, 40, 30)', custom: false } : null)
     });
-    renderItems(view, [{ id: 'shopee', title: 'Shopee', url: 'https://shopee.example/' }]);
+    renderItems(view, [site({ id: 'shopee', title: 'Shopee', url: 'https://shopee.example/' })]);
     const mask = () => view.getTiles()[0].querySelector<HTMLElement>('.x-nt-shortcut-favicon-mask')!;
     expect(mask().dataset.iconPlate).toBe('true');
     expect(mask().style.getPropertyValue('--x-nt-shortcut-icon-plate-light')).toBe('rgb(253, 236, 231)');
 
-    renderItems(view, [{ id: 'shopee', title: 'Shopee', url: 'https://shopee.example/', iconPlate: 'off' }]);
+    renderItems(view, [site({ id: 'shopee', title: 'Shopee', url: 'https://shopee.example/', iconPlate: 'off' })]);
     expect(mask().dataset.iconPlate).toBeUndefined();
 
     // Another site's artwork is read again before it gets a plate.
     analyze.mockReturnValueOnce({ transparent: false, accent: [238, 77, 45], palette: [[238, 77, 45]] });
-    renderItems(view, [{ id: 'shopee', title: 'Shopee', url: 'https://other.example/' }]);
+    renderItems(view, [site({ id: 'shopee', title: 'Shopee', url: 'https://other.example/' })]);
     expect(mask().dataset.iconPlate).toBeUndefined();
   });
 
@@ -442,7 +451,7 @@ describe('Shortcuts React island', () => {
       resolveShortcutIconPlate: ({ analysis }) => (analysis?.transparent
         ? { light: 'rgb(253, 236, 231)', dark: 'rgb(80, 40, 30)', custom: false } : null)
     });
-    renderItems(view, [{ id: 'shopee', title: 'Shopee', url: 'https://shopee.example/' }]);
+    renderItems(view, [site({ id: 'shopee', title: 'Shopee', url: 'https://shopee.example/' })]);
     const tile = view.getTiles()[0];
     const image = tile.querySelector<HTMLImageElement>('img')!;
     act(() => {
@@ -468,7 +477,7 @@ describe('Shortcuts React island', () => {
       resolveShortcutFaviconDataUrl,
       attachFaviconWithFallbacks: attachFavicon
     });
-    renderItems(view, [{ id: 'xhs', title: '小红书', url: 'https://www.xiaohongshu.com/' }]);
+    renderItems(view, [site({ id: 'xhs', title: '小红书', url: 'https://www.xiaohongshu.com/' })]);
     expect(resolveShortcutFaviconDataUrl).not.toHaveBeenCalled();
     expect(document.querySelector('.x-nt-shortcut-favicon-mask')?.getAttribute('data-builtin-icon')).toBe('true');
     expect(attachFavicon).toHaveBeenLastCalledWith(
@@ -494,7 +503,7 @@ describe('Shortcuts React island', () => {
       resolveShortcutFaviconDataUrl: acquireIcon,
       attachFaviconWithFallbacks: attachFavicon
     });
-    const items = [{ id: 'stable', title: 'Stable', url: 'https://unlisted.example/' }];
+    const items = [site({ id: 'stable', title: 'Stable', url: 'https://unlisted.example/' })];
     renderItems(view, items);
     await act(async () => { await Promise.resolve(); });
     expect(acquireIcon).toHaveBeenCalledTimes(1);
@@ -522,11 +531,11 @@ describe('Shortcuts React island', () => {
       getShortcutFaviconDataUrl: () => '',
       resolveShortcutFaviconDataUrl
     });
-    renderItems(view, [{
+    renderItems(view, [site({
       id: 'docs',
       title: 'Docs',
       url: 'https://example.com/docs'
-    }]);
+    })]);
 
     expect(attachFavicon).toHaveBeenCalledOnce();
     expect(resolveShortcutFaviconDataUrl).toHaveBeenCalledWith(
@@ -562,11 +571,11 @@ describe('Shortcuts React island', () => {
       getShortcutFaviconDataUrl: () => 'data:image/png;base64,Y2FjaGVkLWhk',
       resolveShortcutFaviconDataUrl
     });
-    renderItems(view, [{
+    renderItems(view, [site({
       id: 'docs',
       title: 'Docs',
       url: developerConsoleUrl
-    }]);
+    })]);
 
     const image = view.getTiles()[0]
       .querySelector<HTMLImageElement>('.x-nt-shortcut-favicon');
@@ -600,8 +609,8 @@ describe('Shortcuts React island', () => {
     });
 
     renderItems(view, [
-      { id: 'profile', title: 'Tibo', url: profileUrl },
-      { id: 'home', title: 'X', url: homeUrl }
+      site({ id: 'profile', title: 'Tibo', url: profileUrl }),
+      site({ id: 'home', title: 'X', url: homeUrl })
     ]);
 
     expect(attachFavicon).toHaveBeenCalledTimes(2);
@@ -631,16 +640,16 @@ describe('Shortcuts React island', () => {
 
   it('preserves keyed tile nodes when legacy drag order is synchronized', () => {
     const { view, options } = createView();
-    const first = {
+    const first = site({
       id: 'first',
       title: 'First',
       url: 'https://first.example/'
-    };
-    const second = {
+    });
+    const second = site({
       id: 'second',
       title: 'Second',
       url: 'https://second.example/'
-    };
+    });
     renderItems(view, [first, second]);
     const firstTile = view.getTiles()[0];
     const secondTile = view.getTiles()[1];
@@ -656,9 +665,9 @@ describe('Shortcuts React island', () => {
   describe('groups', () => {
     const groups = [{ id: 'g0', title: '' }, { id: 'work', title: '工作' }];
     const items = [
-      { id: 'a', title: 'A', url: 'https://a.example/', groupId: 'g0' },
-      { id: 'b', title: 'B', url: 'https://b.example/', groupId: 'work' },
-      { id: 'c', title: 'C', url: 'https://c.example/', groupId: 'work' }
+      site({ id: 'a', title: 'A', url: 'https://a.example/', groupId: 'g0' }),
+      site({ id: 'b', title: 'B', url: 'https://b.example/', groupId: 'work' }),
+      site({ id: 'c', title: 'C', url: 'https://c.example/', groupId: 'work' })
     ];
     const childSummary = (grid: HTMLElement) => Array.from(grid.children).map((child) => (
       child.classList.contains('x-nt-shortcut-group-header')
@@ -729,9 +738,9 @@ describe('Shortcuts React island', () => {
       const grid = options.grid as HTMLElement;
       const columns = () => grid.style.getPropertyValue('--x-nt-shortcut-grouped-columns');
       const others = [
-        { id: 'd', title: 'D', url: 'https://d.example/', groupId: 'g0' },
-        { id: 'e', title: 'E', url: 'https://e.example/', groupId: 'g0' },
-        { id: 'f', title: 'F', url: 'https://f.example/', groupId: 'g0' }
+        site({ id: 'd', title: 'D', url: 'https://d.example/', groupId: 'g0' }),
+        site({ id: 'e', title: 'E', url: 'https://e.example/', groupId: 'g0' }),
+        site({ id: 'f', title: 'F', url: 'https://f.example/', groupId: 'g0' })
       ];
       renderItems(view, [items[0], ...others, items[1], items[2]], { grouped: true, groups });
       expect(columns()).toBe('4');

@@ -11,13 +11,13 @@ import {
 } from '../domain/bookmark-folder-reference';
 import type {
   BookmarkNode,
-  BookmarkNodeMap,
   FolderBindings,
-  FolderShortcutLike,
-  PortableFolderShortcut
+  FolderShortcutLike
 } from '../domain/bookmark-folder-reference';
 import { LOCAL_PRIMARY_STORAGE_KEY } from '../domain/settings';
 import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
+import { isShortcutFolder } from '../domain/shortcuts-store';
+import type { PortableShortcutFolder, ShortcutItem, VisibleShortcutItem } from '../domain/shortcuts-store';
 import type {
   StorageAreaLike,
   StorageChangeEventLike,
@@ -75,11 +75,11 @@ interface FolderBindingRuntime {
   bind(id: string, folderId: string | number): void;
   // Stores the bindings made since the last flush.
   flush(): Promise<void>;
-  getNode<T extends FolderShortcutLike>(item: T | null | undefined, nodeMap: BookmarkNodeMap): BookmarkNode | null;
+  getNode<T extends FolderShortcutLike>(item: T | null | undefined, nodeMap: ReadonlyMap<string, BookmarkNode>): BookmarkNode | null;
   // Gives folder entries a current portable reference.
-  reconcile<T extends FolderShortcutLike>(items: T[], nodeMap: BookmarkNodeMap): Array<T | PortableFolderShortcut<T>>;
+  reconcile<T extends ShortcutItem>(items: readonly T[], nodeMap: ReadonlyMap<string, BookmarkNode>): Array<T | PortableShortcutFolder>;
   // The entries to show: folders this device can open, with their local ID.
-  visibleItems<T extends FolderShortcutLike>(items: T[], nodeMap: BookmarkNodeMap): T[];
+  visibleItems(items: readonly ShortcutItem[], nodeMap: ReadonlyMap<string, BookmarkNode>): VisibleShortcutItem[];
 }
 
 interface FolderSyncControllerOptions {
@@ -155,7 +155,7 @@ function createRuntime(options?: FolderBindingRuntimeOptions | null): FolderBind
     chain = operation;
     return operation;
   }
-  function getNode<T extends FolderShortcutLike>(item: T | null | undefined, nodeMap: BookmarkNodeMap): BookmarkNode | null {
+  function getNode<T extends FolderShortcutLike>(item: T | null | undefined, nodeMap: ReadonlyMap<string, BookmarkNode>): BookmarkNode | null {
     if (!loaded || !item || item.type !== 'folder') return null;
     const binding = Object.hasOwn(bindings, item.id) ? bindings[item.id] : null;
     if (binding) {
@@ -168,17 +168,17 @@ function createRuntime(options?: FolderBindingRuntimeOptions | null): FolderBind
     if (node) bind(item.id, node.id);
     return node;
   }
-  function findLegacyFolder<T extends FolderShortcutLike>(item: T, nodeMap: BookmarkNodeMap): BookmarkNode | null {
+  function findLegacyFolder<T extends FolderShortcutLike>(item: T, nodeMap: ReadonlyMap<string, BookmarkNode>): BookmarkNode | null {
     // Legacy sync IDs have no provenance. Migrate only a unique title,
     // rather than trusting a possibly unrelated matching numeric ID.
     const candidates = [...nodeMap.values()].filter((candidate) => !candidate.url &&
       !isTreeRootId(candidate.id) && item.title && candidate.title === item.title);
     return candidates.length === 1 && String(candidates[0].id) === item.folderId ? candidates[0] : null;
   }
-  function reconcile<T extends FolderShortcutLike>(items: T[], nodeMap: BookmarkNodeMap): Array<T | PortableFolderShortcut<T>> {
-    if (!loaded) return items;
-    return items.map((item): T | PortableFolderShortcut<T> => {
-      if (!item || item.type !== 'folder') return item;
+  function reconcile<T extends ShortcutItem>(items: readonly T[], nodeMap: ReadonlyMap<string, BookmarkNode>): Array<T | PortableShortcutFolder> {
+    if (!loaded) return items.slice();
+    return items.map((item): T | PortableShortcutFolder => {
+      if (!isShortcutFolder(item)) return item;
       let node = getNode(item, nodeMap);
       if (!item.folderRef && !node) {
         node = findLegacyFolder(item, nodeMap);
@@ -186,13 +186,18 @@ function createRuntime(options?: FolderBindingRuntimeOptions | null): FolderBind
       }
       const ref = node && describe(node.id, nodeMap);
       if (!node || !ref || (item.folderRef && JSON.stringify(item.folderRef) === JSON.stringify(ref))) return item;
-      const { folderId: _localId, ...portable } = item;
-      return { ...portable, folderRef: ref, title: String(node.title || '') };
+      return {
+        id: item.id,
+        ...(item.groupId === undefined ? {} : { groupId: item.groupId }),
+        type: 'folder',
+        title: String(node.title || ''),
+        folderRef: ref
+      };
     });
   }
-  function visibleItems<T extends FolderShortcutLike>(items: T[], nodeMap: BookmarkNodeMap): T[] {
-    return items.flatMap((item) => {
-      if (item.type !== 'folder') return [item];
+  function visibleItems(items: readonly ShortcutItem[], nodeMap: ReadonlyMap<string, BookmarkNode>): VisibleShortcutItem[] {
+    return items.flatMap((item): VisibleShortcutItem[] => {
+      if (!isShortcutFolder(item)) return [item];
       const node = getNode(item, nodeMap);
       return node ? [{ ...item, folderId: String(node.id) }] : [];
     });

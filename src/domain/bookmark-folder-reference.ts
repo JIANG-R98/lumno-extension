@@ -49,11 +49,6 @@ interface FolderShortcutLike {
   folderRef?: unknown;
 }
 
-// A folder entry with its local ID replaced by a portable reference.
-type PortableFolderShortcut<T extends FolderShortcutLike> = Omit<T, 'folderId'> & {
-  folderRef: FolderReference;
-  title: string;
-};
 
 const BINDINGS_KEY = '_x_extension_shortcut_folder_bindings_2026_unique_';
 const ROOT_TYPES: ReadonlySet<string> = new Set<BookmarkRootType>(['bookmarks-bar', 'other', 'mobile', 'managed']);
@@ -211,6 +206,5 @@ export type {
   FolderBindings,
   FolderReference,
   FolderReferenceScope,
-  FolderShortcutLike,
-  PortableFolderShortcut
+  FolderShortcutLike
 };

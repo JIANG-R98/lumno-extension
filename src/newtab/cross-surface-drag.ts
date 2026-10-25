@@ -147,7 +147,7 @@ function getRowInsertionSlot(
   pointerX: number,
   pointerY: number
 ): InsertionSlot {
-  const items = Array.isArray(layoutItems) ? layoutItems : [];
+  const items = layoutItems || [];
   if (!items.length || !Number.isFinite(pointerX) || !Number.isFinite(pointerY)) {
     return { index: 0, anchorIndex: -1, markerPosition: 'before' };
   }
@@ -190,7 +190,7 @@ function getInsertionGapNeighbors<T>(
   markerPosition: string,
   isSameLine?: (item: T, anchor: T) => boolean
 ): { before: T | null; after: T | null } {
-  const list = Array.isArray(items) ? items : [];
+  const list = items || [];
   const index = anchor ? list.indexOf(anchor) : -1;
   if (index < 0 || anchor === null) {
     return { before: null, after: null };
@@ -273,7 +273,7 @@ function planBookmarkToShortcut(options: {
 }): { shortcuts: ShortcutItem[]; shortcutId: string } | null {
   const config = options;
   const shortcuts: ShortcutItem[] = [];
-  (Array.isArray(config.shortcuts) ? config.shortcuts : []).forEach((item) => {
+  (config.shortcuts || []).forEach((item) => {
     if (item) shortcuts.push(item);
   });
   const record = config.record;
@@ -316,7 +316,7 @@ function planTransferShortcuts(options: {
   maxShortcuts: number;
 }): ShortcutItem[] | null {
   const config = options;
-  const next = Array.isArray(config.shortcuts) ? config.shortcuts.slice() : [];
+  const next = config.shortcuts ? config.shortcuts.slice() : [];
   const source = config.source && config.source.snapshot;
   const destinationPlacement = config.destination || null;
   const destination = destinationPlacement && destinationPlacement.snapshot;
@@ -355,10 +355,10 @@ function planShortcutStack(options: {
 }): ShortcutItem[] | null {
   const config = options;
   const shortcuts: ShortcutItem[] = [];
-  (Array.isArray(config.shortcuts) ? config.shortcuts : []).forEach((item) => {
+  (config.shortcuts || []).forEach((item) => {
     if (item) shortcuts.push(item);
   });
-  const sources = Array.isArray(config.sources) ? config.sources : [];
+  const sources = config.sources || [];
   const folderPlacement = config.folder || null;
   const folder = folderPlacement && folderPlacement.snapshot;
   if (sources.length < 2 || !folderPlacement || !folder || !folder.id) {
@@ -404,8 +404,8 @@ function planShortcutReorder(options: {
   groups?: readonly string[] | null;
 }): ShortcutItem[] | null {
   const config = options;
-  const shortcuts = Array.isArray(config.shortcuts) ? config.shortcuts : [];
-  const order = Array.isArray(config.order) ? config.order : [];
+  const shortcuts = config.shortcuts || [];
+  const order = config.order || [];
   const ids = new Set(order);
   const byId = new Map(shortcuts.map((item): [string, ShortcutItem] => [item.id, item]));
   if (!order.length || ids.size !== order.length || order.some((id) => !byId.has(id))) {
@@ -418,7 +418,7 @@ function planShortcutReorder(options: {
     return null;
   }
   // A recorded group for each entry in `order` moves it back into that group.
-  const groups = Array.isArray(config.groups) && config.groups.length === order.length ? config.groups : null;
+  const groups = config.groups && config.groups.length === order.length ? config.groups : null;
   let index = 0;
   // Reorder the recorded entries in their current slots, preserving newer
   // shortcuts and the latest titles, icons and folder bindings.

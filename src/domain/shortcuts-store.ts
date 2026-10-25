@@ -52,6 +52,15 @@ type ShortcutFolder = PortableShortcutFolder | LocalShortcutFolder;
 
 type ShortcutItem = ShortcutLink | ShortcutFolder;
 
+// A folder entry as a page shows it: opened by this device's bookmark ID,
+// keeping its portable reference when it has one.
+interface VisibleShortcutFolder extends ShortcutFolderBase {
+  folderId: string;
+  folderRef?: FolderReference;
+}
+
+type VisibleShortcutItem = ShortcutLink | VisibleShortcutFolder;
+
 // An item of a normalized state, which always names its group.
 type GroupedShortcutItem = ShortcutItem & { groupId: string };
 
@@ -250,7 +259,7 @@ function isUnknownArray(value: unknown): value is unknown[] {
 
 // Type guards rather than property checks narrow the item unions, so the
 // narrowing also holds where strictNullChecks is off.
-function isShortcutFolder(item: ShortcutItem): item is ShortcutFolder {
+function isShortcutFolder<T extends ShortcutItem | VisibleShortcutItem>(item: T): item is Extract<T, { type: 'folder' }> {
   return item.type === 'folder';
 }
 
@@ -930,5 +939,7 @@ export type {
   ShortcutSyncHead,
   ShortcutSyncRead,
   ShortcutSyncSummary,
-  ShortcutSyncUsage
+  ShortcutSyncUsage,
+  VisibleShortcutFolder,
+  VisibleShortcutItem
 };

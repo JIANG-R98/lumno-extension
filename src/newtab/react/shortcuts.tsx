@@ -9,6 +9,7 @@ import {
   type MouseEvent as ReactMouseEvent
 } from 'react';
 import { flushSync } from 'react-dom';
+import type { ShortcutGroup, ShortcutLink, VisibleShortcutFolder, VisibleShortcutItem } from '../../domain/shortcuts-store';
 import { createRoot, type Root } from 'react-dom/client';
 import {
   getIconPlateStyle,
@@ -20,19 +21,7 @@ import {
 
 type ThemeValue = unknown;
 
-export interface ShortcutItem {
-  id?: string;
-  url?: string;
-  host?: string;
-  title?: string;
-  groupId?: string;
-  [key: string]: unknown;
-}
-
-export interface ShortcutGroup {
-  id: string;
-  title: string;
-}
+export type { ShortcutGroup, VisibleShortcutItem };
 
 // Without `grouped`, shortcuts render as one centered run of tiles.
 export interface ShortcutsLayout {
@@ -61,7 +50,7 @@ export interface ShortcutsViewOptions {
   grid?: HTMLElement | null;
   tiles?: ShortcutTileElement[];
   maxShortcuts?: number;
-  getShortcutTitle?: (shortcut: ShortcutItem) => string;
+  getShortcutTitle?: (shortcut: VisibleShortcutItem) => string;
   getHostFromUrl?: (url: string) => string;
   getShortcutIconDataUrl?: (shortcutId: string) => string;
   getShortcutFaviconDataUrl?: (pageUrl: string) => string;
@@ -106,7 +95,7 @@ export interface ShortcutsViewOptions {
   formatOpenLabel?: (title: string) => string;
   isMiddleClick?: (event: ReactMouseEvent<HTMLElement>) => boolean;
   openShortcut?: (
-    shortcut: ShortcutItem,
+    shortcut: VisibleShortcutItem,
     event: ReactMouseEvent<HTMLElement> | ReactKeyboardEvent<HTMLElement>
   ) => void;
   // True right after a press on an open context menu, so it does not open
@@ -133,8 +122,8 @@ export interface ShortcutsViewOptions {
 }
 
 export interface ShortcutsViewController {
-  render(items: ShortcutItem[], layout?: ShortcutsLayout): { count: number };
-  fitGroupedColumns(items: ShortcutItem[], groups: ShortcutGroup[]): boolean;
+  render(items: VisibleShortcutItem[], layout?: ShortcutsLayout): { count: number };
+  fitGroupedColumns(items: VisibleShortcutItem[], groups: ShortcutGroup[]): boolean;
   clear(): void;
   refreshElements(): void;
   getTiles(): ShortcutTileElement[];
@@ -149,7 +138,7 @@ interface NormalizedOptions {
   grid: HTMLElement;
   tiles: ShortcutTileElement[];
   maxShortcuts: number;
-  getShortcutTitle: (shortcut: ShortcutItem) => string;
+  getShortcutTitle: (shortcut: VisibleShortcutItem) => string;
   getHostFromUrl: (url: string) => string;
   getShortcutIconDataUrl: (shortcutId: string) => string;
   getShortcutFaviconDataUrl: (pageUrl: string) => string;
@@ -193,7 +182,7 @@ interface NormalizedOptions {
   formatOpenLabel: (title: string) => string;
   isMiddleClick: (event: ReactMouseEvent<HTMLElement>) => boolean;
   openShortcut: (
-    shortcut: ShortcutItem,
+    shortcut: VisibleShortcutItem,
     event: ReactMouseEvent<HTMLElement> | ReactKeyboardEvent<HTMLElement>
   ) => void;
   isActivationSuppressed: () => boolean;
@@ -279,19 +268,23 @@ function normalizeOptions(
   };
 }
 
+function isFolderShortcut(shortcut: VisibleShortcutItem): shortcut is VisibleShortcutFolder {
+  return shortcut.type === 'folder';
+}
+
 function ShortcutFavicon({
   shortcut,
   host,
   options
 }: {
-  shortcut: ShortcutItem;
+  shortcut: ShortcutLink;
   host: string;
   options: NormalizedOptions;
 }) {
   const imageRef = useRef<HTMLImageElement>(null);
-  const shortcutId = String(shortcut.id || '');
-  const url = String(shortcut.url || '');
-  const iconSource = String(shortcut.iconSource || '');
+  const shortcutId = shortcut.id;
+  const url = shortcut.url;
+  const iconSource = shortcut.iconSource || '';
   const localIconDataUrl = options.getShortcutIconDataUrl(shortcutId);
   const primaryFaviconUrl = options.getShortcutFaviconCandidateUrl(url);
   const isBuiltinIcon = !localIconDataUrl && /\/assets\/images\/site-search\/glyph-[a-z0-9]+\.(?:svg|png)(?:[?#]|$)/.test(primaryFaviconUrl);
@@ -308,7 +301,7 @@ function ShortcutFavicon({
   const plateMode = normalizeIconPlateMode(shortcut.iconPlate);
   const plate = plateMode === 'off' ? null : options.resolveShortcutIconPlate({
     mode: plateMode,
-    color: String(shortcut.iconPlateColor || ''),
+    color: shortcut.iconPlateColor || '',
     // Built-in glyphs are drawn for the bare tile.
     eligible: !isBuiltinIcon || plateMode === 'on',
     analysis: iconAnalysis.key === iconKey ? iconAnalysis.analysis : null
@@ -410,23 +403,24 @@ function ShortcutTile({
   shortcut,
   options
 }: {
-  shortcut: ShortcutItem;
+  shortcut: VisibleShortcutItem;
   options: NormalizedOptions;
 }) {
   const tileRef = useRef<ShortcutTileElement>(null);
   const folderIconRef = useRef<HTMLSpanElement>(null);
-  const isFolder = shortcut.type === 'folder';
+  const folder = isFolderShortcut(shortcut) ? shortcut : null;
+  const link = isFolderShortcut(shortcut) ? null : shortcut;
+  const folderId = folder ? folder.folderId : '';
+  const isFolder = Boolean(folder);
   const title = options.getShortcutTitle(shortcut);
-  const url = String(shortcut.url || '');
-  const host = String(shortcut.host || options.getHostFromUrl(url));
-  const shortcutId = String(shortcut.id || url);
+  const url = link ? link.url : '';
+  const host = link && link.host ? link.host : options.getHostFromUrl(url);
+  const shortcutId = shortcut.id || url;
   // Preserve the SVG paths owned by the animation runtime across list refreshes.
   const folderIconHtml = useMemo(() => ({
-    __html: isFolder ? options.getFolderIconSvg(`shortcut-${shortcutId}`, String(shortcut.folderId || '')) : ''
-  }), [isFolder, options, shortcutId, shortcut.folderId]);
-  const localIconDataUrl = options.getShortcutIconDataUrl(
-    String(shortcut.id || '')
-  );
+    __html: isFolder ? options.getFolderIconSvg(`shortcut-${shortcutId}`, folderId) : ''
+  }), [isFolder, options, shortcutId, folderId]);
+  const localIconDataUrl = options.getShortcutIconDataUrl(shortcut.id);
   const themeSuggestion = useMemo<ThemeSuggestion>(() => ({
     type: 'shortcut',
     url,
@@ -523,17 +517,17 @@ function ShortcutTile({
       className={`x-nt-shortcut-tile${isFolder ? ' x-nt-shortcut-tile--folder' : ''}`}
       draggable={false}
       data-shortcut-id={shortcutId}
-      data-shortcut-group-id={shortcut.groupId ? String(shortcut.groupId) : undefined}
+      data-shortcut-group-id={shortcut.groupId || undefined}
       data-shortcut-url={url}
       data-shortcut-title={title}
       data-shortcut-draggable="true"
-      data-bookmark-id={isFolder ? String(shortcut.folderId || '') : undefined}
-      data-bookmark-drop-folder-id={isFolder ? String(shortcut.folderId || '') : undefined}
+      data-bookmark-id={isFolder ? folderId : undefined}
+      data-bookmark-drop-folder-id={isFolder ? folderId : undefined}
       data-bookmark-drop-folder-title={isFolder ? title : undefined}
       aria-haspopup={isFolder ? 'menu' : undefined}
       aria-expanded={isFolder ? false : undefined}
       data-shortcut-custom-icon={localIconDataUrl ? 'true' : undefined}
-      data-shortcut-from-bookmark={!isFolder && shortcut.fromBookmark === true ? 'true' : undefined}
+      data-shortcut-from-bookmark={link && link.fromBookmark === true ? 'true' : undefined}
       data-tooltip={title}
       aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
       aria-label={options.formatOpenLabel(title)}
@@ -553,14 +547,14 @@ function ShortcutTile({
         }
       }}
     >
-      {isFolder ? <span
+      {link ? <ShortcutFavicon
+        shortcut={link}
+        host={host}
+        options={options}
+      /> : <span
         ref={folderIconRef}
         className="x-nt-shortcut-icon x-nt-shortcut-icon--folder"
         dangerouslySetInnerHTML={folderIconHtml}
-      /> : <ShortcutFavicon
-        shortcut={shortcut}
-        host={host}
-        options={options}
       />}
     </button>
   );
@@ -632,15 +626,15 @@ function ShortcutsList({
   options,
   addButtonRef
 }: {
-  items: ShortcutItem[];
+  items: VisibleShortcutItem[];
   layout: ShortcutsLayout;
   options: NormalizedOptions;
   addButtonRef: React.RefObject<HTMLButtonElement | null>;
 }) {
   const addLabel = options.getAddLabel();
   const keys = new Map<string, number>();
-  const renderTile = (shortcut: ShortcutItem) => {
-    const identity = String(shortcut.id || shortcut.url || 'shortcut');
+  const renderTile = (shortcut: VisibleShortcutItem) => {
+    const identity = shortcut.id || (isFolderShortcut(shortcut) ? '' : shortcut.url) || 'shortcut';
     const occurrence = keys.get(identity) || 0;
     keys.set(identity, occurrence + 1);
     return (
@@ -780,7 +774,7 @@ export function createShortcutsView(
   // The longest group row in slots: its tiles, plus the slot of an empty
   // group or the add tile ending the last group. Grouped rows hug this many
   // columns, so a short set of groups stays centered under the search box.
-  function getGroupedColumnCount(items: ShortcutItem[], groups: ShortcutGroup[]): number {
+  function getGroupedColumnCount(items: VisibleShortcutItem[], groups: ShortcutGroup[]): number {
     const addVisible = options.getAddVisible() && items.length < options.maxShortcuts;
     return Math.max(1, ...groups.map((group, index) => {
       const count = items.filter((shortcut) => shortcut.groupId === group.id).length;
@@ -791,7 +785,7 @@ export function createShortcutsView(
     }));
   }
 
-  function render(items: ShortcutItem[], layout: ShortcutsLayout = {}): { count: number } {
+  function render(items: VisibleShortcutItem[], layout: ShortcutsLayout = {}): { count: number } {
     const normalizedItems = Array.isArray(items) ? items : [];
     const grouped = Boolean(layout.grouped && Array.isArray(layout.groups) && layout.groups.length);
     options.hideTooltip();
@@ -838,7 +832,7 @@ export function createShortcutsView(
   // row, so a longer row does not wrap, a shorter one re-centers at once,
   // and the drop leaves everything where the drag showed it. Returns
   // whether the column count changed.
-  function fitGroupedColumns(items: ShortcutItem[], groups: ShortcutGroup[]): boolean {
+  function fitGroupedColumns(items: VisibleShortcutItem[], groups: ShortcutGroup[]): boolean {
     if (options.grid.getAttribute('data-shortcut-grouped') !== 'true' ||
         !Array.isArray(items) || !Array.isArray(groups) || !groups.length) {
       return false;
