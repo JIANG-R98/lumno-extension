@@ -31,7 +31,8 @@
     "src/newtab/shortcuts/shortcut-icon-plate.ts",
     "src/newtab/shortcuts/shortcut-icon-store.ts",
     "src/newtab/shortcuts/shortcut-page-actions.ts",
-    "src/newtab/shortcuts/shortcut-types.ts"
+    "src/newtab/shortcuts/shortcut-types.ts",
+    "src/newtab/shortcuts/shortcuts-controller.ts"
   ],
   "exclude": [
     "src/**/react/**"

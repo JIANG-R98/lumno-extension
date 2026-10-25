@@ -364,7 +364,8 @@ function createShortcutPageActions(deps: ShortcutPageActionsDeps) {
     return getShortcutReorderTiles().find((tile) => getShortcutTileId(tile) === id) || null;
   }
 
-  function handleShortcutNativeDragStart(event: DragEvent): void {
+  // Tiles are dragged by pointer events, never natively.
+  function handleShortcutNativeDragStart(event: Pick<Event, 'preventDefault'>): void {
     event.preventDefault();
   }
 

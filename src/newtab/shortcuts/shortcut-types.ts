@@ -44,6 +44,12 @@ type ShortcutContextTarget =
   | { kind: 'group'; groupId: string; tile: HTMLElement }
   | { kind: 'add'; tile: HTMLElement };
 
+// A page to add as a shortcut.
+interface ShortcutSite {
+  title: string;
+  url: string;
+}
+
 // The actions of the group and add-tile menus.
 type ShortcutGroupMenuValues = Readonly<Record<
   'addShortcut' | 'create' | 'rename' | 'addSite' | 'moveUp' | 'moveDown' | 'delete' | 'deleteWithSites',
@@ -56,5 +62,6 @@ export type {
   ShortcutContextTarget,
   ShortcutGroupMenuValues,
   ShortcutIconChange,
-  ShortcutInsertionSlot
+  ShortcutInsertionSlot,
+  ShortcutSite
 };

@@ -29,7 +29,7 @@ const controller = LumnoNewtabShortcutsController.createShortcutsController({
   NEWTAB_SHORTCUT_ICON_PLATE: require(path.join(repoRoot, 'src/newtab/shortcuts/shortcut-icon-plate.ts')),
   isShortcutDragActive: () => dragActive,
   shortcutFolderRuntime: { visibleItems: (items) => items, flush: () => Promise.resolve() },
-  bookmarksRuntime: { getNodeMap: () => new Map() },
+  bookmarksRuntime: { getNodeMap: () => new Map(), getSnapshot: () => ({ ready: true, nodeMap: new Map() }) },
   pageStructureRuntime: { shortcut: { section: createElementStub(), grid: createElementStub() } },
   NEWTAB_SHORTCUTS_VIEW: {
     createShortcutsView: () => ({

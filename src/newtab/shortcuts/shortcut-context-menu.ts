@@ -442,7 +442,10 @@ function createShortcutContextMenu(deps: ShortcutContextMenuDeps) {
     pageState.shortcutContextMenuSelectController.setOpen(pageState.shortcutContextMenu.control, true);
   }
 
-  function handleShortcutContextMenu(event: MouseEvent): void {
+  // A DOM or React contextmenu event on a tile.
+  function handleShortcutContextMenu(
+    event: Pick<MouseEvent, 'currentTarget' | 'target' | 'preventDefault' | 'stopPropagation'>
+  ): void {
     const tile = getShortcutTileFromNode(event.currentTarget || event.target);
     if (!tile || !getShortcutTileId(tile)) {
       return;

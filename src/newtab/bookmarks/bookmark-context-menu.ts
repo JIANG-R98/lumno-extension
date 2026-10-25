@@ -5,6 +5,7 @@ import type { SelectMenuOption } from '../../shared/react/select-menu';
 import * as LumnoNewtabDismissStack from '../dismiss-stack';
 import type { ContextMenuParts, SelectMenuController, Translate } from '../newtab-types';
 import type { SelectMenuInstance } from '../react/select-menu';
+import type { ShortcutSite } from '../shortcuts/shortcut-types';
 import type { BookmarkDragSession } from './bookmark-drag';
 import type * as BookmarksStore from './bookmarks-store';
 import type { BookmarksRuntime } from './bookmarks-runtime';
@@ -38,11 +39,6 @@ interface BookmarkItemContextMenuEvent {
   element: HTMLElement;
   parentFolderId?: string;
   sourceKind?: string;
-}
-
-interface ShortcutSite {
-  title: string;
-  url: string;
 }
 
 interface BookmarkContextMenuDeps {
