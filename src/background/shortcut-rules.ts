@@ -2,6 +2,7 @@
 // (assets/data/shortcut-rules.json).
 import * as browserProfile from '../platform/browser-profile';
 import type { ShortcutRule } from '../domain/messages';
+import { readShortcutRules } from '../domain/shortcut-rules-reader';
 
 interface ShortcutRulesOptions {
   chromeApi?: { runtime?: { getURL?: (path: string) => string } } | null;
@@ -13,22 +14,6 @@ interface ShortcutRules {
   loadShortcutRules(): Promise<ShortcutRule[]>;
   // The page a query's leading words open, or null.
   getShortcutUrl(query: string, rules: readonly ShortcutRule[] | null | undefined): string | null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object';
-}
-
-// The rules of the packaged list; malformed entries are left out.
-function readRules(data: unknown): ShortcutRule[] {
-  const items: unknown[] = isRecord(data) && Array.isArray(data.items) ? data.items : [];
-  return items.filter(isRecord).map((item): ShortcutRule => ({
-    ...(typeof item.type === 'string' ? { type: item.type } : {}),
-    ...(Array.isArray(item.keys) ? { keys: item.keys.filter((key): key is string => typeof key === 'string') } : {}),
-    ...(typeof item.path === 'string' ? { path: item.path } : {}),
-    ...(typeof item.url === 'string' ? { url: item.url } : {}),
-    ...(typeof item.searchSourceType === 'string' ? { searchSourceType: item.searchSourceType } : {})
-  }));
 }
 
 function getShortcutUrlForScheme(
@@ -89,7 +74,7 @@ function create(options?: ShortcutRulesOptions | null): Readonly<ShortcutRules> 
     shortcutRulesPromise = fetchImpl(rulesUrl)
       .then((response) => response.json())
       .then((data) => {
-        const items = readRules(data);
+        const items = readShortcutRules(data);
         shortcutRulesCache = items;
         return items;
       })

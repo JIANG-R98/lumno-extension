@@ -1,9 +1,158 @@
-// @ts-nocheck
 // Rendering suggestions: the React suggestions view, selection and
 // scrolling, activating or deleting a row, favicons in rows, the empty
 // state and the open tabs list.
+import type { OverlayTab, WebAppearanceMode } from '../../domain/messages';
+import type { Disposition } from '../../domain/navigation-disposition';
+import type { DisplayedSuggestion } from '../../domain/search/suggestion-action-model';
+import type { LocalSearchScope, SiteSearchProvider } from '../../domain/search/types';
 import * as LumnoMessaging from '../../platform/messaging';
-function createSuggestionsRender(deps) {
+import type {
+  FaviconCandidates,
+  OpenTabSuggestion,
+  Suggestion,
+  SuggestionElement,
+  SuggestionsRenderPayload,
+  SuggestionsViewController,
+  SuggestionsViewOptions,
+  ThemeValue
+} from '../../shared/react/search/suggestion-list/types';
+import type { InputModeController, InputModeParts } from '../../shared/search/search-input-mode';
+import type { InputModeProvider } from '../../shared/search/input-mode/types';
+import type * as SuggestionNavigation from '../../shared/search/suggestion-navigation';
+import type * as SuggestionsHeightLayout from '../../shared/search/suggestions-height-layout';
+import type { CursorTooltipController } from '../../shared/ui/cursor-tooltip';
+import type { TooltipController } from '../../shared/ui/tooltip';
+import type { ActivationEvent } from './result-activation';
+import type { OverlaySuggestion } from './types';
+
+// What the view takes for an option this module passes straight through.
+type ViewOption<K extends keyof SuggestionsViewOptions> = NonNullable<SuggestionsViewOptions[K]>;
+
+interface SuggestionsRenderState {
+  overlay: HTMLElement | null;
+  overlayStyleRoot: Node | null;
+  searchInput: HTMLInputElement | null;
+  suggestionsContainer: HTMLElement | null;
+  inputModeController: Pick<InputModeController, 'isModeMenuVisible' | 'menuElement'> | null;
+  inputParts: Pick<InputModeParts, 'modeMenu'> | null;
+  overlaySuggestionsView: SuggestionsViewController | null;
+  topActionTooltipController: Pick<TooltipController, 'show' | 'hide'>;
+  overlayCursorTooltipController: Pick<CursorTooltipController, 'bind'>;
+  latestOverlayQuery: string;
+  latestRawInputValue: string;
+  selectedIndex: number;
+  currentSuggestions: OverlaySuggestion[];
+  lastRenderedQuery: string;
+  lastRenderedActionContextKey: string;
+  openTabsSearchModeActive: boolean;
+  localSearchScopeState: LocalSearchScope | null;
+  siteSearchState: InputModeProvider | null;
+  tabs: OverlayTab[];
+  // The open tabs have been listed at least once.
+  overlayTabsCacheReady: boolean;
+  currentOverlayTabId: number | null;
+  overlayTabScoreDebugEnabled: boolean;
+  simpleModeEnabled: boolean;
+  overlaySearchResultDisplayLimit: number;
+  loadingSessionTrackingActive: boolean;
+  defaultTheme: ThemeValue;
+  urlHighlightTheme: ThemeValue;
+  attachResolvedFaviconWithFallbacks(
+    image: HTMLImageElement,
+    pageUrl: string,
+    hostKey: string,
+    fallbackUrl: string,
+    onFailed: () => void,
+    sourceOptions: { allowRemoteImage: boolean }
+  ): void;
+  applyFaviconOpticalAlignment: ViewOption<'applyFaviconOpticalAlignment'>;
+  preloadIcon: ViewOption<'preloadIcon'>;
+}
+
+interface SuggestionsRenderDeps {
+  updateSearchSuggestions(rows: never[], query: string): void;
+  requestOverlaySearchSuggestions(query: string): void;
+  // The rendered rows, filled by the view.
+  suggestionItems: SuggestionElement[];
+  SUGGESTION_NAVIGATION: Pick<typeof SuggestionNavigation, 'scrollItemIntoView'>;
+  SUGGESTIONS_HEIGHT_LAYOUT: Pick<typeof SuggestionsHeightLayout, 'applyNaturalSuggestionsHeightLayout'>;
+  syncSearchModeMenuResultOffset(): void;
+  removeOverlay(overlay: HTMLElement | null): void;
+  activateOpenTabsSearchMode(): void;
+  openDocumentPipPickerFromOverlay(): void;
+  activateSiteSearch(provider: InputModeProvider | null): void;
+  openOverlayCommunityQrDialog(qrUrl: string): void;
+  applyThemeModeChange(mode: string): void;
+  applyWebAppearanceMode(mode: WebAppearanceMode): void;
+  shouldSwitchMatchedTabSuggestion: ViewOption<'shouldSwitchMatchedTabSuggestion'>;
+  openMatchedTabSuggestion(
+    suggestion: DisplayedSuggestion,
+    event: ActivationEvent | null,
+    item: { _xVisitButtonAction?: string } | null,
+    query: string
+  ): void;
+  finishOverlayResultActivation(event: ActivationEvent | null, canOpenInBackground: boolean): boolean;
+  openSiteSearchProviderQuery(provider: InputModeProvider | null, query: string, event: ActivationEvent | null): boolean;
+  shouldOpenSearchResultInBackgroundTab(event: ActivationEvent | null): boolean;
+  recordSearchSuggestionSelectionFromSuggestion(suggestion: DisplayedSuggestion, query: string, source: string): void;
+  getSearchResultCreateDisposition(
+    suggestion: DisplayedSuggestion,
+    event: ActivationEvent | null,
+    item: { _xVisitButtonAction?: string } | null
+  ): Disposition;
+  getOverlayFaviconUrlResolver(): {
+    getPageFaviconRenderCandidates(url: string, explicitUrl: string, options?: { includeChromeFallback?: boolean; allowRemoteImage?: boolean }): FaviconCandidates;
+  } | null;
+  t: ViewOption<'t'>;
+  formatMessage: ViewOption<'formatMessage'>;
+  getRiSvg: ViewOption<'getRiSvg'>;
+  SEARCH_UTILS: { sanitizeDisplayText: ViewOption<'sanitizeDisplayText'> };
+  shouldBlockOverlayFaviconForHost: ViewOption<'shouldBlockFaviconForHost'>;
+  isLocalNetworkHost: ViewOption<'isLocalNetworkHost'>;
+  getChromeFaviconUrl: ViewOption<'getChromeFaviconUrl'>;
+  getPageFaviconCandidateUrl: ViewOption<'getBrowserPageFaviconUrl'>;
+  getHostFromUrl(url: string): string;
+  getUrlDisplay: ViewOption<'getUrlDisplay'>;
+  getImmediateThemeForSuggestion: ViewOption<'getImmediateThemeForSuggestion'>;
+  getThemeForSuggestion: ViewOption<'getThemeForSuggestion'>;
+  getThemeForMode: ViewOption<'getThemeForMode'>;
+  getHoverColors: ViewOption<'getHoverColors'>;
+  getHighlightColors: ViewOption<'getHighlightColors'>;
+  getNeutralHoverActionColors: ViewOption<'getNeutralHoverActionColors'>;
+  applyThemeVariables: ViewOption<'applyThemeVariables'>;
+  applyMarkVariables: ViewOption<'applyMarkVariables'>;
+  copySearchResultUrl: ViewOption<'onCopyUrl'>;
+  getSearchActionLabel: ViewOption<'getSearchActionLabel'>;
+  getSiteSearchDisplayName: ViewOption<'getSiteSearchDisplayName'>;
+  isAiSiteSearchProvider: ViewOption<'isAiSiteSearchProvider'>;
+  getDefaultSearchEngineThemeUrlForOverlay: ViewOption<'getDefaultSearchEngineThemeUrl'>;
+  getBrandAccentForUrl: ViewOption<'getBrandAccentForUrl'>;
+  buildTheme(accent: unknown): ThemeValue;
+  SUGGESTION_ACTION_MODEL: ViewOption<'actionModel'>;
+  normalizeSearchResultDisplayLimit(value: unknown): number;
+  pauseOverlayAntiTranslateObserverForMutationBurst(): void;
+  setOpenTabsResultsViewport(active: boolean, itemCount?: number): void;
+  setOverlayResultsCollapsed(collapsed: boolean, options?: { deferLayoutSync?: boolean } | null): void;
+  isAggregateSearchProvider(provider: Partial<SiteSearchProvider> | null): boolean;
+  getSearchModeProviderId(provider: Partial<SiteSearchProvider> | null): string;
+  filterTabsForOverlay(tabs: OverlayTab[], query: string): OverlayTab[];
+  shouldShowOpenTabsForEmptyQuery(): boolean;
+  clearDefaultOpenTabsSuggestions(): void;
+  overlayState: SuggestionsRenderState;
+}
+
+// A row's provider is a full site search provider once it has its key, the
+// one field a provider must have; every provider the overlay puts on its
+// rows does.
+function isFullRowProvider(provider: Suggestion['provider']): provider is InputModeProvider {
+  return typeof provider === 'object' && provider !== null && typeof provider.key === 'string';
+}
+
+function isWebAppearanceMode(value: unknown): value is WebAppearanceMode {
+  return value === 'auto' || value === 'light' || value === 'dark';
+}
+
+function createSuggestionsRender(deps: SuggestionsRenderDeps) {
   const {
     updateSearchSuggestions,
     requestOverlaySearchSuggestions,
@@ -66,9 +215,8 @@ function createSuggestionsRender(deps) {
   // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
-  const OVERLAY_SUGGESTIONS_VIEW = globalThis.LumnoOverlaySuggestionsView;
-
-  function formatTabRankDebugText(tab) {
+  // A tab's switch ranking, shown under it while score debugging is on.
+  function formatTabRankDebugText(tab: OpenTabSuggestion & { _xTabFetchSeq?: number }): string {
     const scoreRaw = Number(tab && tab._xTabRankScore);
     const score = Number.isFinite(scoreRaw) ? scoreRaw.toFixed(2) : '0.00';
     const count30mRaw = Number(tab && tab._xTabSwitchCount30m);
@@ -87,7 +235,7 @@ function createSuggestionsRender(deps) {
   }
   let overlayTabsRequestInFlight = false;
   let overlayTabsRequestSeq = 0;
-  const showTopActionTooltip = (button, text) => {
+  const showTopActionTooltip = (button: HTMLElement, text: string): void => {
     if (!button || !text) {
       return;
     }
@@ -97,15 +245,19 @@ function createSuggestionsRender(deps) {
       maxWidth: 420
     });
   };
-  const hideTopActionTooltip = () => {
+  const hideTopActionTooltip = (): void => {
     overlayState.topActionTooltipController.hide();
   };
 
-  function getOverlaySuggestionRefreshQuery() {
+  function readInputQuery(): string {
+    return overlayState.searchInput ? String(overlayState.searchInput.value || '').trim() : '';
+  }
+
+  function getOverlaySuggestionRefreshQuery(): string {
     return overlayState.latestOverlayQuery || (overlayState.searchInput ? String(overlayState.searchInput.value || '').trim() : '');
   }
 
-  function refreshOverlaySuggestionsAfterHistoryDelete() {
+  function refreshOverlaySuggestionsAfterHistoryDelete(): void {
     const queryToRefresh = getOverlaySuggestionRefreshQuery();
     if (!queryToRefresh) {
       updateSearchSuggestions([], '');
@@ -114,7 +266,7 @@ function createSuggestionsRender(deps) {
     requestOverlaySearchSuggestions(queryToRefresh);
   }
 
-  function deleteHistorySuggestionUrl(suggestion) {
+  function deleteHistorySuggestionUrl(suggestion: { url?: string } | null): void {
     const targetUrl = suggestion && suggestion.url ? String(suggestion.url) : '';
     if (!targetUrl) {
       return;
@@ -133,19 +285,19 @@ function createSuggestionsRender(deps) {
     });
   }
 
-  function updateSelection() {
+  function updateSelection(): void {
     ensureOverlaySuggestionsView().updateSelection(overlayState.selectedIndex);
   }
 
-  function syncSuggestionLastState() {
+  function syncSuggestionLastState(): void {
     suggestionItems.forEach((item, index) => {
-      if (item && typeof item.setAttribute === 'function') {
+      if (item) {
         item.setAttribute('data-last', index === suggestionItems.length - 1 ? 'true' : 'false');
       }
     });
   }
 
-  function scrollSelectedSuggestionIntoView(direction, didWrap) {
+  function scrollSelectedSuggestionIntoView(direction: 'up' | 'down', didWrap: boolean): void {
     if (!overlayState.suggestionsContainer || overlayState.selectedIndex < 0) {
       return;
     }
@@ -157,29 +309,40 @@ function createSuggestionsRender(deps) {
     });
   }
 
-  function getSearchPanelsLayoutTransitionMenu() {
-    if (!overlayState.inputModeController ||
-        typeof overlayState.inputModeController.isModeMenuVisible !== 'function' ||
-        !overlayState.inputModeController.isModeMenuVisible()) {
+  // The open mode menu, which the results move with; null when closed.
+  function getSearchPanelsLayoutTransitionMenu(): HTMLElement | null {
+    const controller = overlayState.inputModeController;
+    if (!controller ||
+        typeof controller.isModeMenuVisible !== 'function' ||
+        !controller.isModeMenuVisible()) {
       return null;
     }
-    const menu = overlayState.inputModeController && overlayState.inputModeController.menuElement
-      ? overlayState.inputModeController.menuElement
-      : overlayState.inputParts.modeMenu;
+    const menu = controller.menuElement
+      ? controller.menuElement
+      : (overlayState.inputParts ? overlayState.inputParts.modeMenu : null);
     return menu && !menu.hidden ? menu : null;
   }
 
-  function commitSuggestionsNaturalHeightAfterRender() {
+  function commitSuggestionsNaturalHeightAfterRender(): void {
     SUGGESTIONS_HEIGHT_LAYOUT.applyNaturalSuggestionsHeightLayout(
       overlayState.suggestionsContainer
     );
     syncSearchModeMenuResultOffset();
   }
 
-  function activateRenderedOverlaySuggestion(suggestion, query, event, index, item) {
+  // A click on a row: run its command or mode switch, or open its page.
+  function activateRenderedOverlaySuggestion(
+    suggestion: Suggestion,
+    query: string,
+    event: MouseEvent,
+    index: number,
+    item: SuggestionElement
+  ): void {
     if (!suggestion) {
       return;
     }
+    const input = overlayState.searchInput;
+    const provider = isFullRowProvider(suggestion.provider) ? suggestion.provider : null;
     if (suggestion.type === 'commandNewTab') {
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openNewTab' });
       removeOverlay(overlayState.overlay);
@@ -191,11 +354,15 @@ function createSuggestionsRender(deps) {
       return;
     }
     if (suggestion.type === 'commandOpenTabs') {
-      overlayState.searchInput.value = '';
+      if (input) {
+        input.value = '';
+      }
       overlayState.latestRawInputValue = '';
       overlayState.latestOverlayQuery = '';
       activateOpenTabsSearchMode();
-      overlayState.searchInput.focus();
+      if (input) {
+        input.focus();
+      }
       return;
     }
     if (suggestion.type === 'commandCopyUrl') {
@@ -208,23 +375,31 @@ function createSuggestionsRender(deps) {
       removeOverlay(overlayState.overlay);
       return;
     }
-    if (suggestion.type === 'siteSearchPrompt' && suggestion.provider) {
-      activateSiteSearch(suggestion.provider);
-      overlayState.searchInput.focus();
+    if (suggestion.type === 'siteSearchPrompt' && provider) {
+      activateSiteSearch(provider);
+      if (input) {
+        input.focus();
+      }
       return;
     }
     if (suggestion.type === 'helpFeedback' && suggestion.feedbackKey === 'community') {
-      openOverlayCommunityQrDialog(suggestion.url);
+      openOverlayCommunityQrDialog(suggestion.url || '');
       return;
     }
     if (suggestion.type === 'modeSwitch') {
-      applyThemeModeChange(suggestion.nextMode);
-      overlayState.searchInput.focus();
+      applyThemeModeChange(suggestion.nextMode || '');
+      if (input) {
+        input.focus();
+      }
       return;
     }
     if (suggestion.type === 'webAppearanceSwitch') {
-      applyWebAppearanceMode(suggestion.nextMode);
-      overlayState.searchInput.focus();
+      if (isWebAppearanceMode(suggestion.nextMode)) {
+        applyWebAppearanceMode(suggestion.nextMode);
+      }
+      if (input) {
+        input.focus();
+      }
       return;
     }
     if (shouldSwitchMatchedTabSuggestion(suggestion, index)) {
@@ -232,9 +407,9 @@ function createSuggestionsRender(deps) {
       finishOverlayResultActivation(event, Boolean(suggestion.url));
       return;
     }
-    if (suggestion.provider && suggestion.searchQuery) {
+    if (provider && suggestion.searchQuery) {
       if (openSiteSearchProviderQuery(
-        suggestion.provider,
+        provider,
         suggestion.searchQuery,
         event
       )) {
@@ -269,7 +444,7 @@ function createSuggestionsRender(deps) {
       );
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'createTab',
-        url: suggestion.url,
+        url: suggestion.url || '',
         disposition: getSearchResultCreateDisposition(
           suggestion,
           event,
@@ -283,12 +458,14 @@ function createSuggestionsRender(deps) {
     );
   }
 
-  function deleteRenderedOverlayHistorySuggestion(suggestion) {
+  function deleteRenderedOverlayHistorySuggestion(suggestion: Suggestion): void {
     deleteHistorySuggestionUrl(suggestion);
   }
 
-  function attachReactOverlayFavicon(image, pageUrl, host, candidates) {
-    const resolvedCandidates = candidates && typeof candidates === 'object'
+  // Loads a row's favicon with the overlay's fallbacks; when all fail the
+  // row hears of it and shows its glyph.
+  function attachReactOverlayFavicon(image: HTMLImageElement, pageUrl: string, host: string, candidates: FaviconCandidates): void {
+    const resolvedCandidates: FaviconCandidates = candidates && typeof candidates === 'object'
       ? candidates
       : {};
     overlayState.attachResolvedFaviconWithFallbacks(
@@ -305,16 +482,25 @@ function createSuggestionsRender(deps) {
     );
   }
 
-  function getReactOverlayFaviconCandidates(url, explicitUrl, options) {
+  function getReactOverlayFaviconCandidates(
+    url: string,
+    explicitUrl: string,
+    options?: { includeChromeFallback?: boolean; allowRemoteImage?: boolean }
+  ): FaviconCandidates {
     const resolver = getOverlayFaviconUrlResolver();
     return resolver ? resolver.getPageFaviconRenderCandidates(url, explicitUrl, options) : {};
   }
 
-  function ensureOverlaySuggestionsView() {
+  // The view, made on first use from the React islands entry's API.
+  function ensureOverlaySuggestionsView(): SuggestionsViewController {
     if (overlayState.overlaySuggestionsView) {
       return overlayState.overlaySuggestionsView;
     }
-    overlayState.overlaySuggestionsView = OVERLAY_SUGGESTIONS_VIEW.createSuggestionsView({
+    const viewApi = globalThis.LumnoOverlaySuggestionsView;
+    if (!viewApi) {
+      throw new Error('The overlay suggestions view has not loaded');
+    }
+    const view = viewApi.createSuggestionsView({
       surface: 'overlay',
       document,
       container: overlayState.suggestionsContainer,
@@ -352,18 +538,18 @@ function createSuggestionsRender(deps) {
       },
       getSelectedIndex: () => overlayState.selectedIndex,
       onSwitchToTab: (tab, event) => {
-        const suggestion = {
+        const suggestion: OverlaySuggestion = {
           type: 'openTab',
           title: tab && tab.title ? tab.title : '',
           url: tab && tab.url ? tab.url : '',
           favicon: tab && tab.favIconUrl ? tab.favIconUrl : '',
-          _xMatchedTabId: tab && typeof tab.id === 'number' ? tab.id : null
+          _xMatchedTabId: tab && typeof tab.id === 'number' ? tab.id : undefined
         };
         openMatchedTabSuggestion(
           suggestion,
           event,
           null,
-          overlayState.searchInput.value.trim()
+          readInputQuery()
         );
         finishOverlayResultActivation(event, Boolean(suggestion.url));
       },
@@ -412,10 +598,11 @@ function createSuggestionsRender(deps) {
       enterAction: 'openNewTab',
       autoHighlightFirstTab: true
     });
-    return overlayState.overlaySuggestionsView;
+    overlayState.overlaySuggestionsView = view;
+    return view;
   }
 
-  function renderOverlayEmptyState(message, art) {
+  function renderOverlayEmptyState(message: string, art?: SuggestionsRenderPayload['emptyArt']): void {
     pauseOverlayAntiTranslateObserverForMutationBurst();
     ensureOverlaySuggestionsView().render({
       suggestions: [],
@@ -425,9 +612,12 @@ function createSuggestionsRender(deps) {
     });
   }
 
-  function renderTabSuggestions(tabList) {
+  function renderTabSuggestions(tabList: OverlayTab[]): void {
     pauseOverlayAntiTranslateObserverForMutationBurst();
-    overlayState.suggestionsContainer.removeAttribute('data-scope-result-enter');
+    const container = overlayState.suggestionsContainer;
+    if (container) {
+      container.removeAttribute('data-scope-result-enter');
+    }
     const reactView = ensureOverlaySuggestionsView();
     suggestionItems.length = 0;
     overlayState.currentSuggestions = [];
@@ -445,41 +635,46 @@ function createSuggestionsRender(deps) {
       return;
     }
     reactView.renderTabs(list);
-    overlayState.suggestionsContainer.scrollTop = 0;
+    if (container) {
+      container.scrollTop = 0;
+    }
     setOverlayResultsCollapsed(false, { deferLayoutSync: true });
     overlayState.selectedIndex = -1;
     updateSelection();
     commitSuggestionsNaturalHeightAfterRender();
   }
 
-  function getOverlaySearchModeKey() {
+  // Which mode a tab listing was asked for, so a late answer for another
+  // mode is not shown.
+  function getOverlaySearchModeKey(): string {
     if (overlayState.openTabsSearchModeActive) {
       return 'openTabs';
     }
     if (overlayState.localSearchScopeState && overlayState.localSearchScopeState.sourceType) {
       return `local:${overlayState.localSearchScopeState.sourceType}`;
     }
-    if (overlayState.siteSearchState) {
-      if (isAggregateSearchProvider(overlayState.siteSearchState)) {
-        return `aggregate:${String(overlayState.siteSearchState.aggregateId || '')}`;
+    const provider = overlayState.siteSearchState;
+    if (provider) {
+      if (isAggregateSearchProvider(provider)) {
+        return `aggregate:${String(provider.aggregateId || '')}`;
       }
-      return `provider:${getSearchModeProviderId(overlayState.siteSearchState)}`;
+      return `provider:${getSearchModeProviderId(provider)}`;
     }
     return 'default';
   }
 
-  function renderCachedTabsForOverlay(filterQuery) {
+  function renderCachedTabsForOverlay(filterQuery?: string): boolean {
     if (!overlayState.overlayTabsCacheReady) {
       return false;
     }
     const query = typeof filterQuery === 'string'
       ? filterQuery
-      : String(overlayState.searchInput.value || '').trim();
+      : readInputQuery();
     renderTabSuggestions(filterTabsForOverlay(overlayState.tabs, query));
     return true;
   }
 
-  function renderCachedTabsOrRequest(filterQuery) {
+  function renderCachedTabsOrRequest(filterQuery?: string): void {
     if (renderCachedTabsForOverlay(filterQuery)) {
       return;
     }
@@ -488,16 +683,18 @@ function createSuggestionsRender(deps) {
     }
   }
 
-  function requestTabsAndRender(filterQuery) {
-    const request = { action: 'getTabsForOverlay' };
+  // Lists the window's tabs from the worker and shows them when the mode
+  // and query still want them.
+  function requestTabsAndRender(filterQuery?: string): void {
     const requestQuery = typeof filterQuery === 'string'
       ? filterQuery
-      : String(overlayState.searchInput.value || '').trim();
+      : readInputQuery();
     const requestModeKey = getOverlaySearchModeKey();
     if (!requestQuery && !shouldShowOpenTabsForEmptyQuery()) {
       clearDefaultOpenTabsSuggestions();
       return;
     }
+    const request: { action: 'getTabsForOverlay'; currentTabId?: number } = { action: 'getTabsForOverlay' };
     if (typeof overlayState.currentOverlayTabId === 'number') {
       request.currentTabId = overlayState.currentOverlayTabId;
     }
@@ -542,3 +739,4 @@ function createSuggestionsRender(deps) {
 }
 
 export { createSuggestionsRender };
+export type { SuggestionsRenderDeps, SuggestionsRenderState };

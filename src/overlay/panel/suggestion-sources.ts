@@ -1,12 +1,140 @@
-// @ts-nocheck
 // Building suggestions: keywords, direct navigation, help center
 // answers, and the update that merges local, tab and remote results.
-import * as BROWSER_PROFILE from '../../platform/browser-profile';
+import type { ShortcutRule } from '../../domain/messages';
+import type { AggregateSearch } from '../../domain/search/aggregate-search-store';
 import * as HELP_CENTER_SEARCH from '../../domain/search/help-center-search';
 import * as LumnoSearchUtils from '../../domain/search/search-utils';
+import type * as SearchUtils from '../../domain/search/search-utils';
+import type * as SuggestionActionModel from '../../domain/search/suggestion-action-model';
+import type { LocalSearchScope, SiteSearchProvider, SuggestionLike } from '../../domain/search/types';
+import type * as Settings from '../../domain/settings';
+import { readShortcutRules } from '../../domain/shortcut-rules-reader';
+import * as BROWSER_PROFILE from '../../platform/browser-profile';
+import type * as CommunityLinks from '../../platform/community-links';
 import * as LumnoMessaging from '../../platform/messaging';
+import type { StorageAreaFacade } from '../../platform/settings-storage';
+import type { SuggestionsViewController } from '../../shared/react/search/suggestion-list/types';
+import type { InputModeProvider } from '../../shared/search/input-mode/types';
+import type { AutocompleteRow } from './autocomplete';
+import type { RemoteMixState } from './remote-suggestions';
+import type { CommandSuggestion, SlashCommand } from './slash-commands';
+import type {
+  FormatMessage,
+  InlineSearchState,
+  LocalSearchScopeTrigger,
+  OverlaySuggestion,
+  SiteSearchTrigger,
+  Translate
+} from './types';
 
-function createSuggestionSources(deps) {
+interface SuggestionSourcesState {
+  storageArea: StorageAreaFacade | null;
+  searchInput: HTMLInputElement | null;
+  suggestionsContainer: HTMLElement | null;
+  latestOverlayQuery: string;
+  latestRawInputValue: string;
+  // The rows of the last answer, to rebuild the list when something changes.
+  lastSuggestionResponse: OverlaySuggestion[];
+  currentSuggestions: OverlaySuggestion[];
+  lastRenderedQuery: string;
+  lastRenderedActionContextKey: string;
+  selectedIndex: number;
+  siteSearchState: InputModeProvider | null;
+  siteSearchTriggerState: SiteSearchTrigger<InputModeProvider> | null;
+  localSearchScopeState: LocalSearchScope | null;
+  localSearchScopeTriggerState: LocalSearchScopeTrigger | null;
+  inlineSearchState: InlineSearchState | null;
+  siteSearchProvidersCache: SiteSearchProvider[] | null;
+  defaultSiteSearchProviders: SiteSearchProvider[];
+  aggregateSearchesCache: AggregateSearch[] | null;
+  overlayLanguageMode: string;
+  overlayThemeMode: string;
+  simpleModeEnabled: boolean;
+  overlaySearchResultPriorityMode: string;
+  overlaySearchResultDisplayLimit: number;
+  overlayTabQuickSwitchEnabled: boolean;
+  overlayTabScoreDebugEnabled: boolean;
+  prioritizeCurrentPageMatch: boolean;
+  currentOverlayTabId: number | null;
+  // Starts loading the rows' icons before they render.
+  warmIconCache(rows: OverlaySuggestion[]): void;
+}
+
+interface SuggestionSourcesDeps {
+  formatMessage: FormatMessage;
+  t: Translate;
+  SETTINGS: Pick<typeof Settings, 'normalizeLocale'>;
+  SEARCH_UTILS: Pick<typeof SearchUtils,
+    'isHelpCenterSiteSearchProvider' | 'composeSearchFirstSuggestionSlate' | 'rankSearchSuggestionSlate'>;
+  SUGGESTION_ACTION_MODEL: Pick<typeof SuggestionActionModel, 'getSuggestionUpdateKind' | 'getActionContextKey'>;
+  COMMUNITY_LINKS: Pick<typeof CommunityLinks, 'load' | 'getLinks' | 'getCommunityChannel'>;
+  getPageFaviconCandidateUrl(url: string): string;
+  isLocalNetworkInput(input: string): boolean;
+  getHostFromUrl(url: string): string;
+  isLocalNetworkHost(host: string): boolean;
+  getSystemLocale(): string;
+  getProviderIcon(provider: SiteSearchProvider): string;
+  isSlashCommandInput(input: string): boolean;
+  isModeCommand(input: string): boolean;
+  THEME_STORAGE_KEY: string;
+  applyOverlayTheme(mode: unknown): void;
+  buildDefaultSearchUrlForOverlay(query: string): string;
+  getDefaultSearchEngineFaviconUrlForOverlay(): string;
+  getCommandMatches(rawInput: string): SlashCommand[];
+  buildModeSuggestion(): CommandSuggestion;
+  buildCommandSuggestion(command: SlashCommand): CommandSuggestion;
+  isCurrentOverlayTabUrl(url: string): boolean;
+  getSearchTriggerProviders(providers: SiteSearchProvider[] | null, definitions: AggregateSearch[] | null): SiteSearchProvider[];
+  getSiteSearchProviders(): Promise<SiteSearchProvider[]>;
+  getInlineSiteSearchCandidate(input: string, providers: SiteSearchProvider[] | null): { provider: SiteSearchProvider; query: string } | null;
+  buildSearchUrl(template: string, query: string, provider?: SiteSearchProvider | null): string;
+  getSiteSearchActionTitle(provider: SiteSearchProvider | null, query: string): string;
+  isAggregateSearchProvider(provider: Partial<SiteSearchProvider> | null): boolean;
+  getMatchedOpenTabIdForSuggestion(suggestion: { url?: string } | null): number | null;
+  filterOverlayBlacklistedSuggestions(list: OverlaySuggestion[] | null): OverlaySuggestion[];
+  getKeywordSearchSuggestionState(list: OverlaySuggestion[]): {
+    onlyKeywordSuggestions: boolean;
+    autocompleteSuggestions: OverlaySuggestion[];
+  };
+  promoteStrongNavigationMatch(list: OverlaySuggestion[], rawQuery: string): OverlaySuggestion | null;
+  promoteTopSiteMatch(list: OverlaySuggestion[], queryText: string): OverlaySuggestion | null;
+  getSiteSearchTriggerCandidate(
+    input: string,
+    providers: SiteSearchProvider[] | null,
+    topSiteMatch: SuggestionLike | null
+  ): SiteSearchProvider | null;
+  getAutocompleteCandidate(suggestions: AutocompleteRow[] | null, rawQuery: string): { completion: string; url: string } | null;
+  getUrlDisplay(url: string | undefined): string;
+  clearAutocomplete(): void;
+  applyAutocomplete(all: AutocompleteRow[] | null, primary: AutocompleteRow | null, reason: string): void;
+  getLocalSearchScopeCandidate(input: string, rules: ShortcutRule[] | undefined): LocalSearchScope | null;
+  setSiteSearchTabHint(provider: InputModeProvider): void;
+  getLocalSearchScopeTabHintProvider(scope: LocalSearchScope): InputModeProvider;
+  clearSiteSearchTabHint(): void;
+  limitOverlaySuggestionsForDisplay(list: OverlaySuggestion[], options?: { uncapped?: boolean } | null): OverlaySuggestion[];
+  // Whether the mode menu is moving the panels, which the results join.
+  getSearchPanelsLayoutTransitionMenu(): unknown;
+  pauseOverlayAntiTranslateObserverForMutationBurst(): void;
+  setOpenTabsResultsViewport(active: boolean, itemCount?: number): void;
+  ensureOverlaySuggestionsView(): Pick<SuggestionsViewController, 'render'>;
+  setOverlayResultsCollapsed(collapsed: boolean, options?: { deferLayoutSync?: boolean } | null): void;
+  syncSuggestionLastState(): void;
+  updateSelection(): void;
+  commitSuggestionsNaturalHeightAfterRender(): void;
+  cancelPendingOverlaySuggestionRequests(): void;
+  shouldShowOpenTabsForEmptyQuery(): boolean;
+  requestTabsAndRender(query?: string): void;
+  clearDefaultOpenTabsSuggestions(): void;
+  overlayState: SuggestionSourcesState;
+}
+
+interface SuggestionUpdateOptions {
+  forceFullRerender?: boolean;
+  remoteMixState?: RemoteMixState;
+  finalRemoteMix?: boolean;
+}
+
+function createSuggestionSources(deps: SuggestionSourcesDeps) {
   const {
     formatMessage,
     getPageFaviconCandidateUrl,
@@ -68,15 +196,12 @@ function createSuggestionSources(deps) {
   // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
-  function getSearchUtilsRuntime() {
-    return LumnoSearchUtils;
-  }
   // Lumno Help Center search lists the matching help pages under its search row.
-  let helpCenterSuggestionSource = null;
+  let helpCenterSuggestionSource: ReturnType<typeof HELP_CENTER_SEARCH.createSuggestionSource> | null = null;
   let helpCenterFeedbackLinksRequested = false;
   let pendingProviderReload = false;
 
-  function getBrowserPageSuggestionTitle(browserProfile, targetUrl) {
+  function getBrowserPageSuggestionTitle(browserProfile: { name: string } | null, targetUrl: string): string {
     const browserName = browserProfile && browserProfile.name ? browserProfile.name : '';
     if (browserName) {
       return formatMessage('open_browser_url', '打开 {browser}：{url}', {
@@ -87,44 +212,46 @@ function createSuggestionSources(deps) {
     return formatMessage('open_url', '打开 {url}', { url: targetUrl });
   }
 
-  function getShortcutRules() {
-    const cacheKey = '_x_extension_shortcut_rules_2024_unique_';
-    const promiseKey = '_x_extension_shortcut_rules_promise_2024_unique_';
-    if (window[cacheKey]) {
-      return Promise.resolve(window[cacheKey]);
+  // The shortcut rules, read once per page; through the worker when this
+  // page's copy of the extension cannot fetch its own files.
+  function getShortcutRules(): Promise<ShortcutRule[]> {
+    const cachedRules = window._x_extension_shortcut_rules_2024_unique_;
+    if (cachedRules) {
+      return Promise.resolve(cachedRules);
     }
-    if (window[promiseKey]) {
-      return window[promiseKey];
+    const pendingRules = window._x_extension_shortcut_rules_promise_2024_unique_;
+    if (pendingRules) {
+      return pendingRules;
     }
     const rulesUrl = chrome.runtime.getURL('assets/data/shortcut-rules.json');
     const rulesPromise = fetch(rulesUrl)
       .then((response) => response.json())
-      .then((data) => {
-        const items = data && Array.isArray(data.items) ? data.items : [];
-        window[cacheKey] = items;
+      .then((data: unknown) => {
+        const items = readShortcutRules(data);
+        window._x_extension_shortcut_rules_2024_unique_ = items;
         return items;
       })
-      .catch(() => new Promise((resolve) => {
+      .catch(() => new Promise<ShortcutRule[]>((resolve) => {
         LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'getShortcutRules' }, (response) => {
           const items = response && Array.isArray(response.items) ? response.items : [];
-          window[cacheKey] = items;
+          window._x_extension_shortcut_rules_2024_unique_ = items;
           resolve(items);
         });
       }));
-    window[promiseKey] = rulesPromise;
+    window._x_extension_shortcut_rules_promise_2024_unique_ = rulesPromise;
     return rulesPromise;
   }
 
-  function buildKeywordSuggestions(input, rules) {
+  function buildKeywordSuggestions(input: string, rules: ShortcutRule[]): OverlaySuggestion[] {
     const queryLower = input.toLowerCase();
     const browserProfile = BROWSER_PROFILE.getBrowserInternalProfile(navigator);
     const scheme = browserProfile.scheme;
-    const matches = [];
+    const matches: OverlaySuggestion[] = [];
     rules.forEach((rule) => {
       if (!rule || !Array.isArray(rule.keys)) {
         return;
       }
-      const isMatch = rule.keys.some((key) => queryLower.startsWith(key));
+      const isMatch = rule.keys.some((key: string) => queryLower.startsWith(key));
       if (!isMatch) {
         return;
       }
@@ -151,15 +278,12 @@ function createSuggestionSources(deps) {
     return matches;
   }
 
-  function getDirectNavigationUrl(input) {
-    const searchUtils = getSearchUtilsRuntime();
-    if (searchUtils && typeof searchUtils.getDirectNavigationUrl === 'function') {
-      return searchUtils.getDirectNavigationUrl(input);
-    }
-    return '';
+  function getDirectNavigationUrl(input: string): string {
+    return LumnoSearchUtils.getDirectNavigationUrl(input);
   }
 
-  function getDirectUrlSuggestion(input) {
+  // The row that opens a typed address, or null when it is no address.
+  function getDirectUrlSuggestion(input: string): OverlaySuggestion | null {
     const targetUrl = getDirectNavigationUrl(input);
     if (!targetUrl) {
       return null;
@@ -178,37 +302,43 @@ function createSuggestionSources(deps) {
     };
   }
 
-  function resolveQuickNavigation(query) {
+  // The address a query opens without searching: a typed address or a
+  // shortcut rule's page; '' when there is none.
+  function resolveQuickNavigation(query: string): Promise<string> {
     const directUrlSuggestion = getDirectUrlSuggestion(query);
     if (directUrlSuggestion) {
-      return Promise.resolve(directUrlSuggestion.url);
+      return Promise.resolve(directUrlSuggestion.url || '');
     }
     return getShortcutRules().then((rules) => {
       const keywordSuggestions = buildKeywordSuggestions(query, rules);
       if (keywordSuggestions.length > 0) {
-        return keywordSuggestions[0].url;
+        return keywordSuggestions[0].url || '';
       }
-      return null;
+      return '';
     });
   }
 
-  function getSuggestionUpdateKind(options) {
+  function getSuggestionUpdateKind(
+    options: Parameters<typeof SUGGESTION_ACTION_MODEL.getSuggestionUpdateKind>[0]
+  ): ReturnType<typeof SUGGESTION_ACTION_MODEL.getSuggestionUpdateKind> {
     return SUGGESTION_ACTION_MODEL.getSuggestionUpdateKind({
       ...(options || {}),
       includeDebugReasons: Boolean(overlayState.overlayTabScoreDebugEnabled)
     });
   }
 
-  function getSuggestionActionContextKey(options) {
+  function getSuggestionActionContextKey(options: Parameters<typeof SUGGESTION_ACTION_MODEL.getActionContextKey>[0]): string {
     return SUGGESTION_ACTION_MODEL.getActionContextKey(options);
   }
 
-  function getHelpCenterLocale() {
+  function getHelpCenterLocale(): string {
     return overlayState.overlayLanguageMode === 'system' ? getSystemLocale() : SETTINGS.normalizeLocale(overlayState.overlayLanguageMode);
   }
 
-  function getHelpCenterSuggestions(query) {
-    if (!HELP_CENTER_SEARCH || !SEARCH_UTILS.isHelpCenterSiteSearchProvider(overlayState.siteSearchState)) {
+  // The help pages matching the query while the help center site search is on.
+  function getHelpCenterSuggestions(query: string): OverlaySuggestion[] {
+    const provider = overlayState.siteSearchState;
+    if (!provider || !SEARCH_UTILS.isHelpCenterSiteSearchProvider(provider)) {
       return [];
     }
     if (!helpCenterSuggestionSource) {
@@ -216,16 +346,16 @@ function createSuggestionSources(deps) {
         sendMessage: (message, callback) => {
           try {
             LumnoMessaging.sendBackgroundMessage(chrome.runtime, message, (response) => {
-              callback(chrome.runtime.lastError ? null : response);
+              callback(chrome.runtime.lastError ? undefined : response);
             });
             return true;
-          } catch (error) {
+          } catch (_error) {
             return false;
           }
         },
         onUpdate: (updatedQuery) => {
           if (updatedQuery === overlayState.latestOverlayQuery) {
-            updateSearchSuggestions(overlayState.lastSuggestionResponse, updatedQuery);
+            updateSearchSuggestions(overlayState.lastSuggestionResponse, overlayState.latestOverlayQuery);
           }
         }
       });
@@ -234,19 +364,16 @@ function createSuggestionSources(deps) {
     return helpCenterSuggestionSource.getSuggestions(
       query,
       locale,
-      getProviderIcon(overlayState.siteSearchState),
+      getProviderIcon(provider),
       getHelpCenterFeedback(query, locale)
     );
   }
 
   // Where to ask when the help center has nothing; community links are fetched fresh once.
-  function getHelpCenterFeedback(query, locale) {
-    if (!COMMUNITY_LINKS) {
-      return null;
-    }
+  function getHelpCenterFeedback(query: string, locale: string) {
     if (!helpCenterFeedbackLinksRequested) {
       helpCenterFeedbackLinksRequested = true;
-      COMMUNITY_LINKS.load().then(() => {
+      void COMMUNITY_LINKS.load().then(() => {
         if (query === overlayState.latestOverlayQuery) {
           updateSearchSuggestions(overlayState.lastSuggestionResponse, query);
         }
@@ -260,11 +387,14 @@ function createSuggestionSources(deps) {
     };
   }
 
-  function updateSearchSuggestions(suggestions, query, options) {
+  // Renders the list for the query from the local rows given, adding the
+  // search action, commands, direct addresses and site search rows, and
+  // ranking them; answers for an older query are dropped.
+  function updateSearchSuggestions(suggestions: OverlaySuggestion[], query: string, options?: SuggestionUpdateOptions | null): void {
     if (query !== overlayState.latestOverlayQuery) {
       return;
     }
-    const renderOptions = options && typeof options === 'object' ? options : {};
+    const renderOptions: SuggestionUpdateOptions = options && typeof options === 'object' ? options : {};
     const forceFullRerender = renderOptions.forceFullRerender === true;
     const finalRemoteMix = renderOptions.finalRemoteMix === true;
     const remoteMixState = renderOptions.remoteMixState && typeof renderOptions.remoteMixState === 'object'
@@ -280,8 +410,8 @@ function createSuggestionSources(deps) {
     const modeCommandActive = slashCommandModeActive && !siteSearchQueryModeActive && isModeCommand(rawTagInput);
     if (modeCommandActive) {
       if (overlayState.storageArea) {
-        overlayState.storageArea.get([THEME_STORAGE_KEY], (result) => {
-          const storedMode = result[THEME_STORAGE_KEY] || 'system';
+        void overlayState.storageArea.get([THEME_STORAGE_KEY], (result) => {
+          const storedMode = (result ? result[THEME_STORAGE_KEY] : undefined) || 'system';
           if (storedMode !== overlayState.overlayThemeMode && query === overlayState.latestOverlayQuery) {
             applyOverlayTheme(storedMode);
             updateSearchSuggestions([], query);
@@ -291,7 +421,7 @@ function createSuggestionSources(deps) {
     }
 
     // Add New Tab suggestion as first item
-    const newTabSuggestion = (localSearchQueryModeActive || slashCommandModeActive ||
+    const newTabSuggestion: OverlaySuggestion | null = (localSearchQueryModeActive || slashCommandModeActive ||
         modeCommandActive || siteSearchQueryModeActive)
       ? null
       : {
@@ -307,7 +437,7 @@ function createSuggestionSources(deps) {
         forceSearch: true
       };
 
-    getShortcutRules().then((rules) => {
+    void getShortcutRules().then((rules) => {
       if (query !== overlayState.latestOverlayQuery) {
         return;
       }
@@ -318,7 +448,7 @@ function createSuggestionSources(deps) {
         ? getCommandMatches(rawTagInput)
         : [];
       const hasCommand = commandMatches.length > 0;
-      const preSuggestions = [];
+      const preSuggestions: OverlaySuggestion[] = [];
       if (modeCommandActive) {
         preSuggestions.push(buildModeSuggestion());
       } else if (slashCommandModeActive && !siteSearchQueryModeActive) {
@@ -327,7 +457,7 @@ function createSuggestionSources(deps) {
         });
       } else if (!siteSearchQueryModeActive && !localSearchQueryModeActive) {
         const directUrlSuggestion = getDirectUrlSuggestion(query);
-        if (directUrlSuggestion && !isCurrentOverlayTabUrl(directUrlSuggestion.url)) {
+        if (directUrlSuggestion && !isCurrentOverlayTabUrl(directUrlSuggestion.url || '')) {
           preSuggestions.push(directUrlSuggestion);
         }
         const keywordSuggestions = buildKeywordSuggestions(query, rules);
@@ -343,7 +473,7 @@ function createSuggestionSources(deps) {
       );
       if (!overlayState.siteSearchProvidersCache && !pendingProviderReload) {
         pendingProviderReload = true;
-        getSiteSearchProviders().then((items) => {
+        void getSiteSearchProviders().then(() => {
           pendingProviderReload = false;
           if (query !== overlayState.latestOverlayQuery) {
             return;
@@ -351,22 +481,23 @@ function createSuggestionSources(deps) {
           updateSearchSuggestions(overlayState.lastSuggestionResponse, query);
         });
       }
-      const rawTagInputForInline = (overlayState.latestRawInputValue || overlayState.searchInput.value || '').trim();
+      const inputValue = overlayState.searchInput ? overlayState.searchInput.value : '';
+      const rawTagInputForInline = (overlayState.latestRawInputValue || inputValue || '').trim();
       const inlineCandidate = (!localSearchQueryModeActive && !slashCommandModeActive &&
           !siteSearchQueryModeActive && !modeCommandActive && !hasCommand)
         ? getInlineSiteSearchCandidate(rawTagInputForInline, providersForTags)
         : null;
-      let inlineSuggestion = null;
+      let inlineSuggestion: OverlaySuggestion | null = null;
       if (inlineCandidate) {
         const inlineUrl = buildSearchUrl(
-          inlineCandidate.provider.template,
+          inlineCandidate.provider.template || '',
           inlineCandidate.query,
           inlineCandidate.provider
         );
         if (inlineUrl) {
           inlineSuggestion = {
             type: 'inlineSiteSearch',
-            title: getSiteSearchActionTitle(inlineCandidate.provider),
+            title: getSiteSearchActionTitle(inlineCandidate.provider, ''),
             url: inlineUrl,
             favicon: getProviderIcon(inlineCandidate.provider),
             provider: inlineCandidate.provider,
@@ -375,36 +506,35 @@ function createSuggestionSources(deps) {
         }
       }
 
-      const siteSearchSuggestion = siteSearchQueryModeActive
+      const activeProvider = overlayState.siteSearchState;
+      const siteSearchSuggestion: OverlaySuggestion | null = siteSearchQueryModeActive && activeProvider
         ? (() => {
-            const aggregateSearch = isAggregateSearchProvider(overlayState.siteSearchState);
+            const aggregateSearch = isAggregateSearchProvider(activeProvider);
             const siteUrl = aggregateSearch
               ? ''
-              : buildSearchUrl(overlayState.siteSearchState.template, query, overlayState.siteSearchState);
+              : buildSearchUrl(activeProvider.template || '', query, activeProvider);
             if (!aggregateSearch && !siteUrl) {
               return null;
             }
             return {
               type: 'siteSearch',
-              title: getSiteSearchActionTitle(overlayState.siteSearchState, query),
+              title: getSiteSearchActionTitle(activeProvider, query),
               url: siteUrl,
-              favicon: aggregateSearch ? '' : getProviderIcon(overlayState.siteSearchState),
-              provider: overlayState.siteSearchState,
+              favicon: aggregateSearch ? '' : getProviderIcon(activeProvider),
+              provider: activeProvider,
               searchQuery: query
             };
           })()
         : null;
 
       // Add New Tab, ChatGPT and Perplexity suggestions to the beginning
-      let allSuggestions = localSearchQueryModeActive
-        ? suggestions.filter((item) => (
-          item &&
-          overlayState.localSearchScopeState &&
-          item.type === overlayState.localSearchScopeState.sourceType
-        ))
+      const newTabRows: OverlaySuggestion[] = newTabSuggestion ? [newTabSuggestion] : [];
+      const scope = overlayState.localSearchScopeState;
+      let allSuggestions: OverlaySuggestion[] = localSearchQueryModeActive
+        ? suggestions.filter((item) => Boolean(item && scope && item.type === scope.sourceType))
         : (slashCommandModeActive ? [...preSuggestions] : (siteSearchQueryModeActive
           ? (siteSearchSuggestion ? [siteSearchSuggestion, ...getHelpCenterSuggestions(query)] : [])
-          : (modeCommandActive ? [...preSuggestions] : [...preSuggestions, newTabSuggestion, /*chatGptSuggestion, perplexitySuggestion,*/ ...suggestions])));
+          : (modeCommandActive ? [...preSuggestions] : [...preSuggestions, ...newTabRows, ...suggestions])));
       allSuggestions.forEach((item) => {
         if (!item || !item.url) {
           return;
@@ -437,8 +567,8 @@ function createSuggestionSources(deps) {
 
       let primaryHighlightIndex = -1;
       let primaryHighlightReason = 'none';
-      let mergedProvider = null;
-      let primarySuggestion = null;
+      let mergedProvider: SiteSearchProvider | null = null;
+      let primarySuggestion: OverlaySuggestion | null = null;
       if (!localSearchQueryModeActive && !slashCommandModeActive && !modeCommandActive && !hasCommand) {
         const rankedSlate = SEARCH_UTILS.rankSearchSuggestionSlate(allSuggestions, {
           query,
@@ -453,7 +583,7 @@ function createSuggestionSources(deps) {
           openTabMatch: overlayState.overlayTabQuickSwitchEnabled || overlayState.prioritizeCurrentPageMatch
             ? {
                 prioritizeCurrentPageMatch: overlayState.prioritizeCurrentPageMatch,
-                currentTabId: overlayState.currentOverlayTabId,
+                currentTabId: overlayState.currentOverlayTabId === null ? undefined : overlayState.currentOverlayTabId,
                 openTabQuickSwitchEnabled: overlayState.overlayTabQuickSwitchEnabled,
                 getDirectNavigationUrl
               }
@@ -461,8 +591,10 @@ function createSuggestionSources(deps) {
           matchers: {
             promoteStrongNavigationMatch,
             promoteTopSiteMatch,
-            getSiteSearchTriggerCandidate,
-            getAutocompleteCandidate,
+            getSiteSearchTriggerCandidate: (input, providers, topSiteMatch) => (
+              getSiteSearchTriggerCandidate(String(input || ''), providers || null, topSiteMatch)
+            ),
+            getAutocompleteCandidate: (rows, rawQuery) => getAutocompleteCandidate(rows || null, rawQuery),
             getUrlDisplay,
             filterSuggestions: (list) => filterOverlayBlacklistedSuggestions(list)
           }
@@ -498,9 +630,9 @@ function createSuggestionSources(deps) {
         overlayState.localSearchScopeTriggerState = resolvedLocalScope
           ? { scope: resolvedLocalScope, rawInput: rawTagInputForInline }
           : null;
-        if (overlayState.siteSearchTriggerState) {
+        if (resolvedProvider) {
           setSiteSearchTabHint(resolvedProvider);
-        } else if (overlayState.localSearchScopeTriggerState) {
+        } else if (resolvedLocalScope) {
           setSiteSearchTabHint(getLocalSearchScopeTabHintProvider(resolvedLocalScope));
         } else {
           clearSiteSearchTabHint();
@@ -548,8 +680,6 @@ function createSuggestionSources(deps) {
       });
       const updateKind = getSuggestionUpdateKind({
         forceFullRerender,
-        query,
-        lastRenderedQuery: overlayState.lastRenderedQuery,
         actionContextKey,
         lastRenderedActionContextKey: overlayState.lastRenderedActionContextKey,
         currentSuggestions: overlayState.currentSuggestions,
@@ -565,8 +695,9 @@ function createSuggestionSources(deps) {
       const canAppend = updateKind === 'append';
       const shouldPreserveVisualState =
         updateKind === 'content' || updateKind === 'append';
-      const previousScrollTop = shouldPreserveVisualState
-        ? Math.max(0, Number(overlayState.suggestionsContainer.scrollTop) || 0)
+      const container = overlayState.suggestionsContainer;
+      const previousScrollTop = shouldPreserveVisualState && container
+        ? Math.max(0, Number(container.scrollTop) || 0)
         : 0;
       const startIndex = canAppend ? overlayState.currentSuggestions.length : 0;
       pauseOverlayAntiTranslateObserverForMutationBurst();
@@ -604,14 +735,16 @@ function createSuggestionSources(deps) {
       setOverlayResultsCollapsed(false, {
         deferLayoutSync: true
       });
-      if (shouldAnimateScopeResultEnter) {
-        overlayState.suggestionsContainer.setAttribute('data-scope-result-enter', 'run');
-      } else {
-        overlayState.suggestionsContainer.removeAttribute('data-scope-result-enter');
+      if (container) {
+        if (shouldAnimateScopeResultEnter) {
+          container.setAttribute('data-scope-result-enter', 'run');
+        } else {
+          container.removeAttribute('data-scope-result-enter');
+        }
       }
       if (updateKind !== 'highlight') {
-        if (shouldPreserveVisualState) {
-          overlayState.suggestionsContainer.scrollTop = previousScrollTop;
+        if (shouldPreserveVisualState && container) {
+          container.scrollTop = previousScrollTop;
         }
         syncSuggestionLastState();
         updateSelection();
@@ -622,7 +755,7 @@ function createSuggestionSources(deps) {
       }
     });
   }
-  function clearSearchSuggestions() {
+  function clearSearchSuggestions(): void {
     cancelPendingOverlaySuggestionRequests();
     overlayState.inlineSearchState = null;
     overlayState.siteSearchTriggerState = null;
@@ -648,3 +781,4 @@ function createSuggestionSources(deps) {
 }
 
 export { createSuggestionSources };
+export type { SuggestionSourcesDeps, SuggestionSourcesState, SuggestionUpdateOptions };

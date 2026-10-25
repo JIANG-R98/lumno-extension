@@ -9,15 +9,15 @@ type Translate = (key: string, fallback: string) => string;
 type FormatMessage = (key: string, fallback: string, values?: Record<string, string>) => string;
 
 import type { LocalSearchScope } from '../../domain/search/types';
-import type { DisplayedSuggestion } from '../../domain/search/suggestion-action-model';
+import type { Suggestion } from '../../shared/react/search/suggestion-list/types';
 import type { InputModeProvider } from '../../shared/search/input-mode/types';
 
 // A row of the overlay's result list, as the panel modules read it.
-interface OverlaySuggestion extends DisplayedSuggestion {
+interface OverlaySuggestion extends Suggestion {
   provider?: InputModeProvider | null;
   commandAliases?: string[];
-  // Which help or feedback link a help row opens ('community' for the QR).
-  feedbackKey?: string;
+  // A typed address on the local network, whose icon is not fetched.
+  isLocalNetwork?: boolean;
 }
 
 // A site search or address the typed text runs on Enter without a mode,
