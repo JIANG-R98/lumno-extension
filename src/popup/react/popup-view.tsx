@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { useSegmentedIndicator } from '../../shared/react/segmented-indicator';
 
-export type PopupActionId = 'clip' | 'shortcut' | 'copy' | 'search' | 'pip';
+export type PopupActionId = 'clip' | 'shortcut' | 'copy' | 'search' | 'pin' | 'pip';
 export type PopupLinkId = 'settings' | 'shortcuts' | 'feedback' | 'release' | 'sync';
 
 export interface PopupPageModel {

@@ -14,7 +14,8 @@
     "src/shared/**/*.ts",
     "src/content/**/*.ts",
     "src/overlay/**/*.ts",
-    "src/options/**/*.ts"
+    "src/options/**/*.ts",
+    "src/popup/**/*.ts"
   ],
   "exclude": [
     "src/**/react/**"

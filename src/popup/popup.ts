@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The toolbar popup: actions on the current page, two global switches and
 // links to the rest of Lumno. React renders it from the model built here;
 // this script owns the browser APIs and the settings it reads and writes.
@@ -11,21 +10,106 @@ import * as LumnoCursorTooltip from '../shared/ui/cursor-tooltip';
 import * as LumnoToast from '../shared/ui/toast';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as LumnoUrlGuards from '../platform/url-guards';
+import { readLocaleMessages } from '../domain/locale-messages';
+import type { BackgroundAction, BackgroundReply, BackgroundRequest, LocaleMessage } from '../domain/messages';
+import type { OverlaySizeMode, ThemeMode } from '../domain/settings';
+import type { StorageChanges } from '../domain/storage-port';
+import * as LumnoMessaging from '../platform/messaging';
+import { isHtmlElement } from '../shared/dom-guards';
+import type {
+  PopupActionId,
+  PopupActionModel,
+  PopupLinkId,
+  PopupModel,
+  PopupNoticeModel,
+  PopupSyncModel
+} from './react/popup-view';
+
+type Translate = (key: string, fallback: string) => string;
+
+// The tab the popup was opened on.
+interface PopupTab {
+  id: number;
+  url: string;
+  title: string;
+  favIconUrl?: string;
+  iconUrl?: string;
+  iconClass?: string;
+  host?: string;
+}
+
+// The settings the popup shows, by row id.
+interface PopupSettingValues {
+  selectionQuickActions: boolean;
+  overlaySize: OverlaySizeMode;
+  overlayPageTheme: boolean;
+  overlayOpenTabs: boolean;
+  theme: ThemeMode;
+  autoPip: boolean;
+}
+
+type PopupSettingId = keyof PopupSettingValues;
+
+// WebDAV's status as the worker stores it, read as untrusted.
+interface PopupSyncStatus {
+  enabled: boolean;
+  state: string;
+  error: string;
+  lastSyncAt: number | null;
+}
+
+interface PopupState {
+  tab: PopupTab | null;
+  // Browser, store and other pages scripts cannot reach.
+  restricted: boolean;
+  // The browser has Document Picture-in-Picture.
+  documentPipSupported: boolean;
+  // Web clip is turned on in Labs.
+  documentPipEnabled: boolean;
+  // Formatted key chords.
+  shortcuts: { search: string; copy: string };
+  // The page among the New Tab's pinned recent sites.
+  recentPin: { pinned: boolean; full: boolean } | null;
+  settings: PopupSettingValues;
+  // The settings disclosure is open.
+  settingsExpanded: boolean;
+  // The page's video and the auto picture-in-picture switch.
+  pip: { supported: boolean; hasVideo: boolean; active: boolean; menuExpanded: boolean };
+  syncStatus: PopupSyncStatus | null;
+  version: string;
+  lang: string;
+  now: number;
+  busyAction: PopupActionId | '';
+  notice: PopupNoticeModel | null;
+}
+
+interface PageDescription {
+  kind: 'lumno' | 'browser' | 'extension' | 'file' | 'web';
+  // Extension-relative.
+  iconPath: string;
+  iconClass: string;
+  host: string;
+}
+
+interface PageContext {
+  ownBase?: string;
+  browserName?: string;
+  isBrowserInternalUrl?(url: string): boolean;
+}
 
 const COMMAND_SHOW_SEARCH = 'show-search';
 const COMMAND_COPY_URL = 'show-search-prefill-v';
 // A success toast shown in the popup stays this long before the popup closes.
 const CLOSE_AFTER_TOAST_MS = 1400;
-const THEME_MODES = Object.freeze(['system', 'light', 'dark']);
-const SYNC_ATTENTION_STATES = Object.freeze(['conflict', 'choice']);
-const SYNC_BUSY_STATES = Object.freeze(['syncing', 'pending']);
+const SYNC_ATTENTION_STATES: readonly string[] = Object.freeze(['conflict', 'choice']);
+const SYNC_BUSY_STATES: readonly string[] = Object.freeze(['syncing', 'pending']);
 // Rate limits the background waits out for minutes to hours before retrying.
-const SYNC_THROTTLE_ERRORS = Object.freeze(['http-429', 'http-503']);
+const SYNC_THROTTLE_ERRORS: readonly string[] = Object.freeze(['http-429', 'http-503']);
 const SETTINGS_EXPANDED_CACHE_KEY = 'lumno-popup-settings-expanded';
 const OVERFLOW_TOLERANCE_PX = 2;
 const VIDEO_PROBE_TIMEOUT_MS = 250;
 
-function getHost(url) {
+function getHost(url: string): string {
   try {
     const parsed = new URL(url);
     if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
@@ -37,13 +121,13 @@ function getHost(url) {
   return url;
 }
 
-function isWebUrl(url) {
+function isWebUrl(url: string): boolean {
   return /^https?:\/\//i.test(String(url || ''));
 }
 
 // Browser logos shipped in assets/images/browser-logos, matched against the
 // browser's product name.
-const BROWSER_LOGOS = Object.freeze([
+const BROWSER_LOGOS: ReadonlyArray<readonly [RegExp, string]> = Object.freeze([
   [/edge/i, 'microsoft-edge-2019.svg'],
   [/zen/i, 'zen.svg'],
   [/firefox/i, 'firefox.svg'],
@@ -54,9 +138,7 @@ const BROWSER_LOGOS = Object.freeze([
 
 // How the page card shows a tab: Lumno's own pages carry the Lumno icon,
 // browser pages the browser's logo, other pages their favicon.
-//   context: { ownBase, browserName, isBrowserInternalUrl(url) }
-// Returns { kind, iconPath, iconClass, host }; iconPath is extension-relative.
-function describePage(url, context) {
+function describePage(url: string, context?: PageContext | null): PageDescription {
   const config = context || {};
   if (config.ownBase && url.startsWith(config.ownBase)) {
     return { kind: 'lumno', iconPath: 'assets/images/lumno.png', iconClass: '', host: 'Lumno' };
@@ -80,9 +162,9 @@ function describePage(url, context) {
 }
 
 // "3 minutes ago" in the popup's language, "now" under a minute.
-function formatSyncTime(lastSyncAt, now, lang) {
+function formatSyncTime(lastSyncAt: number, now: number, lang: string): string {
   const elapsedSeconds = Math.max(0, Math.round((now - lastSyncAt) / 1000));
-  let format = null;
+  let format: Intl.RelativeTimeFormat;
   try {
     format = new Intl.RelativeTimeFormat(lang, { numeric: 'auto' });
   } catch (error) {
@@ -96,7 +178,7 @@ function formatSyncTime(lastSyncAt, now, lang) {
   return format.format(-Math.round(hours / 24), 'day');
 }
 
-function buildSyncModel(status, t, now, lang) {
+function buildSyncModel(status: PopupSyncStatus | null, t: Translate, now: number, lang: string): PopupSyncModel | null {
   if (!status || status.enabled !== true) {
     return null;
   }
@@ -114,7 +196,7 @@ function buildSyncModel(status, t, now, lang) {
   if (SYNC_BUSY_STATES.includes(status.state)) {
     return { label: t('popup_sync_busy', 'WebDAV syncing'), tone: 'busy' };
   }
-  if (typeof status.lastSyncAt === 'number' && status.lastSyncAt > 0) {
+  if (status.lastSyncAt !== null && status.lastSyncAt > 0) {
     return {
       label: `${t('popup_sync_ready', 'WebDAV synced')} · ${formatSyncTime(status.lastSyncAt, now, lang)}`,
       tone: 'ok'
@@ -123,45 +205,29 @@ function buildSyncModel(status, t, now, lang) {
   return null;
 }
 
-// state: {
-//   tab                  { id, url, title, iconUrl, iconClass, host } or null
-//   restricted           browser, store and other pages scripts cannot reach
-//   documentPipSupported the browser has Document Picture-in-Picture
-//   documentPipEnabled   web clip is turned on in Labs
-//   shortcuts            { search, copy } formatted key chords
-//   recentPin            { pinned, full } for the page among the New Tab's
-//                        pinned recent sites
-//   settings             { selectionQuickActions, overlaySize, overlayPageTheme,
-//                          overlayOpenTabs, theme } as stored, normalized
-//   settingsExpanded     the settings disclosure is open
-//   pip                  { supported, hasVideo, active, menuExpanded } for the
-//                        page's video and the auto picture-in-picture switch
-//   syncStatus, version, lang, now
-//   busyAction, notice
-// }
-function buildModel(state, t) {
+function buildModel(state: PopupState, t: Translate): PopupModel {
   const tab = state.tab;
   const url = tab ? String(tab.url || '') : '';
   const restricted = !tab || state.restricted === true;
   // Shortcuts and pinned recent sites hold web pages only. They only store the
   // address, so a store page that takes no scripts can still be saved.
   const canSaveToNewTab = Boolean(tab) && isWebUrl(url);
-  const recentPin = state.recentPin || {};
-  const pinned = recentPin.pinned === true;
-  const pinFull = !pinned && recentPin.full === true;
-  const pip = state.pip || {};
+  const recentPin = state.recentPin;
+  const pinned = Boolean(recentPin && recentPin.pinned === true);
+  const pinFull = !pinned && Boolean(recentPin && recentPin.full === true);
+  const pip = state.pip;
   // Video picture-in-picture runs in the page, so browser pages never get it.
   const showPip = pip.supported === true && Boolean(tab) && !restricted;
   // Web clip is a Labs feature: it only shows once it is turned on.
   const showClip = state.documentPipSupported === true && state.documentPipEnabled === true;
   const values = state.settings;
-  const action = (id, base) => ({
+  const action = (id: PopupActionId, base: Omit<PopupActionModel, 'id'>): PopupActionModel => ({
     ...base,
     id,
     disabled: base.disabled || state.busyAction === id
   });
 
-  const actions = [
+  const actions: PopupActionModel[] = [
     action('search', {
       label: t('popup_open_command_bar', 'Open command bar'),
       tooltip: state.shortcuts.search,
@@ -227,7 +293,7 @@ function buildModel(state, t) {
 
   const notice = state.notice || null;
 
-  const themeMode = THEME_MODES.includes(values.theme) ? values.theme : 'system';
+  const themeMode = values.theme;
   return {
     page: {
       title: tab ? String(tab.title || getHost(url) || url) : 'Lumno',
@@ -320,21 +386,41 @@ function buildModel(state, t) {
   };
 }
 
-function start() {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function readSyncStatus(value: unknown): PopupSyncStatus | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  return {
+    enabled: value.enabled === true,
+    state: typeof value.state === 'string' ? value.state : '',
+    error: typeof value.error === 'string' ? value.error : '',
+    lastSyncAt: typeof value.lastSyncAt === 'number' && Number.isFinite(value.lastSyncAt) ? value.lastSyncAt : null
+  };
+}
+
+type SettingSpecs = { [K in PopupSettingId]: { key: string; normalize(value: unknown): PopupSettingValues[K] } };
+
+function start(): void {
   const chromeApi = globalThis.chrome;
   const settings = LumnoSettings;
   const urlGuards = LumnoUrlGuards;
   const shortcutDisplay = LumnoShortcutDisplay;
   const reactApi = globalThis.LumnoPopupReact;
   const documentObj = globalThis.document;
-  const host = documentObj.getElementById('x-lumno-popup-root');
-  if (!chromeApi || !settings || !reactApi || !host) {
+  const rootElement = documentObj.getElementById('x-lumno-popup-root');
+  if (!chromeApi || !reactApi || !isHtmlElement(rootElement)) {
     return;
   }
+  // Narrowed here, for the functions below.
+  const host = rootElement;
   const provider = LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
   // The settings the popup shows, by row id: where each is stored and how a
   // stored value reads.
-  const SETTING_SPECS = Object.freeze({
+  const SETTING_SPECS: Readonly<SettingSpecs> = Object.freeze({
     selectionQuickActions: {
       key: settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
       normalize: settings.normalizeSelectionQuickActionsEnabled
@@ -357,10 +443,27 @@ function start() {
     },
     autoPip: {
       key: settings.AUTO_PIP_ENABLED_STORAGE_KEY,
-      normalize: (value) => value !== false
+      normalize: (value: unknown) => value !== false
     }
   });
-  const settingIds = Object.keys(SETTING_SPECS);
+  const settingIds: readonly PopupSettingId[] = Object.freeze([
+    'selectionQuickActions', 'overlaySize', 'overlayPageTheme', 'overlayOpenTabs', 'theme', 'autoPip'
+  ]);
+  const isSettingId = (id: string): id is PopupSettingId => settingIds.some((settingId) => settingId === id);
+  // Each setting read from stored values; a missing one reads as its default.
+  function readSettings(values: Record<string, unknown>): PopupSettingValues {
+    return {
+      selectionQuickActions: SETTING_SPECS.selectionQuickActions.normalize(values[SETTING_SPECS.selectionQuickActions.key]),
+      overlaySize: SETTING_SPECS.overlaySize.normalize(values[SETTING_SPECS.overlaySize.key]),
+      overlayPageTheme: SETTING_SPECS.overlayPageTheme.normalize(values[SETTING_SPECS.overlayPageTheme.key]),
+      overlayOpenTabs: SETTING_SPECS.overlayOpenTabs.normalize(values[SETTING_SPECS.overlayOpenTabs.key]),
+      theme: SETTING_SPECS.theme.normalize(values[SETTING_SPECS.theme.key]),
+      autoPip: SETTING_SPECS.autoPip.normalize(values[SETTING_SPECS.autoPip.key])
+    };
+  }
+  function setSetting<K extends PopupSettingId>(id: K, rawValue: unknown): void {
+    state.settings[id] = SETTING_SPECS[id].normalize(rawValue);
+  }
   const darkQuery = globalThis.matchMedia('(prefers-color-scheme: dark)');
   const tooltip = LumnoTooltip.createController({
     documentObj,
@@ -379,18 +482,18 @@ function start() {
     offsetX: 12,
     offsetY: 16
   });
-  let messages = {};
+  let messages: Record<string, LocaleMessage> = {};
   let languageMode = 'system';
   let closeTimer = 0;
-  let popupToast = null;
-  const state = {
+  let popupToast: { element: HTMLElement; controller: ReturnType<typeof LumnoToast.createToastController> } | null = null;
+  const state: PopupState = {
     tab: null,
     restricted: true,
     documentPipSupported: 'documentPictureInPicture' in globalThis,
     documentPipEnabled: false,
     shortcuts: { search: '', copy: '' },
     recentPin: null,
-    settings: Object.fromEntries(settingIds.map((id) => [id, SETTING_SPECS[id].normalize(undefined)])),
+    settings: readSettings({}),
     syncStatus: null,
     version: '',
     lang: 'en',
@@ -409,7 +512,7 @@ function start() {
   };
 
   // Whether the settings were left open is this browser's own convenience.
-  function readSettingsExpanded() {
+  function readSettingsExpanded(): boolean {
     try {
       return globalThis.localStorage.getItem(SETTINGS_EXPANDED_CACHE_KEY) === 'true';
     } catch (error) {
@@ -417,7 +520,7 @@ function start() {
     }
   }
 
-  function writeSettingsExpanded(expanded) {
+  function writeSettingsExpanded(expanded: boolean): void {
     try {
       globalThis.localStorage.setItem(SETTINGS_EXPANDED_CACHE_KEY, expanded ? 'true' : 'false');
     } catch (error) {
@@ -425,8 +528,8 @@ function start() {
     }
   }
 
-  function t(key, fallback) {
-    const entry = messages[key];
+  function t(key: string, fallback: string): string {
+    const entry = Object.prototype.hasOwnProperty.call(messages, key) ? messages[key] : undefined;
     if (entry && typeof entry.message === 'string') {
       return entry.message;
     }
@@ -437,11 +540,14 @@ function start() {
     return fallback;
   }
 
-  function callback(method, ...args) {
+  // The worker's reply, or null when it did not answer.
+  function sendMessage<A extends BackgroundAction>(
+    payload: BackgroundRequest<A>
+  ): Promise<BackgroundReply<A> | null> {
     return new Promise((resolve) => {
       try {
-        method(...args, (result) => {
-          resolve(chromeApi.runtime.lastError ? null : result);
+        LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, payload, (reply) => {
+          resolve(chromeApi.runtime.lastError || reply === undefined ? null : reply);
         });
       } catch (error) {
         resolve(null);
@@ -449,18 +555,39 @@ function start() {
     });
   }
 
-  function sendMessage(payload) {
-    return callback(chromeApi.runtime.sendMessage.bind(chromeApi.runtime), payload);
+  function queryActiveTab(): Promise<chrome.tabs.Tab | null> {
+    return new Promise((resolve) => {
+      try {
+        chromeApi.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          resolve(!chromeApi.runtime.lastError && tabs[0] ? tabs[0] : null);
+        });
+      } catch (error) {
+        resolve(null);
+      }
+    });
   }
 
-  function loadMessages(locale) {
+  function readLocalValues(keys: string[]): Promise<Record<string, unknown>> {
+    return new Promise((resolve) => {
+      try {
+        chromeApi.storage.local.get(keys, (items) => {
+          resolve(chromeApi.runtime.lastError ? {} : items);
+        });
+      } catch (error) {
+        resolve({});
+      }
+    });
+  }
+
+  function loadMessages(locale: string): Promise<Record<string, LocaleMessage>> {
     return fetch(chromeApi.runtime.getURL(`_locales/${locale}/messages.json`))
       .then((response) => (response.ok ? response.json() : {}))
+      .then((value: unknown) => readLocaleMessages(value))
       .catch(() => ({}));
   }
 
   // A web page's favicon, from the browser's cache where it offers one.
-  function getFaviconUrl(tab, page) {
+  function getFaviconUrl(tab: PopupTab, page: PageDescription): string {
     if (page.kind !== 'web') return '';
     const url = String(tab.url || '');
     const manifest = chromeApi.runtime.getManifest();
@@ -470,28 +597,41 @@ function start() {
     return String(tab.favIconUrl || '');
   }
 
-  function readShortcuts() {
-    if (!chromeApi.commands || typeof chromeApi.commands.getAll !== 'function') {
-      return Promise.resolve({ search: '', copy: '' });
-    }
-    return callback(chromeApi.commands.getAll.bind(chromeApi.commands)).then((commands) => {
-      const list = Array.isArray(commands) ? commands : [];
-      const find = (name) => {
-        const command = list.find((item) => item && item.name === name);
+  function readCommands(): Promise<chrome.commands.Command[]> {
+    return new Promise((resolve) => {
+      // Not every browser has the commands API.
+      if (!chromeApi.commands || typeof chromeApi.commands.getAll !== 'function') {
+        resolve([]);
+        return;
+      }
+      try {
+        chromeApi.commands.getAll((commands) => {
+          resolve(chromeApi.runtime.lastError ? [] : commands);
+        });
+      } catch (error) {
+        resolve([]);
+      }
+    });
+  }
+
+  function readShortcuts(): Promise<PopupState['shortcuts']> {
+    return readCommands().then((list) => {
+      const find = (name: string): string => {
+        const command = list.find((item) => item.name === name);
         return command && command.shortcut ? shortcutDisplay.formatShortcutChord(command.shortcut, { navigatorLike: globalThis.navigator }) : '';
       };
       return { search: find(COMMAND_SHOW_SEARCH), copy: find(COMMAND_COPY_URL) };
     });
   }
 
-  function applyTheme() {
+  function applyTheme(): void {
     const mode = state.settings.theme;
     const resolved = mode === 'system' ? (darkQuery.matches ? 'dark' : 'light') : mode;
     documentObj.body.setAttribute('data-theme', resolved);
     documentObj.documentElement.style.colorScheme = resolved;
   }
 
-  function cacheThemeMode(mode) {
+  function cacheThemeMode(mode: ThemeMode): void {
     try {
       globalThis.localStorage.setItem(settings.OPTIONS_THEME_PRELOAD_STORAGE_KEY, mode);
     } catch (error) {
@@ -501,13 +641,13 @@ function start() {
 
   // Shows a value at once and stores it; the rest of Lumno follows the
   // storage change.
-  function saveSetting(id, rawValue) {
+  function saveSetting(id: string, rawValue: unknown): void {
+    if (!isSettingId(id)) return;
     const spec = SETTING_SPECS[id];
-    if (!spec) return;
-    const updates = id === 'theme'
+    const updates: Record<string, unknown> = id === 'theme'
       ? settings.createGlobalThemeModeStorageUpdate(rawValue)
       : { [spec.key]: spec.normalize(rawValue) };
-    state.settings[id] = updates[spec.key];
+    setSetting(id, updates[spec.key]);
     if (id === 'theme') {
       cacheThemeMode(state.settings.theme);
       applyTheme();
@@ -542,12 +682,13 @@ function start() {
     onLink: openLink
   });
 
-  function render() {
+  function render(): void {
     state.now = Date.now();
     controller.render(buildModel(state, t));
     tooltip.bindAll(host, { placement: 'top' });
     host.querySelectorAll('.x-lumno-popup__page-title, .x-lumno-popup__page-host').forEach((line) => {
-      cursorTooltip.bind(line, () => line.textContent, {
+      if (!isHtmlElement(line)) return;
+      cursorTooltip.bind(line, () => line.textContent || '', {
         shouldShow: (target) => LumnoCursorTooltip.isElementTextTruncated(target)
       });
     });
@@ -557,14 +698,14 @@ function start() {
   // The browser sizes the popup to the page, up to 600px tall. Fractional
   // line heights can leave the page a pixel taller than that window, which
   // should not draw a scrollbar; content past the limit still scrolls.
-  function syncOverflow() {
+  function syncOverflow(): void {
     const page = documentObj.documentElement;
     page.style.overflowY = page.scrollHeight - globalThis.innerHeight > OVERFLOW_TOLERANCE_PX ? 'auto' : 'hidden';
   }
 
   // Lumno's top toast, at the top of the popup, for pages that cannot show
   // one themselves (browser pages, PDF viewers).
-  function showPopupToast(message) {
+  function showPopupToast(message: string): void {
     if (!popupToast) {
       const element = documentObj.createElement('div');
       element.className = 'x-lumno-toast';
@@ -585,7 +726,7 @@ function start() {
 
   // Every success is told by Lumno's top toast: the page's when it showed
   // one, so the popup gets out of the way, otherwise the popup's own.
-  function announceSuccess(message, shownInPage) {
+  function announceSuccess(message: string, shownInPage: boolean): void {
     state.busyAction = '';
     if (shownInPage || !message) {
       globalThis.close();
@@ -597,18 +738,23 @@ function start() {
     closeTimer = globalThis.setTimeout(() => globalThis.close(), CLOSE_AFTER_TOAST_MS);
   }
 
-  function showError(text) {
+  function showError(text: string): void {
     state.busyAction = '';
     state.notice = { text, tone: 'error' };
     render();
   }
 
-  function executeInTab(tabId, details) {
+  // The script's result when it is an object; null otherwise.
+  function executeInTab(
+    tabId: number,
+    details: { func: () => unknown; world?: `${chrome.scripting.ExecutionWorld}` }
+  ): Promise<Record<string, unknown> | null> {
     return new Promise((resolve) => {
       try {
         chromeApi.scripting.executeScript({ target: { tabId }, ...details }, (results) => {
           const first = !chromeApi.runtime.lastError && Array.isArray(results) ? results[0] : null;
-          resolve(first && first.result && typeof first.result === 'object' ? first.result : null);
+          const result: unknown = first ? first.result : null;
+          resolve(isRecord(result) ? result : null);
         });
       } catch (error) {
         resolve(null);
@@ -618,20 +764,20 @@ function start() {
 
   // Whether the page has a video picture-in-picture can show, and whether
   // one already floats. A page that does not answer in time counts as none.
-  function probeVideo(tabId) {
+  function probeVideo(tabId: number): Promise<Record<string, unknown> | null> {
     const probe = executeInTab(tabId, {
       func: () => ({
         hasVideo: Array.from(document.querySelectorAll('video')).some((video) => video.readyState >= 1),
         active: Boolean(document.pictureInPictureElement)
       })
     });
-    const timeout = new Promise((resolve) => globalThis.setTimeout(() => resolve(null), VIDEO_PROBE_TIMEOUT_MS));
+    const timeout = new Promise<null>((resolve) => globalThis.setTimeout(() => resolve(null), VIDEO_PROBE_TIMEOUT_MS));
     return Promise.race([probe, timeout]);
   }
 
   // Runs in the page from this click, so the request carries the popup's
   // user activation. Lumno's own helper picks the playing or largest video.
-  async function runPictureInPicture(tab) {
+  async function runPictureInPicture(tab: PopupTab): Promise<void> {
     const mainWorld = LumnoPipMainWorld;
     const exiting = state.pip.active;
     const result = await executeInTab(tab.id, {
@@ -646,7 +792,7 @@ function start() {
   }
 
   // The page is the tab the popup showed, not whatever is active later.
-  async function runAction(id) {
+  async function runAction(id: PopupActionId): Promise<void> {
     const tab = state.tab;
     if (!tab || state.busyAction) return;
     state.busyAction = id;
@@ -679,8 +825,8 @@ function start() {
     if (id === 'pin') {
       const result = await sendMessage({ action: 'popupToggleRecentPin', tabId: tab.id });
       const status = result && result.status;
-      if (status === 'pinned' || status === 'unpinned') {
-        state.recentPin = { ...state.recentPin, pinned: status === 'pinned' };
+      if (result && (status === 'pinned' || status === 'unpinned')) {
+        state.recentPin = { full: state.recentPin ? state.recentPin.full : false, pinned: status === 'pinned' };
         let message = t('popup_recent_unpinned', 'Unpinned from Recent');
         if (status === 'pinned') {
           message = result.tracking === true
@@ -699,7 +845,7 @@ function start() {
     if (id === 'shortcut') {
       const result = await sendMessage({ action: 'popupAddPageShortcut', tabId: tab.id });
       const status = result && result.status;
-      if (status === 'added' || status === 'exists') {
+      if (result && (status === 'added' || status === 'exists')) {
         announceSuccess(result.message, result.toastShown === true);
         return;
       }
@@ -707,22 +853,21 @@ function start() {
     }
   }
 
-  function openLink(id) {
-    const requests = {
-      settings: { action: 'openOptionsPage' },
-      feedback: { action: 'openOptionsPage', hash: 'general' },
-      sync: { action: 'openOptionsPage', hash: 'account' },
-      shortcuts: { action: 'openExtensionShortcutsPage' },
-      release: { action: 'openReleasePage', reason: 'manual' }
-    };
-    const request = requests[id];
-    if (!request) return;
-    sendMessage(request).then(() => globalThis.close());
+  function openLink(id: PopupLinkId): void {
+    const reply = id === 'shortcuts'
+      ? sendMessage({ action: 'openExtensionShortcutsPage' })
+      : id === 'release'
+        ? sendMessage({ action: 'openReleasePage', reason: 'manual' })
+        : sendMessage({
+          action: 'openOptionsPage',
+          ...(id === 'feedback' ? { hash: 'general' } : id === 'sync' ? { hash: 'account' } : {})
+        });
+    reply.then(() => globalThis.close());
   }
 
-  function onStorageChanged(changes, areaName) {
+  function onStorageChanged(changes: StorageChanges, areaName: string): void {
     if (areaName === 'local' && changes[settings.WEBDAV_STATUS_STORAGE_KEY]) {
-      state.syncStatus = changes[settings.WEBDAV_STATUS_STORAGE_KEY].newValue || null;
+      state.syncStatus = readSyncStatus(changes[settings.WEBDAV_STATUS_STORAGE_KEY].newValue);
       render();
     }
     if (!provider.isActiveAreaName(areaName)) return;
@@ -730,7 +875,7 @@ function start() {
     settingIds.forEach((id) => {
       const change = changes[SETTING_SPECS[id].key];
       if (!change) return;
-      state.settings[id] = SETTING_SPECS[id].normalize(change.newValue);
+      setSetting(id, change.newValue);
       changed = true;
     });
     if (changes[settings.THEME_STORAGE_KEY]) applyTheme();
@@ -741,42 +886,44 @@ function start() {
     if (changed) render();
   }
 
-  async function init() {
-    const [tabs, stored, local, shortcuts] = await Promise.all([
-      callback(chromeApi.tabs.query.bind(chromeApi.tabs), { active: true, currentWindow: true }),
+  async function init(): Promise<void> {
+    const [activeTab, stored, local, shortcuts] = await Promise.all([
+      queryActiveTab(),
       provider.ready.then(() => provider.area.get([
         settings.LANGUAGE_STORAGE_KEY,
         settings.DOCUMENT_PIP_ENABLED_STORAGE_KEY,
         ...settingIds.map((id) => SETTING_SPECS[id].key)
       ])).catch(() => ({})),
-      callback(chromeApi.storage.local.get.bind(chromeApi.storage.local), [settings.WEBDAV_STATUS_STORAGE_KEY]),
+      readLocalValues([settings.WEBDAV_STATUS_STORAGE_KEY]),
       readShortcuts()
     ]);
-    const values = stored || {};
-    languageMode = values[settings.LANGUAGE_STORAGE_KEY] || 'system';
+    const values: Record<string, unknown> = stored || {};
+    const storedLanguage = values[settings.LANGUAGE_STORAGE_KEY];
+    languageMode = typeof storedLanguage === 'string' && storedLanguage ? storedLanguage : 'system';
     const uiLanguage = chromeApi.i18n && chromeApi.i18n.getUILanguage ? chromeApi.i18n.getUILanguage() : 'en';
     const locale = settings.normalizeLocale(languageMode === 'system' ? uiLanguage : languageMode);
     state.lang = settings.localeToHtmlLang(locale);
     documentObj.documentElement.lang = state.lang;
-    const tab = Array.isArray(tabs) && tabs[0] && typeof tabs[0].id === 'number' ? tabs[0] : null;
-    if (tab) {
-      const url = String(tab.url || tab.pendingUrl || '');
-      state.tab = { id: tab.id, url, title: String(tab.title || ''), favIconUrl: tab.favIconUrl };
+    if (activeTab && typeof activeTab.id === 'number') {
+      const url = String(activeTab.url || activeTab.pendingUrl || '');
+      const tab: PopupTab = { id: activeTab.id, url, title: String(activeTab.title || ''), favIconUrl: activeTab.favIconUrl };
       const page = describePage(url, {
         ownBase: chromeApi.runtime.getURL(''),
         browserName: LumnoBrowserProfile.getBrowserInternalProfile(globalThis.navigator).name,
         isBrowserInternalUrl: urlGuards.isBrowserInternalUrl
       });
-      state.tab.iconUrl = page.iconPath ? chromeApi.runtime.getURL(page.iconPath) : getFaviconUrl(state.tab, page);
-      state.tab.iconClass = page.iconClass;
-      state.tab.host = page.host;
+      tab.iconUrl = page.iconPath ? chromeApi.runtime.getURL(page.iconPath) : getFaviconUrl(tab, page);
+      tab.iconClass = page.iconClass;
+      tab.host = page.host;
+      state.tab = tab;
       state.restricted = urlGuards.isRestrictedUrl(url);
     }
-    const canProbeVideo = Boolean(state.tab) && !state.restricted && state.pip.supported;
+    const tab = state.tab;
+    const canProbeVideo = Boolean(tab) && !state.restricted && state.pip.supported;
     const [loadedMessages, video, recentPin] = await Promise.all([
       loadMessages(locale),
-      canProbeVideo ? probeVideo(state.tab.id) : Promise.resolve(null),
-      state.tab ? sendMessage({ action: 'popupGetRecentPin', tabId: state.tab.id }) : Promise.resolve(null)
+      tab && canProbeVideo ? probeVideo(tab.id) : Promise.resolve(null),
+      tab ? sendMessage({ action: 'popupGetRecentPin', tabId: tab.id }) : Promise.resolve(null)
     ]);
     messages = loadedMessages;
     if (recentPin) {
@@ -786,12 +933,10 @@ function start() {
       state.pip.hasVideo = video.hasVideo === true;
       state.pip.active = video.active === true;
     }
-    settingIds.forEach((id) => {
-      state.settings[id] = SETTING_SPECS[id].normalize(values[SETTING_SPECS[id].key]);
-    });
+    state.settings = readSettings(values);
     cacheThemeMode(state.settings.theme);
     state.documentPipEnabled = values[settings.DOCUMENT_PIP_ENABLED_STORAGE_KEY] === true;
-    state.syncStatus = local ? local[settings.WEBDAV_STATUS_STORAGE_KEY] || null : null;
+    state.syncStatus = readSyncStatus(local[settings.WEBDAV_STATUS_STORAGE_KEY]);
     state.shortcuts = shortcuts;
     state.version = chromeApi.runtime.getManifest().version || '';
     applyTheme();
@@ -814,3 +959,4 @@ function start() {
 }
 
 export { buildModel, describePage, formatSyncTime, start };
+export type { PageContext, PageDescription, PopupSettingValues, PopupState, PopupSyncStatus, PopupTab };

@@ -26,6 +26,7 @@ import type { createThemePickerApi } from '../options/react/theme-picker';
 import type { createToastApi } from '../shared/react/toast';
 import type { createTranslationHelpApi } from '../options/react/translation-help';
 import type { createWebDavListApi } from '../options/react/webdav-list';
+import type { createPopupApi } from '../popup/react/popup-view';
 
 declare global {
   // The traditional-to-simplified Han table as pairs of characters, set by
@@ -70,6 +71,8 @@ declare global {
   var LumnoOverlayTabSwitcherView: {
     createTabSwitcherView(options?: TabSwitcherViewOptions): TabSwitcherViewController;
   } | undefined;
+  // Set by the popup's React islands entry.
+  var LumnoPopupReact: ReturnType<typeof createPopupApi> | undefined;
   // Set by the options page's React islands entry.
   var LumnoOptionsAggregateSearchList: ReturnType<typeof createAggregateSearchListApi> | undefined;
   var LumnoOptionsBlacklistList: ReturnType<typeof createBlacklistListApi> | undefined;

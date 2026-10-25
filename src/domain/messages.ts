@@ -304,7 +304,8 @@ interface BackgroundMessages {
   popupShowPageToast: { request: PopupTabRequest & { message: string }; reply: OkReply };
   popupAddPageShortcut: { request: PopupTabRequest; reply: PageShortcutResult };
   popupGetRecentPin: { request: PopupTabRequest; reply: RecentPinStatus };
-  popupToggleRecentPin: { request: PopupTabRequest; reply: { status: RecentPinToggleStatus } };
+  // tracking: the pinned page's progress is followed too.
+  popupToggleRecentPin: { request: PopupTabRequest; reply: { status: RecentPinToggleStatus; tracking?: boolean } };
   pipRequestOwnership: { request: { kind: string }; reply: PipOwnershipReply };
   pipReleaseOwnership: { request: { token: string }; reply: PipReleaseReply };
   openDocumentPipPicker: { request: NoFields; reply: OkReply & { enabled?: boolean } };
