@@ -1,5 +1,64 @@
-// @ts-nocheck
-function getSenderFrameTarget(sender) {
+// Picture-in-picture helpers that run in the page's own JavaScript world,
+// where the site's player objects live: entering picture-in-picture on
+// Douyin, iQIYI, bilibili and other players, preparing iQIYI for automatic
+// picture-in-picture, and leaving it (YouTube's mini player included).
+//
+// Each *InMainWorld function is sent to the page on its own by
+// chrome.scripting.executeScript, so it must not use anything outside its
+// own body.
+
+// The extension API this module calls, from chrome or a test double.
+interface PipMainWorldChromeApi {
+  scripting?: typeof chrome.scripting;
+  runtime?: { lastError?: chrome.runtime.LastError };
+}
+
+// What a main-world function returned, or why it could not run.
+type MainWorldPayload = Record<string, unknown>;
+
+interface PipEnterResult {
+  ok: boolean;
+  before: boolean;
+  after: boolean;
+  attempted: boolean;
+  used: string;
+  error: string;
+}
+
+interface PipAutoSetupResult {
+  ok: boolean;
+  bound: boolean;
+  preparedVideos: number;
+  error: string;
+}
+
+interface PipExitResult {
+  ok: boolean;
+  before: boolean;
+  after: boolean;
+  attemptedExit: boolean;
+  error: string;
+}
+
+interface YoutubePipExitResult extends PipExitResult {
+  unminimized: boolean;
+}
+
+// A player method to try, with its arguments.
+interface PlayerMethodCandidate {
+  name: string;
+  args: unknown[];
+}
+
+type MainWorldFunction = () => unknown;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function getSenderFrameTarget(
+  sender: Pick<chrome.runtime.MessageSender, 'tab' | 'frameId'> | null | undefined
+): { tabId: number; frameId: number } | null {
   const senderTab = sender && sender.tab ? sender.tab : null;
   const tabId = senderTab && typeof senderTab.id === 'number' ? senderTab.id : null;
   if (typeof tabId !== 'number') {
@@ -11,24 +70,27 @@ function getSenderFrameTarget(sender) {
   };
 }
 
-function normalizeExecuteScriptPayload(results) {
-  const first = Array.isArray(results) && results.length > 0 ? results[0] : null;
-  const payload = first && typeof first.result === 'object' ? first.result : null;
-  return payload || { ok: false, reason: 'no-result' };
+function normalizeExecuteScriptPayload(results: unknown): MainWorldPayload {
+  const first: unknown = Array.isArray(results) && results.length > 0 ? results[0] : null;
+  return isRecord(first) && isRecord(first.result) ? first.result : { ok: false, reason: 'no-result' };
 }
 
-function executeMainWorld(chromeApi, sender, func) {
+// Runs `func` in the main world of the frame that sent the message.
+function executeMainWorld(
+  chromeApi: PipMainWorldChromeApi | null | undefined,
+  sender: Pick<chrome.runtime.MessageSender, 'tab' | 'frameId'> | null | undefined,
+  func: MainWorldFunction
+): Promise<MainWorldPayload> {
   const target = getSenderFrameTarget(sender);
   if (!target) {
     return Promise.resolve({ ok: false, reason: 'no-tab' });
   }
-  if (!chromeApi ||
-      !chromeApi.scripting ||
-      typeof chromeApi.scripting.executeScript !== 'function') {
+  const scripting = chromeApi ? chromeApi.scripting : null;
+  if (!chromeApi || !scripting || typeof scripting.executeScript !== 'function') {
     return Promise.resolve({ ok: false, reason: 'executeScript-unavailable' });
   }
   return new Promise((resolve) => {
-    chromeApi.scripting.executeScript({
+    scripting.executeScript({
       target: { tabId: target.tabId, frameIds: [target.frameId] },
       world: 'MAIN',
       func: func
@@ -45,8 +107,8 @@ function executeMainWorld(chromeApi, sender, func) {
   });
 }
 
-async function siteTryEnterPiPInMainWorld() {
-  const result = {
+async function siteTryEnterPiPInMainWorld(): Promise<PipEnterResult> {
+  const result: PipEnterResult = {
     ok: true,
     before: Boolean(document.pictureInPictureElement),
     after: Boolean(document.pictureInPictureElement),
@@ -69,9 +131,9 @@ async function siteTryEnterPiPInMainWorld() {
   const host = String(location.hostname || '').toLowerCase();
   const isDouyinHost = host.endsWith('.douyin.com') || host === 'douyin.com';
   const isIqiyiHost = host.endsWith('.iqiyi.com') || host === 'iqiyi.com' || host.includes('.iqiyi.');
-  const candidateVideos = [];
-  const seen = new WeakSet();
-  const pushVideo = (video) => {
+  const candidateVideos: HTMLVideoElement[] = [];
+  const seen = new WeakSet<HTMLVideoElement>();
+  const pushVideo = (video: Element): void => {
     if (!(video instanceof HTMLVideoElement)) {
       return;
     }
@@ -92,20 +154,14 @@ async function siteTryEnterPiPInMainWorld() {
     pushVideo(node);
   });
 
-  const getArea = (video) => {
-    if (!video || typeof video.getBoundingClientRect !== 'function') {
-      return 0;
-    }
+  const getArea = (video: HTMLVideoElement): number => {
     const rect = video.getBoundingClientRect();
     const width = Math.max(0, Number(rect.width || 0));
     const height = Math.max(0, Number(rect.height || 0));
     return width * height;
   };
 
-  const hasBoost = (video) => {
-    if (!video || typeof video.closest !== 'function') {
-      return false;
-    }
+  const hasBoost = (video: HTMLVideoElement): boolean => {
     if (isDouyinHost) {
       return Boolean(video.closest('.xgplayer, .xgplayer-video-wrap, .xg-video-container'));
     }
@@ -118,8 +174,8 @@ async function siteTryEnterPiPInMainWorld() {
     return false;
   };
 
-  const scoreVideo = (video) => {
-    if (!(video instanceof HTMLVideoElement) || !video.isConnected) {
+  const scoreVideo = (video: HTMLVideoElement): number => {
+    if (!video.isConnected) {
       return -1;
     }
     const area = getArea(video);
@@ -149,22 +205,23 @@ async function siteTryEnterPiPInMainWorld() {
       continue;
     }
     try {
-      video.autoPictureInPicture = true;
-    } catch (e) {}
+      // Chrome's automatic picture-in-picture; not in the standard DOM types.
+      Reflect.set(video, 'autoPictureInPicture', true);
+    } catch (_error) {}
     try {
       if (video.disablePictureInPicture) {
         video.disablePictureInPicture = false;
       }
-    } catch (e) {}
+    } catch (_error) {}
     try {
       if (video.hasAttribute('disablepictureinpicture')) {
         video.removeAttribute('disablepictureinpicture');
       }
-    } catch (e) {}
+    } catch (_error) {}
     if (isIqiyiHost && video.paused && !video.ended) {
       try {
         await video.play();
-      } catch (e) {}
+      } catch (_error) {}
     }
     if (typeof video.requestPictureInPicture !== 'function') {
       continue;
@@ -176,8 +233,8 @@ async function siteTryEnterPiPInMainWorld() {
       if (document.pictureInPictureElement) {
         break;
       }
-    } catch (e) {
-      result.error = e && e.name ? String(e.name) : String(e);
+    } catch (error) {
+      result.error = error instanceof Error && error.name ? error.name : String(error);
     }
   }
 
@@ -185,8 +242,8 @@ async function siteTryEnterPiPInMainWorld() {
   return result;
 }
 
-async function iqiyiTryEnterPiPInMainWorld() {
-  const result = {
+async function iqiyiTryEnterPiPInMainWorld(): Promise<PipEnterResult> {
+  const result: PipEnterResult = {
     ok: true,
     before: Boolean(document.pictureInPictureElement),
     after: Boolean(document.pictureInPictureElement),
@@ -195,19 +252,31 @@ async function iqiyiTryEnterPiPInMainWorld() {
     error: ''
   };
 
-  const callMethod = async (obj, candidates) => {
-    if (!obj || typeof obj !== 'object' || !Array.isArray(candidates)) {
+  const isObject = (value: unknown): value is object => Boolean(value) && typeof value === 'object';
+  // Reads obj.a.b... through the page's objects; undefined where a step is missing.
+  const readPath = (source: unknown, path: string[]): unknown => {
+    let current = source;
+    for (const key of path) {
+      if (!isObject(current)) {
+        return undefined;
+      }
+      current = Reflect.get(current, key);
+    }
+    return current;
+  };
+
+  const callMethod = async (obj: unknown, candidates: PlayerMethodCandidate[]): Promise<boolean> => {
+    if (!isObject(obj)) {
       return false;
     }
-    for (const candidate of candidates) {
-      const name = typeof candidate === 'string' ? candidate : candidate && candidate.name;
-      const args = (candidate && Array.isArray(candidate.args)) ? candidate.args : [];
-      if (typeof obj[name] !== 'function') {
+    for (const { name, args } of candidates) {
+      const method: unknown = Reflect.get(obj, name);
+      if (typeof method !== 'function') {
         continue;
       }
       try {
-        const output = obj[name].apply(obj, args);
-        if (output && typeof output.then === 'function') {
+        const output: unknown = Reflect.apply(method, obj, args);
+        if (isObject(output) && 'then' in output && typeof output.then === 'function') {
           await output;
         }
         result.attempted = true;
@@ -215,28 +284,30 @@ async function iqiyiTryEnterPiPInMainWorld() {
         if (document.pictureInPictureElement) {
           return true;
         }
-      } catch (e) {
+      } catch (_error) {
         // Try next candidate.
       }
     }
     return false;
   };
 
-  const trySetPiPProperty = (obj) => {
-    if (!obj || typeof obj !== 'object' || !('pictureInPicture' in obj)) {
+  const trySetPiPProperty = (obj: unknown): boolean => {
+    if (!isObject(obj) || !('pictureInPicture' in obj)) {
       return false;
     }
     try {
-      obj.pictureInPicture = true;
+      if (!Reflect.set(obj, 'pictureInPicture', true)) {
+        return false;
+      }
       result.attempted = true;
       result.used = 'property:pictureInPicture';
       return Boolean(document.pictureInPictureElement);
-    } catch (e) {
+    } catch (_error) {
       return false;
     }
   };
 
-  const getPrimaryVideo = () => {
+  const getPrimaryVideo = (): HTMLVideoElement | null => {
     const selectors = [
       '.iqp-player-videolayer video',
       '.iqp-player video',
@@ -259,52 +330,46 @@ async function iqiyiTryEnterPiPInMainWorld() {
     return null;
   };
 
-  const roots = [];
-  const rootSet = new WeakSet();
-  const pushRoot = (obj) => {
-    if (!obj || typeof obj !== 'object') {
-      return;
-    }
-    if (rootSet.has(obj)) {
+  const roots: object[] = [];
+  const rootSet = new WeakSet<object>();
+  const pushRoot = (obj: unknown): void => {
+    if (!isObject(obj) || rootSet.has(obj)) {
       return;
     }
     rootSet.add(obj);
     roots.push(obj);
   };
+  const pushPlayers = (players: unknown): void => {
+    if (isObject(players)) {
+      Object.values(players).forEach(pushRoot);
+    }
+  };
+  // Calls obj[name]() when it is a method; undefined otherwise.
+  const callIfMethod = (obj: unknown, name: string, args: unknown[] = []): unknown => {
+    const method = readPath(obj, [name]);
+    return isObject(obj) && typeof method === 'function' ? Reflect.apply(method, obj, args) : undefined;
+  };
 
+  const wonder = readPath(window, ['webPlay', 'wonder']);
   try {
-    if (window.webPlay &&
-        window.webPlay.wonder &&
-        typeof window.webPlay.wonder.getPlayer === 'function') {
-      pushRoot(window.webPlay.wonder.getPlayer());
-    }
-  } catch (e) {}
+    pushRoot(callIfMethod(wonder, 'getPlayer'));
+  } catch (_error) {}
   try {
-    if (window.webPlay &&
-        window.webPlay.wonder &&
-        typeof window.webPlay.wonder.getPCBridge === 'function') {
-      pushRoot(window.webPlay.wonder.getPCBridge());
-    }
-  } catch (e) {}
+    pushRoot(callIfMethod(wonder, 'getPCBridge'));
+  } catch (_error) {}
   try {
-    if (window.webPlay &&
-        window.webPlay.wonder &&
-        window.webPlay.wonder._manager &&
-        window.webPlay.wonder._manager._players &&
-        typeof window.webPlay.wonder._manager._players === 'object') {
-      Object.values(window.webPlay.wonder._manager._players).forEach((player) => {
-        pushRoot(player);
-      });
-    }
-  } catch (e) {}
+    pushPlayers(readPath(wonder, ['_manager', '_players']));
+  } catch (_error) {}
 
-  const collectLoaderPlayers = async (timeoutMs) => {
-    if (!window.QiyiPlayerLoader || typeof window.QiyiPlayerLoader.ready !== 'function') {
+  const collectLoaderPlayers = async (timeoutMs: number): Promise<void> => {
+    const loader = readPath(window, ['QiyiPlayerLoader']);
+    const ready = readPath(loader, ['ready']);
+    if (!isObject(loader) || typeof ready !== 'function') {
       return;
     }
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
       let done = false;
-      const finish = () => {
+      const finish = (): void => {
         if (done) {
           return;
         }
@@ -313,31 +378,25 @@ async function iqiyiTryEnterPiPInMainWorld() {
       };
       const timer = setTimeout(finish, Math.max(120, Number(timeoutMs || 260)));
       try {
-        window.QiyiPlayerLoader.ready((manager) => {
+        Reflect.apply(ready, loader, [(manager: unknown) => {
           try {
-            if (manager && typeof manager === 'object') {
+            if (isObject(manager)) {
               pushRoot(manager);
-              if (manager._players && typeof manager._players === 'object') {
-                Object.values(manager._players).forEach((player) => {
-                  pushRoot(player);
-                });
-              }
-              if (typeof manager.getPlayerById === 'function') {
-                ['mainContent', 'root', 'player', '5fcma2g3wzdcvv2smpk4d3h3vq'].forEach((id) => {
-                  try {
-                    pushRoot(manager.getPlayerById(id));
-                  } catch (e) {}
-                });
-              }
+              pushPlayers(readPath(manager, ['_players']));
+              ['mainContent', 'root', 'player', '5fcma2g3wzdcvv2smpk4d3h3vq'].forEach((id) => {
+                try {
+                  pushRoot(callIfMethod(manager, 'getPlayerById', [id]));
+                } catch (_error) {}
+              });
             }
-          } catch (e) {
+          } catch (_error) {
             // Ignore manager traversal errors.
           } finally {
             clearTimeout(timer);
             finish();
           }
-        });
-      } catch (e) {
+        }]);
+      } catch (_error) {
         clearTimeout(timer);
         finish();
       }
@@ -349,7 +408,7 @@ async function iqiyiTryEnterPiPInMainWorld() {
     await collectLoaderPlayers(360);
   }
 
-  const methodCandidates = [
+  const methodCandidates: PlayerMethodCandidate[] = [
     { name: 'openPictureInPicture', args: [] },
     { name: 'toggleBrowserPicInPic', args: [] },
     { name: 'togglePictureInPicture', args: [] },
@@ -381,11 +440,8 @@ async function iqiyiTryEnterPiPInMainWorld() {
       break;
     }
     for (const key of nestedKeys) {
-      if (!root || typeof root !== 'object') {
-        continue;
-      }
-      const nested = root[key];
-      if (!nested || typeof nested !== 'object') {
+      const nested: unknown = Reflect.get(root, key);
+      if (!isObject(nested)) {
         continue;
       }
       await callMethod(nested, methodCandidates);
@@ -412,8 +468,8 @@ async function iqiyiTryEnterPiPInMainWorld() {
         result.attempted = true;
         result.used = 'video.requestPictureInPicture';
         await video.requestPictureInPicture();
-      } catch (e) {
-        result.error = e && e.name ? String(e.name) : String(e);
+      } catch (error) {
+        result.error = error instanceof Error && error.name ? error.name : String(error);
       }
     }
   }
@@ -422,20 +478,20 @@ async function iqiyiTryEnterPiPInMainWorld() {
   return result;
 }
 
-function iqiyiSetupAutoPiPInMainWorld() {
-  const result = {
+function iqiyiSetupAutoPiPInMainWorld(): PipAutoSetupResult {
+  const result: PipAutoSetupResult = {
     ok: true,
     bound: false,
     preparedVideos: 0,
     error: ''
   };
   try {
-    if (window.__lumnoIqiyiAutoPipSetupDone2026) {
+    if (Reflect.get(window, '__lumnoIqiyiAutoPipSetupDone2026')) {
       result.bound = true;
       return result;
     }
 
-    const getPrimaryVideo = () => {
+    const getPrimaryVideo = (): HTMLVideoElement | null => {
       const selectors = [
         '.iqp-player-videolayer video',
         '.iqp-player video',
@@ -458,7 +514,7 @@ function iqiyiSetupAutoPiPInMainWorld() {
       return null;
     };
 
-    const prepareVideo = (video) => {
+    const prepareVideo = (video: Element): boolean => {
       if (!(video instanceof HTMLVideoElement)) {
         return false;
       }
@@ -466,22 +522,23 @@ function iqiyiSetupAutoPiPInMainWorld() {
         return false;
       }
       try {
-        video.autoPictureInPicture = true;
-      } catch (e) {}
+        // Chrome's automatic picture-in-picture; not in the standard DOM types.
+        Reflect.set(video, 'autoPictureInPicture', true);
+      } catch (_error) {}
       try {
         if (video.disablePictureInPicture) {
           video.disablePictureInPicture = false;
         }
-      } catch (e) {}
+      } catch (_error) {}
       try {
         if (video.hasAttribute('disablepictureinpicture')) {
           video.removeAttribute('disablepictureinpicture');
         }
-      } catch (e) {}
+      } catch (_error) {}
       return true;
     };
 
-    const prepareExistingVideos = () => {
+    const prepareExistingVideos = (): number => {
       let count = 0;
       const list = Array.from(document.querySelectorAll('video'));
       for (const video of list) {
@@ -492,14 +549,15 @@ function iqiyiSetupAutoPiPInMainWorld() {
       return count;
     };
 
+    // The prototype's setActionHandler, in case the page replaced its own.
     const mediaSession = ('mediaSession' in navigator) ? navigator.mediaSession : null;
-    const proto = mediaSession ? Object.getPrototypeOf(mediaSession) : null;
-    const nativeSetActionHandler = proto && typeof proto.setActionHandler === 'function'
-      ? proto.setActionHandler
+    const proto: unknown = mediaSession ? Object.getPrototypeOf(mediaSession) : null;
+    const nativeSetActionHandler: unknown = proto && typeof proto === 'object'
+      ? Reflect.get(proto, 'setActionHandler')
       : null;
 
-    if (mediaSession && nativeSetActionHandler) {
-      nativeSetActionHandler.call(mediaSession, 'enterpictureinpicture', async () => {
+    if (mediaSession && typeof nativeSetActionHandler === 'function') {
+      Reflect.apply(nativeSetActionHandler, mediaSession, ['enterpictureinpicture', async () => {
         const video = getPrimaryVideo();
         if (!video || typeof video.requestPictureInPicture !== 'function') {
           return;
@@ -509,21 +567,21 @@ function iqiyiSetupAutoPiPInMainWorld() {
           if (!video.paused || document.visibilityState === 'hidden') {
             await video.requestPictureInPicture();
           }
-        } catch (e) {}
-      });
-      nativeSetActionHandler.call(mediaSession, 'leavepictureinpicture', async () => {
+        } catch (_error) {}
+      }]);
+      Reflect.apply(nativeSetActionHandler, mediaSession, ['leavepictureinpicture', async () => {
         try {
           if (document.pictureInPictureElement && typeof document.exitPictureInPicture === 'function') {
             await document.exitPictureInPicture();
           }
-        } catch (e) {}
-      });
+        } catch (_error) {}
+      }]);
       result.bound = true;
     }
 
     result.preparedVideos = prepareExistingVideos();
 
-    if (!window.__lumnoIqiyiAutoPipObserver2026) {
+    if (!Reflect.get(window, '__lumnoIqiyiAutoPipObserver2026')) {
       const observer = new MutationObserver(() => {
         prepareExistingVideos();
       });
@@ -531,20 +589,20 @@ function iqiyiSetupAutoPiPInMainWorld() {
         childList: true,
         subtree: true
       });
-      window.__lumnoIqiyiAutoPipObserver2026 = observer;
+      Reflect.set(window, '__lumnoIqiyiAutoPipObserver2026', observer);
     }
 
-    window.__lumnoIqiyiAutoPipSetupDone2026 = true;
+    Reflect.set(window, '__lumnoIqiyiAutoPipSetupDone2026', true);
     return result;
-  } catch (e) {
+  } catch (error) {
     result.ok = false;
-    result.error = e && e.message ? String(e.message) : String(e);
+    result.error = error instanceof Error && error.message ? error.message : String(error);
     return result;
   }
 }
 
-async function forceExitPiPInMainWorld() {
-  const result = {
+async function forceExitPiPInMainWorld(): Promise<PipExitResult> {
+  const result: PipExitResult = {
     ok: true,
     before: Boolean(document.pictureInPictureElement),
     after: Boolean(document.pictureInPictureElement),
@@ -556,15 +614,15 @@ async function forceExitPiPInMainWorld() {
       result.attemptedExit = true;
       await document.exitPictureInPicture();
     }
-  } catch (e) {
-    result.error = e && e.name ? String(e.name) : String(e);
+  } catch (error) {
+    result.error = error instanceof Error && error.name ? error.name : String(error);
   }
   result.after = Boolean(document.pictureInPictureElement);
   return result;
 }
 
-async function youtubeForceExitPiPInMainWorld() {
-  const result = {
+async function youtubeForceExitPiPInMainWorld(): Promise<YoutubePipExitResult> {
+  const result: YoutubePipExitResult = {
     ok: true,
     before: Boolean(document.pictureInPictureElement),
     after: Boolean(document.pictureInPictureElement),
@@ -573,35 +631,39 @@ async function youtubeForceExitPiPInMainWorld() {
     error: ''
   };
 
-  const getPlayer = () => {
+  // The YouTube player object: #movie_player, or the one <ytd-player> holds.
+  const getPlayer = (): object | null => {
     const moviePlayer = document.getElementById('movie_player');
-    if (moviePlayer && typeof moviePlayer === 'object') {
+    if (moviePlayer) {
       return moviePlayer;
     }
     const ytdPlayer = document.querySelector('ytd-player');
-    if (ytdPlayer && typeof ytdPlayer.getPlayer === 'function') {
+    const getPlayerMethod: unknown = ytdPlayer ? Reflect.get(ytdPlayer, 'getPlayer') : null;
+    if (ytdPlayer && typeof getPlayerMethod === 'function') {
       try {
-        return ytdPlayer.getPlayer();
-      } catch (e) {
+        const player: unknown = Reflect.apply(getPlayerMethod, ytdPlayer, []);
+        return player && typeof player === 'object' ? player : null;
+      } catch (_error) {
         return null;
       }
     }
     return null;
   };
 
-  const callPlayerMethod = (player, name, args) => {
-    if (!player || typeof player[name] !== 'function') {
+  const callPlayerMethod = (player: object, name: string, args: unknown[]): boolean => {
+    const method: unknown = Reflect.get(player, name);
+    if (typeof method !== 'function') {
       return false;
     }
     try {
-      player[name].apply(player, Array.isArray(args) ? args : []);
+      Reflect.apply(method, player, args);
       return true;
-    } catch (e) {
+    } catch (_error) {
       return false;
     }
   };
 
-  const forceUnminimize = () => {
+  const forceUnminimize = (): boolean => {
     const player = getPlayer();
     if (!player) {
       return false;
@@ -620,17 +682,27 @@ async function youtubeForceExitPiPInMainWorld() {
       result.attemptedExit = true;
       await document.exitPictureInPicture();
     }
-  } catch (e) {
-    result.error = e && e.name ? String(e.name) : String(e);
+  } catch (error) {
+    result.error = error instanceof Error && error.name ? error.name : String(error);
   }
   result.unminimized = forceUnminimize() || result.unminimized;
   result.after = Boolean(document.pictureInPictureElement);
   return result;
 }
 
-function create(options) {
-  const settings = options && typeof options === 'object' ? options : {};
-  const chromeApi = settings.chromeApi || (typeof chrome !== 'undefined' ? chrome : null);
+type PipSender = Pick<chrome.runtime.MessageSender, 'tab' | 'frameId'> | null | undefined;
+
+interface PipMainWorld {
+  siteTryEnterPiPInMainWorld(sender: PipSender): Promise<MainWorldPayload>;
+  iqiyiTryEnterPiPInMainWorld(sender: PipSender): Promise<MainWorldPayload>;
+  iqiyiSetupAutoPiPInMainWorld(sender: PipSender): Promise<MainWorldPayload>;
+  forceExitPiPInMainWorld(sender: PipSender): Promise<MainWorldPayload>;
+  youtubeForceExitPiPInMainWorld(sender: PipSender): Promise<MainWorldPayload>;
+}
+
+function create(options?: { chromeApi?: PipMainWorldChromeApi | null } | null): PipMainWorld {
+  const settings = options || {};
+  const chromeApi: PipMainWorldChromeApi | null = settings.chromeApi || (typeof chrome !== 'undefined' ? chrome : null);
 
   return {
     siteTryEnterPiPInMainWorld(sender) {
@@ -651,6 +723,16 @@ function create(options) {
   };
 }
 
+export type {
+  MainWorldPayload,
+  PipAutoSetupResult,
+  PipEnterResult,
+  PipExitResult,
+  PipMainWorld,
+  PipMainWorldChromeApi,
+  PipSender,
+  YoutubePipExitResult
+};
 export {
   create,
   executeMainWorld,

@@ -1,67 +1,107 @@
-// @ts-nocheck
+// The site search providers a page offers: the background's list, or when
+// the background does not answer, the bundled list merged with the custom
+// and disabled providers from settings.
 import * as LumnoMessaging from '../../platform/messaging';
-const STORAGE_KEYS = Object.freeze({
+import type { MessageRuntime } from '../../platform/messaging';
+import { readSiteSearchProviders } from '../../domain/search/site-search-provider-reader';
+import type { SiteSearchProvider } from '../../domain/search/types';
+import type { StorageAreaLike, StorageItems } from '../../domain/storage-port';
+
+interface SiteSearchStorageKeys {
+  custom: string;
+  disabled: string;
+}
+
+type MergeCustomProviders = (
+  baseItems: readonly SiteSearchProvider[],
+  customItems: readonly SiteSearchProvider[]
+) => SiteSearchProvider[];
+
+interface SiteSearchStoreOptions {
+  chromeApi?: { runtime?: MessageRuntime & { getURL?(path: string): string } } | null;
+  storageArea?: StorageAreaLike | null;
+  storageKeys?: SiteSearchStorageKeys;
+  // Used when the bundled list cannot load.
+  defaultProviders?: SiteSearchProvider[];
+  mergeCustomProviders?: MergeCustomProviders | null;
+  getResourceUrl?(path: string): string;
+  getStorageValues?(keys: string[]): Promise<StorageItems>;
+}
+
+const STORAGE_KEYS: Readonly<SiteSearchStorageKeys> = Object.freeze({
   custom: '_x_extension_site_search_custom_2024_unique_',
   disabled: '_x_extension_site_search_disabled_2024_unique_'
 });
 
-function getRuntimeUrl(chromeApi, path) {
-  return chromeApi && chromeApi.runtime && typeof chromeApi.runtime.getURL === 'function'
-    ? chromeApi.runtime.getURL(path)
-    : path;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
 }
 
-function getStorageValues(storageArea, keys) {
+function getRuntimeUrl(chromeApi: SiteSearchStoreOptions['chromeApi'], path: string): string {
+  const runtime = chromeApi ? chromeApi.runtime : null;
+  return runtime && typeof runtime.getURL === 'function' ? runtime.getURL(path) : path;
+}
+
+// The stored values, read through the callback or the promise the area
+// returns; empty when the area is missing or the read fails.
+function getStorageValues(storageArea: StorageAreaLike | null | undefined, keys: string[]): Promise<StorageItems> {
   return new Promise((resolve) => {
-    if (!storageArea || typeof storageArea.get !== 'function') {
+    if (!storageArea) {
       resolve({});
       return;
     }
     let settled = false;
-    const finish = (result) => {
+    const finish = (result?: unknown): void => {
       if (settled) {
         return;
       }
       settled = true;
-      resolve(result || {});
+      resolve(isRecord(result) ? result : {});
     };
     try {
       const maybePromise = storageArea.get(keys, finish);
       if (maybePromise && typeof maybePromise.then === 'function') {
         maybePromise.then(finish).catch(() => finish({}));
       }
-    } catch (error) {
+    } catch (_error) {
       finish({});
     }
   });
 }
 
-function normalizeDisabledKeys(items) {
+function normalizeDisabledKeys(items: unknown): string[] {
   return Array.isArray(items)
-    ? items.map((item) => String(item || '').toLowerCase()).filter(Boolean)
+    ? items.map((item: unknown) => String(item || '').toLowerCase()).filter(Boolean)
     : [];
 }
 
-function mergeProviders(baseItems, customItems, mergeCustomProviders) {
+function getProviderKey(item: SiteSearchProvider | null | undefined): string {
+  return String(item && item.key ? item.key : '').toLowerCase();
+}
+
+// Custom providers first (each inheriting how its built-in submits), then
+// the built-in ones they do not replace.
+function mergeProviders(
+  baseItems: readonly SiteSearchProvider[] | null | undefined,
+  customItems: readonly SiteSearchProvider[] | null | undefined,
+  mergeCustomProviders?: MergeCustomProviders | null
+): SiteSearchProvider[] {
   if (typeof mergeCustomProviders === 'function') {
-    return mergeCustomProviders(baseItems, customItems);
+    return mergeCustomProviders(baseItems || [], customItems || []);
   }
-  const merged = [];
-  const seen = new Set();
-  const baseMap = new Map((baseItems || []).map((item) => [
-    String(item && item.key ? item.key : '').toLowerCase(),
-    item
-  ]));
+  const merged: SiteSearchProvider[] = [];
+  const seen = new Set<string>();
+  const baseMap = new Map((baseItems || []).map((item) => [getProviderKey(item), item]));
   (customItems || []).forEach((item) => {
-    if (item && item.disabled) {
+    if (item.disabled) {
       return;
     }
-    const key = String(item && item.key ? item.key : '').toLowerCase();
+    const key = getProviderKey(item);
     if (!key || seen.has(key)) {
       return;
     }
     seen.add(key);
-    const builtinKey = String(item && item.builtinKey ? item.builtinKey : '').toLowerCase();
+    const builtinKey = String(item.builtinKey || '').toLowerCase();
     const baseProvider = baseMap.get(builtinKey || key);
     merged.push({
       ...item,
@@ -71,7 +111,7 @@ function mergeProviders(baseItems, customItems, mergeCustomProviders) {
     });
   });
   (baseItems || []).forEach((item) => {
-    const key = String(item && item.key ? item.key : '').toLowerCase();
+    const key = getProviderKey(item);
     if (!key || seen.has(key)) {
       return;
     }
@@ -81,33 +121,37 @@ function mergeProviders(baseItems, customItems, mergeCustomProviders) {
   return merged;
 }
 
-function mergeStoredProviders(baseItems, customItems, disabledKeys, mergeCustomProviders) {
+// The bundled providers without the disabled ones, merged with the custom
+// ones from settings.
+function mergeStoredProviders(
+  baseItems: readonly SiteSearchProvider[] | null | undefined,
+  customItems: readonly SiteSearchProvider[] | null | undefined,
+  disabledKeys: unknown,
+  mergeCustomProviders?: MergeCustomProviders | null
+): SiteSearchProvider[] {
   const disabled = normalizeDisabledKeys(disabledKeys);
-  const baseMap = new Map((baseItems || []).map((item) => [
-    String(item && item.key ? item.key : '').toLowerCase(),
-    item
-  ]));
-  const hydratedCustom = (customItems || []).map((item) => {
-    const key = String(item && item.key ? item.key : '').toLowerCase();
-    const builtinKey = String(item && item.builtinKey ? item.builtinKey : '').toLowerCase();
+  const baseMap = new Map((baseItems || []).map((item) => [getProviderKey(item), item]));
+  const hydratedCustom = (customItems || []).map((item): SiteSearchProvider => {
+    const key = getProviderKey(item);
+    const builtinKey = String(item.builtinKey || '').toLowerCase();
     const baseProvider = baseMap.get(builtinKey || key);
     return {
       ...item,
-      action: String(item && item.action || (baseProvider && baseProvider.action) || '').trim(),
+      action: String(item.action || (baseProvider && baseProvider.action) || '').trim(),
       submitStrategy: String(
-        item && item.submitStrategy || (baseProvider && baseProvider.submitStrategy) || ''
+        item.submitStrategy || (baseProvider && baseProvider.submitStrategy) || ''
       ).trim()
     };
   });
   const filteredBase = (baseItems || []).filter((item) => {
-    const key = String(item && item.key ? item.key : '').toLowerCase();
+    const key = getProviderKey(item);
     return key && !disabled.includes(key);
   });
   return mergeProviders(filteredBase, hydratedCustom, mergeCustomProviders);
 }
 
-function loadSiteSearchProviders(options) {
-  const settings = options && typeof options === 'object' ? options : {};
+function loadSiteSearchProviders(options?: SiteSearchStoreOptions | null): Promise<SiteSearchProvider[]> {
+  const settings: SiteSearchStoreOptions = options || {};
   const chromeApi = settings.chromeApi;
   const storageArea = settings.storageArea || null;
   const storageKeys = settings.storageKeys || STORAGE_KEYS;
@@ -115,18 +159,18 @@ function loadSiteSearchProviders(options) {
   const mergeCustomProviders = settings.mergeCustomProviders;
   const getResourceUrl = typeof settings.getResourceUrl === 'function'
     ? settings.getResourceUrl
-    : (path) => getRuntimeUrl(chromeApi, path);
+    : (path: string) => getRuntimeUrl(chromeApi, path);
   const getValues = typeof settings.getStorageValues === 'function'
     ? settings.getStorageValues
-    : (keys) => getStorageValues(storageArea, keys);
+    : (keys: string[]) => getStorageValues(storageArea, keys);
 
   const loadLocalProviders = fetch(getResourceUrl('assets/data/site-search.json'))
     .then((response) => response.json())
-    .then((data) => (data && Array.isArray(data.items) ? data.items : []))
-    .catch(() => []);
+    .then((data: unknown) => readSiteSearchProviders(isRecord(data) ? data.items : null))
+    .catch((): SiteSearchProvider[] => []);
 
   const loadCustomProviders = getValues([storageKeys.custom])
-    .then((result) => (Array.isArray(result[storageKeys.custom]) ? result[storageKeys.custom] : []));
+    .then((result) => readSiteSearchProviders(result[storageKeys.custom]));
 
   const loadDisabledKeys = getValues([storageKeys.disabled])
     .then((result) => normalizeDisabledKeys(result[storageKeys.disabled]));
@@ -138,25 +182,27 @@ function loadSiteSearchProviders(options) {
     });
 
   return new Promise((resolve) => {
-    if (!chromeApi || !chromeApi.runtime || typeof chromeApi.runtime.sendMessage !== 'function') {
+    const runtime = chromeApi ? chromeApi.runtime : null;
+    if (!runtime || typeof runtime.sendMessage !== 'function') {
       loadFallback().then(resolve);
       return;
     }
     try {
-      LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, { action: 'getSiteSearchProviders' }, (response) => {
-        const items = response && Array.isArray(response.items) ? response.items : [];
+      LumnoMessaging.sendBackgroundMessage(runtime, { action: 'getSiteSearchProviders' }, (response) => {
+        const items = response && 'items' in response && Array.isArray(response.items) ? response.items : [];
         if (items.length > 0) {
           resolve(items);
           return;
         }
         loadFallback().then(resolve);
       });
-    } catch (error) {
+    } catch (_error) {
       loadFallback().then(resolve);
     }
   });
 }
 
+export type { MergeCustomProviders, SiteSearchStorageKeys, SiteSearchStoreOptions };
 export {
   STORAGE_KEYS,
   getStorageValues,

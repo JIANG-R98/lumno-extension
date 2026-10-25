@@ -21,6 +21,7 @@ import {
   FAVICON_REQUEST_BLACKLIST_STORAGE_KEY
 } from '../domain/settings';
 import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
+import { readSiteSearchProviders } from '../domain/search/site-search-provider-reader';
 import { normalizeHost, storageArea, warnBackgroundFailure } from './worker-context';
 import './browser-urls-service';
 import type { BlacklistRule } from '../domain/blacklist-utils';
@@ -79,10 +80,6 @@ interface SiteSearchIconWarmItem {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
-}
-
-function isSiteSearchProvider(value: unknown): value is SiteSearchProvider {
-  return isRecord(value) && typeof value.key === 'string';
 }
 
 // Hosts whose favicon may have changed since it was cached, marked on visits.
@@ -981,7 +978,7 @@ function drainSiteSearchIconWarmQueue(): void {
 }
 
 export function scheduleSiteSearchProviderIconWarmup(providers: unknown, preferredTheme?: unknown): void {
-  const items: SiteSearchProvider[] = Array.isArray(providers) ? providers.filter(isSiteSearchProvider) : [];
+  const items = readSiteSearchProviders(providers);
   if (items.length === 0) {
     return;
   }
