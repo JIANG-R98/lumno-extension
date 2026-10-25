@@ -1,8 +1,37 @@
 // The feedback button and popover: community links, QR code refresh and
 // the React-rendered control.
+import type { CommunityLinks } from '../domain/community-links';
+import type * as LumnoCommunityLinks from '../platform/community-links';
+import type { Disposition } from '../domain/navigation-disposition';
+import { queryHtmlElement } from '../shared/dom-lookup';
 import * as LumnoNewtabDismissStack from './dismiss-stack';
+import type { Translate } from './newtab-types';
+import type { createFeedbackControlApi, FeedbackControlController, FeedbackControlModel } from './react/feedback';
 
-function createFeedbackControlRuntime(deps) {
+interface FeedbackControlState {
+  feedbackLinks: CommunityLinks | null;
+  currentResolvedLocale: string;
+  currentLanguageMode: string;
+  feedbackControl: HTMLDivElement | null;
+  feedbackButton: HTMLElement | null;
+  feedbackReactController: FeedbackControlController | null;
+}
+
+interface FeedbackControlDeps {
+  COMMUNITY_LINKS: Pick<typeof LumnoCommunityLinks,
+    'normalizeHttpsUrl' | 'load' | 'getCommunityChannel' | 'buildFreshQrUrl' | 'getReviewUrl'>;
+  LUMNO_FEEDBACK_LINKS_FALLBACK: CommunityLinks;
+  getSystemLocale(): string;
+  normalizeLocale(locale: unknown): string;
+  t: Translate;
+  openExternalNewTabUrl(url: string, disposition: Disposition): boolean;
+  hideTopActionTooltip(): void;
+  NEWTAB_FEEDBACK_CONTROL: ReturnType<typeof createFeedbackControlApi>;
+  showTopActionTooltip(anchor: HTMLElement, text: string, options?: { checkActive?: boolean; placement?: string }): void;
+  pageState: FeedbackControlState;
+}
+
+function createFeedbackControlRuntime(deps: FeedbackControlDeps) {
   const {
     COMMUNITY_LINKS,
     LUMNO_FEEDBACK_LINKS_FALLBACK,
@@ -22,11 +51,11 @@ function createFeedbackControlRuntime(deps) {
   let feedbackRefreshResultTooltipTimer = 0;
   let feedbackLinksLoaded = false;
 
-  function normalizeFeedbackHttpsUrl(value) {
+  function normalizeFeedbackHttpsUrl(value: unknown): string {
     return COMMUNITY_LINKS.normalizeHttpsUrl(value);
   }
 
-  function loadFeedbackLinks(options) {
+  function loadFeedbackLinks(options?: { force?: boolean }): Promise<CommunityLinks | null> {
     const force = Boolean(options && options.force);
     if (!force && feedbackLinksLoaded) {
       return Promise.resolve(pageState.feedbackLinks);
@@ -39,7 +68,7 @@ function createFeedbackControlRuntime(deps) {
       });
   }
 
-  function getFeedbackWebLocale() {
+  function getFeedbackWebLocale(): string {
     const locale = pageState.currentResolvedLocale ||
       (pageState.currentLanguageMode === 'system' ? getSystemLocale() : normalizeLocale(pageState.currentLanguageMode));
     if (locale === 'zh_CN') {
@@ -54,11 +83,11 @@ function createFeedbackControlRuntime(deps) {
     return 'en';
   }
 
-  function getFeedbackCommunityChannel(links) {
+  function getFeedbackCommunityChannel(links: Partial<CommunityLinks> | null): FeedbackControlModel['channel'] {
     return COMMUNITY_LINKS.getCommunityChannel(links, getFeedbackWebLocale());
   }
 
-  function clearFeedbackRefreshResultTooltipTimer() {
+  function clearFeedbackRefreshResultTooltipTimer(): void {
     if (!feedbackRefreshResultTooltipTimer) {
       return;
     }
@@ -66,11 +95,11 @@ function createFeedbackControlRuntime(deps) {
     feedbackRefreshResultTooltipTimer = 0;
   }
 
-  function buildFreshFeedbackQrUrl(value) {
+  function buildFreshFeedbackQrUrl(value: unknown): string {
     return COMMUNITY_LINKS.buildFreshQrUrl(value);
   }
 
-  function preloadFeedbackQrImage(url) {
+  function preloadFeedbackQrImage(url: string): Promise<boolean> {
     return new Promise((resolve) => {
       if (!url) {
         resolve(false);
@@ -78,7 +107,7 @@ function createFeedbackControlRuntime(deps) {
       }
       const preloader = new Image();
       let settled = false;
-      const finish = (loaded) => {
+      const finish = (loaded: boolean) => {
         if (settled) {
           return;
         }
@@ -101,7 +130,7 @@ function createFeedbackControlRuntime(deps) {
     });
   }
 
-  function buildFeedbackReactModel() {
+  function buildFeedbackReactModel(): FeedbackControlModel {
     const links = pageState.feedbackLinks || LUMNO_FEEDBACK_LINKS_FALLBACK;
     const channel = getFeedbackCommunityChannel(links);
     return {
@@ -139,14 +168,14 @@ function createFeedbackControlRuntime(deps) {
     };
   }
 
-  function syncFeedbackReactElementReferences() {
+  function syncFeedbackReactElementReferences(): void {
     if (!pageState.feedbackControl) {
       return;
     }
-    pageState.feedbackButton = pageState.feedbackControl.querySelector('.x-nt-feedback-button');
+    pageState.feedbackButton = queryHtmlElement(pageState.feedbackControl, '.x-nt-feedback-button');
   }
 
-  function renderFeedbackControlWithReact() {
+  function renderFeedbackControlWithReact(): boolean {
     if (!pageState.feedbackReactController ||
         typeof pageState.feedbackReactController.render !== 'function') {
       return false;
@@ -156,7 +185,7 @@ function createFeedbackControlRuntime(deps) {
     return true;
   }
 
-  function openFeedbackExternalUrl(url, disposition) {
+  function openFeedbackExternalUrl(url: unknown, disposition?: Disposition): boolean {
     const safeUrl = normalizeFeedbackHttpsUrl(url);
     if (!safeUrl) {
       return false;
@@ -164,27 +193,31 @@ function createFeedbackControlRuntime(deps) {
     return openExternalNewTabUrl(safeUrl, disposition || 'newTab');
   }
 
-  function updateFeedbackLanguageStrings() {
+  function updateFeedbackLanguageStrings(): void {
     renderFeedbackControlWithReact();
   }
 
-  function isFeedbackPopoverOpen() {
-    return pageState.feedbackReactController.isOpen();
+  function isFeedbackPopoverOpen(): boolean {
+    return Boolean(pageState.feedbackReactController && pageState.feedbackReactController.isOpen());
   }
 
-  function closeFeedbackPopover(options) {
+  function closeFeedbackPopover(options?: { restoreFocus?: boolean }): void {
     setFeedbackPopoverOpen(false, options);
   }
 
-  function setFeedbackPopoverOpen(open, options) {
+  function setFeedbackPopoverOpen(open: boolean, options?: { restoreFocus?: boolean }): void {
     if (!open) {
       clearFeedbackRefreshResultTooltipTimer();
       hideTopActionTooltip();
     }
+    const controller = pageState.feedbackReactController;
+    if (!controller) {
+      return;
+    }
     if (open) {
-      pageState.feedbackReactController.setOpen(true);
+      controller.setOpen(true);
     } else {
-      pageState.feedbackReactController.close(options);
+      controller.close(options);
     }
   }
 
@@ -193,11 +226,12 @@ function createFeedbackControlRuntime(deps) {
     close: () => closeFeedbackPopover({ restoreFocus: true })
   });
 
-  function createFeedbackControls() {
-    pageState.feedbackControl = document.createElement('div');
+  function createFeedbackControls(): void {
+    const control = document.createElement('div');
+    pageState.feedbackControl = control;
     pageState.feedbackReactController =
       NEWTAB_FEEDBACK_CONTROL.createFeedbackControlController(
-        pageState.feedbackControl,
+        control,
         {
           onHideTooltip() {
             clearFeedbackRefreshResultTooltipTimer();
@@ -215,13 +249,14 @@ function createFeedbackControlRuntime(deps) {
             try {
               const links = await loadFeedbackLinks({ force: true });
               pageState.feedbackLinks = links || pageState.feedbackLinks;
-              const channel = getFeedbackCommunityChannel(pageState.feedbackLinks);
+              const currentLinks = pageState.feedbackLinks;
+              const channel = getFeedbackCommunityChannel(currentLinks);
               if (channel !== 'wechat') {
                 renderFeedbackControlWithReact();
                 return {};
               }
               const refreshedUrl = buildFreshFeedbackQrUrl(
-                pageState.feedbackLinks.wechatQr ||
+                (currentLinks && currentLinks.wechatQr) ||
                   LUMNO_FEEDBACK_LINKS_FALLBACK.wechatQr
               );
               const loaded = await preloadFeedbackQrImage(refreshedUrl);
@@ -239,7 +274,7 @@ function createFeedbackControlRuntime(deps) {
                       'Could not refresh. Try again.'
                     )
                   };
-            } catch (error) {
+            } catch {
               return {
                 message: t(
                   'newtab_feedback_wechat_refresh_error',
@@ -269,4 +304,7 @@ function createFeedbackControlRuntime(deps) {
   };
 }
 
+type FeedbackControlRuntime = ReturnType<typeof createFeedbackControlRuntime>;
+
 export { createFeedbackControlRuntime };
+export type { FeedbackControlDeps, FeedbackControlRuntime, FeedbackControlState };

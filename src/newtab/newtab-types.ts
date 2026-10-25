@@ -69,6 +69,12 @@ interface ContextMenuParts {
   menu: HTMLElement;
 }
 
+// The New Tab's own theme: light, dark, or following the global theme.
+type NewtabThemeMode = 'light' | 'dark' | 'global';
+
+// Which theme the panel edits: the global one, or the New Tab's own.
+type NewtabThemeScope = 'global' | 'home';
+
 export type {
   AttachFaviconWithFallbacks,
   BindCursorTooltip,
@@ -76,6 +82,8 @@ export type {
   ContextMenuParts,
   FaviconAttachOptions,
   FormatMessage,
+  NewtabThemeMode,
+  NewtabThemeScope,
   SelectMenuController,
   SendRuntimeMessage,
   ShowToast,

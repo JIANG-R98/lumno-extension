@@ -1,7 +1,70 @@
 // Slash commands for theme, zen mode and Firefox's website appearance, and
 // the setters behind them.
+import type { WebAppearanceMode } from '../domain/messages';
+import type * as LumnoSettings from '../domain/settings';
+import type { ThemeMode } from '../domain/settings';
+import type { StorageAreaLike } from '../domain/storage-port';
 import * as LumnoMessaging from '../platform/messaging';
-function createModeCommands(deps) {
+import type { Suggestion } from '../shared/react/search/suggestion-list/types';
+import type { FormatMessage, NewtabThemeMode, NewtabThemeScope, Translate } from './newtab-types';
+import type { RenderSuggestions, SlashCommand } from './search/search-types';
+
+interface ModeCommandsState {
+  modeBadge: HTMLElement | null;
+  zenModeEnabled: boolean;
+  currentThemeMode: ThemeMode;
+  inputParts: { input: HTMLInputElement } | null;
+  bookmarkTopbarRuntime: { setVisible(visible: boolean): void } | null;
+  currentBookmarkCount: number;
+  newtabThemeScope: NewtabThemeScope;
+  globalThemeMode: ThemeMode;
+  newtabThemeMode: NewtabThemeMode;
+}
+
+interface ModeCommandsDeps {
+  t: Translate;
+  formatMessage: FormatMessage;
+  updateInputRightPadding(): void;
+  getExtensionResourceUrl(path: string): string;
+  renderSuggestions: RenderSuggestions;
+  applyNewtabTopContentVisibility(): void;
+  applyNewtabShortcutsVisibility(): void;
+  bookmarkSection: HTMLElement | null;
+  recentSection: HTMLElement | null;
+  isBookmarkTopbarMode(): boolean;
+  bookmarkCards: readonly HTMLElement[];
+  closeBookmarkCascadeMenu(): void;
+  closeShortcutContextMenu(): void;
+  closeRecentContextMenu(): void;
+  closeShortcutDialog(): void;
+  closeWallpaperPanel(): void;
+  closeFeedbackPopover(): void;
+  hideTopActionTooltip(): void;
+  hideShortcutTooltip(): void;
+  hideCursorTooltip(): void;
+  updateBookmarkSectionPosition(): void;
+  updateSearchEntryLayout(): void;
+  scheduleWallpaperAdaptiveToneUpdate(): void;
+  normalizeZenModeEnabled(value: unknown): boolean;
+  storageArea: Pick<StorageAreaLike, 'get' | 'set'> | null;
+  NEWTAB_ZEN_MODE_STORAGE_KEY: string;
+  SETTINGS: Pick<typeof LumnoSettings, 'createGlobalThemeModeStorageUpdate'>;
+  THEME_STORAGE_KEY: string;
+  applyScopedThemeMode(): void;
+  updateWallpaperLanguageStrings(): void;
+  normalizeThemeMode(value: unknown): ThemeMode;
+  NEWTAB_THEME_MODE_STORAGE_KEY: string;
+  normalizeNewtabThemeMode(value: unknown): NewtabThemeMode;
+  isNewtabThemeFollowingGlobal(): boolean;
+  normalizeNewtabThemeScope(value: unknown): NewtabThemeScope;
+  NEWTAB_THEME_SCOPE_STORAGE_KEY: string;
+  pageState: ModeCommandsState;
+}
+
+const THEME_MODE_ORDER: readonly ThemeMode[] = ['system', 'light', 'dark'];
+const WEB_APPEARANCE_ORDER: readonly WebAppearanceMode[] = ['auto', 'light', 'dark'];
+
+function createModeCommands(deps: ModeCommandsDeps) {
   const {
     t,
     formatMessage,
@@ -45,9 +108,9 @@ function createModeCommands(deps) {
   const pageState = deps.pageState;
   // Firefox's website appearance setting (the color scheme pages see), read
   // and switched through the background for the /appearance command.
-  let webAppearanceState = { supported: false, mode: 'auto' };
+  let webAppearanceState: { supported: boolean; mode: WebAppearanceMode } = { supported: false, mode: 'auto' };
 
-  function getThemeModeLabel(mode) {
+  function getThemeModeLabel(mode: string): string {
     if (mode === 'dark') {
       return t('theme_label_dark', '深色');
     }
@@ -57,7 +120,7 @@ function createModeCommands(deps) {
     return t('theme_label_system', '跟随系统');
   }
 
-  const commandDefinitions = [
+  const commandDefinitions: SlashCommand[] = [
     {
       type: 'commandNewTab',
       primary: '/new',
@@ -86,12 +149,12 @@ function createModeCommands(deps) {
     }
   ];
 
-  function getCommandMatches(rawInput) {
+  function getCommandMatches(rawInput: unknown): SlashCommand[] {
     const input = String(rawInput || '').trim().toLowerCase();
     if (!input.startsWith('/')) {
       return [];
     }
-    const matches = [];
+    const matches: SlashCommand[] = [];
     for (let i = 0; i < commandDefinitions.length; i += 1) {
       const command = commandDefinitions[i];
       // Only Firefox has a website appearance setting to switch.
@@ -110,7 +173,7 @@ function createModeCommands(deps) {
     return matches;
   }
 
-  function getCommandMatch(rawInput) {
+  function getCommandMatch(rawInput: unknown): { command: SlashCommand; completion: string } | null {
     const matches = getCommandMatches(rawInput);
     return matches.length > 0
       ? {
@@ -120,7 +183,7 @@ function createModeCommands(deps) {
       : null;
   }
 
-  function buildCommandSuggestion(command) {
+  function buildCommandSuggestion(command: SlashCommand): Suggestion {
     if (command.type === 'modeSwitch') {
       return {
         ...buildModeSuggestion(),
@@ -159,7 +222,7 @@ function createModeCommands(deps) {
     };
   }
 
-  function updateModeBadge(rawValue) {
+  function updateModeBadge(rawValue: string | null | undefined): void {
     if (!pageState.modeBadge) {
       return;
     }
@@ -189,48 +252,46 @@ function createModeCommands(deps) {
     updateInputRightPadding();
   }
 
-  function getNextThemeMode(mode) {
-    const order = ['system', 'light', 'dark'];
-    const index = order.indexOf(mode);
+  function getNextThemeMode(mode: unknown): ThemeMode {
+    const index = THEME_MODE_ORDER.findIndex((item) => item === mode);
     if (index === -1) {
       return 'light';
     }
-    return order[(index + 1) % order.length];
+    return THEME_MODE_ORDER[(index + 1) % THEME_MODE_ORDER.length];
   }
 
-  function isModeCommand(input) {
+  function isModeCommand(input: unknown): boolean {
     const raw = String(input || '').trim().toLowerCase();
     return raw === '/mode' || raw.startsWith('/mode ');
   }
 
-  function isZenCommand(input) {
+  function isZenCommand(input: unknown): boolean {
     const raw = String(input || '').trim().toLowerCase();
     return raw === '/zen' || raw.startsWith('/zen ');
   }
 
-  function isSlashCommandInput(input) {
+  function isSlashCommandInput(input: unknown): boolean {
     const raw = String(input || '').trim();
     return raw.startsWith('/');
   }
 
-  function isWebAppearanceCommand(input) {
+  function isWebAppearanceCommand(input: unknown): boolean {
     const raw = String(input || '').trim().toLowerCase();
     return webAppearanceState.supported &&
       (raw === '/appearance' || raw.startsWith('/appearance '));
   }
 
-  function getWebAppearanceModeLabel(mode) {
+  function getWebAppearanceModeLabel(mode: WebAppearanceMode): string {
     return mode === 'auto'
       ? t('web_appearance_label_auto', '自动')
       : getThemeModeLabel(mode);
   }
 
-  function getNextWebAppearanceMode(mode) {
-    const order = ['auto', 'light', 'dark'];
-    return order[(order.indexOf(mode) + 1) % order.length];
+  function getNextWebAppearanceMode(mode: WebAppearanceMode): WebAppearanceMode {
+    return WEB_APPEARANCE_ORDER[(WEB_APPEARANCE_ORDER.indexOf(mode) + 1) % WEB_APPEARANCE_ORDER.length];
   }
 
-  function buildModeSuggestion() {
+  function buildModeSuggestion(): Suggestion {
     const nextMode = getNextThemeMode(pageState.currentThemeMode);
     return {
       type: 'modeSwitch',
@@ -246,7 +307,7 @@ function createModeCommands(deps) {
     };
   }
 
-  function buildZenSuggestion() {
+  function buildZenSuggestion(): Suggestion {
     return {
       type: 'zenSwitch',
       title: pageState.zenModeEnabled
@@ -260,7 +321,7 @@ function createModeCommands(deps) {
     };
   }
 
-  function buildWebAppearanceSuggestion() {
+  function buildWebAppearanceSuggestion(): Suggestion {
     const nextMode = getNextWebAppearanceMode(webAppearanceState.mode);
     return {
       type: 'webAppearanceSwitch',
@@ -274,7 +335,7 @@ function createModeCommands(deps) {
     };
   }
 
-  function refreshWebAppearanceCommand() {
+  function refreshWebAppearanceCommand(): void {
     const rawValue = pageState.inputParts && pageState.inputParts.input
       ? (pageState.inputParts.input.value || '')
       : '';
@@ -284,7 +345,7 @@ function createModeCommands(deps) {
     }
   }
 
-  function applyWebAppearanceState(response) {
+  function applyWebAppearanceState(response: { supported?: boolean; mode?: WebAppearanceMode } | undefined): void {
     if (!response || response.supported === false || typeof response.mode !== 'string') {
       return;
     }
@@ -292,7 +353,7 @@ function createModeCommands(deps) {
     refreshWebAppearanceCommand();
   }
 
-  function loadWebAppearance() {
+  function loadWebAppearance(): void {
     if (typeof chrome === 'undefined' || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
       return;
     }
@@ -304,7 +365,7 @@ function createModeCommands(deps) {
     });
   }
 
-  function setWebAppearanceMode(mode) {
+  function setWebAppearanceMode(mode: WebAppearanceMode): void {
     // Show the choice at once; the reply carries what Firefox kept.
     webAppearanceState = { ...webAppearanceState, mode };
     refreshWebAppearanceCommand();
@@ -317,19 +378,21 @@ function createModeCommands(deps) {
     });
   }
 
-  function updateModeCommandSuggestions() {
-    if (isModeCommand(pageState.inputParts && pageState.inputParts.input ? pageState.inputParts.input.value : '')) {
-      renderSuggestions([], (pageState.inputParts.input.value || '').trim());
+  function updateModeCommandSuggestions(): void {
+    const input = pageState.inputParts && pageState.inputParts.input;
+    if (input && isModeCommand(input.value)) {
+      renderSuggestions([], (input.value || '').trim());
     }
   }
 
-  function updateZenCommandSuggestions() {
-    if (isZenCommand(pageState.inputParts && pageState.inputParts.input ? pageState.inputParts.input.value : '')) {
-      renderSuggestions([], (pageState.inputParts.input.value || '').trim());
+  function updateZenCommandSuggestions(): void {
+    const input = pageState.inputParts && pageState.inputParts.input;
+    if (input && isZenCommand(input.value)) {
+      renderSuggestions([], (input.value || '').trim());
     }
   }
 
-  function syncSectionZenVisibility(section) {
+  function syncSectionZenVisibility(section: HTMLElement | null): void {
     if (!section) {
       return;
     }
@@ -344,7 +407,7 @@ function createModeCommands(deps) {
     );
   }
 
-  function applyZenMode() {
+  function applyZenMode(): void {
     if (document.body) {
       document.body.setAttribute('data-zen-mode', pageState.zenModeEnabled ? 'true' : 'false');
     }
@@ -374,7 +437,7 @@ function createModeCommands(deps) {
     updateModeBadge(pageState.inputParts && pageState.inputParts.input ? pageState.inputParts.input.value : '');
   }
 
-  function setZenModeEnabled(enabled) {
+  function setZenModeEnabled(enabled: unknown): void {
     const nextEnabled = normalizeZenModeEnabled(enabled);
     pageState.zenModeEnabled = nextEnabled;
     if (!storageArea) {
@@ -382,20 +445,21 @@ function createModeCommands(deps) {
       updateZenCommandSuggestions();
       return;
     }
-    storageArea.set({ [NEWTAB_ZEN_MODE_STORAGE_KEY]: nextEnabled }, () => {
+    void storageArea.set({ [NEWTAB_ZEN_MODE_STORAGE_KEY]: nextEnabled }, () => {
       applyZenMode();
       updateZenCommandSuggestions();
     });
   }
 
-  function loadZenMode() {
-    if (!storageArea) {
+  function loadZenMode(): Promise<boolean> {
+    const area = storageArea;
+    if (!area) {
       pageState.zenModeEnabled = false;
       applyZenMode();
       return Promise.resolve(pageState.zenModeEnabled);
     }
     return new Promise((resolve) => {
-      storageArea.get([NEWTAB_ZEN_MODE_STORAGE_KEY], (result) => {
+      void area.get([NEWTAB_ZEN_MODE_STORAGE_KEY], (result) => {
         pageState.zenModeEnabled = normalizeZenModeEnabled(result && result[NEWTAB_ZEN_MODE_STORAGE_KEY]);
         applyZenMode();
         resolve(pageState.zenModeEnabled);
@@ -403,15 +467,15 @@ function createModeCommands(deps) {
     });
   }
 
-  function getThemeScope() {
+  function getThemeScope(): NewtabThemeScope {
     return pageState.newtabThemeScope;
   }
 
-  function getGlobalThemeStorageUpdate(mode) {
+  function getGlobalThemeStorageUpdate(mode: unknown): Record<string, ThemeMode> {
     return SETTINGS.createGlobalThemeModeStorageUpdate(mode);
   }
 
-  function setGlobalThemeMode(mode) {
+  function setGlobalThemeMode(mode: ThemeMode): void {
     const updates = getGlobalThemeStorageUpdate(mode);
     pageState.globalThemeMode = updates[THEME_STORAGE_KEY];
     if (!storageArea) {
@@ -420,14 +484,14 @@ function createModeCommands(deps) {
       updateModeCommandSuggestions();
       return;
     }
-    storageArea.set(updates, () => {
+    void storageArea.set(updates, () => {
       applyScopedThemeMode();
       updateWallpaperLanguageStrings();
       updateModeCommandSuggestions();
     });
   }
 
-  function setThemeMode(mode) {
+  function setThemeMode(mode: unknown): void {
     const nextMode = normalizeThemeMode(mode);
     const isEditingNewtabTheme = pageState.newtabThemeScope === 'home';
     const targetKey = isEditingNewtabTheme
@@ -447,14 +511,14 @@ function createModeCommands(deps) {
       updateModeCommandSuggestions();
       return;
     }
-    storageArea.set({ [targetKey]: nextStoredMode }, () => {
+    void storageArea.set({ [targetKey]: nextStoredMode }, () => {
       applyScopedThemeMode();
       updateWallpaperLanguageStrings();
       updateModeCommandSuggestions();
     });
   }
 
-  function setVisibleThemeMode(mode) {
+  function setVisibleThemeMode(mode: unknown): void {
     const nextMode = normalizeThemeMode(mode);
     if (isNewtabThemeFollowingGlobal()) {
       setGlobalThemeMode(nextMode);
@@ -468,14 +532,14 @@ function createModeCommands(deps) {
       updateModeCommandSuggestions();
       return;
     }
-    storageArea.set({ [NEWTAB_THEME_MODE_STORAGE_KEY]: nextStoredMode }, () => {
+    void storageArea.set({ [NEWTAB_THEME_MODE_STORAGE_KEY]: nextStoredMode }, () => {
       applyScopedThemeMode();
       updateWallpaperLanguageStrings();
       updateModeCommandSuggestions();
     });
   }
 
-  function setThemeScope(scope) {
+  function setThemeScope(scope: unknown): void {
     const nextScope = normalizeNewtabThemeScope(scope);
     const updates = { [NEWTAB_THEME_SCOPE_STORAGE_KEY]: nextScope };
     pageState.newtabThemeScope = nextScope;
@@ -484,7 +548,7 @@ function createModeCommands(deps) {
       updateModeCommandSuggestions();
       return;
     }
-    storageArea.set(updates, () => {
+    void storageArea.set(updates, () => {
       updateWallpaperLanguageStrings();
       updateModeCommandSuggestions();
     });
@@ -515,4 +579,7 @@ function createModeCommands(deps) {
   };
 }
 
+type ModeCommands = ReturnType<typeof createModeCommands>;
+
 export { createModeCommands };
+export type { ModeCommands, ModeCommandsDeps, ModeCommandsState };

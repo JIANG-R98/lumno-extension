@@ -1,12 +1,36 @@
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import * as LumnoMessaging from '../../platform/messaging';
+import type { MessageRuntime } from '../../platform/messaging';
 
 export const PAGE_NOTICE_ID =
   '_x_extension_newtab_notice_banner_2026_unique_';
 
+// The notice's text: a lookup, or the strings by message key.
+export interface PageNoticeMessages {
+  t?: (key: string, fallback: string) => string;
+  getRiSvg?: (id: string, sizeClass: string) => string;
+  detailsUrl?: string;
+  document?: Document;
+  bottomDock?: HTMLElement | null;
+  [key: string]: unknown;
+}
+
+export interface PageNoticeOptions {
+  // The page's query, which asks for the notice with notice=file-access.
+  params?: Pick<URLSearchParams, 'get'> | { notice?: unknown } | null;
+  chromeApi?: { runtime?: MessageRuntime & { lastError?: unknown } } | null;
+  document?: Document;
+  windowObj?: Window;
+  bottomDock?: HTMLElement | null;
+  messages?: PageNoticeMessages;
+  detailsUrl?: string;
+  onClose?: () => void;
+  openExtensionDetailsPage?: (detailsUrl: string) => void;
+}
+
 function getMessage(
-  messages: Record<string, any>,
+  messages: PageNoticeMessages,
   key: string,
   fallback: string
 ) {
@@ -18,36 +42,31 @@ function getMessage(
     : fallback;
 }
 
-function getNoticeParam(params: unknown) {
+function getNoticeParam(params: PageNoticeOptions['params']) {
   if (!params) {
     return '';
   }
-  if (
-    typeof params === 'object' &&
-    params &&
-    'get' in params &&
-    typeof params.get === 'function'
-  ) {
+  if ('get' in params && typeof params.get === 'function') {
     return String(params.get('notice') || '').trim();
   }
-  return String((params as { notice?: unknown }).notice || '').trim();
+  return 'notice' in params ? String(params.notice || '').trim() : '';
 }
 
-function openDetailsPage(options: Record<string, any>, detailsUrl: string) {
+function openDetailsPage(options: PageNoticeOptions, detailsUrl: string) {
   if (typeof options.openExtensionDetailsPage === 'function') {
     options.openExtensionDetailsPage(detailsUrl);
     return;
   }
-  const chromeApi = options.chromeApi;
+  const runtime = options.chromeApi && options.chromeApi.runtime;
   const windowObj: Window | undefined = options.windowObj;
   if (
-    chromeApi?.runtime &&
-    typeof chromeApi.runtime.sendMessage === 'function'
+    runtime &&
+    typeof runtime.sendMessage === 'function'
   ) {
-    LumnoMessaging.sendBackgroundMessage(chromeApi.runtime, 
+    LumnoMessaging.sendBackgroundMessage(runtime,
       { action: 'openExtensionDetailsPage' },
-      (response: { ok?: boolean; url?: string } | undefined) => {
-        if (chromeApi.runtime.lastError) {
+      (response) => {
+        if (runtime.lastError) {
           if (detailsUrl) {
             windowObj?.open(detailsUrl, '_blank');
           }
@@ -75,7 +94,7 @@ function PageNotice({
   onDetails
 }: {
   detailsUrl: string;
-  messages: Record<string, any>;
+  messages: PageNoticeMessages;
   onClose(): void;
   onDetails(detailsUrl: string): void;
 }) {
@@ -143,9 +162,9 @@ export interface PageNoticeController {
 }
 
 export function renderPageNotice(
-  options: Record<string, any> = {}
+  options: PageNoticeOptions = {}
 ): PageNoticeController | null {
-  const messages = options.messages || {};
+  const messages: PageNoticeMessages = options.messages || {};
   const documentObj: Document =
     options.document || messages.document || document;
   if (

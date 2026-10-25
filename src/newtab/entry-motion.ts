@@ -1,5 +1,29 @@
 // The New Tab entry animation and the ready signal once the viewport settles.
-function createEntryMotion(deps) {
+
+interface EntryMotionState {
+  // When the wallpaper was revealed (performance.now()).
+  wallpaperShownAt: number;
+  resolveNewtabEntryAnimationReady: (() => void) | null;
+  newtabReadyRequested: boolean;
+  newtabReadyViewportRevision: number;
+  newtabResizeLayoutLocked: boolean;
+}
+
+// S is the layout's record of the viewport, which the entry motion only
+// hands back to it.
+interface EntryMotionDeps<S> {
+  // The search box's container, which takes the entry state too.
+  root: HTMLElement;
+  shouldSkipNewtabEntryMotion(): boolean;
+  updateBookmarkSectionPosition(): void;
+  finishWordmarkEntryAnimation(): void;
+  rememberSearchEntryViewport(): void;
+  getSearchEntryViewportSnapshot(): S;
+  hasSearchEntryViewportChanged(snapshot: S): boolean;
+  pageState: EntryMotionState;
+}
+
+function createEntryMotion<S>(deps: EntryMotionDeps<S>) {
   const {
     root,
     shouldSkipNewtabEntryMotion,
@@ -24,7 +48,7 @@ function createEntryMotion(deps) {
   let newtabEntryAnimationTimer = 0;
   let newtabWallpaperLeadTimer = 0;
 
-  function getWallpaperLeadDelay() {
+  function getWallpaperLeadDelay(): number {
     const shownAt = Number(pageState.wallpaperShownAt) || 0;
     // The search shortcut's focus reload keeps the old page on screen until
     // this one is ready, so nothing lands at once and the lead only delays it.
@@ -35,7 +59,7 @@ function createEntryMotion(deps) {
     return Math.max(0, shownAt + NEWTAB_WALLPAPER_LEAD_MS - performance.now());
   }
 
-  function finishNewtabEntryAnimation() {
+  function finishNewtabEntryAnimation(): void {
     if (newtabEntryAnimationTimer) {
       window.clearTimeout(newtabEntryAnimationTimer);
       newtabEntryAnimationTimer = 0;
@@ -50,7 +74,7 @@ function createEntryMotion(deps) {
     }
   }
 
-  function startNewtabEntryAnimation() {
+  function startNewtabEntryAnimation(): void {
     if (!document.body) {
       return;
     }
@@ -75,7 +99,7 @@ function createEntryMotion(deps) {
     );
   }
 
-  function revealNewtabWithoutEntryMotion() {
+  function revealNewtabWithoutEntryMotion(): void {
     if (!document.body) {
       return;
     }
@@ -95,7 +119,7 @@ function createEntryMotion(deps) {
     rememberSearchEntryViewport();
   }
 
-  function scheduleNewtabReadyAfterViewportSettle() {
+  function scheduleNewtabReadyAfterViewportSettle(): void {
     if (!pageState.newtabReadyRequested ||
         !document.body ||
         document.body.getAttribute('data-nt-ready') === '1') {
@@ -142,7 +166,7 @@ function createEntryMotion(deps) {
     newtabReadySettleTimer = window.setTimeout(revealAfterViewportSettles, NEWTAB_INITIAL_VIEWPORT_SETTLE_MS);
   }
 
-  function markNewtabReady() {
+  function markNewtabReady(): void {
     if (!document.body || newtabWallpaperLeadTimer) {
       return;
     }
@@ -166,4 +190,7 @@ function createEntryMotion(deps) {
   };
 }
 
+type EntryMotion = ReturnType<typeof createEntryMotion>;
+
 export { createEntryMotion };
+export type { EntryMotion, EntryMotionDeps, EntryMotionState };
