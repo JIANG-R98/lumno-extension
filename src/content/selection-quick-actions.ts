@@ -1,19 +1,127 @@
-// @ts-nocheck
 import * as ACTION_ICON_LIBRARY from '../domain/selection-action-icons';
 import * as INTENT from '../domain/selection-intent';
 import * as SETTINGS from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import type { SelectionAction } from '../domain/selection-intent';
+import type { LocaleMessage } from '../domain/messages';
 import * as TOAST from '../shared/ui/toast';
+import type { ToastController, ToastShowOptions, ToastStyleGate } from '../shared/ui/toast';
 import * as LumnoMessaging from '../platform/messaging';
+
+type SelectionClassification = ReturnType<typeof INTENT.classifySelection>;
+
+interface ViewportBounds {
+  bottom: number;
+  left: number;
+  right: number;
+  top: number;
+}
+
+// Where the selection sits in the viewport; inline is the end of its last
+// line, where the entry button goes.
+interface SelectionRect extends ViewportBounds {
+  inline: ViewportBounds & { height: number };
+}
+
+type TextControl = HTMLInputElement | HTMLTextAreaElement;
+
+// A selection in the page's text, with its ends to tell it from a new one.
+interface DomSelectionSnapshot {
+  sourceKind: 'dom';
+  element: Element;
+  text: string;
+  rect: SelectionRect;
+  anchorNode: Node | null;
+  anchorOffset: number;
+  focusNode: Node | null;
+  focusOffset: number;
+}
+
+// A selection inside a text field, which the page's selection does not show.
+interface TextControlSelectionSnapshot {
+  sourceKind: 'text-control';
+  element: TextControl;
+  text: string;
+  rect: SelectionRect;
+  start: number;
+  end: number;
+}
+
+type SelectionSnapshot = DomSelectionSnapshot | TextControlSelectionSnapshot;
+
+// A selection worth offering actions for.
+interface SelectionCandidate {
+  classification: SelectionClassification;
+  rect: SelectionRect;
+  sourceKind: SelectionSnapshot['sourceKind'];
+  snapshot: SelectionSnapshot;
+}
+
+interface PointerDownState {
+  pointerId: number;
+  // The selection when the button went down, to tell a new one apart.
+  selection: SelectionSnapshot | null;
+}
+
+// The toolbar's elements, all made together in a closed shadow root.
+interface SelectionSurface {
+  host: HTMLDivElement;
+  shadow: ShadowRoot;
+  surface: HTMLDivElement;
+  material: HTMLSpanElement;
+  mainButton: HTMLButtonElement;
+  selectionLogo: HTMLImageElement;
+  mainLabel: HTMLSpanElement;
+  primaryDivider: HTMLSpanElement;
+  contentViewport: HTMLDivElement;
+  actionsViewport: HTMLDivElement;
+  menu: HTMLDivElement;
+}
+
+// Widths the toolbar opens through, measured once it has its final size.
+interface ToolbarGeometry {
+  contentOffset: number;
+  contentWidth: number;
+  expandedWidth: number;
+}
+
+interface ColorRgba {
+  a: number;
+  b: number;
+  g: number;
+  r: number;
+}
+
+// How the page behind the entry button reads, for a button that stays visible.
+type EntryContrastTone = 'dark' | 'light' | 'mixed';
+
+interface IconDefinition {
+  viewBox: string;
+  body: string;
+}
+
+// A page listener the feature adds while it is on and removes when it is off.
+interface PageListener {
+  attach(): void;
+  detach(): void;
+}
+
+function isElementNode(node: Node): node is Element {
+  return node.nodeType === Node.ELEMENT_NODE;
+}
+
+function isTextControlType(type: string): boolean {
+  return ['text', 'search', 'url', 'tel', 'email'].includes(type.toLowerCase());
+}
 
 (function() {
   'use strict';
 
-  if (window._x_extension_selection_quick_actions_2026_unique_) {
+  const RUNTIME_KEY = '_x_extension_selection_quick_actions_2026_unique_';
+  if (Reflect.get(window, RUNTIME_KEY)) {
     return;
   }
-  window._x_extension_selection_quick_actions_2026_unique_ = true;
-
+  Reflect.set(window, RUNTIME_KEY, true);
 
   const ENABLED_STORAGE_KEY = SETTINGS.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY;
   const LANGUAGE_STORAGE_KEY = SETTINGS.LANGUAGE_STORAGE_KEY;
@@ -35,45 +143,35 @@ import * as LumnoMessaging from '../platform/messaging';
   const ACTION_SUCCESS_DISMISS_MS = 900;
   const ACTION_FAILURE_DISMISS_MS = 2200;
   const VIEWPORT_SAFE_MARGIN_PX = 12;
-  const TEXT_INPUT_TYPES = new Set(['text', 'search', 'url', 'tel', 'email']);
   const providerStorage = LumnoSettingsStorage.getProviderStorage(chrome);
   const providerStorageRuntime = providerStorage.runtime;
   const storageArea = providerStorage.area;
 
   let enabled = false;
   let languageMode = 'system';
-  let localeMessages = null;
-  let showTimer = null;
-  let dismissTimer = null;
-  let selectionActionHideTimer = null;
-  let selectionChangeTimer = null;
-  let gestureResetTimer = null;
+  let localeMessages: Record<string, LocaleMessage> | null = null;
+  let showTimer: number | null = null;
+  let dismissTimer: number | null = null;
+  let selectionActionHideTimer: number | null = null;
+  let selectionChangeTimer: number | null = null;
+  let gestureResetTimer: number | null = null;
   let requestSequence = 0;
-  let pointerDownState = null;
+  let pointerDownState: PointerDownState | null = null;
   let selectionGestureActive = false;
-  let currentCandidate = null;
-  let host = null;
-  let shadow = null;
-  let surface = null;
-  let material = null;
-  let mainButton = null;
-  let selectionLogo = null;
-  let mainLabel = null;
-  let primaryDivider = null;
-  let contentViewport = null;
-  let actionsViewport = null;
-  let menu = null;
-  let toastHost = null;
-  let toastController = null;
-  let toastStyleGate = null;
-  let ownershipObserver = null;
-  let surfaceResizeObserver = null;
-  let toolbarEntranceAnimations = [];
-  let toolbarEntranceFrame = null;
-  let toolbarEntranceCleanupTimer = null;
-  let viewportRepositionFrame = null;
-  let hostHorizontalAnchor = 'left';
-  let attachedPageListeners = null;
+  let currentCandidate: SelectionCandidate | null = null;
+  let selectionSurface: SelectionSurface | null = null;
+  let toastHost: HTMLDivElement | null = null;
+  let toastController: Readonly<ToastController> | null = null;
+  let toastStyleGate: Readonly<ToastStyleGate> | null = null;
+  let ownershipObserver: MutationObserver | null = null;
+  let surfaceResizeObserver: ResizeObserver | null = null;
+  let toolbarEntranceAnimations: Animation[] = [];
+  // An animation frame, or a timeout where the fallback runs.
+  let toolbarEntranceFrame: number | null = null;
+  let toolbarEntranceCleanupTimer: number | null = null;
+  let viewportRepositionFrame: number | null = null;
+  let hostHorizontalAnchor: 'left' | 'right' = 'left';
+  let attachedPageListeners: PageListener[] | null = null;
 
   const HOST_ISOLATION_STYLES = Object.freeze({
     all: 'initial',
@@ -118,7 +216,7 @@ import * as LumnoMessaging from '../platform/messaging';
     transition: 'none'
   });
 
-  const ACTION_COPY = Object.freeze({
+  const ACTION_COPY: Readonly<Record<SelectionAction, readonly [string, string]>> = Object.freeze({
     ask: ['selection_quick_action_ask', 'Answer'],
     translate: ['selection_quick_action_translate', 'Translate'],
     explain: ['selection_quick_action_explain', 'Explain'],
@@ -126,9 +224,9 @@ import * as LumnoMessaging from '../platform/messaging';
     search: ['selection_quick_action_search', 'Research'],
     calculate: ['selection_quick_action_calculate', 'Calculate']
   });
-  const TOOLBAR_FALLBACK_ACTIONS = Object.freeze(['explain', 'search', 'translate']);
+  const TOOLBAR_FALLBACK_ACTIONS: readonly SelectionAction[] = Object.freeze(['explain', 'search', 'translate'] as const);
 
-  function createInlineIcon(definition, className) {
+  function createInlineIcon(definition: IconDefinition | undefined, className: string): SVGSVGElement | null {
     if (!definition || !definition.body) {
       return null;
     }
@@ -141,55 +239,46 @@ import * as LumnoMessaging from '../platform/messaging';
     return svg;
   }
 
-  function buildActionIcon(action) {
-    const definitions = ACTION_ICON_LIBRARY.remix || {};
+  function buildActionIcon(action: SelectionAction): SVGSVGElement | null {
+    const definitions = ACTION_ICON_LIBRARY.remix;
     return createInlineIcon(definitions[action] || definitions.ask, 'lumno-selection-action-icon');
   }
 
-  function getMessage(key, fallback) {
-    if (localeMessages && localeMessages[key] && localeMessages[key].message) {
-      return localeMessages[key].message;
+  function getMessage(key: string, fallback: string): string {
+    const entry = localeMessages ? localeMessages[key] : undefined;
+    if (entry && entry.message) {
+      return entry.message;
     }
     try {
       const value = chrome.i18n && chrome.i18n.getMessage
         ? chrome.i18n.getMessage(key)
         : '';
       return value || fallback;
-    } catch (e) {
+    } catch (_error) {
       return fallback;
     }
   }
 
-  function applyNoTranslate(element) {
-    if (!element || typeof element.setAttribute !== 'function') {
-      return element;
-    }
+  function applyNoTranslate<T extends Element>(element: T): T {
     element.setAttribute('translate', 'no');
     element.setAttribute('lang', 'zxx');
     element.setAttribute('notranslate', '');
     element.setAttribute('data-no-translate', 'true');
-    if (element.classList) {
-      element.classList.add('notranslate');
-    }
+    element.classList.add('notranslate');
     return element;
   }
 
-  function applyNoTranslateDeep(root) {
-    if (!root || typeof root !== 'object') {
-      return root;
-    }
+  function applyNoTranslateDeep<T extends Element>(root: T): T {
     applyNoTranslate(root);
-    if (typeof root.querySelectorAll === 'function') {
-      root.querySelectorAll('*').forEach((element) => applyNoTranslate(element));
-    }
+    root.querySelectorAll('*').forEach((element) => applyNoTranslate(element));
     return root;
   }
 
-  function normalizeLocale(value) {
+  function normalizeLocale(value: unknown): string {
     return SETTINGS.localeToHtmlLang(value);
   }
 
-  function getCurrentLocale() {
+  function getCurrentLocale(): string {
     if (languageMode && languageMode !== 'system') {
       return normalizeLocale(languageMode);
     }
@@ -197,13 +286,13 @@ import * as LumnoMessaging from '../platform/messaging';
       if (chrome.i18n && typeof chrome.i18n.getUILanguage === 'function') {
         return normalizeLocale(chrome.i18n.getUILanguage());
       }
-    } catch (e) {
+    } catch (_error) {
       // Fall through to navigator language.
     }
     return normalizeLocale(navigator.language || 'en');
   }
 
-  function refreshLocaleMessages() {
+  function refreshLocaleMessages(): void {
     if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
       return;
     }
@@ -212,18 +301,18 @@ import * as LumnoMessaging from '../platform/messaging';
         return;
       }
       localeMessages = response && response.messages ? response.messages : null;
-      if (menu && !menu.hidden && currentCandidate) {
+      if (selectionSurface && !selectionSurface.menu.hidden && currentCandidate) {
         renderMenu();
       }
     });
   }
 
-  function getActionLabel(action) {
+  function getActionLabel(action: SelectionAction): string {
     const copy = ACTION_COPY[action] || ACTION_COPY.ask;
     return getMessage(copy[0], copy[1]);
   }
 
-  function clearTimers() {
+  function clearTimers(): void {
     if (showTimer) {
       window.clearTimeout(showTimer);
       showTimer = null;
@@ -239,7 +328,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function clearSelectionActionHideTimer() {
+  function clearSelectionActionHideTimer(): void {
     if (!selectionActionHideTimer) {
       return;
     }
@@ -247,56 +336,41 @@ import * as LumnoMessaging from '../platform/messaging';
     selectionActionHideTimer = null;
   }
 
-  function applyHostIsolationStyles() {
-    if (!host) {
-      return;
-    }
+  function applyHostIsolationStyles(host: HTMLElement): void {
     Object.entries(HOST_ISOLATION_STYLES).forEach(([property, value]) => {
       host.style.setProperty(property, value, 'important');
     });
   }
 
-  function setHostHidden(hidden) {
-    if (!host) {
-      return;
-    }
-    applyHostIsolationStyles();
-    host.hidden = Boolean(hidden);
+  function setHostHidden(host: HTMLElement, hidden: boolean): void {
+    applyHostIsolationStyles(host);
+    host.hidden = hidden;
     host.style.setProperty('display', hidden ? 'none' : 'block', 'important');
   }
 
-  function setHostPosition(left, top) {
-    if (!host) {
-      return;
-    }
+  function setHostPosition(host: HTMLElement, left: number, top: number): void {
     hostHorizontalAnchor = 'left';
     host.style.setProperty('left', `${Math.round(left)}px`, 'important');
     host.style.setProperty('right', 'auto', 'important');
     host.style.setProperty('top', `${Math.round(top)}px`, 'important');
   }
 
-  function setHostRightPosition(right, top) {
-    if (!host) {
-      return;
-    }
+  function setHostRightPosition(host: HTMLElement, right: number, top: number): void {
     hostHorizontalAnchor = 'right';
     host.style.setProperty('left', 'auto', 'important');
     host.style.setProperty('right', `${Math.round(right)}px`, 'important');
     host.style.setProperty('top', `${Math.round(top)}px`, 'important');
   }
 
-  function setHostColorScheme(value) {
-    if (!host) {
-      return;
-    }
+  function setHostColorScheme(host: HTMLElement, value: string): void {
     host.style.setProperty('color-scheme', value, 'important');
   }
 
-  function clearSelectionToast() {
-    if (toastController && typeof toastController.destroy === 'function') {
+  function clearSelectionToast(): void {
+    if (toastController) {
       toastController.destroy();
     }
-    if (toastStyleGate && typeof toastStyleGate.destroy === 'function') {
+    if (toastStyleGate) {
       toastStyleGate.destroy();
     }
     if (toastHost && toastHost.isConnected) {
@@ -307,18 +381,19 @@ import * as LumnoMessaging from '../platform/messaging';
     toastStyleGate = null;
   }
 
-  function ensureSelectionToast() {
+  function ensureSelectionToast(): Readonly<ToastController> {
     if (toastHost && toastHost.isConnected && toastController) {
-      return true;
+      return toastController;
     }
     clearSelectionToast();
     const staleHost = document.getElementById(TOAST_HOST_ID);
     if (staleHost) {
       staleHost.remove();
     }
-    toastHost = document.createElement('div');
-    toastHost.id = TOAST_HOST_ID;
-    applyNoTranslate(toastHost);
+    const newHost = document.createElement('div');
+    toastHost = newHost;
+    newHost.id = TOAST_HOST_ID;
+    applyNoTranslate(newHost);
     const hostStyles = {
       all: 'initial',
       position: 'fixed',
@@ -340,10 +415,10 @@ import * as LumnoMessaging from '../platform/messaging';
       contain: 'none'
     };
     Object.entries(hostStyles).forEach(([property, value]) => {
-      toastHost.style.setProperty(property, value, 'important');
+      newHost.style.setProperty(property, value, 'important');
     });
 
-    const toastShadow = toastHost.attachShadow({ mode: 'closed' });
+    const toastShadow = newHost.attachShadow({ mode: 'closed' });
     const stylesheet = document.createElement('link');
     stylesheet.id = TOAST_STYLE_ID;
     stylesheet.rel = 'stylesheet';
@@ -360,33 +435,31 @@ import * as LumnoMessaging from '../platform/messaging';
     toastElement.style.setProperty('--x-lumno-toast-z-index', '2147483647');
     applyNoTranslate(toastElement);
     toastShadow.append(stylesheet, toastElement);
-    (document.documentElement || document.body).appendChild(toastHost);
+    (document.documentElement || document.body).appendChild(newHost);
 
     toastStyleGate = TOAST.createToastStyleGate(toastElement, {
       stylesheetElement: stylesheet,
       windowObj: window
     });
-    toastController = TOAST.createToastController(toastElement, {
+    const controller = TOAST.createToastController(toastElement, {
       duration: ACTION_FAILURE_DISMISS_MS,
       windowObj: window
     });
-    return true;
+    toastController = controller;
+    return controller;
   }
 
-  function showSelectionToast(message, options) {
-    if (!ensureSelectionToast()) {
-      return;
-    }
-    toastController.show(message, options || {});
+  function showSelectionToast(message: string, options?: ToastShowOptions): void {
+    ensureSelectionToast().show(message, options || {});
   }
 
-  function hideSelectionToast() {
-    if (toastController && typeof toastController.hide === 'function') {
+  function hideSelectionToast(): void {
+    if (toastController) {
       toastController.hide();
     }
   }
 
-  function getViewportBounds() {
+  function getViewportBounds(): ViewportBounds {
     const visualViewport = window.visualViewport;
     const width = visualViewport && Number.isFinite(visualViewport.width)
       ? visualViewport.width
@@ -408,19 +481,16 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function getLayoutViewportWidth() {
+  function getLayoutViewportWidth(): number {
     return window.innerWidth || document.documentElement.clientWidth || 0;
   }
 
-  function clampToSafeAxis(value, minimum, maximum) {
+  function clampToSafeAxis(value: number, minimum: number, maximum: number): number {
     const safeMaximum = Math.max(minimum, maximum);
     return Math.min(safeMaximum, Math.max(minimum, value));
   }
 
-  function applySurfaceViewportLimit(viewport) {
-    if (!surface || !viewport) {
-      return;
-    }
+  function applySurfaceViewportLimit(surface: HTMLElement, viewport: ViewportBounds): void {
     const availableWidth = Math.max(
       0,
       viewport.right - viewport.left - VIEWPORT_SAFE_MARGIN_PX * 2
@@ -428,13 +498,14 @@ import * as LumnoMessaging from '../platform/messaging';
     surface.style.maxWidth = `${Math.floor(availableWidth)}px`;
   }
 
-  function clampVisibleSurfaceToViewport() {
+  function clampVisibleSurfaceToViewport(): void {
     viewportRepositionFrame = null;
-    if (!host || host.hidden || !surface) {
+    if (!selectionSurface || selectionSurface.host.hidden) {
       return;
     }
+    const { host, surface } = selectionSurface;
     const viewport = getViewportBounds();
-    applySurfaceViewportLimit(viewport);
+    applySurfaceViewportLimit(surface, viewport);
     const bounds = surface.getBoundingClientRect();
     const safeLeft = viewport.left + VIEWPORT_SAFE_MARGIN_PX;
     const safeTop = viewport.top + VIEWPORT_SAFE_MARGIN_PX;
@@ -457,18 +528,19 @@ import * as LumnoMessaging from '../platform/messaging';
         safeLeft + bounds.width,
         viewport.right - VIEWPORT_SAFE_MARGIN_PX
       );
-      setHostRightPosition(layoutViewportWidth - rightEdge, clampedTop);
+      setHostRightPosition(host, layoutViewportWidth - rightEdge, clampedTop);
       return;
     }
     const currentLeft = Number.parseFloat(host.style.left);
     setHostPosition(
+      host,
       clampToSafeAxis(Number.isFinite(currentLeft) ? currentLeft : bounds.left, safeLeft, maximumLeft),
       clampedTop
     );
   }
 
-  function scheduleViewportClamp() {
-    if (!host || host.hidden || !surface) {
+  function scheduleViewportClamp(): void {
+    if (!selectionSurface || selectionSurface.host.hidden) {
       return;
     }
     if (viewportRepositionFrame != null) {
@@ -477,16 +549,16 @@ import * as LumnoMessaging from '../platform/messaging';
     viewportRepositionFrame = window.requestAnimationFrame(clampVisibleSurfaceToViewport);
   }
 
-  function prefersReducedMotion() {
+  function prefersReducedMotion(): boolean {
     try {
       return typeof window.matchMedia === 'function' &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    } catch (e) {
+    } catch (_error) {
       return false;
     }
   }
 
-  function cancelToolbarEntranceAnimation() {
+  function cancelToolbarEntranceAnimation(): void {
     if (toolbarEntranceFrame != null) {
       window.cancelAnimationFrame(toolbarEntranceFrame);
       window.clearTimeout(toolbarEntranceFrame);
@@ -497,34 +569,24 @@ import * as LumnoMessaging from '../platform/messaging';
       toolbarEntranceCleanupTimer = null;
     }
     toolbarEntranceAnimations.forEach((animation) => {
-      if (animation && typeof animation.cancel === 'function') {
-        animation.cancel();
-      }
+      animation.cancel();
     });
     toolbarEntranceAnimations = [];
-    if (surface) {
+    if (selectionSurface) {
+      const { surface, material, contentViewport, menu } = selectionSurface;
       delete surface.dataset.toolbarEntranceState;
       surface.style.removeProperty('--lumno-entry-width');
       surface.style.removeProperty('--lumno-toolbar-expanded-width');
       surface.style.removeProperty('--lumno-toolbar-content-width');
       surface.style.removeProperty('--lumno-toolbar-content-offset');
       surface.style.removeProperty('will-change');
-    }
-    if (material) {
       material.style.removeProperty('will-change');
-    }
-    if (contentViewport) {
       contentViewport.style.removeProperty('will-change');
-    }
-    if (menu) {
       menu.style.removeProperty('will-change');
     }
   }
 
-  function runToolbarEntranceFallback(geometry) {
-    if (!surface || !material || !contentViewport || !geometry) {
-      return;
-    }
+  function runToolbarEntranceFallback(surface: HTMLElement, geometry: ToolbarGeometry): void {
     surface.dataset.toolbarEntranceMode = 'fallback';
     surface.style.setProperty('--lumno-toolbar-expanded-width', `${geometry.expandedWidth}px`);
     surface.style.setProperty('--lumno-toolbar-content-width', `${geometry.contentWidth}px`);
@@ -533,39 +595,44 @@ import * as LumnoMessaging from '../platform/messaging';
     void surface.offsetWidth;
     toolbarEntranceFrame = window.setTimeout(() => {
       toolbarEntranceFrame = null;
-      if (!surface || !menu || menu.hidden || !host || host.hidden) {
+      const live = selectionSurface;
+      if (!live || live.menu.hidden || live.host.hidden) {
         cancelToolbarEntranceAnimation();
         return;
       }
-      surface.dataset.toolbarEntranceState = 'to';
+      live.surface.dataset.toolbarEntranceState = 'to';
     }, 0);
   }
 
-  function animateToolbarEntrance(originRect) {
+  function animateToolbarEntrance(originRect: DOMRect | null): void {
     cancelToolbarEntranceAnimation();
-    if (!surface || !material || !contentViewport || !originRect) {
+    if (!selectionSurface || !originRect) {
       return;
     }
+    const scheduledSurface = selectionSurface.surface;
     if (prefersReducedMotion()) {
-      surface.dataset.toolbarEntranceMode = 'reduced-motion';
+      scheduledSurface.dataset.toolbarEntranceMode = 'reduced-motion';
       return;
     }
-    surface.dataset.toolbarEntranceMode = 'scheduled';
-    const useWebAnimations = typeof surface.animate === 'function';
+    scheduledSurface.dataset.toolbarEntranceMode = 'scheduled';
+    // Engines without Web Animations get the CSS transition fallback.
+    const useWebAnimations = typeof scheduledSurface.animate === 'function';
     const runAfterLayout = useWebAnimations
-      ? window.requestAnimationFrame.bind(window)
-      : (callback) => window.setTimeout(callback, 0);
+      ? (callback: () => void): number => window.requestAnimationFrame(callback)
+      : (callback: () => void): number => window.setTimeout(callback, 0);
     toolbarEntranceFrame = runAfterLayout(() => {
       toolbarEntranceFrame = null;
-      if (!surface || !menu || menu.hidden || !host || host.hidden) {
+      const live = selectionSurface;
+      if (!live || live.menu.hidden || live.host.hidden) {
         return;
       }
+      const { surface, material, contentViewport, menu } = live;
       const destinationRect = surface.getBoundingClientRect();
       if (destinationRect.width <= 0 || destinationRect.height <= 0) {
         surface.dataset.toolbarEntranceMode = 'invalid-destination';
         return;
       }
-      const geometry = {
+      const geometry: ToolbarGeometry = {
         contentOffset: Math.max(6, Math.min(10, destinationRect.width * 0.04)),
         contentWidth: Math.max(0, (() => {
           const contentRect = contentViewport.getBoundingClientRect();
@@ -574,7 +641,7 @@ import * as LumnoMessaging from '../platform/messaging';
         expandedWidth: destinationRect.width
       };
       if (!useWebAnimations) {
-        runToolbarEntranceFallback(geometry);
+        runToolbarEntranceFallback(surface, geometry);
         return;
       }
       surface.dataset.toolbarEntranceMode = 'web-animations';
@@ -610,14 +677,14 @@ import * as LumnoMessaging from '../platform/messaging';
       toolbarEntranceAnimations = [materialAnimation, contentRevealAnimation, toolbarContentAnimation];
       toolbarEntranceCleanupTimer = window.setTimeout(() => {
         toolbarEntranceCleanupTimer = null;
-        if (material) material.style.removeProperty('will-change');
-        if (contentViewport) contentViewport.style.removeProperty('will-change');
-        if (menu) menu.style.removeProperty('will-change');
+        material.style.removeProperty('will-change');
+        contentViewport.style.removeProperty('will-change');
+        menu.style.removeProperty('will-change');
       }, 420);
     });
   }
 
-  function hideSurface(options) {
+  function hideSurface(options?: { immediate?: boolean }): void {
     cancelToolbarEntranceAnimation();
     clearTimers();
     hideSelectionToast();
@@ -627,23 +694,25 @@ import * as LumnoMessaging from '../platform/messaging';
     }
     currentCandidate = null;
     requestSequence += 1;
-    if (!host) {
+    if (!selectionSurface) {
       return;
     }
-    host.dataset.visible = 'false';
+    selectionSurface.host.dataset.visible = 'false';
     if (!options || options.immediate !== false) {
-      setHostHidden(true);
+      setHostHidden(selectionSurface.host, true);
     } else {
       window.setTimeout(() => {
-        if (host && host.dataset.visible !== 'true') {
-          setHostHidden(true);
+        if (selectionSurface && selectionSurface.host.dataset.visible !== 'true') {
+          setHostHidden(selectionSurface.host, true);
         }
       }, 160);
     }
   }
 
-  function getRuntimeClaim(element) {
-    if (!element || element.nodeType !== Node.ELEMENT_NODE || element.id !== HOST_ID) {
+  // What another copy of this script (another build of the extension, or
+  // an older version) wrote on its host; the stronger claim keeps the page.
+  function getRuntimeClaim(element: Element): { id: string; priority: number; version: number } | null {
+    if (!(element instanceof HTMLElement) || element.id !== HOST_ID) {
       return null;
     }
     return {
@@ -653,7 +722,7 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function compareRuntimeClaim(element) {
+  function compareRuntimeClaim(element: Element): number {
     const claim = getRuntimeClaim(element);
     if (!claim) {
       return -1;
@@ -667,60 +736,54 @@ import * as LumnoMessaging from '../platform/messaging';
     return claim.id.localeCompare(RUNTIME_ID);
   }
 
-  function clearOwnedSurface() {
+  function clearOwnedSurface(): void {
     cancelToolbarEntranceAnimation();
     clearSelectionToast();
     if (surfaceResizeObserver) {
       surfaceResizeObserver.disconnect();
       surfaceResizeObserver = null;
     }
-    if (host && host.isConnected) {
-      host.remove();
+    if (selectionSurface && selectionSurface.host.isConnected) {
+      selectionSurface.host.remove();
     }
-    host = null;
-    shadow = null;
-    surface = null;
-    contentViewport = null;
-    mainButton = null;
-    selectionLogo = null;
-    mainLabel = null;
-    menu = null;
+    selectionSurface = null;
     currentCandidate = null;
   }
 
-  function reconcileSurfaceOwnership() {
+  function reconcileSurfaceOwnership(): boolean {
     if (!enabled) {
       return true;
     }
+    const ownHost = selectionSurface ? selectionSurface.host : null;
     const candidates = Array.from(document.querySelectorAll(`[id="${HOST_ID}"]`));
     const strongerClaim = candidates.find((candidate) => (
-      candidate !== host && compareRuntimeClaim(candidate) > 0
+      candidate !== ownHost && compareRuntimeClaim(candidate) > 0
     ));
     if (strongerClaim) {
       clearOwnedSurface();
       return false;
     }
     candidates.forEach((candidate) => {
-      if (candidate !== host) {
+      if (candidate !== ownHost) {
         candidate.remove();
       }
     });
     return true;
   }
 
-  function mutationContainsSelectionHost(mutation) {
-    return Array.from(mutation.addedNodes || []).some((node) => {
-      if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+  function mutationContainsSelectionHost(mutation: MutationRecord): boolean {
+    return Array.from(mutation.addedNodes).some((node) => {
+      if (!isElementNode(node)) {
         return false;
       }
       if (node.id === HOST_ID) {
         return true;
       }
-      return typeof node.querySelector === 'function' && Boolean(node.querySelector(`[id="${HOST_ID}"]`));
+      return Boolean(node.querySelector(`[id="${HOST_ID}"]`));
     });
   }
 
-  function setOwnershipMonitoring(active) {
+  function setOwnershipMonitoring(active: boolean): void {
     if (!active) {
       if (ownershipObserver) {
         ownershipObserver.disconnect();
@@ -743,14 +806,18 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  function getActiveStorageAreaName() {
+  function getActiveStorageAreaName(): string {
     return providerStorageRuntime.getActiveAreaName();
   }
 
-  function updateRuntimeDebugState() {
-    if (!host) {
-      return;
+  function updateRuntimeDebugState(): void {
+    if (selectionSurface) {
+      writeRuntimeDebugState(selectionSurface.host);
     }
+  }
+
+  // The claim other copies compare against, and what a developer inspects.
+  function writeRuntimeDebugState(host: HTMLElement): void {
     host.dataset.runtimeRevision = RUNTIME_REVISION;
     host.dataset.runtimeVersion = String(RUNTIME_VERSION);
     host.dataset.runtimeId = RUNTIME_ID;
@@ -758,24 +825,12 @@ import * as LumnoMessaging from '../platform/messaging';
     host.dataset.storageArea = getActiveStorageAreaName() || '';
   }
 
-  function isEditableElement(element) {
-    if (!element || element.nodeType !== Node.ELEMENT_NODE) {
-      return false;
-    }
-    return Boolean(element.closest(
-      'input, textarea, select, [contenteditable=""], [contenteditable="true"], [role="textbox"], .monaco-editor, .CodeMirror'
-    ));
-  }
-
-  function isInsideCode(element) {
-    if (!element || element.nodeType !== Node.ELEMENT_NODE) {
-      return false;
-    }
+  function isInsideCode(element: Element): boolean {
     return Boolean(element.closest('code, pre, samp, kbd, .highlight, .syntax-highlight'));
   }
 
-  function isSensitiveElement(element) {
-    if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+  function isSensitiveElement(element: Element | null): boolean {
+    if (!element) {
       return false;
     }
     return Boolean(element.closest(
@@ -783,37 +838,27 @@ import * as LumnoMessaging from '../platform/messaging';
     ));
   }
 
-  function isTextControl(element) {
-    if (!element || element.nodeType !== Node.ELEMENT_NODE) {
-      return false;
-    }
-    if (element.tagName === 'TEXTAREA') {
+  function isTextControl(element: Element | null): element is TextControl {
+    if (element instanceof HTMLTextAreaElement) {
       return true;
     }
-    return element.tagName === 'INPUT' && TEXT_INPUT_TYPES.has(
-      String(element.type || 'text').toLowerCase()
-    );
+    return element instanceof HTMLInputElement && isTextControlType(element.type || 'text');
   }
 
-  function getRangeElement(range) {
-    const node = range && range.commonAncestorContainer;
-    if (!node) {
-      return null;
-    }
-    if (node.nodeType === Node.ELEMENT_NODE) {
+  function getRangeElement(range: Range): Element | null {
+    const node = range.commonAncestorContainer;
+    if (isElementNode(node)) {
       return node;
     }
     if (node.parentElement) {
       return node.parentElement;
     }
-    const root = typeof node.getRootNode === 'function' ? node.getRootNode() : null;
-    return root && root.host && root.host.nodeType === Node.ELEMENT_NODE
-      ? root.host
-      : null;
+    const root = node.getRootNode();
+    return root instanceof ShadowRoot ? root.host : null;
   }
 
-  function getUsableClientRects(range) {
-    if (!range || typeof range.getClientRects !== 'function') {
+  function getUsableClientRects(range: Range): DOMRect[] {
+    if (typeof range.getClientRects !== 'function') {
       return [];
     }
     return Array.from(range.getClientRects()).filter((item) => (
@@ -823,10 +868,7 @@ import * as LumnoMessaging from '../platform/messaging';
     ));
   }
 
-  function getRangeRect(range) {
-    if (!range) {
-      return null;
-    }
+  function getRangeRect(range: Range): SelectionRect | null {
     const clientRects = getUsableClientRects(range);
     let rect = range.getBoundingClientRect();
     if ((!rect || rect.width <= 0 || rect.height <= 0) && clientRects.length > 0) {
@@ -853,8 +895,8 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function getDomSelectionSnapshot() {
-    if (!window.getSelection) {
+  function getDomSelectionSnapshot(): DomSelectionSnapshot | null {
+    if (typeof window.getSelection !== 'function') {
       return null;
     }
     const selection = window.getSelection();
@@ -883,7 +925,10 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function getTextControlSelectionSnapshot(element, point) {
+  function getTextControlSelectionSnapshot(
+    element: Element | null,
+    point?: { clientX: number } | null
+  ): TextControlSelectionSnapshot | null {
     if (!isTextControl(element) || isSensitiveElement(element)) {
       return null;
     }
@@ -923,13 +968,21 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function getUnifiedSelectionSnapshot(target, point) {
-    const targetElement = target && target.nodeType === Node.ELEMENT_NODE
-      ? target
-      : (target && target.parentElement ? target.parentElement : null);
-    const targetControl = targetElement && typeof targetElement.closest === 'function'
-      ? targetElement.closest('input, textarea')
-      : null;
+  function getTargetElement(target: EventTarget | null): Element | null {
+    if (!(target instanceof Node)) {
+      return null;
+    }
+    return isElementNode(target) ? target : target.parentElement;
+  }
+
+  // The selection in the page or in a text field, whichever the user made;
+  // a text field under the pointer comes first.
+  function getUnifiedSelectionSnapshot(
+    target: EventTarget | null,
+    point?: { clientX: number }
+  ): SelectionSnapshot | null {
+    const targetElement = getTargetElement(target);
+    const targetControl = targetElement ? targetElement.closest('input, textarea') : null;
     const activeControl = isTextControl(document.activeElement)
       ? document.activeElement
       : null;
@@ -943,28 +996,26 @@ import * as LumnoMessaging from '../platform/messaging';
       getTextControlSelectionSnapshot(targetControl || activeControl, point);
   }
 
-  function isSameSelection(left, right) {
+  function isSameSelection(left: SelectionSnapshot | null, right: SelectionSnapshot | null): boolean {
     if (!left || !right) {
       return false;
     }
-    if (left.sourceKind !== right.sourceKind ||
-        left.element !== right.element ||
-        left.text !== right.text) {
+    if (left.element !== right.element || left.text !== right.text) {
       return false;
     }
-    if (left.sourceKind === 'text-control') {
+    if (left.sourceKind === 'text-control' && right.sourceKind === 'text-control') {
       return left.start === right.start && left.end === right.end;
     }
-    return left.anchorNode === right.anchorNode &&
-      left.anchorOffset === right.anchorOffset &&
-      left.focusNode === right.focusNode &&
-      left.focusOffset === right.focusOffset;
+    if (left.sourceKind === 'dom' && right.sourceKind === 'dom') {
+      return left.anchorNode === right.anchorNode &&
+        left.anchorOffset === right.anchorOffset &&
+        left.focusNode === right.focusNode &&
+        left.focusOffset === right.focusOffset;
+    }
+    return false;
   }
 
-  function isSelectionStillCurrent(candidate) {
-    if (!candidate || !candidate.snapshot) {
-      return false;
-    }
+  function isSelectionStillCurrent(candidate: SelectionCandidate): boolean {
     const liveSnapshot = getUnifiedSelectionSnapshot(candidate.snapshot.element);
     if (!liveSnapshot) {
       return true;
@@ -972,7 +1023,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return isSameSelection(candidate.snapshot, liveSnapshot);
   }
 
-  function parseCssColor(value) {
+  function parseCssColor(value: string): ColorRgba | null {
     const match = String(value || '').match(
       /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)$/i
     );
@@ -987,7 +1038,7 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function compositeBackground(front, back) {
+  function compositeBackground(front: ColorRgba, back: ColorRgba): ColorRgba {
     const alpha = front.a + back.a * (1 - front.a);
     if (alpha <= 0) {
       return { a: 0, b: 0, g: 0, r: 0 };
@@ -1001,8 +1052,8 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function getRelativeLuminance(color) {
-    const channel = (value) => {
+  function getRelativeLuminance(color: ColorRgba): number {
+    const channel = (value: number): number => {
       const normalized = value / 255;
       return normalized <= 0.04045
         ? normalized / 12.92
@@ -1013,11 +1064,9 @@ import * as LumnoMessaging from '../platform/messaging';
       0.0722 * channel(color.b);
   }
 
-  function resolveEntryContrastTone(element) {
-    let current = element && element.nodeType === Node.ELEMENT_NODE
-      ? element
-      : (document.body || document.documentElement);
-    let composite = { a: 0, b: 0, g: 0, r: 0 };
+  function resolveEntryContrastTone(element: Element): EntryContrastTone {
+    let current: Element | null = element;
+    let composite: ColorRgba = { a: 0, b: 0, g: 0, r: 0 };
     let complexBackdrop = false;
     while (current && composite.a < 0.98) {
       try {
@@ -1029,7 +1078,7 @@ import * as LumnoMessaging from '../platform/messaging';
         if (computed.backgroundImage && computed.backgroundImage !== 'none') {
           complexBackdrop = true;
         }
-      } catch (e) {
+      } catch (_error) {
         // Keep the neutral fallback when a hostile page blocks style inspection.
       }
       current = current.parentElement;
@@ -1381,50 +1430,51 @@ import * as LumnoMessaging from '../platform/messaging';
       }
     `;
 
-  function createSurfaceHost() {
-    host = document.createElement('div');
+  function createSurfaceHost(): { host: HTMLDivElement; shadow: ShadowRoot } {
+    const host = document.createElement('div');
     host.id = HOST_ID;
     applyNoTranslate(host);
-    setHostHidden(true);
+    setHostHidden(host, true);
     host.dataset.visible = 'false';
-    updateRuntimeDebugState();
-    shadow = host.attachShadow({ mode: 'closed' });
+    writeRuntimeDebugState(host);
+    const shadow = host.attachShadow({ mode: 'closed' });
+    return { host, shadow };
   }
 
-  function createSurfaceStyle() {
+  function createSurfaceStyle(): HTMLStyleElement {
     const style = document.createElement('style');
     style.textContent = SELECTION_SURFACE_STYLES;
     return style;
   }
 
-  function createMainButton() {
-    mainButton = document.createElement('button');
+  function createMainButton(): { mainButton: HTMLButtonElement; selectionLogo: HTMLImageElement; mainLabel: HTMLSpanElement } {
+    const mainButton = document.createElement('button');
     mainButton.type = 'button';
     mainButton.className = 'lumno-selection-main';
     const logo = document.createElement('img');
     logo.className = 'lumno-selection-logo';
     logo.alt = '';
     logo.src = chrome.runtime.getURL('assets/images/lumno-selection-mark.svg');
-    selectionLogo = logo;
-    mainLabel = document.createElement('span');
+    const mainLabel = document.createElement('span');
     mainLabel.className = 'lumno-selection-label';
     mainButton.append(logo);
     mainButton.append(mainLabel);
     mainButton.setAttribute('aria-controls', 'lumno-selection-toolbar');
     mainButton.setAttribute('aria-expanded', 'false');
+    return { mainButton, selectionLogo: logo, mainLabel };
   }
 
-  function createToolbar() {
-    primaryDivider = document.createElement('span');
+  function createToolbar(): { primaryDivider: HTMLSpanElement; actionsViewport: HTMLDivElement; menu: HTMLDivElement } {
+    const primaryDivider = document.createElement('span');
     primaryDivider.className = 'lumno-selection-primary-divider';
     primaryDivider.hidden = true;
     primaryDivider.setAttribute('aria-hidden', 'true');
 
-    actionsViewport = document.createElement('div');
+    const actionsViewport = document.createElement('div');
     actionsViewport.className = 'lumno-selection-actions-viewport';
     actionsViewport.hidden = true;
 
-    menu = document.createElement('div');
+    const menu = document.createElement('div');
     menu.id = 'lumno-selection-toolbar';
     menu.className = 'lumno-selection-toolbar';
     menu.tabIndex = -1;
@@ -1432,36 +1482,54 @@ import * as LumnoMessaging from '../platform/messaging';
     menu.setAttribute('role', 'toolbar');
     menu.setAttribute('aria-label', getMessage('selection_quick_action_open_menu', '使用 Lumno 处理所选文字'));
     actionsViewport.append(menu);
+    return { primaryDivider, actionsViewport, menu };
   }
 
-  function buildSurfaceTree() {
-    surface = document.createElement('div');
+  function createSurface(): SelectionSurface {
+    const { host, shadow } = createSurfaceHost();
+    shadow.appendChild(createSurfaceStyle());
+
+    const surface = document.createElement('div');
     surface.className = 'lumno-selection-surface';
     surface.setAttribute('role', 'group');
 
-    material = document.createElement('span');
+    const material = document.createElement('span');
     material.className = 'lumno-selection-material';
     material.setAttribute('aria-hidden', 'true');
 
-    createMainButton();
-    createToolbar();
+    const { mainButton, selectionLogo, mainLabel } = createMainButton();
+    const { primaryDivider, actionsViewport, menu } = createToolbar();
 
-    contentViewport = document.createElement('div');
+    const contentViewport = document.createElement('div');
     contentViewport.className = 'lumno-selection-content';
     contentViewport.append(actionsViewport, primaryDivider, mainButton);
 
     surface.append(material, contentViewport);
     applyNoTranslateDeep(surface);
+    return {
+      host,
+      shadow,
+      surface,
+      material,
+      mainButton,
+      selectionLogo,
+      mainLabel,
+      primaryDivider,
+      contentViewport,
+      actionsViewport,
+      menu
+    };
   }
 
-  function observeSurfaceSize() {
+  function observeSurfaceSize(surface: HTMLElement): void {
     if (typeof window.ResizeObserver === 'function') {
       surfaceResizeObserver = new window.ResizeObserver(scheduleViewportClamp);
       surfaceResizeObserver.observe(surface);
     }
   }
 
-  function bindSurfaceInteractions() {
+  function bindSurfaceInteractions(ui: SelectionSurface): void {
+    const { surface, mainButton, menu } = ui;
     surface.addEventListener('pointerdown', (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -1474,14 +1542,14 @@ import * as LumnoMessaging from '../platform/messaging';
     });
     surface.addEventListener('pointerleave', () => {
       if (currentCandidate) {
-        scheduleDismiss(menu && !menu.hidden ? TOOLBAR_DISMISS_MS : ENTRY_DISMISS_MS);
+        scheduleDismiss(!menu.hidden ? TOOLBAR_DISMISS_MS : ENTRY_DISMISS_MS);
       }
     });
     mainButton.addEventListener('click', () => {
       if (!currentCandidate) {
         return;
       }
-      if (surface && surface.dataset.iconOnly === 'true') {
+      if (surface.dataset.iconOnly === 'true') {
         renderMenu();
         return;
       }
@@ -1489,44 +1557,51 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  function ensureSurface() {
-    if (host && host.isConnected) {
+  // The toolbar, made and added to the page when missing; null while
+  // another copy of this script holds the page.
+  function ensureSurface(): SelectionSurface | null {
+    if (selectionSurface && selectionSurface.host.isConnected) {
       updateRuntimeDebugState();
-      return true;
+      return selectionSurface;
     }
     if (!reconcileSurfaceOwnership()) {
-      return false;
+      return null;
     }
-    createSurfaceHost();
-    shadow.appendChild(createSurfaceStyle());
-    buildSurfaceTree();
-    shadow.appendChild(surface);
-    (document.documentElement || document.body).appendChild(host);
-    observeSurfaceSize();
-    bindSurfaceInteractions();
-    return true;
+    const ui = createSurface();
+    selectionSurface = ui;
+    ui.shadow.appendChild(ui.surface);
+    (document.documentElement || document.body).appendChild(ui.host);
+    observeSurfaceSize(ui.surface);
+    bindSurfaceInteractions(ui);
+    return ui;
   }
 
-  function positionSurface(rect, placement, anchorRect) {
-    if (!host || !surface || !rect) {
+  // Inline puts the entry button at the end of the selection; panel opens
+  // the toolbar where the entry button was.
+  function positionSurface(rect: SelectionRect, placement: 'inline' | 'panel', anchorRect?: DOMRect | null): void {
+    if (!selectionSurface) {
       return;
     }
-    const isInline = placement === 'inline' && rect.inline;
-    const hasPanelAnchor = placement === 'panel' && anchorRect &&
-      Number.isFinite(anchorRect.left) && Number.isFinite(anchorRect.top);
-    if (!hasPanelAnchor) {
+    const isInline = placement === 'inline';
+    const panelAnchor = placement === 'panel' && anchorRect &&
+      Number.isFinite(anchorRect.left) && Number.isFinite(anchorRect.top)
+      ? anchorRect
+      : null;
+    if (!panelAnchor) {
       const initialViewport = getViewportBounds();
       setHostPosition(
+        selectionSurface.host,
         initialViewport.left + VIEWPORT_SAFE_MARGIN_PX,
         initialViewport.top + VIEWPORT_SAFE_MARGIN_PX
       );
     }
     window.requestAnimationFrame(() => {
-      if (!host || host.hidden) {
+      if (!selectionSurface || selectionSurface.host.hidden) {
         return;
       }
+      const { host, surface } = selectionSurface;
       const viewport = getViewportBounds();
-      applySurfaceViewportLimit(viewport);
+      applySurfaceViewportLimit(surface, viewport);
       const bounds = surface.getBoundingClientRect();
       const safeLeft = viewport.left + VIEWPORT_SAFE_MARGIN_PX;
       const safeTop = viewport.top + VIEWPORT_SAFE_MARGIN_PX;
@@ -1534,12 +1609,12 @@ import * as LumnoMessaging from '../platform/messaging';
       const safeBottom = viewport.bottom - VIEWPORT_SAFE_MARGIN_PX;
       const maximumLeft = safeRight - bounds.width;
       const maximumTop = safeBottom - bounds.height;
-      if (hasPanelAnchor) {
-        const anchorHeight = Number.isFinite(anchorRect.height) && anchorRect.height > 0
-          ? anchorRect.height
+      if (panelAnchor) {
+        const anchorHeight = Number.isFinite(panelAnchor.height) && panelAnchor.height > 0
+          ? panelAnchor.height
           : 18;
-        const anchorCenterY = anchorRect.top + anchorHeight / 2;
-        const preferredLeft = anchorRect.left;
+        const anchorCenterY = panelAnchor.top + anchorHeight / 2;
+        const preferredLeft = panelAnchor.left;
         const left = clampToSafeAxis(
           preferredLeft,
           safeLeft,
@@ -1550,7 +1625,7 @@ import * as LumnoMessaging from '../platform/messaging';
           safeTop,
           maximumTop
         );
-        setHostPosition(left, top);
+        setHostPosition(host, left, top);
         return;
       }
       if (isInline) {
@@ -1575,7 +1650,7 @@ import * as LumnoMessaging from '../platform/messaging';
         }
         left = clampToSafeAxis(left, safeLeft, maximumLeft);
         top = clampToSafeAxis(top, safeTop, maximumTop);
-        setHostPosition(left, top);
+        setHostPosition(host, left, top);
         return;
       }
       const left = clampToSafeAxis(
@@ -1588,40 +1663,40 @@ import * as LumnoMessaging from '../platform/messaging';
         ? rect.bottom + VIEWPORT_SAFE_MARGIN_PX
         : rect.top - bounds.height - VIEWPORT_SAFE_MARGIN_PX;
       const top = clampToSafeAxis(preferredTop, safeTop, maximumTop);
-      setHostPosition(left, top);
+      setHostPosition(host, left, top);
     });
   }
 
-  function updateSelectionMark() {
-    if (selectionLogo) {
-      selectionLogo.src = chrome.runtime.getURL('assets/images/lumno-selection-mark.svg');
-    }
-    if (host) {
-      host.dataset.selectionMark = 'lumno';
-      updateRuntimeDebugState();
+  function updateSelectionMark(): void {
+    if (selectionSurface) {
+      selectionSurface.selectionLogo.src = chrome.runtime.getURL('assets/images/lumno-selection-mark.svg');
+      selectionSurface.host.dataset.selectionMark = 'lumno';
+      writeRuntimeDebugState(selectionSurface.host);
     }
   }
 
-  function scheduleDismiss(delay) {
+  function scheduleDismiss(delay: number): void {
     if (dismissTimer) {
       window.clearTimeout(dismissTimer);
     }
     dismissTimer = window.setTimeout(() => hideSurface({ immediate: false }), delay);
   }
 
-  function renderCandidate(candidate) {
+  function renderCandidate(candidate: SelectionCandidate): void {
     cancelToolbarEntranceAnimation();
-    if (!ensureSurface()) {
+    const ui = ensureSurface();
+    if (!ui) {
       return;
     }
+    const { host, surface, mainButton, mainLabel, primaryDivider, actionsViewport, menu } = ui;
     currentCandidate = candidate;
     const action = candidate.classification.action;
     const label = getActionLabel(action);
-    setHostHidden(false);
+    setHostHidden(host, false);
     host.dataset.iconSet = 'remix';
     const entryContrast = resolveEntryContrastTone(candidate.snapshot.element);
     host.dataset.entryContrast = entryContrast;
-    setHostColorScheme(entryContrast === 'mixed' ? 'light dark' : entryContrast);
+    setHostColorScheme(host, entryContrast === 'mixed' ? 'light dark' : entryContrast);
     host.dataset.visible = 'false';
     surface.dataset.iconOnly = 'true';
     delete surface.dataset.toolbarEntranceMode;
@@ -1639,14 +1714,14 @@ import * as LumnoMessaging from '../platform/messaging';
     positionSurface(candidate.rect, 'inline');
     const renderedCandidate = currentCandidate;
     window.requestAnimationFrame(() => {
-      if (host && currentCandidate === renderedCandidate) {
-        host.dataset.visible = 'true';
+      if (selectionSurface && currentCandidate === renderedCandidate) {
+        selectionSurface.host.dataset.visible = 'true';
       }
     });
     scheduleDismiss(ENTRY_DISMISS_MS);
   }
 
-  function buildMenuAction(action) {
+  function buildMenuAction(action: SelectionAction): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
     button.dataset.intent = action;
@@ -1662,29 +1737,31 @@ import * as LumnoMessaging from '../platform/messaging';
     return button;
   }
 
-  function getToolbarActions(primary) {
+  function getToolbarActions(primary: SelectionAction): SelectionAction[] {
     return [primary, ...TOOLBAR_FALLBACK_ACTIONS]
-      .filter((action, index, actions) => ACTION_COPY[action] && actions.indexOf(action) === index)
+      .filter((action, index, actions) => actions.indexOf(action) === index)
       .slice(0, 3);
   }
 
-  function openLabsSettings() {
+  function openLabsSettings(): void {
     try {
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'openOptionsPage',
         hash: 'labs'
       });
-    } catch (e) {
+    } catch (_error) {
       // The entry disappears even if an extension update interrupts navigation.
     }
     hideSurface();
   }
 
-  function renderMenu() {
-    if (!currentCandidate || !host) {
+  function renderMenu(): void {
+    const ui = selectionSurface;
+    if (!currentCandidate || !ui) {
       return;
     }
-    const originRect = surface && surface.dataset.iconOnly === 'true' && mainButton
+    const { host, surface, mainButton, primaryDivider, actionsViewport, menu } = ui;
+    const originRect = surface.dataset.iconOnly === 'true'
       ? mainButton.getBoundingClientRect()
       : null;
     const primary = currentCandidate.classification.action;
@@ -1707,23 +1784,23 @@ import * as LumnoMessaging from '../platform/messaging';
     scheduleDismiss(TOOLBAR_DISMISS_MS);
   }
 
-  function renderSendingStatus() {
-    if (!host || !currentCandidate) {
+  function renderSendingStatus(): void {
+    if (!selectionSurface || !currentCandidate) {
       return;
     }
     cancelToolbarEntranceAnimation();
-    host.dataset.visible = 'false';
-    setHostHidden(true);
+    selectionSurface.host.dataset.visible = 'false';
+    setHostHidden(selectionSurface.host, true);
     showSelectionToast(
       getMessage('selection_quick_action_sending', '正在后台打开…'),
       { duration: ACTION_SUCCESS_DISMISS_MS }
     );
   }
 
-  function renderFailureStatus() {
-    if (host) {
-      host.dataset.visible = 'false';
-      setHostHidden(true);
+  function renderFailureStatus(): void {
+    if (selectionSurface) {
+      selectionSurface.host.dataset.visible = 'false';
+      setHostHidden(selectionSurface.host, true);
     }
     showSelectionToast(
       getMessage('selection_quick_action_failed', '发送失败，请重试。'),
@@ -1732,7 +1809,7 @@ import * as LumnoMessaging from '../platform/messaging';
     scheduleDismiss(ACTION_FAILURE_DISMISS_MS);
   }
 
-  function sendSelectionAction(action) {
+  function sendSelectionAction(action: SelectionAction): void {
     const candidate = currentCandidate;
     if (!candidate || !isSelectionStillCurrent(candidate)) {
       hideSurface();
@@ -1751,7 +1828,7 @@ import * as LumnoMessaging from '../platform/messaging';
       }
     }, ACTION_SUCCESS_DISMISS_MS);
     selectionActionHideTimer = hideTimer;
-    const renderCurrentFailure = () => {
+    const renderCurrentFailure = (): void => {
       if (sequence !== requestSequence || currentCandidate !== candidate) {
         return;
       }
@@ -1773,29 +1850,32 @@ import * as LumnoMessaging from '../platform/messaging';
           renderCurrentFailure();
         }
       });
-    } catch (e) {
+    } catch (_error) {
       renderCurrentFailure();
     }
   }
 
-  function classifySelectionSnapshot(snapshot) {
-    if (!snapshot || !snapshot.element || !snapshot.text) {
+  function classifySelectionSnapshot(snapshot: SelectionSnapshot | null): SelectionClassification | null {
+    if (!snapshot || !snapshot.text) {
       return null;
     }
     return INTENT.classifySelection(snapshot.text, {
-      editable: isEditableElement(snapshot.element),
       insideCode: isInsideCode(snapshot.element),
-      pageLanguage: document.documentElement && document.documentElement.lang,
+      pageLanguage: document.documentElement ? document.documentElement.lang : '',
       sensitive: isSensitiveElement(snapshot.element),
       uiLanguage: getCurrentLocale()
     });
   }
 
-  function buildCandidateFromSnapshot(snapshot, classification) {
-    if (!snapshot || !snapshot.element || !snapshot.rect || !snapshot.text) {
+  function buildCandidateFromSnapshot(
+    snapshot: SelectionSnapshot | null,
+    classification: SelectionClassification | null
+  ): SelectionCandidate | null {
+    if (!snapshot || !snapshot.text) {
       return null;
     }
-    if (host && (snapshot.element === host || host.contains(snapshot.element))) {
+    const ownHost = selectionSurface ? selectionSurface.host : null;
+    if (ownHost && (snapshot.element === ownHost || ownHost.contains(snapshot.element))) {
       return null;
     }
     const resolvedClassification = classification || classifySelectionSnapshot(snapshot);
@@ -1810,7 +1890,7 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function evaluateSelection(snapshot) {
+  function evaluateSelection(snapshot?: SelectionSnapshot | null): void {
     hideSurface();
     const resolvedSnapshot = snapshot || getUnifiedSelectionSnapshot(document.activeElement);
     const classification = classifySelectionSnapshot(resolvedSnapshot);
@@ -1832,7 +1912,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }, ENTRY_DELAY_MS);
   }
 
-  function resetSelectionGesture() {
+  function resetSelectionGesture(): void {
     selectionGestureActive = false;
     if (gestureResetTimer) {
       window.clearTimeout(gestureResetTimer);
@@ -1840,7 +1920,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function scheduleSelectionGestureReset() {
+  function scheduleSelectionGestureReset(): void {
     if (gestureResetTimer) {
       window.clearTimeout(gestureResetTimer);
     }
@@ -1854,18 +1934,18 @@ import * as LumnoMessaging from '../platform/messaging';
     }, SELECTION_GESTURE_TIMEOUT_MS);
   }
 
-  function armSelectionGesture() {
+  function armSelectionGesture(): void {
     selectionGestureActive = true;
     scheduleSelectionGestureReset();
   }
 
-  function cancelSelectionGesture() {
+  function cancelSelectionGesture(): void {
     pointerDownState = null;
     resetSelectionGesture();
     hideSurface();
   }
 
-  function scheduleSelectionChangeEvaluation() {
+  function scheduleSelectionChangeEvaluation(): void {
     if (!enabled || !selectionGestureActive || pointerDownState) {
       return;
     }
@@ -1885,14 +1965,19 @@ import * as LumnoMessaging from '../platform/messaging';
     }, SELECTION_CHANGE_DELAY_MS);
   }
 
-  function handlePointerUp(event) {
+  // Whether the event passed through the toolbar's own host.
+  function isFromOwnSurface(event: Event): boolean {
+    return selectionSurface !== null && event.composedPath().includes(selectionSurface.host);
+  }
+
+  function handlePointerUp(event: PointerEvent): void {
     const pointerDown = pointerDownState;
     pointerDownState = null;
     if (event.button !== 0 || !enabled ||
         event.isPrimary === false ||
         !pointerDown ||
         (pointerDown.pointerId != null && event.pointerId != null && pointerDown.pointerId !== event.pointerId) ||
-        (host && event.composedPath && event.composedPath().includes(host))) {
+        isFromOwnSurface(event)) {
       return;
     }
     armSelectionGesture();
@@ -1909,11 +1994,11 @@ import * as LumnoMessaging from '../platform/messaging';
     evaluateSelection(snapshot);
   }
 
-  function handlePointerDown(event) {
+  function handlePointerDown(event: PointerEvent): void {
     pointerDownState = null;
     if (event.button !== 0 || !enabled ||
         event.isPrimary === false ||
-        (host && event.composedPath && event.composedPath().includes(host))) {
+        isFromOwnSurface(event)) {
       return;
     }
     pointerDownState = {
@@ -1924,7 +2009,7 @@ import * as LumnoMessaging from '../platform/messaging';
     armSelectionGesture();
   }
 
-  function handleSelectionChange() {
+  function handleSelectionChange(): void {
     const snapshot = getUnifiedSelectionSnapshot(document.activeElement);
     if (currentCandidate && snapshot && !isSameSelection(currentCandidate.snapshot, snapshot)) {
       hideSurface();
@@ -1936,7 +2021,7 @@ import * as LumnoMessaging from '../platform/messaging';
     scheduleSelectionChangeEvaluation();
   }
 
-  function handlePointerCancel() {
+  function handlePointerCancel(): void {
     const pointerDown = pointerDownState;
     pointerDownState = null;
     const snapshot = getUnifiedSelectionSnapshot(document.activeElement);
@@ -1946,22 +2031,21 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function handleSelectStart(event) {
-    if (!enabled ||
-        (host && event.composedPath && event.composedPath().includes(host))) {
+  function handleSelectStart(event: Event): void {
+    if (!enabled || isFromOwnSurface(event)) {
       return;
     }
     armSelectionGesture();
   }
 
-  function handleWindowBlur(event) {
-    if (event && event.target !== window) {
+  function handleWindowBlur(event: FocusEvent): void {
+    if (event.target !== window) {
       return;
     }
     cancelSelectionGesture();
   }
 
-  function handleKeyDown(event) {
+  function handleKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       cancelSelectionGesture();
       return;
@@ -1974,49 +2058,76 @@ import * as LumnoMessaging from '../platform/messaging';
   // Page listeners exist only while the feature is enabled, so a disabled
   // feature costs nothing on selectionchange, scroll, resize and the rest.
   // The storage listener below stays attached so the feature can turn back on.
-  function getPageListeners() {
+  function listenDocument<K extends keyof DocumentEventMap>(
+    type: K,
+    listener: (event: DocumentEventMap[K]) => void
+  ): PageListener {
+    return {
+      attach: () => document.addEventListener(type, listener, true),
+      detach: () => document.removeEventListener(type, listener, true)
+    };
+  }
+
+  function listenWindow<K extends keyof WindowEventMap>(
+    type: K,
+    listener: (event: WindowEventMap[K]) => void
+  ): PageListener {
+    return {
+      attach: () => window.addEventListener(type, listener, true),
+      detach: () => window.removeEventListener(type, listener, true)
+    };
+  }
+
+  function listenVisualViewport<K extends keyof VisualViewportEventMap>(
+    visualViewport: VisualViewport,
+    type: K,
+    listener: (event: VisualViewportEventMap[K]) => void
+  ): PageListener {
+    return {
+      attach: () => visualViewport.addEventListener(type, listener, false),
+      detach: () => visualViewport.removeEventListener(type, listener, false)
+    };
+  }
+
+  function getPageListeners(): PageListener[] {
     const listeners = [
-      [document, 'pointerup', handlePointerUp, true],
-      [document, 'pointerdown', handlePointerDown, true],
-      [document, 'pointercancel', handlePointerCancel, true],
-      [document, 'selectstart', handleSelectStart, true],
-      [document, 'selectionchange', handleSelectionChange, true],
-      [document, 'copy', cancelSelectionGesture, true],
-      [document, 'scroll', cancelSelectionGesture, true],
-      [document, 'keydown', handleKeyDown, true],
-      [window, 'blur', handleWindowBlur, true],
-      [window, 'resize', scheduleViewportClamp, true],
-      [window, 'orientationchange', scheduleViewportClamp, true]
+      listenDocument('pointerup', handlePointerUp),
+      listenDocument('pointerdown', handlePointerDown),
+      listenDocument('pointercancel', handlePointerCancel),
+      listenDocument('selectstart', handleSelectStart),
+      listenDocument('selectionchange', handleSelectionChange),
+      listenDocument('copy', cancelSelectionGesture),
+      listenDocument('scroll', cancelSelectionGesture),
+      listenDocument('keydown', handleKeyDown),
+      listenWindow('blur', handleWindowBlur),
+      listenWindow('resize', scheduleViewportClamp),
+      listenWindow('orientationchange', scheduleViewportClamp)
     ];
     if (window.visualViewport) {
       listeners.push(
-        [window.visualViewport, 'resize', scheduleViewportClamp, false],
-        [window.visualViewport, 'scroll', scheduleViewportClamp, false]
+        listenVisualViewport(window.visualViewport, 'resize', scheduleViewportClamp),
+        listenVisualViewport(window.visualViewport, 'scroll', scheduleViewportClamp)
       );
     }
     return listeners;
   }
 
-  function setPageListenersActive(active) {
+  function setPageListenersActive(active: boolean): void {
     if (active && !attachedPageListeners) {
       attachedPageListeners = getPageListeners();
-      attachedPageListeners.forEach(([target, type, listener, capture]) => {
-        target.addEventListener(type, listener, capture);
-      });
+      attachedPageListeners.forEach((listener) => listener.attach());
     } else if (!active && attachedPageListeners) {
-      attachedPageListeners.forEach(([target, type, listener, capture]) => {
-        target.removeEventListener(type, listener, capture);
-      });
+      attachedPageListeners.forEach((listener) => listener.detach());
       attachedPageListeners = null;
     }
   }
 
-  function setFeatureActive(active) {
+  function setFeatureActive(active: boolean): void {
     setPageListenersActive(active);
     setOwnershipMonitoring(active);
   }
 
-  function hydrateSettings() {
+  function hydrateSettings(): void {
     storageArea.get([
       ENABLED_STORAGE_KEY,
       LANGUAGE_STORAGE_KEY
@@ -2034,7 +2145,7 @@ import * as LumnoMessaging from '../platform/messaging';
         clearOwnedSurface();
       }
       setFeatureActive(enabled);
-      if (currentCandidate && host && !host.hidden) {
+      if (currentCandidate && selectionSurface && !selectionSurface.host.hidden) {
         updateSelectionMark();
       } else {
         updateRuntimeDebugState();
@@ -2047,8 +2158,9 @@ import * as LumnoMessaging from '../platform/messaging';
       if (!providerStorageRuntime.isActiveAreaName(areaName)) {
         return;
       }
-      if (changes[ENABLED_STORAGE_KEY]) {
-        enabled = changes[ENABLED_STORAGE_KEY].newValue === true;
+      const enabledChange = changes[ENABLED_STORAGE_KEY];
+      if (enabledChange) {
+        enabled = enabledChange.newValue === true;
         setFeatureActive(enabled);
         if (!enabled) {
           cancelSelectionGesture();

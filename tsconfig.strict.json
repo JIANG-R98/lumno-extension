@@ -12,16 +12,7 @@
     "src/types/**/*.d.ts",
     "src/background/**/*.ts",
     "src/shared/**/*.ts",
-    "src/content/auto-pip-blacklist.ts",
-    "src/content/page-shortcut-toast.ts",
-    "src/content/shortcut-key-observer.ts",
-    "src/content/hotkey-listener.ts",
-    "src/content/auto-pip-core.ts",
-    "src/content/youtube-auto-pip.ts",
-    "src/content/site-auto-pip.ts",
-    "src/content/link-preview-trigger.ts",
-    "src/content/link-preview.ts",
-    "src/content/document-pip-picker.ts"
+    "src/content/**/*.ts"
   ],
   "exclude": [
     "src/**/react/**"
