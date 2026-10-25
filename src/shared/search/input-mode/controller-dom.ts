@@ -3,9 +3,9 @@
 import type * as LumnoMenuSurface from '../../ui/menu-surface';
 import type { CssDeclaration, CssText, InputModeVars, SetStyle } from './types';
 
-// The controller state search-input-mode.ts shares with its modules: the
-// menu parts this module finds or creates.
-interface ControllerDomState {
+// The menu parts this module finds or creates; search-input-mode.ts keeps
+// them in the state it shares with its modules.
+interface ControllerDomParts {
   modeMenuContent: HTMLElement;
   modeMenuFooter: HTMLElement;
   modeMenuFooterFilterText: HTMLElement;
@@ -47,7 +47,6 @@ interface ControllerDomDeps {
   container: HTMLElement;
   applyNoTranslate: <T extends Element>(element: T) => T;
   doc: Document;
-  inputModeState: ControllerDomState;
 }
 
 // The footer's hints: filter text, then Move, Switch, Switch focus and
@@ -73,7 +72,7 @@ function findPart(root: HTMLElement, attribute: string): HTMLElement | null {
   return root.querySelector<HTMLElement>(`[${attribute}]`);
 }
 
-function createControllerDom(deps: ControllerDomDeps): void {
+function createControllerDom(deps: ControllerDomDeps): ControllerDomParts {
   const {
     siteSearchPrefix,
     siteSearchPrefixIcon,
@@ -103,9 +102,6 @@ function createControllerDom(deps: ControllerDomDeps): void {
     applyNoTranslate,
     doc
   } = deps;
-
-  // The controller state object shared with search-input-mode.ts and the other modules.
-  const inputModeState = deps.inputModeState;
 
   function createPart(tagName: 'div' | 'span', className: string, attribute: string): HTMLElement {
     const element = applyNoTranslate(doc.createElement(tagName));
@@ -332,8 +328,6 @@ function createControllerDom(deps: ControllerDomDeps): void {
     modeMenu.appendChild(modeMenuContent);
     modeMenu.appendChild(modeMenuFooter);
   }
-  inputModeState.modeMenuContent = modeMenuContent;
-  inputModeState.modeMenuFooter = modeMenuFooter;
 
   let footer = readFooterParts(modeMenuFooter);
   if (!footer) {
@@ -360,16 +354,20 @@ function createControllerDom(deps: ControllerDomDeps): void {
   footer.actions.appendChild(footer.inputHint);
   footer.actions.appendChild(footer.shortcutHint);
   modeMenuFooter.appendChild(footer.actions);
-  inputModeState.modeMenuFooterFilterText = footer.filterText;
-  inputModeState.modeMenuFooterNavigationKey = footer.navigationKey;
-  inputModeState.modeMenuFooterNavigationText = footer.navigationText;
-  inputModeState.modeMenuFooterSelectKey = footer.selectKey;
-  inputModeState.modeMenuFooterSelectText = footer.selectText;
-  inputModeState.modeMenuFooterInputKey = footer.inputKey;
-  inputModeState.modeMenuFooterInputText = footer.inputText;
-  inputModeState.modeMenuFooterKey = footer.shortcutKey;
-  inputModeState.modeMenuFooterText = footer.shortcutText;
+  return {
+    modeMenuContent,
+    modeMenuFooter,
+    modeMenuFooterFilterText: footer.filterText,
+    modeMenuFooterNavigationKey: footer.navigationKey,
+    modeMenuFooterNavigationText: footer.navigationText,
+    modeMenuFooterSelectKey: footer.selectKey,
+    modeMenuFooterSelectText: footer.selectText,
+    modeMenuFooterInputKey: footer.inputKey,
+    modeMenuFooterInputText: footer.inputText,
+    modeMenuFooterKey: footer.shortcutKey,
+    modeMenuFooterText: footer.shortcutText
+  };
 }
 
 export { createControllerDom };
-export type { ControllerDomDeps, ControllerDomState };
+export type { ControllerDomDeps, ControllerDomParts };

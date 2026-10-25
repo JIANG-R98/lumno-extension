@@ -1,9 +1,10 @@
 // Shapes the input mode controller (search-input-mode.ts) hands to several
 // of its modules here.
+import type { AggregateSearch } from '../../../domain/search/aggregate-search-store';
 import type { SearchTextIndex, SiteSearchProvider } from '../../../domain/search/types';
 
 // Message text by key, with {name} placeholders filled from values.
-type FormatMessage = (key: string, fallback: string, values?: Record<string, string | number>) => string;
+type FormatMessage = (key: string, fallback: string, values?: Record<string, string>) => string;
 
 type CssDeclaration = [property: string, value: string];
 
@@ -66,6 +67,12 @@ interface ModeMenuItem {
   isAi?: boolean;
   theme?: InputModeTheme | null;
   iconUrl?: string;
+  // The surface's own fields, handed back to its select and reorder
+  // callbacks: what the item stands for, its saved order key, and the
+  // aggregate search it runs.
+  kind?: string;
+  orderKey?: string;
+  aggregate?: AggregateSearch;
 }
 
 // Where a run of a label's characters starts and ends.

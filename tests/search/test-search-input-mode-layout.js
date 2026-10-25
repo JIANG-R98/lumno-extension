@@ -132,6 +132,12 @@ class FakeElement {
 
   addEventListener() {}
 
+  removeEventListener() {}
+
+  getRootNode() {
+    return documentObj;
+  }
+
   getBoundingClientRect() {
     return {
       width: this._layoutWidth,
@@ -170,7 +176,12 @@ class FakeResizeObserver {
 const documentObj = {
   createElement(tagName) {
     return new FakeElement(tagName);
-  }
+  },
+  createElementNS(_namespace, tagName) {
+    return new FakeElement(tagName);
+  },
+  addEventListener() {},
+  removeEventListener() {}
 };
 const windowObj = {
   ResizeObserver: FakeResizeObserver,

@@ -151,7 +151,7 @@ function createPrefixText(deps: PrefixTextDeps) {
 
   function setPrefixText(
     prefixText: string,
-    theme: InputModeTheme | null | undefined,
+    theme?: InputModeTheme | null,
     prefixOptions?: PrefixTextOptions | null
   ): void {
     const nextOptions: PrefixTextOptions = prefixOptions || {};
@@ -259,7 +259,7 @@ function createPrefixText(deps: PrefixTextDeps) {
 
   function setProviderPrefix(
     provider: InputModeProvider | null | undefined,
-    theme: InputModeTheme | null | undefined,
+    theme?: InputModeTheme | null,
     providerOptions?: PrefixTextOptions | null
   ): void {
     const isAi = isAiSiteSearchProvider(provider);

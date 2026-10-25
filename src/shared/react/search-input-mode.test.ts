@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // The Han variant table is a classic script that leaves a global.
 import '../search/search-han-variants.js';
 import * as searchInputModeModule from '../search/search-input-mode';
-import * as faviconUtilsModule from '../../domain/favicon/favicon-utils';
+import * as faviconUtils from '../../domain/favicon/favicon-utils';
+import type { ModeMenuItem } from '../search/input-mode/types';
 
 Object.assign(globalThis, {
   pinyinPro: {
@@ -21,60 +22,6 @@ Object.assign(globalThis, {
   }
 });
 
-interface ModeMenuItem {
-  active?: boolean;
-  group?: string;
-  iconClass?: string;
-  iconUrl?: string;
-  id: string;
-  kind: string;
-  label: string;
-  menuIconName?: string;
-  provider?: Record<string, unknown>;
-  searchTerms?: string[];
-}
-
-interface ModeController {
-  clearProviderPrefix(): void;
-  closeModeMenu(restoreFocus?: boolean): boolean;
-  destroy(): void;
-  fitModeMenuWithinViewport(options?: {
-    bottomInset?: number;
-    viewportBottom?: number;
-  }): number | null;
-  getModeMenuFilterQuery(): string;
-  hasActiveModeTag(): boolean;
-  handleModeMenuKeyEvent(event: KeyboardEvent): boolean;
-  menuElement: HTMLDivElement;
-  isModeMenuVisible(): boolean;
-  openModeMenu(focusTarget?: string): boolean;
-  refreshModeMenuLanguage(): void;
-  refreshModeMenu(): unknown;
-  resetModeMenuDoubleTab(): boolean;
-  resetModeTagRemovalConfirmation(): boolean;
-  setModeMenuResultOffset(offset: number): void;
-  setPrefixText(
-    label: string,
-    theme?: object,
-    options?: Record<string, unknown>
-  ): void;
-  setProviderPrefix(
-    provider: Record<string, unknown>,
-    theme?: object,
-    options?: Record<string, unknown>
-  ): void;
-  setTabHintVisible(
-    visible: boolean,
-    provider?: Record<string, unknown>
-  ): void;
-  shouldCompleteModeMenuDoubleTab(event: KeyboardEvent): boolean;
-  handleModeMenuTabFocusToggle(event: KeyboardEvent): boolean;
-  shouldHandleModeMenuKeyEvent(event: KeyboardEvent): boolean;
-  shouldOpenModeMenuForActiveModeOnTab(event: KeyboardEvent): boolean;
-  shouldOpenModeMenuOnDoubleTab(event: KeyboardEvent): boolean;
-  shouldRemoveModeTagOnBackspace(event?: { repeat?: boolean }): boolean;
-}
-
 function getTestContrastRatio(firstRgb: number[], secondRgb: number[]) {
   const getLuminance = (rgb: number[]) => rgb.map((channel) => {
     const value = channel / 255;
@@ -90,13 +37,7 @@ function getTestContrastRatio(firstRgb: number[], secondRgb: number[]) {
     (Math.min(firstLuminance, secondLuminance) + 0.05);
 }
 
-// Typed by hand until the module has types of its own.
-const LumnoSearchInputMode: {
-  createInputModeController(
-    parts: Record<string, HTMLElement>,
-    options?: Record<string, unknown>
-  ): ModeController;
-} = searchInputModeModule as unknown as typeof LumnoSearchInputMode;
+const LumnoSearchInputMode = searchInputModeModule;
 
 function createModeParts() {
   const container = document.createElement('div');
@@ -148,13 +89,6 @@ afterEach(() => {
 
 describe('Shared search scope menu', () => {
   it('checks current favicon policy before assigning prefix and menu images', () => {
-    // Typed by hand until the module has types of its own.
-    const faviconUtils: {
-      createFaviconUrlResolver(options: object): {
-        getProviderFaviconUrl(pageUrl: string, iconUrl: string): string;
-        getExtensionFaviconUrl(pageUrl: string): string;
-      };
-    } = faviconUtilsModule as unknown as typeof faviconUtils;
     let enhanced = true;
     const resolver = faviconUtils.createFaviconUrlResolver({
       getRuntimeUrl: (path: string) => `chrome-extension://abc${path}`,
@@ -168,7 +102,7 @@ describe('Shared search scope menu', () => {
       // These callers deliberately retain a URL chosen before settings changed.
       getProviderIcon: () => iconUrl,
       preferDirectProviderIcons: true,
-      resolveProviderIconUrl: (_provider: object, source: string) => (
+      resolveProviderIconUrl: (_provider, source) => (
         resolver.getProviderFaviconUrl(pageUrl, source)
       ),
       getModeMenuItems: () => [{
@@ -752,7 +686,7 @@ describe('Shared search scope menu', () => {
       { surface: 'overlay' }
     );
 
-    controller.setTabHintVisible(true, { name: 'YouTube' });
+    controller.setTabHintVisible(true, { key: 'yt', name: 'YouTube' });
 
     expect(parts.modeTabHint.style.display).toBe('inline-flex');
     expect(parts.modeTabHintKey.textContent).toBe('Tab');
