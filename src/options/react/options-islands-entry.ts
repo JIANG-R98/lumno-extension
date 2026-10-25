@@ -8,7 +8,6 @@ import { createSegmentedControlApi } from './segmented-control';
 import { createSelectControlApi } from './select-control';
 import { createSettingsNavigationApi } from './settings-navigation';
 import { createSettingsControlsApi } from './settings-controls';
-import { createThemePickerApi } from './theme-picker';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
 import { createTabSwitcherViewApi } from '../../shared/react/tab-switcher';
 
@@ -25,7 +24,6 @@ declare global {
       settingsNavigation: ReturnType<typeof createSettingsNavigationApi>;
       settingsControls: ReturnType<typeof createSettingsControlsApi>;
       shortcutsTab: ReturnType<typeof createShortcutsTabApi>;
-      themePicker: ReturnType<typeof createThemePickerApi>;
       toast: ReturnType<typeof createToastApi>;
       tabSwitcher: ReturnType<typeof createTabSwitcherViewApi>;
     } | undefined;
@@ -35,7 +33,6 @@ declare global {
   var LumnoOptionsSelectControlReact: ReturnType<typeof createSelectControlApi> | undefined;
   var LumnoOptionsSettingsNavigationReact: ReturnType<typeof createSettingsNavigationApi> | undefined;
   var LumnoOptionsSettingsControlsReact: ReturnType<typeof createSettingsControlsApi> | undefined;
-  var LumnoOptionsThemePickerReact: ReturnType<typeof createThemePickerApi> | undefined;
   var LumnoOptionsToastReact: ReturnType<typeof createToastApi> | undefined;
   var LumnoTooltipViewReact: ReturnType<typeof createTooltipViewApi> | undefined;
   var LumnoOverlayTabSwitcherViewReact: ReturnType<typeof createTabSwitcherViewApi> | undefined;
@@ -54,7 +51,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   const settingsNavigationApi = createSettingsNavigationApi();
   const settingsControlsApi = createSettingsControlsApi();
   const shortcutsTabApi = createShortcutsTabApi();
-  const themePickerApi = createThemePickerApi();
   const toastApi = createToastApi();
   const tooltipViewApi = createTooltipViewApi();
   const tabSwitcherApi =
@@ -74,8 +70,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoOptionsSettingsControlsReact = settingsControlsApi;
   runtime.LumnoOptionsSettingsControls = settingsControlsApi;
   runtime.LumnoOptionsShortcutsTab = shortcutsTabApi;
-  runtime.LumnoOptionsThemePickerReact = themePickerApi;
-  runtime.LumnoOptionsThemePicker = themePickerApi;
   runtime.LumnoOptionsToastReact = toastApi;
   runtime.LumnoOptionsToast = toastApi;
   runtime.LumnoTooltipViewReact = tooltipViewApi;
@@ -92,7 +86,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
     settingsNavigation: settingsNavigationApi,
     settingsControls: settingsControlsApi,
     shortcutsTab: shortcutsTabApi,
-    themePicker: themePickerApi,
     toast: toastApi,
     tabSwitcher: tabSwitcherApi
   });

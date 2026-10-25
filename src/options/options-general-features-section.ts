@@ -4,7 +4,7 @@
 // the rows; this keeps their values in step with storage.
 import type * as Settings from '../domain/settings';
 import { createSectionSetting, type SectionSettingBinder, type SectionSettingStorage } from './options-section-setting';
-import type { SectionView } from './options-general-tab';
+import type { SectionView } from './options-section-view';
 import type { GetMessage } from './options-types';
 import type { SettingsLinkModel, SettingsRowModel, SettingsRowsHandlers, SettingsSectionModel } from './react/settings-rows-view';
 

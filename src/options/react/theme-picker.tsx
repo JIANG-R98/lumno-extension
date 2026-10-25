@@ -1,8 +1,3 @@
-import {
-  createReactRootController,
-  type ReactRootController
-} from './root-controller';
-
 export type ThemeMode = 'system' | 'light' | 'dark';
 
 export interface ThemePickerOptionModel {
@@ -17,19 +12,13 @@ export interface ThemePickerRenderModel {
   options: ThemePickerOptionModel[];
 }
 
-export interface ThemePickerControllerOptions {
-  onSelect(mode: ThemeMode, button: HTMLButtonElement): void;
-}
 
-export type ThemePickerController =
-  ReactRootController<ThemePickerRenderModel>;
-
-function ThemePicker({
+export function ThemePicker({
   model,
   onSelect
 }: {
   model: ThemePickerRenderModel;
-  onSelect: ThemePickerControllerOptions['onSelect'];
+  onSelect(mode: ThemeMode, button: HTMLButtonElement): void;
 }) {
   return (
     <>
@@ -75,26 +64,4 @@ function ThemePicker({
       })}
     </>
   );
-}
-
-export function createThemePickerController(
-  host: HTMLElement | null,
-  options: ThemePickerControllerOptions
-): ThemePickerController {
-  if (host) {
-    host.dataset.reactIsland = 'options-theme-picker';
-  }
-  return createReactRootController(
-    host,
-    (model: ThemePickerRenderModel) => (
-      <ThemePicker model={model} onSelect={options.onSelect} />
-    )
-  );
-}
-
-export function createThemePickerApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createThemePickerController
-  });
 }

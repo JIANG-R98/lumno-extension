@@ -20,8 +20,6 @@ function clearRuntime(): void {
   Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsControlsReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsAccountTab');
   Reflect.deleteProperty(runtime, 'LumnoOptionsShortcutsTab');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsThemePicker');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsThemePickerReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsToast');
   Reflect.deleteProperty(runtime, 'LumnoOptionsToastReact');
   Reflect.deleteProperty(runtime, 'LumnoOverlayTabSwitcherView');
@@ -68,10 +66,6 @@ describe('Options React islands entry', () => {
     expect(runtime.LumnoOptionsSettingsControlsReact).toBe(
       runtime.LumnoOptionsSettingsControls
     );
-    expect(runtime.LumnoOptionsThemePicker?.implementation).toBe('react');
-    expect(runtime.LumnoOptionsThemePickerReact).toBe(
-      runtime.LumnoOptionsThemePicker
-    );
     expect(runtime.LumnoOptionsToast?.implementation).toBe('react');
     expect(runtime.LumnoOptionsToastReact).toBe(runtime.LumnoOptionsToast);
     expect(runtime.LumnoOverlayTabSwitcherView?.implementation).toBe('react');
@@ -87,7 +81,6 @@ describe('Options React islands entry', () => {
       settingsControls: runtime.LumnoOptionsSettingsControls,
       accountTab: runtime.LumnoOptionsAccountTab,
       shortcutsTab: runtime.LumnoOptionsShortcutsTab,
-      themePicker: runtime.LumnoOptionsThemePicker,
       toast: runtime.LumnoOptionsToast,
       tabSwitcher: runtime.LumnoOverlayTabSwitcherView
     });

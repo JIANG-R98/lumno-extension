@@ -192,7 +192,7 @@ async function testPages() {
     'LumnoOptionsToastReact', 'LumnoOptionsAccountTab', 'LumnoOptionsBlacklistTabReact', 'LumnoOptionsShortcutsTab',
     'LumnoOptionsSegmentedControlReact', 'LumnoOptionsSelectControlReact', 'LumnoOptionsSettingsNavigationReact',
     'LumnoOptionsSettingsControlsReact',
-    'LumnoOptionsThemePickerReact', 'LumnoOptionsReactIslands', 'LumnoOverlayTabSwitcherViewReact'
+    'LumnoOptionsReactIslands', 'LumnoOverlayTabSwitcherViewReact'
   ]), [], 'Options should install every migrated React API');
   assert.ok(options.document.querySelectorAll('[data-react-island]').length > 5, 'and render through them');
   options.close();

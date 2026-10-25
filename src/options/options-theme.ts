@@ -4,7 +4,7 @@
 import type * as Settings from '../domain/settings';
 import type { ThemeMode } from '../domain/settings';
 import type { GetMessage } from './options-types';
-import type { ThemePickerController } from './react/theme-picker';
+import type { ThemePickerRenderModel } from './react/theme-picker';
 
 // The part of a storage area the section reads and writes.
 interface ThemeStorageArea {
@@ -19,7 +19,7 @@ interface ThemeSectionOptions {
   storageArea: ThemeStorageArea | null;
   settings: Pick<typeof Settings, 'THEME_STORAGE_KEY' | 'OPTIONS_THEME_PRELOAD_STORAGE_KEY' |
     'createGlobalThemeModeStorageUpdate' | 'normalizeThemeMode'>;
-  picker: Pick<ThemePickerController, 'render'>;
+  picker: { render(model: ThemePickerRenderModel): void };
   getMessage: GetMessage;
   // Runs whenever the picker shows a mode.
   onModeShown?(mode: ThemeMode): void;

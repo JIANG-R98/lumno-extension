@@ -15,7 +15,6 @@ import type { createSelectControlApi } from '../options/react/select-control';
 import type { createSettingsControlsApi } from '../options/react/settings-controls';
 import type { createSettingsNavigationApi } from '../options/react/settings-navigation';
 import type { createShortcutsTabApi } from '../options/react/shortcuts-tab';
-import type { createThemePickerApi } from '../options/react/theme-picker';
 import type { createToastApi } from '../shared/react/toast';
 import type { createAccountTabApi } from '../options/react/account-tab';
 import type { createPopupApi } from '../popup/react/popup-view';
@@ -112,7 +111,6 @@ declare global {
   var LumnoOptionsSelectControl: ReturnType<typeof createSelectControlApi> | undefined;
   var LumnoOptionsSettingsControls: ReturnType<typeof createSettingsControlsApi> | undefined;
   var LumnoOptionsSettingsNavigation: ReturnType<typeof createSettingsNavigationApi> | undefined;
-  var LumnoOptionsThemePicker: ReturnType<typeof createThemePickerApi> | undefined;
   var LumnoOptionsToast: ReturnType<typeof createToastApi> | undefined;
   var LumnoOptionsAccountTab: ReturnType<typeof createAccountTabApi> | undefined;
   // Set by the onboarding page's React islands entry.

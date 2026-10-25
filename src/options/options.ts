@@ -9,6 +9,7 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoShortcutDisplay from '../domain/shortcut-display';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as OPTIONS_ACCOUNT_SECTION from './options-account-section';
+import * as OPTIONS_APPEARANCE_GLOBAL_SECTION from './options-appearance-global-section';
 import * as OPTIONS_AGGREGATE_SEARCH_LIST from './options-aggregate-search-list';
 import * as AGGREGATE_SEARCH from './options-aggregate-search';
 import * as OPTIONS_BLACKLIST_SECTION from './options-blacklist-section';
@@ -78,11 +79,6 @@ import * as OPTIONS_STATE from './options-state';
   const panel = getHtmlElement(document, '_x_extension_settings_panel_2024_unique_');
   const optionsRoot = getHtmlElement(document, '_x_extension_options_root_2024_unique_');
   const tabsRow = queryHtmlElement(document, '._x_extension_settings_tabs_row_2024_unique_');
-  const appearanceContent = queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="appearance"]');
-  const themePicker = appearanceContent
-    ? queryHtmlElement(appearanceContent, '._x_extension_theme_picker_2024_unique_')
-    : null;
-  const themeButtons = themePicker ? queryHtmlElements(themePicker, '._x_extension_theme_option_2024_unique_') : [];
   const tabButtons = queryHtmlElements(document, '._x_extension_settings_tab_button_2024_unique_');
   const tabContents = queryHtmlElements(document, '._x_extension_settings_content_2024_unique_');
   const tabsContainer = getHtmlElement(document, '_x_extension_settings_tabs_2024_unique_');
@@ -141,7 +137,7 @@ import * as OPTIONS_STATE from './options-state';
   const bookmarkRowsInfoHost = getHtmlElement(document, '_x_extension_bookmark_rows_info_2026_unique_');
   const bookmarkColumnsInfoHost = getHtmlElement(document, '_x_extension_bookmark_columns_info_2026_unique_');
   const toastElement = getHtmlElement(document, '_x_extension_toast_2024_unique_');
-  if (!panel || !optionsRoot || themeButtons.length === 0 || tabButtons.length === 0) {
+  if (!panel || !optionsRoot || tabButtons.length === 0) {
     return;
   }
   // The React views, set by the options islands bundle that loads first.
@@ -153,11 +149,9 @@ import * as OPTIONS_STATE from './options-state';
   const optionsSegmentedControlApi = globalThis.LumnoOptionsSegmentedControl;
   const optionsSettingsControlsApi = globalThis.LumnoOptionsSettingsControls;
   const optionsSettingsNavigationApi = globalThis.LumnoOptionsSettingsNavigation;
-  const optionsThemePickerApi = globalThis.LumnoOptionsThemePicker;
   if (!optionsAccountTabApi || !optionsBlacklistTabApi || !optionsShortcutsTabApi ||
       !optionsInfoButtonApi || !optionsSegmentedControlApi ||
-      !optionsSettingsControlsApi || !optionsSettingsNavigationApi ||
-      !optionsThemePickerApi) {
+      !optionsSettingsControlsApi || !optionsSettingsNavigationApi) {
     console.warn('Lumno: options views not available.');
     return;
   }
@@ -440,6 +434,7 @@ import * as OPTIONS_STATE from './options-state';
       generalSearchSection.render();
       generalNewtabSection.render();
       generalShortcutsSection.render();
+      appearanceGlobalSection.render();
       labsSection.render();
       blacklistSection.render();
     },
@@ -527,13 +522,6 @@ import * as OPTIONS_STATE from './options-state';
   const overlayPageThemeAdaptationInfoController = createOptionsInfoButtonController(
     overlayPageThemeAdaptationInfoHost
   );
-  const themePickerController =
-    optionsThemePickerApi.createThemePickerController(themePicker, {
-      onSelect(mode, button) {
-        playThemeOptionClickEffect(button);
-        setThemeMode(mode);
-      }
-    });
   function createOptionsSegmentedControlController(host: HTMLElement | null, kind: string, onSelect: (value: string) => void) {
     return segmentedControlApi.createSegmentedControlController(host, {
       kind,
@@ -696,6 +684,17 @@ import * as OPTIONS_STATE from './options-state';
     getMessage,
     getViewportTopInset: getMenuViewportTopInset,
     hideTooltip: () => optionsState.tooltipController.hide()
+  });
+  const appearanceGlobalHost = getHtmlElement(document, '_x_extension_appearance_global_section_2026_unique_');
+  const appearanceGlobalSection = OPTIONS_APPEARANCE_GLOBAL_SECTION.createAppearanceGlobalSection({
+    view: (handlers) => optionsSettingsControlsApi.createAppearanceGlobalSectionController(appearanceGlobalHost, handlers),
+    storageArea: optionsState.storageArea,
+    SETTINGS,
+    getMessage,
+    onTheme(mode, button) {
+      playThemeOptionClickEffect(button);
+      setThemeMode(mode);
+    }
   });
   const labsSection = OPTIONS_LABS_SECTION.createLabsSection({
     host: queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="labs"]'),
@@ -1280,7 +1279,7 @@ import * as OPTIONS_STATE from './options-state';
     getMessage,
     onModeShown: updateOverlayPageThemeAdaptationVisibility,
     panel,
-    picker: themePickerController,
+    picker: appearanceGlobalSection.themePicker,
     settings: SETTINGS,
     storageArea: optionsState.storageArea,
     windowObj: window
@@ -1292,12 +1291,6 @@ import * as OPTIONS_STATE from './options-state';
     }
   });
 
-  themeButtons.forEach((button) => {
-    button.addEventListener('click', function() {
-      playThemeOptionClickEffect(button);
-      setThemeMode(button.getAttribute('data-mode'));
-    });
-  });
 
   if (!optionsState.storageArea) {
     applyLanguageMode('system');
@@ -1386,6 +1379,7 @@ import * as OPTIONS_STATE from './options-state';
   generalSearchSection.bindSettings(settingBinder);
   generalNewtabSection.bindSettings(settingBinder);
   generalShortcutsSection.bindSettings(settingBinder);
+  appearanceGlobalSection.bindSettings(settingBinder);
   labsSection.bindSettings(settingBinder);
   blacklistSection.bindSettings(settingBinder);
   shortcutsSection.bindSettings(settingBinder);

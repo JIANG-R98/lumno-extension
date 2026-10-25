@@ -8,7 +8,7 @@ import type { StorageItems } from '../domain/storage-port';
 import * as LumnoMessaging from '../platform/messaging';
 import type { MessageRuntime } from '../platform/messaging';
 import { createSectionSetting, type SectionSettingBinder } from './options-section-setting';
-import type { SectionView } from './options-general-tab';
+import type { SectionView } from './options-section-view';
 import type { GetMessage } from './options-types';
 import type { GeneralShortcutsSectionHandlers, GeneralShortcutsSectionModel } from './react/general-shortcuts-section';
 import type { ShortcutReferenceRenderModel } from './react/shortcut-reference';

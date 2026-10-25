@@ -102,20 +102,6 @@ function getToggleSettings(settings: typeof Settings, hooks?: ToggleSettingHooks
       kind: 'newtab-appearance-button-visible',
       key: S.NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
       normalize: S.normalizeNewtabAppearanceButtonVisible
-    },
-    {
-      inputId: '_x_extension_motion_effects_toggle_2026_unique_',
-      kind: 'motion-effects',
-      key: S.MOTION_EFFECTS_ENABLED_STORAGE_KEY,
-      normalize: S.normalizeMotionEffectsEnabled,
-      refreshSelects: true
-    },
-    {
-      inputId: '_x_extension_simple_mode_toggle_2026_unique_',
-      kind: 'simple-mode',
-      key: S.SIMPLE_MODE_ENABLED_STORAGE_KEY,
-      normalize: S.normalizeSimpleModeEnabled,
-      refreshSelects: true
     }
   ];
   return Object.freeze(entries.map((entry) => Object.freeze(entry)));

@@ -6,7 +6,7 @@ import type { SearchSourceType } from '../domain/search/types';
 import type * as Settings from '../domain/settings';
 import type { StorageItems } from '../domain/storage-port';
 import { createSectionSetting, type SectionSettingBinder } from './options-section-setting';
-import type { SectionView } from './options-general-tab';
+import type { SectionView } from './options-section-view';
 import type { createSearchSourceOrderController } from './options-search-source-order';
 import type { GetMessage } from './options-types';
 import type { SettingsRowModel, SettingsRowsHandlers, SettingsSectionModel } from './react/settings-rows-view';

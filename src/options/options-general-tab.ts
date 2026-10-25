@@ -5,11 +5,7 @@ import type { GeneralGlobalSectionHandlers, GeneralGlobalSectionModel } from './
 import type { GeneralShortcutsSectionHandlers, GeneralShortcutsSectionModel } from './react/general-shortcuts-section';
 import type { GeneralTabController, GeneralTabModel } from './react/general-tab';
 import type { SettingsRowsHandlers, SettingsSectionModel } from './react/settings-rows-view';
-
-interface SectionView<M> {
-  render(model: M): void;
-  destroy(): void;
-}
+import type { SectionView } from './options-section-view';
 
 function createGeneralTab(controller: Pick<GeneralTabController, 'render'>) {
   const model: GeneralTabModel = { global: null, features: null, search: null, newtab: null, shortcuts: null };
@@ -63,4 +59,3 @@ function createGeneralTab(controller: Pick<GeneralTabController, 'render'>) {
 }
 
 export { createGeneralTab };
-export type { SectionView };

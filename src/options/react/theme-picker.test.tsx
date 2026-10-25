@@ -1,14 +1,10 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  createThemePickerApi,
-  createThemePickerController,
-  type ThemePickerController,
-  type ThemePickerRenderModel
-} from './theme-picker';
+import { ThemePicker, type ThemePickerRenderModel } from './theme-picker';
+import { createReactRootController, type ReactRootController } from './root-controller';
 import { queryHtmlTag } from '../../shared/dom-lookup';
 
-let controllers: ThemePickerController[] = [];
+let controllers: Array<ReactRootController<ThemePickerRenderModel>> = [];
 
 const model: ThemePickerRenderModel = {
   activeMode: 'system',
@@ -38,7 +34,7 @@ function createFixture() {
   const host = document.createElement('div');
   document.body.appendChild(host);
   const onSelect = vi.fn();
-  const controller = createThemePickerController(host, { onSelect });
+  const controller = createReactRootController(host, (value: ThemePickerRenderModel) => <ThemePicker model={value} onSelect={onSelect} />);
   controllers.push(controller);
   return { controller, host, onSelect };
 }
@@ -51,13 +47,11 @@ afterEach(() => {
   document.body.textContent = '';
 });
 
-describe('Options theme picker React island', () => {
+describe('Options theme picker', () => {
   it('renders the existing gallery classes, previews, and active state', () => {
     const { controller, host } = createFixture();
     act(() => controller.render(model));
 
-    expect(createThemePickerApi().implementation).toBe('react');
-    expect(host.dataset.reactIsland).toBe('options-theme-picker');
     expect(host.querySelectorAll('button')).toHaveLength(3);
     expect(host.querySelector('[data-mode="system"]')?.getAttribute('data-active'))
       .toBe('true');

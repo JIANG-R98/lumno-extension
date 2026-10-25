@@ -4,7 +4,7 @@
 import type * as Settings from '../domain/settings';
 import type { NewtabOpenInNewTab, NewtabOpenInNewTabSurface } from '../domain/settings';
 import { createSectionSetting, type SectionSettingBinder, type SectionSettingStorage } from './options-section-setting';
-import type { SectionView } from './options-general-tab';
+import type { SectionView } from './options-section-view';
 import type { GetMessage } from './options-types';
 import type { SettingsRowModel, SettingsRowsHandlers, SettingsSectionModel } from './react/settings-rows-view';
 

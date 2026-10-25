@@ -1,7 +1,5 @@
 const assert = require('assert');
 const fs = require('fs');
-const { JSDOM } = require('jsdom');
-const { readPageSource } = require('../helpers/page-source');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { getBundleFiles, getPageScripts } = require('../helpers/runtime-scripts');
@@ -15,19 +13,7 @@ const tabSwitcherSource = fs.readFileSync('src/overlay/tab-switcher.ts', 'utf8')
 const backgroundSource = readBackgroundSource();
 const selectionActionsSource = fs.readFileSync('src/content/selection-quick-actions.ts', 'utf8');
 
-const optionsDocument = new JSDOM(readPageSource('src/options/options.html')).window.document;
-const appearance = optionsDocument.querySelector('[data-content="appearance"]');
-const themeRow = appearance.querySelector('#_x_extension_theme_mode_row_2026_unique_');
-const motionTitle = appearance.querySelector('[data-i18n="settings_motion_effects_title"]');
-const newtabSection = appearance.querySelector('[data-i18n="settings_newtab_section_title"]');
-assert.ok(themeRow, 'appearance should keep the global theme setting');
-assert.ok((themeRow.compareDocumentPosition(motionTitle) & 4) && (motionTitle.compareDocumentPosition(newtabSection) & 4),
-  'motion effects should appear in Appearance between theme and New Tab settings');
-const tooltip = appearance.querySelector('[data-i18n-tooltip="settings_motion_effects_desc"]');
-assert.strictEqual(tooltip && tooltip.getAttribute('data-tooltip'), '如遇卡顿，或倾向于更利落的唤起方式，可关闭',
-  'the simplified Chinese fallback should keep the requested guidance in the title tooltip');
-assert.strictEqual(optionsDocument.getElementById('_x_extension_motion_effects_toggle_2026_unique_').checked, true,
-  'motion effects should default to enabled in markup');
+// The Settings row is covered by src/options/options-appearance-global-section.test.tsx.
 
 assert(getBundleFiles('newtab-preload').includes('src/shared/motion-preload.ts'),
   'New Tab should preload the synchronized entry-motion preference before it is revealed');
