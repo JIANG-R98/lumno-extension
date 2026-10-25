@@ -23,12 +23,11 @@
   font-weight: 400;
   line-height: 1.45;
   color: rgba(249, 250, 251, 0.96);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-wrap: pretty;
 }
 .x-nt-page-notice-primary {
   all: unset;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
