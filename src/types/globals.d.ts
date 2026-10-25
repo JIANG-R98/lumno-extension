@@ -3,7 +3,6 @@ import type { FeatureHintViewApi, TooltipViewApi } from './view-apis';
 import type { AutoPipBlacklist, DocumentPipPickerApi, PageShortcutToastApi } from './content-apis';
 import type { ShortcutRule } from '../domain/messages';
 import type * as SearchSourceOrder from '../domain/search/search-source-order';
-import type { SuggestionsViewController, SuggestionsViewOptions } from '../shared/react/search/suggestion-list/types';
 import type { createTabSwitcherViewApi } from '../shared/react/tab-switcher';
 import type { TabSwitcherReply } from '../overlay/tab-switcher-host';
 import type { createOverlayShellApi } from '../overlay/react/shell';
@@ -108,9 +107,7 @@ declare global {
   var _x_extension_createSearchInput_2024_unique_: ReturnType<typeof createSearchInputApi>['createSearchInput'] | undefined;
   // Set by the overlay's React islands entry.
   var LumnoOverlayShell: ReturnType<typeof createOverlayShellApi> | undefined;
-  var LumnoOverlaySuggestionsView: {
-    createSuggestionsView(options?: SuggestionsViewOptions): SuggestionsViewController;
-  } | undefined;
+  var LumnoOverlaySuggestionsView: ReturnType<typeof createSuggestionsViewApi> | undefined;
   var LumnoOverlayTabSwitcherView: ReturnType<typeof createTabSwitcherViewApi> | undefined;
   // Set by the popup's React islands entry.
   var LumnoPopupReact: ReturnType<typeof createPopupApi> | undefined;

@@ -1,60 +1,22 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-type OverlayRuntime = typeof globalThis & {
-  LumnoOverlayReactBootstrap?: { reactReady: boolean };
-  LumnoOverlayReactIslands?: {
-    searchInput?: { implementation?: string };
-    shell?: { implementation?: string };
-    suggestions?: { implementation?: string };
-    tabSwitcher?: { implementation?: string };
-  };
-  LumnoOverlayShellReact?: {
-    implementation?: string;
-  };
-  LumnoSearchInputUI?: {
-    createSearchInput?(): unknown;
-    implementation?: string;
-  };
-  LumnoSearchInputUIReact?: {
-    implementation?: string;
-  };
-  LumnoFeatureHintView?: {
-    implementation?: string;
-  };
-  LumnoFeatureHintViewReact?: {
-    implementation?: string;
-  };
-  LumnoOverlaySuggestionsView?: {
-    implementation?: string;
-  };
-  LumnoOverlaySuggestionsViewReact?: {
-    implementation?: string;
-  };
-  LumnoOverlayTabSwitcherView?: {
-    implementation?: string;
-  };
-  LumnoOverlayTabSwitcherViewReact?: {
-    implementation?: string;
-  };
-  _x_extension_createSearchInput_2024_unique_?: unknown;
-};
 
-const runtime = globalThis as OverlayRuntime;
+const runtime = globalThis;
 
 afterEach(() => {
-  delete runtime.LumnoOverlayReactBootstrap;
-  delete runtime.LumnoOverlayReactIslands;
-  delete runtime.LumnoOverlayShell;
-  delete runtime.LumnoOverlayShellReact;
-  delete runtime.LumnoSearchInputUI;
-  delete runtime.LumnoSearchInputUIReact;
-  delete runtime.LumnoFeatureHintView;
-  delete runtime.LumnoFeatureHintViewReact;
-  delete runtime.LumnoOverlaySuggestionsView;
-  delete runtime.LumnoOverlaySuggestionsViewReact;
-  delete runtime.LumnoOverlayTabSwitcherView;
-  delete runtime.LumnoOverlayTabSwitcherViewReact;
-  delete runtime._x_extension_createSearchInput_2024_unique_;
+  Reflect.deleteProperty(runtime, 'LumnoOverlayReactBootstrap');
+  Reflect.deleteProperty(runtime, 'LumnoOverlayReactIslands');
+  Reflect.deleteProperty(runtime, 'LumnoOverlayShell');
+  Reflect.deleteProperty(runtime, 'LumnoOverlayShellReact');
+  Reflect.deleteProperty(runtime, 'LumnoSearchInputUI');
+  Reflect.deleteProperty(runtime, 'LumnoSearchInputUIReact');
+  Reflect.deleteProperty(runtime, 'LumnoFeatureHintView');
+  Reflect.deleteProperty(runtime, 'LumnoFeatureHintViewReact');
+  Reflect.deleteProperty(runtime, 'LumnoOverlaySuggestionsView');
+  Reflect.deleteProperty(runtime, 'LumnoOverlaySuggestionsViewReact');
+  Reflect.deleteProperty(runtime, 'LumnoOverlayTabSwitcherView');
+  Reflect.deleteProperty(runtime, 'LumnoOverlayTabSwitcherViewReact');
+  Reflect.deleteProperty(runtime, '_x_extension_createSearchInput_2024_unique_');
   vi.resetModules();
 });
 

@@ -19,31 +19,30 @@ import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 type StorageValues = Record<string, unknown>;
 type Messages = Record<string, { message: string }>;
 const LOCALE_MESSAGES: Record<string, Messages> = {
-  en: enMessages as Messages,
-  ja: jaMessages as Messages,
-  zh_CN: zhCnMessages as Messages,
-  zh_TW: zhTwMessages as Messages
+  en: enMessages,
+  ja: jaMessages,
+  zh_CN: zhCnMessages,
+  zh_TW: zhTwMessages
 };
 type ChangeListener = (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>, area: string) => void;
 
 
 
-const addedListeners: Array<[EventTarget, string, EventListenerOrEventListenerObject, unknown]> = [];
+const addedListeners: Array<[EventTarget, string, EventListenerOrEventListenerObject, AddEventListenerOptions | boolean | undefined]> = [];
 
-// Typed by hand until the module has types of its own.
-const SETTINGS = settingsModule as unknown as Record<string, string>;
+const SETTINGS = settingsModule;
 
-function trackListeners(target: Document | Window): void {
+function trackListeners(target: EventTarget): void {
   // A test that boots the page twice finds the spy in place, and spying again
   // would hand back that spy as the method to forward to.
   if (vi.isMockFunction(target.addEventListener)) {
     return;
   }
   const addEventListener = target.addEventListener.bind(target);
-  vi.spyOn(target as EventTarget, 'addEventListener').mockImplementation((type, listener, options) => {
+  vi.spyOn(target, 'addEventListener').mockImplementation((type, listener, options) => {
     if (listener) {
       addedListeners.push([target, type, listener, options]);
-      addEventListener(type, listener, options as AddEventListenerOptions);
+      addEventListener(type, listener, options);
     }
   });
 }
@@ -114,9 +113,24 @@ function createArea(name: string, values: StorageValues, listeners: Set<ChangeLi
   };
 }
 
+// The stored search source order's site list and group order.
+function readStoredOrder(value: unknown): { site: unknown[]; groups: unknown } {
+  if (typeof value !== 'object' || value === null || !('lists' in value) || !('groups' in value)) {
+    throw new Error('Expected a stored search source order.');
+  }
+  const lists = value.lists;
+  const site = typeof lists === 'object' && lists !== null && 'site' in lists ? lists.site : null;
+  return { site: Array.isArray(site) ? site : [], groups: value.groups };
+}
+
+// chrome.runtime.lastError between failures; a test sets it for one callback.
+function noLastError(): { message: string } | null {
+  return null;
+}
+
 function createChromeStub(sync: StorageValues, local: StorageValues) {
   const listeners = new Set<ChangeListener>();
-  const messages = enMessages as Record<string, { message: string }>;
+  const messages: Messages = enMessages;
   return {
     commands: { getAll: (callback: (commands: object[]) => void) => callback([]) },
     i18n: {
@@ -127,7 +141,7 @@ function createChromeStub(sync: StorageValues, local: StorageValues) {
       getManifest: () => ({ version: '1.0.0' }),
       getURL: (path: string) => `chrome-extension://lumno/${path}`,
       id: 'lumno',
-      lastError: null,
+      lastError: noLastError(),
       onMessage: { addListener() {} },
       sendMessage: vi.fn((_message: unknown, callback?: (response: unknown) => void) => {
         if (callback) callback({ ok: true });
@@ -192,7 +206,7 @@ function toggle(id: string): HTMLInputElement {
 
 afterEach(() => {
   addedListeners.splice(0).forEach(([target, type, listener, options]) => {
-    target.removeEventListener(type, listener, options as EventListenerOptions);
+    target.removeEventListener(type, listener, options);
   });
   vi.unstubAllGlobals();
 });
@@ -213,7 +227,7 @@ describe('Options page storage wiring', () => {
     expect(synced[settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY]).toBe(true);
     expect(synced[settings.MOTION_EFFECTS_ENABLED_STORAGE_KEY]).toBe(false);
     expect(document.getElementById('_x_extension_feedback_support_2026_unique_')?.textContent)
-      .toContain((enMessages as Messages).settings_help_center_title.message);
+      .toContain(enMessages.settings_help_center_title.message);
     // The WebDAV controller is created in the page's own declaration order.
     expect(document.getElementById('lumno-webdav-list')?.childElementCount).toBeGreaterThan(0);
     // Ready once the startup values have been painted.
@@ -301,8 +315,8 @@ describe('Options page storage wiring', () => {
     });
     await settle();
     expect(siteKeys().slice(0, 3)).toEqual(['yt', 'gh', 'bb']);
-    const stored = chrome.storage.sync.values[key] as { lists: { site: string[] }; groups: string[] };
-    expect(stored.lists.site.slice(0, 3)).toEqual(['yt', 'gh', 'bb']);
+    const stored = readStoredOrder(chrome.storage.sync.values[key]);
+    expect(stored.site.slice(0, 3)).toEqual(['yt', 'gh', 'bb']);
     expect(stored.groups).toEqual(['local', 'ai', 'aggregate', 'engine', 'site']);
 
     // A second move, then consecutive undos and redos from the keyboard.
@@ -322,7 +336,7 @@ describe('Options page storage wiring', () => {
     expect(siteKeys().slice(0, 3)).toEqual(['yt', 'gh', 'bb']);
     await press({ ctrlKey: true, key: 'z' });
     expect(siteKeys().slice(0, 3)).toEqual(['gh', 'yt', 'bb']);
-    expect((chrome.storage.sync.values[key] as { lists: { site: string[] } }).lists.site.slice(0, 2))
+    expect(readStoredOrder(chrome.storage.sync.values[key]).site.slice(0, 2))
       .toEqual(['gh', 'yt']);
     // Nothing older to undo.
     await press({ ctrlKey: true, key: 'z' });
@@ -354,17 +368,7 @@ describe('Options page storage wiring', () => {
 
   it('binds every switch in the shared table to its storage key', async () => {
     const chrome = await bootOptionsPage();
-    // Typed by hand until the module has types of its own.
-    const toggleSettings: {
-      getToggleSettings(settings: unknown): Array<{
-        control?: string;
-        inputId: string;
-        key: string;
-        normalize(value: unknown): unknown;
-        normalizeInput?(value: unknown): unknown;
-      }>;
-    } = toggleSettingsModule as unknown as typeof toggleSettings;
-    const entries = toggleSettings.getToggleSettings(SETTINGS);
+    const entries = toggleSettingsModule.getToggleSettings(SETTINGS);
     // Sub-options stay disabled while their parent switch is off.
     const parents = [SETTINGS.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY, SETTINGS.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY];
     for (const entry of entries) {
@@ -374,11 +378,10 @@ describe('Options page storage wiring', () => {
         });
         await settle();
       }
-      const control = document.getElementById(entry.inputId) as HTMLInputElement & HTMLSelectElement;
-      expect(control, entry.inputId).toBeTruthy();
       if (entry.control === 'select') {
-        const option = Array.from(control.options).map((item) => item.value).find((value) => value !== control.value);
-        const host = expectElement(control.closest('._x_extension_custom_select_2024_unique_'));
+        const select = expectTag(document.getElementById(entry.inputId), 'select', entry.inputId);
+        const option = Array.from(select.options).map((item) => item.value).find((value) => value !== select.value);
+        const host = expectElement(select.closest('._x_extension_custom_select_2024_unique_'));
         await act(async () => {
           queryHtmlTag(host, 'button', 'button')?.click();
         });
@@ -389,6 +392,7 @@ describe('Options page storage wiring', () => {
         expect(chrome.storage.sync.values[entry.key], entry.key).toBe(entry.normalize(option));
         continue;
       }
+      const control = expectTag(document.getElementById(entry.inputId), 'input', entry.inputId);
       const next = !control.checked;
       await act(async () => {
         control.click();
@@ -435,7 +439,7 @@ describe('Options page storage wiring', () => {
     await bootOptionsPage();
     expect(toastText()).not.toContain('Action failed');
     addedListeners.splice(0).forEach(([target, type, listener, options]) => {
-      target.removeEventListener(type, listener, options as EventListenerOptions);
+      target.removeEventListener(type, listener, options);
     });
     vi.unstubAllGlobals();
     document.body.replaceChildren();
@@ -446,7 +450,7 @@ describe('Options page storage wiring', () => {
       const list = Array.isArray(keys) ? keys : [keys];
       if (callback && list.length === 1 && list[0] === settings.AGGREGATE_SEARCH_STORAGE_KEY) {
         queueMicrotask(() => {
-          failing.runtime.lastError = { message: 'read failed' } as unknown as null;
+          failing.runtime.lastError = { message: 'read failed' };
           callback({});
           failing.runtime.lastError = null;
         });

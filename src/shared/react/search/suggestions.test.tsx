@@ -9,7 +9,7 @@ import {
   type SuggestionsViewController,
   type SuggestionsViewOptions
 } from './suggestions';
-import { expectTag, getElements, getTag, getTags } from '../../../../tests/react/dom';
+import { expectTag, getElements, getTag, getTags, required } from '../../../../tests/react/dom';
 import { queryHtmlElement } from '../../dom-lookup';
 
 let views: SuggestionsViewController[] = [];
@@ -73,8 +73,7 @@ function createOptions(
       new Promise(() => {
         // Keep async theme resolution pending for deterministic tests.
       }),
-    getThemeForMode: (theme) =>
-      (theme || defaultTheme) as typeof defaultTheme,
+    getThemeForMode: (theme) => theme || defaultTheme,
     getHoverColors: () => ({
       bg: '#eee',
       border: '#ddd'
@@ -532,7 +531,7 @@ describe('Suggestions React island', () => {
       titleHighlight: {
         text: '腾讯视频 - 中国领先的在线视频平台',
         query: 'shipin',
-        ranges: [[2, 4]] as Array<[number, number]>
+        ranges: [[2, 4]] satisfies Array<[number, number]>
       }
     };
 
@@ -581,9 +580,8 @@ describe('Suggestions React island', () => {
   it('reports whether highlighted text belongs to the selected row', () => {
     const markStates = new Map<SuggestionElement, unknown>();
     const { view, items } = createView({
-      applyMarkVariables: (...args: unknown[]) => {
-        const [item, _theme, active] = args;
-        markStates.set(item as SuggestionElement, active);
+      applyMarkVariables: (item, _theme, active) => {
+        markStates.set(item, active);
       }
     });
 
@@ -1176,8 +1174,8 @@ describe('Suggestions React island', () => {
 
     const firstIdleTask = idleCallbacks.entries().next().value;
     expect(firstIdleTask).toBeDefined();
-    idleCallbacks.delete(firstIdleTask![0]);
-    act(() => firstIdleTask![1]({
+    idleCallbacks.delete(required(firstIdleTask, 'firstIdleTask')[0]);
+    act(() => required(firstIdleTask, 'firstIdleTask')[1]({
       didTimeout: false,
       timeRemaining: () => 8
     }));
@@ -1240,8 +1238,8 @@ describe('Suggestions React island', () => {
     const runNextIdleBatch = () => {
       const idleTask = idleCallbacks.entries().next().value;
       expect(idleTask).toBeDefined();
-      idleCallbacks.delete(idleTask![0]);
-      act(() => idleTask![1]({
+      idleCallbacks.delete(required(idleTask, 'idleTask')[0]);
+      act(() => required(idleTask, 'idleTask')[1]({
         didTimeout: false,
         timeRemaining: () => 8
       }));
@@ -1573,14 +1571,13 @@ describe('Suggestions React island', () => {
       }),
       applyMarkVariables: (item, theme, active) => {
         markThemes.push(theme);
-        const markTheme = theme as typeof brandTheme;
         item.style.setProperty(
           '--x-ext-mark-bg',
-          active ? '#86efac' : markTheme.markBg
+          active ? '#86efac' : theme?.markBg || ''
         );
         item.style.setProperty(
           '--x-ext-mark-text',
-          markTheme.markText
+          theme?.markText || ''
         );
       },
       actionModel: {

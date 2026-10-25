@@ -1,73 +1,25 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-type OnboardingRuntime = typeof globalThis & {
-  LumnoOnboardingActions?: {
-    implementation?: string;
-  };
-  LumnoOnboardingActionsReact?: {
-    implementation?: string;
-  };
-  LumnoOnboardingBodyCopy?: {
-    implementation?: string;
-  };
-  LumnoOnboardingBodyCopyReact?: {
-    implementation?: string;
-  };
-  LumnoOnboardingCopyHeading?: {
-    implementation?: string;
-  };
-  LumnoOnboardingCopyHeadingReact?: {
-    implementation?: string;
-  };
-  LumnoOnboardingCursorLayer?: {
-    implementation?: string;
-  };
-  LumnoOnboardingCursorLayerReact?: {
-    implementation?: string;
-  };
-  LumnoOnboardingInteractions?: {
-    implementation?: string;
-  };
-  LumnoOnboardingInteractionsReact?: {
-    implementation?: string;
-  };
-  LumnoOnboardingPageStrip?: {
-    implementation?: string;
-  };
-  LumnoOnboardingPageStripReact?: {
-    implementation?: string;
-  };
-  LumnoOnboardingVisualSurface?: {
-    implementation?: string;
-  };
-  LumnoOnboardingVisualSurfaceReact?: {
-    implementation?: string;
-  };
-  LumnoOnboardingReactBootstrap?: {
-    reactReady: boolean;
-  };
-  LumnoOnboardingReactIslands?: unknown;
-};
 
-const runtime = globalThis as OnboardingRuntime;
+const runtime = globalThis;
 
 function clearRuntime(): void {
-  delete runtime.LumnoOnboardingActions;
-  delete runtime.LumnoOnboardingActionsReact;
-  delete runtime.LumnoOnboardingBodyCopy;
-  delete runtime.LumnoOnboardingBodyCopyReact;
-  delete runtime.LumnoOnboardingCopyHeading;
-  delete runtime.LumnoOnboardingCopyHeadingReact;
-  delete runtime.LumnoOnboardingCursorLayer;
-  delete runtime.LumnoOnboardingCursorLayerReact;
-  delete runtime.LumnoOnboardingInteractions;
-  delete runtime.LumnoOnboardingInteractionsReact;
-  delete runtime.LumnoOnboardingPageStrip;
-  delete runtime.LumnoOnboardingPageStripReact;
-  delete runtime.LumnoOnboardingVisualSurface;
-  delete runtime.LumnoOnboardingVisualSurfaceReact;
-  delete runtime.LumnoOnboardingReactBootstrap;
-  delete runtime.LumnoOnboardingReactIslands;
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingActions');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingActionsReact');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingBodyCopy');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingBodyCopyReact');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingCopyHeading');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingCopyHeadingReact');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingCursorLayer');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingCursorLayerReact');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingInteractions');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingInteractionsReact');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingPageStrip');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingPageStripReact');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingVisualSurface');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingVisualSurfaceReact');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingReactBootstrap');
+  Reflect.deleteProperty(runtime, 'LumnoOnboardingReactIslands');
 }
 
 afterEach(() => {

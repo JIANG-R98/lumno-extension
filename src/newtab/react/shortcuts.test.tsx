@@ -6,6 +6,7 @@ import {
   createShortcutsViewApi,
   type VisibleShortcutItem,
   type ShortcutsLayout,
+  type ShortcutTileElement,
   type ShortcutsViewController,
   type ShortcutsViewOptions
 } from './shortcuts';
@@ -103,7 +104,7 @@ describe('Shortcuts React island', () => {
       queueThemeForTarget
     });
     renderItems(view, [folderEntry]);
-    const tile = getTag(options.grid!, '[data-shortcut-id="folder-entry"]', 'button');
+    const tile = getTag(required(options.grid, 'options.grid'), '[data-shortcut-id="folder-entry"]', 'button');
     expect(tile.getAttribute('aria-haspopup')).toBe('menu');
     expect(tile.getAttribute('data-bookmark-drop-folder-id')).toBe('42');
     expect(tile.querySelector('[data-folder-icon]')).not.toBeNull();
@@ -115,11 +116,11 @@ describe('Shortcuts React island', () => {
     expect(queueThemeForTarget).not.toHaveBeenCalled();
     act(() => tile.click());
     expect(openShortcut).toHaveBeenCalledWith(expect.objectContaining({ folderId: '42' }), expect.anything());
-    const folderTile = tile as import('./shortcuts').ShortcutTileElement;
-    folderTile._xSetBookmarkMenuVisualActive!(true);
+    const folderTile: ShortcutTileElement = tile;
+    required(folderTile._xSetBookmarkMenuVisualActive, 'folderTile._xSetBookmarkMenuVisualActive')(true);
     expect(animateFolderIcon).toHaveBeenLastCalledWith(tile.querySelector('.x-nt-shortcut-icon'), true);
     expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(true);
-    folderTile._xSetBookmarkMenuVisualActive!(false);
+    required(folderTile._xSetBookmarkMenuVisualActive, 'folderTile._xSetBookmarkMenuVisualActive')(false);
     expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(false);
   });
   it('preserves animated SVG nodes when a folder shortcut rerenders or is renamed', () => {
@@ -132,9 +133,9 @@ describe('Shortcuts React island', () => {
     path.setAttribute('d', 'M9 13');
     renderItems(view, [folder]);
     renderItems(view, [{ ...folder, title: 'Design renamed' }]);
-    expect(options.grid!.querySelector('path')).toBe(path);
+    expect(required(options.grid, 'options.grid').querySelector('path')).toBe(path);
     expect(path.getAttribute('d')).toBe('M9 13');
-    expect(options.grid!.querySelector('[data-shortcut-title="Design renamed"]')).not.toBeNull();
+    expect(required(options.grid, 'options.grid').querySelector('[data-shortcut-title="Design renamed"]')).not.toBeNull();
   });
   it('keeps the folder icon open while the pointer moves into its context menu', () => {
     const animateFolderIcon = vi.fn();
@@ -146,16 +147,16 @@ describe('Shortcuts React island', () => {
     const tile = view.getTiles()[0];
     const icon = tile.querySelector('.x-nt-shortcut-icon');
     tile.setAttribute('data-shortcut-context-menu-open', 'true');
-    tile._xSetBookmarkMenuVisualActive!(true);
+    required(tile._xSetBookmarkMenuVisualActive, 'tile._xSetBookmarkMenuVisualActive')(true);
     animateFolderIcon.mockClear();
     act(() => tile.dispatchEvent(new MouseEvent('pointerout', { bubbles: true, relatedTarget: document.body })));
     expect(animateFolderIcon).not.toHaveBeenCalled();
     // A folder contents menu can close while the context menu is still open.
-    tile._xSetBookmarkMenuVisualActive!(false);
+    required(tile._xSetBookmarkMenuVisualActive, 'tile._xSetBookmarkMenuVisualActive')(false);
     expect(animateFolderIcon).toHaveBeenLastCalledWith(icon, true);
     expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(true);
     tile.removeAttribute('data-shortcut-context-menu-open');
-    tile._xSetBookmarkMenuVisualActive!(false);
+    required(tile._xSetBookmarkMenuVisualActive, 'tile._xSetBookmarkMenuVisualActive')(false);
     expect(animateFolderIcon).toHaveBeenLastCalledWith(icon, false);
     expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(false);
   });
@@ -165,14 +166,14 @@ describe('Shortcuts React island', () => {
     renderItems(view, [folderEntry]);
     const tile = view.getTiles()[0];
     tile.setAttribute('aria-expanded', 'true');
-    tile._xSetBookmarkMenuVisualActive!(true);
+    required(tile._xSetBookmarkMenuVisualActive, 'tile._xSetBookmarkMenuVisualActive')(true);
     tile.setAttribute('data-shortcut-context-menu-open', 'true');
     tile.removeAttribute('data-shortcut-context-menu-open');
-    tile._xSetBookmarkMenuVisualActive!(false);
+    required(tile._xSetBookmarkMenuVisualActive, 'tile._xSetBookmarkMenuVisualActive')(false);
     expect(animateFolderIcon).toHaveBeenLastCalledWith(tile.querySelector('.x-nt-shortcut-icon'), true);
     expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(true);
     tile.setAttribute('aria-expanded', 'false');
-    tile._xSetBookmarkMenuVisualActive!(false);
+    required(tile._xSetBookmarkMenuVisualActive, 'tile._xSetBookmarkMenuVisualActive')(false);
     expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(false);
   });
   it('renders shortcut metadata and keeps the external tile cache synchronous', () => {
@@ -775,7 +776,7 @@ describe('Shortcuts React island', () => {
       const onGroupMenu = vi.fn();
       const { view, options } = createView({ onGroupMenu, getGroupActionsLabel: (title) => `${title} actions` });
       renderItems(view, items, { grouped: true, groups });
-      const header = getElement((options.grid as HTMLElement), '[data-shortcut-group-id="work"]');
+      const header = getElement(required(options.grid, 'grid'), '[data-shortcut-group-id="work"]');
       const more = getTag(header, '.x-nt-shortcut-group-more', 'button');
 
       expect(more.getAttribute('aria-label')).toBe('工作 actions');

@@ -6,7 +6,7 @@ import {
   type SegmentedControlController,
   type SegmentedControlRenderModel
 } from './segmented-control';
-import { getTags } from '../../../tests/react/dom';
+import { getTags, required } from '../../../tests/react/dom';
 import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: SegmentedControlController[] = [];
@@ -112,8 +112,10 @@ describe('Options segmented control React island', () => {
     const { controller, host } = createFixture();
     let visible = false;
     let resizeCallback: ResizeObserverCallback = () => {};
-    class ResizeObserverMock {
+    const observed: { observer: ResizeObserver | null } = { observer: null };
+    class ResizeObserverMock implements ResizeObserver {
       constructor(callback: ResizeObserverCallback) {
+        observed.observer = this;
         resizeCallback = callback;
       }
 
@@ -135,19 +137,7 @@ describe('Options segmented control React island', () => {
         : this === host
           ? 180
           : 70;
-      return {
-        bottom: 40,
-        height: 32,
-        left,
-        right: left + width,
-        top: 8,
-        width,
-        x: left,
-        y: 8,
-        toJSON() {
-          return {};
-        }
-      } as DOMRect;
+      return new DOMRect(left, 8, width, 32);
     });
 
     act(() => controller.render(model));
@@ -157,7 +147,7 @@ describe('Options segmented control React island', () => {
       .toBe('true');
 
     visible = true;
-    act(() => resizeCallback([], {} as ResizeObserver));
+    act(() => resizeCallback([], required(observed.observer, 'resize observer')));
 
     expect(indicator?.dataset.ready).toBe('true');
     expect(indicator?.style.width).toBe('70px');

@@ -2,6 +2,7 @@ import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createPageNoticeApi, renderPageNotice } from './page-notice';
 import { queryHtmlTag } from '../../shared/dom-lookup';
+import { required } from '../../../tests/react/dom';
 
 afterEach(() => {
   document.body.innerHTML = '';
@@ -11,9 +12,9 @@ describe('New Tab React page notice', () => {
   it('renders, opens details, and dismisses through the adapter contract', () => {
     const openExtensionDetailsPage = vi.fn();
     const onClose = vi.fn();
-    let controller = null as ReturnType<typeof renderPageNotice>;
+    const rendered: { controller: ReturnType<typeof renderPageNotice> } = { controller: null };
     act(() => {
-      controller = renderPageNotice({
+      rendered.controller = renderPageNotice({
         document,
         messages: {
           getRiSvg: (icon: string) => `<i data-icon="${icon}"></i>`,
@@ -25,10 +26,7 @@ describe('New Tab React page notice', () => {
         windowObj: window
       });
     });
-    if (!controller) {
-      throw new Error('Expected page notice controller');
-    }
-    const noticeController = controller;
+    const noticeController = required(rendered.controller, 'page notice controller');
     expect(createPageNoticeApi().implementation).toBe('react');
     expect(noticeController.element.dataset.reactIsland).toBe(
       'newtab-page-notice'

@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
-import { createDefaultPanelState } from './wallpaper-view.fixtures';
+import { createDefaultPanelState, createPanelActions } from './wallpaper-view.fixtures';
 import {
   createWallpaperViewApi,
   createWallpaperViewController,
@@ -9,7 +9,7 @@ import {
   type WallpaperPanelState,
   type WallpaperViewController
 } from './wallpaper-view';
-import { expectElement, expectTag, getElement, getElements, getTag, getTags } from '../../../tests/react/dom';
+import { expectElement, expectTag, getElement, getElements, getTag, getTags, required } from '../../../tests/react/dom';
 import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 let controller: WallpaperViewController | null = null;
@@ -22,16 +22,10 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-type MockActions = { [K in keyof WallpaperPanelActions]: WallpaperPanelActions[K] & Mock };
+type MockActions = Record<keyof WallpaperPanelActions, Mock<() => void>>;
 
 function createActions(): MockActions {
-  const calls: Record<string, Mock> = {};
-  return new Proxy(calls, {
-    get(target, key: string) {
-      if (!target[key]) target[key] = vi.fn();
-      return target[key];
-    }
-  }) as MockActions;
+  return createPanelActions(() => vi.fn<() => void>());
 }
 
 const MODEL: WallpaperPanelModel = {
@@ -86,11 +80,11 @@ function rerender(state: WallpaperPanelState) {
 }
 
 function refs() {
-  return controller!.getRefs();
+  return required(controller, 'controller').getRefs();
 }
 
 function setNativeValue(input: HTMLInputElement, value: string) {
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+  const setter = required(required(Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value'), 'Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, ').set, 'Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, ');
   setter.call(input, value);
 }
 
@@ -158,7 +152,7 @@ describe('New Tab React wallpaper view', () => {
   it('renders the complete appearance panel contract', () => {
     const { state } = createState();
     mount(state);
-    const view = controller!;
+    const view = required(controller, 'controller');
     expect(createWallpaperViewApi().implementation).toBe('react');
     expect(view.control.dataset.reactIsland).toBe('newtab-wallpaper');
     expect(view.control.dataset.panelOpen).toBe('false');
@@ -252,7 +246,7 @@ describe('New Tab React wallpaper view', () => {
   it('renders every setting from the state and re-renders in place', () => {
     const { state } = createState();
     mount(state);
-    const panel = controller!.panel;
+    const panel = required(controller, 'controller').panel;
     const { state: next } = createState((draft) => {
       draft.open = true;
       draft.button = { active: true, label: 'Appearance' };
@@ -299,10 +293,10 @@ describe('New Tab React wallpaper view', () => {
     // Another runtime opened its section; a re-render must leave that alone.
     refs().quoteBody.hidden = false;
     rerender(next);
-    expect(controller!.panel).toBe(panel);
+    expect(required(controller, 'controller').panel).toBe(panel);
     expect(refs().quoteBody.hidden).toBe(false);
     expect(panel.dataset.open).toBe('true');
-    expect(controller!.control.dataset.panelOpen).toBe('true');
+    expect(required(controller, 'controller').control.dataset.panelOpen).toBe('true');
     expect(refs().button.getAttribute('aria-expanded')).toBe('true');
     expect(refs().button.dataset.active).toBe('true');
     expect(refs().topContentTimeTab.dataset.active).toBe('true');
@@ -460,7 +454,7 @@ describe('New Tab React wallpaper view', () => {
     expect(host.querySelector('select')?.value).toBe('none');
     expect(host.querySelector('._x_extension_select_label_2024_unique_')?.textContent).toBe('Off');
     const grainOption = queryHtmlElement(document, '[data-react-select-owner="x-nt-wallpaper-effect"] [data-value="grain"]');
-    expect(controller!.containsSelectMenuTarget(grainOption)).toBe(true);
+    expect(required(controller, 'controller').containsSelectMenuTarget(grainOption)).toBe(true);
     act(() => grainOption?.click());
     expect(actions.selectEffect).toHaveBeenCalledWith('grain');
   });
@@ -486,7 +480,7 @@ describe('New Tab React wallpaper view', () => {
     const city = getElement(document, '[data-react-select-owner="x-nt-curated-mix"] [data-value="city"]');
     expect(city.getAttribute('role')).toBe('menuitemcheckbox');
     expect(city.getAttribute('aria-checked')).toBe('false');
-    expect(controller!.containsSelectMenuTarget(city)).toBe(true);
+    expect(required(controller, 'controller').containsSelectMenuTarget(city)).toBe(true);
     act(() => city.click());
     expect(actions.setCuratedMixCategory).toHaveBeenCalledWith('city', true);
     expect(host.dataset.open).toBe('true');
@@ -551,7 +545,7 @@ describe('New Tab React wallpaper view', () => {
       const index = ['built-in', 'local', 'bing', 'curated'].indexOf(tab || '');
       const left = index >= 0 ? 10 + index * 60 : 0;
       const width = index >= 0 ? 56 : 300;
-      return { bottom: 30, height: 30, left, right: left + width, top: 0, width, x: left, y: 0, toJSON() {} } as DOMRect;
+      return new DOMRect(left, 0, width, 30);
     });
     const offsetWidth = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(300);
     const { state } = createState();
@@ -889,12 +883,12 @@ describe('New Tab React wallpaper view', () => {
       };
     });
     mount(state);
-    expect(controller!.closeOpenSelect()).toBe(false);
+    expect(required(controller, 'controller').closeOpenSelect()).toBe(false);
     act(() => getTag(refs().effectSelectHost, 'button', 'button').click());
     expect(refs().effectSelectHost.dataset.open).toBe('true');
     let closed = false;
     act(() => {
-      closed = controller!.closeOpenSelect({ restoreFocus: true });
+      closed = required(controller, 'controller').closeOpenSelect({ restoreFocus: true });
     });
     expect(closed).toBe(true);
     expect(refs().effectSelectHost.dataset.open).toBe('false');

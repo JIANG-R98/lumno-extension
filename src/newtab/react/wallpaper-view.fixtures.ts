@@ -9,12 +9,72 @@ import type { SliderState, ToggleState } from './wallpaper-panel/panel-primitive
 // A complete panel state with English labels, for tests to edit; the runtime builds
 // the real one (src/newtab/wallpaper/wallpaper.ts).
 
+// Every panel action, each one made by `make`; the type keeps the list complete.
+export function createPanelActions<F extends () => void>(make: () => F): Record<keyof WallpaperPanelActions, F> {
+  return {
+    clearUrlInvalid: make(),
+    deleteWallpaper: make(),
+    hideTooltip: make(),
+    importWallpaperFile: make(),
+    openOnlineWallpaperMenu: make(),
+    primeWallpaper: make(),
+    refreshBing: make(),
+    resetShortcutGap: make(),
+    resetShortcutSize: make(),
+    resetTimeFontSize: make(),
+    resetTimeFontWeight: make(),
+    resetTimeOpacity: make(),
+    restoreDailyWallpaper: make(),
+    selectBingWallpaper: make(),
+    selectCuratedCategory: make(),
+    selectCuratedWallpaper: make(),
+    selectEffect: make(),
+    selectFavicon: make(),
+    selectGlassTheme: make(),
+    selectInkTone: make(),
+    selectSourceTab: make(),
+    selectThemeMode: make(),
+    selectThemeScope: make(),
+    selectTimeInk: make(),
+    selectTopContent: make(),
+    selectWallpaper: make(),
+    selectWallpaperMode: make(),
+    setBingDaily: make(),
+    setCuratedDaily: make(),
+    setCuratedMixCategory: make(),
+    setEffectParameter: make(),
+    setGlassStyle: make(),
+    setInputAutoFocus: make(),
+    setModeSync: make(),
+    setOverlay: make(),
+    setSearchWidth: make(),
+    setShortcutAddVisible: make(),
+    setShortcutColumns: make(),
+    setShortcutDockMagnification: make(),
+    setShortcutGap: make(),
+    setShortcutSize: make(),
+    setShortcutsVisible: make(),
+    setTime12Hour: make(),
+    setTimeFont: make(),
+    setTimeFontSize: make(),
+    setTimeFontWeight: make(),
+    setTimeOpacity: make(),
+    setTimeSecondsVisible: make(),
+    setWallpaperEnabled: make(),
+    showButtonTooltip: make(),
+    showLocalWallpaperLimit: make(),
+    showMoreCurated: make(),
+    showTooltip: make(),
+    submitWallpaperUrl: make(),
+    togglePanel: make(),
+    toggleUrlForm: make()
+  };
+}
+
 const noop = () => {};
 
 function createNoopActions(): WallpaperPanelActions {
-  return new Proxy({} as WallpaperPanelActions, {
-    get: () => noop
-  });
+  return createPanelActions(() => noop);
 }
 
 const slider = (label: string, value: number, min: number, max: number, extra: Partial<SliderState> = {}): SliderState => ({

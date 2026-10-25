@@ -143,7 +143,7 @@ describe('Recent Sites React island', () => {
 
     const result = renderItems(view, items);
     const grid = expectElement(options.grid);
-    const card = grid.querySelector<RecentCardElement>('.x-nt-recent-card');
+    const card: RecentCardElement | null = queryHtmlTag(grid, '.x-nt-recent-card', 'div');
 
     expect(result).toEqual({
       changed: true,

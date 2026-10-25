@@ -182,7 +182,7 @@ describe('Options feedback support React island', () => {
     const description = row?.querySelector('._x_extension_setting_desc_2024_unique_');
     // The description mixes copy and markup, so the page-wide i18n pass must leave it alone.
     expect(description?.hasAttribute('data-i18n')).toBe(false);
-    const trigger = description?.querySelector<HTMLButtonElement>('button[data-feedback-support="help-center-ask"]');
+    const trigger = (description ? queryHtmlTag(description, 'button[data-feedback-support="help-center-ask"]', 'button') : null);
     expect(trigger?.classList.contains('_x_extension_help_ask_trigger_2026_unique_')).toBe(true);
     expect(trigger?.querySelector('[data-i18n="settings_help_center_ask_action"]')?.textContent).toBe('在搜索框里直接提问');
     expect(description?.firstChild?.textContent).toBe('用法都在这里，也可以');
@@ -197,7 +197,7 @@ describe('Options feedback support React island', () => {
     });
     expect(popover?.dataset.open).toBe('true');
 
-    const demo = popover?.querySelector<HTMLElement>('._x_extension_help_ask_demo_2026_unique_');
+    const demo = (popover ? queryHtmlElement(popover, '._x_extension_help_ask_demo_2026_unique_') : null);
     const frames = buildAskDemoFrames('lm', '怎么改');
     const playUntil = (phase: string) => {
       for (let step = 0; step < frames.length * 2 && demo?.dataset.phase !== phase; step += 1) {
@@ -210,7 +210,7 @@ describe('Options feedback support React island', () => {
     const skeletonRows = demo?.querySelectorAll('._x_extension_help_ask_demo_skeleton_2026_unique_ li');
     expect(skeletonRows).toHaveLength(1);
     expect(skeletonRows?.[0].textContent).toBe('');
-    expect(demo?.querySelector<HTMLElement>('._x_extension_help_ask_demo_results_2026_unique_')?.dataset.visible)
+    expect((demo ? queryHtmlElement(demo, '._x_extension_help_ask_demo_results_2026_unique_') : null)?.dataset.visible)
       .toBe('false');
     playUntil('tab');
     expect(demo?.querySelector('._x_extension_help_ask_demo_text_2026_unique_')?.textContent).toBe('lm');
@@ -218,7 +218,7 @@ describe('Options feedback support React island', () => {
     playUntil('results');
     expect(demo?.querySelector('._x_extension_help_ask_demo_chip_2026_unique_')?.textContent).toBe('Lumno 帮助中心');
     expect(demo?.querySelector('._x_extension_help_ask_demo_text_2026_unique_')?.textContent).toBe('怎么改');
-    const results = demo?.querySelector<HTMLElement>('._x_extension_help_ask_demo_results_2026_unique_');
+    const results = (demo ? queryHtmlElement(demo, '._x_extension_help_ask_demo_results_2026_unique_') : null);
     expect(results?.dataset.visible).toBe('true');
     expect(results?.querySelectorAll('._x_extension_help_ask_demo_list_2026_unique_ li')).toHaveLength(1);
 
@@ -305,7 +305,7 @@ describe('Options feedback support React island', () => {
     expect(popover?.dataset.open).toBe('false');
 
     act(() => trigger?.click());
-    act(() => popover?.querySelector<HTMLButtonElement>('button')?.click());
+    act(() => (popover ? queryHtmlTag(popover, 'button', 'button') : null)?.click());
     expect(popover?.dataset.open).toBe('false');
   });
 
@@ -350,7 +350,7 @@ describe('Options feedback support React island', () => {
     const rows = host.querySelectorAll('._x_extension_feedback_support_row_2026_unique_');
     const row = rows[rows.length - 1];
     expect(row?.querySelector('[data-i18n="settings_diagnostics_title"]')?.textContent).toBe('诊断信息');
-    const button = row?.querySelector<HTMLButtonElement>('button[data-feedback-support="diagnostics"]');
+    const button = (row ? queryHtmlTag(row, 'button[data-feedback-support="diagnostics"]', 'button') : null);
     expect(button?.type).toBe('button');
     expect(button?.textContent).toBe('导出诊断信息');
 

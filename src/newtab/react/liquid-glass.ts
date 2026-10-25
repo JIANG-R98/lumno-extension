@@ -34,6 +34,19 @@ export interface LiquidGlassGeometry {
   radius?: number;
 }
 
+// What a lens tile is drawn on: a canvas, or a stand-in where there is none.
+export interface LensTileCanvas {
+  width: number;
+  height: number;
+  getContext(contextId: '2d'): LensTileContext | null;
+  toDataURL(type: string): string;
+}
+
+interface LensTileContext {
+  createImageData(width: number, height: number): { readonly data: Uint8ClampedArray };
+  putImageData(image: { readonly data: Uint8ClampedArray }, dx: number, dy: number): void;
+}
+
 // The computed style a surface's lens reads.
 type LensStyle = Pick<CSSStyleDeclaration, 'borderTopLeftRadius' | 'getPropertyValue'>;
 
@@ -178,11 +191,16 @@ export function getLensTilePixels(shape: LiquidGlassShape, radius: number, bezel
   };
 }
 
-function buildLensTiles(documentObj: Document, shape: LiquidGlassShape, radius: number, bezel: number): LensTiles | null {
+function buildLensTiles(
+  createTileCanvas: () => LensTileCanvas,
+  shape: LiquidGlassShape,
+  radius: number,
+  bezel: number
+): LensTiles | null {
   const { size, tiles } = getLensTilePixels(shape, radius, bezel);
   const urls: string[] = [];
   for (const tile of tiles) {
-    const canvas = documentObj.createElement('canvas');
+    const canvas = createTileCanvas();
     canvas.width = tile.width;
     canvas.height = tile.height;
     const context = canvas.getContext('2d');
@@ -199,13 +217,13 @@ function buildLensTiles(documentObj: Document, shape: LiquidGlassShape, radius: 
 
 // Lens tiles for one shape, radius and rim, built once and resolved once every tile has decoded,
 // so no surface points at a filter whose images are still loading (it would draw without its blur).
-function createLensCache(documentObj: Document) {
+function createLensCache(documentObj: Document, createTileCanvas: () => LensTileCanvas) {
   const cache = new Map<string, Promise<LensTiles>>();
   return (shape: LiquidGlassShape, radius: number, bezel: number) => {
     const key = `${shape}:${radius}:${bezel}`;
     let entry = cache.get(key);
     if (!entry) {
-      const tiles = buildLensTiles(documentObj, shape, radius, bezel);
+      const tiles = buildLensTiles(createTileCanvas, shape, radius, bezel);
       entry = tiles
         ? Promise.all(tiles.urls.map((url) => {
           const image = documentObj.createElement('img');
@@ -310,12 +328,13 @@ function placeLens(lens: Lens, width: number, height: number) {
 function createLensSwitcher(options: {
   documentObj: Document;
   windowObj: LiquidGlassWindow;
+  createTileCanvas: () => LensTileCanvas;
   idPrefix: string;
   apply(filterId: string, lens: Lens): void;
   measure(): [number, number];
 }) {
-  const { documentObj, windowObj, idPrefix, apply, measure } = options;
-  const tilesFor = createLensCache(documentObj);
+  const { documentObj, windowObj, createTileCanvas, idPrefix, apply, measure } = options;
+  const tilesFor = createLensCache(documentObj, createTileCanvas);
   let wanted = '';
   let current: Lens | null = null;
   let destroyed = false;
@@ -405,8 +424,10 @@ export function createLiquidGlass(options: {
   documentObj: Document;
   element: HTMLElement;
   windowObj: LiquidGlassWindow;
+  createTileCanvas?: () => LensTileCanvas;
 }): LiquidGlass {
   const { documentObj, element, windowObj } = options;
+  const createTileCanvas = options.createTileCanvas || (() => documentObj.createElement('canvas'));
   const supported = isLiquidGlassSupported(windowObj);
   const shapeOf = (): LiquidGlassShape => element.dataset.layout === 'floating' ? 'floating' : 'docked';
   const measure = (): [number, number] => {
@@ -450,6 +471,7 @@ export function createLiquidGlass(options: {
         lens = createLensSwitcher({
           documentObj,
           windowObj,
+          createTileCanvas,
           idPrefix: '_x_extension_newtab_liquid_glass',
           measure,
           apply(filterId) {
@@ -513,8 +535,10 @@ export function createLiquidSurfaces(options: {
   selector: string;
   strengthProperty?: string;
   windowObj: LiquidGlassWindow;
+  createTileCanvas?: () => LensTileCanvas;
 }): LiquidSurfaces {
   const { documentObj, dispersionSelector, property, rimProperty, selector, strengthProperty, windowObj } = options;
+  const createTileCanvas = options.createTileCanvas || (() => documentObj.createElement('canvas'));
   const supported = isLiquidGlassSupported(windowObj);
   const idPrefix = '_x_extension_newtab_liquid_surface';
   const lenses = new Map<HTMLElement, ReturnType<typeof createLensSwitcher>>();
@@ -552,6 +576,7 @@ export function createLiquidSurfaces(options: {
       lens = createLensSwitcher({
         documentObj,
         windowObj,
+        createTileCanvas,
         idPrefix,
         measure: () => size(element),
         apply: (filterId) => element.style.setProperty(property, `url(#${filterId})`)

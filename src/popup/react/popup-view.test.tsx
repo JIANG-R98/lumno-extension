@@ -73,14 +73,14 @@ function createModel(overrides: Partial<PopupModel> = {}): PopupModel {
 function mount(model: PopupModel) {
   const host = document.createElement('main');
   document.body.appendChild(host);
-  const handlers: PopupHandlers = {
-    onAction: vi.fn(),
-    onSwitch: vi.fn(),
-    onSelect: vi.fn(),
-    onSettingsToggle: vi.fn(),
-    onActionMenuToggle: vi.fn(),
-    onLink: vi.fn()
-  };
+  const handlers = {
+    onAction: vi.fn<PopupHandlers['onAction']>(),
+    onSwitch: vi.fn<PopupHandlers['onSwitch']>(),
+    onSelect: vi.fn<PopupHandlers['onSelect']>(),
+    onSettingsToggle: vi.fn<PopupHandlers['onSettingsToggle']>(),
+    onActionMenuToggle: vi.fn<PopupHandlers['onActionMenuToggle']>(),
+    onLink: vi.fn<PopupHandlers['onLink']>()
+  } satisfies PopupHandlers;
   const controller = createPopupController(host, handlers);
   act(() => controller.render(model));
   return { host, handlers, controller };
@@ -129,7 +129,7 @@ describe('Toolbar popup', () => {
     const cell = queryHtmlElement(host, '[data-action="pip"]')?.parentElement;
     expect(cell?.dataset.hasMenu).toBe('true');
     expect(queryHtmlTag(host, '[data-action="pip"]', 'button')?.disabled).toBe(true);
-    const chevron = cell?.querySelector<HTMLButtonElement>('.x-lumno-popup__action-menu');
+    const chevron = (cell ? queryHtmlTag(cell, '.x-lumno-popup__action-menu', 'button') : null);
     expect(chevron?.disabled).toBe(false);
     expect(chevron?.getAttribute('aria-expanded')).toBe('false');
     expect(chevron?.getAttribute('aria-label')).toBe('Auto picture-in-picture');
@@ -149,7 +149,7 @@ describe('Toolbar popup', () => {
     const panel = queryHtmlElement(host, '.x-lumno-popup__action-panel');
     expect(panel?.id).toBe(chevron?.getAttribute('aria-controls'));
     expect(panel?.querySelector('.x-lumno-popup__row-hint')?.textContent).toBe('A playing video floats when you switch tabs');
-    const toggle = panel?.querySelector<HTMLInputElement>('input[role="switch"]');
+    const toggle = (panel ? queryHtmlTag(panel, 'input[role="switch"]', 'input') : null);
     expect(toggle?.checked).toBe(true);
     act(() => toggle?.click());
     expect(handlers.onSwitch).toHaveBeenCalledWith('autoPip', false);
@@ -243,7 +243,7 @@ describe('Toolbar popup', () => {
     act(() => links[2].click());
     act(() => sync?.click());
     act(() => links[0].click());
-    expect((handlers.onLink as ReturnType<typeof vi.fn>).mock.calls.map((call) => call[0]))
+    expect(handlers.onLink.mock.calls.map((call) => call[0]))
       .toEqual(['shortcuts', 'sync', 'release']);
   });
 

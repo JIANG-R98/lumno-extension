@@ -222,12 +222,8 @@ describe('New Tab top-content React island', () => {
       true
     );
     const clock = queryHtmlElement(host, 'time.x-nt-time-mark');
-    const seconds = clock?.querySelector<HTMLElement>(
-      '.x-nt-time-seconds-value'
-    );
-    const secondsDigits = seconds?.querySelectorAll<HTMLElement>(
-      '.x-nt-time-seconds-digit'
-    );
+    const seconds = (clock ? queryHtmlElement(clock, '.x-nt-time-seconds-value') : null);
+    const secondsDigits = (seconds ? getElements(seconds, '.x-nt-time-seconds-digit') : []);
 
     expect(clock?.getAttribute('datetime')).toMatch(/^\d{2}:\d{2}:\d{2}$/);
     expect(clock?.dataset.showSeconds).toBe('true');

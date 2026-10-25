@@ -41,6 +41,10 @@ export function getTags<K extends TagName>(root: ParentNode, selector: string, t
   return Array.from(root.querySelectorAll(selector), (element) => expectTag(element, tag, selector));
 }
 
+export function getSvgs(root: ParentNode, selector: string): SVGElement[] {
+  return Array.from(root.querySelectorAll(selector), (element) => expectSvg(element, selector));
+}
+
 export function getElementById(id: string): HTMLElement {
   return expectElement(document.getElementById(id), `#${id}`);
 }

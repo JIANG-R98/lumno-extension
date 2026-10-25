@@ -8,14 +8,16 @@ import {
   getSurfaceBezel,
   getSurfaceDisplacementScale,
   isLiquidGlassSupported,
-  placeLensFilter
+  placeLensFilter,
+  type LensTileCanvas
 } from './liquid-glass';
+import { required } from '../../../tests/react/dom';
 
 function fakeWindow(supportsUrl: boolean, userAgent: string) {
   return {
     CSS: { supports: () => supportsUrl },
     navigator: { userAgent }
-  } as unknown as Window;
+  };
 }
 
 describe('New Tab bookmarks bar liquid glass', () => {
@@ -144,7 +146,7 @@ describe('New Tab bookmarks bar liquid glass', () => {
   it('bends the whole surface in every pass and moves only its tiles on resize', () => {
     const tiles = { shape: 'floating' as const, size: 30, urls: Array.from({ length: 8 }, (_, i) => `data:t${i}`) };
     document.body.innerHTML = `<svg>${buildLensFilter('lens', 640, 470, tiles, 90, true)}</svg>`;
-    const filter = document.querySelector('filter') as Element;
+    const filter = required(document.querySelector('filter'), 'filter');
     // No pass that reads the backdrop is held to a subregion: Chrome draws those wrong.
     const bends = Array.from(filter.querySelectorAll('feDisplacementMap'));
     expect(bends).toHaveLength(3);
@@ -162,11 +164,17 @@ describe('New Tab bookmarks bar liquid glass', () => {
     });
 
     function setup() {
-      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
-        createImageData: (width: number, height: number) => ({ data: new Uint8ClampedArray(width * height * 4) }),
-        putImageData() {}
-      } as unknown as CanvasRenderingContext2D);
-      const encoded = vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/png;base64,AA==');
+      // jsdom draws no canvas, so the tiles go onto stand-ins.
+      const encoded = vi.fn((_type: string) => 'data:image/png;base64,AA==');
+      const createTileCanvas = (): LensTileCanvas => ({
+        width: 0,
+        height: 0,
+        getContext: () => ({
+          createImageData: (width: number, height: number) => ({ data: new Uint8ClampedArray(width * height * 4) }),
+          putImageData() {}
+        }),
+        toDataURL: encoded
+      });
       const frames: FrameRequestCallback[] = [];
       const addSurface = (size: { width: number; height: number }) => {
         const element = document.createElement('div');
@@ -179,9 +187,10 @@ describe('New Tab bookmarks bar liquid glass', () => {
       const size = { width: 200, height: 64 };
       const corner = { radius: '16px', rim: '', strength: '' };
       const card = addSurface(size);
-      let resized: ResizeObserverCallback = () => {};
+      type ResizedCallback = (entries: ReadonlyArray<Pick<ResizeObserverEntry, 'target'>>) => void;
+      let resized: ResizedCallback = () => {};
       class FakeResizeObserver {
-        constructor(callback: ResizeObserverCallback) {
+        constructor(callback: ResizedCallback) {
           resized = callback;
         }
         observe() {}
@@ -199,7 +208,7 @@ describe('New Tab bookmarks bar liquid glass', () => {
         cancelAnimationFrame() {},
         ResizeObserver: FakeResizeObserver,
         MutationObserver
-      } as unknown as Window;
+      };
       const surfaces = createLiquidSurfaces({
         documentObj: document,
         dispersionSelector: '.glass.search',
@@ -207,12 +216,13 @@ describe('New Tab bookmarks bar liquid glass', () => {
         rimProperty: '--rim',
         selector: '.glass',
         strengthProperty: '--strength',
-        windowObj
+        windowObj,
+        createTileCanvas
       });
       const resize = (width: number, height: number) => {
         size.width = width;
         size.height = height;
-        resized([{ target: card } as unknown as ResizeObserverEntry], {} as ResizeObserver);
+        resized([{ target: card }]);
       };
       // Lets the tiles' decode settle, then runs the frames it queues.
       const settle = async () => {
@@ -225,7 +235,7 @@ describe('New Tab bookmarks bar liquid glass', () => {
       const filters = () => Array.from(document.querySelectorAll('filter'));
       const pointedAt = (element = card) => element.style.getPropertyValue('--refraction').replace(/^url\(#|\)$/g, '');
       const observe = (element: HTMLElement) =>
-        resized([{ target: element } as unknown as ResizeObserverEntry], {} as ResizeObserver);
+        resized([{ target: element }]);
       return { addSurface, corner, encoded, filters, observe, pointedAt, resize, settle, surfaces };
     }
 
@@ -290,7 +300,7 @@ describe('New Tab bookmarks bar liquid glass', () => {
       // Each id names one filter, the size of the surface pointing at it.
       expect(filters().map((filter) => filter.id).sort()).toEqual(ids.slice().sort());
       const sizeOf = (id: string) => {
-        const filter = document.getElementById(id) as Element;
+        const filter = required(document.getElementById(id), id);
         return [filter.getAttribute('width'), filter.getAttribute('height')];
       };
       expect(sizeOf(ids[0])).toEqual(['640', '70']);
@@ -306,7 +316,7 @@ describe('New Tab bookmarks bar liquid glass', () => {
       resize(270, 156);
       observe(search);
       await settle();
-      const passes = (id: string) => (document.getElementById(id) as Element).querySelectorAll('feDisplacementMap').length;
+      const passes = (id: string) => required(document.getElementById(id), id).querySelectorAll('feDisplacementMap').length;
       expect(passes(pointedAt())).toBe(1);
       expect(passes(pointedAt(search))).toBe(3);
       expect(filters()).toHaveLength(2);
@@ -322,7 +332,7 @@ describe('New Tab bookmarks bar liquid glass', () => {
       const builds = encoded.mock.calls.length;
       // The default would widen the rim as the plate grew, up to 40px at 140px; this one is 22px
       // from the start, so growing never asks for new tiles.
-      const map = () => (filters()[0].querySelector('feDisplacementMap') as Element).getAttribute('scale');
+      const map = () => required(filters()[0].querySelector('feDisplacementMap'), 'feDisplacementMap').getAttribute('scale');
       expect(map()).toBe(getSurfaceDisplacementScale(22).toFixed(1));
       resize(640, 180);
       resize(640, 412);
@@ -342,7 +352,8 @@ describe('New Tab bookmarks bar liquid glass', () => {
       resize(640, 180);
       await settle();
       const first = pointedAt();
-      const map = () => (filters().at(-1)!.querySelector('feDisplacementMap') as Element).getAttribute('scale');
+      const map = () => required(required(filters().at(-1), 'last filter').querySelector('feDisplacementMap'), 'feDisplacementMap')
+        .getAttribute('scale');
       expect(map()).toBe(getSurfaceDisplacementScale(30).toFixed(1));
       // A new strength is a new lens, with the same tiles.
       corner.strength = '1.6';

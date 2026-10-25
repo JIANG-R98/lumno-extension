@@ -34,8 +34,8 @@ describe('Tooltip React view', () => {
     });
     expect(tooltip).not.toBeNull();
     expect(tag).not.toBeNull();
-    const tooltipElement = expectTag(tooltip as unknown, 'div');
-    const tagElement = expectTag(tag as unknown, 'div');
+    const tooltipElement = expectTag(tooltip, 'div');
+    const tagElement = expectTag(tag, 'div');
     elements.push(tooltipElement, tagElement);
     document.body.append(tooltipElement, tagElement);
 
@@ -50,11 +50,7 @@ describe('Tooltip React view', () => {
 
     expect(tooltipElement.dataset.reactIsland).toBe('tooltip');
     expect(tooltipElement.dataset.tooltipKind).toBe('cursor');
-    expect(
-      typeof (
-        tooltipElement as HTMLDivElement & Record<string, unknown>
-      )._x_lumnoTooltipRenderReact_2026_unique_
-    ).toBe('function');
+    expect(typeof Reflect.get(tooltipElement, '_x_lumnoTooltipRenderReact_2026_unique_')).toBe('function');
     expect(
       tooltipElement.querySelectorAll(
         '._x_extension_tooltip_line_2026_unique_'

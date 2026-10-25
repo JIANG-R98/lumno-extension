@@ -1,14 +1,17 @@
 import { afterEach } from 'vitest';
 
-(globalThis as typeof globalThis & {
-  IS_REACT_ACT_ENVIRONMENT?: boolean;
-}).IS_REACT_ACT_ENVIRONMENT = true;
+declare global {
+  // Tells React that tests drive updates through act().
+  var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
+}
+
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 // JSDOM has no AnimationEvent but knows the prefixed WebkitAnimation style,
 // so React DOM would listen for webkitAnimationEnd instead of animationend.
 // Chrome has AnimationEvent; give JSDOM one before React DOM loads.
 if (typeof window.AnimationEvent !== 'function') {
-  class AnimationEventShim extends Event {
+  class AnimationEventShim extends Event implements AnimationEvent {
     readonly animationName: string;
     readonly elapsedTime: number;
     readonly pseudoElement: string;
@@ -20,7 +23,7 @@ if (typeof window.AnimationEvent !== 'function') {
       this.pseudoElement = init.pseudoElement ?? '';
     }
   }
-  window.AnimationEvent = AnimationEventShim as typeof AnimationEvent;
+  window.AnimationEvent = AnimationEventShim;
 }
 
 afterEach(() => {

@@ -1,6 +1,7 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createOverlayShellApi } from './shell';
+import { queryHtmlTag } from '../../shared/dom-lookup';
 
 afterEach(() => {
   document.body.innerHTML = '';
@@ -78,9 +79,7 @@ describe('Overlay React shell', () => {
     expect(
       root.querySelector('#_x_extension_overlay_theme_style_2024_unique_')
     ).not.toBeNull();
-    const criticalStyle = root.querySelector<HTMLStyleElement>(
-      '#_x_extension_overlay_theme_style_2024_unique_'
-    );
+    const criticalStyle = queryHtmlTag(root, '#_x_extension_overlay_theme_style_2024_unique_', 'style');
     expect(criticalStyle?.textContent).toMatch(
       /:where\(#_x_extension_overlay_2024_unique_\)\s+:where\(\.x-ov-suggestion-switch-button\)\s*\{[\s\S]*?background:\s*var\(--x-ov-suggestion-action-button-bg,\s*transparent\);[\s\S]*?border-radius:\s*6px;[\s\S]*?font:\s*inherit;[\s\S]*?font-size:\s*12px;[\s\S]*?height:\s*var\(--x-ov-suggestion-action-height,\s*26px\);/
     );

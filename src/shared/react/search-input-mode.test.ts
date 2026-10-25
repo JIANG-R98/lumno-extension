@@ -5,7 +5,9 @@ import '../search/search-han-variants.js';
 import * as searchInputModeModule from '../search/search-input-mode';
 import * as faviconUtils from '../../domain/favicon/favicon-utils';
 import type { ModeMenuItem } from '../search/input-mode/types';
-import { expectSvg, getElements, getTags } from '../../../tests/react/dom';
+import type { CursorTooltipController } from '../ui/cursor-tooltip';
+import { FakeAnimation } from '../../../tests/react/fake-animation';
+import { expectSvg, getElement, getElements, getSvgs, getTags, required } from '../../../tests/react/dom';
 import { queryHtmlElement, queryHtmlTag } from '../dom-lookup';
 
 Object.assign(globalThis, {
@@ -875,12 +877,11 @@ describe('Shared search scope menu', () => {
     );
 
     expect(controller.openModeMenu('none')).toBe(true);
-    const menuContent = queryHtmlElement(controller.menuElement, '[data-search-input-mode-menu-content]');
+    const menuContent = getElement(controller.menuElement, '[data-search-input-mode-menu-content]');
     const buttons = Array.from(
       getTags(controller.menuElement, '[role="menuitemradio"]', 'button')
     );
-    expect(menuContent).not.toBeNull();
-    menuContent!.getBoundingClientRect = () => ({
+    menuContent.getBoundingClientRect = () => ({
       bottom: 400,
       height: 300,
       left: 0,
@@ -911,31 +912,31 @@ describe('Shared search scope menu', () => {
       });
     });
     const smoothScrollTo = vi.fn((options: ScrollToOptions) => {
-      menuContent!.scrollTop = Number(options.top) || 0;
+      menuContent.scrollTop = Number(options.top) || 0;
     });
-    menuContent!.scrollTo = smoothScrollTo as unknown as HTMLElement['scrollTo'];
+    Object.defineProperty(menuContent, 'scrollTo', { configurable: true, value: smoothScrollTo });
 
-    menuContent!.scrollTop = 200;
+    menuContent.scrollTop = 200;
     controller.menuElement.dispatchEvent(new KeyboardEvent('keydown', {
       bubbles: true,
       cancelable: true,
       key: 'ArrowRight'
     }));
     expect(document.activeElement).toBe(buttons[0]);
-    expect(menuContent!.scrollTop).toBe(166);
+    expect(menuContent.scrollTop).toBe(166);
     expect(smoothScrollTo).toHaveBeenLastCalledWith({
       behavior: 'smooth',
       top: 166
     });
 
-    menuContent!.scrollTop = 100;
+    menuContent.scrollTop = 100;
     buttons[0].dispatchEvent(new KeyboardEvent('keydown', {
       bubbles: true,
       cancelable: true,
       key: 'End'
     }));
     expect(document.activeElement).toBe(buttons[2]);
-    expect(menuContent!.scrollTop).toBe(106);
+    expect(menuContent.scrollTop).toBe(106);
     expect(smoothScrollTo).toHaveBeenCalledTimes(1);
     controller.destroy();
   });
@@ -1144,11 +1145,8 @@ describe('Shared search scope menu', () => {
   });
 
   it('keeps built-in Chinese scopes searchable while the full pinyin runtime is still loading', () => {
-    const pinyinGlobal = globalThis as typeof globalThis & {
-      pinyinPro?: unknown;
-    };
-    const existingPinyinApi = pinyinGlobal.pinyinPro;
-    delete pinyinGlobal.pinyinPro;
+    const existingPinyinApi: unknown = Reflect.get(globalThis, 'pinyinPro');
+    Reflect.deleteProperty(globalThis, 'pinyinPro');
     const parts = createModeParts();
     const controller = LumnoSearchInputMode.createInputModeController(
       parts,
@@ -1175,7 +1173,7 @@ describe('Shared search scope menu', () => {
       item?.querySelector('.x-lumno-search-input-mode__menu-match')?.textContent
     ).toBe('书');
     controller.destroy();
-    pinyinGlobal.pinyinPro = existingPinyinApi;
+    Reflect.set(globalThis, 'pinyinPro', existingPinyinApi);
   });
 
   it('filters scope cards by mixed pinyin and initials from the start of the name', () => {
@@ -1302,11 +1300,7 @@ describe('Shared search scope menu', () => {
     });
     controller.openModeMenu();
 
-    const menuGlyphs = Array.from(
-      controller.menuElement.querySelectorAll<SVGSVGElement>(
-        '.x-lumno-search-input-mode__menu-line-icon'
-      )
-    );
+    const menuGlyphs = getSvgs(controller.menuElement, '.x-lumno-search-input-mode__menu-line-icon');
     expect(menuGlyphs.map((glyph) => glyph.dataset.iconName)).toEqual(iconNames);
     expect(
       menuGlyphs.every((glyph) => (
@@ -1341,9 +1335,7 @@ describe('Shared search scope menu', () => {
         )
       ))
     ).toBe(true);
-    const prefixGlyph = parts.modePrefix.querySelector<SVGSVGElement>(
-      '[data-search-input-mode-line-icon]'
-    );
+    const prefixGlyph = expectSvg(parts.modePrefix.querySelector('[data-search-input-mode-line-icon]'), 'prefix glyph');
     expect(prefixGlyph?.dataset.iconName).toBe('browser');
     expect(prefixGlyph?.getAttribute('stroke-width')).toBe('2');
     expect(prefixGlyph?.style.display).toBe('inline-flex');
@@ -1425,9 +1417,7 @@ describe('Shared search scope menu', () => {
     expect(unavailableCallbacks).toHaveLength(1);
     unavailableCallbacks[0]?.();
 
-    const prefixGlyph = parts.modePrefix.querySelector<SVGSVGElement>(
-      '[data-search-input-mode-line-icon]'
-    );
+    const prefixGlyph = expectSvg(parts.modePrefix.querySelector('[data-search-input-mode-line-icon]'), 'prefix glyph');
     expect(prefixGlyph?.dataset.iconName).toBe('bookmark');
     expect(prefixGlyph?.style.display).toBe('inline-flex');
     expect(parts.modePrefixGlyph.style.display).toBe('none');
@@ -1547,14 +1537,10 @@ describe('Shared search scope menu', () => {
 
   it('drives current text and the chevron from one state while repeated clicks toggle the menu', () => {
     const parts = createModeParts();
-    const prefixAnimation = {
-      cancel: vi.fn(),
-      oncancel: null as null | (() => void),
-      onfinish: null as null | (() => void)
-    };
+    const prefixAnimation = new FakeAnimation();
     const animatePrefix = vi.fn(
       (_keyframes: Keyframe[], _options?: KeyframeAnimationOptions) =>
-        prefixAnimation as unknown as Animation
+        prefixAnimation
     );
     Object.defineProperty(parts.modePrefix, 'animate', {
       configurable: true,
@@ -1587,7 +1573,7 @@ describe('Shared search scope menu', () => {
       duration: 180,
       easing: 'cubic-bezier(0.16, 1, 0.3, 1)'
     });
-    prefixAnimation.onfinish?.();
+    prefixAnimation.emitFinish();
     animatePrefix.mockClear();
     expect(parts.modePrefixCurrent.textContent).toBe('当前');
     expect(parts.modePrefixCurrent.style.opacity).toBe('');
@@ -1668,27 +1654,19 @@ describe('Shared search scope menu', () => {
 
   it('enters open-tabs mode with its browser icon and no default-search ghost', () => {
     const parts = createModeParts();
-    const animation = {
-      cancel: vi.fn(),
-      oncancel: null as null | (() => void),
-      onfinish: null as null | (() => void)
-    };
+    const animation = new FakeAnimation();
     const animate = vi.fn(
       (_keyframes: Keyframe[], _options?: KeyframeAnimationOptions) =>
-        animation as unknown as Animation
+        animation
     );
     Object.defineProperty(parts.modePrefix, 'animate', {
       configurable: true,
       value: animate
     });
-    const iconAnimation = {
-      cancel: vi.fn(),
-      oncancel: null as null | (() => void),
-      onfinish: null as null | (() => void)
-    };
+    const iconAnimation = new FakeAnimation();
     const animateIcon = vi.fn(
       (_keyframes: Keyframe[], _options?: KeyframeAnimationOptions) =>
-        iconAnimation as unknown as Animation
+        iconAnimation
     );
     const controller = LumnoSearchInputMode.createInputModeController(parts);
     const lineIcon = expectSvg(parts.modePrefix.querySelector('[data-search-input-mode-line-icon]'), 'line icon');
@@ -1717,7 +1695,7 @@ describe('Shared search scope menu', () => {
       duration: 180,
       easing: 'cubic-bezier(0.16, 1, 0.3, 1)'
     });
-    animation.onfinish?.();
+    animation.emitFinish();
     expect(lineIcon.style.display).toBe('inline-flex');
     expect(parts.modePrefixGlyph.style.display).toBe('none');
     expect(animateIcon).toHaveBeenCalledWith([
@@ -1754,15 +1732,11 @@ describe('Shared search scope menu', () => {
     const parts = createModeParts();
     const animationStartStates: Array<Record<string, string | undefined>> = [];
     const measurementStates: Array<Record<string, string | undefined>> = [];
-    const resizeAnimations = [0, 1].map(() => ({
-      cancel: vi.fn(),
-      oncancel: null as null | (() => void),
-      onfinish: null as null | (() => void)
-    }));
+    const resizeAnimations = [0, 1].map(() => new FakeAnimation());
     const animateCurrent = vi.fn(
       (_keyframes: Keyframe[], _options?: KeyframeAnimationOptions) => {
         animationStartStates.push({ ...parts.modePrefix.dataset });
-        return resizeAnimations[animateCurrent.mock.calls.length - 1] as unknown as Animation;
+        return resizeAnimations[animateCurrent.mock.calls.length - 1];
       }
     );
     Object.defineProperty(parts.modePrefixCurrent, 'animate', {
@@ -1844,7 +1818,7 @@ describe('Shared search scope menu', () => {
     });
     expect(parts.modePrefixCurrent.style.position).toBe('');
     expect(parts.modePrefixCurrent.style.left).toBe('');
-    resizeAnimations[0].onfinish?.();
+    resizeAnimations[0].emitFinish();
     expect(parts.modePrefixCurrent.style.display).toBe('inline-flex');
     expect(parts.modePrefix.dataset.currentVisible).toBe('true');
     expect(parts.modePrefixCurrent.style.width).toBe('');
@@ -1862,7 +1836,7 @@ describe('Shared search scope menu', () => {
       { marginLeft: '0px', width: '24px' },
       { marginLeft: '-6px', width: '0px' }
     ]);
-    resizeAnimations[1].onfinish?.();
+    resizeAnimations[1].emitFinish();
     expect(parts.modePrefixCurrent.style.display).toBe('none');
     expect(parts.modePrefix.dataset.currentVisible).toBe('false');
     controller.destroy();
@@ -1872,14 +1846,10 @@ describe('Shared search scope menu', () => {
     const parts = createModeParts();
     let inFlightWidth = 0;
     let inFlightMarginLeft = -6;
-    const resizeAnimations = [0, 1].map(() => ({
-      cancel: vi.fn(),
-      oncancel: null as null | (() => void),
-      onfinish: null as null | (() => void)
-    }));
+    const resizeAnimations = [0, 1].map(() => new FakeAnimation());
     const animateCurrent = vi.fn(
       (_keyframes: Keyframe[], _options?: KeyframeAnimationOptions) =>
-        resizeAnimations[animateCurrent.mock.calls.length - 1] as unknown as Animation
+        resizeAnimations[animateCurrent.mock.calls.length - 1]
     );
     Object.defineProperty(parts.modePrefixCurrent, 'animate', {
       configurable: true,
@@ -1910,7 +1880,9 @@ describe('Shared search scope menu', () => {
         const marginLeft = parts.modePrefix.dataset.currentMeasuring === 'true'
           ? 0
           : inFlightMarginLeft;
-        return { marginLeft: `${marginLeft}px` } as CSSStyleDeclaration;
+        const style = document.createElement('div').style;
+        style.marginLeft = `${marginLeft}px`;
+        return style;
       }
       return originalGetComputedStyle(element);
     });
@@ -1939,11 +1911,11 @@ describe('Shared search scope menu', () => {
       { marginLeft: '-6px', width: '0px' }
     ]);
 
-    resizeAnimations[0].onfinish?.();
+    resizeAnimations[0].emitFinish();
     expect(parts.modePrefix.dataset.currentVisible).toBe('true');
     expect(parts.modePrefixCurrent.style.willChange).toBe('width');
 
-    resizeAnimations[1].onfinish?.();
+    resizeAnimations[1].emitFinish();
     expect(parts.modePrefix.dataset.currentVisible).toBe('false');
     expect(parts.modePrefixCurrent.style.width).toBe('');
     expect(parts.modePrefixCurrent.style.marginLeft).toBe('');
@@ -1997,40 +1969,28 @@ describe('Shared search scope menu', () => {
 
   it('stretches on a curve before elastically swapping the scope icon', () => {
     const parts = createModeParts();
-    const resizeAnimation = {
-      cancel: vi.fn(),
-      oncancel: null as null | (() => void),
-      onfinish: null as null | (() => void)
-    };
+    const resizeAnimation = new FakeAnimation();
     const animate = vi.fn(
       (_keyframes: Keyframe[], _options?: KeyframeAnimationOptions) =>
-        resizeAnimation as unknown as Animation
+        resizeAnimation
     );
     Object.defineProperty(parts.modePrefix, 'animate', {
       configurable: true,
       value: animate
     });
-    const iconAnimation = {
-      cancel: vi.fn(),
-      oncancel: null as null | (() => void),
-      onfinish: null as null | (() => void)
-    };
+    const iconAnimation = new FakeAnimation();
     const animateIcon = vi.fn(
       (_keyframes: Keyframe[], _options?: KeyframeAnimationOptions) =>
-        iconAnimation as unknown as Animation
+        iconAnimation
     );
     Object.defineProperty(parts.modePrefixGlyph, 'animate', {
       configurable: true,
       value: animateIcon
     });
-    const outgoingIconAnimation = {
-      cancel: vi.fn(),
-      oncancel: null as null | (() => void),
-      onfinish: null as null | (() => void)
-    };
+    const outgoingIconAnimation = new FakeAnimation();
     const animateOutgoingIcon = vi.fn(
       (_keyframes: Keyframe[], _options?: KeyframeAnimationOptions) =>
-        outgoingIconAnimation as unknown as Animation
+        outgoingIconAnimation
     );
     Object.defineProperty(parts.modePrefixGlyph, 'cloneNode', {
       configurable: true,
@@ -2080,7 +2040,7 @@ describe('Shared search scope menu', () => {
       easing: 'cubic-bezier(0.22, 1, 0.36, 1)'
     });
     expect(
-      (animate.mock.calls[0][0] as Keyframe[]).every((frame) =>
+      animate.mock.calls[0][0].every((frame) =>
         !('opacity' in frame) && !('transform' in frame)
       )
     ).toBe(true);
@@ -2091,7 +2051,7 @@ describe('Shared search scope menu', () => {
     expect(parts.modePrefix.style.transition).toContain('background-color 140ms ease');
     expect(parts.modePrefixCurrent.textContent).toBe('当前');
     expect(parts.modePrefix.style.willChange).toBe('width');
-    resizeAnimation.onfinish?.();
+    resizeAnimation.emitFinish();
     expect(parts.modePrefixText.textContent).toBe('Brave Search');
     expect(parts.modePrefixGlyph.className).toContain('ri-global-line');
     expect(animateIcon).toHaveBeenCalledWith([
@@ -2130,24 +2090,16 @@ describe('Shared search scope menu', () => {
 
   it('keeps the direct width animation when an existing mode becomes shorter', () => {
     const parts = createModeParts();
-    const resizeAnimation = {
-      cancel: vi.fn(),
-      oncancel: null as null | (() => void),
-      onfinish: null as null | (() => void)
-    };
+    const resizeAnimation = new FakeAnimation();
     const animate = vi.fn(
       (_keyframes: Keyframe[], _options?: KeyframeAnimationOptions) =>
-        resizeAnimation as unknown as Animation
+        resizeAnimation
     );
     Object.defineProperty(parts.modePrefix, 'animate', {
       configurable: true,
       value: animate
     });
-    const animateIcon = vi.fn(() => ({
-      cancel: vi.fn(),
-      oncancel: null,
-      onfinish: null
-    }) as unknown as Animation);
+    const animateIcon = vi.fn(() => new FakeAnimation());
     Object.defineProperty(parts.modePrefixGlyph, 'animate', {
       configurable: true,
       value: animateIcon
@@ -2187,12 +2139,12 @@ describe('Shared search scope menu', () => {
     expect(parts.modePrefixGlyph.className).toContain('ri-window-line');
     expect(animateIcon).toHaveBeenCalledTimes(1);
     expect(
-      (animate.mock.calls[0][0] as Keyframe[]).every((frame) =>
+      animate.mock.calls[0][0].every((frame) =>
         !('opacity' in frame) && !('transform' in frame)
       )
     ).toBe(true);
     expect(parts.modePrefix.style.willChange).toBe('width');
-    resizeAnimation.onfinish?.();
+    resizeAnimation.emitFinish();
     expect(parts.modePrefix.style.willChange).toBe('auto');
     controller.destroy();
   });
@@ -2272,14 +2224,7 @@ describe('Shared search scope menu', () => {
       configurable: true,
       value: 56
     });
-    vi.spyOn(parts.container, 'getBoundingClientRect').mockReturnValue({
-      bottom: 300,
-      height: 56,
-      left: 0,
-      right: 760,
-      top: 244,
-      width: 760
-    } as DOMRect);
+    vi.spyOn(parts.container, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 244, 760, 56));
     Object.defineProperty(controller.menuElement, 'offsetTop', {
       configurable: true,
       value: 70
@@ -2398,8 +2343,8 @@ describe('Shared search scope menu', () => {
   it('shows the full label bubble only when the trailing-ellipsis label overflows', () => {
     const parts = createModeParts();
     const tooltipController = {
-      bind: vi.fn(),
-      hide: vi.fn()
+      bind: vi.fn<CursorTooltipController['bind']>(() => null),
+      hide: vi.fn<CursorTooltipController['hide']>(() => null)
     };
     const controller = LumnoSearchInputMode.createInputModeController(
       parts,
@@ -2417,23 +2362,17 @@ describe('Shared search scope menu', () => {
     controller.openModeMenu();
 
     const item = queryHtmlTag(controller.menuElement, '[role="menuitemradio"]', 'button');
-    const label = item?.querySelector<HTMLElement>(
-      '.x-lumno-search-input-mode__menu-label'
-    );
+    const label = getElement(required(item, 'menu item'), '.x-lumno-search-input-mode__menu-label');
     expect(item?.getAttribute('aria-label')).toBe('微信公众号');
     expect(label?.textContent).toBe('微信公众号');
     expect(label?.hasAttribute('title')).toBe(false);
     expect(tooltipController.bind).toHaveBeenCalledOnce();
 
-    const resolveTooltipText = tooltipController.bind.mock.calls[0]?.[1] as
-      | (() => string)
-      | undefined;
-    const tooltipOptions = tooltipController.bind.mock.calls[0]?.[2] as
-      | { shouldShow?: () => boolean; placement?: string }
-      | undefined;
+    const resolveTooltipText = tooltipController.bind.mock.calls[0]?.[1];
+    const tooltipOptions = tooltipController.bind.mock.calls[0]?.[2];
     expect(resolveTooltipText).toBeTypeOf('function');
     expect(tooltipOptions?.shouldShow).toBeTypeOf('function');
-    expect(tooltipOptions?.placement).toBeUndefined();
+    expect(tooltipOptions).not.toHaveProperty('placement');
     Object.defineProperty(label, 'clientWidth', {
       configurable: true,
       value: 48
@@ -2442,24 +2381,24 @@ describe('Shared search scope menu', () => {
       configurable: true,
       value: 76
     });
-    expect(resolveTooltipText?.()).toBe('微信公众号');
-    expect(tooltipOptions?.shouldShow?.()).toBe(true);
+    expect(resolveTooltipText?.(label)).toBe('微信公众号');
+    expect(tooltipOptions?.shouldShow?.(label, null)).toBe(true);
     expect(item?.getAttribute('data-label-truncated')).toBe('true');
 
     Object.defineProperty(label, 'scrollWidth', {
       configurable: true,
       value: 49
     });
-    expect(resolveTooltipText?.()).toBe('微信公众号');
-    expect(tooltipOptions?.shouldShow?.()).toBe(true);
+    expect(resolveTooltipText?.(label)).toBe('微信公众号');
+    expect(tooltipOptions?.shouldShow?.(label, null)).toBe(true);
     expect(item?.getAttribute('data-label-truncated')).toBe('true');
 
     Object.defineProperty(label, 'clientWidth', {
       configurable: true,
       value: 80
     });
-    expect(resolveTooltipText?.()).toBe('微信公众号');
-    expect(tooltipOptions?.shouldShow?.()).toBe(false);
+    expect(resolveTooltipText?.(label)).toBe('微信公众号');
+    expect(tooltipOptions?.shouldShow?.(label, null)).toBe(false);
     expect(item?.getAttribute('data-label-truncated')).toBe('false');
     controller.destroy();
   });
@@ -2656,9 +2595,7 @@ describe('Shared search scope menu', () => {
 
     const icon = queryHtmlElement(controller.menuElement, '.x-lumno-search-input-mode__menu-icon');
     const menuItem = queryHtmlElement(controller.menuElement, '.x-lumno-search-input-mode__menu-item');
-    const label = menuItem?.querySelector<HTMLElement>(
-      '.x-lumno-search-input-mode__menu-label'
-    );
+    const label = (menuItem ? queryHtmlElement(menuItem, '.x-lumno-search-input-mode__menu-label') : null);
     menuItem?.dispatchEvent(new MouseEvent('mouseenter'));
     menuItem?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
 

@@ -11,7 +11,7 @@ import { createInteractionsApi } from './interactions';
 import { createPageStripApi } from './page-strip';
 import { createVisualSurfaceApi } from './visual-surface';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
-import { expectElement, getElements } from '../../../tests/react/dom';
+import { expectElement, getElements, required } from '../../../tests/react/dom';
 import { queryHtmlTag } from '../../shared/dom-lookup';
 
 const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
@@ -29,9 +29,9 @@ const addedListeners: Array<[
   boolean | AddEventListenerOptions | undefined
 ]> = [];
 
-function trackListeners(target: Document | Window): void {
+function trackListeners(target: EventTarget): void {
   const addEventListener = target.addEventListener.bind(target);
-  vi.spyOn(target as EventTarget, 'addEventListener').mockImplementation(
+  vi.spyOn(target, 'addEventListener').mockImplementation(
     (type, listener, options) => {
       if (listener) {
         addedListeners.push([target, type, listener, options]);
@@ -76,7 +76,7 @@ function createChromeStub(stored: Record<string, unknown>) {
 async function bootOnboardingPage(stored: Record<string, unknown> = {}) {
   const parsed = new DOMParser().parseFromString(onboardingHtml, 'text/html');
   const shell = parsed.getElementById('onboarding-root');
-  document.body.appendChild(document.importNode(shell!, true));
+  document.body.appendChild(document.importNode(required(shell, 'shell'), true));
 
   const chrome = createChromeStub(stored);
   vi.stubGlobal('chrome', chrome);
@@ -182,10 +182,10 @@ describe('Onboarding page runtime', () => {
     const link = queryHtmlTag(document, '.interaction-accordion-link[data-action="openShortcuts"]', 'a');
     expect(link).toBeTruthy();
     act(() => {
-      link!.click();
+      required(link, 'link').click();
     });
     act(() => {
-      link!.dispatchEvent(
+      required(link, 'link').dispatchEvent(
         new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 })
       );
     });

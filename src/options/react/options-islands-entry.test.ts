@@ -1,153 +1,45 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-type OptionsRuntime = typeof globalThis & {
-  LumnoOptionsReactBootstrap?: {
-    reactReady: boolean;
-  };
-  LumnoOptionsReactIslands?: unknown;
-  LumnoOptionsAggregateSearchList?: {
-    implementation?: string;
-  };
-  LumnoOptionsAggregateSearchListReact?: {
-    implementation?: string;
-  };
-  LumnoOptionsBlacklistList?: {
-    implementation?: string;
-  };
-  LumnoOptionsBlacklistListReact?: {
-    implementation?: string;
-  };
-  LumnoOptionsFeedbackSupport?: {
-    implementation?: string;
-  };
-  LumnoOptionsFeedbackSupportReact?: {
-    implementation?: string;
-  };
-  LumnoOptionsTranslationHelp?: {
-    implementation?: string;
-  };
-  LumnoOptionsInfoButton?: {
-    implementation?: string;
-  };
-  LumnoOptionsInfoButtonReact?: {
-    implementation?: string;
-  };
-  LumnoOptionsPopconfirm?: {
-    implementation?: string;
-  };
-  LumnoOptionsPopconfirmReact?: {
-    implementation?: string;
-  };
-  LumnoOptionsSegmentedControl?: {
-    implementation?: string;
-  };
-  LumnoOptionsSegmentedControlReact?: {
-    implementation?: string;
-  };
-  LumnoOptionsSelectControl?: {
-    implementation?: string;
-  };
-  LumnoOptionsSelectControlReact?: {
-    implementation?: string;
-  };
-  LumnoOptionsSettingsNavigation?: {
-    implementation?: string;
-  };
-  LumnoOptionsSettingsNavigationReact?: {
-    implementation?: string;
-  };
-  LumnoOptionsSettingsControls?: {
-    implementation?: string;
-  };
-  LumnoOptionsSettingsControlsReact?: {
-    implementation?: string;
-  };
-  LumnoOptionsSettingsForms?: {
-    implementation?: string;
-  };
-  LumnoOptionsSettingsFormsReact?: {
-    implementation?: string;
-  };
-  LumnoOptionsShortcutReference?: {
-    implementation?: string;
-  };
-  LumnoOptionsShortcutReferenceReact?: {
-    implementation?: string;
-  };
-  LumnoOptionsShortcutHotkey?: {
-    implementation?: string;
-  };
-  LumnoOptionsShortcutHotkeyReact?: {
-    implementation?: string;
-  };
-  LumnoOptionsSiteSearchList?: {
-    implementation?: string;
-  };
-  LumnoOptionsSiteSearchListReact?: {
-    implementation?: string;
-  };
-  LumnoOptionsWebDavList?: {
-    implementation?: string;
-  };
-  LumnoOptionsThemePicker?: {
-    implementation?: string;
-  };
-  LumnoOptionsThemePickerReact?: {
-    implementation?: string;
-  };
-  LumnoOptionsToast?: {
-    implementation?: string;
-  };
-  LumnoOptionsToastReact?: {
-    implementation?: string;
-  };
-  LumnoOverlayTabSwitcherView?: {
-    implementation?: string;
-  };
-  LumnoOverlayTabSwitcherViewReact?: {
-    implementation?: string;
-  };
-};
 
-const runtime = globalThis as OptionsRuntime;
+const runtime = globalThis;
 
 function clearRuntime(): void {
-  delete runtime.LumnoOptionsReactBootstrap;
-  delete runtime.LumnoOptionsReactIslands;
-  delete runtime.LumnoOptionsAggregateSearchList;
-  delete runtime.LumnoOptionsAggregateSearchListReact;
-  delete runtime.LumnoOptionsBlacklistList;
-  delete runtime.LumnoOptionsBlacklistListReact;
-  delete runtime.LumnoOptionsFeedbackSupport;
-  delete runtime.LumnoOptionsFeedbackSupportReact;
-  delete runtime.LumnoOptionsTranslationHelp;
-  delete runtime.LumnoOptionsInfoButton;
-  delete runtime.LumnoOptionsInfoButtonReact;
-  delete runtime.LumnoOptionsPopconfirm;
-  delete runtime.LumnoOptionsPopconfirmReact;
-  delete runtime.LumnoOptionsSegmentedControl;
-  delete runtime.LumnoOptionsSegmentedControlReact;
-  delete runtime.LumnoOptionsSelectControl;
-  delete runtime.LumnoOptionsSelectControlReact;
-  delete runtime.LumnoOptionsSettingsNavigation;
-  delete runtime.LumnoOptionsSettingsNavigationReact;
-  delete runtime.LumnoOptionsSettingsControls;
-  delete runtime.LumnoOptionsSettingsControlsReact;
-  delete runtime.LumnoOptionsSettingsForms;
-  delete runtime.LumnoOptionsSettingsFormsReact;
-  delete runtime.LumnoOptionsShortcutReference;
-  delete runtime.LumnoOptionsShortcutReferenceReact;
-  delete runtime.LumnoOptionsShortcutHotkey;
-  delete runtime.LumnoOptionsShortcutHotkeyReact;
-  delete runtime.LumnoOptionsSiteSearchList;
-  delete runtime.LumnoOptionsSiteSearchListReact;
-  delete runtime.LumnoOptionsWebDavList;
-  delete runtime.LumnoOptionsThemePicker;
-  delete runtime.LumnoOptionsThemePickerReact;
-  delete runtime.LumnoOptionsToast;
-  delete runtime.LumnoOptionsToastReact;
-  delete runtime.LumnoOverlayTabSwitcherView;
-  delete runtime.LumnoOverlayTabSwitcherViewReact;
+  Reflect.deleteProperty(runtime, 'LumnoOptionsReactBootstrap');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsReactIslands');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsAggregateSearchList');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsAggregateSearchListReact');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsBlacklistList');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsBlacklistListReact');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsFeedbackSupport');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsFeedbackSupportReact');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsTranslationHelp');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsInfoButton');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsInfoButtonReact');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsPopconfirm');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsPopconfirmReact');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsSegmentedControl');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsSegmentedControlReact');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsSelectControl');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsSelectControlReact');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsNavigation');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsNavigationReact');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsControls');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsControlsReact');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsForms');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsFormsReact');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsShortcutReference');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsShortcutReferenceReact');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsShortcutHotkey');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsShortcutHotkeyReact');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsSiteSearchList');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsSiteSearchListReact');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsWebDavList');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsThemePicker');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsThemePickerReact');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsToast');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsToastReact');
+  Reflect.deleteProperty(runtime, 'LumnoOverlayTabSwitcherView');
+  Reflect.deleteProperty(runtime, 'LumnoOverlayTabSwitcherViewReact');
 }
 
 afterEach(() => {

@@ -6,8 +6,8 @@ import {
   type VisualSurfaceController,
   type VisualSurfaceRenderModel
 } from './visual-surface';
-import { getElements } from '../../../tests/react/dom';
-import { queryHtmlElement } from '../../shared/dom-lookup';
+import { getElements, required } from '../../../tests/react/dom';
+import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 let controllers: VisualSurfaceController[] = [];
 
@@ -123,7 +123,7 @@ describe('Onboarding visual surface React island', () => {
     );
     expect(surface?.getAttribute('aria-label')).toBe('Lumno');
     expect(
-      surface?.querySelector<HTMLImageElement>('.logo-wordmark')?.getAttribute(
+      (surface ? queryHtmlTag(surface, '.logo-wordmark', 'img') : null)?.getAttribute(
         'src'
       )
     ).toBe('/assets/lumno-web-textlogo.svg');
@@ -172,9 +172,7 @@ describe('Onboarding visual surface React island', () => {
     expect(
       surface?.querySelectorAll('.browser-window-clip')
     ).toHaveLength(2);
-    const search = surface?.querySelector<HTMLInputElement>(
-      '#_x_extension_newtab_search_input_2024_unique_'
-    );
+    const search = (surface ? queryHtmlTag(surface, '#_x_extension_newtab_search_input_2024_unique_', 'input') : null);
     expect(search?.readOnly).toBe(true);
     expect(search?.placeholder).toBe('Search or enter URL…');
     expect(
@@ -187,7 +185,7 @@ describe('Onboarding visual surface React island', () => {
       surface?.querySelectorAll('[data-folder-layer]')
     ).toHaveLength(3);
     expect(
-      surface?.querySelector<HTMLElement>('.x-nt-recent-card')
+      (surface ? queryHtmlElement(surface, '.x-nt-recent-card') : null)
         ?.style.getPropertyValue('--x-nt-recent-card-color')
     ).toBe('rgb(221, 233, 253)');
 
@@ -224,7 +222,7 @@ describe('Onboarding visual surface React island', () => {
       controller.render({
         ...model,
         newtabPreview: {
-          ...model.newtabPreview!,
+          ...required(model.newtabPreview, 'model.newtabPreview'),
           reducedMotion: true
         }
       });
@@ -282,7 +280,7 @@ describe('Onboarding visual surface React island', () => {
     ).toBe('Product principles');
     expect(surface?.querySelectorAll('.feature-award')).toHaveLength(2);
     expect(surface?.querySelectorAll('.feature-award__wheat')).toHaveLength(4);
-    const cards = surface?.querySelectorAll<HTMLElement>('.feature-card');
+    const cards = (surface ? getElements(surface, '.feature-card') : []);
     expect(cards).toHaveLength(3);
     expect(cards?.[0]?.getAttribute('aria-label')).toBe(
       'Automatic PiP — Starts when switching tabs'
@@ -291,16 +289,12 @@ describe('Onboarding visual surface React island', () => {
       '350ms'
     );
     expect(
-      surface?.querySelector<HTMLImageElement>(
-        '[data-art="homepage-pip"] img'
-      )?.getAttribute('src')
+      (surface ? queryHtmlTag(surface, '[data-art="homepage-pip"] img', 'img') : null)?.getAttribute('src')
     ).toBe('/assets/onboarding-auto-pip.svg');
     expect(
-      surface?.querySelector<HTMLImageElement>(
-        '[data-art="newtab-filters"] img'
-      )?.getAttribute('src')
+      (surface ? queryHtmlTag(surface, '[data-art="newtab-filters"] img', 'img') : null)?.getAttribute('src')
     ).toBe('/assets/onboarding-newtab-filters.webp');
-    const blank = surface?.querySelector<HTMLElement>('[data-art="blank"]');
+    const blank = (surface ? queryHtmlElement(surface, '[data-art="blank"]') : null);
     expect(blank?.dataset.artWidth).toBe('240');
     expect(blank?.dataset.artHeight).toBe('96');
   });
@@ -375,9 +369,7 @@ describe('Onboarding visual surface React island', () => {
     expect(surface?.getAttribute('aria-label')).toBe(
       'Lumno site-search demo'
     );
-    const cards = surface?.querySelectorAll<HTMLElement>(
-      '.site-search-demo-card'
-    );
+    const cards = (surface ? getElements(surface, '.site-search-demo-card') : []);
     expect(cards).toHaveLength(2);
     expect(cards?.[1]?.style.getPropertyValue('--case-delay')).toBe('760ms');
     expect(
@@ -392,9 +384,7 @@ describe('Onboarding visual surface React island', () => {
       )
     ).toHaveLength(6);
     expect(
-      cards?.[0]?.querySelector<HTMLElement>(
-        '.site-search-demo-query-token--prompt'
-      )?.style.getPropertyValue('--typed-width')
+      (cards?.[0] ? queryHtmlElement(cards?.[0], '.site-search-demo-query-token--prompt') : null)?.style.getPropertyValue('--typed-width')
     ).toBe('calc(8ch + var(--typed-width-buffer, 0.65em))');
     expect(cards?.[0]?.querySelector('mark')?.textContent).toBe('lumno');
     expect(
@@ -481,9 +471,7 @@ describe('Onboarding visual surface React island', () => {
     expect(
       surface?.querySelector('#overlay-demo-panel')?.getAttribute('aria-label')
     ).toBe('Overlay demo');
-    const rows = () => surface?.querySelectorAll<HTMLElement>(
-      '.lumno-overlay-result'
-    );
+    const rows = () => (surface ? getElements(surface, '.lumno-overlay-result') : []);
     expect(rows()?.[0]?.dataset.active).toBe('false');
 
     act(() => {

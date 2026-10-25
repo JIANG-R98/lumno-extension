@@ -85,9 +85,7 @@ describe('New Tab select menu React island', () => {
 
   it('matches the trigger width when a dropdown is portaled', () => {
     const { controller, instance } = createMenu({ ...baseConfig, menuWidth: 'trigger' });
-    vi.spyOn(instance.trigger, 'getBoundingClientRect').mockReturnValue({
-      left: 40, right: 412, top: 40, bottom: 76, width: 372, height: 36
-    } as DOMRect);
+    vi.spyOn(instance.trigger, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, 40, 372, 36));
     act(() => controller.setOpen(instance.wrapper, true));
     expect(instance.menu.style.width).toBe('372px');
   });
@@ -104,20 +102,14 @@ describe('New Tab select menu React island', () => {
     Object.defineProperties(instance.menu, {
       offsetParent: { value: modal }, offsetWidth: { value: 200 }, offsetHeight: { value: 90 }
     });
-    vi.spyOn(modal, 'getBoundingClientRect').mockReturnValue({
-      left: 120, top: 80, width: 800, height: 600
-    } as DOMRect);
-    const triggerRect = vi.spyOn(instance.trigger, 'getBoundingClientRect').mockReturnValue({
-      left: 200, right: 600, top: 200, bottom: 272, width: 400, height: 72
-    } as DOMRect);
+    vi.spyOn(modal, 'getBoundingClientRect').mockReturnValue(new DOMRect(120, 80, 800, 600));
+    const triggerRect = vi.spyOn(instance.trigger, 'getBoundingClientRect').mockReturnValue(new DOMRect(200, 200, 400, 72));
     act(() => controller.setOpen(instance.wrapper, true));
     expect(instance.menu.style.position).toBe('absolute');
     expect(instance.menu.style.width).toBe('200px');
     expect(instance.menu.style.left).toBe('43px');
     expect(instance.menu.style.top).toBe('107px');
-    triggerRect.mockReturnValue({
-      left: 240, right: 640, top: 220, bottom: 292, width: 400, height: 72
-    } as DOMRect);
+    triggerRect.mockReturnValue(new DOMRect(240, 220, 400, 72));
     act(() => window.dispatchEvent(new Event('resize')));
     expect(instance.menu.style.left).toBe('63px');
     expect(instance.menu.style.top).toBe('117px');
@@ -126,12 +118,8 @@ describe('New Tab select menu React island', () => {
   it('uses layout dimensions rather than animated bounds for alignment', () => {
     const { controller, instance } = createMenu({ ...baseConfig, menuAlign: 'right' });
     Object.defineProperties(instance.menu, { offsetWidth: { value: 240 }, offsetHeight: { value: 180 } });
-    vi.spyOn(instance.trigger, 'getBoundingClientRect').mockReturnValue({
-      left: 800, right: 840, top: 100, bottom: 136, width: 40, height: 36
-    } as DOMRect);
-    vi.spyOn(instance.menu, 'getBoundingClientRect').mockReturnValue({
-      width: 230.4, height: 154.8
-    } as DOMRect);
+    vi.spyOn(instance.trigger, 'getBoundingClientRect').mockReturnValue(new DOMRect(800, 100, 40, 36));
+    vi.spyOn(instance.menu, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 230.4, 154.8));
     act(() => controller.setOpen(instance.wrapper, true));
     expect(instance.menu.style.left).toBe('600px');
   });
@@ -141,9 +129,7 @@ describe('New Tab select menu React island', () => {
     Object.defineProperties(instance.menu, {
       offsetHeight: { value: 480 }, clientHeight: { value: 478 }, scrollHeight: { value: 478 }
     });
-    vi.spyOn(instance.trigger, 'getBoundingClientRect').mockReturnValue({
-      left: 40, right: 412, top: 320, bottom: 392, width: 372, height: 72
-    } as DOMRect);
+    vi.spyOn(instance.trigger, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, 320, 372, 72));
     act(() => controller.setOpen(instance.wrapper, true));
     expect(instance.menu.style.top).toBe('398px');
     expect(instance.menu.style.maxHeight).toBe(`${window.innerHeight - 8 - 398}px`);
@@ -154,9 +140,7 @@ describe('New Tab select menu React island', () => {
   it('anchors an upward opening animation at the bottom edge beside its trigger', () => {
     const { controller, instance } = createMenu({ ...baseConfig, menuPortalOffset: 6 });
     Object.defineProperties(instance.menu, { offsetHeight: { value: 180 } });
-    vi.spyOn(instance.trigger, 'getBoundingClientRect').mockReturnValue({
-      left: 40, right: 412, top: 640, bottom: 676, width: 372, height: 36
-    } as DOMRect);
+    vi.spyOn(instance.trigger, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, 640, 372, 36));
     act(() => controller.setOpen(instance.wrapper, true));
     expect(instance.menu.style.top).toBe('454px');
     expect(instance.menu.style.transformOrigin).toBe('bottom left');

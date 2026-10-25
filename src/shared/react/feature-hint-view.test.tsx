@@ -5,6 +5,7 @@ import {
   type FeatureHintViewController
 } from './feature-hint-view';
 import { queryHtmlTag } from '../dom-lookup';
+import { required } from '../../../tests/react/dom';
 
 let controllers: FeatureHintViewController[] = [];
 
@@ -19,9 +20,9 @@ describe('Feature hint React view', () => {
     const onDismiss = vi.fn();
     const onLinkClick = vi.fn();
     const onActionClick = vi.fn();
-    let controller: FeatureHintViewController | null = null;
+    const created: { controller: FeatureHintViewController | null } = { controller: null };
     act(() => {
-      controller = createFeatureHintView({
+      created.controller = createFeatureHintView({
         labels: {
           actions: {
             community: 'Join community',
@@ -64,8 +65,7 @@ describe('Feature hint React view', () => {
         onActionClick
       });
     });
-    expect(controller).not.toBeNull();
-    const view = controller as unknown as FeatureHintViewController;
+    const view = required(created.controller, 'feature hint controller');
     controllers.push(view);
     document.body.appendChild(view.element);
 
@@ -107,9 +107,9 @@ describe('Feature hint React view', () => {
   });
 
   it('renders the Lumno brand and actions as one sentence', () => {
-    let controller: FeatureHintViewController | null = null;
+    const created: { controller: FeatureHintViewController | null } = { controller: null };
     act(() => {
-      controller = createFeatureHintView({
+      created.controller = createFeatureHintView({
         labels: {
           actions: {
             community: '进群',
@@ -154,8 +154,7 @@ describe('Feature hint React view', () => {
         }
       });
     });
-    expect(controller).not.toBeNull();
-    const view = controller as unknown as FeatureHintViewController;
+    const view = required(created.controller, 'feature hint controller');
     controllers.push(view);
     document.body.appendChild(view.element);
 

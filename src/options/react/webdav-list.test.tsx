@@ -2,7 +2,7 @@ import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createWebDavListApi, type WebDavListModel } from './webdav-list';
 import messages from '../../../_locales/en/messages.json';
-import { expectElement, getElement, getTag } from '../../../tests/react/dom';
+import { expectElement, getElement, getTag, required } from '../../../tests/react/dom';
 import { queryHtmlTag } from '../../shared/dom-lookup';
 
 const copy = Object.fromEntries(Object.entries(messages).map(([key, value]) => [key, value.message]));
@@ -25,7 +25,7 @@ const click = async (element: Element | null) => {
 };
 const type = async (input: HTMLInputElement, value: string) => {
   await act(async () => {
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+    required(required(Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value'), 'Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, ').set, 'Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, ').call(input, value);
     input.dispatchEvent(new Event('input', { bubbles: true }));
   });
 };
@@ -119,10 +119,10 @@ describe('WebDAV connection cards', () => {
   it('adds through an empty accordion and returns to empty after deletion', async () => {
     const { host, controller } = fixture({ ...model, connections: [] });
     expect(host.querySelector('[data-webdav-id]')).toBeNull();
-    const add = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Add WebDAV'))!;
+    const add = required([...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Add WebDAV')), '[...host.querySelectorAll("button")].find((button) => button');
     await click(add);
     expect(queryHtmlTag(host, '[name="password"]', 'input')?.required).toBe(true);
-    const cancel = [...host.querySelectorAll('button')].find((button) => button.textContent === copy.confirm_cancel)!;
+    const cancel = required([...host.querySelectorAll('button')].find((button) => button.textContent === copy.confirm_cancel), '[...host.querySelectorAll("button")].find((button) => button');
     await click(cancel);
     expect(add.getAttribute('aria-expanded')).toBe('false');
     act(() => controller.render(model));
@@ -134,9 +134,9 @@ describe('WebDAV connection cards', () => {
     const { card, onAction } = fixture({ ...model, connections: [{ ...item, state: 'choice', remoteMissing: true }, { ...item, id: 'b', state: 'conflict', enabled: true }] });
     const buttons = [...card('a').querySelectorAll('button')];
     expect(buttons.find((button) => button.textContent === copy.webdav_use_remote)).toBeUndefined();
-    await click(buttons.find((button) => button.textContent === copy.webdav_upload_local)!);
+    await click(required(buttons.find((button) => button.textContent === copy.webdav_upload_local), 'buttons.find((button) => button.textContent === copy.webdav_'));
     expect(onAction).toHaveBeenCalledWith('enable', 'a', { decision: 'local' });
-    await click([...card('b').querySelectorAll('button')].find((button) => button.textContent === copy.webdav_use_remote)!);
+    await click(required([...card('b').querySelectorAll('button')].find((button) => button.textContent === copy.webdav_use_remote), '[...card("b").querySelectorAll("button")].find((button) => b'));
     expect(onAction).toHaveBeenCalledWith('sync', 'b', { decision: 'remote' });
     expect(card('b').querySelector('[role="status"]')?.getAttribute('data-status')).toBe('warning');
     const compact = '._x_extension_shortcut_compact_2026_unique_';
@@ -148,7 +148,7 @@ describe('WebDAV connection cards', () => {
     const merge = (id: string) => [...card(id).querySelectorAll('button')].find((button) => button.textContent === copy.webdav_merge_wallpapers);
     expect(merge('b')).toBeUndefined();
     expect(merge('c')).toBeUndefined();
-    await click(merge('a')!);
+    await click(required(merge('a'), 'merge("a")'));
     expect(onAction).toHaveBeenCalledWith('enable', 'a', { decision: 'merge' });
   });
   it('loads conflict differences on demand and shows both sides', async () => {
@@ -159,7 +159,7 @@ describe('WebDAV connection cards', () => {
         remote: { total: 2, added: { names: [], count: 0 }, removed: { names: [], count: 0 }, changed: { names: [], count: 0 }, reordered: false } },
       { key: 'simple', label: 'Simple mode', domain: 'preference', local: { kind: 'boolean', value: true }, remote: { kind: 'unset' } }
     ] });
-    const toggle = [...card('a').querySelectorAll('button')].find((button) => button.textContent?.includes(copy.webdav_view_diff))!;
+    const toggle = required([...card('a').querySelectorAll('button')].find((button) => button.textContent?.includes(copy.webdav_view_diff)), '[...card("a").querySelectorAll("button")].find((button) => b');
     await click(toggle);
     expect(onAction).toHaveBeenCalledWith('conflictDetails', 'a');
     const table = getElement(card('a'), '[role="table"]');
@@ -167,7 +167,7 @@ describe('WebDAV connection cards', () => {
     expect(table.textContent).toContain(copy.webdav_diff_unchanged);
     expect(table.textContent).toContain(copy.webdav_value_on);
     expect(table.textContent).toContain(copy.webdav_value_default);
-    await click([...card('a').querySelectorAll('button')].find((button) => button.textContent?.includes(copy.webdav_hide_diff))!);
+    await click(required([...card('a').querySelectorAll('button')].find((button) => button.textContent?.includes(copy.webdav_hide_diff)), '[...card("a").querySelectorAll("button")].find((button) => b'));
     expect(card('a').querySelector('[role="table"]')).toBeNull();
   });
   it('shows one status pill per card and offers sync only while running', () => {
@@ -203,12 +203,12 @@ describe('WebDAV connection cards', () => {
   });
   it('retries a failed connection from its notice', async () => {
     const { card, onAction } = fixture({ ...model, connections: [{ ...item, enabled: true, state: 'error', errorText: 'Offline' }] });
-    await click([...card('a').querySelectorAll('button')].find((button) => button.textContent?.includes(copy.webdav_retry))!);
+    await click(required([...card('a').querySelectorAll('button')].find((button) => button.textContent?.includes(copy.webdav_retry)), '[...card("a").querySelectorAll("button")].find((button) => b'));
     expect(onAction).toHaveBeenCalledWith('sync', 'a', {});
   });
   it('adds and enables in one step from a plain form', async () => {
     const { host, onAction } = fixture({ ...model, lang: 'zh-CN', connections: [] });
-    await click([...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Add WebDAV'))!);
+    await click(required([...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Add WebDAV')), '[...host.querySelectorAll("button")].find((button) => button'));
     expect(host.querySelector('[role="tablist"]')).toBeNull();
     const endpoint = getTag(host, '[name="endpoint"]', 'input');
     expect(endpoint.value).toBe('');
@@ -229,7 +229,7 @@ describe('WebDAV connection cards', () => {
     expect(suggestion.textContent).toContain(copy.webdav_provider_jianguoyun);
     expect(suggestion.textContent).toContain('me@example.com · /notes');
     expect(suggestion.textContent).toContain(copy.webdav_suggestion_label);
-    await click([...suggestion.querySelectorAll('button')].find((button) => button.textContent === copy.webdav_suggestion_add)!);
+    await click(required([...suggestion.querySelectorAll('button')].find((button) => button.textContent === copy.webdav_suggestion_add), '[...suggestion.querySelectorAll("button")].find((button) => '));
     const form = getTag(host, '.lumno-webdav-editor form', 'form');
     expect(form.hasAttribute('inert')).toBe(false);
     expect(getTag(form, '[name="endpoint"]', 'input').value).toBe(synced.endpoint);
@@ -245,9 +245,9 @@ describe('WebDAV connection cards', () => {
   it('dismisses a synced connection and keeps the plain add form generic', async () => {
     const synced = { endpoint: 'https://dav.test/', directory: 'lumno', username: 'user' };
     const { host, onAction } = fixture({ ...model, connections: [], suggestions: [synced] });
-    await click([...host.querySelectorAll('.lumno-webdav-suggestion button')].find((button) => button.textContent === copy.webdav_suggestion_dismiss)!);
+    await click(required([...host.querySelectorAll('.lumno-webdav-suggestion button')].find((button) => button.textContent === copy.webdav_suggestion_dismiss), '[...host.querySelectorAll(".lumno-webdav-suggestion button")'));
     expect(onAction).toHaveBeenCalledWith('dismissSuggestion', undefined, { config: synced });
-    await click([...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Add WebDAV'))!);
+    await click(required([...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Add WebDAV')), '[...host.querySelectorAll("button")].find((button) => button'));
     const form = getTag(host, '.lumno-webdav-editor form', 'form');
     expect(getTag(form, '[name="endpoint"]', 'input').value).toBe('');
     expect(form.textContent).toContain(copy.webdav_password_hint);

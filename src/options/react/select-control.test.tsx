@@ -139,7 +139,7 @@ describe('Options select control React island', () => {
       .toBe('PingFang SC');
     // The name is drawn in its own face, quoted so any family name parses.
     expect(
-      visible[0]?.querySelector<HTMLElement>('._x_extension_select_option_label_2026_unique_')?.style.fontFamily
+      (visible[0] ? queryHtmlElement(visible[0], '._x_extension_select_option_label_2026_unique_') : null)?.style.fontFamily
     ).toContain('"PingFang SC"');
     expect(search?.getAttribute('aria-activedescendant')).toBe(visible[0]?.id);
 

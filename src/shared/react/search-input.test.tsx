@@ -6,7 +6,7 @@ import {
   destroySearchInput,
   type SearchInputParts
 } from './search-input';
-import { getElement, getTags } from '../../../tests/react/dom';
+import { getElement, getTags, required } from '../../../tests/react/dom';
 
 let inputs: SearchInputParts[] = [];
 
@@ -183,7 +183,7 @@ describe('Shared search input React island', () => {
         id: 'close-tabs'
       }
     });
-    const trigger = parts.secondaryAction!;
+    const trigger = required(parts.secondaryAction, 'parts.secondaryAction');
     const popconfirm = getElement(parts.container, '.x-lumno-search-input__popconfirm');
 
     expect(trigger.getAttribute('aria-haspopup')).toBe('dialog');
@@ -229,7 +229,7 @@ describe('Shared search input React island', () => {
         id: 'close-tabs'
       }
     });
-    const trigger = parts.secondaryAction!;
+    const trigger = required(parts.secondaryAction, 'parts.secondaryAction');
     const popconfirm = getElement(parts.container, '.x-lumno-search-input__popconfirm');
     document.addEventListener('keydown', onDocumentKeyDown);
 

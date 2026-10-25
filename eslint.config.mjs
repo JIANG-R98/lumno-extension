@@ -61,6 +61,13 @@ const DOM_MEMBERS = [
   'defaultView', 'scrollIntoView'
 ];
 
+// An element type given to a query asserts it; the lookups in
+// src/shared/dom-lookup.ts (and tests/react/dom.ts) check it instead.
+const TYPE_ASSERTING_QUERY = {
+  selector: 'CallExpression[callee.property.name=/^(?:querySelector|querySelectorAll|closest)$/][typeArguments]',
+  message: 'Look the element up through a guarded lookup instead of asserting its type.'
+};
+
 export default tseslint.config(
   {
     ignores: [
@@ -128,10 +135,14 @@ export default tseslint.config(
     }
   },
   {
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}', 'tests/react/**/*.ts'],
     extends: [tseslint.configs.recommended],
     rules: {
-      '@typescript-eslint/no-unused-vars': ['error', unusedVarsOptions]
+      '@typescript-eslint/no-unused-vars': ['error', unusedVarsOptions],
+      // Types are narrowed, never asserted.
+      '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+      '@typescript-eslint/no-non-null-assertion': 'error',
+      'no-restricted-syntax': ['error', TYPE_ASSERTING_QUERY]
     }
   },
   {
