@@ -1,5 +1,7 @@
+import { useCallback, useSyncExternalStore } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
+import { createRenderStore, type RenderStore } from '../../shared/react/render-store';
 import { queryHtmlElement } from '../../shared/dom-lookup';
 
 type OverlayShellOptions = Record<string, unknown> & {
@@ -25,6 +27,7 @@ interface OverlayMount {
   host: HTMLElement;
   panel: HTMLElement;
   root: ShadowRoot;
+  view: OverlayPanelView;
 }
 
 function findById(
@@ -460,55 +463,64 @@ function supportsCornerShape(doc: Document): boolean {
 const OVERLAY_PANEL_REST_TRANSFORM =
   'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1))';
 
-function getPanelStyle(options: OverlayShellOptions): string {
+type StyleDeclaration = [property: string, value: string, priority?: 'important'];
+
+// The panel's own look and place. Its motion (transform, opacity,
+// transition, will-change) starts at rest here and is the session's after.
+function getPanelDeclarations(options: OverlayShellOptions, supportsSuperellipse: boolean): StyleDeclaration[] {
   const width = Number(options.width) || 760;
   const maxHeightVh = Number(options.maxHeightVh) || 75;
-  return `
-    all: unset;
-    position: fixed !important;
-    top: 20vh !important;
-    left: 50% !important;
-    transform: ${OVERLAY_PANEL_REST_TRANSFORM} !important;
-    transform-origin: top center !important;
-    width: ${width}px !important;
-    max-width: calc(100vw - 24px) !important;
-    max-height: ${maxHeightVh}vh !important;
-    --x-ov-panel-radius: 26px;
-    background: var(--x-ov-bg, rgba(255, 255, 255, 0.95)) !important;
-    backdrop-filter: blur(var(--x-ov-blur, 24px)) saturate(var(--x-ov-saturate, 165%)) !important;
-    -webkit-backdrop-filter: blur(var(--x-ov-blur, 24px)) saturate(var(--x-ov-saturate, 165%)) !important;
-    border: 1px solid var(--x-ov-border, var(--x-lumno-search-shell-border-light, rgba(0, 0, 0, 0.14))) !important;
-    border-radius: var(--x-ov-panel-radius) !important;
-    box-shadow: var(--x-ov-shadow, inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 1px 2px rgba(15, 23, 42, 0.06), 0 10px 24px -6px rgba(15, 23, 42, 0.12), 0 36px 84px -12px rgba(15, 23, 42, 0.22), 0 96px 220px -16px rgba(15, 23, 42, 0.3), 0 0 140px 8px rgba(15, 23, 42, 0.08)) !important;
-    z-index: 2147483647 !important;
-    font-family: var(--lumno-font-sans, sans-serif) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    pointer-events: auto !important;
-    contain: layout style !important;
-    box-sizing: border-box !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    line-height: 1 !important;
-    text-decoration: none !important;
-    list-style: none !important;
-    outline: none !important;
-    color: var(--x-ov-text, #111827) !important;
-    font-size: 16px !important;
-    font-style: normal !important;
-    font-variant: normal !important;
-    font-weight: 400 !important;
-    letter-spacing: normal !important;
-    word-spacing: normal !important;
-    text-transform: none !important;
-    text-shadow: none !important;
-    vertical-align: baseline !important;
-    opacity: 0 !important;
-    filter: none !important;
-    will-change: auto !important;
-    transition: none !important;
-  `;
+  const important = 'important';
+  const declarations: StyleDeclaration[] = [
+    ['all', 'unset'],
+    ['position', 'fixed', important],
+    ['top', '20vh', important],
+    ['left', '50%', important],
+    ['transform', OVERLAY_PANEL_REST_TRANSFORM, important],
+    ['transform-origin', 'top center', important],
+    ['width', `${width}px`, important],
+    ['max-width', 'calc(100vw - 24px)', important],
+    ['max-height', `${maxHeightVh}vh`, important],
+    ['--x-ov-panel-radius', '26px'],
+    ['background', 'var(--x-ov-bg, rgba(255, 255, 255, 0.95))', important],
+    ['backdrop-filter', 'blur(var(--x-ov-blur, 24px)) saturate(var(--x-ov-saturate, 165%))', important],
+    ['-webkit-backdrop-filter', 'blur(var(--x-ov-blur, 24px)) saturate(var(--x-ov-saturate, 165%))', important],
+    ['border', '1px solid var(--x-ov-border, var(--x-lumno-search-shell-border-light, rgba(0, 0, 0, 0.14)))', important],
+    ['border-radius', 'var(--x-ov-panel-radius)', important],
+    ['box-shadow', 'var(--x-ov-shadow, inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 1px 2px rgba(15, 23, 42, 0.06), 0 10px 24px -6px rgba(15, 23, 42, 0.12), 0 36px 84px -12px rgba(15, 23, 42, 0.22), 0 96px 220px -16px rgba(15, 23, 42, 0.3), 0 0 140px 8px rgba(15, 23, 42, 0.08))', important],
+    ['z-index', '2147483647', important],
+    ['font-family', 'var(--lumno-font-sans, sans-serif)', important],
+    ['display', 'flex', important],
+    ['flex-direction', 'column', important],
+    ['align-items', 'center', important],
+    ['pointer-events', 'auto', important],
+    ['contain', 'layout style', important],
+    ['box-sizing', 'border-box', important],
+    ['margin', '0', important],
+    ['padding', '0', important],
+    ['line-height', '1', important],
+    ['text-decoration', 'none', important],
+    ['list-style', 'none', important],
+    ['outline', 'none', important],
+    ['color', 'var(--x-ov-text, #111827)', important],
+    ['font-size', '16px', important],
+    ['font-style', 'normal', important],
+    ['font-variant', 'normal', important],
+    ['font-weight', '400', important],
+    ['letter-spacing', 'normal', important],
+    ['word-spacing', 'normal', important],
+    ['text-transform', 'none', important],
+    ['text-shadow', 'none', important],
+    ['vertical-align', 'baseline', important],
+    ['opacity', '0', important],
+    ['filter', 'none', important],
+    ['will-change', 'auto', important],
+    ['transition', 'none', important]
+  ];
+  if (supportsSuperellipse) {
+    declarations.push(['corner-shape', 'superellipse(1.25)', important]);
+  }
+  return declarations;
 }
 
 function createOverlayHost(
@@ -564,55 +576,46 @@ function createOverlayHost(
   return host;
 }
 
+// The panel's theme: its scheme and the custom properties it draws with.
+export interface OverlayPanelModel {
+  theme: string;
+  vars: Readonly<Partial<Record<`--${string}`, string>>>;
+}
+
+export interface OverlayPanelView {
+  render(model: OverlayPanelModel): void;
+}
+
 function OverlayPanel({
   id,
-  maxHeightVh,
+  declarations,
   onMount,
-  styleText,
-  supportsSuperellipse,
-  width
+  store
 }: {
   id: string;
-  maxHeightVh: number;
+  declarations: StyleDeclaration[];
   onMount(panel: HTMLDivElement): void;
-  styleText: string;
-  supportsSuperellipse: boolean;
-  width: number;
+  store: RenderStore<OverlayPanelModel>;
 }) {
-  const mountPanel = (panel: HTMLDivElement | null) => {
+  const model = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  // Runs once: the static look goes on beside the theme's properties.
+  const mountPanel = useCallback((panel: HTMLDivElement | null) => {
     if (!panel) {
       return;
     }
-    panel.setAttribute('style', styleText);
-    // JSDOM discards the declaration block because it does not understand
-    // every Chromium-only value. Re-applying the layout contract also keeps
-    // these critical values explicit for hostile-page style isolation.
-    panel.style.setProperty('position', 'fixed', 'important');
-    panel.style.setProperty('width', `${width}px`, 'important');
-    panel.style.setProperty('max-height', `${maxHeightVh}vh`, 'important');
-    panel.style.setProperty(
-      'transform',
-      OVERLAY_PANEL_REST_TRANSFORM,
-      'important'
-    );
-    panel.style.setProperty('transition', 'none', 'important');
-    panel.style.setProperty('filter', 'none', 'important');
-    panel.style.setProperty('will-change', 'auto', 'important');
-    if (supportsSuperellipse) {
-      panel.style.setProperty(
-        'corner-shape',
-        'superellipse(1.25)',
-        'important'
-      );
-    }
+    declarations.forEach(([property, value, priority]) => {
+      panel.style.setProperty(property, value, priority || '');
+    });
     onMount(panel);
-  };
+  }, [declarations, onMount]);
   return (
     <div
       data-lumno-overlay-panel="true"
       data-react-island="overlay-shell"
+      data-theme={model.theme || undefined}
       id={id}
       ref={mountPanel}
+      style={model.vars}
     />
   );
 }
@@ -648,18 +651,17 @@ export function createOverlayShellApi() {
     const registerPanel = (nextPanel: HTMLDivElement) => {
       panel = nextPanel;
     };
+    const store = createRenderStore<OverlayPanelModel>({ theme: '', vars: {} });
     const reactRoot = createRoot(shadowRoot);
     flushSync(() => {
       reactRoot.render(
         <OverlayPanel
+          declarations={getPanelDeclarations(options, supportsCornerShape(doc))}
           id={String(
             options.id || '_x_extension_overlay_2024_unique_'
           )}
-          maxHeightVh={Number(options.maxHeightVh) || 75}
           onMount={registerPanel}
-          styleText={getPanelStyle(options)}
-          supportsSuperellipse={supportsCornerShape(doc)}
-          width={Number(options.width) || 760}
+          store={store}
         />
       );
     });
@@ -673,7 +675,8 @@ export function createOverlayShellApi() {
     mountedPanel._lumnoOverlayRoot = shadowRoot;
     roots.set(host, reactRoot);
     panels.set(host, mountedPanel);
-    return { host, panel: mountedPanel, root: shadowRoot };
+    const view: OverlayPanelView = { render: store.render };
+    return { host, panel: mountedPanel, root: shadowRoot, view };
   }
 
   return Object.freeze({

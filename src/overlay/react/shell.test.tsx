@@ -61,6 +61,34 @@ describe('Overlay React shell', () => {
     expect(mount.root?.querySelector('#overlay-panel')).toBeNull();
   });
 
+  it('draws the panel\'s theme from its model beside its own look', () => {
+    const api = createOverlayShellApi();
+    const holder: { value: ReturnType<typeof api.createOverlayMount> } = { value: null };
+    act(() => {
+      holder.value = api.createOverlayMount(document, { hostId: 'overlay-host', id: 'overlay-panel' });
+    });
+    const mount = holder.value;
+    if (!mount) {
+      throw new Error('Expected overlay mount');
+    }
+
+    act(() => mount.view.render({
+      theme: 'dark',
+      vars: { '--x-ov-text': '#E5E7EB', '--lumno-font-sans': 'Inter, sans-serif' }
+    }));
+    expect(mount.panel.dataset.theme).toBe('dark');
+    expect(mount.panel.style.getPropertyValue('--x-ov-text')).toBe('#E5E7EB');
+    expect(mount.panel.style.getPropertyValue('--lumno-font-sans')).toBe('Inter, sans-serif');
+
+    act(() => mount.view.render({ theme: 'light', vars: { '--x-ov-text': '#111827' } }));
+    expect(mount.panel.dataset.theme).toBe('light');
+    expect(mount.panel.style.getPropertyValue('--x-ov-text')).toBe('#111827');
+    expect(mount.panel.style.getPropertyValue('--lumno-font-sans')).toBe('');
+    expect(mount.panel.style.position).toBe('fixed');
+    expect(mount.panel.style.getPropertyPriority('position')).toBe('important');
+    act(() => api.destroyOverlayMount(mount.host));
+  });
+
   it('installs isolated styles without a legacy adapter', () => {
     const api = createOverlayShellApi();
     const root = document.createElement('div');

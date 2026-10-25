@@ -7,11 +7,14 @@ import type * as FaviconTheme from '../../shared/favicon/favicon-theme';
 import type { HoverColors, ThemeLike, ThemeVariant } from '../../shared/favicon/favicon-theme';
 import * as LumnoOverlayPageTheme from '../page-theme';
 import type { PageTheme } from '../page-theme';
+import type { OverlayPanelModel, OverlayPanelView } from '../react/shell';
 
 type PageThemeObserver = ReturnType<typeof LumnoOverlayPageTheme.createPageThemeObserver>;
 
 interface PanelThemeState {
   overlay: HTMLElement | null;
+  // Draws the panel's theme, once the panel is mounted.
+  overlayPanelView: OverlayPanelView | null;
   overlayMediaQuery: MediaQueryList;
   overlayThemeMode: ThemeMode;
   overlayPageThemeAdaptationEnabled: boolean;
@@ -27,7 +30,7 @@ interface PanelThemeDeps {
   stopOverlayPageThemeObserver(): void;
   applyOverlayTheme(mode: ThemeMode): void;
   SETTINGS: Pick<typeof Settings, 'getOverlayFontFamilyCssValue'>;
-  OVERLAY_FONT_FAMILY_CSS_VAR: string;
+  OVERLAY_FONT_FAMILY_CSS_VAR: `--${string}`;
   FAVICON_THEME: Pick<typeof FaviconTheme, 'getThemeForMode' | 'getHoverColors'>;
   overlayState: PanelThemeState;
 }
@@ -202,25 +205,31 @@ function createPanelTheme(deps: PanelThemeDeps) {
     observer.start();
   }
 
+  // The scheme and colors last worked out; the font is added as it is drawn.
+  let panelTheme: OverlayPanelModel = { theme: '', vars: {} };
+
   // The chosen families reach every text rule through the shared
-  // --lumno-font-sans token, set inline on the panel. Clearing it falls back
-  // to the bundled stack the shadow-root stylesheet defines on the panel.
-  function applyOverlayFontFamily(target: HTMLElement | null): void {
-    if (!target) {
+  // --lumno-font-sans token, set on the panel. Without one the panel falls
+  // back to the bundled stack its shadow-root stylesheet defines.
+  function renderOverlayPanel(): void {
+    const view = overlayState.overlayPanelView;
+    if (!view) {
       return;
     }
-    const cssValue = SETTINGS.getOverlayFontFamilyCssValue(overlayState.overlayFontFamily, overlayState.overlayFontFallback);
-    if (cssValue) {
-      target.style.setProperty(OVERLAY_FONT_FAMILY_CSS_VAR, cssValue);
-    } else {
-      target.style.removeProperty(OVERLAY_FONT_FAMILY_CSS_VAR);
-    }
+    const fontFamily = SETTINGS.getOverlayFontFamilyCssValue(overlayState.overlayFontFamily, overlayState.overlayFontFallback);
+    view.render({
+      theme: panelTheme.theme,
+      vars: fontFamily
+        ? { ...panelTheme.vars, [OVERLAY_FONT_FAMILY_CSS_VAR]: fontFamily }
+        : panelTheme.vars
+    });
   }
 
-  function applyOverlayThemeVariables(target: HTMLElement | null, mode: string): void {
-    if (!target) {
-      return;
-    }
+  function applyOverlayFontFamily(): void {
+    renderOverlayPanel();
+  }
+
+  function applyOverlayThemeVariables(mode: string): void {
     const pageTheme = detectPageTheme();
     const resolved = resolveOverlayTheme(mode, pageTheme);
     const tokens = overlayThemeTokens[resolved] || overlayThemeTokens.light;
@@ -228,36 +237,37 @@ function createPanelTheme(deps: PanelThemeDeps) {
       resolvedTheme: resolved,
       pageTheme
     });
-    target.setAttribute('data-theme', resolved);
-    target.style.setProperty(
-      '--x-ov-bg',
-      shouldStrengthenDarkBackground && tokens.lightPageBg ? tokens.lightPageBg : tokens.bg
-    );
-    target.style.setProperty('--x-ov-mode-menu-bg', tokens.modeMenuBg);
-    target.style.setProperty('--x-ov-border', tokens.border);
-    target.style.setProperty('--x-ov-shadow', tokens.shadow);
-    target.style.setProperty('--x-ov-text', tokens.text);
-    target.style.setProperty('--x-ov-subtext', tokens.subtext);
-    target.style.setProperty('--x-ov-link', tokens.link);
-    target.style.setProperty('--x-ov-placeholder', tokens.placeholder);
-    target.style.setProperty('--x-ov-hover-bg', tokens.hoverBg);
-    target.style.setProperty('--x-ov-neutral-mark-bg', tokens.neutralMarkBg);
-    target.style.setProperty('--x-ov-neutral-mark-text', tokens.neutralMarkText);
-    target.style.setProperty('--x-ov-tag-bg', tokens.tagBg);
-    target.style.setProperty('--x-ov-tag-text', tokens.tagText);
-    target.style.setProperty('--x-ov-bookmark-tag-bg', tokens.bookmarkTagBg);
-    target.style.setProperty('--x-ov-bookmark-tag-text', tokens.bookmarkTagText);
-    target.style.setProperty('--x-ov-blur', tokens.blur);
-    target.style.setProperty('--x-ov-saturate', tokens.saturate);
-    target.style.setProperty('--x-ext-input-text', tokens.text);
-    target.style.setProperty('--x-ext-input-caret', tokens.link);
-    target.style.setProperty('--x-ext-input-icon', tokens.subtext);
-    target.style.setProperty('--x-ext-input-icon-hover-bg', tokens.hoverBg);
-    target.style.setProperty('--x-ext-input-icon-hover', tokens.text);
-    target.style.setProperty('--x-ext-input-underline', tokens.underline);
-    target.style.setProperty('--x-ext-input-divider-inset', tokens.dividerInset);
-    target.style.setProperty('--x-ext-input-divider-opacity', tokens.dividerOpacity);
-    applyOverlayFontFamily(target);
+    panelTheme = {
+      theme: resolved,
+      vars: {
+        '--x-ov-bg': shouldStrengthenDarkBackground && tokens.lightPageBg ? tokens.lightPageBg : tokens.bg,
+        '--x-ov-mode-menu-bg': tokens.modeMenuBg,
+        '--x-ov-border': tokens.border,
+        '--x-ov-shadow': tokens.shadow,
+        '--x-ov-text': tokens.text,
+        '--x-ov-subtext': tokens.subtext,
+        '--x-ov-link': tokens.link,
+        '--x-ov-placeholder': tokens.placeholder,
+        '--x-ov-hover-bg': tokens.hoverBg,
+        '--x-ov-neutral-mark-bg': tokens.neutralMarkBg,
+        '--x-ov-neutral-mark-text': tokens.neutralMarkText,
+        '--x-ov-tag-bg': tokens.tagBg,
+        '--x-ov-tag-text': tokens.tagText,
+        '--x-ov-bookmark-tag-bg': tokens.bookmarkTagBg,
+        '--x-ov-bookmark-tag-text': tokens.bookmarkTagText,
+        '--x-ov-blur': tokens.blur,
+        '--x-ov-saturate': tokens.saturate,
+        '--x-ext-input-text': tokens.text,
+        '--x-ext-input-caret': tokens.link,
+        '--x-ext-input-icon': tokens.subtext,
+        '--x-ext-input-icon-hover-bg': tokens.hoverBg,
+        '--x-ext-input-icon-hover': tokens.text,
+        '--x-ext-input-underline': tokens.underline,
+        '--x-ext-input-divider-inset': tokens.dividerInset,
+        '--x-ext-input-divider-opacity': tokens.dividerOpacity
+      }
+    };
+    renderOverlayPanel();
   }
 
   function isOverlayDarkMode(): boolean {

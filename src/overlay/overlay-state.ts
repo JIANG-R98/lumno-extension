@@ -148,6 +148,7 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
 
     // The panel's elements, made when it mounts.
     overlay: null,
+    overlayPanelView: null,
     overlayStyleRoot: null,
     inputParts: null,
     searchInput: null,

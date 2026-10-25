@@ -228,7 +228,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const applyOverlayTheme = (mode: ThemeMode): void => {
     overlayState.overlayThemeMode = mode;
     const previousResolvedTheme = overlayState.overlay ? overlayState.overlay.getAttribute('data-theme') : '';
-    applyOverlayThemeVariables(overlayState.overlay, mode);
+    applyOverlayThemeVariables(mode);
     overlayState.overlayNoticeLayer.sync(overlayState.overlay);
     const nextResolvedTheme = overlayState.overlay ? overlayState.overlay.getAttribute('data-theme') : '';
     suggestionItems.forEach((item) => {
@@ -1026,6 +1026,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     return;
   }
   overlayState.overlay = overlayMount.panel;
+  overlayState.overlayPanelView = overlayMount.view;
   const overlayHost = overlayMount.host;
   // The panel's shadow root, which holds its styles.
   const overlayStyleRoot = overlayMount.root;
@@ -1791,7 +1792,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     clearDefaultOpenTabsSuggestions();
   }
   applyNoTranslateDeep(overlayState.overlay);
-  applyOverlayThemeVariables(overlayState.overlay, overlayState.overlayThemeMode);
+  applyOverlayThemeVariables(overlayState.overlayThemeMode);
   // Reader extensions such as SimpRead can hide the original body and mount
   // their reading surface directly under <html>. Keep the overlay out of a
   // potentially hidden body while preserving fullscreen containment.

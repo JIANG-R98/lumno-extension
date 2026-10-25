@@ -101,7 +101,7 @@ interface SettingsSyncDeps<Row, Provider, Theme> {
   requestOverlaySearchSuggestions(query: string): void;
   applyOverlayTheme(mode: ThemeMode): void;
   applyLanguageMode(mode: unknown): void;
-  applyOverlayFontFamily(overlayElement: HTMLElement | null): void;
+  applyOverlayFontFamily(): void;
   loadOverlaySearchEngineState(onReload: () => void): Promise<SearchEngineState | null>;
   clearLocalSearchScope(): void;
   shouldShowOpenTabsForEmptyQuery(): boolean;
@@ -526,7 +526,7 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
   ).then((result) => {
     overlayState.overlayFontFamily = SETTINGS.normalizeOverlayFontFamily(result[OVERLAY_FONT_FAMILY_STORAGE_KEY]);
     overlayState.overlayFontFallback = SETTINGS.normalizeOverlayFontFamily(result[OVERLAY_FONT_FALLBACK_STORAGE_KEY]);
-    applyOverlayFontFamily(overlayState.overlay);
+    applyOverlayFontFamily();
     return overlayState.overlayFontFamily;
   });
   overlayState.storageChangeListeners.add((changes, areaName) => {
@@ -545,7 +545,7 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
       changed = true;
     }
     if (changed) {
-      applyOverlayFontFamily(overlayState.overlay);
+      applyOverlayFontFamily();
     }
   });
   overlayState.storageChangeListeners.add((changes, areaName) => {
