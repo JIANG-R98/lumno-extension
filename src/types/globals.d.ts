@@ -11,7 +11,6 @@ import type { ThemeVariant } from '../shared/favicon/favicon-theme';
 import type { createBlacklistTabApi } from '../options/react/blacklist-tab';
 import type { createInfoButtonApi } from '../options/react/info-button';
 import type { createSegmentedControlApi } from '../options/react/segmented-control';
-import type { createSelectControlApi } from '../options/react/select-control';
 import type { createSettingsControlsApi } from '../options/react/settings-controls';
 import type { createSettingsNavigationApi } from '../options/react/settings-navigation';
 import type { createShortcutsTabApi } from '../options/react/shortcuts-tab';
@@ -108,7 +107,6 @@ declare global {
   var LumnoOptionsBlacklistTab: ReturnType<typeof createBlacklistTabApi> | undefined;
   var LumnoOptionsInfoButton: ReturnType<typeof createInfoButtonApi> | undefined;
   var LumnoOptionsSegmentedControl: ReturnType<typeof createSegmentedControlApi> | undefined;
-  var LumnoOptionsSelectControl: ReturnType<typeof createSelectControlApi> | undefined;
   var LumnoOptionsSettingsControls: ReturnType<typeof createSettingsControlsApi> | undefined;
   var LumnoOptionsSettingsNavigation: ReturnType<typeof createSettingsNavigationApi> | undefined;
   var LumnoOptionsToast: ReturnType<typeof createToastApi> | undefined;

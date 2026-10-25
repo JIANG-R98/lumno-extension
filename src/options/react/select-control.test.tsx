@@ -1,14 +1,32 @@
 import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  createSelectControlApi,
-  createSelectControlController,
-  type SelectControlController
+  SettingSelect,
+  type SelectControlOptions,
+  type SelectControlRenderModel
 } from './select-control';
 import { getElement, getElements, getTag } from '../../../tests/react/dom';
 import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
-let controllers: SelectControlController[] = [];
+let roots: Root[] = [];
+
+// Draws a select the way a settings view does; its host is the select's
+// frame, which holds the menu too.
+function mountSelect(options: SelectControlOptions) {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  roots.push(root);
+  return {
+    render(model: SelectControlRenderModel) {
+      root.render(<SettingSelect model={model} options={options} />);
+    },
+    get host() {
+      return getElement(container, '[data-select]');
+    }
+  };
+}
 
 const items = [
   { iconUrl: '/system.png', label: '跟随系统', labelKey: 'language_system', value: 'system' },
@@ -16,25 +34,20 @@ const items = [
 ];
 
 afterEach(() => {
-  act(() => controllers.forEach((controller) => controller.destroy()));
-  controllers = [];
+  act(() => roots.forEach((root) => root.unmount()));
+  roots = [];
   document.body.textContent = '';
 });
 
 describe('Options select control React island', () => {
   it('renders selected labels and legacy classes', () => {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const controller = createSelectControlController(host, {
-      kind: 'language',
+    const controller = mountSelect({
       onSelect: vi.fn()
     });
-    controllers.push(controller);
 
     act(() => controller.render({ id: 'language', items, value: 'system' }));
+    const host = controller.host;
 
-    expect(createSelectControlApi().implementation).toBe('react');
-    expect(host.dataset.reactIsland).toBe('options-select-control');
     expect(host.querySelector('._x_extension_select_label_2024_unique_')?.textContent)
       .toBe('跟随系统');
     expect(host.querySelectorAll('[role="option"]')).toHaveLength(2);
@@ -45,30 +58,24 @@ describe('Options select control React island', () => {
   });
 
   it('disables the trigger when the adapter marks the control unavailable', () => {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const controller = createSelectControlController(host, {
-      kind: 'provider',
+    const controller = mountSelect({
       onSelect: vi.fn()
     });
-    controllers.push(controller);
 
     act(() => controller.render({ disabled: true, id: 'provider', items, value: 'system' }));
+    const host = controller.host;
 
     expect(host.dataset.disabled).toBe('true');
     expect(queryHtmlTag(host, 'button', 'button')?.disabled).toBe(true);
   });
 
   it('opens the menu and reports a selected value', () => {
-    const host = document.createElement('div');
     const onSelect = vi.fn();
-    document.body.appendChild(host);
-    const controller = createSelectControlController(host, {
-      kind: 'language',
+    const controller = mountSelect({
       onSelect
     });
-    controllers.push(controller);
     act(() => controller.render({ id: 'language', items, value: 'system' }));
+    const host = controller.host;
 
     act(() => {
       queryHtmlTag(host, 'button', 'button')?.click();
@@ -84,14 +91,10 @@ describe('Options select control React island', () => {
   });
 
   it('filters a searchable menu and previews each option in its own family', () => {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const controller = createSelectControlController(host, {
-      kind: 'overlay-font',
+    const controller = mountSelect({
       onSelect: vi.fn(),
       searchable: true
     });
-    controllers.push(controller);
     act(() => controller.render({
       emptyLabel: 'No matching fonts',
       id: 'overlay-font',
@@ -103,6 +106,7 @@ describe('Options select control React island', () => {
       searchPlaceholder: 'Search fonts',
       value: ''
     }));
+    const host = controller.host;
 
     act(() => {
       queryHtmlTag(host, 'button', 'button')?.click();
@@ -150,15 +154,11 @@ describe('Options select control React island', () => {
   });
 
   it('chooses a filtered option from the keyboard', () => {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
     const onSelect = vi.fn();
-    const controller = createSelectControlController(host, {
-      kind: 'overlay-font',
+    const controller = mountSelect({
       onSelect,
       searchable: true
     });
-    controllers.push(controller);
     act(() => controller.render({
       id: 'overlay-font-keys',
       items: [
@@ -169,6 +169,7 @@ describe('Options select control React island', () => {
       ],
       value: 'Zapfino'
     }));
+    const host = controller.host;
 
     act(() => {
       queryHtmlTag(host, 'button', 'button')?.click();
@@ -225,15 +226,12 @@ describe('Options select control React island', () => {
       }))
     ];
     const open = (triggerTop: number) => {
-      const host = document.createElement('div');
-      document.body.appendChild(host);
-      const controller = createSelectControlController(host, {
-        kind: 'overlay-font',
+      const controller = mountSelect({
         onSelect: vi.fn(),
         searchable: true
       });
-      controllers.push(controller);
       act(() => controller.render({ id: `font-${triggerTop}`, items, value: '' }));
+      const host = controller.host;
       const trigger = getTag(host, 'button', 'button');
       trigger.getBoundingClientRect = () => new DOMRect(400, triggerTop, 280, 32);
       act(() => trigger.click());
@@ -266,14 +264,11 @@ describe('Options select control React island', () => {
   });
 
   it('accepts adapter-driven selection and copy updates', () => {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const controller = createSelectControlController(host, {
-      kind: 'language',
+    const controller = mountSelect({
       onSelect: vi.fn()
     });
-    controllers.push(controller);
     act(() => controller.render({ id: 'language', items, value: 'system' }));
+    const host = controller.host;
     act(() => controller.render({
       id: 'language',
       items: items.map((item) => ({
@@ -288,12 +283,10 @@ describe('Options select control React island', () => {
   });
 
   it('chooses an option with the keyboard and returns focus to the trigger', () => {
-    const host = document.createElement('div');
     const onSelect = vi.fn();
-    document.body.appendChild(host);
-    const controller = createSelectControlController(host, { kind: 'language', onSelect });
-    controllers.push(controller);
+    const controller = mountSelect({ onSelect });
     act(() => controller.render({ id: 'language', items, value: 'system' }));
+    const host = controller.host;
 
     const trigger = getTag(host, 'button', 'button');
     trigger.focus();
@@ -313,12 +306,10 @@ describe('Options select control React island', () => {
   });
 
   it('closes on Escape without reporting a change', () => {
-    const host = document.createElement('div');
     const onSelect = vi.fn();
-    document.body.appendChild(host);
-    const controller = createSelectControlController(host, { kind: 'language', onSelect });
-    controllers.push(controller);
+    const controller = mountSelect({ onSelect });
     act(() => controller.render({ id: 'language', items, value: 'system' }));
+    const host = controller.host;
 
     act(() => queryHtmlTag(host, 'button', 'button')?.click());
     act(() => {
@@ -330,16 +321,14 @@ describe('Options select control React island', () => {
   });
 
   it('names the trigger with the setting title and the current value', () => {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const controller = createSelectControlController(host, { kind: 'language', onSelect: vi.fn() });
-    controllers.push(controller);
+    const controller = mountSelect({ onSelect: vi.fn() });
     act(() => controller.render({
       id: 'language',
       items,
       labelledBy: 'language_title',
       value: 'zh-CN'
     }));
+    const host = controller.host;
 
     const trigger = getTag(host, 'button', 'button');
     expect(trigger.getAttribute('aria-labelledby')).toBe('language_title language_control_value');

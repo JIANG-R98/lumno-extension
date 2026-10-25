@@ -190,7 +190,7 @@ async function testPages() {
   await options.settle(300);
   assert.deepStrictEqual(missing(options.window, [
     'LumnoOptionsToastReact', 'LumnoOptionsAccountTab', 'LumnoOptionsBlacklistTabReact', 'LumnoOptionsShortcutsTab',
-    'LumnoOptionsSegmentedControlReact', 'LumnoOptionsSelectControlReact', 'LumnoOptionsSettingsNavigationReact',
+    'LumnoOptionsSegmentedControlReact', 'LumnoOptionsSettingsNavigationReact',
     'LumnoOptionsSettingsControlsReact',
     'LumnoOptionsReactIslands', 'LumnoOverlayTabSwitcherViewReact'
   ]), [], 'Options should install every migrated React API');

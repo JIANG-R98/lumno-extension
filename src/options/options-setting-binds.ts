@@ -1,23 +1,14 @@
 // Binds every setting control to its storage key: the one-time loads and
-// the setting binder entries for each section, including the daily quote.
-import * as CUSTOM_QUOTES from '../domain/custom-quotes';
-import type * as Settings from '../domain/settings';
+// the setting binder entries for each section.
 import type { StorageAreaLike } from '../domain/storage-port';
 import type { BatchedStorageArea } from '../platform/settings-storage';
-import * as LumnoOptionsDailyQuote from './options-daily-quote';
-import type { LayoutMutation } from './options-panel-motion';
-import type { SelectControlRecord } from './options-select-controls';
-import type { createSettingBinder, StorageChangeRegistry } from './options-setting-bindings';
+import type { createSettingBinder } from './options-setting-bindings';
 import type { ToggleSettingsEntry } from './options-toggle-settings';
-import type { GetMessage } from './options-types';
-import type { SegmentedControlController } from './react/segmented-control';
-import type { createSettingsControlsApi, ToggleControlController } from './react/settings-controls';
 
 type SettingBinder = ReturnType<typeof createSettingBinder>;
 
 interface SettingBindsState {
   storageArea: BatchedStorageArea | null;
-  dailyQuoteSettings: ReturnType<typeof LumnoOptionsDailyQuote.createDailyQuoteSettings>;
 }
 
 interface SettingBindsDeps {
@@ -48,24 +39,11 @@ interface SettingBindsDeps {
   renderNewtabShortcutSizeControl(value: unknown, disabled?: boolean): void;
   renderNewtabShortcutGapControl(value: unknown, disabled?: boolean): void;
   syncNewtabShortcutSubcontrolAvailability(): void;
-  storageChanges: Pick<StorageChangeRegistry, 'on'>;
   settingBinder: SettingBinder;
   RECENT_COUNT_STORAGE_KEY: string;
   normalizeRecentCount(value: unknown): number;
   renderRecentCountControl(value: unknown): void;
   updateRecentModeTabsVisibility(countValue: unknown): void;
-  SETTINGS: typeof Settings;
-  getMessage: GetMessage;
-  showToast(message: string, isError?: boolean): void;
-  createOptionsSegmentedControlController(
-    host: HTMLElement | null,
-    kind: string,
-    onSelect: (value: string) => void
-  ): SegmentedControlController;
-  optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>, 'createRangeSliderControlController'>;
-  registerOptionsToggleControl(input: HTMLInputElement | null, kind: string): ToggleControlController | null;
-  setConditionalSettingsElementVisibility(element: HTMLElement | null, visible: boolean): boolean;
-  animateOptionsPanelHeight(mutateLayout: LayoutMutation): boolean;
   RECENT_MODE_STORAGE_KEY: string;
   recentModeSelect: HTMLSelectElement | null;
   setRecentModeTabState(mode: unknown): void;
@@ -78,9 +56,6 @@ interface SettingBindsDeps {
   renderBookmarkColumnsControl(value: unknown): void;
   TOGGLE_SETTINGS: readonly ToggleSettingsEntry[];
   toggleSettingControls: ReadonlyMap<ToggleSettingsEntry, HTMLInputElement | null>;
-  registerOptionsSelectControl(select: HTMLSelectElement | null, kind: string): SelectControlRecord | null;
-  renderOptionsSelectControl(select: HTMLSelectElement): void;
-  setOptionsSelectState(select: HTMLSelectElement | null, value: unknown): void;
   optionsState: SettingBindsState;
 }
 
@@ -113,20 +88,11 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     renderNewtabShortcutSizeControl,
     renderNewtabShortcutGapControl,
     syncNewtabShortcutSubcontrolAvailability,
-    storageChanges,
     settingBinder,
     RECENT_COUNT_STORAGE_KEY,
     normalizeRecentCount,
     renderRecentCountControl,
     updateRecentModeTabsVisibility,
-    SETTINGS,
-    getMessage,
-    showToast,
-    createOptionsSegmentedControlController,
-    optionsSettingsControlsApi,
-    registerOptionsToggleControl,
-    setConditionalSettingsElementVisibility,
-    animateOptionsPanelHeight,
     RECENT_MODE_STORAGE_KEY,
     recentModeSelect,
     setRecentModeTabState,
@@ -138,10 +104,7 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     normalizeBookmarkColumns,
     renderBookmarkColumnsControl,
     TOGGLE_SETTINGS,
-    toggleSettingControls,
-    registerOptionsSelectControl,
-    renderOptionsSelectControl,
-    setOptionsSelectState
+    toggleSettingControls
   } = deps;
 
   // The page state object shared with options.js and the other modules.
@@ -253,45 +216,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     repairOnChange: false,
     refreshSelects: true
   });
-  // The daily quote mirrors the quote section of New Tab's appearance panel.
-  optionsState.dailyQuoteSettings = LumnoOptionsDailyQuote.createDailyQuoteSettings({
-    settings: SETTINGS,
-    customQuotes: CUSTOM_QUOTES,
-    getMessage,
-    showToast: (message, isError) => showToast(message, isError),
-    syncArea: optionsState.storageArea,
-    localArea: localStorageArea,
-    createSegmented: createOptionsSegmentedControlController,
-    createRangeSlider: (host, controllerOptions) =>
-      optionsSettingsControlsApi.createRangeSliderControlController(host, controllerOptions),
-    registerToggle: registerOptionsToggleControl,
-    setToggleState: setOptionsToggleState,
-    registerSelect: (select: HTMLSelectElement, kind: string) => {
-      const record = registerOptionsSelectControl(select, kind);
-      if (record) {
-        renderOptionsSelectControl(select);
-      }
-      return record;
-    },
-    setSelectState: setOptionsSelectState,
-    setRowVisible: setConditionalSettingsElementVisibility,
-    animateHeight: animateOptionsPanelHeight
-  });
-  const dailyQuoteSettings = optionsState.dailyQuoteSettings;
-  if (dailyQuoteSettings) {
-    settingBinder.bindSetting({
-      key: SETTINGS.NEWTAB_QUOTE_PREFS_STORAGE_KEY,
-      normalize: SETTINGS.normalizeNewtabQuotePrefs,
-      apply: dailyQuoteSettings.applyPrefs,
-      repairOnLoad: false,
-      repairOnChange: false,
-      refreshSelects: true
-    });
-    storageChanges.on(CUSTOM_QUOTES.KEY, (changes) => {
-      dailyQuoteSettings.applyLibrary(changes[CUSTOM_QUOTES.KEY].newValue);
-    }, { area: 'local' });
-    dailyQuoteSettings.load();
-  }
   settingBinder.bindSetting({
     key: RECENT_MODE_STORAGE_KEY,
     // A missing or unknown mode starts as "most visited"; a later change to

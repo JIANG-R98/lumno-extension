@@ -5,7 +5,6 @@ import { createShortcutsTabApi } from './shortcuts-tab';
 import { createBlacklistTabApi } from './blacklist-tab';
 import { createInfoButtonApi } from './info-button';
 import { createSegmentedControlApi } from './segmented-control';
-import { createSelectControlApi } from './select-control';
 import { createSettingsNavigationApi } from './settings-navigation';
 import { createSettingsControlsApi } from './settings-controls';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
@@ -20,7 +19,6 @@ declare global {
       blacklistTab: ReturnType<typeof createBlacklistTabApi>;
       infoButton: ReturnType<typeof createInfoButtonApi>;
       segmentedControl: ReturnType<typeof createSegmentedControlApi>;
-      selectControl: ReturnType<typeof createSelectControlApi>;
       settingsNavigation: ReturnType<typeof createSettingsNavigationApi>;
       settingsControls: ReturnType<typeof createSettingsControlsApi>;
       shortcutsTab: ReturnType<typeof createShortcutsTabApi>;
@@ -30,7 +28,6 @@ declare global {
   var LumnoOptionsBlacklistTabReact: ReturnType<typeof createBlacklistTabApi> | undefined;
   var LumnoOptionsInfoButtonReact: ReturnType<typeof createInfoButtonApi> | undefined;
   var LumnoOptionsSegmentedControlReact: ReturnType<typeof createSegmentedControlApi> | undefined;
-  var LumnoOptionsSelectControlReact: ReturnType<typeof createSelectControlApi> | undefined;
   var LumnoOptionsSettingsNavigationReact: ReturnType<typeof createSettingsNavigationApi> | undefined;
   var LumnoOptionsSettingsControlsReact: ReturnType<typeof createSettingsControlsApi> | undefined;
   var LumnoOptionsToastReact: ReturnType<typeof createToastApi> | undefined;
@@ -47,7 +44,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   const blacklistTabApi = createBlacklistTabApi();
   const infoButtonApi = createInfoButtonApi();
   const segmentedControlApi = createSegmentedControlApi();
-  const selectControlApi = createSelectControlApi();
   const settingsNavigationApi = createSettingsNavigationApi();
   const settingsControlsApi = createSettingsControlsApi();
   const shortcutsTabApi = createShortcutsTabApi();
@@ -63,8 +59,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoOptionsInfoButton = infoButtonApi;
   runtime.LumnoOptionsSegmentedControlReact = segmentedControlApi;
   runtime.LumnoOptionsSegmentedControl = segmentedControlApi;
-  runtime.LumnoOptionsSelectControlReact = selectControlApi;
-  runtime.LumnoOptionsSelectControl = selectControlApi;
   runtime.LumnoOptionsSettingsNavigationReact = settingsNavigationApi;
   runtime.LumnoOptionsSettingsNavigation = settingsNavigationApi;
   runtime.LumnoOptionsSettingsControlsReact = settingsControlsApi;
@@ -82,7 +76,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
     blacklistTab: blacklistTabApi,
     infoButton: infoButtonApi,
     segmentedControl: segmentedControlApi,
-    selectControl: selectControlApi,
     settingsNavigation: settingsNavigationApi,
     settingsControls: settingsControlsApi,
     shortcutsTab: shortcutsTabApi,

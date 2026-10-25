@@ -1,9 +1,5 @@
 import { useLayoutEffect, useState } from 'react';
 import { SelectMenu } from '../../shared/react/select-menu';
-import {
-  createReactRootController,
-  type ReactRootController
-} from './root-controller';
 
 export interface SelectControlItemModel {
   badge?: string;
@@ -27,17 +23,13 @@ export interface SelectControlRenderModel {
   value: string;
 }
 
-export interface SelectControlControllerOptions {
+export interface SelectControlOptions {
   /** Viewport space covered by sticky page chrome, so the menu never opens beneath it. */
   getViewportTopInset?(): number;
-  kind: string;
   onSelect(value: string): void;
   /** Adds a filter field for long lists such as installed fonts. */
   searchable?: boolean;
 }
-
-export type SelectControlController =
-  ReactRootController<SelectControlRenderModel>;
 
 // Options settings use the shared select so they get the same keyboard model,
 // semantics and placement as New Tab menus. The menu stays inside the host to
@@ -49,7 +41,7 @@ function SelectControl({
 }: {
   host: HTMLElement;
   model: SelectControlRenderModel;
-  options: Omit<SelectControlControllerOptions, 'kind'>;
+  options: SelectControlOptions;
 }) {
   useLayoutEffect(() => {
     host.dataset.disabled = model.disabled ? 'true' : 'false';
@@ -101,7 +93,7 @@ export function SettingSelect({
   options
 }: {
   model: SelectControlRenderModel;
-  options: Omit<SelectControlControllerOptions, 'kind'>;
+  options: SelectControlOptions;
 }) {
   const [host, setHost] = useState<HTMLDivElement | null>(null);
   return (
@@ -114,27 +106,4 @@ export function SettingSelect({
       {host ? <SelectControl host={host} model={model} options={options} /> : null}
     </div>
   );
-}
-
-export function createSelectControlController(
-  host: HTMLElement | null,
-  options: SelectControlControllerOptions
-): SelectControlController {
-  if (host) {
-    host.dataset.reactIsland = 'options-select-control';
-    host.dataset.selectKind = options.kind;
-  }
-  return createReactRootController(
-    host,
-    (model: SelectControlRenderModel) => (host ? (
-      <SelectControl host={host} model={model} options={options} />
-    ) : null)
-  );
-}
-
-export function createSelectControlApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createSelectControlController
-  });
 }

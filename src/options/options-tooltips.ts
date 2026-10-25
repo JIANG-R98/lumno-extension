@@ -1,8 +1,7 @@
-// Tooltips, toasts, and refreshing the custom selects.
+// Tooltips, toasts, and refreshing the settings forms.
 import { isHtmlElement } from '../shared/dom-guards';
 import type { ToastController } from '../shared/react/toast';
 import type { TooltipController } from '../shared/ui/tooltip';
-import type { SelectControlRecord } from './options-select-controls';
 import type { ToastTask } from './options-types';
 
 interface TooltipsState {
@@ -18,8 +17,6 @@ interface TooltipsState {
 interface TooltipsDeps {
   renderSettingsForms(): void;
   toastElement: HTMLElement | null;
-  optionsSelectControlRecords: ReadonlyMap<HTMLSelectElement, SelectControlRecord>;
-  renderOptionsSelectControl(select: HTMLSelectElement): void;
   optionsState: TooltipsState;
 }
 
@@ -31,9 +28,7 @@ const TOOLTIP_OPTIONS = Object.freeze({
 function createTooltips(deps: TooltipsDeps) {
   const {
     renderSettingsForms,
-    toastElement,
-    optionsSelectControlRecords,
-    renderOptionsSelectControl
+    toastElement
   } = deps;
 
   // The page state object shared with options.js and the other modules.
@@ -78,9 +73,6 @@ function createTooltips(deps: TooltipsDeps) {
       );
     }
     renderSettingsForms();
-    optionsSelectControlRecords.forEach((_record, select) => {
-      renderOptionsSelectControl(select);
-    });
   }
 
   function setToastAnnouncement(errorToast: boolean): void {

@@ -95,8 +95,6 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     themeSection: null,
     searchShortcutStatus: null,
     webDavSettingsController: null,
-    // Set once the daily quote rows are wired; language refreshes may run earlier.
-    dailyQuoteSettings: null,
 
     // The page.
     currentLanguageMode: 'system',

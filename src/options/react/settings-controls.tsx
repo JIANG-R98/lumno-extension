@@ -13,6 +13,7 @@ import { createSettingToggleRowsController } from './setting-rows';
 import { createSettingsSectionController } from './settings-rows-view';
 import { createAppearanceGlobalSectionController } from './appearance-global-section';
 import { createAppearanceOverlaySectionController } from './appearance-overlay-section';
+import { createDailyQuoteSectionController } from './daily-quote-section';
 import { createGeneralTabController } from './general-tab';
 
 export type { RangeSliderControlRenderModel, RequiredCheckboxGroupRenderModel, RequiredCheckboxItemModel, ToggleControlRenderModel };
@@ -99,6 +100,7 @@ export function createSettingsControlsApi() {
     implementation: 'react',
     createAppearanceGlobalSectionController,
     createAppearanceOverlaySectionController,
+    createDailyQuoteSectionController,
     createGeneralTabController,
     createRangeSliderControlController,
     createRequiredCheckboxGroupController,

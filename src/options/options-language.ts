@@ -8,7 +8,6 @@ import { isHtmlTag } from '../shared/dom-guards';
 import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as LumnoMessaging from '../platform/messaging';
 import type { BatchedStorageArea } from '../platform/settings-storage';
-import type { createDailyQuoteSettings } from './options-daily-quote';
 import type { createSearchShortcutStatus } from './options-search-shortcut-status';
 import type { SettingsTabKey } from './options-navigation';
 import type { RecentMode } from './options-segmented-tabs';
@@ -34,7 +33,6 @@ interface LanguageState {
   webDavSettingsController: ReturnType<typeof createWebDavController> | null;
   searchShortcutStatus: ReturnType<typeof createSearchShortcutStatus> | null;
   themeSection: ReturnType<typeof createThemeSection> | null;
-  dailyQuoteSettings: ReturnType<typeof createDailyQuoteSettings>;
 }
 
 interface LanguageDeps {
@@ -265,9 +263,6 @@ function createLanguage(deps: LanguageDeps) {
         optionsState.themeSection.render();
       }
       setRecentModeTabState(optionsState.currentRecentMode);
-      if (optionsState.dailyQuoteSettings) {
-        optionsState.dailyQuoteSettings.updateLanguage();
-      }
       renderNewtabShortcutColumnsControl(optionsState.currentNewtabShortcutColumns);
       renderNewtabShortcutSizeControl(optionsState.currentNewtabShortcutSize);
       renderNewtabShortcutGapControl(optionsState.currentNewtabShortcutGap);

@@ -1,5 +1,6 @@
 import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
 import * as LumnoBlacklistUtils from '../domain/blacklist-utils';
+import * as CUSTOM_QUOTES from '../domain/custom-quotes';
 import * as COMMUNITY_LINKS from '../platform/community-links';
 import * as NAVIGATION_DISPOSITION from '../domain/navigation-disposition';
 import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
@@ -10,6 +11,7 @@ import * as LumnoShortcutDisplay from '../domain/shortcut-display';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as OPTIONS_ACCOUNT_SECTION from './options-account-section';
 import * as OPTIONS_APPEARANCE_GLOBAL_SECTION from './options-appearance-global-section';
+import * as OPTIONS_DAILY_QUOTE_SECTION from './options-appearance-daily-quote-section';
 import * as OPTIONS_APPEARANCE_NEWTAB_LOOK_SECTION from './options-appearance-newtab-look-section';
 import * as OPTIONS_APPEARANCE_OVERLAY_SECTION from './options-appearance-overlay-section';
 import { listInstalledFonts } from './options-installed-fonts';
@@ -33,7 +35,6 @@ import * as OPTIONS_NORMALIZERS from './options-normalizers';
 import * as PANEL_MOTION from './options-panel-motion';
 import * as LumnoOptionsSearchSourceOrder from './options-search-source-order';
 import * as OPTIONS_SEGMENTED_TABS from './options-segmented-tabs';
-import * as OPTIONS_SELECT_CONTROLS from './options-select-controls';
 import * as SETTING_BINDINGS from './options-setting-bindings';
 import * as OPTIONS_SETTING_BINDS from './options-setting-binds';
 import * as OPTIONS_SHORTCUT_REFERENCE from './options-shortcut-reference';
@@ -230,16 +231,11 @@ import * as OPTIONS_STATE from './options-state';
   });
 
 
-  const {
-    getMenuViewportTopInset,
-    optionsSelectControlRecords,
-    registerOptionsSelectControl,
-    renderOptionsSelectControl,
-    setOptionsSelectState
-  } = OPTIONS_SELECT_CONTROLS.createSelectControls({
-    tabsRow,
-    getMessage: (key, fallback) => getMessage(key, fallback)
-  });
+  // The settings tabs stay pinned at the top; a menu that flips upward must clear them.
+  function getMenuViewportTopInset(): number {
+    const tabsRect = tabsRow ? tabsRow.getBoundingClientRect() : null;
+    return tabsRect ? Math.max(0, tabsRect.bottom + 8) : 8;
+  }
 
   const {
     showTooltipFor,
@@ -250,8 +246,6 @@ import * as OPTIONS_STATE from './options-state';
   } = OPTIONS_TOOLTIPS.createTooltips({
     renderSettingsForms: (...args) => renderSettingsForms(...args),
     toastElement,
-    optionsSelectControlRecords,
-    renderOptionsSelectControl,
     optionsState
   });
 
@@ -379,6 +373,7 @@ import * as OPTIONS_STATE from './options-state';
       appearanceGlobalSection.render();
       appearanceOverlaySection.render();
       appearanceNewtabLookSection.render();
+      dailyQuoteSection.render();
       labsSection.render();
       blacklistSection.render();
     },
@@ -592,6 +587,18 @@ import * as OPTIONS_STATE from './options-state';
     notifyNewtabSectionsRefresh: (section) => notifyNewtabSectionsRefresh(section),
     getViewportTopInset: getMenuViewportTopInset
   });
+  const dailyQuoteHost = getHtmlElement(document, '_x_extension_appearance_daily_quote_section_2026_unique_');
+  // The daily quote mirrors the quote section of New Tab's appearance panel.
+  const dailyQuoteSection = OPTIONS_DAILY_QUOTE_SECTION.createDailyQuoteSection({
+    view: (handlers) => optionsSettingsControlsApi.createDailyQuoteSectionController(dailyQuoteHost, handlers),
+    settings: SETTINGS,
+    customQuotes: CUSTOM_QUOTES,
+    getMessage,
+    showToast: (message, isError) => showToast(message, isError),
+    syncArea: optionsState.storageArea,
+    localArea: localStorageArea,
+    getViewportTopInset: getMenuViewportTopInset
+  });
   const labsSection = OPTIONS_LABS_SECTION.createLabsSection({
     host: queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="labs"]'),
     optionsSettingsControlsApi,
@@ -615,7 +622,6 @@ import * as OPTIONS_STATE from './options-state';
   });
 
   const {
-    registerOptionsToggleControl,
     setOptionsToggleState,
     TOGGLE_SETTINGS,
     toggleSettingControls
@@ -1152,6 +1158,7 @@ import * as OPTIONS_STATE from './options-state';
   appearanceGlobalSection.bindSettings(settingBinder);
   appearanceOverlaySection.bindSettings(settingBinder, localSettingBinder);
   appearanceNewtabLookSection.bindSettings(settingBinder);
+  dailyQuoteSection.bindSettings(settingBinder, storageChanges);
   labsSection.bindSettings(settingBinder);
   blacklistSection.bindSettings(settingBinder);
   shortcutsSection.bindSettings(settingBinder);
@@ -1183,20 +1190,11 @@ import * as OPTIONS_STATE from './options-state';
     renderNewtabShortcutSizeControl,
     renderNewtabShortcutGapControl,
     syncNewtabShortcutSubcontrolAvailability,
-    storageChanges,
     settingBinder,
     RECENT_COUNT_STORAGE_KEY,
     normalizeRecentCount,
     renderRecentCountControl,
     updateRecentModeTabsVisibility,
-    SETTINGS,
-    getMessage,
-    showToast,
-    createOptionsSegmentedControlController,
-    optionsSettingsControlsApi,
-    registerOptionsToggleControl,
-    setConditionalSettingsElementVisibility,
-    animateOptionsPanelHeight,
     RECENT_MODE_STORAGE_KEY,
     recentModeSelect,
     setRecentModeTabState,
@@ -1209,9 +1207,6 @@ import * as OPTIONS_STATE from './options-state';
     renderBookmarkColumnsControl,
     TOGGLE_SETTINGS,
     toggleSettingControls,
-    registerOptionsSelectControl,
-    renderOptionsSelectControl,
-    setOptionsSelectState,
     optionsState
   });
 

@@ -146,7 +146,6 @@ function createToggleControls(deps: ToggleControlsDeps) {
   markBrowserUnsupportedSettings();
 
   return {
-    registerOptionsToggleControl,
     setOptionsToggleState,
     TOGGLE_SETTINGS,
     toggleSettingControls

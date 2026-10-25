@@ -12,8 +12,6 @@ function clearRuntime(): void {
   Reflect.deleteProperty(runtime, 'LumnoOptionsInfoButtonReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSegmentedControl');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSegmentedControlReact');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsSelectControl');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsSelectControlReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsNavigation');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsNavigationReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsControls');
@@ -54,10 +52,6 @@ describe('Options React islands entry', () => {
     expect(runtime.LumnoOptionsSegmentedControlReact).toBe(
       runtime.LumnoOptionsSegmentedControl
     );
-    expect(runtime.LumnoOptionsSelectControl?.implementation).toBe('react');
-    expect(runtime.LumnoOptionsSelectControlReact).toBe(
-      runtime.LumnoOptionsSelectControl
-    );
     expect(runtime.LumnoOptionsSettingsNavigation?.implementation).toBe('react');
     expect(runtime.LumnoOptionsSettingsNavigationReact).toBe(
       runtime.LumnoOptionsSettingsNavigation
@@ -76,7 +70,6 @@ describe('Options React islands entry', () => {
       blacklistTab: runtime.LumnoOptionsBlacklistTab,
       infoButton: runtime.LumnoOptionsInfoButton,
       segmentedControl: runtime.LumnoOptionsSegmentedControl,
-      selectControl: runtime.LumnoOptionsSelectControl,
       settingsNavigation: runtime.LumnoOptionsSettingsNavigation,
       settingsControls: runtime.LumnoOptionsSettingsControls,
       accountTab: runtime.LumnoOptionsAccountTab,
