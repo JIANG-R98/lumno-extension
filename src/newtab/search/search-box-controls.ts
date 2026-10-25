@@ -11,7 +11,7 @@ import type { SearchInputParts } from '../../shared/react/search-input';
 import type { InputModeController } from '../../shared/search/search-input-mode';
 import type * as FeatureHints from '../../shared/ui/feature-hints';
 import type { FeatureHintController } from '../../shared/ui/feature-hints';
-import type { BindCursorTooltip, FormatMessage, Translate } from '../newtab-types';
+import type { FormatMessage, Translate } from '../newtab-types';
 import type { PageNavigation } from '../page-navigation';
 
 interface SearchBoxControlsState {
@@ -36,8 +36,6 @@ interface SearchBoxControlsDeps {
   formatMessage: FormatMessage;
   // Runs the listener again whenever the page language changes.
   onLanguageChange(listener: () => void): void;
-  bindSearchInputCursorTooltip: BindCursorTooltip;
-  hideSearchInputCursorTooltip(): void;
   dismissWebdavFeatureHint(): void;
   EXTENSION_ROUTES: Pick<typeof ExtensionRoutes, 'buildOptionsUrl'>;
   getExtensionResourceUrl(resourcePath: string): string;
@@ -65,8 +63,6 @@ function createSearchBoxControls(deps: SearchBoxControlsDeps) {
     rightIcon,
     formatMessage,
     onLanguageChange,
-    bindSearchInputCursorTooltip,
-    hideSearchInputCursorTooltip,
     dismissWebdavFeatureHint,
     EXTENSION_ROUTES,
     getExtensionResourceUrl,
@@ -121,11 +117,9 @@ function createSearchBoxControls(deps: SearchBoxControlsDeps) {
     };
     applySettingsTooltip();
     onLanguageChange(applySettingsTooltip);
-    bindSearchInputCursorTooltip(rightIcon, settingsTooltipText);
     rightIcon.addEventListener('click', function(event) {
       event.preventDefault();
       event.stopPropagation();
-      hideSearchInputCursorTooltip();
       dismissWebdavFeatureHint();
       const runtime = typeof chrome !== 'undefined' && chrome && chrome.runtime
         ? chrome.runtime
@@ -183,8 +177,6 @@ function createSearchBoxControls(deps: SearchBoxControlsDeps) {
     };
     applySearchClearTooltip();
     onLanguageChange(applySearchClearTooltip);
-    bindSearchInputCursorTooltip(searchClearButton, searchClearTooltipText);
-    searchClearButton.addEventListener('click', hideSearchInputCursorTooltip);
     searchInput.addEventListener('input', updateInputRightPadding);
   }
 
@@ -196,9 +188,6 @@ function createSearchBoxControls(deps: SearchBoxControlsDeps) {
     };
     applyCloseOtherTabsTooltip();
     onLanguageChange(applyCloseOtherTabsTooltip);
-    bindSearchInputCursorTooltip(closeOtherTabsButton, closeOtherTabsTooltipText);
-    // The click opens the popconfirm; closeOtherTabs runs once it is confirmed.
-    closeOtherTabsButton.addEventListener('click', hideSearchInputCursorTooltip);
   }
 
   function updateInputRightPadding(): void {

@@ -246,6 +246,35 @@ describe('Shared search input React island', () => {
     expect(button.dataset.hoverActive).toBeUndefined();
   });
 
+  it('binds the surface\'s tooltip to its buttons with their current labels', () => {
+    const parts = create({
+      clearAction: { ariaLabel: 'Clear', id: 'clear' },
+      secondaryAction: { ariaLabel: 'Close other tabs', id: 'close-tabs' }
+    });
+    const texts = new Map<HTMLElement, () => string>();
+    const tooltip = {
+      bind: vi.fn((button: HTMLElement, getText: () => string) => {
+        texts.set(button, getText);
+      }),
+      hide: vi.fn()
+    };
+    const onActivate = vi.fn();
+
+    act(() => parts.setChrome({ tooltip, scopeAction: { enabled: true, label: 'Open scopes', onActivate } }));
+    const secondary = required(parts.secondaryAction, 'parts.secondaryAction');
+    expect(texts.get(parts.icon)?.()).toBe('Open scopes');
+    expect(texts.get(parts.rightIcon)?.()).toBe('Settings');
+    expect(texts.get(secondary)?.()).toBe('Close other tabs');
+
+    act(() => parts.setChrome({ rightIconLabel: '设置', scopeAction: { enabled: false, label: 'Open scopes', onActivate } }));
+    expect(texts.get(parts.rightIcon)?.()).toBe('设置');
+    expect(texts.get(parts.icon)?.()).toBe('');
+
+    act(() => parts.rightIcon.click());
+    act(() => secondary.click());
+    expect(tooltip.hide).toHaveBeenCalledTimes(2);
+  });
+
   it('follows text the surface sets itself once asked', () => {
     const parts = create({ clearAction: { id: 'clear' } });
     const clear = required(parts.clearAction, 'parts.clearAction');

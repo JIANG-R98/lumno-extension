@@ -2999,8 +2999,6 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     rightIcon,
     formatMessage,
     onLanguageChange,
-    bindSearchInputCursorTooltip,
-    hideSearchInputCursorTooltip,
     dismissWebdavFeatureHint,
     EXTENSION_ROUTES,
     getExtensionResourceUrl,

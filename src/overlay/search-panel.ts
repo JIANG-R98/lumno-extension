@@ -930,8 +930,11 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     setLocalSearchScopePrefix,
     updateSearchSuggestions,
     requestTabsAndRender,
+    applyInputActionLabels: () => applyInputActionLabels(),
     overlayState
   });
+  // The search icon opens the scope panel, except while a scope is set.
+  let searchScopeIconEnabled = true;
 
   // The overlay's faces on the host document (see overlay-font-faces.ts),
   // unless the page registered them while it loaded. The icon class rules
@@ -1162,7 +1165,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   overlayState.searchInput = inputParts.input;
   applyOverlayInputExtensionIsolation(overlayState.searchInput);
   overlayState.inputContainer = overlayState.inputParts.container;
-  const searchScopeIcon = overlayState.inputParts.icon;
   const rightIcon = inputParts.rightIcon;
   overlayState.inputHistoryController =
     SEARCH_INPUT_HISTORY.createSearchInputHistoryController({
@@ -1250,16 +1252,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const hideInputActionCursorTooltip = () => {
     overlayCursorTooltipController.hide();
   };
-  const closeOtherTabsButton = inputParts.secondaryAction;
   const searchClearButton = inputParts.clearAction;
-  if (closeOtherTabsButton) {
-    bindInputActionCursorTooltip(
-      closeOtherTabsButton,
-      () => t('overlay_close_other_tabs_tooltip', '关闭其他标签页')
-    );
-    // The click opens the popconfirm; confirmCloseOtherTabs runs once it is confirmed.
-    closeOtherTabsButton.addEventListener('click', hideInputActionCursorTooltip);
-  }
+  inputParts.setChrome({
+    tooltip: { bind: bindInputActionCursorTooltip, hide: hideInputActionCursorTooltip }
+  });
   overlayState.modeBadge = overlayState.inputParts.modeBadge;
 
   const suggestionsContainer = document.createElement('div');
@@ -1288,43 +1284,46 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     }
   });
 
-  const searchScopeTooltipText = () => t(
-    'shortcut_reference_search_open_scope_menu_title',
-    '打开搜索范围面板'
-  );
-  const activateSearchScopeIcon = (): void => {
-    hideInputActionCursorTooltip();
+  function activateSearchScopeIcon(): void {
     if (overlayState.inputModeController) {
       overlayState.inputModeController.resetModeMenuDoubleTab();
     }
     openSearchModeMenuFromDoubleTab();
-  };
-  // The search icon opens the scope panel, except while a scope is set.
-  const setSearchScopeIconEnabled = (enabled: boolean): void => {
+  }
+  function setSearchScopeIconEnabled(enabled: boolean): void {
+    searchScopeIconEnabled = enabled;
     if (!enabled) {
       hideInputActionCursorTooltip();
     }
-    inputParts.setChrome({
-      scopeAction: { enabled, label: searchScopeTooltipText(), onActivate: activateSearchScopeIcon }
+    applyInputActionLabels();
+  }
+  // The input's buttons' names and tooltips in the current language.
+  function applyInputActionLabels(): void {
+    if (!overlayState.inputParts) {
+      return;
+    }
+    overlayState.inputParts.setChrome({
+      rightIconLabel: formatMessage('command_settings', '打开设置', { name: 'Lumno' }),
+      secondaryLabel: t('overlay_close_other_tabs_tooltip', '关闭其他标签页'),
+      clearLabel: t('search_input_clear', '清空'),
+      scopeAction: {
+        enabled: searchScopeIconEnabled,
+        label: t('shortcut_reference_search_open_scope_menu_title', '打开搜索范围面板'),
+        onActivate: activateSearchScopeIcon
+      }
     });
-  };
-  setSearchScopeIconEnabled(true);
-  bindInputActionCursorTooltip(searchScopeIcon, searchScopeTooltipText);
+  }
+  applyInputActionLabels();
 
   if (rightIcon) {
-    const settingsTooltipText = () => formatMessage('command_settings', '打开设置', { name: 'Lumno' });
-    bindInputActionCursorTooltip(rightIcon, settingsTooltipText);
     rightIcon.addEventListener('click', function(event) {
       event.preventDefault();
       event.stopPropagation();
-      hideInputActionCursorTooltip();
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openOptionsPage' });
       removeOverlay(overlayState.overlay);
     });
   }
   if (searchClearButton) {
-    bindInputActionCursorTooltip(searchClearButton, () => t('search_input_clear', '清空'));
-    searchClearButton.addEventListener('click', hideInputActionCursorTooltip);
     overlayState.inputParts.input.addEventListener('input', () => {
       if (overlayState.inputModeController) {
         overlayState.inputModeController.updateLayout();

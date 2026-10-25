@@ -5,7 +5,6 @@ import * as LumnoCjkFontFaces from '../../shared/cjk-font-faces';
 import * as OVERLAY_FONT_FACES from '../../shared/overlay-font-faces';
 import type * as OverlayRuntime from '../runtime';
 import type { ReadableStorageArea } from '../runtime';
-import type { SearchInputParts } from '../../shared/react/search-input';
 
 // Row is a suggestion row, Provider a site search provider and Theme a
 // suggestion theme; this module only passes them along.
@@ -17,7 +16,6 @@ interface PanelLanguageState<Row, Provider, Theme> {
   overlayEngagementNoticeController: { updateLanguage?(): void } | null;
   searchInput: HTMLInputElement | null;
   defaultPlaceholderText: string;
-  inputParts: Pick<SearchInputParts, 'setChrome'> | null;
   modeBadge: HTMLElement | null;
   siteSearchState: Provider | null;
   localSearchScopeState: LocalSearchScope | null;
@@ -38,6 +36,8 @@ interface PanelLanguageDeps<Row, Provider, Theme> {
   setLocalSearchScopePrefix(scope: LocalSearchScope): void;
   updateSearchSuggestions(rows: Row[], query: string): void;
   requestTabsAndRender(): void;
+  // Names the search input's buttons again.
+  applyInputActionLabels(): void;
   overlayState: PanelLanguageState<Row, Provider, Theme>;
 }
 
@@ -55,7 +55,8 @@ function createPanelLanguage<Row, Provider, Theme>(deps: PanelLanguageDeps<Row, 
     updateSiteSearchPrefixLayout,
     setLocalSearchScopePrefix,
     updateSearchSuggestions,
-    requestTabsAndRender
+    requestTabsAndRender,
+    applyInputActionLabels
   } = deps;
 
   // The panel state object shared with search-panel.ts and the other modules.
@@ -158,21 +159,13 @@ function createPanelLanguage<Row, Provider, Theme>(deps: PanelLanguageDeps<Row, 
         typeof overlayState.overlayEngagementNoticeController.updateLanguage === 'function') {
       overlayState.overlayEngagementNoticeController.updateLanguage();
     }
-    const settingsTooltipText = formatMessage('command_settings', '打开设置', { name: 'Lumno' });
-    const closeOtherTooltipText = t('overlay_close_other_tabs_tooltip', '关闭其他标签页');
     if (overlayState.searchInput) {
       overlayState.defaultPlaceholderText = t('overlay_search_placeholder', t('search_placeholder', overlayState.defaultPlaceholderText));
       if (!overlayState.siteSearchState && !overlayState.localSearchScopeState) {
         overlayState.searchInput.placeholder = overlayState.defaultPlaceholderText;
       }
     }
-    if (overlayState.inputParts) {
-      overlayState.inputParts.setChrome({
-        rightIconLabel: settingsTooltipText,
-        secondaryLabel: closeOtherTooltipText,
-        clearLabel: t('search_input_clear', '清空')
-      });
-    }
+    applyInputActionLabels();
     if (overlayState.modeBadge) {
       updateModeBadge(overlayState.searchInput ? overlayState.searchInput.value : '');
     }

@@ -598,7 +598,6 @@ function createSearchBox(deps: SearchBoxDeps) {
     '打开搜索范围面板'
   );
   function activateSearchScopeIcon(): void {
-    hideSearchInputCursorTooltip();
     if (pageState.inputModeController) {
       pageState.inputModeController.resetModeMenuDoubleTab();
     }
@@ -622,8 +621,10 @@ function createSearchBox(deps: SearchBoxDeps) {
   onLanguageChange(() => {
     setSearchScopeIconEnabled(searchScopeIconEnabled);
   });
+  inputParts.setChrome({
+    tooltip: { bind: bindSearchInputCursorTooltip, hide: hideSearchInputCursorTooltip }
+  });
   setSearchScopeIconEnabled(true);
-  bindSearchInputCursorTooltip(searchScopeIcon, searchScopeTooltipText);
 
   function getCloseOtherTabsConfirmCopy() {
     return {

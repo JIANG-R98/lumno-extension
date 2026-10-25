@@ -50,6 +50,12 @@ export interface SearchScopeAction {
   onActivate(): void;
 }
 
+// The surface's tooltip that follows the pointer over the field's buttons.
+export interface SearchInputTooltip {
+  bind(button: HTMLElement, getText: () => string): void;
+  hide(): void;
+}
+
 // What the surface changes about the field's chrome after creating it.
 export interface SearchInputChrome {
   // The buttons' names and tooltips, in the current language.
@@ -60,6 +66,21 @@ export interface SearchInputChrome {
   // The underline, when the surface decides it (the overlay shows it with
   // its results); null leaves it to the field's text.
   underline: boolean | null;
+  tooltip: SearchInputTooltip | null;
+}
+
+// Binds the surface's tooltip to the button, reading its label as it is
+// when the tooltip shows.
+function useButtonTooltip<T extends HTMLElement>(tooltip: SearchInputTooltip | null, label: string) {
+  const ref = useRef<T>(null);
+  const latestLabel = useRef(label);
+  latestLabel.current = label;
+  useLayoutEffect(() => {
+    if (tooltip && ref.current) {
+      tooltip.bind(ref.current, () => latestLabel.current);
+    }
+  }, [tooltip]);
+  return ref;
 }
 
 export interface SearchInputConfig {
@@ -172,14 +193,18 @@ const POPCONFIRM_CLASS_NAMES: PopconfirmClassNames = Object.freeze({
 });
 const POPCONFIRM_GAP = 6;
 
-function SecondaryAction({ action, label }: { action: SecondaryActionConfig; label: string }) {
+function SecondaryAction({ action, label, tooltip }: {
+  action: SecondaryActionConfig;
+  label: string;
+  tooltip: SearchInputTooltip | null;
+}) {
   const confirm = action.confirm;
   const hover = useHoverActive();
   const [open, setOpen] = useState(false);
   // Kept after closing so the bubble fades out with its content.
   const [copy, setCopy] = useState<PopconfirmCopy | null>(null);
   const [position, setPosition] = useState<CSSProperties>({});
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useButtonTooltip<HTMLButtonElement>(tooltip, label);
   const popconfirmRef = useRef<HTMLDivElement>(null);
   const popconfirmId = useId();
 
@@ -212,7 +237,7 @@ function SecondaryAction({ action, label }: { action: SecondaryActionConfig; lab
     return () => {
       root.removeEventListener('pointerdown', onPointerDown, true);
     };
-  }, [open]);
+  }, [open, triggerRef]);
 
   const onKeyDown = (event: ReactKeyboardEvent) => {
     if (!open || event.key !== 'Escape') {
@@ -226,6 +251,9 @@ function SecondaryAction({ action, label }: { action: SecondaryActionConfig; lab
 
   const toggle = () => {
     const trigger = triggerRef.current;
+    if (tooltip) {
+      tooltip.hide();
+    }
     if (!confirm || !trigger) {
       return;
     }
@@ -258,7 +286,7 @@ function SecondaryAction({ action, label }: { action: SecondaryActionConfig; lab
         data-hover-active={hover.active ? 'true' : undefined}
         data-tooltip={label || undefined}
         id={action.id}
-        onClick={confirm ? toggle : undefined}
+        onClick={confirm ? toggle : (tooltip ? tooltip.hide : undefined)}
         onKeyDown={confirm ? onKeyDown : undefined}
         ref={triggerRef}
         type="button"
@@ -320,8 +348,13 @@ function useHoverActive() {
   };
 }
 
-function RightIcon({ config, label }: { config: SearchInputConfig; label: string }) {
+function RightIcon({ config, label, tooltip }: {
+  config: SearchInputConfig;
+  label: string;
+  tooltip: SearchInputTooltip | null;
+}) {
   const hover = useHoverActive();
+  const ref = useButtonTooltip<HTMLButtonElement>(tooltip, label);
   return (
     <button
       {...noTranslateProps()}
@@ -337,8 +370,12 @@ function RightIcon({ config, label }: { config: SearchInputConfig; label: string
       id={config.rightIconId || '_x_extension_search_right_icon_2024_unique_'}
       onClick={(event) => {
         hover.handlers.onMouseLeave();
+        if (tooltip) {
+          tooltip.hide();
+        }
         event.currentTarget.blur();
       }}
+      ref={ref}
       type="button"
     />
   );
@@ -346,13 +383,15 @@ function RightIcon({ config, label }: { config: SearchInputConfig; label: string
 
 // Shown only while the field has text; clearing keeps focus, and the
 // caret, in the field.
-function ClearAction({ action, label, visible, inputRef }: {
+function ClearAction({ action, label, visible, inputRef, tooltip }: {
   action: NonNullable<SearchInputConfig['clearAction']>;
   label: string;
   visible: boolean;
   inputRef: RefObject<HTMLInputElement | null>;
+  tooltip: SearchInputTooltip | null;
 }) {
   const hover = useHoverActive();
+  const ref = useButtonTooltip<HTMLButtonElement>(tooltip, label);
   return (
     <button
       {...noTranslateProps()}
@@ -367,6 +406,9 @@ function ClearAction({ action, label, visible, inputRef }: {
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
+        if (tooltip) {
+          tooltip.hide();
+        }
         const input = inputRef.current;
         if (!input) {
           return;
@@ -376,6 +418,7 @@ function ClearAction({ action, label, visible, inputRef }: {
         input.focus({ preventScroll: true });
       }}
       onMouseDown={(event) => event.preventDefault()}
+      ref={ref}
       type="button"
     />
   );
@@ -383,10 +426,15 @@ function ClearAction({ action, label, visible, inputRef }: {
 
 // The search icon; while the surface makes it a scope action, a button
 // that opens the scope panel.
-function ScopeIcon({ config, action }: { config: SearchInputConfig; action: SearchScopeAction | null }) {
+function ScopeIcon({ config, action, tooltip }: {
+  config: SearchInputConfig;
+  action: SearchScopeAction | null;
+  tooltip: SearchInputTooltip | null;
+}) {
   const [hover, setHover] = useState(false);
-  const iconRef = useRef<HTMLDivElement>(null);
   const enabled = Boolean(action && action.enabled);
+  // A disabled action has nothing to say.
+  const iconRef = useButtonTooltip<HTMLDivElement>(action ? tooltip : null, enabled && action ? action.label : '');
   // A disabled action gives its focus up.
   useLayoutEffect(() => {
     const icon = iconRef.current;
@@ -397,7 +445,7 @@ function ScopeIcon({ config, action }: { config: SearchInputConfig; action: Sear
         icon.blur();
       }
     }
-  }, [enabled]);
+  }, [enabled, iconRef]);
   const activate = (event: ReactMouseEvent<HTMLDivElement> | ReactKeyboardEvent<HTMLDivElement>): void => {
     if (!action || !action.enabled) {
       return;
@@ -405,6 +453,9 @@ function ScopeIcon({ config, action }: { config: SearchInputConfig; action: Sear
     event.preventDefault();
     event.stopPropagation();
     setHover(false);
+    if (tooltip) {
+      tooltip.hide();
+    }
     action.onActivate();
     event.currentTarget.blur();
   };
@@ -467,7 +518,7 @@ function SearchInput({ config, stores }: { config: SearchInputConfig; stores: In
       : '_x_extension_newtab_site_search_tab_hint_2026_unique_';
   return (
     <>
-      <ScopeIcon action={chrome.scopeAction} config={config} />
+      <ScopeIcon action={chrome.scopeAction} config={config} tooltip={chrome.tooltip} />
       <input
         {...noTranslateProps()}
         autoComplete="off"
@@ -487,12 +538,18 @@ function SearchInput({ config, stores }: { config: SearchInputConfig; stores: In
         data-visible={dividerVisible ? 'true' : 'false'}
         id={config.dividerId || '_x_extension_input_divider_2024_unique_'}
       />
-      {config.showRightIcon === false ? null : <RightIcon config={config} label={chrome.rightIconLabel} />}
+      {config.showRightIcon === false ? null : <RightIcon config={config} label={chrome.rightIconLabel} tooltip={chrome.tooltip} />}
       {config.clearAction ? (
-        <ClearAction action={config.clearAction} inputRef={inputRef} label={chrome.clearLabel} visible={value !== ''} />
+        <ClearAction
+          action={config.clearAction}
+          inputRef={inputRef}
+          label={chrome.clearLabel}
+          tooltip={chrome.tooltip}
+          visible={value !== ''}
+        />
       ) : null}
       {config.secondaryAction ? (
-        <SecondaryAction action={config.secondaryAction} label={chrome.secondaryLabel} />
+        <SecondaryAction action={config.secondaryAction} label={chrome.secondaryLabel} tooltip={chrome.tooltip} />
       ) : null}
       {config.modeBadge ? (
         <div
@@ -598,7 +655,8 @@ export function createSearchInput(
       clearLabel: config.clearAction && config.clearAction.ariaLabel ? config.clearAction.ariaLabel : 'Clear',
       secondaryLabel: config.secondaryAction && config.secondaryAction.ariaLabel ? config.secondaryAction.ariaLabel : '',
       scopeAction: null,
-      underline: null
+      underline: null,
+      tooltip: null
     })
   };
   flushSync(() => root.render(<SearchInput config={config} stores={stores} />));
