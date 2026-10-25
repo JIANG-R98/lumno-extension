@@ -44,8 +44,8 @@ import * as WALLPAPER_EFFECTS from './wallpaper-effects';
 import * as WALLPAPER_LOCAL_STORE from '../../shared/wallpaper-local-store';
 
 const DEFAULT_STORAGE_KEYS = {
-  wallpaper: '_x_extension_newtab_wallpaper_2026_unique_',
-  localWallpaper: '_x_extension_newtab_local_wallpaper_2026_unique_',
+  wallpaper: SETTINGS.NEWTAB_WALLPAPER_STORAGE_KEY,
+  localWallpaper: SETTINGS.NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY,
   onlineWallpaper: SETTINGS.NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY,
   linkWallpapers: SETTINGS.NEWTAB_LINK_WALLPAPERS_STORAGE_KEY,
   dailyWallpaperPicks: SETTINGS.NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY,

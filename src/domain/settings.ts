@@ -214,6 +214,8 @@ const NEWTAB_QUOTE_FONTS: readonly NewtabQuoteFont[] = Object.freeze([
   })
 ]);
 const BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY = '_x_extension_bookmark_folder_icons_visible_2026_unique_';
+// Shows the bookmark folder menu's layout guides (a developer aid).
+const BOOKMARK_CASCADE_DEBUG_STORAGE_KEY = '_x_extension_bookmark_cascade_debug_2026_unique_';
 // Folder colors are keyed by bookmark path, not the device-only bookmark id.
 const BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY = '_x_extension_bookmark_folder_color_refs_2026_unique_';
 const BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY = '_x_extension_bookmark_folder_color_presets_2026_unique_';
@@ -263,6 +265,8 @@ const NEWTAB_WIDTH_MODE_STORAGE_KEY = '_x_extension_newtab_width_mode_2026_uniqu
 const NEWTAB_SEARCH_WIDTH_STORAGE_KEY = '_x_extension_newtab_search_width_2026_unique_';
 const NEWTAB_ZEN_MODE_STORAGE_KEY = '_x_extension_newtab_zen_mode_2026_unique_';
 const NEWTAB_WALLPAPER_STORAGE_KEY = '_x_extension_newtab_wallpaper_2026_unique_';
+// The selected local wallpaper, kept on this device only.
+const NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY = '_x_extension_newtab_local_wallpaper_2026_unique_';
 const NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY = '_x_extension_newtab_wallpaper_overlay_2026_unique_';
 const NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY = '_x_extension_newtab_wallpaper_effect_2026_unique_';
 const NEWTAB_FAVICON_STORAGE_KEY = '_x_extension_newtab_favicon_2026_unique_';
@@ -306,6 +310,8 @@ const LINK_PREVIEW_ENABLED_STORAGE_KEY = '_x_extension_link_preview_enabled_2026
 const OVERLAY_TAB_PRIORITY_STORAGE_KEY = '_x_extension_overlay_tab_priority_2024_unique_';
 const RESTRICTED_ACTION_STORAGE_KEY = '_x_extension_restricted_action_2024_unique_';
 const SEARCH_RESULT_PRIORITY_STORAGE_KEY = '_x_extension_search_result_priority_2026_unique_';
+// Shows each tab's ranking score in the results (a developer aid).
+const TAB_RANK_SCORE_DEBUG_STORAGE_KEY = '_x_extension_tab_rank_score_debug_2026_unique_';
 const SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY = '_x_extension_search_result_source_types_2026_unique_';
 const FALLBACK_SHORTCUT_STORAGE_KEY = '_x_extension_fallback_hotkey_2024_unique_';
 const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_custom_2024_unique_';
@@ -1162,6 +1168,7 @@ export {
   NEWTAB_SEARCH_WIDTH_STORAGE_KEY,
   NEWTAB_ZEN_MODE_STORAGE_KEY,
   NEWTAB_WALLPAPER_STORAGE_KEY,
+  NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY,
   NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY,
   NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY,
   NEWTAB_FAVICON_STORAGE_KEY,
@@ -1188,6 +1195,7 @@ export {
   OVERLAY_TAB_PRIORITY_STORAGE_KEY,
   RESTRICTED_ACTION_STORAGE_KEY,
   SEARCH_RESULT_PRIORITY_STORAGE_KEY,
+  TAB_RANK_SCORE_DEBUG_STORAGE_KEY,
   SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
   FALLBACK_SHORTCUT_STORAGE_KEY,
   SITE_SEARCH_STORAGE_KEY,
@@ -1245,6 +1253,7 @@ export {
   NEWTAB_QUOTE_FONT_DEFAULT,
   NEWTAB_QUOTE_FONTS,
   BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY,
+  BOOKMARK_CASCADE_DEBUG_STORAGE_KEY,
   BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY,
   BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY,
   UPDATE_NOTICE_ENABLED_STORAGE_KEY,

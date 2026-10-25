@@ -102,7 +102,95 @@ import * as NEWTAB_TOP_CONTENT_RUNTIME from './top-content/top-content';
 import * as NEWTAB_URL_POLICY from './url-policy';
 import * as NEWTAB_VIEWPORT_INSETS from './viewport-insets';
 import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page';
+import * as LumnoSettingsStorage from '../platform/settings-storage';
+import * as LumnoMessaging from '../platform/messaging';
 import { isNode } from '../shared/dom-guards';
+import {
+  AGGREGATE_SEARCH_STORAGE_KEY,
+  BOOKMARK_COLUMNS_STORAGE_KEY,
+  BOOKMARK_COUNT_STORAGE_KEY,
+  BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY as FOLDER_COLOR_PRESETS_STORAGE_KEY,
+  BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY,
+  BOOKMARK_VIEW_MODE_STORAGE_KEY,
+  DEFAULT_SEARCH_ENGINE_STORAGE_KEY,
+  FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
+  FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
+  HIDDEN_RECENT_SITES_STORAGE_KEY,
+  LANGUAGE_STORAGE_KEY,
+  MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY,
+  NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
+  NEWTAB_FAVICON_STORAGE_KEY,
+  NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
+  NEWTAB_GLASS_STYLE_STORAGE_KEY,
+  NEWTAB_GLASS_THEME_STORAGE_KEY,
+  NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY,
+  NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY,
+  NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY,
+  NEWTAB_SEARCH_WIDTH_STORAGE_KEY,
+  NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,
+  NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,
+  NEWTAB_SHORTCUT_COLUMNS_MIN,
+  NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
+  NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
+  NEWTAB_SHORTCUT_WIDTH_MAX,
+  NEWTAB_SHORTCUT_WIDTH_MIN,
+  NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
+  NEWTAB_THEME_MODE_STORAGE_KEY,
+  NEWTAB_THEME_SCOPE_STORAGE_KEY,
+  NEWTAB_TIME_12_HOUR_STORAGE_KEY,
+  NEWTAB_TIME_FONT_SIZE_STORAGE_KEY,
+  NEWTAB_TIME_FONT_STORAGE_KEY,
+  NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
+  NEWTAB_TIME_INK_STORAGE_KEY,
+  NEWTAB_TIME_OPACITY_STORAGE_KEY,
+  NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
+  NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
+  NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY,
+  NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY,
+  NEWTAB_WALLPAPER_STORAGE_KEY,
+  NEWTAB_WIDTH_MODE_STORAGE_KEY,
+  NEWTAB_ZEN_MODE_STORAGE_KEY,
+  NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY,
+  OVERLAY_TAB_PRIORITY_STORAGE_KEY,
+  PINNED_RECENT_SITES_STORAGE_KEY,
+  RECENT_COUNT_STORAGE_KEY,
+  RECENT_MODE_STORAGE_KEY,
+  SEARCH_BLACKLIST_STORAGE_KEY,
+  SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
+  SEARCH_RESULT_PRIORITY_STORAGE_KEY,
+  SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
+  SIMPLE_MODE_ENABLED_STORAGE_KEY,
+  SITE_SEARCH_DISABLED_STORAGE_KEY,
+  SITE_SEARCH_STORAGE_KEY,
+  TAB_RANK_SCORE_DEBUG_STORAGE_KEY,
+  THEME_STORAGE_KEY
+} from '../domain/settings';
+import {
+  BOOKMARK_CONTEXT_MENU_EDIT_VALUE,
+  BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE,
+  BOOKMARK_TOPBAR_LAYOUT_ACTION,
+  BOOKMARK_TOPBAR_PICK_COLOR_ACTION,
+  BOOKMARK_TOPBAR_SURFACE_MODE_ACTION,
+  FAVICON_CACHE_BOOT_WAIT_MS,
+  FOLDER_COLOR_CONTEXT_MENU_VALUE,
+  MAX_PINNED_RECENT_SITES,
+  NEWTAB_CONTEXT_MENU_OPEN_VALUE,
+  NEWTAB_GLASS_ADAPTIVE_SELECTOR,
+  NEWTAB_MOBILE_FLOW_BREAKPOINT_PX,
+  NEWTAB_WIDTH_MODE_CONFIGS,
+  RECENT_CARD_TARGET_WIDTH_PX,
+  RECENT_GRID_GAP_PX,
+  SHORTCUT_CONTEXT_MENU_EDIT_VALUE,
+  SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE,
+  SHORTCUT_CONTEXT_MENU_REMOVE_VALUE,
+  SHORTCUT_DIALOG_ITEM_BOOKMARK,
+  SHORTCUT_DIALOG_ITEM_FOLDER,
+  SHORTCUT_GROUP_MENU_VALUES,
+  SYNCED_PAGE_STORAGE_KEYS,
+  WORDMARK_ENTRY_ANIMATION_NAME,
+  createSiteDisplayNameOptions,
+  getRiSvg
+} from './newtab-config';
 import type { BackgroundAction, BackgroundReply, BackgroundRequest } from '../domain/messages';
 import type { Disposition } from '../domain/navigation-disposition';
 import type { SearchActionModel, SearchActionModelOptions } from '../domain/search/suggestion-action-model';
@@ -120,8 +208,6 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
   }
   return api;
 }
-import * as LumnoSettingsStorage from '../platform/settings-storage';
-import * as LumnoMessaging from '../platform/messaging';
 
 (function() {
   // Page state shared with the modules split out of this file: each module
@@ -150,8 +236,6 @@ import * as LumnoMessaging from '../platform/messaging';
   const TOP_SITES_FOLLOW_HISTORY =
     LumnoBrowserProfile.getBrowserInternalScheme(navigator.userAgent) !== 'edge://';
   const startupRecentSourceReadsAt = Date.now();
-
-  const NEWTAB_CONTEXT_MENU_OPEN_VALUE = 'open-in-new-tab';
 
   const {
     updateRecentContextMenuLanguageStrings,
@@ -228,87 +312,6 @@ import * as LumnoMessaging from '../platform/messaging';
 
   const SETTINGS = settingsRuntimeApi;
   const BROWSER_PROFILE = LumnoBrowserProfile;
-  const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
-  const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
-  const RECENT_MODE_STORAGE_KEY = '_x_extension_recent_mode_2024_unique_';
-  const RECENT_COUNT_STORAGE_KEY = '_x_extension_recent_count_2024_unique_';
-  const NEWTAB_WIDTH_MODE_STORAGE_KEY = '_x_extension_newtab_width_mode_2026_unique_';
-  const NEWTAB_SEARCH_WIDTH_STORAGE_KEY = '_x_extension_newtab_search_width_2026_unique_';
-  const NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY = SETTINGS.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY ||
-    '_x_extension_newtab_input_auto_focus_enabled_2026_unique_';
-  const NEWTAB_QUOTE_PREFS_STORAGE_KEY = SETTINGS.NEWTAB_QUOTE_PREFS_STORAGE_KEY ||
-    '_x_extension_newtab_quote_prefs_2026_unique_';
-  const NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY = SETTINGS.NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY ||
-    '_x_extension_newtab_feedback_button_visible_2026_unique_';
-  const NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY = SETTINGS.NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY ||
-    '_x_extension_newtab_appearance_button_visible_2026_unique_';
-  const NEWTAB_GLASS_STYLE_STORAGE_KEY = SETTINGS.NEWTAB_GLASS_STYLE_STORAGE_KEY;
-  const NEWTAB_GLASS_THEME_STORAGE_KEY = SETTINGS.NEWTAB_GLASS_THEME_STORAGE_KEY;
-  // The plates that sit straight on the wallpaper; floating menus and panels keep a fixed dense tint.
-  const NEWTAB_GLASS_ADAPTIVE_SELECTOR = [
-    '#_x_extension_newtab_root_2024_unique_',
-    '.x-nt-shortcut-icon',
-    '.x-nt-bookmark-card:not(.x-nt-bookmarks-topbar .x-nt-bookmark-card):not(.x-nt-bookmark-card-drag-preview)' +
-      ':not([data-bookmark-page-outgoing] .x-nt-bookmark-card)',
-    '.x-nt-recent-card-visual',
-    '.x-nt-wallpaper-button',
-    '.x-nt-feedback-button',
-    '.x-nt-bookmarks-pager-btn:not(.x-nt-bookmarks-topbar *)',
-    '.x-nt-section-mode-select ._x_extension_select_trigger_2024_unique_:not(.x-nt-bookmarks-topbar *)',
-    '.x-nt-bookmark-cascade-debug-button'
-  ].join(',');
-  const NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY = SETTINGS.NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY ||
-    '_x_extension_newtab_open_in_new_tab_2026_unique_';
-  const NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY = SETTINGS.NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY ||
-    '_x_extension_number_shortcut_instant_enabled_2026_unique_';
-  const MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY =
-    SETTINGS.MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY ||
-    '_x_extension_macos_ctrl_suggestion_navigation_enabled_2026_unique_';
-  const SIMPLE_MODE_ENABLED_STORAGE_KEY = SETTINGS.SIMPLE_MODE_ENABLED_STORAGE_KEY ||
-    '_x_extension_simple_mode_enabled_2026_unique_';
-  const NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY = SETTINGS.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY ||
-    '_x_extension_newtab_wordmark_visible_2026_unique_';
-  const NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY =
-    SETTINGS.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY ||
-    '_x_extension_newtab_time_font_weight_2026_unique_';
-  const NEWTAB_TIME_FONT_SIZE_STORAGE_KEY = SETTINGS.NEWTAB_TIME_FONT_SIZE_STORAGE_KEY ||
-    '_x_extension_newtab_time_font_size_2026_unique_';
-  const NEWTAB_TIME_OPACITY_STORAGE_KEY = SETTINGS.NEWTAB_TIME_OPACITY_STORAGE_KEY ||
-    '_x_extension_newtab_time_opacity_2026_unique_';
-  const NEWTAB_TIME_INK_STORAGE_KEY = SETTINGS.NEWTAB_TIME_INK_STORAGE_KEY ||
-    '_x_extension_newtab_time_ink_2026_unique_';
-  const NEWTAB_TIME_FONT_STORAGE_KEY = SETTINGS.NEWTAB_TIME_FONT_STORAGE_KEY ||
-    '_x_extension_newtab_time_font_2026_unique_';
-  const NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY =
-    SETTINGS.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY ||
-    '_x_extension_newtab_time_seconds_visible_2026_unique_';
-  const NEWTAB_TIME_12_HOUR_STORAGE_KEY = SETTINGS.NEWTAB_TIME_12_HOUR_STORAGE_KEY ||
-    '_x_extension_newtab_time_12_hour_2026_unique_';
-  const NEWTAB_ZEN_MODE_STORAGE_KEY = '_x_extension_newtab_zen_mode_2026_unique_';
-  const NEWTAB_THEME_MODE_STORAGE_KEY = '_x_extension_newtab_theme_mode_2026_unique_';
-  const NEWTAB_THEME_SCOPE_STORAGE_KEY = '_x_extension_newtab_theme_scope_2026_unique_';
-  const NEWTAB_WALLPAPER_STORAGE_KEY = '_x_extension_newtab_wallpaper_2026_unique_';
-  const NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY = '_x_extension_newtab_local_wallpaper_2026_unique_';
-  const NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY = '_x_extension_newtab_wallpaper_overlay_2026_unique_';
-  const NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY = '_x_extension_newtab_wallpaper_effect_2026_unique_';
-  const NEWTAB_FAVICON_STORAGE_KEY = '_x_extension_newtab_favicon_2026_unique_';
-  const BOOKMARK_COUNT_STORAGE_KEY = '_x_extension_bookmark_count_2024_unique_';
-  const BOOKMARK_COLUMNS_STORAGE_KEY = '_x_extension_bookmark_columns_2024_unique_';
-  const BOOKMARK_VIEW_MODE_STORAGE_KEY = '_x_extension_bookmark_view_mode_2026_unique_';
-  const BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY = '_x_extension_bookmark_folder_icons_visible_2026_unique_';
-  const BOOKMARK_CASCADE_DEBUG_STORAGE_KEY = '_x_extension_bookmark_cascade_debug_2026_unique_';
-  const BOOKMARK_TOPBAR_PICK_COLOR_ACTION = 'pick-bookmark-topbar-color';
-  const BOOKMARK_TOPBAR_SURFACE_MODE_ACTION = 'set-bookmark-topbar-surface-mode';
-  const BOOKMARK_TOPBAR_LAYOUT_ACTION = 'set-bookmark-topbar-layout';
-  const DEFAULT_SEARCH_ENGINE_STORAGE_KEY = '_x_extension_default_search_engine_2024_unique_';
-  const SEARCH_RESULT_PRIORITY_STORAGE_KEY = '_x_extension_search_result_priority_2026_unique_';
-  const OVERLAY_TAB_PRIORITY_STORAGE_KEY = '_x_extension_overlay_tab_priority_2024_unique_';
-  const SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY = '_x_extension_search_result_source_types_2026_unique_';
-  const SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY = SETTINGS.SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY ||
-    '_x_extension_search_result_display_limit_2026_unique_';
-  const SEARCH_BLACKLIST_STORAGE_KEY = '_x_extension_search_blacklist_2026_unique_';
-  const FAVICON_REQUEST_BLACKLIST_STORAGE_KEY = '_x_extension_favicon_request_blacklist_2026_unique_';
-  const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_';
   const COMMUNITY_LINKS = LumnoCommunityLinks;
   const LUMNO_FEEDBACK_LINKS_FALLBACK = COMMUNITY_LINKS.FALLBACK_LINKS;
   const NEWTAB_BOOKMARKS_TOPBAR = requireIslandApi(globalThis.LumnoNewtabBookmarksTopbar, 'bookmarks bar');
@@ -369,17 +372,7 @@ import * as LumnoMessaging from '../platform/messaging';
   const NEWTAB_SELECT_MENU = requireIslandApi(globalThis.LumnoNewtabSelectMenu, 'select menu');
   const NEWTAB_TOP_CONTENT = requireIslandApi(globalThis.LumnoNewtabTopContent, 'top content');
   const NEWTAB_PAGE_STRUCTURE = requireIslandApi(globalThis.LumnoNewtabPageStructure, 'page structure');
-  const SITE_DISPLAY_NAME_OPTIONS = Object.freeze({
-    getBrandName(brandHost: string, fallback: string): string {
-      if (brandHost === 'mp.weixin.qq.com') {
-        return t('site_brand_wechat_official', '微信公众号');
-      }
-      if (brandHost === 'weibo.com') {
-        return t('site_search_name_weibo', '微博');
-      }
-      return fallback;
-    }
-  });
+  const SITE_DISPLAY_NAME_OPTIONS = createSiteDisplayNameOptions(t);
   const getFigmaFolderSvg = NEWTAB_BOOKMARK_FOLDER_ICON.getFigmaFolderSvg;
   function initFolderPathMorph(icon: Element | null | undefined): void {
     NEWTAB_BOOKMARK_FOLDER_ICON.initFolderPathMorph(icon);
@@ -393,22 +386,6 @@ import * as LumnoMessaging from '../platform/messaging';
     store: NEWTAB_BOOKMARKS_STORE,
     normalizeHost
   });
-  const SHORTCUT_CONTEXT_MENU_EDIT_VALUE = 'edit';
-  const SHORTCUT_CONTEXT_MENU_REMOVE_VALUE = 'remove';
-  const SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE = 'hide-add';
-  const SHORTCUT_GROUP_MENU_VALUES = Object.freeze({
-    addShortcut: 'shortcut-add',
-    create: 'group-create',
-    rename: 'group-rename',
-    addSite: 'group-add-site',
-    moveUp: 'group-move-up',
-    moveDown: 'group-move-down',
-    delete: 'group-delete',
-    deleteWithSites: 'group-delete-sites'
-  });
-  const FOLDER_COLOR_CONTEXT_MENU_VALUE = 'folder-color';
-  const BOOKMARK_CONTEXT_MENU_EDIT_VALUE = 'edit';
-  const BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE = 'open-in-new-tab-group';
 
 
   const {
@@ -425,11 +402,7 @@ import * as LumnoMessaging from '../platform/messaging';
   const shortcutTiles: ShortcutTileElement[] = [];
   const SHORTCUT_DIALOG_MODE_EDIT = NEWTAB_SHORTCUT_DIALOG.MODE_EDIT || 'edit';
   const folderColorApi = globalThis.LumnoNewtabFolderColorPicker;
-  const FOLDER_COLOR_PRESETS_STORAGE_KEY = SETTINGS.BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY ||
-    '_x_extension_bookmark_folder_color_presets_2026_unique_';
 
-  const SHORTCUT_DIALOG_ITEM_BOOKMARK = 'bookmark';
-  const SHORTCUT_DIALOG_ITEM_FOLDER = 'folder';
 
   const {
     updateBookmarkContextMenuLanguageStrings,
@@ -536,27 +509,7 @@ import * as LumnoMessaging from '../platform/messaging';
   shortcutFolderRuntime.ready.catch((error) => {
     console.warn('[Lumno] Could not load shortcut folder bindings.', error);
   });
-  const TAB_RANK_SCORE_DEBUG_STORAGE_KEY = '_x_extension_tab_rank_score_debug_2026_unique_';
-  const FAVICON_CACHE_BOOT_WAIT_MS = 120;
-  const PINNED_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
-  const HIDDEN_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_hidden_recent_sites_2026_unique_';
   const NEWTAB_SHORTCUTS_LOCAL_OVERFLOW_STORAGE_KEY = NEWTAB_SHORTCUTS_STORE.SHORTCUTS_LOCAL_OVERFLOW_KEY;
-  const NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY = '_x_extension_newtab_shortcuts_visible_2026_unique_';
-  const NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY = '_x_extension_newtab_shortcut_add_visible_2026_unique_';
-  const NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY = '_x_extension_newtab_shortcut_dock_magnification_enabled_2026_unique_';
-  const NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY = SETTINGS.NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY ||
-    '_x_extension_newtab_shortcut_width_2026_unique_';
-  const NEWTAB_SHORTCUT_WIDTH_MIN = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_MIN))
-    ? Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_MIN)
-    : 360;
-  const NEWTAB_SHORTCUT_WIDTH_MAX = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_MAX))
-    ? Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_MAX)
-    : 1440;
-  const NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY = SETTINGS.NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY ||
-    '_x_extension_newtab_shortcut_columns_2026_unique_';
-  const NEWTAB_SHORTCUT_COLUMNS_MIN = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_COLUMNS_MIN))
-    ? Number(SETTINGS.NEWTAB_SHORTCUT_COLUMNS_MIN)
-    : 4;
   const NEWTAB_SHORTCUT_COLUMNS_MAX = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_COLUMNS_MAX))
     ? Number(SETTINGS.NEWTAB_SHORTCUT_COLUMNS_MAX)
     : 16;
@@ -591,21 +544,10 @@ import * as LumnoMessaging from '../platform/messaging';
   )
     ? Number(SETTINGS.NEWTAB_SHORTCUT_GAP_DEFAULT)
     : 4;
-  const NEWTAB_SHORTCUT_ICONS_STORAGE_KEY =
-    NEWTAB_SHORTCUT_ICON_STORE.DEFAULT_STORAGE_KEY ||
-    '_x_extension_newtab_shortcut_icons_2026_unique_';
-  const NEWTAB_SHORTCUT_FAVICON_CACHE_STORAGE_KEY =
-    SHORTCUT_FAVICON.DEFAULT_STORAGE_KEY ||
-    '_x_extension_newtab_shortcut_favicon_cache_2026_unique_';
-  const SITE_SEARCH_ICON_CACHE_STORAGE_KEY =
-    SHORTCUT_FAVICON.SITE_SEARCH_STORAGE_KEY ||
-    '_x_extension_site_search_icon_cache_canonical_2026_unique_';
-  const siteSearchIconCacheOptions = SHORTCUT_FAVICON.SITE_SEARCH_CACHE_OPTIONS || {
-    cacheTtlMs: 1000 * 60 * 60 * 24 * 180,
-    cacheMaxEntries: 40,
-    maxDataUrlLength: 192 * 1024
-  };
-  const MAX_PINNED_RECENT_SITES = 3;
+  const NEWTAB_SHORTCUT_ICONS_STORAGE_KEY = NEWTAB_SHORTCUT_ICON_STORE.DEFAULT_STORAGE_KEY;
+  const NEWTAB_SHORTCUT_FAVICON_CACHE_STORAGE_KEY = SHORTCUT_FAVICON.DEFAULT_STORAGE_KEY;
+  const SITE_SEARCH_ICON_CACHE_STORAGE_KEY = SHORTCUT_FAVICON.SITE_SEARCH_STORAGE_KEY;
+  const siteSearchIconCacheOptions = SHORTCUT_FAVICON.SITE_SEARCH_CACHE_OPTIONS;
   const NEWTAB_SHORTCUTS_CRITICAL_SYNC_RESERVE_BYTES = NEWTAB_SHORTCUTS_STORE.DEFAULT_SHORTCUTS_SYNC_RESERVE_BYTES;
   const NEWTAB_SHORTCUTS_STORAGE_KEYS = NEWTAB_SHORTCUTS_STORE.SHORTCUT_STORAGE_KEYS;
   const pageSearchParams = new URLSearchParams(window.location.search || '');
@@ -733,8 +675,6 @@ import * as LumnoMessaging from '../platform/messaging';
 
   const defaultSiteSearchProviders = SEARCH_UTILS.getDefaultSiteSearchProviders();
 
-  const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_custom_2024_unique_';
-  const SITE_SEARCH_DISABLED_STORAGE_KEY = '_x_extension_site_search_disabled_2024_unique_';
 
   const {
     buildSearchUrl,
@@ -1205,28 +1145,6 @@ import * as LumnoMessaging from '../platform/messaging';
     LANGUAGE_STORAGE_KEY,
     pageState
   });
-  const WORDMARK_ENTRY_ANIMATION_NAME = '_x_nt_wordmark_enter_2026_unique_';
-  const RECENT_CARD_TARGET_WIDTH_PX = 248;
-  const RECENT_GRID_GAP_PX = 12;
-  const NEWTAB_MOBILE_FLOW_BREAKPOINT_PX = 640;
-  const RECENT_WIDE_MAX_COLUMNS = 6;
-  const RECENT_WIDE_CONTENT_MAX_WIDTH_PX = NEWTAB_LAYOUT.getGridContentWidthForColumns(
-    RECENT_WIDE_MAX_COLUMNS,
-    RECENT_CARD_TARGET_WIDTH_PX,
-    RECENT_GRID_GAP_PX
-  );
-  const NEWTAB_WIDTH_MODE_CONFIGS = {
-    standard: {
-      searchMaxWidth: NEWTAB_LAYOUT.STANDARD_SEARCH_MAX_WIDTH_PX,
-      contentMaxWidth: NEWTAB_LAYOUT.CONTENT_MAX_WIDTH_PX,
-      recentMaxColumns: 4
-    },
-    wide: {
-      searchMaxWidth: 920,
-      contentMaxWidth: RECENT_WIDE_CONTENT_MAX_WIDTH_PX,
-      recentMaxColumns: RECENT_WIDE_MAX_COLUMNS
-    }
-  };
   const NEWTAB_SEARCH_WIDTH_CONFIG = NEWTAB_LAYOUT.SEARCH_WIDTH_CONFIG;
   const toastElement = document.getElementById('_x_extension_toast_2024_unique_');
   pageState.toastController = NEWTAB_TOAST.createToastController(toastElement, { windowObj: window });
@@ -1440,12 +1358,6 @@ import * as LumnoMessaging from '../platform/messaging';
       return;
     }
     LumnoSettingsStorage.migrateLocalSettingsToSync(chrome.storage.local, storageArea, keys);
-  }
-
-  function getRiSvg(id: string, sizeClass?: string, extraClass?: string): string {
-    const size = sizeClass || 'ri-size-16';
-    const extra = extraClass ? ` ${extraClass}` : '';
-    return `<i class="ri-icon ${size}${extra} ${id}" aria-hidden="true"></i>`;
   }
 
   pageState.quoteRuntime = LumnoNewtabQuotes.createRuntime({
@@ -1911,63 +1823,8 @@ import * as LumnoMessaging from '../platform/messaging';
     pageState
   });
 
-  pageState.AGGREGATE_SEARCH_STORAGE_KEY = SETTINGS.AGGREGATE_SEARCH_STORAGE_KEY ||
-    AGGREGATE_SEARCH_STORE.STORAGE_KEY ||
-    '_x_extension_aggregate_searches_2026_unique_';
-  migrateStorageIfNeeded([
-    THEME_STORAGE_KEY,
-    LANGUAGE_STORAGE_KEY,
-    RECENT_MODE_STORAGE_KEY,
-    RECENT_COUNT_STORAGE_KEY,
-    NEWTAB_WIDTH_MODE_STORAGE_KEY,
-    NEWTAB_SEARCH_WIDTH_STORAGE_KEY,
-    NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY,
-    NEWTAB_QUOTE_PREFS_STORAGE_KEY,
-    NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
-    NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
-    NEWTAB_GLASS_STYLE_STORAGE_KEY,
-    NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
-    NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
-    NEWTAB_TIME_FONT_SIZE_STORAGE_KEY,
-    NEWTAB_TIME_OPACITY_STORAGE_KEY,
-    NEWTAB_TIME_INK_STORAGE_KEY,
-    NEWTAB_TIME_FONT_STORAGE_KEY,
-    NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
-    NEWTAB_TIME_12_HOUR_STORAGE_KEY,
-    NEWTAB_THEME_MODE_STORAGE_KEY,
-    NEWTAB_THEME_SCOPE_STORAGE_KEY,
-    NEWTAB_ZEN_MODE_STORAGE_KEY,
-    NEWTAB_WALLPAPER_STORAGE_KEY,
-    NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY,
-    NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY,
-    NEWTAB_FAVICON_STORAGE_KEY,
-    BOOKMARK_COUNT_STORAGE_KEY,
-    BOOKMARK_COLUMNS_STORAGE_KEY,
-    BOOKMARK_VIEW_MODE_STORAGE_KEY,
-    BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY,
-    BOOKMARK_CASCADE_DEBUG_STORAGE_KEY,
-    TAB_RANK_SCORE_DEBUG_STORAGE_KEY,
-    DEFAULT_SEARCH_ENGINE_STORAGE_KEY,
-    SEARCH_RESULT_PRIORITY_STORAGE_KEY,
-    SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
-    SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
-    SITE_SEARCH_STORAGE_KEY,
-    SITE_SEARCH_DISABLED_STORAGE_KEY,
-    pageState.AGGREGATE_SEARCH_STORAGE_KEY,
-    SEARCH_BLACKLIST_STORAGE_KEY,
-    FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
-    FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
-    PINNED_RECENT_SITES_STORAGE_KEY,
-    HIDDEN_RECENT_SITES_STORAGE_KEY,
-    ...NEWTAB_SHORTCUTS_STORAGE_KEYS,
-    NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,
-    NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,
-    NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
-    NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
-    NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
-    NEWTAB_SHORTCUT_SIZE_STORAGE_KEY,
-    NEWTAB_SHORTCUT_GAP_STORAGE_KEY
-  ]);
+  pageState.AGGREGATE_SEARCH_STORAGE_KEY = AGGREGATE_SEARCH_STORAGE_KEY;
+  migrateStorageIfNeeded(SYNCED_PAGE_STORAGE_KEYS.slice());
 
   const {
     faviconCacheRuntime,

@@ -126,8 +126,8 @@ const GROUPED_STATE_VERSION = 3;
 const LEGACY_MAX_SHORTCUTS = 60;
 const MAX_SHORTCUTS = shortcutStore.DEFAULT_MAX_SHORTCUTS;
 const ICONS_KEY = SHORTCUT_ICON_MAP.DEFAULT_STORAGE_KEY;
-const WALLPAPER_KEY = '_x_extension_newtab_wallpaper_2026_unique_';
-const LOCAL_WALLPAPER_KEY = '_x_extension_newtab_local_wallpaper_2026_unique_';
+const WALLPAPER_KEY = settings.NEWTAB_WALLPAPER_STORAGE_KEY;
+const LOCAL_WALLPAPER_KEY = settings.NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY;
 const LINK_WALLPAPERS_KEY = settings.NEWTAB_LINK_WALLPAPERS_STORAGE_KEY;
 // Browser sync stores the link list as one item of at most 8 KB.
 const MAX_LINK_WALLPAPERS_BYTES = 8000;
