@@ -2,6 +2,7 @@
 // report a wrong string on a prefilled GitHub issue form, or download every
 // UI string as a spreadsheet, fill in a "Suggestion" column and attach it.
 // scripts/i18n/import-sheet.js merges a returned spreadsheet.
+import { downloadTextFile } from './options-download';
 
 // Lumno is written in Simplified Chinese, so there is nothing to improve there.
 const SOURCE_LOCALE = 'zh_CN';
@@ -57,20 +58,6 @@ function buildTranslationSheetCsv(input) {
     rows.push([key, getMessageText(referenceMessages, key), getMessageText(currentMessages, key), '', '']);
   });
   return `\uFEFF${rows.map((row) => row.map(escapeCsvField).join(',')).join('\r\n')}\r\n`;
-}
-
-function downloadTextFile(documentObj, fileName, text, type) {
-  const view = documentObj.defaultView;
-  const blob = new view.Blob([text], { type });
-  const url = view.URL.createObjectURL(blob);
-  const link = documentObj.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  link.hidden = true;
-  documentObj.body.appendChild(link);
-  link.click();
-  link.remove();
-  view.setTimeout(() => view.URL.revokeObjectURL(url), 1000);
 }
 
 //   getMessage(key, fallback), formatTemplate(template, values), locale,

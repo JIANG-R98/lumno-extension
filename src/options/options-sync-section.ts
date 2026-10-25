@@ -10,6 +10,7 @@
 //   provider area), localStorageArea, getActivePrimaryAreaName(),
 //   getMessage, formatTemplate, showToast, beginToast, showTooltipFor
 import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
+import { downloadJsonFile } from './options-download';
 
 function createSyncSection(options) {
   const {
@@ -221,18 +222,6 @@ function createSyncSection(options) {
     });
   }
 
-  function downloadJson(filename, payload) {
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = documentObj.createElement('a');
-    link.href = url;
-    link.download = filename;
-    documentObj.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  }
-
   // Wires the three buttons and the hidden file input.
   function bindControls() {
     function getSyncFailureMessage() {
@@ -276,7 +265,8 @@ function createSyncSection(options) {
           return;
         }
         storageArea.get(SYNC_KEYS, (result) => {
-          downloadJson(
+          downloadJsonFile(
+            documentObj,
             `lumno-settings-${Date.now()}.json`,
             syncTransfer.buildExportFile(result, new Date().toISOString())
           );
