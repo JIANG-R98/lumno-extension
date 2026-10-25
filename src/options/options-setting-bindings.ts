@@ -78,9 +78,8 @@ function createStorageChangeRegistry(options?: StorageChangeRegistryOptions) {
 //   repairOnChange   false to never write back after a storage change
 //   refreshSelects   true to refresh the custom selects after applying
 //
-// bindToggle/bindSelect add the control: they apply through setToggleState
-// or setSelectState (then spec.afterApply), and persist the control's own
-// changes. `normalizeInput` overrides how the control's value is read.
+// bindToggle adds the control: it applies through setToggleState (then
+// spec.afterApply), and persists the control's own changes. `normalizeInput` overrides how the control's value is read.
 // A binder made with `area: 'local'` reads, writes and follows
 // chrome.storage.local (device-only settings) instead of the primary area.
 // `writeRepairs(values, stored)` replaces the write-back after the startup
@@ -93,7 +92,6 @@ interface SettingBinderOptions {
   refreshCustomSelects?(): void;
   writeRepairs?(values: Record<string, unknown>, stored: Record<string, unknown>): void;
   setToggleState?(input: HTMLInputElement, checked: boolean): void;
-  setSelectState?(select: HTMLSelectElement, value: unknown): void;
 }
 
 interface SettingSpec<V> {
@@ -184,12 +182,7 @@ function createSettingBinder(config: SettingBinderOptions) {
     bindControl(spec, (input) => input.checked, setToggleState);
   }
 
-  function bindSelect<V>(spec: ControlSpec<V, HTMLSelectElement>): void {
-    const setSelectState = config.setSelectState || (() => {});
-    bindControl(spec, (select) => select.value, setSelectState);
-  }
-
-  return Object.freeze({ bindSelect, bindSetting, bindToggle });
+  return Object.freeze({ bindSetting, bindToggle });
 }
 
 export { createSettingBinder, createStorageChangeRegistry };

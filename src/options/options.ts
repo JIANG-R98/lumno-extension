@@ -17,6 +17,7 @@ import * as OPTIONS_CONTROL_EVENTS from './options-control-events';
 import * as LumnoOptionsFallbackShortcut from './options-fallback-shortcut';
 import * as LumnoOptionsFeedbackSupportSection from './options-feedback-support';
 import * as OPTIONS_FORMS from './options-forms';
+import * as OPTIONS_GENERAL_FEATURES_SECTION from './options-general-features-section';
 import * as OPTIONS_LABS_SECTION from './options-labs-section';
 import * as OPTIONS_LANGUAGE from './options-language';
 import * as OPTIONS_NAVIGATION from './options-navigation';
@@ -107,14 +108,6 @@ import * as OPTIONS_STATE from './options-state';
   const searchResultDisplayLimitControlHost = getHtmlElement(document, '_x_extension_search_result_display_limit_control_2026_unique_');
   const overlayWidthControlHost = getHtmlElement(document, '_x_extension_overlay_width_control_2026_unique_');
   const bookmarkFolderIconsVisibleRow = getHtmlElement(document, '_x_extension_bookmark_folder_icons_visible_row_2026_unique_');
-  const tabSwitcherToggle = getHtmlTag(document, '_x_extension_tab_switcher_toggle_2026_unique_', 'input');
-  const tabSwitcherSubrows = getHtmlElement(document, '_x_extension_tab_switcher_subrows_2026_unique_');
-  const selectionQuickActionsToggle = getHtmlTag(document, '_x_extension_selection_quick_actions_toggle_2026_unique_', 'input');
-  const selectionQuickActionsSubrows = getHtmlElement(document, '_x_extension_selection_quick_actions_subrows_2026_unique_');
-  const selectionQuickActionsProviderRow = getHtmlElement(document, '_x_extension_selection_quick_actions_provider_row_2026_unique_');
-  const selectionQuickActionsProviderSelect = getHtmlTag(document, '_x_extension_selection_quick_actions_provider_select_2026_unique_', 'select');
-  const selectionQuickActionsGroupRow = getHtmlElement(document, '_x_extension_selection_quick_actions_group_row_2026_unique_');
-  const selectionQuickActionsGroupToggle = getHtmlTag(document, '_x_extension_selection_quick_actions_group_toggle_2026_unique_', 'input');
   const newtabTopContentTabsWrap = getHtmlElement(document, '_x_extension_newtab_top_content_tabs_wrap_2026_unique_');
   const newtabTimeFontRow = getHtmlElement(document, '_x_extension_newtab_time_font_row_2026_unique_');
   const newtabTimeFontSelect = getHtmlTag(document, '_x_extension_newtab_time_font_select_2026_unique_', 'select');
@@ -315,6 +308,7 @@ import * as OPTIONS_STATE from './options-state';
 
 
   const {
+    getMenuViewportTopInset,
     optionsSelectControlRecords,
     registerOptionsSelectControl,
     refreshOptionsSelectItems,
@@ -487,10 +481,13 @@ import * as OPTIONS_STATE from './options-state';
     renderSearchResultDisplayLimitControl: (...args) => renderSearchResultDisplayLimitControl(...args),
     renderOverlayWidthControl: (...args) => renderOverlayWidthControl(...args),
     renderSettingsNavigation,
-    renderLabsSettings: () => labsSection.render(),
+    renderTabSections: () => {
+      generalFeaturesSection.render();
+      labsSection.render();
+      blacklistSection.render();
+    },
     renderSiteSearchList,
     renderAggregateSearchList: (...args) => renderAggregateSearchList(...args),
-    renderBlacklistSettings: () => blacklistSection.render(),
     optionsState
   });
 
@@ -733,6 +730,19 @@ import * as OPTIONS_STATE from './options-state';
 
   // Drawn before the switches below are set up, which mark the rows this
   // browser cannot honor.
+  const generalFeaturesSection = OPTIONS_GENERAL_FEATURES_SECTION.createGeneralFeaturesSection({
+    host: getHtmlElement(document, '_x_extension_general_features_section_2026_unique_'),
+    optionsSettingsControlsApi,
+    storageArea: optionsState.storageArea,
+    SETTINGS,
+    getMessage,
+    browserFamily: document.documentElement.getAttribute('data-browser-family') || '',
+    getAssetUrl: (path) => chrome.runtime.getURL(path),
+    getViewportTopInset: getMenuViewportTopInset,
+    getTabSwitcherShortcut: () => LumnoShortcutDisplay.formatShortcutChord('Alt+Q', {
+      platform: optionsState.isMacPlatform ? 'mac' : 'windows'
+    }) || (optionsState.isMacPlatform ? '⌥Q' : 'Alt+Q')
+  });
   const labsSection = OPTIONS_LABS_SECTION.createLabsSection({
     host: queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="labs"]'),
     optionsSettingsControlsApi,
@@ -758,7 +768,6 @@ import * as OPTIONS_STATE from './options-state';
   const {
     registerOptionsToggleControl,
     setOptionsToggleState,
-    syncSelectionQuickActionsProviderAvailability,
     TOGGLE_SETTINGS,
     toggleSettingControls,
     searchResultSourceTypeItems,
@@ -766,15 +775,6 @@ import * as OPTIONS_STATE from './options-state';
     renderSearchResultSourceTypeControl
   } = OPTIONS_TOGGLE_CONTROLS.createToggleControls({
     optionsSettingsControlsApi,
-    tabSwitcherToggle,
-    tabSwitcherSubrows,
-    selectionQuickActionsToggle,
-    selectionQuickActionsProviderSelect,
-    renderOptionsSelectControl: renderOptionsSelectControl,
-    selectionQuickActionsSubrows,
-    selectionQuickActionsProviderRow,
-    selectionQuickActionsGroupToggle,
-    selectionQuickActionsGroupRow,
     SETTINGS,
     syncNewtabShortcutSubcontrolAvailability: (...args) => syncNewtabShortcutSubcontrolAvailability(...args),
     newtabOpenInNewTabToggles,
@@ -865,8 +865,7 @@ import * as OPTIONS_STATE from './options-state';
     writeRepairs: (values, stored) => LumnoSettingsStorage.writeSettingRepairs(chrome, optionsState.storageArea, values, stored),
     registry: storageChanges,
     refreshCustomSelects,
-    setToggleState: setOptionsToggleState,
-    setSelectState: setOptionsSelectState
+    setToggleState: setOptionsToggleState
   });
   // Device-only settings (the overlay's local fonts) stay in
   // chrome.storage.local whichever area holds the synced ones.
@@ -875,8 +874,7 @@ import * as OPTIONS_STATE from './options-state';
     storageArea: localStorageArea,
     registry: storageChanges,
     refreshCustomSelects,
-    setToggleState: setOptionsToggleState,
-    setSelectState: setOptionsSelectState
+    setToggleState: setOptionsToggleState
   });
 
   function finishOptionsStartupStorageBatch(metrics: ReadBatchMetrics): void {
@@ -1068,8 +1066,7 @@ import * as OPTIONS_STATE from './options-state';
     [languageSelect, 'language'],
     [searchResultTabPositionSelect, 'search-result-tab-position'],
     [newtabGlassStyleSelect, 'newtab-glass-style'],
-    [newtabTimeFontSelect, 'newtab-time-font'],
-    [selectionQuickActionsProviderSelect, 'selection-quick-actions-provider']
+    [newtabTimeFontSelect, 'newtab-time-font']
   ];
   selectKinds.forEach(([select, kind]) => {
     const record = registerOptionsSelectControl(select, kind);
@@ -1206,7 +1203,6 @@ import * as OPTIONS_STATE from './options-state';
   renderBookmarkColumnsControl(6);
   renderSearchResultDisplayLimitControl(10);
   renderOverlayWidthControl(null);
-  syncSelectionQuickActionsProviderAvailability();
 
   function renderFeedbackSupport() {
     feedbackSupportSection.render();
@@ -1300,7 +1296,7 @@ import * as OPTIONS_STATE from './options-state';
       slug,
       anchor
     ),
-    tabSwitcherCtrlTabLink: getHtmlTag(document, '_x_extension_tab_switcher_ctrl_tab_link_2026_unique_', 'a'),
+    onTabSwitcherCtrlTabLinkChange: (link) => generalFeaturesSection.setCtrlTabLink(link),
     optionsState
   });
 
@@ -1514,6 +1510,7 @@ import * as OPTIONS_STATE from './options-state';
     }
   }, true);
 
+  generalFeaturesSection.bindSettings(settingBinder);
   labsSection.bindSettings(settingBinder);
   blacklistSection.bindSettings(settingBinder);
   shortcutsSection.bindSettings(settingBinder);

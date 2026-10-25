@@ -1,0 +1,269 @@
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createReactRootController, type ReactRootController } from './root-controller';
+import { SettingDivider, SettingSwitch, SettingTitle, type SettingRowUnsupported } from './setting-rows';
+import { SettingSelect, type SelectControlRenderModel } from './select-control';
+import type { ToggleControlRenderModel } from './toggle-control';
+
+// How a row sits in its section.
+export interface SettingsRowLook {
+  // Rows are compact unless set to false.
+  compact?: boolean;
+  // Indented under the row above it.
+  subrow?: boolean;
+  // A label row that heads the sub-rows after it.
+  group?: boolean;
+  className?: string;
+}
+
+export interface SettingsTitleModel {
+  text: string;
+  // Names a select's trigger together with its value.
+  id?: string;
+  badge?: string;
+  info?: string;
+}
+
+// A link beside a row's switch, such as a guide for the setting.
+export interface SettingsLinkModel {
+  id: string;
+  href: string;
+  label: string;
+  bound: boolean;
+  // The browser family it is shown on, as data-browser-only names it.
+  browserOnly?: string;
+}
+
+export type SettingsRowModel =
+  | { type: 'header'; key: string; title: string }
+  | { type: 'divider'; key: string }
+  | (SettingsRowLook & {
+    type: 'toggle';
+    key: string;
+    rowId?: string;
+    title: SettingsTitleModel;
+    description?: string;
+    disabled?: boolean;
+    unsupported?: SettingRowUnsupported | null;
+    toggle: ToggleControlRenderModel;
+    link?: SettingsLinkModel | null;
+  })
+  | (SettingsRowLook & {
+    type: 'select';
+    key: string;
+    rowId?: string;
+    title: SettingsTitleModel;
+    disabled?: boolean;
+    select: SelectControlRenderModel;
+    searchable?: boolean;
+  })
+  | (SettingsRowLook & { type: 'label'; key: string; title: SettingsTitleModel })
+  | { type: 'reveal'; key: string; id: string; expanded: boolean; rows: SettingsRowModel[] }
+  // Drawn by the view that holds the rows.
+  | { type: 'slot'; key: string };
+
+export interface SettingsRowsHandlers {
+  onToggle(key: string, checked: boolean): void;
+  onSelect(key: string, value: string): void;
+  // Viewport space covered by sticky page chrome, so menus never open beneath it.
+  getViewportTopInset?(): number;
+  renderSlot?(key: string): ReactNode;
+}
+
+function getRowClassName(look: SettingsRowLook): string {
+  return [
+    '_x_extension_setting_row_2024_unique_',
+    look.compact === false ? '' : '_x_extension_setting_row_compact_2024_unique_',
+    look.group ? '_x_extension_setting_group_row_2026_unique_' : '',
+    look.subrow ? '_x_extension_setting_subrow_2026_unique_' : '',
+    look.className || ''
+  ].filter(Boolean).join(' ');
+}
+
+function getDisabledProps(disabled: boolean | undefined) {
+  if (typeof disabled !== 'boolean') {
+    return {};
+  }
+  const state = disabled ? 'true' : 'false';
+  return { 'data-disabled': state, 'aria-disabled': disabled };
+}
+
+function getUnsupportedProps(unsupported: SettingRowUnsupported | null | undefined) {
+  if (!unsupported) {
+    return {};
+  }
+  return {
+    'data-browser-unsupported': unsupported.browser,
+    'data-unsupported-reason-key': unsupported.reasonKey,
+    'data-unsupported': unsupported.active ? 'true' : undefined,
+    'aria-disabled': unsupported.active ? true : undefined
+  };
+}
+
+function RowTitle({ title, description }: { title: SettingsTitleModel; description?: string }) {
+  return (
+    <div>
+      <SettingTitle badge={title.badge} id={title.id} info={title.info} title={title.text} />
+      {description ? <p className="_x_extension_setting_desc_2024_unique_">{description}</p> : null}
+    </div>
+  );
+}
+
+function RowLink({ model }: { model: SettingsLinkModel }) {
+  return (
+    <a
+      className="_x_extension_shortcut_submit_2024_unique_ _x_extension_shortcut_ghost_2026_unique_"
+      data-bound={model.bound ? 'true' : 'false'}
+      data-browser-only={model.browserOnly}
+      href={model.href}
+      id={model.id}
+      rel="noopener noreferrer"
+      target="_blank"
+    >
+      <span data-ctrl-tab-label="">{model.label}</span>
+      <i aria-hidden="true" className="ri-icon ri-size-14 ri-external-link-line" />
+    </a>
+  );
+}
+
+// Sub-rows open and fold with their switch. The first render only places
+// them (no motion while the page loads its settings); later changes animate,
+// and the rows let menus spill out once they have settled open.
+export function SettingsReveal({ id, expanded, children }: { id: string; expanded: boolean; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [motion, setMotion] = useState(false);
+  const [settled, setSettled] = useState(expanded);
+  const shownExpanded = useRef(expanded);
+
+  useLayoutEffect(() => {
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => setMotion(true));
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    if (shownExpanded.current === expanded) {
+      return;
+    }
+    shownExpanded.current = expanded;
+    const wrap = ref.current;
+    const instant = !motion || !wrap || getComputedStyle(wrap).transitionDuration
+      .split(',')
+      .every((value) => parseFloat(value) === 0);
+    setSettled(expanded && instant);
+  }, [expanded, motion]);
+
+  return (
+    <div
+      className="_x_extension_setting_reveal_2026_unique_"
+      data-expanded={expanded ? 'true' : 'false'}
+      data-motion={motion ? undefined : 'off'}
+      data-settled={settled ? 'true' : 'false'}
+      id={id}
+      inert={!expanded}
+      onTransitionEnd={(event) => {
+        if (event.target === event.currentTarget && event.propertyName === 'grid-template-rows' && expanded) {
+          setSettled(true);
+        }
+      }}
+      ref={ref}
+    >
+      <div className="_x_extension_setting_reveal_inner_2026_unique_">{children}</div>
+    </div>
+  );
+}
+
+function SettingsRow({ row, handlers }: { row: SettingsRowModel; handlers: SettingsRowsHandlers }) {
+  switch (row.type) {
+    case 'header':
+      return (
+        <div className="_x_extension_setting_row_2024_unique_ _x_extension_section_header_2026_unique_">
+          <div>
+            <p className="_x_extension_section_title_2024_unique_">{row.title}</p>
+          </div>
+        </div>
+      );
+    case 'divider':
+      return <SettingDivider />;
+    case 'toggle': {
+      const toggle = <SettingSwitch model={row.toggle} onChange={(checked) => handlers.onToggle(row.key, checked)} />;
+      return (
+        <div
+          className={getRowClassName(row)}
+          id={row.rowId}
+          {...getDisabledProps(row.disabled)}
+          {...getUnsupportedProps(row.unsupported)}
+        >
+          <RowTitle description={row.description} title={row.title} />
+          {row.link ? (
+            <div className="_x_extension_setting_row_actions_2026_unique_">
+              <RowLink model={row.link} />
+              {toggle}
+            </div>
+          ) : toggle}
+        </div>
+      );
+    }
+    case 'select':
+      return (
+        <div className={getRowClassName(row)} id={row.rowId} {...getDisabledProps(row.disabled)}>
+          <RowTitle title={row.title} />
+          <SettingSelect
+            model={row.select}
+            options={{
+              getViewportTopInset: handlers.getViewportTopInset,
+              onSelect: (value) => handlers.onSelect(row.key, value),
+              searchable: row.searchable
+            }}
+          />
+        </div>
+      );
+    case 'label':
+      return (
+        <div className={getRowClassName(row)}>
+          <RowTitle title={row.title} />
+        </div>
+      );
+    case 'reveal':
+      return (
+        <SettingsReveal expanded={row.expanded} id={row.id}>
+          <SettingsRows handlers={handlers} rows={row.rows} />
+        </SettingsReveal>
+      );
+    case 'slot':
+      return <>{handlers.renderSlot ? handlers.renderSlot(row.key) : null}</>;
+  }
+}
+
+export function SettingsRows({ rows, handlers }: { rows: SettingsRowModel[]; handlers: SettingsRowsHandlers }) {
+  return (
+    <>
+      {rows.map((row) => <SettingsRow handlers={handlers} key={row.key} row={row} />)}
+    </>
+  );
+}
+
+export interface SettingsSectionModel {
+  rows: SettingsRowModel[];
+}
+
+export type SettingsSectionController = ReactRootController<SettingsSectionModel>;
+
+// A section of a settings tab drawn as rows. Its host takes no box of its
+// own, so the rows keep the tab's spacing.
+export function createSettingsSectionController(
+  host: HTMLElement | null,
+  handlers: SettingsRowsHandlers
+): SettingsSectionController {
+  if (host) {
+    host.dataset.reactIsland = 'options-settings-section';
+  }
+  return createReactRootController(
+    host,
+    (model: SettingsSectionModel) => <SettingsRows handlers={handlers} rows={model.rows} />
+  );
+}

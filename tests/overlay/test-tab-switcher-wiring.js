@@ -1,9 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { JSDOM } = require('jsdom');
 const settings = require('../../src/domain/settings.ts');
-const { getToggleSettings } = require('../../src/options/options-toggle-settings.ts');
 const { getManifestContentScripts } = require('../helpers/runtime-scripts');
 
 // What the tab switcher needs from the manifest, the locales and the Settings
@@ -60,19 +58,8 @@ localeNames.forEach((locale) => {
 });
 assert.notStrictEqual(localeMessages.zh_CN.tab_switcher_title.message, localeMessages.en.tab_switcher_title.message);
 
-const optionsDocument = new JSDOM(fs.readFileSync(path.join(repoRoot, 'src/options/options.html'), 'utf8')).window.document;
-const toggleInput = optionsDocument.getElementById('_x_extension_tab_switcher_toggle_2026_unique_');
-assert.ok(toggleInput, 'Settings should have a tab switcher toggle');
-assert.ok(optionsDocument.querySelector('[data-i18n="settings_tab_switcher_title"]'));
-assert.strictEqual(
-  optionsDocument.querySelector('[data-i18n-tooltip="settings_tab_switcher_desc"]').getAttribute('data-tooltip'),
-  '快速切换最近标签页，默认 {shortcut}，可自定义',
-  'the fallback copy should explain the platform default and that it can be changed'
-);
-
-const toggle = getToggleSettings(settings).find((entry) => entry.inputId === '_x_extension_tab_switcher_toggle_2026_unique_');
 assert.strictEqual(settings.TAB_SWITCHER_ENABLED_STORAGE_KEY, '_x_extension_tab_switcher_enabled_2026_unique_');
-assert.ok(toggle && toggle.key === settings.TAB_SWITCHER_ENABLED_STORAGE_KEY, 'the toggle should write the synced switcher setting');
-assert.strictEqual(toggle.normalize(undefined), true, 'the tab switcher is on until turned off');
+assert.strictEqual(settings.normalizeTabSwitcherEnabled(undefined), true, 'the tab switcher is on until turned off');
+// The Settings row is covered by src/options/options-general-features-section.test.tsx.
 
 console.log('tab switcher wiring tests passed');

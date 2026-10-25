@@ -2,11 +2,9 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
-const settings = require('../../src/domain/settings.ts');
 const selectionScriptRegistration = require('../../src/background/selection-script-registration.ts');
 const selectionTarget = require('../../src/background/selection-target.ts');
 const selectionActionIcons = require('../../src/domain/selection-action-icons.ts');
-const { getToggleSettings } = require('../../src/options/options-toggle-settings.ts');
 const { getBundleFiles, getManifestContentScripts } = require('../helpers/runtime-scripts');
 const { readStylesheet } = require('../helpers/css-tokens');
 const { parseCss } = require('../helpers/css-rules');
@@ -19,9 +17,6 @@ const { parseCss } = require('../helpers/css-rules');
 const repoRoot = path.resolve(__dirname, '..', '..');
 const localeNames = ['en', 'ja', 'zh_CN', 'zh_TW'];
 const readMessages = (locale) => JSON.parse(fs.readFileSync(path.join(repoRoot, `_locales/${locale}/messages.json`), 'utf8'));
-const ENABLED_KEY = '_x_extension_selection_quick_actions_enabled_2026_unique_';
-const PROVIDER_KEY = '_x_extension_selection_quick_actions_provider_2026_unique_';
-const GROUP_KEY = '_x_extension_selection_quick_actions_group_enabled_2026_unique_';
 
 assert(
   !getManifestContentScripts().some((files) => files.includes('src/content/selection-quick-actions.ts')),
@@ -42,28 +37,7 @@ const mark = new JSDOM(fs.readFileSync(path.join(repoRoot, 'assets/images/lumno-
 assert.strictEqual(mark.documentElement.getAttribute('shape-rendering'), 'geometricPrecision');
 assert.strictEqual(mark.querySelectorAll('path').length, 2, 'the selection mark should be the two-layer vector Lumno mark');
 
-const optionsDocument = new JSDOM(fs.readFileSync(path.join(repoRoot, 'src/options/options.html'), 'utf8')).window.document;
-const toggle = optionsDocument.getElementById('_x_extension_selection_quick_actions_toggle_2026_unique_');
-assert(toggle, 'Labs should render the selection quick actions toggle');
-assert.strictEqual(toggle.hasAttribute('checked'), false, 'the selection toolbar should be off by default');
-const groupToggle = optionsDocument.getElementById('_x_extension_selection_quick_actions_group_toggle_2026_unique_');
-assert(groupToggle, 'Labs should render the optional selection group toggle');
-assert.strictEqual(groupToggle.hasAttribute('checked'), false, 'selection grouping should be off by default');
-assert(optionsDocument.getElementById('_x_extension_selection_quick_actions_provider_select_2026_unique_'),
-  'Labs should render the preferred provider dropdown');
-assert.ok(optionsDocument.querySelectorAll('[data-icon-path^="assets/images/site-search/tile-"]').length >= 8,
-  'the provider dropdown should pair each provider with a bundled icon');
-assert.strictEqual(optionsDocument.querySelector('[data-i18n="settings_selection_quick_actions_group_title"]').textContent, '在后台查询',
-  'grouping should be described as a background query rather than tab creation');
-assert.strictEqual(
-  optionsDocument.querySelector('[data-i18n-tooltip="settings_selection_quick_actions_group_desc"]').getAttribute('data-tooltip'),
-  '所有 AI 网页皆归入「AI 查询」标签组'
-);
-const toggleKeys = getToggleSettings(settings).map((entry) => entry.key);
-[ENABLED_KEY, PROVIDER_KEY, GROUP_KEY].forEach((key) => {
-  assert(toggleKeys.includes(key), `Settings should save ${key}`);
-});
-
+// The Settings rows are covered by src/options/options-general-features-section.test.tsx.
 const optionsStyles = parseCss(readStylesheet('src/options/options.css'));
 assert.strictEqual(
   optionsStyles.rule('._x_extension_theme_indicator_2024_unique_[data-ready="false"] ~ ._x_extension_theme_option_2024_unique_[data-active="true"]').get('background'),

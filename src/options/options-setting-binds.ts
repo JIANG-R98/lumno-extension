@@ -12,7 +12,6 @@ import type {
   SearchResultPriority
 } from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
-import { isHtmlTag } from '../shared/dom-guards';
 import type { BatchedStorageArea } from '../platform/settings-storage';
 import * as LumnoOptionsDailyQuote from './options-daily-quote';
 import type { LayoutMutation } from './options-panel-motion';
@@ -138,7 +137,7 @@ interface SettingBindsDeps {
   NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY: string;
   setNewtabOpenInNewTabState(value: unknown): void;
   TOGGLE_SETTINGS: readonly ToggleSettingsEntry[];
-  toggleSettingControls: ReadonlyMap<ToggleSettingsEntry, HTMLInputElement | HTMLSelectElement | null>;
+  toggleSettingControls: ReadonlyMap<ToggleSettingsEntry, HTMLInputElement | null>;
   RESTRICTED_ACTION_STORAGE_KEY: string;
   restrictedActionSelect: HTMLSelectElement | null;
   setRestrictedActionTabState(action: unknown): void;
@@ -672,12 +671,7 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     repairOnChange: false
   });
   TOGGLE_SETTINGS.forEach((entry) => {
-    const control = toggleSettingControls.get(entry) || null;
-    if (entry.control === 'select') {
-      settingBinder.bindSelect({ ...entry, input: isHtmlTag(control, 'select') ? control : null });
-    } else {
-      settingBinder.bindToggle({ ...entry, input: isHtmlTag(control, 'input') ? control : null });
-    }
+    settingBinder.bindToggle({ ...entry, input: toggleSettingControls.get(entry) || null });
   });
   settingBinder.bindSetting({
     key: RESTRICTED_ACTION_STORAGE_KEY,

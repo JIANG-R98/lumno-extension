@@ -370,27 +370,13 @@ describe('Options page storage wiring', () => {
     const chrome = await bootOptionsPage();
     const entries = toggleSettingsModule.getToggleSettings(SETTINGS);
     // Sub-options stay disabled while their parent switch is off.
-    const parents = [SETTINGS.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY, SETTINGS.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY];
+    const parents = [SETTINGS.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY];
     for (const entry of entries) {
       if (!parents.includes(entry.key)) {
         await act(async () => {
           chrome.storage.sync.externalSet(Object.fromEntries(parents.map((key) => [key, true])));
         });
         await settle();
-      }
-      if (entry.control === 'select') {
-        const select = expectTag(document.getElementById(entry.inputId), 'select', entry.inputId);
-        const option = Array.from(select.options).map((item) => item.value).find((value) => value !== select.value);
-        const host = expectElement(select.closest('._x_extension_custom_select_2024_unique_'));
-        await act(async () => {
-          queryHtmlTag(host, 'button', 'button')?.click();
-        });
-        await act(async () => {
-          queryHtmlElement(host, `[data-value="${option}"]`)?.click();
-        });
-        await settle();
-        expect(chrome.storage.sync.values[entry.key], entry.key).toBe(entry.normalize(option));
-        continue;
       }
       const control = expectTag(document.getElementById(entry.inputId), 'input', entry.inputId);
       const next = !control.checked;

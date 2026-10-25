@@ -12,6 +12,7 @@ import {
 } from '../../shared/react/range-slider';
 import { ToggleControl, type ToggleControlRenderModel } from './toggle-control';
 import { createSettingToggleRowsController } from './setting-rows';
+import { createSettingsSectionController } from './settings-rows-view';
 
 export type { ToggleControlRenderModel };
 
@@ -331,6 +332,7 @@ export function createSettingsControlsApi() {
     createRangeSliderControlController,
     createRequiredCheckboxGroupController,
     createSettingToggleRowsController,
+    createSettingsSectionController,
     createToggleControlController
   });
 }

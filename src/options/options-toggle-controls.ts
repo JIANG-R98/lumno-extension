@@ -1,6 +1,6 @@
 // The page's switches: registering each toggle with its React control,
-// their checked state, the selection toolbar's provider row, settings a
-// browser does not support, and the search result source checkboxes.
+// their checked state, settings a browser does not support, and the search
+// result source checkboxes.
 import type { SearchSourceType } from '../domain/search/types';
 import type * as Settings from '../domain/settings';
 import { isHtmlElement, isHtmlTag } from '../shared/dom-guards';
@@ -28,16 +28,6 @@ interface ToggleControlsState {
 interface ToggleControlsDeps {
   optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>,
     'createToggleControlController' | 'createRequiredCheckboxGroupController'>;
-  tabSwitcherToggle: HTMLInputElement | null;
-  // The rows under the tab switcher switch, open while it is on.
-  tabSwitcherSubrows: HTMLElement | null;
-  selectionQuickActionsToggle: HTMLInputElement | null;
-  selectionQuickActionsProviderSelect: HTMLSelectElement | null;
-  renderOptionsSelectControl(select: HTMLSelectElement): void;
-  selectionQuickActionsSubrows: HTMLElement | null;
-  selectionQuickActionsProviderRow: HTMLElement | null;
-  selectionQuickActionsGroupToggle: HTMLInputElement | null;
-  selectionQuickActionsGroupRow: HTMLElement | null;
   SETTINGS: typeof Settings;
   syncNewtabShortcutSubcontrolAvailability(): void;
   newtabOpenInNewTabToggles: HTMLInputElement[];
@@ -69,15 +59,6 @@ interface SourceTypeItem {
 function createToggleControls(deps: ToggleControlsDeps) {
   const {
     optionsSettingsControlsApi,
-    tabSwitcherToggle,
-    tabSwitcherSubrows,
-    selectionQuickActionsToggle,
-    selectionQuickActionsProviderSelect,
-    renderOptionsSelectControl,
-    selectionQuickActionsSubrows,
-    selectionQuickActionsProviderRow,
-    selectionQuickActionsGroupToggle,
-    selectionQuickActionsGroupRow,
     SETTINGS,
     syncNewtabShortcutSubcontrolAvailability,
     newtabOpenInNewTabToggles,
@@ -146,84 +127,21 @@ function createToggleControls(deps: ToggleControlsDeps) {
     record.controller.render(record.model);
   }
 
-  // Sub-rows open and fold with their switch. The first sync only places
-  // them (no motion while the page loads its settings); later ones animate.
-  function createSubrowsReveal(wrap: HTMLElement | null): (expanded: boolean) => void {
-    if (!wrap) {
-      return () => {};
-    }
-    wrap.addEventListener('transitionend', (event) => {
-      if (event.target === wrap
-        && event.propertyName === 'grid-template-rows'
-        && wrap.getAttribute('data-expanded') === 'true') {
-        wrap.setAttribute('data-settled', 'true');
-      }
-    });
-    let motionQueued = false;
-    return function setExpanded(expanded: boolean): void {
-      const next = expanded ? 'true' : 'false';
-      if (wrap.getAttribute('data-expanded') !== next) {
-        wrap.setAttribute('data-expanded', next);
-        wrap.inert = !expanded;
-        const instant = wrap.getAttribute('data-motion') === 'off'
-          || getComputedStyle(wrap).transitionDuration.split(',').every((value) => parseFloat(value) === 0);
-        wrap.setAttribute('data-settled', expanded && instant ? 'true' : 'false');
-      }
-      if (!motionQueued && wrap.getAttribute('data-motion') === 'off') {
-        motionQueued = true;
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          wrap.removeAttribute('data-motion');
-        }));
-      }
-    };
-  }
-  const setSelectionQuickActionsSubrowsExpanded = createSubrowsReveal(selectionQuickActionsSubrows);
-  const setTabSwitcherSubrowsExpanded = createSubrowsReveal(tabSwitcherSubrows);
-
-  function syncTabSwitcherSubrows(): void {
-    setTabSwitcherSubrowsExpanded(Boolean(tabSwitcherToggle && tabSwitcherToggle.checked));
-  }
-
-  function syncSelectionQuickActionsProviderAvailability(): void {
-    const disabled = Boolean(selectionQuickActionsToggle && !selectionQuickActionsToggle.checked);
-    setSelectionQuickActionsSubrowsExpanded(!disabled);
-    if (selectionQuickActionsProviderSelect) {
-      selectionQuickActionsProviderSelect.disabled = disabled;
-      renderOptionsSelectControl(selectionQuickActionsProviderSelect);
-    }
-    if (selectionQuickActionsProviderRow) {
-      selectionQuickActionsProviderRow.setAttribute('data-disabled', disabled ? 'true' : 'false');
-      selectionQuickActionsProviderRow.setAttribute('aria-disabled', disabled ? 'true' : 'false');
-    }
-    if (selectionQuickActionsGroupToggle) {
-      setOptionsToggleState(
-        selectionQuickActionsGroupToggle,
-        selectionQuickActionsGroupToggle.checked,
-        disabled
-      );
-    }
-    if (selectionQuickActionsGroupRow) {
-      selectionQuickActionsGroupRow.setAttribute('data-disabled', disabled ? 'true' : 'false');
-      selectionQuickActionsGroupRow.setAttribute('aria-disabled', disabled ? 'true' : 'false');
-    }
-  }
   const TOGGLE_SETTINGS = LumnoOptionsToggleSettings.getToggleSettings(SETTINGS, {
-    newtabShortcutSubcontrols: syncNewtabShortcutSubcontrolAvailability,
-    selectionQuickActionsAvailability: syncSelectionQuickActionsProviderAvailability,
-    tabSwitcherSubrows: syncTabSwitcherSubrows
+    newtabShortcutSubcontrols: syncNewtabShortcutSubcontrolAvailability
   });
   // Each switch's React view replaces its <input> in the document. The page
   // keeps working with the original element: the view reports clicks to it as
   // change events and re-renders from it, so look every control up once, now.
-  const toggleSettingControls = new Map<ToggleSettingsEntry, HTMLInputElement | HTMLSelectElement | null>(
+  const toggleSettingControls = new Map<ToggleSettingsEntry, HTMLInputElement | null>(
     TOGGLE_SETTINGS.map((entry) => {
       const control = document.getElementById(entry.inputId);
-      return [entry, isHtmlTag(control, 'input') || isHtmlTag(control, 'select') ? control : null];
+      return [entry, isHtmlTag(control, 'input') ? control : null];
     })
   );
   TOGGLE_SETTINGS.forEach((entry) => {
     const control = toggleSettingControls.get(entry);
-    if (entry.kind && isHtmlTag(control, 'input')) {
+    if (entry.kind && control) {
       registerOptionsToggleControl(control, entry.kind);
     }
   });
@@ -353,7 +271,6 @@ function createToggleControls(deps: ToggleControlsDeps) {
   return {
     registerOptionsToggleControl,
     setOptionsToggleState,
-    syncSelectionQuickActionsProviderAvailability,
     TOGGLE_SETTINGS,
     toggleSettingControls,
     searchResultSourceTypeItems,

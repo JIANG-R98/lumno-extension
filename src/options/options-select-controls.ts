@@ -70,6 +70,11 @@ function createSelectControls(deps: SelectControlsDeps) {
   const optionsState = deps.optionsState;
 
   const optionsSelectControlApi = globalThis.LumnoOptionsSelectControl;
+  // The settings tabs stay pinned at the top; a menu that flips upward must clear them.
+  function getMenuViewportTopInset(): number {
+    const tabsRect = tabsRow ? tabsRow.getBoundingClientRect() : null;
+    return tabsRect ? Math.max(0, tabsRect.bottom + 8) : 8;
+  }
   const optionsSelectControlRecords = new Map<HTMLSelectElement, SelectControlRecord>();
   function readOptionsSelectItems(select: HTMLSelectElement): SelectItem[] {
     return Array.from(select.options).map((option) => {
@@ -100,11 +105,7 @@ function createSelectControls(deps: SelectControlsDeps) {
       title.id = `${select.id}_title`;
     }
     const controller = optionsSelectControlApi.createSelectControlController(host, {
-      getViewportTopInset() {
-        // The settings tabs stay pinned at the top; a menu that flips upward must clear them.
-        const tabsRect = tabsRow ? tabsRow.getBoundingClientRect() : null;
-        return tabsRect ? Math.max(0, tabsRect.bottom + 8) : 8;
-      },
+      getViewportTopInset: getMenuViewportTopInset,
       kind,
       onSelect(next) {
         select.value = next;
@@ -286,6 +287,7 @@ function createSelectControls(deps: SelectControlsDeps) {
   }
 
   return {
+    getMenuViewportTopInset,
     optionsSelectControlRecords,
     registerOptionsSelectControl,
     refreshOptionsSelectItems,

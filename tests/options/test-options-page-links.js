@@ -25,7 +25,10 @@ async function testVersionBadgeOpensTheReleasePage() {
 }
 
 async function testTabSwitcherShortcutFollowsThePlatform() {
-  const description = (page) => page.document.querySelector('[data-i18n-tooltip="settings_tab_switcher_desc"]').getAttribute('data-tooltip');
+  const description = (page) => page.byId('_x_extension_tab_switcher_toggle_2026_unique_')
+    .closest('._x_extension_setting_row_2024_unique_')
+    .querySelector('._x_extension_info_button_2026_unique_')
+    .getAttribute('data-tooltip');
   const mac = await createOptionsPage({ platform: 'MacIntel' });
   assert.match(description(mac), /⌥Q/, 'on macOS the default shortcut should read ⌥Q');
   mac.close();

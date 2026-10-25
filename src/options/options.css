@@ -565,6 +565,11 @@ body[data-theme="dark"] ._x_extension_tabs_indicator_2024_unique_ {
 ._x_extension_settings_content_2024_unique_[data-active="true"] {
   display: flex;
 }
+/* A section a React view draws inside a tab: its rows sit in the tab's own
+   column, with its gap. */
+._x_extension_settings_section_2026_unique_ {
+  display: contents;
+}
 ._x_extension_setting_row_2024_unique_ {
   display: flex;
   justify-content: space-between;

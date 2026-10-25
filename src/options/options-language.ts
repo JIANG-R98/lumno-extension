@@ -101,10 +101,10 @@ interface LanguageDeps {
   renderSearchResultDisplayLimitControl(value: unknown): void;
   renderOverlayWidthControl(value: unknown): void;
   renderSettingsNavigation(tabKey: SettingsTabKey): void;
-  renderLabsSettings(): void;
+  // Redraws the tab sections React views draw from translated copy.
+  renderTabSections(): void;
   renderSiteSearchList(): void;
   renderAggregateSearchList(): void;
-  renderBlacklistSettings(): void;
   optionsState: LanguageState;
 }
 
@@ -149,10 +149,9 @@ function createLanguage(deps: LanguageDeps) {
     renderSearchResultDisplayLimitControl,
     renderOverlayWidthControl,
     renderSettingsNavigation,
-    renderLabsSettings,
+    renderTabSections,
     renderSiteSearchList,
-    renderAggregateSearchList,
-    renderBlacklistSettings
+    renderAggregateSearchList
   } = deps;
 
   // The page state object shared with options.js and the other modules.
@@ -369,10 +368,9 @@ function createLanguage(deps: LanguageDeps) {
       renderSearchResultDisplayLimitControl(optionsState.currentSearchResultDisplayLimit);
       renderOverlayWidthControl(optionsState.currentOverlayWidth);
       renderSettingsNavigation(optionsState.currentActiveSettingsTab);
-      renderLabsSettings();
+      renderTabSections();
       renderSiteSearchList();
       renderAggregateSearchList();
-      renderBlacklistSettings();
     });
   }
 

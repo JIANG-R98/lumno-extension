@@ -110,13 +110,10 @@ function createPage(initial, options) {
 {
   const table = getToggleSettings(settings);
   const hooks = {
-    newtabShortcutSubcontrols() {},
-    selectionQuickActionsAvailability() {}
+    newtabShortcutSubcontrols() {}
   };
   const hooked = new Map(getToggleSettings(settings, hooks).map((entry) => [entry.key, entry.afterApply]));
   assert.strictEqual(hooked.get(settings.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY), hooks.newtabShortcutSubcontrols);
-  assert.strictEqual(hooked.get(settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY), hooks.selectionQuickActionsAvailability);
-  assert.strictEqual(hooked.get(settings.SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY), hooks.selectionQuickActionsAvailability);
   assert.strictEqual(hooked.get(settings.MOTION_EFFECTS_ENABLED_STORAGE_KEY), undefined);
   const keys = table.map((entry) => entry.key);
   assert(keys.every(Boolean), 'every switch should use a key defined in LumnoSettings');
@@ -125,8 +122,16 @@ function createPage(initial, options) {
   keys.forEach((key) => {
     assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(key), `${key} should travel with Chrome Sync and export`);
   });
-  // The Labs and Blacklist tabs draw and bind their own switches.
+  // Sections drawn by React views bind their own switches.
   [
+    settings.AUTO_PIP_ENABLED_STORAGE_KEY,
+    settings.TAB_SWITCHER_ENABLED_STORAGE_KEY,
+    settings.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY,
+    settings.LINK_PREVIEW_ENABLED_STORAGE_KEY,
+    settings.PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY,
+    settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
+    settings.SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY,
+    settings.SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY,
     settings.DOCUMENT_PIP_ENABLED_STORAGE_KEY,
     settings.NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY,
     settings.MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY,
@@ -139,13 +144,8 @@ function createPage(initial, options) {
   const expectedDefaults = new Map([
     [settings.UPDATE_NOTICE_ENABLED_STORAGE_KEY, true],
     [settings.MOTION_EFFECTS_ENABLED_STORAGE_KEY, true],
-    [settings.TAB_SWITCHER_ENABLED_STORAGE_KEY, true],
-    [settings.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY, false],
-    [settings.AUTO_PIP_ENABLED_STORAGE_KEY, true],
-    [settings.PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY, false],
     [settings.OVERLAY_TAB_PRIORITY_STORAGE_KEY, true],
-    [settings.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY, settings.normalizeNewtabTimeSecondsVisible(undefined)],
-    [settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY, settings.normalizeSelectionQuickActionsEnabled(undefined)]
+    [settings.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY, settings.normalizeNewtabTimeSecondsVisible(undefined)]
   ]);
   expectedDefaults.forEach((expected, key) => {
     assert(byKey.has(key), `${key} should be bound to a switch`);
@@ -156,8 +156,7 @@ function createPage(initial, options) {
     const input = createInput();
     const hookCalls = [];
     const spec = Object.assign({}, entry, { input, afterApply: (value) => hookCalls.push(value) });
-    if (entry.control === 'select') page.binder.bindSelect(spec);
-    else page.binder.bindToggle(spec);
+    page.binder.bindToggle(spec);
     const startupValue = entry.normalize(undefined);
     if (entry.load === false) {
       assert.strictEqual(page.area.writes.length, 0, `${entry.key} is read by its section`);
@@ -173,15 +172,9 @@ function createPage(initial, options) {
       );
     }
     page.area.writes.length = 0;
-    if (entry.control === 'select') {
-      const option = settings.SELECTION_QUICK_ACTIONS_PROVIDER_KEYS[1];
-      input.change(option);
-      assert.deepStrictEqual(page.area.writes, [{ [entry.key]: entry.normalize(option) }]);
-    } else {
-      input.change(!input.checked);
-      const expected = (entry.normalizeInput || entry.normalize)(input.checked);
-      assert.deepStrictEqual(page.area.writes, [{ [entry.key]: expected }], `${entry.key} persists switch changes`);
-    }
+    input.change(!input.checked);
+    const expected = (entry.normalizeInput || entry.normalize)(input.checked);
+    assert.deepStrictEqual(page.area.writes, [{ [entry.key]: expected }], `${entry.key} persists switch changes`);
     page.area.writes.length = 0;
     page.registry.dispatch({ [entry.key]: { newValue: 'not-a-value' } }, 'sync');
     const normalized = entry.normalize('not-a-value');

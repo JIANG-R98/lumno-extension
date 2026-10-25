@@ -17,8 +17,8 @@ interface ShortcutReferenceDeps {
   formatTemplate: FormatTemplate;
   // The help center page for a slug and section (getHelpUrl in community-links).
   getHelpUrl?: (slug: string, anchor: string) => string;
-  // The tab switcher row's link to the Ctrl+Tab guide.
-  tabSwitcherCtrlTabLink?: HTMLAnchorElement | null;
+  // Hands the tab switcher row its link to the Ctrl+Tab guide.
+  onTabSwitcherCtrlTabLinkChange?(link: { href: string; label: string; bound: boolean }): void;
   optionsState: ShortcutReferenceState;
 }
 
@@ -30,7 +30,7 @@ function createShortcutReference(deps: ShortcutReferenceDeps) {
     getMessage,
     formatTemplate,
     getHelpUrl,
-    tabSwitcherCtrlTabLink
+    onTabSwitcherCtrlTabLinkChange
   } = deps;
 
   // The page state object shared with options.js and the other modules.
@@ -61,7 +61,7 @@ function createShortcutReference(deps: ShortcutReferenceDeps) {
   // links to the help center's console snippet; once bound, it links there as
   // the place to read how to change it back.
   function renderTabSwitcherCtrlTabLink(groups: readonly ShortcutReferenceGroup[]): void {
-    if (!tabSwitcherCtrlTabLink || typeof getHelpUrl !== 'function') {
+    if (!onTabSwitcherCtrlTabLinkChange || typeof getHelpUrl !== 'function') {
       return;
     }
     const item = groups
@@ -73,13 +73,7 @@ function createShortcutReference(deps: ShortcutReferenceDeps) {
       : getMessage('settings_tab_switcher_ctrl_tab_link', '像 Arc 一样用 {shortcut} 切换'), {
       shortcut: optionsState.isMacPlatform ? '⌃Tab' : 'Ctrl+Tab'
     });
-    tabSwitcherCtrlTabLink.href = getHelpUrl('tab-switcher', 'ctrl-tab');
-    tabSwitcherCtrlTabLink.setAttribute('data-bound', bound ? 'true' : 'false');
-    const labelNode = tabSwitcherCtrlTabLink.querySelector('[data-ctrl-tab-label]');
-    if (labelNode) {
-      labelNode.textContent = label;
-    }
-    tabSwitcherCtrlTabLink.hidden = false;
+    onTabSwitcherCtrlTabLinkChange({ href: getHelpUrl('tab-switcher', 'ctrl-tab'), label, bound });
   }
 
   function getShortcutReferenceParts(shortcut: string): string[] {

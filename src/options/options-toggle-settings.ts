@@ -1,5 +1,4 @@
-// The Options switches (and the one select) that each store one value under
-// one key. The page binds every entry the same way: read and normalize at
+// The Options switches that each store one value under one key. The page binds every entry the same way: read and normalize at
 // startup, follow storage changes, persist the control's own changes, and
 // write the normalized value back when the stored one was missing or
 // invalid. Entries are bound in this order, which is also the order their
@@ -21,8 +20,6 @@ interface StoredSettingEntry {
 }
 
 interface ToggleSettingEntry extends StoredSettingEntry {
-  // Toggles leave it out.
-  control?: 'toggle';
   // The React toggle kind it renders as; none for a plain one.
   kind?: string;
   normalize(raw: unknown): boolean;
@@ -31,29 +28,17 @@ interface ToggleSettingEntry extends StoredSettingEntry {
   afterApply?(value: boolean): void;
 }
 
-interface SelectSettingEntry extends StoredSettingEntry {
-  control: 'select';
-  kind?: undefined;
-  normalize(raw: unknown): string;
-  normalizeInput?(raw: unknown): string;
-  afterApply?(value: string): void;
-}
-
-type ToggleSettingsEntry = ToggleSettingEntry | SelectSettingEntry;
+type ToggleSettingsEntry = ToggleSettingEntry;
 
 // Page functions some switches run after a value is applied; tests may
 // leave them out.
 interface ToggleSettingHooks {
   newtabShortcutSubcontrols?(): void;
-  selectionQuickActionsAvailability?(): void;
-  tabSwitcherSubrows?(): void;
 }
 
 function getToggleSettings(settings: typeof Settings, hooks?: ToggleSettingHooks): readonly ToggleSettingsEntry[] {
   const S = settings;
   const page = hooks || {};
-  const isNotFalse = (value: unknown): boolean => value !== false;
-  const isTrue = (value: unknown): boolean => value === true;
   const entries: ToggleSettingsEntry[] = [
     {
       inputId: '_x_extension_overlay_page_theme_adaptation_toggle_2026_unique_',
@@ -167,69 +152,10 @@ function getToggleSettings(settings: typeof Settings, hooks?: ToggleSettingHooks
       inputId: '_x_extension_search_fuzzy_pinyin_toggle_2026_unique_',
       key: S.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY,
       normalize: S.normalizeSearchFuzzyPinyinEnabled
-    },
-    {
-      inputId: '_x_extension_auto_pip_toggle_2024_unique_',
-      kind: 'auto-pip',
-      key: S.AUTO_PIP_ENABLED_STORAGE_KEY,
-      normalize: isNotFalse,
-      refreshSelects: true
-    },
-    {
-      inputId: '_x_extension_tab_switcher_toggle_2026_unique_',
-      kind: 'tab-switcher',
-      key: S.TAB_SWITCHER_ENABLED_STORAGE_KEY,
-      normalize: S.normalizeTabSwitcherEnabled,
-      refreshSelects: true,
-      afterApply: page.tabSwitcherSubrows
-    },
-    {
-      inputId: '_x_extension_tab_switcher_current_window_only_toggle_2026_unique_',
-      kind: 'tab-switcher-current-window-only',
-      key: S.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY,
-      normalize: S.normalizeTabSwitcherCurrentWindowOnly,
-      refreshSelects: true
-    },
-    {
-      inputId: '_x_extension_link_preview_toggle_2026_unique_',
-      kind: 'link-preview',
-      key: S.LINK_PREVIEW_ENABLED_STORAGE_KEY,
-      normalize: S.normalizeLinkPreviewEnabled,
-      refreshSelects: true
-    },
-    {
-      inputId: '_x_extension_pinned_tab_recovery_toggle_2026_unique_',
-      kind: 'pinned-tab-recovery',
-      key: S.PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY,
-      normalize: isTrue,
-      refreshSelects: true
-    },
-    {
-      inputId: '_x_extension_selection_quick_actions_toggle_2026_unique_',
-      kind: 'selection-quick-actions',
-      key: S.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
-      normalize: S.normalizeSelectionQuickActionsEnabled,
-      refreshSelects: true,
-      afterApply: page.selectionQuickActionsAvailability
-    },
-    {
-      inputId: '_x_extension_selection_quick_actions_provider_select_2026_unique_',
-      control: 'select',
-      key: S.SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY,
-      normalize: S.normalizeSelectionQuickActionsProvider,
-      refreshSelects: true
-    },
-    {
-      inputId: '_x_extension_selection_quick_actions_group_toggle_2026_unique_',
-      kind: 'selection-quick-actions-group',
-      key: S.SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY,
-      normalize: S.normalizeSelectionQuickActionsGroupEnabled,
-      refreshSelects: true,
-      afterApply: page.selectionQuickActionsAvailability
     }
   ];
   return Object.freeze(entries.map((entry) => Object.freeze(entry)));
 }
 
 export { getToggleSettings };
-export type { SelectSettingEntry, ToggleSettingEntry, ToggleSettingHooks, ToggleSettingsEntry };
+export type { ToggleSettingEntry, ToggleSettingHooks, ToggleSettingsEntry };

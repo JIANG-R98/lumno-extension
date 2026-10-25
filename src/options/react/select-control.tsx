@@ -1,4 +1,4 @@
-import { useLayoutEffect } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { SelectMenu } from '../../shared/react/select-menu';
 import {
   createReactRootController,
@@ -49,7 +49,7 @@ function SelectControl({
 }: {
   host: HTMLElement;
   model: SelectControlRenderModel;
-  options: SelectControlControllerOptions;
+  options: Omit<SelectControlControllerOptions, 'kind'>;
 }) {
   useLayoutEffect(() => {
     host.dataset.disabled = model.disabled ? 'true' : 'false';
@@ -91,6 +91,28 @@ function SelectControl({
       host={host}
       windowObj={host.ownerDocument.defaultView || window}
     />
+  );
+}
+
+// A select inside a React view, in the page's select frame, which also
+// holds its menu.
+export function SettingSelect({
+  model,
+  options
+}: {
+  model: SelectControlRenderModel;
+  options: Omit<SelectControlControllerOptions, 'kind'>;
+}) {
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
+  return (
+    <div
+      className="_x_extension_select_wrap_2024_unique_ _x_extension_custom_select_2024_unique_ _x_extension_select_wrap_auto_2024_unique_ _x_extension_select_align_right_2024_unique_"
+      data-select={model.id}
+      data-select-searchable={options.searchable ? 'true' : undefined}
+      ref={setHost}
+    >
+      {host ? <SelectControl host={host} model={model} options={options} /> : null}
+    </div>
   );
 }
 
