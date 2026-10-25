@@ -1,6 +1,3 @@
-import { flushSync } from 'react-dom';
-import { createRoot, type Root } from 'react-dom/client';
-
 export interface BodyCopyRenderModel {
   note: string;
   shortcutLabel: string;
@@ -8,11 +5,6 @@ export interface BodyCopyRenderModel {
   shortcutTokens: string[];
   shortcutValue: string;
   value: string;
-}
-
-export interface BodyCopyController {
-  render(model: BodyCopyRenderModel): void;
-  destroy(): void;
 }
 
 interface NormalizedBodyCopyModel extends BodyCopyRenderModel {
@@ -75,7 +67,7 @@ function ShortcutLabel({
   );
 }
 
-function BodyCopyView({ model }: { model: NormalizedBodyCopyModel }) {
+function BodyCopyText({ model }: { model: NormalizedBodyCopyModel }) {
   const hasPlaceholder = Boolean(
     model.shortcutPlaceholder &&
       model.value.includes(model.shortcutPlaceholder)
@@ -104,51 +96,16 @@ function BodyCopyView({ model }: { model: NormalizedBodyCopyModel }) {
   );
 }
 
-export function createBodyCopyController(
-  host: HTMLElement | null
-): BodyCopyController {
-  if (!host) {
-    return {
-      render() {},
-      destroy() {}
-    };
-  }
-
-  const hostElement: HTMLElement = host;
-  const reactRoot: Root = createRoot(hostElement);
-  let destroyed = false;
-  hostElement.setAttribute('data-react-island', 'onboarding-body-copy');
-
-  function render(model: BodyCopyRenderModel): void {
-    if (destroyed) {
-      return;
-    }
-    const normalizedModel = normalizeModel(model);
-    hostElement.dataset.empty =
-      normalizedModel.value || normalizedModel.note ? 'false' : 'true';
-
-    flushSync(() => {
-      reactRoot.render(<BodyCopyView model={normalizedModel} />);
-    });
-  }
-
-  return Object.freeze({
-    render,
-    destroy() {
-      if (destroyed) {
-        return;
-      }
-      destroyed = true;
-      flushSync(() => {
-        reactRoot.unmount();
-      });
-    }
-  });
-}
-
-export function createBodyCopyApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createBodyCopyController
-  });
+// The slide's body: its text around the search shortcut, then a note.
+export function BodyCopy({ model, className }: { model: BodyCopyRenderModel; className?: string }) {
+  const normalizedModel = normalizeModel(model);
+  return (
+    <p
+      className={['body-copy', className].filter(Boolean).join(' ')}
+      data-empty={normalizedModel.value || normalizedModel.note ? 'false' : 'true'}
+      id="onboarding-body"
+    >
+      <BodyCopyText model={normalizedModel} />
+    </p>
+  );
 }

@@ -1,36 +1,41 @@
 import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  createActionButtonsApi,
-  createActionButtonsController,
-  type ActionButtonsController
-} from './action-buttons';
+import { ActionButtons, type ActionButtonsModel } from './action-buttons';
+import { getElement } from '../../../tests/react/dom';
 import { queryHtmlTag } from '../../shared/dom-lookup';
 
-let controllers: ActionButtonsController[] = [];
+let roots: Root[] = [];
 
+// Draws the group with no actions first, so its element is in place.
 function createFixture() {
-  const host = document.createElement('div');
-  document.body.appendChild(host);
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  roots.push(root);
   const options = {
     onAction: vi.fn(),
     onShowTooltip: vi.fn(),
     onHideTooltip: vi.fn()
   };
-  const controller = createActionButtonsController(host, options);
-  controllers.push(controller);
-  return { controller, host, options };
+  const controller = {
+    render(actions: ActionButtonsModel) {
+      root.render(<ActionButtons actions={actions} handlers={options} />);
+    }
+  };
+  act(() => controller.render({}));
+  return { controller, host: getElement(container, '.onboarding-copy-actions'), options };
 }
 
 afterEach(() => {
   act(() => {
-    controllers.forEach((controller) => controller.destroy());
+    roots.forEach((root) => root.unmount());
   });
-  controllers = [];
+  roots = [];
   document.body.textContent = '';
 });
 
-describe('Onboarding action buttons React island', () => {
+describe('Onboarding action buttons', () => {
   it('renders action variants, labels, icons, and tooltip metadata', () => {
     const { controller, host } = createFixture();
     act(() => {
@@ -55,8 +60,6 @@ describe('Onboarding action buttons React island', () => {
     });
 
     const buttons = Array.from(host.querySelectorAll('button'));
-    expect(createActionButtonsApi().implementation).toBe('react');
-    expect(host.dataset.reactIsland).toBe('onboarding-actions');
     expect(host.dataset.visible).toBe('true');
     expect(buttons).toHaveLength(3);
     expect(buttons[0].classList).toContain(

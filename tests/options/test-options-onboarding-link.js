@@ -9,7 +9,7 @@ const { readPageSource } = require('../helpers/page-source');
 const repoRoot = path.join(__dirname, '..', '..');
 const optionsDocument = new JSDOM(readPageSource('src/options/options.html')).window.document;
 const optionsCss = parsePageCss('src/options/options.html');
-const onboardingDocument = new JSDOM(readPageSource('src/onboarding/onboarding.html')).window.document;
+const onboardingContent = require('../../src/onboarding/onboarding-content.ts');
 
 const buttonId = '_x_extension_open_onboarding_page_2026_unique_';
 const buttonClass = '_x_extension_onboarding_guide_button_2026_unique_';
@@ -24,9 +24,9 @@ function rule(selector) {
   return found;
 }
 
-const onboardingGhost = onboardingDocument.querySelector('.onboarding-action-button--ghost');
-assert.ok(onboardingGhost && onboardingDocument.querySelector('.ri-external-link-line'),
-  'onboarding should keep the reference ghost action icon used by the options tutorial link');
+assert.ok(onboardingContent.getOnboardingBlueprint('en').slides.some((slide) => slide.actions.ghost &&
+  slide.actions.ghost.icon === 'ri-external-link-line'),
+'onboarding should keep the reference ghost action icon used by the options tutorial link');
 
 const ghost = rule(`._x_extension_shortcut_submit_2024_unique_.${buttonClass}`);
 assert.deepStrictEqual(

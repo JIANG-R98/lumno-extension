@@ -1,31 +1,47 @@
 import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  createInteractionsApi,
-  createInteractionsController,
-  type InteractionsController
-} from './interactions';
+import { Interactions, type InteractionsRenderModel } from './interactions';
+import { getElement } from '../../../tests/react/dom';
 import { queryHtmlTag } from '../../shared/dom-lookup';
 
-let controllers: InteractionsController[] = [];
+let roots: Root[] = [];
 
+interface Fixture {
+  render(model: InteractionsRenderModel): void;
+  // Opens an accordion over the rows last drawn.
+  setExpandedAccordionId(accordionId: string): void;
+}
+
+// Draws no rows first, so the element is in place.
 function createFixture() {
-  const host = document.createElement('div');
-  document.body.appendChild(host);
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  roots.push(root);
   const options = {
     onAction: vi.fn(),
     onHideInfoTooltip: vi.fn(),
     onShowInfoTooltip: vi.fn(),
     onToggleAccordion: vi.fn()
   };
-  const controller = createInteractionsController(host, options);
-  controllers.push(controller);
-  return { controller, host, options };
+  let last: InteractionsRenderModel = { expandedAccordionId: '', slots: [] };
+  const controller: Fixture = {
+    render(model) {
+      last = model;
+      root.render(<Interactions handlers={options} model={model} />);
+    },
+    setExpandedAccordionId(accordionId) {
+      controller.render({ ...last, expandedAccordionId: accordionId });
+    }
+  };
+  act(() => controller.render(last));
+  return { controller, host: getElement(container, '#onboarding-interaction-slots'), options };
 }
 
 function renderSlots(
-  controller: InteractionsController,
-  slots: Parameters<InteractionsController['render']>[0]['slots'],
+  controller: Fixture,
+  slots: InteractionsRenderModel['slots'],
   expandedAccordionId = ''
 ): void {
   act(() => {
@@ -38,13 +54,13 @@ function renderSlots(
 
 afterEach(() => {
   act(() => {
-    controllers.forEach((controller) => controller.destroy());
+    roots.forEach((root) => root.unmount());
   });
-  controllers = [];
+  roots = [];
   document.body.textContent = '';
 });
 
-describe('Onboarding interactions React island', () => {
+describe('Onboarding interactions', () => {
   it('removes an empty interaction host from the page layout', () => {
     const { controller, host } = createFixture();
 
@@ -96,8 +112,6 @@ describe('Onboarding interactions React island', () => {
       }
     ]);
 
-    expect(createInteractionsApi().implementation).toBe('react');
-    expect(host.dataset.reactIsland).toBe('onboarding-interactions');
     expect(host.dataset.accordion).toBe('false');
     expect(host.querySelectorAll('.interaction-slot')).toHaveLength(2);
     expect(host.querySelector('.ri-shield-check-line')).not.toBeNull();

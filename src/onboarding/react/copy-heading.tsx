@@ -5,8 +5,6 @@ import {
   useRef,
   useState
 } from 'react';
-import { flushSync } from 'react-dom';
-import { createRoot, type Root } from 'react-dom/client';
 
 interface TitleCycleItem {
   label?: string;
@@ -35,12 +33,8 @@ export interface CopyHeadingRenderModel {
   titleLogo?: TitleLogo | null;
 }
 
-export interface CopyHeadingController {
-  render(model: CopyHeadingRenderModel): void;
-  destroy(): void;
-}
-
-export interface CopyHeadingControllerOptions {
+export interface CopyHeadingHandlers {
+  // The title's lines changed width, so its fit needs measuring again.
   onTitleFitNeeded(): void;
 }
 
@@ -170,7 +164,7 @@ function RotatingTitle({
   options
 }: {
   model: NormalizedCopyHeadingModel;
-  options: CopyHeadingControllerOptions;
+  options: CopyHeadingHandlers;
 }) {
   const items = model.titleCycle?.items || NO_TITLE_CYCLE_ITEMS;
   const [activeIndex, setActiveIndex] = useState(0);
@@ -316,7 +310,7 @@ function TitleCopyView({
   options
 }: {
   model: NormalizedCopyHeadingModel;
-  options: CopyHeadingControllerOptions;
+  options: CopyHeadingHandlers;
 }) {
   return model.titleCycle ? (
     <RotatingTitle model={model} options={options} />
@@ -325,72 +319,32 @@ function TitleCopyView({
   );
 }
 
-export function createCopyHeadingController(
-  hosts: {
-    eyebrow: HTMLElement | null;
-    title: HTMLElement | null;
-  },
-  options: CopyHeadingControllerOptions
-): CopyHeadingController {
-  const eyebrowHost = hosts.eyebrow;
-  const titleHost = hosts.title;
-  const eyebrowRoot: Root | null = eyebrowHost ? createRoot(eyebrowHost) : null;
-  const titleRoot: Root | null = titleHost ? createRoot(titleHost) : null;
-  let destroyed = false;
-  let revision = 0;
-
-  eyebrowHost?.setAttribute('data-react-island', 'onboarding-eyebrow');
-  titleHost?.setAttribute('data-react-island', 'onboarding-title-copy');
-
-  function render(model: CopyHeadingRenderModel): void {
-    if (destroyed) {
-      return;
-    }
-    const normalizedModel = normalizeModel(model);
-    revision += 1;
-    if (eyebrowHost) {
-      eyebrowHost.dataset.empty = normalizedModel.eyebrow ? 'false' : 'true';
-    }
-    if (titleHost) {
-      titleHost.dataset.empty = normalizedModel.title ? 'false' : 'true';
-      if (normalizedModel.titleLines.length > 0 && normalizedModel.title) {
-        titleHost.setAttribute('aria-label', normalizedModel.title);
-      } else {
-        titleHost.removeAttribute('aria-label');
-      }
-    }
-
-    flushSync(() => {
-      eyebrowRoot?.render(normalizedModel.eyebrow);
-      titleRoot?.render(
-        <TitleCopyView
-          key={revision}
-          model={normalizedModel}
-          options={options}
-        />
-      );
-    });
-    options.onTitleFitNeeded();
-  }
-
-  return Object.freeze({
-    render,
-    destroy() {
-      if (destroyed) {
-        return;
-      }
-      destroyed = true;
-      flushSync(() => {
-        eyebrowRoot?.unmount();
-        titleRoot?.unmount();
-      });
-    }
-  });
-}
-
-export function createCopyHeadingApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createCopyHeadingController
-  });
+// The eyebrow and title of a slide. A title cycling through words starts its
+// cycle again whenever the title changes.
+export function CopyHeading({
+  model,
+  handlers,
+  titleClassName
+}: {
+  model: CopyHeadingRenderModel;
+  handlers: CopyHeadingHandlers;
+  titleClassName?: string;
+}) {
+  const normalizedModel = normalizeModel(model);
+  const titleKey = [normalizedModel.title, ...normalizedModel.titleLines].join('\u0000');
+  return (
+    <>
+      <p className="eyebrow" data-empty={normalizedModel.eyebrow ? 'false' : 'true'} id="onboarding-eyebrow">
+        {normalizedModel.eyebrow}
+      </p>
+      <h1
+        aria-label={normalizedModel.titleLines.length > 0 && normalizedModel.title ? normalizedModel.title : undefined}
+        className={['title', titleClassName].filter(Boolean).join(' ')}
+        data-empty={normalizedModel.title ? 'false' : 'true'}
+        id="onboarding-title"
+      >
+        <TitleCopyView key={titleKey} model={normalizedModel} options={handlers} />
+      </h1>
+    </>
+  );
 }

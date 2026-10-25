@@ -1,6 +1,4 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
-import { flushSync } from 'react-dom';
-import { createRoot, type Root } from 'react-dom/client';
 
 export interface PageStripRenderModel {
   pageCount: number;
@@ -11,12 +9,7 @@ export interface PageStripRenderModel {
   segmentAriaLabels: string[];
 }
 
-export interface PageStripController {
-  render(model: PageStripRenderModel): void;
-  destroy(): void;
-}
-
-export interface PageStripControllerOptions {
+export interface PageStripHandlers {
   onNavigate(slideIndex: number): void;
 }
 
@@ -25,91 +18,55 @@ function getSafePageCount(value: unknown): number {
   return Number.isFinite(count) ? Math.max(1, Math.floor(count)) : 1;
 }
 
-export function createPageStripController(
-  host: HTMLElement | null,
-  options: PageStripControllerOptions
-): PageStripController {
-  if (!host) {
-    return {
-      render() {},
-      destroy() {}
-    };
-  }
+// The step strip above the copy: one segment per page after the intro.
+export function PageStrip({ model, handlers }: { model: PageStripRenderModel; handlers: PageStripHandlers }) {
+  const pageCount = getSafePageCount(model.pageCount);
+  const currentPageIndex = Math.max(
+    0,
+    Math.min(pageCount - 1, Math.floor(Number(model.currentPageIndex) || 0))
+  );
+  return (
+    <div
+      aria-label={String(model.ariaLabel || '')}
+      className="page-strip"
+      data-entering={model.entering ? 'true' : 'false'}
+      hidden={Boolean(model.hidden)}
+      id="onboarding-page-strip"
+      role="group"
+      style={{ '--page-strip-count': String(pageCount) }}
+    >
+      {model.hidden
+        ? null
+        : Array.from({ length: pageCount }, (_, pageIndex) => {
+            const slideIndex = pageIndex + 1;
+            const active = pageIndex === currentPageIndex;
+            const style = {
+              '--page-strip-segment-index': String(pageIndex)
+            };
+            const handleClick = (
+              event: ReactMouseEvent<HTMLButtonElement>
+            ): void => {
+              event.preventDefault();
+              event.stopPropagation();
+              handlers.onNavigate(slideIndex);
+            };
 
-  const hostElement: HTMLElement = host;
-  const reactRoot: Root = createRoot(hostElement);
-  let destroyed = false;
-  hostElement.setAttribute('data-react-island', 'onboarding-page-strip');
-
-  function render(model: PageStripRenderModel): void {
-    if (destroyed) {
-      return;
-    }
-    const pageCount = getSafePageCount(model.pageCount);
-    const currentPageIndex = Math.max(
-      0,
-      Math.min(pageCount - 1, Math.floor(Number(model.currentPageIndex) || 0))
-    );
-    hostElement.hidden = Boolean(model.hidden);
-    hostElement.dataset.entering = model.entering ? 'true' : 'false';
-    hostElement.style.setProperty('--page-strip-count', String(pageCount));
-    hostElement.setAttribute('aria-label', String(model.ariaLabel || ''));
-
-    flushSync(() => {
-      reactRoot.render(
-        model.hidden
-          ? null
-          : Array.from({ length: pageCount }, (_, pageIndex) => {
-              const slideIndex = pageIndex + 1;
-              const active = pageIndex === currentPageIndex;
-              const style = {
-                '--page-strip-segment-index': String(pageIndex)
-              };
-              const handleClick = (
-                event: ReactMouseEvent<HTMLButtonElement>
-              ): void => {
-                event.preventDefault();
-                event.stopPropagation();
-                options.onNavigate(slideIndex);
-              };
-
-              return (
-                <button
-                  aria-current={active ? 'step' : undefined}
-                  aria-label={String(
-                    model.segmentAriaLabels[pageIndex] || `Page ${slideIndex}`
-                  )}
-                  className="page-strip-segment"
-                  data-active={active ? 'true' : 'false'}
-                  data-slide-target={String(slideIndex)}
-                  key={slideIndex}
-                  onClick={handleClick}
-                  style={style}
-                  type="button"
-                />
-              );
-            })
-      );
-    });
-  }
-
-  return Object.freeze({
-    render,
-    destroy() {
-      if (destroyed) {
-        return;
-      }
-      destroyed = true;
-      flushSync(() => {
-        reactRoot.unmount();
-      });
-    }
-  });
-}
-
-export function createPageStripApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createPageStripController
-  });
+            return (
+              <button
+                aria-current={active ? 'step' : undefined}
+                aria-label={String(
+                  model.segmentAriaLabels[pageIndex] || `Page ${slideIndex}`
+                )}
+                className="page-strip-segment"
+                data-active={active ? 'true' : 'false'}
+                data-slide-target={String(slideIndex)}
+                key={slideIndex}
+                onClick={handleClick}
+                style={style}
+                type="button"
+              />
+            );
+          })}
+    </div>
+  );
 }

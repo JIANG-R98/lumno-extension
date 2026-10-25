@@ -3,8 +3,6 @@ import type {
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent
 } from 'react';
-import { flushSync } from 'react-dom';
-import { createRoot, type Root } from 'react-dom/client';
 
 export interface OnboardingAction {
   actionId: string;
@@ -21,12 +19,7 @@ export interface ActionButtonsModel {
   ghost?: OnboardingAction | null;
 }
 
-export interface ActionButtonsController {
-  render(actions: ActionButtonsModel): void;
-  destroy(): void;
-}
-
-export interface ActionButtonsControllerOptions {
+export interface ActionButtonsHandlers {
   onAction(actionId: string, event: MouseEvent): void;
   onShowTooltip(button: HTMLButtonElement): void;
   onHideTooltip(): void;
@@ -35,7 +28,7 @@ export interface ActionButtonsControllerOptions {
 interface ActionButtonProps {
   action: OnboardingAction;
   kind: 'primary' | 'secondary' | 'ghost';
-  options: ActionButtonsControllerOptions;
+  options: ActionButtonsHandlers;
 }
 
 function ActionButton({
@@ -100,72 +93,17 @@ function ActionButton({
   );
 }
 
-export function createActionButtonsController(
-  host: HTMLElement | null,
-  options: ActionButtonsControllerOptions
-): ActionButtonsController {
-  if (!host) {
-    return {
-      render() {},
-      destroy() {}
-    };
-  }
-
-  const hostElement: HTMLElement = host;
-  const reactRoot: Root = createRoot(hostElement);
-  let destroyed = false;
-  hostElement.setAttribute('data-react-island', 'onboarding-actions');
-
-  function render(actions: ActionButtonsModel): void {
-    if (destroyed) {
-      return;
-    }
-    const primary = actions.primary || null;
-    const secondary = actions.secondary || null;
-    const ghost = actions.ghost || null;
-    const visible = Boolean(primary || secondary || ghost);
-    hostElement.hidden = !visible;
-    hostElement.dataset.visible = visible ? 'true' : 'false';
-
-    flushSync(() => {
-      reactRoot.render(
-        <>
-          {primary ? (
-            <ActionButton action={primary} kind="primary" options={options} />
-          ) : null}
-          {secondary ? (
-            <ActionButton
-              action={secondary}
-              kind="secondary"
-              options={options}
-            />
-          ) : null}
-          {ghost ? (
-            <ActionButton action={ghost} kind="ghost" options={options} />
-          ) : null}
-        </>
-      );
-    });
-  }
-
-  return Object.freeze({
-    render,
-    destroy() {
-      if (destroyed) {
-        return;
-      }
-      destroyed = true;
-      options.onHideTooltip();
-      flushSync(() => {
-        reactRoot.unmount();
-      });
-    }
-  });
-}
-
-export function createActionButtonsApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createActionButtonsController
-  });
+// The slide's buttons: next, back, and one more action.
+export function ActionButtons({ actions, handlers }: { actions: ActionButtonsModel; handlers: ActionButtonsHandlers }) {
+  const primary = actions.primary || null;
+  const secondary = actions.secondary || null;
+  const ghost = actions.ghost || null;
+  const visible = Boolean(primary || secondary || ghost);
+  return (
+    <div aria-label="Onboarding actions" className="onboarding-copy-actions" data-visible={visible ? 'true' : 'false'} hidden={!visible}>
+      {primary ? <ActionButton action={primary} kind="primary" options={handlers} /> : null}
+      {secondary ? <ActionButton action={secondary} kind="secondary" options={handlers} /> : null}
+      {ghost ? <ActionButton action={ghost} kind="ghost" options={handlers} /> : null}
+    </div>
+  );
 }

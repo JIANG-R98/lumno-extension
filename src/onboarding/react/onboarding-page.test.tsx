@@ -3,12 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import onboardingHtml from '../onboarding.html?raw';
 import * as onboardingContent from '../onboarding-content';
 import { runPageBundle } from '../../../tests/react/page-bundles';
-import { createActionButtonsApi } from './action-buttons';
-import { createBodyCopyApi } from './body-copy';
-import { createCopyHeadingApi } from './copy-heading';
+import { createCopyPanelApi } from './copy-panel';
 import { createCursorLayerApi } from './cursor-layer';
-import { createInteractionsApi } from './interactions';
-import { createPageStripApi } from './page-strip';
 import { createVisualSurfaceApi } from './visual-surface';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
 import { expectElement, getElements, required } from '../../../tests/react/dom';
@@ -85,12 +81,8 @@ async function bootOnboardingPage(stored: Record<string, unknown> = {}) {
     addEventListener() {},
     removeEventListener() {}
   }));
-  globalThis.LumnoOnboardingActions = createActionButtonsApi();
-  globalThis.LumnoOnboardingBodyCopy = createBodyCopyApi();
-  globalThis.LumnoOnboardingCopyHeading = createCopyHeadingApi();
+  globalThis.LumnoOnboardingCopyPanel = createCopyPanelApi();
   globalThis.LumnoOnboardingCursorLayer = createCursorLayerApi();
-  globalThis.LumnoOnboardingInteractions = createInteractionsApi();
-  globalThis.LumnoOnboardingPageStrip = createPageStripApi();
   globalThis.LumnoOnboardingVisualSurface = createVisualSurfaceApi();
   globalThis.LumnoTooltipView = createTooltipViewApi();
   vi.resetModules();

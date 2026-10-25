@@ -1,29 +1,35 @@
 import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  createBodyCopyApi,
-  createBodyCopyController,
-  type BodyCopyController,
-  type BodyCopyRenderModel
-} from './body-copy';
-import { getElements } from '../../../tests/react/dom';
+import { BodyCopy, type BodyCopyRenderModel } from './body-copy';
+import { getElement, getElements } from '../../../tests/react/dom';
 import { queryHtmlElement } from '../../shared/dom-lookup';
 
-let controllers: BodyCopyController[] = [];
+let roots: Root[] = [];
 
+interface Fixture {
+  render(model: BodyCopyRenderModel): void;
+}
+
+// Draws an empty body first, so its element is in place.
 function createFixture() {
-  const host = document.createElement('p');
-  host.id = 'onboarding-body';
-  host.className = 'body-copy';
-  host.dataset.empty = 'true';
-  document.body.appendChild(host);
-  const controller = createBodyCopyController(host);
-  controllers.push(controller);
-  return { controller, host };
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  roots.push(root);
+  const controller: Fixture = {
+    render(model) {
+      root.render(<BodyCopy model={model} />);
+    }
+  };
+  act(() => controller.render({
+    note: '', shortcutLabel: '', shortcutPlaceholder: '', shortcutTokens: [], shortcutValue: '', value: ''
+  }));
+  return { controller, host: getElement(container, '#onboarding-body') };
 }
 
 function render(
-  controller: BodyCopyController,
+  controller: Fixture,
   overrides: Partial<BodyCopyRenderModel> = {}
 ): void {
   act(() => {
@@ -41,13 +47,13 @@ function render(
 
 afterEach(() => {
   act(() => {
-    controllers.forEach((controller) => controller.destroy());
+    roots.forEach((root) => root.unmount());
   });
-  controllers = [];
+  roots = [];
   document.body.textContent = '';
 });
 
-describe('Onboarding body copy React island', () => {
+describe('Onboarding body copy', () => {
   it('renders plain body and note copy while preserving stable child targets', () => {
     const { controller, host } = createFixture();
     render(controller, {
@@ -55,8 +61,6 @@ describe('Onboarding body copy React island', () => {
       value: 'Search from any page.'
     });
 
-    expect(createBodyCopyApi().implementation).toBe('react');
-    expect(host.dataset.reactIsland).toBe('onboarding-body-copy');
     expect(host.dataset.empty).toBe('false');
     expect(host.querySelector('#onboarding-body-prefix')?.textContent).toBe(
       'Search from any page.'

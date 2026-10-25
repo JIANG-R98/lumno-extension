@@ -15,12 +15,8 @@ import type { createShortcutsTabApi } from '../options/react/shortcuts-tab';
 import type { createToastApi } from '../shared/react/toast';
 import type { createAccountTabApi } from '../options/react/account-tab';
 import type { createPopupApi } from '../popup/react/popup-view';
-import type { createActionButtonsApi } from '../onboarding/react/action-buttons';
-import type { createBodyCopyApi } from '../onboarding/react/body-copy';
-import type { createCopyHeadingApi } from '../onboarding/react/copy-heading';
+import type { createCopyPanelApi } from '../onboarding/react/copy-panel';
 import type { createCursorLayerApi } from '../onboarding/react/cursor-layer';
-import type { createInteractionsApi } from '../onboarding/react/interactions';
-import type { createPageStripApi } from '../onboarding/react/page-strip';
 import type { createVisualSurfaceApi } from '../onboarding/react/visual-surface';
 import type { createBookmarksViewApi } from '../newtab/react/bookmarks';
 import type { createSegmentedIndicatorApi } from '../shared/react/segmented-indicator';
@@ -108,12 +104,8 @@ declare global {
   var LumnoOptionsToast: ReturnType<typeof createToastApi> | undefined;
   var LumnoOptionsAccountTab: ReturnType<typeof createAccountTabApi> | undefined;
   // Set by the onboarding page's React islands entry.
-  var LumnoOnboardingActions: ReturnType<typeof createActionButtonsApi> | undefined;
-  var LumnoOnboardingBodyCopy: ReturnType<typeof createBodyCopyApi> | undefined;
-  var LumnoOnboardingCopyHeading: ReturnType<typeof createCopyHeadingApi> | undefined;
   var LumnoOnboardingCursorLayer: ReturnType<typeof createCursorLayerApi> | undefined;
-  var LumnoOnboardingInteractions: ReturnType<typeof createInteractionsApi> | undefined;
-  var LumnoOnboardingPageStrip: ReturnType<typeof createPageStripApi> | undefined;
+  var LumnoOnboardingCopyPanel: ReturnType<typeof createCopyPanelApi> | undefined;
   var LumnoOnboardingVisualSurface: ReturnType<typeof createVisualSurfaceApi> | undefined;
   // Set by the New Tab's React islands entry.
   var LumnoNewtabBookmarksView: ReturnType<typeof createBookmarksViewApi> | undefined;

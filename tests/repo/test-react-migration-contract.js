@@ -200,10 +200,10 @@ async function testPages() {
   const onboarding = await createOnboardingPage({});
   await onboarding.settle(200);
   assert.deepStrictEqual(missing(onboarding.window, [
-    'LumnoOnboardingPageStripReact', 'LumnoOnboardingActionsReact', 'LumnoOnboardingBodyCopyReact', 'LumnoOnboardingCopyHeadingReact',
-    'LumnoOnboardingCursorLayerReact', 'LumnoOnboardingInteractionsReact', 'LumnoOnboardingVisualSurfaceReact', 'LumnoOnboardingReactIslands'
+    'LumnoOnboardingCopyPanelReact', 'LumnoOnboardingCursorLayerReact', 'LumnoOnboardingVisualSurfaceReact', 'LumnoOnboardingReactIslands'
   ]), [], 'Onboarding should install every migrated React API');
-  assert.strictEqual(onboarding.document.getElementById('onboarding-page-strip').getAttribute('data-react-island'), 'onboarding-page-strip');
+  assert.strictEqual(onboarding.document.getElementById('onboarding-copy-panel').getAttribute('data-react-island'), 'onboarding-copy-panel');
+  assert.ok(onboarding.document.getElementById('onboarding-page-strip'), 'and draw the copy column through it');
   onboarding.close();
 }
 

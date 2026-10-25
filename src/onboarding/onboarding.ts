@@ -5,7 +5,7 @@ import * as NAVIGATION_DISPOSITION from '../domain/navigation-disposition';
 import type { Disposition } from '../domain/navigation-disposition';
 import * as LumnoSettings from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
-import { isElementNode, isHtmlElement } from '../shared/dom-guards';
+import { isElementNode } from '../shared/dom-guards';
 import { getHtmlElement, queryHtmlElement } from '../shared/dom-lookup';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as MODEL from './onboarding-content';
@@ -16,6 +16,7 @@ import type {
   OnboardingSlide,
   OnboardingState
 } from './onboarding-content';
+import type { CopyPanelModel, CopySwapPhase } from './react/copy-panel';
 import type { InteractionBrowserAvatars, InteractionInfoTooltip } from './react/interactions';
 import type { NewtabPreviewItem } from './react/newtab-preview';
 import type { SiteSearchTheme } from './react/site-search-demo';
@@ -121,78 +122,44 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   const params = new URLSearchParams(window.location.search || '');
   const root = queryHtmlElement(document, '[data-onboarding-shell]');
   const copyPanel = getHtmlElement(document, 'onboarding-copy-panel');
-  const eyebrow = getHtmlElement(document, 'onboarding-eyebrow');
-  const title = getHtmlElement(document, 'onboarding-title');
-  const body = getHtmlElement(document, 'onboarding-body');
-  const pageStrip = getHtmlElement(document, 'onboarding-page-strip');
-  const interactionSlots = getHtmlElement(document, 'onboarding-interaction-slots');
   const visualSlot = getHtmlElement(document, 'onboarding-visual-slot');
   const visualPanel = getHtmlElement(document, 'onboarding-visual-panel');
   const visualCanvas = getHtmlElement(document, 'onboarding-visual-canvas');
   const visualStage = getHtmlElement(document, 'onboarding-visual-stage');
   const cursorLayer = getHtmlElement(document, 'onboarding-cursor-layer');
-  const copyActions = queryHtmlElement(document, '.onboarding-copy-actions');
   // Set by the React islands entry, which the page loads first.
-  const onboardingPageStripApi = globalThis.LumnoOnboardingPageStrip;
-  const onboardingActionsApi = globalThis.LumnoOnboardingActions;
-  const onboardingBodyCopyApi = globalThis.LumnoOnboardingBodyCopy;
-  const onboardingCopyHeadingApi = globalThis.LumnoOnboardingCopyHeading;
+  const onboardingCopyPanelApi = globalThis.LumnoOnboardingCopyPanel;
   const onboardingCursorLayerApi = globalThis.LumnoOnboardingCursorLayer;
-  const onboardingInteractionsApi = globalThis.LumnoOnboardingInteractions;
   const onboardingVisualSurfaceApi = globalThis.LumnoOnboardingVisualSurface;
-  if (!onboardingPageStripApi || !onboardingActionsApi || !onboardingBodyCopyApi || !onboardingCopyHeadingApi ||
-      !onboardingCursorLayerApi || !onboardingInteractionsApi || !onboardingVisualSurfaceApi) {
+  if (!onboardingCopyPanelApi || !onboardingCursorLayerApi || !onboardingVisualSurfaceApi) {
     return;
   }
-  const pageStripController = pageStrip
-    ? onboardingPageStripApi.createPageStripController(pageStrip, {
-      onNavigate(slideIndex) {
-        dispatch({ type: 'GOTO', index: slideIndex });
-      }
-    })
-    : null;
-  const copyActionsController = copyActions
-    ? onboardingActionsApi.createActionButtonsController(copyActions, {
-      onAction(actionId, event) {
-        runExtensionAction(actionId, event);
-      },
-      onShowTooltip(button) {
-        showActionButtonTooltip(button);
-      },
-      onHideTooltip() {
-        hideActionButtonTooltip();
-      }
-    })
-    : null;
-  const interactionSlotsController = interactionSlots
-    ? onboardingInteractionsApi.createInteractionsController(interactionSlots, {
-      onAction(actionId, event) {
-        runExtensionAction(actionId, event);
-      },
-      onToggleAccordion(accordionId) {
-        toggleInteractionAccordion(accordionId);
-      },
-      onShowInfoTooltip(target, infoTooltip, browserAvatars) {
-        showOnboardingInfoTooltip(target, infoTooltip, browserAvatars);
-      },
-      onHideInfoTooltip() {
-        hideOnboardingInfoTooltip();
-      }
-    })
-    : null;
-  const bodyCopyController = body
-    ? onboardingBodyCopyApi.createBodyCopyController(body)
-    : null;
-  const copyHeadingController = (eyebrow || title)
-    ? onboardingCopyHeadingApi.createCopyHeadingController(
-      { eyebrow, title },
-      {
-        onTitleFitNeeded() {
-          scheduleTitleFitUpdate();
-        }
-      }
-    )
-    : null;
+  const copyPanelController = onboardingCopyPanelApi.createCopyPanelController(copyPanel, {
+    onNavigate(slideIndex) {
+      dispatch({ type: 'GOTO', index: slideIndex });
+    },
+    onTitleFitNeeded() {
+      scheduleTitleFitUpdate();
+    },
+    onAction(actionId, event) {
+      runExtensionAction(actionId, event);
+    },
+    onShowTooltip(button) {
+      showActionButtonTooltip(button);
+    },
+    onHideTooltip() {
+      hideActionButtonTooltip();
+    },
+    onToggleAccordion(accordionId) {
+      toggleInteractionAccordion(accordionId);
+    },
+    onShowInfoTooltip(target, infoTooltip, browserAvatars) {
+      showOnboardingInfoTooltip(target, infoTooltip, browserAvatars);
+    },
+    onHideInfoTooltip() {
+      hideOnboardingInfoTooltip();
+    }
+  });
   const cursorLayerController = cursorLayer
     ? onboardingCursorLayerApi.createCursorLayerController(cursorLayer)
     : null;
@@ -207,6 +174,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   let copySwapTimeout = 0;
   let visualScaleFrame = 0;
   let expandedInteractionAccordionId = '';
+  // The title and body's place in a slide change.
+  let copySwap: CopySwapPhase = null;
+  // The step strip shows from the second slide on and slides in when it
+  // appears; this is the slide it last drew.
+  let pageStripIndex = -1;
+  let pageStripEntering = false;
   let visualResizeObserver: ResizeObserver | null = null;
   const onboardingInfoTooltipController = LumnoTooltip.createController({
     id: '_x_extension_onboarding_info_tooltip_2026_unique_',
@@ -722,38 +695,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 
 
-  function updateInteractionAccordionRows(): void {
-    if (!interactionSlotsController) {
-      return;
-    }
-    interactionSlotsController.setExpandedAccordionId(
-      expandedInteractionAccordionId
-    );
-  }
-
   function toggleInteractionAccordion(accordionId: string | undefined): void {
     const id = String(accordionId || '').trim();
     if (!id) {
       return;
     }
     expandedInteractionAccordionId = expandedInteractionAccordionId === id ? '' : id;
-    updateInteractionAccordionRows();
-  }
-
-  function renderInteractions(slide: OnboardingSlide): void {
-    if (!interactionSlots || !interactionSlotsController) {
-      return;
-    }
-    hideOnboardingInfoTooltip();
-    const slots = slide.left.interactionSlots;
-    const hasAccordion = slots.some((slot) => slot.accordion && slot.accordion.text);
-    interactionSlots.hidden = slots.length === 0;
-    interactionSlots.dataset.visible = slots.length > 0 ? 'true' : 'false';
-    interactionSlots.dataset.accordion = hasAccordion ? 'true' : 'false';
-    interactionSlotsController.render({
-      slots,
-      expandedAccordionId: expandedInteractionAccordionId
-    });
+    renderCopyPanel();
   }
 
 
@@ -937,13 +885,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     }
   }
 
-  function renderCopyActions(slide: OnboardingSlide): void {
-    if (!copyActionsController) {
-      return;
-    }
-    copyActionsController.render(slide.actions);
-  }
-
   function renderCursor(slide: OnboardingSlide): void {
     if (!cursorLayerController) {
       return;
@@ -954,57 +895,79 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     });
   }
 
-  function renderBodyCopy(slide: OnboardingSlide): void {
-    if (!bodyCopyController) {
-      return;
+  function getCopyPanelModel(slide: OnboardingSlide, slideCount: number, index: number): CopyPanelModel {
+    const pageCount = Math.max(1, slideCount - 1);
+    const currentPageIndex = Math.max(0, index - 1);
+    const pageStripHidden = index <= 0;
+    if (index !== pageStripIndex) {
+      pageStripEntering = !pageStripHidden && pageStripIndex <= 0;
+      pageStripIndex = index;
     }
-    bodyCopyController.render({
-      note: String(slide.copy.note || ''),
-      shortcutLabel: currentShortcutLabel,
-      shortcutPlaceholder: SHORTCUT_PLACEHOLDER,
-      shortcutTokens: getShortcutDisplayTokens(currentShortcutValue),
-      shortcutValue: normalizeShortcutValue(currentShortcutValue),
-      value: String(slide.copy.body || '')
-    });
+    return {
+      slideId: slide.id,
+      pageStrip: {
+        pageCount,
+        currentPageIndex,
+        hidden: pageStripHidden,
+        entering: pageStripEntering,
+        ariaLabel: formatRuntimeTemplate(
+          getRuntimeMiscText('pageStripAriaTemplate', 'Onboarding navigation, page {current} of {total}'),
+          { current: currentPageIndex + 1, total: pageCount }
+        ),
+        segmentAriaLabels: Array.from({ length: pageCount }, (_, pageIndex) => formatRuntimeTemplate(
+          getRuntimeMiscText('pageSegmentAriaTemplate', 'Page {page}'),
+          { page: pageIndex + 1 }
+        ))
+      },
+      heading: {
+        cycleFirstDelayMs: TITLE_CYCLE_FIRST_DELAY_MS,
+        cycleIntervalMs: TITLE_CYCLE_INTERVAL_MS,
+        eyebrow: String(slide.copy.eyebrow || ''),
+        reducedMotion: prefersReducedMotion(),
+        swapDurationMs: getTextSwapDurationMs(),
+        title: String(slide.copy.title || ''),
+        titleCycle: slide.copy.titleCycle || null,
+        titleLines: slide.copy.titleLines || [],
+        titleLogo: slide.copy.titleLogo || null
+      },
+      body: {
+        note: String(slide.copy.note || ''),
+        shortcutLabel: currentShortcutLabel,
+        shortcutPlaceholder: SHORTCUT_PLACEHOLDER,
+        shortcutTokens: getShortcutDisplayTokens(currentShortcutValue),
+        shortcutValue: normalizeShortcutValue(currentShortcutValue),
+        value: String(slide.copy.body || '')
+      },
+      interactions: {
+        slots: slide.left.interactionSlots,
+        expandedAccordionId: expandedInteractionAccordionId
+      },
+      actions: slide.actions,
+      copySwap
+    };
   }
 
-  function renderPageStrip(): void {
-    if (!pageStrip || !pageStripController || !blueprint || !state) {
+  // Redraws the copy column; an info tooltip left open would point at a
+  // row that may have moved.
+  function renderCopyPanel(): void {
+    if (!blueprint || !state) {
       return;
     }
-    const wasPageStripHidden = pageStrip.hidden;
-    pageStrip.hidden = state.index <= 0;
-    pageStrip.dataset.entering =
-      wasPageStripHidden && !pageStrip.hidden ? 'true' : 'false';
-    const pageCount = Math.max(1, blueprint.slides.length - 1);
-    const currentPageIndex = Math.max(0, state.index - 1);
-    pageStrip.style.setProperty('--page-strip-count', String(pageCount));
-    const ariaLabel = formatRuntimeTemplate(
-      getRuntimeMiscText(
-        'pageStripAriaTemplate',
-        'Onboarding navigation, page {current} of {total}'
-      ),
-      { current: currentPageIndex + 1, total: pageCount }
-    );
-    pageStrip.setAttribute('aria-label', ariaLabel);
-    pageStripController.render({
-      pageCount,
-      currentPageIndex,
-      hidden: pageStrip.hidden,
-      entering: pageStrip.dataset.entering === 'true',
-      ariaLabel,
-      segmentAriaLabels: Array.from(
-        { length: pageCount },
-        (_, pageIndex) =>
-          formatRuntimeTemplate(
-            getRuntimeMiscText('pageSegmentAriaTemplate', 'Page {page}'),
-            { page: pageIndex + 1 }
-          )
-      )
-    });
+    const slide = MODEL.getSlideByIndex(blueprint, state.index);
+    if (!slide) {
+      return;
+    }
+    hideOnboardingInfoTooltip();
+    copyPanelController.render(getCopyPanelModel(slide, blueprint.slides.length, state.index));
+    scheduleTitleFitUpdate();
+  }
+
+  function getTitle(): HTMLElement | null {
+    return getHtmlElement(document, 'onboarding-title');
   }
 
   function getTitleFitLines(): Element[] {
+    const title = getTitle();
     if (!title) {
       return [];
     }
@@ -1013,6 +976,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   }
 
   function updateTitleFitScale(): void {
+    const title = getTitle();
     if (!title) {
       return;
     }
@@ -1037,7 +1001,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   }
 
   function scheduleTitleFitUpdate(): void {
-    if (!title || typeof window.requestAnimationFrame !== 'function') {
+    if (typeof window.requestAnimationFrame !== 'function') {
       updateTitleFitScale();
       return;
     }
@@ -1164,23 +1128,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   }
 
 
-  function renderTitleCopy(slide: OnboardingSlide): void {
-    if (!title || !copyHeadingController) {
-      return;
-    }
-    copyHeadingController.render({
-      cycleFirstDelayMs: TITLE_CYCLE_FIRST_DELAY_MS,
-      cycleIntervalMs: TITLE_CYCLE_INTERVAL_MS,
-      eyebrow: String(slide.copy.eyebrow || ''),
-      reducedMotion: prefersReducedMotion(),
-      swapDurationMs: getTextSwapDurationMs(),
-      title: String(slide.copy.title || ''),
-      titleCycle: slide.copy.titleCycle || null,
-      titleLines: slide.copy.titleLines || [],
-      titleLogo: slide.copy.titleLogo || null
-    });
-  }
-
   function render(): void {
     if (!blueprint || !state) {
       return;
@@ -1197,34 +1144,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     document.documentElement.lang = blueprint.htmlLang || 'en';
     document.title = `${blueprint.brand} Onboarding`;
 
-    if (copyPanel) {
-      copyPanel.dataset.slideId = slide.id;
-    }
-    renderPageStrip();
-    renderTitleCopy(slide);
-    renderBodyCopy(slide);
-    renderInteractions(slide);
-    renderCopyActions(slide);
+    renderCopyPanel();
     renderVisualSurface(slide);
     scheduleVisualCanvasScaleUpdate();
   }
 
-  function getCopySwapTargets(): HTMLElement[] {
-    const targets: HTMLElement[] = [];
-    if (title) {
-      targets.push(title);
-    }
-    if (body) {
-      targets.push(body);
-    }
-    return targets;
-  }
-
-  function clearCopySwapClasses(): void {
-    getCopySwapTargets().forEach((element) => {
-      element.classList.remove('t-copy-swap', 'is-exit', 'is-enter-start');
-    });
-  }
 
   function clearCursorTransitionStart(): void {
     if (!root) {
@@ -1294,34 +1218,29 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       window.clearTimeout(copySwapTimeout);
       copySwapTimeout = 0;
     }
-    const targets = getCopySwapTargets();
-    if (targets.length === 0 || prefersReducedMotion()) {
-      clearCopySwapClasses();
+    if (prefersReducedMotion()) {
+      copySwap = null;
       captureCursorTransitionStart(nextState);
       commitState(nextState);
       return;
     }
     prepareVisualExit(nextState);
-    targets.forEach((element) => {
-      element.classList.add('t-copy-swap');
-      element.classList.remove('is-enter-start');
-      element.classList.add('is-exit');
-    });
+    copySwap = 'exit';
+    renderCopyPanel();
     copySwapTimeout = window.setTimeout(() => {
       copySwapTimeout = 0;
       captureCursorTransitionStart(nextState);
+      // The new copy is placed where it slides in from, laid out there, then
+      // released so it slides in.
+      copySwap = 'enter-start';
       commitState(nextState);
-      const nextTargets = getCopySwapTargets();
-      nextTargets.forEach((element) => {
-        element.classList.add('t-copy-swap', 'is-enter-start');
-        element.classList.remove('is-exit');
+      [getTitle(), getHtmlElement(document, 'onboarding-body')].forEach((element) => {
+        if (element) {
+          void element.offsetHeight;
+        }
       });
-      nextTargets.forEach((element) => {
-        void element.offsetHeight;
-      });
-      nextTargets.forEach((element) => {
-        element.classList.remove('is-enter-start');
-      });
+      copySwap = 'enter';
+      renderCopyPanel();
     }, getTextSwapDurationMs());
   }
 
@@ -1337,12 +1256,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     animateCopySwap(nextState);
   }
 
-  // An action by its id, or the element whose data-action names it.
-  function runExtensionAction(actionTarget: string | HTMLElement, event?: MouseEvent): void {
-    const target = typeof actionTarget === 'string' ? null : actionTarget;
-    const id = typeof actionTarget === 'string'
-      ? actionTarget
-      : String(actionTarget.dataset.action || '');
+  // Runs a slide action by its id; the click decides where a page opens.
+  function runExtensionAction(id: string, event?: MouseEvent): void {
     if (!id) {
       return;
     }
@@ -1353,10 +1268,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     }
     if (id === 'prev') {
       dispatch({ type: 'PREV' });
-      return;
-    }
-    if (id === 'toggleInteractionAccordion') {
-      toggleInteractionAccordion(target ? target.dataset.accordionId : '');
       return;
     }
     if (id === 'openChromeWebStore') {
@@ -1399,48 +1310,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       }
     }
   }
-
-  // Click events target elements, never text nodes.
-  document.addEventListener('click', (event) => {
-    const eventTarget = event.target;
-    if (!isElementNode(eventTarget)) {
-      return;
-    }
-    const accordionLinkTarget = eventTarget.closest('.interaction-accordion-link[data-action]');
-    if (isHtmlElement(accordionLinkTarget)) {
-      event.preventDefault();
-      runExtensionAction(accordionLinkTarget, event);
-      return;
-    }
-    if (eventTarget.closest('.interaction-accordion-panel')) {
-      return;
-    }
-    const target = eventTarget.closest('[data-action], [data-slide-target]');
-    if (!isHtmlElement(target)) {
-      return;
-    }
-    event.preventDefault();
-    if (target.dataset.slideTarget) {
-      dispatch({ type: 'GOTO', index: Number(target.dataset.slideTarget) });
-      return;
-    }
-    runExtensionAction(target, event);
-  });
-
-  document.addEventListener('auxclick', (event) => {
-    if (!event || Number(event.button) !== 1) {
-      return;
-    }
-    const target = isElementNode(event.target)
-      ? event.target.closest('.interaction-accordion-link[data-action]')
-      : null;
-    if (!isHtmlElement(target)) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    runExtensionAction(target, event);
-  });
 
   document.addEventListener('keydown', (event) => {
     if (!event || event.defaultPrevented) {

@@ -1,27 +1,34 @@
 import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  createPageStripApi,
-  createPageStripController,
-  type PageStripController
-} from './page-strip';
-import { getTags } from '../../../tests/react/dom';
+import { PageStrip, type PageStripRenderModel } from './page-strip';
+import { getElement, getTags } from '../../../tests/react/dom';
 
-let controllers: PageStripController[] = [];
+let roots: Root[] = [];
 
+interface Fixture {
+  render(model: PageStripRenderModel): void;
+}
+
+// Draws the strip hidden, as on the intro page, so its element is in place.
 function createFixture() {
-  const host = document.createElement('div');
-  host.hidden = true;
-  document.body.appendChild(host);
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  roots.push(root);
   const onNavigate = vi.fn();
-  const controller = createPageStripController(host, { onNavigate });
-  controllers.push(controller);
-  return { controller, host, onNavigate };
+  const controller: Fixture = {
+    render(model) {
+      root.render(<PageStrip handlers={{ onNavigate }} model={model} />);
+    }
+  };
+  act(() => controller.render({ pageCount: 1, currentPageIndex: 0, hidden: true, entering: false, ariaLabel: '', segmentAriaLabels: [] }));
+  return { controller, host: getElement(container, '#onboarding-page-strip'), onNavigate };
 }
 
 function renderPage(
-  controller: PageStripController,
-  overrides: Partial<Parameters<PageStripController['render']>[0]> = {}
+  controller: Fixture,
+  overrides: Partial<PageStripRenderModel> = {}
 ): void {
   act(() => {
     controller.render({
@@ -38,13 +45,13 @@ function renderPage(
 
 afterEach(() => {
   act(() => {
-    controllers.forEach((controller) => controller.destroy());
+    roots.forEach((root) => root.unmount());
   });
-  controllers = [];
+  roots = [];
   document.body.textContent = '';
 });
 
-describe('Onboarding page strip React island', () => {
+describe('Onboarding page strip', () => {
   it('renders the current step with the legacy class and ARIA contract', () => {
     const { controller, host } = createFixture();
     renderPage(controller);
@@ -52,8 +59,6 @@ describe('Onboarding page strip React island', () => {
     const segments = Array.from(
       getTags(host, '.page-strip-segment', 'button')
     );
-    expect(createPageStripApi().implementation).toBe('react');
-    expect(host.dataset.reactIsland).toBe('onboarding-page-strip');
     expect(host.hidden).toBe(false);
     expect(host.style.getPropertyValue('--page-strip-count')).toBe('4');
     expect(host.getAttribute('aria-label')).toBe('Page 2 of 4');

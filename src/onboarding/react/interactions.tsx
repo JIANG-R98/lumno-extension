@@ -4,8 +4,6 @@ import type {
   MouseEvent as ReactMouseEvent,
   ReactNode
 } from 'react';
-import { flushSync } from 'react-dom';
-import { createRoot, type Root } from 'react-dom/client';
 import { RemixIcon as Icon } from '../../shared/react/remix-icon';
 import type { BrowserAvatar } from '../../types/view-apis';
 
@@ -63,13 +61,7 @@ export interface InteractionsRenderModel {
   slots: readonly InteractionSlot[];
 }
 
-export interface InteractionsController {
-  render(model: InteractionsRenderModel): void;
-  setExpandedAccordionId(accordionId: string): void;
-  destroy(): void;
-}
-
-export interface InteractionsControllerOptions {
+export interface InteractionsHandlers {
   onAction(actionId: string, event: MouseEvent): void;
   onHideInfoTooltip(): void;
   onShowInfoTooltip(
@@ -140,6 +132,15 @@ function LinkedText({
         data-action={item.actionId || undefined}
         href={item.href}
         key={`${item.label}-${index}`}
+        onAuxClick={(event) => {
+          // A middle click opens the page in the background.
+          if (!item.actionId || event.button !== 1) {
+            return;
+          }
+          event.preventDefault();
+          event.stopPropagation();
+          onAction(item.actionId, event.nativeEvent);
+        }}
         onClick={(event) => {
           if (!item.actionId) {
             return;
@@ -167,7 +168,7 @@ function InteractionInfoButton({
 }: {
   browserAvatars: InteractionBrowserAvatars | undefined;
   infoTooltip: InteractionInfoTooltip;
-  options: InteractionsControllerOptions;
+  options: InteractionsHandlers;
 }) {
   const show = (
     event: ReactMouseEvent<HTMLButtonElement> |
@@ -216,7 +217,7 @@ function InteractionLinkAffordance({
   options
 }: {
   linkButton: InteractionLinkButton;
-  options: InteractionsControllerOptions;
+  options: InteractionsHandlers;
 }) {
   const label = String(linkButton.label || 'GitHub repo').trim() || 'GitHub repo';
   const tooltip = String(linkButton.tooltip || label).trim() || label;
@@ -258,7 +259,7 @@ function InteractionSlotCopy({
   slot
 }: {
   expandedAccordionId: string;
-  options: InteractionsControllerOptions;
+  options: InteractionsHandlers;
   slot: InteractionSlot;
 }) {
   const accordion = slot.accordion || null;
@@ -379,7 +380,7 @@ function InteractionSlotView({
   slot
 }: {
   expandedAccordionId: string;
-  options: InteractionsControllerOptions;
+  options: InteractionsHandlers;
   slot: InteractionSlot;
 }) {
   const hasAccordion = Boolean(slot.accordion?.text);
@@ -437,82 +438,22 @@ function InteractionSlotView({
   );
 }
 
-export function createInteractionsController(
-  host: HTMLElement | null,
-  options: InteractionsControllerOptions
-): InteractionsController {
-  if (!host) {
-    return {
-      render() {},
-      setExpandedAccordionId() {},
-      destroy() {}
-    };
-  }
-
-  const hostElement: HTMLElement = host;
-  const reactRoot: Root = createRoot(hostElement);
-  let destroyed = false;
-  let currentModel: InteractionsRenderModel | null = null;
-  hostElement.setAttribute('data-react-island', 'onboarding-interactions');
-
-  function commit(model: InteractionsRenderModel): void {
-    if (destroyed) {
-      return;
-    }
-    currentModel = {
-      expandedAccordionId: String(model.expandedAccordionId || ''),
-      slots: Array.isArray(model.slots) ? model.slots : []
-    };
-    options.onHideInfoTooltip();
-    hostElement.hidden = currentModel.slots.length === 0;
-    hostElement.dataset.visible = currentModel.slots.length > 0 ? 'true' : 'false';
-    hostElement.dataset.accordion = currentModel.slots.some(
-      (slot) => Boolean(slot.accordion?.text)
-    ) ? 'true' : 'false';
-
-    flushSync(() => {
-      reactRoot.render(
-        currentModel?.slots.map((slot) => (
-          <InteractionSlotView
-            expandedAccordionId={
-              currentModel?.expandedAccordionId || ''
-            }
-            key={slot.id}
-            options={options}
-            slot={slot}
-          />
-        ))
-      );
-    });
-  }
-
-  return Object.freeze({
-    render: commit,
-    setExpandedAccordionId(accordionId: string) {
-      if (!currentModel) {
-        return;
-      }
-      commit({
-        ...currentModel,
-        expandedAccordionId: String(accordionId || '')
-      });
-    },
-    destroy() {
-      if (destroyed) {
-        return;
-      }
-      destroyed = true;
-      options.onHideInfoTooltip();
-      flushSync(() => {
-        reactRoot.unmount();
-      });
-    }
-  });
-}
-
-export function createInteractionsApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createInteractionsController
-  });
+// The slide's interaction rows: actions, notes and accordions.
+export function Interactions({ model, handlers }: { model: InteractionsRenderModel; handlers: InteractionsHandlers }) {
+  const slots = Array.isArray(model.slots) ? model.slots : [];
+  const expandedAccordionId = String(model.expandedAccordionId || '');
+  return (
+    <div
+      aria-label="Onboarding interaction slots"
+      className="interaction-slots"
+      data-accordion={slots.some((slot) => Boolean(slot.accordion?.text)) ? 'true' : 'false'}
+      data-visible={slots.length > 0 ? 'true' : 'false'}
+      hidden={slots.length === 0}
+      id="onboarding-interaction-slots"
+    >
+      {slots.map((slot) => (
+        <InteractionSlotView expandedAccordionId={expandedAccordionId} key={slot.id} options={handlers} slot={slot} />
+      ))}
+    </div>
+  );
 }

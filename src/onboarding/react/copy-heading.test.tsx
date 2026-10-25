@@ -1,34 +1,43 @@
 import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  createCopyHeadingApi,
-  createCopyHeadingController,
-  type CopyHeadingController,
-  type CopyHeadingRenderModel
-} from './copy-heading';
+import { CopyHeading, type CopyHeadingRenderModel } from './copy-heading';
+import { getElement } from '../../../tests/react/dom';
 import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
-let controllers: CopyHeadingController[] = [];
+let roots: Root[] = [];
 
+interface Fixture {
+  render(model: CopyHeadingRenderModel): void;
+}
+
+// Draws an empty heading first, so its elements are in place.
 function createFixture() {
-  const eyebrow = document.createElement('p');
-  eyebrow.id = 'onboarding-eyebrow';
-  const title = document.createElement('h1');
-  title.id = 'onboarding-title';
-  document.body.append(eyebrow, title);
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  roots.push(root);
   const options = {
     onTitleFitNeeded: vi.fn()
   };
-  const controller = createCopyHeadingController(
-    { eyebrow, title },
-    options
-  );
-  controllers.push(controller);
-  return { controller, eyebrow, options, title };
+  const controller: Fixture = {
+    render(model) {
+      root.render(<CopyHeading handlers={options} model={model} />);
+    }
+  };
+  act(() => controller.render({
+    cycleFirstDelayMs: 0, cycleIntervalMs: 1, eyebrow: '', reducedMotion: true, swapDurationMs: 0, title: '', titleLines: []
+  }));
+  return {
+    controller,
+    eyebrow: getElement(container, '#onboarding-eyebrow'),
+    options,
+    title: getElement(container, '#onboarding-title')
+  };
 }
 
 function render(
-  controller: CopyHeadingController,
+  controller: Fixture,
   overrides: Partial<CopyHeadingRenderModel> = {}
 ): void {
   act(() => {
@@ -49,23 +58,20 @@ function render(
 
 afterEach(() => {
   act(() => {
-    controllers.forEach((controller) => controller.destroy());
+    roots.forEach((root) => root.unmount());
   });
-  controllers = [];
+  roots = [];
   document.body.textContent = '';
   vi.useRealTimers();
 });
 
-describe('Onboarding copy heading React island', () => {
-  it('renders eyebrow and plain title copy on stable hosts', () => {
+describe('Onboarding copy heading', () => {
+  it('renders eyebrow and plain title copy', () => {
     const { controller, eyebrow, title } = createFixture();
     render(controller);
 
-    expect(createCopyHeadingApi().implementation).toBe('react');
-    expect(eyebrow.dataset.reactIsland).toBe('onboarding-eyebrow');
     expect(eyebrow.dataset.empty).toBe('false');
     expect(eyebrow.textContent).toBe('Welcome');
-    expect(title.dataset.reactIsland).toBe('onboarding-title-copy');
     expect(title.dataset.empty).toBe('false');
     expect(title.textContent).toBe('Search your bookmarks');
     expect(title.hasAttribute('aria-label')).toBe(false);
