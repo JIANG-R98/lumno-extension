@@ -44,8 +44,8 @@ interface AggregateSearchListDeps {
   getLocalizedBuiltinProviderName(item: SiteSearchProvider | null): string;
   formatTemplate: FormatTemplate;
   aggregateSearchListController: Pick<AggregateSearchListController, 'render'> | null;
-  syncClearButtonAvailability(button: HTMLElement | null, hasItems: boolean): void;
-  aggregateSearchClearButton: HTMLElement | null;
+  syncClearButtonAvailability(button: HTMLButtonElement | null, hasItems: boolean): void;
+  aggregateSearchClearButton: HTMLButtonElement | null;
   // The keys each list shows right now, in order, for the move buttons.
   renderedSearchSourceKeys: Record<string, string[]>;
   getSearchSourceReorderCopy(): ReorderCopyModel;

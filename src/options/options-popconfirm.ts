@@ -1,8 +1,39 @@
-// @ts-nocheck
 // Inline confirmations: opening and closing them, keeping the clear
 // buttons in step with what they would clear, and removing a site search
 // item after one.
-function createPopconfirm(deps) {
+import type { SiteSearchProvider } from '../domain/search/types';
+import type * as SiteSearch from './options-site-search';
+import type { GetMessage } from './options-types';
+import type { PopconfirmController, PopconfirmRenderModel } from './react/popconfirm';
+
+interface PopconfirmState {
+  // The open confirmation, if any.
+  activePopconfirm: HTMLElement | null;
+  disabledSiteSearchKeys: Set<string>;
+  customSiteSearchProviders: SiteSearchProvider[];
+  customSiteSearchProviderIdsReady: boolean;
+  editingSiteSearchKey: string | null;
+}
+
+interface PopconfirmDeps {
+  getMessage: GetMessage;
+  // Re-render each confirmation's copy after a language change.
+  popconfirmLanguageRefreshers: Set<() => void>;
+  saveDisabledSiteSearchKeys(keys: Iterable<string>): Promise<unknown>;
+  refreshSiteSearchProviders(): unknown;
+  resetSiteSearchForm(): void;
+  showToast(message: string, isError?: boolean): void;
+  getSiteSearchBuiltinKey: typeof SiteSearch.getSiteSearchBuiltinKey;
+  saveSiteSearchProviderState(items: readonly SiteSearchProvider[], keys: Iterable<string>): Promise<unknown>;
+  optionsState: PopconfirmState;
+}
+
+interface CloseOptions {
+  // Put focus back on the button that opened it.
+  restoreFocus?: boolean;
+}
+
+function createPopconfirm(deps: PopconfirmDeps) {
   const {
     getMessage,
     popconfirmLanguageRefreshers,
@@ -18,22 +49,25 @@ function createPopconfirm(deps) {
   const optionsState = deps.optionsState;
 
   const optionsPopconfirmApi = globalThis.LumnoOptionsPopconfirm;
+  // How each confirmation closes, by its element.
+  const popconfirmClosers = new WeakMap<HTMLElement, (closeOptions?: CloseOptions) => void>();
 
-  function closeActivePopconfirm() {
-    if (optionsState.activePopconfirm) {
-      const popconfirm = optionsState.activePopconfirm;
-      const closePopconfirm = popconfirm._xOptionsClosePopconfirm;
-      if (typeof closePopconfirm === 'function') {
-        closePopconfirm();
-      } else {
-        popconfirm.setAttribute('data-open', 'false');
-        optionsState.activePopconfirm = null;
-      }
+  function closeActivePopconfirm(closeOptions?: CloseOptions): void {
+    const popconfirm = optionsState.activePopconfirm;
+    if (!popconfirm) {
+      return;
+    }
+    const closePopconfirm = popconfirmClosers.get(popconfirm);
+    if (closePopconfirm) {
+      closePopconfirm(closeOptions);
+    } else {
+      popconfirm.setAttribute('data-open', 'false');
+      optionsState.activePopconfirm = null;
     }
   }
 
   // A clear-all action has nothing to confirm on an empty list.
-  function syncClearButtonAvailability(button, hasItems) {
+  function syncClearButtonAvailability(button: HTMLButtonElement | null, hasItems: boolean): void {
     if (!button) {
       return;
     }
@@ -42,21 +76,23 @@ function createPopconfirm(deps) {
       return;
     }
     button.disabled = disabled;
-    const popconfirm = button.getAttribute('aria-controls')
-      ? document.getElementById(button.getAttribute('aria-controls'))
-      : null;
+    const controlsId = button.getAttribute('aria-controls');
+    const popconfirm = controlsId ? document.getElementById(controlsId) : null;
     if (disabled && popconfirm && popconfirm === optionsState.activePopconfirm) {
       closeActivePopconfirm();
     }
   }
 
-  function initializePopconfirmWrap(wrap, trigger, messageKey, fallbackMessage, onConfirm) {
-    if (!wrap || !trigger) {
+  function initializePopconfirmWrap(
+    wrap: HTMLElement,
+    trigger: HTMLElement,
+    messageKey: string,
+    fallbackMessage: string,
+    onConfirm: () => unknown
+  ): HTMLElement | null {
+    if (!optionsPopconfirmApi) {
       return null;
     }
-    const reactApi = typeof optionsPopconfirmApi !== 'undefined'
-      ? optionsPopconfirmApi
-      : {};
     wrap.className = '_x_extension_popconfirm_wrap_2024_unique_';
     const popconfirm = document.createElement('div');
     popconfirm.className = '_x_extension_popconfirm_2024_unique_';
@@ -64,11 +100,9 @@ function createPopconfirm(deps) {
     wrap.appendChild(trigger);
     wrap.appendChild(popconfirm);
 
-    let popconfirmController = null;
-
-    function getPopconfirmRenderModel(open) {
+    function getPopconfirmRenderModel(open: boolean): PopconfirmRenderModel {
       return {
-        open: Boolean(open),
+        open,
         messageKey,
         message: getMessage(messageKey, fallbackMessage),
         cancelLabel: getMessage('confirm_cancel', '取消'),
@@ -76,45 +110,35 @@ function createPopconfirm(deps) {
       };
     }
 
-    function setPopconfirmOpen(open) {
-      const nextOpen = Boolean(open);
-      popconfirmController.render(getPopconfirmRenderModel(nextOpen));
-      trigger.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+    function setPopconfirmOpen(open: boolean): void {
+      popconfirmController.render(getPopconfirmRenderModel(open));
+      trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
 
-    function closePopconfirm(closeOptions) {
+    function closePopconfirm(closeOptions?: CloseOptions): void {
       const shouldRestoreFocus = Boolean(closeOptions && closeOptions.restoreFocus);
       setPopconfirmOpen(false);
       if (optionsState.activePopconfirm === popconfirm) {
         optionsState.activePopconfirm = null;
       }
-      if (shouldRestoreFocus && trigger.isConnected && typeof trigger.focus === 'function') {
+      if (shouldRestoreFocus && trigger.isConnected) {
         trigger.focus({ preventScroll: true });
       }
     }
-    popconfirm._xOptionsClosePopconfirm = closePopconfirm;
+    popconfirmClosers.set(popconfirm, closePopconfirm);
 
-    popconfirmController = reactApi.createPopconfirmController(popconfirm, {
+    const popconfirmController: PopconfirmController = optionsPopconfirmApi.createPopconfirmController(popconfirm, {
       onCancel() {
         closePopconfirm({ restoreFocus: true });
       },
       onConfirm() {
         closePopconfirm({ restoreFocus: true });
-        if (typeof onConfirm === 'function') {
-          onConfirm();
-        }
+        onConfirm();
       }
     });
-    const refreshPopconfirmLanguage = () => {
+    popconfirmLanguageRefreshers.add(() => {
       popconfirmController.render(getPopconfirmRenderModel(popconfirm.getAttribute('data-open') === 'true'));
-    };
-    popconfirmLanguageRefreshers.add(refreshPopconfirmLanguage);
-    popconfirm._xOptionsDestroyPopconfirm = () => {
-      closePopconfirm();
-      popconfirmLanguageRefreshers.delete(refreshPopconfirmLanguage);
-      popconfirmController.destroy();
-      popconfirmController = null;
-    };
+    });
     setPopconfirmOpen(false);
     if (trigger.id) {
       popconfirm.id = `${trigger.id}_popconfirm`;
@@ -138,7 +162,12 @@ function createPopconfirm(deps) {
     return wrap;
   }
 
-  function attachPopconfirm(trigger, messageKey, fallbackMessage, onConfirm) {
+  function attachPopconfirm(
+    trigger: HTMLElement | null,
+    messageKey: string,
+    fallbackMessage: string,
+    onConfirm: () => unknown
+  ): void {
     if (!trigger || !trigger.parentNode) {
       return;
     }
@@ -148,7 +177,7 @@ function createPopconfirm(deps) {
     initializePopconfirmWrap(wrap, trigger, messageKey, fallbackMessage, onConfirm);
   }
 
-  function removeSiteSearchItem(key, isBuiltin) {
+  function removeSiteSearchItem(key: string, isBuiltin: boolean): Promise<void> {
     if (isBuiltin) {
       const nextDisabledKeys = new Set(optionsState.disabledSiteSearchKeys);
       nextDisabledKeys.add(key.toLowerCase());
@@ -197,3 +226,4 @@ function createPopconfirm(deps) {
 }
 
 export { createPopconfirm };
+export type { CloseOptions, PopconfirmDeps, PopconfirmState };

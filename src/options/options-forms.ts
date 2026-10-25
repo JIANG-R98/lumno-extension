@@ -1,6 +1,66 @@
 // The site search and blacklist forms: their render models, saving
 // what they submit, error copy, and the blacklist rule drafts.
-function createForms(deps) {
+import type { BlacklistRule, MatchMode } from '../domain/blacklist-utils';
+import type { AggregateSearch } from '../domain/search/aggregate-search-store';
+import type { SiteSearchProvider } from '../domain/search/types';
+import type { BlacklistRuleDraft, createBlacklistModel } from './options-blacklist';
+import type { createSiteSearchModel } from './options-site-search';
+import type { GetMessage } from './options-types';
+import type { SiteSearchProviderDraft, SiteSearchSaveResult } from './react/site-search-list';
+import type {
+  BlacklistFormController,
+  BlacklistFormModeCopyModel,
+  BlacklistFormRenderModel,
+  BlacklistFormSaveResult,
+  SiteSearchFormController,
+  SiteSearchFormRenderModel
+} from './react/settings-forms';
+
+type BlacklistModel = ReturnType<typeof createBlacklistModel>;
+
+interface FormsState {
+  // Made once the page has mounted its React views.
+  siteSearchFormController: Pick<SiteSearchFormController, 'render'> | null;
+  searchBlacklistFormController: Pick<BlacklistFormController, 'render' | 'reset'> | null;
+  faviconBlacklistFormController: Pick<BlacklistFormController, 'render' | 'reset'> | null;
+  siteSearchModel: Pick<ReturnType<typeof createSiteSearchModel>, 'addCustomSiteSearchProvider'>;
+  blacklistModel: Pick<BlacklistModel, 'getMatchTone' | 'buildRuleDraft' | 'upsertItems'>;
+  getBlacklistInputConfig: BlacklistModel['getInputConfig'];
+  buildBlacklistItemKey: BlacklistModel['buildItemKey'];
+  customSiteSearchProviders: SiteSearchProvider[];
+  customSiteSearchProviderIdsReady: boolean;
+  disabledSiteSearchKeys: Set<string>;
+  searchBlacklistItems: BlacklistRule[];
+  faviconRequestBlacklistItems: BlacklistRule[];
+}
+
+interface FormsDeps {
+  getMessage: GetMessage;
+  suspendSiteSearchRefresh(durationMs: number): void;
+  createPersistentId(prefix: string): string;
+  findSiteSearchKeyConflict(key: string, allowedKey?: string): SiteSearchProvider | AggregateSearch | null;
+  saveSiteSearchProviderState(items: readonly SiteSearchProvider[], keys: Iterable<string>): Promise<unknown>;
+  refreshSiteSearchProviders(): unknown;
+  renderSiteSearchList(): void;
+  showToast(message: string, isError?: boolean): void;
+  saveFaviconRequestBlacklistItems(items: BlacklistRule[]): Promise<BlacklistRule[]>;
+  renderFaviconRequestBlacklistList(): void;
+  faviconBlacklistEditor: HTMLElement | null;
+  saveSearchBlacklistItems(items: BlacklistRule[]): Promise<BlacklistRule[]>;
+  renderSearchBlacklistList(): void;
+  notifyNewtabSectionsRefresh(section: string): void;
+  optionsState: FormsState;
+}
+
+interface BlacklistModeCopy {
+  labelFallback: string;
+  labelKey: string;
+  mode: MatchMode;
+  tooltipFallback: string;
+  tooltipKey: string;
+}
+
+function createForms(deps: FormsDeps) {
   const {
     getMessage,
     suspendSiteSearchRefresh,
@@ -21,8 +81,8 @@ function createForms(deps) {
   // The page state object shared with options.js and the other modules.
   const optionsState = deps.optionsState;
 
-  function formatTemplate(text, params) {
-    return String(text || '').replace(/\{(\w+)\}/g, (match, key) => {
+  function formatTemplate(text: string, params: Record<string, string | number>): string {
+    return String(text || '').replace(/\{(\w+)\}/g, (match, key: string) => {
       if (params && Object.prototype.hasOwnProperty.call(params, key)) {
         return String(params[key]);
       }
@@ -30,7 +90,7 @@ function createForms(deps) {
     });
   }
 
-  function getSiteSearchFormRenderModel() {
+  function getSiteSearchFormRenderModel(): SiteSearchFormRenderModel {
     return {
       copy: {
         addLabel: getMessage('shortcuts_add', '添加自定义搜索'),
@@ -70,8 +130,8 @@ function createForms(deps) {
     };
   }
 
-  function getBlacklistFormRenderModel(addKey, addFallback) {
-    const modeCopy = [
+  function getBlacklistFormRenderModel(addKey: string, addFallback: string): BlacklistFormRenderModel {
+    const modeCopy: BlacklistModeCopy[] = [
       {
         labelFallback: '\u5f53\u524d\u9875\u9762',
         labelKey: 'blacklist_match_exact',
@@ -99,7 +159,7 @@ function createForms(deps) {
         addLabel: getMessage(addKey, addFallback),
         cancelLabel: getMessage('shortcuts_cancel', '取消'),
         matchLabel: getMessage('blacklist_match_label', '匹配方式'),
-        modes: modeCopy.map((item) => {
+        modes: modeCopy.map((item): BlacklistFormModeCopyModel => {
           const presentation = optionsState.getBlacklistInputConfig([item.mode]);
           return {
             label: getMessage(item.labelKey, item.labelFallback),
@@ -123,7 +183,7 @@ function createForms(deps) {
     };
   }
 
-  function renderSettingsForms() {
+  function renderSettingsForms(): void {
     if (optionsState.siteSearchFormController) {
       optionsState.siteSearchFormController.render(getSiteSearchFormRenderModel());
     }
@@ -142,7 +202,7 @@ function createForms(deps) {
     }
   }
 
-  async function handleReactSiteSearchFormSave(draft) {
+  async function handleReactSiteSearchFormSave(draft: SiteSearchProviderDraft): Promise<SiteSearchSaveResult> {
     suspendSiteSearchRefresh(260);
     const result = optionsState.siteSearchModel.addCustomSiteSearchProvider(draft, {
       createId: () => createPersistentId('source'),
@@ -150,7 +210,7 @@ function createForms(deps) {
       disabledKeys: optionsState.disabledSiteSearchKeys,
       hasKeyConflict: (key, allowedKey) => Boolean(findSiteSearchKeyConflict(key, allowedKey))
     });
-    if (!result.ok) {
+    if (result.ok === false) {
       return { ok: false, error: getSiteSearchErrorMessage(result.error) };
     }
     try {
@@ -163,7 +223,7 @@ function createForms(deps) {
     }
   }
 
-  function getSiteSearchErrorMessage(errorKey) {
+  function getSiteSearchErrorMessage(errorKey: string): string {
     switch (errorKey) {
       case 'shortcuts_error_key':
         return getMessage('shortcuts_error_key', '请填写触发词。');
@@ -178,7 +238,7 @@ function createForms(deps) {
     }
   }
 
-  function applySavedSiteSearchProviders(custom, disabledKeys) {
+  function applySavedSiteSearchProviders(custom: SiteSearchProvider[], disabledKeys: Set<string>): void {
     optionsState.customSiteSearchProviders = custom;
     optionsState.customSiteSearchProviderIdsReady = true;
     optionsState.disabledSiteSearchKeys = disabledKeys;
@@ -186,7 +246,7 @@ function createForms(deps) {
     showToast(getMessage('toast_saved', '已保存'), false);
   }
 
-  async function handleReactSearchBlacklistFormSave(value, modes) {
+  async function handleReactSearchBlacklistFormSave(value: string, modes: MatchMode[]): Promise<BlacklistFormSaveResult> {
     const draft = buildBlacklistRuleDraft(value, modes);
     if (!draft.item) {
       return { ok: false, error: draft.error || '' };
@@ -202,17 +262,18 @@ function createForms(deps) {
     }
   }
 
-  async function handleReactFaviconBlacklistFormSave(value, modes) {
+  async function handleReactFaviconBlacklistFormSave(value: string, modes: MatchMode[]): Promise<BlacklistFormSaveResult> {
     const draft = buildBlacklistRuleDraft(value, modes);
     if (!draft.item) {
       return { ok: false, error: draft.error || '' };
     }
     const nextKey = optionsState.buildBlacklistItemKey(draft.item);
-    const nextItems = [draft.item].concat(
-      optionsState.faviconRequestBlacklistItems.filter(
+    const nextItems = [
+      draft.item,
+      ...optionsState.faviconRequestBlacklistItems.filter(
         (item) => optionsState.buildBlacklistItemKey(item) !== nextKey
       )
-    );
+    ];
     try {
       optionsState.faviconRequestBlacklistItems = await saveFaviconRequestBlacklistItems(nextItems);
       renderFaviconRequestBlacklistList();
@@ -223,16 +284,16 @@ function createForms(deps) {
     }
   }
 
-  function resetBlacklistForm() {
+  function resetBlacklistForm(): void {
     optionsState.searchBlacklistFormController?.reset();
   }
 
-  function resetFaviconBlacklistForm() {
+  function resetFaviconBlacklistForm(): void {
     optionsState.faviconBlacklistFormController?.reset();
   }
 
-  function setFaviconBlacklistEditorEnabled(enabled) {
-    const editable = enabled === true;
+  function setFaviconBlacklistEditorEnabled(enabled: boolean): void {
+    const editable = enabled;
     if (!faviconBlacklistEditor) {
       return;
     }
@@ -246,7 +307,7 @@ function createForms(deps) {
     }
   }
 
-  function getBlacklistMatchBadgeConfig(modes) {
+  function getBlacklistMatchBadgeConfig(modes: unknown): { tone: MatchMode; text: string } {
     const tone = optionsState.blacklistModel.getMatchTone(modes);
     if (tone === 'exact') {
       return { tone, text: getMessage('blacklist_match_exact', '当前页面') };
@@ -257,7 +318,7 @@ function createForms(deps) {
     return { tone, text: getMessage('blacklist_match_prefix', '当前站点路径') };
   }
 
-  function buildBlacklistRuleDraft(inputValue, matchModes) {
+  function buildBlacklistRuleDraft(inputValue: string, matchModes: MatchMode[]): BlacklistRuleDraft {
     const draft = optionsState.blacklistModel.buildRuleDraft(inputValue, matchModes);
     if (draft.item) {
       return draft;
@@ -272,11 +333,11 @@ function createForms(deps) {
     };
   }
 
-  function upsertBlacklistItems(nextItem, replacedRuleKey) {
+  function upsertBlacklistItems(nextItem: BlacklistRule, replacedRuleKey: string): BlacklistRule[] {
     return optionsState.blacklistModel.upsertItems(optionsState.searchBlacklistItems, nextItem, replacedRuleKey);
   }
 
-  function persistBlacklistItems(nextItems, successMessage) {
+  function persistBlacklistItems(nextItems: BlacklistRule[], successMessage: string): Promise<BlacklistRule[]> {
     return saveSearchBlacklistItems(nextItems).then((savedItems) => {
       optionsState.searchBlacklistItems = savedItems;
       renderSearchBlacklistList();
@@ -307,3 +368,4 @@ function createForms(deps) {
 }
 
 export { createForms };
+export type { FormsDeps, FormsState };

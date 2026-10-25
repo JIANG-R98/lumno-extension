@@ -8,7 +8,7 @@ import type { StorageAreaLike } from '../domain/storage-port';
 import { isHtmlTag } from '../shared/dom-guards';
 import { downloadJsonFile } from './options-download';
 import type { createSyncTransfer, SettingsImportPlan } from './options-sync-transfer';
-import type { FormatTemplate, GetMessage } from './options-types';
+import type { FormatTemplate, GetMessage, ToastTask } from './options-types';
 
 interface SyncSectionElements {
   syncStatus: HTMLElement | null;
@@ -18,13 +18,6 @@ interface SyncSectionElements {
   syncImportButton: HTMLButtonElement | null;
   syncImportInput: HTMLInputElement | null;
   shortcutSyncSummary: HTMLElement | null;
-}
-
-// A toast that shows a task's progress, then how it ended.
-interface ToastTask {
-  done(message: string): void;
-  fail(message: string): void;
-  cancel(): void;
 }
 
 interface SyncSectionChromeApi {
@@ -391,4 +384,4 @@ function createSyncSection(options: SyncSectionOptions) {
 }
 
 export { createSyncSection };
-export type { SyncSectionChromeApi, SyncSectionElements, SyncSectionOptions, ToastTask };
+export type { SyncSectionChromeApi, SyncSectionElements, SyncSectionOptions };

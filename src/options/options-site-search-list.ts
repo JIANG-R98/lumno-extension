@@ -72,8 +72,8 @@ interface SiteSearchListDeps {
   siteSearchCustomList: HTMLElement | null;
   siteSearchBuiltinList: HTMLElement | null;
   siteSearchAiBuiltinList: HTMLElement | null;
-  syncClearButtonAvailability(button: HTMLElement | null, hasItems: boolean): void;
-  customClearButton: HTMLElement | null;
+  syncClearButtonAvailability(button: HTMLButtonElement | null, hasItems: boolean): void;
+  customClearButton: HTMLButtonElement | null;
   initTooltips(): void;
   scrollToOptionsTarget(targetKey: string, options?: ScrollToTargetOptions): boolean;
   normalizeSiteSearchProvider(

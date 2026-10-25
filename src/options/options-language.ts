@@ -1,10 +1,118 @@
-// @ts-nocheck
 // The page language: resolving and loading the locale, applying the copy
 // to every control, and the document language.
+import { readLocaleMessages } from '../domain/locale-messages';
+import type { LocaleMessage } from '../domain/messages';
+import type * as Settings from '../domain/settings';
+import type {
+  NewtabGlassTheme,
+  NewtabTimeInk,
+  NewtabTopContentMode,
+  NewtabWidthMode,
+  OverlayEnterAnimation,
+  OverlaySizeMode,
+  RestrictedAction,
+  SearchResultPriority
+} from '../domain/settings';
+import type { StorageAreaLike } from '../domain/storage-port';
+import { isHtmlTag } from '../shared/dom-guards';
 import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as LumnoMessaging from '../platform/messaging';
+import type { BatchedStorageArea } from '../platform/settings-storage';
+import type { createDailyQuoteSettings } from './options-daily-quote';
+import type { createFallbackShortcutSection } from './options-fallback-shortcut';
+import type { SettingsTabKey } from './options-navigation';
+import type { RecentMode } from './options-segmented-tabs';
+import type { createThemeSection } from './options-theme';
+import type { FormatTemplate } from './options-types';
+import type { createController as createWebDavController } from './webdav-options';
 
-function createLanguage(deps) {
+type LocaleMessages = Record<string, LocaleMessage>;
+
+interface LanguageState {
+  currentLanguageMode: string;
+  storageArea: BatchedStorageArea | null;
+  isMacPlatform: boolean;
+  editingSiteSearchKey: string | null;
+  currentActiveSettingsTab: SettingsTabKey;
+  currentNewtabWidthMode: NewtabWidthMode;
+  currentOverlaySizeMode: OverlaySizeMode;
+  currentOverlayEnterAnimation: OverlayEnterAnimation;
+  currentSearchResultPriority: SearchResultPriority;
+  currentRecentMode: RecentMode;
+  currentRestrictedAction: RestrictedAction;
+  currentNewtabTopContentMode: NewtabTopContentMode;
+  currentNewtabTimeFontWeight: number;
+  currentNewtabTimeFontSize: number;
+  currentNewtabTimeOpacity: number;
+  currentNewtabTimeInk: NewtabTimeInk;
+  currentNewtabGlassTheme: NewtabGlassTheme;
+  currentNewtabShortcutColumns: number;
+  currentNewtabShortcutSize: number;
+  currentNewtabShortcutGap: number;
+  currentRecentCount: number;
+  currentBookmarkCount: number;
+  currentBookmarkColumns: number;
+  currentSearchResultDisplayLimit: number;
+  // Made as the page starts; null until then.
+  webDavSettingsController: ReturnType<typeof createWebDavController>;
+  fallbackShortcutSection: ReturnType<typeof createFallbackShortcutSection> | null;
+  themeSection: ReturnType<typeof createThemeSection> | null;
+  dailyQuoteSettings: ReturnType<typeof createDailyQuoteSettings>;
+}
+
+interface LanguageDeps {
+  renderOverlayFontMissingNotices(): void;
+  popconfirmLanguageRefreshers: Set<() => void>;
+  formatTemplate: FormatTemplate;
+  formatShortcutForDisplay(shortcut: string): string;
+  fallbackShortcutInput: HTMLInputElement | null;
+  fallbackShortcutTokens: HTMLElement | null;
+  SETTINGS: Pick<typeof Settings, 'normalizeLocale' | 'localeToHtmlLang' | 'resolveSupportedLocale' |
+    'isMachineTranslatedLocale'>;
+  LANGUAGE_STORAGE_KEY: string;
+  localStorageArea: StorageAreaLike | null;
+  languageSelect: HTMLSelectElement | null;
+  languageMachineNote: HTMLElement | null;
+  setOptionsSelectState(select: HTMLSelectElement | null, value: unknown): void;
+  renderOptionsInfoButtons(): void;
+  renderFeedbackSupport(): void;
+  renderTranslationHelp(): void;
+  refreshCustomSelects(): void;
+  setEditingState(key: string | null): void;
+  updateBuiltinResetTooltip(): void;
+  updateCustomClearTooltip(): void;
+  updateAggregateSearchClearTooltip(): void;
+  updateBlacklistClearTooltip(): void;
+  refreshSyncStatus(): void;
+  renderShortcutReferenceList(): void;
+  setNewtabWidthTabState(mode: unknown): void;
+  setOverlaySizeTabState(mode: unknown): void;
+  setOverlayEnterAnimationTabState(mode: unknown): void;
+  setSearchResultPriorityTabState(priority: unknown): void;
+  setRecentModeTabState(mode: unknown): void;
+  setRestrictedActionTabState(action: unknown): void;
+  setNewtabTopContentTabState(mode: unknown): void;
+  renderNewtabTimeFontWeightControl(value: unknown): void;
+  renderNewtabTimeFontSizeControl(value: unknown): void;
+  renderNewtabTimeOpacityControl(value: unknown): void;
+  setNewtabTimeInkTabState(ink: unknown): void;
+  setNewtabGlassThemeTabState(theme: unknown): void;
+  renderNewtabShortcutColumnsControl(value: unknown, disabled?: boolean): void;
+  renderNewtabShortcutSizeControl(value: unknown, disabled?: boolean): void;
+  renderNewtabShortcutGapControl(value: unknown, disabled?: boolean): void;
+  syncNewtabShortcutSubcontrolAvailability(): void;
+  renderRecentCountControl(value: unknown): void;
+  renderBookmarkRowsControl(value: unknown): void;
+  renderBookmarkColumnsControl(value: unknown): void;
+  renderSearchResultDisplayLimitControl(value: unknown): void;
+  renderSettingsNavigation(tabKey: SettingsTabKey): void;
+  renderSiteSearchList(): void;
+  renderAggregateSearchList(): void;
+  renderSearchBlacklistList(): void;
+  optionsState: LanguageState;
+}
+
+function createLanguage(deps: LanguageDeps) {
   const {
     renderOverlayFontMissingNotices,
     popconfirmLanguageRefreshers,
@@ -58,10 +166,10 @@ function createLanguage(deps) {
   // The page state object shared with options.js and the other modules.
   const optionsState = deps.optionsState;
 
-  let currentMessages = null;
+  let currentMessages: LocaleMessages | null = null;
   let languageApplyRequestId = 0;
 
-  function getMessage(key, fallback) {
+  function getMessage(key: string, fallback: string): string {
     if (currentMessages && Object.prototype.hasOwnProperty.call(currentMessages, key)) {
       const entry = currentMessages[key];
       if (entry && typeof entry.message === 'string') {
@@ -71,7 +179,7 @@ function createLanguage(deps) {
     if (optionsState.currentLanguageMode !== 'system') {
       return fallback || '';
     }
-    if (chrome && chrome.i18n && chrome.i18n.getMessage) {
+    if (chrome.i18n && chrome.i18n.getMessage) {
       const message = chrome.i18n.getMessage(key);
       if (message) {
         return message;
@@ -80,11 +188,11 @@ function createLanguage(deps) {
     return fallback || '';
   }
 
-  function applyI18n() {
+  function applyI18n(): void {
     if (optionsState.webDavSettingsController) optionsState.webDavSettingsController.render();
     renderOverlayFontMissingNotices();
     popconfirmLanguageRefreshers.forEach((refresh) => refresh());
-    const browserName = LumnoBrowserProfile?.getBrowserInternalProfile(navigator).name || 'Chrome';
+    const browserName = LumnoBrowserProfile.getBrowserInternalProfile(navigator).name || 'Chrome';
     const templateValues = {
       name: 'Lumno',
       browser: browserName,
@@ -98,7 +206,7 @@ function createLanguage(deps) {
       const fallback = node.textContent || '';
       const message = formatTemplate(getMessage(key, fallback), templateValues);
       node.textContent = message;
-      if (node.tagName === 'OPTION') {
+      if (isHtmlTag(node, 'option')) {
         node.label = message;
       }
     });
@@ -137,27 +245,29 @@ function createLanguage(deps) {
     });
     if (fallbackShortcutInput && fallbackShortcutTokens) {
       fallbackShortcutTokens.setAttribute('data-placeholder', fallbackShortcutInput.getAttribute('placeholder') || '');
-      optionsState.fallbackShortcutSection.renderTokens();
+      if (optionsState.fallbackShortcutSection) {
+        optionsState.fallbackShortcutSection.renderTokens();
+      }
     }
   }
 
-  function normalizeLocale(locale) {
+  function normalizeLocale(locale: unknown): string {
     return SETTINGS.normalizeLocale(locale);
   }
 
-  function localeToHtmlLang(locale) {
+  function localeToHtmlLang(locale: unknown): string {
     return SETTINGS.localeToHtmlLang(locale);
   }
 
-  function applyDocumentLanguage(locale) {
+  function applyDocumentLanguage(locale: string): void {
     if (!document.documentElement) {
       return;
     }
     document.documentElement.lang = localeToHtmlLang(locale);
   }
 
-  function getSystemLocale() {
-    if (chrome && chrome.i18n && chrome.i18n.getUILanguage) {
+  function getSystemLocale(): string {
+    if (chrome.i18n && chrome.i18n.getUILanguage) {
       return normalizeLocale(chrome.i18n.getUILanguage());
     }
     return normalizeLocale(navigator.language || 'en');
@@ -165,47 +275,42 @@ function createLanguage(deps) {
 
   // A stored language is the picker value: the language's html lang, or
   // 'system' for anything Lumno has no copy in.
-  function normalizeLanguageMode(mode) {
+  function normalizeLanguageMode(mode: unknown): string {
     const locale = SETTINGS.resolveSupportedLocale(mode);
     return locale ? SETTINGS.localeToHtmlLang(locale) : 'system';
   }
 
   // AI-translated languages say so under the picker and ask for corrections.
-  function renderMachineTranslationNote(locale) {
+  function renderMachineTranslationNote(locale: string): void {
     if (languageMachineNote) {
       languageMachineNote.hidden = !SETTINGS.isMachineTranslatedLocale(locale);
     }
   }
 
-  function loadLocaleMessages(locale) {
+  function loadLocaleMessages(locale: string): Promise<LocaleMessages> {
     const normalized = normalizeLocale(locale);
-    const localePath = chrome && chrome.runtime && typeof chrome.runtime.getURL === 'function'
-      ? chrome.runtime.getURL(`_locales/${normalized}/messages.json`)
-      : `../../_locales/${normalized}/messages.json`;
-    const fetchFromBackground = () => new Promise((resolve) => {
-      if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
-        resolve({});
-        return;
-      }
+    const localePath = chrome.runtime.getURL(`_locales/${normalized}/messages.json`);
+    const fetchFromBackground = (): Promise<LocaleMessages> => new Promise((resolve) => {
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'getLocaleMessages', locale: normalized }, (response) => {
-        if (chrome.runtime && chrome.runtime.lastError) {
+        if (chrome.runtime.lastError) {
           resolve({});
           return;
         }
-        resolve(response && response.messages ? response.messages : {});
+        resolve(readLocaleMessages(response ? response.messages : undefined));
       });
     });
     return fetch(localePath, { cache: 'no-store' })
       .then((response) => {
-        if (!response || !response.ok) {
+        if (!response.ok) {
           throw new Error('locale fetch failed');
         }
         return response.json();
       })
+      .then((messages: unknown) => readLocaleMessages(messages))
       .catch(() => fetchFromBackground());
   }
 
-  function applyLanguageMode(mode, options) {
+  function applyLanguageMode(mode: unknown, options?: { persist?: boolean }): void {
     const requestId = ++languageApplyRequestId;
     const normalizedMode = normalizeLanguageMode(mode);
     optionsState.currentLanguageMode = normalizedMode;
@@ -227,7 +332,7 @@ function createLanguage(deps) {
       if (requestId !== languageApplyRequestId) {
         return;
       }
-      currentMessages = messages || {};
+      currentMessages = messages;
       if (languageSelect) {
         setOptionsSelectState(languageSelect, normalizedMode);
         if (languageSelect.value !== normalizedMode) {
@@ -246,9 +351,13 @@ function createLanguage(deps) {
       updateAggregateSearchClearTooltip();
       updateBlacklistClearTooltip();
       refreshSyncStatus();
-      optionsState.fallbackShortcutSection.refreshShortcutsStatus();
+      if (optionsState.fallbackShortcutSection) {
+        optionsState.fallbackShortcutSection.refreshShortcutsStatus();
+      }
       renderShortcutReferenceList();
-      optionsState.themeSection.render();
+      if (optionsState.themeSection) {
+        optionsState.themeSection.render();
+      }
       setNewtabWidthTabState(optionsState.currentNewtabWidthMode);
       setOverlaySizeTabState(optionsState.currentOverlaySizeMode);
       setOverlayEnterAnimationTabState(optionsState.currentOverlayEnterAnimation);
@@ -290,3 +399,4 @@ function createLanguage(deps) {
 }
 
 export { createLanguage };
+export type { LanguageDeps, LanguageState, LocaleMessages };

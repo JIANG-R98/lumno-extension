@@ -1,7 +1,43 @@
-// @ts-nocheck
 // Tooltips, toasts and the clear buttons' hover copy, the fallback
 // shortcut field width, and refreshing the custom selects.
-function createTooltips(deps) {
+import { isHtmlElement } from '../shared/dom-guards';
+import type { ToastController } from '../shared/react/toast';
+import type { TooltipController } from '../shared/ui/tooltip';
+import type { SelectControlRecord } from './options-select-controls';
+import type { GetMessage, ToastTask } from './options-types';
+
+interface TooltipsState {
+  // While the startup read batch is pending, select refreshes wait for it.
+  optionsStartupStorageBatchPending: boolean;
+  optionsStartupRefreshCoalescing: boolean;
+  optionsStartupRefreshDeferred: boolean;
+  optionsSelectControlRecords: ReadonlyMap<HTMLSelectElement, SelectControlRecord>;
+  renderOptionsSelectControl(select: HTMLSelectElement): void;
+  // Made once the page has mounted them.
+  tooltipController: TooltipController | null;
+  toastController: ToastController | null;
+}
+
+interface TooltipsDeps {
+  renderSettingsForms(): void;
+  fallbackShortcutWrap: HTMLElement | null;
+  restrictedActionSelectWrap: HTMLElement | null;
+  fallbackShortcutTokens: HTMLElement | null;
+  builtinResetButton: HTMLElement | null;
+  getMessage: GetMessage;
+  customClearButton: HTMLButtonElement | null;
+  aggregateSearchClearButton: HTMLButtonElement | null;
+  blacklistClearButton: HTMLButtonElement | null;
+  toastElement: HTMLElement | null;
+  optionsState: TooltipsState;
+}
+
+const TOOLTIP_OPTIONS = Object.freeze({
+  maxWidth: 'min(360px, calc(100vw - 24px))',
+  spacing: 8
+});
+
+function createTooltips(deps: TooltipsDeps) {
   const {
     renderSettingsForms,
     fallbackShortcutWrap,
@@ -22,33 +58,32 @@ function createTooltips(deps) {
   let fallbackShortcutBaseWidth = 0;
   let isFallbackWidthReady = false;
 
-  function showTooltipFor(target) {
-    if (!target) {
+  function showTooltipFor(target: HTMLElement | null): void {
+    if (!target || !optionsState.tooltipController) {
       return;
     }
     const text = target.getAttribute('data-tooltip');
     if (!text) {
       return;
     }
-    optionsState.tooltipController.show(target, text, {
-      maxWidth: 'min(360px, calc(100vw - 24px))',
-      spacing: 8
+    optionsState.tooltipController.show(target, text, TOOLTIP_OPTIONS);
+  }
+
+  function initTooltips(): void {
+    const tooltipController = optionsState.tooltipController;
+    if (!tooltipController) {
+      return;
+    }
+    document.querySelectorAll('[data-tooltip]').forEach((node) => {
+      if (isHtmlElement(node)) {
+        tooltipController.bind(node, () => node.getAttribute('data-tooltip'), TOOLTIP_OPTIONS);
+      }
     });
   }
 
-  function initTooltips() {
-    const nodes = Array.from(document.querySelectorAll('[data-tooltip]'));
-    nodes.forEach((node) => {
-      optionsState.tooltipController.bind(node, () => node.getAttribute('data-tooltip'), {
-        maxWidth: 'min(360px, calc(100vw - 24px))',
-        spacing: 8
-      });
-    });
-  }
-
-  function refreshCustomSelects(options) {
-    const config = options && typeof options === 'object' ? options : {};
-    if ((optionsState.optionsStartupStorageBatchPending || optionsState.optionsStartupRefreshCoalescing) && !config.force) {
+  function refreshCustomSelects(options?: { force?: boolean }): void {
+    const force = Boolean(options && options.force);
+    if ((optionsState.optionsStartupStorageBatchPending || optionsState.optionsStartupRefreshCoalescing) && !force) {
       optionsState.optionsStartupRefreshDeferred = true;
       return;
     }
@@ -60,13 +95,13 @@ function createTooltips(deps) {
       );
     }
     renderSettingsForms();
-    optionsState.optionsSelectControlRecords.forEach((record, select) => {
+    optionsState.optionsSelectControlRecords.forEach((_record, select) => {
       optionsState.renderOptionsSelectControl(select);
     });
     syncFallbackShortcutWrapWidth();
   }
 
-  function syncFallbackShortcutWrapWidth() {
+  function syncFallbackShortcutWrapWidth(): void {
     if (!fallbackShortcutWrap || !restrictedActionSelectWrap) {
       return;
     }
@@ -78,14 +113,14 @@ function createTooltips(deps) {
     updateFallbackShortcutWrapWidthForContent();
   }
 
-  function updateFallbackShortcutWrapWidthForContent() {
+  function updateFallbackShortcutWrapWidthForContent(): void {
     if (!fallbackShortcutWrap) {
       return;
     }
     const fallbackBase = Math.max(120, Number.isFinite(fallbackShortcutBaseWidth) ? fallbackShortcutBaseWidth : 0);
     let nextWidth = fallbackBase || Math.round(fallbackShortcutWrap.getBoundingClientRect().width) || 180;
     if (fallbackShortcutTokens) {
-      const tokenEls = Array.from(fallbackShortcutTokens.children || []);
+      const tokenEls = Array.from(fallbackShortcutTokens.children);
       if (tokenEls.length > 0) {
         const style = window.getComputedStyle(fallbackShortcutTokens);
         const gap = Number.parseFloat(style.columnGap || style.gap) || 0;
@@ -108,7 +143,7 @@ function createTooltips(deps) {
     }
   }
 
-  function updateBuiltinResetTooltip() {
+  function updateBuiltinResetTooltip(): void {
     if (!builtinResetButton) {
       return;
     }
@@ -118,7 +153,7 @@ function createTooltips(deps) {
     builtinResetButton.setAttribute('data-tooltip', text);
   }
 
-  function updateCustomClearTooltip() {
+  function updateCustomClearTooltip(): void {
     if (!customClearButton) {
       return;
     }
@@ -128,7 +163,7 @@ function createTooltips(deps) {
     customClearButton.setAttribute('data-tooltip', text);
   }
 
-  function updateAggregateSearchClearTooltip() {
+  function updateAggregateSearchClearTooltip(): void {
     if (!aggregateSearchClearButton) {
       return;
     }
@@ -138,7 +173,7 @@ function createTooltips(deps) {
     aggregateSearchClearButton.setAttribute('data-tooltip', text);
   }
 
-  function updateBlacklistClearTooltip() {
+  function updateBlacklistClearTooltip(): void {
     if (!blacklistClearButton) {
       return;
     }
@@ -148,7 +183,7 @@ function createTooltips(deps) {
     blacklistClearButton.setAttribute('data-tooltip', text);
   }
 
-  function setToastAnnouncement(errorToast) {
+  function setToastAnnouncement(errorToast: boolean): void {
     if (toastElement) {
       toastElement.setAttribute('role', errorToast ? 'alert' : 'status');
       toastElement.setAttribute('aria-live', errorToast ? 'assertive' : 'polite');
@@ -156,29 +191,31 @@ function createTooltips(deps) {
     }
   }
 
-  function showToast(message, isError) {
+  function showToast(message: string, isError?: boolean): void {
     const errorToast = Boolean(isError);
     setToastAnnouncement(errorToast);
-    optionsState.toastController.show(message, {
-      error: errorToast
-    });
+    if (optionsState.toastController) {
+      optionsState.toastController.show(message, {
+        error: errorToast
+      });
+    }
   }
 
   // A task that may run long: its loading Toast turns into the result in place.
-  function beginToast(message) {
+  function beginToast(message: string): ToastTask {
     setToastAnnouncement(false);
-    const task = optionsState.toastController.begin(message);
+    const task = optionsState.toastController ? optionsState.toastController.begin(message) : null;
     return {
       done(result) {
         setToastAnnouncement(false);
-        task.done(result);
+        if (task) task.done(result);
       },
       fail(result) {
         setToastAnnouncement(true);
-        task.fail(result);
+        if (task) task.fail(result);
       },
       cancel() {
-        task.cancel();
+        if (task) task.cancel();
       }
     };
   }
@@ -199,3 +236,4 @@ function createTooltips(deps) {
 }
 
 export { createTooltips };
+export type { TooltipsDeps, TooltipsState };

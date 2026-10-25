@@ -39,11 +39,11 @@ interface BlacklistListsDeps {
   upsertBlacklistItems(nextItem: BlacklistRule, replacedRuleKey: string): BlacklistRule[];
   persistBlacklistItems(nextItems: BlacklistRule[], successMessage: string): Promise<unknown>;
   faviconBlacklistList: HTMLElement | null;
-  syncClearButtonAvailability(button: HTMLElement | null, hasItems: boolean): void;
-  faviconBlacklistClearButton: HTMLElement | null;
+  syncClearButtonAvailability(button: HTMLButtonElement | null, hasItems: boolean): void;
+  faviconBlacklistClearButton: HTMLButtonElement | null;
   faviconBlacklistListController: BlacklistListControllerRef;
   blacklistList: HTMLElement | null;
-  blacklistClearButton: HTMLElement | null;
+  blacklistClearButton: HTMLButtonElement | null;
   searchBlacklistListController: BlacklistListControllerRef;
   optionsState: BlacklistListsState;
 }

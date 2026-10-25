@@ -1769,14 +1769,9 @@ import * as LumnoMessaging from '../platform/messaging';
     if (event.key !== 'Escape' || !optionsState.activePopconfirm) {
       return;
     }
-    const popconfirm = optionsState.activePopconfirm;
-    const closePopconfirm = popconfirm._xOptionsClosePopconfirm;
-    if (typeof closePopconfirm !== 'function') {
-      return;
-    }
     event.preventDefault();
     event.stopPropagation();
-    closePopconfirm({ restoreFocus: true });
+    closeActivePopconfirm({ restoreFocus: true });
   });
 
   setSiteSearchFormExpanded(false);

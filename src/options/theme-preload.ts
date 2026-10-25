@@ -1,6 +1,9 @@
-// @ts-nocheck
+// Paints the Options page in the cached theme and opens the linked tab
+// before the page script runs, then follows the stored theme once read.
 import * as SETTINGS from '../domain/settings';
+import type { ThemeMode } from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import { normalizeSettingsTabKey, SETTINGS_TAB_KEYS } from './options-navigation';
 
 (function() {
   const THEME_STORAGE_KEY = SETTINGS.THEME_STORAGE_KEY;
@@ -9,33 +12,25 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
   const PRELOAD_THEME_MODE_ATTRIBUTE = 'data-options-theme-mode';
   const BACKGROUND_PRELOAD_ID = '_x_extension_options_background_preload_2026_unique_';
   const PANEL_ID = '_x_extension_settings_panel_2024_unique_';
-  const SETTINGS_TAB_KEYS = ['general', 'account', 'appearance', 'shortcuts', 'blacklist', 'labs'];
   const root = document.documentElement;
-  if (!root) {
-    return;
-  }
 
-  let resolvedTheme = 'light';
-  let currentThemeMode = 'system';
-  let bodyObserver = null;
-  let routeObserver = null;
+  let resolvedTheme: 'dark' | 'light' = 'light';
+  let currentThemeMode: ThemeMode = 'system';
+  let bodyObserver: MutationObserver | null = null;
+  let routeObserver: MutationObserver | null = null;
 
-  function getInitialTabKey() {
+  function getInitialTabKey(): string {
     try {
       const rawHash = String(globalThis.location && globalThis.location.hash || '')
         .replace(/^#/, '')
         .trim();
-      const tabKey = rawHash.split(':')[0] || '';
-      return SETTINGS_TAB_KEYS.includes(tabKey) ? tabKey : 'general';
+      return normalizeSettingsTabKey(rawHash.split(':')[0] || '');
     } catch (e) {
       return 'general';
     }
   }
 
-  function applyInitialTabState() {
-    if (typeof document.querySelectorAll !== 'function') {
-      return false;
-    }
+  function applyInitialTabState(): boolean {
     const tabKey = getInitialTabKey();
     const tabButtons = Array.from(document.querySelectorAll(
       '._x_extension_settings_tab_button_2024_unique_[data-tab]'
@@ -60,14 +55,7 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
     return true;
   }
 
-  function normalizeThemeMode(value) {
-    if (value === 'dark' || value === 'light') {
-      return value;
-    }
-    return 'system';
-  }
-
-  function getSystemTheme() {
+  function getSystemTheme(): 'dark' | 'light' {
     try {
       return globalThis.matchMedia && globalThis.matchMedia('(prefers-color-scheme: dark)').matches
         ? 'dark'
@@ -77,50 +65,39 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
     }
   }
 
-  function resolveTheme(mode) {
-    const normalized = normalizeThemeMode(mode);
-    return normalized === 'system' ? getSystemTheme() : normalized;
+  function resolveTheme(mode: ThemeMode): 'dark' | 'light' {
+    return mode === 'system' ? getSystemTheme() : mode;
   }
 
-  function readCachedThemeMode() {
+  function readCachedThemeMode(): ThemeMode {
     try {
-      return normalizeThemeMode(globalThis.localStorage
-        ? globalThis.localStorage.getItem(THEME_CACHE_KEY)
-        : 'system');
+      return SETTINGS.normalizeThemeMode(globalThis.localStorage.getItem(THEME_CACHE_KEY));
     } catch (e) {
       return 'system';
     }
   }
 
-  function cacheThemeMode(mode) {
+  function cacheThemeMode(mode: ThemeMode): void {
     try {
-      if (globalThis.localStorage) {
-        globalThis.localStorage.setItem(THEME_CACHE_KEY, normalizeThemeMode(mode));
-      }
+      globalThis.localStorage.setItem(THEME_CACHE_KEY, mode);
     } catch (e) {
       // Best effort only; chrome.storage remains the source of truth.
     }
   }
 
-  function getRuntimeUrl(path) {
-    if (globalThis.chrome && chrome.runtime && typeof chrome.runtime.getURL === 'function') {
-      return chrome.runtime.getURL(path);
-    }
-    return `../../${path}`;
-  }
-
-  function updateBackgroundPreload(theme) {
+  function updateBackgroundPreload(theme: 'dark' | 'light'): void {
     if (!document.head) {
       return;
     }
-    const href = getRuntimeUrl(
+    const href = chrome.runtime.getURL(
       theme === 'dark'
         ? 'assets/images/settings-bg-dark.webp'
         : 'assets/images/settings-bg-light.webp'
     );
-    let link = document.getElementById(BACKGROUND_PRELOAD_ID);
-    if (!link) {
-      link = document.createElement('link');
+    // The link this script added on an earlier pass.
+    const existing = document.getElementById(BACKGROUND_PRELOAD_ID);
+    if (!existing || !('href' in existing)) {
+      const link = document.createElement('link');
       link.id = BACKGROUND_PRELOAD_ID;
       link.rel = 'preload';
       link.as = 'image';
@@ -129,10 +106,10 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
       document.head.appendChild(link);
       return;
     }
-    link.href = href;
+    existing.href = href;
   }
 
-  function applyTheme(theme) {
+  function applyTheme(theme: 'dark' | 'light'): void {
     resolvedTheme = theme === 'dark' ? 'dark' : 'light';
     root.setAttribute(PRELOAD_THEME_ATTRIBUTE, resolvedTheme);
     root.setAttribute(PRELOAD_THEME_MODE_ATTRIBUTE, currentThemeMode);
@@ -161,12 +138,11 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
   applyTheme(resolveTheme(currentThemeMode));
   const initialTabApplied = applyInitialTabState();
 
-  if ((!document.body || !document.getElementById(PANEL_ID)) &&
-      typeof globalThis.MutationObserver === 'function') {
+  if (!document.body || !document.getElementById(PANEL_ID)) {
     bodyObserver = new MutationObserver(() => applyTheme(resolvedTheme));
     bodyObserver.observe(root, { childList: true, subtree: true });
   }
-  if (!initialTabApplied && typeof globalThis.MutationObserver === 'function') {
+  if (!initialTabApplied) {
     routeObserver = new MutationObserver(applyInitialTabState);
     routeObserver.observe(root, { childList: true, subtree: true });
   }
@@ -175,7 +151,7 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
     const storage = LumnoSettingsStorage.getProviderStorage(globalThis.chrome).area;
     if (storage && typeof storage.get === 'function') {
       storage.get([THEME_STORAGE_KEY], (result) => {
-        const storedMode = normalizeThemeMode(result && result[THEME_STORAGE_KEY]);
+        const storedMode = SETTINGS.normalizeThemeMode(result && result[THEME_STORAGE_KEY]);
         currentThemeMode = storedMode;
         cacheThemeMode(storedMode);
         applyTheme(resolveTheme(storedMode));

@@ -46,7 +46,12 @@
     "src/options/options-fallback-shortcut.ts",
     "src/options/options-sync-transfer.ts",
     "src/options/options-sync-section.ts",
-    "src/options/webdav-options.ts"
+    "src/options/webdav-options.ts",
+    "src/options/options-tooltips.ts",
+    "src/options/options-popconfirm.ts",
+    "src/options/options-forms.ts",
+    "src/options/options-language.ts",
+    "src/options/theme-preload.ts"
   ],
   "exclude": [
     "src/**/react/**"
