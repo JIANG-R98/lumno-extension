@@ -27,7 +27,7 @@ interface SearchInputEventsState<Provider, Aggregate> {
   openTabsSearchModeActive: boolean;
   siteSearchProvidersCache: Provider[] | null;
   defaultSiteSearchProviders: Provider[];
-  aggregateSearchesCache: Aggregate[];
+  aggregateSearchesCache: Aggregate[] | null;
   selectedIndex: number;
   latestOverlayQuery: string;
   latestRawInputValue: string;
@@ -38,7 +38,7 @@ interface SearchInputEventsDeps<Provider, Aggregate> {
   applyNoTranslate(element: Element): unknown;
   clearSiteSearchTabHint(): void;
   isSlashCommandInput(input: string): boolean;
-  getSearchTriggerProviders(siteProviders: Provider[], aggregates: Aggregate[]): Provider[];
+  getSearchTriggerProviders(siteProviders: Provider[], aggregates: Aggregate[] | null): Provider[];
   getInlineSiteSearchCandidate(input: string, providers: Provider[]): unknown;
   getSiteSearchTriggerCandidate(input: string, providers: Provider[], options: null): Provider | null;
   setSiteSearchTabHint(provider: Provider | InputModeProvider): void;

@@ -33,7 +33,12 @@
     "src/overlay/panel/panel-notices.ts",
     "src/overlay/panel/remote-suggestions.ts",
     "src/overlay/panel/results-layout.ts",
-    "src/overlay/panel/search-input-events.ts"
+    "src/overlay/panel/search-input-events.ts",
+    "src/overlay/panel/site-search-providers.ts",
+    "src/overlay/panel/search-modes.ts",
+    "src/overlay/panel/search-mode-menu.ts",
+    "src/overlay/panel/panel-session.ts",
+    "src/overlay/panel/panel-keys.ts"
   ],
   "exclude": [
     "src/**/react/**"

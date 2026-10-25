@@ -1,8 +1,127 @@
-// @ts-nocheck
 // Keys inside the panel: Tab into modes and autocomplete, the input's
 // keydown, and navigating, opening and deleting results.
+import type { ShortcutRule, WebAppearanceMode } from '../../domain/messages';
+import type { Disposition } from '../../domain/navigation-disposition';
+import type { AggregateSearch } from '../../domain/search/aggregate-search-store';
+import type { createSearchInputHistoryController } from '../../domain/search/search-input-history';
+import type * as SearchInputHistory from '../../domain/search/search-input-history';
+import type { DisplayedSuggestion } from '../../domain/search/suggestion-action-model';
+import type { LocalSearchScope, SiteSearchProvider, SuggestionLike } from '../../domain/search/types';
+import type { ThemeMode } from '../../domain/settings';
 import * as LumnoMessaging from '../../platform/messaging';
-function createPanelKeys(deps) {
+import type { SuggestionElement } from '../../shared/react/search/suggestion-list/types';
+import type { InputModeController } from '../../shared/search/search-input-mode';
+import type { InputModeProvider } from '../../shared/search/input-mode/types';
+import type * as SuggestionNavigation from '../../shared/search/suggestion-navigation';
+import type { NumberShortcutOptions } from '../../shared/search/suggestion-navigation';
+import type { AutocompleteState } from './autocomplete';
+import type { ActivationEvent } from './result-activation';
+import type { SlashCommand } from './slash-commands';
+import type { InlineSearchState, LocalSearchScopeTrigger, OverlaySuggestion, SiteSearchTrigger } from './types';
+
+interface PanelKeysState {
+  overlay: HTMLElement | null;
+  searchInput: HTMLInputElement | null;
+  suggestionsContainer: HTMLElement | null;
+  inputModeController: Pick<InputModeController,
+    'handleModeMenuTabFocusToggle' | 'shouldCompleteModeMenuDoubleTab' | 'shouldOpenModeMenuForActiveModeOnTab' |
+    'openModeMenu' | 'shouldOpenModeMenuOnDoubleTab' | 'shouldRemoveModeTagOnBackspace'> | null;
+  inputHistoryController: Pick<ReturnType<typeof createSearchInputHistoryController>, 'move' | 'record'> | null;
+  isApplyingSearchInputHistory: boolean;
+  siteSearchState: InputModeProvider | null;
+  siteSearchTriggerState: SiteSearchTrigger<InputModeProvider> | null;
+  localSearchScopeState: LocalSearchScope | null;
+  localSearchScopeTriggerState: LocalSearchScopeTrigger | null;
+  openTabsSearchModeActive: boolean;
+  inlineSearchState: InlineSearchState | null;
+  autocompleteState: AutocompleteState | null;
+  siteSearchProvidersCache: SiteSearchProvider[] | null;
+  defaultSiteSearchProviders: SiteSearchProvider[];
+  aggregateSearchesCache: AggregateSearch[] | null;
+  currentSuggestions: OverlaySuggestion[];
+  selectedIndex: number;
+  latestRawInputValue: string;
+  latestOverlayQuery: string;
+  overlayThemeMode: string;
+  prioritizeCurrentPageMatch: boolean;
+  currentOverlayTabId: number | null;
+  // Enter on the first result switches to its open tab.
+  overlayTabQuickSwitchEnabled: boolean;
+  macosCtrlSuggestionNavigationEnabled: boolean;
+}
+
+interface PanelKeysDeps {
+  cancelPendingOpenTabsPrefixEntry(): boolean;
+  openSearchModeMenuFromDoubleTab(): Promise<boolean>;
+  activateOpenTabsSearchMode(options?: { deferPrefixEntry?: boolean; preserveModeMenuDoubleTab?: boolean }): void;
+  activateSiteSearch(provider: InputModeProvider | null): void;
+  activateLocalSearchScope(scope: LocalSearchScope | null): boolean;
+  getSearchTriggerProviders(providers: SiteSearchProvider[] | null, definitions: AggregateSearch[] | null): SiteSearchProvider[];
+  getTopSiteMatchCandidate(list: OverlaySuggestion[] | null, input: string): OverlaySuggestion | null;
+  getSiteSearchTriggerCandidate(
+    input: string,
+    providers: SiteSearchProvider[] | null,
+    topSiteMatch: SuggestionLike | null
+  ): SiteSearchProvider | null;
+  getLocalSearchScopeCandidate(input: string, rules: ShortcutRule[] | undefined): LocalSearchScope | null;
+  getSiteSearchProviders(): Promise<SiteSearchProvider[]>;
+  getAggregateSearches(): Promise<AggregateSearch[]>;
+  getShortcutRules(): Promise<ShortcutRule[]>;
+  syncSuggestionActionModifiersFromEvent(event: ActivationEvent | null): void;
+  clearSiteSearch(): void;
+  clearLocalSearchScope(): boolean;
+  requestOverlaySearchSuggestions(query: string): void;
+  clearSearchSuggestions(): void;
+  clearOpenTabsSearchMode(): void;
+  isImeCompositionEvent(event: KeyboardEvent): boolean;
+  SEARCH_INPUT_HISTORY: Pick<typeof SearchInputHistory, 'getShortcutDirection'>;
+  dismissAutocompletePreviewOnNonTabKey(event: KeyboardEvent | null): boolean;
+  // The rendered rows, in list order.
+  suggestionItems: SuggestionElement[];
+  SUGGESTION_NAVIGATION: Pick<typeof SuggestionNavigation, 'getSuggestionNavigationKey' | 'handleNumberShortcutKeyEvent'>;
+  numberShortcutOptions: NumberShortcutOptions;
+  removeOverlay(overlay: HTMLElement | null): void;
+  closeOverlayWithMotion(overlay: HTMLElement | null): void;
+  updateSelection(): void;
+  scrollSelectedSuggestionIntoView(direction: 'up' | 'down', didWrap: boolean): void;
+  getCommandMatch(rawInput: string): { command: SlashCommand; completion: string } | null;
+  applyThemeModeChange(mode: string): void;
+  getNextThemeMode(mode: string): ThemeMode;
+  applyWebAppearanceMode(mode: WebAppearanceMode): void;
+  applyNextWebAppearanceMode(): void;
+  openDocumentPipPickerFromOverlay(): void;
+  isModeCommand(input: string): boolean;
+  openOverlayCommunityQrDialog(qrUrl: string): void;
+  openSiteSearchProviderQuery(provider: InputModeProvider | null, query: string, event: ActivationEvent | null): boolean;
+  finishOverlayResultActivation(event: ActivationEvent | null, canOpenInBackground: boolean): boolean;
+  openMatchedTabSuggestion(
+    suggestion: DisplayedSuggestion,
+    event: ActivationEvent | null,
+    item: { _xVisitButtonAction?: string } | null,
+    query: string
+  ): void;
+  shouldOpenSearchResultInBackgroundTab(event: ActivationEvent | null): boolean;
+  recordSearchSuggestionSelectionFromSuggestion(suggestion: DisplayedSuggestion, query: string, source: string): void;
+  getSearchResultCreateDisposition(
+    suggestion: DisplayedSuggestion,
+    event: ActivationEvent | null,
+    item: { _xVisitButtonAction?: string } | null
+  ): Disposition;
+  isSlashCommandInput(input: string): boolean;
+  // Called with no rows: the list rebuilds from the typed command.
+  updateSearchSuggestions(rows: never[], query: string): void;
+  isAggregateSearchProvider(provider: Partial<SiteSearchProvider> | null): boolean;
+  getSearchResultNewTabDisposition(event: ActivationEvent | null): 'backgroundTab' | 'newTab';
+  // The address a query leads straight to, or '' to search it.
+  resolveQuickNavigation(query: string): Promise<string>;
+  overlayState: PanelKeysState;
+}
+
+function isWebAppearanceMode(value: unknown): value is WebAppearanceMode {
+  return value === 'auto' || value === 'light' || value === 'dark';
+}
+
+function createPanelKeys(deps: PanelKeysDeps) {
   const {
     cancelPendingOpenTabsPrefixEntry,
     openSearchModeMenuFromDoubleTab,
@@ -56,8 +175,11 @@ function createPanelKeys(deps) {
   // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
-  function handleTabKey(e) {
-    if (!e || e.defaultPrevented) {
+  // Tab: the mode menu, a typed trigger's mode, or the shown completion;
+  // true when it was used.
+  function handleTabKey(e: KeyboardEvent | null): boolean {
+    const input = overlayState.searchInput;
+    if (!e || e.defaultPrevented || !input) {
       return false;
     }
     if (overlayState.inputModeController &&
@@ -71,7 +193,7 @@ function createPanelKeys(deps) {
         overlayState.inputModeController.shouldCompleteModeMenuDoubleTab(e);
       if (shouldOpenModeMenu) {
         cancelPendingOpenTabsPrefixEntry();
-        openSearchModeMenuFromDoubleTab();
+        void openSearchModeMenuFromDoubleTab();
         return true;
       }
       if (e.defaultPrevented) {
@@ -81,13 +203,13 @@ function createPanelKeys(deps) {
     if (overlayState.inputModeController &&
         typeof overlayState.inputModeController.shouldOpenModeMenuForActiveModeOnTab === 'function' &&
         overlayState.inputModeController.shouldOpenModeMenuForActiveModeOnTab(e)) {
-      overlayState.inputModeController.openModeMenu('none');
+      void overlayState.inputModeController.openModeMenu('none');
       return true;
     }
     if (overlayState.siteSearchState || overlayState.localSearchScopeState || overlayState.openTabsSearchModeActive) {
       return false;
     }
-    const rawValue = overlayState.searchInput.value;
+    const rawValue = input.value;
     const rawTrigger = overlayState.latestRawInputValue || rawValue;
     const triggerInput = (rawTrigger || rawValue).trim();
     if (!triggerInput && overlayState.inputModeController &&
@@ -95,7 +217,7 @@ function createPanelKeys(deps) {
       const shouldOpenModeMenu = overlayState.inputModeController.shouldOpenModeMenuOnDoubleTab(e);
       if (shouldOpenModeMenu) {
         cancelPendingOpenTabsPrefixEntry();
-        openSearchModeMenuFromDoubleTab();
+        void openSearchModeMenuFromDoubleTab();
         return true;
       }
       if (e.defaultPrevented) {
@@ -107,18 +229,16 @@ function createPanelKeys(deps) {
       }
       return false;
     }
-    if (overlayState.siteSearchTriggerState &&
-        overlayState.siteSearchTriggerState.rawInput === triggerInput &&
-        overlayState.siteSearchTriggerState.provider) {
+    const siteTrigger = overlayState.siteSearchTriggerState;
+    if (siteTrigger && siteTrigger.rawInput === triggerInput && siteTrigger.provider) {
       e.preventDefault();
-      activateSiteSearch(overlayState.siteSearchTriggerState.provider);
+      activateSiteSearch(siteTrigger.provider);
       return true;
     }
-    if (overlayState.localSearchScopeTriggerState &&
-        overlayState.localSearchScopeTriggerState.rawInput === triggerInput &&
-        overlayState.localSearchScopeTriggerState.scope) {
+    const scopeTrigger = overlayState.localSearchScopeTriggerState;
+    if (scopeTrigger && scopeTrigger.rawInput === triggerInput && scopeTrigger.scope) {
       e.preventDefault();
-      return activateLocalSearchScope(overlayState.localSearchScopeTriggerState.scope);
+      return activateLocalSearchScope(scopeTrigger.scope);
     }
     if (triggerInput) {
       e.preventDefault();
@@ -141,13 +261,15 @@ function createPanelKeys(deps) {
         activateLocalSearchScope(directLocalScope);
         return true;
       }
-      Promise.all([
+      void Promise.all([
         getSiteSearchProviders(),
         getAggregateSearches(),
         getShortcutRules()
       ]).then(([items, definitions, rules]) => {
-        if (overlayState.siteSearchState || overlayState.localSearchScopeState || overlayState.openTabsSearchModeActive ||
-            String(overlayState.searchInput.value || '').trim() !== triggerInput) {
+        // The input may have been replaced while the lists loaded.
+        const liveInput = overlayState.searchInput;
+        if (!liveInput || overlayState.siteSearchState || overlayState.localSearchScopeState ||
+            overlayState.openTabsSearchModeActive || String(liveInput.value || '').trim() !== triggerInput) {
           return;
         }
         const asyncTopSiteMatch = getTopSiteMatchCandidate(overlayState.currentSuggestions, triggerInput);
@@ -165,43 +287,51 @@ function createPanelKeys(deps) {
           activateLocalSearchScope(asyncLocalScope);
           return;
         }
-        if (overlayState.autocompleteState && overlayState.autocompleteState.completion) {
-          overlayState.searchInput.value = overlayState.autocompleteState.completion;
-          overlayState.searchInput.setSelectionRange(overlayState.autocompleteState.completion.length, overlayState.autocompleteState.completion.length);
-          overlayState.latestRawInputValue = overlayState.autocompleteState.completion;
-          overlayState.latestOverlayQuery = overlayState.autocompleteState.completion.trim();
-          overlayState.autocompleteState = null;
-          overlayState.searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-        }
+        acceptAutocompletion(liveInput);
       });
       return true;
     }
     if (overlayState.autocompleteState && overlayState.autocompleteState.completion) {
       e.preventDefault();
-      overlayState.searchInput.value = overlayState.autocompleteState.completion;
-      overlayState.searchInput.setSelectionRange(overlayState.autocompleteState.completion.length, overlayState.autocompleteState.completion.length);
-      overlayState.latestRawInputValue = overlayState.autocompleteState.completion;
-      overlayState.latestOverlayQuery = overlayState.autocompleteState.completion.trim();
-      overlayState.autocompleteState = null;
-      overlayState.searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      acceptAutocompletion(input);
       return true;
     }
     return false;
   }
 
-  function shouldRemoveSearchModeTagOnBackspace(event) {
+  // Takes the shown completion as typed text.
+  function acceptAutocompletion(input: HTMLInputElement): void {
+    const completion = overlayState.autocompleteState ? overlayState.autocompleteState.completion : '';
+    if (!completion) {
+      return;
+    }
+    input.value = completion;
+    input.setSelectionRange(completion.length, completion.length);
+    overlayState.latestRawInputValue = completion;
+    overlayState.latestOverlayQuery = completion.trim();
+    overlayState.autocompleteState = null;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  // Backspace in an empty input removes the mode tag, unless the tag asks
+  // for a second press first.
+  function shouldRemoveSearchModeTagOnBackspace(event: KeyboardEvent): boolean {
     if (!overlayState.inputModeController ||
         typeof overlayState.inputModeController.shouldRemoveModeTagOnBackspace !== 'function') {
       return true;
     }
     const shouldRemove = overlayState.inputModeController.shouldRemoveModeTagOnBackspace(event);
-    if (!shouldRemove && event && typeof event.preventDefault === 'function') {
+    if (!shouldRemove) {
       event.preventDefault();
     }
     return shouldRemove;
   }
 
-  function handleSearchInputKeydown(e) {
+  function handleSearchInputKeydown(e: KeyboardEvent): void {
+    const input = overlayState.searchInput;
+    if (!input) {
+      return;
+    }
     syncSuggestionActionModifiersFromEvent(e);
     if (!e.metaKey && !e.ctrlKey && !e.altKey) {
       e.stopPropagation();
@@ -216,7 +346,7 @@ function createPanelKeys(deps) {
       e.preventDefault();
       e.stopPropagation();
       clearLocalSearchScope();
-      const fallbackQuery = overlayState.searchInput.value.trim();
+      const fallbackQuery = input.value.trim();
       if (fallbackQuery) {
         requestOverlaySearchSuggestions(fallbackQuery);
       } else {
@@ -230,14 +360,14 @@ function createPanelKeys(deps) {
       clearOpenTabsSearchMode();
       return;
     }
-    if (e.key === 'Backspace' && overlayState.siteSearchState && !overlayState.searchInput.value) {
+    if (e.key === 'Backspace' && overlayState.siteSearchState && !input.value) {
       if (!shouldRemoveSearchModeTagOnBackspace(e)) {
         return;
       }
       clearSiteSearch();
       return;
     }
-    if (e.key === 'Backspace' && overlayState.localSearchScopeState && !overlayState.searchInput.value) {
+    if (e.key === 'Backspace' && overlayState.localSearchScopeState && !input.value) {
       if (!shouldRemoveSearchModeTagOnBackspace(e)) {
         return;
       }
@@ -245,7 +375,7 @@ function createPanelKeys(deps) {
       clearSearchSuggestions();
       return;
     }
-    if (e.key === 'Backspace' && overlayState.openTabsSearchModeActive && !overlayState.searchInput.value) {
+    if (e.key === 'Backspace' && overlayState.openTabsSearchModeActive && !input.value) {
       if (!shouldRemoveSearchModeTagOnBackspace(e)) {
         return;
       }
@@ -263,14 +393,14 @@ function createPanelKeys(deps) {
       if (overlayState.inputHistoryController) {
         const result = overlayState.inputHistoryController.move(
           inputHistoryDirection,
-          overlayState.searchInput.value
+          input.value
         );
         if (result.handled) {
           overlayState.isApplyingSearchInputHistory = true;
           try {
-            overlayState.searchInput.value = result.value;
-            overlayState.searchInput.setSelectionRange(result.value.length, result.value.length);
-            overlayState.searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+            input.value = result.value;
+            input.setSelectionRange(result.value.length, result.value.length);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
           } finally {
             overlayState.isApplyingSearchInputHistory = false;
           }
@@ -294,17 +424,18 @@ function createPanelKeys(deps) {
     }
     dismissAutocompletePreviewOnNonTabKey(e);
     if (e.key !== 'Backspace' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-      overlayState.latestRawInputValue = overlayState.searchInput.value;
-      overlayState.latestOverlayQuery = overlayState.searchInput.value.trim();
+      overlayState.latestRawInputValue = input.value;
+      overlayState.latestOverlayQuery = input.value.trim();
     }
   }
 
   // Add keyboard navigation
-  function getAutoHighlightIndex() {
+  function getAutoHighlightIndex(): number {
     return suggestionItems.findIndex((item) => Boolean(item && item._xIsAutocompleteTop));
   }
 
-  function shouldSwitchMatchedTabSuggestion(suggestion, index) {
+  // Enter on this row switches to the tab it is open in.
+  function shouldSwitchMatchedTabSuggestion(suggestion: SuggestionLike | null, index: number): boolean {
     if (!suggestion || typeof suggestion._xMatchedTabId !== 'number') {
       return false;
     }
@@ -320,7 +451,7 @@ function createPanelKeys(deps) {
     return index === 0;
   }
 
-  function getSuggestionNavigationKey(event) {
+  function getSuggestionNavigationKey(event: KeyboardEvent): 'ArrowDown' | 'ArrowUp' | '' {
     return SUGGESTION_NAVIGATION.getSuggestionNavigationKey(event, {
       macosCtrlEnabled: overlayState.macosCtrlSuggestionNavigationEnabled,
       navigatorLike: window && window.navigator ? window.navigator : null
@@ -329,7 +460,11 @@ function createPanelKeys(deps) {
 
   // Keys that belong to the overlay (see LumnoOverlayKeyboard), plus the
   // navigation, Enter and Escape keys forwarded by the input handler.
-  function handleOverlayKeydown(e) {
+  function handleOverlayKeydown(e: KeyboardEvent): void {
+    const input = overlayState.searchInput;
+    if (!input) {
+      return;
+    }
     syncSuggestionActionModifiersFromEvent(e);
     if (SUGGESTION_NAVIGATION.handleNumberShortcutKeyEvent(
       e,
@@ -367,7 +502,7 @@ function createPanelKeys(deps) {
       }
       updateSelection();
       scrollSelectedSuggestionIntoView('down', didWrap);
-      overlayState.searchInput.focus();
+      input.focus();
     } else if (suggestionNavigationKey === 'ArrowUp') {
       e.preventDefault();
       if (suggestionItems.length === 0) {
@@ -396,10 +531,10 @@ function createPanelKeys(deps) {
       }
       updateSelection();
       scrollSelectedSuggestionIntoView('up', didWrap);
-      overlayState.searchInput.focus();
+      input.focus();
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      const query = overlayState.searchInput.value.trim();
+      const query = input.value.trim();
       if (query && overlayState.inputHistoryController) {
         overlayState.inputHistoryController.record(query);
       }
@@ -407,22 +542,22 @@ function createPanelKeys(deps) {
       if (commandMatch && overlayState.selectedIndex === -1) {
         if (commandMatch.command.type === 'modeSwitch') {
           applyThemeModeChange(getNextThemeMode(overlayState.overlayThemeMode || 'system'));
-          overlayState.searchInput.focus();
+          input.focus();
           return;
         } else if (commandMatch.command.type === 'webAppearanceSwitch') {
           applyNextWebAppearanceMode();
-          overlayState.searchInput.focus();
+          input.focus();
           return;
         } else if (commandMatch.command.type === 'commandNewTab') {
           LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openNewTab' });
         } else if (commandMatch.command.type === 'commandSettings') {
           LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openOptionsPage' });
         } else if (commandMatch.command.type === 'commandOpenTabs') {
-          overlayState.searchInput.value = '';
+          input.value = '';
           overlayState.latestRawInputValue = '';
           overlayState.latestOverlayQuery = '';
           activateOpenTabsSearchMode();
-          overlayState.searchInput.focus();
+          input.focus();
           return;
         } else if (commandMatch.command.type === 'commandCopyUrl') {
           LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'copyCurrentPageUrl' });
@@ -449,13 +584,15 @@ function createPanelKeys(deps) {
         if (isSearchSuggestion && overlayState.currentSuggestions[activeSuggestionIndex]) {
           const selectedSuggestion = overlayState.currentSuggestions[activeSuggestionIndex];
           if (selectedSuggestion.type === 'modeSwitch') {
-            applyThemeModeChange(selectedSuggestion.nextMode);
-            overlayState.searchInput.focus();
+            applyThemeModeChange(selectedSuggestion.nextMode || '');
+            input.focus();
             return;
           }
           if (selectedSuggestion.type === 'webAppearanceSwitch') {
-            applyWebAppearanceMode(selectedSuggestion.nextMode);
-            overlayState.searchInput.focus();
+            if (isWebAppearanceMode(selectedSuggestion.nextMode)) {
+              applyWebAppearanceMode(selectedSuggestion.nextMode);
+            }
+            input.focus();
             return;
           }
           if (selectedSuggestion.type === 'commandNewTab') {
@@ -469,11 +606,11 @@ function createPanelKeys(deps) {
             return;
           }
           if (selectedSuggestion.type === 'commandOpenTabs') {
-            overlayState.searchInput.value = '';
+            input.value = '';
             overlayState.latestRawInputValue = '';
             overlayState.latestOverlayQuery = '';
             activateOpenTabsSearchMode();
-            overlayState.searchInput.focus();
+            input.focus();
             return;
           }
           if (selectedSuggestion.type === 'commandCopyUrl') {
@@ -488,11 +625,11 @@ function createPanelKeys(deps) {
           }
           if (selectedSuggestion.type === 'siteSearchPrompt' && selectedSuggestion.provider) {
             activateSiteSearch(selectedSuggestion.provider);
-            overlayState.searchInput.focus();
+            input.focus();
             return;
           }
           if (selectedSuggestion.type === 'helpFeedback' && selectedSuggestion.feedbackKey === 'community') {
-            openOverlayCommunityQrDialog(selectedSuggestion.url);
+            openOverlayCommunityQrDialog(selectedSuggestion.url || '');
             return;
           }
           if (selectedSuggestion.provider && selectedSuggestion.searchQuery) {
@@ -525,22 +662,14 @@ function createPanelKeys(deps) {
             recordSearchSuggestionSelectionFromSuggestion(selectedSuggestion, query, 'overlay');
             LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'createTab',
-              url: selectedSuggestion.url,
+              url: selectedSuggestion.url || '',
               disposition: getSearchResultCreateDisposition(selectedSuggestion, e, activeItem)
             });
             canKeepOverlayOpen = true;
           }
         } else if (!isSearchSuggestion) {
-          if (activeItem && activeItem._xIsOpenTabsModeEntry) {
-            activateOpenTabsSearchMode();
-            overlayState.searchInput.focus();
-            return;
-          }
           // Switch to existing tab
-          if (activeItem && activeItem._xIsRenderedTabSuggestion && activeItem._xSuggestion) {
-            openMatchedTabSuggestion(activeItem._xSuggestion, e, activeItem, query);
-            canKeepOverlayOpen = Boolean(activeItem._xSuggestion.url);
-          } else if (activeItem && typeof activeItem._xTabId === 'number') {
+          if (activeItem && typeof activeItem._xTabId === 'number') {
             LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'switchToTab',
               tabId: activeItem._xTabId
@@ -556,9 +685,10 @@ function createPanelKeys(deps) {
         if (overlayState.localSearchScopeState) {
           return;
         }
-        if (overlayState.siteSearchState) {
-          const activeAggregateSearch = isAggregateSearchProvider(overlayState.siteSearchState);
-          if (openSiteSearchProviderQuery(overlayState.siteSearchState, query, e)) {
+        const activeProvider = overlayState.siteSearchState;
+        if (activeProvider) {
+          const activeAggregateSearch = isAggregateSearchProvider(activeProvider);
+          if (openSiteSearchProviderQuery(activeProvider, query, e)) {
             finishOverlayResultActivation(e, true);
             return;
           }
@@ -566,17 +696,17 @@ function createPanelKeys(deps) {
             return;
           }
         }
-        const currentRawInput = (overlayState.latestRawInputValue || overlayState.searchInput.value || '').trim();
-        if (overlayState.inlineSearchState && overlayState.inlineSearchState.isAuto &&
-            overlayState.inlineSearchState.rawInput === currentRawInput) {
-          if (overlayState.inlineSearchState.provider && overlayState.inlineSearchState.query) {
-            if (!openSiteSearchProviderQuery(overlayState.inlineSearchState.provider, overlayState.inlineSearchState.query, e)) {
+        const currentRawInput = (overlayState.latestRawInputValue || input.value || '').trim();
+        const inlineSearch = overlayState.inlineSearchState;
+        if (inlineSearch && inlineSearch.isAuto && inlineSearch.rawInput === currentRawInput) {
+          if (inlineSearch.provider && inlineSearch.query) {
+            if (!openSiteSearchProviderQuery(inlineSearch.provider, inlineSearch.query, e)) {
               return;
             }
-          } else if (overlayState.inlineSearchState.url) {
+          } else if (inlineSearch.url) {
             LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'createTab',
-              url: overlayState.inlineSearchState.url,
+              url: inlineSearch.url,
               disposition: getSearchResultNewTabDisposition(e)
             });
           } else {
@@ -599,7 +729,7 @@ function createPanelKeys(deps) {
           finishOverlayResultActivation(e, true);
           return;
         }
-        resolveQuickNavigation(query).then((targetUrl) => {
+        void resolveQuickNavigation(query).then((targetUrl) => {
           if (targetUrl) {
             LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'createTab',
@@ -625,7 +755,7 @@ function createPanelKeys(deps) {
     }
   }
 
-  function handleOverlayKeyup(e) {
+  function handleOverlayKeyup(e: KeyboardEvent): void {
     syncSuggestionActionModifiersFromEvent(e);
     SUGGESTION_NAVIGATION.handleNumberShortcutKeyEvent(
       e,
@@ -635,12 +765,14 @@ function createPanelKeys(deps) {
     );
   }
 
-  function isSearchInputActive() {
-    const searchRoot = overlayState.searchInput && typeof overlayState.searchInput.getRootNode === 'function'
-      ? overlayState.searchInput.getRootNode()
-      : null;
-    const activeInRoot = searchRoot && searchRoot.activeElement ? searchRoot.activeElement : null;
-    return document.activeElement === overlayState.searchInput || activeInRoot === overlayState.searchInput;
+  function isSearchInputActive(): boolean {
+    const input = overlayState.searchInput;
+    if (!input) {
+      return false;
+    }
+    const searchRoot = input.getRootNode();
+    const activeInRoot = 'activeElement' in searchRoot ? searchRoot.activeElement : null;
+    return document.activeElement === input || activeInRoot === input;
   }
 
   return {
@@ -655,3 +787,4 @@ function createPanelKeys(deps) {
 }
 
 export { createPanelKeys };
+export type { PanelKeysDeps, PanelKeysState };

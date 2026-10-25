@@ -1,13 +1,81 @@
-// @ts-nocheck
 // Site search providers and aggregate searches in the overlay: their
 // URLs and icons, running an interactive provider, recording a selection,
 // and loading and reloading both lists.
+import type * as FaviconUtils from '../../domain/favicon/favicon-utils';
+import type { FaviconUrlResolver } from '../../domain/favicon/favicon-utils';
+import type * as ShortcutFavicon from '../../domain/favicon/shortcut-favicon';
+import type { CachedIconMap, SiteSearchIconOptions } from '../../domain/favicon/shortcut-favicon';
+import type * as AggregateSearchStore from '../../domain/search/aggregate-search-store';
+import type { AggregateSearch } from '../../domain/search/aggregate-search-store';
 import * as AGGREGATE_SEARCH_SURFACE from '../../domain/search/aggregate-search-surface';
+import { readSiteSearchProviders } from '../../domain/search/site-search-provider-reader';
+import type { DisplayedSuggestion } from '../../domain/search/suggestion-action-model';
+import type * as SearchUtils from '../../domain/search/search-utils';
+import type { SiteSearchProvider } from '../../domain/search/types';
+import type { StorageAreaFacade } from '../../platform/settings-storage';
+import type { InputModeProvider } from '../../shared/search/input-mode/types';
 import * as SITE_SEARCH_STORE from '../../shared/search/site-search-store';
 import * as LumnoAggregateSearchStorage from '../../platform/aggregate-search-storage';
 import * as LumnoMessaging from '../../platform/messaging';
+import type { ActivationEvent } from './result-activation';
+import type { Translate } from './types';
 
-function createSiteSearchProviders(deps) {
+interface SiteSearchProvidersState {
+  storageArea: StorageAreaFacade | null;
+  // The bundled providers, for when the stored list cannot load.
+  defaultSiteSearchProviders: SiteSearchProvider[];
+  siteSearchProvidersCache: SiteSearchProvider[] | null;
+  // Raised to drop a load that a newer one replaced.
+  siteSearchProvidersLoadVersion: number;
+  aggregateSearchesCache: AggregateSearch[] | null;
+  aggregateSearchesLoadPromise: Promise<AggregateSearch[]> | null;
+  aggregateSearchesLoadVersion: number;
+  siteSearchIconCache: CachedIconMap;
+  siteSearchIconCacheLoaded: boolean;
+  // A favicon as a data: URL from the worker, or '' when there is none.
+  requestFaviconData(url: string, pageUrl?: string): Promise<string>;
+  attachResolvedFaviconWithFallbacks(
+    image: HTMLImageElement,
+    pageUrl: string,
+    hostKey: string,
+    fallbackUrl: string,
+    onFailed: () => void
+  ): void;
+}
+
+interface SiteSearchProvidersDeps {
+  SEARCH_UTILS: Pick<typeof SearchUtils,
+    'withHelpCenterLocale' | 'isAiSiteSearchProvider' | 'isSearchEngineSiteSearchProvider' |
+    'isInteractiveSiteSearchProvider' | 'mergeCustomProviders'>;
+  AGGREGATE_SEARCH_STORE: Pick<typeof AggregateSearchStore, 'isAggregateSearchProvider'>;
+  SHORTCUT_FAVICON: Pick<typeof ShortcutFavicon, 'getSiteSearchProviderIcon' | 'getSiteSearchProviderPageUrl'>;
+  FAVICON_UTILS: Pick<typeof FaviconUtils, 'isExtensionFaviconEndpointUrl' | 'getCanonicalPageUrlForFavicon'>;
+  getHelpCenterLocale(): string;
+  showOverlayToast(message: string, isError?: boolean): void;
+  t: Translate;
+  getSearchResultNewTabDisposition(event: ActivationEvent | null): 'backgroundTab' | 'newTab';
+  finishOverlayResultActivation(event: ActivationEvent | null, canOpenInBackground: boolean): boolean;
+  getOverlayFaviconUrlResolver(): FaviconUrlResolver | null;
+  siteSearchIconCacheOptions: SiteSearchIconOptions;
+  // Favicon images already fetched, as data: URLs by address.
+  faviconDataCache: Map<string, string>;
+  getHostFromUrl(url: string): string;
+  SITE_SEARCH_STORAGE_KEY: string;
+  SITE_SEARCH_DISABLED_STORAGE_KEY: string;
+  AGGREGATE_SEARCH_STORAGE_KEY: string;
+  getStorageValuesAsync(keys: string[]): Promise<Record<string, unknown>>;
+  overlayState: SiteSearchProvidersState;
+}
+
+// What the input mode controller passes when it shows a provider's icon.
+interface ProviderIconContext {
+  iconUrl?: string;
+  iconHost?: string;
+  provider?: SiteSearchProvider | null;
+  onIconUnavailable?(): void;
+}
+
+function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
   const {
     SEARCH_UTILS,
     getHelpCenterLocale,
@@ -31,10 +99,10 @@ function createSiteSearchProviders(deps) {
   // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
-  let siteSearchProvidersLoadPromise = null;
-  let aggregateSearchRequestController = null;
+  let siteSearchProvidersLoadPromise: Promise<SiteSearchProvider[]> | null = null;
+  let aggregateSearchRequestController: ReturnType<typeof AGGREGATE_SEARCH_SURFACE.createAggregateSearchRequestController> | null = null;
 
-  function buildSearchUrl(template, query, provider) {
+  function buildSearchUrl(template: string, query: string, provider?: SiteSearchProvider | null): string {
     if (!template) {
       return '';
     }
@@ -42,36 +110,39 @@ function createSiteSearchProviders(deps) {
     return provider ? SEARCH_UTILS.withHelpCenterLocale(url, provider, getHelpCenterLocale()) : url;
   }
 
-  function isAiSiteSearchProvider(provider) {
+  function isAiSiteSearchProvider(provider: SiteSearchProvider | null): boolean {
     return SEARCH_UTILS.isAiSiteSearchProvider(provider);
   }
 
-  function isSearchEngineSiteSearchProvider(provider) {
+  function isSearchEngineSiteSearchProvider(provider: SiteSearchProvider | null): boolean {
     return SEARCH_UTILS.isSearchEngineSiteSearchProvider(provider);
   }
 
-  function isAggregateSearchProvider(provider) {
+  function isAggregateSearchProvider(provider: Partial<SiteSearchProvider> | null): boolean {
     return AGGREGATE_SEARCH_STORE.isAggregateSearchProvider(provider);
   }
 
-  function isInteractiveSiteSearchProvider(provider) {
+  function isInteractiveSiteSearchProvider(provider: SiteSearchProvider): boolean {
     return SEARCH_UTILS.isInteractiveSiteSearchProvider(provider);
   }
 
-  function getAggregateSearchRequestController() {
+  function getAggregateSearchRequestController(): ReturnType<typeof AGGREGATE_SEARCH_SURFACE.createAggregateSearchRequestController> {
     if (aggregateSearchRequestController) {
       return aggregateSearchRequestController;
     }
-    aggregateSearchRequestController = AGGREGATE_SEARCH_SURFACE.createAggregateSearchRequestController({
+    const controller = AGGREGATE_SEARCH_SURFACE.createAggregateSearchRequestController({
       chromeApi: chrome,
       onFeedback(descriptor) {
         showOverlayToast(t(descriptor.messageKey, descriptor.fallback), descriptor.isError);
       }
     });
-    return aggregateSearchRequestController;
+    aggregateSearchRequestController = controller;
+    return controller;
   }
 
-  function openSiteSearchProviderQuery(provider, query, event) {
+  // Runs a site search, an interactive provider or an aggregate search;
+  // true when a tab opened at once, so the panel may close.
+  function openSiteSearchProviderQuery(provider: InputModeProvider | null, query: string, event: ActivationEvent | null): boolean {
     const trimmedQuery = String(query || '').trim();
     if (!provider || !trimmedQuery) {
       return false;
@@ -91,7 +162,7 @@ function createSiteSearchProviders(deps) {
         onSuccess(response) {
           const feedbackDelayMs = AGGREGATE_SEARCH_SURFACE.getSuccessFeedbackDelayMs(response);
           if (feedbackDelayMs > 0) {
-            setTimeout(() => {
+            window.setTimeout(() => {
               finishOverlayResultActivation(event, true);
             }, feedbackDelayMs);
             return;
@@ -110,7 +181,7 @@ function createSiteSearchProviders(deps) {
       });
       return true;
     }
-    const siteUrl = buildSearchUrl(provider.template, trimmedQuery, provider);
+    const siteUrl = buildSearchUrl(provider.template || '', trimmedQuery, provider);
     if (!siteUrl) {
       return false;
     }
@@ -122,7 +193,8 @@ function createSiteSearchProviders(deps) {
     return true;
   }
 
-  function recordSearchSuggestionSelectionFromSuggestion(suggestion, query, source) {
+  // Teaches the ranking which result was picked for the query.
+  function recordSearchSuggestionSelectionFromSuggestion(suggestion: DisplayedSuggestion, query: string, source: string): void {
     if (!suggestion || suggestion.forceSearch || suggestion.provider || !suggestion.url) {
       return;
     }
@@ -135,12 +207,12 @@ function createSiteSearchProviders(deps) {
         type: suggestion.type || 'history',
         source: source || 'overlay'
       });
-    } catch (e) {
+    } catch (_error) {
       // Selection ranking is best-effort; never block opening the target.
     }
   }
 
-  function getProviderIcon(provider) {
+  function getProviderIcon(provider: SiteSearchProvider): string {
     const resolver = getOverlayFaviconUrlResolver();
     if (!resolver) {
       return '';
@@ -148,7 +220,7 @@ function createSiteSearchProviders(deps) {
     const iconUrl = SHORTCUT_FAVICON.getSiteSearchProviderIcon(
       overlayState.siteSearchIconCacheLoaded ? overlayState.siteSearchIconCache : {}, provider, Date.now(), {
         ...siteSearchIconCacheOptions,
-        resolveAssetUrl: (path) => chrome.runtime.getURL(path)
+        resolveAssetUrl: (path: string) => chrome.runtime.getURL(path)
       }
     );
     return resolver.getProviderFaviconUrl(SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider), iconUrl);
@@ -157,7 +229,7 @@ function createSiteSearchProviders(deps) {
   // Input-mode icons load straight into an <img> in the page, which cannot
   // load the browser's _favicon cache; those arrive as data: URLs from the
   // background, and the provider keeps its glyph until one is cached.
-  function toPageRenderableIconUrl(iconUrl, pageUrl) {
+  function toPageRenderableIconUrl(iconUrl: string, pageUrl: string): string {
     if (!FAVICON_UTILS.isExtensionFaviconEndpointUrl(iconUrl)) {
       return iconUrl;
     }
@@ -169,11 +241,11 @@ function createSiteSearchProviders(deps) {
     return '';
   }
 
-  function getPageRenderableProviderIcon(provider) {
+  function getPageRenderableProviderIcon(provider: SiteSearchProvider): string {
     return toPageRenderableIconUrl(getProviderIcon(provider), SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider));
   }
 
-  function getProviderIconAttachPageUrl(provider, iconUrl, iconHost) {
+  function getProviderIconAttachPageUrl(provider: SiteSearchProvider | null, iconUrl: string, iconHost: string): string {
     const providerPageUrl = SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider);
     if (providerPageUrl) {
       return providerPageUrl;
@@ -186,7 +258,9 @@ function createSiteSearchProviders(deps) {
     return host ? `https://${host}/` : '';
   }
 
-  function attachInputModeProviderIcon(icon, context) {
+  // Loads a provider's favicon into icon, with the usual fallbacks; false
+  // when there is nothing to load.
+  function attachInputModeProviderIcon(icon: HTMLImageElement | null, context: ProviderIconContext | null): boolean {
     const iconUrl = context && context.iconUrl ? String(context.iconUrl).trim() : '';
     if (!icon || !iconUrl || iconUrl.startsWith('data:') || /^(?:chrome|moz)-extension:/i.test(iconUrl)) {
       return false;
@@ -201,27 +275,30 @@ function createSiteSearchProviders(deps) {
       return false;
     }
     const hostKey = iconHost || getHostFromUrl(pageUrl);
-    overlayState.attachResolvedFaviconWithFallbacks(icon, pageUrl, hostKey, iconUrl, () => {
+    const image = icon;
+    overlayState.attachResolvedFaviconWithFallbacks(image, pageUrl, hostKey, iconUrl, () => {
       if (context && typeof context.onIconUnavailable === 'function') {
         context.onIconUnavailable();
         return;
       }
-      if (icon && typeof icon.remove === 'function') {
-        icon.remove();
-      }
+      image.remove();
     });
     return true;
   }
 
-  function beginSiteSearchProviderLoad(loader, options) {
-    const settings = options && typeof options === 'object' ? options : {};
+  // Starts a load of the providers; a newer load, or an invalidating one,
+  // wins over any still running.
+  function beginSiteSearchProviderLoad(
+    loader: () => Promise<SiteSearchProvider[]>,
+    options?: { invalidate?: boolean }
+  ): { promise: Promise<SiteSearchProvider[]>; version: number } {
+    const settings: { invalidate?: boolean } = options && typeof options === 'object' ? options : {};
     if (settings.invalidate === true) {
       overlayState.siteSearchProvidersLoadVersion += 1;
       siteSearchProvidersLoadPromise = null;
     }
     const loadVersion = overlayState.siteSearchProvidersLoadVersion;
-    let loadTask = null;
-    loadTask = Promise.resolve().then(() => loader()).then((items) => {
+    const loadTask: Promise<SiteSearchProvider[]> = Promise.resolve().then(() => loader()).then((items) => {
       const normalizedItems = Array.isArray(items) ? items : [];
       if (loadVersion === overlayState.siteSearchProvidersLoadVersion &&
           siteSearchProvidersLoadPromise === loadTask) {
@@ -247,7 +324,7 @@ function createSiteSearchProviders(deps) {
     };
   }
 
-  function getSiteSearchProviders() {
+  function getSiteSearchProviders(): Promise<SiteSearchProvider[]> {
     if (siteSearchProvidersLoadPromise) {
       return siteSearchProvidersLoadPromise;
     }
@@ -267,17 +344,14 @@ function createSiteSearchProviders(deps) {
     })).promise;
   }
 
-  function reloadSiteSearchProvidersFromStorage() {
+  function reloadSiteSearchProvidersFromStorage(): { promise: Promise<SiteSearchProvider[]>; version: number } {
     return beginSiteSearchProviderLoad(() => getStorageValuesAsync([
       SITE_SEARCH_STORAGE_KEY,
       SITE_SEARCH_DISABLED_STORAGE_KEY
     ]).then((result) => {
-      const customItems = Array.isArray(result[SITE_SEARCH_STORAGE_KEY])
-        ? result[SITE_SEARCH_STORAGE_KEY]
-        : [];
-      const disabledKeys = Array.isArray(result[SITE_SEARCH_DISABLED_STORAGE_KEY])
-        ? result[SITE_SEARCH_DISABLED_STORAGE_KEY]
-        : [];
+      const customItems = readSiteSearchProviders(result[SITE_SEARCH_STORAGE_KEY]);
+      const storedDisabledKeys = result[SITE_SEARCH_DISABLED_STORAGE_KEY];
+      const disabledKeys = Array.isArray(storedDisabledKeys) ? storedDisabledKeys : [];
       return SITE_SEARCH_STORE.mergeStoredProviders(
         overlayState.defaultSiteSearchProviders,
         customItems,
@@ -287,7 +361,7 @@ function createSiteSearchProviders(deps) {
     }), { invalidate: true });
   }
 
-  function getAggregateSearches() {
+  function getAggregateSearches(): Promise<AggregateSearch[]> {
     if (overlayState.aggregateSearchesCache) {
       return Promise.resolve(overlayState.aggregateSearchesCache);
     }
@@ -305,7 +379,7 @@ function createSiteSearchProviders(deps) {
         return items;
       }
       return overlayState.aggregateSearchesCache || [];
-    }).catch(() => {
+    }).catch((): AggregateSearch[] => {
       if (loadVersion === overlayState.aggregateSearchesLoadVersion) {
         overlayState.aggregateSearchesCache = null;
         return [];
@@ -338,3 +412,4 @@ function createSiteSearchProviders(deps) {
 }
 
 export { createSiteSearchProviders };
+export type { ProviderIconContext, SiteSearchProvidersDeps, SiteSearchProvidersState };

@@ -1,8 +1,62 @@
-// @ts-nocheck
 // Search modes: site search, local scopes and open tabs, their input
 // prefixes and labels, and the top-site and trigger candidates that suggest
 // switching.
-function createSearchModes(deps) {
+import type { ShortcutRule } from '../../domain/messages';
+import type * as SearchUtils from '../../domain/search/search-utils';
+import type { LocalSearchScope, SearchSourceType, SiteSearchProvider, SuggestionLike } from '../../domain/search/types';
+import type { InputModeController } from '../../shared/search/search-input-mode';
+import type { PrefixTextOptions } from '../../shared/search/input-mode/prefix-text';
+import type { InputModeProvider, InputModeTheme } from '../../shared/search/input-mode/types';
+import type { FormatMessage, LocalSearchScopeTrigger, SiteSearchTrigger, Translate } from './types';
+
+interface SearchModesState {
+  inputModeController: Pick<InputModeController,
+    'updateLayout' | 'setProviderPrefix' | 'setPrefixText' | 'clearProviderPrefix'> | null;
+  searchInput: HTMLInputElement | null;
+  defaultTheme: InputModeTheme;
+  openTabsSearchModeActive: boolean;
+  siteSearchState: InputModeProvider | null;
+  siteSearchTriggerState: SiteSearchTrigger<InputModeProvider> | null;
+  localSearchScopeState: LocalSearchScope | null;
+  localSearchScopeTriggerState: LocalSearchScopeTrigger | null;
+  // Cleared whenever the mode changes.
+  inlineSearchState: unknown;
+  enabledSearchResultSourceTypes: SearchSourceType[];
+  latestRawInputValue: string;
+  latestOverlayQuery: string;
+  overlaySuggestionRequestSeq: number;
+}
+
+interface SearchModesDeps {
+  t: Translate;
+  formatMessage: FormatMessage;
+  SEARCH_UTILS: Pick<typeof SearchUtils,
+    'getSiteSearchProviderDisplayNameMessage' | 'getInlineSiteSearchCandidate' | 'promoteStrongNavigationMatch' |
+    'getKeywordSearchSuggestionState' | 'getSiteSearchTriggerCandidate' | 'findLocalSearchScope'>;
+  isAggregateSearchProvider(provider: Partial<SiteSearchProvider> | null): boolean;
+  isAiSiteSearchProvider(provider: SiteSearchProvider | null): boolean;
+  getDirectNavigationUrl(rawQuery: string): unknown;
+  getUrlDisplay(url: string | undefined): string;
+  cancelPendingOverlaySuggestionRequests(): void;
+  clearAutocomplete(): void;
+  clearSearchSuggestions(): void;
+  getImmediateThemeForSuggestion(suggestion: { provider: InputModeProvider }): InputModeTheme | null;
+  getThemeForProvider(provider: InputModeProvider): Promise<InputModeTheme>;
+  renderCachedTabsForOverlay(query: string): void;
+  requestTabsAndRender(query?: string): void;
+  isSlashCommandInput(input: string): boolean;
+  // Called with no rows: the list rebuilds from the typed command.
+  updateSearchSuggestions(rows: never[], query: string): void;
+  requestOverlaySearchSuggestions(query: string): void;
+  overlayState: SearchModesState;
+}
+
+interface OpenTabsPrefixOptions {
+  animate?: boolean;
+  preserveModeMenuDoubleTab?: boolean;
+}
+
+function createSearchModes(deps: SearchModesDeps) {
   const {
     t,
     SEARCH_UTILS,
@@ -29,19 +83,23 @@ function createSearchModes(deps) {
   const OVERLAY_OPEN_TABS_PREFIX_FEEDBACK_DELAY_MS = 120;
   let pendingOpenTabsPrefixEntryTimer = 0;
 
-  function updateSiteSearchPrefixLayout() {
+  function updateSiteSearchPrefixLayout(): void {
     if (overlayState.inputModeController) {
       overlayState.inputModeController.updateLayout();
     }
   }
 
-  function setSiteSearchPrefix(provider, theme, options) {
+  function setSiteSearchPrefix(
+    provider: InputModeProvider | null,
+    theme: InputModeTheme | null,
+    options?: PrefixTextOptions | null
+  ): void {
     if (overlayState.inputModeController) {
       overlayState.inputModeController.setProviderPrefix(provider, theme, options);
     }
   }
 
-  function setOpenTabsSearchPrefix(theme, options) {
+  function setOpenTabsSearchPrefix(theme: InputModeTheme, options?: OpenTabsPrefixOptions): void {
     if (overlayState.inputModeController) {
       const prefixOptions = options || {};
       overlayState.inputModeController.setPrefixText(
@@ -60,7 +118,7 @@ function createSearchModes(deps) {
     }
   }
 
-  function cancelPendingOpenTabsPrefixEntry() {
+  function cancelPendingOpenTabsPrefixEntry(): boolean {
     if (!pendingOpenTabsPrefixEntryTimer) {
       return false;
     }
@@ -69,7 +127,9 @@ function createSearchModes(deps) {
     return true;
   }
 
-  function scheduleOpenTabsPrefixEntry(options) {
+  // Shows the open tabs prefix a moment later, so a quick second key can
+  // still change the mode first.
+  function scheduleOpenTabsPrefixEntry(options?: OpenTabsPrefixOptions): void {
     cancelPendingOpenTabsPrefixEntry();
     const prefixOptions = options || {};
     pendingOpenTabsPrefixEntryTimer = window.setTimeout(() => {
@@ -86,13 +146,13 @@ function createSearchModes(deps) {
     }, OVERLAY_OPEN_TABS_PREFIX_FEEDBACK_DELAY_MS);
   }
 
-  function clearSiteSearchPrefix() {
+  function clearSiteSearchPrefix(): void {
     if (overlayState.inputModeController) {
       overlayState.inputModeController.clearProviderPrefix();
     }
   }
 
-  function getSiteSearchDisplayName(provider) {
+  function getSiteSearchDisplayName(provider: SiteSearchProvider | null): string {
     if (!provider) {
       return t('site_search_default', '站内');
     }
@@ -103,7 +163,7 @@ function createSearchModes(deps) {
     return provider.name || provider.key || t('site_search_default', '站内');
   }
 
-  function getSiteSearchActionTitle(provider, query) {
+  function getSiteSearchActionTitle(provider: SiteSearchProvider | null, query: string): string {
     const site = getSiteSearchDisplayName(provider);
     const queryText = String(query || '').trim();
     if (isAggregateSearchProvider(provider)) {
@@ -124,7 +184,7 @@ function createSearchModes(deps) {
       : formatMessage('search_in_site', '在 {site} 中搜索', { site });
   }
 
-  function getSiteSearchPrefixText(provider) {
+  function getSiteSearchPrefixText(provider: SiteSearchProvider | null): string {
     if (isAiSiteSearchProvider(provider)) {
       return getSiteSearchDisplayName(provider);
     }
@@ -133,22 +193,22 @@ function createSearchModes(deps) {
     });
   }
 
-  function getInlineSiteSearchCandidate(input, providers) {
+  function getInlineSiteSearchCandidate(input: string, providers: SiteSearchProvider[] | null) {
     return SEARCH_UTILS.getInlineSiteSearchCandidate(input, providers);
   }
 
-  function promoteStrongNavigationMatch(list, rawQuery) {
+  function promoteStrongNavigationMatch<T extends SuggestionLike>(list: T[], rawQuery: string): T | null {
     return SEARCH_UTILS.promoteStrongNavigationMatch(list, rawQuery, {
       getDirectNavigationUrl,
       getUrlDisplay
     });
   }
 
-  function getKeywordSearchSuggestionState(list) {
+  function getKeywordSearchSuggestionState<T extends SuggestionLike>(list: T[]) {
     return SEARCH_UTILS.getKeywordSearchSuggestionState(list);
   }
 
-  function matchesTopSitePrefix(suggestion, input) {
+  function matchesTopSitePrefix(suggestion: SuggestionLike | null, input: string): boolean {
     if (!suggestion || !(suggestion.type === 'topSite' || suggestion.isTopSite)) {
       return false;
     }
@@ -168,7 +228,8 @@ function createSearchModes(deps) {
     return host.toLowerCase().startsWith(query);
   }
 
-  function getTopSiteMatchCandidate(list, input) {
+  // The top site the query starts, by host first and then by title.
+  function getTopSiteMatchCandidate<T extends SuggestionLike>(list: T[] | null, input: string): T | null {
     if (!Array.isArray(list)) {
       return null;
     }
@@ -176,7 +237,7 @@ function createSearchModes(deps) {
     if (!query || /\s/.test(query)) {
       return null;
     }
-    let fallback = null;
+    let fallback: T | null = null;
     for (let i = 0; i < list.length; i += 1) {
       const suggestion = list[i];
       if (!suggestion || !(suggestion.type === 'topSite' || suggestion.isTopSite)) {
@@ -194,7 +255,9 @@ function createSearchModes(deps) {
     return fallback;
   }
 
-  function promoteTopSiteMatch(list, queryText) {
+  // Moves the matching top site to the top when it is already the first
+  // result besides the search action.
+  function promoteTopSiteMatch<T extends SuggestionLike>(list: T[], queryText: string): T | null {
     const match = getTopSiteMatchCandidate(list, queryText);
     if (!match) {
       return null;
@@ -217,13 +280,17 @@ function createSearchModes(deps) {
     return null;
   }
 
-  function getSiteSearchTriggerCandidate(input, providers, topSiteMatch) {
+  function getSiteSearchTriggerCandidate(
+    input: string,
+    providers: SiteSearchProvider[] | null,
+    topSiteMatch: SuggestionLike | null
+  ): SiteSearchProvider | null {
     return SEARCH_UTILS.getSiteSearchTriggerCandidate(input, providers, topSiteMatch, {
       matchesTopSitePrefix
     });
   }
 
-  function getLocalSearchScopeCandidate(input, rules) {
+  function getLocalSearchScopeCandidate(input: string, rules: ShortcutRule[] | undefined): LocalSearchScope | null {
     const scope = SEARCH_UTILS.findLocalSearchScope(input, rules);
     if (!scope || !overlayState.enabledSearchResultSourceTypes.includes(scope.sourceType)) {
       return null;
@@ -231,7 +298,7 @@ function createSearchModes(deps) {
     return scope;
   }
 
-  function getLocalSearchScopeLabel(scope) {
+  function getLocalSearchScopeLabel(scope: Pick<LocalSearchScope, 'sourceType'> | null): string {
     const sourceType = scope && scope.sourceType ? scope.sourceType : '';
     if (sourceType === 'bookmark') {
       return t('search_tag_bookmark', '书签');
@@ -245,7 +312,7 @@ function createSearchModes(deps) {
     return '';
   }
 
-  function getLocalSearchScopeIconClass(sourceType) {
+  function getLocalSearchScopeIconClass(sourceType: string): string {
     if (sourceType === 'bookmark') {
       return 'ri-bookmark-3-line';
     }
@@ -255,9 +322,11 @@ function createSearchModes(deps) {
     return 'ri-star-line';
   }
 
-  function getLocalSearchScopeTabHintProvider(scope) {
+  // A stand-in provider whose Tab hint names the local source.
+  function getLocalSearchScopeTabHintProvider(scope: LocalSearchScope): InputModeProvider {
     const source = getLocalSearchScopeLabel(scope);
     return {
+      key: `local:${scope.sourceType}`,
       name: source,
       tabHintLabel: formatMessage(
         'local_search_tab_hint',
@@ -267,7 +336,7 @@ function createSearchModes(deps) {
     };
   }
 
-  function setLocalSearchScopePrefix(scope) {
+  function setLocalSearchScopePrefix(scope: LocalSearchScope | null): void {
     if (!overlayState.inputModeController || !scope) {
       return;
     }
@@ -283,11 +352,12 @@ function createSearchModes(deps) {
     );
   }
 
-  function activateLocalSearchScope(scope, activationOptions) {
+  // Narrows search to one local source; false when that source is off.
+  function activateLocalSearchScope(scope: LocalSearchScope | null, activationOptions?: { preserveResults?: boolean } | null): boolean {
     if (!scope || !overlayState.enabledSearchResultSourceTypes.includes(scope.sourceType)) {
       return false;
     }
-    const options = activationOptions && typeof activationOptions === 'object'
+    const options: { preserveResults?: boolean } = activationOptions && typeof activationOptions === 'object'
       ? activationOptions
       : {};
     cancelPendingOverlaySuggestionRequests();
@@ -297,7 +367,9 @@ function createSearchModes(deps) {
     overlayState.siteSearchState = null;
     overlayState.siteSearchTriggerState = null;
     overlayState.inlineSearchState = null;
-    overlayState.searchInput.value = '';
+    if (overlayState.searchInput) {
+      overlayState.searchInput.value = '';
+    }
     overlayState.latestRawInputValue = '';
     overlayState.latestOverlayQuery = '';
     clearAutocomplete();
@@ -308,7 +380,7 @@ function createSearchModes(deps) {
     return true;
   }
 
-  function clearLocalSearchScope() {
+  function clearLocalSearchScope(): boolean {
     if (!overlayState.localSearchScopeState) {
       return false;
     }
@@ -321,11 +393,14 @@ function createSearchModes(deps) {
     return true;
   }
 
-  function activateSiteSearch(provider, activationOptions) {
+  function activateSiteSearch(
+    provider: InputModeProvider | null,
+    activationOptions?: { preserveResults?: boolean; animatePrefix?: boolean } | null
+  ): void {
     if (!provider) {
       return;
     }
-    const options = activationOptions && typeof activationOptions === 'object'
+    const options: { preserveResults?: boolean; animatePrefix?: boolean } = activationOptions && typeof activationOptions === 'object'
       ? activationOptions
       : {};
     cancelPendingOpenTabsPrefixEntry();
@@ -337,7 +412,9 @@ function createSearchModes(deps) {
     overlayState.localSearchScopeTriggerState = null;
     overlayState.siteSearchState = provider;
     overlayState.inlineSearchState = null;
-    overlayState.searchInput.value = '';
+    if (overlayState.searchInput) {
+      overlayState.searchInput.value = '';
+    }
     overlayState.latestRawInputValue = '';
     overlayState.latestOverlayQuery = '';
     clearAutocomplete();
@@ -345,7 +422,7 @@ function createSearchModes(deps) {
     setSiteSearchPrefix(provider, immediateTheme, {
       animate: options.animatePrefix !== false
     });
-    getThemeForProvider(provider).then((theme) => {
+    void getThemeForProvider(provider).then((theme) => {
       if (overlayState.siteSearchState === provider) {
         setSiteSearchPrefix(provider, theme);
       }
@@ -355,7 +432,7 @@ function createSearchModes(deps) {
     }
   }
 
-  function clearSiteSearch() {
+  function clearSiteSearch(): void {
     if (!overlayState.siteSearchState) {
       return;
     }
@@ -365,7 +442,9 @@ function createSearchModes(deps) {
     clearAutocomplete();
   }
 
-  function activateOpenTabsSearchMode(options) {
+  function activateOpenTabsSearchMode(
+    options?: OpenTabsPrefixOptions & { deferPrefixEntry?: boolean; deferResults?: boolean }
+  ): void {
     const prefixOptions = options || {};
     cancelPendingOpenTabsPrefixEntry();
     cancelPendingOverlaySuggestionRequests();
@@ -381,7 +460,7 @@ function createSearchModes(deps) {
     } else {
       setOpenTabsSearchPrefix(overlayState.defaultTheme, prefixOptions);
     }
-    overlayState.latestRawInputValue = overlayState.searchInput.value || '';
+    overlayState.latestRawInputValue = overlayState.searchInput ? overlayState.searchInput.value || '' : '';
     overlayState.latestOverlayQuery = overlayState.latestRawInputValue.trim();
     if (prefixOptions.deferResults !== true) {
       renderCachedTabsForOverlay(overlayState.latestOverlayQuery);
@@ -389,7 +468,7 @@ function createSearchModes(deps) {
     }
   }
 
-  function clearOpenTabsSearchMode() {
+  function clearOpenTabsSearchMode(): void {
     if (!overlayState.openTabsSearchModeActive) {
       return;
     }
@@ -397,7 +476,7 @@ function createSearchModes(deps) {
     overlayState.openTabsSearchModeActive = false;
     clearSiteSearchPrefix();
     clearAutocomplete();
-    const rawValue = overlayState.searchInput.value || '';
+    const rawValue = overlayState.searchInput ? overlayState.searchInput.value || '' : '';
     const query = rawValue.trim();
     overlayState.latestRawInputValue = rawValue;
     overlayState.latestOverlayQuery = query;
@@ -440,3 +519,4 @@ function createSearchModes(deps) {
 }
 
 export { createSearchModes };
+export type { SearchModesDeps, SearchModesState };

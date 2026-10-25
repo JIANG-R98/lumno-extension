@@ -1,7 +1,7 @@
 // Shapes the input mode controller (search-input-mode.ts) hands to several
 // of its modules here.
 import type { AggregateSearch } from '../../../domain/search/aggregate-search-store';
-import type { SearchTextIndex, SiteSearchProvider } from '../../../domain/search/types';
+import type { SearchSourceType, SearchTextIndex, SiteSearchProvider } from '../../../domain/search/types';
 
 // Message text by key, with {name} placeholders filled from values.
 type FormatMessage = (key: string, fallback: string, values?: Record<string, string>) => string;
@@ -73,6 +73,8 @@ interface ModeMenuItem {
   kind?: string;
   orderKey?: string;
   aggregate?: AggregateSearch;
+  // The local source a local scope item narrows search to.
+  sourceType?: SearchSourceType;
 }
 
 // Where a run of a label's characters starts and ends.

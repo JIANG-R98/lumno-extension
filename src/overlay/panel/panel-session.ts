@@ -1,11 +1,79 @@
-// @ts-nocheck
 // The overlay's place on the page: the context token that tells this
 // session's panel from a stale one, the mount host and its visibility, wheel
 // isolation, telling the background about loading and closing, and removing
 // the panel.
 import * as LumnoSettingsStorage from '../../platform/settings-storage';
 import * as LumnoMessaging from '../../platform/messaging';
-function createPanelSession(deps) {
+import type { EngagementNoticeController } from '../../shared/engagement-notice';
+import type { SuggestionsViewController } from '../../shared/react/search/suggestion-list/types';
+import type { InputModeController } from '../../shared/search/search-input-mode';
+import type { UpdateNoticeController } from '../../shared/update-notice';
+import type * as OverlayLifecycle from '../lifecycle';
+import type { createNoticeLayer } from '../notices';
+import type { StorageChangeListeners } from './types';
+
+interface PanelSessionState {
+  overlayContextToken: string;
+  overlayViewportSizeSync: Pick<ReturnType<typeof OverlayLifecycle.createViewportSizeSync>, 'stop'>;
+  overlayNoticeLayer: Pick<ReturnType<typeof createNoticeLayer>, 'stop'>;
+  overlaySessionCleanups: Pick<ReturnType<typeof OverlayLifecycle.createSessionCleanupRegistry>, 'run'>;
+  storageChangeListeners: StorageChangeListeners;
+  overlayKeyRouter: { stop(): void } | null;
+  // Holds the panel back until its styles load; cancelled when it closes.
+  overlayRevealGate: { cancel?(): void } | null;
+  overlayWheelIsolationHandler: ((event: WheelEvent) => void) | null;
+  overlaySuggestionsView: Pick<SuggestionsViewController, 'destroy'> | null;
+  clickOutsideHandler: ((event: MouseEvent) => void) | null;
+  overlayMediaQuery: MediaQueryList;
+  overlayThemeMediaListener: ((event: MediaQueryListEvent) => void) | null;
+  overlayThemeListenerAttached: boolean;
+  overlayScrollPauseHandler: ((event: Event) => void) | null;
+  inputModeController: Pick<InputModeController, 'destroy'> | null;
+  inputHistoryController: { destroy?(): void } | null;
+  overlayUpdateNoticeController: UpdateNoticeController | null;
+  overlayEngagementNoticeController: EngagementNoticeController | null;
+  motionEffectsEnabled: boolean;
+  // The page under the overlay is loading and the worker keeps its input.
+  loadingSessionTrackingActive: boolean;
+  suppressOverlayLoadingSessionNotification: boolean;
+}
+
+interface PanelSessionDeps {
+  pauseOverlayAntiTranslateObserverForScroll(): void;
+  clearOverlayEnterAnimationFrames(): void;
+  clearOverlayPanelEnterCleanup(): void;
+  cancelPendingOverlaySuggestionRequests(): void;
+  stopOverlayAntiTranslateObserver(): void;
+  overlayShell: { destroyOverlayMount(host: HTMLElement | null): void };
+  stopOverlayPageThemeObserver(): void;
+  overlayLifecycle: Pick<typeof OverlayLifecycle, 'requestSessionDestroy'>;
+  overlayState: PanelSessionState;
+}
+
+interface RemoveOverlayOptions {
+  // The page under the overlay is loading; the worker keeps the input.
+  preserveLoadingIntent?: boolean;
+  animateExit?: boolean;
+}
+
+function isElementTarget(target: EventTarget | null): target is Element {
+  return target !== null && 'nodeType' in target && target.nodeType === 1;
+}
+
+function isNodeTarget(target: EventTarget | null): target is Node {
+  return target !== null && 'nodeType' in target;
+}
+
+function hasInlineStyle(element: Element): element is Element & ElementCSSInlineStyle {
+  return 'style' in element && Boolean(element.style);
+}
+
+// HTML and SVG elements can be blurred; other elements cannot.
+function isBlurrable(element: Element): element is Element & HTMLOrSVGElement {
+  return 'blur' in element && typeof element.blur === 'function';
+}
+
+function createPanelSession(deps: PanelSessionDeps) {
   const {
     pauseOverlayAntiTranslateObserverForScroll,
     clearOverlayEnterAnimationFrames,
@@ -23,71 +91,73 @@ function createPanelSession(deps) {
   const OVERLAY_CONTEXT_TOKEN_KEY = '__lumnoOverlayContextToken2026';
   const OVERLAY_CONTEXT_TOKEN_ATTRIBUTE = 'data-lumno-overlay-context-token';
 
-  function stopOverlayViewportSizeSync() {
+  function stopOverlayViewportSizeSync(): void {
     overlayState.overlayViewportSizeSync.stop();
   }
 
-  function getOrCreateOverlayContextToken() {
+  // This content script's token, kept on its global across invocations.
+  function getOrCreateOverlayContextToken(): string {
     try {
-      const storedToken = window[OVERLAY_CONTEXT_TOKEN_KEY];
+      const storedToken: unknown = Reflect.get(window, OVERLAY_CONTEXT_TOKEN_KEY);
       if (typeof storedToken === 'string' && storedToken) {
         return storedToken;
       }
-    } catch (e) {
+    } catch (_error) {
       // Fall through to a fresh token when the isolated world cannot persist it.
     }
     const nextToken = `${Date.now()}:${Math.random().toString(36).slice(2)}`;
     try {
-      window[OVERLAY_CONTEXT_TOKEN_KEY] = nextToken;
-    } catch (e) {
+      Reflect.set(window, OVERLAY_CONTEXT_TOKEN_KEY, nextToken);
+    } catch (_error) {
       // The returned token is still useful for this invocation.
     }
     return nextToken;
   }
 
-  function getOverlayMountHost(overlayElement) {
+  // The element the panel is mounted under: the shell's host, the shadow
+  // root's host, or the panel itself.
+  function getOverlayMountHost(overlayElement: HTMLElement | null): HTMLElement | null {
     if (!overlayElement) {
       return null;
     }
-    if (overlayElement._lumnoOverlayHost) {
-      return overlayElement._lumnoOverlayHost;
+    const shellHost: unknown = Reflect.get(overlayElement, '_lumnoOverlayHost');
+    if (shellHost instanceof HTMLElement) {
+      return shellHost;
     }
     try {
-      if (typeof overlayElement.getRootNode === 'function') {
-        const root = overlayElement.getRootNode();
-        if (root && root.host) {
-          return root.host;
-        }
+      const root = overlayElement.getRootNode();
+      if (root instanceof ShadowRoot && root.host instanceof HTMLElement) {
+        return root.host;
       }
-    } catch (e) {
+    } catch (_error) {
       // Fall back to removing the element itself.
     }
     return overlayElement;
   }
 
-  function getOverlayElementContextToken(element) {
-    if (!element || typeof element.getAttribute !== 'function') {
+  function getOverlayElementContextToken(element: Element | null): string {
+    if (!element) {
       return '';
     }
     return String(element.getAttribute(OVERLAY_CONTEXT_TOKEN_ATTRIBUTE) || '').trim();
   }
 
-  function setOverlayStoredContextToken(overlayElement) {
+  function setOverlayStoredContextToken(overlayElement: HTMLElement | null): void {
     const mountHost = getOverlayMountHost(overlayElement);
     [overlayElement, mountHost].forEach((element) => {
-      if (element && typeof element.setAttribute === 'function') {
+      if (element) {
         element.setAttribute(OVERLAY_CONTEXT_TOKEN_ATTRIBUTE, overlayState.overlayContextToken);
       }
     });
   }
 
-  function getOverlayStoredContextToken(overlayElement) {
+  function getOverlayStoredContextToken(overlayElement: HTMLElement | null): string {
     return getOverlayElementContextToken(overlayElement) ||
       getOverlayElementContextToken(getOverlayMountHost(overlayElement));
   }
 
-  function setOverlayMountVisibility(mountHost, hidden) {
-    if (!mountHost || !mountHost.style || typeof mountHost.style.setProperty !== 'function') {
+  function setOverlayMountVisibility(mountHost: Element | null, hidden: boolean): void {
+    if (!mountHost || !hasInlineStyle(mountHost) || typeof mountHost.style.setProperty !== 'function') {
       return;
     }
     if (hidden) {
@@ -101,16 +171,17 @@ function createPanelSession(deps) {
     }
   }
 
-  function isStaleOverlay(overlayElement) {
+  // A panel left by an earlier context of this extension (before a reload).
+  function isStaleOverlay(overlayElement: HTMLElement | null): boolean {
     const storedToken = getOverlayStoredContextToken(overlayElement);
     return storedToken !== overlayState.overlayContextToken;
   }
 
-  function isScrollableOverflowValue(value) {
+  function isScrollableOverflowValue(value: string): boolean {
     return value === 'auto' || value === 'scroll' || value === 'overlay';
   }
 
-  function canScrollByWheelDelta(scrollPosition, viewportSize, scrollSize, delta) {
+  function canScrollByWheelDelta(scrollPosition: number, viewportSize: number, scrollSize: number, delta: number): boolean {
     if (!delta) {
       return false;
     }
@@ -124,8 +195,8 @@ function createPanelSession(deps) {
     return scrollPosition < maxScroll - 1;
   }
 
-  function canScrollElementWithWheel(element, event) {
-    if (!element || element.nodeType !== 1 || !event) {
+  function canScrollElementWithWheel(element: EventTarget | null, event: WheelEvent): boolean {
+    if (!isElementTarget(element) || !event) {
       return false;
     }
     const doc = element.ownerDocument || document;
@@ -154,7 +225,8 @@ function createPanelSession(deps) {
     return canScrollY || canScrollX;
   }
 
-  function findOverlayWheelScrollableElement(event, overlayElement) {
+  // The element in the panel the wheel would scroll, if any.
+  function findOverlayWheelScrollableElement(event: WheelEvent, overlayElement: Element): EventTarget | null {
     if (!event || !overlayElement) {
       return null;
     }
@@ -169,11 +241,10 @@ function createPanelSession(deps) {
         return node;
       }
     }
-    let current = event.target && event.target.nodeType === 1
-      ? event.target
-      : event.target && event.target.parentElement
-        ? event.target.parentElement
-        : null;
+    const target = event.target;
+    let current: Element | null = isElementTarget(target)
+      ? target
+      : (isNodeTarget(target) ? target.parentElement : null);
     while (current && current !== overlayElement) {
       if (canScrollElementWithWheel(current, event)) {
         return current;
@@ -183,8 +254,10 @@ function createPanelSession(deps) {
     return null;
   }
 
-  function createOverlayWheelIsolationHandler(overlayElement) {
-    return function(event) {
+  // Keeps the page from scrolling under the panel, while what scrolls in
+  // the panel still does.
+  function createOverlayWheelIsolationHandler(overlayElement: HTMLElement): (event: WheelEvent) => void {
+    return function(event: WheelEvent): void {
       if (!event || !overlayElement || !overlayElement.isConnected) {
         return;
       }
@@ -192,7 +265,7 @@ function createPanelSession(deps) {
         ? event.composedPath()
         : [];
       const target = event.target;
-      const isInsideOverlay = (target && overlayElement.contains(target)) || path.includes(overlayElement);
+      const isInsideOverlay = (isNodeTarget(target) && overlayElement.contains(target)) || path.includes(overlayElement);
       if (!isInsideOverlay) {
         return;
       }
@@ -205,7 +278,7 @@ function createPanelSession(deps) {
     };
   }
 
-  function notifyOverlayClosed() {
+  function notifyOverlayClosed(): void {
     if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
       return;
     }
@@ -213,23 +286,25 @@ function createPanelSession(deps) {
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'notifyOverlayClosed' }, () => {
         void chrome.runtime.lastError;
       });
-    } catch (error) {
+    } catch (_error) {
       // The document may already be unloading.
     }
   }
 
-  function isOverlayInputFocused(input) {
+  function isOverlayInputFocused(input: HTMLInputElement | null): boolean {
     if (!input) {
       return false;
     }
     if (document.activeElement === input) {
       return true;
     }
-    const root = typeof input.getRootNode === 'function' ? input.getRootNode() : null;
-    return Boolean(root && root.activeElement === input);
+    const root = input.getRootNode();
+    return 'activeElement' in root && root.activeElement === input;
   }
 
-  function notifyOverlayLoadingSession(input) {
+  // Hands the worker the input's text and selection, to put back after
+  // the page under the overlay loads.
+  function notifyOverlayLoadingSession(input: HTMLInputElement | null): void {
     if (overlayState.suppressOverlayLoadingSessionNotification || !overlayState.loadingSessionTrackingActive || !input ||
         !chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
       return;
@@ -265,17 +340,17 @@ function createPanelSession(deps) {
           overlayState.loadingSessionTrackingActive = false;
         }
       });
-    } catch (error) {
+    } catch (_error) {
       // The loading Document can be replaced between the input event and delivery.
     }
   }
 
-  let overlayExitTimer = null;
-  let closingOverlayElement = null;
+  let overlayExitTimer: number | null = null;
+  let closingOverlayElement: HTMLElement | null = null;
 
   // The exit follows the same switches as the entry: the Motion effects
   // setting and the system's reduced-motion preference.
-  function closeOverlayWithMotion(overlayElement) {
+  function closeOverlayWithMotion(overlayElement: HTMLElement | null): void {
     if (!overlayElement || !overlayElement.isConnected ||
         LumnoSettingsStorage.shouldSkipEntryMotion(window, overlayState.motionEffectsEnabled) ||
         overlayElement.getAttribute('data-lumno-overlay-entry') !== 'done') {
@@ -292,9 +367,9 @@ function createPanelSession(deps) {
       overlayState.overlayKeyRouter.stop();
     }
     overlayElement.inert = true;
-    const overlayRoot = overlayElement._lumnoOverlayRoot;
-    const focusedElement = overlayRoot && overlayRoot.activeElement;
-    if (focusedElement && typeof focusedElement.blur === 'function') {
+    const overlayRoot: unknown = Reflect.get(overlayElement, '_lumnoOverlayRoot');
+    const focusedElement = overlayRoot instanceof ShadowRoot ? overlayRoot.activeElement : null;
+    if (focusedElement && isBlurrable(focusedElement)) {
       focusedElement.blur();
     }
     overlayElement.setAttribute('data-lumno-overlay-exit', 'running');
@@ -321,8 +396,8 @@ function createPanelSession(deps) {
 
   // Tears down this invocation's overlay session: DOM, page listeners,
   // storage listeners and every controller registered for the session.
-  function removeOverlay(overlayElement, options) {
-    const removalOptions = options && typeof options === 'object' ? options : {};
+  function removeOverlay(overlayElement: HTMLElement | null, options?: RemoveOverlayOptions | null): void {
+    const removalOptions: RemoveOverlayOptions = options && typeof options === 'object' ? options : {};
     if (overlayExitTimer !== null) {
       window.clearTimeout(overlayExitTimer);
       overlayExitTimer = null;
@@ -408,7 +483,9 @@ function createPanelSession(deps) {
     overlayState.overlayEngagementNoticeController = null;
   }
 
-  function destroyExistingOverlaySession(overlayElement, options) {
+  // Asks the session that owns an existing panel to close; removes the
+  // panel itself when no session answers.
+  function destroyExistingOverlaySession(overlayElement: HTMLElement | null, options?: RemoveOverlayOptions | null): void {
     const mountHost = getOverlayMountHost(overlayElement);
     const destroyed = mountHost
       ? overlayLifecycle.requestSessionDestroy(mountHost, options)
@@ -438,3 +515,4 @@ function createPanelSession(deps) {
 }
 
 export { createPanelSession };
+export type { PanelSessionDeps, PanelSessionState, RemoveOverlayOptions };

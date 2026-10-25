@@ -1,8 +1,77 @@
-// @ts-nocheck
 // The search mode menu: its providers and items, the order the user
 // gives them, stepping through it, opening it with a double Tab, and
 // picking an item.
-function createSearchModeMenu(deps) {
+import type { CachedIconMap } from '../../domain/favicon/shortcut-favicon';
+import type * as AggregateSearchStore from '../../domain/search/aggregate-search-store';
+import type { AggregateSearch } from '../../domain/search/aggregate-search-store';
+import type * as SearchSourceOrder from '../../domain/search/search-source-order';
+import type { ScopeMenuMove } from '../../domain/search/search-source-order';
+import type * as SearchUtils from '../../domain/search/search-utils';
+import type { LocalSearchScope, SearchEngineState, SearchSourceType, SiteSearchProvider } from '../../domain/search/types';
+import type { StorageAreaFacade } from '../../platform/settings-storage';
+import type { InputModeController } from '../../shared/search/search-input-mode';
+import type { InputModeProvider, ModeMenuItem } from '../../shared/search/input-mode/types';
+import type { Translate } from './types';
+
+interface SearchModeMenuState {
+  storageArea: StorageAreaFacade | null;
+  searchInput: HTMLInputElement | null;
+  inputModeController: Pick<InputModeController, 'openModeMenu'> | null;
+  overlaySearchEngineState: SearchEngineState | null;
+  overlaySearchEngineStateReady: Promise<SearchEngineState | null>;
+  // The page the overlay opened on, whose site search the menu offers first.
+  initialContextTabUrl: string;
+  siteSearchProvidersCache: SiteSearchProvider[] | null;
+  defaultSiteSearchProviders: SiteSearchProvider[];
+  aggregateSearchesCache: AggregateSearch[] | null;
+  siteSearchIconCache: CachedIconMap;
+  siteSearchIconCacheLoaded: boolean;
+  siteSearchState: InputModeProvider | null;
+  localSearchScopeState: LocalSearchScope | null;
+  openTabsSearchModeActive: boolean;
+  enabledSearchResultSourceTypes: SearchSourceType[];
+  // Writes of the stored order, one after another.
+  searchSourceOrderQueue: Promise<unknown>;
+  latestRawInputValue: string;
+  latestOverlayQuery: string;
+}
+
+interface SearchModeMenuDeps {
+  SEARCH_UTILS: Pick<typeof SearchUtils, 'getSearchEngineSiteSearchProvider' | 'findSiteSearchProviderForPageUrl'>;
+  AGGREGATE_SEARCH_STORE: Pick<typeof AggregateSearchStore,
+    'isAggregateSearchAvailable' | 'mergeTriggerProviders' | 'createScopeProvider'>;
+  SEARCH_SOURCE_ORDER: Pick<typeof SearchSourceOrder,
+    'rankScopeItems' | 'applyScopeMenuMove' | 'applyGroupMove' | 'createHistory'>;
+  t: Translate;
+  isAggregateSearchProvider(provider: Partial<SiteSearchProvider> | null): boolean;
+  isSearchEngineSiteSearchProvider(provider: SiteSearchProvider | null): boolean;
+  isAiSiteSearchProvider(provider: SiteSearchProvider | null): boolean;
+  getSiteSearchDisplayName(provider: SiteSearchProvider | null): string;
+  getPageRenderableProviderIcon(provider: SiteSearchProvider): string;
+  getLocalSearchScopeLabel(scope: Pick<LocalSearchScope, 'sourceType'> | null): string;
+  getLocalSearchScopeIconClass(sourceType: string): string;
+  getStorageValuesAsync(keys: string[]): Promise<Record<string, unknown>>;
+  SEARCH_SOURCE_ORDER_STORAGE_KEY: string;
+  loadSiteSearchIconCache(): Promise<CachedIconMap>;
+  getSiteSearchProviders(): Promise<SiteSearchProvider[]>;
+  getAggregateSearches(): Promise<AggregateSearch[]>;
+  cancelPendingOpenTabsPrefixEntry(): boolean;
+  activateSiteSearch(provider: InputModeProvider | null, options?: { preserveResults?: boolean; animatePrefix?: boolean }): void;
+  activateOpenTabsSearchMode(options?: { deferResults?: boolean }): void;
+  activateLocalSearchScope(scope: LocalSearchScope | null, options?: { preserveResults?: boolean }): boolean;
+  overlayState: SearchModeMenuState;
+}
+
+// A group block dragged by its title.
+interface GroupMove {
+  groups: unknown;
+  group: unknown;
+  delta: number;
+}
+
+const LOCAL_SOURCE_TYPES: readonly SearchSourceType[] = ['topSite', 'bookmark', 'history'];
+
+function createSearchModeMenu(deps: SearchModeMenuDeps) {
   const {
     SEARCH_UTILS,
     AGGREGATE_SEARCH_STORE,
@@ -29,25 +98,27 @@ function createSearchModeMenu(deps) {
   // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
-  function getSearchModeProviderId(provider) {
+  function getSearchModeProviderId(provider: Partial<SiteSearchProvider> | null): string {
     return `provider:${provider && (provider.key || provider.name) ? (provider.key || provider.name) : ''}`;
   }
 
-  function getOverlayDefaultSearchModeProvider(providers) {
+  function getOverlayDefaultSearchModeProvider(providers: readonly SiteSearchProvider[]): SiteSearchProvider | null {
     return SEARCH_UTILS.getSearchEngineSiteSearchProvider(
       overlayState.overlaySearchEngineState,
       providers
     );
   }
 
-  function getCurrentPageSiteSearchModeProvider(providers) {
+  function getCurrentPageSiteSearchModeProvider(providers: readonly SiteSearchProvider[]): SiteSearchProvider | null {
     return SEARCH_UTILS.findSiteSearchProviderForPageUrl(
       overlayState.initialContextTabUrl,
       providers
     );
   }
 
-  function getSearchModeProviders() {
+  // The stored providers, with the default search engine first when the
+  // list lacks it.
+  function getSearchModeProviders(): SiteSearchProvider[] {
     const providers = (overlayState.siteSearchProvidersCache && overlayState.siteSearchProvidersCache.length > 0)
       ? overlayState.siteSearchProvidersCache
       : overlayState.defaultSiteSearchProviders;
@@ -60,14 +131,18 @@ function createSearchModeMenu(deps) {
     return [defaultProvider].concat(providers);
   }
 
-  function isAggregateSearchDefinitionAvailable(definition, providers) {
+  function isAggregateSearchDefinitionAvailable(definition: AggregateSearch, providers?: readonly SiteSearchProvider[] | null): boolean {
     return AGGREGATE_SEARCH_STORE.isAggregateSearchAvailable(
       definition,
       Array.isArray(providers) ? providers : getSearchModeProviders()
     );
   }
 
-  function getSearchTriggerProviders(providers, definitions) {
+  // The site search providers plus the aggregate searches that can run.
+  function getSearchTriggerProviders(
+    providers: SiteSearchProvider[] | null,
+    definitions: AggregateSearch[] | null
+  ): SiteSearchProvider[] {
     const sourceProviders = Array.isArray(providers) ? providers : [];
     const availableDefinitions = (Array.isArray(definitions) ? definitions : [])
       .filter((definition) => isAggregateSearchDefinitionAvailable(
@@ -80,14 +155,15 @@ function createSearchModeMenu(deps) {
     );
   }
 
-  function buildSearchModeMenuItems(sourceOrder) {
+  function buildSearchModeMenuItems(sourceOrder: unknown): ModeMenuItem[] {
     const engineGroup = t('search_scope_group_engines', '搜索引擎');
     const localGroup = t('search_scope_group_local', '浏览器内容');
     const aiGroup = t('search_scope_group_ai', 'AI 搜索');
     const siteGroup = t('search_scope_group_sites', '站内搜索');
     const aggregateGroup = t('search_scope_group_aggregates', '聚合搜索');
-    const items = [];
+    const items: ModeMenuItem[] = [];
     const providers = getSearchModeProviders();
+    const activeProvider = overlayState.siteSearchState;
     (overlayState.aggregateSearchesCache || []).forEach((definition) => {
       if (!isAggregateSearchDefinitionAvailable(definition, providers)) {
         return;
@@ -109,8 +185,9 @@ function createSearchModeMenu(deps) {
         iconClass: 'ri-stack-line',
         searchTerms: [definition.name].concat(definition.sourceRefs || []),
         active: Boolean(
-          isAggregateSearchProvider(overlayState.siteSearchState) &&
-          String(overlayState.siteSearchState.aggregateId || '') === String(definition.id || '')
+          activeProvider &&
+          isAggregateSearchProvider(activeProvider) &&
+          String(activeProvider.aggregateId || '') === String(definition.id || '')
         )
       });
     });
@@ -136,7 +213,7 @@ function createSearchModeMenu(deps) {
           iconUrl: getPageRenderableProviderIcon(provider),
           iconClass: isAi ? 'ri-search-ai-line' : 'ri-global-line',
           isAi,
-          active: Boolean(overlayState.siteSearchState && getSearchModeProviderId(overlayState.siteSearchState) === getSearchModeProviderId(provider))
+          active: Boolean(activeProvider && getSearchModeProviderId(activeProvider) === getSearchModeProviderId(provider))
         });
       });
     items.push({
@@ -152,7 +229,7 @@ function createSearchModeMenu(deps) {
       menuIconName: 'browser',
       active: overlayState.openTabsSearchModeActive
     });
-    ['topSite', 'bookmark', 'history'].forEach((sourceType) => {
+    LOCAL_SOURCE_TYPES.forEach((sourceType) => {
       if (!overlayState.enabledSearchResultSourceTypes.includes(sourceType)) {
         return;
       }
@@ -175,18 +252,17 @@ function createSearchModeMenu(deps) {
         active: Boolean(overlayState.localSearchScopeState && overlayState.localSearchScopeState.sourceType === sourceType)
       });
     });
-    return SEARCH_SOURCE_ORDER
-      ? SEARCH_SOURCE_ORDER.rankScopeItems(items, sourceOrder)
-      : items;
+    return SEARCH_SOURCE_ORDER.rankScopeItems(items, sourceOrder);
   }
 
-  function loadSearchSourceOrder() {
+  // The stored order, as stored; the order helpers read it as untrusted.
+  function loadSearchSourceOrder(): Promise<unknown> {
     return getStorageValuesAsync([SEARCH_SOURCE_ORDER_STORAGE_KEY])
       .then((result) => result && result[SEARCH_SOURCE_ORDER_STORAGE_KEY])
       .catch(() => null);
   }
 
-  function getSearchModeMenuItems() {
+  function getSearchModeMenuItems(): Promise<ModeMenuItem[]> {
     return Promise.all([
       overlayState.siteSearchIconCacheLoaded
         ? Promise.resolve(overlayState.siteSearchIconCache)
@@ -199,42 +275,45 @@ function createSearchModeMenu(deps) {
 
   // A tile dragged in the panel: store the new order on top of the latest
   // stored one, so a concurrent change from Settings is not lost.
-  function reorderSearchModeMenu(payload) {
-    if (!SEARCH_SOURCE_ORDER || !overlayState.storageArea) {
+  function reorderSearchModeMenu(payload: ScopeMenuMove | null): Promise<unknown> {
+    if (!overlayState.storageArea) {
       return Promise.resolve();
     }
     return queueSearchSourceOrderTask(() => loadSearchSourceOrder()
       .then((value) => recordSearchSourceOrder(value, SEARCH_SOURCE_ORDER.applyScopeMenuMove(value, payload))));
   }
-  function queueSearchSourceOrderTask(task) {
+  function queueSearchSourceOrderTask(task: () => Promise<unknown>): Promise<unknown> {
     overlayState.searchSourceOrderQueue = overlayState.searchSourceOrderQueue.then(task).catch(() => {});
     return overlayState.searchSourceOrderQueue;
   }
 
-  function writeSearchSourceOrder(value) {
+  function writeSearchSourceOrder(value: unknown): Promise<void> {
+    const area = overlayState.storageArea;
+    if (!area) {
+      return Promise.resolve();
+    }
     return new Promise((resolve) => {
-      overlayState.storageArea.set({ [SEARCH_SOURCE_ORDER_STORAGE_KEY]: value }, () => resolve());
+      void area.set({ [SEARCH_SOURCE_ORDER_STORAGE_KEY]: value }, () => resolve());
     });
   }
 
   // Undo and redo for the moves made in this page's panel. Kept on the
   // content script's global so it outlives one opening of the command bar.
-  function getSearchSourceOrderHistory() {
-    if (!globalThis.__lumnoSearchSourceOrderHistory2026) {
-      globalThis.__lumnoSearchSourceOrderHistory2026 = SEARCH_SOURCE_ORDER.createHistory();
-    }
-    return globalThis.__lumnoSearchSourceOrderHistory2026;
+  function getSearchSourceOrderHistory(): ReturnType<typeof SEARCH_SOURCE_ORDER.createHistory> {
+    const history = globalThis.__lumnoSearchSourceOrderHistory2026 || SEARCH_SOURCE_ORDER.createHistory();
+    globalThis.__lumnoSearchSourceOrderHistory2026 = history;
+    return history;
   }
 
-  function recordSearchSourceOrder(before, after) {
+  function recordSearchSourceOrder(before: unknown, after: SearchSourceOrder.SearchSourceOrder): Promise<void> {
     getSearchSourceOrderHistory().record(before, after);
     return writeSearchSourceOrder(after);
   }
 
   // Returns whether there was a step to take, so the panel only claims
   // Ctrl/Cmd+Z when it does something.
-  function stepSearchModeMenuHistory(direction) {
-    if (!SEARCH_SOURCE_ORDER || !overlayState.storageArea) {
+  function stepSearchModeMenuHistory(direction: 'undo' | 'redo'): boolean {
+    if (!overlayState.storageArea) {
       return false;
     }
     const history = getSearchSourceOrderHistory();
@@ -244,14 +323,14 @@ function createSearchModeMenu(deps) {
     queueSearchSourceOrderTask(() => loadSearchSourceOrder()
       .then((value) => {
         const target = direction === 'redo' ? history.redo(value) : history.undo(value);
-        return target ? writeSearchSourceOrder(target) : null;
+        return target ? writeSearchSourceOrder(target) : Promise.resolve();
       }));
     return true;
   }
 
   // A group block moved from its title in the panel.
-  function moveSearchModeMenuGroup(payload) {
-    if (!SEARCH_SOURCE_ORDER || !overlayState.storageArea || !payload) {
+  function moveSearchModeMenuGroup(payload: GroupMove | null): Promise<unknown> {
+    if (!overlayState.storageArea || !payload) {
       return Promise.resolve();
     }
     return queueSearchSourceOrderTask(() => loadSearchSourceOrder()
@@ -261,22 +340,28 @@ function createSearchModeMenu(deps) {
       )));
   }
 
-  function openSearchModeMenuFromDoubleTab() {
+  function readInputValue(): string {
+    return overlayState.searchInput ? String(overlayState.searchInput.value || '') : '';
+  }
+
+  // Double Tab with no mode: switches to this page's site search, or the
+  // default engine's, and opens the menu; resolves to whether it opened.
+  function openSearchModeMenuFromDoubleTab(): Promise<boolean> {
     cancelPendingOpenTabsPrefixEntry();
     const expectedSiteSearchState = overlayState.siteSearchState;
     const expectedLocalSearchScopeState = overlayState.localSearchScopeState;
     const expectedOpenTabsSearchModeActive = overlayState.openTabsSearchModeActive;
-    const expectedInputValue = String(overlayState.searchInput.value || '');
-    const isActivationCurrent = () => Boolean(
+    const expectedInputValue = readInputValue();
+    const isActivationCurrent = (): boolean => Boolean(
       overlayState.inputModeController &&
       overlayState.siteSearchState === expectedSiteSearchState &&
       overlayState.localSearchScopeState === expectedLocalSearchScopeState &&
       overlayState.openTabsSearchModeActive === expectedOpenTabsSearchModeActive &&
-      String(overlayState.searchInput.value || '') === expectedInputValue &&
+      readInputValue() === expectedInputValue &&
       !expectedSiteSearchState &&
       !expectedLocalSearchScopeState
     );
-    const activateDefaultProvider = (providers) => {
+    const activateDefaultProvider = (providers: SiteSearchProvider[]): boolean | Promise<boolean> => {
       if (!isActivationCurrent()) {
         return false;
       }
@@ -295,7 +380,11 @@ function createSearchModeMenu(deps) {
       } else {
         activateSiteSearch(provider, { animatePrefix: false });
       }
-      const openResult = overlayState.inputModeController.openModeMenu(
+      const controller = overlayState.inputModeController;
+      if (!controller) {
+        return false;
+      }
+      const openResult = controller.openModeMenu(
         currentPageProvider ? 'input' : 'none'
       );
       return Promise.resolve(openResult).then(Boolean);
@@ -307,35 +396,42 @@ function createSearchModeMenu(deps) {
     ]).then(([, providers]) => activateDefaultProvider(providers));
   }
 
-  function restoreSearchModeQuery(rawQuery) {
+  // Puts the query back after a mode switch emptied the input, and runs
+  // it again in the new mode.
+  function restoreSearchModeQuery(rawQuery: string): void {
     const value = String(rawQuery || '');
-    overlayState.searchInput.value = value;
     overlayState.latestRawInputValue = value;
     overlayState.latestOverlayQuery = value.trim();
-    overlayState.searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    const input = overlayState.searchInput;
+    if (!input) {
+      return;
+    }
+    input.value = value;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-  function shouldPreserveSearchModeResults(rawQuery) {
+  function shouldPreserveSearchModeResults(rawQuery: string): boolean {
     return Boolean(String(rawQuery || '').trim());
   }
 
-  function selectSearchModeMenuItem(item) {
+  function selectSearchModeMenuItem(item: ModeMenuItem | null): void {
     if (!item || !item.kind) {
       return;
     }
-    const rawQuery = overlayState.searchInput.value || '';
+    const rawQuery = readInputValue();
     const preserveResults = shouldPreserveSearchModeResults(rawQuery);
     if (item.kind === 'openTabs') {
-      activateOpenTabsSearchMode({
-        deferResults: true,
-        preserveResults
-      });
+      activateOpenTabsSearchMode({ deferResults: true });
       restoreSearchModeQuery(rawQuery);
       return;
     }
     if (item.kind === 'local') {
+      if (!item.sourceType) {
+        return;
+      }
+      // Chosen from the menu, so no trigger was typed.
       activateLocalSearchScope(
-        { sourceType: item.sourceType },
+        { sourceType: item.sourceType, trigger: '', key: '' },
         { preserveResults }
       );
       restoreSearchModeQuery(rawQuery);
@@ -367,3 +463,4 @@ function createSearchModeMenu(deps) {
 }
 
 export { createSearchModeMenu };
+export type { SearchModeMenuDeps, SearchModeMenuState };

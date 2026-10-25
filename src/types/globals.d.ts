@@ -2,6 +2,7 @@
 import type { FeatureHintViewApi, TooltipViewApi } from './view-apis';
 import type { AutoPipBlacklist, DocumentPipPickerApi, PageShortcutToastApi } from './content-apis';
 import type { ShortcutRule } from '../domain/messages';
+import type * as SearchSourceOrder from '../domain/search/search-source-order';
 
 declare global {
   // The traditional-to-simplified Han table as pairs of characters, set by
@@ -18,5 +19,9 @@ declare global {
   var __lumnoDocumentPiPPicker2026: Readonly<DocumentPipPickerApi> | undefined;
   // assets/data/shortcut-rules.json, once a search surface loaded it.
   var _x_extension_shortcut_rules_2024_unique_: ShortcutRule[] | undefined;
+  // Whether this page's search overlay is open, for the next toggle.
+  var _x_extension_search_overlay_open_2026_unique_: boolean | undefined;
+  // Undo and redo of mode menu moves, kept across openings of the overlay.
+  var __lumnoSearchSourceOrderHistory2026: ReturnType<typeof SearchSourceOrder.createHistory> | undefined;
 }
 
