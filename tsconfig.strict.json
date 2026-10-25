@@ -51,7 +51,8 @@
     "src/options/options-popconfirm.ts",
     "src/options/options-forms.ts",
     "src/options/options-language.ts",
-    "src/options/theme-preload.ts"
+    "src/options/theme-preload.ts",
+    "src/options/options-state.ts"
   ],
   "exclude": [
     "src/**/react/**"

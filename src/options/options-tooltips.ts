@@ -11,8 +11,6 @@ interface TooltipsState {
   optionsStartupStorageBatchPending: boolean;
   optionsStartupRefreshCoalescing: boolean;
   optionsStartupRefreshDeferred: boolean;
-  optionsSelectControlRecords: ReadonlyMap<HTMLSelectElement, SelectControlRecord>;
-  renderOptionsSelectControl(select: HTMLSelectElement): void;
   // Made once the page has mounted them.
   tooltipController: TooltipController | null;
   toastController: ToastController | null;
@@ -29,6 +27,8 @@ interface TooltipsDeps {
   aggregateSearchClearButton: HTMLButtonElement | null;
   blacklistClearButton: HTMLButtonElement | null;
   toastElement: HTMLElement | null;
+  optionsSelectControlRecords: ReadonlyMap<HTMLSelectElement, SelectControlRecord>;
+  renderOptionsSelectControl(select: HTMLSelectElement): void;
   optionsState: TooltipsState;
 }
 
@@ -48,7 +48,9 @@ function createTooltips(deps: TooltipsDeps) {
     customClearButton,
     aggregateSearchClearButton,
     blacklistClearButton,
-    toastElement
+    toastElement,
+    optionsSelectControlRecords,
+    renderOptionsSelectControl
   } = deps;
 
   // The page state object shared with options.js and the other modules.
@@ -95,8 +97,8 @@ function createTooltips(deps: TooltipsDeps) {
       );
     }
     renderSettingsForms();
-    optionsState.optionsSelectControlRecords.forEach((_record, select) => {
-      optionsState.renderOptionsSelectControl(select);
+    optionsSelectControlRecords.forEach((_record, select) => {
+      renderOptionsSelectControl(select);
     });
     syncFallbackShortcutWrapWidth();
   }

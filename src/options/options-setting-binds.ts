@@ -34,12 +34,6 @@ interface SettingBindsState {
   currentNewtabGlassStyle: NewtabGlassStyle;
   currentNewtabTimeFont: string;
   currentNewtabTimeFontWeight: number;
-  ensureOverlayFontOption(select: HTMLSelectElement | null, family: string): void;
-  refreshOptionsSelectItems(select: HTMLSelectElement): void;
-  renderOverlayFontMissingNotices(): void;
-  registerOptionsSelectControl(select: HTMLSelectElement | null, kind: string): SelectControlRecord | null;
-  renderOptionsSelectControl(select: HTMLSelectElement): void;
-  setOptionsSelectState(select: HTMLSelectElement | null, value: unknown): void;
 }
 
 interface SettingBindsDeps {
@@ -152,6 +146,12 @@ interface SettingBindsDeps {
   RESTRICTED_ACTION_STORAGE_KEY: string;
   restrictedActionSelect: HTMLSelectElement | null;
   setRestrictedActionTabState(action: unknown): void;
+  ensureOverlayFontOption(select: HTMLSelectElement | null, family: string): void;
+  refreshOptionsSelectItems(select: HTMLSelectElement): void;
+  renderOverlayFontMissingNotices(): void;
+  registerOptionsSelectControl(select: HTMLSelectElement | null, kind: string): SelectControlRecord | null;
+  renderOptionsSelectControl(select: HTMLSelectElement): void;
+  setOptionsSelectState(select: HTMLSelectElement | null, value: unknown): void;
   optionsState: SettingBindsState;
 }
 
@@ -261,7 +261,13 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     toggleSettingControls,
     RESTRICTED_ACTION_STORAGE_KEY,
     restrictedActionSelect,
-    setRestrictedActionTabState
+    setRestrictedActionTabState,
+    ensureOverlayFontOption,
+    refreshOptionsSelectItems,
+    renderOverlayFontMissingNotices,
+    registerOptionsSelectControl,
+    renderOptionsSelectControl,
+    setOptionsSelectState
   } = deps;
 
   // The page state object shared with options.js and the other modules.
@@ -448,10 +454,10 @@ function createSettingBinds(deps: SettingBindsDeps): void {
       if (!overlayFontSelect) {
         return;
       }
-      optionsState.ensureOverlayFontOption(overlayFontSelect, family);
+      ensureOverlayFontOption(overlayFontSelect, family);
       overlayFontSelect.value = family;
-      optionsState.refreshOptionsSelectItems(overlayFontSelect);
-      optionsState.renderOverlayFontMissingNotices();
+      refreshOptionsSelectItems(overlayFontSelect);
+      renderOverlayFontMissingNotices();
     },
     repairOnChange: false,
     refreshSelects: true
@@ -469,11 +475,11 @@ function createSettingBinds(deps: SettingBindsDeps): void {
       fontSelects
         .forEach(([select, family]) => {
           if (select && family) {
-            optionsState.ensureOverlayFontOption(select, family);
-            optionsState.refreshOptionsSelectItems(select);
+            ensureOverlayFontOption(select, family);
+            refreshOptionsSelectItems(select);
           }
         });
-      optionsState.renderOverlayFontMissingNotices();
+      renderOverlayFontMissingNotices();
     },
     repairOnLoad: false,
     repairOnChange: false,
@@ -487,10 +493,10 @@ function createSettingBinds(deps: SettingBindsDeps): void {
       if (!overlayFontFallbackSelect) {
         return;
       }
-      optionsState.ensureOverlayFontOption(overlayFontFallbackSelect, family);
+      ensureOverlayFontOption(overlayFontFallbackSelect, family);
       overlayFontFallbackSelect.value = family;
-      optionsState.refreshOptionsSelectItems(overlayFontFallbackSelect);
-      optionsState.renderOverlayFontMissingNotices();
+      refreshOptionsSelectItems(overlayFontFallbackSelect);
+      renderOverlayFontMissingNotices();
     },
     repairOnChange: false,
     refreshSelects: true
@@ -542,13 +548,13 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     registerToggle: registerOptionsToggleControl,
     setToggleState: setOptionsToggleState,
     registerSelect: (select: HTMLSelectElement, kind: string) => {
-      const record = optionsState.registerOptionsSelectControl(select, kind);
+      const record = registerOptionsSelectControl(select, kind);
       if (record) {
-        optionsState.renderOptionsSelectControl(select);
+        renderOptionsSelectControl(select);
       }
       return record;
     },
-    setSelectState: optionsState.setOptionsSelectState,
+    setSelectState: setOptionsSelectState,
     setRowVisible: setConditionalSettingsElementVisibility,
     animateHeight: animateOptionsPanelHeight
   });

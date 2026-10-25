@@ -43,18 +43,13 @@ import * as LumnoOptionsTranslationHelpSection from './options-translation-help'
 import * as LumnoOptionsDiagnostics from './options-diagnostics';
 import * as LumnoWebDavOptions from './webdav-options';
 import * as LumnoMessaging from '../platform/messaging';
+import { getHtmlElement, getHtmlTag, queryHtmlElement, queryHtmlElements, queryHtmlTags } from '../shared/dom-lookup';
+import * as OPTIONS_STATE from './options-state';
 
 (function() {
-  // Page state shared with the parts of this page split out into
-  // src/options/: each receives this one object as `optionsState` and reads
-  // and writes the same properties this file does.
-  const optionsState = {};
   const optionsRuntimeStartedAt = typeof performance !== 'undefined' && typeof performance.now === 'function'
     ? performance.now()
     : Date.now();
-  optionsState.optionsStartupStorageBatchPending = false;
-  optionsState.optionsStartupRefreshCoalescing = true;
-  optionsState.optionsStartupRefreshDeferred = false;
   let optionsReadyMarked = false;
 
   function markOptionsPerformance(name) {
@@ -72,146 +67,141 @@ import * as LumnoMessaging from '../platform/messaging';
     document.documentElement.setAttribute('data-lumno-options-runtime-started', 'true');
   }
 
-  const panel = document.getElementById('_x_extension_settings_panel_2024_unique_');
-  const optionsRoot = document.getElementById('_x_extension_options_root_2024_unique_');
-  const tabsRow = document.querySelector('._x_extension_settings_tabs_row_2024_unique_');
-  const appearanceContent = document.querySelector('._x_extension_settings_content_2024_unique_[data-content="appearance"]');
+  const panel = getHtmlElement(document, '_x_extension_settings_panel_2024_unique_');
+  const optionsRoot = getHtmlElement(document, '_x_extension_options_root_2024_unique_');
+  const tabsRow = queryHtmlElement(document, '._x_extension_settings_tabs_row_2024_unique_');
+  const appearanceContent = queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="appearance"]');
   const themePicker = appearanceContent
-    ? appearanceContent.querySelector('._x_extension_theme_picker_2024_unique_')
+    ? queryHtmlElement(appearanceContent, '._x_extension_theme_picker_2024_unique_')
     : null;
-  const themeButtons = themePicker ? Array.from(themePicker.querySelectorAll('._x_extension_theme_option_2024_unique_')) : [];
-  const tabButtons = Array.from(document.querySelectorAll('._x_extension_settings_tab_button_2024_unique_'));
-  const tabContents = Array.from(document.querySelectorAll('._x_extension_settings_content_2024_unique_'));
-  const tabsContainer = document.getElementById('_x_extension_settings_tabs_2024_unique_');
-  const settingsVersion = document.getElementById('_x_extension_settings_version_2024_unique_');
-  const languageSelect = document.getElementById('_x_extension_language_select_2024_unique_');
-  const languageMachineNote = document.getElementById('_x_extension_language_machine_note_2026_unique_');
-  const recentModeSelect = document.getElementById('_x_extension_recent_mode_select_2024_unique_');
-  const recentModeTabButtons = Array.from(document.querySelectorAll('button[data-recent-mode]'));
-  const recentModeTabsWrap = document.getElementById('_x_extension_recent_mode_tabs_wrap_2024_unique_');
-  const recentCountControlHost = document.getElementById('_x_extension_recent_count_control_2026_unique_');
-  const newtabWidthSelect = document.getElementById('_x_extension_newtab_width_select_2026_unique_');
-  const newtabWidthTabsWrap = document.getElementById('_x_extension_newtab_width_tabs_wrap_2026_unique_');
-  const newtabWidthTabButtons = Array.from(document.querySelectorAll('button[data-newtab-width]'));
-  const overlaySizeTabButtons = Array.from(document.querySelectorAll('button[data-overlay-size]'));
-  const overlaySizeTabsWrap = document.getElementById('_x_extension_overlay_size_tabs_wrap_2026_unique_');
-  const overlayEnterAnimationTabButtons = Array.from(document.querySelectorAll('button[data-overlay-enter-animation]'));
-  const overlayEnterAnimationTabsWrap = document.getElementById('_x_extension_overlay_enter_animation_tabs_wrap_2026_unique_');
-  const overlayFontRow = document.getElementById('_x_extension_overlay_font_row_2026_unique_');
-  const overlayFontSelect = document.getElementById('_x_extension_overlay_font_select_2026_unique_');
-  const overlayFontFallbackRow = document.getElementById('_x_extension_overlay_font_fallback_row_2026_unique_');
-  const overlayFontFallbackSelect = document.getElementById(
-    '_x_extension_overlay_font_fallback_select_2026_unique_'
-  );
-  const overlayFontMissing = document.getElementById('_x_extension_overlay_font_missing_2026_unique_');
-  const overlayFontFallbackMissing = document.getElementById(
-    '_x_extension_overlay_font_fallback_missing_2026_unique_'
-  );
-  const bookmarkRowsControlHost = document.getElementById('_x_extension_bookmark_rows_control_2026_unique_');
-  const bookmarkColumnsSettingRow = document.getElementById('_x_extension_bookmark_columns_setting_row_2026_unique_');
-  const bookmarkColumnsControlHost = document.getElementById('_x_extension_bookmark_columns_control_2026_unique_');
-  const searchResultDisplayLimitControlHost = document.getElementById('_x_extension_search_result_display_limit_control_2026_unique_');
-  const bookmarkFolderIconsVisibleRow = document.getElementById('_x_extension_bookmark_folder_icons_visible_row_2026_unique_');
-  const aggregateSearchAutoGroupToggle = document.getElementById(
-    '_x_extension_aggregate_search_auto_group_toggle_2026_unique_'
-  );
-  const selectionQuickActionsToggle = document.getElementById('_x_extension_selection_quick_actions_toggle_2026_unique_');
-  const selectionQuickActionsSubrows = document.getElementById('_x_extension_selection_quick_actions_subrows_2026_unique_');
-  const selectionQuickActionsProviderRow = document.getElementById('_x_extension_selection_quick_actions_provider_row_2026_unique_');
-  const selectionQuickActionsProviderSelect = document.getElementById('_x_extension_selection_quick_actions_provider_select_2026_unique_');
-  const selectionQuickActionsGroupRow = document.getElementById('_x_extension_selection_quick_actions_group_row_2026_unique_');
-  const selectionQuickActionsGroupToggle = document.getElementById('_x_extension_selection_quick_actions_group_toggle_2026_unique_');
-  const newtabTopContentTabsWrap = document.getElementById('_x_extension_newtab_top_content_tabs_wrap_2026_unique_');
-  const newtabTimeFontRow = document.getElementById('_x_extension_newtab_time_font_row_2026_unique_');
-  const newtabTimeFontSelect = document.getElementById('_x_extension_newtab_time_font_select_2026_unique_');
-  const newtabTimeFontWeightRow = document.getElementById('_x_extension_newtab_time_font_weight_row_2026_unique_');
-  const newtabTimeFontWeightControlHost = document.getElementById('_x_extension_newtab_time_font_weight_control_2026_unique_');
-  const newtabTimeFontSizeRow = document.getElementById('_x_extension_newtab_time_font_size_row_2026_unique_');
-  const newtabTimeFontSizeControlHost = document.getElementById('_x_extension_newtab_time_font_size_control_2026_unique_');
-  const newtabTimeOpacityRow = document.getElementById('_x_extension_newtab_time_opacity_row_2026_unique_');
-  const newtabTimeOpacityControlHost = document.getElementById('_x_extension_newtab_time_opacity_control_2026_unique_');
-  const newtabTimeInkRow = document.getElementById('_x_extension_newtab_time_ink_row_2026_unique_');
-  const newtabTimeInkTabsWrap = document.getElementById('_x_extension_newtab_time_ink_tabs_wrap_2026_unique_');
-  const newtabTimeSecondsRow = document.getElementById('_x_extension_newtab_time_seconds_row_2026_unique_');
-  const newtabTime12HourRow = document.getElementById('_x_extension_newtab_time_12_hour_row_2026_unique_');
-  const newtabShortcutsToggle = document.getElementById('_x_extension_newtab_shortcuts_toggle_2026_unique_');
-  const newtabShortcutAddRow = document.getElementById('_x_extension_newtab_shortcut_add_row_2026_unique_');
-  const newtabShortcutAddToggle = document.getElementById('_x_extension_newtab_shortcut_add_toggle_2026_unique_');
-  const newtabShortcutDockMagnificationRow = document.getElementById('_x_extension_newtab_shortcut_dock_magnification_row_2026_unique_');
-  const newtabShortcutDockMagnificationToggle = document.getElementById('_x_extension_newtab_shortcut_dock_magnification_toggle_2026_unique_');
-  const newtabShortcutColumnsRow = document.getElementById('_x_extension_newtab_shortcut_columns_setting_row_2026_unique_');
-  const newtabShortcutColumnsControlHost = document.getElementById('_x_extension_newtab_shortcut_columns_control_2026_unique_');
-  const newtabShortcutSizeRow = document.getElementById('_x_extension_newtab_shortcut_size_setting_row_2026_unique_');
-  const newtabShortcutSizeControlHost = document.getElementById('_x_extension_newtab_shortcut_size_control_2026_unique_');
-  const newtabShortcutGapRow = document.getElementById('_x_extension_newtab_shortcut_gap_setting_row_2026_unique_');
-  const newtabShortcutGapControlHost = document.getElementById('_x_extension_newtab_shortcut_gap_control_2026_unique_');
-  const restrictedActionSelect = document.getElementById('_x_extension_restricted_action_select_2024_unique_');
-  const searchResultPrioritySelect = document.getElementById('_x_extension_search_result_priority_select_2026_unique_');
-  const searchResultTabPositionSelect = document.getElementById('_x_extension_search_result_tab_position_select_2026_unique_');
-  const newtabGlassStyleSelect = document.getElementById('_x_extension_newtab_glass_style_select_2026_unique_');
-  const newtabGlassThemeRow = document.getElementById('_x_extension_newtab_glass_theme_row_2026_unique_');
-  const newtabGlassThemeTabsWrap = document.getElementById('_x_extension_newtab_glass_theme_tabs_wrap_2026_unique_');
-  const searchResultSourceTypeGroupHost = document.getElementById('_x_extension_search_result_source_types_2026_unique_');
-  const searchResultSourceTypeResetButton = document.getElementById('_x_extension_search_result_source_types_reset_2026_unique_');
-  const searchResultSourceTypeInputs = Array.from(document.querySelectorAll('input[data-search-result-source-type]'));
-  const overlayPageThemeAdaptationRow = document.getElementById('_x_extension_overlay_page_theme_adaptation_row_2026_unique_');
-  const overlayPageThemeAdaptationInfoHost = document.getElementById('_x_extension_overlay_page_theme_adaptation_info_2026_unique_');
-  const restrictedActionInfoHost = document.getElementById('_x_extension_restricted_action_info_2026_unique_');
-  const bookmarkRowsInfoHost = document.getElementById('_x_extension_bookmark_rows_info_2026_unique_');
-  const bookmarkColumnsInfoHost = document.getElementById('_x_extension_bookmark_columns_info_2026_unique_');
-  const faviconBlacklistEditor = document.getElementById('_x_extension_favicon_blacklist_editor_2026_unique_');
-  const faviconBlacklistList = document.getElementById('_x_extension_favicon_blacklist_list_2026_unique_');
-  const faviconBlacklistForm = document.getElementById('_x_extension_favicon_blacklist_form_2026_unique_');
-  const faviconBlacklistClearButton = document.getElementById('_x_extension_favicon_blacklist_clear_2026_unique_');
-  const syncStatus = document.getElementById('_x_extension_sync_status_2024_unique_');
-  const syncStatusText = document.getElementById('_x_extension_sync_status_text_2024_unique_');
-  const syncNowButton = document.getElementById('_x_extension_sync_now_2024_unique_');
-  const shortcutSyncSummary = document.getElementById('_x_extension_shortcut_sync_summary_2026_unique_');
-  const syncExportButton = document.getElementById('_x_extension_sync_export_2024_unique_');
-  const syncImportButton = document.getElementById('_x_extension_sync_import_2024_unique_');
-  const syncImportInput = document.getElementById('_x_extension_sync_import_input_2024_unique_');
-  const newtabOpenInNewTabToggles = Array.from(document.querySelectorAll('input[data-newtab-open-in-new-tab-surface]'));
-  const fallbackShortcutInput = document.getElementById('_x_extension_shortcuts_input_2024_unique_');
-  const fallbackShortcutTokens = document.getElementById('_x_extension_shortcuts_tokens_2024_unique_');
-  const fallbackShortcutWrap = document.querySelector('._x_extension_shortcuts_hotkey_wrap_2024_unique_');
-  const restrictedActionSelectWrap = document.getElementById('_x_extension_restricted_action_tabs_wrap_2024_unique_');
-  const restrictedActionTabButtons = Array.from(document.querySelectorAll('button[data-restricted-action]'));
-  const searchResultPriorityTabsWrap = document.getElementById('_x_extension_search_result_priority_tabs_wrap_2026_unique_');
-  const searchResultPriorityTabButtons = Array.from(document.querySelectorAll('button[data-search-result-priority]'));
-  const clearShortcutButton = document.getElementById('_x_extension_clear_shortcut_2024_unique_');
-  const resetShortcutButton = document.getElementById('_x_extension_reset_shortcut_2024_unique_');
-  const shortcutsStatus = document.getElementById('_x_extension_shortcuts_status_2024_unique_');
-  const shortcutReferenceList = document.getElementById('_x_extension_shortcut_reference_list_2026_unique_');
-  const openOnboardingPageButton = document.getElementById('_x_extension_open_onboarding_page_2026_unique_');
-  const feedbackSupportHost = document.getElementById('_x_extension_feedback_support_2026_unique_');
-  const translationHelpHost = document.getElementById('_x_extension_translation_help_2026_unique_');
-  const openShortcutsPageButton = document.getElementById('_x_extension_open_shortcuts_page_2026_unique_');
-  const siteSearchEngineBuiltinList = document.getElementById('_x_extension_search_engine_builtin_list_2026_unique_');
-  const aggregateSearchList = document.getElementById('_x_extension_aggregate_search_list_2026_unique_');
-  const aggregateSearchClearButton = document.getElementById('_x_extension_aggregate_search_clear_2026_unique_');
-  const siteSearchCustomList = document.getElementById('_x_extension_site_search_custom_list_2024_unique_');
-  const siteSearchBuiltinList = document.getElementById('_x_extension_site_search_builtin_list_2024_unique_');
-  const siteSearchAiGroup = document.getElementById('_x_extension_site_search_ai_group_2026_unique_');
-  const siteSearchAiBuiltinList = document.getElementById('_x_extension_site_search_ai_builtin_list_2026_unique_');
-  const siteSearchKeyInput = document.getElementById('_x_extension_site_search_key_2024_unique_');
-  const siteSearchNameInput = document.getElementById('_x_extension_site_search_name_2024_unique_');
-  const siteSearchTemplateInput = document.getElementById('_x_extension_site_search_template_2024_unique_');
-  const siteSearchInsertQueryButton = document.getElementById('_x_extension_site_search_insert_query_2026_unique_');
-  const siteSearchAliasInput = document.getElementById('_x_extension_site_search_alias_2024_unique_');
-  const siteSearchCategoryButtons = Array.from(document.querySelectorAll(
-    'button[data-site-search-category]'
-  ));
-  const siteSearchForm = document.querySelector('._x_extension_settings_content_2024_unique_[data-content="shortcuts"] ._x_extension_shortcut_form_2024_unique_');
-  const siteSearchFormTrigger = document.getElementById('_x_extension_site_search_expand_2024_unique_');
-  const siteSearchAddButton = document.getElementById('_x_extension_site_search_add_2024_unique_');
-  const siteSearchCancelButton = document.getElementById('_x_extension_site_search_cancel_2024_unique_');
-  const siteSearchError = document.getElementById('_x_extension_site_search_error_2024_unique_');
-  const builtinResetButton = document.getElementById('_x_extension_builtin_reset_2024_unique_');
-  const customClearButton = document.getElementById('_x_extension_custom_clear_2024_unique_');
-  const blacklistList = document.getElementById('_x_extension_blacklist_list_2026_unique_');
-  const blacklistForm = document.getElementById('_x_extension_blacklist_form_2026_unique_');
-  const blacklistClearButton = document.getElementById('_x_extension_blacklist_clear_2026_unique_');
-  const toastElement = document.getElementById('_x_extension_toast_2024_unique_');
+  const themeButtons = themePicker ? queryHtmlElements(themePicker, '._x_extension_theme_option_2024_unique_') : [];
+  const tabButtons = queryHtmlElements(document, '._x_extension_settings_tab_button_2024_unique_');
+  const tabContents = queryHtmlElements(document, '._x_extension_settings_content_2024_unique_');
+  const tabsContainer = getHtmlElement(document, '_x_extension_settings_tabs_2024_unique_');
+  const settingsVersion = getHtmlElement(document, '_x_extension_settings_version_2024_unique_');
+  const languageSelect = getHtmlTag(document, '_x_extension_language_select_2024_unique_', 'select');
+  const languageMachineNote = getHtmlElement(document, '_x_extension_language_machine_note_2026_unique_');
+  const recentModeSelect = getHtmlTag(document, '_x_extension_recent_mode_select_2024_unique_', 'select');
+  const recentModeTabButtons = queryHtmlElements(document, 'button[data-recent-mode]');
+  const recentModeTabsWrap = getHtmlElement(document, '_x_extension_recent_mode_tabs_wrap_2024_unique_');
+  const recentCountControlHost = getHtmlElement(document, '_x_extension_recent_count_control_2026_unique_');
+  const newtabWidthSelect = getHtmlTag(document, '_x_extension_newtab_width_select_2026_unique_', 'select');
+  const newtabWidthTabsWrap = getHtmlElement(document, '_x_extension_newtab_width_tabs_wrap_2026_unique_');
+  const newtabWidthTabButtons = queryHtmlElements(document, 'button[data-newtab-width]');
+  const overlaySizeTabButtons = queryHtmlElements(document, 'button[data-overlay-size]');
+  const overlaySizeTabsWrap = getHtmlElement(document, '_x_extension_overlay_size_tabs_wrap_2026_unique_');
+  const overlayEnterAnimationTabButtons = queryHtmlElements(document, 'button[data-overlay-enter-animation]');
+  const overlayEnterAnimationTabsWrap = getHtmlElement(document, '_x_extension_overlay_enter_animation_tabs_wrap_2026_unique_');
+  const overlayFontRow = getHtmlElement(document, '_x_extension_overlay_font_row_2026_unique_');
+  const overlayFontSelect = getHtmlTag(document, '_x_extension_overlay_font_select_2026_unique_', 'select');
+  const overlayFontFallbackRow = getHtmlElement(document, '_x_extension_overlay_font_fallback_row_2026_unique_');
+  const overlayFontFallbackSelect = getHtmlTag(document, '_x_extension_overlay_font_fallback_select_2026_unique_', 'select');
+  const overlayFontMissing = getHtmlElement(document, '_x_extension_overlay_font_missing_2026_unique_');
+  const overlayFontFallbackMissing = getHtmlElement(document, '_x_extension_overlay_font_fallback_missing_2026_unique_');
+  const bookmarkRowsControlHost = getHtmlElement(document, '_x_extension_bookmark_rows_control_2026_unique_');
+  const bookmarkColumnsSettingRow = getHtmlElement(document, '_x_extension_bookmark_columns_setting_row_2026_unique_');
+  const bookmarkColumnsControlHost = getHtmlElement(document, '_x_extension_bookmark_columns_control_2026_unique_');
+  const searchResultDisplayLimitControlHost = getHtmlElement(document, '_x_extension_search_result_display_limit_control_2026_unique_');
+  const bookmarkFolderIconsVisibleRow = getHtmlElement(document, '_x_extension_bookmark_folder_icons_visible_row_2026_unique_');
+  const aggregateSearchAutoGroupToggle = getHtmlTag(document, '_x_extension_aggregate_search_auto_group_toggle_2026_unique_', 'input');
+  const selectionQuickActionsToggle = getHtmlTag(document, '_x_extension_selection_quick_actions_toggle_2026_unique_', 'input');
+  const selectionQuickActionsSubrows = getHtmlElement(document, '_x_extension_selection_quick_actions_subrows_2026_unique_');
+  const selectionQuickActionsProviderRow = getHtmlElement(document, '_x_extension_selection_quick_actions_provider_row_2026_unique_');
+  const selectionQuickActionsProviderSelect = getHtmlTag(document, '_x_extension_selection_quick_actions_provider_select_2026_unique_', 'select');
+  const selectionQuickActionsGroupRow = getHtmlElement(document, '_x_extension_selection_quick_actions_group_row_2026_unique_');
+  const selectionQuickActionsGroupToggle = getHtmlTag(document, '_x_extension_selection_quick_actions_group_toggle_2026_unique_', 'input');
+  const newtabTopContentTabsWrap = getHtmlElement(document, '_x_extension_newtab_top_content_tabs_wrap_2026_unique_');
+  const newtabTimeFontRow = getHtmlElement(document, '_x_extension_newtab_time_font_row_2026_unique_');
+  const newtabTimeFontSelect = getHtmlTag(document, '_x_extension_newtab_time_font_select_2026_unique_', 'select');
+  const newtabTimeFontWeightRow = getHtmlElement(document, '_x_extension_newtab_time_font_weight_row_2026_unique_');
+  const newtabTimeFontWeightControlHost = getHtmlElement(document, '_x_extension_newtab_time_font_weight_control_2026_unique_');
+  const newtabTimeFontSizeRow = getHtmlElement(document, '_x_extension_newtab_time_font_size_row_2026_unique_');
+  const newtabTimeFontSizeControlHost = getHtmlElement(document, '_x_extension_newtab_time_font_size_control_2026_unique_');
+  const newtabTimeOpacityRow = getHtmlElement(document, '_x_extension_newtab_time_opacity_row_2026_unique_');
+  const newtabTimeOpacityControlHost = getHtmlElement(document, '_x_extension_newtab_time_opacity_control_2026_unique_');
+  const newtabTimeInkRow = getHtmlElement(document, '_x_extension_newtab_time_ink_row_2026_unique_');
+  const newtabTimeInkTabsWrap = getHtmlElement(document, '_x_extension_newtab_time_ink_tabs_wrap_2026_unique_');
+  const newtabTimeSecondsRow = getHtmlElement(document, '_x_extension_newtab_time_seconds_row_2026_unique_');
+  const newtabTime12HourRow = getHtmlElement(document, '_x_extension_newtab_time_12_hour_row_2026_unique_');
+  const newtabShortcutsToggle = getHtmlTag(document, '_x_extension_newtab_shortcuts_toggle_2026_unique_', 'input');
+  const newtabShortcutAddRow = getHtmlElement(document, '_x_extension_newtab_shortcut_add_row_2026_unique_');
+  const newtabShortcutAddToggle = getHtmlTag(document, '_x_extension_newtab_shortcut_add_toggle_2026_unique_', 'input');
+  const newtabShortcutDockMagnificationRow = getHtmlElement(document, '_x_extension_newtab_shortcut_dock_magnification_row_2026_unique_');
+  const newtabShortcutDockMagnificationToggle = getHtmlTag(document, '_x_extension_newtab_shortcut_dock_magnification_toggle_2026_unique_', 'input');
+  const newtabShortcutColumnsRow = getHtmlElement(document, '_x_extension_newtab_shortcut_columns_setting_row_2026_unique_');
+  const newtabShortcutColumnsControlHost = getHtmlElement(document, '_x_extension_newtab_shortcut_columns_control_2026_unique_');
+  const newtabShortcutSizeRow = getHtmlElement(document, '_x_extension_newtab_shortcut_size_setting_row_2026_unique_');
+  const newtabShortcutSizeControlHost = getHtmlElement(document, '_x_extension_newtab_shortcut_size_control_2026_unique_');
+  const newtabShortcutGapRow = getHtmlElement(document, '_x_extension_newtab_shortcut_gap_setting_row_2026_unique_');
+  const newtabShortcutGapControlHost = getHtmlElement(document, '_x_extension_newtab_shortcut_gap_control_2026_unique_');
+  const restrictedActionSelect = getHtmlTag(document, '_x_extension_restricted_action_select_2024_unique_', 'select');
+  const searchResultPrioritySelect = getHtmlTag(document, '_x_extension_search_result_priority_select_2026_unique_', 'select');
+  const searchResultTabPositionSelect = getHtmlTag(document, '_x_extension_search_result_tab_position_select_2026_unique_', 'select');
+  const newtabGlassStyleSelect = getHtmlTag(document, '_x_extension_newtab_glass_style_select_2026_unique_', 'select');
+  const newtabGlassThemeRow = getHtmlElement(document, '_x_extension_newtab_glass_theme_row_2026_unique_');
+  const newtabGlassThemeTabsWrap = getHtmlElement(document, '_x_extension_newtab_glass_theme_tabs_wrap_2026_unique_');
+  const searchResultSourceTypeGroupHost = getHtmlElement(document, '_x_extension_search_result_source_types_2026_unique_');
+  const searchResultSourceTypeResetButton = getHtmlElement(document, '_x_extension_search_result_source_types_reset_2026_unique_');
+  const searchResultSourceTypeInputs = queryHtmlTags(document, 'input[data-search-result-source-type]', 'input');
+  const overlayPageThemeAdaptationRow = getHtmlElement(document, '_x_extension_overlay_page_theme_adaptation_row_2026_unique_');
+  const overlayPageThemeAdaptationInfoHost = getHtmlElement(document, '_x_extension_overlay_page_theme_adaptation_info_2026_unique_');
+  const restrictedActionInfoHost = getHtmlElement(document, '_x_extension_restricted_action_info_2026_unique_');
+  const bookmarkRowsInfoHost = getHtmlElement(document, '_x_extension_bookmark_rows_info_2026_unique_');
+  const bookmarkColumnsInfoHost = getHtmlElement(document, '_x_extension_bookmark_columns_info_2026_unique_');
+  const faviconBlacklistEditor = getHtmlElement(document, '_x_extension_favicon_blacklist_editor_2026_unique_');
+  const faviconBlacklistList = getHtmlElement(document, '_x_extension_favicon_blacklist_list_2026_unique_');
+  const faviconBlacklistForm = getHtmlElement(document, '_x_extension_favicon_blacklist_form_2026_unique_');
+  const faviconBlacklistClearButton = getHtmlTag(document, '_x_extension_favicon_blacklist_clear_2026_unique_', 'button');
+  const syncStatus = getHtmlElement(document, '_x_extension_sync_status_2024_unique_');
+  const syncStatusText = getHtmlElement(document, '_x_extension_sync_status_text_2024_unique_');
+  const syncNowButton = getHtmlTag(document, '_x_extension_sync_now_2024_unique_', 'button');
+  const shortcutSyncSummary = getHtmlElement(document, '_x_extension_shortcut_sync_summary_2026_unique_');
+  const syncExportButton = getHtmlTag(document, '_x_extension_sync_export_2024_unique_', 'button');
+  const syncImportButton = getHtmlTag(document, '_x_extension_sync_import_2024_unique_', 'button');
+  const syncImportInput = getHtmlTag(document, '_x_extension_sync_import_input_2024_unique_', 'input');
+  const newtabOpenInNewTabToggles = queryHtmlTags(document, 'input[data-newtab-open-in-new-tab-surface]', 'input');
+  const fallbackShortcutInput = getHtmlTag(document, '_x_extension_shortcuts_input_2024_unique_', 'input');
+  const fallbackShortcutTokens = getHtmlElement(document, '_x_extension_shortcuts_tokens_2024_unique_');
+  const fallbackShortcutWrap = queryHtmlElement(document, '._x_extension_shortcuts_hotkey_wrap_2024_unique_');
+  const restrictedActionSelectWrap = getHtmlElement(document, '_x_extension_restricted_action_tabs_wrap_2024_unique_');
+  const restrictedActionTabButtons = queryHtmlElements(document, 'button[data-restricted-action]');
+  const searchResultPriorityTabsWrap = getHtmlElement(document, '_x_extension_search_result_priority_tabs_wrap_2026_unique_');
+  const searchResultPriorityTabButtons = queryHtmlElements(document, 'button[data-search-result-priority]');
+  const clearShortcutButton = getHtmlElement(document, '_x_extension_clear_shortcut_2024_unique_');
+  const resetShortcutButton = getHtmlElement(document, '_x_extension_reset_shortcut_2024_unique_');
+  const shortcutsStatus = getHtmlElement(document, '_x_extension_shortcuts_status_2024_unique_');
+  const shortcutReferenceList = getHtmlElement(document, '_x_extension_shortcut_reference_list_2026_unique_');
+  const openOnboardingPageButton = getHtmlElement(document, '_x_extension_open_onboarding_page_2026_unique_');
+  const feedbackSupportHost = getHtmlElement(document, '_x_extension_feedback_support_2026_unique_');
+  const translationHelpHost = getHtmlElement(document, '_x_extension_translation_help_2026_unique_');
+  const openShortcutsPageButton = getHtmlElement(document, '_x_extension_open_shortcuts_page_2026_unique_');
+  const siteSearchEngineBuiltinList = getHtmlElement(document, '_x_extension_search_engine_builtin_list_2026_unique_');
+  const aggregateSearchList = getHtmlElement(document, '_x_extension_aggregate_search_list_2026_unique_');
+  const aggregateSearchClearButton = getHtmlTag(document, '_x_extension_aggregate_search_clear_2026_unique_', 'button');
+  const siteSearchCustomList = getHtmlElement(document, '_x_extension_site_search_custom_list_2024_unique_');
+  const siteSearchBuiltinList = getHtmlElement(document, '_x_extension_site_search_builtin_list_2024_unique_');
+  const siteSearchAiGroup = getHtmlElement(document, '_x_extension_site_search_ai_group_2026_unique_');
+  const siteSearchAiBuiltinList = getHtmlElement(document, '_x_extension_site_search_ai_builtin_list_2026_unique_');
+  const siteSearchKeyInput = getHtmlTag(document, '_x_extension_site_search_key_2024_unique_', 'input');
+  const siteSearchNameInput = getHtmlTag(document, '_x_extension_site_search_name_2024_unique_', 'input');
+  const siteSearchTemplateInput = getHtmlTag(document, '_x_extension_site_search_template_2024_unique_', 'input');
+  const siteSearchInsertQueryButton = getHtmlElement(document, '_x_extension_site_search_insert_query_2026_unique_');
+  const siteSearchAliasInput = getHtmlTag(document, '_x_extension_site_search_alias_2024_unique_', 'input');
+  const siteSearchCategoryButtons = queryHtmlElements(document, 'button[data-site-search-category]');
+  const siteSearchForm = queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="shortcuts"] ._x_extension_shortcut_form_2024_unique_');
+  const siteSearchFormTrigger = getHtmlElement(document, '_x_extension_site_search_expand_2024_unique_');
+  const siteSearchAddButton = getHtmlElement(document, '_x_extension_site_search_add_2024_unique_');
+  const siteSearchCancelButton = getHtmlElement(document, '_x_extension_site_search_cancel_2024_unique_');
+  const siteSearchError = getHtmlElement(document, '_x_extension_site_search_error_2024_unique_');
+  const builtinResetButton = getHtmlElement(document, '_x_extension_builtin_reset_2024_unique_');
+  const customClearButton = getHtmlTag(document, '_x_extension_custom_clear_2024_unique_', 'button');
+  const blacklistList = getHtmlElement(document, '_x_extension_blacklist_list_2026_unique_');
+  const blacklistForm = getHtmlElement(document, '_x_extension_blacklist_form_2026_unique_');
+  const blacklistClearButton = getHtmlTag(document, '_x_extension_blacklist_clear_2026_unique_', 'button');
+  const toastElement = getHtmlElement(document, '_x_extension_toast_2024_unique_');
+  if (!panel || !optionsRoot || themeButtons.length === 0 || tabButtons.length === 0) {
+    return;
+  }
   const optionsBlacklistListApi = globalThis.LumnoOptionsBlacklistList;
   const optionsAggregateSearchListApi = globalThis.LumnoOptionsAggregateSearchList;
   const optionsFeedbackSupportApi = globalThis.LumnoOptionsFeedbackSupport;
@@ -280,6 +270,90 @@ import * as LumnoMessaging from '../platform/messaging';
   // after a language change so the label follows the chosen language.
   const popconfirmLanguageRefreshers = new Set();
 
+  // The provider area, and the read batch that serves the startup reads in one go.
+  const { runtime: providerStorageRuntime, area: rawStorageArea } = LumnoSettingsStorage.getProviderStorage(chrome);
+  const startupStorageReadBatch = LumnoSettingsStorage.createStorageReadBatch(rawStorageArea);
+  if (!startupStorageReadBatch) {
+    return;
+  }
+  const SYNC_KEYS = SETTINGS.CHROME_SYNC_STORAGE_KEYS;
+  const SEARCH_SOURCE_ORDER_STORAGE_KEY = SETTINGS.SEARCH_SOURCE_ORDER_STORAGE_KEY;
+  // Page state shared with the parts of this page split out into
+  // src/options/: each receives this one object as `optionsState` and reads
+  // and writes the same properties this file does.
+  const optionsState = OPTIONS_STATE.createOptionsState({
+    providerStorageRuntime,
+    storageArea: startupStorageReadBatch.area,
+    rawStorageArea,
+    siteSearchModel: SITE_SEARCH.createSiteSearchModel({
+      searchUtils: SEARCH_UTILS,
+      aggregateSearchStore: AGGREGATE_SEARCH_STORE
+    }),
+    blacklistModel: LumnoOptionsBlacklist.createBlacklistModel({
+      blacklistUtils: LumnoBlacklistUtils
+    }),
+    enqueueSiteSearchProviderStorageOperation: SITE_SEARCH.createOperationQueue(),
+    panelHeightAnimator: PANEL_MOTION.createPanelHeightAnimator({
+      documentObj: document,
+      panel,
+      reserveHost: optionsRoot,
+      windowObj: window
+    }),
+    searchSourceOrderController: LumnoOptionsSearchSourceOrder.createSearchSourceOrderController({
+      groupHost: getHtmlElement(document, '_x_extension_search_source_group_order_2026_unique_'),
+      getMessage: (key, fallback) => getMessage(key, fallback),
+      showToast: (message, isError) => showToast(message, isError),
+      read: () => LumnoSettingsStorage.readStorageValue(startupStorageReadBatch.area, chrome, SEARCH_SOURCE_ORDER_STORAGE_KEY),
+      write: (value) => LumnoSettingsStorage.writeStorageValue(
+        rawStorageArea,
+        chrome,
+        SEARCH_SOURCE_ORDER_STORAGE_KEY,
+        value
+      ),
+      onChange() {
+        if (optionsState.siteSearchProvidersLoaded) {
+          renderSiteSearchList();
+        }
+        renderAggregateSearchList();
+        renderSearchResultSourceTypeControl(collectCheckedSearchResultSourceTypes());
+      }
+    }),
+    tooltipController: LumnoTooltip.createController({
+      documentObj: document,
+      windowObj: window,
+      id: '_x_extension_options_tooltip_2026_unique_',
+      appendTo: document.body,
+      maxWidth: 'min(360px, calc(100vw - 24px))'
+    }),
+    toastController: optionsToastApi
+      ? optionsToastApi.createToastController(toastElement, {
+        windowObj: window,
+        duration: 2200
+      })
+      : null,
+    isMacPlatform: LumnoShortcutDisplay.getNavigatorPlatform(navigator) === 'mac',
+    fallbackSiteSearchProviders: SEARCH_UTILS.getDefaultSiteSearchProviders()
+  });
+
+
+  const {
+    optionsSelectControlRecords,
+    registerOptionsSelectControl,
+    refreshOptionsSelectItems,
+    renderOptionsSelectControl,
+    setOptionsSelectState,
+    getInstalledFontFamilies,
+    renderOverlayFontMissingNotices,
+    ensureOverlayFontOption,
+    populateOverlayFontOptions
+  } = OPTIONS_SELECT_CONTROLS.createSelectControls({
+    tabsRow,
+    getMessage: (key, fallback) => getMessage(key, fallback),
+    overlayFontMissing,
+    overlayFontFallbackMissing,
+    formatTemplate: (text, params) => formatTemplate(text, params),
+    optionsState
+  });
 
   const {
     showTooltipFor,
@@ -304,6 +378,8 @@ import * as LumnoMessaging from '../platform/messaging';
     aggregateSearchClearButton,
     blacklistClearButton,
     toastElement,
+    optionsSelectControlRecords,
+    renderOptionsSelectControl,
     optionsState
   });
 
@@ -432,7 +508,7 @@ import * as LumnoMessaging from '../platform/messaging';
     applyLanguageMode,
     loadLocaleMessages
   } = OPTIONS_LANGUAGE.createLanguage({
-    renderOverlayFontMissingNotices: (...args) => optionsState.renderOverlayFontMissingNotices(...args),
+    renderOverlayFontMissingNotices: (...args) => renderOverlayFontMissingNotices(...args),
     popconfirmLanguageRefreshers,
     formatTemplate: (...args) => formatTemplate(...args),
     formatShortcutForDisplay: (...args) => formatShortcutForDisplay(...args),
@@ -443,7 +519,7 @@ import * as LumnoMessaging from '../platform/messaging';
     localStorageArea,
     languageSelect,
     languageMachineNote,
-    setOptionsSelectState: (...args) => optionsState.setOptionsSelectState(...args),
+    setOptionsSelectState: (...args) => setOptionsSelectState(...args),
     renderOptionsInfoButtons,
     renderFeedbackSupport,
     renderTranslationHelp,
@@ -515,14 +591,6 @@ import * as LumnoMessaging from '../platform/messaging';
     optionsState
   });
 
-  ({ optionsSelectControlRecords: optionsState.optionsSelectControlRecords, registerOptionsSelectControl: optionsState.registerOptionsSelectControl, refreshOptionsSelectItems: optionsState.refreshOptionsSelectItems, renderOptionsSelectControl: optionsState.renderOptionsSelectControl, setOptionsSelectState: optionsState.setOptionsSelectState, getInstalledFontFamilies: optionsState.getInstalledFontFamilies, renderOverlayFontMissingNotices: optionsState.renderOverlayFontMissingNotices, ensureOverlayFontOption: optionsState.ensureOverlayFontOption, populateOverlayFontOptions: optionsState.populateOverlayFontOptions } = OPTIONS_SELECT_CONTROLS.createSelectControls({
-    tabsRow,
-    getMessage,
-    overlayFontMissing,
-    overlayFontFallbackMissing,
-    formatTemplate,
-    optionsState
-  }));
 
   const optionsSettingsControlsApi = globalThis.LumnoOptionsSettingsControls;
   const optionsSettingsFormsApi = globalThis.LumnoOptionsSettingsForms;
@@ -532,10 +600,6 @@ import * as LumnoMessaging from '../platform/messaging';
   const optionsSiteSearchListApi = globalThis.LumnoOptionsSiteSearchList;
   const optionsThemePickerApi = globalThis.LumnoOptionsThemePicker;
   const shortcutDisplay = LumnoShortcutDisplay;
-  optionsState.toastController = optionsToastApi.createToastController(toastElement, {
-    windowObj: window,
-    duration: 2200
-  });
   const diagnosticsExport = LumnoOptionsDiagnostics.createDiagnosticsExport({
     chromeApi: chrome,
     documentObj: document,
@@ -768,7 +832,7 @@ import * as LumnoMessaging from '../platform/messaging';
     optionsSettingsControlsApi,
     selectionQuickActionsToggle,
     selectionQuickActionsProviderSelect,
-    renderOptionsSelectControl: optionsState.renderOptionsSelectControl,
+    renderOptionsSelectControl: renderOptionsSelectControl,
     selectionQuickActionsSubrows,
     selectionQuickActionsProviderRow,
     selectionQuickActionsGroupToggle,
@@ -862,20 +926,11 @@ import * as LumnoMessaging from '../platform/messaging';
       onSave: handleReactFaviconBlacklistFormSave
     });
 
-  // 使用系统字体，避免外链字体依赖。
-  if (!panel || themeButtons.length === 0 || tabButtons.length === 0) {
-    return;
-  }
-  optionsState.siteSearchModel = SITE_SEARCH.createSiteSearchModel({
-    searchUtils: SEARCH_UTILS,
-    aggregateSearchStore: AGGREGATE_SEARCH_STORE
-  });
   const {
     getActiveBuiltinSiteSearchProviders,
     getSiteSearchBuiltinKey,
     normalizeAliases
   } = SITE_SEARCH;
-  optionsState.enqueueSiteSearchProviderStorageOperation = SITE_SEARCH.createOperationQueue();
   const aggregateSearchModel = AGGREGATE_SEARCH.createAggregateSearchModel({
     aggregateSearchStore: AGGREGATE_SEARCH_STORE
   });
@@ -883,10 +938,6 @@ import * as LumnoMessaging from '../platform/messaging';
     deriveLegacyAutoGroupEnabled: aggregateSearchModel.deriveLegacyAutoGroupEnabled,
     settings: SETTINGS
   });
-  ({ runtime: optionsState.providerStorageRuntime, area: optionsState.rawStorageArea } = LumnoSettingsStorage.getProviderStorage(chrome));
-  const startupStorageReadBatch = LumnoSettingsStorage.createStorageReadBatch(optionsState.rawStorageArea);
-  optionsState.storageArea = startupStorageReadBatch.area;
-  optionsState.optionsStartupStorageBatchPending = true;
   // Each section registers its storage change handlers here, next to the
   // code that renders it; one chrome.storage listener dispatches to them.
   const storageChanges = SETTING_BINDINGS.createStorageChangeRegistry({
@@ -898,7 +949,7 @@ import * as LumnoMessaging from '../platform/messaging';
     registry: storageChanges,
     refreshCustomSelects,
     setToggleState: setOptionsToggleState,
-    setSelectState: optionsState.setOptionsSelectState
+    setSelectState: setOptionsSelectState
   });
   // Device-only settings (the overlay's local fonts) stay in
   // chrome.storage.local whichever area holds the synced ones.
@@ -908,7 +959,7 @@ import * as LumnoMessaging from '../platform/messaging';
     registry: storageChanges,
     refreshCustomSelects,
     setToggleState: setOptionsToggleState,
-    setSelectState: optionsState.setOptionsSelectState
+    setSelectState: setOptionsSelectState
   });
 
   function finishOptionsStartupStorageBatch(metrics) {
@@ -995,37 +1046,10 @@ import * as LumnoMessaging from '../platform/messaging';
     return LumnoSettingsStorage.addStorageChangeListener(chrome, listener);
   }
 
-  optionsState.panelHeightAnimator = PANEL_MOTION.createPanelHeightAnimator({
-    documentObj: document,
-    panel,
-    reserveHost: optionsRoot,
-    windowObj: window
-  });
   const { setConditionalSettingsElementVisibility } = PANEL_MOTION;
   function animateOptionsPanelHeight(mutateLayout) {
     return optionsState.panelHeightAnimator.animate(mutateLayout);
   }
-  const SYNC_KEYS = SETTINGS.CHROME_SYNC_STORAGE_KEYS;
-  const SEARCH_SOURCE_ORDER_STORAGE_KEY = SETTINGS.SEARCH_SOURCE_ORDER_STORAGE_KEY;
-  optionsState.searchSourceOrderController = LumnoOptionsSearchSourceOrder.createSearchSourceOrderController({
-      groupHost: document.getElementById('_x_extension_search_source_group_order_2026_unique_'),
-      getMessage,
-      showToast: (message, isError) => showToast(message, isError),
-      read: () => LumnoSettingsStorage.readStorageValue(optionsState.storageArea, chrome, SEARCH_SOURCE_ORDER_STORAGE_KEY),
-      write: (value) => LumnoSettingsStorage.writeStorageValue(
-        optionsState.rawStorageArea,
-        chrome,
-        SEARCH_SOURCE_ORDER_STORAGE_KEY,
-        value
-      ),
-      onChange() {
-        if (optionsState.siteSearchProvidersLoaded) {
-          renderSiteSearchList();
-        }
-        renderAggregateSearchList();
-        renderSearchResultSourceTypeControl(collectCheckedSearchResultSourceTypes());
-      }
-    });
   optionsState.searchSourceOrderController.attachListDrag(siteSearchCustomList, 'custom', getSearchSourceRowKey);
   optionsState.searchSourceOrderController.attachListDrag(siteSearchEngineBuiltinList, 'engine', getSearchSourceRowKey);
   optionsState.searchSourceOrderController.attachListDrag(siteSearchBuiltinList, 'site', getSearchSourceRowKey);
@@ -1044,12 +1068,6 @@ import * as LumnoMessaging from '../platform/messaging';
   function getSearchSourceRowKey(row) {
     return String(row.getAttribute('data-key') || '').toLowerCase();
   }
-  // Grouped shortcut state. Its three keys are one save and move together.
-  optionsState.blacklistModel = LumnoOptionsBlacklist.createBlacklistModel({
-    blacklistUtils: LumnoBlacklistUtils
-  });
-  ({ buildItemKey: optionsState.buildBlacklistItemKey, formatPatternForDisplay: optionsState.formatBlacklistPatternForDisplay, getInputConfig: optionsState.getBlacklistInputConfig, getPatternInputValue: optionsState.getBlacklistPatternInputValue, normalizeItems: optionsState.normalizeBlacklistItems, normalizeMatchModes: optionsState.normalizeBlacklistMatchModes } = optionsState.blacklistModel);
-  optionsState.currentLanguageMode = 'system';
   optionsState.webDavSettingsController = LumnoWebDavOptions.createController({ chromeApi: chrome, getMessage,
       animateLayout: animateOptionsPanelHeight });
   if (searchResultSourceTypeController) {
@@ -1057,17 +1075,6 @@ import * as LumnoMessaging from '../platform/messaging';
       searchResultSourceTypeItems.filter((item) => item.checked).map((item) => item.value)
     );
   }
-  const shortcutPlatform = shortcutDisplay.getNavigatorPlatform(typeof navigator !== 'undefined' ? navigator : null);
-  optionsState.isMacPlatform = shortcutPlatform === 'mac';
-  optionsState.defaultSiteSearchProviders = [];
-  optionsState.customSiteSearchProviders = [];
-  optionsState.customSiteSearchProviderIdsReady = true;
-  optionsState.disabledSiteSearchKeys = new Set();
-  // Whether the Help Center site search (lm) is on; unknown (null) until the providers load,
-  // so the "ask in the search box" demo never shows for someone who turned it off.
-  optionsState.helpCenterSearchEnabled = null;
-  optionsState.siteSearchProvidersLoaded = false;
-  optionsState.aggregateSearches = [];
 
   const {
     deriveLegacyAggregateSearchAutoGroupEnabled,
@@ -1102,22 +1109,7 @@ import * as LumnoMessaging from '../platform/messaging';
     optionsState
   });
 
-  optionsState.editingSiteSearchKey = null;
-  optionsState.siteSearchDraftCategory = 'site';
-  optionsState.activePopconfirm = null;
-  optionsState.siteSearchFormExpanded = false;
-  optionsState.siteSearchRefreshSuppressUntil = 0;
   let siteSearchRefreshTimer = null;
-  optionsState.pendingOptionsScrollTarget = '';
-  optionsState.searchBlacklistItems = [];
-  optionsState.faviconRequestBlacklistItems = [];
-  optionsState.tooltipController = LumnoTooltip.createController({
-    documentObj: document,
-    windowObj: window,
-    id: '_x_extension_options_tooltip_2026_unique_',
-    appendTo: document.body,
-    maxWidth: 'min(360px, calc(100vw - 24px))'
-  });
   function renderOptionsInfoButtons() {
     const bookmarkTooltip = getMessage(
       'settings_bookmark_adaptive_count_tooltip',
@@ -1151,7 +1143,6 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
   renderOptionsInfoButtons();
-  optionsState.fallbackSiteSearchProviders = SEARCH_UTILS.getDefaultSiteSearchProviders();
 
   function createPersistentId(prefix) {
     const safePrefix = String(prefix || 'item').replace(/[^a-z0-9_-]/gi, '').toLowerCase() || 'item';
@@ -1161,39 +1152,6 @@ import * as LumnoMessaging from '../platform/messaging';
     return `${safePrefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
   }
 
-  optionsState.currentRecentMode = 'most';
-  optionsState.currentNewtabWidthMode = 'wide';
-  optionsState.currentOverlaySizeMode = 'standard';
-  optionsState.currentOverlayEnterAnimation = 'elastic';
-  // Empty means the bundled Lumno Open Sans stack.
-  optionsState.currentOverlayFontFamily = '';
-  optionsState.currentOverlayFontFallback = '';
-  // Display names of the chosen families, so a face uninstalled since is
-  // still named in the missing-font notice.
-  optionsState.currentOverlayFontLabels = {};
-  // The installed families once the list is read. Null until then (and on
-  // Firefox), so nothing is reported missing before it can be checked.
-  optionsState.installedOverlayFontFamilies = null;
-  optionsState.currentRestrictedAction = 'default';
-  optionsState.currentSearchResultPriority = 'autocomplete';
-  optionsState.currentSearchResultDisplayLimit = 10;
-  optionsState.currentRecentCount = 4;
-  optionsState.currentBookmarkCount = 8;
-  optionsState.currentBookmarkColumns = 6;
-  optionsState.currentNewtabTopContentMode = 'brand';
-  optionsState.currentNewtabTimeFontWeight = NEWTAB_TIME_FONT_WEIGHT_DEFAULT;
-  optionsState.currentNewtabTimeFontSize = SETTINGS.NEWTAB_TIME_FONT_SIZE_DEFAULT;
-  optionsState.currentNewtabTimeOpacity = SETTINGS.NEWTAB_TIME_OPACITY_DEFAULT;
-  optionsState.currentNewtabTimeInk = SETTINGS.NEWTAB_TIME_INK_DEFAULT;
-  optionsState.currentNewtabGlassStyle = 'none';
-  optionsState.currentNewtabGlassTheme = 'follow';
-  optionsState.currentNewtabTimeFont = SETTINGS.NEWTAB_TIME_FONT_DEFAULT;
-  // Set once the daily quote rows are wired; language refreshes may run earlier.
-  optionsState.dailyQuoteSettings = null;
-  optionsState.currentNewtabShortcutColumns = NEWTAB_SHORTCUT_COLUMNS_DEFAULT;
-  optionsState.currentNewtabShortcutSize = NEWTAB_SHORTCUT_SIZE_DEFAULT;
-  optionsState.currentNewtabShortcutGap = NEWTAB_SHORTCUT_GAP_DEFAULT;
-  optionsState.currentActiveSettingsTab = 'general';
   // Face names are proper names, so the list comes straight from settings.
   if (newtabTimeFontSelect) {
     SETTINGS.NEWTAB_TIME_FONTS.forEach((font) => {
@@ -1221,9 +1179,9 @@ import * as LumnoMessaging from '../platform/messaging';
     [newtabTimeFontSelect, 'newtab-time-font'],
     [selectionQuickActionsProviderSelect, 'selection-quick-actions-provider']
   ].forEach(([select, kind]) => {
-    const record = optionsState.registerOptionsSelectControl(select, kind);
+    const record = registerOptionsSelectControl(select, kind);
     if (record) {
-      optionsState.renderOptionsSelectControl(select);
+      renderOptionsSelectControl(select);
     }
   });
   [[overlayFontMissing, overlayFontSelect], [overlayFontFallbackMissing, overlayFontFallbackSelect]]
@@ -1238,31 +1196,31 @@ import * as LumnoMessaging from '../platform/messaging';
       });
     });
   [overlayFontSelect, overlayFontFallbackSelect].forEach((select) => {
-    if (optionsState.registerOptionsSelectControl(select, 'overlay-font')) {
-      optionsState.renderOptionsSelectControl(select);
+    if (registerOptionsSelectControl(select, 'overlay-font')) {
+      renderOptionsSelectControl(select);
     }
   });
-  optionsState.getInstalledFontFamilies().then((fonts) => {
+  getInstalledFontFamilies().then((fonts) => {
     const families = fonts
       .map((font) => (font && typeof font.fontId === 'string' ? font.fontId.trim() : ''))
       .filter(Boolean);
     // An empty list means the read failed, not that no font is installed.
     optionsState.installedOverlayFontFamilies = families.length ? new Set(families) : null;
-    optionsState.populateOverlayFontOptions(overlayFontSelect, optionsState.currentOverlayFontFamily, 'settings_overlay_font_default', fonts);
-    optionsState.populateOverlayFontOptions(
+    populateOverlayFontOptions(overlayFontSelect, optionsState.currentOverlayFontFamily, 'settings_overlay_font_default', fonts);
+    populateOverlayFontOptions(
       overlayFontFallbackSelect,
       optionsState.currentOverlayFontFallback,
       'settings_overlay_font_fallback_none',
       fonts
     );
-    optionsState.renderOverlayFontMissingNotices();
+    renderOverlayFontMissingNotices();
   });
   // Firefox cannot list fonts; keep the rows visible but inert.
   [[overlayFontRow, overlayFontSelect], [overlayFontFallbackRow, overlayFontFallbackSelect]]
     .forEach(([row, select]) => {
       if (row && select && row.getAttribute('data-unsupported') === 'true') {
         select.disabled = true;
-        optionsState.renderOptionsSelectControl(select);
+        renderOptionsSelectControl(select);
       }
     });
 
@@ -1622,6 +1580,8 @@ import * as LumnoMessaging from '../platform/messaging';
     getMessage,
     openShortcutsPageButton,
     openOnboardingPageButton,
+    refreshOptionsSelectItems,
+    renderOverlayFontMissingNotices,
     optionsState
   });
 
@@ -1749,6 +1709,12 @@ import * as LumnoMessaging from '../platform/messaging';
     RESTRICTED_ACTION_STORAGE_KEY,
     restrictedActionSelect,
     setRestrictedActionTabState,
+    ensureOverlayFontOption,
+    refreshOptionsSelectItems,
+    renderOverlayFontMissingNotices,
+    registerOptionsSelectControl,
+    renderOptionsSelectControl,
+    setOptionsSelectState,
     optionsState
   });
 

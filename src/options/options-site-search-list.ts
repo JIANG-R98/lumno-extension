@@ -39,7 +39,8 @@ interface SiteSearchListState {
   disabledSiteSearchKeys: Set<string>;
   siteSearchProvidersLoaded: boolean;
   customSiteSearchProviderIdsReady: boolean;
-  helpCenterSearchEnabled: boolean;
+  // Null until the providers load, so the first sync always renders.
+  helpCenterSearchEnabled: boolean | null;
   siteSearchEngineBuiltinListController: SiteSearchListControllerRef;
   siteSearchCustomListController: SiteSearchListControllerRef;
   siteSearchBuiltinListController: SiteSearchListControllerRef;

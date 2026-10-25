@@ -3,11 +3,11 @@
 // source types.
 import type { SearchSourceType } from '../domain/search/types';
 import type * as Settings from '../domain/settings';
-import type { StorageAreaFacade } from '../platform/settings-storage';
+import type { BatchedStorageArea } from '../platform/settings-storage';
 import type { LayoutMutation } from './options-panel-motion';
 
 interface NormalizersState {
-  storageArea: StorageAreaFacade | null;
+  storageArea: BatchedStorageArea | null;
 }
 
 interface NormalizersDeps {

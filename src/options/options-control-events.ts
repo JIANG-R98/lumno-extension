@@ -23,8 +23,6 @@ interface ControlEventsState {
   currentOverlayFontFallback: string;
   currentOverlayFontLabels: Record<string, string>;
   currentNewtabGlassStyle: NewtabGlassStyle;
-  refreshOptionsSelectItems(select: HTMLSelectElement): void;
-  renderOverlayFontMissingNotices(): void;
 }
 
 interface ControlEventsDeps {
@@ -75,6 +73,8 @@ interface ControlEventsDeps {
   getMessage: GetMessage;
   openShortcutsPageButton: HTMLElement | null;
   openOnboardingPageButton: HTMLElement | null;
+  refreshOptionsSelectItems(select: HTMLSelectElement): void;
+  renderOverlayFontMissingNotices(): void;
   optionsState: ControlEventsState;
 }
 
@@ -122,7 +122,9 @@ function createControlEvents(deps: ControlEventsDeps) {
     showToast,
     getMessage,
     openShortcutsPageButton,
-    openOnboardingPageButton
+    openOnboardingPageButton,
+    refreshOptionsSelectItems,
+    renderOverlayFontMissingNotices
   } = deps;
 
   // The page state object shared with options.js and the other modules.
@@ -209,8 +211,8 @@ function createControlEvents(deps: ControlEventsDeps) {
       if (localStorageArea) {
         localStorageArea.set({ [key]: family, [OVERLAY_FONT_LABELS_STORAGE_KEY]: optionsState.currentOverlayFontLabels });
       }
-      optionsState.refreshOptionsSelectItems(select);
-      optionsState.renderOverlayFontMissingNotices();
+      refreshOptionsSelectItems(select);
+      renderOverlayFontMissingNotices();
     });
   });
   if (newtabGlassStyleSelect) {
