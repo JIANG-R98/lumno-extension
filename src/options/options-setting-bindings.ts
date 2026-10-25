@@ -1,18 +1,43 @@
-// @ts-nocheck
 // Routes chrome.storage.onChanged events to the handlers each settings
 // section registers next to its own render code. A handler watches one key
 // or several; with several it runs once per event when any of them changed.
 // Handlers run in registration order. By default they only see events from
 // the provider's primary area; `area: 'local'` watches chrome.storage.local.
-function createStorageChangeRegistry(options) {
-  const isPrimaryAreaName = options && typeof options.isPrimaryAreaName === 'function'
+import type { StorageAreaLike, StorageChanges } from '../domain/storage-port';
+
+type StorageChangeHandler = (changes: StorageChanges, areaName: string) => void;
+
+interface RegistryEntryOptions {
+  // 'primary' (the default) or an area name such as 'local'.
+  area?: string;
+}
+
+interface RegistryEntry {
+  area: string;
+  handler: StorageChangeHandler;
+  keys: string[];
+}
+
+interface StorageChangeRegistryOptions {
+  isPrimaryAreaName?(areaName: string): boolean;
+}
+
+type StorageChangeRegistry = ReturnType<typeof createStorageChangeRegistry>;
+
+function createStorageChangeRegistry(options?: StorageChangeRegistryOptions) {
+  const isPrimaryAreaName = options && options.isPrimaryAreaName
     ? options.isPrimaryAreaName
     : () => false;
-  const entries = [];
+  const entries: RegistryEntry[] = [];
 
-  function on(keys, handler, entryOptions) {
-    const list = (Array.isArray(keys) ? keys : [keys]).filter(Boolean);
-    if (!list.length || typeof handler !== 'function') {
+  // Without keys there is nothing to watch, and the handler never runs.
+  function on(
+    keys: string | readonly string[] | undefined,
+    handler: StorageChangeHandler,
+    entryOptions?: RegistryEntryOptions
+  ): void {
+    const list = (typeof keys === 'string' ? [keys] : Array.from(keys || [])).filter(Boolean);
+    if (!list.length) {
       return;
     }
     entries.push({
@@ -22,7 +47,7 @@ function createStorageChangeRegistry(options) {
     });
   }
 
-  function dispatch(changes, areaName) {
+  function dispatch(changes: StorageChanges | null | undefined, areaName: string): void {
     if (!changes || typeof changes !== 'object') {
       return;
     }
@@ -61,28 +86,50 @@ function createStorageChangeRegistry(options) {
 // `writeRepairs(values, stored)` replaces the write-back after the startup
 // read (Options passes SETTINGS.writeSettingRepairs, which leaves a missing
 // value alone while this device's local copy migrates in).
-function createSettingBinder(options) {
-  const config = options || {};
+interface SettingBinderOptions {
+  storageArea: StorageAreaLike | null;
+  registry: Pick<StorageChangeRegistry, 'on'>;
+  area?: string;
+  refreshCustomSelects?(): void;
+  writeRepairs?(values: Record<string, unknown>, stored: Record<string, unknown>): void;
+  setToggleState?(input: HTMLInputElement, checked: boolean): void;
+  setSelectState?(select: HTMLSelectElement, value: unknown): void;
+}
+
+interface SettingSpec<V> {
+  key: string;
+  normalize(raw: unknown): V;
+  normalizeChange?(raw: unknown): V;
+  apply(value: V, raw: unknown): void;
+  load?: boolean;
+  repairOnLoad?: boolean;
+  repairOnChange?: boolean;
+  refreshSelects?: boolean;
+}
+
+interface ControlSpec<V, C> extends Omit<SettingSpec<V>, 'apply'> {
+  input: C | null;
+  afterApply?(value: V): void;
+  normalizeInput?(raw: unknown): V;
+}
+
+function createSettingBinder(config: SettingBinderOptions) {
   const storageArea = config.storageArea || null;
   const registry = config.registry;
   const registryOptions = config.area ? { area: config.area } : undefined;
-  const refreshCustomSelects = typeof config.refreshCustomSelects === 'function'
-    ? config.refreshCustomSelects
-    : () => {};
+  const refreshCustomSelects = config.refreshCustomSelects || (() => {});
 
-  function write(values) {
+  function write(values: Record<string, unknown>): void {
     if (storageArea) {
       storageArea.set(values);
     }
   }
-  const writeRepairs = typeof config.writeRepairs === 'function'
-    ? config.writeRepairs
-    : (values) => write(values);
+  const writeRepairs = config.writeRepairs || ((values: Record<string, unknown>) => write(values));
 
-  function bindSetting(spec) {
+  function bindSetting<V>(spec: SettingSpec<V>): void {
     const key = spec.key;
     const normalizeChange = spec.normalizeChange || spec.normalize;
-    const sync = (raw, normalize, repair, startup) => {
+    const sync = (raw: unknown, normalize: (raw: unknown) => V, repair: boolean, startup: boolean): void => {
       const value = normalize(raw);
       spec.apply(value, raw);
       if (repair && raw !== value) {
@@ -102,19 +149,25 @@ function createSettingBinder(options) {
       });
     }
     registry.on(key, (changes) => {
-      sync(changes[key].newValue, normalizeChange, spec.repairOnChange !== false);
+      sync(changes[key].newValue, normalizeChange, spec.repairOnChange !== false, false);
     }, registryOptions);
   }
 
-  function bindControl(spec, readControl, setControlState) {
+  function bindControl<V, C extends HTMLInputElement | HTMLSelectElement>(
+    spec: ControlSpec<V, C>,
+    readControl: (control: C) => unknown,
+    setControlState: (control: C, value: V) => void
+  ): void {
     const control = spec.input;
-    const apply = (value) => {
-      setControlState(control, value);
-      if (typeof spec.afterApply === 'function') {
+    const apply = (value: V): void => {
+      if (control) {
+        setControlState(control, value);
+      }
+      if (spec.afterApply) {
         spec.afterApply(value);
       }
     };
-    bindSetting(Object.assign({}, spec, { apply }));
+    bindSetting({ ...spec, apply });
     if (!control) {
       return;
     }
@@ -126,15 +179,26 @@ function createSettingBinder(options) {
     });
   }
 
-  function bindToggle(spec) {
-    bindControl(spec, (input) => input.checked, config.setToggleState);
+  function bindToggle(spec: ControlSpec<boolean, HTMLInputElement>): void {
+    const setToggleState = config.setToggleState || (() => {});
+    bindControl(spec, (input) => input.checked, setToggleState);
   }
 
-  function bindSelect(spec) {
-    bindControl(spec, (select) => select.value, config.setSelectState);
+  function bindSelect<V>(spec: ControlSpec<V, HTMLSelectElement>): void {
+    const setSelectState = config.setSelectState || (() => {});
+    bindControl(spec, (select) => select.value, setSelectState);
   }
 
   return Object.freeze({ bindSelect, bindSetting, bindToggle });
 }
 
 export { createSettingBinder, createStorageChangeRegistry };
+export type {
+  ControlSpec,
+  RegistryEntryOptions,
+  SettingBinderOptions,
+  SettingSpec,
+  StorageChangeHandler,
+  StorageChangeRegistry,
+  StorageChangeRegistryOptions
+};

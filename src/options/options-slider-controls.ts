@@ -1,7 +1,84 @@
 // The page's sliders: clock weight, size and opacity, shortcut columns,
 // size and gap, bookmark rows and columns, recent count and the result
 // display limit, each with its React control.
-function createSliderControls(deps) {
+import type * as Settings from '../domain/settings';
+import type { StorageAreaLike } from '../domain/storage-port';
+import type { GetMessage } from './options-types';
+import type { createSettingsControlsApi } from './react/settings-controls';
+
+interface SliderControlsState {
+  currentNewtabTimeFont: string;
+  currentNewtabTimeFontWeight: number;
+  currentNewtabTimeFontSize: number;
+  currentNewtabTimeOpacity: number;
+  currentNewtabShortcutColumns: number;
+  currentNewtabShortcutSize: number;
+  currentNewtabShortcutGap: number;
+  currentBookmarkCount: number;
+  currentRecentCount: number;
+  currentBookmarkColumns: number;
+  currentSearchResultDisplayLimit: number;
+}
+
+interface SliderControlsDeps {
+  optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>, 'createRangeSliderControlController'>;
+  storageArea: StorageAreaLike | null;
+  SETTINGS: Pick<typeof Settings,
+    'NEWTAB_TIME_FONT_SIZE_DEFAULT' | 'NEWTAB_TIME_FONT_SIZE_MAX' | 'NEWTAB_TIME_FONT_SIZE_MIN' |
+    'NEWTAB_TIME_FONT_SIZE_STORAGE_KEY' | 'NEWTAB_TIME_OPACITY_DEFAULT' | 'NEWTAB_TIME_OPACITY_MAX' |
+    'NEWTAB_TIME_OPACITY_MIN' | 'NEWTAB_TIME_OPACITY_STORAGE_KEY' | 'getNewtabTimeFont' |
+    'normalizeNewtabTimeFontSize' | 'normalizeNewtabTimeOpacity' | 'resolveNewtabTimeFontWeight'>;
+  getMessage: GetMessage;
+  newtabTimeFontWeightControlHost: HTMLElement | null;
+  normalizeNewtabTimeFontWeight(value: unknown): number;
+  NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY: string;
+  newtabTimeFontSizeControlHost: HTMLElement | null;
+  newtabTimeOpacityControlHost: HTMLElement | null;
+  newtabShortcutColumnsControlHost: HTMLElement | null;
+  normalizeNewtabShortcutColumns(value: unknown): number;
+  NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY: string;
+  NEWTAB_SHORTCUT_COLUMNS_MIN: number;
+  NEWTAB_SHORTCUT_COLUMNS_MAX: number;
+  newtabShortcutSizeControlHost: HTMLElement | null;
+  normalizeNewtabShortcutSize(value: unknown): number;
+  NEWTAB_SHORTCUT_SIZE_STORAGE_KEY: string;
+  NEWTAB_SHORTCUT_SIZE_DEFAULT: number;
+  NEWTAB_SHORTCUT_SIZE_MIN: number;
+  NEWTAB_SHORTCUT_SIZE_MAX: number;
+  newtabShortcutGapControlHost: HTMLElement | null;
+  normalizeNewtabShortcutGap(value: unknown): number;
+  NEWTAB_SHORTCUT_GAP_STORAGE_KEY: string;
+  NEWTAB_SHORTCUT_GAP_DEFAULT: number;
+  NEWTAB_SHORTCUT_GAP_MIN: number;
+  NEWTAB_SHORTCUT_GAP_MAX: number;
+  newtabShortcutsToggle: HTMLInputElement | null;
+  newtabShortcutAddToggle: HTMLInputElement | null;
+  newtabShortcutDockMagnificationToggle: HTMLInputElement | null;
+  setOptionsToggleState(input: HTMLInputElement | null, checked: boolean, disabled?: boolean): void;
+  newtabShortcutAddRow: HTMLElement | null;
+  newtabShortcutDockMagnificationRow: HTMLElement | null;
+  newtabShortcutColumnsRow: HTMLElement | null;
+  newtabShortcutSizeRow: HTMLElement | null;
+  newtabShortcutGapRow: HTMLElement | null;
+  bookmarkRowsControlHost: HTMLElement | null;
+  normalizeBookmarkCount(value: unknown): number;
+  updateBookmarkColumnsSettingVisibility(countValue: unknown): void;
+  BOOKMARK_COUNT_STORAGE_KEY: string;
+  notifyNewtabSectionsRefresh(section: string): void;
+  recentCountControlHost: HTMLElement | null;
+  normalizeRecentCount(value: unknown): number;
+  updateRecentModeTabsVisibility(countValue: unknown): void;
+  RECENT_COUNT_STORAGE_KEY: string;
+  bookmarkColumnsControlHost: HTMLElement | null;
+  normalizeBookmarkColumns(value: unknown): number;
+  BOOKMARK_COLUMNS_STORAGE_KEY: string;
+  searchResultDisplayLimitControlHost: HTMLElement | null;
+  normalizeSearchResultDisplayLimit(value: unknown): number;
+  SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY: string;
+  optionsState: SliderControlsState;
+}
+
+function createSliderControls(deps: SliderControlsDeps) {
   const {
     optionsSettingsControlsApi,
     newtabTimeFontWeightControlHost,
@@ -72,10 +149,7 @@ function createSliderControls(deps) {
         }
       }
     );
-  function renderNewtabTimeFontWeightControl(value) {
-    if (!newtabTimeFontWeightController) {
-      return;
-    }
+  function renderNewtabTimeFontWeightControl(value: unknown): void {
     optionsState.currentNewtabTimeFontWeight = normalizeNewtabTimeFontWeight(value);
     // The slider spans the range the chosen face draws well.
     const timeFont = SETTINGS.getNewtabTimeFont(optionsState.currentNewtabTimeFont);
@@ -112,10 +186,7 @@ function createSliderControls(deps) {
         }
       }
     );
-  function renderNewtabTimeFontSizeControl(value) {
-    if (!newtabTimeFontSizeController) {
-      return;
-    }
+  function renderNewtabTimeFontSizeControl(value: unknown): void {
     optionsState.currentNewtabTimeFontSize = SETTINGS.normalizeNewtabTimeFontSize(value);
     const min = SETTINGS.NEWTAB_TIME_FONT_SIZE_MIN;
     const max = SETTINGS.NEWTAB_TIME_FONT_SIZE_MAX;
@@ -151,10 +222,7 @@ function createSliderControls(deps) {
         }
       }
     );
-  function renderNewtabTimeOpacityControl(value) {
-    if (!newtabTimeOpacityController) {
-      return;
-    }
+  function renderNewtabTimeOpacityControl(value: unknown): void {
     optionsState.currentNewtabTimeOpacity = SETTINGS.normalizeNewtabTimeOpacity(value);
     const min = SETTINGS.NEWTAB_TIME_OPACITY_MIN;
     const max = SETTINGS.NEWTAB_TIME_OPACITY_MAX;
@@ -190,10 +258,7 @@ function createSliderControls(deps) {
         }
       }
     );
-  function renderNewtabShortcutColumnsControl(value, disabled) {
-    if (!newtabShortcutColumnsController) {
-      return;
-    }
+  function renderNewtabShortcutColumnsControl(value: unknown, disabled?: boolean): void {
     optionsState.currentNewtabShortcutColumns = normalizeNewtabShortcutColumns(value);
     newtabShortcutColumnsController.render({
       ariaLabel: getMessage(
@@ -228,10 +293,7 @@ function createSliderControls(deps) {
         }
       }
     );
-  function renderNewtabShortcutSizeControl(value, disabled) {
-    if (!newtabShortcutSizeController) {
-      return;
-    }
+  function renderNewtabShortcutSizeControl(value: unknown, disabled?: boolean): void {
     optionsState.currentNewtabShortcutSize = normalizeNewtabShortcutSize(value);
     const label = getMessage('settings_newtab_shortcut_size_title', 'Shortcut size');
     newtabShortcutSizeController.render({
@@ -274,10 +336,7 @@ function createSliderControls(deps) {
         }
       }
     );
-  function renderNewtabShortcutGapControl(value, disabled) {
-    if (!newtabShortcutGapController) {
-      return;
-    }
+  function renderNewtabShortcutGapControl(value: unknown, disabled?: boolean): void {
     optionsState.currentNewtabShortcutGap = normalizeNewtabShortcutGap(value);
     const label = getMessage('settings_newtab_shortcut_gap_title', 'Shortcut spacing');
     newtabShortcutGapController.render({
@@ -303,7 +362,7 @@ function createSliderControls(deps) {
       valueSuffix: ' px'
     });
   }
-  function syncNewtabShortcutSubcontrolAvailability() {
+  function syncNewtabShortcutSubcontrolAvailability(): void {
     const disabled = Boolean(newtabShortcutsToggle && !newtabShortcutsToggle.checked);
     [newtabShortcutAddToggle, newtabShortcutDockMagnificationToggle].forEach((toggle) => {
       if (toggle) {
@@ -345,10 +404,7 @@ function createSliderControls(deps) {
         }
       }
     );
-  function renderBookmarkRowsControl(value) {
-    if (!bookmarkRowsController) {
-      return;
-    }
+  function renderBookmarkRowsControl(value: unknown): void {
     optionsState.currentBookmarkCount = normalizeBookmarkCount(value);
     bookmarkRowsController.render({
       ariaLabel: getMessage('settings_bookmarks_title', 'Bookmark rows'),
@@ -381,10 +437,7 @@ function createSliderControls(deps) {
         }
       }
     );
-  function renderRecentCountControl(value) {
-    if (!recentCountController) {
-      return;
-    }
+  function renderRecentCountControl(value: unknown): void {
     optionsState.currentRecentCount = normalizeRecentCount(value);
     recentCountController.render({
       ariaLabel: getMessage('settings_recent_sites_title', 'Recent site cards'),
@@ -415,10 +468,7 @@ function createSliderControls(deps) {
         }
       }
     );
-  function renderBookmarkColumnsControl(value) {
-    if (!bookmarkColumnsController) {
-      return;
-    }
+  function renderBookmarkColumnsControl(value: unknown): void {
     optionsState.currentBookmarkColumns = normalizeBookmarkColumns(value);
     bookmarkColumnsController.render({
       ariaLabel: getMessage('settings_bookmark_columns_title', 'Bookmarks per row'),
@@ -448,10 +498,7 @@ function createSliderControls(deps) {
         }
       }
     );
-  function renderSearchResultDisplayLimitControl(value) {
-    if (!searchResultDisplayLimitController) {
-      return;
-    }
+  function renderSearchResultDisplayLimitControl(value: unknown): void {
     optionsState.currentSearchResultDisplayLimit = normalizeSearchResultDisplayLimit(value);
     searchResultDisplayLimitController.render({
       ariaLabel: getMessage('settings_search_result_display_limit_title', 'Maximum Visible Results'),
@@ -483,3 +530,4 @@ function createSliderControls(deps) {
 }
 
 export { createSliderControls };
+export type { SliderControlsDeps, SliderControlsState };

@@ -1,8 +1,52 @@
-// @ts-nocheck
 // The page's selects: their React controls and items, the clock font
 // and language selects, and the overlay font selects with installed fonts
 // and a notice for a missing one.
-function createSelectControls(deps) {
+import { isElementNode, isHtmlElement } from '../shared/dom-guards';
+import type { FormatTemplate, GetMessage } from './options-types';
+import type { SelectControlController } from './react/select-control';
+
+interface SelectControlsState {
+  currentOverlayFontFamily: string;
+  currentOverlayFontFallback: string;
+  // The fonts' names as the device that chose them showed them, by family.
+  currentOverlayFontLabels: Record<string, string>;
+  // Null until the installed fonts have been read.
+  installedOverlayFontFamilies: Set<string> | null;
+}
+
+interface SelectControlsDeps {
+  tabsRow: Element | null;
+  getMessage: GetMessage;
+  overlayFontMissing: HTMLElement | null;
+  overlayFontFallbackMissing: HTMLElement | null;
+  formatTemplate: FormatTemplate;
+  optionsState: SelectControlsState;
+}
+
+// A select's option, as its menu shows it.
+interface SelectItem {
+  badge: string;
+  fallback: string;
+  fontFamily: string;
+  iconUrl: string;
+  labelKey: string;
+  value: string;
+}
+
+interface SelectControlRecord {
+  controller: SelectControlController;
+  emptyLabelKey: string;
+  items: SelectItem[];
+  labelledBy: string;
+  searchPlaceholderKey: string;
+  select: HTMLSelectElement;
+}
+
+function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
+  return typeof value === 'object' && value !== null && 'then' in value && typeof value.then === 'function';
+}
+
+function createSelectControls(deps: SelectControlsDeps) {
   const {
     tabsRow,
     getMessage,
@@ -15,35 +59,33 @@ function createSelectControls(deps) {
   const optionsState = deps.optionsState;
 
   const optionsSelectControlApi = globalThis.LumnoOptionsSelectControl;
-  const optionsSelectControlRecords = new Map();
-  function readOptionsSelectItems(select) {
+  const optionsSelectControlRecords = new Map<HTMLSelectElement, SelectControlRecord>();
+  function readOptionsSelectItems(select: HTMLSelectElement): SelectItem[] {
     return Array.from(select.options).map((option) => {
       const iconPath = option.getAttribute('data-icon-path') || '';
       return {
         badge: option.getAttribute('data-badge') || '',
         fallback: option.textContent || option.value,
         fontFamily: option.getAttribute('data-font-family') || '',
-        iconUrl: iconPath && chrome && chrome.runtime && typeof chrome.runtime.getURL === 'function'
-          ? chrome.runtime.getURL(iconPath)
-          : (iconPath ? `../../${iconPath}` : ''),
+        iconUrl: iconPath ? chrome.runtime.getURL(iconPath) : '',
         labelKey: option.getAttribute('data-i18n') || '',
         value: option.value
       };
     });
   }
-  function registerOptionsSelectControl(select, kind) {
-    if (!select) {
+  function registerOptionsSelectControl(select: HTMLSelectElement | null, kind: string): SelectControlRecord | null {
+    if (!select || !optionsSelectControlApi) {
       return null;
     }
     const host = select.closest('._x_extension_custom_select_2024_unique_');
-    if (!host) {
+    if (!isHtmlElement(host)) {
       return null;
     }
     const items = readOptionsSelectItems(select);
     // The setting title plus the current value name the trigger for assistive tech.
     const title = host.closest('._x_extension_setting_row_2024_unique_')
       ?.querySelector('._x_extension_setting_title_2024_unique_');
-    if (title && !title.id) {
+    if (isElementNode(title) && !title.id) {
       title.id = `${select.id}_title`;
     }
     const controller = optionsSelectControlApi.createSelectControlController(host, {
@@ -60,7 +102,7 @@ function createSelectControls(deps) {
       // Long lists (the installed fonts) get a filter field in the menu.
       searchable: host.getAttribute('data-select-searchable') === 'true'
     });
-    const record = {
+    const record: SelectControlRecord = {
       controller,
       emptyLabelKey: host.getAttribute('data-select-empty-key') || '',
       items,
@@ -73,7 +115,7 @@ function createSelectControls(deps) {
   }
   // Options populated after registration (installed fonts load asynchronously)
   // need their snapshot rebuilt, or the menu keeps showing the old list.
-  function refreshOptionsSelectItems(select) {
+  function refreshOptionsSelectItems(select: HTMLSelectElement): void {
     const record = optionsSelectControlRecords.get(select);
     if (!record) {
       return;
@@ -81,13 +123,13 @@ function createSelectControls(deps) {
     record.items = readOptionsSelectItems(select);
     renderOptionsSelectControl(select);
   }
-  function renderOptionsSelectControl(select) {
+  function renderOptionsSelectControl(select: HTMLSelectElement): void {
     const record = optionsSelectControlRecords.get(select);
     if (!record) {
       return;
     }
     record.controller.render({
-      disabled: Boolean(select.disabled),
+      disabled: select.disabled,
       emptyLabel: record.emptyLabelKey ? getMessage(record.emptyLabelKey, '') : undefined,
       id: select.id,
       labelledBy: record.labelledBy || undefined,
@@ -105,7 +147,7 @@ function createSelectControls(deps) {
       value: select.value
     });
   }
-  function setOptionsSelectState(select, value) {
+  function setOptionsSelectState(select: HTMLSelectElement | null, value: unknown): void {
     if (!select) {
       return;
     }
@@ -117,16 +159,20 @@ function createSelectControls(deps) {
   // let fontSettings be optional, so it is granted at install (it carries no
   // install warning). The row stays visible but dimmed on Firefox
   // (data-browser-unsupported) with the reason.
-  function getInstalledFontFamilies() {
-    const fontSettings = chrome && chrome.fontSettings;
+  function getInstalledFontFamilies(): Promise<chrome.fontSettings.FontName[]> {
+    // Absent where the browser has no fontSettings API.
+    const fontSettings = 'fontSettings' in chrome ? chrome.fontSettings : undefined;
     if (!fontSettings || typeof fontSettings.getFontList !== 'function') {
       return Promise.resolve([]);
     }
     try {
-      const result = fontSettings.getFontList();
+      const result: unknown = fontSettings.getFontList();
       // Chrome 96+ returns a promise. Older builds still take a callback.
-      if (result && typeof result.then === 'function') {
-        return result.catch(() => []);
+      if (isPromiseLike(result)) {
+        return Promise.resolve(result).then(
+          (fonts: unknown) => (Array.isArray(fonts) ? fonts : []),
+          () => []
+        );
       }
     } catch (error) {
       return Promise.resolve([]);
@@ -143,17 +189,18 @@ function createSelectControls(deps) {
       }
     });
   }
-  function getOverlayFontLabel(family) {
+  function getOverlayFontLabel(family: string): string {
     return (family && optionsState.currentOverlayFontLabels[family]) || family;
   }
   // A chosen face this device does not have (uninstalled since, or never
   // here): the overlay already falls back, and the row says which font is
   // missing with one button to put the default back.
-  function renderOverlayFontMissingNotices() {
-    [
+  function renderOverlayFontMissingNotices(): void {
+    const notices: Array<[HTMLElement | null, string, string]> = [
       [overlayFontMissing, optionsState.currentOverlayFontFamily, 'settings_overlay_font_missing'],
       [overlayFontFallbackMissing, optionsState.currentOverlayFontFallback, 'settings_overlay_font_fallback_missing']
-    ].forEach(([notice, family, messageKey]) => {
+    ];
+    notices.forEach(([notice, family, messageKey]) => {
       if (!notice) {
         return;
       }
@@ -167,7 +214,7 @@ function createSelectControls(deps) {
       }
     });
   }
-  function ensureOverlayFontOption(select, family) {
+  function ensureOverlayFontOption(select: HTMLSelectElement | null, family: string): void {
     if (!select || !family) {
       return;
     }
@@ -190,13 +237,18 @@ function createSelectControls(deps) {
     option.setAttribute('data-font-unlisted', 'true');
     select.appendChild(option);
   }
-  function populateOverlayFontOptions(select, currentFamily, defaultLabelKey, fonts) {
+  function populateOverlayFontOptions(
+    select: HTMLSelectElement | null,
+    currentFamily: string,
+    defaultLabelKey: string,
+    fonts: readonly Partial<chrome.fontSettings.FontName>[]
+  ): void {
     if (!select) {
       return;
     }
-    const seen = new Set();
-    const entries = [];
-    (Array.isArray(fonts) ? fonts : []).forEach((font) => {
+    const seen = new Set<string>();
+    const entries: Array<[family: string, label: string]> = [];
+    fonts.forEach((font) => {
       const family = font && typeof font.fontId === 'string' ? font.fontId.trim() : '';
       const label = font && typeof font.displayName === 'string' ? font.displayName.trim() : '';
       if (!family || seen.has(family)) {
@@ -239,3 +291,4 @@ function createSelectControls(deps) {
 }
 
 export { createSelectControls };
+export type { SelectControlRecord, SelectControlsDeps, SelectControlsState, SelectItem };

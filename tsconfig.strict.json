@@ -32,7 +32,16 @@
     "src/options/options-aggregate-search.ts",
     "src/options/options-aggregate-search-list.ts",
     "src/options/options-blacklist.ts",
-    "src/options/options-blacklist-lists.ts"
+    "src/options/options-blacklist-lists.ts",
+    "src/options/options-setting-bindings.ts",
+    "src/options/options-toggle-settings.ts",
+    "src/options/options-toggle-controls.ts",
+    "src/options/options-select-controls.ts",
+    "src/options/options-segmented-tabs.ts",
+    "src/options/options-slider-controls.ts",
+    "src/options/options-control-events.ts",
+    "src/options/options-daily-quote.ts",
+    "src/options/options-setting-binds.ts"
   ],
   "exclude": [
     "src/**/react/**"

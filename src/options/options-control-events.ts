@@ -1,7 +1,84 @@
 // Change handlers for the page's selects, segmented controls and toggles,
 // and the buttons that open the browser's shortcut page or onboarding.
+import type * as Settings from '../domain/settings';
+import type { NewtabGlassStyle, NewtabOpenInNewTab, NewtabOpenInNewTabSurface } from '../domain/settings';
+import type { SearchSourceType } from '../domain/search/types';
+import type { StorageAreaLike } from '../domain/storage-port';
 import * as LumnoMessaging from '../platform/messaging';
-function createControlEvents(deps) {
+import type { BatchedStorageArea } from '../platform/settings-storage';
+import type { GetMessage } from './options-types';
+
+const NEWTAB_OPEN_IN_NEW_TAB_SURFACES: readonly NewtabOpenInNewTabSurface[] = ['search', 'shortcuts', 'bookmarks', 'recentSites'];
+
+// The New Tab surface a switch is for, by its data attribute.
+function readOpenInNewTabSurface(input: Element): NewtabOpenInNewTabSurface | null {
+  const value = input.getAttribute('data-newtab-open-in-new-tab-surface');
+  return NEWTAB_OPEN_IN_NEW_TAB_SURFACES.find((surface) => surface === value) || null;
+}
+
+interface ControlEventsState {
+  storageArea: BatchedStorageArea | null;
+  currentNewtabTimeFont: string;
+  currentOverlayFontFamily: string;
+  currentOverlayFontFallback: string;
+  currentOverlayFontLabels: Record<string, string>;
+  currentNewtabGlassStyle: NewtabGlassStyle;
+  refreshOptionsSelectItems(select: HTMLSelectElement): void;
+  renderOverlayFontMissingNotices(): void;
+}
+
+interface ControlEventsDeps {
+  languageSelect: HTMLSelectElement | null;
+  applyLanguageMode(mode: string, options?: { persist?: boolean }): unknown;
+  newtabWidthSelect: HTMLSelectElement | null;
+  handleNewtabWidthSelection(value: string): void;
+  // The page's own segment buttons, until each control's view replaces them.
+  newtabWidthTabButtons: Element[];
+  overlaySizeTabButtons: Element[];
+  handleOverlaySizeSelection(value: string): void;
+  overlayEnterAnimationTabButtons: Element[];
+  handleOverlayEnterAnimationSelection(value: string): void;
+  searchResultPrioritySelect: HTMLSelectElement | null;
+  handleSearchResultPrioritySelection(value: string): void;
+  newtabTimeFontSelect: HTMLSelectElement | null;
+  SETTINGS: Pick<typeof Settings,
+    'NEWTAB_GLASS_STYLE_STORAGE_KEY' | 'NEWTAB_TIME_FONT_STORAGE_KEY' | 'getNewtabTimeFont' |
+    'normalizeNewtabGlassStyle' | 'normalizeNewtabOpenInNewTab' | 'normalizeNewtabTimeFont' |
+    'normalizeOverlayFontFamily' | 'normalizeOverlayFontLabels' | 'normalizeSearchResultTabPosition'>;
+  renderNewtabTimeFontWeightControl(value: unknown): void;
+  NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY: string;
+  refreshCustomSelects(): void;
+  overlayFontSelect: HTMLSelectElement | null;
+  OVERLAY_FONT_FAMILY_STORAGE_KEY: string;
+  overlayFontFallbackSelect: HTMLSelectElement | null;
+  OVERLAY_FONT_FALLBACK_STORAGE_KEY: string;
+  localStorageArea: StorageAreaLike | null;
+  OVERLAY_FONT_LABELS_STORAGE_KEY: string;
+  newtabGlassStyleSelect: HTMLSelectElement | null;
+  syncNewtabGlassThemeVisibility(): void;
+  searchResultTabPositionSelect: HTMLSelectElement | null;
+  SEARCH_RESULT_TAB_POSITION_STORAGE_KEY: string;
+  searchResultPriorityTabButtons: Element[];
+  searchResultSourceTypeInputs: HTMLInputElement[];
+  persistSearchResultSourceTypes(value: unknown): void;
+  collectCheckedSearchResultSourceTypes(): SearchSourceType[];
+  recentModeSelect: HTMLSelectElement | null;
+  handleRecentModeSelection(value: string): void;
+  recentModeTabButtons: Element[];
+  newtabOpenInNewTabToggles: HTMLInputElement[];
+  setOptionsToggleState(input: HTMLInputElement | null, checked: boolean, disabled?: boolean): void;
+  NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY: string;
+  restrictedActionSelect: HTMLSelectElement | null;
+  handleRestrictedActionSelection(value: string): void;
+  restrictedActionTabButtons: Element[];
+  showToast(message: string, isError?: boolean): void;
+  getMessage: GetMessage;
+  openShortcutsPageButton: HTMLElement | null;
+  openOnboardingPageButton: HTMLElement | null;
+  optionsState: ControlEventsState;
+}
+
+function createControlEvents(deps: ControlEventsDeps) {
   const {
     languageSelect,
     applyLanguageMode,
@@ -66,21 +143,21 @@ function createControlEvents(deps) {
   if (newtabWidthTabButtons.length > 0) {
     newtabWidthTabButtons.forEach((button) => {
       button.addEventListener('click', () => {
-        handleNewtabWidthSelection(button.getAttribute('data-newtab-width'));
+        handleNewtabWidthSelection(button.getAttribute('data-newtab-width') || '');
       });
     });
   }
   if (overlaySizeTabButtons.length > 0) {
     overlaySizeTabButtons.forEach((button) => {
       button.addEventListener('click', () => {
-        handleOverlaySizeSelection(button.getAttribute('data-overlay-size'));
+        handleOverlaySizeSelection(button.getAttribute('data-overlay-size') || '');
       });
     });
   }
   if (overlayEnterAnimationTabButtons.length > 0) {
     overlayEnterAnimationTabButtons.forEach((button) => {
       button.addEventListener('click', () => {
-        handleOverlayEnterAnimationSelection(button.getAttribute('data-overlay-enter-animation'));
+        handleOverlayEnterAnimationSelection(button.getAttribute('data-overlay-enter-animation') || '');
       });
     });
   }
@@ -97,8 +174,9 @@ function createControlEvents(deps) {
       newtabTimeFontSelect.value = font;
       optionsState.currentNewtabTimeFont = font;
       renderNewtabTimeFontWeightControl(weight);
-      if (optionsState.storageArea) {
-        optionsState.storageArea.set({
+      const storageArea = optionsState.storageArea;
+      if (storageArea) {
+        storageArea.set({
           [SETTINGS.NEWTAB_TIME_FONT_STORAGE_KEY]: font,
           [NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY]: weight
         });
@@ -108,17 +186,18 @@ function createControlEvents(deps) {
   }
   // Both font rows persist a family, with its display name beside it, and
   // rebuild their menu list afterwards.
-  [
+  const fontRows: Array<[HTMLSelectElement | null, string, (family: string) => void]> = [
     [overlayFontSelect, OVERLAY_FONT_FAMILY_STORAGE_KEY, (family) => { optionsState.currentOverlayFontFamily = family; }],
     [overlayFontFallbackSelect, OVERLAY_FONT_FALLBACK_STORAGE_KEY,
       (family) => { optionsState.currentOverlayFontFallback = family; }]
-  ].forEach(([select, key, remember]) => {
+  ];
+  fontRows.forEach(([select, key, remember]) => {
     if (!select) {
       return;
     }
     select.addEventListener('change', () => {
       const family = SETTINGS.normalizeOverlayFontFamily(select.value);
-      const chosenOption = select.selectedOptions && select.selectedOptions[0];
+      const chosenOption = select.selectedOptions[0];
       select.value = family;
       remember(family);
       optionsState.currentOverlayFontLabels = SETTINGS.normalizeOverlayFontLabels(
@@ -140,8 +219,9 @@ function createControlEvents(deps) {
       newtabGlassStyleSelect.value = style;
       optionsState.currentNewtabGlassStyle = style;
       syncNewtabGlassThemeVisibility();
-      if (optionsState.storageArea) {
-        optionsState.storageArea.set({ [SETTINGS.NEWTAB_GLASS_STYLE_STORAGE_KEY]: style });
+      const storageArea = optionsState.storageArea;
+      if (storageArea) {
+        storageArea.set({ [SETTINGS.NEWTAB_GLASS_STYLE_STORAGE_KEY]: style });
       }
       refreshCustomSelects();
     });
@@ -150,8 +230,9 @@ function createControlEvents(deps) {
     searchResultTabPositionSelect.addEventListener('change', () => {
       const position = SETTINGS.normalizeSearchResultTabPosition(searchResultTabPositionSelect.value);
       searchResultTabPositionSelect.value = position;
-      if (optionsState.storageArea) {
-        optionsState.storageArea.set({ [SEARCH_RESULT_TAB_POSITION_STORAGE_KEY]: position });
+      const storageArea = optionsState.storageArea;
+      if (storageArea) {
+        storageArea.set({ [SEARCH_RESULT_TAB_POSITION_STORAGE_KEY]: position });
       }
       refreshCustomSelects();
     });
@@ -159,7 +240,7 @@ function createControlEvents(deps) {
   if (searchResultPriorityTabButtons.length > 0) {
     searchResultPriorityTabButtons.forEach((button) => {
       button.addEventListener('click', () => {
-        handleSearchResultPrioritySelection(button.getAttribute('data-search-result-priority'));
+        handleSearchResultPrioritySelection(button.getAttribute('data-search-result-priority') || '');
       });
     });
   }
@@ -178,28 +259,33 @@ function createControlEvents(deps) {
   if (recentModeTabButtons.length > 0) {
     recentModeTabButtons.forEach((button) => {
       button.addEventListener('click', () => {
-        handleRecentModeSelection(button.getAttribute('data-recent-mode'));
+        handleRecentModeSelection(button.getAttribute('data-recent-mode') || '');
       });
     });
   }
-  function setNewtabOpenInNewTabState(value) {
-    const normalized = SETTINGS.normalizeNewtabOpenInNewTab(value);
+  function setNewtabOpenInNewTabState(value: unknown): void {
+    const normalized: NewtabOpenInNewTab = SETTINGS.normalizeNewtabOpenInNewTab(value);
     newtabOpenInNewTabToggles.forEach((input) => {
-      setOptionsToggleState(input, normalized[input.getAttribute('data-newtab-open-in-new-tab-surface')]);
+      const surface = readOpenInNewTabSurface(input);
+      setOptionsToggleState(input, surface ? normalized[surface] : false);
     });
   }
   newtabOpenInNewTabToggles.forEach((input) => {
     input.addEventListener('change', () => {
-      const next = {};
+      const next: Partial<NewtabOpenInNewTab> = {};
       newtabOpenInNewTabToggles.forEach((item) => {
-        next[item.getAttribute('data-newtab-open-in-new-tab-surface')] = Boolean(item.checked);
+        const surface = readOpenInNewTabSurface(item);
+        if (surface) {
+          next[surface] = item.checked;
+        }
       });
       const normalized = SETTINGS.normalizeNewtabOpenInNewTab(next);
       setNewtabOpenInNewTabState(normalized);
-      if (!optionsState.storageArea) {
+      const storageArea = optionsState.storageArea;
+      if (!storageArea) {
         return;
       }
-      optionsState.storageArea.set({ [NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY]: normalized });
+      storageArea.set({ [NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY]: normalized });
     });
   });
 
@@ -211,14 +297,14 @@ function createControlEvents(deps) {
   if (restrictedActionTabButtons.length > 0) {
     restrictedActionTabButtons.forEach((button) => {
       button.addEventListener('click', () => {
-        handleRestrictedActionSelection(button.getAttribute('data-restricted-action'));
+        handleRestrictedActionSelection(button.getAttribute('data-restricted-action') || '');
       });
     });
   }
 
-  function openExtensionShortcutsPage() {
+  function openExtensionShortcutsPage(): void {
     LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openExtensionShortcutsPage' }, (response) => {
-      if (chrome.runtime && chrome.runtime.lastError) {
+      if (chrome.runtime.lastError) {
         showToast(getMessage('toast_error', '操作失败，请重试。'), true);
         return;
       }
@@ -233,7 +319,7 @@ function createControlEvents(deps) {
   if (openOnboardingPageButton) {
     openOnboardingPageButton.addEventListener('click', () => {
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openOnboardingPage' }, (response) => {
-        if (chrome.runtime && chrome.runtime.lastError) {
+        if (chrome.runtime.lastError) {
           showToast(getMessage('toast_error', '操作失败，请重试。'), true);
           return;
         }
@@ -250,3 +336,4 @@ function createControlEvents(deps) {
 }
 
 export { createControlEvents };
+export type { ControlEventsDeps, ControlEventsState };

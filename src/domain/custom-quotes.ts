@@ -68,6 +68,16 @@ function normalizeLibrary(value: any): QuoteLibrary | null {
   return quotes.length ? { version: 1, filename: String(value.filename || '').slice(0, 128), revision: Number(value.revision) || 0, quotes } : null;
 }
 // `random` (defaults to Math.random) is injectable so tests stay deterministic.
+// A stored pick, read as untrusted; null when it is not one.
+function readQuotePick(value: unknown): QuotePick | null {
+  if (!value || typeof value !== 'object' || !('day' in value) || !('revision' in value) || !('index' in value)) {
+    return null;
+  }
+  const { day, revision, index } = value;
+  return typeof day === 'string' && typeof revision === 'number' && typeof index === 'number'
+    ? { day, revision, index }
+    : null;
+}
 function select(library: QuoteLibrary, date: Date, pick?: QuotePick | null, reroll?: boolean, random?: () => number) {
   const day = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
   let hash = 0; for (const char of `${day}|${library.filename}|${library.revision}`) hash = ((hash * 31) + char.charCodeAt(0)) >>> 0;
@@ -101,6 +111,7 @@ export {
   parseMarkdown,
   normalizeLibrary,
   readLibraryFile,
+  readQuotePick,
   select
 };
 export type { Quote, QuoteFile, QuoteLibrary, QuotePick };

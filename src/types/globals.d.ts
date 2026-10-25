@@ -9,6 +9,23 @@ import type { TabSwitcherReply } from '../overlay/tab-switcher-host';
 import type { createOverlayShellApi } from '../overlay/react/shell';
 import type { createSearchInputApi } from '../shared/react/search-input';
 import type { ThemeVariant } from '../shared/favicon/favicon-theme';
+import type { createAggregateSearchListApi } from '../options/react/aggregate-search-list';
+import type { createBlacklistListApi } from '../options/react/blacklist-list';
+import type { createFeedbackSupportApi } from '../options/react/feedback-support';
+import type { createInfoButtonApi } from '../options/react/info-button';
+import type { createPopconfirmApi } from '../options/react/popconfirm';
+import type { createSegmentedControlApi } from '../options/react/segmented-control';
+import type { createSelectControlApi } from '../options/react/select-control';
+import type { createSettingsControlsApi } from '../options/react/settings-controls';
+import type { createSettingsFormsApi } from '../options/react/settings-forms';
+import type { createSettingsNavigationApi } from '../options/react/settings-navigation';
+import type { createShortcutHotkeyApi } from '../options/react/shortcut-hotkey';
+import type { createShortcutReferenceApi } from '../options/react/shortcut-reference';
+import type { createSiteSearchListApi } from '../options/react/site-search-list';
+import type { createThemePickerApi } from '../options/react/theme-picker';
+import type { createToastApi } from '../shared/react/toast';
+import type { createTranslationHelpApi } from '../options/react/translation-help';
+import type { createWebDavListApi } from '../options/react/webdav-list';
 
 declare global {
   // The traditional-to-simplified Han table as pairs of characters, set by
@@ -53,6 +70,24 @@ declare global {
   var LumnoOverlayTabSwitcherView: {
     createTabSwitcherView(options?: TabSwitcherViewOptions): TabSwitcherViewController;
   } | undefined;
+  // Set by the options page's React islands entry.
+  var LumnoOptionsAggregateSearchList: ReturnType<typeof createAggregateSearchListApi> | undefined;
+  var LumnoOptionsBlacklistList: ReturnType<typeof createBlacklistListApi> | undefined;
+  var LumnoOptionsFeedbackSupport: ReturnType<typeof createFeedbackSupportApi> | undefined;
+  var LumnoOptionsInfoButton: ReturnType<typeof createInfoButtonApi> | undefined;
+  var LumnoOptionsPopconfirm: ReturnType<typeof createPopconfirmApi> | undefined;
+  var LumnoOptionsSegmentedControl: ReturnType<typeof createSegmentedControlApi> | undefined;
+  var LumnoOptionsSelectControl: ReturnType<typeof createSelectControlApi> | undefined;
+  var LumnoOptionsSettingsControls: ReturnType<typeof createSettingsControlsApi> | undefined;
+  var LumnoOptionsSettingsForms: ReturnType<typeof createSettingsFormsApi> | undefined;
+  var LumnoOptionsSettingsNavigation: ReturnType<typeof createSettingsNavigationApi> | undefined;
+  var LumnoOptionsShortcutHotkey: ReturnType<typeof createShortcutHotkeyApi> | undefined;
+  var LumnoOptionsShortcutReference: ReturnType<typeof createShortcutReferenceApi> | undefined;
+  var LumnoOptionsSiteSearchList: ReturnType<typeof createSiteSearchListApi> | undefined;
+  var LumnoOptionsThemePicker: ReturnType<typeof createThemePickerApi> | undefined;
+  var LumnoOptionsToast: ReturnType<typeof createToastApi> | undefined;
+  var LumnoOptionsTranslationHelp: ReturnType<typeof createTranslationHelpApi> | undefined;
+  var LumnoOptionsWebDavList: ReturnType<typeof createWebDavListApi> | undefined;
   // Opens the tab switcher with the context the worker sends, read as
   // untrusted; set by src/overlay/tab-switcher.ts.
   var _x_extension_toggleTabSwitcher_2026_unique_: ((context: unknown) => TabSwitcherReply) | undefined;

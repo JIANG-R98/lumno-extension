@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The Options switches (and the one select) that each store one value under
 // one key. The page binds every entry the same way: read and normalize at
 // startup, follow storage changes, persist the control's own changes, and
@@ -6,24 +5,56 @@
 // invalid. Entries are bound in this order, which is also the order their
 // startup reads resolve in.
 //
-//   inputId         the control's element id
-//   kind            the React toggle kind it renders as (none for a plain one)
-//   key, normalize  storage key and normalizer
-//   control         'select' for a select; toggles by default
-//   refreshSelects  refresh the custom selects after applying
-//   afterApply      page function to run after applying a value (from hooks)
-//   load            false when a section reads the key with related keys
-//   repairOnLoad/repairOnChange, normalizeInput: see createSettingBinder
-//
-// hooks: { faviconBlacklistEditor, newtabShortcutSubcontrols,
-//          selectionQuickActionsAvailability } — page functions some
-//          switches run after a value is applied; tests may leave them out.
-function getToggleSettings(settings, hooks) {
+import type * as Settings from '../domain/settings';
+
+interface StoredSettingEntry {
+  // The control's element id.
+  inputId: string;
+  key: string;
+  // Refresh the custom selects after applying.
+  refreshSelects?: boolean;
+  // False when a section reads the key with related keys.
+  load?: boolean;
+  // See createSettingBinder.
+  repairOnLoad?: boolean;
+  repairOnChange?: boolean;
+}
+
+interface ToggleSettingEntry extends StoredSettingEntry {
+  // Toggles leave it out.
+  control?: 'toggle';
+  // The React toggle kind it renders as; none for a plain one.
+  kind?: string;
+  normalize(raw: unknown): boolean;
+  normalizeInput?(raw: unknown): boolean;
+  // A page function to run after applying a value (from hooks).
+  afterApply?(value: boolean): void;
+}
+
+interface SelectSettingEntry extends StoredSettingEntry {
+  control: 'select';
+  kind?: undefined;
+  normalize(raw: unknown): string;
+  normalizeInput?(raw: unknown): string;
+  afterApply?(value: string): void;
+}
+
+type ToggleSettingsEntry = ToggleSettingEntry | SelectSettingEntry;
+
+// Page functions some switches run after a value is applied; tests may
+// leave them out.
+interface ToggleSettingHooks {
+  faviconBlacklistEditor?(enabled: boolean): void;
+  newtabShortcutSubcontrols?(): void;
+  selectionQuickActionsAvailability?(): void;
+}
+
+function getToggleSettings(settings: typeof Settings, hooks?: ToggleSettingHooks): readonly ToggleSettingsEntry[] {
   const S = settings;
   const page = hooks || {};
-  const isNotFalse = (value) => value !== false;
-  const isTrue = (value) => value === true;
-  return Object.freeze([
+  const isNotFalse = (value: unknown): boolean => value !== false;
+  const isTrue = (value: unknown): boolean => value === true;
+  const entries: ToggleSettingsEntry[] = [
     {
       inputId: '_x_extension_overlay_page_theme_adaptation_toggle_2026_unique_',
       key: S.OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
@@ -223,7 +254,9 @@ function getToggleSettings(settings, hooks) {
       refreshSelects: true,
       afterApply: page.selectionQuickActionsAvailability
     }
-  ].map((entry) => Object.freeze(entry)));
+  ];
+  return Object.freeze(entries.map((entry) => Object.freeze(entry)));
 }
 
 export { getToggleSettings };
+export type { SelectSettingEntry, ToggleSettingEntry, ToggleSettingHooks, ToggleSettingsEntry };

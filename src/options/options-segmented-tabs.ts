@@ -1,15 +1,92 @@
-// @ts-nocheck
 // The segmented controls: their state for each setting and what
 // selecting a segment saves.
-function createSegmentedTabs(deps) {
+import type * as Settings from '../domain/settings';
+import type {
+  NewtabGlassStyle,
+  NewtabGlassTheme,
+  NewtabTimeInk,
+  NewtabTopContentMode,
+  NewtabWidthMode,
+  OverlayEnterAnimation,
+  OverlaySizeMode,
+  RestrictedAction,
+  SearchResultPriority
+} from '../domain/settings';
+import type { BatchedStorageArea } from '../platform/settings-storage';
+import type { LayoutMutation } from './options-panel-motion';
+import type { GetMessage } from './options-types';
+import type { SegmentedControlController, SegmentedControlRenderModel } from './react/segmented-control';
+
+type RecentMode = 'latest' | 'most';
+
+type SegmentedControllerRef = Pick<SegmentedControlController, 'render'> | null;
+
+interface SegmentedTabsState {
+  storageArea: BatchedStorageArea | null;
+  currentRecentMode: RecentMode;
+  currentOverlaySizeMode: OverlaySizeMode;
+  currentOverlayEnterAnimation: OverlayEnterAnimation;
+  currentNewtabWidthMode: NewtabWidthMode;
+  currentNewtabTopContentMode: NewtabTopContentMode;
+  currentNewtabTimeInk: NewtabTimeInk;
+  currentNewtabGlassTheme: NewtabGlassTheme;
+  currentNewtabGlassStyle: NewtabGlassStyle;
+  currentRestrictedAction: RestrictedAction;
+  currentSearchResultPriority: SearchResultPriority;
+  // Made once the page has mounted its React views.
+  recentModeTabsController: SegmentedControllerRef;
+  overlaySizeTabsController: SegmentedControllerRef;
+  overlayEnterAnimationTabsController: SegmentedControllerRef;
+  newtabWidthTabsController: SegmentedControllerRef;
+  newtabTopContentTabsController: SegmentedControllerRef;
+  newtabTimeInkTabsController: SegmentedControllerRef;
+  newtabGlassThemeTabsController: SegmentedControllerRef;
+  restrictedActionTabsController: SegmentedControllerRef;
+  searchResultPriorityTabsController: SegmentedControllerRef;
+}
+
+interface SegmentedTabsDeps {
+  getMessage: GetMessage;
+  normalizeOverlaySizeMode(value: unknown): OverlaySizeMode;
+  normalizeOverlayEnterAnimation(value: unknown): OverlayEnterAnimation;
+  normalizeNewtabWidthMode(value: unknown): NewtabWidthMode;
+  normalizeNewtabTopContentMode(value: unknown): NewtabTopContentMode;
+  SETTINGS: Pick<typeof Settings, 'normalizeNewtabTimeInk' | 'normalizeNewtabGlassTheme' |
+    'NEWTAB_GLASS_THEME_STORAGE_KEY' | 'NEWTAB_TIME_INK_STORAGE_KEY'>;
+  animateOptionsPanelHeight(mutateLayout: LayoutMutation): boolean;
+  setConditionalSettingsElementVisibility(element: HTMLElement | null, visible: boolean, visibleDisplay?: string): boolean;
+  newtabGlassThemeRow: HTMLElement | null;
+  newtabTimeFontRow: HTMLElement | null;
+  newtabTimeFontWeightRow: HTMLElement | null;
+  newtabTimeFontSizeRow: HTMLElement | null;
+  newtabTimeOpacityRow: HTMLElement | null;
+  newtabTimeInkRow: HTMLElement | null;
+  newtabTimeSecondsRow: HTMLElement | null;
+  newtabTime12HourRow: HTMLElement | null;
+  recentModeTabsWrap: HTMLElement | null;
+  RESTRICTED_ACTION_STORAGE_KEY: string;
+  RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY: string;
+  normalizeSearchResultPriority(value: unknown): SearchResultPriority;
+  newtabWidthSelect: HTMLSelectElement | null;
+  NEWTAB_WIDTH_MODE_STORAGE_KEY: string;
+  notifyNewtabSectionsRefresh(section: string): void;
+  OVERLAY_SIZE_MODE_STORAGE_KEY: string;
+  OVERLAY_ENTER_ANIMATION_STORAGE_KEY: string;
+  searchResultPrioritySelect: HTMLSelectElement | null;
+  SEARCH_RESULT_PRIORITY_STORAGE_KEY: string;
+  NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY: string;
+  recentModeSelect: HTMLSelectElement | null;
+  RECENT_MODE_STORAGE_KEY: string;
+  restrictedActionSelect: HTMLSelectElement | null;
+  optionsState: SegmentedTabsState;
+}
+
+function createSegmentedTabs(deps: SegmentedTabsDeps) {
   const {
     getMessage,
-    recentModeTabButtons,
     normalizeOverlaySizeMode,
-    overlaySizeTabButtons,
     normalizeOverlayEnterAnimation,
     normalizeNewtabWidthMode,
-    newtabWidthTabButtons,
     normalizeNewtabTopContentMode,
     SETTINGS,
     animateOptionsPanelHeight,
@@ -23,11 +100,9 @@ function createSegmentedTabs(deps) {
     newtabTimeSecondsRow,
     newtabTime12HourRow,
     recentModeTabsWrap,
-    restrictedActionTabButtons,
     RESTRICTED_ACTION_STORAGE_KEY,
     RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
     normalizeSearchResultPriority,
-    searchResultPriorityTabButtons,
     newtabWidthSelect,
     NEWTAB_WIDTH_MODE_STORAGE_KEY,
     notifyNewtabSectionsRefresh,
@@ -44,15 +119,14 @@ function createSegmentedTabs(deps) {
   // The page state object shared with options.js and the other modules.
   const optionsState = deps.optionsState;
 
-  function renderSegmentedControlState(
-    controller,
-    model
-  ) {
-    controller.render(model);
+  function renderSegmentedControlState(controller: SegmentedControllerRef, model: SegmentedControlRenderModel): void {
+    if (controller) {
+      controller.render(model);
+    }
   }
 
-  function setRecentModeTabState(mode) {
-    const nextMode = mode === 'most' ? 'most' : 'latest';
+  function setRecentModeTabState(mode: unknown): void {
+    const nextMode: RecentMode = mode === 'most' ? 'most' : 'latest';
     optionsState.currentRecentMode = nextMode;
     renderSegmentedControlState(
       optionsState.recentModeTabsController,
@@ -74,14 +148,11 @@ function createSegmentedTabs(deps) {
         select: {
           id: '_x_extension_recent_mode_select_2024_unique_'
         }
-      },
-      recentModeTabButtons,
-      'data-recent-mode',
-      (value) => value === 'most' ? 'most' : 'latest'
+      }
     );
   }
 
-  function setOverlaySizeTabState(mode) {
+  function setOverlaySizeTabState(mode: unknown): void {
     const nextMode = normalizeOverlaySizeMode(mode);
     optionsState.currentOverlaySizeMode = nextMode;
     renderSegmentedControlState(
@@ -106,14 +177,11 @@ function createSegmentedTabs(deps) {
             label: getMessage('overlay_size_large', '大')
           }
         ]
-      },
-      overlaySizeTabButtons,
-      'data-overlay-size',
-      normalizeOverlaySizeMode
+      }
     );
   }
 
-  function setOverlayEnterAnimationTabState(mode) {
+  function setOverlayEnterAnimationTabState(mode: unknown): void {
     const nextMode = normalizeOverlayEnterAnimation(mode);
     optionsState.currentOverlayEnterAnimation = nextMode;
     renderSegmentedControlState(
@@ -137,7 +205,7 @@ function createSegmentedTabs(deps) {
     );
   }
 
-  function setNewtabWidthTabState(mode) {
+  function setNewtabWidthTabState(mode: unknown): void {
     const nextMode = normalizeNewtabWidthMode(mode);
     optionsState.currentNewtabWidthMode = nextMode;
     renderSegmentedControlState(
@@ -160,14 +228,11 @@ function createSegmentedTabs(deps) {
         select: {
           id: '_x_extension_newtab_width_select_2026_unique_'
         }
-      },
-      newtabWidthTabButtons,
-      'data-newtab-width',
-      normalizeNewtabWidthMode
+      }
     );
   }
 
-  function setNewtabTopContentTabState(mode) {
+  function setNewtabTopContentTabState(mode: unknown): void {
     const nextMode = normalizeNewtabTopContentMode(mode);
     optionsState.currentNewtabTopContentMode = nextMode;
     renderSegmentedControlState(
@@ -197,7 +262,7 @@ function createSegmentedTabs(deps) {
     syncNewtabTimeSecondsVisibility();
   }
 
-  function setNewtabTimeInkTabState(ink) {
+  function setNewtabTimeInkTabState(ink: unknown): void {
     optionsState.currentNewtabTimeInk = SETTINGS.normalizeNewtabTimeInk(ink);
     renderSegmentedControlState(
       optionsState.newtabTimeInkTabsController,
@@ -213,7 +278,7 @@ function createSegmentedTabs(deps) {
     );
   }
 
-  function setNewtabGlassThemeTabState(theme) {
+  function setNewtabGlassThemeTabState(theme: unknown): void {
     optionsState.currentNewtabGlassTheme = SETTINGS.normalizeNewtabGlassTheme(theme);
     renderSegmentedControlState(
       optionsState.newtabGlassThemeTabsController,
@@ -230,14 +295,14 @@ function createSegmentedTabs(deps) {
   }
 
   // The material's light/dark choice only matters while a glass material is on.
-  function syncNewtabGlassThemeVisibility() {
+  function syncNewtabGlassThemeVisibility(): void {
     animateOptionsPanelHeight(() => setConditionalSettingsElementVisibility(
       newtabGlassThemeRow,
       optionsState.currentNewtabGlassStyle !== 'none'
     ));
   }
 
-  function syncNewtabTimeSecondsVisibility() {
+  function syncNewtabTimeSecondsVisibility(): void {
     const visible = optionsState.currentNewtabTopContentMode === 'time';
     animateOptionsPanelHeight(() => {
       let changed = false;
@@ -256,23 +321,19 @@ function createSegmentedTabs(deps) {
     });
   }
 
-  function updateRecentModeTabsVisibility(countValue) {
+  function updateRecentModeTabsVisibility(countValue: unknown): void {
     if (!recentModeTabsWrap) {
       return;
     }
-    const parsed = Number.parseInt(countValue, 10);
+    const parsed = Number.parseInt(String(countValue), 10);
     const shouldHide = Number.isFinite(parsed) ? parsed <= 0 : false;
     animateOptionsPanelHeight(() =>
       setConditionalSettingsElementVisibility(recentModeTabsWrap, !shouldHide, 'flex')
     );
-    if (!shouldHide) {
-      requestAnimationFrame(() => {
-      });
-    }
   }
 
-  function setRestrictedActionTabState(action) {
-    const nextAction = action === 'none' ? 'none' : 'default';
+  function setRestrictedActionTabState(action: unknown): void {
+    const nextAction: RestrictedAction = action === 'none' ? 'none' : 'default';
     optionsState.currentRestrictedAction = nextAction;
     renderSegmentedControlState(
       optionsState.restrictedActionTabsController,
@@ -294,21 +355,18 @@ function createSegmentedTabs(deps) {
         select: {
           id: '_x_extension_restricted_action_select_2024_unique_'
         }
-      },
-      restrictedActionTabButtons,
-      'data-restricted-action',
-      (value) => value === 'none' ? 'none' : 'default'
+      }
     );
   }
 
-  function createRestrictedActionStorageUpdate(action) {
+  function createRestrictedActionStorageUpdate(action: RestrictedAction): Record<string, unknown> {
     return {
       [RESTRICTED_ACTION_STORAGE_KEY]: action === 'none' ? 'none' : 'default',
       [RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY]: true
     };
   }
 
-  function setSearchResultPriorityTabState(priority) {
+  function setSearchResultPriorityTabState(priority: unknown): void {
     const nextPriority = normalizeSearchResultPriority(priority);
     optionsState.currentSearchResultPriority = nextPriority;
     renderSegmentedControlState(
@@ -331,106 +389,112 @@ function createSegmentedTabs(deps) {
         select: {
           id: '_x_extension_search_result_priority_select_2026_unique_'
         }
-      },
-      searchResultPriorityTabButtons,
-      'data-search-result-priority',
-      normalizeSearchResultPriority
+      }
     );
   }
 
-  function handleNewtabWidthSelection(value) {
+  function handleNewtabWidthSelection(value: string): void {
     const nextMode = normalizeNewtabWidthMode(value);
     setNewtabWidthTabState(nextMode);
     if (newtabWidthSelect) {
       newtabWidthSelect.value = nextMode;
     }
-    if (!optionsState.storageArea) {
+    const storageArea = optionsState.storageArea;
+    if (!storageArea) {
       return;
     }
-    optionsState.storageArea.set({ [NEWTAB_WIDTH_MODE_STORAGE_KEY]: nextMode });
+    storageArea.set({ [NEWTAB_WIDTH_MODE_STORAGE_KEY]: nextMode });
     notifyNewtabSectionsRefresh('all');
   }
 
-  function handleOverlaySizeSelection(value) {
+  function handleOverlaySizeSelection(value: string): void {
     const nextMode = normalizeOverlaySizeMode(value);
     setOverlaySizeTabState(nextMode);
-    if (!optionsState.storageArea) {
+    const storageArea = optionsState.storageArea;
+    if (!storageArea) {
       return;
     }
-    optionsState.storageArea.set({ [OVERLAY_SIZE_MODE_STORAGE_KEY]: nextMode });
+    storageArea.set({ [OVERLAY_SIZE_MODE_STORAGE_KEY]: nextMode });
   }
 
-  function handleOverlayEnterAnimationSelection(value) {
+  function handleOverlayEnterAnimationSelection(value: string): void {
     const nextMode = normalizeOverlayEnterAnimation(value);
     setOverlayEnterAnimationTabState(nextMode);
-    if (!optionsState.storageArea) {
+    const storageArea = optionsState.storageArea;
+    if (!storageArea) {
       return;
     }
-    optionsState.storageArea.set({ [OVERLAY_ENTER_ANIMATION_STORAGE_KEY]: nextMode });
+    storageArea.set({ [OVERLAY_ENTER_ANIMATION_STORAGE_KEY]: nextMode });
   }
 
-  function handleSearchResultPrioritySelection(value) {
+  function handleSearchResultPrioritySelection(value: string): void {
     const nextPriority = normalizeSearchResultPriority(value);
     setSearchResultPriorityTabState(nextPriority);
     if (searchResultPrioritySelect) {
       searchResultPrioritySelect.value = nextPriority;
     }
-    if (!optionsState.storageArea) {
+    const storageArea = optionsState.storageArea;
+    if (!storageArea) {
       return;
     }
-    optionsState.storageArea.set({ [SEARCH_RESULT_PRIORITY_STORAGE_KEY]: nextPriority });
+    storageArea.set({ [SEARCH_RESULT_PRIORITY_STORAGE_KEY]: nextPriority });
   }
 
-  function handleNewtabTopContentSelection(value) {
+  function handleNewtabTopContentSelection(value: string): void {
     const nextMode = normalizeNewtabTopContentMode(value);
     setNewtabTopContentTabState(nextMode);
-    if (!optionsState.storageArea) {
+    const storageArea = optionsState.storageArea;
+    if (!storageArea) {
       return;
     }
-    optionsState.storageArea.set({ [NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY]: nextMode });
+    storageArea.set({ [NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY]: nextMode });
   }
 
-  function handleNewtabGlassThemeSelection(value) {
+  function handleNewtabGlassThemeSelection(value: string): void {
     const nextTheme = SETTINGS.normalizeNewtabGlassTheme(value);
     setNewtabGlassThemeTabState(nextTheme);
-    if (!optionsState.storageArea) {
+    const storageArea = optionsState.storageArea;
+    if (!storageArea) {
       return;
     }
-    optionsState.storageArea.set({ [SETTINGS.NEWTAB_GLASS_THEME_STORAGE_KEY]: nextTheme });
+    storageArea.set({ [SETTINGS.NEWTAB_GLASS_THEME_STORAGE_KEY]: nextTheme });
   }
 
-  function handleNewtabTimeInkSelection(value) {
+  function handleNewtabTimeInkSelection(value: string): void {
     const nextInk = SETTINGS.normalizeNewtabTimeInk(value);
     setNewtabTimeInkTabState(nextInk);
-    if (!optionsState.storageArea) {
+    const storageArea = optionsState.storageArea;
+    if (!storageArea) {
       return;
     }
-    optionsState.storageArea.set({ [SETTINGS.NEWTAB_TIME_INK_STORAGE_KEY]: nextInk });
+    storageArea.set({ [SETTINGS.NEWTAB_TIME_INK_STORAGE_KEY]: nextInk });
   }
 
-  function handleRecentModeSelection(value) {
-    const nextMode = value === 'most' ? 'most' : 'latest';
+  function handleRecentModeSelection(value: string): void {
+    const nextMode: RecentMode = value === 'most' ? 'most' : 'latest';
     setRecentModeTabState(nextMode);
     if (recentModeSelect) {
       recentModeSelect.value = nextMode;
     }
-    if (!optionsState.storageArea) {
+    const storageArea = optionsState.storageArea;
+    if (!storageArea) {
       return;
     }
-    optionsState.storageArea.set({ [RECENT_MODE_STORAGE_KEY]: nextMode });
+    storageArea.set({ [RECENT_MODE_STORAGE_KEY]: nextMode });
     notifyNewtabSectionsRefresh('recent');
   }
 
-  function handleRestrictedActionSelection(value) {
-    const nextAction = value === 'none' ? 'none' : 'default';
+  function handleRestrictedActionSelection(value: string): void {
+    const nextAction: RestrictedAction = value === 'none' ? 'none' : 'default';
     setRestrictedActionTabState(nextAction);
     if (restrictedActionSelect) {
       restrictedActionSelect.value = nextAction;
     }
-    if (!optionsState.storageArea) {
+    const storageArea = optionsState.storageArea;
+    if (!storageArea) {
       return;
     }
-    optionsState.storageArea.set(createRestrictedActionStorageUpdate(nextAction));
+    storageArea.set(createRestrictedActionStorageUpdate(nextAction));
   }
 
   return {
@@ -458,3 +522,4 @@ function createSegmentedTabs(deps) {
 }
 
 export { createSegmentedTabs };
+export type { RecentMode, SegmentedTabsDeps, SegmentedTabsState };

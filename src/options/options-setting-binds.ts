@@ -1,9 +1,161 @@
 // Binds every setting control to its storage key: the one-time loads and
 // the setting binder entries for each section, including the daily quote.
 import * as CUSTOM_QUOTES from '../domain/custom-quotes';
+import type { SearchSourceType } from '../domain/search/types';
+import type * as Settings from '../domain/settings';
+import type {
+  NewtabGlassStyle,
+  NewtabTopContentMode,
+  NewtabWidthMode,
+  OverlayEnterAnimation,
+  OverlaySizeMode,
+  SearchResultPriority
+} from '../domain/settings';
+import type { StorageAreaLike } from '../domain/storage-port';
+import { isHtmlTag } from '../shared/dom-guards';
+import type { BatchedStorageArea } from '../platform/settings-storage';
 import * as LumnoOptionsDailyQuote from './options-daily-quote';
+import type { LayoutMutation } from './options-panel-motion';
+import type { SelectControlRecord } from './options-select-controls';
+import type { createSettingBinder, StorageChangeRegistry } from './options-setting-bindings';
+import type { ToggleSettingsEntry } from './options-toggle-settings';
+import type { GetMessage } from './options-types';
+import type { SegmentedControlController } from './react/segmented-control';
+import type { createSettingsControlsApi, ToggleControlController } from './react/settings-controls';
 
-function createSettingBinds(deps) {
+type SettingBinder = ReturnType<typeof createSettingBinder>;
+
+interface SettingBindsState {
+  storageArea: BatchedStorageArea | null;
+  dailyQuoteSettings: ReturnType<typeof LumnoOptionsDailyQuote.createDailyQuoteSettings>;
+  currentOverlayFontFamily: string;
+  currentOverlayFontFallback: string;
+  currentOverlayFontLabels: Record<string, string>;
+  currentNewtabGlassStyle: NewtabGlassStyle;
+  currentNewtabTimeFont: string;
+  currentNewtabTimeFontWeight: number;
+  ensureOverlayFontOption(select: HTMLSelectElement | null, family: string): void;
+  refreshOptionsSelectItems(select: HTMLSelectElement): void;
+  renderOverlayFontMissingNotices(): void;
+  registerOptionsSelectControl(select: HTMLSelectElement | null, kind: string): SelectControlRecord | null;
+  renderOptionsSelectControl(select: HTMLSelectElement): void;
+  setOptionsSelectState(select: HTMLSelectElement | null, value: unknown): void;
+}
+
+interface SettingBindsDeps {
+  LANGUAGE_STORAGE_KEY: string;
+  normalizeLanguageMode(mode: unknown): string;
+  localStorageArea: StorageAreaLike | null;
+  applyLanguageMode(mode: string, options?: { persist?: boolean }): unknown;
+  getActivePrimaryAreaName(): string;
+  NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY: string;
+  NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY: string;
+  NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY: string;
+  NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY: string;
+  NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY: string;
+  NEWTAB_SHORTCUT_SIZE_STORAGE_KEY: string;
+  NEWTAB_SHORTCUT_GAP_STORAGE_KEY: string;
+  normalizeNewtabShortcutsVisible(value: unknown): boolean;
+  normalizeNewtabShortcutAddVisible(value: unknown): boolean;
+  normalizeNewtabShortcutDockMagnificationEnabled(value: unknown): boolean;
+  inferNewtabShortcutColumnsFromWidth(value: unknown): number;
+  normalizeNewtabShortcutColumns(value: unknown): number;
+  normalizeNewtabShortcutSize(value: unknown): number;
+  normalizeNewtabShortcutGap(value: unknown): number;
+  setOptionsToggleState(input: HTMLInputElement | null, checked: boolean, disabled?: boolean): void;
+  newtabShortcutsToggle: HTMLInputElement | null;
+  newtabShortcutAddToggle: HTMLInputElement | null;
+  newtabShortcutDockMagnificationToggle: HTMLInputElement | null;
+  renderNewtabShortcutColumnsControl(value: unknown, disabled?: boolean): void;
+  renderNewtabShortcutSizeControl(value: unknown, disabled?: boolean): void;
+  renderNewtabShortcutGapControl(value: unknown, disabled?: boolean): void;
+  syncNewtabShortcutSubcontrolAvailability(): void;
+  AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY: string;
+  AGGREGATE_SEARCH_STORAGE_KEY: string;
+  deriveLegacyAggregateSearchAutoGroupEnabled(value: unknown): boolean;
+  normalizeAggregateSearchAutoGroupEnabled(value: unknown): boolean;
+  aggregateSearchAutoGroupToggle: HTMLInputElement | null;
+  refreshCustomSelects(): void;
+  SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY: string;
+  normalizeSearchResultSourceTypes(value: unknown): SearchSourceType[];
+  setSearchResultSourceTypeState(value: unknown): void;
+  storageChanges: Pick<StorageChangeRegistry, 'on'>;
+  settingBinder: SettingBinder;
+  RECENT_COUNT_STORAGE_KEY: string;
+  normalizeRecentCount(value: unknown): number;
+  renderRecentCountControl(value: unknown): void;
+  updateRecentModeTabsVisibility(countValue: unknown): void;
+  NEWTAB_WIDTH_MODE_STORAGE_KEY: string;
+  normalizeNewtabWidthMode(value: unknown): NewtabWidthMode;
+  newtabWidthSelect: HTMLSelectElement | null;
+  setNewtabWidthTabState(mode: unknown): void;
+  OVERLAY_SIZE_MODE_STORAGE_KEY: string;
+  normalizeOverlaySizeMode(value: unknown): OverlaySizeMode;
+  setOverlaySizeTabState(mode: unknown): void;
+  OVERLAY_ENTER_ANIMATION_STORAGE_KEY: string;
+  normalizeOverlayEnterAnimation(value: unknown): OverlayEnterAnimation;
+  setOverlayEnterAnimationTabState(mode: unknown): void;
+  localSettingBinder: SettingBinder;
+  OVERLAY_FONT_FAMILY_STORAGE_KEY: string;
+  SETTINGS: typeof Settings;
+  overlayFontSelect: HTMLSelectElement | null;
+  OVERLAY_FONT_LABELS_STORAGE_KEY: string;
+  overlayFontFallbackSelect: HTMLSelectElement | null;
+  OVERLAY_FONT_FALLBACK_STORAGE_KEY: string;
+  SEARCH_RESULT_PRIORITY_STORAGE_KEY: string;
+  normalizeSearchResultPriority(value: unknown): SearchResultPriority;
+  searchResultPrioritySelect: HTMLSelectElement | null;
+  setSearchResultPriorityTabState(priority: unknown): void;
+  newtabGlassStyleSelect: HTMLSelectElement | null;
+  syncNewtabGlassThemeVisibility(): void;
+  setNewtabGlassThemeTabState(theme: unknown): void;
+  getMessage: GetMessage;
+  showToast(message: string, isError?: boolean): void;
+  createOptionsSegmentedControlController(
+    host: HTMLElement | null,
+    kind: string,
+    onSelect: (value: string) => void
+  ): SegmentedControlController;
+  optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>, 'createRangeSliderControlController'>;
+  registerOptionsToggleControl(input: HTMLInputElement | null, kind: string): ToggleControlController | null;
+  setConditionalSettingsElementVisibility(element: HTMLElement | null, visible: boolean): boolean;
+  animateOptionsPanelHeight(mutateLayout: LayoutMutation): boolean;
+  SEARCH_RESULT_TAB_POSITION_STORAGE_KEY: string;
+  searchResultTabPositionSelect: HTMLSelectElement | null;
+  SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY: string;
+  normalizeSearchResultDisplayLimit(value: unknown): number;
+  renderSearchResultDisplayLimitControl(value: unknown): void;
+  RECENT_MODE_STORAGE_KEY: string;
+  recentModeSelect: HTMLSelectElement | null;
+  setRecentModeTabState(mode: unknown): void;
+  BOOKMARK_COUNT_STORAGE_KEY: string;
+  normalizeBookmarkCount(value: unknown): number;
+  renderBookmarkRowsControl(value: unknown): void;
+  updateBookmarkColumnsSettingVisibility(countValue: unknown): void;
+  BOOKMARK_COLUMNS_STORAGE_KEY: string;
+  normalizeBookmarkColumns(value: unknown): number;
+  renderBookmarkColumnsControl(value: unknown): void;
+  NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY: string;
+  normalizeNewtabTopContentMode(value: unknown): NewtabTopContentMode;
+  setNewtabTopContentTabState(mode: unknown): void;
+  newtabTimeFontSelect: HTMLSelectElement | null;
+  renderNewtabTimeFontWeightControl(value: unknown): void;
+  NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY: string;
+  normalizeNewtabTimeFontWeight(value: unknown): number;
+  renderNewtabTimeFontSizeControl(value: unknown): void;
+  renderNewtabTimeOpacityControl(value: unknown): void;
+  setNewtabTimeInkTabState(ink: unknown): void;
+  NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY: string;
+  setNewtabOpenInNewTabState(value: unknown): void;
+  TOGGLE_SETTINGS: readonly ToggleSettingsEntry[];
+  toggleSettingControls: ReadonlyMap<ToggleSettingsEntry, HTMLInputElement | HTMLSelectElement | null>;
+  RESTRICTED_ACTION_STORAGE_KEY: string;
+  restrictedActionSelect: HTMLSelectElement | null;
+  setRestrictedActionTabState(action: unknown): void;
+  optionsState: SettingBindsState;
+}
+
+function createSettingBinds(deps: SettingBindsDeps): void {
   const {
     LANGUAGE_STORAGE_KEY,
     normalizeLanguageMode,
@@ -120,16 +272,17 @@ function createSettingBinds(deps) {
   // shows the system language without writing it, so a choice another page is
   // still saving is not overwritten; the language change handler applies that
   // choice once it lands.
-  function loadLanguageSetting() {
-    if (!optionsState.storageArea) {
+  function loadLanguageSetting(): void {
+    const storageArea = optionsState.storageArea;
+    if (!storageArea) {
       return;
     }
-    optionsState.storageArea.get([LANGUAGE_STORAGE_KEY], (result) => {
-      if (Object.prototype.hasOwnProperty.call(result, LANGUAGE_STORAGE_KEY)) {
+    storageArea.get([LANGUAGE_STORAGE_KEY], (result) => {
+      if (result && Object.prototype.hasOwnProperty.call(result, LANGUAGE_STORAGE_KEY)) {
         const storedRaw = result[LANGUAGE_STORAGE_KEY];
         const stored = normalizeLanguageMode(storedRaw);
         if (storedRaw !== stored) {
-          optionsState.storageArea.set({ [LANGUAGE_STORAGE_KEY]: stored });
+          storageArea.set({ [LANGUAGE_STORAGE_KEY]: stored });
         }
         if (localStorageArea) {
           localStorageArea.set({ [LANGUAGE_STORAGE_KEY]: stored });
@@ -142,13 +295,13 @@ function createSettingBinds(deps) {
         return;
       }
       localStorageArea.get([LANGUAGE_STORAGE_KEY], (localResult) => {
-        if (!Object.prototype.hasOwnProperty.call(localResult, LANGUAGE_STORAGE_KEY)) {
+        if (!localResult || !Object.prototype.hasOwnProperty.call(localResult, LANGUAGE_STORAGE_KEY)) {
           applyLanguageMode('system');
           return;
         }
         const localMode = normalizeLanguageMode(localResult[LANGUAGE_STORAGE_KEY]);
         localStorageArea.set({ [LANGUAGE_STORAGE_KEY]: localMode });
-        optionsState.storageArea.set({ [LANGUAGE_STORAGE_KEY]: localMode });
+        storageArea.set({ [LANGUAGE_STORAGE_KEY]: localMode });
         applyLanguageMode(localMode);
       });
     });
@@ -156,11 +309,12 @@ function createSettingBinds(deps) {
 
   // The New Tab shortcut switches and sliders are read together because the
   // column count falls back to one inferred from the older width setting.
-  function loadNewtabShortcutSettings() {
-    if (!optionsState.storageArea) {
+  function loadNewtabShortcutSettings(): void {
+    const storageArea = optionsState.storageArea;
+    if (!storageArea) {
       return;
     }
-    optionsState.storageArea.get([
+    storageArea.get([
       NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,
       NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,
       NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
@@ -168,79 +322,81 @@ function createSettingBinds(deps) {
       NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
       NEWTAB_SHORTCUT_SIZE_STORAGE_KEY,
       NEWTAB_SHORTCUT_GAP_STORAGE_KEY
-    ], (result) => {
+    ], (items) => {
+      const result = items || {};
       const rawColumns = result[NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY];
-      const values = {
-        [NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY]:
-          normalizeNewtabShortcutsVisible(result[NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY]),
-        [NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY]:
-          normalizeNewtabShortcutAddVisible(result[NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY]),
-        [NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY]:
-          normalizeNewtabShortcutDockMagnificationEnabled(
-            result[NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY]
-          ),
-        [NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY]: rawColumns === undefined
-          ? inferNewtabShortcutColumnsFromWidth(result[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY])
-          : normalizeNewtabShortcutColumns(rawColumns),
-        [NEWTAB_SHORTCUT_SIZE_STORAGE_KEY]:
-          normalizeNewtabShortcutSize(result[NEWTAB_SHORTCUT_SIZE_STORAGE_KEY]),
-        [NEWTAB_SHORTCUT_GAP_STORAGE_KEY]:
-          normalizeNewtabShortcutGap(result[NEWTAB_SHORTCUT_GAP_STORAGE_KEY])
-      };
-      setOptionsToggleState(newtabShortcutsToggle, values[NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY]);
-      setOptionsToggleState(newtabShortcutAddToggle, values[NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY]);
-      setOptionsToggleState(
-        newtabShortcutDockMagnificationToggle,
-        values[NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY]
+      const visible = normalizeNewtabShortcutsVisible(result[NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY]);
+      const addVisible = normalizeNewtabShortcutAddVisible(result[NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY]);
+      const dockMagnification = normalizeNewtabShortcutDockMagnificationEnabled(
+        result[NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY]
       );
-      renderNewtabShortcutColumnsControl(values[NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY]);
-      renderNewtabShortcutSizeControl(values[NEWTAB_SHORTCUT_SIZE_STORAGE_KEY]);
-      renderNewtabShortcutGapControl(values[NEWTAB_SHORTCUT_GAP_STORAGE_KEY]);
+      const columns = rawColumns === undefined
+        ? inferNewtabShortcutColumnsFromWidth(result[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY])
+        : normalizeNewtabShortcutColumns(rawColumns);
+      const size = normalizeNewtabShortcutSize(result[NEWTAB_SHORTCUT_SIZE_STORAGE_KEY]);
+      const gap = normalizeNewtabShortcutGap(result[NEWTAB_SHORTCUT_GAP_STORAGE_KEY]);
+      const values: Record<string, unknown> = {
+        [NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY]: visible,
+        [NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY]: addVisible,
+        [NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY]: dockMagnification,
+        [NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY]: columns,
+        [NEWTAB_SHORTCUT_SIZE_STORAGE_KEY]: size,
+        [NEWTAB_SHORTCUT_GAP_STORAGE_KEY]: gap
+      };
+      setOptionsToggleState(newtabShortcutsToggle, visible);
+      setOptionsToggleState(newtabShortcutAddToggle, addVisible);
+      setOptionsToggleState(newtabShortcutDockMagnificationToggle, dockMagnification);
+      renderNewtabShortcutColumnsControl(columns);
+      renderNewtabShortcutSizeControl(size);
+      renderNewtabShortcutGapControl(gap);
       syncNewtabShortcutSubcontrolAvailability();
-      const repairs = {};
+      const repairs: Record<string, unknown> = {};
       Object.keys(values).forEach((key) => {
         if (result[key] !== values[key]) {
           repairs[key] = values[key];
         }
       });
       if (Object.keys(repairs).length > 0) {
-        optionsState.storageArea.set(repairs);
+        storageArea.set(repairs);
       }
     });
   }
 
   // Older installs have aggregate searches but no auto-group choice; it is
   // derived from those searches the first time.
-  function loadAggregateSearchAutoGroupSetting() {
-    if (!optionsState.storageArea) {
+  function loadAggregateSearchAutoGroupSetting(): void {
+    const storageArea = optionsState.storageArea;
+    if (!storageArea) {
       return;
     }
-    optionsState.storageArea.get([
+    storageArea.get([
       AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
       AGGREGATE_SEARCH_STORAGE_KEY
-    ], (result) => {
+    ], (items) => {
+      const result = items || {};
       const rawValue = result[AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY];
       const stored = typeof rawValue === 'undefined'
         ? deriveLegacyAggregateSearchAutoGroupEnabled(result[AGGREGATE_SEARCH_STORAGE_KEY])
         : normalizeAggregateSearchAutoGroupEnabled(rawValue);
       setOptionsToggleState(aggregateSearchAutoGroupToggle, stored);
       if (rawValue !== stored) {
-        optionsState.storageArea.set({ [AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY]: stored });
+        storageArea.set({ [AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY]: stored });
       }
       refreshCustomSelects();
     });
   }
 
-  function loadSearchResultSourceTypes() {
-    if (!optionsState.storageArea) {
+  function loadSearchResultSourceTypes(): void {
+    const storageArea = optionsState.storageArea;
+    if (!storageArea) {
       return;
     }
-    optionsState.storageArea.get([SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY], (result) => {
-      const stored = result[SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY];
+    storageArea.get([SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY], (items) => {
+      const stored = items ? items[SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY] : undefined;
       const sourceTypes = normalizeSearchResultSourceTypes(stored);
       setSearchResultSourceTypeState(sourceTypes);
       if (!Array.isArray(stored) || JSON.stringify(stored) !== JSON.stringify(sourceTypes)) {
-        optionsState.storageArea.set({ [SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY]: sourceTypes });
+        storageArea.set({ [SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY]: sourceTypes });
       }
     });
   }
@@ -306,7 +462,11 @@ function createSettingBinds(deps) {
     normalize: (value) => SETTINGS.normalizeOverlayFontLabels(value),
     apply(labels) {
       optionsState.currentOverlayFontLabels = labels;
-      [[overlayFontSelect, optionsState.currentOverlayFontFamily], [overlayFontFallbackSelect, optionsState.currentOverlayFontFallback]]
+      const fontSelects: Array<[HTMLSelectElement | null, string]> = [
+        [overlayFontSelect, optionsState.currentOverlayFontFamily],
+        [overlayFontFallbackSelect, optionsState.currentOverlayFontFallback]
+      ];
+      fontSelects
         .forEach(([select, family]) => {
           if (select && family) {
             optionsState.ensureOverlayFontOption(select, family);
@@ -381,7 +541,7 @@ function createSettingBinds(deps) {
       optionsSettingsControlsApi.createRangeSliderControlController(host, controllerOptions),
     registerToggle: registerOptionsToggleControl,
     setToggleState: setOptionsToggleState,
-    registerSelect: (select, kind) => {
+    registerSelect: (select: HTMLSelectElement, kind: string) => {
       const record = optionsState.registerOptionsSelectControl(select, kind);
       if (record) {
         optionsState.renderOptionsSelectControl(select);
@@ -392,19 +552,20 @@ function createSettingBinds(deps) {
     setRowVisible: setConditionalSettingsElementVisibility,
     animateHeight: animateOptionsPanelHeight
   });
-  if (optionsState.dailyQuoteSettings) {
+  const dailyQuoteSettings = optionsState.dailyQuoteSettings;
+  if (dailyQuoteSettings) {
     settingBinder.bindSetting({
       key: SETTINGS.NEWTAB_QUOTE_PREFS_STORAGE_KEY,
       normalize: SETTINGS.normalizeNewtabQuotePrefs,
-      apply: optionsState.dailyQuoteSettings.applyPrefs,
+      apply: dailyQuoteSettings.applyPrefs,
       repairOnLoad: false,
       repairOnChange: false,
       refreshSelects: true
     });
     storageChanges.on(CUSTOM_QUOTES.KEY, (changes) => {
-      optionsState.dailyQuoteSettings.applyLibrary(changes[CUSTOM_QUOTES.KEY].newValue);
+      dailyQuoteSettings.applyLibrary(changes[CUSTOM_QUOTES.KEY].newValue);
     }, { area: 'local' });
-    optionsState.dailyQuoteSettings.load();
+    dailyQuoteSettings.load();
   }
   settingBinder.bindSetting({
     key: SEARCH_RESULT_TAB_POSITION_STORAGE_KEY,
@@ -428,8 +589,8 @@ function createSettingBinds(deps) {
     key: RECENT_MODE_STORAGE_KEY,
     // A missing or unknown mode starts as "most visited"; a later change to
     // anything but "most" shows "latest", as the switch only offers the two.
-    normalize: (value) => (value === 'latest' || value === 'most' ? value : 'most'),
-    normalizeChange: (value) => (value === 'most' ? 'most' : 'latest'),
+    normalize: (value): 'latest' | 'most' => (value === 'latest' || value === 'most' ? value : 'most'),
+    normalizeChange: (value): 'latest' | 'most' => (value === 'most' ? 'most' : 'latest'),
     apply(mode) {
       if (recentModeSelect) {
         recentModeSelect.value = mode;
@@ -502,11 +663,12 @@ function createSettingBinds(deps) {
     repairOnLoad: false,
     repairOnChange: false
   });
-  [
+  const shortcutSliders: Array<[string, (value: unknown) => number, (value: unknown, disabled?: boolean) => void]> = [
     [NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY, normalizeNewtabShortcutColumns, renderNewtabShortcutColumnsControl],
     [NEWTAB_SHORTCUT_SIZE_STORAGE_KEY, normalizeNewtabShortcutSize, renderNewtabShortcutSizeControl],
     [NEWTAB_SHORTCUT_GAP_STORAGE_KEY, normalizeNewtabShortcutGap, renderNewtabShortcutGapControl]
-  ].forEach(([key, normalize, render]) => {
+  ];
+  shortcutSliders.forEach(([key, normalize, render]) => {
     settingBinder.bindSetting({
       key,
       normalize,
@@ -525,18 +687,18 @@ function createSettingBinds(deps) {
     repairOnChange: false
   });
   TOGGLE_SETTINGS.forEach((entry) => {
-    const spec = Object.assign({}, entry, { input: toggleSettingControls.get(entry) });
+    const control = toggleSettingControls.get(entry) || null;
     if (entry.control === 'select') {
-      settingBinder.bindSelect(spec);
+      settingBinder.bindSelect({ ...entry, input: isHtmlTag(control, 'select') ? control : null });
     } else {
-      settingBinder.bindToggle(spec);
+      settingBinder.bindToggle({ ...entry, input: isHtmlTag(control, 'input') ? control : null });
     }
   });
   loadAggregateSearchAutoGroupSetting();
   settingBinder.bindSetting({
     key: RESTRICTED_ACTION_STORAGE_KEY,
     // "lumno" is the old name of the default action.
-    normalize: (value) => (value === 'none' ? 'none' : 'default'),
+    normalize: (value): 'none' | 'default' => (value === 'none' ? 'none' : 'default'),
     apply(action) {
       if (restrictedActionSelect) {
         restrictedActionSelect.value = action;
@@ -545,8 +707,7 @@ function createSettingBinds(deps) {
     },
     refreshSelects: true
   });
-
-  return {};
 }
 
 export { createSettingBinds };
+export type { SettingBindsDeps, SettingBindsState };

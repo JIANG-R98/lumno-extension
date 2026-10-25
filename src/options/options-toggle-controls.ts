@@ -1,11 +1,70 @@
-// @ts-nocheck
 // The page's switches: registering each toggle with its React control,
 // their checked state, the selection toolbar's provider row, settings a
 // browser does not support, and the search result source checkboxes.
+import type { SearchSourceType } from '../domain/search/types';
+import type * as Settings from '../domain/settings';
+import { isHtmlElement, isHtmlTag } from '../shared/dom-guards';
 import * as LumnoCursorTooltip from '../shared/ui/cursor-tooltip';
+import type { CursorTooltipController } from '../shared/ui/cursor-tooltip';
+import type { TooltipController } from '../shared/ui/tooltip';
+import type { createSearchSourceOrderController } from './options-search-source-order';
 import * as LumnoOptionsToggleSettings from './options-toggle-settings';
+import type { ToggleSettingsEntry } from './options-toggle-settings';
+import type { GetMessage } from './options-types';
+import type {
+  createSettingsControlsApi,
+  RequiredCheckboxItemModel,
+  ToggleControlController,
+  ToggleControlRenderModel
+} from './react/settings-controls';
 
-function createToggleControls(deps) {
+interface ToggleControlsState {
+  searchSourceOrderController: Pick<ReturnType<typeof createSearchSourceOrderController>,
+    'moveLocal' | 'sortLocalSourceTypes' | 'isLocalDefault' | 'resetLocal'>;
+  // Made once the page has mounted its tooltips.
+  tooltipController: Pick<TooltipController, 'hide'> | null;
+}
+
+interface ToggleControlsDeps {
+  optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>,
+    'createToggleControlController' | 'createRequiredCheckboxGroupController'>;
+  selectionQuickActionsToggle: HTMLInputElement | null;
+  selectionQuickActionsProviderSelect: HTMLSelectElement | null;
+  renderOptionsSelectControl(select: HTMLSelectElement): void;
+  selectionQuickActionsSubrows: HTMLElement | null;
+  selectionQuickActionsProviderRow: HTMLElement | null;
+  selectionQuickActionsGroupToggle: HTMLInputElement | null;
+  selectionQuickActionsGroupRow: HTMLElement | null;
+  SETTINGS: typeof Settings;
+  setFaviconBlacklistEditorEnabled(enabled: boolean): void;
+  syncNewtabShortcutSubcontrolAvailability(): void;
+  newtabOpenInNewTabToggles: HTMLInputElement[];
+  getMessage: GetMessage;
+  searchResultSourceTypeInputs: HTMLInputElement[];
+  searchResultSourceTypeGroupHost: HTMLElement | null;
+  searchResultSourceTypeResetButton: HTMLElement | null;
+  // The keys each list shows right now, in order, for the move buttons.
+  renderedSearchSourceKeys: Record<string, string[]>;
+  normalizeSearchResultSourceTypes(value: unknown): SearchSourceType[];
+  persistSearchResultSourceTypes(value: unknown): void;
+  optionsState: ToggleControlsState;
+}
+
+interface ToggleControlRecord {
+  controller: ToggleControlController;
+  model: ToggleControlRenderModel;
+}
+
+// A search result source checkbox, as the page wrote it.
+interface SourceTypeItem {
+  checked: boolean;
+  id: string;
+  labelFallback: string;
+  labelKey: string;
+  value: string;
+}
+
+function createToggleControls(deps: ToggleControlsDeps) {
   const {
     optionsSettingsControlsApi,
     selectionQuickActionsToggle,
@@ -31,27 +90,27 @@ function createToggleControls(deps) {
   // The page state object shared with options.js and the other modules.
   const optionsState = deps.optionsState;
 
-  const optionsToggleControlRecords = new Map();
-  const unsupportedSettingInputIds = new Set();
-  function registerOptionsToggleControl(input, kind) {
+  const optionsToggleControlRecords = new Map<HTMLInputElement, ToggleControlRecord>();
+  const unsupportedSettingInputIds = new Set<string>();
+  function registerOptionsToggleControl(input: HTMLInputElement | null, kind: string): ToggleControlController | null {
     if (!input) {
       return null;
     }
     const host = input.closest('._x_extension_switch_2024_unique_');
-    if (!host) {
+    if (!isHtmlElement(host)) {
       return null;
     }
-    const model = {
+    const model: ToggleControlRenderModel = {
       ariaLabel: input.getAttribute('aria-label') || undefined,
       ariaLabelKey: input.getAttribute('data-i18n-aria-label') || undefined,
-      checked: Boolean(input.checked),
-      disabled: Boolean(input.disabled),
+      checked: input.checked,
+      disabled: input.disabled,
       id: input.id
     };
     const controller = optionsSettingsControlsApi.createToggleControlController(host, {
       kind,
       onChange(next) {
-        input.checked = Boolean(next);
+        input.checked = next;
         input.dispatchEvent(new Event('change'));
       }
     });
@@ -60,27 +119,27 @@ function createToggleControls(deps) {
     controller.render(model);
     return controller;
   }
-  function setOptionsToggleState(input, checked, disabled) {
+  function setOptionsToggleState(input: HTMLInputElement | null, checked: boolean, disabled?: boolean): void {
     if (!input) {
       return;
     }
     // Stays off without touching the synced value other browsers use.
-    if (unsupportedSettingInputIds.has(input.id)) {
-      checked = false;
-      disabled = true;
-    }
-    input.checked = Boolean(checked);
-    if (typeof disabled === 'boolean') {
-      input.disabled = disabled;
+    const unsupported = unsupportedSettingInputIds.has(input.id);
+    const nextChecked = unsupported ? false : checked;
+    const nextDisabled = unsupported ? true : disabled;
+    input.checked = nextChecked;
+    if (typeof nextDisabled === 'boolean') {
+      input.disabled = nextDisabled;
     }
     const record = optionsToggleControlRecords.get(input);
     if (!record) {
       return;
     }
-    record.model = Object.assign({}, record.model, {
-      checked: Boolean(checked),
-      disabled: Boolean(input.disabled)
-    });
+    record.model = {
+      ...record.model,
+      checked: nextChecked,
+      disabled: input.disabled
+    };
     record.controller.render(record.model);
   }
 
@@ -96,7 +155,7 @@ function createToggleControls(deps) {
     });
   }
   let selectionQuickActionsSubrowsMotionQueued = false;
-  function setSelectionQuickActionsSubrowsExpanded(expanded) {
+  function setSelectionQuickActionsSubrowsExpanded(expanded: boolean): void {
     const wrap = selectionQuickActionsSubrows;
     if (!wrap) {
       return;
@@ -117,7 +176,7 @@ function createToggleControls(deps) {
     }
   }
 
-  function syncSelectionQuickActionsProviderAvailability() {
+  function syncSelectionQuickActionsProviderAvailability(): void {
     const disabled = Boolean(selectionQuickActionsToggle && !selectionQuickActionsToggle.checked);
     setSelectionQuickActionsSubrowsExpanded(!disabled);
     if (selectionQuickActionsProviderSelect) {
@@ -148,13 +207,16 @@ function createToggleControls(deps) {
   // Each switch's React view replaces its <input> in the document. The page
   // keeps working with the original element: the view reports clicks to it as
   // change events and re-renders from it, so look every control up once, now.
-  const toggleSettingControls = new Map(TOGGLE_SETTINGS.map((entry) => [
-    entry,
-    document.getElementById(entry.inputId)
-  ]));
+  const toggleSettingControls = new Map<ToggleSettingsEntry, HTMLInputElement | HTMLSelectElement | null>(
+    TOGGLE_SETTINGS.map((entry) => {
+      const control = document.getElementById(entry.inputId);
+      return [entry, isHtmlTag(control, 'input') || isHtmlTag(control, 'select') ? control : null];
+    })
+  );
   TOGGLE_SETTINGS.forEach((entry) => {
-    if (entry.kind) {
-      registerOptionsToggleControl(toggleSettingControls.get(entry), entry.kind);
+    const control = toggleSettingControls.get(entry);
+    if (entry.kind && isHtmlTag(control, 'input')) {
+      registerOptionsToggleControl(control, entry.kind);
     }
   });
   newtabOpenInNewTabToggles.forEach((input) => registerOptionsToggleControl(input, 'newtab-open-in-new-tab'));
@@ -162,9 +224,9 @@ function createToggleControls(deps) {
   // Settings this browser cannot honor stay visible but disabled, with the
   // reason in a tooltip that follows the cursor: <div
   // data-browser-unsupported="firefox" data-unsupported-reason-key="...">.
-  function markBrowserUnsupportedSettings() {
+  function markBrowserUnsupportedSettings(): void {
     const family = document.documentElement.getAttribute('data-browser-family');
-    let reasonTooltip = null;
+    let reasonTooltip: CursorTooltipController | null = null;
     document.querySelectorAll('[data-browser-unsupported]').forEach((row) => {
       if (row.getAttribute('data-browser-unsupported') !== family) {
         return;
@@ -181,9 +243,15 @@ function createToggleControls(deps) {
         offsetY: 16
       });
       const reasonKey = row.getAttribute('data-unsupported-reason-key') || '';
-      reasonTooltip.bind(row, () => getMessage(reasonKey, ''));
+      if (isHtmlElement(row)) {
+        reasonTooltip.bind(row, () => getMessage(reasonKey, ''));
+      }
       // The toggle's React view replaces its <input>; the label keeps the id.
-      row.querySelectorAll('label[for]').forEach((label) => unsupportedSettingInputIds.add(label.htmlFor));
+      row.querySelectorAll('label[for]').forEach((label) => {
+        if (isHtmlTag(label, 'label')) {
+          unsupportedSettingInputIds.add(label.htmlFor);
+        }
+      });
     });
     optionsToggleControlRecords.forEach((record, input) => {
       if (unsupportedSettingInputIds.has(input.id)) {
@@ -193,14 +261,14 @@ function createToggleControls(deps) {
   }
   markBrowserUnsupportedSettings();
 
-  const searchResultSourceTypeItems = searchResultSourceTypeInputs.map((input) => {
+  const searchResultSourceTypeItems: SourceTypeItem[] = searchResultSourceTypeInputs.map((input) => {
     const label = input.closest('label');
     const text = label ? label.querySelector('span[data-i18n]') : null;
     return {
-      checked: Boolean(input.checked),
+      checked: input.checked,
       id: input.id,
-      labelFallback: text ? text.textContent : '',
-      labelKey: text ? text.getAttribute('data-i18n') : '',
+      labelFallback: text ? text.textContent || '' : '',
+      labelKey: text ? text.getAttribute('data-i18n') || '' : '',
       value: input.getAttribute('data-search-result-source-type') || ''
     };
   }).filter((item) => item.value);
@@ -216,37 +284,40 @@ function createToggleControls(deps) {
         ),
         onChange(values) {
           const selected = new Set(values);
-          let changedInput = null;
-          searchResultSourceTypeInputs.forEach((input) => {
-            const next = selected.has(input.getAttribute('data-search-result-source-type'));
+          let changedInput: HTMLInputElement | null = null;
+          for (const input of searchResultSourceTypeInputs) {
+            const next = selected.has(input.getAttribute('data-search-result-source-type') || '');
             if (input.checked !== next && !changedInput) {
               changedInput = input;
             }
             input.checked = next;
-          });
+          }
           if (changedInput) {
             changedInput.dispatchEvent(new Event('change'));
           }
         }
       }
     );
-  function renderSearchResultSourceTypeControl(value) {
-    if (!searchResultSourceTypeController) {
-      return;
-    }
-    const selected = new Set(normalizeSearchResultSourceTypes(value));
+  function renderSearchResultSourceTypeControl(value: unknown): void {
+    const selected = new Set<string>(normalizeSearchResultSourceTypes(value));
     const values = optionsState.searchSourceOrderController.sortLocalSourceTypes(
       searchResultSourceTypeItems.map((item) => item.value)
     );
     renderedSearchSourceKeys.local = values;
-    searchResultSourceTypeController.render({
-      items: values.map((type) => searchResultSourceTypeItems.find((item) => item.value === type))
-        .map((item) => Object.assign({}, item, {
+    const items: RequiredCheckboxItemModel[] = [];
+    values.forEach((type) => {
+      const item = searchResultSourceTypeItems.find((entry) => entry.value === type);
+      if (item) {
+        items.push({
           checked: selected.has(item.value),
-          label: getMessage(item.labelKey, item.labelFallback)
-        })),
-      sortable: true
+          id: item.id,
+          label: getMessage(item.labelKey, item.labelFallback),
+          labelKey: item.labelKey,
+          value: item.value
+        });
+      }
     });
+    searchResultSourceTypeController.render({ items, sortable: true });
     if (searchResultSourceTypeResetButton) {
       searchResultSourceTypeResetButton.hidden = selected.size >= searchResultSourceTypeItems.length &&
         optionsState.searchSourceOrderController.isLocalDefault();
@@ -265,7 +336,7 @@ function createToggleControls(deps) {
       }
       const firstInput = searchResultSourceTypeGroupHost &&
         searchResultSourceTypeGroupHost.querySelector('input[type="checkbox"]');
-      if (firstInput) {
+      if (isHtmlElement(firstInput)) {
         firstInput.focus({ preventScroll: true });
       }
     });
@@ -284,3 +355,4 @@ function createToggleControls(deps) {
 }
 
 export { createToggleControls };
+export type { SourceTypeItem, ToggleControlsDeps, ToggleControlsState };
