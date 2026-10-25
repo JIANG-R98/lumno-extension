@@ -88,9 +88,12 @@ TOPBAR_LOCAL_KEYS.forEach((key) => {
   assert(!chromeSyncKeys.includes(key), `options must not export or import local-only ${key}`);
 });
 
-// Labels are wired through data-i18n.
-assert(optionsDocument.querySelector('[data-i18n="settings_overlay_open_tabs_default_visible_title"]'),
-  'overlay open-tabs setting label should be wired through data-i18n');
+// Labels are translated: static ones through data-i18n, those React draws
+// from their locale messages.
+localeNames.forEach((locale) => {
+  assert(localeMessages[locale].settings_overlay_open_tabs_default_visible_title?.message,
+    `${locale} should translate the overlay open-tabs setting label`);
+});
 const folderIconsLabel = optionsDocument.querySelector('[data-i18n="settings_bookmark_folder_icons_visible_title"]');
 assert(folderIconsLabel, 'bookmark folder icon setting label should be wired through data-i18n');
 assert(folderIconsLabel.compareDocumentPosition(optionsDocument.querySelector('[data-i18n="settings_recent_sites_title"]')) & 4,

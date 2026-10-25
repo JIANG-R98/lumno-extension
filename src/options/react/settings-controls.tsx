@@ -78,7 +78,7 @@ export interface RequiredCheckboxGroupControllerOptions {
 export type RequiredCheckboxGroupController =
   ReactRootController<RequiredCheckboxGroupRenderModel>;
 
-function RequiredCheckboxGroup({
+export function RequiredCheckboxGroup({
   model,
   onChange,
   onMove
@@ -155,7 +155,7 @@ function RequiredCheckboxGroup({
   );
 }
 
-function RangeSliderControl({
+export function RangeSliderControl({
   model,
   onInput
 }: {

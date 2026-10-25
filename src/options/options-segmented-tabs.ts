@@ -9,8 +9,7 @@ import type {
   NewtabWidthMode,
   OverlayEnterAnimation,
   OverlaySizeMode,
-  RestrictedAction,
-  SearchResultPriority
+  RestrictedAction
 } from '../domain/settings';
 import type { BatchedStorageArea } from '../platform/settings-storage';
 import type { LayoutMutation } from './options-panel-motion';
@@ -32,7 +31,6 @@ interface SegmentedTabsState {
   currentNewtabGlassTheme: NewtabGlassTheme;
   currentNewtabGlassStyle: NewtabGlassStyle;
   currentRestrictedAction: RestrictedAction;
-  currentSearchResultPriority: SearchResultPriority;
   // Made once the page has mounted its React views.
   recentModeTabsController: SegmentedControllerRef;
   overlaySizeTabsController: SegmentedControllerRef;
@@ -42,7 +40,6 @@ interface SegmentedTabsState {
   newtabTimeInkTabsController: SegmentedControllerRef;
   newtabGlassThemeTabsController: SegmentedControllerRef;
   restrictedActionTabsController: SegmentedControllerRef;
-  searchResultPriorityTabsController: SegmentedControllerRef;
 }
 
 interface SegmentedTabsDeps {
@@ -66,14 +63,11 @@ interface SegmentedTabsDeps {
   recentModeTabsWrap: HTMLElement | null;
   RESTRICTED_ACTION_STORAGE_KEY: string;
   RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY: string;
-  normalizeSearchResultPriority(value: unknown): SearchResultPriority;
   newtabWidthSelect: HTMLSelectElement | null;
   NEWTAB_WIDTH_MODE_STORAGE_KEY: string;
   notifyNewtabSectionsRefresh(section: string): void;
   OVERLAY_SIZE_MODE_STORAGE_KEY: string;
   OVERLAY_ENTER_ANIMATION_STORAGE_KEY: string;
-  searchResultPrioritySelect: HTMLSelectElement | null;
-  SEARCH_RESULT_PRIORITY_STORAGE_KEY: string;
   NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY: string;
   recentModeSelect: HTMLSelectElement | null;
   RECENT_MODE_STORAGE_KEY: string;
@@ -102,14 +96,11 @@ function createSegmentedTabs(deps: SegmentedTabsDeps) {
     recentModeTabsWrap,
     RESTRICTED_ACTION_STORAGE_KEY,
     RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
-    normalizeSearchResultPriority,
     newtabWidthSelect,
     NEWTAB_WIDTH_MODE_STORAGE_KEY,
     notifyNewtabSectionsRefresh,
     OVERLAY_SIZE_MODE_STORAGE_KEY,
     OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
-    searchResultPrioritySelect,
-    SEARCH_RESULT_PRIORITY_STORAGE_KEY,
     NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
     recentModeSelect,
     RECENT_MODE_STORAGE_KEY,
@@ -366,33 +357,6 @@ function createSegmentedTabs(deps: SegmentedTabsDeps) {
     };
   }
 
-  function setSearchResultPriorityTabState(priority: unknown): void {
-    const nextPriority = normalizeSearchResultPriority(priority);
-    optionsState.currentSearchResultPriority = nextPriority;
-    renderSegmentedControlState(
-      optionsState.searchResultPriorityTabsController,
-      {
-        activeValue: nextPriority,
-        dataAttribute: 'data-search-result-priority',
-        items: [
-          {
-            value: 'autocomplete',
-            labelKey: 'search_result_priority_autocomplete',
-            label: getMessage('search_result_priority_autocomplete', '补全优先')
-          },
-          {
-            value: 'search',
-            labelKey: 'search_result_priority_search',
-            label: getMessage('search_result_priority_search', '搜索优先')
-          }
-        ],
-        select: {
-          id: '_x_extension_search_result_priority_select_2026_unique_'
-        }
-      }
-    );
-  }
-
   function handleNewtabWidthSelection(value: string): void {
     const nextMode = normalizeNewtabWidthMode(value);
     setNewtabWidthTabState(nextMode);
@@ -425,19 +389,6 @@ function createSegmentedTabs(deps: SegmentedTabsDeps) {
       return;
     }
     storageArea.set({ [OVERLAY_ENTER_ANIMATION_STORAGE_KEY]: nextMode });
-  }
-
-  function handleSearchResultPrioritySelection(value: string): void {
-    const nextPriority = normalizeSearchResultPriority(value);
-    setSearchResultPriorityTabState(nextPriority);
-    if (searchResultPrioritySelect) {
-      searchResultPrioritySelect.value = nextPriority;
-    }
-    const storageArea = optionsState.storageArea;
-    if (!storageArea) {
-      return;
-    }
-    storageArea.set({ [SEARCH_RESULT_PRIORITY_STORAGE_KEY]: nextPriority });
   }
 
   function handleNewtabTopContentSelection(value: string): void {
@@ -508,11 +459,9 @@ function createSegmentedTabs(deps: SegmentedTabsDeps) {
     syncNewtabGlassThemeVisibility,
     updateRecentModeTabsVisibility,
     setRestrictedActionTabState,
-    setSearchResultPriorityTabState,
     handleNewtabWidthSelection,
     handleOverlaySizeSelection,
     handleOverlayEnterAnimationSelection,
-    handleSearchResultPrioritySelection,
     handleNewtabTopContentSelection,
     handleNewtabGlassThemeSelection,
     handleNewtabTimeInkSelection,

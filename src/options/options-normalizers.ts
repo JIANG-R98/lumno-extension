@@ -1,14 +1,7 @@
 // Normalizing stored values for the controls: counts, columns, width and
-// size modes, clock and shortcut settings, result priority, limit and
-// source types.
-import type { SearchSourceType } from '../domain/search/types';
+// size modes, and clock and shortcut settings.
 import type * as Settings from '../domain/settings';
-import type { BatchedStorageArea } from '../platform/settings-storage';
 import type { LayoutMutation } from './options-panel-motion';
-
-interface NormalizersState {
-  storageArea: BatchedStorageArea | null;
-}
 
 interface NormalizersDeps {
   SETTINGS: Pick<typeof Settings,
@@ -16,9 +9,7 @@ interface NormalizersDeps {
     'normalizeOverlaySizeMode' | 'normalizeOverlayEnterAnimation' | 'normalizeNewtabTopContentMode' |
     'normalizeNewtabTimeFontWeight' | 'normalizeNewtabShortcutsVisible' | 'normalizeNewtabShortcutAddVisible' |
     'normalizeNewtabShortcutDockMagnificationEnabled' | 'normalizeNewtabShortcutColumns' |
-    'normalizeNewtabShortcutSize' | 'normalizeNewtabShortcutGap' | 'inferNewtabShortcutColumnsFromWidth' |
-    'normalizeSearchResultPriority' |
-    'normalizeSearchResultDisplayLimit' | 'normalizeSearchResultSourceType' | 'normalizeSearchResultSourceTypes'>;
+    'normalizeNewtabShortcutSize' | 'normalizeNewtabShortcutGap' | 'inferNewtabShortcutColumnsFromWidth'>;
   bookmarkColumnsSettingRow: HTMLElement | null;
   bookmarkFolderIconsVisibleRow: HTMLElement | null;
   animateOptionsPanelHeight(mutateLayout: LayoutMutation): boolean;
@@ -34,11 +25,6 @@ interface NormalizersDeps {
   NEWTAB_SHORTCUT_GAP_DEFAULT: number;
   NEWTAB_SHORTCUT_WIDTH_MIN: number;
   NEWTAB_SHORTCUT_WIDTH_MAX: number;
-  // The source type checkboxes, one per data-search-result-source-type.
-  searchResultSourceTypeInputs: HTMLInputElement[];
-  renderSearchResultSourceTypeControl(types: SearchSourceType[]): void;
-  SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY: string;
-  optionsState: NormalizersState;
 }
 
 function createNormalizers(deps: NormalizersDeps) {
@@ -58,14 +44,8 @@ function createNormalizers(deps: NormalizersDeps) {
     NEWTAB_SHORTCUT_GAP_MAX,
     NEWTAB_SHORTCUT_GAP_DEFAULT,
     NEWTAB_SHORTCUT_WIDTH_MIN,
-    NEWTAB_SHORTCUT_WIDTH_MAX,
-    searchResultSourceTypeInputs,
-    renderSearchResultSourceTypeControl,
-    SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY
+    NEWTAB_SHORTCUT_WIDTH_MAX
   } = deps;
-
-  // The page state object shared with options.js and the other modules.
-  const optionsState = deps.optionsState;
 
   function normalizeBookmarkCount(value: unknown) {
     return SETTINGS.normalizeBookmarkCount(value);
@@ -161,51 +141,6 @@ function createNormalizers(deps: NormalizersDeps) {
     });
   }
 
-  function normalizeSearchResultPriority(value: unknown) {
-    return SETTINGS.normalizeSearchResultPriority(value);
-  }
-
-  function normalizeSearchResultDisplayLimit(value: unknown) {
-    return SETTINGS.normalizeSearchResultDisplayLimit(value);
-  }
-
-  function normalizeSearchResultSourceTypes(value: unknown) {
-    return SETTINGS.normalizeSearchResultSourceTypes(value);
-  }
-
-  // The checked source types, in the order of their checkboxes.
-  function collectCheckedSearchResultSourceTypes(): SearchSourceType[] {
-    const checked: SearchSourceType[] = [];
-    searchResultSourceTypeInputs.forEach((input) => {
-      const type = input.checked
-        ? SETTINGS.normalizeSearchResultSourceType(input.getAttribute('data-search-result-source-type'))
-        : '';
-      if (type) {
-        checked.push(type);
-      }
-    });
-    return checked;
-  }
-
-  function setSearchResultSourceTypeState(value: unknown): void {
-    const normalized = normalizeSearchResultSourceTypes(value);
-    const selected = new Set<string>(normalized);
-    searchResultSourceTypeInputs.forEach((input) => {
-      const type = input.getAttribute('data-search-result-source-type');
-      input.checked = type !== null && selected.has(type);
-    });
-    renderSearchResultSourceTypeControl(normalized);
-  }
-
-  function persistSearchResultSourceTypes(value: unknown): void {
-    const normalized = normalizeSearchResultSourceTypes(value);
-    setSearchResultSourceTypeState(normalized);
-    if (!optionsState.storageArea) {
-      return;
-    }
-    optionsState.storageArea.set({ [SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY]: normalized });
-  }
-
   return {
     normalizeBookmarkCount,
     normalizeRecentCount,
@@ -222,15 +157,9 @@ function createNormalizers(deps: NormalizersDeps) {
     normalizeNewtabShortcutColumns,
     normalizeNewtabShortcutSize,
     normalizeNewtabShortcutGap,
-    inferNewtabShortcutColumnsFromWidth,
-    normalizeSearchResultPriority,
-    normalizeSearchResultDisplayLimit,
-    normalizeSearchResultSourceTypes,
-    collectCheckedSearchResultSourceTypes,
-    setSearchResultSourceTypeState,
-    persistSearchResultSourceTypes
+    inferNewtabShortcutColumnsFromWidth
   };
 }
 
 export { createNormalizers };
-export type { NormalizersDeps, NormalizersState };
+export type { NormalizersDeps };

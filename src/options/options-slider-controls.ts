@@ -18,7 +18,6 @@ interface SliderControlsState {
   currentBookmarkCount: number;
   currentRecentCount: number;
   currentBookmarkColumns: number;
-  currentSearchResultDisplayLimit: number;
   currentOverlaySizeMode: OverlaySizeMode;
   // A custom overlay width, or null while it follows the size.
   currentOverlayWidth: number | null;
@@ -78,9 +77,6 @@ interface SliderControlsDeps {
   bookmarkColumnsControlHost: HTMLElement | null;
   normalizeBookmarkColumns(value: unknown): number;
   BOOKMARK_COLUMNS_STORAGE_KEY: string;
-  searchResultDisplayLimitControlHost: HTMLElement | null;
-  normalizeSearchResultDisplayLimit(value: unknown): number;
-  SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY: string;
   overlayWidthControlHost: HTMLElement | null;
   optionsState: SliderControlsState;
 }
@@ -134,9 +130,6 @@ function createSliderControls(deps: SliderControlsDeps) {
     bookmarkColumnsControlHost,
     normalizeBookmarkColumns,
     BOOKMARK_COLUMNS_STORAGE_KEY,
-    searchResultDisplayLimitControlHost,
-    normalizeSearchResultDisplayLimit,
-    SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
     overlayWidthControlHost
   } = deps;
 
@@ -492,36 +485,6 @@ function createSliderControls(deps: SliderControlsDeps) {
       value: optionsState.currentBookmarkColumns
     });
   }
-  const searchResultDisplayLimitController =
-    optionsSettingsControlsApi.createRangeSliderControlController(
-      searchResultDisplayLimitControlHost,
-      {
-        kind: 'search-result-display-limit',
-        onInput(value) {
-          const nextLimit = normalizeSearchResultDisplayLimit(value);
-          optionsState.currentSearchResultDisplayLimit = nextLimit;
-          if (storageArea) {
-            storageArea.set({ [SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY]: nextLimit });
-          }
-        }
-      }
-    );
-  function renderSearchResultDisplayLimitControl(value: unknown): void {
-    optionsState.currentSearchResultDisplayLimit = normalizeSearchResultDisplayLimit(value);
-    searchResultDisplayLimitController.render({
-      ariaLabel: getMessage('settings_search_result_display_limit_title', 'Maximum Visible Results'),
-      id: '_x_extension_search_result_display_limit_slider_2026_unique_',
-      min: 5,
-      max: 10,
-      step: 1,
-      ticks: [
-        { align: 'start', label: '5' },
-        { align: 'end', label: '10' }
-      ],
-      value: optionsState.currentSearchResultDisplayLimit
-    });
-  }
-
   function getOverlaySizeWidth(): number {
     return SETTINGS.getOverlaySizePreset(optionsState.currentOverlaySizeMode).width;
   }
@@ -589,7 +552,6 @@ function createSliderControls(deps: SliderControlsDeps) {
     renderBookmarkRowsControl,
     renderRecentCountControl,
     renderBookmarkColumnsControl,
-    renderSearchResultDisplayLimitControl,
     renderOverlayWidthControl
   };
 }

@@ -11,7 +11,6 @@ import type { ControlEventsState } from './options-control-events';
 import type { FormsState } from './options-forms';
 import type { LanguageState } from './options-language';
 import type { NavigationState } from './options-navigation';
-import type { NormalizersState } from './options-normalizers';
 import type { createPanelHeightAnimator } from './options-panel-motion';
 import type { createSearchSourceOrderController } from './options-search-source-order';
 import type { SegmentedTabsState } from './options-segmented-tabs';
@@ -23,7 +22,6 @@ import type { SiteSearchActionsState } from './options-site-search-actions';
 import type { SiteSearchFormState } from './options-site-search-form';
 import type { SiteSearchListState } from './options-site-search-list';
 import type { SliderControlsState } from './options-slider-controls';
-import type { ToggleControlsState } from './options-toggle-controls';
 import type { TooltipsState } from './options-tooltips';
 
 // What options.ts itself keeps beyond the modules' slices, and the full
@@ -41,7 +39,6 @@ type OptionsState =
   FormsState &
   LanguageState &
   NavigationState &
-  NormalizersState &
   SegmentedTabsState &
   SelectControlsState &
   SettingBindsState &
@@ -50,7 +47,6 @@ type OptionsState =
   SiteSearchFormState &
   SiteSearchListState &
   SliderControlsState &
-  ToggleControlsState &
   TooltipsState &
   OptionsPageState;
 
@@ -102,7 +98,6 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     newtabTimeInkTabsController: null,
     newtabGlassThemeTabsController: null,
     restrictedActionTabsController: null,
-    searchResultPriorityTabsController: null,
     siteSearchEngineBuiltinListController: null,
     siteSearchCustomListController: null,
     siteSearchBuiltinListController: null,
@@ -148,8 +143,6 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     // Firefox), so nothing is reported missing before it can be checked.
     installedOverlayFontFamilies: null,
     currentRestrictedAction: 'default',
-    currentSearchResultPriority: 'autocomplete',
-    currentSearchResultDisplayLimit: 10,
     currentRecentCount: 4,
     currentBookmarkCount: 8,
     currentBookmarkColumns: 6,

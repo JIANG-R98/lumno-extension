@@ -1,6 +1,5 @@
 const assert = require('assert');
 const fs = require('fs');
-const { JSDOM } = require('jsdom');
 const settings = require('../../src/domain/settings.ts');
 const { readStylesheet } = require('../helpers/css-tokens');
 const { parseCss } = require('../helpers/css-rules');
@@ -30,12 +29,13 @@ function changeStored(surface, key, value) {
 }
 
 async function testSettingsSlider() {
-  const doc = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
+  const page = await createOptionsPage({ sync: { [LIMIT]: 7 } });
+  await page.settle(80);
   const [sources, limit, openTabs] = [
-    'settings_search_result_sources_title',
-    'settings_search_result_display_limit_title',
-    'settings_overlay_open_tabs_default_visible_title'
-  ].map((key) => doc.querySelector(`[data-i18n="${key}"]`));
+    '_x_extension_search_result_source_types_2026_unique_',
+    '_x_extension_search_result_display_limit_setting_row_2026_unique_',
+    '_x_extension_overlay_open_tabs_default_visible_toggle_2026_unique_'
+  ].map((id) => page.byId(id));
   assert.ok((sources.compareDocumentPosition(limit) & 4) && (limit.compareDocumentPosition(openTabs) & 4),
     'the result limit should sit between result types and default open tabs');
   const css = parseCss(readStylesheet('src/options/options.css'));
@@ -43,8 +43,6 @@ async function testSettingsSlider() {
     entry.selectors.includes('#_x_extension_search_result_display_limit_control_2026_unique_')),
   'the result limit should share the bookmark-rows slider sizing');
 
-  const page = await createOptionsPage({ sync: { [LIMIT]: 7 } });
-  await page.settle(80);
   const slider = page.byId('_x_extension_search_result_display_limit_slider_2026_unique_');
   assert.deepStrictEqual([slider.type, slider.min, slider.max, slider.step, slider.value], ['range', '5', '10', '1', '7'],
     'Settings should offer whole numbers from 5 to 10, starting from the stored value');

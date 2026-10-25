@@ -46,12 +46,6 @@ function getToggleSettings(settings: typeof Settings, hooks?: ToggleSettingHooks
       normalize: S.normalizeOverlayPageThemeAdaptationEnabled
     },
     {
-      inputId: '_x_extension_overlay_open_tabs_default_visible_toggle_2026_unique_',
-      kind: 'overlay-open-tabs-default-visible',
-      key: S.OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
-      normalize: S.normalizeOverlayOpenTabsDefaultVisible
-    },
-    {
       inputId: '_x_extension_bookmark_folder_icons_visible_toggle_2026_unique_',
       kind: 'bookmark-folder-icons-visible',
       key: S.BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY,
@@ -147,11 +141,6 @@ function getToggleSettings(settings: typeof Settings, hooks?: ToggleSettingHooks
       normalize: S.normalizeProgressTrackingEnabled,
       repairOnLoad: false,
       repairOnChange: false
-    },
-    {
-      inputId: '_x_extension_search_fuzzy_pinyin_toggle_2026_unique_',
-      key: S.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY,
-      normalize: S.normalizeSearchFuzzyPinyinEnabled
     }
   ];
   return Object.freeze(entries.map((entry) => Object.freeze(entry)));

@@ -10,8 +10,7 @@ import type {
   NewtabWidthMode,
   OverlayEnterAnimation,
   OverlaySizeMode,
-  RestrictedAction,
-  SearchResultPriority
+  RestrictedAction
 } from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
 import { isHtmlTag } from '../shared/dom-guards';
@@ -36,7 +35,6 @@ interface LanguageState {
   currentNewtabWidthMode: NewtabWidthMode;
   currentOverlaySizeMode: OverlaySizeMode;
   currentOverlayEnterAnimation: OverlayEnterAnimation;
-  currentSearchResultPriority: SearchResultPriority;
   currentRecentMode: RecentMode;
   currentRestrictedAction: RestrictedAction;
   currentNewtabTopContentMode: NewtabTopContentMode;
@@ -51,7 +49,6 @@ interface LanguageState {
   currentRecentCount: number;
   currentBookmarkCount: number;
   currentBookmarkColumns: number;
-  currentSearchResultDisplayLimit: number;
   currentOverlayWidth: number | null;
   // Made as the page starts; null until then.
   webDavSettingsController: ReturnType<typeof createWebDavController> | null;
@@ -82,7 +79,6 @@ interface LanguageDeps {
   setNewtabWidthTabState(mode: unknown): void;
   setOverlaySizeTabState(mode: unknown): void;
   setOverlayEnterAnimationTabState(mode: unknown): void;
-  setSearchResultPriorityTabState(priority: unknown): void;
   setRecentModeTabState(mode: unknown): void;
   setRestrictedActionTabState(action: unknown): void;
   setNewtabTopContentTabState(mode: unknown): void;
@@ -98,7 +94,6 @@ interface LanguageDeps {
   renderRecentCountControl(value: unknown): void;
   renderBookmarkRowsControl(value: unknown): void;
   renderBookmarkColumnsControl(value: unknown): void;
-  renderSearchResultDisplayLimitControl(value: unknown): void;
   renderOverlayWidthControl(value: unknown): void;
   renderSettingsNavigation(tabKey: SettingsTabKey): void;
   // Redraws the tab sections React views draw from translated copy.
@@ -130,7 +125,6 @@ function createLanguage(deps: LanguageDeps) {
     setNewtabWidthTabState,
     setOverlaySizeTabState,
     setOverlayEnterAnimationTabState,
-    setSearchResultPriorityTabState,
     setRecentModeTabState,
     setRestrictedActionTabState,
     setNewtabTopContentTabState,
@@ -146,7 +140,6 @@ function createLanguage(deps: LanguageDeps) {
     renderRecentCountControl,
     renderBookmarkRowsControl,
     renderBookmarkColumnsControl,
-    renderSearchResultDisplayLimitControl,
     renderOverlayWidthControl,
     renderSettingsNavigation,
     renderTabSections,
@@ -346,7 +339,6 @@ function createLanguage(deps: LanguageDeps) {
       setNewtabWidthTabState(optionsState.currentNewtabWidthMode);
       setOverlaySizeTabState(optionsState.currentOverlaySizeMode);
       setOverlayEnterAnimationTabState(optionsState.currentOverlayEnterAnimation);
-      setSearchResultPriorityTabState(optionsState.currentSearchResultPriority);
       setRecentModeTabState(optionsState.currentRecentMode);
       setRestrictedActionTabState(optionsState.currentRestrictedAction);
       setNewtabTopContentTabState(optionsState.currentNewtabTopContentMode);
@@ -365,7 +357,6 @@ function createLanguage(deps: LanguageDeps) {
       renderRecentCountControl(optionsState.currentRecentCount);
       renderBookmarkRowsControl(optionsState.currentBookmarkCount);
       renderBookmarkColumnsControl(optionsState.currentBookmarkColumns);
-      renderSearchResultDisplayLimitControl(optionsState.currentSearchResultDisplayLimit);
       renderOverlayWidthControl(optionsState.currentOverlayWidth);
       renderSettingsNavigation(optionsState.currentActiveSettingsTab);
       renderTabSections();

@@ -1,59 +1,29 @@
 // The page's switches: registering each toggle with its React control,
-// their checked state, settings a browser does not support, and the search
-// result source checkboxes.
-import type { SearchSourceType } from '../domain/search/types';
+// their checked state, and settings a browser does not support.
 import type * as Settings from '../domain/settings';
 import { isHtmlElement, isHtmlTag } from '../shared/dom-guards';
 import * as LumnoCursorTooltip from '../shared/ui/cursor-tooltip';
 import type { CursorTooltipController } from '../shared/ui/cursor-tooltip';
-import type { TooltipController } from '../shared/ui/tooltip';
-import type { createSearchSourceOrderController } from './options-search-source-order';
 import * as LumnoOptionsToggleSettings from './options-toggle-settings';
 import type { ToggleSettingsEntry } from './options-toggle-settings';
 import type { GetMessage } from './options-types';
 import type {
   createSettingsControlsApi,
-  RequiredCheckboxItemModel,
   ToggleControlController,
   ToggleControlRenderModel
 } from './react/settings-controls';
 
-interface ToggleControlsState {
-  searchSourceOrderController: Pick<ReturnType<typeof createSearchSourceOrderController>,
-    'moveLocal' | 'sortLocalSourceTypes' | 'isLocalDefault' | 'resetLocal'>;
-  // Made once the page has mounted its tooltips.
-  tooltipController: Pick<TooltipController, 'hide'> | null;
-}
-
 interface ToggleControlsDeps {
-  optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>,
-    'createToggleControlController' | 'createRequiredCheckboxGroupController'>;
+  optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>, 'createToggleControlController'>;
   SETTINGS: typeof Settings;
   syncNewtabShortcutSubcontrolAvailability(): void;
   newtabOpenInNewTabToggles: HTMLInputElement[];
   getMessage: GetMessage;
-  searchResultSourceTypeInputs: HTMLInputElement[];
-  searchResultSourceTypeGroupHost: HTMLElement | null;
-  searchResultSourceTypeResetButton: HTMLElement | null;
-  // The keys each list shows right now, in order, for the move buttons.
-  renderedSearchSourceKeys: Record<string, string[]>;
-  normalizeSearchResultSourceTypes(value: unknown): SearchSourceType[];
-  persistSearchResultSourceTypes(value: unknown): void;
-  optionsState: ToggleControlsState;
 }
 
 interface ToggleControlRecord {
   controller: ToggleControlController;
   model: ToggleControlRenderModel;
-}
-
-// A search result source checkbox, as the page wrote it.
-interface SourceTypeItem {
-  checked: boolean;
-  id: string;
-  labelFallback: string;
-  labelKey: string;
-  value: string;
 }
 
 function createToggleControls(deps: ToggleControlsDeps) {
@@ -62,17 +32,8 @@ function createToggleControls(deps: ToggleControlsDeps) {
     SETTINGS,
     syncNewtabShortcutSubcontrolAvailability,
     newtabOpenInNewTabToggles,
-    getMessage,
-    searchResultSourceTypeInputs,
-    searchResultSourceTypeGroupHost,
-    searchResultSourceTypeResetButton,
-    renderedSearchSourceKeys,
-    normalizeSearchResultSourceTypes,
-    persistSearchResultSourceTypes
+    getMessage
   } = deps;
-
-  // The page state object shared with options.js and the other modules.
-  const optionsState = deps.optionsState;
 
   const optionsToggleControlRecords = new Map<HTMLInputElement, ToggleControlRecord>();
   const unsupportedSettingInputIds = new Set<string>();
@@ -187,97 +148,13 @@ function createToggleControls(deps: ToggleControlsDeps) {
   }
   markBrowserUnsupportedSettings();
 
-  const searchResultSourceTypeItems: SourceTypeItem[] = searchResultSourceTypeInputs.map((input) => {
-    const label = input.closest('label');
-    const text = label ? label.querySelector('span[data-i18n]') : null;
-    return {
-      checked: input.checked,
-      id: input.id,
-      labelFallback: text ? text.textContent || '' : '',
-      labelKey: text ? text.getAttribute('data-i18n') || '' : '',
-      value: input.getAttribute('data-search-result-source-type') || ''
-    };
-  }).filter((item) => item.value);
-  const searchResultSourceTypeController =
-    optionsSettingsControlsApi.createRequiredCheckboxGroupController(
-      searchResultSourceTypeGroupHost,
-      {
-        kind: 'search-result-sources',
-        onMove: (fromIndex, toIndex) => optionsState.searchSourceOrderController.moveLocal(
-          renderedSearchSourceKeys.local || [],
-          fromIndex,
-          toIndex
-        ),
-        onChange(values) {
-          const selected = new Set(values);
-          let changedInput: HTMLInputElement | null = null;
-          for (const input of searchResultSourceTypeInputs) {
-            const next = selected.has(input.getAttribute('data-search-result-source-type') || '');
-            if (input.checked !== next && !changedInput) {
-              changedInput = input;
-            }
-            input.checked = next;
-          }
-          if (changedInput) {
-            changedInput.dispatchEvent(new Event('change'));
-          }
-        }
-      }
-    );
-  function renderSearchResultSourceTypeControl(value: unknown): void {
-    const selected = new Set<string>(normalizeSearchResultSourceTypes(value));
-    const values = optionsState.searchSourceOrderController.sortLocalSourceTypes(
-      searchResultSourceTypeItems.map((item) => item.value)
-    );
-    renderedSearchSourceKeys.local = values;
-    const items: RequiredCheckboxItemModel[] = [];
-    values.forEach((type) => {
-      const item = searchResultSourceTypeItems.find((entry) => entry.value === type);
-      if (item) {
-        items.push({
-          checked: selected.has(item.value),
-          id: item.id,
-          label: getMessage(item.labelKey, item.labelFallback),
-          labelKey: item.labelKey,
-          value: item.value
-        });
-      }
-    });
-    searchResultSourceTypeController.render({ items, sortable: true });
-    if (searchResultSourceTypeResetButton) {
-      searchResultSourceTypeResetButton.hidden = selected.size >= searchResultSourceTypeItems.length &&
-        optionsState.searchSourceOrderController.isLocalDefault();
-    }
-  }
-
-  // Reset beside the title shows while the types differ from their defaults:
-  // every type back on and in its usual order (the order step can be undone).
-  if (searchResultSourceTypeResetButton) {
-    searchResultSourceTypeResetButton.addEventListener('click', () => {
-      optionsState.searchSourceOrderController.resetLocal();
-      persistSearchResultSourceTypes(searchResultSourceTypeItems.map((item) => item.value));
-      // The button hides itself, so its tooltip and focus move on.
-      if (optionsState.tooltipController) {
-        optionsState.tooltipController.hide();
-      }
-      const firstInput = searchResultSourceTypeGroupHost &&
-        searchResultSourceTypeGroupHost.querySelector('input[type="checkbox"]');
-      if (isHtmlElement(firstInput)) {
-        firstInput.focus({ preventScroll: true });
-      }
-    });
-  }
-
   return {
     registerOptionsToggleControl,
     setOptionsToggleState,
     TOGGLE_SETTINGS,
-    toggleSettingControls,
-    searchResultSourceTypeItems,
-    searchResultSourceTypeController,
-    renderSearchResultSourceTypeControl
+    toggleSettingControls
   };
 }
 
 export { createToggleControls };
-export type { SourceTypeItem, ToggleControlsDeps, ToggleControlsState };
+export type { ToggleControlsDeps };

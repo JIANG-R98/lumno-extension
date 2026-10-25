@@ -1,7 +1,14 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createReactRootController, type ReactRootController } from './root-controller';
 import { SettingDivider, SettingSwitch, SettingTitle, type SettingRowUnsupported } from './setting-rows';
+import { SegmentedControl, type SegmentedControlRenderModel } from './segmented-control';
 import { SettingSelect, type SelectControlRenderModel } from './select-control';
+import {
+  RangeSliderControl,
+  RequiredCheckboxGroup,
+  type RangeSliderControlRenderModel,
+  type RequiredCheckboxGroupRenderModel
+} from './settings-controls';
 import type { ToggleControlRenderModel } from './toggle-control';
 
 // How a row sits in its section.
@@ -56,6 +63,36 @@ export type SettingsRowModel =
     select: SelectControlRenderModel;
     searchable?: boolean;
   })
+  | (SettingsRowLook & {
+    type: 'segmented';
+    key: string;
+    rowId?: string;
+    title: SettingsTitleModel;
+    // The option group's own id and accessible name.
+    groupId: string;
+    ariaLabel: string;
+    segmented: SegmentedControlRenderModel;
+  })
+  | (SettingsRowLook & {
+    type: 'slider';
+    key: string;
+    rowId?: string;
+    title: SettingsTitleModel;
+    // The slider's frame, which the page's styles size.
+    hostId: string;
+    slider: RangeSliderControlRenderModel;
+  })
+  | (SettingsRowLook & {
+    type: 'checkbox-group';
+    key: string;
+    rowId?: string;
+    title: SettingsTitleModel;
+    groupId: string;
+    ariaLabel: string;
+    checkboxes: RequiredCheckboxGroupRenderModel;
+    // Puts the choices back as they were; hidden while they already are.
+    reset?: { id: string; label: string; hidden: boolean } | null;
+  })
   | (SettingsRowLook & { type: 'label'; key: string; title: SettingsTitleModel })
   | { type: 'reveal'; key: string; id: string; expanded: boolean; rows: SettingsRowModel[] }
   // Drawn by the view that holds the rows.
@@ -64,6 +101,13 @@ export type SettingsRowModel =
 export interface SettingsRowsHandlers {
   onToggle(key: string, checked: boolean): void;
   onSelect(key: string, value: string): void;
+  // Segmented options report through onSelect too.
+  onSlide?(key: string, value: number): void;
+  onCheck?(key: string, values: string[]): void;
+  onMove?(key: string, fromIndex: number, toIndex: number): void;
+  onReset?(key: string): void;
+  // Lets the page drag a checkbox group's items; returns the detach.
+  attachDrag?(key: string, host: HTMLElement | null): () => void;
   // Viewport space covered by sticky page chrome, so menus never open beneath it.
   getViewportTopInset?(): number;
   renderSlot?(key: string): ReactNode;
@@ -99,10 +143,10 @@ function getUnsupportedProps(unsupported: SettingRowUnsupported | null | undefin
   };
 }
 
-function RowTitle({ title, description }: { title: SettingsTitleModel; description?: string }) {
+function RowTitle({ title, description, action }: { title: SettingsTitleModel; description?: string; action?: ReactNode }) {
   return (
     <div>
-      <SettingTitle badge={title.badge} id={title.id} info={title.info} title={title.text} />
+      <SettingTitle action={action} badge={title.badge} id={title.id} info={title.info} title={title.text} />
       {description ? <p className="_x_extension_setting_desc_2024_unique_">{description}</p> : null}
     </div>
   );
@@ -177,6 +221,49 @@ export function SettingsReveal({ id, expanded, children }: { id: string; expande
   );
 }
 
+// A group of checkboxes at least one of which stays checked, optionally
+// reordered by dragging or with Alt and the arrow keys.
+function CheckboxGroupRow({
+  row,
+  handlers
+}: {
+  row: Extract<SettingsRowModel, { type: 'checkbox-group' }>;
+  handlers: SettingsRowsHandlers;
+}) {
+  const groupRef = useRef<HTMLDivElement>(null);
+  const { attachDrag } = handlers;
+  useLayoutEffect(() => (attachDrag ? attachDrag(row.key, groupRef.current) : undefined), [attachDrag, row.key]);
+  const reset = row.reset ? (
+    <button
+      aria-label={row.reset.label}
+      className="_x_extension_shortcut_group_action_2024_unique_ _x_extension_range_slider_reset_button_2026_unique_"
+      data-tooltip={row.reset.label}
+      hidden={row.reset.hidden}
+      id={row.reset.id}
+      onClick={() => {
+        handlers.onReset?.(row.key);
+        // The button hides itself, so focus moves to the first choice.
+        groupRef.current?.querySelector('input')?.focus({ preventScroll: true });
+      }}
+      type="button"
+    >
+      <i aria-hidden="true" className="ri-icon ri-size-14 ri-reset-left-line" />
+    </button>
+  ) : null;
+  return (
+    <div className={getRowClassName(row)} id={row.rowId}>
+      <RowTitle action={reset} title={row.title} />
+      <div aria-label={row.ariaLabel} className="_x_extension_checkbox_group_2026_unique_" id={row.groupId} ref={groupRef} role="group">
+        <RequiredCheckboxGroup
+          model={row.checkboxes}
+          onChange={(values) => handlers.onCheck?.(row.key, values)}
+          onMove={handlers.onMove ? (fromIndex, toIndex) => handlers.onMove?.(row.key, fromIndex, toIndex) : undefined}
+        />
+      </div>
+    </div>
+  );
+}
+
 function SettingsRow({ row, handlers }: { row: SettingsRowModel; handlers: SettingsRowsHandlers }) {
   switch (row.type) {
     case 'header':
@@ -222,6 +309,31 @@ function SettingsRow({ row, handlers }: { row: SettingsRowModel; handlers: Setti
           />
         </div>
       );
+    case 'segmented':
+      return (
+        <div className={getRowClassName(row)} id={row.rowId}>
+          <RowTitle title={row.title} />
+          <div
+            aria-label={row.ariaLabel}
+            className="_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_"
+            id={row.groupId}
+            role="radiogroup"
+          >
+            <SegmentedControl model={row.segmented} onSelect={(value) => handlers.onSelect(row.key, value)} />
+          </div>
+        </div>
+      );
+    case 'slider':
+      return (
+        <div className={getRowClassName(row)} id={row.rowId}>
+          <RowTitle title={row.title} />
+          <div id={row.hostId}>
+            <RangeSliderControl model={row.slider} onInput={(value) => handlers.onSlide?.(row.key, value)} />
+          </div>
+        </div>
+      );
+    case 'checkbox-group':
+      return <CheckboxGroupRow handlers={handlers} row={row} />;
     case 'label':
       return (
         <div className={getRowClassName(row)}>

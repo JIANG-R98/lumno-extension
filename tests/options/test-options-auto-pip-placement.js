@@ -22,7 +22,7 @@ const { createOptionsPage } = require('../helpers/options-page');
   const updateNotice = row('_x_extension_update_notice_toggle_2026_unique_');
   const autoPip = row('_x_extension_auto_pip_toggle_2024_unique_');
   const tabSwitcher = row('_x_extension_tab_switcher_toggle_2026_unique_');
-  const searchResults = general.querySelector('[data-i18n="settings_search_results_section_title"]');
+  const searchResults = page.byId('_x_extension_search_result_tab_position_select_2026_unique_');
   assert.ok(updateNotice && general.contains(updateNotice), 'update notice switch should live in general settings');
   assert.ok(autoPip && general.contains(autoPip), 'auto picture-in-picture should live in general settings');
   assert.ok(tabSwitcher && general.contains(tabSwitcher), 'Alt+Q tab switcher should live in general settings');

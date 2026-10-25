@@ -1,15 +1,13 @@
 // Binds every setting control to its storage key: the one-time loads and
 // the setting binder entries for each section, including the daily quote.
 import * as CUSTOM_QUOTES from '../domain/custom-quotes';
-import type { SearchSourceType } from '../domain/search/types';
 import type * as Settings from '../domain/settings';
 import type {
   NewtabGlassStyle,
   NewtabTopContentMode,
   NewtabWidthMode,
   OverlayEnterAnimation,
-  OverlaySizeMode,
-  SearchResultPriority
+  OverlaySizeMode
 } from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
 import type { BatchedStorageArea } from '../platform/settings-storage';
@@ -64,9 +62,6 @@ interface SettingBindsDeps {
   renderNewtabShortcutSizeControl(value: unknown, disabled?: boolean): void;
   renderNewtabShortcutGapControl(value: unknown, disabled?: boolean): void;
   syncNewtabShortcutSubcontrolAvailability(): void;
-  SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY: string;
-  normalizeSearchResultSourceTypes(value: unknown): SearchSourceType[];
-  setSearchResultSourceTypeState(value: unknown): void;
   storageChanges: Pick<StorageChangeRegistry, 'on'>;
   settingBinder: SettingBinder;
   RECENT_COUNT_STORAGE_KEY: string;
@@ -90,10 +85,6 @@ interface SettingBindsDeps {
   OVERLAY_FONT_LABELS_STORAGE_KEY: string;
   overlayFontFallbackSelect: HTMLSelectElement | null;
   OVERLAY_FONT_FALLBACK_STORAGE_KEY: string;
-  SEARCH_RESULT_PRIORITY_STORAGE_KEY: string;
-  normalizeSearchResultPriority(value: unknown): SearchResultPriority;
-  searchResultPrioritySelect: HTMLSelectElement | null;
-  setSearchResultPriorityTabState(priority: unknown): void;
   newtabGlassStyleSelect: HTMLSelectElement | null;
   syncNewtabGlassThemeVisibility(): void;
   setNewtabGlassThemeTabState(theme: unknown): void;
@@ -108,11 +99,6 @@ interface SettingBindsDeps {
   registerOptionsToggleControl(input: HTMLInputElement | null, kind: string): ToggleControlController | null;
   setConditionalSettingsElementVisibility(element: HTMLElement | null, visible: boolean): boolean;
   animateOptionsPanelHeight(mutateLayout: LayoutMutation): boolean;
-  SEARCH_RESULT_TAB_POSITION_STORAGE_KEY: string;
-  searchResultTabPositionSelect: HTMLSelectElement | null;
-  SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY: string;
-  normalizeSearchResultDisplayLimit(value: unknown): number;
-  renderSearchResultDisplayLimitControl(value: unknown): void;
   renderOverlayWidthControl(value: unknown): void;
   RECENT_MODE_STORAGE_KEY: string;
   recentModeSelect: HTMLSelectElement | null;
@@ -179,9 +165,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     renderNewtabShortcutSizeControl,
     renderNewtabShortcutGapControl,
     syncNewtabShortcutSubcontrolAvailability,
-    SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
-    normalizeSearchResultSourceTypes,
-    setSearchResultSourceTypeState,
     storageChanges,
     settingBinder,
     RECENT_COUNT_STORAGE_KEY,
@@ -205,10 +188,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     OVERLAY_FONT_LABELS_STORAGE_KEY,
     overlayFontFallbackSelect,
     OVERLAY_FONT_FALLBACK_STORAGE_KEY,
-    SEARCH_RESULT_PRIORITY_STORAGE_KEY,
-    normalizeSearchResultPriority,
-    searchResultPrioritySelect,
-    setSearchResultPriorityTabState,
     newtabGlassStyleSelect,
     syncNewtabGlassThemeVisibility,
     setNewtabGlassThemeTabState,
@@ -219,11 +198,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     registerOptionsToggleControl,
     setConditionalSettingsElementVisibility,
     animateOptionsPanelHeight,
-    SEARCH_RESULT_TAB_POSITION_STORAGE_KEY,
-    searchResultTabPositionSelect,
-    SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
-    normalizeSearchResultDisplayLimit,
-    renderSearchResultDisplayLimitControl,
     renderOverlayWidthControl,
     RECENT_MODE_STORAGE_KEY,
     recentModeSelect,
@@ -358,24 +332,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     });
   }
 
-  function loadSearchResultSourceTypes(): void {
-    const storageArea = optionsState.storageArea;
-    if (!storageArea) {
-      return;
-    }
-    storageArea.get([SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY], (items) => {
-      const stored = items ? items[SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY] : undefined;
-      const sourceTypes = normalizeSearchResultSourceTypes(stored);
-      setSearchResultSourceTypeState(sourceTypes);
-      if (!Array.isArray(stored) || JSON.stringify(stored) !== JSON.stringify(sourceTypes)) {
-        storageArea.set({ [SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY]: sourceTypes });
-      }
-    });
-  }
-  storageChanges.on(SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY, (changes) => {
-    setSearchResultSourceTypeState(changes[SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY].newValue);
-  });
-
   loadLanguageSetting();
   settingBinder.bindSetting({
     key: RECENT_COUNT_STORAGE_KEY,
@@ -480,18 +436,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     refreshSelects: true
   });
   settingBinder.bindSetting({
-    key: SEARCH_RESULT_PRIORITY_STORAGE_KEY,
-    normalize: normalizeSearchResultPriority,
-    apply(priority) {
-      if (searchResultPrioritySelect) {
-        searchResultPrioritySelect.value = priority;
-      }
-      setSearchResultPriorityTabState(priority);
-    },
-    repairOnChange: false,
-    refreshSelects: true
-  });
-  settingBinder.bindSetting({
     key: SETTINGS.NEWTAB_GLASS_STYLE_STORAGE_KEY,
     normalize: SETTINGS.normalizeNewtabGlassStyle,
     apply(style) {
@@ -551,24 +495,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     }, { area: 'local' });
     dailyQuoteSettings.load();
   }
-  settingBinder.bindSetting({
-    key: SEARCH_RESULT_TAB_POSITION_STORAGE_KEY,
-    normalize: SETTINGS.normalizeSearchResultTabPosition,
-    apply(position) {
-      if (searchResultTabPositionSelect) {
-        searchResultTabPositionSelect.value = position;
-      }
-    },
-    repairOnLoad: false,
-    repairOnChange: false,
-    refreshSelects: true
-  });
-  loadSearchResultSourceTypes();
-  settingBinder.bindSetting({
-    key: SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
-    normalize: normalizeSearchResultDisplayLimit,
-    apply: renderSearchResultDisplayLimitControl
-  });
   settingBinder.bindSetting({
     key: RECENT_MODE_STORAGE_KEY,
     // A missing or unknown mode starts as "most visited"; a later change to

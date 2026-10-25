@@ -492,7 +492,7 @@ describe('Options page storage wiring', () => {
       await vi.waitFor(() => {
         expect(label()).toBe(messages.search_result_tab_position_end.message);
       });
-      expect(host.dataset.selectKind).toBe('search-result-tab-position');
+      expect(host.dataset.select).toBe('_x_extension_search_result_tab_position_select_2026_unique_');
       await act(async () => {
         queryHtmlTag(host, 'button', 'button')?.click();
       });

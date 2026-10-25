@@ -18,6 +18,7 @@ import * as LumnoOptionsFallbackShortcut from './options-fallback-shortcut';
 import * as LumnoOptionsFeedbackSupportSection from './options-feedback-support';
 import * as OPTIONS_FORMS from './options-forms';
 import * as OPTIONS_GENERAL_FEATURES_SECTION from './options-general-features-section';
+import * as OPTIONS_GENERAL_SEARCH_SECTION from './options-general-search-section';
 import * as OPTIONS_LABS_SECTION from './options-labs-section';
 import * as OPTIONS_LANGUAGE from './options-language';
 import * as OPTIONS_NAVIGATION from './options-navigation';
@@ -105,7 +106,6 @@ import * as OPTIONS_STATE from './options-state';
   const bookmarkRowsControlHost = getHtmlElement(document, '_x_extension_bookmark_rows_control_2026_unique_');
   const bookmarkColumnsSettingRow = getHtmlElement(document, '_x_extension_bookmark_columns_setting_row_2026_unique_');
   const bookmarkColumnsControlHost = getHtmlElement(document, '_x_extension_bookmark_columns_control_2026_unique_');
-  const searchResultDisplayLimitControlHost = getHtmlElement(document, '_x_extension_search_result_display_limit_control_2026_unique_');
   const overlayWidthControlHost = getHtmlElement(document, '_x_extension_overlay_width_control_2026_unique_');
   const bookmarkFolderIconsVisibleRow = getHtmlElement(document, '_x_extension_bookmark_folder_icons_visible_row_2026_unique_');
   const newtabTopContentTabsWrap = getHtmlElement(document, '_x_extension_newtab_top_content_tabs_wrap_2026_unique_');
@@ -133,14 +133,9 @@ import * as OPTIONS_STATE from './options-state';
   const newtabShortcutGapRow = getHtmlElement(document, '_x_extension_newtab_shortcut_gap_setting_row_2026_unique_');
   const newtabShortcutGapControlHost = getHtmlElement(document, '_x_extension_newtab_shortcut_gap_control_2026_unique_');
   const restrictedActionSelect = getHtmlTag(document, '_x_extension_restricted_action_select_2024_unique_', 'select');
-  const searchResultPrioritySelect = getHtmlTag(document, '_x_extension_search_result_priority_select_2026_unique_', 'select');
-  const searchResultTabPositionSelect = getHtmlTag(document, '_x_extension_search_result_tab_position_select_2026_unique_', 'select');
   const newtabGlassStyleSelect = getHtmlTag(document, '_x_extension_newtab_glass_style_select_2026_unique_', 'select');
   const newtabGlassThemeRow = getHtmlElement(document, '_x_extension_newtab_glass_theme_row_2026_unique_');
   const newtabGlassThemeTabsWrap = getHtmlElement(document, '_x_extension_newtab_glass_theme_tabs_wrap_2026_unique_');
-  const searchResultSourceTypeGroupHost = getHtmlElement(document, '_x_extension_search_result_source_types_2026_unique_');
-  const searchResultSourceTypeResetButton = getHtmlElement(document, '_x_extension_search_result_source_types_reset_2026_unique_');
-  const searchResultSourceTypeInputs = queryHtmlTags(document, 'input[data-search-result-source-type]', 'input');
   const overlayPageThemeAdaptationRow = getHtmlElement(document, '_x_extension_overlay_page_theme_adaptation_row_2026_unique_');
   const overlayPageThemeAdaptationInfoHost = getHtmlElement(document, '_x_extension_overlay_page_theme_adaptation_info_2026_unique_');
   const restrictedActionInfoHost = getHtmlElement(document, '_x_extension_restricted_action_info_2026_unique_');
@@ -152,8 +147,6 @@ import * as OPTIONS_STATE from './options-state';
   const fallbackShortcutWrap = queryHtmlElement(document, '._x_extension_shortcuts_hotkey_wrap_2024_unique_');
   const restrictedActionSelectWrap = getHtmlElement(document, '_x_extension_restricted_action_tabs_wrap_2024_unique_');
   const restrictedActionTabButtons = queryHtmlElements(document, 'button[data-restricted-action]');
-  const searchResultPriorityTabsWrap = getHtmlElement(document, '_x_extension_search_result_priority_tabs_wrap_2026_unique_');
-  const searchResultPriorityTabButtons = queryHtmlElements(document, 'button[data-search-result-priority]');
   const clearShortcutButton = getHtmlElement(document, '_x_extension_clear_shortcut_2024_unique_');
   const resetShortcutButton = getHtmlElement(document, '_x_extension_reset_shortcut_2024_unique_');
   const shortcutsStatus = getHtmlElement(document, '_x_extension_shortcuts_status_2024_unique_');
@@ -229,10 +222,6 @@ import * as OPTIONS_STATE from './options-state';
     NEWTAB_TIME_FONT_WEIGHT_DEFAULT,
     RESTRICTED_ACTION_STORAGE_KEY,
     RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
-    SEARCH_RESULT_PRIORITY_STORAGE_KEY,
-    SEARCH_RESULT_TAB_POSITION_STORAGE_KEY,
-    SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
-    SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
     FALLBACK_SHORTCUT_STORAGE_KEY,
     SITE_SEARCH_STORAGE_KEY,
     SITE_SEARCH_DISABLED_STORAGE_KEY,
@@ -286,7 +275,7 @@ import * as OPTIONS_STATE from './options-state';
           renderSiteSearchList();
         }
         renderAggregateSearchList();
-        renderSearchResultSourceTypeControl(collectCheckedSearchResultSourceTypes());
+        generalSearchSection.render();
       }
     }),
     tooltipController: LumnoTooltip.createController({
@@ -462,7 +451,6 @@ import * as OPTIONS_STATE from './options-state';
     setNewtabWidthTabState: (...args) => setNewtabWidthTabState(...args),
     setOverlaySizeTabState: (...args) => setOverlaySizeTabState(...args),
     setOverlayEnterAnimationTabState: (...args) => setOverlayEnterAnimationTabState(...args),
-    setSearchResultPriorityTabState: (...args) => setSearchResultPriorityTabState(...args),
     setRecentModeTabState: (...args) => setRecentModeTabState(...args),
     setRestrictedActionTabState: (...args) => setRestrictedActionTabState(...args),
     setNewtabTopContentTabState: (...args) => setNewtabTopContentTabState(...args),
@@ -478,11 +466,11 @@ import * as OPTIONS_STATE from './options-state';
     renderRecentCountControl: (...args) => renderRecentCountControl(...args),
     renderBookmarkRowsControl: (...args) => renderBookmarkRowsControl(...args),
     renderBookmarkColumnsControl: (...args) => renderBookmarkColumnsControl(...args),
-    renderSearchResultDisplayLimitControl: (...args) => renderSearchResultDisplayLimitControl(...args),
     renderOverlayWidthControl: (...args) => renderOverlayWidthControl(...args),
     renderSettingsNavigation,
     renderTabSections: () => {
       generalFeaturesSection.render();
+      generalSearchSection.render();
       labsSection.render();
       blacklistSection.render();
     },
@@ -590,11 +578,9 @@ import * as OPTIONS_STATE from './options-state';
     syncNewtabGlassThemeVisibility,
     updateRecentModeTabsVisibility,
     setRestrictedActionTabState,
-    setSearchResultPriorityTabState,
     handleNewtabWidthSelection,
     handleOverlaySizeSelection,
     handleOverlayEnterAnimationSelection,
-    handleSearchResultPrioritySelection,
     handleNewtabTopContentSelection,
     handleNewtabGlassThemeSelection,
     handleNewtabTimeInkSelection,
@@ -620,14 +606,11 @@ import * as OPTIONS_STATE from './options-state';
     recentModeTabsWrap,
     RESTRICTED_ACTION_STORAGE_KEY,
     RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
-    normalizeSearchResultPriority: (...args) => normalizeSearchResultPriority(...args),
     newtabWidthSelect,
     NEWTAB_WIDTH_MODE_STORAGE_KEY,
     notifyNewtabSectionsRefresh,
     OVERLAY_SIZE_MODE_STORAGE_KEY,
     OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
-    searchResultPrioritySelect,
-    SEARCH_RESULT_PRIORITY_STORAGE_KEY,
     NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
     recentModeSelect,
     RECENT_MODE_STORAGE_KEY,
@@ -657,13 +640,7 @@ import * as OPTIONS_STATE from './options-state';
     normalizeNewtabShortcutColumns,
     normalizeNewtabShortcutSize,
     normalizeNewtabShortcutGap,
-    inferNewtabShortcutColumnsFromWidth,
-    normalizeSearchResultPriority,
-    normalizeSearchResultDisplayLimit,
-    normalizeSearchResultSourceTypes,
-    collectCheckedSearchResultSourceTypes,
-    setSearchResultSourceTypeState,
-    persistSearchResultSourceTypes
+    inferNewtabShortcutColumnsFromWidth
   } = OPTIONS_NORMALIZERS.createNormalizers({
     SETTINGS,
     bookmarkColumnsSettingRow,
@@ -680,11 +657,7 @@ import * as OPTIONS_STATE from './options-state';
     NEWTAB_SHORTCUT_GAP_MAX,
     NEWTAB_SHORTCUT_GAP_DEFAULT,
     NEWTAB_SHORTCUT_WIDTH_MIN,
-    NEWTAB_SHORTCUT_WIDTH_MAX,
-    searchResultSourceTypeInputs,
-    renderSearchResultSourceTypeControl: (...args) => renderSearchResultSourceTypeControl(...args),
-    SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
-    optionsState
+    NEWTAB_SHORTCUT_WIDTH_MAX
   });
 
   optionsState.newtabWidthTabsController = createOptionsSegmentedControlController(
@@ -706,11 +679,6 @@ import * as OPTIONS_STATE from './options-state';
     restrictedActionSelectWrap,
     'restricted-action',
     handleRestrictedActionSelection
-  );
-  optionsState.searchResultPriorityTabsController = createOptionsSegmentedControlController(
-    searchResultPriorityTabsWrap,
-    'search-result-priority',
-    handleSearchResultPrioritySelection
   );
   optionsState.newtabTopContentTabsController = createOptionsSegmentedControlController(
     newtabTopContentTabsWrap,
@@ -743,6 +711,16 @@ import * as OPTIONS_STATE from './options-state';
       platform: optionsState.isMacPlatform ? 'mac' : 'windows'
     }) || (optionsState.isMacPlatform ? '⌥Q' : 'Alt+Q')
   });
+  const generalSearchSection = OPTIONS_GENERAL_SEARCH_SECTION.createGeneralSearchSection({
+    host: getHtmlElement(document, '_x_extension_general_search_section_2026_unique_'),
+    optionsSettingsControlsApi,
+    storageArea: optionsState.storageArea,
+    SETTINGS,
+    orderController: optionsState.searchSourceOrderController,
+    getMessage,
+    getViewportTopInset: getMenuViewportTopInset,
+    hideTooltip: () => optionsState.tooltipController.hide()
+  });
   const labsSection = OPTIONS_LABS_SECTION.createLabsSection({
     host: queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="labs"]'),
     optionsSettingsControlsApi,
@@ -769,23 +747,13 @@ import * as OPTIONS_STATE from './options-state';
     registerOptionsToggleControl,
     setOptionsToggleState,
     TOGGLE_SETTINGS,
-    toggleSettingControls,
-    searchResultSourceTypeItems,
-    searchResultSourceTypeController,
-    renderSearchResultSourceTypeControl
+    toggleSettingControls
   } = OPTIONS_TOGGLE_CONTROLS.createToggleControls({
     optionsSettingsControlsApi,
     SETTINGS,
     syncNewtabShortcutSubcontrolAvailability: (...args) => syncNewtabShortcutSubcontrolAvailability(...args),
     newtabOpenInNewTabToggles,
-    getMessage,
-    searchResultSourceTypeInputs,
-    searchResultSourceTypeGroupHost,
-    searchResultSourceTypeResetButton,
-    renderedSearchSourceKeys,
-    normalizeSearchResultSourceTypes,
-    persistSearchResultSourceTypes,
-    optionsState
+    getMessage
   });
 
   optionsState.settingsNavigationController = optionsSettingsNavigationApi.createSettingsNavigationController(tabsContainer, {
@@ -956,17 +924,11 @@ import * as OPTIONS_STATE from './options-state';
   function animateOptionsPanelHeight(mutateLayout: LayoutMutation): boolean {
     return optionsState.panelHeightAnimator.animate(mutateLayout);
   }
-  optionsState.searchSourceOrderController.attachLocalDrag(searchResultSourceTypeGroupHost);
   storageChanges.on(SEARCH_SOURCE_ORDER_STORAGE_KEY, (changes) => {
     optionsState.searchSourceOrderController.accept(changes[SEARCH_SOURCE_ORDER_STORAGE_KEY].newValue);
   });
   optionsState.searchSourceOrderController.load();
 
-  if (searchResultSourceTypeController) {
-    renderSearchResultSourceTypeControl(
-      searchResultSourceTypeItems.filter((item) => item.checked).map((item) => item.value)
-    );
-  }
 
   const {
     deriveLegacyAggregateSearchAutoGroupEnabled,
@@ -1064,7 +1026,6 @@ import * as OPTIONS_STATE from './options-state';
   }
   const selectKinds: Array<[HTMLSelectElement | null, string]> = [
     [languageSelect, 'language'],
-    [searchResultTabPositionSelect, 'search-result-tab-position'],
     [newtabGlassStyleSelect, 'newtab-glass-style'],
     [newtabTimeFontSelect, 'newtab-time-font']
   ];
@@ -1134,7 +1095,6 @@ import * as OPTIONS_STATE from './options-state';
     renderBookmarkRowsControl,
     renderRecentCountControl,
     renderBookmarkColumnsControl,
-    renderSearchResultDisplayLimitControl,
     renderOverlayWidthControl
   } = OPTIONS_SLIDER_CONTROLS.createSliderControls({
     optionsSettingsControlsApi,
@@ -1184,9 +1144,6 @@ import * as OPTIONS_STATE from './options-state';
     bookmarkColumnsControlHost,
     normalizeBookmarkColumns,
     BOOKMARK_COLUMNS_STORAGE_KEY,
-    searchResultDisplayLimitControlHost,
-    normalizeSearchResultDisplayLimit,
-    SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
     overlayWidthControlHost,
     optionsState
   });
@@ -1201,7 +1158,6 @@ import * as OPTIONS_STATE from './options-state';
   renderRecentCountControl(4);
   renderBookmarkRowsControl(8);
   renderBookmarkColumnsControl(6);
-  renderSearchResultDisplayLimitControl(10);
   renderOverlayWidthControl(null);
 
   function renderFeedbackSupport() {
@@ -1220,7 +1176,6 @@ import * as OPTIONS_STATE from './options-state';
   setNewtabWidthTabState(optionsState.currentNewtabWidthMode);
   setOverlaySizeTabState(optionsState.currentOverlaySizeMode);
   setOverlayEnterAnimationTabState(optionsState.currentOverlayEnterAnimation);
-  setSearchResultPriorityTabState(optionsState.currentSearchResultPriority);
   setRecentModeTabState(optionsState.currentRecentMode);
   setRestrictedActionTabState(optionsState.currentRestrictedAction);
   setNewtabTopContentTabState(optionsState.currentNewtabTopContentMode);
@@ -1455,8 +1410,6 @@ import * as OPTIONS_STATE from './options-state';
     handleOverlaySizeSelection,
     overlayEnterAnimationTabButtons,
     handleOverlayEnterAnimationSelection,
-    searchResultPrioritySelect,
-    handleSearchResultPrioritySelection,
     newtabTimeFontSelect,
     SETTINGS,
     renderNewtabTimeFontWeightControl,
@@ -1470,12 +1423,6 @@ import * as OPTIONS_STATE from './options-state';
     OVERLAY_FONT_LABELS_STORAGE_KEY,
     newtabGlassStyleSelect,
     syncNewtabGlassThemeVisibility,
-    searchResultTabPositionSelect,
-    SEARCH_RESULT_TAB_POSITION_STORAGE_KEY,
-    searchResultPriorityTabButtons,
-    searchResultSourceTypeInputs,
-    persistSearchResultSourceTypes,
-    collectCheckedSearchResultSourceTypes,
     recentModeSelect,
     handleRecentModeSelection,
     recentModeTabButtons,
@@ -1511,6 +1458,7 @@ import * as OPTIONS_STATE from './options-state';
   }, true);
 
   generalFeaturesSection.bindSettings(settingBinder);
+  generalSearchSection.bindSettings(settingBinder);
   labsSection.bindSettings(settingBinder);
   blacklistSection.bindSettings(settingBinder);
   shortcutsSection.bindSettings(settingBinder);
@@ -1542,9 +1490,6 @@ import * as OPTIONS_STATE from './options-state';
     renderNewtabShortcutSizeControl,
     renderNewtabShortcutGapControl,
     syncNewtabShortcutSubcontrolAvailability,
-    SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
-    normalizeSearchResultSourceTypes,
-    setSearchResultSourceTypeState,
     storageChanges,
     settingBinder,
     RECENT_COUNT_STORAGE_KEY,
@@ -1568,10 +1513,6 @@ import * as OPTIONS_STATE from './options-state';
     OVERLAY_FONT_LABELS_STORAGE_KEY,
     overlayFontFallbackSelect,
     OVERLAY_FONT_FALLBACK_STORAGE_KEY,
-    SEARCH_RESULT_PRIORITY_STORAGE_KEY,
-    normalizeSearchResultPriority,
-    searchResultPrioritySelect,
-    setSearchResultPriorityTabState,
     newtabGlassStyleSelect,
     syncNewtabGlassThemeVisibility,
     setNewtabGlassThemeTabState,
@@ -1582,11 +1523,6 @@ import * as OPTIONS_STATE from './options-state';
     registerOptionsToggleControl,
     setConditionalSettingsElementVisibility,
     animateOptionsPanelHeight,
-    SEARCH_RESULT_TAB_POSITION_STORAGE_KEY,
-    searchResultTabPositionSelect,
-    SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
-    normalizeSearchResultDisplayLimit,
-    renderSearchResultDisplayLimitControl,
     renderOverlayWidthControl,
     RECENT_MODE_STORAGE_KEY,
     recentModeSelect,

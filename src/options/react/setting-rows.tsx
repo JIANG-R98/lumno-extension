@@ -28,8 +28,13 @@ export function SettingTitle({
   id,
   title,
   badge,
-  info
-}: Pick<SettingToggleRowModel, 'title' | 'badge' | 'info'> & { id?: string }) {
+  info,
+  action
+}: Pick<SettingToggleRowModel, 'title' | 'badge' | 'info'> & {
+  id?: string;
+  // A small button after the title, such as a reset.
+  action?: ReactNode;
+}) {
   return (
     <p className="_x_extension_setting_title_2024_unique_" id={id}>
       <span className="_x_extension_setting_title_with_icon_2024_unique_">
@@ -40,6 +45,7 @@ export function SettingTitle({
           </span>
         ) : null}
         {info ? <InfoButton tooltip={info} /> : null}
+        {action}
       </span>
     </p>
   );

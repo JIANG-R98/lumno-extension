@@ -2,7 +2,6 @@
 // and the buttons that open the browser's shortcut page or onboarding.
 import type * as Settings from '../domain/settings';
 import type { NewtabGlassStyle, NewtabOpenInNewTab, NewtabOpenInNewTabSurface } from '../domain/settings';
-import type { SearchSourceType } from '../domain/search/types';
 import type { StorageAreaLike } from '../domain/storage-port';
 import * as LumnoMessaging from '../platform/messaging';
 import type { BatchedStorageArea } from '../platform/settings-storage';
@@ -36,13 +35,11 @@ interface ControlEventsDeps {
   handleOverlaySizeSelection(value: string): void;
   overlayEnterAnimationTabButtons: Element[];
   handleOverlayEnterAnimationSelection(value: string): void;
-  searchResultPrioritySelect: HTMLSelectElement | null;
-  handleSearchResultPrioritySelection(value: string): void;
   newtabTimeFontSelect: HTMLSelectElement | null;
   SETTINGS: Pick<typeof Settings,
     'NEWTAB_GLASS_STYLE_STORAGE_KEY' | 'NEWTAB_TIME_FONT_STORAGE_KEY' | 'getNewtabTimeFont' |
     'normalizeNewtabGlassStyle' | 'normalizeNewtabOpenInNewTab' | 'normalizeNewtabTimeFont' |
-    'normalizeOverlayFontFamily' | 'normalizeOverlayFontLabels' | 'normalizeSearchResultTabPosition'>;
+    'normalizeOverlayFontFamily' | 'normalizeOverlayFontLabels'>;
   renderNewtabTimeFontWeightControl(value: unknown): void;
   NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY: string;
   refreshCustomSelects(): void;
@@ -54,12 +51,6 @@ interface ControlEventsDeps {
   OVERLAY_FONT_LABELS_STORAGE_KEY: string;
   newtabGlassStyleSelect: HTMLSelectElement | null;
   syncNewtabGlassThemeVisibility(): void;
-  searchResultTabPositionSelect: HTMLSelectElement | null;
-  SEARCH_RESULT_TAB_POSITION_STORAGE_KEY: string;
-  searchResultPriorityTabButtons: Element[];
-  searchResultSourceTypeInputs: HTMLInputElement[];
-  persistSearchResultSourceTypes(value: unknown): void;
-  collectCheckedSearchResultSourceTypes(): SearchSourceType[];
   recentModeSelect: HTMLSelectElement | null;
   handleRecentModeSelection(value: string): void;
   recentModeTabButtons: Element[];
@@ -89,8 +80,6 @@ function createControlEvents(deps: ControlEventsDeps) {
     handleOverlaySizeSelection,
     overlayEnterAnimationTabButtons,
     handleOverlayEnterAnimationSelection,
-    searchResultPrioritySelect,
-    handleSearchResultPrioritySelection,
     newtabTimeFontSelect,
     SETTINGS,
     renderNewtabTimeFontWeightControl,
@@ -104,12 +93,6 @@ function createControlEvents(deps: ControlEventsDeps) {
     OVERLAY_FONT_LABELS_STORAGE_KEY,
     newtabGlassStyleSelect,
     syncNewtabGlassThemeVisibility,
-    searchResultTabPositionSelect,
-    SEARCH_RESULT_TAB_POSITION_STORAGE_KEY,
-    searchResultPriorityTabButtons,
-    searchResultSourceTypeInputs,
-    persistSearchResultSourceTypes,
-    collectCheckedSearchResultSourceTypes,
     recentModeSelect,
     handleRecentModeSelection,
     recentModeTabButtons,
@@ -161,11 +144,6 @@ function createControlEvents(deps: ControlEventsDeps) {
       button.addEventListener('click', () => {
         handleOverlayEnterAnimationSelection(button.getAttribute('data-overlay-enter-animation') || '');
       });
-    });
-  }
-  if (searchResultPrioritySelect) {
-    searchResultPrioritySelect.addEventListener('change', () => {
-      handleSearchResultPrioritySelection(searchResultPrioritySelect.value);
     });
   }
   if (newtabTimeFontSelect) {
@@ -226,31 +204,6 @@ function createControlEvents(deps: ControlEventsDeps) {
         storageArea.set({ [SETTINGS.NEWTAB_GLASS_STYLE_STORAGE_KEY]: style });
       }
       refreshCustomSelects();
-    });
-  }
-  if (searchResultTabPositionSelect) {
-    searchResultTabPositionSelect.addEventListener('change', () => {
-      const position = SETTINGS.normalizeSearchResultTabPosition(searchResultTabPositionSelect.value);
-      searchResultTabPositionSelect.value = position;
-      const storageArea = optionsState.storageArea;
-      if (storageArea) {
-        storageArea.set({ [SEARCH_RESULT_TAB_POSITION_STORAGE_KEY]: position });
-      }
-      refreshCustomSelects();
-    });
-  }
-  if (searchResultPriorityTabButtons.length > 0) {
-    searchResultPriorityTabButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        handleSearchResultPrioritySelection(button.getAttribute('data-search-result-priority') || '');
-      });
-    });
-  }
-  if (searchResultSourceTypeInputs.length > 0) {
-    searchResultSourceTypeInputs.forEach((input) => {
-      input.addEventListener('change', () => {
-        persistSearchResultSourceTypes(collectCheckedSearchResultSourceTypes());
-      });
     });
   }
   if (recentModeSelect) {
