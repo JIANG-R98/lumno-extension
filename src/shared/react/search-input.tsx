@@ -3,8 +3,10 @@ import {
   useId,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
-  type KeyboardEvent as ReactKeyboardEvent
+  type KeyboardEvent as ReactKeyboardEvent,
+  type RefObject
 } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
@@ -13,7 +15,9 @@ import {
   type PopconfirmClassNames,
   type PopconfirmCopy
 } from './popconfirm-content';
-import { queryHtmlElement, queryHtmlElements, queryHtmlTag, querySvgElement } from '../dom-lookup';
+import { queryHtmlElement, queryHtmlTag, querySvgElement } from '../dom-lookup';
+import { createRenderStore, type RenderStore } from './render-store';
+import { innerHtml } from './inner-html';
 import { ModeMenu, createModeMenuStore, type ModeMenuStore, type ModeMenuView } from './search/mode-menu';
 import {
   ModeTag,
@@ -225,9 +229,7 @@ function SecondaryAction({ action }: { action: SecondaryActionConfig }) {
         aria-haspopup={confirm ? 'dialog' : undefined}
         aria-label={action.ariaLabel || ''}
         className={action.className || ''}
-        dangerouslySetInnerHTML={{
-          __html: action.html || ''
-        }}
+        dangerouslySetInnerHTML={innerHtml(action.html || '')}
         id={action.id}
         onClick={confirm ? toggle : undefined}
         onKeyDown={confirm ? onKeyDown : undefined}
@@ -264,14 +266,99 @@ function SecondaryAction({ action }: { action: SecondaryActionConfig }) {
 }
 
 // The stores the input mode controller draws the mode tag, Tab hint and
-// scope panel through.
-interface ModeStores {
+// scope panel through, and the field's text as the chrome around it last
+// saw it.
+interface InputStores {
   modeMenu: ModeMenuStore;
   modeTag: ModeTagStore;
   tabHint: TabHintStore;
+  value: RenderStore<string>;
 }
 
-function SearchInput({ config, stores }: { config: SearchInputConfig; stores: ModeStores }) {
+// Shows the hover look while the pointer is over the button; a press,
+// leaving or losing focus ends it.
+function useHoverActive() {
+  const [active, setActive] = useState(false);
+  const end = () => setActive(false);
+  return {
+    active,
+    handlers: {
+      onMouseEnter: () => setActive(true),
+      onMouseLeave: end,
+      onBlur: end,
+      onPointerUp: end,
+      onPointerCancel: end
+    }
+  };
+}
+
+function RightIcon({ config }: { config: SearchInputConfig }) {
+  const hover = useHoverActive();
+  return (
+    <button
+      {...noTranslateProps()}
+      {...hover.handlers}
+      aria-label={config.rightIconAlt || 'Settings'}
+      className={CLASSES.rightIcon}
+      dangerouslySetInnerHTML={innerHtml(
+        config.rightIconHtml ||
+          '<i class="_x_extension_svg_2024_unique_ ri-icon ri-size-16 ri-settings-line" aria-hidden="true"></i>'
+      )}
+      data-hover-active={hover.active ? 'true' : 'false'}
+      id={config.rightIconId || '_x_extension_search_right_icon_2024_unique_'}
+      onClick={(event) => {
+        hover.handlers.onMouseLeave();
+        event.currentTarget.blur();
+      }}
+      type="button"
+    />
+  );
+}
+
+// Shown only while the field has text; clearing keeps focus, and the
+// caret, in the field.
+function ClearAction({ action, visible, inputRef }: {
+  action: NonNullable<SearchInputConfig['clearAction']>;
+  visible: boolean;
+  inputRef: RefObject<HTMLInputElement | null>;
+}) {
+  const hover = useHoverActive();
+  return (
+    <button
+      {...noTranslateProps()}
+      {...hover.handlers}
+      aria-label={action.ariaLabel || 'Clear'}
+      className={CLASSES.clearAction}
+      dangerouslySetInnerHTML={innerHtml(action.html || '<i class="ri-icon ri-size-16 ri-close-line" aria-hidden="true"></i>')}
+      data-hover-active={hover.active && visible ? 'true' : undefined}
+      hidden={!visible}
+      id={action.id}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const input = inputRef.current;
+        if (!input) {
+          return;
+        }
+        input.value = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.focus({ preventScroll: true });
+      }}
+      onMouseDown={(event) => event.preventDefault()}
+      type="button"
+    />
+  );
+}
+
+function SearchInput({ config, stores }: { config: SearchInputConfig; stores: InputStores }) {
+  const value = useSyncExternalStore(stores.value.subscribe, stores.value.getSnapshot);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // An input border set by the surface replaces the underline.
+  const hasBorderOverride = Boolean(
+    config.inputStyleOverrides &&
+      Object.prototype.hasOwnProperty.call(config.inputStyleOverrides, 'border-bottom')
+  );
+  const dividerVisible = !hasBorderOverride && (Boolean(config.showUnderlineWhenEmpty) || Boolean(value.trim()));
   const modeSurface =
     config.modeBadge?.surface === 'overlay' ? 'overlay' : 'newtab';
   const modePrefixId =
@@ -299,7 +386,9 @@ function SearchInput({ config, stores }: { config: SearchInputConfig; stores: Mo
         autoComplete="off"
         className={CLASSES.input}
         id={config.inputId || '_x_extension_search_input_2024_unique_'}
+        onInput={(event) => stores.value.render(event.currentTarget.value)}
         placeholder={config.placeholder || 'Search or enter URL…'}
+        ref={inputRef}
         type="text"
       />
       <ModeTag prefixId={modePrefixId} store={stores.modeTag} />
@@ -308,39 +397,12 @@ function SearchInput({ config, stores }: { config: SearchInputConfig; stores: Mo
       <div
         {...noTranslateProps()}
         className={CLASSES.divider}
+        data-visible={dividerVisible ? 'true' : 'false'}
         id={config.dividerId || '_x_extension_input_divider_2024_unique_'}
       />
-      {config.showRightIcon === false ? null : (
-        <button
-          {...noTranslateProps()}
-          aria-label={config.rightIconAlt || 'Settings'}
-          className={CLASSES.rightIcon}
-          dangerouslySetInnerHTML={{
-            __html:
-              config.rightIconHtml ||
-              '<i class="_x_extension_svg_2024_unique_ ri-icon ri-size-16 ri-settings-line" aria-hidden="true"></i>'
-          }}
-          id={
-            config.rightIconId ||
-            '_x_extension_search_right_icon_2024_unique_'
-          }
-          type="button"
-        />
-      )}
+      {config.showRightIcon === false ? null : <RightIcon config={config} />}
       {config.clearAction ? (
-        <button
-          {...noTranslateProps()}
-          aria-label={config.clearAction.ariaLabel || 'Clear'}
-          className={CLASSES.clearAction}
-          dangerouslySetInnerHTML={{
-            __html:
-              config.clearAction.html ||
-              '<i class="ri-icon ri-size-16 ri-close-line" aria-hidden="true"></i>'
-          }}
-          hidden
-          id={config.clearAction.id}
-          type="button"
-        />
+        <ClearAction action={config.clearAction} inputRef={inputRef} visible={value !== ''} />
       ) : null}
       {config.secondaryAction ? (
         <SecondaryAction action={config.secondaryAction} />
@@ -428,7 +490,6 @@ export function createSearchInput(
   config: SearchInputConfig = {}
 ): SearchInputParts {
   ensureStyles(config);
-  const isolated = Boolean(config.styleRoot);
   const container = document.createElement('div');
   container.id =
     config.containerId || '_x_extension_input_container_2024_unique_';
@@ -440,10 +501,11 @@ export function createSearchInput(
   container.setAttribute('translate', 'no');
   const root = createRoot(container);
   roots.set(container, root);
-  const stores: ModeStores = {
+  const stores: InputStores = {
     modeMenu: createModeMenuStore(),
     modeTag: createModeTagStore(),
-    tabHint: createTabHintStore()
+    tabHint: createTabHintStore(),
+    value: createRenderStore('')
   };
   flushSync(() => root.render(<SearchInput config={config} stores={stores} />));
   const input = queryHtmlTag(container, 'input', 'input');
@@ -499,19 +561,13 @@ export function createSearchInput(
     root.unmount();
     throw new Error('Search mode mount');
   }
-  // Shown only while the field has text; programmatic value changes are picked up by the caller.
+  // Brings the chrome up to date after the surface set the field's text
+  // itself; returns whether the clear button shows.
   const syncClearAction = () => {
-    if (!clearAction) {
-      return false;
+    if (input.value !== stores.value.getSnapshot()) {
+      stores.value.render(input.value);
     }
-    const visible = input.value !== '';
-    if (clearAction.hidden === visible) {
-      clearAction.hidden = !visible;
-      if (!visible) {
-        clearAction.removeAttribute('data-hover-active');
-      }
-    }
-    return visible;
+    return Boolean(clearAction) && input.value !== '';
   };
   const modeMenuView: ModeMenuView = {
     render: (model, handlers) => stores.modeMenu.render({ model, handlers })
@@ -548,50 +604,23 @@ export function createSearchInput(
     secondaryAction,
     syncClearAction
   };
-  (
-    [
-      [container, 'container', config.containerStyleOverrides],
-      [input, 'input', config.inputStyleOverrides],
-      [divider, 'divider', config.dividerStyleOverrides],
-      [icon, 'icon', config.iconStyleOverrides],
-      [rightIcon, 'rightIcon', config.rightIconStyleOverrides]
-    ] as const
-  ).forEach(([element, key, overrides]) => {
-    if (overrides) {
-      applyStyles(element, overrides);
+  // The surface's own looks for the parts, set once.
+  const overrides: Array<[HTMLElement | null, StyleOverrides | undefined]> = [
+    [container, config.containerStyleOverrides],
+    [input, config.inputStyleOverrides],
+    [divider, config.dividerStyleOverrides],
+    [icon, config.iconStyleOverrides],
+    [rightIcon, config.rightIconStyleOverrides],
+    [clearAction, config.clearAction ? config.clearAction.styleOverrides : undefined]
+  ];
+  overrides.forEach(([element, styles]) => {
+    if (element && styles) {
+      applyStyles(element, styles);
     }
   });
-  const hasBorderOverride = Boolean(
-    config.inputStyleOverrides &&
-      Object.prototype.hasOwnProperty.call(
-        config.inputStyleOverrides,
-        'border-bottom'
-      )
-  );
-  const setDividerVisible = (visible: boolean) => {
-    if (isolated) {
-      divider.dataset.visible = visible ? 'true' : 'false';
-    } else {
-      divider.style.setProperty(
-        'display',
-        visible ? 'block' : 'none'
-      );
-    }
-  };
-  const updateDivider = () => {
-    if (hasBorderOverride) {
-      setDividerVisible(false);
-    } else if (config.showUnderlineWhenEmpty) {
-      setDividerVisible(true);
-    } else {
-      setDividerVisible(Boolean(input.value.trim()));
-    }
-  };
-  updateDivider();
   if (config.onInput) {
     input.addEventListener('input', config.onInput);
   }
-  input.addEventListener('input', updateDivider);
   if (config.onFocus) {
     input.addEventListener('focus', config.onFocus);
   }
@@ -600,71 +629,6 @@ export function createSearchInput(
   }
   if (config.onKeyDown) {
     input.addEventListener('keydown', config.onKeyDown);
-  }
-  const setRightIconVisualState = (active: boolean) => {
-    rightIcon.dataset.hoverActive = active ? 'true' : 'false';
-    if (isolated) {
-      return;
-    }
-    applyStyles(
-      rightIcon,
-      {
-        background: active
-          ? 'var(--x-ext-input-icon-hover-bg, rgba(148, 163, 184, 0.16))'
-          : 'transparent',
-        color: active
-          ? 'var(--x-ext-input-icon-hover, #4B5563)'
-          : 'var(--x-ext-input-icon, #9CA3AF)',
-        transform: 'none'
-      }
-    );
-  };
-  setRightIconVisualState(false);
-  queryHtmlElements(rightIcon, '*')
-    .forEach((node) => {
-      if (!isolated) {
-        applyStyles(
-          node,
-          { cursor: 'inherit', 'pointer-events': 'none' }
-        );
-      }
-    });
-  rightIcon.addEventListener('mouseenter', () =>
-    setRightIconVisualState(true)
-  );
-  ['mouseleave', 'blur', 'pointerup', 'pointercancel'].forEach((type) => {
-    rightIcon.addEventListener(type, () => setRightIconVisualState(false));
-  });
-  rightIcon.addEventListener('click', () => {
-    setRightIconVisualState(false);
-    rightIcon.blur();
-  });
-  if (clearAction) {
-    if (config.clearAction?.styleOverrides) {
-      applyStyles(clearAction, config.clearAction.styleOverrides);
-    }
-    const resetClearVisualState = () => {
-      clearAction.removeAttribute('data-hover-active');
-    };
-    clearAction.addEventListener('mouseenter', () => {
-      clearAction.setAttribute('data-hover-active', 'true');
-    });
-    ['mouseleave', 'blur', 'pointerup', 'pointercancel'].forEach((type) => {
-      clearAction.addEventListener(type, resetClearVisualState);
-    });
-    // Keep focus (and the caret) in the field while clearing.
-    clearAction.addEventListener('mousedown', (event) => {
-      event.preventDefault();
-    });
-    clearAction.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      input.value = '';
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.focus({ preventScroll: true });
-    });
-    input.addEventListener('input', syncClearAction);
-    syncClearAction();
   }
   return parts;
 }

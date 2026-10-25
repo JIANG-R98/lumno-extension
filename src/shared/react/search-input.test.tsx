@@ -52,7 +52,7 @@ describe('Shared search input React island', () => {
     expect(parts.input.placeholder).toBe('Search');
     expect(parts.icon.id).toBe('icon');
     expect(parts.rightIcon.getAttribute('aria-label')).toBe('Settings');
-    expect(parts.divider.style.display).toBe('none');
+    expect(parts.divider.dataset.visible).toBe('false');
     expect(parts.modePrefix.parentElement).toBe(parts.container);
     expect(parts.modePrefix.tagName).toBe('BUTTON');
     expect(parts.modePrefixIconFrame.parentElement).toBe(parts.modePrefix);
@@ -91,10 +91,10 @@ describe('Shared search input React island', () => {
     expect(onInput).toHaveBeenCalledTimes(1);
     expect(onKeyDown).toHaveBeenCalledTimes(1);
     expect(onBlur).toHaveBeenCalledTimes(1);
-    expect(parts.divider.style.display).toBe('block');
+    expect(parts.divider.dataset.visible).toBe('true');
   });
 
-  it('keeps isolated underline and right-icon visual state in attributes', () => {
+  it('shows the underline and the right icon\'s hover look through attributes', () => {
     const styleRoot = document.createElement('div').attachShadow({
       mode: 'open'
     });
@@ -104,40 +104,93 @@ describe('Shared search input React island', () => {
     });
 
     expect(parts.divider.dataset.visible).toBe('true');
+    expect(parts.rightIcon.dataset.hoverActive).toBe('false');
+    // React follows the pointer with mouseover and mouseout.
     act(() => {
       parts.rightIcon.dispatchEvent(
-        new MouseEvent('mouseenter', { bubbles: true })
+        new MouseEvent('mouseover', { bubbles: true, relatedTarget: document.body })
       );
     });
     expect(parts.rightIcon.dataset.hoverActive).toBe('true');
+    expect(parts.rightIcon.getAttribute('style')).toBeNull();
     act(() => {
       parts.rightIcon.dispatchEvent(
-        new MouseEvent('mouseleave', { bubbles: true })
+        new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body })
       );
     });
     expect(parts.rightIcon.dataset.hoverActive).toBe('false');
   });
 
-  it('keeps the right-icon hit box still while exposing visual hover state', () => {
-    const parts = create();
+  it('hides the underline under a surface border of its own', () => {
+    const parts = create({ inputStyleOverrides: { 'border-bottom': '1px solid red' } });
 
     act(() => {
-      parts.rightIcon.dispatchEvent(
-        new MouseEvent('mouseenter', { bubbles: true })
-      );
+      parts.input.value = 'lumno';
+      parts.input.dispatchEvent(new InputEvent('input', { bubbles: true }));
     });
 
-    expect(parts.rightIcon.style.transform).toBe('none');
-    expect(parts.rightIcon.dataset.hoverActive).toBe('true');
+    expect(parts.divider.dataset.visible).toBe('false');
+  });
+
+  it('shows the clear button while the field has text and clears it in place', () => {
+    const onInput = vi.fn();
+    const parts = create({
+      clearAction: { ariaLabel: 'Clear', id: 'clear', styleOverrides: { '--x-ext-input-clear-right': '79px' } },
+      onInput
+    });
+    const clear = required(parts.clearAction, 'parts.clearAction');
+    expect(clear.hidden).toBe(true);
+    expect(clear.style.getPropertyValue('--x-ext-input-clear-right')).toBe('79px');
 
     act(() => {
-      parts.rightIcon.dispatchEvent(
-        new MouseEvent('mouseleave', { bubbles: true })
-      );
+      parts.input.focus();
+      parts.input.value = 'lumno';
+      parts.input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    });
+    expect(clear.hidden).toBe(false);
+
+    const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    act(() => {
+      clear.dispatchEvent(press);
+      clear.click();
+    });
+    expect(press.defaultPrevented).toBe(true);
+    expect(parts.input.value).toBe('');
+    expect(onInput).toHaveBeenCalledTimes(2);
+    expect(document.activeElement).toBe(parts.input);
+    expect(clear.hidden).toBe(true);
+  });
+
+  it('keeps the buttons\' icons in place while the user types', () => {
+    const parts = create({ clearAction: { id: 'clear' } });
+    const rightIconGlyph = parts.rightIcon.firstElementChild;
+    const clearGlyph = required(parts.clearAction, 'parts.clearAction').firstElementChild;
+
+    act(() => {
+      parts.input.value = 'l';
+      parts.input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+      parts.input.value = 'lu';
+      parts.input.dispatchEvent(new InputEvent('input', { bubbles: true }));
     });
 
-    expect(parts.rightIcon.style.transform).toBe('none');
-    expect(parts.rightIcon.dataset.hoverActive).toBe('false');
+    expect(parts.rightIcon.firstElementChild).toBe(rightIconGlyph);
+    expect(parts.clearAction?.firstElementChild).toBe(clearGlyph);
+  });
+
+  it('follows text the surface sets itself once asked', () => {
+    const parts = create({ clearAction: { id: 'clear' } });
+    const clear = required(parts.clearAction, 'parts.clearAction');
+
+    parts.input.value = 'set by the surface';
+    expect(clear.hidden).toBe(true);
+    let visible = false;
+    act(() => {
+      visible = parts.syncClearAction();
+    });
+
+    expect(visible).toBe(true);
+    expect(clear.hidden).toBe(false);
+    expect(parts.divider.dataset.visible).toBe('true');
   });
 
   it('renders a React-owned secondary action and mode badge', () => {

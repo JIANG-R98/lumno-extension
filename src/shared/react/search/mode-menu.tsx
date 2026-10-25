@@ -20,6 +20,7 @@ import { className as MENU_SURFACE_CLASS } from '../../ui/menu-surface';
 import { hostClassName as CURSOR_TOOLTIP_HOST_CLASS } from '../../ui/cursor-tooltip';
 import { getModeLineIconPaths } from '../../search/input-mode/line-icons';
 import { createRenderStore, type RenderStore } from '../render-store';
+import { innerHtml } from '../inner-html';
 import { FONT_STACK, NO_TRANSLATE, SURFACE_VARS, type ModeSurface } from './mode-surface';
 import type { ModeMenuRange } from '../../search/input-mode/types';
 
@@ -420,7 +421,7 @@ function GroupTitle({ title, groupKey, hidden, first, last, model, handlers }: {
 const EMPTY_ART_SIZE = 96;
 
 function EmptyState({ text, hidden }: { text: string; hidden: boolean }) {
-  const artMarkup = useMemo(() => getEmptyStateArtMarkup('noResults', { size: EMPTY_ART_SIZE }), []);
+  const artMarkup = useMemo(() => innerHtml(getEmptyStateArtMarkup('noResults', { size: EMPTY_ART_SIZE })), []);
   const artRef = useRef<HTMLSpanElement>(null);
   // Its theme follows the panel's while it shows.
   useLayoutEffect(() => {
@@ -429,7 +430,7 @@ function EmptyState({ text, hidden }: { text: string; hidden: boolean }) {
   }, [hidden]);
   return (
     <div {...NO_TRANSLATE} className="x-lumno-search-input-mode__menu-empty" hidden={hidden} role="status">
-      <span className="x-lumno-search-input-mode__menu-empty-art" dangerouslySetInnerHTML={{ __html: artMarkup }} ref={artRef} />
+      <span className="x-lumno-search-input-mode__menu-empty-art" dangerouslySetInnerHTML={artMarkup} ref={artRef} />
       <span data-i18n="overlay_empty_result">{text}</span>
     </div>
   );
