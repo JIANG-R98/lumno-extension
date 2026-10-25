@@ -228,13 +228,10 @@ interface CrtRenderParams {
   curvature?: number;
 }
 
-// The parts of a canvas the renderer uses.
-type CrtCanvas = Pick<HTMLCanvasElement, 'width' | 'height' | 'getContext'> &
-  Partial<Pick<HTMLCanvasElement, 'addEventListener' | 'removeEventListener'>>;
-
 interface CrtRendererOptions {
   documentObj?: Document;
-  canvas?: CrtCanvas;
+  // The canvas to draw on; a new one when missing.
+  canvas?: HTMLCanvasElement;
   onContextLost?: () => void;
   // Gets whether the restored context still renders.
   onContextRestored?: (supported: boolean) => void;
@@ -567,7 +564,7 @@ function createWebGL2Pipeline(gl: GL): Pipeline | null {
 function createRenderer(options?: CrtRendererOptions | null) {
   const settings: CrtRendererOptions = options || {};
   const documentObj = settings.documentObj || globalThis.document;
-  const canvas: CrtCanvas | null = settings.canvas || (documentObj && typeof documentObj.createElement === 'function'
+  const canvas: HTMLCanvasElement | null = settings.canvas || (documentObj && typeof documentObj.createElement === 'function'
     ? documentObj.createElement('canvas')
     : null);
   if (!canvas || typeof canvas.getContext !== 'function') return null;

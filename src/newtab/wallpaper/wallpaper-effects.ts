@@ -1,9 +1,122 @@
-// @ts-nocheck
+// The wallpaper effects: a canvas over the wallpaper that blurs, grains,
+// dithers or redraws it, with the preferences that pick and tune the effect.
 import * as LumnoNewtabCrtWebGL from './wallpaper-crt-webgl';
+import type { CrtRenderer } from './wallpaper-crt-webgl';
 import { getSamplerSize } from '../../domain/wallpaper-sampler-size';
 
-const EFFECT_TYPES = ['none', 'blur', 'grain', 'blocks', 'halftone', 'dither', 'ascii', 'crt'];
-const EFFECT_INK_TONES = ['auto', 'dark', 'light'];
+type EffectType = 'none' | 'blur' | 'grain' | 'blocks' | 'halftone' | 'dither' | 'ascii' | 'crt';
+// Which tones an effect draws in: 'auto' follows the color mode.
+type EffectInkTone = 'auto' | 'dark' | 'light';
+
+// The effect settings of one color mode.
+interface WallpaperEffectPrefs {
+  version: number;
+  type: EffectType;
+  inkTone: EffectInkTone;
+  // 0-100.
+  strength: number;
+  size: number;
+  spacing: number;
+  texture: number;
+  // 0-5.
+  blockSize: number;
+  // The CRT effect's physical values: strength and bloom 0-20, RGB offset
+  // 0-100, curvature 0-35.
+  crtStrength: number;
+  crtBloom: number;
+  crtRgbOffset: number;
+  crtCurvature: number;
+}
+
+// The stored preferences: one set per color mode.
+interface WallpaperEffectStoragePrefs {
+  version: number;
+  light: WallpaperEffectPrefs;
+  dark: WallpaperEffectPrefs;
+}
+
+interface RgbColor {
+  red: number;
+  green: number;
+  blue: number;
+}
+
+interface Viewport {
+  width: number;
+  height: number;
+}
+
+// How light a sampled image is, 0-1, and the ink that reads on it.
+interface ImageAnalysis {
+  averageLuminance: number;
+  lowLuminance: number;
+  highLuminance: number;
+  useDarkInk: boolean;
+}
+
+// The wallpaper read into a small canvas, with how its pixels map onto the
+// full image.
+interface EffectSampler extends ImageAnalysis {
+  width: number;
+  height: number;
+  naturalWidth: number;
+  naturalHeight: number;
+  scaleX: number;
+  scaleY: number;
+  data: Uint8ClampedArray;
+}
+
+// A small copy of the wallpaper, cropped the same way, with the full image's
+// width and height (0 when unknown).
+interface WallpaperSample {
+  url: string;
+  width: number;
+  height: number;
+}
+
+// Where a cover-fit wallpaper sits in the viewport.
+interface RenderedMetrics {
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+  renderedWidth: number;
+  renderedHeight: number;
+}
+
+type NoiseKind = 'coarse' | 'fine';
+
+// Draws one layered effect onto a context.
+type EffectLayerDrawer = (
+  targetContext: CanvasRenderingContext2D,
+  viewport: Viewport,
+  sampler: EffectSampler,
+  inkTone: string,
+  strength: number,
+  size: number,
+  spacing: number
+) => void;
+
+// The page the effects draw on, and the wallpaper they draw from. W is the
+// page's wallpaper record, which the effects only hand back to it.
+interface WallpaperEffectsOptions<W> {
+  documentObj?: Document;
+  windowObj?: Window;
+  getCurrentWallpaper?: () => W | null | undefined;
+  getWallpaperImageUrl?: (wallpaper: W) => string;
+  // Every effect but CRT reads the wallpaper through a sampler a few hundred
+  // pixels across, so it samples this copy instead of waiting for the full
+  // image to load and decode.
+  getWallpaperSample?: (wallpaper: W) => WallpaperSample | null | undefined;
+  shouldAnimateTransition?: () => boolean;
+  onRender?: () => void;
+  // The wallpaper's average luminance remembered from an earlier page (0-1),
+  // or null. The blur frost picks its blend from it, so the first frame
+  // needs no full-size decode.
+  getLuminanceHint?: (imageUrl: string) => number | null | undefined;
+}
+
+const EFFECT_TYPES: readonly EffectType[] = ['none', 'blur', 'grain', 'blocks', 'halftone', 'dither', 'ascii', 'crt'];
+const EFFECT_INK_TONES: readonly EffectInkTone[] = ['auto', 'dark', 'light'];
 const BAYER_4X4 = [
   [0, 8, 2, 10],
   [12, 4, 14, 6],
@@ -16,7 +129,7 @@ const MAX_EFFECT_CANVAS_SCALE = 1.6;
 const PARAMETER_RENDER_DEBOUNCE_MS = 72;
 const MIN_BLUR_RADIUS_PX = 2;
 const MAX_BLUR_RADIUS_PX = 32;
-const DEFAULT_PREFS = {
+const DEFAULT_PREFS: WallpaperEffectPrefs = {
   version: 11,
   type: 'none',
   inkTone: 'auto',
@@ -31,19 +144,19 @@ const DEFAULT_PREFS = {
   crtCurvature: 18
 };
 
-function getOption(options, key, fallback) {
-  if (options && Object.prototype.hasOwnProperty.call(options, key)) {
-    return options[key];
-  }
-  return fallback;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
 }
 
-function getFunction(options, key, fallback) {
-  const value = getOption(options, key, fallback || function() {});
-  return typeof value === 'function' ? value : (fallback || function() {});
+function isEffectType(value: unknown): value is EffectType {
+  return EFFECT_TYPES.some((type) => type === value);
 }
 
-function clampNumber(value, min, max) {
+function isEffectInkTone(value: unknown): value is EffectInkTone {
+  return EFFECT_INK_TONES.some((tone) => tone === value);
+}
+
+function clampNumber(value: unknown, min: number, max: number): number {
   const number = Number(value);
   if (!Number.isFinite(number)) {
     return min;
@@ -51,11 +164,11 @@ function clampNumber(value, min, max) {
   return Math.min(max, Math.max(min, number));
 }
 
-function clampCrtPhysicalValue(value, min, max) {
+function clampCrtPhysicalValue(value: unknown, min: number, max: number): number {
   return Math.round(clampNumber(value, min, max) * 1000) / 1000;
 }
 
-function normalizeBlockParameter(value, fallback) {
+function normalizeBlockParameter(value: unknown, fallback: number): number {
   const number = Number(value);
   if (!Number.isFinite(number)) {
     return fallback;
@@ -63,12 +176,14 @@ function normalizeBlockParameter(value, fallback) {
   return Math.round(clampNumber(number, 0, 5));
 }
 
-function migratePrefsToLatest(value, inheritedVersion) {
-  const source = value && typeof value === 'object' ? value : {};
+// A stored set of preferences brought to the latest version; values are
+// left for normalizePrefs to check.
+function migratePrefsToLatest(value: unknown, inheritedVersion?: unknown): Record<string, unknown> {
+  const source = isRecord(value) ? value : {};
   const ownVersion = Number(source.version);
   const fallbackVersion = Number(inheritedVersion);
   const storedVersion = Number.isFinite(ownVersion) ? ownVersion : fallbackVersion;
-  const migrated = Object.assign({}, source);
+  const migrated: Record<string, unknown> = { ...source };
   if (!Number.isFinite(storedVersion) || storedVersion < 11) {
     if (source.type === 'blocks') {
       const explicitBlockSize = Number(source.blockSize);
@@ -99,7 +214,7 @@ function migratePrefsToLatest(value, inheritedVersion) {
   return migrated;
 }
 
-function quantizeDitherChannel(value, threshold, levels) {
+function quantizeDitherChannel(value: number, threshold: number, levels: number): number {
   const stepCount = Math.max(2, Math.round(Number(levels) || 2));
   const scaled = (clampNumber(value, 0, 255) / 255) * (stepCount - 1);
   const lower = Math.floor(scaled);
@@ -110,10 +225,15 @@ function quantizeDitherChannel(value, threshold, levels) {
   return (quantizedIndex / (stepCount - 1)) * 255;
 }
 
-function quantizeDitherColor(color, threshold, levels, mix) {
+function quantizeDitherColor(
+  color: Partial<RgbColor> | null | undefined,
+  threshold: number,
+  levels: number,
+  mix: number
+): RgbColor {
   const source = color || {};
   const blend = clampNumber(mix, 0, 1);
-  const quantize = (value) => {
+  const quantize = (value: unknown): number => {
     const channel = clampNumber(value, 0, 255);
     const quantized = quantizeDitherChannel(channel, threshold, levels);
     return Math.round(channel + ((quantized - channel) * blend));
@@ -125,7 +245,11 @@ function quantizeDitherColor(color, threshold, levels, mix) {
   };
 }
 
-function liftSampleColor(color, brightness, saturationBoost) {
+function liftSampleColor(
+  color: Partial<RgbColor> | null | undefined,
+  brightness: number,
+  saturationBoost: number
+): RgbColor {
   const source = color || {};
   const red = clampNumber(source.red, 0, 255) / 255;
   const green = clampNumber(source.green, 0, 255) / 255;
@@ -186,7 +310,7 @@ function liftSampleColor(color, brightness, saturationBoost) {
   };
 }
 
-function getEffectCanvasScale(devicePixelRatio, viewportWidth, viewportHeight) {
+function getEffectCanvasScale(devicePixelRatio: unknown, viewportWidth: unknown, viewportHeight: unknown): number {
   const width = Math.max(1, Number(viewportWidth) || 1);
   const height = Math.max(1, Number(viewportHeight) || 1);
   const pixelBudgetScale = Math.sqrt(TARGET_EFFECT_CANVAS_PIXELS / (width * height));
@@ -197,7 +321,7 @@ function getEffectCanvasScale(devicePixelRatio, viewportWidth, viewportHeight) {
   );
 }
 
-function analyzeImageData(data) {
+function analyzeImageData(data: ArrayLike<number> | null | undefined): ImageAnalysis {
   if (!data || typeof data.length !== 'number' || data.length < 4) {
     return {
       averageLuminance: 0.5,
@@ -210,7 +334,7 @@ function analyzeImageData(data) {
   const sampleStride = Math.max(1, Math.floor(pixelCount / 12000));
   let luminanceTotal = 0;
   let sampledPixels = 0;
-  const luminanceSamples = [];
+  const luminanceSamples: number[] = [];
   for (let pixelIndex = 0; pixelIndex < pixelCount; pixelIndex += sampleStride) {
     const index = pixelIndex * 4;
     const alpha = clampNumber(Number(data[index + 3]) / 255, 0, 1);
@@ -241,12 +365,10 @@ function analyzeImageData(data) {
   };
 }
 
-function normalizePrefs(value, inheritedVersion) {
+function normalizePrefs(value: unknown, inheritedVersion?: unknown): WallpaperEffectPrefs {
   const source = migratePrefsToLatest(value, inheritedVersion);
-  const type = EFFECT_TYPES.indexOf(source.type) === -1 ? DEFAULT_PREFS.type : source.type;
-  const inkTone = EFFECT_INK_TONES.indexOf(source.inkTone) === -1
-    ? DEFAULT_PREFS.inkTone
-    : source.inkTone;
+  const type = isEffectType(source.type) ? source.type : DEFAULT_PREFS.type;
+  const inkTone = isEffectInkTone(source.inkTone) ? source.inkTone : DEFAULT_PREFS.inkTone;
   const rawStrength = Number.isFinite(Number(source.strength))
     ? source.strength
     : DEFAULT_PREFS.strength;
@@ -290,13 +412,10 @@ function normalizePrefs(value, inheritedVersion) {
   };
 }
 
-function normalizeStoragePrefs(value) {
-  const source = value && typeof value === 'object' ? value : {};
-  const hasModePrefs = Boolean(
-    (source.light && typeof source.light === 'object') ||
-    (source.dark && typeof source.dark === 'object')
-  );
-  const normalizeMode = (modeValue) => normalizePrefs(modeValue, source.version);
+function normalizeStoragePrefs(value: unknown): WallpaperEffectStoragePrefs {
+  const source = isRecord(value) ? value : {};
+  const hasModePrefs = isRecord(source.light) || isRecord(source.dark);
+  const normalizeMode = (modeValue: unknown) => normalizePrefs(modeValue, source.version);
   const shared = normalizeMode(source);
   const lightSource = hasModePrefs ? (source.light || source.dark) : shared;
   const darkSource = hasModePrefs ? (source.dark || source.light) : shared;
@@ -307,13 +426,13 @@ function normalizeStoragePrefs(value) {
   };
 }
 
-function getBlurRadius(strength) {
+function getBlurRadius(strength: unknown): number {
   const ratio = clampNumber(strength, 0, 100) / 100;
   return Math.round((MIN_BLUR_RADIUS_PX +
     ((MAX_BLUR_RADIUS_PX - MIN_BLUR_RADIUS_PX) * ratio)) * 10) / 10;
 }
 
-function getStandardFrostParams(texture) {
+function getStandardFrostParams(texture: unknown) {
   const inputRatio = clampNumber(texture, 0, 100) / 100;
   const ratio = Math.pow(inputRatio, 0.65);
   return {
@@ -328,21 +447,19 @@ function getStandardFrostParams(texture) {
 }
 
 // 'auto' follows the color mode: light mode samples shadows, dark mode samples highlights.
-function resolveAutoInkTone(inkTone, mode) {
+function resolveAutoInkTone(inkTone: unknown, mode: unknown): 'dark' | 'light' {
   if (inkTone === 'dark' || inkTone === 'light') {
     return inkTone;
   }
   return mode === 'dark' ? 'light' : 'dark';
 }
 
-function resolvePrefsForMode(value, mode) {
+function resolvePrefsForMode(value: unknown, mode: unknown): WallpaperEffectPrefs {
   const normalized = normalizePrefs(value);
-  return Object.assign({}, normalized, {
-    inkTone: resolveAutoInkTone(normalized.inkTone, mode)
-  });
+  return { ...normalized, inkTone: resolveAutoInkTone(normalized.inkTone, mode) };
 }
 
-function resolveUseDarkInk(inkTone, sampler) {
+function resolveUseDarkInk(inkTone: unknown, sampler: { useDarkInk?: boolean } | null | undefined): boolean {
   if (inkTone === 'dark') {
     return true;
   }
@@ -352,72 +469,62 @@ function resolveUseDarkInk(inkTone, sampler) {
   return Boolean(sampler && sampler.useDarkInk === true);
 }
 
-function createWallpaperEffects(options) {
-  const documentObj = getOption(options, 'documentObj', globalThis.document);
-  const windowObj = getOption(options, 'windowObj', globalThis.window);
-  const getCurrentWallpaper = getFunction(options, 'getCurrentWallpaper', function() {
-    return null;
-  });
-  const getWallpaperImageUrl = getFunction(options, 'getWallpaperImageUrl', function() {
-    return '';
-  });
-  // A small copy of the same image, cropped the same way, as { url, width, height } with the full
-  // image's width and height (0 when unknown), or null. Every effect but CRT reads the wallpaper
-  // through a sampler a few hundred pixels across, so it samples this copy instead of waiting for
-  // the full image to load and decode.
-  const getWallpaperSample = getFunction(options, 'getWallpaperSample', function() {
-    return null;
-  });
-  const shouldAnimateTransition = getFunction(options, 'shouldAnimateTransition', function() {
-    return true;
-  });
-  const onRender = getFunction(options, 'onRender');
-  // The wallpaper's average luminance remembered from an earlier page (0–1), or null. The blur
-  // frost picks its blend from it, so the first frame needs no full-size decode.
-  const getLuminanceHint = getFunction(options, 'getLuminanceHint', function() {
-    return null;
-  });
+function createWallpaperEffects<W>(options?: WallpaperEffectsOptions<W> | null) {
+  const config: WallpaperEffectsOptions<W> = options || {};
+  const documentObj = config.documentObj || globalThis.document;
+  const windowObj = config.windowObj || globalThis.window;
+  const getCurrentWallpaper = config.getCurrentWallpaper || (() => null);
+  const getWallpaperImageUrl = config.getWallpaperImageUrl || (() => '');
+  const getWallpaperSample = config.getWallpaperSample || (() => null);
+  const shouldAnimateTransition = config.shouldAnimateTransition || (() => true);
+  const onRender = config.onRender || (() => {});
+  const getLuminanceHint = config.getLuminanceHint || (() => null);
   const EFFECT_CROSSFADE_MS = 150;
   const RESIZE_RENDER_SETTLE_MS = 140;
   const RESIZE_CROSSFADE_MS = 180;
   const ASCII_CHARS = '  .,:;-=+xX08S#&@';
 
-  let canvas = null;
-  let context = null;
-  let prefs = Object.assign({}, DEFAULT_PREFS);
+  let canvas: HTMLCanvasElement | null = null;
+  let context: CanvasRenderingContext2D | null = null;
+  let prefs: WallpaperEffectPrefs = { ...DEFAULT_PREFS };
   let renderFrame = 0;
   let renderTimer = 0;
   let renderToken = 0;
-  let loadedImage = null;
+  let loadedImage: HTMLImageElement | null = null;
   let loadedImageUrl = '';
-  let loadedSampler = null;
+  let loadedSampler: EffectSampler | null = null;
   let loadedSamplerUrl = '';
   // The wallpaper URL the canvas was last drawn from; '' while it shows nothing image-based.
   let renderedSourceUrl = '';
-  let observer = null;
-  let asciiGlyphMetricsCache = null;
+  let observer: MutationObserver | null = null;
+  let asciiGlyphMetricsCache: { fontSize: number; font: string; glyphWidth: number; glyphHeight: number } | null = null;
   let effectBaseCacheKey = '';
-  let crtWebglRenderer = null;
+  let crtWebglRenderer: CrtRenderer | null = null;
   let hasTriedCrtWebglRenderer = false;
-  const materialNoiseTiles = { coarse: null, fine: null };
-  const standardNoiseDataUrls = { coarse: null, fine: null };
-  let resizeTransitionCanvas = null;
+  const materialNoiseTiles: Record<NoiseKind, HTMLCanvasElement | null> = { coarse: null, fine: null };
+  const standardNoiseDataUrls: Record<NoiseKind, string | null> = { coarse: null, fine: null };
+  let resizeTransitionCanvas: HTMLCanvasElement | null = null;
   let resizeTransitionFrame = 0;
   let resizeTransitionTimer = 0;
   let shouldCrossfadeResize = false;
   let renderRequestRevision = 0;
   let renderCompletedRevision = 0;
   let destroyed = false;
-  const renderWaiters = [];
+  const renderWaiters: Array<{ revision: number; resolve: () => void }> = [];
 
-  function requestFrame(callback) {
+  // The canvas and its context while the effect layer exists.
+  function getSurface(): { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D } | null {
+    return canvas && context ? { canvas, context } : null;
+  }
+
+  function requestFrame(callback: () => void): number {
     if (windowObj && typeof windowObj.requestAnimationFrame === 'function') {
       return windowObj.requestAnimationFrame(callback);
     }
     return setTimeout(callback, 16);
   }
 
-  function cancelFrame(id) {
+  function cancelFrame(id: number): void {
     if (windowObj && typeof windowObj.cancelAnimationFrame === 'function') {
       windowObj.cancelAnimationFrame(id);
       return;
@@ -425,17 +532,17 @@ function createWallpaperEffects(options) {
     clearTimeout(id);
   }
 
-  function shouldReduceMotion() {
+  function shouldReduceMotion(): boolean {
     return Boolean(windowObj &&
       typeof windowObj.matchMedia === 'function' &&
       windowObj.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
 
-  function canAnimateTransition() {
+  function canAnimateTransition(): boolean {
     return shouldAnimateTransition() && !shouldReduceMotion();
   }
 
-  function getViewportSize() {
+  function getViewportSize(): Viewport {
     const docEl = documentObj.documentElement;
     return {
       width: Math.max(1, windowObj.innerWidth || (docEl ? docEl.clientWidth : 0) || 1),
@@ -443,7 +550,7 @@ function createWallpaperEffects(options) {
     };
   }
 
-  function getDeviceScale(viewport) {
+  function getDeviceScale(viewport: Viewport): number {
     return getEffectCanvasScale(
       windowObj.devicePixelRatio || 1,
       viewport.width,
@@ -451,17 +558,17 @@ function createWallpaperEffects(options) {
     );
   }
 
-  function getLuminanceFromRgb(red, green, blue) {
+  function getLuminanceFromRgb(red: number, green: number, blue: number): number {
     return ((red * 0.299) + (green * 0.587) + (blue * 0.114)) / 255;
   }
 
-  function isWallpaperActive() {
+  function isWallpaperActive(): boolean {
     return Boolean(documentObj.body &&
       documentObj.body.getAttribute('data-wallpaper-active') === 'true' &&
       getCurrentWallpaper());
   }
 
-  function updateWallpaperEffectProperties(nextPrefs) {
+  function updateWallpaperEffectProperties(nextPrefs: WallpaperEffectPrefs): void {
     const body = documentObj && documentObj.body;
     if (!body || !body.style || typeof body.style.setProperty !== 'function') {
       return;
@@ -478,28 +585,30 @@ function createWallpaperEffects(options) {
     body.style.setProperty('--x-nt-wallpaper-blur-contrast', `${frost.contrast}%`);
   }
 
-  function ensureCanvas() {
+  function ensureCanvas(): HTMLCanvasElement | null {
     if (canvas && context) {
       return canvas;
     }
-    if (!documentObj || !documentObj.createElement || !documentObj.body) {
+    if (!documentObj || typeof documentObj.createElement !== 'function' || !documentObj.body) {
       return null;
     }
-    canvas = documentObj.createElement('canvas');
-    canvas.className = 'x-nt-wallpaper-effect-canvas';
-    canvas.setAttribute('aria-hidden', 'true');
-    context = canvas.getContext('2d', { alpha: true });
-    if (!context) {
+    const nextCanvas = documentObj.createElement('canvas');
+    nextCanvas.className = 'x-nt-wallpaper-effect-canvas';
+    nextCanvas.setAttribute('aria-hidden', 'true');
+    const nextContext = nextCanvas.getContext('2d', { alpha: true });
+    if (!nextContext) {
       canvas = null;
       return null;
     }
-    documentObj.body.insertBefore(canvas, documentObj.body.firstChild || null);
+    canvas = nextCanvas;
+    context = nextContext;
+    documentObj.body.insertBefore(nextCanvas, documentObj.body.firstChild || null);
     bindObservers();
-    return canvas;
+    return nextCanvas;
   }
 
-  function bindObservers() {
-    if (observer || !globalThis.MutationObserver || !documentObj.body) {
+  function bindObservers(): void {
+    if (observer || typeof globalThis.MutationObserver !== 'function' || !documentObj.body) {
       return;
     }
     observer = new globalThis.MutationObserver((mutations) => {
@@ -517,11 +626,11 @@ function createWallpaperEffects(options) {
     });
   }
 
-  function clearEffectBaseCache() {
+  function clearEffectBaseCache(): void {
     effectBaseCacheKey = '';
   }
 
-  function cleanupResizeCrossfade() {
+  function cleanupResizeCrossfade(): void {
     if (resizeTransitionFrame) {
       cancelFrame(resizeTransitionFrame);
       resizeTransitionFrame = 0;
@@ -540,7 +649,7 @@ function createWallpaperEffects(options) {
     }
   }
 
-  function prepareResizeCrossfade() {
+  function prepareResizeCrossfade(): boolean {
     if (!canvas ||
         !context ||
         shouldReduceMotion() ||
@@ -571,7 +680,7 @@ function createWallpaperEffects(options) {
     snapshot.style.backgroundPosition = canvas.style.backgroundPosition || '0 0';
     try {
       snapshotContext.drawImage(canvas, 0, 0);
-    } catch (error) {
+    } catch {
       return false;
     }
     if (!canvas.parentNode) {
@@ -586,7 +695,7 @@ function createWallpaperEffects(options) {
     return true;
   }
 
-  function finishResizeCrossfade() {
+  function finishResizeCrossfade(): void {
     if (!canvas || !resizeTransitionCanvas) {
       return;
     }
@@ -607,7 +716,7 @@ function createWallpaperEffects(options) {
     });
   }
 
-  function resizeCanvas() {
+  function resizeCanvas(): Viewport | null {
     if (!canvas || !context) {
       return null;
     }
@@ -629,7 +738,7 @@ function createWallpaperEffects(options) {
     return viewport;
   }
 
-  function clearCanvas() {
+  function clearCanvas(): void {
     renderToken += 1;
     shouldCrossfadeResize = false;
     cleanupResizeCrossfade();
@@ -656,16 +765,16 @@ function createWallpaperEffects(options) {
     onRender();
   }
 
-  function waitForRenderRevision(revision) {
+  function waitForRenderRevision(revision: number): Promise<void> {
     if (renderCompletedRevision >= revision) {
       return Promise.resolve();
     }
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       renderWaiters.push({ revision, resolve });
     });
   }
 
-  function completeRender(revision) {
+  function completeRender(revision: number): void {
     renderCompletedRevision = Math.max(renderCompletedRevision, revision);
     for (let index = renderWaiters.length - 1; index >= 0; index -= 1) {
       const waiter = renderWaiters[index];
@@ -677,14 +786,14 @@ function createWallpaperEffects(options) {
     }
   }
 
-  function loadImage(url, token) {
+  function loadImage(url: string, token: number): Promise<HTMLImageElement | null> {
     if (!url) {
       return Promise.resolve(null);
     }
     if (loadedImage && loadedImageUrl === url) {
       return Promise.resolve(loadedImage);
     }
-    return new Promise((resolve, reject) => {
+    return new Promise<HTMLImageElement | null>((resolve, reject) => {
       const image = new Image();
       image.decoding = 'async';
       // Online wallpapers allow CORS; requesting it keeps the canvas readable for pixel sampling.
@@ -716,15 +825,15 @@ function createWallpaperEffects(options) {
 
   // sourceSize is the full image's size when image is its small copy: the samples then land where
   // they would on the full image, so the effects look the same either way.
-  function createSampler(image, sourceSize) {
+  function createSampler(image: HTMLImageElement | null, sourceSize: Viewport | null): EffectSampler | null {
     if (!image) {
       return null;
     }
     const imageWidth = Math.max(1, image.naturalWidth || image.width || 1);
     const imageHeight = Math.max(1, image.naturalHeight || image.height || 1);
-    const hasSourceSize = Boolean(sourceSize && sourceSize.width > 0 && sourceSize.height > 0);
-    const naturalWidth = hasSourceSize ? sourceSize.width : imageWidth;
-    const naturalHeight = hasSourceSize ? sourceSize.height : imageHeight;
+    const fullSize = sourceSize && sourceSize.width > 0 && sourceSize.height > 0 ? sourceSize : null;
+    const naturalWidth = fullSize ? fullSize.width : imageWidth;
+    const naturalHeight = fullSize ? fullSize.height : imageHeight;
     const samplerSize = getSamplerSize(imageWidth, imageHeight);
     const sourceCanvas = documentObj.createElement('canvas');
     sourceCanvas.width = samplerSize.width;
@@ -734,10 +843,10 @@ function createWallpaperEffects(options) {
       return null;
     }
     sourceContext.drawImage(image, 0, 0, sourceCanvas.width, sourceCanvas.height);
-    let data = null;
+    let data: Uint8ClampedArray;
     try {
       data = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height).data;
-    } catch (e) {
+    } catch {
       return null;
     }
     const analysis = analyzeImageData(data);
@@ -758,7 +867,7 @@ function createWallpaperEffects(options) {
 
   // The small copy an effect samples, or null to sample the full image. CRT draws the wallpaper
   // itself, so it needs the full image.
-  function getEffectSample(type, wallpaper, imageUrl) {
+  function getEffectSample(type: EffectType, wallpaper: W | null | undefined, imageUrl: string): WallpaperSample | null {
     if (type === 'crt' || !wallpaper || !imageUrl) {
       return null;
     }
@@ -767,20 +876,20 @@ function createWallpaperEffects(options) {
   }
 
   // The full image's size when the image just loaded is the sample's copy.
-  function getLoadedSourceSize(sample) {
+  function getLoadedSourceSize(sample: WallpaperSample | null): WallpaperSample | null {
     return sample && loadedImageUrl === sample.url ? sample : null;
   }
 
   // Loads the image an effect samples; a small copy that fails to load falls back to the full one.
   // The image loaded is then loadedImage, under loadedImageUrl.
-  function loadEffectSource(sourceUrl, imageUrl, token) {
+  function loadEffectSource(sourceUrl: string, imageUrl: string, token: number): Promise<HTMLImageElement | null> {
     const loading = loadImage(sourceUrl, token);
     return sourceUrl === imageUrl
       ? loading
       : loading.catch(() => (token === renderToken ? loadImage(imageUrl, token) : null));
   }
 
-  function getSampler(image, imageUrl, sourceSize) {
+  function getSampler(image: HTMLImageElement, imageUrl: string, sourceSize: Viewport | null): EffectSampler | null {
     if (loadedSampler && loadedSamplerUrl === imageUrl) {
       return loadedSampler;
     }
@@ -790,7 +899,7 @@ function createWallpaperEffects(options) {
     return loadedSampler;
   }
 
-  function getRenderedMetrics(sampler, viewport) {
+  function getRenderedMetrics(sampler: EffectSampler, viewport: Viewport): RenderedMetrics {
     const scale = Math.max(
       viewport.width / sampler.naturalWidth,
       viewport.height / sampler.naturalHeight
@@ -806,7 +915,7 @@ function createWallpaperEffects(options) {
     };
   }
 
-  function sampleColor(sampler, metrics, viewportX, viewportY) {
+  function sampleColor(sampler: EffectSampler, metrics: RenderedMetrics, viewportX: number, viewportY: number): RgbColor {
     const sourceX = ((viewportX - metrics.offsetX) / metrics.scale) * sampler.scaleX;
     const sourceY = ((viewportY - metrics.offsetY) / metrics.scale) * sampler.scaleY;
     const x = Math.round(clampNumber(sourceX, 0, sampler.width - 1));
@@ -823,15 +932,15 @@ function createWallpaperEffects(options) {
     };
   }
 
-  function getLuminance(color) {
+  function getLuminance(color: RgbColor): number {
     return getLuminanceFromRgb(color.red, color.green, color.blue);
   }
 
-  function clampChannel(value) {
+  function clampChannel(value: number): number {
     return Math.round(clampNumber(value, 0, 255));
   }
 
-  function boostSampleColor(color, amount) {
+  function boostSampleColor(color: RgbColor, amount: number): RgbColor {
     const boost = 1 + clampNumber(amount, 0, 1.2);
     const luma = ((color.red * 0.299) + (color.green * 0.587) + (color.blue * 0.114));
     return {
@@ -841,16 +950,16 @@ function createWallpaperEffects(options) {
     };
   }
 
-  function getEffectAlpha(base, strength) {
+  function getEffectAlpha(base: number, strength: number): number {
     return clampNumber((strength / 100) * base, 0, 1);
   }
 
-  function smoothstep(value) {
+  function smoothstep(value: number): number {
     const x = clampNumber(value, 0, 1);
     return x * x * (3 - (2 * x));
   }
 
-  function applyToneCurve(tone, strength) {
+  function applyToneCurve(tone: number, strength: number): number {
     const amount = clampNumber(strength, 0, 100) / 100;
     const blackPoint = amount * 0.22;
     const whitePoint = 1 - (amount * 0.08);
@@ -859,7 +968,7 @@ function createWallpaperEffects(options) {
     return (leveled * (1 - amount)) + (curved * amount);
   }
 
-  function getLayerEffectTone(luminance, sampler, strength, useDarkInk) {
+  function getLayerEffectTone(luminance: number, sampler: EffectSampler, strength: number, useDarkInk: boolean): number {
     const useLightInk = useDarkInk !== true;
     const rawTone = useLightInk ? luminance : (1 - luminance);
     const low = clampNumber(sampler.lowLuminance, 0, 1);
@@ -878,12 +987,12 @@ function createWallpaperEffects(options) {
     );
   }
 
-  function getControlRange(value, minValue, maxValue) {
+  function getControlRange(value: number, minValue: number, maxValue: number): number {
     const ratio = clampNumber(value, 0, 100) / 100;
     return minValue + ((maxValue - minValue) * ratio);
   }
 
-  function getAsciiGlyphMetrics(fontSize, font, targetContext) {
+  function getAsciiGlyphMetrics(fontSize: number, font: string, targetContext: CanvasRenderingContext2D) {
     if (asciiGlyphMetricsCache &&
         asciiGlyphMetricsCache.fontSize === fontSize &&
         asciiGlyphMetricsCache.font === font) {
@@ -908,7 +1017,7 @@ function createWallpaperEffects(options) {
     return asciiGlyphMetricsCache;
   }
 
-  function getOverlayBlendLuminance(baseLuminance, effectLuminance) {
+  function getOverlayBlendLuminance(baseLuminance: number, effectLuminance: number): number {
     const base = clampNumber(baseLuminance, 0, 1);
     const source = clampNumber(effectLuminance, 0, 1);
     if (base <= 0.5) {
@@ -917,7 +1026,7 @@ function createWallpaperEffects(options) {
     return 1 - (2 * (1 - base) * (1 - source));
   }
 
-  function setCanvasVisuals(type, opacity, blendMode) {
+  function setCanvasVisuals(type: string, opacity: number, blendMode: string): void {
     if (!canvas) {
       return;
     }
@@ -928,7 +1037,7 @@ function createWallpaperEffects(options) {
     finishResizeCrossfade();
   }
 
-  function getCanvasOpacity() {
+  function getCanvasOpacity(): number {
     if (!canvas) {
       return 0;
     }
@@ -936,7 +1045,7 @@ function createWallpaperEffects(options) {
     return clampNumber(Number.isFinite(opacity) ? opacity : 1, 0, 1);
   }
 
-  function resolveMaterialBlendMode(luminance) {
+  function resolveMaterialBlendMode(luminance: number): string {
     if (luminance <= 0.42) {
       return 'screen';
     }
@@ -946,7 +1055,9 @@ function createWallpaperEffects(options) {
     return 'soft-light';
   }
 
-  function getLuminanceAtViewport(viewportX, viewportY, baseLuminance) {
+  // The luminance at a viewport point with the effect over a wallpaper of
+  // the given luminance there; null when the effect does not change it.
+  function getLuminanceAtViewport(viewportX: number, viewportY: number, baseLuminance: number | null | undefined): number | null {
     const normalized = normalizePrefs(prefs);
     if (!canvas ||
         !context ||
@@ -956,12 +1067,12 @@ function createWallpaperEffects(options) {
       return null;
     }
     if (normalized.type === 'blur') {
-      return Number.isFinite(baseLuminance) ? baseLuminance : null;
+      return typeof baseLuminance === 'number' && Number.isFinite(baseLuminance) ? baseLuminance : null;
     }
     const viewport = getViewportSize();
     const x = Math.round(clampNumber(viewportX, 0, viewport.width) * (canvas.width / viewport.width));
     const y = Math.round(clampNumber(viewportY, 0, viewport.height) * (canvas.height / viewport.height));
-    let pixel = null;
+    let pixel: Uint8ClampedArray;
     try {
       pixel = context.getImageData(
         clampNumber(x, 0, canvas.width - 1),
@@ -969,25 +1080,27 @@ function createWallpaperEffects(options) {
         1,
         1
       ).data;
-    } catch (e) {
+    } catch {
       return null;
     }
     const canvasAlpha = (pixel[3] / 255) * getCanvasOpacity();
     const effectLuminance = getLuminanceFromRgb(pixel[0], pixel[1], pixel[2]);
+    if (typeof baseLuminance !== 'number' || !Number.isFinite(baseLuminance)) {
+      return null;
+    }
     if (normalized.type === 'grain') {
-      if (!Number.isFinite(baseLuminance)) {
-        return null;
-      }
       const blended = getOverlayBlendLuminance(baseLuminance, effectLuminance);
       return (baseLuminance * (1 - canvasAlpha)) + (blended * canvasAlpha);
-    }
-    if (!Number.isFinite(baseLuminance)) {
-      return null;
     }
     return (baseLuminance * (1 - canvasAlpha)) + (effectLuminance * canvasAlpha);
   }
 
-  function drawGrain(viewport, strength) {
+  function drawGrain(viewport: Viewport, strength: number): void {
+    const surface = getSurface();
+    if (!surface) {
+      return;
+    }
+    const { context } = surface;
     context.clearRect(0, 0, viewport.width, viewport.height);
     const tile = documentObj.createElement('canvas');
     tile.width = 180;
@@ -1014,9 +1127,9 @@ function createWallpaperEffects(options) {
     setCanvasVisuals('grain', 0.08 + getEffectAlpha(0.22, strength), 'overlay');
   }
 
-  function quantizeBlockColor(color, texture) {
+  function quantizeBlockColor(color: RgbColor, texture: number): RgbColor {
     const levels = 4 + Math.round((clampNumber(texture, 0, 100) / 100) * 20);
-    const quantize = (value) => Math.round(
+    const quantize = (value: number) => Math.round(
       (Math.round((clampNumber(value, 0, 255) / 255) * (levels - 1)) / (levels - 1)) * 255
     );
     return {
@@ -1026,7 +1139,7 @@ function createWallpaperEffects(options) {
     };
   }
 
-  function shadeBlockColor(color, amount) {
+  function shadeBlockColor(color: RgbColor, amount: number): RgbColor {
     const ratio = clampNumber(amount, -1, 1);
     const target = ratio >= 0 ? 255 : 0;
     const mix = Math.abs(ratio);
@@ -1037,14 +1150,18 @@ function createWallpaperEffects(options) {
     };
   }
 
-  function getBlockColorCss(color, alpha) {
-    if (Number.isFinite(alpha)) {
+  function getBlockColorCss(color: RgbColor, alpha?: number): string {
+    if (typeof alpha === 'number' && Number.isFinite(alpha)) {
       return `rgb(${color.red} ${color.green} ${color.blue} / ${clampNumber(alpha, 0, 1)})`;
     }
     return `rgb(${color.red} ${color.green} ${color.blue})`;
   }
 
-  function fillBlockPolygon(targetContext, points, color) {
+  function fillBlockPolygon(
+    targetContext: CanvasRenderingContext2D,
+    points: ReadonlyArray<{ x: number; y: number }>,
+    color: string
+  ): void {
     if (!points.length) {
       return;
     }
@@ -1058,7 +1175,13 @@ function createWallpaperEffects(options) {
     targetContext.fill();
   }
 
-  function fillBlockCircle(targetContext, x, y, radius, color) {
+  function fillBlockCircle(
+    targetContext: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    radius: number,
+    color: string
+  ): void {
     targetContext.beginPath();
     targetContext.arc(x, y, radius, 0, Math.PI * 2);
     targetContext.closePath();
@@ -1066,15 +1189,15 @@ function createWallpaperEffects(options) {
     targetContext.fill();
   }
 
-  function getBlockMaterialHash(column, row) {
+  function getBlockMaterialHash(column: number, row: number): number {
     return Math.abs(Math.imul(column + 17, 374761393) ^ Math.imul(row + 29, 668265263));
   }
 
-  function getBlockMaterialVariation(column, row) {
+  function getBlockMaterialVariation(column: number, row: number): number {
     return ((getBlockMaterialHash(column, row) % 17) - 8) / 400;
   }
 
-  function mixBlockColors(first, second, ratio) {
+  function mixBlockColors(first: RgbColor, second: RgbColor | null | undefined, ratio: number): RgbColor {
     const mix = clampNumber(ratio, 0, 1);
     const target = second || first;
     return {
@@ -1084,7 +1207,14 @@ function createWallpaperEffects(options) {
     };
   }
 
-  function drawCompactBlockGrid(viewport, sampler, metrics, cellSize, texture) {
+  function drawCompactBlockGrid(
+    context: CanvasRenderingContext2D,
+    viewport: Viewport,
+    sampler: EffectSampler,
+    metrics: RenderedMetrics,
+    cellSize: number,
+    texture: number
+  ): void {
     const edge = 1;
     for (let y = -cellSize; y < viewport.height + cellSize; y += cellSize) {
       for (let x = -cellSize; x < viewport.width + cellSize; x += cellSize) {
@@ -1109,7 +1239,19 @@ function createWallpaperEffects(options) {
     }
   }
 
-  function drawBlocks(viewport, sampler, strength, size, spacing, texture) {
+  function drawBlocks(
+    viewport: Viewport,
+    sampler: EffectSampler,
+    strength: number,
+    size: number,
+    spacing: number,
+    texture: number
+  ): void {
+    const surface = getSurface();
+    if (!surface) {
+      return;
+    }
+    const { context } = surface;
     const sizeRatio = clampNumber(size, 0, 5) / 5;
     const cellSize = Math.round((viewport.width < 720 ? 10 : 13) +
       (Math.pow(sizeRatio, 0.82) * (viewport.width < 720 ? 30 : 43)));
@@ -1123,7 +1265,7 @@ function createWallpaperEffects(options) {
     if (effectBaseCacheKey !== cacheKey) {
       context.clearRect(0, 0, viewport.width, viewport.height);
       if (cellSize < 16) {
-        drawCompactBlockGrid(viewport, sampler, metrics, cellSize, texture);
+        drawCompactBlockGrid(context, viewport, sampler, metrics, cellSize, texture);
         effectBaseCacheKey = cacheKey;
         setCanvasVisuals('blocks', 1, 'normal');
         return;
@@ -1141,8 +1283,8 @@ function createWallpaperEffects(options) {
           return { color: sampleColor(sampler, metrics, centerX, centerY) };
         })
       );
-      const occupied = Array.from({ length: rowCount }, () => Array(columnCount).fill(false));
-      const canOccupy = (row, column, rowSpan, columnSpan) => {
+      const occupied = Array.from({ length: rowCount }, () => Array.from({ length: columnCount }, () => false));
+      const canOccupy = (row: number, column: number, rowSpan: number, columnSpan: number): boolean => {
         if (row + rowSpan > rowCount || column + columnSpan > columnCount) {
           return false;
         }
@@ -1155,7 +1297,7 @@ function createWallpaperEffects(options) {
         }
         return true;
       };
-      const getCombinedSample = (row, column, rowSpan, columnSpan) => {
+      const getCombinedSample = (row: number, column: number, rowSpan: number, columnSpan: number): { color: RgbColor } | null => {
         let count = 0;
         let red = 0;
         let green = 0;
@@ -1183,7 +1325,14 @@ function createWallpaperEffects(options) {
           }
         };
       };
-      const tiles = [];
+      const tiles: Array<{
+        row: number;
+        column: number;
+        rowSpan: number;
+        columnSpan: number;
+        hash: number;
+        sample: { color: RgbColor } | null;
+      }> = [];
       for (let row = 0; row < rowCount; row += 1) {
         for (let column = 0; column < columnCount; column += 1) {
           if (occupied[row][column]) {
@@ -1329,7 +1478,7 @@ function createWallpaperEffects(options) {
     setCanvasVisuals('blocks', 1, 'normal');
   }
 
-  function getGridStart(step, minimum) {
+  function getGridStart(step: number, minimum: number): number {
     const first = step / 2;
     if (minimum <= first) {
       return first;
@@ -1337,7 +1486,15 @@ function createWallpaperEffects(options) {
     return first + (Math.floor((minimum - first) / step) * step);
   }
 
-  function getEffectBaseKey(type, viewport, sampler, inkTone, strength, size, spacing) {
+  function getEffectBaseKey(
+    type: string,
+    viewport: Viewport,
+    sampler: EffectSampler,
+    inkTone: string,
+    strength: number,
+    size: number,
+    spacing: number
+  ): string {
     return [
       type,
       loadedImageUrl,
@@ -1353,7 +1510,15 @@ function createWallpaperEffects(options) {
     ].join(':');
   }
 
-  function drawHalftoneLayer(targetContext, viewport, sampler, inkTone, strength, size, spacing) {
+  function drawHalftoneLayer(
+    targetContext: CanvasRenderingContext2D,
+    viewport: Viewport,
+    sampler: EffectSampler,
+    inkTone: string,
+    strength: number,
+    size: number,
+    spacing: number
+  ): void {
     const metrics = getRenderedMetrics(sampler, viewport);
     const step = getControlRange(
       spacing,
@@ -1406,7 +1571,15 @@ function createWallpaperEffects(options) {
     targetContext.globalAlpha = 1;
   }
 
-  function drawAsciiLayer(targetContext, viewport, sampler, inkTone, strength, size, spacing) {
+  function drawAsciiLayer(
+    targetContext: CanvasRenderingContext2D,
+    viewport: Viewport,
+    sampler: EffectSampler,
+    inkTone: string,
+    strength: number,
+    size: number,
+    spacing: number
+  ): void {
     const metrics = getRenderedMetrics(sampler, viewport);
     const useDarkInk = resolveUseDarkInk(inkTone, sampler);
     const strengthRatio = clampNumber(strength, 0, 100) / 100;
@@ -1460,7 +1633,15 @@ function createWallpaperEffects(options) {
     targetContext.globalAlpha = 1;
   }
 
-  function drawDitherLayer(targetContext, viewport, sampler, _inkTone, strength, size, spacing) {
+  function drawDitherLayer(
+    targetContext: CanvasRenderingContext2D,
+    viewport: Viewport,
+    sampler: EffectSampler,
+    _inkTone: string,
+    strength: number,
+    size: number,
+    spacing: number
+  ): void {
     const metrics = getRenderedMetrics(sampler, viewport);
     const strengthRatio = clampNumber(strength, 0, 100) / 100;
     const pixelSize = Math.max(2, Math.round(getControlRange(
@@ -1515,7 +1696,12 @@ function createWallpaperEffects(options) {
     targetContext.imageSmoothingEnabled = previousSmoothing;
   }
 
-  function drawWallpaperCover(targetContext, viewport, sampler, offsetX) {
+  function drawWallpaperCover(
+    targetContext: CanvasRenderingContext2D,
+    viewport: Viewport,
+    sampler: EffectSampler | null,
+    offsetX: number
+  ): void {
     if (!loadedImage || !sampler) {
       return;
     }
@@ -1533,7 +1719,14 @@ function createWallpaperEffects(options) {
     );
   }
 
-  function drawCrtFallbackLayer(targetContext, viewport, sampler, _inkTone, strength, crtPrefs) {
+  function drawCrtFallbackLayer(
+    targetContext: CanvasRenderingContext2D,
+    viewport: Viewport,
+    sampler: EffectSampler,
+    _inkTone: string,
+    strength: number,
+    crtPrefs: Pick<WallpaperEffectPrefs, 'crtRgbOffset' | 'crtBloom' | 'crtCurvature'> | null
+  ): void {
     const details = crtPrefs || DEFAULT_PREFS;
     const strengthRatio = clampNumber(strength, 0, 20) / 20;
     const fringeOffset = getControlRange(details.crtRgbOffset, 0, 4.2);
@@ -1618,13 +1811,13 @@ function createWallpaperEffects(options) {
     targetContext.fillRect(0, 0, viewport.width, viewport.height);
   }
 
-  function getNoiseByte(x, y, seed) {
+  function getNoiseByte(x: number, y: number, seed: number): number {
     let value = ((x * 374761393) ^ (y * 668265263) ^ seed) >>> 0;
     value = Math.imul(value ^ (value >>> 13), 1274126177) >>> 0;
     return (value ^ (value >>> 16)) & 255;
   }
 
-  function getCoarseNoiseByte(x, y, tileSize) {
+  function getCoarseNoiseByte(x: number, y: number, tileSize: number): number {
     const cellSize = 16;
     const cellCount = Math.max(1, Math.round(tileSize / cellSize));
     const cellX = Math.floor(x / cellSize);
@@ -1644,7 +1837,7 @@ function createWallpaperEffects(options) {
     return Math.round(top + ((bottom - top) * smoothY));
   }
 
-  function writeTransparentNoisePixel(data, index, value, alphaScale) {
+  function writeTransparentNoisePixel(data: Uint8ClampedArray, index: number, value: number, alphaScale: number): void {
     const delta = value - 127.5;
     const channel = delta >= 0 ? 255 : 0;
     data[index] = channel;
@@ -1653,75 +1846,85 @@ function createWallpaperEffects(options) {
     data[index + 3] = Math.round(Math.min(255, Math.abs(delta) * 2 * alphaScale));
   }
 
-  function ensureMaterialNoiseTile(kind) {
-    if (!materialNoiseTiles[kind]) {
-      const tile = documentObj.createElement('canvas');
-      tile.width = 128;
-      tile.height = 128;
-      const tileContext = tile.getContext('2d');
-      if (!tileContext) {
-        return null;
+  function ensureMaterialNoiseTile(kind: NoiseKind): HTMLCanvasElement | null {
+    const existing = materialNoiseTiles[kind];
+    if (existing) {
+      return existing;
+    }
+    const tile = documentObj.createElement('canvas');
+    tile.width = 128;
+    tile.height = 128;
+    const tileContext = tile.getContext('2d');
+    if (!tileContext) {
+      return null;
+    }
+    const imageData = tileContext.createImageData(tile.width, tile.height);
+    const noiseValues = new Uint8Array(tile.width * tile.height);
+    for (let y = 0; y < tile.height; y += 1) {
+      for (let x = 0; x < tile.width; x += 1) {
+        noiseValues[(y * tile.width) + x] = kind === 'coarse'
+          ? getCoarseNoiseByte(x, y, tile.width)
+          : getNoiseByte(x, y, 0x9e3779b9);
       }
-      const imageData = tileContext.createImageData(tile.width, tile.height);
-      const noiseValues = new Uint8Array(tile.width * tile.height);
-      for (let y = 0; y < tile.height; y += 1) {
-        for (let x = 0; x < tile.width; x += 1) {
-          noiseValues[(y * tile.width) + x] = kind === 'coarse'
-            ? getCoarseNoiseByte(x, y, tile.width)
-            : getNoiseByte(x, y, 0x9e3779b9);
-        }
-      }
-      for (let y = 0; y < tile.height; y += 1) {
-        for (let x = 0; x < tile.width; x += 1) {
-          const pixelIndex = (y * tile.width) + x;
-          const index = pixelIndex * 4;
-          let value = noiseValues[pixelIndex];
-          if (kind === 'fine') {
-            const left = noiseValues[(y * tile.width) + ((x + tile.width - 1) % tile.width)];
-            const right = noiseValues[(y * tile.width) + ((x + 1) % tile.width)];
-            const top = noiseValues[(((y + tile.height - 1) % tile.height) * tile.width) + x];
-            const bottom = noiseValues[(((y + 1) % tile.height) * tile.width) + x];
-            value = clampNumber(
-              127.5 + (((right - left) + (bottom - top)) * 0.55),
-              0,
-              255
-            );
-          }
-          writeTransparentNoisePixel(
-            imageData.data,
-            index,
-            value,
-            kind === 'coarse' ? 0.45 : 1.05
+    }
+    for (let y = 0; y < tile.height; y += 1) {
+      for (let x = 0; x < tile.width; x += 1) {
+        const pixelIndex = (y * tile.width) + x;
+        const index = pixelIndex * 4;
+        let value = noiseValues[pixelIndex];
+        if (kind === 'fine') {
+          const left = noiseValues[(y * tile.width) + ((x + tile.width - 1) % tile.width)];
+          const right = noiseValues[(y * tile.width) + ((x + 1) % tile.width)];
+          const top = noiseValues[(((y + tile.height - 1) % tile.height) * tile.width) + x];
+          const bottom = noiseValues[(((y + 1) % tile.height) * tile.width) + x];
+          value = clampNumber(
+            127.5 + (((right - left) + (bottom - top)) * 0.55),
+            0,
+            255
           );
         }
+        writeTransparentNoisePixel(
+          imageData.data,
+          index,
+          value,
+          kind === 'coarse' ? 0.45 : 1.05
+        );
       }
-      tileContext.putImageData(imageData, 0, 0);
-      materialNoiseTiles[kind] = tile;
     }
-    return materialNoiseTiles[kind];
-  }
+    tileContext.putImageData(imageData, 0, 0);
+    materialNoiseTiles[kind] = tile;
+    return tile;
+}
 
-  function getStandardNoiseDataUrl(kind) {
-    if (standardNoiseDataUrls[kind] !== null) {
-      return standardNoiseDataUrls[kind];
+  function getStandardNoiseDataUrl(kind: NoiseKind): string {
+    const cached = standardNoiseDataUrls[kind];
+    if (cached !== null) {
+      return cached;
     }
     const tile = ensureMaterialNoiseTile(kind);
     if (!tile || typeof tile.toDataURL !== 'function') {
       return '';
     }
+    let url: string;
     try {
-      standardNoiseDataUrls[kind] = tile.toDataURL('image/png');
-    } catch (_error) {
+      url = tile.toDataURL('image/png');
+    } catch {
       return '';
     }
-    return standardNoiseDataUrls[kind];
+    standardNoiseDataUrls[kind] = url;
+    return url;
   }
 
-  function drawStandardGlassTexture(texture, wallpaperLuminance) {
+  function drawStandardGlassTexture(texture: number, wallpaperLuminance: number | null): void {
+    const surface = getSurface();
+    if (!surface) {
+      return;
+    }
+    const { canvas } = surface;
     const params = getStandardFrostParams(texture);
     const viewport = getViewportSize();
     const materialBlendMode = resolveMaterialBlendMode(
-      Number.isFinite(wallpaperLuminance) ? wallpaperLuminance : 0.5
+      typeof wallpaperLuminance === 'number' && Number.isFinite(wallpaperLuminance) ? wallpaperLuminance : 0.5
     );
     const enabled = params.ratio > 0.001;
     const fineNoiseUrl = enabled ? getStandardNoiseDataUrl('fine') : '';
@@ -1764,7 +1967,21 @@ function createWallpaperEffects(options) {
     );
   }
 
-  function drawCachedLayeredEffect(type, viewport, sampler, inkTone, strength, size, spacing, drawLayer) {
+  function drawCachedLayeredEffect(
+    type: string,
+    viewport: Viewport,
+    sampler: EffectSampler,
+    inkTone: string,
+    strength: number,
+    size: number,
+    spacing: number,
+    drawLayer: EffectLayerDrawer
+  ): void {
+    const surface = getSurface();
+    if (!surface) {
+      return;
+    }
+    const { context } = surface;
     const boundedSpacing = clampNumber(spacing, 0, 100);
     const cacheKey = getEffectBaseKey(type, viewport, sampler, inkTone, strength, size, boundedSpacing);
     if (effectBaseCacheKey !== cacheKey) {
@@ -1775,7 +1992,7 @@ function createWallpaperEffects(options) {
     setCanvasVisuals(type, 1, 'normal');
   }
 
-  function drawHalftone(viewport, sampler, inkTone, strength, size, spacing) {
+  function drawHalftone(viewport: Viewport, sampler: EffectSampler, inkTone: string, strength: number, size: number, spacing: number): void {
     drawCachedLayeredEffect(
       'halftone',
       viewport,
@@ -1788,7 +2005,7 @@ function createWallpaperEffects(options) {
     );
   }
 
-  function drawAscii(viewport, sampler, inkTone, strength, size, spacing) {
+  function drawAscii(viewport: Viewport, sampler: EffectSampler, inkTone: string, strength: number, size: number, spacing: number): void {
     drawCachedLayeredEffect(
       'ascii',
       viewport,
@@ -1801,7 +2018,7 @@ function createWallpaperEffects(options) {
     );
   }
 
-  function drawDither(viewport, sampler, inkTone, strength, size, spacing) {
+  function drawDither(viewport: Viewport, sampler: EffectSampler, inkTone: string, strength: number, size: number, spacing: number): void {
     drawCachedLayeredEffect(
       'dither',
       viewport,
@@ -1814,7 +2031,7 @@ function createWallpaperEffects(options) {
     );
   }
 
-  function ensureCrtWebglRenderer() {
+  function ensureCrtWebglRenderer(): CrtRenderer | null {
     if (hasTriedCrtWebglRenderer) {
       return crtWebglRenderer;
     }
@@ -1832,21 +2049,32 @@ function createWallpaperEffects(options) {
           scheduleRender();
         }
       });
-    } catch (_error) {
+    } catch {
       crtWebglRenderer = null;
     }
     return crtWebglRenderer;
   }
 
-  function destroyCrtWebglRenderer() {
-    if (crtWebglRenderer && typeof crtWebglRenderer.destroy === 'function') {
+  function destroyCrtWebglRenderer(): void {
+    if (crtWebglRenderer) {
       crtWebglRenderer.destroy();
     }
     crtWebglRenderer = null;
     hasTriedCrtWebglRenderer = false;
   }
 
-  function drawCrt(viewport, sampler, inkTone, strength, crtPrefs) {
+  function drawCrt(
+    viewport: Viewport,
+    sampler: EffectSampler,
+    inkTone: string,
+    strength: number,
+    crtPrefs: Pick<WallpaperEffectPrefs, 'crtRgbOffset' | 'crtBloom' | 'crtCurvature'> | null
+  ): void {
+    const surface = getSurface();
+    if (!surface) {
+      return;
+    }
+    const { canvas, context } = surface;
     const details = crtPrefs || DEFAULT_PREFS;
     const cacheKey = [
       getEffectBaseKey('crt-webgl', viewport, sampler, inkTone, strength, 33, 2),
@@ -1857,7 +2085,6 @@ function createWallpaperEffects(options) {
     if (effectBaseCacheKey !== cacheKey) {
       const renderer = ensureCrtWebglRenderer();
       const rendered = Boolean(renderer &&
-        typeof renderer.render === 'function' &&
         renderer.render({
           image: loadedImage,
           width: canvas.width,
@@ -1870,7 +2097,7 @@ function createWallpaperEffects(options) {
           curvature: details.crtCurvature
         }));
       context.clearRect(0, 0, viewport.width, viewport.height);
-      if (rendered && renderer.canvas) {
+      if (rendered && renderer && renderer.canvas) {
         context.drawImage(
           renderer.canvas,
           0,
@@ -1890,7 +2117,7 @@ function createWallpaperEffects(options) {
     setCanvasVisuals('crt', 1, 'normal');
   }
 
-  function renderNow(revision) {
+  function renderNow(revision: number): void {
     renderFrame = 0;
     const normalized = normalizePrefs(prefs);
     if (normalized.type === 'none' || !isWallpaperActive()) {
@@ -2060,10 +2287,10 @@ function createWallpaperEffects(options) {
     });
   }
 
-  function runRenderNow(revision) {
+  function runRenderNow(revision: number): void {
     try {
       renderNow(revision);
-    } catch (_error) {
+    } catch {
       try {
         clearCanvas();
       } finally {
@@ -2072,7 +2299,7 @@ function createWallpaperEffects(options) {
     }
   }
 
-  function scheduleRender(delay) {
+  function scheduleRender(delay?: number): number {
     const revision = ++renderRequestRevision;
     if (destroyed) {
       completeRender(revision);
@@ -2098,7 +2325,7 @@ function createWallpaperEffects(options) {
     return revision;
   }
 
-  function apply(nextPrefs) {
+  function apply(nextPrefs: unknown): Promise<void> {
     const previousPrefs = normalizePrefs(prefs);
     prefs = normalizePrefs(nextPrefs);
     updateWallpaperEffectProperties(prefs);
@@ -2146,7 +2373,7 @@ function createWallpaperEffects(options) {
     return waitForRenderRevision(scheduleRender());
   }
 
-  function refresh(options) {
+  function refresh(options?: { immediate?: boolean } | null): Promise<void> {
     const normalized = normalizePrefs(prefs);
     const immediate = Boolean(options && options.immediate);
     if (canvas &&
@@ -2173,7 +2400,7 @@ function createWallpaperEffects(options) {
 
   // True when the canvas was drawn from an older wallpaper and no render is on its way, e.g. after
   // a background tab missed the redraw for a photo that changed meanwhile.
-  function isSourceStale() {
+  function isSourceStale(): boolean {
     const type = normalizePrefs(prefs).type;
     if (destroyed || type === 'none' || type === 'grain' ||
         renderCompletedRevision < renderRequestRevision || !isWallpaperActive()) {
@@ -2183,7 +2410,7 @@ function createWallpaperEffects(options) {
     return renderedSourceUrl !== (wallpaper ? getWallpaperImageUrl(wallpaper) : '');
   }
 
-  function handleWindowResize() {
+  function handleWindowResize(): void {
     const normalized = normalizePrefs(prefs);
     shouldCrossfadeResize = Boolean(
       canvas &&
@@ -2199,7 +2426,7 @@ function createWallpaperEffects(options) {
     scheduleRender(RESIZE_RENDER_SETTLE_MS);
   }
 
-  function destroy() {
+  function destroy(): void {
     if (destroyed) {
       return;
     }
@@ -2213,7 +2440,7 @@ function createWallpaperEffects(options) {
       clearTimeout(renderTimer);
       renderTimer = 0;
     }
-    if (observer && typeof observer.disconnect === 'function') {
+    if (observer) {
       observer.disconnect();
     }
     observer = null;
@@ -2244,6 +2471,8 @@ function createWallpaperEffects(options) {
   };
 }
 
+type WallpaperEffects = ReturnType<typeof createWallpaperEffects>;
+
 export {
   analyzeImageData,
   DEFAULT_PREFS,
@@ -2261,4 +2490,13 @@ export {
   resolveAutoInkTone,
   resolvePrefsForMode,
   resolveUseDarkInk
+};
+export type {
+  EffectInkTone,
+  EffectType,
+  WallpaperEffectPrefs,
+  WallpaperEffects,
+  WallpaperEffectsOptions,
+  WallpaperEffectStoragePrefs,
+  WallpaperSample
 };

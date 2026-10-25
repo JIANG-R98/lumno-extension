@@ -32,7 +32,8 @@
     "src/newtab/shortcuts/**/*.ts",
     "src/newtab/theme/**/*.ts",
     "src/newtab/top-content/**/*.ts",
-    "src/newtab/wallpaper/wallpaper-crt-webgl.ts"
+    "src/newtab/wallpaper/wallpaper-crt-webgl.ts",
+    "src/newtab/wallpaper/wallpaper-effects.ts"
   ],
   "exclude": [
     "src/**/react/**"
