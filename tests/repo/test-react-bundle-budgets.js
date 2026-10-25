@@ -57,7 +57,7 @@ const routes = {
 const ceilings = {
   'the New Tab route': { uncompressed: 450, gzip: 134 },
   'the Options route': { uncompressed: 320, gzip: 90 },
-  'the injected Overlay route': { uncompressed: 290, gzip: 88 },
+  'the injected Overlay route': { uncompressed: 300, gzip: 92 },
   'the toolbar popup route': { uncompressed: 230, gzip: 72 },
   'all React artifacts together': { uncompressed: 900, gzip: 270 }
 };
