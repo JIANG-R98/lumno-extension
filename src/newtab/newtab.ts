@@ -38,6 +38,7 @@ import * as NEWTAB_BOOKMARKS_RUNTIME from './bookmarks/bookmarks-runtime';
 import * as NEWTAB_BOOKMARKS_STORE from './bookmarks/bookmarks-store';
 import * as NEWTAB_FOLDER_COLORS from './bookmarks/folder-colors';
 import * as LumnoNewtabFolderItemIcons from './bookmarks/folder-item-icons';
+import * as NEWTAB_CARD_ACTIVATION_GUARD from './card-activation-guard';
 import * as NEWTAB_CLIPBOARD_ACTIONS from './clipboard-actions';
 import * as NEWTAB_CROSS_SURFACE_DRAG from './cross-surface-drag';
 import * as LumnoNewtabDismissStack from './dismiss-stack';
@@ -69,6 +70,7 @@ import * as NEWTAB_SEARCH_MODE_CONTROLLER from './search/search-mode-controller'
 import * as NEWTAB_SEARCH_MODES from './search/search-modes';
 import * as NEWTAB_SEARCH_NAVIGATION from './search/search-navigation';
 import * as NEWTAB_SEARCH_SETTINGS_SYNC from './search/search-settings-sync';
+import * as NEWTAB_SITE_SEARCH_ICON_CACHE from './search/site-search-icon-cache';
 import * as NEWTAB_SITE_SEARCH_PROVIDERS from './search/site-search-providers';
 import * as NEWTAB_SITE_SEARCH_RUNTIME from './search/site-search-runtime';
 import * as NEWTAB_SUGGESTIONS_CONTROLLER from './search/suggestions-controller';
@@ -95,6 +97,7 @@ import * as NEWTAB_FAVICON_THEME from '../shared/favicon/favicon-theme';
 import * as NEWTAB_GLASS_SURFACES from './theme/glass-surfaces';
 import * as NEWTAB_PAGE_FAVICONS from './theme/page-favicons';
 import * as NEWTAB_SITE_THEME_RESOLVER from './theme/site-theme-resolver';
+import * as NEWTAB_SYSTEM_THEME from './theme/system-theme';
 import * as NEWTAB_TOOLTIP_BINDINGS from './tooltip-bindings';
 import * as NEWTAB_TOOLTIP_CONTROLLERS from './tooltip-controllers';
 import * as LumnoNewtabQuotes from './top-content/quotes';
@@ -194,7 +197,6 @@ import {
 import type { BackgroundAction, BackgroundReply, BackgroundRequest } from '../domain/messages';
 import type { Disposition } from '../domain/navigation-disposition';
 import type { SearchActionModel, SearchActionModelOptions } from '../domain/search/suggestion-action-model';
-import type { ThemeMode } from '../domain/settings';
 import type { SuggestionElement } from '../shared/react/search/suggestion-list/types';
 import type { BookmarkCardElement } from './react/bookmarks';
 import type { RecentCardElement } from './react/recent-sites';
@@ -226,9 +228,10 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
   const {
     settingsRuntimeApi,
     providerStorageRuntime,
-    rawStorageArea,
     startupStorageReadBatch,
-    storageArea
+    storageArea,
+    isPrimaryStorageAreaName,
+    migrateLocalSettingsIfNeeded
   } = NEWTAB_STARTUP_STORAGE.createStartupStorage();
 
   // Edge's topSites lists its own promoted sites instead of the user's, so Edge
@@ -273,14 +276,6 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
       ? chrome.storage.local
       : null;
   const recentSitesStorageArea = storageArea || localStorageArea;
-  const storageAreaName = providerStorageRuntime ? providerStorageRuntime.name : (rawStorageArea
-    ? (rawStorageArea === (chrome && chrome.storage ? chrome.storage.sync : null) ? 'sync' : 'local')
-    : null);
-  function isPrimaryStorageAreaName(areaName: string): boolean {
-    return providerStorageRuntime
-      ? providerStorageRuntime.isActiveAreaName(areaName)
-      : Boolean(storageAreaName) && areaName === storageAreaName;
-  }
   function getExtensionResourceUrl(resourcePath: unknown): string {
     const normalizedPath = String(resourcePath || '').replace(/^\/+/, '');
     if (chrome && chrome.runtime && typeof chrome.runtime.getURL === 'function') {
@@ -551,7 +546,12 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
   const NEWTAB_SHORTCUTS_CRITICAL_SYNC_RESERVE_BYTES = NEWTAB_SHORTCUTS_STORE.DEFAULT_SHORTCUTS_SYNC_RESERVE_BYTES;
   const NEWTAB_SHORTCUTS_STORAGE_KEYS = NEWTAB_SHORTCUTS_STORE.SHORTCUT_STORAGE_KEYS;
   const pageSearchParams = new URLSearchParams(window.location.search || '');
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  const {
+    mediaQuery,
+    resolveTheme,
+    addMediaQueryChangeListener,
+    removeMediaQueryChangeListener
+  } = NEWTAB_SYSTEM_THEME.createSystemTheme(window);
   const initialThemeReadyPromise = new Promise<void>((resolve) => {
     pageState.resolveInitialThemeReady = resolve;
   });
@@ -858,29 +858,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     pageState
   });
 
-  // A press made while a card context menu is open belongs to the menu:
-  // choosing an item, or dismissing it. So do presses shortly after it, the
-  // rest of a double-click or one through the fading menu. Cards ignore the
-  // press and the click it ends in, so none opens the card underneath.
-  const CONTEXT_MENU_CLICK_THROUGH_GUARD_MS = 500;
-  const CONTEXT_MENU_PRESS_CLICK_MAX_MS = 1000;
-  let contextMenuPressedAt = 0;
-  let lastPressAt = 0;
-  let lastPressBelongsToMenu = false;
-  document.addEventListener('pointerdown', () => {
-    const now = Date.now();
-    lastPressAt = now;
-    lastPressBelongsToMenu = now - contextMenuPressedAt < CONTEXT_MENU_CLICK_THROUGH_GUARD_MS;
-    if (document.querySelector('.x-nt-shortcut-context-menu-portal[data-open="true"]')) {
-      contextMenuPressedAt = now;
-      lastPressBelongsToMenu = true;
-    }
-  }, true);
-
-  function isCardActivationSuppressed() {
-    return lastPressBelongsToMenu &&
-      Date.now() - lastPressAt < CONTEXT_MENU_PRESS_CLICK_MAX_MS;
-  }
+  const { isCardActivationSuppressed } = NEWTAB_CARD_ACTIVATION_GUARD.createCardActivationGuard({ documentObj: document });
 
   const {
     getRecentContextMenuOptions,
@@ -995,29 +973,10 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     ...siteSearchIconCacheOptions
   });
 
-  function loadSiteSearchIconCache() {
-    if (pageState.siteSearchIconCacheLoaded) {
-      return Promise.resolve(pageState.siteSearchIconCache);
-    }
-    if (pageState.siteSearchIconCacheLoadPromise) {
-      return pageState.siteSearchIconCacheLoadPromise;
-    }
-    const loadRevision = pageState.siteSearchIconCacheRevision;
-    pageState.siteSearchIconCacheLoadPromise = siteSearchIconStore.readAll().then((cache) => {
-      if (pageState.siteSearchIconCacheRevision === loadRevision) {
-        pageState.siteSearchIconCache = cache && typeof cache === 'object' ? cache : {};
-      }
-      pageState.siteSearchIconCacheLoaded = true;
-      return pageState.siteSearchIconCache;
-    }).catch(() => {
-      if (pageState.siteSearchIconCacheRevision === loadRevision) {
-        pageState.siteSearchIconCache = {};
-      }
-      pageState.siteSearchIconCacheLoaded = true;
-      return pageState.siteSearchIconCache;
-    });
-    return pageState.siteSearchIconCacheLoadPromise;
-  }
+  const { loadSiteSearchIconCache } = NEWTAB_SITE_SEARCH_ICON_CACHE.createSiteSearchIconCache({
+    store: siteSearchIconStore,
+    pageState
+  });
 
   loadSiteSearchIconCache();
   const sectionModeSelectController =
@@ -1299,67 +1258,6 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     pageState
   });
 
-  function resolveTheme(mode: ThemeMode, mediaMatchesOverride?: boolean | null): 'light' | 'dark' {
-    if (mode === 'dark') {
-      return 'dark';
-    }
-    if (mode === 'light') {
-      return 'light';
-    }
-    if (typeof mediaMatchesOverride === 'boolean') {
-      return mediaMatchesOverride ? 'dark' : 'light';
-    }
-    return mediaQuery.matches ? 'dark' : 'light';
-  }
-
-  function addMediaQueryChangeListener(
-    queryList: MediaQueryList,
-    listener: (event: MediaQueryListEvent) => void
-  ): boolean {
-    if (!queryList || typeof listener !== 'function') {
-      return false;
-    }
-    if (typeof queryList.addEventListener === 'function') {
-      queryList.addEventListener('change', listener);
-      return true;
-    }
-    if (typeof queryList.addListener === 'function') {
-      queryList.addListener(listener);
-      return true;
-    }
-    return false;
-  }
-
-  function removeMediaQueryChangeListener(
-    queryList: MediaQueryList,
-    listener: (event: MediaQueryListEvent) => void
-  ): void {
-    if (!queryList || typeof listener !== 'function') {
-      return;
-    }
-    if (typeof queryList.removeEventListener === 'function') {
-      queryList.removeEventListener('change', listener);
-      return;
-    }
-    if (typeof queryList.removeListener === 'function') {
-      queryList.removeListener(listener);
-    }
-  }
-
-  function migrateStorageIfNeeded(keys: string[], providerReady?: boolean): void {
-    if (providerStorageRuntime && !providerReady) {
-      void providerStorageRuntime.ready.then(() => migrateStorageIfNeeded(keys, true));
-      return;
-    }
-    if (!storageArea || !chrome || !chrome.storage || !chrome.storage.local) {
-      return;
-    }
-    if (isPrimaryStorageAreaName('local')) {
-      return;
-    }
-    LumnoSettingsStorage.migrateLocalSettingsToSync(chrome.storage.local, storageArea, keys);
-  }
-
   pageState.quoteRuntime = LumnoNewtabQuotes.createRuntime({
     documentObj: document, windowObj: window, chromeObj: chrome,
     storageArea, localStorageArea, t, showToast,
@@ -1367,8 +1265,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     getSearchRoot: () => root,
     getShortcutSection: () => pageState.shortcutSection,
     getTooltipController: () => topActionTooltipController,
-    isPreferenceArea: (areaName) => providerStorageRuntime
-      ? providerStorageRuntime.isActiveAreaName(areaName) : areaName === 'sync',
+    isPreferenceArea: isPrimaryStorageAreaName,
     onLayout: () => window.requestAnimationFrame(() => {
       updateBookmarkSectionPosition();
       scheduleWallpaperAdaptiveToneUpdate();
@@ -1824,7 +1721,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
   });
 
   pageState.AGGREGATE_SEARCH_STORAGE_KEY = AGGREGATE_SEARCH_STORAGE_KEY;
-  migrateStorageIfNeeded(SYNCED_PAGE_STORAGE_KEYS.slice());
+  migrateLocalSettingsIfNeeded(SYNCED_PAGE_STORAGE_KEYS.slice());
 
   const {
     faviconCacheRuntime,
@@ -2114,7 +2011,6 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     normalizeHost,
     sanitizeDisplayText,
     providerStorageRuntime,
-    storageAreaName,
     NEWTAB_SHORTCUTS_STORE,
     NEWTAB_SHORTCUTS_CRITICAL_SYNC_RESERVE_BYTES,
     NEWTAB_SHORTCUTS_LOCAL_OVERFLOW_STORAGE_KEY,

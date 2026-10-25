@@ -69,7 +69,7 @@ interface SettingsSyncState {
   siteSearchIconCache: CachedIconMap;
   siteSearchIconCacheLoaded: boolean;
   siteSearchIconCacheRevision: number;
-  siteSearchIconCacheLoadPromise: Promise<unknown> | null;
+  siteSearchIconCacheLoadPromise: Promise<CachedIconMap> | null;
   siteSearchState: SiteSearchProvider | null;
   inputModeController: Pick<InputModeController, 'refreshModeMenu'> | null;
   latestQuery: string;

@@ -90,7 +90,6 @@ interface ShortcutsControllerDeps {
   normalizeHost: NonNullable<ShortcutNormalizeOptions['normalizeHost']>;
   sanitizeDisplayText(text: unknown): string;
   providerStorageRuntime: Pick<ProviderStorageRuntime, 'getActiveAreaName'> | null;
-  storageAreaName: string | null;
   NEWTAB_SHORTCUTS_STORE: Pick<typeof ShortcutsStore,
     | 'DEFAULT_MAX_SHORTCUT_GROUPS'
     | 'SHORTCUTS_SYNC_KEYS'
@@ -305,7 +304,6 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     normalizeHost,
     sanitizeDisplayText,
     providerStorageRuntime,
-    storageAreaName,
     NEWTAB_SHORTCUTS_STORE,
     NEWTAB_SHORTCUTS_CRITICAL_SYNC_RESERVE_BYTES,
     NEWTAB_SHORTCUTS_LOCAL_OVERFLOW_STORAGE_KEY,
@@ -482,7 +480,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
 
   function isShortcutSyncStorageActive(): boolean {
     return Boolean(
-      (providerStorageRuntime ? providerStorageRuntime.getActiveAreaName() : storageAreaName) === 'sync' &&
+      Boolean(providerStorageRuntime && providerStorageRuntime.getActiveAreaName() === 'sync') &&
       chrome && chrome.storage && chrome.storage.sync
     );
   }

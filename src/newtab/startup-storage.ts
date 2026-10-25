@@ -1,6 +1,6 @@
-// The storage area the page reads settings from, and the one batched read
-// that fetches every key the first render needs before the modules ask for
-// them one by one.
+// The storage area the page reads settings from, the one batched read that
+// fetches every key the first render needs before the modules ask for them
+// one by one, and moving preferences an older version kept locally.
 import * as LumnoSettings from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 
@@ -52,12 +52,30 @@ function createStartupStorage() {
     });
   }
 
+  // Whether a storage change came from the area settings live in.
+  function isPrimaryStorageAreaName(areaName: string): boolean {
+    return providerStorageRuntime.isActiveAreaName(areaName);
+  }
+
+  // Copies preferences an older version kept in local storage into browser
+  // sync, once the settings area is known and turns out to be sync.
+  function migrateLocalSettingsIfNeeded(keys: string[]): void {
+    void providerStorageRuntime.ready.then(() => {
+      if (!chrome.storage || !chrome.storage.local || isPrimaryStorageAreaName('local')) {
+        return;
+      }
+      LumnoSettingsStorage.migrateLocalSettingsToSync(chrome.storage.local, storageArea, keys);
+    });
+  }
+
   return {
     settingsRuntimeApi,
     providerStorageRuntime,
     rawStorageArea,
     startupStorageReadBatch,
-    storageArea
+    storageArea,
+    isPrimaryStorageAreaName,
+    migrateLocalSettingsIfNeeded
   };
 }
 
