@@ -152,10 +152,6 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
     inputParts: null,
     searchInput: null,
     inputContainer: null,
-    inputDivider: null,
-    rightIcon: null,
-    closeOtherTabsButton: null,
-    searchClearButton: null,
     modeBadge: null,
     suggestionsContainer: null,
 

@@ -5,6 +5,7 @@ import * as LumnoCjkFontFaces from '../../shared/cjk-font-faces';
 import * as OVERLAY_FONT_FACES from '../../shared/overlay-font-faces';
 import type * as OverlayRuntime from '../runtime';
 import type { ReadableStorageArea } from '../runtime';
+import type { SearchInputParts } from '../../shared/react/search-input';
 
 // Row is a suggestion row, Provider a site search provider and Theme a
 // suggestion theme; this module only passes them along.
@@ -16,9 +17,7 @@ interface PanelLanguageState<Row, Provider, Theme> {
   overlayEngagementNoticeController: { updateLanguage?(): void } | null;
   searchInput: HTMLInputElement | null;
   defaultPlaceholderText: string;
-  rightIcon: HTMLElement | null;
-  closeOtherTabsButton: HTMLElement | null;
-  searchClearButton: HTMLElement | null;
+  inputParts: Pick<SearchInputParts, 'setChrome'> | null;
   modeBadge: HTMLElement | null;
   siteSearchState: Provider | null;
   localSearchScopeState: LocalSearchScope | null;
@@ -167,14 +166,12 @@ function createPanelLanguage<Row, Provider, Theme>(deps: PanelLanguageDeps<Row, 
         overlayState.searchInput.placeholder = overlayState.defaultPlaceholderText;
       }
     }
-    if (overlayState.rightIcon) {
-      overlayState.rightIcon.setAttribute('aria-label', settingsTooltipText);
-    }
-    if (overlayState.closeOtherTabsButton) {
-      overlayState.closeOtherTabsButton.setAttribute('aria-label', closeOtherTooltipText);
-    }
-    if (overlayState.searchClearButton) {
-      overlayState.searchClearButton.setAttribute('aria-label', t('search_input_clear', '清空'));
+    if (overlayState.inputParts) {
+      overlayState.inputParts.setChrome({
+        rightIconLabel: settingsTooltipText,
+        secondaryLabel: closeOtherTooltipText,
+        clearLabel: t('search_input_clear', '清空')
+      });
     }
     if (overlayState.modeBadge) {
       updateModeBadge(overlayState.searchInput ? overlayState.searchInput.value : '');

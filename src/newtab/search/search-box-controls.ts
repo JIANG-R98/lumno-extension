@@ -117,8 +117,7 @@ function createSearchBoxControls(deps: SearchBoxControlsDeps) {
       { name: 'Lumno' }
     );
     const applySettingsTooltip = () => {
-      rightIcon.setAttribute('aria-label', settingsTooltipText());
-      rightIcon.setAttribute('data-tooltip', settingsTooltipText());
+      inputParts.setChrome({ rightIconLabel: settingsTooltipText() });
     };
     applySettingsTooltip();
     onLanguageChange(applySettingsTooltip);
@@ -180,8 +179,7 @@ function createSearchBoxControls(deps: SearchBoxControlsDeps) {
   if (searchClearButton) {
     const searchClearTooltipText = (): string => t('search_input_clear', '清空');
     const applySearchClearTooltip = () => {
-      searchClearButton.setAttribute('aria-label', searchClearTooltipText());
-      searchClearButton.setAttribute('data-tooltip', searchClearTooltipText());
+      inputParts.setChrome({ clearLabel: searchClearTooltipText() });
     };
     applySearchClearTooltip();
     onLanguageChange(applySearchClearTooltip);
@@ -194,22 +192,11 @@ function createSearchBoxControls(deps: SearchBoxControlsDeps) {
   if (closeOtherTabsButton) {
     const closeOtherTabsTooltipText = (): string => t('overlay_close_other_tabs_tooltip', '关闭其他标签页');
     const applyCloseOtherTabsTooltip = () => {
-      closeOtherTabsButton.setAttribute('aria-label', closeOtherTabsTooltipText());
-      closeOtherTabsButton.setAttribute('data-tooltip', closeOtherTabsTooltipText());
-    };
-    const resetCloseOtherTabsButtonVisualState = () => {
-      closeOtherTabsButton.removeAttribute('data-hover-active');
+      inputParts.setChrome({ secondaryLabel: closeOtherTabsTooltipText() });
     };
     applyCloseOtherTabsTooltip();
     onLanguageChange(applyCloseOtherTabsTooltip);
     bindSearchInputCursorTooltip(closeOtherTabsButton, closeOtherTabsTooltipText);
-    closeOtherTabsButton.addEventListener('mouseenter', () => {
-      closeOtherTabsButton.setAttribute('data-hover-active', 'true');
-    });
-    closeOtherTabsButton.addEventListener('mouseleave', resetCloseOtherTabsButtonVisualState);
-    closeOtherTabsButton.addEventListener('blur', resetCloseOtherTabsButtonVisualState);
-    closeOtherTabsButton.addEventListener('pointerup', resetCloseOtherTabsButtonVisualState);
-    closeOtherTabsButton.addEventListener('pointercancel', resetCloseOtherTabsButtonVisualState);
     // The click opens the popconfirm; closeOtherTabs runs once it is confirmed.
     closeOtherTabsButton.addEventListener('click', hideSearchInputCursorTooltip);
   }

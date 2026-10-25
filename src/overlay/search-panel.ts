@@ -1163,7 +1163,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   applyOverlayInputExtensionIsolation(overlayState.searchInput);
   overlayState.inputContainer = overlayState.inputParts.container;
   const searchScopeIcon = overlayState.inputParts.icon;
-  overlayState.rightIcon = overlayState.inputParts.rightIcon;
+  const rightIcon = inputParts.rightIcon;
   overlayState.inputHistoryController =
     SEARCH_INPUT_HISTORY.createSearchInputHistoryController({
       storageArea: chrome && chrome.storage
@@ -1190,7 +1190,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
 
   applyNoTranslate(overlayState.searchInput);
   applyNoTranslate(overlayState.inputContainer);
-  applyNoTranslate(overlayState.rightIcon);
+  applyNoTranslate(rightIcon);
   const topActionTooltipController = LumnoTooltip.createController({
     documentObj: document,
     windowObj: window,
@@ -1250,23 +1250,9 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const hideInputActionCursorTooltip = () => {
     overlayCursorTooltipController.hide();
   };
-  const closeOtherTabsButton = overlayState.inputParts.secondaryAction;
-  overlayState.closeOtherTabsButton = closeOtherTabsButton;
-  overlayState.searchClearButton = overlayState.inputParts.clearAction;
-  const resetCloseOtherTabsButtonVisualState = () => {
-    if (closeOtherTabsButton) {
-      closeOtherTabsButton.removeAttribute('data-hover-active');
-    }
-  };
+  const closeOtherTabsButton = inputParts.secondaryAction;
+  const searchClearButton = inputParts.clearAction;
   if (closeOtherTabsButton) {
-    resetCloseOtherTabsButtonVisualState();
-    closeOtherTabsButton.addEventListener('mouseenter', () => {
-      closeOtherTabsButton.setAttribute('data-hover-active', 'true');
-    });
-    closeOtherTabsButton.addEventListener('mouseleave', resetCloseOtherTabsButtonVisualState);
-    closeOtherTabsButton.addEventListener('blur', resetCloseOtherTabsButtonVisualState);
-    closeOtherTabsButton.addEventListener('pointerup', resetCloseOtherTabsButtonVisualState);
-    closeOtherTabsButton.addEventListener('pointercancel', resetCloseOtherTabsButtonVisualState);
     bindInputActionCursorTooltip(
       closeOtherTabsButton,
       () => t('overlay_close_other_tabs_tooltip', '关闭其他标签页')
@@ -1293,7 +1279,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     }
     suggestionsContainer.setAttribute('data-scope-result-enter', 'done');
   });
-  overlayState.inputDivider = overlayState.inputParts.divider;
   overlayState.overlayWheelIsolationHandler = createOverlayWheelIsolationHandler(overlayState.overlay);
   overlayState.overlay.addEventListener('wheel', overlayState.overlayWheelIsolationHandler, { passive: false, capture: true });
 
@@ -1307,65 +1292,29 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     'shortcut_reference_search_open_scope_menu_title',
     '打开搜索范围面板'
   );
-  const setSearchScopeIconVisualState = (active: boolean): void => {
-    const enabled = searchScopeIcon.getAttribute('aria-disabled') !== 'true';
-    searchScopeIcon.dataset.hoverActive = active && enabled ? 'true' : 'false';
-  };
-  const setSearchScopeIconEnabled = (enabled: boolean): void => {
-    searchScopeIcon.setAttribute('aria-disabled', enabled ? 'false' : 'true');
-    searchScopeIcon.setAttribute('tabindex', enabled ? '0' : '-1');
-    searchScopeIcon.setAttribute('aria-label', searchScopeTooltipText());
-    if (enabled) {
-      searchScopeIcon.setAttribute('data-tooltip', searchScopeTooltipText());
-      return;
-    }
-    searchScopeIcon.removeAttribute('data-tooltip');
+  const activateSearchScopeIcon = (): void => {
     hideInputActionCursorTooltip();
-    setSearchScopeIconVisualState(false);
-    searchScopeIcon.blur();
-  };
-  const activateSearchScopeIcon = (event: Event): void => {
-    if (searchScopeIcon.getAttribute('aria-disabled') === 'true') {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    hideInputActionCursorTooltip();
-    setSearchScopeIconVisualState(false);
     if (overlayState.inputModeController) {
       overlayState.inputModeController.resetModeMenuDoubleTab();
     }
     openSearchModeMenuFromDoubleTab();
-    searchScopeIcon.blur();
   };
-  searchScopeIcon.dataset.searchScopeAction = 'true';
-  searchScopeIcon.setAttribute('role', 'button');
-  setSearchScopeIconEnabled(true);
-  setSearchScopeIconVisualState(false);
-  searchScopeIcon.addEventListener('mouseenter', () => {
-    setSearchScopeIconVisualState(true);
-  });
-  searchScopeIcon.addEventListener('focus', () => {
-    setSearchScopeIconVisualState(true);
-  });
-  ['mouseleave', 'blur', 'pointerup', 'pointercancel'].forEach((type) => {
-    searchScopeIcon.addEventListener(type, () => {
-      setSearchScopeIconVisualState(false);
-    });
-  });
-  searchScopeIcon.addEventListener('click', activateSearchScopeIcon);
-  searchScopeIcon.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') {
-      return;
+  // The search icon opens the scope panel, except while a scope is set.
+  const setSearchScopeIconEnabled = (enabled: boolean): void => {
+    if (!enabled) {
+      hideInputActionCursorTooltip();
     }
-    activateSearchScopeIcon(event);
-  });
+    inputParts.setChrome({
+      scopeAction: { enabled, label: searchScopeTooltipText(), onActivate: activateSearchScopeIcon }
+    });
+  };
+  setSearchScopeIconEnabled(true);
   bindInputActionCursorTooltip(searchScopeIcon, searchScopeTooltipText);
 
-  if (overlayState.rightIcon) {
+  if (rightIcon) {
     const settingsTooltipText = () => formatMessage('command_settings', '打开设置', { name: 'Lumno' });
-    bindInputActionCursorTooltip(overlayState.rightIcon, settingsTooltipText);
-    overlayState.rightIcon.addEventListener('click', function(event) {
+    bindInputActionCursorTooltip(rightIcon, settingsTooltipText);
+    rightIcon.addEventListener('click', function(event) {
       event.preventDefault();
       event.stopPropagation();
       hideInputActionCursorTooltip();
@@ -1373,9 +1322,9 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       removeOverlay(overlayState.overlay);
     });
   }
-  if (overlayState.searchClearButton) {
-    bindInputActionCursorTooltip(overlayState.searchClearButton, () => t('search_input_clear', '清空'));
-    overlayState.searchClearButton.addEventListener('click', hideInputActionCursorTooltip);
+  if (searchClearButton) {
+    bindInputActionCursorTooltip(searchClearButton, () => t('search_input_clear', '清空'));
+    searchClearButton.addEventListener('click', hideInputActionCursorTooltip);
     overlayState.inputParts.input.addEventListener('input', () => {
       if (overlayState.inputModeController) {
         overlayState.inputModeController.updateLayout();
@@ -1401,7 +1350,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       overlayState.searchInput.focus({ preventScroll: true });
     }
     LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'closeOtherTabsForOverlay' }, (response) => {
-      resetCloseOtherTabsButtonVisualState();
       if (!response || response.ok !== true) {
         return;
       }

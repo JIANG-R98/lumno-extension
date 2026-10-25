@@ -1,6 +1,7 @@
 // How the results area is laid out: the open tabs viewport and its
 // scrollbar gutter, the divider, the offset under an open mode menu,
 // collapsing results, the input's right padding and the tab hint.
+import type { SearchInputParts } from '../../shared/react/search-input';
 import type { SuggestionsViewController } from '../../shared/react/search/suggestion-list/types';
 import type { InputModeController } from '../../shared/search/search-input-mode';
 import type { InputModeProvider } from '../../shared/search/input-mode/types';
@@ -10,7 +11,7 @@ import type * as SuggestionsHeightLayout from '../../shared/search/suggestions-h
 interface ResultsLayoutState {
   overlay: HTMLElement | null;
   inputContainer: HTMLElement | null;
-  inputDivider: HTMLElement | null;
+  inputParts: Pick<SearchInputParts, 'setChrome'> | null;
   suggestionsContainer: HTMLElement | null;
   // The panel's styles live in its own shadow root, so inline styles need
   // no !important.
@@ -161,11 +162,9 @@ function createResultsLayout(deps: ResultsLayoutDeps) {
   }
 
   function setInputDividerVisible(visible: boolean): void {
-    if (!overlayState.inputDivider) {
-      return;
+    if (overlayState.inputParts) {
+      overlayState.inputParts.setChrome({ underline: visible });
     }
-    overlayState.inputDivider.setAttribute('data-visible', visible ? 'true' : 'false');
-    overlayState.inputDivider.style.setProperty('display', visible ? 'block' : 'none');
   }
 
   function getSearchModeMenuResultOffset(): number {

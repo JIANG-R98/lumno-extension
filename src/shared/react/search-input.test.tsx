@@ -177,6 +177,75 @@ describe('Shared search input React island', () => {
     expect(parts.clearAction?.firstElementChild).toBe(clearGlyph);
   });
 
+  it('makes the search icon a scope button while the surface asks', () => {
+    const parts = create();
+    const onActivate = vi.fn();
+    expect(parts.icon.getAttribute('role')).toBeNull();
+
+    act(() => parts.setChrome({ scopeAction: { enabled: true, label: 'Open scopes', onActivate } }));
+    expect(parts.icon.getAttribute('role')).toBe('button');
+    expect(parts.icon.tabIndex).toBe(0);
+    expect(parts.icon.getAttribute('aria-label')).toBe('Open scopes');
+    expect(parts.icon.dataset.tooltip).toBe('Open scopes');
+
+    const enter = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter' });
+    act(() => {
+      parts.icon.focus();
+      parts.icon.dispatchEvent(enter);
+    });
+    expect(enter.defaultPrevented).toBe(true);
+    expect(onActivate).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).not.toBe(parts.icon);
+
+    act(() => parts.icon.click());
+    expect(onActivate).toHaveBeenCalledTimes(2);
+
+    act(() => parts.icon.focus());
+    expect(document.activeElement).toBe(parts.icon);
+    act(() => parts.setChrome({ scopeAction: { enabled: false, label: 'Open scopes', onActivate } }));
+    expect(parts.icon.getAttribute('aria-disabled')).toBe('true');
+    expect(parts.icon.tabIndex).toBe(-1);
+    expect(parts.icon.dataset.tooltip).toBeUndefined();
+    expect(document.activeElement).not.toBe(parts.icon);
+    act(() => parts.icon.click());
+    expect(onActivate).toHaveBeenCalledTimes(2);
+  });
+
+  it('takes the buttons\' labels and the underline from the surface', () => {
+    const parts = create({
+      clearAction: { ariaLabel: 'Clear', id: 'clear' },
+      secondaryAction: { ariaLabel: 'Close other tabs', id: 'close-tabs' }
+    });
+
+    act(() => parts.setChrome({ rightIconLabel: '设置', clearLabel: '清空', secondaryLabel: '关闭其他标签页', underline: true }));
+
+    expect(parts.rightIcon.getAttribute('aria-label')).toBe('设置');
+    expect(parts.clearAction?.getAttribute('aria-label')).toBe('清空');
+    expect(parts.secondaryAction?.getAttribute('aria-label')).toBe('关闭其他标签页');
+    expect(parts.secondaryAction?.dataset.tooltip).toBe('关闭其他标签页');
+    expect(parts.divider.dataset.visible).toBe('true');
+    act(() => parts.setChrome({ underline: false }));
+    act(() => {
+      parts.input.value = 'lumno';
+      parts.input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    });
+    expect(parts.divider.dataset.visible).toBe('false');
+  });
+
+  it('shows the secondary action\'s hover look while the pointer is over it', () => {
+    const parts = create({ secondaryAction: { ariaLabel: 'Close other tabs', id: 'close-tabs' } });
+    const button = required(parts.secondaryAction, 'parts.secondaryAction');
+
+    act(() => {
+      button.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, relatedTarget: document.body }));
+    });
+    expect(button.dataset.hoverActive).toBe('true');
+    act(() => {
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    });
+    expect(button.dataset.hoverActive).toBeUndefined();
+  });
+
   it('follows text the surface sets itself once asked', () => {
     const parts = create({ clearAction: { id: 'clear' } });
     const clear = required(parts.clearAction, 'parts.clearAction');

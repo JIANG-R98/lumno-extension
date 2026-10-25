@@ -597,63 +597,32 @@ function createSearchBox(deps: SearchBoxDeps) {
     'shortcut_reference_search_open_scope_menu_title',
     '打开搜索范围面板'
   );
-  function setSearchScopeIconVisualState(active: boolean): void {
-    const enabled = searchScopeIcon.getAttribute('aria-disabled') !== 'true';
-    searchScopeIcon.dataset.hoverActive = active && enabled ? 'true' : 'false';
-  }
-  function setSearchScopeIconEnabled(enabled: boolean): void {
-    const nextEnabled = enabled !== false;
-    searchScopeIcon.setAttribute('aria-disabled', nextEnabled ? 'false' : 'true');
-    searchScopeIcon.setAttribute('tabindex', nextEnabled ? '0' : '-1');
-    searchScopeIcon.setAttribute('aria-label', searchScopeTooltipText());
-    if (nextEnabled) {
-      searchScopeIcon.setAttribute('data-tooltip', searchScopeTooltipText());
-      return;
-    }
-    searchScopeIcon.removeAttribute('data-tooltip');
+  function activateSearchScopeIcon(): void {
     hideSearchInputCursorTooltip();
-    setSearchScopeIconVisualState(false);
-    searchScopeIcon.blur();
-  }
-  onLanguageChange(() => {
-    setSearchScopeIconEnabled(searchScopeIcon.getAttribute('aria-disabled') !== 'true');
-  });
-  function activateSearchScopeIcon(event: Event): void {
-    if (searchScopeIcon.getAttribute('aria-disabled') === 'true') {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    hideSearchInputCursorTooltip();
-    setSearchScopeIconVisualState(false);
     if (pageState.inputModeController) {
       pageState.inputModeController.resetModeMenuDoubleTab();
     }
     void openSearchModeMenuFromDoubleTab();
-    searchScopeIcon.blur();
   }
-  searchScopeIcon.dataset.searchScopeAction = 'true';
-  searchScopeIcon.setAttribute('role', 'button');
-  setSearchScopeIconEnabled(true);
-  setSearchScopeIconVisualState(false);
-  searchScopeIcon.addEventListener('mouseenter', () => {
-    setSearchScopeIconVisualState(true);
-  });
-  searchScopeIcon.addEventListener('focus', () => {
-    setSearchScopeIconVisualState(true);
-  });
-  ['mouseleave', 'blur', 'pointerup', 'pointercancel'].forEach((type) => {
-    searchScopeIcon.addEventListener(type, () => {
-      setSearchScopeIconVisualState(false);
-    });
-  });
-  searchScopeIcon.addEventListener('click', activateSearchScopeIcon);
-  searchScopeIcon.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') {
-      return;
+  // The search icon opens the scope panel, except while a scope is set.
+  let searchScopeIconEnabled = true;
+  function setSearchScopeIconEnabled(enabled: boolean): void {
+    searchScopeIconEnabled = enabled !== false;
+    if (!searchScopeIconEnabled) {
+      hideSearchInputCursorTooltip();
     }
-    activateSearchScopeIcon(event);
+    inputParts.setChrome({
+      scopeAction: {
+        enabled: searchScopeIconEnabled,
+        label: searchScopeTooltipText(),
+        onActivate: activateSearchScopeIcon
+      }
+    });
+  }
+  onLanguageChange(() => {
+    setSearchScopeIconEnabled(searchScopeIconEnabled);
   });
+  setSearchScopeIconEnabled(true);
   bindSearchInputCursorTooltip(searchScopeIcon, searchScopeTooltipText);
 
   function getCloseOtherTabsConfirmCopy() {
@@ -669,13 +638,9 @@ function createSearchBox(deps: SearchBoxDeps) {
     if (event.isTrusted !== true) {
       return;
     }
-    const closeOtherTabsButton = inputParts.secondaryAction;
     // The confirm button is going away with its bubble; keep typing in the field.
     searchInput.focus({ preventScroll: true });
     LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'closeOtherTabsForOverlay' }, (response) => {
-      if (closeOtherTabsButton) {
-        closeOtherTabsButton.removeAttribute('data-hover-active');
-      }
       if (chrome.runtime.lastError || !response || response.ok !== true) {
         return;
       }
