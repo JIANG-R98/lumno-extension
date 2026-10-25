@@ -1,6 +1,94 @@
-// @ts-nocheck
 // Loading and rendering the bookmark and recent-site sections.
-function createSectionLoaders(deps) {
+import type { HiddenRecentSite, RecentSite } from '../domain/recent-sites-store';
+import { queryHtmlElement } from '../shared/dom-lookup';
+import type { AppearanceModes } from './appearance-modes';
+import type { BookmarkCascadeActions } from './bookmarks/bookmark-cascade-actions';
+import type { BookmarkDragSession } from './bookmarks/bookmark-drag';
+import type { BookmarkDragController } from './bookmarks/bookmark-drag-controller';
+import type { BookmarkPager } from './bookmarks/bookmark-pager';
+import type { BookmarkItem } from './bookmarks/bookmarks-store';
+import type { BookmarksRuntime } from './bookmarks/bookmarks-runtime';
+import type { PageLayout } from './page-layout';
+import type { PagePreferences } from './page-preferences';
+import type { BookmarksViewController } from './react/bookmarks';
+import type { RecentSitesViewController } from './react/recent-sites';
+import type { RecentCardDrag } from './recent/recent-card-drag';
+import type { RecentSitesController } from './recent/recent-sites-controller';
+import type { RecentSources } from './recent/recent-sources';
+import type { SectionHeaders } from './section-headers';
+import type { ShortcutDrag, ShortcutDragSession } from './shortcuts/shortcut-drag';
+import type { ShortcutsController } from './shortcuts/shortcuts-controller';
+import type { PageFavicons } from './theme/page-favicons';
+import type { UrlPolicy } from './url-policy';
+
+interface SectionLoadOptions {
+  force?: boolean;
+  skipFaviconWait?: boolean;
+  // The section data revision the load was asked for; a newer one drops it.
+  sectionDataRevision?: number;
+}
+
+interface SectionLoadersState {
+  // Goes up whenever the section data is replaced, so loads asked for
+  // before then land nowhere.
+  sectionDataRevision: number;
+  initialThemeApplied: boolean;
+  bookmarkDragState: BookmarkDragSession | null;
+  shortcutDragState: ShortcutDragSession | null;
+  bookmarkGrid: HTMLElement | null;
+  bookmarksView: Pick<BookmarksViewController, 'render' | 'clear'> | null;
+  bookmarkCurrentFolderId: string;
+  bookmarkRootFolderId: string;
+  bookmarkRenderSignature: string;
+  currentBookmarkViewMode: string;
+  currentBookmarkCount: number;
+  bookmarkAllItems: BookmarkItem[];
+  bookmarkRootTotalCount: number;
+  bookmarkRootVisibleCount: number;
+  bookmarkCurrentPage: number;
+  bookmarkLoadedOnce: boolean;
+  newtabShortcuts: ReadonlyArray<{ type?: string }>;
+  recentSitesView: Pick<RecentSitesViewController, 'render' | 'clear'> | null;
+  hiddenRecentSites: HiddenRecentSite[];
+  recentSourceItems: RecentSite[];
+  recentRenderSignature: string;
+  currentRecentMode: string;
+  recentLoadedOnce: boolean;
+}
+
+interface SectionLoadersDeps extends
+  Pick<ShortcutDrag, 'isShortcutDragActive' | 'scheduleShortcutDragMove'>,
+  Pick<BookmarkDragController,
+    'updateBookmarkDragLayoutCache' | 'setBookmarkDragCardTransform' | 'scheduleBookmarkDragMove' |
+    'syncOpenBookmarkCascadeAnchorVisual' | 'playPendingBookmarkLayoutAnimation'>,
+  Pick<BookmarkPager,
+    'updateBookmarkGridHeightLock' | 'updateBookmarkPagerState' | 'getBookmarkPageCount' | 'renderCurrentBookmarkPage'>,
+  Pick<PageLayout,
+    'updateBookmarkSectionPosition' | 'getRecentLimit' | 'getRecentSourceLimit' | 'setContentSectionVisible' |
+    'beginSearchEntryRestoreLayoutLock'>,
+  Pick<RecentSitesController,
+    'normalizeRecentSiteRecord' | 'getRecentSiteUrlKey' | 'writeHiddenRecentSites' | 'isRecentSiteHidden' |
+    'mergeRecentSitesWithPinned'>,
+  Pick<UrlPolicy, 'shouldExcludeFromRecentSites'>,
+  Pick<BookmarkCascadeActions, 'closeBookmarkCascadeMenu' | 'getTopBookmarks'>,
+  Pick<AppearanceModes, 'bootstrapInitialThemeMode'>,
+  Pick<PageFavicons, 'areFaviconRenderCachesReady' | 'waitForFaviconRenderCaches'>,
+  Pick<PagePreferences, 'getBookmarkLimit'>,
+  Pick<ShortcutsController, 'renderShortcuts'>,
+  Pick<RecentSources, 'getRecentSites'> {
+  isRecentCardDragActive: RecentCardDrag['isRecentCardDragActive'];
+  resumeRecentCardDragAfterFolderSwitch: RecentCardDrag['resumeRecentCardDragAfterFolderSwitch'];
+  isBookmarkTopbarMode: SectionHeaders['isBookmarkTopbarMode'];
+  setBookmarkSurfaceVisible: SectionHeaders['setBookmarkSurfaceVisible'];
+  updateBookmarkBreadcrumb: SectionHeaders['updateBookmarkBreadcrumb'];
+  recentSection: HTMLElement | null;
+  bookmarksRuntime: Pick<BookmarksRuntime, 'invalidate'>;
+  FAVICON_CACHE_BOOT_WAIT_MS: number;
+  MAX_PINNED_RECENT_SITES: number;
+  pageState: SectionLoadersState;
+}
+
+function createSectionLoaders(deps: SectionLoadersDeps) {
   const {
     isShortcutDragActive,
     isRecentCardDragActive,
@@ -55,19 +143,33 @@ function createSectionLoaders(deps) {
   // holds still meanwhile, so the dock grows over free space, and the bar
   // stays hidden when it would cover shortcuts: the shortcut area would
   // then shrink and scroll under the pointer.
-  function isDragActive() {
+  function getBookmarksView(): Pick<BookmarksViewController, 'render' | 'clear'> {
+    if (!pageState.bookmarksView) {
+      throw new Error('Bookmarks view unavailable');
+    }
+    return pageState.bookmarksView;
+  }
+
+  function getRecentSitesView(): Pick<RecentSitesViewController, 'render' | 'clear'> {
+    if (!pageState.recentSitesView) {
+      throw new Error('Recent sites view unavailable');
+    }
+    return pageState.recentSitesView;
+  }
+
+  function isDragActive(): boolean {
     return Boolean((pageState.bookmarkDragState && pageState.bookmarkDragState.isDragging) ||
       isShortcutDragActive() || isRecentCardDragActive());
   }
 
-  function getShortcutAreaLimit() {
-    const section = typeof document !== 'undefined' && document.querySelector
-      ? document.querySelector('.x-nt-shortcuts-section')
+  function getShortcutAreaLimit(): string {
+    const section = typeof document !== 'undefined'
+      ? queryHtmlElement(document, '.x-nt-shortcuts-section')
       : null;
     return section && section.style ? section.style.getPropertyValue('--x-nt-shortcuts-max-height') : '';
   }
 
-  function showEmptyBookmarkRoot(visible, keepForDrag) {
+  function showEmptyBookmarkRoot(visible: boolean, keepForDrag: boolean): void {
     const limitBefore = getShortcutAreaLimit();
     const layoutOptions = isDragActive() ? { preserveSearchEntryLayout: true } : undefined;
     setBookmarkSurfaceVisible(visible);
@@ -87,7 +189,7 @@ function createSectionLoaders(deps) {
     updateBookmarkSectionPosition(layoutOptions);
   }
 
-  function renderBookmarks(items) {
+  function renderBookmarks(items: BookmarkItem[] | null | undefined): void {
     const normalizedItems = Array.isArray(items) ? items : [];
     const isAtRoot = String(pageState.bookmarkCurrentFolderId || '') === String(pageState.bookmarkRootFolderId || '1');
     const keepEmptyRootVisibleForDrag = Boolean(
@@ -103,7 +205,7 @@ function createSectionLoaders(deps) {
         pageState.bookmarkGrid.removeAttribute('data-bookmark-empty-drop-surface');
       }
     }
-    const renderResult = pageState.bookmarksView.render(normalizedItems, {
+    const renderResult = getBookmarksView().render(normalizedItems, {
       signature: pageState.bookmarkRenderSignature,
       folderId: pageState.bookmarkCurrentFolderId,
       rootFolderId: pageState.bookmarkRootFolderId,
@@ -158,9 +260,9 @@ function createSectionLoaders(deps) {
     updateBookmarkSectionPosition();
   }
 
-  function renderRecentSites(items) {
+  function renderRecentSites(items: RecentSite[] | null | undefined): void {
     const sourceItems = Array.isArray(items) ? items : [];
-    const resolvedHiddenUrls = new Set();
+    const resolvedHiddenUrls = new Set<string>();
     sourceItems.forEach((item) => {
       const normalizedItem = normalizeRecentSiteRecord(item);
       if (!normalizedItem) {
@@ -179,7 +281,7 @@ function createSectionLoaders(deps) {
       }
     });
     if (resolvedHiddenUrls.size > 0) {
-      writeHiddenRecentSites(
+      void writeHiddenRecentSites(
         pageState.hiddenRecentSites.filter((entry) => entry && !resolvedHiddenUrls.has(entry.url))
       );
     }
@@ -190,7 +292,7 @@ function createSectionLoaders(deps) {
       });
     pageState.recentSourceItems = normalizedSourceItems.slice();
     const mergedItems = mergeRecentSitesWithPinned(normalizedSourceItems, getRecentLimit());
-    const renderResult = pageState.recentSitesView.render(mergedItems, {
+    const renderResult = getRecentSitesView().render(mergedItems, {
       signature: pageState.recentRenderSignature
     });
     if (!renderResult.changed) {
@@ -212,11 +314,11 @@ function createSectionLoaders(deps) {
     updateBookmarkSectionPosition();
   }
 
-  function markBookmarkDataDirty() {
+  function markBookmarkDataDirty(): void {
     bookmarkDataDirty = true;
   }
 
-  function markBookmarkTreeDirty(options) {
+  function markBookmarkTreeDirty(options?: { preserveCascadeOpen?: boolean; skipRuntimeInvalidate?: boolean }): void {
     const preserveCascadeOpen = Boolean(options && options.preserveCascadeOpen);
     bookmarkDataDirty = true;
     if (!options || options.skipRuntimeInvalidate !== true) {
@@ -227,11 +329,11 @@ function createSectionLoaders(deps) {
     }
   }
 
-  function markRecentDataDirty() {
+  function markRecentDataDirty(): void {
     recentDataDirty = true;
   }
 
-  function loadBookmarks(options) {
+  function loadBookmarks(options?: SectionLoadOptions): Promise<void> {
     const config = options || {};
     const requestedSectionDataRevision = Number.isFinite(Number(config.sectionDataRevision))
       ? Number(config.sectionDataRevision)
@@ -267,7 +369,7 @@ function createSectionLoaders(deps) {
       pageState.bookmarkRootVisibleCount = 0;
       pageState.bookmarkCurrentPage = 0;
       pageState.bookmarkRenderSignature = '';
-      pageState.bookmarksView.clear();
+      getBookmarksView().clear();
       setBookmarkSurfaceVisible(false);
       bookmarkDataDirty = false;
       pageState.bookmarkLoadedOnce = true;
@@ -286,7 +388,7 @@ function createSectionLoaders(deps) {
         pageState.bookmarkRootVisibleCount = 0;
         pageState.bookmarkCurrentPage = 0;
         pageState.bookmarkRenderSignature = '';
-        pageState.bookmarksView.clear();
+        getBookmarksView().clear();
         setBookmarkSurfaceVisible(false);
         bookmarkDataDirty = false;
         pageState.bookmarkLoadedOnce = true;
@@ -317,7 +419,7 @@ function createSectionLoaders(deps) {
     });
   }
 
-  function loadRecentSites(options) {
+  function loadRecentSites(options?: SectionLoadOptions): Promise<void> {
     const config = options || {};
     const requestedSectionDataRevision = Number.isFinite(Number(config.sectionDataRevision))
       ? Number(config.sectionDataRevision)
@@ -350,7 +452,7 @@ function createSectionLoaders(deps) {
     if (!recentSourceLimit || recentSourceLimit <= 0) {
       pageState.recentRenderSignature = '';
       pageState.recentSourceItems = [];
-      pageState.recentSitesView.clear();
+      getRecentSitesView().clear();
       setContentSectionVisible(recentSection, false);
       recentDataDirty = false;
       pageState.recentLoadedOnce = true;
@@ -369,7 +471,7 @@ function createSectionLoaders(deps) {
     });
   }
 
-  function handleRecentVisibilityChange() {
+  function handleRecentVisibilityChange(): void {
     if (document.visibilityState !== 'visible') {
       return;
     }
@@ -379,20 +481,20 @@ function createSectionLoaders(deps) {
       beginSearchEntryRestoreLayoutLock();
     }
     if (shouldReloadRecent) {
-      loadRecentSites();
+      void loadRecentSites();
     }
     if (shouldReloadBookmarks) {
-      loadBookmarks();
+      void loadBookmarks();
     }
   }
 
-  function forceReloadRecentSitesForI18n() {
+  function forceReloadRecentSitesForI18n(): void {
     pageState.recentRenderSignature = '';
     pageState.bookmarkRenderSignature = '';
     markRecentDataDirty();
     markBookmarkDataDirty();
-    loadRecentSites();
-    loadBookmarks();
+    void loadRecentSites();
+    void loadBookmarks();
   }
 
   return {
@@ -408,4 +510,7 @@ function createSectionLoaders(deps) {
   };
 }
 
+type SectionLoaders = ReturnType<typeof createSectionLoaders>;
+
 export { createSectionLoaders };
+export type { SectionLoadOptions, SectionLoaders, SectionLoadersDeps, SectionLoadersState };

@@ -1,6 +1,84 @@
 // Headings, mode menus, pager labels and breadcrumbs for the bookmark and
 // recent-site sections.
-function createSectionHeaders(deps) {
+import type { StorageAreaLike } from '../domain/storage-port';
+import type { BookmarkCascadeActions } from './bookmarks/bookmark-cascade-actions';
+import type { BookmarkCascadeRuntime } from './bookmarks/bookmark-cascade-menu';
+import type { BookmarkDisplaySettings, BookmarkViewMode } from './bookmarks/bookmark-display-settings';
+import type { BookmarkPathEntry } from './bookmarks/bookmarks-store';
+import type { Translate } from './newtab-types';
+import type { PageLayout } from './page-layout';
+import type { createBookmarkBreadcrumbController } from './react/bookmark-breadcrumb';
+import type { BookmarksTopbarRuntime } from './react/bookmarks-topbar';
+import type { RecentModeSwitch } from './recent/recent-mode-switch';
+import type { SectionLoaders } from './section-loaders';
+import type { SectionModeSelect } from './section-mode-select';
+import type { TooltipBindings } from './tooltip-bindings';
+import type { ViewportInsets } from './viewport-insets';
+
+type BookmarkBreadcrumbController = ReturnType<typeof createBookmarkBreadcrumbController>;
+
+interface BookmarkViewModeOptions {
+  // Applies only while the view mode is still at this revision.
+  expectedRevision?: number;
+  // Loads the bookmarks when the mode stays the same but none are loaded yet.
+  ensureLoaded?: boolean;
+  force?: boolean;
+  persist?: boolean;
+}
+
+interface BookmarkViewModeResult {
+  applied: boolean;
+  changed: boolean;
+  mode: BookmarkViewMode;
+  revision: number;
+}
+
+interface SectionHeadersState {
+  recentHeading: HTMLElement | null;
+  recentModeMenu: Pick<RecentModeSwitch, 'update'> | null;
+  currentRecentMode: string;
+  bookmarkHeading: HTMLElement | null;
+  bookmarkModeMenu: Pick<SectionModeSelect, 'update'> | null;
+  bookmarkGrid: HTMLElement | null;
+  bookmarkCascadeRuntime: Pick<BookmarkCascadeRuntime, 'positionLevels' | 'isOpen'> | null;
+  bookmarkTopbarRuntime: Pick<BookmarksTopbarRuntime, 'activate' | 'deactivate' | 'setVisible' | 'element'> | null;
+  bookmarkBreadcrumbController: Pick<BookmarkBreadcrumbController, 'render'> | null;
+  bookmarkPagerPrevButton: HTMLElement | null;
+  bookmarkPagerNextButton: HTMLElement | null;
+  bookmarkOpenManagerButton: HTMLElement | null;
+  currentBookmarkViewMode: BookmarkViewMode;
+  bookmarkViewModeRevision: number;
+  bookmarkCurrentFolderId: string;
+  bookmarkRootFolderId: string;
+  bookmarkFolderPath: BookmarkPathEntry[];
+  bookmarkCanNavigateRoot: boolean;
+  bookmarkCurrentPage: number;
+  bookmarkRenderSignature: string;
+  bookmarkLoadedOnce: boolean;
+  currentBookmarkCount: number;
+  zenModeEnabled: boolean;
+}
+
+interface SectionHeadersDeps extends
+  Pick<PageLayout, 'normalizeRecentMode' | 'updateSearchEntryLayout' | 'setContentSectionVisible'>,
+  Pick<BookmarkDisplaySettings, 'normalizeBookmarkViewMode' | 'persistBookmarkViewMode'>,
+  Pick<BookmarkCascadeActions, 'closeBookmarkCascadeMenu'>,
+  Pick<TooltipBindings, 'showTopActionTooltip' | 'hideTopActionTooltip'>,
+  Pick<ViewportInsets, 'getNewtabVisualViewportInsets'> {
+  t: Translate;
+  markRecentDataDirty: SectionLoaders['markRecentDataDirty'];
+  loadRecentSites: SectionLoaders['loadRecentSites'];
+  markBookmarkDataDirty: SectionLoaders['markBookmarkDataDirty'];
+  loadBookmarks: SectionLoaders['loadBookmarks'];
+  storageArea: StorageAreaLike | null;
+  RECENT_MODE_STORAGE_KEY: string;
+  BOOKMARK_TOPBAR_HEIGHT_PX: number;
+  bookmarkSection: HTMLElement | null;
+  bookmarkCards: readonly HTMLElement[];
+  pageState: SectionHeadersState;
+}
+
+function createSectionHeaders(deps: SectionHeadersDeps) {
   const {
     t,
     normalizeRecentMode,
@@ -31,7 +109,7 @@ function createSectionHeaders(deps) {
   // Matches the floating bar's 8px top offset and 40px height in styles/bookmarks-topbar.css.
   const BOOKMARK_TOPBAR_FLOATING_OCCUPIED_PX = 48;
 
-  function updateRecentHeading() {
+  function updateRecentHeading(): void {
     if (!pageState.recentHeading) {
       return;
     }
@@ -40,13 +118,13 @@ function createSectionHeaders(deps) {
     pageState.recentHeading.textContent = t(key, fallback);
   }
 
-  function updateRecentModeMenu() {
-    if (pageState.recentModeMenu && typeof pageState.recentModeMenu.update === 'function') {
+  function updateRecentModeMenu(): void {
+    if (pageState.recentModeMenu) {
       pageState.recentModeMenu.update();
     }
   }
 
-  function setRecentMode(nextMode) {
+  function setRecentMode(nextMode: unknown): void {
     const mode = normalizeRecentMode(nextMode, 'latest');
     if (pageState.currentRecentMode === mode) {
       updateRecentModeMenu();
@@ -56,28 +134,28 @@ function createSectionHeaders(deps) {
     updateRecentHeading();
     updateRecentModeMenu();
     if (storageArea) {
-      storageArea.set({ [RECENT_MODE_STORAGE_KEY]: mode });
+      void storageArea.set({ [RECENT_MODE_STORAGE_KEY]: mode });
     }
     markRecentDataDirty();
-    loadRecentSites({ force: true });
+    void loadRecentSites({ force: true });
   }
 
-  function canDismissRecentCard() {
+  function canDismissRecentCard(): boolean {
     return true;
   }
 
-  function updateBookmarkHeading() {
+  function updateBookmarkHeading(): void {
     if (!pageState.bookmarkHeading) {
       return;
     }
     pageState.bookmarkHeading.textContent = t('bookmarks_heading', '书签');
   }
 
-  function isBookmarkTopbarMode() {
+  function isBookmarkTopbarMode(): boolean {
     return pageState.currentBookmarkViewMode === 'top';
   }
 
-  function getNewtabTopOccupiedInsetPx() {
+  function getNewtabTopOccupiedInsetPx(): number {
     const visualViewportTopInset = getNewtabVisualViewportInsets().top;
     const body = document.body;
     const bookmarkTopbarInset = body && body.getAttribute('data-nt-top-occupied') === 'true'
@@ -88,18 +166,18 @@ function createSectionHeaders(deps) {
     return visualViewportTopInset + bookmarkTopbarInset;
   }
 
-  function getNewtabViewportTopPaddingPx() {
+  function getNewtabViewportTopPaddingPx(): number {
     return getNewtabTopOccupiedInsetPx() + Math.min(8, NEWTAB_FLOATING_TOP_GAP_PX);
   }
 
-  function getBookmarkCascadeViewportTopPaddingPx() {
+  function getBookmarkCascadeViewportTopPaddingPx(): number {
     const occupiedTopInset = getNewtabTopOccupiedInsetPx();
     return occupiedTopInset > 0
       ? occupiedTopInset + BOOKMARK_CASCADE_TOPBAR_GAP_PX
       : 8;
   }
 
-  function setNewtabTopOccupied(occupied) {
+  function setNewtabTopOccupied(occupied: unknown): void {
     if (!document.body) {
       return;
     }
@@ -111,7 +189,7 @@ function createSectionHeaders(deps) {
     refreshTopOccupiedLayout();
   }
 
-  function setNewtabTopLayout(layout) {
+  function setNewtabTopLayout(layout: unknown): void {
     if (!document.body) {
       return;
     }
@@ -125,16 +203,14 @@ function createSectionHeaders(deps) {
     }
   }
 
-  function refreshTopOccupiedLayout() {
+  function refreshTopOccupiedLayout(): void {
     updateSearchEntryLayout();
-    if (pageState.bookmarkCascadeRuntime &&
-        typeof pageState.bookmarkCascadeRuntime.positionLevels === 'function' &&
-        pageState.bookmarkCascadeRuntime.isOpen()) {
+    if (pageState.bookmarkCascadeRuntime && pageState.bookmarkCascadeRuntime.isOpen()) {
       pageState.bookmarkCascadeRuntime.positionLevels();
     }
   }
 
-  function syncBookmarkSurfaceMode() {
+  function syncBookmarkSurfaceMode(): void {
     if (!pageState.bookmarkTopbarRuntime) {
       return;
     }
@@ -153,7 +229,7 @@ function createSectionHeaders(deps) {
     }
   }
 
-  function setBookmarkSurfaceVisible(visible) {
+  function setBookmarkSurfaceVisible(visible: unknown): void {
     const nextVisible = visible === true;
     if (isBookmarkTopbarMode()) {
       setContentSectionVisible(bookmarkSection, false);
@@ -168,8 +244,8 @@ function createSectionHeaders(deps) {
     setContentSectionVisible(bookmarkSection, nextVisible);
   }
 
-  function updateBookmarkModeMenu() {
-    if (pageState.bookmarkModeMenu && typeof pageState.bookmarkModeMenu.update === 'function') {
+  function updateBookmarkModeMenu(): void {
+    if (pageState.bookmarkModeMenu) {
       pageState.bookmarkModeMenu.update();
     }
     if (pageState.bookmarkGrid) {
@@ -181,8 +257,11 @@ function createSectionHeaders(deps) {
     syncBookmarkSurfaceMode();
   }
 
-  function applyBookmarkViewMode(nextMode, options) {
-    const config = options && typeof options === 'object' ? options : {};
+  function applyBookmarkViewMode(
+    nextMode: unknown,
+    options?: BookmarkViewModeOptions | null
+  ): BookmarkViewModeResult {
+    const config: BookmarkViewModeOptions = options && typeof options === 'object' ? options : {};
     if (Object.prototype.hasOwnProperty.call(config, 'expectedRevision') &&
         config.expectedRevision !== pageState.bookmarkViewModeRevision) {
       return {
@@ -200,7 +279,7 @@ function createSectionHeaders(deps) {
         pageState.bookmarkCurrentPage = 0;
         pageState.bookmarkRenderSignature = '';
         markBookmarkDataDirty();
-        loadBookmarks(config.force === true ? { force: true } : undefined);
+        void loadBookmarks(config.force === true ? { force: true } : undefined);
       }
       return {
         applied: true,
@@ -222,7 +301,7 @@ function createSectionHeaders(deps) {
       persistBookmarkViewMode(mode);
     }
     markBookmarkDataDirty();
-    loadBookmarks(config.force === true ? { force: true } : undefined);
+    void loadBookmarks(config.force === true ? { force: true } : undefined);
     return {
       applied: true,
       changed: true,
@@ -231,14 +310,14 @@ function createSectionHeaders(deps) {
     };
   }
 
-  function setBookmarkViewMode(nextMode) {
+  function setBookmarkViewMode(nextMode: unknown): BookmarkViewModeResult {
     return applyBookmarkViewMode(nextMode, {
       persist: true,
       force: true
     });
   }
 
-  function navigateBookmarkFolder(targetId) {
+  function navigateBookmarkFolder(targetId: unknown): void {
     const id = String(targetId || '').trim();
     if (!id) {
       return;
@@ -247,10 +326,10 @@ function createSectionHeaders(deps) {
     pageState.bookmarkCurrentFolderId = id;
     pageState.bookmarkCurrentPage = 0;
     pageState.bookmarkRenderSignature = '';
-    loadBookmarks({ force: true });
+    void loadBookmarks({ force: true });
   }
 
-  function updateBookmarkHeadingRootLinkState(isNested) {
+  function updateBookmarkHeadingRootLinkState(isNested: boolean): void {
     if (!pageState.bookmarkHeading) {
       return;
     }
@@ -274,7 +353,7 @@ function createSectionHeaders(deps) {
     }
   }
 
-  function updateBookmarkPagerLabels() {
+  function updateBookmarkPagerLabels(): void {
     if (pageState.bookmarkPagerPrevButton) {
       const prevLabel = t('bookmarks_page_prev', '上一页');
       pageState.bookmarkPagerPrevButton.setAttribute('aria-label', prevLabel);
@@ -295,7 +374,7 @@ function createSectionHeaders(deps) {
     }
   }
 
-  function bindBookmarkPagerTooltip(button, getLabel) {
+  function bindBookmarkPagerTooltip(button: HTMLElement | null, getLabel: () => string): void {
     if (!button || typeof getLabel !== 'function') {
       return;
     }
@@ -317,7 +396,7 @@ function createSectionHeaders(deps) {
     button.addEventListener('blur', hideTopActionTooltip);
   }
 
-  function updateBookmarkBreadcrumb() {
+  function updateBookmarkBreadcrumb(): void {
     if (!pageState.bookmarkBreadcrumbController) {
       return;
     }
@@ -363,4 +442,7 @@ function createSectionHeaders(deps) {
   };
 }
 
+type SectionHeaders = ReturnType<typeof createSectionHeaders>;
+
 export { createSectionHeaders };
+export type { BookmarkViewModeOptions, BookmarkViewModeResult, SectionHeaders, SectionHeadersDeps, SectionHeadersState };

@@ -43,6 +43,8 @@ import type { SearchModeControllerState } from './search/search-mode-controller'
 import type { SearchModesState } from './search/search-modes';
 import type { SearchNavigationState } from './search/search-navigation';
 import type { SearchSettingsSyncState } from './search/search-settings-sync';
+import type { SectionHeadersState } from './section-headers';
+import type { SectionLoadersState } from './section-loaders';
 import type { SectionReloadState } from './section-reload';
 import type { ShortcutContextMenuState } from './shortcuts/shortcut-context-menu';
 import type { ShortcutDockState } from './shortcuts/shortcut-dock';
@@ -115,6 +117,8 @@ type NewtabPageState =
   SearchModesState &
   SearchNavigationState &
   SearchSettingsSyncState &
+  SectionHeadersState &
+  SectionLoadersState &
   SectionReloadState &
   ShortcutContextMenuState &
   ShortcutDockState &

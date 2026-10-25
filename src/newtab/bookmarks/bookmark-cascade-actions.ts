@@ -80,5 +80,7 @@ function createBookmarkCascadeActions(deps: BookmarkCascadeActionsDeps) {
   };
 }
 
+type BookmarkCascadeActions = ReturnType<typeof createBookmarkCascadeActions>;
+
 export { createBookmarkCascadeActions };
-export type { BookmarkCascadeActionsDeps, BookmarkCascadeActionsState };
+export type { BookmarkCascadeActions, BookmarkCascadeActionsDeps, BookmarkCascadeActionsState };

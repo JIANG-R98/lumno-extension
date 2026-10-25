@@ -378,5 +378,7 @@ function createBookmarkPager(deps: BookmarkPagerDeps) {
   };
 }
 
+type BookmarkPager = ReturnType<typeof createBookmarkPager>;
+
 export { createBookmarkPager };
-export type { BookmarkPagerDeps, BookmarkPagerState };
+export type { BookmarkPager, BookmarkPagerDeps, BookmarkPagerState };

@@ -18,6 +18,8 @@ import type { RecentCardElement } from './react/recent-sites';
 import type { ShortcutTileElement } from './react/shortcuts';
 import type { NewtabTopContentMode, TopContentController } from './react/wordmark';
 import type { SearchModes } from './search/search-modes';
+import type { SectionHeaders } from './section-headers';
+import type { SectionLoaders } from './section-loaders';
 import type { ActiveLocalScope } from './search/search-types';
 import type { SuggestionsController } from './search/suggestions-controller';
 import type { ShortcutPageActions } from './shortcuts/shortcut-page-actions';
@@ -77,15 +79,15 @@ interface AppearanceModesDeps extends
   Pick<CardThemes, 'applyRecentCardTheme' | 'applyBookmarkCardTheme' | 'applyShortcutTileTheme'> {
   t: Translate;
   formatMessage: FormatMessage;
-  updateRecentHeading(): void;
-  updateRecentModeMenu(): void;
-  updateBookmarkHeading(): void;
-  updateBookmarkPagerLabels(): void;
-  updateBookmarkBreadcrumb(): void;
-  updateBookmarkModeMenu(): void;
+  updateRecentHeading: SectionHeaders['updateRecentHeading'];
+  updateRecentModeMenu: SectionHeaders['updateRecentModeMenu'];
+  updateBookmarkHeading: SectionHeaders['updateBookmarkHeading'];
+  updateBookmarkPagerLabels: SectionHeaders['updateBookmarkPagerLabels'];
+  updateBookmarkBreadcrumb: SectionHeaders['updateBookmarkBreadcrumb'];
+  updateBookmarkModeMenu: SectionHeaders['updateBookmarkModeMenu'];
   // Tells the listeners outside this module that the language changed.
   notifyLanguageChange(): void;
-  forceReloadRecentSitesForI18n(): void;
+  forceReloadRecentSitesForI18n: SectionLoaders['forceReloadRecentSitesForI18n'];
   scheduleWallpaperAdaptiveToneUpdate(): void;
   recentCards: readonly RecentCardElement[];
   bookmarkCards: readonly BookmarkCardElement[];

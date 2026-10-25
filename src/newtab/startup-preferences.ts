@@ -10,10 +10,13 @@ import type { StorageAreaLike } from '../domain/storage-port';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import type { AppearanceModes } from './appearance-modes';
 import type { BookmarkDisplaySettings } from './bookmarks/bookmark-display-settings';
+import type { BookmarkPager } from './bookmarks/bookmark-pager';
 import type { PageLayout } from './page-layout';
 import type { PagePreferences } from './page-preferences';
 import type { BookmarksViewController } from './react/bookmarks';
 import type { RecentSitesController } from './recent/recent-sites-controller';
+import type { SectionHeaders } from './section-headers';
+import type { SectionLoaders } from './section-loaders';
 import type { TopContentRuntime } from './top-content/top-content';
 import type { WallpaperRuntime } from './wallpaper/wallpaper';
 
@@ -64,15 +67,15 @@ interface StartupPreferencesDeps extends
   settingsRuntimeApi: Pick<typeof LumnoSettings,
     'PROGRESS_TRACKING_ENABLED_STORAGE_KEY' | 'normalizeProgressTrackingEnabled'>;
   PROGRESS_HISTORY: Pick<typeof ProgressHistory, 'STORAGE_KEY' | 'normalizeHistoryMap'>;
-  renderRecentSites(items: RecentSite[]): void;
-  markRecentDataDirty(): void;
-  loadRecentSites(options?: { force?: boolean }): void;
-  updateRecentHeading(): void;
-  updateRecentModeMenu(): void;
-  renderCurrentBookmarkPage(): void;
-  updateBookmarkGridHeightLock(): void;
-  markBookmarkDataDirty(): void;
-  loadBookmarks(): void;
+  renderRecentSites: SectionLoaders['renderRecentSites'];
+  markRecentDataDirty: SectionLoaders['markRecentDataDirty'];
+  loadRecentSites: SectionLoaders['loadRecentSites'];
+  updateRecentHeading: SectionHeaders['updateRecentHeading'];
+  updateRecentModeMenu: SectionHeaders['updateRecentModeMenu'];
+  renderCurrentBookmarkPage: BookmarkPager['renderCurrentBookmarkPage'];
+  updateBookmarkGridHeightLock: BookmarkPager['updateBookmarkGridHeightLock'];
+  markBookmarkDataDirty: SectionLoaders['markBookmarkDataDirty'];
+  loadBookmarks: SectionLoaders['loadBookmarks'];
   RECENT_COUNT_STORAGE_KEY: string;
   RECENT_MODE_STORAGE_KEY: string;
   NEWTAB_WIDTH_MODE_STORAGE_KEY: string;

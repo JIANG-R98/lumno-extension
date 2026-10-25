@@ -37,7 +37,6 @@ export interface BookmarkItem {
   themeUrl?: string;
   host?: string;
   previewUrls?: string[];
-  [key: string]: unknown;
 }
 
 export interface BookmarkCardElement extends HTMLDivElement {
