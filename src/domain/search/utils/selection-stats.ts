@@ -27,6 +27,10 @@ type SelectionStatsDeps =
 
 type SelectionStatsOptions = Pick<SearchRankingOptions, 'now' | 'retentionDays' | 'maxQueries' | 'maxEntriesPerQuery'>;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
 function createSelectionStats(deps: SelectionStatsDeps) {
   const {
     normalizeSearchText,
@@ -131,8 +135,8 @@ function createSelectionStats(deps: SelectionStatsDeps) {
     return 'history';
   }
 
-  function normalizeSearchSelectionEntry(urlKey: string, entry: any, now: number, retentionMs: number): SearchSelectionEntry | null {
-    if (!urlKey || !entry || typeof entry !== 'object') {
+  function normalizeSearchSelectionEntry(urlKey: string, entry: unknown, now: number, retentionMs: number): SearchSelectionEntry | null {
+    if (!urlKey || !isRecord(entry)) {
       return null;
     }
     const lastSelectedAt = Number(entry.lastSelectedAt) || 0;
@@ -153,7 +157,7 @@ function createSelectionStats(deps: SelectionStatsDeps) {
   }
 
   // Stored stats are read as untrusted input and rebuilt.
-  function normalizeSearchSelectionStats(rawStats: any, options?: SelectionStatsOptions | null): SearchSelectionStats {
+  function normalizeSearchSelectionStats(rawStats: unknown, options?: SelectionStatsOptions | null): SearchSelectionStats {
     const settings: SelectionStatsOptions = options && typeof options === 'object' ? options : {};
     const now = getNow(settings);
     const retentionDays = Number(settings.retentionDays) > 0
@@ -166,15 +170,15 @@ function createSelectionStats(deps: SelectionStatsDeps) {
     const maxEntriesPerQuery = Number(settings.maxEntriesPerQuery) > 0
       ? Math.floor(Number(settings.maxEntriesPerQuery))
       : SEARCH_SELECTION_POLICY.maxEntriesPerQuery;
-    const sourceQueries: Record<string, any> = rawStats && typeof rawStats === 'object' && rawStats.queries && typeof rawStats.queries === 'object'
+    const sourceQueries: Record<string, unknown> = isRecord(rawStats) && isRecord(rawStats.queries)
       ? rawStats.queries
       : {};
     const buckets: Array<[string, SearchSelectionBucket]> = [];
 
     Object.entries(sourceQueries).forEach(([rawQueryKey, rawBucket]) => {
       const queryKey = normalizeSearchSelectionQuery(rawQueryKey);
-      const bucket = rawBucket && typeof rawBucket === 'object' ? rawBucket : {};
-      const sourceEntries: Record<string, unknown> = bucket.entries && typeof bucket.entries === 'object' ? bucket.entries : {};
+      const bucket: Record<string, unknown> = isRecord(rawBucket) ? rawBucket : {};
+      const sourceEntries: Record<string, unknown> = isRecord(bucket.entries) ? bucket.entries : {};
       const entries: Record<string, SearchSelectionEntry> = {};
       Object.entries(sourceEntries)
         .map(([urlKey, entry]): [string, SearchSelectionEntry | null] => [urlKey, normalizeSearchSelectionEntry(urlKey, entry, now, retentionMs)])

@@ -234,10 +234,14 @@ function createDeterministicCustomProviderId(item: unknown, _index: number, atte
   );
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
 // A stored definition, also in the older shapes it was saved in; null when
 // it has no id, no name or too few sources.
-function normalizeAggregateSearch(item: any): AggregateSearch | null {
-  if (!item || typeof item !== 'object') {
+function normalizeAggregateSearch(item: unknown): AggregateSearch | null {
+  if (!isRecord(item)) {
     return null;
   }
   const id = normalizeId(item.id);
@@ -262,10 +266,10 @@ function normalizeAggregateSearch(item: any): AggregateSearch | null {
   };
 }
 
-function normalizeAggregateSearches(value: any): AggregateSearch[] {
+function normalizeAggregateSearches(value: unknown): AggregateSearch[] {
   const source: unknown[] = Array.isArray(value)
     ? value
-    : (value && Array.isArray(value.items) ? value.items : []);
+    : (isRecord(value) && Array.isArray(value.items) ? value.items : []);
   const items: AggregateSearch[] = [];
   const seen = new Set<string>();
   source.forEach((item) => {

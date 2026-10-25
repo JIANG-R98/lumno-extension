@@ -131,7 +131,6 @@ export default tseslint.config(
     files: ['src/**/*.{ts,tsx}'],
     extends: [tseslint.configs.recommended],
     rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': ['error', unusedVarsOptions]
     }
   },
@@ -182,9 +181,6 @@ export default tseslint.config(
       // code for the React Compiler, which Lumno does not use.
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
-      // Config objects handed over from the untyped runtime in src/ are typed
-      // as Record<string, any> on purpose.
-      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': ['error', unusedVarsOptions]
     }
   }

@@ -165,20 +165,26 @@ function buildRuleKey(rule: { pattern?: unknown; matchModes?: unknown } | null |
   return `${String(rule.pattern)}::${modes.join('|')}`;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
 // Stored entries: rule objects, or bare pattern strings from older versions.
 function normalizeItems(items: unknown, fallbackMode?: MatchMode | null): BlacklistRule[] {
   if (!Array.isArray(items)) {
     return [];
   }
+  const entries: unknown[] = items;
   const normalized: BlacklistRule[] = [];
   const seen = new Set<string>();
-  items.forEach((entry: any) => {
+  entries.forEach((entry) => {
+    const rule = isRecord(entry) ? entry : null;
     const matchModes = normalizeMatchModes(
-      entry && entry.matchModes ? entry.matchModes : [DEFAULT_MATCH_MODE],
+      rule && rule.matchModes ? rule.matchModes : [DEFAULT_MATCH_MODE],
       fallbackMode === undefined ? DEFAULT_MATCH_MODE : fallbackMode
     );
     const pattern = normalizePattern(
-      entry && entry.pattern ? entry.pattern : entry,
+      rule && rule.pattern ? rule.pattern : entry,
       matchModes,
       fallbackMode === undefined ? DEFAULT_MATCH_MODE : fallbackMode
     );

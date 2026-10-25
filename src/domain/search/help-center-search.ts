@@ -166,8 +166,24 @@ const LATIN_WORD = /^[a-z][a-z'-]*$/;
 const MARK = /\u0001(\d+)\.(\d+)\u0002/;
 const MARK_SPLIT = /(\u0001\d+\.\d+\u0002)/;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
 function toStrings(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item) => typeof item === 'string' && item) : [];
+  const items: unknown[] = Array.isArray(value) ? value : [];
+  return items.filter((item): item is string => typeof item === 'string' && Boolean(item));
+}
+
+type RawIndexDoc = Record<string, unknown> & { title: string; href: string };
+type RawIndexSection = Record<string, unknown> & { id: string; title: string };
+
+function isRawIndexDoc(value: unknown): value is RawIndexDoc {
+  return isRecord(value) && typeof value.title === 'string' && typeof value.href === 'string';
+}
+
+function isRawIndexSection(value: unknown): value is RawIndexSection {
+  return isRecord(value) && typeof value.id === 'string' && typeof value.title === 'string';
 }
 
 // Index docs: { title, href, text, aliases?, sections: [{ id, title, aliases? }] }. Aliases are
@@ -176,15 +192,17 @@ function toStrings(value: unknown): string[] {
 // breaks turned to spaces so every offset stays the same.
 // The fetched index is untrusted input; entries without a title and link are dropped.
 function normalizeIndex(payload: unknown): HelpIndexDoc[] {
-  return (Array.isArray(payload) ? payload : [])
-    .filter((doc: any) => doc && typeof doc.title === 'string' && typeof doc.href === 'string')
-    .map((doc: any): HelpIndexDoc => {
+  const docs: unknown[] = Array.isArray(payload) ? payload : [];
+  return docs
+    .filter(isRawIndexDoc)
+    .map((doc): HelpIndexDoc => {
       const source = typeof doc.text === 'string' ? doc.text : '';
       const text = source.replace(/[\t\n]/g, ' ');
       const aliases = toStrings(doc.aliases);
-      const sections: HelpIndexSection[] = (Array.isArray(doc.sections) ? doc.sections : [])
-        .filter((section: any) => section && typeof section.id === 'string' && typeof section.title === 'string')
-        .map((section: any): HelpIndexSection => {
+      const rawSections: unknown[] = Array.isArray(doc.sections) ? doc.sections : [];
+      const sections: HelpIndexSection[] = rawSections
+        .filter(isRawIndexSection)
+        .map((section): HelpIndexSection => {
           const sectionAliases = toStrings(section.aliases);
           return {
             id: section.id,
