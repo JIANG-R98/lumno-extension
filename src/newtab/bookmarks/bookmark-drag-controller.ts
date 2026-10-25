@@ -21,19 +21,17 @@ import * as LumnoNewtabDragClickGuard from '../drag-click-guard';
 import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
 import type { BookmarkCardElement } from '../react/bookmarks';
 import type { BookmarksTopbarRuntime } from '../react/bookmarks-topbar';
-import type { PersistShortcuts, ShortcutIconChange, ShortcutInsertionSlot } from '../shortcuts/shortcut-types';
+import type { PersistShortcuts, ShortcutInsertionSlot } from '../shortcuts/shortcut-types';
 import type { BookmarkCascadeRuntime, CascadeItemEventDetail, CascadeRefreshOptions } from './bookmark-cascade-menu';
 import type * as BookmarkDrag from './bookmark-drag';
 import type { BookmarkDragSession, BookmarkDragSource, BookmarkLayoutItem } from './bookmark-drag';
 import type * as FolderIcon from './bookmark-folder-icon';
 import type * as MoveHistory from './bookmark-move-history';
-import type {
-  BookmarkLocation,
-  BookmarkMoveHistory,
-  ShortcutGroupDeleteRecord
-} from './bookmark-move-history';
-import type { BookmarkItem, BookmarkNode } from './bookmarks-store';
+import type { BookmarkMoveHistory, ShortcutGroupDeleteRecord } from './bookmark-move-history';
+import type { BookmarkItem } from './bookmarks-store';
 import * as BOOKMARK_DRAG_RULES from './bookmark-drag-rules';
+import * as BOOKMARK_MOVE_ACTIONS from './bookmark-move-actions';
+import type { BookmarkDeleteTarget } from './bookmark-move-actions';
 import * as BOOKMARK_SHORTCUT_TRANSFER from './bookmark-shortcut-transfer';
 import type { AnimationRect } from './bookmark-drag-rules';
 import type { BookmarksRuntime } from './bookmarks-runtime';
@@ -118,15 +116,6 @@ interface BookmarkDragControllerDeps {
   getShortcutGroups?(): ShortcutGroup[];
   isWebDavBackingUpShortcuts?(): Promise<boolean>;
   pageState: BookmarkDragControllerState;
-}
-
-// A context menu's bookmark, to delete.
-interface BookmarkDeleteTarget {
-  bookmarkId: string;
-  title?: string;
-  parentId?: string;
-  index?: number;
-  sourceKind?: string;
 }
 
 interface PendingLayoutAnimation {
@@ -1288,97 +1277,35 @@ function createBookmarkDragController(deps: BookmarkDragControllerDeps) {
     });
   }
 
-  // Where the card the drag reordered sits among its folder's bookmarks.
-  function getBookmarkMoveDestination(bookmarkId: unknown): BookmarkLocation | null {
-    return BOOKMARK_DRAG_RULES.getMoveDestination(pageState.bookmarkAllItems, bookmarkId, pageState.bookmarkCurrentFolderId);
-  }
-
-  function getBookmarkDeleteRecord(target: BookmarkDeleteTarget | null) {
-    if (!target || !target.bookmarkId) {
-      return null;
-    }
-    const node = bookmarksRuntime.getNode(target.bookmarkId);
-    if (!node) {
-      return null;
-    }
-    return NEWTAB_BOOKMARK_MOVE_HISTORY.createDeleteRecord({
-      bookmarkId: String(node.id || target.bookmarkId),
-      title: String(node.title || target.title || ''),
-      parentId: String(node.parentId || target.parentId || ''),
-      index: Number.isFinite(Number(node.index)) ? Number(node.index) : target.index,
-      snapshot: node
-    });
-  }
-
-  function deleteBookmarkFromContextTarget(target: BookmarkDeleteTarget | null): boolean {
-    if (!target || !target.bookmarkId || pageState.bookmarkMoveHistoryBusy) {
-      return false;
-    }
-    pageState.bookmarkMoveHistoryBusy = true;
-    const keepCascadeOpen = Boolean(
-      target.sourceKind === 'cascade' &&
-      pageState.bookmarkCascadeRuntime &&
-      pageState.bookmarkCascadeRuntime.isOpen()
-    );
-    bookmarksRuntime.runControlledMutation(() => {
-      return bookmarksRuntime.ensureReady(false).then(() => {
-        const record = getBookmarkDeleteRecord(target);
-        if (!record) {
-          throw new Error('Bookmark snapshot is unavailable.');
-        }
-        queueBookmarkLayoutAnimation(record.bookmarkId);
-        return bookmarksRuntime.remove(record.bookmarkId, {
-          recursive: !record.snapshot.url
-        }).then(() => {
-          bookmarkMoveHistory.push(record);
-          markBookmarkTreeDirty({ preserveCascadeOpen: keepCascadeOpen });
-          loadBookmarks({ force: true });
-          if (keepCascadeOpen) {
-            refreshOpenBookmarkCascadeMenu();
-          }
-          return true;
-        });
-      });
-    }).catch((error) => {
+  const {
+    deleteBookmarkFromContextTarget,
+    getBookmarkUndoShortcutLabel,
+    persistBookmarkDragOrder,
+    persistBookmarkCrossLevelMove,
+    performBookmarkMoveHistoryAction
+  } = BOOKMARK_MOVE_ACTIONS.createBookmarkMoveActions({
+    bookmarksRuntime,
+    bookmarkMoveHistory,
+    NEWTAB_BOOKMARK_MOVE_HISTORY,
+    NEWTAB_CROSS_SURFACE_DRAG,
+    transfer: { applyBookmarkShortcutTransfer, applyShortcutStack },
+    applyShortcutGroupDeleteRecord,
+    persistShortcuts,
+    MAX_NEWTAB_SHORTCUTS,
+    refreshShortcutFolderReferences,
+    scheduleWallpaperAdaptiveToneUpdate,
+    markBookmarkTreeDirty,
+    loadBookmarks,
+    refreshOpenBookmarkCascadeMenu: (refreshOptions) => refreshOpenBookmarkCascadeMenu(refreshOptions),
+    queueLayoutAnimation: (excludedBookmarkId) => queueBookmarkLayoutAnimation(excludedBookmarkId),
+    dropLayoutAnimation: () => {
       bookmarkPendingLayoutAnimation = null;
-      console.warn('[Lumno] Failed to delete bookmark', error);
-      showToast(t('bookmarks_delete_failed', 'Could not delete bookmark'), true);
-    }).finally(() => {
-      pageState.bookmarkMoveHistoryBusy = false;
-    });
-    return true;
-  }
-
-  function getBookmarkMoveRecord(
-    state: BookmarkDragSession | null,
-    destination: BookmarkLocation | null,
-    movedNode: BookmarkNode | null
-  ) {
-    if (!state || !destination) {
-      return null;
-    }
-    const movedIndex = movedNode ? Number(movedNode.index) : NaN;
-    return NEWTAB_BOOKMARK_MOVE_HISTORY.createMoveRecord({
-      bookmarkId: state.bookmarkId,
-      title: state.itemTitle,
-      from: {
-        parentId: state.parentId,
-        index: state.originalIndex
-      },
-      to: {
-        parentId: String((movedNode && movedNode.parentId) || destination.parentId || ''),
-        index: Number.isFinite(movedIndex) ? movedIndex : destination.index
-      }
-    });
-  }
-
-  function getBookmarkUndoShortcutLabel(): string {
-    return BOOKMARK_DRAG_RULES.getUndoShortcutLabels(navigator).undo;
-  }
-
-  function getBookmarkRedoShortcutLabel(): string {
-    return BOOKMARK_DRAG_RULES.getUndoShortcutLabels(navigator).redo;
-  }
+    },
+    showToast,
+    t,
+    formatMessage,
+    pageState
+  });
 
   function refreshOpenBookmarkCascadeMenu(refreshOptions?: CascadeRefreshOptions): Promise<boolean> {
     if (!pageState.bookmarkCascadeRuntime || !pageState.bookmarkCascadeRuntime.isOpen()) {
@@ -1409,314 +1336,6 @@ function createBookmarkDragController(deps: BookmarkDragControllerDeps) {
     return nextAnchor
       ? pageState.bookmarkCascadeRuntime.rebindAnchor(nextAnchor, { instant: true })
       : false;
-  }
-
-  function finishPersistedBookmarkMove(
-    state: BookmarkDragSession,
-    destination: BookmarkLocation,
-    movedNode: BookmarkNode | null
-  ): boolean {
-    const record = getBookmarkMoveRecord(state, destination, movedNode);
-    if (record) {
-      bookmarkMoveHistory.push(record);
-    }
-    const keepCascadeOpen = Boolean(state.keepCascadeOpenAfterDrop);
-    markBookmarkTreeDirty({ preserveCascadeOpen: keepCascadeOpen });
-    loadBookmarks({ force: true });
-    if (keepCascadeOpen) {
-      refreshOpenBookmarkCascadeMenu({
-        draggedBookmarkId: String(state.bookmarkId || ''),
-        draggedRect: state.draggedVisualRect
-      });
-    }
-    return true;
-  }
-
-  function persistBookmarkDragOrder(state: BookmarkDragSession): Promise<boolean> {
-    if (!state || !state.bookmarkId) {
-      return Promise.resolve(false);
-    }
-    const destination = getBookmarkMoveDestination(state.bookmarkId);
-    if (!destination) {
-      return Promise.resolve(false);
-    }
-    return bookmarksRuntime.runControlledMutation(() => {
-      return bookmarksRuntime.move(state.bookmarkId, destination).then((movedNode) => {
-        return finishPersistedBookmarkMove(state, destination, movedNode);
-      });
-    }).catch((error) => {
-      console.warn('[Lumno] Failed to reorder bookmark', error);
-      markBookmarkTreeDirty();
-      loadBookmarks({ force: true });
-      showToast(t('bookmarks_move_failed', 'Could not move bookmark'), true);
-      return false;
-    });
-  }
-
-  function persistBookmarkCrossLevelMove(state: BookmarkDragSession, target: DragDropTarget): Promise<boolean> {
-    if (target.kind === 'blocked' || target.surface === 'shortcuts' || !target.folderId) {
-      return Promise.resolve(false);
-    }
-    const targetFolderId = String(target.folderId);
-    const targetItems = bookmarksRuntime.getFolderItems(targetFolderId);
-    const rawTargetIndex = target.kind === 'insertion' && Number.isFinite(Number(target.index))
-      ? Number(target.index)
-      : targetItems.length;
-    const shouldPreserveTargetPageSlot = target.surface === 'grid' &&
-      target.preservePageSlot === true &&
-      String(state.parentId || '') === targetFolderId &&
-      Number(state.originalIndex) < rawTargetIndex;
-    const destinationIndex = shouldPreserveTargetPageSlot
-      ? NEWTAB_BOOKMARK_MOVE_HISTORY.getMoveApiDestinationIndex({
-        sourceParentId: state.parentId,
-        sourceIndex: state.originalIndex,
-        targetParentId: targetFolderId,
-        targetIndex: rawTargetIndex
-      })
-      : rawTargetIndex;
-    const destination = {
-      parentId: targetFolderId,
-      index: destinationIndex
-    };
-    return bookmarksRuntime.runControlledMutation(() => {
-      return bookmarksRuntime.move(state.bookmarkId, destination).then((movedNode) => {
-        return finishPersistedBookmarkMove(state, destination, movedNode);
-      });
-    }).catch((error) => {
-      console.warn('[Lumno] Failed to move bookmark across folders', error);
-      markBookmarkTreeDirty();
-      loadBookmarks({ force: true });
-      showToast(t('bookmarks_move_failed', 'Could not move bookmark'), true);
-      return false;
-    });
-  }
-
-  function performBookmarkMoveHistoryAction(direction: 'undo' | 'redo'): boolean {
-    if (pageState.bookmarkMoveHistoryBusy) {
-      return false;
-    }
-    const isUndo = direction === 'undo';
-    const record = isUndo ? bookmarkMoveHistory.peekUndo() : bookmarkMoveHistory.peekRedo();
-    if (!record) {
-      return false;
-    }
-    pageState.bookmarkMoveHistoryBusy = true;
-    if (record.kind === 'shortcut-reorder') {
-      const next = NEWTAB_CROSS_SURFACE_DRAG.planShortcutReorder({
-        shortcuts: pageState.newtabShortcuts,
-        sourceOrder: isUndo ? record.toOrder : record.fromOrder,
-        order: isUndo ? record.fromOrder : record.toOrder,
-        groups: isUndo ? record.fromGroups : record.toGroups
-      });
-      if (!next) {
-        pageState.bookmarkMoveHistoryBusy = false;
-        showToast(t('toast_error', 'Operation failed. Please try again.'), true);
-        return true;
-      }
-      persistShortcuts(next, '', undefined, { animateLayout: true }).then((saved) => {
-        if (!saved) return;
-        if (isUndo) bookmarkMoveHistory.commitUndo();
-        else bookmarkMoveHistory.commitRedo();
-        scheduleWallpaperAdaptiveToneUpdate();
-      }).finally(() => { pageState.bookmarkMoveHistoryBusy = false; });
-      return true;
-    }
-    if (record.kind === 'transfer') {
-      queueBookmarkLayoutAnimation('');
-      applyBookmarkShortcutTransfer(record, isUndo).then((saved) => {
-        if (!saved) return;
-        if (isUndo) bookmarkMoveHistory.commitUndo();
-        else bookmarkMoveHistory.commitRedo();
-        if (!record.snapshot.url) {
-          showToast(formatMessage(
-            isUndo ? 'bookmarks_move_undone' : 'bookmarks_move_redone',
-            isUndo ? 'Move undone · {shortcut} to redo' : 'Move restored · {shortcut} to undo',
-            { shortcut: isUndo ? getBookmarkRedoShortcutLabel() : getBookmarkUndoShortcutLabel() }
-          ));
-        }
-      }).finally(() => {
-        pageState.bookmarkMoveHistoryBusy = false;
-        if (pageState.newtabShortcuts.some((item) => isShortcutFolder(item))) return refreshShortcutFolderReferences();
-        return undefined;
-      });
-      return true;
-    }
-    if (record.kind === 'shortcut-stack') {
-      queueBookmarkLayoutAnimation('');
-      applyShortcutStack(record, isUndo).then((saved) => {
-        if (!saved) return;
-        if (isUndo) bookmarkMoveHistory.commitUndo();
-        else bookmarkMoveHistory.commitRedo();
-        showToast(formatMessage(
-          isUndo ? 'newtab_shortcuts_stack_undone' : 'newtab_shortcuts_stack_redone',
-          isUndo ? 'Folder creation undone · {shortcut} to redo' : 'Folder created again · {shortcut} to undo',
-          { shortcut: isUndo ? getBookmarkRedoShortcutLabel() : getBookmarkUndoShortcutLabel() }
-        ));
-      }).finally(() => {
-        pageState.bookmarkMoveHistoryBusy = false;
-        if (pageState.newtabShortcuts.some((item) => isShortcutFolder(item))) return refreshShortcutFolderReferences();
-        return undefined;
-      });
-      return true;
-    }
-    if (record.kind === 'shortcut-group-delete') {
-      applyShortcutGroupDeleteRecord(record, isUndo).then((saved) => {
-        if (!saved) {
-          showToast(t('toast_error', 'Operation failed. Please try again.'), true);
-          return;
-        }
-        if (isUndo) bookmarkMoveHistory.commitUndo();
-        else bookmarkMoveHistory.commitRedo();
-        showToast(formatMessage(
-          isUndo ? 'newtab_shortcuts_group_delete_undone' : 'newtab_shortcuts_group_delete_redone',
-          isUndo ? 'Group restored · {shortcut} to redo' : 'Group deleted · {shortcut} to undo',
-          { shortcut: isUndo ? getBookmarkRedoShortcutLabel() : getBookmarkUndoShortcutLabel() }
-        ));
-      }).finally(() => { pageState.bookmarkMoveHistoryBusy = false; });
-      return true;
-    }
-    if (record.kind === 'shortcut-delete' || record.kind === 'shortcut-add') {
-      // Undoing a removal puts the shortcut back; undoing an addition takes it out.
-      const restores = (record.kind === 'shortcut-delete') === isUndo;
-      const snapshot = record.snapshot;
-      const exists = pageState.newtabShortcuts.some((item) => item.id === snapshot.id ||
-        (isShortcutFolder(snapshot)
-          ? !snapshot.folderRef && isShortcutFolder(item) && !item.folderRef && item.folderId === snapshot.folderId
-          : !isShortcutFolder(item) && item.url === snapshot.url));
-      if (restores && (exists || pageState.newtabShortcuts.length >= MAX_NEWTAB_SHORTCUTS)) {
-        pageState.bookmarkMoveHistoryBusy = false;
-        showToast(t('toast_error', 'Operation failed. Please try again.'), true);
-        return true;
-      }
-      const next = pageState.newtabShortcuts.slice();
-      if (restores) {
-        next.splice(Math.min(record.index, next.length), 0, snapshot);
-      } else {
-        const index = next.findIndex((item) => item.id === snapshot.id);
-        if (index >= 0) next.splice(index, 1);
-      }
-      const iconChange: ShortcutIconChange | undefined = restores && record.iconDataUrl
-        ? { shortcutId: snapshot.id, action: 'replace', dataUrl: record.iconDataUrl }
-        : undefined;
-      const messages = record.kind === 'shortcut-add'
-        ? (isUndo
-          ? ['newtab_shortcuts_add_undone', 'Shortcut add undone · {shortcut} to redo']
-          : ['newtab_shortcuts_add_redone', 'Shortcut added again · {shortcut} to undo'])
-        : (isUndo
-          ? ['newtab_shortcuts_remove_undone', 'Shortcut restored · {shortcut} to redo']
-          : ['newtab_shortcuts_remove_redone', 'Shortcut removed · {shortcut} to undo']);
-      persistShortcuts(next, '', iconChange, { animateLayout: true }).then((saved) => {
-        if (!saved) return;
-        if (isUndo) bookmarkMoveHistory.commitUndo();
-        else bookmarkMoveHistory.commitRedo();
-        showToast(formatMessage(messages[0], messages[1], {
-          shortcut: isUndo ? getBookmarkRedoShortcutLabel() : getBookmarkUndoShortcutLabel()
-        }));
-      }).finally(() => { pageState.bookmarkMoveHistoryBusy = false; });
-      return true;
-    }
-    const keepCascadeOpen = Boolean(
-      pageState.bookmarkCascadeRuntime &&
-      pageState.bookmarkCascadeRuntime.isOpen()
-    );
-    if (record.kind === 'delete') {
-      queueBookmarkLayoutAnimation(
-        isUndo
-          ? ''
-          : String((record.runtime && record.runtime.currentBookmarkId) || record.bookmarkId || '')
-      );
-      const deleteAction = bookmarksRuntime.runControlledMutation(() => {
-        return isUndo
-          ? bookmarksRuntime.restore(record.snapshot, {
-            parentId: record.parentId,
-            index: record.index
-          }).then((node) => {
-            bookmarkMoveHistory.remapBookmarkId(record.bookmarkId, node && node.id);
-            if (record.runtime) {
-              record.runtime.currentBookmarkId = String((node && node.id) || '');
-            }
-          })
-          : bookmarksRuntime.remove(
-            bookmarkMoveHistory.resolveBookmarkId(record.bookmarkId || (record.runtime && record.runtime.currentBookmarkId)),
-            { recursive: !record.snapshot.url }
-          ).then(() => {
-            if (record.runtime) {
-              record.runtime.currentBookmarkId = '';
-            }
-          });
-      });
-      deleteAction.then(() => {
-        if (isUndo) {
-          bookmarkMoveHistory.commitUndo();
-          showToast(formatMessage(
-            'bookmarks_delete_undone',
-            'Deletion undone · {shortcut} to delete again',
-            { shortcut: getBookmarkRedoShortcutLabel() }
-          ));
-        } else {
-          bookmarkMoveHistory.commitRedo();
-          showToast(formatMessage(
-            'bookmarks_delete_redone',
-            'Deletion restored · {shortcut} to undo',
-            { shortcut: getBookmarkUndoShortcutLabel() }
-          ));
-        }
-        markBookmarkTreeDirty({ preserveCascadeOpen: keepCascadeOpen });
-        loadBookmarks({ force: true });
-        if (keepCascadeOpen) {
-          refreshOpenBookmarkCascadeMenu();
-        }
-      }).catch((error) => {
-        bookmarkPendingLayoutAnimation = null;
-        console.warn('[Lumno] Failed to restore bookmark deletion history', error);
-        showToast(t('bookmarks_delete_failed', 'Could not delete bookmark'), true);
-      }).finally(() => {
-        pageState.bookmarkMoveHistoryBusy = false;
-      });
-      return true;
-    }
-    const source = isUndo ? record.to : record.from;
-    const target = isUndo ? record.from : record.to;
-    const destination = {
-      parentId: target.parentId,
-      index: NEWTAB_BOOKMARK_MOVE_HISTORY.getMoveApiDestinationIndex({
-        sourceParentId: source.parentId,
-        sourceIndex: source.index,
-        targetParentId: target.parentId,
-        targetIndex: target.index
-      })
-    };
-    bookmarksRuntime.runControlledMutation(() => {
-      return bookmarksRuntime.move(bookmarkMoveHistory.resolveBookmarkId(record.bookmarkId), destination);
-    }).then(() => {
-      if (isUndo) {
-        bookmarkMoveHistory.commitUndo();
-        showToast(formatMessage(
-          'bookmarks_move_undone',
-          'Move undone · {shortcut} to redo',
-          { shortcut: getBookmarkRedoShortcutLabel() }
-        ));
-      } else {
-        bookmarkMoveHistory.commitRedo();
-        showToast(formatMessage(
-          'bookmarks_move_redone',
-          'Move restored · {shortcut} to undo',
-          { shortcut: getBookmarkUndoShortcutLabel() }
-        ));
-      }
-      markBookmarkTreeDirty({ preserveCascadeOpen: keepCascadeOpen });
-      loadBookmarks({ force: true });
-      if (keepCascadeOpen) {
-        refreshOpenBookmarkCascadeMenu();
-      }
-    }).catch((error) => {
-      bookmarkPendingLayoutAnimation = null;
-      console.warn('[Lumno] Failed to restore bookmark move history', error);
-      showToast(t('bookmarks_move_failed', 'Could not move bookmark'), true);
-    }).finally(() => {
-      pageState.bookmarkMoveHistoryBusy = false;
-    });
-    return true;
   }
 
   function isBookmarkDragActive(): boolean {
