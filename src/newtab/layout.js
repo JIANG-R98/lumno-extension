@@ -892,20 +892,25 @@ function createLayoutController(options) {
     }
     bottomDock.style.setProperty('display', (bookmarkVisible || recentVisible) ? 'flex' : 'none', 'important');
     updateBottomDockScrollbarInsets(sectionSafeCorridor.parentElement, mobileFlow);
+    const previousSearchEntryTop = body.style.getPropertyValue('padding-top');
     positionSearchEntry({
       preserveCurrentTop: Boolean(callbacks && callbacks.preserveSearchEntryLayout)
     });
-    // A new density moves the shortcuts, and on short screens a new
-    // shortcut area limit moves the dock; either changes what this pass
-    // measured, so the caller lays out once more against it.
+    // The dock's height above was measured against where the shortcuts sat,
+    // so moving the search entry (say, as the bookmarks top bar leaves)
+    // moves what it was measured against. A new density moves the
+    // shortcuts too, and on short screens a new shortcut area limit moves
+    // the dock; any of these sends the caller round once more.
+    const searchEntryMoved = !mobileFlow &&
+      body.style.getPropertyValue('padding-top') !== previousSearchEntryTop;
     const shortcutAreaLimitChanged = updateShortcutAreaLimit();
-    return previousDockDensity !== dockDensity || shortcutAreaLimitChanged;
+    return previousDockDensity !== dockDensity || shortcutAreaLimitChanged || searchEntryMoved;
   }
 
-  // Lays the dock out, then again while a pass changed its own inputs (a
-  // density or shortcut-area limit). Follow-up passes keep the search box
-  // where it is and only make the dock denser, so this settles within the
-  // call instead of over painted frames.
+  // Lays the dock out, then again while a pass changed its own inputs (the
+  // search entry's place, a density or a shortcut-area limit). Follow-up
+  // passes keep the search box where it is and only make the dock denser,
+  // so this settles within the call instead of over painted frames.
   const BOTTOM_DOCK_LAYOUT_MAX_PASSES = 3;
   function updateBottomDockLayout(callbacks) {
     let passOptions = callbacks;

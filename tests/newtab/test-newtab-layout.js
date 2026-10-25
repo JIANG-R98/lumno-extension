@@ -1459,6 +1459,26 @@ function testShortcutAreaLeavesTheDockRoomOnShortScreens() {
     'short screens keep the dock its minimum room and the shortcuts scroll above it');
 }
 
+// Leaving the bookmarks top bar moves the search entry, and the shortcuts
+// with it, in the same pass that measures the dock; the dock's height
+// follows where the shortcuts end up, not where they were.
+function testDockFollowsShortcutsWhenTheSearchEntryMoves() {
+  const { body, bottomDock, shortcutSection, controller } = createFixture({
+    shortcutVisible: true
+  });
+  shortcutSection.getBoundingClientRect = () => {
+    const top = (Number.parseFloat(body.style.getPropertyValue('padding-top')) || 0) + 140;
+    return { left: 420, top, width: 240, height: 72, bottom: top + 72 };
+  };
+  controller.updateBottomDockLayout();
+  body.style.setProperty('padding-top', '300px');
+  controller.updateBottomDockLayout();
+  const searchEntryTop = Number.parseFloat(body.style.getPropertyValue('padding-top'));
+  assert.notStrictEqual(searchEntryTop, 300, 'the search entry should move to its centered place');
+  assert.strictEqual(bottomDock.style.getPropertyValue('max-height'), `${900 - (searchEntryTop + 140 + 72 + 8)}px`,
+    'the dock should stop a gap below the shortcuts at their new place');
+}
+
 function testMobileFlowShortcutsKeepTheirHeight() {
   const { shortcutSection, controller } = createFixture({
     innerWidth: 500,
@@ -1475,6 +1495,7 @@ function testMobileFlowShortcutsKeepTheirHeight() {
 testWideRecentGridCanReachMaximumColumns();
 testTallShortcutsScrollAboveTheBottomDock();
 testShortcutAreaLeavesTheDockRoomOnShortScreens();
+testDockFollowsShortcutsWhenTheSearchEntryMoves();
 testMobileFlowShortcutsKeepTheirHeight();
 
 console.log('newtab layout tests passed');
