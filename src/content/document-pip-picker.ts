@@ -35,7 +35,8 @@ interface ClipLayout {
 // the pointer leaves.
 interface PiPDock {
   element: HTMLDivElement;
-  cancelHide(): void;
+  // Stops the dock and its timers; the window may already be gone.
+  destroy(): void;
 }
 
 // An open clip: the picked element, its copy in the floating window, and
@@ -1353,113 +1354,44 @@ function readErrorText(error: unknown, field: 'name' | 'message'): string {
   }
 
   function createPiPDock(pipContext: {
-    pipWindow: Window;
     pipDocument: Document;
     shell: HTMLDivElement;
     visualTheme: VisualTheme;
-  }): PiPDock {
-    const { pipWindow, pipDocument, shell, visualTheme } = pipContext;
-    const dock = pipDocument.createElement('div');
-    dock.setAttribute('data-lumno-pip-dock', '1');
-    applyNoTranslate(dock);
-    dock.style.cssText = [
-      'position: fixed',
-      'left: 50%',
-      'bottom: 10px',
-      'transform: translateX(-50%) translateY(calc(100% - 8px))',
-      'display: flex',
-      'align-items: center',
-      'gap: 8px',
-      'padding: 8px 10px 12px',
-      'border-radius: 999px',
-      `background: ${visualTheme.hudBackground}`,
-      `border: 1px solid ${visualTheme.hudBorder}`,
-      `box-shadow: ${visualTheme.cardShadow}`,
-      'backdrop-filter: blur(16px)',
-      '-webkit-backdrop-filter: blur(16px)',
-      'transition: transform 180ms ease, opacity 180ms ease',
-      'opacity: 0.92',
-      'z-index: 2147483647'
-    ].join(';');
-
-    const buildDockButton = (label: string, iconClass: string): HTMLButtonElement => {
-      const button = pipDocument.createElement('button');
-      button.type = 'button';
-      button.className = 'lumno-pip-dock-btn';
-      applyNoTranslate(button);
-      button.style.cssText = [
-        `background: ${visualTheme.buttonBackground}`,
-        `color: ${visualTheme.buttonText}`,
-        `box-shadow: ${visualTheme.buttonShadow}`
-      ].join(';');
-      const icon = pipDocument.createElement('i');
-      icon.className = `ri-icon ${iconClass}`;
-      applyNoTranslate(icon);
-      const text = pipDocument.createElement('span');
-      text.className = 'lumno-pip-dock-label';
-      text.textContent = label;
-      applyNoTranslate(text);
-      button.appendChild(icon);
-      button.appendChild(text);
-      return button;
-    };
-
-    let hideTimer: number | null = null;
-    const cancelHide = (): void => {
-      if (hideTimer !== null) {
-        pipWindow.clearTimeout(hideTimer);
-        hideTimer = null;
+  }): PiPDock | null {
+    const { pipDocument, shell, visualTheme } = pipContext;
+    const viewApi = globalThis.LumnoPipDockView;
+    if (!viewApi) {
+      return null;
+    }
+    const host = pipDocument.createElement('div');
+    shell.appendChild(host);
+    const view = viewApi.createPipDockView(host, {
+      onClose() {
+        restoreSession({ closeWindow: true });
+      },
+      onReselect() {
+        restoreSession({ closeWindow: true });
+        window.requestAnimationFrame(() => {
+          startSelection();
+        });
       }
-    };
-
-    const showDock = (): void => {
-      cancelHide();
-      dock.setAttribute('data-expanded', 'true');
-      dock.style.transform = 'translateX(-50%) translateY(0)';
-      dock.style.opacity = '1';
-    };
-
-    const hideDock = (): void => {
-      cancelHide();
-      hideTimer = pipWindow.setTimeout(() => {
-        hideTimer = null;
-        dock.removeAttribute('data-expanded');
-        dock.style.transform = 'translateX(-50%) translateY(calc(100% - 8px))';
-        dock.style.opacity = '0.92';
-      }, 140);
-    };
-
-    const closeButton = buildDockButton(getMessage('document_pip_picker_button_close', 'Close'), 'ri-close-line');
-    closeButton.style.background = visualTheme.secondaryButtonBackground;
-    closeButton.addEventListener('click', () => {
-      restoreSession({ closeWindow: true });
     });
-
-    const reselectButton = buildDockButton(getMessage('document_pip_picker_button_reselect', 'Reselect'), 'ri-focus-3-line');
-    reselectButton.addEventListener('click', () => {
-      restoreSession({ closeWindow: true });
-      window.requestAnimationFrame(() => {
-        startSelection();
-      });
-    });
-
-    dock.appendChild(reselectButton);
-    dock.appendChild(closeButton);
-    dock.addEventListener('mouseenter', showDock);
-    dock.addEventListener('mouseleave', hideDock);
-    dock.addEventListener('focusin', showDock);
-    dock.addEventListener('focusout', hideDock);
-    pipDocument.addEventListener('mousemove', (event) => {
-      const height = pipWindow.innerHeight;
-      if (height > 0 && event.clientY >= height - 48) {
-        showDock();
-        return;
+    view.render({
+      theme: {
+        hudBackground: visualTheme.hudBackground,
+        hudBorder: visualTheme.hudBorder,
+        cardShadow: visualTheme.cardShadow,
+        buttonBackground: visualTheme.buttonBackground,
+        buttonText: visualTheme.buttonText,
+        buttonShadow: visualTheme.buttonShadow,
+        secondaryButtonBackground: visualTheme.secondaryButtonBackground
+      },
+      labels: {
+        reselect: getMessage('document_pip_picker_button_reselect', 'Reselect'),
+        close: getMessage('document_pip_picker_button_close', 'Close')
       }
-      hideDock();
     });
-
-    shell.appendChild(dock);
-    return { element: dock, cancelHide };
+    return { element: host, destroy: view.destroy };
   }
 
   function restoreSession(options?: { closeWindow?: boolean }): boolean {
@@ -1485,9 +1417,9 @@ function readErrorText(error: unknown, field: 'name' | 'message'): string {
     session.documentSyncTimer = null;
     window.removeEventListener('pagehide', session.onMainPageHide, true);
     try {
-      session.dock.cancelHide();
+      session.dock.destroy();
     } catch (_error) {
-      // Ignore timer cleanup failures.
+      // The window may be gone already.
     }
 
     if (!options || options.closeWindow !== false) {
@@ -1617,11 +1549,13 @@ function readErrorText(error: unknown, field: 'name' | 'message'): string {
       const pipDocument = pipWindow.document;
       const { shell, content } = createPiPScaffold(pipWindow, visualTheme, layout);
       const dock = createPiPDock({
-        pipWindow,
         pipDocument,
         shell,
         visualTheme
       });
+      if (!dock) {
+        throw new Error('The clip window dock could not be drawn.');
+      }
       const contextChain = buildPiPContextChain(element, pipDocument);
       content.appendChild(contextChain.root);
 

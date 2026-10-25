@@ -4,6 +4,7 @@ import type { AutoPipBlacklist, DocumentPipPickerApi, PageShortcutToastApi } fro
 import type { ShortcutRule } from '../domain/messages';
 import type * as SearchSourceOrder from '../domain/search/search-source-order';
 import type { createLinkPreviewViewApi } from '../shared/react/link-preview-view';
+import type { createPipDockViewApi } from '../shared/react/pip-dock-view';
 import type { createTabSwitcherViewApi } from '../shared/react/tab-switcher';
 import type { TabSwitcherReply } from '../overlay/tab-switcher-host';
 import type { createOverlayShellApi } from '../overlay/react/shell';
@@ -95,6 +96,8 @@ declare global {
   var LumnoOverlayTabSwitcherView: ReturnType<typeof createTabSwitcherViewApi> | undefined;
   // Set by the overlay React bundle, which the link preview is injected after.
   var LumnoLinkPreviewView: ReturnType<typeof createLinkPreviewViewApi> | undefined;
+  // Set by the overlay React bundle, which the page clip picker is injected after.
+  var LumnoPipDockView: ReturnType<typeof createPipDockViewApi> | undefined;
   // Set by the popup's React islands entry.
   var LumnoPopupReact: ReturnType<typeof createPopupApi> | undefined;
   // Set by the options page's React islands entry.

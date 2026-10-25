@@ -1,6 +1,12 @@
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
+const fs = require('fs');
 const { bundleScript } = require('../helpers/module-script');
+const { extensionFilePath } = require('../../scripts/build/extension-output');
+
+// The background injects the overlay bundle first: the clip window's dock
+// draws through its React.
+const overlayIslandsSource = fs.readFileSync(extensionFilePath('src/react/overlay-islands.js'), 'utf8');
 
 // The web clip picker, injected into a page with a fake Document
 // Picture-in-Picture API: pick an element, open it in the floating window and
@@ -67,6 +73,7 @@ function createPage() {
     },
     i18n: { getMessage: () => '' }
   };
+  window.eval(overlayIslandsSource);
   window.eval(bundleScript('document-pip-picker'));
   return { window, document: window.document, card, events, messages, pipWindows, shadowRoots };
 }

@@ -181,7 +181,9 @@ function openDocumentPipPickerOnReadyTab(activeTab: chrome.tabs.Tab | null | und
   const injectAndInvoke = (invokeMode: PickerMode): void => {
     chrome.scripting.executeScript({
       target: { tabId: activeTabId },
+      // The clip window's dock draws through the overlay bundle's React.
       files: [
+        'src/react/overlay-islands.js',
         'build/document-pip-picker.js'
       ]
     }, () => {

@@ -1,6 +1,7 @@
 import { createSearchInputApi } from '../../shared/react/search-input';
 import { createSuggestionsViewApi } from '../../shared/react/search/suggestions';
 import { createLinkPreviewViewApi } from '../../shared/react/link-preview-view';
+import { createPipDockViewApi } from '../../shared/react/pip-dock-view';
 import { createTabSwitcherViewApi } from '../../shared/react/tab-switcher';
 import { createOverlayShellApi } from './shell';
 import { createFeatureHintViewApi } from '../../shared/react/feature-hint-view';
@@ -57,6 +58,7 @@ runtime.LumnoOverlaySuggestionsView = suggestionsApi;
 runtime.LumnoOverlayTabSwitcherViewReact = tabSwitcherApi;
 runtime.LumnoOverlayTabSwitcherView = tabSwitcherApi;
 runtime.LumnoLinkPreviewView = runtime.LumnoLinkPreviewView || createLinkPreviewViewApi();
+runtime.LumnoPipDockView = runtime.LumnoPipDockView || createPipDockViewApi();
 runtime.LumnoOverlayReactIslands = Object.freeze({
   searchInput: searchInputApi,
   shell: shellApi,
