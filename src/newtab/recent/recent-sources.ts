@@ -1,7 +1,49 @@
 // Where recent sites come from: open tabs, top sites and history, read
 // once at startup and then on demand, merged into the recent list; plus the
 // change history dialog and the recent context menu's copy.
-function createRecentSources(deps) {
+import type { RecentSite, RecentSiteOptions, RecentSiteSources } from '../../domain/recent-sites-store';
+import type * as RecentSitesStore from '../../domain/recent-sites-store';
+import type { BrowserIconIndex } from '../../domain/favicon/favicon-utils';
+import type { SelectMenuOption } from '../../shared/react/select-menu';
+import type { ContextMenuParts, SelectMenuController, ShowToast, Translate } from '../newtab-types';
+import type {
+  RecentHistoryDialogController,
+  RecentHistoryDialogOptions,
+  RecentHistoryItem
+} from '../react/recent-history-dialog';
+import type { RecentContextTarget, StartupRecentSourceReads } from './recent-types';
+
+interface RecentSourcesState {
+  recentContextMenu: ContextMenuParts | null;
+  recentContextMenuSelectController: SelectMenuController | null;
+  recentContextMenuTarget: RecentContextTarget | null;
+  recentHistoryDialogController: RecentHistoryDialogController | null;
+  progressTrackingEnabled: boolean;
+  startupRecentSourceReads: StartupRecentSourceReads | null;
+  // Firefox's own cached icons, which recent cards wait for there.
+  firefoxBrowserIcons: Readonly<BrowserIconIndex> | null;
+  firefoxBrowserIconsReady: Promise<unknown>;
+}
+
+interface RecentSourcesDeps {
+  t: Translate;
+  getRecentContextMenuOptions(target?: RecentContextTarget | null): SelectMenuOption[];
+  NEWTAB_CONTEXT_MENU_OPEN_VALUE: string;
+  restoreProgressVersion: NonNullable<RecentHistoryDialogOptions['onRestore']>;
+  showToast: ShowToast;
+  // Whether top sites list the user's sites (Edge lists its own).
+  TOP_SITES_FOLLOW_HISTORY: boolean;
+  startupRecentSourceReadsAt: number;
+  NEWTAB_RECENT_STORE: Pick<typeof RecentSitesStore, 'mergeRecentSiteSources'>;
+  getRecentStoreOptions(): RecentSiteOptions;
+  isBrowserPageRecentUrl(url: string | undefined): boolean;
+  pageState: RecentSourcesState;
+}
+
+// What a merge reads, without the list settings each merge sets itself.
+type RecentSourceReads = Pick<RecentSiteSources, 'tabs' | 'topSites' | 'historyItems'>;
+
+function createRecentSources(deps: RecentSourcesDeps) {
   const {
     t,
     getRecentContextMenuOptions,
@@ -24,9 +66,9 @@ function createRecentSources(deps) {
   // one long after load, read afresh.
   const STARTUP_RECENT_SOURCE_MAX_AGE_MS = 3000;
   const NEWTAB_RECENT_HISTORY_DIALOG = globalThis.LumnoNewtabRecentHistoryDialog;
-  let recentHistoryDialogLoadPromise = null;
+  let recentHistoryDialogLoadPromise: Promise<RecentHistoryDialogController> | null = null;
 
-  function updateRecentContextMenuLanguageStrings() {
+  function updateRecentContextMenuLanguageStrings(): void {
     if (!pageState.recentContextMenu || !pageState.recentContextMenuSelectController) {
       return;
     }
@@ -36,20 +78,18 @@ function createRecentSources(deps) {
         t('recent_context_menu_label', 'Recent site actions')
       );
     }
-    if (typeof pageState.recentContextMenuSelectController.setOptions === 'function') {
-      pageState.recentContextMenuSelectController.setOptions(
-        pageState.recentContextMenu.control,
-        getRecentContextMenuOptions(pageState.recentContextMenuTarget),
-        NEWTAB_CONTEXT_MENU_OPEN_VALUE
-      );
-    }
+    pageState.recentContextMenuSelectController.setOptions(
+      pageState.recentContextMenu.control,
+      getRecentContextMenuOptions(pageState.recentContextMenuTarget),
+      NEWTAB_CONTEXT_MENU_OPEN_VALUE
+    );
   }
 
   // The change history dialog is loaded the first time someone opens it.
-  function openRecentHistoryDialog(item) {
+  function openRecentHistoryDialog(item: RecentHistoryItem): Promise<void> {
     if (!recentHistoryDialogLoadPromise) {
       recentHistoryDialogLoadPromise = Promise.resolve(
-        NEWTAB_RECENT_HISTORY_DIALOG && typeof NEWTAB_RECENT_HISTORY_DIALOG.createRecentHistoryDialog === 'function'
+        NEWTAB_RECENT_HISTORY_DIALOG
           ? NEWTAB_RECENT_HISTORY_DIALOG.createRecentHistoryDialog({
             documentObj: document,
             windowObj: window,
@@ -65,7 +105,7 @@ function createRecentSources(deps) {
         controller.mount(document.body);
         pageState.recentHistoryDialogController = controller;
         return controller;
-      }).catch((error) => {
+      }).catch((error: unknown) => {
         recentHistoryDialogLoadPromise = null;
         throw error;
       });
@@ -77,7 +117,7 @@ function createRecentSources(deps) {
     });
   }
 
-  function readRecentOpenTabs() {
+  function readRecentOpenTabs(): Promise<chrome.tabs.Tab[]> {
     return new Promise((resolve) => {
       if (!chrome.tabs || !chrome.tabs.query) {
         resolve([]);
@@ -89,7 +129,7 @@ function createRecentSources(deps) {
     });
   }
 
-  function readRecentTopSites() {
+  function readRecentTopSites(): Promise<chrome.topSites.MostVisitedURL[] | null> {
     return new Promise((resolve) => {
       if (!chrome.topSites || !chrome.topSites.get || !TOP_SITES_FOLLOW_HISTORY) {
         resolve(null);
@@ -101,7 +141,7 @@ function createRecentSources(deps) {
     });
   }
 
-  function readRecentHistoryItems() {
+  function readRecentHistoryItems(): Promise<chrome.history.HistoryItem[] | null> {
     return new Promise((resolve) => {
       if (!chrome.history || !chrome.history.search) {
         resolve(null);
@@ -118,18 +158,21 @@ function createRecentSources(deps) {
     });
   }
 
-  function releaseStartupRecentSourceReads() {
+  function releaseStartupRecentSourceReads(): void {
     pageState.startupRecentSourceReads = null;
   }
 
-  function takeStartupRecentSourceRead(name, read) {
+  function takeStartupRecentSourceRead<K extends keyof StartupRecentSourceReads>(
+    name: K,
+    read: () => StartupRecentSourceReads[K]
+  ): StartupRecentSourceReads[K] {
     const pending = pageState.startupRecentSourceReads ? pageState.startupRecentSourceReads[name] : null;
     return pending && Date.now() - startupRecentSourceReadsAt <= STARTUP_RECENT_SOURCE_MAX_AGE_MS
       ? pending
       : read();
   }
 
-  function getRecentSites(limit, mode) {
+  function getRecentSites(limit: number, mode: string): Promise<RecentSite[]> {
     const safeLimit = Math.max(0, Number(limit) || 0);
     if (safeLimit > 0 && pageState.firefoxBrowserIcons) {
       // Render recent cards once Firefox's own icons are indexed.
@@ -138,14 +181,14 @@ function createRecentSources(deps) {
     return getRecentSitesNow(limit, mode);
   }
 
-  function getRecentSitesNow(limit, mode) {
+  function getRecentSitesNow(limit: number, mode: string): Promise<RecentSite[]> {
     const safeLimit = Math.max(0, Number(limit) || 0);
     const viewMode = mode === 'most' ? 'most' : 'latest';
     if (safeLimit <= 0) {
       return Promise.resolve([]);
     }
 
-    const mergeSources = (sources, mergeMode) => NEWTAB_RECENT_STORE.mergeRecentSiteSources({
+    const mergeSources = (sources: RecentSourceReads, mergeMode: string): RecentSite[] => NEWTAB_RECENT_STORE.mergeRecentSiteSources({
       ...getRecentStoreOptions(),
       ...(sources || {}),
       mode: mergeMode || viewMode,
@@ -159,11 +202,11 @@ function createRecentSources(deps) {
     const readTopSites = () => takeStartupRecentSourceRead('topSites', readRecentTopSites);
     const readHistoryItems = () => takeStartupRecentSourceRead('historyItems', readRecentHistoryItems);
 
-    const mergeWithTabsIfNeeded = (sources, mergeMode) => {
+    const mergeWithTabsIfNeeded = (sources: RecentSourceReads, mergeMode: string): Promise<RecentSite[]> => {
       const withoutTabs = mergeSources(sources, mergeMode);
       return readOpenTabs().then((tabs) => {
         const shouldMergeTabs = withoutTabs.length < safeLimit ||
-          (Array.isArray(tabs) && tabs.some((tab) => isBrowserPageRecentUrl(tab && tab.url)));
+          tabs.some((tab) => isBrowserPageRecentUrl(tab.url));
         if (!shouldMergeTabs) {
           return withoutTabs;
         }
@@ -174,8 +217,8 @@ function createRecentSources(deps) {
       });
     };
 
-    const loadLatestRecentSites = () => readHistoryItems().then((historyItems) => {
-      if (!Array.isArray(historyItems)) {
+    const loadLatestRecentSites = (): Promise<RecentSite[]> => readHistoryItems().then((historyItems) => {
+      if (!historyItems) {
         return [];
       }
       const historyOnly = mergeSources({ historyItems }, 'latest');
@@ -184,13 +227,13 @@ function createRecentSources(deps) {
       }
       return readTopSites().then((topSites) => mergeWithTabsIfNeeded({
         historyItems,
-        topSites: Array.isArray(topSites) ? topSites : []
+        topSites: topSites || []
       }, 'latest'));
     });
 
     if (viewMode === 'most') {
       return readTopSites().then((topSites) => {
-        const topSiteItems = Array.isArray(topSites) ? topSites : [];
+        const topSiteItems = topSites || [];
         const topOnly = mergeSources({ topSites: topSiteItems }, 'most');
         if (topOnly.length >= safeLimit) {
           return mergeWithTabsIfNeeded({ topSites: topSiteItems }, 'most');
@@ -198,7 +241,7 @@ function createRecentSources(deps) {
         // Fill a short topSites list from history ranked by visit counts.
         return readHistoryItems().then((historyItems) => mergeWithTabsIfNeeded({
           topSites: topSiteItems,
-          historyItems: Array.isArray(historyItems) ? historyItems : []
+          historyItems: historyItems || []
         }, 'most'));
       });
     }
@@ -217,4 +260,7 @@ function createRecentSources(deps) {
   };
 }
 
+type RecentSources = ReturnType<typeof createRecentSources>;
+
 export { createRecentSources };
+export type { RecentSources, RecentSourcesDeps, RecentSourcesState };

@@ -1,8 +1,73 @@
 // Builds the recent section: its pointer tracking, heading and mode
 // switch, grid and the recent sites view.
+import type { BindCursorTooltip, FormatMessage, ShowToast, Translate } from '../newtab-types';
+import type { PageStructureRuntime } from '../react/page-structure';
+import type { RecentSitesViewController, RecentSitesViewOptions } from '../react/recent-sites';
 import * as NEWTAB_RECENT_MODE_SWITCH from './recent-mode-switch';
+import type { RecentModeSwitch } from './recent-mode-switch';
 
-function createRecentSection(deps) {
+// An option the recent sites view is handed as it is.
+type ViewOption<K extends keyof RecentSitesViewOptions> = NonNullable<RecentSitesViewOptions[K]>;
+
+interface RecentSectionState {
+  recentMouseInsideSection: boolean;
+  recentMouseLeftAt: number;
+  recentHeader: HTMLElement | null;
+  recentHeading: HTMLElement | null;
+  recentModeMenu: RecentModeSwitch | null;
+  recentGrid: HTMLElement | null;
+  recentSitesView: RecentSitesViewController | null;
+  currentRecentMode: string;
+  pinnedRecentSites: readonly unknown[];
+  // Starts a drag when a press on a card moves far enough.
+  recentCardDragRuntime: { handleRecentCardPointerDown: ViewOption<'onCardPointerDown'> } | null;
+  // The items the grid shows, to skip renders that change nothing.
+  recentRenderSignature: string;
+  recentLoadedOnce: boolean;
+}
+
+interface RecentSectionDeps {
+  setContentSectionVisible(section: HTMLElement | null, visible: boolean): void;
+  hideTopActionTooltip(): void;
+  pageStructureRuntime: { recent: Pick<PageStructureRuntime['recent'], 'section' | 'header' | 'heading' | 'grid'> };
+  updateRecentHeading(): void;
+  t: Translate;
+  setRecentMode(mode: string): void;
+  applyRecentGridColumns(): void;
+  recentCards: ViewOption<'cards'>;
+  formatMessage: FormatMessage;
+  sanitizeDisplayText: ViewOption<'sanitizeDisplayText'>;
+  getOwnExtensionPageDisplay: ViewOption<'getOwnExtensionPageDisplay'>;
+  getHostFromUrl: ViewOption<'getHostFromUrl'>;
+  getCanonicalPageUrlForFavicon: ViewOption<'getCanonicalPageUrlForFavicon'>;
+  getSiteDisplayName: ViewOption<'getSiteDisplayName'>;
+  getUrlDisplay: ViewOption<'getUrlDisplay'>;
+  getRiSvg: ViewOption<'getRiSvg'>;
+  attachFaviconWithFallbacks: ViewOption<'attachFaviconWithFallbacks'>;
+  getBrowserPageFaviconUrl: ViewOption<'getBrowserPageFaviconUrl'>;
+  getImmediateThemeForSuggestion: ViewOption<'getImmediateThemeForSuggestion'>;
+  queueThemeForTarget: ViewOption<'queueThemeForTarget'>;
+  applyRecentCardTheme: ViewOption<'applyCardTheme'>;
+  getRecentLimit(): number;
+  isRecentSitePinned: ViewOption<'isPinned'>;
+  MAX_PINNED_RECENT_SITES: number;
+  updateRecentPinButton: ViewOption<'updatePinButton'>;
+  showToast: ShowToast;
+  showTopActionTooltip: ViewOption<'showTopActionTooltip'>;
+  navigateToUrl: ViewOption<'navigateToUrl'>;
+  bindCursorTooltip: BindCursorTooltip;
+  hideCursorTooltip(): void;
+  // Returns where the URL opened; anything but 'currentTab' keeps this page.
+  openUrlFromNewtabCard(url: string, options: { openInBackgroundTab: boolean; surface: string }): string | void;
+  togglePinnedRecentSite: ViewOption<'togglePinned'>;
+  handleRecentCardContextMenu: ViewOption<'onItemContextMenu'>;
+  isCardActivationSuppressed(): boolean;
+  getRecentProgressState: ViewOption<'getProgressState'>;
+  toggleRecentProgressTracking: ViewOption<'toggleProgressTracking'>;
+  pageState: RecentSectionState;
+}
+
+function createRecentSection(deps: RecentSectionDeps): void {
   const {
     setContentSectionVisible,
     hideTopActionTooltip,
@@ -46,31 +111,37 @@ function createRecentSection(deps) {
   const pageState = deps.pageState;
 
   const NEWTAB_RECENT_VIEW = globalThis.LumnoNewtabRecentSitesView;
+  if (!NEWTAB_RECENT_VIEW) {
+    throw new Error('Recent sites view unavailable');
+  }
+  const section = pageStructureRuntime.recent.section;
 
-  setContentSectionVisible(pageState.recentSection, false);
-  pageState.recentSection.addEventListener('pointerenter', (event) => {
-    if (!event || event.pointerType !== 'mouse') {
+  setContentSectionVisible(section, false);
+  section.addEventListener('pointerenter', (event) => {
+    if (event.pointerType !== 'mouse') {
       return;
     }
     pageState.recentMouseInsideSection = true;
     pageState.recentMouseLeftAt = 0;
   });
-  pageState.recentSection.addEventListener('pointerleave', (event) => {
-    if (!event || event.pointerType !== 'mouse') {
+  section.addEventListener('pointerleave', (event) => {
+    if (event.pointerType !== 'mouse') {
       return;
     }
     pageState.recentMouseInsideSection = false;
     pageState.recentMouseLeftAt = Date.now();
     hideTopActionTooltip();
   });
-  pageState.recentSection.addEventListener('pointercancel', () => {
+  section.addEventListener('pointercancel', () => {
     pageState.recentMouseInsideSection = false;
     hideTopActionTooltip();
   });
-  pageState.recentHeader = pageStructureRuntime.recent.header;
-  pageState.recentHeading = pageStructureRuntime.recent.heading;
+  const header = pageStructureRuntime.recent.header;
+  const heading = pageStructureRuntime.recent.heading;
+  pageState.recentHeader = header;
+  pageState.recentHeading = heading;
   updateRecentHeading();
-  pageState.recentModeMenu = NEWTAB_RECENT_MODE_SWITCH.createRecentModeSwitch({
+  const modeMenu = NEWTAB_RECENT_MODE_SWITCH.createRecentModeSwitch({
     documentObj: document,
     windowObj: window,
     t,
@@ -91,6 +162,7 @@ function createRecentSection(deps) {
       }
     ]
   });
+  pageState.recentModeMenu = modeMenu;
   pageState.recentGrid = pageStructureRuntime.recent.grid;
   applyRecentGridColumns();
   pageState.recentSitesView = NEWTAB_RECENT_VIEW.createRecentSitesView({
@@ -134,12 +206,11 @@ function createRecentSection(deps) {
     toggleProgressTracking: toggleRecentProgressTracking
   });
   // The mode switch shows the current heading, so it stands in for the plain heading.
-  pageState.recentHeading.hidden = true;
-  pageState.recentHeader.appendChild(pageState.recentModeMenu.control);
+  heading.hidden = true;
+  header.appendChild(modeMenu.control);
   pageState.recentRenderSignature = '';
   pageState.recentLoadedOnce = false;
-
-  return {};
 }
 
 export { createRecentSection };
+export type { RecentSectionDeps, RecentSectionState };

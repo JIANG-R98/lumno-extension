@@ -25,6 +25,10 @@
     "src/newtab/section-mode-select.ts",
     "src/newtab/storage-change-registry.ts",
     "src/newtab/bookmarks/**/*.ts",
+    "src/newtab/recent/recent-mode-switch.ts",
+    "src/newtab/recent/recent-section.ts",
+    "src/newtab/recent/recent-sources.ts",
+    "src/newtab/recent/recent-types.ts",
     "src/newtab/shortcuts/**/*.ts"
   ],
   "exclude": [

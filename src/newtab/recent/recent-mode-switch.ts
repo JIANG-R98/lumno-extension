@@ -1,13 +1,38 @@
 // The recent section's heading doubles as its display mode switch. At rest it reads as the
 // current mode's name; pointed at, focused or tapped it widens into a segmented control
 // with the other modes to its right, so the current name never moves under the pointer.
+import { isElementNode } from '../../shared/dom-guards';
+import type { Translate } from '../newtab-types';
+
 const HOVER_EXPAND_DELAY_MS = 100;
 const HOVER_COLLAPSE_DELAY_MS = 200;
 // Matches the option width transition in styles/sections.css; the options are reordered once a
 // collapse has finished so the next expansion again starts from the current mode.
 const COLLAPSE_SETTLE_MS = 240;
 
-function createRecentModeSwitch(deps) {
+// A display mode and the message key of its name.
+interface RecentModeOption {
+  value: string;
+  labelKey: string;
+  fallback: string;
+}
+
+interface RecentModeSwitchDeps {
+  documentObj: Document;
+  windowObj: Window;
+  t: Translate;
+  getValue(): string;
+  onChange(value: string): void;
+  options: readonly RecentModeOption[];
+}
+
+interface RecentModeSwitch {
+  control: HTMLDivElement;
+  // Shows the current mode and the page language.
+  update(): void;
+}
+
+function createRecentModeSwitch(deps: RecentModeSwitchDeps): RecentModeSwitch {
   const {
     documentObj,
     windowObj,
@@ -46,17 +71,17 @@ function createRecentModeSwitch(deps) {
   let collapseTimer = 0;
   let settleTimer = 0;
 
-  const isMouse = (event) => Boolean(event && event.pointerType === 'mouse');
-  const hasKeyboardFocus = () => {
+  const isMouse = (event: PointerEvent): boolean => event.pointerType === 'mouse';
+  const hasKeyboardFocus = (): boolean => {
     const active = documentObj.activeElement;
     return Boolean(active && control.contains(active) && active.matches(':focus-visible'));
   };
-  const getCurrentValue = () => {
-    const value = typeof getValue === 'function' ? getValue() : '';
+  const getCurrentValue = (): string => {
+    const value = getValue();
     return buttons.some((entry) => entry.option.value === value) ? value : options[0].value;
   };
 
-  function clearHoverTimers() {
+  function clearHoverTimers(): void {
     windowObj.clearTimeout(expandTimer);
     windowObj.clearTimeout(collapseTimer);
     expandTimer = 0;
@@ -65,7 +90,7 @@ function createRecentModeSwitch(deps) {
 
   // Options collapse to no width, so each one is given its label's natural width to grow to.
   // A collapsed option has no padding either, so the padding is read from the switch.
-  function measureOptionWidths() {
+  function measureOptionWidths(): void {
     const padX = parseFloat(windowObj.getComputedStyle(control)
       .getPropertyValue('--x-nt-recent-mode-pad-x')) || 0;
     buttons.forEach(({ button, label }) => {
@@ -74,12 +99,12 @@ function createRecentModeSwitch(deps) {
     });
   }
 
-  const getOptionWidth = (entry) =>
+  const getOptionWidth = (entry: { button: HTMLButtonElement }): number =>
     parseFloat(entry.button.style.getPropertyValue('--x-nt-recent-mode-option-width')) ||
     entry.button.offsetWidth;
 
   // `buttons` follows the DOM order, and every option is at full width while expanded.
-  function placeIndicator() {
+  function placeIndicator(): void {
     const activeIndex = buttons.findIndex((entry) => entry.button.getAttribute('aria-checked') === 'true');
     if (activeIndex < 0) {
       return;
@@ -90,7 +115,7 @@ function createRecentModeSwitch(deps) {
   }
 
   // The current mode leads, the rest keep their listed order behind it.
-  function orderOptions(value) {
+  function orderOptions(value: string): void {
     const ordered = [
       ...buttons.filter((entry) => entry.option.value === value),
       ...buttons.filter((entry) => entry.option.value !== value)
@@ -99,7 +124,7 @@ function createRecentModeSwitch(deps) {
     buttons.splice(0, buttons.length, ...ordered);
   }
 
-  function setExpanded(next) {
+  function setExpanded(next: boolean): void {
     if (expanded === next) {
       return;
     }
@@ -124,7 +149,7 @@ function createRecentModeSwitch(deps) {
 
   // Applies an order change without animating it; only called while collapsed, where the
   // other options are hidden and the move cannot be seen.
-  function snapToCurrent() {
+  function snapToCurrent(): void {
     const value = getCurrentValue();
     if (buttons[0] && buttons[0].option.value === value) {
       return;
@@ -136,7 +161,7 @@ function createRecentModeSwitch(deps) {
     control.removeAttribute('data-instant');
   }
 
-  function select(value, { focus = false } = {}) {
+  function select(value: string | null, { focus = false }: { focus?: boolean } = {}): void {
     const entry = buttons.find((item) => item.option.value === value);
     if (!entry) {
       return;
@@ -144,13 +169,13 @@ function createRecentModeSwitch(deps) {
     if (focus) {
       entry.button.focus();
     }
-    if (value !== getCurrentValue() && typeof onChange === 'function') {
-      onChange(value);
+    if (entry.option.value !== getCurrentValue()) {
+      onChange(entry.option.value);
     }
     update();
   }
 
-  function update() {
+  function update(): void {
     const value = getCurrentValue();
     const title = t('display_mode_title', 'Display mode');
     control.setAttribute('aria-label', title);
@@ -201,7 +226,7 @@ function createRecentModeSwitch(deps) {
   });
 
   control.addEventListener('click', (event) => {
-    const button = event.target && event.target.closest
+    const button = isElementNode(event.target)
       ? event.target.closest('.x-nt-recent-mode-switch-option')
       : null;
     if (!button || !control.contains(button)) {
@@ -252,7 +277,7 @@ function createRecentModeSwitch(deps) {
     }
   });
   control.addEventListener('focusout', (event) => {
-    if (event.relatedTarget && control.contains(event.relatedTarget)) {
+    if (isElementNode(event.relatedTarget) && control.contains(event.relatedTarget)) {
       return;
     }
     if (!pointerInside) {
@@ -262,7 +287,7 @@ function createRecentModeSwitch(deps) {
 
   // A touch expansion stays until the next touch lands outside the switch.
   documentObj.addEventListener('pointerdown', (event) => {
-    if (expanded && !expandedByHover && !control.contains(event.target)) {
+    if (expanded && !expandedByHover && !(isElementNode(event.target) && control.contains(event.target))) {
       setExpanded(false);
     }
   }, true);
@@ -273,3 +298,4 @@ function createRecentModeSwitch(deps) {
 }
 
 export { createRecentModeSwitch };
+export type { RecentModeOption, RecentModeSwitch, RecentModeSwitchDeps };
