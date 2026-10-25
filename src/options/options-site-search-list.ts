@@ -1,12 +1,97 @@
-// @ts-nocheck
 // The site search lists: built-in, custom and AI providers with their
 // icons and copy, saving provider state and disabled keys, and refreshing
 // the lists when providers change.
 import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
+import type { AggregateSearch } from '../domain/search/aggregate-search-store';
+import type * as SearchUtils from '../domain/search/search-utils';
+import { readSiteSearchProviders } from '../domain/search/site-search-provider-reader';
+import type { SiteSearchProvider } from '../domain/search/types';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import type { BatchedStorageArea, StorageAreaFacade } from '../platform/settings-storage';
 import * as LumnoMessaging from '../platform/messaging';
+import type { ScrollToTargetOptions } from './options-navigation';
+import type { createSearchSourceOrderController } from './options-search-source-order';
+import type * as SiteSearch from './options-site-search';
+import type { EnqueueOperation, PreparedSiteSearchProviders, SiteSearchProviderSnapshot } from './options-site-search';
+import type { GetMessage } from './options-types';
+import type { ReorderCopyModel } from './react/reorder-buttons';
+import type {
+  SiteSearchListController,
+  SiteSearchListCopyModel,
+  SiteSearchProviderDraft,
+  SiteSearchProviderItemModel,
+  SiteSearchSaveResult
+} from './react/site-search-list';
 
-function createSiteSearchList(deps) {
+// A provider as a list shows it: built-in or custom.
+type ListedSiteSearchProvider = SiteSearchProvider & { _xIsCustom: boolean };
+
+type SiteSearchListControllerRef = Pick<SiteSearchListController, 'render'> | null;
+
+interface SiteSearchListState {
+  searchSourceOrderController: Pick<ReturnType<typeof createSearchSourceOrderController>, 'sortList'>;
+  siteSearchModel: Pick<ReturnType<typeof SiteSearch.createSiteSearchModel>,
+    'editSiteSearchProvider' | 'prepareSiteSearchProviderSnapshot'>;
+  defaultSiteSearchProviders: SiteSearchProvider[];
+  customSiteSearchProviders: SiteSearchProvider[];
+  // Shown until the bundled list loads, and when it cannot.
+  fallbackSiteSearchProviders: SiteSearchProvider[];
+  disabledSiteSearchKeys: Set<string>;
+  siteSearchProvidersLoaded: boolean;
+  customSiteSearchProviderIdsReady: boolean;
+  helpCenterSearchEnabled: boolean;
+  siteSearchEngineBuiltinListController: SiteSearchListControllerRef;
+  siteSearchCustomListController: SiteSearchListControllerRef;
+  siteSearchBuiltinListController: SiteSearchListControllerRef;
+  siteSearchAiBuiltinListController: SiteSearchListControllerRef;
+  // A linked setting to scroll to once the lists have rendered.
+  pendingOptionsScrollTarget: string;
+  storageArea: BatchedStorageArea | null;
+  rawStorageArea: StorageAreaFacade | null;
+  enqueueSiteSearchProviderStorageOperation: EnqueueOperation;
+}
+
+interface SiteSearchListDeps {
+  SEARCH_UTILS: Pick<typeof SearchUtils, 'getSiteSearchProviderDisplayNameMessage' | 'isHelpCenterSiteSearchProvider'>;
+  getMessage: GetMessage;
+  normalizeSiteSearchTemplate(template: unknown): string;
+  isSearchEngineSiteSearchProvider(item: Partial<SiteSearchProvider> | null | undefined): boolean;
+  isAiSiteSearchProvider(item: Partial<SiteSearchProvider> | null | undefined): boolean;
+  // The keys each list shows right now, in order, for the move buttons.
+  renderedSearchSourceKeys: Record<string, string[]>;
+  suspendSiteSearchRefresh(durationMs: number): void;
+  createPersistentId(prefix: string): string;
+  findSiteSearchKeyConflict(key: string, allowedKey?: string): SiteSearchProvider | AggregateSearch | null;
+  getSiteSearchErrorMessage(errorKey: string): string;
+  applySavedSiteSearchProviders(custom: SiteSearchProvider[], disabledKeys: Set<string>): void;
+  renderAggregateSearchList(): void;
+  showToast(message: string, isError?: boolean): void;
+  getActiveBuiltinSiteSearchProviders: typeof SiteSearch.getActiveBuiltinSiteSearchProviders;
+  renderFeedbackSupport(): void;
+  siteSearchEngineBuiltinList: HTMLElement | null;
+  siteSearchCustomList: HTMLElement | null;
+  siteSearchBuiltinList: HTMLElement | null;
+  siteSearchAiBuiltinList: HTMLElement | null;
+  syncClearButtonAvailability(button: HTMLElement | null, hasItems: boolean): void;
+  customClearButton: HTMLElement | null;
+  initTooltips(): void;
+  scrollToOptionsTarget(targetKey: string, options?: ScrollToTargetOptions): boolean;
+  normalizeSiteSearchProvider(
+    item: Partial<SiteSearchProvider> | null | undefined,
+    baseItem?: Partial<SiteSearchProvider> | null
+  ): SiteSearchProvider | null;
+  SITE_SEARCH_STORAGE_KEY: string;
+  getSiteSearchBuiltinKey: typeof SiteSearch.getSiteSearchBuiltinKey;
+  SITE_SEARCH_DISABLED_STORAGE_KEY: string;
+  SITE_SEARCH: Pick<typeof SiteSearch, 'createSiteSearchProviderRefreshCoordinator' | 'createSnapshotPersister'>;
+  optionsState: SiteSearchListState;
+}
+
+function isPresent<T>(value: T | null | undefined): value is T {
+  return value !== null && value !== undefined;
+}
+
+function createSiteSearchList(deps: SiteSearchListDeps) {
   const {
     SEARCH_UTILS,
     getMessage,
@@ -42,11 +127,14 @@ function createSiteSearchList(deps) {
   const optionsState = deps.optionsState;
 
   const DEBUG_DUPLICATE_CUSTOM_KEY = 'dup';
-  let siteSearchProviderRefreshCoordinator = null;
+  let siteSearchProviderRefreshCoordinator: ReturnType<typeof SiteSearch.createSiteSearchProviderRefreshCoordinator<
+    SiteSearchProviderSnapshot,
+    PreparedSiteSearchProviders
+  >> | null = null;
 
-  function getLocalizedBuiltinProviderName(item) {
+  function getLocalizedBuiltinProviderName(item: ListedSiteSearchProvider | null): string {
     if (!item || item._xIsCustom) {
-      return item && (item.name || item.key) ? (item.name || item.key) : '';
+      return item ? (item.name || item.key) : '';
     }
     const mapping = SEARCH_UTILS.getSiteSearchProviderDisplayNameMessage(item);
     if (!mapping) {
@@ -55,7 +143,7 @@ function createSiteSearchList(deps) {
     return getMessage(mapping.messageKey, mapping.fallback);
   }
 
-  function getSiteSearchItemIconUrl(item) {
+  function getSiteSearchItemIconUrl(item: ListedSiteSearchProvider | null): string {
     if (!item) {
       return '';
     }
@@ -66,10 +154,10 @@ function createSiteSearchList(deps) {
       return chrome.runtime.getURL(localIconAsset);
     }
     if (item.icon) {
-      return String(item.icon || '').trim();
+      return item.icon.trim();
     }
     if (item.iconUrl) {
-      return String(item.iconUrl || '').trim();
+      return item.iconUrl.trim();
     }
     try {
       const template = normalizeSiteSearchTemplate(String(item.template || '').trim());
@@ -83,7 +171,7 @@ function createSiteSearchList(deps) {
     }
   }
 
-  function getSiteSearchListCopy() {
+  function getSiteSearchListCopy(): SiteSearchListCopyModel {
     return {
       aliasLabel: getMessage('shortcuts_label_alias', '别名'),
       aliasPlaceholder: getMessage('shortcuts_placeholder_alias', '选填，例如 小破站、油管等'),
@@ -118,13 +206,14 @@ function createSiteSearchList(deps) {
     };
   }
 
-  function getSiteSearchProviderItemModel(item, builtinTemplateSet) {
-    const normalizedTemplate = normalizeSiteSearchTemplate(
-      String(item && item.template ? item.template : '').trim()
-    );
-    const isCustom = Boolean(item && item._xIsCustom);
+  function getSiteSearchProviderItemModel(
+    item: ListedSiteSearchProvider,
+    builtinTemplateSet: ReadonlySet<string>
+  ): SiteSearchProviderItemModel {
+    const normalizedTemplate = normalizeSiteSearchTemplate(String(item.template || '').trim());
+    const isCustom = item._xIsCustom;
     const isSearchEngine = isSearchEngineSiteSearchProvider(item);
-    const duplicate = isCustom && normalizedTemplate && builtinTemplateSet.has(normalizedTemplate);
+    const duplicate = isCustom && Boolean(normalizedTemplate) && builtinTemplateSet.has(normalizedTemplate);
     return {
       aliasesText: Array.isArray(item.aliases) ? item.aliases.join(',') : '',
       badgeText: isCustom
@@ -161,7 +250,7 @@ function createSiteSearchList(deps) {
     };
   }
 
-  function getSearchSourceReorderCopy() {
+  function getSearchSourceReorderCopy(): ReorderCopyModel {
     return {
       moveDownLabel: getMessage('settings_search_source_move_down', '下移'),
       moveUpLabel: getMessage('settings_search_source_move_up', '上移')
@@ -169,20 +258,16 @@ function createSiteSearchList(deps) {
   }
 
   function renderSiteSearchListController(
-    controller,
-    items,
-    placeholder,
-    builtinTemplateSet,
-    listId
-  ) {
-    if (!controller || typeof controller.render !== 'function') {
+    controller: SiteSearchListControllerRef,
+    items: ListedSiteSearchProvider[],
+    placeholder: string,
+    builtinTemplateSet: ReadonlySet<string>,
+    listId: string
+  ): boolean {
+    if (!controller) {
       return false;
     }
-    const ordered = optionsState.searchSourceOrderController.sortList(
-      Array.isArray(items) ? items : [],
-      listId,
-      (item) => item && item.key
-    );
+    const ordered = optionsState.searchSourceOrderController.sortList(items, listId, (item) => item.key);
     renderedSearchSourceKeys[listId] = ordered.map((item) => String(item.key || '').toLowerCase());
     controller.render({
       copy: getSiteSearchListCopy(),
@@ -195,7 +280,7 @@ function createSiteSearchList(deps) {
     return true;
   }
 
-  function locateBuiltinSiteSearchProvider(normalizedTemplate) {
+  function locateBuiltinSiteSearchProvider(normalizedTemplate: string): void {
     const targetRow = Array.from(document.querySelectorAll(
       '[data-type="builtin"][data-template]'
     )).find((row) => row.getAttribute('data-template') === normalizedTemplate);
@@ -204,7 +289,8 @@ function createSiteSearchList(deps) {
     }
     targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
     targetRow.removeAttribute('data-flash');
-    void targetRow.offsetWidth;
+    // Reading the layout restarts the animation when the attribute returns.
+    void targetRow.getBoundingClientRect();
     targetRow.setAttribute('data-flash', 'true');
     const onFlashEnd = () => {
       targetRow.removeAttribute('data-flash');
@@ -213,7 +299,11 @@ function createSiteSearchList(deps) {
     targetRow.addEventListener('animationend', onFlashEnd);
   }
 
-  function handleSiteSearchProviderSave(key, isBuiltin, draft) {
+  function handleSiteSearchProviderSave(
+    key: string,
+    isBuiltin: boolean,
+    draft: SiteSearchProviderDraft
+  ): Promise<SiteSearchSaveResult> {
     suspendSiteSearchRefresh(260);
     const item = (isBuiltin ? optionsState.defaultSiteSearchProviders : optionsState.customSiteSearchProviders)
       .find((entry) => String(entry.key || '') === key);
@@ -225,12 +315,16 @@ function createSiteSearchList(deps) {
         disabledKeys: optionsState.disabledSiteSearchKeys,
         hasKeyConflict: (value, allowedKey) => Boolean(findSiteSearchKeyConflict(value, allowedKey))
       })
-      : { ok: false, error: 'toast_error' };
-    if (!result.ok) {
+      : null;
+    if (!result) {
+      return Promise.resolve({ ok: false, error: getSiteSearchErrorMessage('toast_error') });
+    }
+    if (result.ok === false) {
       return Promise.resolve({ ok: false, error: getSiteSearchErrorMessage(result.error) });
     }
-    return saveSiteSearchProviderState(result.custom, result.disabledKeys).then(() => {
-      applySavedSiteSearchProviders(result.custom, result.disabledKeys);
+    const { custom, disabledKeys } = result;
+    return saveSiteSearchProviderState(custom, disabledKeys).then(() => {
+      applySavedSiteSearchProviders(custom, disabledKeys);
       renderAggregateSearchList();
       return { ok: true };
     }).catch(() => {
@@ -240,7 +334,7 @@ function createSiteSearchList(deps) {
     });
   }
 
-  function syncHelpCenterSearchEnabled() {
+  function syncHelpCenterSearchEnabled(): void {
     if (!optionsState.siteSearchProvidersLoaded) {
       return;
     }
@@ -258,7 +352,7 @@ function createSiteSearchList(deps) {
     }
   }
 
-  function renderSiteSearchList() {
+  function renderSiteSearchList(): void {
     syncHelpCenterSearchEnabled();
     if (!siteSearchEngineBuiltinList || !siteSearchCustomList || !siteSearchBuiltinList) {
       return;
@@ -270,10 +364,10 @@ function createSiteSearchList(deps) {
     );
     const displayDefaults = optionsState.defaultSiteSearchProviders.filter((item) => {
       const key = String(item.key || '').toLowerCase();
-      return key && !customKeys.has(key) && !optionsState.disabledSiteSearchKeys.has(key);
+      return Boolean(key) && !customKeys.has(key) && !optionsState.disabledSiteSearchKeys.has(key);
     });
-    const displayEngineDefaults = displayDefaults.filter(isSearchEngineSiteSearchProvider);
-    const displayAiDefaults = displayDefaults.filter(isAiSiteSearchProvider);
+    const displayEngineDefaults = displayDefaults.filter((item) => isSearchEngineSiteSearchProvider(item));
+    const displayAiDefaults = displayDefaults.filter((item) => isAiSiteSearchProvider(item));
     const displaySearchDefaults = displayDefaults.filter(
       (item) => (
         !isSearchEngineSiteSearchProvider(item) && !isAiSiteSearchProvider(item)
@@ -290,19 +384,19 @@ function createSiteSearchList(deps) {
         )
         .filter(Boolean)
     );
-    const customItems = optionsState.customSiteSearchProviders.map((item) => ({
+    const customItems: ListedSiteSearchProvider[] = optionsState.customSiteSearchProviders.map((item) => ({
       ...item,
       _xIsCustom: true
     }));
-    const engineItems = displayEngineDefaults.map((item) => ({
+    const engineItems: ListedSiteSearchProvider[] = displayEngineDefaults.map((item) => ({
       ...item,
       _xIsCustom: false
     }));
-    const searchItems = displaySearchDefaults.map((item) => ({
+    const searchItems: ListedSiteSearchProvider[] = displaySearchDefaults.map((item) => ({
       ...item,
       _xIsCustom: false
     }));
-    const aiItems = displayAiDefaults.map((item) => ({
+    const aiItems: ListedSiteSearchProvider[] = displayAiDefaults.map((item) => ({
       ...item,
       _xIsCustom: false
     }));
@@ -347,63 +441,54 @@ function createSiteSearchList(deps) {
     }
   }
 
-  function loadDefaultSiteSearchProviders() {
-    const localUrl = chrome && chrome.runtime && typeof chrome.runtime.getURL === 'function'
-      ? chrome.runtime.getURL('assets/data/site-search.json')
-      : '../../assets/data/site-search.json';
+  // The bundled providers, or the fallbacks when the list is empty.
+  function normalizeDefaultProviders(items: SiteSearchProvider[]): SiteSearchProvider[] {
+    const source = items.length > 0 ? items : optionsState.fallbackSiteSearchProviders;
+    return source.map((item) => normalizeSiteSearchProvider(item)).filter(isPresent);
+  }
+
+  function loadDefaultSiteSearchProviders(): Promise<SiteSearchProvider[]> {
+    const localUrl = chrome.runtime.getURL('assets/data/site-search.json');
     return fetch(localUrl)
       .then((resp) => resp.json())
-      .then((data) => {
-        const items = data && Array.isArray(data.items) ? data.items : [];
-        const source = items.length > 0 ? items : optionsState.fallbackSiteSearchProviders;
-        return source.map((item) => normalizeSiteSearchProvider(item)).filter(Boolean);
-      })
-      .catch(() => new Promise((resolve) => {
-        if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
-          resolve(optionsState.fallbackSiteSearchProviders.slice());
-          return;
-        }
+      .then((data: unknown) => normalizeDefaultProviders(
+        readSiteSearchProviders(data && typeof data === 'object' && 'items' in data ? data.items : null)
+      ))
+      .catch(() => new Promise<SiteSearchProvider[]>((resolve) => {
         LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'getSiteSearchProviders' }, (response) => {
-          const items = response && Array.isArray(response.items) ? response.items : [];
-          const source = items.length > 0 ? items : optionsState.fallbackSiteSearchProviders;
-          resolve(source.map((item) => normalizeSiteSearchProvider(item)).filter(Boolean));
+          resolve(normalizeDefaultProviders(response ? readSiteSearchProviders(response.items) : []));
         });
       }));
   }
 
-  function loadCustomSiteSearchProviders(baseItems) {
+  function loadCustomSiteSearchProviders(baseItems: readonly SiteSearchProvider[]): Promise<SiteSearchProvider[]> {
     return LumnoSettingsStorage.readStorageValue(
       optionsState.storageArea,
       chrome,
       SITE_SEARCH_STORAGE_KEY
     ).then((value) => {
-      const items = Array.isArray(value) ? value : [];
-      const baseMap = new Map((baseItems || []).map((item) => [
-        String(item && item.key ? item.key : '').toLowerCase(),
-        item
-      ]));
-      return items.map((item) => {
-        const key = String(item && item.key ? item.key : '').toLowerCase();
+      const baseMap = new Map(baseItems.map((item) => [item.key.toLowerCase(), item]));
+      return readSiteSearchProviders(value).map((item) => {
         const builtinKey = getSiteSearchBuiltinKey(item);
-        return normalizeSiteSearchProvider(item, baseMap.get(builtinKey || key));
-      }).filter(Boolean);
+        return normalizeSiteSearchProvider(item, baseMap.get(builtinKey || item.key.toLowerCase()));
+      }).filter(isPresent);
     });
   }
 
-  function loadDisabledSiteSearchKeys() {
+  function loadDisabledSiteSearchKeys(): Promise<string[]> {
     return LumnoSettingsStorage.readStorageValue(
       optionsState.storageArea,
       chrome,
       SITE_SEARCH_DISABLED_STORAGE_KEY
     ).then((value) => {
-      const items = Array.isArray(value) ? value : [];
+      const items: unknown[] = Array.isArray(value) ? value : [];
       return items.map((item) => String(item).toLowerCase()).filter(Boolean);
     });
   }
 
-  function writeDisabledSiteSearchKeys(keys) {
-    const payload = Array.from(keys || [])
-      .map((item) => String(item).toLowerCase())
+  function writeDisabledSiteSearchKeys(keys: Iterable<string>): Promise<string[]> {
+    const payload = Array.from(keys)
+      .map((item) => item.toLowerCase())
       .filter(Boolean);
     return LumnoSettingsStorage.writeStorageValue(
       optionsState.rawStorageArea,
@@ -413,12 +498,12 @@ function createSiteSearchList(deps) {
     );
   }
 
-  function writeSiteSearchProviderState(items, keys) {
-    const providersPayload = (items || [])
+  function writeSiteSearchProviderState(items: readonly SiteSearchProvider[], keys: Iterable<string>): Promise<unknown> {
+    const providersPayload = items
       .map((item) => normalizeSiteSearchProvider(item))
-      .filter(Boolean);
-    const disabledPayload = Array.from(keys || [])
-      .map((item) => String(item).toLowerCase())
+      .filter(isPresent);
+    const disabledPayload = Array.from(keys)
+      .map((item) => item.toLowerCase())
       .filter(Boolean);
     const payload = {
       [SITE_SEARCH_STORAGE_KEY]: providersPayload,
@@ -427,25 +512,25 @@ function createSiteSearchList(deps) {
     return LumnoSettingsStorage.writeStorageValues(optionsState.rawStorageArea, chrome, payload);
   }
 
-  function saveDisabledSiteSearchKeys(keys) {
+  function saveDisabledSiteSearchKeys(keys: Iterable<string>): Promise<string[]> {
     return optionsState.enqueueSiteSearchProviderStorageOperation(
       () => writeDisabledSiteSearchKeys(keys)
     );
   }
 
-  function saveSiteSearchProviderState(items, keys) {
+  function saveSiteSearchProviderState(items: readonly SiteSearchProvider[], keys: Iterable<string>): Promise<unknown> {
     return optionsState.enqueueSiteSearchProviderStorageOperation(
       () => writeSiteSearchProviderState(items, keys)
     );
   }
 
-  function prepareSiteSearchProviderSnapshot(snapshot) {
+  function prepareSiteSearchProviderSnapshot(snapshot: SiteSearchProviderSnapshot): PreparedSiteSearchProviders {
     return optionsState.siteSearchModel.prepareSiteSearchProviderSnapshot(snapshot, {
       debugDuplicateKey: DEBUG_DUPLICATE_CUSTOM_KEY
     });
   }
 
-  async function loadSiteSearchProviderSnapshot() {
+  async function loadSiteSearchProviderSnapshot(): Promise<SiteSearchProviderSnapshot> {
     const defaults = await loadDefaultSiteSearchProviders();
     const [custom, disabled] = await Promise.all([
       loadCustomSiteSearchProviders(defaults),
@@ -456,7 +541,10 @@ function createSiteSearchList(deps) {
 
   function getSiteSearchProviderRefreshCoordinator() {
     if (!siteSearchProviderRefreshCoordinator) {
-      siteSearchProviderRefreshCoordinator = SITE_SEARCH.createSiteSearchProviderRefreshCoordinator({
+      siteSearchProviderRefreshCoordinator = SITE_SEARCH.createSiteSearchProviderRefreshCoordinator<
+        SiteSearchProviderSnapshot,
+        PreparedSiteSearchProviders
+      >({
         apply(prepared) {
           optionsState.defaultSiteSearchProviders = prepared.defaults;
           optionsState.customSiteSearchProviders = prepared.custom;
@@ -485,13 +573,13 @@ function createSiteSearchList(deps) {
     return siteSearchProviderRefreshCoordinator;
   }
 
-  function invalidateSiteSearchProviderRefresh() {
+  function invalidateSiteSearchProviderRefresh(): void {
     if (siteSearchProviderRefreshCoordinator) {
       siteSearchProviderRefreshCoordinator.invalidate();
     }
   }
 
-  function refreshSiteSearchProviders() {
+  function refreshSiteSearchProviders(): Promise<unknown> {
     syncHelpCenterSearchEnabled();
     if (!siteSearchEngineBuiltinList || !siteSearchCustomList || !siteSearchBuiltinList) {
       return Promise.resolve();
@@ -507,36 +595,6 @@ function createSiteSearchList(deps) {
     return getSiteSearchProviderRefreshCoordinator().refresh().catch(() => {});
   }
 
-  function handleSiteSearchListClick(event) {
-      if (event.currentTarget &&
-          event.currentTarget.getAttribute('data-react-island') === 'options-site-search-list') {
-        return;
-      }
-      const target = event.target;
-      if (!target) {
-        return;
-      }
-      const editTarget = target.closest ? target.closest('button[data-edit-key]') : null;
-      if (editTarget) {
-        const key = String(editTarget.dataset.editKey || '');
-        const isBuiltin = editTarget.dataset.editType === 'builtin';
-        const match = isBuiltin
-          ? optionsState.defaultSiteSearchProviders.find((item) => String(item.key || '') === key)
-          : optionsState.customSiteSearchProviders.find((item) => String(item.key || '') === key);
-        if (match) {
-          const row = editTarget.closest('._x_extension_shortcut_item_2024_unique_');
-          if (row) {
-            row.setAttribute('data-expanded', row.getAttribute('data-expanded') === 'true' ? 'false' : 'true');
-          }
-          return;
-        }
-        return;
-      }
-      if (target.closest && target.closest('._x_extension_popconfirm_2024_unique_')) {
-        return;
-      }
-    }
-
   return {
     getLocalizedBuiltinProviderName,
     getSiteSearchItemIconUrl,
@@ -549,9 +607,9 @@ function createSiteSearchList(deps) {
     saveDisabledSiteSearchKeys,
     saveSiteSearchProviderState,
     invalidateSiteSearchProviderRefresh,
-    refreshSiteSearchProviders,
-    handleSiteSearchListClick
+    refreshSiteSearchProviders
   };
 }
 
 export { createSiteSearchList };
+export type { ListedSiteSearchProvider, SiteSearchListDeps, SiteSearchListState };

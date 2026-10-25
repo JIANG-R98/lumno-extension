@@ -1,46 +1,108 @@
-// @ts-nocheck
 // Site search providers on the Options page: the rules for adding and
 // editing a provider, cleaning up stored custom providers, and the refresh
 // coordinator that keeps the lists in step with storage. Validation results
 // name a locale message key in `error`; the page turns it into text.
+import type * as AggregateSearchStore from '../domain/search/aggregate-search-store';
+import type { AggregateSearch } from '../domain/search/aggregate-search-store';
+import type * as SearchUtils from '../domain/search/search-utils';
+import type { SiteSearchProvider } from '../domain/search/types';
+
+// What a refresh step reports: whether storage needs the cleaned snapshot.
+interface PreparedSnapshot {
+  needsPersistence?: boolean;
+}
+
+interface PersistContext {
+  // False once a newer refresh has started.
+  isCurrent(): boolean;
+}
+
+interface RefreshCoordinatorConfig<S, P extends PreparedSnapshot> {
+  load(): Promise<S>;
+  prepare(snapshot: S): P;
+  persist(prepared: P, context: PersistContext): Promise<unknown>;
+  apply(prepared: P): void;
+  onError?(error: unknown): void;
+}
+
+type RefreshResult<P> = { stale: true } | { stale: false; value: P };
+
+// Runs one storage operation after the ones before it.
+type EnqueueOperation = <R>(operation: () => R | PromiseLike<R>) => Promise<R>;
+
+// Site search providers as storage holds them, after reading.
+interface SiteSearchProviderSnapshot {
+  defaults: SiteSearchProvider[];
+  custom: SiteSearchProvider[];
+  disabled: string[];
+}
+
+interface PreparedSiteSearchProviders {
+  custom: SiteSearchProvider[];
+  defaults: SiteSearchProvider[];
+  disabledKeys: Set<string>;
+  needsPersistence: boolean;
+}
+
+interface SnapshotPersisterOptions<S, P extends PreparedSnapshot & { custom: unknown; disabledKeys: unknown }> {
+  enqueue: EnqueueOperation;
+  load(): Promise<S>;
+  prepare(snapshot: S): P;
+  write(custom: P['custom'], disabledKeys: P['disabledKeys']): unknown;
+}
+
+// The add and edit forms' fields.
+interface SiteSearchDraft {
+  key?: string;
+  name?: string;
+  template?: string;
+  // Comma-separated, as typed.
+  aliases?: string;
+  category?: string;
+}
+
+type SiteSearchEditResult =
+  { ok: false; error: string } |
+  { ok: true; custom: SiteSearchProvider[]; disabledKeys: Set<string> };
+
+interface SiteSearchEditState {
+  custom: SiteSearchProvider[];
+  disabledKeys: Iterable<string>;
+  hasKeyConflict(key: string, allowedKey: string): boolean;
+  createId(): string;
+}
+
+interface SiteSearchModelDeps {
+  searchUtils: Pick<typeof SearchUtils, 'normalizeSiteSearchTemplate' | 'findSiteSearchProviderKeyConflict' |
+    'normalizeSiteSearchProvider' | 'isAiSiteSearchProvider'>;
+  aggregateSearchStore: Pick<typeof AggregateSearchStore, 'ensureCustomProviderIds' | 'createDeterministicCustomProviderId'>;
+}
 
 // Serializes refreshes so the newest one wins. A refresh that loses to a
 // newer one (or to invalidate()) resolves as { stale: true } without
 // applying anything. When prepare() reports needsPersistence, the snapshot
 // is re-read inside the serialized path before persisting, and the stored
 // result is read back before it is applied.
-function createSiteSearchProviderRefreshCoordinator(config) {
-  const options = config && typeof config === 'object' ? config : {};
-  const load = typeof options.load === 'function'
-    ? options.load
-    : () => Promise.resolve({});
-  const prepare = typeof options.prepare === 'function'
-    ? options.prepare
-    : (snapshot) => snapshot;
-  const persist = typeof options.persist === 'function'
-    ? options.persist
-    : () => Promise.resolve();
-  const apply = typeof options.apply === 'function'
-    ? options.apply
-    : () => {};
-  const onError = typeof options.onError === 'function'
-    ? options.onError
-    : () => {};
+function createSiteSearchProviderRefreshCoordinator<S, P extends PreparedSnapshot>(
+  config: RefreshCoordinatorConfig<S, P>
+) {
+  const { load, prepare, persist, apply } = config;
+  const onError = config.onError || (() => {});
   let generation = 0;
-  let refreshQueue = Promise.resolve();
+  let refreshQueue: Promise<unknown> = Promise.resolve();
 
-  function isCurrent(token) {
+  function isCurrent(token: number): boolean {
     return token === generation;
   }
 
-  async function run(token) {
+  async function run(token: number): Promise<RefreshResult<P>> {
     try {
       let snapshot = await load();
       if (!isCurrent(token)) {
         return { stale: true };
       }
       let prepared = prepare(snapshot);
-      if (prepared && prepared.needsPersistence) {
+      if (prepared.needsPersistence) {
         // A refresh can spend time loading the bundled provider catalog. Re-read
         // sync storage inside the serialized migration path so cleanup never uses
         // the earlier snapshot merely because it happened to finish last.
@@ -49,7 +111,7 @@ function createSiteSearchProviderRefreshCoordinator(config) {
           return { stale: true };
         }
         prepared = prepare(snapshot);
-        if (prepared && prepared.needsPersistence) {
+        if (prepared.needsPersistence) {
           if (!isCurrent(token)) {
             return { stale: true };
           }
@@ -82,10 +144,10 @@ function createSiteSearchProviderRefreshCoordinator(config) {
   }
 
   return {
-    invalidate() {
+    invalidate(): void {
       generation += 1;
     },
-    refresh() {
+    refresh(): Promise<RefreshResult<P>> {
       const token = ++generation;
       const task = refreshQueue.then(
         () => run(token),
@@ -102,11 +164,11 @@ function createSiteSearchProviderRefreshCoordinator(config) {
 // The coordinator's persist step: inside the shared write queue it reads
 // storage again and writes only if the fresh snapshot still needs cleanup,
 // so a migration never writes back an older snapshot over a newer save.
-function createSnapshotPersister(options) {
-  return function persist(_prepared, context) {
-    const isCurrent = context && typeof context.isCurrent === 'function'
-      ? context.isCurrent
-      : () => true;
+function createSnapshotPersister<S, P extends PreparedSnapshot & { custom: unknown; disabledKeys: unknown }>(
+  options: SnapshotPersisterOptions<S, P>
+) {
+  return function persist(_prepared: unknown, context: PersistContext): Promise<unknown> {
+    const isCurrent = context.isCurrent;
     return options.enqueue(async () => {
       if (!isCurrent()) {
         return undefined;
@@ -125,23 +187,22 @@ function createSnapshotPersister(options) {
 }
 
 // Runs storage writes one after another; each caller gets its own result.
-function createOperationQueue() {
-  let queue = Promise.resolve();
-  return function enqueue(operation) {
-    const run = typeof operation === 'function' ? operation : () => undefined;
-    const task = queue.then(run, run);
+function createOperationQueue(): EnqueueOperation {
+  let queue: Promise<unknown> = Promise.resolve();
+  return function enqueue<R>(operation: () => R | PromiseLike<R>): Promise<R> {
+    const task = queue.then(operation, operation);
     // A failed write is reported to its caller and must not stop the next one.
     queue = task.catch(() => {});
     return task;
   };
 }
 
-function normalizeKey(value) {
+function normalizeKey(value: unknown): string {
   return String(value || '').trim().toLowerCase();
 }
 
 // "a, b，c" -> ['a', 'b', 'c'] (both comma widths, blanks and repeats dropped).
-function normalizeAliases(input) {
+function normalizeAliases(input: string): string[] {
   if (!input) {
     return [];
   }
@@ -153,7 +214,7 @@ function normalizeAliases(input) {
   ));
 }
 
-function normalizeAliasList(list) {
+function normalizeAliasList(list: unknown): string[] {
   const items = Array.isArray(list) ? list : [];
   const cleaned = items
     .map((item) => String(item || '').trim().toLowerCase())
@@ -162,37 +223,41 @@ function normalizeAliasList(list) {
 }
 
 // The built-in provider a custom provider overrides, if any.
-function getSiteSearchBuiltinKey(item) {
+function getSiteSearchBuiltinKey(item: Pick<SiteSearchProvider, 'builtinKey'> | null | undefined): string {
   return normalizeKey(item && item.builtinKey);
 }
 
 // Built-ins still shown: not overridden by a custom provider with the same
 // key and not turned off.
-function getActiveBuiltinSiteSearchProviders(defaults, custom, disabledKeys) {
-  const customKeys = new Set((custom || []).map((item) => normalizeKey(item && item.key)).filter(Boolean));
+function getActiveBuiltinSiteSearchProviders<T extends Pick<SiteSearchProvider, 'key'>>(
+  defaults: readonly T[],
+  custom: readonly Pick<SiteSearchProvider, 'key'>[],
+  disabledKeys: ReadonlySet<string> | Iterable<string>
+): T[] {
+  const customKeys = new Set(custom.map((item) => normalizeKey(item.key)).filter(Boolean));
   const disabled = disabledKeys instanceof Set
     ? disabledKeys
-    : new Set(Array.from(disabledKeys || []).map((key) => String(key || '').toLowerCase()));
-  return (defaults || []).filter((item) => {
-    const key = normalizeKey(item && item.key);
-    return key && !customKeys.has(key) && !disabled.has(key);
+    : new Set(Array.from(disabledKeys).map((key) => key.toLowerCase()));
+  return defaults.filter((item) => {
+    const key = normalizeKey(item.key);
+    return Boolean(key) && !customKeys.has(key) && !disabled.has(key);
   });
 }
 
-function createSiteSearchModel(deps) {
+function createSiteSearchModel(deps: SiteSearchModelDeps) {
   const searchUtils = deps.searchUtils;
   const aggregateSearchStore = deps.aggregateSearchStore;
-  const normalizeTemplate = (template) => searchUtils.normalizeSiteSearchTemplate(template);
+  const normalizeTemplate = (template: string): string => searchUtils.normalizeSiteSearchTemplate(template);
 
-  function isDuplicateTemplate(template, providers) {
+  function isDuplicateTemplate(template: string | undefined, providers: readonly SiteSearchProvider[]): boolean {
     const normalized = normalizeTemplate(String(template || '').trim());
     if (!normalized) {
       return false;
     }
-    return (providers || []).some((item) => normalizeTemplate(String(item.template || '').trim()) === normalized);
+    return providers.some((item) => normalizeTemplate(String(item.template || '').trim()) === normalized);
   }
 
-  function isSameProviderContent(a, b) {
+  function isSameProviderContent(a: SiteSearchProvider | null | undefined, b: SiteSearchProvider | null | undefined): boolean {
     if (!a || !b) {
       return false;
     }
@@ -207,9 +272,12 @@ function createSiteSearchModel(deps) {
   }
 
   // Drops stored custom providers that merely repeat a built-in unchanged.
-  function filterRedundantCustomProviders(defaults, custom) {
-    const map = new Map((defaults || []).map((item) => [String(item.key || '').toLowerCase(), item]));
-    return (custom || []).filter((item) => {
+  function filterRedundantCustomProviders(
+    defaults: readonly SiteSearchProvider[],
+    custom: readonly SiteSearchProvider[]
+  ): SiteSearchProvider[] {
+    const map = new Map(defaults.map((item) => [String(item.key || '').toLowerCase(), item]));
+    return custom.filter((item) => {
       if (getSiteSearchBuiltinKey(item)) {
         return true;
       }
@@ -220,35 +288,40 @@ function createSiteSearchModel(deps) {
 
   // The provider or aggregate search already using a trigger, ignoring the
   // provider key (or aggregate id) being edited.
-  function findSiteSearchKeyConflict(key, allowedKey, allowedAggregateId, state) {
+  function findSiteSearchKeyConflict(
+    key: string,
+    allowedKey: string,
+    allowedAggregateId: string,
+    state: { providers: readonly SiteSearchProvider[]; aggregateSearches: readonly AggregateSearch[] }
+  ): SiteSearchProvider | AggregateSearch | null {
     const normalizedKey = normalizeKey(key);
     if (!normalizedKey) {
       return null;
     }
     const providerConflict = searchUtils.findSiteSearchProviderKeyConflict(
       normalizedKey,
-      state.providers || [],
+      state.providers,
       normalizeKey(allowedKey)
     );
     if (providerConflict) {
       return providerConflict;
     }
-    const normalizedAllowedAggregateId = String(allowedAggregateId || '').trim();
-    return (state.aggregateSearches || []).find(
-      (item) => String(item && item.id || '').trim() !== normalizedAllowedAggregateId &&
-        normalizeKey(item && item.key) === normalizedKey
+    const normalizedAllowedAggregateId = allowedAggregateId.trim();
+    return state.aggregateSearches.find(
+      (item) => item.id.trim() !== normalizedAllowedAggregateId && normalizeKey(item.key) === normalizedKey
     ) || null;
   }
 
   // Cleans a stored snapshot: drops redundant and debug providers, gives
   // every custom provider a stable id, marks customs that duplicate an
   // active built-in, and turns built-ins back on when everything was off.
-  function prepareSiteSearchProviderSnapshot(snapshot, options) {
-    const values = snapshot && typeof snapshot === 'object' ? snapshot : {};
+  function prepareSiteSearchProviderSnapshot(
+    snapshot: SiteSearchProviderSnapshot,
+    options?: { debugDuplicateKey?: string }
+  ): PreparedSiteSearchProviders {
     const debugDuplicateKey = options && options.debugDuplicateKey;
-    const defaults = Array.isArray(values.defaults) ? values.defaults : [];
-    const custom = Array.isArray(values.custom) ? values.custom : [];
-    let disabledKeys = new Set(Array.isArray(values.disabled) ? values.disabled : []);
+    const { defaults, custom } = snapshot;
+    let disabledKeys = new Set(snapshot.disabled);
     const filteredCustom = filterRedundantCustomProviders(defaults, custom);
     const withoutDebug = filteredCustom.filter(
       (item) => String(item.key || '').toLowerCase() !== debugDuplicateKey
@@ -275,7 +348,7 @@ function createSiteSearchModel(deps) {
       };
     });
     const didUpdateDisabled = nextCustom.some((item, index) => {
-      const before = customWithStableIds[index] || {};
+      const before: Partial<SiteSearchProvider> = customWithStableIds[index] || {};
       return Boolean(before.disabled) !== Boolean(item.disabled) ||
         String(before.disabledReason || '') !== String(item.disabledReason || '');
     });
@@ -288,7 +361,7 @@ function createSiteSearchModel(deps) {
       defaults.length > 0 &&
       disabledKeys.size > 0;
     if (didResetDisabled) {
-      disabledKeys = new Set();
+      disabledKeys = new Set<string>();
     }
     return {
       custom: nextCustom,
@@ -300,7 +373,7 @@ function createSiteSearchModel(deps) {
   }
 
   // The checks shared by every add or edit of a trigger key.
-  function validateTriggerKey(key, hasConflict) {
+  function validateTriggerKey(key: string, hasConflict: (key: string) => boolean): string {
     if (!key) {
       return 'shortcuts_error_key';
     }
@@ -314,9 +387,7 @@ function createSiteSearchModel(deps) {
   }
 
   // A new custom provider from the add form.
-  //   draft: { key, name, template, aliases, category }
-  //   state: { custom, disabledKeys, hasKeyConflict(key), createId() }
-  function addCustomSiteSearchProvider(draft, state) {
+  function addCustomSiteSearchProvider(draft: SiteSearchDraft | null, state: SiteSearchEditState): SiteSearchEditResult {
     const key = String(draft && draft.key ? draft.key : '').trim();
     const keyError = validateTriggerKey(key, (value) => state.hasKeyConflict(value, ''));
     if (keyError) {
@@ -343,9 +414,7 @@ function createSiteSearchModel(deps) {
     disabledKeys.delete(normalizedKey);
     return {
       ok: true,
-      custom: [nextItem].concat(
-        (state.custom || []).filter((item) => String(item.key || '').toLowerCase() !== normalizedKey)
-      ),
+      custom: [nextItem, ...state.custom.filter((item) => String(item.key || '').toLowerCase() !== normalizedKey)],
       disabledKeys
     };
   }
@@ -354,8 +423,12 @@ function createSiteSearchModel(deps) {
   // built-in stores a custom copy that names it in builtinKey and turns the
   // built-in off; a plain custom provider that repeats an active built-in's
   // template is kept but marked disabled as a duplicate.
-  //   state: { defaults, custom, disabledKeys, hasKeyConflict(key, allowedKey), createId() }
-  function editSiteSearchProvider(item, isBuiltin, draft, state) {
+  function editSiteSearchProvider(
+    item: SiteSearchProvider,
+    isBuiltin: boolean,
+    draft: SiteSearchDraft | null,
+    state: SiteSearchEditState & { defaults: readonly SiteSearchProvider[] }
+  ): SiteSearchEditResult {
     const nextKeyRaw = String(draft && draft.key ? draft.key : '').trim();
     const previousKey = String(item.key || '').toLowerCase();
     const keyError = validateTriggerKey(nextKeyRaw, (value) => state.hasKeyConflict(value, previousKey));
@@ -368,7 +441,7 @@ function createSiteSearchModel(deps) {
       return { ok: false, error: 'toast_error_template' };
     }
     const normalizedKey = nextKeyRaw.toLowerCase();
-    let custom = (state.custom || []).filter(
+    let custom = state.custom.filter(
       (entry) => String(entry.key || '').toLowerCase() !== normalizedKey
     );
     if (previousKey && previousKey !== normalizedKey) {
@@ -381,7 +454,7 @@ function createSiteSearchModel(deps) {
     } else {
       disabledKeys.delete(normalizedKey);
     }
-    const nextItemDraft = {
+    const nextItemDraft: SiteSearchProvider = {
       ...item,
       id: String(item.id || '').trim() || state.createId(),
       key: nextKeyRaw,
@@ -397,7 +470,7 @@ function createSiteSearchModel(deps) {
     }
     const activeBuiltins = getActiveBuiltinSiteSearchProviders(
       state.defaults,
-      [nextItemDraft].concat(custom),
+      [nextItemDraft, ...custom],
       disabledKeys
     );
     const shouldDisable = !builtinKey && isDuplicateTemplate(template, activeBuiltins);
@@ -434,4 +507,16 @@ export {
   getSiteSearchBuiltinKey,
   normalizeAliasList,
   normalizeAliases
+};
+export type {
+  EnqueueOperation,
+  PersistContext,
+  PreparedSiteSearchProviders,
+  RefreshCoordinatorConfig,
+  RefreshResult,
+  SiteSearchDraft,
+  SiteSearchEditResult,
+  SiteSearchEditState,
+  SiteSearchModelDeps,
+  SiteSearchProviderSnapshot
 };

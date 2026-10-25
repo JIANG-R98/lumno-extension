@@ -75,13 +75,19 @@ interface ReadBatchMetrics {
   underlyingReadCount: number;
 }
 
+// The area a read batch hands out: reads made before the batch flushes are
+// served by one storage read.
+interface BatchedStorageArea extends StorageAreaLike {
+  get(
+    keys?: StorageKeys | ((items: StorageItems | undefined) => void),
+    callback?: (items: StorageItems | undefined) => void
+  ): Promise<StorageItems | undefined> | void;
+  remove(keys: string | string[], callback?: () => void): Promise<void> | void;
+  clear(callback?: () => void): Promise<void> | void;
+}
+
 interface StorageReadBatch {
-  area: {
-    clear(callback?: () => void): unknown;
-    get(keys?: StorageKeys | ((items: StorageItems | undefined) => void), callback?: (items: StorageItems | undefined) => void): unknown;
-    remove(keys: string | string[], callback?: () => void): unknown;
-    set(items: StorageItems, callback?: () => void): unknown;
-  };
+  area: BatchedStorageArea;
   flush(): void;
   ready: Promise<ReadBatchMetrics>;
 }
@@ -580,7 +586,7 @@ function createStorageReadBatch(area: StorageAreaLike | null | undefined): Stora
   function get(
     keysOrCallback?: StorageKeys | ((items: StorageItems | undefined) => void),
     maybeCallback?: (items: StorageItems | undefined) => void
-  ): unknown {
+  ): Promise<StorageItems | undefined> | void {
     let keys: StorageKeys | undefined;
     let callback = maybeCallback;
     if (typeof keysOrCallback === 'function' && typeof callback === 'undefined') {
@@ -868,5 +874,6 @@ export type {
   ReadBatchMetrics,
   StorageAreaFacade,
   StorageChromeApi,
+  BatchedStorageArea,
   StorageReadBatch
 };

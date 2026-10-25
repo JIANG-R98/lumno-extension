@@ -353,8 +353,7 @@ import * as LumnoMessaging from '../platform/messaging';
     saveDisabledSiteSearchKeys,
     saveSiteSearchProviderState,
     invalidateSiteSearchProviderRefresh,
-    refreshSiteSearchProviders,
-    handleSiteSearchListClick
+    refreshSiteSearchProviders
   } = OPTIONS_SITE_SEARCH_LIST.createSiteSearchList({
     SEARCH_UTILS,
     getMessage: (...args) => getMessage(...args),
@@ -1875,11 +1874,6 @@ import * as LumnoMessaging from '../platform/messaging';
   }
 
   OPTIONS_SITE_SEARCH_EVENTS.createSiteSearchEvents({
-    siteSearchCustomList,
-    handleSiteSearchListClick,
-    siteSearchEngineBuiltinList,
-    siteSearchBuiltinList,
-    siteSearchAiBuiltinList,
     siteSearchCancelButton,
     resetSiteSearchForm,
     siteSearchFormTrigger,

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Search sources order on the Options page: the search panel group chips at
 // the top of Search sources, the per-list moves of the provider and aggregate
 // lists, and the browser content order on the result type checkboxes. All of
@@ -6,38 +5,54 @@
 // its lists through `onChange`.
 
 import * as ORDER from '../domain/search/search-source-order';
+import type { SearchSourceOrder } from '../domain/search/search-source-order';
+import { isElementNode, isHtmlElement, isHtmlTag } from '../shared/dom-guards';
 import * as SORTABLE from '../shared/ui/sortable-drag';
+import type { GetMessage } from './options-types';
 
-function createSearchSourceOrderController(config) {
-  const options = config && typeof config === 'object' ? config : {};
-  const getMessage = typeof options.getMessage === 'function'
-    ? options.getMessage
-    : (key, fallback) => fallback;
+interface SearchSourceOrderConfig {
+  // Where the search panel group chips go.
+  groupHost?: HTMLElement | null;
+  getMessage?: GetMessage;
+  showToast?(message: string, isError?: boolean): void;
+  // The stored record, as storage holds it.
+  read?(): unknown;
+  write(value: SearchSourceOrder): unknown;
+  // Runs after every change, so the page can re-sort its lists.
+  onChange?(order: SearchSourceOrder): void;
+  // The document whose undo and redo keys step through the moves.
+  document?: Document | null;
+}
+
+type HistoryDirection = 'undo' | 'redo';
+
+function createSearchSourceOrderController(options: SearchSourceOrderConfig) {
+  const getMessage: GetMessage = options.getMessage || ((_key, fallback) => fallback);
   const groupHost = options.groupHost || null;
   let order = ORDER.normalizeOrder(null);
-  let writeQueue = Promise.resolve();
-  const detachers = [];
+  let writeQueue: Promise<unknown> = Promise.resolve();
+  const detachers: Array<() => void> = [];
   const history = ORDER.createHistory();
 
-  function notify() {
-    if (typeof options.onChange === 'function') {
+  function notify(): void {
+    if (options.onChange) {
       options.onChange(order);
     }
     renderGroupChips();
   }
 
-  function accept(value) {
+  function accept(value: unknown): void {
     order = ORDER.normalizeOrder(value);
     notify();
   }
 
-  function load() {
+  function load(): Promise<void> {
     return Promise.resolve(options.read ? options.read() : undefined)
       .then((value) => accept(value))
       .catch(() => notify());
   }
 
-  function persist(next, persistOptions) {
+  function persist(next: SearchSourceOrder, persistOptions?: { record?: boolean }): Promise<unknown> {
     if (!persistOptions || persistOptions.record !== false) {
       history.record(order, next);
     }
@@ -46,7 +61,7 @@ function createSearchSourceOrderController(config) {
     writeQueue = writeQueue
       .then(() => options.write(next))
       .catch(() => {
-        if (typeof options.showToast === 'function') {
+        if (options.showToast) {
           options.showToast(getMessage('settings_search_source_order_failed', '排序保存失败，请重试。'), true);
         }
         // Show what storage really holds rather than an order that never landed.
@@ -57,13 +72,13 @@ function createSearchSourceOrderController(config) {
 
   // Ctrl/Cmd+Z and Shift+Ctrl/Cmd+Z step through this page's moves, one at a
   // time and as many times as there are moves to step through.
-  function stepHistory(direction) {
+  function stepHistory(direction: HistoryDirection): boolean {
     const target = direction === 'redo' ? history.redo(order) : history.undo(order);
     if (!target) {
       return false;
     }
     persist(target, { record: false });
-    if (typeof options.showToast === 'function') {
+    if (options.showToast) {
       options.showToast(direction === 'redo'
         ? getMessage('settings_search_source_order_redone', '已恢复排序')
         : getMessage('settings_search_source_order_undone', '已撤销排序'));
@@ -72,18 +87,19 @@ function createSearchSourceOrderController(config) {
   }
 
   // Text fields keep their own undo.
-  function isTextEditingTarget(target) {
-    if (!target || target.nodeType !== 1) {
+  function isTextEditingTarget(target: EventTarget | null): boolean {
+    if (!isElementNode(target)) {
       return false;
     }
-    if (target.isContentEditable || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+    if ((isHtmlElement(target) && target.isContentEditable) ||
+        isHtmlTag(target, 'textarea') || isHtmlTag(target, 'select')) {
       return true;
     }
-    return target.tagName === 'INPUT' &&
-      !['checkbox', 'radio', 'button', 'range'].includes(String(target.type || '').toLowerCase());
+    return isHtmlTag(target, 'input') &&
+      !['checkbox', 'radio', 'button', 'range'].includes(target.type.toLowerCase());
   }
 
-  function handleHistoryKeydown(event) {
+  function handleHistoryKeydown(event: KeyboardEvent): void {
     const direction = ORDER.getHistoryShortcut(event);
     if (!direction || event.defaultPrevented || isTextEditingTarget(event.target)) {
       return;
@@ -101,42 +117,46 @@ function createSearchSourceOrderController(config) {
     detachers.push(() => historyDocument.removeEventListener('keydown', handleHistoryKeydown));
   }
 
-  function sortList(items, listId, getKey) {
+  function sortList<T extends { key?: unknown } | null>(
+    items: readonly T[],
+    listId: string,
+    getKey?: (item: T) => unknown
+  ): T[] {
     return ORDER.sortList(items, order, listId, getKey);
   }
 
   // `renderedKeys` is the list as shown; keys the record holds but the page
   // does not show (a disabled built-in) keep their relative slot.
-  function moveListItem(listId, renderedKeys, fromIndex, toIndex) {
+  function moveListItem(listId: string, renderedKeys: readonly string[], fromIndex: number, toIndex: number): Promise<unknown> {
     const moved = ORDER.moveIndex(renderedKeys, fromIndex, toIndex);
     return persist(ORDER.applyMove(order, listId, renderedKeys, moved));
   }
 
-  function sortLocalSourceTypes(sourceTypes) {
+  function sortLocalSourceTypes(sourceTypes: readonly string[]): string[] {
     return ORDER.sortLocalSourceTypes(sourceTypes, order);
   }
 
-  function moveLocal(renderedTypes, fromIndex, toIndex) {
+  function moveLocal(renderedTypes: readonly string[], fromIndex: number, toIndex: number): Promise<unknown> {
     const moved = ORDER.moveIndex(renderedTypes, fromIndex, toIndex);
     return persist(ORDER.applyMove(order, 'local', renderedTypes, moved));
   }
 
-  function isLocalDefault() {
+  function isLocalDefault(): boolean {
     return ORDER.LOCAL_SOURCE_TYPES.every((type, index) => order.local[index] === type);
   }
 
-  function resetLocal() {
+  function resetLocal(): Promise<unknown> {
     if (isLocalDefault()) {
       return Promise.resolve();
     }
     return persist(ORDER.withLocal(order, ORDER.LOCAL_SOURCE_TYPES.slice()));
   }
 
-  function moveGroup(fromIndex, toIndex) {
+  function moveGroup(fromIndex: number, toIndex: number): Promise<unknown> {
     return persist(ORDER.withGroups(order, ORDER.moveIndex(order.groups, fromIndex, toIndex)));
   }
 
-  function getGroupLabel(group) {
+  function getGroupLabel(group: string): string {
     if (group === 'aggregate') {
       return getMessage('search_scope_group_aggregates', '聚合搜索');
     }
@@ -152,7 +172,7 @@ function createSearchSourceOrderController(config) {
     return getMessage('search_scope_group_local', '浏览器内容');
   }
 
-  function renderGroupChips() {
+  function renderGroupChips(): void {
     if (!groupHost) {
       return;
     }
@@ -194,7 +214,7 @@ function createSearchSourceOrderController(config) {
     });
     if (focusedGroup) {
       const chip = groupHost.querySelector(`[data-group="${focusedGroup}"]`);
-      if (chip) {
+      if (isHtmlElement(chip)) {
         chip.focus({ preventScroll: true });
       }
     }
@@ -202,31 +222,32 @@ function createSearchSourceOrderController(config) {
 
   // Drag for one container. Rows reorder only among their own siblings, and
   // a list with an open editor stays put so heights cannot shift mid-drag.
-  function attachDrag(host, onReorder, attachOptions) {
-    if (!host || !SORTABLE) {
+  function attachDrag(
+    host: HTMLElement | null,
+    onReorder: (fromIndex: number, toIndex: number, peers: HTMLElement[]) => void
+  ): void {
+    if (!host) {
       return;
     }
-    const settings = attachOptions || {};
     const detach = SORTABLE.attach(host, {
       itemSelector: '[data-sortable="true"]',
-      getPeers: (item) => Array.from(item.parentElement.children)
-        .filter((child) => child.getAttribute('data-sortable') === 'true'),
-      canStart: (item) => !item.parentElement.querySelector('[data-expanded="true"]') &&
-        (typeof settings.canStart !== 'function' || settings.canStart(item)),
-      onReorder: (item, fromIndex, toIndex, peers) => onReorder(fromIndex, toIndex, peers)
+      getPeers: (item) => (item.parentElement ? Array.from(item.parentElement.children) : [])
+        .filter((child): child is HTMLElement => isHtmlElement(child) && child.getAttribute('data-sortable') === 'true'),
+      canStart: (item) => !(item.parentElement && item.parentElement.querySelector('[data-expanded="true"]')),
+      onReorder: (_item, fromIndex, toIndex, peers) => onReorder(fromIndex, toIndex, peers)
     });
     detachers.push(detach);
   }
 
-  function attachListDrag(host, listId, getKey) {
+  function attachListDrag(host: HTMLElement | null, listId: string, getKey: (row: HTMLElement) => string): void {
     attachDrag(host, (fromIndex, toIndex, peers) => {
       moveListItem(listId, peers.map(getKey), fromIndex, toIndex);
     });
   }
 
-  function attachLocalDrag(host) {
+  function attachLocalDrag(host: HTMLElement | null): void {
     attachDrag(host, (fromIndex, toIndex, peers) => {
-      moveLocal(peers.map((peer) => peer.getAttribute('data-value')), fromIndex, toIndex);
+      moveLocal(peers.map((peer) => peer.getAttribute('data-value') || ''), fromIndex, toIndex);
     });
   }
 
@@ -236,7 +257,7 @@ function createSearchSourceOrderController(config) {
     accept,
     attachListDrag,
     attachLocalDrag,
-    getOrder: () => order,
+    getOrder: (): SearchSourceOrder => order,
     isLocalDefault,
     load,
     moveListItem,
@@ -246,10 +267,11 @@ function createSearchSourceOrderController(config) {
     sortList,
     sortLocalSourceTypes,
     undo: () => stepHistory('undo'),
-    destroy() {
+    destroy(): void {
       detachers.splice(0).forEach((detach) => detach());
     }
   });
 }
 
 export { createSearchSourceOrderController };
+export type { SearchSourceOrderConfig };

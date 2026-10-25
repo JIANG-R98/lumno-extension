@@ -1,12 +1,76 @@
 // Click handlers for the site search, aggregate search and blacklist
 // lists and their add, reset and clear buttons.
-function createSiteSearchEvents(deps) {
+import type { BlacklistRule } from '../domain/blacklist-utils';
+import type { AggregateSearch } from '../domain/search/aggregate-search-store';
+import type { SiteSearchProvider } from '../domain/search/types';
+import type * as SiteSearch from './options-site-search';
+import type { SiteSearchCategory } from './options-site-search-form';
+import type { GetMessage } from './options-types';
+
+interface SiteSearchEventsState {
+  siteSearchFormExpanded: boolean;
+  editingSiteSearchKey: string | null;
+  siteSearchDraftCategory: SiteSearchCategory;
+  customSiteSearchProviders: SiteSearchProvider[];
+  customSiteSearchProviderIdsReady: boolean;
+  disabledSiteSearchKeys: Set<string>;
+  searchBlacklistItems: BlacklistRule[];
+  faviconRequestBlacklistItems: BlacklistRule[];
+}
+
+interface SiteSearchEventsDeps {
+  siteSearchCancelButton: HTMLElement | null;
+  resetSiteSearchForm(): void;
+  siteSearchFormTrigger: HTMLElement | null;
+  setSiteSearchFormExpanded(expanded: boolean): void;
+  siteSearchInsertQueryButton: HTMLElement | null;
+  insertSiteSearchQueryToken(): void;
+  siteSearchCategoryButtons: HTMLElement[];
+  setLegacySiteSearchDraftCategory(category: string | undefined): void;
+  siteSearchAddButton: HTMLElement | null;
+  attachSaveButtonAnimation(button: HTMLElement | null): void;
+  suspendSiteSearchRefresh(durationMs: number): void;
+  setSiteSearchError(message: string): void;
+  siteSearchKeyInput: HTMLInputElement | null;
+  siteSearchNameInput: HTMLInputElement | null;
+  siteSearchTemplateInput: HTMLInputElement | null;
+  siteSearchAliasInput: HTMLInputElement | null;
+  normalizeAliases: typeof SiteSearch.normalizeAliases;
+  getMessage: GetMessage;
+  findSiteSearchKeyConflict(key: string, allowedKey?: string): SiteSearchProvider | AggregateSearch | null;
+  normalizeSiteSearchTemplate(template: unknown): string;
+  getSiteSearchBuiltinKey: typeof SiteSearch.getSiteSearchBuiltinKey;
+  normalizeSiteSearchProvider(
+    item: Partial<SiteSearchProvider> | null | undefined,
+    baseItem?: Partial<SiteSearchProvider> | null
+  ): SiteSearchProvider | null;
+  createPersistentId(prefix: string): string;
+  saveSiteSearchProviderState(items: readonly SiteSearchProvider[], keys: Iterable<string>): Promise<unknown>;
+  renderSiteSearchList(): void;
+  refreshSiteSearchProviders(): unknown;
+  showToast(message: string, isError?: boolean): void;
+  builtinResetButton: HTMLElement | null;
+  attachPopconfirm(trigger: HTMLElement | null, messageKey: string, fallbackMessage: string, onConfirm: () => unknown): void;
+  loadDefaultSiteSearchProviders(): Promise<SiteSearchProvider[]>;
+  loadCustomSiteSearchProviders(baseItems: readonly SiteSearchProvider[]): Promise<SiteSearchProvider[]>;
+  renderAggregateSearchList(): void;
+  customClearButton: HTMLElement | null;
+  aggregateSearchClearButton: HTMLElement | null;
+  handleAggregateSearchClear(): unknown;
+  blacklistClearButton: HTMLElement | null;
+  saveSearchBlacklistItems(items: BlacklistRule[]): Promise<BlacklistRule[]>;
+  renderSearchBlacklistList(): void;
+  resetBlacklistForm(): void;
+  notifyNewtabSectionsRefresh(section: string): void;
+  faviconBlacklistClearButton: HTMLElement | null;
+  saveFaviconRequestBlacklistItems(items: BlacklistRule[]): Promise<BlacklistRule[]>;
+  renderFaviconRequestBlacklistList(): void;
+  resetFaviconBlacklistForm(): void;
+  optionsState: SiteSearchEventsState;
+}
+
+function createSiteSearchEvents(deps: SiteSearchEventsDeps): void {
   const {
-    siteSearchCustomList,
-    handleSiteSearchListClick,
-    siteSearchEngineBuiltinList,
-    siteSearchBuiltinList,
-    siteSearchAiBuiltinList,
     siteSearchCancelButton,
     resetSiteSearchForm,
     siteSearchFormTrigger,
@@ -56,19 +120,6 @@ function createSiteSearchEvents(deps) {
   // The page state object shared with options.js and the other modules.
   const optionsState = deps.optionsState;
 
-  if (siteSearchCustomList) {
-    siteSearchCustomList.addEventListener('click', handleSiteSearchListClick);
-  }
-  if (siteSearchEngineBuiltinList) {
-    siteSearchEngineBuiltinList.addEventListener('click', handleSiteSearchListClick);
-  }
-  if (siteSearchBuiltinList) {
-    siteSearchBuiltinList.addEventListener('click', handleSiteSearchListClick);
-  }
-  if (siteSearchAiBuiltinList) {
-    siteSearchAiBuiltinList.addEventListener('click', handleSiteSearchListClick);
-  }
-
   if (siteSearchCancelButton) {
     siteSearchCancelButton.addEventListener('click', function() {
       resetSiteSearchForm();
@@ -103,9 +154,9 @@ function createSiteSearchEvents(deps) {
       }
       suspendSiteSearchRefresh(260);
       setSiteSearchError('');
-      const key = String(siteSearchKeyInput ? siteSearchKeyInput.value : '').trim();
-      const name = String(siteSearchNameInput ? siteSearchNameInput.value : '').trim();
-      const templateRaw = String(siteSearchTemplateInput ? siteSearchTemplateInput.value : '').trim();
+      const key = (siteSearchKeyInput ? siteSearchKeyInput.value : '').trim();
+      const name = (siteSearchNameInput ? siteSearchNameInput.value : '').trim();
+      const templateRaw = (siteSearchTemplateInput ? siteSearchTemplateInput.value : '').trim();
       const aliases = normalizeAliases(siteSearchAliasInput ? siteSearchAliasInput.value : '');
       if (!key) {
         setSiteSearchError(getMessage('shortcuts_error_key', '请填写触发词。'));
@@ -125,13 +176,14 @@ function createSiteSearchEvents(deps) {
         return;
       }
       const normalizedKey = key.toLowerCase();
+      const editingKey = (optionsState.editingSiteSearchKey || '').toLowerCase();
       const editingItem = optionsState.customSiteSearchProviders.find(
-        (item) => String(item.key || '').toLowerCase() === String(optionsState.editingSiteSearchKey || '').toLowerCase()
+        (item) => item.key.toLowerCase() === editingKey
       );
       const builtinKey = getSiteSearchBuiltinKey(editingItem);
-      let next = optionsState.customSiteSearchProviders.filter((item) => String(item.key || '').toLowerCase() !== normalizedKey);
-      if (optionsState.editingSiteSearchKey && optionsState.editingSiteSearchKey.toLowerCase() !== normalizedKey) {
-        next = next.filter((item) => String(item.key || '').toLowerCase() !== optionsState.editingSiteSearchKey.toLowerCase());
+      let next = optionsState.customSiteSearchProviders.filter((item) => item.key.toLowerCase() !== normalizedKey);
+      if (editingKey && editingKey !== normalizedKey) {
+        next = next.filter((item) => item.key.toLowerCase() !== editingKey);
       }
       const nextItem = normalizeSiteSearchProvider({
         ...(editingItem || {}),
@@ -177,19 +229,19 @@ function createSiteSearchEvents(deps) {
       '确认重置内置列表？',
       () => {
         loadDefaultSiteSearchProviders().then((defaults) => Promise.all([
-          Promise.resolve(defaults),
+          defaults,
           loadCustomSiteSearchProviders(defaults)
         ])).then(([defaults, custom]) => {
-          const defaultKeys = new Set((defaults || []).map((item) => String(item.key || '').toLowerCase()));
-          const filteredCustom = (custom || []).filter((item) => {
-            const key = String(item && item.key ? item.key : '').toLowerCase();
+          const defaultKeys = new Set(defaults.map((item) => item.key.toLowerCase()));
+          const filteredCustom = custom.filter((item) => {
+            const key = item.key.toLowerCase();
             const builtinKey = getSiteSearchBuiltinKey(item);
-            return key && !defaultKeys.has(key) && !defaultKeys.has(builtinKey);
+            return Boolean(key) && !defaultKeys.has(key) && !defaultKeys.has(builtinKey);
           });
-          saveSiteSearchProviderState(filteredCustom, new Set()).then(() => {
+          saveSiteSearchProviderState(filteredCustom, new Set<string>()).then(() => {
             optionsState.customSiteSearchProviders = filteredCustom;
             optionsState.customSiteSearchProviderIdsReady = true;
-            optionsState.disabledSiteSearchKeys = new Set();
+            optionsState.disabledSiteSearchKeys = new Set<string>();
             renderSiteSearchList();
             renderAggregateSearchList();
           }).catch(() => {
@@ -272,7 +324,7 @@ function createSiteSearchEvents(deps) {
     );
   }
 
-  return {};
 }
 
 export { createSiteSearchEvents };
+export type { SiteSearchEventsDeps, SiteSearchEventsState };
