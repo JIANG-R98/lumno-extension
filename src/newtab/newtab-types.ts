@@ -1,6 +1,7 @@
 // Types the New Tab shares with the modules split out of it.
 import type { ToastShowOptions } from '../shared/react/toast';
 import type { CursorTooltipOptions, CursorTooltipTextSource } from '../shared/ui/cursor-tooltip';
+import type { createSelectMenuController } from './react/select-menu';
 import type { TooltipBindOptions, TooltipTextSource } from '../shared/ui/tooltip';
 
 // A message by key from the page language; fallback when it has none.
@@ -26,4 +27,23 @@ type BindCursorTooltip = (
   options?: CursorTooltipOptions
 ) => HTMLElement | null;
 
-export type { BindCursorTooltip, BindTooltip, FormatMessage, ShowToast, Translate };
+// The controller of the React select menus the page's context menus are.
+type SelectMenuController = ReturnType<typeof createSelectMenuController>;
+
+// A context menu's parts: the positioned wrapper and the select it drives.
+interface ContextMenuParts {
+  control: HTMLElement;
+  select: HTMLSelectElement;
+  trigger: HTMLButtonElement;
+  menu: HTMLElement;
+}
+
+export type {
+  BindCursorTooltip,
+  BindTooltip,
+  ContextMenuParts,
+  FormatMessage,
+  SelectMenuController,
+  ShowToast,
+  Translate
+};

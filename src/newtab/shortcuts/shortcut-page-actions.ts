@@ -1,8 +1,76 @@
-// @ts-nocheck
 // Shortcut tiles on the page: finding a tile and its shortcut, the
 // context menu's options, opening the shortcut dialog to add or edit, the
 // icon plate color picker, and the copy the dialog and menus show.
-function createShortcutPageActions(deps) {
+import { isShortcutFolder } from '../../domain/shortcuts-store';
+import type * as ShortcutsStore from '../../domain/shortcuts-store';
+import type { ShortcutGroup, ShortcutItem } from '../../domain/shortcuts-store';
+import { isElementNode, isHtmlElement } from '../../shared/dom-guards';
+import { queryHtmlElements } from '../../shared/dom-lookup';
+import type { SelectMenuOption } from '../../shared/react/select-menu';
+import type { BookmarkEditTarget } from '../bookmarks/bookmark-actions';
+import type * as BookmarksStore from '../bookmarks/bookmarks-store';
+import type { BookmarksRuntime } from '../bookmarks/bookmarks-runtime';
+import type { FolderColorPicker } from '../bookmarks/folder-colors';
+import type { BindTooltip, ContextMenuParts, FormatMessage, SelectMenuController, ShowToast, Translate } from '../newtab-types';
+import type { createFolderColorPickerApi } from '../react/folder-color-picker-lazy';
+import type {
+  IconPlateColorRequest,
+  ShortcutDialogCloseOptions,
+  ShortcutDialogController,
+  ShortcutDialogOpenOptions
+} from '../react/shortcut-dialog';
+import type { ShortcutContextTarget, ShortcutGroupMenuValues } from './shortcut-types';
+
+interface ShortcutPageActionsState {
+  // The folder color picker, made the first time a plate color is picked.
+  shortcutPlateColorPicker: FolderColorPicker | null;
+  // Settles the plate color request that is open.
+  shortcutPlateColorPick: ((color: string | null | undefined) => void) | null;
+  shortcutDialogController: ShortcutDialogController | null;
+  shortcutContextMenu: ContextMenuParts | null;
+  shortcutContextMenuSelectController: SelectMenuController | null;
+  shortcutContextMenuTarget: ShortcutContextTarget | null;
+  newtabShortcuts: ShortcutItem[];
+  shortcutSection: HTMLElement | null;
+  addShortcutButton: HTMLElement | null;
+  shortcutGrid: HTMLElement | null;
+}
+
+interface ShortcutPageActionsDeps {
+  folderColorApi: ReturnType<typeof createFolderColorPickerApi> | undefined;
+  t: Translate;
+  bindShortcutDialogTooltip: BindTooltip;
+  hideShortcutDialogTooltip(): void;
+  readSavedFolderColors(): Promise<unknown>;
+  saveSavedFolderColors(colors: string[]): Promise<void>;
+  SHORTCUT_GROUP_MENU_VALUES: ShortcutGroupMenuValues;
+  getShortcutGroups(): ShortcutGroup[];
+  NEWTAB_SHORTCUTS_STORE: Pick<typeof ShortcutsStore, 'DEFAULT_MAX_SHORTCUT_GROUPS'>;
+  SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE: string;
+  MAX_NEWTAB_SHORTCUTS: number;
+  NEWTAB_CONTEXT_MENU_OPEN_VALUE: string;
+  BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE: string;
+  NEWTAB_BOOKMARKS_STORE: Pick<typeof BookmarksStore, 'collectFolderBookmarkUrls'>;
+  bookmarksRuntime: BookmarksRuntime;
+  getShortcutFolderId(shortcut: ShortcutItem): string;
+  SHORTCUT_CONTEXT_MENU_EDIT_VALUE: string;
+  FOLDER_COLOR_CONTEXT_MENU_VALUE: string;
+  SHORTCUT_CONTEXT_MENU_REMOVE_VALUE: string;
+  formatMessage: FormatMessage;
+  updateBookmarkContextMenuLanguageStrings(): void;
+  updateRecentContextMenuLanguageStrings(): void;
+  createShortcutDialogComponent(): ShortcutDialogController | null | Promise<ShortcutDialogController | null>;
+  showToast: ShowToast;
+  // The tiles drawn now, kept in DOM order.
+  shortcutTiles: HTMLElement[];
+  openBookmarkEditor(target: BookmarkEditTarget): void;
+  getShortcutTitle(shortcut: ShortcutItem): string;
+  SHORTCUT_DIALOG_MODE_EDIT: string;
+  getShortcutIconDataUrl(shortcutId: string): string;
+  pageState: ShortcutPageActionsState;
+}
+
+function createShortcutPageActions(deps: ShortcutPageActionsDeps) {
   const {
     folderColorApi,
     t,
@@ -38,14 +106,17 @@ function createShortcutPageActions(deps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  let shortcutDialogLoadPromise = null;
+  let shortcutDialogLoadPromise: Promise<void> | null = null;
   let shortcutDialogOpenRevision = 0;
 
   // The folder color picker, over the shortcut dialog, for an icon's plate.
   // It shares the saved colors with folders; the shortcut dialog saves the
   // result. Resolves with a color, null to follow the icon, or undefined.
-  async function pickShortcutIconPlateColor(request) {
+  async function pickShortcutIconPlateColor(request: IconPlateColorRequest): Promise<string | null | undefined> {
     if (!pageState.shortcutPlateColorPicker) {
+      if (!folderColorApi) {
+        return undefined;
+      }
       try {
         pageState.shortcutPlateColorPicker = await folderColorApi.createFolderColorPicker({
           documentObj: document, t,
@@ -63,13 +134,15 @@ function createShortcutPageActions(deps) {
         return undefined;
       }
     }
+    // Narrowed here, for the promise below.
+    const picker = pageState.shortcutPlateColorPicker;
     return new Promise((resolve) => {
       pageState.shortcutPlateColorPick = (color) => {
         pageState.shortcutPlateColorPick = null;
         resolve(color);
       };
       const label = t('newtab_shortcuts_icon_plate_color_label', 'Background color');
-      pageState.shortcutPlateColorPicker.open({
+      picker.open({
         folderId: 'shortcut-icon-plate',
         title: request.title,
         color: request.color,
@@ -85,14 +158,14 @@ function createShortcutPageActions(deps) {
     });
   }
 
-  function updateShortcutDialogLanguageStrings() {
+  function updateShortcutDialogLanguageStrings(): void {
     if (pageState.shortcutDialogController) {
       pageState.shortcutDialogController.updateLanguage();
     }
   }
 
-  function getShortcutContextMenuOptions(target) {
-    const createGroupOption = {
+  function getShortcutContextMenuOptions(target?: ShortcutContextTarget | null): SelectMenuOption[] {
+    const createGroupOption: SelectMenuOption = {
       action: SHORTCUT_GROUP_MENU_VALUES.create,
       value: SHORTCUT_GROUP_MENU_VALUES.create,
       label: t('newtab_shortcuts_group_new', 'New group')
@@ -116,7 +189,8 @@ function createShortcutPageActions(deps) {
       const groups = getShortcutGroups();
       const index = groups.findIndex((group) => group.id === target.groupId);
       const hasSites = pageState.newtabShortcuts.some((item) => item.groupId === target.groupId);
-      const option = (value, label, extra) => ({ action: value, value, label, ...(extra || {}) });
+      const option = (value: string, label: string, extra?: Partial<SelectMenuOption>): SelectMenuOption => (
+        { action: value, value, label, ...(extra || {}) });
       return [
         option(SHORTCUT_GROUP_MENU_VALUES.rename, t('newtab_shortcuts_group_rename', 'Rename')),
         option(SHORTCUT_GROUP_MENU_VALUES.addSite, t('newtab_shortcuts_group_add_site', 'Add site'), {
@@ -138,8 +212,8 @@ function createShortcutPageActions(deps) {
           })] : [])
       ];
     }
-    const shortcut = target && getShortcutById(target.shortcutId);
-    if (shortcut && shortcut.type === 'folder') {
+    const shortcut = target && target.kind === 'shortcut' ? getShortcutById(target.shortcutId) : null;
+    if (shortcut && isShortcutFolder(shortcut)) {
       return [
         { action: NEWTAB_CONTEXT_MENU_OPEN_VALUE, value: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
           label: t('newtab_shortcuts_open_folder', 'Open folder') },
@@ -176,28 +250,24 @@ function createShortcutPageActions(deps) {
     ];
   }
 
-  function updateShortcutContextMenuLanguageStrings() {
+  function updateShortcutContextMenuLanguageStrings(): void {
     if (!pageState.shortcutContextMenu || !pageState.shortcutContextMenuSelectController) {
       return;
     }
     const label = t('newtab_shortcuts_context_menu_label', 'Shortcut actions');
-    if (pageState.shortcutContextMenu.trigger) {
-      pageState.shortcutContextMenu.trigger.setAttribute('aria-label', label);
-    }
-    if (typeof pageState.shortcutContextMenuSelectController.setOptions === 'function') {
-      pageState.shortcutContextMenuSelectController.setOptions(
-        pageState.shortcutContextMenu.control,
-        getShortcutContextMenuOptions(pageState.shortcutContextMenuTarget),
-        pageState.shortcutContextMenuTarget && pageState.shortcutContextMenuTarget.kind === 'group'
-          ? SHORTCUT_GROUP_MENU_VALUES.rename
-          : pageState.shortcutContextMenuTarget && pageState.shortcutContextMenuTarget.kind === 'add'
-          ? SHORTCUT_GROUP_MENU_VALUES.addShortcut
-          : NEWTAB_CONTEXT_MENU_OPEN_VALUE
-      );
-    }
+    pageState.shortcutContextMenu.trigger.setAttribute('aria-label', label);
+    pageState.shortcutContextMenuSelectController.setOptions(
+      pageState.shortcutContextMenu.control,
+      getShortcutContextMenuOptions(pageState.shortcutContextMenuTarget),
+      pageState.shortcutContextMenuTarget && pageState.shortcutContextMenuTarget.kind === 'group'
+        ? SHORTCUT_GROUP_MENU_VALUES.rename
+        : pageState.shortcutContextMenuTarget && pageState.shortcutContextMenuTarget.kind === 'add'
+        ? SHORTCUT_GROUP_MENU_VALUES.addShortcut
+        : NEWTAB_CONTEXT_MENU_OPEN_VALUE
+    );
   }
 
-  function updateShortcutLanguageStrings() {
+  function updateShortcutLanguageStrings(): void {
     if (pageState.shortcutSection) {
       pageState.shortcutSection.setAttribute('aria-label', t('newtab_shortcuts_section_label', 'Shortcuts'));
     }
@@ -208,7 +278,7 @@ function createShortcutPageActions(deps) {
     }
     updateShortcutDialogLanguageStrings();
     if (pageState.shortcutGrid) {
-      Array.from(pageState.shortcutGrid.querySelectorAll('.x-nt-shortcut-tile[data-shortcut-url]')).forEach((tile) => {
+      pageState.shortcutGrid.querySelectorAll('.x-nt-shortcut-tile[data-shortcut-url]').forEach((tile) => {
         const title = tile.getAttribute('data-shortcut-title') || '';
         tile.setAttribute('aria-label', formatMessage('open_prefix', '打开 {title}', { title }));
       });
@@ -218,7 +288,7 @@ function createShortcutPageActions(deps) {
     updateRecentContextMenuLanguageStrings();
   }
 
-  function closeShortcutDialog(options) {
+  function closeShortcutDialog(options?: ShortcutDialogCloseOptions): void {
     shortcutDialogOpenRevision += 1;
     if (pageState.shortcutDialogController) {
       pageState.shortcutDialogController.close({
@@ -228,7 +298,7 @@ function createShortcutPageActions(deps) {
     }
   }
 
-  async function openShortcutDialog(options) {
+  async function openShortcutDialog(options: ShortcutDialogOpenOptions): Promise<void> {
     const revision = ++shortcutDialogOpenRevision;
     try {
       if (!pageState.shortcutDialogController) {
@@ -241,46 +311,44 @@ function createShortcutPageActions(deps) {
         }
         await shortcutDialogLoadPromise;
       }
-      if (revision === shortcutDialogOpenRevision) pageState.shortcutDialogController.open(options);
+      if (revision === shortcutDialogOpenRevision && pageState.shortcutDialogController) {
+        pageState.shortcutDialogController.open(options);
+      }
     } catch (error) {
       console.warn('[Lumno] Failed to load shortcut dialog', error);
       if (revision === shortcutDialogOpenRevision) showToast(t('toast_error', 'Operation failed. Please try again.'), true);
     }
   }
 
-  function getShortcutTileFromNode(node) {
-    if (!pageState.shortcutGrid || !node) {
+  function getShortcutTileFromNode(node: EventTarget | null): HTMLElement | null {
+    if (!pageState.shortcutGrid || !isElementNode(node)) {
       return null;
     }
-    const tile = typeof node.closest === 'function'
-      ? node.closest('.x-nt-shortcut-tile')
-      : null;
-    return tile && pageState.shortcutGrid.contains(tile) ? tile : null;
+    const tile = node.closest('.x-nt-shortcut-tile');
+    return isHtmlElement(tile) && pageState.shortcutGrid.contains(tile) ? tile : null;
   }
 
-  function getShortcutTileId(tile) {
-    return tile && typeof tile.getAttribute === 'function'
-      ? tile.getAttribute('data-shortcut-id') || ''
-      : '';
+  function getShortcutTileId(tile: Element | null | undefined): string {
+    return tile ? tile.getAttribute('data-shortcut-id') || '' : '';
   }
 
-  function refreshShortcutTileCacheFromDom() {
+  function refreshShortcutTileCacheFromDom(): void {
     if (!pageState.shortcutGrid) {
       return;
     }
     shortcutTiles.length = 0;
-    Array.from(pageState.shortcutGrid.querySelectorAll('.x-nt-shortcut-tile[data-shortcut-id]')).forEach((tile) => {
+    queryHtmlElements(pageState.shortcutGrid, '.x-nt-shortcut-tile[data-shortcut-id]').forEach((tile) => {
       shortcutTiles.push(tile);
     });
   }
 
-  function getShortcutReorderTiles() {
+  function getShortcutReorderTiles(): HTMLElement[] {
     return pageState.shortcutGrid
-      ? Array.from(pageState.shortcutGrid.querySelectorAll('.x-nt-shortcut-tile[data-shortcut-id]'))
+      ? queryHtmlElements(pageState.shortcutGrid, '.x-nt-shortcut-tile[data-shortcut-id]')
       : [];
   }
 
-  function getShortcutById(shortcutId) {
+  function getShortcutById(shortcutId: unknown): ShortcutItem | null {
     const id = String(shortcutId || '');
     if (!id) {
       return null;
@@ -288,7 +356,7 @@ function createShortcutPageActions(deps) {
     return pageState.newtabShortcuts.find((item) => item && item.id === id) || null;
   }
 
-  function getShortcutTileById(shortcutId) {
+  function getShortcutTileById(shortcutId: unknown): HTMLElement | null {
     const id = String(shortcutId || '');
     if (!id) {
       return null;
@@ -296,17 +364,15 @@ function createShortcutPageActions(deps) {
     return getShortcutReorderTiles().find((tile) => getShortcutTileId(tile) === id) || null;
   }
 
-  function handleShortcutNativeDragStart(event) {
-    if (event && typeof event.preventDefault === 'function') {
-      event.preventDefault();
-    }
+  function handleShortcutNativeDragStart(event: DragEvent): void {
+    event.preventDefault();
   }
 
-  function openShortcutEditor(shortcut, sourceElement) {
+  function openShortcutEditor(shortcut: ShortcutItem | null, sourceElement: HTMLElement | null): void {
     if (!shortcut) {
       return;
     }
-    if (shortcut.type === 'folder') {
+    if (isShortcutFolder(shortcut)) {
       openBookmarkEditor({ bookmarkId: getShortcutFolderId(shortcut), isFolder: true,
         title: getShortcutTitle(shortcut), element: sourceElement });
       return;
@@ -321,8 +387,9 @@ function createShortcutPageActions(deps) {
     });
   }
 
-  function isShortcutFolderAnchor(element) {
-    return Boolean(element && element.classList && element.classList.contains('x-nt-shortcut-tile'));
+  // Whether a folder menu opened from a folder shortcut, not a bookmark.
+  function isShortcutFolderAnchor(element: HTMLElement | null | undefined): boolean {
+    return Boolean(element && element.classList.contains('x-nt-shortcut-tile'));
   }
 
   return {
@@ -343,4 +410,7 @@ function createShortcutPageActions(deps) {
   };
 }
 
+type ShortcutPageActions = ReturnType<typeof createShortcutPageActions>;
+
 export { createShortcutPageActions };
+export type { ShortcutPageActions, ShortcutPageActionsDeps, ShortcutPageActionsState };

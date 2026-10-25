@@ -3,13 +3,11 @@ import type { Disposition } from '../../domain/navigation-disposition';
 import { isElementNode } from '../../shared/dom-guards';
 import type { SelectMenuOption } from '../../shared/react/select-menu';
 import * as LumnoNewtabDismissStack from '../dismiss-stack';
-import type { Translate } from '../newtab-types';
-import type { createSelectMenuController, SelectMenuInstance } from '../react/select-menu';
+import type { ContextMenuParts, SelectMenuController, Translate } from '../newtab-types';
+import type { SelectMenuInstance } from '../react/select-menu';
 import type { BookmarkDragSession } from './bookmark-drag';
 import type * as BookmarksStore from './bookmarks-store';
 import type { BookmarksRuntime } from './bookmarks-runtime';
-
-type SelectMenuController = ReturnType<typeof createSelectMenuController>;
 
 // The bookmark a context menu was opened for.
 interface BookmarkContextTarget {
@@ -23,13 +21,7 @@ interface BookmarkContextTarget {
   element: HTMLElement;
 }
 
-// The menu's parts: the positioned wrapper and the select it drives.
-interface BookmarkContextMenuParts {
-  control: HTMLElement;
-  select: HTMLSelectElement;
-  trigger: HTMLButtonElement;
-  menu: HTMLElement;
-}
+type BookmarkContextMenuParts = ContextMenuParts;
 
 interface BookmarkContextMenuState {
   // Made the first time a bookmark's menu opens.
@@ -416,6 +408,5 @@ export type {
   BookmarkContextMenuParts,
   BookmarkContextMenuState,
   BookmarkContextTarget,
-  BookmarkItemContextMenuEvent,
-  SelectMenuController
+  BookmarkItemContextMenuEvent
 };

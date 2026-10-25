@@ -1,8 +1,63 @@
-// @ts-nocheck
 // Right-click menu for shortcut tiles and the add-shortcut tile.
+import type { Disposition } from '../../domain/navigation-disposition';
+import { isShortcutFolder } from '../../domain/shortcuts-store';
+import type { ShortcutItem } from '../../domain/shortcuts-store';
+import { isElementNode, isNode } from '../../shared/dom-guards';
+import { queryHtmlElements } from '../../shared/dom-lookup';
+import type { SelectMenuOption } from '../../shared/react/select-menu';
+import type { BookmarkEditTarget } from '../bookmarks/bookmark-actions';
+import type { BookmarkMenuAnchor } from '../bookmarks/bookmark-cascade-menu';
 import * as LumnoNewtabDismissStack from '../dismiss-stack';
+import type { ContextMenuParts, SelectMenuController, Translate } from '../newtab-types';
+import type { SelectMenuInstance } from '../react/select-menu';
+import type { ShortcutDock } from './shortcut-dock';
+import type { ShortcutContextTarget, ShortcutGroupMenuValues } from './shortcut-types';
 
-function createShortcutContextMenu(deps) {
+interface ShortcutContextMenuState {
+  shortcutContextMenu: ContextMenuParts | null;
+  shortcutContextMenuSelectController: SelectMenuController | null;
+  shortcutContextMenuTarget: ShortcutContextTarget | null;
+  shortcutGrid: HTMLElement | null;
+  shortcutSection: HTMLElement | null;
+  addShortcutButton: HTMLElement | null;
+}
+
+interface ShortcutContextMenuDeps {
+  getShortcutDockIcon: ShortcutDock['getShortcutDockIcon'];
+  setShortcutDockHover: ShortcutDock['setShortcutDockHover'];
+  resetShortcutDockHover(): void;
+  getShortcutTileFromNode(node: EventTarget | null): HTMLElement | null;
+  getShortcutById(shortcutId: unknown): ShortcutItem | null;
+  SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE: string;
+  hideShortcutAddFromContextMenu(sourceElement: HTMLElement): void;
+  FOLDER_COLOR_CONTEXT_MENU_VALUE: string;
+  openFolderColorPicker(folderId: string, title: string, sourceElement?: HTMLElement | null): Promise<void>;
+  getShortcutFolderId(shortcut: ShortcutItem): string;
+  SHORTCUT_CONTEXT_MENU_EDIT_VALUE: string;
+  openShortcutEditor(shortcut: ShortcutItem, sourceElement: HTMLElement | null): void;
+  NEWTAB_CONTEXT_MENU_OPEN_VALUE: string;
+  // Opens a folder shortcut's menu, or its site.
+  openShortcutUrl(shortcut: ShortcutItem): unknown;
+  openExternalNewTabUrl(url: string, disposition: Disposition): unknown;
+  SHORTCUT_CONTEXT_MENU_REMOVE_VALUE: string;
+  removeShortcutById(shortcutId: string): unknown;
+  BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE: string;
+  openBookmarkFolderTabGroupConfirmation(target: BookmarkEditTarget): void;
+  t: Translate;
+  getShortcutContextMenuOptions(target?: ShortcutContextTarget | null): SelectMenuOption[];
+  closeRecentContextMenu(): void;
+  hideShortcutTooltip(): void;
+  getShortcutTileId(tile: Element | null | undefined): string;
+  SHORTCUT_GROUP_MENU_VALUES: ShortcutGroupMenuValues;
+  openShortcutGroupDialog(groupId: string, sourceElement: HTMLElement): void;
+  openShortcutAddDialog(sourceElement: HTMLElement, groupId?: string): void;
+  moveShortcutGroup(groupId: string, offset: number): unknown;
+  deleteShortcutGroup(groupId: string, keepSites: boolean): unknown;
+  confirmDeleteShortcutGroupWithSites(groupId: string, sourceElement: HTMLElement): void;
+  pageState: ShortcutContextMenuState;
+}
+
+function createShortcutContextMenu(deps: ShortcutContextMenuDeps) {
   // Escape closes the menu through the page's dismiss stack.
   const dismissStack = LumnoNewtabDismissStack.getDismissStack();
   const {
@@ -46,7 +101,7 @@ function createShortcutContextMenu(deps) {
   const SHORTCUT_CONTEXT_MENU_PORTAL_Z_INDEX = 10040;
   const SHORTCUT_CONTEXT_MENU_PORTAL_OFFSET_PX = -6;
 
-  function isShortcutContextMenuOpen() {
+  function isShortcutContextMenuOpen(): boolean {
     return Boolean(
       pageState.shortcutContextMenu &&
       pageState.shortcutContextMenuSelectController &&
@@ -54,21 +109,18 @@ function createShortcutContextMenu(deps) {
     );
   }
 
-  function isShortcutContextMenuNode(node) {
-    if (!node || !pageState.shortcutContextMenu) {
+  function isShortcutContextMenuNode(node: EventTarget | null): boolean {
+    if (!isNode(node) || !pageState.shortcutContextMenu) {
       return false;
     }
     const { control, menu } = pageState.shortcutContextMenu;
-    return Boolean(
-      (control && (node === control || (typeof control.contains === 'function' && control.contains(node)))) ||
-      (menu && (node === menu || (typeof menu.contains === 'function' && menu.contains(node))))
-    );
+    return control.contains(node) || menu.contains(node);
   }
 
   // A group's menu button is marked as well as tiles, so clear by the mark.
-  function clearShortcutContextMenuTileActive() {
-    const tiles = pageState.shortcutGrid
-      ? Array.from(pageState.shortcutGrid.querySelectorAll('[data-shortcut-context-menu-open]'))
+  function clearShortcutContextMenuTileActive(): void {
+    const tiles: BookmarkMenuAnchor[] = pageState.shortcutGrid
+      ? queryHtmlElements(pageState.shortcutGrid, '[data-shortcut-context-menu-open]')
       : [];
     tiles.forEach((tile) => {
       if (!tile.hasAttribute('data-shortcut-context-menu-open')) {
@@ -81,9 +133,9 @@ function createShortcutContextMenu(deps) {
     });
   }
 
-  function setShortcutContextMenuTileActive(target) {
+  function setShortcutContextMenuTileActive(target: ShortcutContextTarget): void {
     clearShortcutContextMenuTileActive();
-    const tile = target && target.tile;
+    const tile: BookmarkMenuAnchor = target.tile;
     if (tile) {
       tile.setAttribute('data-shortcut-context-menu-open', 'true');
       if (typeof tile._xSetBookmarkMenuVisualActive === 'function') {
@@ -92,30 +144,27 @@ function createShortcutContextMenu(deps) {
     }
   }
 
-  function getShortcutContextMenuAnchorElement(tile) {
+  function getShortcutContextMenuAnchorElement(tile: HTMLElement): HTMLElement {
     return getShortcutDockIcon(tile) || tile;
   }
 
-  function getShortcutContextMenuAnchorX(tile) {
+  function getShortcutContextMenuAnchorX(tile: HTMLElement): number | null {
     const anchor = getShortcutContextMenuAnchorElement(tile);
-    if (!anchor || typeof anchor.getBoundingClientRect !== 'function') {
-      return null;
-    }
     const rect = anchor.getBoundingClientRect();
     const centerX = rect.left + (rect.width / 2);
     return Number.isFinite(centerX) ? centerX : null;
   }
 
   // Only a shortcut tile magnifies; a group title's menu button does not.
-  function applyShortcutContextMenuDockHover(tile) {
-    if (!tile || !tile.classList || !tile.classList.contains('x-nt-shortcut-tile')) {
+  function applyShortcutContextMenuDockHover(tile: HTMLElement | null): void {
+    if (!tile || !tile.classList.contains('x-nt-shortcut-tile')) {
       return;
     }
     setShortcutDockHover(tile, getShortcutContextMenuAnchorX(tile), { settle: true });
     tile.setAttribute('data-shortcut-context-menu-open', 'true');
   }
 
-  function syncShortcutDockHoverFromPoint(clientX, clientY) {
+  function syncShortcutDockHoverFromPoint(clientX: unknown, clientY: unknown): void {
     const pointerX = Number(clientX);
     const pointerY = Number(clientY);
     if (!Number.isFinite(pointerX) || !Number.isFinite(pointerY) ||
@@ -131,8 +180,9 @@ function createShortcutContextMenu(deps) {
     resetShortcutDockHover();
   }
 
-  function closeShortcutContextMenu(options) {
-    const closeOptions = options && typeof options === 'object' ? options : {};
+  // `syncHoverFromPointer` hands the dock to the pointer at the press that closed it.
+  function closeShortcutContextMenu(options?: { syncHoverFromPointer?: boolean; clientX?: number; clientY?: number }): void {
+    const closeOptions = options || {};
     if (!pageState.shortcutContextMenu || !pageState.shortcutContextMenuSelectController) {
       pageState.shortcutContextMenuTarget = null;
       clearShortcutContextMenuTileActive();
@@ -152,20 +202,16 @@ function createShortcutContextMenu(deps) {
     resetShortcutDockHover();
   }
 
-  function getShortcutContextMenuPoint(tile) {
-    const anchor = getShortcutContextMenuAnchorElement(tile);
-    if (anchor && typeof anchor.getBoundingClientRect === 'function') {
-      const rect = anchor.getBoundingClientRect();
-      return {
-        x: Math.round(rect.left + rect.width / 2),
-        y: Math.round(rect.bottom)
-      };
-    }
-    return { x: 0, y: 0 };
+  function getShortcutContextMenuPoint(tile: HTMLElement): { x: number; y: number } {
+    const rect = getShortcutContextMenuAnchorElement(tile).getBoundingClientRect();
+    return {
+      x: Math.round(rect.left + rect.width / 2),
+      y: Math.round(rect.bottom)
+    };
   }
 
-  function setShortcutContextMenuPosition(tile) {
-    if (!pageState.shortcutContextMenu || !pageState.shortcutContextMenu.control) {
+  function setShortcutContextMenuPosition(tile: HTMLElement): void {
+    if (!pageState.shortcutContextMenu) {
       return;
     }
     const point = getShortcutContextMenuPoint(tile);
@@ -173,18 +219,18 @@ function createShortcutContextMenu(deps) {
     pageState.shortcutContextMenu.control.style.top = `${Math.round(point.y)}px`;
   }
 
-  function handleShortcutContextMenuAction(actionValue) {
+  function handleShortcutContextMenuAction(actionValue: unknown): void {
     const action = String(actionValue || '');
     const target = pageState.shortcutContextMenuTarget;
     const targetId = target && target.kind === 'shortcut'
       ? String(target.shortcutId || '')
       : '';
     const shortcut = getShortcutById(targetId);
-    const sourceElement = target && target.tile;
     closeShortcutContextMenu();
     if (!target || !action) {
       return;
     }
+    const sourceElement = target.tile;
     if (target.kind === 'add' && action === SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE) {
       hideShortcutAddFromContextMenu(sourceElement);
       return;
@@ -204,11 +250,11 @@ function createShortcutContextMenu(deps) {
     if (!shortcut) {
       return;
     }
-    if (action === FOLDER_COLOR_CONTEXT_MENU_VALUE && shortcut.type === 'folder') {
+    if (action === FOLDER_COLOR_CONTEXT_MENU_VALUE && isShortcutFolder(shortcut)) {
       openFolderColorPicker(getShortcutFolderId(shortcut), shortcut.title, sourceElement);
       return;
     }
-    if (action === BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE && shortcut.type === 'folder') {
+    if (action === BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE && isShortcutFolder(shortcut)) {
       openBookmarkFolderTabGroupConfirmation({
         isFolder: true,
         bookmarkId: getShortcutFolderId(shortcut),
@@ -222,7 +268,7 @@ function createShortcutContextMenu(deps) {
       return;
     }
     if (action === NEWTAB_CONTEXT_MENU_OPEN_VALUE) {
-      if (shortcut.type === 'folder') {
+      if (isShortcutFolder(shortcut)) {
         openShortcutUrl(shortcut);
         return;
       }
@@ -234,7 +280,7 @@ function createShortcutContextMenu(deps) {
     }
   }
 
-  function handleShortcutGroupMenuAction(action, groupId, sourceElement) {
+  function handleShortcutGroupMenuAction(action: string, groupId: string, sourceElement: HTMLElement): void {
     if (!groupId) {
       return;
     }
@@ -253,12 +299,12 @@ function createShortcutContextMenu(deps) {
     }
   }
 
-  function handleShortcutContextMenuActionClick(event) {
-    const target = event && event.target;
-    const option = target && typeof target.closest === 'function'
+  function handleShortcutContextMenuActionClick(event: MouseEvent): void {
+    const target = event.target;
+    const option = isElementNode(target)
       ? target.closest('._x_extension_select_option_2024_unique_')
       : null;
-    if (!option || !pageState.shortcutContextMenu || !pageState.shortcutContextMenu.menu ||
+    if (!option || !pageState.shortcutContextMenu ||
         !pageState.shortcutContextMenu.menu.contains(option)) {
       return;
     }
@@ -268,17 +314,17 @@ function createShortcutContextMenu(deps) {
 
   // A button that opened the menu closes it when pressed again, instead
   // of the press closing it and the click opening it once more.
-  let reopenBlockedAnchor = null;
+  let reopenBlockedAnchor: HTMLElement | null = null;
 
   // The menu's own outside-press handling may already have closed it, so
   // the menu's target, not its open state, says which button opened it.
-  function handleShortcutContextMenuDocumentPointerDown(event) {
+  function handleShortcutContextMenuDocumentPointerDown(event: PointerEvent): void {
     const target = pageState.shortcutContextMenuTarget;
     if ((!target && !isShortcutContextMenuOpen()) || isShortcutContextMenuNode(event.target)) {
       return;
     }
     const anchor = target && target.kind !== 'shortcut' ? target.tile : null;
-    reopenBlockedAnchor = anchor && typeof anchor.contains === 'function' && anchor.contains(event.target)
+    reopenBlockedAnchor = anchor && isNode(event.target) && anchor.contains(event.target)
       ? anchor
       : null;
     closeShortcutContextMenu({
@@ -293,18 +339,17 @@ function createShortcutContextMenu(deps) {
     close: () => closeShortcutContextMenu()
   });
 
-  function handleShortcutContextMenuDocumentFocusIn(event) {
+  function handleShortcutContextMenuDocumentFocusIn(event: FocusEvent): void {
     if (pageState.shortcutContextMenuTarget && !isShortcutContextMenuNode(event.target)) {
       closeShortcutContextMenu();
     }
   }
 
-  function createShortcutContextMenu() {
-    if (!pageState.shortcutContextMenuSelectController ||
-        typeof pageState.shortcutContextMenuSelectController.createSelect !== 'function') {
+  function createShortcutContextMenu(): ContextMenuParts | null {
+    if (!pageState.shortcutContextMenuSelectController) {
       return null;
     }
-    const created = pageState.shortcutContextMenuSelectController.createSelect({
+    const created: SelectMenuInstance | null = pageState.shortcutContextMenuSelectController.createSelect({
       id: '_x_extension_newtab_shortcut_context_menu_2026_unique_',
       selectId: '_x_extension_newtab_shortcut_context_menu_select_2026_unique_',
       className: 'x-nt-shortcut-context-menu',
@@ -325,15 +370,15 @@ function createShortcutContextMenu(deps) {
         handleShortcutContextMenuAction(payload && payload.action);
       }
     });
+    if (!created) {
+      return null;
+    }
     const control = created.wrapper;
     const select = created.select;
     const trigger = created.trigger;
     const menu = created.menu;
-    if (!control || !select || !trigger || !menu) {
-      return null;
-    }
     trigger.tabIndex = -1;
-    const stopContextMenuEvent = (event) => {
+    const stopContextMenuEvent = (event: Event): void => {
       event.stopPropagation();
     };
     [control, trigger, menu].forEach((element) => {
@@ -356,9 +401,9 @@ function createShortcutContextMenu(deps) {
     };
   }
 
-  function openShortcutContextMenu(target) {
-    const tile = target && target.tile;
-    const shortcutId = target && target.kind === 'shortcut'
+  function openShortcutContextMenu(target: ShortcutContextTarget): void {
+    const tile = target.tile;
+    const shortcutId = target.kind === 'shortcut'
       ? String(target.shortcutId || '')
       : '';
     if (!tile || (target.kind === 'shortcut' && !shortcutId) || (target.kind === 'group' && !target.groupId)) {
@@ -387,19 +432,17 @@ function createShortcutContextMenu(deps) {
       : target.kind === 'group'
         ? SHORTCUT_GROUP_MENU_VALUES.rename
         : NEWTAB_CONTEXT_MENU_OPEN_VALUE;
-    if (typeof pageState.shortcutContextMenuSelectController.setOptions === 'function') {
-      pageState.shortcutContextMenuSelectController.setOptions(
-        pageState.shortcutContextMenu.control,
-        getShortcutContextMenuOptions(target),
-        defaultValue
-      );
-    }
+    pageState.shortcutContextMenuSelectController.setOptions(
+      pageState.shortcutContextMenu.control,
+      getShortcutContextMenuOptions(target),
+      defaultValue
+    );
     pageState.shortcutContextMenu.select.value = defaultValue;
     pageState.shortcutContextMenuSelectController.sync(pageState.shortcutContextMenu.control);
     pageState.shortcutContextMenuSelectController.setOpen(pageState.shortcutContextMenu.control, true);
   }
 
-  function handleShortcutContextMenu(event) {
+  function handleShortcutContextMenu(event: MouseEvent): void {
     const tile = getShortcutTileFromNode(event.currentTarget || event.target);
     if (!tile || !getShortcutTileId(tile)) {
       return;
@@ -413,7 +456,7 @@ function createShortcutContextMenu(deps) {
     });
   }
 
-  function openShortcutGroupMenu(groupId, anchor) {
+  function openShortcutGroupMenu(groupId: unknown, anchor: HTMLElement | null): void {
     if (!groupId || !anchor) {
       return;
     }
@@ -424,7 +467,7 @@ function createShortcutContextMenu(deps) {
     });
   }
 
-  function openShortcutAddContextMenu(sourceElement) {
+  function openShortcutAddContextMenu(sourceElement?: HTMLElement | null): void {
     const tile = sourceElement || pageState.addShortcutButton;
     if (!tile || tile.hidden) {
       return;
@@ -447,4 +490,7 @@ function createShortcutContextMenu(deps) {
   };
 }
 
+type ShortcutContextMenu = ReturnType<typeof createShortcutContextMenu>;
+
 export { createShortcutContextMenu };
+export type { ShortcutContextMenu, ShortcutContextMenuDeps, ShortcutContextMenuState };

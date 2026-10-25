@@ -4,16 +4,20 @@
 import type { BookmarkTabGroupReply } from '../../domain/messages';
 import * as LumnoMessaging from '../../platform/messaging';
 import type { SelectMenuOption } from '../../shared/react/select-menu';
-import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
+import type { ContextMenuParts, FormatMessage, SelectMenuController, ShowToast, Translate } from '../newtab-types';
 import type { ShortcutDialogOpenOptions } from '../react/shortcut-dialog';
 import type { BookmarkCascadeRuntime } from './bookmark-cascade-menu';
-import type { BookmarkContextMenuParts, BookmarkContextTarget, SelectMenuController } from './bookmark-context-menu';
+import type { BookmarkContextTarget } from './bookmark-context-menu';
 import type * as BookmarksStore from './bookmarks-store';
 import type { BookmarksRuntime } from './bookmarks-runtime';
 import type { FolderItemIcon } from './folder-item-icons';
 
+// The bookmark an action is for, as far as the actions read it.
+type BookmarkEditTarget = Pick<BookmarkContextTarget, 'bookmarkId' | 'isFolder' | 'title'> &
+  Partial<Pick<BookmarkContextTarget, 'url' | 'sourceKind'>> & { element: HTMLElement | null };
+
 interface BookmarkActionsState {
-  bookmarkContextMenu: BookmarkContextMenuParts | null;
+  bookmarkContextMenu: ContextMenuParts | null;
   bookmarkContextMenuSelectController: SelectMenuController | null;
   bookmarkContextMenuTarget: BookmarkContextTarget | null;
   bookmarkCascadeRuntime: BookmarkCascadeRuntime | null;
@@ -103,7 +107,7 @@ function createBookmarkActions(deps: BookmarkActionsDeps) {
     });
   }
 
-  function openBookmarkFolderTabGroupConfirmation(target: BookmarkContextTarget | null): void {
+  function openBookmarkFolderTabGroupConfirmation(target: BookmarkEditTarget | null): void {
     if (!target || !target.isFolder || !target.bookmarkId) {
       return;
     }
@@ -151,7 +155,7 @@ function createBookmarkActions(deps: BookmarkActionsDeps) {
     });
   }
 
-  function openBookmarkEditor(target: BookmarkContextTarget | null): void {
+  function openBookmarkEditor(target: BookmarkEditTarget | null): void {
     if (!target || !target.bookmarkId) {
       return;
     }
@@ -188,4 +192,4 @@ function createBookmarkActions(deps: BookmarkActionsDeps) {
 }
 
 export { createBookmarkActions };
-export type { BookmarkActionsDeps, BookmarkActionsState };
+export type { BookmarkActionsDeps, BookmarkActionsState, BookmarkEditTarget };

@@ -37,4 +37,24 @@ interface ShortcutInsertionSlot {
   groupId: string;
 }
 
-export type { PersistShortcuts, PersistShortcutsOptions, ShortcutIconChange, ShortcutInsertionSlot };
+// What a shortcut context menu was opened for: a tile, a group's title,
+// or the add tile.
+type ShortcutContextTarget =
+  | { kind: 'shortcut'; shortcutId: string; tile: HTMLElement }
+  | { kind: 'group'; groupId: string; tile: HTMLElement }
+  | { kind: 'add'; tile: HTMLElement };
+
+// The actions of the group and add-tile menus.
+type ShortcutGroupMenuValues = Readonly<Record<
+  'addShortcut' | 'create' | 'rename' | 'addSite' | 'moveUp' | 'moveDown' | 'delete' | 'deleteWithSites',
+  string
+>>;
+
+export type {
+  PersistShortcuts,
+  PersistShortcutsOptions,
+  ShortcutContextTarget,
+  ShortcutGroupMenuValues,
+  ShortcutIconChange,
+  ShortcutInsertionSlot
+};

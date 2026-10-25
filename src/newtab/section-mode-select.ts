@@ -2,8 +2,7 @@
 // options (view modes, recent sources) and the React select each header hosts.
 import type { SelectMenuOption } from '../shared/react/select-menu';
 import type { TooltipShowOptions } from '../shared/ui/tooltip';
-import type { SelectMenuController } from './bookmarks/bookmark-context-menu';
-import type { Translate } from './newtab-types';
+import type { SelectMenuController, Translate } from './newtab-types';
 
 // A menu entry as a header describes it, with its label by message key.
 interface SectionModeOptionSource {

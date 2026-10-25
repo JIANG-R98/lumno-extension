@@ -26,9 +26,11 @@
     "src/newtab/storage-change-registry.ts",
     "src/newtab/bookmarks/**/*.ts",
     "src/newtab/shortcuts/bottom-dock-runtime.ts",
+    "src/newtab/shortcuts/shortcut-context-menu.ts",
     "src/newtab/shortcuts/shortcut-dock.ts",
     "src/newtab/shortcuts/shortcut-icon-plate.ts",
     "src/newtab/shortcuts/shortcut-icon-store.ts",
+    "src/newtab/shortcuts/shortcut-page-actions.ts",
     "src/newtab/shortcuts/shortcut-types.ts"
   ],
   "exclude": [
