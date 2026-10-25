@@ -131,7 +131,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
 }
 
-const UI_FILES = Object.freeze(['build/link-preview.js']);
+// The surface draws through the overlay bundle's React, injected first.
+const UI_FILES = Object.freeze(['src/react/overlay-islands.js', 'build/link-preview.js']);
 // X-Frame-Options and CSP frame-ancestors are the two ways a page refuses to
 // be framed (a page that sends both is judged by frame-ancestors). While a
 // tab's preview is open, its subframes from the previewed site lose

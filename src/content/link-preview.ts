@@ -4,13 +4,18 @@ import type { PreviewSurfaceCommand } from '../domain/link-preview-frame-message
 import type { BackgroundAction, BackgroundReply, BackgroundRequest, LinkPreviewOrigin } from '../domain/messages';
 import * as TOAST from '../shared/ui/toast';
 import type { ToastController, ToastShowOptions, ToastStyleGate } from '../shared/ui/toast';
-import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-state-art';
+import { EMPTY_STATE_ART_CSS } from '../shared/ui/empty-state-art';
+import type {
+  LinkPreviewElements,
+  LinkPreviewViewController,
+  LinkPreviewViewModel
+} from '../shared/react/link-preview-view';
 import * as LumnoMessaging from '../platform/messaging';
 import { isNavigateEvent, readPageNavigation } from '../platform/page-navigation';
 import type { ListenerTarget } from '../platform/page-navigation';
 
 // One preview: its elements, and where it is between prewarm and close.
-interface LinkPreview {
+interface LinkPreview extends LinkPreviewElements {
   token: string;
   url: string;
   // The address now, following links taken inside the preview.
@@ -19,18 +24,9 @@ interface LinkPreview {
   // Handed to the frame once its page reports in (see linkPreviewFrameBind).
   frameSecret: string;
   host: HTMLDivElement;
-  root: HTMLDivElement;
-  page: HTMLDivElement;
-  shot: HTMLImageElement;
-  veil: HTMLCanvasElement;
-  surround: HTMLCanvasElement;
-  scrim: HTMLDivElement;
-  windowElement: HTMLDivElement;
-  panel: HTMLDivElement;
-  controls: HTMLDivElement;
-  frame: HTMLIFrameElement;
-  backButton: HTMLButtonElement;
-  toastElement: HTMLDivElement;
+  view: LinkPreviewViewController;
+  // What the view shows now.
+  model: LinkPreviewViewModel;
   toastGate: Readonly<ToastStyleGate>;
   toast: Readonly<ToastController>;
   supportsPopover: boolean;
@@ -55,7 +51,6 @@ interface ShowRequest {
   origin: LinkPreviewOrigin | null;
 }
 
-type IconName = 'close' | 'openInTab' | 'copyLink' | 'reload' | 'back';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
@@ -89,38 +84,11 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
   Reflect.set(window, RUNTIME_KEY, true);
 
   const HOST_ID = '_x_extension_link_preview_host_2026_unique_';
-  const PREVIEW_FRAME_NAME = 'lumno-link-preview';
   // A prewarmed window the click never claimed (the page kept the click).
   const PREWARM_TTL_MS = 4500;
   // How long after the frame's load event a page may still report in; the
   // report is posted at document start, so it nearly always arrives first.
   const ALIVE_GRACE_MS = 250;
-  const FRAME_SANDBOX = [
-    'allow-downloads',
-    'allow-forms',
-    'allow-modals',
-    'allow-pointer-lock',
-    'allow-popups',
-    'allow-popups-to-escape-sandbox',
-    'allow-presentation',
-    'allow-same-origin',
-    'allow-scripts',
-    'allow-storage-access-by-user-activation'
-  ].join(' ');
-  const FRAME_ALLOW = 'autoplay; clipboard-read; clipboard-write; encrypted-media; fullscreen; picture-in-picture; web-share';
-  const ICON_PATHS: Readonly<Record<IconName, string>> = {
-    close: 'M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z',
-    openInTab: 'M10 6v2H5v11h11v-5h2v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6zm11-3v8h-2V6.413l-7.793 7.794-1.414-1.414L17.585 5H13V3h8z',
-    copyLink: 'M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1.001 1.001 0 0 1 3 21l.003-14c0-.552.45-1 1.007-1H7zM5.003 8L5 20h10V8H5.003zM9 6h8v10h2V4H9v2z',
-    reload: 'M5.463 4.433A9.961 9.961 0 0 1 12 2c5.523 0 10 4.477 10 10 0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228l-.997-1.795zm13.074 15.134A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772l.997 1.795z',
-    back: 'M7.828 11H20v2H7.828l5.364 5.364-1.414 1.414L4 12l7.778-7.778 1.414 1.414z'
-  };
-
-  const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-  // Stiff springs: the window reaches 90% of its size in under 100ms and
-  // overshoots about 3% at 150ms, so it lands crisply and still bounces.
-  const OPEN_SPRING = createSpringEasing(600, 26);
-  const SOFT_SPRING = createSpringEasing(640, 38);
 
   const STYLES = `
     :host {
@@ -436,6 +404,13 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
     }
   `;
 
+  const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  // Stiff springs: the window reaches 90% of its size in under 100ms and
+  // overshoots about 3% at 150ms, so it lands crisply and still bounces.
+  const OPEN_SPRING = createSpringEasing(600, 26);
+  const SOFT_SPRING = createSpringEasing(640, 38);
+
+
   // The page receded behind the preview: scaled, and crossfaded to its veil, the
   // screenshot blurred by BLUR_CSS_PX and toned by VEIL_TONE. The veil is
   // painted at BLUR_RENDER_WIDTH pixels wide; blurred, it scales up unseen.
@@ -526,27 +501,6 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
     }
   }
 
-  function createIcon(name: IconName): SVGSVGElement {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('aria-hidden', 'true');
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', ICON_PATHS[name]);
-    svg.append(path);
-    return svg;
-  }
-
-  function createControl(name: IconName, label: string, onClick: () => void): HTMLButtonElement {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'control';
-    button.title = label;
-    button.setAttribute('aria-label', label);
-    button.append(createIcon(name));
-    button.addEventListener('click', onClick);
-    return button;
-  }
-
   // Copies the address the preview is on now, which follows links taken
   // inside it. The page's clipboard API needs a secure page; elsewhere a
   // selected field inside the window copies instead, so focus stays here.
@@ -610,7 +564,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
   // Back steps through the frame's own history only; the button shows while
   // the previewed page reports it has somewhere to go back to.
   function goBack(preview: LinkPreview): void {
-    preview.root.dataset.loaded = 'false';
+    update(preview, { loaded: false });
     postToFrame(preview, { type: 'back' });
   }
 
@@ -618,8 +572,8 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
   // frame's history; Chrome's error page has no script, so it is loaded
   // again from its address.
   function reload(preview: LinkPreview): void {
-    preview.root.dataset.loaded = 'false';
-    if (preview.pageReported && preview.root.dataset.blocked !== 'true') {
+    update(preview, { loaded: false });
+    if (preview.pageReported && preview.model.blocked !== true) {
       postToFrame(preview, { type: 'reload' });
     } else {
       preview.frame.src = toPreviewFrameUrl(preview.currentUrl || preview.url);
@@ -654,7 +608,18 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
     ].map((declaration) => `${declaration} !important`).join('; ');
   }
 
-  function build(token: string, url: string): LinkPreview {
+  // Shows a change in the view at once, so the motion that follows starts
+  // from it.
+  function update(preview: LinkPreview, patch: Partial<LinkPreviewViewModel>): void {
+    preview.model = { ...preview.model, ...patch };
+    preview.view.render(preview.model);
+  }
+
+  function build(token: string, url: string): LinkPreview | null {
+    const viewApi = globalThis.LumnoLinkPreviewView;
+    if (!viewApi) {
+      return null;
+    }
     const host = document.createElement('div');
     host.id = HOST_ID;
     host.setAttribute('translate', 'no');
@@ -664,93 +629,56 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       host.setAttribute('popover', 'manual');
     }
     const shadow = host.attachShadow({ mode: 'closed' });
-    const style = document.createElement('style');
-    style.textContent = STYLES;
-
-    const root = document.createElement('div');
-    root.className = 'root';
-    root.dataset.state = 'prewarm';
-    root.setAttribute('role', 'dialog');
-    root.setAttribute('aria-modal', 'true');
-    root.tabIndex = -1;
-
-    const stage = document.createElement('div');
-    stage.className = 'stage';
-    const surround = document.createElement('canvas');
-    surround.className = 'surround';
-    surround.hidden = true;
-    const page = document.createElement('div');
-    page.className = 'page';
-    page.hidden = true;
-    const shot = document.createElement('img');
-    shot.className = 'shot';
-    shot.alt = '';
-    const veil = document.createElement('canvas');
-    veil.className = 'veil';
-    page.append(shot, veil);
-    const scrim = document.createElement('div');
-    scrim.className = 'scrim';
-    stage.append(surround, page, scrim);
-
-    const windowElement = document.createElement('div');
-    windowElement.className = 'window';
-    const panel = document.createElement('div');
-    panel.className = 'panel';
-    const placeholder = document.createElement('div');
-    placeholder.className = 'placeholder';
-    placeholder.textContent = readHostLabel(url);
-    const frame = document.createElement('iframe');
-    frame.name = PREVIEW_FRAME_NAME;
-    frame.setAttribute('sandbox', FRAME_SANDBOX);
-    frame.setAttribute('allow', FRAME_ALLOW);
-    frame.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
-    const notice = document.createElement('div');
-    notice.className = 'notice';
-    const noticeText = document.createElement('div');
-    noticeText.textContent = getMessage('link_preview_blocked', 'This page can’t be shown in a preview');
-    const noticeButton = document.createElement('button');
-    noticeButton.type = 'button';
-    noticeButton.textContent = getMessage('link_preview_open_in_tab', 'Open in new tab');
-    notice.append(createEmptyStateArt(document, 'blockedPage', { size: 176 }), noticeText, noticeButton);
-    panel.append(placeholder, frame, notice);
-
-    const controls = document.createElement('div');
-    controls.className = 'controls';
-    // The window sits in the top layer, so a toast of the page's own would
-    // stay under it; this one lives in the window.
-    const toastStylesheet = document.createElement('link');
-    toastStylesheet.rel = 'stylesheet';
-    toastStylesheet.href = chrome.runtime.getURL('src/shared/ui/toast.css');
-    const toastElement = document.createElement('div');
-    toastElement.className = 'x-lumno-toast';
-    toastElement.setAttribute('data-show', 'false');
-    toastElement.setAttribute('role', 'status');
-    toastElement.setAttribute('aria-live', 'polite');
-    toastElement.style.setProperty('--x-lumno-toast-top', 'max(24px, calc(env(safe-area-inset-top) + 12px))');
-    // Last, so it comes and goes without moving the others.
-    const backButton = createControl('back', getMessage('link_preview_back', 'Back'), () => goBack(preview));
-    backButton.hidden = true;
-    const preview: LinkPreview = {
+    // The frame's address is part of the first draw: a frame connected
+    // without one loads about:blank first, and that load would count as the
+    // page's (see handleFrameLoad). The host joins the page afterwards.
+    const model: LinkPreviewViewModel = {
+      state: 'prewarm',
+      motion: null,
+      loaded: null,
+      blocked: null,
+      shot: null,
+      shotVisible: false,
+      backVisible: false,
+      panelColor: '',
+      viewport: null,
+      closing: false,
+      frameUrl: toPreviewFrameUrl(url),
+      placeholder: readHostLabel(url),
+      labels: {
+        close: getMessage('link_preview_close', 'Close'),
+        openInTab: getMessage('link_preview_open_in_tab', 'Open in new tab'),
+        copyLink: getMessage('link_preview_copy_link', 'Copy link'),
+        reload: getMessage('link_preview_reload', 'Reload'),
+        back: getMessage('link_preview_back', 'Back'),
+        blocked: getMessage('link_preview_blocked', 'This page can’t be shown in a preview')
+      }
+    };
+    let preview: LinkPreview | null = null;
+    const view = viewApi.createLinkPreviewView(shadow, {
+      onClose: () => close(preview),
+      onOpenInTab: () => { if (preview) moveToTab(preview); },
+      onCopyLink: () => { if (preview) copyLink(preview); },
+      onReload: () => { if (preview) reload(preview); },
+      onBack: () => { if (preview) goBack(preview); },
+      onFrameLoad: () => { if (preview) handleFrameLoad(preview); }
+    }, model, { styles: STYLES, toastStylesheetUrl: chrome.runtime.getURL('src/shared/ui/toast.css') });
+    if (!view) {
+      return null;
+    }
+    const elements: LinkPreviewElements = view.elements;
+    const built: LinkPreview = {
       token,
       url,
       currentUrl: url,
-      frameUrl: toPreviewFrameUrl(url),
+      frameUrl: model.frameUrl,
       frameSecret: '',
       host,
-      root,
-      page,
-      shot,
-      veil,
-      surround,
-      scrim,
-      windowElement,
-      panel,
-      controls,
-      frame,
-      backButton,
-      toastElement,
-      toastGate: TOAST.createToastStyleGate(toastElement, { stylesheetElement: toastStylesheet, windowObj: window }),
-      toast: TOAST.createToastController(toastElement, { windowObj: window }),
+      view,
+      model,
+      ...elements,
+      toastGate: TOAST.createToastStyleGate(elements.toastElement, { stylesheetElement: elements.toastStylesheet, windowObj: window }),
+      toast: TOAST.createToastController(elements.toastElement, { windowObj: window }),
       supportsPopover,
       shown: false,
       closing: false,
@@ -762,57 +690,28 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       pageReported: false,
       cleanups: []
     };
-    const closeButton = createControl('close', getMessage('link_preview_close', 'Close'), () => close(preview));
-    closeButton.classList.add('control-close');
-    const openInTabButton = createControl(
-      'openInTab',
-      getMessage('link_preview_open_in_tab', 'Open in new tab'),
-      () => moveToTab(preview)
-    );
-    const copyLinkButton = createControl(
-      'copyLink',
-      getMessage('link_preview_copy_link', 'Copy link'),
-      () => copyLink(preview)
-    );
-    const reloadButton = createControl('reload', getMessage('link_preview_reload', 'Reload'), () => reload(preview));
-    noticeButton.addEventListener('click', () => moveToTab(preview));
-    controls.append(closeButton, openInTabButton, copyLinkButton, reloadButton, backButton);
-    windowElement.append(panel, controls);
-    root.append(stage, windowElement, toastElement);
-    shadow.append(style, toastStylesheet, root);
+    preview = built;
 
-    // A press outside the window closes it.
-    stage.addEventListener('click', () => close(preview));
-    // The page under the screenshot must not scroll while the preview is up.
-    const blockScroll = (event: Event): void => event.preventDefault();
-    root.addEventListener('wheel', blockScroll, { passive: false });
-    root.addEventListener('touchmove', blockScroll, { passive: false });
-
-    frame.addEventListener('load', () => handleFrameLoad(preview));
-    listenWindow(preview, 'message', (event) => handleFrameMessage(preview, event));
-    listenWindow(preview, 'keydown', (event) => {
-      if (preview.shown && event.key === 'Escape') {
+    listenWindow(built, 'message', (event) => handleFrameMessage(built, event));
+    listenWindow(built, 'keydown', (event) => {
+      if (built.shown && event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
-        close(preview);
+        close(built);
       }
     }, true);
-    listenWindow(preview, 'pagehide', () => {
-      send({ action: 'linkPreviewClose', token: preview.token });
+    listenWindow(built, 'pagehide', () => {
+      send({ action: 'linkPreviewClose', token: built.token });
     });
 
     // Until the click claims it, the invisible window must not take the
     // press: the click has to land on the link that started it.
     host.style.setProperty('pointer-events', 'none', 'important');
-    // The address is set before the frame is connected: a frame connected
-    // without one loads about:blank first, and that load would count as the
-    // page's (see handleFrameLoad).
-    frame.src = preview.frameUrl;
     document.documentElement.append(host);
     if (supportsPopover) {
       host.showPopover();
     }
-    return preview;
+    return built;
   }
 
   function listenWindow<K extends keyof WindowEventMap>(
@@ -859,8 +758,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       // Until the page moves on, the link keeps its own address where the
       // frame loads it through another (see toPreviewFrameUrl).
       preview.currentUrl = message.url === preview.frameUrl ? preview.url : message.url;
-      preview.root.dataset.blocked = 'false';
-      preview.backButton.hidden = !message.canGoBack;
+      update(preview, { blocked: false, backVisible: message.canGoBack });
       // Only this window holds the frame, so only the frame's page hears
       // the secret; its content script hands it to the background, which
       // then takes that frame's reports as the preview's.
@@ -868,11 +766,11 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
         postToFrame(preview, { type: 'bind', secret: preview.frameSecret });
       }
     } else if (message.type === 'background') {
-      preview.panel.style.backgroundColor = message.color;
+      update(preview, { panelColor: message.color });
     } else if (message.type === 'loading') {
-      preview.root.dataset.loaded = 'false';
+      update(preview, { loaded: false });
     } else if (message.type === 'loaded') {
-      preview.root.dataset.loaded = 'true';
+      update(preview, { loaded: true });
     } else if (message.type === 'escape' && preview.shown) {
       close(preview);
     }
@@ -892,7 +790,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       const alive = preview.aliveSinceLoad;
       preview.aliveSinceLoad = false;
       if (alive) {
-        preview.root.dataset.loaded = 'true';
+        update(preview, { loaded: true });
         return;
       }
       retryRefusedPage(preview, loadNumber);
@@ -913,8 +811,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
         replaceFrameLocation(preview, response.url);
         return;
       }
-      preview.root.dataset.loaded = 'true';
-      preview.root.dataset.blocked = 'true';
+      update(preview, { loaded: true, blocked: true });
     });
   }
 
@@ -943,8 +840,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
   }
 
   function fitPageToWindow(preview: LinkPreview): void {
-    preview.root.style.setProperty('--lp-window-width', `${window.innerWidth}px`);
-    preview.root.style.setProperty('--lp-window-height', `${window.innerHeight}px`);
+    update(preview, { viewport: { width: window.innerWidth, height: window.innerHeight } });
   }
 
   // The page under the preview keeps its scroll position while the preview
@@ -969,6 +865,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
     preview.toastGate.destroy();
     preview.cleanups.splice(0).forEach((cleanup) => cleanup());
     preview.frame.removeAttribute('src');
+    preview.view.destroy();
     preview.host.remove();
     if (current === preview) {
       current = null;
@@ -984,6 +881,9 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       return false;
     }
     const preview = build(token, url);
+    if (!preview) {
+      return false;
+    }
     preview.frameSecret = frameSecret;
     current = preview;
     preview.prewarmTimer = window.setTimeout(() => {
@@ -1079,10 +979,11 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
   // decoded for the GPU and uploaded before the click instead of on the
   // opening's first frame.
   function showShot(preview: LinkPreview): void {
-    fitPageToWindow(preview);
-    preview.page.hidden = false;
-    preview.surround.hidden = false;
-    preview.root.dataset.shot = 'image';
+    update(preview, {
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      shot: 'image',
+      shotVisible: true
+    });
   }
 
   async function show(message: ShowRequest): Promise<boolean> {
@@ -1114,11 +1015,9 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
     if (hasShot) {
       showShot(preview);
     } else {
-      preview.page.hidden = true;
-      preview.surround.hidden = true;
-      preview.root.dataset.shot = 'none';
+      update(preview, { shot: 'none', shotVisible: false });
     }
-    preview.root.dataset.state = 'open';
+    update(preview, { state: 'open' });
     preview.host.style.removeProperty('pointer-events');
     playOpening(preview, message.origin);
     preview.root.focus({ preventScroll: true });
@@ -1128,7 +1027,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
 
   function playOpening(preview: LinkPreview, origin: LinkPreviewOrigin | null): void {
     const reduced = reducedMotionQuery.matches;
-    preview.root.dataset.motion = 'moving';
+    update(preview, { motion: 'moving' });
     const rect = preview.windowElement.getBoundingClientRect();
     const originX = origin ? Math.min(Math.max(origin.x - rect.left, 0), rect.width) : rect.width / 2;
     const originY = origin ? Math.min(Math.max(origin.y - rect.top, 0), rect.height) : rect.height / 2;
@@ -1140,7 +1039,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
     preview.veil.animate([{ opacity: 0 }, { opacity: 1 }], blurIn);
     preview.scrim.animate([{ opacity: 0 }, { opacity: 1 }], blurIn);
     if (reduced) {
-      preview.root.dataset.motion = 'still';
+      update(preview, { motion: 'still' });
       preview.windowElement.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, fill: 'forwards' });
       return;
     }
@@ -1150,7 +1049,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
     ], { duration: OPEN_SPRING.duration, easing: OPEN_SPRING.easing, fill: 'forwards' });
     spring.finished.then(() => {
       if (!preview.closing) {
-        preview.root.dataset.motion = 'still';
+        update(preview, { motion: 'still' });
       }
     }, () => {});
     preview.windowElement.animate([{ opacity: 0 }, { opacity: 1 }], {
@@ -1188,8 +1087,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       return;
     }
     const reduced = reducedMotionQuery.matches;
-    preview.root.style.pointerEvents = 'none';
-    preview.root.dataset.motion = 'moving';
+    update(preview, { closing: true, motion: 'moving' });
     preview.controls.animate([{ opacity: 1 }, { opacity: 0 }], {
       duration: reduced ? 1 : 110,
       easing: 'ease-out',

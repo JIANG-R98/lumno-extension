@@ -8,7 +8,7 @@ export interface ReactRootController<Model> {
 }
 
 export function createReactRootController<Model>(
-  host: HTMLElement | null,
+  host: Element | DocumentFragment | null,
   renderView: (model: Model) => ReactNode
 ): ReactRootController<Model> {
   if (!host) {
