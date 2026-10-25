@@ -7,6 +7,8 @@ import type { SettingSpec } from './options-setting-bindings';
 import { createSettingsControlsApi } from './react/settings-controls';
 import { getElement, getTag, getTags } from '../../tests/react/dom';
 
+const sections: Array<{ destroy(): void }> = [];
+
 const TAB_SWITCHER_TOGGLE = '_x_extension_tab_switcher_toggle_2026_unique_';
 const SELECTION_TOGGLE = '_x_extension_selection_quick_actions_toggle_2026_unique_';
 const GROUP_TOGGLE = '_x_extension_selection_quick_actions_group_toggle_2026_unique_';
@@ -28,6 +30,7 @@ function setUp(browserFamily = 'chromium') {
     getViewportTopInset: () => 0,
     getTabSwitcherShortcut: () => '⌥Q'
   });
+  sections.push(section);
   const changes = new Map<string, (raw: unknown) => void>();
   section.bindSettings({
     bindSetting<V>(spec: SettingSpec<V>): void {
@@ -41,6 +44,7 @@ function setUp(browserFamily = 'chromium') {
 const toggle = (host: HTMLElement, id: string) => getTag(host, `#${id}`, 'input');
 
 afterEach(() => {
+  act(() => sections.splice(0).forEach((section) => section.destroy()));
   document.body.textContent = '';
 });
 

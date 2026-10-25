@@ -59,13 +59,9 @@ interface LanguageDeps {
   renderOverlayFontMissingNotices(): void;
   formatTemplate: FormatTemplate;
   formatShortcutForDisplay(shortcut: string): string;
-  SETTINGS: Pick<typeof Settings, 'normalizeLocale' | 'localeToHtmlLang' | 'resolveSupportedLocale' |
-    'isMachineTranslatedLocale'>;
+  SETTINGS: Pick<typeof Settings, 'normalizeLocale' | 'localeToHtmlLang' | 'resolveSupportedLocale'>;
   LANGUAGE_STORAGE_KEY: string;
   localStorageArea: StorageAreaLike | null;
-  languageSelect: HTMLSelectElement | null;
-  languageMachineNote: HTMLElement | null;
-  setOptionsSelectState(select: HTMLSelectElement | null, value: unknown): void;
   renderOptionsInfoButtons(): void;
   renderFeedbackSupport(): void;
   renderTranslationHelp(): void;
@@ -93,6 +89,8 @@ interface LanguageDeps {
   renderSettingsNavigation(tabKey: SettingsTabKey): void;
   // Redraws the tab sections React views draw from translated copy.
   renderTabSections(): void;
+  // The picker's language and the locale the page now shows.
+  onLanguageApplied(mode: string, locale: string): void;
   renderSiteSearchList(): void;
   renderAggregateSearchList(): void;
   optionsState: LanguageState;
@@ -106,9 +104,6 @@ function createLanguage(deps: LanguageDeps) {
     SETTINGS,
     LANGUAGE_STORAGE_KEY,
     localStorageArea,
-    languageSelect,
-    languageMachineNote,
-    setOptionsSelectState,
     renderOptionsInfoButtons,
     renderFeedbackSupport,
     renderTranslationHelp,
@@ -135,6 +130,7 @@ function createLanguage(deps: LanguageDeps) {
     renderOverlayWidthControl,
     renderSettingsNavigation,
     renderTabSections,
+    onLanguageApplied,
     renderSiteSearchList,
     renderAggregateSearchList
   } = deps;
@@ -249,13 +245,6 @@ function createLanguage(deps: LanguageDeps) {
     return locale ? SETTINGS.localeToHtmlLang(locale) : 'system';
   }
 
-  // AI-translated languages say so under the picker and ask for corrections.
-  function renderMachineTranslationNote(locale: string): void {
-    if (languageMachineNote) {
-      languageMachineNote.hidden = !SETTINGS.isMachineTranslatedLocale(locale);
-    }
-  }
-
   function loadLocaleMessages(locale: string): Promise<LocaleMessages> {
     const normalized = normalizeLocale(locale);
     const localePath = chrome.runtime.getURL(`_locales/${normalized}/messages.json`);
@@ -302,14 +291,8 @@ function createLanguage(deps: LanguageDeps) {
         return;
       }
       currentMessages = messages;
-      if (languageSelect) {
-        setOptionsSelectState(languageSelect, normalizedMode);
-        if (languageSelect.value !== normalizedMode) {
-          setOptionsSelectState(languageSelect, 'system');
-        }
-      }
+      onLanguageApplied(normalizedMode, targetLocale);
       applyI18n();
-      renderMachineTranslationNote(targetLocale);
       renderOptionsInfoButtons();
       renderFeedbackSupport();
       renderTranslationHelp();

@@ -7,6 +7,8 @@ import type { SettingSpec } from './options-setting-bindings';
 import { createSettingsControlsApi } from './react/settings-controls';
 import { getElement, getTag, getTags } from '../../tests/react/dom';
 
+const sections: Array<{ destroy(): void }> = [];
+
 function setUp(response: unknown = { ok: true }) {
   const host = document.createElement('div');
   document.body.appendChild(host);
@@ -30,6 +32,7 @@ function setUp(response: unknown = { ok: true }) {
     getMessage: (_key, fallback) => fallback,
     showToast: (message, isError) => toasts.push([message, Boolean(isError)])
   });
+  sections.push(section);
   const changes = new Map<string, (raw: unknown) => void>();
   section.bindSettings({
     bindSetting<V>(spec: SettingSpec<V>): void {
@@ -41,6 +44,7 @@ function setUp(response: unknown = { ok: true }) {
 }
 
 afterEach(() => {
+  act(() => sections.splice(0).forEach((section) => section.destroy()));
   document.body.textContent = '';
 });
 

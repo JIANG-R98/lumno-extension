@@ -24,11 +24,6 @@ function rule(selector) {
   return found;
 }
 
-const button = optionsDocument.getElementById(buttonId);
-assert.ok(button && button.tagName === 'BUTTON' && button.classList.contains(buttonClass),
-  'general settings header should expose a compact onboarding tutorial ghost action');
-assert.strictEqual(button.querySelector(`span[data-i18n="${labelKey}"]`).textContent, '新手引导');
-assert.ok(button.querySelector('i.ri-icon.ri-size-14.ri-external-link-line'), 'with the onboarding ghost icon');
 const onboardingGhost = onboardingDocument.querySelector('.onboarding-action-button--ghost');
 assert.ok(onboardingGhost && onboardingDocument.querySelector('.ri-external-link-line'),
   'onboarding should keep the reference ghost action icon used by the options tutorial link');
@@ -71,7 +66,12 @@ assert.strictEqual(rule(`body[data-theme="dark"] .${versionButtonClass}:hover`).
 (async () => {
   const page = await createOptionsPage({});
   await page.settle(200);
-  await page.click(page.byId(buttonId));
+  const button = page.byId(buttonId);
+  assert.ok(button && button.tagName === 'BUTTON' && button.classList.contains(buttonClass),
+    'general settings header should expose a compact onboarding tutorial ghost action');
+  assert.strictEqual(button.querySelector('span').textContent, '新手引导');
+  assert.ok(button.querySelector('i.ri-icon.ri-size-14.ri-external-link-line'), 'with the onboarding ghost icon');
+  await page.click(button);
   assert.ok(page.messages.some((message) => message.action === 'openOnboardingPage'),
     'clicking the tutorial action should ask the background page to open onboarding');
   await page.click(page.byId(versionButtonId));

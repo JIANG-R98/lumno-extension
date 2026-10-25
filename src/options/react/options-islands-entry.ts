@@ -3,14 +3,12 @@ import { createSegmentedIndicatorApi } from '../../shared/react/segmented-indica
 import { createAccountTabApi } from './account-tab';
 import { createShortcutsTabApi } from './shortcuts-tab';
 import { createBlacklistTabApi } from './blacklist-tab';
-import { createFeedbackSupportApi } from './feedback-support';
 import { createInfoButtonApi } from './info-button';
 import { createSegmentedControlApi } from './segmented-control';
 import { createSelectControlApi } from './select-control';
 import { createSettingsNavigationApi } from './settings-navigation';
 import { createSettingsControlsApi } from './settings-controls';
 import { createThemePickerApi } from './theme-picker';
-import { createTranslationHelpApi } from './translation-help';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
 import { createTabSwitcherViewApi } from '../../shared/react/tab-switcher';
 
@@ -21,7 +19,6 @@ declare global {
   var LumnoOptionsReactIslands: {
       accountTab: ReturnType<typeof createAccountTabApi>;
       blacklistTab: ReturnType<typeof createBlacklistTabApi>;
-      feedbackSupport: ReturnType<typeof createFeedbackSupportApi>;
       infoButton: ReturnType<typeof createInfoButtonApi>;
       segmentedControl: ReturnType<typeof createSegmentedControlApi>;
       selectControl: ReturnType<typeof createSelectControlApi>;
@@ -29,12 +26,10 @@ declare global {
       settingsControls: ReturnType<typeof createSettingsControlsApi>;
       shortcutsTab: ReturnType<typeof createShortcutsTabApi>;
       themePicker: ReturnType<typeof createThemePickerApi>;
-      translationHelp: ReturnType<typeof createTranslationHelpApi>;
       toast: ReturnType<typeof createToastApi>;
       tabSwitcher: ReturnType<typeof createTabSwitcherViewApi>;
     } | undefined;
   var LumnoOptionsBlacklistTabReact: ReturnType<typeof createBlacklistTabApi> | undefined;
-  var LumnoOptionsFeedbackSupportReact: ReturnType<typeof createFeedbackSupportApi> | undefined;
   var LumnoOptionsInfoButtonReact: ReturnType<typeof createInfoButtonApi> | undefined;
   var LumnoOptionsSegmentedControlReact: ReturnType<typeof createSegmentedControlApi> | undefined;
   var LumnoOptionsSelectControlReact: ReturnType<typeof createSelectControlApi> | undefined;
@@ -53,7 +48,6 @@ const bootstrapState = runtime.LumnoOptionsReactBootstrap;
 if (!bootstrapState || !bootstrapState.reactReady) {
   const accountTabApi = createAccountTabApi();
   const blacklistTabApi = createBlacklistTabApi();
-  const feedbackSupportApi = createFeedbackSupportApi();
   const infoButtonApi = createInfoButtonApi();
   const segmentedControlApi = createSegmentedControlApi();
   const selectControlApi = createSelectControlApi();
@@ -61,7 +55,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   const settingsControlsApi = createSettingsControlsApi();
   const shortcutsTabApi = createShortcutsTabApi();
   const themePickerApi = createThemePickerApi();
-  const translationHelpApi = createTranslationHelpApi();
   const toastApi = createToastApi();
   const tooltipViewApi = createTooltipViewApi();
   const tabSwitcherApi =
@@ -70,8 +63,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoOptionsAccountTab = accountTabApi;
   runtime.LumnoOptionsBlacklistTabReact = blacklistTabApi;
   runtime.LumnoOptionsBlacklistTab = blacklistTabApi;
-  runtime.LumnoOptionsFeedbackSupportReact = feedbackSupportApi;
-  runtime.LumnoOptionsFeedbackSupport = feedbackSupportApi;
   runtime.LumnoOptionsInfoButtonReact = infoButtonApi;
   runtime.LumnoOptionsInfoButton = infoButtonApi;
   runtime.LumnoOptionsSegmentedControlReact = segmentedControlApi;
@@ -85,7 +76,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoOptionsShortcutsTab = shortcutsTabApi;
   runtime.LumnoOptionsThemePickerReact = themePickerApi;
   runtime.LumnoOptionsThemePicker = themePickerApi;
-  runtime.LumnoOptionsTranslationHelp = translationHelpApi;
   runtime.LumnoOptionsToastReact = toastApi;
   runtime.LumnoOptionsToast = toastApi;
   runtime.LumnoTooltipViewReact = tooltipViewApi;
@@ -96,7 +86,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoOptionsReactIslands = Object.freeze({
     accountTab: accountTabApi,
     blacklistTab: blacklistTabApi,
-    feedbackSupport: feedbackSupportApi,
     infoButton: infoButtonApi,
     segmentedControl: segmentedControlApi,
     selectControl: selectControlApi,
@@ -104,7 +93,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
     settingsControls: settingsControlsApi,
     shortcutsTab: shortcutsTabApi,
     themePicker: themePickerApi,
-    translationHelp: translationHelpApi,
     toast: toastApi,
     tabSwitcher: tabSwitcherApi
   });

@@ -6,7 +6,7 @@ import type { LocaleMessage } from '../domain/messages';
 import type { UiLocale } from '../domain/settings';
 import { downloadTextFile } from './options-download';
 import type { FormatTemplate, GetMessage } from './options-types';
-import type { TranslationHelpController, TranslationHelpRenderModel } from './react/translation-help';
+import type { TranslationHelpRenderModel } from './react/translation-help';
 
 type LocaleMessages = Record<string, LocaleMessage>;
 
@@ -36,7 +36,7 @@ interface TranslationHelpModelInput {
 
 interface TranslationHelpSectionOptions {
   // The React controller; null when the section is not on the page.
-  controller: Pick<TranslationHelpController, 'render'> | null;
+  controller: { render(model: TranslationHelpRenderModel): void } | null;
   documentObj: Document;
   getMessage: GetMessage;
   formatTemplate: FormatTemplate;

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { createReactRootController, type ReactRootController } from './root-controller';
 import { isNode } from '../../shared/dom-guards';
 
 export interface TranslationHelpRenderModel {
@@ -16,13 +15,12 @@ export interface TranslationHelpRenderModel {
   title?: string;
 }
 
-export type TranslationHelpController = ReactRootController<TranslationHelpRenderModel>;
 
 const POPOVER_ID = '_x_extension_translation_help_popover_2026_unique_';
 
 // The quiet "Improve translation" button beside the language picker; it opens
 // a small panel with the two ways to help.
-function TranslationHelpView(model: TranslationHelpRenderModel) {
+export function TranslationHelpView(model: TranslationHelpRenderModel) {
   const [open, setOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -138,22 +136,4 @@ function TranslationHelpView(model: TranslationHelpRenderModel) {
       </div>
     </div>
   );
-}
-
-export function createTranslationHelpController(
-  host: HTMLElement | null
-): TranslationHelpController {
-  if (host) {
-    host.dataset.reactIsland = 'options-translation-help';
-  }
-  return createReactRootController(host, (model) => (
-    <TranslationHelpView {...model} />
-  ));
-}
-
-export function createTranslationHelpApi() {
-  return Object.freeze({
-    implementation: 'react' as const,
-    createTranslationHelpController
-  });
 }

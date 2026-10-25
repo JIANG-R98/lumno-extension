@@ -17,6 +17,7 @@ import * as OPTIONS_CONTROL_EVENTS from './options-control-events';
 import * as LumnoOptionsFeedbackSupportSection from './options-feedback-support';
 import * as OPTIONS_FORMS from './options-forms';
 import * as OPTIONS_GENERAL_FEATURES_SECTION from './options-general-features-section';
+import * as OPTIONS_GENERAL_GLOBAL_SECTION from './options-general-global-section';
 import * as OPTIONS_GENERAL_NEWTAB_SECTION from './options-general-newtab-section';
 import * as OPTIONS_GENERAL_SEARCH_SECTION from './options-general-search-section';
 import * as OPTIONS_GENERAL_SHORTCUTS_SECTION from './options-general-shortcuts-section';
@@ -85,8 +86,6 @@ import * as OPTIONS_STATE from './options-state';
   const tabContents = queryHtmlElements(document, '._x_extension_settings_content_2024_unique_');
   const tabsContainer = getHtmlElement(document, '_x_extension_settings_tabs_2024_unique_');
   const settingsVersion = getHtmlElement(document, '_x_extension_settings_version_2024_unique_');
-  const languageSelect = getHtmlTag(document, '_x_extension_language_select_2024_unique_', 'select');
-  const languageMachineNote = getHtmlElement(document, '_x_extension_language_machine_note_2026_unique_');
   const recentModeSelect = getHtmlTag(document, '_x_extension_recent_mode_select_2024_unique_', 'select');
   const recentModeTabButtons = queryHtmlElements(document, 'button[data-recent-mode]');
   const recentModeTabsWrap = getHtmlElement(document, '_x_extension_recent_mode_tabs_wrap_2024_unique_');
@@ -140,9 +139,6 @@ import * as OPTIONS_STATE from './options-state';
   const overlayPageThemeAdaptationInfoHost = getHtmlElement(document, '_x_extension_overlay_page_theme_adaptation_info_2026_unique_');
   const bookmarkRowsInfoHost = getHtmlElement(document, '_x_extension_bookmark_rows_info_2026_unique_');
   const bookmarkColumnsInfoHost = getHtmlElement(document, '_x_extension_bookmark_columns_info_2026_unique_');
-  const openOnboardingPageButton = getHtmlElement(document, '_x_extension_open_onboarding_page_2026_unique_');
-  const feedbackSupportHost = getHtmlElement(document, '_x_extension_feedback_support_2026_unique_');
-  const translationHelpHost = getHtmlElement(document, '_x_extension_translation_help_2026_unique_');
   const toastElement = getHtmlElement(document, '_x_extension_toast_2024_unique_');
   if (!panel || !optionsRoot || themeButtons.length === 0 || tabButtons.length === 0) {
     return;
@@ -151,16 +147,14 @@ import * as OPTIONS_STATE from './options-state';
   const optionsBlacklistTabApi = globalThis.LumnoOptionsBlacklistTab;
   const optionsAccountTabApi = globalThis.LumnoOptionsAccountTab;
   const optionsShortcutsTabApi = globalThis.LumnoOptionsShortcutsTab;
-  const optionsFeedbackSupportApi = globalThis.LumnoOptionsFeedbackSupport;
-  const optionsTranslationHelpApi = globalThis.LumnoOptionsTranslationHelp;
   const optionsInfoButtonApi = globalThis.LumnoOptionsInfoButton;
   const optionsToastApi = globalThis.LumnoOptionsToast;
   const optionsSegmentedControlApi = globalThis.LumnoOptionsSegmentedControl;
   const optionsSettingsControlsApi = globalThis.LumnoOptionsSettingsControls;
   const optionsSettingsNavigationApi = globalThis.LumnoOptionsSettingsNavigation;
   const optionsThemePickerApi = globalThis.LumnoOptionsThemePicker;
-  if (!optionsAccountTabApi || !optionsBlacklistTabApi || !optionsShortcutsTabApi || !optionsFeedbackSupportApi ||
-      !optionsTranslationHelpApi || !optionsInfoButtonApi || !optionsSegmentedControlApi ||
+  if (!optionsAccountTabApi || !optionsBlacklistTabApi || !optionsShortcutsTabApi ||
+      !optionsInfoButtonApi || !optionsSegmentedControlApi ||
       !optionsSettingsControlsApi || !optionsSettingsNavigationApi ||
       !optionsThemePickerApi) {
     console.warn('Lumno: options views not available.');
@@ -413,9 +407,6 @@ import * as OPTIONS_STATE from './options-state';
     SETTINGS,
     LANGUAGE_STORAGE_KEY,
     localStorageArea,
-    languageSelect,
-    languageMachineNote,
-    setOptionsSelectState: (...args) => setOptionsSelectState(...args),
     renderOptionsInfoButtons,
     renderFeedbackSupport,
     renderTranslationHelp,
@@ -441,7 +432,9 @@ import * as OPTIONS_STATE from './options-state';
     renderBookmarkColumnsControl: (...args) => renderBookmarkColumnsControl(...args),
     renderOverlayWidthControl: (...args) => renderOverlayWidthControl(...args),
     renderSettingsNavigation,
+    onLanguageApplied: (mode, locale) => generalGlobalSection.setLanguage(mode, locale),
     renderTabSections: () => {
+      generalGlobalSection.render();
       generalFeaturesSection.render();
       generalSearchSection.render();
       generalNewtabSection.render();
@@ -483,9 +476,20 @@ import * as OPTIONS_STATE from './options-state';
     navigatorObj: navigator,
     settingKeys: SETTINGS.CHROME_SYNC_STORAGE_KEYS
   });
+  const generalGlobalSection = OPTIONS_GENERAL_GLOBAL_SECTION.createGeneralGlobalSection({
+    host: getHtmlElement(document, '_x_extension_general_global_section_2026_unique_'),
+    optionsSettingsControlsApi,
+    storageArea: optionsState.storageArea,
+    SETTINGS,
+    runtime: chrome.runtime,
+    getMessage,
+    showToast,
+    applyLanguage: (mode) => applyLanguageMode(mode, { persist: true }),
+    getViewportTopInset: getMenuViewportTopInset
+  });
   const feedbackSupportSection = LumnoOptionsFeedbackSupportSection.createFeedbackSupportSection({
     communityLinks: COMMUNITY_LINKS,
-    controller: optionsFeedbackSupportApi.createFeedbackSupportController(feedbackSupportHost),
+    controller: generalGlobalSection.feedback,
     exportDiagnostics: () => diagnosticsExport.exportReport().then(
       () => showToast(getMessage('settings_diagnostics_export_done', '已导出诊断信息'), false),
       (error) => {
@@ -493,7 +497,7 @@ import * as OPTIONS_STATE from './options-state';
         showToast(getMessage('settings_diagnostics_export_failed', '诊断信息导出失败'), true);
       }
     ),
-    licensesLink: getHtmlTag(document, '_x_extension_open_licenses_2026_unique_', 'a'),
+    licensesLink: generalGlobalSection.licensesLink,
     getLocale: () => (optionsState.currentLanguageMode === 'system' ? getSystemLocale() : normalizeLocale(optionsState.currentLanguageMode)),
     getMessage,
     helpIconUrl: chrome && chrome.runtime && typeof chrome.runtime.getURL === 'function'
@@ -502,7 +506,7 @@ import * as OPTIONS_STATE from './options-state';
     isHelpCenterSearchEnabled: () => optionsState.helpCenterSearchEnabled === true
   });
   const translationHelpSection = LumnoOptionsTranslationHelpSection.createTranslationHelpSection({
-    controller: optionsTranslationHelpApi.createTranslationHelpController(translationHelpHost),
+    controller: generalGlobalSection.translationHelp,
     documentObj: document,
     formatTemplate: (...args) => formatTemplate(...args),
     getIssueUrl: () => COMMUNITY_LINKS.getLinks().githubIssue,
@@ -977,18 +981,7 @@ import * as OPTIONS_STATE from './options-state';
     });
     newtabTimeFontSelect.value = optionsState.currentNewtabTimeFont;
   }
-  // Each language is listed in its own words, so the names are not translated.
-  if (languageSelect) {
-    SETTINGS.UI_LOCALES.forEach((locale) => {
-      const option = document.createElement('option');
-      option.value = locale.htmlLang;
-      option.lang = locale.htmlLang;
-      option.textContent = locale.name;
-      languageSelect.appendChild(option);
-    });
-  }
   const selectKinds: Array<[HTMLSelectElement | null, string]> = [
-    [languageSelect, 'language'],
     [newtabGlassStyleSelect, 'newtab-glass-style'],
     [newtabTimeFontSelect, 'newtab-time-font']
   ];
@@ -1347,8 +1340,6 @@ import * as OPTIONS_STATE from './options-state';
   });
 
   OPTIONS_CONTROL_EVENTS.createControlEvents({
-    languageSelect,
-    applyLanguageMode,
     newtabWidthSelect,
     handleNewtabWidthSelection,
     newtabWidthTabButtons,
@@ -1372,9 +1363,6 @@ import * as OPTIONS_STATE from './options-state';
     recentModeSelect,
     handleRecentModeSelection,
     recentModeTabButtons,
-    showToast,
-    getMessage,
-    openOnboardingPageButton,
     refreshOptionsSelectItems,
     renderOverlayFontMissingNotices,
     optionsState
@@ -1394,6 +1382,7 @@ import * as OPTIONS_STATE from './options-state';
     }
   }, true);
 
+  generalGlobalSection.bindSettings(settingBinder);
   generalFeaturesSection.bindSettings(settingBinder);
   generalSearchSection.bindSettings(settingBinder);
   generalNewtabSection.bindSettings(settingBinder);

@@ -111,7 +111,7 @@ function createGeneralNewtabSection(deps: GeneralNewtabSectionDeps) {
 
   render();
 
-  return { render, bindSettings };
+  return { render, bindSettings, destroy: () => controller.destroy() };
 }
 
 export { createGeneralNewtabSection };

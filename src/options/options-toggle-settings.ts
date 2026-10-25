@@ -104,13 +104,6 @@ function getToggleSettings(settings: typeof Settings, hooks?: ToggleSettingHooks
       normalize: S.normalizeNewtabAppearanceButtonVisible
     },
     {
-      inputId: '_x_extension_update_notice_toggle_2026_unique_',
-      kind: 'update-notice',
-      key: S.UPDATE_NOTICE_ENABLED_STORAGE_KEY,
-      normalize: S.normalizeUpdateNoticeEnabled,
-      refreshSelects: true
-    },
-    {
       inputId: '_x_extension_motion_effects_toggle_2026_unique_',
       kind: 'motion-effects',
       key: S.MOTION_EFFECTS_ENABLED_STORAGE_KEY,

@@ -9,7 +9,6 @@ import type { createOverlayShellApi } from '../overlay/react/shell';
 import type { createSearchInputApi } from '../shared/react/search-input';
 import type { ThemeVariant } from '../shared/favicon/favicon-theme';
 import type { createBlacklistTabApi } from '../options/react/blacklist-tab';
-import type { createFeedbackSupportApi } from '../options/react/feedback-support';
 import type { createInfoButtonApi } from '../options/react/info-button';
 import type { createSegmentedControlApi } from '../options/react/segmented-control';
 import type { createSelectControlApi } from '../options/react/select-control';
@@ -18,7 +17,6 @@ import type { createSettingsNavigationApi } from '../options/react/settings-navi
 import type { createShortcutsTabApi } from '../options/react/shortcuts-tab';
 import type { createThemePickerApi } from '../options/react/theme-picker';
 import type { createToastApi } from '../shared/react/toast';
-import type { createTranslationHelpApi } from '../options/react/translation-help';
 import type { createAccountTabApi } from '../options/react/account-tab';
 import type { createPopupApi } from '../popup/react/popup-view';
 import type { createActionButtonsApi } from '../onboarding/react/action-buttons';
@@ -109,7 +107,6 @@ declare global {
   // Set by the options page's React islands entry.
   var LumnoOptionsShortcutsTab: ReturnType<typeof createShortcutsTabApi> | undefined;
   var LumnoOptionsBlacklistTab: ReturnType<typeof createBlacklistTabApi> | undefined;
-  var LumnoOptionsFeedbackSupport: ReturnType<typeof createFeedbackSupportApi> | undefined;
   var LumnoOptionsInfoButton: ReturnType<typeof createInfoButtonApi> | undefined;
   var LumnoOptionsSegmentedControl: ReturnType<typeof createSegmentedControlApi> | undefined;
   var LumnoOptionsSelectControl: ReturnType<typeof createSelectControlApi> | undefined;
@@ -117,7 +114,6 @@ declare global {
   var LumnoOptionsSettingsNavigation: ReturnType<typeof createSettingsNavigationApi> | undefined;
   var LumnoOptionsThemePicker: ReturnType<typeof createThemePickerApi> | undefined;
   var LumnoOptionsToast: ReturnType<typeof createToastApi> | undefined;
-  var LumnoOptionsTranslationHelp: ReturnType<typeof createTranslationHelpApi> | undefined;
   var LumnoOptionsAccountTab: ReturnType<typeof createAccountTabApi> | undefined;
   // Set by the onboarding page's React islands entry.
   var LumnoOnboardingActions: ReturnType<typeof createActionButtonsApi> | undefined;

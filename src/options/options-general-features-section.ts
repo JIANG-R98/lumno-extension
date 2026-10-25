@@ -257,7 +257,7 @@ function createGeneralFeaturesSection(deps: GeneralFeaturesSectionDeps) {
 
   render();
 
-  return { render, bindSettings, setCtrlTabLink };
+  return { render, bindSettings, destroy: () => controller.destroy(), setCtrlTabLink };
 }
 
 export { createGeneralFeaturesSection };

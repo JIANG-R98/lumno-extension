@@ -136,6 +136,7 @@ function createPage(initial, options) {
     settings.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY,
     settings.PROGRESS_TRACKING_ENABLED_STORAGE_KEY,
     settings.OVERLAY_TAB_PRIORITY_STORAGE_KEY,
+    settings.UPDATE_NOTICE_ENABLED_STORAGE_KEY,
     settings.DOCUMENT_PIP_ENABLED_STORAGE_KEY,
     settings.NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY,
     settings.MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY,
@@ -146,7 +147,6 @@ function createPage(initial, options) {
 
   const byKey = new Map(table.map((entry) => [entry.key, entry]));
   const expectedDefaults = new Map([
-    [settings.UPDATE_NOTICE_ENABLED_STORAGE_KEY, true],
     [settings.MOTION_EFFECTS_ENABLED_STORAGE_KEY, true],
     [settings.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY, settings.normalizeNewtabTimeSecondsVisible(undefined)]
   ]);

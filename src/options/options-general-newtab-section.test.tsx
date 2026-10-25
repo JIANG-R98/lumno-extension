@@ -7,6 +7,8 @@ import type { SettingSpec } from './options-setting-bindings';
 import { createSettingsControlsApi } from './react/settings-controls';
 import { getTag, getTags } from '../../tests/react/dom';
 
+const sections: Array<{ destroy(): void }> = [];
+
 const OPEN_KEY = Settings.NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY;
 
 function setUp() {
@@ -20,6 +22,7 @@ function setUp() {
     SETTINGS: Settings,
     getMessage: (_key, fallback) => fallback
   });
+  sections.push(section);
   const specs = new Map<string, SettingSpec<unknown>>();
   const changes = new Map<string, (raw: unknown) => void>();
   section.bindSettings({
@@ -33,6 +36,7 @@ function setUp() {
 }
 
 afterEach(() => {
+  act(() => sections.splice(0).forEach((section) => section.destroy()));
   document.body.textContent = '';
 });
 

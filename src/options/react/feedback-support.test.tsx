@@ -2,14 +2,13 @@ import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildAskDemoFrames,
-  createFeedbackSupportApi,
-  createFeedbackSupportController,
-  type FeedbackSupportController,
+  FeedbackSupportView,
   type FeedbackSupportRenderModel
 } from './feedback-support';
+import { createReactRootController, type ReactRootController } from './root-controller';
 import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
-let controllers: FeedbackSupportController[] = [];
+let controllers: Array<ReactRootController<FeedbackSupportRenderModel>> = [];
 
 const model: FeedbackSupportRenderModel = {
   heading: '反馈与支持',
@@ -49,7 +48,7 @@ const model: FeedbackSupportRenderModel = {
 function createFixture() {
   const host = document.createElement('div');
   document.body.appendChild(host);
-  const controller = createFeedbackSupportController(host);
+  const controller = createReactRootController(host, (value: FeedbackSupportRenderModel) => <FeedbackSupportView {...value} />);
   controllers.push(controller);
   return { controller, host };
 }
@@ -63,13 +62,11 @@ afterEach(() => {
   document.body.textContent = '';
 });
 
-describe('Options feedback support React island', () => {
+describe('Options feedback support', () => {
   it('lays the feedback channels out as one row of tiles under the heading', () => {
     const { controller, host } = createFixture();
     act(() => controller.render(model));
 
-    expect(createFeedbackSupportApi().implementation).toBe('react');
-    expect(host.dataset.reactIsland).toBe('options-feedback-support');
     const nav = host.querySelector('nav._x_extension_feedback_support_links_2026_unique_');
     const tiles = nav?.querySelectorAll('a._x_extension_feedback_support_link_2026_unique_') || [];
     expect(tiles).toHaveLength(4);

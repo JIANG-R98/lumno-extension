@@ -292,7 +292,7 @@ function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
 
   render();
 
-  return { render, bindSettings };
+  return { render, bindSettings, destroy: () => controller.destroy() };
 }
 
 export { createGeneralSearchSection };

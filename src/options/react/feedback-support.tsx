@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { createReactRootController, type ReactRootController } from './root-controller';
 import { isNode } from '../../shared/dom-guards';
 
 export interface FeedbackSupportQr {
@@ -71,8 +70,6 @@ export interface FeedbackSupportRenderModel {
   items: FeedbackSupportItem[];
 }
 
-export type FeedbackSupportController =
-  ReactRootController<FeedbackSupportRenderModel>;
 
 const ACTION_CLASS = '_x_extension_shortcut_submit_2024_unique_ _x_extension_feedback_support_action_2026_unique_';
 const TILE_CLASS = '_x_extension_feedback_support_link_2026_unique_';
@@ -418,7 +415,7 @@ function FeedbackSupportDiagnosticsRow({ diagnostics }: { diagnostics: FeedbackS
   );
 }
 
-function FeedbackSupportView({ channels, diagnostics, heading, headingKey, help, items }: FeedbackSupportRenderModel) {
+export function FeedbackSupportView({ channels, diagnostics, heading, headingKey, help, items }: FeedbackSupportRenderModel) {
   return (
     <section
       className="_x_extension_feedback_support_section_2026_unique_"
@@ -472,22 +469,4 @@ function FeedbackSupportView({ channels, diagnostics, heading, headingKey, help,
       {diagnostics ? <FeedbackSupportDiagnosticsRow diagnostics={diagnostics} /> : null}
     </section>
   );
-}
-
-export function createFeedbackSupportController(
-  host: HTMLElement | null
-): FeedbackSupportController {
-  if (host) {
-    host.dataset.reactIsland = 'options-feedback-support';
-  }
-  return createReactRootController(host, (model) => (
-    <FeedbackSupportView {...model} />
-  ));
-}
-
-export function createFeedbackSupportApi() {
-  return Object.freeze({
-    implementation: 'react' as const,
-    createFeedbackSupportController
-  });
 }

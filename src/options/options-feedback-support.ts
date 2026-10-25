@@ -9,7 +9,7 @@
 import type { CommunityLinks } from '../domain/community-links';
 import type * as CommunityLinksApi from '../platform/community-links';
 import type { GetMessage } from './options-types';
-import type { FeedbackSupportController, FeedbackSupportRenderModel } from './react/feedback-support';
+import type { FeedbackSupportRenderModel } from './react/feedback-support';
 
 type FeedbackCommunityLinks = Pick<typeof CommunityLinksApi,
   'FALLBACK_LINKS' | 'getCommunityChannel' | 'getHelpUrl' | 'getReviewUrl' | 'load'>;
@@ -27,7 +27,7 @@ interface FeedbackSupportModelInput {
 
 interface FeedbackSupportSectionOptions {
   // The section's React controller; null when the section is not on the page.
-  controller: Pick<FeedbackSupportController, 'render'> | null;
+  controller: { render(model: FeedbackSupportRenderModel): void } | null;
   // The open-source licenses link beside the onboarding guide.
   licensesLink?: Pick<HTMLAnchorElement, 'href'> | null;
   communityLinks: FeedbackCommunityLinks;

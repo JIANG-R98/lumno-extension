@@ -1,11 +1,8 @@
-// Change handlers for the page's selects, segmented controls and toggles,
-// and the buttons that open the browser's shortcut page or onboarding.
+// Change handlers for the page's remaining selects and segmented controls.
 import type * as Settings from '../domain/settings';
 import type { NewtabGlassStyle } from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
-import * as LumnoMessaging from '../platform/messaging';
 import type { BatchedStorageArea } from '../platform/settings-storage';
-import type { GetMessage } from './options-types';
 
 interface ControlEventsState {
   storageArea: BatchedStorageArea | null;
@@ -17,8 +14,6 @@ interface ControlEventsState {
 }
 
 interface ControlEventsDeps {
-  languageSelect: HTMLSelectElement | null;
-  applyLanguageMode(mode: string, options?: { persist?: boolean }): unknown;
   newtabWidthSelect: HTMLSelectElement | null;
   handleNewtabWidthSelection(value: string): void;
   // The page's own segment buttons, until each control's view replaces them.
@@ -46,9 +41,6 @@ interface ControlEventsDeps {
   recentModeSelect: HTMLSelectElement | null;
   handleRecentModeSelection(value: string): void;
   recentModeTabButtons: Element[];
-  showToast(message: string, isError?: boolean): void;
-  getMessage: GetMessage;
-  openOnboardingPageButton: HTMLElement | null;
   refreshOptionsSelectItems(select: HTMLSelectElement): void;
   renderOverlayFontMissingNotices(): void;
   optionsState: ControlEventsState;
@@ -56,8 +48,6 @@ interface ControlEventsDeps {
 
 function createControlEvents(deps: ControlEventsDeps): void {
   const {
-    languageSelect,
-    applyLanguageMode,
     newtabWidthSelect,
     handleNewtabWidthSelection,
     newtabWidthTabButtons,
@@ -81,9 +71,6 @@ function createControlEvents(deps: ControlEventsDeps): void {
     recentModeSelect,
     handleRecentModeSelection,
     recentModeTabButtons,
-    showToast,
-    getMessage,
-    openOnboardingPageButton,
     refreshOptionsSelectItems,
     renderOverlayFontMissingNotices
   } = deps;
@@ -91,12 +78,6 @@ function createControlEvents(deps: ControlEventsDeps): void {
   // The page state object shared with options.js and the other modules.
   const optionsState = deps.optionsState;
 
-  if (languageSelect) {
-    languageSelect.addEventListener('change', () => {
-      const next = languageSelect.value || 'system';
-      applyLanguageMode(next, { persist: true });
-    });
-  }
 
   if (newtabWidthSelect) {
     newtabWidthSelect.addEventListener('change', () => {
@@ -193,19 +174,6 @@ function createControlEvents(deps: ControlEventsDeps): void {
     recentModeTabButtons.forEach((button) => {
       button.addEventListener('click', () => {
         handleRecentModeSelection(button.getAttribute('data-recent-mode') || '');
-      });
-    });
-  }
-  if (openOnboardingPageButton) {
-    openOnboardingPageButton.addEventListener('click', () => {
-      LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openOnboardingPage' }, (response) => {
-        if (chrome.runtime.lastError) {
-          showToast(getMessage('toast_error', '操作失败，请重试。'), true);
-          return;
-        }
-        if (!response || response.ok === false) {
-          showToast(getMessage('toast_error', '操作失败，请重试。'), true);
-        }
       });
     });
   }

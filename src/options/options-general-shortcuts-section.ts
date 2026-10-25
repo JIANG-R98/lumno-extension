@@ -143,6 +143,7 @@ function createGeneralShortcutsSection(deps: GeneralShortcutsSectionDeps) {
     render,
     bindSettings,
     setStatus,
+    destroy: () => controller.destroy(),
     // Where the shortcut list module draws its rows.
     referenceList: {
       render(model: ShortcutReferenceRenderModel) {

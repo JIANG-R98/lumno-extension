@@ -7,6 +7,8 @@ import type { SettingSpec } from './options-setting-bindings';
 import { createSettingsControlsApi } from './react/settings-controls';
 import { getElement, getTag, getTags } from '../../tests/react/dom';
 
+const sections: Array<{ destroy(): void }> = [];
+
 const SOURCE_TYPES_KEY = Settings.SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY;
 const RESET = '_x_extension_search_result_source_types_reset_2026_unique_';
 
@@ -45,6 +47,7 @@ function setUp(stored: StorageItems = {}) {
     getViewportTopInset: () => 0,
     hideTooltip
   });
+  sections.push(section);
   const changes = new Map<string, (raw: unknown) => void>();
   section.bindSettings({
     bindSetting<V>(spec: SettingSpec<V>): void {
@@ -59,6 +62,7 @@ const sourceValues = (host: HTMLElement) => getTags(host, '#_x_extension_search_
   .map((label) => label.dataset.value);
 
 afterEach(() => {
+  act(() => sections.splice(0).forEach((section) => section.destroy()));
   document.body.textContent = '';
 });
 

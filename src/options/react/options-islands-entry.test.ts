@@ -8,9 +8,6 @@ function clearRuntime(): void {
   Reflect.deleteProperty(runtime, 'LumnoOptionsReactIslands');
   Reflect.deleteProperty(runtime, 'LumnoOptionsBlacklistTab');
   Reflect.deleteProperty(runtime, 'LumnoOptionsBlacklistTabReact');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsFeedbackSupport');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsFeedbackSupportReact');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsTranslationHelp');
   Reflect.deleteProperty(runtime, 'LumnoOptionsInfoButton');
   Reflect.deleteProperty(runtime, 'LumnoOptionsInfoButtonReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSegmentedControl');
@@ -51,10 +48,6 @@ describe('Options React islands entry', () => {
     expect(runtime.LumnoOptionsBlacklistTabReact).toBe(
       runtime.LumnoOptionsBlacklistTab
     );
-    expect(runtime.LumnoOptionsFeedbackSupport?.implementation).toBe('react');
-    expect(runtime.LumnoOptionsFeedbackSupportReact).toBe(
-      runtime.LumnoOptionsFeedbackSupport
-    );
     expect(runtime.LumnoOptionsInfoButton?.implementation).toBe('react');
     expect(runtime.LumnoOptionsInfoButtonReact).toBe(
       runtime.LumnoOptionsInfoButton
@@ -79,7 +72,6 @@ describe('Options React islands entry', () => {
     expect(runtime.LumnoOptionsThemePickerReact).toBe(
       runtime.LumnoOptionsThemePicker
     );
-    expect(runtime.LumnoOptionsTranslationHelp?.implementation).toBe('react');
     expect(runtime.LumnoOptionsToast?.implementation).toBe('react');
     expect(runtime.LumnoOptionsToastReact).toBe(runtime.LumnoOptionsToast);
     expect(runtime.LumnoOverlayTabSwitcherView?.implementation).toBe('react');
@@ -88,7 +80,6 @@ describe('Options React islands entry', () => {
     );
     expect(runtime.LumnoOptionsReactIslands).toEqual({
       blacklistTab: runtime.LumnoOptionsBlacklistTab,
-      feedbackSupport: runtime.LumnoOptionsFeedbackSupport,
       infoButton: runtime.LumnoOptionsInfoButton,
       segmentedControl: runtime.LumnoOptionsSegmentedControl,
       selectControl: runtime.LumnoOptionsSelectControl,
@@ -97,7 +88,6 @@ describe('Options React islands entry', () => {
       accountTab: runtime.LumnoOptionsAccountTab,
       shortcutsTab: runtime.LumnoOptionsShortcutsTab,
       themePicker: runtime.LumnoOptionsThemePicker,
-      translationHelp: runtime.LumnoOptionsTranslationHelp,
       toast: runtime.LumnoOptionsToast,
       tabSwitcher: runtime.LumnoOverlayTabSwitcherView
     });

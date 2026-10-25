@@ -1,11 +1,9 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { JSDOM } = require('jsdom');
 const settings = require('../../src/domain/settings.ts');
 const { parsePageCss } = require('../helpers/css-rules');
 const { createOptionsPage } = require('../helpers/options-page');
-const { readPageSource } = require('../helpers/page-source');
 const { getPageScripts } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -20,12 +18,14 @@ const ACTION_KEYS = [
 ];
 const readMessages = (locale) => JSON.parse(fs.readFileSync(path.join(repoRoot, `_locales/${locale}/messages.json`), 'utf8'));
 
-function testMarkupAndStyles() {
-  const doc = new JSDOM(readPageSource('src/options/options.html')).window.document;
-  const host = doc.getElementById(HOST_ID);
-  const globalSettings = doc.querySelector('[data-i18n="settings_global_section_title"]');
-  assert.ok(host, 'general settings should include the feedback support React host');
+async function testMarkupAndStyles() {
+  const page = await createOptionsPage({});
+  await page.settle(80);
+  const host = page.byId(HOST_ID);
+  const globalSettings = page.byId('_x_extension_open_licenses_2026_unique_');
+  assert.ok(host && host.closest('[data-content="general"]'), 'general settings should include the feedback support host');
   assert.ok(host.compareDocumentPosition(globalSettings) & 4, 'feedback support should appear above global settings');
+  page.close();
   const css = parsePageCss('src/options/options.html');
   const links = css.rule('._x_extension_feedback_support_links_2026_unique_');
   assert.deepStrictEqual(links && ['display', 'grid-auto-flow', 'grid-auto-columns'].map((name) => links.get(name)), ['grid', 'column', 'minmax(0, 1fr)'],
@@ -121,7 +121,7 @@ async function testHelpCenterAskFollowsTheSiteSearch() {
 }
 
 (async () => {
-  testMarkupAndStyles();
+  await testMarkupAndStyles();
   testCopy();
   await testChannels();
   await testHelpCenterAskFollowsTheSiteSearch();
