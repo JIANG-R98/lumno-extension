@@ -3,7 +3,7 @@ import type { FaviconUrlResolver, ThemeRgb } from '../../domain/favicon/favicon-
 import type * as ShortcutFavicon from '../../domain/favicon/shortcut-favicon';
 import type * as SearchUtils from '../../domain/search/search-utils';
 import type { SiteSearchProvider } from '../../domain/search/types';
-import type { ThemeLike, ThemeVariant } from '../../shared/favicon/favicon-theme';
+import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 
 interface SuggestionThemesState {
   defaultTheme: ThemeVariant;
@@ -26,7 +26,7 @@ interface SuggestionThemesDeps {
   defaultAccentColor: ThemeRgb;
   shouldBlockOverlayFaviconForHost(hostname: string): boolean;
   getProviderIcon(provider: SiteSearchProvider): string;
-  getThemeForMode(theme: ThemeLike): ThemeVariant;
+  getThemeForMode(theme: ThemeVariant): ThemeVariant;
   overlayState: SuggestionThemesState;
 }
 
@@ -488,7 +488,7 @@ function createSuggestionThemes(deps: SuggestionThemesDeps) {
     return null;
   }
 
-  function applyThemeVariables(target: HTMLElement | null, theme: ThemeLike | null): void {
+  function applyThemeVariables(target: HTMLElement | null, theme: ThemeVariant | null): void {
     if (!target || !theme) {
       return;
     }
@@ -504,7 +504,7 @@ function createSuggestionThemes(deps: SuggestionThemesDeps) {
     target.style.setProperty('--x-ext-icon-color', resolvedTheme.accent);
   }
 
-  function applyMarkVariables(target: HTMLElement | null, theme: ThemeLike | null, active: boolean): void {
+  function applyMarkVariables(target: HTMLElement | null, theme: ThemeVariant | null, active: boolean): void {
     if (!target || !theme) {
       return;
     }

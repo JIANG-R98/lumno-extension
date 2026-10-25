@@ -568,9 +568,10 @@ function resolveDarkModeOption(options: ThemeModeOptions | null | undefined): bo
   return Boolean(options && options.isDarkMode);
 }
 
-function getThemeForMode(theme: ThemeLike | null | undefined, options?: ThemeModeOptions | null): ThemeLike {
+// The theme as given in light mode, or its dark variant, built once.
+function getThemeForMode<T extends ThemeLike>(theme: T | null | undefined, options?: ThemeModeOptions | null): T | ThemeVariant {
   const fallbackTheme = options && options.defaultTheme ? options.defaultTheme : createDefaultTheme();
-  const sourceTheme: ThemeLike = theme || fallbackTheme;
+  const sourceTheme: T | ThemeVariant = theme || fallbackTheme;
   if (!resolveDarkModeOption(options)) {
     return sourceTheme;
   }

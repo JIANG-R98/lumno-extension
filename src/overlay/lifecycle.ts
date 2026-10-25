@@ -1,7 +1,68 @@
-function createChromeEventListenerRegistry(eventTarget) {
-  const listeners = new Set();
+// A chrome.* event such as chrome.storage.onChanged.
+interface ChromeEventLike<L> {
+  addListener(listener: L): void;
+  removeListener(listener: L): void;
+}
 
-  function add(listener) {
+// A window with its own constructors and timers.
+type HostWindow = Window & typeof globalThis;
+
+interface OverlaySizePreset {
+  width: number;
+  maxHeightVh: number;
+  uiScale: number;
+}
+
+interface ViewportSizeSyncConfig {
+  getSizePreset?(): Partial<OverlaySizePreset> | null;
+  // The page's zoom when the overlay opened, which the panel undoes.
+  getRequestedTabZoomFactor?(): unknown;
+  shouldIgnoreTabZoomCompensation?(): unknown;
+}
+
+interface MountConnectionGuardConfig {
+  getMountParent?(doc: Document): Element | null;
+  // Runs after the host was put back into the page.
+  onRestore?(host: Element, parent: Element): void;
+}
+
+// The page guards' hooks the anti-translate guard calls.
+interface AntiTranslateGuardHelpers {
+  applyNoTranslateDeep?(node: Element): unknown;
+  restoreProtectedNode?(node: Element): boolean;
+  restoreProtectedAncestors?(node: Node, root: Element): boolean;
+}
+
+interface AntiTranslateGuardState {
+  root: Element;
+  flushTimer: number | null;
+  pendingProtectedNodes: Set<Element>;
+  pendingNoTranslateRoots: Set<Element>;
+  guardWindowStartedAt: number;
+  mutationCountInWindow: number;
+  callbackCountInWindow: number;
+  paused: boolean;
+  // 'transient' for a scroll or a burst of changes, 'backoff' when the
+  // page changed too much.
+  pauseReason: '' | 'transient' | 'backoff';
+  resumeTimer: number | null;
+}
+
+interface SessionDestroyOptions {
+  preserveLoadingIntent: boolean;
+  animateExit: boolean;
+}
+
+// Read through a call, so a check made before the host moved is not reused.
+function isInDocument(element: Element): boolean {
+  return element.isConnected === true;
+}
+
+// Every listener added through it, removed together by clear().
+function createChromeEventListenerRegistry<L extends (...args: never[]) => unknown>(eventTarget: ChromeEventLike<L> | null) {
+  const listeners = new Set<L>();
+
+  function add(listener: L): L | null {
     if (!eventTarget || typeof eventTarget.addListener !== 'function' ||
         typeof listener !== 'function') {
       return null;
@@ -14,7 +75,7 @@ function createChromeEventListenerRegistry(eventTarget) {
     return listener;
   }
 
-  function remove(listener) {
+  function remove(listener: L): boolean {
     if (!listeners.has(listener)) {
       return false;
     }
@@ -25,7 +86,7 @@ function createChromeEventListenerRegistry(eventTarget) {
     return true;
   }
 
-  function clear() {
+  function clear(): void {
     Array.from(listeners).forEach(remove);
   }
 
@@ -37,12 +98,12 @@ function createChromeEventListenerRegistry(eventTarget) {
   });
 }
 
-function createFrameTracker(win) {
+function createFrameTracker(win?: Window | null) {
   const targetWindow = win || window;
-  let enterRafA = null;
-  let enterRafB = null;
+  let enterRafA: number | null = null;
+  let enterRafB: number | null = null;
 
-  function clear() {
+  function clear(): void {
     if (enterRafA !== null) {
       targetWindow.cancelAnimationFrame(enterRafA);
       enterRafA = null;
@@ -53,7 +114,8 @@ function createFrameTracker(win) {
     }
   }
 
-  function runEnterAnimation(element, applyVisibleState) {
+  // Runs applyVisibleState two frames later, once the start state painted.
+  function runEnterAnimation(element: Element | null, applyVisibleState: () => void): void {
     clear();
     if (!element || typeof applyVisibleState !== 'function') {
       return;
@@ -76,50 +138,56 @@ function createFrameTracker(win) {
   });
 }
 
-function createViewportSizeSync(win, config) {
+function createViewportSizeSync(win?: Window | null, config?: ViewportSizeSyncConfig | null) {
   const targetWindow = win || window;
-  const settings = config && typeof config === 'object' ? config : {};
-  let resizeHandler = null;
-  let visualViewportTarget = null;
-  let baseDevicePixelRatio = null;
-  let baseTopPx = null;
+  const settings: ViewportSizeSyncConfig = config && typeof config === 'object' ? config : {};
+  let resizeHandler: (() => void) | null = null;
+  let visualViewportTarget: VisualViewport | null = null;
+  let baseDevicePixelRatio: number | null = null;
+  let baseTopPx: number | null = null;
   let initialTabZoomFactor = 1;
 
-  function getSizePreset() {
+  function getSizePreset(): Partial<OverlaySizePreset> {
     if (typeof settings.getSizePreset === 'function') {
       return settings.getSizePreset() || {};
     }
     return { width: 760, maxHeightVh: 75, uiScale: 1 };
   }
 
-  function getRequestedTabZoomFactor() {
+  function getRequestedTabZoomFactor(): number {
     const raw = typeof settings.getRequestedTabZoomFactor === 'function'
       ? settings.getRequestedTabZoomFactor()
       : 1;
     return Number.isFinite(Number(raw)) && Number(raw) > 0 ? Number(raw) : 1;
   }
 
-  function getVisualViewportScale(visualViewport) {
+  function getVisualViewportScale(visualViewport: VisualViewport | null): number {
     const raw = visualViewport && Number.isFinite(Number(visualViewport.scale))
       ? Number(visualViewport.scale)
       : 1;
     return raw > 0 ? raw : 1;
   }
 
-  function getVisualViewportOffset(visualViewport, key) {
+  function getVisualViewportOffset(visualViewport: VisualViewport | null, key: 'offsetLeft' | 'offsetTop'): number {
     const raw = visualViewport && Number.isFinite(Number(visualViewport[key]))
       ? Number(visualViewport[key])
       : 0;
     return raw > 0 ? raw : 0;
   }
 
-  function shouldIgnoreTabZoomCompensation() {
+  function shouldIgnoreTabZoomCompensation(): boolean {
     return typeof settings.shouldIgnoreTabZoomCompensation === 'function'
       ? Boolean(settings.shouldIgnoreTabZoomCompensation())
       : false;
   }
 
-  function getViewportSize() {
+  function getViewportSize(): {
+    viewportWidth: number;
+    viewportHeight: number;
+    visualViewportScale: number;
+    visualViewportOffsetLeft: number;
+    visualViewportOffsetTop: number;
+  } {
     const doc = targetWindow.document;
     const visualViewport = targetWindow.visualViewport;
     const viewportWidth = visualViewport && Number.isFinite(visualViewport.width) && visualViewport.width > 0
@@ -138,7 +206,8 @@ function createViewportSizeSync(win, config) {
     };
   }
 
-  function apply(overlayElement) {
+  // Sizes and places the panel so it looks the same at any page zoom.
+  function apply(overlayElement: HTMLElement | null): void {
     if (!overlayElement || !overlayElement.isConnected) {
       return;
     }
@@ -147,7 +216,7 @@ function createViewportSizeSync(win, config) {
     const currentDpr = Number.isFinite(targetWindow.devicePixelRatio) && targetWindow.devicePixelRatio > 0
       ? targetWindow.devicePixelRatio
       : 1;
-    const baseDpr = Number.isFinite(baseDevicePixelRatio) && baseDevicePixelRatio > 0
+    const baseDpr = baseDevicePixelRatio !== null && Number.isFinite(baseDevicePixelRatio) && baseDevicePixelRatio > 0
       ? baseDevicePixelRatio
       : currentDpr;
     const dprScaleDelta = currentDpr / baseDpr;
@@ -161,7 +230,7 @@ function createViewportSizeSync(win, config) {
     const zoomScale = layoutZoomScale * visualViewportScale;
     const safeZoomScale = Math.max(0.5, Math.min(3, zoomScale));
     const safeVisualViewportScale = Math.max(0.5, Math.min(3, visualViewportScale));
-    const presetUiScale = Number.isFinite(sizePreset.uiScale) && sizePreset.uiScale > 0
+    const presetUiScale = sizePreset.uiScale !== undefined && Number.isFinite(sizePreset.uiScale) && sizePreset.uiScale > 0
       ? sizePreset.uiScale
       : 1;
     const finalOverlayZoom = (1 / safeZoomScale) * presetUiScale;
@@ -172,7 +241,7 @@ function createViewportSizeSync(win, config) {
     const baseLeft = viewport.viewportWidth * 0.5;
     const compensatedLeft = viewport.visualViewportOffsetLeft +
       (baseLeft / safeVisualViewportScale);
-    const baseTop = Number.isFinite(baseTopPx) && baseTopPx > 0
+    const baseTop = baseTopPx !== null && Number.isFinite(baseTopPx) && baseTopPx > 0
       ? baseTopPx
       : (viewport.viewportHeight * 0.2);
     const compensatedTop = viewport.visualViewportOffsetTop +
@@ -190,7 +259,7 @@ function createViewportSizeSync(win, config) {
     }
   }
 
-  function stop() {
+  function stop(): void {
     if (!resizeHandler) {
       baseDevicePixelRatio = null;
       baseTopPx = null;
@@ -209,7 +278,7 @@ function createViewportSizeSync(win, config) {
     initialTabZoomFactor = 1;
   }
 
-  function start(overlayElement) {
+  function start(overlayElement: HTMLElement | null): void {
     stop();
     if (!overlayElement) {
       return;
@@ -221,13 +290,14 @@ function createViewportSizeSync(win, config) {
     const viewport = getViewportSize();
     const visualViewport = targetWindow.visualViewport;
     baseTopPx = viewport.viewportHeight * 0.2;
-    resizeHandler = () => {
+    const handler = (): void => {
       apply(overlayElement);
     };
-    targetWindow.addEventListener('resize', resizeHandler);
+    resizeHandler = handler;
+    targetWindow.addEventListener('resize', handler);
     if (visualViewport && typeof visualViewport.addEventListener === 'function') {
-      visualViewport.addEventListener('resize', resizeHandler);
-      visualViewport.addEventListener('scroll', resizeHandler);
+      visualViewport.addEventListener('resize', handler);
+      visualViewport.addEventListener('scroll', handler);
       visualViewportTarget = visualViewport;
     }
     apply(overlayElement);
@@ -240,23 +310,25 @@ function createViewportSizeSync(win, config) {
   });
 }
 
-function createMountConnectionGuard(win, config) {
+// Puts the overlay's host back when the page removes it (a framework
+// re-rendering <html>, or entering fullscreen elsewhere).
+function createMountConnectionGuard(win?: HostWindow | null, config?: MountConnectionGuardConfig | null) {
   const targetWindow = win || window;
-  const settings = config && typeof config === 'object' ? config : {};
+  const settings: MountConnectionGuardConfig = config && typeof config === 'object' ? config : {};
   const doc = targetWindow.document;
   const MutationObserverCtor = targetWindow.MutationObserver;
   const MAX_RESTORE_ATTEMPTS = 4;
   const RESTORE_RETRY_MS = 16;
 
   let active = false;
-  let mountHost = null;
-  let documentObserver = null;
-  let parentObserver = null;
-  let observedParent = null;
-  let restoreTimer = null;
+  let mountHost: Element | null = null;
+  let documentObserver: MutationObserver | null = null;
+  let parentObserver: MutationObserver | null = null;
+  let observedParent: Node | null = null;
+  let restoreTimer: number | null = null;
   let restoreAttempts = 0;
 
-  function clearRestoreTimer() {
+  function clearRestoreTimer(): void {
     if (restoreTimer === null) {
       return;
     }
@@ -264,12 +336,12 @@ function createMountConnectionGuard(win, config) {
     restoreTimer = null;
   }
 
-  function resolveMountParent() {
-    let candidate = null;
+  function resolveMountParent(): Element | null {
+    let candidate: Element | null = null;
     if (typeof settings.getMountParent === 'function') {
       try {
         candidate = settings.getMountParent(doc);
-      } catch (error) {
+      } catch (_error) {
         candidate = null;
       }
     }
@@ -283,26 +355,26 @@ function createMountConnectionGuard(win, config) {
     return candidate;
   }
 
-  function observeParent(parent) {
+  function observeParent(parent: Node | null): void {
     if (!active || !parent || typeof MutationObserverCtor !== 'function') {
       return;
     }
-    if (!parentObserver) {
-      parentObserver = new MutationObserverCtor(() => {
-        if (active && mountHost && mountHost.isConnected !== true) {
-          scheduleRestore();
-        }
-      });
-    }
+    const observer = parentObserver || new MutationObserverCtor(() => {
+      if (active && mountHost && mountHost.isConnected !== true) {
+        scheduleRestore();
+      }
+    });
+    parentObserver = observer;
     if (observedParent === parent) {
       return;
     }
-    parentObserver.disconnect();
+    observer.disconnect();
     observedParent = parent;
-    parentObserver.observe(parent, { childList: true });
+    observer.observe(parent, { childList: true });
   }
 
-  function ensureConnected() {
+  // Puts the host back if it left the page; true when it is in the page.
+  function ensureConnected(): boolean {
     if (!active || !mountHost) {
       return false;
     }
@@ -318,24 +390,24 @@ function createMountConnectionGuard(win, config) {
     observeParent(parent);
     try {
       parent.appendChild(mountHost);
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
-    if (mountHost.isConnected !== true) {
+    if (!isInDocument(mountHost)) {
       return false;
     }
     restoreAttempts = 0;
     if (typeof settings.onRestore === 'function') {
       try {
         settings.onRestore(mountHost, parent);
-      } catch (error) {
+      } catch (_error) {
         // Reconnection itself succeeded; optional UI restoration is best effort.
       }
     }
     return true;
   }
 
-  function scheduleRestore() {
+  function scheduleRestore(): void {
     if (!active || !mountHost || mountHost.isConnected === true || restoreTimer !== null) {
       return;
     }
@@ -352,7 +424,7 @@ function createMountConnectionGuard(win, config) {
     }, delay);
   }
 
-  function handleDocumentMutation() {
+  function handleDocumentMutation(): void {
     if (!active || !mountHost) {
       return;
     }
@@ -364,7 +436,7 @@ function createMountConnectionGuard(win, config) {
     }
   }
 
-  function start(host) {
+  function start(host: Element | null): void {
     stop();
     if (!host) {
       return;
@@ -372,8 +444,9 @@ function createMountConnectionGuard(win, config) {
     active = true;
     mountHost = host;
     if (doc && typeof MutationObserverCtor === 'function') {
-      documentObserver = new MutationObserverCtor(handleDocumentMutation);
-      documentObserver.observe(doc, { childList: true });
+      const observer = new MutationObserverCtor(handleDocumentMutation);
+      documentObserver = observer;
+      observer.observe(doc, { childList: true });
     }
     observeParent(host.parentNode || resolveMountParent());
     if (typeof targetWindow.addEventListener === 'function') {
@@ -384,7 +457,7 @@ function createMountConnectionGuard(win, config) {
     }
   }
 
-  function stop() {
+  function stop(): void {
     active = false;
     clearRestoreTimer();
     restoreAttempts = 0;
@@ -410,12 +483,14 @@ function createMountConnectionGuard(win, config) {
   });
 }
 
-function createAntiTranslateGuard(win, deps) {
+// Keeps page translators out of the panel: marks what the panel adds as
+// not to translate, and backs off when the page changes too much to watch.
+function createAntiTranslateGuard(win?: HostWindow | null, deps?: AntiTranslateGuardHelpers | null) {
   const targetWindow = win || window;
-  const helpers = deps && typeof deps === 'object' ? deps : {};
+  const helpers: AntiTranslateGuardHelpers = deps && typeof deps === 'object' ? deps : {};
   const applyNoTranslateDeep = typeof helpers.applyNoTranslateDeep === 'function'
     ? helpers.applyNoTranslateDeep
-    : (node) => node;
+    : (node: Element) => node;
   const restoreProtectedNode = typeof helpers.restoreProtectedNode === 'function'
     ? helpers.restoreProtectedNode
     : () => false;
@@ -430,11 +505,15 @@ function createAntiTranslateGuard(win, deps) {
   const BACKOFF_MS = 900;
   const SCROLL_PAUSE_MS = 180;
 
-  let observer = null;
-  let state = null;
-  let scrollPauseResumeTimer = null;
+  let observer: MutationObserver | null = null;
+  let state: AntiTranslateGuardState | null = null;
+  let scrollPauseResumeTimer: number | null = null;
 
-  function observeRoot(root) {
+  function isElementNode(node: Node): node is Element {
+    return node.nodeType === NodeCtor.ELEMENT_NODE;
+  }
+
+  function observeRoot(root: Element): void {
     if (!observer || !root || !root.isConnected) {
       return;
     }
@@ -445,11 +524,11 @@ function createAntiTranslateGuard(win, deps) {
     });
   }
 
-  function restoreProtectedSubtree(root) {
+  function restoreProtectedSubtree(root: Element): void {
     if (!root || !NodeCtor || root.nodeType !== NodeCtor.ELEMENT_NODE) {
       return;
     }
-    const nodes = [root];
+    const nodes: Element[] = [root];
     if (typeof root.querySelectorAll === 'function') {
       root.querySelectorAll('*').forEach((node) => {
         nodes.push(node);
@@ -460,7 +539,7 @@ function createAntiTranslateGuard(win, deps) {
     });
   }
 
-  function stop() {
+  function stop(): void {
     if (scrollPauseResumeTimer !== null) {
       targetWindow.clearTimeout(scrollPauseResumeTimer);
       scrollPauseResumeTimer = null;
@@ -478,7 +557,7 @@ function createAntiTranslateGuard(win, deps) {
     }
   }
 
-  function pauseForTransientMutations() {
+  function pauseForTransientMutations(): void {
     const activeState = state;
     if (!activeState || activeState.resumeTimer || activeState.pauseReason === 'backoff') {
       return;
@@ -520,7 +599,7 @@ function createAntiTranslateGuard(win, deps) {
     }, SCROLL_PAUSE_MS);
   }
 
-  function backoff(reason, detail) {
+  function backoff(reason: string, detail: Record<string, number> | null): void {
     const activeState = state;
     if (!activeState || activeState.paused) {
       return;
@@ -562,12 +641,12 @@ function createAntiTranslateGuard(win, deps) {
         reason: reason || 'unknown',
         detail: detail || null
       });
-    } catch (error) {
+    } catch (_error) {
       // Ignore console serialization failures.
     }
   }
 
-  function start(root) {
+  function start(root: Element | null): void {
     stop();
     if (!root || typeof MutationObserverCtor !== 'function') {
       return;
@@ -585,7 +664,7 @@ function createAntiTranslateGuard(win, deps) {
       pauseReason: '',
       resumeTimer: null
     };
-    observer = new MutationObserverCtor((mutations) => {
+    observer = new MutationObserverCtor((mutations: MutationRecord[]) => {
       const activeState = state;
       if (isRestoring || !activeState || activeState.paused) {
         return;
@@ -607,23 +686,21 @@ function createAntiTranslateGuard(win, deps) {
         return;
       }
       mutations.forEach((mutation) => {
-        if (mutation.target) {
-          const restored = restoreProtectedAncestors(mutation.target, root);
-          if (!restored && mutation.target.nodeType === NodeCtor.ELEMENT_NODE) {
-            activeState.pendingNoTranslateRoots.add(mutation.target);
+        const target = mutation.target;
+        if (target) {
+          const restored = restoreProtectedAncestors(target, root);
+          if (!restored && isElementNode(target)) {
+            activeState.pendingNoTranslateRoots.add(target);
           }
         }
         mutation.addedNodes.forEach((node) => {
-          if (node.nodeType === NodeCtor.ELEMENT_NODE) {
+          if (isElementNode(node)) {
             activeState.pendingNoTranslateRoots.add(node);
           }
-          let current = node && node.nodeType === NodeCtor.ELEMENT_NODE
-            ? node
-            : node && node.parentElement
-              ? node.parentElement
-              : null;
+          let current: Element | null = isElementNode(node) ? node : node.parentElement;
           while (current) {
-            if (typeof current._xProtectedRender === 'function') {
+            // An element that renders itself again after a translator.
+            if ('_xProtectedRender' in current && typeof current._xProtectedRender === 'function') {
               activeState.pendingProtectedNodes.add(current);
               break;
             }
@@ -678,20 +755,22 @@ function createAntiTranslateGuard(win, deps) {
 // Teardown steps owned by one overlay session, run newest first. A failing
 // step never keeps the rest of the session alive.
 function createSessionCleanupRegistry() {
-  const cleanups = [];
+  const cleanups: Array<() => void> = [];
   return Object.freeze({
-    add(cleanup) {
+    add(cleanup: () => void): () => void {
       if (typeof cleanup === 'function') {
         cleanups.push(cleanup);
       }
       return cleanup;
     },
-    run() {
+    run(): void {
       while (cleanups.length > 0) {
         const cleanup = cleanups.pop();
         try {
-          cleanup();
-        } catch (error) {
+          if (cleanup) {
+            cleanup();
+          }
+        } catch (_error) {
           // Keep releasing the remaining steps.
         }
       }
@@ -711,12 +790,17 @@ const SESSION_DESTROY_EVENT = '_x_extension_overlay_session_destroy_2026_unique_
 const SESSION_PRESERVE_LOADING_INTENT = 'preserve-loading-intent';
 const SESSION_ANIMATE_EXIT = 'animate-exit';
 
-function onSessionDestroyRequest(host, destroy) {
+function readEventDetail(event: Event): unknown {
+  return 'detail' in event ? event.detail : undefined;
+}
+
+function onSessionDestroyRequest(host: EventTarget | null, destroy: (options: SessionDestroyOptions) => void): () => void {
   if (!host || typeof host.addEventListener !== 'function' || typeof destroy !== 'function') {
     return () => {};
   }
-  const handleDestroyRequest = (event) => {
-    const animateExit = Boolean(event) && event.detail === SESSION_ANIMATE_EXIT;
+  const handleDestroyRequest = (event: Event): void => {
+    const detail = readEventDetail(event);
+    const animateExit = Boolean(event) && detail === SESSION_ANIMATE_EXIT;
     // An animated exit keeps listening, so a later request (a press that
     // reopens the overlay) can still finish the session at once.
     if (!animateExit) {
@@ -724,7 +808,7 @@ function onSessionDestroyRequest(host, destroy) {
     }
     destroy({
       preserveLoadingIntent: Boolean(event) &&
-        event.detail === SESSION_PRESERVE_LOADING_INTENT,
+        detail === SESSION_PRESERVE_LOADING_INTENT,
       animateExit
     });
   };
@@ -736,7 +820,10 @@ function onSessionDestroyRequest(host, destroy) {
 
 // Asks the session mounted on `host` to tear itself down. Returns true when
 // the host has left the document afterwards.
-function requestSessionDestroy(host, options) {
+function requestSessionDestroy(
+  host: Element | null,
+  options?: { preserveLoadingIntent?: boolean; animateExit?: boolean } | null
+): boolean {
   if (!host || typeof host.dispatchEvent !== 'function') {
     return false;
   }
@@ -764,3 +851,4 @@ export {
   onSessionDestroyRequest,
   requestSessionDestroy
 };
+export type { AntiTranslateGuardHelpers, MountConnectionGuardConfig, OverlaySizePreset, SessionDestroyOptions, ViewportSizeSyncConfig };

@@ -1,8 +1,56 @@
+type PageTheme = 'dark' | 'light';
+
+// An [r, g, b] triple, each 0 to 255.
+type Rgb = number[];
+
+interface ParsedColor {
+  rgb: Rgb;
+  alpha: number;
+}
+
+// One hint at the page's theme, and how much it counts.
+interface ThemeSignal {
+  theme: PageTheme;
+  confidence: number;
+  weight: number;
+}
+
+// Where the viewport is sampled, as fractions of its size.
+interface SamplePoint {
+  x: number;
+  y: number;
+  weight: number;
+}
+
+interface VisualThemeSignal {
+  // Null when the samples are too mixed to call.
+  theme: PageTheme | null;
+  suggestedTheme: PageTheme;
+  confidence: number;
+  score: number;
+  sampleCount: number;
+}
+
+interface PageThemeOptions {
+  document?: Document | null;
+  window?: Window | null;
+  points?: readonly SamplePoint[];
+  // Reads the theme-color meta as an [r, g, b] triple.
+  parseThemeColorRgb?: (color: string) => Rgb | null;
+}
+
+interface ThemeModeOptions {
+  // 'dark', 'light', or anything else for the system setting.
+  mode?: string;
+  pageThemeAdaptationEnabled?: boolean;
+  systemTheme?: string;
+}
+
 const OVERLAY_PANEL_ID = '_x_extension_overlay_2024_unique_';
 const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
-const DEFAULT_CANVAS_RGB = [255, 255, 255];
+const DEFAULT_CANVAS_RGB: readonly number[] = [255, 255, 255];
 const MAX_BACKGROUND_ANCESTORS = 10;
-const VIEWPORT_SAMPLE_POINTS = Object.freeze([
+const VIEWPORT_SAMPLE_POINTS: readonly SamplePoint[] = Object.freeze([
   { x: 0.28, y: 0.19, weight: 1.2 },
   { x: 0.39, y: 0.19, weight: 1.7 },
   { x: 0.5, y: 0.19, weight: 2.35 },
@@ -34,7 +82,7 @@ const VIEWPORT_SAMPLE_POINTS = Object.freeze([
   { x: 0.5, y: 0.78, weight: 0.35 }
 ]);
 
-function clampNumber(value, min, max) {
+function clampNumber(value: unknown, min: number, max: number): number {
   const number = Number(value);
   if (!Number.isFinite(number)) {
     return min;
@@ -42,7 +90,7 @@ function clampNumber(value, min, max) {
   return Math.min(max, Math.max(min, number));
 }
 
-function parseColorChannel(value) {
+function parseColorChannel(value: string): number {
   const text = String(value || '').trim();
   if (!text) {
     return NaN;
@@ -53,7 +101,7 @@ function parseColorChannel(value) {
   return clampNumber(Number(text), 0, 255);
 }
 
-function parseAlphaChannel(value) {
+function parseAlphaChannel(value: string): number {
   const text = String(value || '').trim();
   if (!text) {
     return 1;
@@ -64,7 +112,7 @@ function parseAlphaChannel(value) {
   return clampNumber(Number(text), 0, 1);
 }
 
-function parseHexColor(hex) {
+function parseHexColor(hex: string): ParsedColor | null {
   if (hex.length === 3 || hex.length === 4) {
     const red = parseInt(hex[0] + hex[0], 16);
     const green = parseInt(hex[1] + hex[1], 16);
@@ -87,13 +135,13 @@ function parseHexColor(hex) {
   return null;
 }
 
-function parseFunctionalColor(trimmed) {
+function parseFunctionalColor(trimmed: string): ParsedColor | null {
   const match = trimmed.match(/^rgba?\((.*)\)$/);
   if (!match) {
     return null;
   }
   const body = match[1].trim();
-  let parts = [];
+  let parts: string[] = [];
   let alpha = 1;
   if (body.includes(',')) {
     parts = body.split(',').map((part) => part.trim());
@@ -120,7 +168,7 @@ function parseFunctionalColor(trimmed) {
   return { rgb, alpha };
 }
 
-function parseCssColor(color) {
+function parseCssColor(color: unknown): ParsedColor | null {
   if (!color || typeof color !== 'string') {
     return null;
   }
@@ -137,7 +185,7 @@ function parseCssColor(color) {
   return parseFunctionalColor(trimmed);
 }
 
-function mixRgb(foreground, background, alpha) {
+function mixRgb(foreground: readonly number[], background: readonly number[], alpha: number): Rgb {
   const amount = clampNumber(alpha, 0, 1);
   return [
     Math.round((foreground[0] * amount) + (background[0] * (1 - amount))),
@@ -146,7 +194,7 @@ function mixRgb(foreground, background, alpha) {
   ];
 }
 
-function getRelativeLuminance(rgb) {
+function getRelativeLuminance(rgb: readonly number[] | null): number {
   if (!rgb || rgb.length !== 3) {
     return 0;
   }
@@ -157,7 +205,7 @@ function getRelativeLuminance(rgb) {
   return (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
 }
 
-function getPerceptualTone(rgb) {
+function getPerceptualTone(rgb: readonly number[] | null): number {
   if (!rgb || rgb.length !== 3) {
     return 0.5;
   }
@@ -168,7 +216,7 @@ function getPerceptualTone(rgb) {
   ) / 255;
 }
 
-function getCssColorThemeSignal(color, weight) {
+function getCssColorThemeSignal(color: unknown, weight: number): ThemeSignal | null {
   const parsed = parseCssColor(color);
   if (!parsed || parsed.alpha <= 0.08) {
     return null;
@@ -197,7 +245,8 @@ function getCssColorThemeSignal(color, weight) {
   return null;
 }
 
-function resolvePageThemeSignals(signals) {
+// The theme the signals agree on, or null when they are too weak or split.
+function resolvePageThemeSignals(signals: ReadonlyArray<ThemeSignal | null>): PageTheme | null {
   let totalScore = 0;
   let totalWeight = 0;
   (Array.isArray(signals) ? signals : []).forEach((signal) => {
@@ -228,18 +277,18 @@ function resolvePageThemeSignals(signals) {
   return null;
 }
 
-function getComputedStyleFor(win, element) {
+function getComputedStyleFor(win: Window | null, element: Element | null): CSSStyleDeclaration | null {
   if (!win || typeof win.getComputedStyle !== 'function' || !element) {
     return null;
   }
   try {
     return win.getComputedStyle(element);
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
 
-function isElementRenderable(style) {
+function isElementRenderable(style: CSSStyleDeclaration | null): boolean {
   if (!style) {
     return true;
   }
@@ -250,7 +299,7 @@ function isElementRenderable(style) {
   return !Number.isFinite(opacity) || opacity > 0.03;
 }
 
-function getElementId(element) {
+function getElementId(element: Element | null): string {
   if (!element) {
     return '';
   }
@@ -260,15 +309,15 @@ function getElementId(element) {
   return typeof element.getAttribute === 'function' ? String(element.getAttribute('id') || '') : '';
 }
 
-function hasTruthyAttribute(element, name) {
+function hasTruthyAttribute(element: Element, name: string): boolean {
   if (!element || typeof element.hasAttribute !== 'function') {
     return false;
   }
   return element.hasAttribute(name);
 }
 
-function isLumnoOverlayElement(element) {
-  let current = element;
+function isLumnoOverlayElement(element: Element): boolean {
+  let current: Element | null = element;
   let depth = 0;
   while (current && depth < MAX_BACKGROUND_ANCESTORS) {
     const id = getElementId(current);
@@ -285,7 +334,7 @@ function isLumnoOverlayElement(element) {
   return false;
 }
 
-function getViewportSize(doc, win) {
+function getViewportSize(doc: Document, win: Window): { width: number; height: number } {
   const visualViewport = win && win.visualViewport ? win.visualViewport : null;
   const width = Number(visualViewport && visualViewport.width) ||
     Number(win && win.innerWidth) ||
@@ -301,20 +350,22 @@ function getViewportSize(doc, win) {
   };
 }
 
-function getElementAtPoint(doc, x, y) {
+function getElementAtPoint(doc: Document, x: number, y: number): Element | null {
   if (!doc || typeof doc.elementFromPoint !== 'function') {
     return null;
   }
   try {
     return doc.elementFromPoint(x, y);
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
 
-function getCompositedBackgroundRgb(element, doc, win) {
-  const stack = [];
-  let current = element;
+// The background behind an element: its own and its ancestors' colors
+// laid over the white canvas.
+function getCompositedBackgroundRgb(element: Element, doc: Document, win: Window): { rgb: Rgb; hasExplicitBackground: boolean } {
+  const stack: Element[] = [];
+  let current: Element | null = element;
   let depth = 0;
   while (current && depth < MAX_BACKGROUND_ANCESTORS) {
     stack.push(current);
@@ -348,7 +399,7 @@ function getCompositedBackgroundRgb(element, doc, win) {
   };
 }
 
-function getElementTextRgb(element, win) {
+function getElementTextRgb(element: Element, win: Window): Rgb | null {
   const style = getComputedStyleFor(win, element);
   const parsed = parseCssColor(style && style.color);
   if (!parsed || parsed.alpha < 0.2) {
@@ -357,7 +408,7 @@ function getElementTextRgb(element, win) {
   return parsed.rgb;
 }
 
-function scoreThemeSample(element, weight, doc, win) {
+function scoreThemeSample(element: Element | null, weight: number, doc: Document, win: Window): { score: number; weight: number } | null {
   if (!element || isLumnoOverlayElement(element)) {
     return null;
   }
@@ -386,7 +437,7 @@ function scoreThemeSample(element, weight, doc, win) {
     vote += (backgroundTone - 0.5) * 0.7;
   }
 
-  if (textTone !== null) {
+  if (textRgb && textTone !== null) {
     const backgroundLuminance = getRelativeLuminance(backgroundRgb);
     const textLuminance = getRelativeLuminance(textRgb);
     const contrast = (Math.max(backgroundLuminance, textLuminance) + 0.05) /
@@ -406,8 +457,9 @@ function scoreThemeSample(element, weight, doc, win) {
   };
 }
 
-function detectPageVisualThemeSignal(options) {
-  const settings = options && typeof options === 'object' ? options : {};
+// The theme of what the viewport shows, from colors sampled across it.
+function detectPageVisualThemeSignal(options?: PageThemeOptions | null): VisualThemeSignal | null {
+  const settings: PageThemeOptions = options && typeof options === 'object' ? options : {};
   const doc = settings.document || (typeof document !== 'undefined' ? document : null);
   const win = settings.window || (doc && doc.defaultView) || (typeof window !== 'undefined' ? window : null);
   if (!doc || !win) {
@@ -451,19 +503,19 @@ function detectPageVisualThemeSignal(options) {
   };
 }
 
-function detectPageVisualTheme(options) {
+function detectPageVisualTheme(options?: PageThemeOptions | null): PageTheme | null {
   const signal = detectPageVisualThemeSignal(options);
   return signal && signal.theme ? signal.theme : null;
 }
 
-function pushThemeCandidate(candidates, element) {
+function pushThemeCandidate(candidates: Element[], element: Element | null): void {
   if (!element || candidates.includes(element)) {
     return;
   }
   candidates.push(element);
 }
 
-function getFirstElementByTagName(doc, tagName) {
+function getFirstElementByTagName(doc: Document, tagName: string): Element | null {
   if (typeof doc.getElementsByTagName !== 'function') {
     return null;
   }
@@ -474,10 +526,10 @@ function getFirstElementByTagName(doc, tagName) {
 // Elements whose class or theme attributes usually carry a site's explicit
 // light/dark choice: the root, the body, common app roots and the first
 // few body children.
-function getPageThemeCandidateElements(doc) {
+function getPageThemeCandidateElements(doc: Document): Element[] {
   const docEl = doc.documentElement;
   const body = doc.body;
-  const candidates = [];
+  const candidates: Element[] = [];
   pushThemeCandidate(candidates, docEl);
   pushThemeCandidate(candidates, body);
   ['app', 'root', '__next', '__nuxt'].forEach((id) => {
@@ -496,7 +548,7 @@ function getPageThemeCandidateElements(doc) {
   return candidates;
 }
 
-function classifyThemeToken(value) {
+function classifyThemeToken(value: string | null): PageTheme | null {
   const normalized = String(value || '').toLowerCase();
   if (!normalized) {
     return null;
@@ -524,7 +576,7 @@ function classifyThemeToken(value) {
 
 // Classifies one class token; business names such as "light-rays" or
 // "dark-veil" are not theme switches.
-function getThemeClassTokenTheme(token) {
+function getThemeClassTokenTheme(token: string): PageTheme | null {
   const normalized = String(token || '').toLowerCase().trim();
   if (!normalized) {
     return null;
@@ -546,7 +598,7 @@ function getThemeClassTokenTheme(token) {
   return null;
 }
 
-function getElementClassTheme(element) {
+function getElementClassTheme(element: Element | null): PageTheme | null {
   if (!element) {
     return null;
   }
@@ -567,7 +619,7 @@ function getElementClassTheme(element) {
   return null;
 }
 
-function getElementAttributeTheme(element) {
+function getElementAttributeTheme(element: Element | null): PageTheme | null {
   if (!element || typeof element.hasAttribute !== 'function') {
     return null;
   }
@@ -601,7 +653,7 @@ function getElementAttributeTheme(element) {
   return getElementClassTheme(element);
 }
 
-function getHeadMetaContent(doc, name) {
+function getHeadMetaContent(doc: Document, name: string): string {
   const head = doc.head;
   if (!head || typeof head.querySelector !== 'function') {
     return '';
@@ -610,11 +662,11 @@ function getHeadMetaContent(doc, name) {
   return meta ? String(meta.getAttribute('content') || '') : '';
 }
 
-function getThemeSignalWeight(weight) {
+function getThemeSignalWeight(weight: unknown): number {
   return Number.isFinite(Number(weight)) ? Math.max(0, Number(weight)) : 1;
 }
 
-function getThemeSignalFromLuminance(luminance, weight) {
+function getThemeSignalFromLuminance(luminance: number, weight: number): ThemeSignal | null {
   if (luminance < 0.42) {
     return {
       theme: 'dark',
@@ -632,7 +684,7 @@ function getThemeSignalFromLuminance(luminance, weight) {
   return null;
 }
 
-function getThemeSignalFromTheme(theme, weight, confidence) {
+function getThemeSignalFromTheme(theme: string | null | undefined, weight: number, confidence: number): ThemeSignal | null {
   if (theme !== 'dark' && theme !== 'light') {
     return null;
   }
@@ -647,7 +699,7 @@ function getThemeSignalFromTheme(theme, weight, confidence) {
   };
 }
 
-function getThemeSignalFromSchemeValue(value, weight) {
+function getThemeSignalFromSchemeValue(value: string, weight: number): ThemeSignal | null {
   const normalized = String(value || '').toLowerCase();
   if (!normalized) {
     return null;
@@ -663,7 +715,10 @@ function getThemeSignalFromSchemeValue(value, weight) {
   return null;
 }
 
-function normalizeThemeSignal(signal, defaultWeight) {
+function normalizeThemeSignal(
+  signal: { theme: PageTheme | null; confidence: number; weight?: number } | null,
+  defaultWeight: number
+): ThemeSignal | null {
   if (!signal || (signal.theme !== 'dark' && signal.theme !== 'light')) {
     return null;
   }
@@ -681,12 +736,15 @@ function normalizeThemeSignal(signal, defaultWeight) {
 // meta, root/body backgrounds and a visual sample of the viewport. No
 // single hint short-circuits the others. `parseThemeColorRgb` reads the
 // theme-color meta as an [r, g, b] triple (the favicon-theme parser).
-function detectPageTheme(options) {
-  const settings = options && typeof options === 'object' ? options : {};
+function detectPageTheme(options?: PageThemeOptions | null): PageTheme | null {
+  const settings: PageThemeOptions = options && typeof options === 'object' ? options : {};
   const doc = settings.document || (typeof document !== 'undefined' ? document : null);
   const win = settings.window || (doc && doc.defaultView) || null;
-  const docEl = doc ? doc.documentElement : null;
-  if (!docEl || !win) {
+  if (!doc || !win) {
+    return null;
+  }
+  const docEl = doc.documentElement;
+  if (!docEl) {
     return null;
   }
   const body = doc.body;
@@ -742,12 +800,12 @@ const PAGE_THEME_ATTRIBUTE_FILTER = Object.freeze([
 
 // Watches the host page for theme switches (root/body theme attributes and
 // head meta changes) and calls `onChange` at most once per frame.
-function createPageThemeObserver(win, onChange) {
+function createPageThemeObserver(win: Window & typeof globalThis, onChange: () => void) {
   const doc = win && win.document;
-  let observer = null;
-  let frame = null;
+  let observer: MutationObserver | null = null;
+  let frame: number | null = null;
 
-  function scheduleChange() {
+  function scheduleChange(): void {
     if (frame !== null) {
       return;
     }
@@ -759,21 +817,22 @@ function createPageThemeObserver(win, onChange) {
     });
   }
 
-  function start() {
+  function start(): void {
     if (observer || !doc || typeof win.MutationObserver !== 'function') {
       return;
     }
-    observer = new win.MutationObserver(scheduleChange);
+    const pageObserver = new win.MutationObserver(scheduleChange);
+    observer = pageObserver;
     [doc.documentElement, doc.body].forEach((element) => {
       if (element) {
-        observer.observe(element, {
+        pageObserver.observe(element, {
           attributes: true,
           attributeFilter: PAGE_THEME_ATTRIBUTE_FILTER.slice()
         });
       }
     });
     if (doc.head) {
-      observer.observe(doc.head, {
+      pageObserver.observe(doc.head, {
         childList: true,
         subtree: true,
         attributes: true,
@@ -783,7 +842,7 @@ function createPageThemeObserver(win, onChange) {
     scheduleChange();
   }
 
-  function stop() {
+  function stop(): void {
     if (frame !== null) {
       win.cancelAnimationFrame(frame);
       frame = null;
@@ -801,8 +860,10 @@ function createPageThemeObserver(win, onChange) {
   });
 }
 
-function resolveOverlayTheme(options) {
-  const settings = options && typeof options === 'object' ? options : {};
+// The panel's theme: the chosen mode, or in system mode the page's theme
+// when adapting to it, else the system's.
+function resolveOverlayTheme(options?: (ThemeModeOptions & { pageTheme?: string | null }) | null): PageTheme {
+  const settings: ThemeModeOptions & { pageTheme?: string | null } = options && typeof options === 'object' ? options : {};
   const mode = settings.mode === 'dark' || settings.mode === 'light'
     ? settings.mode
     : 'system';
@@ -818,13 +879,13 @@ function resolveOverlayTheme(options) {
   return settings.systemTheme === 'dark' ? 'dark' : 'light';
 }
 
-function shouldStrengthenDarkOverlayBackground(options) {
-  const settings = options && typeof options === 'object' ? options : {};
+function shouldStrengthenDarkOverlayBackground(options?: { resolvedTheme?: string; pageTheme?: string | null } | null): boolean {
+  const settings: { resolvedTheme?: string; pageTheme?: string | null } = options && typeof options === 'object' ? options : {};
   return settings.resolvedTheme === 'dark' && settings.pageTheme === 'light';
 }
 
-function shouldObservePageTheme(options) {
-  const settings = options && typeof options === 'object' ? options : {};
+function shouldObservePageTheme(options?: ThemeModeOptions | null): boolean {
+  const settings: ThemeModeOptions = options && typeof options === 'object' ? options : {};
   const mode = settings.mode === 'dark' || settings.mode === 'light'
     ? settings.mode
     : 'system';
@@ -837,8 +898,9 @@ function shouldObservePageTheme(options) {
   return settings.pageThemeAdaptationEnabled === true || settings.systemTheme === 'dark';
 }
 
-function syncPageThemeObservation(options) {
-  const settings = options && typeof options === 'object' ? options : {};
+// Starts or stops watching the page, as the mode needs; true when watching.
+function syncPageThemeObservation(options?: (ThemeModeOptions & { start?: () => void; stop?: () => void }) | null): boolean {
+  const settings: ThemeModeOptions & { start?: () => void; stop?: () => void } = options && typeof options === 'object' ? options : {};
   const shouldObserve = shouldObservePageTheme(settings);
   const callback = shouldObserve ? settings.start : settings.stop;
   if (typeof callback === 'function') {
@@ -863,3 +925,4 @@ export {
   shouldObservePageTheme,
   syncPageThemeObservation
 };
+export type { PageTheme, PageThemeOptions, ParsedColor, ThemeModeOptions, ThemeSignal, VisualThemeSignal };

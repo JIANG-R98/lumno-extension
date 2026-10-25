@@ -23,7 +23,10 @@
     "src/overlay/panel/tab-matching.ts",
     "src/overlay/notices.ts",
     "src/overlay/panel/settings-sync.ts",
-    "src/overlay/panel/suggestion-themes.ts"
+    "src/overlay/panel/suggestion-themes.ts",
+    "src/overlay/page-theme.ts",
+    "src/overlay/panel/panel-theme.ts",
+    "src/overlay/lifecycle.ts"
   ],
   "exclude": [
     "src/**/react/**"
