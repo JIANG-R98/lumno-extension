@@ -29,6 +29,7 @@
     "src/newtab/search/**/*.ts",
     "src/newtab/shortcuts/**/*.ts",
     "src/newtab/theme/card-themes.ts",
+    "src/newtab/theme/favicon-view.ts",
     "src/newtab/theme/glass-surfaces.ts",
     "src/newtab/theme/site-theme-resolver.ts",
     "src/newtab/theme/theme-types.ts"

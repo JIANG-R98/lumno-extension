@@ -139,8 +139,6 @@ function createPageFavicons(deps) {
     getStrictFaviconReason: getNewtabStrictFaviconReason,
     logFaviconDecision: logNewtabFaviconDecision,
     getHostFromUrl,
-    isFaviconProxyUrl,
-    isChromeMonogramFaviconUrl,
     getPersistedFaviconEntry,
     getPersistedFaviconDataEntry,
     setPersistedFaviconUrl,

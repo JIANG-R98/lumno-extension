@@ -1,16 +1,103 @@
-// @ts-nocheck
+// The New Tab's favicons: each image tries its icon sources in turn, falls
+// back to a link icon, and is rescued later when a source recovers.
+import type { FaviconDataEntry, FaviconUrlEntry } from '../../domain/favicon/favicon-cache';
 import * as LumnoFaviconUtils from '../../domain/favicon/favicon-utils';
+import type { FaviconPlanCandidate, FaviconResolverOptions } from '../../domain/favicon/favicon-utils';
+import type { MessageRuntime } from '../../platform/messaging';
 import * as LumnoFaviconViewCore from '../../shared/favicon/favicon-view-core';
+import type {
+  FallbackIconNode,
+  FaviconImage,
+  FaviconViewCoreOptions,
+  FaviconViewWindow,
+  FaviconWarmItem
+} from '../../shared/favicon/favicon-view-core';
+import type { FaviconAttachOptions } from '../newtab-types';
 
-function noop() {}
+// An icon image with the attach state this runtime keeps on it; tests read
+// the session to tell an attach was replaced.
+type ThemeFaviconImage = FaviconImage & {
+  _xThemeFaviconSession?: number;
+  _xThemeFaviconLoadTimer?: number | null;
+  _xThemeFaviconErrorHandler?: (() => void) | null;
+  // Rescues tried for the page the image shows.
+  _xThemeFaviconRescue?: { pageUrl: string; attempts: number };
+};
 
-function createFaviconViewRuntime(options) {
-  const config = options || {};
+type FaviconRuntimeWindow = FaviconViewWindow & Partial<Pick<Window, 'clearTimeout' | 'getComputedStyle'>>;
+
+interface FaviconViewRuntimeOptions extends Pick<FaviconViewCoreOptions,
+  | 'requestFaviconData'
+  | 'detectDefaultExtensionFavicon'
+  | 'faviconDataCache'
+  | 'faviconDataPending'
+  | 'iconPreloadCache'
+  | 'preloadThemeFromFavicon'>,
+  Pick<FaviconResolverOptions,
+    | 'getExtensionFaviconUrl'
+    | 'getGstaticFaviconUrl'
+    | 'getChromeFaviconUrl'
+    | 'shouldBlockFaviconForHost'
+    | 'shouldAvoidDirectFaviconForHost'
+    | 'isEnhancedFaviconFetchEnabled'
+    | 'getStrictFaviconReason'
+    | 'logFaviconDecision'> {
+  document?: Document | null;
+  windowObj?: FaviconRuntimeWindow | null;
+  chromeApi?: { runtime?: MessageRuntime & { id?: string; getURL?(path: string): string } } | null;
+  getRiSvg?(id: string, sizeClass?: string): string;
+  isOwnExtensionUrl?(url: string): boolean;
+  isBlockedLocalFaviconUrl?(url: string): boolean;
+  getHostFromUrl?(url: string): string;
+  getPersistedFaviconEntry?(cacheKey: string): FaviconUrlEntry | null;
+  getPersistedFaviconDataEntry?(cacheKey: string): FaviconDataEntry | null;
+  setPersistedFaviconUrl?(cacheKey: string, url: string): void;
+  setPersistedFaviconData?(cacheKey: string, dataUrl: string): void;
+  hasThemeForHost?(hostKey: string): boolean;
+  // Logs each icon that could not load once, while debugging.
+  missingIconCache?: Set<string>;
+  missingIconDebugEnabled?: boolean;
+  faviconFallbackNodeMap?: WeakMap<FaviconImage, FallbackIconNode>;
+  // How long a source may load before the next one is tried.
+  faviconCandidateLoadTimeoutMs?: number;
+}
+
+// Where an image's icon comes from while it is being attached.
+interface ThemeFaviconState {
+  url: string;
+  hostKey: string;
+  cacheKey: string;
+  persistedDataUrl: string;
+  persistedUrl: string;
+  onUnavailable: (() => void) | null;
+  primaryUrl: string;
+  browserUrl: string;
+  pageSpecificUrl: string;
+  extensionFavicon: string;
+  gstaticFavicon: string;
+  previousWorkingSrc: string;
+  skipPersisted: boolean;
+  sourceProfile: 'shortcut' | '';
+  allowRemoteImage: boolean;
+  customImageUrl: string;
+  // Whether no newer attach replaced this one.
+  isSessionCurrent(): boolean;
+  isSessionMounted(): boolean;
+}
+
+function noop(): void {}
+
+function createFaviconViewRuntime(options?: FaviconViewRuntimeOptions | null) {
+  const config: FaviconViewRuntimeOptions = options || {};
   const doc = config.document || globalThis.document;
-  const win = config.windowObj || globalThis.window || globalThis;
+  const win: FaviconRuntimeWindow = config.windowObj || globalThis.window || globalThis;
   const chromeApi = config.chromeApi || globalThis.chrome || {};
-  const setTimer = typeof win.setTimeout === 'function' ? win.setTimeout.bind(win) : setTimeout;
-  const clearTimer = typeof win.clearTimeout === 'function' ? win.clearTimeout.bind(win) : clearTimeout;
+  const setTimer: (callback: () => void, delay: number) => number = typeof win.setTimeout === 'function'
+    ? win.setTimeout.bind(win)
+    : (callback, delay) => setTimeout(callback, delay);
+  const clearTimer: (timer: number) => void = typeof win.clearTimeout === 'function'
+    ? win.clearTimeout.bind(win)
+    : (timer) => clearTimeout(timer);
   const getRiSvg = typeof config.getRiSvg === 'function' ? config.getRiSvg : (() => '');
   const getExtensionFaviconUrl = typeof config.getExtensionFaviconUrl === 'function' ? config.getExtensionFaviconUrl : (() => '');
   const getGstaticFaviconUrl = typeof config.getGstaticFaviconUrl === 'function' ? config.getGstaticFaviconUrl : (() => '');
@@ -40,11 +127,11 @@ function createFaviconViewRuntime(options) {
   const setPersistedFaviconUrl = typeof config.setPersistedFaviconUrl === 'function' ? config.setPersistedFaviconUrl : noop;
   const setPersistedFaviconData = typeof config.setPersistedFaviconData === 'function' ? config.setPersistedFaviconData : noop;
   const preloadThemeFromFavicon = typeof config.preloadThemeFromFavicon === 'function' ? config.preloadThemeFromFavicon : noop;
-  const faviconDataCache = config.faviconDataCache || new Map();
-  const faviconDataPending = config.faviconDataPending || new Map();
-  const iconPreloadCache = config.iconPreloadCache || new Map();
-  const shortcutFaviconOptionsByImage = new WeakMap();
-  const missingIconCache = config.missingIconCache || new Set();
+  const faviconDataCache = config.faviconDataCache || new Map<string, string>();
+  const faviconDataPending = config.faviconDataPending || new Map<string, Promise<string | null>>();
+  const iconPreloadCache = config.iconPreloadCache || new Map<string, HTMLImageElement>();
+  const shortcutFaviconOptionsByImage = new WeakMap<HTMLImageElement, FaviconAttachOptions>();
+  const missingIconCache = config.missingIconCache || new Set<string>();
   const missingIconDebugEnabled = config.missingIconDebugEnabled === true;
   const faviconUtils = LumnoFaviconUtils;
   const faviconUrlResolver = faviconUtils.createFaviconUrlResolver({
@@ -84,11 +171,12 @@ function createFaviconViewRuntime(options) {
     detectDefaultExtensionFavicon: config.detectDefaultExtensionFavicon,
     ignoreLastWorkingWhenFallback: true
   });
-  const faviconCandidateLoadTimeoutMs = Number.isFinite(config.faviconCandidateLoadTimeoutMs)
+  const faviconCandidateLoadTimeoutMs = config.faviconCandidateLoadTimeoutMs !== undefined &&
+    Number.isFinite(config.faviconCandidateLoadTimeoutMs)
     ? Math.max(0, config.faviconCandidateLoadTimeoutMs)
     : 2600;
   const THEME_FAVICON_RESCUE_MAX_ATTEMPTS = 2;
-  let themeFaviconRescueTimer = null;
+  let themeFaviconRescueTimer: number | null = null;
 
   const {
     setFallbackNodeVisible,
@@ -100,7 +188,7 @@ function createFaviconViewRuntime(options) {
     getLastWorkingFaviconSrc
   } = faviconViewCore;
 
-  function reportMissingIcon(context, url, iconUrl) {
+  function reportMissingIcon(context: string, url: string, iconUrl: string): void {
     if (!missingIconDebugEnabled) {
       return;
     }
@@ -115,10 +203,7 @@ function createFaviconViewRuntime(options) {
     console.warn(`[Lumno] icon missing context=${safeContext} url=${safeUrl} icon=${safeIcon}`);
   }
 
-  function resolveFallbackIconDimension(img, axis, defaultSize) {
-    if (!img) {
-      return defaultSize;
-    }
+  function resolveFallbackIconDimension(img: HTMLImageElement, axis: 'width' | 'height', defaultSize: number): number {
     const inlineValue = Number.parseFloat(
       axis === 'width'
         ? (img.style && img.style.width ? img.style.width : '')
@@ -129,11 +214,9 @@ function createFaviconViewRuntime(options) {
     }
     if (typeof win.getComputedStyle === 'function') {
       const computed = win.getComputedStyle(img);
-      if (computed) {
-        const computedValue = Number.parseFloat(axis === 'width' ? computed.width : computed.height);
-        if (Number.isFinite(computedValue) && computedValue > 0) {
-          return computedValue;
-        }
+      const computedValue = Number.parseFloat(axis === 'width' ? computed.width : computed.height);
+      if (Number.isFinite(computedValue) && computedValue > 0) {
+        return computedValue;
       }
     }
     const layoutValue = axis === 'width' ? img.clientWidth : img.clientHeight;
@@ -143,31 +226,28 @@ function createFaviconViewRuntime(options) {
     return defaultSize;
   }
 
-  function getFallbackIconName(img, fallback) {
-    const raw = img && typeof img.getAttribute === 'function'
-      ? String(img.getAttribute('data-fallback-icon-name') || '').trim()
-      : '';
+  function getFallbackIconName(img: HTMLImageElement, fallback: string): string {
+    const raw = String(img.getAttribute('data-fallback-icon-name') || '').trim();
     return raw || fallback || 'ri-link';
   }
 
-  function createFallbackIconNode(img) {
+  function createFallbackIconNode(img: FaviconImage): FallbackIconNode {
     const node = doc.createElement('span');
-    const isFolderPreview = !!(img.classList && img.classList.contains('x-nt-folder-preview-favicon'));
-    const isBookmarkLeadingIcon = !!(
-      img.classList &&
+    const parent = img.parentElement;
+    const isFolderPreview = img.classList.contains('x-nt-folder-preview-favicon');
+    const isBookmarkLeadingIcon = Boolean(
       img.classList.contains('x-nt-bookmark-icon') &&
-      img.parentElement &&
-      img.parentElement.classList &&
-      img.parentElement.classList.contains('x-nt-bookmark-card')
+      parent &&
+      parent.classList.contains('x-nt-bookmark-card')
     );
     const isSearchSuggestionIcon = (img.getAttribute('data-x-nt-suggestion-icon') === '1') || Boolean(
-      img.closest && img.closest('#_x_extension_newtab_suggestions_container_2024_unique_')
+      img.closest('#_x_extension_newtab_suggestions_container_2024_unique_')
     );
     if (isFolderPreview) {
       node.className = 'x-nt-folder-preview-favicon x-nt-folder-preview-favicon--fallback _x_extension_favicon_fallback_2024_unique_';
       setFallbackNodeVisible(node, true);
       node.innerHTML = getRiSvg(getFallbackIconName(img, 'ri-link'), 'ri-size-12');
-      img.parentElement.insertBefore(node, img);
+      if (parent) parent.insertBefore(node, img);
       return node;
     }
     const defaultDimension = isSearchSuggestionIcon ? 16 : 25;
@@ -188,7 +268,7 @@ function createFaviconViewRuntime(options) {
     node.style.setProperty('--x-nt-favicon-fallback-padding', `${isSearchSuggestionIcon ? 0 : 3}px`);
     setFallbackNodeVisible(node, true);
     node.innerHTML = getRiSvg(getFallbackIconName(img, 'ri-link'), 'ri-size-16');
-    img.parentElement.insertBefore(node, img.nextSibling);
+    if (parent) parent.insertBefore(node, img.nextSibling);
     return node;
   }
 
@@ -196,7 +276,7 @@ function createFaviconViewRuntime(options) {
     fallbackClassName: '_x_extension_favicon_fallback_2024_unique_',
     nodeMap: config.faviconFallbackNodeMap,
     createFallbackNode: createFallbackIconNode,
-    setImageVisible(img, visible) {
+    setImageVisible(img: FaviconImage, visible: boolean) {
       if (visible) {
         img.style.setProperty('display', 'block');
       } else {
@@ -213,8 +293,8 @@ function createFaviconViewRuntime(options) {
     applyFallbackIcon
   } = fallbackIcons;
 
-  function refreshFallbackIcons() {
-    doc.querySelectorAll('img[data-fallback-icon="true"]').forEach((img) => {
+  function refreshFallbackIcons(): void {
+    doc.querySelectorAll<HTMLImageElement>('img[data-fallback-icon="true"]').forEach((img) => {
       const node = ensureFallbackIconNode(img);
       if (node) {
         setFallbackNodeVisible(node, true);
@@ -224,28 +304,28 @@ function createFaviconViewRuntime(options) {
     });
   }
 
-  function restoreWorkingFaviconOrFallback(img, previousSrc) {
+  function restoreWorkingFaviconOrFallback(img: FaviconImage, previousSrc: string) {
     return faviconViewCore.restoreWorkingFaviconOrFallback(img, previousSrc, {
       applyFallbackIcon
     });
   }
 
-  function attachFaviconData(img, url, hostOverride, pageUrl) {
+  function attachFaviconData(img: FaviconImage, url: string, hostOverride?: string, pageUrl?: string): void {
     const safeUrl = faviconUrlResolver.getSafeFaviconCandidateUrl(url, pageUrl || url, 'data');
     if (safeUrl) {
       faviconViewCore.attachFaviconData(img, safeUrl, hostOverride, pageUrl || url);
     }
   }
 
-  function preloadIcon(url, pageUrl) {
+  function preloadIcon(url: string, pageUrl?: string): void {
     const safeUrl = faviconUrlResolver.resolveFaviconSource(url, pageUrl || '');
     if (safeUrl) {
       faviconViewCore.preloadIcon(safeUrl);
     }
   }
 
-  function warmIconCache(list) {
-    const safeItems = (Array.isArray(list) ? list : []).map((item) => {
+  function warmIconCache(list: readonly (FaviconWarmItem | null | undefined)[] | null | undefined): void {
+    const safeItems = (list || []).map((item) => {
       if (!item || !item.favicon) {
         return item;
       }
@@ -255,23 +335,31 @@ function createFaviconViewRuntime(options) {
     faviconViewCore.warmIconCache(safeItems);
   }
 
-  function getSafeFaviconCandidateUrl(value, pageUrl, candidateKind, sourceOptions) {
+  function getSafeFaviconCandidateUrl(
+    ...args: Parameters<typeof faviconUrlResolver.getSafeFaviconCandidateUrl>
+  ): string {
+    const [value, pageUrl, candidateKind, sourceOptions] = args;
     return faviconUrlResolver.getSafeFaviconCandidateUrl(value, pageUrl, candidateKind, sourceOptions);
   }
 
-  function getRuntimeExtensionFaviconUrl(pageUrl) {
+  function getRuntimeExtensionFaviconUrl(pageUrl: string): string {
     return faviconUrlResolver.getExtensionFaviconUrl(pageUrl);
   }
 
-  function getRuntimeGstaticFaviconUrl(pageUrl) {
+  function getRuntimeGstaticFaviconUrl(pageUrl: string): string {
     return faviconUrlResolver.getGstaticFaviconUrl(pageUrl);
   }
 
-  function getRuntimeChromeFaviconUrl(pageUrl) {
+  function getRuntimeChromeFaviconUrl(pageUrl: string): string {
     return faviconUrlResolver.getChromeFaviconUrl(pageUrl);
   }
 
-  function createThemeAwareFaviconState(img, url, host, optionsArg) {
+  function createThemeAwareFaviconState(
+    img: ThemeFaviconImage,
+    url: string,
+    host: string,
+    optionsArg: FaviconAttachOptions | undefined
+  ): ThemeFaviconState {
     img._xThemeFaviconSession = (img._xThemeFaviconSession || 0) + 1;
     const session = img._xThemeFaviconSession;
     const hostKey = host || getHostFromUrl(url);
@@ -336,16 +424,16 @@ function createFaviconViewRuntime(options) {
     };
   }
 
-  function clearThemeAwareCandidateLoadTimer(img) {
-    if (!img || img._xThemeFaviconLoadTimer === null || img._xThemeFaviconLoadTimer === undefined) {
+  function clearThemeAwareCandidateLoadTimer(img: ThemeFaviconImage): void {
+    if (img._xThemeFaviconLoadTimer === null || img._xThemeFaviconLoadTimer === undefined) {
       return;
     }
     clearTimer(img._xThemeFaviconLoadTimer);
     img._xThemeFaviconLoadTimer = null;
   }
 
-  function isThemeAwareCandidateLoaded(img, nextSrc) {
-    if (!img || !nextSrc) {
+  function isThemeAwareCandidateLoaded(img: HTMLImageElement, nextSrc: string): boolean {
+    if (!nextSrc) {
       return false;
     }
     const resolvedSrc = img.getAttribute('data-favicon-current-src') || '';
@@ -355,8 +443,8 @@ function createFaviconViewRuntime(options) {
     return Boolean(img.complete && img.naturalWidth > 0);
   }
 
-  function scheduleThemeAwareCandidateLoadTimer(img, state, nextSrc) {
-    if (!img || !state || !nextSrc || faviconCandidateLoadTimeoutMs <= 0) {
+  function scheduleThemeAwareCandidateLoadTimer(img: ThemeFaviconImage, state: ThemeFaviconState, nextSrc: string): void {
+    if (!nextSrc || faviconCandidateLoadTimeoutMs <= 0) {
       return;
     }
     clearThemeAwareCandidateLoadTimer(img);
@@ -364,7 +452,7 @@ function createFaviconViewRuntime(options) {
     const expectedSrc = String(nextSrc);
     img._xThemeFaviconLoadTimer = setTimer(() => {
       img._xThemeFaviconLoadTimer = null;
-      if (!img || !state.isSessionCurrent()) {
+      if (!state.isSessionCurrent()) {
         return;
       }
       if ((img._xFaviconLoadToken || 0) !== expectedToken) {
@@ -383,7 +471,7 @@ function createFaviconViewRuntime(options) {
     }, faviconCandidateLoadTimeoutMs);
   }
 
-  function syncThemeAwareFaviconAttributes(img, state) {
+  function syncThemeAwareFaviconAttributes(img: HTMLImageElement, state: ThemeFaviconState): void {
     img.setAttribute('data-x-nt-theme-favicon', '1');
     img.setAttribute('data-x-nt-favicon-page-url', state.url);
     img.setAttribute('data-x-nt-favicon-host', state.hostKey);
@@ -395,12 +483,12 @@ function createFaviconViewRuntime(options) {
     }
   }
 
-  function buildThemeAwareFaviconCandidatePlan(state) {
+  function buildThemeAwareFaviconCandidatePlan(state: ThemeFaviconState): FaviconPlanCandidate[] {
     const runtimeCandidates = faviconUrlResolver.buildFaviconCandidatePlan(state);
-    const seen = new Set();
+    const seen = new Set<string>();
     return runtimeCandidates.filter((candidate) => {
-      const safeUrl = getSafeFaviconCandidateUrl(candidate && candidate.url, state.url, candidate && candidate.kind,
-        { allowRemoteImage: state.allowRemoteImage && candidate && candidate.kind === 'primary' });
+      const safeUrl = getSafeFaviconCandidateUrl(candidate.url, state.url, candidate.kind,
+        { allowRemoteImage: state.allowRemoteImage && candidate.kind === 'primary' });
       if (!safeUrl || seen.has(safeUrl)) {
         return false;
       }
@@ -410,11 +498,11 @@ function createFaviconViewRuntime(options) {
     });
   }
 
-  function persistResolvedThemeAwareCandidate(state, candidateUrl, resolvedDataUrl) {
-    if (state && state.skipPersisted) {
+  function persistResolvedThemeAwareCandidate(state: ThemeFaviconState, candidateUrl: string, resolvedDataUrl: string): void {
+    if (state.skipPersisted) {
       return;
     }
-    const cacheKey = state && state.cacheKey ? String(state.cacheKey) : '';
+    const cacheKey = state.cacheKey ? String(state.cacheKey) : '';
     const nextSrc = String(candidateUrl || '').trim();
     const dataUrl = String(resolvedDataUrl || '').trim();
     if (!cacheKey || !nextSrc) {
@@ -436,9 +524,14 @@ function createFaviconViewRuntime(options) {
     }).catch(noop);
   }
 
-  function tryApplyThemeAwareFaviconCandidate(img, state, tried, candidate) {
-    const nextSrc = candidate && candidate.url ? String(candidate.url) : '';
-    if (!nextSrc || !img || !state.isSessionCurrent()) {
+  function tryApplyThemeAwareFaviconCandidate(
+    img: ThemeFaviconImage,
+    state: ThemeFaviconState,
+    tried: Set<string>,
+    candidate: FaviconPlanCandidate
+  ): boolean {
+    const nextSrc = candidate.url ? String(candidate.url) : '';
+    if (!nextSrc || !state.isSessionCurrent()) {
       return false;
     }
     if (tried.has(nextSrc)) {
@@ -459,7 +552,7 @@ function createFaviconViewRuntime(options) {
       }
       defaultProxyCheckStarted = true;
       setTimer(() => {
-        if (!img || !state.isSessionCurrent()) {
+        if (!state.isSessionCurrent()) {
           return;
         }
         const currentSrc = img.getAttribute('data-favicon-current-src') || img.src || '';
@@ -475,8 +568,8 @@ function createFaviconViewRuntime(options) {
             isDefault: !dataUrl,
             dataUrl: dataUrl || ''
           }));
-        defaultCheckPromise.catch(() => ({ isDefault: false, dataUrl: '' })).then((result) => {
-          if (!img || !state.isSessionCurrent()) {
+        void defaultCheckPromise.catch(() => ({ isDefault: false, dataUrl: '' })).then((result) => {
+          if (!state.isSessionCurrent()) {
             return;
           }
           const latestSrc = img.getAttribute('data-favicon-current-src') || img.src || '';
@@ -537,7 +630,7 @@ function createFaviconViewRuntime(options) {
     return true;
   }
 
-  function finalizeDefaultThemeAwareFaviconFailure(img, state, iconUrl) {
+  function finalizeDefaultThemeAwareFaviconFailure(img: ThemeFaviconImage, state: ThemeFaviconState, iconUrl: string): void {
     clearThemeAwareCandidateLoadTimer(img);
     reportMissingIcon('favicon', state.url, iconUrl || '');
     if (state.onUnavailable) {
@@ -548,7 +641,7 @@ function createFaviconViewRuntime(options) {
     scheduleThemeAwareFaviconRescue();
   }
 
-  function finalizeThemeAwareFaviconFailure(img, state, iconUrl) {
+  function finalizeThemeAwareFaviconFailure(img: ThemeFaviconImage, state: ThemeFaviconState, iconUrl: string): void {
     reportMissingIcon('favicon', state.url, iconUrl || '');
     if (state.onUnavailable) {
       state.onUnavailable();
@@ -558,8 +651,8 @@ function createFaviconViewRuntime(options) {
     scheduleThemeAwareFaviconRescue();
   }
 
-  function attachFaviconWithFallbacks(img, url, host, optionsArg) {
-    if (!img || !url) {
+  function attachFaviconWithFallbacks(img: ThemeFaviconImage, url: string, host: string, optionsArg?: FaviconAttachOptions): void {
+    if (!url) {
       return;
     }
     if (optionsArg && optionsArg.sourceProfile === 'shortcut') {
@@ -590,10 +683,10 @@ function createFaviconViewRuntime(options) {
     syncThemeAwareFaviconAttributes(img, state);
 
     const candidates = buildThemeAwareFaviconCandidatePlan(state);
-    const tried = new Set();
+    const tried = new Set<string>();
     let candidateIndex = 0;
 
-    const tryNextAvailableCandidate = () => {
+    const tryNextAvailableCandidate = (): boolean => {
       while (candidateIndex < candidates.length) {
         const candidate = candidates[candidateIndex];
         candidateIndex += 1;
@@ -604,12 +697,12 @@ function createFaviconViewRuntime(options) {
       return false;
     };
 
-    const finalizeFailure = (iconUrl) => {
+    const finalizeFailure = (iconUrl?: string): void => {
       clearThemeAwareCandidateLoadTimer(img);
       finalizeThemeAwareFaviconFailure(
         img,
         state,
-        iconUrl || (img ? (img.getAttribute('data-favicon-current-src') || img.src || '') : '')
+        iconUrl || img.getAttribute('data-favicon-current-src') || img.src || ''
       );
     };
 
@@ -631,9 +724,9 @@ function createFaviconViewRuntime(options) {
     }
   }
 
-  function refreshThemeAwareFavicons() {
-    doc.querySelectorAll('img[data-x-nt-theme-favicon="1"]').forEach((img) => {
-      if (!img || !img.isConnected) {
+  function refreshThemeAwareFavicons(): void {
+    doc.querySelectorAll<HTMLImageElement>('img[data-x-nt-theme-favicon="1"]').forEach((img) => {
+      if (!img.isConnected) {
         return;
       }
       const pageUrl = img.getAttribute('data-x-nt-favicon-page-url') || '';
@@ -652,7 +745,7 @@ function createFaviconViewRuntime(options) {
 
   // Every failed rescue schedules another rescue, so an icon that can never
   // load would be refetched forever. Cap the extra attempts per image and page.
-  function consumeThemeAwareFaviconRescueAttempt(img, pageUrl) {
+  function consumeThemeAwareFaviconRescueAttempt(img: ThemeFaviconImage, pageUrl: string): boolean {
     const previous = img._xThemeFaviconRescue;
     const attempts = previous && previous.pageUrl === pageUrl ? previous.attempts : 0;
     if (attempts >= THEME_FAVICON_RESCUE_MAX_ATTEMPTS) {
@@ -662,12 +755,12 @@ function createFaviconViewRuntime(options) {
     return true;
   }
 
-  function rescueThemeAwareFallbackFavicons() {
-    doc.querySelectorAll(
+  function rescueThemeAwareFallbackFavicons(): void {
+    doc.querySelectorAll<HTMLImageElement>(
       'img[data-x-nt-theme-favicon="1"][data-fallback-icon="true"], ' +
       'img[data-x-nt-theme-favicon="1"][data-favicon-placeholder="true"]'
     ).forEach((img) => {
-      if (!img || !img.isConnected) {
+      if (!img.isConnected) {
         return;
       }
       const pageUrl = img.getAttribute('data-x-nt-favicon-page-url') || '';
@@ -684,7 +777,7 @@ function createFaviconViewRuntime(options) {
     });
   }
 
-  function scheduleThemeAwareFaviconRescue() {
+  function scheduleThemeAwareFaviconRescue(): void {
     if (themeFaviconRescueTimer !== null) {
       clearTimer(themeFaviconRescueTimer);
       themeFaviconRescueTimer = null;
@@ -716,4 +809,7 @@ function createFaviconViewRuntime(options) {
   };
 }
 
+type FaviconViewRuntime = ReturnType<typeof createFaviconViewRuntime>;
+
 export { createFaviconViewRuntime };
+export type { FaviconViewRuntime, FaviconViewRuntimeOptions, ThemeFaviconImage };
