@@ -3590,6 +3590,9 @@
   "settings_newtab_glass_theme_title": {
     "message": "Material theme"
   },
+  "settings_newtab_glass_theme_desc": {
+    "message": "Auto: follows Theme mode, but switches to dark material over darker wallpapers to keep text legible.\nLight / Dark: fix the material and set New Tab to the same theme."
+  },
   "settings_newtab_glass_theme_follow": {
     "message": "Auto"
   },

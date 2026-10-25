@@ -3590,6 +3590,9 @@
   "settings_newtab_glass_theme_title": {
     "message": "Materialdesign"
   },
+  "settings_newtab_glass_theme_desc": {
+    "message": "Automatisch: folgt dem Farbmodus, wechselt aber bei dunkleren Hintergrundbildern zu dunklem Material, damit Text lesbar bleibt.\nHell / Dunkel: legen das Material fest und zeigen den neuen Tab im selben Modus."
+  },
   "settings_newtab_glass_theme_follow": {
     "message": "Automatisch"
   },

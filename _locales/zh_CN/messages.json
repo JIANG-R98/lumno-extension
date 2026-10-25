@@ -3590,6 +3590,9 @@
   "settings_newtab_glass_theme_title": {
     "message": "材质深浅色"
   },
+  "settings_newtab_glass_theme_desc": {
+    "message": "「自动」：跟随深浅色模式，壁纸较暗时改用深色材质，让文字保持清晰。\n「浅色」「深色」：固定材质，并让新标签页使用同样的深浅色。"
+  },
   "settings_newtab_glass_theme_follow": {
     "message": "自动"
   },

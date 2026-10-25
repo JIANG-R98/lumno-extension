@@ -3590,6 +3590,9 @@
   "settings_newtab_glass_theme_title": {
     "message": "Тема материала"
   },
+  "settings_newtab_glass_theme_desc": {
+    "message": "Авто: следует режиму темы, но на темных обоях переключается на темный материал, чтобы текст оставался читаемым.\nСветлая / Темная: закрепляют материал и применяют ту же тему к новой вкладке."
+  },
   "settings_newtab_glass_theme_follow": {
     "message": "Авто"
   },

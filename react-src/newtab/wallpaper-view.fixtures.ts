@@ -63,6 +63,7 @@ export function createDefaultPanelState(): WallpaperPanelState {
       ],
       sectionTitle: 'Style',
       theme: {
+        infoTooltip: 'Auto follows Theme mode.',
         tabs: {
           active: 'follow',
           label: 'Material theme',

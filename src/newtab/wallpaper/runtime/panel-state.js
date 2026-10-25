@@ -876,6 +876,7 @@ function createPanelState(deps) {
         theme: {
           visible: glassStyleValue !== 'none',
           title: glassThemeTitle,
+          infoTooltip: t('settings_newtab_glass_theme_desc', 'Auto: follows Theme mode, but switches to dark material over darker wallpapers to keep text legible.\nLight / Dark: fix the material and set New Tab to the same theme.'),
           tabs: {
             active: SETTINGS.normalizeNewtabGlassTheme(getGlassTheme()),
             label: glassThemeTitle,

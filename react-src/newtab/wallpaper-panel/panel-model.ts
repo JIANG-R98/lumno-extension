@@ -188,7 +188,7 @@ export interface WallpaperPanelState {
     infoTooltip: string;
     options: SelectMenuOption[];
     sectionTitle: string;
-    theme: { tabs: SegmentState<GlassTheme>; title: string; visible: boolean };
+    theme: { infoTooltip: string; tabs: SegmentState<GlassTheme>; title: string; visible: boolean };
     title: string;
     value: string;
   };

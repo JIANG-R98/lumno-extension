@@ -66,8 +66,17 @@ export function StyleSection({ panel }: { panel: WallpaperPanelContext }) {
           {...collapsible(glassStyle.theme.visible)}
           className="x-nt-appearance-setting-row x-nt-panel-collapsible"
         >
-          <span {...ref('glassThemeTitle')} className="x-nt-appearance-setting-title">
-            {glassStyle.theme.title}
+          <span className="x-nt-appearance-setting-title-group">
+            <span {...ref('glassThemeTitle')} className="x-nt-appearance-setting-title">
+              {glassStyle.theme.title}
+            </span>
+            <InfoButton
+              actions={actions}
+              icon={infoIcon}
+              label={glassStyle.theme.title}
+              name="glassThemeInfoButton"
+              tooltip={glassStyle.theme.infoTooltip}
+            />
           </span>
           <SegmentedChoice
             buttonClassName="x-nt-segmented-tab x-nt-wallpaper-tab"

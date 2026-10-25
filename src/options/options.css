@@ -620,6 +620,10 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
 ._x_extension_setting_desc_compact_2026_unique_ {
   margin: -2px 0 0;
 }
+/* A description whose message breaks into lines keeps them. */
+._x_extension_setting_desc_lines_2026_unique_ {
+  white-space: pre-line;
+}
 ._x_extension_shortcut_input_affix_2026_unique_ {
   display: flex;
   align-items: center;

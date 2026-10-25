@@ -3590,6 +3590,9 @@
   "settings_newtab_glass_theme_title": {
     "message": "Tema do material"
   },
+  "settings_newtab_glass_theme_desc": {
+    "message": "Automático: segue o modo de tema, mas usa material escuro sobre planos de fundo mais escuros para manter o texto legível.\nClaro / Escuro: fixam o material e aplicam o mesmo tema à Nova guia."
+  },
   "settings_newtab_glass_theme_follow": {
     "message": "Automático"
   },

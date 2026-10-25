@@ -3590,6 +3590,9 @@
   "settings_newtab_glass_theme_title": {
     "message": "소재 테마"
   },
+  "settings_newtab_glass_theme_desc": {
+    "message": "자동: 테마 모드를 따르되, 배경화면이 어두우면 글자가 잘 보이도록 어두운 소재로 바꿉니다.\n라이트 / 다크: 소재를 고정하고 새 탭도 같은 테마로 표시합니다."
+  },
   "settings_newtab_glass_theme_follow": {
     "message": "자동"
   },

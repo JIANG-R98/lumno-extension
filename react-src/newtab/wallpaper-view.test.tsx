@@ -140,6 +140,7 @@ describe('New Tab React wallpaper view', () => {
     rerender(state);
     expect(refs().glassThemeRow.hidden).toBe(false);
     expect(refs().glassThemeTitle.textContent).toBe('Material theme');
+    expect(refs().glassThemeInfoButton.getAttribute('aria-label')).toBe('Material theme');
     expect(refs().glassThemeTabs.querySelector('[data-newtab-glass-theme="follow"]')?.getAttribute('aria-pressed')).toBe('true');
     act(() => refs().glassThemeTabs.querySelector<HTMLElement>('[data-newtab-glass-theme="dark"]')!.click());
     expect(actions.selectGlassTheme).toHaveBeenCalledWith('dark');
