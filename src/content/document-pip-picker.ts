@@ -1,6 +1,128 @@
-// @ts-nocheck
+import type { BackgroundAction, BackgroundReply, BackgroundRequest, OkReply } from '../domain/messages';
 import * as TOAST from '../shared/ui/toast';
+import type { ToastController, ToastStyleGate } from '../shared/ui/toast';
 import * as LumnoMessaging from '../platform/messaging';
+import { allowsPictureInPicture, readDocumentPictureInPicture } from '../platform/document-picture-in-picture';
+import type { DocumentPipPickerApi, DocumentPipPickerReply } from '../types/content-apis';
+
+type Rgba = [number, number, number, number];
+
+// The colors the picker and the floating window take from the picked area,
+// so both sit naturally on the page.
+interface VisualTheme {
+  pageBackground: string;
+  hudBackground: string;
+  hudBorder: string;
+  buttonBackground: string;
+  secondaryButtonBackground: string;
+  buttonText: string;
+  buttonShadow: string;
+  cardShadow: string;
+  highlightBorder: string;
+  highlightBackground: string;
+  highlightShadow: string;
+  isDark: boolean;
+}
+
+interface ClipLayout {
+  // Room around a floating card, so its edges do not touch the window frame.
+  gutter: number;
+  width: number;
+  height: number;
+}
+
+// The floating window's bottom bar, which tucks itself away a moment after
+// the pointer leaves.
+interface PiPDock {
+  element: HTMLDivElement;
+  cancelHide(): void;
+}
+
+// An open clip: the picked element, its copy in the floating window, and
+// what keeps the copy current.
+interface ClipSession {
+  element: Element;
+  pipWindow: Window;
+  pipDocument: Document;
+  // The scroll box around the copy.
+  pipContent: HTMLDivElement;
+  // Where the copy hangs, under shallow copies of the element's ancestors.
+  pipContentMount: HTMLElement;
+  pipElementClone: Element | null;
+  styleSignature: string;
+  documentObserver: MutationObserver;
+  contentObserver: MutationObserver;
+  resizeObserver: ResizeObserver | null;
+  contentSyncTimer: number | null;
+  documentSyncTimer: number | null;
+  dock: PiPDock;
+  onMainPageHide: () => void;
+}
+
+interface PickerState {
+  // The user is picking an element.
+  active: boolean;
+  root: HTMLDivElement | null;
+  highlight: HTMLDivElement | null;
+  currentTarget: Element | null;
+  // The element under the pointer and its ancestors that can be clipped,
+  // innermost first; the wheel and arrow keys move along it.
+  currentStack: Element[];
+  currentStackIndex: number;
+  currentTheme: VisualTheme | null;
+  session: ClipSession | null;
+  teardownSelection: (() => void) | null;
+  toastHost: HTMLDivElement | null;
+  toastElement: HTMLDivElement | null;
+  toastController: Readonly<ToastController> | null;
+  toastStyleGate: Readonly<ToastStyleGate> | null;
+  opening: boolean;
+  // The picture-in-picture ownership this page holds, if any.
+  ownerToken: string;
+  runtimeMessageHandlerBound: boolean;
+}
+
+type SupportReason = 'ok' | 'not-top-level' | 'not-secure-context' | 'api-unavailable' | 'blocked-by-policy';
+
+type StyleSheetEntry =
+  | { kind: 'link'; key: string; href: string; media: string }
+  | { kind: 'style'; key: string; cssText: string; media: string };
+
+type OpenResult =
+  | { ok: true }
+  | { ok: false; reason: string; errorName?: string; errorMessage?: string };
+
+type ToastKind = 'info' | 'error';
+
+const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+// By node type rather than instanceof Element, which fails for nodes of the
+// floating window: it is a realm of its own.
+function isElementTarget(target: EventTarget | null): target is Element {
+  return target !== null && 'nodeType' in target && target.nodeType === 1;
+}
+
+// An HTML element of the given tag, matched by name for the same reason.
+function isHtmlTag<K extends keyof HTMLElementTagNameMap>(element: Element, tag: K): element is HTMLElementTagNameMap[K] {
+  return element.namespaceURI === HTML_NAMESPACE && element.localName === tag;
+}
+
+// HTML and SVG elements have an inline style.
+function hasInlineStyle(element: Element): element is Element & ElementCSSInlineStyle {
+  return 'style' in element && isRecord(element.style);
+}
+
+function readErrorText(error: unknown, field: 'name' | 'message'): string {
+  if (!isRecord(error)) {
+    return '';
+  }
+  const value = error[field];
+  return value ? String(value) : '';
+}
 
 (function() {
   if (window.__lumnoDocumentPiPPicker2026) {
@@ -21,7 +143,7 @@ import * as LumnoMessaging from '../platform/messaging';
   const PIP_SYNC_DELAY_MS = 80;
   const PIP_STYLE_ANCHOR_ID = '__lumno_pip_style_anchor_2026__';
   const PICKER_Z_INDEX = '2147483646';
-  const CONTEXT_LAYOUT_RESET = [
+  const CONTEXT_LAYOUT_RESET: ReadonlyArray<readonly [string, string]> = [
     ['display', 'block'],
     ['position', 'static'],
     ['float', 'none'],
@@ -39,7 +161,7 @@ import * as LumnoMessaging from '../platform/messaging';
     ['transform', 'none'],
     ['contain', 'none']
   ];
-  const state = {
+  const state: PickerState = {
     active: false,
     root: null,
     highlight: null,
@@ -58,26 +180,16 @@ import * as LumnoMessaging from '../platform/messaging';
     runtimeMessageHandlerBound: false
   };
 
-  function applyNoTranslate(element) {
-    if (!element || typeof element.setAttribute !== 'function') {
-      return element;
-    }
+  function applyNoTranslate<T extends Element>(element: T): T {
     element.setAttribute('translate', 'no');
     element.setAttribute('lang', 'zxx');
     element.setAttribute('notranslate', '');
     element.setAttribute('data-no-translate', 'true');
-    if (element.classList) {
-      element.classList.add('notranslate');
-    }
+    element.classList.add('notranslate');
     return element;
   }
 
-
-
-
-
-
-  function getMessage(name, fallback) {
+  function getMessage(name: string, fallback: string): string {
     try {
       if (chrome && chrome.i18n && typeof chrome.i18n.getMessage === 'function') {
         const value = chrome.i18n.getMessage(name);
@@ -85,52 +197,40 @@ import * as LumnoMessaging from '../platform/messaging';
           return value;
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // Ignore i18n failures in page context.
     }
     return fallback;
   }
 
-  function getRuntimeUrl(path) {
+  function getRuntimeUrl(path: string): string {
     try {
       if (chrome && chrome.runtime && typeof chrome.runtime.getURL === 'function') {
         return chrome.runtime.getURL(path);
       }
-    } catch (error) {
+    } catch (_error) {
       // Ignore runtime URL failures.
     }
     return path;
   }
 
-  function isPictureInPictureAllowedByPolicy() {
-    const policy = document.permissionsPolicy || document.featurePolicy;
-    if (!policy || typeof policy.allowsFeature !== 'function') {
-      return true;
-    }
-    try {
-      return policy.allowsFeature('picture-in-picture') !== false;
-    } catch (error) {
-      return true;
-    }
-  }
-
-  function getDocumentPiPSupportState() {
+  function getDocumentPiPSupportState(): { supported: boolean; reason: SupportReason } {
     if (window.top !== window.self) {
       return { supported: false, reason: 'not-top-level' };
     }
     if (!window.isSecureContext) {
       return { supported: false, reason: 'not-secure-context' };
     }
-    if (!window.documentPictureInPicture || typeof window.documentPictureInPicture.requestWindow !== 'function') {
+    if (!readDocumentPictureInPicture(window)) {
       return { supported: false, reason: 'api-unavailable' };
     }
-    if (!isPictureInPictureAllowedByPolicy()) {
+    if (!allowsPictureInPicture(document)) {
       return { supported: false, reason: 'blocked-by-policy' };
     }
     return { supported: true, reason: 'ok' };
   }
 
-  function getSupportFailureMessage(reason) {
+  function getSupportFailureMessage(reason: SupportReason): string {
     if (reason === 'blocked-by-policy') {
       return getMessage(
         'document_pip_picker_unsupported_policy',
@@ -155,8 +255,8 @@ import * as LumnoMessaging from '../platform/messaging';
     );
   }
 
-  function getOpenFailureMessage(error) {
-    const name = String(error && error.name ? error.name : '');
+  function getOpenFailureMessage(error: unknown): string {
+    const name = readErrorText(error, 'name');
     if (name === 'NotAllowedError') {
       return getMessage(
         'document_pip_picker_open_failed_not_allowed',
@@ -187,11 +287,14 @@ import * as LumnoMessaging from '../platform/messaging';
     );
   }
 
-  function hasActiveVideoPiP() {
+  function hasActiveVideoPiP(): boolean {
     return Boolean(document.pictureInPictureElement);
   }
 
-  function sendRuntimeMessage(message) {
+  // Resolves with the reply, or with { ok: false, reason } on any failure.
+  function sendRuntimeMessage<A extends BackgroundAction>(
+    message: BackgroundRequest<A>
+  ): Promise<BackgroundReply<A> | OkReply> {
     return new Promise((resolve) => {
       if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
         resolve({ ok: false, reason: 'no-runtime-sendMessage' });
@@ -216,12 +319,12 @@ import * as LumnoMessaging from '../platform/messaging';
     });
   }
 
-  async function requestDocumentPipOwnership() {
+  async function requestDocumentPipOwnership(): Promise<{ ok: boolean; granted: boolean; reason?: string }> {
     const response = await sendRuntimeMessage({
       action: 'pipRequestOwnership',
       kind: 'document'
     });
-    if (response && response.ok && response.granted && response.token) {
+    if (response.ok && 'granted' in response && response.granted && response.token) {
       state.ownerToken = String(response.token);
       return { ok: true, granted: true };
     }
@@ -232,8 +335,8 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function releaseDocumentPipOwnership() {
-    const token = typeof state.ownerToken === 'string' ? state.ownerToken : '';
+  function releaseDocumentPipOwnership(): void {
+    const token = state.ownerToken;
     state.ownerToken = '';
     if (!token) {
       return;
@@ -244,7 +347,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }).catch(() => {});
   }
 
-  function showVideoPiPConflictToast() {
+  function showVideoPiPConflictToast(): void {
     ensurePickerUi();
     applyPickerTheme(getPickerTheme(null));
     showToast(
@@ -256,24 +359,20 @@ import * as LumnoMessaging from '../platform/messaging';
     );
   }
 
-  function isOwnNode(node) {
-    return Boolean(node && node.nodeType === 1 && node.closest &&
-      node.closest(`#${ROOT_ID}, #${TOAST_HOST_ID}`));
+  function isOwnNode(target: EventTarget | null): boolean {
+    return isElementTarget(target) && Boolean(target.closest(`#${ROOT_ID}, #${TOAST_HOST_ID}`));
   }
 
-  function getElementFromPoint(event) {
-    if (!event || typeof document.elementFromPoint !== 'function') {
+  function getElementFromPoint(event: MouseEvent): Element | null {
+    if (typeof document.elementFromPoint !== 'function') {
       return null;
     }
-    const node = document.elementFromPoint(event.clientX, event.clientY);
-    if (!node || isOwnNode(node)) {
-      return null;
-    }
-    return node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+    const element = document.elementFromPoint(event.clientX, event.clientY);
+    return element && !isOwnNode(element) ? element : null;
   }
 
-  function isVisibleElement(element) {
-    if (!(element instanceof Element) || !element.isConnected) {
+  function isVisibleElement(element: Element): boolean {
+    if (!element.isConnected) {
       return false;
     }
     const rect = element.getBoundingClientRect();
@@ -284,8 +383,8 @@ import * as LumnoMessaging from '../platform/messaging';
     return style.display !== 'none' && style.visibility !== 'hidden';
   }
 
-  function isAllowedElement(element) {
-    if (!(element instanceof Element) || !element.isConnected || isOwnNode(element)) {
+  function isAllowedElement(element: Element): boolean {
+    if (!element.isConnected || isOwnNode(element)) {
       return false;
     }
     const tagName = String(element.tagName || '').toUpperCase();
@@ -315,25 +414,22 @@ import * as LumnoMessaging from '../platform/messaging';
     return isVisibleElement(element);
   }
 
-  function containsBlockedMediaContent(element) {
-    if (!(element instanceof Element)) {
-      return false;
-    }
+  function containsBlockedMediaContent(element: Element): boolean {
     const tagName = String(element.tagName || '').toUpperCase();
     if (tagName === 'VIDEO' || tagName === 'AUDIO' || tagName === 'IFRAME') {
       return true;
     }
     try {
       return Boolean(element.querySelector('video, audio, iframe'));
-    } catch (error) {
+    } catch (_error) {
       return true;
     }
   }
 
-  function getElementStack(element) {
-    const stack = [];
-    let current = element;
-    while (current && current instanceof Element) {
+  function getElementStack(element: Element): Element[] {
+    const stack: Element[] = [];
+    let current: Element | null = element;
+    while (current) {
       if (isAllowedElement(current)) {
         stack.push(current);
       }
@@ -345,35 +441,23 @@ import * as LumnoMessaging from '../platform/messaging';
     return stack.slice(0, 8);
   }
 
-  function getElementArea(element) {
-    if (!(element instanceof Element)) {
-      return 0;
-    }
+  function getElementArea(element: Element): number {
     const rect = element.getBoundingClientRect();
     return Math.max(0, Math.round((Number(rect.width) || 0) * (Number(rect.height) || 0)));
   }
 
-  function hasPaintedSurface(element) {
-    if (!(element instanceof Element)) {
-      return false;
-    }
+  function hasPaintedSurface(element: Element): boolean {
     const style = window.getComputedStyle(element);
     const backgroundColor = parseCssColor(style.backgroundColor);
     return Boolean((backgroundColor && backgroundColor[3] > 0.04) || style.backgroundImage !== 'none');
   }
 
-  function isLikelyLeafNode(element) {
-    if (!(element instanceof Element)) {
-      return false;
-    }
-    const childElements = Array.from(element.children || []).filter((child) => isVisibleElement(child));
+  function isLikelyLeafNode(element: Element): boolean {
+    const childElements = Array.from(element.children).filter((child) => isVisibleElement(child));
     return childElements.length === 0;
   }
 
-  function isLikelyToolbarLike(element) {
-    if (!(element instanceof Element)) {
-      return false;
-    }
+  function isLikelyToolbarLike(element: Element): boolean {
     const tagName = String(element.tagName || '').toLowerCase();
     const role = String(element.getAttribute('role') || '').toLowerCase();
     const classText = String(element.className || '').toLowerCase();
@@ -383,10 +467,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return /(toolbar|topbar|navbar|nav-|actions|action-bar|menu-bar|header-actions)/.test(classText);
   }
 
-  function isLikelyInteractiveContainer(element) {
-    if (!(element instanceof Element)) {
-      return false;
-    }
+  function isLikelyInteractiveContainer(element: Element): boolean {
     if (isLikelyToolbarLike(element)) {
       return true;
     }
@@ -396,10 +477,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return Boolean(element.querySelector('button, a[href], input, select, textarea, [role="button"], [role="menuitem"], [aria-haspopup="true"]'));
   }
 
-  function getCandidateScore(element) {
-    if (!(element instanceof Element)) {
-      return -1;
-    }
+  function getCandidateScore(element: Element): number {
     const area = getElementArea(element);
     const paintedBoost = hasPaintedSurface(element) ? 1400000 : 0;
     const semanticBoost = element.matches('article, section, main, aside, dialog, [role="dialog"], [role="region"], [role="article"]') ? 1200000 : 0;
@@ -411,8 +489,8 @@ import * as LumnoMessaging from '../platform/messaging';
     return area + paintedBoost + semanticBoost + containerBoost + toolbarPenalty + tinyPenalty + giantPenalty + interactivePenalty;
   }
 
-  function getDefaultStackIndex(stack) {
-    if (!Array.isArray(stack) || stack.length === 0) {
+  function getDefaultStackIndex(stack: Element[]): number {
+    if (stack.length === 0) {
       return 0;
     }
     let bestIndex = 0;
@@ -427,17 +505,15 @@ import * as LumnoMessaging from '../platform/messaging';
     return bestIndex;
   }
 
-
-
-  function clampChannel(value) {
+  function clampChannel(value: string | number): number {
     return Math.max(0, Math.min(255, Math.round(Number(value) || 0)));
   }
 
-  function clampAlpha(value) {
+  function clampAlpha(value: string | number): number {
     return Math.max(0, Math.min(1, Number(value)));
   }
 
-  function parseCssColor(value) {
+  function parseCssColor(value: string): Rgba | null {
     const raw = String(value || '').trim().toLowerCase();
     if (!raw || raw === 'transparent' || raw === 'initial' || raw === 'inherit') {
       return null;
@@ -480,32 +556,25 @@ import * as LumnoMessaging from '../platform/messaging';
     return null;
   }
 
-  function rgbToCss(color, alphaOverride) {
-    const parsed = Array.isArray(color) ? color : null;
-    if (!parsed || parsed.length < 3) {
-      return '';
-    }
-    const alpha = alphaOverride == null ? (parsed[3] == null ? 1 : parsed[3]) : alphaOverride;
+  function rgbToCss(color: Rgba, alphaOverride?: number): string {
+    const alpha = alphaOverride == null ? color[3] : alphaOverride;
     if (alpha >= 0.999) {
-      return `rgb(${clampChannel(parsed[0])}, ${clampChannel(parsed[1])}, ${clampChannel(parsed[2])})`;
+      return `rgb(${clampChannel(color[0])}, ${clampChannel(color[1])}, ${clampChannel(color[2])})`;
     }
-    return `rgba(${clampChannel(parsed[0])}, ${clampChannel(parsed[1])}, ${clampChannel(parsed[2])}, ${clampAlpha(alpha).toFixed(3).replace(/0+$/,'').replace(/\.$/,'')})`;
+    return `rgba(${clampChannel(color[0])}, ${clampChannel(color[1])}, ${clampChannel(color[2])}, ${clampAlpha(alpha).toFixed(3).replace(/0+$/,'').replace(/\.$/,'')})`;
   }
 
-  function getLuminance(color) {
-    if (!Array.isArray(color) || color.length < 3) {
-      return 1;
-    }
-    const normalize = (channel) => {
+  function getLuminance(color: Rgba): number {
+    const normalize = (channel: number): number => {
       const value = clampChannel(channel) / 255;
       return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
     };
     return 0.2126 * normalize(color[0]) + 0.7152 * normalize(color[1]) + 0.0722 * normalize(color[2]);
   }
 
-  function findNearestPaintedElement(element) {
-    let current = element;
-    while (current && current instanceof Element) {
+  function findNearestPaintedElement(element: Element): Element {
+    let current: Element | null = element;
+    while (current) {
       const style = window.getComputedStyle(current);
       const backgroundColor = parseCssColor(style.backgroundColor);
       if ((backgroundColor && backgroundColor[3] > 0.04) || style.backgroundImage !== 'none') {
@@ -516,12 +585,12 @@ import * as LumnoMessaging from '../platform/messaging';
     return document.body || document.documentElement;
   }
 
-  function getVisualTheme(element) {
+  function getVisualTheme(element: Element): VisualTheme {
     const surfaceElement = findNearestPaintedElement(element);
     const pageElement = document.body || document.documentElement;
     const surfaceStyle = window.getComputedStyle(surfaceElement);
     const pageStyle = window.getComputedStyle(pageElement);
-    const surfaceColor = parseCssColor(surfaceStyle.backgroundColor) ||
+    const surfaceColor: Rgba = parseCssColor(surfaceStyle.backgroundColor) ||
       parseCssColor(pageStyle.backgroundColor) ||
       [255, 255, 255, 1];
     const pageColor = parseCssColor(pageStyle.backgroundColor) || surfaceColor;
@@ -546,13 +615,14 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function getPickerTheme(element) {
+  function getPickerTheme(element: Element | null): VisualTheme {
     return getVisualTheme(element || document.body || document.documentElement);
   }
 
-  function ensurePickerUi() {
-    if (state.root && state.root.isConnected) {
-      return;
+  // Returns the highlight box, adding the picker's layer when it is missing.
+  function ensurePickerUi(): HTMLDivElement {
+    if (state.root && state.root.isConnected && state.highlight) {
+      return state.highlight;
     }
     const root = document.createElement('div');
     root.id = ROOT_ID;
@@ -589,10 +659,10 @@ import * as LumnoMessaging from '../platform/messaging';
 
     state.root = root;
     state.highlight = highlight;
+    return highlight;
   }
 
-  function applyPickerTheme(theme) {
-    const resolvedTheme = theme || getPickerTheme(null);
+  function applyPickerTheme(resolvedTheme: VisualTheme): void {
     state.currentTheme = resolvedTheme;
     if (state.highlight) {
       state.highlight.style.borderColor = resolvedTheme.highlightBorder;
@@ -609,11 +679,11 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function setHighlight(element) {
-    ensurePickerUi();
+  function setHighlight(element: Element | null): void {
+    const highlight = ensurePickerUi();
     applyPickerTheme(getPickerTheme(element));
-    if (!(element instanceof Element)) {
-      state.highlight.style.opacity = '0';
+    if (!element) {
+      highlight.style.opacity = '0';
       return;
     }
     const rect = element.getBoundingClientRect();
@@ -623,13 +693,13 @@ import * as LumnoMessaging from '../platform/messaging';
     const top = Math.max(0, Math.round(rect.top) - PICKER_HIGHLIGHT_PADDING);
     const right = Math.min(viewportWidth, Math.round(rect.right) + PICKER_HIGHLIGHT_PADDING);
     const bottom = Math.min(viewportHeight, Math.round(rect.bottom) + PICKER_HIGHLIGHT_PADDING);
-    state.highlight.style.opacity = '1';
-    state.highlight.style.width = `${Math.max(0, right - left)}px`;
-    state.highlight.style.height = `${Math.max(0, bottom - top)}px`;
-    state.highlight.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+    highlight.style.opacity = '1';
+    highlight.style.width = `${Math.max(0, right - left)}px`;
+    highlight.style.height = `${Math.max(0, bottom - top)}px`;
+    highlight.style.transform = `translate3d(${left}px, ${top}px, 0)`;
   }
 
-  function clearToast() {
+  function clearToast(): void {
     if (state.toastController) {
       state.toastController.destroy();
     }
@@ -647,13 +717,13 @@ import * as LumnoMessaging from '../platform/messaging';
 
   // The shared Toast, in its own shadow root so page styles cannot reach it and
   // outside the aria-hidden picker root so screen readers still hear it.
-  function ensureToast() {
-    if (state.toastHost && state.toastHost.isConnected && state.toastController) {
-      return true;
+  function ensureToast(): { element: HTMLDivElement; controller: Readonly<ToastController> } | null {
+    if (state.toastHost && state.toastHost.isConnected && state.toastElement && state.toastController) {
+      return { element: state.toastElement, controller: state.toastController };
     }
     clearToast();
-    if (!TOAST || typeof TOAST.createToastController !== 'function' || !document.documentElement) {
-      return false;
+    if (!document.documentElement) {
+      return null;
     }
     const staleHost = document.getElementById(TOAST_HOST_ID);
     if (staleHost) {
@@ -691,38 +761,40 @@ import * as LumnoMessaging from '../platform/messaging';
       stylesheetElement: stylesheet,
       windowObj: window
     });
-    state.toastController = TOAST.createToastController(toastElement, { windowObj: window });
-    return true;
+    const controller = TOAST.createToastController(toastElement, { windowObj: window });
+    state.toastController = controller;
+    return { element: toastElement, controller };
   }
 
-  function hideToast() {
+  function hideToast(): void {
     if (state.toastController) {
       state.toastController.hide();
     }
   }
 
-  function showToast(message, kind, options) {
-    if (!ensureToast()) {
+  function showToast(message: string, kind: ToastKind, options?: { persistent?: boolean }): void {
+    const toast = ensureToast();
+    if (!toast) {
       return;
     }
     applyPickerTheme(state.currentTheme || getPickerTheme(state.currentTarget));
     const errorToast = kind === 'error';
-    state.toastElement.setAttribute('role', errorToast ? 'alert' : 'status');
-    state.toastElement.setAttribute('aria-live', errorToast ? 'assertive' : 'polite');
-    state.toastController.show(message, {
+    toast.element.setAttribute('role', errorToast ? 'alert' : 'status');
+    toast.element.setAttribute('aria-live', errorToast ? 'assertive' : 'polite');
+    toast.controller.show(message, {
       error: errorToast,
       duration: options && options.persistent ? 0 : undefined
     });
   }
 
-  function selectTargetFromStack(index) {
-    const nextIndex = Math.max(0, Math.min(Number(index || 0), state.currentStack.length - 1));
+  function selectTargetFromStack(index: number): void {
+    const nextIndex = Math.max(0, Math.min(index, state.currentStack.length - 1));
     state.currentStackIndex = nextIndex;
     state.currentTarget = state.currentStack[nextIndex] || null;
     setHighlight(state.currentTarget);
   }
 
-  function updateCurrentTargetFromPointer(event) {
+  function updateCurrentTargetFromPointer(event: MouseEvent): void {
     const element = getElementFromPoint(event);
     if (!element) {
       state.currentStack = [];
@@ -755,23 +827,24 @@ import * as LumnoMessaging from '../platform/messaging';
     selectTargetFromStack(nextIndex);
   }
 
-  function getPageStyleSheets() {
-    const sheets = Array.from(document.styleSheets || []);
+  function getPageStyleSheets(): CSSStyleSheet[] {
+    const sheets = Array.from(document.styleSheets);
+    // Some engines and test DOMs have no adopted stylesheets.
     const adopted = Array.isArray(document.adoptedStyleSheets) ? document.adoptedStyleSheets : [];
-    return sheets.concat(adopted).filter((styleSheet) => styleSheet && !styleSheet.disabled);
+    return sheets.concat(adopted).filter((styleSheet) => !styleSheet.disabled);
   }
 
-  function getStyleSheetRuleCount(styleSheet) {
+  function getStyleSheetRuleCount(styleSheet: CSSStyleSheet): number {
     try {
       return styleSheet.cssRules ? styleSheet.cssRules.length : -1;
-    } catch (error) {
+    } catch (_error) {
       return -1;
     }
   }
 
   // Cheap enough to run on every page change: rule counts catch CSS-in-JS
   // libraries that insert rules without touching the DOM.
-  function getStyleSheetSignature() {
+  function getStyleSheetSignature(): string {
     return getPageStyleSheets().map((styleSheet) => {
       const ownerNode = styleSheet.ownerNode;
       const textLength = ownerNode && ownerNode.textContent ? ownerNode.textContent.length : 0;
@@ -780,26 +853,46 @@ import * as LumnoMessaging from '../platform/messaging';
     }).join('|');
   }
 
-  function getStyleSheetEntries() {
-    return getPageStyleSheets().map((styleSheet) => {
+  function getStyleSheetEntries(): StyleSheetEntry[] {
+    return getPageStyleSheets().map((styleSheet): StyleSheetEntry => {
       const ownerNode = styleSheet.ownerNode;
       const media = styleSheet.media ? styleSheet.media.mediaText : '';
       if (ownerNode instanceof HTMLLinkElement && ownerNode.href) {
-        return { key: `link|${ownerNode.href}|${media}`, href: ownerNode.href, media: media };
+        return { kind: 'link', key: `link|${ownerNode.href}|${media}`, href: ownerNode.href, media: media };
       }
       let cssText = '';
       try {
         cssText = Array.from(styleSheet.cssRules || []).map((rule) => rule.cssText).join('\n');
-      } catch (error) {
+      } catch (_error) {
         cssText = ownerNode && ownerNode.textContent ? ownerNode.textContent : '';
       }
-      return { key: `style|${media}|${cssText}`, cssText: cssText, media: media };
+      return { kind: 'style', key: `style|${media}|${cssText}`, cssText: cssText, media: media };
     });
+  }
+
+  function createPiPStyleNode(pipDocument: Document, entry: StyleSheetEntry): HTMLLinkElement | HTMLStyleElement {
+    let node: HTMLLinkElement | HTMLStyleElement;
+    if (entry.kind === 'link') {
+      const link = pipDocument.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = entry.href;
+      node = link;
+    } else {
+      const style = pipDocument.createElement('style');
+      style.textContent = entry.cssText;
+      node = style;
+    }
+    node.setAttribute('data-lumno-pip-sheet', '1');
+    node.setAttribute('data-lumno-pip-key', entry.key);
+    if (entry.media) {
+      node.setAttribute('media', entry.media);
+    }
+    return node;
   }
 
   // Page stylesheets go in front of this marker and the dock's own styles
   // after it, so page rules never restyle the dock.
-  function ensurePiPStyleAnchor(pipDocument) {
+  function ensurePiPStyleAnchor(pipDocument: Document): HTMLElement {
     let anchor = pipDocument.getElementById(PIP_STYLE_ANCHOR_ID);
     if (!anchor) {
       anchor = pipDocument.createElement('meta');
@@ -809,9 +902,9 @@ import * as LumnoMessaging from '../platform/messaging';
     return anchor;
   }
 
-  function syncPiPStyleSheets(session) {
+  function syncPiPStyleSheets(session: ClipSession): void {
     const pipDocument = session.pipDocument;
-    if (!pipDocument || !pipDocument.head) {
+    if (!pipDocument.head) {
       return;
     }
     const signature = getStyleSheetSignature();
@@ -823,31 +916,19 @@ import * as LumnoMessaging from '../platform/messaging';
     const anchor = ensurePiPStyleAnchor(pipDocument);
     // Reuse nodes that are still wanted, so unchanged stylesheets never reload
     // and the floating content does not flash while the page restyles itself.
-    const reusable = new Map();
+    const reusable = new Map<string, Element>();
     Array.from(head.querySelectorAll('[data-lumno-pip-sheet="1"]')).forEach((node) => {
-      reusable.set(node.getAttribute('data-lumno-pip-key'), node);
+      reusable.set(node.getAttribute('data-lumno-pip-key') || '', node);
     });
-    const nodes = getStyleSheetEntries().map((entry) => {
+    const nodes = getStyleSheetEntries().map((entry): Element => {
       const existing = reusable.get(entry.key);
       if (existing) {
         reusable.delete(entry.key);
         return existing;
       }
-      const node = pipDocument.createElement(entry.href ? 'link' : 'style');
-      node.setAttribute('data-lumno-pip-sheet', '1');
-      node.setAttribute('data-lumno-pip-key', entry.key);
-      if (entry.media) {
-        node.setAttribute('media', entry.media);
-      }
-      if (entry.href) {
-        node.rel = 'stylesheet';
-        node.href = entry.href;
-      } else {
-        node.textContent = entry.cssText;
-      }
-      return node;
+      return createPiPStyleNode(pipDocument, entry);
     });
-    let reference = anchor;
+    let reference: Element = anchor;
     for (let index = nodes.length - 1; index >= 0; index -= 1) {
       if (nodes[index].nextSibling !== reference) {
         head.insertBefore(nodes[index], reference);
@@ -857,7 +938,7 @@ import * as LumnoMessaging from '../platform/messaging';
     reusable.forEach((node) => node.remove());
   }
 
-  function copyRootAttributes(source, target, names) {
+  function copyRootAttributes(source: Element | null, target: Element | null, names: readonly string[]): void {
     if (!source || !target) {
       return;
     }
@@ -876,32 +957,29 @@ import * as LumnoMessaging from '../platform/messaging';
 
   // Theme switches usually live on <html> or <body> (class, data-theme, CSS
   // variables in the style attribute); the PiP document follows them.
-  function syncPiPRootAttributes(session) {
+  function syncPiPRootAttributes(session: ClipSession): void {
     const pipDocument = session.pipDocument;
-    if (!pipDocument || !pipDocument.documentElement) {
+    if (!pipDocument.documentElement) {
       return;
     }
     copyRootAttributes(document.documentElement, pipDocument.documentElement, ['style', 'lang', 'dir']);
     copyRootAttributes(document.body, pipDocument.body, ['lang', 'dir']);
   }
 
-  function ensurePiPDocumentBase(pipDocument) {
-    if (!pipDocument || !pipDocument.head) {
+  function ensurePiPDocumentBase(pipDocument: Document): void {
+    if (!pipDocument.head) {
       return;
     }
-    let base = pipDocument.getElementById('__lumno_pip_base_2026__');
-    if (!base) {
-      base = pipDocument.createElement('base');
+    const existing = pipDocument.getElementById('__lumno_pip_base_2026__');
+    const base = existing || pipDocument.createElement('base');
+    if (!existing) {
       base.id = '__lumno_pip_base_2026__';
       pipDocument.head.insertBefore(base, pipDocument.head.firstChild || null);
     }
-    base.href = document.baseURI || window.location.href;
+    base.setAttribute('href', document.baseURI || window.location.href);
   }
 
-  function cloneContextNodeShallow(sourceNode, pipDocument) {
-    if (!(sourceNode instanceof Element) || !pipDocument) {
-      return null;
-    }
+  function cloneContextNodeShallow(sourceNode: Element, pipDocument: Document): HTMLElement | null {
     const tagName = String(sourceNode.tagName || '').toLowerCase();
     if (!tagName) {
       return null;
@@ -941,7 +1019,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return clone;
   }
 
-  function buildPiPContextChain(element, pipDocument) {
+  function buildPiPContextChain(element: Element, pipDocument: Document): { root: HTMLDivElement; mountPoint: HTMLElement } {
     const root = pipDocument.createElement('div');
     root.setAttribute('data-lumno-pip-context-root', '1');
     root.style.cssText = [
@@ -951,15 +1029,15 @@ import * as LumnoMessaging from '../platform/messaging';
       'box-sizing: border-box'
     ].join(';');
 
-    const ancestors = [];
-    let current = element instanceof Element ? element.parentElement : null;
+    const ancestors: Element[] = [];
+    let current = element.parentElement;
     while (current && current !== document.body && current !== document.documentElement) {
       ancestors.push(current);
       current = current.parentElement;
     }
     ancestors.reverse();
 
-    let mountPoint = root;
+    let mountPoint: HTMLElement = root;
     ancestors.forEach((ancestor) => {
       const clonedAncestor = cloneContextNodeShallow(ancestor, pipDocument);
       if (!clonedAncestor) {
@@ -975,8 +1053,8 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function ensurePiPDockAssets(pipDocument) {
-    if (!pipDocument || !pipDocument.head) {
+  function ensurePiPDockAssets(pipDocument: Document): void {
+    if (!pipDocument.head) {
       return;
     }
     // The PiP window holds a clone of the host page, so remixicon.css and its
@@ -1078,84 +1156,78 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-
-
-  function getElementTree(root) {
-    if (!root || root.nodeType !== Node.ELEMENT_NODE || typeof root.querySelectorAll !== 'function') {
-      return [];
-    }
+  function getElementTree(root: Element): Element[] {
     return [root].concat(Array.from(root.querySelectorAll('*')));
   }
 
-  function copyUrlAttribute(sourceNode, cloneNode, attrName, propertyName) {
-    if (!sourceNode || !cloneNode || !attrName || typeof sourceNode.getAttribute !== 'function' ||
-        typeof cloneNode.setAttribute !== 'function') {
-      return;
-    }
+  // Writes the page's resolved URL into the copy, which has no base of the
+  // page's own to resolve a relative one against.
+  function copyUrlAttribute(sourceNode: Element, cloneNode: Element, attrName: string, resolved: string): void {
     const raw = sourceNode.getAttribute(attrName);
     if (!raw || /^\s*(#|data:|blob:|javascript:)/i.test(raw)) {
       return;
     }
-    const resolved = sourceNode[propertyName || attrName];
-    if (typeof resolved === 'string' && resolved) {
+    if (resolved) {
       cloneNode.setAttribute(attrName, resolved);
     }
   }
 
-  function syncCloneRuntimeState(sourceRoot, cloneRoot) {
+  // Copies what lives only in properties (form values, open details, canvas
+  // pixels) and resolved URLs onto the copy, element by element.
+  function syncCloneRuntimeState(sourceRoot: Element, cloneRoot: Element): void {
     const sourceNodes = getElementTree(sourceRoot);
     const cloneNodes = getElementTree(cloneRoot);
     const count = Math.min(sourceNodes.length, cloneNodes.length);
     for (let index = 0; index < count; index += 1) {
       const sourceNode = sourceNodes[index];
       const cloneNode = cloneNodes[index];
-      const tagName = String(sourceNode && sourceNode.tagName || '').toLowerCase();
-      if (!tagName) {
-        continue;
-      }
-      if (tagName === 'input') {
+      if (isHtmlTag(sourceNode, 'input') && isHtmlTag(cloneNode, 'input')) {
         cloneNode.value = sourceNode.value;
-        cloneNode.checked = Boolean(sourceNode.checked);
-        cloneNode.indeterminate = Boolean(sourceNode.indeterminate);
-      } else if (tagName === 'textarea') {
+        cloneNode.checked = sourceNode.checked;
+        cloneNode.indeterminate = sourceNode.indeterminate;
+      } else if (isHtmlTag(sourceNode, 'textarea') && isHtmlTag(cloneNode, 'textarea')) {
         cloneNode.value = sourceNode.value;
         cloneNode.textContent = sourceNode.value;
-      } else if (tagName === 'select') {
+      } else if (isHtmlTag(sourceNode, 'select') && isHtmlTag(cloneNode, 'select')) {
+        const cloneOptions = cloneNode.options;
         cloneNode.selectedIndex = sourceNode.selectedIndex;
-        Array.from(sourceNode.options || []).forEach((sourceOption, optionIndex) => {
-          const cloneOption = cloneNode.options && cloneNode.options[optionIndex];
+        Array.from(sourceNode.options).forEach((sourceOption, optionIndex) => {
+          const cloneOption = cloneOptions[optionIndex];
           if (cloneOption) {
-            cloneOption.selected = Boolean(sourceOption.selected);
+            cloneOption.selected = sourceOption.selected;
           }
         });
-      } else if (tagName === 'option') {
-        cloneNode.selected = Boolean(sourceNode.selected);
-      } else if (tagName === 'details') {
-        cloneNode.open = Boolean(sourceNode.open);
-      } else if (tagName === 'canvas' && typeof sourceNode.getContext === 'function' && typeof cloneNode.getContext === 'function') {
+      } else if (isHtmlTag(sourceNode, 'option') && isHtmlTag(cloneNode, 'option')) {
+        cloneNode.selected = sourceNode.selected;
+      } else if (isHtmlTag(sourceNode, 'details') && isHtmlTag(cloneNode, 'details')) {
+        cloneNode.open = sourceNode.open;
+      } else if (isHtmlTag(sourceNode, 'canvas') && isHtmlTag(cloneNode, 'canvas')) {
         try {
           const context = cloneNode.getContext('2d');
           if (context) {
             context.drawImage(sourceNode, 0, 0);
           }
-        } catch (error) {
+        } catch (_error) {
           // Ignore canvas copies that are blocked by browser security.
         }
       }
 
-      if (tagName === 'img') {
-        copyUrlAttribute(sourceNode, cloneNode, 'src', sourceNode.currentSrc ? 'currentSrc' : 'src');
-      } else if (tagName === 'source' || tagName === 'track' || tagName === 'script') {
-        copyUrlAttribute(sourceNode, cloneNode, 'src', 'src');
-      } else if (tagName === 'a' || tagName === 'area') {
-        copyUrlAttribute(sourceNode, cloneNode, 'href', 'href');
+      if (isHtmlTag(sourceNode, 'img')) {
+        copyUrlAttribute(sourceNode, cloneNode, 'src', sourceNode.currentSrc || sourceNode.src);
+      } else if (isHtmlTag(sourceNode, 'source') || isHtmlTag(sourceNode, 'track') || isHtmlTag(sourceNode, 'script')) {
+        copyUrlAttribute(sourceNode, cloneNode, 'src', sourceNode.src);
+      } else if (isHtmlTag(sourceNode, 'a') || isHtmlTag(sourceNode, 'area')) {
+        copyUrlAttribute(sourceNode, cloneNode, 'href', sourceNode.href);
       }
     }
   }
 
   // The clip keeps its own look, but page-level placement (sticky headers,
   // fixed panels, outer margins) has no meaning in the floating window.
-  function normalizeClipRoot(clone, element) {
+  function normalizeClipRoot(clone: Element, element: Element): void {
+    if (!hasInlineStyle(clone)) {
+      return;
+    }
     const computed = window.getComputedStyle(element);
     if (['fixed', 'sticky', 'absolute'].includes(computed.position)) {
       clone.style.setProperty('position', 'relative', 'important');
@@ -1166,47 +1238,34 @@ import * as LumnoMessaging from '../platform/messaging';
     clone.style.setProperty('margin', '0', 'important');
   }
 
-  function buildPiPElementClone(element, pipDocument) {
-    if (!element || !pipDocument) {
-      return null;
-    }
-    const clone = typeof pipDocument.importNode === 'function'
-      ? pipDocument.importNode(element, true)
-      : element.cloneNode(true);
-    if (clone && clone.nodeType === Node.ELEMENT_NODE) {
-      syncCloneRuntimeState(element, clone);
-      normalizeClipRoot(clone, element);
-    }
+  function buildPiPElementClone(element: Element, pipDocument: Document): Element {
+    const clone = pipDocument.importNode(element, true);
+    syncCloneRuntimeState(element, clone);
+    normalizeClipRoot(clone, element);
     return clone;
   }
 
-  function refreshPiPContent(session) {
-    if (!session || !session.element || !session.pipDocument || !session.pipContentMount ||
-        !session.pipWindow || session.pipWindow.closed) {
+  function refreshPiPContent(session: ClipSession): void {
+    if (session.pipWindow.closed) {
       return;
     }
     syncPiPStyleSheets(session);
     const clone = buildPiPElementClone(session.element, session.pipDocument);
-    if (!clone) {
-      return;
-    }
-    const scrollHost = session.pipContent || null;
-    const scrollTop = scrollHost ? scrollHost.scrollTop : 0;
-    const scrollLeft = scrollHost ? scrollHost.scrollLeft : 0;
+    const scrollHost = session.pipContent;
+    const scrollTop = scrollHost.scrollTop;
+    const scrollLeft = scrollHost.scrollLeft;
     if (session.pipElementClone && session.pipElementClone.parentNode === session.pipContentMount) {
       session.pipContentMount.replaceChild(clone, session.pipElementClone);
     } else {
       session.pipContentMount.replaceChildren(clone);
     }
     session.pipElementClone = clone;
-    if (scrollHost) {
-      scrollHost.scrollTop = scrollTop;
-      scrollHost.scrollLeft = scrollLeft;
-    }
+    scrollHost.scrollTop = scrollTop;
+    scrollHost.scrollLeft = scrollLeft;
   }
 
-  function schedulePiPContentRefresh(session) {
-    if (!session || !session.element || !session.pipContentMount || session.contentSyncTimer != null) {
+  function schedulePiPContentRefresh(session: ClipSession): void {
+    if (session.contentSyncTimer != null) {
       return;
     }
     session.contentSyncTimer = window.setTimeout(() => {
@@ -1215,13 +1274,13 @@ import * as LumnoMessaging from '../platform/messaging';
     }, PIP_SYNC_DELAY_MS);
   }
 
-  function schedulePiPDocumentSync(session) {
-    if (!session || session.documentSyncTimer != null) {
+  function schedulePiPDocumentSync(session: ClipSession): void {
+    if (session.documentSyncTimer != null) {
       return;
     }
     session.documentSyncTimer = window.setTimeout(() => {
       session.documentSyncTimer = null;
-      if (!session.pipWindow || session.pipWindow.closed) {
+      if (session.pipWindow.closed) {
         return;
       }
       syncPiPRootAttributes(session);
@@ -1229,13 +1288,13 @@ import * as LumnoMessaging from '../platform/messaging';
     }, PIP_SYNC_DELAY_MS);
   }
 
-  function hasFloatingSurface(element) {
+  function hasFloatingSurface(element: Element): boolean {
     const style = window.getComputedStyle(element);
     return hasPaintedSurface(element) &&
       (style.boxShadow !== 'none' || (parseFloat(style.borderTopLeftRadius) || 0) > 0);
   }
 
-  function getClipLayout(element) {
+  function getClipLayout(element: Element): ClipLayout {
     const rect = element.getBoundingClientRect();
     // Cards with rounded corners or shadows get a little room so their edges
     // do not touch the window frame; flat regions use the whole window.
@@ -1249,7 +1308,11 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function createPiPScaffold(pipWindow, visualTheme, layout) {
+  function createPiPScaffold(
+    pipWindow: Window,
+    visualTheme: VisualTheme,
+    layout: ClipLayout
+  ): { shell: HTMLDivElement; content: HTMLDivElement } {
     const pipDocument = pipWindow.document;
     ensurePiPDocumentBase(pipDocument);
     ensurePiPStyleAnchor(pipDocument);
@@ -1289,7 +1352,12 @@ import * as LumnoMessaging from '../platform/messaging';
     };
   }
 
-  function createPiPDock(pipContext) {
+  function createPiPDock(pipContext: {
+    pipWindow: Window;
+    pipDocument: Document;
+    shell: HTMLDivElement;
+    visualTheme: VisualTheme;
+  }): PiPDock {
     const { pipWindow, pipDocument, shell, visualTheme } = pipContext;
     const dock = pipDocument.createElement('div');
     dock.setAttribute('data-lumno-pip-dock', '1');
@@ -1314,7 +1382,7 @@ import * as LumnoMessaging from '../platform/messaging';
       'z-index: 2147483647'
     ].join(';');
 
-    const buildDockButton = (label, iconClass) => {
+    const buildDockButton = (label: string, iconClass: string): HTMLButtonElement => {
       const button = pipDocument.createElement('button');
       button.type = 'button';
       button.className = 'lumno-pip-dock-btn';
@@ -1336,22 +1404,25 @@ import * as LumnoMessaging from '../platform/messaging';
       return button;
     };
 
-    const showDock = () => {
-      if (dock._xHideTimer) {
-        pipWindow.clearTimeout(dock._xHideTimer);
-        dock._xHideTimer = null;
+    let hideTimer: number | null = null;
+    const cancelHide = (): void => {
+      if (hideTimer !== null) {
+        pipWindow.clearTimeout(hideTimer);
+        hideTimer = null;
       }
+    };
+
+    const showDock = (): void => {
+      cancelHide();
       dock.setAttribute('data-expanded', 'true');
       dock.style.transform = 'translateX(-50%) translateY(0)';
       dock.style.opacity = '1';
     };
 
-    const hideDock = () => {
-      if (dock._xHideTimer) {
-        pipWindow.clearTimeout(dock._xHideTimer);
-      }
-      dock._xHideTimer = pipWindow.setTimeout(() => {
-        dock._xHideTimer = null;
+    const hideDock = (): void => {
+      cancelHide();
+      hideTimer = pipWindow.setTimeout(() => {
+        hideTimer = null;
         dock.removeAttribute('data-expanded');
         dock.style.transform = 'translateX(-50%) translateY(calc(100% - 8px))';
         dock.style.opacity = '0.92';
@@ -1379,9 +1450,8 @@ import * as LumnoMessaging from '../platform/messaging';
     dock.addEventListener('focusin', showDock);
     dock.addEventListener('focusout', hideDock);
     pipDocument.addEventListener('mousemove', (event) => {
-      const y = Number(event && event.clientY);
-      const height = Number(pipWindow.innerHeight || 0);
-      if (height > 0 && y >= height - 48) {
+      const height = pipWindow.innerHeight;
+      if (height > 0 && event.clientY >= height - 48) {
         showDock();
         return;
       }
@@ -1389,17 +1459,17 @@ import * as LumnoMessaging from '../platform/messaging';
     });
 
     shell.appendChild(dock);
-    return dock;
+    return { element: dock, cancelHide };
   }
 
-  function restoreSession(options) {
+  function restoreSession(options?: { closeWindow?: boolean }): boolean {
     const session = state.session;
     if (!session) {
       releaseDocumentPipOwnership();
       return false;
     }
     state.session = null;
-    window[STATE_FLAG] = false;
+    Reflect.set(window, STATE_FLAG, false);
 
     [session.documentObserver, session.contentObserver, session.resizeObserver].forEach((observer) => {
       if (observer) {
@@ -1413,24 +1483,19 @@ import * as LumnoMessaging from '../platform/messaging';
     });
     session.contentSyncTimer = null;
     session.documentSyncTimer = null;
-    if (session.onMainPageHide) {
-      window.removeEventListener('pagehide', session.onMainPageHide, true);
-    }
-    if (session.dock && session.dock._xHideTimer) {
-      try {
-        session.pipWindow.clearTimeout(session.dock._xHideTimer);
-      } catch (error) {
-        // Ignore timer cleanup failures.
-      }
-      session.dock._xHideTimer = null;
+    window.removeEventListener('pagehide', session.onMainPageHide, true);
+    try {
+      session.dock.cancelHide();
+    } catch (_error) {
+      // Ignore timer cleanup failures.
     }
 
     if (!options || options.closeWindow !== false) {
       try {
-        if (session.pipWindow && !session.pipWindow.closed) {
+        if (!session.pipWindow.closed) {
           session.pipWindow.close();
         }
-      } catch (error) {
+      } catch (_error) {
         // Ignore close failures.
       }
     }
@@ -1439,11 +1504,11 @@ import * as LumnoMessaging from '../platform/messaging';
     return true;
   }
 
-  function getPiPLinkUrl(link) {
+  function getPiPLinkUrl(link: Element): URL | null {
     const rawHref = link.getAttribute('href') || '';
     try {
       return new URL(rawHref, document.baseURI || window.location.href);
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
@@ -1451,13 +1516,12 @@ import * as LumnoMessaging from '../platform/messaging';
   // The clip is a copy without the page's scripts, so following a link inside
   // the small window would replace the clip itself. Links open as tabs next
   // to the page instead, and in-page anchors scroll the clip.
-  function handlePiPLinkClick(event, session) {
+  function handlePiPLinkClick(event: MouseEvent, session: ClipSession): void {
     if (event.defaultPrevented || event.button !== 0) {
       return;
     }
-    const link = event.target && typeof event.target.closest === 'function'
-      ? event.target.closest('a[href], area[href]')
-      : null;
+    const target = event.target;
+    const link = isElementTarget(target) ? target.closest('a[href], area[href]') : null;
     if (!link) {
       return;
     }
@@ -1473,10 +1537,10 @@ import * as LumnoMessaging from '../platform/messaging';
       if (!url.hash) {
         return;
       }
-      let anchorTarget = null;
+      let anchorTarget: HTMLElement | null = null;
       try {
         anchorTarget = session.pipDocument.getElementById(decodeURIComponent(url.hash.slice(1)));
-      } catch (error) {
+      } catch (_error) {
         anchorTarget = null;
       }
       if (anchorTarget) {
@@ -1487,14 +1551,14 @@ import * as LumnoMessaging from '../platform/messaging';
     if (!/^(https?|mailto|tel):$/.test(url.protocol)) {
       return;
     }
-    sendRuntimeMessage({
+    void sendRuntimeMessage({
       action: 'createTab',
       url: url.href,
-      disposition: event.metaKey || event.ctrlKey ? 'backgroundTab' : 'foregroundTab'
+      disposition: event.metaKey || event.ctrlKey ? 'backgroundTab' : 'newTab'
     });
   }
 
-  function attachPiPDocumentHandlers(session) {
+  function attachPiPDocumentHandlers(session: ClipSession): void {
     const pipDocument = session.pipDocument;
     pipDocument.addEventListener('click', (event) => {
       handlePiPLinkClick(event, session);
@@ -1504,7 +1568,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }, true);
   }
 
-  async function openDocumentPiP(element) {
+  async function openDocumentPiP(element: Element): Promise<OpenResult> {
     if (!isAllowedElement(element) || containsBlockedMediaContent(element)) {
       showToast(
         getMessage(
@@ -1521,14 +1585,20 @@ import * as LumnoMessaging from '../platform/messaging';
       return { ok: false, reason: 'video-pip-active' };
     }
 
+    const pictureInPicture = readDocumentPictureInPicture(window);
+    if (!pictureInPicture) {
+      showToast(getSupportFailureMessage('api-unavailable'), 'error');
+      return { ok: false, reason: 'api-unavailable' };
+    }
+
     const visualTheme = getVisualTheme(element);
     const layout = getClipLayout(element);
-    let pipWindow = null;
+    let pipWindow: Window;
     try {
       // Browsers only open PiP while the click's user activation is fresh, so
       // the window comes first; slow work like waking the background service
       // worker must not run before it.
-      pipWindow = await window.documentPictureInPicture.requestWindow({
+      pipWindow = await pictureInPicture.requestWindow({
         width: layout.width,
         height: layout.height
       });
@@ -1537,12 +1607,12 @@ import * as LumnoMessaging from '../platform/messaging';
       return {
         ok: false,
         reason: 'request-window-failed',
-        errorName: error && error.name ? String(error.name) : '',
-        errorMessage: error && error.message ? String(error.message) : ''
+        errorName: readErrorText(error, 'name'),
+        errorMessage: readErrorText(error, 'message')
       };
     }
 
-    let session = null;
+    let session: ClipSession | null = null;
     try {
       const pipDocument = pipWindow.document;
       const { shell, content } = createPiPScaffold(pipWindow, visualTheme, layout);
@@ -1555,7 +1625,7 @@ import * as LumnoMessaging from '../platform/messaging';
       const contextChain = buildPiPContextChain(element, pipDocument);
       content.appendChild(contextChain.root);
 
-      session = {
+      const opened: ClipSession = {
         element: element,
         pipWindow: pipWindow,
         pipDocument: pipDocument,
@@ -1563,67 +1633,66 @@ import * as LumnoMessaging from '../platform/messaging';
         pipContentMount: contextChain.mountPoint,
         pipElementClone: null,
         styleSignature: '',
-        documentObserver: null,
-        contentObserver: null,
-        resizeObserver: null,
+        documentObserver: new MutationObserver(() => {
+          schedulePiPDocumentSync(opened);
+        }),
+        contentObserver: new MutationObserver(() => {
+          schedulePiPContentRefresh(opened);
+        }),
+        resizeObserver: typeof ResizeObserver === 'function'
+          ? new ResizeObserver(() => {
+            schedulePiPContentRefresh(opened);
+          })
+          : null,
         contentSyncTimer: null,
         documentSyncTimer: null,
         dock: dock,
-        onMainPageHide: null
+        onMainPageHide: () => {
+          if (state.session === opened) {
+            restoreSession({ closeWindow: true });
+          }
+        }
       };
+      session = opened;
 
-      session.documentObserver = new MutationObserver(() => {
-        schedulePiPDocumentSync(session);
-      });
-      session.documentObserver.observe(document.documentElement, { attributes: true });
+      opened.documentObserver.observe(document.documentElement, { attributes: true });
       if (document.body) {
-        session.documentObserver.observe(document.body, { attributes: true });
+        opened.documentObserver.observe(document.body, { attributes: true });
       }
       if (document.head) {
-        session.documentObserver.observe(document.head, {
+        opened.documentObserver.observe(document.head, {
           childList: true,
           subtree: true,
           characterData: true
         });
       }
 
-      session.contentObserver = new MutationObserver(() => {
-        schedulePiPContentRefresh(session);
-      });
-      session.contentObserver.observe(element, {
+      opened.contentObserver.observe(element, {
         subtree: true,
         childList: true,
         characterData: true,
         attributes: true
       });
 
-      if (typeof ResizeObserver === 'function') {
-        session.resizeObserver = new ResizeObserver(() => {
-          schedulePiPContentRefresh(session);
-        });
-        session.resizeObserver.observe(element);
+      if (opened.resizeObserver) {
+        opened.resizeObserver.observe(element);
       }
 
-      session.onMainPageHide = () => {
-        if (state.session === session) {
-          restoreSession({ closeWindow: true });
-        }
-      };
       pipWindow.addEventListener('pagehide', () => {
-        if (state.session === session) {
+        if (state.session === opened) {
           restoreSession({ closeWindow: false });
         }
       }, { once: true });
-      window.addEventListener('pagehide', session.onMainPageHide, true);
-      attachPiPDocumentHandlers(session);
+      window.addEventListener('pagehide', opened.onMainPageHide, true);
+      attachPiPDocumentHandlers(opened);
 
-      state.session = session;
-      syncPiPRootAttributes(session);
-      refreshPiPContent(session);
-      window[STATE_FLAG] = true;
+      state.session = opened;
+      syncPiPRootAttributes(opened);
+      refreshPiPContent(opened);
+      Reflect.set(window, STATE_FLAG, true);
 
     } catch (error) {
-      if (state.session === session && session) {
+      if (session && state.session === session) {
         restoreSession({ closeWindow: true });
       } else {
         pipWindow.close();
@@ -1640,14 +1709,14 @@ import * as LumnoMessaging from '../platform/messaging';
     return { ok: true };
   }
 
-  function stopSelection(options) {
+  function stopSelection(options?: { clearHighlight?: boolean }): void {
     state.active = false;
     state.currentTarget = null;
     state.currentStack = [];
     state.currentStackIndex = 0;
     state.currentTheme = null;
     state.opening = false;
-    if (typeof state.teardownSelection === 'function') {
+    if (state.teardownSelection) {
       state.teardownSelection();
       state.teardownSelection = null;
     }
@@ -1657,7 +1726,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  async function confirmCurrentTarget() {
+  async function confirmCurrentTarget(): Promise<void> {
     if (!state.active || state.opening) {
       return;
     }
@@ -1669,11 +1738,11 @@ import * as LumnoMessaging from '../platform/messaging';
     stopSelection({});
     try {
       const result = await openDocumentPiP(target);
-      if (!result || result.ok !== true) {
+      if (!result.ok) {
         releaseDocumentPipOwnership();
         setHighlight(null);
       }
-    } catch (error) {
+    } catch (_error) {
       releaseDocumentPipOwnership();
       setHighlight(null);
       showToast(
@@ -1686,7 +1755,7 @@ import * as LumnoMessaging from '../platform/messaging';
     }
   }
 
-  function startSelection() {
+  function startSelection(): DocumentPipPickerReply {
     const support = getDocumentPiPSupportState();
     if (!support.supported) {
       showToast(
@@ -1706,14 +1775,14 @@ import * as LumnoMessaging from '../platform/messaging';
     applyPickerTheme(getPickerTheme(null));
     state.active = true;
 
-    const onMouseMove = (event) => {
+    const onMouseMove = (event: MouseEvent): void => {
       if (!state.active) {
         return;
       }
       updateCurrentTargetFromPointer(event);
     };
 
-    const onWheel = (event) => {
+    const onWheel = (event: WheelEvent): void => {
       if (!state.active || !state.currentStack.length) {
         return;
       }
@@ -1726,7 +1795,7 @@ import * as LumnoMessaging from '../platform/messaging';
       selectTargetFromStack(state.currentStackIndex + (delta > 0 ? 1 : -1));
     };
 
-    const onKeyDown = (event) => {
+    const onKeyDown = (event: KeyboardEvent): void => {
       if (!state.active) {
         return;
       }
@@ -1755,11 +1824,11 @@ import * as LumnoMessaging from '../platform/messaging';
       if ((event.key === 'Enter' || event.key === 'NumpadEnter') && state.currentTarget) {
         event.preventDefault();
         event.stopPropagation();
-        confirmCurrentTarget();
+        void confirmCurrentTarget();
       }
     };
 
-    const onClick = async (event) => {
+    const onClick = async (event: MouseEvent): Promise<void> => {
       if (!state.active) {
         return;
       }
@@ -1775,7 +1844,7 @@ import * as LumnoMessaging from '../platform/messaging';
       await confirmCurrentTarget();
     };
 
-    const onPointerBlockingEvent = (event) => {
+    const onPointerBlockingEvent = (event: Event): void => {
       if (!state.active) {
         return;
       }
@@ -1816,7 +1885,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return { ok: true, state: 'started' };
   }
 
-  function toggle() {
+  function toggle(): DocumentPipPickerReply {
     if (state.session) {
       restoreSession({ closeWindow: true });
       showToast(
@@ -1836,7 +1905,7 @@ import * as LumnoMessaging from '../platform/messaging';
     return startSelection();
   }
 
-  function bindRuntimeMessageListener() {
+  function bindRuntimeMessageListener(): void {
     if (state.runtimeMessageHandlerBound) {
       return;
     }
@@ -1844,9 +1913,10 @@ import * as LumnoMessaging from '../platform/messaging';
         typeof chrome.runtime.onMessage.addListener !== 'function') {
       return;
     }
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      if (!message || message.action !== 'lumno:pip-force-surrender') {
-        return;
+    // Another tab took picture-in-picture over.
+    chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse: (reply: OkReply) => void) => {
+      if (!isRecord(message) || message.action !== 'lumno:pip-force-surrender') {
+        return false;
       }
       if (state.active) {
         stopSelection({});
@@ -1860,7 +1930,7 @@ import * as LumnoMessaging from '../platform/messaging';
 
   bindRuntimeMessageListener();
 
-  window.__lumnoDocumentPiPPicker2026 = {
+  const pickerApi: Readonly<DocumentPipPickerApi> = {
     toggle: toggle,
     restore: () => restoreSession({ closeWindow: true }),
     notifyVideoPiPConflict: () => {
@@ -1871,4 +1941,5 @@ import * as LumnoMessaging from '../platform/messaging';
       return { ok: false, state: 'blocked-by-video-pip' };
     }
   };
+  window.__lumnoDocumentPiPPicker2026 = pickerApi;
 })();

@@ -130,7 +130,7 @@ async function testLinksInTheCopy(page) {
   click('other-link');
   await wait(10);
   const created = page.messages.slice(before).map((message) => ({ ...message }));
-  assert.deepStrictEqual(created, [{ action: 'createTab', url: 'https://other.example.test/story', disposition: 'foregroundTab' }],
+  assert.deepStrictEqual(created, [{ action: 'createTab', url: 'https://other.example.test/story', disposition: 'newTab' }],
     'another page should open in a tab next to the page');
 }
 
