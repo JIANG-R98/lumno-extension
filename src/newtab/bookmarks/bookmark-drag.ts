@@ -1,15 +1,88 @@
+// A bookmark drag's session, its floating preview, and where the pointer
+// would drop it in the grid or bar.
+import { isHtmlElement } from '../../shared/dom-guards';
+import type {
+  DragDropTarget,
+  GridInsertionTarget,
+  LayoutRect,
+  MarkerPosition,
+  SurfaceDragState
+} from '../cross-surface-drag';
+import type { BookmarkCardElement, BookmarkItem as CardItem } from '../react/bookmarks';
+import type { BookmarkItem } from './bookmarks-store';
+
+// A bookmark card, or a row of the cascade menu, that a drag starts on.
+type BookmarkDragSource = HTMLElement &
+  Pick<BookmarkCardElement, '_xBookmarkItem' | '_xTitleText' | '_xDeactivateBookmarkHoverVisual'>;
+
+interface BookmarkLayoutItem {
+  card: BookmarkDragSource;
+  rect: LayoutRect;
+}
+
+interface BookmarkDragSession extends SurfaceDragState {
+  pointerId: number;
+  card: BookmarkDragSource;
+  bookmarkId: string;
+  parentId: string;
+  sourceKind: 'cascade' | 'card';
+  isFolder: boolean;
+  itemTitle: string;
+  originalIndex: number;
+  // The items and the page's cards as they were, to put back on cancel.
+  originalAllItems: BookmarkItem[];
+  originalPageCardIds: string[];
+  originalPageIndex: number;
+  startX: number;
+  startY: number;
+  grabOffsetX: number;
+  grabOffsetY: number;
+  baseLeft: number;
+  baseTop: number;
+  translateX: number;
+  translateY: number;
+  moveFrameId: number;
+  pageIndex: number;
+  // The other cards of the page and where they are.
+  layoutItems: BookmarkLayoutItem[];
+  dragPreviewElement: HTMLElement | null;
+  dragPreviewOffsetX: number;
+  dragPreviewOffsetY: number;
+  keepCascadeOpenAfterDrop: boolean;
+  isDragging: boolean;
+  hasReordered: boolean;
+  // Where the dragged card was drawn when it dropped.
+  draggedVisualRect?: { left: number; top: number; right: number; bottom: number; width: number; height: number } | null;
+}
+
+// The parts of a session the preview helpers use.
+type PreviewSession = Pick<BookmarkDragSession, 'card' | 'isFolder' | 'sourceKind'> &
+  Partial<Pick<BookmarkDragSession,
+    'bookmarkId' | 'dragPreviewElement' | 'baseLeft' | 'baseTop' | 'grabOffsetX' | 'grabOffsetY' |
+    'dragPreviewOffsetX' | 'dragPreviewOffsetY'>>;
+
+type VisualSession = Pick<BookmarkDragSession, 'card' | 'dragPreviewElement' | 'baseLeft' | 'baseTop' |
+  'grabOffsetX' | 'grabOffsetY' | 'dragPreviewOffsetX' | 'dragPreviewOffsetY' | 'translateX' | 'translateY'>;
+
+interface ViewportWindow {
+  innerWidth: number;
+  innerHeight: number;
+}
+
+type RectInput = Partial<Pick<LayoutRect, 'left' | 'top' | 'right' | 'bottom' | 'width' | 'height' | 'centerY'>>;
+
 const DEFAULT_PREVIEW_POINTER_GAP_PX = 10;
 const DEFAULT_PREVIEW_VIEWPORT_EDGE_PX = 8;
 const DEFAULT_GRID_INSERTION_HIT_ZONE_PX = 8;
 const DEFAULT_GRID_COLUMN_GAP_PX = 12;
 
-function getAttribute(element, name) {
+function getAttribute(element: Pick<Element, 'getAttribute'> | null | undefined, name: string): string | null {
   return element && typeof element.getAttribute === 'function'
     ? element.getAttribute(name)
     : null;
 }
 
-function hasClass(element, className) {
+function hasClass(element: Pick<Element, 'classList'> | null | undefined, className: string): boolean {
   return Boolean(
     element &&
     element.classList &&
@@ -18,7 +91,7 @@ function hasClass(element, className) {
   );
 }
 
-function getRectCenterY(rect) {
+function getRectCenterY(rect: RectInput | null | undefined): number {
   const centerY = Number(rect && rect.centerY);
   if (Number.isFinite(centerY)) {
     return centerY;
@@ -30,18 +103,30 @@ function getRectCenterY(rect) {
     : NaN;
 }
 
-function getLayoutItemIndex(layoutItem) {
-  const card = layoutItem && layoutItem.card;
+function getLayoutItemIndex(layoutItem: BookmarkLayoutItem | null | undefined): number {
+  const card = layoutItem ? layoutItem.card : null;
   const bookmarkItem = card && card._xBookmarkItem;
   const attributeIndex = Number(getAttribute(card, 'data-bookmark-index'));
   const fallbackIndex = Number(bookmarkItem && bookmarkItem.index);
   return Number.isFinite(attributeIndex) ? attributeIndex : fallbackIndex;
 }
 
-function createSession(options) {
-  const config = options && typeof options === 'object' ? options : {};
-  const event = config.event && typeof config.event === 'object' ? config.event : {};
-  const card = config.card || null;
+function createSession(options: {
+  event?: Pick<PointerEvent, 'pointerId' | 'clientX' | 'clientY'> | null;
+  card: BookmarkDragSource;
+  bookmarkItem?: CardItem | BookmarkItem | null;
+  bookmarkId?: unknown;
+  parentId?: unknown;
+  sourceKind?: string;
+  isFolder?: boolean;
+  itemTitle?: string;
+  allItems?: readonly BookmarkItem[];
+  pageCardIds?: readonly string[];
+  pageIndex?: number;
+}): BookmarkDragSession {
+  const config = options;
+  const event = config.event || { pointerId: 0, clientX: NaN, clientY: NaN };
+  const card = config.card;
   const bookmarkItem = config.bookmarkItem && typeof config.bookmarkItem === 'object'
     ? config.bookmarkItem
     : null;
@@ -107,7 +192,11 @@ function createSession(options) {
   };
 }
 
-function getFolderSwitchTarget(currentFolderId, dropTarget) {
+// The breadcrumb step a drag rests on, to open that folder.
+function getFolderSwitchTarget(
+  currentFolderId: unknown,
+  dropTarget: DragDropTarget | null
+): { folderId: string; element: HTMLElement | null } | null {
   if (!dropTarget || dropTarget.kind !== 'breadcrumb') {
     return null;
   }
@@ -121,7 +210,7 @@ function getFolderSwitchTarget(currentFolderId, dropTarget) {
   };
 }
 
-function shouldKeepCascadeOpenAfterDrop(sourceKind, dropTarget) {
+function shouldKeepCascadeOpenAfterDrop(sourceKind: string, dropTarget: DragDropTarget | null): boolean {
   return Boolean(
     sourceKind === 'cascade' &&
     dropTarget &&
@@ -129,7 +218,8 @@ function shouldKeepCascadeOpenAfterDrop(sourceKind, dropTarget) {
   );
 }
 
-function getVisualElement(state) {
+// The floating preview while there is one, else the card itself.
+function getVisualElement(state: Pick<BookmarkDragSession, 'card' | 'dragPreviewElement'> | null | undefined): HTMLElement | null {
   return state && state.dragPreviewElement
     ? state.dragPreviewElement
     : state && state.card
@@ -137,7 +227,11 @@ function getVisualElement(state) {
       : null;
 }
 
-function getLayoutShiftDelta(beforeRect, afterRect, options) {
+function getLayoutShiftDelta(
+  beforeRect: RectInput | null | undefined,
+  afterRect: RectInput | null | undefined,
+  options?: { horizontalOnly?: boolean }
+): { dx: number; dy: number } | null {
   const beforeLeft = Number(beforeRect && beforeRect.left);
   const beforeTop = Number(beforeRect && beforeRect.top);
   const afterLeft = Number(afterRect && afterRect.left);
@@ -153,24 +247,34 @@ function getLayoutShiftDelta(beforeRect, afterRect, options) {
   };
 }
 
-function resetPreviewFolderVisual(state, preview, options) {
-  if (!state || !state.isFolder || !preview ||
-      typeof preview.querySelector !== 'function') {
+interface RenderClosedFolderIconDetail {
+  bookmarkId: string;
+  folderIcon: Element;
+  preview: HTMLElement;
+  state: PreviewSession;
+}
+
+interface PreviewOptions {
+  documentObj?: Pick<Document, 'body'> | null;
+  // Draws the preview's folder icon closed.
+  renderClosedFolderIcon?(detail: RenderClosedFolderIconDetail): void;
+}
+
+function resetPreviewFolderVisual(state: PreviewSession, preview: HTMLElement, options?: PreviewOptions): void {
+  if (!state.isFolder) {
     return;
   }
-  if (preview.classList && typeof preview.classList.remove === 'function') {
-    preview.classList.remove(
-      'x-nt-bookmark-card--folder-expanded',
-      'x-nt-bookmark-card--hover'
-    );
-  }
+  preview.classList.remove(
+    'x-nt-bookmark-card--folder-expanded',
+    'x-nt-bookmark-card--hover'
+  );
   const folderIcon = preview.querySelector(
     '.x-nt-bookmark-icon--figma, .x-nt-bookmark-cascade-icon--folder'
   );
   if (!folderIcon) {
     return;
   }
-  const config = options && typeof options === 'object' ? options : {};
+  const config = options || {};
   if (typeof config.renderClosedFolderIcon === 'function') {
     config.renderClosedFolderIcon({
       bookmarkId: String(state.bookmarkId || 'folder'),
@@ -179,22 +283,22 @@ function resetPreviewFolderVisual(state, preview, options) {
       state
     });
   }
-  if (typeof folderIcon.setAttribute === 'function') {
-    folderIcon.setAttribute('aria-hidden', 'true');
-  }
+  folderIcon.setAttribute('aria-hidden', 'true');
 }
 
-function createPreview(state, options) {
-  const config = options && typeof options === 'object' ? options : {};
+// A copy of the dragged card that floats over the page while it moves.
+function createPreview(state: PreviewSession | null | undefined, options?: PreviewOptions): HTMLElement | null {
+  const config = options || {};
   const documentObj = config.documentObj ||
     (typeof document !== 'undefined' ? document : null);
-  if (!state || !state.card || !documentObj || !documentObj.body ||
-      typeof state.card.cloneNode !== 'function' ||
-      typeof state.card.getBoundingClientRect !== 'function') {
+  if (!state || !state.card || !documentObj || !documentObj.body) {
     return null;
   }
   const rect = state.card.getBoundingClientRect();
   const preview = state.card.cloneNode(true);
+  if (!isHtmlElement(preview)) {
+    return null;
+  }
   const isCascadeSource = state.sourceKind === 'cascade';
   const isTopbarCardSource = Boolean(
     !isCascadeSource &&
@@ -229,25 +333,19 @@ function createPreview(state, options) {
     'data-hover-suppressed',
     'aria-expanded'
   ].forEach((name) => preview.removeAttribute(name));
-  if (preview.classList && typeof preview.classList.remove === 'function') {
-    preview.classList.remove(
-      'x-nt-bookmark-card--hover',
-      'x-nt-bookmark-card--folder-expanded'
-    );
-  }
+  preview.classList.remove(
+    'x-nt-bookmark-card--hover',
+    'x-nt-bookmark-card--folder-expanded'
+  );
   preview.setAttribute('aria-hidden', 'true');
   preview.setAttribute('data-bookmark-drag-preview', 'true');
   preview.tabIndex = -1;
-  if (typeof preview.querySelectorAll === 'function') {
-    preview.querySelectorAll('[id]').forEach((element) => element.removeAttribute('id'));
-    preview.querySelectorAll(
-      '.x-nt-bookmark-copy-action, .x-nt-bookmark-cascade-copy-trigger'
-    ).forEach((element) => {
-      if (element && typeof element.remove === 'function') {
-        element.remove();
-      }
-    });
-  }
+  preview.querySelectorAll('[id]').forEach((element) => element.removeAttribute('id'));
+  preview.querySelectorAll(
+    '.x-nt-bookmark-copy-action, .x-nt-bookmark-cascade-copy-trigger'
+  ).forEach((element) => {
+    element.remove();
+  });
   resetPreviewFolderVisual(state, preview, config);
   preview.style.left = `${rect.left}px`;
   preview.style.top = `${rect.top}px`;
@@ -265,7 +363,7 @@ function createPreview(state, options) {
   return preview;
 }
 
-function removePreview(state) {
+function removePreview(state: Pick<BookmarkDragSession, 'dragPreviewElement'> | null | undefined): void {
   if (!state || !state.dragPreviewElement) {
     return;
   }
@@ -276,8 +374,17 @@ function removePreview(state) {
   }
 }
 
-function getFloatingPreviewPosition(options) {
-  const config = options && typeof options === 'object' ? options : {};
+function getFloatingPreviewPosition(options: {
+  pointerX: number;
+  pointerY: number;
+  previewWidth?: number;
+  previewHeight?: number;
+  viewportWidth?: number;
+  viewportHeight?: number;
+  pointerGapPx?: number;
+  viewportEdgePx?: number;
+}): { left: number; top: number } {
+  const config = options;
   const pointerX = Number(config.pointerX);
   const pointerY = Number(config.pointerY);
   const previewWidth = Math.max(0, Number(config.previewWidth) || 0);
@@ -309,9 +416,15 @@ function getFloatingPreviewPosition(options) {
   return { left, top };
 }
 
-function updateVisualPosition(state, pointerX, pointerY, options) {
+// Moves the preview (or the card) with the pointer.
+function updateVisualPosition(
+  state: VisualSession | null | undefined,
+  pointerX: number,
+  pointerY: number,
+  options?: { windowObj?: ViewportWindow | null; pointerGapPx?: number; viewportEdgePx?: number }
+): { left: number; top: number } | null {
   const visualElement = getVisualElement(state);
-  if (!state || !visualElement || !visualElement.style) {
+  if (!state || !visualElement) {
     return null;
   }
   const baseLeft = Number(state.baseLeft) || 0;
@@ -321,7 +434,7 @@ function updateVisualPosition(state, pointerX, pointerY, options) {
   let nextY = pointerY - state.grabOffsetY - baseTop +
     (Number(state.dragPreviewOffsetY) || 0);
   if (state.dragPreviewElement === visualElement) {
-    const config = options && typeof options === 'object' ? options : {};
+    const config = options || {};
     const windowObj = config.windowObj ||
       (typeof window !== 'undefined' ? window : null);
     const position = getFloatingPreviewPosition({
@@ -351,9 +464,8 @@ function updateVisualPosition(state, pointerX, pointerY, options) {
   return { left: baseLeft + nextX, top: baseTop + nextY };
 }
 
-function isPointInsideElement(element, pointerX, pointerY) {
-  if (!element || typeof element.getBoundingClientRect !== 'function' ||
-      !Number.isFinite(pointerX) || !Number.isFinite(pointerY)) {
+function isPointInsideElement(element: Pick<Element, 'getBoundingClientRect'> | null | undefined, pointerX: number, pointerY: number): boolean {
+  if (!element || !Number.isFinite(pointerX) || !Number.isFinite(pointerY)) {
     return false;
   }
   const rect = element.getBoundingClientRect();
@@ -361,13 +473,30 @@ function isPointInsideElement(element, pointerX, pointerY) {
     pointerY >= rect.top && pointerY <= rect.bottom;
 }
 
-function getGridInsertionTarget(options) {
-  const config = options && typeof options === 'object' ? options : {};
+interface Boundary {
+  x: number;
+  anchorItem: BookmarkLayoutItem;
+  markerPosition: MarkerPosition;
+}
+
+// The line between two cards nearest the pointer, within the hit zone.
+function getGridInsertionTarget(options: {
+  gridElement?: HTMLElement | null;
+  pointerX: number;
+  pointerY: number;
+  layoutItems?: readonly BookmarkLayoutItem[];
+  isCrossPageDrag?: boolean;
+  columnGap?: string;
+  hitZonePx?: number;
+  markerVerticalInsetPx?: number;
+  folderId?: unknown;
+  pageStartIndex?: number;
+}): GridInsertionTarget | null {
+  const config = options;
   const gridElement = config.gridElement || null;
   const pointerX = Number(config.pointerX);
   const pointerY = Number(config.pointerY);
-  if (!gridElement || typeof gridElement.getBoundingClientRect !== 'function' ||
-      !Number.isFinite(pointerX) || !Number.isFinite(pointerY)) {
+  if (!gridElement || !Number.isFinite(pointerX) || !Number.isFinite(pointerY)) {
     return null;
   }
   const layoutItems = Array.isArray(config.layoutItems) ? config.layoutItems : [];
@@ -377,7 +506,7 @@ function getGridInsertionTarget(options) {
     return Number.isFinite(itemIndex) ? Math.max(lastIndex, itemIndex) : lastIndex;
   }, -1);
   const gridRect = gridElement.getBoundingClientRect();
-  const computedColumnGap = Number.parseFloat(config.columnGap);
+  const computedColumnGap = Number.parseFloat(String(config.columnGap));
   const columnGap = Number.isFinite(computedColumnGap)
     ? Math.max(0, computedColumnGap)
     : DEFAULT_GRID_COLUMN_GAP_PX;
@@ -439,7 +568,7 @@ function getGridInsertionTarget(options) {
           Math.max(8, Math.min(item.rect.height, nearestItem.rect.height) / 2);
     })
     .sort((first, second) => first.rect.left - second.rect.left);
-  const boundaries = [];
+  const boundaries: Boundary[] = [];
   const firstItem = rowCards[0];
   const lastItem = rowCards[rowCards.length - 1];
   if (firstItem) {
@@ -465,15 +594,15 @@ function getGridInsertionTarget(options) {
       markerPosition: 'after'
     });
   }
-  let nearestBoundary = null;
+  let nearestBoundary: Boundary | null = null;
   let nearestBoundaryDistance = Infinity;
-  boundaries.forEach((boundary) => {
+  for (const boundary of boundaries) {
     const distance = Math.abs(pointerX - boundary.x);
     if (distance < nearestBoundaryDistance) {
       nearestBoundary = boundary;
       nearestBoundaryDistance = distance;
     }
-  });
+  }
   if (!nearestBoundary || nearestBoundaryDistance > hitZonePx) {
     return null;
   }
@@ -515,8 +644,14 @@ function getGridInsertionTarget(options) {
   };
 }
 
-function getTopbarDropPoint(options) {
-  const config = options || {};
+// Where a drag over the compact bar lands on its row of cards.
+function getTopbarDropPoint(options: {
+  surfaceElement?: HTMLElement | null;
+  viewportElement?: HTMLElement | null;
+  pointerX: number;
+  pointerY: number;
+}): { x: number; y: number } | null {
+  const config = options;
   const surface = config.surfaceElement;
   const viewport = config.viewportElement;
   const x = Number(config.pointerX);
@@ -556,3 +691,4 @@ export {
   shouldKeepCascadeOpenAfterDrop,
   updateVisualPosition
 };
+export type { BookmarkDragSession, BookmarkDragSource, BookmarkLayoutItem };

@@ -1,4 +1,123 @@
-function normalizeLocation(location) {
+// The undo and redo history of bookmark and shortcut changes: moves,
+// deletes, transfers between bookmarks and shortcuts, stacking shortcuts
+// into a folder, reordering and deleting shortcut groups.
+import { isPortableFolder, isShortcutFolder } from '../../domain/shortcuts-store';
+import type { ShortcutItem } from '../../domain/shortcuts-store';
+import type { FolderItemIcon } from './folder-item-icons';
+import type { BookmarkNode } from './bookmarks-store';
+
+interface BookmarkLocation {
+  parentId: string;
+  index: number;
+}
+
+type LocationInput = { parentId?: unknown; index?: unknown } | null | undefined;
+
+// A bookmark or folder as it was, enough to create it again.
+interface SnapshotNode {
+  title: string;
+  url: string;
+  children: readonly SnapshotNode[];
+}
+
+type SnapshotInput = { title?: unknown; url?: unknown; children?: readonly SnapshotInput[] | null } | null | undefined;
+
+type BookmarkNodeMap = ReadonlyMap<string, BookmarkNode>;
+
+interface MoveRecord {
+  // Move records are made without a kind.
+  kind?: 'move';
+  bookmarkId: string;
+  title: string;
+  from: Readonly<BookmarkLocation>;
+  to: Readonly<BookmarkLocation>;
+}
+
+interface DeleteRecord {
+  kind: 'delete';
+  bookmarkId: string;
+  title: string;
+  parentId: string;
+  index: number;
+  snapshot: SnapshotNode;
+  // The id the bookmark has after undo created it again.
+  runtime: { currentBookmarkId: string };
+}
+
+interface ShortcutDeleteRecord {
+  kind: 'shortcut-delete';
+  snapshot: ShortcutItem;
+  index: number;
+  iconDataUrl: string;
+}
+
+interface ShortcutAddRecord {
+  kind: 'shortcut-add';
+  snapshot: ShortcutItem;
+  index: number;
+  iconDataUrl: string;
+}
+
+interface TransferRecord {
+  kind: 'transfer';
+  bookmarkId: string;
+  snapshot: SnapshotNode;
+  from: Readonly<BookmarkLocation> | null;
+  to: Readonly<BookmarkLocation> | null;
+  beforeShortcut: ShortcutDeleteRecord | null;
+  afterShortcut: ShortcutDeleteRecord | null;
+  itemIcon: Readonly<FolderItemIcon> | null;
+  runtime: { currentBookmarkId: string };
+}
+
+interface ShortcutStackRecord {
+  kind: 'shortcut-stack';
+  bookmarkId: string;
+  snapshot: SnapshotNode;
+  sources: readonly ShortcutDeleteRecord[];
+  folderShortcut: Readonly<{ id: string; index: number; groupId: string }>;
+  itemIcons: readonly (Readonly<FolderItemIcon> | null)[];
+  runtime: { currentBookmarkId: string; location: BookmarkLocation | null; title: string };
+}
+
+interface ShortcutReorderRecord {
+  kind: 'shortcut-reorder';
+  fromOrder: readonly string[];
+  toOrder: readonly string[];
+  fromGroups?: readonly string[];
+  toGroups?: readonly string[];
+}
+
+interface ShortcutGroupDeleteRecord {
+  kind: 'shortcut-group-delete';
+  group: Readonly<{ id: string; title: string }>;
+  groupIndex: number;
+  targetGroupId: string;
+  movedIds: readonly string[];
+  removed: readonly ShortcutDeleteRecord[];
+}
+
+type HistoryRecord =
+  | MoveRecord
+  | DeleteRecord
+  | ShortcutDeleteRecord
+  | ShortcutAddRecord
+  | TransferRecord
+  | ShortcutStackRecord
+  | ShortcutReorderRecord
+  | ShortcutGroupDeleteRecord;
+
+interface ShortcutDeleteInput {
+  snapshot?: ShortcutItem | null;
+  index?: unknown;
+  iconDataUrl?: unknown;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function normalizeLocation(location: LocationInput): BookmarkLocation | null {
   if (!location || !location.parentId) {
     return null;
   }
@@ -8,7 +127,7 @@ function normalizeLocation(location) {
   };
 }
 
-function isFolderInsideBookmark(nodeMap, bookmarkId, targetFolderId) {
+function isFolderInsideBookmark(nodeMap: BookmarkNodeMap | null | undefined, bookmarkId: unknown, targetFolderId: unknown): boolean {
   if (!(nodeMap instanceof Map)) {
     return false;
   }
@@ -26,8 +145,13 @@ function isFolderInsideBookmark(nodeMap, bookmarkId, targetFolderId) {
   return false;
 }
 
-function canMoveBookmarkToFolder(options) {
-  const config = options && typeof options === 'object' ? options : {};
+function canMoveBookmarkToFolder(options: {
+  bookmarkId?: unknown;
+  sourceParentId?: unknown;
+  targetFolderId?: unknown;
+  nodeMap?: BookmarkNodeMap | null;
+}): boolean {
+  const config = options || {};
   const bookmarkId = String(config.bookmarkId || '');
   const sourceParentId = String(config.sourceParentId || '');
   const targetFolderId = String(config.targetFolderId || '');
@@ -40,8 +164,15 @@ function canMoveBookmarkToFolder(options) {
   return !isFolderInsideBookmark(config.nodeMap, bookmarkId, targetFolderId);
 }
 
-function normalizeMoveDestinationIndex(options) {
-  const config = options && typeof options === 'object' ? options : {};
+interface MoveIndexInput {
+  sourceParentId?: unknown;
+  targetParentId?: unknown;
+  sourceIndex?: unknown;
+  targetIndex?: unknown;
+}
+
+function normalizeMoveDestinationIndex(options: MoveIndexInput): number {
+  const config = options || {};
   const sourceParentId = String(config.sourceParentId || '');
   const targetParentId = String(config.targetParentId || '');
   const sourceIndex = Math.max(0, Math.round(Number(config.sourceIndex) || 0));
@@ -52,8 +183,8 @@ function normalizeMoveDestinationIndex(options) {
   return targetIndex;
 }
 
-function getMoveApiDestinationIndex(options) {
-  const config = options && typeof options === 'object' ? options : {};
+function getMoveApiDestinationIndex(options: MoveIndexInput): number {
+  const config = options || {};
   const sourceParentId = String(config.sourceParentId || '');
   const targetParentId = String(config.targetParentId || '');
   const sourceIndex = Math.max(0, Math.round(Number(config.sourceIndex) || 0));
@@ -64,8 +195,11 @@ function getMoveApiDestinationIndex(options) {
   return targetIndex;
 }
 
-function canMoveBookmarkToLocation(options) {
-  const config = options && typeof options === 'object' ? options : {};
+function canMoveBookmarkToLocation(options: MoveIndexInput & {
+  bookmarkId?: unknown;
+  nodeMap?: BookmarkNodeMap | null;
+}): boolean {
+  const config = options || {};
   const bookmarkId = String(config.bookmarkId || '');
   const sourceParentId = String(config.sourceParentId || '');
   const targetParentId = String(config.targetParentId || '');
@@ -84,8 +218,13 @@ function canMoveBookmarkToLocation(options) {
   return sourceParentId !== targetParentId || destinationIndex !== sourceIndex;
 }
 
-function createMoveRecord(options) {
-  const config = options && typeof options === 'object' ? options : {};
+function createMoveRecord(options: {
+  bookmarkId?: unknown;
+  title?: unknown;
+  from?: LocationInput;
+  to?: LocationInput;
+} | null | undefined): Readonly<MoveRecord> | null {
+  const config = options || {};
   const bookmarkId = String(config.bookmarkId || '');
   const from = normalizeLocation(config.from);
   const to = normalizeLocation(config.to);
@@ -100,15 +239,17 @@ function createMoveRecord(options) {
   });
 }
 
-function cloneBookmarkSnapshot(node) {
+function cloneBookmarkSnapshot(node: SnapshotInput): SnapshotNode | null {
   if (!node || typeof node !== 'object') {
     return null;
   }
   const title = String(node.title || '');
   const url = node.url ? String(node.url) : '';
-  const children = Array.isArray(node.children)
-    ? node.children.map(cloneBookmarkSnapshot).filter(Boolean)
-    : [];
+  const children: SnapshotNode[] = [];
+  (Array.isArray(node.children) ? node.children : []).forEach((child) => {
+    const cloned = cloneBookmarkSnapshot(child);
+    if (cloned) children.push(cloned);
+  });
   return Object.freeze({
     title,
     url,
@@ -116,8 +257,14 @@ function cloneBookmarkSnapshot(node) {
   });
 }
 
-function createDeleteRecord(options) {
-  const config = options && typeof options === 'object' ? options : {};
+function createDeleteRecord(options: {
+  bookmarkId?: unknown;
+  parentId?: unknown;
+  index?: unknown;
+  title?: unknown;
+  snapshot?: SnapshotInput;
+} | null | undefined): Readonly<DeleteRecord> | null {
+  const config = options || {};
   const bookmarkId = String(config.bookmarkId || '');
   const parentId = String(config.parentId || '');
   const index = Math.max(0, Math.round(Number(config.index) || 0));
@@ -138,40 +285,56 @@ function createDeleteRecord(options) {
   });
 }
 
-function normalizeHistoryRecord(record) {
-  if (record && record.kind === 'shortcut-reorder') {
+function normalizeHistoryRecord(record: HistoryRecord | null | undefined): HistoryRecord | null {
+  if (!record) {
+    return null;
+  }
+  if (record.kind === 'shortcut-reorder') {
     return createShortcutReorderRecord(record);
   }
-  if (record && record.kind === 'transfer') {
+  if (record.kind === 'transfer') {
     return createTransferRecord(record);
   }
-  if (record && record.kind === 'shortcut-delete') {
+  if (record.kind === 'shortcut-delete') {
     return createShortcutDeleteRecord(record);
   }
-  if (record && record.kind === 'shortcut-add') {
+  if (record.kind === 'shortcut-add') {
     return createShortcutAddRecord(record);
   }
-  if (record && record.kind === 'shortcut-group-delete') {
+  if (record.kind === 'shortcut-group-delete') {
     return createShortcutGroupDeleteRecord(record);
   }
-  if (record && record.kind === 'shortcut-stack') {
+  if (record.kind === 'shortcut-stack') {
     return createShortcutStackRecord(record);
   }
-  if (record && record.kind === 'delete') {
+  if (record.kind === 'delete') {
     return createDeleteRecord(record);
   }
   return createMoveRecord(record);
 }
 
-function createShortcutDeleteRecord(options) {
-  const config = options && typeof options === 'object' ? options : {};
+// A link with its URL, or a folder with its bookmark folder.
+function hasShortcutTarget(item: ShortcutItem): boolean {
+  return isShortcutFolder(item) ? Boolean(item.folderId || item.folderRef) : Boolean(item.url);
+}
+
+// A copy of the shortcut that later edits to the original cannot change.
+function cloneShortcutSnapshot(item: ShortcutItem): ShortcutItem {
+  if (isShortcutFolder(item) && isPortableFolder(item)) {
+    return { ...item, folderRef: { ...item.folderRef, path: item.folderRef.path.slice() } };
+  }
+  return { ...item };
+}
+
+function createShortcutDeleteRecord(options: ShortcutDeleteInput | null | undefined): Readonly<ShortcutDeleteRecord> | null {
+  const config = options || {};
   const snapshot = config.snapshot;
-  if (!snapshot || !snapshot.id || !(snapshot.url || snapshot.folderId || snapshot.folderRef)) {
+  if (!snapshot || !snapshot.id || !hasShortcutTarget(snapshot)) {
     return null;
   }
   return Object.freeze({
     kind: 'shortcut-delete',
-    snapshot: Object.freeze(JSON.parse(JSON.stringify(snapshot))),
+    snapshot: Object.freeze(cloneShortcutSnapshot(snapshot)),
     index: Math.max(0, Math.round(Number(config.index) || 0)),
     iconDataUrl: String(config.iconDataUrl || '')
   });
@@ -179,7 +342,7 @@ function createShortcutDeleteRecord(options) {
 
 // Adding a site as a shortcut, e.g. by dragging a recent-site card onto
 // the shortcuts; undo removes it again.
-function createShortcutAddRecord(options) {
+function createShortcutAddRecord(options: ShortcutDeleteInput | null | undefined): Readonly<ShortcutAddRecord> | null {
   const record = createShortcutDeleteRecord(options);
   return record && Object.freeze({ ...record, kind: 'shortcut-add' });
 }
@@ -187,8 +350,17 @@ function createShortcutAddRecord(options) {
 // Moves a site between a bookmark and a shortcut. Without either shortcut
 // it only creates (`to`) or removes (`from`) a website bookmark, as when a
 // recent-site card is dropped onto the bookmarks.
-function createTransferRecord(options) {
-  const config = options && typeof options === 'object' ? options : {};
+function createTransferRecord(options: {
+  bookmarkId?: unknown;
+  snapshot?: SnapshotInput;
+  from?: LocationInput;
+  to?: LocationInput;
+  beforeShortcut?: ShortcutDeleteInput | null;
+  afterShortcut?: ShortcutDeleteInput | null;
+  itemIcon?: FolderItemIcon | null;
+  runtime?: { currentBookmarkId?: unknown } | null;
+} | null | undefined): Readonly<TransferRecord> | null {
+  const config = options || {};
   const from = normalizeLocation(config.from);
   const to = normalizeLocation(config.to);
   const snapshot = cloneBookmarkSnapshot(config.snapshot);
@@ -209,7 +381,7 @@ function createTransferRecord(options) {
     afterShortcut: afterShortcut || null,
     // The icon the site shows as a bookmark inside a shortcut folder, put
     // back whenever the transfer creates that bookmark.
-    itemIcon: config.itemIcon && typeof config.itemIcon === 'object' &&
+    itemIcon: config.itemIcon && isRecord(config.itemIcon) &&
       (config.itemIcon.iconSource || config.itemIcon.shortcut)
       ? Object.freeze({ ...config.itemIcon })
       : null,
@@ -222,15 +394,26 @@ function createTransferRecord(options) {
 // Stacking two website shortcuts creates a bookmark folder holding both
 // sites. `runtime` follows the folder through undo and redo: its current id,
 // and the location and name it had when last removed.
-function createShortcutStackRecord(options) {
-  const config = options && typeof options === 'object' ? options : {};
+function createShortcutStackRecord(options: {
+  bookmarkId?: unknown;
+  snapshot?: SnapshotInput;
+  sources?: readonly (ShortcutDeleteInput | null | undefined)[];
+  folderShortcut?: { id?: unknown; index?: unknown; groupId?: unknown } | null;
+  itemIcons?: readonly (FolderItemIcon | null | undefined)[];
+  runtime?: { currentBookmarkId?: unknown; location?: LocationInput; title?: unknown } | null;
+} | null | undefined): Readonly<ShortcutStackRecord> | null {
+  const config = options || {};
   const snapshot = cloneBookmarkSnapshot(config.snapshot);
-  const sources = (Array.isArray(config.sources) ? config.sources : [])
-    .map((source) => source && createShortcutDeleteRecord(source));
-  const folderShortcutId = String(config.folderShortcut && config.folderShortcut.id || '');
+  const sources: ShortcutDeleteRecord[] = [];
+  const sourceInputs = Array.isArray(config.sources) ? config.sources : [];
+  sourceInputs.forEach((source) => {
+    const record = source ? createShortcutDeleteRecord(source) : null;
+    if (record && record.snapshot.type !== 'folder') sources.push(record);
+  });
+  const folderShortcut = config.folderShortcut || {};
+  const folderShortcutId = String(folderShortcut.id || '');
   if (!snapshot || snapshot.url || !snapshot.children.length || snapshot.children.some((child) => !child.url) ||
-      sources.length !== 2 || sources.some((source) => !source || source.snapshot.type === 'folder') ||
-      !folderShortcutId) {
+      sourceInputs.length !== 2 || sources.length !== 2 || !folderShortcutId) {
     return null;
   }
   const runtime = config.runtime || {};
@@ -241,13 +424,13 @@ function createShortcutStackRecord(options) {
     sources: Object.freeze(sources),
     folderShortcut: Object.freeze({
       id: folderShortcutId,
-      index: Math.max(0, Math.round(Number(config.folderShortcut.index) || 0)),
-      groupId: String(config.folderShortcut.groupId || '')
+      index: Math.max(0, Math.round(Number(folderShortcut.index) || 0)),
+      groupId: String(folderShortcut.groupId || '')
     }),
     // The icon each stacked site keeps inside the folder, in child order.
     itemIcons: Object.freeze(snapshot.children.map((_child, index) => {
       const icon = Array.isArray(config.itemIcons) ? config.itemIcons[index] : null;
-      return icon && typeof icon === 'object' ? Object.freeze({ ...icon }) : null;
+      return icon && isRecord(icon) ? Object.freeze({ ...icon }) : null;
     })),
     runtime: {
       currentBookmarkId: String(runtime.currentBookmarkId || config.bookmarkId || ''),
@@ -259,29 +442,36 @@ function createShortcutStackRecord(options) {
 
 // Undo removes a stacked folder only while it still holds exactly the
 // stacked sites, so it never deletes bookmarks added to the folder later.
-function isShortcutStackFolderIntact(node, snapshot) {
+function isShortcutStackFolderIntact(node: BookmarkNode | null | undefined, snapshot: SnapshotNode | null | undefined): boolean {
   const children = node && !node.url && Array.isArray(node.children) ? node.children : null;
   const expected = snapshot && Array.isArray(snapshot.children) ? snapshot.children : [];
   if (!children || children.length !== expected.length || children.some((child) => !child.url)) {
     return false;
   }
-  const urls = (items) => items.map((item) => String(item.url)).sort();
+  const urls = (items: readonly { url?: string }[]): string[] => items.map((item) => String(item.url)).sort();
   const actual = urls(children);
   return urls(expected).every((url, index) => url === actual[index]);
 }
 
 // `fromGroups` and `toGroups` name each entry's group, in the same order as
 // `fromOrder` and `toOrder`; a move into another group can keep the order.
-function createShortcutReorderRecord(options) {
+function createShortcutReorderRecord(options: {
+  fromOrder?: readonly unknown[];
+  toOrder?: readonly unknown[];
+  fromGroups?: readonly unknown[] | null;
+  toGroups?: readonly unknown[] | null;
+} | null | undefined): Readonly<ShortcutReorderRecord> | null {
   const config = options || {};
   const fromOrder = Array.isArray(config.fromOrder) ? config.fromOrder.map(String) : [];
   const toOrder = Array.isArray(config.toOrder) ? config.toOrder.map(String) : [];
   const fromIds = new Set(fromOrder);
-  const readGroups = (groups) => (Array.isArray(groups) && groups.length === fromOrder.length
-    ? groups.map((groupId) => String(groupId || '')) : null);
+  const readGroups = (groups: readonly unknown[] | null | undefined): string[] | null => (
+    Array.isArray(groups) && groups.length === fromOrder.length
+      ? groups.map((groupId) => String(groupId || '')) : null);
   const fromGroups = readGroups(config.fromGroups);
   const toGroups = readGroups(config.toGroups);
-  const groupOf = (order, groups) => new Map(groups ? order.map((id, index) => [id, groups[index]]) : []);
+  const groupOf = (order: string[], groups: string[] | null): Map<string, string> => (
+    new Map(groups ? order.map((id, index): [string, string] => [id, groups[index]]) : []));
   const fromGroupById = groupOf(fromOrder, fromGroups);
   const toGroupById = groupOf(toOrder, toGroups);
   const regrouped = Boolean(fromGroups && toGroups) &&
@@ -304,16 +494,26 @@ function createShortcutReorderRecord(options) {
 
 // Deleting a shortcut group either moves its sites into another group
 // (`movedIds`, `targetGroupId`) or removes them with the group (`removed`).
-function createShortcutGroupDeleteRecord(options) {
-  const config = options && typeof options === 'object' ? options : {};
+function createShortcutGroupDeleteRecord(options: {
+  group?: { id?: unknown; title?: unknown } | null;
+  groupIndex?: unknown;
+  targetGroupId?: unknown;
+  movedIds?: readonly unknown[];
+  removed?: readonly (ShortcutDeleteInput | null | undefined)[];
+} | null | undefined): Readonly<ShortcutGroupDeleteRecord> | null {
+  const config = options || {};
   const group = config.group && typeof config.group === 'object' ? config.group : null;
   const groupId = String(group && group.id || '');
-  if (!groupId) {
+  if (!group || !groupId) {
     return null;
   }
-  const removed = (Array.isArray(config.removed) ? config.removed : [])
-    .map((entry) => entry && createShortcutDeleteRecord(entry));
-  if (removed.some((entry) => !entry)) {
+  const removedInputs = Array.isArray(config.removed) ? config.removed : [];
+  const removed: ShortcutDeleteRecord[] = [];
+  removedInputs.forEach((entry) => {
+    const record = entry ? createShortcutDeleteRecord(entry) : null;
+    if (record) removed.push(record);
+  });
+  if (removed.length !== removedInputs.length) {
     return null;
   }
   return Object.freeze({
@@ -326,24 +526,29 @@ function createShortcutGroupDeleteRecord(options) {
   });
 }
 
-function createBookmarkMoveHistory(options) {
-  const config = options && typeof options === 'object' ? options : {};
+function createBookmarkMoveHistory(options?: { maxEntries?: number }) {
+  const config = options || {};
   const maxEntries = Math.max(1, Math.round(Number(config.maxEntries) || 30));
-  const undoStack = [];
-  const redoStack = [];
-  const bookmarkIds = new Map();
+  const undoStack: HistoryRecord[] = [];
+  const redoStack: HistoryRecord[] = [];
+  // Bookmark ids the history recorded, mapped to the ids the bookmarks
+  // have since undo or redo created them again.
+  const bookmarkIds = new Map<string, string>();
 
-  function resolveBookmarkId(bookmarkId) {
+  // The id the bookmark has now.
+  function resolveBookmarkId(bookmarkId: unknown): string {
     let id = String(bookmarkId || '');
     const seen = new Set();
-    while (bookmarkIds.has(id) && !seen.has(id)) {
+    let next = bookmarkIds.get(id);
+    while (next !== undefined && !seen.has(id)) {
       seen.add(id);
-      id = bookmarkIds.get(id);
+      id = next;
+      next = bookmarkIds.get(id);
     }
     return id;
   }
 
-  function remapBookmarkId(previousId, nextId) {
+  function remapBookmarkId(previousId: unknown, nextId: unknown): void {
     const resolvedId = resolveBookmarkId(previousId);
     const id = String(nextId || '');
     if (resolvedId && id && resolvedId !== id) {
@@ -354,7 +559,7 @@ function createBookmarkMoveHistory(options) {
     }
   }
 
-  function push(record) {
+  function push(record: HistoryRecord | null | undefined): boolean {
     const normalized = normalizeHistoryRecord(record);
     if (!normalized) {
       return false;
@@ -366,24 +571,24 @@ function createBookmarkMoveHistory(options) {
     redoStack.length = 0;
     // Retain mappings only for the bounded history, rather than accumulating
     // an id for every bookmark recreated by repeated undo/redo cycles.
-    const retainedIds = new Set(undoStack.map((item) => item.bookmarkId).filter(Boolean));
+    const retainedIds = new Set(undoStack.map((item) => ('bookmarkId' in item ? item.bookmarkId : '')).filter(Boolean));
     const retainedMappings = [...bookmarkIds.keys()]
       .filter((id) => retainedIds.has(id))
-      .map((id) => [id, resolveBookmarkId(id)]);
+      .map((id): [string, string] => [id, resolveBookmarkId(id)]);
     bookmarkIds.clear();
     retainedMappings.forEach(([id, currentId]) => bookmarkIds.set(id, currentId));
     return true;
   }
 
-  function peekUndo() {
+  function peekUndo(): HistoryRecord | null {
     return undoStack[undoStack.length - 1] || null;
   }
 
-  function peekRedo() {
+  function peekRedo(): HistoryRecord | null {
     return redoStack[redoStack.length - 1] || null;
   }
 
-  function commitUndo() {
+  function commitUndo(): HistoryRecord | null {
     const record = undoStack.pop() || null;
     if (record) {
       redoStack.push(record);
@@ -391,7 +596,7 @@ function createBookmarkMoveHistory(options) {
     return record;
   }
 
-  function commitRedo() {
+  function commitRedo(): HistoryRecord | null {
     const record = redoStack.pop() || null;
     if (record) {
       undoStack.push(record);
@@ -399,7 +604,7 @@ function createBookmarkMoveHistory(options) {
     return record;
   }
 
-  function clear() {
+  function clear(): void {
     undoStack.length = 0;
     redoStack.length = 0;
     bookmarkIds.clear();
@@ -437,4 +642,20 @@ export {
   isShortcutStackFolderIntact,
   normalizeMoveDestinationIndex,
   normalizeLocation
+};
+type BookmarkMoveHistory = ReturnType<typeof createBookmarkMoveHistory>;
+
+export type {
+  BookmarkLocation,
+  BookmarkMoveHistory,
+  DeleteRecord,
+  HistoryRecord,
+  MoveRecord,
+  ShortcutAddRecord,
+  ShortcutDeleteRecord,
+  ShortcutGroupDeleteRecord,
+  ShortcutReorderRecord,
+  ShortcutStackRecord,
+  SnapshotNode,
+  TransferRecord
 };

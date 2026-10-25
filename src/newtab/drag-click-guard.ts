@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Releasing a dragged shortcut, bookmark or group title also fires a click
 // on whatever is under the pointer, which would open the site or toggle
 // the folder the drag just dropped. One policy for every drag on the page:
@@ -12,24 +11,30 @@
 // pointer's release first, then guards the same way.
 const DRAG_CLICK_GUARD_MS = 420;
 
-function createDragClickGuard(options) {
+interface DragClickGuardOptions {
+  windowObj?: Pick<Window, 'addEventListener' | 'removeEventListener'> | null;
+  now?: () => number;
+  guardMs?: number;
+}
+
+function createDragClickGuard(options?: DragClickGuardOptions) {
   const opts = options || {};
   const windowObj = opts.windowObj || (typeof window !== 'undefined' ? window : null);
   const now = typeof opts.now === 'function' ? opts.now : () => Date.now();
-  const guardMs = Number.isFinite(opts.guardMs) ? opts.guardMs : DRAG_CLICK_GUARD_MS;
+  const guardMs = opts.guardMs !== undefined && Number.isFinite(opts.guardMs) ? opts.guardMs : DRAG_CLICK_GUARD_MS;
   let armedUntil = 0;
-  let waitingPointerId = null;
+  let waitingPointerId: number | null = null;
   let listening = false;
 
   // Enter or Space on a focused control also fires a click, with no
   // press count and no pointer type; a release that fired no click (its
   // target was removed) must not swallow that.
-  function isPointerClick(event) {
+  function isPointerClick(event: MouseEvent): boolean {
     return Number(event.detail) > 0 ||
-      (typeof event.pointerType === 'string' && event.pointerType !== '');
+      ('pointerType' in event && typeof event.pointerType === 'string' && event.pointerType !== '');
   }
 
-  function handleClick(event) {
+  function handleClick(event: MouseEvent): void {
     if (!armedUntil || !isPointerClick(event)) {
       return;
     }
@@ -37,19 +42,17 @@ function createDragClickGuard(options) {
     disarm();
     if (active) {
       event.preventDefault();
-      if (typeof event.stopImmediatePropagation === 'function') {
-        event.stopImmediatePropagation();
-      }
+      event.stopImmediatePropagation();
       event.stopPropagation();
     }
   }
 
-  function handlePointerDown() {
+  function handlePointerDown(): void {
     // The held pointer of a canceled drag is already down; any press is new.
     disarm();
   }
 
-  function handleRelease(event) {
+  function handleRelease(event: PointerEvent | null): void {
     if (waitingPointerId === null || (event && event.pointerId !== waitingPointerId)) {
       return;
     }
@@ -57,7 +60,7 @@ function createDragClickGuard(options) {
     armedUntil = now() + guardMs;
   }
 
-  function listen() {
+  function listen(): void {
     if (listening || !windowObj || typeof windowObj.addEventListener !== 'function') {
       return;
     }
@@ -69,8 +72,8 @@ function createDragClickGuard(options) {
     windowObj.addEventListener('pointercancel', handleRelease, true);
   }
 
-  function unlisten() {
-    if (!listening) {
+  function unlisten(): void {
+    if (!listening || !windowObj) {
       return;
     }
     listening = false;
@@ -80,21 +83,21 @@ function createDragClickGuard(options) {
     windowObj.removeEventListener('pointercancel', handleRelease, true);
   }
 
-  function disarm() {
+  function disarm(): void {
     armedUntil = 0;
     waitingPointerId = null;
     unlisten();
   }
 
   // The drag ended with its pointer's release.
-  function armAfterRelease() {
+  function armAfterRelease(): void {
     waitingPointerId = null;
     armedUntil = now() + guardMs;
     listen();
   }
 
   // The drag ended while `pointerId` is still held down.
-  function armUntilRelease(pointerId) {
+  function armUntilRelease(pointerId: number): void {
     armedUntil = 0;
     waitingPointerId = pointerId;
     listen();
@@ -102,7 +105,7 @@ function createDragClickGuard(options) {
 
   // `release` is the pointer event that ended the drag, or null when the
   // drag was canceled without one.
-  function armAfterDrag(release, pointerId) {
+  function armAfterDrag(release: Event | null | undefined, pointerId: number): void {
     if (release) {
       armAfterRelease();
     } else {
@@ -110,7 +113,7 @@ function createDragClickGuard(options) {
     }
   }
 
-  function isArmed() {
+  function isArmed(): boolean {
     return waitingPointerId !== null || (armedUntil > 0 && now() <= armedUntil);
   }
 
@@ -123,8 +126,10 @@ function createDragClickGuard(options) {
   };
 }
 
-let sharedGuard = null;
-function getDragClickGuard() {
+type DragClickGuard = ReturnType<typeof createDragClickGuard>;
+
+let sharedGuard: DragClickGuard | null = null;
+function getDragClickGuard(): DragClickGuard {
   if (!sharedGuard) {
     sharedGuard = createDragClickGuard();
   }
@@ -132,3 +137,4 @@ function getDragClickGuard() {
 }
 
 export { DRAG_CLICK_GUARD_MS, createDragClickGuard, getDragClickGuard };
+export type { DragClickGuard };

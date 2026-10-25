@@ -106,6 +106,8 @@ const clonedPreviewActions = [
   }
 ];
 const previewNode = {
+  nodeType: 1,
+  namespaceURI: 'http://www.w3.org/1999/xhtml',
   classList: {
     add(...names) {
       names.forEach((name) => previewClasses.add(name));
@@ -176,6 +178,8 @@ assert.strictEqual(
 
 const topbarPreviewClasses = new Set(['x-nt-bookmark-card']);
 const topbarPreviewNode = {
+  nodeType: 1,
+  namespaceURI: 'http://www.w3.org/1999/xhtml',
   classList: {
     add(...names) {
       names.forEach((name) => topbarPreviewClasses.add(name));

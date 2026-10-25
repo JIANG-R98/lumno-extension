@@ -1,9 +1,151 @@
-// @ts-nocheck
+// What dragging between the bookmarks, the shortcuts and the recent sites
+// shares: insertion slots and gaps, and the shortcut lists a drop makes.
+import { isShortcutFolder } from '../domain/shortcuts-store';
+import type { ShortcutItem } from '../domain/shortcuts-store';
+import type { BookmarkNode } from './bookmarks/bookmarks-store';
+
 const BOOKMARK_TREE_ROOT_ID = '0';
+
+// An item's box in the viewport, with its center.
+interface LayoutRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
+  centerX: number;
+  centerY: number;
+}
+
+type MarkerPosition = 'before' | 'after';
+
+interface InsertionSlot {
+  // The position in the list the item goes to.
+  index: number;
+  // The item the marker sits by; -1 in an empty list.
+  anchorIndex: number;
+  markerPosition: MarkerPosition;
+}
+
+type InsertionGapSide = 'before' | 'after';
+
+// A shortcut and where it was, to put it back.
+interface ShortcutPlacement {
+  snapshot: ShortcutItem;
+  index: number;
+}
+
+// A line between two cards of the bookmark grid or bar, drawn on the grid.
+interface GridInsertionTarget {
+  kind: 'insertion';
+  surface: 'grid';
+  folderId: string;
+  index: number;
+  // The card the line sits by, or the grid when it is empty.
+  element: HTMLElement;
+  markerElement: HTMLElement;
+  markerPosition: MarkerPosition;
+  markerOffsetPx: number;
+  markerTopPx: number;
+  markerHeightPx: number;
+  isPageStartBoundary?: boolean;
+  // A drag from another page keeps the slot it leaves on this one.
+  preservePageSlot?: boolean;
+}
+
+// A row of the open cascade menu, or the gap between two of its rows.
+interface CascadeDropTarget {
+  kind: 'insertion' | 'cascade';
+  surface: 'cascade';
+  folderId: string;
+  title: string;
+  index?: number;
+  element: HTMLElement | null;
+  markerElement: HTMLElement | null;
+  markerPosition: MarkerPosition | '';
+}
+
+// A slot among the shortcuts for `record`; the tiles beside it lean apart.
+interface ShortcutInsertionTarget {
+  kind: 'insertion';
+  surface: 'shortcuts';
+  index: number;
+  groupId: string;
+  record: ShortcutItem | null;
+  element: null;
+  anchorElement: HTMLElement | null;
+  markerElement: null;
+  markerPosition: MarkerPosition;
+}
+
+// A folder to drop into: a folder card, a folder shortcut, or a step of
+// the breadcrumb.
+interface FolderDropTarget {
+  kind: 'card' | 'shortcut-folder' | 'breadcrumb';
+  surface?: 'folder';
+  folderId: string;
+  title: string;
+  element: HTMLElement;
+  markerElement?: null;
+}
+
+// A folder shortcut dropped back on the bookmark folder it shows, which
+// only removes the shortcut.
+interface ReturnDropTarget {
+  kind: 'return';
+  surface?: 'folder' | 'cascade';
+  bookmarkId: string;
+  folderId: string;
+  title: string;
+  element: HTMLElement | null;
+  markerElement?: HTMLElement | null;
+}
+
+// Over a surface that takes no drop here.
+interface BlockedDropTarget {
+  kind: 'blocked';
+  surface: string;
+  element?: undefined;
+  markerElement?: undefined;
+}
+
+type DragDropTarget =
+  | GridInsertionTarget
+  | CascadeDropTarget
+  | ShortcutInsertionTarget
+  | FolderDropTarget
+  | ReturnDropTarget
+  | BlockedDropTarget;
+
+// What every drag over the bookmarks keeps, whichever surface it started on.
+interface SurfaceDragState {
+  isDragging: boolean;
+  dropTarget: DragDropTarget | null;
+  pendingPointerX: number;
+  pendingPointerY: number;
+  pageSwitchTimerId: number;
+  pageSwitchDirection: number;
+  pageSwitchButton: HTMLElement | null;
+  folderSwitchTimerId: number;
+  folderSwitchTargetId: string;
+  folderSwitchElement: HTMLElement | null;
+  // The folder a drag switched to, until the grid shows it.
+  folderSwitchPendingId: string;
+  // The bookmark being dragged, or the bookmark folder a dragged shortcut shows.
+  bookmarkId?: string;
+  shortcutId?: string;
+  // The dragged shortcut tile.
+  tile?: HTMLElement | null;
+}
 
 // Nearest-row insertion slot for a wrapping grid. `layoutItems` are
 // [{ rect }] in DOM order; the returned index is a position in that list.
-function getRowInsertionSlot(layoutItems, pointerX, pointerY) {
+function getRowInsertionSlot(
+  layoutItems: readonly { rect: LayoutRect }[] | null | undefined,
+  pointerX: number,
+  pointerY: number
+): InsertionSlot {
   const items = Array.isArray(layoutItems) ? layoutItems : [];
   if (!items.length || !Number.isFinite(pointerX) || !Number.isFinite(pointerY)) {
     return { index: 0, anchorIndex: -1, markerPosition: 'before' };
@@ -41,16 +183,21 @@ function getRowInsertionSlot(layoutItems, pointerX, pointerY) {
 
 // The two items on either side of an insertion point, in DOM order.
 // `isSameLine(item, anchor)` drops a neighbour that wrapped to another row.
-function getInsertionGapNeighbors(items, anchor, markerPosition, isSameLine) {
+function getInsertionGapNeighbors<T>(
+  items: readonly T[] | null | undefined,
+  anchor: T | null,
+  markerPosition: string,
+  isSameLine?: (item: T, anchor: T) => boolean
+): { before: T | null; after: T | null } {
   const list = Array.isArray(items) ? items : [];
   const index = anchor ? list.indexOf(anchor) : -1;
-  if (index < 0) {
+  if (index < 0 || anchor === null) {
     return { before: null, after: null };
   }
   const isAfter = markerPosition === 'after';
-  const before = isAfter ? anchor : list[index - 1] || null;
-  const after = isAfter ? list[index + 1] || null : anchor;
-  const keep = (item) => Boolean(item) &&
+  const before: T | null = isAfter ? anchor : list[index - 1] || null;
+  const after: T | null = isAfter ? list[index + 1] || null : anchor;
+  const keep = (item: T | null): item is T => item !== null && Boolean(item) &&
     (item === anchor || typeof isSameLine !== 'function' || isSameLine(item, anchor));
   return {
     before: keep(before) ? before : null,
@@ -60,69 +207,87 @@ function getInsertionGapNeighbors(items, anchor, markerPosition, isSameLine) {
 
 const INSERTION_GAP_ATTRIBUTE = 'data-drag-gap';
 const INSERTION_GAP_REST_MS = 240;
+// The leaning pair each owner set last.
+const insertionGapsByOwner = new WeakMap<object, Map<Element, InsertionGapSide>>();
+// The timer that ends a released neighbour's slide back.
+const insertionGapRestTimers = new WeakMap<Element, ReturnType<typeof setTimeout>>();
 
-function releaseInsertionGapElement(element) {
+function releaseInsertionGapElement(element: Element): void {
   const side = element.getAttribute(INSERTION_GAP_ATTRIBUTE);
   if (!side || side === 'rest') {
     return;
   }
   // Keep the transition rule while the neighbour slides back.
   element.setAttribute(INSERTION_GAP_ATTRIBUTE, 'rest');
-  element._xInsertionGapRestTimer = setTimeout(() => {
-    element._xInsertionGapRestTimer = 0;
+  insertionGapRestTimers.set(element, setTimeout(() => {
+    insertionGapRestTimers.delete(element);
     if (element.getAttribute(INSERTION_GAP_ATTRIBUTE) === 'rest') {
       element.removeAttribute(INSERTION_GAP_ATTRIBUTE);
     }
-  }, INSERTION_GAP_REST_MS);
+  }, INSERTION_GAP_REST_MS));
 }
 
 // Leans the neighbours of an insertion point apart. `owner` remembers the
 // leaning pair so the next call releases whichever is no longer adjacent.
-function setInsertionGap(owner, before, after) {
+function setInsertionGap(owner: object | null | undefined, before: Element | null, after: Element | null): void {
   if (!owner) {
     return;
   }
-  const next = new Map();
+  const next = new Map<Element, InsertionGapSide>();
   if (before) next.set(before, 'before');
   if (after && after !== before) next.set(after, 'after');
-  const previous = owner.insertionGapElements instanceof Map ? owner.insertionGapElements : new Map();
-  previous.forEach((side, element) => {
+  const previous = insertionGapsByOwner.get(owner) || new Map<Element, InsertionGapSide>();
+  previous.forEach((_side, element) => {
     if (!next.has(element)) releaseInsertionGapElement(element);
   });
   next.forEach((side, element) => {
-    if (element._xInsertionGapRestTimer) {
-      clearTimeout(element._xInsertionGapRestTimer);
-      element._xInsertionGapRestTimer = 0;
+    const restTimer = insertionGapRestTimers.get(element);
+    if (restTimer !== undefined) {
+      clearTimeout(restTimer);
+      insertionGapRestTimers.delete(element);
     }
     if (element.getAttribute(INSERTION_GAP_ATTRIBUTE) !== side) {
       element.setAttribute(INSERTION_GAP_ATTRIBUTE, side);
     }
   });
-  owner.insertionGapElements = next;
+  insertionGapsByOwner.set(owner, next);
 }
 
-function isBookmarkFolderDropTarget(folderId, nodeMap) {
+function isBookmarkFolderDropTarget(folderId: unknown, nodeMap: ReadonlyMap<string, BookmarkNode> | null | undefined): boolean {
   const id = String(folderId || '');
-  const node = id && nodeMap && typeof nodeMap.get === 'function'
-    ? nodeMap.get(id)
-    : null;
+  const node = id && nodeMap ? nodeMap.get(id) : null;
   return Boolean(node && !node.url && id !== BOOKMARK_TREE_ROOT_ID);
 }
 
 // Inserts `record` at `index`, or moves the shortcut that already has its
 // URL there instead of duplicating it. Returns null when the list is full.
-function planBookmarkToShortcut(options) {
-  const config = options && typeof options === 'object' ? options : {};
-  const shortcuts = Array.isArray(config.shortcuts) ? config.shortcuts.filter(Boolean) : [];
+function planBookmarkToShortcut(options: {
+  shortcuts?: readonly (ShortcutItem | null | undefined)[];
+  record?: ShortcutItem | null;
+  // The local bookmark folder of a folder shortcut.
+  getFolderId?: (item: ShortcutItem) => string;
+  index: number;
+  maxShortcuts: number;
+  groupId?: string;
+}): { shortcuts: ShortcutItem[]; shortcutId: string } | null {
+  const config = options;
+  const shortcuts: ShortcutItem[] = [];
+  (Array.isArray(config.shortcuts) ? config.shortcuts : []).forEach((item) => {
+    if (item) shortcuts.push(item);
+  });
   const record = config.record;
-  const folderId = (item) => typeof config.getFolderId === 'function' ? config.getFolderId(item) : item.folderId;
+  const folderId = (item: ShortcutItem): string => {
+    if (typeof config.getFolderId === 'function') return config.getFolderId(item);
+    return isShortcutFolder(item) ? String(item.folderId || '') : '';
+  };
   const index = Number(config.index);
-  if (!record || !(record.url || (record.type === 'folder' && (record.folderId || record.folderRef))) || !Number.isFinite(index)) {
+  const hasTarget = record && (isShortcutFolder(record) ? Boolean(record.folderId || record.folderRef) : Boolean(record.url));
+  if (!record || !hasTarget || !Number.isFinite(index)) {
     return null;
   }
-  const existingIndex = shortcuts.findIndex((item) => record.type === 'folder'
-    ? item.type === 'folder' && (item.id === record.id || (folderId(record) && folderId(item) === folderId(record)))
-    : item.type !== 'folder' && item.url === record.url);
+  const existingIndex = shortcuts.findIndex((item) => isShortcutFolder(record)
+    ? isShortcutFolder(item) && (item.id === record.id || (folderId(record) && folderId(item) === folderId(record)))
+    : !isShortcutFolder(item) && item.url === record.url);
   if (existingIndex < 0 && shortcuts.length >= Number(config.maxShortcuts)) {
     return null;
   }
@@ -132,7 +297,7 @@ function planBookmarkToShortcut(options) {
     : nextShortcuts.splice(existingIndex, 1)[0];
   // The shortcut joins the group of the tile it was dropped beside.
   const groupId = String(config.groupId || '');
-  const shortcut = groupId && found.groupId !== groupId ? { ...found, groupId } : found;
+  const shortcut: ShortcutItem = groupId && found.groupId !== groupId ? { ...found, groupId } : found;
   const insertionIndex = existingIndex >= 0 && index > existingIndex ? index - 1 : index;
   nextShortcuts.splice(Math.max(0, Math.min(nextShortcuts.length, insertionIndex)), 0, shortcut);
   return {
@@ -141,29 +306,38 @@ function planBookmarkToShortcut(options) {
   };
 }
 
-function planTransferShortcuts(options) {
-  const config = options || {};
+// Removes the shortcut a site left (`source`) and adds the one it became
+// (`destination`); null when the shortcuts no longer match or are full.
+function planTransferShortcuts(options: {
+  shortcuts?: readonly ShortcutItem[];
+  source?: { snapshot: ShortcutItem } | null;
+  destination?: ShortcutPlacement | null;
+  maxShortcuts: number;
+}): ShortcutItem[] | null {
+  const config = options;
   const next = Array.isArray(config.shortcuts) ? config.shortcuts.slice() : [];
   const source = config.source && config.source.snapshot;
-  const destination = config.destination && config.destination.snapshot;
+  const destinationPlacement = config.destination || null;
+  const destination = destinationPlacement && destinationPlacement.snapshot;
   if (source) {
     const index = next.findIndex((item) => item.id === source.id);
-    if (index < 0 || next[index].type !== source.type ||
-        (source.type !== 'folder' &&
-          (next[index].url !== source.url || next[index].title !== source.title))) {
+    const current = index >= 0 ? next[index] : null;
+    if (!current || isShortcutFolder(current) !== isShortcutFolder(source) ||
+        (!isShortcutFolder(source) && !isShortcutFolder(current) &&
+          (current.url !== source.url || current.title !== source.title))) {
       return null;
     }
     next.splice(index, 1);
   }
-  if (destination) {
+  if (destinationPlacement && destination) {
     const duplicate = next.some((item) => item.id === destination.id ||
-      (destination.type !== 'folder' && item.type !== 'folder' && item.url === destination.url) ||
-      (destination.type === 'folder' && !destination.folderRef &&
-        item.type === 'folder' && !item.folderRef && item.folderId === destination.folderId));
+      (!isShortcutFolder(destination) && !isShortcutFolder(item) && item.url === destination.url) ||
+      (isShortcutFolder(destination) && !destination.folderRef &&
+        isShortcutFolder(item) && !item.folderRef && item.folderId === destination.folderId));
     if (duplicate || next.length >= Number(config.maxShortcuts)) {
       return null;
     }
-    next.splice(Math.min(config.destination.index, next.length), 0, destination);
+    next.splice(Math.min(destinationPlacement.index, next.length), 0, destination);
   }
   return next;
 }
@@ -171,23 +345,33 @@ function planTransferShortcuts(options) {
 // Stacking drops the website `sources` and puts the folder entry where the
 // stack target was. Undo removes the entry and restores each source at its
 // recorded index. Returns null when the shortcuts no longer match.
-function planShortcutStack(options) {
-  const config = options || {};
-  const shortcuts = Array.isArray(config.shortcuts) ? config.shortcuts.filter(Boolean) : [];
+function planShortcutStack(options: {
+  shortcuts?: readonly (ShortcutItem | null | undefined)[];
+  sources?: readonly ShortcutPlacement[];
+  folder?: { snapshot: ShortcutItem; index?: number; groupId?: string } | null;
+  undo?: boolean;
+  maxShortcuts: number;
+}): ShortcutItem[] | null {
+  const config = options;
+  const shortcuts: ShortcutItem[] = [];
+  (Array.isArray(config.shortcuts) ? config.shortcuts : []).forEach((item) => {
+    if (item) shortcuts.push(item);
+  });
   const sources = Array.isArray(config.sources) ? config.sources : [];
-  const folder = config.folder && config.folder.snapshot;
-  if (sources.length < 2 || !folder || !folder.id) {
+  const folderPlacement = config.folder || null;
+  const folder = folderPlacement && folderPlacement.snapshot;
+  if (sources.length < 2 || !folderPlacement || !folder || !folder.id) {
     return null;
   }
   const folderIndex = shortcuts.findIndex((item) => item.id === folder.id);
   if (config.undo) {
-    if (folderIndex < 0 || shortcuts[folderIndex].type !== 'folder') {
+    if (folderIndex < 0 || !isShortcutFolder(shortcuts[folderIndex])) {
       return null;
     }
     const next = shortcuts.slice();
     next.splice(folderIndex, 1);
     const conflict = sources.some(({ snapshot }) => next.some((item) => item.id === snapshot.id ||
-      (item.type !== 'folder' && item.url === snapshot.url)));
+      (!isShortcutFolder(item) && !isShortcutFolder(snapshot) && item.url === snapshot.url)));
     if (conflict || next.length + sources.length > Number(config.maxShortcuts)) {
       return null;
     }
@@ -198,30 +382,38 @@ function planShortcutStack(options) {
   }
   const ids = new Set(sources.map(({ snapshot }) => snapshot.id));
   const available = sources.every(({ snapshot }) => shortcuts.some((item) => item.id === snapshot.id &&
-    item.type !== 'folder' && item.url === snapshot.url));
+    !isShortcutFolder(item) && !isShortcutFolder(snapshot) && item.url === snapshot.url));
   if (folderIndex >= 0 || ids.size !== sources.length || !available) {
     return null;
   }
   const next = shortcuts.filter((item) => !ids.has(item.id));
   // The folder takes the group of the site it was stacked onto.
-  const groupId = String(config.folder.groupId || '');
-  next.splice(Math.max(0, Math.min(Number(config.folder.index) || 0, next.length)), 0,
+  const groupId = String(folderPlacement.groupId || '');
+  next.splice(Math.max(0, Math.min(Number(folderPlacement.index) || 0, next.length)), 0,
     groupId ? { ...folder, groupId } : folder);
   return next;
 }
 
-function planShortcutReorder(options) {
-  const config = options || {};
+// Puts the recorded entries back in `order`, each into its group in
+// `groups`; null when `sourceOrder` no longer matches.
+function planShortcutReorder(options: {
+  shortcuts?: readonly ShortcutItem[];
+  order?: readonly string[];
+  sourceOrder?: readonly string[] | null;
+  groups?: readonly string[] | null;
+}): ShortcutItem[] | null {
+  const config = options;
   const shortcuts = Array.isArray(config.shortcuts) ? config.shortcuts : [];
   const order = Array.isArray(config.order) ? config.order : [];
   const ids = new Set(order);
-  const byId = new Map(shortcuts.map((item) => [item.id, item]));
+  const byId = new Map(shortcuts.map((item): [string, ShortcutItem] => [item.id, item]));
   if (!order.length || ids.size !== order.length || order.some((id) => !byId.has(id))) {
     return null;
   }
   const currentOrder = shortcuts.filter((item) => ids.has(item.id)).map((item) => item.id);
-  if (config.sourceOrder && (config.sourceOrder.length !== currentOrder.length ||
-      currentOrder.some((id, index) => id !== config.sourceOrder[index]))) {
+  const sourceOrder = config.sourceOrder;
+  if (sourceOrder && (sourceOrder.length !== currentOrder.length ||
+      currentOrder.some((id, index) => id !== sourceOrder[index]))) {
     return null;
   }
   // A recorded group for each entry in `order` moves it back into that group.
@@ -232,14 +424,14 @@ function planShortcutReorder(options) {
   return shortcuts.map((item) => {
     if (!ids.has(item.id)) return item;
     const groupId = groups ? String(groups[index] || '') : '';
-    const entry = byId.get(order[index++]);
+    const entry = byId.get(order[index++]) || item;
     return groupId && entry.groupId !== groupId ? { ...entry, groupId } : entry;
   });
 }
 
 // Drag reorders slide tiles and cards with inline transitions; with
 // reduced motion asked for, they move straight to where they land.
-function prefersReducedMotion(windowObj) {
+function prefersReducedMotion(windowObj?: { matchMedia?(query: string): { matches: boolean } } | null): boolean {
   const win = windowObj || (typeof window !== 'undefined' ? window : null);
   return Boolean(win && typeof win.matchMedia === 'function' &&
     win.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -255,4 +447,18 @@ export {
   planTransferShortcuts,
   planShortcutStack,
   planShortcutReorder
+};
+export type {
+  BlockedDropTarget,
+  CascadeDropTarget,
+  DragDropTarget,
+  FolderDropTarget,
+  GridInsertionTarget,
+  InsertionSlot,
+  LayoutRect,
+  MarkerPosition,
+  ReturnDropTarget,
+  ShortcutInsertionTarget,
+  ShortcutPlacement,
+  SurfaceDragState
 };
