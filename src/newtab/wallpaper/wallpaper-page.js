@@ -285,12 +285,13 @@ function createWallpaperPage(deps) {
       bookmarksBar.style.removeProperty('--x-nt-glass-saturate');
     }
     // Floating panels and menus take the same material and ink as the plates; flipped to light ink
-    // they switch their controls to the dark palette (paletteSwap).
+    // they switch their controls to the dark palette (paletteSwap). They follow the plates' ink
+    // rather than weigh in on it (floating).
     document.querySelectorAll(
       '.x-nt-wallpaper-panel, ._x_extension_menu_surface_2024_unique_, .x-lumno-feature-hint, ' +
       '.x-nt-feedback-popover, .x-lumno-toast'
     ).forEach((element) => {
-      targets.push({ element, sampleElement: element, glass: true, paletteSwap: true });
+      targets.push({ element, sampleElement: element, glass: true, paletteSwap: true, floating: true });
     });
     // A dialog samples the wallpaper under itself and sets its ink on its backdrop layer, which hands
     // it down to the dialog and its controls; the WeChat group dialog's card is in its shadow root.
@@ -301,7 +302,7 @@ function createWallpaperPage(deps) {
         ? element.shadowRoot.querySelector('.card')
         : element.querySelector('.x-nt-shortcut-dialog, .x-nt-recent-history-dialog');
       if (dialog) {
-        targets.push({ element, sampleElement: dialog, glass: true, paletteSwap: true });
+        targets.push({ element, sampleElement: dialog, glass: true, paletteSwap: true, floating: true });
       }
     });
     return targets;
@@ -533,9 +534,9 @@ function createWallpaperPage(deps) {
     }
   }
 
-  function scheduleWallpaperAdaptiveToneUpdate() {
+  function scheduleWallpaperAdaptiveToneUpdate(options) {
     if (pageState.wallpaperRuntime) {
-      pageState.wallpaperRuntime.scheduleAdaptiveToneUpdate();
+      pageState.wallpaperRuntime.scheduleAdaptiveToneUpdate(options);
     }
   }
 

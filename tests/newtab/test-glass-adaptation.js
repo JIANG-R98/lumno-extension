@@ -22,9 +22,15 @@ const darkBusy = getGlassAdaptation(0.25, 0.5, grey(60), 'light');
 assert.strictEqual(darkBusy.ink, 'light');
 assert(darkBusy.density > dark.density + 0.3, 'a busy dark patch thickens light-ink glass');
 
-// Hysteresis: between the thresholds a plate keeps the ink it has.
-assert.strictEqual(getGlassAdaptation(0.45, 0.1, grey(115), 'light', 'light').ink, 'light');
-assert.strictEqual(getGlassAdaptation(0.45, 0.1, grey(115), 'light', 'dark').ink, 'dark');
+// A fresh decision splits at one threshold, so the same wallpaper always opens in the same ink.
+assert.strictEqual(getGlassAdaptation(0.48, 0.1, grey(122), 'light').ink, 'light');
+assert.strictEqual(getGlassAdaptation(0.52, 0.1, grey(133), 'light').ink, 'dark');
+assert.strictEqual(getGlassAdaptation(0.48, 0.1, grey(122), 'light', '').ink, 'light');
+// Hysteresis: re-sampling the same wallpaper near the threshold keeps the ink a plate has.
+assert.strictEqual(getGlassAdaptation(0.52, 0.1, grey(133), 'light', 'light').ink, 'light');
+assert.strictEqual(getGlassAdaptation(0.48, 0.1, grey(122), 'light', 'dark').ink, 'dark');
+assert.strictEqual(getGlassAdaptation(0.57, 0.1, grey(145), 'light', 'light').ink, 'dark');
+assert.strictEqual(getGlassAdaptation(0.43, 0.1, grey(110), 'light', 'dark').ink, 'light');
 
 // The dark theme always reads light; a bright patch thickens it.
 const darkThemeBright = getGlassAdaptation(0.9, 0.04, grey(230), 'dark');

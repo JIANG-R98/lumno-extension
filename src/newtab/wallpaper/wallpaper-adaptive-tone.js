@@ -733,10 +733,16 @@ function applySurfaceToneStyles(element, luminance, ink, color, textureContrast,
     formatRgb(borderColor.red, borderColor.green, borderColor.blue, ink === 'dark' ? 8 : 13));
 }
 
+// Under the light theme, glass over wallpaper darker than this takes light ink. A fresh decision
+// uses the threshold itself, so the same wallpaper always opens in the same ink; a re-sample of the
+// same wallpaper keeps the ink it has within the band around it, so a plate near it does not flicker.
+const GLASS_INK_THRESHOLD = 0.5;
+const GLASS_INK_HYSTERESIS = 0.05;
+
 // How a glass plate should read over this patch of wallpaper.
 // - ink: under the light theme a plate over a dark patch flips to light text on a thin dark tint,
-//   so dark wallpaper stays see-through instead of turning milky; with hysteresis, so a plate near
-//   the threshold does not flicker. The dark theme always reads light.
+//   so dark wallpaper stays see-through instead of turning milky. previousInk ('' for a fresh
+//   decision) holds it within the hysteresis band. The dark theme always reads light.
 // - density (0 thin, 1 dense): how much tint the plate needs for its ink to read. It grows with
 //   texture and color, and with how close the patch's brightness is to the ink's own.
 // - saturate: how much of the material's saturation boost to keep; a vivid patch keeps less, or
@@ -752,8 +758,10 @@ function getGlassAdaptation(luminance, textureContrast, color, themeMode, previo
   if (fixedInk === 'light' || fixedInk === 'dark') {
     ink = fixedInk;
   } else if (themeMode !== 'dark') {
-    const darkThreshold = previousInk === 'light' ? 0.5 : 0.4;
-    ink = inkLuminance < darkThreshold ? 'light' : 'dark';
+    const band = previousInk === 'light'
+      ? GLASS_INK_HYSTERESIS
+      : previousInk === 'dark' ? -GLASS_INK_HYSTERESIS : 0;
+    ink = inkLuminance < GLASS_INK_THRESHOLD + band ? 'light' : 'dark';
   }
   const nearInk = ink === 'dark'
     ? smoothstep(clampNumber((0.8 - lum) / 0.35, 0, 1))
@@ -820,6 +828,8 @@ function createWallpaperAdaptiveTone(options) {
   let pendingImageUrl = '';
   let loadToken = 0;
   let toneFrame = 0;
+  let pendingResetInk = false;
+  let glassPlates = [];
   let settledWaiters = [];
 
   // Resolves once no wallpaper image is still loading for a sample: the shown wallpaper's tones
@@ -1284,7 +1294,16 @@ function createWallpaperAdaptiveTone(options) {
     // Targets in one tone group read a single sample over all their elements and
     // keep one ink, so a caption never takes a different color from its heading.
     const toneGroups = new Map();
-    getToneTargets().forEach((target) => {
+    const targets = getToneTargets();
+    // A new set of plates (the page still filling in, a card added or removed) is a new layout, so
+    // its ink is decided afresh; scrolling and resizing move the same plates and keep theirs.
+    const plates = targets
+      .filter((target) => target && target.element && target.glass && !target.floating && target.disabled !== true)
+      .map((target) => target.element);
+    const platesChanged = plates.length !== glassPlates.length ||
+      plates.some((element, index) => element !== glassPlates[index]);
+    glassPlates = plates;
+    targets.forEach((target) => {
       if (!target || !target.element) {
         return;
       }
@@ -1392,20 +1411,23 @@ function createWallpaperAdaptiveTone(options) {
         clearForcedIconBackgroundStyles(target.element);
       }
     });
-    applyGlassSamples(glassSamples, themeMode);
+    applyGlassSamples(glassSamples, themeMode, config.resetInk === true || platesChanged);
     applyWordmarkThemeAppearance();
   }
 
-  // The whole page reads in one ink, chosen from the mean brightness under all its glass, so no
-  // plate or menu stays white beside dark ones; each still sets its own tint density from what lies
-  // under it, so a plate over a brighter patch thickens rather than flipping.
-  function applyGlassSamples(entries, themeMode) {
+  // The whole page reads in one ink, chosen from the mean brightness under its plates, so no plate
+  // or menu stays white beside dark ones; each still sets its own tint density from what lies under
+  // it, so a plate over a brighter patch thickens rather than flipping. Floating surfaces (the
+  // Appearance panel, menus, dialogs) take the page's ink without weighing in, so opening one never
+  // turns the page. resetInk decides afresh instead of holding the last ink.
+  function applyGlassSamples(entries, themeMode, resetInk) {
     const inkCounts = { light: 0, dark: 0 };
     if (entries.length === 0) {
       return;
     }
-    const pageLuminance = entries.reduce((total, entry) => total + entry.sample.luminance, 0) / entries.length;
-    const previousInk = documentObj.body ? documentObj.body.getAttribute('data-glass-ink-hint') : '';
+    const plates = entries.filter((entry) => !entry.target.floating);
+    const weighed = plates.length > 0 ? plates : entries;
+    const pageLuminance = weighed.reduce((total, entry) => total + entry.sample.luminance, 0) / weighed.length;    const previousInk = !resetInk && documentObj.body ? documentObj.body.getAttribute('data-glass-ink-hint') : '';
     // A material held light (newtab.js sets data-glass-theme) keeps dark ink over any wallpaper.
     const heldLight = Boolean(documentObj.body) && documentObj.body.getAttribute('data-glass-theme') === 'light';
     [entries].forEach((members) => {
@@ -1434,7 +1456,9 @@ function createWallpaperAdaptiveTone(options) {
         }
       });
     });
-    if (!heldLight) {
+    // Only the light theme's sampled ink is worth remembering: a held material or the dark theme
+    // would leave the next light page opening in an ink it did not choose.
+    if (!heldLight && themeMode !== 'dark') {
       rememberGlassInkHint(inkCounts);
     }
   }
@@ -1457,9 +1481,15 @@ function createWallpaperAdaptiveTone(options) {
     }
   }
 
-  function schedule() {
+  // { resetInk: true } when a setting changed what the ink should be (the theme, the material or
+  // its theme): the next sample decides afresh, as a newly opened page would. Other callers pass
+  // nothing (or an event) and the page keeps its ink within the hysteresis band.
+  function schedule(options) {
     if (!getCurrentWallpaper() || !sampler || pendingImageUrl) {
       return;
+    }
+    if (options && options.resetInk === true) {
+      pendingResetInk = true;
     }
     if (toneFrame) {
       return;
@@ -1467,7 +1497,9 @@ function createWallpaperAdaptiveTone(options) {
     toneFrame = requestFrame(() => {
       toneFrame = requestFrame(() => {
         toneFrame = 0;
-        apply();
+        const resetInk = pendingResetInk;
+        pendingResetInk = false;
+        apply({ resetInk });
       });
     });
   }

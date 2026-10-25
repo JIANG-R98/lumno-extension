@@ -115,7 +115,7 @@ function createGlassSurfaces(deps) {
     // The bookmarks bar's "match style" background follows the page's material.
     syncBookmarkTopbarSurfaceAppearance({ updateMenu: false });
     updateWallpaperAppearanceSelectionUi();
-    scheduleWallpaperAdaptiveToneUpdate();
+    scheduleWallpaperAdaptiveToneUpdate({ resetInk: true });
   }
 
   // A material set to light or dark holds the page's theme there (appearance-modes.js reads
@@ -148,7 +148,7 @@ function createGlassSurfaces(deps) {
     pageState.newtabGlassTheme = SETTINGS.normalizeNewtabGlassTheme(value);
     syncNewtabGlassThemeOverride();
     updateWallpaperAppearanceSelectionUi();
-    scheduleWallpaperAdaptiveToneUpdate();
+    scheduleWallpaperAdaptiveToneUpdate({ resetInk: true });
   }
 
   function loadNewtabGlassStyle() {

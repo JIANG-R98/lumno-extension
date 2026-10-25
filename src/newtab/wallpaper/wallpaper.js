@@ -1512,8 +1512,8 @@ function createWallpaperRuntime(options) {
     wallpaperState.wallpaperEffects = WALLPAPER_EFFECTS.createWallpaperEffects(wallpaperEffectRuntimeOptions);
   }
 
-  function scheduleWallpaperAdaptiveToneUpdate() {
-    wallpaperState.wallpaperAdaptiveTone.schedule();
+  function scheduleWallpaperAdaptiveToneUpdate(options) {
+    wallpaperState.wallpaperAdaptiveTone.schedule(options);
   }
 
   function refreshWallpaperAdaptiveSampler() {

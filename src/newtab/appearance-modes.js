@@ -251,7 +251,8 @@ function createAppearanceModes(deps) {
       removeMediaQueryChangeListener(mediaQuery, handleMediaChange);
       mediaListenerAttached = false;
     }
-    scheduleWallpaperAdaptiveToneUpdate();
+    // A new theme decides the glass ink afresh rather than holding the last theme's.
+    scheduleWallpaperAdaptiveToneUpdate(didResolvedThemeChange ? { resetInk: true } : undefined);
   }
 
   function normalizeThemeMode(value) {
