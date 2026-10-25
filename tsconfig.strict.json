@@ -26,7 +26,14 @@
     "src/overlay/panel/suggestion-themes.ts",
     "src/overlay/page-theme.ts",
     "src/overlay/panel/panel-theme.ts",
-    "src/overlay/lifecycle.ts"
+    "src/overlay/lifecycle.ts",
+    "src/overlay/runtime.ts",
+    "src/overlay/panel/copy-actions.ts",
+    "src/overlay/panel/panel-language.ts",
+    "src/overlay/panel/panel-notices.ts",
+    "src/overlay/panel/remote-suggestions.ts",
+    "src/overlay/panel/results-layout.ts",
+    "src/overlay/panel/search-input-events.ts"
   ],
   "exclude": [
     "src/**/react/**"

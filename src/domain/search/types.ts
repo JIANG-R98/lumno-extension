@@ -248,7 +248,7 @@ interface LocalSearchScopeRule {
 }
 
 interface LocalSearchScope {
-  sourceType: string;
+  sourceType: SearchSourceType;
   trigger: string;
   key: string;
 }

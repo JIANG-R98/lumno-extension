@@ -1,13 +1,38 @@
-// @ts-nocheck
 // Notices in the overlay: the update notice and its session slot, the
 // engagement notice and the community QR dialog.
+import type { Disposition } from '../../domain/navigation-disposition';
+import type * as Settings from '../../domain/settings';
+import type * as CommunityLinks from '../../platform/community-links';
 import * as ENGAGEMENT_NOTICE from '../../shared/engagement-notice';
+import type { EngagementNoticeController } from '../../shared/engagement-notice';
 import * as COMMUNITY_QR_DIALOG from '../../shared/ui/community-qr-dialog';
 import * as FEATURE_HINTS from '../../shared/ui/feature-hints';
 import * as UPDATE_NOTICE from '../../shared/update-notice';
+import type { UpdateNoticeController } from '../../shared/update-notice';
 import * as LumnoMessaging from '../../platform/messaging';
+import type { ActivationEvent } from './result-activation';
+import type { Translate } from './types';
 
-function createPanelNotices(deps) {
+interface PanelNoticesState {
+  overlay: HTMLElement | null;
+  searchInput: HTMLInputElement | null;
+  overlayLanguageMode: string;
+  overlayUpdateNoticeController: UpdateNoticeController | null;
+  overlayEngagementNoticeController: EngagementNoticeController | null;
+}
+
+interface PanelNoticesDeps {
+  removeOverlay(overlay: HTMLElement | null): void;
+  COMMUNITY_LINKS: Pick<typeof CommunityLinks, 'FALLBACK_LINKS'>;
+  t: Translate;
+  getRiSvg(id: string, sizeClass: string): string;
+  getOpenDisposition(event: ActivationEvent | null, fallback?: Disposition): Disposition;
+  getSystemLocale(): string;
+  SETTINGS: Pick<typeof Settings, 'normalizeLocale'>;
+  overlayState: PanelNoticesState;
+}
+
+function createPanelNotices(deps: PanelNoticesDeps) {
   const {
     removeOverlay,
     COMMUNITY_LINKS,
@@ -23,12 +48,9 @@ function createPanelNotices(deps) {
 
   // The WeChat group QR opens in a dialog over the page, never in a new tab.
   // The overlay closes first, as it does for any result it opens.
-  function openOverlayCommunityQrDialog(qrUrl) {
+  function openOverlayCommunityQrDialog(qrUrl: string): void {
     const theme = overlayState.overlay && overlayState.overlay.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
     removeOverlay(overlayState.overlay);
-    if (!COMMUNITY_QR_DIALOG) {
-      return;
-    }
     COMMUNITY_QR_DIALOG.open({
       documentObj: document,
       imageUrl: qrUrl || COMMUNITY_LINKS.FALLBACK_LINKS.wechatQr,
@@ -38,7 +60,7 @@ function createPanelNotices(deps) {
       theme
     });
   }
-  function overlayUpdateNoticeClaimsSessionSlot() {
+  function overlayUpdateNoticeClaimsSessionSlot(): boolean {
     return Boolean(
       overlayState.overlayUpdateNoticeController &&
       typeof overlayState.overlayUpdateNoticeController.hasSessionSlot === 'function' &&
@@ -78,22 +100,26 @@ function createPanelNotices(deps) {
       t,
       getRiSvg,
       exposureGate: overlayState.overlayUpdateNoticeController && overlayState.overlayUpdateNoticeController.ready,
+      // Waits until no update notice shows, the page is in view and the
+      // input is empty.
       canShow() {
+        const updateNotice = overlayState.overlayUpdateNoticeController;
         const updateNoticeVisible = Boolean(
-          overlayState.overlayUpdateNoticeController &&
-          overlayState.overlayUpdateNoticeController.element &&
-          overlayState.overlayUpdateNoticeController.element.getAttribute('data-visible') === 'true'
+          updateNotice &&
+          updateNotice.element &&
+          updateNotice.element.getAttribute('data-visible') === 'true'
         );
+        const overlay = overlayState.overlay;
+        const input = overlayState.searchInput;
         return !updateNoticeVisible &&
           !overlayUpdateNoticeClaimsSessionSlot() &&
           document.visibilityState === 'visible' &&
-          overlayState.overlay &&
-          overlayState.overlay.isConnected &&
-          !String(overlayState.searchInput.value || '').trim();
+          Boolean(overlay && overlay.isConnected) &&
+          !String(input ? input.value || '' : '').trim();
       },
       onReview(event) {
         const disposition = getOpenDisposition(event, 'newTab');
-        ENGAGEMENT_NOTICE.loadReviewUrl().then((url) => {
+        void ENGAGEMENT_NOTICE.loadReviewUrl().then((url) => {
           if (!url) {
             return;
           }
@@ -115,7 +141,7 @@ function createPanelNotices(deps) {
             force: true,
             locale
           });
-        communityUrlPromise.then((url) => {
+        void communityUrlPromise.then((url) => {
           if (isWechat) {
             openOverlayCommunityQrDialog(url);
             return;
@@ -135,3 +161,4 @@ function createPanelNotices(deps) {
 }
 
 export { createPanelNotices };
+export type { PanelNoticesDeps, PanelNoticesState };

@@ -1,8 +1,69 @@
-// @ts-nocheck
 // Input events in the search box: reading the live value, the trigger
 // hint, IME composition and the main input handler.
+import type { ShortcutRule } from '../../domain/messages';
+import type { createImeKeyGuard } from '../../domain/search/ime-key-guard';
+import type { createSearchInputHistoryController } from '../../domain/search/search-input-history';
+import type { LocalSearchScope } from '../../domain/search/types';
 import * as LumnoMessaging from '../../platform/messaging';
-function createSearchInputEvents(deps) {
+import type { EngagementNoticeController } from '../../shared/engagement-notice';
+import type { InputModeProvider } from '../../shared/search/input-mode/types';
+import type { LocalSearchScopeTrigger, SiteSearchTrigger } from './types';
+
+// Provider is a site search provider, Aggregate an aggregate search; this
+// module passes both to the trigger lookups.
+interface SearchInputEventsState<Provider, Aggregate> {
+  searchInput: HTMLInputElement | null;
+  inputContainer: HTMLElement | null;
+  imeKeyGuard: Pick<ReturnType<typeof createImeKeyGuard>, 'markCompositionStart' | 'markCompositionEnd' | 'isComposing'>;
+  inputHistoryController: Pick<ReturnType<typeof createSearchInputHistoryController>, 'resetNavigation'> | null;
+  // History is being written into the input, which is not typing.
+  isApplyingSearchInputHistory: boolean;
+  overlayEngagementNoticeController: Pick<EngagementNoticeController, 'recordMeaningfulUse'> | null;
+  siteSearchTriggerState: SiteSearchTrigger<Provider> | null;
+  localSearchScopeTriggerState: LocalSearchScopeTrigger | null;
+  // Only whether a site search or a local scope is active.
+  siteSearchState: unknown;
+  localSearchScopeState: LocalSearchScope | null;
+  openTabsSearchModeActive: boolean;
+  siteSearchProvidersCache: Provider[] | null;
+  defaultSiteSearchProviders: Provider[];
+  aggregateSearchesCache: Aggregate[];
+  selectedIndex: number;
+  latestOverlayQuery: string;
+  latestRawInputValue: string;
+  lastDeletionAt: number;
+}
+
+interface SearchInputEventsDeps<Provider, Aggregate> {
+  applyNoTranslate(element: Element): unknown;
+  clearSiteSearchTabHint(): void;
+  isSlashCommandInput(input: string): boolean;
+  getSearchTriggerProviders(siteProviders: Provider[], aggregates: Aggregate[]): Provider[];
+  getInlineSiteSearchCandidate(input: string, providers: Provider[]): unknown;
+  getSiteSearchTriggerCandidate(input: string, providers: Provider[], options: null): Provider | null;
+  setSiteSearchTabHint(provider: Provider | InputModeProvider): void;
+  getLocalSearchScopeCandidate(input: string, rules: ShortcutRule[] | undefined): LocalSearchScope | null;
+  getLocalSearchScopeTabHintProvider(scope: LocalSearchScope): InputModeProvider;
+  cancelPendingOverlaySuggestionRequests(): void;
+  clearAutocomplete(): void;
+  notifyOverlayLoadingSession(input: HTMLInputElement | null): void;
+  updateModeBadge(rawValue: string): void;
+  updateSelection(): void;
+  // Called with no rows: the list rebuilds from the typed command.
+  updateSearchSuggestions(rows: never[], query: string): void;
+  renderCachedTabsOrRequest(query: string): void;
+  getDirectUrlSuggestion(query: string): unknown;
+  updatePendingSearchSuggestions(query: string): boolean;
+  requestOverlaySearchSuggestions(query: string): void;
+  clearSearchSuggestions(): void;
+  overlayState: SearchInputEventsState<Provider, Aggregate>;
+}
+
+function readInputType(event: Event | null): string {
+  return event && 'inputType' in event && typeof event.inputType === 'string' ? event.inputType : '';
+}
+
+function createSearchInputEvents<Provider, Aggregate>(deps: SearchInputEventsDeps<Provider, Aggregate>) {
   const {
     applyNoTranslate,
     clearSiteSearchTabHint,
@@ -29,59 +90,58 @@ function createSearchInputEvents(deps) {
   // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
-  const handledSearchInputEvents = new WeakSet();
+  // The same event can reach the input and the panel; each handles it once.
+  const handledSearchInputEvents = new WeakSet<Event>();
 
-  function openDocumentPipPickerFromOverlay() {
+  function openDocumentPipPickerFromOverlay(): void {
     LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openDocumentPipPicker' });
   }
 
-  function getLiveSearchInputFromEvent(event) {
-    const target = event && event.target && event.target.tagName
-      ? event.target
-      : null;
-    if (target &&
-        String(target.tagName || '').toLowerCase() === 'input' &&
-        overlayState.inputContainer &&
-        typeof overlayState.inputContainer.contains === 'function' &&
-        overlayState.inputContainer.contains(target)) {
+  // The input the event came from: a page script may have replaced the
+  // panel's input with a copy.
+  function getLiveSearchInputFromEvent(event: Event | null): HTMLInputElement | null {
+    const target = event ? event.target : null;
+    const container = overlayState.inputContainer;
+    if (target instanceof HTMLInputElement && container && container.contains(target)) {
       return target;
     }
-    if (overlayState.inputContainer && typeof overlayState.inputContainer.querySelector === 'function') {
-      const currentInput = overlayState.inputContainer.querySelector('#_x_extension_search_input_2024_unique_') ||
-        overlayState.inputContainer.querySelector('input');
-      if (currentInput) {
+    if (container) {
+      const currentInput = container.querySelector('#_x_extension_search_input_2024_unique_') ||
+        container.querySelector('input');
+      if (currentInput instanceof HTMLInputElement) {
         return currentInput;
       }
     }
     return overlayState.searchInput;
   }
 
-  function syncLiveSearchInputFromEvent(event) {
+  function syncLiveSearchInputFromEvent(event: Event | null): HTMLInputElement | null {
     const liveInput = getLiveSearchInputFromEvent(event);
     if (liveInput && liveInput !== overlayState.searchInput) {
       overlayState.searchInput = liveInput;
-      applyNoTranslate(overlayState.searchInput);
+      applyNoTranslate(liveInput);
     }
     return overlayState.searchInput;
   }
 
-  function runSearchInputEventOnce(event, handler) {
+  function runSearchInputEventOnce(event: Event | null, handler: () => void): void {
     if (event) {
       if (handledSearchInputEvents.has(event)) {
         return;
       }
       handledSearchInputEvents.add(event);
     }
-    handler(event);
+    handler();
   }
 
-  function clearPendingSearchTriggerHint() {
+  function clearPendingSearchTriggerHint(): void {
     overlayState.siteSearchTriggerState = null;
     overlayState.localSearchScopeTriggerState = null;
     clearSiteSearchTabHint();
   }
 
-  function syncSearchTriggerHintFromInput(rawValue) {
+  // Shows the Tab hint for an exact trigger as soon as it is typed.
+  function syncSearchTriggerHintFromInput(rawValue: string): void {
     const triggerInput = String(rawValue || '').trim();
     if (!triggerInput ||
         overlayState.siteSearchState ||
@@ -128,7 +188,7 @@ function createSearchInputEvents(deps) {
   }
 
   // Add input event for search suggestions
-  function handleSearchInputCompositionStart(event) {
+  function handleSearchInputCompositionStart(event: Event | null): void {
     runSearchInputEventOnce(event, () => {
       cancelPendingOverlaySuggestionRequests();
       syncLiveSearchInputFromEvent(event);
@@ -138,7 +198,7 @@ function createSearchInputEvents(deps) {
     });
   }
 
-  function handleSearchInputCompositionEnd(event) {
+  function handleSearchInputCompositionEnd(event: Event | null): void {
     runSearchInputEventOnce(event, () => {
       overlayState.imeKeyGuard.markCompositionEnd(event);
       const liveInput = syncLiveSearchInputFromEvent(event);
@@ -177,7 +237,7 @@ function createSearchInputEvents(deps) {
     });
   }
 
-  function handleSearchInputEvent(event) {
+  function handleSearchInputEvent(event: Event | null): void {
     runSearchInputEventOnce(event, () => {
       if (overlayState.inputHistoryController && !overlayState.isApplyingSearchInputHistory) {
         overlayState.inputHistoryController.resetNavigation();
@@ -186,15 +246,14 @@ function createSearchInputEvents(deps) {
       notifyOverlayLoadingSession(liveInput);
       const rawValue = liveInput ? liveInput.value : '';
       const query = rawValue.trim();
-      if (query &&
-          overlayState.overlayEngagementNoticeController &&
-          typeof overlayState.overlayEngagementNoticeController.recordMeaningfulUse === 'function') {
-        overlayState.overlayEngagementNoticeController.recordMeaningfulUse();
+      const engagementNotice = overlayState.overlayEngagementNoticeController;
+      if (query && engagementNotice && typeof engagementNotice.recordMeaningfulUse === 'function') {
+        engagementNotice.recordMeaningfulUse();
       }
       updateModeBadge(rawValue);
-      const inputType = event && event.inputType;
+      const inputType = readInputType(event);
       const isPaste = inputType === 'insertFromPaste';
-      const isDelete = inputType && inputType.startsWith('delete');
+      const isDelete = inputType.startsWith('delete');
       if (isDelete) {
         overlayState.lastDeletionAt = Date.now();
       }
@@ -253,3 +312,4 @@ function createSearchInputEvents(deps) {
 }
 
 export { createSearchInputEvents };
+export type { SearchInputEventsDeps, SearchInputEventsState };

@@ -8,6 +8,20 @@ type Translate = (key: string, fallback: string) => string;
 // Translate with {name} placeholders filled in from values.
 type FormatMessage = (key: string, fallback: string, values?: Record<string, string>) => string;
 
+import type { LocalSearchScope } from '../../domain/search/types';
+
+// A typed trigger that would switch to a site search on Tab.
+interface SiteSearchTrigger<Provider> {
+  provider: Provider;
+  rawInput: string;
+}
+
+// A typed trigger that would narrow search to one local source on Tab.
+interface LocalSearchScopeTrigger {
+  scope: LocalSearchScope;
+  rawInput: string;
+}
+
 // A change from chrome.storage.onChanged; the values are whatever is stored.
 interface StorageChangeRecord {
   newValue?: unknown;
@@ -21,4 +35,12 @@ interface StorageChangeListeners {
   add(listener: StorageChangeListener): unknown;
 }
 
-export type { FormatMessage, StorageChangeListener, StorageChangeListeners, StorageChangeRecord, Translate };
+export type {
+  FormatMessage,
+  LocalSearchScopeTrigger,
+  SiteSearchTrigger,
+  StorageChangeListener,
+  StorageChangeListeners,
+  StorageChangeRecord,
+  Translate
+};

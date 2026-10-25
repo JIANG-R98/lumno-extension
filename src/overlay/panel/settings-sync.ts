@@ -7,10 +7,9 @@ import type * as Settings from '../../domain/settings';
 import type { OverlaySizeMode, SearchResultPriority } from '../../domain/settings';
 import type { StorageAreaFacade } from '../../platform/settings-storage';
 import type * as SuggestionNavigation from '../../shared/search/suggestion-navigation';
+import type * as OverlayRuntime from '../runtime';
+import type { ReadableStorageArea } from '../runtime';
 import type { StorageChangeListeners } from './types';
-
-// chrome.storage.local, or the provider area where there is none.
-type SettingsArea = chrome.storage.StorageArea | StorageAreaFacade;
 
 type StoredValues = Record<string, unknown>;
 
@@ -108,8 +107,9 @@ interface SettingsSyncDeps<Row, Provider, Theme> {
   // The settings read once when the panel opened.
   initialOverlaySettingsReady: Promise<StoredValues>;
   documentPipSupported: boolean;
-  overlayRuntime: { getStorageValues(storageArea: SettingsArea | null, keys: string[]): Promise<StoredValues> };
-  localStorageArea: SettingsArea | null;
+  overlayRuntime: Pick<typeof OverlayRuntime, 'getStorageValues'>;
+  // chrome.storage.local, or the provider area where there is none.
+  localStorageArea: ReadableStorageArea | null;
   overlayState: SettingsSyncState<Row, Provider>;
 }
 
@@ -518,4 +518,4 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
 }
 
 export { createSettingsSync };
-export type { SettingsArea, SettingsSyncDeps, SettingsSyncState };
+export type { SettingsSyncDeps, SettingsSyncState };

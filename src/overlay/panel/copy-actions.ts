@@ -1,22 +1,35 @@
-// @ts-nocheck
+import type { ToastController, ToastShowOptions } from '../../shared/ui/toast';
+import type { Translate } from './types';
+
+interface CopyActionsDeps {
+  overlayToastController: Pick<ToastController, 'show' | 'hide'>;
+  t: Translate;
+}
+
+// HTML, SVG and MathML elements have focus(); other elements do not.
+function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
+  return 'focus' in element && typeof element.focus === 'function';
+}
+
 // The overlay toast, and copying a result's URL to the clipboard.
-function createCopyActions(deps) {
+function createCopyActions(deps: CopyActionsDeps) {
   const {
     overlayToastController,
     t
   } = deps;
 
-  function hideOverlayToast() {
+  function hideOverlayToast(): void {
     overlayToastController.hide();
   }
 
-  function showOverlayToast(message, isError, options) {
+  function showOverlayToast(message: string, isError?: boolean, options?: ToastShowOptions): void {
     overlayToastController.show(message, Object.assign({}, options, {
       error: Boolean(isError)
     }));
   }
 
-  function fallbackCopyText(text) {
+  // Copies through a hidden text field where the Clipboard API is refused.
+  function fallbackCopyText(text: string): boolean {
     if (!document || !document.body || typeof document.execCommand !== 'function') {
       return false;
     }
@@ -32,21 +45,21 @@ function createCopyActions(deps) {
     let copied = false;
     try {
       copied = document.execCommand('copy');
-    } catch (error) {
+    } catch (_error) {
       copied = false;
     }
     textarea.remove();
-    if (activeElement && typeof activeElement.focus === 'function') {
+    if (activeElement && isFocusable(activeElement)) {
       activeElement.focus({ preventScroll: true });
     }
     return copied;
   }
 
-  function copyTextToClipboard(text) {
+  function copyTextToClipboard(text: string): Promise<void | boolean> {
     const value = String(text || '');
     const clipboard = window.navigator && window.navigator.clipboard;
     if (clipboard && typeof clipboard.writeText === 'function') {
-      return Promise.resolve(clipboard.writeText(value)).catch((error) => {
+      return Promise.resolve(clipboard.writeText(value)).catch((error: unknown) => {
         if (fallbackCopyText(value)) {
           return true;
         }
@@ -58,7 +71,8 @@ function createCopyActions(deps) {
       : Promise.reject(new Error('clipboard-write-failed'));
   }
 
-  function copySearchResultUrl(url) {
+  // Copies a result's address and says whether it worked; true on success.
+  function copySearchResultUrl(url: string): Promise<boolean> {
     const value = String(url || '').trim();
     if (!value) {
       showOverlayToast(t(
@@ -90,3 +104,4 @@ function createCopyActions(deps) {
 }
 
 export { createCopyActions };
+export type { CopyActionsDeps };

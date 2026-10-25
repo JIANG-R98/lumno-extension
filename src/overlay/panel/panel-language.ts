@@ -1,9 +1,49 @@
-// @ts-nocheck
-// The panel language: locale, messages, t() and formatMessage(), and
-// applying the copy to the panel when the language changes.
+import type { LocaleMessage } from '../../domain/messages';
+import type { LocalSearchScope } from '../../domain/search/types';
+import type * as Settings from '../../domain/settings';
 import * as LumnoCjkFontFaces from '../../shared/cjk-font-faces';
+import type * as OverlayRuntime from '../runtime';
+import type { ReadableStorageArea } from '../runtime';
 
-function createPanelLanguage(deps) {
+// Row is a suggestion row, Provider a site search provider and Theme a
+// suggestion theme; this module only passes them along.
+interface PanelLanguageState<Row, Provider, Theme> {
+  // 'system', or a locale the user chose.
+  overlayLanguageMode: string;
+  inputModeController: { refreshModeMenuLanguage?(): void } | null;
+  overlayUpdateNoticeController: { updateLanguage?(): void } | null;
+  overlayEngagementNoticeController: { updateLanguage?(): void } | null;
+  searchInput: HTMLInputElement | null;
+  defaultPlaceholderText: string;
+  rightIcon: HTMLElement | null;
+  closeOtherTabsButton: HTMLElement | null;
+  searchClearButton: HTMLElement | null;
+  modeBadge: HTMLElement | null;
+  siteSearchState: Provider | null;
+  localSearchScopeState: LocalSearchScope | null;
+  defaultTheme: Theme;
+  latestOverlayQuery: string;
+  lastSuggestionResponse: Row[];
+}
+
+interface PanelLanguageDeps<Row, Provider, Theme> {
+  SETTINGS: Pick<typeof Settings, 'localeToHtmlLang' | 'normalizeLocale'>;
+  overlayRuntime: Pick<typeof OverlayRuntime, 'loadLocaleMessages' | 'getStorageValues'>;
+  storageArea: ReadableStorageArea | null;
+  LANGUAGE_STORAGE_KEY: string;
+  updateModeBadge(rawValue: string): void;
+  setSiteSearchPrefix(provider: Provider, theme: Theme): void;
+  getThemeForProvider(provider: Provider): Promise<Theme>;
+  updateSiteSearchPrefixLayout(): void;
+  setLocalSearchScopePrefix(scope: LocalSearchScope): void;
+  updateSearchSuggestions(rows: Row[], query: string): void;
+  requestTabsAndRender(): void;
+  overlayState: PanelLanguageState<Row, Provider, Theme>;
+}
+
+type LocaleMessages = Record<string, LocaleMessage>;
+
+function createPanelLanguage<Row, Provider, Theme>(deps: PanelLanguageDeps<Row, Provider, Theme>) {
   const {
     SETTINGS,
     overlayRuntime,
@@ -21,28 +61,24 @@ function createPanelLanguage(deps) {
   // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
-  let currentMessages = null;
+  let currentMessages: LocaleMessages | null = null;
 
-  function applyOverlayCjkFontFace(locale) {
-    const cjkFontFaces = LumnoCjkFontFaces;
-    if (!cjkFontFaces) {
-      return;
-    }
-    cjkFontFaces.install(document, {
+  function applyOverlayCjkFontFace(locale: string): void {
+    LumnoCjkFontFaces.install(document, {
       family: 'Lumno Open Sans',
       lang: SETTINGS.localeToHtmlLang(locale),
       styleId: '_x_extension_overlay_cjk_font_faces_2026_unique_'
     });
   }
 
-  function getSystemLocale() {
+  function getSystemLocale(): string {
     if (chrome && chrome.i18n && chrome.i18n.getUILanguage) {
       return SETTINGS.normalizeLocale(chrome.i18n.getUILanguage());
     }
     return SETTINGS.normalizeLocale(navigator.language || 'en');
   }
 
-  function loadLocaleMessages(locale) {
+  function loadLocaleMessages(locale: string): Promise<LocaleMessages> {
     return overlayRuntime.loadLocaleMessages({
       chromeApi: chrome,
       locale,
@@ -50,9 +86,10 @@ function createPanelLanguage(deps) {
     });
   }
 
-  function t(key, fallback) {
-    if (currentMessages && currentMessages[key] && currentMessages[key].message) {
-      return currentMessages[key].message;
+  function t(key: string, fallback: string): string {
+    const entry = currentMessages ? currentMessages[key] : undefined;
+    if (entry && entry.message) {
+      return entry.message;
     }
     if (chrome && chrome.i18n && chrome.i18n.getMessage) {
       const message = chrome.i18n.getMessage(key);
@@ -63,11 +100,12 @@ function createPanelLanguage(deps) {
     return fallback || '';
   }
 
-  function getStorageValuesAsync(keys) {
+  function getStorageValuesAsync(keys: string[]): Promise<Record<string, unknown>> {
     return overlayRuntime.getStorageValues(storageArea, keys);
   }
 
-  function loadPreferredLocaleMessages(locale, fallbackMessages) {
+  // The locale's messages, or fallbackMessages when it has none.
+  function loadPreferredLocaleMessages(locale: string, fallbackMessages: LocaleMessages | null): Promise<LocaleMessages> {
     return loadLocaleMessages(locale).then((messages) => {
       if (messages && Object.keys(messages).length > 0) {
         return messages;
@@ -76,10 +114,12 @@ function createPanelLanguage(deps) {
     }).catch(() => fallbackMessages || {});
   }
 
-  async function bootstrapOverlayLanguageForInitialRender(settingsReady) {
+  // Loads the messages before the panel first renders.
+  async function bootstrapOverlayLanguageForInitialRender(settingsReady?: Promise<Record<string, unknown>> | null): Promise<void> {
     const result = await Promise.resolve(settingsReady ||
       getStorageValuesAsync([LANGUAGE_STORAGE_KEY]));
-    overlayState.overlayLanguageMode = result[LANGUAGE_STORAGE_KEY] || 'system';
+    const storedMode = result[LANGUAGE_STORAGE_KEY];
+    overlayState.overlayLanguageMode = typeof storedMode === 'string' && storedMode ? storedMode : 'system';
     const targetLocale = overlayState.overlayLanguageMode === 'system'
       ? getSystemLocale()
       : SETTINGS.normalizeLocale(overlayState.overlayLanguageMode);
@@ -87,7 +127,7 @@ function createPanelLanguage(deps) {
     currentMessages = await loadPreferredLocaleMessages(targetLocale, null);
   }
 
-  function formatMessage(key, fallback, params) {
+  function formatMessage(key: string, fallback: string, params?: Record<string, string>): string {
     let text = t(key, fallback);
     if (!params) {
       return text;
@@ -99,7 +139,8 @@ function createPanelLanguage(deps) {
     return text;
   }
 
-  function applyLanguageStrings(options) {
+  // Puts the current language's copy on everything the panel shows.
+  function applyLanguageStrings(options?: { refreshResults?: boolean }): void {
     const refreshResults = !options || options.refreshResults !== false;
     if (overlayState.inputModeController &&
         typeof overlayState.inputModeController.refreshModeMenuLanguage === 'function') {
@@ -136,7 +177,7 @@ function createPanelLanguage(deps) {
     if (overlayState.siteSearchState) {
       const activeSiteSearchProvider = overlayState.siteSearchState;
       setSiteSearchPrefix(activeSiteSearchProvider, overlayState.defaultTheme);
-      getThemeForProvider(activeSiteSearchProvider).then((theme) => {
+      void getThemeForProvider(activeSiteSearchProvider).then((theme) => {
         if (overlayState.siteSearchState === activeSiteSearchProvider) {
           setSiteSearchPrefix(activeSiteSearchProvider, theme);
         }
@@ -156,13 +197,13 @@ function createPanelLanguage(deps) {
     }
   }
 
-  function applyLanguageMode(mode) {
-    overlayState.overlayLanguageMode = mode || 'system';
+  function applyLanguageMode(mode: unknown): void {
+    overlayState.overlayLanguageMode = typeof mode === 'string' && mode ? mode : 'system';
     const targetLocale = overlayState.overlayLanguageMode === 'system'
       ? getSystemLocale()
       : SETTINGS.normalizeLocale(overlayState.overlayLanguageMode);
     applyOverlayCjkFontFace(targetLocale);
-    loadPreferredLocaleMessages(targetLocale, null).then((messages) => {
+    void loadPreferredLocaleMessages(targetLocale, null).then((messages) => {
       currentMessages = messages || {};
       applyLanguageStrings();
     });
@@ -180,3 +221,4 @@ function createPanelLanguage(deps) {
 }
 
 export { createPanelLanguage };
+export type { PanelLanguageDeps, PanelLanguageState };

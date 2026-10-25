@@ -1,6 +1,7 @@
 // Values scripts hand each other on globalThis.
 import type { FeatureHintViewApi, TooltipViewApi } from './view-apis';
 import type { AutoPipBlacklist, DocumentPipPickerApi, PageShortcutToastApi } from './content-apis';
+import type { ShortcutRule } from '../domain/messages';
 
 declare global {
   // The traditional-to-simplified Han table as pairs of characters, set by
@@ -15,5 +16,7 @@ declare global {
   var __lumnoAutoPipBlacklist2026: AutoPipBlacklist | undefined;
   var __lumnoPageShortcutToast2026: Readonly<PageShortcutToastApi> | undefined;
   var __lumnoDocumentPiPPicker2026: Readonly<DocumentPipPickerApi> | undefined;
+  // assets/data/shortcut-rules.json, once a search surface loaded it.
+  var _x_extension_shortcut_rules_2024_unique_: ShortcutRule[] | undefined;
 }
 

@@ -6,6 +6,7 @@ import type {
   LocalSearchScopeRule,
   NormalizedSiteSearchProvider,
   SearchEngineState,
+  SearchSourceType,
   SiteSearchProvider
 } from '../types';
 import type { DirectNavigationApi } from './direct-navigation';
@@ -47,7 +48,9 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
       .replace(/\{searchTerms\}/g, '{query}');
   }
 
-  const LOCAL_SEARCH_SOURCE_TYPES = new Set(['topSite', 'bookmark', 'history']);
+  function isLocalSearchSourceType(value: string): value is SearchSourceType {
+    return value === 'topSite' || value === 'bookmark' || value === 'history';
+  }
 
   function normalizeLocalSearchScopeTrigger(value: unknown): string {
     return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -62,7 +65,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
       const rule = rules[i];
       const sourceType = String(rule && rule.searchSourceType ? rule.searchSourceType : '').trim();
       const keys = rule && rule.keys;
-      if (!LOCAL_SEARCH_SOURCE_TYPES.has(sourceType) || !Array.isArray(keys)) {
+      if (!isLocalSearchSourceType(sourceType) || !Array.isArray(keys)) {
         continue;
       }
       const matchedKey = keys.find((key) => normalizeLocalSearchScopeTrigger(key) === trigger);

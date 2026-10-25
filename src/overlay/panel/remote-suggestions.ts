@@ -1,8 +1,43 @@
-// @ts-nocheck
 // Remote search suggestions: requesting them from the background and
 // merging late responses into what is shown.
+import type { LocalSearchScope, SuggestionLike } from '../../domain/search/types';
 import * as LumnoMessaging from '../../platform/messaging';
-function createRemoteSuggestions(deps) {
+
+// Shared by the renders of one request: whether the search engine's
+// suggestions came back, and whether the list showed its final mix.
+interface RemoteMixState {
+  settled: boolean;
+  visualSettled?: boolean;
+}
+
+interface SuggestionUpdateOptions {
+  remoteMixState?: RemoteMixState;
+  // The search engine's suggestions are in, or will not come.
+  finalRemoteMix?: boolean;
+}
+
+interface RemoteSuggestionsState {
+  suggestionsContainer: HTMLElement | null;
+  lastSuggestionResponse: SuggestionLike[];
+  latestOverlayQuery: string;
+  // Only whether a site search is active.
+  siteSearchState: unknown;
+  localSearchScopeState: LocalSearchScope | null;
+  overlaySearchResultPriorityMode: string;
+  // Raised for each request, so a late answer to an older one is dropped.
+  overlaySuggestionRequestSeq: number;
+  overlayRemoteSuggestionDebounceTimer: number | null;
+  overlayFirstResultRevealTimer: number | null;
+}
+
+interface RemoteSuggestionsDeps {
+  updateSearchSuggestions(rows: SuggestionLike[], query: string, options?: SuggestionUpdateOptions): void;
+  isSlashCommandInput(input: string): boolean;
+  getDirectUrlSuggestion(query: string): unknown;
+  overlayState: RemoteSuggestionsState;
+}
+
+function createRemoteSuggestions(deps: RemoteSuggestionsDeps) {
   const {
     updateSearchSuggestions,
     isSlashCommandInput,
@@ -14,16 +49,29 @@ function createRemoteSuggestions(deps) {
 
   const OVERLAY_FIRST_RESULT_REVEAL_DELAY_MS = 120;
 
-  function updatePendingSearchSuggestions(query) {
-    if (overlayState.suggestionsContainer.getAttribute('data-collapsed') === 'true' ||
-        overlayState.suggestionsContainer.getAttribute('aria-hidden') === 'true') {
+  function clearFirstResultRevealTimer(): void {
+    if (overlayState.overlayFirstResultRevealTimer !== null) {
+      window.clearTimeout(overlayState.overlayFirstResultRevealTimer);
+    }
+    overlayState.overlayFirstResultRevealTimer = null;
+  }
+
+  // Shows the last answer again while a request is pending; false while
+  // the list is collapsed or hidden.
+  function updatePendingSearchSuggestions(query: string): boolean {
+    const container = overlayState.suggestionsContainer;
+    if (!container ||
+        container.getAttribute('data-collapsed') === 'true' ||
+        container.getAttribute('aria-hidden') === 'true') {
       return false;
     }
     updateSearchSuggestions(overlayState.lastSuggestionResponse, query);
     return true;
   }
 
-  function requestOverlaySearchSuggestions(query) {
+  // Asks the worker for local results, then for the search engine's
+  // suggestions, and renders each answer that is still current.
+  function requestOverlaySearchSuggestions(query: string): void {
     const requestQuery = String(query || '').trim();
     const requestLocalSearchScope = overlayState.localSearchScopeState;
     if (!requestLocalSearchScope && isSlashCommandInput(requestQuery)) {
@@ -43,13 +91,13 @@ function createRemoteSuggestions(deps) {
     const showExactSearchPendingState = requestSearchFirst &&
       !requestLocalSearchScope &&
       !getDirectUrlSuggestion(requestQuery);
-    const remoteMixState = { settled: false };
+    const remoteMixState: RemoteMixState = { settled: false };
     if (overlayState.overlayRemoteSuggestionDebounceTimer) {
-      clearTimeout(overlayState.overlayRemoteSuggestionDebounceTimer);
+      window.clearTimeout(overlayState.overlayRemoteSuggestionDebounceTimer);
       overlayState.overlayRemoteSuggestionDebounceTimer = null;
     }
     if (overlayState.overlayFirstResultRevealTimer) {
-      clearTimeout(overlayState.overlayFirstResultRevealTimer);
+      window.clearTimeout(overlayState.overlayFirstResultRevealTimer);
       overlayState.overlayFirstResultRevealTimer = null;
     }
     if (showExactSearchPendingState) {
@@ -78,10 +126,11 @@ function createRemoteSuggestions(deps) {
       // Search-first already shows the exact search action while remote
       // suggestions are pending. Autocomplete-first keeps its short mix
       // budget so a collapsed result surface still opens only once.
+      const container = overlayState.suggestionsContainer;
       const waitForFirstResultMix = !requestSearchFirst &&
-        overlayState.suggestionsContainer.getAttribute('data-collapsed') === 'true';
+        Boolean(container && container.getAttribute('data-collapsed') === 'true');
       if (waitForFirstResultMix) {
-        overlayState.overlayFirstResultRevealTimer = setTimeout(() => {
+        overlayState.overlayFirstResultRevealTimer = window.setTimeout(() => {
           overlayState.overlayFirstResultRevealTimer = null;
           if (requestSeq !== overlayState.overlaySuggestionRequestSeq ||
               requestQuery !== overlayState.latestOverlayQuery ||
@@ -102,7 +151,7 @@ function createRemoteSuggestions(deps) {
       const remoteDelay = (requestSearchFirst || waitForFirstResultMix)
         ? 0
         : Math.max(0, 120 - (Date.now() - requestStartedAt));
-      overlayState.overlayRemoteSuggestionDebounceTimer = setTimeout(function() {
+      overlayState.overlayRemoteSuggestionDebounceTimer = window.setTimeout(function() {
         overlayState.overlayRemoteSuggestionDebounceTimer = null;
         if (requestSeq !== overlayState.overlaySuggestionRequestSeq || requestQuery !== overlayState.latestOverlayQuery) {
           return;
@@ -120,8 +169,7 @@ function createRemoteSuggestions(deps) {
           if (chrome.runtime && chrome.runtime.lastError) {
             remoteMixState.settled = true;
             if (waitForFirstResultMix && !remoteMixState.visualSettled) {
-              clearTimeout(overlayState.overlayFirstResultRevealTimer);
-              overlayState.overlayFirstResultRevealTimer = null;
+              clearFirstResultRevealTimer();
               remoteMixState.visualSettled = true;
               updateSearchSuggestions(localSuggestions, requestQuery, {
                 remoteMixState,
@@ -141,8 +189,7 @@ function createRemoteSuggestions(deps) {
               !Array.isArray(remoteResponse.suggestions)) {
             remoteMixState.settled = true;
             if (waitForFirstResultMix && !remoteMixState.visualSettled) {
-              clearTimeout(overlayState.overlayFirstResultRevealTimer);
-              overlayState.overlayFirstResultRevealTimer = null;
+              clearFirstResultRevealTimer();
               remoteMixState.visualSettled = true;
               updateSearchSuggestions(localSuggestions, requestQuery, {
                 remoteMixState,
@@ -161,8 +208,7 @@ function createRemoteSuggestions(deps) {
             if (remoteMixState.visualSettled) {
               return;
             }
-            clearTimeout(overlayState.overlayFirstResultRevealTimer);
-            overlayState.overlayFirstResultRevealTimer = null;
+            clearFirstResultRevealTimer();
             remoteMixState.visualSettled = true;
             updateSearchSuggestions(remoteResponse.suggestions, requestQuery, {
               remoteMixState,
@@ -186,3 +232,4 @@ function createRemoteSuggestions(deps) {
 }
 
 export { createRemoteSuggestions };
+export type { RemoteMixState, RemoteSuggestionsDeps, RemoteSuggestionsState, SuggestionUpdateOptions };

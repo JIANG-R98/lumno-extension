@@ -1,8 +1,55 @@
-// @ts-nocheck
 // How the results area is laid out: the open tabs viewport and its
 // scrollbar gutter, the divider, the offset under an open mode menu,
 // collapsing results, the input's right padding and the tab hint.
-function createResultsLayout(deps) {
+import type { SuggestionsViewController } from '../../shared/react/search/suggestion-list/types';
+import type { InputModeController } from '../../shared/search/search-input-mode';
+import type { InputModeProvider } from '../../shared/search/input-mode/types';
+import type * as SuggestionNavigation from '../../shared/search/suggestion-navigation';
+import type * as SuggestionsHeightLayout from '../../shared/search/suggestions-height-layout';
+
+interface ResultsLayoutState {
+  overlay: HTMLElement | null;
+  inputContainer: HTMLElement | null;
+  inputDivider: HTMLElement | null;
+  suggestionsContainer: HTMLElement | null;
+  // The panel's styles live in its own shadow root, so inline styles need
+  // no !important.
+  inputUsesIsolatedStyles: boolean;
+  inputModeController: Pick<InputModeController,
+    'setModeMenuResultOffset' | 'fitModeMenuWithinViewport' | 'updateLayout' | 'setTabHintVisible'> | null;
+  overlaySearchResultDisplayLimit: number;
+  // Only whether a site search or a local scope is active.
+  siteSearchState: unknown;
+  localSearchScopeState: unknown;
+  openTabsSearchModeActive: boolean;
+  overlayOpenTabsDefaultVisibleLoaded: boolean;
+  overlayOpenTabsDefaultVisible: boolean;
+  // The rows shown; this module only empties the list.
+  currentSuggestions: unknown[];
+  lastRenderedQuery: string;
+  lastRenderedActionContextKey: string;
+  selectedIndex: number;
+}
+
+interface ResultsLayoutDeps {
+  normalizeSearchResultDisplayLimit(value: unknown): number;
+  SUGGESTION_NAVIGATION: Pick<typeof SuggestionNavigation, 'getVisibleRowsViewportHeight'>;
+  SUGGESTIONS_HEIGHT_LAYOUT: Pick<typeof SuggestionsHeightLayout, 'applyNaturalSuggestionsHeightLayout'>;
+  setInputScopedStyle(element: HTMLElement | null, property: string, value: string): void;
+  ensureOverlaySuggestionsView(): Pick<SuggestionsViewController, 'clear'>;
+  // The rendered rows; emptied with the list.
+  suggestionItems: unknown[];
+  updateSelection(): void;
+  overlayState: ResultsLayoutState;
+}
+
+type CssPixelProperty = 'borderLeftWidth' | 'borderRightWidth' | 'paddingTop' | 'paddingBottom' | `--${string}`;
+
+function isCustomProperty(property: string): property is `--${string}` {
+  return property.startsWith('--');
+}
+
+function createResultsLayout(deps: ResultsLayoutDeps) {
   const {
     normalizeSearchResultDisplayLimit,
     SUGGESTION_NAVIGATION,
@@ -16,33 +63,38 @@ function createResultsLayout(deps) {
   // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
-  const setOverlayPanelScopedStyle = (element, property, value) => {
+  const setOverlayPanelScopedStyle = (element: HTMLElement | null, property: string, value: string): void => {
     if (!element) {
       return;
     }
     element.style.setProperty(property, value, 'important');
   };
-  function readComputedCssPixels(computedStyle, property) {
+  function getImportance(): string {
+    return overlayState.inputUsesIsolatedStyles ? '' : 'important';
+  }
+  function readComputedCssPixels(computedStyle: CSSStyleDeclaration | null, property: CssPixelProperty): number {
     if (!computedStyle) {
       return 0;
     }
-    const rawValue = property.startsWith('--') &&
+    const rawValue: unknown = isCustomProperty(property) &&
         typeof computedStyle.getPropertyValue === 'function'
       ? computedStyle.getPropertyValue(property)
-      : computedStyle[property];
-    const value = Number.parseFloat(rawValue);
+      : Reflect.get(computedStyle, property);
+    const value = Number.parseFloat(String(rawValue));
     return Number.isFinite(value) ? Math.max(0, value) : 0;
   }
-  function syncOpenTabsScrollbarGutter(computedStyle) {
-    if (!overlayState.suggestionsContainer.hasAttribute('data-open-tabs-visible-row-limit')) {
+  // Gives rows back the width of the open tabs list's real scrollbar.
+  function syncOpenTabsScrollbarGutter(computedStyle?: CSSStyleDeclaration): void {
+    const container = overlayState.suggestionsContainer;
+    if (!container || !container.hasAttribute('data-open-tabs-visible-row-limit')) {
       return;
     }
-    const style = computedStyle || window.getComputedStyle(overlayState.suggestionsContainer);
+    const style = computedStyle || window.getComputedStyle(container);
     const gutterWidth = Math.max(
       0,
       Math.round(
-        (Number(overlayState.suggestionsContainer.offsetWidth) || 0) -
-        (Number(overlayState.suggestionsContainer.clientWidth) || 0) -
+        (Number(container.offsetWidth) || 0) -
+        (Number(container.clientWidth) || 0) -
         readComputedCssPixels(style, 'borderLeftWidth') -
         readComputedCssPixels(style, 'borderRightWidth')
       )
@@ -52,17 +104,22 @@ function createResultsLayout(deps) {
     if (!gutterWidth) {
       return;
     }
-    overlayState.suggestionsContainer.style.setProperty(
+    container.style.setProperty(
       '--x-ov-open-tabs-scrollbar-gutter',
       `${gutterWidth}px`,
-      overlayState.inputUsesIsolatedStyles ? '' : 'important'
+      getImportance()
     );
   }
-  function setOpenTabsResultsViewport(active, itemCount) {
+  // Caps the open tabs list at the display limit's rows, scrolling the rest.
+  function setOpenTabsResultsViewport(active: boolean, itemCount?: number): void {
+    const container = overlayState.suggestionsContainer;
+    if (!container) {
+      return;
+    }
     if (!active) {
-      overlayState.suggestionsContainer.style.removeProperty('--x-ov-suggestions-max-height');
-      overlayState.suggestionsContainer.style.removeProperty('--x-ov-open-tabs-scrollbar-gutter');
-      overlayState.suggestionsContainer.removeAttribute('data-open-tabs-visible-row-limit');
+      container.style.removeProperty('--x-ov-suggestions-max-height');
+      container.style.removeProperty('--x-ov-open-tabs-scrollbar-gutter');
+      container.removeAttribute('data-open-tabs-visible-row-limit');
       return;
     }
     const visibleRowLimit = normalizeSearchResultDisplayLimit(
@@ -74,16 +131,16 @@ function createResultsLayout(deps) {
     // to scroll; otherwise one opened tab can look clipped by an empty
     // scrollbar gutter.
     if (normalizedItemCount <= visibleRowLimit) {
-      overlayState.suggestionsContainer.style.removeProperty('--x-ov-suggestions-max-height');
-      overlayState.suggestionsContainer.style.removeProperty('--x-ov-open-tabs-scrollbar-gutter');
-      overlayState.suggestionsContainer.removeAttribute('data-open-tabs-visible-row-limit');
+      container.style.removeProperty('--x-ov-suggestions-max-height');
+      container.style.removeProperty('--x-ov-open-tabs-scrollbar-gutter');
+      container.removeAttribute('data-open-tabs-visible-row-limit');
       return;
     }
-    overlayState.suggestionsContainer.setAttribute(
+    container.setAttribute(
       'data-open-tabs-visible-row-limit',
       String(visibleRowLimit)
     );
-    const computedStyle = window.getComputedStyle(overlayState.suggestionsContainer);
+    const computedStyle = window.getComputedStyle(container);
     syncOpenTabsScrollbarGutter(computedStyle);
     if (typeof window.requestAnimationFrame === 'function') {
       window.requestAnimationFrame(() => {
@@ -92,24 +149,24 @@ function createResultsLayout(deps) {
     }
     const maxHeight = SUGGESTION_NAVIGATION.getVisibleRowsViewportHeight({
       visibleRowLimit,
-      itemCount,
+      itemCount: normalizedItemCount,
       rowHeight: readComputedCssPixels(computedStyle, '--x-ov-suggestion-row-height'),
       rowGap: readComputedCssPixels(computedStyle, '--x-ov-suggestion-row-gap'),
       paddingTop: readComputedCssPixels(computedStyle, 'paddingTop'),
       paddingBottom: readComputedCssPixels(computedStyle, 'paddingBottom')
     });
     if (maxHeight > 0) {
-      overlayState.suggestionsContainer.style.setProperty(
+      container.style.setProperty(
         '--x-ov-suggestions-max-height',
         `${maxHeight}px`,
-        overlayState.inputUsesIsolatedStyles ? '' : 'important'
+        getImportance()
       );
     } else {
-      overlayState.suggestionsContainer.style.removeProperty('--x-ov-suggestions-max-height');
+      container.style.removeProperty('--x-ov-suggestions-max-height');
     }
   }
 
-  function setInputDividerVisible(visible) {
+  function setInputDividerVisible(visible: boolean): void {
     if (!overlayState.inputDivider) {
       return;
     }
@@ -117,7 +174,7 @@ function createResultsLayout(deps) {
     overlayState.inputDivider.style.setProperty('display', visible ? 'block' : 'none', overlayState.inputUsesIsolatedStyles ? '' : 'important');
   }
 
-  function getSearchModeMenuResultOffset() {
+  function getSearchModeMenuResultOffset(): number {
     if (!overlayState.suggestionsContainer ||
         overlayState.suggestionsContainer.getAttribute('data-collapsed') === 'true' ||
         overlayState.suggestionsContainer.getAttribute('aria-hidden') === 'true') {
@@ -134,41 +191,51 @@ function createResultsLayout(deps) {
     return Math.max(0, Number(rect && rect.height) || 0);
   }
 
-  function syncSearchModeMenuResultOffset() {
-    if (!overlayState.inputModeController ||
-        typeof overlayState.inputModeController.setModeMenuResultOffset !== 'function') {
+  // Keeps an open mode menu clear of the results and inside the viewport.
+  function syncSearchModeMenuResultOffset(): void {
+    const controller = overlayState.inputModeController;
+    const container = overlayState.suggestionsContainer;
+    if (!controller || typeof controller.setModeMenuResultOffset !== 'function' || !container) {
       return;
     }
     const fitMaxHeightProperty =
       '--x-ov-suggestions-menu-fit-max-height';
     const resultHeightLimit =
-      typeof overlayState.inputModeController.fitModeMenuWithinViewport === 'function'
-        ? overlayState.inputModeController.fitModeMenuWithinViewport({ bottomInset: 24 })
+      typeof controller.fitModeMenuWithinViewport === 'function'
+        ? controller.fitModeMenuWithinViewport({ bottomInset: 24 })
         : null;
-    if (Number.isFinite(resultHeightLimit)) {
-      overlayState.suggestionsContainer.style.setProperty(
+    if (resultHeightLimit !== null && Number.isFinite(resultHeightLimit)) {
+      container.style.setProperty(
         fitMaxHeightProperty,
         `${resultHeightLimit}px`,
-        overlayState.inputUsesIsolatedStyles ? '' : 'important'
+        getImportance()
       );
     } else {
-      overlayState.suggestionsContainer.style.removeProperty(fitMaxHeightProperty);
+      container.style.removeProperty(fitMaxHeightProperty);
     }
-    overlayState.inputModeController.setModeMenuResultOffset(
+    controller.setModeMenuResultOffset(
       getSearchModeMenuResultOffset()
     );
   }
 
-  function setOverlayResultsCollapsed(collapsed, options) {
-    const stateOptions = options && typeof options === 'object'
+  // Collapses the results under the input, or opens them; deferLayoutSync
+  // leaves the mode menu's offset to the caller.
+  function setOverlayResultsCollapsed(collapsed: boolean, options?: { deferLayoutSync?: boolean } | null): void {
+    const stateOptions: { deferLayoutSync?: boolean } = options && typeof options === 'object'
       ? options
       : {};
+    const container = overlayState.suggestionsContainer;
+    if (!container) {
+      return;
+    }
     const shouldSyncLayout = stateOptions.deferLayoutSync !== true;
     const shouldCollapse = Boolean(collapsed);
-    const wasCollapsed = overlayState.suggestionsContainer.getAttribute('data-collapsed') === 'true';
-    overlayState.overlay.setAttribute('data-open-tabs-default-collapsed', shouldCollapse ? 'true' : 'false');
-    overlayState.suggestionsContainer.setAttribute('data-collapsed', shouldCollapse ? 'true' : 'false');
-    overlayState.suggestionsContainer.setAttribute('aria-hidden', shouldCollapse ? 'true' : 'false');
+    const wasCollapsed = container.getAttribute('data-collapsed') === 'true';
+    if (overlayState.overlay) {
+      overlayState.overlay.setAttribute('data-open-tabs-default-collapsed', shouldCollapse ? 'true' : 'false');
+    }
+    container.setAttribute('data-collapsed', shouldCollapse ? 'true' : 'false');
+    container.setAttribute('aria-hidden', shouldCollapse ? 'true' : 'false');
     setOverlayPanelScopedStyle(
       overlayState.overlay,
       'border-radius',
@@ -182,23 +249,20 @@ function createResultsLayout(deps) {
         : 'var(--x-ov-content-radius, 25px) var(--x-ov-content-radius, 25px) 0 0'
     );
     if (shouldCollapse) {
-      SUGGESTIONS_HEIGHT_LAYOUT.applyNaturalSuggestionsHeightLayout(
-        overlayState.suggestionsContainer
-      );
-      overlayState.suggestionsContainer.style.setProperty('max-height', '0px', overlayState.inputUsesIsolatedStyles ? '' : 'important');
-      overlayState.suggestionsContainer.style.setProperty('min-height', '0px', overlayState.inputUsesIsolatedStyles ? '' : 'important');
-      overlayState.suggestionsContainer.style.setProperty('padding-top', '0px', overlayState.inputUsesIsolatedStyles ? '' : 'important');
-      overlayState.suggestionsContainer.style.setProperty('padding-bottom', '0px', overlayState.inputUsesIsolatedStyles ? '' : 'important');
-      overlayState.suggestionsContainer.style.setProperty('opacity', '0', overlayState.inputUsesIsolatedStyles ? '' : 'important');
-      overlayState.suggestionsContainer.style.setProperty('pointer-events', 'none', overlayState.inputUsesIsolatedStyles ? '' : 'important');
-      overlayState.suggestionsContainer.style.setProperty('overflow', 'hidden', overlayState.inputUsesIsolatedStyles ? '' : 'important');
+      SUGGESTIONS_HEIGHT_LAYOUT.applyNaturalSuggestionsHeightLayout(container);
+      const importance = getImportance();
+      container.style.setProperty('max-height', '0px', importance);
+      container.style.setProperty('min-height', '0px', importance);
+      container.style.setProperty('padding-top', '0px', importance);
+      container.style.setProperty('padding-bottom', '0px', importance);
+      container.style.setProperty('opacity', '0', importance);
+      container.style.setProperty('pointer-events', 'none', importance);
+      container.style.setProperty('overflow', 'hidden', importance);
       setInputDividerVisible(false);
       syncSearchModeMenuResultOffset();
       return;
     }
-    SUGGESTIONS_HEIGHT_LAYOUT.applyNaturalSuggestionsHeightLayout(
-      overlayState.suggestionsContainer
-    );
+    SUGGESTIONS_HEIGHT_LAYOUT.applyNaturalSuggestionsHeightLayout(container);
     if (!wasCollapsed) {
       setInputDividerVisible(true);
       if (shouldSyncLayout) {
@@ -206,21 +270,21 @@ function createResultsLayout(deps) {
       }
       return;
     }
-    overlayState.suggestionsContainer.style.removeProperty('max-height');
-    overlayState.suggestionsContainer.style.removeProperty('min-height');
-    overlayState.suggestionsContainer.style.removeProperty('padding-top');
-    overlayState.suggestionsContainer.style.removeProperty('padding-bottom');
-    overlayState.suggestionsContainer.style.removeProperty('opacity');
-    overlayState.suggestionsContainer.style.removeProperty('pointer-events');
-    overlayState.suggestionsContainer.style.removeProperty('overflow');
-    overlayState.suggestionsContainer.removeAttribute('aria-hidden');
+    container.style.removeProperty('max-height');
+    container.style.removeProperty('min-height');
+    container.style.removeProperty('padding-top');
+    container.style.removeProperty('padding-bottom');
+    container.style.removeProperty('opacity');
+    container.style.removeProperty('pointer-events');
+    container.style.removeProperty('overflow');
+    container.removeAttribute('aria-hidden');
     setInputDividerVisible(true);
     if (shouldSyncLayout) {
       syncSearchModeMenuResultOffset();
     }
   }
 
-  function shouldShowOpenTabsForEmptyQuery() {
+  function shouldShowOpenTabsForEmptyQuery(): boolean {
     if (overlayState.siteSearchState || overlayState.localSearchScopeState) {
       return false;
     }
@@ -228,10 +292,12 @@ function createResultsLayout(deps) {
       (overlayState.overlayOpenTabsDefaultVisibleLoaded && overlayState.overlayOpenTabsDefaultVisible);
   }
 
-  function clearDefaultOpenTabsSuggestions() {
+  function clearDefaultOpenTabsSuggestions(): void {
     ensureOverlaySuggestionsView().clear();
     setOpenTabsResultsViewport(false);
-    overlayState.suggestionsContainer.removeAttribute('data-scope-result-enter');
+    if (overlayState.suggestionsContainer) {
+      overlayState.suggestionsContainer.removeAttribute('data-scope-result-enter');
+    }
     suggestionItems.length = 0;
     overlayState.currentSuggestions = [];
     overlayState.lastRenderedQuery = '';
@@ -241,19 +307,19 @@ function createResultsLayout(deps) {
     updateSelection();
   }
 
-  function updateInputRightPadding() {
+  function updateInputRightPadding(): void {
     if (overlayState.inputModeController) {
       overlayState.inputModeController.updateLayout();
     }
   }
 
-  function setSiteSearchTabHint(provider) {
+  function setSiteSearchTabHint(provider: InputModeProvider): void {
     if (overlayState.inputModeController) {
       overlayState.inputModeController.setTabHintVisible(true, provider);
     }
   }
 
-  function clearSiteSearchTabHint() {
+  function clearSiteSearchTabHint(): void {
     if (overlayState.inputModeController) {
       overlayState.inputModeController.setTabHintVisible(false);
     }
@@ -273,3 +339,4 @@ function createResultsLayout(deps) {
 }
 
 export { createResultsLayout };
+export type { ResultsLayoutDeps, ResultsLayoutState };
