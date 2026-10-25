@@ -21,12 +21,6 @@ declare global {
       toast: ReturnType<typeof createToastApi>;
       tabSwitcher: ReturnType<typeof createTabSwitcherViewApi>;
     } | undefined;
-  var LumnoOptionsBlacklistTabReact: ReturnType<typeof createBlacklistTabApi> | undefined;
-  var LumnoOptionsSettingsNavigationReact: ReturnType<typeof createSettingsNavigationApi> | undefined;
-  var LumnoOptionsSettingsControlsReact: ReturnType<typeof createSettingsControlsApi> | undefined;
-  var LumnoOptionsToastReact: ReturnType<typeof createToastApi> | undefined;
-  var LumnoTooltipViewReact: ReturnType<typeof createTooltipViewApi> | undefined;
-  var LumnoOverlayTabSwitcherViewReact: ReturnType<typeof createTabSwitcherViewApi> | undefined;
 }
 
 const runtime = globalThis;
@@ -45,19 +39,13 @@ if (!bootstrapState || !bootstrapState.reactReady) {
     runtime.LumnoOverlayTabSwitcherView || createTabSwitcherViewApi();
 
   runtime.LumnoOptionsAccountTab = accountTabApi;
-  runtime.LumnoOptionsBlacklistTabReact = blacklistTabApi;
   runtime.LumnoOptionsBlacklistTab = blacklistTabApi;
-  runtime.LumnoOptionsSettingsNavigationReact = settingsNavigationApi;
   runtime.LumnoOptionsSettingsNavigation = settingsNavigationApi;
-  runtime.LumnoOptionsSettingsControlsReact = settingsControlsApi;
   runtime.LumnoOptionsSettingsControls = settingsControlsApi;
   runtime.LumnoOptionsShortcutsTab = shortcutsTabApi;
-  runtime.LumnoOptionsToastReact = toastApi;
   runtime.LumnoOptionsToast = toastApi;
-  runtime.LumnoTooltipViewReact = tooltipViewApi;
   runtime.LumnoTooltipView = tooltipViewApi;
   runtime.LumnoSegmentedIndicator = createSegmentedIndicatorApi();
-  runtime.LumnoOverlayTabSwitcherViewReact = tabSwitcherApi;
   runtime.LumnoOverlayTabSwitcherView = tabSwitcherApi;
   runtime.LumnoOptionsReactIslands = Object.freeze({
     accountTab: accountTabApi,

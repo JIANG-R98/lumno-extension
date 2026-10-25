@@ -49,29 +49,6 @@ declare global {
       bookmarkBreadcrumb: ReturnType<typeof createBookmarkBreadcrumbApi>;
       tabSwitcher: ReturnType<typeof createTabSwitcherViewApi>;
     } | undefined;
-  var LumnoNewtabBookmarksViewReact: ReturnType<typeof createBookmarksViewApi> | undefined;
-  var LumnoNewtabFeedbackControlReact: ReturnType<typeof createFeedbackControlApi> | undefined;
-  var LumnoNewtabDockReact: ReturnType<typeof createDockApi> | undefined;
-  var LumnoNewtabShortcutDialogReact: ReturnType<typeof createShortcutDialogApi> | undefined;
-  var LumnoNewtabShortcutsViewReact: ReturnType<typeof createShortcutsViewApi> | undefined;
-  var LumnoNewtabRecentSitesViewReact: ReturnType<typeof createRecentSitesViewApi> | undefined;
-  var LumnoNewtabSelectMenuReact: ReturnType<typeof createSelectMenuApi> | undefined;
-  var LumnoNewtabSuggestionsViewReact: ReturnType<typeof createSuggestionsViewApi> | undefined;
-  var LumnoNewtabToastReact: ReturnType<typeof createToastApi> | undefined;
-  var LumnoNewtabTopContentReact: ReturnType<typeof createTopContentApi> | undefined;
-  var LumnoNewtabWordmarkReact: ReturnType<typeof createTopContentApi> | undefined;
-  var LumnoNewtabPageStructureReact: ReturnType<typeof createPageStructureApi> | undefined;
-  var LumnoNewtabBookmarksTopbarReact: ReturnType<typeof createBookmarksTopbarApi> | undefined;
-  var LumnoNewtabPageNoticeReact: ReturnType<typeof createPageNoticeApi> | undefined;
-  var LumnoNewtabBookmarkCascadeViewReact: ReturnType<
-      typeof createBookmarkCascadeViewApi
-    > | undefined;
-  var LumnoNewtabWallpaperViewReact: ReturnType<typeof createWallpaperViewApi> | undefined;
-  var LumnoNewtabBookmarkBreadcrumbReact: ReturnType<typeof createBookmarkBreadcrumbApi> | undefined;
-  var LumnoSearchInputUIReact: ReturnType<typeof createSearchInputApi> | undefined;
-  var LumnoFeatureHintViewReact: ReturnType<typeof createFeatureHintViewApi> | undefined;
-  var LumnoTooltipViewReact: ReturnType<typeof createTooltipViewApi> | undefined;
-  var LumnoOverlayTabSwitcherViewReact: ReturnType<typeof createTabSwitcherViewApi> | undefined;
 }
 
 const runtime = globalThis;
@@ -104,50 +81,29 @@ if (!bootstrapState || !bootstrapState.reactReady) {
     runtime.LumnoOverlayTabSwitcherView || createTabSwitcherViewApi();
 
   runtime.LumnoNewtabLiquidSurfaces = { create: createLiquidSurfaces };
-  runtime.LumnoNewtabBookmarksViewReact = bookmarksApi;
   runtime.LumnoNewtabBookmarksView = bookmarksApi;
-  runtime.LumnoNewtabDockReact = dockApi;
   runtime.LumnoNewtabDock = dockApi;
-  runtime.LumnoNewtabFeedbackControlReact = feedbackApi;
   runtime.LumnoNewtabFeedbackControl = feedbackApi;
-  runtime.LumnoNewtabShortcutDialogReact = shortcutDialogApi;
   runtime.LumnoNewtabShortcutDialog = shortcutDialogApi;
   runtime.LumnoNewtabRecentHistoryDialog = recentHistoryDialogApi;
   runtime.LumnoNewtabFolderColorPicker = folderColorPickerApi;
-  runtime.LumnoNewtabRecentSitesViewReact = recentSitesApi;
   runtime.LumnoNewtabRecentSitesView = recentSitesApi;
-  runtime.LumnoNewtabSelectMenuReact = selectMenuApi;
   runtime.LumnoNewtabSelectMenu = selectMenuApi;
-  runtime.LumnoNewtabShortcutsViewReact = shortcutsApi;
   runtime.LumnoNewtabShortcutsView = shortcutsApi;
-  runtime.LumnoNewtabSuggestionsViewReact = suggestionsApi;
   runtime.LumnoNewtabSuggestionsView = suggestionsApi;
-  runtime.LumnoNewtabToastReact = toastApi;
   runtime.LumnoNewtabToast = toastApi;
-  runtime.LumnoNewtabTopContentReact = topContentApi;
   runtime.LumnoNewtabTopContent = topContentApi;
-  runtime.LumnoNewtabWordmarkReact = topContentApi;
   runtime.LumnoNewtabWordmark = topContentApi;
-  runtime.LumnoNewtabPageStructureReact = pageStructureApi;
   runtime.LumnoNewtabPageStructure = pageStructureApi;
-  runtime.LumnoNewtabBookmarksTopbarReact = bookmarksTopbarApi;
   runtime.LumnoNewtabBookmarksTopbar = bookmarksTopbarApi;
-  runtime.LumnoNewtabPageNoticeReact = pageNoticeApi;
   runtime.LumnoNewtabPageNotice = pageNoticeApi;
-  runtime.LumnoNewtabBookmarkCascadeViewReact = bookmarkCascadeViewApi;
   runtime.LumnoNewtabBookmarkCascadeView = bookmarkCascadeViewApi;
-  runtime.LumnoNewtabWallpaperViewReact = wallpaperViewApi;
   runtime.LumnoNewtabWallpaperView = wallpaperViewApi;
-  runtime.LumnoNewtabBookmarkBreadcrumbReact = bookmarkBreadcrumbApi;
   runtime.LumnoNewtabBookmarkBreadcrumb = bookmarkBreadcrumbApi;
-  runtime.LumnoSearchInputUIReact = searchInputApi;
   runtime.LumnoSearchInputUI = searchInputApi;
-  runtime.LumnoFeatureHintViewReact = featureHintViewApi;
   runtime.LumnoFeatureHintView = featureHintViewApi;
-  runtime.LumnoTooltipViewReact = tooltipViewApi;
   runtime.LumnoTooltipView = tooltipViewApi;
   runtime.LumnoSegmentedIndicator = createSegmentedIndicatorApi();
-  runtime.LumnoOverlayTabSwitcherViewReact = tabSwitcherApi;
   runtime.LumnoOverlayTabSwitcherView = tabSwitcherApi;
   runtime._x_extension_createSearchInput_2024_unique_ =
     searchInputApi.createSearchInput;

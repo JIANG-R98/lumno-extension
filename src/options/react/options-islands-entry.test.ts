@@ -7,17 +7,12 @@ function clearRuntime(): void {
   Reflect.deleteProperty(runtime, 'LumnoOptionsReactBootstrap');
   Reflect.deleteProperty(runtime, 'LumnoOptionsReactIslands');
   Reflect.deleteProperty(runtime, 'LumnoOptionsBlacklistTab');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsBlacklistTabReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsNavigation');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsNavigationReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsControls');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsControlsReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsAccountTab');
   Reflect.deleteProperty(runtime, 'LumnoOptionsShortcutsTab');
   Reflect.deleteProperty(runtime, 'LumnoOptionsToast');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsToastReact');
   Reflect.deleteProperty(runtime, 'LumnoOverlayTabSwitcherView');
-  Reflect.deleteProperty(runtime, 'LumnoOverlayTabSwitcherViewReact');
 }
 
 afterEach(() => {
@@ -37,23 +32,10 @@ describe('Options React islands entry', () => {
     expect(runtime.LumnoOptionsAccountTab?.implementation).toBe('react');
     expect(runtime.LumnoOptionsShortcutsTab?.implementation).toBe('react');
     expect(runtime.LumnoOptionsBlacklistTab?.implementation).toBe('react');
-    expect(runtime.LumnoOptionsBlacklistTabReact).toBe(
-      runtime.LumnoOptionsBlacklistTab
-    );
     expect(runtime.LumnoOptionsSettingsNavigation?.implementation).toBe('react');
-    expect(runtime.LumnoOptionsSettingsNavigationReact).toBe(
-      runtime.LumnoOptionsSettingsNavigation
-    );
     expect(runtime.LumnoOptionsSettingsControls?.implementation).toBe('react');
-    expect(runtime.LumnoOptionsSettingsControlsReact).toBe(
-      runtime.LumnoOptionsSettingsControls
-    );
     expect(runtime.LumnoOptionsToast?.implementation).toBe('react');
-    expect(runtime.LumnoOptionsToastReact).toBe(runtime.LumnoOptionsToast);
     expect(runtime.LumnoOverlayTabSwitcherView?.implementation).toBe('react');
-    expect(runtime.LumnoOverlayTabSwitcherViewReact).toBe(
-      runtime.LumnoOverlayTabSwitcherView
-    );
     expect(runtime.LumnoOptionsReactIslands).toEqual({
       blacklistTab: runtime.LumnoOptionsBlacklistTab,
       settingsNavigation: runtime.LumnoOptionsSettingsNavigation,

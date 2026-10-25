@@ -123,17 +123,17 @@ assert(
   'New Tab and Options should reuse the shared tab-switcher implementation and React runtime'
 );
 assert(
-  newtabBundle.includes('LumnoOverlayTabSwitcherViewReact') &&
-    optionsBundle.includes('LumnoOverlayTabSwitcherViewReact') &&
+  newtabBundle.includes('LumnoOverlayTabSwitcherView') &&
+    optionsBundle.includes('LumnoOverlayTabSwitcherView') &&
     tabSwitcherSharedBundle.includes('overlay-tab-switcher'),
   'extension-page React entries should install the tab-switcher API before their bridge connects'
 );
 assert(
   overlayBundle.includes('LumnoOverlayReactBootstrap') &&
-    overlayBundle.includes('LumnoOverlayShellReact') &&
-    overlayBundle.includes('LumnoOverlaySuggestionsViewReact') &&
-    overlayBundle.includes('LumnoOverlayTabSwitcherViewReact') &&
-    overlayBundle.includes('LumnoSearchInputUIReact') &&
+    overlayBundle.includes('LumnoOverlayShell') &&
+    overlayBundle.includes('LumnoOverlaySuggestionsView') &&
+    overlayBundle.includes('LumnoOverlayTabSwitcherView') &&
+    overlayBundle.includes('LumnoSearchInputUI') &&
     overlayBundle.includes('overlay-shell') &&
     overlayBundle.includes('overlay-tab-switcher') &&
     overlayBundle.includes('suggestions') &&
@@ -175,10 +175,10 @@ async function testPages() {
   const newtab = await createNewtabPage({});
   await newtab.settle(300);
   assert.deepStrictEqual(missing(newtab.window, [
-    'LumnoNewtabShortcutDialogReact', 'LumnoNewtabRecentSitesViewReact', 'LumnoNewtabBookmarksViewReact',
-    'LumnoNewtabSuggestionsViewReact', 'LumnoNewtabShortcutsViewReact', 'LumnoNewtabToastReact',
-    'LumnoNewtabFeedbackControlReact', 'LumnoNewtabSelectMenuReact', 'LumnoNewtabDockReact',
-    'LumnoNewtabWordmarkReact', 'LumnoSearchInputUIReact', 'LumnoNewtabReactIslands', 'LumnoOverlayTabSwitcherViewReact'
+    'LumnoNewtabShortcutDialog', 'LumnoNewtabRecentSitesView', 'LumnoNewtabBookmarksView',
+    'LumnoNewtabSuggestionsView', 'LumnoNewtabShortcutsView', 'LumnoNewtabToast',
+    'LumnoNewtabFeedbackControl', 'LumnoNewtabSelectMenu', 'LumnoNewtabDock',
+    'LumnoNewtabWordmark', 'LumnoSearchInputUI', 'LumnoNewtabReactIslands', 'LumnoOverlayTabSwitcherView'
   ]), [], 'New Tab should install its React APIs, the tab switcher included, before its bridge connects');
   const islands = new Set(Array.from(newtab.document.querySelectorAll('[data-react-island]')).map((node) => node.getAttribute('data-react-island')));
   ['newtab-feedback-control', 'newtab-bottom-dock', 'newtab-wordmark', 'shared-search-input'].forEach((island) => {
@@ -189,10 +189,10 @@ async function testPages() {
   const options = await createOptionsPage({});
   await options.settle(300);
   assert.deepStrictEqual(missing(options.window, [
-    'LumnoOptionsToastReact', 'LumnoOptionsAccountTab', 'LumnoOptionsBlacklistTabReact', 'LumnoOptionsShortcutsTab',
-    'LumnoOptionsSettingsNavigationReact',
-    'LumnoOptionsSettingsControlsReact',
-    'LumnoOptionsReactIslands', 'LumnoOverlayTabSwitcherViewReact'
+    'LumnoOptionsToast', 'LumnoOptionsAccountTab', 'LumnoOptionsBlacklistTab', 'LumnoOptionsShortcutsTab',
+    'LumnoOptionsSettingsNavigation',
+    'LumnoOptionsSettingsControls',
+    'LumnoOptionsReactIslands', 'LumnoOverlayTabSwitcherView'
   ]), [], 'Options should install every migrated React API');
   assert.ok(options.document.querySelectorAll('[data-react-island]').length > 5, 'and render through them');
   options.close();
@@ -200,7 +200,7 @@ async function testPages() {
   const onboarding = await createOnboardingPage({});
   await onboarding.settle(200);
   assert.deepStrictEqual(missing(onboarding.window, [
-    'LumnoOnboardingPageReact', 'LumnoOnboardingReactIslands'
+    'LumnoOnboardingPage', 'LumnoOnboardingReactIslands'
   ]), [], 'Onboarding should install every migrated React API');
   assert.strictEqual(onboarding.document.getElementById('onboarding-root').getAttribute('data-react-island'), 'onboarding-page');
   assert.ok(onboarding.document.getElementById('onboarding-page-strip'), 'and draw the page through it');

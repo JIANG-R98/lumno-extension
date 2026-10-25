@@ -5,7 +5,6 @@ const runtime = globalThis;
 
 function clearRuntime(): void {
   Reflect.deleteProperty(runtime, 'LumnoOnboardingPage');
-  Reflect.deleteProperty(runtime, 'LumnoOnboardingPageReact');
   Reflect.deleteProperty(runtime, 'LumnoOnboardingReactBootstrap');
   Reflect.deleteProperty(runtime, 'LumnoOnboardingReactIslands');
 }
@@ -25,7 +24,6 @@ describe('Onboarding React islands entry', () => {
 
     expect(runtime.LumnoOnboardingReactBootstrap.reactReady).toBe(true);
     expect(runtime.LumnoOnboardingPage?.implementation).toBe('react');
-    expect(runtime.LumnoOnboardingPageReact).toBe(runtime.LumnoOnboardingPage);
     expect(runtime.LumnoOnboardingReactIslands).toEqual({
       page: runtime.LumnoOnboardingPage
     });
