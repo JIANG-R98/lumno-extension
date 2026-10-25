@@ -187,3 +187,4 @@ function createTabMatching(deps: TabMatchingDeps) {
 }
 
 export { createTabMatching };
+export type { TabMatchingDeps, TabMatchingState };

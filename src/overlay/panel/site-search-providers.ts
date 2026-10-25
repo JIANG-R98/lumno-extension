@@ -32,8 +32,8 @@ interface SiteSearchProvidersState {
   aggregateSearchesLoadVersion: number;
   siteSearchIconCache: CachedIconMap;
   siteSearchIconCacheLoaded: boolean;
-  // A favicon as a data: URL from the worker, or '' when there is none.
-  requestFaviconData(url: string, pageUrl?: string): Promise<string>;
+  // A favicon as a data: URL from the worker; empty or null when there is none.
+  requestFaviconData(url: string, pageUrl?: string): Promise<string | null>;
   attachResolvedFaviconWithFallbacks(
     image: HTMLImageElement,
     pageUrl: string,

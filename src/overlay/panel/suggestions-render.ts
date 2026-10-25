@@ -36,8 +36,9 @@ interface SuggestionsRenderState {
   inputModeController: Pick<InputModeController, 'isModeMenuVisible' | 'menuElement'> | null;
   inputParts: Pick<InputModeParts, 'modeMenu'> | null;
   overlaySuggestionsView: SuggestionsViewController | null;
-  topActionTooltipController: Pick<TooltipController, 'show' | 'hide'>;
-  overlayCursorTooltipController: Pick<CursorTooltipController, 'bind'>;
+  // Made once the panel has mounted.
+  topActionTooltipController: Pick<TooltipController, 'show' | 'hide'> | null;
+  overlayCursorTooltipController: Pick<CursorTooltipController, 'bind'> | null;
   latestOverlayQuery: string;
   latestRawInputValue: string;
   selectedIndex: number;
@@ -236,7 +237,7 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
   let overlayTabsRequestInFlight = false;
   let overlayTabsRequestSeq = 0;
   const showTopActionTooltip = (button: HTMLElement, text: string): void => {
-    if (!button || !text) {
+    if (!button || !text || !overlayState.topActionTooltipController) {
       return;
     }
     overlayState.topActionTooltipController.show(button, text, {
@@ -246,7 +247,9 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
     });
   };
   const hideTopActionTooltip = (): void => {
-    overlayState.topActionTooltipController.hide();
+    if (overlayState.topActionTooltipController) {
+      overlayState.topActionTooltipController.hide();
+    }
   };
 
   function readInputQuery(): string {
@@ -559,7 +562,7 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
       showTopActionTooltip,
       hideTopActionTooltip,
       bindCursorTooltip: (target, getText, options) => (
-        overlayState.overlayCursorTooltipController.bind(
+        overlayState.overlayCursorTooltipController && overlayState.overlayCursorTooltipController.bind(
           target,
           getText,
           Object.assign(

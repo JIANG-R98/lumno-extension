@@ -8,8 +8,8 @@ import type { ThemeLike, ThemeVariant } from '../../shared/favicon/favicon-theme
 interface SuggestionThemesState {
   defaultTheme: ThemeVariant;
   isBlockedLocalFaviconUrl(url: string): boolean;
-  // A favicon service's image as a data: URL, or '' when there is none.
-  requestFaviconData(url: string): Promise<string>;
+  // A favicon service's image as a data: URL; empty or null when there is none.
+  requestFaviconData(url: string): Promise<string | null>;
 }
 
 interface SuggestionThemesDeps {

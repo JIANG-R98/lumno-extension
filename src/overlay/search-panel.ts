@@ -45,6 +45,8 @@ import * as PANEL_SUGGESTION_SOURCES from './panel/suggestion-sources';
 import * as PANEL_SUGGESTION_THEMES from './panel/suggestion-themes';
 import * as PANEL_SUGGESTIONS_RENDER from './panel/suggestions-render';
 import * as PANEL_TAB_MATCHING from './panel/tab-matching';
+import * as OVERLAY_CONTEXT from './overlay-context';
+import * as OVERLAY_STATE from './overlay-state';
 import * as LumnoOverlayRuntime from './runtime';
 import * as LumnoOverlaySiteFixes from './site-fixes';
 import * as LumnoMessaging from '../platform/messaging';
@@ -56,25 +58,88 @@ window._x_extension_search_overlay_runtime_version_2026_unique_ =
 window._x_extension_search_overlay_open_2026_unique_ = false;
 
 window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, overlayContext) {
+  const overlayLifecycle = LumnoOverlayLifecycle;
+  const overlayRuntime = LumnoOverlayRuntime;
+  if (!overlayRuntime.STORAGE_KEYS) {
+    console.warn('Lumno: overlay runtime helper not available.');
+    return;
+  }
+  const openOptions = OVERLAY_CONTEXT.readOverlayOpenOptions(overlayContext, Date.now());
+  const initialOverlayTabs = OVERLAY_CONTEXT.readOverlayTabs(requestedTabs);
+  const requestedTabZoomFactor = openOptions.tabZoomFactor;
+  const initialPrefillQuery = openOptions.prefillQuery;
+  const initialContextTabId = openOptions.currentTabId;
+  const ensureOverlayOpen = openOptions.ensureOpen;
+  const initialOverlayOpenStartedAt = openOptions.openedAt;
+  const initialLoadingSession = openOptions.loadingSession;
+  const shouldIgnoreTabZoomCompensation = isLocalFileLikeOverlayUrl(openOptions.currentTabUrl);
+  const storageRuntime = overlayRuntime.getStorageArea(chrome);
+  // Web clip needs Document Picture-in-Picture, which Firefox does not ship.
+  const documentPipSupported = 'documentPictureInPicture' in window;
+  // Made once the modules it relies on exist; the state reaches it through
+  // the functions below.
+  let overlayFaviconRuntime = null;
+
   // Panel state shared with the parts of this panel in overlay/panel/: each
   // receives this one object as `overlayState` and reads and writes the same
   // properties this function does.
-  const overlayState = {};
-  overlayState.overlayThemeMediaListener = null;
-  overlayState.overlayPageThemeObserver = null;
-  overlayState.clickOutsideHandler = null;
-  overlayState.overlayScrollPauseHandler = null;
-  overlayState.overlayWheelIsolationHandler = null;
-  overlayState.overlayRevealGate = null;
-  overlayState.overlayUpdateNoticeController = null;
-  overlayState.overlayEngagementNoticeController = null;
-  overlayState.inputHistoryController = null;
-  overlayState.isApplyingSearchInputHistory = false;
-  overlayState.overlaySuggestionsView = null;
-  overlayState.overlaySuggestionRequestSeq = 0;
-  overlayState.overlayRemoteSuggestionDebounceTimer = null;
-  overlayState.overlayFirstResultRevealTimer = null;
-  overlayState.suppressOverlayLoadingSessionNotification = false;
+  const overlayState = OVERLAY_STATE.createOverlayState({
+    storageArea: storageRuntime.area,
+    storageChangeListeners: overlayLifecycle.createChromeEventListenerRegistry(
+      chrome && chrome.storage ? chrome.storage.onChanged : null
+    ),
+    // Teardown steps owned by this invocation's overlay session. Controllers
+    // created deep inside the mount block register here so removeOverlay can
+    // release them without stashing them on DOM expandos.
+    overlaySessionCleanups: overlayLifecycle.createSessionCleanupRegistry(),
+    overlayNoticeLayer: OVERLAY_NOTICES.createNoticeLayer(window, {
+      getUpdateNotice: () => overlayState.overlayUpdateNoticeController,
+      getEngagementNotice: () => overlayState.overlayEngagementNoticeController,
+      getSizePreset: () => getOverlaySizePreset(overlayState.overlaySizeMode),
+      decorate: (element) => applyNoTranslateDeep(element)
+    }),
+    overlayViewportSizeSync: overlayLifecycle.createViewportSizeSync(window, {
+      getSizePreset: () => getOverlaySizePreset(overlayState.overlaySizeMode),
+      getRequestedTabZoomFactor: () => requestedTabZoomFactor,
+      shouldIgnoreTabZoomCompensation: () => shouldIgnoreTabZoomCompensation
+    }),
+    imeKeyGuard: LumnoImeKeyGuard.createImeKeyGuard(),
+    overlayMediaQuery: window.matchMedia('(prefers-color-scheme: dark)'),
+    defaultTheme: FAVICON_THEME.createDefaultTheme(),
+    urlHighlightTheme: FAVICON_THEME.createUrlHighlightTheme(),
+    defaultSiteSearchProviders: SEARCH_UTILS.getDefaultSiteSearchProviders(),
+    requestFaviconData: (url, pageUrl) => (
+      overlayFaviconRuntime ? overlayFaviconRuntime.requestFaviconData(url, pageUrl || '') : Promise.resolve(null)
+    ),
+    attachResolvedFaviconWithFallbacks: (image, pageUrl, hostKey, fallbackUrl, onFailed, sourceOptions) => {
+      if (overlayFaviconRuntime) {
+        overlayFaviconRuntime.attachResolvedFaviconWithFallbacks(image, pageUrl, hostKey, fallbackUrl, onFailed, sourceOptions);
+      }
+    },
+    isBlockedLocalFaviconUrl: (url) => Boolean(overlayFaviconRuntime && overlayFaviconRuntime.isBlockedLocalFaviconUrl(url)),
+    applyFaviconOpticalAlignment: (image) => {
+      if (overlayFaviconRuntime) {
+        overlayFaviconRuntime.applyFaviconOpticalAlignment(image);
+      }
+    },
+    preloadIcon: (url, pageUrl) => {
+      if (overlayFaviconRuntime) {
+        overlayFaviconRuntime.preloadIcon(url, pageUrl);
+      }
+    },
+    warmIconCache: (rows) => {
+      if (overlayFaviconRuntime) {
+        overlayFaviconRuntime.warmIconCache(rows);
+      }
+    },
+    prioritizeCurrentPageMatch: openOptions.prioritizeCurrentPageMatch,
+    initialContextTabUrl: openOptions.currentTabUrl,
+    loadingSessionTrackingActive: openOptions.loadingSessionTracked,
+    documentPipEnabled: documentPipSupported && openOptions.documentPipEnabled,
+    tabs: initialOverlayTabs,
+    currentOverlayTabId: initialContextTabId,
+    siteSearchProvidersCache: openOptions.siteSearchProviders.length > 0 ? openOptions.siteSearchProviders : null
+  });
   function cancelPendingOverlaySuggestionRequests() {
     overlayState.overlaySuggestionRequestSeq += 1;
     if (overlayState.overlayRemoteSuggestionDebounceTimer) {
@@ -88,7 +153,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   }
   const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
   const OVERLAY_PANEL_ID = '_x_extension_overlay_2024_unique_';
-  const overlayLifecycle = LumnoOverlayLifecycle;
 
   const overlayShell = globalThis.LumnoOverlayShell;
 
@@ -148,8 +212,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   };
 
   const buildTheme = FAVICON_THEME.buildTheme;
-
-  const overlayRuntime = LumnoOverlayRuntime;
 
   const overlayStorageKeys = overlayRuntime.STORAGE_KEYS;
   const THEME_STORAGE_KEY = overlayStorageKeys.themeMode;
@@ -589,68 +651,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   });
   const overlayFaviconView = LumnoOverlayFaviconView;
   const overlaySiteFixes = LumnoOverlaySiteFixes;
-  if (!overlayRuntime.STORAGE_KEYS) {
-    console.warn('Lumno: overlay runtime helper not available.');
-    return;
-  }
-  // Teardown steps owned by this invocation's overlay session. Controllers
-  // created deep inside the mount block register here so removeOverlay can
-  // release them without stashing them on DOM expandos.
-  overlayState.overlaySessionCleanups = overlayLifecycle.createSessionCleanupRegistry();
   const addOverlaySessionCleanup = overlayState.overlaySessionCleanups.add;
-  overlayState.storageChangeListeners = overlayLifecycle.createChromeEventListenerRegistry(
-    chrome && chrome.storage ? chrome.storage.onChanged : null
-  );
-  const normalizedOverlayContext = (overlayContext && typeof overlayContext === 'object') ? overlayContext : {};
-  const requestedTabZoomFactorRaw = Number(normalizedOverlayContext.tabZoomFactor);
-  const initialPrefillQuery = typeof normalizedOverlayContext.prefillQuery === 'string'
-    ? String(normalizedOverlayContext.prefillQuery).trim()
-    : '';
-  overlayState.prioritizeCurrentPageMatch = Boolean(normalizedOverlayContext.prioritizeCurrentPageMatch);
-  const initialContextTabId = Number.isFinite(Number(normalizedOverlayContext.currentTabId))
-    ? Number(normalizedOverlayContext.currentTabId)
-    : null;
-  overlayState.initialContextTabUrl = typeof normalizedOverlayContext.currentTabUrl === 'string'
-    ? String(normalizedOverlayContext.currentTabUrl).trim()
-    : '';
-  const ensureOverlayOpen = normalizedOverlayContext.ensureOpen === true;
-  const initialOverlayOpenStartedAtRaw = Number(normalizedOverlayContext.openedAt);
-  const initialOverlayClockNow = Date.now();
-  const initialOverlayOpenStartedAt = Number.isFinite(initialOverlayOpenStartedAtRaw) &&
-    initialOverlayOpenStartedAtRaw <= initialOverlayClockNow + 1000 &&
-    initialOverlayOpenStartedAtRaw >= initialOverlayClockNow - 60 * 1000
-    ? initialOverlayOpenStartedAtRaw
-    : initialOverlayClockNow;
-  overlayState.loadingSessionTrackingActive = normalizedOverlayContext.loadingSessionTracked === true;
-  const rawLoadingSession = normalizedOverlayContext.loadingSession &&
-    typeof normalizedOverlayContext.loadingSession === 'object'
-    ? normalizedOverlayContext.loadingSession
-    : null;
-  const initialLoadingSession = rawLoadingSession &&
-    typeof rawLoadingSession.inputValue === 'string'
-    ? (() => {
-        const inputValue = rawLoadingSession.inputValue;
-        const inputLength = inputValue.length;
-        const rawStart = Number(rawLoadingSession.selectionStart);
-        const selectionStart = Number.isFinite(rawStart)
-          ? Math.max(0, Math.min(inputLength, Math.trunc(rawStart)))
-          : inputLength;
-        const rawEnd = Number(rawLoadingSession.selectionEnd);
-        const selectionEnd = Number.isFinite(rawEnd)
-          ? Math.max(selectionStart, Math.min(inputLength, Math.trunc(rawEnd)))
-          : selectionStart;
-        return {
-          inputValue,
-          selectionStart,
-          selectionEnd,
-          selectionDirection: rawLoadingSession.selectionDirection === 'backward' ||
-            rawLoadingSession.selectionDirection === 'forward'
-            ? rawLoadingSession.selectionDirection
-            : 'none',
-          focused: rawLoadingSession.focused !== false
-        };
-      })()
-    : null;
   function isLocalFileLikeOverlayUrl(url) {
     if (!url) {
       return false;
@@ -686,16 +687,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     }
     return false;
   }
-  const shouldIgnoreTabZoomCompensation = isLocalFileLikeOverlayUrl(overlayState.initialContextTabUrl);
-  const initialOverlayTabs = Array.isArray(requestedTabs)
-    ? requestedTabs.map((tab) => ({
-      ...tab,
-      url: tab && typeof tab.url === 'string' ? String(tab.url).trim() : ''
-    }))
-    : [];
-  const requestedTabZoomFactor = Number.isFinite(requestedTabZoomFactorRaw) && requestedTabZoomFactorRaw > 0
-    ? requestedTabZoomFactorRaw
-    : 1;
   const overlayFrameTracker = overlayLifecycle.createFrameTracker(window);
 
   const {
@@ -713,11 +704,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     overlayState
   });
 
-  overlayState.overlayViewportSizeSync = overlayLifecycle.createViewportSizeSync(window, {
-    getSizePreset: () => getOverlaySizePreset(overlayState.overlaySizeMode),
-    getRequestedTabZoomFactor: () => requestedTabZoomFactor,
-    shouldIgnoreTabZoomCompensation: () => shouldIgnoreTabZoomCompensation
-  });
   const overlayAntiTranslateGuard = overlayLifecycle.createAntiTranslateGuard(window, {
     applyNoTranslate: (...args) => applyNoTranslate(...args),
     applyNoTranslateDeep: (...args) => applyNoTranslateDeep(...args),
@@ -776,8 +762,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     '_x_extension_macos_ctrl_suggestion_navigation_enabled_2026_unique_';
   const OVERLAY_TAB_PRIORITY_STORAGE_KEY = overlayStorageKeys.overlayTabPriority;
   const TAB_RANK_SCORE_DEBUG_STORAGE_KEY = overlayStorageKeys.tabRankScoreDebug;
-  const storageRuntime = overlayRuntime.getStorageArea(chrome);
-  overlayState.storageArea = storageRuntime.area;
   const storageAreaName = storageRuntime.name;
   function isPrimaryStorageAreaName(areaName) {
     return typeof storageRuntime.isActiveAreaName === 'function'
@@ -795,32 +779,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const TOAST_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'src/shared/ui/toast.css');
   const EXTERNAL_LINK_ICON_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'src/shared/ui/external-link-icon.css');
   const OVERLAY_SUGGESTIONS_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'src/overlay/suggestions-view.css');
-  overlayState.overlayMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  overlayState.overlayThemeMode = 'system';
-  overlayState.overlaySearchResultPriorityMode = 'autocomplete';
-  overlayState.overlaySearchResultDisplayLimit = 10;
-  overlayState.overlaySizeMode = 'standard';
-  overlayState.overlayEnterAnimation = 'elastic';
-  // Empty keeps the bundled Lumno Open Sans stack the CSS declares. The
-  // fallback covers glyphs (Chinese) the chosen family does not carry.
-  overlayState.overlayFontFamily = '';
-  overlayState.overlayFontFallback = '';
-  overlayState.motionEffectsEnabled = true;
-  overlayState.simpleModeEnabled = false;
-  overlayState.overlayPageThemeAdaptationEnabled = true;
-  overlayState.overlaySearchBlacklistItems = [];
-  overlayState.overlayFaviconRequestBlacklistItems = [];
-  overlayState.faviconEnhancedFetchEnabled = false;
-  overlayState.initialFaviconEnhancedFetchReady = Promise.resolve();
-  overlayState.overlayOpenTabsDefaultVisible = true;
-  overlayState.overlayOpenTabsDefaultVisibleLoaded = !overlayState.storageArea;
-  overlayState.initialOverlayOpenTabsDefaultVisibleReady = Promise.resolve();
-  // Web clip needs Document Picture-in-Picture, which Firefox does not ship.
-  const documentPipSupported = 'documentPictureInPicture' in window;
-  overlayState.documentPipEnabled = documentPipSupported && Boolean(normalizedOverlayContext.documentPipEnabled);
-  overlayState.overlayThemeListenerAttached = false;
-  overlayState.numberShortcutInstantEnabled = false;
-  overlayState.macosCtrlSuggestionNavigationEnabled = false;
   const initialOverlaySettingsReady = overlayRuntime.getStorageValues(
     overlayState.storageArea,
     [
@@ -907,13 +865,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       overlayState.overlayPageThemeObserver.stop();
     }
   }
-
-  overlayState.modeBadge = null;
-  overlayState.inputModeController = null;
-  overlayState.overlayLanguageMode = 'system';
-  overlayState.overlayTabQuickSwitchEnabled = true;
-  overlayState.overlayTabScoreDebugEnabled = false;
-
 
   const {
     buildDefaultSearchUrlForOverlay,
@@ -1063,16 +1014,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     overlayState
   });
 
-  overlayState.defaultPlaceholderText = 'Search or enter URL…';
-  overlayState.lastSuggestionResponse = [];
-  overlayState.overlaySearchEngineState = {
-    id: '',
-    name: '',
-    host: '',
-    searchTemplate: ''
-  };
-  overlayState.overlaySearchEngineStateReady = Promise.resolve(overlayState.overlaySearchEngineState);
-
   // Chrome ignores @font-face rules inside shadow roots, so the overlay's
   // fonts are declared on the host document. Only the faces live there, under
   // Lumno-specific family names, so they can neither restyle host elements
@@ -1132,13 +1073,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     const extra = extraClass ? ` ${extraClass}` : '';
     return '<i class="ri-icon ' + size + extra + ' ' + id + '" aria-hidden="true"></i>';
   }
-
-  overlayState.overlayNoticeLayer = OVERLAY_NOTICES.createNoticeLayer(window, {
-    getUpdateNotice: () => overlayState.overlayUpdateNoticeController,
-    getEngagementNotice: () => overlayState.overlayEngagementNoticeController,
-    getSizePreset: () => getOverlaySizePreset(overlayState.overlaySizeMode),
-    decorate: applyNoTranslateDeep
-  });
 
   function startOverlayViewportSizeSync(overlayElement) {
     overlayState.overlayViewportSizeSync.start(overlayElement);
@@ -1203,32 +1137,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   overlayState.overlay.classList.add('x-lumno-search-entry');
   setOverlayMountVisibility(overlayHost, true);
   applyNoTranslate(overlayState.overlay);
-
-  overlayState.tabs = [];
-  overlayState.currentOverlayTabId = null;
-  if (initialOverlayTabs.length > 0) {
-    overlayState.tabs = initialOverlayTabs;
-  }
-  overlayState.overlayTabsCacheReady = initialOverlayTabs.length > 0;
-  if (typeof initialContextTabId === 'number') {
-    overlayState.currentOverlayTabId = initialContextTabId;
-  }
-  overlayState.latestOverlayQuery = '';
-  overlayState.latestRawInputValue = '';
-  overlayState.lastDeletionAt = 0;
-  overlayState.autocompleteState = null;
-  overlayState.inlineSearchState = null;
-  overlayState.siteSearchTriggerState = null;
-  overlayState.localSearchScopeTriggerState = null;
-  overlayState.siteSearchState = null;
-  overlayState.localSearchScopeState = null;
-  overlayState.enabledSearchResultSourceTypes = ['topSite', 'bookmark', 'history'];
-  overlayState.openTabsSearchModeActive = false;
-  overlayState.imeKeyGuard = LumnoImeKeyGuard.createImeKeyGuard();
-  overlayState.selectedIndex = -1; // -1 means input is focused, 0+ means suggestion is selected
-  overlayState.currentSuggestions = []; // Store current suggestions for keyboard navigation
-  overlayState.lastRenderedQuery = '';
-  overlayState.lastRenderedActionContextKey = '';
 
   // 使用系统字体，避免外链字体依赖。
 
@@ -1639,24 +1547,12 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     return overlayState.imeKeyGuard.shouldIgnoreKeydown(event);
   }
   const defaultPlaceholder = overlayState.searchInput.placeholder;
-  const initialSiteSearchProviders = Array.isArray(overlayContext && overlayContext.siteSearchProviders)
-    ? overlayContext.siteSearchProviders
-    : [];
-  overlayState.siteSearchProvidersCache = initialSiteSearchProviders.length > 0
-    ? initialSiteSearchProviders
-    : null;
-  overlayState.siteSearchProvidersLoadVersion = 0;
-  overlayState.aggregateSearchesCache = null;
-  overlayState.aggregateSearchesLoadPromise = null;
-  overlayState.aggregateSearchesLoadVersion = 0;
   const siteSearchIconStore = LumnoShortcutFaviconStore.createShortcutFaviconStore({
     chromeApi: chrome,
     storageArea: localStorageArea,
     storageKey: SITE_SEARCH_ICON_CACHE_STORAGE_KEY,
     ...siteSearchIconCacheOptions
   });
-  overlayState.siteSearchIconCache = {};
-  overlayState.siteSearchIconCacheLoaded = false;
   let siteSearchIconCacheLoadPromise = null;
   let siteSearchIconCacheRevision = 0;
 
@@ -1688,7 +1584,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
 
   // Warm local icon lookup immediately, but never put it on the overlay reveal path.
   loadSiteSearchIconCache();
-  overlayState.defaultSiteSearchProviders = SEARCH_UTILS.getDefaultSiteSearchProviders();
   window._x_extension_theme_color_cache_2024_unique_ = themeColorCache;
   window._x_extension_theme_host_cache_2024_unique_ = themeHostCache;
   window._x_extension_overlay_favicon_data_cache_2026_unique_ = faviconDataCache;
@@ -1696,7 +1591,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   window._x_extension_overlay_favicon_data_pending_2026_unique_ = faviconDataPending;
   const iconPreloadCache = window._x_extension_overlay_icon_preload_cache_2026_unique_ || new Map();
   window._x_extension_overlay_icon_preload_cache_2026_unique_ = iconPreloadCache;
-  const overlayFaviconRuntime = overlayFaviconView.createOverlayFaviconViewRuntime({
+  const faviconRuntime = overlayFaviconView.createOverlayFaviconViewRuntime({
     document,
     windowObj: window,
     chromeApi: chrome,
@@ -1723,24 +1618,17 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     rerenderReplacedFaviconRows,
     hasThemeForHost: (hostKey) => Boolean(hostKey && themeHostCache.has(hostKey))
   });
-  overlayState.applyFaviconOpticalAlignment = overlayFaviconRuntime.applyFaviconOpticalAlignment;
-  overlayState.isBlockedLocalFaviconUrl = overlayFaviconRuntime.isBlockedLocalFaviconUrl;
-  overlayState.requestFaviconData = overlayFaviconRuntime.requestFaviconData;
-  const attachFaviconData = overlayFaviconRuntime.attachFaviconData;
+  overlayFaviconRuntime = faviconRuntime;
+  const attachFaviconData = faviconRuntime.attachFaviconData;
   const attachInputModeFaviconData =
     SHORTCUT_FAVICON.createSiteSearchProviderIconHydrator(attachFaviconData);
-  overlayState.attachResolvedFaviconWithFallbacks = overlayFaviconRuntime.attachResolvedFaviconWithFallbacks;
-  const refreshOverlayThemeAwareFavicons = overlayFaviconRuntime.refreshOverlayThemeAwareFavicons;
-  const refreshOverlayFaviconsForPolicyChange = overlayFaviconRuntime.refreshOverlayFaviconsForPolicyChange;
-  overlayState.preloadIcon = overlayFaviconRuntime.preloadIcon;
-  overlayState.warmIconCache = overlayFaviconRuntime.warmIconCache;
+  const refreshOverlayThemeAwareFavicons = faviconRuntime.refreshOverlayThemeAwareFavicons;
+  const refreshOverlayFaviconsForPolicyChange = faviconRuntime.refreshOverlayFaviconsForPolicyChange;
   const defaultCaretColor = overlayState.searchInput.style.caretColor || 'var(--x-ext-input-caret, #7DB7FF)';
   const inputModePrefixTransition = 'opacity 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1), background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, color 140ms ease';
 
   const rgbToCss = FAVICON_THEME.rgbToCss;
 
-  overlayState.defaultTheme = FAVICON_THEME.createDefaultTheme();
-  overlayState.urlHighlightTheme = FAVICON_THEME.createUrlHighlightTheme();
 
   const initialOverlayThemeReady = initialOverlaySettingsReady.then((result) => {
     if (!overlayState.storageArea) {
@@ -2026,10 +1914,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       requestOverlaySearchSuggestions(overlayState.latestOverlayQuery);
     }
   });
-
-  // Moves, undos and redos run one after another, so each reads what the
-  // previous one stored.
-  overlayState.searchSourceOrderQueue = Promise.resolve();
 
   overlayState.searchInput.addEventListener('compositionstart', handleSearchInputCompositionStart);
   overlayState.searchInput.addEventListener('compositionend', handleSearchInputCompositionEnd);
