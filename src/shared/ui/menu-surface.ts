@@ -1,10 +1,36 @@
-// @ts-nocheck
+// The shared look and open/close motion of floating menus, and the option
+// to size a menu to its content between a minimum and a maximum width.
 const SURFACE_CLASS = '_x_extension_menu_surface_2024_unique_';
 const CONTENT_WIDTH_ATTRIBUTE = 'data-menu-surface-width';
 const MIN_WIDTH_VAR = '--x-extension-menu-surface-min-width';
 const MAX_WIDTH_VAR = '--x-extension-menu-surface-max-width';
 
-function normalizeCssLength(value) {
+// A number of pixels or any CSS length.
+type CssLength = number | string | null | undefined;
+
+// A menu element, or a test double with the members used here.
+interface MenuSurfaceElement {
+  classList: Pick<DOMTokenList, 'add'>;
+  style: Pick<CSSStyleDeclaration, 'setProperty' | 'removeProperty'>;
+  setAttribute(name: string, value: string): void;
+  removeAttribute(name: string): void;
+}
+
+type FrameRequest = (callback: () => void) => unknown;
+
+interface MenuSurfaceOptions {
+  // 'content' (or contentWidth: true) sizes the menu to its content.
+  width?: string;
+  menuWidth?: string;
+  contentWidth?: boolean;
+  minWidth?: CssLength;
+  menuMinWidth?: CssLength;
+  maxWidth?: CssLength;
+  menuMaxWidth?: CssLength;
+  requestAnimationFrame?: FrameRequest;
+}
+
+function normalizeCssLength(value: CssLength): string {
   if (value === undefined || value === null || value === '') {
     return '';
   }
@@ -14,99 +40,62 @@ function normalizeCssLength(value) {
   return String(value).trim();
 }
 
-function getRequestAnimationFrame(options) {
+function getRequestAnimationFrame(options: MenuSurfaceOptions | null | undefined): FrameRequest {
   if (options && typeof options.requestAnimationFrame === 'function') {
     return options.requestAnimationFrame;
   }
-  if (globalThis && typeof globalThis.requestAnimationFrame === 'function') {
+  if (typeof globalThis.requestAnimationFrame === 'function') {
     return globalThis.requestAnimationFrame.bind(globalThis);
   }
-  return (callback) => {
-    if (globalThis && typeof globalThis.setTimeout === 'function') {
-      globalThis.setTimeout(callback, 0);
-      return;
-    }
-    callback();
-  };
+  return (callback) => globalThis.setTimeout(callback, 0);
 }
 
-function addClass(element, className) {
-  if (!element || !className) {
-    return;
-  }
-  if (element.classList && typeof element.classList.add === 'function') {
-    element.classList.add(className);
-    return;
-  }
-  const current = String(element.className || '');
-  const parts = current.split(/\s+/).filter(Boolean);
-  if (!parts.includes(className)) {
-    parts.push(className);
-    element.className = parts.join(' ');
-  }
-}
-
-function setStyleProperty(element, name, value) {
-  if (!element || !element.style || typeof element.style.setProperty !== 'function') {
-    return;
-  }
-  element.style.setProperty(name, value);
-}
-
-function removeStyleProperty(element, name) {
-  if (!element || !element.style || typeof element.style.removeProperty !== 'function') {
-    return;
-  }
-  element.style.removeProperty(name);
-}
-
-function apply(element, options) {
+function apply<T extends MenuSurfaceElement>(element: T | null | undefined, options?: MenuSurfaceOptions | null): T | null {
   if (!element) {
     return null;
   }
-  const config = options || {};
-  addClass(element, SURFACE_CLASS);
+  const config: MenuSurfaceOptions = options || {};
+  element.classList.add(SURFACE_CLASS);
   if (config.width === 'content' || config.menuWidth === 'content' || config.contentWidth) {
     applyContentWidth(element, config);
   }
   return element;
 }
 
-function applyContentWidth(element, options) {
-  if (!element || typeof element.setAttribute !== 'function') {
+function applyContentWidth<T extends MenuSurfaceElement>(element: T | null | undefined, options?: MenuSurfaceOptions | null): T | null {
+  if (!element) {
     return null;
   }
-  const config = options || {};
+  const config: MenuSurfaceOptions = options || {};
   const minWidth = normalizeCssLength(
     config.minWidth === undefined ? config.menuMinWidth : config.minWidth
   ) || '0';
   const maxWidth = normalizeCssLength(
     config.maxWidth === undefined ? config.menuMaxWidth : config.maxWidth
   ) || 'calc(100vw - 32px)';
-  addClass(element, SURFACE_CLASS);
+  element.classList.add(SURFACE_CLASS);
   element.setAttribute(CONTENT_WIDTH_ATTRIBUTE, 'content');
-  setStyleProperty(element, MIN_WIDTH_VAR, minWidth);
-  setStyleProperty(element, MAX_WIDTH_VAR, maxWidth);
+  element.style.setProperty(MIN_WIDTH_VAR, minWidth);
+  element.style.setProperty(MAX_WIDTH_VAR, maxWidth);
   return element;
 }
 
-function clearContentWidth(element) {
+function clearContentWidth<T extends MenuSurfaceElement>(element: T | null | undefined): T | null {
   if (!element) {
     return null;
   }
-  if (typeof element.removeAttribute === 'function') {
-    element.removeAttribute(CONTENT_WIDTH_ATTRIBUTE);
-  }
-  removeStyleProperty(element, MIN_WIDTH_VAR);
-  removeStyleProperty(element, MAX_WIDTH_VAR);
+  element.removeAttribute(CONTENT_WIDTH_ATTRIBUTE);
+  element.style.removeProperty(MIN_WIDTH_VAR);
+  element.style.removeProperty(MAX_WIDTH_VAR);
   return element;
 }
 
-function open(element, options) {
-  if (!element || typeof element.setAttribute !== 'function') {
+// Draws the menu closed for a frame, then open, so the open motion plays.
+function open<T extends MenuSurfaceElement>(element: T | null | undefined, options?: MenuSurfaceOptions | null): T | null {
+  if (!element) {
     return null;
   }
-  addClass(element, SURFACE_CLASS);
+  element.classList.add(SURFACE_CLASS);
   element.setAttribute('data-open', 'false');
   getRequestAnimationFrame(options)(() => {
     element.setAttribute('data-open', 'true');
@@ -114,14 +103,15 @@ function open(element, options) {
   return element;
 }
 
-function close(element) {
-  if (!element || typeof element.setAttribute !== 'function') {
+function close<T extends MenuSurfaceElement>(element: T | null | undefined): T | null {
+  if (!element) {
     return null;
   }
   element.setAttribute('data-open', 'false');
   return element;
 }
 
+export type { CssLength, MenuSurfaceElement, MenuSurfaceOptions };
 export {
   SURFACE_CLASS as className,
   CONTENT_WIDTH_ATTRIBUTE as contentWidthAttribute,

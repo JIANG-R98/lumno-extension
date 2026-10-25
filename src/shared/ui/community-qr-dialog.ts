@@ -212,26 +212,45 @@ const STYLES = `
   }
 `;
 
-let active = null;
+interface CommunityQrDialogOptions {
+  imageUrl?: string;
+  title?: string;
+  alt?: string;
+  closeLabel?: string;
+  theme?: 'light' | 'dark';
+  documentObj?: Document | null;
+  // Focused again when the dialog closes, such as document.activeElement.
+  returnFocus?: Element | null;
+  // Draw the card in the page's glass material; the dialog then opens in the
+  // body, where the page sets the material's custom properties.
+  glass?: boolean;
+}
 
-function close() {
+interface CommunityQrDialog {
+  element: HTMLElement;
+  close(): void;
+}
+
+let active: CommunityQrDialog | null = null;
+
+// HTML, SVG and MathML elements all have focus(); other elements do not.
+function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
+  return 'focus' in element && typeof element.focus === 'function';
+}
+
+function close(): void {
   if (active) {
     active.close();
   }
 }
 
-function isOpen() {
+function isOpen(): boolean {
   return Boolean(active);
 }
 
-/**
- * Opens the dialog. options: { imageUrl, title, alt, closeLabel, theme
- * ('light' | 'dark'), documentObj, returnFocus (element focused on close),
- * glass (draw the card in the page's glass material; the dialog then opens in
- * the body, where the page sets the material's custom properties) }.
- */
-function open(options) {
-  const config = options && typeof options === 'object' ? options : {};
+// Opens the dialog; null without a document or an image.
+function open(options?: CommunityQrDialogOptions | null): CommunityQrDialog | null {
+  const config: CommunityQrDialogOptions = options || {};
   const documentObj = config.documentObj || globalThis.document;
   const imageUrl = String(config.imageUrl || '').trim();
   if (!documentObj || !documentObj.documentElement || !imageUrl) {
@@ -293,11 +312,11 @@ function open(options) {
 
   let closed = false;
 
-  function swallowScroll(event) {
+  function swallowScroll(event: Event): void {
     event.preventDefault();
   }
 
-  function onKeyDown(event) {
+  function onKeyDown(event: KeyboardEvent): void {
     // Keys typed in the dialog stay in it, so page shortcuts and the
     // search box behind it don't react while it is open.
     event.stopPropagation();
@@ -312,11 +331,11 @@ function open(options) {
     }
   }
 
-  function stopPropagation(event) {
+  function stopPropagation(event: Event): void {
     event.stopPropagation();
   }
 
-  const controller = {
+  const controller: CommunityQrDialog = {
     element: host,
     close() {
       if (closed) {
@@ -327,12 +346,12 @@ function open(options) {
         active = null;
       }
       host.setAttribute('data-open', 'false');
-      const reduceMotion = windowObj.matchMedia &&
+      const reduceMotion = typeof windowObj.matchMedia === 'function' &&
         windowObj.matchMedia('(prefers-reduced-motion: reduce)').matches;
       windowObj.setTimeout(() => {
         host.remove();
       }, reduceMotion ? 0 : EXIT_DURATION_MS);
-      if (returnFocus && returnFocus.isConnected && typeof returnFocus.focus === 'function') {
+      if (returnFocus && returnFocus.isConnected && isFocusable(returnFocus)) {
         returnFocus.focus({ preventScroll: true });
       }
     }
@@ -360,4 +379,5 @@ function open(options) {
   return controller;
 }
 
+export type { CommunityQrDialog, CommunityQrDialogOptions };
 export { HOST_ID, open, close, isOpen };

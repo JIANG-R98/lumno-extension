@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Empty-state illustrations: small scenes for "nothing here", "no results"
 // and "can't load" moments, drawn the way the utilities art on lumno.kubai.design
 // is (lumno-web src/components/home/UtilityArt.astro): a pale tile with dense
@@ -38,7 +37,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const CLASS_PREFIX = 'lumno-empty-art';
 const WIDTH = 160;
 const HEIGHT = 120;
-const THEMES = ['light', 'dark', 'auto'];
+const THEMES: readonly EmptyStateArtTheme[] = ['light', 'dark', 'auto'];
 
 // Remix Icon 4 outlines (assets/remixicon/fonts), on their 24 x 24 grid.
 const ICONS = {
@@ -54,7 +53,9 @@ const ICONS = {
   inbox: 'M4.02 3.78Q4.1 3.44 4.37 3.22Q4.64 3 5 3H19Q19.36 3 19.63 3.22Q19.9 3.44 19.98 3.78L21.98 12.78Q22 12.9 22 13V20Q22 20.42 21.71 20.71Q21.42 21 21 21H3Q2.58 21 2.29 20.71Q2 20.42 2 20V13Q2 12.9 2.02 12.78ZM5.8 5 4.24 12H9Q9 12.82 9.4 13.51Q9.8 14.2 10.49 14.6Q11.18 15 12 15Q12.82 15 13.51 14.6Q14.2 14.2 14.6 13.51Q15 12.82 15 12H19.76L18.2 5ZM16.58 14Q16 15.34 14.76 16.17Q13.52 17 12 17Q10.48 17 9.24 16.17Q8 15.34 7.42 14H4V19H20V14Z',
   file: 'M21 8V21Q21 21.42 20.71 21.71Q20.42 22 20 22H4Q3.58 22 3.29 21.71Q3 21.42 3 21V3Q3 2.58 3.29 2.29Q3.58 2 4 2H15ZM19 9H14V4H5V20H19Z',
   globe: 'M12 22Q9.96 22 8.1 21.22Q6.32 20.46 4.93 19.07Q3.54 17.68 2.78 15.9Q2 14.04 2 12Q2 9.96 2.78 8.1Q3.54 6.32 4.93 4.93Q6.32 3.54 8.1 2.78Q9.96 2 12 2Q14.04 2 15.9 2.78Q17.68 3.54 19.07 4.93Q20.46 6.32 21.22 8.1Q22 9.96 22 12Q22 14.04 21.22 15.9Q20.46 17.68 19.07 19.07Q17.68 20.46 15.9 21.22Q14.04 22 12 22ZM9.72 19.66Q8.22 16.5 8.02 13H4.06Q4.26 14.56 5.03 15.92Q5.8 17.28 7.01 18.25Q8.22 19.22 9.72 19.66ZM10.04 13Q10.26 16.6 12 19.76Q13.74 16.6 13.96 13ZM19.94 13H15.98Q15.78 16.5 14.3 19.66Q15.78 19.22 16.99 18.25Q18.2 17.28 18.97 15.92Q19.74 14.56 19.94 13ZM4.06 11H8.02Q8.22 7.5 9.72 4.34Q8.22 4.78 7.01 5.75Q5.8 6.72 5.03 8.08Q4.26 9.44 4.06 11ZM10.04 11H13.96Q13.74 7.4 12 4.24Q10.26 7.4 10.04 11ZM14.3 4.34Q15.78 7.5 15.98 11H19.94Q19.74 9.44 18.97 8.08Q18.2 6.72 16.99 5.75Q15.78 4.78 14.3 4.34Z'
-};
+} satisfies Record<string, string>;
+
+type IconName = keyof typeof ICONS;
 
 // The palette, from the site's art (light) and Lumno's dark surfaces.
 const LIGHT = {
@@ -76,7 +77,11 @@ const LIGHT = {
   keyTop: '#404859',
   keyBottom: '#273042'
 };
-const DARK = {
+
+type PaletteKey = keyof typeof LIGHT;
+type Palette = Record<PaletteKey, string>;
+
+const DARK: Palette = {
   tile: '#26262b',
   hatch: 'rgba(255, 255, 255, 0.035)',
   edge: 'rgba(255, 255, 255, 0.07)',
@@ -96,14 +101,35 @@ const DARK = {
   keyBottom: '#3b4354'
 };
 // Palette entries a surface may re-point, light and dark.
-const OVERRIDABLE = {
+const OVERRIDABLE: Partial<Record<PaletteKey, readonly [light: string, dark: string]>> = {
   tile: ['--lumno-art-tile', '--lumno-art-tile-dark'],
   accent: ['--lumno-art-accent', '--lumno-art-accent-dark']
 };
 
+function hasOwn(object: object, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(object, key);
+}
+
+function isPaletteKey(value: string): value is PaletteKey {
+  return hasOwn(LIGHT, value);
+}
+
+const PALETTE_KEYS: readonly PaletteKey[] = Object.keys(LIGHT).filter(isPaletteKey);
+
+// A node's attributes: SVG attributes, plus `paint` (a color class),
+// `shadow` (a filter) and `class`.
+interface ArtAttributes {
+  [attribute: string]: string | number | undefined;
+  paint?: PaintName;
+  shadow?: 'drop' | 'lift';
+  class?: string;
+}
+
+type ArtNode = [tag: string, attributes: ArtAttributes, children?: ArtNode[]];
+
 // Building blocks. Every scene is a list of [tag, attributes, children?]
 // nodes on a 160 x 120 canvas; `paint` picks a color class.
-function icon(name, cx, cy, size, paint) {
+function icon(name: IconName, cx: number, cy: number, size: number, paint?: PaintName): ArtNode {
   const scale = size / 24;
   return ['path', {
     paint: paint || 'icon',
@@ -112,21 +138,21 @@ function icon(name, cx, cy, size, paint) {
   }];
 }
 
-function line(x, y, width, strong) {
+function line(x: number, y: number, width: number, strong?: boolean): ArtNode {
   const height = strong ? 5 : 4;
   return ['rect', { paint: strong ? 'strong' : 'line', x, y, width, height, rx: height / 2 }];
 }
 
 // A card or window: an opaque surface with a ring and a soft drop.
-function surface(x, y, width, height, rx, extra) {
+function surface(x: number, y: number, width: number, height: number, rx: number, extra?: ArtAttributes): ArtNode {
   return ['rect', { paint: 'surface', shadow: 'drop', x, y, width, height, rx, ...extra }];
 }
 
 // A browser window with a tab strip; `tab` draws one active tab.
-function browserWindow(x, y, width, height, options) {
+function browserWindow(x: number, y: number, width: number, height: number, options?: { tab?: boolean }): ArtNode[] {
   const config = options || {};
   const strip = 18;
-  const nodes = [
+  const nodes: ArtNode[] = [
     surface(x, y, width, height, 10),
     ['path', {
       paint: 'strip',
@@ -145,7 +171,7 @@ function browserWindow(x, y, width, height, options) {
 }
 
 // A round control like the link preview's buttons beside its window.
-function control(cx, cy, r, name, accent) {
+function control(cx: number, cy: number, r: number, name: IconName, accent?: boolean): ArtNode[] {
   return [
     ['circle', { paint: accent ? 'accent' : 'surface', shadow: 'lift', cx, cy, r, class: accent ? 'pop' : undefined }],
     icon(name, cx, cy, r * 1.05, accent ? 'onAccent' : 'ink')
@@ -153,20 +179,21 @@ function control(cx, cy, r, name, accent) {
 }
 
 // What the empty search list says: its icon and a line where the words go.
-function emptyRow(cx, cy, width) {
+function emptyRow(cx: number, cy: number, width: number): ArtNode[] {
   const start = cx - (10 + 5 + width) / 2;
   return [icon('file', start + 5, cy, 10), line(start + 15, cy - 2, width)];
 }
 
-function searchPill(lead) {
+// The search pill led by `lead`, with the caret at x = `caret`.
+function searchPill(lead: ArtNode[], caret: number): ArtNode[] {
   return [
     surface(16, 24, 128, 24, 12),
     ...lead,
-    ['rect', { paint: 'accent', class: 'pop', x: lead.caret, y: 30, width: 1.6, height: 12, rx: 0.8 }]
+    ['rect', { paint: 'accent', class: 'pop', x: caret, y: 30, width: 1.6, height: 12, rx: 0.8 }]
   ];
 }
 
-const ART = {
+const ART: Record<EmptyStateArtName, () => ArtNode[]> = {
   // A page that refuses to be framed: the preview window shows only a
   // stop sign, and beside it the open-in-tab control is the way through.
   blockedPage: () => [
@@ -182,19 +209,17 @@ const ART = {
   // over a list that holds only the empty row.
   noResults: () => {
     const lead = [icon('search', 29, 36, 11, 'ink'), line(40, 33.5, 38, true)];
-    lead.caret = 82;
-    return [...searchPill(lead), surface(26, 56, 108, 40, 11), ...emptyRow(80, 76, 44)];
+    return [...searchPill(lead, 82), surface(26, 56, 108, 40, 11), ...emptyRow(80, 76, 44)];
   },
 
   // A slash command that matches nothing: the pill led by the / key.
   noCommands: () => {
-    const lead = [
+    const lead: ArtNode[] = [
       ['rect', { paint: 'key', x: 22, y: 29, width: 14, height: 14, rx: 4 }],
       ['path', { paint: 'onAccentLine', d: 'M31 32.5l-4 7' }],
       line(42, 33.5, 30, true)
     ];
-    lead.caret = 76;
-    return [...searchPill(lead), surface(26, 56, 108, 40, 11), ...emptyRow(80, 76, 44)];
+    return [...searchPill(lead, 76), surface(26, 56, 108, 40, 11), ...emptyRow(80, 76, 44)];
   },
 
   // No tabs: a window whose strip has only a place for one, and the plus.
@@ -211,8 +236,8 @@ const ART = {
     surface(26, 26, 108, 74, 13),
     icon('folder', 40, 40, 12, 'accent'),
     line(51, 37.5, 40, true),
-    ...[0, 1, 2, 3].map((i) => ['rect', { paint: 'slot', x: 34 + i * 24, y: 54, width: 20, height: 18, rx: 5 }]),
-    ...[0, 1, 2, 3].map((i) => ['rect', { paint: 'slot', x: 34 + i * 24, y: 76, width: 20, height: 18, rx: 5, opacity: 0.6 }])
+    ...[0, 1, 2, 3].map((i): ArtNode => ['rect', { paint: 'slot', x: 34 + i * 24, y: 54, width: 20, height: 18, rx: 5 }]),
+    ...[0, 1, 2, 3].map((i): ArtNode => ['rect', { paint: 'slot', x: 34 + i * 24, y: 76, width: 20, height: 18, rx: 5, opacity: 0.6 }])
   ],
 
   // A settings list with nothing added yet, and its add button.
@@ -246,11 +271,16 @@ const ART = {
   ]
 };
 
-export const EMPTY_STATE_ART_NAMES = Object.freeze(Object.keys(ART));
+function isEmptyStateArtName(value: string): value is EmptyStateArtName {
+  return hasOwn(ART, value);
+}
+
+export const EMPTY_STATE_ART_NAMES: readonly EmptyStateArtName[] = Object.freeze(Object.keys(ART).filter(isEmptyStateArtName));
 
 // Each paint: presentation attributes, where a value naming a palette entry
 // takes that color (light as the attribute, both themes through the CSS).
 const KEY_GRADIENT = Symbol('key gradient');
+type PaintValue = string | number | typeof KEY_GRADIENT;
 const PAINTS = {
   tile: { fill: 'tile' },
   hatch: { stroke: 'hatch' },
@@ -271,12 +301,16 @@ const PAINTS = {
   onAccent: { fill: '#ffffff' },
   onAccentLine: { fill: 'none', stroke: '#ffffff', 'stroke-width': 1.6, 'stroke-linecap': 'round' },
   dash: { fill: 'none', stroke: 'strong', 'stroke-width': 1.2, 'stroke-dasharray': '3 3' }
-};
+} satisfies Record<string, Readonly<Record<string, PaintValue>>>;
 
-function paletteVariables(palette, themeIndex) {
-  return Object.entries(palette)
-    .map(([key, value]) => {
-      const override = OVERRIDABLE[key] ? OVERRIDABLE[key][themeIndex] : '';
+type PaintName = keyof typeof PAINTS;
+
+function paletteVariables(palette: Palette, themeIndex: 0 | 1): string {
+  return PALETTE_KEYS
+    .map((key) => {
+      const value = palette[key];
+      const overrides = OVERRIDABLE[key];
+      const override = overrides ? overrides[themeIndex] : '';
       return `--${CLASS_PREFIX}-${key}: ${override ? `var(${override}, ${value})` : value};`;
     })
     .join(' ');
@@ -285,9 +319,11 @@ function paletteVariables(palette, themeIndex) {
 const SELF = `.${CLASS_PREFIX}`;
 const PAINT_RULES = Object.entries(PAINTS)
   .map(([name, paint]) => {
-    const declarations = Object.entries(paint)
-      .filter(([, value]) => typeof value === 'string' && Object.prototype.hasOwnProperty.call(LIGHT, value))
-      .map(([property, value]) => `${property}: var(--${CLASS_PREFIX}-${value});`)
+    const declarations = Object.entries<PaintValue>(paint)
+      .map(([property, value]) => (typeof value === 'string' && isPaletteKey(value)
+        ? `${property}: var(--${CLASS_PREFIX}-${value});`
+        : ''))
+      .filter(Boolean)
       .join(' ');
     return declarations ? `${SELF} .p-${name} { ${declarations} }` : '';
   })
@@ -312,21 +348,27 @@ const STYLE_MARK = 'data-lumno-empty-art-style';
 
 // Places EMPTY_STATE_ART_CSS once in the document or shadow root that holds
 // `node`. Returns false while `node` is not connected to either.
-export function ensureEmptyStateArtStyles(node) {
-  const root = node && typeof node.getRootNode === 'function' ? node.getRootNode() : null;
-  const isDocument = Boolean(root && root.nodeType === 9);
-  const isShadowRoot = Boolean(root && root.nodeType === 11 && root.host);
-  if (!isDocument && !isShadowRoot) {
+function isDocumentNode(node: Node): node is Document {
+  return node.nodeType === 9;
+}
+
+function isShadowRootNode(node: Node): node is ShadowRoot {
+  return node.nodeType === 11 && 'host' in node && Boolean(node.host);
+}
+
+export function ensureEmptyStateArtStyles(node: Node | null | undefined): boolean {
+  const root = node ? node.getRootNode() : null;
+  if (!root || (!isDocumentNode(root) && !isShadowRootNode(root))) {
     return false;
   }
-  const holder = isDocument ? (root.head || root.documentElement) : root;
+  const holder = isDocumentNode(root) ? (root.head || root.documentElement) : root;
   // Looked up among the holder's own children: `:scope` matches nothing in
   // a shadow root.
-  const present = Array.prototype.some.call(holder.children, (child) => (
+  const present = Array.from(holder.children).some((child) => (
     child.localName === 'style' && child.hasAttribute(STYLE_MARK)
   ));
   if (!present) {
-    const style = (isDocument ? root : root.ownerDocument).createElement('style');
+    const style = (isDocumentNode(root) ? root : root.ownerDocument).createElement('style');
     style.setAttribute(STYLE_MARK, '');
     style.textContent = EMPTY_STATE_ART_CSS;
     holder.appendChild(style);
@@ -337,7 +379,7 @@ export function ensureEmptyStateArtStyles(node) {
 // A drop shadow under the shape. Built from primitives every HTML parser
 // knows by name (feDropShadow comes out lowercased from some), so the markup
 // form renders the same as the element.
-function shadowFilter(id, dy, blur, start, size) {
+function shadowFilter(id: string, dy: number, blur: number, start: string, size: string): ArtNode {
   return ['filter', { id, x: start, y: start, width: size, height: size }, [
     ['feGaussianBlur', { in: 'SourceAlpha', stdDeviation: blur }],
     ['feOffset', { dy, result: 'blur' }],
@@ -348,7 +390,7 @@ function shadowFilter(id, dy, blur, start, size) {
 }
 
 // The tile, its pattern and the shared shadows and gradient.
-function frame(id) {
+function frame(id: string): ArtNode[] {
   return [
     ['defs', {}, [
       ['pattern', { id: `${id}-hatch`, width: 7, height: 7, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, [
@@ -367,19 +409,24 @@ function frame(id) {
   ];
 }
 
-function paintAttributes(id, paint) {
-  return Object.fromEntries(Object.entries(PAINTS[paint]).map(([property, value]) => {
+type SvgAttributes = Record<string, string | number | undefined>;
+
+function paintAttributes(id: string, paint: PaintName): SvgAttributes {
+  const attributes: SvgAttributes = {};
+  Object.entries<PaintValue>(PAINTS[paint]).forEach(([property, value]) => {
     if (value === KEY_GRADIENT) {
-      return [property, `url(#${id}-key)`];
+      attributes[property] = `url(#${id}-key)`;
+    } else {
+      attributes[property] = typeof value === 'string' && isPaletteKey(value) ? LIGHT[value] : value;
     }
-    return [property, Object.prototype.hasOwnProperty.call(LIGHT, value) ? LIGHT[value] : value];
-  }));
+  });
+  return attributes;
 }
 
-function resolveAttributes(id, attributes) {
+function resolveAttributes(id: string, attributes: ArtAttributes): SvgAttributes {
   const { paint, shadow, class: className, ...rest } = attributes;
   const classes = [paint ? `p-${paint}` : '', className || ''].filter(Boolean).join(' ');
-  const resolved = { ...(paint ? paintAttributes(id, paint) : {}), ...rest };
+  const resolved: SvgAttributes = { ...(paint ? paintAttributes(id, paint) : {}), ...rest };
   if (classes) {
     resolved.class = classes;
   }
@@ -389,25 +436,29 @@ function resolveAttributes(id, attributes) {
   return resolved;
 }
 
-function getScene(name) {
-  const draw = Object.prototype.hasOwnProperty.call(ART, name) ? ART[name] : null;
-  if (!draw) {
+// Scripts that are not type-checked may still ask for any name.
+function getScene(name: string): ArtNode[] {
+  if (!isEmptyStateArtName(name)) {
     throw new Error(`Unknown empty-state art: ${name}`);
   }
-  return draw();
+  return ART[name]();
 }
 
-function createId() {
+function createId(): string {
   return `${CLASS_PREFIX}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function describe(name, options) {
-  const config = options || {};
+function readTheme(value: unknown): EmptyStateArtTheme {
+  return THEMES.find((theme) => theme === value) || 'auto';
+}
+
+function describe(name: EmptyStateArtName, options?: EmptyStateArtOptions | null): { id: string; attributes: ArtAttributes; children: ArtNode[] } {
+  const config: EmptyStateArtOptions = options || {};
   const id = config.id ? String(config.id) : createId();
   const width = Number(config.size) || WIDTH;
-  const theme = THEMES.includes(config.theme) ? config.theme : 'auto';
+  const theme = readTheme(config.theme);
   const label = config.label ? String(config.label) : '';
-  const attributes = {
+  const attributes: ArtAttributes = {
     xmlns: SVG_NS,
     id,
     class: `${CLASS_PREFIX} ${CLASS_PREFIX}--${name}`,
@@ -427,7 +478,7 @@ function describe(name, options) {
   return { id, attributes, children: [...frame(id), ...getScene(name)] };
 }
 
-function buildElement(doc, id, tag, attributes, children) {
+function buildElement(doc: Document, id: string, tag: string, attributes: ArtAttributes, children?: ArtNode[]): SVGElement {
   const element = doc.createElementNS(SVG_NS, tag);
   Object.entries(resolveAttributes(id, attributes)).forEach(([key, value]) => {
     if (key !== 'xmlns' && value !== undefined) {
@@ -444,13 +495,17 @@ function buildElement(doc, id, tag, attributes, children) {
 // needs no HTML parsing (pages with Trusted Types stay happy).
 // options: { size = 160 (width; height keeps 4:3), theme = 'auto', label, id }
 // Without a label it is aria-hidden.
-export function createEmptyStateArt(doc, name, options) {
+export function createEmptyStateArt(
+  doc: Document | null | undefined,
+  name: EmptyStateArtName,
+  options?: EmptyStateArtOptions | null
+): SVGElement {
   const ownerDocument = doc || globalThis.document;
   const { id, attributes, children } = describe(name, options);
   return buildElement(ownerDocument, id, 'svg', attributes, children);
 }
 
-function escapeText(value) {
+function escapeText(value: string | number): string {
   return String(value)
     .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
@@ -458,10 +513,9 @@ function escapeText(value) {
     .replace(/>/g, '&gt;');
 }
 
-function toMarkup(id, tag, attributes, children) {
+function toMarkup(id: string, tag: string, attributes: ArtAttributes, children?: ArtNode[]): string {
   const attributeText = Object.entries(resolveAttributes(id, attributes))
-    .filter(([, value]) => value !== undefined)
-    .map(([key, value]) => ` ${key}="${escapeText(value)}"`)
+    .map(([key, value]) => (value === undefined ? '' : ` ${key}="${escapeText(value)}"`))
     .join('');
   const childText = (children || [])
     .map(([childTag, childAttributes, grandchildren]) => toMarkup(id, childTag, childAttributes, grandchildren))
@@ -473,8 +527,8 @@ function toMarkup(id, tag, attributes, children) {
 // of: a New Tab glass panel inked for a dark wallpaper, New Tab text laid
 // straight on a wallpaper (its sampled ink: dark ink means a light backdrop),
 // or a page's data-theme (New Tab, Options, the overlay). Else the system's.
-export function resolveEmptyStateArtTheme(element) {
-  if (!element || typeof element.closest !== 'function') {
+export function resolveEmptyStateArtTheme(element: Element | null | undefined): EmptyStateArtTheme {
+  if (!element) {
     return 'auto';
   }
   const doc = element.ownerDocument;
@@ -501,27 +555,29 @@ const THEME_ATTRIBUTES = ['data-theme', 'data-glass-ink-theme', 'data-wallpaper-
 // Keeps a placed illustration's theme in step with where it sits (a theme
 // switch, a new wallpaper sampled to another ink), and makes sure its root
 // has the shared stylesheet. Returns a stop function.
-export function followEmptyStateArtTheme(svg) {
-  ensureEmptyStateArtStyles(svg);
-  const view = svg && svg.ownerDocument ? svg.ownerDocument.defaultView : null;
+export function followEmptyStateArtTheme(svg: Element | null | undefined): () => void {
+  if (!svg) {
+    return () => {};
+  }
+  const art = svg;
+  ensureEmptyStateArtStyles(art);
+  const view = art.ownerDocument.defaultView;
   // Writes only a change: the svg's own data-theme is among the attributes
   // watched, and rewriting the same value would notify again, forever.
-  const update = () => {
-    const theme = resolveEmptyStateArtTheme(svg.parentElement || svg);
-    if (svg.getAttribute('data-theme') !== theme) {
-      svg.setAttribute('data-theme', theme);
+  const update = (): void => {
+    const theme = resolveEmptyStateArtTheme(art.parentElement || art);
+    if (art.getAttribute('data-theme') !== theme) {
+      art.setAttribute('data-theme', theme);
     }
   };
   if (!view || typeof view.MutationObserver !== 'function') {
-    if (svg) {
-      update();
-    }
+    update();
     return () => {};
   }
   update();
   const observer = new view.MutationObserver(update);
-  const root = svg.getRootNode();
-  observer.observe(root.nodeType === 9 ? root.documentElement : root, {
+  const root = art.getRootNode();
+  observer.observe(isDocumentNode(root) ? root.documentElement : root, {
     subtree: true,
     attributes: true,
     attributeFilter: THEME_ATTRIBUTES
@@ -530,7 +586,7 @@ export function followEmptyStateArtTheme(svg) {
 }
 
 // The same illustration as markup, for views that render SVG strings.
-export function getEmptyStateArtMarkup(name, options) {
+export function getEmptyStateArtMarkup(name: EmptyStateArtName, options?: EmptyStateArtOptions | null): string {
   const { id, attributes, children } = describe(name, options);
   return toMarkup(id, 'svg', attributes, children);
 }

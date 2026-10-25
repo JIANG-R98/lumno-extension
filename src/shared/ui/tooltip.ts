@@ -1,4 +1,5 @@
-// @ts-nocheck
+// The shared tooltip: one element per controller, placed beside its target
+// and drawn by the React tooltip view (globalThis.LumnoTooltipView).
 const TOOLTIP_CLASS = '_x_extension_tooltip_2026_unique_';
 const HOST_CLASS = '_x_extension_tooltip_host_2026_unique_';
 const LEGACY_HOST_CLASS = '_x_extension_tooltip_host_2024_unique_';
@@ -8,79 +9,121 @@ const DEFAULT_VISIBLE_ATTRIBUTE = 'data-visible';
 const DEFAULT_BOUND_ATTRIBUTE = 'data-tooltip-bound';
 const DEFAULT_TEXT_ATTRIBUTE = 'data-tooltip';
 
-function getDocument(options) {
-  return (options && options.documentObj) || (globalThis && globalThis.document) || null;
+type TooltipPlacement = 'top' | 'bottom' | 'left' | 'left-above';
+
+// The page window, or a stand-in with the members used here.
+type TooltipWindow = Partial<Pick<Window, 'innerWidth' | 'innerHeight' | 'requestAnimationFrame' | 'setTimeout' | 'clearTimeout'>>;
+
+interface TooltipRect {
+  top: number;
+  left: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
 }
 
-function getWindow(options) {
-  return (options && options.windowObj) || (globalThis && globalThis.window) || globalThis || {};
+interface TooltipPosition {
+  top: number;
+  left: number;
 }
 
-function getRequestAnimationFrame(windowObj) {
-  if (windowObj && typeof windowObj.requestAnimationFrame === 'function') {
-    return windowObj.requestAnimationFrame.bind(windowObj);
+interface TooltipElementOptions {
+  documentObj?: Document | null;
+  className?: string;
+  id?: string;
+  tooltipKind?: string;
+  // 'absolute' places the tooltip inside boundaryElement; anything else is fixed.
+  positionMode?: string;
+  decorateElement?(element: HTMLElement): void;
+}
+
+interface TooltipPositionOptions {
+  windowObj?: TooltipWindow | null;
+  positionMode?: string;
+  placement?: TooltipPlacement | string;
+  margin?: number;
+  // The gap to the target; a function reads it per target.
+  spacing?: number | ((target: HTMLElement) => number);
+  boundaryElement?: Element | null;
+  maxWidth?: number | string;
+}
+
+interface TooltipActiveOptions {
+  // false shows the tooltip even when the target is neither focused nor hovered.
+  checkActive?: boolean;
+}
+
+type TooltipShowOptions = TooltipPositionOptions & TooltipActiveOptions;
+
+interface TooltipBindOptions extends TooltipShowOptions {
+  boundAttribute?: string;
+  // Keep the native title tooltip as well.
+  suppressNativeTitle?: boolean;
+  // The attribute that holds the text, data-tooltip by default.
+  attributeName?: string;
+  showOnFocus?: boolean;
+  selector?: string;
+}
+
+interface TooltipControllerOptions extends TooltipElementOptions, TooltipShowOptions {
+  appendTo?: Node | null;
+  hideDelay?: number;
+}
+
+type TooltipTextSource = (target: HTMLElement) => string | null | undefined;
+
+interface TooltipController {
+  readonly element: HTMLElement | null;
+  destroy(): void;
+  show(target: HTMLElement | null | undefined, text: string | null | undefined, options?: TooltipShowOptions | null): HTMLElement | null;
+  hide(): HTMLElement | null;
+  bind(target: HTMLElement | null | undefined, getText?: TooltipTextSource | null, options?: TooltipBindOptions | null): HTMLElement | null;
+  bindAll(rootNode?: ParentNode | null, options?: TooltipBindOptions | null): HTMLElement[];
+}
+
+// The global timers with the DOM's numeric ids.
+const globalTimers: Pick<Window, 'setTimeout' | 'clearTimeout'> = globalThis;
+
+function getDocument(options: TooltipElementOptions | null | undefined): Document | null {
+  return (options && options.documentObj) || globalThis.document || null;
+}
+
+function getWindow(options: TooltipPositionOptions | null | undefined): TooltipWindow {
+  return (options && options.windowObj) || globalThis;
+}
+
+function getRequestAnimationFrame(windowObj: TooltipWindow): (callback: () => void) => void {
+  if (typeof windowObj.requestAnimationFrame === 'function') {
+    const requestFrame = windowObj.requestAnimationFrame;
+    return (callback) => {
+      Reflect.apply(requestFrame, windowObj, [callback]);
+    };
   }
   return (callback) => {
-    if (globalThis && typeof globalThis.setTimeout === 'function') {
-      globalThis.setTimeout(callback, 0);
-      return;
-    }
-    callback();
+    globalTimers.setTimeout(callback, 0);
   };
 }
 
-function getSetTimeout(windowObj) {
-  if (windowObj && typeof windowObj.setTimeout === 'function') {
-    return windowObj.setTimeout.bind(windowObj);
+function getSetTimeout(windowObj: TooltipWindow): (callback: () => void, delay: number) => number {
+  const setTimer = typeof windowObj.setTimeout === 'function' ? windowObj.setTimeout : null;
+  if (setTimer) {
+    return (callback, delay) => Reflect.apply(setTimer, windowObj, [callback, delay]);
   }
-  if (globalThis && typeof globalThis.setTimeout === 'function') {
-    return globalThis.setTimeout.bind(globalThis);
-  }
-  return (callback) => {
-    callback();
-    return 0;
-  };
+  return (callback, delay) => globalTimers.setTimeout(callback, delay);
 }
 
-function getClearTimeout(windowObj) {
-  if (windowObj && typeof windowObj.clearTimeout === 'function') {
-    return windowObj.clearTimeout.bind(windowObj);
+function getClearTimeout(windowObj: TooltipWindow): (timerId: number) => void {
+  const clearTimer = typeof windowObj.clearTimeout === 'function' ? windowObj.clearTimeout : null;
+  if (clearTimer) {
+    return (timerId) => {
+      Reflect.apply(clearTimer, windowObj, [timerId]);
+    };
   }
-  if (globalThis && typeof globalThis.clearTimeout === 'function') {
-    return globalThis.clearTimeout.bind(globalThis);
-  }
-  return () => {};
+  return (timerId) => globalTimers.clearTimeout(timerId);
 }
 
-function addClass(element, className) {
-  if (!element || !className) {
-    return;
-  }
-  if (element.classList && typeof element.classList.add === 'function') {
-    element.classList.add(className);
-    return;
-  }
-  const current = String(element.className || '');
-  const parts = current.split(/\s+/).filter(Boolean);
-  if (!parts.includes(className)) {
-    parts.push(className);
-    element.className = parts.join(' ');
-  }
-}
-
-function setAttribute(element, name, value) {
-  if (element && typeof element.setAttribute === 'function') {
-    element.setAttribute(name, String(value));
-  }
-}
-
-function setStyleProperty(element, name, value) {
-  if (element && element.style && typeof element.style.setProperty === 'function') {
-    element.style.setProperty(name, value);
-  }
-}
-
-function normalizeCssLength(value) {
+function normalizeCssLength(value: number | string | null | undefined): string {
   if (value === undefined || value === null || value === '') {
     return '';
   }
@@ -90,31 +133,34 @@ function normalizeCssLength(value) {
   return String(value).trim();
 }
 
-function getNumber(value, fallback) {
+function getNumber(value: unknown, fallback: number): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function getDynamicNumber(value, target, fallback) {
+function getDynamicNumber(
+  value: number | ((target: HTMLElement) => number) | undefined,
+  target: HTMLElement,
+  fallback: number
+): number {
   const resolved = typeof value === 'function' ? value(target) : value;
   return getNumber(resolved, fallback);
 }
 
-function getElementRect(element, fallback) {
-  if (element && typeof element.getBoundingClientRect === 'function') {
+function getElementRect(element: Element | null | undefined, fallback?: TooltipRect): TooltipRect {
+  if (element) {
     return element.getBoundingClientRect();
   }
   return fallback || { top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 };
 }
 
-function createElement(doc, options) {
+function createElement(doc: Document | null | undefined, options?: TooltipElementOptions | null): HTMLElement | null {
   const documentObj = doc || getDocument(options);
-  const tooltipView = globalThis && globalThis.LumnoTooltipView;
-  if (!documentObj || !tooltipView ||
-      typeof tooltipView.createTooltipElement !== 'function') {
+  const tooltipView = globalThis.LumnoTooltipView;
+  if (!documentObj || !tooltipView) {
     return null;
   }
-  const config = options || {};
+  const config: TooltipElementOptions = options || {};
   const element = tooltipView.createTooltipElement({
     className: config.className || '',
     documentObj,
@@ -122,27 +168,26 @@ function createElement(doc, options) {
     kind: config.tooltipKind || '',
     positionMode: config.positionMode
   });
-  if (typeof config.decorateElement === 'function') {
+  if (element && typeof config.decorateElement === 'function') {
     config.decorateElement(element);
   }
   return element;
 }
 
-function renderText(element, text) {
+function renderText(element: HTMLElement | null | undefined, text: string | null | undefined): HTMLElement | null {
   if (!element) {
     return null;
   }
-  const tooltipView = globalThis && globalThis.LumnoTooltipView;
-  if (!tooltipView || typeof tooltipView.renderTooltipText !== 'function') {
+  const tooltipView = globalThis.LumnoTooltipView;
+  if (!tooltipView) {
     return null;
   }
   tooltipView.renderTooltipText(element, String(text || ''));
   return element;
 }
 
-function isTargetActive(target, doc, options) {
-  const config = options || {};
-  if (config.checkActive === false) {
+function isTargetActive(target: HTMLElement | null, doc: Document | null, options: TooltipActiveOptions): boolean {
+  if (options.checkActive === false) {
     return true;
   }
   if (!target) {
@@ -154,42 +199,49 @@ function isTargetActive(target, doc, options) {
   if (doc && doc.activeElement === target) {
     return true;
   }
-  if (typeof target.matches === 'function') {
-    try {
-      return target.matches(':hover');
-    } catch (error) {
-      return true;
-    }
+  try {
+    return target.matches(':hover');
+  } catch (_error) {
+    return true;
   }
-  return true;
 }
 
-function position(element, target, options) {
+function readPlacement(value: string | undefined): TooltipPlacement {
+  return value === 'left' || value === 'left-above' || value === 'bottom' ? value : 'top';
+}
+
+// Places the tooltip above its target (or below, to the left, or above and to
+// the left), flipped to the other side when it would leave the viewport or
+// the boundary element, and clamped inside it.
+function position(
+  element: HTMLElement | null | undefined,
+  target: HTMLElement | null | undefined,
+  options?: TooltipPositionOptions | null
+): Readonly<TooltipPosition> | null {
   if (!element || !target) {
     return null;
   }
-  const config = options || {};
+  const config: TooltipPositionOptions = options || {};
   const windowObj = getWindow(config);
   const positionMode = config.positionMode === 'absolute' ? 'absolute' : 'fixed';
-  const placement = config.placement === 'left' || config.placement === 'left-above' || config.placement === 'bottom'
-    ? config.placement
-    : 'top';
+  const placement = readPlacement(config.placement);
   const margin = getNumber(config.margin, 8);
   const spacing = getDynamicNumber(config.spacing, target, 10);
   const viewportWidth = getNumber(windowObj.innerWidth, 1024);
   const viewportHeight = getNumber(windowObj.innerHeight, 768);
   const boundaryElement = config.boundaryElement || null;
-  const boundaryRect = positionMode === 'absolute'
-    ? getElementRect(boundaryElement, { top: 0, left: 0, right: viewportWidth, bottom: viewportHeight, width: viewportWidth, height: viewportHeight })
-    : { top: 0, left: 0, right: viewportWidth, bottom: viewportHeight, width: viewportWidth, height: viewportHeight };
+  const viewportRect: TooltipRect = {
+    top: 0, left: 0, right: viewportWidth, bottom: viewportHeight, width: viewportWidth, height: viewportHeight
+  };
+  const boundaryRect = positionMode === 'absolute' ? getElementRect(boundaryElement, viewportRect) : viewportRect;
   const availableWidth = Math.max(180, Math.floor((boundaryRect.width || viewportWidth) - (margin * 2)));
   const configuredMaxWidth = config.maxWidth === undefined ? 420 : config.maxWidth;
   const resolvedMaxWidth = typeof configuredMaxWidth === 'number'
     ? `${Math.min(configuredMaxWidth, availableWidth)}px`
     : (normalizeCssLength(configuredMaxWidth) || `${availableWidth}px`);
-  setStyleProperty(element, 'max-width', resolvedMaxWidth);
-  setStyleProperty(element, 'width', 'max-content');
-  setAttribute(element, 'data-tooltip-position', positionMode);
+  element.style.setProperty('max-width', resolvedMaxWidth);
+  element.style.setProperty('width', 'max-content');
+  element.setAttribute('data-tooltip-position', positionMode);
 
   const targetRect = getElementRect(target);
   const tooltipRect = getElementRect(element);
@@ -227,36 +279,40 @@ function position(element, target, options) {
   const maxLeft = Math.max(margin, (boundaryRect.width || viewportWidth) - tooltipRect.width - margin);
   top = Math.max(margin, Math.min(top, maxTop));
   left = Math.max(margin, Math.min(left, maxLeft));
-  setStyleProperty(element, 'top', `${Math.round(top)}px`);
-  setStyleProperty(element, 'left', `${Math.round(left)}px`);
+  element.style.setProperty('top', `${Math.round(top)}px`);
+  element.style.setProperty('left', `${Math.round(left)}px`);
   return Object.freeze({ top: Math.round(top), left: Math.round(left) });
 }
 
-function createController(options) {
-  const config = options || {};
+function createController(options?: TooltipControllerOptions | null): TooltipController {
+  const config: TooltipControllerOptions = options || {};
   const documentObj = getDocument(config);
   const windowObj = getWindow(config);
   const requestFrame = getRequestAnimationFrame(windowObj);
   const setTimer = getSetTimeout(windowObj);
   const clearTimer = getClearTimeout(windowObj);
-  let element = null;
-  let hideTimer = null;
-  let currentTarget = null;
+  let element: HTMLElement | null = null;
+  let hideTimer: number | null = null;
+  let currentTarget: HTMLElement | null = null;
   let token = 0;
 
-  function ensureElement() {
+  function ensureElement(): HTMLElement | null {
     if (element) {
       return element;
     }
     element = createElement(documentObj, config);
     const appendTo = config.appendTo || (documentObj && documentObj.body);
-    if (appendTo && typeof appendTo.appendChild === 'function' && element) {
+    if (appendTo && element) {
       appendTo.appendChild(element);
     }
     return element;
   }
 
-  function show(target, text, showOptions) {
+  function show(
+    target: HTMLElement | null | undefined,
+    text: string | null | undefined,
+    showOptions?: TooltipShowOptions | null
+  ): HTMLElement | null {
     const content = String(text || '');
     if (!target || !content) {
       return null;
@@ -273,29 +329,30 @@ function createController(options) {
     const showToken = token;
     currentTarget = target;
     renderText(tooltip, content);
-    setAttribute(tooltip, DEFAULT_VISIBLE_ATTRIBUTE, 'false');
-    setAttribute(tooltip, 'aria-hidden', 'true');
-    const mergedOptions = Object.assign({}, config, showOptions || {});
+    tooltip.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, 'false');
+    tooltip.setAttribute('aria-hidden', 'true');
+    const mergedOptions: TooltipShowOptions = { ...config, ...showOptions };
     position(tooltip, target, mergedOptions);
     requestFrame(() => {
       if (showToken !== token || currentTarget !== target || !isTargetActive(target, documentObj, mergedOptions)) {
         return;
       }
-      setAttribute(tooltip, DEFAULT_VISIBLE_ATTRIBUTE, 'true');
-      setAttribute(tooltip, 'aria-hidden', 'false');
+      tooltip.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, 'true');
+      tooltip.setAttribute('aria-hidden', 'false');
     });
     return tooltip;
   }
 
-  function hide() {
-    if (!element) {
+  function hide(): HTMLElement | null {
+    const tooltip = element;
+    if (!tooltip) {
       return null;
     }
     token += 1;
     const hideToken = token;
     currentTarget = null;
-    setAttribute(element, DEFAULT_VISIBLE_ATTRIBUTE, 'false');
-    setAttribute(element, 'aria-hidden', 'true');
+    tooltip.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, 'false');
+    tooltip.setAttribute('aria-hidden', 'true');
     if (hideTimer) {
       clearTimer(hideTimer);
     }
@@ -303,43 +360,39 @@ function createController(options) {
       if (hideToken !== token || !element) {
         return;
       }
-      setAttribute(element, DEFAULT_VISIBLE_ATTRIBUTE, 'false');
+      element.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, 'false');
       hideTimer = null;
     }, getNumber(config.hideDelay, 120));
-    return element;
+    return tooltip;
   }
 
-  function bind(target, getText, bindOptions) {
-    if (!target || typeof target.addEventListener !== 'function') {
+  function bind(
+    target: HTMLElement | null | undefined,
+    getText?: TooltipTextSource | null,
+    bindOptions?: TooltipBindOptions | null
+  ): HTMLElement | null {
+    if (!target) {
       return null;
     }
-    const settings = bindOptions || {};
+    const settings: TooltipBindOptions = bindOptions || {};
     const boundAttribute = settings.boundAttribute || DEFAULT_BOUND_ATTRIBUTE;
-    if (typeof target.getAttribute === 'function' && target.getAttribute(boundAttribute) === 'true') {
+    if (target.getAttribute(boundAttribute) === 'true') {
       return target;
     }
-    addClass(target, HOST_CLASS);
-    addClass(target, LEGACY_HOST_CLASS);
-    if (typeof target.setAttribute === 'function') {
-      target.setAttribute(boundAttribute, 'true');
-    }
-    if (
-      settings.suppressNativeTitle !== false &&
-      typeof target.getAttribute === 'function' &&
-      typeof target.removeAttribute === 'function'
-    ) {
+    target.classList.add(HOST_CLASS);
+    target.classList.add(LEGACY_HOST_CLASS);
+    target.setAttribute(boundAttribute, 'true');
+    if (settings.suppressNativeTitle !== false) {
       const nativeTitle = target.getAttribute('title');
       if (nativeTitle) {
         target.setAttribute('data-tooltip-native-title', nativeTitle);
         target.removeAttribute('title');
       }
     }
-    const resolveText = typeof getText === 'function'
+    const resolveText: TooltipTextSource = typeof getText === 'function'
       ? getText
-      : () => (typeof target.getAttribute === 'function'
-        ? target.getAttribute(settings.attributeName || DEFAULT_TEXT_ATTRIBUTE)
-        : '');
-    const showBoundTooltip = () => {
+      : () => target.getAttribute(settings.attributeName || DEFAULT_TEXT_ATTRIBUTE);
+    const showBoundTooltip = (): void => {
       show(target, resolveText(target), settings);
     };
     target.addEventListener('mouseenter', showBoundTooltip);
@@ -351,16 +404,21 @@ function createController(options) {
     return target;
   }
 
-  function bindAll(rootNode, bindOptions) {
+  function bindAll(rootNode?: ParentNode | null, bindOptions?: TooltipBindOptions | null): HTMLElement[] {
     const scope = rootNode || documentObj;
-    if (!scope || typeof scope.querySelectorAll !== 'function') {
+    if (!scope) {
       return [];
     }
-    const settings = bindOptions || {};
+    const settings: TooltipBindOptions = bindOptions || {};
     const selector = settings.selector || `[${settings.attributeName || DEFAULT_TEXT_ATTRIBUTE}]`;
-    return Array.from(scope.querySelectorAll(selector))
-      .map((node) => bind(node, null, settings))
-      .filter(Boolean);
+    const bound: HTMLElement[] = [];
+    scope.querySelectorAll<HTMLElement>(selector).forEach((node) => {
+      const result = bind(node, null, settings);
+      if (result) {
+        bound.push(result);
+      }
+    });
+    return bound;
   }
 
   return {
@@ -374,9 +432,8 @@ function createController(options) {
         clearTimer(hideTimer);
         hideTimer = null;
       }
-      const tooltipView = globalThis && globalThis.LumnoTooltipView;
-      if (element && tooltipView &&
-          typeof tooltipView.destroyTooltipElement === 'function') {
+      const tooltipView = globalThis.LumnoTooltipView;
+      if (element && tooltipView) {
         tooltipView.destroyTooltipElement(element);
       }
       if (element && element.parentNode) {
@@ -391,6 +448,20 @@ function createController(options) {
   };
 }
 
+export type {
+  TooltipActiveOptions,
+  TooltipBindOptions,
+  TooltipController,
+  TooltipControllerOptions,
+  TooltipElementOptions,
+  TooltipPlacement,
+  TooltipPosition,
+  TooltipPositionOptions,
+  TooltipRect,
+  TooltipShowOptions,
+  TooltipTextSource,
+  TooltipWindow
+};
 export {
   TOOLTIP_CLASS as className,
   HOST_CLASS as hostClassName,

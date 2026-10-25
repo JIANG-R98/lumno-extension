@@ -60,6 +60,23 @@ class FakeElement {
     return this._layoutWidth;
   }
 
+  // Reads and writes className, as the DOM's classList does.
+  get classList() {
+    const element = this;
+    const names = () => String(element.className || '').split(/\s+/).filter(Boolean);
+    return {
+      add(...added) {
+        element.className = [...new Set([...names(), ...added])].join(' ');
+      },
+      remove(...removed) {
+        element.className = names().filter((name) => !removed.includes(name)).join(' ');
+      },
+      contains(name) {
+        return names().includes(name);
+      }
+    };
+  }
+
   appendChild(child) {
     child.parentNode = this;
     this.children.push(child);

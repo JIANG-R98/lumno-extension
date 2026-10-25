@@ -1,5 +1,8 @@
-// @ts-nocheck
+// The cursor tooltip: the shared tooltip drawn beside the pointer (for text
+// cut short, such as long titles and addresses), with an optional tag above
+// it that names what a held modifier key would do.
 import * as LumnoTooltip from './tooltip';
+import type { TooltipElementOptions, TooltipRect, TooltipWindow } from './tooltip';
 
 const HOST_CLASS = '_x_extension_cursor_tooltip_host_2026_unique_';
 const TAG_CLASS = '_x_extension_cursor_tooltip_tag_2026_unique_';
@@ -10,105 +13,182 @@ const DEFAULT_VISIBLE_ATTRIBUTE = 'data-visible';
 const DEFAULT_BOUND_ATTRIBUTE = 'data-cursor-tooltip-bound';
 const DEFAULT_TEXT_ATTRIBUTE = 'data-cursor-tooltip';
 
-function getBaseTooltip() {
-  return LumnoTooltip;
+interface CursorPoint {
+  clientX: number;
+  clientY: number;
 }
 
-function getDocument(options) {
-  return (options && options.documentObj) || (globalThis && globalThis.document) || null;
+// A pointer, focus or key event, or a bare point: whatever the caller has.
+interface CursorPointInput {
+  type?: string;
+  key?: string;
+  clientX?: number;
+  clientY?: number;
+  x?: number;
+  y?: number;
+  metaKey?: boolean;
+  ctrlKey?: boolean;
+  altKey?: boolean;
+  shiftKey?: boolean;
+  relatedTarget?: EventTarget | null;
 }
 
-function getWindow(options) {
-  return (options && options.windowObj) || (globalThis && globalThis.window) || globalThis || {};
+// A node the pointer may move to, or a test stand-in with these members.
+interface HandoffNode {
+  parentElement?: HandoffNode | null;
+  parentNode?: HandoffNode | null;
+  getAttribute?(name: string): string | null;
 }
 
-function getNavigator(options) {
-  const windowObj = getWindow(options);
-  return (windowObj && windowObj.navigator) || (globalThis && globalThis.navigator) || {};
+// The page window, or a stand-in with the members used here.
+type CursorTooltipWindow = TooltipWindow & {
+  navigator?: { platform?: string; userAgent?: string };
+  addEventListener?: EventTarget['addEventListener'];
+  removeEventListener?: EventTarget['removeEventListener'];
+};
+
+// The controller's options; show, move and bind take the same ones, merged
+// over these.
+interface CursorTooltipOptions extends TooltipElementOptions {
+  windowObj?: CursorTooltipWindow | null;
+  appendTo?: Node | null;
+  hideDelay?: number;
+  positionMode?: string;
+  margin?: number;
+  offsetX?: number;
+  offsetY?: number;
+  boundaryElement?: Element | null;
+  maxWidth?: number | string;
+  // false shows the tooltip even when the target is neither focused nor hovered.
+  checkActive?: boolean;
+  // Return false to keep the tooltip hidden for this target and input.
+  shouldShow?(target: HTMLElement, inputEvent: CursorPointInput | null): boolean;
+  // The input the current show or move came from.
+  inputEvent?: CursorPointInput | null;
+  // The action tag above the tooltip, e.g. "Open in new tab"; none when empty.
+  getTagText?(input: CursorPointInput, target: HTMLElement): string | null | undefined;
+  tagText?: string;
+  // The key drawn in the tag: ⌘ on Apple platforms, the Windows logo elsewhere.
+  getTagKeyText?(options: CursorTooltipOptions): string | null | undefined;
+  tagKeyText?: string | null;
+  tagGap?: number;
+  tagMaxWidth?: number | string;
+  // Moving to another bound target keeps the tooltip on screen.
+  preserveVisibleOnTargetSwitch?: boolean;
+  // Leaving for another bound target inside handoffRoot hides the tooltip
+  // after a delay instead of at once.
+  deferHideVisibility?: boolean;
+  handoffRoot?: HandoffNode | null;
+  handoffElement?: HandoffNode | null;
+  boundAttribute?: string;
+  // Keep the native title tooltip as well.
+  suppressNativeTitle?: boolean;
+  // The attribute that holds the text, data-cursor-tooltip by default.
+  attributeName?: string;
+  selector?: string;
 }
 
-function isMacPlatform(options) {
-  const navigatorObj = getNavigator(options);
+interface CursorTooltipHideOptions {
+  preserveActiveBinding?: boolean;
+  deferVisibility?: boolean;
+}
+
+type CursorTooltipTextSource = (target: HTMLElement) => string | null | undefined;
+
+interface CursorTooltipPosition {
+  top: number;
+  left: number;
+}
+
+interface CursorTooltipController {
+  readonly element: HTMLElement | null;
+  readonly tagElement: HTMLElement | null;
+  destroy(): void;
+  show(
+    target: HTMLElement | null | undefined,
+    text: string | null | undefined,
+    pointInput?: CursorPointInput | null,
+    options?: CursorTooltipOptions | null
+  ): HTMLElement | null;
+  move(pointInput?: CursorPointInput | null, options?: CursorTooltipOptions | null): HTMLElement | null;
+  hide(options?: CursorTooltipHideOptions | null): HTMLElement | null;
+  // Shows the tooltip again for the target last bound, e.g. after a modifier key changed.
+  refresh(event?: CursorPointInput | null): HTMLElement | null;
+  bind(
+    target: HTMLElement | null | undefined,
+    getText?: CursorTooltipTextSource | null,
+    options?: CursorTooltipOptions | null
+  ): HTMLElement | null;
+  bindAll(rootNode?: ParentNode | null, options?: CursorTooltipOptions | null): HTMLElement[];
+}
+
+type ListenerTarget = Pick<EventTarget, 'addEventListener' | 'removeEventListener'>;
+
+interface ActiveBinding {
+  target: HTMLElement;
+  resolveText: CursorTooltipTextSource;
+  settings: CursorTooltipOptions;
+  lastPoint: CursorPoint;
+}
+
+// The global timers with the DOM's numeric ids.
+const globalTimers: Pick<Window, 'setTimeout' | 'clearTimeout'> = globalThis;
+
+function getDocument(options: CursorTooltipOptions | null | undefined): Document | null {
+  return (options && options.documentObj) || globalThis.document || null;
+}
+
+function getWindow(options: CursorTooltipOptions | null | undefined): CursorTooltipWindow {
+  return (options && options.windowObj) || globalThis;
+}
+
+function isMacPlatform(options: CursorTooltipOptions): boolean {
+  const navigatorObj = getWindow(options).navigator || globalThis.navigator || {};
   const source = `${navigatorObj.platform || ''} ${navigatorObj.userAgent || ''}`.toLowerCase();
   return /mac|iphone|ipad|ipod/.test(source);
 }
 
-function getCursorTooltipTagKeyText(options) {
-  const config = options || {};
-  if (typeof config.getTagKeyText === 'function') {
-    return String(config.getTagKeyText(config) || '').trim();
+function getCursorTooltipTagKeyText(options: CursorTooltipOptions): string {
+  if (typeof options.getTagKeyText === 'function') {
+    return String(options.getTagKeyText(options) || '').trim();
   }
-  if (config.tagKeyText !== undefined && config.tagKeyText !== null) {
-    return String(config.tagKeyText || '').trim();
+  if (options.tagKeyText !== undefined && options.tagKeyText !== null) {
+    return String(options.tagKeyText || '').trim();
   }
-  return isMacPlatform(config) ? '⌘' : 'win';
+  return isMacPlatform(options) ? '⌘' : 'win';
 }
 
-function getRequestAnimationFrame(windowObj) {
-  if (windowObj && typeof windowObj.requestAnimationFrame === 'function') {
-    return windowObj.requestAnimationFrame.bind(windowObj);
+function getRequestAnimationFrame(windowObj: CursorTooltipWindow): (callback: () => void) => void {
+  if (typeof windowObj.requestAnimationFrame === 'function') {
+    const requestFrame = windowObj.requestAnimationFrame;
+    return (callback) => {
+      Reflect.apply(requestFrame, windowObj, [callback]);
+    };
   }
   return (callback) => {
-    if (globalThis && typeof globalThis.setTimeout === 'function') {
-      globalThis.setTimeout(callback, 0);
-      return;
-    }
-    callback();
+    globalTimers.setTimeout(callback, 0);
   };
 }
 
-function getSetTimeout(windowObj) {
-  if (windowObj && typeof windowObj.setTimeout === 'function') {
-    return windowObj.setTimeout.bind(windowObj);
+function getSetTimeout(windowObj: CursorTooltipWindow): (callback: () => void, delay: number) => number {
+  const setTimer = typeof windowObj.setTimeout === 'function' ? windowObj.setTimeout : null;
+  if (setTimer) {
+    return (callback, delay) => Reflect.apply(setTimer, windowObj, [callback, delay]);
   }
-  if (globalThis && typeof globalThis.setTimeout === 'function') {
-    return globalThis.setTimeout.bind(globalThis);
-  }
-  return (callback) => {
-    callback();
-    return 0;
-  };
+  return (callback, delay) => globalTimers.setTimeout(callback, delay);
 }
 
-function getClearTimeout(windowObj) {
-  if (windowObj && typeof windowObj.clearTimeout === 'function') {
-    return windowObj.clearTimeout.bind(windowObj);
+function getClearTimeout(windowObj: CursorTooltipWindow): (timerId: number) => void {
+  const clearTimer = typeof windowObj.clearTimeout === 'function' ? windowObj.clearTimeout : null;
+  if (clearTimer) {
+    return (timerId) => {
+      Reflect.apply(clearTimer, windowObj, [timerId]);
+    };
   }
-  if (globalThis && typeof globalThis.clearTimeout === 'function') {
-    return globalThis.clearTimeout.bind(globalThis);
-  }
-  return () => {};
+  return (timerId) => globalTimers.clearTimeout(timerId);
 }
 
-function addClass(element, className) {
-  if (!element || !className) {
-    return;
-  }
-  if (element.classList && typeof element.classList.add === 'function') {
-    element.classList.add(className);
-    return;
-  }
-  const current = String(element.className || '');
-  const parts = current.split(/\s+/).filter(Boolean);
-  if (!parts.includes(className)) {
-    parts.push(className);
-    element.className = parts.join(' ');
-  }
-}
-
-function setAttribute(element, name, value) {
-  if (element && typeof element.setAttribute === 'function') {
-    element.setAttribute(name, String(value));
-  }
-}
-
-function setStyleProperty(element, name, value) {
-  if (element && element.style && typeof element.style.setProperty === 'function') {
-    element.style.setProperty(name, value);
-  }
-}
-
-function normalizeCssLength(value) {
+function normalizeCssLength(value: number | string | null | undefined): string {
   if (value === undefined || value === null || value === '') {
     return '';
   }
@@ -118,34 +198,20 @@ function normalizeCssLength(value) {
   return String(value).trim();
 }
 
-function getNumber(value, fallback) {
+function getNumber(value: unknown, fallback: number): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function getElementRect(element, fallback) {
-  if (element && typeof element.getBoundingClientRect === 'function') {
+function getElementRect(element: Element | null | undefined, fallback?: TooltipRect): TooltipRect {
+  if (element) {
     return element.getBoundingClientRect();
   }
   return fallback || { top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 };
 }
 
-function getPointFromInput(input, target) {
-  const source = input || {};
-  const x = Number(source.clientX !== undefined ? source.clientX : source.x);
-  const y = Number(source.clientY !== undefined ? source.clientY : source.y);
-  if (Number.isFinite(x) && Number.isFinite(y)) {
-    return { clientX: x, clientY: y };
-  }
-  const rect = getElementRect(target);
-  return {
-    clientX: rect.left + ((rect.width || 0) / 2),
-    clientY: rect.bottom || (rect.top + (rect.height || 0))
-  };
-}
-
-function getExplicitPointFromInput(input) {
-  const source = input || {};
+function getExplicitPointFromInput(input: CursorPointInput | null | undefined): CursorPoint | null {
+  const source: CursorPointInput = input || {};
   const x = Number(source.clientX !== undefined ? source.clientX : source.x);
   const y = Number(source.clientY !== undefined ? source.clientY : source.y);
   if (Number.isFinite(x) && Number.isFinite(y)) {
@@ -154,7 +220,20 @@ function getExplicitPointFromInput(input) {
   return null;
 }
 
-function isPointInsideElement(point, element) {
+// The input's point, or the middle of the target's bottom edge without one.
+function getPointFromInput(input: CursorPointInput | null | undefined, target: Element | null | undefined): CursorPoint {
+  const point = getExplicitPointFromInput(input);
+  if (point) {
+    return point;
+  }
+  const rect = getElementRect(target);
+  return {
+    clientX: rect.left + ((rect.width || 0) / 2),
+    clientY: rect.bottom || (rect.top + (rect.height || 0))
+  };
+}
+
+function isPointInsideElement(point: CursorPoint | null, element: Element | null): boolean {
   if (!point || !element) {
     return false;
   }
@@ -165,7 +244,7 @@ function isPointInsideElement(point, element) {
     point.clientY <= rect.bottom;
 }
 
-function isSamePoint(point, referencePoint) {
+function isSamePoint(point: CursorPoint | null, referencePoint: CursorPoint | null): boolean {
   if (!point || !referencePoint) {
     return false;
   }
@@ -173,9 +252,8 @@ function isSamePoint(point, referencePoint) {
     Math.abs(point.clientY - referencePoint.clientY) <= 1;
 }
 
-function isTargetActive(target, doc, options) {
-  const config = options || {};
-  if (config.checkActive === false) {
+function isTargetActive(target: HTMLElement | null, doc: Document | null, options: CursorTooltipOptions): boolean {
+  if (options.checkActive === false) {
     return true;
   }
   if (!target) {
@@ -187,29 +265,33 @@ function isTargetActive(target, doc, options) {
   if (doc && doc.activeElement === target) {
     return true;
   }
-  if (typeof target.matches === 'function') {
-    try {
-      return target.matches(':hover');
-    } catch (error) {
-      return true;
-    }
+  try {
+    return target.matches(':hover');
+  } catch (_error) {
+    return true;
   }
-  return true;
 }
 
-function shouldShowTarget(target, options) {
-  const config = options || {};
-  if (typeof config.shouldShow !== 'function') {
+function shouldShowTarget(target: HTMLElement, options: CursorTooltipOptions): boolean {
+  if (typeof options.shouldShow !== 'function') {
     return true;
   }
   try {
-    return config.shouldShow(target, config.inputEvent || null) !== false;
-  } catch (error) {
+    return options.shouldShow(target, options.inputEvent || null) !== false;
+  } catch (_error) {
     return false;
   }
 }
 
-function isElementTextTruncated(element, options) {
+// The element's sizes, or a stand-in with them.
+type TruncationTarget = Partial<Pick<Element, 'clientWidth' | 'scrollWidth' | 'clientHeight' | 'scrollHeight'>>;
+
+// Whether the element's text overflows it: horizontally by default, and
+// vertically (clamped lines) when asked.
+function isElementTextTruncated(
+  element: TruncationTarget | null | undefined,
+  options?: { horizontal?: boolean; vertical?: boolean } | null
+): boolean {
   if (!element) {
     return false;
   }
@@ -233,57 +315,32 @@ function isElementTextTruncated(element, options) {
   return hasHorizontalOverflow || hasVerticalOverflow;
 }
 
-function createElement(doc, options, tooltipKind) {
-  const baseTooltip = getBaseTooltip();
-  const decorateElement = typeof options.decorateElement === 'function'
-    ? options.decorateElement
-    : null;
-  const kind = tooltipKind || 'cursor';
-  if (typeof baseTooltip.createElement === 'function') {
-    return baseTooltip.createElement(doc, Object.assign({}, options, {
-      tooltipKind: kind,
-      decorateElement: (element) => {
-        if (decorateElement) {
-          decorateElement(element);
-        }
-      }
-    }));
-  }
-  return null;
+function createElement(doc: Document | null, options: CursorTooltipOptions, tooltipKind?: string): HTMLElement | null {
+  return LumnoTooltip.createElement(doc, { ...options, tooltipKind: tooltipKind || 'cursor' });
 }
 
-function renderText(element, text) {
-  const baseTooltip = getBaseTooltip();
-  if (typeof baseTooltip.renderText === 'function') {
-    return baseTooltip.renderText(element, text);
-  }
-  if (element) {
-    element.textContent = String(text || '');
-  }
-  return element;
-}
-
-function renderContent(element, text, options) {
-  return renderText(element, text);
-}
-
-function isWindowsLogoKeyText(text) {
+function isWindowsLogoKeyText(text: string): boolean {
   return String(text || '').trim().toLowerCase() === 'win';
 }
 
-function getCursorTooltipTagText(target, pointInput, options) {
-  const config = options || {};
-  if (typeof config.getTagText === 'function') {
-    return String(config.getTagText(pointInput || {}, target) || '').trim();
+function getCursorTooltipTagText(target: HTMLElement, pointInput: CursorPointInput | null | undefined, options: CursorTooltipOptions): string {
+  if (typeof options.getTagText === 'function') {
+    return String(options.getTagText(pointInput || {}, target) || '').trim();
   }
-  return String(config.tagText || '').trim();
+  return String(options.tagText || '').trim();
 }
 
-function positionAtPoint(element, point, options) {
+// Places the tooltip below and to the right of the point, flipped to the
+// other side when it would leave the viewport or the boundary element.
+function positionAtPoint(
+  element: HTMLElement | null | undefined,
+  point: CursorPointInput | null | undefined,
+  options?: CursorTooltipOptions | null
+): Readonly<CursorTooltipPosition> | null {
   if (!element || !point) {
     return null;
   }
-  const config = options || {};
+  const config: CursorTooltipOptions = options || {};
   const windowObj = getWindow(config);
   const positionMode = config.positionMode === 'absolute' ? 'absolute' : 'fixed';
   const margin = getNumber(config.margin, 8);
@@ -292,17 +349,18 @@ function positionAtPoint(element, point, options) {
   const viewportWidth = getNumber(windowObj.innerWidth, 1024);
   const viewportHeight = getNumber(windowObj.innerHeight, 768);
   const boundaryElement = config.boundaryElement || null;
-  const boundaryRect = positionMode === 'absolute'
-    ? getElementRect(boundaryElement, { top: 0, left: 0, right: viewportWidth, bottom: viewportHeight, width: viewportWidth, height: viewportHeight })
-    : { top: 0, left: 0, right: viewportWidth, bottom: viewportHeight, width: viewportWidth, height: viewportHeight };
+  const viewportRect: TooltipRect = {
+    top: 0, left: 0, right: viewportWidth, bottom: viewportHeight, width: viewportWidth, height: viewportHeight
+  };
+  const boundaryRect = positionMode === 'absolute' ? getElementRect(boundaryElement, viewportRect) : viewportRect;
   const availableWidth = Math.max(180, Math.floor((boundaryRect.width || viewportWidth) - (margin * 2)));
   const configuredMaxWidth = config.maxWidth === undefined ? 420 : config.maxWidth;
   const resolvedMaxWidth = typeof configuredMaxWidth === 'number'
     ? `${Math.min(configuredMaxWidth, availableWidth)}px`
     : (normalizeCssLength(configuredMaxWidth) || `${availableWidth}px`);
-  setStyleProperty(element, 'max-width', resolvedMaxWidth);
-  setStyleProperty(element, 'width', 'max-content');
-  setAttribute(element, 'data-tooltip-position', positionMode);
+  element.style.setProperty('max-width', resolvedMaxWidth);
+  element.style.setProperty('width', 'max-content');
+  element.setAttribute('data-tooltip-position', positionMode);
 
   const tooltipRect = getElementRect(element);
   const pointerLeft = getNumber(point.clientX !== undefined ? point.clientX : point.x, 0) - boundaryRect.left;
@@ -320,75 +378,127 @@ function positionAtPoint(element, point, options) {
   const maxLeft = Math.max(margin, (boundaryRect.width || viewportWidth) - tooltipRect.width - margin);
   top = Math.max(margin, Math.min(top, maxTop));
   left = Math.max(margin, Math.min(left, maxLeft));
-  setStyleProperty(element, 'top', `${Math.round(top)}px`);
-  setStyleProperty(element, 'left', `${Math.round(left)}px`);
+  element.style.setProperty('top', `${Math.round(top)}px`);
+  element.style.setProperty('left', `${Math.round(left)}px`);
   return Object.freeze({ top: Math.round(top), left: Math.round(left) });
 }
 
-function createController(options) {
-  const config = options || {};
+function isHandoffNode(value: unknown): value is HandoffNode {
+  return typeof value === 'object' && value !== null && ('parentNode' in value || 'getAttribute' in value);
+}
+
+function getNodeParent(node: HandoffNode | null | undefined): HandoffNode | null {
+  return (node && (node.parentElement || node.parentNode)) || null;
+}
+
+function isNodeContainedBy(container: HandoffNode, node: HandoffNode): boolean {
+  let current: HandoffNode | null = node;
+  while (current) {
+    if (current === container) {
+      return true;
+    }
+    current = getNodeParent(current);
+  }
+  return false;
+}
+
+// The nearest bound target at or above the node, below the root.
+function getBoundHandoffTarget(node: HandoffNode, boundAttribute: string, rootNode: HandoffNode): HandoffNode | null {
+  let current: HandoffNode | null = node;
+  while (current && current !== rootNode) {
+    if (typeof current.getAttribute === 'function' && current.getAttribute(boundAttribute) === 'true') {
+      return current;
+    }
+    current = getNodeParent(current);
+  }
+  return null;
+}
+
+function isModifierRefreshEvent(event: CursorPointInput | null | undefined): boolean {
+  if (!event) {
+    return false;
+  }
+  const key = String(event.key || '');
+  return Boolean(
+    event.metaKey ||
+    event.ctrlKey ||
+    event.altKey ||
+    event.shiftKey ||
+    key === 'Meta' ||
+    key === 'Control' ||
+    key === 'Alt' ||
+    key === 'Shift'
+  );
+}
+
+function createController(options?: CursorTooltipOptions | null): CursorTooltipController {
+  const config: CursorTooltipOptions = options || {};
   const documentObj = getDocument(config);
   const windowObj = getWindow(config);
   const requestFrame = getRequestAnimationFrame(windowObj);
   const setTimer = getSetTimeout(windowObj);
   const clearTimer = getClearTimeout(windowObj);
-  let element = null;
-  let tagElement = null;
-  let hideTimer = null;
-  let currentTarget = null;
-  let lastPoint = null;
-  let activeBinding = null;
+  let element: HTMLElement | null = null;
+  let tagElement: HTMLElement | null = null;
+  let hideTimer: number | null = null;
+  let currentTarget: HTMLElement | null = null;
+  let lastPoint: CursorPoint | null = null;
+  let activeBinding: ActiveBinding | null = null;
   let modifierListenersAttached = false;
-  let detachModifierListeners = null;
+  let detachModifierListeners: (() => void) | null = null;
   let token = 0;
 
-  function ensureElement() {
+  function appendToPage(node: HTMLElement): void {
+    const appendTo = config.appendTo || (documentObj && documentObj.body);
+    if (appendTo) {
+      appendTo.appendChild(node);
+    }
+  }
+
+  function ensureElement(): HTMLElement | null {
     if (element) {
       return element;
     }
     element = createElement(documentObj, config);
-    const appendTo = config.appendTo || (documentObj && documentObj.body);
-    if (appendTo && typeof appendTo.appendChild === 'function' && element) {
-      appendTo.appendChild(element);
+    if (element) {
+      appendToPage(element);
     }
     return element;
   }
 
-  function ensureTagElement() {
+  function ensureTagElement(): HTMLElement | null {
     if (tagElement) {
       return tagElement;
     }
-    const tagOptions = Object.assign({}, config, {
+    const tagOptions: CursorTooltipOptions = {
+      ...config,
       id: config.id ? `${config.id}_tag` : '',
       className: [config.className, TAG_CLASS].filter(Boolean).join(' ')
-    });
+    };
     tagElement = createElement(documentObj, tagOptions, 'cursor-tag');
     if (tagElement) {
-      setAttribute(tagElement, 'data-cursor-tooltip-tag', 'true');
-    }
-    const appendTo = config.appendTo || (documentObj && documentObj.body);
-    if (appendTo && typeof appendTo.appendChild === 'function' && tagElement) {
-      appendTo.appendChild(tagElement);
+      tagElement.setAttribute('data-cursor-tooltip-tag', 'true');
+      appendToPage(tagElement);
     }
     return tagElement;
   }
 
-  function hideCursorTooltipTag() {
+  function hideCursorTooltipTag(): HTMLElement | null {
     if (element) {
-      setAttribute(element, 'data-cursor-tooltip-tag-visible', 'false');
+      element.setAttribute('data-cursor-tooltip-tag-visible', 'false');
     }
     if (!tagElement) {
       return null;
     }
-    setAttribute(tagElement, DEFAULT_VISIBLE_ATTRIBUTE, 'false');
-    setAttribute(tagElement, 'aria-hidden', 'true');
+    tagElement.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, 'false');
+    tagElement.setAttribute('aria-hidden', 'true');
     return tagElement;
   }
 
-  function renderCursorTooltipTag(tagText, renderOptions) {
+  function renderCursorTooltipTag(tagText: string, renderOptions: CursorTooltipOptions): HTMLElement | null {
     const text = String(tagText || '').trim();
     if (element) {
-      setAttribute(element, 'data-cursor-tooltip-tag-visible', text ? 'true' : 'false');
+      element.setAttribute('data-cursor-tooltip-tag-visible', text ? 'true' : 'false');
     }
     if (!text) {
       hideCursorTooltipTag();
@@ -398,128 +508,101 @@ function createController(options) {
     if (!tag) {
       return null;
     }
-    const keyText = getCursorTooltipTagKeyText(Object.assign({}, config, renderOptions || {}));
-    const drawWindowsLogo = isWindowsLogoKeyText(keyText);
-    const tooltipView = globalThis && globalThis.LumnoTooltipView;
-    if (!tooltipView || typeof tooltipView.renderCursorTag !== 'function') {
+    const keyText = getCursorTooltipTagKeyText({ ...config, ...renderOptions });
+    const tooltipView = globalThis.LumnoTooltipView;
+    if (!tooltipView) {
       return null;
     }
     tooltipView.renderCursorTag(tag, {
       keyText,
       label: text,
-      windowsLogo: drawWindowsLogo
+      windowsLogo: isWindowsLogoKeyText(keyText)
     });
-    setAttribute(tag, 'aria-label', `${keyText} ${text}`.trim());
-    setAttribute(tag, DEFAULT_VISIBLE_ATTRIBUTE, 'false');
-    setAttribute(tag, 'aria-hidden', 'true');
+    tag.setAttribute('aria-label', `${keyText} ${text}`.trim());
+    tag.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, 'false');
+    tag.setAttribute('aria-hidden', 'true');
     return tag;
   }
 
-  function setCursorTooltipTagVisible(visible) {
+  function setCursorTooltipTagVisible(visible: boolean): void {
     if (!tagElement) {
       return;
     }
-    const nextVisible = visible ? 'true' : 'false';
-    setAttribute(tagElement, DEFAULT_VISIBLE_ATTRIBUTE, nextVisible);
-    setAttribute(tagElement, 'aria-hidden', visible ? 'false' : 'true');
+    tagElement.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, visible ? 'true' : 'false');
+    tagElement.setAttribute('aria-hidden', visible ? 'false' : 'true');
   }
 
-  function positionCursorTooltipTag(tag, tooltipPosition, options) {
+  // Sets the tag just above the tooltip's left edge.
+  function positionCursorTooltipTag(
+    tag: HTMLElement | null,
+    tooltipPosition: Readonly<CursorTooltipPosition> | null,
+    positionOptions: CursorTooltipOptions
+  ): Readonly<CursorTooltipPosition> | null {
     if (!tag || !tooltipPosition) {
       return null;
     }
-    const positionOptions = options || {};
     const positionMode = positionOptions.positionMode === 'absolute' ? 'absolute' : 'fixed';
     const margin = getNumber(positionOptions.margin, 8);
     const gap = getNumber(positionOptions.tagGap, 6);
     const viewportWidth = getNumber(windowObj.innerWidth, 1024);
     const viewportHeight = getNumber(windowObj.innerHeight, 768);
     const boundaryElement = positionOptions.boundaryElement || null;
-    const boundaryRect = positionMode === 'absolute'
-      ? getElementRect(boundaryElement, { top: 0, left: 0, right: viewportWidth, bottom: viewportHeight, width: viewportWidth, height: viewportHeight })
-      : { top: 0, left: 0, right: viewportWidth, bottom: viewportHeight, width: viewportWidth, height: viewportHeight };
+    const viewportRect: TooltipRect = {
+      top: 0, left: 0, right: viewportWidth, bottom: viewportHeight, width: viewportWidth, height: viewportHeight
+    };
+    const boundaryRect = positionMode === 'absolute' ? getElementRect(boundaryElement, viewportRect) : viewportRect;
     const availableWidth = Math.max(120, Math.floor((boundaryRect.width || viewportWidth) - (margin * 2)));
     const configuredMaxWidth = positionOptions.tagMaxWidth === undefined ? 220 : positionOptions.tagMaxWidth;
     const resolvedMaxWidth = typeof configuredMaxWidth === 'number'
       ? `${Math.min(configuredMaxWidth, availableWidth)}px`
       : (normalizeCssLength(configuredMaxWidth) || `${availableWidth}px`);
-    setStyleProperty(tag, 'max-width', resolvedMaxWidth);
-    setStyleProperty(tag, 'width', 'max-content');
-    setAttribute(tag, 'data-tooltip-position', positionMode);
+    tag.style.setProperty('max-width', resolvedMaxWidth);
+    tag.style.setProperty('width', 'max-content');
+    tag.setAttribute('data-tooltip-position', positionMode);
 
     const tagRect = getElementRect(tag);
     const maxLeft = Math.max(margin, (boundaryRect.width || viewportWidth) - tagRect.width - margin);
     const maxTop = Math.max(margin, (boundaryRect.height || viewportHeight) - tagRect.height - margin);
     const left = Math.max(margin, Math.min(tooltipPosition.left, maxLeft));
     const top = Math.max(margin, Math.min(tooltipPosition.top - tagRect.height - gap, maxTop));
-    setStyleProperty(tag, 'left', `${Math.round(left)}px`);
-    setStyleProperty(tag, 'top', `${Math.round(top)}px`);
+    tag.style.setProperty('left', `${Math.round(left)}px`);
+    tag.style.setProperty('top', `${Math.round(top)}px`);
     return Object.freeze({ top: Math.round(top), left: Math.round(left) });
   }
 
-  function setActiveBinding(target, resolveText, settings, pointInput) {
+  function setActiveBinding(
+    target: HTMLElement,
+    resolveText: CursorTooltipTextSource,
+    settings: CursorTooltipOptions,
+    pointInput: CursorPointInput | null
+  ): void {
     activeBinding = {
       target,
       resolveText,
-      settings: settings || {},
+      settings,
       lastPoint: getPointFromInput(pointInput, target)
     };
   }
 
-  function clearActiveBinding(target) {
-    if (!target || (activeBinding && activeBinding.target === target)) {
+  function clearActiveBinding(target: HTMLElement): void {
+    if (activeBinding && activeBinding.target === target) {
       activeBinding = null;
     }
   }
 
-  function getNodeParent(node) {
-    return (node && (node.parentElement || node.parentNode)) || null;
-  }
-
-  function isNodeContainedBy(container, node) {
-    if (!container || !node) {
+  // Whether leaving the target for another bound target in the handoff root
+  // should keep the tooltip up for the hide delay.
+  function shouldDeferBoundTooltipHide(
+    event: CursorPointInput | null | undefined,
+    target: HTMLElement,
+    settings: CursorTooltipOptions,
+    boundAttribute: string
+  ): boolean {
+    if (settings.deferHideVisibility !== true || !event) {
       return false;
     }
-    if (container === node) {
-      return true;
-    }
-    if (typeof container.contains === 'function') {
-      try {
-        return container.contains(node);
-      } catch (error) {
-        return false;
-      }
-    }
-    let current = node;
-    while (current) {
-      if (current === container) {
-        return true;
-      }
-      current = getNodeParent(current);
-    }
-    return false;
-  }
-
-  function getBoundHandoffTarget(node, boundAttribute, rootNode) {
-    let current = node;
-    while (current && current !== rootNode) {
-      if (
-        typeof current.getAttribute === 'function' &&
-        current.getAttribute(boundAttribute) === 'true'
-      ) {
-        return current;
-      }
-      current = getNodeParent(current);
-    }
-    return null;
-  }
-
-  function shouldDeferBoundTooltipHide(event, target, settings, boundAttribute) {
-    if (!settings || settings.deferHideVisibility !== true || !event) {
-      return false;
-    }
-    const relatedTarget = event.relatedTarget || null;
-    if (!relatedTarget || relatedTarget === target) {
+    const relatedTarget = event.relatedTarget;
+    if (!isHandoffNode(relatedTarget) || relatedTarget === target) {
       return false;
     }
     const handoffRoot = settings.handoffRoot || settings.handoffElement || getNodeParent(target);
@@ -530,13 +613,14 @@ function createController(options) {
     return Boolean(relatedBoundTarget && relatedBoundTarget !== target);
   }
 
-  function shouldIgnoreStaleEnter(event, target, settings) {
-    if (
-      !settings ||
-      settings.preserveVisibleOnTargetSwitch !== true ||
-      !currentTarget ||
-      currentTarget === target
-    ) {
+  // A pointerenter that fires again where the pointer already was (the page
+  // re-rendered under it) must not move the tooltip to another target.
+  function shouldIgnoreStaleEnter(
+    event: CursorPointInput | null | undefined,
+    target: HTMLElement,
+    settings: CursorTooltipOptions
+  ): boolean {
+    if (settings.preserveVisibleOnTargetSwitch !== true || !currentTarget || currentTarget === target) {
       return false;
     }
     const point = getExplicitPointFromInput(event);
@@ -549,9 +633,9 @@ function createController(options) {
     return staleEnter;
   }
 
-  function getModifierRefreshInput(event, binding) {
-    const source = event || {};
-    const point = (binding && binding.lastPoint) || lastPoint || getPointFromInput(null, binding && binding.target);
+  function getModifierRefreshInput(event: CursorPointInput | null | undefined, binding: ActiveBinding): CursorPointInput {
+    const source: CursorPointInput = event || {};
+    const point = binding.lastPoint || lastPoint || getPointFromInput(null, binding.target);
     return {
       type: source.type || 'modifierchange',
       key: source.key || '',
@@ -564,30 +648,14 @@ function createController(options) {
     };
   }
 
-  function isModifierRefreshEvent(event) {
-    if (!event) {
-      return false;
-    }
-    const key = String(event.key || '');
-    return Boolean(
-      event.metaKey ||
-      event.ctrlKey ||
-      event.altKey ||
-      event.shiftKey ||
-      key === 'Meta' ||
-      key === 'Control' ||
-      key === 'Alt' ||
-      key === 'Shift'
-    );
-  }
-
-  function hideWithOptions(hideOptions) {
+  function hideWithOptions(hideOptions?: CursorTooltipHideOptions | null): HTMLElement | null {
     const preserveActiveBinding = Boolean(hideOptions && hideOptions.preserveActiveBinding);
     const deferVisibility = Boolean(hideOptions && hideOptions.deferVisibility);
     if (!preserveActiveBinding) {
       activeBinding = null;
     }
-    if (!element) {
+    const tooltip = element;
+    if (!tooltip) {
       hideCursorTooltipTag();
       return null;
     }
@@ -603,48 +671,46 @@ function createController(options) {
           return;
         }
         currentTarget = null;
-        setAttribute(element, DEFAULT_VISIBLE_ATTRIBUTE, 'false');
-        setAttribute(element, 'aria-hidden', 'true');
+        element.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, 'false');
+        element.setAttribute('aria-hidden', 'true');
         hideTimer = null;
       }, getNumber(config.hideDelay, 120));
-      return element;
+      return tooltip;
     }
     currentTarget = null;
-    setAttribute(element, DEFAULT_VISIBLE_ATTRIBUTE, 'false');
-    setAttribute(element, 'aria-hidden', 'true');
+    tooltip.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, 'false');
+    tooltip.setAttribute('aria-hidden', 'true');
     hideTimer = setTimer(() => {
       if (hideToken !== token || !element) {
         return;
       }
-      setAttribute(element, DEFAULT_VISIBLE_ATTRIBUTE, 'false');
+      element.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, 'false');
       hideTimer = null;
     }, getNumber(config.hideDelay, 120));
-    return element;
+    return tooltip;
   }
 
-  function refreshActiveBinding(event) {
+  function refreshActiveBinding(event?: CursorPointInput | null): HTMLElement | null {
     const binding = activeBinding;
-    if (!binding || !binding.target) {
+    if (!binding) {
       return null;
     }
     const input = getModifierRefreshInput(event, binding);
-    const eventOptions = Object.assign({}, binding.settings, {
-      inputEvent: input
-    });
+    const eventOptions: CursorTooltipOptions = { ...binding.settings, inputEvent: input };
     if (!shouldShowTarget(binding.target, eventOptions)) {
       return hideWithOptions({ preserveActiveBinding: true });
     }
     return show(binding.target, binding.resolveText(binding.target), input, eventOptions);
   }
 
-  function handleModifierRefreshEvent(event) {
+  function handleModifierRefreshEvent(event: CursorPointInput): void {
     if (!isModifierRefreshEvent(event)) {
       return;
     }
     refreshActiveBinding(event);
   }
 
-  function handleModifierBlur() {
+  function handleModifierBlur(): void {
     refreshActiveBinding({
       type: 'blur',
       key: '',
@@ -655,13 +721,27 @@ function createController(options) {
     });
   }
 
-  function attachModifierListeners() {
+  function getModifierListenerTarget(): ListenerTarget | null {
+    const { addEventListener: addListener, removeEventListener: removeListener } = windowObj;
+    if (typeof addListener !== 'function') {
+      return documentObj;
+    }
+    return {
+      addEventListener: (...args) => Reflect.apply(addListener, windowObj, args),
+      removeEventListener: (...args) => {
+        if (typeof removeListener === 'function') {
+          Reflect.apply(removeListener, windowObj, args);
+        }
+      }
+    };
+  }
+
+  // Held modifier keys change the action tag, so key presses refresh it.
+  function attachModifierListeners(): void {
     if (modifierListenersAttached) {
       return;
     }
-    const listenerTarget = windowObj && typeof windowObj.addEventListener === 'function'
-      ? windowObj
-      : (documentObj && typeof documentObj.addEventListener === 'function' ? documentObj : null);
+    const listenerTarget = getModifierListenerTarget();
     if (!listenerTarget) {
       return;
     }
@@ -678,11 +758,14 @@ function createController(options) {
     };
   }
 
-  function show(target, text, pointInput, showOptions) {
+  function show(
+    target: HTMLElement | null | undefined,
+    text: string | null | undefined,
+    pointInput?: CursorPointInput | null,
+    showOptions?: CursorTooltipOptions | null
+  ): HTMLElement | null {
     const content = String(text || '');
-    const mergedOptions = Object.assign({}, config, showOptions || {}, {
-      inputEvent: pointInput || null
-    });
+    const mergedOptions: CursorTooltipOptions = { ...config, ...showOptions, inputEvent: pointInput || null };
     if (!target || !content || !shouldShowTarget(target, mergedOptions)) {
       return null;
     }
@@ -697,29 +780,24 @@ function createController(options) {
     token += 1;
     const showToken = token;
     currentTarget = target;
-    lastPoint = getPointFromInput(pointInput, target);
-    renderContent(tooltip, content, mergedOptions);
+    const point = getPointFromInput(pointInput, target);
+    lastPoint = point;
+    LumnoTooltip.renderText(tooltip, content);
     const tag = renderCursorTooltipTag(getCursorTooltipTagText(target, pointInput, mergedOptions), mergedOptions);
     const preserveVisible = Boolean(
       mergedOptions.preserveVisibleOnTargetSwitch &&
-      typeof tooltip.getAttribute === 'function' &&
       tooltip.getAttribute(DEFAULT_VISIBLE_ATTRIBUTE) === 'true'
     );
-    if (!preserveVisible) {
-      setAttribute(tooltip, DEFAULT_VISIBLE_ATTRIBUTE, 'false');
-      setAttribute(tooltip, 'aria-hidden', 'true');
-    } else {
-      setAttribute(tooltip, DEFAULT_VISIBLE_ATTRIBUTE, 'true');
-      setAttribute(tooltip, 'aria-hidden', 'false');
-    }
-    const tooltipPosition = positionAtPoint(tooltip, lastPoint, mergedOptions);
+    tooltip.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, preserveVisible ? 'true' : 'false');
+    tooltip.setAttribute('aria-hidden', preserveVisible ? 'false' : 'true');
+    const tooltipPosition = positionAtPoint(tooltip, point, mergedOptions);
     positionCursorTooltipTag(tag, tooltipPosition, mergedOptions);
     requestFrame(() => {
       if (showToken !== token || currentTarget !== target || !isTargetActive(target, documentObj, mergedOptions)) {
         return;
       }
-      setAttribute(tooltip, DEFAULT_VISIBLE_ATTRIBUTE, 'true');
-      setAttribute(tooltip, 'aria-hidden', 'false');
+      tooltip.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, 'true');
+      tooltip.setAttribute('aria-hidden', 'false');
       if (tag) {
         setCursorTooltipTagVisible(true);
       }
@@ -727,20 +805,19 @@ function createController(options) {
     return tooltip;
   }
 
-  function move(pointInput, moveOptions) {
+  function move(pointInput?: CursorPointInput | null, moveOptions?: CursorTooltipOptions | null): HTMLElement | null {
     if (!element || !currentTarget) {
       return null;
     }
-    lastPoint = getPointFromInput(pointInput, currentTarget);
-    const mergedOptions = Object.assign({}, config, moveOptions || {}, {
-      inputEvent: pointInput || null
-    });
+    const point = getPointFromInput(pointInput, currentTarget);
+    lastPoint = point;
+    const mergedOptions: CursorTooltipOptions = { ...config, ...moveOptions, inputEvent: pointInput || null };
     if (!shouldShowTarget(currentTarget, mergedOptions)) {
       hide();
       return element;
     }
     const tag = renderCursorTooltipTag(getCursorTooltipTagText(currentTarget, pointInput, mergedOptions), mergedOptions);
-    const tooltipPosition = positionAtPoint(element, lastPoint, mergedOptions);
+    const tooltipPosition = positionAtPoint(element, point, mergedOptions);
     positionCursorTooltipTag(tag, tooltipPosition, mergedOptions);
     if (tag) {
       setCursorTooltipTagVisible(true);
@@ -748,44 +825,41 @@ function createController(options) {
     return element;
   }
 
-  function hide(hideOptions) {
+  function hide(hideOptions?: CursorTooltipHideOptions | null): HTMLElement | null {
     return hideWithOptions(hideOptions);
   }
 
-  function bind(target, getText, bindOptions) {
-    if (!target || typeof target.addEventListener !== 'function') {
+  function bind(
+    target: HTMLElement | null | undefined,
+    getText?: CursorTooltipTextSource | null,
+    bindOptions?: CursorTooltipOptions | null
+  ): HTMLElement | null {
+    if (!target) {
       return null;
     }
     attachModifierListeners();
-    const settings = bindOptions || {};
+    const settings: CursorTooltipOptions = bindOptions || {};
     const boundAttribute = settings.boundAttribute || DEFAULT_BOUND_ATTRIBUTE;
-    if (typeof target.getAttribute === 'function' && target.getAttribute(boundAttribute) === 'true') {
+    if (target.getAttribute(boundAttribute) === 'true') {
       return target;
     }
-    addClass(target, HOST_CLASS);
-    if (typeof target.setAttribute === 'function') {
-      target.setAttribute(boundAttribute, 'true');
-    }
-    if (
-      settings.suppressNativeTitle !== false &&
-      typeof target.getAttribute === 'function' &&
-      typeof target.removeAttribute === 'function'
-    ) {
+    target.classList.add(HOST_CLASS);
+    target.setAttribute(boundAttribute, 'true');
+    if (settings.suppressNativeTitle !== false) {
       const nativeTitle = target.getAttribute('title');
       if (nativeTitle) {
         target.setAttribute('data-cursor-tooltip-native-title', nativeTitle);
         target.removeAttribute('title');
       }
     }
-    const resolveText = typeof getText === 'function'
+    const resolveText: CursorTooltipTextSource = typeof getText === 'function'
       ? getText
-      : () => (typeof target.getAttribute === 'function'
-        ? target.getAttribute(settings.attributeName || DEFAULT_TEXT_ATTRIBUTE)
-        : '');
-    const getEventOptions = (event) => Object.assign({}, settings, {
+      : () => target.getAttribute(settings.attributeName || DEFAULT_TEXT_ATTRIBUTE);
+    const getEventOptions = (event: CursorPointInput | null): CursorTooltipOptions => ({
+      ...settings,
       inputEvent: event || null
     });
-    const showBoundTooltip = (event) => {
+    const showBoundTooltip = (event: CursorPointInput): void => {
       if (shouldIgnoreStaleEnter(event, target, settings)) {
         return;
       }
@@ -797,7 +871,7 @@ function createController(options) {
       }
       show(target, resolveText(target), event, eventOptions);
     };
-    const moveBoundTooltip = (event) => {
+    const moveBoundTooltip = (event: CursorPointInput): void => {
       const eventOptions = getEventOptions(event);
       if (currentTarget && currentTarget !== target) {
         return;
@@ -813,7 +887,7 @@ function createController(options) {
       }
       move(event, eventOptions);
     };
-    const showFocusTooltip = () => {
+    const showFocusTooltip = (): void => {
       setActiveBinding(target, resolveText, settings, null);
       const eventOptions = getEventOptions(null);
       if (!shouldShowTarget(target, eventOptions)) {
@@ -822,7 +896,7 @@ function createController(options) {
       }
       show(target, resolveText(target), getPointFromInput(null, target), eventOptions);
     };
-    const hideBoundTooltip = (event) => {
+    const hideBoundTooltip = (event: CursorPointInput): void => {
       if (currentTarget && currentTarget !== target) {
         clearActiveBinding(target);
         return;
@@ -841,16 +915,21 @@ function createController(options) {
     return target;
   }
 
-  function bindAll(rootNode, bindOptions) {
+  function bindAll(rootNode?: ParentNode | null, bindOptions?: CursorTooltipOptions | null): HTMLElement[] {
     const scope = rootNode || documentObj;
-    if (!scope || typeof scope.querySelectorAll !== 'function') {
+    if (!scope) {
       return [];
     }
-    const settings = bindOptions || {};
+    const settings: CursorTooltipOptions = bindOptions || {};
     const selector = settings.selector || `[${settings.attributeName || DEFAULT_TEXT_ATTRIBUTE}]`;
-    return Array.from(scope.querySelectorAll(selector))
-      .map((node) => bind(node, null, settings))
-      .filter(Boolean);
+    const bound: HTMLElement[] = [];
+    scope.querySelectorAll<HTMLElement>(selector).forEach((node) => {
+      const result = bind(node, null, settings);
+      if (result) {
+        bound.push(result);
+      }
+    });
+    return bound;
   }
 
   return {
@@ -871,14 +950,13 @@ function createController(options) {
         clearTimer(hideTimer);
         hideTimer = null;
       }
-      const tooltipView = globalThis && globalThis.LumnoTooltipView;
-      [element, tagElement].forEach((target) => {
-        if (target && tooltipView &&
-            typeof tooltipView.destroyTooltipElement === 'function') {
-          tooltipView.destroyTooltipElement(target);
+      const tooltipView = globalThis.LumnoTooltipView;
+      [element, tagElement].forEach((node) => {
+        if (node && tooltipView) {
+          tooltipView.destroyTooltipElement(node);
         }
-        if (target && target.parentNode) {
-          target.parentNode.removeChild(target);
+        if (node && node.parentNode) {
+          node.parentNode.removeChild(node);
         }
       });
       element = null;
@@ -893,6 +971,18 @@ function createController(options) {
   };
 }
 
+export type {
+  CursorPoint,
+  CursorPointInput,
+  CursorTooltipController,
+  CursorTooltipHideOptions,
+  CursorTooltipOptions,
+  CursorTooltipPosition,
+  CursorTooltipTextSource,
+  CursorTooltipWindow,
+  HandoffNode,
+  TruncationTarget
+};
 export {
   HOST_CLASS as hostClassName,
   TAG_CLASS as tagClassName,
