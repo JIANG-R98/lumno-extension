@@ -72,7 +72,7 @@ const pageEntryRunsAfterBridge = (page, reactEntry, entry) => {
   assert(pageEntryRunsAfterBridge(page, reactEntry, entry), `${page} should connect its bridge between the React entry and the page entry`);
 });
 assert(
-  ['blacklist', 'labs'].every((tab) => {
+  ['account', 'blacklist', 'labs'].every((tab) => {
     const host = new JSDOM(optionsHtml).window.document.querySelector(`[data-content="${tab}"]`);
     return host && host.children.length === 0;
   }),

@@ -1,6 +1,7 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createWebDavListApi, type WebDavListModel } from './webdav-list';
+import { WebDavList, type WebDavListModel } from './webdav-list';
+import { createReactRootController, type ReactRootController } from './root-controller';
 import messages from '../../../_locales/en/messages.json';
 import { expectElement, getElement, getTag, required } from '../../../tests/react/dom';
 import { queryHtmlTag } from '../../shared/dom-lookup';
@@ -9,12 +10,12 @@ const copy = Object.fromEntries(Object.entries(messages).map(([key, value]) => [
 const item = { id: 'a', config: { endpoint: 'https://dav.test/', directory: 'lumno', username: 'user', hasPassword: true },
   enabled: false, state: 'paused', lastSyncAt: 1790899200000 };
 const model: WebDavListModel = { copy, ready: true, outdated: false, connections: [item, { ...item, id: 'b' }] };
-const controllers: ReturnType<ReturnType<typeof createWebDavListApi>['createWebDavListController']>[] = [];
+const controllers: Array<ReactRootController<WebDavListModel>> = [];
 function fixture(value = model) {
   const host = document.createElement('div');
   document.body.append(host);
   const onAction = vi.fn().mockResolvedValue({});
-  const controller = createWebDavListApi().createWebDavListController(host, { onAction });
+  const controller = createReactRootController(host, (value: WebDavListModel) => <WebDavList model={value} options={{ onAction }} />);
   controllers.push(controller);
   act(() => controller.render(value));
   const card = (id: string) => getElement(host, `[data-webdav-id="${id}"]`);

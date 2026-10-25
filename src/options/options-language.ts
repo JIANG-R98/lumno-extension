@@ -55,7 +55,7 @@ interface LanguageState {
   currentSearchResultDisplayLimit: number;
   currentOverlayWidth: number | null;
   // Made as the page starts; null until then.
-  webDavSettingsController: ReturnType<typeof createWebDavController>;
+  webDavSettingsController: ReturnType<typeof createWebDavController> | null;
   fallbackShortcutSection: ReturnType<typeof createFallbackShortcutSection> | null;
   themeSection: ReturnType<typeof createThemeSection> | null;
   dailyQuoteSettings: ReturnType<typeof createDailyQuoteSettings>;

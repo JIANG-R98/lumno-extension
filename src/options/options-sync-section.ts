@@ -1,24 +1,15 @@
 // The browser sync card on the Account tab: its status line and last-sync
-// tooltip, the note on how many New Tab shortcuts browser sync carries, the
-// "sync now", export and import buttons, and moving settings that older
-// versions kept only in chrome.storage.local into browser sync.
+// tooltip, the note on how many New Tab shortcuts browser sync carries, what
+// its "sync now", export and import buttons do, and moving settings that
+// older versions kept only in chrome.storage.local into browser sync. The
+// card itself is drawn from the model this hands to onRender.
 import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
 import type * as Settings from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
-import { isHtmlTag } from '../shared/dom-guards';
 import { downloadJsonFile } from './options-download';
 import type { createSyncTransfer, SettingsImportPlan } from './options-sync-transfer';
 import type { FormatTemplate, GetMessage, ToastTask } from './options-types';
-
-interface SyncSectionElements {
-  syncStatus: HTMLElement | null;
-  syncStatusText: HTMLElement | null;
-  syncNowButton: HTMLButtonElement | null;
-  syncExportButton: HTMLButtonElement | null;
-  syncImportButton: HTMLButtonElement | null;
-  syncImportInput: HTMLInputElement | null;
-  shortcutSyncSummary: HTMLElement | null;
-}
+import type { BrowserSyncCardHandlers, BrowserSyncCardModel, BrowserSyncTone } from './react/account-tab';
 
 interface SyncSectionChromeApi {
   runtime: { lastError?: { message?: string } | null };
@@ -26,7 +17,6 @@ interface SyncSectionChromeApi {
 }
 
 interface SyncSectionOptions {
-  elements: SyncSectionElements;
   chromeApi: SyncSectionChromeApi;
   settings: Pick<typeof Settings, 'CHROME_SYNC_STORAGE_KEYS' | 'SYNC_META_STORAGE_KEY' |
     'NEWTAB_SHORTCUTS_V2_STORAGE_KEYS' | 'WEBDAV_STATUS_STORAGE_KEY'>;
@@ -39,8 +29,20 @@ interface SyncSectionOptions {
   formatTemplate: FormatTemplate;
   showToast(message: string, isError?: boolean): void;
   beginToast(message: string): ToastTask;
-  showTooltipFor(target: HTMLElement): void;
+  // The browser the page runs in, as the card's title names it.
+  browserName: string;
+  // Draws the card; called whenever its state changes.
+  onRender(model: BrowserSyncCardModel): void;
+  // Refreshes the sync-now tooltip if it is showing.
+  refreshSyncNowTooltip(): void;
   documentObj: Document;
+}
+
+// The status line: a message key, its fallback and template values.
+interface SyncStatus {
+  key: string;
+  fallback: string;
+  params?: Record<string, string | number>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -49,22 +51,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function createSyncSection(options: SyncSectionOptions) {
   const {
-    syncStatus,
-    syncStatusText,
-    syncNowButton,
-    syncExportButton,
-    syncImportButton,
-    syncImportInput,
-    shortcutSyncSummary
-  } = options.elements;
-  const {
     beginToast,
+    browserName,
     formatTemplate,
     getActivePrimaryAreaName,
     getMessage,
     localStorageArea,
+    onRender,
+    refreshSyncNowTooltip,
     showToast,
-    showTooltipFor,
     storageArea,
     syncTransfer
   } = options;
@@ -74,12 +69,44 @@ function createSyncSection(options: SyncSectionOptions) {
   const SYNC_META_STORAGE_KEY = SETTINGS.SYNC_META_STORAGE_KEY;
   const documentObj = options.documentObj;
 
-  function setSyncButtonEnabled(button: HTMLButtonElement | null, enabled: boolean): void {
-    if (!button) {
-      return;
-    }
-    button.disabled = !enabled;
-    button.setAttribute('data-disabled', enabled ? 'false' : 'true');
+  // Until the first refresh (null) the card shows sync as on, with no tone.
+  let status: SyncStatus | null = null;
+  let statusTone: BrowserSyncTone = '';
+  let available = true;
+  let syncing = false;
+  let lastSyncText = '';
+  let shortcutSummary = '';
+
+  function getModel(): BrowserSyncCardModel {
+    const templateValues = { name: 'Lumno', browser: browserName };
+    const statusTemplate = status
+      ? getMessage(status.key, status.fallback)
+      : getMessage('sync_status_ready', '同步已开启');
+    const tooltip = statusTone === 'danger'
+      ? getMessage('sync_status_unavailable_hint', '同步不可用：请检查当前浏览器是否支持并已开启内置同步。')
+      : getMessage('sync_status_hint', '同步信息说明');
+    return {
+      sectionTitle: getMessage('settings_sync_section_title', '浏览器内置同步'),
+      title: formatTemplate(getMessage('settings_sync_title', '{browser} 内置同步'), templateValues),
+      status: {
+        text: status && status.params ? formatTemplate(statusTemplate, status.params) : statusTemplate,
+        tone: statusTone,
+        tooltip: formatTemplate(tooltip, templateValues)
+      },
+      summary: shortcutSummary,
+      available,
+      syncing,
+      syncNowTooltip: lastSyncText
+        ? formatTemplate(getMessage('sync_tooltip_last_manual', '最近导入/手动同步 {time}'), { time: lastSyncText })
+        : getMessage('sync_tooltip_default', '手动同步'),
+      exportLabel: getMessage('sync_action_export', '导出配置'),
+      importLabel: getMessage('sync_action_import', '导入配置'),
+      syncNowLabel: getMessage('sync_action_now', '手动同步')
+    };
+  }
+
+  function render(): void {
+    onRender(getModel());
   }
 
   function formatSyncTime(timestamp: number | string): string {
@@ -94,45 +121,21 @@ function createSyncSection(options: SyncSectionOptions) {
   }
 
   function updateSyncStatusText(statusKey: string, fallback: string, params?: Record<string, string | number>): void {
-    if (!syncStatus) {
-      return;
-    }
-    let statusStyle = '';
-    let tooltipKey = 'sync_status_hint';
+    status = { key: statusKey, fallback, params };
     if (statusKey === 'sync_status_ready' || statusKey === 'sync_status_done') {
-      statusStyle = 'success';
-      tooltipKey = 'sync_status_hint';
+      statusTone = 'success';
     } else if (statusKey === 'sync_status_failed' || statusKey === 'sync_status_failed_reason' || statusKey === 'sync_status_unavailable') {
-      statusStyle = 'danger';
-      tooltipKey = 'sync_status_unavailable_hint';
-    }
-    if (statusStyle) {
-      syncStatus.setAttribute('data-status', statusStyle);
+      statusTone = 'danger';
     } else {
-      syncStatus.removeAttribute('data-status');
+      statusTone = '';
     }
-    if (syncStatus.hasAttribute('data-i18n-tooltip')) {
-      syncStatus.setAttribute('data-i18n-tooltip', tooltipKey);
-    }
-    syncStatus.setAttribute('data-tooltip', getMessage(tooltipKey, syncStatus.getAttribute('data-tooltip') || ''));
-    const template = getMessage(statusKey, fallback);
-    const target = syncStatusText || syncStatus;
-    target.textContent = params ? formatTemplate(template, params) : template;
+    render();
   }
 
   function updateSyncNowTooltip(timeText: string): void {
-    if (!syncNowButton) {
-      return;
-    }
-    if (!timeText) {
-      syncNowButton.setAttribute('data-tooltip', getMessage('sync_tooltip_default', '手动同步'));
-      return;
-    }
-    const template = getMessage('sync_tooltip_last_manual', '最近导入/手动同步 {time}');
-    syncNowButton.setAttribute('data-tooltip', formatTemplate(template, { time: timeText }));
-    if (syncNowButton.matches(':hover') || syncNowButton.matches(':focus')) {
-      showTooltipFor(syncNowButton);
-    }
+    lastSyncText = timeText;
+    render();
+    refreshSyncNowTooltip();
   }
 
   // Says how many New Tab shortcuts browser sync carries and where the
@@ -141,9 +144,11 @@ function createSyncSection(options: SyncSectionOptions) {
   let shortcutSyncSummaryRevision = 0;
   function refreshShortcutSyncSummary(): void {
     const store = LumnoNewtabShortcutsStore;
-    if (!shortcutSyncSummary || !storageArea || getActivePrimaryAreaName() !== 'sync' ||
-        !localStorageArea) {
-      if (shortcutSyncSummary) shortcutSyncSummary.hidden = true;
+    if (!storageArea || getActivePrimaryAreaName() !== 'sync' || !localStorageArea) {
+      if (shortcutSummary) {
+        shortcutSummary = '';
+        render();
+      }
       return;
     }
     const revision = ++shortcutSyncSummaryRevision;
@@ -175,27 +180,19 @@ function createSyncSection(options: SyncSectionOptions) {
             : getMessage('options_shortcut_sync_split_local', 'Shortcuts: {synced} sync with the browser; {local} exceed its sync space and stay on this device. Turn on WebDAV to sync them too.'),
           { synced: summary.synced, local: summary.localOnly });
         }
-        shortcutSyncSummary.textContent = text;
-        shortcutSyncSummary.hidden = !text;
+        shortcutSummary = text;
+        render();
       });
     });
   }
 
   function refreshSyncStatus(): void {
     refreshShortcutSyncSummary();
-    if (!syncStatus) {
-      return;
-    }
+    available = Boolean(storageArea);
     if (!storageArea) {
       updateSyncStatusText('sync_status_unavailable', '同步不可用');
-      setSyncButtonEnabled(syncNowButton, false);
-      setSyncButtonEnabled(syncExportButton, false);
-      setSyncButtonEnabled(syncImportButton, false);
       return;
     }
-    setSyncButtonEnabled(syncNowButton, true);
-    setSyncButtonEnabled(syncExportButton, true);
-    setSyncButtonEnabled(syncImportButton, true);
     updateSyncStatusText('sync_status_ready', '同步已开启');
     // The last-sync time describes the browser's own sync service.
     (chrome.storage.sync || storageArea).get([SYNC_META_STORAGE_KEY], (result) => {
@@ -261,127 +258,124 @@ function createSyncSection(options: SyncSectionOptions) {
     });
   }
 
-  // Wires the three buttons and the hidden file input.
-  function bindControls(): void {
+  function getSyncFailureMessage(): string {
+    const reason = chrome.runtime.lastError
+      ? chrome.runtime.lastError.message
+      : '';
+    return formatTemplate(getMessage('sync_status_failed_reason', '同步失败：{reason}'), {
+      reason: reason || getMessage('sync_status_failed', '同步失败')
+    });
+  }
+
+  // Pushes the values browser sync already holds, stamped as a manual sync.
+  function syncNow(): void {
+    const transfer = syncTransfer;
+    const browserSyncArea = chrome.storage.sync;
+    if (!transfer) {
+      return;
+    }
+    if (!browserSyncArea) {
+      updateSyncStatusText('sync_status_unavailable', '同步不可用');
+      return;
+    }
+    if (syncing) {
+      return;
+    }
+    syncing = true;
+    render();
+    browserSyncArea.get(SYNC_KEYS.slice(), (result) => {
+      browserSyncArea.set(transfer.buildManualSyncPayload(result, Date.now()), () => {
+        syncing = false;
+        render();
+        if (chrome.runtime.lastError) {
+          showToast(getSyncFailureMessage(), true);
+          return;
+        }
+        showToast(getMessage('sync_status_done', '同步完成'), false);
+        updateSyncNowTooltip(formatSyncTime(Date.now()));
+      });
+    });
+  }
+
+  function exportSettings(): void {
+    const transfer = syncTransfer;
+    if (!transfer || !storageArea) {
+      return;
+    }
+    storageArea.get(SYNC_KEYS.slice(), (result) => {
+      downloadJsonFile(
+        documentObj,
+        `lumno-settings-${Date.now()}.json`,
+        transfer.buildExportFile(result, new Date().toISOString())
+      );
+      showToast(getMessage('sync_export_done', '已导出配置'), false);
+    });
+  }
+
+  function readTextFile(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error || new Error('file-read-failed'));
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.readAsText(file);
+    });
+  }
+
+  function applySyncImport(area: StorageAreaLike, plan: SettingsImportPlan, toastTask: ToastTask): void {
+    area.set(plan.payload, () => {
+      if (chrome.runtime.lastError) {
+        toastTask.fail(getSyncFailureMessage());
+        return;
+      }
+      const finishImport = (): void => {
+        toastTask.done(getMessage('sync_import_done', '导入完成'));
+        refreshSyncStatus();
+      };
+      if (!plan.keysToClear.length || !area.remove) {
+        finishImport();
+        return;
+      }
+      area.remove(plan.keysToClear, finishImport);
+    });
+  }
+
+  function importSettings(file: File): void {
     const transfer = syncTransfer;
     if (!transfer) {
       return;
     }
-    function getSyncFailureMessage(): string {
-      const reason = chrome.runtime.lastError
-        ? chrome.runtime.lastError.message
-        : '';
-      return formatTemplate(getMessage('sync_status_failed_reason', '同步失败：{reason}'), {
-        reason: reason || getMessage('sync_status_failed', '同步失败')
-      });
-    }
-
-    if (syncNowButton) {
-      syncNowButton.addEventListener('click', () => {
-        // Pushes the values browser sync already holds, stamped as a manual sync.
-        const browserSyncArea = chrome.storage.sync;
-        if (!browserSyncArea) {
-          updateSyncStatusText('sync_status_unavailable', '同步不可用');
-          return;
-        }
-        if (syncNowButton.getAttribute('aria-busy') === 'true') {
-          return;
-        }
-        syncNowButton.setAttribute('aria-busy', 'true');
-        browserSyncArea.get(SYNC_KEYS.slice(), (result) => {
-          browserSyncArea.set(transfer.buildManualSyncPayload(result, Date.now()), () => {
-            syncNowButton.removeAttribute('aria-busy');
-            if (chrome.runtime.lastError) {
-              showToast(getSyncFailureMessage(), true);
-              return;
-            }
-            showToast(getMessage('sync_status_done', '同步完成'), false);
-            updateSyncNowTooltip(formatSyncTime(Date.now()));
-          });
-        });
-      });
-    }
-
-    if (syncExportButton) {
-      syncExportButton.addEventListener('click', () => {
-        if (!storageArea) {
-          return;
-        }
-        storageArea.get(SYNC_KEYS.slice(), (result) => {
-          downloadJsonFile(
-            documentObj,
-            `lumno-settings-${Date.now()}.json`,
-            transfer.buildExportFile(result, new Date().toISOString())
-          );
-          showToast(getMessage('sync_export_done', '已导出配置'), false);
-        });
-      });
-    }
-
-    function readTextFile(file: File): Promise<string> {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onerror = () => reject(reader.error || new Error('file-read-failed'));
-        reader.onload = () => resolve(String(reader.result || ''));
-        reader.readAsText(file);
-      });
-    }
-
-    function applySyncImport(area: StorageAreaLike, plan: SettingsImportPlan, toastTask: ToastTask): void {
-      area.set(plan.payload, () => {
-        if (chrome.runtime.lastError) {
-          toastTask.fail(getSyncFailureMessage());
-          return;
-        }
-        const finishImport = (): void => {
-          toastTask.done(getMessage('sync_import_done', '导入完成'));
-          refreshSyncStatus();
-        };
-        if (!plan.keysToClear.length || !area.remove) {
-          finishImport();
-          return;
-        }
-        area.remove(plan.keysToClear, finishImport);
-      });
-    }
-
-    if (syncImportButton && syncImportInput) {
-      syncImportButton.addEventListener('click', () => {
-        syncImportInput.click();
-      });
-      syncImportInput.addEventListener('change', (event) => {
-        const input = event.target;
-        const file = isHtmlTag(input, 'input') && input.files ? input.files[0] : null;
-        if (!file) {
-          return;
-        }
-        const toastTask = beginToast(getMessage('sync_importing', '正在导入配置…'));
-        const failInvalid = () => toastTask.fail(getMessage('sync_import_invalid', '配置文件无效'));
-        readTextFile(file).then((text) => {
-          const data = transfer.parseImportFile(text);
-          const plan = data ? transfer.buildImportPlan(data, Date.now()) : null;
-          if (!plan) {
-            failInvalid();
-          } else if (storageArea) {
-            applySyncImport(storageArea, plan, toastTask);
-          } else {
-            toastTask.cancel();
-          }
-        }, failInvalid).finally(() => {
-          syncImportInput.value = '';
-        });
-      });
-    }
+    const toastTask = beginToast(getMessage('sync_importing', '正在导入配置…'));
+    const failInvalid = () => toastTask.fail(getMessage('sync_import_invalid', '配置文件无效'));
+    readTextFile(file).then((text) => {
+      const data = transfer.parseImportFile(text);
+      const plan = data ? transfer.buildImportPlan(data, Date.now()) : null;
+      if (!plan) {
+        failInvalid();
+      } else if (storageArea) {
+        applySyncImport(storageArea, plan, toastTask);
+      } else {
+        toastTask.cancel();
+      }
+    }, failInvalid);
   }
 
+  const handlers: BrowserSyncCardHandlers = {
+    onSyncNow: syncNow,
+    onExport: exportSettings,
+    onImport: importSettings
+  };
+
+  render();
+
   return Object.freeze({
-    bindControls,
+    handlers,
     migrateStorageIfNeeded,
     refreshShortcutSyncSummary,
     refreshSyncStatus,
+    render,
     updateSyncStatusText
   });
 }
 
 export { createSyncSection };
-export type { SyncSectionChromeApi, SyncSectionElements, SyncSectionOptions };
+export type { SyncSectionChromeApi, SyncSectionOptions };

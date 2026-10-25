@@ -24,7 +24,7 @@ import type { createSiteSearchListApi } from '../options/react/site-search-list'
 import type { createThemePickerApi } from '../options/react/theme-picker';
 import type { createToastApi } from '../shared/react/toast';
 import type { createTranslationHelpApi } from '../options/react/translation-help';
-import type { createWebDavListApi } from '../options/react/webdav-list';
+import type { createAccountTabApi } from '../options/react/account-tab';
 import type { createPopupApi } from '../popup/react/popup-view';
 import type { createActionButtonsApi } from '../onboarding/react/action-buttons';
 import type { createBodyCopyApi } from '../onboarding/react/body-copy';
@@ -128,7 +128,7 @@ declare global {
   var LumnoOptionsThemePicker: ReturnType<typeof createThemePickerApi> | undefined;
   var LumnoOptionsToast: ReturnType<typeof createToastApi> | undefined;
   var LumnoOptionsTranslationHelp: ReturnType<typeof createTranslationHelpApi> | undefined;
-  var LumnoOptionsWebDavList: ReturnType<typeof createWebDavListApi> | undefined;
+  var LumnoOptionsAccountTab: ReturnType<typeof createAccountTabApi> | undefined;
   // Set by the onboarding page's React islands entry.
   var LumnoOnboardingActions: ReturnType<typeof createActionButtonsApi> | undefined;
   var LumnoOnboardingBodyCopy: ReturnType<typeof createBodyCopyApi> | undefined;

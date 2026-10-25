@@ -1,5 +1,6 @@
 import { createToastApi } from '../../shared/react/toast';
 import { createSegmentedIndicatorApi } from '../../shared/react/segmented-indicator';
+import { createAccountTabApi } from './account-tab';
 import { createAggregateSearchListApi } from './aggregate-search-list';
 import { createBlacklistTabApi } from './blacklist-tab';
 import { createFeedbackSupportApi } from './feedback-support';
@@ -13,7 +14,6 @@ import { createSettingsFormsApi } from './settings-forms';
 import { createShortcutReferenceApi } from './shortcut-reference';
 import { createShortcutHotkeyApi } from './shortcut-hotkey';
 import { createSiteSearchListApi } from './site-search-list';
-import { createWebDavListApi } from './webdav-list';
 import { createThemePickerApi } from './theme-picker';
 import { createTranslationHelpApi } from './translation-help';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
@@ -24,6 +24,7 @@ declare global {
       reactReady: boolean;
     } | undefined;
   var LumnoOptionsReactIslands: {
+      accountTab: ReturnType<typeof createAccountTabApi>;
       aggregateSearchList: ReturnType<typeof createAggregateSearchListApi>;
       blacklistTab: ReturnType<typeof createBlacklistTabApi>;
       feedbackSupport: ReturnType<typeof createFeedbackSupportApi>;
@@ -37,7 +38,6 @@ declare global {
       shortcutReference: ReturnType<typeof createShortcutReferenceApi>;
       shortcutHotkey: ReturnType<typeof createShortcutHotkeyApi>;
       siteSearchList: ReturnType<typeof createSiteSearchListApi>;
-      webDavList: ReturnType<typeof createWebDavListApi>;
       themePicker: ReturnType<typeof createThemePickerApi>;
       translationHelp: ReturnType<typeof createTranslationHelpApi>;
       toast: ReturnType<typeof createToastApi>;
@@ -67,6 +67,7 @@ const runtime = globalThis;
 const bootstrapState = runtime.LumnoOptionsReactBootstrap;
 
 if (!bootstrapState || !bootstrapState.reactReady) {
+  const accountTabApi = createAccountTabApi();
   const aggregateSearchListApi = createAggregateSearchListApi();
   const blacklistTabApi = createBlacklistTabApi();
   const feedbackSupportApi = createFeedbackSupportApi();
@@ -80,7 +81,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   const shortcutReferenceApi = createShortcutReferenceApi();
   const shortcutHotkeyApi = createShortcutHotkeyApi();
   const siteSearchListApi = createSiteSearchListApi();
-  const webDavListApi = createWebDavListApi();
   const themePickerApi = createThemePickerApi();
   const translationHelpApi = createTranslationHelpApi();
   const toastApi = createToastApi();
@@ -88,6 +88,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   const tabSwitcherApi =
     runtime.LumnoOverlayTabSwitcherView || createTabSwitcherViewApi();
 
+  runtime.LumnoOptionsAccountTab = accountTabApi;
   runtime.LumnoOptionsAggregateSearchListReact = aggregateSearchListApi;
   runtime.LumnoOptionsAggregateSearchList = aggregateSearchListApi;
   runtime.LumnoOptionsBlacklistTabReact = blacklistTabApi;
@@ -114,7 +115,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoOptionsShortcutHotkey = shortcutHotkeyApi;
   runtime.LumnoOptionsSiteSearchListReact = siteSearchListApi;
   runtime.LumnoOptionsSiteSearchList = siteSearchListApi;
-  runtime.LumnoOptionsWebDavList = webDavListApi;
   runtime.LumnoOptionsThemePickerReact = themePickerApi;
   runtime.LumnoOptionsThemePicker = themePickerApi;
   runtime.LumnoOptionsTranslationHelp = translationHelpApi;
@@ -126,6 +126,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoOverlayTabSwitcherViewReact = tabSwitcherApi;
   runtime.LumnoOverlayTabSwitcherView = tabSwitcherApi;
   runtime.LumnoOptionsReactIslands = Object.freeze({
+    accountTab: accountTabApi,
     aggregateSearchList: aggregateSearchListApi,
     blacklistTab: blacklistTabApi,
     feedbackSupport: feedbackSupportApi,
@@ -139,7 +140,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
     shortcutReference: shortcutReferenceApi,
     shortcutHotkey: shortcutHotkeyApi,
     siteSearchList: siteSearchListApi,
-    webDavList: webDavListApi,
     themePicker: themePickerApi,
     translationHelp: translationHelpApi,
     toast: toastApi,

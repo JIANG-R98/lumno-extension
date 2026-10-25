@@ -1,5 +1,4 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { createReactRootController } from './root-controller';
 import { InlinePopconfirm } from './inline-popconfirm';
 import { InfoButton } from './info-button';
 import { getAsyncErrorMessage, useExclusiveAsyncAction } from '../../shared/react/use-exclusive-async-action';
@@ -589,11 +588,4 @@ export function WebDavList({ model, options }: { model: WebDavListModel; options
       <ConnectionEditor id={addId} model={model} open={adding} options={options} preset={preset} onClose={closeAdd} />
     </div>
   </>;
-}
-
-export function createWebDavListApi() {
-  return { implementation: 'react', createWebDavListController: (host: HTMLElement | null, options: WebDavListOptions) => {
-    if (host) host.dataset.reactIsland = 'options-webdav-list';
-    return createReactRootController(host, (model: WebDavListModel) => <WebDavList model={model} options={options} />);
-  } };
 }

@@ -8,6 +8,7 @@ import * as SETTINGS from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoShortcutDisplay from '../domain/shortcut-display';
 import * as LumnoTooltip from '../shared/ui/tooltip';
+import * as OPTIONS_ACCOUNT_SECTION from './options-account-section';
 import * as OPTIONS_AGGREGATE_SEARCH_LIST from './options-aggregate-search-list';
 import * as AGGREGATE_SEARCH from './options-aggregate-search';
 import * as OPTIONS_BLACKLIST_SECTION from './options-blacklist-section';
@@ -34,14 +35,13 @@ import * as OPTIONS_SITE_SEARCH_FORM from './options-site-search-form';
 import * as OPTIONS_SITE_SEARCH_LIST from './options-site-search-list';
 import * as SITE_SEARCH from './options-site-search';
 import * as OPTIONS_SLIDER_CONTROLS from './options-slider-controls';
-import * as LumnoOptionsSyncSection from './options-sync-section';
 import * as LumnoOptionsSyncTransfer from './options-sync-transfer';
 import * as THEME from './options-theme';
 import * as OPTIONS_TOGGLE_CONTROLS from './options-toggle-controls';
 import * as OPTIONS_TOOLTIPS from './options-tooltips';
 import * as LumnoOptionsTranslationHelpSection from './options-translation-help';
 import * as LumnoOptionsDiagnostics from './options-diagnostics';
-import * as LumnoWebDavOptions from './webdav-options';
+import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as LumnoMessaging from '../platform/messaging';
 import type { StorageChangeListener } from '../domain/storage-port';
 import type { ReadBatchMetrics } from '../platform/settings-storage';
@@ -155,13 +155,6 @@ import * as OPTIONS_STATE from './options-state';
   const restrictedActionInfoHost = getHtmlElement(document, '_x_extension_restricted_action_info_2026_unique_');
   const bookmarkRowsInfoHost = getHtmlElement(document, '_x_extension_bookmark_rows_info_2026_unique_');
   const bookmarkColumnsInfoHost = getHtmlElement(document, '_x_extension_bookmark_columns_info_2026_unique_');
-  const syncStatus = getHtmlElement(document, '_x_extension_sync_status_2024_unique_');
-  const syncStatusText = getHtmlElement(document, '_x_extension_sync_status_text_2024_unique_');
-  const syncNowButton = getHtmlTag(document, '_x_extension_sync_now_2024_unique_', 'button');
-  const shortcutSyncSummary = getHtmlElement(document, '_x_extension_shortcut_sync_summary_2026_unique_');
-  const syncExportButton = getHtmlTag(document, '_x_extension_sync_export_2024_unique_', 'button');
-  const syncImportButton = getHtmlTag(document, '_x_extension_sync_import_2024_unique_', 'button');
-  const syncImportInput = getHtmlTag(document, '_x_extension_sync_import_input_2024_unique_', 'input');
   const newtabOpenInNewTabToggles = queryHtmlTags(document, 'input[data-newtab-open-in-new-tab-surface]', 'input');
   const fallbackShortcutInput = getHtmlTag(document, '_x_extension_shortcuts_input_2024_unique_', 'input');
   const fallbackShortcutTokens = getHtmlElement(document, '_x_extension_shortcuts_tokens_2024_unique_');
@@ -204,6 +197,7 @@ import * as OPTIONS_STATE from './options-state';
   }
   // The React views, set by the options islands bundle that loads first.
   const optionsBlacklistTabApi = globalThis.LumnoOptionsBlacklistTab;
+  const optionsAccountTabApi = globalThis.LumnoOptionsAccountTab;
   const optionsAggregateSearchListApi = globalThis.LumnoOptionsAggregateSearchList;
   const optionsFeedbackSupportApi = globalThis.LumnoOptionsFeedbackSupport;
   const optionsTranslationHelpApi = globalThis.LumnoOptionsTranslationHelp;
@@ -217,7 +211,7 @@ import * as OPTIONS_STATE from './options-state';
   const optionsShortcutHotkeyApi = globalThis.LumnoOptionsShortcutHotkey;
   const optionsSiteSearchListApi = globalThis.LumnoOptionsSiteSearchList;
   const optionsThemePickerApi = globalThis.LumnoOptionsThemePicker;
-  if (!optionsBlacklistTabApi || !optionsAggregateSearchListApi || !optionsFeedbackSupportApi ||
+  if (!optionsAccountTabApi || !optionsBlacklistTabApi || !optionsAggregateSearchListApi || !optionsFeedbackSupportApi ||
       !optionsTranslationHelpApi || !optionsInfoButtonApi || !optionsSegmentedControlApi ||
       !optionsSettingsControlsApi || !optionsSettingsFormsApi || !optionsSettingsNavigationApi ||
       !optionsShortcutReferenceApi || !optionsShortcutHotkeyApi || !optionsSiteSearchListApi || !optionsThemePickerApi) {
@@ -1056,7 +1050,6 @@ import * as OPTIONS_STATE from './options-state';
   function getSearchSourceRowKey(row: HTMLElement): string {
     return String(row.getAttribute('data-key') || '').toLowerCase();
   }
-  optionsState.webDavSettingsController = LumnoWebDavOptions.createController({ chromeApi: chrome, getMessage });
   if (searchResultSourceTypeController) {
     renderSearchResultSourceTypeControl(
       searchResultSourceTypeItems.filter((item) => item.checked).map((item) => item.value)
@@ -1344,29 +1337,28 @@ import * as OPTIONS_STATE from './options-state';
     }
   }
 
-  const syncSection = LumnoOptionsSyncSection.createSyncSection({
-    beginToast,
-    chromeApi: chrome,
-    documentObj: document,
-    elements: {
-      shortcutSyncSummary,
-      syncExportButton,
-      syncImportButton,
-      syncImportInput,
-      syncNowButton,
-      syncStatus,
-      syncStatusText
+  const accountSection = OPTIONS_ACCOUNT_SECTION.createAccountSection({
+    host: getHtmlElement(document, '_x_extension_account_settings_content_2026_unique_'),
+    accountTabApi: optionsAccountTabApi,
+    sync: {
+      beginToast,
+      browserName: LumnoBrowserProfile.getBrowserInternalProfile(navigator).name || 'Chrome',
+      chromeApi: chrome,
+      documentObj: document,
+      formatTemplate,
+      getActivePrimaryAreaName,
+      getMessage,
+      localStorageArea,
+      settings: SETTINGS,
+      showToast,
+      storageArea: optionsState.storageArea,
+      syncTransfer
     },
-    formatTemplate,
-    getActivePrimaryAreaName,
-    getMessage,
-    localStorageArea,
-    settings: SETTINGS,
-    showToast,
-    showTooltipFor,
-    storageArea: optionsState.storageArea,
-    syncTransfer
+    webdav: { chromeApi: chrome, getMessage },
+    showTooltipFor
   });
+  const syncSection = accountSection.syncSection;
+  optionsState.webDavSettingsController = accountSection.webDavController;
   function refreshSyncStatus() {
     syncSection.refreshSyncStatus();
   }
@@ -1609,8 +1601,6 @@ import * as OPTIONS_STATE from './options-state';
       renderShortcutReferenceList();
     }
   }, true);
-
-  syncSection.bindControls();
 
   labsSection.bindSettings(settingBinder);
   blacklistSection.bindSettings(settingBinder);

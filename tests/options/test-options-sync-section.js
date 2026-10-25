@@ -8,11 +8,9 @@ const [V2_HEAD, V2_CHUNK_2] = settings.NEWTAB_SHORTCUTS_V2_STORAGE_KEYS;
 
 function createSection(sync, local, options) {
   const config = options || {};
-  const { document } = new JSDOM(`
-    <span id="status" data-i18n-tooltip="sync_status_hint"><span id="text"></span></span>
-    <button id="now"></button><button id="export"></button><button id="import"></button>
-    <input id="file" type="file"><p id="summary"></p>`).window;
+  const { document } = new JSDOM('').window;
   const writes = [];
+  const rendered = [];
   let syncReads = 0;
   // No remove() or clear(): migration must never delete anything.
   const storageArea = {
@@ -34,28 +32,21 @@ function createSection(sync, local, options) {
   };
   const section = createSyncSection({
     beginToast: () => ({ cancel() {}, done() {}, fail() {} }),
+    browserName: 'Edge',
     chromeApi: { runtime: { lastError: null }, storage: {} },
     documentObj: document,
-    elements: {
-      shortcutSyncSummary: document.getElementById('summary'),
-      syncExportButton: document.getElementById('export'),
-      syncImportButton: document.getElementById('import'),
-      syncImportInput: document.getElementById('file'),
-      syncNowButton: document.getElementById('now'),
-      syncStatus: document.getElementById('status'),
-      syncStatusText: document.getElementById('text')
-    },
+    onRender: (model) => rendered.push(model),
+    refreshSyncNowTooltip() {},
     formatTemplate: (text, params) => String(text).replace(/\{(\w+)\}/g, (m, k) => (params && k in params ? params[k] : m)),
     getActivePrimaryAreaName: () => config.primary || 'sync',
     getMessage: (key, fallback) => fallback,
     localStorageArea,
     settings,
     showToast() {},
-    showTooltipFor() {},
     storageArea,
     syncTransfer: null
   });
-  return { document, section, writes };
+  return { section, writes, model: () => rendered[rendered.length - 1] };
 }
 
 // Settings older versions kept only in local storage move into browser sync,
@@ -95,14 +86,49 @@ function createSection(sync, local, options) {
 // The status line and buttons follow whether settings can sync.
 {
   const page = createSection({}, {});
+  assert.strictEqual(page.model().title, 'Edge 内置同步', 'the card names the browser it syncs through');
   page.section.refreshSyncStatus();
-  assert.strictEqual(page.document.getElementById('status').getAttribute('data-status'), 'success');
-  assert.strictEqual(page.document.getElementById('text').textContent, '同步已开启');
-  assert.strictEqual(page.document.getElementById('now').disabled, false);
+  assert.strictEqual(page.model().status.tone, 'success');
+  assert.strictEqual(page.model().status.text, '同步已开启');
+  assert.strictEqual(page.model().available, true);
   page.section.updateSyncStatusText('sync_status_failed_reason', '同步失败：{reason}', { reason: 'quota' });
-  assert.strictEqual(page.document.getElementById('status').getAttribute('data-status'), 'danger');
-  assert.strictEqual(page.document.getElementById('status').getAttribute('data-i18n-tooltip'), 'sync_status_unavailable_hint');
-  assert.strictEqual(page.document.getElementById('text').textContent, '同步失败：quota');
+  assert.strictEqual(page.model().status.tone, 'danger');
+  assert.match(page.model().status.tooltip, /同步不可用/, 'a failure explains what to check');
+  assert.strictEqual(page.model().status.text, '同步失败：quota');
+}
+
+// Without a storage area nothing can sync, and the buttons say so.
+{
+  const rendered = [];
+  const section = createSyncSection({
+    beginToast: () => ({ cancel() {}, done() {}, fail() {} }),
+    browserName: 'Chrome',
+    chromeApi: { runtime: { lastError: null }, storage: {} },
+    documentObj: new JSDOM('').window.document,
+    onRender: (model) => rendered.push(model),
+    refreshSyncNowTooltip() {},
+    formatTemplate: (text) => text,
+    getActivePrimaryAreaName: () => 'sync',
+    getMessage: (key, fallback) => fallback,
+    localStorageArea: null,
+    settings,
+    showToast() {},
+    storageArea: null,
+    syncTransfer: null
+  });
+  section.refreshSyncStatus();
+  const model = rendered[rendered.length - 1];
+  assert.strictEqual(model.available, false);
+  assert.strictEqual(model.status.text, '同步不可用');
+  assert.strictEqual(model.summary, '');
+}
+
+// The shortcut note says how many shortcuts browser sync carries.
+{
+  const page = createSection({}, {});
+  page.section.refreshShortcutSyncSummary();
+  assert.match(page.model().summary, /^Shortcuts: all \d+ sync with the browser\.$/,
+    'shortcuts that fit all travel with browser sync');
 }
 
 console.log('Options sync section tests passed.');

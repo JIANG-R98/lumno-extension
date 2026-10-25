@@ -1,5 +1,6 @@
 // The WebDAV card on the Account tab: the connections the worker reports,
-// their actions, and the copy for their states and failures.
+// their actions, and the copy for their states and failures. The card itself
+// is drawn from the model this hands to onRender.
 import * as LumnoSettings from '../domain/settings';
 import type { WebDavOperation } from '../domain/messages';
 import { readConflictDescriptions, readWebDavOperation } from '../domain/webdav-contract';
@@ -7,6 +8,7 @@ import type { ConflictDescription, ValueSummary } from '../domain/webdav-contrac
 import * as LumnoMessaging from '../platform/messaging';
 import type { MessageRuntime } from '../platform/messaging';
 import type { GetMessage } from './options-types';
+import type { WebDavCardModel } from './react/account-tab';
 import type { WebDavActionResult, WebDavConfig, WebDavConflictItem, WebDavConnection } from './react/webdav-list';
 
 const EXPECTED_CLIENT_REVISION = 'dav-lock-5';
@@ -56,6 +58,8 @@ interface WebDavChromeApi {
 interface WebDavControllerOptions {
   chromeApi: WebDavChromeApi;
   getMessage: GetMessage;
+  // Draws the card; called whenever its state changes.
+  onRender(model: WebDavCardModel): void;
 }
 
 type Translate = (key: string, fallback: string) => string;
@@ -338,19 +342,12 @@ function preferenceItem(
 function createController(options: WebDavControllerOptions) {
   const chromeApi = options.chromeApi;
   const t = options.getMessage;
-  const panel = document.getElementById('lumno-webdav-settings');
-  const api = globalThis.LumnoOptionsWebDavList;
-  const listHost = document.getElementById('lumno-webdav-list');
-  const setupHintElement = document.getElementById('lumno-webdav-setup-hint');
-  const versionElement = document.getElementById('lumno-webdav-version');
-  if (!panel || !api || !setupHintElement || !versionElement) return null;
-  // Narrowed here, for the functions below.
-  const setupHint = setupHintElement;
-  const versionNotice = versionElement;
+  const onRender = options.onRender;
   let current: WebDavStatus = { clientRevision: '', syncRevision: '', connections: [], suggestions: [] };
   let initialized = false;
   let refreshSequence = 0;
-  const infoController = globalThis.LumnoOptionsInfoButton?.createInfoButtonController(document.getElementById('lumno-webdav-beta-info'));
+  // Why the first status read failed, shown until a read succeeds.
+  let loadFailure = '';
   const requiresReload = (): boolean => initialized &&
     (current.clientRevision !== EXPECTED_CLIENT_REVISION || current.syncRevision !== EXPECTED_SYNC_REVISION);
   const message = (operation: WebDavOperation, extra?: Record<string, unknown>): Promise<Record<string, unknown>> =>
@@ -414,30 +411,27 @@ function createController(options: WebDavControllerOptions) {
   function connectionName(item: WebDavConnectionStatus): string {
     try { return new URL(item.config.endpoint).host; } catch (_error) { return item.config.endpoint; }
   }
-  const listController = api.createWebDavListController(listHost, {
-    async onAction(operation, id, extra): Promise<WebDavActionResult> {
-      if (requiresReload() && !['pause'].includes(operation)) throw new Error(createCopy(t).webdav_error_outdated);
-      const webDavOperation = readWebDavOperation(operation);
-      if (!webDavOperation) throw failure(new Error('unknown-operation'));
-      try {
-        const result = await message(webDavOperation, { ...(id ? { id } : {}), ...extra });
-        if (webDavOperation === 'conflictDetails') {
-          const copy = createCopy(t);
-          return { items: readConflictDescriptions(result.items).map((item): WebDavConflictItem => item.domain === 'shortcuts'
-            ? { ...item, label: copy.webdav_conflict_shortcuts }
-            : item.domain === 'wallpapers' ? { ...item, label: copy.webdav_conflict_wallpapers } : preferenceItem(t, item)) };
-        }
-        await refresh();
-        return { needsChoice: result.needsChoice === true };
-      } catch (error) {
-        // The action's own error is what the list shows; a failed refresh on top of it only warns.
-        await refresh().catch((refreshError) => console.warn('[Lumno] WebDAV status refresh failed', refreshError));
-        throw failure(error);
+  async function onAction(operation: string, id?: string, extra?: Record<string, unknown>): Promise<WebDavActionResult> {
+    if (requiresReload() && !['pause'].includes(operation)) throw new Error(createCopy(t).webdav_error_outdated);
+    const webDavOperation = readWebDavOperation(operation);
+    if (!webDavOperation) throw failure(new Error('unknown-operation'));
+    try {
+      const result = await message(webDavOperation, { ...(id ? { id } : {}), ...extra });
+      if (webDavOperation === 'conflictDetails') {
+        const copy = createCopy(t);
+        return { items: readConflictDescriptions(result.items).map((item): WebDavConflictItem => item.domain === 'shortcuts'
+          ? { ...item, label: copy.webdav_conflict_shortcuts }
+          : item.domain === 'wallpapers' ? { ...item, label: copy.webdav_conflict_wallpapers } : preferenceItem(t, item)) };
       }
+      await refresh();
+      return { needsChoice: result.needsChoice === true };
+    } catch (error) {
+      // The action's own error is what the list shows; a failed refresh on top of it only warns.
+      await refresh().catch((refreshError) => console.warn('[Lumno] WebDAV status refresh failed', refreshError));
+      throw failure(error);
     }
-  });
+  }
   function render(): void {
-    infoController?.render({ tooltip: createCopy(t).webdav_beta_hint, tooltipKey: 'webdav_beta_hint' });
     const copy = createCopy(t);
     const connections = current.connections
       .map((item) => ({ ...item, needsRecovery: item.needsRecovery || (item.error === 'interrupted-apply' && !item.enabled) }));
@@ -459,7 +453,7 @@ function createController(options: WebDavControllerOptions) {
       return t('webdav_warning_throttled', '服务器暂时拒绝了请求（HTTP {status}），通常是短时间内请求过多，坚果云等网盘会这样限流。Lumno 会在 {time} 后自动重试，本机数据已保留。')
         .replace('{status}', item.error.slice(5)).replace('{time}', time);
     };
-    listController.render({
+    const list = {
       ready: initialized, outdated: requiresReload(), copy, lang: document.documentElement.lang || '',
       suggestions: current.suggestions,
       connections: connections.map((item): WebDavConnection => ({
@@ -480,12 +474,16 @@ function createController(options: WebDavControllerOptions) {
         conflictsText: [...new Set(item.conflicts.map((key) => copy[
           key === 'shortcuts' ? 'webdav_conflict_shortcuts' : key === 'wallpapers' ? 'webdav_conflict_wallpapers' : 'webdav_conflict_preferences'
         ]))].join(/^(zh|ja)/.test(document.documentElement.lang) ? '、' : ', ') }))
+    };
+    onRender({
+      title: copy.webdav_title,
+      badge: 'Beta',
+      info: copy.webdav_beta_hint,
+      setupHint: t('webdav_setup_hint', '通过坚果云或其他 WebDAV 服务同步配置、自定义图标和壁纸，与浏览器自带的同步同时运行。'),
+      showSetupHint: connections.length === 0,
+      notice: requiresReload() ? copy.webdav_error_outdated : loadFailure,
+      list
     });
-    setupHint.hidden = connections.length > 0;
-    const version = versionNotice;
-    version.hidden = !requiresReload();
-    version.dataset.error = 'true';
-    version.textContent = requiresReload() ? copy.webdav_error_outdated : '';
   }
   async function refresh(): Promise<void> {
     const sequence = ++refreshSequence;
@@ -493,6 +491,7 @@ function createController(options: WebDavControllerOptions) {
     if (sequence !== refreshSequence) return;
     current = readStatus(result);
     initialized = true;
+    loadFailure = '';
     render();
   }
   chromeApi.storage.onChanged.addListener((changes, area) => {
@@ -506,12 +505,10 @@ function createController(options: WebDavControllerOptions) {
   });
   render();
   refresh().catch((error: unknown) => {
-    const version = versionNotice;
-    version.hidden = false;
-    version.dataset.error = 'true';
-    version.textContent = failure(error).message;
+    loadFailure = failure(error).message;
+    render();
   });
-  return { render, refresh };
+  return { render, refresh, onAction };
 }
 
 export { createController };

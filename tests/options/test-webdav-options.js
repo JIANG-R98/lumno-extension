@@ -11,7 +11,7 @@ async function run() {
   const window = dom.window;
   const requests = [];
   const listeners = [];
-  let infoModel;
+  let cardModel;
   let renderModel;
   let actions;
   let nextError;
@@ -40,12 +40,6 @@ async function run() {
         local: { kind: 'text', value: '#000000' }, remote: { kind: 'text', value: '#445566' } }] });
     callback({ ok: true });
   } }, storage: { onChanged: { addListener(fn) { listeners.push(fn); } } } };
-  window.LumnoOptionsInfoButton = { createInfoButtonController: () => ({ render(value) { infoModel = value; } }) };
-  window.LumnoOptionsWebDavList = { createWebDavListController(host, options) {
-    assert.strictEqual(host.id, 'lumno-webdav-list');
-    actions = options;
-    return { render(value) { renderModel = value; } };
-  } };
   window.eval(moduleScript('src/domain/settings.ts', 'LumnoSettings'));
   window.eval(moduleScript('src/options/webdav-options.ts', 'LumnoWebDavOptions'));
   const messages = JSON.parse(fs.readFileSync('_locales/en/messages.json', 'utf8'));
@@ -55,16 +49,21 @@ async function run() {
   // the host's declaration order is covered there; here the controller gets
   // the same options the page passes.
   const controller = window.LumnoWebDavOptions.createController({
-    animateLayout() {},
     chromeApi: chrome,
-    getMessage: (key, fallback) => messages[key]?.message || fallback
+    getMessage: (key, fallback) => messages[key]?.message || fallback,
+    onRender(model) {
+      cardModel = model;
+      renderModel = model.list;
+    }
   });
+  actions = controller;
   await controller.refresh();
   assert.strictEqual(renderModel.ready, true);
   assert.strictEqual(renderModel.connections.length, 0);
-  assert.strictEqual(infoModel.tooltipKey, 'webdav_beta_hint');
+  assert.strictEqual(cardModel.info, messages.webdav_beta_hint.message);
+  assert.strictEqual(cardModel.title, messages.webdav_title.message);
   assert.strictEqual(renderModel.copy.webdav_add, 'Add WebDAV');
-  assert.strictEqual(window.document.querySelector('#lumno-webdav-setup-hint').hidden, false);
+  assert.strictEqual(cardModel.showSetupHint, true);
   const a = { id: 'a', state: 'paused', enabled: false, config: { endpoint: 'https://dav.test/', directory: 'lumno', username: 'user', hasPassword: true } };
   model.connections = [{ ...a, id: 'backup', enabled: true, state: 'ready', localPrimary: true, chromeBackup: 'incomplete' },
     { ...a, id: 'migrated', enabled: true, state: 'ready', localPrimary: false, chromeBackup: 'incomplete' }];
@@ -98,7 +97,7 @@ async function run() {
   assert.strictEqual(renderModel.connections[0].diagnosticText, 'Lumno 9.9.9 · interrupted-apply', 'every failure offers its exact code');
   model.connections = [a, { ...a, id: 'b', state: 'conflict', conflicts: ['shortcuts', 'wallpapers'], error: 'remote-missing' }];
   await controller.refresh();
-  assert.strictEqual(window.document.querySelector('#lumno-webdav-setup-hint').hidden, true);
+  assert.strictEqual(cardModel.showSetupHint, false);
   await actions.onAction('pause', 'a');
   assert(requests.some((request) => request.operation === 'pause' && request.id === 'a'));
   const statusReads = requests.filter((request) => request.operation === 'status').length;
@@ -144,7 +143,7 @@ async function run() {
   model.syncRevision = 'dav-parallel-1';
   await controller.refresh();
   assert.strictEqual(renderModel.outdated, true);
-  assert.strictEqual(window.document.querySelector('#lumno-webdav-version').hidden, false);
+  assert.strictEqual(cardModel.notice, messages.webdav_error_outdated.message);
   const count = requests.length;
   await assert.rejects(actions.onAction('add'), /multiple WebDAV connections/);
   await assert.rejects(actions.onAction('remove', 'a'), /multiple WebDAV connections/);
@@ -156,7 +155,8 @@ async function run() {
   listeners.forEach((fn) => fn({ [key]: {} }, 'local'));
   await new Promise((resolve) => setImmediate(resolve));
   assert.strictEqual(renderModel.connections.length, 0);
-  assert.strictEqual(window.document.querySelector('#lumno-webdav-setup-hint').hidden, false);
+  assert.strictEqual(cardModel.showSetupHint, true);
+  assert.strictEqual(cardModel.notice, '');
   window.close();
   console.log('WebDAV settings adapter tests passed: empty state, per-connection actions, diagnostics and version guards');
 }

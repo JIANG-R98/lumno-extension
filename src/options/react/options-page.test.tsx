@@ -550,7 +550,7 @@ describe('Options page storage wiring', () => {
     })], 'settings.json', { type: 'application/json' });
     Object.defineProperty(input, 'files', { configurable: true, value: [file] });
     await act(async () => {
-      input.dispatchEvent(new Event('change'));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
     });
     await vi.waitFor(() => {
       expect(chrome.storage.sync.values[settings.SYNC_META_STORAGE_KEY]).toMatchObject({ source: 'import' });

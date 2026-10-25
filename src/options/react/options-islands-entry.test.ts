@@ -33,7 +33,7 @@ function clearRuntime(): void {
   Reflect.deleteProperty(runtime, 'LumnoOptionsShortcutHotkeyReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSiteSearchList');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSiteSearchListReact');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsWebDavList');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsAccountTab');
   Reflect.deleteProperty(runtime, 'LumnoOptionsThemePicker');
   Reflect.deleteProperty(runtime, 'LumnoOptionsThemePickerReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsToast');
@@ -133,7 +133,7 @@ describe('Options React islands entry', () => {
       shortcutReference: runtime.LumnoOptionsShortcutReference,
       shortcutHotkey: runtime.LumnoOptionsShortcutHotkey,
       siteSearchList: runtime.LumnoOptionsSiteSearchList,
-      webDavList: runtime.LumnoOptionsWebDavList,
+      accountTab: runtime.LumnoOptionsAccountTab,
       themePicker: runtime.LumnoOptionsThemePicker,
       translationHelp: runtime.LumnoOptionsTranslationHelp,
       toast: runtime.LumnoOptionsToast,
