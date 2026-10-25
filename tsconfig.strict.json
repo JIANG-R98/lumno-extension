@@ -16,7 +16,10 @@
     "src/overlay/**/*.ts",
     "src/options/**/*.ts",
     "src/onboarding/**/*.ts",
-    "src/popup/**/*.ts"
+    "src/popup/**/*.ts",
+    "src/newtab/bookmarks/bookmarks-runtime.ts",
+    "src/newtab/bookmarks/bookmarks-store.ts",
+    "src/newtab/bookmarks/folder-item-icons.ts"
   ],
   "exclude": [
     "src/**/react/**"

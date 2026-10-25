@@ -1,7 +1,15 @@
-// @ts-nocheck
 import * as LumnoNewtabBookmarksStore from './bookmarks-store';
+import type { BookmarkItem, BookmarkNode, BookmarkPathEntry } from './bookmarks-store';
 
-const BOOKMARK_EVENT_NAMES = Object.freeze([
+type BookmarkEventName =
+  | 'onCreated'
+  | 'onRemoved'
+  | 'onChanged'
+  | 'onMoved'
+  | 'onChildrenReordered'
+  | 'onImportEnded';
+
+const BOOKMARK_EVENT_NAMES: readonly BookmarkEventName[] = Object.freeze([
   'onCreated',
   'onRemoved',
   'onChanged',
@@ -9,53 +17,108 @@ const BOOKMARK_EVENT_NAMES = Object.freeze([
   'onChildrenReordered',
   'onImportEnded'
 ]);
-const CONTROLLED_MUTATION_EVENT_NAMES = new Set([
+const CONTROLLED_MUTATION_EVENT_NAMES = new Set<BookmarkEventName>([
   'onCreated',
   'onRemoved',
   'onChanged',
   'onMoved',
   'onChildrenReordered'
 ]);
-const HISTORY_INVALIDATING_EVENT_NAMES = new Set([
+const HISTORY_INVALIDATING_EVENT_NAMES = new Set<BookmarkEventName>([
   'onCreated',
   'onRemoved',
   'onMoved',
   'onChildrenReordered',
   'onImportEnded'
 ]);
-const CASCADE_REFRESH_EVENT_NAMES = new Set([
+const CASCADE_REFRESH_EVENT_NAMES = new Set<BookmarkEventName>([
   'onChanged',
   'onMoved',
   'onChildrenReordered'
 ]);
 
-function getDefaultBookmarksStore() {
-  return typeof globalThis !== 'undefined'
-    ? LumnoNewtabBookmarksStore
-    : null;
+type BookmarkEventListener = (...args: unknown[]) => void;
+
+interface BookmarkEventTarget {
+  addListener(listener: BookmarkEventListener): void;
+  removeListener(listener: BookmarkEventListener): void;
 }
 
-function getDefaultChromeApi() {
+// chrome.bookmarks, as far as the runtime uses it.
+interface BookmarksApi extends Partial<Record<BookmarkEventName, BookmarkEventTarget>> {
+  getTree?(callback: (nodes: BookmarkNode[]) => void): void;
+  move?(id: string, destination: chrome.bookmarks.MoveDestination, callback: (node: BookmarkNode) => void): void;
+  update?(id: string, changes: chrome.bookmarks.UpdateChanges, callback: (node: BookmarkNode) => void): void;
+  remove?(id: string, callback: () => void): void;
+  removeTree?(id: string, callback: () => void): void;
+  create?(details: chrome.bookmarks.CreateDetails, callback: (node: BookmarkNode) => void): void;
+}
+
+interface BookmarksChromeApi {
+  runtime?: { lastError?: { message?: string } | null };
+  bookmarks?: BookmarksApi;
+}
+
+interface BookmarksRuntimeOptions {
+  chromeApi?: BookmarksChromeApi | null;
+  store?: typeof LumnoNewtabBookmarksStore;
+  normalizeHost?: (hostname: string) => string;
+  fallbackRootId?: string;
+}
+
+interface ReadFolderOptions {
+  // Reread the tree first.
+  force?: boolean;
+  // At most this many items; 0 or none reads them all.
+  limit?: number;
+  rootTitle?: string;
+}
+
+interface FolderReadResult {
+  ready: boolean;
+  rootFolderId: string;
+  folderId: string;
+  path: BookmarkPathEntry[];
+  items: BookmarkItem[];
+}
+
+// A bookmark or folder as it was, to create again after a delete.
+interface BookmarkSnapshot {
+  title: string;
+  url?: string;
+  children?: readonly BookmarkSnapshot[];
+}
+
+interface BookmarkChange {
+  eventName: BookmarkEventName;
+  args: readonly unknown[];
+  // Caused by a move or edit this page made.
+  isControlled: boolean;
+  invalidatesHistory: boolean;
+  shouldRefreshCascade: boolean;
+}
+
+function getDefaultChromeApi(): BookmarksChromeApi | null {
   return typeof chrome !== 'undefined' ? chrome : null;
 }
 
-function createBookmarksRuntime(options) {
-  const config = options && typeof options === 'object' ? options : {};
+function createBookmarksRuntime(options?: BookmarksRuntimeOptions) {
+  const config = options || {};
   const chromeApi = config.chromeApi || getDefaultChromeApi();
   const bookmarksApi = chromeApi && chromeApi.bookmarks ? chromeApi.bookmarks : null;
-  const store = config.store || getDefaultBookmarksStore() || {};
+  const store = config.store || LumnoNewtabBookmarksStore;
   const normalizeHost = typeof config.normalizeHost === 'function'
     ? config.normalizeHost
     : undefined;
   const fallbackRootId = String(config.fallbackRootId || '1');
-  const listeners = new Set();
-  const eventBindings = [];
-  let nodeMap = new Map();
-  let folderItemsCache = new Map();
+  const listeners = new Set<(change: BookmarkChange) => void>();
+  const eventBindings: { eventTarget: BookmarkEventTarget; handler: BookmarkEventListener }[] = [];
+  let nodeMap = new Map<string, BookmarkNode>();
+  let folderItemsCache = new Map<string, BookmarkItem[]>();
   let rootFolderId = fallbackRootId;
   let ready = false;
   let dirty = true;
-  let loadingPromise = null;
+  let loadingPromise: Promise<boolean> | null = null;
   let cacheGeneration = 0;
   let controlledMutationDepth = 0;
   let controlledMutationEventDirty = false;
@@ -64,7 +127,7 @@ function createBookmarksRuntime(options) {
     return chromeApi && chromeApi.runtime ? chromeApi.runtime.lastError : null;
   }
 
-  function getErrorMessage(fallback) {
+  function getErrorMessage(fallback: string): string {
     const lastError = getLastError();
     return String((lastError && lastError.message) || fallback);
   }
@@ -89,31 +152,30 @@ function createBookmarksRuntime(options) {
     return getSnapshot();
   }
 
-  function rebuild(nodes) {
-    if (typeof store.buildBookmarkFolderCache !== 'function') {
-      return false;
-    }
+  function rebuild(nodes: BookmarkNode[]): boolean {
     const cache = store.buildBookmarkFolderCache(nodes, {
       lazy: true,
       normalizeHost
     });
-    const rootNode = cache && cache.rootNode ? cache.rootNode : null;
+    const rootNode = cache.rootNode;
     if (!rootNode) {
       ready = false;
       return false;
     }
-    nodeMap = cache.nodeMap instanceof Map ? cache.nodeMap : new Map();
-    folderItemsCache = cache.folderItemsCache instanceof Map
-      ? cache.folderItemsCache
-      : new Map();
+    nodeMap = cache.nodeMap;
+    folderItemsCache = cache.folderItemsCache;
     rootFolderId = String(cache.rootFolderId || rootNode.id || fallbackRootId);
     ready = true;
     dirty = false;
     return true;
   }
 
-  function ensureReady(forceReload) {
-    if (!bookmarksApi || typeof bookmarksApi.getTree !== 'function') {
+  function ensureReady(forceReload?: boolean): Promise<boolean> {
+    // Narrowed here, for the callback below.
+    const getTree = bookmarksApi && typeof bookmarksApi.getTree === 'function'
+      ? bookmarksApi.getTree.bind(bookmarksApi)
+      : null;
+    if (!getTree) {
       return Promise.resolve(false);
     }
     if (forceReload) {
@@ -126,9 +188,10 @@ function createBookmarksRuntime(options) {
       return loadingPromise;
     }
     const requestGeneration = cacheGeneration;
-    let requestPromise = null;
-    requestPromise = new Promise((resolve) => {
-      bookmarksApi.getTree((nodes) => {
+    // getTree may call back at once, before the promise is assigned.
+    let requestPromise: Promise<boolean> | null = null;
+    requestPromise = new Promise<boolean>((resolve) => {
+      getTree((nodes) => {
         const isCurrentRequest = requestGeneration === cacheGeneration;
         let loaded = false;
         if (isCurrentRequest &&
@@ -152,27 +215,27 @@ function createBookmarksRuntime(options) {
     return requestPromise;
   }
 
-  function getRootFolderId() {
+  function getRootFolderId(): string {
     return rootFolderId;
   }
 
-  function getNode(id) {
+  function getNode(id: unknown): BookmarkNode | null {
     const nodeId = String(id || '');
     return nodeId ? (nodeMap.get(nodeId) || null) : null;
   }
 
-  function getNodeMap() {
+  function getNodeMap(): ReadonlyMap<string, BookmarkNode> {
     return nodeMap;
   }
 
-  function getFolderItems(folderId) {
+  function getFolderItems(folderId: unknown): BookmarkItem[] {
     const id = String(folderId || '');
     const cachedItems = id ? folderItemsCache.get(id) : null;
     if (Array.isArray(cachedItems)) {
       return cachedItems;
     }
     const node = id ? nodeMap.get(id) : null;
-    if (!node || node.url || typeof store.buildBookmarkItemsFromChildren !== 'function') {
+    if (!node || node.url) {
       return [];
     }
     const items = store.buildBookmarkItemsFromChildren(node.children, { normalizeHost });
@@ -180,13 +243,7 @@ function createBookmarksRuntime(options) {
     return items;
   }
 
-  function getFolderPath(folderId, rootTitle) {
-    if (typeof store.buildBookmarkFolderPath !== 'function') {
-      return [{
-        id: rootFolderId,
-        title: String(rootTitle || 'Bookmarks')
-      }];
-    }
+  function getFolderPath(folderId: unknown, rootTitle?: string): BookmarkPathEntry[] {
     return store.buildBookmarkFolderPath(folderId, {
       nodeMap,
       rootId: rootFolderId,
@@ -194,8 +251,8 @@ function createBookmarksRuntime(options) {
     });
   }
 
-  async function readFolder(folderId, options) {
-    const readOptions = options && typeof options === 'object' ? options : {};
+  async function readFolder(folderId: unknown, options?: ReadFolderOptions): Promise<Readonly<FolderReadResult>> {
+    const readOptions = options || {};
     const loaded = await ensureReady(Boolean(readOptions.force));
     const rootTitle = String(readOptions.rootTitle || 'Bookmarks');
     if (!loaded) {
@@ -211,7 +268,7 @@ function createBookmarksRuntime(options) {
     const targetNode = getNode(requestedId) || getNode(rootFolderId);
     const resolvedFolderId = String((targetNode && targetNode.id) || rootFolderId);
     const items = getFolderItems(resolvedFolderId);
-    const parsedLimit = Number.parseInt(readOptions.limit, 10);
+    const parsedLimit = Number.parseInt(String(readOptions.limit), 10);
     const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 0;
     return Object.freeze({
       ready: true,
@@ -222,14 +279,14 @@ function createBookmarksRuntime(options) {
     });
   }
 
-  function move(bookmarkId, destination) {
+  function move(bookmarkId: unknown, destination: { parentId: unknown; index?: unknown }): Promise<BookmarkNode> {
     return new Promise((resolve, reject) => {
       const id = String(bookmarkId || '');
       if (!bookmarksApi || typeof bookmarksApi.move !== 'function' || !id || !destination) {
         reject(new Error('Chrome bookmarks.move is unavailable.'));
         return;
       }
-      const moveDestination = {
+      const moveDestination: chrome.bookmarks.MoveDestination = {
         parentId: String(destination.parentId || '')
       };
       if (Number.isFinite(Number(destination.index))) {
@@ -245,15 +302,15 @@ function createBookmarksRuntime(options) {
     });
   }
 
-  function update(bookmarkId, changes) {
+  function update(bookmarkId: unknown, changes: { title?: string; url?: string }): Promise<BookmarkNode> {
     return new Promise((resolve, reject) => {
       const id = String(bookmarkId || '');
-      const rawChanges = changes && typeof changes === 'object' ? changes : {};
-      const updateChanges = {};
-      if (Object.prototype.hasOwnProperty.call(rawChanges, 'title')) {
+      const rawChanges = changes || {};
+      const updateChanges: chrome.bookmarks.UpdateChanges = {};
+      if (Object.hasOwn(rawChanges, 'title')) {
         updateChanges.title = String(rawChanges.title || '');
       }
-      if (Object.prototype.hasOwnProperty.call(rawChanges, 'url')) {
+      if (Object.hasOwn(rawChanges, 'url')) {
         updateChanges.url = String(rawChanges.url || '');
       }
       if (!bookmarksApi || typeof bookmarksApi.update !== 'function' || !id ||
@@ -271,28 +328,29 @@ function createBookmarksRuntime(options) {
     });
   }
 
-  function remove(bookmarkId, options) {
+  // `{ recursive: true }` deletes a folder with everything in it.
+  function remove(bookmarkId: unknown, options?: { recursive?: boolean }): Promise<true> {
     return new Promise((resolve, reject) => {
       const id = String(bookmarkId || '');
-      const removeOptions = options && typeof options === 'object' ? options : {};
-      const removeMethod = removeOptions.recursive
-        ? bookmarksApi && bookmarksApi.removeTree
-        : bookmarksApi && bookmarksApi.remove;
-      if (!bookmarksApi || typeof removeMethod !== 'function' || !id) {
-        reject(new Error('Chrome bookmark removal is unavailable.'));
-        return;
-      }
-      removeMethod.call(bookmarksApi, id, () => {
+      const recursive = Boolean(options && options.recursive);
+      const done = () => {
         if (getLastError()) {
           reject(new Error(getErrorMessage('Failed to delete bookmark.')));
           return;
         }
         resolve(true);
-      });
+      };
+      if (bookmarksApi && id && recursive && typeof bookmarksApi.removeTree === 'function') {
+        bookmarksApi.removeTree(id, done);
+      } else if (bookmarksApi && id && !recursive && typeof bookmarksApi.remove === 'function') {
+        bookmarksApi.remove(id, done);
+      } else {
+        reject(new Error('Chrome bookmark removal is unavailable.'));
+      }
     });
   }
 
-  function create(details) {
+  function create(details: chrome.bookmarks.CreateDetails): Promise<BookmarkNode> {
     return new Promise((resolve, reject) => {
       if (!bookmarksApi || typeof bookmarksApi.create !== 'function') {
         reject(new Error('Chrome bookmarks.create is unavailable.'));
@@ -308,15 +366,17 @@ function createBookmarksRuntime(options) {
     });
   }
 
-  async function restore(snapshot, options) {
-    const restoreOptions = options && typeof options === 'object' ? options : {};
-    const parentId = String(restoreOptions.parentId || '');
+  async function restore(
+    snapshot: BookmarkSnapshot | null | undefined,
+    options: { parentId: unknown; index?: unknown }
+  ): Promise<BookmarkNode> {
+    const parentId = String(options.parentId || '');
     if (!snapshot || !parentId) {
       throw new Error('Bookmark restore snapshot is incomplete.');
     }
-    const details = {
+    const details: chrome.bookmarks.CreateDetails = {
       parentId,
-      index: Math.max(0, Math.round(Number(restoreOptions.index) || 0)),
+      index: Math.max(0, Math.round(Number(options.index) || 0)),
       title: String(snapshot.title || '')
     };
     if (snapshot.url) {
@@ -338,10 +398,8 @@ function createBookmarksRuntime(options) {
     return createdNode;
   }
 
-  function runControlledMutation(task) {
-    if (typeof task !== 'function') {
-      return Promise.reject(new TypeError('A bookmark mutation task is required.'));
-    }
+  // Runs bookmark edits this page makes; their change events count once.
+  function runControlledMutation<T>(task: () => T | Promise<T>): Promise<T> {
     if (controlledMutationDepth === 0) {
       controlledMutationEventDirty = false;
     }
@@ -356,7 +414,7 @@ function createBookmarksRuntime(options) {
       });
   }
 
-  function notifyChange(eventName, args) {
+  function notifyChange(eventName: BookmarkEventName, args: unknown[]): void {
     const isControlled = controlledMutationDepth > 0 &&
       CONTROLLED_MUTATION_EVENT_NAMES.has(eventName);
     if (isControlled && controlledMutationEventDirty) {
@@ -366,9 +424,9 @@ function createBookmarksRuntime(options) {
       controlledMutationEventDirty = true;
     }
     invalidate();
-    const change = Object.freeze({
+    const change: Readonly<BookmarkChange> = Object.freeze({
       eventName,
-      args: Array.isArray(args) ? args : [],
+      args,
       isControlled,
       invalidatesHistory: HISTORY_INVALIDATING_EVENT_NAMES.has(eventName),
       shouldRefreshCascade: CASCADE_REFRESH_EVENT_NAMES.has(eventName)
@@ -391,7 +449,7 @@ function createBookmarksRuntime(options) {
       if (!eventTarget || typeof eventTarget.addListener !== 'function') {
         return;
       }
-      const handler = (...args) => {
+      const handler = (...args: unknown[]): void => {
         notifyChange(eventName, args);
       };
       eventTarget.addListener(handler);
@@ -407,10 +465,7 @@ function createBookmarksRuntime(options) {
     });
   }
 
-  function subscribe(listener) {
-    if (typeof listener !== 'function') {
-      return function noop() {};
-    }
+  function subscribe(listener: (change: BookmarkChange) => void): () => void {
     listeners.add(listener);
     bindEvents();
     let active = true;
@@ -453,4 +508,7 @@ function createBookmarksRuntime(options) {
   });
 }
 
+type BookmarksRuntime = ReturnType<typeof createBookmarksRuntime>;
+
 export { BOOKMARK_EVENT_NAMES, createBookmarksRuntime };
+export type { BookmarkChange, BookmarkSnapshot, BookmarksChromeApi, BookmarksRuntime, FolderReadResult };

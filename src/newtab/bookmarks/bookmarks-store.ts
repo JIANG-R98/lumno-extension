@@ -1,3 +1,58 @@
+type BookmarkNode = chrome.bookmarks.BookmarkTreeNode;
+
+interface BookmarkItemBase {
+  id: string;
+  parentId: string;
+  index: number;
+  title: string;
+  url: string;
+  host: string;
+  // The URL whose site colors the card; a folder's first bookmark.
+  themeUrl: string;
+}
+
+interface BookmarkLinkItem extends BookmarkItemBase {
+  type: 'bookmark';
+}
+
+interface BookmarkFolderItem extends BookmarkItemBase {
+  type: 'folder';
+  childCount: number;
+  // Up to four URLs inside the folder, for its icon.
+  previewUrls: string[];
+}
+
+// A card of the bookmark grid.
+type BookmarkItem = BookmarkLinkItem | BookmarkFolderItem;
+
+// One step of the breadcrumb, from the bookmarks bar down.
+interface BookmarkPathEntry {
+  id: string;
+  title: string;
+}
+
+interface BookmarkItemOptions {
+  normalizeHost?: (hostname: string) => string;
+}
+
+interface BookmarkFolderCacheOptions extends BookmarkItemOptions {
+  // Build only the bookmarks bar's items; other folders as they open.
+  lazy?: boolean;
+}
+
+interface BookmarkFolderCache {
+  rootNode: BookmarkNode | null;
+  rootFolderId: string;
+  nodeMap: Map<string, BookmarkNode>;
+  folderItemsCache: Map<string, BookmarkItem[]>;
+}
+
+interface BookmarkFolderPathOptions {
+  nodeMap?: ReadonlyMap<string, BookmarkNode>;
+  rootId?: string;
+  rootTitle?: string;
+}
+
 const BOOKMARKS_BAR_TITLES = new Set([
   'bookmarks bar',
   '书签栏',
@@ -8,23 +63,23 @@ const BOOKMARKS_BAR_TITLES = new Set([
 // so match by id only); Firefox's toolbar has a fixed GUID.
 const BOOKMARKS_BAR_IDS = new Set(['1', 'toolbar_____']);
 
-function defaultNormalizeHost(hostname) {
+function defaultNormalizeHost(hostname: string): string {
   return String(hostname || '').trim().toLowerCase().replace(/^www\./i, '');
 }
 
-function getNormalizeHost(options) {
+function getNormalizeHost(options: BookmarkItemOptions | undefined): (hostname: string) => string {
   return options && typeof options.normalizeHost === 'function'
     ? options.normalizeHost
     : defaultNormalizeHost;
 }
 
-function findBookmarksBarNode(treeNodes) {
+function findBookmarksBarNode(treeNodes: readonly BookmarkNode[] | null | undefined): BookmarkNode | null {
   if (!Array.isArray(treeNodes)) {
     return null;
   }
   for (let i = 0; i < treeNodes.length; i += 1) {
     const root = treeNodes[i];
-    const rootChildren = Array.isArray(root && root.children) ? root.children : [];
+    const rootChildren: readonly BookmarkNode[] = root && Array.isArray(root.children) ? root.children : [];
     const directMatch = rootChildren.find((child) => child && BOOKMARKS_BAR_IDS.has(String(child.id || '')));
     if (directMatch) {
       return directMatch;
@@ -40,7 +95,7 @@ function findBookmarksBarNode(treeNodes) {
   return null;
 }
 
-function findFirstUrlInFolder(node) {
+function findFirstUrlInFolder(node: BookmarkNode | null | undefined): string {
   if (!node) {
     return '';
   }
@@ -58,7 +113,12 @@ function findFirstUrlInFolder(node) {
   return '';
 }
 
-function collectFolderUrls(node, limit, collected, seen) {
+function collectFolderUrls(
+  node: BookmarkNode | null | undefined,
+  limit: number,
+  collected: string[],
+  seen: Set<string>
+): void {
   if (!node || collected.length >= limit) {
     return;
   }
@@ -79,7 +139,7 @@ function collectFolderUrls(node, limit, collected, seen) {
   }
 }
 
-function collectFolderBookmarkUrls(node, collected) {
+function collectFolderBookmarkUrls(node: BookmarkNode | null | undefined, collected?: string[]): string[] {
   const urls = Array.isArray(collected) ? collected : [];
   if (!node) {
     return urls;
@@ -95,9 +155,10 @@ function collectFolderBookmarkUrls(node, collected) {
   return urls;
 }
 
-function buildBookmarkNodeMap(nodes) {
-  const nodeMap = new Map();
-  const walk = (node, parentId, index) => {
+// Indexes the tree by id, filling in each node's parentId and index.
+function buildBookmarkNodeMap(nodes: readonly BookmarkNode[] | null | undefined): Map<string, BookmarkNode> {
+  const nodeMap = new Map<string, BookmarkNode>();
+  const walk = (node: BookmarkNode | null | undefined, parentId: string, index: number): void => {
     if (!node) {
       return;
     }
@@ -121,10 +182,13 @@ function buildBookmarkNodeMap(nodes) {
   return nodeMap;
 }
 
-function buildBookmarkItemsFromChildren(children, options) {
+function buildBookmarkItemsFromChildren(
+  children: readonly BookmarkNode[] | null | undefined,
+  options?: BookmarkItemOptions
+): BookmarkItem[] {
   const normalizeHost = getNormalizeHost(options);
   const items = Array.isArray(children) ? children : [];
-  const results = [];
+  const results: BookmarkItem[] = [];
   // Bookmark cards are identity-based: separate browser nodes may intentionally
   // share a URL and must remain visible after cross-folder moves.
   for (let index = 0; index < items.length; index += 1) {
@@ -155,7 +219,7 @@ function buildBookmarkItemsFromChildren(children, options) {
       continue;
     }
     const themeUrl = findFirstUrlInFolder(item);
-    const previewUrls = [];
+    const previewUrls: string[] = [];
     collectFolderUrls(item, 4, previewUrls, new Set());
     let host = '';
     if (themeUrl) {
@@ -181,7 +245,11 @@ function buildBookmarkItemsFromChildren(children, options) {
   return results;
 }
 
-function cacheBookmarkFolderItems(node, folderItemsCache, options) {
+function cacheBookmarkFolderItems(
+  node: BookmarkNode | null | undefined,
+  folderItemsCache: Map<string, BookmarkItem[]>,
+  options: BookmarkItemOptions | undefined
+): void {
   if (!node) {
     return;
   }
@@ -202,10 +270,13 @@ function cacheBookmarkFolderItems(node, folderItemsCache, options) {
   }
 }
 
-function buildBookmarkFolderCache(nodes, options) {
+function buildBookmarkFolderCache(
+  nodes: readonly BookmarkNode[] | null | undefined,
+  options?: BookmarkFolderCacheOptions
+): BookmarkFolderCache {
   const nodeMap = buildBookmarkNodeMap(nodes);
   const rootNode = findBookmarksBarNode(nodes);
-  const folderItemsCache = new Map();
+  const folderItemsCache = new Map<string, BookmarkItem[]>();
   if (rootNode) {
     if (options && options.lazy === true) {
       folderItemsCache.set(
@@ -224,17 +295,17 @@ function buildBookmarkFolderCache(nodes, options) {
   };
 }
 
-function buildBookmarkFolderPath(folderId, options) {
-  const opts = options && typeof options === 'object' ? options : {};
-  const nodeMap = opts.nodeMap instanceof Map ? opts.nodeMap : new Map();
+function buildBookmarkFolderPath(folderId: unknown, options?: BookmarkFolderPathOptions): BookmarkPathEntry[] {
+  const opts = options || {};
+  const nodeMap = opts.nodeMap || new Map<string, BookmarkNode>();
   const rootId = String(opts.rootId || '1');
   const rootTitle = String(opts.rootTitle || 'Bookmarks');
   const targetId = String(folderId || rootId);
-  const path = [{ id: rootId, title: rootTitle }];
+  const path: BookmarkPathEntry[] = [{ id: rootId, title: rootTitle }];
   if (targetId === rootId) {
     return path;
   }
-  const chain = [];
+  const chain: BookmarkPathEntry[] = [];
   let cursor = nodeMap.get(targetId);
   let guard = 0;
   while (cursor && guard < 64) {
@@ -247,14 +318,14 @@ function buildBookmarkFolderPath(folderId, options) {
       title: String(cursor.title || '').trim() || rootTitle
     });
     const parentId = String(cursor.parentId || '');
-    cursor = parentId ? nodeMap.get(parentId) : null;
+    cursor = parentId ? nodeMap.get(parentId) : undefined;
     guard += 1;
   }
   chain.reverse().forEach((item) => path.push(item));
   return path;
 }
 
-function getBookmarkPageItems(items, page, limit) {
+function getBookmarkPageItems<T>(items: readonly T[] | null | undefined, page: number, limit: number): T[] {
   if (!Array.isArray(items) || items.length === 0) {
     return [];
   }
@@ -279,4 +350,12 @@ export {
   buildBookmarkFolderCache,
   buildBookmarkFolderPath,
   getBookmarkPageItems
+};
+export type {
+  BookmarkFolderCache,
+  BookmarkFolderItem,
+  BookmarkItem,
+  BookmarkLinkItem,
+  BookmarkNode,
+  BookmarkPathEntry
 };
