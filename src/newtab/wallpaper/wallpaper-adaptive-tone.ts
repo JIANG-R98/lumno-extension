@@ -26,7 +26,9 @@ interface GlassAdaptation {
 }
 
 // Something with a box on screen to sample under.
-type SampleSource = Pick<Element, 'getBoundingClientRect'>;
+interface SampleSource {
+  getBoundingClientRect(): Pick<DOMRect, 'left' | 'top' | 'right' | 'bottom' | 'width' | 'height'>;
+}
 
 interface ScreenRect {
   left: number;

@@ -1,10 +1,143 @@
-// @ts-nocheck
 // The page's wallpaper: the wallpaper runtime and its panel controls, the
 // first wallpaper, overlay and effect shown at startup, and the adaptive
 // tone targets that keep text and glass surfaces readable on it.
+import type * as LumnoExtensionRoutes from '../../domain/extension-routes';
+import type * as LumnoSettings from '../../domain/settings';
+import type { NewtabGlassStyle, NewtabGlassTheme, NewtabTimeInk, NewtabTopContentMode } from '../../domain/settings';
+import type { StorageAreaLike } from '../../domain/storage-port';
+import { queryHtmlElement, queryHtmlElements } from '../../shared/dom-lookup';
+import type { ToastTask } from '../../shared/react/toast';
+import type * as LumnoFeatureHints from '../../shared/ui/feature-hints';
+import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
+import type { ThemeScope } from '../react/wallpaper-panel/panel-model';
+import type { TopContentController } from '../react/wordmark';
+import type { QuoteRuntime } from '../top-content/quotes';
+import type { TopContentRuntime } from '../top-content/top-content';
+import type { AdaptiveToneTarget } from './wallpaper-adaptive-tone';
 import * as NEWTAB_WALLPAPER from './wallpaper';
+import type { WallpaperRuntime } from './wallpaper';
+import type { SectionPanelSettings } from './runtime/panel-actions';
+import type { SearchWidthConfig } from './runtime/panel-settings';
 
-function createWallpaperPage(deps) {
+type StorageArea = Pick<StorageAreaLike, 'get' | 'set'>;
+
+// Whether a layout change is only shown or also saved.
+type PersistOptions = { persist: boolean };
+
+// The page state parts the wallpaper reads and sets.
+interface WallpaperPageState {
+  newtabTimeInk: NewtabTimeInk;
+  newtabTopContentMode: NewtabTopContentMode;
+  newtabTimeFontWeight: number;
+  newtabTimeFontSize: number;
+  newtabTimeOpacity: number;
+  newtabTimeFont: string;
+  newtabTimeSecondsVisible: boolean;
+  newtabTime12Hour: boolean;
+  newtabShortcutsVisible: boolean;
+  newtabShortcutAddVisible: boolean;
+  newtabShortcutDockMagnificationEnabled: boolean;
+  newtabShortcutColumns: number;
+  newtabShortcutSize: number;
+  newtabShortcutGap: number;
+  newtabInputAutoFocusEnabled: boolean;
+  newtabGlassTheme: NewtabGlassTheme;
+  globalThemeMode: string;
+  bookmarkPagerPrevButton: HTMLElement | null;
+  bookmarkTitleWrap: HTMLElement | null;
+  bookmarkTopbarRuntime: { element: HTMLElement | null } | null;
+  shortcutGrid: HTMLElement | null;
+  addShortcutButton: HTMLElement | null;
+  topContentController: TopContentController | null;
+  topContentContainer: HTMLElement | null;
+  wordmarkImageEl: HTMLImageElement | null;
+  quoteRuntime: Pick<QuoteRuntime, 'element' | 'textElement' | 'bindSettings' | 'getProviderLabel' | 'updateLanguage'> | null;
+  sectionPanelSettings: (SectionPanelSettings & { updateLanguage(): void }) | null;
+  recentHeader: HTMLElement | null;
+  feedbackButton: HTMLElement | null;
+  bottomDockScroller: HTMLElement | null;
+  wallpaperRuntime: WallpaperRuntime | null;
+  wallpaperControl: HTMLDivElement | null;
+  // When the wallpaper was revealed (performance.now()).
+  wallpaperShownAt: number;
+}
+
+interface WallpaperPageDeps extends Pick<TopContentRuntime,
+  'setNewtabTopContentMode' | 'setNewtabTimeFontWeight' | 'setNewtabTimeFontSize' | 'setNewtabTimeOpacity' |
+  'setNewtabTimeInk' | 'setNewtabTimeFont' | 'setNewtabTimeSecondsVisible' | 'setNewtabTime12Hour'> {
+  SETTINGS: Pick<typeof LumnoSettings, 'normalizeNewtabTimeInk' | 'normalizeNewtabGlassStyle' | 'normalizeNewtabGlassTheme'>;
+  shortcutTiles: readonly HTMLElement[];
+  // A dock tile's icon, which its tone samples.
+  getShortcutDockIcon(tile: HTMLElement): HTMLElement | null;
+  shortcutGroupHeaders: readonly HTMLElement[];
+  getEffectiveBookmarkTopbarSurfaceMode(): string;
+  isBookmarkTopbarMode(): boolean;
+  // The search box.
+  root: HTMLElement;
+  // The glass plates that sample the wallpaper behind them.
+  NEWTAB_GLASS_ADAPTIVE_SELECTOR: string;
+  EXTENSION_ROUTES: Pick<typeof LumnoExtensionRoutes, 'buildOptionsUrl'>;
+  storageArea: StorageArea | null;
+  localStorageArea: StorageArea | null;
+  NEWTAB_WALLPAPER_STORAGE_KEY: string;
+  NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY: string;
+  NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY: string;
+  NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY: string;
+  NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY: string;
+  NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY: string;
+  NEWTAB_TIME_FONT_SIZE_STORAGE_KEY: string;
+  NEWTAB_TIME_OPACITY_STORAGE_KEY: string;
+  NEWTAB_TIME_INK_STORAGE_KEY: string;
+  NEWTAB_TIME_FONT_STORAGE_KEY: string;
+  NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY: string;
+  NEWTAB_TIME_12_HOUR_STORAGE_KEY: string;
+  NEWTAB_FAVICON_STORAGE_KEY: string;
+  NEWTAB_SEARCH_WIDTH_CONFIG: SearchWidthConfig;
+  t: Translate;
+  formatMessage: FormatMessage;
+  getSelectedThemeMode(): string;
+  getScopedThemeMode(): string;
+  getThemeScope(): string;
+  setThemeMode(mode: string): void;
+  setThemeScope(scope: ThemeScope): void;
+  getRiSvg(id: string, sizeClass?: string, extraClass?: string): string;
+  showToast: ShowToast;
+  beginToast(message: string): ToastTask;
+  showTopActionTooltip(anchor: HTMLElement, text: string, options?: { placement?: string }): void;
+  hideTopActionTooltip(): void;
+  applyWordmarkThemeAppearance(): void;
+  getEffectiveNewtabSearchWidth(): number;
+  setNewtabSearchWidth(width: number, options: PersistOptions): void;
+  NEWTAB_SHORTCUT_COLUMNS_MIN: number;
+  NEWTAB_SHORTCUT_COLUMNS_MAX: number;
+  NEWTAB_SHORTCUT_COLUMNS_DEFAULT: number;
+  NEWTAB_SHORTCUT_SIZE_MIN: number;
+  NEWTAB_SHORTCUT_SIZE_MAX: number;
+  NEWTAB_SHORTCUT_SIZE_DEFAULT: number;
+  NEWTAB_SHORTCUT_GAP_MIN: number;
+  NEWTAB_SHORTCUT_GAP_MAX: number;
+  NEWTAB_SHORTCUT_GAP_DEFAULT: number;
+  setNewtabShortcutsVisible(visible: boolean, options: PersistOptions): void;
+  setNewtabShortcutAddVisible(visible: boolean, options: PersistOptions): void;
+  setNewtabShortcutDockMagnificationEnabled(enabled: boolean, options: PersistOptions): void;
+  setNewtabShortcutColumns(columns: number, options: PersistOptions): void;
+  setNewtabShortcutSize(size: number, options: PersistOptions): void;
+  setNewtabShortcutGap(gap: number, options: PersistOptions): void;
+  FEATURE_HINTS: typeof LumnoFeatureHints;
+  // Settles once the page's entry animation is done.
+  newtabEntryAnimationReadyPromise: PromiseLike<unknown>;
+  // Settles once the auto-focus setting is read.
+  initialNewtabInputAutoFocusReadyTask: PromiseLike<unknown>;
+  setNewtabInputAutoFocusEnabled(enabled: boolean): void;
+  applyNewtabGlassStyle(style: NewtabGlassStyle): void;
+  NEWTAB_GLASS_STYLE_STORAGE_KEY: string;
+  applyNewtabGlassTheme(theme: NewtabGlassTheme): void;
+  NEWTAB_GLASS_THEME_STORAGE_KEY: string;
+  bootstrapInitialThemeMode(): PromiseLike<unknown>;
+  pageState: WallpaperPageState;
+}
+
+function createWallpaperPage(deps: WallpaperPageDeps) {
   const {
     SETTINGS,
     shortcutTiles,
@@ -86,21 +219,22 @@ function createWallpaperPage(deps) {
   const NEWTAB_WALLPAPER_VIEW = globalThis.LumnoNewtabWallpaperView;
 
   // The clock's ink when the user fixed it; '' leaves it to the wallpaper or theme.
-  function getFixedTimeInk() {
+  function getFixedTimeInk(): Exclude<NewtabTimeInk, 'auto'> | '' {
     const ink = SETTINGS.normalizeNewtabTimeInk(pageState.newtabTimeInk);
     return pageState.newtabTopContentMode === 'time' && ink !== 'auto' ? ink : '';
   }
 
-  function createWallpaperAdaptiveToneTargets() {
+  function createWallpaperAdaptiveToneTargets(): AdaptiveToneTarget[] {
     const bookmarkPager = pageState.bookmarkPagerPrevButton && pageState.bookmarkPagerPrevButton.parentElement
       ? pageState.bookmarkPagerPrevButton.parentElement
       : null;
-    const shortcutIconTargets = shortcutTiles.map((tile) => ({
-      element: tile,
-      forcedIconBackground: 'shortcut-fallback'
-    }));
+    const shortcutIconTargets: Array<{ element: HTMLElement; forcedIconBackground: AdaptiveToneTarget['forcedIconBackground'] }> =
+      shortcutTiles.map((tile) => ({
+        element: tile,
+        forcedIconBackground: 'shortcut-fallback'
+      }));
     if (pageState.shortcutGrid) {
-      pageState.shortcutGrid.querySelectorAll('.x-nt-shortcut-group-empty').forEach((slot) => {
+      queryHtmlElements(pageState.shortcutGrid, '.x-nt-shortcut-group-empty').forEach((slot) => {
         shortcutIconTargets.push({ element: slot, forcedIconBackground: 'shortcut-add' });
       });
     }
@@ -111,7 +245,7 @@ function createWallpaperPage(deps) {
     // folder or the add button never flips tone against its neighbor where the
     // wallpaper under the row changes from light to dark.
     const shortcutIconSample = shortcutIconTargets.map(({ element }) => getShortcutDockIcon(element) || element);
-    const shortcutToneTargets = shortcutIconTargets.map(({ element, forcedIconBackground }) => ({
+    const shortcutToneTargets = shortcutIconTargets.map(({ element, forcedIconBackground }): AdaptiveToneTarget => ({
       element,
       sampleElement: shortcutIconSample,
       toneGroup: 'shortcut-icons',
@@ -131,7 +265,7 @@ function createWallpaperPage(deps) {
         iconButton: true
       });
     });
-    const topContentSample = pageState.topContentController && typeof pageState.topContentController.getContent === 'function'
+    const topContentSample: HTMLElement | null = pageState.topContentController && typeof pageState.topContentController.getContent === 'function'
       ? (pageState.topContentController.getContent() || pageState.topContentContainer)
       : (pageState.wordmarkImageEl || pageState.topContentContainer);
     const quoteElement = pageState.quoteRuntime && pageState.quoteRuntime.element;
@@ -142,7 +276,7 @@ function createWallpaperPage(deps) {
       quoteElement.getAttribute('data-position') === 'top' &&
       pageState.topContentContainer && pageState.topContentContainer.getAttribute('data-visible') !== 'false');
     const captionSample = quoteIsCaption ? [topContentSample, quoteSample] : null;
-    return [
+    const targets: AdaptiveToneTarget[] = [
       {
         element: pageState.bookmarkTopbarRuntime && pageState.bookmarkTopbarRuntime.element,
         sampleElement: pageState.bookmarkTopbarRuntime && pageState.bookmarkTopbarRuntime.element,
@@ -216,17 +350,18 @@ function createWallpaperPage(deps) {
         minHeight: 64,
         disabled: !isBottomDockScrollbarShown()
       }
-    ].concat(shortcutToneTargets, createGlassToneTargets());
+    ];
+    return targets.concat(shortcutToneTargets, createGlassToneTargets());
   }
 
   // Under a glass style each plate also samples the wallpaper right behind it, to set how dense its
   // tint is and how much saturation it keeps (glass-style.css reads both).
-  function createGlassToneTargets() {
+  function createGlassToneTargets(): AdaptiveToneTarget[] {
     if (!document.body || !document.body.hasAttribute('data-glass-style')) {
       return [];
     }
     // Plates in one row share an ink (light or dark text), so neighbors never alternate.
-    const groupOf = (element) => {
+    const groupOf = (element: Element): string => {
       if (element.closest('.x-nt-shortcuts-section')) {
         return 'shortcuts';
       }
@@ -255,7 +390,7 @@ function createWallpaperPage(deps) {
           Math.max(bar.height, Math.min(window.innerHeight - bar.top, bar.height + reach)));
       }
     };
-    const targets = Array.from(document.querySelectorAll(NEWTAB_GLASS_ADAPTIVE_SELECTOR)).map((element) => ({
+    const targets = queryHtmlElements(document, NEWTAB_GLASS_ADAPTIVE_SELECTOR).map((element): AdaptiveToneTarget => ({
       element,
       sampleElement: element === root ? searchStackSample : element,
       glass: true,
@@ -275,7 +410,7 @@ function createWallpaperPage(deps) {
     });
     // A frosted bookmarks bar samples like a plate. Out of frosted it drops what this sets, since
     // the bar's other surfaces style its ink themselves.
-    const bookmarksBar = document.querySelector('.x-nt-bookmarks-topbar');
+    const bookmarksBar = queryHtmlElement(document, '.x-nt-bookmarks-topbar');
     const barTakesGlass = bookmarksBar &&
       (bookmarksBar.dataset.surfaceMode === 'frosted' || bookmarksBar.dataset.surfaceMode === 'clear');
     if (barTakesGlass && bookmarksBar.dataset.visible === 'true') {
@@ -287,7 +422,7 @@ function createWallpaperPage(deps) {
     }
     // Floating panels and menus take the same material and ink as the plates; flipped to light ink
     // they switch their controls to the dark palette (paletteSwap).
-    document.querySelectorAll(
+    queryHtmlElements(document,
       '.x-nt-wallpaper-panel, ._x_extension_menu_surface_2024_unique_, .x-lumno-feature-hint, ' +
       '.x-nt-feedback-popover, .x-lumno-toast'
     ).forEach((element) => {
@@ -295,7 +430,7 @@ function createWallpaperPage(deps) {
     });
     // A dialog samples the wallpaper under itself and sets its ink on its backdrop layer, which hands
     // it down to the dialog and its controls; the WeChat group dialog's card is in its shadow root.
-    document.querySelectorAll(
+    queryHtmlElements(document,
       '.x-nt-shortcut-dialog-backdrop, .x-nt-recent-history-backdrop, #_x_extension_community_qr_dialog_2026_unique_'
     ).forEach((element) => {
       const dialog = element.shadowRoot
@@ -308,14 +443,14 @@ function createWallpaperPage(deps) {
     return targets;
   }
 
-  function getBottomDockScrollbarGutter() {
+  function getBottomDockScrollbarGutter(): number {
     return pageState.bottomDockScroller
       ? Math.max(0, pageState.bottomDockScroller.offsetWidth - pageState.bottomDockScroller.clientWidth)
       : 0;
   }
 
   // Overlay scrollbars (macOS) take no gutter but still show while scrolling.
-  function isBottomDockScrollbarShown() {
+  function isBottomDockScrollbarShown(): boolean {
     return Boolean(
       pageState.bottomDockScroller &&
       pageState.bottomDockScroller.scrollHeight > pageState.bottomDockScroller.clientHeight + 1
@@ -324,11 +459,15 @@ function createWallpaperPage(deps) {
 
   const bottomDockScrollbarTrackArea = {
     getBoundingClientRect() {
-      const rect = pageState.bottomDockScroller.getBoundingClientRect();
+      const scroller = pageState.bottomDockScroller;
+      if (!scroller) {
+        return { left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 };
+      }
+      const rect = scroller.getBoundingClientRect();
       // An overlay bar draws about 10px wide over the scroller's right edge.
       const gutter = getBottomDockScrollbarGutter() || 10;
       const endInset = Number.parseFloat(
-        pageState.bottomDockScroller.style.getPropertyValue('--x-nt-bottom-dock-scrollbar-end-inset')
+        scroller.style.getPropertyValue('--x-nt-bottom-dock-scrollbar-end-inset')
       ) || 0;
       const top = rect.top + 10;
       const bottom = Math.max(top, rect.bottom - Math.max(10, endInset));
@@ -440,7 +579,7 @@ function createWallpaperPage(deps) {
       const style = SETTINGS.normalizeNewtabGlassStyle(value);
       applyNewtabGlassStyle(style);
       if (storageArea) {
-        storageArea.set({ [NEWTAB_GLASS_STYLE_STORAGE_KEY]: style });
+        void storageArea.set({ [NEWTAB_GLASS_STYLE_STORAGE_KEY]: style });
       }
     },
     getGlassTheme: () => pageState.newtabGlassTheme,
@@ -448,53 +587,54 @@ function createWallpaperPage(deps) {
       const theme = SETTINGS.normalizeNewtabGlassTheme(value);
       applyNewtabGlassTheme(theme);
       if (storageArea) {
-        storageArea.set({ [NEWTAB_GLASS_THEME_STORAGE_KEY]: theme });
+        void storageArea.set({ [NEWTAB_GLASS_THEME_STORAGE_KEY]: theme });
       }
     },
     getAdaptiveToneTargets: createWallpaperAdaptiveToneTargets,
     view: NEWTAB_WALLPAPER_VIEW
   });
 
-  function updateWallpaperLanguageStrings() {
+  function updateWallpaperLanguageStrings(): void {
     if (pageState.wallpaperRuntime) {
       pageState.wallpaperRuntime.updateLanguageStrings();
     }
   }
 
-  function updateWallpaperAppearanceSelectionUi() {
+  function updateWallpaperAppearanceSelectionUi(): void {
     if (pageState.wallpaperRuntime) {
       pageState.wallpaperRuntime.updateAppearanceSelectionUi();
     }
   }
 
-  function bootstrapInitialWallpaper() {
-    if (!pageState.wallpaperRuntime) {
+  function bootstrapInitialWallpaper(): Promise<void> {
+    const runtime = pageState.wallpaperRuntime;
+    if (!runtime) {
       return Promise.resolve();
     }
-    return bootstrapInitialThemeMode().then(() => pageState.wallpaperRuntime.bootstrapInitialWallpaper());
+    return Promise.resolve(bootstrapInitialThemeMode()).then(() => runtime.bootstrapInitialWallpaper());
   }
 
-  function bootstrapInitialWallpaperOverlay() {
+  function bootstrapInitialWallpaperOverlay(): Promise<void> {
     return pageState.wallpaperRuntime ? pageState.wallpaperRuntime.bootstrapInitialWallpaperOverlay() : Promise.resolve();
   }
 
-  function bootstrapInitialWallpaperEffect() {
+  function bootstrapInitialWallpaperEffect(): Promise<void> {
     return pageState.wallpaperRuntime ? pageState.wallpaperRuntime.bootstrapInitialWallpaperEffect() : Promise.resolve();
   }
 
-  function waitForInitialWallpaperEffectVisual() {
+  function waitForInitialWallpaperEffectVisual(): Promise<void> {
     return pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.waitForInitialWallpaperEffectVisual === 'function'
       ? pageState.wallpaperRuntime.waitForInitialWallpaperEffectVisual()
       : Promise.resolve();
   }
 
-  function waitForInitialWallpaperTone() {
+  function waitForInitialWallpaperTone(): Promise<void> {
     return pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.waitForInitialWallpaperTone === 'function'
       ? pageState.wallpaperRuntime.waitForInitialWallpaperTone()
       : Promise.resolve();
   }
 
-  function markInitialWallpaperVisualReady() {
+  function markInitialWallpaperVisualReady(): void {
     if (!document.body) {
       return;
     }
@@ -510,13 +650,13 @@ function createWallpaperPage(deps) {
     }
   }
 
-  function bootstrapInitialNewtabFavicon() {
+  function bootstrapInitialNewtabFavicon(): Promise<void> {
     return pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.bootstrapInitialNewtabFavicon === 'function'
       ? pageState.wallpaperRuntime.bootstrapInitialNewtabFavicon()
       : Promise.resolve();
   }
 
-  function createWallpaperControls() {
+  function createWallpaperControls(): void {
     if (!pageState.wallpaperRuntime) {
       return;
     }
@@ -524,17 +664,17 @@ function createWallpaperPage(deps) {
     pageState.wallpaperControl = pageState.wallpaperRuntime.getControlElement();
   }
 
-  function isWallpaperPanelOpen() {
+  function isWallpaperPanelOpen(): boolean {
     return pageState.wallpaperRuntime ? pageState.wallpaperRuntime.isPanelOpen() : false;
   }
 
-  function closeWallpaperPanel(options) {
+  function closeWallpaperPanel(options?: { restoreFocus?: boolean } | null): void {
     if (pageState.wallpaperRuntime) {
       pageState.wallpaperRuntime.closePanel(options);
     }
   }
 
-  function scheduleWallpaperAdaptiveToneUpdate() {
+  function scheduleWallpaperAdaptiveToneUpdate(): void {
     if (pageState.wallpaperRuntime) {
       pageState.wallpaperRuntime.scheduleAdaptiveToneUpdate();
     }
@@ -558,4 +698,7 @@ function createWallpaperPage(deps) {
   };
 }
 
+type WallpaperPage = ReturnType<typeof createWallpaperPage>;
+
 export { createWallpaperPage };
+export type { WallpaperPage, WallpaperPageDeps, WallpaperPageState };

@@ -1859,9 +1859,12 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
   };
 }
 
+type WallpaperRuntime = ReturnType<typeof createWallpaperRuntime>;
+
 export {
   DEFAULT_STORAGE_KEYS as STORAGE_KEYS,
   WALLPAPER_EFFECT_MODE_STORAGE_VERSION,
   normalizeWallpaperEffectStoragePrefs,
   createWallpaperRuntime
 };
+export type { WallpaperRuntime, WallpaperRuntimeOptions };
