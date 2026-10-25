@@ -1,7 +1,72 @@
-// @ts-nocheck
 // How the mode prefix looks and where it sits: its colors on each surface,
 // the input padding it takes, and the menu footer alignment.
-function createPrefixVisual(deps) {
+import type { InputModeTheme, IsElementVisible, Rgb, SetStyle } from './types';
+
+// The controller state search-input-mode.ts shares with its modules.
+interface PrefixVisualState {
+  destroyed: boolean;
+  modeMenuOpen: boolean;
+  modeMenuContent: HTMLElement;
+  modeMenuFooter: HTMLElement;
+}
+
+interface PrefixVisualConfig {
+  // The surface's own badge on the input's right (e.g. a keyboard hint).
+  getModeBadgeElement?(): HTMLElement | null | undefined;
+  modeBadgeElement?: HTMLElement | null;
+}
+
+// Which built-in line icon a mode shows, if any.
+interface PrefixVisualOptions {
+  menuIconName?: string;
+}
+
+// The prefix's colors.
+interface PrefixVisual {
+  accentColor: string;
+  background: string;
+  border: string;
+  shadow: string;
+  color: string;
+  caretColor: string;
+}
+
+interface PrefixVisualDeps {
+  win: Pick<Window, 'getComputedStyle'> & Partial<Pick<Window, 'matchMedia'>>;
+  surface: 'newtab' | 'overlay';
+  getModeMenuLineIconPaths: (iconName: string) => readonly string[] | null;
+  isDarkMode: () => unknown;
+  getThemeForMode: (theme: InputModeTheme) => InputModeTheme | null | undefined;
+  defaultTheme: InputModeTheme;
+  parseCssColor: (color: unknown) => Rgb | null;
+  defaultAccentColor: Rgb;
+  mixRgb: (source: Rgb, target: Rgb, targetWeight: number) => Rgb;
+  getAccessibleThemeTextRgb: (accentRgb: Rgb, backgroundRgb: Rgb) => Rgb;
+  rgbToCss: (rgb: Rgb) => string;
+  setStyle: SetStyle;
+  container: HTMLElement;
+  useImportantStyles: boolean;
+  siteSearchPrefix: HTMLElement;
+  siteSearchPrefixLineIcon: SVGElement;
+  siteSearchPrefixChevron: HTMLElement;
+  siteSearchPrefixCurrent: HTMLElement;
+  input: HTMLInputElement;
+  // Width taken by optional actions beside the input's right icon.
+  getExtraRightInset: (() => number) | null;
+  rightAnchorOffset: number;
+  rightReserveBase: number;
+  siteSearchTabHint: HTMLElement;
+  isElementVisible: IsElementVisible;
+  setInputStyle: (target: HTMLElement, property: string, value: string) => void;
+  config: PrefixVisualConfig;
+  configuredBaseInputPaddingLeft: number | null;
+  prefixGap: number;
+  modeMenu: HTMLElement;
+  notifyModeMenuLayoutChange: () => void;
+  inputModeState: PrefixVisualState;
+}
+
+function createPrefixVisual(deps: PrefixVisualDeps) {
   const {
     win,
     surface,
@@ -38,9 +103,9 @@ function createPrefixVisual(deps) {
   // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
 
-  let baseInputPaddingLeft = null;
+  let baseInputPaddingLeft: number | null = null;
 
-  function shouldReduceInputModeMotion() {
+  function shouldReduceInputModeMotion(): boolean {
     return Boolean(
       win &&
       typeof win.matchMedia === 'function' &&
@@ -48,13 +113,16 @@ function createPrefixVisual(deps) {
     );
   }
 
-  function getBuiltInSurfaceColor() {
+  function getBuiltInSurfaceColor(): string {
     return surface === 'overlay'
       ? 'var(--x-ov-text, #111827)'
       : 'var(--x-nt-text, #111827)';
   }
 
-  function getInputModePrefixVisual(theme, visualOptions) {
+  function getInputModePrefixVisual(
+    theme: InputModeTheme | null | undefined,
+    visualOptions: PrefixVisualOptions | null | undefined
+  ): PrefixVisual {
     const lineIconName = visualOptions && visualOptions.menuIconName
       ? String(visualOptions.menuIconName).trim()
       : '';
@@ -94,7 +162,10 @@ function createPrefixVisual(deps) {
     };
   }
 
-  function applyInputModePrefixVisual(theme, visualOptions) {
+  function applyInputModePrefixVisual(
+    theme: InputModeTheme | null | undefined,
+    visualOptions?: PrefixVisualOptions | null
+  ): PrefixVisual {
     const visual = getInputModePrefixVisual(theme, visualOptions);
     setStyle(container, '--x-lumno-search-mode-accent', visual.accentColor, useImportantStyles);
     setStyle(container, '--x-lumno-search-mode-selected-bg', visual.background, useImportantStyles);
@@ -109,10 +180,7 @@ function createPrefixVisual(deps) {
     return visual;
   }
 
-  function updateInputRightPadding() {
-    if (!input) {
-      return;
-    }
+  function updateInputRightPadding(): void {
     const extraInset = getExtraRightInset ? getExtraRightInset() : 0;
     const anchorOffset = rightAnchorOffset + extraInset;
     let totalReserve = rightReserveBase + extraInset;
@@ -123,7 +191,7 @@ function createPrefixVisual(deps) {
         setStyle(badgeElement, 'right', `${anchorOffset}px`, useImportantStyles);
       }
     }
-    if (isElementVisible(badgeElement)) {
+    if (badgeElement && isElementVisible(badgeElement)) {
       const badgeWidth = Math.ceil(badgeElement.getBoundingClientRect().width || 0);
       totalReserve = Math.max(totalReserve, anchorOffset + badgeWidth + 12);
     }
@@ -134,13 +202,13 @@ function createPrefixVisual(deps) {
     setInputStyle(input, 'padding-right', `${totalReserve}px`);
   }
 
-  function getModeBadgeElement() {
-    return typeof config.getModeBadgeElement === 'function'
+  function getModeBadgeElement(): HTMLElement | null {
+    return (typeof config.getModeBadgeElement === 'function'
       ? config.getModeBadgeElement()
-      : config.modeBadgeElement;
+      : config.modeBadgeElement) || null;
   }
 
-  function getBaseInputPaddingLeft() {
+  function getBaseInputPaddingLeft(): number {
     if (baseInputPaddingLeft === null) {
       const computed = parseFloat(win.getComputedStyle(input).paddingLeft);
       baseInputPaddingLeft = Number.isFinite(computed) && computed > 0
@@ -150,7 +218,7 @@ function createPrefixVisual(deps) {
     return baseInputPaddingLeft;
   }
 
-  function updatePrefixLayout() {
+  function updatePrefixLayout(): void {
     const basePadding = getBaseInputPaddingLeft();
     setStyle(siteSearchPrefix, 'left', `${basePadding}px`, useImportantStyles);
     if (!isElementVisible(siteSearchPrefix)) {
@@ -162,11 +230,12 @@ function createPrefixVisual(deps) {
     setInputStyle(input, 'padding-left', `${paddedLeft}px`);
   }
 
-  function updateModeMenuFooterAlignment() {
+  // Lines the footer's hints up with the menu items' icons.
+  function updateModeMenuFooterAlignment(): void {
     if (modeMenu.hidden || !inputModeState.modeMenuFooter || !inputModeState.modeMenuContent) {
       return;
     }
-    const firstIcon = inputModeState.modeMenuContent.querySelector(
+    const firstIcon = inputModeState.modeMenuContent.querySelector<HTMLElement>(
       '.x-lumno-search-input-mode__menu-icon'
     );
     if (!firstIcon || Number(firstIcon.offsetWidth) <= 0) {
@@ -189,7 +258,7 @@ function createPrefixVisual(deps) {
     );
   }
 
-  function updateLayout() {
+  function updateLayout(): void {
     if (inputModeState.destroyed) {
       return;
     }
@@ -213,4 +282,7 @@ function createPrefixVisual(deps) {
   };
 }
 
+type PrefixVisualApi = ReturnType<typeof createPrefixVisual>;
+
 export { createPrefixVisual };
+export type { PrefixVisual, PrefixVisualApi, PrefixVisualConfig, PrefixVisualDeps, PrefixVisualOptions, PrefixVisualState };

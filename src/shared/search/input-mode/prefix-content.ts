@@ -1,7 +1,67 @@
-// @ts-nocheck
 // The mode prefix's content: its identity, the icon swap with a ghost of
 // the previous icon, and measuring and setting its text and icon.
-function createPrefixContent(deps) {
+import type {
+  AttachFaviconData,
+  AttachProviderIcon,
+  CssText,
+  FormatMessage,
+  IsElementVisible,
+  PrefixContentOptions,
+  ResolveProviderIconUrl,
+  SetStyle
+} from './types';
+
+// The controller state search-input-mode.ts shares with its modules.
+interface PrefixContentState {
+  // Counts content changes, so a late icon failure knows it is stale.
+  inputModePrefixContentRevision: number;
+}
+
+interface PrefixContentDeps {
+  siteSearchPrefix: HTMLElement;
+  formatMessage: FormatMessage;
+  setStyle: SetStyle;
+  useImportantStyles: boolean;
+  shouldReduceInputModeMotion: () => boolean;
+  siteSearchPrefixLineIcon: SVGElement;
+  siteSearchPrefixIconFrame: HTMLElement;
+  siteSearchPrefixGlyph: HTMLElement;
+  isElementVisible: IsElementVisible;
+  DEFAULT_PREFIX_ICON_POP_DURATION: number;
+  DEFAULT_PREFIX_ICON_POP_EASING: string;
+  DEFAULT_PREFIX_ICON_EXIT_DURATION: number;
+  DEFAULT_PREFIX_ICON_EXIT_EASING: string;
+  siteSearchPrefixText: HTMLElement;
+  resolveProviderIconUrl: ResolveProviderIconUrl;
+  renderModeLineIconSvg: (svg: Element | null | undefined, lineIconName: string, strokeWidth?: string) => boolean;
+  siteSearchPrefixIcon: HTMLImageElement;
+  cssText: CssText;
+  removeProviderIconRuntimeFallbacks: (root: HTMLElement) => void;
+  updatePrefixLayout: () => void;
+  attachProviderIcon: AttachProviderIcon | null;
+  preferDirectProviderIcons: boolean;
+  attachFaviconData: AttachFaviconData | null;
+  siteSearchPrefixCurrentText: HTMLElement;
+  siteSearchPrefixCurrent: HTMLElement;
+  siteSearchPrefixChevron: HTMLElement;
+  win: Partial<Pick<Window, 'getComputedStyle'>> | null | undefined;
+  inputModeState: PrefixContentState;
+}
+
+// Where the "current" label sits and how wide it is.
+interface PrefixCurrentVisualState {
+  marginLeft: number;
+  width: number;
+}
+
+type PrefixIcon = SVGElement | HTMLElement;
+
+// An element node with an inline style; nodeType 1 is an element.
+function isStyledElement(node: Node): node is Element & ElementCSSInlineStyle {
+  return node.nodeType === 1 && 'style' in node;
+}
+
+function createPrefixContent(deps: PrefixContentDeps) {
   const {
     siteSearchPrefix,
     formatMessage,
@@ -35,12 +95,17 @@ function createPrefixContent(deps) {
   // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
 
-  let inputModePrefixIconAnimation = null;
-  let inputModePrefixIconAnimationElement = null;
-  let inputModePrefixIconGhost = null;
-  let inputModePrefixOutgoingIconAnimation = null;
+  let inputModePrefixIconAnimation: Animation | null = null;
+  let inputModePrefixIconAnimationElement: PrefixIcon | null = null;
+  let inputModePrefixIconGhost: Element | null = null;
+  let inputModePrefixOutgoingIconAnimation: Animation | null = null;
 
-  function setInputModePrefixIdentity(prefixText, contentOptions) {
+  function getActivePrefixIcon(): PrefixIcon | undefined {
+    const icons: PrefixIcon[] = [siteSearchPrefixLineIcon, siteSearchPrefixIconFrame, siteSearchPrefixGlyph];
+    return icons.find((element) => isElementVisible(element));
+  }
+
+  function setInputModePrefixIdentity(prefixText: string, contentOptions?: PrefixContentOptions | null): void {
     siteSearchPrefix.setAttribute(
       'data-mode-id',
       contentOptions && contentOptions.modeId ? String(contentOptions.modeId) : ''
@@ -52,7 +117,7 @@ function createPrefixContent(deps) {
     ));
   }
 
-  function cancelInputModePrefixIconAnimation() {
+  function cancelInputModePrefixIconAnimation(): void {
     const incomingAnimation = inputModePrefixIconAnimation;
     const incomingElement = inputModePrefixIconAnimationElement;
     const outgoingAnimation = inputModePrefixOutgoingIconAnimation;
@@ -78,23 +143,25 @@ function createPrefixContent(deps) {
     }
   }
 
-  function createInputModePrefixIconGhost(animateIcon) {
+  // A copy of the shown icon over it, to fade out while the new one pops in.
+  function createInputModePrefixIconGhost(animateIcon: boolean): (Element & ElementCSSInlineStyle) | null {
     if (!animateIcon || shouldReduceInputModeMotion()) {
       return null;
     }
-    const activeIcon = [
-      siteSearchPrefixLineIcon,
-      siteSearchPrefixIconFrame,
-      siteSearchPrefixGlyph
-    ].find((element) => isElementVisible(element));
+    const activeIcon = getActivePrefixIcon();
     if (!activeIcon || typeof activeIcon.cloneNode !== 'function') {
       return null;
     }
     const ghost = activeIcon.cloneNode(true);
+    if (!isStyledElement(ghost)) {
+      return null;
+    }
     const prefixRect = siteSearchPrefix.getBoundingClientRect();
     const iconRect = activeIcon.getBoundingClientRect();
-    const iconWidth = Number(iconRect.width) || Number(activeIcon.offsetWidth) || 16;
-    const iconHeight = Number(iconRect.height) || Number(activeIcon.offsetHeight) || 16;
+    const layoutWidth = 'offsetWidth' in activeIcon ? Number(activeIcon.offsetWidth) : 0;
+    const layoutHeight = 'offsetHeight' in activeIcon ? Number(activeIcon.offsetHeight) : 0;
+    const iconWidth = Number(iconRect.width) || layoutWidth || 16;
+    const iconHeight = Number(iconRect.height) || layoutHeight || 16;
     const iconLeft = Number(iconRect.left) - Number(prefixRect.left);
     const iconTop = Number(iconRect.top) - Number(prefixRect.top);
     ghost.removeAttribute('id');
@@ -123,12 +190,11 @@ function createPrefixContent(deps) {
     return ghost;
   }
 
-  function playInputModePrefixIconSwap(animateIcon, outgoingIcon) {
-    const activeIcon = [
-      siteSearchPrefixLineIcon,
-      siteSearchPrefixIconFrame,
-      siteSearchPrefixGlyph
-    ].find((element) => isElementVisible(element));
+  function playInputModePrefixIconSwap(
+    animateIcon: boolean,
+    outgoingIcon: (Element & ElementCSSInlineStyle) | null
+  ): void {
+    const activeIcon = getActivePrefixIcon();
     if (!activeIcon) {
       if (outgoingIcon && outgoingIcon.parentNode) {
         outgoingIcon.parentNode.removeChild(outgoingIcon);
@@ -210,7 +276,7 @@ function createPrefixContent(deps) {
     });
     inputModePrefixIconGhost = outgoingIcon;
     inputModePrefixOutgoingIconAnimation = outgoingAnimation;
-    const removeOutgoingIcon = () => {
+    const removeOutgoingIcon = (): void => {
       if (inputModePrefixOutgoingIconAnimation === outgoingAnimation) {
         inputModePrefixOutgoingIconAnimation = null;
       }
@@ -225,7 +291,7 @@ function createPrefixContent(deps) {
     outgoingAnimation.oncancel = removeOutgoingIcon;
   }
 
-  function measureInputModePrefixWidthForText(prefixText) {
+  function measureInputModePrefixWidthForText(prefixText: string): number {
     const previousText = String(siteSearchPrefixText.textContent || '');
     siteSearchPrefixText.textContent = String(prefixText || '');
     const width = Number(siteSearchPrefix.getBoundingClientRect().width) || 0;
@@ -233,7 +299,7 @@ function createPrefixContent(deps) {
     return width;
   }
 
-  function setInputModePrefixContent(prefixText, contentOptions) {
+  function setInputModePrefixContent(prefixText: string, contentOptions?: PrefixContentOptions | null): void {
     const preserveIconAnimation = Boolean(
       contentOptions && contentOptions.preserveIconAnimation
     );
@@ -241,7 +307,7 @@ function createPrefixContent(deps) {
     const animateOutgoingIcon = Boolean(
       contentOptions && contentOptions.animateOutgoingIcon
     );
-    let outgoingIcon = null;
+    let outgoingIcon: (Element & ElementCSSInlineStyle) | null = null;
     if (!preserveIconAnimation) {
       cancelInputModePrefixIconAnimation();
       outgoingIcon = createInputModePrefixIconGhost(animateOutgoingIcon);
@@ -303,7 +369,7 @@ function createPrefixContent(deps) {
         ['display', 'block']
       ], useImportantStyles);
       setStyle(siteSearchPrefixGlyph, 'display', 'none', useImportantStyles);
-      const removeUnavailableIcon = () => {
+      const removeUnavailableIcon = (): void => {
         if (contentRevision !== inputModeState.inputModePrefixContentRevision) {
           return;
         }
@@ -325,7 +391,7 @@ function createPrefixContent(deps) {
             prefixText,
             provider: contentOptions && contentOptions.provider ? contentOptions.provider : null
           }) === true;
-        } catch (e) {
+        } catch (_error) {
           handledByProviderIconRuntime = false;
         }
       }
@@ -384,9 +450,8 @@ function createPrefixContent(deps) {
     }
   }
 
-  function getInputModePrefixRenderedWidth() {
-    if (!isElementVisible(siteSearchPrefix) ||
-        typeof siteSearchPrefix.getBoundingClientRect !== 'function') {
+  function getInputModePrefixRenderedWidth(): number {
+    if (!isElementVisible(siteSearchPrefix)) {
       return 0;
     }
     return Math.max(
@@ -395,9 +460,8 @@ function createPrefixContent(deps) {
     );
   }
 
-  function getInputModePrefixCurrentVisualState() {
-    if (!isElementVisible(siteSearchPrefix) ||
-        typeof siteSearchPrefixCurrent.getBoundingClientRect !== 'function') {
+  function getInputModePrefixCurrentVisualState(): PrefixCurrentVisualState {
+    if (!isElementVisible(siteSearchPrefix)) {
       return { marginLeft: 0, width: 0 };
     }
     const width = Math.max(
@@ -423,4 +487,7 @@ function createPrefixContent(deps) {
   };
 }
 
+type PrefixContentApi = ReturnType<typeof createPrefixContent>;
+
 export { createPrefixContent };
+export type { PrefixContentApi, PrefixContentDeps, PrefixContentState, PrefixCurrentVisualState };

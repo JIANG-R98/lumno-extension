@@ -106,11 +106,35 @@ type AttachProviderIcon = (image: HTMLImageElement, details: {
   iconUrl: string;
   onIconUnavailable: () => void;
   prefixText: string;
-  provider: SiteSearchProvider;
+  provider: SiteSearchProvider | null;
 }) => unknown;
 
 // Swaps the image to the icon's cached data URL once there is one.
 type AttachFaviconData = (image: HTMLImageElement, iconUrl: string, iconHost: string) => void;
+
+// A site search provider as the surfaces hand it to the controller; an
+// aggregate search comes as one with its id.
+type InputModeProvider = SiteSearchProvider & {
+  aggregateId?: string;
+  // Replaces "Search with {site}" in the Tab hint.
+  tabHintLabel?: string;
+};
+
+// What the mode prefix shows besides its text, and how it changes.
+interface PrefixContentOptions {
+  modeId?: string;
+  provider?: InputModeProvider | null;
+  iconUrl?: string;
+  // The host whose icon and theme the provider uses.
+  iconHost?: string;
+  iconClass?: string;
+  isAi?: boolean;
+  menuIconName?: string;
+  // Keep an icon animation that is running.
+  preserveIconAnimation?: boolean;
+  animateIcon?: boolean;
+  animateOutgoingIcon?: boolean;
+}
 
 type ResolveProviderIconUrl = (provider: SiteSearchProvider | null | undefined, iconUrl: string) => string | null | undefined;
 
@@ -126,12 +150,14 @@ export type {
   GetThemeForProvider,
   InputModeTheme,
   InputModeVars,
+  InputModeProvider,
   IsElementVisible,
   ModeMenuEntry,
   ModeMenuItem,
   ModeMenuMatch,
   ModeMenuRange,
   ModeMenuSearchIndex,
+  PrefixContentOptions,
   ResolveProviderIconUrl,
   Rgb,
   SetStyle

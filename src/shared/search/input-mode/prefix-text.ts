@@ -1,7 +1,92 @@
-// @ts-nocheck
 // Setting the mode prefix for a provider or scope, clearing it, and the
 // site search Tab hint.
-function createPrefixText(deps) {
+import type {
+  CssText,
+  FormatMessage,
+  InputModeProvider,
+  InputModeTheme,
+  InputModeVars,
+  IsElementVisible,
+  PrefixContentOptions,
+  SetStyle
+} from './types';
+import type { PrefixContentApi } from './prefix-content';
+import type { PrefixMotionApi } from './prefix-motion';
+import type { PrefixVisualApi } from './prefix-visual';
+
+// The controller state search-input-mode.ts shares with its modules.
+interface PrefixTextState {
+  modeTagActive: boolean;
+  inputModePrefixAnimation: Animation | null;
+  inputModePrefixCurrentAnimation: Animation | null;
+  inputModePrefixAnimationFrame: number | null;
+  inputModePrefixAnimationTimer: number;
+  inputModePrefixPendingText: string;
+  inputModePrefixContentRevision: number;
+}
+
+interface PrefixTextConfig {
+  onModeTagActiveChange?(active: boolean): void;
+  // The surface shows something else where the Tab hint goes.
+  isTabHintSuppressed?(): boolean;
+}
+
+interface PrefixTextOptions extends PrefixContentOptions {
+  // Play the enter (or resize) motion.
+  animate?: boolean;
+  preserveModeMenuDoubleTab?: boolean;
+}
+
+interface PrefixTextDeps {
+  config: PrefixTextConfig;
+  siteSearchPrefix: HTMLElement;
+  siteSearchPrefixText: HTMLElement;
+  resetModeMenuDoubleTab: () => void;
+  resetModeTagRemovalConfirmation: () => void;
+  isElementVisible: IsElementVisible;
+  getInputModePrefixRenderedWidth: PrefixContentApi['getInputModePrefixRenderedWidth'];
+  cancelInputModePrefixAnimation: PrefixMotionApi['cancelInputModePrefixAnimation'];
+  settleInputModePrefixMenuVisualState: PrefixMotionApi['settleInputModePrefixMenuVisualState'];
+  setStyle: SetStyle;
+  prefixTransition: string;
+  useImportantStyles: boolean;
+  setInputModePrefixIdentity: PrefixContentApi['setInputModePrefixIdentity'];
+  applyInputModePrefixVisual: PrefixVisualApi['applyInputModePrefixVisual'];
+  syncInputPlaceholder: () => void;
+  setInputStyle: (target: HTMLElement, property: string, value: string) => void;
+  input: HTMLInputElement;
+  updatePrefixLayout: () => void;
+  measureInputModePrefixWidthForText: PrefixContentApi['measureInputModePrefixWidthForText'];
+  playInputModePrefixResizeAnimation: PrefixMotionApi['playInputModePrefixResizeAnimation'];
+  setInputModePrefixContent: PrefixContentApi['setInputModePrefixContent'];
+  setInputModePrefixRestState: PrefixMotionApi['setInputModePrefixRestState'];
+  playInputModePrefixEnterAnimation: PrefixMotionApi['playInputModePrefixEnterAnimation'];
+  isAiSiteSearchProvider: (provider: InputModeProvider | null | undefined) => boolean;
+  getProviderIcon: (provider: InputModeProvider | null | undefined) => string;
+  getProviderThemeHost: (provider: InputModeProvider | null | undefined) => string;
+  getSiteSearchPrefixText: (provider: InputModeProvider | null | undefined) => string;
+  cancelInputModePrefixIconAnimation: PrefixContentApi['cancelInputModePrefixIconAnimation'];
+  siteSearchPrefixIcon: HTMLImageElement;
+  siteSearchPrefixIconFrame: HTMLElement;
+  siteSearchPrefixGlyph: HTMLElement;
+  siteSearchPrefixLineIcon: SVGElement;
+  siteSearchPrefixChevron: HTMLElement;
+  closeModeMenu: (restoreFocus?: boolean) => void;
+  getDefaultPlaceholder: () => string;
+  defaultCaretColor: string;
+  getSiteSearchDisplayName: (provider: InputModeProvider | null | undefined) => string;
+  formatMessage: FormatMessage;
+  siteSearchTabHintKey: HTMLElement;
+  cssText: CssText;
+  vars: InputModeVars;
+  siteSearchTabHintText: HTMLElement;
+  siteSearchTabHint: HTMLElement;
+  win: Partial<Pick<Window, 'matchMedia'>> | null | undefined;
+  updateInputRightPadding: () => void;
+  inputModeState: PrefixTextState;
+}
+
+function createPrefixText(deps: PrefixTextDeps) {
   const {
     config,
     siteSearchPrefix,
@@ -53,7 +138,7 @@ function createPrefixText(deps) {
   // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
 
-  function setModeTagActive(active) {
+  function setModeTagActive(active: boolean): void {
     const nextActive = Boolean(active);
     if (inputModeState.modeTagActive === nextActive) {
       return;
@@ -64,8 +149,12 @@ function createPrefixText(deps) {
     }
   }
 
-  function setPrefixText(prefixText, theme, prefixOptions) {
-    const nextOptions = prefixOptions || {};
+  function setPrefixText(
+    prefixText: string,
+    theme: InputModeTheme | null | undefined,
+    prefixOptions?: PrefixTextOptions | null
+  ): void {
+    const nextOptions: PrefixTextOptions = prefixOptions || {};
     const nextPrefixText = String(prefixText || '');
     const shouldAnimate = Boolean(nextOptions.animate);
     const nextModeId = nextOptions.modeId ? String(nextOptions.modeId) : '';
@@ -122,7 +211,7 @@ function createPrefixText(deps) {
       updatePrefixLayout();
       return;
     }
-    const contentOptions = {
+    const contentOptions: PrefixContentOptions = {
       ...nextOptions,
       animateIcon: shouldAnimate && !isRepeatedMode,
       animateOutgoingIcon: shouldAnimateResize,
@@ -168,7 +257,11 @@ function createPrefixText(deps) {
     }
   }
 
-  function setProviderPrefix(provider, theme, providerOptions) {
+  function setProviderPrefix(
+    provider: InputModeProvider | null | undefined,
+    theme: InputModeTheme | null | undefined,
+    providerOptions?: PrefixTextOptions | null
+  ): void {
     const isAi = isAiSiteSearchProvider(provider);
     const isAggregate = Boolean(
       provider && (
@@ -177,8 +270,8 @@ function createPrefixText(deps) {
         String(provider.category || '') === 'aggregateSearch'
       )
     );
-    const nextOptions = {
-      ...(providerOptions || {}),
+    const nextOptions: PrefixTextOptions = {
+      ...providerOptions,
       iconUrl: isAggregate ? '' : getProviderIcon(provider),
       iconHost: isAggregate ? '' : getProviderThemeHost(provider),
       iconClass: isAggregate ? 'ri-stack-line' : (isAi ? 'ri-search-ai-line' : 'ri-global-line'),
@@ -191,7 +284,7 @@ function createPrefixText(deps) {
     setPrefixText(getSiteSearchPrefixText(provider), theme, nextOptions);
   }
 
-  function clearProviderPrefix() {
+  function clearProviderPrefix(): void {
     resetModeMenuDoubleTab();
     resetModeTagRemovalConfirmation();
     cancelInputModePrefixIconAnimation();
@@ -214,8 +307,9 @@ function createPrefixText(deps) {
     updatePrefixLayout();
   }
 
-  function removeProviderIconRuntimeFallbacks(parent) {
-    if (!parent || typeof parent.querySelectorAll !== 'function') {
+  // Removes the fallback icons the surfaces' icon runtimes leave beside an image.
+  function removeProviderIconRuntimeFallbacks(parent: ParentNode | null | undefined): void {
+    if (!parent) {
       return;
     }
     parent.querySelectorAll(
@@ -226,7 +320,7 @@ function createPrefixText(deps) {
     ).forEach((node) => node.remove());
   }
 
-  function renderTabHint(provider) {
+  function renderTabHint(provider: InputModeProvider | null | undefined): void {
     const site = getSiteSearchDisplayName(provider);
     const explicitLabel = provider && provider.tabHintLabel
       ? String(provider.tabHintLabel).trim()
@@ -283,7 +377,7 @@ function createPrefixText(deps) {
   }
 
   // Touch-only devices have no Tab key, so the hint would only crowd the query.
-  function hasNoTabKeyPointer() {
+  function hasNoTabKeyPointer(): boolean {
     return Boolean(
       win &&
       typeof win.matchMedia === 'function' &&
@@ -291,7 +385,7 @@ function createPrefixText(deps) {
     );
   }
 
-  function setTabHintVisible(visible, provider) {
+  function setTabHintVisible(visible: boolean, provider?: InputModeProvider | null): void {
     if (!visible || hasNoTabKeyPointer()) {
       setStyle(siteSearchTabHint, 'display', 'none', useImportantStyles);
       siteSearchTabHint.removeAttribute('title');
@@ -315,4 +409,7 @@ function createPrefixText(deps) {
   };
 }
 
+type PrefixTextApi = ReturnType<typeof createPrefixText>;
+
 export { createPrefixText };
+export type { PrefixTextApi, PrefixTextConfig, PrefixTextDeps, PrefixTextOptions, PrefixTextState };

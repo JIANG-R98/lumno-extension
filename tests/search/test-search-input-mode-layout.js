@@ -33,6 +33,12 @@ class FakeStyle {
   getPropertyValue(property) {
     return this.values.get(property) || '';
   }
+
+  removeProperty(property) {
+    const value = this.getPropertyValue(property);
+    this.values.delete(property);
+    return value;
+  }
 }
 
 class FakeElement {

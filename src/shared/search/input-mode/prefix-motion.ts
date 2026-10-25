@@ -1,7 +1,48 @@
-// @ts-nocheck
 // Mode prefix motion: the current label reveal, entering, resizing, and
 // the rest state and menu-open state it settles into.
-function createPrefixMotion(deps) {
+import type { IsElementVisible, SetStyle } from './types';
+import type { PrefixCurrentVisualState } from './prefix-content';
+
+// The controller state search-input-mode.ts shares with its modules.
+interface PrefixMotionState {
+  modeMenuOpen: boolean;
+  inputModePrefixAnimation: Animation | null;
+  inputModePrefixCurrentAnimation: Animation | null;
+  // The frame and timer of a resize where the Web Animations API is missing.
+  inputModePrefixAnimationFrame: number | null;
+  inputModePrefixAnimationTimer: number;
+  // The text a resize is on its way to.
+  inputModePrefixPendingText: string;
+}
+
+interface PrefixMotionDeps {
+  siteSearchPrefixCurrent: HTMLElement;
+  setStyle: SetStyle;
+  useImportantStyles: boolean;
+  shouldReduceInputModeMotion: () => boolean;
+  updatePrefixLayout: () => void;
+  DEFAULT_PREFIX_RESIZE_DURATION: number;
+  DEFAULT_PREFIX_RESIZE_EASING: string;
+  win: Pick<Window, 'requestAnimationFrame' | 'setTimeout'> & Partial<Pick<Window, 'cancelAnimationFrame' | 'clearTimeout'>>;
+  siteSearchPrefix: HTMLElement;
+  prefixTransition: string;
+  DEFAULT_PREFIX_ENTER_DURATION: number;
+  DEFAULT_PREFIX_ENTER_EASING: string;
+  modeMenu: HTMLElement;
+  isElementVisible: IsElementVisible;
+  getInputModePrefixCurrentVisualState: () => PrefixCurrentVisualState;
+  DEFAULT_PREFIX_ITEM_GAP_PX: number;
+  inputModeState: PrefixMotionState;
+}
+
+interface PrefixResizeOptions {
+  // Each gets the animation revision it ran under.
+  onStart?(revision: number): void;
+  onFinish?(revision: number): void;
+  preservePendingText?: boolean;
+}
+
+function createPrefixMotion(deps: PrefixMotionDeps) {
   const {
     siteSearchPrefixCurrent,
     setStyle,
@@ -26,25 +67,25 @@ function createPrefixMotion(deps) {
 
   let inputModePrefixAnimationRevision = 0;
 
-  function clearInputModePrefixCurrentAnimatedStyles() {
-    if (siteSearchPrefixCurrent && siteSearchPrefixCurrent.style &&
-        typeof siteSearchPrefixCurrent.style.removeProperty === 'function') {
-      siteSearchPrefixCurrent.style.removeProperty('width');
-      siteSearchPrefixCurrent.style.removeProperty('margin-left');
-    }
+  function clearInputModePrefixCurrentAnimatedStyles(): void {
+    siteSearchPrefixCurrent.style.removeProperty('width');
+    siteSearchPrefixCurrent.style.removeProperty('margin-left');
     setStyle(siteSearchPrefixCurrent, 'will-change', 'auto', useImportantStyles);
   }
 
-  function cancelInputModePrefixCurrentAnimation() {
+  function cancelInputModePrefixCurrentAnimation(): void {
     const animation = inputModeState.inputModePrefixCurrentAnimation;
     inputModeState.inputModePrefixCurrentAnimation = null;
-    if (animation && typeof animation.cancel === 'function') {
+    if (animation) {
       animation.cancel();
     }
     clearInputModePrefixCurrentAnimatedStyles();
   }
 
-  function playInputModePrefixCurrentResizeAnimation(fromState, toState) {
+  function playInputModePrefixCurrentResizeAnimation(
+    fromState: PrefixCurrentVisualState,
+    toState: PrefixCurrentVisualState
+  ): void {
     cancelInputModePrefixCurrentAnimation();
     const animationRevision = inputModePrefixAnimationRevision;
     const startWidth = Math.max(0, Number(fromState && fromState.width) || 0);
@@ -81,7 +122,7 @@ function createPrefixMotion(deps) {
     });
     inputModeState.inputModePrefixCurrentAnimation = animation;
     setStyle(siteSearchPrefixCurrent, 'will-change', 'width', useImportantStyles);
-    const finish = () => {
+    const finish = (): void => {
       if (inputModeState.inputModePrefixCurrentAnimation !== animation ||
           animationRevision !== inputModePrefixAnimationRevision) {
         return;
@@ -101,7 +142,7 @@ function createPrefixMotion(deps) {
     };
   }
 
-  function cancelInputModePrefixAnimation(cancelOptions) {
+  function cancelInputModePrefixAnimation(cancelOptions?: { preservePendingText?: boolean }): void {
     inputModePrefixAnimationRevision += 1;
     if (!cancelOptions || cancelOptions.preservePendingText !== true) {
       inputModeState.inputModePrefixPendingText = '';
@@ -110,9 +151,7 @@ function createPrefixMotion(deps) {
     if (inputModeState.inputModePrefixAnimation) {
       const animation = inputModeState.inputModePrefixAnimation;
       inputModeState.inputModePrefixAnimation = null;
-      if (typeof animation.cancel === 'function') {
-        animation.cancel();
-      }
+      animation.cancel();
     }
     if (inputModeState.inputModePrefixAnimationFrame !== null && win && typeof win.cancelAnimationFrame === 'function') {
       win.cancelAnimationFrame(inputModeState.inputModePrefixAnimationFrame);
@@ -122,30 +161,18 @@ function createPrefixMotion(deps) {
       win.clearTimeout(inputModeState.inputModePrefixAnimationTimer);
       inputModeState.inputModePrefixAnimationTimer = 0;
     }
-    if (siteSearchPrefix && siteSearchPrefix.style) {
-      if (typeof siteSearchPrefix.style.removeProperty === 'function') {
-        siteSearchPrefix.style.removeProperty('width');
-      } else {
-        siteSearchPrefix.style.width = '';
-      }
-    }
+    siteSearchPrefix.style.removeProperty('width');
   }
 
-  function restoreInputModePrefixAnimatedState() {
-    if (siteSearchPrefix && siteSearchPrefix.style) {
-      if (typeof siteSearchPrefix.style.removeProperty === 'function') {
-        siteSearchPrefix.style.removeProperty('width');
-      } else {
-        siteSearchPrefix.style.width = '';
-      }
-    }
+  function restoreInputModePrefixAnimatedState(): void {
+    siteSearchPrefix.style.removeProperty('width');
     setStyle(siteSearchPrefix, 'opacity', '1', useImportantStyles);
     setStyle(siteSearchPrefix, 'transform', 'translateY(-50%) translateX(0) scaleX(1)', useImportantStyles);
     setStyle(siteSearchPrefix, 'transition', prefixTransition, useImportantStyles);
     setStyle(siteSearchPrefix, 'will-change', 'auto', useImportantStyles);
   }
 
-  function setInputModePrefixRestState(restOptions) {
+  function setInputModePrefixRestState(restOptions?: { transition?: boolean }): void {
     cancelInputModePrefixAnimation();
     const transitionEnabled = !restOptions || restOptions.transition !== false;
     setStyle(siteSearchPrefix, 'opacity', '1', useImportantStyles);
@@ -154,7 +181,7 @@ function createPrefixMotion(deps) {
     setStyle(siteSearchPrefix, 'will-change', 'auto', useImportantStyles);
   }
 
-  function playInputModePrefixEnterAnimation() {
+  function playInputModePrefixEnterAnimation(): void {
     cancelInputModePrefixAnimation();
     const animationRevision = inputModePrefixAnimationRevision;
     siteSearchPrefix.style.setProperty('opacity', '1');
@@ -197,8 +224,12 @@ function createPrefixMotion(deps) {
     };
   }
 
-  function playInputModePrefixResizeAnimation(fromWidth, toWidth, resizeOptions) {
-    const options = resizeOptions || {};
+  function playInputModePrefixResizeAnimation(
+    fromWidth: number,
+    toWidth: number,
+    resizeOptions?: PrefixResizeOptions | null
+  ): void {
+    const options: PrefixResizeOptions = resizeOptions || {};
     const onStart = typeof options.onStart === 'function'
       ? options.onStart
       : null;
@@ -283,7 +314,7 @@ function createPrefixMotion(deps) {
     });
   }
 
-  function setInputModePrefixCurrentVisible(visible) {
+  function setInputModePrefixCurrentVisible(visible: boolean): void {
     const nextVisible = Boolean(visible);
     siteSearchPrefix.setAttribute(
       'data-current-visible',
@@ -300,7 +331,7 @@ function createPrefixMotion(deps) {
     );
   }
 
-  function setInputModePrefixCurrentMeasuring(measuring) {
+  function setInputModePrefixCurrentMeasuring(measuring: boolean): void {
     const nextMeasuring = Boolean(measuring);
     siteSearchPrefix.setAttribute(
       'data-current-measuring',
@@ -317,14 +348,15 @@ function createPrefixMotion(deps) {
     );
   }
 
-  function settleInputModePrefixMenuVisualState() {
+  function settleInputModePrefixMenuVisualState(): void {
     const currentVisible = Boolean(inputModeState.modeMenuOpen && !modeMenu.hidden);
     setInputModePrefixCurrentMeasuring(false);
     setInputModePrefixCurrentVisible(currentVisible);
     clearInputModePrefixCurrentAnimatedStyles();
   }
 
-  function setInputModePrefixMenuOpen(open) {
+  // Reveals the "current" label beside the prefix while the menu is open.
+  function setInputModePrefixMenuOpen(open: boolean): void {
     const nextOpen = Boolean(open);
     const wasOpen = siteSearchPrefix.getAttribute('data-menu-open') === 'true';
     if (wasOpen === nextOpen) {
@@ -342,7 +374,7 @@ function createPrefixMotion(deps) {
     }
     siteSearchPrefix.setAttribute('data-menu-open', nextOpen ? 'true' : 'false');
     setInputModePrefixCurrentMeasuring(nextOpen);
-    const nextCurrentState = nextOpen
+    const nextCurrentState: PrefixCurrentVisualState = nextOpen
       ? getInputModePrefixCurrentVisualState()
       : {
         marginLeft: -DEFAULT_PREFIX_ITEM_GAP_PX,
@@ -376,4 +408,7 @@ function createPrefixMotion(deps) {
   };
 }
 
+type PrefixMotionApi = ReturnType<typeof createPrefixMotion>;
+
 export { createPrefixMotion };
+export type { PrefixMotionApi, PrefixMotionDeps, PrefixMotionState, PrefixResizeOptions };
