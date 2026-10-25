@@ -1,7 +1,66 @@
 // Daily wallpapers: the Bing catalog and curated categories, the picks
 // kept per day, refreshing them when a day has passed, and picking a Bing
 // or curated photo.
-function createDailyWallpapers(deps) {
+import type { StorageAreaLike } from '../../../domain/storage-port';
+import type { ToastTask } from '../../../shared/react/toast';
+import type { FormatMessage, ShowToast, Translate } from '../../newtab-types';
+import type * as RemoteContent from '../../remote-content';
+import type { RemoteContentClient } from '../../remote-content';
+import type { RemoteWallpaper } from '../../remote-content-types';
+import type { WallpaperSelection } from './wallpaper-selection';
+import type { WallpaperSources } from './wallpaper-sources';
+import type { WallpaperStorage } from './wallpaper-storage';
+import type { DailyWallpaperPicks, WallpaperItem, WallpaperMode, WallpaperState } from './wallpaper-runtime-types';
+
+interface DailyWallpapersDeps extends
+  Pick<WallpaperStorage,
+    'getEffectiveWallpaperIdForMode' | 'getResolvedWallpaperMode' | 'getWallpaperSelectionIdForUi' |
+    'writeStorageValue' | 'getWallpaperTileSelectionId' | 'getWallpaperEditMode'>,
+  Pick<WallpaperSelection, 'applyResolvedNewtabWallpaper' | 'persistNewtabWallpaper'>,
+  Pick<WallpaperSources, 'getWallpaperById'> {
+  renderWallpaperPanelState(): void;
+  remoteClient: Pick<RemoteContentClient, 'getCatalog' | 'ensureWallpaper' | 'getWallpaper'>;
+  NEWTAB_WALLPAPER_MODES: readonly WallpaperMode[];
+  REMOTE_CONTENT: Pick<typeof RemoteContent,
+    'BING_DAILY_ID' | 'localDay' | 'isDailyWallpaperId' | 'getWallpaperProvider' | 'getCuratedWallpapers' |
+    'CURATED_CATEGORIES' | 'RANDOM_CATEGORY' | 'getRandomMixCategories' | 'normalizeRandomMixExcluded' |
+    'setRandomMixExcluded' | 'curatedDailyId'>;
+  document: Document;
+  window: Window;
+  storageArea: Pick<StorageAreaLike, 'get' | 'set'> | null;
+  NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY: string;
+  showToast: ShowToast;
+  t: Translate;
+  formatMessage: FormatMessage;
+  // Replays the entry motion of a panel element.
+  playWallpaperEnterMotion(element: HTMLElement | null | undefined, state: string): void;
+  // The appearance panel's elements by data-wallpaper-ref name.
+  getWallpaperPanelRefs(): Readonly<Partial<Record<string, HTMLElement>>>;
+  NEWTAB_CURATED_MIX_EXCLUDED_STORAGE_KEY: string;
+  NEWTAB_WALLPAPER_DEFAULT_ID: string;
+  // Shows a toast that follows a task to its end.
+  beginToast(message: string): ToastTask;
+  wallpaperState: Pick<WallpaperState,
+    'wallpaperViewController' | 'bingLoading' | 'bingStatus' | 'bingItems' | 'hasStoredWallpaperStateLoaded' |
+    'wallpaperEffects' | 'dailyWallpaperPicks' | 'curatedCategory' | 'bingSelecting' | 'bingSelectionSeq' |
+    'currentWallpaperPrefs'>;
+}
+
+// Category names when their messages are missing.
+const CURATED_CATEGORY_FALLBACKS: Readonly<Record<string, string>> = {
+  random: 'Mix',
+  nature: 'Nature',
+  water: 'Water',
+  city: 'City',
+  minimal: 'Minimal',
+  art: 'Art'
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function createDailyWallpapers(deps: DailyWallpapersDeps) {
   const {
     renderWallpaperPanelState,
     remoteClient,
@@ -40,23 +99,23 @@ function createDailyWallpapers(deps) {
   let dailyWallpaperCheckedDay = '';
   let hasWallpaperPageShownListeners = false;
 
-  function formatBingDate(date) {
-    return /^\d{8}$/.test(String(date || ''))
+  function formatBingDate(date: string | undefined): string {
+    return date && /^\d{8}$/.test(date)
       ? `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}` : '';
   }
 
   // Bing credits read "Place (© Photographer)"; show them as "Place · © Photographer".
-  function formatBingCopyright(copyright) {
+  function formatBingCopyright(copyright: unknown): string {
     const text = String(copyright || '').trim();
     const match = /^(.*?)\s*[(（]\s*(©[^()（）]*)[)）]\s*$/.exec(text);
     return match ? [match[1], match[2].trim()].filter(Boolean).join(' · ') : text;
   }
 
-  function getBingWallpaperLabel(item) {
+  function getBingWallpaperLabel(item: WallpaperItem | null | undefined): string {
     return item ? [item.name, formatBingDate(item.date)].filter(Boolean).join(' · ') : '';
   }
 
-  async function loadBingCatalog(refresh) {
+  async function loadBingCatalog(refresh?: boolean): Promise<void> {
     if (!wallpaperState.wallpaperViewController) return;
     const seq = ++bingCatalogSeq;
     wallpaperState.bingLoading = true;
@@ -76,7 +135,7 @@ function createDailyWallpapers(deps) {
           applyResolvedNewtabWallpaper();
         }
       }
-    } catch (_error) {
+    } catch {
       if (seq !== bingCatalogSeq) return;
       wallpaperState.bingStatus = 'error';
     } finally {
@@ -88,7 +147,7 @@ function createDailyWallpapers(deps) {
   }
 
   // A New Tab can stay open past midnight; pick up the new daily photo when it is shown again.
-  function refreshDailyWallpapersIfStale() {
+  function refreshDailyWallpapersIfStale(): void {
     if (!wallpaperState.hasStoredWallpaperStateLoaded || document.visibilityState === 'hidden') return;
     const day = REMOTE_CONTENT.localDay(Date.now());
     if (day === dailyWallpaperCheckedDay) return;
@@ -102,7 +161,7 @@ function createDailyWallpapers(deps) {
       renderWallpaperPanelState();
     }
     if (!dailyIds.includes(REMOTE_CONTENT.BING_DAILY_ID)) return;
-    remoteClient.ensureWallpaper(REMOTE_CONTENT.BING_DAILY_ID).then(() => {
+    void remoteClient.ensureWallpaper(REMOTE_CONTENT.BING_DAILY_ID).then(() => {
       if (getEffectiveWallpaperIdForMode(getResolvedWallpaperMode()) === REMOTE_CONTENT.BING_DAILY_ID) {
         applyResolvedNewtabWallpaper();
       }
@@ -113,21 +172,22 @@ function createDailyWallpapers(deps) {
   }
 
   // A background tab can miss the effect redraw for a photo that changed while it was hidden.
-  function syncWallpaperEffectSource() {
-    if (document.visibilityState === 'hidden' || !wallpaperState.wallpaperEffects ||
-        typeof wallpaperState.wallpaperEffects.isSourceStale !== 'function' || !wallpaperState.wallpaperEffects.isSourceStale()) {
+  function syncWallpaperEffectSource(): void {
+    const effects = wallpaperState.wallpaperEffects;
+    if (document.visibilityState === 'hidden' || !effects ||
+        typeof effects.isSourceStale !== 'function' || !effects.isSourceStale()) {
       return;
     }
-    wallpaperState.wallpaperEffects.refresh({ immediate: true });
+    void effects.refresh({ immediate: true });
   }
 
-  function handleWallpaperPageShown() {
+  function handleWallpaperPageShown(): void {
     refreshDailyWallpapersIfStale();
     syncWallpaperEffectSource();
   }
 
   // Bound once the stored wallpaper loads, so a tab that never opens the panel still rolls over.
-  function bindWallpaperPageShownListeners() {
+  function bindWallpaperPageShownListeners(): void {
     if (hasWallpaperPageShownListeners) return;
     hasWallpaperPageShownListeners = true;
     dailyWallpaperCheckedDay = REMOTE_CONTENT.localDay(Date.now());
@@ -139,11 +199,10 @@ function createDailyWallpapers(deps) {
     }
   }
 
-  function normalizeDailyWallpaperPicks(value) {
-    const picks = {};
-    const source = value && typeof value === 'object' && value.picks && typeof value.picks === 'object'
-      ? value.picks
-      : {};
+  function normalizeDailyWallpaperPicks(value: unknown): DailyWallpaperPicks {
+    const picks: Record<string, string> = {};
+    const stored = isRecord(value) ? value : {};
+    const source = isRecord(stored.picks) ? stored.picks : {};
     Object.keys(source).forEach((dailyId) => {
       const pickId = String(source[dailyId] || '');
       if (REMOTE_CONTENT.isDailyWallpaperId(dailyId) && !REMOTE_CONTENT.isDailyWallpaperId(pickId) &&
@@ -151,10 +210,10 @@ function createDailyWallpapers(deps) {
         picks[dailyId] = pickId;
       }
     });
-    return { day: value && typeof value.day === 'string' ? value.day : '', picks };
+    return { day: typeof stored.day === 'string' ? stored.day : '', picks };
   }
 
-  function getDailyWallpaperPick(dailyId) {
+  function getDailyWallpaperPick(dailyId: string): string {
     if (!REMOTE_CONTENT.isDailyWallpaperId(dailyId) ||
         wallpaperState.dailyWallpaperPicks.day !== REMOTE_CONTENT.localDay(Date.now())) {
       return '';
@@ -162,15 +221,17 @@ function createDailyWallpapers(deps) {
     return wallpaperState.dailyWallpaperPicks.picks[dailyId] || '';
   }
 
-  function getActiveDailyWallpaperId(provider) {
+  function getActiveDailyWallpaperId(provider: string): string {
     const id = getWallpaperSelectionIdForUi();
     return REMOTE_CONTENT.isDailyWallpaperId(id) && REMOTE_CONTENT.getWallpaperProvider(id) === provider ? id : '';
   }
 
   // Choosing today's own photo, or restoring it, simply drops the pick.
-  function setDailyWallpaperPick(dailyId, pickId) {
+  function setDailyWallpaperPick(dailyId: string, pickId: string): void {
     const today = REMOTE_CONTENT.localDay(Date.now());
-    const picks = wallpaperState.dailyWallpaperPicks.day === today ? Object.assign({}, wallpaperState.dailyWallpaperPicks.picks) : {};
+    const picks: Record<string, string> = wallpaperState.dailyWallpaperPicks.day === today
+      ? { ...wallpaperState.dailyWallpaperPicks.picks }
+      : {};
     const scheduled = remoteClient.getWallpaper(dailyId);
     if (!pickId || scheduled && scheduled.dailyId === pickId) delete picks[dailyId];
     else picks[dailyId] = pickId;
@@ -183,11 +244,11 @@ function createDailyWallpapers(deps) {
     renderWallpaperPanelState();
   }
 
-  function clearDailyWallpaperPick(dailyId) {
+  function clearDailyWallpaperPick(dailyId: string): void {
     if (getDailyWallpaperPick(dailyId)) setDailyWallpaperPick(dailyId, '');
   }
 
-  function getCuratedTileItems() {
+  function getCuratedTileItems(): RemoteWallpaper[] {
     const items = REMOTE_CONTENT.getCuratedWallpapers(wallpaperState.curatedCategory);
     if (!items.length) return [];
     // Wrap around the end of the category so every page fills both rows.
@@ -198,46 +259,45 @@ function createDailyWallpapers(deps) {
 
   // Pages keep a fixed order, so choosing a photo never reshuffles the grid; instead the list
   // opens on the page that holds the chosen or daily photo.
-  function showCuratedPageOfSelection() {
+  function showCuratedPageOfSelection(): void {
     const selectedId = getWallpaperTileSelectionId(getWallpaperSelectionIdForUi());
     const index = REMOTE_CONTENT.getCuratedWallpapers(wallpaperState.curatedCategory).findIndex((item) => item.id === selectedId);
     curatedPage = index >= 0 ? Math.floor(index / CURATED_TILE_LIMIT) : 0;
   }
 
   // Paintings are named by title, photos by photographer.
-  function getCuratedPhotoLabel(item) {
+  function getCuratedPhotoLabel(item: WallpaperItem | null | undefined): string {
     if (item && item.title) return item.title;
     return item && item.name && item.name !== 'Picsum'
       ? formatMessage('newtab_curated_photo_by', 'Photo by {name}', { name: item.name })
       : '';
   }
 
-  function getCuratedPhotoMeta(item) {
+  function getCuratedPhotoMeta(item: WallpaperItem | null | undefined): string {
     if (item && item.title) {
       return [item.name, t('newtab_curated_art_meta', 'The Cleveland Museum of Art')].filter(Boolean).join(' · ');
     }
     return t('newtab_curated_source_meta', 'Unsplash · via Lorem Picsum');
   }
 
-  function getCuratedCategoryLabel(category) {
-    const fallbacks = { random: 'Mix', nature: 'Nature', water: 'Water', city: 'City', minimal: 'Minimal', art: 'Art' };
-    return t(`newtab_curated_category_${category}`, fallbacks[category] || category);
+  function getCuratedCategoryLabel(category: string): string {
+    return t(`newtab_curated_category_${category}`, CURATED_CATEGORY_FALLBACKS[category] || category);
   }
 
-  function isCuratedDailyWallpaperActive() {
+  function isCuratedDailyWallpaperActive(): boolean {
     const selectedId = getWallpaperSelectionIdForUi();
     return REMOTE_CONTENT.isDailyWallpaperId(selectedId) &&
       REMOTE_CONTENT.getWallpaperProvider(selectedId) === 'curated';
   }
 
-  function selectCuratedCategory(category) {
+  function selectCuratedCategory(category: string): void {
     if (!REMOTE_CONTENT.CURATED_CATEGORIES.includes(category) || category === wallpaperState.curatedCategory) return;
     wallpaperState.curatedCategory = category;
     showCuratedPageOfSelection();
     renderWallpaperPanelState();
     playWallpaperEnterMotion(getWallpaperPanelRefs().curatedItemsHost, 'enter');
   }
-  function setCuratedMixCategory(category, included) {
+  function setCuratedMixCategory(category: string, included: boolean): void {
     const excluded = REMOTE_CONTENT.CURATED_CATEGORIES
       .filter((value) => value !== REMOTE_CONTENT.RANDOM_CATEGORY &&
         !REMOTE_CONTENT.getRandomMixCategories().includes(value));
@@ -254,12 +314,12 @@ function createDailyWallpapers(deps) {
     renderWallpaperPanelState();
     playWallpaperEnterMotion(getWallpaperPanelRefs().curatedItemsHost, 'enter');
   }
-  function showMoreCuratedWallpapers() {
+  function showMoreCuratedWallpapers(): void {
     curatedPage += 1;
     renderWallpaperPanelState();
     playWallpaperEnterMotion(getWallpaperPanelRefs().curatedItemsHost, 'enter');
   }
-  function setCuratedDailyWallpaper(enabled) {
+  function setCuratedDailyWallpaper(enabled: boolean): void {
     if (enabled) {
       const dailyId = REMOTE_CONTENT.curatedDailyId(wallpaperState.curatedCategory);
       clearDailyWallpaperPick(dailyId);
@@ -273,13 +333,18 @@ function createDailyWallpapers(deps) {
     renderWallpaperPanelState();
   }
 
-  async function selectBingWallpaper(id, options) {
+  // Whether the two modes share one wallpaper.
+  function isSameForModes(): boolean {
+    return wallpaperState.currentWallpaperPrefs ? wallpaperState.currentWallpaperPrefs.sameForModes : true;
+  }
+
+  async function selectBingWallpaper(id: string, options?: { asDailyPick?: boolean } | null): Promise<void> {
     if (wallpaperState.bingSelecting) return;
     // A tile chosen while the daily photo is on replaces it for today only.
     const dailyId = options && options.asDailyPick ? getActiveDailyWallpaperId('bing') : '';
     const seq = ++wallpaperState.bingSelectionSeq;
     const mode = getWallpaperEditMode();
-    const sameForModes = wallpaperState.currentWallpaperPrefs.sameForModes;
+    const sameForModes = isSameForModes();
     wallpaperState.bingSelecting = true;
     renderWallpaperPanelState();
     // The new wallpaper is its own success signal, so only a failure leaves a message.
@@ -288,10 +353,10 @@ function createDailyWallpapers(deps) {
       await remoteClient.ensureWallpaper(id);
       toastTask.done();
       if (seq !== wallpaperState.bingSelectionSeq || mode !== getWallpaperEditMode() ||
-          sameForModes !== wallpaperState.currentWallpaperPrefs.sameForModes) return;
+          sameForModes !== isSameForModes()) return;
       if (dailyId) setDailyWallpaperPick(dailyId, id);
       else persistNewtabWallpaper(id);
-    } catch (_error) {
+    } catch {
       toastTask.fail(seq === wallpaperState.bingSelectionSeq
         ? t('newtab_bing_save_error', 'Could not save wallpaper. Please try again.')
         : '');
@@ -325,4 +390,7 @@ function createDailyWallpapers(deps) {
   };
 }
 
+type DailyWallpapers = ReturnType<typeof createDailyWallpapers>;
+
 export { createDailyWallpapers };
+export type { DailyWallpapers, DailyWallpapersDeps };

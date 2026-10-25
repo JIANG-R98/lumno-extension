@@ -1,9 +1,119 @@
 // Wallpapers the user adds: imported files and URLs, link wallpapers,
 // saving an online wallpaper locally, caching wallpaper images (including
 // tomorrow's daily ones), the online wallpaper menu, and deleting.
+import type { StorageAreaLike } from '../../../domain/storage-port';
+import { isNode } from '../../../shared/dom-guards';
+import type { ToastTask } from '../../../shared/react/toast';
+import type { SelectMenuOption } from '../../../shared/react/select-menu';
+import type { WallpaperImageCache, WallpaperRecordInput } from '../../../shared/wallpaper-local-store';
 import * as LumnoNewtabDismissStack from '../../dismiss-stack';
+import type { FormatMessage, ShowToast, Translate } from '../../newtab-types';
+import type { createSelectMenuController } from '../../react/select-menu';
+import type * as RemoteContent from '../../remote-content';
+import type { RemoteContentClient } from '../../remote-content';
+import type { RemoteWallpaper } from '../../remote-content-types';
+import type { WallpaperSelection } from './wallpaper-selection';
+import type { WallpaperSources } from './wallpaper-sources';
+import type { WallpaperStorage } from './wallpaper-storage';
+import type { WallpaperVisual } from './wallpaper-visual';
+import type {
+  CachedWallpaperImage,
+  LinkWallpaperEntry,
+  WallpaperItem,
+  WallpaperMode,
+  WallpaperState
+} from './wallpaper-runtime-types';
 
-function createCustomWallpapers(deps) {
+type SelectMenuController = ReturnType<typeof createSelectMenuController>;
+
+// The context menu online photos open to save them locally.
+interface OnlineWallpaperMenu {
+  controller: SelectMenuController;
+  control: HTMLElement;
+  menu: HTMLElement;
+}
+
+// The image parts of a built record or a cached copy.
+type WallpaperImageRecord = Pick<WallpaperRecordInput, 'imageDataUrl' | 'thumbnailDataUrl' | 'sampleDataUrl' | 'width' | 'height'>;
+
+type FetchRemoteContent = (url: string, init: RequestInit) => Promise<Response>;
+
+interface CustomWallpapersDeps extends
+  Pick<WallpaperStorage,
+    'buildCustomWallpaperRecordFromFile' | 'writeCustomWallpaperRecord' | 'normalizeCustomWallpaperRecord' |
+    'writeWallpaperPreloadCache' | 'writeStorageValue' | 'getWritableWallpaperPrefs' | 'setWallpaperPrefs' |
+    'getWritableLocalWallpaperOverrides' | 'writeCurrentWallpaperPrefs' | 'deleteCustomWallpaperRecord' |
+    'writeLocalWallpaperValue' | 'buildLocalWallpaperStorageValue' | 'getEffectiveWallpaperIdForMode'>,
+  Pick<WallpaperSelection,
+    'persistNewtabWallpaper' | 'mergeCustomWallpaperRecords' | 'applyResolvedNewtabWallpaper' | 'loadCustomWallpapers'>,
+  Pick<WallpaperSources, 'getCachedWallpaperImage' | 'getWallpaperById' | 'getShownWallpaperCopy' | 'getCustomWallpaperById'>,
+  Pick<WallpaperVisual, 'waitForDocumentLoad'> {
+  showToast: ShowToast;
+  formatMessage: FormatMessage;
+  renderWallpaperPanelState(): void;
+  // Shows a toast that follows a task to its end.
+  beginToast(message: string): ToastTask;
+  t: Translate;
+  options: { fetchRemoteContent?: FetchRemoteContent };
+  windowObj: Window & typeof globalThis;
+  cachedWallpaperImages: Map<string, CachedWallpaperImage>;
+  wallpaperImageCache: WallpaperImageCache | null;
+  warnWallpaperStoreFailure(message: string): (error: unknown) => void;
+  NEWTAB_WALLPAPER_MODES: readonly WallpaperMode[];
+  REMOTE_CONTENT: Pick<typeof RemoteContent,
+    'wallpaperFromId' | 'isDailyWallpaperId' | 'BING_DAILY_ID' | 'getCuratedDailyWallpaper'>;
+  window: Window & typeof globalThis;
+  dailyWallpaperStandIns: Map<string, CachedWallpaperImage>;
+  storageArea: Pick<StorageAreaLike, 'get' | 'set'> | null;
+  NEWTAB_LINK_WALLPAPERS_STORAGE_KEY: string;
+  hideTopActionTooltip(): void;
+  NEWTAB_WALLPAPER_DEFAULT_ID: string;
+  remoteClient: Pick<RemoteContentClient, 'getWallpaper'>;
+  document: Document;
+  // The appearance panel's elements by data-wallpaper-ref name.
+  getWallpaperPanelRefs(): Readonly<Partial<Record<string, HTMLElement>>>;
+  NEWTAB_LOCAL_WALLPAPER_DISABLED_VALUE: string;
+  wallpaperState: Pick<WallpaperState,
+    'customWallpapers' | 'linkWallpapers' | 'customWallpaperImporting' | 'customWallpaperUrlFormOpen' |
+    'customWallpaperUrlInvalid' | 'wallpaperViewController' | 'customWallpaperCatalogLoaded' |
+    'hasStoredWallpaperStateLoaded' | 'customWallpaperUrlClearToken' | 'activeWallpaperTab'>;
+}
+
+// The global timers with the DOM's numeric ids.
+const globalTimers: Pick<Window, 'setTimeout' | 'clearTimeout'> = globalThis;
+
+// Some hosts label images as generic binaries; these extensions then name the type.
+const IMAGE_EXTENSION_TYPES: Readonly<Record<string, string>> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp'
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+// A copy read from the image cache or handed over by the preload, read as
+// untrusted; null when it holds no image.
+function readCachedWallpaperImage(value: unknown): CachedWallpaperImage | null {
+  if (!isRecord(value) || typeof value.id !== 'string' || !value.id ||
+      typeof value.imageDataUrl !== 'string' || !value.imageDataUrl) {
+    return null;
+  }
+  return {
+    id: value.id,
+    url: typeof value.url === 'string' ? value.url : '',
+    imageDataUrl: value.imageDataUrl,
+    thumbnailDataUrl: typeof value.thumbnailDataUrl === 'string' ? value.thumbnailDataUrl : '',
+    sampleDataUrl: typeof value.sampleDataUrl === 'string' ? value.sampleDataUrl : '',
+    width: Number(value.width) || 0,
+    height: Number(value.height) || 0,
+    cachedAt: Number(value.cachedAt) || 0
+  };
+}
+
+function createCustomWallpapers(deps: CustomWallpapersDeps) {
   const {
     showToast,
     formatMessage,
@@ -56,7 +166,7 @@ function createCustomWallpapers(deps) {
 
   // Tomorrow's curated photo downloads once the page idles, or after this long at the latest.
   const UPCOMING_WALLPAPER_IDLE_TIMEOUT_MS = 30000;
-  const wallpaperImageCaching = new Map();
+  const wallpaperImageCaching = new Map<string, Promise<boolean>>();
   // The upcoming photos the page has scheduled to cache, so repeated applies do not queue them again.
   let upcomingWallpaperCacheKey = '';
   const LINK_WALLPAPER_ID_PATTERN = /^link-[a-z0-9]{4,32}$/;
@@ -66,20 +176,20 @@ function createCustomWallpapers(deps) {
   // Uploads and links together. A library already past this keeps every wallpaper; only adding stops.
   const LOCAL_WALLPAPER_LIMIT = 30;
   // The online photo the save menu is open for.
-  let onlineWallpaperMenu = null;
-  let onlineWallpaperMenuTarget = null;
+  let onlineWallpaperMenu: OnlineWallpaperMenu | null = null;
+  let onlineWallpaperMenuTarget: { id: string; element: Element } | null = null;
 
-  function isLocalWallpaperLibraryFull() {
+  function isLocalWallpaperLibraryFull(): boolean {
     return wallpaperState.customWallpapers.length + wallpaperState.linkWallpapers.length >= LOCAL_WALLPAPER_LIMIT;
   }
 
-  function showLocalWallpaperLimitToast() {
+  function showLocalWallpaperLimitToast(): void {
     showToast(formatMessage('newtab_wallpaper_local_limit',
       'You can keep up to {count} local wallpapers. Delete some and try again.',
       { count: LOCAL_WALLPAPER_LIMIT }), true);
   }
 
-  function importCustomWallpaperFile(file) {
+  function importCustomWallpaperFile(file: File | null | undefined): void {
     if (!file || wallpaperState.customWallpaperImporting) {
       return;
     }
@@ -90,7 +200,7 @@ function createCustomWallpapers(deps) {
     wallpaperState.customWallpaperImporting = true;
     renderWallpaperPanelState();
     const toastTask = beginToast(t('newtab_wallpaper_importing', 'Importing wallpaper…'));
-    buildCustomWallpaperRecordFromFile(file).then((record) => {
+    void buildCustomWallpaperRecordFromFile(file).then((record) => {
       return writeCustomWallpaperRecord(record).then(() => record);
     }).then((record) => {
       const nextWallpaper = normalizeCustomWallpaperRecord(record);
@@ -109,39 +219,39 @@ function createCustomWallpapers(deps) {
     });
   }
 
-  function normalizeCustomWallpaperUrl(value) {
+  function normalizeCustomWallpaperUrl(value: unknown): string {
     try {
       const url = new URL(String(value || '').trim());
       return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : '';
-    } catch (_error) {
+    } catch {
       return '';
     }
   }
 
-  function getCustomWallpaperUrlName(url) {
+  function getCustomWallpaperUrlName(url: string): string {
     try {
       const parsed = new URL(url);
       const file = decodeURIComponent(parsed.pathname.split('/').filter(Boolean).pop() || '');
       return (file.replace(/\.[^.]+$/, '') || parsed.hostname).slice(0, 80);
-    } catch (_error) {
+    } catch {
       return '';
     }
   }
 
   // Some hosts label images as generic binaries; the file extension then names the type.
-  function getCustomWallpaperUrlMimeType(url, type) {
+  function getCustomWallpaperUrlMimeType(url: string, type: string): string {
     const mime = String(type || '').split(';')[0].trim().toLowerCase();
     if (mime.startsWith('image/')) return mime === 'image/jpg' ? 'image/jpeg' : mime;
     const extension = (/\.([a-z0-9]{3,4})$/i.exec(new URL(url).pathname) || [])[1] || '';
-    return { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[extension.toLowerCase()] || mime;
+    return IMAGE_EXTENSION_TYPES[extension.toLowerCase()] || mime;
   }
 
-  async function fetchCustomWallpaperFile(url) {
-    const fetcher = typeof options.fetchRemoteContent === 'function'
+  async function fetchCustomWallpaperFile(url: string): Promise<File> {
+    const fetcher: FetchRemoteContent = typeof options.fetchRemoteContent === 'function'
       ? options.fetchRemoteContent
       : windowObj.fetch.bind(windowObj);
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20000);
+    const timer = globalTimers.setTimeout(() => controller.abort(), 20000);
     try {
       const response = await fetcher(url, {
         signal: controller.signal,
@@ -156,11 +266,11 @@ function createCustomWallpapers(deps) {
         type: getCustomWallpaperUrlMimeType(response.url || url, blob.type)
       });
     } finally {
-      clearTimeout(timer);
+      globalTimers.clearTimeout(timer);
     }
   }
 
-  function setCustomWallpaperUrlFormOpen(open) {
+  function setCustomWallpaperUrlFormOpen(open: unknown): void {
     const nextOpen = Boolean(open);
     if (wallpaperState.customWallpaperUrlFormOpen !== nextOpen) {
       wallpaperState.customWallpaperUrlFormOpen = nextOpen;
@@ -171,31 +281,35 @@ function createCustomWallpapers(deps) {
       wallpaperState.wallpaperViewController.focus('urlInput');
     }
   }
-  function isLinkWallpaperId(id) {
+  function isLinkWallpaperId(id: unknown): boolean {
     return LINK_WALLPAPER_ID_PATTERN.test(String(id || ''));
   }
 
-  function normalizeLinkWallpapers(value) {
-    const ids = new Set();
-    return (Array.isArray(value) ? value : []).map((entry) => ({
-      id: String(entry && entry.id || ''),
-      url: normalizeCustomWallpaperUrl(entry && entry.url),
-      addedAt: Number(entry && entry.addedAt) || 0
-    })).filter((entry) => {
+  function normalizeLinkWallpapers(value: unknown): LinkWallpaperEntry[] {
+    const ids = new Set<string>();
+    const list: unknown[] = Array.isArray(value) ? value : [];
+    return list.map((item): LinkWallpaperEntry => {
+      const entry = isRecord(item) ? item : {};
+      return {
+        id: String(entry.id || ''),
+        url: normalizeCustomWallpaperUrl(entry.url),
+        addedAt: Number(entry.addedAt) || 0
+      };
+    }).filter((entry) => {
       if (!isLinkWallpaperId(entry.id) || !entry.url || ids.has(entry.id)) return false;
       ids.add(entry.id);
       return true;
     });
   }
 
-  function setLinkWallpapers(value) {
+  function setLinkWallpapers(value: unknown): boolean {
     const next = normalizeLinkWallpapers(value);
     const changed = JSON.stringify(next) !== JSON.stringify(wallpaperState.linkWallpapers);
     wallpaperState.linkWallpapers = next;
     return changed;
   }
 
-  function getLinkWallpaperById(id) {
+  function getLinkWallpaperById(id: string): WallpaperItem | null {
     const entry = wallpaperState.linkWallpapers.find((item) => item.id === id);
     if (!entry) return null;
     const cached = getCachedWallpaperImage(id, entry.url);
@@ -213,14 +327,14 @@ function createCustomWallpapers(deps) {
   }
 
   // The preload already reads the shown photo's copy; take it instead of opening the cache again.
-  function takePreloadedWallpaperImage() {
+  function takePreloadedWallpaperImage(): Promise<void> {
     const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
     const ready = wallpaperPreload && !wallpaperPreload.customImageId && wallpaperPreload.imageReady;
-    if (!ready || typeof ready.then !== 'function') return Promise.resolve();
+    if (!wallpaperPreload || !ready || typeof ready.then !== 'function') return Promise.resolve();
     wallpaperPreload.imageReady = null;
     return ready.then(() => {
-      const record = wallpaperPreload.cachedImageRecord;
-      if (record && record.id && record.imageDataUrl && !cachedWallpaperImages.has(record.id)) {
+      const record = readCachedWallpaperImage(wallpaperPreload.cachedImageRecord);
+      if (record && !cachedWallpaperImages.has(record.id)) {
         cachedWallpaperImages.set(record.id, record);
       }
     }, () => {
@@ -229,10 +343,10 @@ function createCustomWallpapers(deps) {
   }
 
   // Likewise for an upload: the preload read its record from the local wallpaper library.
-  function takePreloadedCustomWallpaper() {
+  function takePreloadedCustomWallpaper(): Promise<void> {
     const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
     const ready = wallpaperPreload && wallpaperPreload.customImageId && wallpaperPreload.imageReady;
-    if (!ready || typeof ready.then !== 'function') return Promise.resolve();
+    if (!wallpaperPreload || !ready || typeof ready.then !== 'function') return Promise.resolve();
     wallpaperPreload.imageReady = null;
     return ready.then(() => {
       const record = wallpaperPreload.cachedImageRecord;
@@ -244,24 +358,25 @@ function createCustomWallpapers(deps) {
     });
   }
 
-  function readCachedWallpaperImages(ids) {
+  function readCachedWallpaperImages(ids: string[]): Promise<void> {
     return takePreloadedWallpaperImage().then(() => readStoredCachedWallpaperImages(ids));
   }
 
-  function readStoredCachedWallpaperImages(ids) {
+  function readStoredCachedWallpaperImages(ids: string[]): Promise<void> {
     const missing = ids.filter((id) => !cachedWallpaperImages.has(id));
     if (!wallpaperImageCache || !missing.length) return Promise.resolve();
     return wallpaperImageCache.readByIds(missing).then((records) => {
-      records.forEach((record) => {
-        if (record && record.imageDataUrl) cachedWallpaperImages.set(record.id, record);
+      records.forEach((stored) => {
+        const record = readCachedWallpaperImage(stored);
+        if (record) cachedWallpaperImages.set(record.id, record);
       });
     }).catch(warnWallpaperStoreFailure('Could not read cached wallpaper images.'));
   }
 
-  function rememberCachedWallpaperImage(id, url, record) {
+  function rememberCachedWallpaperImage(id: string, url: string, record: WallpaperImageRecord): void {
     // The effects sample sampleDataUrl (or, for copies cached before it existed, the thumbnail), placed
     // by the copy's width and height.
-    const image = { id, url, imageDataUrl: record.imageDataUrl, thumbnailDataUrl: record.thumbnailDataUrl,
+    const image: CachedWallpaperImage = { id, url, imageDataUrl: record.imageDataUrl, thumbnailDataUrl: record.thumbnailDataUrl,
       sampleDataUrl: record.sampleDataUrl || '', width: record.width, height: record.height, cachedAt: Date.now() };
     cachedWallpaperImages.set(id, image);
     if (wallpaperImageCache) {
@@ -272,10 +387,12 @@ function createCustomWallpapers(deps) {
   // A link names a single image. Each device downloads it, or a curated photo or print, once and
   // keeps a downscaled copy, so new tabs skip the network and the wallpaper keeps showing if the
   // link later breaks.
-  function cacheWallpaperImage(photoId, url) {
+  function cacheWallpaperImage(photoId: string, url: string | undefined): Promise<boolean> {
     if (getCachedWallpaperImage(photoId, url)) return Promise.resolve(true);
-    if (wallpaperImageCaching.has(photoId)) return wallpaperImageCaching.get(photoId);
-    const task = readCachedWallpaperImages([photoId]).then(() => getCachedWallpaperImage(photoId, url) ||
+    const pending = wallpaperImageCaching.get(photoId);
+    if (pending) return pending;
+    if (!url) return Promise.resolve(false);
+    const task = readCachedWallpaperImages([photoId]).then<CachedWallpaperImage | void>(() => getCachedWallpaperImage(photoId, url) ||
       fetchCustomWallpaperFile(url).then(buildCustomWallpaperRecordFromFile).then((record) => {
         rememberCachedWallpaperImage(photoId, url, record);
         pruneCachedWallpaperImages();
@@ -292,50 +409,50 @@ function createCustomWallpapers(deps) {
     return task;
   }
 
-  function cacheLinkWallpaper(id) {
+  function cacheLinkWallpaper(id: string): Promise<boolean> {
     const entry = wallpaperState.linkWallpapers.find((item) => item.id === id);
     return entry ? cacheWallpaperImage(id, entry.url) : Promise.resolve(false);
   }
 
   // The photo a mode shows: the link itself, or the photo or print a curated or daily pick resolves to.
-  function getEffectiveWallpaperPhotoId(mode) {
+  function getEffectiveWallpaperPhotoId(mode: WallpaperMode): string {
     const id = getEffectiveWallpaperIdForMode(mode);
     if (isLinkWallpaperId(id)) return id;
     const item = id && REMOTE_CONTENT.wallpaperFromId(id) ? getWallpaperById(id) : null;
     return item && item.cacheImage ? item.dailyId || item.id : '';
   }
 
-  function cacheShownWallpaperImages() {
+  function cacheShownWallpaperImages(): void {
     NEWTAB_WALLPAPER_MODES.forEach((mode) => {
       const id = getEffectiveWallpaperIdForMode(mode);
       if (isLinkWallpaperId(id)) {
-        cacheLinkWallpaper(id);
+        void cacheLinkWallpaper(id);
         return;
       }
       const item = id && REMOTE_CONTENT.wallpaperFromId(id) ? getWallpaperById(id) : null;
-      if (item && item.cacheImage) cacheWallpaperImage(item.dailyId || item.id, item.imageUrl);
+      if (item && item.cacheImage) void cacheWallpaperImage(item.dailyId || item.id, item.imageUrl);
     });
     scheduleUpcomingDailyWallpaperCache();
   }
 
   // Noon of the next local day, which stays on that date across a daylight-saving change.
-  function getNextLocalDayTimestamp(timestamp) {
+  function getNextLocalDayTimestamp(timestamp: number): number {
     const date = new Date(timestamp);
     return new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1, 12).getTime();
   }
 
   // A curated daily slot follows the date alone, so tomorrow's photo is known today. Bing publishes
   // tomorrow's only tomorrow; its slot keeps today's copy until then.
-  function getUpcomingDailyWallpaper(id) {
+  function getUpcomingDailyWallpaper(id: string): RemoteWallpaper | null {
     if (!REMOTE_CONTENT.isDailyWallpaperId(id) || id === REMOTE_CONTENT.BING_DAILY_ID) return null;
     const slot = REMOTE_CONTENT.wallpaperFromId(id);
-    const pick = slot && REMOTE_CONTENT.getCuratedDailyWallpaper(slot.category,
+    const pick = slot && REMOTE_CONTENT.getCuratedDailyWallpaper(slot.category || '',
       getNextLocalDayTimestamp(Date.now()));
     return pick && pick.cacheImage ? pick : null;
   }
 
-  function getUpcomingDailyWallpapers() {
-    const items = [];
+  function getUpcomingDailyWallpapers(): RemoteWallpaper[] {
+    const items: RemoteWallpaper[] = [];
     NEWTAB_WALLPAPER_MODES.forEach((mode) => {
       const item = getUpcomingDailyWallpaper(getEffectiveWallpaperIdForMode(mode));
       if (item && !items.some((existing) => existing.id === item.id)) items.push(item);
@@ -346,7 +463,7 @@ function createCustomWallpapers(deps) {
   // Caches tomorrow's curated photo once the page is idle, so the first tab after midnight opens
   // on the new photo from this device's copy instead of waiting on Picsum. The copy is one more
   // download a day and, like every cached photo, stays on this device: sync and WebDAV never see it.
-  function scheduleUpcomingDailyWallpaperCache() {
+  function scheduleUpcomingDailyWallpaperCache(): void {
     const upcoming = getUpcomingDailyWallpapers()
       .filter((item) => !getCachedWallpaperImage(item.id, item.imageUrl));
     const key = upcoming.map((item) => item.id).join(' ');
@@ -362,9 +479,9 @@ function createCustomWallpapers(deps) {
       const task = () => Promise.all(upcoming.map((item) => cacheWallpaperImage(item.id, item.imageUrl)));
       const locks = window.navigator && window.navigator.locks;
       return Promise.all(Array.from(wallpaperImageCaching.values()))
-        .then(() => locks && typeof locks.request === 'function'
-          ? locks.request('lumno-newtab-upcoming-wallpaper', task)
-          : task())
+        .then(async () => (locks && typeof locks.request === 'function'
+          ? await locks.request('lumno-newtab-upcoming-wallpaper', task)
+          : await task()))
         .then((results) => {
           if (results.every(Boolean)) {
             writeWallpaperPreloadCache();
@@ -374,7 +491,7 @@ function createCustomWallpapers(deps) {
           }
         });
     };
-    waitForDocumentLoad().then(() => {
+    void waitForDocumentLoad().then(() => {
       window.requestIdleCallback(() => {
         cacheUpcoming().catch(() => {
           if (upcomingWallpaperCacheKey === key) upcomingWallpaperCacheKey = '';
@@ -385,7 +502,7 @@ function createCustomWallpapers(deps) {
 
   // Saved links keep their copies; a curated photo or print stays only while a mode shows it, or
   // stands in for it, or is tomorrow's, so daily picks do not pile up one image per day.
-  function pruneCachedWallpaperImages() {
+  function pruneCachedWallpaperImages(): void {
     if (!wallpaperImageCache || !wallpaperState.hasStoredWallpaperStateLoaded) return;
     const shownCopyIds = NEWTAB_WALLPAPER_MODES.map((mode) => {
       const id = getEffectiveWallpaperIdForMode(mode);
@@ -393,22 +510,26 @@ function createCustomWallpapers(deps) {
       return copy ? copy.id : '';
     });
     const keep = new Set(wallpaperState.linkWallpapers.map((item) => item.id)
-      .concat(NEWTAB_WALLPAPER_MODES.map(getEffectiveWallpaperPhotoId), shownCopyIds,
+      .concat(NEWTAB_WALLPAPER_MODES.map((mode) => getEffectiveWallpaperPhotoId(mode)), shownCopyIds,
         getUpcomingDailyWallpapers().map((item) => item.id)));
-    wallpaperImageCache.keys().then((keys) => keys.filter((key) => !keep.has(key)).forEach((key) => {
-      cachedWallpaperImages.delete(key);
-      dailyWallpaperStandIns.forEach((copy, slotId) => {
-        if (copy.id === key) dailyWallpaperStandIns.delete(slotId);
-      });
-      wallpaperImageCache.remove(key).catch(warnWallpaperStoreFailure('Could not prune a cached wallpaper image.'));
+    // Narrowed here, for the callbacks below.
+    const imageCache = wallpaperImageCache;
+    imageCache.keys().then((keys) => keys.filter((key) => typeof key !== 'string' || !keep.has(key)).forEach((key) => {
+      if (typeof key === 'string') {
+        cachedWallpaperImages.delete(key);
+        dailyWallpaperStandIns.forEach((copy, slotId) => {
+          if (copy.id === key) dailyWallpaperStandIns.delete(slotId);
+        });
+      }
+      imageCache.remove(key).catch(warnWallpaperStoreFailure('Could not prune a cached wallpaper image.'));
     })).catch(warnWallpaperStoreFailure('Could not list cached wallpaper images.'));
   }
 
-  function cacheListedLinkWallpapers() {
-    wallpaperState.linkWallpapers.forEach((item) => cacheLinkWallpaper(item.id));
+  function cacheListedLinkWallpapers(): void {
+    wallpaperState.linkWallpapers.forEach((item) => { void cacheLinkWallpaper(item.id); });
   }
 
-  function writeLinkWallpapers(list) {
+  function writeLinkWallpapers(list: LinkWallpaperEntry[]): void {
     wallpaperState.linkWallpapers = list;
     writeStorageValue(storageArea, NEWTAB_LINK_WALLPAPERS_STORAGE_KEY, list, () => {
       showToast(t('newtab_wallpaper_save_error', 'Failed to save wallpaper'), true);
@@ -416,7 +537,7 @@ function createCustomWallpapers(deps) {
   }
 
   // Deleting a link removes it from every synced device, like the other synced settings.
-  function deleteLinkWallpaper(id) {
+  function deleteLinkWallpaper(id: string): void {
     hideTopActionTooltip();
     // Read the selection while the link still resolves.
     const prefs = getWritableWallpaperPrefs();
@@ -437,8 +558,8 @@ function createCustomWallpapers(deps) {
   }
 
   // A new synced link entry, or null after telling the user the link no longer fits sync storage.
-  function createLinkWallpaperEntry(url) {
-    const entry = {
+  function createLinkWallpaperEntry(url: string): LinkWallpaperEntry | null {
+    const entry: LinkWallpaperEntry = {
       id: `link-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`,
       url,
       addedAt: Date.now()
@@ -452,27 +573,27 @@ function createCustomWallpapers(deps) {
     return entry;
   }
 
-  function getOnlineWallpaperUrl(id) {
+  function getOnlineWallpaperUrl(id: string): string {
     const wallpaper = remoteClient.getWallpaper(id);
     return normalizeCustomWallpaperUrl(wallpaper && wallpaper.imageUrl);
   }
 
-  function isOnlineWallpaperSaved(id) {
+  function isOnlineWallpaperSaved(id: string): boolean {
     const url = getOnlineWallpaperUrl(id);
     return Boolean(url) && wallpaperState.linkWallpapers.some((item) => item.url === url);
   }
 
   // A Bing or curated photo joins the local library as a link, so it syncs like one; the copy this
   // device already keeps for the photo becomes the link's copy.
-  function saveOnlineWallpaperToLocal(id) {
+  function saveOnlineWallpaperToLocal(id: string): void {
     const url = getOnlineWallpaperUrl(id);
     if (!url || wallpaperState.customWallpaperImporting) {
       return;
     }
     wallpaperState.customWallpaperImporting = true;
     renderWallpaperPanelState();
-    let toastTask = null;
-    loadCustomWallpapers().then(() => {
+    let toastTask: ToastTask | null = null;
+    void loadCustomWallpapers().then(() => {
       if (wallpaperState.linkWallpapers.some((item) => item.url === url)) {
         showToast(t('newtab_wallpaper_in_local', 'Already in local wallpapers'), false);
         return null;
@@ -485,12 +606,14 @@ function createCustomWallpapers(deps) {
       if (!entry) {
         return null;
       }
-      toastTask = beginToast(t('newtab_wallpaper_saving_local', 'Saving to local wallpapers…'));
-      return readCachedWallpaperImages([id]).then(() => getCachedWallpaperImage(id, url) ||
+      const task = beginToast(t('newtab_wallpaper_saving_local', 'Saving to local wallpapers…'));
+      toastTask = task;
+      return readCachedWallpaperImages([id]).then((): WallpaperImageRecord | Promise<WallpaperImageRecord> =>
+        getCachedWallpaperImage(id, url) ||
         fetchCustomWallpaperFile(url).then(buildCustomWallpaperRecordFromFile)).then((record) => {
         rememberCachedWallpaperImage(entry.id, url, record);
         writeLinkWallpapers(wallpaperState.linkWallpapers.concat(entry));
-        toastTask.done(t('newtab_wallpaper_saved_local', 'Saved to local wallpapers'));
+        task.done(t('newtab_wallpaper_saved_local', 'Saved to local wallpapers'));
       });
     }).catch(() => {
       if (toastTask) {
@@ -504,28 +627,29 @@ function createCustomWallpapers(deps) {
     });
   }
 
-  function isOnlineWallpaperMenuOpen() {
+  function isOnlineWallpaperMenuOpen(): boolean {
     return Boolean(onlineWallpaperMenu && onlineWallpaperMenu.controller.isOpen(onlineWallpaperMenu.control));
   }
 
-  function isOnlineWallpaperMenuNode(node) {
-    return Boolean(node && onlineWallpaperMenu &&
+  function isOnlineWallpaperMenuNode(node: EventTarget | Node | null | undefined): boolean {
+    return Boolean(isNode(node) && onlineWallpaperMenu &&
       (onlineWallpaperMenu.control.contains(node) || onlineWallpaperMenu.menu.contains(node)));
   }
 
-  function closeOnlineWallpaperMenu() {
+  function closeOnlineWallpaperMenu(): boolean {
     const wasOpen = Boolean(onlineWallpaperMenuTarget);
     if (onlineWallpaperMenuTarget) {
       onlineWallpaperMenuTarget.element.removeAttribute('data-context-menu-open');
       onlineWallpaperMenuTarget = null;
     }
-    if (isOnlineWallpaperMenuOpen()) {
-      onlineWallpaperMenu.controller.setOpen(onlineWallpaperMenu.control, false);
+    const menu = onlineWallpaperMenu;
+    if (menu && menu.controller.isOpen(menu.control)) {
+      menu.controller.setOpen(menu.control, false);
     }
     return wasOpen;
   }
 
-  function getOnlineWallpaperMenuOptions(id) {
+  function getOnlineWallpaperMenuOptions(id: string): SelectMenuOption[] {
     const saved = isOnlineWallpaperSaved(id);
     return [{
       action: 'save-local',
@@ -537,7 +661,7 @@ function createCustomWallpapers(deps) {
     }];
   }
 
-  function createOnlineWallpaperMenu() {
+  function createOnlineWallpaperMenu(): OnlineWallpaperMenu | null {
     const selectMenuApi = globalThis.LumnoNewtabSelectMenu;
     if (!selectMenuApi || typeof selectMenuApi.createController !== 'function') {
       return null;
@@ -592,38 +716,45 @@ function createCustomWallpapers(deps) {
     return { controller, control: created.wrapper, menu: created.menu };
   }
 
-  function openOnlineWallpaperMenu(id, element, point) {
+  function openOnlineWallpaperMenu(id: string, element: HTMLElement | null | undefined, point: { x: number; y: number }): void {
     if (!getOnlineWallpaperUrl(id) || !element) {
       return;
     }
     if (!onlineWallpaperMenu) {
       onlineWallpaperMenu = createOnlineWallpaperMenu();
     }
-    if (!onlineWallpaperMenu) {
+    const menu = onlineWallpaperMenu;
+    if (!menu) {
       return;
     }
     closeOnlineWallpaperMenu();
     hideTopActionTooltip();
     onlineWallpaperMenuTarget = { id, element };
     element.setAttribute('data-context-menu-open', 'true');
-    onlineWallpaperMenu.control.style.left = `${Math.round(point.x)}px`;
-    onlineWallpaperMenu.control.style.top = `${Math.round(point.y)}px`;
-    onlineWallpaperMenu.controller.setOptions(onlineWallpaperMenu.control, getOnlineWallpaperMenuOptions(id), 'save-local');
-    onlineWallpaperMenu.controller.setOpen(onlineWallpaperMenu.control, true);
+    menu.control.style.left = `${Math.round(point.x)}px`;
+    menu.control.style.top = `${Math.round(point.y)}px`;
+    menu.controller.setOptions(menu.control, getOnlineWallpaperMenuOptions(id), 'save-local');
+    menu.controller.setOpen(menu.control, true);
   }
 
-  function finishCustomWallpaperUrlEntry() {
+  function finishCustomWallpaperUrlEntry(): void {
     wallpaperState.customWallpaperUrlClearToken += 1;
     setCustomWallpaperUrlFormOpen(false);
   }
 
-  function submitCustomWallpaperUrl(value) {
+  function focusPanelElement(name: string): void {
+    if (wallpaperState.wallpaperViewController) {
+      wallpaperState.wallpaperViewController.focus(name);
+    }
+  }
+
+  function submitCustomWallpaperUrl(value: unknown): void {
     const url = normalizeCustomWallpaperUrl(value);
     if (!url) {
       wallpaperState.customWallpaperUrlInvalid = true;
       renderWallpaperPanelState();
       showToast(t('newtab_wallpaper_url_invalid', 'Enter a link that starts with http:// or https://'), true);
-      wallpaperState.wallpaperViewController.focus('urlInput');
+      focusPanelElement('urlInput');
       return;
     }
     if (wallpaperState.customWallpaperUrlInvalid) {
@@ -648,7 +779,7 @@ function createCustomWallpapers(deps) {
     renderWallpaperPanelState();
     const toastTask = beginToast(t('newtab_wallpaper_importing', 'Importing wallpaper…'));
     // Load the image before saving the link, so a broken link never reaches other devices.
-    fetchCustomWallpaperFile(url).then(buildCustomWallpaperRecordFromFile).then((record) => {
+    void fetchCustomWallpaperFile(url).then(buildCustomWallpaperRecordFromFile).then((record) => {
       rememberCachedWallpaperImage(entry.id, url, record);
       writeLinkWallpapers(wallpaperState.linkWallpapers.concat(entry));
       persistNewtabWallpaper(entry.id);
@@ -657,24 +788,24 @@ function createCustomWallpapers(deps) {
       toastTask.done(t('newtab_wallpaper_import_done', 'Wallpaper imported'));
     }).catch(() => {
       toastTask.fail(t('newtab_wallpaper_url_import_error', 'Could not add an image from this link'));
-      if (wallpaperState.customWallpaperUrlFormOpen) wallpaperState.wallpaperViewController.focus('urlInput');
+      if (wallpaperState.customWallpaperUrlFormOpen) focusPanelElement('urlInput');
     }).finally(() => {
       wallpaperState.customWallpaperImporting = false;
       renderWallpaperPanelState();
     });
   }
 
-  function closeCustomWallpaperUrlForm() {
+  function closeCustomWallpaperUrlForm(): boolean {
     if (!wallpaperState.customWallpaperUrlFormOpen || wallpaperState.activeWallpaperTab !== 'local') {
       return false;
     }
     const urlForm = getWallpaperPanelRefs().urlForm;
     const hadFocus = Boolean(urlForm && urlForm.contains(document.activeElement));
     setCustomWallpaperUrlFormOpen(false);
-    if (hadFocus) wallpaperState.wallpaperViewController.focus('urlTile');
+    if (hadFocus) focusPanelElement('urlTile');
     return true;
   }
-  function deleteCustomWallpaper(id) {
+  function deleteCustomWallpaper(id: string): void {
     if (isLinkWallpaperId(id)) {
       deleteLinkWallpaper(id);
       return;
@@ -684,7 +815,7 @@ function createCustomWallpapers(deps) {
       return;
     }
     hideTopActionTooltip();
-    deleteCustomWallpaperRecord(targetWallpaper).then(() => {
+    void deleteCustomWallpaperRecord(targetWallpaper).then(() => {
       wallpaperState.customWallpapers = wallpaperState.customWallpapers.filter((item) => item && item.id !== targetWallpaper.id);
       renderWallpaperPanelState();
       const overrides = getWritableLocalWallpaperOverrides();
@@ -697,12 +828,13 @@ function createCustomWallpapers(deps) {
         changed = true;
       });
       if (changed) {
-        setWallpaperPrefs(wallpaperState.currentWallpaperPrefs, overrides);
+        const prefs = getWritableWallpaperPrefs();
+        setWallpaperPrefs(prefs, overrides);
         applyResolvedNewtabWallpaper();
         renderWallpaperPanelState();
         writeLocalWallpaperValue(buildLocalWallpaperStorageValue(
-          wallpaperState.currentLocalWallpaperOverrides,
-          wallpaperState.currentWallpaperPrefs.sameForModes
+          getWritableLocalWallpaperOverrides(),
+          prefs.sameForModes
         ), { showError: true });
       } else {
         renderWallpaperPanelState();
@@ -737,4 +869,7 @@ function createCustomWallpapers(deps) {
   };
 }
 
+type CustomWallpapers = ReturnType<typeof createCustomWallpapers>;
+
 export { createCustomWallpapers };
+export type { CustomWallpapers, CustomWallpapersDeps };
