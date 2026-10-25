@@ -27,7 +27,6 @@ interface PrefixMotionDeps {
   prefixTransition: string;
   DEFAULT_PREFIX_ENTER_DURATION: number;
   DEFAULT_PREFIX_ENTER_EASING: string;
-  modeMenu: HTMLElement;
   isElementVisible: IsElementVisible;
   getInputModePrefixCurrentVisualState: () => PrefixCurrentVisualState;
   DEFAULT_PREFIX_ITEM_GAP_PX: number;
@@ -54,7 +53,6 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
     prefixTransition,
     DEFAULT_PREFIX_ENTER_DURATION,
     DEFAULT_PREFIX_ENTER_EASING,
-    modeMenu,
     isElementVisible,
     getInputModePrefixCurrentVisualState,
     DEFAULT_PREFIX_ITEM_GAP_PX
@@ -344,7 +342,7 @@ function createPrefixMotion(deps: PrefixMotionDeps) {
   }
 
   function settleInputModePrefixMenuVisualState(): void {
-    const currentVisible = Boolean(inputModeState.modeMenuOpen && !modeMenu.hidden);
+    const currentVisible = inputModeState.modeMenuOpen;
     setInputModePrefixCurrentMeasuring(false);
     setInputModePrefixCurrentVisible(currentVisible);
     clearInputModePrefixCurrentAnimatedStyles();

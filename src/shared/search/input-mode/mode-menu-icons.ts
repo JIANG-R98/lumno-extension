@@ -1,25 +1,23 @@
-// Mode menu icons: provider icons with their theme, built-in line icons
-// and glyphs.
-import type { CursorTooltipController } from '../../ui/cursor-tooltip';
+// Mode menu icons: which icon a tile shows (a built-in line icon, a site
+// icon or a glyph) and its colors from the mode's theme, with provider
+// themes resolved once per opening; and the line icon of the mode tag.
+import { getModeLineIconPaths } from './line-icons';
+import type { ModeMenuTileColors, ModeMenuTileIcon } from '../../react/search/mode-menu';
 import type {
-  AttachFaviconData,
   GetThemeForProvider,
   InputModeTheme,
   ModeMenuItem,
   ResolveProviderIconUrl,
-  Rgb,
-  SetStyle
+  Rgb
 } from './types';
 import type { SiteSearchProvider } from '../../../domain/search/types';
 
 // The controller state search-input-mode.ts shares with its modules.
 interface ModeMenuIconsState {
   destroyed: boolean;
-  modeMenuContent: HTMLElement;
 }
 
 interface ModeMenuIconsDeps {
-  modeMenuCursorTooltipController: Pick<CursorTooltipController, 'hide'> | null;
   getThemeForMode: (theme: InputModeTheme) => InputModeTheme | null | undefined;
   defaultTheme: InputModeTheme;
   parseCssColor: (color: unknown) => Rgb | null;
@@ -27,22 +25,24 @@ interface ModeMenuIconsDeps {
   mixRgb: (source: Rgb, target: Rgb, targetWeight: number) => Rgb;
   isDarkMode: () => unknown;
   getAccessibleThemeFocusRingRgb: (accentRgb: Rgb, backgroundRgb: Rgb) => Rgb;
-  setStyle: SetStyle;
   rgbToCss: (rgb: Rgb) => string;
   getBuiltInSurfaceColor: () => string;
-  getModeMenuLineIconPaths: (iconName: string) => readonly string[] | null;
   createSvgElement: (tagName: string) => Element;
-  doc: Document;
   getThemeForProvider: GetThemeForProvider | null;
   resolveProviderIconUrl: ResolveProviderIconUrl;
   getProviderThemeHost: (provider: SiteSearchProvider) => string | null | undefined;
-  attachFaviconData: AttachFaviconData | null;
+  // Draws the menu again once a provider theme arrives.
+  onProviderThemesChange: () => void;
   inputModeState: ModeMenuIconsState;
+}
+
+function getLineIconName(item: ModeMenuItem): string {
+  const name = item.menuIconName ? String(item.menuIconName).trim() : '';
+  return getModeLineIconPaths(name) ? name : '';
 }
 
 function createModeMenuIcons(deps: ModeMenuIconsDeps) {
   const {
-    modeMenuCursorTooltipController,
     getThemeForMode,
     defaultTheme,
     parseCssColor,
@@ -50,97 +50,105 @@ function createModeMenuIcons(deps: ModeMenuIconsDeps) {
     mixRgb,
     isDarkMode,
     getAccessibleThemeFocusRingRgb,
-    setStyle,
     rgbToCss,
     getBuiltInSurfaceColor,
-    getModeMenuLineIconPaths,
     createSvgElement,
-    doc,
     getThemeForProvider,
     resolveProviderIconUrl,
     getProviderThemeHost,
-    attachFaviconData
+    onProviderThemesChange
   } = deps;
 
   // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
 
-  function clearModeMenuContents(): void {
-    if (modeMenuCursorTooltipController) {
-      modeMenuCursorTooltipController.hide();
-    }
-    while (inputModeState.modeMenuContent.firstChild) {
-      inputModeState.modeMenuContent.removeChild(inputModeState.modeMenuContent.firstChild);
-    }
+  // Provider themes by item id, and the ids still being resolved. Cleared
+  // when the menu opens, so each opening asks again.
+  let providerThemes = new Map<string, InputModeTheme>();
+  let pendingThemes = new Set<string>();
+
+  function clearModeMenuProviderThemes(): void {
+    providerThemes = new Map();
+    pendingThemes = new Set();
   }
 
-  function applyModeMenuIconTheme(
-    wrap: HTMLElement,
-    menuItem: HTMLElement | null | undefined,
-    theme: InputModeTheme | null | undefined
-  ): void {
+  // Asks the surface for the themes of the providers not asked about yet.
+  function requestModeMenuProviderThemes(items: readonly ModeMenuItem[]): void {
+    if (!getThemeForProvider) {
+      return;
+    }
+    const resolveTheme = getThemeForProvider;
+    const themes = providerThemes;
+    const pending = pendingThemes;
+    items.forEach((item) => {
+      const provider = item.provider;
+      if (!provider || themes.has(item.id) || pending.has(item.id)) {
+        return;
+      }
+      pending.add(item.id);
+      Promise.resolve(resolveTheme(provider)).then((theme: InputModeTheme | null | undefined) => {
+        pending.delete(item.id);
+        if (inputModeState.destroyed || themes !== providerThemes || !theme) {
+          return;
+        }
+        themes.set(item.id, theme);
+        onProviderThemesChange();
+      }).catch(() => {
+        pending.delete(item.id);
+      });
+    });
+  }
+
+  function getThemedColors(theme: InputModeTheme | null | undefined): ModeMenuTileColors {
     const resolvedTheme = theme ? getThemeForMode(theme) : defaultTheme;
     const resolvedAccentRgb = resolvedTheme && (
       resolvedTheme.accentRgb || parseCssColor(resolvedTheme.accent)
     ) || defaultAccentColor;
+    // Rounded and with every channel present.
     const accentRgb = mixRgb(resolvedAccentRgb, resolvedAccentRgb, 0);
     const darkMode = Boolean(isDarkMode());
     const panelRgb = darkMode ? [20, 20, 20] : [255, 255, 255];
     const selectedBackgroundOpacity = darkMode ? 0.2 : 0.14;
-    const selectedBackgroundRgb = mixRgb(
-      accentRgb,
-      panelRgb,
-      1 - selectedBackgroundOpacity
-    );
-    const focusRingRgb = getAccessibleThemeFocusRingRgb(
-      accentRgb,
-      selectedBackgroundRgb
-    );
-    setStyle(
-      wrap,
-      '--x-lumno-search-mode-icon-color',
-      rgbToCss(focusRingRgb)
-    );
-    if (menuItem) {
-      setStyle(
-        menuItem,
-        '--x-lumno-search-mode-selected-bg',
-        `rgba(${accentRgb[0]}, ${accentRgb[1]}, ${accentRgb[2]}, ${selectedBackgroundOpacity})`
-      );
-      setStyle(
-        menuItem,
-        '--x-lumno-search-mode-item-focus-ring',
-        rgbToCss(focusRingRgb)
-      );
-    }
+    const selectedBackgroundRgb = mixRgb(accentRgb, panelRgb, 1 - selectedBackgroundOpacity);
+    const focusRing = rgbToCss(getAccessibleThemeFocusRingRgb(accentRgb, selectedBackgroundRgb));
+    return {
+      icon: focusRing,
+      selectedBackground: `rgba(${accentRgb[0]}, ${accentRgb[1]}, ${accentRgb[2]}, ${selectedBackgroundOpacity})`,
+      focusRing
+    };
   }
 
-  function applyModeMenuBuiltInIconTheme(wrap: HTMLElement, menuItem: HTMLElement | null | undefined): void {
+  // Built-in sources take the surface's text color.
+  function getBuiltInColors(): ModeMenuTileColors {
     const surfaceColor = getBuiltInSurfaceColor();
     const darkMode = Boolean(isDarkMode());
-    const selectedBackground = `color-mix(in srgb, ${surfaceColor} ${darkMode ? 16 : 11}%, transparent)`;
-    setStyle(
-      wrap,
-      '--x-lumno-search-mode-icon-color',
-      surfaceColor
-    );
-    if (menuItem) {
-      setStyle(
-        menuItem,
-        '--x-lumno-search-mode-selected-bg',
-        selectedBackground
-      );
-      setStyle(
-        menuItem,
-        '--x-lumno-search-mode-item-focus-ring',
-        surfaceColor
-      );
+    return {
+      icon: surfaceColor,
+      selectedBackground: `color-mix(in srgb, ${surfaceColor} ${darkMode ? 16 : 11}%, transparent)`,
+      focusRing: surfaceColor
+    };
+  }
+
+  function getModeMenuTileColors(item: ModeMenuItem): ModeMenuTileColors {
+    if (getLineIconName(item)) {
+      return getBuiltInColors();
     }
+    return getThemedColors(providerThemes.get(item.id) || item.theme || defaultTheme);
+  }
+
+  function getModeMenuTileIcon(item: ModeMenuItem): ModeMenuTileIcon {
+    const provider = item.provider || null;
+    return {
+      lineIcon: getLineIconName(item),
+      glyphClass: item.iconClass || (item.isAi ? 'ri-search-ai-line' : 'ri-search-line'),
+      iconUrl: item.iconUrl ? String(resolveProviderIconUrl(item.provider, item.iconUrl) || '').trim() : '',
+      iconHost: provider ? String(getProviderThemeHost(provider) || '').trim() : ''
+    };
   }
 
   // Draws a built-in line icon into the svg; false when there is no such icon.
   function renderModeLineIconSvg(svg: Element | null | undefined, lineIconName: string, strokeWidth?: string): boolean {
-    const lineIconPaths = getModeMenuLineIconPaths(lineIconName);
+    const lineIconPaths = getModeLineIconPaths(lineIconName);
     if (!svg || !lineIconPaths) {
       return false;
     }
@@ -163,84 +171,12 @@ function createModeMenuIcons(deps: ModeMenuIconsDeps) {
     return true;
   }
 
-  function createModeMenuGlyph(item: ModeMenuItem): Element {
-    const lineIconName = item.menuIconName ? String(item.menuIconName).trim() : '';
-    const svg = createSvgElement('svg');
-    if (renderModeLineIconSvg(svg, lineIconName, '1.65')) {
-      svg.classList.add('x-lumno-search-input-mode__menu-line-icon');
-      return svg;
-    }
-    const glyph = doc.createElement('i');
-    glyph.className = `ri-icon ri-size-24 ${item.iconClass || (item.isAi ? 'ri-search-ai-line' : 'ri-search-line')}`;
-    return glyph;
-  }
-
-  function setModeMenuGlyphHidden(glyph: Element, hidden: boolean): void {
-    if (hidden) {
-      glyph.setAttribute('hidden', '');
-      return;
-    }
-    glyph.removeAttribute('hidden');
-  }
-
-  function createModeMenuIcon(item: ModeMenuItem, menuItem: HTMLElement | null | undefined): HTMLSpanElement {
-    const lineIconName = item.menuIconName ? String(item.menuIconName).trim() : '';
-    const isBuiltInLineIcon = Boolean(getModeMenuLineIconPaths(lineIconName));
-    const wrap = doc.createElement('span');
-    wrap.className = 'x-lumno-search-input-mode__menu-icon';
-    wrap.setAttribute('aria-hidden', 'true');
-    wrap.setAttribute('data-icon-state', 'fallback');
-    if (isBuiltInLineIcon) {
-      wrap.setAttribute('data-icon-kind', 'builtin');
-    }
-    const faviconMask = doc.createElement('span');
-    faviconMask.className = 'x-lumno-search-input-mode__menu-favicon-mask';
-    const glyph = createModeMenuGlyph(item);
-    faviconMask.appendChild(glyph);
-    wrap.appendChild(faviconMask);
-    if (isBuiltInLineIcon) {
-      applyModeMenuBuiltInIconTheme(wrap, menuItem);
-    } else {
-      applyModeMenuIconTheme(wrap, menuItem, item.theme || defaultTheme);
-    }
-    if (item.provider && getThemeForProvider) {
-      Promise.resolve(getThemeForProvider(item.provider)).then((theme: InputModeTheme | null | undefined) => {
-        if (!inputModeState.destroyed && wrap.isConnected && theme) {
-          applyModeMenuIconTheme(wrap, menuItem, theme);
-        }
-      }).catch(() => {});
-    }
-    const iconUrl = item.iconUrl ? String(resolveProviderIconUrl(item.provider, item.iconUrl) || '').trim() : '';
-    if (iconUrl) {
-      const image = doc.createElement('img');
-      image.alt = '';
-      image.decoding = 'async';
-      image.referrerPolicy = 'no-referrer';
-      const showFallback = (): void => {
-        wrap.setAttribute('data-icon-state', 'fallback');
-        image.remove();
-        setModeMenuGlyphHidden(glyph, false);
-      };
-      image.addEventListener('load', () => {
-        wrap.setAttribute('data-icon-state', 'resolved');
-        setModeMenuGlyphHidden(glyph, true);
-      }, { once: true });
-      faviconMask.appendChild(image);
-      const provider = item.provider || null;
-      const iconHost = provider ? String(getProviderThemeHost(provider) || '').trim() : '';
-      image.addEventListener('error', showFallback, { once: true });
-      image.src = iconUrl;
-      if (attachFaviconData && !iconUrl.startsWith('data:')) {
-        attachFaviconData(image, iconUrl, iconHost);
-      }
-    }
-    return wrap;
-  }
-
   return {
-    clearModeMenuContents,
-    renderModeLineIconSvg,
-    createModeMenuIcon
+    clearModeMenuProviderThemes,
+    requestModeMenuProviderThemes,
+    getModeMenuTileColors,
+    getModeMenuTileIcon,
+    renderModeLineIconSvg
   };
 }
 

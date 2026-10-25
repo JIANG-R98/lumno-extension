@@ -1,12 +1,12 @@
 // Placing the mode menu: its offset below results, fitting it in the
 // viewport, and the frames that reveal and conceal it.
-import type * as LumnoMenuSurface from '../../ui/menu-surface';
 import type { SetStyle } from './types';
 
 // The controller state search-input-mode.ts shares with its modules.
 interface ModeMenuLayoutState {
   destroyed: boolean;
   modeMenuOpen: boolean;
+  modeMenuRevealed: boolean;
 }
 
 interface ModeMenuLayoutConfig {
@@ -25,7 +25,7 @@ interface ModeMenuLayoutDeps {
   doc: Document | null | undefined;
   DEFAULT_MODE_MENU_VIEWPORT_BOTTOM_INSET: number;
   config: ModeMenuLayoutConfig;
-  menuSurface: Pick<typeof LumnoMenuSurface, 'open' | 'close'>;
+  renderModeMenuView: () => unknown;
   inputModeState: ModeMenuLayoutState;
 }
 
@@ -44,7 +44,7 @@ function createModeMenuLayout(deps: ModeMenuLayoutDeps) {
     doc,
     DEFAULT_MODE_MENU_VIEWPORT_BOTTOM_INSET,
     config,
-    menuSurface
+    renderModeMenuView
   } = deps;
 
   // The controller state object shared with search-input-mode.ts and the other modules.
@@ -72,7 +72,7 @@ function createModeMenuLayout(deps: ModeMenuLayoutDeps) {
     const fitOptions: FitModeMenuOptions = options || {};
     const viewportMaxHeightProperty =
       '--x-lumno-search-mode-menu-viewport-max-height';
-    if (inputModeState.destroyed || modeMenu.hidden || !inputModeState.modeMenuOpen) {
+    if (inputModeState.destroyed || !inputModeState.modeMenuOpen) {
       modeMenu.style.removeProperty(viewportMaxHeightProperty);
       return null;
     }
@@ -138,7 +138,7 @@ function createModeMenuLayout(deps: ModeMenuLayoutDeps) {
     if (typeof config.onModeMenuLayoutChange === 'function') {
       config.onModeMenuLayoutChange({
         menuElement: modeMenu,
-        open: Boolean(inputModeState.modeMenuOpen && !modeMenu.hidden)
+        open: inputModeState.modeMenuOpen
       });
     }
   }
@@ -191,21 +191,25 @@ function createModeMenuLayout(deps: ModeMenuLayoutDeps) {
   }
 
   function isModeMenuVisible(): boolean {
-    return Boolean(!inputModeState.destroyed && inputModeState.modeMenuOpen && !modeMenu.hidden);
+    return Boolean(!inputModeState.destroyed && inputModeState.modeMenuOpen);
   }
 
-  // Plays the open motion on the next frame, unless the menu closed by then.
+  // Draws the menu closed for a frame, then open, so the open motion
+  // plays; not if it closed by then.
   function revealModeMenuSurface(): void {
-    const guardedFrame = (callback: () => void): number => requestModeMenuRevealFrame(() => {
-      if (inputModeState.modeMenuOpen && !modeMenu.hidden) {
-        callback();
+    inputModeState.modeMenuRevealed = false;
+    renderModeMenuView();
+    requestModeMenuRevealFrame(() => {
+      if (inputModeState.modeMenuOpen) {
+        inputModeState.modeMenuRevealed = true;
+        renderModeMenuView();
       }
     });
-    menuSurface.open(modeMenu, { requestAnimationFrame: guardedFrame });
   }
 
   function concealModeMenuSurface(): void {
-    menuSurface.close(modeMenu);
+    inputModeState.modeMenuRevealed = false;
+    renderModeMenuView();
   }
 
   return {

@@ -7,8 +7,6 @@ import { queryHtmlElement } from '../../dom-lookup';
 interface PrefixVisualState {
   destroyed: boolean;
   modeMenuOpen: boolean;
-  modeMenuContent: HTMLElement;
-  modeMenuFooter: HTMLElement;
 }
 
 interface PrefixVisualConfig {
@@ -62,6 +60,8 @@ interface PrefixVisualDeps {
   configuredBaseInputPaddingLeft: number | null;
   prefixGap: number;
   modeMenu: HTMLElement;
+  modeMenuContent: HTMLElement;
+  modeMenuFooter: HTMLElement;
   notifyModeMenuLayoutChange: () => void;
   inputModeState: PrefixVisualState;
 }
@@ -96,6 +96,8 @@ function createPrefixVisual(deps: PrefixVisualDeps) {
     configuredBaseInputPaddingLeft,
     prefixGap,
     modeMenu,
+    modeMenuContent,
+    modeMenuFooter,
     notifyModeMenuLayoutChange
   } = deps;
 
@@ -231,16 +233,16 @@ function createPrefixVisual(deps: PrefixVisualDeps) {
 
   // Lines the footer's hints up with the menu items' icons.
   function updateModeMenuFooterAlignment(): void {
-    if (modeMenu.hidden || !inputModeState.modeMenuFooter || !inputModeState.modeMenuContent) {
+    if (!inputModeState.modeMenuOpen) {
       return;
     }
-    const firstIcon = queryHtmlElement(inputModeState.modeMenuContent, '.x-lumno-search-input-mode__menu-icon');
+    const firstIcon = queryHtmlElement(modeMenuContent, '.x-lumno-search-input-mode__menu-icon');
     if (!firstIcon || Number(firstIcon.offsetWidth) <= 0) {
       return;
     }
     const menuRect = modeMenu.getBoundingClientRect();
     const iconRect = firstIcon.getBoundingClientRect();
-    const footerRect = inputModeState.modeMenuFooter.getBoundingClientRect();
+    const footerRect = modeMenuFooter.getBoundingClientRect();
     const menuLayoutWidth = Number(modeMenu.offsetWidth) || menuRect.width;
     const scaleX = menuLayoutWidth > 0 ? menuRect.width / menuLayoutWidth : 1;
     if (!Number.isFinite(scaleX) || scaleX <= 0) {
@@ -248,7 +250,7 @@ function createPrefixVisual(deps: PrefixVisualDeps) {
     }
     const inlineStart = Math.max(0, (iconRect.left - footerRect.left) / scaleX);
     setStyle(
-      inputModeState.modeMenuFooter,
+      modeMenuFooter,
       '--x-lumno-search-mode-footer-inline-start',
       `${Math.round(inlineStart * 100) / 100}px`
     );
@@ -261,7 +263,7 @@ function createPrefixVisual(deps: PrefixVisualDeps) {
     updateInputRightPadding();
     updatePrefixLayout();
     updateModeMenuFooterAlignment();
-    if (inputModeState.modeMenuOpen && !modeMenu.hidden) {
+    if (inputModeState.modeMenuOpen) {
       notifyModeMenuLayoutChange();
     }
   }

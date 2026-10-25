@@ -1,25 +1,26 @@
-// Rendering the mode menu: its groups and items, history keys, moving and
-// reordering groups, and applying the filter.
-import * as LumnoSortableDrag from '../../ui/sortable-drag';
-import {
-  createEmptyStateArt,
-  ensureEmptyStateArtStyles,
-  resolveEmptyStateArtTheme
-} from '../../ui/empty-state-art';
-import type { FormatMessage, ModeMenuEntry, ModeMenuItem, SetStyle } from './types';
+// The mode menu's model: its items with the filter applied, moving and
+// reordering groups and tiles, and history keys. The menu itself is drawn
+// by the React view (react/search/mode-menu.tsx) from this model.
+import type { ModeMenuHandlers, ModeMenuModel, ModeMenuView } from '../../react/search/mode-menu';
+import type { AttachFaviconData, ModeMenuEntry, ModeMenuItem } from './types';
 import type { ModeMenuIconsApi } from './mode-menu-icons';
 import type { ModeMenuLanguageApi } from './mode-menu-language';
 import type { ModeMenuNavigationApi } from './mode-menu-navigation';
 import type { ModeMenuSearchApi } from './mode-menu-search';
 import type { PrefixVisualApi } from './prefix-visual';
-import { queryHtmlTags } from '../../dom-lookup';
 
 // The controller state search-input-mode.ts shares with its modules.
 interface ModeMenuRenderState {
   modeMenuOpen: boolean;
-  modeMenuContent: HTMLElement;
+  // The open motion has played; false while it waits for its frame.
+  modeMenuRevealed: boolean;
+  modeMenuBusy: boolean;
+  modeMenuSearchActive: boolean;
+  modeMenuHasQuery: boolean;
+  // The tile that takes Tab focus; empty for none.
+  modeMenuFocusId: string;
   modeMenuFilterQuery: string;
-  renderedModeMenuEntries: ModeMenuEntry[];
+  modeMenuEntries: ModeMenuEntry[];
 }
 
 interface ModeMenuReorder {
@@ -38,39 +39,28 @@ interface ModeMenuRenderConfig {
 }
 
 interface ModeMenuRenderDeps {
-  clearModeMenuContents: ModeMenuIconsApi['clearModeMenuContents'];
-  doc: Document;
+  view: ModeMenuView;
+  modeMenuContent: HTMLElement;
   canMoveModeMenuGroups: boolean;
   canReorderModeMenu: boolean;
-  createModeMenuIcon: ModeMenuIconsApi['createModeMenuIcon'];
-  createModeMenuLabel: ModeMenuSearchApi['createModeMenuLabel'];
-  bindModeMenuLabelTooltip: ModeMenuSearchApi['bindModeMenuLabelTooltip'];
-  selectModeMenuItem: ModeMenuNavigationApi['selectModeMenuItem'];
-  buildModeMenuSearchIndex: ModeMenuSearchApi['buildModeMenuSearchIndex'];
-  applyNoTranslate: <T extends Element>(element: T) => T;
-  formatMessage: FormatMessage;
-  modeMenu: HTMLElement;
   config: ModeMenuRenderConfig;
+  buildModeMenuSearchIndex: ModeMenuSearchApi['buildModeMenuSearchIndex'];
   normalizeModeMenuSearchText: ModeMenuSearchApi['normalizeModeMenuSearchText'];
-  refreshModeMenuFilterText: ModeMenuLanguageApi['refreshModeMenuFilterText'];
   getModeMenuItemMatch: ModeMenuSearchApi['getModeMenuItemMatch'];
-  renderModeMenuLabelMatch: ModeMenuSearchApi['renderModeMenuLabelMatch'];
+  bindModeMenuLabelTooltip: ModeMenuSearchApi['bindModeMenuLabelTooltip'];
+  getModeMenuTileIcon: ModeMenuIconsApi['getModeMenuTileIcon'];
+  getModeMenuTileColors: ModeMenuIconsApi['getModeMenuTileColors'];
+  requestModeMenuProviderThemes: ModeMenuIconsApi['requestModeMenuProviderThemes'];
+  getModeMenuLabels: ModeMenuLanguageApi['getModeMenuLabels'];
+  selectModeMenuItem: ModeMenuNavigationApi['selectModeMenuItem'];
+  handleMenuKeydown: (event: KeyboardEvent) => unknown;
+  handleModeMenuPointerDown: (event: PointerEvent) => void;
+  attachFaviconData: AttachFaviconData | null;
   updateModeMenuFooterAlignment: PrefixVisualApi['updateModeMenuFooterAlignment'];
   notifyModeMenuLayoutChange: () => void;
   input: HTMLInputElement;
-  setStyle: SetStyle;
   inputModeState: ModeMenuRenderState;
 }
-
-// A group title as drawn, and how many of its items the filter leaves.
-interface RenderedGroup {
-  element: HTMLElement;
-  group: string;
-  groupKey: string;
-  visibleCount: number;
-}
-
-type GroupMoveControl = [direction: 'up' | 'down', delta: number, iconClass: string, messageKey: string, fallback: string];
 
 function isModeMenuItem(item: ModeMenuItem | null | undefined): item is ModeMenuItem {
   return Boolean(item && item.id && item.label);
@@ -78,128 +68,117 @@ function isModeMenuItem(item: ModeMenuItem | null | undefined): item is ModeMenu
 
 function createModeMenuRender(deps: ModeMenuRenderDeps) {
   const {
-    clearModeMenuContents,
-    doc,
+    view,
+    modeMenuContent,
     canMoveModeMenuGroups,
     canReorderModeMenu,
-    createModeMenuIcon,
-    createModeMenuLabel,
-    bindModeMenuLabelTooltip,
-    selectModeMenuItem,
-    buildModeMenuSearchIndex,
-    applyNoTranslate,
-    formatMessage,
-    modeMenu,
     config,
+    buildModeMenuSearchIndex,
     normalizeModeMenuSearchText,
-    refreshModeMenuFilterText,
     getModeMenuItemMatch,
-    renderModeMenuLabelMatch,
+    bindModeMenuLabelTooltip,
+    getModeMenuTileIcon,
+    getModeMenuTileColors,
+    requestModeMenuProviderThemes,
+    getModeMenuLabels,
+    selectModeMenuItem,
+    handleMenuKeydown,
+    handleModeMenuPointerDown,
+    attachFaviconData,
     updateModeMenuFooterAlignment,
     notifyModeMenuLayoutChange,
-    input,
-    setStyle,
+    input
   } = deps;
 
   // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
 
-  let renderedModeMenuGroups: RenderedGroup[] = [];
-  let modeMenuEmptyState: HTMLElement | null = null;
+  function findEntry(id: string): ModeMenuEntry | undefined {
+    return inputModeState.modeMenuEntries.find((entry) => String(entry.item.id) === id);
+  }
 
-  // Draws the items, a title where the group changes; returns the items drawn.
-  function renderModeMenu(items: ReadonlyArray<ModeMenuItem | null | undefined> | null | undefined): ModeMenuItem[] {
-    clearModeMenuContents();
-    inputModeState.renderedModeMenuEntries = [];
-    renderedModeMenuGroups = [];
-    modeMenuEmptyState = null;
+  const handlers: ModeMenuHandlers = {
+    onSelect(id) {
+      const entry = findEntry(id);
+      if (entry) {
+        selectModeMenuItem(entry.item, { focusAfterSelect: 'input' });
+      }
+    },
+    onGroupMove: (groupKey, delta) => moveModeMenuGroup(groupKey, delta),
+    onReorder: (id, list, orderedIds) => reorderModeMenu(id, list, orderedIds),
+    onKeyDown(event) {
+      handleMenuKeydown(event);
+    },
+    onPointerDown: (event) => handleModeMenuPointerDown(event),
+    bindLabelTooltip: (button, label) => bindModeMenuLabelTooltip(button, label),
+    attachIconData(image, iconUrl, iconHost) {
+      if (attachFaviconData) {
+        attachFaviconData(image, iconUrl, iconHost);
+      }
+    }
+  };
+
+  // Takes the items to show; returns those that can be shown.
+  function setModeMenuItems(items: ReadonlyArray<ModeMenuItem | null | undefined> | null | undefined): ModeMenuItem[] {
     const normalizedItems = Array.isArray(items) ? items.filter(isModeMenuItem) : [];
-    let previousGroup = '';
-    normalizedItems.forEach((item) => {
-      const group = item.group ? String(item.group) : '';
-      if (group && group !== previousGroup) {
-        const groupLabel = doc.createElement('div');
-        groupLabel.className = 'x-lumno-search-input-mode__menu-group';
-        groupLabel.setAttribute('aria-hidden', 'true');
-        groupLabel.setAttribute('role', 'presentation');
-        const groupKey = item.groupKey ? String(item.groupKey) : '';
-        if (canMoveModeMenuGroups && groupKey) {
-          groupLabel.dataset.groupKey = groupKey;
-          const title = doc.createElement('span');
-          title.textContent = group;
-          groupLabel.appendChild(title);
-          groupLabel.appendChild(createModeMenuGroupMoveControls(groupKey));
-        } else {
-          groupLabel.textContent = group;
-        }
-        inputModeState.modeMenuContent.appendChild(groupLabel);
-        renderedModeMenuGroups.push({
-          element: groupLabel,
-          group,
-          groupKey,
-          visibleCount: 0
-        });
-        previousGroup = group;
-      }
-      const button = doc.createElement('button');
-      button.className = 'x-lumno-search-input-mode__menu-item';
-      button.type = 'button';
-      button.tabIndex = -1;
-      button.setAttribute('role', 'menuitemradio');
-      button.setAttribute('aria-checked', item.active ? 'true' : 'false');
-      button.setAttribute('aria-label', String(item.label));
-      button.setAttribute('data-label-truncated', 'false');
-      button.dataset.modeId = String(item.id);
-      // Items of one order list drag among themselves inside their group.
-      if (canReorderModeMenu && item.orderList && item.orderList !== 'pinned') {
-        button.dataset.sortList = String(item.orderList);
-      }
-      button.appendChild(createModeMenuIcon(item, button));
-      const label = createModeMenuLabel(item.label);
-      button.appendChild(label);
-      bindModeMenuLabelTooltip(button, label, item.label);
-      button.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        selectModeMenuItem(item, { focusAfterSelect: 'input' });
-      });
-      inputModeState.modeMenuContent.appendChild(button);
-      inputModeState.renderedModeMenuEntries.push({
-        button,
-        group,
-        item,
-        label,
-        labelText: String(item.label),
-        searchIndex: buildModeMenuSearchIndex(item)
-      });
-    });
-    syncModeMenuGroupMoveControls();
-    const emptyState = applyNoTranslate(doc.createElement('div'));
-    emptyState.className = 'x-lumno-search-input-mode__menu-empty';
-    emptyState.setAttribute('role', 'status');
-    // The words sit in their own element, so relocalizing them keeps the art.
-    const modeMenuEmptyText = doc.createElement('span');
-    modeMenuEmptyText.setAttribute('data-i18n', 'overlay_empty_result');
-    modeMenuEmptyText.textContent = formatMessage(
-      'overlay_empty_result',
-      'No matching results'
-    );
-    emptyState.append(
-      createEmptyStateArt(doc, 'noResults', { size: 96 }),
-      modeMenuEmptyText
-    );
-    emptyState.hidden = true;
-    inputModeState.modeMenuContent.appendChild(emptyState);
-    modeMenuEmptyState = emptyState;
-    applyModeMenuFilter(inputModeState.modeMenuFilterQuery, { preserveScroll: true });
+    inputModeState.modeMenuEntries = normalizedItems.map((item) => ({
+      checked: Boolean(item.active),
+      group: item.group ? String(item.group) : '',
+      item,
+      labelText: String(item.label),
+      searchIndex: buildModeMenuSearchIndex(item)
+    }));
+    requestModeMenuProviderThemes(normalizedItems);
     return normalizedItems;
+  }
+
+  function buildModeMenuModel(): ModeMenuModel {
+    const normalizedQuery = normalizeModeMenuSearchText(inputModeState.modeMenuFilterQuery);
+    return {
+      open: inputModeState.modeMenuOpen,
+      revealed: inputModeState.modeMenuRevealed,
+      busy: inputModeState.modeMenuBusy,
+      searchActive: inputModeState.modeMenuSearchActive,
+      hasQuery: inputModeState.modeMenuHasQuery,
+      filtered: Boolean(normalizedQuery),
+      focusId: inputModeState.modeMenuFocusId,
+      canMoveGroups: canMoveModeMenuGroups,
+      canReorder: canReorderModeMenu,
+      labels: getModeMenuLabels(),
+      tiles: inputModeState.modeMenuEntries.map((entry) => {
+        const item = entry.item;
+        const match = getModeMenuItemMatch(entry, normalizedQuery);
+        return {
+          id: String(item.id),
+          label: entry.labelText,
+          group: entry.group,
+          groupKey: item.groupKey ? String(item.groupKey) : '',
+          checked: entry.checked,
+          // Items of one order list drag among themselves inside their group.
+          sortList: canReorderModeMenu && item.orderList && item.orderList !== 'pinned'
+            ? String(item.orderList)
+            : '',
+          hidden: !match.matched,
+          ranges: match.ranges,
+          icon: getModeMenuTileIcon(item),
+          colors: getModeMenuTileColors(item)
+        };
+      })
+    };
+  }
+
+  // Draws the menu from the state; returns the model drawn.
+  function renderModeMenuView(): ModeMenuModel {
+    const model = buildModeMenuModel();
+    view.render(model, handlers);
+    return model;
   }
 
   // While the panel is open, Ctrl/Cmd+Z and Shift+Ctrl/Cmd+Z step back and
   // forth through the moves made in it. The host answers whether it had a
   // step to take; when it had none, the keys keep their usual meaning.
   function handleModeMenuHistoryKeydown(event: KeyboardEvent): void {
-    if (!inputModeState.modeMenuOpen || modeMenu.hidden || event.altKey || !(event.metaKey || event.ctrlKey)) {
+    if (!inputModeState.modeMenuOpen || event.altKey || !(event.metaKey || event.ctrlKey)) {
       return;
     }
     const key = String(event.key || '').toLowerCase();
@@ -215,120 +194,86 @@ function createModeMenuRender(deps: ModeMenuRenderDeps) {
     }
   }
 
-  // Hovering a group title shows move up and move down for the whole block.
-  // The host stores the new group order and refreshes the menu.
-  function createModeMenuGroupMoveControls(groupKey: string): HTMLSpanElement {
-    const controls = doc.createElement('span');
-    controls.className = 'x-lumno-search-input-mode__menu-group-move';
-    const moves: GroupMoveControl[] = [
-      ['up', -1, 'ri-arrow-up-s-line', 'settings_search_source_move_up', 'Move up'],
-      ['down', 1, 'ri-arrow-down-s-line', 'settings_search_source_move_down', 'Move down']
-    ];
-    moves.forEach(([direction, delta, iconClass, messageKey, fallback]) => {
-      const button = doc.createElement('button');
-      button.type = 'button';
-      button.tabIndex = -1;
-      button.className = 'x-lumno-search-input-mode__menu-group-move-button';
-      button.dataset.groupMove = direction;
-      const label = formatMessage(messageKey, fallback);
-      button.setAttribute('aria-label', label);
-      button.title = label;
-      const icon = doc.createElement('i');
-      icon.className = `ri-icon ri-size-14 ${iconClass}`;
-      icon.setAttribute('aria-hidden', 'true');
-      button.appendChild(icon);
-      button.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (button.disabled || typeof config.onModeMenuGroupMove !== 'function') {
-          return;
-        }
-        config.onModeMenuGroupMove({
-          delta,
-          group: groupKey,
-          groups: renderedModeMenuGroups.map((entry) => entry.groupKey).filter(Boolean)
-        });
-      });
-      controls.appendChild(button);
-    });
-    return controls;
-  }
-
-  function syncModeMenuGroupMoveControls(): void {
-    const movable = renderedModeMenuGroups.filter((entry) => entry.groupKey);
-    movable.forEach((entry, index) => {
-      queryHtmlTags(entry.element, '[data-group-move]', 'button').forEach((button) => {
-        button.disabled = button.dataset.groupMove === 'up'
-          ? index === 0
-          : index === movable.length - 1;
-      });
-    });
-  }
-
-  // Dragging a tile reorders it among the tiles of its own order list in its
-  // group (custom searches among custom ones, built-ins among built-ins).
-  // The tiles move at once; the host stores the order through
-  // `onModeMenuReorder` and may refresh the menu afterwards.
-  function attachModeMenuReorder(): () => void {
-    if (!canReorderModeMenu) {
-      return () => {};
-    }
-    const getEntry = (button: HTMLElement): ModeMenuEntry | undefined => (
-      inputModeState.renderedModeMenuEntries.find((entry) => entry.button === button)
-    );
-    return LumnoSortableDrag.attach(inputModeState.modeMenuContent, {
-      itemSelector: '.x-lumno-search-input-mode__menu-item[data-sort-list]',
-      canStart: () => inputModeState.modeMenuOpen && modeMenu.getAttribute('data-filtered') !== 'true',
-      getPeers: (button) => {
-        const entry = getEntry(button);
-        if (!entry) {
-          return [];
-        }
-        return inputModeState.renderedModeMenuEntries
-          .filter((candidate) => (
-            candidate.group === entry.group &&
-            !candidate.button.hidden &&
-            candidate.button.dataset.sortList === button.dataset.sortList
-          ))
-          .map((candidate) => candidate.button);
-      },
-      onReorder: (button, fromIndex, toIndex, peers) => {
-        const moved = peers.slice();
-        moved.splice(toIndex, 0, moved.splice(fromIndex, 1)[0]);
-        const anchor = peers[peers.length - 1].nextSibling;
-        moved.forEach((peer) => inputModeState.modeMenuContent.insertBefore(peer, anchor));
-        inputModeState.renderedModeMenuEntries.sort((left, right) => (
-          left.button.compareDocumentPosition(right.button) & 4 ? -1 : 1
-        ));
-        const entry = getEntry(button);
-        const listId = button.dataset.sortList;
-        if (typeof config.onModeMenuReorder !== 'function') {
-          return;
-        }
-        const movedItems: ModeMenuItem[] = [];
-        moved.forEach((peer) => {
-          const movedEntry = getEntry(peer);
-          if (movedEntry) {
-            movedItems.push(movedEntry.item);
-          }
-        });
-        config.onModeMenuReorder({
-          item: entry ? entry.item : null,
-          list: listId,
-          movedItems,
-          listItems: inputModeState.renderedModeMenuEntries
-            .filter((candidate) => candidate.button.dataset.sortList === listId)
-            .map((candidate) => candidate.item)
-        });
+  // The keys of the groups in the order their titles show.
+  function getModeMenuGroupKeys(): string[] {
+    const keys: string[] = [];
+    let previousGroup = '';
+    inputModeState.modeMenuEntries.forEach((entry) => {
+      if (entry.group && entry.group !== previousGroup) {
+        keys.push(entry.item.groupKey ? String(entry.item.groupKey) : '');
+        previousGroup = entry.group;
       }
     });
+    return keys.filter(Boolean);
+  }
+
+  // The host stores the new group order and refreshes the menu.
+  function moveModeMenuGroup(groupKey: string, delta: number): void {
+    if (typeof config.onModeMenuGroupMove !== 'function') {
+      return;
+    }
+    config.onModeMenuGroupMove({
+      delta,
+      group: groupKey,
+      groups: getModeMenuGroupKeys()
+    });
+  }
+
+  // A tile dropped in a new place among its list's tiles: they take their
+  // new order where the last of them was. The host stores the order through
+  // `onModeMenuReorder` and may refresh the menu afterwards.
+  function reorderModeMenu(id: string, list: string, orderedIds: string[]): void {
+    const entries = inputModeState.modeMenuEntries;
+    const moved = orderedIds
+      .map((orderedId) => findEntry(orderedId))
+      .filter((entry): entry is ModeMenuEntry => Boolean(entry));
+    if (moved.length === 0) {
+      return;
+    }
+    const movedSet = new Set(moved);
+    let lastIndex = -1;
+    entries.forEach((entry, index) => {
+      if (movedSet.has(entry)) {
+        lastIndex = index;
+      }
+    });
+    inputModeState.modeMenuEntries = [
+      ...entries.slice(0, lastIndex + 1).filter((entry) => !movedSet.has(entry)),
+      ...moved,
+      ...entries.slice(lastIndex + 1)
+    ];
+    renderModeMenuView();
+    if (typeof config.onModeMenuReorder !== 'function') {
+      return;
+    }
+    const entry = findEntry(id);
+    config.onModeMenuReorder({
+      item: entry ? entry.item : null,
+      list,
+      movedItems: moved.map((movedEntry) => movedEntry.item),
+      listItems: inputModeState.modeMenuEntries
+        .filter((candidate) => candidate.item.orderList === list)
+        .map((candidate) => candidate.item)
+    });
+  }
+
+  // Marks the mode as the selected one; false when the menu does not show it.
+  function setModeMenuSelection(modeId: string): boolean {
+    const selectedModeId = String(modeId || '');
+    let matched = false;
+    inputModeState.modeMenuEntries.forEach((entry) => {
+      entry.checked = Boolean(selectedModeId && String(entry.item.id) === selectedModeId);
+      matched = matched || entry.checked;
+    });
+    renderModeMenuView();
+    return matched;
   }
 
   function refreshModeMenuSearchIndexes(): void {
-    if (inputModeState.renderedModeMenuEntries.length === 0) {
+    if (inputModeState.modeMenuEntries.length === 0) {
       return;
     }
-    inputModeState.renderedModeMenuEntries.forEach((entry) => {
+    inputModeState.modeMenuEntries.forEach((entry) => {
       entry.searchIndex = buildModeMenuSearchIndex(entry.item);
     });
     if (normalizeModeMenuSearchText(inputModeState.modeMenuFilterQuery)) {
@@ -339,70 +284,32 @@ function createModeMenuRender(deps: ModeMenuRenderDeps) {
   // Shows only the items that match; returns how many do.
   function applyModeMenuFilter(query: unknown, filterOptions?: { preserveScroll?: boolean } | null): number {
     inputModeState.modeMenuFilterQuery = String(query || '');
-    refreshModeMenuFilterText();
-    const normalizedQuery = normalizeModeMenuSearchText(inputModeState.modeMenuFilterQuery);
-    modeMenu.setAttribute('data-filtered', normalizedQuery ? 'true' : 'false');
-    renderedModeMenuGroups.forEach((group) => {
-      group.visibleCount = 0;
-    });
-    let visibleCount = 0;
-    inputModeState.renderedModeMenuEntries.forEach((entry) => {
-      const match = getModeMenuItemMatch(entry, normalizedQuery);
-      entry.button.hidden = !match.matched;
-      entry.button.tabIndex = -1;
-      renderModeMenuLabelMatch(
-        entry.label,
-        entry.labelText,
-        match.ranges
-      );
-      if (!match.matched) {
-        return;
-      }
-      visibleCount += 1;
-      const groupRecord = renderedModeMenuGroups.find((group) => (
-        group.group === entry.group
-      ));
-      if (groupRecord) {
-        groupRecord.visibleCount += 1;
-      }
-    });
-    renderedModeMenuGroups.forEach((group) => {
-      group.element.hidden = group.visibleCount === 0;
-    });
-    if (modeMenuEmptyState) {
-      modeMenuEmptyState.hidden = visibleCount > 0;
-      const art = modeMenuEmptyState.firstElementChild;
-      if (visibleCount === 0 && art) {
-        // The page's theme may have changed since the menu was built.
-        art.setAttribute('data-theme', resolveEmptyStateArtTheme(modeMenu || input));
-        ensureEmptyStateArtStyles(art);
-      }
-    }
+    const model = renderModeMenuView();
     if (!filterOptions || filterOptions.preserveScroll !== true) {
-      inputModeState.modeMenuContent.scrollTop = 0;
+      modeMenuContent.scrollTop = 0;
     }
     updateModeMenuFooterAlignment();
     notifyModeMenuLayoutChange();
-    return visibleCount;
+    return model.tiles.filter((tile) => !tile.hidden).length;
   }
 
+  // The panel lifts a little while the input has text.
   function syncModeMenuQueryLift(): void {
     const hasQuery = Boolean(String(input.value || '').trim());
-    modeMenu.setAttribute('data-has-query', hasQuery ? 'true' : 'false');
-    setStyle(
-      modeMenu,
-      '--x-lumno-search-mode-menu-lift',
-      hasQuery ? '-8px' : '0px'
-    );
+    if (hasQuery !== inputModeState.modeMenuHasQuery) {
+      inputModeState.modeMenuHasQuery = hasQuery;
+      renderModeMenuView();
+    }
   }
 
   return {
-    renderModeMenu,
+    setModeMenuItems,
+    renderModeMenuView,
     handleModeMenuHistoryKeydown,
-    attachModeMenuReorder,
     refreshModeMenuSearchIndexes,
     applyModeMenuFilter,
-    syncModeMenuQueryLift
+    syncModeMenuQueryLift,
+    setModeMenuSelection
   };
 }
 

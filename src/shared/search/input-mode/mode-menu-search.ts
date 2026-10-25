@@ -1,5 +1,5 @@
 // Filtering the mode menu: the search text and Han readings of each item,
-// matching a query, and the highlighted label.
+// matching a query, and the full label of a tile that cuts it short.
 import * as LumnoSearchUtils from '../../../domain/search/search-utils';
 import type * as LumnoCursorTooltip from '../../ui/cursor-tooltip';
 import type { CursorTooltipController } from '../../ui/cursor-tooltip';
@@ -14,7 +14,6 @@ interface ModeMenuSearchDeps {
   getModeMenuPinyinApi: () => PinyinApi | null | undefined;
   // Readings of common characters in built-in scope names, before pinyin-pro loads.
   MODE_MENU_PINYIN_FALLBACKS: Readonly<Record<string, string>>;
-  doc: Document;
   modeMenuCursorTooltipController: Pick<CursorTooltipController, 'bind'> | null;
   cursorTooltipApi: Pick<typeof LumnoCursorTooltip, 'isElementTextTruncated'>;
   modeMenu: HTMLElement;
@@ -28,7 +27,6 @@ function createModeMenuSearch(deps: ModeMenuSearchDeps) {
   const {
     getModeMenuPinyinApi,
     MODE_MENU_PINYIN_FALLBACKS,
-    doc,
     modeMenuCursorTooltipController,
     cursorTooltipApi,
     modeMenu
@@ -164,48 +162,9 @@ function createModeMenuSearch(deps: ModeMenuSearchDeps) {
     return { matched: false, ranges: [] };
   }
 
-  function renderModeMenuLabelMatch(label: HTMLElement, labelText: string, ranges: ModeMenuRange[] | null | undefined): void {
-    while (label.firstChild) {
-      label.removeChild(label.firstChild);
-    }
-    const normalizedRanges = (Array.isArray(ranges) ? ranges : [])
-      .map((range) => ({
-        start: Math.max(0, Number(range && range.start) || 0),
-        end: Math.min(labelText.length, Number(range && range.end) || 0)
-      }))
-      .filter((range) => range.end > range.start)
-      .sort((left, right) => left.start - right.start);
-    if (normalizedRanges.length === 0) {
-      label.textContent = labelText;
-      return;
-    }
-    let offset = 0;
-    normalizedRanges.forEach((range) => {
-      if (range.start > offset) {
-        label.appendChild(doc.createTextNode(labelText.slice(offset, range.start)));
-      }
-      const mark = doc.createElement('mark');
-      mark.className = 'x-lumno-search-input-mode__menu-match';
-      mark.textContent = labelText.slice(range.start, range.end);
-      label.appendChild(mark);
-      offset = range.end;
-    });
-    if (offset < labelText.length) {
-      label.appendChild(doc.createTextNode(labelText.slice(offset)));
-    }
-  }
-
-  function createModeMenuLabel(labelText: string): HTMLSpanElement {
-    const text = String(labelText || '');
-    const label = doc.createElement('span');
-    label.className = 'x-lumno-search-input-mode__menu-label';
-    label.setAttribute('aria-hidden', 'true');
-    label.textContent = text;
-    return label;
-  }
-
   // Shows the full label beside the pointer when the menu cut it short.
-  function bindModeMenuLabelTooltip(button: HTMLElement, label: HTMLElement, labelText: string): void {
+  function bindModeMenuLabelTooltip(button: HTMLElement, label: HTMLElement): void {
+    button.setAttribute('data-label-truncated', 'false');
     if (!modeMenuCursorTooltipController) {
       return;
     }
@@ -214,7 +173,7 @@ function createModeMenuSearch(deps: ModeMenuSearchDeps) {
       button.setAttribute('data-label-truncated', isTruncated ? 'true' : 'false');
       return isTruncated;
     };
-    modeMenuCursorTooltipController.bind(button, () => String(labelText || ''), {
+    modeMenuCursorTooltipController.bind(button, () => button.getAttribute('aria-label') || '', {
       maxWidth: 320,
       shouldShow: updateTruncatedState,
       deferHideVisibility: true,
@@ -227,8 +186,6 @@ function createModeMenuSearch(deps: ModeMenuSearchDeps) {
     normalizeModeMenuSearchText,
     buildModeMenuSearchIndex,
     getModeMenuItemMatch,
-    renderModeMenuLabelMatch,
-    createModeMenuLabel,
     bindModeMenuLabelTooltip
   };
 }

@@ -10,6 +10,7 @@ import type { CursorTooltipController } from '../ui/cursor-tooltip';
 import { FakeAnimation } from '../../../tests/react/fake-animation';
 import { expectSvg, getElement, getElements, getSvgs, getTags, required } from '../../../tests/react/dom';
 import { queryHtmlElement, queryHtmlTag } from '../dom-lookup';
+import { createSearchInput } from './search-input';
 
 Object.assign(globalThis, {
   pinyinPro: {
@@ -44,47 +45,14 @@ function getTestContrastRatio(firstRgb: number[], secondRgb: number[]) {
 
 const LumnoSearchInputMode = searchInputModeModule;
 
-function createModeParts() {
-  const container = document.createElement('div');
-  const input = document.createElement('input');
-  input.style.paddingLeft = '44px';
-  const modePrefix = document.createElement('button');
-  const modePrefixIconFrame = document.createElement('span');
-  const modePrefixIcon = document.createElement('img');
-  modePrefixIconFrame.appendChild(modePrefixIcon);
-  const modePrefixGlyph = document.createElement('i');
-  const modePrefixText = document.createElement('span');
-  const modePrefixChevron = document.createElement('i');
-  const modePrefixCurrent = document.createElement('span');
-  modePrefix.append(
-    modePrefixIconFrame,
-    modePrefixGlyph,
-    modePrefixText,
-    modePrefixCurrent,
-    modePrefixChevron
-  );
-  const modeMenu = document.createElement('div');
-  const modeTabHint = document.createElement('span');
-  const modeTabHintKey = document.createElement('span');
-  const modeTabHintText = document.createElement('span');
-  modeTabHint.append(modeTabHintKey, modeTabHintText);
-  container.append(input, modePrefix, modeMenu, modeTabHint);
-  document.body.appendChild(container);
-  return {
-    container,
-    input,
-    modeMenu,
-    modePrefix,
-    modePrefixChevron,
-    modePrefixCurrent,
-    modePrefixGlyph,
-    modePrefixIconFrame,
-    modePrefixIcon,
-    modePrefixText,
-    modeTabHint,
-    modeTabHintKey,
-    modeTabHintText
-  };
+// The search input's parts as a surface renders them.
+function createModeParts(surface: 'newtab' | 'overlay' = 'newtab') {
+  const parts = createSearchInput({
+    modeBadge: { id: `${surface}-mode-badge`, surface }
+  });
+  parts.input.style.paddingLeft = '44px';
+  document.body.appendChild(parts.container);
+  return parts;
 }
 
 afterEach(() => {
@@ -249,7 +217,7 @@ describe('Shared search scope menu', () => {
   });
 
   it('opens on one Tab when a tag is already selected and preserves that tag', () => {
-    const parts = createModeParts();
+    const parts = createModeParts('overlay');
     const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
@@ -684,7 +652,7 @@ describe('Shared search scope menu', () => {
   });
 
   it('renders and clears the matched search provider Tab hint', () => {
-    const parts = createModeParts();
+    const parts = createModeParts('overlay');
     const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       { surface: 'overlay' }
@@ -1347,7 +1315,7 @@ describe('Shared search scope menu', () => {
   });
 
   it('reserves the stronger overlay theme surface for selected built-in cards', () => {
-    const parts = createModeParts();
+    const parts = createModeParts('overlay');
     const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
@@ -1413,7 +1381,7 @@ describe('Shared search scope menu', () => {
   });
 
   it('enforces Overlay keyboard and pointer selection focus targets', async () => {
-    const parts = createModeParts();
+    const parts = createModeParts('overlay');
     const shadowHost = document.createElement('div');
     const shadowRoot = shadowHost.attachShadow({ mode: 'open' });
     document.body.appendChild(shadowHost);
@@ -1912,7 +1880,7 @@ describe('Shared search scope menu', () => {
   });
 
   it('keeps the overlay current label clipped by its own in-flow slot before CSS loads', () => {
-    const parts = createModeParts();
+    const parts = createModeParts('overlay');
     const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       { surface: 'overlay' }
@@ -2409,7 +2377,7 @@ describe('Shared search scope menu', () => {
     );
     newtabController.destroy();
 
-    const overlayParts = createModeParts();
+    const overlayParts = createModeParts('overlay');
     const overlayController = LumnoSearchInputMode.createInputModeController(
       overlayParts,
       { surface: 'overlay' }
@@ -2645,6 +2613,130 @@ describe('Shared search scope menu', () => {
 
     expect(controller.menuElement.hidden).toBe(true);
     expect(document.activeElement).toBe(parts.modePrefix);
+    controller.destroy();
+  });
+
+  it('tells presses inside a closed shadow root from presses outside it', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const shadowRoot = host.attachShadow({ mode: 'closed' });
+    const overlaySibling = document.createElement('button');
+    const parts = createModeParts('overlay');
+    shadowRoot.append(overlaySibling, parts.container);
+    let selectedModeId = '';
+    const controller = LumnoSearchInputMode.createInputModeController(parts, {
+      surface: 'overlay',
+      getModeMenuItems: () => [
+        { active: true, id: 'provider:example', kind: 'provider', label: 'Example' },
+        { active: false, id: 'provider:other', kind: 'provider', label: 'Other' }
+      ],
+      onModeMenuSelect: (item) => {
+        selectedModeId = String(item.id);
+      }
+    });
+    const press = (target: EventTarget, type: string) => {
+      const event = new MouseEvent(type, { bubbles: true, cancelable: true, composed: true });
+      target.dispatchEvent(event);
+      return event;
+    };
+
+    expect(controller.openModeMenu('none')).toBe(true);
+    press(parts.modePrefix, 'pointerdown');
+    press(parts.modePrefix, 'click');
+    expect(controller.isModeMenuVisible()).toBe(false);
+    press(parts.modePrefix, 'pointerdown');
+    press(parts.modePrefix, 'click');
+    expect(controller.isModeMenuVisible()).toBe(true);
+
+    const otherButton = getElement(controller.menuElement, '[data-mode-id="provider:other"]');
+    // Native pointer focus would scroll the panel's ancestors.
+    expect(press(otherButton, 'pointerdown').defaultPrevented).toBe(true);
+    expect(controller.isModeMenuVisible()).toBe(true);
+    press(otherButton, 'click');
+    expect(selectedModeId).toBe('provider:other');
+    expect(shadowRoot.activeElement).toBe(parts.input);
+    expect(controller.menuElement.getAttribute('data-search-active')).toBe('false');
+    expect(controller.isModeMenuVisible()).toBe(true);
+
+    press(controller.menuElement, 'pointerdown');
+    expect(shadowRoot.activeElement).toBe(controller.menuElement);
+    controller.menuElement.dispatchEvent(
+      new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Tab' })
+    );
+    expect(shadowRoot.activeElement).toBe(parts.input);
+
+    press(overlaySibling, 'pointerdown');
+    expect(controller.isModeMenuVisible()).toBe(false);
+    expect(controller.openModeMenu('none')).toBe(true);
+    press(document.body, 'pointerdown');
+    expect(controller.isModeMenuVisible()).toBe(false);
+    expect(host.isConnected).toBe(true);
+    controller.destroy();
+  });
+
+  it('reorders tiles of one list by dragging and reports the new order', () => {
+    const parts = createModeParts();
+    const items: ModeMenuItem[] = ['a', 'b', 'c'].map((id) => ({
+      group: 'Custom', groupKey: 'custom', id, kind: 'provider', label: id.toUpperCase(), orderList: 'custom'
+    }));
+    items.push({ group: 'Custom', groupKey: 'custom', id: 'pinned', kind: 'provider', label: 'Pinned', orderList: 'pinned' });
+    const onModeMenuReorder = vi.fn();
+    const onModeMenuSelect = vi.fn();
+    const controller = LumnoSearchInputMode.createInputModeController(parts, {
+      getModeMenuItems: () => items,
+      onModeMenuReorder,
+      onModeMenuSelect
+    });
+    controller.openModeMenu();
+    const buttons = getTags(controller.menuElement, '[role="menuitemradio"]', 'button');
+    expect(buttons.map((button) => button.dataset.sortList || '')).toEqual(['custom', 'custom', 'custom', '']);
+    // jsdom has no layout: the tiles sit in a row, 80px wide with 10px gaps.
+    buttons.forEach((button, index) => {
+      button.getBoundingClientRect = () => DOMRect.fromRect({ x: index * 90, y: 0, width: 80, height: 40 });
+    });
+    const pointer = (target: EventTarget, type: string, x: number) => {
+      target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: 20, button: 0 }));
+    };
+    pointer(buttons[0], 'pointerdown', 20);
+    pointer(window, 'pointermove', 40);
+    pointer(window, 'pointermove', 205);
+    pointer(window, 'pointerup', 205);
+    // The click that ends the drag selects nothing.
+    buttons[0].click();
+    expect(onModeMenuSelect).not.toHaveBeenCalled();
+
+    expect(onModeMenuReorder).toHaveBeenCalledTimes(1);
+    expect(onModeMenuReorder).toHaveBeenCalledWith({
+      item: items[0],
+      list: 'custom',
+      movedItems: [items[1], items[2], items[0]],
+      listItems: [items[1], items[2], items[0]]
+    });
+    expect(
+      getTags(controller.menuElement, '[role="menuitemradio"]', 'button').map((button) => button.dataset.modeId)
+    ).toEqual(['b', 'c', 'a', 'pinned']);
+    controller.destroy();
+  });
+
+  it('moves whole groups from their titles', () => {
+    const parts = createModeParts();
+    const onModeMenuGroupMove = vi.fn();
+    const controller = LumnoSearchInputMode.createInputModeController(parts, {
+      getModeMenuItems: () => [
+        { group: 'Engines', groupKey: 'engines', id: 'google', kind: 'provider', label: 'Google' },
+        { group: 'Local', groupKey: 'local', id: 'history', kind: 'local', label: 'History' },
+        { group: 'Local', groupKey: 'local', id: 'bookmarks', kind: 'local', label: 'Bookmarks' }
+      ],
+      onModeMenuGroupMove
+    });
+    controller.openModeMenu();
+    const titles = getElements(controller.menuElement, '.x-lumno-search-input-mode__menu-group');
+    expect(titles.map((title) => title.dataset.groupKey)).toEqual(['engines', 'local']);
+    const moveButtons = titles.map((title) => getTags(title, '[data-group-move]', 'button'));
+    expect(moveButtons.map((pair) => pair.map((button) => button.disabled))).toEqual([[true, false], [false, true]]);
+
+    moveButtons[0][1].click();
+    expect(onModeMenuGroupMove).toHaveBeenCalledWith({ delta: 1, group: 'engines', groups: ['engines', 'local'] });
     controller.destroy();
   });
 });

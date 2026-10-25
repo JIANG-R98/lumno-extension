@@ -14,6 +14,7 @@ import {
   type PopconfirmCopy
 } from './popconfirm-content';
 import { queryHtmlElement, queryHtmlElements, queryHtmlTag } from '../dom-lookup';
+import { ModeMenu, createModeMenuStore, type ModeMenuStore, type ModeMenuView } from './search/mode-menu';
 
 type StyleOverrides = Record<string, string>;
 
@@ -78,6 +79,9 @@ export interface SearchInputParts {
   input: HTMLInputElement;
   modeBadge: HTMLDivElement | null;
   modeMenu: HTMLDivElement;
+  modeMenuContent: HTMLDivElement;
+  modeMenuFooter: HTMLDivElement;
+  modeMenuView: ModeMenuView;
   modePrefix: HTMLButtonElement;
   modePrefixChevron: HTMLElement;
   modePrefixCurrent: HTMLSpanElement;
@@ -246,7 +250,7 @@ function SecondaryAction({ action }: { action: SecondaryActionConfig }) {
   );
 }
 
-function SearchInput({ config }: { config: SearchInputConfig }) {
+function SearchInput({ config, modeMenuStore }: { config: SearchInputConfig; modeMenuStore: ModeMenuStore }) {
   const modeSurface =
     config.modeBadge?.surface === 'overlay' ? 'overlay' : 'newtab';
   const modePrefixId =
@@ -316,11 +320,7 @@ function SearchInput({ config }: { config: SearchInputConfig }) {
           data-search-input-mode-prefix-chevron=""
         />
       </button>
-      <div
-        {...noTranslateProps()}
-        data-search-input-mode-menu=""
-        hidden
-      />
+      <ModeMenu prefixId={modePrefixId} store={modeMenuStore} surface={modeSurface} />
       <span
         {...noTranslateProps()}
         aria-hidden="true"
@@ -472,7 +472,8 @@ export function createSearchInput(
   container.setAttribute('translate', 'no');
   const root = createRoot(container);
   roots.set(container, root);
-  flushSync(() => root.render(<SearchInput config={config} />));
+  const modeMenuStore = createModeMenuStore();
+  flushSync(() => root.render(<SearchInput config={config} modeMenuStore={modeMenuStore} />));
   const input = queryHtmlTag(container, 'input', 'input');
   const icon = queryHtmlTag(container, '.x-lumno-search-input__icon', 'div');
   const divider = queryHtmlTag(container, '.x-lumno-search-input__divider', 'div');
@@ -504,6 +505,8 @@ export function createSearchInput(
   const modePrefixChevron = queryHtmlElement(container, '[data-search-input-mode-prefix-chevron]');
   const modePrefixCurrent = queryHtmlTag(container, '[data-search-input-mode-current]', 'span');
   const modeMenu = queryHtmlTag(container, '[data-search-input-mode-menu]', 'div');
+  const modeMenuContent = queryHtmlTag(container, '[data-search-input-mode-menu-content]', 'div');
+  const modeMenuFooter = queryHtmlTag(container, '[data-search-input-mode-menu-footer]', 'div');
   if (
     !modePrefix ||
     !modePrefixGlyph ||
@@ -513,6 +516,8 @@ export function createSearchInput(
     !modePrefixChevron ||
     !modePrefixCurrent ||
     !modeMenu ||
+    !modeMenuContent ||
+    !modeMenuFooter ||
     !modeTabHint ||
     !modeTabHintKey ||
     !modeTabHintText
@@ -542,6 +547,9 @@ export function createSearchInput(
     input,
     modeBadge,
     modeMenu,
+    modeMenuContent,
+    modeMenuFooter,
+    modeMenuView: { render: modeMenuStore.render },
     modePrefix,
     modePrefixChevron,
     modePrefixCurrent,

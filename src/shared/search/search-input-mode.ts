@@ -4,7 +4,6 @@
 // this file builds them around one shared state.
 import * as LumnoShortcutDisplay from '../../domain/shortcut-display';
 import * as LumnoCursorTooltip from '../ui/cursor-tooltip';
-import * as LumnoMenuSurface from '../ui/menu-surface';
 import * as INPUT_MODE_CONTROLLER_DOM from './input-mode/controller-dom';
 import * as INPUT_MODE_MODE_MENU_ICONS from './input-mode/mode-menu-icons';
 import * as INPUT_MODE_MODE_MENU_LANGUAGE from './input-mode/mode-menu-language';
@@ -20,7 +19,6 @@ import * as INPUT_MODE_PREFIX_TEXT from './input-mode/prefix-text';
 import * as INPUT_MODE_PREFIX_VISUAL from './input-mode/prefix-visual';
 import type { NavigatorLike } from '../../domain/shortcut-display';
 import type { CursorTooltipController } from '../ui/cursor-tooltip';
-import type { ControllerDomParts } from './input-mode/controller-dom';
 import type { ModeMenuIconsState } from './input-mode/mode-menu-icons';
 import type { ModeMenuLanguageConfig, ModeMenuLanguageState } from './input-mode/mode-menu-language';
 import type { ModeMenuLayoutConfig, ModeMenuLayoutState } from './input-mode/mode-menu-layout';
@@ -45,6 +43,8 @@ import type {
   Rgb
 } from './input-mode/types';
 import { queryHtmlElement } from '../dom-lookup';
+import { getModeLineIconPaths } from './input-mode/line-icons';
+import type { ModeMenuView } from '../react/search/mode-menu';
 
 // The elements the surface renders for the mode (React owns them).
 interface InputModeParts {
@@ -60,7 +60,11 @@ interface InputModeParts {
   modePrefixIconFrame?: HTMLElement | null;
   modePrefixCurrent?: HTMLElement | null;
   modePrefixChevron?: HTMLElement | null;
-  modeMenu?: HTMLElement | null;
+  // The mode menu the React view draws, with its scrolling content and footer.
+  modeMenu: HTMLElement;
+  modeMenuContent: HTMLElement;
+  modeMenuFooter: HTMLElement;
+  modeMenuView: ModeMenuView;
 }
 
 type ModeMenuTooltipController = Pick<CursorTooltipController, 'bind' | 'hide'>;
@@ -123,8 +127,7 @@ type InputModeConfig = InputModeOwnConfig &
 
 // The state this controller shares with its modules: each takes it as
 // `inputModeState` and reads and writes the same properties.
-type InputModeState = ControllerDomParts &
-  ModeMenuIconsState &
+type InputModeState = ModeMenuIconsState &
   ModeMenuLanguageState &
   ModeMenuLayoutState &
   ModeMenuLifecycleState &
@@ -157,12 +160,6 @@ const DEFAULT_PREFIX_ENTER_DURATION = 180;
 const DEFAULT_PREFIX_ENTER_EASING = 'cubic-bezier(0.16, 1, 0.3, 1)';
 const DEFAULT_PREFIX_TRANSITION = 'background-color 140ms ease, color 140ms ease';
 const MIN_PREFIX_TEXT_CONTRAST = 4.5;
-const MODE_MENU_LINE_ICON_PATHS: Readonly<Record<string, readonly string[]>> = Object.freeze({
-  bookmark: ['M18 7v14l-6-4l-6 4V7a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4'],
-  browser: ['M4 8h16M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm4-2v4'],
-  history: ['M12 8v4l2 2', 'M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5'],
-  star: ['m12 17.75l-6.172 3.245l1.179-6.873l-5-4.867l6.9-1l3.086-6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873z']
-});
 const MODE_MENU_PINYIN_FALLBACKS: Readonly<Record<string, string>> = Object.freeze({
   书: 'shu',
   信: 'xin',
@@ -202,13 +199,6 @@ const MODE_MENU_PINYIN_FALLBACKS: Readonly<Record<string, string>> = Object.free
   科: 'ke',
   史: 'shi'
 });
-
-function getModeMenuLineIconPaths(iconName: string): readonly string[] | null {
-  return Object.prototype.hasOwnProperty.call(
-    MODE_MENU_LINE_ICON_PATHS,
-    iconName
-  ) ? MODE_MENU_LINE_ICON_PATHS[iconName] : null;
-}
 
 function noopTranslate<T extends Element>(element: T): T {
   return element;
@@ -451,8 +441,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     ? config.rgbToCss
     : defaultRgbToCss;
   const defaultTheme: InputModeTheme = config.defaultTheme || {};
-  const menuSurface = LumnoMenuSurface;
-  const menuSurfaceClass = menuSurface.className || '_x_extension_menu_surface_2024_unique_';
   const cursorTooltipApi = LumnoCursorTooltip;
   const shortcutDisplayApi = LumnoShortcutDisplay;
   const defaultAccentColor = Array.isArray(config.defaultAccentColor)
@@ -510,7 +498,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
   let layoutResizeObserver: ResizeObserver | null = null;
   const canReorderModeMenu = typeof config.onModeMenuReorder === 'function';
   const canMoveModeMenuGroups = typeof config.onModeMenuGroupMove === 'function';
-  let detachModeMenuReorder: () => void = () => {};
 
   function getModeMenuPlaceholder(): string {
     return formatMessage(
@@ -531,7 +518,7 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
   }
 
   function syncInputPlaceholder(): void {
-    if (inputModeState.modeMenuOpen && !modeMenu.hidden) {
+    if (inputModeState.modeMenuOpen) {
       input.placeholder = getModeMenuPlaceholder();
       return;
     }
@@ -628,13 +615,14 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
       doc.createElement('span')
   );
   const siteSearchPrefixChevron = parts.modePrefixChevron || doc.createElement('i');
-  const modeMenuWasProvided = Boolean(parts.modeMenu);
-  const modeMenu = applyNoTranslate(parts.modeMenu || doc.createElement('div'));
+  const modeMenu = parts.modeMenu;
+  const modeMenuContent = parts.modeMenuContent;
+  const modeMenuFooter = parts.modeMenuFooter;
   const siteSearchTabHint = applyNoTranslate(parts.modeTabHint);
   const siteSearchTabHintKey = applyNoTranslate(parts.modeTabHintKey);
   const siteSearchTabHintText = applyNoTranslate(parts.modeTabHintText);
 
-  const modeMenuParts = INPUT_MODE_CONTROLLER_DOM.createControllerDom({
+  INPUT_MODE_CONTROLLER_DOM.createControllerDom({
     siteSearchPrefix,
     siteSearchPrefixIcon,
     siteSearchPrefixText,
@@ -651,26 +639,21 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     siteSearchPrefixCurrentText,
     DEFAULT_PREFIX_ITEM_GAP_PX,
     INPUT_FONT_STACK,
-    prefixTransition,
-    setStyle,
-    modeMenu,
-    menuSurfaceClass,
-    menuSurface,
-    surface,
-    vars,
-    container,
-    applyNoTranslate,
-    doc
+    prefixTransition
   });
 
   const inputModeState: InputModeState = {
-    ...modeMenuParts,
     destroyed: false,
     modeMenuOpen: false,
+    modeMenuRevealed: false,
+    modeMenuBusy: false,
+    modeMenuSearchActive: false,
+    modeMenuHasQuery: false,
+    modeMenuFocusId: '',
     modeMenuPending: false,
     modeMenuRequestId: 0,
     modeMenuFilterQuery: '',
-    renderedModeMenuEntries: [],
+    modeMenuEntries: [],
     modeTagActive: false,
     modeMenuPinyinRuntimeReady: undefined,
     inputModePrefixAnimation: null,
@@ -697,41 +680,41 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     doc,
     DEFAULT_MODE_MENU_VIEWPORT_BOTTOM_INSET,
     config,
-    menuSurface,
+    renderModeMenuView: () => renderModeMenuView(),
     inputModeState
   });
 
 
 
   const {
-    renderModeMenu,
+    setModeMenuItems,
+    renderModeMenuView,
     handleModeMenuHistoryKeydown,
-    attachModeMenuReorder,
     refreshModeMenuSearchIndexes,
     applyModeMenuFilter,
-    syncModeMenuQueryLift
+    syncModeMenuQueryLift,
+    setModeMenuSelection
   } = INPUT_MODE_MODE_MENU_RENDER.createModeMenuRender({
-    clearModeMenuContents: (...args) => clearModeMenuContents(...args),
-    doc,
+    view: parts.modeMenuView,
+    modeMenuContent,
     canMoveModeMenuGroups,
     canReorderModeMenu,
-    createModeMenuIcon: (...args) => createModeMenuIcon(...args),
-    createModeMenuLabel: (...args) => createModeMenuLabel(...args),
-    bindModeMenuLabelTooltip: (...args) => bindModeMenuLabelTooltip(...args),
-    selectModeMenuItem: (...args) => selectModeMenuItem(...args),
-    buildModeMenuSearchIndex: (...args) => buildModeMenuSearchIndex(...args),
-    applyNoTranslate,
-    formatMessage,
-    modeMenu,
     config,
+    buildModeMenuSearchIndex: (...args) => buildModeMenuSearchIndex(...args),
     normalizeModeMenuSearchText: (...args) => normalizeModeMenuSearchText(...args),
-    refreshModeMenuFilterText: (...args) => refreshModeMenuFilterText(...args),
     getModeMenuItemMatch: (...args) => getModeMenuItemMatch(...args),
-    renderModeMenuLabelMatch: (...args) => renderModeMenuLabelMatch(...args),
+    bindModeMenuLabelTooltip: (...args) => bindModeMenuLabelTooltip(...args),
+    getModeMenuTileIcon: (...args) => getModeMenuTileIcon(...args),
+    getModeMenuTileColors: (...args) => getModeMenuTileColors(...args),
+    requestModeMenuProviderThemes: (...args) => requestModeMenuProviderThemes(...args),
+    getModeMenuLabels: (...args) => getModeMenuLabels(...args),
+    selectModeMenuItem: (...args) => selectModeMenuItem(...args),
+    handleMenuKeydown: (...args) => handleMenuKeydown(...args),
+    handleModeMenuPointerDown: (...args) => handleModeMenuPointerDown(...args),
+    attachFaviconData,
     updateModeMenuFooterAlignment: (...args) => updateModeMenuFooterAlignment(...args),
     notifyModeMenuLayoutChange,
     input,
-    setStyle,
     inputModeState
   });
 
@@ -750,9 +733,11 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     refreshModeMenuLanguage: (...args) => refreshModeMenuLanguage(...args),
     resetModeMenuDoubleTab: (...args) => resetModeMenuDoubleTab(...args),
     resetModeTagRemovalConfirmation: (...args) => resetModeTagRemovalConfirmation(...args),
-    renderModeMenu,
-    syncModeMenuQueryLift,
+    setModeMenuItems,
+    renderModeMenuView,
+    clearModeMenuProviderThemes: () => clearModeMenuProviderThemes(),
     modeMenu,
+    input,
     syncInputPlaceholder,
     updateModeMenuFooterAlignment: (...args) => updateModeMenuFooterAlignment(...args),
     revealModeMenuSurface,
@@ -793,6 +778,7 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     selectModeMenuItem
   } = INPUT_MODE_MODE_MENU_NAVIGATION.createModeMenuNavigation({
     modeMenu,
+    modeMenuContent,
     doc,
     input,
     DEFAULT_MODE_MENU_SCROLL_TOP_CONTEXT,
@@ -801,6 +787,8 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     normalizeModeMenuSearchText: (...args) => normalizeModeMenuSearchText(...args),
     config,
     refreshModeMenu,
+    renderModeMenuView,
+    setModeMenuSelection,
     inputModeState
   });
 
@@ -838,7 +826,7 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
   } = INPUT_MODE_PREFIX_VISUAL.createPrefixVisual({
     win,
     surface,
-    getModeMenuLineIconPaths,
+    getModeMenuLineIconPaths: getModeLineIconPaths,
     isDarkMode,
     getThemeForMode,
     defaultTheme,
@@ -864,17 +852,20 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     configuredBaseInputPaddingLeft,
     prefixGap,
     modeMenu,
+    modeMenuContent,
+    modeMenuFooter,
     notifyModeMenuLayoutChange,
     inputModeState
   });
 
 
   const {
-    clearModeMenuContents,
-    renderModeLineIconSvg,
-    createModeMenuIcon
+    clearModeMenuProviderThemes,
+    requestModeMenuProviderThemes,
+    getModeMenuTileColors,
+    getModeMenuTileIcon,
+    renderModeLineIconSvg
   } = INPUT_MODE_MODE_MENU_ICONS.createModeMenuIcons({
-    modeMenuCursorTooltipController,
     getThemeForMode,
     defaultTheme,
     parseCssColor,
@@ -882,16 +873,13 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     mixRgb,
     isDarkMode,
     getAccessibleThemeFocusRingRgb,
-    setStyle,
     rgbToCss,
     getBuiltInSurfaceColor,
-    getModeMenuLineIconPaths,
     createSvgElement,
-    doc,
     getThemeForProvider,
     resolveProviderIconUrl,
     getProviderThemeHost,
-    attachFaviconData,
+    onProviderThemesChange: () => renderModeMenuView(),
     inputModeState
   });
 
@@ -948,7 +936,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     prefixTransition,
     DEFAULT_PREFIX_ENTER_DURATION,
     DEFAULT_PREFIX_ENTER_EASING,
-    modeMenu,
     isElementVisible,
     getInputModePrefixCurrentVisualState,
     DEFAULT_PREFIX_ITEM_GAP_PX,
@@ -1010,15 +997,15 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
 
 
   const {
-    refreshModeMenuFilterText,
+    getModeMenuLabels,
     refreshModeMenuLanguage
   } = INPUT_MODE_MODE_MENU_LANGUAGE.createModeMenuLanguage({
     formatMessage,
-    doc,
     shortcutDisplayApi,
     config,
     win,
     syncInputPlaceholder,
+    renderModeMenuView,
     siteSearchTabHint,
     tabHintId,
     siteSearchTabHintKey,
@@ -1034,13 +1021,10 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     normalizeModeMenuSearchText,
     buildModeMenuSearchIndex,
     getModeMenuItemMatch,
-    renderModeMenuLabelMatch,
-    createModeMenuLabel,
     bindModeMenuLabelTooltip
   } = INPUT_MODE_MODE_MENU_SEARCH.createModeMenuSearch({
     getModeMenuPinyinApi,
     MODE_MENU_PINYIN_FALLBACKS,
-    doc,
     modeMenuCursorTooltipController,
     cursorTooltipApi,
     modeMenu
@@ -1079,9 +1063,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
   input.addEventListener('keydown', handleModeInputKeydown);
   input.addEventListener('blur', handleModeInputBlur);
   input.addEventListener('focus', handleModeInputFocus);
-  modeMenu.addEventListener('keydown', handleMenuKeydown);
-  modeMenu.addEventListener('pointerdown', handleModeMenuPointerDown);
-  detachModeMenuReorder = attachModeMenuReorder();
   if (typeof config.onModeMenuHistory === 'function') {
     container.addEventListener('keydown', handleModeMenuHistoryKeydown, true);
   }
@@ -1102,7 +1083,7 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     const observer = new win.ResizeObserver(updateLayout);
     observer.observe(siteSearchPrefix);
     observer.observe(siteSearchTabHint);
-    observer.observe(inputModeState.modeMenuContent);
+    observer.observe(modeMenuContent);
     const badgeElement = getModeBadgeElement();
     if (badgeElement) {
       observer.observe(badgeElement);
@@ -1111,10 +1092,10 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
   }
 
   win.addEventListener('resize', onResize);
+  renderModeMenuView();
 
   function destroy(): void {
     inputModeState.destroyed = true;
-    detachModeMenuReorder();
     container.removeEventListener('keydown', handleModeMenuHistoryKeydown, true);
     inputModeState.modeMenuRequestId += 1;
     inputModeState.modeMenuPending = false;
@@ -1130,8 +1111,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
     }
     siteSearchPrefix.removeEventListener('click', handlePrefixClick);
     siteSearchPrefix.removeEventListener('keydown', handlePrefixKeydown);
-    modeMenu.removeEventListener('keydown', handleMenuKeydown);
-    modeMenu.removeEventListener('pointerdown', handleModeMenuPointerDown);
     input.removeEventListener('input', handleModeInput);
     input.removeEventListener('keydown', handleModeInputKeydown);
     input.removeEventListener('blur', handleModeInputBlur);
@@ -1150,9 +1129,6 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
       ownedModeMenuCursorTooltipController.destroy();
     } else if (modeMenuCursorTooltipController) {
       modeMenuCursorTooltipController.hide();
-    }
-    if (!modeMenuWasProvided) {
-      modeMenu.remove();
     }
   }
 

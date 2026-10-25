@@ -98,12 +98,12 @@ interface ModeMenuMatch {
   ranges: ModeMenuRange[];
 }
 
-// An item as the menu drew it.
+// An item the menu shows, with what the filter matches it against.
 interface ModeMenuEntry {
-  button: HTMLButtonElement;
+  // Shown as the selected mode.
+  checked: boolean;
   group: string;
   item: ModeMenuItem;
-  label: HTMLElement;
   labelText: string;
   searchIndex: Readonly<ModeMenuSearchIndex>;
 }

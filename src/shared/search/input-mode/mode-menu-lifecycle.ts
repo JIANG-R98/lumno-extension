@@ -25,7 +25,11 @@ interface ModeMenuLifecycleState {
   // Counts open and refresh requests, so a late answer knows it is stale.
   modeMenuRequestId: number;
   modeMenuFilterQuery: string;
-  renderedModeMenuEntries: ModeMenuEntry[];
+  modeMenuEntries: ModeMenuEntry[];
+  modeMenuBusy: boolean;
+  modeMenuHasQuery: boolean;
+  modeMenuFocusId: string;
+  modeMenuSearchActive: boolean;
   modeMenuPinyinRuntimeReady: PromiseLike<unknown> | null | undefined;
 }
 
@@ -34,9 +38,11 @@ interface ModeMenuLifecycleDeps {
   refreshModeMenuLanguage: ModeMenuLanguageApi['refreshModeMenuLanguage'];
   resetModeMenuDoubleTab: ModeTabKeysApi['resetModeMenuDoubleTab'];
   resetModeTagRemovalConfirmation: ModeTabKeysApi['resetModeTagRemovalConfirmation'];
-  renderModeMenu: ModeMenuRenderApi['renderModeMenu'];
-  syncModeMenuQueryLift: ModeMenuRenderApi['syncModeMenuQueryLift'];
+  setModeMenuItems: ModeMenuRenderApi['setModeMenuItems'];
+  renderModeMenuView: ModeMenuRenderApi['renderModeMenuView'];
+  clearModeMenuProviderThemes: () => void;
   modeMenu: HTMLElement;
+  input: HTMLInputElement;
   syncInputPlaceholder: () => void;
   updateModeMenuFooterAlignment: PrefixVisualApi['updateModeMenuFooterAlignment'];
   revealModeMenuSurface: ModeMenuLayoutApi['revealModeMenuSurface'];
@@ -96,9 +102,11 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
     refreshModeMenuLanguage,
     resetModeMenuDoubleTab,
     resetModeTagRemovalConfirmation,
-    renderModeMenu,
-    syncModeMenuQueryLift,
+    setModeMenuItems,
+    renderModeMenuView,
+    clearModeMenuProviderThemes,
     modeMenu,
+    input,
     syncInputPlaceholder,
     updateModeMenuFooterAlignment,
     revealModeMenuSurface,
@@ -128,6 +136,13 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
   // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
 
+  function setModeMenuBusy(busy: boolean): void {
+    if (inputModeState.modeMenuBusy !== busy) {
+      inputModeState.modeMenuBusy = busy;
+      renderModeMenuView();
+    }
+  }
+
   function openModeMenu(focusTarget?: ModeMenuFocusTarget): boolean | Promise<boolean> {
     if (inputModeState.destroyed || typeof config.getModeMenuItems !== 'function') {
       return false;
@@ -142,14 +157,21 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
         return false;
       }
       inputModeState.modeMenuPending = false;
+      inputModeState.modeMenuBusy = false;
       inputModeState.modeMenuFilterQuery = '';
-      const normalizedItems = renderModeMenu(items);
+      inputModeState.modeMenuFocusId = '';
+      if (modeMenuCursorTooltipController) {
+        modeMenuCursorTooltipController.hide();
+      }
+      clearModeMenuProviderThemes();
+      const normalizedItems = setModeMenuItems(items);
       if (normalizedItems.length === 0) {
+        renderModeMenuView();
         return false;
       }
       inputModeState.modeMenuOpen = true;
-      syncModeMenuQueryLift();
-      modeMenu.hidden = false;
+      inputModeState.modeMenuHasQuery = Boolean(String(input.value || '').trim());
+      renderModeMenuView();
       syncInputPlaceholder();
       updateModeMenuFooterAlignment();
       revealModeMenuSurface();
@@ -174,7 +196,7 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
     const items = config.getModeMenuItems();
     requestModeMenuPinyinRuntime();
     if (isPromiseLike(items) || isPromiseLike(inputModeState.modeMenuPinyinRuntimeReady)) {
-      modeMenu.setAttribute('aria-busy', 'true');
+      setModeMenuBusy(true);
       return Promise.all([
         Promise.resolve(items),
         Promise.resolve(inputModeState.modeMenuPinyinRuntimeReady)
@@ -182,12 +204,11 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
         if (requestId !== inputModeState.modeMenuRequestId) {
           return false;
         }
-        modeMenu.removeAttribute('aria-busy');
         return finishOpen(resolvedItems);
       }, () => {
         if (requestId === inputModeState.modeMenuRequestId) {
           inputModeState.modeMenuPending = false;
-          modeMenu.removeAttribute('aria-busy');
+          setModeMenuBusy(false);
         }
         return false;
       });
@@ -197,7 +218,7 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
 
   // Draws the items again, keeping focus on the same mode where it can.
   function refreshModeMenu(preferredModeId?: string): boolean | Promise<boolean> {
-    if (inputModeState.destroyed || !inputModeState.modeMenuOpen || modeMenu.hidden ||
+    if (inputModeState.destroyed || !inputModeState.modeMenuOpen ||
         typeof config.getModeMenuItems !== 'function') {
       return false;
     }
@@ -213,13 +234,17 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
     const requestId = ++inputModeState.modeMenuRequestId;
     inputModeState.modeMenuPending = true;
     const finishRefresh = (items: ModeMenuItemList): boolean => {
-      if (inputModeState.destroyed || requestId !== inputModeState.modeMenuRequestId || !inputModeState.modeMenuOpen || modeMenu.hidden) {
+      if (inputModeState.destroyed || requestId !== inputModeState.modeMenuRequestId || !inputModeState.modeMenuOpen) {
         return false;
       }
       inputModeState.modeMenuPending = false;
-      modeMenu.removeAttribute('aria-busy');
-      const normalizedItems = renderModeMenu(items);
-      syncModeMenuQueryLift();
+      inputModeState.modeMenuBusy = false;
+      if (modeMenuCursorTooltipController) {
+        modeMenuCursorTooltipController.hide();
+      }
+      const normalizedItems = setModeMenuItems(items);
+      inputModeState.modeMenuHasQuery = Boolean(String(input.value || '').trim());
+      renderModeMenuView();
       if (normalizedItems.length === 0) {
         closeModeMenu(false);
         return false;
@@ -239,11 +264,11 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
     };
     const items = config.getModeMenuItems();
     if (isPromiseLike(items)) {
-      modeMenu.setAttribute('aria-busy', 'true');
+      setModeMenuBusy(true);
       return Promise.resolve(items).then(finishRefresh, () => {
         if (requestId === inputModeState.modeMenuRequestId) {
           inputModeState.modeMenuPending = false;
-          modeMenu.removeAttribute('aria-busy');
+          setModeMenuBusy(false);
         }
         return false;
       });
@@ -252,23 +277,23 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
   }
 
   function closeModeMenu(restoreFocus?: boolean): boolean {
-    if (!inputModeState.modeMenuOpen && !inputModeState.modeMenuPending && modeMenu.hidden) {
+    if (!inputModeState.modeMenuOpen && !inputModeState.modeMenuPending) {
       return false;
     }
     inputModeState.modeMenuRequestId += 1;
     inputModeState.modeMenuPending = false;
     resetModeMenuDoubleTab();
     resetModeTagRemovalConfirmation();
-    modeMenu.removeAttribute('aria-busy');
     cancelModeMenuRevealFrame();
     if (modeMenuCursorTooltipController) {
       modeMenuCursorTooltipController.hide();
     }
     inputModeState.modeMenuOpen = false;
+    inputModeState.modeMenuBusy = false;
     inputModeState.modeMenuFilterQuery = '';
-    setModeMenuSearchActive(false);
+    inputModeState.modeMenuFocusId = '';
+    inputModeState.modeMenuSearchActive = false;
     concealModeMenuSurface();
-    modeMenu.hidden = true;
     syncInputPlaceholder();
     container.removeAttribute('data-mode-menu-open');
     siteSearchPrefix.setAttribute('aria-expanded', 'false');
@@ -345,9 +370,8 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
       return true;
     } else if ((event.key === 'Enter' || event.key === ' ') && currentIndex >= 0) {
       stopModeMenuKeyEvent(event);
-      const entry = inputModeState.renderedModeMenuEntries.find((candidate) => (
-        candidate.button === buttons[currentIndex]
-      ));
+      const modeId = buttons[currentIndex].dataset.modeId || '';
+      const entry = inputModeState.modeMenuEntries.find((candidate) => String(candidate.item.id) === modeId);
       if (entry) {
         selectModeMenuItem(entry.item, {
           focusAfterSelect: 'panel'
@@ -376,7 +400,7 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
   }
 
   function handleModeMenuPointerDown(event: PointerEvent): void {
-    if (!inputModeState.modeMenuOpen || modeMenu.hidden) {
+    if (!inputModeState.modeMenuOpen) {
       return;
     }
     setModeMenuSearchActive(true);

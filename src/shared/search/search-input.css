@@ -688,7 +688,11 @@
   align-content: center !important;
 }
 
-.x-lumno-search-input-mode__menu-empty > svg {
+.x-lumno-search-input-mode__menu-empty-art {
+  display: contents !important;
+}
+
+.x-lumno-search-input-mode__menu-empty-art > svg {
   display: block !important;
   flex: none !important;
 }

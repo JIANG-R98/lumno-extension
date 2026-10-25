@@ -7,7 +7,8 @@ import { queryHtmlElements } from '../../dom-lookup';
 interface ModeMenuNavigationState {
   destroyed: boolean;
   modeMenuOpen: boolean;
-  modeMenuContent: HTMLElement;
+  modeMenuSearchActive: boolean;
+  modeMenuFocusId: string;
   modeMenuFilterQuery: string;
 }
 
@@ -18,6 +19,7 @@ interface ModeMenuNavigationConfig {
 
 interface ModeMenuNavigationDeps {
   modeMenu: HTMLElement;
+  modeMenuContent: HTMLElement;
   doc: Document;
   input: HTMLInputElement;
   DEFAULT_MODE_MENU_SCROLL_TOP_CONTEXT: number;
@@ -26,6 +28,8 @@ interface ModeMenuNavigationDeps {
   normalizeModeMenuSearchText: (value: unknown) => string;
   config: ModeMenuNavigationConfig;
   refreshModeMenu: (selectedModeId?: string) => void;
+  renderModeMenuView: () => unknown;
+  setModeMenuSelection: (modeId: string) => boolean;
   inputModeState: ModeMenuNavigationState;
 }
 
@@ -65,6 +69,7 @@ function isDocumentOrShadowRoot(node: Node): node is Node & DocumentOrShadowRoot
 function createModeMenuNavigation(deps: ModeMenuNavigationDeps) {
   const {
     modeMenu,
+    modeMenuContent,
     doc,
     input,
     DEFAULT_MODE_MENU_SCROLL_TOP_CONTEXT,
@@ -72,7 +77,9 @@ function createModeMenuNavigation(deps: ModeMenuNavigationDeps) {
     win,
     normalizeModeMenuSearchText,
     config,
-    refreshModeMenu
+    refreshModeMenu,
+    renderModeMenuView,
+    setModeMenuSelection
   } = deps;
 
   // The controller state object shared with search-input-mode.ts and the other modules.
@@ -95,17 +102,20 @@ function createModeMenuNavigation(deps: ModeMenuNavigationDeps) {
   }
 
   function setModeMenuSearchActive(active: boolean): void {
-    modeMenu.setAttribute('data-search-active', active ? 'true' : 'false');
+    if (inputModeState.modeMenuSearchActive !== active) {
+      inputModeState.modeMenuSearchActive = active;
+      renderModeMenuView();
+    }
   }
 
+  // Focuses the panel itself, where typing filters it.
   function focusModeMenuSearch(): boolean {
-    if (inputModeState.destroyed || !inputModeState.modeMenuOpen || modeMenu.hidden) {
+    if (inputModeState.destroyed || !inputModeState.modeMenuOpen) {
       return false;
     }
-    getModeMenuButtons().forEach((button) => {
-      button.tabIndex = -1;
-    });
-    setModeMenuSearchActive(true);
+    inputModeState.modeMenuFocusId = '';
+    inputModeState.modeMenuSearchActive = true;
+    renderModeMenuView();
     modeMenu.focus({ preventScroll: true });
     return true;
   }
@@ -121,7 +131,7 @@ function createModeMenuNavigation(deps: ModeMenuNavigationDeps) {
 
   // Whether a key event belongs to the open menu: focus or the target is in it.
   function shouldHandleModeMenuKeyEvent(event: { target?: EventTarget | null } | null | undefined): boolean {
-    if (inputModeState.destroyed || !inputModeState.modeMenuOpen || modeMenu.hidden) {
+    if (inputModeState.destroyed || !inputModeState.modeMenuOpen) {
       return false;
     }
     const activeElement = getModeMenuActiveElement();
@@ -133,11 +143,8 @@ function createModeMenuNavigation(deps: ModeMenuNavigationDeps) {
   }
 
   function scrollModeMenuButtonIntoView(button: HTMLElement, scrollOptions?: { smooth?: boolean }): void {
-    if (!inputModeState.modeMenuContent) {
-      return;
-    }
     const buttonRect = button.getBoundingClientRect();
-    const contentRect = inputModeState.modeMenuContent.getBoundingClientRect();
+    const contentRect = modeMenuContent.getBoundingClientRect();
     const topBoundary = contentRect.top + DEFAULT_MODE_MENU_SCROLL_TOP_CONTEXT;
     const bottomBoundary = contentRect.bottom -
       DEFAULT_MODE_MENU_SCROLL_BOTTOM_CONTEXT;
@@ -152,20 +159,20 @@ function createModeMenuNavigation(deps: ModeMenuNavigationDeps) {
     }
     const targetScrollTop = Math.max(
       0,
-      (Number(inputModeState.modeMenuContent.scrollTop) || 0) + scrollDelta
+      (Number(modeMenuContent.scrollTop) || 0) + scrollDelta
     );
     const prefersReducedMotion = typeof win.matchMedia === 'function' &&
       win.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const shouldSmoothScroll = scrollOptions &&
       scrollOptions.smooth === true &&
       !prefersReducedMotion;
-    if (shouldSmoothScroll && typeof inputModeState.modeMenuContent.scrollTo === 'function') {
-      inputModeState.modeMenuContent.scrollTo({
+    if (shouldSmoothScroll && typeof modeMenuContent.scrollTo === 'function') {
+      modeMenuContent.scrollTo({
         behavior: 'smooth',
         top: targetScrollTop
       });
     } else {
-      inputModeState.modeMenuContent.scrollTop = targetScrollTop;
+      modeMenuContent.scrollTop = targetScrollTop;
     }
   }
 
@@ -175,10 +182,9 @@ function createModeMenuNavigation(deps: ModeMenuNavigationDeps) {
       return false;
     }
     const normalizedIndex = ((index % buttons.length) + buttons.length) % buttons.length;
-    buttons.forEach((button, buttonIndex) => {
-      button.tabIndex = buttonIndex === normalizedIndex ? 0 : -1;
-    });
-    setModeMenuSearchActive(true);
+    inputModeState.modeMenuFocusId = buttons[normalizedIndex].dataset.modeId || '';
+    inputModeState.modeMenuSearchActive = true;
+    renderModeMenuView();
     buttons[normalizedIndex].focus({ preventScroll: true });
     scrollModeMenuButtonIntoView(buttons[normalizedIndex], {
       smooth: Boolean(focusOptions && focusOptions.smoothScroll)
@@ -303,19 +309,6 @@ function createModeMenuNavigation(deps: ModeMenuNavigationDeps) {
     return closest ? closest.index : currentIndex;
   }
 
-  function syncModeMenuSelection(modeId: string): boolean {
-    const selectedModeId = String(modeId || '');
-    let matched = false;
-    getAllModeMenuButtons().forEach((button) => {
-      const isSelected = Boolean(
-        selectedModeId && String(button.dataset.modeId || '') === selectedModeId
-      );
-      button.setAttribute('aria-checked', isSelected ? 'true' : 'false');
-      matched = matched || isSelected;
-    });
-    return matched;
-  }
-
   function selectModeMenuItem(item: ModeMenuItem, selectionOptions?: ModeMenuSelectOptions | null): void {
     const selectOptions: ModeMenuSelectOptions = selectionOptions || {};
     const focusAfterSelect = selectOptions.focusAfterSelect === 'panel'
@@ -326,9 +319,9 @@ function createModeMenuNavigation(deps: ModeMenuNavigationDeps) {
       result = config.onModeMenuSelect(item);
     }
     const syncSelectedMode = (): void => {
-      if (!inputModeState.destroyed && inputModeState.modeMenuOpen && !modeMenu.hidden) {
+      if (!inputModeState.destroyed && inputModeState.modeMenuOpen) {
         const selectedModeId = item && item.id ? String(item.id) : '';
-        if (!syncModeMenuSelection(selectedModeId)) {
+        if (!setModeMenuSelection(selectedModeId)) {
           refreshModeMenu(selectedModeId);
         }
         if (focusAfterSelect === 'panel') {

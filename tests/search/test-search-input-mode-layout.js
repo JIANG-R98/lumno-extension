@@ -214,6 +214,14 @@ modeTabHint.appendChild(modeTabHintKey);
 modeTabHint.appendChild(modeTabHintText);
 container.appendChild(modePrefix);
 container.appendChild(modeTabHint);
+// The mode menu, which the React view draws; this test only lays out the prefix.
+const modeMenu = new FakeElement('div');
+const modeMenuContent = new FakeElement('div');
+const modeMenuFooter = new FakeElement('div');
+modeMenu.appendChild(modeMenuContent);
+modeMenu.appendChild(modeMenuFooter);
+container.appendChild(modeMenu);
+const modeMenuView = { render() {} };
 const badge = new FakeElement('span');
 badge._layoutWidth = 48;
 badge.setAttribute('data-visible', 'true');
@@ -229,7 +237,11 @@ const controller = LumnoSearchInputMode.createInputModeController(
     modePrefixText,
     modeTabHint,
     modeTabHintKey,
-    modeTabHintText
+    modeTabHintText,
+    modeMenu,
+    modeMenuContent,
+    modeMenuFooter,
+    modeMenuView
   },
   {
     document: documentObj,

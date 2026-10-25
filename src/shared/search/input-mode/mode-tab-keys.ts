@@ -216,7 +216,7 @@ function createModeTabKeys(deps: ModeTabKeysDeps) {
       resetModeTagRemovalConfirmation();
       return false;
     }
-    if (!inputModeState.modeMenuOpen || modeMenu.hidden) {
+    if (!inputModeState.modeMenuOpen) {
       resetModeTagRemovalConfirmation();
       return true;
     }

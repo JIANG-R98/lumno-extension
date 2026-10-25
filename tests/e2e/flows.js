@@ -185,6 +185,52 @@ async function overlaySearch({ browser, fixtures }) {
   await web.waitFor(`!document.getElementById('${OVERLAY_HOST_ID}')`, { message: 'Escape did not close the overlay' });
 }
 
+// The search scope panel opens on a double Tab, in the new tab search box
+// and in the overlay; a click on a scope tags the input with it, and Escape
+// closes the panel only.
+async function searchScope({ browser, fixtures }) {
+  const MENU = '[data-search-input-mode-menu]';
+  const TILE = `${MENU} [role="menuitemradio"]`;
+  const newtab = await browser.openPage(browser.extensionUrl('newtab.html'));
+  await focusTab(browser, newtab);
+  await newtab.waitFor(`Boolean(document.getElementById('${NEWTAB_INPUT_ID}'))`, { message: 'no search box' });
+  await newtab.evaluate(`document.getElementById('${NEWTAB_INPUT_ID}').focus()`);
+  await newtab.press('Tab');
+  await newtab.press('Tab');
+  await newtab.waitFor(`(() => {
+    const menu = document.querySelector('${MENU}');
+    return Boolean(menu && !menu.hidden && menu.dataset.open === 'true' &&
+      menu.querySelectorAll('[role="menuitemradio"]').length > 1);
+  })()`, { message: 'double Tab did not open the scope panel' });
+  const label = await newtab.evaluate(`Array.from(document.querySelectorAll('${TILE}'))
+    .find((tile) => tile.getAttribute('aria-checked') !== 'true').getAttribute('aria-label')`);
+  const center = await elementCenter(newtab, `Array.from(document.querySelectorAll('${TILE}'))
+    .find((tile) => tile.getAttribute('aria-label') === ${JSON.stringify(label)})`);
+  await newtab.click(center.x, center.y);
+  await newtab.waitFor(`(() => {
+    const prefix = document.querySelector('[data-search-input-mode-prefix]');
+    return Boolean(prefix && prefix.checkVisibility() && prefix.textContent.includes(${JSON.stringify(label)}));
+  })()`, { message: 'the chosen scope did not tag the input' });
+  await newtab.press('Escape');
+  await newtab.waitFor(`document.querySelector('${MENU}').hidden`, { message: 'Escape did not close the scope panel' });
+
+  const web = await browser.openPage(fixtures.url('/page.html'));
+  await focusTab(browser, web);
+  await dispatchCommand(browser, 'show-search');
+  await web.waitForShadow(OVERLAY_HOST_ID, OVERLAY_INPUT, function isFocused() {
+    return this.getRootNode().activeElement === this;
+  }, (results) => results.length === 1 && results[0] === true, { message: 'the overlay input was not focused' });
+  await web.press('Tab');
+  await web.press('Tab');
+  await web.waitForShadow(OVERLAY_HOST_ID, TILE, getText, (texts) => texts.length > 1,
+    { message: 'double Tab did not open the overlay scope panel' });
+  await web.press('Escape');
+  await web.waitForShadow(OVERLAY_HOST_ID, MENU, function isHidden() {
+    return this.hidden;
+  }, (results) => results.length === 1 && results[0] === true, { message: 'Escape did not close the overlay scope panel' });
+  assert.ok(await web.evaluate(`Boolean(document.getElementById('${OVERLAY_HOST_ID}'))`), 'Escape on the panel closed the overlay');
+}
+
 // The tab switcher lists the open tabs and Enter switches to the selected one,
 // the previously used tab.
 async function tabSwitcher({ browser, fixtures }) {
@@ -296,6 +342,7 @@ module.exports = {
   surfaces,
   'newtab-search': newtabSearch,
   'overlay-search': overlaySearch,
+  'search-scope': searchScope,
   'tab-switcher': tabSwitcher,
   'link-preview': linkPreview,
   diagnostics
