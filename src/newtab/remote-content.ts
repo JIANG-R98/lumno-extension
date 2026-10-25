@@ -142,6 +142,12 @@ function readCachedQuote(value: unknown): DailyQuote | null {
   };
 }
 
+// The quote cached for a category, from the stored quote cache.
+function readCachedQuoteFor(cache: unknown, type: string): DailyQuote | null {
+  const entry = isRecord(cache) ? cache[type] : null;
+  return isRecord(entry) ? readCachedQuote(entry.quote) : null;
+}
+
 function curatedWallpaperFromId(id: string): RemoteWallpaper | null {
   const daily = CURATED_DAILY_ID_PATTERN.exec(id);
   if (daily) {
@@ -589,6 +595,7 @@ export {
   normalizeRandomMixExcluded,
   setRandomMixExcluded,
   getRandomMixCategories,
+  readCachedQuoteFor,
   createClient
 };
 export type { RemoteContentClient, RemoteContentClientOptions };

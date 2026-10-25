@@ -61,10 +61,16 @@ function parseQuotes(content: unknown, format: 'md' | 'txt' = 'md'): Quote[] {
 }
 // Retain the previous helper for callers; all new imports use line-based parsing.
 const parseMarkdown = (content: unknown): Quote[] => parseQuotes(content, 'md');
-function normalizeLibrary(value: any): QuoteLibrary | null {
-  if (!value || value.version !== 1 || !Array.isArray(value.quotes) || !value.quotes.length || value.quotes.length > MAX_QUOTES) return null;
-  const quotes: Quote[] = value.quotes.filter((item: any) => item && typeof item.text === 'string' && item.text.trim() && item.text.length <= 500)
-    .map((item: any) => ({ text: item.text.trim(), author: String(item.author || '').slice(0, 120) }));
+const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object';
+// A stored collection, read as untrusted; null when it holds no usable quote.
+function normalizeLibrary(value: unknown): QuoteLibrary | null {
+  if (!isRecord(value) || value.version !== 1 || !Array.isArray(value.quotes)) return null;
+  const stored: readonly unknown[] = value.quotes;
+  if (!stored.length || stored.length > MAX_QUOTES) return null;
+  const quotes: Quote[] = stored.flatMap((item): Quote[] => {
+    if (!isRecord(item) || typeof item.text !== 'string' || !item.text.trim() || item.text.length > 500) return [];
+    return [{ text: item.text.trim(), author: String(item.author || '').slice(0, 120) }];
+  });
   return quotes.length ? { version: 1, filename: String(value.filename || '').slice(0, 128), revision: Number(value.revision) || 0, quotes } : null;
 }
 // `random` (defaults to Math.random) is injectable so tests stay deterministic.
