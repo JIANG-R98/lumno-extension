@@ -34,6 +34,25 @@ import type { createCursorLayerApi } from '../onboarding/react/cursor-layer';
 import type { createInteractionsApi } from '../onboarding/react/interactions';
 import type { createPageStripApi } from '../onboarding/react/page-strip';
 import type { createVisualSurfaceApi } from '../onboarding/react/visual-surface';
+import type { createBookmarksViewApi } from '../newtab/react/bookmarks';
+import type { createSegmentedIndicatorApi } from '../shared/react/segmented-indicator';
+import type { createDockApi } from '../newtab/react/dock';
+import type { createFeedbackControlApi } from '../newtab/react/feedback';
+import type { createRecentSitesViewApi } from '../newtab/react/recent-sites';
+import type { createSelectMenuApi } from '../newtab/react/select-menu';
+import type { createShortcutDialogApi } from '../newtab/react/shortcut-dialog-lazy';
+import type { createRecentHistoryDialogApi } from '../newtab/react/recent-history-dialog-lazy';
+import type { createFolderColorPickerApi } from '../newtab/react/folder-color-picker-lazy';
+import type { createShortcutsViewApi } from '../newtab/react/shortcuts';
+import type { createSuggestionsViewApi } from '../shared/react/search/suggestions';
+import type { createTopContentApi } from '../newtab/react/wordmark';
+import type { createPageStructureApi } from '../newtab/react/page-structure';
+import type { createBookmarksTopbarApi } from '../newtab/react/bookmarks-topbar';
+import type { createLiquidSurfaces } from '../newtab/react/liquid-glass';
+import type { createPageNoticeApi } from '../newtab/react/page-notice';
+import type { createBookmarkCascadeViewApi } from '../newtab/react/bookmark-cascade-view';
+import type { createWallpaperViewApi } from '../newtab/react/wallpaper-view';
+import type { createBookmarkBreadcrumbApi } from '../newtab/react/bookmark-breadcrumb';
 
 declare global {
   // The traditional-to-simplified Han table as pairs of characters, set by
@@ -106,6 +125,29 @@ declare global {
   var LumnoOnboardingInteractions: ReturnType<typeof createInteractionsApi> | undefined;
   var LumnoOnboardingPageStrip: ReturnType<typeof createPageStripApi> | undefined;
   var LumnoOnboardingVisualSurface: ReturnType<typeof createVisualSurfaceApi> | undefined;
+  // Set by the New Tab's React islands entry.
+  var LumnoNewtabBookmarksView: ReturnType<typeof createBookmarksViewApi> | undefined;
+  var LumnoNewtabFeedbackControl: ReturnType<typeof createFeedbackControlApi> | undefined;
+  var LumnoNewtabDock: ReturnType<typeof createDockApi> | undefined;
+  var LumnoNewtabShortcutDialog: ReturnType<typeof createShortcutDialogApi> | undefined;
+  var LumnoNewtabRecentHistoryDialog: ReturnType<typeof createRecentHistoryDialogApi> | undefined;
+  var LumnoNewtabFolderColorPicker: ReturnType<typeof createFolderColorPickerApi> | undefined;
+  var LumnoNewtabShortcutsView: ReturnType<typeof createShortcutsViewApi> | undefined;
+  var LumnoNewtabRecentSitesView: ReturnType<typeof createRecentSitesViewApi> | undefined;
+  var LumnoNewtabSelectMenu: ReturnType<typeof createSelectMenuApi> | undefined;
+  var LumnoNewtabSuggestionsView: ReturnType<typeof createSuggestionsViewApi> | undefined;
+  var LumnoNewtabToast: ReturnType<typeof createToastApi> | undefined;
+  var LumnoNewtabTopContent: ReturnType<typeof createTopContentApi> | undefined;
+  var LumnoNewtabWordmark: ReturnType<typeof createTopContentApi> | undefined;
+  var LumnoNewtabPageStructure: ReturnType<typeof createPageStructureApi> | undefined;
+  var LumnoNewtabBookmarksTopbar: ReturnType<typeof createBookmarksTopbarApi> | undefined;
+  var LumnoNewtabLiquidSurfaces: { create: typeof createLiquidSurfaces } | undefined;
+  var LumnoNewtabPageNotice: ReturnType<typeof createPageNoticeApi> | undefined;
+  var LumnoNewtabBookmarkCascadeView: ReturnType<typeof createBookmarkCascadeViewApi> | undefined;
+  var LumnoNewtabWallpaperView: ReturnType<typeof createWallpaperViewApi> | undefined;
+  var LumnoNewtabBookmarkBreadcrumb: ReturnType<typeof createBookmarkBreadcrumbApi> | undefined;
+  var LumnoSearchInputUI: ReturnType<typeof createSearchInputApi> | undefined;
+  var LumnoSegmentedIndicator: ReturnType<typeof createSegmentedIndicatorApi> | undefined;
   // Opens the tab switcher with the context the worker sends, read as
   // untrusted; set by src/overlay/tab-switcher.ts.
   var _x_extension_toggleTabSwitcher_2026_unique_: ((context: unknown) => TabSwitcherReply) | undefined;

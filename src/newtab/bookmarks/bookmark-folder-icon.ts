@@ -1,5 +1,130 @@
-// @ts-nocheck
 import * as references from '../../domain/bookmark-folder-reference';
+import type { BookmarkNode as ReferenceNode } from '../../domain/bookmark-folder-reference';
+import { isSvgElement } from '../../shared/dom-guards';
+import type { BookmarkNode } from './bookmarks-store';
+
+// A synced folder color: the color, and the folder's creation time that
+// finds it again after a rename or move.
+interface FolderColorRef {
+  color: string;
+  dateAdded?: number;
+}
+
+// Synced colors by folder reference.
+type FolderColorRefs = Record<string, FolderColorRef>;
+
+// Colors by this device's folder ids.
+type FolderColorMap = Record<string, string>;
+
+type FolderNodeMap = ReadonlyMap<string, BookmarkNode>;
+
+// A folder's path from its root: titles, with the order among same-name
+// siblings after the first.
+type FolderPath = (string | [string, number])[];
+
+interface Rgb {
+  r: number;
+  g: number;
+  b: number;
+}
+
+interface Point {
+  x: number;
+  y: number;
+}
+
+// Two shapes written with the same commands, morphed number by number.
+interface NumberMorphTemplate {
+  type: 'number';
+  segments: string[];
+  fromNumbers: number[];
+  toNumbers: number[];
+}
+
+// Two shapes sampled into the same number of points.
+interface PointMorphTemplate {
+  type: 'point';
+  fromPoints: Point[];
+  toPoints: Point[];
+  closed: boolean;
+}
+
+type MorphTemplate = NumberMorphTemplate | PointMorphTemplate;
+
+// The shapes a point morph runs between and the points it last drew.
+interface PointMorph {
+  ends: Map<string, Point[]>;
+  closed: boolean;
+  points: Point[];
+  d: string;
+}
+
+interface FolderMorphPart {
+  partName: string;
+  pathEl: SVGElement;
+  baseD: string;
+  hoverD: string;
+  fillBase: string;
+  fillHover: string;
+  opacityBase: number;
+  opacityHover: number;
+  // Paths that take this part's shape as it morphs.
+  linkedFollowers: Element[];
+  animationFrameId: number;
+  pointMorph?: PointMorph | null;
+}
+
+type MorphState = 'base' | 'hover';
+
+interface GradientStop {
+  offset: number;
+  color: string;
+  // The stop's color before the folder was recolored.
+  baseColor?: string;
+}
+
+interface GradientConfig {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  stops: GradientStop[];
+}
+
+interface UpperGradientMorph {
+  mainGradientEl: Element;
+  overlayGradientEl: Element;
+  baseMain: GradientConfig;
+  hoverMain: GradientConfig;
+  baseOverlay: GradientConfig;
+  hoverOverlay: GradientConfig;
+  state: MorphState;
+  rafId: number;
+}
+
+// What a folder icon keeps between its morphs and recolors.
+interface FolderIconState {
+  color?: string;
+  upperGradientMorph?: UpperGradientMorph;
+  morphParts?: FolderMorphPart[];
+  morphSvg?: SVGSVGElement | null;
+  morphState?: MorphState;
+  upperFilterRestoreTimerId?: number;
+}
+
+const folderIconStates = new WeakMap<Element, FolderIconState>();
+// The filter an upper shape had before a morph turned it off.
+const originalUpperFilters = new WeakMap<Element, string | null>();
+
+function getFolderIconState(folderIcon: Element): FolderIconState {
+  let state = folderIconStates.get(folderIcon);
+  if (!state) {
+    state = {};
+    folderIconStates.set(folderIcon, state);
+  }
+  return state;
+}
+
 const DEFAULT_FOLDER_COLOR = '#5393FF';
 // Legacy device-only map keyed by bookmark id. Ids differ on every device,
 // so it is migrated into the synced reference map below.
@@ -10,33 +135,37 @@ const FOLDER_COLORS_STORAGE_KEY = '_x_extension_bookmark_folder_colors_2026_uniq
 const FOLDER_COLOR_REFS_STORAGE_KEY = '_x_extension_bookmark_folder_color_refs_2026_unique_';
 // Keeps the synced value well under the 8 KB browser sync item quota.
 const MAX_FOLDER_COLOR_REFS = 100;
-const own = (value, key) => Object.prototype.hasOwnProperty.call(value || {}, key);
-function normalizeFolderColorMap(value) {
-  const result = {};
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return result;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function normalizeFolderColorMap(value: unknown): FolderColorMap {
+  const result: FolderColorMap = {};
+  if (!isRecord(value) || Array.isArray(value)) return result;
   Object.entries(value).forEach(([id, color]) => {
-    if (/^[a-zA-Z0-9_-]+$/.test(id) && !['__proto__', 'constructor', 'prototype'].includes(id) && typeof color === 'string' && hexToRgb(color)) {
-      result[id] = rgbToHex(hexToRgb(color)).toUpperCase();
+    const rgb = typeof color === 'string' ? hexToRgb(color) : null;
+    if (/^[a-zA-Z0-9_-]+$/.test(id) && !['__proto__', 'constructor', 'prototype'].includes(id) && rgb) {
+      result[id] = rgbToHex(rgb).toUpperCase();
     }
   });
   return result;
 }
-function hashFolderPath(path) {
+function hashFolderPath(path: FolderPath): string {
   return references.hashText(JSON.stringify(path));
 }
 // Maps every folder id to its portable reference. Same-name siblings are
 // told apart by their order among themselves.
-function collectFolderColorRefs(nodeMap) {
-  const refs = new Map();
+function collectFolderColorRefs(nodeMap: FolderNodeMap): Map<string, string> {
+  const refs = new Map<string, string>();
   if (!(nodeMap instanceof Map)) return refs;
   const top = references.getTreeRoot(nodeMap);
-  const roots = top && Array.isArray(top.children)
+  const roots: readonly ReferenceNode[] = top && Array.isArray(top.children)
     ? top.children
     : [...nodeMap.values()].filter((node) => references.isTreeRootId(node.parentId));
-  function visit(node, path) {
+  function visit(node: ReferenceNode, path: FolderPath): void {
     refs.set(String(node.id), hashFolderPath(path));
     if (path.length > 64) return;
-    const seen = new Map();
+    const seen = new Map<string, number>();
     (node.children || []).forEach((child) => {
       if (!child || child.url || !child.id) return;
       const title = String(child.title || '');
@@ -51,12 +180,12 @@ function collectFolderColorRefs(nodeMap) {
   });
   return refs;
 }
-function normalizeFolderColorRefs(value) {
-  const result = {};
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return result;
+function normalizeFolderColorRefs(value: unknown): FolderColorRefs {
+  const result: FolderColorRefs = {};
+  if (!isRecord(value) || Array.isArray(value)) return result;
   Object.entries(value).forEach(([ref, entry]) => {
-    const rgb = entry && typeof entry === 'object' ? hexToRgb(entry.color) : null;
-    if (!/^[a-f0-9]{16}$/.test(ref) || !rgb) return;
+    const rgb = isRecord(entry) ? hexToRgb(entry.color) : null;
+    if (!/^[a-f0-9]{16}$/.test(ref) || !rgb || !isRecord(entry)) return;
     const dateAdded = Number(entry.dateAdded);
     result[ref] = {
       color: rgbToHex(rgb).toUpperCase(),
@@ -67,7 +196,7 @@ function normalizeFolderColorRefs(value) {
   refs.slice(0, Math.max(0, refs.length - MAX_FOLDER_COLOR_REFS)).forEach((ref) => { delete result[ref]; });
   return result;
 }
-function createFolderColorRef(nodeMap, folderId, color) {
+function createFolderColorRef(nodeMap: FolderNodeMap, folderId: string, color: string): FolderColorRef {
   const node = nodeMap.get(String(folderId));
   const dateAdded = Number(node && node.dateAdded);
   return { color, ...(Number.isFinite(dateAdded) && dateAdded > 0 ? { dateAdded } : {}) };
@@ -76,18 +205,22 @@ function createFolderColorRef(nodeMap, folderId, color) {
 // finds a folder through renames, moves and same-name sibling shifts; the
 // path decides otherwise. Entries for folders missing here are kept for
 // other devices. The caller writes `refs` back when `changed` is true.
-function resolveFolderColors(value, nodeMap) {
+function resolveFolderColors(
+  value: unknown,
+  nodeMap: FolderNodeMap
+): { colors: FolderColorMap; refs: FolderColorRefs; changed: boolean } {
   const refs = normalizeFolderColorRefs(value);
   const folderRefs = collectFolderColorRefs(nodeMap);
-  const idsByRef = new Map();
-  const refsByDate = new Map();
+  const idsByRef = new Map<string, string[]>();
+  const refsByDate = new Map<number, Set<string>>();
   folderRefs.forEach((ref, id) => {
     idsByRef.set(ref, [...(idsByRef.get(ref) || []), id]);
-    const dateAdded = Number(nodeMap.get(id).dateAdded) || 0;
+    const node = nodeMap.get(id);
+    const dateAdded = Number(node && node.dateAdded) || 0;
     if (dateAdded > 0) refsByDate.set(dateAdded, new Set([...(refsByDate.get(dateAdded) || []), ref]));
   });
-  const targets = new Map();
-  const claimed = new Set();
+  const targets = new Map<string, string>();
+  const claimed = new Set<string>();
   Object.entries(refs).forEach(([ref, entry]) => {
     const matches = entry.dateAdded ? [...(refsByDate.get(entry.dateAdded) || [])] : [];
     if (matches.length === 1 && !claimed.has(matches[0])) {
@@ -101,37 +234,43 @@ function resolveFolderColors(value, nodeMap) {
     targets.set(ref, ref);
     claimed.add(ref);
   });
-  const next = {};
+  const next: FolderColorRefs = {};
   Object.entries(refs).forEach(([ref, entry]) => {
-    if (targets.has(ref)) next[targets.get(ref)] = entry;
+    const target = targets.get(ref);
+    if (target) next[target] = entry;
   });
-  const colors = {};
+  const colors: FolderColorMap = {};
   Object.entries(next).forEach(([ref, entry]) => {
     (idsByRef.get(ref) || []).forEach((id) => { colors[id] = entry.color; });
   });
   return { colors, refs: next, changed: Object.keys(refs).some((ref) => targets.get(ref) !== ref) };
 }
 // Returns the next synced map, or null when the folder cannot be referenced.
-function setFolderColorRef(value, folderId, color, nodeMap) {
+function setFolderColorRef(
+  value: unknown,
+  folderId: unknown,
+  color: string | null,
+  nodeMap: FolderNodeMap
+): FolderColorRefs | null {
   const refs = normalizeFolderColorRefs(value);
   const ref = collectFolderColorRefs(nodeMap).get(String(folderId));
   if (!ref) return null;
   delete refs[ref];
   const rgb = color ? hexToRgb(color) : null;
-  if (rgb) refs[ref] = createFolderColorRef(nodeMap, folderId, rgbToHex(rgb).toUpperCase());
+  if (rgb) refs[ref] = createFolderColorRef(nodeMap, String(folderId), rgbToHex(rgb).toUpperCase());
   return normalizeFolderColorRefs(refs);
 }
 // Adds legacy id-keyed colors without replacing colors already synced.
-function importFolderColorMap(colorMap, value, nodeMap) {
+function importFolderColorMap(colorMap: unknown, value: unknown, nodeMap: FolderNodeMap): FolderColorRefs {
   const refs = normalizeFolderColorRefs(value);
   const folderRefs = collectFolderColorRefs(nodeMap);
   Object.entries(normalizeFolderColorMap(colorMap)).forEach(([id, color]) => {
     const ref = folderRefs.get(id);
-    if (ref && !own(refs, ref)) refs[ref] = createFolderColorRef(nodeMap, id, color);
+    if (ref && !Object.hasOwn(refs, ref)) refs[ref] = createFolderColorRef(nodeMap, id, color);
   });
   return normalizeFolderColorRefs(refs);
 }
-function getFigmaFolderSvg(idSuffix, folderId) {
+function getFigmaFolderSvg(idSuffix: unknown, folderId?: unknown): string {
   const suffix = String(idSuffix || 'default').replace(/[^a-zA-Z0-9_-]/g, '_');
   const colorId = String(folderId || '').replace(/[^a-zA-Z0-9_-]/g, '_');
   const baseLowerFilterId = `x-nt-folder-filter-lower-base-${suffix}`;
@@ -282,22 +421,22 @@ const FOLDER_PATH_MORPH_BEZIER = {
   y2: 1
 };
 
-function cubicBezierSampleCurveX(t, x1, x2) {
+function cubicBezierSampleCurveX(t: number, x1: number, x2: number): number {
   const inv = 1 - t;
   return 3 * inv * inv * t * x1 + 3 * inv * t * t * x2 + t * t * t;
 }
 
-function cubicBezierSampleCurveY(t, y1, y2) {
+function cubicBezierSampleCurveY(t: number, y1: number, y2: number): number {
   const inv = 1 - t;
   return 3 * inv * inv * t * y1 + 3 * inv * t * t * y2 + t * t * t;
 }
 
-function cubicBezierSampleCurveDerivativeX(t, x1, x2) {
+function cubicBezierSampleCurveDerivativeX(t: number, x1: number, x2: number): number {
   const inv = 1 - t;
   return 3 * inv * inv * x1 + 6 * inv * t * (x2 - x1) + 3 * t * t * (1 - x2);
 }
 
-function cubicBezierEase(progress, bezier) {
+function cubicBezierEase(progress: number, bezier: typeof FOLDER_PATH_MORPH_BEZIER): number {
   const clamped = Math.max(0, Math.min(1, progress));
   if (clamped === 0 || clamped === 1) {
     return clamped;
@@ -315,7 +454,7 @@ function cubicBezierEase(progress, bezier) {
   return cubicBezierSampleCurveY(t, bezier.y1, bezier.y2);
 }
 
-function buildPathMorphTemplate(fromD, toD) {
+function buildPathMorphTemplate(fromD: string, toD: string): NumberMorphTemplate | null {
   const numberPattern = /-?\d*\.?\d+(?:e[-+]?\d+)?/gi;
   const fromNumbers = (String(fromD || '').match(numberPattern) || []).map((value) => Number(value));
   const toNumbers = (String(toD || '').match(numberPattern) || []).map((value) => Number(value));
@@ -331,7 +470,7 @@ function buildPathMorphTemplate(fromD, toD) {
   return { type: 'number', segments, fromNumbers, toNumbers };
 }
 
-function composeNumberPathD(segments, numbers) {
+function composeNumberPathD(segments: string[], numbers: number[]): string {
   let output = '';
   for (let i = 0; i < numbers.length; i += 1) {
     output += `${segments[i]}${Number(numbers[i].toFixed(6))}`;
@@ -340,11 +479,15 @@ function composeNumberPathD(segments, numbers) {
   return output;
 }
 
-function isClosedPathData(d) {
+function isClosedPathData(d: string): boolean {
   return /[zZ]\s*$/.test(String(d || '').trim());
 }
 
-function samplePathPoints(svgEl, d, sampleCount) {
+function samplePathPoints(
+  svgEl: Element,
+  d: string,
+  sampleCount: number
+): { points: Point[]; closed: boolean } | null {
   if (!svgEl || !d) {
     return null;
   }
@@ -362,7 +505,7 @@ function samplePathPoints(svgEl, d, sampleCount) {
       return null;
     }
     const closed = isClosedPathData(d);
-    const points = [];
+    const points: Point[] = [];
     const divisor = closed ? count : Math.max(1, count - 1);
     for (let i = 0; i < count; i += 1) {
       const ratio = i / divisor;
@@ -378,7 +521,7 @@ function samplePathPoints(svgEl, d, sampleCount) {
   }
 }
 
-function buildPointMorphTemplate(pathEl, fromD, toD) {
+function buildPointMorphTemplate(pathEl: Element, fromD: string, toD: string): PointMorphTemplate | null {
   if (!pathEl) {
     return null;
   }
@@ -396,8 +539,8 @@ function buildPointMorphTemplate(pathEl, fromD, toD) {
   let fromPoints = fromData.points;
   let toPoints = toData.points;
   if (closed && fromPoints.length > 4) {
-    const alignClosedPoints = (sourcePoints, targetPoints) => {
-      const rotatePoints = (points, shift) => {
+    const alignClosedPoints = (sourcePoints: Point[], targetPoints: Point[]): Point[] => {
+      const rotatePoints = (points: Point[], shift: number): Point[] => {
         const len = points.length;
         const normalizedShift = ((shift % len) + len) % len;
         if (!normalizedShift) {
@@ -405,8 +548,8 @@ function buildPointMorphTemplate(pathEl, fromD, toD) {
         }
         return points.slice(normalizedShift).concat(points.slice(0, normalizedShift));
       };
-      const reversePoints = (points) => points.slice().reverse();
-      const calcScore = (aPoints, bPoints) => {
+      const reversePoints = (points: Point[]): Point[] => points.slice().reverse();
+      const calcScore = (aPoints: Point[], bPoints: Point[]): number => {
         let total = 0;
         for (let i = 0; i < aPoints.length; i += 1) {
           const dx = aPoints[i].x - bPoints[i].x;
@@ -446,15 +589,16 @@ function buildPointMorphTemplate(pathEl, fromD, toD) {
 // frame before the lid moved. Every folder icon draws the same shapes, so
 // each pair is sampled and aligned once per page, and a pair already
 // sampled the other way round is reused swapped.
-const pointMorphTemplateCache = new Map();
+const pointMorphTemplateCache = new Map<string, PointMorphTemplate>();
 
-function getPointMorphTemplate(pathEl, fromD, toD) {
+function getPointMorphTemplate(pathEl: Element, fromD: string, toD: string): PointMorphTemplate | null {
   const key = `${fromD}\n${toD}`;
-  if (pointMorphTemplateCache.has(key)) {
-    return pointMorphTemplateCache.get(key);
+  const cached = pointMorphTemplateCache.get(key);
+  if (cached) {
+    return cached;
   }
   const reverse = pointMorphTemplateCache.get(`${toD}\n${fromD}`);
-  const template = reverse
+  const template: PointMorphTemplate | null = reverse
     ? { type: 'point', fromPoints: reverse.toPoints, toPoints: reverse.fromPoints, closed: reverse.closed }
     : buildPointMorphTemplate(pathEl, fromD, toD);
   // A path that could not be measured yet (not rendered) is sampled again next time.
@@ -463,7 +607,7 @@ function getPointMorphTemplate(pathEl, fromD, toD) {
 }
 
 // Samples one part's shapes per idle slot, so the first hover finds them ready.
-function warmFolderPathMorph(parts) {
+function warmFolderPathMorph(parts: FolderMorphPart[]): void {
   if (typeof requestIdleCallback !== 'function') {
     return;
   }
@@ -485,7 +629,7 @@ function warmFolderPathMorph(parts) {
   }
 }
 
-function composePointPathD(points, closed) {
+function composePointPathD(points: Point[], closed: boolean): string {
   if (!Array.isArray(points) || !points.length) {
     return '';
   }
@@ -499,7 +643,7 @@ function composePointPathD(points, closed) {
   return d;
 }
 
-function cancelFolderPathMorph(part) {
+function cancelFolderPathMorph(part: FolderMorphPart | null | undefined): void {
   if (!part) {
     return;
   }
@@ -509,7 +653,7 @@ function cancelFolderPathMorph(part) {
   }
 }
 
-function hexToRgb(hex) {
+function hexToRgb(hex: unknown): Rgb | null {
   const raw = String(hex || '').trim();
   const normalized = raw.startsWith('#') ? raw.slice(1) : raw;
   if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
@@ -522,23 +666,24 @@ function hexToRgb(hex) {
   };
 }
 
-function rgbToHex(rgb) {
-  const toHex = (value) => {
+function rgbToHex(rgb: Rgb): string {
+  const toHex = (value: number): string => {
     const v = Math.max(0, Math.min(255, Math.round(value)));
     return v.toString(16).padStart(2, '0');
   };
   return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
 }
 
-function tintFolderColor(source, color) {
+function tintFolderColor(source: string, color: string): string {
   if (color.toUpperCase() === '#5393FF') return source;
   const sourceRgb = hexToRgb(source);
   const selected = hexToRgb(color);
   if (!sourceRgb || !selected) return source;
-  const reference = { r: 83, g: 147, b: 255 };
-  const tinted = {};
+  const reference: Rgb = { r: 83, g: 147, b: 255 };
+  const tinted: Rgb = { r: 0, g: 0, b: 0 };
+  const channels: (keyof Rgb)[] = ['r', 'g', 'b'];
   // Preserve the original highlights and shaded edges relative to the outline.
-  ['r', 'g', 'b'].forEach((channel) => {
+  channels.forEach((channel) => {
     const amount = channel === 'b'
       ? (sourceRgb.r - reference.r) / (255 - reference.r)
       : (sourceRgb[channel] - reference[channel]) / (255 - reference[channel]);
@@ -549,19 +694,21 @@ function tintFolderColor(source, color) {
   return rgbToHex(tinted);
 }
 
-function applyFolderColor(folderIcon, value) {
+function applyFolderColor(folderIcon: Element | null | undefined, value: unknown): void {
   const svg = folderIcon && folderIcon.querySelector('svg');
-  if (!svg) return;
+  if (!folderIcon || !svg) return;
   const selected = hexToRgb(value);
   const color = selected ? rgbToHex(selected).toUpperCase() : DEFAULT_FOLDER_COLOR;
-  if (folderIcon._xFolderColor === color && svg.getAttribute('data-folder-color') === color) return;
-  folderIcon._xFolderColor = color;
+  const iconState = getFolderIconState(folderIcon);
+  if (iconState.color === color && svg.getAttribute('data-folder-color') === color) return;
+  iconState.color = color;
   svg.setAttribute('data-folder-color', color);
   svg.querySelectorAll('[data-folder-part$="-outline"], [data-folder-part-hover$="-outline"]').forEach((path) => {
     path.setAttribute('stroke', color);
   });
   svg.querySelectorAll('linearGradient:not([data-folder-gradient-morph]) stop').forEach((stop) => {
     const source = stop.getAttribute('data-folder-base-color') || stop.getAttribute('stop-color');
+    if (!source) return;
     stop.setAttribute('data-folder-base-color', source);
     stop.setAttribute('stop-color', tintFolderColor(source, color));
   });
@@ -571,30 +718,32 @@ function applyFolderColor(folderIcon, value) {
     matrix.setAttribute('data-folder-base-shadow', original);
     if (color === DEFAULT_FOLDER_COLOR) { matrix.setAttribute('values', original); return; }
     const shadow = hexToRgb(tintFolderColor('#8AB6FF', color));
+    if (!shadow) return;
     matrix.setAttribute('values', `0 0 0 0 ${shadow.r / 255} 0 0 0 0 ${shadow.g / 255} 0 0 0 0 ${shadow.b / 255} 0 0 0 0.21 0`);
   });
   initFolderUpperGradientMorph(folderIcon);
-  const morph = folderIcon._xUpperGradientMorph;
+  const morph = iconState.upperGradientMorph;
   if (morph) {
     if (morph.rafId) { cancelAnimationFrame(morph.rafId); morph.rafId = 0; }
-    ['baseMain', 'hoverMain', 'baseOverlay', 'hoverOverlay'].forEach((key) => {
-      morph[key].stops.forEach((stop) => {
-        stop.baseColor = stop.baseColor || stop.color;
-        stop.color = tintFolderColor(stop.baseColor, color);
+    [morph.baseMain, morph.hoverMain, morph.baseOverlay, morph.hoverOverlay].forEach((config) => {
+      config.stops.forEach((stop) => {
+        const baseColor = stop.baseColor || stop.color;
+        stop.baseColor = baseColor;
+        stop.color = tintFolderColor(baseColor, color);
       });
     });
-    const isOpen = folderIcon._xFolderMorphState === 'hover';
+    const isOpen = iconState.morphState === 'hover';
     morph.state = isOpen ? 'hover' : 'base';
     applyGradientMorphConfig(morph.mainGradientEl, isOpen ? morph.hoverMain : morph.baseMain);
     applyGradientMorphConfig(morph.overlayGradientEl, isOpen ? morph.hoverOverlay : morph.baseOverlay);
   }
 }
 
-function lerpNumber(fromValue, toValue, t) {
+function lerpNumber(fromValue: number, toValue: number, t: number): number {
   return fromValue + (toValue - fromValue) * t;
 }
 
-function applyGradientMorphConfig(gradientEl, config) {
+function applyGradientMorphConfig(gradientEl: Element | null, config: GradientConfig | null): void {
   if (!gradientEl || !config) {
     return;
   }
@@ -613,9 +762,9 @@ function applyGradientMorphConfig(gradientEl, config) {
   });
 }
 
-function interpolateGradientConfig(fromConfig, toConfig, t) {
+function interpolateGradientConfig(fromConfig: GradientConfig, toConfig: GradientConfig, t: number): GradientConfig {
   const progress = Math.max(0, Math.min(1, t));
-  const next = {
+  const next: GradientConfig = {
     x1: Number(lerpNumber(fromConfig.x1, toConfig.x1, progress).toFixed(6)),
     y1: Number(lerpNumber(fromConfig.y1, toConfig.y1, progress).toFixed(6)),
     x2: Number(lerpNumber(fromConfig.x2, toConfig.x2, progress).toFixed(6)),
@@ -645,8 +794,8 @@ function interpolateGradientConfig(fromConfig, toConfig, t) {
   return next;
 }
 
-function initFolderUpperGradientMorph(folderIcon) {
-  if (!folderIcon || folderIcon._xUpperGradientMorph) {
+function initFolderUpperGradientMorph(folderIcon: Element | null): void {
+  if (!folderIcon || getFolderIconState(folderIcon).upperGradientMorph) {
     return;
   }
   const svg = folderIcon.querySelector('svg');
@@ -658,7 +807,7 @@ function initFolderUpperGradientMorph(folderIcon) {
   if (!mainGradientEl || !overlayGradientEl) {
     return;
   }
-  const baseMain = {
+  const baseMain: GradientConfig = {
     x1: 15.5, y1: 2, x2: 15.5, y2: 23,
     stops: [
       { offset: 0, color: '#CCDFFF' },
@@ -667,7 +816,7 @@ function initFolderUpperGradientMorph(folderIcon) {
       { offset: 1, color: '#97BEFF' }
     ]
   };
-  const hoverMain = {
+  const hoverMain: GradientConfig = {
     x1: 16.3736, y1: 2, x2: 16.3736, y2: 23,
     stops: [
       { offset: 0, color: '#93BBFF' },
@@ -676,7 +825,7 @@ function initFolderUpperGradientMorph(folderIcon) {
       { offset: 1, color: '#97BEFF' }
     ]
   };
-  const baseOverlay = {
+  const baseOverlay: GradientConfig = {
     x1: 15.5, y1: 2, x2: 15.5, y2: 23,
     stops: [
       { offset: 0, color: '#CCDFFF' },
@@ -685,7 +834,7 @@ function initFolderUpperGradientMorph(folderIcon) {
       { offset: 1, color: '#97BEFF' }
     ]
   };
-  const hoverOverlay = {
+  const hoverOverlay: GradientConfig = {
     x1: 17.3736, y1: 11.3333, x2: 17.3736, y2: 23,
     stops: [
       { offset: 0, color: '#CCDFFF' },
@@ -694,7 +843,7 @@ function initFolderUpperGradientMorph(folderIcon) {
       { offset: 1, color: '#97BEFF' }
     ]
   };
-  folderIcon._xUpperGradientMorph = {
+  getFolderIconState(folderIcon).upperGradientMorph = {
     mainGradientEl,
     overlayGradientEl,
     baseMain,
@@ -708,14 +857,9 @@ function initFolderUpperGradientMorph(folderIcon) {
   applyGradientMorphConfig(overlayGradientEl, baseOverlay);
 }
 
-function playFolderUpperGradientMorph(folderIcon, toHover) {
-  if (!folderIcon) {
-    return;
-  }
-  if (!folderIcon._xUpperGradientMorph) {
-    initFolderUpperGradientMorph(folderIcon);
-  }
-  const morphState = folderIcon._xUpperGradientMorph;
+function playFolderUpperGradientMorph(folderIcon: Element, toHover: boolean): void {
+  initFolderUpperGradientMorph(folderIcon);
+  const morphState = getFolderIconState(folderIcon).upperGradientMorph;
   if (!morphState) {
     return;
   }
@@ -733,7 +877,7 @@ function playFolderUpperGradientMorph(folderIcon, toHover) {
   const fromOverlay = toHover ? morphState.baseOverlay : morphState.hoverOverlay;
   const toOverlay = toHover ? morphState.hoverOverlay : morphState.baseOverlay;
   const startTime = performance.now();
-  const tick = (now) => {
+  const tick = (now: number): void => {
     const rawProgress = Math.max(0, Math.min(1, (now - startTime) / FOLDER_PATH_MORPH_DURATION_MS));
     const eased = cubicBezierEase(rawProgress, FOLDER_PATH_MORPH_BEZIER);
     applyGradientMorphConfig(morphState.mainGradientEl, interpolateGradientConfig(fromMain, toMain, eased));
@@ -749,10 +893,7 @@ function playFolderUpperGradientMorph(folderIcon, toHover) {
   morphState.rafId = requestAnimationFrame(tick);
 }
 
-function setFolderUpperFilterSuspended(folderIcon, suspended) {
-  if (!folderIcon) {
-    return;
-  }
+function setFolderUpperFilterSuspended(folderIcon: Element, suspended: boolean): void {
   const svg = folderIcon.querySelector('svg');
   if (!svg) {
     return;
@@ -762,13 +903,13 @@ function setFolderUpperFilterSuspended(folderIcon, suspended) {
     return;
   }
   if (suspended) {
-    if (typeof upperFilterGroup._xOriginalFilterAttr === 'undefined') {
-      upperFilterGroup._xOriginalFilterAttr = upperFilterGroup.getAttribute('filter');
+    if (!originalUpperFilters.has(upperFilterGroup)) {
+      originalUpperFilters.set(upperFilterGroup, upperFilterGroup.getAttribute('filter'));
     }
     upperFilterGroup.setAttribute('filter', 'none');
     return;
   }
-  const original = upperFilterGroup._xOriginalFilterAttr;
+  const original = originalUpperFilters.get(upperFilterGroup);
   if (typeof original === 'string' && original) {
     upperFilterGroup.setAttribute('filter', original);
   } else {
@@ -776,15 +917,16 @@ function setFolderUpperFilterSuspended(folderIcon, suspended) {
   }
 }
 
-function animatePathDWithCurve(part, fromD, toD) {
-  let template = buildPathMorphTemplate(fromD, toD);
+function animatePathDWithCurve(part: FolderMorphPart, fromD: string, toD: string): boolean {
+  let template: MorphTemplate | null = buildPathMorphTemplate(fromD, toD);
   // Turned back mid-morph: carry on from the points on screen towards the
   // other shape of the same pair, with no new sampling.
   const previous = part.pointMorph;
-  let ends = null;
-  if (!template && previous && previous.d === fromD && previous.ends.has(toD)) {
+  const previousEnd = previous && previous.d === fromD ? previous.ends.get(toD) : undefined;
+  let ends: Map<string, Point[]> | null = null;
+  if (!template && previous && previousEnd) {
     ends = previous.ends;
-    template = { type: 'point', fromPoints: previous.points, toPoints: ends.get(toD), closed: previous.closed };
+    template = { type: 'point', fromPoints: previous.points, toPoints: previousEnd, closed: previous.closed };
   }
   if (!template) {
     template = getPointMorphTemplate(part.pathEl, fromD, toD);
@@ -797,41 +939,39 @@ function animatePathDWithCurve(part, fromD, toD) {
     part.pathEl.setAttribute('d', toD);
     return false;
   }
-  // The shapes this morph runs between and the points it last drew.
-  part.pointMorph = ends ? { ends, closed: template.closed, points: template.fromPoints, d: fromD } : null;
+  // Narrowed here, for the frames below.
+  const morph = template;
+  part.pointMorph = ends && morph.type === 'point'
+    ? { ends, closed: morph.closed, points: morph.fromPoints, d: fromD }
+    : null;
   cancelFolderPathMorph(part);
   const startTime = performance.now();
-  const syncFollowers = (dValue) => {
-    if (!part || !Array.isArray(part.linkedFollowers) || !part.linkedFollowers.length) {
-      return;
-    }
+  const syncFollowers = (dValue: string): void => {
     part.linkedFollowers.forEach((el) => {
-      if (el && typeof el.setAttribute === 'function') {
-        el.setAttribute('d', dValue);
-      }
+      el.setAttribute('d', dValue);
     });
   };
-  const tick = (now) => {
+  const tick = (now: number): void => {
     const elapsed = now - startTime;
     const rawProgress = Math.max(0, Math.min(1, elapsed / FOLDER_PATH_MORPH_DURATION_MS));
     const eased = cubicBezierEase(rawProgress, FOLDER_PATH_MORPH_BEZIER);
-    if (template.type === 'number') {
-      const values = template.fromNumbers.map((fromValue, index) => {
-        const toValue = template.toNumbers[index];
+    if (morph.type === 'number') {
+      const values = morph.fromNumbers.map((fromValue, index) => {
+        const toValue = morph.toNumbers[index];
         return fromValue + (toValue - fromValue) * eased;
       });
-      const nextD = composeNumberPathD(template.segments, values);
+      const nextD = composeNumberPathD(morph.segments, values);
       part.pathEl.setAttribute('d', nextD);
       syncFollowers(nextD);
     } else {
-      const points = template.fromPoints.map((fromPoint, index) => {
-        const toPoint = template.toPoints[index];
+      const points = morph.fromPoints.map((fromPoint, index) => {
+        const toPoint = morph.toPoints[index];
         return {
           x: fromPoint.x + (toPoint.x - fromPoint.x) * eased,
           y: fromPoint.y + (toPoint.y - fromPoint.y) * eased
         };
       });
-      const nextD = composePointPathD(points, template.closed);
+      const nextD = composePointPathD(points, morph.closed);
       part.pathEl.setAttribute('d', nextD);
       syncFollowers(nextD);
       if (part.pointMorph) {
@@ -845,8 +985,8 @@ function animatePathDWithCurve(part, fromD, toD) {
     }
     part.pathEl.setAttribute('d', toD);
     syncFollowers(toD);
-    if (part.pointMorph) {
-      part.pointMorph.points = template.toPoints;
+    if (part.pointMorph && morph.type === 'point') {
+      part.pointMorph.points = morph.toPoints;
       part.pointMorph.d = toD;
     }
     part.animationFrameId = 0;
@@ -855,22 +995,23 @@ function animatePathDWithCurve(part, fromD, toD) {
   return true;
 }
 
-function initFolderPathMorph(folderIcon) {
+function initFolderPathMorph(folderIcon: Element | null | undefined): void {
   if (!folderIcon) return;
+  const iconState = getFolderIconState(folderIcon);
   const svg = folderIcon.querySelector('svg');
-  if (folderIcon._xFolderMorphParts && folderIcon._xFolderMorphSvg === svg) return;
-  if (folderIcon._xFolderMorphParts) {
-    folderIcon._xFolderMorphParts.forEach(cancelFolderPathMorph);
-    const previous = folderIcon._xUpperGradientMorph;
+  if (iconState.morphParts && iconState.morphSvg === svg) return;
+  if (iconState.morphParts) {
+    iconState.morphParts.forEach(cancelFolderPathMorph);
+    const previous = iconState.upperGradientMorph;
     if (previous && previous.rafId) cancelAnimationFrame(previous.rafId);
-    delete folderIcon._xUpperGradientMorph;
+    delete iconState.upperGradientMorph;
   }
-  folderIcon._xFolderMorphSvg = svg;
+  iconState.morphSvg = svg;
   if (!svg) {
-    folderIcon._xFolderMorphParts = [];
+    iconState.morphParts = [];
     return;
   }
-  const hoverPathMap = new Map();
+  const hoverPathMap = new Map<string, string>();
   svg.querySelectorAll('[data-folder-part-hover]').forEach((pathEl) => {
     const partName = pathEl.getAttribute('data-folder-part-hover');
     const partD = pathEl.getAttribute('d');
@@ -879,12 +1020,12 @@ function initFolderPathMorph(folderIcon) {
     }
     hoverPathMap.set(partName, partD);
   });
-  const parts = [];
+  const parts: FolderMorphPart[] = [];
   svg.querySelectorAll('[data-folder-part]').forEach((pathEl) => {
     const partName = pathEl.getAttribute('data-folder-part');
     const baseD = pathEl.getAttribute('d');
-    const hoverD = hoverPathMap.get(partName);
-    if (!partName || !baseD || !hoverD) {
+    const hoverD = partName ? hoverPathMap.get(partName) : undefined;
+    if (!isSvgElement(pathEl) || !partName || !baseD || !hoverD) {
       return;
     }
     parts.push({
@@ -894,13 +1035,13 @@ function initFolderPathMorph(folderIcon) {
       hoverD,
       fillBase: pathEl.getAttribute('data-folder-fill-base') || '',
       fillHover: pathEl.getAttribute('data-folder-fill-hover') || '',
-      opacityBase: Number.parseFloat(pathEl.getAttribute('data-folder-opacity-base')),
-      opacityHover: Number.parseFloat(pathEl.getAttribute('data-folder-opacity-hover')),
+      opacityBase: Number.parseFloat(pathEl.getAttribute('data-folder-opacity-base') || ''),
+      opacityHover: Number.parseFloat(pathEl.getAttribute('data-folder-opacity-hover') || ''),
       linkedFollowers: [],
       animationFrameId: 0
     });
   });
-  const partMap = new Map();
+  const partMap = new Map<string, FolderMorphPart>();
   parts.forEach((part) => {
     partMap.set(part.partName, part);
   });
@@ -917,32 +1058,31 @@ function initFolderPathMorph(folderIcon) {
       part.pathEl.style.opacity = String(part.opacityBase);
     }
   });
-  folderIcon._xFolderMorphParts = parts;
-  folderIcon._xFolderMorphState = 'base';
+  iconState.morphParts = parts;
+  iconState.morphState = 'base';
   warmFolderPathMorph(parts);
 }
 
-function setFolderPathMorphState(folderIcon, toHover) {
+function setFolderPathMorphState(folderIcon: Element | null | undefined, toHover: boolean): void {
   if (!folderIcon) {
     return;
   }
-  if (!folderIcon._xFolderMorphParts) {
+  const iconState = getFolderIconState(folderIcon);
+  if (!iconState.morphParts) {
     initFolderPathMorph(folderIcon);
   }
-  const parts = Array.isArray(folderIcon._xFolderMorphParts) ? folderIcon._xFolderMorphParts : [];
+  const parts = iconState.morphParts || [];
   if (!parts.length) {
     return;
   }
-  const targetState = toHover ? 'hover' : 'base';
-  if (folderIcon._xUpperFilterRestoreTimerId) {
-    clearTimeout(folderIcon._xUpperFilterRestoreTimerId);
-    folderIcon._xUpperFilterRestoreTimerId = 0;
+  const targetState: MorphState = toHover ? 'hover' : 'base';
+  if (iconState.upperFilterRestoreTimerId) {
+    clearTimeout(iconState.upperFilterRestoreTimerId);
+    iconState.upperFilterRestoreTimerId = 0;
   }
   setFolderUpperFilterSuspended(folderIcon, false);
-  if (!folderIcon._xUpperGradientMorph) {
-    initFolderUpperGradientMorph(folderIcon);
-  }
-  const gradientMorph = folderIcon._xUpperGradientMorph;
+  initFolderUpperGradientMorph(folderIcon);
+  const gradientMorph = iconState.upperGradientMorph;
   if (gradientMorph) {
     if (gradientMorph.rafId) {
       cancelAnimationFrame(gradientMorph.rafId);
@@ -962,21 +1102,16 @@ function setFolderPathMorphState(folderIcon, toHover) {
     part.partName,
     toHover ? part.hoverD : part.baseD
   ]));
-  folderIcon._xFolderMorphState = targetState;
+  iconState.morphState = targetState;
   parts.forEach((part) => {
-    if (!part || !part.pathEl) {
-      return;
-    }
     cancelFolderPathMorph(part);
     const targetFill = toHover ? part.fillHover : part.fillBase;
     if (targetFill) {
       part.pathEl.setAttribute('fill', targetFill);
     }
-    if (part.pathEl.style) {
-      part.pathEl.style.removeProperty('transition');
-      if (Number.isFinite(part.opacityBase) && Number.isFinite(part.opacityHover)) {
-        part.pathEl.style.opacity = String(toHover ? part.opacityHover : part.opacityBase);
-      }
+    part.pathEl.style.removeProperty('transition');
+    if (Number.isFinite(part.opacityBase) && Number.isFinite(part.opacityHover)) {
+      part.pathEl.style.opacity = String(toHover ? part.opacityHover : part.opacityBase);
     }
     const targetD = part.partName === 'upper-overlay'
       ? (targetPaths.get('upper-body') || targetPaths.get(part.partName))
@@ -985,15 +1120,17 @@ function setFolderPathMorphState(folderIcon, toHover) {
       return;
     }
     part.pathEl.setAttribute('d', targetD);
-    (part.linkedFollowers || []).forEach((follower) => {
-      if (follower && typeof follower.setAttribute === 'function') {
-        follower.setAttribute('d', targetD);
-      }
+    part.linkedFollowers.forEach((follower) => {
+      follower.setAttribute('d', targetD);
     });
   });
 }
 
-function playFolderPathMorph(folderIcon, toHover, morphOptions) {
+function playFolderPathMorph(
+  folderIcon: Element | null | undefined,
+  toHover: boolean,
+  morphOptions?: { instant?: boolean }
+): void {
   if (!folderIcon) {
     return;
   }
@@ -1001,35 +1138,34 @@ function playFolderPathMorph(folderIcon, toHover, morphOptions) {
     setFolderPathMorphState(folderIcon, toHover);
     return;
   }
-  if (!folderIcon._xFolderMorphParts) {
+  const iconState = getFolderIconState(folderIcon);
+  if (!iconState.morphParts) {
     initFolderPathMorph(folderIcon);
   }
-  const parts = Array.isArray(folderIcon._xFolderMorphParts) ? folderIcon._xFolderMorphParts : [];
+  const parts = iconState.morphParts || [];
   if (!parts.length) {
     return;
   }
-  const targetState = toHover ? 'hover' : 'base';
-  if (folderIcon._xFolderMorphState === targetState) {
+  const targetState: MorphState = toHover ? 'hover' : 'base';
+  if (iconState.morphState === targetState) {
     return;
   }
   setFolderUpperFilterSuspended(folderIcon, true);
   playFolderUpperGradientMorph(folderIcon, toHover);
-  if (folderIcon._xUpperFilterRestoreTimerId) {
-    clearTimeout(folderIcon._xUpperFilterRestoreTimerId);
-    folderIcon._xUpperFilterRestoreTimerId = 0;
+  if (iconState.upperFilterRestoreTimerId) {
+    clearTimeout(iconState.upperFilterRestoreTimerId);
+    iconState.upperFilterRestoreTimerId = 0;
   }
-  folderIcon._xUpperFilterRestoreTimerId = window.setTimeout(() => {
-    folderIcon._xUpperFilterRestoreTimerId = 0;
+  iconState.upperFilterRestoreTimerId = window.setTimeout(() => {
+    iconState.upperFilterRestoreTimerId = 0;
     setFolderUpperFilterSuspended(folderIcon, false);
   }, FOLDER_PATH_MORPH_DURATION_MS + 48);
-  folderIcon._xFolderMorphState = targetState;
+  iconState.morphState = targetState;
   parts.forEach((part) => {
-    const currentD = part.pathEl && typeof part.pathEl.getAttribute === 'function'
-      ? (part.pathEl.getAttribute('d') || '')
-      : '';
+    const currentD = part.pathEl.getAttribute('d') || '';
     const fromD = currentD || (toHover ? part.baseD : part.hoverD);
     const toD = toHover ? part.hoverD : part.baseD;
-    if (!part.pathEl || !fromD || !toD) {
+    if (!fromD || !toD) {
       return;
     }
     const targetFill = toHover ? part.fillHover : part.fillBase;
@@ -1042,7 +1178,7 @@ function playFolderPathMorph(folderIcon, toHover, morphOptions) {
     }
     if (part.partName === 'upper-overlay') {
       const upperBodyPart = parts.find((item) => item.partName === 'upper-body');
-      if (upperBodyPart && upperBodyPart.pathEl) {
+      if (upperBodyPart) {
         part.pathEl.setAttribute('d', upperBodyPart.pathEl.getAttribute('d') || toD);
         return;
       }
@@ -1053,6 +1189,17 @@ function playFolderPathMorph(folderIcon, toHover, morphOptions) {
       part.animationFrameId = 0;
     }
   });
+}
+
+// Where an icon's morph is, and the parts it morphs.
+function getFolderMorphState(folderIcon: Element): MorphState | undefined {
+  const iconState = folderIconStates.get(folderIcon);
+  return iconState ? iconState.morphState : undefined;
+}
+
+function getFolderMorphParts(folderIcon: Element): readonly FolderMorphPart[] {
+  const iconState = folderIconStates.get(folderIcon);
+  return iconState && iconState.morphParts ? iconState.morphParts : [];
 }
 
 export {
@@ -1070,5 +1217,8 @@ export {
   applyFolderColor,
   initFolderPathMorph,
   playFolderPathMorph,
-  setFolderPathMorphState
+  setFolderPathMorphState,
+  getFolderMorphState,
+  getFolderMorphParts
 };
+export type { FolderColorMap, FolderColorRef, FolderColorRefs };

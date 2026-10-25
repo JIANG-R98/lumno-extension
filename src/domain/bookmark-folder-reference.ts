@@ -82,7 +82,7 @@ function isTreeRootId(id: string | number | undefined): boolean {
   return TREE_ROOT_IDS.has(String(id));
 }
 
-function getTreeRoot(nodeMap: BookmarkNodeMap): BookmarkNode | undefined {
+function getTreeRoot(nodeMap: ReadonlyMap<string, BookmarkNode>): BookmarkNode | undefined {
   return nodeMap.get('0') || nodeMap.get('root________');
 }
 

@@ -91,18 +91,18 @@ const dom = new JSDOM('<!doctype html><body><span id="folder"></span></body>');
 const iconElement = dom.window.document.getElementById('folder');
 iconElement.innerHTML = firstSvg;
 folderIcon.initFolderPathMorph(iconElement);
-assert.ok(Array.isArray(iconElement._xFolderMorphParts));
-assert.ok(iconElement._xFolderMorphParts.length >= 6);
-assert.strictEqual(iconElement._xFolderMorphState, 'base');
+assert.ok(Array.isArray(folderIcon.getFolderMorphParts(iconElement)));
+assert.ok(folderIcon.getFolderMorphParts(iconElement).length >= 6);
+assert.strictEqual(folderIcon.getFolderMorphState(iconElement), 'base');
 
 folderIcon.playFolderPathMorph(iconElement, true, { instant: true });
-assert.strictEqual(iconElement._xFolderMorphState, 'hover');
-const upperBody = iconElement._xFolderMorphParts.find((part) => part.partName === 'upper-body');
+assert.strictEqual(folderIcon.getFolderMorphState(iconElement), 'hover');
+const upperBody = folderIcon.getFolderMorphParts(iconElement).find((part) => part.partName === 'upper-body');
 assert.ok(upperBody);
 assert.strictEqual(upperBody.pathEl.getAttribute('d'), upperBody.hoverD);
 
 folderIcon.setFolderPathMorphState(iconElement, false);
-assert.strictEqual(iconElement._xFolderMorphState, 'base');
+assert.strictEqual(folderIcon.getFolderMorphState(iconElement), 'base');
 assert.strictEqual(upperBody.pathEl.getAttribute('d'), upperBody.baseD);
 
 folderIcon.applyFolderColor(iconElement, '#EF4444');
@@ -115,7 +115,7 @@ folderIcon.playFolderPathMorph(iconElement, true, { instant: true });
 assert.strictEqual(upperBody.pathEl, originalPath, 'recoloring must retain animated path nodes');
 assert.notDeepStrictEqual(Array.from(iconElement.querySelectorAll('[data-folder-gradient-morph="upper-main"] stop')).map((stop) => stop.getAttribute('stop-color')), closedStops, 'expanded folders should keep their shaded gradient animation');
 folderIcon.applyFolderColor(iconElement, '#22C55E');
-assert.strictEqual(iconElement._xFolderMorphState, 'hover', 'recoloring an open folder must preserve its expanded shape');
+assert.strictEqual(folderIcon.getFolderMorphState(iconElement), 'hover', 'recoloring an open folder must preserve its expanded shape');
 folderIcon.setFolderPathMorphState(iconElement, false);
 folderIcon.applyFolderColor(iconElement, null);
 assert.deepStrictEqual(Array.from(iconElement.querySelectorAll('[data-folder-gradient-morph="upper-main"] stop')).map((stop) => stop.getAttribute('stop-color')), ['#CCDFFF', '#B2CEFF', '#89B5FF', '#97BEFF'], 'reset must exactly restore the original blue palette');
@@ -124,7 +124,7 @@ iconElement.innerHTML = folderIcon.getFigmaFolderSvg('after-reorder', '123');
 folderIcon.initFolderPathMorph(iconElement);
 folderIcon.applyFolderColor(iconElement, '#EF4444');
 folderIcon.playFolderPathMorph(iconElement, true, { instant: true });
-assert.strictEqual(iconElement._xFolderMorphParts.find((part) => part.partName === 'upper-body').pathEl, iconElement.querySelector('[data-folder-part="upper-body"]'), 'reordered folders must animate the current SVG');
+assert.strictEqual(folderIcon.getFolderMorphParts(iconElement).find((part) => part.partName === 'upper-body').pathEl, iconElement.querySelector('[data-folder-part="upper-body"]'), 'reordered folders must animate the current SVG');
 assert.strictEqual(iconElement.querySelector('svg').getAttribute('data-folder-color-id'), '123');
 
 {

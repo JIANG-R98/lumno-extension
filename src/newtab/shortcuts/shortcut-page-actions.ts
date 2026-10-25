@@ -8,9 +8,8 @@ function createShortcutPageActions(deps) {
     t,
     bindShortcutDialogTooltip,
     hideShortcutDialogTooltip,
-    folderColorStorage,
-    storageArea,
-    FOLDER_COLOR_PRESETS_STORAGE_KEY,
+    readSavedFolderColors,
+    saveSavedFolderColors,
     SHORTCUT_GROUP_MENU_VALUES,
     getShortcutGroups,
     NEWTAB_SHORTCUTS_STORE,
@@ -52,9 +51,8 @@ function createShortcutPageActions(deps) {
           documentObj: document, t,
           bindTooltip: bindShortcutDialogTooltip,
           hideTooltip: hideShortcutDialogTooltip,
-          readSavedColors: () => folderColorStorage(storageArea, 'get', [FOLDER_COLOR_PRESETS_STORAGE_KEY])
-            .then((data) => data[FOLDER_COLOR_PRESETS_STORAGE_KEY]),
-          saveSavedColors: (colors) => folderColorStorage(storageArea, 'set', { [FOLDER_COLOR_PRESETS_STORAGE_KEY]: colors }),
+          readSavedColors: readSavedFolderColors,
+          saveSavedColors: saveSavedFolderColors,
           onSubmit: (_id, color) => {
             pageState.shortcutPlateColorPick?.(color);
             return Promise.resolve();

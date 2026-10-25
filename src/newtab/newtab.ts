@@ -461,9 +461,8 @@ import * as LumnoMessaging from '../platform/messaging';
     t,
     bindShortcutDialogTooltip: (...args) => bindShortcutDialogTooltip(...args),
     hideShortcutDialogTooltip: (...args) => hideShortcutDialogTooltip(...args),
-    folderColorStorage: (...args) => folderColorStorage(...args),
-    storageArea,
-    FOLDER_COLOR_PRESETS_STORAGE_KEY,
+    readSavedFolderColors: (...args) => readSavedFolderColors(...args),
+    saveSavedFolderColors: (...args) => saveSavedFolderColors(...args),
     SHORTCUT_GROUP_MENU_VALUES,
     getShortcutGroups: (...args) => getShortcutGroups(...args),
     NEWTAB_SHORTCUTS_STORE,
@@ -1038,7 +1037,8 @@ import * as LumnoMessaging from '../platform/messaging';
 
   const {
     applySavedFolderColor,
-    folderColorStorage,
+    readSavedFolderColors,
+    saveSavedFolderColors,
     syncFolderColorsWithBookmarks,
     scheduleFolderColorSync,
     loadFolderColors,
