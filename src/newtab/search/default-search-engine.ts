@@ -1,6 +1,62 @@
 // The default search engine: the built-in engine list, the stored choice,
 // and the search URL, label, theme and favicon each engine contributes.
-function createDefaultSearchEngine(deps) {
+import type * as SearchUtils from '../../domain/search/search-utils';
+import type { SearchEngineState } from '../../domain/search/types';
+import type { StorageAreaLike } from '../../domain/storage-port';
+import type { Translate } from '../newtab-types';
+
+// The browser's default search engine as the background stores it.
+interface DefaultSearchEngineState extends SearchEngineState {
+  id: string;
+  name: string;
+  host: string;
+  updatedAt: number;
+}
+
+interface SearchEngineDef {
+  id: string;
+  name: string;
+  hostMatches: string[];
+  searchUrl(query: string): string;
+}
+
+interface DefaultSearchEngineModuleState {
+  defaultSearchEngineState: DefaultSearchEngineState;
+}
+
+interface DefaultSearchEngineDeps {
+  getPageFaviconCandidateUrl(pageUrl: string): string;
+  t: Translate;
+  storageArea: StorageAreaLike | null;
+  DEFAULT_SEARCH_ENGINE_STORAGE_KEY: string;
+  SEARCH_UTILS: Pick<typeof SearchUtils, 'isRetiredSearchEngineState'>;
+  pageState: DefaultSearchEngineModuleState;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+// A stored engine choice; null when it names no engine or one Lumno no
+// longer offers.
+function readStoredSearchEngineState(
+  value: unknown,
+  isRetired: (state: SearchEngineState) => boolean
+): DefaultSearchEngineState | null {
+  if (!isRecord(value) || !value.id) {
+    return null;
+  }
+  const state: DefaultSearchEngineState = {
+    id: String(value.id),
+    name: typeof value.name === 'string' ? value.name : '',
+    host: typeof value.host === 'string' ? value.host : '',
+    updatedAt: Number(value.updatedAt) || 0,
+    ...(typeof value.searchTemplate === 'string' ? { searchTemplate: value.searchTemplate } : {})
+  };
+  return isRetired(state) ? null : state;
+}
+
+function createDefaultSearchEngine(deps: DefaultSearchEngineDeps) {
   const {
     getPageFaviconCandidateUrl,
     t,
@@ -12,7 +68,7 @@ function createDefaultSearchEngine(deps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  const SEARCH_ENGINE_DEFS = [
+  const SEARCH_ENGINE_DEFS: readonly SearchEngineDef[] = [
     {
       id: 'google',
       name: 'Google',
@@ -69,45 +125,47 @@ function createDefaultSearchEngine(deps) {
     }
   ];
 
-  function getSearchEngineById(id) {
+  function getSearchEngineById(id: string): SearchEngineDef | null {
     if (!id) {
       return null;
     }
     return SEARCH_ENGINE_DEFS.find((engine) => engine.id === id) || null;
   }
 
-  function buildDefaultSearchUrl(query) {
+  function buildDefaultSearchUrl(query: string): string {
     const engine = getSearchEngineById(pageState.defaultSearchEngineState.id);
-    if (engine && typeof engine.searchUrl === 'function') {
+    if (engine) {
       return engine.searchUrl(query);
     }
     return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
   }
 
-  function getDefaultSearchEngineThemeUrl() {
+  function getDefaultSearchEngineThemeUrl(): string {
     const engine = getSearchEngineById(pageState.defaultSearchEngineState.id);
-    if (engine && typeof engine.searchUrl === 'function') {
+    if (engine) {
       return engine.searchUrl('test');
     }
     return 'https://www.google.com';
   }
 
-  function getDefaultSearchEngineFaviconUrl() {
+  function getDefaultSearchEngineFaviconUrl(): string {
     return getPageFaviconCandidateUrl(getDefaultSearchEngineThemeUrl());
   }
 
-  function getSearchActionLabel() {
+  function getSearchActionLabel(): string {
     return t('action_search', '搜索');
   }
 
-  function loadDefaultSearchEngineState() {
+  function loadDefaultSearchEngineState(): void {
     if (!storageArea) {
       return;
     }
-    storageArea.get([DEFAULT_SEARCH_ENGINE_STORAGE_KEY], (result) => {
-      const stored = result ? result[DEFAULT_SEARCH_ENGINE_STORAGE_KEY] : null;
-      if (stored && stored.id &&
-          (!SEARCH_UTILS.isRetiredSearchEngineState(stored))) {
+    void storageArea.get([DEFAULT_SEARCH_ENGINE_STORAGE_KEY], (result) => {
+      const stored = readStoredSearchEngineState(
+        result ? result[DEFAULT_SEARCH_ENGINE_STORAGE_KEY] : null,
+        SEARCH_UTILS.isRetiredSearchEngineState
+      );
+      if (stored) {
         pageState.defaultSearchEngineState = stored;
       }
     });
@@ -122,4 +180,7 @@ function createDefaultSearchEngine(deps) {
   };
 }
 
-export { createDefaultSearchEngine };
+type DefaultSearchEngine = ReturnType<typeof createDefaultSearchEngine>;
+
+export { createDefaultSearchEngine, readStoredSearchEngineState };
+export type { DefaultSearchEngine, DefaultSearchEngineDeps, DefaultSearchEngineModuleState, DefaultSearchEngineState };

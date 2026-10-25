@@ -1,10 +1,25 @@
 // Where the suggestion list sits: shown or hidden, floating under the
 // search box, and offset below an open search mode menu.
-function createSuggestionsLayout(deps) {
+import type { InputModeController } from '../../shared/search/search-input-mode';
+import type { LayoutMotion } from '../layout-motion';
+import type { DockLayoutController } from '../react/dock';
+
+interface SuggestionsLayoutState {
+  suggestionsContainer: HTMLElement | null;
+  inputModeController: Pick<InputModeController, 'setModeMenuResultOffset' | 'fitModeMenuWithinViewport'> | null;
+  layoutMotion: Pick<LayoutMotion, 'cancelAll'> | null;
+  layoutController: Pick<DockLayoutController, 'setSuggestionsVisible' | 'updateSuggestionsFloatingLayout'> | null;
+}
+
+interface SuggestionsLayoutDeps {
+  pageState: SuggestionsLayoutState;
+}
+
+function createSuggestionsLayout(deps: SuggestionsLayoutDeps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  function getSearchModeMenuResultOffset() {
+  function getSearchModeMenuResultOffset(): number {
     if (!pageState.suggestionsContainer ||
         pageState.suggestionsContainer.getAttribute('data-visible') !== 'true') {
       return 0;
@@ -20,44 +35,41 @@ function createSuggestionsLayout(deps) {
     return Math.max(0, Number(rect && rect.height) || 0);
   }
 
-  function syncSearchModeMenuResultOffset() {
-    if (!pageState.inputModeController ||
-        typeof pageState.inputModeController.setModeMenuResultOffset !== 'function') {
+  function syncSearchModeMenuResultOffset(): void {
+    const container = pageState.suggestionsContainer;
+    if (!pageState.inputModeController || !container) {
       return;
     }
     const fitMaxHeightProperty =
       '--x-nt-suggestions-menu-fit-max-height';
-    const resultHeightLimit =
-      typeof pageState.inputModeController.fitModeMenuWithinViewport === 'function'
-        ? pageState.inputModeController.fitModeMenuWithinViewport({ bottomInset: 24 })
-        : null;
-    if (Number.isFinite(resultHeightLimit)) {
-      pageState.suggestionsContainer.style.setProperty(
+    const resultHeightLimit = pageState.inputModeController.fitModeMenuWithinViewport({ bottomInset: 24 });
+    if (resultHeightLimit !== null && Number.isFinite(resultHeightLimit)) {
+      container.style.setProperty(
         fitMaxHeightProperty,
         `${resultHeightLimit}px`
       );
     } else {
-      pageState.suggestionsContainer.style.removeProperty(fitMaxHeightProperty);
+      container.style.removeProperty(fitMaxHeightProperty);
     }
     pageState.inputModeController.setModeMenuResultOffset(
       getSearchModeMenuResultOffset()
     );
   }
 
-  function setSuggestionsVisible(visible) {
+  function setSuggestionsVisible(visible: boolean): void {
     // The open list is placed from the search box's drawn position, so the
     // box lands first.
     if (visible && pageState.layoutMotion) {
       pageState.layoutMotion.cancelAll();
     }
-    if (pageState.layoutController && typeof pageState.layoutController.setSuggestionsVisible === 'function') {
+    if (pageState.layoutController && pageState.layoutController.setSuggestionsVisible) {
       pageState.layoutController.setSuggestionsVisible(visible);
     }
     syncSearchModeMenuResultOffset();
   }
 
-  function updateSuggestionsFloatingLayout() {
-    if (pageState.layoutController && typeof pageState.layoutController.updateSuggestionsFloatingLayout === 'function') {
+  function updateSuggestionsFloatingLayout(): void {
+    if (pageState.layoutController && pageState.layoutController.updateSuggestionsFloatingLayout) {
       pageState.layoutController.updateSuggestionsFloatingLayout();
     }
   }
@@ -69,4 +81,7 @@ function createSuggestionsLayout(deps) {
   };
 }
 
+type SuggestionsLayout = ReturnType<typeof createSuggestionsLayout>;
+
 export { createSuggestionsLayout };
+export type { SuggestionsLayout, SuggestionsLayoutDeps, SuggestionsLayoutState };

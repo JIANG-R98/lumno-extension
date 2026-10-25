@@ -73,6 +73,9 @@ export interface DockLayoutControllerOptions {
 
 export interface DockLayoutController {
   updateBottomDockLayout?(callbacks?: unknown): void;
+  // Floats the suggestion list under the search box while it shows.
+  setSuggestionsVisible?(visible: boolean): void;
+  updateSuggestionsFloatingLayout?(): void;
 }
 
 export interface BottomDockRuntimeConfig {

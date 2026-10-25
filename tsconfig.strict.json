@@ -26,6 +26,11 @@
     "src/newtab/storage-change-registry.ts",
     "src/newtab/bookmarks/**/*.ts",
     "src/newtab/recent/**/*.ts",
+    "src/newtab/search/background-search-focus.ts",
+    "src/newtab/search/default-search-engine.ts",
+    "src/newtab/search/direct-navigation-settle.ts",
+    "src/newtab/search/search-input-composition.ts",
+    "src/newtab/search/suggestions-layout.ts",
     "src/newtab/shortcuts/**/*.ts"
   ],
   "exclude": [
