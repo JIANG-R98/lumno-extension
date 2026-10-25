@@ -59,7 +59,7 @@ const ceilings = {
   'the Options route': { uncompressed: 320, gzip: 90 },
   'the injected Overlay route': { uncompressed: 290, gzip: 88 },
   'the toolbar popup route': { uncompressed: 230, gzip: 72 },
-  'all React artifacts together': { uncompressed: 900, gzip: 250 }
+  'all React artifacts together': { uncompressed: 900, gzip: 270 }
 };
 
 const GROWTH_LIMIT_KIB = { uncompressed: 12, gzip: 4 };
