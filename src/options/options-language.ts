@@ -83,7 +83,6 @@ interface LanguageDeps {
   updateBuiltinResetTooltip(): void;
   updateCustomClearTooltip(): void;
   updateAggregateSearchClearTooltip(): void;
-  updateBlacklistClearTooltip(): void;
   refreshSyncStatus(): void;
   renderShortcutReferenceList(): void;
   setNewtabWidthTabState(mode: unknown): void;
@@ -111,7 +110,7 @@ interface LanguageDeps {
   renderLabsSettings(): void;
   renderSiteSearchList(): void;
   renderAggregateSearchList(): void;
-  renderSearchBlacklistList(): void;
+  renderBlacklistSettings(): void;
   optionsState: LanguageState;
 }
 
@@ -137,7 +136,6 @@ function createLanguage(deps: LanguageDeps) {
     updateBuiltinResetTooltip,
     updateCustomClearTooltip,
     updateAggregateSearchClearTooltip,
-    updateBlacklistClearTooltip,
     refreshSyncStatus,
     renderShortcutReferenceList,
     setNewtabWidthTabState,
@@ -165,7 +163,7 @@ function createLanguage(deps: LanguageDeps) {
     renderLabsSettings,
     renderSiteSearchList,
     renderAggregateSearchList,
-    renderSearchBlacklistList
+    renderBlacklistSettings
   } = deps;
 
   // The page state object shared with options.js and the other modules.
@@ -354,7 +352,6 @@ function createLanguage(deps: LanguageDeps) {
       updateBuiltinResetTooltip();
       updateCustomClearTooltip();
       updateAggregateSearchClearTooltip();
-      updateBlacklistClearTooltip();
       refreshSyncStatus();
       if (optionsState.fallbackShortcutSection) {
         optionsState.fallbackShortcutSection.refreshShortcutsStatus();
@@ -391,7 +388,7 @@ function createLanguage(deps: LanguageDeps) {
       renderLabsSettings();
       renderSiteSearchList();
       renderAggregateSearchList();
-      renderSearchBlacklistList();
+      renderBlacklistSettings();
     });
   }
 

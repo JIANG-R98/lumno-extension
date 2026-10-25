@@ -44,7 +44,6 @@ type ToggleSettingsEntry = ToggleSettingEntry | SelectSettingEntry;
 // Page functions some switches run after a value is applied; tests may
 // leave them out.
 interface ToggleSettingHooks {
-  faviconBlacklistEditor?(enabled: boolean): void;
   newtabShortcutSubcontrols?(): void;
   selectionQuickActionsAvailability?(): void;
   tabSwitcherSubrows?(): void;
@@ -66,13 +65,6 @@ function getToggleSettings(settings: typeof Settings, hooks?: ToggleSettingHooks
       kind: 'overlay-open-tabs-default-visible',
       key: S.OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
       normalize: S.normalizeOverlayOpenTabsDefaultVisible
-    },
-    {
-      inputId: '_x_extension_favicon_enhanced_fetch_toggle_2026_unique_',
-      kind: 'favicon-enhanced-fetch',
-      key: S.FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
-      normalize: S.normalizeFaviconEnhancedFetchEnabled,
-      afterApply: page.faviconBlacklistEditor
     },
     {
       inputId: '_x_extension_bookmark_folder_icons_visible_toggle_2026_unique_',

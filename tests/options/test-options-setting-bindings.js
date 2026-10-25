@@ -110,12 +110,10 @@ function createPage(initial, options) {
 {
   const table = getToggleSettings(settings);
   const hooks = {
-    faviconBlacklistEditor() {},
     newtabShortcutSubcontrols() {},
     selectionQuickActionsAvailability() {}
   };
   const hooked = new Map(getToggleSettings(settings, hooks).map((entry) => [entry.key, entry.afterApply]));
-  assert.strictEqual(hooked.get(settings.FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY), hooks.faviconBlacklistEditor);
   assert.strictEqual(hooked.get(settings.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY), hooks.newtabShortcutSubcontrols);
   assert.strictEqual(hooked.get(settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY), hooks.selectionQuickActionsAvailability);
   assert.strictEqual(hooked.get(settings.SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY), hooks.selectionQuickActionsAvailability);
@@ -127,13 +125,14 @@ function createPage(initial, options) {
   keys.forEach((key) => {
     assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(key), `${key} should travel with Chrome Sync and export`);
   });
-  // The Labs tab draws and binds its own switches.
+  // The Labs and Blacklist tabs draw and bind their own switches.
   [
     settings.DOCUMENT_PIP_ENABLED_STORAGE_KEY,
     settings.NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY,
-    settings.MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY
+    settings.MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY,
+    settings.FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY
   ].forEach((key) => {
-    assert(!keys.includes(key), `${key} is bound by the Labs tab`);
+    assert(!keys.includes(key), `${key} is bound by its own tab`);
   });
 
   const byKey = new Map(table.map((entry) => [entry.key, entry]));

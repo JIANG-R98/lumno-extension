@@ -25,7 +25,6 @@ interface TooltipsDeps {
   getMessage: GetMessage;
   customClearButton: HTMLButtonElement | null;
   aggregateSearchClearButton: HTMLButtonElement | null;
-  blacklistClearButton: HTMLButtonElement | null;
   toastElement: HTMLElement | null;
   optionsSelectControlRecords: ReadonlyMap<HTMLSelectElement, SelectControlRecord>;
   renderOptionsSelectControl(select: HTMLSelectElement): void;
@@ -47,7 +46,6 @@ function createTooltips(deps: TooltipsDeps) {
     getMessage,
     customClearButton,
     aggregateSearchClearButton,
-    blacklistClearButton,
     toastElement,
     optionsSelectControlRecords,
     renderOptionsSelectControl
@@ -175,16 +173,6 @@ function createTooltips(deps: TooltipsDeps) {
     aggregateSearchClearButton.setAttribute('data-tooltip', text);
   }
 
-  function updateBlacklistClearTooltip(): void {
-    if (!blacklistClearButton) {
-      return;
-    }
-    const text = getMessage('blacklist_clear', '清空黑名单');
-    blacklistClearButton.removeAttribute('title');
-    blacklistClearButton.setAttribute('aria-label', text);
-    blacklistClearButton.setAttribute('data-tooltip', text);
-  }
-
   function setToastAnnouncement(errorToast: boolean): void {
     if (toastElement) {
       toastElement.setAttribute('role', errorToast ? 'alert' : 'status');
@@ -231,7 +219,6 @@ function createTooltips(deps: TooltipsDeps) {
     updateBuiltinResetTooltip,
     updateCustomClearTooltip,
     updateAggregateSearchClearTooltip,
-    updateBlacklistClearTooltip,
     showToast,
     beginToast
   };

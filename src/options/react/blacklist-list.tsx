@@ -1,9 +1,5 @@
 import { useState } from 'react';
 import {
-  createReactRootController,
-  type ReactRootController
-} from './root-controller';
-import {
   getAsyncErrorMessage,
   useExclusiveAsyncAction
 } from '../../shared/react/use-exclusive-async-action';
@@ -55,18 +51,12 @@ export interface BlacklistSaveResult {
   ok: boolean;
 }
 
-export interface BlacklistListControllerOptions {
-  kind: string;
-  onRemove(key: string): void | Promise<void>;
-  onSave?(
-    key: string,
-    inputValue: string,
-    matchModes: BlacklistMatchMode[]
-  ): BlacklistSaveResult | Promise<BlacklistSaveResult>;
-}
-
-export type BlacklistListController =
-  ReactRootController<BlacklistListRenderModel>;
+// Saves an edited rule under the key it had.
+export type BlacklistSaveHandler = (
+  key: string,
+  inputValue: string,
+  matchModes: BlacklistMatchMode[]
+) => BlacklistSaveResult | Promise<BlacklistSaveResult>;
 
 function getInputPresentation(
   modes: BlacklistMatchMode[],
@@ -223,14 +213,14 @@ function BlacklistEditor({
   );
 }
 
-function BlacklistList({
+export function BlacklistList({
   model,
   onRemove,
   onSave
 }: {
   model: BlacklistListRenderModel;
   onRemove(key: string): void | Promise<void>;
-  onSave?: BlacklistListControllerOptions['onSave'];
+  onSave?: BlacklistSaveHandler;
 }) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
@@ -298,31 +288,4 @@ function BlacklistList({
       })}
     </>
   );
-}
-
-export function createBlacklistListController(
-  host: HTMLElement | null,
-  options: BlacklistListControllerOptions
-): BlacklistListController {
-  if (host) {
-    host.dataset.reactIsland = 'options-blacklist-list';
-    host.dataset.blacklistKind = options.kind;
-  }
-  return createReactRootController(
-    host,
-    (model: BlacklistListRenderModel) => (
-      <BlacklistList
-        model={model}
-        onRemove={options.onRemove}
-        onSave={options.onSave}
-      />
-    )
-  );
-}
-
-export function createBlacklistListApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createBlacklistListController
-  });
 }

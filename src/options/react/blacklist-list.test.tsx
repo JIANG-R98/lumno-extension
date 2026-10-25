@@ -1,15 +1,28 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  createBlacklistListApi,
-  createBlacklistListController,
-  type BlacklistListController,
-  type BlacklistListRenderModel
+  BlacklistList,
+  type BlacklistListRenderModel,
+  type BlacklistSaveHandler
 } from './blacklist-list';
+import { createReactRootController, type ReactRootController } from './root-controller';
 import { getTags } from '../../../tests/react/dom';
 import { queryHtmlTag } from '../../shared/dom-lookup';
 
-let controllers: BlacklistListController[] = [];
+let controllers: Array<ReactRootController<BlacklistListRenderModel>> = [];
+
+function renderList(
+  host: HTMLElement,
+  onRemove: (key: string) => void | Promise<void>,
+  onSave?: BlacklistSaveHandler
+): ReactRootController<BlacklistListRenderModel> {
+  const controller = createReactRootController(
+    host,
+    (listModel: BlacklistListRenderModel) => <BlacklistList model={listModel} onRemove={onRemove} onSave={onSave} />
+  );
+  controllers.push(controller);
+  return controller;
+}
 
 const model: BlacklistListRenderModel = {
   copy: {
@@ -49,12 +62,7 @@ function createFixture(editable = true) {
   document.body.appendChild(host);
   const onRemove = vi.fn();
   const onSave = vi.fn().mockResolvedValue({ ok: true });
-  const controller = createBlacklistListController(host, {
-    kind: editable ? 'search' : 'favicon',
-    onRemove,
-    onSave: editable ? onSave : undefined
-  });
-  controllers.push(controller);
+  const controller = renderList(host, onRemove, editable ? onSave : undefined);
   return { controller, host, onRemove, onSave };
 }
 
@@ -66,14 +74,11 @@ afterEach(() => {
   document.body.textContent = '';
 });
 
-describe('Options blacklist list React island', () => {
-  it('renders legacy row, badge, action, and host contracts', () => {
+describe('Options blacklist list', () => {
+  it('renders the row, badge and action contracts', () => {
     const { controller, host } = createFixture();
     act(() => controller.render(model));
 
-    expect(createBlacklistListApi().implementation).toBe('react');
-    expect(host.dataset.reactIsland).toBe('options-blacklist-list');
-    expect(host.dataset.blacklistKind).toBe('search');
     expect(host.querySelector('[data-rule-key="example.com::suffix"]'))
       .not.toBeNull();
     expect(host.querySelector('[data-tone="suffix"]')?.textContent)
@@ -163,11 +168,7 @@ describe('Options blacklist list React island', () => {
     }));
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const controller = createBlacklistListController(host, {
-      kind: 'favicon',
-      onRemove
-    });
-    controllers.push(controller);
+    const controller = renderList(host, onRemove);
     act(() => controller.render({ ...model, editable: false }));
     act(() => {
       queryHtmlTag(host, '._x_extension_shortcut_remove_2024_unique_', 'button')?.click();

@@ -10,7 +10,7 @@ import * as LumnoShortcutDisplay from '../domain/shortcut-display';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as OPTIONS_AGGREGATE_SEARCH_LIST from './options-aggregate-search-list';
 import * as AGGREGATE_SEARCH from './options-aggregate-search';
-import * as OPTIONS_BLACKLIST_LISTS from './options-blacklist-lists';
+import * as OPTIONS_BLACKLIST_SECTION from './options-blacklist-section';
 import * as LumnoOptionsBlacklist from './options-blacklist';
 import * as OPTIONS_CONTROL_EVENTS from './options-control-events';
 import * as LumnoOptionsFallbackShortcut from './options-fallback-shortcut';
@@ -155,10 +155,6 @@ import * as OPTIONS_STATE from './options-state';
   const restrictedActionInfoHost = getHtmlElement(document, '_x_extension_restricted_action_info_2026_unique_');
   const bookmarkRowsInfoHost = getHtmlElement(document, '_x_extension_bookmark_rows_info_2026_unique_');
   const bookmarkColumnsInfoHost = getHtmlElement(document, '_x_extension_bookmark_columns_info_2026_unique_');
-  const faviconBlacklistEditor = getHtmlElement(document, '_x_extension_favicon_blacklist_editor_2026_unique_');
-  const faviconBlacklistList = getHtmlElement(document, '_x_extension_favicon_blacklist_list_2026_unique_');
-  const faviconBlacklistForm = getHtmlElement(document, '_x_extension_favicon_blacklist_form_2026_unique_');
-  const faviconBlacklistClearButton = getHtmlTag(document, '_x_extension_favicon_blacklist_clear_2026_unique_', 'button');
   const syncStatus = getHtmlElement(document, '_x_extension_sync_status_2024_unique_');
   const syncStatusText = getHtmlElement(document, '_x_extension_sync_status_text_2024_unique_');
   const syncNowButton = getHtmlTag(document, '_x_extension_sync_now_2024_unique_', 'button');
@@ -202,15 +198,12 @@ import * as OPTIONS_STATE from './options-state';
   const siteSearchError = getHtmlElement(document, '_x_extension_site_search_error_2024_unique_');
   const builtinResetButton = getHtmlElement(document, '_x_extension_builtin_reset_2024_unique_');
   const customClearButton = getHtmlTag(document, '_x_extension_custom_clear_2024_unique_', 'button');
-  const blacklistList = getHtmlElement(document, '_x_extension_blacklist_list_2026_unique_');
-  const blacklistForm = getHtmlElement(document, '_x_extension_blacklist_form_2026_unique_');
-  const blacklistClearButton = getHtmlTag(document, '_x_extension_blacklist_clear_2026_unique_', 'button');
   const toastElement = getHtmlElement(document, '_x_extension_toast_2024_unique_');
   if (!panel || !optionsRoot || themeButtons.length === 0 || tabButtons.length === 0) {
     return;
   }
   // The React views, set by the options islands bundle that loads first.
-  const optionsBlacklistListApi = globalThis.LumnoOptionsBlacklistList;
+  const optionsBlacklistTabApi = globalThis.LumnoOptionsBlacklistTab;
   const optionsAggregateSearchListApi = globalThis.LumnoOptionsAggregateSearchList;
   const optionsFeedbackSupportApi = globalThis.LumnoOptionsFeedbackSupport;
   const optionsTranslationHelpApi = globalThis.LumnoOptionsTranslationHelp;
@@ -224,7 +217,7 @@ import * as OPTIONS_STATE from './options-state';
   const optionsShortcutHotkeyApi = globalThis.LumnoOptionsShortcutHotkey;
   const optionsSiteSearchListApi = globalThis.LumnoOptionsSiteSearchList;
   const optionsThemePickerApi = globalThis.LumnoOptionsThemePicker;
-  if (!optionsBlacklistListApi || !optionsAggregateSearchListApi || !optionsFeedbackSupportApi ||
+  if (!optionsBlacklistTabApi || !optionsAggregateSearchListApi || !optionsFeedbackSupportApi ||
       !optionsTranslationHelpApi || !optionsInfoButtonApi || !optionsSegmentedControlApi ||
       !optionsSettingsControlsApi || !optionsSettingsFormsApi || !optionsSettingsNavigationApi ||
       !optionsShortcutReferenceApi || !optionsShortcutHotkeyApi || !optionsSiteSearchListApi || !optionsThemePickerApi) {
@@ -283,8 +276,6 @@ import * as OPTIONS_STATE from './options-state';
     SITE_SEARCH_DISABLED_STORAGE_KEY,
     AGGREGATE_SEARCH_STORAGE_KEY,
     AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
-    SEARCH_BLACKLIST_STORAGE_KEY,
-    FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
     SYNC_META_STORAGE_KEY,
     NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY
   } = SETTINGS;
@@ -314,9 +305,6 @@ import * as OPTIONS_STATE from './options-state';
     siteSearchModel: SITE_SEARCH.createSiteSearchModel({
       searchUtils: SEARCH_UTILS,
       aggregateSearchStore: AGGREGATE_SEARCH_STORE
-    }),
-    blacklistModel: LumnoOptionsBlacklist.createBlacklistModel({
-      blacklistUtils: LumnoBlacklistUtils
     }),
     enqueueSiteSearchProviderStorageOperation: SITE_SEARCH.createOperationQueue(),
     panelHeightAnimator: PANEL_MOTION.createPanelHeightAnimator({
@@ -390,7 +378,6 @@ import * as OPTIONS_STATE from './options-state';
     updateBuiltinResetTooltip,
     updateCustomClearTooltip,
     updateAggregateSearchClearTooltip,
-    updateBlacklistClearTooltip,
     showToast,
     beginToast
   } = OPTIONS_TOOLTIPS.createTooltips({
@@ -402,7 +389,6 @@ import * as OPTIONS_STATE from './options-state';
     getMessage: (...args) => getMessage(...args),
     customClearButton,
     aggregateSearchClearButton,
-    blacklistClearButton,
     toastElement,
     optionsSelectControlRecords,
     renderOptionsSelectControl,
@@ -554,7 +540,6 @@ import * as OPTIONS_STATE from './options-state';
     updateBuiltinResetTooltip,
     updateCustomClearTooltip,
     updateAggregateSearchClearTooltip,
-    updateBlacklistClearTooltip,
     refreshSyncStatus,
     renderShortcutReferenceList: (...args) => renderShortcutReferenceList(...args),
     setNewtabWidthTabState: (...args) => setNewtabWidthTabState(...args),
@@ -582,7 +567,7 @@ import * as OPTIONS_STATE from './options-state';
     renderLabsSettings: () => labsSection.render(),
     renderSiteSearchList,
     renderAggregateSearchList: (...args) => renderAggregateSearchList(...args),
-    renderSearchBlacklistList: (...args) => renderSearchBlacklistList(...args),
+    renderBlacklistSettings: () => blacklistSection.render(),
     optionsState
   });
 
@@ -591,16 +576,7 @@ import * as OPTIONS_STATE from './options-state';
     renderSettingsForms,
     handleReactSiteSearchFormSave,
     getSiteSearchErrorMessage,
-    applySavedSiteSearchProviders,
-    handleReactSearchBlacklistFormSave,
-    handleReactFaviconBlacklistFormSave,
-    resetBlacklistForm,
-    resetFaviconBlacklistForm,
-    setFaviconBlacklistEditorEnabled,
-    getBlacklistMatchBadgeConfig,
-    buildBlacklistRuleDraft,
-    upsertBlacklistItems,
-    persistBlacklistItems
+    applySavedSiteSearchProviders
   } = OPTIONS_FORMS.createForms({
     getMessage,
     suspendSiteSearchRefresh,
@@ -610,12 +586,6 @@ import * as OPTIONS_STATE from './options-state';
     refreshSiteSearchProviders,
     renderSiteSearchList,
     showToast,
-    saveFaviconRequestBlacklistItems: (...args) => saveFaviconRequestBlacklistItems(...args),
-    renderFaviconRequestBlacklistList: (...args) => renderFaviconRequestBlacklistList(...args),
-    faviconBlacklistEditor,
-    saveSearchBlacklistItems: (...args) => saveSearchBlacklistItems(...args),
-    renderSearchBlacklistList: (...args) => renderSearchBlacklistList(...args),
-    notifyNewtabSectionsRefresh,
     optionsState
   });
 
@@ -849,6 +819,19 @@ import * as OPTIONS_STATE from './options-state';
     getMessage,
     browserFamily: document.documentElement.getAttribute('data-browser-family') || ''
   });
+  const blacklistSection = OPTIONS_BLACKLIST_SECTION.createBlacklistSection({
+    host: queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="blacklist"]'),
+    blacklistTabApi: optionsBlacklistTabApi,
+    storageArea: optionsState.storageArea,
+    SETTINGS,
+    blacklistModel: LumnoOptionsBlacklist.createBlacklistModel({
+      blacklistUtils: LumnoBlacklistUtils
+    }),
+    getMessage,
+    showToast,
+    notifyNewtabSectionsRefresh,
+    initTooltips
+  });
 
   const {
     registerOptionsToggleControl,
@@ -871,7 +854,6 @@ import * as OPTIONS_STATE from './options-state';
     selectionQuickActionsGroupToggle,
     selectionQuickActionsGroupRow,
     SETTINGS,
-    setFaviconBlacklistEditorEnabled,
     syncNewtabShortcutSubcontrolAvailability: (...args) => syncNewtabShortcutSubcontrolAvailability(...args),
     newtabOpenInNewTabToggles,
     getMessage,
@@ -886,17 +868,6 @@ import * as OPTIONS_STATE from './options-state';
 
   optionsState.settingsNavigationController = optionsSettingsNavigationApi.createSettingsNavigationController(tabsContainer, {
       onSelect: handleSettingsTabSelection
-    });
-  const searchBlacklistListController =
-    optionsBlacklistListApi.createBlacklistListController(blacklistList, {
-      kind: 'search',
-      onRemove: (...args) => handleSearchBlacklistRemove(...args),
-      onSave: (...args) => handleSearchBlacklistSave(...args)
-    });
-  const faviconBlacklistListController =
-    optionsBlacklistListApi.createBlacklistListController(faviconBlacklistList, {
-      kind: 'favicon',
-      onRemove: (...args) => handleFaviconBlacklistRemove(...args)
     });
   // Each Search sources list orders on its own; the record keys them by list.
   // The search source order list each site search list sorts by.
@@ -950,14 +921,6 @@ import * as OPTIONS_STATE from './options-state';
     });
   optionsState.siteSearchFormController = optionsSettingsFormsApi.createSiteSearchFormController(siteSearchForm, {
       onSave: handleReactSiteSearchFormSave
-    });
-  optionsState.searchBlacklistFormController = optionsSettingsFormsApi.createBlacklistFormController(blacklistForm, {
-      kind: 'search',
-      onSave: handleReactSearchBlacklistFormSave
-    });
-  optionsState.faviconBlacklistFormController = optionsSettingsFormsApi.createBlacklistFormController(faviconBlacklistForm, {
-      kind: 'favicon',
-      onSave: handleReactFaviconBlacklistFormSave
     });
 
   const {
@@ -1650,6 +1613,7 @@ import * as OPTIONS_STATE from './options-state';
   syncSection.bindControls();
 
   labsSection.bindSettings(settingBinder);
+  blacklistSection.bindSettings(settingBinder);
   OPTIONS_SETTING_BINDS.createSettingBinds({
     LANGUAGE_STORAGE_KEY,
     normalizeLanguageMode,
@@ -1796,48 +1760,6 @@ import * as OPTIONS_STATE from './options-state';
     );
   });
 
-  const {
-    loadSearchBlacklistItems,
-    saveSearchBlacklistItems,
-    loadFaviconRequestBlacklistItems,
-    saveFaviconRequestBlacklistItems,
-    handleFaviconBlacklistRemove,
-    handleSearchBlacklistRemove,
-    handleSearchBlacklistSave,
-    renderFaviconRequestBlacklistList,
-    renderSearchBlacklistList
-  } = OPTIONS_BLACKLIST_LISTS.createBlacklistLists({
-    SEARCH_BLACKLIST_STORAGE_KEY,
-    FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
-    getMessage,
-    getBlacklistMatchBadgeConfig,
-    initTooltips,
-    showToast,
-    notifyNewtabSectionsRefresh,
-    buildBlacklistRuleDraft,
-    upsertBlacklistItems,
-    persistBlacklistItems,
-    faviconBlacklistList,
-    syncClearButtonAvailability,
-    faviconBlacklistClearButton,
-    faviconBlacklistListController,
-    blacklistList,
-    blacklistClearButton,
-    searchBlacklistListController,
-    optionsState
-  });
-
-  storageChanges.on(SEARCH_BLACKLIST_STORAGE_KEY, (changes) => {
-    optionsState.searchBlacklistItems = optionsState.normalizeBlacklistItems(changes[SEARCH_BLACKLIST_STORAGE_KEY].newValue);
-    renderSearchBlacklistList();
-  });
-  storageChanges.on(FAVICON_REQUEST_BLACKLIST_STORAGE_KEY, (changes) => {
-    optionsState.faviconRequestBlacklistItems = optionsState.normalizeBlacklistItems(
-      changes[FAVICON_REQUEST_BLACKLIST_STORAGE_KEY].newValue
-    );
-    renderFaviconRequestBlacklistList();
-  });
-
   // A save on this page suspends refreshes briefly so its own write does not
   // re-render the list mid-edit; a change during that window refreshes after.
   storageChanges.on([SITE_SEARCH_STORAGE_KEY, SITE_SEARCH_DISABLED_STORAGE_KEY], () => {
@@ -1863,18 +1785,6 @@ import * as OPTIONS_STATE from './options-state';
   if (aggregateSearchList) {
     // Load failures are reported through onLoadError.
     refreshAggregateSearches().catch(() => {});
-  }
-  if (blacklistList) {
-    loadSearchBlacklistItems().then((items) => {
-      optionsState.searchBlacklistItems = items;
-      renderSearchBlacklistList();
-    });
-  }
-  if (faviconBlacklistList) {
-    loadFaviconRequestBlacklistItems().then((items) => {
-      optionsState.faviconRequestBlacklistItems = items;
-      renderFaviconRequestBlacklistList();
-    });
   }
 
   OPTIONS_SITE_SEARCH_EVENTS.createSiteSearchEvents({
@@ -1913,15 +1823,6 @@ import * as OPTIONS_STATE from './options-state';
     customClearButton,
     aggregateSearchClearButton,
     handleAggregateSearchClear,
-    blacklistClearButton,
-    saveSearchBlacklistItems,
-    renderSearchBlacklistList,
-    resetBlacklistForm,
-    notifyNewtabSectionsRefresh,
-    faviconBlacklistClearButton,
-    saveFaviconRequestBlacklistItems,
-    renderFaviconRequestBlacklistList,
-    resetFaviconBlacklistForm,
     optionsState
   });
 

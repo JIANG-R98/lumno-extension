@@ -14,7 +14,9 @@ export function InlinePopconfirm({
   triggerAriaLabel,
   triggerClassName,
   triggerIconClass,
-  triggerDisabled = false
+  triggerDisabled = false,
+  triggerId,
+  triggerTooltip
 }: {
   copy: InlinePopconfirmCopy;
   onConfirm(): void | Promise<void>;
@@ -22,12 +24,16 @@ export function InlinePopconfirm({
   triggerClassName: string;
   triggerIconClass: string;
   triggerDisabled?: boolean;
+  triggerId?: string;
+  // Shown by the page's floating tooltip.
+  triggerTooltip?: string;
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const restoreTriggerFocusRef = useRef(false);
-  const popconfirmId = useId();
+  const generatedId = useId();
+  const popconfirmId = triggerId ? `${triggerId}_popconfirm` : generatedId;
   const confirmAction = useExclusiveAsyncAction(onConfirm);
 
   const closeAndRestoreTriggerFocus = () => {
@@ -78,7 +84,9 @@ export function InlinePopconfirm({
         aria-haspopup="dialog"
         aria-label={triggerAriaLabel}
         className={triggerClassName}
+        data-tooltip={triggerTooltip}
         disabled={confirmAction.pending || triggerDisabled}
+        id={triggerId}
         onClick={(event) => {
           event.stopPropagation();
           setOpen((value) => !value);

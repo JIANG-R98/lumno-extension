@@ -1,7 +1,7 @@
 import { createToastApi } from '../../shared/react/toast';
 import { createSegmentedIndicatorApi } from '../../shared/react/segmented-indicator';
 import { createAggregateSearchListApi } from './aggregate-search-list';
-import { createBlacklistListApi } from './blacklist-list';
+import { createBlacklistTabApi } from './blacklist-tab';
 import { createFeedbackSupportApi } from './feedback-support';
 import { createInfoButtonApi } from './info-button';
 import { createPopconfirmApi } from './popconfirm';
@@ -25,7 +25,7 @@ declare global {
     } | undefined;
   var LumnoOptionsReactIslands: {
       aggregateSearchList: ReturnType<typeof createAggregateSearchListApi>;
-      blacklistList: ReturnType<typeof createBlacklistListApi>;
+      blacklistTab: ReturnType<typeof createBlacklistTabApi>;
       feedbackSupport: ReturnType<typeof createFeedbackSupportApi>;
       infoButton: ReturnType<typeof createInfoButtonApi>;
       popconfirm: ReturnType<typeof createPopconfirmApi>;
@@ -44,7 +44,7 @@ declare global {
       tabSwitcher: ReturnType<typeof createTabSwitcherViewApi>;
     } | undefined;
   var LumnoOptionsAggregateSearchListReact: ReturnType<typeof createAggregateSearchListApi> | undefined;
-  var LumnoOptionsBlacklistListReact: ReturnType<typeof createBlacklistListApi> | undefined;
+  var LumnoOptionsBlacklistTabReact: ReturnType<typeof createBlacklistTabApi> | undefined;
   var LumnoOptionsFeedbackSupportReact: ReturnType<typeof createFeedbackSupportApi> | undefined;
   var LumnoOptionsInfoButtonReact: ReturnType<typeof createInfoButtonApi> | undefined;
   var LumnoOptionsPopconfirmReact: ReturnType<typeof createPopconfirmApi> | undefined;
@@ -68,7 +68,7 @@ const bootstrapState = runtime.LumnoOptionsReactBootstrap;
 
 if (!bootstrapState || !bootstrapState.reactReady) {
   const aggregateSearchListApi = createAggregateSearchListApi();
-  const blacklistListApi = createBlacklistListApi();
+  const blacklistTabApi = createBlacklistTabApi();
   const feedbackSupportApi = createFeedbackSupportApi();
   const infoButtonApi = createInfoButtonApi();
   const popconfirmApi = createPopconfirmApi();
@@ -90,8 +90,8 @@ if (!bootstrapState || !bootstrapState.reactReady) {
 
   runtime.LumnoOptionsAggregateSearchListReact = aggregateSearchListApi;
   runtime.LumnoOptionsAggregateSearchList = aggregateSearchListApi;
-  runtime.LumnoOptionsBlacklistListReact = blacklistListApi;
-  runtime.LumnoOptionsBlacklistList = blacklistListApi;
+  runtime.LumnoOptionsBlacklistTabReact = blacklistTabApi;
+  runtime.LumnoOptionsBlacklistTab = blacklistTabApi;
   runtime.LumnoOptionsFeedbackSupportReact = feedbackSupportApi;
   runtime.LumnoOptionsFeedbackSupport = feedbackSupportApi;
   runtime.LumnoOptionsInfoButtonReact = infoButtonApi;
@@ -127,7 +127,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoOverlayTabSwitcherView = tabSwitcherApi;
   runtime.LumnoOptionsReactIslands = Object.freeze({
     aggregateSearchList: aggregateSearchListApi,
-    blacklistList: blacklistListApi,
+    blacklistTab: blacklistTabApi,
     feedbackSupport: feedbackSupportApi,
     infoButton: infoButtonApi,
     popconfirm: popconfirmApi,

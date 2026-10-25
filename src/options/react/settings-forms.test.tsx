@@ -1,18 +1,18 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  createBlacklistFormController,
+  BlacklistForm,
   createSettingsFormsApi,
   createSiteSearchFormController,
-  type BlacklistFormController,
   type BlacklistFormRenderModel,
-  type SiteSearchFormController,
+  type BlacklistFormSaveHandler,
   type SiteSearchFormRenderModel
 } from './settings-forms';
-import { getTags } from '../../../tests/react/dom';
+import { createReactRootController } from './root-controller';
+import { getElement, getTags } from '../../../tests/react/dom';
 import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
-let controllers: Array<BlacklistFormController | SiteSearchFormController> = [];
+let controllers: Array<{ destroy(): void }> = [];
 
 const siteModel: SiteSearchFormRenderModel = {
   copy: {
@@ -76,6 +76,33 @@ const blacklistModel: BlacklistFormRenderModel = {
     ]
   }
 };
+
+const BLACKLIST_FORM_ID = 'blacklist-form';
+
+// A blacklist form drawn in a host, re-rendered with a new reset version on demand.
+function createBlacklistFormFixture(onSave: BlacklistFormSaveHandler, attach = true) {
+  const host = document.createElement('div');
+  if (attach) {
+    document.body.appendChild(host);
+  }
+  const controller = createReactRootController(
+    host,
+    ({ resetVersion }: { resetVersion: number }) => (
+      <BlacklistForm frameId={BLACKLIST_FORM_ID} model={blacklistModel} onSave={onSave} resetVersion={resetVersion} />
+    )
+  );
+  controllers.push(controller);
+  let resetVersion = 0;
+  act(() => controller.render({ resetVersion }));
+  return {
+    host,
+    frame: () => getElement(host, `#${BLACKLIST_FORM_ID}`),
+    reset() {
+      resetVersion += 1;
+      controller.render({ resetVersion });
+    }
+  };
+}
 
 afterEach(() => {
   act(() => controllers.forEach((controller) => controller.destroy()));
@@ -192,15 +219,9 @@ describe('Options settings form React islands', () => {
   });
 
   it('switches blacklist presentation and submits the selected mode', async () => {
-    const host = document.createElement('div');
     const onSave = vi.fn().mockResolvedValue({ ok: true });
-    document.body.appendChild(host);
-    const controller = createBlacklistFormController(host, {
-      kind: 'search',
-      onSave
-    });
-    controllers.push(controller);
-    act(() => controller.render(blacklistModel));
+    const { host, frame } = createBlacklistFormFixture(onSave);
+    expect(frame().className).toBe('_x_extension_shortcut_form_2024_unique_');
     const buttons = getTags(host, 'button:not(._x_extension_info_button_2026_unique_)', 'button');
     const checkboxes = getTags(host, 'input[type="checkbox"]', 'input');
     act(() => buttons[0]?.click());
@@ -220,17 +241,14 @@ describe('Options settings form React islands', () => {
     });
 
     expect(onSave).toHaveBeenCalledWith('example.com/page', ['exact']);
-    expect(host.dataset.expanded).toBe('false');
+    expect(frame().dataset.expanded).toBe('false');
   });
 
   it('keeps a blacklist form open after adapter validation fails', async () => {
-    const host = document.createElement('div');
-    const controller = createBlacklistFormController(host, {
-      kind: 'favicon',
-      onSave: vi.fn().mockResolvedValue({ ok: false, error: '请输入网站域名。' })
-    });
-    controllers.push(controller);
-    act(() => controller.render(blacklistModel));
+    const { host, frame } = createBlacklistFormFixture(
+      vi.fn().mockResolvedValue({ ok: false, error: '请输入网站域名。' }),
+      false
+    );
     const buttons = getTags(host, 'button:not(._x_extension_info_button_2026_unique_)', 'button');
     act(() => buttons[0]?.click());
     await act(async () => {
@@ -238,20 +256,13 @@ describe('Options settings form React islands', () => {
       await Promise.resolve();
     });
 
-    expect(host.dataset.expanded).toBe('true');
+    expect(frame().dataset.expanded).toBe('true');
     expect(host.querySelector('._x_extension_shortcut_error_2024_unique_')?.textContent)
       .toBe('请输入网站域名。');
   });
 
-  it('lets the adapter reset React-owned blacklist form state', () => {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const controller = createBlacklistFormController(host, {
-      kind: 'search',
-      onSave: vi.fn().mockResolvedValue({ ok: true })
-    });
-    controllers.push(controller);
-    act(() => controller.render(blacklistModel));
+  it('closes and clears a blacklist form on a new reset version', () => {
+    const { host, frame, reset } = createBlacklistFormFixture(vi.fn().mockResolvedValue({ ok: true }));
     const openButton = queryHtmlTag(host, 'button', 'button');
     const textInput = queryHtmlTag(host, 'input:not([type="checkbox"])', 'input');
 
@@ -264,9 +275,9 @@ describe('Options settings form React islands', () => {
       setter?.call(textInput, 'example.com');
       textInput?.dispatchEvent(new Event('input', { bubbles: true }));
     });
-    act(() => controller.reset());
+    act(() => reset());
 
-    expect(host.dataset.expanded).toBe('false');
+    expect(frame().dataset.expanded).toBe('false');
     expect(queryHtmlTag(host, 'input:not([type="checkbox"])', 'input')?.value)
       .toBe('');
     expect(getTags(host, 'input[type="checkbox"]', 'input')[2]?.checked)
@@ -274,14 +285,7 @@ describe('Options settings form React islands', () => {
   });
 
   it('keeps the blacklist draft while closing and starts each open empty', () => {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const controller = createBlacklistFormController(host, {
-      kind: 'search',
-      onSave: vi.fn().mockResolvedValue({ ok: true })
-    });
-    controllers.push(controller);
-    act(() => controller.render(blacklistModel));
+    const { host, frame } = createBlacklistFormFixture(vi.fn().mockResolvedValue({ ok: true }));
     const openButton = queryHtmlTag(host, 'button', 'button');
     const fields = queryHtmlElement(host, '._x_extension_shortcut_form_fields_2024_unique_');
     const textInput = queryHtmlTag(host, 'input:not([type="checkbox"])', 'input');
@@ -302,7 +306,7 @@ describe('Options settings form React islands', () => {
     });
     act(() => cancelButton?.click());
 
-    expect(host.dataset.expanded).toBe('false');
+    expect(frame().dataset.expanded).toBe('false');
     expect(fields?.hasAttribute('inert')).toBe(true);
     expect(textInput?.value).toBe('example.com');
     expect(cancelButton?.style.display).toBe('');

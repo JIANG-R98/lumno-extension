@@ -73,22 +73,15 @@ export interface BlacklistFormSaveResult {
   ok: boolean;
 }
 
-export interface BlacklistFormControllerOptions {
-  kind: string;
-  onSave(
-    value: string,
-    modes: BlacklistMatchMode[]
-  ): BlacklistFormSaveResult | Promise<BlacklistFormSaveResult>;
-}
+export type BlacklistFormSaveHandler = (
+  value: string,
+  modes: BlacklistMatchMode[]
+) => BlacklistFormSaveResult | Promise<BlacklistFormSaveResult>;
 
-export interface BlacklistFormController
-  extends ReactRootController<BlacklistFormRenderModel> {
-  reset(): void;
-}
-
-// The add forms live in a host the adapter owns, so the open state is mirrored
-// onto it. Opening focuses the first field; closing hands focus back to the
-// Add trigger, which only becomes visible once the host has collapsed.
+// A form in a host the adapter owns mirrors its open state onto that host;
+// one that draws its own frame passes none. Opening focuses the first field;
+// closing hands focus back to the Add trigger, which only becomes visible
+// once the form has collapsed.
 function useAccordionForm(
   host: HTMLElement | null,
   expanded: boolean,
@@ -317,18 +310,17 @@ function SiteSearchForm({
   );
 }
 
-function BlacklistForm({
-  host,
+// An add form in its own frame, which carries the open state for the page's
+// styles. A new resetVersion closes and clears it.
+export function BlacklistForm({
+  frameId,
   model,
   onSave,
   resetVersion
 }: {
-  host: HTMLElement | null;
+  frameId: string;
   model: BlacklistFormRenderModel;
-  onSave(
-    value: string,
-    modes: BlacklistMatchMode[]
-  ): BlacklistFormSaveResult | Promise<BlacklistFormSaveResult>;
+  onSave: BlacklistFormSaveHandler;
   resetVersion: number;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -344,7 +336,7 @@ function BlacklistForm({
     [mode, model.copy.modes]
   );
 
-  useAccordionForm(host, expanded, inputRef, triggerRef);
+  useAccordionForm(null, expanded, inputRef, triggerRef);
 
   useEffect(() => {
     setExpanded(false);
@@ -363,7 +355,11 @@ function BlacklistForm({
   const close = () => setExpanded(false);
 
   return (
-    <>
+    <div
+      className="_x_extension_shortcut_form_2024_unique_"
+      data-expanded={expanded ? 'true' : 'false'}
+      id={frameId}
+    >
       <div className="_x_extension_shortcut_form_trigger_2024_unique_">
         <button
           aria-expanded={expanded}
@@ -483,7 +479,7 @@ function BlacklistForm({
           {error}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -502,50 +498,9 @@ export function createSiteSearchFormController(
   );
 }
 
-export function createBlacklistFormController(
-  host: HTMLElement | null,
-  options: BlacklistFormControllerOptions
-): BlacklistFormController {
-  if (host) {
-    host.dataset.reactIsland = 'options-blacklist-form';
-    host.dataset.blacklistKind = options.kind;
-  }
-  let resetVersion = 0;
-  let currentModel: BlacklistFormRenderModel | null = null;
-  const rootController = createReactRootController(
-    host,
-    (model: BlacklistFormRenderModel) => (
-      <BlacklistForm
-        host={host}
-        model={model}
-        onSave={options.onSave}
-        resetVersion={resetVersion}
-      />
-    )
-  );
-  return Object.freeze({
-    render(model: BlacklistFormRenderModel) {
-      currentModel = model;
-      rootController.render(model);
-    },
-    reset() {
-      if (!currentModel) {
-        return;
-      }
-      resetVersion += 1;
-      rootController.render(currentModel);
-    },
-    destroy() {
-      currentModel = null;
-      rootController.destroy();
-    }
-  });
-}
-
 export function createSettingsFormsApi() {
   return Object.freeze({
     implementation: 'react',
-    createBlacklistFormController,
     createSiteSearchFormController
   });
 }

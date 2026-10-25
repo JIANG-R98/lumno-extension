@@ -9,7 +9,7 @@ import type { createOverlayShellApi } from '../overlay/react/shell';
 import type { createSearchInputApi } from '../shared/react/search-input';
 import type { ThemeVariant } from '../shared/favicon/favicon-theme';
 import type { createAggregateSearchListApi } from '../options/react/aggregate-search-list';
-import type { createBlacklistListApi } from '../options/react/blacklist-list';
+import type { createBlacklistTabApi } from '../options/react/blacklist-tab';
 import type { createFeedbackSupportApi } from '../options/react/feedback-support';
 import type { createInfoButtonApi } from '../options/react/info-button';
 import type { createPopconfirmApi } from '../options/react/popconfirm';
@@ -113,7 +113,7 @@ declare global {
   var LumnoPopupReact: ReturnType<typeof createPopupApi> | undefined;
   // Set by the options page's React islands entry.
   var LumnoOptionsAggregateSearchList: ReturnType<typeof createAggregateSearchListApi> | undefined;
-  var LumnoOptionsBlacklistList: ReturnType<typeof createBlacklistListApi> | undefined;
+  var LumnoOptionsBlacklistTab: ReturnType<typeof createBlacklistTabApi> | undefined;
   var LumnoOptionsFeedbackSupport: ReturnType<typeof createFeedbackSupportApi> | undefined;
   var LumnoOptionsInfoButton: ReturnType<typeof createInfoButtonApi> | undefined;
   var LumnoOptionsPopconfirm: ReturnType<typeof createPopconfirmApi> | undefined;

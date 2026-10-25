@@ -8,8 +8,8 @@ function clearRuntime(): void {
   Reflect.deleteProperty(runtime, 'LumnoOptionsReactIslands');
   Reflect.deleteProperty(runtime, 'LumnoOptionsAggregateSearchList');
   Reflect.deleteProperty(runtime, 'LumnoOptionsAggregateSearchListReact');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsBlacklistList');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsBlacklistListReact');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsBlacklistTab');
+  Reflect.deleteProperty(runtime, 'LumnoOptionsBlacklistTabReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsFeedbackSupport');
   Reflect.deleteProperty(runtime, 'LumnoOptionsFeedbackSupportReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsTranslationHelp');
@@ -60,9 +60,9 @@ describe('Options React islands entry', () => {
     expect(runtime.LumnoOptionsAggregateSearchListReact).toBe(
       runtime.LumnoOptionsAggregateSearchList
     );
-    expect(runtime.LumnoOptionsBlacklistList?.implementation).toBe('react');
-    expect(runtime.LumnoOptionsBlacklistListReact).toBe(
-      runtime.LumnoOptionsBlacklistList
+    expect(runtime.LumnoOptionsBlacklistTab?.implementation).toBe('react');
+    expect(runtime.LumnoOptionsBlacklistTabReact).toBe(
+      runtime.LumnoOptionsBlacklistTab
     );
     expect(runtime.LumnoOptionsFeedbackSupport?.implementation).toBe('react');
     expect(runtime.LumnoOptionsFeedbackSupportReact).toBe(
@@ -121,7 +121,7 @@ describe('Options React islands entry', () => {
     );
     expect(runtime.LumnoOptionsReactIslands).toEqual({
       aggregateSearchList: runtime.LumnoOptionsAggregateSearchList,
-      blacklistList: runtime.LumnoOptionsBlacklistList,
+      blacklistTab: runtime.LumnoOptionsBlacklistTab,
       feedbackSupport: runtime.LumnoOptionsFeedbackSupport,
       infoButton: runtime.LumnoOptionsInfoButton,
       popconfirm: runtime.LumnoOptionsPopconfirm,

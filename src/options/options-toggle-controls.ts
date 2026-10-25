@@ -39,7 +39,6 @@ interface ToggleControlsDeps {
   selectionQuickActionsGroupToggle: HTMLInputElement | null;
   selectionQuickActionsGroupRow: HTMLElement | null;
   SETTINGS: typeof Settings;
-  setFaviconBlacklistEditorEnabled(enabled: boolean): void;
   syncNewtabShortcutSubcontrolAvailability(): void;
   newtabOpenInNewTabToggles: HTMLInputElement[];
   getMessage: GetMessage;
@@ -80,7 +79,6 @@ function createToggleControls(deps: ToggleControlsDeps) {
     selectionQuickActionsGroupToggle,
     selectionQuickActionsGroupRow,
     SETTINGS,
-    setFaviconBlacklistEditorEnabled,
     syncNewtabShortcutSubcontrolAvailability,
     newtabOpenInNewTabToggles,
     getMessage,
@@ -210,7 +208,6 @@ function createToggleControls(deps: ToggleControlsDeps) {
     }
   }
   const TOGGLE_SETTINGS = LumnoOptionsToggleSettings.getToggleSettings(SETTINGS, {
-    faviconBlacklistEditor: setFaviconBlacklistEditorEnabled,
     newtabShortcutSubcontrols: syncNewtabShortcutSubcontrolAvailability,
     selectionQuickActionsAvailability: syncSelectionQuickActionsProviderAvailability,
     tabSwitcherSubrows: syncTabSwitcherSubrows

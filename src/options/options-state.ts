@@ -7,8 +7,6 @@ import type { BatchedStorageArea, ProviderStorageRuntime, StorageAreaFacade } fr
 import type { ToastController } from '../shared/react/toast';
 import type { TooltipController } from '../shared/ui/tooltip';
 import type { AggregateSearchListState } from './options-aggregate-search-list';
-import type { createBlacklistModel } from './options-blacklist';
-import type { BlacklistListsState } from './options-blacklist-lists';
 import type { ControlEventsState } from './options-control-events';
 import type { FormsState } from './options-forms';
 import type { LanguageState } from './options-language';
@@ -40,7 +38,6 @@ interface OptionsPageState {
 
 type OptionsState =
   AggregateSearchListState &
-  BlacklistListsState &
   ControlEventsState &
   FormsState &
   LanguageState &
@@ -68,7 +65,6 @@ interface OptionsStateParts {
   // The provider area itself, for writes.
   rawStorageArea: StorageAreaFacade;
   siteSearchModel: ReturnType<typeof createSiteSearchModel>;
-  blacklistModel: ReturnType<typeof createBlacklistModel>;
   enqueueSiteSearchProviderStorageOperation: EnqueueOperation;
   panelHeightAnimator: ReturnType<typeof createPanelHeightAnimator>;
   searchSourceOrderController: ReturnType<typeof createSearchSourceOrderController>;
@@ -79,20 +75,12 @@ interface OptionsStateParts {
 }
 
 function createOptionsState(parts: OptionsStateParts): OptionsState {
-  const blacklistModel = parts.blacklistModel;
   return {
     // What the page made before the state.
     providerStorageRuntime: parts.providerStorageRuntime,
     storageArea: parts.storageArea,
     rawStorageArea: parts.rawStorageArea,
     siteSearchModel: parts.siteSearchModel,
-    blacklistModel,
-    buildBlacklistItemKey: blacklistModel.buildItemKey,
-    formatBlacklistPatternForDisplay: blacklistModel.formatPatternForDisplay,
-    getBlacklistInputConfig: blacklistModel.getInputConfig,
-    getBlacklistPatternInputValue: blacklistModel.getPatternInputValue,
-    normalizeBlacklistItems: blacklistModel.normalizeItems,
-    normalizeBlacklistMatchModes: blacklistModel.normalizeMatchModes,
     enqueueSiteSearchProviderStorageOperation: parts.enqueueSiteSearchProviderStorageOperation,
     panelHeightAnimator: parts.panelHeightAnimator,
     searchSourceOrderController: parts.searchSourceOrderController,
@@ -122,8 +110,6 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     siteSearchBuiltinListController: null,
     siteSearchAiBuiltinListController: null,
     siteSearchFormController: null,
-    searchBlacklistFormController: null,
-    faviconBlacklistFormController: null,
     themeSection: null,
     fallbackShortcutSection: null,
     webDavSettingsController: null,
@@ -137,7 +123,7 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     pendingOptionsScrollTarget: '',
     activePopconfirm: null,
 
-    // Site searches, aggregate searches and blacklists, empty until read.
+    // Site searches and aggregate searches, empty until read.
     defaultSiteSearchProviders: [],
     customSiteSearchProviders: [],
     customSiteSearchProviderIdsReady: true,
@@ -151,8 +137,6 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     siteSearchDraftCategory: 'site',
     siteSearchFormExpanded: false,
     siteSearchRefreshSuppressUntil: 0,
-    searchBlacklistItems: [],
-    faviconRequestBlacklistItems: [],
 
     // Settings, at their defaults until storage answers.
     currentRecentMode: 'most',

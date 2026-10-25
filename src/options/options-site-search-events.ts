@@ -1,6 +1,5 @@
-// Click handlers for the site search, aggregate search and blacklist
-// lists and their add, reset and clear buttons.
-import type { BlacklistRule } from '../domain/blacklist-utils';
+// Click handlers for the site search and aggregate search lists and their
+// add, reset and clear buttons.
 import type { AggregateSearch } from '../domain/search/aggregate-search-store';
 import type { SiteSearchProvider } from '../domain/search/types';
 import type * as SiteSearch from './options-site-search';
@@ -14,8 +13,6 @@ interface SiteSearchEventsState {
   customSiteSearchProviders: SiteSearchProvider[];
   customSiteSearchProviderIdsReady: boolean;
   disabledSiteSearchKeys: Set<string>;
-  searchBlacklistItems: BlacklistRule[];
-  faviconRequestBlacklistItems: BlacklistRule[];
 }
 
 interface SiteSearchEventsDeps {
@@ -57,15 +54,6 @@ interface SiteSearchEventsDeps {
   customClearButton: HTMLButtonElement | null;
   aggregateSearchClearButton: HTMLButtonElement | null;
   handleAggregateSearchClear(): unknown;
-  blacklistClearButton: HTMLButtonElement | null;
-  saveSearchBlacklistItems(items: BlacklistRule[]): Promise<BlacklistRule[]>;
-  renderSearchBlacklistList(): void;
-  resetBlacklistForm(): void;
-  notifyNewtabSectionsRefresh(section: string): void;
-  faviconBlacklistClearButton: HTMLButtonElement | null;
-  saveFaviconRequestBlacklistItems(items: BlacklistRule[]): Promise<BlacklistRule[]>;
-  renderFaviconRequestBlacklistList(): void;
-  resetFaviconBlacklistForm(): void;
   optionsState: SiteSearchEventsState;
 }
 
@@ -105,16 +93,7 @@ function createSiteSearchEvents(deps: SiteSearchEventsDeps): void {
     renderAggregateSearchList,
     customClearButton,
     aggregateSearchClearButton,
-    handleAggregateSearchClear,
-    blacklistClearButton,
-    saveSearchBlacklistItems,
-    renderSearchBlacklistList,
-    resetBlacklistForm,
-    notifyNewtabSectionsRefresh,
-    faviconBlacklistClearButton,
-    saveFaviconRequestBlacklistItems,
-    renderFaviconRequestBlacklistList,
-    resetFaviconBlacklistForm
+    handleAggregateSearchClear
   } = deps;
 
   // The page state object shared with options.js and the other modules.
@@ -289,41 +268,6 @@ function createSiteSearchEvents(deps: SiteSearchEventsDeps): void {
       handleAggregateSearchClear
     );
   }
-
-  if (blacklistClearButton) {
-    attachPopconfirm(
-      blacklistClearButton,
-      'confirm_clear_blacklist',
-      '确认清空黑名单？',
-      () => {
-        saveSearchBlacklistItems([]).then((savedItems) => {
-          optionsState.searchBlacklistItems = savedItems;
-          renderSearchBlacklistList();
-          resetBlacklistForm();
-          notifyNewtabSectionsRefresh('recent');
-          showToast(getMessage('toast_cleared', '已清空'), false);
-        }).catch(() => {
-          showToast(getMessage('toast_error', '操作失败，请重试。'), true);
-        });
-      }
-    );
-  }
-  if (faviconBlacklistClearButton) {
-    attachPopconfirm(
-      faviconBlacklistClearButton,
-      'confirm_clear_favicon_blacklist',
-      '确认清空排除规则？',
-      () => {
-        saveFaviconRequestBlacklistItems([]).then((savedItems) => {
-          optionsState.faviconRequestBlacklistItems = savedItems;
-          renderFaviconRequestBlacklistList();
-          resetFaviconBlacklistForm();
-          showToast(getMessage('toast_cleared', '已清空'), false);
-        }).catch(() => showToast(getMessage('toast_error', '操作失败，请重试。'), true));
-      }
-    );
-  }
-
 }
 
 export { createSiteSearchEvents };

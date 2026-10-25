@@ -72,11 +72,11 @@ const pageEntryRunsAfterBridge = (page, reactEntry, entry) => {
   assert(pageEntryRunsAfterBridge(page, reactEntry, entry), `${page} should connect its bridge between the React entry and the page entry`);
 });
 assert(
-  ['_x_extension_blacklist_form_2026_unique_', '_x_extension_favicon_blacklist_form_2026_unique_'].every((id) => {
-    const host = new JSDOM(optionsHtml).window.document.getElementById(id);
+  ['blacklist', 'labs'].every((tab) => {
+    const host = new JSDOM(optionsHtml).window.document.querySelector(`[data-content="${tab}"]`);
     return host && host.children.length === 0;
   }),
-  'React-owned blacklist forms should not retain legacy DOM in the markup'
+  'Options tabs drawn by React should not retain legacy DOM in the markup'
 );
 assert.strictEqual(
   packageJson.scripts['build:react'],
@@ -189,7 +189,7 @@ async function testPages() {
   const options = await createOptionsPage({});
   await options.settle(300);
   assert.deepStrictEqual(missing(options.window, [
-    'LumnoOptionsToastReact', 'LumnoOptionsBlacklistListReact', 'LumnoOptionsPopconfirmReact', 'LumnoOptionsSegmentedControlReact',
+    'LumnoOptionsToastReact', 'LumnoOptionsBlacklistTabReact', 'LumnoOptionsPopconfirmReact', 'LumnoOptionsSegmentedControlReact',
     'LumnoOptionsSelectControlReact', 'LumnoOptionsSettingsNavigationReact', 'LumnoOptionsSettingsControlsReact',
     'LumnoOptionsSettingsFormsReact', 'LumnoOptionsShortcutReferenceReact', 'LumnoOptionsShortcutHotkeyReact',
     'LumnoOptionsSiteSearchListReact', 'LumnoOptionsThemePickerReact', 'LumnoOptionsReactIslands', 'LumnoOverlayTabSwitcherViewReact'
