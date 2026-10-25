@@ -15,20 +15,38 @@ const MAX_PALETTE_SIZE = 3;
 const MIN_PALETTE_SHARE = 0.12;
 const MIN_PALETTE_DISTANCE = 96;
 const MAX_CACHE_ENTRIES = 400;
-const PLATE_MODES = Object.freeze(['on', 'off']);
-const LIGHT_BASE = [255, 255, 255];
-const DARK_BASE = [42, 42, 44];
-const analysisCache = new Map();
+// Red, green and blue, 0 to 255.
+type Rgb = readonly number[];
 
-function clampChannel(value) {
+type PlateMode = 'on' | 'off';
+
+// What the plate logic reads from an icon's artwork.
+interface IconAnalysis {
+  // See-through at its edge, so it needs a plate to read as a tile.
+  transparent: boolean;
+  accent: number[] | null;
+  palette: number[][];
+}
+
+interface PlateColors {
+  light: string;
+  dark: string;
+}
+
+const PLATE_MODES: readonly PlateMode[] = Object.freeze(['on', 'off']);
+const LIGHT_BASE: Rgb = [255, 255, 255];
+const DARK_BASE: Rgb = [42, 42, 44];
+const analysisCache = new Map<string, IconAnalysis | null>();
+
+function clampChannel(value: unknown): number {
   return Math.max(0, Math.min(255, Math.round(Number(value) || 0)));
 }
 
-function mixColor(color, target, amount) {
+function mixColor(color: Rgb, target: Rgb, amount: number): number[] {
   return [0, 1, 2].map((index) => clampChannel(color[index] + ((target[index] - color[index]) * amount)));
 }
 
-function getLuminance(rgb) {
+function getLuminance(rgb: Rgb): number {
   const [r, g, b] = rgb.map((value) => {
     const channel = value / 255;
     return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
@@ -36,21 +54,21 @@ function getLuminance(rgb) {
   return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
 }
 
-function getContrastRatio(first, second) {
+function getContrastRatio(first: Rgb, second: Rgb): number {
   const a = getLuminance(first);
   const b = getLuminance(second);
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
-function isNearWhite(rgb) {
+function isNearWhite(rgb: Rgb): boolean {
   return Math.min(rgb[0], rgb[1], rgb[2]) > 232;
 }
 
-function getColorDistance(first, second) {
+function getColorDistance(first: Rgb, second: Rgb): number {
   return Math.abs(first[0] - second[0]) + Math.abs(first[1] - second[1]) + Math.abs(first[2] - second[2]);
 }
 
-function getSaturation(rgb) {
+function getSaturation(rgb: Rgb): number {
   const max = Math.max(rgb[0], rgb[1], rgb[2]) / 255;
   const min = Math.min(rgb[0], rgb[1], rgb[2]) / 255;
   if (max === min) return 0;
@@ -58,33 +76,33 @@ function getSaturation(rgb) {
   return (max - min) / (1 - Math.abs((2 * lightness) - 1));
 }
 
-function rgbToHex(rgb) {
+function rgbToHex(rgb: Rgb): string {
   return `#${rgb.map((channel) => clampChannel(channel).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
 }
 
-function hexToRgb(value) {
+function hexToRgb(value: unknown): number[] | null {
   const match = /^#([\da-f]{6})$/i.exec(String(value || '').trim());
   if (!match) return null;
   return [0, 2, 4].map((offset) => parseInt(match[1].slice(offset, offset + 2), 16));
 }
 
-function rgbToCss(rgb) {
+function rgbToCss(rgb: Rgb): string {
   return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
 }
 
 // '' means automatic: a plate only behind see-through artwork.
-function normalizePlateMode(value) {
-  return PLATE_MODES.includes(value) ? value : '';
+function normalizePlateMode(value: unknown): PlateMode | '' {
+  return value === 'on' || value === 'off' ? value : '';
 }
 
-function normalizePlateColor(value) {
+function normalizePlateColor(value: unknown): string {
   const rgb = hexToRgb(value);
   return rgb ? rgbToHex(rgb) : '';
 }
 
 // Reads RGBA pixels of a square sample. Returns whether the artwork is
 // see-through at its edge, its main color and a few distinct colors.
-function analyzePixels(data, size) {
+function analyzePixels(data: ArrayLike<number> | null | undefined, size: number): IconAnalysis | null {
   const side = Math.max(1, Math.floor(Number(size) || SAMPLE_SIZE));
   if (!data || data.length < side * side * 4) {
     return null;
@@ -93,7 +111,7 @@ function analyzePixels(data, size) {
   let clearEdgeCount = 0;
   let opaqueCount = 0;
   let visibleCount = 0;
-  const buckets = new Map();
+  const buckets = new Map<number, { weight: number; count: number; r: number; g: number; b: number }>();
   for (let y = 0; y < side; y += 1) {
     for (let x = 0; x < side; x += 1) {
       const offset = ((y * side) + x) * 4;
@@ -133,7 +151,7 @@ function analyzePixels(data, size) {
   }));
   // Only colors that make up a real part of the artwork, not the blends at
   // its anti-aliased edges; white is always offered on its own.
-  const palette = [];
+  const palette: number[][] = [];
   ranked.forEach(({ share, rgb }) => {
     if (palette.length >= MAX_PALETTE_SIZE || share < MIN_PALETTE_SHARE || isNearWhite(rgb)) return;
     if (palette.some((color) => getColorDistance(color, rgb) < MIN_PALETTE_DISTANCE)) return;
@@ -147,20 +165,24 @@ function analyzePixels(data, size) {
   };
 }
 
-function analyzeImage(image, options) {
-  const opts = options && typeof options === 'object' ? options : {};
+function analyzeImage(
+  image: HTMLImageElement | null | undefined,
+  options?: { documentObj?: Pick<Document, 'createElement'> | null }
+): IconAnalysis | null {
+  const opts = options || {};
   const source = image && (image.currentSrc || image.src) ? String(image.currentSrc || image.src) : '';
-  if (!source || !image.complete || !(image.naturalWidth > 0)) {
+  if (!image || !source || !image.complete || !(image.naturalWidth > 0)) {
     return null;
   }
-  if (analysisCache.has(source)) {
-    return analysisCache.get(source);
+  const cached = analysisCache.get(source);
+  if (cached !== undefined) {
+    return cached;
   }
   const documentObj = opts.documentObj || globalThis.document;
   if (!documentObj || typeof documentObj.createElement !== 'function') {
     return null;
   }
-  let result = null;
+  let result: IconAnalysis | null = null;
   try {
     const canvas = documentObj.createElement('canvas');
     canvas.width = SAMPLE_SIZE;
@@ -174,8 +196,9 @@ function analyzeImage(image, options) {
     // A cross-origin image taints the canvas; such icons keep no plate.
     result = null;
   }
-  if (analysisCache.size >= MAX_CACHE_ENTRIES) {
-    analysisCache.delete(analysisCache.keys().next().value);
+  const oldest = analysisCache.keys().next();
+  if (analysisCache.size >= MAX_CACHE_ENTRIES && !oldest.done) {
+    analysisCache.delete(oldest.value);
   }
   analysisCache.set(source, result);
   return result;
@@ -184,7 +207,7 @@ function analyzeImage(image, options) {
 // The first tint that keeps the artwork legible, on the mode's own surface
 // first: a black logo gets a light plate even in dark mode, a white logo a
 // dark one in light mode.
-function pickPlate(accent, candidates) {
+function pickPlate(accent: Rgb, candidates: readonly Rgb[]): Rgb {
   let best = candidates[0];
   let bestContrast = 0;
   for (const candidate of candidates) {
@@ -198,7 +221,7 @@ function pickPlate(accent, candidates) {
   return best;
 }
 
-function getAutoPlateColors(accent) {
+function getAutoPlateColors(accent: Rgb | null | undefined): PlateColors {
   const color = Array.isArray(accent) && accent.length === 3 ? accent : null;
   if (!color) {
     return { light: rgbToCss(LIGHT_BASE), dark: rgbToCss([58, 58, 60]) };
@@ -221,9 +244,9 @@ function getAutoPlateColors(accent) {
 // Plate colors a person can pick in the shortcut dialog: a soft and a
 // stronger tint of the artwork's main color, soft tints of its other
 // colors, then white and near-black.
-function getPlateColorChoices(analysis) {
+function getPlateColorChoices(analysis: IconAnalysis | null | undefined): string[] {
   const palette = analysis && Array.isArray(analysis.palette) ? analysis.palette : [];
-  const candidates = [];
+  const candidates: Rgb[] = [];
   palette.forEach((rgb, index) => {
     candidates.push(pickPlate(rgb, [mixColor(rgb, LIGHT_BASE, 0.86), mixColor(rgb, DARK_BASE, 0.6)]));
     if (index === 0) {
@@ -231,7 +254,7 @@ function getPlateColorChoices(analysis) {
     }
   });
   candidates.push(LIGHT_BASE, [28, 28, 30]);
-  const choices = [];
+  const choices: Rgb[] = [];
   candidates.forEach((rgb) => {
     if (choices.some((color) => getColorDistance(color, rgb) < 24)) return;
     choices.push(rgb);
@@ -240,8 +263,14 @@ function getPlateColorChoices(analysis) {
 }
 
 // What a tile shows: null for no plate, else the plate colors per mode.
-function resolvePlate(input) {
-  const source = input && typeof input === 'object' ? input : {};
+function resolvePlate(input: {
+  mode?: unknown;
+  // false when the icon cannot take a plate at all.
+  eligible?: boolean;
+  analysis?: IconAnalysis | null;
+  color?: unknown;
+} | null | undefined): (PlateColors & { custom: boolean }) | null {
+  const source = input || {};
   const mode = normalizePlateMode(source.mode);
   if (mode === 'off' || source.eligible === false) {
     return null;
@@ -272,3 +301,4 @@ export {
   hexToRgb,
   getContrastRatio
 };
+export type { IconAnalysis, PlateColors, PlateMode };

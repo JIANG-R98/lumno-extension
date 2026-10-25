@@ -44,13 +44,63 @@ function Dock({
   );
 }
 
+// An element, or a function that reads it when the layout runs.
+type ElementSource = HTMLElement | null | undefined | (() => HTMLElement | null | undefined);
+
+type DockLayoutConstants = typeof DEFAULT_DOCK_LAYOUT_CONSTANTS & Partial<Record<string, number>>;
+
+// What the layout controller lays out; see LumnoNewtabLayout.
+export interface DockLayoutControllerOptions {
+  documentObj: Document;
+  windowObj: Window;
+  root: ElementSource;
+  searchLayer: ElementSource;
+  // The search input's parts; the layout reads their container.
+  inputParts?: () => { container?: HTMLElement | null } | null | undefined;
+  topContentContainer: ElementSource;
+  shortcutSection: ElementSource;
+  quoteSection: ElementSource;
+  bottomDock: HTMLElement;
+  bookmarkSection: ElementSource;
+  recentSection: ElementSource;
+  sectionSafeCorridor: HTMLElement;
+  suggestionsContainer: ElementSource;
+  suggestionsSurface: ElementSource;
+  suggestionsOutline: ElementSource;
+  getTopInsetPx?: () => number;
+  constants: DockLayoutConstants;
+}
+
+export interface DockLayoutController {
+  updateBottomDockLayout?(callbacks?: unknown): void;
+}
+
+export interface BottomDockRuntimeConfig {
+  documentObj?: Document;
+  windowObj?: Window;
+  layoutRuntime: {
+    createLayoutController(options: DockLayoutControllerOptions): DockLayoutController;
+  };
+  root?: ElementSource;
+  searchLayer?: ElementSource;
+  inputParts?: DockLayoutControllerOptions['inputParts'];
+  topContentContainer?: ElementSource;
+  shortcutSection?: ElementSource;
+  quoteSection?: ElementSource;
+  bookmarkSection: HTMLElement;
+  recentSection: HTMLElement;
+  suggestionsContainer?: ElementSource;
+  suggestionsSurface?: ElementSource;
+  suggestionsOutline?: ElementSource;
+  getTopInsetPx?: () => number;
+  constants?: Partial<Record<string, number>>;
+}
+
 export interface DockRuntime {
   appendSections(): DockRuntime;
   destroy(): void;
   element: HTMLDivElement;
-  layoutController: {
-    updateBottomDockLayout?(callbacks?: unknown): void;
-  };
+  layoutController: DockLayoutController;
   mount(parent?: HTMLElement | null): DockRuntime;
   onScroll(
     listener: EventListenerOrEventListenerObject,
@@ -61,11 +111,11 @@ export interface DockRuntime {
   updateLayout(callbacks?: unknown): void;
 }
 
-export function createBottomDockRuntime(config: Record<string, any>): DockRuntime {
+export function createBottomDockRuntime(config: BottomDockRuntimeConfig): DockRuntime {
   const documentObj: Document = config.documentObj || document;
   const windowObj: Window = config.windowObj || window;
-  const layoutRuntime = config.layoutRuntime || {};
-  if (typeof layoutRuntime.createLayoutController !== 'function') {
+  const layoutRuntime = config.layoutRuntime;
+  if (!layoutRuntime || typeof layoutRuntime.createLayoutController !== 'function') {
     throw new Error(
       'LumnoNewtabDock requires LumnoNewtabLayout.createLayoutController().'
     );
@@ -74,15 +124,15 @@ export function createBottomDockRuntime(config: Record<string, any>): DockRuntim
   bottomDock.id = DOCK_IDS.bottomDock;
   bottomDock.dataset.reactIsland = 'newtab-bottom-dock';
   const root: Root = createRoot(bottomDock);
-  let elements: DockElements | null = null;
+  const mounted: { elements: DockElements | null } = { elements: null };
   const register = (nextElements: DockElements) => {
-    elements = nextElements;
+    mounted.elements = nextElements;
   };
   flushSync(() => root.render(<Dock register={register} />));
-  if (!elements) {
+  if (!mounted.elements) {
     throw new Error('Lumno New Tab React dock did not mount.');
   }
-  const { scroller, sectionSafeCorridor } = elements as DockElements;
+  const { scroller, sectionSafeCorridor } = mounted.elements;
   const layoutController = layoutRuntime.createLayoutController({
     documentObj,
     windowObj,

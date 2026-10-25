@@ -1,8 +1,43 @@
 // Creates the bottom shortcut dock and the layout motion that moves the
 // page's blocks when the dock, sections or search entry change size.
 import * as LumnoNewtabLayoutMotion from '../layout-motion';
+import type { LayoutMotion } from '../layout-motion';
+import type { BottomDockRuntimeConfig, DockLayoutController } from '../react/dock';
 
-function createBottomDockRuntime(deps) {
+// A part of the page that may show an element of its own.
+type ElementOwner = { element?: HTMLElement | null } | null;
+
+interface BottomDockRuntimeState {
+  searchLayer: HTMLElement | null;
+  inputParts: { container?: HTMLElement | null } | null;
+  topContentContainer: HTMLElement | null;
+  shortcutSection: HTMLElement | null;
+  quoteRuntime: ElementOwner;
+  recentSection: HTMLElement | null;
+  suggestionsContainer: HTMLElement | null;
+  updateNoticeController: ElementOwner;
+  engagementNoticeController: ElementOwner;
+  bottomDockScroller: HTMLElement | null;
+  layoutController: DockLayoutController | null;
+  layoutMotion: LayoutMotion | null;
+  // While the window is resized the layout does not animate.
+  newtabResizeLayoutLocked: boolean;
+}
+
+interface BottomDockRuntimeDeps {
+  NEWTAB_LAYOUT: BottomDockRuntimeConfig['layoutRuntime'];
+  root: HTMLElement;
+  bookmarkSection: HTMLElement | null;
+  suggestionsSurface: HTMLElement | null;
+  suggestionsOutline: HTMLElement | null;
+  getNewtabTopOccupiedInsetPx(): number;
+  NEWTAB_MOBILE_FLOW_BREAKPOINT_PX: number;
+  shouldAnimateNewtabLayoutShift(): boolean;
+  applyNewtabWidthMode(): void;
+  pageState: BottomDockRuntimeState;
+}
+
+function createBottomDockRuntime(deps: BottomDockRuntimeDeps) {
   const {
     NEWTAB_LAYOUT,
     root,
@@ -18,7 +53,12 @@ function createBottomDockRuntime(deps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
+  // Set by the New Tab's React islands entry, which loads first.
   const NEWTAB_DOCK = globalThis.LumnoNewtabDock;
+  const recentSection = pageState.recentSection;
+  if (!NEWTAB_DOCK || !bookmarkSection || !recentSection) {
+    throw new Error('The New Tab dock, bookmark or recent section is unavailable.');
+  }
   // A heading mode menu opens once the mouse rests on the heading, so a pointer passing over
   // it does not flash the menu, and waits a moment before closing so the pointer can cross
   // the gap into the menu.
@@ -47,7 +87,7 @@ function createBottomDockRuntime(deps) {
     shortcutSection: () => pageState.shortcutSection,
     quoteSection: () => pageState.quoteRuntime && pageState.quoteRuntime.element,
     bookmarkSection,
-    recentSection: pageState.recentSection,
+    recentSection,
     suggestionsContainer: pageState.suggestionsContainer,
     suggestionsSurface,
     suggestionsOutline,
@@ -87,7 +127,7 @@ function createBottomDockRuntime(deps) {
         element: pageState.engagementNoticeController && pageState.engagementNoticeController.element
       },
       { key: 'bookmarks', element: bookmarkSection, mover: bottomDock },
-      { key: 'recent', element: pageState.recentSection, mover: bottomDock }
+      { key: 'recent', element: recentSection, mover: bottomDock }
     ],
     canAnimate: () => shouldAnimateNewtabLayoutShift() &&
       !pageState.newtabResizeLayoutLocked &&
@@ -103,3 +143,4 @@ function createBottomDockRuntime(deps) {
 }
 
 export { createBottomDockRuntime };
+export type { BottomDockRuntimeDeps, BottomDockRuntimeState };

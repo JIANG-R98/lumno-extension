@@ -216,8 +216,19 @@ export interface BookmarksTopbarRuntime {
   windowObj: Window;
 }
 
+export interface BookmarksTopbarOptions {
+  documentObj?: Document;
+  windowObj?: Window;
+  ariaLabel?: string;
+  // Moved into the bar while it shows, and back when it hides.
+  grid?: HTMLElement | null;
+  modeControl?: HTMLElement | null;
+  managerButton?: HTMLElement | null;
+  onVisibilityChange?(visible: boolean, detail: { element: HTMLElement; height: number }): void;
+}
+
 export function createBookmarksTopbar(
-  options: Record<string, any> = {}
+  options: BookmarksTopbarOptions = {}
 ): BookmarksTopbarRuntime {
   const documentObj: Document = options.documentObj || document;
   const windowObj: Window = options.windowObj || window;
@@ -230,17 +241,16 @@ export function createBookmarksTopbar(
   element.dataset.visible = 'false';
   element.setAttribute('aria-label', String(options.ariaLabel || 'Bookmarks'));
   const reactRoot: Root = createRoot(element);
-  let elements: TopbarElements | null = null;
+  const mounted: { elements: TopbarElements | null } = { elements: null };
   const register = (nextElements: TopbarElements) => {
-    elements = nextElements;
+    mounted.elements = nextElements;
   };
   flushSync(() => reactRoot.render(<TopbarStructure register={register} />));
-  if (!elements) {
+  if (!mounted.elements) {
     flushSync(() => reactRoot.unmount());
     throw new Error('Lumno New Tab React bookmarks topbar did not mount.');
   }
-  const { actions, edgeFade, itemsHost, viewport } =
-    elements as TopbarElements;
+  const { actions, edgeFade, itemsHost, viewport } = mounted.elements;
   const grid: HTMLElement | null = options.grid || null;
   const modeControl: HTMLElement | null = options.modeControl || null;
   const managerButton: HTMLElement | null = options.managerButton || null;

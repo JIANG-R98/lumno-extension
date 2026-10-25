@@ -15,12 +15,39 @@
 // shifted alike: the bottom dock moves as a whole when its sections slide
 // together, since its scroller clips a section moved on its own past the
 // dock's new edge.
+interface Shift {
+  x: number;
+  y: number;
+}
+
+// A block to follow: the element to measure, and the one to move.
+interface LayoutMotionTarget {
+  key: string;
+  element: HTMLElement | null | undefined;
+  mover?: HTMLElement;
+}
+
+interface LayoutMotionOptions {
+  documentObj?: Pick<Document, 'body'>;
+  windowObj?: Pick<Window, 'innerWidth' | 'innerHeight' | 'scrollX' | 'scrollY' | 'getComputedStyle'>;
+  getTargets?(): LayoutMotionTarget[];
+  // false lets blocks jump into place.
+  canAnimate?(): boolean;
+}
+
+interface BlockPosition {
+  element: HTMLElement;
+  mover: HTMLElement;
+  x: number;
+  top: number;
+}
+
 const LAYOUT_MOTION_DURATION_MS = 340;
 const LAYOUT_MOTION_EASING = 'cubic-bezier(0.65, 0, 0.35, 1)';
 const MIN_SHIFT_PX = 0.5;
 const SHARED_SHIFT_TOLERANCE_PX = 1;
 
-function parseTranslate(value) {
+function parseTranslate(value: unknown): Shift {
   if (!value || value === 'none') {
     return { x: 0, y: 0 };
   }
@@ -34,7 +61,7 @@ function parseTranslate(value) {
 }
 
 // Shifts that may move one mover: all alike, or none.
-function resolveSharedShift(shifts) {
+function resolveSharedShift(shifts: readonly Shift[] | null | undefined): Shift | null {
   if (!shifts || shifts.length === 0) {
     return null;
   }
@@ -49,31 +76,31 @@ function resolveSharedShift(shifts) {
   return first;
 }
 
-function createLayoutMotion(options) {
+function createLayoutMotion(options?: LayoutMotionOptions) {
   const config = options || {};
   const documentObj = config.documentObj || document;
   const windowObj = config.windowObj || window;
   const getTargets = typeof config.getTargets === 'function' ? config.getTargets : () => [];
   const canAnimate = typeof config.canAnimate === 'function' ? config.canAnimate : () => true;
-  const animations = new Map();
-  let lastPositions = new Map();
-  let lastViewport = null;
+  const animations = new Map<HTMLElement, Animation>();
+  let lastPositions = new Map<string, BlockPosition>();
+  let lastViewport: { width: number; height: number } | null = null;
 
-  function getViewport() {
+  function getViewport(): { width: number; height: number } {
     return {
       width: Math.max(0, Number(windowObj.innerWidth) || 0),
       height: Math.max(0, Number(windowObj.innerHeight) || 0)
     };
   }
 
-  function getPlayingOffset(mover) {
+  function getPlayingOffset(mover: HTMLElement): Shift {
     if (!animations.has(mover) || typeof windowObj.getComputedStyle !== 'function') {
       return { x: 0, y: 0 };
     }
     return parseTranslate(windowObj.getComputedStyle(mover).translate);
   }
 
-  function getAncestorScroll(element) {
+  function getAncestorScroll(element: HTMLElement): Shift {
     const body = documentObj.body;
     let x = 0;
     let y = 0;
@@ -84,13 +111,13 @@ function createLayoutMotion(options) {
     return { x, y };
   }
 
-  function measure() {
-    const positions = new Map();
+  function measure(): Map<string, BlockPosition> {
+    const positions = new Map<string, BlockPosition>();
     const scrollX = Number(windowObj.scrollX) || 0;
     const scrollY = Number(windowObj.scrollY) || 0;
     getTargets().forEach((target) => {
       const element = target && target.element;
-      if (!element || !element.isConnected || typeof element.getBoundingClientRect !== 'function') {
+      if (!element || !element.isConnected) {
         return;
       }
       const rect = element.getBoundingClientRect();
@@ -113,7 +140,7 @@ function createLayoutMotion(options) {
     return positions;
   }
 
-  function play(mover, shift) {
+  function play(mover: HTMLElement, shift: Shift): void {
     if (typeof mover.animate !== 'function') {
       return;
     }
@@ -148,7 +175,7 @@ function createLayoutMotion(options) {
     };
   }
 
-  function cancel(mover) {
+  function cancel(mover: HTMLElement): void {
     const animation = animations.get(mover);
     if (!animation) {
       return;
@@ -157,21 +184,21 @@ function createLayoutMotion(options) {
     animation.cancel();
   }
 
-  function cancelAll() {
+  function cancelAll(): void {
     Array.from(animations.keys()).forEach(cancel);
   }
 
   // Records where every block now sits and, when the page may animate and
   // the viewport is the one the last pass saw, moves the blocks that
   // shifted from where they were.
-  function commit() {
+  function commit(): void {
     const viewport = getViewport();
     const positions = measure();
-    const sameViewport = Boolean(lastViewport) &&
+    const sameViewport = lastViewport !== null &&
       lastViewport.width === viewport.width &&
       lastViewport.height === viewport.height;
     if (sameViewport && canAnimate()) {
-      const shiftsByMover = new Map();
+      const shiftsByMover = new Map<HTMLElement, Shift[]>();
       positions.forEach((position, key) => {
         const previous = lastPositions.get(key);
         if (!previous || previous.element !== position.element || previous.mover !== position.mover) {
@@ -204,3 +231,6 @@ export {
   parseTranslate,
   resolveSharedShift
 };
+type LayoutMotion = ReturnType<typeof createLayoutMotion>;
+
+export type { LayoutMotion, LayoutMotionTarget };

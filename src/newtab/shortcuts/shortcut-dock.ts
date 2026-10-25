@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Dock-style magnification and hover state for the shortcut row.
 //
 // While the pointer is over the row, every icon's size, rise and sideways
@@ -6,13 +5,52 @@
 // jumps as the pointer crosses from one tile to the next. A frame loop eases
 // each icon toward that target (CSS transitions restarted on every move
 // stuttered); leaving hands the icons back to the CSS transition.
+import { isElementNode } from '../../shared/dom-guards';
+import { queryHtmlElement, queryHtmlElements } from '../../shared/dom-lookup';
 const SHORTCUT_DOCK_FOLLOW_TIME_MS = 60;
 const SHORTCUT_DOCK_DEFAULT_SCALE = 1.28;
 const SHORTCUT_DOCK_DEFAULT_RISE_PX = -6;
 // The sideways nudge at the default scale; it shrinks with the scale.
 const SHORTCUT_DOCK_SHIFT_PX = 16;
 
-function createShortcutDock(deps) {
+interface DockTransform {
+  scale: number;
+  shiftX: number;
+  rise: number;
+}
+
+// An icon's eased transform, the target it moves toward, and its tile.
+interface DockIconState extends DockTransform {
+  written: boolean;
+  target: DockTransform;
+  tile: HTMLElement;
+}
+
+interface DockMagnitude {
+  growth: number;
+  rise: number;
+  shift: number;
+}
+
+interface ShortcutDockState {
+  shortcutGrid: HTMLElement | null;
+  newtabShortcutDockMagnificationEnabled: boolean;
+  // The pointer's x for the next dock frame; NaN when none is pending.
+  shortcutDockPendingPointerX: number;
+  shortcutContextMenuTarget: { tile?: HTMLElement | null } | null;
+}
+
+interface ShortcutDockDeps {
+  isShortcutDragActive(): boolean;
+  isBookmarkDragActive(): boolean;
+  isShortcutContextMenuOpen(): boolean;
+  applyShortcutContextMenuDockHover(tile: HTMLElement): void;
+  clearShortcutContextMenuTileActive(): void;
+  getShortcutTileFromNode(node: EventTarget | null): HTMLElement | null;
+  pageState: ShortcutDockState;
+}
+
+function createShortcutDock(deps: ShortcutDockDeps) {
   const {
     isShortcutDragActive,
     isBookmarkDragActive,
@@ -26,44 +64,39 @@ function createShortcutDock(deps) {
   const pageState = deps.pageState;
 
   let shortcutDockPointerFrame = 0;
-  let shortcutDockPendingTile = null;
+  let shortcutDockPendingTile: HTMLElement | null = null;
   let shortcutDockLastFrameTime = 0;
   // The tile under the pointer; the gaps between tiles keep the last one.
-  let shortcutDockActiveTile = null;
+  let shortcutDockActiveTile: HTMLElement | null = null;
   // Icon -> its eased transform values and the target they move toward.
-  const shortcutDockIconStates = new Map();
+  const shortcutDockIconStates = new Map<HTMLElement, DockIconState>();
   // How far the icon under the pointer grows and rises at this density.
-  let shortcutDockMagnitude = null;
+  let shortcutDockMagnitude: DockMagnitude | null = null;
   // Folder tile whose menu is open; it keeps its hover look like a pressed dock item.
-  let shortcutDockFolderMenuTile = null;
+  let shortcutDockFolderMenuTile: HTMLElement | null = null;
 
-  function getShortcutDockPointerX(event) {
+  function getShortcutDockPointerX(event: PointerEvent): number | null {
     const value = Number(event && event.clientX);
     return Number.isFinite(value) ? value : null;
   }
 
-  function getShortcutDockIcon(tile) {
-    return tile && typeof tile.querySelector === 'function'
-      ? tile.querySelector('.x-nt-shortcut-icon')
-      : null;
+  function getShortcutDockIcon(tile: HTMLElement | null | undefined): HTMLElement | null {
+    return tile ? queryHtmlElement(tile, '.x-nt-shortcut-icon') : null;
   }
 
-  function prefersReducedMotion() {
+  function prefersReducedMotion(): boolean {
     return typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
   // The values sit on the tile, where the icon and its drop backdrop both read them.
-  function removeShortcutDockTileStyles(tile) {
-    if (!tile || !tile.style || typeof tile.style.removeProperty !== 'function') {
-      return;
-    }
+  function removeShortcutDockTileStyles(tile: HTMLElement): void {
     tile.style.removeProperty('--x-nt-shortcut-dock-scale');
     tile.style.removeProperty('--x-nt-shortcut-dock-shift-x');
     tile.style.removeProperty('--x-nt-shortcut-dock-rise');
   }
 
-  function resetShortcutDockTile(tile) {
+  function resetShortcutDockTile(tile: HTMLElement | null): void {
     if (!tile) {
       return;
     }
@@ -72,7 +105,7 @@ function createShortcutDock(deps) {
     removeShortcutDockTileStyles(tile);
   }
 
-  function cancelShortcutDockPointerFrame() {
+  function cancelShortcutDockPointerFrame(): void {
     if (shortcutDockPointerFrame) {
       window.cancelAnimationFrame(shortcutDockPointerFrame);
       shortcutDockPointerFrame = 0;
@@ -84,7 +117,7 @@ function createShortcutDock(deps) {
 
   // Removing the inline values and the following flag in one style change
   // lets the CSS transition carry each icon back from wherever it is.
-  function clearShortcutDockMagnificationState() {
+  function clearShortcutDockMagnificationState(): void {
     cancelShortcutDockPointerFrame();
     shortcutDockIconStates.clear();
     shortcutDockActiveTile = null;
@@ -94,12 +127,12 @@ function createShortcutDock(deps) {
     }
     pageState.shortcutGrid.removeAttribute('data-dock-active');
     pageState.shortcutGrid.removeAttribute('data-dock-following');
-    Array.from(pageState.shortcutGrid.querySelectorAll('.x-nt-shortcut-tile')).forEach((tile) => {
+    queryHtmlElements(pageState.shortcutGrid, '.x-nt-shortcut-tile').forEach((tile) => {
       resetShortcutDockTile(tile);
     });
   }
 
-  function applyNewtabShortcutDockMagnification() {
+  function applyNewtabShortcutDockMagnification(): void {
     if (!pageState.shortcutGrid) {
       return;
     }
@@ -113,7 +146,7 @@ function createShortcutDock(deps) {
   }
 
   // The compact and tiny dock densities magnify less; follow their values.
-  function readShortcutDockMagnitude() {
+  function readShortcutDockMagnitude(): DockMagnitude {
     const grid = pageState.shortcutGrid;
     const style = grid && typeof window.getComputedStyle === 'function'
       ? window.getComputedStyle(grid)
@@ -130,8 +163,8 @@ function createShortcutDock(deps) {
 
   // Where the icon is drawn right now, mid-transition included, so the frame
   // loop picks it up there instead of snapping it to rest first.
-  function readShortcutDockIconTransform(icon) {
-    const rest = { scale: 1, shiftX: 0, rise: 0 };
+  function readShortcutDockIconTransform(icon: HTMLElement | null): DockTransform {
+    const rest: DockTransform = { scale: 1, shiftX: 0, rise: 0 };
     if (!icon || typeof window.getComputedStyle !== 'function') {
       return rest;
     }
@@ -151,7 +184,7 @@ function createShortcutDock(deps) {
   // and offsetWidth ignores the scale. Measuring the magnified icon fed its
   // own size back into the radius, so a grown icon held on as the pointer
   // left it.
-  function getShortcutDockTarget(pointerX, rect, icon, magnitude) {
+  function getShortcutDockTarget(pointerX: number, rect: DOMRect, icon: HTMLElement, magnitude: DockMagnitude): DockTransform {
     const iconWidth = Math.max(1, icon.offsetWidth || rect.width || rect.height || 48);
     const centerX = rect.left + ((rect.width || iconWidth) / 2);
     const influenceRadius = Math.max(144, iconWidth * 4.5);
@@ -167,17 +200,14 @@ function createShortcutDock(deps) {
     };
   }
 
-  function writeShortcutDockTileState(tile, state) {
-    if (!tile || !tile.style || typeof tile.style.setProperty !== 'function') {
-      return;
-    }
+  function writeShortcutDockTileState(tile: HTMLElement, state: DockTransform): void {
     tile.style.setProperty('--x-nt-shortcut-dock-scale', state.scale.toFixed(4));
     tile.style.setProperty('--x-nt-shortcut-dock-shift-x', `${state.shiftX.toFixed(2)}px`);
     tile.style.setProperty('--x-nt-shortcut-dock-rise', `${state.rise.toFixed(2)}px`);
   }
 
   // Eases every icon toward its target; reports whether any still moves.
-  function stepShortcutDockIcons(elapsedMs) {
+  function stepShortcutDockIcons(elapsedMs: number): boolean {
     const progress = 1 - Math.exp(-elapsedMs / SHORTCUT_DOCK_FOLLOW_TIME_MS);
     let moving = false;
     shortcutDockIconStates.forEach((state, icon) => {
@@ -209,7 +239,7 @@ function createShortcutDock(deps) {
     return moving;
   }
 
-  function runShortcutDockFrame(now) {
+  function runShortcutDockFrame(now: number): void {
     shortcutDockPointerFrame = 0;
     const pendingTile = shortcutDockPendingTile;
     const pendingPointerX = pageState.shortcutDockPendingPointerX;
@@ -234,29 +264,26 @@ function createShortcutDock(deps) {
     }
   }
 
-  function requestShortcutDockFrame() {
+  function requestShortcutDockFrame(): void {
     if (!shortcutDockPointerFrame) {
       shortcutDockPointerFrame = window.requestAnimationFrame(runShortcutDockFrame);
     }
   }
 
-  function scheduleShortcutDockPointerStyles(tile, pointerX) {
+  function scheduleShortcutDockPointerStyles(tile: HTMLElement | null, pointerX: number | null): void {
     shortcutDockPendingTile = tile || null;
     pageState.shortcutDockPendingPointerX = Number(pointerX);
     requestShortcutDockFrame();
   }
 
-  function getShortcutDockIconCenterX(tile) {
+  function getShortcutDockIconCenterX(tile: HTMLElement): number | null {
     const icon = getShortcutDockIcon(tile) || tile;
-    if (!icon || typeof icon.getBoundingClientRect !== 'function') {
-      return null;
-    }
     const rect = icon.getBoundingClientRect();
     const centerX = rect.left + (rect.width / 2);
     return Number.isFinite(centerX) ? centerX : null;
   }
 
-  function getOpenShortcutFolderMenuTile() {
+  function getOpenShortcutFolderMenuTile(): HTMLElement | null {
     const tile = shortcutDockFolderMenuTile;
     if (tile && tile.isConnected && tile.getAttribute('aria-expanded') === 'true') {
       return tile;
@@ -265,7 +292,8 @@ function createShortcutDock(deps) {
     return null;
   }
 
-  function syncShortcutDockFolderMenu(tile) {
+  // Keeps a folder tile looking pressed while its menu is open.
+  function syncShortcutDockFolderMenu(tile: HTMLElement | null): void {
     if (!tile) {
       return;
     }
@@ -286,7 +314,7 @@ function createShortcutDock(deps) {
     }
   }
 
-  function resetShortcutDockHover() {
+  function resetShortcutDockHover(): void {
     cancelShortcutDockPointerFrame();
     if (!pageState.shortcutGrid) {
       return;
@@ -308,10 +336,10 @@ function createShortcutDock(deps) {
   }
 
   // Without a pointer position the tiles take the CSS steps by distance.
-  function setShortcutDockStepHover(tiles, activeIndex) {
+  function setShortcutDockStepHover(grid: HTMLElement, tiles: HTMLElement[], activeIndex: number): void {
     shortcutDockIconStates.clear();
-    pageState.shortcutGrid.setAttribute('data-dock-active', 'true');
-    pageState.shortcutGrid.removeAttribute('data-dock-following');
+    grid.setAttribute('data-dock-active', 'true');
+    grid.removeAttribute('data-dock-following');
     tiles.forEach((tile, index) => {
       const offset = index - activeIndex;
       const distance = Math.abs(offset);
@@ -326,30 +354,34 @@ function createShortcutDock(deps) {
   }
 
   // `settle` marks a resting position (a menu's tile) rather than the pointer.
-  function setShortcutDockHover(activeTile, pointerX, options) {
-    if (!pageState.shortcutGrid || !activeTile) {
+  function setShortcutDockHover(
+    activeTile: HTMLElement | null,
+    pointerX: number | null,
+    options?: { fromFrame?: boolean; settle?: boolean }
+  ): void {
+    const grid = pageState.shortcutGrid;
+    if (!grid || !activeTile) {
       return;
     }
     if (!pageState.newtabShortcutDockMagnificationEnabled) {
       clearShortcutDockMagnificationState();
       return;
     }
-    const tiles = Array.from(pageState.shortcutGrid.querySelectorAll('.x-nt-shortcut-tile'));
+    const tiles = queryHtmlElements(grid, '.x-nt-shortcut-tile');
     const activeIndex = tiles.indexOf(activeTile);
     if (activeIndex < 0) {
       resetShortcutDockHover();
       return;
     }
     shortcutDockActiveTile = activeTile;
-    if (!Number.isFinite(pointerX) || prefersReducedMotion()) {
-      setShortcutDockStepHover(tiles, activeIndex);
+    if (pointerX === null || !Number.isFinite(pointerX) || prefersReducedMotion()) {
+      setShortcutDockStepHover(grid, tiles, activeIndex);
       return;
     }
     // Reads first: every tile's resting box, and where a newly reached icon
     // is drawn now.
-    if (!shortcutDockMagnitude) {
-      shortcutDockMagnitude = readShortcutDockMagnitude();
-    }
+    const magnitude = shortcutDockMagnitude || readShortcutDockMagnitude();
+    shortcutDockMagnitude = magnitude;
     const activeRect = activeTile.getBoundingClientRect();
     const targets = tiles.map((tile) => {
       const icon = getShortcutDockIcon(tile);
@@ -359,20 +391,20 @@ function createShortcutDock(deps) {
       const rect = tile.getBoundingClientRect();
       // Only the pointer's own row magnifies; a wrapped row below stays put.
       const sameRow = Math.abs(rect.top - activeRect.top) < Math.max(1, rect.height / 2);
-      const target = sameRow
-        ? getShortcutDockTarget(pointerX, rect, icon, shortcutDockMagnitude)
+      const target: DockTransform = sameRow
+        ? getShortcutDockTarget(pointerX, rect, icon, magnitude)
         : { scale: 1, shiftX: 0, rise: 0 };
       const atRest = target.scale <= 1.0005;
       if (atRest && !shortcutDockIconStates.has(icon)) {
         return { tile, icon, target, state: null };
       }
-      const state = shortcutDockIconStates.get(icon) ||
-        Object.assign(readShortcutDockIconTransform(icon), { written: false });
+      const state: DockIconState = shortcutDockIconStates.get(icon) ||
+        { ...readShortcutDockIconTransform(icon), written: false, target, tile };
       return { tile, icon, target, state };
     });
-    pageState.shortcutGrid.setAttribute('data-dock-active', 'true');
+    grid.setAttribute('data-dock-active', 'true');
     // The frame loop moves the icons, so the CSS transition steps aside.
-    pageState.shortcutGrid.setAttribute('data-dock-following', 'true');
+    grid.setAttribute('data-dock-following', 'true');
     targets.forEach((entry, index) => {
       if (!entry) {
         return;
@@ -396,7 +428,7 @@ function createShortcutDock(deps) {
     }
   }
 
-  function handleShortcutDockPointerOver(event) {
+  function handleShortcutDockPointerOver(event: PointerEvent): void {
     if (isShortcutDragActive() || isBookmarkDragActive()) {
       return;
     }
@@ -408,12 +440,12 @@ function createShortcutDock(deps) {
     // A group title row is not part of the dock: pointing at it settles
     // the icons, so a magnified icon never shows beside a waking title.
     const target = event.target;
-    if (target && typeof target.closest === 'function' && target.closest('.x-nt-shortcut-group-header')) {
+    if (isElementNode(target) && target.closest('.x-nt-shortcut-group-header')) {
       resetShortcutDockHover();
     }
   }
 
-  function handleShortcutDockPointerMove(event) {
+  function handleShortcutDockPointerMove(event: PointerEvent): void {
     if (isShortcutDragActive() || isBookmarkDragActive()) {
       return;
     }
@@ -439,4 +471,7 @@ function createShortcutDock(deps) {
   };
 }
 
+type ShortcutDock = ReturnType<typeof createShortcutDock>;
+
 export { createShortcutDock };
+export type { ShortcutDock, ShortcutDockDeps, ShortcutDockState };

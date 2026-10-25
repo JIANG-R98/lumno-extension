@@ -1,38 +1,62 @@
-// @ts-nocheck
+// Custom shortcut icons: reading a picked image file, fitting it into a
+// 128 px PNG, and keeping the images by shortcut id in local storage.
+import type { StorageAreaLike } from '../../domain/storage-port';
+
+// An error with a code saying which step failed.
+type ShortcutIconError = Error & { code: string };
+
+// The parts of the window the store uses; tests pass their own.
+interface IconStoreWindow {
+  FileReader?: typeof FileReader;
+  Image?: typeof Image;
+  chrome?: { runtime?: { lastError?: { message?: string } | null } };
+}
+
+interface ShortcutIconStoreOptions {
+  documentObj?: Pick<Document, 'createElement'> | null;
+  windowObj?: IconStoreWindow | null;
+  storageArea?: StorageAreaLike | null;
+  storageKey?: string;
+}
+
+interface PreparedShortcutIcon {
+  dataUrl: string;
+  sourceWidth: number;
+  sourceHeight: number;
+  outputWidth: number;
+  outputHeight: number;
+}
+
+// Icon images by shortcut id.
+type ShortcutIconMap = Record<string, string>;
+
 const DEFAULT_STORAGE_KEY = '_x_extension_newtab_shortcut_icons_2026_unique_';
 const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 const MAX_SOURCE_DIMENSION = 4096;
 const OUTPUT_SIZE = 128;
 const MAX_STORED_DATA_URL_LENGTH = 160 * 1024;
 const MAX_OUTPUT_BYTES = 96 * 1024;
-const ACCEPTED_MIME_TYPES = Object.freeze([
+const ACCEPTED_MIME_TYPES: readonly string[] = Object.freeze([
   'image/png',
   'image/jpeg',
   'image/webp'
 ]);
 
-function getOption(options, key, fallback) {
-  if (options && Object.prototype.hasOwnProperty.call(options, key)) {
-    return options[key];
-  }
-  return fallback;
+function createIconError(code: string, message?: string): ShortcutIconError {
+  return Object.assign(new Error(message || code || 'Shortcut icon error.'), {
+    code: String(code || 'unknown')
+  });
 }
 
-function createIconError(code, message) {
-  const error = new Error(message || code || 'Shortcut icon error.');
-  error.code = String(code || 'unknown');
-  return error;
-}
-
-function normalizeShortcutId(value) {
+function normalizeShortcutId(value: unknown): string {
   return String(value || '').trim();
 }
 
-function isAcceptedMimeType(value) {
+function isAcceptedMimeType(value: unknown): boolean {
   return ACCEPTED_MIME_TYPES.includes(String(value || '').trim().toLowerCase());
 }
 
-function validateSourceFile(file) {
+function validateSourceFile(file: Pick<Blob, 'type' | 'size'> | null | undefined): true {
   if (!file || !isAcceptedMimeType(file.type)) {
     throw createIconError('unsupported-type', 'Unsupported shortcut icon type.');
   }
@@ -46,7 +70,7 @@ function validateSourceFile(file) {
   return true;
 }
 
-function validateSourceDimensions(width, height) {
+function validateSourceDimensions(width: unknown, height: unknown): { width: number; height: number } {
   const sourceWidth = Math.floor(Number(width));
   const sourceHeight = Math.floor(Number(height));
   if (!Number.isFinite(sourceWidth) || !Number.isFinite(sourceHeight) ||
@@ -62,7 +86,11 @@ function validateSourceDimensions(width, height) {
   };
 }
 
-function getContainedRect(sourceWidth, sourceHeight, targetSize) {
+function getContainedRect(
+  sourceWidth: unknown,
+  sourceHeight: unknown,
+  targetSize: unknown
+): { x: number; y: number; width: number; height: number } {
   const dimensions = validateSourceDimensions(sourceWidth, sourceHeight);
   const size = Math.max(1, Math.round(Number(targetSize) || OUTPUT_SIZE));
   const scale = Math.min(size / dimensions.width, size / dimensions.height);
@@ -76,7 +104,7 @@ function getContainedRect(sourceWidth, sourceHeight, targetSize) {
   };
 }
 
-function getDataUrlByteLength(value) {
+function getDataUrlByteLength(value: unknown): number {
   const match = /^data:[^;,]+;base64,([a-zA-Z0-9+/]*={0,2})$/.exec(String(value || '').trim());
   if (!match) return 0;
   const encoded = match[1];
@@ -84,7 +112,7 @@ function getDataUrlByteLength(value) {
   return Math.max(0, Math.floor((encoded.length * 3) / 4) - padding);
 }
 
-function normalizeIconDataUrl(value) {
+function normalizeIconDataUrl(value: unknown): string {
   const dataUrl = String(value || '').trim();
   if (!dataUrl.startsWith('data:image/png;base64,') ||
       dataUrl.length > MAX_STORED_DATA_URL_LENGTH ||
@@ -94,9 +122,13 @@ function normalizeIconDataUrl(value) {
   return dataUrl;
 }
 
-function normalizeIconMap(value) {
-  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-  const normalized = {};
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function normalizeIconMap(value: unknown): ShortcutIconMap {
+  const source = isRecord(value) && !Array.isArray(value) ? value : {};
+  const normalized: ShortcutIconMap = {};
   Object.keys(source).forEach((rawId) => {
     const shortcutId = normalizeShortcutId(rawId);
     const dataUrl = normalizeIconDataUrl(source[rawId]);
@@ -107,21 +139,24 @@ function normalizeIconMap(value) {
   return normalized;
 }
 
-function createShortcutIconStore(options) {
-  const opts = options && typeof options === 'object' ? options : {};
-  const documentObj = getOption(opts, 'documentObj', globalThis.document);
-  const windowObj = getOption(opts, 'windowObj', globalThis.window || globalThis);
-  const storageArea = getOption(opts, 'storageArea', null);
-  const storageKey = String(getOption(opts, 'storageKey', DEFAULT_STORAGE_KEY));
+function createShortcutIconStore(options?: ShortcutIconStoreOptions) {
+  const opts = options || {};
+  // An option given as null stays null; one left out takes the default.
+  const documentObj = Object.hasOwn(opts, 'documentObj') ? opts.documentObj || null : globalThis.document;
+  const windowObj: IconStoreWindow | null = Object.hasOwn(opts, 'windowObj')
+    ? opts.windowObj || null
+    : (globalThis.window || globalThis);
+  const storageArea = opts.storageArea || null;
+  const storageKey = String(Object.hasOwn(opts, 'storageKey') ? opts.storageKey : DEFAULT_STORAGE_KEY);
 
-  function getRuntimeError() {
+  function getRuntimeError(): { message?: string } | null {
     const chromeApi = windowObj && windowObj.chrome ? windowObj.chrome : globalThis.chrome;
     return chromeApi && chromeApi.runtime && chromeApi.runtime.lastError
       ? chromeApi.runtime.lastError
       : null;
   }
 
-  function readAll() {
+  function readAll(): Promise<ShortcutIconMap> {
     return new Promise((resolve, reject) => {
       if (!storageArea || typeof storageArea.get !== 'function') {
         resolve({});
@@ -138,7 +173,7 @@ function createShortcutIconStore(options) {
     });
   }
 
-  function writeAll(iconMap) {
+  function writeAll(iconMap: unknown): Promise<ShortcutIconMap> {
     const normalized = normalizeIconMap(iconMap);
     return new Promise((resolve, reject) => {
       if (!storageArea || typeof storageArea.set !== 'function') {
@@ -156,7 +191,7 @@ function createShortcutIconStore(options) {
     });
   }
 
-  function readFileAsDataUrl(file) {
+  function readFileAsDataUrl(file: Blob): Promise<string> {
     return new Promise((resolve, reject) => {
       const Reader = (windowObj && windowObj.FileReader) || globalThis.FileReader;
       if (typeof Reader !== 'function') {
@@ -174,7 +209,7 @@ function createShortcutIconStore(options) {
     });
   }
 
-  function loadImage(dataUrl) {
+  function loadImage(dataUrl: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
       const ImageConstructor = (windowObj && windowObj.Image) || globalThis.Image;
       if (typeof ImageConstructor !== 'function') {
@@ -190,14 +225,14 @@ function createShortcutIconStore(options) {
     });
   }
 
-  function renderNormalizedPng(image, sourceWidth, sourceHeight) {
+  function renderNormalizedPng(image: HTMLImageElement, sourceWidth: number, sourceHeight: number): string {
     if (!documentObj || typeof documentObj.createElement !== 'function') {
       throw createIconError('render-failed', 'Canvas is unavailable.');
     }
     const canvas = documentObj.createElement('canvas');
     canvas.width = OUTPUT_SIZE;
     canvas.height = OUTPUT_SIZE;
-    const context = canvas.getContext && canvas.getContext('2d');
+    const context = canvas.getContext('2d');
     if (!context) {
       throw createIconError('render-failed', 'Canvas is unavailable.');
     }
@@ -214,7 +249,11 @@ function createShortcutIconStore(options) {
     return normalized;
   }
 
-  function prepareFile(file) {
+  // Reads a picked image and fits it into the icon size.
+  function prepareFile(file: Blob | null | undefined): Promise<PreparedShortcutIcon> {
+    if (!file) {
+      return Promise.reject(createIconError('unsupported-type', 'Unsupported shortcut icon type.'));
+    }
     try {
       validateSourceFile(file);
     } catch (error) {
@@ -262,3 +301,6 @@ export {
   normalizeIconMap,
   createShortcutIconStore
 };
+type ShortcutIconStore = ReturnType<typeof createShortcutIconStore>;
+
+export type { PreparedShortcutIcon, ShortcutIconError, ShortcutIconMap, ShortcutIconStore };

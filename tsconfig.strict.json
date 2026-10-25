@@ -20,10 +20,15 @@
     "src/newtab/cross-surface-drag.ts",
     "src/newtab/dismiss-stack.ts",
     "src/newtab/drag-click-guard.ts",
+    "src/newtab/layout-motion.ts",
     "src/newtab/newtab-types.ts",
     "src/newtab/section-mode-select.ts",
     "src/newtab/storage-change-registry.ts",
     "src/newtab/bookmarks/**/*.ts",
+    "src/newtab/shortcuts/bottom-dock-runtime.ts",
+    "src/newtab/shortcuts/shortcut-dock.ts",
+    "src/newtab/shortcuts/shortcut-icon-plate.ts",
+    "src/newtab/shortcuts/shortcut-icon-store.ts",
     "src/newtab/shortcuts/shortcut-types.ts"
   ],
   "exclude": [
