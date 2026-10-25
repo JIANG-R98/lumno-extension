@@ -98,7 +98,29 @@ export interface PopupHandlers {
   onSettingsToggle(expanded: boolean): void;
   onActionMenuToggle(id: PopupActionId, expanded: boolean): void;
   onLink(id: PopupLinkId): void;
+  onShowTooltip(target: HTMLElement, text: string): void;
+  onHideTooltip(): void;
+  // A line that may be cut short shows its whole text near the cursor.
+  bindTruncationTooltip(element: HTMLElement | null): void;
 }
+
+// A control's tooltip, shown on hover and focus.
+function tooltipProps(text: string | undefined, handlers: PopupHandlers) {
+  if (!text) {
+    return {};
+  }
+  const show = (event: { currentTarget: HTMLElement }): void => handlers.onShowTooltip(event.currentTarget, text);
+  return {
+    'data-tooltip': text,
+    onBlur: handlers.onHideTooltip,
+    onFocus: show,
+    onMouseEnter: show,
+    onMouseLeave: handlers.onHideTooltip
+  };
+}
+
+// The shared tooltip's host class, which stops CSS tooltips from showing too.
+const TOOLTIP_HOST_CLASS = '_x_extension_tooltip_host_2026_unique_';
 
 // Synced and syncing share the cloud; a wait or a failure gets its own icon.
 const SYNC_ICONS: Partial<Record<PopupSyncModel['tone'], string>> = {
@@ -117,9 +139,9 @@ function ActionCell({
   return (
     <div className="x-lumno-popup__action-cell" data-has-menu={action.menu ? 'true' : 'false'}>
       <button
-        className="x-lumno-popup__action"
+        className={action.tooltip ? `x-lumno-popup__action ${TOOLTIP_HOST_CLASS}` : 'x-lumno-popup__action'}
         data-action={action.id}
-        data-tooltip={action.tooltip || undefined}
+        {...tooltipProps(action.tooltip, handlers)}
         disabled={action.disabled}
         onClick={() => handlers.onAction(action.id)}
         type="button"
@@ -132,8 +154,8 @@ function ActionCell({
           aria-controls={panelId}
           aria-expanded={action.menu.expanded}
           aria-label={action.menu.label}
-          className="x-lumno-popup__action-menu"
-          data-tooltip={action.menu.label}
+          className={`x-lumno-popup__action-menu ${TOOLTIP_HOST_CLASS}`}
+          {...tooltipProps(action.menu.label, handlers)}
           onClick={() => handlers.onActionMenuToggle(action.id, !action.menu?.expanded)}
           type="button"
         >
@@ -163,8 +185,8 @@ function PageCard({
           )}
         </span>
         <span className="x-lumno-popup__page-text">
-          <span className="x-lumno-popup__page-title">{page.title}</span>
-          {page.host ? <span className="x-lumno-popup__page-host">{page.host}</span> : null}
+          <span className="x-lumno-popup__page-title" ref={handlers.bindTruncationTooltip}>{page.title}</span>
+          {page.host ? <span className="x-lumno-popup__page-host" ref={handlers.bindTruncationTooltip}>{page.host}</span> : null}
         </span>
       </header>
       {notice ? (
@@ -337,9 +359,9 @@ export function PopupView({ model, handlers }: { model: PopupModel; handlers: Po
         {model.sync ? (
           <button
             aria-label={model.sync.label}
-            className="x-lumno-popup__icon-button x-lumno-popup__sync"
+            className={`x-lumno-popup__icon-button x-lumno-popup__sync ${TOOLTIP_HOST_CLASS}`}
             data-tone={model.sync.tone}
-            data-tooltip={model.sync.label}
+            {...tooltipProps(model.sync.label, handlers)}
             onClick={() => handlers.onLink('sync')}
             type="button"
           >
@@ -353,9 +375,9 @@ export function PopupView({ model, handlers }: { model: PopupModel; handlers: Po
           {model.links.map((link) => (
             <button
               aria-label={link.label}
-              className="x-lumno-popup__icon-button"
+              className={`x-lumno-popup__icon-button ${TOOLTIP_HOST_CLASS}`}
               data-link={link.id}
-              data-tooltip={link.label}
+              {...tooltipProps(link.label, handlers)}
               key={link.id}
               onClick={() => handlers.onLink(link.id)}
               type="button"

@@ -679,19 +679,23 @@ function start(): void {
       tooltip.hide();
       render();
     },
-    onLink: openLink
+    onLink: openLink,
+    onShowTooltip(target, text) {
+      tooltip.show(target, text, { placement: 'top' });
+    },
+    onHideTooltip() {
+      tooltip.hide();
+    },
+    bindTruncationTooltip(element) {
+      cursorTooltip.bind(element, () => (element ? element.textContent || '' : ''), {
+        shouldShow: (target) => LumnoCursorTooltip.isElementTextTruncated(target)
+      });
+    }
   });
 
   function render(): void {
     state.now = Date.now();
     controller.render(buildModel(state, t));
-    tooltip.bindAll(host, { placement: 'top' });
-    host.querySelectorAll('.x-lumno-popup__page-title, .x-lumno-popup__page-host').forEach((line) => {
-      if (!isHtmlElement(line)) return;
-      cursorTooltip.bind(line, () => line.textContent || '', {
-        shouldShow: (target) => LumnoCursorTooltip.isElementTextTruncated(target)
-      });
-    });
     globalThis.requestAnimationFrame(syncOverflow);
   }
 

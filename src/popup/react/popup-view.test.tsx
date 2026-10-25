@@ -79,7 +79,10 @@ function mount(model: PopupModel) {
     onSelect: vi.fn<PopupHandlers['onSelect']>(),
     onSettingsToggle: vi.fn<PopupHandlers['onSettingsToggle']>(),
     onActionMenuToggle: vi.fn<PopupHandlers['onActionMenuToggle']>(),
-    onLink: vi.fn<PopupHandlers['onLink']>()
+    onLink: vi.fn<PopupHandlers['onLink']>(),
+    onShowTooltip: vi.fn<PopupHandlers['onShowTooltip']>(),
+    onHideTooltip: vi.fn<PopupHandlers['onHideTooltip']>(),
+    bindTruncationTooltip: vi.fn<PopupHandlers['bindTruncationTooltip']>()
   } satisfies PopupHandlers;
   const controller = createPopupController(host, handlers);
   act(() => controller.render(model));
@@ -252,6 +255,24 @@ describe('Toolbar popup', () => {
     const sync = queryHtmlTag(host, '.x-lumno-popup__sync', 'button');
     expect(sync?.dataset.tone).toBe('waiting');
     expect(sync?.querySelector('.ri-time-line')).not.toBeNull();
+  });
+
+  it('shows a control\'s tooltip on hover and focus, and binds the page lines for long text', () => {
+    const { host, handlers } = mount(createModel());
+    const copy = getTags(host, '.x-lumno-popup__action', 'button')[1];
+    act(() => {
+      copy.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, relatedTarget: document.body }));
+    });
+    expect(handlers.onShowTooltip).toHaveBeenLastCalledWith(copy, '⇧⌘C');
+    act(() => {
+      copy.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body }));
+    });
+    expect(handlers.onHideTooltip).toHaveBeenCalledTimes(1);
+    act(() => copy.focus());
+    expect(handlers.onShowTooltip).toHaveBeenCalledTimes(2);
+    expect(copy.classList.contains('_x_extension_tooltip_host_2026_unique_')).toBe(true);
+    expect(handlers.bindTruncationTooltip.mock.calls.map(([element]) => element?.className))
+      .toEqual(['x-lumno-popup__page-title', 'x-lumno-popup__page-host']);
   });
 
   it('leaves the sync link out without WebDAV', () => {
