@@ -33,6 +33,8 @@ interface ThemeVariant {
   _xThemeSource?: string;
   _xThemeConfidence?: string;
   _xThemeNeutral?: boolean;
+  // Taken from a shortcut's own uploaded icon (New Tab).
+  _xIsCustomShortcutIcon?: boolean;
   // The dark variant, built once on first use.
   _xDark?: ThemeVariant;
 }

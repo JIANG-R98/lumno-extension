@@ -28,7 +28,9 @@
     "src/newtab/recent/**/*.ts",
     "src/newtab/search/**/*.ts",
     "src/newtab/shortcuts/**/*.ts",
-    "src/newtab/theme/glass-surfaces.ts"
+    "src/newtab/theme/glass-surfaces.ts",
+    "src/newtab/theme/site-theme-resolver.ts",
+    "src/newtab/theme/theme-types.ts"
   ],
   "exclude": [
     "src/**/react/**"

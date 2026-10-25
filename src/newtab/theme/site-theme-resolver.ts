@@ -1,8 +1,115 @@
-// @ts-nocheck
 // Resolves per-site accent themes from favicons and brand colors, caches them,
 // and applies them to suggestion rows, shortcut tiles and bookmark/recent cards.
+import type { SiteThemeEntry } from '../../domain/favicon/favicon-cache';
+import type * as FaviconUtils from '../../domain/favicon/favicon-utils';
+import type { FaviconUrlResolver, ThemeRgb } from '../../domain/favicon/favicon-utils';
+import type { SiteSearchProvider } from '../../domain/search/types';
+import type * as FaviconTheme from '../../shared/favicon/favicon-theme';
+import type { HoverColors, ThemeVariant } from '../../shared/favicon/favicon-theme';
+import type { FaviconCacheRuntime } from '../../platform/favicon-cache';
 import * as LumnoMessaging from '../../platform/messaging';
-function createSiteThemeResolver(deps) {
+import type { SuggestionElement } from '../../shared/react/search/suggestion-list/types';
+import type { BookmarkCardElement } from '../react/bookmarks';
+import type { RecentCardElement } from '../react/recent-sites';
+import type { ShortcutTileElement } from '../react/shortcuts';
+import type { SearchModeController } from '../search/search-mode-controller';
+import type { SiteSearchProviders } from '../search/site-search-providers';
+import type { ThemeConfidence, ThemeSource, ThemeSubject } from './theme-types';
+
+interface SiteThemeResolverState {
+  siteSearchState: SiteSearchProvider | null;
+  // Favicon data URLs by icon address.
+  faviconDataCache: Map<string, string>;
+  // Fetches an icon's data URL; null when it cannot.
+  requestFaviconData(url: string): Promise<string | null>;
+  faviconCacheRuntime: Pick<FaviconCacheRuntime, 'ensureCachesReady'>;
+}
+
+// Applies a theme to an element that shows a site.
+type ApplyElementTheme<E> = (element: E, theme: ThemeVariant, host: string) => void;
+
+interface SiteThemeResolverDeps {
+  NEWTAB_FAVICON_THEME: Pick<typeof FaviconTheme,
+    | 'buildTheme'
+    | 'getBrandAccentForHost'
+    | 'getThemeFingerprint'
+    | 'normalizeFaviconHost'
+    | 'isFaviconProxyUrl'
+    | 'getThemeForMode'
+    | 'getHoverColors'>;
+  FAVICON_UTILS: Pick<typeof FaviconUtils,
+    | 'normalizeFaviconHost'
+    | 'isFaviconProxyUrl'
+    | 'getCanonicalPageUrlForFavicon'
+    | 'isNeutralThemeColor'
+    | 'isPlaceholderFaviconColor'
+    | 'getThemeFaviconCandidateUrls'>;
+  normalizeHost(hostname: string): string;
+  parseCssColor: typeof FaviconTheme.parseCssColor;
+  defaultAccentColor: ThemeRgb;
+  defaultTheme: ThemeVariant;
+  getProviderHost: SiteSearchProviders['getProviderHost'];
+  recentCards: RecentCardElement[];
+  applyRecentCardTheme: ApplyElementTheme<RecentCardElement>;
+  bookmarkCards: BookmarkCardElement[];
+  applyBookmarkCardTheme: ApplyElementTheme<BookmarkCardElement>;
+  shortcutTiles: ShortcutTileElement[];
+  applyShortcutTileTheme: ApplyElementTheme<ShortcutTileElement>;
+  suggestionItems: SuggestionElement[];
+  setSiteSearchPrefix: SearchModeController['setSiteSearchPrefix'];
+  updateSelection(): void;
+  setPersistedSiteThemeEntry(hostKey: string, theme: ThemeVariant): unknown;
+  getPersistedSiteThemeEntry(hostKey: string): SiteThemeEntry | null;
+  getPageFaviconUrlResolver(): Pick<FaviconUrlResolver, 'getSafeFaviconCandidateUrl' | 'resolveFaviconSource'> | null;
+  getBrandAccentForUrl(url: string): ThemeRgb | null;
+  extractAverageColor(image: HTMLImageElement): ThemeRgb | null;
+  getProviderIcon: SiteSearchProviders['getProviderIcon'];
+  // Whether the site's icon may have changed since its theme was stored.
+  isHostFaviconVisitDirty(hostKey: string): boolean;
+  stableHashCode(value: string): number;
+  // The icon a subject's theme is read from; '' for none.
+  getThemeSourceForSuggestion(subject: ThemeSubject): string;
+  areFaviconRenderCachesReady(): boolean;
+  pageState: SiteThemeResolverState;
+}
+
+// A theme read from a page's declared color, or a stored one.
+interface ThemeResult {
+  accentRgb: unknown;
+  source?: string;
+  neutral?: boolean;
+  confidence?: string;
+}
+
+// How a resolved theme updates the caches.
+interface ResolvedThemeOptions {
+  // The icon the theme was read from, to cache it under.
+  iconUrl?: string;
+  // false keeps it out of the persisted cache.
+  persist?: boolean;
+  // false leaves the elements showing the site as they are.
+  refresh?: boolean;
+}
+
+// How an icon is read for a theme.
+interface ImageThemeOptions {
+  crossOrigin?: boolean;
+  // Keep the icon's own theme in the icon cache even when the host has a
+  // stronger one.
+  preferIconTheme?: boolean;
+}
+
+// An element waiting for its theme, and what to do with it.
+interface ThemeResolutionItem {
+  target: Element;
+  suggestion: ThemeSubject;
+  applyTheme(theme: ThemeVariant): void;
+  // Lower goes first.
+  priority: number;
+  sequence: number;
+}
+
+function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
   const {
     NEWTAB_FAVICON_THEME,
     FAVICON_UTILS,
@@ -44,18 +151,18 @@ function createSiteThemeResolver(deps) {
   const normalizeFaviconHost = FAVICON_UTILS.normalizeFaviconHost || NEWTAB_FAVICON_THEME.normalizeFaviconHost;
 
   const isFaviconProxyUrl = FAVICON_UTILS.isFaviconProxyUrl || NEWTAB_FAVICON_THEME.isFaviconProxyUrl;
-  const themeColorCache = window._x_extension_theme_color_cache_2024_unique_ || new Map();
+  const themeColorCache = window._x_extension_theme_color_cache_2024_unique_ || new Map<string, ThemeVariant>();
 
   window._x_extension_theme_color_cache_2024_unique_ = themeColorCache;
 
-  const themeHostCache = window._x_extension_theme_host_cache_2024_unique_ || new Map();
+  const themeHostCache = window._x_extension_theme_host_cache_2024_unique_ || new Map<string, ThemeVariant>();
 
   window._x_extension_theme_host_cache_2024_unique_ = themeHostCache;
 
-  const siteThemeRequestPending = new Map();
-  const themeFaviconCandidateRequestPending = new Map();
+  const siteThemeRequestPending = new Map<string, Promise<ThemeResult | null>>();
+  const themeFaviconCandidateRequestPending = new Map<string, Promise<string[]>>();
 
-  function getHighlightColors(theme) {
+  function getHighlightColors(theme: ThemeVariant): { bg: string; border: string } {
     const resolvedTheme = getThemeForMode(theme);
     if (!resolvedTheme || !resolvedTheme._xIsBrand) {
       return {
@@ -69,32 +176,35 @@ function createSiteThemeResolver(deps) {
     };
   }
 
-  function getHostFromUrl(url) {
+  function getHostFromUrl(url: string): string {
     if (!url) {
       return '';
     }
     try {
       return normalizeHost(new URL(getCanonicalPageUrlForFavicon(url) || url).hostname);
-    } catch (e) {
+    } catch {
       return '';
     }
   }
 
-  function getCanonicalPageUrlForFavicon(url) {
+  function getCanonicalPageUrlForFavicon(url: string): string {
     return FAVICON_UTILS.getCanonicalPageUrlForFavicon(url);
   }
 
-  function normalizeAccentRgb(value) {
+  // An RGB triple of whole channels from 0 to 255; null for anything else.
+  function normalizeAccentRgb(value: unknown): ThemeRgb | null {
     if (!Array.isArray(value) || value.length !== 3) {
       return null;
     }
-    const rgb = value.map((channel) => Math.round(Number(channel)));
-    return rgb.every((channel) => Number.isFinite(channel) && channel >= 0 && channel <= 255)
-      ? rgb
+    const red = Math.round(Number(value[0]));
+    const green = Math.round(Number(value[1]));
+    const blue = Math.round(Number(value[2]));
+    return [red, green, blue].every((channel) => Number.isFinite(channel) && channel >= 0 && channel <= 255)
+      ? [red, green, blue]
       : null;
   }
 
-  function isNeutralThemeAccent(value) {
+  function isNeutralThemeAccent(value: unknown): boolean {
     const rgb = normalizeAccentRgb(value);
     if (!rgb) {
       return false;
@@ -102,7 +212,7 @@ function createSiteThemeResolver(deps) {
     return FAVICON_UTILS.isNeutralThemeColor(rgb);
   }
 
-  function normalizeThemeConfidence(value, accentRgb) {
+  function normalizeThemeConfidence(value: unknown, accentRgb: unknown): ThemeConfidence {
     const confidence = String(value || '').trim().toLowerCase();
     if (confidence === 'color' || confidence === 'neutral') {
       return confidence;
@@ -110,7 +220,7 @@ function createSiteThemeResolver(deps) {
     return isNeutralThemeAccent(accentRgb) ? 'neutral' : 'color';
   }
 
-  function normalizeThemeSource(source) {
+  function normalizeThemeSource(source: unknown): ThemeSource {
     const value = String(source || '').trim().toLowerCase();
     if (
       value === 'brand' ||
@@ -125,7 +235,7 @@ function createSiteThemeResolver(deps) {
     return 'fallback';
   }
 
-  function getThemeSourcePriority(source, theme) {
+  function getThemeSourcePriority(source: unknown, theme?: ThemeVariant | null): number {
     const value = normalizeThemeSource(source);
     if (value === 'brand') {
       return 40;
@@ -148,19 +258,19 @@ function createSiteThemeResolver(deps) {
     return 10;
   }
 
-  function getThemeSource(theme) {
+  function getThemeSource(theme: ThemeVariant | null | undefined): ThemeSource {
     if (!theme) {
       return 'fallback';
     }
     return normalizeThemeSource(theme._xThemeSource || (theme._xIsDefault ? 'fallback' : (theme._xIsBrand ? 'brand' : 'fallback')));
   }
 
-  function getThemeColorFingerprint(theme) {
+  function getThemeColorFingerprint(theme: ThemeVariant): string {
     const rgb = theme && normalizeAccentRgb(theme.accentRgb || parseCssColor(theme.accent));
     return (rgb || defaultAccentColor).join(',');
   }
 
-  function buildThemeFromAccent(accentRgb, source) {
+  function buildThemeFromAccent(accentRgb: unknown, source: unknown): ThemeVariant {
     const rgb = normalizeAccentRgb(accentRgb);
     if (!rgb) {
       return defaultTheme;
@@ -176,22 +286,22 @@ function createSiteThemeResolver(deps) {
     return theme;
   }
 
-  function buildThemeFromThemeResult(result, fallbackSource) {
-    const accentRgb = result && normalizeAccentRgb(result.accentRgb);
+  function buildThemeFromThemeResult(result: ThemeResult | null | undefined, fallbackSource: unknown): ThemeVariant | null {
+    const accentRgb = result ? normalizeAccentRgb(result.accentRgb) : null;
     if (!accentRgb) {
       return null;
     }
     const source = normalizeThemeSource((result && result.source) || fallbackSource || 'meta');
     const confidence = normalizeThemeConfidence(result && result.confidence, accentRgb);
     const theme = buildThemeFromAccent(accentRgb, source);
-    theme._xThemeNeutral = typeof (result && result.neutral) === 'boolean'
+    theme._xThemeNeutral = result && typeof result.neutral === 'boolean'
       ? result.neutral
       : confidence === 'neutral';
     theme._xThemeConfidence = confidence;
     return theme;
   }
 
-  function isLowConfidenceTheme(theme) {
+  function isLowConfidenceTheme(theme: ThemeVariant | null | undefined): boolean {
     if (!theme) {
       return false;
     }
@@ -204,7 +314,7 @@ function createSiteThemeResolver(deps) {
     return theme._xThemeNeutral === true || confidence === 'neutral';
   }
 
-  function isPersistableTheme(theme) {
+  function isPersistableTheme(theme: ThemeVariant | null | undefined): boolean {
     const source = getThemeSource(theme);
     return source === 'brand' ||
       source === 'mask-icon' ||
@@ -213,11 +323,11 @@ function createSiteThemeResolver(deps) {
       source === 'favicon';
   }
 
-  function getProviderThemeHost(provider) {
+  function getProviderThemeHost(provider: Partial<SiteSearchProvider> | null | undefined): string {
     return normalizeHost(getProviderHost(provider));
   }
 
-  function getThemeHostForSuggestion(suggestion) {
+  function getThemeHostForSuggestion(suggestion: ThemeSubject | null | undefined): string {
     if (!suggestion) {
       return '';
     }
@@ -233,14 +343,14 @@ function createSiteThemeResolver(deps) {
     return '';
   }
 
-  function getThemePageUrlForSuggestion(suggestion, hostKey) {
+  function getThemePageUrlForSuggestion(suggestion: ThemeSubject | null | undefined, hostKey: string): string {
     if (suggestion && suggestion.url) {
       try {
         const parsed = new URL(getCanonicalPageUrlForFavicon(suggestion.url) || suggestion.url);
         if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
           return parsed.href;
         }
-      } catch (e) {
+      } catch {
         // Ignore malformed URLs.
       }
     }
@@ -250,7 +360,7 @@ function createSiteThemeResolver(deps) {
 
   // Tiles showing a custom upload, saved snapshot or bundled glyph take their
   // tint from that artwork rather than from whichever icon set the host theme.
-  function refreshShortcutTileTheme(tile, hostTheme, normalizedHost) {
+  function refreshShortcutTileTheme(tile: ShortcutTileElement, hostTheme: ThemeVariant, normalizedHost: string): void {
     if (tile.getAttribute('data-shortcut-custom-icon') === 'true') {
       return;
     }
@@ -261,16 +371,17 @@ function createSiteThemeResolver(deps) {
       return;
     }
     // A snapshot saved after the tile mounted is picked up here.
-    getThemeForSuggestion(suggestion).then((iconTheme) => {
+    void getThemeForSuggestion(suggestion).then((iconTheme) => {
       if (!tile.isConnected || normalizeHost(tile._xHost || '') !== normalizedHost) {
         return;
       }
-      tile._xTheme = iconTheme || defaultTheme;
-      applyShortcutTileTheme(tile, tile._xTheme, normalizedHost);
+      const theme = iconTheme || defaultTheme;
+      tile._xTheme = theme;
+      applyShortcutTileTheme(tile, theme, normalizedHost);
     });
   }
 
-  function refreshThemeConsumersForHost(hostKey, theme) {
+  function refreshThemeConsumersForHost(hostKey: string, theme: ThemeVariant): void {
     const normalizedHost = normalizeHost(hostKey);
     if (!normalizedHost || !theme) {
       return;
@@ -304,7 +415,7 @@ function createSiteThemeResolver(deps) {
     updateSelection();
   }
 
-  function setResolvedThemeForHost(hostKey, theme, options) {
+  function setResolvedThemeForHost(hostKey: string, theme: ThemeVariant | null | undefined, options?: ResolvedThemeOptions): ThemeVariant {
     const normalizedHost = normalizeHost(hostKey);
     const nextTheme = theme || defaultTheme;
     const iconUrl = options && options.iconUrl ? String(options.iconUrl) : '';
@@ -342,14 +453,14 @@ function createSiteThemeResolver(deps) {
     return nextTheme;
   }
 
-  function getPersistedThemeForHost(hostKey) {
+  function getPersistedThemeForHost(hostKey: string): ThemeVariant | null {
     const normalizedHost = normalizeHost(hostKey);
     if (!normalizedHost) {
       return null;
     }
     const entry = getPersistedSiteThemeEntry(normalizedHost);
     const accentRgb = entry ? normalizeAccentRgb(entry.accentRgb) : null;
-    if (!accentRgb) {
+    if (!entry || !accentRgb) {
       return null;
     }
     // Entries saved before placeholder globes were filtered out.
@@ -366,25 +477,26 @@ function createSiteThemeResolver(deps) {
     return setResolvedThemeForHost(normalizedHost, theme, { persist: false, refresh: false });
   }
 
-  function requestSiteThemeColor(pageUrl, hostKey) {
+  function requestSiteThemeColor(pageUrl: string, hostKey: string): Promise<ThemeResult | null> {
     const url = String(pageUrl || '').trim();
     const host = normalizeHost(hostKey);
     if (!url || !host || !chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
       return Promise.resolve(null);
     }
     const requestKey = `${host}::${url}::${getFaviconPreferredTheme()}`;
-    if (siteThemeRequestPending.has(requestKey)) {
-      return siteThemeRequestPending.get(requestKey);
+    const pendingRequest = siteThemeRequestPending.get(requestKey);
+    if (pendingRequest) {
+      return pendingRequest;
     }
-    const promise = new Promise((resolve) => {
+    const promise = new Promise<ThemeResult | null>((resolve) => {
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'resolveSiteThemeColor',
         url,
         host,
         preferredTheme: getFaviconPreferredTheme()
       }, (response) => {
-        const accentRgb = response && normalizeAccentRgb(response.accentRgb);
-        resolve(accentRgb ? {
+        const accentRgb = response ? normalizeAccentRgb(response.accentRgb) : null;
+        resolve(response && accentRgb ? {
           accentRgb,
           source: response.source || 'meta',
           neutral: response.neutral === true,
@@ -399,21 +511,22 @@ function createSiteThemeResolver(deps) {
     return promise;
   }
 
-  function getThemeFaviconCandidateUrls(urls) {
+  function getThemeFaviconCandidateUrls(urls: readonly string[]): string[] {
     return FAVICON_UTILS.getThemeFaviconCandidateUrls(urls, { includeProxy: true });
   }
 
-  function requestThemeFaviconCandidates(pageUrl, hostKey) {
+  function requestThemeFaviconCandidates(pageUrl: string, hostKey: string): Promise<string[]> {
     const url = String(pageUrl || '').trim();
     const host = normalizeHost(hostKey);
     if (!url || !host || !chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
       return Promise.resolve([]);
     }
     const requestKey = `${host}::${url}::${getFaviconPreferredTheme()}`;
-    if (themeFaviconCandidateRequestPending.has(requestKey)) {
-      return themeFaviconCandidateRequestPending.get(requestKey);
+    const pendingCandidates = themeFaviconCandidateRequestPending.get(requestKey);
+    if (pendingCandidates) {
+      return pendingCandidates;
     }
-    const promise = new Promise((resolve) => {
+    const promise = new Promise<string[]>((resolve) => {
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'resolveFaviconCandidates',
         url,
@@ -422,20 +535,19 @@ function createSiteThemeResolver(deps) {
         preferredTheme: getFaviconPreferredTheme(),
         excludeChromeFallback: true
       }, (response) => {
-        const resolved = response && Array.isArray(response.urls) ? response.urls : [];
-        resolve(getThemeFaviconCandidateUrls(resolved));
+        resolve(getThemeFaviconCandidateUrls(response ? response.urls : []));
       });
-    }).catch(() => []).then((result) => {
+    }).catch((): string[] => []).then((result) => {
       themeFaviconCandidateRequestPending.delete(requestKey);
-      return Array.isArray(result) ? result : [];
+      return result;
     });
     themeFaviconCandidateRequestPending.set(requestKey, promise);
     return promise;
   }
 
-  function getThemeFromUrl(url, hostOverride, options) {
+  function getThemeFromUrl(rawUrl: string, hostOverride?: string, options?: ImageThemeOptions): Promise<ThemeVariant> {
     const resolver = getPageFaviconUrlResolver();
-    url = resolver ? resolver.getSafeFaviconCandidateUrl(url, '', 'theme') : '';
+    const url = resolver ? resolver.getSafeFaviconCandidateUrl(rawUrl, '', 'theme') : '';
     if (!url) {
       return Promise.resolve(defaultTheme);
     }
@@ -470,27 +582,27 @@ function createSiteThemeResolver(deps) {
     }
     const cachedFaviconData = pageState.faviconDataCache.get(url);
     if (cachedFaviconData) {
-      return loadThemeFromImageSource(url, cachedFaviconData, hostKey, useHostCache, { preferIconTheme });
+      return loadThemeFromImageSource(url, cachedFaviconData, hostKey, Boolean(useHostCache), { preferIconTheme });
     }
     return withThemeTimeout(pageState.requestFaviconData(url), THEME_ICON_LOAD_TIMEOUT_MS, null).then((dataUrl) => {
       if (dataUrl) {
-        return loadThemeFromImageSource(url, dataUrl, hostKey, useHostCache, { preferIconTheme });
+        return loadThemeFromImageSource(url, dataUrl, hostKey, Boolean(useHostCache), { preferIconTheme });
       }
       if (isProxy) {
         themeColorCache.set(url, defaultTheme);
         return defaultTheme;
       }
-      return loadThemeFromImageSource(url, url, hostKey, useHostCache, { crossOrigin: true, preferIconTheme });
+      return loadThemeFromImageSource(url, url, hostKey, Boolean(useHostCache), { crossOrigin: true, preferIconTheme });
     });
   }
 
-  function withThemeTimeout(promise, timeoutMs, fallbackValue) {
+  function withThemeTimeout<T, F>(promise: Promise<T>, timeoutMs: number, fallbackValue: F): Promise<T | F> {
     return new Promise((resolve) => {
       let settled = false;
       const timer = Number.isFinite(timeoutMs) && timeoutMs > 0
         ? window.setTimeout(() => finish(fallbackValue), timeoutMs)
         : null;
-      function finish(value) {
+      function finish(value: T | F): void {
         if (settled) {
           return;
         }
@@ -500,25 +612,29 @@ function createSiteThemeResolver(deps) {
         }
         resolve(value);
       }
-      Promise.resolve(promise).then(finish).catch(() => finish(fallbackValue));
+      promise.then(finish).catch(() => finish(fallbackValue));
     });
   }
 
-  function loadThemeFromImageSource(url, imageSource, hostKey, useHostCache, options) {
+  function loadThemeFromImageSource(
+    url: string,
+    imageSource: string,
+    hostKey: string,
+    useHostCache: boolean,
+    options?: ImageThemeOptions
+  ): Promise<ThemeVariant> {
     return new Promise((resolve) => {
       let settled = false;
       const timer = window.setTimeout(() => {
         themeColorCache.set(url, defaultTheme);
         finish(defaultTheme);
       }, THEME_ICON_LOAD_TIMEOUT_MS);
-      function finish(theme) {
+      function finish(theme: ThemeVariant | null): void {
         if (settled) {
           return;
         }
         settled = true;
-        if (timer !== null) {
-          window.clearTimeout(timer);
-        }
+        window.clearTimeout(timer);
         resolve(theme || defaultTheme);
       }
       const image = new Image();
@@ -553,7 +669,7 @@ function createSiteThemeResolver(deps) {
     });
   }
 
-  function buildAndCacheBrandThemeForHost(hostKey, iconUrl) {
+  function buildAndCacheBrandThemeForHost(hostKey: string, iconUrl: string): ThemeVariant | null {
     const normalizedHost = normalizeHost(hostKey);
     if (!normalizedHost) {
       return null;
@@ -573,14 +689,14 @@ function createSiteThemeResolver(deps) {
     return brandTheme;
   }
 
-  function getThemeFromResolvedFaviconCandidates(pageUrl, hostKey, iconUrl) {
+  function getThemeFromResolvedFaviconCandidates(pageUrl: string, hostKey: string, iconUrl: string): Promise<ThemeVariant> {
     return requestThemeFaviconCandidates(pageUrl, hostKey).then((candidateUrls) => {
       const candidates = getThemeFaviconCandidateUrls([
         ...candidateUrls,
         iconUrl
       ]);
       let index = 0;
-      const next = () => {
+      const next = (): Promise<ThemeVariant> => {
         const candidate = candidates[index];
         index += 1;
         if (!candidate) {
@@ -597,7 +713,13 @@ function createSiteThemeResolver(deps) {
     });
   }
 
-  function resolveThemeWithFaviconFallback(hostKey, iconUrl, persistedTheme, siteTheme, pageUrl) {
+  function resolveThemeWithFaviconFallback(
+    hostKey: string,
+    iconUrl: string,
+    persistedTheme: ThemeVariant | null,
+    siteTheme: ThemeResult | null,
+    pageUrl: string
+  ): Promise<ThemeVariant> {
     const siteThemeValue = siteTheme ? buildThemeFromThemeResult(siteTheme, siteTheme.source || 'meta') : null;
     if (siteThemeValue && !isLowConfidenceTheme(siteThemeValue)) {
       return Promise.resolve(setResolvedThemeForHost(hostKey, siteThemeValue, { iconUrl }));
@@ -624,22 +746,18 @@ function createSiteThemeResolver(deps) {
     });
   }
 
-  function getThemeForProvider(provider) {
+  function getThemeForProvider(provider: Partial<SiteSearchProvider>): Promise<ThemeVariant> {
     const hostKey = getProviderThemeHost(provider);
     const providerPageUrl = getThemePageUrlForSuggestion({ provider }, hostKey);
     const resolver = getPageFaviconUrlResolver();
     const iconUrl = resolver ? resolver.resolveFaviconSource(getProviderIcon(provider), providerPageUrl) : '';
-    if (hostKey && themeHostCache.has(hostKey)) {
-      const cachedTheme = themeHostCache.get(hostKey);
-      if (cachedTheme && !isLowConfidenceTheme(cachedTheme)) {
-        return Promise.resolve(cachedTheme);
-      }
+    const cachedTheme = hostKey ? themeHostCache.get(hostKey) : undefined;
+    if (cachedTheme && !isLowConfidenceTheme(cachedTheme)) {
+      return Promise.resolve(cachedTheme);
     }
-    if (iconUrl && themeColorCache.has(iconUrl)) {
-      const cachedIconTheme = themeColorCache.get(iconUrl);
-      if (cachedIconTheme && !isLowConfidenceTheme(cachedIconTheme)) {
-        return Promise.resolve(cachedIconTheme);
-      }
+    const cachedIconTheme = iconUrl ? themeColorCache.get(iconUrl) : undefined;
+    if (cachedIconTheme && !isLowConfidenceTheme(cachedIconTheme)) {
+      return Promise.resolve(cachedIconTheme);
     }
     const brandTheme = buildAndCacheBrandThemeForHost(hostKey, iconUrl);
     if (brandTheme) {
@@ -655,18 +773,18 @@ function createSiteThemeResolver(deps) {
     });
   }
 
-  function shouldUseBrandTheme(suggestion) {
+  function shouldUseBrandTheme(suggestion: ThemeSubject | null | undefined): suggestion is ThemeSubject {
     if (!suggestion) {
       return false;
     }
     const neutralTypes = ['googleSuggest', 'newtab', 'modeSwitch', 'zenSwitch', 'webAppearanceSwitch', 'chatgpt', 'perplexity', 'commandNewTab', 'commandSettings', 'commandDocumentPip'];
-    if (neutralTypes.includes(suggestion.type)) {
+    if (neutralTypes.includes(String(suggestion.type || ''))) {
       return false;
     }
     return true;
   }
 
-  function getCustomShortcutThemeImageDataUrl(suggestion) {
+  function getCustomShortcutThemeImageDataUrl(suggestion: ThemeSubject): string {
     const dataUrl = String(
       suggestion && suggestion.customIconDataUrl
         ? suggestion.customIconDataUrl
@@ -677,21 +795,21 @@ function createSiteThemeResolver(deps) {
       : '';
   }
 
-  function getCustomShortcutThemeCacheKey(dataUrl) {
+  function getCustomShortcutThemeCacheKey(dataUrl: string): string {
     const source = String(dataUrl || '');
     return source
       ? `shortcut-custom-icon:${source.length}:${stableHashCode(source)}`
       : '';
   }
 
-  function markCustomShortcutTheme(theme) {
+  function markCustomShortcutTheme(theme: ThemeVariant | null | undefined): ThemeVariant {
     if (theme && theme !== defaultTheme && !theme._xIsDefault) {
       theme._xIsCustomShortcutIcon = true;
     }
     return theme || defaultTheme;
   }
 
-  function getThemeForSuggestion(suggestion) {
+  function getThemeForSuggestion(suggestion: ThemeSubject | null | undefined): Promise<ThemeVariant> {
     if (!shouldUseBrandTheme(suggestion)) {
       return Promise.resolve(defaultTheme);
     }
@@ -710,7 +828,7 @@ function createSiteThemeResolver(deps) {
         false
       ).then(markCustomShortcutTheme);
     }
-    if (suggestion && suggestion.provider) {
+    if (suggestion.provider) {
       return getThemeForProvider(suggestion.provider);
     }
     const hostKey = getThemeHostForSuggestion(suggestion);
@@ -719,7 +837,7 @@ function createSiteThemeResolver(deps) {
     if (brandTheme) {
       return Promise.resolve(brandTheme);
     }
-    if (suggestion && suggestion.type === 'shortcut') {
+    if (suggestion.type === 'shortcut') {
       // Tint from the artwork the tile actually shows, not whatever icon another
       // surface happened to load for the same host.
       if (!iconUrl) {
@@ -745,7 +863,7 @@ function createSiteThemeResolver(deps) {
     });
   }
 
-  function getImmediateThemeForSuggestion(suggestion) {
+  function getImmediateThemeForSuggestion(suggestion: ThemeSubject | null | undefined): ThemeVariant {
     if (!shouldUseBrandTheme(suggestion)) {
       return defaultTheme;
     }
@@ -756,20 +874,16 @@ function createSiteThemeResolver(deps) {
         ? markCustomShortcutTheme(themeColorCache.get(customThemeCacheKey))
         : defaultTheme;
     }
-    if (suggestion && suggestion.provider) {
+    if (suggestion.provider) {
       const hostKey = getProviderThemeHost(suggestion.provider);
       const iconUrl = getProviderIcon(suggestion.provider);
-      if (hostKey && themeHostCache.has(hostKey)) {
-        const cachedTheme = themeHostCache.get(hostKey);
-        if (cachedTheme && !isLowConfidenceTheme(cachedTheme)) {
-          return cachedTheme;
-        }
+      const cachedTheme = hostKey ? themeHostCache.get(hostKey) : undefined;
+      if (cachedTheme && !isLowConfidenceTheme(cachedTheme)) {
+        return cachedTheme;
       }
-      if (iconUrl && themeColorCache.has(iconUrl)) {
-        const cachedIconTheme = themeColorCache.get(iconUrl);
-        if (cachedIconTheme && !isLowConfidenceTheme(cachedIconTheme)) {
-          return cachedIconTheme;
-        }
+      const cachedIconTheme = iconUrl ? themeColorCache.get(iconUrl) : undefined;
+      if (cachedIconTheme && !isLowConfidenceTheme(cachedIconTheme)) {
+        return cachedIconTheme;
       }
       const brandTheme = buildAndCacheBrandThemeForHost(hostKey, iconUrl);
       if (brandTheme) {
@@ -781,7 +895,7 @@ function createSiteThemeResolver(deps) {
       }
       return defaultTheme;
     }
-    if (suggestion && suggestion.url) {
+    if (suggestion.url) {
       const hostKey = getHostFromUrl(suggestion.url);
       if (suggestion.type === 'shortcut') {
         const iconUrl = getThemeSourceForSuggestion(suggestion);
@@ -790,17 +904,13 @@ function createSiteThemeResolver(deps) {
           return iconTheme;
         }
       }
-      if (hostKey && themeHostCache.has(hostKey)) {
-        const cachedTheme = themeHostCache.get(hostKey);
-        if (cachedTheme && !isLowConfidenceTheme(cachedTheme)) {
-          return cachedTheme;
-        }
+      const cachedTheme = hostKey ? themeHostCache.get(hostKey) : undefined;
+      if (cachedTheme && !isLowConfidenceTheme(cachedTheme)) {
+        return cachedTheme;
       }
-      if (themeColorCache.has(suggestion.url)) {
-        const cachedUrlTheme = themeColorCache.get(suggestion.url);
-        if (cachedUrlTheme && !isLowConfidenceTheme(cachedUrlTheme)) {
-          return cachedUrlTheme;
-        }
+      const cachedUrlTheme = themeColorCache.get(suggestion.url);
+      if (cachedUrlTheme && !isLowConfidenceTheme(cachedUrlTheme)) {
+        return cachedUrlTheme;
       }
       const brandTheme = buildAndCacheBrandThemeForHost(hostKey, suggestion.url);
       if (brandTheme) {
@@ -815,7 +925,7 @@ function createSiteThemeResolver(deps) {
     return defaultTheme;
   }
 
-  function shouldUseUrlFallbackThemeForSuggestion(suggestion, theme) {
+  function shouldUseUrlFallbackThemeForSuggestion(suggestion: ThemeSubject | null | undefined, theme: ThemeVariant | null | undefined): boolean {
     if (!suggestion || !shouldUseBrandTheme(suggestion)) {
       return false;
     }
@@ -827,13 +937,13 @@ function createSiteThemeResolver(deps) {
     return Boolean(iconUrl && isFaviconProxyUrl(iconUrl));
   }
 
-  const themeResolutionQueue = [];
-  const queuedThemeResolutionByTarget = new WeakMap();
+  const themeResolutionQueue: ThemeResolutionItem[] = [];
+  const queuedThemeResolutionByTarget = new WeakMap<Element, ThemeResolutionItem>();
   let themeResolutionSequence = 0;
-  let themeResolutionFlushTimer = null;
+  let themeResolutionFlushTimer: number | null = null;
   let themeResolutionCacheWaitStarted = false;
 
-  function scheduleThemeResolutionFlush(delayMs) {
+  function scheduleThemeResolutionFlush(delayMs: number): void {
     if (themeResolutionFlushTimer !== null) {
       return;
     }
@@ -843,14 +953,14 @@ function createSiteThemeResolver(deps) {
     }, Math.max(0, Number(delayMs) || 0));
   }
 
-  function flushThemeResolutionQueue() {
+  function flushThemeResolutionQueue(): void {
     if (themeResolutionQueue.length === 0) {
       return;
     }
     if (!areFaviconRenderCachesReady()) {
       if (!themeResolutionCacheWaitStarted) {
         themeResolutionCacheWaitStarted = true;
-        pageState.faviconCacheRuntime.ensureCachesReady().then(() => {
+        void pageState.faviconCacheRuntime.ensureCachesReady().then(() => {
           themeResolutionCacheWaitStarted = false;
           scheduleThemeResolutionFlush(0);
         });
@@ -865,15 +975,15 @@ function createSiteThemeResolver(deps) {
     });
     const batch = themeResolutionQueue.splice(0, THEME_RESOLUTION_BATCH_SIZE);
     batch.forEach((item) => {
-      if (!item || !item.target || !item.target.isConnected) {
+      if (!item.target.isConnected) {
         return;
       }
       if (queuedThemeResolutionByTarget.get(item.target) !== item) {
         return;
       }
       queuedThemeResolutionByTarget.delete(item.target);
-      getThemeForSuggestion(item.suggestion).then((theme) => {
-        if (!item.target || !item.target.isConnected) {
+      void getThemeForSuggestion(item.suggestion).then((theme) => {
+        if (!item.target.isConnected) {
           return;
         }
         item.applyTheme(theme || defaultTheme);
@@ -884,20 +994,26 @@ function createSiteThemeResolver(deps) {
     }
   }
 
-  function queueThemeForTarget(target, suggestion, applyTheme, options) {
-    if (!target || typeof applyTheme !== 'function') {
-      return;
-    }
+  // Resolves the subject's theme for the element in a batch, then applies
+  // it while the element is still on the page.
+  function queueThemeForTarget(
+    target: Element,
+    suggestion: ThemeSubject,
+    applyTheme: (theme: ThemeVariant) => void,
+    options?: { priority?: number; delayMs?: number }
+  ): void {
     if (!shouldUseBrandTheme(suggestion)) {
       return;
     }
     const existing = queuedThemeResolutionByTarget.get(target);
-    const item = {
+    const priority = options && options.priority !== undefined && Number.isFinite(options.priority) ? options.priority : 1;
+    themeResolutionSequence += 1;
+    const item: ThemeResolutionItem = {
       target,
       suggestion,
       applyTheme,
-      priority: Number.isFinite(options && options.priority) ? options.priority : 1,
-      sequence: themeResolutionSequence += 1
+      priority,
+      sequence: themeResolutionSequence
     };
     if (existing) {
       existing.suggestion = item.suggestion;
@@ -908,34 +1024,34 @@ function createSiteThemeResolver(deps) {
       queuedThemeResolutionByTarget.set(target, item);
       themeResolutionQueue.push(item);
     }
-    scheduleThemeResolutionFlush(options && Number.isFinite(options.delayMs)
+    scheduleThemeResolutionFlush(options && options.delayMs !== undefined && Number.isFinite(options.delayMs)
       ? options.delayMs
       : THEME_RESOLUTION_BATCH_DELAY_MS);
   }
 
-  function isNewtabDarkMode() {
+  function isNewtabDarkMode(): boolean {
     return document.body.getAttribute('data-theme') === 'dark';
   }
 
-  function getFaviconPreferredTheme() {
+  function getFaviconPreferredTheme(): 'dark' | 'light' {
     return isNewtabDarkMode() ? 'dark' : 'light';
   }
 
-  function getThemeForMode(theme) {
+  function getThemeForMode(theme: ThemeVariant | null | undefined): ThemeVariant {
     return NEWTAB_FAVICON_THEME.getThemeForMode(theme, {
       defaultTheme,
       isDarkMode: isNewtabDarkMode
     });
   }
 
-  function getHoverColors(theme) {
+  function getHoverColors(theme: ThemeVariant | null | undefined): HoverColors {
     return NEWTAB_FAVICON_THEME.getHoverColors(theme, {
       defaultTheme,
       isDarkMode: isNewtabDarkMode
     });
   }
 
-  function getNeutralHoverActionColors() {
+  function getNeutralHoverActionColors(): HoverColors {
     return isNewtabDarkMode()
       ? {
         bg: 'rgba(255, 255, 255, 0.10)',
@@ -949,8 +1065,8 @@ function createSiteThemeResolver(deps) {
       };
   }
 
-  function applyThemeVariables(target, theme) {
-    if (!target || !theme) {
+  function applyThemeVariables(target: HTMLElement, theme: ThemeVariant | null | undefined): void {
+    if (!theme) {
       return;
     }
     const resolvedTheme = getThemeForMode(theme);
@@ -964,7 +1080,7 @@ function createSiteThemeResolver(deps) {
     target.style.setProperty('--x-ext-key-border', resolvedTheme.keyBorder);
     target.style.setProperty('--x-ext-icon-color', resolvedTheme.accent);
     const highlight = getHighlightColors(theme);
-    const hover = resolvedTheme._xIsBrand
+    const hover: { bg: string; border: string } = resolvedTheme._xIsBrand
       ? getHoverColors(theme)
       : {
         bg: 'var(--x-nt-hover-bg, #F3F4F6)',
@@ -974,8 +1090,8 @@ function createSiteThemeResolver(deps) {
     target.style.setProperty('--x-nt-suggestion-hover-bg', hover.bg);
   }
 
-  function applyMarkVariables(target, theme, active) {
-    if (!target || !theme) {
+  function applyMarkVariables(target: HTMLElement, theme: ThemeVariant | null | undefined, active: boolean): void {
+    if (!theme) {
       return;
     }
     const resolvedTheme = getThemeForMode(theme);
@@ -1021,4 +1137,7 @@ function createSiteThemeResolver(deps) {
   };
 }
 
+type SiteThemeResolver = ReturnType<typeof createSiteThemeResolver>;
+
 export { createSiteThemeResolver };
+export type { SiteThemeResolver, SiteThemeResolverDeps, SiteThemeResolverState };

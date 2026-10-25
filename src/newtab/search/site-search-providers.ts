@@ -204,11 +204,11 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     return true;
   }
 
-  function getProviderFaviconPageUrl(provider: SiteSearchProvider | null | undefined): string {
+  function getProviderFaviconPageUrl(provider: Partial<SiteSearchProvider> | null | undefined): string {
     return SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider);
   }
 
-  function getProviderIcon(provider: SiteSearchProvider | null | undefined): string {
+  function getProviderIcon(provider: Partial<SiteSearchProvider> | null | undefined): string {
     const resolver = getPageFaviconUrlResolver();
     if (!resolver) {
       return '';
@@ -505,7 +505,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     return null;
   }
 
-  function getProviderHost(provider: SiteSearchProvider | null | undefined): string {
+  function getProviderHost(provider: Partial<SiteSearchProvider> | null | undefined): string {
     return SEARCH_UTILS.getSiteSearchProviderHost(provider);
   }
 
