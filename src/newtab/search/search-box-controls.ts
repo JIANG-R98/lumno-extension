@@ -1,10 +1,64 @@
-// @ts-nocheck
 // The controls inside the search box: the settings menu button, the clear
 // button, close other tabs, the input's right padding, and which action
 // buttons the page shows.
-import * as LumnoSettingsStorage from '../../platform/settings-storage';
+import type * as ExtensionRoutes from '../../domain/extension-routes';
+import type { Disposition } from '../../domain/navigation-disposition';
+import type * as SearchUtils from '../../domain/search/search-utils';
+import type { SiteSearchProvider } from '../../domain/search/types';
+import type { StorageAreaLike, StorageItems } from '../../domain/storage-port';
 import * as LumnoMessaging from '../../platform/messaging';
-function createSearchBoxControls(deps) {
+import * as LumnoSettingsStorage from '../../platform/settings-storage';
+import type { SearchInputParts } from '../../shared/react/search-input';
+import type { InputModeController } from '../../shared/search/search-input-mode';
+import type * as FeatureHints from '../../shared/ui/feature-hints';
+import type { FeatureHintController } from '../../shared/ui/feature-hints';
+import type { BindCursorTooltip, FormatMessage, Translate } from '../newtab-types';
+
+interface SearchBoxControlsState {
+  inputParts: SearchInputParts;
+  siteSearchState: SiteSearchProvider | null;
+  // Counts the uses the review notice waits for.
+  engagementNoticeController: { recordMeaningfulUse?(): void } | null;
+  webdavFeatureHintController: FeatureHintController | null;
+  inputModeController: Pick<InputModeController, 'updateLayout'> | null;
+  newtabFeedbackButtonVisible: boolean;
+  newtabAppearanceButtonVisible: boolean;
+  feedbackReactController: unknown;
+  wallpaperRuntime: unknown;
+  feedbackControl: HTMLElement | null;
+  wallpaperControl: HTMLElement | null;
+}
+
+interface SearchBoxControlsDeps {
+  SEARCH_UTILS: Pick<typeof SearchUtils, 'isHelpCenterSiteSearchProvider'>;
+  dismissHelpCenterAskHint(): void;
+  rightIcon: HTMLElement | null;
+  formatMessage: FormatMessage;
+  // Runs the listener again whenever the page language changes.
+  onLanguageChange(listener: () => void): void;
+  bindSearchInputCursorTooltip: BindCursorTooltip;
+  hideSearchInputCursorTooltip(): void;
+  dismissWebdavFeatureHint(): void;
+  EXTENSION_ROUTES: Pick<typeof ExtensionRoutes, 'buildOptionsUrl'>;
+  getExtensionResourceUrl(resourcePath: string): string;
+  FEATURE_HINTS: Pick<typeof FeatureHints, 'createFeatureHint'>;
+  // Settles with whether the Help Center tip is showing.
+  helpCenterAskHintSettled: Promise<boolean>;
+  t: Translate;
+  getRiSvg(id: string, sizeClass: string): string;
+  getOpenDisposition(event: MouseEvent | string | null | undefined, fallback?: Disposition): Disposition;
+  searchInput: HTMLInputElement;
+  closeFeedbackPopover(): void;
+  closeWallpaperPanel(): void;
+  storageArea: StorageAreaLike | null;
+  NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY: string;
+  NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY: string;
+  normalizeNewtabFeedbackButtonVisible(value: unknown): boolean;
+  normalizeNewtabAppearanceButtonVisible(value: unknown): boolean;
+  pageState: SearchBoxControlsState;
+}
+
+function createSearchBoxControls(deps: SearchBoxControlsDeps) {
   const {
     SEARCH_UTILS,
     dismissHelpCenterAskHint,
@@ -42,16 +96,16 @@ function createSearchBoxControls(deps) {
   });
 
   pageState.inputParts.input.addEventListener('input', function() {
+    const notice = pageState.engagementNoticeController;
     if (!String(pageState.inputParts.input.value || '').trim() ||
-        !pageState.engagementNoticeController ||
-        typeof pageState.engagementNoticeController.recordMeaningfulUse !== 'function') {
+        !notice || !notice.recordMeaningfulUse) {
       return;
     }
-    pageState.engagementNoticeController.recordMeaningfulUse();
+    notice.recordMeaningfulUse();
   });
 
   if (rightIcon) {
-    const settingsTooltipText = () => formatMessage(
+    const settingsTooltipText = (): string => formatMessage(
       'command_settings',
       '打开设置',
       { name: 'Lumno' }
@@ -83,9 +137,8 @@ function createSearchBoxControls(deps) {
     });
     // Above the settings icon, point to WebDAV sync under Account & sync until it is dismissed.
     // It shares the space above the input with the Help Center tip, so it waits its turn.
-    if (typeof FEATURE_HINTS.createFeatureHint === 'function' &&
-        document.documentElement.getAttribute('data-nt-focus-route-pending') !== 'true') {
-      pageState.webdavFeatureHintController = FEATURE_HINTS.createFeatureHint({
+    if (document.documentElement.getAttribute('data-nt-focus-route-pending') !== 'true') {
+      const hint = FEATURE_HINTS.createFeatureHint({
         documentObj: document,
         windowObj: window,
         chromeApi: chrome,
@@ -103,8 +156,9 @@ function createSearchBoxControls(deps) {
           });
         }
       });
-      if (pageState.webdavFeatureHintController && pageState.webdavFeatureHintController.element) {
-        pageState.inputParts.container.appendChild(pageState.webdavFeatureHintController.element);
+      pageState.webdavFeatureHintController = hint;
+      if (hint) {
+        pageState.inputParts.container.appendChild(hint.element);
         helpCenterAskHintSettled.then((helpTipShowing) => {
           if (!helpTipShowing && pageState.webdavFeatureHintController) {
             pageState.webdavFeatureHintController.setVisible(true);
@@ -118,7 +172,7 @@ function createSearchBoxControls(deps) {
   // Width the clear button adds left of the close-other-tabs button: 30px button + 6px gap.
   const SEARCH_CLEAR_BUTTON_INSET = 36;
   if (searchClearButton) {
-    const searchClearTooltipText = () => t('search_input_clear', '清空');
+    const searchClearTooltipText = (): string => t('search_input_clear', '清空');
     const applySearchClearTooltip = () => {
       searchClearButton.setAttribute('aria-label', searchClearTooltipText());
       searchClearButton.setAttribute('data-tooltip', searchClearTooltipText());
@@ -132,7 +186,7 @@ function createSearchBoxControls(deps) {
 
   const closeOtherTabsButton = pageState.inputParts.secondaryAction;
   if (closeOtherTabsButton) {
-    const closeOtherTabsTooltipText = () => t('overlay_close_other_tabs_tooltip', '关闭其他标签页');
+    const closeOtherTabsTooltipText = (): string => t('overlay_close_other_tabs_tooltip', '关闭其他标签页');
     const applyCloseOtherTabsTooltip = () => {
       closeOtherTabsButton.setAttribute('aria-label', closeOtherTabsTooltipText());
       closeOtherTabsButton.setAttribute('data-tooltip', closeOtherTabsTooltipText());
@@ -154,13 +208,13 @@ function createSearchBoxControls(deps) {
     closeOtherTabsButton.addEventListener('click', hideSearchInputCursorTooltip);
   }
 
-  function updateInputRightPadding() {
+  function updateInputRightPadding(): void {
     if (pageState.inputModeController) {
       pageState.inputModeController.updateLayout();
     }
   }
 
-  function setNewtabActionControlVisibility(element, visible) {
+  function setNewtabActionControlVisibility(element: HTMLElement | null, visible: boolean): void {
     if (!element) {
       return;
     }
@@ -176,7 +230,7 @@ function createSearchBoxControls(deps) {
     }
   }
 
-  function applyNewtabActionButtonVisibility() {
+  function applyNewtabActionButtonVisibility(): void {
     if (!pageState.newtabFeedbackButtonVisible && pageState.feedbackReactController) {
       closeFeedbackPopover();
     }
@@ -187,15 +241,17 @@ function createSearchBoxControls(deps) {
     setNewtabActionControlVisibility(pageState.wallpaperControl, pageState.newtabAppearanceButtonVisible);
   }
 
-  function loadNewtabActionButtonVisibility() {
+  function loadNewtabActionButtonVisibility(): Promise<void> {
     if (!storageArea) {
       pageState.newtabFeedbackButtonVisible = true;
       pageState.newtabAppearanceButtonVisible = true;
       applyNewtabActionButtonVisibility();
       return Promise.resolve();
     }
+    // Narrowed here, for the storage callback below.
+    const area = storageArea;
     return new Promise((resolve) => {
-      storageArea.get([
+      void area.get([
         NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
         NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY
       ], (result) => {
@@ -204,7 +260,7 @@ function createSearchBoxControls(deps) {
         const rawAppearance = stored[NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY];
         pageState.newtabFeedbackButtonVisible = normalizeNewtabFeedbackButtonVisible(rawFeedback);
         pageState.newtabAppearanceButtonVisible = normalizeNewtabAppearanceButtonVisible(rawAppearance);
-        const repairs = {};
+        const repairs: StorageItems = {};
         if (rawFeedback !== pageState.newtabFeedbackButtonVisible) {
           repairs[NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY] = pageState.newtabFeedbackButtonVisible;
         }
@@ -214,7 +270,7 @@ function createSearchBoxControls(deps) {
         applyNewtabActionButtonVisibility();
         // A missing value stays missing while this device's local copy
         // migrates in.
-        LumnoSettingsStorage.writeSettingRepairs(chrome, storageArea, repairs, stored);
+        LumnoSettingsStorage.writeSettingRepairs(chrome, area, repairs, stored);
         resolve();
       });
     });
@@ -228,4 +284,7 @@ function createSearchBoxControls(deps) {
   };
 }
 
+type SearchBoxControls = ReturnType<typeof createSearchBoxControls>;
+
 export { createSearchBoxControls };
+export type { SearchBoxControls, SearchBoxControlsDeps, SearchBoxControlsState };

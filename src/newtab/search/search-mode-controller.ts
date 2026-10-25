@@ -1,10 +1,88 @@
-// @ts-nocheck
 // The search input's mode controller: site search and local scope
 // prefixes, the tab hint for site search, the placeholder and caret color
 // per mode, and the cached provider icons the prefixes show.
+import type { FaviconUrlResolver } from '../../domain/favicon/favicon-utils';
+import type { LocalSearchScope, SearchSourceType, SiteSearchProvider } from '../../domain/search/types';
+import type * as Settings from '../../domain/settings';
+import type { NewtabOpenInNewTab } from '../../domain/settings';
+import type { StorageAreaLike } from '../../domain/storage-port';
+import type { SearchInputParts } from '../../shared/react/search-input';
+import type { Suggestion } from '../../shared/react/search/suggestion-list/types';
 import * as SEARCH_INPUT_MODE from '../../shared/search/search-input-mode';
+import type { InputModeConfig, InputModeController } from '../../shared/search/search-input-mode';
+import type { InputModeTheme } from '../../shared/search/input-mode/types';
+import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
+import type { RenderSuggestions } from './search-types';
 
-function createSearchModeController(deps) {
+// An option the input mode controller is handed as it is.
+type ModeOption<K extends keyof InputModeConfig> = NonNullable<InputModeConfig[K]>;
+
+interface SearchModeControllerState {
+  inputParts: SearchInputParts;
+  modeBadge: HTMLElement | null;
+  suggestionsContainer: HTMLElement;
+  inputModeController: InputModeController | null;
+  siteSearchState: SiteSearchProvider | null;
+  localSearchScopeState: LocalSearchScope | null;
+  searchResultPriorityMode: string;
+  enabledSearchResultSourceTypes: SearchSourceType[];
+  searchResultDisplayLimit: number;
+  openTabQuickSwitchEnabled: boolean;
+  newtabOpenInNewTab: NewtabOpenInNewTab;
+  latestQuery: string;
+  lastSuggestionResponse: Suggestion[];
+}
+
+interface SearchModeControllerDeps {
+  storageArea: StorageAreaLike | null;
+  SEARCH_RESULT_PRIORITY_STORAGE_KEY: string;
+  SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY: string;
+  SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY: string;
+  OVERLAY_TAB_PRIORITY_STORAGE_KEY: string;
+  NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY: string;
+  normalizeSearchResultPriority(value: unknown): string;
+  normalizeEnabledSearchResultSourceTypes(value: unknown): SearchSourceType[];
+  normalizeSearchResultDisplayLimit(value: unknown): number;
+  normalizeOverlayTabPriorityMode(value: unknown): boolean;
+  SETTINGS: Pick<typeof Settings, 'normalizeNewtabOpenInNewTab'>;
+  renderSuggestions: RenderSuggestions;
+  searchInput: HTMLInputElement;
+  // The room the clear button takes at the input's right.
+  SEARCH_CLEAR_BUTTON_INSET: number;
+  getThemeForMode: ModeOption<'getThemeForMode'>;
+  defaultTheme: ModeOption<'defaultTheme'>;
+  defaultAccentColor: ModeOption<'defaultAccentColor'>;
+  parseCssColor: ModeOption<'parseCssColor'>;
+  rgbToCss: ModeOption<'rgbToCss'>;
+  isNewtabDarkMode: ModeOption<'isDarkMode'>;
+  getProviderIcon: ModeOption<'getProviderIcon'>;
+  getPageFaviconUrlResolver(): Pick<FaviconUrlResolver, 'getProviderFaviconUrl'>;
+  getProviderFaviconPageUrl(provider: SiteSearchProvider | null | undefined): string;
+  getProviderThemeHost: ModeOption<'getProviderThemeHost'>;
+  // The theme a provider's icon gives its prefix, once worked out.
+  getThemeForProvider(provider: SiteSearchProvider): Promise<InputModeTheme | null | undefined>;
+  getSiteSearchPrefixText: ModeOption<'getSiteSearchPrefixText'>;
+  getSiteSearchDisplayName: ModeOption<'getSiteSearchDisplayName'>;
+  isAiSiteSearchProvider: ModeOption<'isAiSiteSearchProvider'>;
+  attachInputModeFaviconData: ModeOption<'attachFaviconData'>;
+  attachInputModeProviderIcon: ModeOption<'attachProviderIcon'>;
+  formatMessage: FormatMessage;
+  bookmarkCursorTooltipController: ModeOption<'modeMenuCursorTooltipController'>;
+  getSearchModeMenuItems: ModeOption<'getModeMenuItems'>;
+  selectSearchModeMenuItem: ModeOption<'onModeMenuSelect'>;
+  reorderSearchModeMenu: ModeOption<'onModeMenuReorder'>;
+  moveSearchModeMenuGroup: ModeOption<'onModeMenuGroupMove'>;
+  stepSearchModeMenuHistory: ModeOption<'onModeMenuHistory'>;
+  showToast: ShowToast;
+  t: Translate;
+  hideToast(): void;
+  setSearchScopeIconEnabled(enabled: boolean): void;
+  syncSearchModeMenuResultOffset(): void;
+  loadSiteSearchIconCache(): Promise<unknown>;
+  pageState: SearchModeControllerState;
+}
+
+function createSearchModeController(deps: SearchModeControllerDeps) {
   const {
     storageArea,
     SEARCH_RESULT_PRIORITY_STORAGE_KEY,
@@ -54,20 +132,22 @@ function createSearchModeController(deps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  function setSiteSearchTabHint(provider) {
+  function setSiteSearchTabHint(provider: SiteSearchProvider | null): void {
     if (pageState.inputModeController) {
       pageState.inputModeController.setTabHintVisible(true, provider);
     }
   }
 
-  function clearSiteSearchTabHint() {
+  function clearSiteSearchTabHint(): void {
     if (pageState.inputModeController) {
       pageState.inputModeController.setTabHintVisible(false);
     }
   }
 
   if (storageArea) {
-    storageArea.get([
+    // Narrowed here, for the storage callback below.
+    const area = storageArea;
+    void area.get([
       SEARCH_RESULT_PRIORITY_STORAGE_KEY,
       SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
       SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
@@ -89,10 +169,10 @@ function createSearchModeController(deps) {
         result ? result[NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY] : null
       );
       if (raw !== nextMode) {
-        storageArea.set({ [SEARCH_RESULT_PRIORITY_STORAGE_KEY]: nextMode });
+        void area.set({ [SEARCH_RESULT_PRIORITY_STORAGE_KEY]: nextMode });
       }
       if (rawDisplayLimit !== pageState.searchResultDisplayLimit) {
-        storageArea.set({ [SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY]: pageState.searchResultDisplayLimit });
+        void area.set({ [SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY]: pageState.searchResultDisplayLimit });
       }
       if (pageState.latestQuery) {
         renderSuggestions(pageState.lastSuggestionResponse, pageState.latestQuery);
@@ -171,19 +251,20 @@ function createSearchModeController(deps) {
     }).catch(() => {});
   });
 
-  function updateSiteSearchPrefixLayout() {
+  function updateSiteSearchPrefixLayout(): void {
     if (pageState.inputModeController) {
       pageState.inputModeController.updateLayout();
     }
   }
 
-  function setSiteSearchPrefix(provider, theme, options) {
+  function setSiteSearchPrefix(...args: Parameters<InputModeController['setProviderPrefix']>): void {
+    const [provider, theme, options] = args;
     if (pageState.inputModeController) {
       pageState.inputModeController.setProviderPrefix(provider, theme, options);
     }
   }
 
-  function clearSiteSearchPrefix() {
+  function clearSiteSearchPrefix(): void {
     if (pageState.inputModeController) {
       pageState.inputModeController.clearProviderPrefix();
     }
@@ -198,4 +279,7 @@ function createSearchModeController(deps) {
   };
 }
 
+type SearchModeController = ReturnType<typeof createSearchModeController>;
+
 export { createSearchModeController };
+export type { SearchModeController, SearchModeControllerDeps, SearchModeControllerState };

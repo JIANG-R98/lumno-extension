@@ -1,5 +1,6 @@
 // Types and helpers the New Tab search modules share.
 import type { SiteSearchProvider } from '../../domain/search/types';
+import type { Suggestion } from '../../shared/react/search/suggestion-list/types';
 
 // What a suggestion request asks for besides the query.
 interface RequestSuggestionsOptions {
@@ -11,6 +12,9 @@ interface RequestSuggestionsOptions {
 
 type RequestSuggestions = (query: string, options?: RequestSuggestionsOptions) => unknown;
 
+// Shows the suggestions for the query.
+type RenderSuggestions = (suggestions: Suggestion[], query: string) => unknown;
+
 // The aggregate search a search mode stands for; '' for a site search.
 function getAggregateSearchId(provider: SiteSearchProvider | null | undefined): string {
   if (!provider || !('aggregateId' in provider)) {
@@ -21,4 +25,4 @@ function getAggregateSearchId(provider: SiteSearchProvider | null | undefined): 
 }
 
 export { getAggregateSearchId };
-export type { RequestSuggestions, RequestSuggestionsOptions };
+export type { RenderSuggestions, RequestSuggestions, RequestSuggestionsOptions };
