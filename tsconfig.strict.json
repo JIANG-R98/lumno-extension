@@ -12,7 +12,15 @@
     "src/types/**/*.d.ts",
     "src/background/**/*.ts",
     "src/shared/**/*.ts",
-    "src/content/**/*.ts"
+    "src/content/**/*.ts",
+    "src/overlay/panel/autocomplete.ts",
+    "src/overlay/panel/default-search-engine.ts",
+    "src/overlay/panel/entry-motion.ts",
+    "src/overlay/panel/favicon-policy.ts",
+    "src/overlay/panel/page-guards.ts",
+    "src/overlay/panel/result-activation.ts",
+    "src/overlay/panel/slash-commands.ts",
+    "src/overlay/panel/tab-matching.ts"
   ],
   "exclude": [
     "src/**/react/**"

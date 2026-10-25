@@ -418,7 +418,7 @@ function createSuggestionSources(deps) {
           delete item._xMatchedTabId;
         }
       });
-      allSuggestions = filterOverlayBlacklistedSuggestions(allSuggestions, query);
+      allSuggestions = filterOverlayBlacklistedSuggestions(allSuggestions);
       const hasDirectUrlSuggestion = preSuggestions.some((suggestion) => (
         suggestion && suggestion.type === 'directUrl'
       ));
@@ -464,7 +464,7 @@ function createSuggestionSources(deps) {
             getSiteSearchTriggerCandidate,
             getAutocompleteCandidate,
             getUrlDisplay,
-            filterSuggestions: (list) => filterOverlayBlacklistedSuggestions(list, query)
+            filterSuggestions: (list) => filterOverlayBlacklistedSuggestions(list)
           }
         });
         allSuggestions = rankedSlate.suggestions;

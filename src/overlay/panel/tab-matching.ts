@@ -1,6 +1,31 @@
+import type { OverlayTab } from '../../domain/messages';
+import type * as SearchUtils from '../../domain/search/search-utils';
+
+interface TabMatchingState {
+  // The window's open tabs, as the overlay lists them.
+  tabs: OverlayTab[];
+  // The tab the overlay was opened in.
+  currentOverlayTabId: number | null;
+  // That tab's address, for before its entry is in tabs.
+  initialContextTabUrl: string;
+  // A result for the page already open counts as that open tab.
+  prioritizeCurrentPageMatch: boolean;
+}
+
+interface TabMatchingDeps {
+  SEARCH_UTILS: Pick<typeof SearchUtils, 'buildTabMatchUrl'>;
+  overlayState: TabMatchingState;
+}
+
+// What a tab is matched by.
+interface TabTextSource {
+  title?: string;
+  url?: string;
+}
+
 // Matching open tabs: the text a tab is searched by, filtering them for
 // the query, and finding the tab a suggestion already has open.
-function createTabMatching(deps) {
+function createTabMatching(deps: TabMatchingDeps) {
   const {
     SEARCH_UTILS
   } = deps;
@@ -8,36 +33,37 @@ function createTabMatching(deps) {
   // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
-  function isEnglishQuery(query) {
+  function isEnglishQuery(query: string): boolean {
     if (!query) {
       return false;
     }
     return /^[A-Za-z0-9\s._/-]+$/.test(query);
   }
 
-  function getUrlDisplay(url) {
+  // An address as the panel shows it: no scheme, no "www.", no lone "/".
+  function getUrlDisplay(url: string | undefined): string {
     if (!url) {
       return '';
     }
     try {
       const parsed = new URL(url);
-    const host = parsed.hostname.replace(/^www\./i, '');
+      const host = parsed.hostname.replace(/^www\./i, '');
       const path = parsed.pathname === '/' ? '' : parsed.pathname;
       return `${host}${path}${parsed.search || ''}${parsed.hash || ''}`;
-    } catch (e) {
+    } catch (_error) {
       return url;
     }
   }
 
-  function normalizeTabSearchToken(value) {
+  function normalizeTabSearchToken(value: string): string {
     return String(value || '').trim().toLowerCase();
   }
 
-  function buildTabSearchText(tab) {
+  function buildTabSearchText(tab: TabTextSource | null): string {
     if (!tab) {
       return '';
     }
-    const parts = [];
+    const parts: string[] = [];
     if (tab.title) {
       parts.push(String(tab.title));
     }
@@ -52,13 +78,15 @@ function createTabMatching(deps) {
       if (parsed.pathname) {
         parts.push(parsed.pathname);
       }
-    } catch (e) {
+    } catch (_error) {
       // Ignore malformed URLs.
     }
     return parts.join(' ').toLowerCase();
   }
 
-  function filterTabsForOverlay(tabList, queryText) {
+  // The tabs matching every word of the query; with no query, all of them,
+  // the current tab moved to second place so another tab comes first.
+  function filterTabsForOverlay<T extends TabTextSource & { id?: number }>(tabList: T[], queryText: string): T[] {
     const list = Array.isArray(tabList) ? tabList : [];
     const normalized = normalizeTabSearchToken(queryText);
     if (!normalized) {
@@ -88,15 +116,16 @@ function createTabMatching(deps) {
     });
   }
 
-  function normalizeTabMatchUrl(url) {
+  function normalizeTabMatchUrl(url: string): string {
     return SEARCH_UTILS.buildTabMatchUrl(url);
   }
 
-  function normalizeTabMatchUrlWithoutSearch(url) {
+  function normalizeTabMatchUrlWithoutSearch(url: string): string {
     return SEARCH_UTILS.buildTabMatchUrl(url, { includeSearch: false });
   }
 
-  function getMatchedOpenTabIdForSuggestion(suggestion) {
+  // The open tab that already shows a suggestion's page, if any.
+  function getMatchedOpenTabIdForSuggestion(suggestion: { url?: string } | null): number | null {
     if (!suggestion || !suggestion.url || !Array.isArray(overlayState.tabs) || overlayState.tabs.length === 0) {
       return null;
     }
@@ -125,7 +154,7 @@ function createTabMatching(deps) {
     return null;
   }
 
-  function isCurrentOverlayTabUrl(url) {
+  function isCurrentOverlayTabUrl(url: string): boolean {
     if (!overlayState.prioritizeCurrentPageMatch || !url) {
       return false;
     }

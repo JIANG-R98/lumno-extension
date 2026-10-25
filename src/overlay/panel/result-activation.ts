@@ -1,9 +1,44 @@
 // Opening a result: the modifier keys that pick the current, a new or a
 // background tab, and switching to an open tab instead.
 import * as NAVIGATION_DISPOSITION from '../../domain/navigation-disposition';
+import type { Disposition } from '../../domain/navigation-disposition';
+import type * as SuggestionActionModel from '../../domain/search/suggestion-action-model';
+import type { DisplayedSuggestion } from '../../domain/search/suggestion-action-model';
 import * as LumnoMessaging from '../../platform/messaging';
+import type { SuggestionsViewController } from '../../shared/react/search/suggestion-list/types';
 
-function createResultActivation(deps) {
+// The keys and button of the click or key press that opens a result.
+interface ActivationEvent {
+  altKey?: boolean;
+  shiftKey?: boolean;
+  metaKey?: boolean;
+  ctrlKey?: boolean;
+  button?: number;
+}
+
+// The rendered row a result was opened from.
+interface ActivatedItem {
+  _xVisitButtonAction?: string;
+}
+
+interface ResultActivationState {
+  overlay: HTMLElement | null;
+  searchInput: HTMLInputElement | null;
+  // Number keys open results at once, so Cmd and Ctrl keep their own use.
+  numberShortcutInstantEnabled: boolean;
+}
+
+interface ResultActivationDeps {
+  ensureOverlaySuggestionsView(): Pick<SuggestionsViewController,
+    'setOpenInCurrentTabModifierActive' | 'setOpenSwitchInNewTabModifierActive' | 'setOpenInBackgroundTabModifierActive'>;
+  SUGGESTION_ACTION_MODEL: Pick<typeof SuggestionActionModel,
+    'shouldOpenNewTabActionInCurrentTab' | 'shouldOpenSwitchActionInNewTab' | 'getSearchResultOpenDisposition'>;
+  removeOverlay(overlay: HTMLElement | null): void;
+  recordSearchSuggestionSelectionFromSuggestion(suggestion: DisplayedSuggestion, query: string, surface: string): void;
+  overlayState: ResultActivationState;
+}
+
+function createResultActivation(deps: ResultActivationDeps) {
   const {
     ensureOverlaySuggestionsView,
     SUGGESTION_ACTION_MODEL,
@@ -18,7 +53,13 @@ function createResultActivation(deps) {
   let openSwitchInNewTabModifierActive = false;
   let openInBackgroundTabModifierActive = false;
 
-  function setSuggestionActionModifiersActive(openInCurrentTabActive, openSwitchInNewTabActive, openInBackgroundTabActive) {
+  // Tells the list which modifier keys are held, so its buttons say what a
+  // click would do.
+  function setSuggestionActionModifiersActive(
+    openInCurrentTabActive: boolean,
+    openSwitchInNewTabActive: boolean,
+    openInBackgroundTabActive: boolean
+  ): void {
     const nextOpenInCurrentTabActive = Boolean(openInCurrentTabActive);
     const nextOpenSwitchInNewTabActive = Boolean(openSwitchInNewTabActive);
     const nextOpenInBackgroundTabActive = Boolean(openInBackgroundTabActive);
@@ -42,7 +83,7 @@ function createResultActivation(deps) {
     );
   }
 
-  function syncSuggestionActionModifiersFromEvent(event) {
+  function syncSuggestionActionModifiersFromEvent(event: ActivationEvent | null): void {
     setSuggestionActionModifiersActive(
       Boolean(event && event.altKey),
       Boolean(event && event.shiftKey),
@@ -50,7 +91,11 @@ function createResultActivation(deps) {
     );
   }
 
-  function shouldUseCurrentTabForOpenNewTabAction(suggestion, event, item) {
+  function shouldUseCurrentTabForOpenNewTabAction(
+    suggestion: DisplayedSuggestion,
+    event: ActivationEvent | null,
+    item: ActivatedItem | null
+  ): boolean {
     if (!event || !event.altKey) {
       return false;
     }
@@ -61,7 +106,11 @@ function createResultActivation(deps) {
     });
   }
 
-  function shouldUseNewTabForSwitchAction(suggestion, event, item) {
+  function shouldUseNewTabForSwitchAction(
+    suggestion: DisplayedSuggestion,
+    event: ActivationEvent | null,
+    item: ActivatedItem | null
+  ): boolean {
     if (!event || !event.shiftKey) {
       return false;
     }
@@ -72,7 +121,7 @@ function createResultActivation(deps) {
     });
   }
 
-  function shouldOpenSearchResultInBackgroundTab(event) {
+  function shouldOpenSearchResultInBackgroundTab(event: ActivationEvent | null): boolean {
     const config = {
       openInBackgroundTab: Boolean(event && (
         ((event.metaKey || event.ctrlKey) && !overlayState.numberShortcutInstantEnabled) ||
@@ -83,17 +132,21 @@ function createResultActivation(deps) {
     return SUGGESTION_ACTION_MODEL.getSearchResultOpenDisposition(config) === 'backgroundTab';
   }
 
-  function finishOverlayResultActivation(event, canOpenInBackground) {
+  // Closes the panel after a result opened, unless it opened in the
+  // background; true when the panel closed.
+  function finishOverlayResultActivation(event: ActivationEvent | null, canOpenInBackground: boolean): boolean {
     if (canOpenInBackground !== false &&
         shouldOpenSearchResultInBackgroundTab(event)) {
-      overlayState.searchInput.focus({ preventScroll: true });
+      if (overlayState.searchInput) {
+        overlayState.searchInput.focus({ preventScroll: true });
+      }
       return false;
     }
     removeOverlay(overlayState.overlay);
     return true;
   }
 
-  function getOpenDisposition(event, fallback) {
+  function getOpenDisposition(event: ActivationEvent | null, fallback?: Disposition): Disposition {
     if (overlayState.numberShortcutInstantEnabled) {
       return (NAVIGATION_DISPOSITION.isMiddleClick(event) || Boolean(event && (event.metaKey || event.ctrlKey) && !overlayState.numberShortcutInstantEnabled))
         ? 'backgroundTab'
@@ -102,18 +155,29 @@ function createResultActivation(deps) {
     return NAVIGATION_DISPOSITION.getDisposition(event, fallback);
   }
 
-  function getSearchResultNewTabDisposition(event) {
+  function getSearchResultNewTabDisposition(event: ActivationEvent | null): 'backgroundTab' | 'newTab' {
     return shouldOpenSearchResultInBackgroundTab(event) ? 'backgroundTab' : 'newTab';
   }
 
-  function getSearchResultCreateDisposition(suggestion, event, item) {
+  function getSearchResultCreateDisposition(
+    suggestion: DisplayedSuggestion,
+    event: ActivationEvent | null,
+    item: ActivatedItem | null
+  ): Disposition {
     if (shouldUseCurrentTabForOpenNewTabAction(suggestion, event, item)) {
       return 'currentTab';
     }
     return getSearchResultNewTabDisposition(event);
   }
 
-  function openMatchedTabSuggestion(suggestion, event, item, query) {
+  // Switches to the tab a result is open in, or opens the result in a new
+  // tab when the keys held ask for one.
+  function openMatchedTabSuggestion(
+    suggestion: DisplayedSuggestion,
+    event: ActivationEvent | null,
+    item: ActivatedItem | null,
+    query: string
+  ): void {
     if (suggestion && suggestion.url &&
         (shouldUseNewTabForSwitchAction(suggestion, event, item) ||
           shouldOpenSearchResultInBackgroundTab(event))) {
@@ -123,6 +187,9 @@ function createResultActivation(deps) {
         url: suggestion.url,
         disposition: getSearchResultNewTabDisposition(event)
       });
+      return;
+    }
+    if (typeof suggestion._xMatchedTabId !== 'number') {
       return;
     }
     LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
@@ -144,3 +211,4 @@ function createResultActivation(deps) {
 }
 
 export { createResultActivation };
+export type { ActivationEvent, ResultActivationDeps, ResultActivationState };

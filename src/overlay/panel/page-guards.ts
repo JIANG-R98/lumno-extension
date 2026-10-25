@@ -1,12 +1,24 @@
+// The anti-translate guard from lifecycle.ts, as far as the panel drives it.
+interface AntiTranslateGuardControls {
+  start(root: Element): void;
+  stop(): void;
+  pauseForScroll(): void;
+  pauseForMutationBurst(): void;
+}
+
+interface PageGuardsDeps {
+  overlayAntiTranslateGuard: AntiTranslateGuardControls;
+}
+
 // Keeps the host page out of the panel: no page translation inside it,
 // and no other extension decorating its input.
-function createPageGuards(deps) {
+function createPageGuards(deps: PageGuardsDeps) {
   const {
     overlayAntiTranslateGuard
   } = deps;
 
-  function applyOverlayInputExtensionIsolation(input) {
-    if (!input || typeof input.setAttribute !== 'function') {
+  function applyOverlayInputExtensionIsolation(input: Element | null): void {
+    if (!input) {
       return;
     }
     const exclusionAttributes = {
@@ -25,55 +37,54 @@ function createPageGuards(deps) {
     });
   }
 
-  function applyNoTranslate(element) {
-    if (!element || !element.setAttribute) {
+  // Tolerates a missing element, which some callers may still pass.
+  function applyNoTranslate<T extends Element | null>(element: T): T {
+    if (!element) {
       return element;
     }
     element.setAttribute('translate', 'no');
     element.setAttribute('lang', 'zxx');
     element.setAttribute('notranslate', '');
     element.setAttribute('data-no-translate', 'true');
-    if (element.classList) {
-      element.classList.add('notranslate');
-    }
+    element.classList.add('notranslate');
     return element;
   }
 
-  function applyNoTranslateDeep(root) {
-    if (!root || typeof root !== 'object') {
+  // Marks root and every element under it.
+  function applyNoTranslateDeep<T extends Element | null>(root: T): T {
+    if (!root) {
       return root;
     }
     applyNoTranslate(root);
-    if (!root.querySelectorAll) {
-      return root;
-    }
     root.querySelectorAll('*').forEach((element) => {
       applyNoTranslate(element);
     });
     return root;
   }
 
-  function restoreProtectedNode(node) {
+  // The guard's hooks for nodes a translator rewrote; the panel has none to
+  // put back.
+  function restoreProtectedNode(node: Node): boolean {
     return false;
   }
 
-  function restoreProtectedAncestors(node, root) {
+  function restoreProtectedAncestors(node: Node, root: Node): boolean {
     return false;
   }
 
-  function stopOverlayAntiTranslateObserver() {
+  function stopOverlayAntiTranslateObserver(): void {
     overlayAntiTranslateGuard.stop();
   }
 
-  function pauseOverlayAntiTranslateObserverForScroll() {
+  function pauseOverlayAntiTranslateObserverForScroll(): void {
     overlayAntiTranslateGuard.pauseForScroll();
   }
 
-  function pauseOverlayAntiTranslateObserverForMutationBurst() {
+  function pauseOverlayAntiTranslateObserverForMutationBurst(): void {
     overlayAntiTranslateGuard.pauseForMutationBurst();
   }
 
-  function startOverlayAntiTranslateObserver(root) {
+  function startOverlayAntiTranslateObserver(root: Element): void {
     overlayAntiTranslateGuard.start(root);
   }
 
@@ -91,3 +102,4 @@ function createPageGuards(deps) {
 }
 
 export { createPageGuards };
+export type { AntiTranslateGuardControls, PageGuardsDeps };

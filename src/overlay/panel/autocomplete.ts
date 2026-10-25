@@ -1,6 +1,52 @@
+import type { SuggestionLike } from '../../domain/search/types';
+
+// What a row offers for completion; command rows complete to their text.
+interface AutocompleteRow extends SuggestionLike {
+  commandText?: string;
+  commandAliases?: string[];
+}
+
+interface AutocompleteCandidate {
+  completion: string;
+  url: string;
+  title: string;
+  type: 'command' | 'url' | 'title';
+}
+
+// The completion shown in the input, selected after what was typed.
+interface AutocompleteState {
+  completion: string;
+  displayText: string;
+  url: string;
+  rawQuery: string;
+  title: string;
+  type: string;
+}
+
+interface AutocompleteOverlayState {
+  autocompleteState: AutocompleteState | null;
+  searchInput: HTMLInputElement | null;
+  latestRawInputValue: string;
+  latestOverlayQuery: string;
+  // 'search' keeps the search action first, so nothing is completed.
+  overlaySearchResultPriorityMode: string;
+  // When the user last deleted text; completing right after would fight it.
+  lastDeletionAt: number;
+  // Only whether a site search or a local scope is active.
+  siteSearchState: unknown;
+  localSearchScopeState: unknown;
+}
+
+interface AutocompleteDeps {
+  getUrlDisplay(url: string | undefined): string;
+  isEnglishQuery(query: string): boolean;
+  getKeywordSearchSuggestionState(suggestions: AutocompleteRow[]): { autocompleteSuggestions: AutocompleteRow[] };
+  overlayState: AutocompleteOverlayState;
+}
+
 // Inline autocomplete: the candidate for what is typed (domains, prefixes,
 // suggestions), showing it in the input and dismissing it.
-function createAutocomplete(deps) {
+function createAutocomplete(deps: AutocompleteDeps) {
   const {
     getUrlDisplay,
     isEnglishQuery,
@@ -10,7 +56,7 @@ function createAutocomplete(deps) {
   // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
-  function getAutocompleteCandidate(allSuggestions, rawQuery) {
+  function getAutocompleteCandidate(allSuggestions: AutocompleteRow[] | null, rawQuery: string): AutocompleteCandidate | null {
     if (!Array.isArray(allSuggestions) || !rawQuery) {
       return null;
     }
@@ -72,7 +118,7 @@ function createAutocomplete(deps) {
     return null;
   }
 
-  function getDomainPrefixCandidate(allSuggestions, rawQuery) {
+  function getDomainPrefixCandidate(allSuggestions: AutocompleteRow[] | null, rawQuery: string): AutocompleteCandidate | null {
     if (!Array.isArray(allSuggestions) || !rawQuery) {
       return null;
     }
@@ -99,7 +145,7 @@ function createAutocomplete(deps) {
     return null;
   }
 
-  function getAutocompleteCandidateFromSuggestion(suggestion, rawQuery) {
+  function getAutocompleteCandidateFromSuggestion(suggestion: AutocompleteRow | null, rawQuery: string): AutocompleteCandidate | null {
     if (!suggestion || !rawQuery || suggestion.type === 'newtab') {
       return null;
     }
@@ -151,11 +197,13 @@ function createAutocomplete(deps) {
     return null;
   }
 
-  function clearAutocomplete() {
+  function clearAutocomplete(): void {
     overlayState.autocompleteState = null;
   }
 
-  function dismissAutocompletePreviewOnNonTabKey(event) {
+  // Any key but Tab or Enter drops the shown completion and restores what
+  // was typed; true when there was one.
+  function dismissAutocompletePreviewOnNonTabKey(event: KeyboardEvent | null): boolean {
     if (!event || event.key === 'Tab' || event.key === 'Enter') {
       return false;
     }
@@ -179,7 +227,11 @@ function createAutocomplete(deps) {
     return true;
   }
 
-  function applyAutocomplete(allSuggestions, primarySuggestion, primaryHighlightReason) {
+  function applyAutocomplete(
+    allSuggestions: AutocompleteRow[] | null,
+    primarySuggestion: AutocompleteRow | null,
+    primaryHighlightReason: string
+  ): void {
     const rawQuery = overlayState.latestRawInputValue;
     const trimmedQuery = rawQuery.trim();
     if (overlayState.overlaySearchResultPriorityMode === 'search') {
@@ -206,7 +258,11 @@ function createAutocomplete(deps) {
       clearAutocomplete();
       return;
     }
-    if (overlayState.searchInput.selectionStart !== overlayState.searchInput.value.length || overlayState.searchInput.selectionEnd !== overlayState.searchInput.value.length) {
+    const input = overlayState.searchInput;
+    if (!input) {
+      return;
+    }
+    if (input.selectionStart !== input.value.length || input.selectionEnd !== input.value.length) {
       return;
     }
     const shouldForcePrimaryAlignment = Boolean(
@@ -215,7 +271,7 @@ function createAutocomplete(deps) {
       primaryHighlightReason !== 'autocomplete' &&
       primaryHighlightReason !== 'default'
     );
-    let candidate = null;
+    let candidate: AutocompleteCandidate | null = null;
     if (primarySuggestion) {
       candidate = getAutocompleteCandidateFromSuggestion(primarySuggestion, rawQuery);
     }
@@ -247,8 +303,8 @@ function createAutocomplete(deps) {
     // The typed part stays as typed: "4A" completes to "4Anet.com", not
     // the candidate's own "4anet.com".
     const displayText = rawQuery + candidate.completion.slice(rawQuery.length);
-    overlayState.searchInput.value = displayText;
-    overlayState.searchInput.setSelectionRange(rawQuery.length, displayText.length);
+    input.value = displayText;
+    input.setSelectionRange(rawQuery.length, displayText.length);
     overlayState.autocompleteState = {
       completion: displayText,
       displayText: displayText,
@@ -268,3 +324,4 @@ function createAutocomplete(deps) {
 }
 
 export { createAutocomplete };
+export type { AutocompleteDeps, AutocompleteOverlayState, AutocompleteRow, AutocompleteState };

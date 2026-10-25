@@ -1,8 +1,38 @@
 // Which favicons the overlay may fetch: the search and favicon
 // blacklists, local network hosts, and the display limit for results.
 import * as LumnoBlacklistUtils from '../../domain/blacklist-utils';
+import type { BlacklistRule } from '../../domain/blacklist-utils';
+import type * as FaviconUtils from '../../domain/favicon/favicon-utils';
+import type { FaviconDecisionLogger, FaviconUrlResolver } from '../../domain/favicon/favicon-utils';
+import type * as SearchUtils from '../../domain/search/search-utils';
+import type * as Settings from '../../domain/settings';
 
-function createFaviconPolicy(deps) {
+interface FaviconPolicyState {
+  // Results under these addresses are left out of search.
+  overlaySearchBlacklistItems: BlacklistRule[];
+  // Pages whose icons are never fetched from icon services.
+  overlayFaviconRequestBlacklistItems: BlacklistRule[];
+  faviconEnhancedFetchEnabled: boolean;
+  overlaySearchResultDisplayLimit: number;
+}
+
+interface FaviconPolicyDeps {
+  FAVICON_UTILS: Pick<typeof FaviconUtils,
+    'getCanonicalPageUrlForFavicon' | 'isLocalNetworkHost' | 'shouldBlockFaviconForHost' |
+    'createFaviconUrlResolver' | 'shouldAvoidDirectFaviconForHost' | 'isBlockedLocalFaviconUrl'>;
+  SETTINGS: Pick<typeof Settings, 'normalizeSearchResultDisplayLimit'>;
+  SEARCH_UTILS: Pick<typeof SearchUtils, 'limitSearchSuggestionsForDisplay'>;
+  logOverlayFaviconDecision: FaviconDecisionLogger;
+  overlayState: FaviconPolicyState;
+}
+
+// What the search blacklist reads from a row.
+interface FilterableSuggestion {
+  type?: string;
+  url?: string;
+}
+
+function createFaviconPolicy(deps: FaviconPolicyDeps) {
   const {
     FAVICON_UTILS,
     SETTINGS,
@@ -13,29 +43,29 @@ function createFaviconPolicy(deps) {
   // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
-  function normalizeOverlaySearchBlacklistItems(items) {
+  function normalizeOverlaySearchBlacklistItems(items: unknown): BlacklistRule[] {
     return LumnoBlacklistUtils.normalizeItems(items, 'prefix');
   }
 
-  function normalizeOverlayFaviconRequestBlacklistItems(items) {
+  function normalizeOverlayFaviconRequestBlacklistItems(items: unknown): BlacklistRule[] {
     return LumnoBlacklistUtils.normalizeItems(items, 'prefix');
   }
 
-  function getOverlayFaviconMatchUrl(url) {
+  function getOverlayFaviconMatchUrl(url: string): string {
     const raw = String(url || '').trim();
     return String(FAVICON_UTILS.getCanonicalPageUrlForFavicon(raw) || raw);
   }
 
-  function isUrlExcludedFromOverlayFaviconRequests(url) {
+  function isUrlExcludedFromOverlayFaviconRequests(url: string): boolean {
     const target = getOverlayFaviconMatchUrl(url);
     return Boolean(
       target &&
-      LumnoBlacklistUtils &&
       LumnoBlacklistUtils.isUrlBlocked(target, overlayState.overlayFaviconRequestBlacklistItems)
     );
   }
 
-  function getOverlayStrictFaviconReason(pageUrl) {
+  // Why icon services are off for a page: 'exclusion', 'global-off', or ''.
+  function getOverlayStrictFaviconReason(pageUrl: string): string {
     if (isUrlExcludedFromOverlayFaviconRequests(pageUrl)) {
       return 'exclusion';
     }
@@ -45,15 +75,16 @@ function createFaviconPolicy(deps) {
     return '';
   }
 
-  function isOverlayEnhancedFaviconFetchEnabled(pageUrl) {
+  function isOverlayEnhancedFaviconFetchEnabled(pageUrl: string): boolean {
     return getOverlayStrictFaviconReason(pageUrl) === '';
   }
 
-  function isUrlBlockedByOverlaySearchBlacklist(url) {
+  function isUrlBlockedByOverlaySearchBlacklist(url: string): boolean {
     return LumnoBlacklistUtils.isUrlBlocked(url, overlayState.overlaySearchBlacklistItems);
   }
 
-  function isOverlaySuggestionBlockedBySearchBlacklist(suggestion, queryForProvider) {
+  // Search actions and site search rows stay; they lead to no blocked page.
+  function isOverlaySuggestionBlockedBySearchBlacklist(suggestion: FilterableSuggestion | null): boolean {
     if (!suggestion) {
       return false;
     }
@@ -71,18 +102,19 @@ function createFaviconPolicy(deps) {
     return false;
   }
 
-  function filterOverlayBlacklistedSuggestions(list, queryForProvider) {
+  function filterOverlayBlacklistedSuggestions<T extends FilterableSuggestion>(list: T[] | null): T[] {
     if (!Array.isArray(list) || list.length === 0) {
       return [];
     }
-    return list.filter((suggestion) => !isOverlaySuggestionBlockedBySearchBlacklist(suggestion, queryForProvider));
+    return list.filter((suggestion) => !isOverlaySuggestionBlockedBySearchBlacklist(suggestion));
   }
 
-  function normalizeSearchResultDisplayLimit(value) {
+  function normalizeSearchResultDisplayLimit(value: unknown): number {
     return SETTINGS.normalizeSearchResultDisplayLimit(value);
   }
 
-  function limitOverlaySuggestionsForDisplay(list, options) {
+  // The rows the user's display limit allows; uncapped keeps them all.
+  function limitOverlaySuggestionsForDisplay<T>(list: T[] | null, options?: { uncapped?: boolean } | null): T[] {
     const config = options && typeof options === 'object' ? options : {};
     if (config.uncapped === true) {
       return Array.isArray(list) ? list : [];
@@ -92,21 +124,21 @@ function createFaviconPolicy(deps) {
     });
   }
 
-  function isLocalNetworkHost(hostname) {
+  function isLocalNetworkHost(hostname: string): boolean {
     return FAVICON_UTILS.isLocalNetworkHost(hostname);
   }
 
-  function shouldBlockFaviconForHost(hostname) {
+  function shouldBlockFaviconForHost(hostname: string): boolean {
     return FAVICON_UTILS.shouldBlockFaviconForHost(hostname);
   }
 
-  function shouldBlockOverlayFaviconForHost(hostname) {
+  function shouldBlockOverlayFaviconForHost(hostname: string): boolean {
     return shouldBlockFaviconForHost(hostname);
   }
 
-  let overlayFaviconUrlResolver = null;
+  let overlayFaviconUrlResolver: FaviconUrlResolver | null = null;
 
-  function getOverlayFaviconUrlResolver() {
+  function getOverlayFaviconUrlResolver(): FaviconUrlResolver {
     if (!overlayFaviconUrlResolver) {
       overlayFaviconUrlResolver = FAVICON_UTILS.createFaviconUrlResolver({
         chromeApi: chrome,
@@ -122,12 +154,13 @@ function createFaviconPolicy(deps) {
     return overlayFaviconUrlResolver;
   }
 
-  function isBlockedOverlayFaviconUrl(url) {
+  function isBlockedOverlayFaviconUrl(url: string): boolean {
     const resolver = getOverlayFaviconUrlResolver();
     return resolver ? resolver.isBlockedFaviconUrl(url) : false;
   }
 
-  function isLocalNetworkInput(input) {
+  // Whether typed text addresses a host on the local network.
+  function isLocalNetworkInput(input: string): boolean {
     const raw = String(input || '').trim().toLowerCase();
     if (!raw) {
       return false;
@@ -171,3 +204,4 @@ function createFaviconPolicy(deps) {
 }
 
 export { createFaviconPolicy };
+export type { FaviconPolicyDeps, FaviconPolicyState };

@@ -1,8 +1,73 @@
 // Slash commands in the overlay: their definitions, matching what is
 // typed, the suggestion each builds, the theme mode command and the website
 // appearance command.
+import type { WebAppearanceMode } from '../../domain/messages';
+import type * as Settings from '../../domain/settings';
+import type { ThemeMode } from '../../domain/settings';
 import * as LumnoMessaging from '../../platform/messaging';
-function createSlashCommands(deps) {
+import type { StorageAreaFacade } from '../../platform/settings-storage';
+import type { FormatMessage, Translate } from './types';
+
+type SlashCommandType =
+  | 'commandNewTab'
+  | 'commandSettings'
+  | 'modeSwitch'
+  | 'webAppearanceSwitch'
+  | 'commandOpenTabs'
+  | 'commandCopyUrl'
+  | 'commandDocumentPip';
+
+interface SlashCommand {
+  type: SlashCommandType;
+  primary: string;
+  aliases: string[];
+  // Words that run the command without the slash.
+  legacyExactAliases?: string[];
+  requiresWebAppearance?: boolean;
+  requiresDocumentPipEnabled?: boolean;
+}
+
+// The suggestion row a command shows as.
+interface CommandSuggestion {
+  type: string;
+  title: string;
+  url: string;
+  favicon?: string;
+  commandText: string;
+  commandAliases: string[];
+  // The mode the row switches to.
+  nextMode?: string;
+}
+
+interface WebAppearanceCommandState {
+  supported: boolean;
+  mode: WebAppearanceMode;
+}
+
+interface SlashCommandsState {
+  documentPipEnabled: boolean;
+  // Shows the theme mode while a /mode or /appearance command is typed.
+  modeBadge: HTMLElement | null;
+  overlayThemeMode: string;
+  overlayMediaQuery: MediaQueryList;
+  searchInput: HTMLInputElement | null;
+}
+
+interface SlashCommandsDeps {
+  t: Translate;
+  formatMessage: FormatMessage;
+  updateInputRightPadding(): void;
+  detectPageTheme(): string | null;
+  SETTINGS: Pick<typeof Settings, 'createGlobalThemeModeStorageUpdate'>;
+  storageArea: StorageAreaFacade | null;
+  applyOverlayTheme(mode: ThemeMode): void;
+  THEME_STORAGE_KEY: string;
+  // Called with no rows: the list rebuilds from the typed command.
+  updateSearchSuggestions(suggestions: never[], query: string): void;
+  overlayState: SlashCommandsState;
+}
+
+function createSlashCommands(deps: SlashCommandsDeps) {
   const {
     t,
     formatMessage,
@@ -19,9 +84,9 @@ function createSlashCommands(deps) {
   const overlayState = deps.overlayState;
   // Firefox's website appearance setting (the color scheme pages see), read
   // and switched through the background for the /appearance command.
-  let webAppearanceState = { supported: false, mode: 'auto' };
+  let webAppearanceState: WebAppearanceCommandState = { supported: false, mode: 'auto' };
 
-  function getThemeModeLabel(mode) {
+  function getThemeModeLabel(mode: string): string {
     if (mode === 'dark') {
       return t('theme_label_dark', '深色');
     }
@@ -31,7 +96,7 @@ function createSlashCommands(deps) {
     return t('theme_label_system', '跟随系统');
   }
 
-  const commandDefinitions = [
+  const commandDefinitions: SlashCommand[] = [
     {
       type: 'commandNewTab',
       primary: '/new',
@@ -73,9 +138,9 @@ function createSlashCommands(deps) {
     }
   ];
 
-  function getCommandMatches(rawInput) {
+  function getCommandMatches(rawInput: string): SlashCommand[] {
     const input = String(rawInput || '').trim().toLowerCase();
-    const matches = [];
+    const matches: SlashCommand[] = [];
     for (let i = 0; i < commandDefinitions.length; i += 1) {
       const command = commandDefinitions[i];
       // The setting may sync from a browser that has Document PiP (Firefox has none).
@@ -109,11 +174,11 @@ function createSlashCommands(deps) {
     return matches;
   }
 
-  function isSlashCommandInput(input) {
+  function isSlashCommandInput(input: string): boolean {
     return String(input || '').trim().startsWith('/');
   }
 
-  function getCommandMatch(rawInput) {
+  function getCommandMatch(rawInput: string): { command: SlashCommand; completion: string } | null {
     const matches = getCommandMatches(rawInput);
     return matches.length > 0
       ? {
@@ -123,7 +188,7 @@ function createSlashCommands(deps) {
       : null;
   }
 
-  function buildCommandSuggestion(command) {
+  function buildCommandSuggestion(command: SlashCommand): CommandSuggestion {
     if (command.type === 'modeSwitch') {
       return {
         ...buildModeSuggestion(),
@@ -161,7 +226,7 @@ function createSlashCommands(deps) {
     };
   }
 
-  function updateModeBadge(rawValue) {
+  function updateModeBadge(rawValue: string): void {
     if (!overlayState.modeBadge) {
       return;
     }
@@ -197,21 +262,21 @@ function createSlashCommands(deps) {
     updateInputRightPadding();
   }
 
-  function getNextThemeMode(mode) {
-    const order = ['system', 'light', 'dark'];
-    const index = order.indexOf(mode);
+  function getNextThemeMode(mode: string): ThemeMode {
+    const order: ThemeMode[] = ['system', 'light', 'dark'];
+    const index = order.findIndex((item) => item === mode);
     if (index === -1) {
       return 'light';
     }
     return order[(index + 1) % order.length];
   }
 
-  function isModeCommand(input) {
+  function isModeCommand(input: string): boolean {
     const raw = String(input || '').trim().toLowerCase();
     return raw === '/mode' || raw.startsWith('/mode ');
   }
 
-  function buildModeSuggestion() {
+  function buildModeSuggestion(): CommandSuggestion & { nextMode: ThemeMode } {
     const nextMode = getNextThemeMode(overlayState.overlayThemeMode || 'system');
     return {
       type: 'modeSwitch',
@@ -227,39 +292,40 @@ function createSlashCommands(deps) {
     };
   }
 
-  function getThemeStorageUpdate(mode) {
+  function getThemeStorageUpdate(mode: string): Record<string, ThemeMode> {
     return SETTINGS.createGlobalThemeModeStorageUpdate(mode);
   }
 
-  function applyThemeModeChange(mode) {
+  function applyThemeModeChange(mode: string): void {
     const updates = getThemeStorageUpdate(mode);
     if (storageArea) {
-      storageArea.set(updates);
+      void storageArea.set(updates);
     }
     applyOverlayTheme(updates[THEME_STORAGE_KEY]);
-    if (isModeCommand(overlayState.searchInput.value || '')) {
-      updateSearchSuggestions([], (overlayState.searchInput.value || '').trim());
+    const input = overlayState.searchInput;
+    if (input && isModeCommand(input.value || '')) {
+      updateSearchSuggestions([], (input.value || '').trim());
     }
   }
 
-  function getWebAppearanceModeLabel(mode) {
+  function getWebAppearanceModeLabel(mode: string): string {
     return mode === 'auto'
       ? t('web_appearance_label_auto', '自动')
       : getThemeModeLabel(mode);
   }
 
-  function getNextWebAppearanceMode(mode) {
-    const order = ['auto', 'light', 'dark'];
+  function getNextWebAppearanceMode(mode: WebAppearanceMode): WebAppearanceMode {
+    const order: WebAppearanceMode[] = ['auto', 'light', 'dark'];
     return order[(order.indexOf(mode) + 1) % order.length];
   }
 
-  function isWebAppearanceCommand(input) {
+  function isWebAppearanceCommand(input: string): boolean {
     const raw = String(input || '').trim().toLowerCase();
     return webAppearanceState.supported &&
       (raw === '/appearance' || raw.startsWith('/appearance '));
   }
 
-  function buildWebAppearanceSuggestion() {
+  function buildWebAppearanceSuggestion(): CommandSuggestion & { nextMode: WebAppearanceMode } {
     const nextMode = getNextWebAppearanceMode(webAppearanceState.mode);
     return {
       type: 'webAppearanceSwitch',
@@ -273,7 +339,7 @@ function createSlashCommands(deps) {
     };
   }
 
-  function refreshWebAppearanceCommand() {
+  function refreshWebAppearanceCommand(): void {
     const rawValue = overlayState.searchInput ? (overlayState.searchInput.value || '') : '';
     updateModeBadge(rawValue);
     if (isSlashCommandInput(rawValue)) {
@@ -281,7 +347,7 @@ function createSlashCommands(deps) {
     }
   }
 
-  function applyWebAppearanceState(response) {
+  function applyWebAppearanceState(response: { supported?: boolean; mode?: WebAppearanceMode } | undefined): void {
     if (!response || response.supported === false || typeof response.mode !== 'string') {
       return;
     }
@@ -289,7 +355,7 @@ function createSlashCommands(deps) {
     refreshWebAppearanceCommand();
   }
 
-  function loadWebAppearanceState() {
+  function loadWebAppearanceState(): void {
     if (typeof chrome === 'undefined' || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
       return;
     }
@@ -301,7 +367,7 @@ function createSlashCommands(deps) {
     });
   }
 
-  function applyWebAppearanceMode(mode) {
+  function applyWebAppearanceMode(mode: WebAppearanceMode): void {
     // Show the choice at once; the reply carries what Firefox kept.
     webAppearanceState = { ...webAppearanceState, mode };
     refreshWebAppearanceCommand();
@@ -314,7 +380,7 @@ function createSlashCommands(deps) {
     });
   }
 
-  function applyNextWebAppearanceMode() {
+  function applyNextWebAppearanceMode(): void {
     applyWebAppearanceMode(getNextWebAppearanceMode(webAppearanceState.mode));
   }
 
@@ -336,3 +402,4 @@ function createSlashCommands(deps) {
 }
 
 export { createSlashCommands };
+export type { CommandSuggestion, SlashCommand, SlashCommandsDeps, SlashCommandsState };

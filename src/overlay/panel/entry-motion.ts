@@ -1,7 +1,36 @@
 // The panel's entry motion: when to skip it, the start and reveal
 // transforms, and playing, tracking and cleaning up the enter animation.
 import * as LumnoSettingsStorage from '../../platform/settings-storage';
-function createEntryMotion(deps) {
+
+interface EntryMotionState {
+  motionEffectsEnabled: boolean;
+  // 'fade', or the default elastic motion.
+  overlayEnterAnimation: string;
+  overlayOpenTabsDefaultVisibleLoaded: boolean;
+  overlayOpenTabsDefaultVisible: boolean;
+}
+
+// The frame tracker from lifecycle.ts, as far as the entry motion uses it.
+interface EnterFrameTracker {
+  runEnterAnimation(element: HTMLElement, callback: () => void): void;
+  clear(): void;
+}
+
+interface EntryMotionDeps {
+  // When the user asked for the panel, for the entry motion's budget.
+  initialOverlayOpenStartedAt: number;
+  overlayFrameTracker: EnterFrameTracker;
+  overlayState: EntryMotionState;
+}
+
+interface EnterMotion {
+  opacityDurationMs: number;
+  panelDelayMs: number;
+  panelDurationMs: number;
+  panelEasing: string;
+}
+
+function createEntryMotion(deps: EntryMotionDeps) {
   const {
     initialOverlayOpenStartedAt,
     overlayFrameTracker
@@ -10,13 +39,13 @@ function createEntryMotion(deps) {
   // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
-  let overlayEnterCleanupElement = null;
-  let overlayEnterCleanupTimer = null;
-  let overlayEnterTransitionEndHandler = null;
-  let overlayEnterAnimations = [];
+  let overlayEnterCleanupElement: HTMLElement | null = null;
+  let overlayEnterCleanupTimer: number | null = null;
+  let overlayEnterTransitionEndHandler: ((event: TransitionEvent) => void) | null = null;
+  let overlayEnterAnimations: Animation[] = [];
   let overlayEnterAnimationRevision = 0;
   const OVERLAY_STARTUP_ENTRY_MOTION_BUDGET_MS = 280;
-  const OVERLAY_ENTER_MOTION = Object.freeze({
+  const OVERLAY_ENTER_MOTION: Readonly<Record<'elastic' | 'fade', EnterMotion>> = Object.freeze({
     elastic: Object.freeze({
       opacityDurationMs: 130,
       panelDelayMs: 0,
@@ -34,50 +63,52 @@ function createEntryMotion(deps) {
   const OVERLAY_ELASTIC_OPEN_TABS_ENTRY_SCALE_START = 0.94;
   const OVERLAY_ENTER_CLEANUP_BUFFER_MS = 80;
 
-  function shouldSkipOverlayEntryMotion() {
+  function shouldSkipOverlayEntryMotion(): boolean {
     return LumnoSettingsStorage.shouldSkipEntryMotion(window, overlayState.motionEffectsEnabled);
   }
 
-  function shouldSkipOverlayEntryMotionForSlowStartup() {
+  function shouldSkipOverlayEntryMotionForSlowStartup(): boolean {
     return Date.now() - initialOverlayOpenStartedAt > OVERLAY_STARTUP_ENTRY_MOTION_BUDGET_MS;
   }
 
-  function getOverlayEnterAnimationRevealTransform() {
+  function getOverlayEnterAnimationRevealTransform(): string {
     if (overlayState.overlayEnterAnimation === 'fade') {
       return 'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1)) scale(1)';
     }
     return 'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1)) scaleX(1)';
   }
 
-  function getOverlayElasticEntryScaleStart() {
+  function getOverlayElasticEntryScaleStart(): number {
     return overlayState.overlayOpenTabsDefaultVisibleLoaded && overlayState.overlayOpenTabsDefaultVisible
       ? OVERLAY_ELASTIC_OPEN_TABS_ENTRY_SCALE_START
       : OVERLAY_ELASTIC_ENTRY_SCALE_START;
   }
 
-  function getOverlayEnterAnimationStartTransform() {
+  function getOverlayEnterAnimationStartTransform(): string {
     if (overlayState.overlayEnterAnimation === 'fade') {
       return 'translateX(-50%) translateY(16px) scale(var(--x-ov-visible-scale, 1)) scale(0.985)';
     }
     return `translateX(-50%) translateY(12px) scale(var(--x-ov-visible-scale, 1)) scaleX(var(--x-lumno-search-entry-scale-start, ${getOverlayElasticEntryScaleStart()}))`;
   }
 
-  function getOverlayEnterAnimationDeltaTransform() {
+  function getOverlayEnterAnimationDeltaTransform(): string {
     if (overlayState.overlayEnterAnimation === 'fade') {
       return 'translateY(16px) scale(0.985)';
     }
     return `translateY(12px) scaleX(${getOverlayElasticEntryScaleStart()})`;
   }
 
-  function getOverlayEnterMotion() {
-    return OVERLAY_ENTER_MOTION[overlayState.overlayEnterAnimation] ||
-      OVERLAY_ENTER_MOTION.elastic;
+  function getOverlayEnterMotion(): EnterMotion {
+    const name = overlayState.overlayEnterAnimation;
+    return name === 'fade' || name === 'elastic'
+      ? OVERLAY_ENTER_MOTION[name]
+      : OVERLAY_ENTER_MOTION.elastic;
   }
 
-  function clearOverlayPanelEnterCleanup() {
+  function clearOverlayPanelEnterCleanup(): void {
     overlayEnterAnimationRevision += 1;
     if (overlayEnterCleanupTimer !== null) {
-      clearTimeout(overlayEnterCleanupTimer);
+      window.clearTimeout(overlayEnterCleanupTimer);
       overlayEnterCleanupTimer = null;
     }
     if (overlayEnterCleanupElement && overlayEnterTransitionEndHandler) {
@@ -87,12 +118,10 @@ function createEntryMotion(deps) {
       );
     }
     overlayEnterAnimations.forEach((animation) => {
-      if (animation && typeof animation.cancel === 'function') {
-        try {
-          animation.cancel();
-        } catch (error) {
-          // A finished animation may already have released its effect.
-        }
+      try {
+        animation.cancel();
+      } catch (_error) {
+        // A finished animation may already have released its effect.
       }
     });
     overlayEnterAnimations = [];
@@ -100,7 +129,9 @@ function createEntryMotion(deps) {
     overlayEnterTransitionEndHandler = null;
   }
 
-  function finishOverlayPanelEnterAnimation(overlayElement, animationRevision) {
+  // Settles the panel in its final place; a revision from an older entry
+  // is ignored.
+  function finishOverlayPanelEnterAnimation(overlayElement: HTMLElement | null, animationRevision?: number): void {
     if (!overlayElement ||
         (animationRevision && animationRevision !== overlayEnterAnimationRevision)) {
       return;
@@ -120,38 +151,37 @@ function createEntryMotion(deps) {
     overlayElement.style.removeProperty('--x-lumno-search-entry-delay');
   }
 
-  function trackOverlayPanelEnterAnimation(overlayElement, animations) {
+  function trackOverlayPanelEnterAnimation(overlayElement: HTMLElement, animations: Animation[]): number {
     const animationRevision = overlayEnterAnimationRevision;
     overlayElement.setAttribute('data-lumno-overlay-entry', 'running');
     overlayEnterCleanupElement = overlayElement;
-    overlayEnterAnimations = Array.isArray(animations)
-      ? animations.filter(Boolean)
-      : [];
+    overlayEnterAnimations = animations.slice();
     const primaryAnimation = overlayEnterAnimations[0] || null;
     if (primaryAnimation) {
       primaryAnimation.onfinish = () => {
         finishOverlayPanelEnterAnimation(overlayElement, animationRevision);
       };
     } else {
-      overlayEnterTransitionEndHandler = (event) => {
-        if (!event || event.target !== overlayElement || event.propertyName !== 'transform') {
+      const onTransitionEnd = (event: TransitionEvent): void => {
+        if (event.target !== overlayElement || event.propertyName !== 'transform') {
           return;
         }
         finishOverlayPanelEnterAnimation(overlayElement, animationRevision);
       };
-      overlayElement.addEventListener('transitionend', overlayEnterTransitionEndHandler);
+      overlayEnterTransitionEndHandler = onTransitionEnd;
+      overlayElement.addEventListener('transitionend', onTransitionEnd);
     }
     const motion = getOverlayEnterMotion();
     const cleanupDelayMs = motion.panelDelayMs +
       motion.panelDurationMs + OVERLAY_ENTER_CLEANUP_BUFFER_MS;
-    overlayEnterCleanupTimer = setTimeout(() => {
+    overlayEnterCleanupTimer = window.setTimeout(() => {
       overlayEnterCleanupTimer = null;
       finishOverlayPanelEnterAnimation(overlayElement, animationRevision);
     }, cleanupDelayMs);
     return animationRevision;
   }
 
-  function applyOverlayEnterAnimationInitialState(overlayElement) {
+  function applyOverlayEnterAnimationInitialState(overlayElement: HTMLElement | null): void {
     if (!overlayElement) {
       return;
     }
@@ -176,8 +206,10 @@ function createEntryMotion(deps) {
     );
   }
 
-  function playOverlayPanelEnterAnimation(overlayElement, revealTransform) {
-    if (!overlayElement || !overlayElement.style) {
+  // Plays the entry with Web Animations, or a CSS transition where the
+  // document refuses them; false when there is no panel.
+  function playOverlayPanelEnterAnimation(overlayElement: HTMLElement | null, revealTransform: string): boolean {
+    if (!overlayElement) {
       return false;
     }
     clearOverlayPanelEnterCleanup();
@@ -186,8 +218,8 @@ function createEntryMotion(deps) {
     const deltaTransform = getOverlayEnterAnimationDeltaTransform();
     overlayElement.style.setProperty('transition', 'none', 'important');
     if (typeof overlayElement.animate === 'function') {
-      let transformAnimation = null;
-      let opacityAnimation = null;
+      let transformAnimation: Animation | null = null;
+      let opacityAnimation: Animation | null = null;
       try {
         // WAAPI animation values sit below author !important declarations.
         // The shell reset stays at normal priority inside Shadow DOM, so only
@@ -218,12 +250,12 @@ function createEntryMotion(deps) {
           [transformAnimation, opacityAnimation]
         );
         return true;
-      } catch (error) {
+      } catch (_error) {
         [transformAnimation, opacityAnimation].forEach((animation) => {
-          if (animation && typeof animation.cancel === 'function') {
+          if (animation) {
             try {
               animation.cancel();
-            } catch (cancelError) {
+            } catch (_cancelError) {
               // Continue into the CSS fallback with a clean protected state.
             }
           }
@@ -245,7 +277,7 @@ function createEntryMotion(deps) {
     });
     return true;
   }
-  function clearOverlayEnterAnimationFrames() {
+  function clearOverlayEnterAnimationFrames(): void {
     overlayFrameTracker.clear();
   }
 
@@ -262,3 +294,4 @@ function createEntryMotion(deps) {
 }
 
 export { createEntryMotion };
+export type { EnterFrameTracker, EntryMotionDeps, EntryMotionState };

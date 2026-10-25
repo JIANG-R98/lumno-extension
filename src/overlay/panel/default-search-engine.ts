@@ -1,6 +1,26 @@
+import { readSearchEngineState } from '../../domain/search/search-engine-state-reader';
+import type * as SearchUtils from '../../domain/search/search-utils';
+import type { SearchEngineState } from '../../domain/search/types';
+import type { StorageAreaFacade } from '../../platform/settings-storage';
+import type { Translate } from './types';
+
+interface DefaultSearchEngineState {
+  // The engine the user chose, once read from storage.
+  overlaySearchEngineState: SearchEngineState | null;
+}
+
+interface DefaultSearchEngineDeps {
+  getOverlayFaviconUrlResolver(): { getPageFaviconCandidateUrl(url: string): string } | null;
+  t: Translate;
+  storageArea: StorageAreaFacade | null;
+  DEFAULT_SEARCH_ENGINE_STORAGE_KEY: string;
+  SEARCH_UTILS: Pick<typeof SearchUtils, 'isRetiredSearchEngineState'>;
+  overlayState: DefaultSearchEngineState;
+}
+
 // The default search engine inside the overlay: its stored choice and
 // the search URL, label, theme and favicon it contributes.
-function createDefaultSearchEngine(deps) {
+function createDefaultSearchEngine(deps: DefaultSearchEngineDeps) {
   const {
     getOverlayFaviconUrlResolver,
     t,
@@ -12,18 +32,18 @@ function createDefaultSearchEngine(deps) {
   // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
-  function buildSearchUrlFromTemplate(template, query) {
+  function buildSearchUrlFromTemplate(template: string, query: string): string {
     if (!template) {
       return '';
     }
     return template.replace(/\{query\}/g, encodeURIComponent(query || ''));
   }
 
-  function getOverlaySearchEngineState() {
+  function getOverlaySearchEngineState(): SearchEngineState {
     return overlayState.overlaySearchEngineState || {};
   }
 
-  function buildDefaultSearchUrlForOverlay(query) {
+  function buildDefaultSearchUrlForOverlay(query: string): string {
     const state = getOverlaySearchEngineState();
     if (state.searchTemplate) {
       return buildSearchUrlFromTemplate(state.searchTemplate, query);
@@ -31,12 +51,12 @@ function createDefaultSearchEngine(deps) {
     return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
   }
 
-  function getDefaultSearchEngineFaviconUrlForOverlay() {
+  function getDefaultSearchEngineFaviconUrlForOverlay(): string {
     const resolver = getOverlayFaviconUrlResolver();
     return resolver ? resolver.getPageFaviconCandidateUrl(getDefaultSearchEngineThemeUrlForOverlay()) : '';
   }
 
-  function getDefaultSearchEngineThemeUrlForOverlay() {
+  function getDefaultSearchEngineThemeUrlForOverlay(): string {
     const state = getOverlaySearchEngineState();
     if (state.searchTemplate) {
       return buildSearchUrlFromTemplate(state.searchTemplate, 'test');
@@ -47,22 +67,24 @@ function createDefaultSearchEngine(deps) {
     return 'https://www.google.com';
   }
 
-  function getSearchActionLabel() {
+  function getSearchActionLabel(): string {
     return t('action_search', '搜索');
   }
 
-  function loadOverlaySearchEngineState(onReload) {
+  // Reads the stored engine; onReload runs when one was found.
+  function loadOverlaySearchEngineState(onReload?: () => void): Promise<SearchEngineState | null> {
     if (!storageArea || typeof storageArea.get !== 'function') {
       return Promise.resolve(overlayState.overlaySearchEngineState);
     }
+    const area = storageArea;
     return new Promise((resolve) => {
       let settled = false;
-      const finish = (result) => {
+      const finish = (result: Record<string, unknown> | null | undefined): void => {
         if (settled) {
           return;
         }
         settled = true;
-        const stored = result ? result[DEFAULT_SEARCH_ENGINE_STORAGE_KEY] : null;
+        const stored = readSearchEngineState(result ? result[DEFAULT_SEARCH_ENGINE_STORAGE_KEY] : null);
         if (stored && stored.id &&
             (!SEARCH_UTILS.isRetiredSearchEngineState(stored))) {
           overlayState.overlaySearchEngineState = stored;
@@ -73,11 +95,11 @@ function createDefaultSearchEngine(deps) {
         resolve(overlayState.overlaySearchEngineState);
       };
       try {
-        const maybePromise = storageArea.get([DEFAULT_SEARCH_ENGINE_STORAGE_KEY], finish);
+        const maybePromise = area.get([DEFAULT_SEARCH_ENGINE_STORAGE_KEY], finish);
         if (maybePromise && typeof maybePromise.then === 'function') {
           maybePromise.then(finish, () => finish(null));
         }
-      } catch (error) {
+      } catch (_error) {
         finish(null);
       }
     });
@@ -93,3 +115,4 @@ function createDefaultSearchEngine(deps) {
 }
 
 export { createDefaultSearchEngine };
+export type { DefaultSearchEngineDeps, DefaultSearchEngineState };
