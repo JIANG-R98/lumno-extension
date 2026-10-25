@@ -16,6 +16,7 @@ import * as OPTIONS_CONTROL_EVENTS from './options-control-events';
 import * as LumnoOptionsFallbackShortcut from './options-fallback-shortcut';
 import * as LumnoOptionsFeedbackSupportSection from './options-feedback-support';
 import * as OPTIONS_FORMS from './options-forms';
+import * as OPTIONS_LABS_SECTION from './options-labs-section';
 import * as OPTIONS_LANGUAGE from './options-language';
 import * as OPTIONS_NAVIGATION from './options-navigation';
 import * as OPTIONS_NORMALIZERS from './options-normalizers';
@@ -578,6 +579,7 @@ import * as OPTIONS_STATE from './options-state';
     renderSearchResultDisplayLimitControl: (...args) => renderSearchResultDisplayLimitControl(...args),
     renderOverlayWidthControl: (...args) => renderOverlayWidthControl(...args),
     renderSettingsNavigation,
+    renderLabsSettings: () => labsSection.render(),
     renderSiteSearchList,
     renderAggregateSearchList: (...args) => renderAggregateSearchList(...args),
     renderSearchBlacklistList: (...args) => renderSearchBlacklistList(...args),
@@ -836,6 +838,17 @@ import * as OPTIONS_STATE from './options-state';
     'newtab-glass-theme',
     handleNewtabGlassThemeSelection
   );
+
+  // Drawn before the switches below are set up, which mark the rows this
+  // browser cannot honor.
+  const labsSection = OPTIONS_LABS_SECTION.createLabsSection({
+    host: queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="labs"]'),
+    optionsSettingsControlsApi,
+    storageArea: optionsState.storageArea,
+    SETTINGS,
+    getMessage,
+    browserFamily: document.documentElement.getAttribute('data-browser-family') || ''
+  });
 
   const {
     registerOptionsToggleControl,
@@ -1636,6 +1649,7 @@ import * as OPTIONS_STATE from './options-state';
 
   syncSection.bindControls();
 
+  labsSection.bindSettings(settingBinder);
   OPTIONS_SETTING_BINDS.createSettingBinds({
     LANGUAGE_STORAGE_KEY,
     normalizeLanguageMode,

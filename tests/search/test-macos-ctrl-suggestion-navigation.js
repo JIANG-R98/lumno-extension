@@ -1,6 +1,5 @@
 const assert = require('assert');
 const fs = require('fs');
-const { JSDOM } = require('jsdom');
 const { createOptionsPage } = require('../helpers/options-page');
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 
@@ -40,15 +39,11 @@ async function testSurfacesFollowTheExperiment(name) {
 }
 
 async function testSettingsLabsToggle() {
-  const doc = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
-  const toggle = doc.getElementById(TOGGLE);
-  assert.ok(toggle && toggle.closest('[data-content="labs"]'), 'the opt-in control should live in Labs');
-  assert.strictEqual(toggle.checked, false, 'the experiment should start off');
-
   const page = await createOptionsPage();
   const control = page.byId(TOGGLE);
-  assert.strictEqual(control.checked, false);
-  await page.choose(control, true);
+  assert.ok(control && control.closest('[data-content="labs"]'), 'the opt-in control should live in Labs');
+  assert.strictEqual(control.checked, false, 'the experiment should start off');
+  await page.click(control);
   await page.settle(60);
   assert.ok(page.storage.sync.writes.some((write) => write[KEY] === true), 'turning it on should save the preference');
   page.close();

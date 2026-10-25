@@ -127,6 +127,14 @@ function createPage(initial, options) {
   keys.forEach((key) => {
     assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(key), `${key} should travel with Chrome Sync and export`);
   });
+  // The Labs tab draws and binds its own switches.
+  [
+    settings.DOCUMENT_PIP_ENABLED_STORAGE_KEY,
+    settings.NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY,
+    settings.MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY
+  ].forEach((key) => {
+    assert(!keys.includes(key), `${key} is bound by the Labs tab`);
+  });
 
   const byKey = new Map(table.map((entry) => [entry.key, entry]));
   const expectedDefaults = new Map([
@@ -135,7 +143,6 @@ function createPage(initial, options) {
     [settings.TAB_SWITCHER_ENABLED_STORAGE_KEY, true],
     [settings.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY, false],
     [settings.AUTO_PIP_ENABLED_STORAGE_KEY, true],
-    [settings.DOCUMENT_PIP_ENABLED_STORAGE_KEY, false],
     [settings.PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY, false],
     [settings.OVERLAY_TAB_PRIORITY_STORAGE_KEY, true],
     [settings.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY, settings.normalizeNewtabTimeSecondsVisible(undefined)],

@@ -108,6 +108,7 @@ interface LanguageDeps {
   renderSearchResultDisplayLimitControl(value: unknown): void;
   renderOverlayWidthControl(value: unknown): void;
   renderSettingsNavigation(tabKey: SettingsTabKey): void;
+  renderLabsSettings(): void;
   renderSiteSearchList(): void;
   renderAggregateSearchList(): void;
   renderSearchBlacklistList(): void;
@@ -161,6 +162,7 @@ function createLanguage(deps: LanguageDeps) {
     renderSearchResultDisplayLimitControl,
     renderOverlayWidthControl,
     renderSettingsNavigation,
+    renderLabsSettings,
     renderSiteSearchList,
     renderAggregateSearchList,
     renderSearchBlacklistList
@@ -386,6 +388,7 @@ function createLanguage(deps: LanguageDeps) {
       renderSearchResultDisplayLimitControl(optionsState.currentSearchResultDisplayLimit);
       renderOverlayWidthControl(optionsState.currentOverlayWidth);
       renderSettingsNavigation(optionsState.currentActiveSettingsTab);
+      renderLabsSettings();
       renderSiteSearchList();
       renderAggregateSearchList();
       renderSearchBlacklistList();
