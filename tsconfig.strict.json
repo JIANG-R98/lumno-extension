@@ -15,7 +15,10 @@
     "src/content/auto-pip-blacklist.ts",
     "src/content/page-shortcut-toast.ts",
     "src/content/shortcut-key-observer.ts",
-    "src/content/hotkey-listener.ts"
+    "src/content/hotkey-listener.ts",
+    "src/content/auto-pip-core.ts",
+    "src/content/youtube-auto-pip.ts",
+    "src/content/site-auto-pip.ts"
   ],
   "exclude": [
     "src/**/react/**"

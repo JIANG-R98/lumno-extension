@@ -1,18 +1,52 @@
-// @ts-nocheck
+// Automatic picture-in-picture on video sites other than YouTube, with a
+// player profile per site for finding the real player and for the sites
+// that only enter PiP from the page's own world.
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as CORE from './auto-pip-core';
+import type { AutoPipState } from './auto-pip-core';
+
+// How auto PiP finds and enters a site's player.
+interface SitePlayerProfile {
+  test: RegExp;
+  // Containers of the real player; matching videos score higher.
+  selectors: string[];
+  // Previews and feeds that never enter PiP.
+  rejectSelectors?: string[];
+  // Enter even where the site set disablePictureInPicture.
+  allowDisablePiP?: boolean;
+  minVisibleArea?: number;
+  allowEnterWhenHiddenVideo?: boolean;
+  autoResumeOnHiddenEnter?: boolean;
+  allowNoUserGesture?: boolean;
+  allowEnterWhenNotPlaying?: boolean;
+  hiddenRetryLimit?: number;
+  hiddenRetryDelayMs?: number;
+  // The site's player only enters PiP reliably from the page's own world:
+  // the background runs `action` there (after `setupAction`, when set).
+  mainWorldEnter?: {
+    action: 'siteTryEnterPiPInMainWorld' | 'iqiyiTryEnterPiPInMainWorld';
+    setupAction?: 'iqiyiSetupAutoPiPInMainWorld';
+    requiresPlaying?: boolean;
+  };
+  reloadsJingxuanModal?: boolean;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
 
 (function () {
-  if (window._x_lumno_site_auto_pip_2026_unique_) {
+  const RUNNING_FLAG = '_x_lumno_site_auto_pip_2026_unique_';
+  if (Reflect.get(window, RUNNING_FLAG)) {
     return;
   }
-  window._x_lumno_site_auto_pip_2026_unique_ = true;
+  Reflect.set(window, RUNNING_FLAG, true);
 
   if (window.top !== window.self) {
     return;
   }
 
-  const state = {
+  const state: AutoPipState & { lastVisibleAt: number; hadUserGesture: boolean; douyinModalReloadAt: number } = {
     autoPipEnabled: false,
     activeVideo: null,
     lastManagedVideo: null,
@@ -85,18 +119,13 @@ import * as CORE from './auto-pip-core';
   core.syncAutoPipEnabledSetting();
   const autoPipBlacklist = window.__lumnoAutoPipBlacklist2026;
   if (host && autoPipBlacklist && Array.isArray(autoPipBlacklist.hostRules)) {
-    const isBlacklisted = autoPipBlacklist.hostRules.some((rule) => {
-      if (!(rule instanceof RegExp)) {
-        return false;
-      }
-      return rule.test(host);
-    });
+    const isBlacklisted = autoPipBlacklist.hostRules.some((rule) => rule.test(host));
     if (isBlacklisted) {
       return;
     }
   }
 
-  const IQIYI_PLAYER_PROFILE = {
+  const IQIYI_PLAYER_PROFILE: Omit<SitePlayerProfile, 'test'> = {
     selectors: [
       ".iqp-player video",
       ".iqp-player-videolayer video",
@@ -119,7 +148,7 @@ import * as CORE from './auto-pip-core';
   // enters PiP reliably from the page's own world: the background runs
   // `action` there (after `setupAction`, when set). With requiresPlaying, the
   // main-world attempt is skipped unless the video is playing.
-  const SITE_PROFILES = {
+  const SITE_PROFILES: Readonly<Record<string, SitePlayerProfile>> = {
     douyin: {
       test: /(^|\.)douyin\.com$/,
       selectors: [
@@ -205,17 +234,19 @@ import * as CORE from './auto-pip-core';
       hiddenRetryLimit: 16,
       hiddenRetryDelayMs: 180
     },
-    iqiyi: Object.assign({
+    iqiyi: {
       test: /(^|\.)iqiyi\.com$/,
       mainWorldEnter: {
         action: "iqiyiTryEnterPiPInMainWorld",
         setupAction: "iqiyiSetupAutoPiPInMainWorld"
-      }
-    }, IQIYI_PLAYER_PROFILE),
+      },
+      ...IQIYI_PLAYER_PROFILE
+    },
     // iQIYI's international site shares the player but not the main-world setup.
-    iqiyiInternational: Object.assign({
-      test: /(^|\.)iq\.com$/
-    }, IQIYI_PLAYER_PROFILE),
+    iqiyiInternational: {
+      test: /(^|\.)iq\.com$/,
+      ...IQIYI_PLAYER_PROFILE
+    },
     kuaishou: {
       test: /(^|\.)(kuaishou\.com|kwai\.com)$/,
       selectors: [
@@ -373,9 +404,8 @@ import * as CORE from './auto-pip-core';
     }
   };
 
-  function getMatchedProfile() {
-    const matched = Object.values(SITE_PROFILES).find((profile) => profile.test.test(host));
-    return matched && typeof matched === "object" ? matched : null;
+  function getMatchedProfile(): SitePlayerProfile | null {
+    return Object.values(SITE_PROFILES).find((profile) => profile.test.test(host)) || null;
   }
 
   const matchedProfile = getMatchedProfile();
@@ -389,19 +419,19 @@ import * as CORE from './auto-pip-core';
     ? matchedProfile.mainWorldEnter
     : null;
 
-  function isJingxuanModalUrl() {
+  function isJingxuanModalUrl(): boolean {
     if (!matchedProfile || !matchedProfile.reloadsJingxuanModal) {
       return false;
     }
     try {
       const url = new URL(location.href);
       return url.pathname === "/jingxuan" && url.searchParams.has("modal_id");
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
 
-  function requestMainWorldSetup() {
+  function requestMainWorldSetup(): Promise<unknown> {
     if (!mainWorldEnter || !mainWorldEnter.setupAction) {
       return Promise.resolve({ ok: false, reason: "no-main-world-setup" });
     }
@@ -411,7 +441,7 @@ import * as CORE from './auto-pip-core';
     );
   }
 
-  function getHiddenRetryLimit() {
+  function getHiddenRetryLimit(): number {
     const value = Number(matchedProfile && matchedProfile.hiddenRetryLimit);
     if (Number.isFinite(value) && value >= 0) {
       return Math.floor(value);
@@ -419,7 +449,7 @@ import * as CORE from './auto-pip-core';
     return DEFAULT_HIDDEN_RETRY_LIMIT;
   }
 
-  function getHiddenRetryDelayMs() {
+  function getHiddenRetryDelayMs(): number {
     const value = Number(matchedProfile && matchedProfile.hiddenRetryDelayMs);
     if (Number.isFinite(value) && value >= 40) {
       return Math.floor(value);
@@ -427,8 +457,9 @@ import * as CORE from './auto-pip-core';
     return DEFAULT_HIDDEN_RETRY_DELAY_MS;
   }
 
-  function getVisibleArea(video) {
-    if (!video || typeof video.getBoundingClientRect !== "function") {
+  // The part of the video inside the viewport.
+  function getVisibleArea(video: Element | null): number {
+    if (!video) {
       return 0;
     }
     const rect = video.getBoundingClientRect();
@@ -446,7 +477,7 @@ import * as CORE from './auto-pip-core';
     return width * height;
   }
 
-  function isVideoVisibleEnough(video) {
+  function isVideoVisibleEnough(video: HTMLVideoElement | null): boolean {
     if (!video || !video.isConnected || core.isProbablyHiddenByStyles(video)) {
       return false;
     }
@@ -456,13 +487,12 @@ import * as CORE from './auto-pip-core';
     if (width < MIN_VISIBLE_WIDTH || height < MIN_VISIBLE_HEIGHT) {
       return false;
     }
-    const minArea = Number(matchedProfile && matchedProfile.minVisibleArea) > 0
-      ? Number(matchedProfile.minVisibleArea)
-      : MIN_VISIBLE_AREA;
+    const profileMinArea = matchedProfile ? Number(matchedProfile.minVisibleArea) : 0;
+    const minArea = profileMinArea > 0 ? profileMinArea : MIN_VISIBLE_AREA;
     return getVisibleArea(video) >= minArea;
   }
 
-  function hasAnyPlayingMedia() {
+  function hasAnyPlayingMedia(): boolean {
     const mediaNodes = Array.from(document.querySelectorAll("video, audio"));
     return mediaNodes.some((node) => {
       return node instanceof HTMLMediaElement &&
@@ -472,7 +502,7 @@ import * as CORE from './auto-pip-core';
     });
   }
 
-  function shouldRecoverJingxuanModalByReload() {
+  function shouldRecoverJingxuanModalByReload(): boolean {
     if (!isJingxuanModalUrl()) {
       return false;
     }
@@ -483,7 +513,7 @@ import * as CORE from './auto-pip-core';
     return hasAnyPlayingMedia() || state.shouldResumeInlinePlayback;
   }
 
-  function reloadJingxuanModalIfNeeded() {
+  function reloadJingxuanModalIfNeeded(): boolean {
     if (!shouldRecoverJingxuanModalByReload()) {
       return false;
     }
@@ -496,16 +526,20 @@ import * as CORE from './auto-pip-core';
     return true;
   }
 
-  function isLikelyAudible(video) {
+  function isLikelyAudible(video: HTMLVideoElement | null): boolean {
     if (!video) {
       return false;
     }
     if (video.muted || Number(video.volume || 0) === 0) {
       return false;
     }
-    if (typeof video.audioTracks === "object" && video.audioTracks && video.audioTracks.length > 0) {
-      for (let i = 0; i < video.audioTracks.length; i += 1) {
-        if (video.audioTracks[i] && video.audioTracks[i].enabled !== false) {
+    // AudioTrackList is missing from some browsers and from the DOM types.
+    const audioTracks: unknown = Reflect.get(video, "audioTracks");
+    const trackCount = isRecord(audioTracks) && typeof audioTracks.length === "number" ? audioTracks.length : 0;
+    if (isRecord(audioTracks) && trackCount > 0) {
+      for (let i = 0; i < trackCount; i += 1) {
+        const track: unknown = Reflect.get(audioTracks, i);
+        if (isRecord(track) && track.enabled !== false) {
           return true;
         }
       }
@@ -514,7 +548,7 @@ import * as CORE from './auto-pip-core';
     return true;
   }
 
-  function isRejectedByProfile(video) {
+  function isRejectedByProfile(video: HTMLVideoElement | null): boolean {
     if (!video || profileRejectSelectors.length === 0) {
       return false;
     }
@@ -523,7 +557,7 @@ import * as CORE from './auto-pip-core';
         if (video.matches(selector)) {
           return true;
         }
-      } catch (error) {
+      } catch (_error) {
         // Ignore invalid selector and continue.
       }
       try {
@@ -534,17 +568,17 @@ import * as CORE from './auto-pip-core';
         if (node === video) {
           return true;
         }
-        if (typeof node.contains === "function" && node.contains(video)) {
+        if (node.contains(video)) {
           return true;
         }
-      } catch (error) {
+      } catch (_error) {
         // Ignore invalid selector and continue.
       }
     }
     return false;
   }
 
-  function isVideoCandidate(video) {
+  function isVideoCandidate(video: HTMLVideoElement | null): boolean {
     if (isRejectedByProfile(video)) {
       return false;
     }
@@ -556,7 +590,7 @@ import * as CORE from './auto-pip-core';
       Number(video.videoHeight || 0) > 0;
   }
 
-  function hasProfileBoost(video) {
+  function hasProfileBoost(video: HTMLVideoElement | null): boolean {
     if (!video || profileSelectors.length === 0) {
       return false;
     }
@@ -569,10 +603,10 @@ import * as CORE from './auto-pip-core';
         if (node === video) {
           return true;
         }
-        if (typeof node.contains === "function" && node.contains(video)) {
+        if (node.contains(video)) {
           return true;
         }
-      } catch (error) {
+      } catch (_error) {
         // Ignore invalid selector and continue.
       }
     }
@@ -581,7 +615,7 @@ import * as CORE from './auto-pip-core';
 
   // Playing beats audible beats profile-matched beats recently used; the
   // on-screen area breaks ties. Videos with no area are skipped.
-  function scoreVideo(video) {
+  function scoreVideo(video: HTMLVideoElement): number | null {
     const visibleArea = getVisibleArea(video);
     const area = Math.max(visibleArea, core.getRectArea(video));
     if (area <= 0) {
@@ -595,7 +629,7 @@ import * as CORE from './auto-pip-core';
     return playingBoost + audibleBoost + profileBoost + lastManagedBoost + activeBoost + area;
   }
 
-  function markPlaybackIntentFromActiveVideo() {
+  function markPlaybackIntentFromActiveVideo(): boolean {
     const activeVideo = syncActiveVideo(state.lastManagedVideo || state.activeVideo);
     if (isVideoPlaying(activeVideo)) {
       state.hadUserGesture = true;
@@ -605,8 +639,10 @@ import * as CORE from './auto-pip-core';
     return false;
   }
 
-  async function requestVideoPictureInPicture(video) {
-    if (!video || typeof video.requestPictureInPicture !== "function") {
+  // Enters PiP, lifting the site's disablePictureInPicture for the request
+  // where the profile allows it.
+  async function requestVideoPictureInPicture(video: HTMLVideoElement): Promise<boolean> {
+    if (typeof video.requestPictureInPicture !== "function") {
       return false;
     }
     const allowDisablePiP = Boolean(matchedProfile && matchedProfile.allowDisablePiP);
@@ -618,7 +654,7 @@ import * as CORE from './auto-pip-core';
         if (hadDisableAttr) {
           video.removeAttribute("disablepictureinpicture");
         }
-      } catch (error) {
+      } catch (_error) {
         // Ignore property/attribute write errors.
       }
     }
@@ -632,14 +668,14 @@ import * as CORE from './auto-pip-core';
           if (hadDisableAttr) {
             video.setAttribute("disablepictureinpicture", "");
           }
-        } catch (error) {
+        } catch (_error) {
           // Ignore restore errors.
         }
       }
     }
   }
 
-  async function maybeEnterPiP(reason) {
+  async function maybeEnterPiP(reason: string): Promise<boolean> {
     if (!state.autoPipEnabled) {
       return false;
     }
@@ -671,7 +707,7 @@ import * as CORE from './auto-pip-core';
     }
 
     let ownershipGranted = false;
-    const ensureOwnership = async () => {
+    const ensureOwnership = async (): Promise<boolean> => {
       if (ownershipGranted || state.ownerToken) {
         ownershipGranted = true;
         return true;
@@ -700,10 +736,12 @@ import * as CORE from './auto-pip-core';
         { action: mainWorldEnter.action },
         { ms: MAIN_WORLD_ENTER_TIMEOUT_MS, minMs: 160 }
       );
-      if (document.pictureInPictureElement) {
+      // Read afresh: the page entered PiP while this function waited.
+      const pipElement = getPictureInPictureElement();
+      if (pipElement) {
         state.managedPiP = true;
-        if (document.pictureInPictureElement instanceof HTMLVideoElement) {
-          state.lastManagedVideo = document.pictureInPictureElement;
+        if (pipElement instanceof HTMLVideoElement) {
+          state.lastManagedVideo = pipElement;
         }
         state.hiddenRetryBudget = 0;
         clearEnterRetryTimer();
@@ -711,7 +749,7 @@ import * as CORE from './auto-pip-core';
       }
     }
 
-    if (!isVideoPlaying(activeVideo)) {
+    if (!activeVideo || !isVideoPlaying(activeVideo)) {
       return false;
     }
 
@@ -739,7 +777,7 @@ import * as CORE from './auto-pip-core';
       state.hiddenRetryBudget = 0;
       clearEnterRetryTimer();
       return true;
-    } catch (error) {
+    } catch (_error) {
       return false;
     } finally {
       state.enteringPiP = false;
@@ -749,7 +787,7 @@ import * as CORE from './auto-pip-core';
     }
   }
 
-  function recoverInlinePlaybackIfNeeded() {
+  function recoverInlinePlaybackIfNeeded(): void {
     if (document.visibilityState !== "visible") {
       return;
     }
@@ -770,7 +808,7 @@ import * as CORE from './auto-pip-core';
     }
   }
 
-  function scheduleVisibleRecovery() {
+  function scheduleVisibleRecovery(): void {
     clearRecoveryTimer();
     if (!state.shouldResumeInlinePlayback &&
         !state.managedPiP &&
@@ -783,7 +821,7 @@ import * as CORE from './auto-pip-core';
     }
 
     let attempts = 0;
-    const run = async () => {
+    const run = async (): Promise<void> => {
       attempts += 1;
       await maybeExitPiP();
       if (reloadJingxuanModalIfNeeded()) {
@@ -796,7 +834,7 @@ import * as CORE from './auto-pip-core';
         return;
       }
       if (document.pictureInPictureElement && attempts < VISIBLE_RECOVERY_MAX_ATTEMPTS) {
-        state.recoveryTimer = setTimeout(
+        state.recoveryTimer = window.setTimeout(
           run,
           attempts < VISIBLE_RECOVERY_FAST_ATTEMPTS
             ? VISIBLE_RECOVERY_FAST_DELAY_MS
@@ -809,7 +847,7 @@ import * as CORE from './auto-pip-core';
     run();
   }
 
-  function handleVisibilityChange() {
+  function handleVisibilityChange(): void {
     if (document.visibilityState === "hidden") {
       core.capturePlaybackStateOnHide();
       state.hiddenRetryBudget = getHiddenRetryLimit();
@@ -839,8 +877,8 @@ import * as CORE from './auto-pip-core';
     }
   }
 
-  function onVideoEvent(event) {
-    const target = event && event.target;
+  function onVideoEvent(event: Event): void {
+    const target = event.target;
     if (!(target instanceof HTMLVideoElement)) {
       return;
     }
@@ -869,20 +907,24 @@ import * as CORE from './auto-pip-core';
     }
   }
 
-  function onEnterPictureInPicture(event) {
+  function onEnterPictureInPicture(event: Event): void {
     if (state.enteringPiP || document.visibilityState === "hidden") {
       state.managedPiP = true;
       return;
     }
-    const target = event && event.target;
+    const target = event.target;
     state.managedPiP = Boolean(target && target === state.lastManagedVideo);
   }
 
-  function markUserGesture() {
+  function getPictureInPictureElement(): Element | null {
+    return document.pictureInPictureElement;
+  }
+
+  function markUserGesture(): void {
     state.hadUserGesture = true;
   }
 
-  function init() {
+  function init(): void {
     if (!core.canExitPiP()) {
       return;
     }

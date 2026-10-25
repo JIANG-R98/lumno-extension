@@ -1,10 +1,77 @@
-// @ts-nocheck
 // Shared auto Picture-in-Picture logic for src/content/site-auto-pip.ts and
 // src/content/youtube-auto-pip.ts, loaded after settings.ts by both of their
 // content_scripts entries. Nothing here touches the page until a content
 // script calls createAutoPipCore.
 import * as LumnoSettings from '../domain/settings';
+import type { BackgroundAction, BackgroundReply, BackgroundRequest, OkReply, PageReply } from '../domain/messages';
 import * as LumnoMessaging from '../platform/messaging';
+import type * as LumnoSettingsStorage from '../platform/settings-storage';
+
+// What the two auto PiP scripts track; each adds fields of its own.
+interface AutoPipState {
+  autoPipEnabled: boolean;
+  activeVideo: HTMLVideoElement | null;
+  lastManagedVideo: HTMLVideoElement | null;
+  enteringPiP: boolean;
+  exitingPiP: boolean;
+  // Lumno put the page into picture-in-picture.
+  managedPiP: boolean;
+  enterRetryTimer: number | null;
+  recoveryTimer: number | null;
+  // No automatic entering before this time.
+  suppressEnterUntil: number;
+  mediaSessionHandlerBound: boolean;
+  // Retries left while the tab stays hidden.
+  hiddenRetryBudget: number;
+  shouldResumeInlinePlayback: boolean;
+  wasPlayingBeforeHide: boolean;
+  // The background's grant of the one picture-in-picture across tabs.
+  ownerToken: string;
+  runtimeMessageHandlerBound: boolean;
+}
+
+interface AutoPipCoreConfig {
+  pageBridgeScriptId: string;
+  // The background action that leaves PiP from the page's own world.
+  mainWorldExitAction: 'forceExitPiPInMainWorld' | 'ytForceExitPiPInMainWorld';
+  enterSuppressAfterExitMs: number;
+  enterSuppressAfterVisibleMs: number;
+}
+
+// The parts each site does differently.
+interface AutoPipHooks {
+  maybeEnterPiP(reason: string): Promise<boolean>;
+  scheduleVisibleRecovery(): void;
+  isVideoCandidate(video: HTMLVideoElement): boolean;
+  // A higher score wins; null skips the video.
+  scoreVideo(video: HTMLVideoElement): number | null;
+  getHiddenRetryDelayMs?(): number;
+  afterExitAttempt?(): void;
+  onPageReturn?(): void;
+}
+
+interface AutoPipCoreOptions {
+  state: AutoPipState;
+  // The page's window, with its constructors.
+  window: Window & typeof globalThis;
+  document: Document;
+  navigator: Navigator;
+  chrome: typeof chrome;
+  providerStorage: ReturnType<typeof LumnoSettingsStorage.getProviderStorage>;
+  config: AutoPipCoreConfig;
+  hooks: AutoPipHooks;
+}
+
+interface PageBridgeExitResult extends OkReply {
+  attempted?: boolean;
+  before?: boolean;
+  after?: boolean;
+  error?: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
 
 const AUTO_PIP_ENABLED_STORAGE_KEY = LumnoSettings.AUTO_PIP_ENABLED_STORAGE_KEY;
 const DOCUMENT_PIP_ACTIVE_FLAG = '__lumno_document_pip_active_2026__';
@@ -15,62 +82,60 @@ const MAIN_WORLD_EXIT_TIMEOUT_MS = 760;
 const PAGE_BRIDGE_EXIT_TIMEOUT_MS = 520;
 const MIN_DEFERRED_ENTER_DELAY_MS = 40;
 
-function normalizeAutoPipEnabled(value) {
+function normalizeAutoPipEnabled(value: unknown): boolean {
   return value !== false;
 }
 
-function isVideoPlaying(video) {
+function isVideoPlaying(video: HTMLMediaElement | null | undefined): boolean {
   if (!video) {
     return false;
   }
   return !video.paused && !video.ended && Number(video.readyState || 0) >= 2;
 }
 
-function warnUnexpected(context) {
+function warnUnexpected(context: string): (error: unknown) => void {
   return (error) => {
     console.warn(`[Lumno] auto PiP: ${context} failed`, error);
   };
 }
 
-// options: { state, window, document, navigator, chrome, providerStorage, config, hooks }
-// config: { pageBridgeScriptId, mainWorldExitAction, enterSuppressAfterExitMs,
-//           enterSuppressAfterVisibleMs }
-// hooks:  { maybeEnterPiP, scheduleVisibleRecovery, isVideoCandidate, scoreVideo,
-//           getHiddenRetryDelayMs?, afterExitAttempt?, onPageReturn? }
-// The hooks are the parts each site does differently.
-function createAutoPipCore(options) {
+function createAutoPipCore(options: AutoPipCoreOptions) {
   const { state, window, document, navigator, chrome, providerStorage, config, hooks } = options;
 
-  function setAutoPipEnabled(value) {
+  function setAutoPipEnabled(value: unknown): void {
     state.autoPipEnabled = normalizeAutoPipEnabled(value);
   }
 
-  function isDocumentPiPActive() {
-    return window[DOCUMENT_PIP_ACTIVE_FLAG] === true;
+  // The document picture-in-picture picker sets this flag on the page's window.
+  function isDocumentPiPActive(): boolean {
+    return Reflect.get(window, DOCUMENT_PIP_ACTIVE_FLAG) === true;
   }
 
   // Resolves with the response, or with { ok: false, reason } on any
   // failure. With timeout ({ ms, minMs }) it also resolves on timeout.
-  function sendRuntimeMessage(message, timeout) {
+  function sendRuntimeMessage<A extends BackgroundAction>(
+    message: BackgroundRequest<A>,
+    timeout?: { ms: number; minMs: number }
+  ): Promise<BackgroundReply<A> | OkReply> {
     return new Promise((resolve) => {
       if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
         resolve({ ok: false, reason: 'no-runtime-sendMessage' });
         return;
       }
       let done = false;
-      let timer = null;
-      const finish = (result) => {
+      let timer: number | null = null;
+      const finish = (result: BackgroundReply<A> | OkReply): void => {
         if (done) {
           return;
         }
         done = true;
         if (timer) {
-          clearTimeout(timer);
+          window.clearTimeout(timer);
         }
-        resolve(result || { ok: false });
+        resolve(result);
       };
       if (timeout) {
-        timer = setTimeout(() => {
+        timer = window.setTimeout(() => {
           finish({ ok: false, reason: 'timeout' });
         }, Math.max(timeout.minMs, Number(timeout.ms)));
       }
@@ -90,9 +155,9 @@ function createAutoPipCore(options) {
     });
   }
 
-  async function requestPiPOwnership(kind) {
+  async function requestPiPOwnership(kind: string): Promise<{ ok: boolean; granted: boolean; reason?: string }> {
     const response = await sendRuntimeMessage({ action: 'pipRequestOwnership', kind: kind });
-    if (response && response.ok && response.granted && response.token) {
+    if (response.ok && 'granted' in response && response.granted && response.token) {
       state.ownerToken = String(response.token);
       return { ok: true, granted: true };
     }
@@ -103,7 +168,7 @@ function createAutoPipCore(options) {
     };
   }
 
-  async function releasePiPOwnership() {
+  async function releasePiPOwnership(): Promise<unknown> {
     const token = typeof state.ownerToken === 'string' ? state.ownerToken : '';
     state.ownerToken = '';
     if (!token) {
@@ -112,23 +177,23 @@ function createAutoPipCore(options) {
     return sendRuntimeMessage({ action: 'pipReleaseOwnership', token: token });
   }
 
-  function clearEnterRetryTimer() {
+  function clearEnterRetryTimer(): void {
     if (!state.enterRetryTimer) {
       return;
     }
-    clearTimeout(state.enterRetryTimer);
+    window.clearTimeout(state.enterRetryTimer);
     state.enterRetryTimer = null;
   }
 
-  function clearRecoveryTimer() {
+  function clearRecoveryTimer(): void {
     if (!state.recoveryTimer) {
       return;
     }
-    clearTimeout(state.recoveryTimer);
+    window.clearTimeout(state.recoveryTimer);
     state.recoveryTimer = null;
   }
 
-  function clearPlaybackRecoveryState() {
+  function clearPlaybackRecoveryState(): void {
     state.shouldResumeInlinePlayback = false;
     state.wasPlayingBeforeHide = false;
     state.hiddenRetryBudget = 0;
@@ -136,7 +201,7 @@ function createAutoPipCore(options) {
     clearRecoveryTimer();
   }
 
-  function syncAutoPipEnabledSetting() {
+  function syncAutoPipEnabledSetting(): void {
     if (!chrome || !chrome.storage) {
       return;
     }
@@ -170,29 +235,26 @@ function createAutoPipCore(options) {
     });
   }
 
-  function canEnterPiP() {
+  function canEnterPiP(): boolean {
     return typeof document !== 'undefined' && document.pictureInPictureEnabled === true;
   }
 
-  function canExitPiP() {
+  function canExitPiP(): boolean {
     return typeof document !== 'undefined' && typeof document.exitPictureInPicture === 'function';
   }
 
-  function isProbablyHiddenByStyles(element) {
+  function isProbablyHiddenByStyles(element: Element | null | undefined): boolean {
     if (!element || !(element instanceof window.Element)) {
       return true;
     }
     const style = window.getComputedStyle(element);
-    if (!style) {
-      return false;
-    }
     return style.display === 'none' ||
       style.visibility === 'hidden' ||
       Number(style.opacity || 1) === 0;
   }
 
-  function getRectArea(video) {
-    if (!video || typeof video.getBoundingClientRect !== 'function') {
+  function getRectArea(video: Element | null | undefined): number {
+    if (!video) {
       return 0;
     }
     const rect = video.getBoundingClientRect();
@@ -203,12 +265,12 @@ function createAutoPipCore(options) {
 
   // The highest hooks.scoreVideo score among candidates wins; a null score
   // skips the video. Falls back to the first video on the page.
-  function pickPrimaryVideo() {
+  function pickPrimaryVideo(): HTMLVideoElement | null {
     const videos = Array.from(document.querySelectorAll('video'));
     if (!videos.length) {
       return null;
     }
-    let best = null;
+    let best: HTMLVideoElement | null = null;
     let bestScore = -1;
     for (const video of videos) {
       if (!hooks.isVideoCandidate(video)) {
@@ -223,27 +285,27 @@ function createAutoPipCore(options) {
     return best || videos[0] || null;
   }
 
-  function syncActiveVideo(preferred) {
+  function syncActiveVideo(preferred?: HTMLVideoElement | null): HTMLVideoElement | null {
     state.activeVideo = preferred && hooks.isVideoCandidate(preferred)
       ? preferred
       : pickPrimaryVideo();
     return state.activeVideo;
   }
 
-  function pauseAllManagedMedia() {
+  function pauseAllManagedMedia(): void {
     Array.from(document.querySelectorAll('video, audio')).forEach((node) => {
       if (!(node instanceof window.HTMLMediaElement) || node.paused || node.ended) {
         return;
       }
       try {
         node.pause();
-      } catch (error) {
+      } catch (_error) {
         // Ignore pause failures from site-specific players.
       }
     });
   }
 
-  function ensurePageBridgeInjected() {
+  function ensurePageBridgeInjected(): void {
     if (document.getElementById(config.pageBridgeScriptId)) {
       return;
     }
@@ -265,7 +327,7 @@ function createAutoPipCore(options) {
   let pageBridgeRequestSeq = 0;
 
   // Asks youtube-auto-pip-page.js, running in the page's own world, to exit PiP.
-  function requestPageBridgeExitPiP(timeoutMs) {
+  function requestPageBridgeExitPiP(timeoutMs: number): Promise<PageBridgeExitResult> {
     return new Promise((resolve) => {
       if (typeof window.CustomEvent !== 'function') {
         resolve({ ok: false, reason: 'no-custom-event' });
@@ -274,19 +336,22 @@ function createAutoPipCore(options) {
       ensurePageBridgeInjected();
       const requestId = ++pageBridgeRequestSeq;
       let done = false;
-      const finish = (result) => {
+      let timer = 0;
+      const finish = (result: PageBridgeExitResult): void => {
         if (done) {
           return;
         }
         done = true;
         window.removeEventListener(PAGE_BRIDGE_RESPONSE_EVENT, onResponse, true);
         if (timer) {
-          clearTimeout(timer);
+          window.clearTimeout(timer);
         }
-        resolve(result || { ok: false });
+        resolve(result);
       };
-      const onResponse = (event) => {
-        const detail = event && event.detail ? event.detail : {};
+      // The page's answer, as plain data on a CustomEvent from the page's world.
+      const onResponse = (event: Event): void => {
+        const rawDetail: unknown = 'detail' in event ? event.detail : null;
+        const detail: Record<string, unknown> = isRecord(rawDetail) ? rawDetail : {};
         if (Number(detail.requestId || 0) !== requestId) {
           return;
         }
@@ -299,7 +364,7 @@ function createAutoPipCore(options) {
         });
       };
       window.addEventListener(PAGE_BRIDGE_RESPONSE_EVENT, onResponse, true);
-      const timer = setTimeout(() => {
+      timer = window.setTimeout(() => {
         finish({ ok: false, reason: 'timeout' });
       }, Math.max(120, Number(timeoutMs || PAGE_BRIDGE_EXIT_TIMEOUT_MS)));
       window.dispatchEvent(new window.CustomEvent(PAGE_BRIDGE_REQUEST_EVENT, {
@@ -308,7 +373,7 @@ function createAutoPipCore(options) {
     });
   }
 
-  async function maybeExitPiP() {
+  async function maybeExitPiP(): Promise<boolean> {
     if (!canExitPiP() || state.enteringPiP || state.exitingPiP) {
       return false;
     }
@@ -334,7 +399,7 @@ function createAutoPipCore(options) {
       }
       await document.exitPictureInPicture();
       return !document.pictureInPictureElement;
-    } catch (error) {
+    } catch (_error) {
       // exitPictureInPicture rejects when PiP already ended on its own.
       return false;
     } finally {
@@ -347,7 +412,7 @@ function createAutoPipCore(options) {
     }
   }
 
-  async function forceSurrenderPiP(reason) {
+  async function forceSurrenderPiP(reason: string): Promise<OkReply> {
     const isHidden = document.visibilityState === 'hidden';
     if (isHidden) {
       clearPlaybackRecoveryState();
@@ -355,7 +420,7 @@ function createAutoPipCore(options) {
     state.suppressEnterUntil = Date.now() + config.enterSuppressAfterVisibleMs;
     try {
       await maybeExitPiP();
-    } catch (error) {
+    } catch (_error) {
       // Best effort only.
     }
     if (isHidden) {
@@ -367,7 +432,7 @@ function createAutoPipCore(options) {
   }
 
   // The background asks this tab to give up PiP when another tab takes it.
-  function bindRuntimeMessageListener() {
+  function bindRuntimeMessageListener(): void {
     if (state.runtimeMessageHandlerBound) {
       return;
     }
@@ -375,18 +440,22 @@ function createAutoPipCore(options) {
         typeof chrome.runtime.onMessage.addListener !== 'function') {
       return;
     }
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      if (!message || message.action !== 'lumno:pip-force-surrender') {
+    chrome.runtime.onMessage.addListener((
+      message: unknown,
+      _sender: chrome.runtime.MessageSender,
+      sendResponse: (reply: PageReply<'lumno:pip-force-surrender'>) => void
+    ) => {
+      if (!isRecord(message) || message.action !== 'lumno:pip-force-surrender') {
         return;
       }
       forceSurrenderPiP(message.reason ? String(message.reason) : '')
         .then((result) => {
           sendResponse(result);
         })
-        .catch((error) => {
+        .catch((error: unknown) => {
           sendResponse({
             ok: false,
-            reason: error && error.message ? error.message : String(error || 'surrender-failed')
+            reason: error instanceof Error && error.message ? error.message : String(error || 'surrender-failed')
           });
         });
       return true;
@@ -394,7 +463,7 @@ function createAutoPipCore(options) {
     state.runtimeMessageHandlerBound = true;
   }
 
-  function bindMediaSessionAutoPiP() {
+  function bindMediaSessionAutoPiP(): void {
     if (state.mediaSessionHandlerBound) {
       return;
     }
@@ -402,11 +471,15 @@ function createAutoPipCore(options) {
       return;
     }
     try {
-      navigator.mediaSession.setActionHandler('enterpictureinpicture', async () => {
-        await hooks.maybeEnterPiP('media_session_action');
-      });
+      // A newer action than the DOM types know.
+      Reflect.apply(navigator.mediaSession.setActionHandler, navigator.mediaSession, [
+        'enterpictureinpicture',
+        async () => {
+          await hooks.maybeEnterPiP('media_session_action');
+        }
+      ]);
       state.mediaSessionHandlerBound = true;
-    } catch (error) {
+    } catch (_error) {
       // Older browser versions may not support this action type.
     }
   }
@@ -414,7 +487,7 @@ function createAutoPipCore(options) {
   // Retries entering PiP while the tab stays hidden: once after the
   // suppression window or the retry delay, then again while
   // state.hiddenRetryBudget lasts.
-  function scheduleDeferredEnterPiP(reason) {
+  function scheduleDeferredEnterPiP(reason?: string): void {
     if (!state.autoPipEnabled) {
       return;
     }
@@ -430,7 +503,7 @@ function createAutoPipCore(options) {
     const delay = suppressUntil > now
       ? (suppressUntil - now + MIN_DEFERRED_ENTER_DELAY_MS)
       : baseDelay;
-    state.enterRetryTimer = setTimeout(async () => {
+    state.enterRetryTimer = window.setTimeout(async () => {
       state.enterRetryTimer = null;
       if (document.visibilityState !== 'hidden') {
         return;
@@ -448,7 +521,7 @@ function createAutoPipCore(options) {
   }
 
   // Records, as the tab hides, whether inline playback should resume later.
-  function capturePlaybackStateOnHide() {
+  function capturePlaybackStateOnHide(): void {
     const video = syncActiveVideo(state.lastManagedVideo || state.activeVideo);
     const shouldTrackRecovery = state.autoPipEnabled || state.managedPiP ||
       Boolean(document.pictureInPictureElement);
@@ -459,14 +532,14 @@ function createAutoPipCore(options) {
     );
   }
 
-  function onLeavePictureInPicture() {
+  function onLeavePictureInPicture(): void {
     state.managedPiP = false;
     if (document.visibilityState === 'visible') {
       hooks.scheduleVisibleRecovery();
     }
   }
 
-  function handlePageReturn() {
+  function handlePageReturn(): void {
     if (hooks.onPageReturn) {
       hooks.onPageReturn();
     }
@@ -475,7 +548,7 @@ function createAutoPipCore(options) {
     hooks.scheduleVisibleRecovery();
   }
 
-  function bindPageReturnListeners() {
+  function bindPageReturnListeners(): void {
     window.addEventListener('focus', handlePageReturn, true);
     window.addEventListener('pageshow', handlePageReturn, true);
   }
@@ -507,6 +580,9 @@ function createAutoPipCore(options) {
   });
 }
 
+type AutoPipCore = ReturnType<typeof createAutoPipCore>;
+
+export type { AutoPipCore, AutoPipCoreConfig, AutoPipCoreOptions, AutoPipHooks, AutoPipState };
 export {
   AUTO_PIP_ENABLED_STORAGE_KEY,
   normalizeAutoPipEnabled,

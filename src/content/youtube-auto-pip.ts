@@ -1,12 +1,16 @@
-// @ts-nocheck
+// Automatic picture-in-picture on YouTube: enters it when the tab hides
+// with a video playing, and on return undoes YouTube's own PiP and mini
+// player leftovers until the video plays inline again.
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as CORE from './auto-pip-core';
+import type { AutoPipState } from './auto-pip-core';
 
 (function () {
-  if (window._x_lumno_youtube_auto_pip_2026_unique_) {
+  const RUNNING_FLAG = '_x_lumno_youtube_auto_pip_2026_unique_';
+  if (Reflect.get(window, RUNNING_FLAG)) {
     return;
   }
-  window._x_lumno_youtube_auto_pip_2026_unique_ = true;
+  Reflect.set(window, RUNNING_FLAG, true);
 
   if (window.top !== window.self) {
     return;
@@ -16,7 +20,7 @@ import * as CORE from './auto-pip-core';
   if (!host || !/(^|\.)youtube\.com$/.test(host)) {
     return;
   }
-  const state = {
+  const state: AutoPipState & { uiRecoverySuppressUntil: number } = {
     autoPipEnabled: false,
     activeVideo: null,
     enteringPiP: false,
@@ -77,7 +81,7 @@ import * as CORE from './auto-pip-core';
 
   core.syncAutoPipEnabledSetting();
 
-  function shouldAllowRecoveryReload() {
+  function shouldAllowRecoveryReload(): boolean {
     try {
       const raw = sessionStorage.getItem(RECOVERY_RELOAD_GUARD_KEY);
       const lastAt = Number(raw || 0);
@@ -85,20 +89,20 @@ import * as CORE from './auto-pip-core';
         return true;
       }
       return (Date.now() - lastAt) > RECOVERY_RELOAD_GUARD_MS;
-    } catch (error) {
+    } catch (_error) {
       return true;
     }
   }
 
-  function markRecoveryReloadNow() {
+  function markRecoveryReloadNow(): void {
     try {
       sessionStorage.setItem(RECOVERY_RELOAD_GUARD_KEY, String(Date.now()));
-    } catch (error) {
+    } catch (_error) {
       // Ignore storage write failures.
     }
   }
 
-  function isVideoCandidate(video) {
+  function isVideoCandidate(video: HTMLVideoElement): boolean {
     return Boolean(video) &&
       !video.disablePictureInPicture &&
       Number(video.videoWidth || 0) > 0 &&
@@ -106,12 +110,12 @@ import * as CORE from './auto-pip-core';
   }
 
   // A playing video always wins; otherwise the largest one does.
-  function scoreVideo(video) {
+  function scoreVideo(video: HTMLVideoElement): number {
     const playingBoost = isVideoPlaying(video) ? 1000000000 : 0;
     return playingBoost + core.getRectArea(video);
   }
 
-  function getFirstHTMLElement(selectors) {
+  function getFirstHTMLElement(selectors: string[]): HTMLElement | null {
     for (const selector of selectors) {
       const node = document.querySelector(selector);
       if (node instanceof HTMLElement) {
@@ -121,21 +125,21 @@ import * as CORE from './auto-pip-core';
     return null;
   }
 
-  function getYouTubePiPButton() {
+  function getYouTubePiPButton(): HTMLElement | null {
     return getFirstHTMLElement([
       ".ytp-pip-button",
       ".ytp-right-controls .ytp-button.ytp-pip-button"
     ]);
   }
 
-  function getYouTubeMiniPlayerButton() {
+  function getYouTubeMiniPlayerButton(): HTMLElement | null {
     return getFirstHTMLElement([
       ".ytp-miniplayer-button",
       ".ytp-right-controls .ytp-button.ytp-miniplayer-button"
     ]);
   }
 
-  function isPressedButton(button) {
+  function isPressedButton(button: Element | null): boolean {
     if (!button) {
       return false;
     }
@@ -149,19 +153,19 @@ import * as CORE from './auto-pip-core';
     return false;
   }
 
-  function clickButton(button) {
+  function clickButton(button: Element | null): boolean {
     if (!button) {
       return false;
     }
     try {
       button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
       return true;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
 
-  function getYouTubePiPToggleButtonIfPressed() {
+  function getYouTubePiPToggleButtonIfPressed(): HTMLElement | null {
     const pipButton = getYouTubePiPButton();
     if (isPressedButton(pipButton)) {
       return pipButton;
@@ -173,7 +177,7 @@ import * as CORE from './auto-pip-core';
     return null;
   }
 
-  function isInlineVideoVisible(video) {
+  function isInlineVideoVisible(video: HTMLVideoElement | null): boolean {
     if (!video || !video.isConnected) {
       return false;
     }
@@ -184,14 +188,11 @@ import * as CORE from './auto-pip-core';
     return Number(rect.width || 0) >= 160 && Number(rect.height || 0) >= 90;
   }
 
-  function isElementVisible(element) {
+  function isElementVisible(element: Element | null): boolean {
     if (!element || !(element instanceof Element) || !element.isConnected) {
       return false;
     }
     const style = window.getComputedStyle(element);
-    if (!style) {
-      return true;
-    }
     if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity || 1) === 0) {
       return false;
     }
@@ -199,7 +200,7 @@ import * as CORE from './auto-pip-core';
     return Number(rect.width || 0) > 0 && Number(rect.height || 0) > 0;
   }
 
-  function markUiRecoverySuppressed(ms) {
+  function markUiRecoverySuppressed(ms: number): void {
     const duration = Math.max(0, Number(ms || 0));
     if (!duration) {
       return;
@@ -210,7 +211,7 @@ import * as CORE from './auto-pip-core';
     );
   }
 
-  function isSettingsMenuExpanded() {
+  function isSettingsMenuExpanded(): boolean {
     const settingsButton = document.querySelector(".ytp-settings-button");
     if (settingsButton instanceof Element && settingsButton.getAttribute("aria-expanded") === "true") {
       return true;
@@ -219,7 +220,7 @@ import * as CORE from './auto-pip-core';
     return isElementVisible(visibleMenu);
   }
 
-  function shouldDeferVisibleRecoveryForUi() {
+  function shouldDeferVisibleRecoveryForUi(): boolean {
     const suppressUntil = Number(state.uiRecoverySuppressUntil || 0);
     if (Date.now() < suppressUntil) {
       return true;
@@ -231,7 +232,7 @@ import * as CORE from './auto-pip-core';
     return false;
   }
 
-  function hasYouTubeMiniPlayerState() {
+  function hasYouTubeMiniPlayerState(): boolean {
     return Boolean(
       document.querySelector(
         "ytd-app[miniplayer-active_], ytd-app[miniplayer-is-active], ytd-app[miniplayer-active]"
@@ -239,7 +240,7 @@ import * as CORE from './auto-pip-core';
     );
   }
 
-  function forceRestoreYouTubeInlineContainer() {
+  function forceRestoreYouTubeInlineContainer(): void {
     const app = document.querySelector("ytd-app");
     if (app && app instanceof Element) {
       app.removeAttribute("miniplayer-active_");
@@ -265,43 +266,47 @@ import * as CORE from './auto-pip-core';
     document.documentElement.classList.remove("ytp-player-minimized");
   }
 
-  function getYouTubePlayerApi() {
+  // YouTube's player object: #movie_player, or the one <ytd-player> holds.
+  // Its methods belong to the page and are reached by name.
+  function getYouTubePlayerApi(): object | null {
     const moviePlayer = document.getElementById("movie_player");
-    if (moviePlayer && typeof moviePlayer === "object") {
+    if (moviePlayer) {
       return moviePlayer;
     }
     const ytdPlayer = document.querySelector("ytd-player");
-    if (ytdPlayer && typeof ytdPlayer.getPlayer === "function") {
+    const getPlayer: unknown = ytdPlayer ? Reflect.get(ytdPlayer, "getPlayer") : null;
+    if (ytdPlayer && typeof getPlayer === "function") {
       try {
-        const player = ytdPlayer.getPlayer();
+        const player: unknown = Reflect.apply(getPlayer, ytdPlayer, []);
         if (player && typeof player === "object") {
           return player;
         }
-      } catch (error) {
+      } catch (_error) {
         // Ignore API retrieval errors.
       }
     }
     return null;
   }
 
-  function callPlayerMethod(player, methodName, args) {
-    if (!player || typeof player[methodName] !== "function") {
+  function callPlayerMethod(player: object, methodName: string, args: unknown[]): { called: boolean; value: unknown } {
+    const method: unknown = Reflect.get(player, methodName);
+    if (typeof method !== "function") {
       return { called: false, value: undefined };
     }
     try {
-      return { called: true, value: player[methodName].apply(player, Array.isArray(args) ? args : []) };
-    } catch (error) {
+      return { called: true, value: Reflect.apply(method, player, args) };
+    } catch (_error) {
       return { called: false, value: undefined };
     }
   }
 
-  function forceUnminimizeViaPlayerApi() {
+  function forceUnminimizeViaPlayerApi(): boolean {
     const player = getYouTubePlayerApi();
     if (!player) {
       return false;
     }
     let changed = false;
-    const candidates = [
+    const candidates: unknown[][] = [
       [false],
       [0],
       [null],
@@ -314,7 +319,7 @@ import * as CORE from './auto-pip-core';
     return changed;
   }
 
-  function tryExitYouTubeViaPlayerApi(video) {
+  function tryExitYouTubeViaPlayerApi(video: HTMLVideoElement | null): boolean {
     const player = getYouTubePlayerApi();
     if (!player) {
       return false;
@@ -328,7 +333,7 @@ import * as CORE from './auto-pip-core';
       changed = toggled.called || changed;
     }
 
-    const exitCandidates = [
+    const exitCandidates: Array<[name: string, args: unknown[]]> = [
       ["exitPictureInPicture", []],
       ["togglePictureInPicture", []],
       ["togglePip", []],
@@ -348,7 +353,7 @@ import * as CORE from './auto-pip-core';
     return changed;
   }
 
-  function looksLikeYouTubeGhostPiP(video) {
+  function looksLikeYouTubeGhostPiP(video: HTMLVideoElement | null): boolean {
     if (document.pictureInPictureElement) {
       return true;
     }
@@ -364,7 +369,7 @@ import * as CORE from './auto-pip-core';
     return false;
   }
 
-  function tryExitYouTubePipLikeModes(video) {
+  function tryExitYouTubePipLikeModes(video: HTMLVideoElement | null): boolean {
     const ghostState = looksLikeYouTubeGhostPiP(video);
     if (!ghostState) {
       return false;
@@ -382,7 +387,7 @@ import * as CORE from './auto-pip-core';
     return changed;
   }
 
-  function trySoftResetPlayerRender(video) {
+  function trySoftResetPlayerRender(video: HTMLVideoElement | null): void {
     if (!video) {
       return;
     }
@@ -392,12 +397,12 @@ import * as CORE from './auto-pip-core';
       requestAnimationFrame(() => {
         video.style.transform = "";
       });
-    } catch (error) {
+    } catch (_error) {
       // Ignore style mutation errors.
     }
   }
 
-  function maybeHardRecoverByReload(video) {
+  function maybeHardRecoverByReload(video: HTMLVideoElement | null): void {
     if (document.visibilityState !== "visible") {
       return;
     }
@@ -413,7 +418,7 @@ import * as CORE from './auto-pip-core';
     location.replace(url.toString());
   }
 
-  function forceReloadToReturnInlinePlayback() {
+  function forceReloadToReturnInlinePlayback(): boolean {
     if (document.visibilityState !== "visible") {
       return false;
     }
@@ -445,7 +450,7 @@ import * as CORE from './auto-pip-core';
     return true;
   }
 
-  async function maybeEnterPiP(reason) {
+  async function maybeEnterPiP(reason: string): Promise<boolean> {
     if (!state.autoPipEnabled) {
       return false;
     }
@@ -467,7 +472,7 @@ import * as CORE from './auto-pip-core';
     }
 
     const activeVideo = syncActiveVideo();
-    if (!isVideoPlaying(activeVideo)) {
+    if (!activeVideo || !isVideoPlaying(activeVideo)) {
       return false;
     }
 
@@ -484,7 +489,7 @@ import * as CORE from './auto-pip-core';
       state.lastManagedVideo = activeVideo;
       clearEnterRetryTimer();
       return true;
-    } catch (error) {
+    } catch (_error) {
       // Best effort: hidden-tab requests can fail without user activation.
       return false;
     } finally {
@@ -495,7 +500,7 @@ import * as CORE from './auto-pip-core';
     }
   }
 
-  function recoverInlinePlaybackIfNeeded(attemptIndex) {
+  function recoverInlinePlaybackIfNeeded(attemptIndex: number): void {
     if (document.visibilityState !== "visible") {
       return;
     }
@@ -534,7 +539,7 @@ import * as CORE from './auto-pip-core';
     }
   }
 
-  function scheduleVisibleRecovery() {
+  function scheduleVisibleRecovery(): void {
     clearRecoveryTimer();
     if (!state.shouldResumeInlinePlayback &&
         !state.managedPiP &&
@@ -543,9 +548,9 @@ import * as CORE from './auto-pip-core';
     }
 
     let attempts = 0;
-    const run = async () => {
+    const run = async (): Promise<void> => {
       if (shouldDeferVisibleRecoveryForUi()) {
-        state.recoveryTimer = setTimeout(() => {
+        state.recoveryTimer = window.setTimeout(() => {
           run();
         }, VISIBLE_RECOVERY_UI_DEFER_MS);
         return;
@@ -566,7 +571,7 @@ import * as CORE from './auto-pip-core';
         const delay = attempts < VISIBLE_RECOVERY_FAST_ATTEMPTS
           ? VISIBLE_RECOVERY_FAST_DELAY_MS
           : VISIBLE_RECOVERY_SLOW_DELAY_MS;
-        state.recoveryTimer = setTimeout(() => {
+        state.recoveryTimer = window.setTimeout(() => {
           run();
         }, delay);
         return;
@@ -580,7 +585,7 @@ import * as CORE from './auto-pip-core';
     run();
   }
 
-  function handleVisibilityChange() {
+  function handleVisibilityChange(): void {
     if (document.visibilityState === "hidden") {
       core.capturePlaybackStateOnHide();
       clearRecoveryTimer();
@@ -595,9 +600,9 @@ import * as CORE from './auto-pip-core';
     }
   }
 
-  function onVideoEvent(event) {
-    const target = event && event.target;
-    if (!target || target.tagName !== "VIDEO") {
+  function onVideoEvent(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLVideoElement)) {
       return;
     }
     syncActiveVideo(target);
@@ -625,16 +630,16 @@ import * as CORE from './auto-pip-core';
     }
   }
 
-  function onEnterPictureInPicture(event) {
+  function onEnterPictureInPicture(event: Event): void {
     if (state.enteringPiP) {
       state.managedPiP = true;
       return;
     }
-    const target = event && event.target;
+    const target = event.target;
     state.managedPiP = Boolean(target && target === state.activeVideo);
   }
 
-  function init() {
+  function init(): void {
     if (!core.canExitPiP()) {
       return;
     }
@@ -644,7 +649,7 @@ import * as CORE from './auto-pip-core';
         url.searchParams.delete("lumno_pip_recover");
         history.replaceState(history.state, "", url.toString());
       }
-    } catch (error) {
+    } catch (_error) {
       // Ignore URL cleanup errors.
     }
     core.ensurePageBridgeInjected();
@@ -660,8 +665,8 @@ import * as CORE from './auto-pip-core';
     document.addEventListener("enterpictureinpicture", onEnterPictureInPicture, true);
     document.addEventListener("leavepictureinpicture", core.onLeavePictureInPicture, true);
     document.addEventListener("pointerdown", (event) => {
-      const target = event && event.target instanceof Element ? event.target : null;
-      if (!target || !target.closest) {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) {
         return;
       }
       if (target.closest(".ytp-settings-button, .ytp-panel-menu, .ytp-settings-menu")) {

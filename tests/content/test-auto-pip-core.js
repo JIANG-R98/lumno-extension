@@ -54,7 +54,10 @@ function createHarness(overrides = {}) {
   const window = {
     Element: FakeElement,
     HTMLMediaElement: FakeMediaElement,
-    getComputedStyle: (element) => element.style || null,
+    // A computed style always exists; an element without one shows defaults.
+    getComputedStyle: (element) => element.style || {},
+    setTimeout: (callback, ms) => setTimeout(callback, ms),
+    clearTimeout: (timer) => clearTimeout(timer),
     addEventListener() {},
     removeEventListener() {},
     dispatchEvent() {}
