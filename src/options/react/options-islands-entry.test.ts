@@ -21,8 +21,6 @@ function clearRuntime(): void {
   Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsNavigationReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsControls');
   Reflect.deleteProperty(runtime, 'LumnoOptionsSettingsControlsReact');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsShortcutReference');
-  Reflect.deleteProperty(runtime, 'LumnoOptionsShortcutReferenceReact');
   Reflect.deleteProperty(runtime, 'LumnoOptionsAccountTab');
   Reflect.deleteProperty(runtime, 'LumnoOptionsShortcutsTab');
   Reflect.deleteProperty(runtime, 'LumnoOptionsThemePicker');
@@ -77,10 +75,6 @@ describe('Options React islands entry', () => {
     expect(runtime.LumnoOptionsSettingsControlsReact).toBe(
       runtime.LumnoOptionsSettingsControls
     );
-    expect(runtime.LumnoOptionsShortcutReference?.implementation).toBe('react');
-    expect(runtime.LumnoOptionsShortcutReferenceReact).toBe(
-      runtime.LumnoOptionsShortcutReference
-    );
     expect(runtime.LumnoOptionsThemePicker?.implementation).toBe('react');
     expect(runtime.LumnoOptionsThemePickerReact).toBe(
       runtime.LumnoOptionsThemePicker
@@ -100,7 +94,6 @@ describe('Options React islands entry', () => {
       selectControl: runtime.LumnoOptionsSelectControl,
       settingsNavigation: runtime.LumnoOptionsSettingsNavigation,
       settingsControls: runtime.LumnoOptionsSettingsControls,
-      shortcutReference: runtime.LumnoOptionsShortcutReference,
       accountTab: runtime.LumnoOptionsAccountTab,
       shortcutsTab: runtime.LumnoOptionsShortcutsTab,
       themePicker: runtime.LumnoOptionsThemePicker,

@@ -3,7 +3,7 @@ import * as LumnoShortcutReference from '../domain/shortcut-reference';
 import type { ShortcutReferenceGroup } from '../domain/shortcut-reference';
 import type * as ShortcutDisplay from '../domain/shortcut-display';
 import type { FormatTemplate, GetMessage } from './options-types';
-import type { ShortcutReferenceController } from './react/shortcut-reference';
+import type { ShortcutReferenceRenderModel } from './react/shortcut-reference';
 
 interface ShortcutReferenceState {
   isMacPlatform: boolean;
@@ -11,8 +11,7 @@ interface ShortcutReferenceState {
 
 interface ShortcutReferenceDeps {
   shortcutDisplay: Pick<typeof ShortcutDisplay, 'formatShortcutChord' | 'formatShortcutReferencePart'>;
-  shortcutReferenceList: HTMLElement | null;
-  shortcutReferenceController: Pick<ShortcutReferenceController, 'render'>;
+  shortcutReferenceController: { render(model: ShortcutReferenceRenderModel): void };
   getMessage: GetMessage;
   formatTemplate: FormatTemplate;
   // The help center page for a slug and section (getHelpUrl in community-links).
@@ -25,7 +24,6 @@ interface ShortcutReferenceDeps {
 function createShortcutReference(deps: ShortcutReferenceDeps) {
   const {
     shortcutDisplay,
-    shortcutReferenceList,
     shortcutReferenceController,
     getMessage,
     formatTemplate,
@@ -88,9 +86,6 @@ function createShortcutReference(deps: ShortcutReferenceDeps) {
   }
 
   function renderShortcutReferenceGroups(groups: ShortcutReferenceGroup[]): void {
-    if (!shortcutReferenceList) {
-      return;
-    }
     const visibleGroups = groups.map((group) => ({
       ...group,
       items: group.items.filter((item) => item.commandName !== 'show-search')
@@ -129,9 +124,6 @@ function createShortcutReference(deps: ShortcutReferenceDeps) {
   }
 
   function renderShortcutReferenceList(): void {
-    if (!shortcutReferenceList) {
-      return;
-    }
     const shortcutReference = LumnoShortcutReference;
     const platform = optionsState.isMacPlatform ? 'mac' : 'default';
     const renderWithCommands = (commands: chrome.commands.Command[] | undefined): void => {

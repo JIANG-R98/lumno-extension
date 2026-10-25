@@ -19,6 +19,7 @@ import * as OPTIONS_FORMS from './options-forms';
 import * as OPTIONS_GENERAL_FEATURES_SECTION from './options-general-features-section';
 import * as OPTIONS_GENERAL_NEWTAB_SECTION from './options-general-newtab-section';
 import * as OPTIONS_GENERAL_SEARCH_SECTION from './options-general-search-section';
+import * as OPTIONS_GENERAL_SHORTCUTS_SECTION from './options-general-shortcuts-section';
 import * as OPTIONS_LABS_SECTION from './options-labs-section';
 import * as OPTIONS_LANGUAGE from './options-language';
 import * as OPTIONS_NAVIGATION from './options-navigation';
@@ -132,23 +133,16 @@ import * as OPTIONS_STATE from './options-state';
   const newtabShortcutSizeControlHost = getHtmlElement(document, '_x_extension_newtab_shortcut_size_control_2026_unique_');
   const newtabShortcutGapRow = getHtmlElement(document, '_x_extension_newtab_shortcut_gap_setting_row_2026_unique_');
   const newtabShortcutGapControlHost = getHtmlElement(document, '_x_extension_newtab_shortcut_gap_control_2026_unique_');
-  const restrictedActionSelect = getHtmlTag(document, '_x_extension_restricted_action_select_2024_unique_', 'select');
   const newtabGlassStyleSelect = getHtmlTag(document, '_x_extension_newtab_glass_style_select_2026_unique_', 'select');
   const newtabGlassThemeRow = getHtmlElement(document, '_x_extension_newtab_glass_theme_row_2026_unique_');
   const newtabGlassThemeTabsWrap = getHtmlElement(document, '_x_extension_newtab_glass_theme_tabs_wrap_2026_unique_');
   const overlayPageThemeAdaptationRow = getHtmlElement(document, '_x_extension_overlay_page_theme_adaptation_row_2026_unique_');
   const overlayPageThemeAdaptationInfoHost = getHtmlElement(document, '_x_extension_overlay_page_theme_adaptation_info_2026_unique_');
-  const restrictedActionInfoHost = getHtmlElement(document, '_x_extension_restricted_action_info_2026_unique_');
   const bookmarkRowsInfoHost = getHtmlElement(document, '_x_extension_bookmark_rows_info_2026_unique_');
   const bookmarkColumnsInfoHost = getHtmlElement(document, '_x_extension_bookmark_columns_info_2026_unique_');
-  const restrictedActionSelectWrap = getHtmlElement(document, '_x_extension_restricted_action_tabs_wrap_2024_unique_');
-  const restrictedActionTabButtons = queryHtmlElements(document, 'button[data-restricted-action]');
-  const shortcutsStatus = getHtmlElement(document, '_x_extension_shortcuts_status_2024_unique_');
-  const shortcutReferenceList = getHtmlElement(document, '_x_extension_shortcut_reference_list_2026_unique_');
   const openOnboardingPageButton = getHtmlElement(document, '_x_extension_open_onboarding_page_2026_unique_');
   const feedbackSupportHost = getHtmlElement(document, '_x_extension_feedback_support_2026_unique_');
   const translationHelpHost = getHtmlElement(document, '_x_extension_translation_help_2026_unique_');
-  const openShortcutsPageButton = getHtmlElement(document, '_x_extension_open_shortcuts_page_2026_unique_');
   const toastElement = getHtmlElement(document, '_x_extension_toast_2024_unique_');
   if (!panel || !optionsRoot || themeButtons.length === 0 || tabButtons.length === 0) {
     return;
@@ -164,12 +158,11 @@ import * as OPTIONS_STATE from './options-state';
   const optionsSegmentedControlApi = globalThis.LumnoOptionsSegmentedControl;
   const optionsSettingsControlsApi = globalThis.LumnoOptionsSettingsControls;
   const optionsSettingsNavigationApi = globalThis.LumnoOptionsSettingsNavigation;
-  const optionsShortcutReferenceApi = globalThis.LumnoOptionsShortcutReference;
   const optionsThemePickerApi = globalThis.LumnoOptionsThemePicker;
   if (!optionsAccountTabApi || !optionsBlacklistTabApi || !optionsShortcutsTabApi || !optionsFeedbackSupportApi ||
       !optionsTranslationHelpApi || !optionsInfoButtonApi || !optionsSegmentedControlApi ||
       !optionsSettingsControlsApi || !optionsSettingsNavigationApi ||
-      !optionsShortcutReferenceApi || !optionsThemePickerApi) {
+      !optionsThemePickerApi) {
     console.warn('Lumno: options views not available.');
     return;
   }
@@ -213,8 +206,6 @@ import * as OPTIONS_STATE from './options-state';
     NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
     NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
     NEWTAB_TIME_FONT_WEIGHT_DEFAULT,
-    RESTRICTED_ACTION_STORAGE_KEY,
-    RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
     FALLBACK_SHORTCUT_STORAGE_KEY,
     SITE_SEARCH_STORAGE_KEY,
     SITE_SEARCH_DISABLED_STORAGE_KEY,
@@ -435,7 +426,6 @@ import * as OPTIONS_STATE from './options-state';
     setOverlaySizeTabState: (...args) => setOverlaySizeTabState(...args),
     setOverlayEnterAnimationTabState: (...args) => setOverlayEnterAnimationTabState(...args),
     setRecentModeTabState: (...args) => setRecentModeTabState(...args),
-    setRestrictedActionTabState: (...args) => setRestrictedActionTabState(...args),
     setNewtabTopContentTabState: (...args) => setNewtabTopContentTabState(...args),
     renderNewtabTimeFontWeightControl: (...args) => renderNewtabTimeFontWeightControl(...args),
     renderNewtabTimeFontSizeControl: (...args) => renderNewtabTimeFontSizeControl(...args),
@@ -455,6 +445,7 @@ import * as OPTIONS_STATE from './options-state';
       generalFeaturesSection.render();
       generalSearchSection.render();
       generalNewtabSection.render();
+      generalShortcutsSection.render();
       labsSection.render();
       blacklistSection.render();
     },
@@ -524,14 +515,11 @@ import * as OPTIONS_STATE from './options-state';
   function createOptionsInfoButtonController(host: HTMLElement | null) {
     return infoButtonApi.createInfoButtonController(host);
   }
-  const restrictedActionInfoController = createOptionsInfoButtonController(restrictedActionInfoHost);
   const bookmarkRowsInfoController = createOptionsInfoButtonController(bookmarkRowsInfoHost);
   const bookmarkColumnsInfoController = createOptionsInfoButtonController(bookmarkColumnsInfoHost);
   const overlayPageThemeAdaptationInfoController = createOptionsInfoButtonController(
     overlayPageThemeAdaptationInfoHost
   );
-  const shortcutReferenceController =
-    optionsShortcutReferenceApi.createShortcutReferenceController(shortcutReferenceList);
   const themePickerController =
     optionsThemePickerApi.createThemePickerController(themePicker, {
       onSelect(mode, button) {
@@ -556,15 +544,13 @@ import * as OPTIONS_STATE from './options-state';
     setNewtabGlassThemeTabState,
     syncNewtabGlassThemeVisibility,
     updateRecentModeTabsVisibility,
-    setRestrictedActionTabState,
     handleNewtabWidthSelection,
     handleOverlaySizeSelection,
     handleOverlayEnterAnimationSelection,
     handleNewtabTopContentSelection,
     handleNewtabGlassThemeSelection,
     handleNewtabTimeInkSelection,
-    handleRecentModeSelection,
-    handleRestrictedActionSelection
+    handleRecentModeSelection
   } = OPTIONS_SEGMENTED_TABS.createSegmentedTabs({
     getMessage,
     normalizeOverlaySizeMode: (...args) => normalizeOverlaySizeMode(...args),
@@ -583,8 +569,6 @@ import * as OPTIONS_STATE from './options-state';
     newtabTimeSecondsRow,
     newtabTime12HourRow,
     recentModeTabsWrap,
-    RESTRICTED_ACTION_STORAGE_KEY,
-    RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
     newtabWidthSelect,
     NEWTAB_WIDTH_MODE_STORAGE_KEY,
     notifyNewtabSectionsRefresh,
@@ -593,7 +577,6 @@ import * as OPTIONS_STATE from './options-state';
     NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
     recentModeSelect,
     RECENT_MODE_STORAGE_KEY,
-    restrictedActionSelect,
     optionsState
   });
 
@@ -654,11 +637,6 @@ import * as OPTIONS_STATE from './options-state';
     'overlay-enter-animation',
     handleOverlayEnterAnimationSelection
   );
-  optionsState.restrictedActionTabsController = createOptionsSegmentedControlController(
-    restrictedActionSelectWrap,
-    'restricted-action',
-    handleRestrictedActionSelection
-  );
   optionsState.newtabTopContentTabsController = createOptionsSegmentedControlController(
     newtabTopContentTabsWrap,
     'newtab-top-content',
@@ -689,6 +667,15 @@ import * as OPTIONS_STATE from './options-state';
     getTabSwitcherShortcut: () => LumnoShortcutDisplay.formatShortcutChord('Alt+Q', {
       platform: optionsState.isMacPlatform ? 'mac' : 'windows'
     }) || (optionsState.isMacPlatform ? '⌥Q' : 'Alt+Q')
+  });
+  const generalShortcutsSection = OPTIONS_GENERAL_SHORTCUTS_SECTION.createGeneralShortcutsSection({
+    host: getHtmlElement(document, '_x_extension_general_shortcuts_section_2026_unique_'),
+    optionsSettingsControlsApi,
+    storageArea: optionsState.storageArea,
+    SETTINGS,
+    runtime: chrome.runtime,
+    getMessage,
+    showToast
   });
   const generalNewtabSection = OPTIONS_GENERAL_NEWTAB_SECTION.createGeneralNewtabSection({
     host: getHtmlElement(document, '_x_extension_general_newtab_section_2026_unique_'),
@@ -960,15 +947,6 @@ import * as OPTIONS_STATE from './options-state';
         });
       }
     });
-    if (restrictedActionInfoController) {
-      restrictedActionInfoController.render({
-        tooltip: getMessage(
-          'settings_restricted_tooltip',
-          '受限页（如 chrome://、扩展商店、部分 file:// 页面）无法开启聚焦搜索；按下快捷键将按此处规则处理。'
-        ),
-        tooltipKey: 'settings_restricted_tooltip'
-      });
-    }
     if (overlayPageThemeAdaptationInfoController) {
       overlayPageThemeAdaptationInfoController.render({
         tooltip: getMessage(
@@ -1162,7 +1140,6 @@ import * as OPTIONS_STATE from './options-state';
   setOverlaySizeTabState(optionsState.currentOverlaySizeMode);
   setOverlayEnterAnimationTabState(optionsState.currentOverlayEnterAnimation);
   setRecentModeTabState(optionsState.currentRecentMode);
-  setRestrictedActionTabState(optionsState.currentRestrictedAction);
   setNewtabTopContentTabState(optionsState.currentNewtabTopContentMode);
   setNewtabTimeInkTabState(optionsState.currentNewtabTimeInk);
   setNewtabGlassThemeTabState(optionsState.currentNewtabGlassTheme);
@@ -1227,8 +1204,7 @@ import * as OPTIONS_STATE from './options-state';
     renderShortcutReferenceList
   } = OPTIONS_SHORTCUT_REFERENCE.createShortcutReference({
     shortcutDisplay,
-    shortcutReferenceList,
-    shortcutReferenceController,
+    shortcutReferenceController: generalShortcutsSection.referenceList,
     getMessage,
     formatTemplate,
     getHelpUrl: (slug, anchor) => COMMUNITY_LINKS.getHelpUrl(
@@ -1245,11 +1221,7 @@ import * as OPTIONS_STATE from './options-state';
     isMacPlatform: optionsState.isMacPlatform,
     formatShortcutForDisplay,
     getMessage,
-    onChange(label) {
-      if (shortcutsStatus) {
-        shortcutsStatus.textContent = label;
-      }
-    }
+    onChange: (label) => generalShortcutsSection.setStatus(label)
   });
   function loadCurrentShortcut(): void {
     if (optionsState.searchShortcutStatus) {
@@ -1400,12 +1372,8 @@ import * as OPTIONS_STATE from './options-state';
     recentModeSelect,
     handleRecentModeSelection,
     recentModeTabButtons,
-    restrictedActionSelect,
-    handleRestrictedActionSelection,
-    restrictedActionTabButtons,
     showToast,
     getMessage,
-    openShortcutsPageButton,
     openOnboardingPageButton,
     refreshOptionsSelectItems,
     renderOverlayFontMissingNotices,
@@ -1429,6 +1397,7 @@ import * as OPTIONS_STATE from './options-state';
   generalFeaturesSection.bindSettings(settingBinder);
   generalSearchSection.bindSettings(settingBinder);
   generalNewtabSection.bindSettings(settingBinder);
+  generalShortcutsSection.bindSettings(settingBinder);
   labsSection.bindSettings(settingBinder);
   blacklistSection.bindSettings(settingBinder);
   shortcutsSection.bindSettings(settingBinder);
@@ -1516,9 +1485,6 @@ import * as OPTIONS_STATE from './options-state';
     setNewtabTimeInkTabState,
     TOGGLE_SETTINGS,
     toggleSettingControls,
-    RESTRICTED_ACTION_STORAGE_KEY,
-    restrictedActionSelect,
-    setRestrictedActionTabState,
     ensureOverlayFontOption,
     refreshOptionsSelectItems,
     renderOverlayFontMissingNotices,

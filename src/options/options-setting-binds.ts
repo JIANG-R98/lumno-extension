@@ -122,9 +122,6 @@ interface SettingBindsDeps {
   setNewtabTimeInkTabState(ink: unknown): void;
   TOGGLE_SETTINGS: readonly ToggleSettingsEntry[];
   toggleSettingControls: ReadonlyMap<ToggleSettingsEntry, HTMLInputElement | null>;
-  RESTRICTED_ACTION_STORAGE_KEY: string;
-  restrictedActionSelect: HTMLSelectElement | null;
-  setRestrictedActionTabState(action: unknown): void;
   ensureOverlayFontOption(select: HTMLSelectElement | null, family: string): void;
   refreshOptionsSelectItems(select: HTMLSelectElement): void;
   renderOverlayFontMissingNotices(): void;
@@ -219,9 +216,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     setNewtabTimeInkTabState,
     TOGGLE_SETTINGS,
     toggleSettingControls,
-    RESTRICTED_ACTION_STORAGE_KEY,
-    restrictedActionSelect,
-    setRestrictedActionTabState,
     ensureOverlayFontOption,
     refreshOptionsSelectItems,
     renderOverlayFontMissingNotices,
@@ -587,18 +581,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
   loadNewtabShortcutSettings();
   TOGGLE_SETTINGS.forEach((entry) => {
     settingBinder.bindToggle({ ...entry, input: toggleSettingControls.get(entry) || null });
-  });
-  settingBinder.bindSetting({
-    key: RESTRICTED_ACTION_STORAGE_KEY,
-    // "lumno" is the old name of the default action.
-    normalize: (value): 'none' | 'default' => (value === 'none' ? 'none' : 'default'),
-    apply(action) {
-      if (restrictedActionSelect) {
-        restrictedActionSelect.value = action;
-      }
-      setRestrictedActionTabState(action);
-    },
-    refreshSelects: true
   });
 }
 

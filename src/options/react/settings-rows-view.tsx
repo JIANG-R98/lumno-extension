@@ -3,12 +3,8 @@ import { createReactRootController, type ReactRootController } from './root-cont
 import { SettingDivider, SettingSwitch, SettingTitle, type SettingRowUnsupported } from './setting-rows';
 import { SegmentedControl, type SegmentedControlRenderModel } from './segmented-control';
 import { SettingSelect, type SelectControlRenderModel } from './select-control';
-import {
-  RangeSliderControl,
-  RequiredCheckboxGroup,
-  type RangeSliderControlRenderModel,
-  type RequiredCheckboxGroupRenderModel
-} from './settings-controls';
+import { RangeSliderControl, type RangeSliderControlRenderModel } from './range-slider-control';
+import { RequiredCheckboxGroup, type RequiredCheckboxGroupRenderModel } from './required-checkbox-group';
 import type { ToggleControlRenderModel } from './toggle-control';
 
 // How a row sits in its section.

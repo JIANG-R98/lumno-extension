@@ -132,6 +132,10 @@ function createPage(initial, options) {
     settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
     settings.SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY,
     settings.SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY,
+    settings.OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
+    settings.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY,
+    settings.PROGRESS_TRACKING_ENABLED_STORAGE_KEY,
+    settings.OVERLAY_TAB_PRIORITY_STORAGE_KEY,
     settings.DOCUMENT_PIP_ENABLED_STORAGE_KEY,
     settings.NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY,
     settings.MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY,
@@ -144,7 +148,6 @@ function createPage(initial, options) {
   const expectedDefaults = new Map([
     [settings.UPDATE_NOTICE_ENABLED_STORAGE_KEY, true],
     [settings.MOTION_EFFECTS_ENABLED_STORAGE_KEY, true],
-    [settings.OVERLAY_TAB_PRIORITY_STORAGE_KEY, true],
     [settings.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY, settings.normalizeNewtabTimeSecondsVisible(undefined)]
   ]);
   expectedDefaults.forEach((expected, key) => {
@@ -185,13 +188,6 @@ function createPage(initial, options) {
     );
     assert(hookCalls.length > 0, `${entry.key} runs its after hook on apply`);
   });
-
-  const quickSwitch = byKey.get(settings.OVERLAY_TAB_PRIORITY_STORAGE_KEY);
-  const page = createPage({ [quickSwitch.key]: false });
-  const input = createInput();
-  page.binder.bindToggle(Object.assign({}, quickSwitch, { input }));
-  assert.strictEqual(input.checked, true, 'tab quick switching stays on');
-  assert.deepStrictEqual(page.area.values[quickSwitch.key], true);
 }
 
 // A binder made with area 'local' reads and writes chrome.storage.local and

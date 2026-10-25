@@ -9,8 +9,7 @@ import type {
   NewtabTopContentMode,
   NewtabWidthMode,
   OverlayEnterAnimation,
-  OverlaySizeMode,
-  RestrictedAction
+  OverlaySizeMode
 } from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
 import { isHtmlTag } from '../shared/dom-guards';
@@ -36,7 +35,6 @@ interface LanguageState {
   currentOverlaySizeMode: OverlaySizeMode;
   currentOverlayEnterAnimation: OverlayEnterAnimation;
   currentRecentMode: RecentMode;
-  currentRestrictedAction: RestrictedAction;
   currentNewtabTopContentMode: NewtabTopContentMode;
   currentNewtabTimeFontWeight: number;
   currentNewtabTimeFontSize: number;
@@ -78,7 +76,6 @@ interface LanguageDeps {
   setOverlaySizeTabState(mode: unknown): void;
   setOverlayEnterAnimationTabState(mode: unknown): void;
   setRecentModeTabState(mode: unknown): void;
-  setRestrictedActionTabState(action: unknown): void;
   setNewtabTopContentTabState(mode: unknown): void;
   renderNewtabTimeFontWeightControl(value: unknown): void;
   renderNewtabTimeFontSizeControl(value: unknown): void;
@@ -122,7 +119,6 @@ function createLanguage(deps: LanguageDeps) {
     setOverlaySizeTabState,
     setOverlayEnterAnimationTabState,
     setRecentModeTabState,
-    setRestrictedActionTabState,
     setNewtabTopContentTabState,
     renderNewtabTimeFontWeightControl,
     renderNewtabTimeFontSizeControl,
@@ -330,7 +326,6 @@ function createLanguage(deps: LanguageDeps) {
       setOverlaySizeTabState(optionsState.currentOverlaySizeMode);
       setOverlayEnterAnimationTabState(optionsState.currentOverlayEnterAnimation);
       setRecentModeTabState(optionsState.currentRecentMode);
-      setRestrictedActionTabState(optionsState.currentRestrictedAction);
       setNewtabTopContentTabState(optionsState.currentNewtabTopContentMode);
       renderNewtabTimeFontWeightControl(optionsState.currentNewtabTimeFontWeight);
       renderNewtabTimeFontSizeControl(optionsState.currentNewtabTimeFontSize);

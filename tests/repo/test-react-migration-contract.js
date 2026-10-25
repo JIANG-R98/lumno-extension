@@ -191,7 +191,7 @@ async function testPages() {
   assert.deepStrictEqual(missing(options.window, [
     'LumnoOptionsToastReact', 'LumnoOptionsAccountTab', 'LumnoOptionsBlacklistTabReact', 'LumnoOptionsShortcutsTab',
     'LumnoOptionsSegmentedControlReact', 'LumnoOptionsSelectControlReact', 'LumnoOptionsSettingsNavigationReact',
-    'LumnoOptionsSettingsControlsReact', 'LumnoOptionsShortcutReferenceReact',
+    'LumnoOptionsSettingsControlsReact',
     'LumnoOptionsThemePickerReact', 'LumnoOptionsReactIslands', 'LumnoOverlayTabSwitcherViewReact'
   ]), [], 'Options should install every migrated React API');
   assert.ok(options.document.querySelectorAll('[data-react-island]').length > 5, 'and render through them');

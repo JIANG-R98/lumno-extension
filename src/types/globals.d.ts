@@ -15,7 +15,6 @@ import type { createSegmentedControlApi } from '../options/react/segmented-contr
 import type { createSelectControlApi } from '../options/react/select-control';
 import type { createSettingsControlsApi } from '../options/react/settings-controls';
 import type { createSettingsNavigationApi } from '../options/react/settings-navigation';
-import type { createShortcutReferenceApi } from '../options/react/shortcut-reference';
 import type { createShortcutsTabApi } from '../options/react/shortcuts-tab';
 import type { createThemePickerApi } from '../options/react/theme-picker';
 import type { createToastApi } from '../shared/react/toast';
@@ -116,7 +115,6 @@ declare global {
   var LumnoOptionsSelectControl: ReturnType<typeof createSelectControlApi> | undefined;
   var LumnoOptionsSettingsControls: ReturnType<typeof createSettingsControlsApi> | undefined;
   var LumnoOptionsSettingsNavigation: ReturnType<typeof createSettingsNavigationApi> | undefined;
-  var LumnoOptionsShortcutReference: ReturnType<typeof createShortcutReferenceApi> | undefined;
   var LumnoOptionsThemePicker: ReturnType<typeof createThemePickerApi> | undefined;
   var LumnoOptionsToast: ReturnType<typeof createToastApi> | undefined;
   var LumnoOptionsTranslationHelp: ReturnType<typeof createTranslationHelpApi> | undefined;

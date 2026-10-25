@@ -52,16 +52,6 @@ function getToggleSettings(settings: typeof Settings, hooks?: ToggleSettingHooks
       normalize: S.normalizeBookmarkFolderIconsVisible
     },
     {
-      // Quick switching is always on; the stored value is repaired to true
-      // after a stray change, so the switch writes what it shows.
-      inputId: '_x_extension_overlay_tab_quick_switch_2024_unique_',
-      kind: 'overlay-tab-quick-switch',
-      key: S.OVERLAY_TAB_PRIORITY_STORAGE_KEY,
-      normalize: () => true,
-      normalizeInput: Boolean,
-      refreshSelects: true
-    },
-    {
       inputId: '_x_extension_newtab_time_seconds_toggle_2026_unique_',
       kind: 'newtab-time-seconds',
       key: S.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,

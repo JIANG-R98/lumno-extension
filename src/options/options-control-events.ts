@@ -46,12 +46,8 @@ interface ControlEventsDeps {
   recentModeSelect: HTMLSelectElement | null;
   handleRecentModeSelection(value: string): void;
   recentModeTabButtons: Element[];
-  restrictedActionSelect: HTMLSelectElement | null;
-  handleRestrictedActionSelection(value: string): void;
-  restrictedActionTabButtons: Element[];
   showToast(message: string, isError?: boolean): void;
   getMessage: GetMessage;
-  openShortcutsPageButton: HTMLElement | null;
   openOnboardingPageButton: HTMLElement | null;
   refreshOptionsSelectItems(select: HTMLSelectElement): void;
   renderOverlayFontMissingNotices(): void;
@@ -85,12 +81,8 @@ function createControlEvents(deps: ControlEventsDeps): void {
     recentModeSelect,
     handleRecentModeSelection,
     recentModeTabButtons,
-    restrictedActionSelect,
-    handleRestrictedActionSelection,
-    restrictedActionTabButtons,
     showToast,
     getMessage,
-    openShortcutsPageButton,
     openOnboardingPageButton,
     refreshOptionsSelectItems,
     renderOverlayFontMissingNotices
@@ -203,33 +195,6 @@ function createControlEvents(deps: ControlEventsDeps): void {
         handleRecentModeSelection(button.getAttribute('data-recent-mode') || '');
       });
     });
-  }
-  if (restrictedActionSelect) {
-    restrictedActionSelect.addEventListener('change', () => {
-      handleRestrictedActionSelection(restrictedActionSelect.value);
-    });
-  }
-  if (restrictedActionTabButtons.length > 0) {
-    restrictedActionTabButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        handleRestrictedActionSelection(button.getAttribute('data-restricted-action') || '');
-      });
-    });
-  }
-
-  function openExtensionShortcutsPage(): void {
-    LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openExtensionShortcutsPage' }, (response) => {
-      if (chrome.runtime.lastError) {
-        showToast(getMessage('toast_error', '操作失败，请重试。'), true);
-        return;
-      }
-      if (!response || response.ok === false) {
-        showToast(getMessage('toast_error', '操作失败，请重试。'), true);
-      }
-    });
-  }
-  if (openShortcutsPageButton) {
-    openShortcutsPageButton.addEventListener('click', openExtensionShortcutsPage);
   }
   if (openOnboardingPageButton) {
     openOnboardingPageButton.addEventListener('click', () => {

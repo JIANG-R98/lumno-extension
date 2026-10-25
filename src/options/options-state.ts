@@ -97,7 +97,6 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     newtabTopContentTabsController: null,
     newtabTimeInkTabsController: null,
     newtabGlassThemeTabsController: null,
-    restrictedActionTabsController: null,
     siteSearchEngineBuiltinListController: null,
     siteSearchCustomListController: null,
     siteSearchBuiltinListController: null,
@@ -142,7 +141,6 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     // The installed families once the list is read. Null until then (and on
     // Firefox), so nothing is reported missing before it can be checked.
     installedOverlayFontFamilies: null,
-    currentRestrictedAction: 'default',
     currentRecentCount: 4,
     currentBookmarkCount: 8,
     currentBookmarkColumns: 6,

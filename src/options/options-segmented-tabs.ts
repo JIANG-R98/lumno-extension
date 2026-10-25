@@ -8,8 +8,7 @@ import type {
   NewtabTopContentMode,
   NewtabWidthMode,
   OverlayEnterAnimation,
-  OverlaySizeMode,
-  RestrictedAction
+  OverlaySizeMode
 } from '../domain/settings';
 import type { BatchedStorageArea } from '../platform/settings-storage';
 import type { LayoutMutation } from './options-panel-motion';
@@ -30,7 +29,6 @@ interface SegmentedTabsState {
   currentNewtabTimeInk: NewtabTimeInk;
   currentNewtabGlassTheme: NewtabGlassTheme;
   currentNewtabGlassStyle: NewtabGlassStyle;
-  currentRestrictedAction: RestrictedAction;
   // Made once the page has mounted its React views.
   recentModeTabsController: SegmentedControllerRef;
   overlaySizeTabsController: SegmentedControllerRef;
@@ -39,7 +37,6 @@ interface SegmentedTabsState {
   newtabTopContentTabsController: SegmentedControllerRef;
   newtabTimeInkTabsController: SegmentedControllerRef;
   newtabGlassThemeTabsController: SegmentedControllerRef;
-  restrictedActionTabsController: SegmentedControllerRef;
 }
 
 interface SegmentedTabsDeps {
@@ -61,8 +58,6 @@ interface SegmentedTabsDeps {
   newtabTimeSecondsRow: HTMLElement | null;
   newtabTime12HourRow: HTMLElement | null;
   recentModeTabsWrap: HTMLElement | null;
-  RESTRICTED_ACTION_STORAGE_KEY: string;
-  RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY: string;
   newtabWidthSelect: HTMLSelectElement | null;
   NEWTAB_WIDTH_MODE_STORAGE_KEY: string;
   notifyNewtabSectionsRefresh(section: string): void;
@@ -71,7 +66,6 @@ interface SegmentedTabsDeps {
   NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY: string;
   recentModeSelect: HTMLSelectElement | null;
   RECENT_MODE_STORAGE_KEY: string;
-  restrictedActionSelect: HTMLSelectElement | null;
   optionsState: SegmentedTabsState;
 }
 
@@ -94,8 +88,6 @@ function createSegmentedTabs(deps: SegmentedTabsDeps) {
     newtabTimeSecondsRow,
     newtabTime12HourRow,
     recentModeTabsWrap,
-    RESTRICTED_ACTION_STORAGE_KEY,
-    RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
     newtabWidthSelect,
     NEWTAB_WIDTH_MODE_STORAGE_KEY,
     notifyNewtabSectionsRefresh,
@@ -103,8 +95,7 @@ function createSegmentedTabs(deps: SegmentedTabsDeps) {
     OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
     NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
     recentModeSelect,
-    RECENT_MODE_STORAGE_KEY,
-    restrictedActionSelect
+    RECENT_MODE_STORAGE_KEY
   } = deps;
 
   // The page state object shared with options.js and the other modules.
@@ -323,40 +314,6 @@ function createSegmentedTabs(deps: SegmentedTabsDeps) {
     );
   }
 
-  function setRestrictedActionTabState(action: unknown): void {
-    const nextAction: RestrictedAction = action === 'none' ? 'none' : 'default';
-    optionsState.currentRestrictedAction = nextAction;
-    renderSegmentedControlState(
-      optionsState.restrictedActionTabsController,
-      {
-        activeValue: nextAction,
-        dataAttribute: 'data-restricted-action',
-        items: [
-          {
-            value: 'default',
-            labelKey: 'restricted_action_default',
-            label: getMessage('restricted_action_default', '前往 Lumno 新标签页')
-          },
-          {
-            value: 'none',
-            labelKey: 'restricted_action_none',
-            label: getMessage('restricted_action_none', '遵循浏览器设置')
-          }
-        ],
-        select: {
-          id: '_x_extension_restricted_action_select_2024_unique_'
-        }
-      }
-    );
-  }
-
-  function createRestrictedActionStorageUpdate(action: RestrictedAction): Record<string, unknown> {
-    return {
-      [RESTRICTED_ACTION_STORAGE_KEY]: action === 'none' ? 'none' : 'default',
-      [RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY]: true
-    };
-  }
-
   function handleNewtabWidthSelection(value: string): void {
     const nextMode = normalizeNewtabWidthMode(value);
     setNewtabWidthTabState(nextMode);
@@ -435,19 +392,6 @@ function createSegmentedTabs(deps: SegmentedTabsDeps) {
     notifyNewtabSectionsRefresh('recent');
   }
 
-  function handleRestrictedActionSelection(value: string): void {
-    const nextAction: RestrictedAction = value === 'none' ? 'none' : 'default';
-    setRestrictedActionTabState(nextAction);
-    if (restrictedActionSelect) {
-      restrictedActionSelect.value = nextAction;
-    }
-    const storageArea = optionsState.storageArea;
-    if (!storageArea) {
-      return;
-    }
-    storageArea.set(createRestrictedActionStorageUpdate(nextAction));
-  }
-
   return {
     setRecentModeTabState,
     setOverlaySizeTabState,
@@ -458,15 +402,13 @@ function createSegmentedTabs(deps: SegmentedTabsDeps) {
     setNewtabGlassThemeTabState,
     syncNewtabGlassThemeVisibility,
     updateRecentModeTabsVisibility,
-    setRestrictedActionTabState,
     handleNewtabWidthSelection,
     handleOverlaySizeSelection,
     handleOverlayEnterAnimationSelection,
     handleNewtabTopContentSelection,
     handleNewtabGlassThemeSelection,
     handleNewtabTimeInkSelection,
-    handleRecentModeSelection,
-    handleRestrictedActionSelection
+    handleRecentModeSelection
   };
 }
 

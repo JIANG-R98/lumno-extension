@@ -1,8 +1,4 @@
 import { Fragment } from 'react';
-import {
-  createReactRootController,
-  type ReactRootController
-} from './root-controller';
 
 export interface ShortcutReferenceItemModel {
   commandName: string;
@@ -28,10 +24,8 @@ export interface ShortcutReferenceRenderModel {
   groups: ShortcutReferenceGroupModel[];
 }
 
-export type ShortcutReferenceController =
-  ReactRootController<ShortcutReferenceRenderModel>;
 
-function ShortcutReference({ model }: { model: ShortcutReferenceRenderModel }) {
+export function ShortcutReference({ model }: { model: ShortcutReferenceRenderModel }) {
   return (
     <>
       {model.groups.map((group) => (
@@ -81,25 +75,4 @@ function ShortcutReference({ model }: { model: ShortcutReferenceRenderModel }) {
       ))}
     </>
   );
-}
-
-export function createShortcutReferenceController(
-  host: HTMLElement | null
-): ShortcutReferenceController {
-  if (host) {
-    host.dataset.reactIsland = 'options-shortcut-reference';
-  }
-  return createReactRootController(
-    host,
-    (model: ShortcutReferenceRenderModel) => (
-      <ShortcutReference model={model} />
-    )
-  );
-}
-
-export function createShortcutReferenceApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createShortcutReferenceController
-  });
 }

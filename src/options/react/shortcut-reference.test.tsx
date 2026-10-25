@@ -1,13 +1,9 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  createShortcutReferenceApi,
-  createShortcutReferenceController,
-  type ShortcutReferenceController,
-  type ShortcutReferenceRenderModel
-} from './shortcut-reference';
+import { ShortcutReference, type ShortcutReferenceRenderModel } from './shortcut-reference';
+import { createReactRootController, type ReactRootController } from './root-controller';
 
-let controllers: ShortcutReferenceController[] = [];
+let controllers: Array<ReactRootController<ShortcutReferenceRenderModel>> = [];
 
 const model: ShortcutReferenceRenderModel = {
   groups: [
@@ -42,7 +38,7 @@ const model: ShortcutReferenceRenderModel = {
 function createFixture() {
   const host = document.createElement('div');
   document.body.appendChild(host);
-  const controller = createShortcutReferenceController(host);
+  const controller = createReactRootController(host, (value: ShortcutReferenceRenderModel) => <ShortcutReference model={value} />);
   controllers.push(controller);
   return { controller, host };
 }
@@ -55,13 +51,11 @@ afterEach(() => {
   document.body.textContent = '';
 });
 
-describe('Options shortcut reference React island', () => {
-  it('renders existing group, row, localization, and metadata contracts', () => {
+describe('Options shortcut reference', () => {
+  it('renders the group, row, localization and metadata contracts', () => {
     const { controller, host } = createFixture();
     act(() => controller.render(model));
 
-    expect(createShortcutReferenceApi().implementation).toBe('react');
-    expect(host.dataset.reactIsland).toBe('options-shortcut-reference');
     expect(
       host.querySelector('[data-shortcut-group="search"]')?.textContent
     ).toBe('聚焦搜索');
