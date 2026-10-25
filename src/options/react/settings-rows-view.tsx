@@ -46,6 +46,8 @@ export type SettingsRowModel =
     title: SettingsTitleModel;
     description?: string;
     disabled?: boolean;
+    // Out of the layout while the setting does not apply.
+    hidden?: boolean;
     unsupported?: SettingRowUnsupported | null;
     toggle: ToggleControlRenderModel;
     link?: SettingsLinkModel | null;
@@ -127,7 +129,7 @@ function getDisabledProps(disabled: boolean | undefined) {
   return { 'data-disabled': state, 'aria-disabled': disabled };
 }
 
-function getUnsupportedProps(unsupported: SettingRowUnsupported | null | undefined) {
+export function getUnsupportedProps(unsupported: SettingRowUnsupported | null | undefined) {
   if (!unsupported) {
     return {};
   }
@@ -276,7 +278,9 @@ function SettingsRow({ row, handlers }: { row: SettingsRowModel; handlers: Setti
       const toggle = <SettingSwitch model={row.toggle} onChange={(checked) => handlers.onToggle(row.key, checked)} />;
       return (
         <div
+          aria-hidden={row.hidden ? true : undefined}
           className={getRowClassName(row)}
+          hidden={row.hidden}
           id={row.rowId}
           {...getDisabledProps(row.disabled)}
           {...getUnsupportedProps(row.unsupported)}

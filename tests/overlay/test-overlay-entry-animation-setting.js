@@ -1,6 +1,5 @@
 const assert = require('assert');
 const fs = require('fs');
-const { JSDOM } = require('jsdom');
 const settings = require('../../src/domain/settings.ts');
 const { createOptionsPage } = require('../helpers/options-page');
 const { loadBackground, wait } = require('../helpers/background-harness');
@@ -10,19 +9,15 @@ const { loadBackground, wait } = require('../helpers/background-harness');
 
 const KEY = '_x_extension_overlay_enter_animation_2026_unique_';
 
-function testMarkup() {
-  const doc = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
-  const size = doc.querySelector('[data-i18n="settings_overlay_size_title"]');
-  const animation = doc.querySelector('[data-i18n="settings_overlay_enter_animation_title"]');
-  assert.ok(size && animation && (size.compareDocumentPosition(animation) & 4),
-    'the opening animation row should follow the overlay size setting');
-  const options = Array.from(doc.querySelectorAll('[data-overlay-enter-animation]'));
-  assert.deepStrictEqual(options.map((button) => [button.getAttribute('data-overlay-enter-animation'), button.getAttribute('data-active')]),
-    [['elastic', 'true'], ['fade', 'false']], 'spring should be selected by default, with fade available');
-}
-
 async function testChoosingFadeIsSaved() {
   const page = await createOptionsPage();
+  const size = page.byId('_x_extension_overlay_size_tabs_wrap_2026_unique_');
+  const animation = page.byId('_x_extension_overlay_enter_animation_tabs_wrap_2026_unique_');
+  assert.ok(size && animation && (size.compareDocumentPosition(animation) & 4),
+    'the opening animation row should follow the overlay size setting');
+  const options = Array.from(page.document.querySelectorAll('[data-overlay-enter-animation]'));
+  assert.deepStrictEqual(options.map((button) => [button.getAttribute('data-overlay-enter-animation'), button.getAttribute('data-active')]),
+    [['elastic', 'true'], ['fade', 'false']], 'spring should be selected by default, with fade available');
   // The segmented control is a React island: read its buttons afresh.
   const pressed = (value) => page.document.querySelector(`[data-overlay-enter-animation="${value}"]`).getAttribute('aria-checked');
   assert.strictEqual(page.byId('_x_extension_overlay_enter_animation_tabs_wrap_2026_unique_').getAttribute('role'), 'radiogroup',
@@ -64,7 +59,6 @@ function testCopy() {
 }
 
 (async () => {
-  testMarkup();
   await testChoosingFadeIsSaved();
   await testStorage();
   testCopy();

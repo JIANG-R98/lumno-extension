@@ -10,6 +10,8 @@ import * as LumnoShortcutDisplay from '../domain/shortcut-display';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as OPTIONS_ACCOUNT_SECTION from './options-account-section';
 import * as OPTIONS_APPEARANCE_GLOBAL_SECTION from './options-appearance-global-section';
+import * as OPTIONS_APPEARANCE_OVERLAY_SECTION from './options-appearance-overlay-section';
+import { listInstalledFonts } from './options-installed-fonts';
 import * as OPTIONS_AGGREGATE_SEARCH_LIST from './options-aggregate-search-list';
 import * as AGGREGATE_SEARCH from './options-aggregate-search';
 import * as OPTIONS_BLACKLIST_SECTION from './options-blacklist-section';
@@ -90,20 +92,9 @@ import * as OPTIONS_STATE from './options-state';
   const newtabWidthSelect = getHtmlTag(document, '_x_extension_newtab_width_select_2026_unique_', 'select');
   const newtabWidthTabsWrap = getHtmlElement(document, '_x_extension_newtab_width_tabs_wrap_2026_unique_');
   const newtabWidthTabButtons = queryHtmlElements(document, 'button[data-newtab-width]');
-  const overlaySizeTabButtons = queryHtmlElements(document, 'button[data-overlay-size]');
-  const overlaySizeTabsWrap = getHtmlElement(document, '_x_extension_overlay_size_tabs_wrap_2026_unique_');
-  const overlayEnterAnimationTabButtons = queryHtmlElements(document, 'button[data-overlay-enter-animation]');
-  const overlayEnterAnimationTabsWrap = getHtmlElement(document, '_x_extension_overlay_enter_animation_tabs_wrap_2026_unique_');
-  const overlayFontRow = getHtmlElement(document, '_x_extension_overlay_font_row_2026_unique_');
-  const overlayFontSelect = getHtmlTag(document, '_x_extension_overlay_font_select_2026_unique_', 'select');
-  const overlayFontFallbackRow = getHtmlElement(document, '_x_extension_overlay_font_fallback_row_2026_unique_');
-  const overlayFontFallbackSelect = getHtmlTag(document, '_x_extension_overlay_font_fallback_select_2026_unique_', 'select');
-  const overlayFontMissing = getHtmlElement(document, '_x_extension_overlay_font_missing_2026_unique_');
-  const overlayFontFallbackMissing = getHtmlElement(document, '_x_extension_overlay_font_fallback_missing_2026_unique_');
   const bookmarkRowsControlHost = getHtmlElement(document, '_x_extension_bookmark_rows_control_2026_unique_');
   const bookmarkColumnsSettingRow = getHtmlElement(document, '_x_extension_bookmark_columns_setting_row_2026_unique_');
   const bookmarkColumnsControlHost = getHtmlElement(document, '_x_extension_bookmark_columns_control_2026_unique_');
-  const overlayWidthControlHost = getHtmlElement(document, '_x_extension_overlay_width_control_2026_unique_');
   const bookmarkFolderIconsVisibleRow = getHtmlElement(document, '_x_extension_bookmark_folder_icons_visible_row_2026_unique_');
   const newtabTopContentTabsWrap = getHtmlElement(document, '_x_extension_newtab_top_content_tabs_wrap_2026_unique_');
   const newtabTimeFontRow = getHtmlElement(document, '_x_extension_newtab_time_font_row_2026_unique_');
@@ -132,8 +123,6 @@ import * as OPTIONS_STATE from './options-state';
   const newtabGlassStyleSelect = getHtmlTag(document, '_x_extension_newtab_glass_style_select_2026_unique_', 'select');
   const newtabGlassThemeRow = getHtmlElement(document, '_x_extension_newtab_glass_theme_row_2026_unique_');
   const newtabGlassThemeTabsWrap = getHtmlElement(document, '_x_extension_newtab_glass_theme_tabs_wrap_2026_unique_');
-  const overlayPageThemeAdaptationRow = getHtmlElement(document, '_x_extension_overlay_page_theme_adaptation_row_2026_unique_');
-  const overlayPageThemeAdaptationInfoHost = getHtmlElement(document, '_x_extension_overlay_page_theme_adaptation_info_2026_unique_');
   const bookmarkRowsInfoHost = getHtmlElement(document, '_x_extension_bookmark_rows_info_2026_unique_');
   const bookmarkColumnsInfoHost = getHtmlElement(document, '_x_extension_bookmark_columns_info_2026_unique_');
   const toastElement = getHtmlElement(document, '_x_extension_toast_2024_unique_');
@@ -167,11 +156,6 @@ import * as OPTIONS_STATE from './options-state';
     RECENT_MODE_STORAGE_KEY,
     RECENT_COUNT_STORAGE_KEY,
     NEWTAB_WIDTH_MODE_STORAGE_KEY,
-    OVERLAY_SIZE_MODE_STORAGE_KEY,
-    OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
-    OVERLAY_FONT_FAMILY_STORAGE_KEY,
-    OVERLAY_FONT_FALLBACK_STORAGE_KEY,
-    OVERLAY_FONT_LABELS_STORAGE_KEY,
     BOOKMARK_COUNT_STORAGE_KEY,
     BOOKMARK_COLUMNS_STORAGE_KEY,
     NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,
@@ -272,20 +256,11 @@ import * as OPTIONS_STATE from './options-state';
     getMenuViewportTopInset,
     optionsSelectControlRecords,
     registerOptionsSelectControl,
-    refreshOptionsSelectItems,
     renderOptionsSelectControl,
-    setOptionsSelectState,
-    getInstalledFontFamilies,
-    renderOverlayFontMissingNotices,
-    ensureOverlayFontOption,
-    populateOverlayFontOptions
+    setOptionsSelectState
   } = OPTIONS_SELECT_CONTROLS.createSelectControls({
     tabsRow,
-    getMessage: (key, fallback) => getMessage(key, fallback),
-    overlayFontMissing,
-    overlayFontFallbackMissing,
-    formatTemplate: (text, params) => formatTemplate(text, params),
-    optionsState
+    getMessage: (key, fallback) => getMessage(key, fallback)
   });
 
   const {
@@ -396,7 +371,6 @@ import * as OPTIONS_STATE from './options-state';
     applyLanguageMode,
     loadLocaleMessages
   } = OPTIONS_LANGUAGE.createLanguage({
-    renderOverlayFontMissingNotices: (...args) => renderOverlayFontMissingNotices(...args),
     formatTemplate: (...args) => formatTemplate(...args),
     formatShortcutForDisplay: (...args) => formatShortcutForDisplay(...args),
     SETTINGS,
@@ -409,8 +383,6 @@ import * as OPTIONS_STATE from './options-state';
     refreshSyncStatus,
     renderShortcutReferenceList: (...args) => renderShortcutReferenceList(...args),
     setNewtabWidthTabState: (...args) => setNewtabWidthTabState(...args),
-    setOverlaySizeTabState: (...args) => setOverlaySizeTabState(...args),
-    setOverlayEnterAnimationTabState: (...args) => setOverlayEnterAnimationTabState(...args),
     setRecentModeTabState: (...args) => setRecentModeTabState(...args),
     setNewtabTopContentTabState: (...args) => setNewtabTopContentTabState(...args),
     renderNewtabTimeFontWeightControl: (...args) => renderNewtabTimeFontWeightControl(...args),
@@ -425,7 +397,6 @@ import * as OPTIONS_STATE from './options-state';
     renderRecentCountControl: (...args) => renderRecentCountControl(...args),
     renderBookmarkRowsControl: (...args) => renderBookmarkRowsControl(...args),
     renderBookmarkColumnsControl: (...args) => renderBookmarkColumnsControl(...args),
-    renderOverlayWidthControl: (...args) => renderOverlayWidthControl(...args),
     renderSettingsNavigation,
     onLanguageApplied: (mode, locale) => generalGlobalSection.setLanguage(mode, locale),
     renderTabSections: () => {
@@ -435,6 +406,7 @@ import * as OPTIONS_STATE from './options-state';
       generalNewtabSection.render();
       generalShortcutsSection.render();
       appearanceGlobalSection.render();
+      appearanceOverlaySection.render();
       labsSection.render();
       blacklistSection.render();
     },
@@ -519,9 +491,6 @@ import * as OPTIONS_STATE from './options-state';
   }
   const bookmarkRowsInfoController = createOptionsInfoButtonController(bookmarkRowsInfoHost);
   const bookmarkColumnsInfoController = createOptionsInfoButtonController(bookmarkColumnsInfoHost);
-  const overlayPageThemeAdaptationInfoController = createOptionsInfoButtonController(
-    overlayPageThemeAdaptationInfoHost
-  );
   function createOptionsSegmentedControlController(host: HTMLElement | null, kind: string, onSelect: (value: string) => void) {
     return segmentedControlApi.createSegmentedControlController(host, {
       kind,
@@ -531,8 +500,6 @@ import * as OPTIONS_STATE from './options-state';
 
   const {
     setRecentModeTabState,
-    setOverlaySizeTabState,
-    setOverlayEnterAnimationTabState,
     setNewtabWidthTabState,
     setNewtabTopContentTabState,
     setNewtabTimeInkTabState,
@@ -540,16 +507,12 @@ import * as OPTIONS_STATE from './options-state';
     syncNewtabGlassThemeVisibility,
     updateRecentModeTabsVisibility,
     handleNewtabWidthSelection,
-    handleOverlaySizeSelection,
-    handleOverlayEnterAnimationSelection,
     handleNewtabTopContentSelection,
     handleNewtabGlassThemeSelection,
     handleNewtabTimeInkSelection,
     handleRecentModeSelection
   } = OPTIONS_SEGMENTED_TABS.createSegmentedTabs({
     getMessage,
-    normalizeOverlaySizeMode: (...args) => normalizeOverlaySizeMode(...args),
-    normalizeOverlayEnterAnimation: (...args) => normalizeOverlayEnterAnimation(...args),
     normalizeNewtabWidthMode: (...args) => normalizeNewtabWidthMode(...args),
     normalizeNewtabTopContentMode: (...args) => normalizeNewtabTopContentMode(...args),
     SETTINGS,
@@ -567,8 +530,6 @@ import * as OPTIONS_STATE from './options-state';
     newtabWidthSelect,
     NEWTAB_WIDTH_MODE_STORAGE_KEY,
     notifyNewtabSectionsRefresh,
-    OVERLAY_SIZE_MODE_STORAGE_KEY,
-    OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
     NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
     recentModeSelect,
     RECENT_MODE_STORAGE_KEY,
@@ -586,8 +547,6 @@ import * as OPTIONS_STATE from './options-state';
     normalizeRecentCount,
     normalizeBookmarkColumns,
     normalizeNewtabWidthMode,
-    normalizeOverlaySizeMode,
-    normalizeOverlayEnterAnimation,
     updateBookmarkColumnsSettingVisibility,
     normalizeNewtabTopContentMode,
     normalizeNewtabTimeFontWeight,
@@ -621,16 +580,6 @@ import * as OPTIONS_STATE from './options-state';
     newtabWidthTabsWrap,
     'newtab-width',
     handleNewtabWidthSelection
-  );
-  optionsState.overlaySizeTabsController = createOptionsSegmentedControlController(
-    overlaySizeTabsWrap,
-    'overlay-size',
-    handleOverlaySizeSelection
-  );
-  optionsState.overlayEnterAnimationTabsController = createOptionsSegmentedControlController(
-    overlayEnterAnimationTabsWrap,
-    'overlay-enter-animation',
-    handleOverlayEnterAnimationSelection
   );
   optionsState.newtabTopContentTabsController = createOptionsSegmentedControlController(
     newtabTopContentTabsWrap,
@@ -695,6 +644,18 @@ import * as OPTIONS_STATE from './options-state';
       playThemeOptionClickEffect(button);
       setThemeMode(mode);
     }
+  });
+  const appearanceOverlayHost = getHtmlElement(document, '_x_extension_appearance_overlay_section_2026_unique_');
+  const appearanceOverlaySection = OPTIONS_APPEARANCE_OVERLAY_SECTION.createAppearanceOverlaySection({
+    view: (handlers) => optionsSettingsControlsApi.createAppearanceOverlaySectionController(appearanceOverlayHost, handlers),
+    storageArea: optionsState.storageArea,
+    localStorageArea,
+    SETTINGS,
+    getMessage,
+    formatTemplate: (text, params) => formatTemplate(text, params),
+    browserFamily: document.documentElement.getAttribute('data-browser-family') || '',
+    listInstalledFonts,
+    getViewportTopInset: getMenuViewportTopInset
   });
   const labsSection = OPTIONS_LABS_SECTION.createLabsSection({
     host: queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="labs"]'),
@@ -949,15 +910,6 @@ import * as OPTIONS_STATE from './options-state';
         });
       }
     });
-    if (overlayPageThemeAdaptationInfoController) {
-      overlayPageThemeAdaptationInfoController.render({
-        tooltip: getMessage(
-          'settings_overlay_page_theme_adaptation_tooltip',
-          '仅在“深浅色模式”=“跟随系统”时显示，关闭后将不再基于网页主题色变更深浅模式。'
-        ),
-        tooltipKey: 'settings_overlay_page_theme_adaptation_tooltip'
-      });
-    }
   }
   renderOptionsInfoButtons();
 
@@ -989,54 +941,6 @@ import * as OPTIONS_STATE from './options-state';
       renderOptionsSelectControl(record.select);
     }
   });
-  const fontNotices: Array<[HTMLElement | null, HTMLSelectElement | null]> = [
-    [overlayFontMissing, overlayFontSelect],
-    [overlayFontFallbackMissing, overlayFontFallbackSelect]
-  ];
-  fontNotices
-    .forEach(([notice, select]) => {
-      const button = notice && notice.querySelector('._x_extension_overlay_font_reset_2026_unique_');
-      if (!button || !select) {
-        return;
-      }
-      button.addEventListener('click', () => {
-        select.value = '';
-        select.dispatchEvent(new Event('change', { bubbles: true }));
-      });
-    });
-  [overlayFontSelect, overlayFontFallbackSelect].forEach((select) => {
-    const record = registerOptionsSelectControl(select, 'overlay-font');
-    if (record) {
-      renderOptionsSelectControl(record.select);
-    }
-  });
-  getInstalledFontFamilies().then((fonts) => {
-    const families = fonts
-      .map((font) => (font && typeof font.fontId === 'string' ? font.fontId.trim() : ''))
-      .filter(Boolean);
-    // An empty list means the read failed, not that no font is installed.
-    optionsState.installedOverlayFontFamilies = families.length ? new Set(families) : null;
-    populateOverlayFontOptions(overlayFontSelect, optionsState.currentOverlayFontFamily, 'settings_overlay_font_default', fonts);
-    populateOverlayFontOptions(
-      overlayFontFallbackSelect,
-      optionsState.currentOverlayFontFallback,
-      'settings_overlay_font_fallback_none',
-      fonts
-    );
-    renderOverlayFontMissingNotices();
-  });
-  // Firefox cannot list fonts; keep the rows visible but inert.
-  const fontRows: Array<[HTMLElement | null, HTMLSelectElement | null]> = [
-    [overlayFontRow, overlayFontSelect],
-    [overlayFontFallbackRow, overlayFontFallbackSelect]
-  ];
-  fontRows
-    .forEach(([row, select]) => {
-      if (row && select && row.getAttribute('data-unsupported') === 'true') {
-        select.disabled = true;
-        renderOptionsSelectControl(select);
-      }
-    });
 
   const {
     renderNewtabTimeFontWeightControl,
@@ -1048,8 +952,7 @@ import * as OPTIONS_STATE from './options-state';
     syncNewtabShortcutSubcontrolAvailability,
     renderBookmarkRowsControl,
     renderRecentCountControl,
-    renderBookmarkColumnsControl,
-    renderOverlayWidthControl
+    renderBookmarkColumnsControl
   } = OPTIONS_SLIDER_CONTROLS.createSliderControls({
     optionsSettingsControlsApi,
     newtabTimeFontWeightControlHost,
@@ -1098,7 +1001,6 @@ import * as OPTIONS_STATE from './options-state';
     bookmarkColumnsControlHost,
     normalizeBookmarkColumns,
     BOOKMARK_COLUMNS_STORAGE_KEY,
-    overlayWidthControlHost,
     optionsState
   });
 
@@ -1112,7 +1014,6 @@ import * as OPTIONS_STATE from './options-state';
   renderRecentCountControl(4);
   renderBookmarkRowsControl(8);
   renderBookmarkColumnsControl(6);
-  renderOverlayWidthControl(null);
 
   function renderFeedbackSupport() {
     feedbackSupportSection.render();
@@ -1128,8 +1029,6 @@ import * as OPTIONS_STATE from './options-state';
   renderTranslationHelp();
 
   setNewtabWidthTabState(optionsState.currentNewtabWidthMode);
-  setOverlaySizeTabState(optionsState.currentOverlaySizeMode);
-  setOverlayEnterAnimationTabState(optionsState.currentOverlayEnterAnimation);
   setRecentModeTabState(optionsState.currentRecentMode);
   setNewtabTopContentTabState(optionsState.currentNewtabTopContentMode);
   setNewtabTimeInkTabState(optionsState.currentNewtabTimeInk);
@@ -1253,14 +1152,9 @@ import * as OPTIONS_STATE from './options-state';
 
   function updateOverlayPageThemeAdaptationVisibility(mode: unknown): void {
     const nextMode = mode === 'dark' || mode === 'light' ? mode : 'system';
-    const visible = nextMode === 'system';
-    if (!overlayPageThemeAdaptationRow) {
-      document.documentElement.setAttribute('data-options-theme-mode', nextMode);
-      return;
-    }
     animateOptionsPanelHeight(() => {
       document.documentElement.setAttribute('data-options-theme-mode', nextMode);
-      return setConditionalSettingsElementVisibility(overlayPageThemeAdaptationRow, visible);
+      return appearanceOverlaySection.showThemeMode(nextMode);
     });
   }
 
@@ -1335,28 +1229,16 @@ import * as OPTIONS_STATE from './options-state';
     newtabWidthSelect,
     handleNewtabWidthSelection,
     newtabWidthTabButtons,
-    overlaySizeTabButtons,
-    handleOverlaySizeSelection,
-    overlayEnterAnimationTabButtons,
-    handleOverlayEnterAnimationSelection,
     newtabTimeFontSelect,
     SETTINGS,
     renderNewtabTimeFontWeightControl,
     NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
     refreshCustomSelects,
-    overlayFontSelect,
-    OVERLAY_FONT_FAMILY_STORAGE_KEY,
-    overlayFontFallbackSelect,
-    OVERLAY_FONT_FALLBACK_STORAGE_KEY,
-    localStorageArea,
-    OVERLAY_FONT_LABELS_STORAGE_KEY,
     newtabGlassStyleSelect,
     syncNewtabGlassThemeVisibility,
     recentModeSelect,
     handleRecentModeSelection,
     recentModeTabButtons,
-    refreshOptionsSelectItems,
-    renderOverlayFontMissingNotices,
     optionsState
   });
 
@@ -1380,6 +1262,7 @@ import * as OPTIONS_STATE from './options-state';
   generalNewtabSection.bindSettings(settingBinder);
   generalShortcutsSection.bindSettings(settingBinder);
   appearanceGlobalSection.bindSettings(settingBinder);
+  appearanceOverlaySection.bindSettings(settingBinder, localSettingBinder);
   labsSection.bindSettings(settingBinder);
   blacklistSection.bindSettings(settingBinder);
   shortcutsSection.bindSettings(settingBinder);
@@ -1421,19 +1304,7 @@ import * as OPTIONS_STATE from './options-state';
     normalizeNewtabWidthMode,
     newtabWidthSelect,
     setNewtabWidthTabState,
-    OVERLAY_SIZE_MODE_STORAGE_KEY,
-    normalizeOverlaySizeMode,
-    setOverlaySizeTabState,
-    OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
-    normalizeOverlayEnterAnimation,
-    setOverlayEnterAnimationTabState,
-    localSettingBinder,
-    OVERLAY_FONT_FAMILY_STORAGE_KEY,
     SETTINGS,
-    overlayFontSelect,
-    OVERLAY_FONT_LABELS_STORAGE_KEY,
-    overlayFontFallbackSelect,
-    OVERLAY_FONT_FALLBACK_STORAGE_KEY,
     newtabGlassStyleSelect,
     syncNewtabGlassThemeVisibility,
     setNewtabGlassThemeTabState,
@@ -1444,7 +1315,6 @@ import * as OPTIONS_STATE from './options-state';
     registerOptionsToggleControl,
     setConditionalSettingsElementVisibility,
     animateOptionsPanelHeight,
-    renderOverlayWidthControl,
     RECENT_MODE_STORAGE_KEY,
     recentModeSelect,
     setRecentModeTabState,
@@ -1467,9 +1337,6 @@ import * as OPTIONS_STATE from './options-state';
     setNewtabTimeInkTabState,
     TOGGLE_SETTINGS,
     toggleSettingControls,
-    ensureOverlayFontOption,
-    refreshOptionsSelectItems,
-    renderOverlayFontMissingNotices,
     registerOptionsSelectControl,
     renderOptionsSelectControl,
     setOptionsSelectState,

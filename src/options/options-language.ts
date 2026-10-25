@@ -7,9 +7,7 @@ import type {
   NewtabGlassTheme,
   NewtabTimeInk,
   NewtabTopContentMode,
-  NewtabWidthMode,
-  OverlayEnterAnimation,
-  OverlaySizeMode
+  NewtabWidthMode
 } from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
 import { isHtmlTag } from '../shared/dom-guards';
@@ -32,8 +30,6 @@ interface LanguageState {
   isMacPlatform: boolean;
   currentActiveSettingsTab: SettingsTabKey;
   currentNewtabWidthMode: NewtabWidthMode;
-  currentOverlaySizeMode: OverlaySizeMode;
-  currentOverlayEnterAnimation: OverlayEnterAnimation;
   currentRecentMode: RecentMode;
   currentNewtabTopContentMode: NewtabTopContentMode;
   currentNewtabTimeFontWeight: number;
@@ -47,7 +43,6 @@ interface LanguageState {
   currentRecentCount: number;
   currentBookmarkCount: number;
   currentBookmarkColumns: number;
-  currentOverlayWidth: number | null;
   // Made as the page starts; null until then.
   webDavSettingsController: ReturnType<typeof createWebDavController> | null;
   searchShortcutStatus: ReturnType<typeof createSearchShortcutStatus> | null;
@@ -56,7 +51,6 @@ interface LanguageState {
 }
 
 interface LanguageDeps {
-  renderOverlayFontMissingNotices(): void;
   formatTemplate: FormatTemplate;
   formatShortcutForDisplay(shortcut: string): string;
   SETTINGS: Pick<typeof Settings, 'normalizeLocale' | 'localeToHtmlLang' | 'resolveSupportedLocale'>;
@@ -69,8 +63,6 @@ interface LanguageDeps {
   refreshSyncStatus(): void;
   renderShortcutReferenceList(): void;
   setNewtabWidthTabState(mode: unknown): void;
-  setOverlaySizeTabState(mode: unknown): void;
-  setOverlayEnterAnimationTabState(mode: unknown): void;
   setRecentModeTabState(mode: unknown): void;
   setNewtabTopContentTabState(mode: unknown): void;
   renderNewtabTimeFontWeightControl(value: unknown): void;
@@ -85,7 +77,6 @@ interface LanguageDeps {
   renderRecentCountControl(value: unknown): void;
   renderBookmarkRowsControl(value: unknown): void;
   renderBookmarkColumnsControl(value: unknown): void;
-  renderOverlayWidthControl(value: unknown): void;
   renderSettingsNavigation(tabKey: SettingsTabKey): void;
   // Redraws the tab sections React views draw from translated copy.
   renderTabSections(): void;
@@ -98,7 +89,6 @@ interface LanguageDeps {
 
 function createLanguage(deps: LanguageDeps) {
   const {
-    renderOverlayFontMissingNotices,
     formatTemplate,
     formatShortcutForDisplay,
     SETTINGS,
@@ -111,8 +101,6 @@ function createLanguage(deps: LanguageDeps) {
     refreshSyncStatus,
     renderShortcutReferenceList,
     setNewtabWidthTabState,
-    setOverlaySizeTabState,
-    setOverlayEnterAnimationTabState,
     setRecentModeTabState,
     setNewtabTopContentTabState,
     renderNewtabTimeFontWeightControl,
@@ -127,7 +115,6 @@ function createLanguage(deps: LanguageDeps) {
     renderRecentCountControl,
     renderBookmarkRowsControl,
     renderBookmarkColumnsControl,
-    renderOverlayWidthControl,
     renderSettingsNavigation,
     renderTabSections,
     onLanguageApplied,
@@ -162,7 +149,6 @@ function createLanguage(deps: LanguageDeps) {
 
   function applyI18n(): void {
     if (optionsState.webDavSettingsController) optionsState.webDavSettingsController.render();
-    renderOverlayFontMissingNotices();
     const browserName = LumnoBrowserProfile.getBrowserInternalProfile(navigator).name || 'Chrome';
     const templateValues = {
       name: 'Lumno',
@@ -306,8 +292,6 @@ function createLanguage(deps: LanguageDeps) {
         optionsState.themeSection.render();
       }
       setNewtabWidthTabState(optionsState.currentNewtabWidthMode);
-      setOverlaySizeTabState(optionsState.currentOverlaySizeMode);
-      setOverlayEnterAnimationTabState(optionsState.currentOverlayEnterAnimation);
       setRecentModeTabState(optionsState.currentRecentMode);
       setNewtabTopContentTabState(optionsState.currentNewtabTopContentMode);
       renderNewtabTimeFontWeightControl(optionsState.currentNewtabTimeFontWeight);
@@ -325,7 +309,6 @@ function createLanguage(deps: LanguageDeps) {
       renderRecentCountControl(optionsState.currentRecentCount);
       renderBookmarkRowsControl(optionsState.currentBookmarkCount);
       renderBookmarkColumnsControl(optionsState.currentBookmarkColumns);
-      renderOverlayWidthControl(optionsState.currentOverlayWidth);
       renderSettingsNavigation(optionsState.currentActiveSettingsTab);
       renderTabSections();
       renderSiteSearchList();

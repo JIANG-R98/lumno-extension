@@ -5,9 +5,7 @@ import type * as Settings from '../domain/settings';
 import type {
   NewtabGlassStyle,
   NewtabTopContentMode,
-  NewtabWidthMode,
-  OverlayEnterAnimation,
-  OverlaySizeMode
+  NewtabWidthMode
 } from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
 import type { BatchedStorageArea } from '../platform/settings-storage';
@@ -25,13 +23,9 @@ type SettingBinder = ReturnType<typeof createSettingBinder>;
 interface SettingBindsState {
   storageArea: BatchedStorageArea | null;
   dailyQuoteSettings: ReturnType<typeof LumnoOptionsDailyQuote.createDailyQuoteSettings>;
-  currentOverlayFontFamily: string;
-  currentOverlayFontFallback: string;
-  currentOverlayFontLabels: Record<string, string>;
   currentNewtabGlassStyle: NewtabGlassStyle;
   currentNewtabTimeFont: string;
   currentNewtabTimeFontWeight: number;
-  currentOverlayWidth: number | null;
 }
 
 interface SettingBindsDeps {
@@ -72,19 +66,7 @@ interface SettingBindsDeps {
   normalizeNewtabWidthMode(value: unknown): NewtabWidthMode;
   newtabWidthSelect: HTMLSelectElement | null;
   setNewtabWidthTabState(mode: unknown): void;
-  OVERLAY_SIZE_MODE_STORAGE_KEY: string;
-  normalizeOverlaySizeMode(value: unknown): OverlaySizeMode;
-  setOverlaySizeTabState(mode: unknown): void;
-  OVERLAY_ENTER_ANIMATION_STORAGE_KEY: string;
-  normalizeOverlayEnterAnimation(value: unknown): OverlayEnterAnimation;
-  setOverlayEnterAnimationTabState(mode: unknown): void;
-  localSettingBinder: SettingBinder;
-  OVERLAY_FONT_FAMILY_STORAGE_KEY: string;
   SETTINGS: typeof Settings;
-  overlayFontSelect: HTMLSelectElement | null;
-  OVERLAY_FONT_LABELS_STORAGE_KEY: string;
-  overlayFontFallbackSelect: HTMLSelectElement | null;
-  OVERLAY_FONT_FALLBACK_STORAGE_KEY: string;
   newtabGlassStyleSelect: HTMLSelectElement | null;
   syncNewtabGlassThemeVisibility(): void;
   setNewtabGlassThemeTabState(theme: unknown): void;
@@ -99,7 +81,6 @@ interface SettingBindsDeps {
   registerOptionsToggleControl(input: HTMLInputElement | null, kind: string): ToggleControlController | null;
   setConditionalSettingsElementVisibility(element: HTMLElement | null, visible: boolean): boolean;
   animateOptionsPanelHeight(mutateLayout: LayoutMutation): boolean;
-  renderOverlayWidthControl(value: unknown): void;
   RECENT_MODE_STORAGE_KEY: string;
   recentModeSelect: HTMLSelectElement | null;
   setRecentModeTabState(mode: unknown): void;
@@ -122,9 +103,6 @@ interface SettingBindsDeps {
   setNewtabTimeInkTabState(ink: unknown): void;
   TOGGLE_SETTINGS: readonly ToggleSettingsEntry[];
   toggleSettingControls: ReadonlyMap<ToggleSettingsEntry, HTMLInputElement | null>;
-  ensureOverlayFontOption(select: HTMLSelectElement | null, family: string): void;
-  refreshOptionsSelectItems(select: HTMLSelectElement): void;
-  renderOverlayFontMissingNotices(): void;
   registerOptionsSelectControl(select: HTMLSelectElement | null, kind: string): SelectControlRecord | null;
   renderOptionsSelectControl(select: HTMLSelectElement): void;
   setOptionsSelectState(select: HTMLSelectElement | null, value: unknown): void;
@@ -170,19 +148,7 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     normalizeNewtabWidthMode,
     newtabWidthSelect,
     setNewtabWidthTabState,
-    OVERLAY_SIZE_MODE_STORAGE_KEY,
-    normalizeOverlaySizeMode,
-    setOverlaySizeTabState,
-    OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
-    normalizeOverlayEnterAnimation,
-    setOverlayEnterAnimationTabState,
-    localSettingBinder,
-    OVERLAY_FONT_FAMILY_STORAGE_KEY,
     SETTINGS,
-    overlayFontSelect,
-    OVERLAY_FONT_LABELS_STORAGE_KEY,
-    overlayFontFallbackSelect,
-    OVERLAY_FONT_FALLBACK_STORAGE_KEY,
     newtabGlassStyleSelect,
     syncNewtabGlassThemeVisibility,
     setNewtabGlassThemeTabState,
@@ -193,7 +159,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     registerOptionsToggleControl,
     setConditionalSettingsElementVisibility,
     animateOptionsPanelHeight,
-    renderOverlayWidthControl,
     RECENT_MODE_STORAGE_KEY,
     recentModeSelect,
     setRecentModeTabState,
@@ -216,9 +181,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
     setNewtabTimeInkTabState,
     TOGGLE_SETTINGS,
     toggleSettingControls,
-    ensureOverlayFontOption,
-    refreshOptionsSelectItems,
-    renderOverlayFontMissingNotices,
     registerOptionsSelectControl,
     renderOptionsSelectControl,
     setOptionsSelectState
@@ -341,86 +303,6 @@ function createSettingBinds(deps: SettingBindsDeps): void {
         newtabWidthSelect.value = mode;
       }
       setNewtabWidthTabState(mode);
-    },
-    repairOnChange: false,
-    refreshSelects: true
-  });
-  settingBinder.bindSetting({
-    key: OVERLAY_SIZE_MODE_STORAGE_KEY,
-    normalize: normalizeOverlaySizeMode,
-    apply(mode) {
-      setOverlaySizeTabState(mode);
-      // An unset width shows the new size's own width.
-      renderOverlayWidthControl(optionsState.currentOverlayWidth);
-    },
-    repairOnChange: false,
-    refreshSelects: true
-  });
-  settingBinder.bindSetting({
-    key: SETTINGS.OVERLAY_WIDTH_STORAGE_KEY,
-    normalize: SETTINGS.normalizeOverlayWidth,
-    apply: renderOverlayWidthControl,
-    // Unset is a valid state (follow the size), so nothing is written back.
-    repairOnLoad: false,
-    repairOnChange: false
-  });
-  settingBinder.bindSetting({
-    key: OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
-    normalize: normalizeOverlayEnterAnimation,
-    apply: setOverlayEnterAnimationTabState,
-    repairOnChange: false
-  });
-  localSettingBinder.bindSetting({
-    key: OVERLAY_FONT_FAMILY_STORAGE_KEY,
-    normalize: SETTINGS.normalizeOverlayFontFamily,
-    apply(family) {
-      optionsState.currentOverlayFontFamily = family;
-      if (!overlayFontSelect) {
-        return;
-      }
-      ensureOverlayFontOption(overlayFontSelect, family);
-      overlayFontSelect.value = family;
-      refreshOptionsSelectItems(overlayFontSelect);
-      renderOverlayFontMissingNotices();
-    },
-    repairOnChange: false,
-    refreshSelects: true
-  });
-  localSettingBinder.bindSetting({
-    key: OVERLAY_FONT_LABELS_STORAGE_KEY,
-    // Families may load after the names, so nothing is pruned on read.
-    normalize: (value) => SETTINGS.normalizeOverlayFontLabels(value),
-    apply(labels) {
-      optionsState.currentOverlayFontLabels = labels;
-      const fontSelects: Array<[HTMLSelectElement | null, string]> = [
-        [overlayFontSelect, optionsState.currentOverlayFontFamily],
-        [overlayFontFallbackSelect, optionsState.currentOverlayFontFallback]
-      ];
-      fontSelects
-        .forEach(([select, family]) => {
-          if (select && family) {
-            ensureOverlayFontOption(select, family);
-            refreshOptionsSelectItems(select);
-          }
-        });
-      renderOverlayFontMissingNotices();
-    },
-    repairOnLoad: false,
-    repairOnChange: false,
-    refreshSelects: true
-  });
-  localSettingBinder.bindSetting({
-    key: OVERLAY_FONT_FALLBACK_STORAGE_KEY,
-    normalize: SETTINGS.normalizeOverlayFontFamily,
-    apply(family) {
-      optionsState.currentOverlayFontFallback = family;
-      if (!overlayFontFallbackSelect) {
-        return;
-      }
-      ensureOverlayFontOption(overlayFontFallbackSelect, family);
-      overlayFontFallbackSelect.value = family;
-      refreshOptionsSelectItems(overlayFontFallbackSelect);
-      renderOverlayFontMissingNotices();
     },
     repairOnChange: false,
     refreshSelects: true

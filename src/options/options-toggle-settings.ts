@@ -41,11 +41,6 @@ function getToggleSettings(settings: typeof Settings, hooks?: ToggleSettingHooks
   const page = hooks || {};
   const entries: ToggleSettingsEntry[] = [
     {
-      inputId: '_x_extension_overlay_page_theme_adaptation_toggle_2026_unique_',
-      key: S.OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
-      normalize: S.normalizeOverlayPageThemeAdaptationEnabled
-    },
-    {
       inputId: '_x_extension_bookmark_folder_icons_visible_toggle_2026_unique_',
       kind: 'bookmark-folder-icons-visible',
       key: S.BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY,

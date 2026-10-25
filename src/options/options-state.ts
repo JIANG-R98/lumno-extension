@@ -14,7 +14,6 @@ import type { NavigationState } from './options-navigation';
 import type { createPanelHeightAnimator } from './options-panel-motion';
 import type { createSearchSourceOrderController } from './options-search-source-order';
 import type { SegmentedTabsState } from './options-segmented-tabs';
-import type { SelectControlsState } from './options-select-controls';
 import type { SettingBindsState } from './options-setting-binds';
 import type { ShortcutReferenceState } from './options-shortcut-reference';
 import type { createSiteSearchModel, EnqueueOperation } from './options-site-search';
@@ -40,7 +39,6 @@ type OptionsState =
   LanguageState &
   NavigationState &
   SegmentedTabsState &
-  SelectControlsState &
   SettingBindsState &
   ShortcutReferenceState &
   SiteSearchActionsState &
@@ -91,8 +89,6 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     // Views made as the page mounts them.
     settingsNavigationController: null,
     recentModeTabsController: null,
-    overlaySizeTabsController: null,
-    overlayEnterAnimationTabsController: null,
     newtabWidthTabsController: null,
     newtabTopContentTabsController: null,
     newtabTimeInkTabsController: null,
@@ -129,18 +125,6 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     // Settings, at their defaults until storage answers.
     currentRecentMode: 'most',
     currentNewtabWidthMode: 'wide',
-    currentOverlaySizeMode: 'standard',
-    currentOverlayWidth: null,
-    currentOverlayEnterAnimation: 'elastic',
-    // Empty means the bundled Lumno Open Sans stack.
-    currentOverlayFontFamily: '',
-    currentOverlayFontFallback: '',
-    // Display names of the chosen families, so a face uninstalled since is
-    // still named in the missing-font notice.
-    currentOverlayFontLabels: {},
-    // The installed families once the list is read. Null until then (and on
-    // Firefox), so nothing is reported missing before it can be checked.
-    installedOverlayFontFamilies: null,
     currentRecentCount: 4,
     currentBookmarkCount: 8,
     currentBookmarkColumns: 6,

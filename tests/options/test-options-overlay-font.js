@@ -17,11 +17,12 @@ const fontWrites = (area) => area.writes.filter((write) => Object.keys(write).so
 async function testRowsAndTheirMarkup() {
   const page = await createOptionsPage({ fonts: FONTS });
   const doc = page.document;
-  const row = (key) => doc.querySelector(`[data-i18n="${key}"]`);
+  const row = (id) => page.byId(`_x_extension_${id}_2026_unique_`);
   const follows = (later, earlier) => Boolean(earlier.compareDocumentPosition(later) & page.window.Node.DOCUMENT_POSITION_FOLLOWING);
-  assert.ok(follows(row('settings_overlay_font_title'), row('settings_overlay_enter_animation_title')),
+  assert.ok(follows(row('overlay_font_row'), row('overlay_enter_animation_tabs_wrap')),
     'the font row should follow the opening animation row');
-  assert.ok(follows(row('settings_overlay_page_theme_adaptation_title'), row('settings_overlay_font_fallback_title')),
+  assert.ok(follows(row('overlay_font_fallback_row'), row('overlay_font_row')));
+  assert.ok(follows(row('overlay_page_theme_adaptation_row'), row('overlay_font_fallback_row')),
     'webpage theme adaptation should stay the last overlay appearance setting');
   [FONT_SELECT, FALLBACK_SELECT].forEach((id) => {
     assert.strictEqual(doc.querySelector(`[data-select="${id}"]`).getAttribute('data-select-searchable'), 'true',

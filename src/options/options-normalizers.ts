@@ -6,7 +6,7 @@ import type { LayoutMutation } from './options-panel-motion';
 interface NormalizersDeps {
   SETTINGS: Pick<typeof Settings,
     'normalizeBookmarkCount' | 'normalizeBookmarkColumns' | 'normalizeNewtabWidthMode' |
-    'normalizeOverlaySizeMode' | 'normalizeOverlayEnterAnimation' | 'normalizeNewtabTopContentMode' |
+    'normalizeNewtabTopContentMode' |
     'normalizeNewtabTimeFontWeight' | 'normalizeNewtabShortcutsVisible' | 'normalizeNewtabShortcutAddVisible' |
     'normalizeNewtabShortcutDockMagnificationEnabled' | 'normalizeNewtabShortcutColumns' |
     'normalizeNewtabShortcutSize' | 'normalizeNewtabShortcutGap' | 'inferNewtabShortcutColumnsFromWidth'>;
@@ -65,14 +65,6 @@ function createNormalizers(deps: NormalizersDeps) {
 
   function normalizeNewtabWidthMode(value: unknown) {
     return SETTINGS.normalizeNewtabWidthMode(value);
-  }
-
-  function normalizeOverlaySizeMode(value: unknown) {
-    return SETTINGS.normalizeOverlaySizeMode(value);
-  }
-
-  function normalizeOverlayEnterAnimation(value: unknown) {
-    return SETTINGS.normalizeOverlayEnterAnimation(value);
   }
 
   function updateBookmarkColumnsSettingVisibility(countValue: unknown): void {
@@ -146,8 +138,6 @@ function createNormalizers(deps: NormalizersDeps) {
     normalizeRecentCount,
     normalizeBookmarkColumns,
     normalizeNewtabWidthMode,
-    normalizeOverlaySizeMode,
-    normalizeOverlayEnterAnimation,
     updateBookmarkColumnsSettingVisibility,
     normalizeNewtabTopContentMode,
     normalizeNewtabTimeFontWeight,

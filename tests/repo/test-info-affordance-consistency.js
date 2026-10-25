@@ -40,8 +40,7 @@ assert.strictEqual(rule(onboardingCss, '.interaction-info-button:hover').get('ba
   [
     '_x_extension_restricted_action_info_2026_unique_',
     '_x_extension_bookmark_rows_info_2026_unique_',
-    '_x_extension_bookmark_columns_info_2026_unique_',
-    '_x_extension_overlay_page_theme_adaptation_info_2026_unique_'
+    '_x_extension_bookmark_columns_info_2026_unique_'
   ].forEach((id) => {
     const host = page.byId(id);
     assert.ok(host && host.querySelector(INFO), `${id} should be mounted with the shared info button`);
@@ -49,7 +48,8 @@ assert.strictEqual(rule(onboardingCss, '.interaction-info-button:hover').get('ba
   [
     ['_x_extension_blacklist_form_2026_unique_', 'the search exclusion form'],
     ['_x_extension_favicon_blacklist_form_2026_unique_', 'the icon exclusion form'],
-    ['_x_extension_site_search_builtin_list_2024_unique_', 'the site search list']
+    ['_x_extension_site_search_builtin_list_2024_unique_', 'the site search list'],
+    ['_x_extension_overlay_page_theme_adaptation_row_2026_unique_', 'the webpage theme adaptation row']
   ].forEach(([id, label]) => {
     assert.ok(page.byId(id).querySelector(INFO), `${label} should reuse the shared InfoButton`);
   });

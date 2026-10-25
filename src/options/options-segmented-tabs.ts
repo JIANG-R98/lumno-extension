@@ -6,9 +6,7 @@ import type {
   NewtabGlassTheme,
   NewtabTimeInk,
   NewtabTopContentMode,
-  NewtabWidthMode,
-  OverlayEnterAnimation,
-  OverlaySizeMode
+  NewtabWidthMode
 } from '../domain/settings';
 import type { BatchedStorageArea } from '../platform/settings-storage';
 import type { LayoutMutation } from './options-panel-motion';
@@ -22,8 +20,6 @@ type SegmentedControllerRef = Pick<SegmentedControlController, 'render'> | null;
 interface SegmentedTabsState {
   storageArea: BatchedStorageArea | null;
   currentRecentMode: RecentMode;
-  currentOverlaySizeMode: OverlaySizeMode;
-  currentOverlayEnterAnimation: OverlayEnterAnimation;
   currentNewtabWidthMode: NewtabWidthMode;
   currentNewtabTopContentMode: NewtabTopContentMode;
   currentNewtabTimeInk: NewtabTimeInk;
@@ -31,8 +27,6 @@ interface SegmentedTabsState {
   currentNewtabGlassStyle: NewtabGlassStyle;
   // Made once the page has mounted its React views.
   recentModeTabsController: SegmentedControllerRef;
-  overlaySizeTabsController: SegmentedControllerRef;
-  overlayEnterAnimationTabsController: SegmentedControllerRef;
   newtabWidthTabsController: SegmentedControllerRef;
   newtabTopContentTabsController: SegmentedControllerRef;
   newtabTimeInkTabsController: SegmentedControllerRef;
@@ -41,8 +35,6 @@ interface SegmentedTabsState {
 
 interface SegmentedTabsDeps {
   getMessage: GetMessage;
-  normalizeOverlaySizeMode(value: unknown): OverlaySizeMode;
-  normalizeOverlayEnterAnimation(value: unknown): OverlayEnterAnimation;
   normalizeNewtabWidthMode(value: unknown): NewtabWidthMode;
   normalizeNewtabTopContentMode(value: unknown): NewtabTopContentMode;
   SETTINGS: Pick<typeof Settings, 'normalizeNewtabTimeInk' | 'normalizeNewtabGlassTheme' |
@@ -61,8 +53,6 @@ interface SegmentedTabsDeps {
   newtabWidthSelect: HTMLSelectElement | null;
   NEWTAB_WIDTH_MODE_STORAGE_KEY: string;
   notifyNewtabSectionsRefresh(section: string): void;
-  OVERLAY_SIZE_MODE_STORAGE_KEY: string;
-  OVERLAY_ENTER_ANIMATION_STORAGE_KEY: string;
   NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY: string;
   recentModeSelect: HTMLSelectElement | null;
   RECENT_MODE_STORAGE_KEY: string;
@@ -72,8 +62,6 @@ interface SegmentedTabsDeps {
 function createSegmentedTabs(deps: SegmentedTabsDeps) {
   const {
     getMessage,
-    normalizeOverlaySizeMode,
-    normalizeOverlayEnterAnimation,
     normalizeNewtabWidthMode,
     normalizeNewtabTopContentMode,
     SETTINGS,
@@ -91,8 +79,6 @@ function createSegmentedTabs(deps: SegmentedTabsDeps) {
     newtabWidthSelect,
     NEWTAB_WIDTH_MODE_STORAGE_KEY,
     notifyNewtabSectionsRefresh,
-    OVERLAY_SIZE_MODE_STORAGE_KEY,
-    OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
     NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
     recentModeSelect,
     RECENT_MODE_STORAGE_KEY
@@ -130,59 +116,6 @@ function createSegmentedTabs(deps: SegmentedTabsDeps) {
         select: {
           id: '_x_extension_recent_mode_select_2024_unique_'
         }
-      }
-    );
-  }
-
-  function setOverlaySizeTabState(mode: unknown): void {
-    const nextMode = normalizeOverlaySizeMode(mode);
-    optionsState.currentOverlaySizeMode = nextMode;
-    renderSegmentedControlState(
-      optionsState.overlaySizeTabsController,
-      {
-        activeValue: nextMode,
-        dataAttribute: 'data-overlay-size',
-        items: [
-          {
-            value: 'compact',
-            labelKey: 'overlay_size_compact',
-            label: getMessage('overlay_size_compact', '小')
-          },
-          {
-            value: 'standard',
-            labelKey: 'overlay_size_standard',
-            label: getMessage('overlay_size_standard', '标准')
-          },
-          {
-            value: 'large',
-            labelKey: 'overlay_size_large',
-            label: getMessage('overlay_size_large', '大')
-          }
-        ]
-      }
-    );
-  }
-
-  function setOverlayEnterAnimationTabState(mode: unknown): void {
-    const nextMode = normalizeOverlayEnterAnimation(mode);
-    optionsState.currentOverlayEnterAnimation = nextMode;
-    renderSegmentedControlState(
-      optionsState.overlayEnterAnimationTabsController,
-      {
-        activeValue: nextMode,
-        dataAttribute: 'data-overlay-enter-animation',
-        items: [
-          {
-            value: 'elastic',
-            labelKey: 'overlay_enter_animation_elastic',
-            label: getMessage('overlay_enter_animation_elastic', '弹性')
-          },
-          {
-            value: 'fade',
-            labelKey: 'overlay_enter_animation_fade',
-            label: getMessage('overlay_enter_animation_fade', '淡入')
-          }
-        ]
       }
     );
   }
@@ -328,26 +261,6 @@ function createSegmentedTabs(deps: SegmentedTabsDeps) {
     notifyNewtabSectionsRefresh('all');
   }
 
-  function handleOverlaySizeSelection(value: string): void {
-    const nextMode = normalizeOverlaySizeMode(value);
-    setOverlaySizeTabState(nextMode);
-    const storageArea = optionsState.storageArea;
-    if (!storageArea) {
-      return;
-    }
-    storageArea.set({ [OVERLAY_SIZE_MODE_STORAGE_KEY]: nextMode });
-  }
-
-  function handleOverlayEnterAnimationSelection(value: string): void {
-    const nextMode = normalizeOverlayEnterAnimation(value);
-    setOverlayEnterAnimationTabState(nextMode);
-    const storageArea = optionsState.storageArea;
-    if (!storageArea) {
-      return;
-    }
-    storageArea.set({ [OVERLAY_ENTER_ANIMATION_STORAGE_KEY]: nextMode });
-  }
-
   function handleNewtabTopContentSelection(value: string): void {
     const nextMode = normalizeNewtabTopContentMode(value);
     setNewtabTopContentTabState(nextMode);
@@ -394,8 +307,6 @@ function createSegmentedTabs(deps: SegmentedTabsDeps) {
 
   return {
     setRecentModeTabState,
-    setOverlaySizeTabState,
-    setOverlayEnterAnimationTabState,
     setNewtabWidthTabState,
     setNewtabTopContentTabState,
     setNewtabTimeInkTabState,
@@ -403,8 +314,6 @@ function createSegmentedTabs(deps: SegmentedTabsDeps) {
     syncNewtabGlassThemeVisibility,
     updateRecentModeTabsVisibility,
     handleNewtabWidthSelection,
-    handleOverlaySizeSelection,
-    handleOverlayEnterAnimationSelection,
     handleNewtabTopContentSelection,
     handleNewtabGlassThemeSelection,
     handleNewtabTimeInkSelection,

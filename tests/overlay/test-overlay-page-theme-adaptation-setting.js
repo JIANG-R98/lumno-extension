@@ -1,6 +1,5 @@
 const assert = require('assert');
 const fs = require('fs');
-const { JSDOM } = require('jsdom');
 const settings = require('../../src/domain/settings.ts');
 const pageTheme = require('../../src/overlay/page-theme.ts');
 const { parseCss } = require('../helpers/css-rules');
@@ -15,20 +14,24 @@ const ADAPTATION_KEY = settings.OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KE
 const THEME_KEY = '_x_extension_theme_mode_2024_unique_';
 const ROW_ID = '_x_extension_overlay_page_theme_adaptation_row_2026_unique_';
 
-function testSettingsMarkup() {
-  const doc = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
-  const key = (name) => doc.querySelector(`[data-i18n="${name}"]`);
+async function testSettingsMarkup() {
+  const page = await createOptionsPage();
+  const doc = page.document;
   const follows = (later, earlier) => Boolean(earlier.compareDocumentPosition(later) & 4);
-  assert.ok(follows(key('settings_newtab_section_title'), key('settings_webpage_focus_overlay_section_title')),
-    'webpage overlay settings should appear above New Tab settings');
-  assert.ok(follows(key('settings_overlay_enter_animation_title'), key('settings_overlay_size_title')));
-  assert.ok(follows(key('settings_overlay_page_theme_adaptation_title'), key('settings_overlay_enter_animation_title')),
-    'webpage theme adaptation should be the last overlay appearance setting');
-  assert.strictEqual(doc.getElementById('_x_extension_overlay_page_theme_adaptation_toggle_2026_unique_').hasAttribute('checked'), true,
+  const overlay = page.byId('_x_extension_appearance_overlay_section_2026_unique_');
+  const newtabTitle = doc.querySelector('[data-i18n="settings_newtab_section_title"]');
+  assert.strictEqual(overlay.querySelector('._x_extension_section_title_2024_unique_').textContent, '网页聚焦搜索浮层');
+  assert.ok(follows(newtabTitle, overlay), 'webpage overlay settings should appear above New Tab settings');
+  const size = page.byId('_x_extension_overlay_size_tabs_wrap_2026_unique_');
+  const animation = page.byId('_x_extension_overlay_enter_animation_tabs_wrap_2026_unique_');
+  const row = page.byId(ROW_ID);
+  assert.ok(follows(animation, size));
+  assert.ok(follows(row, animation), 'webpage theme adaptation should be the last overlay appearance setting');
+  assert.strictEqual(row, overlay.querySelector('._x_extension_setting_row_2024_unique_:last-child'));
+  assert.strictEqual(page.byId('_x_extension_overlay_page_theme_adaptation_toggle_2026_unique_').checked, true,
     'webpage theme adaptation should default to on');
-  const row = doc.getElementById(ROW_ID);
-  assert.ok(row && doc.getElementById('_x_extension_overlay_page_theme_adaptation_info_2026_unique_'));
   assert.strictEqual(row.querySelector('[title]'), null, 'the row should not fall back to a native title tooltip');
+  page.close();
 
   const css = parseCss(readStylesheet('src/options/options.css'));
   ['light', 'dark'].forEach((mode) => {
@@ -42,7 +45,7 @@ async function testSettingsRowFollowsTheThemeMode() {
   const page = await createOptionsPage();
   const row = page.byId(ROW_ID);
   assert.strictEqual(row.hidden, false, 'the row should show while the theme follows the system');
-  const info = page.byId('_x_extension_overlay_page_theme_adaptation_info_2026_unique_').querySelector('button');
+  const info = row.querySelector('._x_extension_info_button_2026_unique_');
   assert.strictEqual(info.getAttribute('data-tooltip'), '仅在“深浅色模式”=“跟随系统”时显示，关闭后将不再基于网页主题色变更深浅模式。',
     'the InfoButton should explain when the setting applies');
   await page.click(page.document.querySelector('[data-mode="light"]._x_extension_theme_option_2024_unique_'));
@@ -165,7 +168,7 @@ Object.entries(expectedCopy).forEach(([locale, expected]) => {
 });
 
 (async () => {
-  testSettingsMarkup();
+  await testSettingsMarkup();
   await testSettingsRowFollowsTheThemeMode();
   await testOverlayFollowsTheSettingLive();
   console.log('overlay page theme adaptation setting tests passed');

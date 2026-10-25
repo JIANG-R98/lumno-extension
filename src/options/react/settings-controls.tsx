@@ -12,6 +12,7 @@ import { ToggleControl, type ToggleControlRenderModel } from './toggle-control';
 import { createSettingToggleRowsController } from './setting-rows';
 import { createSettingsSectionController } from './settings-rows-view';
 import { createAppearanceGlobalSectionController } from './appearance-global-section';
+import { createAppearanceOverlaySectionController } from './appearance-overlay-section';
 import { createGeneralTabController } from './general-tab';
 
 export type { RangeSliderControlRenderModel, RequiredCheckboxGroupRenderModel, RequiredCheckboxItemModel, ToggleControlRenderModel };
@@ -97,6 +98,7 @@ export function createSettingsControlsApi() {
   return Object.freeze({
     implementation: 'react',
     createAppearanceGlobalSectionController,
+    createAppearanceOverlaySectionController,
     createGeneralTabController,
     createRangeSliderControlController,
     createRequiredCheckboxGroupController,
