@@ -2,7 +2,50 @@
 // report a wrong string on a prefilled GitHub issue form, or download every
 // UI string as a spreadsheet, fill in a "Suggestion" column and attach it.
 // scripts/i18n/import-sheet.js merges a returned spreadsheet.
+import type { LocaleMessage } from '../domain/messages';
+import type { UiLocale } from '../domain/settings';
 import { downloadTextFile } from './options-download';
+import type { FormatTemplate, GetMessage } from './options-types';
+import type { TranslationHelpController, TranslationHelpRenderModel } from './react/translation-help';
+
+type LocaleMessages = Record<string, LocaleMessage>;
+
+interface TranslationIssueInput {
+  // The repository's new-issue URL.
+  issueUrl: string;
+  locale: string;
+  languageName: string;
+  version: string;
+}
+
+interface TranslationSheetInput {
+  headers: { reference: string; current: string; suggestion: string; note: string };
+  referenceMessages: LocaleMessages;
+  currentMessages: LocaleMessages;
+}
+
+interface TranslationHelpModelInput {
+  getMessage: GetMessage;
+  formatTemplate: FormatTemplate;
+  locale: string;
+  uiLocales: readonly Pick<UiLocale, 'id' | 'name'>[];
+  issueUrl: string;
+  version: string;
+  onDownload?: () => Promise<void>;
+}
+
+interface TranslationHelpSectionOptions {
+  // The React controller; null when the section is not on the page.
+  controller: Pick<TranslationHelpController, 'render'> | null;
+  documentObj: Document;
+  getMessage: GetMessage;
+  formatTemplate: FormatTemplate;
+  getLocale(): string;
+  getIssueUrl(): string;
+  uiLocales: readonly Pick<UiLocale, 'id' | 'name'>[];
+  loadLocaleMessages(locale: string): Promise<LocaleMessages>;
+  version: string;
+}
 
 // Lumno is written in Simplified Chinese, so there is nothing to improve there.
 const SOURCE_LOCALE = 'zh_CN';
@@ -10,18 +53,17 @@ const ISSUE_TEMPLATE = 'translation.yml';
 
 // English is the column translators read beside their own language; English
 // and Traditional Chinese read the Simplified Chinese it was written in.
-function getTranslationReferenceLocale(locale) {
+function getTranslationReferenceLocale(locale: string): string {
   return locale === 'en' || locale === 'zh_TW' ? SOURCE_LOCALE : 'en';
 }
 
-function getLocaleName(uiLocales, locale) {
-  const entry = (uiLocales || []).find((item) => item.id === locale);
+function getLocaleName(uiLocales: readonly Pick<UiLocale, 'id' | 'name'>[], locale: string): string {
+  const entry = uiLocales.find((item) => item.id === locale);
   return entry ? entry.name : locale;
 }
 
-//   issueUrl (the repository's new-issue URL), locale, languageName, version
-function buildTranslationIssueUrl(input) {
-  let url;
+function buildTranslationIssueUrl(input: TranslationIssueInput): string {
+  let url: URL;
   try {
     url = new URL(input.issueUrl);
   } catch (error) {
@@ -37,32 +79,27 @@ function buildTranslationIssueUrl(input) {
   return url.toString();
 }
 
-function escapeCsvField(value) {
-  const text = String(value === undefined || value === null ? '' : value);
+function escapeCsvField(text: string): string {
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
-function getMessageText(messages, key) {
-  const entry = messages && messages[key];
+function getMessageText(messages: LocaleMessages, key: string): string {
+  const entry = Object.prototype.hasOwnProperty.call(messages, key) ? messages[key] : undefined;
   return entry && typeof entry.message === 'string' ? entry.message : '';
 }
 
 // One row per string, in the reference file's order. The BOM makes Excel
 // read the file as UTF-8.
-//   headers: { reference, current, suggestion, note }
-//   referenceMessages, currentMessages: messages.json objects
-function buildTranslationSheetCsv(input) {
+function buildTranslationSheetCsv(input: TranslationSheetInput): string {
   const { headers, referenceMessages, currentMessages } = input;
   const rows = [['ID', headers.reference, headers.current, headers.suggestion, headers.note]];
-  Object.keys(referenceMessages || {}).forEach((key) => {
+  Object.keys(referenceMessages).forEach((key) => {
     rows.push([key, getMessageText(referenceMessages, key), getMessageText(currentMessages, key), '', '']);
   });
   return `\uFEFF${rows.map((row) => row.map(escapeCsvField).join(',')).join('\r\n')}\r\n`;
 }
 
-//   getMessage(key, fallback), formatTemplate(template, values), locale,
-//   uiLocales, issueUrl, version, onDownload
-function buildTranslationHelpModel(input) {
+function buildTranslationHelpModel(input: TranslationHelpModelInput): TranslationHelpRenderModel {
   const { getMessage, locale } = input;
   if (!locale || locale === SOURCE_LOCALE) {
     return { visible: false };
@@ -91,13 +128,10 @@ function buildTranslationHelpModel(input) {
   };
 }
 
-//   controller            the React controller (may be null)
-//   getMessage, formatTemplate, getLocale(), getIssueUrl(), version,
-//   uiLocales, loadLocaleMessages(locale) -> Promise<messages>, documentObj
-function createTranslationHelpSection(options) {
-  let downloading = null;
+function createTranslationHelpSection(options: TranslationHelpSectionOptions) {
+  let downloading: Promise<void> | null = null;
 
-  function download() {
+  function download(): Promise<void> {
     if (downloading) {
       return downloading;
     }
@@ -124,7 +158,7 @@ function createTranslationHelpSection(options) {
     return downloading;
   }
 
-  function render() {
+  function render(): void {
     if (!options.controller) {
       return;
     }
@@ -148,4 +182,11 @@ export {
   buildTranslationSheetCsv,
   createTranslationHelpSection,
   getTranslationReferenceLocale
+};
+export type {
+  LocaleMessages,
+  TranslationHelpModelInput,
+  TranslationHelpSectionOptions,
+  TranslationIssueInput,
+  TranslationSheetInput
 };

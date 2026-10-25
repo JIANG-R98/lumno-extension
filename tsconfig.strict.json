@@ -13,7 +13,17 @@
     "src/background/**/*.ts",
     "src/shared/**/*.ts",
     "src/content/**/*.ts",
-    "src/overlay/**/*.ts"
+    "src/overlay/**/*.ts",
+    "src/options/options-types.ts",
+    "src/options/options-download.ts",
+    "src/options/options-diagnostics.ts",
+    "src/options/options-panel-motion.ts",
+    "src/options/options-normalizers.ts",
+    "src/options/options-navigation.ts",
+    "src/options/options-feedback-support.ts",
+    "src/options/options-shortcut-reference.ts",
+    "src/options/options-theme.ts",
+    "src/options/options-translation-help.ts"
   ],
   "exclude": [
     "src/**/react/**"

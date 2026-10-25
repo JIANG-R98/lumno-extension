@@ -307,15 +307,6 @@ import * as LumnoMessaging from '../platform/messaging';
     optionsState
   });
 
-  const SETTINGS_TAB_KEYS = Object.freeze([
-    'general',
-    'account',
-    'appearance',
-    'shortcuts',
-    'blacklist',
-    'labs'
-  ]);
-
 
 
   const {
@@ -407,7 +398,6 @@ import * as LumnoMessaging from '../platform/messaging';
     scrollToOptionsTarget
   } = OPTIONS_NAVIGATION.createNavigation({
     getMessage: (...args) => getMessage(...args),
-    SETTINGS_TAB_KEYS,
     tabContents,
     syncFallbackShortcutWrapWidth,
     updateFallbackShortcutWrapWidthForContent,
@@ -1560,11 +1550,7 @@ import * as LumnoMessaging from '../platform/messaging';
 
   function getInitialTabKey() {
     const routeState = getOptionsRouteState();
-    const tabKey = routeState.tabKey;
-    if (!tabKey) {
-      return 'general';
-    }
-    return SETTINGS_TAB_KEYS.includes(tabKey) ? tabKey : 'general';
+    return OPTIONS_NAVIGATION.normalizeSettingsTabKey(routeState.tabKey);
   }
 
   function getInitialOptionsTargetKey() {

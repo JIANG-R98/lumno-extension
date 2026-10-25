@@ -1,6 +1,30 @@
 // The Options theme: the system / light / dark picker, the resolved theme
 // on the page, and the localStorage copy theme-preload.ts paints from on the
 // next load. While the mode is "system" the page follows the OS setting.
+import type * as Settings from '../domain/settings';
+import type { ThemeMode } from '../domain/settings';
+import type { GetMessage } from './options-types';
+import type { ThemePickerController } from './react/theme-picker';
+
+// The part of a storage area the section reads and writes.
+interface ThemeStorageArea {
+  get(keys: string[], callback: (items: Record<string, unknown> | undefined) => void): unknown;
+  set(items: Record<string, unknown>, callback: () => void): unknown;
+}
+
+interface ThemeSectionOptions {
+  documentObj: Document;
+  windowObj: Window;
+  panel: HTMLElement;
+  storageArea: ThemeStorageArea | null;
+  settings: Pick<typeof Settings, 'THEME_STORAGE_KEY' | 'OPTIONS_THEME_PRELOAD_STORAGE_KEY' |
+    'createGlobalThemeModeStorageUpdate' | 'normalizeThemeMode'>;
+  picker: Pick<ThemePickerController, 'render'>;
+  getMessage: GetMessage;
+  // Runs whenever the picker shows a mode.
+  onModeShown?(mode: ThemeMode): void;
+}
+
 const THEME_PREVIEWS = Object.freeze({
   system: '../../assets/images/system.svg',
   light: '../../assets/images/light.svg',
@@ -8,33 +32,23 @@ const THEME_PREVIEWS = Object.freeze({
 });
 const CLICK_EFFECT_MS = 260;
 
-function normalizeMode(mode) {
-  return mode === 'dark' || mode === 'light' ? mode : 'system';
-}
-
-//   documentObj, windowObj, panel
-//   storageArea      provider storage area (may be null)
-//   settings         LumnoSettings
-//   picker           the theme picker's React controller
-//   getMessage(key, fallback)
-//   onModeShown(mode) runs whenever the picker shows a mode
-function createThemeSection(options) {
+function createThemeSection(options: ThemeSectionOptions) {
   const { documentObj, windowObj, panel, storageArea, settings, picker } = options;
   const getMessage = options.getMessage;
-  const onModeShown = typeof options.onModeShown === 'function' ? options.onModeShown : () => {};
+  const onModeShown = options.onModeShown || (() => {});
   const themeKey = settings.THEME_STORAGE_KEY;
   const mediaQuery = windowObj.matchMedia('(prefers-color-scheme: dark)');
-  let currentMode = 'system';
+  let currentMode: ThemeMode = 'system';
   let followsSystem = false;
 
-  function resolveTheme(mode) {
+  function resolveTheme(mode: ThemeMode): 'dark' | 'light' {
     if (mode === 'dark' || mode === 'light') {
       return mode;
     }
     return mediaQuery.matches ? 'dark' : 'light';
   }
 
-  function applyResolvedTheme(resolvedTheme) {
+  function applyResolvedTheme(resolvedTheme: 'dark' | 'light'): void {
     documentObj.body.setAttribute('data-theme', resolvedTheme);
     panel.setAttribute('data-theme', resolvedTheme);
     documentObj.documentElement.style.colorScheme = resolvedTheme;
@@ -44,7 +58,7 @@ function createThemeSection(options) {
     }
   }
 
-  function render() {
+  function render(): void {
     onModeShown(currentMode);
     picker.render({
       activeMode: currentMode,
@@ -71,13 +85,13 @@ function createThemeSection(options) {
     });
   }
 
-  function onSystemThemeChange() {
+  function onSystemThemeChange(): void {
     if (currentMode === 'system') {
       applyResolvedTheme(resolveTheme('system'));
     }
   }
 
-  function followSystemTheme(follow) {
+  function followSystemTheme(follow: boolean): void {
     if (follow === followsSystem) {
       return;
     }
@@ -89,19 +103,17 @@ function createThemeSection(options) {
     }
   }
 
-  function cacheMode(mode) {
+  function cacheMode(mode: ThemeMode): void {
     try {
-      if (windowObj.localStorage) {
-        windowObj.localStorage.setItem(settings.OPTIONS_THEME_PRELOAD_STORAGE_KEY, normalizeMode(mode));
-      }
+      windowObj.localStorage.setItem(settings.OPTIONS_THEME_PRELOAD_STORAGE_KEY, mode);
     } catch (e) {
       // The early theme preloader falls back to the system theme when caching is unavailable.
     }
   }
 
   // Shows a stored mode: picker, page theme and, for "system", OS changes.
-  function show(mode) {
-    currentMode = normalizeMode(mode);
+  function show(mode: ThemeMode): void {
+    currentMode = mode;
     render();
     applyResolvedTheme(resolveTheme(currentMode));
     followSystemTheme(currentMode === 'system');
@@ -110,14 +122,14 @@ function createThemeSection(options) {
   // theme-preload.ts has already painted the cached (or system) theme and
   // marked the page ready before this runs, so there is nothing to fall
   // back to while the stored preference loads.
-  function init() {
-    return new Promise((resolve) => {
+  function init(): Promise<void> {
+    return new Promise<ThemeMode>((resolve) => {
       if (!storageArea) {
         resolve('system');
         return;
       }
       storageArea.get([themeKey], (result) => {
-        resolve((result && result[themeKey]) || 'system');
+        resolve(settings.normalizeThemeMode(result ? result[themeKey] : undefined));
       });
     }).then((storedMode) => {
       cacheMode(storedMode);
@@ -126,7 +138,7 @@ function createThemeSection(options) {
     });
   }
 
-  function setMode(mode) {
+  function setMode(mode: unknown): void {
     if (!storageArea) {
       return;
     }
@@ -136,20 +148,21 @@ function createThemeSection(options) {
     storageArea.set(updates, () => show(nextMode));
   }
 
-  function applyStorageChange(value) {
-    show(value || 'system');
+  function applyStorageChange(value: unknown): void {
+    show(settings.normalizeThemeMode(value));
   }
 
   return Object.freeze({ applyStorageChange, init, render, setMode });
 }
 
 // The short press animation on a theme option.
-function playThemeOptionClickEffect(button, windowObj) {
+function playThemeOptionClickEffect(button: Element | null, windowObj: Window): void {
   if (!button) {
     return;
   }
   button.classList.remove('x-theme-clicking');
-  void button.offsetWidth;
+  // Reading the layout restarts the animation when the class returns.
+  void button.getBoundingClientRect();
   button.classList.add('x-theme-clicking');
   windowObj.setTimeout(() => {
     button.classList.remove('x-theme-clicking');
@@ -157,3 +170,4 @@ function playThemeOptionClickEffect(button, windowObj) {
 }
 
 export { createThemeSection, playThemeOptionClickEffect };
+export type { ThemeSectionOptions, ThemeStorageArea };

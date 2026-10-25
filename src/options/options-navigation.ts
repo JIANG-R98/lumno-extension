@@ -1,9 +1,62 @@
 // Settings navigation: the tab list, the active tab, the sticky header,
 // scroll and resize refreshes, and scrolling to a linked setting.
-function createNavigation(deps) {
+import type { createPanelHeightAnimator } from './options-panel-motion';
+import type { GetMessage } from './options-types';
+import type { SettingsNavigationController, SettingsNavigationItemModel } from './react/settings-navigation';
+
+type SettingsTabKey = 'general' | 'account' | 'appearance' | 'shortcuts' | 'blacklist' | 'labs';
+
+// The settings tabs, in their order on the page.
+const SETTINGS_TAB_KEYS: readonly SettingsTabKey[] = Object.freeze([
+  'general',
+  'account',
+  'appearance',
+  'shortcuts',
+  'blacklist',
+  'labs'
+]);
+
+// A tab key from a link or a click; the General tab when it names none.
+function normalizeSettingsTabKey(value: unknown): SettingsTabKey {
+  return SETTINGS_TAB_KEYS.find((key) => key === value) || 'general';
+}
+
+interface NavigationState {
+  // Made once the page has mounted its React views.
+  settingsNavigationController: SettingsNavigationController | null;
+  panelHeightAnimator: ReturnType<typeof createPanelHeightAnimator> | null;
+  currentActiveSettingsTab: SettingsTabKey;
+}
+
+interface NavigationDeps {
+  getMessage: GetMessage;
+  // Each tab's content, by its data-content.
+  tabContents: Element[];
+  syncFallbackShortcutWrapWidth(): void;
+  updateFallbackShortcutWrapWidthForContent(): void;
+  refreshSiteSearchProviders(): unknown;
+  tabsRow: Element | null;
+  siteSearchAiGroup: Element | null;
+  siteSearchAiBuiltinList: Element | null;
+  optionsState: NavigationState;
+}
+
+interface OptionsRouteState {
+  tabKey: string;
+  // What in the tab the link points at, after the first ':'.
+  targetKey: string;
+}
+
+interface ScrollToTargetOptions {
+  behavior?: ScrollBehavior;
+  block?: ScrollLogicalPosition;
+  // Flash the row once it is in view.
+  flash?: boolean;
+}
+
+function createNavigation(deps: NavigationDeps) {
   const {
     getMessage,
-    SETTINGS_TAB_KEYS,
     tabContents,
     syncFallbackShortcutWrapWidth,
     updateFallbackShortcutWrapWidthForContent,
@@ -19,7 +72,7 @@ function createNavigation(deps) {
   const OPTIONS_TARGET_SITE_SEARCH_AI = 'site-search-ai';
   const OPTIONS_TARGET_DOCUMENT_PIP = 'document-pip';
 
-  function getSettingsNavigationItems() {
+  function getSettingsNavigationItems(): SettingsNavigationItemModel[] {
     return [
       {
         key: 'general',
@@ -60,20 +113,21 @@ function createNavigation(deps) {
     ];
   }
 
-  function renderSettingsNavigation(tabKey) {
+  function renderSettingsNavigation(tabKey: SettingsTabKey): void {
+    if (!optionsState.settingsNavigationController) {
+      return;
+    }
     optionsState.settingsNavigationController.render({
       activeKey: tabKey,
       items: getSettingsNavigationItems()
     });
   }
 
-  function normalizeSettingsTabKey(tabKey) {
-    return SETTINGS_TAB_KEYS.includes(tabKey) ? tabKey : 'general';
-  }
-
-  function setActiveTab(tabKey) {
+  function setActiveTab(tabKey: unknown): void {
     const nextTabKey = normalizeSettingsTabKey(tabKey);
-    optionsState.panelHeightAnimator.cancel();
+    if (optionsState.panelHeightAnimator) {
+      optionsState.panelHeightAnimator.cancel();
+    }
     optionsState.currentActiveSettingsTab = nextTabKey;
     renderSettingsNavigation(nextTabKey);
     tabContents.forEach((content) => {
@@ -88,15 +142,13 @@ function createNavigation(deps) {
         });
       });
     }
-    if (nextTabKey) {
-      const nextHash = `#${nextTabKey}`;
-      if (window.location.hash !== nextHash) {
-        window.history.replaceState(null, '', nextHash);
-      }
+    const nextHash = `#${nextTabKey}`;
+    if (window.location.hash !== nextHash) {
+      window.history.replaceState(null, '', nextHash);
     }
   }
 
-  function handleSettingsTabSelection(value) {
+  function handleSettingsTabSelection(value: string): void {
     const tabKey = normalizeSettingsTabKey(value);
     const currentTabKey = optionsState.currentActiveSettingsTab;
     setActiveTab(tabKey);
@@ -108,7 +160,7 @@ function createNavigation(deps) {
     }
   }
 
-  function updateTabsStickyVisualState() {
+  function updateTabsStickyVisualState(): void {
     if (!tabsRow) return;
     const stickyTop = parseFloat(window.getComputedStyle(tabsRow).top || '0') || 0;
     const isStuck = tabsRow.getBoundingClientRect().top <= stickyTop + 0.5;
@@ -117,7 +169,7 @@ function createNavigation(deps) {
 
   let optionsScrollFrame = 0;
   let optionsResizeFrame = 0;
-  function scheduleOptionsScrollRefresh() {
+  function scheduleOptionsScrollRefresh(): void {
     if (optionsScrollFrame) {
       return;
     }
@@ -127,7 +179,7 @@ function createNavigation(deps) {
     });
   }
 
-  function scheduleOptionsViewportLayoutRefresh() {
+  function scheduleOptionsViewportLayoutRefresh(): void {
     if (optionsResizeFrame) {
       return;
     }
@@ -138,12 +190,12 @@ function createNavigation(deps) {
     });
   }
 
-  function resetPageScrollToDefault() {
+  function resetPageScrollToDefault(): void {
     window.scrollTo({ top: 0, behavior: 'auto' });
     updateTabsStickyVisualState();
   }
 
-  function getOptionsRouteState() {
+  function getOptionsRouteState(): OptionsRouteState {
     const rawHash = window.location.hash.replace('#', '').trim();
     if (!rawHash) {
       return {
@@ -151,14 +203,14 @@ function createNavigation(deps) {
         targetKey: ''
       };
     }
-    const parts = rawHash.split(':').map((part) => String(part || '').trim()).filter(Boolean);
+    const parts = rawHash.split(':').map((part) => part.trim()).filter(Boolean);
     return {
       tabKey: parts[0] || '',
       targetKey: parts.slice(1).join(':')
     };
   }
 
-  function getOptionsTargetElement(targetKey) {
+  function getOptionsTargetElement(targetKey: string): Element | null {
     if (targetKey === OPTIONS_TARGET_DOCUMENT_PIP) {
       return document.getElementById('_x_extension_document_pip_row_2026_unique_');
     }
@@ -170,9 +222,9 @@ function createNavigation(deps) {
       : null);
   }
 
-  function scrollToOptionsTarget(targetKey, options) {
+  function scrollToOptionsTarget(targetKey: string, options?: ScrollToTargetOptions): boolean {
     const target = getOptionsTargetElement(targetKey);
-    if (!target || typeof target.scrollIntoView !== 'function') {
+    if (!target) {
       return false;
     }
     const behavior = options && options.behavior ? options.behavior : 'smooth';
@@ -189,9 +241,10 @@ function createNavigation(deps) {
 
   // Points the eye at the row a deep link opened, e.g. the web clip switch
   // that the toolbar button leads to while web clip is off.
-  function flashOptionsTarget(target) {
+  function flashOptionsTarget(target: Element): void {
     target.removeAttribute('data-flash');
-    void target.offsetWidth;
+    // Reading the layout restarts the animation when the attribute returns.
+    void target.getBoundingClientRect();
     target.setAttribute('data-flash', 'true');
     const onFlashEnd = () => {
       target.removeAttribute('data-flash');
@@ -212,4 +265,5 @@ function createNavigation(deps) {
   };
 }
 
-export { createNavigation };
+export { createNavigation, normalizeSettingsTabKey, SETTINGS_TAB_KEYS };
+export type { NavigationDeps, NavigationState, OptionsRouteState, ScrollToTargetOptions, SettingsTabKey };

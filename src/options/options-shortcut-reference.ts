@@ -1,7 +1,24 @@
 // The keyboard shortcut reference list and how shortcuts are shown.
 import * as LumnoShortcutReference from '../domain/shortcut-reference';
+import type { ShortcutReferenceGroup } from '../domain/shortcut-reference';
+import type * as ShortcutDisplay from '../domain/shortcut-display';
+import type { FormatTemplate, GetMessage } from './options-types';
+import type { ShortcutReferenceController } from './react/shortcut-reference';
 
-function createShortcutReference(deps) {
+interface ShortcutReferenceState {
+  isMacPlatform: boolean;
+}
+
+interface ShortcutReferenceDeps {
+  shortcutDisplay: Pick<typeof ShortcutDisplay, 'formatShortcutChord' | 'formatShortcutReferencePart'>;
+  shortcutReferenceList: HTMLElement | null;
+  shortcutReferenceController: Pick<ShortcutReferenceController, 'render'>;
+  getMessage: GetMessage;
+  formatTemplate: FormatTemplate;
+  optionsState: ShortcutReferenceState;
+}
+
+function createShortcutReference(deps: ShortcutReferenceDeps) {
   const {
     shortcutDisplay,
     shortcutReferenceList,
@@ -13,14 +30,14 @@ function createShortcutReference(deps) {
   // The page state object shared with options.js and the other modules.
   const optionsState = deps.optionsState;
 
-  function formatShortcutForDisplay(shortcut) {
+  function formatShortcutForDisplay(shortcut: string): string {
     return shortcutDisplay.formatShortcutChord(shortcut, {
       platform: optionsState.isMacPlatform ? 'mac' : 'windows'
     });
   }
 
-  function getShortcutReferencePartLabel(part) {
-    const text = String(part || '').trim();
+  function getShortcutReferencePartLabel(part: string): string {
+    const text = part.trim();
     if (!text) {
       return '';
     }
@@ -29,8 +46,8 @@ function createShortcutReference(deps) {
     });
   }
 
-  function getShortcutReferenceParts(shortcut) {
-    const value = String(shortcut || '').trim();
+  function getShortcutReferenceParts(shortcut: string): string[] {
+    const value = shortcut.trim();
     if (!value) {
       return [];
     }
@@ -40,23 +57,23 @@ function createShortcutReference(deps) {
       .filter(Boolean);
   }
 
-  function renderShortcutReferenceGroups(groups) {
+  function renderShortcutReferenceGroups(groups: ShortcutReferenceGroup[]): void {
     if (!shortcutReferenceList) {
       return;
     }
     const visibleGroups = groups.map((group) => ({
       ...group,
-      items: (group.items || []).filter((item) => !(item && item.commandName === 'show-search'))
+      items: group.items.filter((item) => item.commandName !== 'show-search')
     })).filter((group) => group.items.length > 0);
     shortcutReferenceController.render({
       groups: visibleGroups.map((group) => ({
-        id: group && group.id ? String(group.id) : '',
-        titleKey: group && group.titleKey ? String(group.titleKey) : '',
-        title: getMessage(group.titleKey, group.titleFallback || ''),
+        id: group.id,
+        titleKey: group.titleKey,
+        title: getMessage(group.titleKey, group.titleFallback),
         // The search group hangs off the "show-search" row above the list.
         nested: group.id === 'search',
         items: group.items.map((item) => {
-          const parts = getShortcutReferenceParts(item.shortcut || '');
+          const parts = getShortcutReferenceParts(item.shortcut);
           const customShortcutLabel = item.shortcutLabelKey
             ? formatTemplate(getMessage(
               item.shortcutLabelKey,
@@ -66,11 +83,11 @@ function createShortcutReference(deps) {
             })
             : '';
           return {
-            id: item && item.id ? String(item.id) : '',
-            commandName: item && item.commandName ? String(item.commandName) : '',
-            editable: Boolean(item && item.editable),
-            titleKey: item && item.titleKey ? String(item.titleKey) : '',
-            title: getMessage(item.titleKey, item.titleFallback || ''),
+            id: item.id,
+            commandName: item.commandName || '',
+            editable: item.editable,
+            titleKey: item.titleKey,
+            title: getMessage(item.titleKey, item.titleFallback),
             shortcutEmpty: !customShortcutLabel && parts.length === 0,
             shortcutLabel: customShortcutLabel || (parts.length > 0
               ? parts.join(' / ')
@@ -81,29 +98,26 @@ function createShortcutReference(deps) {
     });
   }
 
-  function renderShortcutReferenceList() {
+  function renderShortcutReferenceList(): void {
     if (!shortcutReferenceList) {
       return;
     }
     const shortcutReference = LumnoShortcutReference;
     const platform = optionsState.isMacPlatform ? 'mac' : 'default';
-    const renderWithCommands = (commands) => {
+    const renderWithCommands = (commands: chrome.commands.Command[] | undefined): void => {
       const groups = shortcutReference.getShortcutReferenceGroups({
         commands,
         platform
       });
       renderShortcutReferenceGroups(groups);
     };
-    if (!chrome || !chrome.commands || typeof chrome.commands.getAll !== 'function') {
-      renderWithCommands(null);
+    // Not every browser has the commands API.
+    if (!chrome.commands || typeof chrome.commands.getAll !== 'function') {
+      renderWithCommands(undefined);
       return;
     }
     chrome.commands.getAll((commands) => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        renderWithCommands(null);
-        return;
-      }
-      renderWithCommands(Array.isArray(commands) ? commands : null);
+      renderWithCommands(chrome.runtime.lastError ? undefined : commands);
     });
   }
 
@@ -114,3 +128,4 @@ function createShortcutReference(deps) {
 }
 
 export { createShortcutReference };
+export type { ShortcutReferenceDeps, ShortcutReferenceState };

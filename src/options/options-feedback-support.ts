@@ -6,8 +6,41 @@
 // at the current URL. Links come from the shared remote community-links
 // file, with its bundled fallback first.
 
+import type { CommunityLinks } from '../domain/community-links';
+import type * as CommunityLinksApi from '../platform/community-links';
+import type { GetMessage } from './options-types';
+import type { FeedbackSupportController, FeedbackSupportRenderModel } from './react/feedback-support';
+
+type FeedbackCommunityLinks = Pick<typeof CommunityLinksApi,
+  'FALLBACK_LINKS' | 'getCommunityChannel' | 'getHelpUrl' | 'getReviewUrl' | 'load'>;
+
+interface FeedbackSupportModelInput {
+  communityLinks: Pick<FeedbackCommunityLinks, 'getCommunityChannel' | 'getHelpUrl' | 'getReviewUrl'>;
+  getMessage: GetMessage;
+  links: Readonly<CommunityLinks>;
+  webLocale: string;
+  helpCenterSearchEnabled: boolean;
+  helpIconUrl?: string;
+  // Resolves once the export is reported; no diagnostics row without it.
+  onExportDiagnostics?: (() => Promise<void>) | null;
+}
+
+interface FeedbackSupportSectionOptions {
+  // The section's React controller; null when the section is not on the page.
+  controller: Pick<FeedbackSupportController, 'render'> | null;
+  // The open-source licenses link beside the onboarding guide.
+  licensesLink?: Pick<HTMLAnchorElement, 'href'> | null;
+  communityLinks: FeedbackCommunityLinks;
+  getMessage: GetMessage;
+  getLocale(): string;
+  isHelpCenterSearchEnabled(): boolean;
+  helpIconUrl?: string;
+  // Saves the diagnostics file and reports the outcome.
+  exportDiagnostics?: (() => Promise<void>) | null;
+}
+
 // Options locale (zh_CN, zh_TW, ja, other) -> the website's locale.
-function getFeedbackSupportWebLocale(locale) {
+function getFeedbackSupportWebLocale(locale: string): string {
   if (locale === 'zh_CN') {
     return 'zh-CN';
   }
@@ -17,10 +50,7 @@ function getFeedbackSupportWebLocale(locale) {
   return locale === 'ja' ? 'ja' : 'en';
 }
 
-//   getMessage(key, fallback), communityLinks (LumnoCommunityLinks),
-//   links, webLocale, helpCenterSearchEnabled, helpIconUrl,
-//   onExportDiagnostics() (optional; resolves once the export is reported)
-function buildFeedbackSupportModel(input) {
+function buildFeedbackSupportModel(input: FeedbackSupportModelInput): FeedbackSupportRenderModel {
   const { communityLinks, getMessage, links, webLocale } = input;
   const communityIsWechat = communityLinks.getCommunityChannel(links, webLocale) === 'wechat';
   return {
@@ -28,7 +58,7 @@ function buildFeedbackSupportModel(input) {
       title: getMessage('settings_feedback_support_channels_title', '交流与反馈'),
       titleKey: 'settings_feedback_support_channels_title'
     },
-    diagnostics: typeof input.onExportDiagnostics !== 'function' ? null : {
+    diagnostics: !input.onExportDiagnostics ? null : {
       description: getMessage('settings_diagnostics_desc', '导出版本、设置和最近的错误记录，可附在反馈里。快捷方式、网址等个人内容不会写入文件。'),
       descriptionKey: 'settings_diagnostics_desc',
       label: getMessage('settings_diagnostics_action', '导出诊断信息'),
@@ -44,7 +74,7 @@ function buildFeedbackSupportModel(input) {
         caption: getMessage('settings_help_center_ask_caption', '在新标签页或命令栏输入 lm 或「帮助中心」，按 Tab，再写下你的问题。'),
         captionKey: 'settings_help_center_ask_caption',
         descriptionTemplate: getMessage('settings_help_center_desc_with_ask', '每个功能的用法和常见问题都在这里，也可以{ask}。'),
-        iconUrl: input.helpIconUrl,
+        iconUrl: input.helpIconUrl || '',
         label: getMessage('settings_help_center_ask_action', '在搜索框里直接提问'),
         labelKey: 'settings_help_center_ask_action',
         prefix: 'lm',
@@ -111,16 +141,11 @@ function buildFeedbackSupportModel(input) {
   };
 }
 
-//   controller            the section's React controller (may be null)
-//   licensesLink          the open-source licenses <a> beside the onboarding guide (may be null)
-//   communityLinks        LumnoCommunityLinks
-//   getMessage, getLocale(), isHelpCenterSearchEnabled(), helpIconUrl
-//   exportDiagnostics()   saves the diagnostics file and reports the outcome (may be null)
-function createFeedbackSupportSection(options) {
+function createFeedbackSupportSection(options: FeedbackSupportSectionOptions) {
   const communityLinks = options.communityLinks;
-  let links = communityLinks.FALLBACK_LINKS;
+  let links: Readonly<CommunityLinks> = communityLinks.FALLBACK_LINKS;
 
-  function render() {
+  function render(): void {
     if (options.licensesLink && links.licenses) {
       options.licensesLink.href = links.licenses;
     }
@@ -139,9 +164,9 @@ function createFeedbackSupportSection(options) {
   }
 
   // Shows the bundled links at once, then the remote ones once they load.
-  function loadLinks() {
+  function loadLinks(): Promise<Readonly<CommunityLinks>> {
     return communityLinks.load().then((loaded) => {
-      links = loaded || communityLinks.FALLBACK_LINKS;
+      links = loaded;
       render();
       return links;
     });
@@ -151,3 +176,4 @@ function createFeedbackSupportSection(options) {
 }
 
 export { buildFeedbackSupportModel, createFeedbackSupportSection, getFeedbackSupportWebLocale };
+export type { FeedbackSupportModelInput, FeedbackSupportSectionOptions };

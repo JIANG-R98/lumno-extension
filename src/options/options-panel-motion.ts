@@ -8,11 +8,15 @@ const HEIGHT_ANIMATION_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
 // Shows or hides one conditional setting; with visibleDisplay it toggles
 // style.display instead of hidden. Returns whether visibility changed.
-function setConditionalSettingsElementVisibility(element, visible, visibleDisplay) {
+function setConditionalSettingsElementVisibility(
+  element: HTMLElement | null,
+  visible: boolean,
+  visibleDisplay?: string
+): boolean {
   if (!element) {
     return false;
   }
-  const shouldShow = Boolean(visible);
+  const shouldShow = visible;
   const wasVisible = visibleDisplay
     ? element.style.display !== 'none'
     : !element.hidden;
@@ -25,32 +29,39 @@ function setConditionalSettingsElementVisibility(element, visible, visibleDispla
   return wasVisible !== shouldShow;
 }
 
-//   panel        the element whose height animates
-//   reserveHost  the element whose --settings-focus-anchor-reserve keeps
-//                room below the panel
-//   documentObj, windowObj
-// animate(mutateLayout) runs mutateLayout (which returns false when nothing
-// changed) and animates the resulting height change; cancel() stops it.
-function createPanelHeightAnimator(options) {
+interface PanelHeightAnimatorOptions {
+  // The element whose height animates.
+  panel: HTMLElement;
+  // The element whose --settings-focus-anchor-reserve keeps room below the panel.
+  reserveHost: HTMLElement;
+  documentObj: Document;
+  windowObj: Window;
+}
+
+// What a layout change reports: false when nothing changed.
+type LayoutMutation = () => boolean;
+
+// animate(mutateLayout) runs mutateLayout and animates the resulting height
+// change; cancel() stops it.
+function createPanelHeightAnimator(options: PanelHeightAnimatorOptions) {
   const panel = options.panel;
   const reserveHost = options.reserveHost;
   const documentObj = options.documentObj;
   const windowObj = options.windowObj;
-  let heightAnimation = null;
-  let reservedAnchor = null;
+  let heightAnimation: Animation | null = null;
+  let reservedAnchor: Element | null = null;
   let focusAnchorReserve = 0;
 
-  function getFocusedPanelAnchor() {
+  function getFocusedPanelAnchor(): Element | null {
     const activeElement = documentObj.activeElement;
-    if (!activeElement || activeElement === documentObj.body || !panel.contains(activeElement) ||
-        typeof activeElement.getBoundingClientRect !== 'function') {
+    if (!activeElement || activeElement === documentObj.body || !panel.contains(activeElement)) {
       return null;
     }
     const rect = activeElement.getBoundingClientRect();
     return rect.width > 0 || rect.height > 0 ? activeElement : null;
   }
 
-  function setFocusAnchorReserve(anchor, reserve) {
+  function setFocusAnchorReserve(anchor: Element | null, reserve: number): void {
     const nextReserve = Number.isFinite(reserve) ? Math.max(0, Math.ceil(reserve)) : 0;
     reservedAnchor = nextReserve > 0 ? anchor : null;
     focusAnchorReserve = nextReserve;
@@ -61,21 +72,20 @@ function createPanelHeightAnimator(options) {
     reserveHost.style.removeProperty('--settings-focus-anchor-reserve');
   }
 
-  function clearFocusAnchorReserve() {
+  function clearFocusAnchorReserve(): void {
     setFocusAnchorReserve(null, 0);
   }
 
-  function releaseFocusAnchorReserve(event) {
+  function releaseFocusAnchorReserve(event: Event): void {
     const anchor = reservedAnchor;
-    const target = event && event.target;
-    if (!anchor || !target || target === anchor ||
-        (typeof anchor.contains === 'function' && anchor.contains(target))) {
+    const target = event.target;
+    if (!anchor || !target || target === anchor || event.composedPath().includes(anchor)) {
       return;
     }
     clearFocusAnchorReserve();
   }
 
-  function primeFocusAnchorReserve(anchor, beforeHeight) {
+  function primeFocusAnchorReserve(anchor: Element | null, beforeHeight: number): void {
     if (!anchor) {
       return;
     }
@@ -85,8 +95,8 @@ function createPanelHeightAnimator(options) {
     );
   }
 
-  function stabilizeFocusAnchor(anchor, focusTop, minimumHeightReduction) {
-    if (!anchor || !Number.isFinite(focusTop) || !anchor.isConnected) {
+  function stabilizeFocusAnchor(anchor: Element | null, focusTop: number | null, minimumHeightReduction: number): void {
+    if (!anchor || focusTop === null || !Number.isFinite(focusTop) || !anchor.isConnected) {
       clearFocusAnchorReserve();
       return;
     }
@@ -111,7 +121,7 @@ function createPanelHeightAnimator(options) {
     }
   }
 
-  function cancel() {
+  function cancel(): void {
     const animation = heightAnimation;
     heightAnimation = null;
     if (animation) {
@@ -123,7 +133,7 @@ function createPanelHeightAnimator(options) {
     clearFocusAnchorReserve();
   }
 
-  function shouldAnimate() {
+  function shouldAnimate(): boolean {
     if (!documentObj.documentElement ||
         documentObj.documentElement.getAttribute('data-lumno-options-ready') !== 'true' ||
         typeof panel.animate !== 'function') {
@@ -136,10 +146,7 @@ function createPanelHeightAnimator(options) {
       windowObj.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
 
-  function animate(mutateLayout) {
-    if (typeof mutateLayout !== 'function') {
-      return false;
-    }
+  function animate(mutateLayout: LayoutMutation): boolean {
     const animationInProgress = Boolean(heightAnimation);
     const previousFocusAnchor = reservedAnchor;
     const previousFocusAnchorReserve = focusAnchorReserve;
@@ -149,7 +156,7 @@ function createPanelHeightAnimator(options) {
     primeFocusAnchorReserve(focusAnchor, beforeHeight);
     panel.setAttribute('data-height-animating', 'true');
 
-    const layoutChanged = mutateLayout() !== false;
+    const layoutChanged = mutateLayout();
     if (!layoutChanged) {
       setFocusAnchorReserve(previousFocusAnchor, previousFocusAnchorReserve);
       if (!animationInProgress) {
@@ -216,3 +223,4 @@ function createPanelHeightAnimator(options) {
 }
 
 export { createPanelHeightAnimator, setConditionalSettingsElementVisibility };
+export type { LayoutMutation, PanelHeightAnimatorOptions };

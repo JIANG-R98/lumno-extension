@@ -1346,6 +1346,7 @@ export {
   normalizeSearchResultPriority,
   normalizeSearchResultTabPosition,
   normalizeSearchResultDisplayLimit,
+  normalizeSearchResultSourceType,
   normalizeSearchResultSourceTypes,
   normalizeTabRankScoreDebugMode,
   normalizeRestrictedAction,
