@@ -53,6 +53,7 @@ import type { createPageNoticeApi } from '../newtab/react/page-notice';
 import type { createBookmarkCascadeViewApi } from '../newtab/react/bookmark-cascade-view';
 import type { createWallpaperViewApi } from '../newtab/react/wallpaper-view';
 import type { createBookmarkBreadcrumbApi } from '../newtab/react/bookmark-breadcrumb';
+import type { WallpaperEffectPreloadRuntime, WallpaperPreloadState } from '../newtab/wallpaper/wallpaper-preload-types';
 
 declare global {
   // The EyeDropper API, which Chromium has and TypeScript's DOM library
@@ -65,6 +66,11 @@ declare global {
   }
   interface Window {
     EyeDropper?: new () => EyeDropperInstance;
+  }
+  // Uint8Array.fromBase64, which newer browsers have and TypeScript's
+  // library does not describe yet.
+  interface Uint8ArrayConstructor {
+    fromBase64?(base64: string): Uint8Array<ArrayBuffer>;
   }
   // The traditional-to-simplified Han table as pairs of characters, set by
   // src/shared/search/search-han-variants.js once a page or the worker loads it.
@@ -156,6 +162,10 @@ declare global {
   var LumnoNewtabPageNotice: ReturnType<typeof createPageNoticeApi> | undefined;
   var LumnoNewtabBookmarkCascadeView: ReturnType<typeof createBookmarkCascadeViewApi> | undefined;
   var LumnoNewtabWallpaperView: ReturnType<typeof createWallpaperViewApi> | undefined;
+  // Set by src/newtab/wallpaper/wallpaper-preload.ts when it painted a
+  // wallpaper, and by wallpaper-effect-preload.ts when it started the effect.
+  var LumnoNewtabWallpaperPreload: WallpaperPreloadState | undefined;
+  var LumnoNewtabWallpaperEffectPreload: WallpaperEffectPreloadRuntime | undefined;
   var LumnoNewtabBookmarkBreadcrumb: ReturnType<typeof createBookmarkBreadcrumbApi> | undefined;
   var LumnoSearchInputUI: ReturnType<typeof createSearchInputApi> | undefined;
   var LumnoSegmentedIndicator: ReturnType<typeof createSegmentedIndicatorApi> | undefined;

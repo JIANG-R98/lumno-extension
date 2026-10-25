@@ -1,6 +1,38 @@
-// @ts-nocheck
+// Paints the cached wallpaper and the New Tab favicon before the page's own
+// scripts run, from what an earlier page saved on this device.
 import * as LumnoSettingsStorage from '../../platform/settings-storage';
 import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
+import type { WallpaperEffectPrefs, WallpaperSample } from './wallpaper-effects';
+import type {
+  PreloadDecodedImage,
+  PreloadImageRecord,
+  PreloadObjectUrl,
+  WallpaperMode,
+  WallpaperPreloadState
+} from './wallpaper-preload-types';
+
+type OverlayPosition = 'top' | 'mid' | 'bottom';
+type OverlayStops = Record<WallpaperMode, Record<OverlayPosition, number>>;
+type FaviconId = 'default' | 'alternate';
+
+// A copy of an online photo in the image cache, under the URL it copies.
+interface CachedImageRef {
+  id: string;
+  url: string;
+}
+
+// An upload in the local wallpaper library, under its store key.
+interface CustomImageRef {
+  id: string;
+  key: string;
+}
+
+const WALLPAPER_MODES: readonly WallpaperMode[] = ['light', 'dark'];
+const OVERLAY_POSITIONS: readonly OverlayPosition[] = ['top', 'mid', 'bottom'];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
 
 (function() {
   const PRELOAD_STORAGE_KEY = '_x_extension_newtab_wallpaper_preload_2026_unique_';
@@ -25,7 +57,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
   const CSS_INLINE_URL_MAX_LENGTH = 32 * 1024;
   // Chrome drops a CSS custom property longer than this (MAX_CSS_URL_LENGTH in wallpaper-local-store.ts).
   const CSS_CUSTOM_PROPERTY_MAX_LENGTH = 2 * 1024 * 1024;
-  const FAVICON_OPTIONS = {
+  const FAVICON_OPTIONS: Record<FaviconId, { file: string; type: string; sizes: string }> = {
     default: {
       file: 'assets/images/lumno.png',
       type: 'image/png',
@@ -38,12 +70,12 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
     }
   };
 
-  function normalizeWallpaperMode(value) {
+  function normalizeWallpaperMode(value: unknown): WallpaperMode {
     return value === 'dark' ? 'dark' : 'light';
   }
 
-  function resolveCachedWallpaperMode(data) {
-    const themeMode = data && typeof data.themeMode === 'string' ? data.themeMode : '';
+  function resolveCachedWallpaperMode(data: Record<string, unknown>): WallpaperMode {
+    const themeMode = typeof data.themeMode === 'string' ? data.themeMode : '';
     if (themeMode === 'dark' || themeMode === 'light') {
       return themeMode;
     }
@@ -52,43 +84,40 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
         return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
           ? 'dark'
           : 'light';
-      } catch (e) {
-        return normalizeWallpaperMode(data && data.mode);
+      } catch {
+        return normalizeWallpaperMode(data.mode);
       }
     }
-    return normalizeWallpaperMode(data && data.mode);
+    return normalizeWallpaperMode(data.mode);
   }
 
-  function normalizeEffectPrefs(value, inheritedVersion) {
+  function normalizeEffectPrefs(value: unknown, inheritedVersion?: unknown): WallpaperEffectPrefs {
     const effects = LumnoNewtabWallpaperEffects;
     return effects.normalizePrefs(value, inheritedVersion);
   }
 
-  function getEffectPrefsForMode(value, mode) {
+  function getEffectPrefsForMode(value: unknown, mode: WallpaperMode): WallpaperEffectPrefs {
     const effects = LumnoNewtabWallpaperEffects;
     return effects.normalizeStoragePrefs(value)[mode];
   }
 
-  function readStoredEffectPrefs(mode, cachedPrefs) {
+  function readStoredEffectPrefs(mode: WallpaperMode, cachedPrefs: WallpaperEffectPrefs | null): Promise<WallpaperEffectPrefs> {
     if (cachedPrefs) {
       return Promise.resolve(cachedPrefs);
     }
-    const storage = providerStorageRuntime
-      ? providerStorageRuntime.area
-      : (window.chrome && window.chrome.storage &&
-        (window.chrome.storage.sync || window.chrome.storage.local));
+    const storage = providerStorageRuntime.area;
     if (!storage || typeof storage.get !== 'function') {
       return Promise.resolve(normalizeEffectPrefs(null));
     }
     return new Promise((resolve) => {
       try {
-        storage.get([WALLPAPER_EFFECT_STORAGE_KEY], (result) => {
+        void storage.get([WALLPAPER_EFFECT_STORAGE_KEY], (result) => {
           resolve(getEffectPrefsForMode(
             result && result[WALLPAPER_EFFECT_STORAGE_KEY],
             mode
-          ) || normalizeEffectPrefs(null));
+          ));
         });
-      } catch (_error) {
+      } catch {
         resolve(normalizeEffectPrefs(null));
       }
     });
@@ -100,15 +129,16 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
       if (!raw) {
         return null;
       }
-      const data = JSON.parse(raw);
-      if (!data ||
+      const data: unknown = JSON.parse(raw);
+      if (!isRecord(data) ||
           Number(data.version) !== PRELOAD_STORAGE_VERSION ||
-          !data.wallpapers ||
+          !isRecord(data.wallpapers) ||
           !data.overlayStops) {
         return null;
       }
       const mode = resolveCachedWallpaperMode(data);
-      const entry = data.wallpapers[mode];
+      const storedEntry = data.wallpapers[mode];
+      const entry = isRecord(storedEntry) ? storedEntry : null;
       const path = entry && typeof entry.path === 'string' ? entry.path.trim() : '';
       const overlayStops = normalizeCachedOverlayStops(data.overlayStops);
       if (!overlayStops) {
@@ -116,7 +146,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
       }
       // A daily photo's slot also names tomorrow's photo once its copy is cached, so the first tab
       // after midnight paints the new photo. Its luminance is not measured yet.
-      const next = entry && entry.next;
+      const next = entry && isRecord(entry.next) ? entry.next : null;
       const nextImage = next && next.day === getLocalDay(Date.now()) ? normalizeCachedImage(next.cachedImage) : null;
       return {
         mode,
@@ -129,66 +159,75 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
         overlayStops,
         effectPrefs: getEffectPrefsForMode(data.wallpaperEffects, mode)
       };
-    } catch (e) {
+    } catch {
       return null;
     }
   }
 
   // A full image's size as an entry or record names it, or 0 by 0 when it does not.
-  function normalizeSourceSize(value) {
-    const width = Math.round(Number(value && value.width));
-    const height = Math.round(Number(value && value.height));
+  function normalizeSourceSize(value: unknown): { width: number; height: number } {
+    const source = isRecord(value) ? value : {};
+    const width = Math.round(Number(source.width));
+    const height = Math.round(Number(source.height));
     return width > 0 && height > 0 ? { width, height } : { width: 0, height: 0 };
   }
 
   // Matches localDay in remote-content.ts, which loads after this script.
-  function getLocalDay(timestamp) {
+  function getLocalDay(timestamp: number): string {
     const date = new Date(timestamp);
     return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
   }
 
-  function normalizeCachedImage(value) {
-    const id = value && typeof value.id === 'string' ? value.id : '';
-    const url = value && typeof value.url === 'string' ? value.url : '';
+  function normalizeCachedImage(value: unknown): CachedImageRef | null {
+    const source = isRecord(value) ? value : {};
+    const id = typeof source.id === 'string' ? source.id : '';
+    const url = typeof source.url === 'string' ? source.url : '';
     return id && url ? { id, url } : null;
   }
 
-  function normalizeCustomImage(value) {
-    const id = value && typeof value.id === 'string' ? value.id : '';
-    const key = value && typeof value.key === 'string' && value.key ? value.key : id;
+  function normalizeCustomImage(value: unknown): CustomImageRef | null {
+    const source = isRecord(value) ? value : {};
+    const id = typeof source.id === 'string' ? source.id : '';
+    const key = typeof source.key === 'string' && source.key ? source.key : id;
     return CUSTOM_WALLPAPER_ID_PATTERN.test(id) && key ? { id, key } : null;
   }
 
   // The wallpaper's average luminance (0–1), which the blur effect's frost blends by.
-  function normalizeLuminance(value) {
+  function normalizeLuminance(value: unknown): number | null {
     const luminance = typeof value === 'number' ? value : NaN;
     return Number.isFinite(luminance) && luminance >= 0 && luminance <= 1 ? luminance : null;
   }
 
   // Reads one record from an IndexedDB store wallpaper.ts keeps, and only one holding an image.
-  function readStoredImageRecord(dbName, storeName, key, isExpectedRecord) {
+  function readStoredImageRecord(
+    dbName: string,
+    storeName: string,
+    key: string,
+    isExpectedRecord: (record: Record<string, unknown>) => boolean
+  ): Promise<PreloadImageRecord | null> {
     return new Promise((resolve) => {
-      let request = null;
+      let request: IDBOpenDBRequest | null = null;
       try {
         request = window.indexedDB ? window.indexedDB.open(dbName, 1) : null;
-      } catch (e) {
+      } catch {
         request = null;
       }
       if (!request) {
         resolve(null);
         return;
       }
+      // Narrowed here, for the callbacks below.
+      const openRequest = request;
       // wallpaper.ts creates the database; an empty one has nothing to paint.
-      request.onupgradeneeded = () => request.transaction.abort();
-      request.onerror = () => resolve(null);
-      request.onsuccess = () => {
-        const db = request.result;
-        const finish = (record) => {
+      openRequest.onupgradeneeded = () => openRequest.transaction?.abort();
+      openRequest.onerror = () => resolve(null);
+      openRequest.onsuccess = () => {
+        const db = openRequest.result;
+        const finish = (record: unknown) => {
           db.close();
-          resolve(record &&
+          resolve(isRecord(record) &&
             isExpectedRecord(record) &&
-            typeof record.imageDataUrl === 'string' &&
-            record.imageDataUrl.startsWith('data:image/') ? record : null);
+            isImageRecord(record) ? record : null);
         };
         try {
           const read = db.transaction(storeName, 'readonly')
@@ -196,29 +235,33 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
             .get(key);
           read.onsuccess = () => finish(read.result);
           read.onerror = () => finish(null);
-        } catch (e) {
+        } catch {
           finish(null);
         }
       };
     });
   }
 
+  function isImageRecord(record: Record<string, unknown>): record is PreloadImageRecord {
+    return typeof record.imageDataUrl === 'string' && record.imageDataUrl.startsWith('data:image/');
+  }
+
   // The copy wallpaper.ts saved, and only when it is still the copy of the same image.
-  function readCachedImage(cachedImage) {
+  function readCachedImage(cachedImage: CachedImageRef): Promise<PreloadImageRecord | null> {
     return readStoredImageRecord(IMAGE_CACHE_DB_NAME, IMAGE_CACHE_STORE_NAME, cachedImage.id,
       (record) => record.url === cachedImage.url);
   }
 
   // The upload itself, from the local wallpaper library. Uploads never reuse an ID, so the record
   // under that key is always the image the entry named.
-  function readCustomImage(customImage) {
+  function readCustomImage(customImage: CustomImageRef): Promise<PreloadImageRecord | null> {
     return readStoredImageRecord(CUSTOM_WALLPAPER_DB_NAME, CUSTOM_WALLPAPER_STORE_NAME, customImage.key,
       () => true);
   }
 
   // wallpaper.ts adopts the blob URL (cssObjectUrl) instead of making its own, so the background
   // never swaps to a second, still undecoded copy of the same image.
-  function getCssSafeImageUrl(dataUrl) {
+  function getCssSafeImageUrl(dataUrl: string): { url: string; objectUrl: PreloadObjectUrl | null } {
     if (dataUrl.length <= CSS_INLINE_URL_MAX_LENGTH ||
         !window.URL || typeof window.URL.createObjectURL !== 'function') {
       return { url: dataUrl, objectUrl: null };
@@ -230,7 +273,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
         return { url: dataUrl, objectUrl: null };
       }
       const payload = dataUrl.slice(comma + 1);
-      let bytes;
+      let bytes: Uint8Array<ArrayBuffer>;
       if (typeof Uint8Array.fromBase64 === 'function') {
         bytes = Uint8Array.fromBase64(payload);
       } else {
@@ -242,7 +285,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
       }
       const url = window.URL.createObjectURL(new window.Blob([bytes], { type: meta.replace(/;base64$/i, '') }));
       return { url, objectUrl: { source: dataUrl, url } };
-    } catch (e) {
+    } catch {
       // Past Chrome's custom-property limit the data URL would not paint at all; wallpaper.ts tries again.
       return {
         url: getCssUrlValue(dataUrl).length <= CSS_CUSTOM_PROPERTY_MAX_LENGTH ? dataUrl : '',
@@ -251,50 +294,48 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
     }
   }
 
-  function normalizeCachedOverlayStops(value) {
-    const result = {};
-    const modes = ['light', 'dark'];
-    const positions = ['top', 'mid', 'bottom'];
-    for (const mode of modes) {
-      const entry = value && value[mode];
-      if (!entry || typeof entry !== 'object') {
-        return null;
-      }
-      result[mode] = {};
-      for (const position of positions) {
-        const stop = Number(entry[position]);
-        if (!Number.isFinite(stop) || stop < 0 || stop > 100) {
-          return null;
-        }
-        result[mode][position] = stop;
-      }
-    }
-    return result;
+  function normalizeCachedOverlayStops(value: unknown): OverlayStops | null {
+    const source = isRecord(value) ? value : {};
+    const light = normalizeModeOverlayStops(source.light);
+    const dark = light ? normalizeModeOverlayStops(source.dark) : null;
+    return light && dark ? { light, dark } : null;
   }
 
-  function getRuntimeUrl(path) {
+  // One color mode's overlay stops, each a percentage.
+  function normalizeModeOverlayStops(entry: unknown): Record<OverlayPosition, number> | null {
+    if (!isRecord(entry)) {
+      return null;
+    }
+    const top = Number(entry.top);
+    const mid = Number(entry.mid);
+    const bottom = Number(entry.bottom);
+    const isStop = (stop: number) => Number.isFinite(stop) && stop >= 0 && stop <= 100;
+    return isStop(top) && isStop(mid) && isStop(bottom) ? { top, mid, bottom } : null;
+  }
+
+  function getRuntimeUrl(path: string): string {
     if (window.chrome && window.chrome.runtime && typeof window.chrome.runtime.getURL === 'function') {
       return window.chrome.runtime.getURL(path);
     }
     return `../../${path}`;
   }
 
-  function normalizeFaviconId(value) {
+  function normalizeFaviconId(value: unknown): FaviconId | '' {
     const id = String(value || '').trim();
-    return Object.prototype.hasOwnProperty.call(FAVICON_OPTIONS, id) ? id : '';
+    return id === 'default' || id === 'alternate' ? id : '';
   }
 
-  function readCachedFaviconId() {
+  function readCachedFaviconId(): FaviconId | '' {
     try {
       return normalizeFaviconId(window.localStorage ?
         window.localStorage.getItem(FAVICON_PRELOAD_STORAGE_KEY) :
         '');
-    } catch (e) {
+    } catch {
       return '';
     }
   }
 
-  function cacheFaviconId(id) {
+  function cacheFaviconId(id: unknown): void {
     const normalized = normalizeFaviconId(id);
     if (!normalized) {
       return;
@@ -303,19 +344,17 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
       if (window.localStorage) {
         window.localStorage.setItem(FAVICON_PRELOAD_STORAGE_KEY, normalized);
       }
-    } catch (e) {
+    } catch {
       // Ignore private-mode or quota failures; the runtime still applies the favicon later.
     }
   }
 
-  function getFaviconLink() {
+  function getFaviconLink(): Element | null {
     if (!document.head) {
       return null;
     }
-    const existing = Array.from(document.head.children || []).find((child) => {
-      return child &&
-        String(child.tagName || '').toUpperCase() === 'LINK' &&
-        child.getAttribute &&
+    const existing = Array.from(document.head.children).find((child) => {
+      return String(child.tagName || '').toUpperCase() === 'LINK' &&
         child.getAttribute('data-lumno-newtab-favicon') === 'true';
     });
     if (existing) {
@@ -327,10 +366,13 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
     return link;
   }
 
-  function applyFaviconId(id) {
+  function applyFaviconId(id: unknown): boolean {
     const normalized = normalizeFaviconId(id);
-    const item = normalized ? FAVICON_OPTIONS[normalized] : null;
-    const link = item ? getFaviconLink() : null;
+    if (!normalized) {
+      return false;
+    }
+    const item = FAVICON_OPTIONS[normalized];
+    const link = getFaviconLink();
     if (!link) {
       return false;
     }
@@ -346,19 +388,17 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
     return true;
   }
 
-  function applyStoredFaviconWhenAvailable() {
+  function applyStoredFaviconWhenAvailable(): void {
     const cachedId = readCachedFaviconId();
     if (cachedId) {
       applyFaviconId(cachedId);
     }
     try {
-      const storage = providerStorageRuntime
-        ? providerStorageRuntime.area
-        : (window.chrome && window.chrome.storage && window.chrome.storage.sync);
+      const storage = providerStorageRuntime.area;
       if (!storage || typeof storage.get !== 'function') {
         return;
       }
-      storage.get([FAVICON_STORAGE_KEY], (result) => {
+      void storage.get([FAVICON_STORAGE_KEY], (result) => {
         const nextId = normalizeFaviconId(result && result[FAVICON_STORAGE_KEY]);
         if (!nextId) {
           return;
@@ -366,12 +406,12 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
         cacheFaviconId(nextId);
         applyFaviconId(nextId);
       });
-    } catch (e) {
+    } catch {
       // Best-effort only; wallpaper.ts applies the definitive favicon after boot.
     }
   }
 
-  function getCssUrlValue(url) {
+  function getCssUrlValue(url: unknown): string {
     const safe = String(url || '')
       .replace(/\\/g, '\\\\')
       .replace(/"/g, '\\"')
@@ -380,7 +420,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
     return safe ? `url("${safe}")` : 'none';
   }
 
-  function markBodyActive() {
+  function markBodyActive(): void {
     const shouldMarkActive = () => {
       return document.documentElement &&
         document.documentElement.getAttribute('data-wallpaper-active') === 'true';
@@ -407,8 +447,8 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
   const root = document.documentElement;
   if (root) {
     root.setAttribute('data-wallpaper-preload-theme', cachedWallpaper.mode);
-    ['light', 'dark'].forEach((mode) => {
-      ['top', 'mid', 'bottom'].forEach((position) => {
+    WALLPAPER_MODES.forEach((mode) => {
+      OVERLAY_POSITIONS.forEach((position) => {
         root.style.setProperty(
           `--x-nt-wallpaper-overlay-${mode}-${position}`,
           `${cachedWallpaper.overlayStops[mode][position]}%`
@@ -417,19 +457,25 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
     });
   }
 
-  function createPreloadState(fields) {
-    return Object.assign({
-      effectPrefsReady: readStoredEffectPrefs(cachedWallpaper.mode, cachedWallpaper.effectPrefs),
+  // Narrowed here, for the functions below.
+  const cached = cachedWallpaper;
+  function createPreloadState(
+    fields: Omit<WallpaperPreloadState, 'effectPrefsReady' | 'initialImageUrl' | 'luminance' | 'mode'> &
+      Partial<Pick<WallpaperPreloadState, 'initialImageUrl'>>
+  ): WallpaperPreloadState {
+    return {
+      effectPrefsReady: readStoredEffectPrefs(cached.mode, cached.effectPrefs),
       // The URL of the image this page preloaded, once known; the luminance belongs to it. Unlike
       // imageUrl, wallpaper.ts never changes it.
       initialImageUrl: '',
-      luminance: cachedWallpaper.luminance,
-      mode: cachedWallpaper.mode
-    }, fields);
+      luminance: cached.luminance,
+      mode: cached.mode,
+      ...fields
+    };
   }
   // A bundled wallpaper's small copy, which wallpaper.ts and the effects sample instead of the full
   // file (getWallpaperSample in wallpaper-sources.ts).
-  function getBundledSamplePath(path) {
+  function getBundledSamplePath(path: string): string {
     return /^assets\/wallpapers\/[-.\w]+\.webp$/.test(path) && !/-thumb\.webp$/.test(path)
       ? path.replace(/\.webp$/, '-sample.avif')
       : '';
@@ -437,22 +483,22 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
 
   // The small copy saved with an upload or a cached photo for sampling (an older one's thumbnail),
   // when it differs from the full image, as getWallpaperSample in wallpaper-sources.ts names it.
-  function getRecordSample(record) {
-    const url = [record && record.sampleDataUrl, record && record.thumbnailDataUrl]
-      .find((value) => typeof value === 'string' && value.startsWith('data:image/')) || '';
+  function getRecordSample(record: PreloadImageRecord): WallpaperSample | null {
+    const url = [record.sampleDataUrl, record.thumbnailDataUrl]
+      .find((value): value is string => typeof value === 'string' && value.startsWith('data:image/')) || '';
     return url && url !== record.imageDataUrl
-      ? Object.assign({ url }, normalizeSourceSize(record))
+      ? { url, ...normalizeSourceSize(record) }
       : null;
   }
 
   // Decodes the wallpaper's small copy while the page loads; wallpaper.ts samples its tones from
   // this image (decodedImage) instead of loading and decoding it again. sourceUrl is the full image
   // it stands for.
-  function decodeWallpaperImage(url, sourceUrl) {
+  function decodeWallpaperImage(url: string, sourceUrl: string): PreloadDecodedImage | null {
     if (typeof window.Image !== 'function') {
       return null;
     }
-    const ready = new Promise((resolve) => {
+    const ready = new Promise<HTMLImageElement | null>((resolve) => {
       const image = new window.Image();
       image.decoding = 'async';
       image.onload = () => {
@@ -465,7 +511,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
     return { url: sourceUrl || url, ready };
   }
 
-  function applyWallpaperImage(url) {
+  function applyWallpaperImage(url: string): void {
     if (root) {
       root.style.setProperty('--x-nt-wallpaper-image', getCssUrlValue(url));
       root.style.setProperty('--x-nt-wallpaper-size', 'cover');
@@ -479,7 +525,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
     const url = getRuntimeUrl(cachedWallpaper.path);
     const samplePath = getBundledSamplePath(cachedWallpaper.path);
     const sample = samplePath
-      ? Object.assign({ url: getRuntimeUrl(samplePath) }, cachedWallpaper.sourceSize)
+      ? { url: getRuntimeUrl(samplePath), ...cachedWallpaper.sourceSize }
       : null;
     globalThis.LumnoNewtabWallpaperPreload = createPreloadState({
       imageUrl: url,
@@ -503,7 +549,12 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
     return;
   }
   const customImage = cachedWallpaper.customImage;
-  if (!cachedWallpaper.cachedImage && !customImage) {
+  const cachedImage = cachedWallpaper.cachedImage;
+  // The stored image this page paints from: an upload, else an online photo's copy.
+  const storedImage = customImage
+    ? { id: customImage.id, read: () => readCustomImage(customImage) }
+    : (cachedImage ? { id: cachedImage.id, read: () => readCachedImage(cachedImage) } : null);
+  if (!storedImage) {
     return;
   }
   // wallpaper.ts sets runtimeApplied once it paints, and reuses cachedImageRecord instead of reading
@@ -518,12 +569,10 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
     decodedImage: null,
     runtimeApplied: false,
     wallpaper: {
-      id: customImage ? customImage.id : cachedWallpaper.id || cachedWallpaper.cachedImage.id
+      id: customImage ? customImage.id : cachedWallpaper.id || storedImage.id
     }
   });
-  const recordRead = customImage
-    ? readCustomImage(customImage)
-    : readCachedImage(cachedWallpaper.cachedImage);
+  const recordRead = storedImage.read();
   preloadState.imageReady = recordRead.then((record) => {
     preloadState.cachedImageRecord = record;
     if (!record || preloadState.runtimeApplied) {

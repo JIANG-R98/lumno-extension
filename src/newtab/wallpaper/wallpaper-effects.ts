@@ -115,6 +115,9 @@ interface WallpaperEffectsOptions<W> {
   getLuminanceHint?: (imageUrl: string) => number | null | undefined;
 }
 
+// The global timers with the DOM's numeric ids.
+const globalTimers: Pick<Window, 'setTimeout' | 'clearTimeout'> = globalThis;
+
 const EFFECT_TYPES: readonly EffectType[] = ['none', 'blur', 'grain', 'blocks', 'halftone', 'dither', 'ascii', 'crt'];
 const EFFECT_INK_TONES: readonly EffectInkTone[] = ['auto', 'dark', 'light'];
 const BAYER_4X4 = [
@@ -521,7 +524,7 @@ function createWallpaperEffects<W>(options?: WallpaperEffectsOptions<W> | null) 
     if (windowObj && typeof windowObj.requestAnimationFrame === 'function') {
       return windowObj.requestAnimationFrame(callback);
     }
-    return setTimeout(callback, 16);
+    return globalTimers.setTimeout(callback, 16);
   }
 
   function cancelFrame(id: number): void {
@@ -529,7 +532,7 @@ function createWallpaperEffects<W>(options?: WallpaperEffectsOptions<W> | null) 
       windowObj.cancelAnimationFrame(id);
       return;
     }
-    clearTimeout(id);
+    globalTimers.clearTimeout(id);
   }
 
   function shouldReduceMotion(): boolean {
@@ -636,7 +639,7 @@ function createWallpaperEffects<W>(options?: WallpaperEffectsOptions<W> | null) 
       resizeTransitionFrame = 0;
     }
     if (resizeTransitionTimer) {
-      clearTimeout(resizeTransitionTimer);
+      globalTimers.clearTimeout(resizeTransitionTimer);
       resizeTransitionTimer = 0;
     }
     if (resizeTransitionCanvas && resizeTransitionCanvas.parentNode) {
@@ -707,7 +710,7 @@ function createWallpaperEffects<W>(options?: WallpaperEffectsOptions<W> | null) 
       }
       canvas.removeAttribute('data-resize-enter');
       snapshot.setAttribute('data-resize-exit', 'true');
-      resizeTransitionTimer = setTimeout(() => {
+      resizeTransitionTimer = globalTimers.setTimeout(() => {
         resizeTransitionTimer = 0;
         if (resizeTransitionCanvas === snapshot) {
           cleanupResizeCrossfade();
@@ -747,7 +750,7 @@ function createWallpaperEffects<W>(options?: WallpaperEffectsOptions<W> | null) 
       renderFrame = 0;
     }
     if (renderTimer) {
-      clearTimeout(renderTimer);
+      globalTimers.clearTimeout(renderTimer);
       renderTimer = 0;
     }
     clearEffectBaseCache();
@@ -2310,12 +2313,12 @@ function createWallpaperEffects<W>(options?: WallpaperEffectsOptions<W> | null) 
       renderFrame = 0;
     }
     if (renderTimer) {
-      clearTimeout(renderTimer);
+      globalTimers.clearTimeout(renderTimer);
       renderTimer = 0;
     }
     const wait = Number(delay) || 0;
     if (wait > 0) {
-      renderTimer = setTimeout(() => {
+      renderTimer = globalTimers.setTimeout(() => {
         renderTimer = 0;
         renderFrame = requestFrame(() => runRenderNow(revision));
       }, wait);
@@ -2437,7 +2440,7 @@ function createWallpaperEffects<W>(options?: WallpaperEffectsOptions<W> | null) 
       renderFrame = 0;
     }
     if (renderTimer) {
-      clearTimeout(renderTimer);
+      globalTimers.clearTimeout(renderTimer);
       renderTimer = 0;
     }
     if (observer) {

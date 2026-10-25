@@ -1,4 +1,8 @@
+// Starts the wallpaper effect over the preloaded wallpaper before the page's
+// own scripts run, for wallpaper.ts to adopt.
 import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
+import type { WallpaperEffectPrefs } from './wallpaper-effects';
+import type { WallpaperEffectPreloadRuntime } from './wallpaper-preload-types';
 
 (function() {
   const root = document.documentElement;
@@ -13,12 +17,14 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
       !preloadState.effectPrefsReady) {
     return;
   }
+  // Narrowed here, for the callbacks below.
+  const state = preloadState;
 
   const liveState = {
     onRender() {},
     shouldAnimateTransition: () => false
   };
-  const preloadRuntime = {
+  const preloadRuntime: WallpaperEffectPreloadRuntime = {
     claimed: false,
     controller: null,
     // When this script revealed the wallpaper (performance.now()); the entry starts a beat later.
@@ -33,9 +39,9 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
       }
     },
     updateSource(wallpaper, imageUrl, sample) {
-      preloadState.wallpaper = wallpaper || null;
-      preloadState.imageUrl = String(imageUrl || '');
-      preloadState.sample = sample || null;
+      state.wallpaper = wallpaper || null;
+      state.imageUrl = String(imageUrl || '');
+      state.sample = sample || null;
     }
   };
   globalThis.LumnoNewtabWallpaperEffectPreload = preloadRuntime;
@@ -45,33 +51,34 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
   const controller = effects.createWallpaperEffects({
     documentObj: document,
     windowObj: window,
-    getCurrentWallpaper: () => preloadState.wallpaper,
-    getWallpaperImageUrl: () => preloadState.imageUrl,
-    getWallpaperSample: () => preloadState.sample || null,
+    getCurrentWallpaper: () => state.wallpaper,
+    getWallpaperImageUrl: () => state.imageUrl,
+    getWallpaperSample: () => state.sample || null,
     shouldAnimateTransition: () => liveState.shouldAnimateTransition(),
     onRender: () => liveState.onRender(),
     // The luminance an earlier page measured belongs to the image this page preloaded.
     getLuminanceHint: (imageUrl) => {
-      const luminance = preloadState.luminance;
+      const luminance = state.luminance;
       if (typeof luminance !== 'number') {
         return null;
       }
-      if (preloadState.initialImageUrl) {
-        return imageUrl === preloadState.initialImageUrl ? luminance : null;
+      if (state.initialImageUrl) {
+        return imageUrl === state.initialImageUrl ? luminance : null;
       }
-      return preloadState.runtimeApplied ? null : luminance;
+      return state.runtimeApplied ? null : luminance;
     }
   });
   let runtimeAppliedPrefs = false;
-  preloadRuntime.controller = Object.assign({}, controller, {
-    apply(prefs) {
+  preloadRuntime.controller = {
+    ...controller,
+    apply(prefs: unknown) {
       runtimeAppliedPrefs = true;
       return controller.apply(prefs);
     }
-  });
+  };
 
   let wallpaperMarkedReady = false;
-  function markWallpaperReady() {
+  function markWallpaperReady(): void {
     if (!document.body || wallpaperMarkedReady) {
       return;
     }
@@ -81,12 +88,12 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
   }
 
   // The page stays unpainted until this resolves, so the wallpaper and its effect appear together.
-  function startEffects(prefs, imageUrl) {
+  function startEffects(prefs: WallpaperEffectPrefs, imageUrl: string): void {
     // Once wallpaper.ts applies its own preferences it also decides when the wallpaper is ready.
     if (preloadRuntime.claimed || runtimeAppliedPrefs || !imageUrl) {
       return;
     }
-    const normalized = effects.resolvePrefsForMode(prefs, preloadState.mode);
+    const normalized = effects.resolvePrefsForMode(prefs, state.mode);
     if (normalized.type === 'none') {
       body.setAttribute('data-wallpaper-effect', 'none');
       markWallpaperReady();
@@ -95,15 +102,15 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
 
     body.setAttribute('data-wallpaper-active', 'true');
     body.setAttribute('data-wallpaper-effect', normalized.type);
-    controller.apply(normalized);
-    controller.refresh({ immediate: true }).then(markWallpaperReady);
+    void controller.apply(normalized);
+    void controller.refresh({ immediate: true }).then(markWallpaperReady);
   }
 
   // An online photo's IndexedDB copy may still be loading; without one, wallpaper.ts takes over.
-  const imageReady = preloadState.imageUrl ? null : preloadState.imageReady;
-  preloadState.effectPrefsReady.then((prefs) => {
+  const imageReady = state.imageUrl ? null : state.imageReady;
+  state.effectPrefsReady.then((prefs) => {
     if (!imageReady) {
-      return startEffects(prefs, preloadState.imageUrl);
+      return startEffects(prefs, state.imageUrl);
     }
     return imageReady.then((imageUrl) => startEffects(prefs, imageUrl));
   }).catch(markWallpaperReady);

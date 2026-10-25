@@ -33,7 +33,10 @@
     "src/newtab/theme/**/*.ts",
     "src/newtab/top-content/**/*.ts",
     "src/newtab/wallpaper/wallpaper-crt-webgl.ts",
-    "src/newtab/wallpaper/wallpaper-effects.ts"
+    "src/newtab/wallpaper/wallpaper-effects.ts",
+    "src/newtab/wallpaper/wallpaper-effect-preload.ts",
+    "src/newtab/wallpaper/wallpaper-preload.ts",
+    "src/newtab/wallpaper/wallpaper-preload-types.ts"
   ],
   "exclude": [
     "src/**/react/**"
