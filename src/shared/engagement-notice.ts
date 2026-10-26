@@ -7,7 +7,7 @@ import type { CommunityChannel } from '../domain/community-links';
 import { getContextSettingsStore } from '../platform/settings-store';
 import type { SettingsStoreChromeApi } from '../platform/settings-store';
 import * as LumnoFeatureHints from './ui/feature-hints';
-import type { FeatureHintController, FeatureHintDefinition } from './ui/feature-hints';
+import type { FeatureHintController, FeatureHintDefinition } from './ui/feature-hint-catalog';
 import { engagementNoticeState } from '../domain/settings/features';
 
 type EngagementSurface = 'newtab' | 'overlay';

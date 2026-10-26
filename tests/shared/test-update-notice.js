@@ -151,7 +151,7 @@ const featureHintView = {
   }
 };
 
-const featureHints = require('../../src/shared/ui/feature-hints.ts');
+const featureHints = require('../helpers/feature-hints.ts');
 const updateNotice = require('../../src/shared/update-notice.ts');
 const settingsStorage = require('../helpers/settings-storage.ts');
 
@@ -444,8 +444,8 @@ function flushMicrotasks() {
   await testOnNewTab();
   testStyles();
 
-  const firstDismissKey = updateNotice.getUpdateNoticeDismissKey(featureHints, '0.9.10');
-  const nextDismissKey = updateNotice.getUpdateNoticeDismissKey(featureHints, '0.9.11');
+  const firstDismissKey = updateNotice.getUpdateNoticeDismissKey('0.9.10');
+  const nextDismissKey = updateNotice.getUpdateNoticeDismissKey('0.9.11');
   assert.strictEqual(
     featureSettings.updateNoticeEnabled.key,
     '_x_extension_update_notice_enabled_2026_unique_',
@@ -678,7 +678,7 @@ function flushMicrotasks() {
   };
   const cappedChromeApi = createStorageBackedChrome({}, cappedStore, '0.9.10');
   const displayCountKey = updateNotice.getUpdateNoticeDisplayCountKey('0.9.10');
-  const cappedDismissKey = updateNotice.getUpdateNoticeDismissKey(featureHints, '0.9.10');
+  const cappedDismissKey = updateNotice.getUpdateNoticeDismissKey('0.9.10');
   async function createMountedCappedController(surface) {
     const controller = updateNotice.createUpdateNotice({
       documentObj: createFakeDocument(),

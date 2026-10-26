@@ -8,7 +8,7 @@ import * as LumnoMessaging from '../../platform/messaging';
 import type { SearchInputParts } from '../../shared/react/search-input';
 import type { InputModeController } from '../../shared/search/search-input-mode';
 import type * as FeatureHints from '../../shared/ui/feature-hints';
-import type { FeatureHintController } from '../../shared/ui/feature-hints';
+import type { FeatureHintController } from '../../shared/ui/feature-hint-catalog';
 import type { FormatMessage, Translate } from '../newtab-types';
 import type { PageNavigation } from '../page-navigation';
 import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';

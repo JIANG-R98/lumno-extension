@@ -158,7 +158,7 @@ global.__lumnoTestModuleStubs = Object.assign(global.__lumnoTestModuleStubs || {
   'src/shared/react/feature-hint-view.tsx': { getFeatureHintViewApi: () => featureHintView }
 });
 require('../../src/domain/shortcut-display.ts');
-const featureHints = require('../../src/shared/ui/feature-hints.ts');
+const featureHints = require('../helpers/feature-hints.ts');
 
 function createStorageArea(store) {
   return {

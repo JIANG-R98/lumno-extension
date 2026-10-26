@@ -6,7 +6,7 @@ import type { SiteSearchProvider } from '../domain/search/types';
 import type { StorageAreaLike } from '../domain/storage-port';
 import type { Suggestion, SuggestionElement, SuggestionsViewOptions } from '../shared/react/search/suggestion-list/types';
 import type { InputModeController } from '../shared/search/search-input-mode';
-import type { FeatureHintController } from '../shared/ui/feature-hints';
+import type { FeatureHintController } from '../shared/ui/feature-hint-catalog';
 import type { BookmarkDisplaySettings } from './bookmarks/bookmark-display-settings';
 import type { FeedbackControlRuntime } from './feedback-control';
 import type { ModeCommands } from './mode-commands';

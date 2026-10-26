@@ -11,7 +11,7 @@ import type { SiteSearchProvider } from '../domain/search/types';
 import type * as LumnoCommunityLinks from '../platform/community-links';
 import type { EngagementNoticeController } from '../shared/engagement-notice';
 import type * as LumnoFeatureHints from '../shared/ui/feature-hints';
-import type { FeatureHintController } from '../shared/ui/feature-hints';
+import type { FeatureHintController } from '../shared/ui/feature-hint-catalog';
 import type { UpdateNoticeController } from '../shared/update-notice';
 import type { Translate } from './newtab-types';
 import { getPageNoticeApi } from './react/page-notice';

@@ -5,7 +5,7 @@ import * as SETTINGS from '../../domain/settings';
 import type { NewtabTimeInk, NewtabTopContentMode } from '../../domain/settings';
 import type { StorageAreaLike, StorageChanges } from '../../domain/storage-port';
 import type { ToastTask } from '../../shared/react/toast';
-import type { FeatureHintChromeApi } from '../../shared/ui/feature-hints';
+import type { FeatureHintChromeApi } from '../../shared/ui/feature-hint-catalog';
 import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
 import type { GlassTheme, ThemeScope, WallpaperSourceTab } from '../react/wallpaper-panel/panel-model';
 import type { createWallpaperViewApi } from '../react/wallpaper-view';

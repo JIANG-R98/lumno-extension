@@ -6,7 +6,8 @@ import { createSettingsStore, getContextSettingsStore } from '../platform/settin
 import type { SettingsStore } from '../platform/settings-store';
 import { UPDATE_NOTICE_MAX_DISPLAY_COUNT, RELEASE_DETAILS_URL, GITHUB_RELEASE_API_URL, GITHUB_RELEASE_PAGE_URL, normalizeVersionTag, formatVersionLabel, getReleaseTagCandidates, sanitizeText, extractReleaseTitleFromHtml, getCurrentVersionTag, buildReleaseDetailsUrl, normalizeUpdateNoticePayload, shouldShowUpdateNotice, normalizeUpdateNoticeEnabled, getUpdateNoticeDisplayCountKey, getUpdateNoticeDisplayCountSetting, normalizeUpdateNoticeDisplayCount, getStoredUpdateNotice, getStoredUpdateNoticeEnabled, getStoredUpdateNoticeDisplayCount, setStoredUpdateNotice, fetchReleaseTitle, publishUpdateNotice } from '../platform/update-notice';
 import type { ReleaseFetch, UpdateNotice, UpdateNoticeChromeApi } from '../platform/update-notice';
-import type { FeatureHintController, FeatureHintDefinition } from './ui/feature-hints';
+import type { FeatureHintController, FeatureHintDefinition } from './ui/feature-hint-catalog';
+import { getFeatureHintSyncDismissKey } from './ui/feature-hint-dismiss';
 import type { Setting } from '../domain/settings/define';
 import { featureHintDismissedEverywhere, updateNoticeEnabled as updateNoticeEnabledSetting, updateNoticeState } from '../domain/settings/features';
 
@@ -20,7 +21,7 @@ interface UpdateNoticeOptions {
   chromeApi?: UpdateNoticeChromeApi | null;
   // The page's settings store; the context's shared one when absent.
   settingsStore?: SettingsStore | null;
-  featureHints?: Pick<typeof LumnoFeatureHints, 'createFeatureHint' | 'getFeatureHintSyncDismissKey'> | null;
+  featureHints?: Pick<typeof LumnoFeatureHints, 'createFeatureHint'> | null;
   // This version; the manifest's when absent.
   version?: string;
   surface?: string;
@@ -98,11 +99,8 @@ function createUpdateNoticeDefinition(
 }
 
 // The key that remembers the notice of this version was dismissed.
-function getUpdateNoticeDismissKey(
-  featureHints: Pick<typeof LumnoFeatureHints, 'getFeatureHintSyncDismissKey'> | null | undefined,
-  versionTag: unknown
-): string {
-  return (featureHints || LumnoFeatureHints).getFeatureHintSyncDismissKey(createUpdateNoticeDefinition(versionTag));
+function getUpdateNoticeDismissKey(versionTag: unknown): string {
+  return getFeatureHintSyncDismissKey(createUpdateNoticeDefinition(versionTag));
 }
 
 function createUpdateNotice(options?: UpdateNoticeOptions | null): UpdateNoticeController | null {
@@ -119,7 +117,7 @@ function createUpdateNotice(options?: UpdateNoticeOptions | null): UpdateNoticeC
     (chromeApi ? getContextSettingsStore(chromeApi) : createSettingsStore({ chromeApi: null, settings: [] }));
   const surface = readSurface(config.surface);
   const definition = createUpdateNoticeDefinition(currentVersion, { surface });
-  const dismissKey = getUpdateNoticeDismissKey(featureHints, currentVersion);
+  const dismissKey = getUpdateNoticeDismissKey(currentVersion);
   const displayCountSetting = getUpdateNoticeDisplayCountSetting(currentVersion);
   const dismissId = featureHintDismissedEverywhere.idOf(dismissKey);
   const dismissSetting = dismissId ? featureHintDismissedEverywhere.member(dismissId) : null;

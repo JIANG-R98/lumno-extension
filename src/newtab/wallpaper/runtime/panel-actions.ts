@@ -2,7 +2,7 @@
 // calls, slider value inputs, and the wallpaper sources feature hint.
 import type * as LumnoSettings from '../../../domain/settings';
 import type * as LumnoFeatureHints from '../../../shared/ui/feature-hints';
-import type { FeatureHintChromeApi, FeatureHintController, FeatureHintOptions } from '../../../shared/ui/feature-hints';
+import type { FeatureHintChromeApi, FeatureHintController, FeatureHintOptions } from '../../../shared/ui/feature-hint-catalog';
 import type { Translate } from '../../newtab-types';
 import type { EffectSliderKey, GlassTheme, ThemeScope, WallpaperPanelActions } from '../../react/wallpaper-panel/panel-model';
 import type { SliderChange } from '../../react/wallpaper-panel/panel-primitives';
