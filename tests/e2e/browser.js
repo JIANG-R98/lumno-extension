@@ -289,17 +289,29 @@ async function launchBrowser({ extensionPath }) {
     await cdp.send('Target.closeTarget', { targetId: page.targetId }).catch(() => {});
   }
 
+  const waitForExit = (ms) => new Promise((resolve) => {
+    if (child.exitCode !== null || child.signalCode !== null) {
+      resolve();
+      return;
+    }
+    child.once('exit', resolve);
+    setTimeout(resolve, ms);
+  });
+
+  // Asks Chrome to quit so its helper processes stop writing to the profile,
+  // and kills it only if it does not.
   async function close() {
-    child.kill('SIGKILL');
-    await new Promise((resolve) => {
-      if (child.exitCode !== null || child.signalCode !== null) {
-        resolve();
-        return;
-      }
-      child.once('exit', resolve);
-      setTimeout(resolve, 2000);
-    });
-    fs.rmSync(profileDir, { recursive: true, force: true, maxRetries: 5 });
+    cdp.send('Browser.close').catch(() => {});
+    await waitForExit(5000);
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill('SIGKILL');
+      await waitForExit(2000);
+    }
+    try {
+      fs.rmSync(profileDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+    } catch (error) {
+      console.warn(`Could not remove ${profileDir}: ${error.message}`);
+    }
   }
 
   await cdp.send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true });
