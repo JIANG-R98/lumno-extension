@@ -1,3 +1,4 @@
+import { RemixIcon } from '../../shared/react/remix-icon';
 export type ThemeMode = 'system' | 'light' | 'dark';
 
 export interface ThemePickerOptionModel {
@@ -50,7 +51,7 @@ export function ThemePicker({
                 aria-hidden="true"
                 className="_x_extension_theme_check_2026_unique_"
               >
-                <i aria-hidden="true" className="ri-icon ri-check-line" />
+                <RemixIcon name="ri-check-line" />
               </span>
             </span>
             <span

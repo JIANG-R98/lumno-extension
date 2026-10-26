@@ -5,11 +5,10 @@ import { ref, type TooltipActions, tooltipHandlers } from './panel-primitives';
 import type { SelectMenuControls } from '../../../shared/react/select-menu';
 import { type PanelSelectModel, type CuratedMixState, CURATED_MIX_SELECT_ID } from './panel-model';
 import { SelectMenu } from '../select-menu';
-import { innerHtml } from '../../../shared/react/inner-html';
+import { RemixIcon } from '../../../shared/react/remix-icon';
 
 // Leading chevron + title form one disclosure hot area for every panel section.
 export function SectionTrigger({
-  arrowIcon,
   bodyId,
   disabled,
   expanded,
@@ -21,7 +20,6 @@ export function SectionTrigger({
   titleRef,
   triggerRef
 }: {
-  arrowIcon: string;
   bodyId: string;
   disabled?: boolean;
   expanded: boolean;
@@ -49,8 +47,9 @@ export function SectionTrigger({
       <span
         aria-hidden="true"
         className="x-nt-section-chevron"
-        dangerouslySetInnerHTML={innerHtml(arrowIcon)}
-      />
+      >
+        <RemixIcon name="ri-arrow-right-s-line" />
+      </span>
       <span
         {...ref(titleRef)}
         className={`x-nt-wallpaper-panel-title${titleClassName ? ` ${titleClassName}` : ''}`}
@@ -63,13 +62,11 @@ export function SectionTrigger({
 
 export function InfoButton({
   actions,
-  icon,
   label,
   name,
   tooltip
 }: {
   actions?: TooltipActions;
-  icon: string;
   label?: string;
   name: string;
   tooltip?: string;
@@ -80,9 +77,10 @@ export function InfoButton({
       {...(actions ? tooltipHandlers(actions, tooltip) : {})}
       aria-label={label || undefined}
       className="x-nt-appearance-info-button"
-      dangerouslySetInnerHTML={innerHtml(icon)}
       type="button"
-    />
+    >
+      <RemixIcon name="ri-information-line" />
+    </button>
   );
 }
 

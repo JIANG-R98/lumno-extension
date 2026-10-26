@@ -21,6 +21,7 @@ import {
   type ModeTagModel,
   type TabHintModel
 } from '../../search/input-mode/mode-tag-model';
+import { RemixIcon } from '../remix-icon';
 
 export type { ModeTagModel, TabHintModel };
 
@@ -180,10 +181,10 @@ function GhostIcon({ ghost }: { ghost: ModeTagGhost }) {
     );
   }
   return (
-    <i
-      aria-hidden="true"
-      className={`ri-icon ri-size-16 ${ghost.icon.glyphClass}`}
+    <RemixIcon
       data-search-input-mode-icon-ghost=""
+      name={ghost.icon.glyphName}
+      size={16}
       style={style}
     />
   );
@@ -252,10 +253,10 @@ export function ModeTag({ store, prefixId }: { store: ModeTagStore; prefixId: st
           style={{ ...IMAGE_STYLE, display: showImage ? 'block' : 'none' }}
         />
       </span>
-      <i
-        aria-hidden="true"
-        className={`ri-icon ri-size-16 ${model.icon ? model.icon.glyphClass : 'ri-search-line'}`}
+      <RemixIcon
         data-search-input-mode-prefix-glyph=""
+        name={model.icon ? model.icon.glyphName : 'ri-search-line'}
+        size={16}
         style={{ display: showGlyph ? 'inline-flex' : 'none', flex: '0 0 auto', transition: 'none' }}
       />
       <svg
@@ -313,10 +314,10 @@ export function ModeTag({ store, prefixId }: { store: ModeTagStore; prefixId: st
           {model.currentText}
         </span>
       </span>
-      <i
-        aria-hidden="true"
-        className="ri-icon ri-size-16 ri-arrow-down-s-line"
+      <RemixIcon
         data-search-input-mode-prefix-chevron=""
+        name="ri-arrow-down-s-line"
+        size={16}
         style={{ display: model.icon ? 'inline-flex' : 'none', flex: '0 0 auto', color: accent }}
       />
       {model.ghost ? <GhostIcon ghost={model.ghost} key={model.ghost.key} /> : null}

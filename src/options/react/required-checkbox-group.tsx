@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 export interface RequiredCheckboxItemModel {
   checked: boolean;
@@ -52,7 +53,7 @@ export function RequiredCheckboxGroup({
           key={item.value}
         >
           {sortable ? (
-            <i aria-hidden="true" className="ri-icon ri-size-14 ri-draggable" />
+            <RemixIcon name="ri-draggable" />
           ) : null}
           <input
             checked={selected.has(item.value)}

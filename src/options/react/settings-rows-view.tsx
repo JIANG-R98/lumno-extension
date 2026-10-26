@@ -6,6 +6,7 @@ import { SettingSelect, type SelectControlRenderModel } from './select-control';
 import { RangeSliderControl, type RangeSliderControlRenderModel } from './range-slider-control';
 import { RequiredCheckboxGroup, type RequiredCheckboxGroupRenderModel } from './required-checkbox-group';
 import type { ToggleControlRenderModel } from './toggle-control';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 // How a row sits in its section.
 export interface SettingsRowLook {
@@ -175,7 +176,7 @@ function RowLink({ model }: { model: SettingsLinkModel }) {
       target="_blank"
     >
       <span data-ctrl-tab-label="">{model.label}</span>
-      <i aria-hidden="true" className="ri-icon ri-size-14 ri-external-link-line" />
+      <RemixIcon name="ri-external-link-line" />
     </a>
   );
 }
@@ -258,7 +259,7 @@ function CheckboxGroupRow({
       }}
       type="button"
     >
-      <i aria-hidden="true" className="ri-icon ri-size-14 ri-reset-left-line" />
+      <RemixIcon name="ri-reset-left-line" />
     </button>
   ) : null;
   return (

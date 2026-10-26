@@ -50,8 +50,6 @@ interface BookmarkSectionDeps {
   getHostFromUrl(url: string): string;
   getSiteDisplayName(host: string, title?: string): string;
   getUrlDisplay(url: string): string;
-  getRiSvg(icon: string, className?: string): string;
-  getFigmaFolderSvg: typeof FolderIcon.getFigmaFolderSvg;
   initFolderPathMorph: typeof FolderIcon.initFolderPathMorph;
   playFolderPathMorph: typeof FolderIcon.playFolderPathMorph;
   stableHashCode: ViewOption<'stableHashCode'>;
@@ -113,8 +111,6 @@ function createBookmarkSection(deps: BookmarkSectionDeps) {
     getHostFromUrl,
     getSiteDisplayName,
     getUrlDisplay,
-    getRiSvg,
-    getFigmaFolderSvg,
     initFolderPathMorph,
     playFolderPathMorph,
     stableHashCode,
@@ -189,8 +185,6 @@ function createBookmarkSection(deps: BookmarkSectionDeps) {
     getHostFromUrl,
     getSiteDisplayName,
     getUrlDisplay,
-    getRiSvg,
-    getFigmaFolderSvg,
     initFolderPathMorph,
     playFolderPathMorph,
     stableHashCode,
@@ -227,7 +221,6 @@ function createBookmarkSection(deps: BookmarkSectionDeps) {
     getHostFromUrl,
     getSiteDisplayName,
     getUrlDisplay,
-    getFigmaFolderSvg,
     initFolderPathMorph,
     playFolderPathMorph,
     attachFaviconWithFallbacks,

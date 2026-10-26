@@ -1,4 +1,6 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import { RemixIcon } from './remix-icon';
+import type { RemixIconName } from '../ui/remix-icon';
 
 type LinkButtonLabelProps = ComponentPropsWithoutRef<'span'> & {
   [dataAttribute: `data-${string}`]: string | undefined;
@@ -10,7 +12,7 @@ export interface LinkButtonProps
   /** Opens in a new tab (adds target/rel). */
   external?: boolean;
   /** Remix icon class rendered before the label, e.g. `ri-github-line`. */
-  leadingIcon?: string;
+  leadingIcon?: RemixIconName;
   labelProps?: LinkButtonLabelProps;
 }
 
@@ -41,10 +43,7 @@ export function LinkButton({
       target={external ? target || '_blank' : target}
     >
       {leadingIcon ? (
-        <i
-          aria-hidden="true"
-          className={`ri-icon x-lumno-link-button__leading-icon ${leadingIcon}`}
-        />
+        <RemixIcon className="x-lumno-link-button__leading-icon" name={leadingIcon} />
       ) : null}
       <span
         {...labelProps}
@@ -52,10 +51,7 @@ export function LinkButton({
       >
         {children}
       </span>
-      <i
-        aria-hidden="true"
-        className={`ri-icon x-lumno-link-button__icon ${LINK_BUTTON_ICON}`}
-      />
+      <RemixIcon className="x-lumno-link-button__icon" name={LINK_BUTTON_ICON} />
     </a>
   );
 }

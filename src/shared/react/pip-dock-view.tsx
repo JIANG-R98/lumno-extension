@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createReactRootController, type ReactRootController } from './root-controller';
+import type { RemixIconName } from '../ui/remix-icon';
+import { RemixIcon } from './remix-icon';
 
 // The dock at the bottom of a page clip's picture-in-picture window: it
 // peeks out from the bottom edge and slides up while the pointer is near it
@@ -38,9 +40,9 @@ const NO_TRANSLATE = {
   notranslate: ''
 } as const;
 
-function DockButton({ label, iconClass, background, theme, onClick }: {
+function DockButton({ label, iconName, background, theme, onClick }: {
   label: string;
-  iconClass: string;
+  iconName: RemixIconName;
   background: string;
   theme: PipDockTheme;
   onClick(): void;
@@ -53,7 +55,7 @@ function DockButton({ label, iconClass, background, theme, onClick }: {
       style={{ background, color: theme.buttonText, boxShadow: theme.buttonShadow }}
       type="button"
     >
-      <i {...NO_TRANSLATE} className={`ri-icon ${iconClass} notranslate`} />
+      <RemixIcon {...NO_TRANSLATE} name={iconName} />
       <span {...NO_TRANSLATE} className="lumno-pip-dock-label notranslate">{label}</span>
     </button>
   );
@@ -150,14 +152,14 @@ function PipDock({ model, handlers }: { model: PipDockModel; handlers: PipDockHa
     >
       <DockButton
         background={theme.buttonBackground}
-        iconClass="ri-focus-3-line"
+        iconName="ri-focus-3-line"
         label={labels.reselect}
         onClick={handlers.onReselect}
         theme={theme}
       />
       <DockButton
         background={theme.secondaryButtonBackground}
-        iconClass="ri-close-line"
+        iconName="ri-close-line"
         label={labels.close}
         onClick={handlers.onClose}
         theme={theme}

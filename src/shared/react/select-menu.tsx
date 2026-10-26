@@ -11,6 +11,8 @@ import {
 import { createPortal } from 'react-dom';
 import { isNode } from '../dom-guards';
 import { queryHtmlElement } from '../dom-lookup';
+import { RemixIcon } from './remix-icon';
+import type { RemixIconName } from '../ui/remix-icon';
 
 export interface SelectMenuOption {
   action?: string;
@@ -24,13 +26,13 @@ export interface SelectMenuOption {
   /** Renders the label in this family, so a font picker previews each face. */
   fontFamily?: string;
   groupTitle?: string;
-  iconClass?: string;
-  /** Image icon (for example a site tile); takes precedence over `iconClass`. */
+  iconName?: RemixIconName;
+  /** Image icon (for example a site tile); takes precedence over `iconName`. */
   iconUrl?: string;
   label: string;
   radio?: boolean;
   /** Icon after a radio choice's label (for example an eyedropper); checked or not. */
-  trailingIconClass?: string;
+  trailingIconName?: RemixIconName;
   value: string;
 }
 
@@ -122,7 +124,7 @@ export interface SelectMenuConfig {
   searchPlaceholder?: string;
   selectId?: string;
   tooltip?: string;
-  triggerIconClass?: string;
+  triggerIconName?: RemixIconName;
   /** Trigger text in place of the chosen option's label, for menus of checkbox options. */
   triggerLabel?: string;
   value?: string;
@@ -467,7 +469,7 @@ export function SelectMenu({
     const selected = isValueOption(option) && option.value === selectedValue;
     const radioItem = usesMenuSemantics && !option.checkbox && (!option.action || option.radio);
     const checked = option.radio || option.checkbox ? option.checked === true : selected;
-    const trailingIconClass = String(option.trailingIconClass || '').trim();
+    const trailingIconName = option.trailingIconName;
     return (
       <Fragment key={`${option.action || option.value}:${index}`}>
         {option.dividerBefore && index > 0 ? (
@@ -525,11 +527,8 @@ export function SelectMenu({
               className="_x_extension_select_option_icon_2026_unique_"
               src={option.iconUrl}
             />
-          ) : option.iconClass ? (
-            <i
-              aria-hidden="true"
-              className={`_x_extension_select_option_icon_2026_unique_ ri-icon ri-size-16 ${option.iconClass}`}
-            />
+          ) : option.iconName ? (
+            <RemixIcon className="_x_extension_select_option_icon_2026_unique_" name={option.iconName} size={16} />
           ) : null}
           <span
             className="_x_extension_select_option_label_2026_unique_"
@@ -542,12 +541,12 @@ export function SelectMenu({
               {option.badge}
             </span>
           ) : null}
-          {option.radio && trailingIconClass ? (
+          {option.radio && trailingIconName ? (
             <span
               aria-hidden="true"
               className="_x_extension_select_option_check_2026_unique_"
             >
-              <i className={`ri-icon ri-size-16 ${trailingIconClass}`} />
+              <RemixIcon name={trailingIconName} size={16} />
             </span>
           ) : null}
         </div>
@@ -639,10 +638,7 @@ export function SelectMenu({
             type="text"
             value={filter}
           />
-          <i
-            aria-hidden="true"
-            className="_x_extension_select_search_icon_2026_unique_ ri-icon ri-size-16 ri-search-line"
-          />
+          <RemixIcon className="_x_extension_select_search_icon_2026_unique_" name="ri-search-line" size={16} />
         </div>
       ) : null}
       {searchable && !visibleOptions.length && config.emptyLabel ? (
@@ -762,12 +758,7 @@ export function SelectMenu({
         >
           {config.triggerLabel ?? (selectedOption?.label || '')}
         </span>
-        <i
-          aria-hidden="true"
-          className={`_x_extension_select_icon_2024_unique_ ri-icon ri-size-16 ${
-            config.triggerIconClass || 'ri-arrow-down-s-line'
-          }`}
-        />
+        <RemixIcon className="_x_extension_select_icon_2024_unique_" name={config.triggerIconName || 'ri-arrow-down-s-line'} size={16} />
       </button>
       {config.menuPortal !== false
         ? createPortal(menu, config.menuPortalContainer || documentObj.body)

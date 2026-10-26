@@ -52,7 +52,7 @@ function BlacklistClearButton({
   onConfirm(): void | Promise<void>;
 }) {
   return (
-    <GroupActionConfirm disabled={disabled} iconClass="ri-delete-bin-4-line" id={id} model={model} onConfirm={onConfirm} />
+    <GroupActionConfirm disabled={disabled} iconName="ri-delete-bin-4-line" id={id} model={model} onConfirm={onConfirm} />
   );
 }
 

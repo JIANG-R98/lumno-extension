@@ -24,6 +24,7 @@ import type * as SiteSearchStore from '../../shared/search/site-search-store';
 import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
 import { getAggregateSearchId } from './search-types';
 import type { ActiveLocalScope } from './search-types';
+import type { RemixIconName } from '../../shared/ui/remix-icon';
 
 interface SiteSearchProvidersState {
   // Icons saved for site search providers, by page URL.
@@ -496,7 +497,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     return '';
   }
 
-  function getLocalSearchScopeIconClass(sourceType: string): string {
+  function getLocalSearchScopeIconName(sourceType: string): RemixIconName {
     if (sourceType === 'bookmark') {
       return 'ri-bookmark-3-line';
     }
@@ -536,7 +537,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     normalizeSearchResultDisplayLimit,
     getLocalSearchScopeCandidate,
     getLocalSearchScopeLabel,
-    getLocalSearchScopeIconClass,
+    getLocalSearchScopeIconName,
     getSearchModeProviderId
   };
 }

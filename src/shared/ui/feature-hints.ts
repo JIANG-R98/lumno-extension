@@ -4,7 +4,7 @@
 // (getFeatureHintViewApi()).
 import '../../domain/navigation-disposition';
 import * as LumnoShortcutDisplay from '../../domain/shortcut-display';
-import { getRiSvg as getDefaultRiSvg } from './remix-icon';
+import type { RemixIconName, RemixIconSpec } from './remix-icon';
 import type { NavigatorLike } from '../../domain/shortcut-display';
 import type { StorageAreaLike } from '../../domain/storage-port';
 import type { FeatureHintViewController, FeatureHintViewLabels } from '../../types/view-apis';
@@ -21,7 +21,7 @@ type FeatureHintAlignMode = 'center' | 'start' | 'auto';
 interface FeatureHintAction {
   id?: string;
   actionId?: string;
-  icon?: string;
+  icon?: RemixIconName;
   labelKey?: string;
   labelFallback?: string;
   variant?: string;
@@ -30,7 +30,7 @@ interface FeatureHintAction {
 
 interface FeatureHintActionItem {
   id: string;
-  iconHtml: string;
+  icon: RemixIconSpec | null;
   labelKey: string;
   labelFallback: string;
   onClick: FeatureHintAction['onClick'] | null;
@@ -54,7 +54,7 @@ interface FeatureHintDefinition {
   rememberOnFirstShow?: boolean;
   roundedArrowTip?: boolean;
   inlineActions?: boolean;
-  badgeIcon?: string;
+  badgeIcon?: RemixIconName;
   badgeIconText?: string;
   badgeIconImageSrc?: string;
   badgeWordmarkImageSrc?: string;
@@ -102,8 +102,6 @@ interface FeatureHintOptions {
   id?: string;
   hint?: FeatureHintDefinition | string | null;
   t?: Translate | null;
-  // The markup of a Remix icon.
-  getRiSvg?(id: string, sizeClass: string): string;
   arrowSide?: string;
   arrowAlign?: string;
   dismissStorage?: string;
@@ -484,7 +482,6 @@ function createFeatureHint(options?: FeatureHintOptions | null): FeatureHintCont
   const hint = definition;
   const page = documentObj;
   const t = typeof config.t === 'function' ? config.t : null;
-  const getRiSvg = typeof config.getRiSvg === 'function' ? config.getRiSvg : getDefaultRiSvg;
   const idPart = getDomIdPart(hint.id);
   const arrowSide = normalizeArrowSide(config.arrowSide || hint.arrowSide);
   const arrowAlign = normalizeArrowAlign(config.arrowAlign || hint.arrowAlign);
@@ -516,7 +513,7 @@ function createFeatureHint(options?: FeatureHintOptions | null): FeatureHintCont
     }
     items.push({
       id,
-      iconHtml: action.icon ? getRiSvg(String(action.icon), 'ri-size-12') : '',
+      icon: action.icon ? { name: action.icon, size: 12 } : null,
       labelKey: String(action.labelKey || '').trim(),
       labelFallback: String(action.labelFallback || '').trim(),
       onClick: typeof action.onClick === 'function' ? action.onClick : null,
@@ -573,16 +570,14 @@ function createFeatureHint(options?: FeatureHintOptions | null): FeatureHintCont
     documentObj: page,
     model: {
       actions: actions.map((action) => ({
-        iconHtml: action.iconHtml,
+        icon: action.icon || undefined,
         id: action.id,
         variant: action.variant
       })),
       alignMode,
       arrowAlign,
       arrowSide,
-      badgeIconHtml: hint.badgeIcon
-        ? getRiSvg(hint.badgeIcon, 'ri-size-10')
-        : '',
+      badgeIcon: hint.badgeIcon ? { name: hint.badgeIcon } : undefined,
       badgeIconImageSrc: String(
         config.badgeIconImageSrc || hint.badgeIconImageSrc || ''
       ),

@@ -1,6 +1,7 @@
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { queryHtmlTag, queryHtmlTags } from '../../shared/dom-lookup';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 export interface RecentHistoryVersion {
   title: string;
@@ -76,12 +77,12 @@ function RecentHistoryDialogView(model: ViewModel) {
           <p>{t('recent_history_description', 'Set any retained version as current without removing history.')}</p>
         </span>
         <button className="x-nt-recent-history-close" type="button" aria-label={t('recent_update_close', 'Close')} onClick={model.onClose}>
-          <i className="ri-icon ri-close-line" aria-hidden="true" />
+          <RemixIcon name="ri-close-line" />
         </button>
       </header>
       <div className="x-nt-recent-history-list">
         <article className="x-nt-recent-history-current">
-          <span className="x-nt-recent-history-rail" aria-hidden="true"><i className="ri-icon ri-pushpin-2-fill" /></span>
+          <span className="x-nt-recent-history-rail" aria-hidden="true"><RemixIcon name="ri-pushpin-2-fill" /></span>
           <VersionContent version={item} />
           <time>{formatVersionTime(undefined, true, t)}</time>
         </article>
@@ -99,7 +100,7 @@ function RecentHistoryDialogView(model: ViewModel) {
                   disabled={busyIndex >= 0}
                   onClick={() => model.onRestore(index)}
                 >
-                  <i className="ri-icon ri-pushpin-2-line" aria-hidden="true" />
+                  <RemixIcon name="ri-pushpin-2-line" />
                   {busyIndex === index
                     ? t('recent_history_restoring', 'Restoring…')
                     : t('recent_history_restore', 'Set as current')}

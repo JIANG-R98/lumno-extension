@@ -5,7 +5,7 @@ import { queryHtmlTag } from '../../shared/dom-lookup';
 import { required } from '../../../tests/react/dom';
 
 afterEach(() => {
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 describe('New Tab React page notice', () => {

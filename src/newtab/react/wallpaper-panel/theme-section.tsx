@@ -3,25 +3,21 @@ import { SectionTrigger, InfoButton } from './panel-controls';
 import { SegmentedChoice, ref } from './panel-primitives';
 import { collapsible } from './panel-model';
 import type { WallpaperPanelContext } from './use-wallpaper-panel';
-import { innerHtml } from '../../../shared/react/inner-html';
+import { RemixIcon } from '../../../shared/react/remix-icon';
 
 export function ThemeSection({ panel }: { panel: WallpaperPanelContext }) {
   const {
-    arrowIcon,
     themeExpanded,
     setThemeExpanded,
     state,
     actions,
-    infoIcon,
     model,
-    checkIcon
   } = panel;
   return (
     <div className="x-nt-appearance-section">
       <div className="x-nt-wallpaper-panel-header">
         <div className="x-nt-appearance-title-group">
           <SectionTrigger
-            arrowIcon={arrowIcon}
             bodyId="_x_extension_newtab_theme_section_body_2026_unique_"
             expanded={themeExpanded}
             onToggle={() => setThemeExpanded(!themeExpanded)}
@@ -31,7 +27,6 @@ export function ThemeSection({ panel }: { panel: WallpaperPanelContext }) {
           />
           <InfoButton
             actions={actions}
-            icon={infoIcon}
             label={state.theme.infoLabel}
             name="appearanceInfoButton"
             tooltip={state.theme.infoTooltip}
@@ -83,8 +78,9 @@ export function ThemeSection({ panel }: { panel: WallpaperPanelContext }) {
                     ) : null}
                     <span
                       className="x-nt-appearance-check"
-                      dangerouslySetInnerHTML={innerHtml(checkIcon)}
-                    />
+                    >
+                      <RemixIcon name="ri-check-line" size={16} />
+                    </span>
                   </span>
                   <span className="x-nt-appearance-label">{option?.label}</span>
                 </span>

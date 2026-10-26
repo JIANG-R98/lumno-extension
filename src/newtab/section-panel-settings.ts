@@ -134,7 +134,7 @@ function createRuntime(options: SectionPanelSettingsOptions) {
         surfaceOption('adaptive', 'bookmark_topbar_surface_follow', 'Match style'),
         surfaceOption('transparent', 'bookmark_topbar_surface_transparent', 'Transparent'),
         surfaceOption('custom', 'bookmark_topbar_surface_custom', 'Custom color', {
-          trailingIconClass: 'ri-dropper-line'
+          trailingIconName: 'ri-dropper-line'
         })
       ],
       value: surfaceMode,

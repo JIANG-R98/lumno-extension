@@ -65,7 +65,7 @@ function createModeParts(surface: 'newtab' | 'overlay' = 'newtab') {
 
 afterEach(() => {
   vi.useRealTimers();
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 describe('Shared search scope menu', () => {
@@ -686,14 +686,14 @@ describe('Shared search scope menu', () => {
       {
         active: true,
         group: 'Search scope',
-        iconClass: 'ri-search-line',
+        iconName: 'ri-search-line',
         id: 'all',
         kind: 'all',
         label: 'Search everything'
       },
       {
         group: 'Browser content',
-        iconClass: 'ri-bookmark-3-line',
+        iconName: 'ri-bookmark-3-line',
         id: 'local:bookmark',
         kind: 'local',
         label: 'Bookmarks'
@@ -714,7 +714,7 @@ describe('Shared search scope menu', () => {
     );
 
     controller.setPrefixText('Search everything', {}, {
-      iconClass: 'ri-search-line',
+      iconName: 'ri-search-line',
       modeId: 'all'
     });
     expect(controller.openModeMenu()).toBe(true);
@@ -1258,7 +1258,7 @@ describe('Shared search scope menu', () => {
       {
         getModeMenuItems: () => iconNames.map((menuIconName) => ({
           group: 'Browser content',
-          iconClass: 'ri-window-line',
+          iconName: 'ri-window-line',
           id: `local:${menuIconName}`,
           kind: 'local',
           label: menuIconName,
@@ -1268,7 +1268,7 @@ describe('Shared search scope menu', () => {
     );
 
     controller.setPrefixText('Open tabs', {}, {
-      iconClass: 'ri-window-line',
+      iconName: 'ri-window-line',
       menuIconName: 'browser',
       modeId: 'openTabs'
     });
@@ -1368,7 +1368,7 @@ describe('Shared search scope menu', () => {
     const controller = LumnoSearchInputMode.createInputModeController(parts, {});
 
     controller.setPrefixText('YouTube', {}, {
-      iconClass: 'ri-global-line',
+      iconName: 'ri-global-line',
       iconUrl: 'https://www.youtube.com/favicon.ico',
       modeId: 'provider:youtube'
     });
@@ -1394,7 +1394,7 @@ describe('Shared search scope menu', () => {
     shadowRoot.appendChild(parts.container);
     const duckduckgoItem: ModeMenuItem = {
       group: 'Search engines',
-      iconClass: 'ri-global-line',
+      iconName: 'ri-global-line',
       id: 'provider:ddg',
       kind: 'provider',
       label: 'DuckDuckGo',
@@ -1410,7 +1410,7 @@ describe('Shared search scope menu', () => {
       }
     );
     controller.setPrefixText('Search open tabs', {}, {
-      iconClass: 'ri-window-line',
+      iconName: 'ri-window-line',
       modeId: 'openTabs'
     });
     controller.openModeMenu();
@@ -1454,7 +1454,7 @@ describe('Shared search scope menu', () => {
     );
 
     controller.setPrefixText('Bilibili', { accentRgb: [0, 174, 236] }, {
-      iconClass: 'ri-global-line',
+      iconName: 'ri-global-line',
       modeId: 'provider:bilibili'
     });
 
@@ -1638,7 +1638,7 @@ describe('Shared search scope menu', () => {
 
     controller.setPrefixText('Search open tabs', {}, {
       animate: true,
-      iconClass: 'ri-window-line',
+      iconName: 'ri-window-line',
       menuIconName: 'browser',
       modeId: 'openTabs'
     });
@@ -1741,7 +1741,7 @@ describe('Shared search scope menu', () => {
       }
     );
     controller.setPrefixText('Google', {}, {
-      iconClass: 'ri-google-fill',
+      iconName: 'ri-google-fill',
       modeId: 'provider:google'
     });
 
@@ -1774,7 +1774,7 @@ describe('Shared search scope menu', () => {
       easing: 'cubic-bezier(0.22, 1, 0.36, 1)'
     });
     controller.setPrefixText('Google', { accent: '#2563eb' }, {
-      iconClass: 'ri-google-fill',
+      iconName: 'ri-google-fill',
       modeId: 'provider:google'
     });
     expect(parts.modePrefixCurrent.style.position).toBe('');
@@ -1911,13 +1911,13 @@ describe('Shared search scope menu', () => {
     });
     const controller = LumnoSearchInputMode.createInputModeController(parts);
     controller.setPrefixText('Brave Search', {}, {
-      iconClass: 'ri-global-line',
+      iconName: 'ri-global-line',
       modeId: 'provider:brave'
     });
 
     controller.setPrefixText('Brave Search', {}, {
       animate: true,
-      iconClass: 'ri-global-line',
+      iconName: 'ri-global-line',
       modeId: 'provider:brave'
     });
 
@@ -1978,13 +1978,13 @@ describe('Shared search scope menu', () => {
     });
     const controller = LumnoSearchInputMode.createInputModeController(parts);
     controller.setPrefixText('Open tabs', {}, {
-      iconClass: 'ri-window-line',
+      iconName: 'ri-window-line',
       modeId: 'openTabs'
     });
 
     controller.setPrefixText('Brave Search', {}, {
       animate: true,
-      iconClass: 'ri-global-line',
+      iconName: 'ri-global-line',
       modeId: 'provider:brave'
     });
 
@@ -2079,13 +2079,13 @@ describe('Shared search scope menu', () => {
     });
     const controller = LumnoSearchInputMode.createInputModeController(parts);
     controller.setPrefixText('Brave Search', {}, {
-      iconClass: 'ri-global-line',
+      iconName: 'ri-global-line',
       modeId: 'provider:brave'
     });
 
     controller.setPrefixText('Open tabs', {}, {
       animate: true,
-      iconClass: 'ri-window-line',
+      iconName: 'ri-window-line',
       modeId: 'openTabs'
     });
 
@@ -2114,21 +2114,21 @@ describe('Shared search scope menu', () => {
       {
         active: true,
         group: 'Search scope',
-        iconClass: 'ri-search-line',
+        iconName: 'ri-search-line',
         id: 'all',
         kind: 'all',
         label: 'Search everything'
       },
       {
         group: 'Browser content',
-        iconClass: 'ri-bookmark-3-line',
+        iconName: 'ri-bookmark-3-line',
         id: 'local:bookmark',
         kind: 'local',
         label: 'Bookmarks'
       },
       {
         group: 'Site search',
-        iconClass: 'ri-global-line',
+        iconName: 'ri-global-line',
         id: 'provider:bilibili',
         kind: 'provider',
         label: 'Bilibili'
@@ -2415,7 +2415,7 @@ describe('Shared search scope menu', () => {
         attachFaviconData,
         getModeMenuItems: () => [{
           active: true,
-          iconClass: 'ri-global-line',
+          iconName: 'ri-global-line',
           iconUrl: 'https://www.taobao.com/favicon.ico',
           id: 'provider:tb',
           kind: 'provider',
@@ -2521,7 +2521,7 @@ describe('Shared search scope menu', () => {
       {
         getThemeForProvider,
         getModeMenuItems: () => [{
-          iconClass: 'ri-bilibili-fill',
+          iconName: 'ri-bilibili-fill',
           id: 'provider:bilibili',
           kind: 'provider',
           label: 'Bilibili',
@@ -2569,7 +2569,7 @@ describe('Shared search scope menu', () => {
       {
         getModeMenuItems: () => [{
           active: true,
-          iconClass: 'ri-global-line',
+          iconName: 'ri-global-line',
           iconUrl: 'https://missing.example/favicon.ico',
           id: 'provider:missing',
           kind: 'provider',
@@ -2748,7 +2748,7 @@ describe('Shared search scope menu', () => {
     const parts = createModeParts();
     const controller = LumnoSearchInputMode.createInputModeController(parts, {});
     controller.setPrefixText('YouTube', {}, {
-      iconClass: 'ri-global-line',
+      iconName: 'ri-global-line',
       iconUrl: 'https://www.youtube.com/favicon.ico',
       modeId: 'provider:youtube'
     });

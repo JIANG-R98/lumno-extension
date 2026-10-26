@@ -50,7 +50,6 @@ interface EngagementNoticeOptions {
   surface?: string;
   locale?: string;
   t?: (key: string, fallback: string) => string;
-  getRiSvg?(id: string, sizeClass: string): string;
   now?(): number;
   // How long after the page opens the invitation may appear.
   delayMs?: number;
@@ -376,7 +375,6 @@ function createEngagementNotice(options?: EngagementNoticeOptions | null): Engag
     definition,
     chromeApi,
     t: config.t,
-    getRiSvg: config.getRiSvg,
     badgeIconImageSrc: getExtensionAssetUrl(
       chromeApi,
       'assets/images/lumno.png',

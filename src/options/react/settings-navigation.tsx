@@ -6,9 +6,11 @@ import {
 } from '../../shared/react/root-controller';
 import { queryHtmlElement } from '../../shared/dom-lookup';
 import { lazyInstance } from '../../shared/lazy-instance';
+import type { RemixIconName } from '../../shared/ui/remix-icon';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 export interface SettingsNavigationItemModel {
-  iconClass: string;
+  iconName: RemixIconName;
   key: string;
   label: string;
   labelKey: string;
@@ -124,10 +126,7 @@ function SettingsNavigation({
             onClick={() => onSelect(item.key)}
             type="button"
           >
-            <i
-              aria-hidden="true"
-              className={`_x_extension_tab_icon_2024_unique_ ${item.iconClass}`}
-            />
+            <RemixIcon className="_x_extension_tab_icon_2024_unique_" name={item.iconName} />
             <span data-i18n={item.labelKey}>{item.label}</span>
           </button>
         );

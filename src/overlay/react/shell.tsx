@@ -433,9 +433,11 @@ function appendOverlayStyleNodes(
     }
     #_x_extension_overlay_2024_unique_ .ri-size-8 { --ri-size: 8px; }
     #_x_extension_overlay_2024_unique_ .ri-size-12 { --ri-size: 12px; }
+    #_x_extension_overlay_2024_unique_ .ri-size-14 { --ri-size: 14px; }
     #_x_extension_overlay_2024_unique_ .ri-size-16 { --ri-size: 16px; }
     #_x_extension_overlay_2024_unique_ .ri-size-20 { --ri-size: 20px; }
     #_x_extension_overlay_2024_unique_ .ri-size-24 { --ri-size: 24px; }
+    #_x_extension_overlay_2024_unique_ .ri-size-28 { --ri-size: 28px; }
     #_x_extension_search_input_2024_unique_ {
       text-align: left;
     }

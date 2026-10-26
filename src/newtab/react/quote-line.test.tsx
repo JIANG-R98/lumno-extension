@@ -8,7 +8,7 @@ let views: QuoteLineView[] = [];
 afterEach(() => {
   act(() => views.forEach((view) => view.destroy()));
   views = [];
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 const MODEL: QuoteLineModel = {

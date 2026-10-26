@@ -177,7 +177,6 @@ interface ShortcutsControllerDeps {
   NEWTAB_SHORTCUTS_VIEW: Pick<ReturnType<typeof createShortcutsViewApi>, 'createShortcutsView'>;
   shortcutTiles: ViewOption<'tiles'>;
   shortcutGroupHeaders: ViewOption<'groupHeaders'>;
-  getFigmaFolderSvg: ViewOption<'getFolderIconSvg'>;
   initFolderPathMorph: ViewOption<'initFolderIcon'>;
   playFolderPathMorph: ViewOption<'animateFolderIcon'>;
   getHostFromUrl: ViewOption<'getHostFromUrl'>;
@@ -191,7 +190,6 @@ interface ShortcutsControllerDeps {
   isCardActivationSuppressed(): boolean;
   handleShortcutContextMenu: ShortcutContextMenu['handleShortcutContextMenu'];
   handleShortcutNativeDragStart: ShortcutPageActions['handleShortcutNativeDragStart'];
-  getRiSvg(id: string, sizeClass?: string, extraClass?: string): string;
   openShortcutDialog: ShortcutPageActions['openShortcutDialog'];
   openShortcutAddContextMenu: ShortcutContextMenu['openShortcutAddContextMenu'];
   handleShortcutDragPointerDown(event: PointerEvent): void;
@@ -367,7 +365,6 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     NEWTAB_SHORTCUTS_VIEW,
     shortcutTiles,
     shortcutGroupHeaders,
-    getFigmaFolderSvg,
     initFolderPathMorph,
     playFolderPathMorph,
     getHostFromUrl,
@@ -381,7 +378,6 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     isCardActivationSuppressed,
     handleShortcutContextMenu,
     handleShortcutNativeDragStart,
-    getRiSvg,
     openShortcutDialog,
     openShortcutAddContextMenu,
     handleShortcutDragPointerDown,
@@ -1909,7 +1905,6 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
       grid,
       tiles: shortcutTiles,
       maxShortcuts: MAX_NEWTAB_SHORTCUTS,
-      getFolderIconSvg: getFigmaFolderSvg,
       initFolderIcon: initFolderPathMorph,
       animateFolderIcon: playFolderPathMorph,
       onFolderMenuChange: syncShortcutDockFolderMenu,
@@ -1936,7 +1931,6 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
       onContextMenu: handleShortcutContextMenu,
       onNativeDragStart: handleShortcutNativeDragStart,
       getAddLabel: () => t('newtab_shortcuts_add', 'Add shortcut'),
-      getAddIconSvg: () => getRiSvg('ri-add-line', 'ri-size-28'),
       getAddVisible: () => pageState.newtabShortcutAddVisible && pageState.newtabShortcuts.length < MAX_NEWTAB_SHORTCUTS,
       // The add tile asks what to add, or offers to hide itself.
       onAdd: openShortcutAddContextMenu,
@@ -1946,7 +1940,6 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
       getGroupActionsLabel: (title) => formatMessage('newtab_shortcuts_group_actions', '{group} actions', {
         group: title || t('newtab_shortcuts_group_untitled_name', 'Untitled group')
       }),
-      getGroupMoreIconSvg: () => getRiSvg('ri-more-fill', 'ri-size-16'),
       onGroupMenu: handleShortcutGroupMenu,
       onGroupRename: openShortcutGroupDialog,
       getGroupEmptyLabel: () => t('newtab_shortcuts_group_add_site', 'Add site'),
@@ -1968,7 +1961,6 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
       documentObj: document,
       windowObj: window,
       t,
-      getRiSvg,
       bindTooltip: bindShortcutDialogTooltip,
       hideTooltip: hideShortcutDialogTooltip,
       prepareIconFile: shortcutIconStore.prepareFile,

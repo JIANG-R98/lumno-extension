@@ -25,7 +25,6 @@ interface PanelNoticesDeps {
   removeOverlay(overlay: HTMLElement | null): void;
   COMMUNITY_LINKS: Pick<typeof CommunityLinks, 'FALLBACK_LINKS'>;
   t: Translate;
-  getRiSvg(id: string, sizeClass: string): string;
   getOpenDisposition(event: ActivationEvent | null, fallback?: Disposition): Disposition;
   getSystemLocale(): string;
   SETTINGS: Pick<typeof Settings, 'normalizeLocale'>;
@@ -37,7 +36,6 @@ function createPanelNotices(deps: PanelNoticesDeps) {
     removeOverlay,
     COMMUNITY_LINKS,
     t,
-    getRiSvg,
     getOpenDisposition,
     getSystemLocale,
     SETTINGS
@@ -73,7 +71,6 @@ function createPanelNotices(deps: PanelNoticesDeps) {
     chromeApi: chrome,
     surface: 'overlay',
     t,
-    getRiSvg,
     onSessionSlotClaimed() {
       if (overlayState.overlayEngagementNoticeController &&
           typeof overlayState.overlayEngagementNoticeController.suppressForSession === 'function') {
@@ -98,7 +95,6 @@ function createPanelNotices(deps: PanelNoticesDeps) {
         ? getSystemLocale()
         : SETTINGS.normalizeLocale(overlayState.overlayLanguageMode),
       t,
-      getRiSvg,
       exposureGate: overlayState.overlayUpdateNoticeController && overlayState.overlayUpdateNoticeController.ready,
       // Waits until no update notice shows, the page is in view and the
       // input is empty.

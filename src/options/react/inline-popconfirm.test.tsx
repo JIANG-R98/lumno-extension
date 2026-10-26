@@ -24,7 +24,7 @@ function createFixture(onConfirm = vi.fn().mockResolvedValue(undefined)) {
         onConfirm={onConfirm}
         triggerAriaLabel="Remove"
         triggerClassName="remove-trigger"
-        triggerIconClass="remove-icon"
+        triggerIconName="ri-delete-bin-4-line"
       />
     );
   });

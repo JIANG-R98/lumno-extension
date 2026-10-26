@@ -57,7 +57,7 @@ afterEach(() => {
     controllers.forEach((controller) => controller.destroy());
   });
   controllers = [];
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 describe('New Tab feedback React island', () => {

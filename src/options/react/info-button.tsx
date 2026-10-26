@@ -1,8 +1,10 @@
 import { useId } from 'react';
+import { RemixIcon } from '../../shared/react/remix-icon';
+import type { RemixIconName } from '../../shared/ui/remix-icon';
 
 export interface InfoButtonRenderModel {
   className?: string;
-  iconClass?: string;
+  iconName?: RemixIconName;
   label?: string;
   tooltip: string;
   tooltipKey?: string;
@@ -10,7 +12,7 @@ export interface InfoButtonRenderModel {
 
 export function InfoButton({
   className = '',
-  iconClass = 'ri-information-line',
+  iconName = 'ri-information-line',
   label,
   tooltip,
   tooltipKey
@@ -34,10 +36,7 @@ export function InfoButton({
       data-tooltip={tooltip}
       type="button"
     >
-      <i
-        aria-hidden="true"
-        className={`ri-icon ri-size-14 ${iconClass}`}
-      />
+      <RemixIcon name={iconName} />
       {describesTooltip ? <span hidden id={descriptionId}>{tooltip}</span> : null}
     </button>
   );

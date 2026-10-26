@@ -15,13 +15,13 @@ const model: SettingsNavigationRenderModel = {
   activeKey: 'general',
   items: [
     {
-      iconClass: 'ri-icon ri-command-fill',
+      iconName: 'ri-command-fill',
       key: 'general',
       label: '常规',
       labelKey: 'settings_tab_general'
     },
     {
-      iconClass: 'ri-icon ri-moon-clear-fill',
+      iconName: 'ri-moon-clear-fill',
       key: 'appearance',
       label: '外观',
       labelKey: 'settings_tab_appearance'

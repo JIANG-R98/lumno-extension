@@ -13,17 +13,16 @@ import {
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { isElementTextTruncated } from '../../shared/react/text-overflow';
-import {
-  followEmptyStateArtTheme,
-  getEmptyStateArtMarkup
-} from '../../shared/ui/empty-state-art';
+import { followEmptyStateArtTheme } from '../../shared/ui/empty-state-art';
 import type { CursorTooltipOptions } from '../../shared/ui/cursor-tooltip';
 import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 import { queryHtmlTags } from '../../shared/dom-lookup';
-import { innerHtml } from '../../shared/react/inner-html';
+import { EmptyStateArt } from '../../shared/react/empty-state-art';
 import { FaviconFallback, FolderPreviewFaviconFallback } from '../../shared/react/favicon-fallback';
 import { createRenderStore, type RenderStore } from '../../shared/react/render-store';
 import { lazyInstance } from '../../shared/lazy-instance';
+import { RemixIcon } from '../../shared/react/remix-icon';
+import { FolderIcon } from './folder-icon';
 
 // A site's theme as the page resolves it; the view passes it through.
 type ThemeValue = Partial<ThemeVariant> | null;
@@ -93,8 +92,6 @@ export interface BookmarksViewOptions {
   getHostFromUrl?: (url: string) => string;
   getSiteDisplayName?: (host: string, title?: string) => string;
   getUrlDisplay?: (url: string) => string;
-  getRiSvg?: (id: string, sizeClass?: string) => string;
-  getFigmaFolderSvg?: (id: string, folderId?: string) => string;
   initFolderPathMorph?: (element: HTMLElement) => void;
   playFolderPathMorph?: (
     element: HTMLElement,
@@ -178,10 +175,6 @@ interface NormalizedBookmarksOptions {
     BookmarksViewOptions['getSiteDisplayName']
   >;
   getUrlDisplay: NonNullable<BookmarksViewOptions['getUrlDisplay']>;
-  getRiSvg: NonNullable<BookmarksViewOptions['getRiSvg']>;
-  getFigmaFolderSvg: NonNullable<
-    BookmarksViewOptions['getFigmaFolderSvg']
-  >;
   initFolderPathMorph: NonNullable<
     BookmarksViewOptions['initFolderPathMorph']
   >;
@@ -362,14 +355,6 @@ function normalizeOptions(
       typeof rawOptions.getUrlDisplay === 'function'
         ? rawOptions.getUrlDisplay
         : (url) => url || '',
-    getRiSvg:
-      typeof rawOptions.getRiSvg === 'function'
-        ? rawOptions.getRiSvg
-        : () => '',
-    getFigmaFolderSvg:
-      typeof rawOptions.getFigmaFolderSvg === 'function'
-        ? rawOptions.getFigmaFolderSvg
-        : () => '',
     initFolderPathMorph:
       typeof rawOptions.initFolderPathMorph === 'function'
         ? rawOptions.initFolderPathMorph
@@ -568,9 +553,6 @@ function BookmarkCard({
   );
   const contextMenuOpen = contextMenuBookmark !== null && contextMenuBookmark === String(item.id || '');
   const folderIconId = String(item.id || `folder-${index}`);
-  const folderIconHtml = useMemo(() => ({
-    __html: isFolder ? options.getFigmaFolderSvg(`bookmark-${folderIconId}`, item.id) : ''
-  }), [isFolder, folderIconId, item.id, options]);
   const themeUrl = String(item.themeUrl || item.url || '');
   const host = String(item.host || options.getHostFromUrl(themeUrl) || '');
   const siteName = options.getSiteDisplayName(
@@ -1026,8 +1008,9 @@ function BookmarkCard({
           ref={iconRef}
           className="x-nt-bookmark-icon x-nt-bookmark-icon--figma"
           aria-hidden="true"
-          dangerouslySetInnerHTML={folderIconHtml}
-        />
+        >
+          <FolderIcon idSuffix={`bookmark-${folderIconId}`} folderId={item.id === undefined ? undefined : String(item.id)} />
+        </span>
       ) : (
         <>
           <img
@@ -1052,10 +1035,6 @@ function BookmarkCard({
           type="button"
           className="x-nt-bookmark-copy-action"
           aria-label={options.t('bookmarks_copy_url', 'Copy link')}
-          dangerouslySetInnerHTML={innerHtml(options.getRiSvg(
-              'ri-file-copy-line',
-              'ri-size-16'
-            ))}
           onPointerEnter={() => {
             options.hideCursorTooltip();
             setCopyActionVisible(true);
@@ -1083,8 +1062,9 @@ function BookmarkCard({
               .then(() => options.copyUrl(item.url))
               .catch(() => {});
           }}
-          onKeyDown={(event) => event.stopPropagation()}
-        />
+          onKeyDown={(event) => event.stopPropagation()}>
+          <RemixIcon name="ri-file-copy-line" size={16} />
+        </button>
       ) : null}
       {previewItems.length > 0 ? (
         <span className="x-nt-folder-preview">
@@ -1144,24 +1124,22 @@ function EmptyFolderState({
 }: {
   options: NormalizedBookmarksOptions;
 }) {
-  // Kept across re-renders of the same empty folder, so the art is not
-  // redrawn (and replayed) each time; its theme follows the wallpaper ink.
-  const artMarkup = useMemo(
-    () => getEmptyStateArtMarkup('emptyFolder', { size: 112 }),
-    []
-  );
+  // EmptyStateArt keeps the art across re-renders of the same empty folder,
+  // so it is not redrawn (and replayed) each time; its theme follows the
+  // wallpaper ink.
   const artRef = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
     const svg = artRef.current?.querySelector('svg');
     return svg ? followEmptyStateArtTheme(svg) : undefined;
-  }, [artMarkup]);
+  }, []);
   return (
     <div className="x-nt-bookmark-empty">
       <span
         ref={artRef}
         className="x-nt-bookmark-empty__art"
-        dangerouslySetInnerHTML={innerHtml(artMarkup)}
-      />
+      >
+        <EmptyStateArt name="emptyFolder" size={112} />
+      </span>
       <span>{options.t('bookmarks_empty_folder', '暂无内容')}</span>
     </div>
   );

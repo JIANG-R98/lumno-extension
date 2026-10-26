@@ -81,7 +81,6 @@ const controller = LumnoNewtabShortcutsController.createShortcutsController({
   shortcutFaviconStore: { mergeAll: (entries) => Promise.resolve(entries) },
   t: (key, fallback) => fallback,
   formatMessage: (key, fallback) => fallback,
-  getRiSvg: () => '',
   hideShortcutTooltip: noop,
   closeShortcutContextMenu: noop,
   syncOpenBookmarkCascadeAnchorVisual: noop,

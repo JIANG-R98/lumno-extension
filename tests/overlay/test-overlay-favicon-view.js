@@ -250,9 +250,6 @@ function createRuntime(options) {
       requestFaviconData: Object.prototype.hasOwnProperty.call(config, 'requestFaviconData')
         ? config.requestFaviconData
         : answerBrowserCacheRequests,
-      getRiSvg() {
-        return '';
-      },
       getHostFromUrl(url) {
         try {
           return new URL(url).hostname.toLowerCase();

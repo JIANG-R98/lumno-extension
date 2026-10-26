@@ -40,6 +40,7 @@ import type {
   WallpaperMode,
   WallpaperState
 } from './wallpaper-runtime-types';
+import type { SvgNode } from '../../../shared/ui/svg-tree';
 
 // The CRT settings stored as physical values and shown as percentages.
 type CrtParameterKey = 'crtStrength' | 'crtBloom' | 'crtRgbOffset' | 'crtCurvature';
@@ -73,7 +74,6 @@ interface PanelStateDeps extends
   NEWTAB_FAVICON_SVG_SHADOW_PATH: string;
   NEWTAB_FAVICON_SVG_MAIN_PATH: string;
   NEWTAB_FAVICON_OPTIONS: readonly NewtabFaviconOption[];
-  getRiSvg(id: string, sizeClass?: string, extraClass?: string): string;
   SETTINGS: Pick<typeof LumnoSettings,
     'NEWTAB_QUOTE_FONT_SIZE_MIN' | 'NEWTAB_QUOTE_FONT_SIZE_MAX' | 'NEWTAB_QUOTE_FONT_SIZE_DEFAULT' |
     'NEWTAB_TIME_FONT_SIZE_DEFAULT' | 'NEWTAB_TIME_FONT_SIZE_MIN' | 'NEWTAB_TIME_FONT_SIZE_MAX' |
@@ -170,7 +170,6 @@ function createPanelState(deps: PanelStateDeps) {
     NEWTAB_FAVICON_SVG_MAIN_PATH,
     NEWTAB_FAVICON_OPTIONS,
     getNewtabFaviconUrl,
-    getRiSvg,
     SETTINGS,
     getSearchWidthSnapPoints,
     getSearchWidthPercent,
@@ -307,12 +306,10 @@ function createPanelState(deps: PanelStateDeps) {
 
   // Asset URLs, icons and slider marks: fixed for the page's lifetime.
   function createWallpaperPanelModel(): WallpaperPanelModel {
-    const faviconInlineSvg = [
-      '<svg viewBox="0 0 104 104" fill="none" xmlns="http://www.w3.org/2000/svg">',
-      `<path opacity="var(--x-nt-favicon-shadow-opacity, 0.2)" d="${NEWTAB_FAVICON_SVG_SHADOW_PATH}" fill="currentColor"/>`,
-      `<path d="${NEWTAB_FAVICON_SVG_MAIN_PATH}" fill="currentColor" fill-opacity="var(--x-nt-favicon-main-opacity, 0.5)"/>`,
-      '</svg>'
-    ].join('');
+    const faviconInlineSvg: SvgNode = ['svg', { viewBox: '0 0 104 104', fill: 'none' }, [
+      ['path', { opacity: 'var(--x-nt-favicon-shadow-opacity, 0.2)', d: NEWTAB_FAVICON_SVG_SHADOW_PATH, fill: 'currentColor' }],
+      ['path', { d: NEWTAB_FAVICON_SVG_MAIN_PATH, fill: 'currentColor', 'fill-opacity': 'var(--x-nt-favicon-main-opacity, 0.5)' }]
+    ]];
     const uniqueSorted = (values: number[]) => values
       .filter((value, index, array) => array.indexOf(value) === index)
       .sort((a, b) => a - b);
@@ -320,20 +317,9 @@ function createPanelState(deps: PanelStateDeps) {
       appearanceOptions: WALLPAPER_APPEARANCE_MODES.map((mode) => ({ mode })),
       favicons: NEWTAB_FAVICON_OPTIONS.map((item) => ({
         id: item.id,
-        inlineSvg: item.preview === 'inlineSvg' ? faviconInlineSvg : '',
+        inlineSvg: item.preview === 'inlineSvg' ? faviconInlineSvg : undefined,
         previewUrl: item.preview === 'inlineSvg' ? '' : getNewtabFaviconUrl(item)
       })),
-      icons: {
-        add: getRiSvg('ri-add-large-line', 'ri-size-18'),
-        arrow: getRiSvg('ri-arrow-right-s-line', 'ri-size-14'),
-        check: getRiSvg('ri-check-line', 'ri-size-16'),
-        delete: getRiSvg('ri-close-line', 'ri-size-14'),
-        refresh: getRiSvg('ri-refresh-line', 'ri-size-14'),
-        info: getRiSvg('ri-information-line', 'ri-size-14'),
-        restore: getRiSvg('ri-arrow-go-back-line', 'ri-size-14'),
-        link: getRiSvg('ri-link', 'ri-size-18'),
-        wallpaper: getRiSvg('ri-t-shirt-2-line', 'ri-size-20')
-      },
       marks: {
         // One mark per snap point, so the marks show where the slider settles.
         searchWidth: getSliderMarks(getSearchWidthSnapPoints(), getSearchWidthPercent),

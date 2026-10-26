@@ -6,6 +6,7 @@ import type * as ShortcutsStore from '../../domain/shortcuts-store';
 import type { ShortcutItem, ShortcutLink } from '../../domain/shortcuts-store';
 import { isHtmlElement, isHtmlTag } from '../../shared/dom-guards';
 import { queryHtmlElement } from '../../shared/dom-lookup';
+import { createRemixIconElement } from '../../shared/ui/remix-icon';
 import type { BookmarkDragSession } from '../bookmarks/bookmark-drag';
 import type { BookmarkDragController } from '../bookmarks/bookmark-drag-controller';
 import type * as MoveHistory from '../bookmarks/bookmark-move-history';
@@ -71,7 +72,6 @@ interface RecentCardDragDeps {
   showToast: ShowToast;
   t: Translate;
   formatMessage: FormatMessage;
-  getRiSvg(id: string, sizeClass?: string, extraClass?: string): string;
   pageState: RecentCardDragState;
 }
 
@@ -147,7 +147,6 @@ function createRecentCardDrag(deps: RecentCardDragDeps) {
     showToast,
     t,
     formatMessage,
-    getRiSvg
   } = deps;
 
   // The page state object shared with newtab.js and the other modules.
@@ -224,7 +223,7 @@ function createRecentCardDrag(deps: RecentCardDragDeps) {
     if (!icon) {
       icon = document.createElement('span');
       icon.className = 'x-nt-favicon-fallback';
-      icon.innerHTML = getRiSvg('ri-link', 'ri-size-16');
+      icon.append(createRemixIconElement(document, { name: 'ri-link', size: 16 }));
     }
     icon.removeAttribute('id');
     icon.setAttribute('data-visible', 'true');

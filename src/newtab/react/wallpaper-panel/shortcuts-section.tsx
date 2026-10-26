@@ -9,7 +9,6 @@ export function ShortcutsSection({ panel }: { panel: WallpaperPanelContext }) {
   const {
     shortcuts,
     shortcutsOpen,
-    arrowIcon,
     setShortcutsExpanded,
     shortcutsExpanded,
     actions,
@@ -27,7 +26,6 @@ export function ShortcutsSection({ panel }: { panel: WallpaperPanelContext }) {
       >
         <div className="x-nt-wallpaper-panel-header x-nt-shortcuts-accordion-row">
           <SectionTrigger
-            arrowIcon={arrowIcon}
             bodyId="_x_extension_newtab_shortcuts_settings_2026_unique_"
             disabled={!shortcuts.enabled}
             expanded={shortcutsOpen}

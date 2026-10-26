@@ -4,6 +4,7 @@ import {
 } from 'react';
 import { RemixIcon as Icon } from '../../shared/react/remix-icon';
 import { HighlightedText } from './site-search-demo';
+import type { RemixIconName } from '../../shared/ui/remix-icon';
 
 export interface BookmarkFocusResult {
   actionTagLabel?: string;
@@ -142,11 +143,11 @@ function BrowserWindow() {
 
 function SuggestionInlineIcon({
   className,
-  iconClass,
+  iconName,
   tone
 }: {
   className?: string;
-  iconClass: string;
+  iconName: RemixIconName;
   tone?: string;
 }) {
   return (
@@ -154,7 +155,7 @@ function SuggestionInlineIcon({
       className={className || 'x-ov-suggestion-inline-icon'}
       data-tone={tone}
     >
-      <Icon className={iconClass} />
+      <Icon name={iconName} />
     </span>
   );
 }
@@ -178,21 +179,21 @@ function ResultFavicon({
   ].includes(type);
   const hasImage = Boolean(!usesInlineIcon && favicon && !failed);
   let content = (
-    <SuggestionInlineIcon iconClass="ri-link" />
+    <SuggestionInlineIcon iconName="ri-link" />
   );
   if (type === 'newtab' || type === 'googleSuggest') {
     content = (
-      <SuggestionInlineIcon iconClass="ri-search-line" tone="subtext" />
+      <SuggestionInlineIcon iconName="ri-search-line" tone="subtext" />
     );
   } else if (type === 'browserPage') {
-    content = <SuggestionInlineIcon iconClass="ri-link" />;
+    content = <SuggestionInlineIcon iconName="ri-link" />;
   } else if (type === 'commandNewTab') {
     content = (
-      <SuggestionInlineIcon iconClass="ri-add-line" tone="subtext" />
+      <SuggestionInlineIcon iconName="ri-add-line" tone="subtext" />
     );
   } else if (type === 'commandSettings') {
     content = (
-      <SuggestionInlineIcon iconClass="ri-settings-3-line" tone="subtext" />
+      <SuggestionInlineIcon iconName="ri-settings-3-line" tone="subtext" />
     );
   } else if (hasImage) {
     content = (
@@ -334,7 +335,7 @@ function OverlayResult({
               data-visible="false"
               type="button"
             >
-              <Icon className="ri-delete-bin-6-line" />
+              <Icon name="ri-delete-bin-6-line" />
             </button>
           </div>
         ) : null}
@@ -381,7 +382,7 @@ function OverlayPanel({
     >
       <div className="x-lumno-search-input x-lumno-search-input__container">
         <span className="x-lumno-search-input__icon">
-          <Icon className="ri-search-line ri-size-16" />
+          <Icon name="ri-search-line" size={16} />
         </span>
         <div
           aria-label={model.searchAriaLabel}
@@ -397,7 +398,7 @@ function OverlayPanel({
           className="x-lumno-search-input__right-icon"
           type="button"
         >
-          <Icon className="ri-settings-line ri-size-16" />
+          <Icon name="ri-settings-line" size={16} />
         </button>
         <div
           className="x-lumno-search-input-mode__badge"

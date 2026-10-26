@@ -19,7 +19,7 @@ import { surfaceClass, setSurfaceStyle } from './surface-options';
 import { bindTextTooltip } from './highlight';
 import { setIconEmphasis } from './action-styles';
 import { queryHtmlTag } from '../../../dom-lookup';
-import { innerHtml } from '../../inner-html';
+import { RemixIcon } from '../../remix-icon';
 
 function OpenTabRowComponent({
   runtime,
@@ -365,11 +365,9 @@ function OpenTabRowComponent({
                     ? 'x-ov-inline-icon'
                     : undefined
                 }
-                dangerouslySetInnerHTML={innerHtml(options.getRiSvg(
-                    'ri-arrow-right-line',
-                    'ri-size-12'
-                  ))}
-              />
+              >
+                <RemixIcon name="ri-arrow-right-line" size={12} />
+              </span>
             </>
           )}
         </button>

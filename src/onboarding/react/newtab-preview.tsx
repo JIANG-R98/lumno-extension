@@ -4,6 +4,7 @@ import {
   type CSSProperties
 } from 'react';
 import { RemixIcon as Icon } from '../../shared/react/remix-icon';
+import type { RemixIconName } from '../../shared/ui/remix-icon';
 
 type PreviewHoverTarget = 'idle' | 'recent' | 'bookmark';
 type Rgb = [number, number, number];
@@ -11,7 +12,7 @@ type Rgb = [number, number, number];
 export interface NewtabPreviewItem {
   accentRgb?: readonly number[];
   alt?: boolean;
-  iconClass?: string;
+  iconName?: RemixIconName;
   iconSrc?: string;
   previewUrls?: readonly string[];
   siteName?: string;
@@ -236,12 +237,12 @@ function FolderGlyph({ idSuffix }: { idSuffix: string }) {
 
 function PreviewFavicon({
   className,
-  fallbackIconClass,
+  fallbackIconName,
   idSuffix,
   item
 }: {
   className: string;
-  fallbackIconClass: string;
+  fallbackIconName: RemixIconName;
   idSuffix: string;
   item: NewtabPreviewItem;
 }) {
@@ -268,7 +269,7 @@ function PreviewFavicon({
   }
   return (
     <span className={`${className} newtab-preview-glyph-favicon`.trim()}>
-      <Icon className={item.iconClass || fallbackIconClass || 'ri-link'} />
+      <Icon name={item.iconName || fallbackIconName || 'ri-link'} />
     </span>
   );
 }
@@ -311,7 +312,7 @@ function PreviewSearchPanel({ model }: { model: NewtabPreviewModel }) {
             className="x-lumno-search-input__icon"
             id="_x_extension_newtab_search_icon_2024_unique_"
           >
-            <Icon className="ri-search-line" />
+            <Icon name="ri-search-line" />
           </span>
           <input
             aria-label={model.searchAriaLabel}
@@ -329,7 +330,7 @@ function PreviewSearchPanel({ model }: { model: NewtabPreviewModel }) {
             tabIndex={-1}
             type="button"
           >
-            <Icon className="ri-settings-3-line" />
+            <Icon name="ri-settings-3-line" />
           </button>
           <span
             className="x-lumno-search-input__divider"
@@ -387,7 +388,7 @@ function SectionModeSelect({
       >
         <span className="_x_extension_select_label_2024_unique_">{label}</span>
         <span className="_x_extension_select_icon_2024_unique_">
-          <Icon className="ri-more-line" />
+          <Icon name="ri-more-line" />
         </span>
       </button>
     </div>
@@ -405,17 +406,17 @@ function SectionPager({
     {
       ariaLabel: formatTemplate(model.previousLabelTemplate, { label }),
       disabled: true,
-      iconClass: 'ri-arrow-left-s-line'
+      iconName: 'ri-arrow-left-s-line' as const
     },
     {
       ariaLabel: formatTemplate(model.nextLabelTemplate, { label }),
       disabled: false,
-      iconClass: 'ri-arrow-right-s-line'
+      iconName: 'ri-arrow-right-s-line' as const
     },
     {
       ariaLabel: model.bookmarkManagerLabel,
       disabled: false,
-      iconClass: 'ri-bookmark-line'
+      iconName: 'ri-bookmark-line' as const
     }
   ];
   return (
@@ -425,11 +426,11 @@ function SectionPager({
           aria-disabled={button.disabled ? 'true' : 'false'}
           aria-label={button.ariaLabel}
           className="x-nt-bookmarks-pager-btn"
-          key={button.iconClass}
+          key={button.iconName}
           tabIndex={-1}
           type="button"
         >
-          <Icon className={button.iconClass} />
+          <Icon name={button.iconName} />
         </button>
       ))}
     </div>
@@ -464,7 +465,7 @@ function RecentCard({
         <div className="x-nt-recent-header">
           <PreviewFavicon
             className="x-nt-recent-favicon"
-            fallbackIconClass="ri-global-line"
+            fallbackIconName="ri-global-line"
             idSuffix={`recent-${index}`}
             item={item}
           />
@@ -475,13 +476,13 @@ function RecentCard({
       <div className="x-nt-recent-url">
         <div className="x-nt-recent-action">
           <span>{model.visitLabel}</span>
-          <Icon className="ri-arrow-right-line" />
+          <Icon name="ri-arrow-right-line" />
         </div>
         <span className="x-nt-recent-url-text">
           {String(item.urlText || '')}
         </span>
         <button className="x-nt-recent-pin" tabIndex={-1} type="button">
-          <Icon className="ri-pushpin-line" />
+          <Icon name="ri-pushpin-line" />
         </button>
       </div>
     </div>
@@ -524,7 +525,7 @@ function BookmarkCard({
             ? 'x-nt-bookmark-icon x-nt-bookmark-icon--figma newtab-preview-folder-glyph'
             : 'x-nt-bookmark-icon'
         }
-        fallbackIconClass="ri-bookmark-3-line"
+        fallbackIconName="ri-bookmark-3-line"
         idSuffix={`bookmark-${title}-${index}`}
         item={item}
       />

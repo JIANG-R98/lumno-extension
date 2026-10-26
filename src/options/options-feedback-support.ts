@@ -104,7 +104,7 @@ function buildFeedbackSupportModel(input: FeedbackSupportModelInput): FeedbackSu
       ...(communityIsWechat
         ? [{
             href: links.wechatQr,
-            iconClass: 'ri-wechat-line',
+            iconName: 'ri-wechat-line' as const,
             key: 'community',
             label: getMessage('settings_feedback_support_wechat_action', '加入反馈群'),
             labelKey: 'settings_feedback_support_wechat_action',
@@ -118,21 +118,21 @@ function buildFeedbackSupportModel(input: FeedbackSupportModelInput): FeedbackSu
         : []),
       {
         href: communityLinks.getReviewUrl(links),
-        iconClass: 'ri-star-line',
+        iconName: 'ri-star-line' as const,
         key: 'chrome-review',
         label: getMessage('settings_feedback_support_review_action', '为 Lumno 评分'),
         labelKey: 'settings_feedback_support_review_action'
       },
       {
         href: links.githubIssue,
-        iconClass: 'ri-github-line',
+        iconName: 'ri-github-line' as const,
         key: 'github-issue',
         label: getMessage('settings_feedback_support_github_issue_action', '创建 Issue'),
         labelKey: 'settings_feedback_support_github_issue_action'
       },
       {
         href: links.x,
-        iconClass: 'ri-twitter-x-line',
+        iconName: 'ri-twitter-x-line' as const,
         key: 'contact-author',
         label: getMessage('settings_feedback_support_contact_author_action', '联系作者'),
         labelKey: 'settings_feedback_support_contact_author_action'

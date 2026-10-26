@@ -7,21 +7,19 @@ import type {
   WallpaperPanelActions,
   SelectedSourceState,
   DailyState,
-  WallpaperPanelModel,
   OnlineTileState
 } from './panel-model';
 import { ref, tooltipHandlers, Switch } from './panel-primitives';
 import { LinkButton } from '../../../shared/react/link-button';
 import { InfoButton } from './panel-controls';
-import { innerHtml } from '../../../shared/react/inner-html';
+import { RemixIcon } from '../../../shared/react/remix-icon';
+import { SvgTree } from '../../../shared/react/svg-tree';
 
 export function WallpaperTile({
-  checkIcon,
   onPrime,
   onSelect,
   tile
 }: {
-  checkIcon: string;
   onPrime?(): void;
   onSelect(): void;
   tile: TileState & { disabled?: boolean; tooltip?: string };
@@ -52,20 +50,19 @@ export function WallpaperTile({
       </span>
       <span
         className="x-nt-wallpaper-check"
-        dangerouslySetInnerHTML={innerHtml(checkIcon)}
-      />
+      >
+        <RemixIcon name="ri-check-line" size={16} />
+      </span>
     </button>
   );
 }
 
 export function FaviconTile({
-  checkIcon,
   item,
   label,
   onSelect,
   selected
 }: {
-  checkIcon: string;
   item: FaviconItem;
   label: string;
   onSelect(): void;
@@ -86,8 +83,9 @@ export function FaviconTile({
           <span
             aria-hidden="true"
             className="x-nt-favicon-image x-nt-favicon-svg-preview"
-            dangerouslySetInnerHTML={innerHtml(item.inlineSvg)}
-          />
+          >
+            <SvgTree node={item.inlineSvg} />
+          </span>
         ) : (
           <img
             alt=""
@@ -99,8 +97,9 @@ export function FaviconTile({
       </span>
       <span
         className="x-nt-wallpaper-check"
-        dangerouslySetInnerHTML={innerHtml(checkIcon)}
-      />
+      >
+        <RemixIcon name="ri-check-line" size={16} />
+      </span>
     </button>
   );
 }
@@ -119,14 +118,10 @@ const isFromDeleteButton = (event: { target: EventTarget | null }) => Boolean(
 
 export function CustomWallpaperTile({
   actions,
-  checkIcon,
-  deleteIcon,
   deleteLabel,
   tile
 }: {
   actions: WallpaperPanelActions;
-  checkIcon: string;
-  deleteIcon: string;
   deleteLabel: string;
   tile: TileState;
 }) {
@@ -163,19 +158,21 @@ export function CustomWallpaperTile({
       </span>
       <span
         className="x-nt-wallpaper-check"
-        dangerouslySetInnerHTML={innerHtml(checkIcon)}
-      />
+      >
+        <RemixIcon name="ri-check-line" size={16} />
+      </span>
       <button
         aria-label={deleteLabel || undefined}
         className="x-nt-wallpaper-delete-button"
-        dangerouslySetInnerHTML={innerHtml(deleteIcon)}
         onClick={(event: ReactMouseEvent<HTMLButtonElement>) => {
           event.preventDefault();
           event.stopPropagation();
           actions.deleteWallpaper(tile.id);
         }}
         type="button"
-      />
+      >
+        <RemixIcon name="ri-close-line" />
+      </button>
     </div>
   );
 }
@@ -201,13 +198,11 @@ export function SelectedSource({ name, source }: { name: string; source: Selecte
 export function DailyRow({
   actions,
   daily: state,
-  icons,
   name,
   onToggle
 }: {
   actions: WallpaperPanelActions;
   daily: DailyState;
-  icons: WallpaperPanelModel['icons'];
   name: string;
   onToggle(enabled: boolean): void;
 }) {
@@ -217,7 +212,6 @@ export function DailyRow({
         <span {...ref(`${name}DailyLabel`)} className="x-nt-wallpaper-mode-sync-title">{state.label}</span>
         <InfoButton
           actions={actions}
-          icon={String(icons?.info || '')}
           label={state.infoTooltip}
           name={`${name}DailyInfoButton`}
           tooltip={state.infoTooltip}
@@ -229,14 +223,15 @@ export function DailyRow({
           {...tooltipHandlers(actions, state.restoreLabel)}
           aria-label={state.restoreLabel || undefined}
           className="x-nt-panel-icon-button x-nt-daily-restore"
-          dangerouslySetInnerHTML={innerHtml(String(icons?.restore || ''))}
           hidden={!state.restoreVisible}
           onClick={() => {
             actions.hideTooltip();
             actions.restoreDailyWallpaper();
           }}
           type="button"
-        />
+        >
+          <RemixIcon name="ri-arrow-go-back-line" />
+        </button>
         <Switch name={`${name}DailyToggle`} onChange={onToggle} toggle={state.toggle} />
       </span>
     </div>
@@ -245,13 +240,11 @@ export function DailyRow({
 
 export function OnlineTiles({
   actions,
-  checkIcon,
   name,
   onSelect,
   tiles
 }: {
   actions: WallpaperPanelActions;
-  checkIcon: string;
   name: string;
   onSelect(id: string): void;
   tiles: OnlineTileState[];
@@ -289,8 +282,9 @@ export function OnlineTiles({
           </span>
           <span
             className="x-nt-wallpaper-check"
-            dangerouslySetInnerHTML={innerHtml(checkIcon)}
-          />
+          >
+            <RemixIcon name="ri-check-line" size={16} />
+          </span>
         </button>
       ))}
     </>

@@ -39,7 +39,6 @@ const controller = LumnoNewtabShortcutsController.createShortcutsController({
   },
   t: (key, fallback) => fallback,
   formatMessage: (key, fallback) => fallback,
-  getRiSvg: () => '',
   hideShortcutTooltip: noop,
   closeShortcutContextMenu: noop,
   syncOpenBookmarkCascadeAnchorVisual: noop,

@@ -25,6 +25,7 @@ import type {
   PopupSyncModel
 } from './react/popup-view';
 import { getPopupApi } from './react/popup-view';
+import type { RemixIconName } from '../shared/ui/remix-icon';
 
 type Translate = (key: string, fallback: string) => string;
 
@@ -35,7 +36,7 @@ interface PopupTab {
   title: string;
   favIconUrl?: string;
   iconUrl?: string;
-  iconClass?: string;
+  iconName?: RemixIconName | null;
   host?: string;
 }
 
@@ -88,7 +89,8 @@ interface PageDescription {
   kind: 'lumno' | 'browser' | 'extension' | 'file' | 'web';
   // Extension-relative.
   iconPath: string;
-  iconClass: string;
+  // Pages with an icon image draw no glyph.
+  iconName: RemixIconName | null;
   host: string;
 }
 
@@ -142,24 +144,24 @@ const BROWSER_LOGOS: ReadonlyArray<readonly [RegExp, string]> = Object.freeze([
 function describePage(url: string, context?: PageContext | null): PageDescription {
   const config = context || {};
   if (config.ownBase && url.startsWith(config.ownBase)) {
-    return { kind: 'lumno', iconPath: 'assets/images/lumno.png', iconClass: '', host: 'Lumno' };
+    return { kind: 'lumno', iconPath: 'assets/images/lumno.png', iconName: null, host: 'Lumno' };
   }
   if (typeof config.isBrowserInternalUrl === 'function' && config.isBrowserInternalUrl(url)) {
     const logo = BROWSER_LOGOS.find(([pattern]) => pattern.test(String(config.browserName || '')));
     return {
       kind: 'browser',
       iconPath: logo ? `assets/images/browser-logos/${logo[1]}` : '',
-      iconClass: logo ? '' : 'ri-window-line',
+      iconName: logo ? null : 'ri-window-line',
       host: url
     };
   }
   if (/^(?:chrome|moz|edge)-extension:/i.test(url)) {
-    return { kind: 'extension', iconPath: '', iconClass: 'ri-puzzle-line', host: getHost(url) };
+    return { kind: 'extension', iconPath: '', iconName: 'ri-puzzle-line', host: getHost(url) };
   }
   if (/^file:/i.test(url)) {
-    return { kind: 'file', iconPath: '', iconClass: 'ri-file-line', host: url };
+    return { kind: 'file', iconPath: '', iconName: 'ri-file-line', host: url };
   }
-  return { kind: 'web', iconPath: '', iconClass: 'ri-global-line', host: getHost(url) };
+  return { kind: 'web', iconPath: '', iconName: 'ri-global-line', host: getHost(url) };
 }
 
 // "3 minutes ago" in the popup's language, "now" under a minute.
@@ -232,19 +234,19 @@ function buildModel(state: PopupState, t: Translate): PopupModel {
     action('search', {
       label: t('popup_open_command_bar', 'Open command bar'),
       tooltip: state.shortcuts.search,
-      iconClass: 'ri-search-line',
+      iconName: 'ri-search-line',
       disabled: !tab
     }),
     action('copy', {
       label: t('popup_action_copy', 'Copy link'),
       tooltip: state.shortcuts.copy,
-      iconClass: 'ri-link',
+      iconName: 'ri-link',
       disabled: !url
     }),
     action('shortcut', {
       label: t('popup_action_shortcut', 'Add shortcut'),
       tooltip: t('popup_action_shortcut_tooltip', 'Add to your New Tab shortcuts'),
-      iconClass: 'ri-apps-2-add-line',
+      iconName: 'ri-apps-2-add-line',
       disabled: !canSaveToNewTab
     }),
     action('pin', {
@@ -256,7 +258,7 @@ function buildModel(state: PopupState, t: Translate): PopupModel {
         : (pinFull
           ? t('recent_pin_limit', 'You can pin up to 3 cards')
           : t('popup_action_pin_recent_tooltip', 'Pin to Recent on New Tab')),
-      iconClass: pinned ? 'ri-unpin-line' : 'ri-pushpin-line',
+      iconName: pinned ? 'ri-unpin-line' : 'ri-pushpin-line',
       disabled: !canSaveToNewTab || pinFull
     })
   ];
@@ -270,7 +272,7 @@ function buildModel(state: PopupState, t: Translate): PopupModel {
     actions.push(action('clip', {
       label: t('settings_document_pip_title', 'Web clip'),
       tooltip: restricted ? unavailable : t('popup_action_clip_tooltip', 'Clip part of the page into a floating window'),
-      iconClass: 'ri-screenshot-2-line',
+      iconName: 'ri-screenshot-2-line',
       disabled: restricted
     }));
   }
@@ -283,7 +285,7 @@ function buildModel(state: PopupState, t: Translate): PopupModel {
       tooltip: pip.hasVideo || pip.active
         ? t('popup_action_pip_tooltip', 'Float this page’s video in a small window')
         : '',
-      iconClass: 'ri-picture-in-picture-2-line',
+      iconName: 'ri-picture-in-picture-2-line',
       disabled: !pip.hasVideo && !pip.active,
       menu: {
         label: t('popup_action_pip_menu', 'Auto picture-in-picture'),
@@ -300,7 +302,7 @@ function buildModel(state: PopupState, t: Translate): PopupModel {
       title: tab ? String(tab.title || getHost(url) || url) : 'Lumno',
       host: tab ? (tab.host === undefined ? getHost(url) : String(tab.host)) : '',
       iconUrl: tab ? String(tab.iconUrl || '') : '',
-      iconClass: tab ? String(tab.iconClass || 'ri-global-line') : 'ri-global-line'
+      iconName: (tab && tab.iconName) || 'ri-global-line'
     },
     actionsLabel: t('popup_actions_label', 'Page actions'),
     actions,
@@ -377,10 +379,10 @@ function buildModel(state: PopupState, t: Translate): PopupModel {
       ]
     },
     links: [
-      { id: 'release', label: t('popup_release_notes', 'What’s new'), iconClass: 'ri-sparkling-2-line' },
-      { id: 'feedback', label: t('popup_link_feedback', 'Feedback'), iconClass: 'ri-chat-smile-2-line' },
-      { id: 'shortcuts', label: t('popup_link_shortcuts', 'Set shortcuts'), iconClass: 'ri-keyboard-box-line' },
-      { id: 'settings', label: t('popup_link_settings', 'Settings'), iconClass: 'ri-settings-3-line' }
+      { id: 'release', label: t('popup_release_notes', 'What’s new'), iconName: 'ri-sparkling-2-line' },
+      { id: 'feedback', label: t('popup_link_feedback', 'Feedback'), iconName: 'ri-chat-smile-2-line' },
+      { id: 'shortcuts', label: t('popup_link_shortcuts', 'Set shortcuts'), iconName: 'ri-keyboard-box-line' },
+      { id: 'settings', label: t('popup_link_settings', 'Settings'), iconName: 'ri-settings-3-line' }
     ],
     sync: buildSyncModel(state.syncStatus, t, state.now, state.lang),
     version: `Lumno ${state.version || ''}`.trim()
@@ -918,7 +920,7 @@ function start(): void {
         isBrowserInternalUrl: urlGuards.isBrowserInternalUrl
       });
       tab.iconUrl = page.iconPath ? chromeApi.runtime.getURL(page.iconPath) : getFaviconUrl(tab, page);
-      tab.iconClass = page.iconClass;
+      tab.iconName = page.iconName;
       tab.host = page.host;
       state.tab = tab;
       state.restricted = urlGuards.isRestrictedUrl(url);

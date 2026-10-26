@@ -1,7 +1,6 @@
 import type { CSSProperties } from 'react';
-import { getEmptyStateArtMarkup } from '../ui/empty-state-art';
+import { EmptyStateArt } from './empty-state-art';
 import { createReactRootController, type ReactRootController } from './root-controller';
-import { innerHtml } from './inner-html';
 
 // The link preview window over a page: the receded page behind it, the
 // frame, the notice for a page that refuses to be framed, the buttons
@@ -126,13 +125,12 @@ function blockScroll(event: Event): void {
   event.preventDefault();
 }
 
-function LinkPreviewView({ model, handlers, refs, styles, toastStylesheetUrl, blockedArt }: {
+function LinkPreviewView({ model, handlers, refs, styles, toastStylesheetUrl }: {
   model: LinkPreviewViewModel;
   handlers: LinkPreviewViewHandlers;
   refs: RefSetters;
   styles: string;
   toastStylesheetUrl: string;
-  blockedArt: string;
 }) {
   const rootStyle: CSSProperties = {
     ...(model.viewport
@@ -184,7 +182,9 @@ function LinkPreviewView({ model, handlers, refs, styles, toastStylesheetUrl, bl
               src={model.frameUrl}
             />
             <div className="notice">
-              <span dangerouslySetInnerHTML={innerHtml(blockedArt)} />
+              <span>
+                <EmptyStateArt name="blockedPage" size={176} />
+              </span>
               <div>{model.labels.blocked}</div>
               <button onClick={handlers.onOpenInTab} type="button">{model.labels.openInTab}</button>
             </div>
@@ -254,10 +254,8 @@ function createLinkPreviewView(
     toastElement(element) { refs.toastElement = element; },
     toastStylesheet(element) { refs.toastStylesheet = element; }
   };
-  const blockedArt = getEmptyStateArtMarkup('blockedPage', { size: 176 });
   const view = createReactRootController(shadowRoot, (next: LinkPreviewViewModel) => (
     <LinkPreviewView
-      blockedArt={blockedArt}
       handlers={handlers}
       model={next}
       refs={setters}

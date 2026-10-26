@@ -102,7 +102,6 @@ interface WallpaperPageDeps extends Pick<TopContentRuntime,
   getThemeScope(): string;
   setThemeMode(mode: string): void;
   setThemeScope(scope: ThemeScope): void;
-  getRiSvg(id: string, sizeClass?: string, extraClass?: string): string;
   showToast: ShowToast;
   beginToast(message: string): ToastTask;
   showTopActionTooltip(anchor: HTMLElement, text: string, options?: { placement?: string }): void;
@@ -173,7 +172,6 @@ function createWallpaperPage(deps: WallpaperPageDeps) {
     getThemeScope,
     setThemeMode,
     setThemeScope,
-    getRiSvg,
     showToast,
     beginToast,
     showTopActionTooltip,
@@ -517,7 +515,6 @@ function createWallpaperPage(deps: WallpaperPageDeps) {
     getGlobalThemeMode: () => pageState.globalThemeMode,
     setThemeMode: (...args) => setThemeMode(...args),
     setThemeScope: (...args) => setThemeScope(...args),
-    getRiSvg,
     showToast,
     beginToast,
     showTopActionTooltip: (...args) => showTopActionTooltip(...args),

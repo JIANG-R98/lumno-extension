@@ -3,6 +3,7 @@
 // favicon runtime finds it there, sizes it to the image and shows or hides it.
 import type { CSSProperties } from 'react';
 import { RemixIcon } from './remix-icon';
+import type { RemixIconName } from '../ui/remix-icon';
 
 // How the New Tab icon sits on its surface: a tag-colored tile, the bookmark
 // card's icon color, or bare beside a suggestion.
@@ -34,7 +35,7 @@ export function FaviconFallback({
   tone = 'tag',
   visible = false
 }: {
-  iconName?: string;
+  iconName?: RemixIconName;
   tone?: FaviconFallbackTone;
   visible?: boolean;
 }) {
@@ -45,7 +46,7 @@ export function FaviconFallback({
       data-visible={visible ? 'true' : 'false'}
       style={TONE_STYLES[tone]}
     >
-      <RemixIcon className={`ri-size-16 ${iconName}`} />
+      <RemixIcon name={iconName} size={16} />
     </span>
   );
 }
@@ -58,7 +59,7 @@ export function FolderPreviewFaviconFallback() {
       className="x-nt-folder-preview-favicon x-nt-folder-preview-favicon--fallback _x_extension_favicon_fallback_2024_unique_"
       data-visible="false"
     >
-      <RemixIcon className="ri-size-12 ri-link" />
+      <RemixIcon name="ri-link" size={12} />
     </span>
   );
 }
@@ -70,7 +71,7 @@ export function OverlayFaviconFallback() {
       className="x-ov-suggestion-inline-icon x-ov-suggestion-favicon-fallback _x_extension_overlay_favicon_fallback_2026_unique_"
       data-visible="false"
     >
-      <RemixIcon className="ri-size-16 ri-link" />
+      <RemixIcon name="ri-link" size={16} />
     </span>
   );
 }

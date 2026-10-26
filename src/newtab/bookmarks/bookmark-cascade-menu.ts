@@ -75,7 +75,6 @@ interface BookmarkCascadeMenuOptions {
   getHostFromUrl?(url: string): string;
   getSiteDisplayName?(host: string, title: string): string;
   getUrlDisplay?(url: string): string;
-  getFigmaFolderSvg?(suffix: string, folderId?: string): string;
   initFolderPathMorph?(icon: Element): void;
   playFolderPathMorph?(icon: Element, toHover: boolean): void;
   attachFaviconWithFallbacks?(image: HTMLImageElement, url: string, host: string, options: FaviconFallbackOptions): void;
@@ -109,7 +108,7 @@ interface CascadeRowContent {
   item: BookmarkItem;
   isFolder: boolean;
   title: string;
-  folderIconMarkup: string;
+  folderIconSuffix: string;
   iconUrl: string;
   iconMonochrome: boolean;
   iconAlt: string;
@@ -222,7 +221,6 @@ function createBookmarkCascadeMenuRuntime(options?: BookmarkCascadeMenuOptions) 
   const getHostFromUrl = config.getHostFromUrl || (() => '');
   const getSiteDisplayName = config.getSiteDisplayName || ((_host: string, title: string) => title || '');
   const getUrlDisplay = config.getUrlDisplay || ((url: string) => url || '');
-  const getFigmaFolderSvg = config.getFigmaFolderSvg || (() => '');
   const initFolderPathMorph = config.initFolderPathMorph || noop;
   const playFolderPathMorph = config.playFolderPathMorph || noop;
   const attachFaviconWithFallbacks = config.attachFaviconWithFallbacks || noop;
@@ -370,7 +368,7 @@ function createBookmarkCascadeMenuRuntime(options?: BookmarkCascadeMenuOptions) 
           expanded: row.isFolder && isRowExpanded(entry, row.key),
           hoverSuppressed: entry.suppressedKeys.has(row.key),
           contextMenuOpen: contextMenuBookmarkId !== '' && contextMenuBookmarkId === String(row.item.id || ''),
-          folderIconMarkup: row.folderIconMarkup,
+          folderIconSuffix: row.folderIconSuffix,
           iconUrl: row.iconUrl,
           iconMonochrome: row.iconMonochrome,
           iconAlt: row.iconAlt,
@@ -1276,7 +1274,7 @@ function createBookmarkCascadeMenuRuntime(options?: BookmarkCascadeMenuOptions) 
       item,
       isFolder,
       title,
-      folderIconMarkup: isFolder ? getFigmaFolderSvg(`${id || 'folder'}-cascade-${index}`, id) : '',
+      folderIconSuffix: isFolder ? `${id || 'folder'}-cascade-${index}` : '',
       iconUrl,
       // Lumno's black glyph icons need inverting on dark menus.
       iconMonochrome: /\/glyph-(?:gh|gpt|mdn|wk|zw)\.svg(?:[?#]|$)/.test(iconUrl),

@@ -28,9 +28,6 @@ export interface WallpaperPanelProps {
 export function useWallpaperPanel(props: WallpaperPanelProps) {
   const { documentObj, model, quoteSettings, registerSelect, sectionSettings, state } = props;
   const { actions, glassStyle } = state;
-  const checkIcon = String(model.icons?.check || '');
-  const arrowIcon = String(model.icons?.arrow || '');
-  const infoIcon = String(model.icons?.info || '');
   const marks = model.marks || {};
   const { bubble, node: bubbleNode } = useSliderValueBubble(documentObj, state.open);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -96,9 +93,6 @@ export function useWallpaperPanel(props: WallpaperPanelProps) {
     state,
     actions,
     glassStyle,
-    checkIcon,
-    arrowIcon,
-    infoIcon,
     marks,
     bubble,
     bubbleNode,

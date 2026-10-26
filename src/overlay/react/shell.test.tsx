@@ -5,7 +5,7 @@ import { createOverlayShellApi } from './shell';
 import { queryHtmlTag } from '../../shared/dom-lookup';
 
 afterEach(() => {
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
   document.head
     .querySelectorAll('[id^="_x_extension_"]')
     .forEach((element) => element.remove());

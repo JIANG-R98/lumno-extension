@@ -1,5 +1,6 @@
 // Types the suggestion list shares between its rows, its runtime and the
 // New Tab and overlay adapters that create it.
+import type { RemixIconName } from '../../../ui/remix-icon';
 import type { TabRankFields } from '../../../../domain/messages';
 import type { HelpContextBlock } from '../../../../domain/search/help-center-search';
 import type {
@@ -32,8 +33,7 @@ export interface Suggestion extends DisplayedSuggestion {
   };
   // A help center page's matched passage.
   context?: HelpContextBlock[];
-  // A help or feedback row's Remix icon and which link it opens.
-  iconName?: string;
+  // Which link a feedback row opens.
   feedbackKey?: string;
 }
 
@@ -190,7 +190,6 @@ export interface SuggestionsViewOptions {
     values?: Record<string, string>
   ) => string;
   actionModel?: SuggestionActionModel;
-  getRiSvg?: (name: string, sizeClass?: string) => string;
   sanitizeDisplayText?: (value: unknown) => string;
   formatTabRankDebugText?: (tab: OpenTabSuggestion) => string;
   isTabRankScoreDebugEnabled?: () => boolean;
@@ -335,7 +334,6 @@ export interface NormalizedOptions {
   t: Translate;
   formatMessage: NonNullable<SuggestionsViewOptions['formatMessage']>;
   actionModel: SuggestionActionModel;
-  getRiSvg: NonNullable<SuggestionsViewOptions['getRiSvg']>;
   sanitizeDisplayText: NonNullable<
     SuggestionsViewOptions['sanitizeDisplayText']
   >;
@@ -482,7 +480,7 @@ export interface SuggestionValueRef {
 
 export interface IconSpec {
   kind: 'favicon' | 'inline';
-  iconName?: string;
+  iconName?: RemixIconName;
   tone?: string;
   src?: string;
   attach?: boolean;
@@ -490,7 +488,7 @@ export interface IconSpec {
   host?: string;
   favicon?: string;
   objectFitContain?: boolean;
-  fallbackIconName?: string;
+  fallbackIconName?: RemixIconName;
   allowRemoteImage?: boolean;
 }
 

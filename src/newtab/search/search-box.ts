@@ -54,7 +54,6 @@ interface SearchBoxDeps {
   suggestionItems: ViewOption<'items'>;
   t: Translate;
   formatMessage: FormatMessage;
-  getRiSvg(id: string, sizeClass?: string, extraClass?: string): string;
   sanitizeDisplayText: ViewOption<'sanitizeDisplayText'>;
   shouldBlockFaviconForHost: ViewOption<'shouldBlockFaviconForHost'>;
   isLocalNetworkHost: ViewOption<'isLocalNetworkHost'>;
@@ -146,7 +145,6 @@ function createSearchBox(deps: SearchBoxDeps) {
     suggestionItems,
     t,
     formatMessage,
-    getRiSvg,
     sanitizeDisplayText,
     shouldBlockFaviconForHost,
     isLocalNetworkHost,
@@ -263,7 +261,6 @@ function createSearchBox(deps: SearchBoxDeps) {
     items: suggestionItems,
     t,
     formatMessage,
-    getRiSvg,
     sanitizeDisplayText,
     formatTabRankDebugText,
     isTabRankScoreDebugEnabled: () => pageState.tabRankScoreDebugEnabled,
@@ -386,7 +383,7 @@ function createSearchBox(deps: SearchBoxDeps) {
     clearAction: {
       id: '_x_extension_newtab_search_clear_2026_unique_',
       ariaLabel: t('search_input_clear', '清空'),
-      html: getRiSvg('ri-close-line', 'ri-size-16'),
+      icon: { name: 'ri-close-line', size: 16 },
       styleOverrides: {
         '--x-ext-input-clear-right': '79px',
         '--x-ext-input-clear-top': '7px',
@@ -398,7 +395,7 @@ function createSearchBox(deps: SearchBoxDeps) {
       id: '_x_extension_newtab_close_other_tabs_2026_unique_',
       className: 'x-nt-close-other-tabs',
       ariaLabel: t('overlay_close_other_tabs_tooltip', '关闭其他标签页'),
-      html: getRiSvg('ri-brush-2-line', 'ri-size-16'),
+      icon: { name: 'ri-brush-2-line', size: 16 },
       confirm: {
         getCopy: getCloseOtherTabsConfirmCopy,
         onConfirm: closeOtherTabs

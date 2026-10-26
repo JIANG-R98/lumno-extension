@@ -476,9 +476,6 @@ function flushMicrotasks() {
       }
       return fallback;
     },
-    getRiSvg() {
-      return '';
-    },
     onSessionSlotClaimed() {
       sessionSlotClaims += 1;
     },
@@ -493,9 +490,6 @@ function flushMicrotasks() {
     t(key, fallback) {
       return fallback;
     },
-    getRiSvg() {
-      return '';
-    }
   });
 
   assert(firstController, 'first update notice should be created');
@@ -561,9 +555,6 @@ function flushMicrotasks() {
     t(key, fallback) {
       return fallback;
     },
-    getRiSvg() {
-      return '';
-    }
   });
   assert(laterSessionController, 'a later-session update controller should still be creatable');
   assert.strictEqual(
@@ -589,9 +580,6 @@ function flushMicrotasks() {
     t(key, fallback) {
       return fallback;
     },
-    getRiSvg() {
-      return '';
-    }
   });
   assert(disabledController, 'disabled update notice controller should still be created');
   await flushMicrotasks();
@@ -632,9 +620,6 @@ function flushMicrotasks() {
     t(key, fallback) {
       return fallback;
     },
-    getRiSvg() {
-      return '';
-    }
   });
   assert(oldController, 'old-version update notice controller should still be creatable');
   await flushMicrotasks();
@@ -669,9 +654,6 @@ function flushMicrotasks() {
     t(key, fallback) {
       return fallback;
     },
-    getRiSvg() {
-      return '';
-    }
   });
   assert(hydratedController, 'missing-title update notice controller should be created');
   await flushMicrotasks();
@@ -703,9 +685,6 @@ function flushMicrotasks() {
       t(key, fallback) {
         return fallback;
       },
-      getRiSvg() {
-        return '';
-      }
     });
     assert(controller, `${surface} capped update notice should be created`);
     const exposureRecorded = controller.recordExposure();

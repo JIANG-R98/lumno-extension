@@ -12,13 +12,13 @@ const model: SegmentedControlRenderModel = {
   dataAttribute: 'data-recent-mode',
   items: [
     {
-      iconClass: 'ri-icon ri-size-14 ri-time-line',
+      iconName: 'ri-time-line',
       label: '最近访问',
       labelKey: 'recent_mode_latest',
       value: 'latest'
     },
     {
-      iconClass: 'ri-icon ri-size-14 ri-vip-diamond-line',
+      iconName: 'ri-vip-diamond-line',
       label: '最常访问',
       labelKey: 'recent_mode_most',
       value: 'most'

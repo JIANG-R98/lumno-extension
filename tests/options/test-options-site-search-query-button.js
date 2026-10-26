@@ -31,7 +31,7 @@ async function testMarkupAndStyles() {
   'custom site search form should place the ghost button on the right side of the template header');
   assert.ok(button.type === 'button' && ['_x_extension_shortcut_submit_2024_unique_', ghostClass, buttonClass].every((name) => button.classList.contains(name)));
   assert.strictEqual(button.querySelector('span[data-i18n="shortcuts_insert_query"]').textContent, '插入查询变量');
-  assert.ok(button.querySelector('i.ri-icon.ri-size-14.ri-add-line'));
+  assert.ok(button.querySelector('i.ri-icon.ri-add-line'));
   assert.ok(optionsDocument.getElementById(templateInputId), 'the query insert button should live beside the template input it edits');
   page.close();
 

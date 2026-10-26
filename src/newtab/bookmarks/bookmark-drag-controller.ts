@@ -7,6 +7,7 @@ import type { ShortcutGroup, ShortcutItem } from '../../domain/shortcuts-store';
 import type { FolderBindingRuntime } from '../../platform/bookmark-folder-bindings';
 import { isElementNode, isHtmlElement, isHtmlTag } from '../../shared/dom-guards';
 import { queryHtmlTags } from '../../shared/dom-lookup';
+import { createSvgElement } from '../../shared/ui/svg-tree';
 import type * as CrossSurfaceDrag from '../cross-surface-drag';
 import type {
   BlockedDropTarget,
@@ -26,6 +27,7 @@ import type { BookmarkCascadeRuntime, CascadeItemEventDetail, CascadeRefreshOpti
 import type * as BookmarkDrag from './bookmark-drag';
 import type { BookmarkDragSession, BookmarkDragSource, BookmarkLayoutItem } from './bookmark-drag';
 import type * as FolderIcon from './bookmark-folder-icon';
+import { describeFolderIcon } from './bookmark-folder-icon';
 import type * as MoveHistory from './bookmark-move-history';
 import type { BookmarkMoveHistory, ShortcutGroupDeleteRecord } from './bookmark-move-history';
 import type { BookmarkItem } from './bookmarks-store';
@@ -66,7 +68,6 @@ interface BookmarkDragControllerDeps {
   isBookmarkTopbarMode(): boolean;
   getBookmarkLimit(): number;
   NEWTAB_BOOKMARK_DRAG: typeof BookmarkDrag;
-  getFigmaFolderSvg: typeof FolderIcon.getFigmaFolderSvg;
   initFolderPathMorph: typeof FolderIcon.initFolderPathMorph;
   setFolderPathMorphState: typeof FolderIcon.setFolderPathMorphState;
   isContentSectionVisible(section: HTMLElement | null): boolean;
@@ -141,7 +142,6 @@ function createBookmarkDragController(deps: BookmarkDragControllerDeps) {
     isBookmarkTopbarMode,
     getBookmarkLimit,
     NEWTAB_BOOKMARK_DRAG,
-    getFigmaFolderSvg,
     initFolderPathMorph,
     setFolderPathMorphState,
     isContentSectionVisible,
@@ -422,7 +422,7 @@ function createBookmarkDragController(deps: BookmarkDragControllerDeps) {
     return NEWTAB_BOOKMARK_DRAG.createPreview(state, {
       documentObj: document,
       renderClosedFolderIcon: ({ bookmarkId, folderIcon }) => {
-        folderIcon.innerHTML = getFigmaFolderSvg(`${bookmarkId}-drag-preview`, bookmarkId);
+        folderIcon.replaceChildren(createSvgElement(document, describeFolderIcon(`${bookmarkId}-drag-preview`, bookmarkId)));
         initFolderPathMorph(folderIcon);
         setFolderPathMorphState(folderIcon, false);
       }

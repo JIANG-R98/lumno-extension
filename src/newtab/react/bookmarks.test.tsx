@@ -34,10 +34,6 @@ function createOptions(
     getHostFromUrl: () => 'example.com',
     getSiteDisplayName: (_host, title) => title || 'Example',
     getUrlDisplay: (url) => url,
-    getRiSvg: (id, sizeClass = '') =>
-      `<i class="${sizeClass} ${id}"></i>`,
-    getFigmaFolderSvg: (id) =>
-      `<svg data-folder-id="${id}"></svg>`,
     initFolderPathMorph: () => {},
     playFolderPathMorph: () => {},
     stableHashCode: () => 0,
@@ -326,7 +322,6 @@ describe('Bookmarks React island', () => {
   it('keeps an open folder and its animated SVG through rename and reorder refreshes', () => {
     const morph = vi.fn();
     const { view } = createView({
-      getFigmaFolderSvg: () => '<svg><path d="M0 0" /></svg>',
       playFolderPathMorph: morph
     });
     const folder: BookmarkItem = { id: 'design', parentId: '1', index: 0, type: 'folder', title: 'Design' };

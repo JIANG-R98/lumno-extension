@@ -254,7 +254,7 @@ function createPrefixText(deps: PrefixTextDeps) {
       ...providerOptions,
       iconUrl: isAggregate ? '' : getProviderIcon(provider),
       iconHost: isAggregate ? '' : getProviderThemeHost(provider),
-      iconClass: isAggregate ? 'ri-stack-line' : (isAi ? 'ri-search-ai-line' : 'ri-global-line'),
+      iconName: isAggregate ? 'ri-stack-line' : (isAi ? 'ri-search-ai-line' : 'ri-global-line'),
       modeId: isAggregate
         ? `aggregate:${String(provider && provider.aggregateId ? provider.aggregateId : '')}`
         : `provider:${provider && (provider.key || provider.name) ? (provider.key || provider.name) : ''}`,

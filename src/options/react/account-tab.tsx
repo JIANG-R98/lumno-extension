@@ -4,6 +4,7 @@ import { createReactRootController, type ReactRootController } from '../../share
 import { SettingDivider } from './setting-rows';
 import { WebDavList, type WebDavListModel, type WebDavListOptions } from './webdav-list';
 import { lazyInstance } from '../../shared/lazy-instance';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 export type BrowserSyncTone = 'success' | 'danger' | '';
 
@@ -86,7 +87,7 @@ function BrowserSyncCard({
               role="img"
             >
               <span id="_x_extension_sync_status_text_2024_unique_">{model.status.text}</span>
-              <i aria-hidden="true" className="ri-icon ri-size-12 ri-information-line" />
+              <RemixIcon name="ri-information-line" size={12} />
             </span>
           </div>
           <p
@@ -108,7 +109,7 @@ function BrowserSyncCard({
               onClick={handlers.onExport}
               type="button"
             >
-              <i aria-hidden="true" className="ri-icon ri-size-16 ri-upload-line" />
+              <RemixIcon name="ri-upload-line" size={16} />
               <span>{model.exportLabel}</span>
             </button>
             <button
@@ -119,7 +120,7 @@ function BrowserSyncCard({
               onClick={() => fileRef.current?.click()}
               type="button"
             >
-              <i aria-hidden="true" className="ri-icon ri-size-16 ri-download-line" />
+              <RemixIcon name="ri-download-line" size={16} />
               <span>{model.importLabel}</span>
             </button>
             <button
@@ -132,7 +133,7 @@ function BrowserSyncCard({
               onClick={handlers.onSyncNow}
               type="button"
             >
-              <i aria-hidden="true" className="ri-icon ri-size-16 _x_extension_sync_now_icon_2024_unique_ ri-refresh-line x-lumno-busy-spin" />
+              <RemixIcon className="_x_extension_sync_now_icon_2024_unique_ x-lumno-busy-spin" name="ri-refresh-line" size={16} />
               <span>{model.syncNowLabel}</span>
             </button>
           </div>

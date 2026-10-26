@@ -12,7 +12,7 @@ let controller: RecentHistoryDialogController | null = null;
 afterEach(() => {
   act(() => controller?.destroy());
   controller = null;
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
   vi.useRealTimers();
 });
 

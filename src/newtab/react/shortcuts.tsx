@@ -21,10 +21,11 @@ import {
 } from './shortcut-dialog-helpers';
 import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 import { queryHtmlElements, queryHtmlTag, queryHtmlTags } from '../../shared/dom-lookup';
-import { innerHtml } from '../../shared/react/inner-html';
 import { FaviconFallback } from '../../shared/react/favicon-fallback';
 import { createRenderStore, type RenderStore } from '../../shared/react/render-store';
 import { lazyInstance } from '../../shared/lazy-instance';
+import { RemixIcon } from '../../shared/react/remix-icon';
+import { FolderIcon } from './folder-icon';
 
 // A site's theme as the page resolves it; the view passes it through.
 type ThemeValue = Partial<ThemeVariant> | null;
@@ -51,7 +52,6 @@ export interface ShortcutTileElement extends HTMLButtonElement {
 }
 
 export interface ShortcutsViewOptions {
-  getFolderIconSvg?: (idSuffix: string, folderId?: string) => string;
   initFolderIcon?: (icon: HTMLElement) => void;
   animateFolderIcon?: (icon: HTMLElement, active: boolean) => void;
   onFolderMenuChange?: (tile: HTMLElement) => void;
@@ -115,14 +115,12 @@ export interface ShortcutsViewOptions {
   onContextMenu?: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   onNativeDragStart?: (event: ReactDragEvent<HTMLButtonElement>) => void;
   getAddLabel?: () => string;
-  getAddIconSvg?: () => string;
   getAddVisible?: () => boolean;
   onAdd?: (sourceElement: HTMLButtonElement) => void;
   onAddContextMenu?: (sourceElement: HTMLButtonElement) => void;
   groupHeaders?: HTMLElement[];
   getGroupPlaceholder?: () => string;
   getGroupActionsLabel?: (title: string) => string;
-  getGroupMoreIconSvg?: () => string;
   onGroupMenu?: (groupId: string, anchor: HTMLElement) => void;
   onGroupRename?: (groupId: string, sourceElement: HTMLElement) => void;
   getGroupEmptyLabel?: () => string;
@@ -149,7 +147,6 @@ export interface ShortcutsViewController {
 
 interface NormalizedOptions {
   contextMenuMark: RenderStore<ShortcutContextMenuMark | null>;
-  getFolderIconSvg: (idSuffix: string, folderId?: string) => string;
   initFolderIcon: (icon: HTMLElement) => void;
   animateFolderIcon: (icon: HTMLElement, active: boolean) => void;
   onFolderMenuChange: (tile: HTMLElement) => void;
@@ -208,14 +205,12 @@ interface NormalizedOptions {
   onContextMenu: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   onNativeDragStart: (event: ReactDragEvent<HTMLButtonElement>) => void;
   getAddLabel: () => string;
-  getAddIconSvg: () => string;
   getAddVisible: () => boolean;
   onAdd: (sourceElement: HTMLButtonElement) => void;
   onAddContextMenu: (sourceElement: HTMLButtonElement) => void;
   groupHeaders: HTMLElement[];
   getGroupPlaceholder: () => string;
   getGroupActionsLabel: (title: string) => string;
-  getGroupMoreIconSvg: () => string;
   onGroupMenu: (groupId: string, anchor: HTMLElement) => void;
   onGroupRename: (groupId: string, sourceElement: HTMLElement) => void;
   getGroupEmptyLabel: () => string;
@@ -230,7 +225,6 @@ function normalizeOptions(
   }
   return {
     contextMenuMark: createRenderStore<ShortcutContextMenuMark | null>(null),
-    getFolderIconSvg: options.getFolderIconSvg || (() => ''),
     initFolderIcon: options.initFolderIcon || (() => {}),
     animateFolderIcon: options.animateFolderIcon || (() => {}),
     onFolderMenuChange: options.onFolderMenuChange || (() => {}),
@@ -272,14 +266,12 @@ function normalizeOptions(
       event.preventDefault();
     }),
     getAddLabel: options.getAddLabel || (() => ''),
-    getAddIconSvg: options.getAddIconSvg || (() => ''),
     getAddVisible: options.getAddVisible || (() => true),
     onAdd: options.onAdd || (() => {}),
     onAddContextMenu: options.onAddContextMenu || (() => {}),
     groupHeaders: Array.isArray(options.groupHeaders) ? options.groupHeaders : [],
     getGroupPlaceholder: options.getGroupPlaceholder || (() => ''),
     getGroupActionsLabel: options.getGroupActionsLabel || ((title) => title),
-    getGroupMoreIconSvg: options.getGroupMoreIconSvg || (() => ''),
     onGroupMenu: options.onGroupMenu || (() => {}),
     onGroupRename: options.onGroupRename || (() => {}),
     getGroupEmptyLabel: options.getGroupEmptyLabel || (() => ''),
@@ -445,10 +437,6 @@ function ShortcutTile({
   const [menuOpen, setMenuOpen] = useState(false);
   const folderOpen = isFolder && (menuOpen || contextMenuOpen);
   const folderOpenRef = useRef(false);
-  // Preserve the SVG paths owned by the animation runtime across list refreshes.
-  const folderIconHtml = useMemo(() => ({
-    __html: isFolder ? options.getFolderIconSvg(`shortcut-${shortcutId}`, folderId) : ''
-  }), [isFolder, options, shortcutId, folderId]);
   const localIconDataUrl = options.getShortcutIconDataUrl(shortcut.id);
   const themeSuggestion = useMemo<ThemeSuggestion>(() => ({
     type: 'shortcut',
@@ -592,8 +580,9 @@ function ShortcutTile({
       /> : <span
         ref={folderIconRef}
         className="x-nt-shortcut-icon x-nt-shortcut-icon--folder"
-        dangerouslySetInnerHTML={folderIconHtml}
-      />}
+      >
+        <FolderIcon idSuffix={`shortcut-${shortcutId}`} folderId={folderId} />
+      </span>}
     </button>
   );
 }
@@ -658,8 +647,9 @@ function ShortcutGroupHeader({
           event.stopPropagation();
           openMenu();
         }}
-        dangerouslySetInnerHTML={innerHtml(options.getGroupMoreIconSvg())}
-      />
+      >
+        <RemixIcon name="ri-more-fill" size={16} />
+      </button>
     </div>
   );
 }
@@ -723,8 +713,9 @@ function ShortcutsList({
               >
                 <span
                   className="x-nt-shortcut-icon x-nt-shortcut-icon--add"
-                  dangerouslySetInnerHTML={innerHtml(options.getAddIconSvg())}
-                />
+                >
+                  <RemixIcon name="ri-add-line" />
+                </span>
               </button>
             ]
             : items.filter((shortcut) => shortcut.groupId === group.id).map(renderTile))
@@ -753,8 +744,9 @@ function ShortcutsList({
       >
         <span
           className="x-nt-shortcut-icon x-nt-shortcut-icon--add"
-          dangerouslySetInnerHTML={innerHtml(options.getAddIconSvg())}
-        />
+        >
+          <RemixIcon name="ri-add-line" />
+        </span>
       </button>
     </>
   );

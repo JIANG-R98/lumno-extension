@@ -6,7 +6,6 @@
 import {
   useEffect,
   useLayoutEffect,
-  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -15,20 +14,22 @@ import {
   type ReactElement
 } from 'react';
 import * as LumnoSortableDrag from '../../ui/sortable-drag';
-import { followEmptyStateArtTheme, getEmptyStateArtMarkup } from '../../ui/empty-state-art';
+import { followEmptyStateArtTheme } from '../../ui/empty-state-art';
+import { EmptyStateArt } from '../empty-state-art';
 import { className as MENU_SURFACE_CLASS } from '../../ui/menu-surface';
 import { hostClassName as CURSOR_TOOLTIP_HOST_CLASS } from '../../ui/cursor-tooltip';
 import { getModeLineIconPaths } from '../../search/input-mode/line-icons';
 import { createRenderStore, type RenderStore } from '../render-store';
-import { innerHtml } from '../inner-html';
 import { FONT_STACK, NO_TRANSLATE, SURFACE_VARS, type ModeSurface } from './mode-surface';
 import type { ModeMenuRange } from '../../search/input-mode/types';
+import { RemixIcon } from '../remix-icon';
+import type { RemixIconName } from '../../ui/remix-icon';
 
 export interface ModeMenuTileIcon {
   // A built-in line icon's name; empty for a glyph or a site icon.
   lineIcon: string;
   // The Remix icon class shown until the site icon loads, or if it fails.
-  glyphClass: string;
+  glyphName: RemixIconName;
   iconUrl: string;
   // The host whose saved icon may replace iconUrl.
   iconHost: string;
@@ -251,7 +252,7 @@ function TileIcon({ icon, color, attachIconData }: {
             />
           )
         ) : (
-          <i className={`ri-icon ri-size-24 ${icon.glyphClass}`} hidden={state === 'resolved'} />
+          <RemixIcon hidden={state === 'resolved'} name={icon.glyphName} size={24} />
         )}
         {icon.iconUrl && state !== 'failed' ? (
           <img
@@ -387,7 +388,7 @@ function GroupTitle({ title, groupKey, hidden, first, last, model, handlers }: {
         <>
           <span>{title}</span>
           <span className="x-lumno-search-input-mode__menu-group-move">
-            {GROUP_MOVES.map(([direction, delta, iconClass]) => {
+            {GROUP_MOVES.map(([direction, delta, iconName]) => {
               const label = direction === 'up' ? model.labels.moveUp : model.labels.moveDown;
               return (
                 <button
@@ -407,7 +408,7 @@ function GroupTitle({ title, groupKey, hidden, first, last, model, handlers }: {
                   title={label}
                   type="button"
                 >
-                  <i aria-hidden="true" className={`ri-icon ri-size-14 ${iconClass}`} />
+                  <RemixIcon name={iconName} />
                 </button>
               );
             })}
@@ -421,7 +422,6 @@ function GroupTitle({ title, groupKey, hidden, first, last, model, handlers }: {
 const EMPTY_ART_SIZE = 96;
 
 function EmptyState({ text, hidden }: { text: string; hidden: boolean }) {
-  const artMarkup = useMemo(() => innerHtml(getEmptyStateArtMarkup('noResults', { size: EMPTY_ART_SIZE })), []);
   const artRef = useRef<HTMLSpanElement>(null);
   // Its theme follows the panel's while it shows.
   useLayoutEffect(() => {
@@ -430,7 +430,9 @@ function EmptyState({ text, hidden }: { text: string; hidden: boolean }) {
   }, [hidden]);
   return (
     <div {...NO_TRANSLATE} className="x-lumno-search-input-mode__menu-empty" hidden={hidden} role="status">
-      <span className="x-lumno-search-input-mode__menu-empty-art" dangerouslySetInnerHTML={artMarkup} ref={artRef} />
+      <span className="x-lumno-search-input-mode__menu-empty-art" ref={artRef}>
+        <EmptyStateArt name="noResults" size={EMPTY_ART_SIZE} />
+      </span>
       <span data-i18n="overlay_empty_result">{text}</span>
     </div>
   );

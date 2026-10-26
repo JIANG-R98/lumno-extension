@@ -313,8 +313,7 @@ function flushMicrotasks() {
     navigatorLike: {
       userAgentData: { platform: 'macOS' }
     },
-    t: (key, fallback) => fallback,
-    getRiSvg: () => ''
+    t: (key, fallback) => fallback
   });
   const windowsHintController = featureHints.createFeatureHint({
     documentObj: createFakeDocument(),
@@ -323,8 +322,7 @@ function flushMicrotasks() {
     navigatorLike: {
       userAgentData: { platform: 'Windows' }
     },
-    t: (key, fallback) => fallback,
-    getRiSvg: () => ''
+    t: (key, fallback) => fallback
   });
   assert(macHintController, 'macOS tab switcher hint should be created');
   assert(windowsHintController, 'Windows tab switcher hint should be created');
@@ -351,8 +349,7 @@ function flushMicrotasks() {
     definition: 'newtab-ai-quick-jump',
     chromeApi,
     windowObj: fakeWindow,
-    t: (key, fallback) => fallback,
-    getRiSvg: () => ''
+    t: (key, fallback) => fallback
   });
   assert(firstController, 'first feature hint should be created');
   assert(firstController.ready instanceof Promise, 'feature hints should expose async visibility readiness');
@@ -402,8 +399,7 @@ function flushMicrotasks() {
     documentObj: createFakeDocument(),
     definition: 'newtab-ai-quick-jump',
     chromeApi,
-    t: (key, fallback) => fallback,
-    getRiSvg: () => ''
+    t: (key, fallback) => fallback
   });
   assert(secondController, 'second feature hint should be created');
   assert.strictEqual(
@@ -438,8 +434,7 @@ function flushMicrotasks() {
     documentObj: createFakeDocument(),
     definition: 'newtab-webdav-sync',
     chromeApi: createStorageBackedChrome({}, webdavSyncStore),
-    t: (key, fallback) => fallback,
-    getRiSvg: () => ''
+    t: (key, fallback) => fallback
   });
   assert(webdavController, 'WebDAV feature hint should be created');
   assert.strictEqual(
@@ -476,8 +471,7 @@ function flushMicrotasks() {
     documentObj: createFakeDocument(),
     definition: 'newtab-webdav-sync',
     chromeApi: createStorageBackedChrome({}, webdavSyncStore),
-    t: (key, fallback) => fallback,
-    getRiSvg: () => ''
+    t: (key, fallback) => fallback
   });
   assert.strictEqual(
     await acknowledgedWebdavController.ready,
@@ -498,8 +492,7 @@ function flushMicrotasks() {
     visibilityGate: new Promise((resolve) => {
       releaseVisibilityGate = resolve;
     }),
-    t: (key, fallback) => fallback,
-    getRiSvg: () => ''
+    t: (key, fallback) => fallback
   });
   assert(gatedWebdavController, 'gated WebDAV feature hint should be created');
   assert.strictEqual(
@@ -535,8 +528,7 @@ function flushMicrotasks() {
     documentObj: createFakeDocument(),
     definition: 'newtab-ai-quick-jump',
     chromeApi: createStorageBackedChrome(legacyLocalStore, migratedSyncStore),
-    t: (key, fallback) => fallback,
-    getRiSvg: () => ''
+    t: (key, fallback) => fallback
   });
   assert(legacyController, 'legacy feature hint should be created');
   await flushMicrotasks();
@@ -566,8 +558,7 @@ function flushMicrotasks() {
       textFallback: 'Plain feature hint',
       closeLabelFallback: 'Dismiss plain feature hint'
     },
-    t: (key, fallback) => fallback,
-    getRiSvg: () => ''
+    t: (key, fallback) => fallback
   });
   assert(plainController, 'plain feature hint should be created');
   assert.strictEqual(
@@ -599,8 +590,7 @@ function flushMicrotasks() {
         }
       }
     },
-    t: (key, fallback) => fallback,
-    getRiSvg: () => ''
+    t: (key, fallback) => fallback
   });
   assert(deferredController, 'a feature hint with deferred storage should be created');
   deferredController.destroy();

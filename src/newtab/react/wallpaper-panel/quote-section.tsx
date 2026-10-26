@@ -5,12 +5,13 @@ import { ref, Switch, SegmentedChoice, PanelSlider, tooltipHandlers } from './pa
 import { SectionTrigger, InfoButton, SettingRow, PanelSelect } from './panel-controls';
 import { QUOTE_POSITION_SELECT_ID, QUOTE_FONT_SELECT_ID, collapsible, type QuoteSettingsModel } from './panel-model';
 import type { WallpaperPanelContext } from './use-wallpaper-panel';
+import { RemixIcon } from '../../../shared/react/remix-icon';
 
 const BODY_ID = '_x_extension_newtab_quote_section_body_2026_unique_';
 const QUOTE_TABS = 'x-nt-wallpaper-tabs x-nt-quote-tabs x-nt-row-tabs';
 
 export function QuoteSection({ panel, settings }: { panel: WallpaperPanelContext; settings: QuoteSettingsModel }) {
-  const { arrowIcon, actions: panelActions, infoIcon, documentObj, registerSelect, sliderBubble } = panel;
+  const { actions: panelActions, documentObj, registerSelect, sliderBubble } = panel;
   const { quote, actions } = settings;
   const fileInput = useRef<HTMLInputElement>(null);
   const open = quote.enabled && quote.expanded;
@@ -20,7 +21,6 @@ export function QuoteSection({ panel, settings }: { panel: WallpaperPanelContext
       <div className="x-nt-wallpaper-panel-header">
         <span className="x-nt-appearance-title-group">
           <SectionTrigger
-            arrowIcon={arrowIcon}
             bodyId={BODY_ID}
             disabled={!quote.enabled}
             expanded={open}
@@ -31,7 +31,6 @@ export function QuoteSection({ panel, settings }: { panel: WallpaperPanelContext
           />
           <InfoButton
             actions={panelActions}
-            icon={infoIcon}
             label={quote.infoTooltip}
             name="quoteInfoButton"
             tooltip={quote.infoTooltip}
@@ -71,7 +70,6 @@ export function QuoteSection({ panel, settings }: { panel: WallpaperPanelContext
                 <span className="x-nt-appearance-setting-title">{library.title}</span>
                 <InfoButton
                   actions={panelActions}
-                  icon={infoIcon}
                   label={library.title}
                   name="quoteImportInfoButton"
                   tooltip={library.infoTooltip}
@@ -96,7 +94,7 @@ export function QuoteSection({ panel, settings }: { panel: WallpaperPanelContext
                 hidden={!library.count}
                 tabIndex={0}
               >
-                <i aria-hidden="true" className="ri-icon ri-size-14 ri-file-text-line" />
+                <RemixIcon name="ri-file-text-line" />
                 <span {...ref('quoteLibraryCountText')}>{library.count ? library.count.text : ''}</span>
               </span>
               <button

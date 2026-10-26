@@ -14,6 +14,7 @@ import type { InputModeProvider, ModeMenuItem } from '../../shared/search/input-
 import type { Translate } from './types';
 import { lazyInstance } from '../../shared/lazy-instance';
 import { createHistory as createSearchSourceOrderHistory } from '../../domain/search/search-source-order';
+import type { RemixIconName } from '../../shared/ui/remix-icon';
 
 interface SearchModeMenuState {
   storageArea: StorageAreaFacade | null;
@@ -51,7 +52,7 @@ interface SearchModeMenuDeps {
   getSiteSearchDisplayName(provider: SiteSearchProvider | null): string;
   getPageRenderableProviderIcon(provider: SiteSearchProvider): string;
   getLocalSearchScopeLabel(scope: Pick<LocalSearchScope, 'sourceType'> | null): string;
-  getLocalSearchScopeIconClass(sourceType: string): string;
+  getLocalSearchScopeIconName(sourceType: string): RemixIconName;
   getStorageValuesAsync(keys: string[]): Promise<Record<string, unknown>>;
   SEARCH_SOURCE_ORDER_STORAGE_KEY: string;
   loadSiteSearchIconCache(): Promise<CachedIconMap>;
@@ -87,7 +88,7 @@ function createSearchModeMenu(deps: SearchModeMenuDeps) {
     getSiteSearchDisplayName,
     getPageRenderableProviderIcon,
     getLocalSearchScopeLabel,
-    getLocalSearchScopeIconClass,
+    getLocalSearchScopeIconName,
     SEARCH_SOURCE_ORDER,
     getStorageValuesAsync,
     SEARCH_SOURCE_ORDER_STORAGE_KEY,
@@ -187,7 +188,7 @@ function createSearchModeMenu(deps: SearchModeMenuDeps) {
         groupKey: 'aggregate',
         orderList: 'aggregate',
         orderKey: definition.id,
-        iconClass: 'ri-stack-line',
+        iconName: 'ri-stack-line',
         searchTerms: [definition.name].concat(definition.sourceRefs || []),
         active: Boolean(
           activeProvider &&
@@ -216,7 +217,7 @@ function createSearchModeMenu(deps: SearchModeMenuDeps) {
           orderList: provider._xIsCustom ? 'custom' : groupKey,
           orderKey: provider.key,
           iconUrl: getPageRenderableProviderIcon(provider),
-          iconClass: isAi ? 'ri-search-ai-line' : 'ri-global-line',
+          iconName: isAi ? 'ri-search-ai-line' : 'ri-global-line',
           isAi,
           active: Boolean(activeProvider && getSearchModeProviderId(activeProvider) === getSearchModeProviderId(provider))
         });
@@ -230,7 +231,7 @@ function createSearchModeMenu(deps: SearchModeMenuDeps) {
       // Leads browser content and is not reorderable.
       groupKey: 'local',
       orderList: 'pinned',
-      iconClass: 'ri-window-line',
+      iconName: 'ri-window-line',
       menuIconName: 'browser',
       active: overlayState.openTabsSearchModeActive
     });
@@ -252,7 +253,7 @@ function createSearchModeMenu(deps: SearchModeMenuDeps) {
             ? ['bookmark', 'bookmarks']
             : ['history', 'browsing history']),
         group: localGroup,
-        iconClass: getLocalSearchScopeIconClass(sourceType),
+        iconName: getLocalSearchScopeIconName(sourceType),
         menuIconName: sourceType === 'topSite' ? 'star' : sourceType,
         active: Boolean(overlayState.localSearchScopeState && overlayState.localSearchScopeState.sourceType === sourceType)
       });

@@ -15,10 +15,10 @@ import { isElementTextTruncated } from '../../shared/react/text-overflow';
 import type { RecentSite } from '../../domain/recent-sites-store';
 import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 import { queryHtmlTags } from '../../shared/dom-lookup';
-import { innerHtml } from '../../shared/react/inner-html';
 import { FaviconFallback } from '../../shared/react/favicon-fallback';
 import { createRenderStore, type RenderStore } from '../../shared/react/render-store';
 import { lazyInstance } from '../../shared/lazy-instance';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 type Translate = (key: string, fallback: string) => string;
 // A site's theme as the page resolves it; the view passes it through.
@@ -72,7 +72,6 @@ export interface RecentSitesViewOptions {
   getBrowserPageFaviconUrl?: (url: string) => string;
   getSiteDisplayName?: (host: string, title?: string) => string;
   getUrlDisplay?: (url: string) => string;
-  getRiSvg?: (id: string, sizeClass?: string) => string;
   attachFaviconWithFallbacks?: (
     image: HTMLImageElement,
     pageUrl: string,
@@ -187,7 +186,6 @@ interface NormalizedRecentSitesOptions {
   >;
   getSiteDisplayName: NonNullable<RecentSitesViewOptions['getSiteDisplayName']>;
   getUrlDisplay: NonNullable<RecentSitesViewOptions['getUrlDisplay']>;
-  getRiSvg: NonNullable<RecentSitesViewOptions['getRiSvg']>;
   attachFaviconWithFallbacks: NonNullable<
     RecentSitesViewOptions['attachFaviconWithFallbacks']
   >;
@@ -352,10 +350,6 @@ function normalizeOptions(
       typeof rawOptions.getUrlDisplay === 'function'
         ? rawOptions.getUrlDisplay
         : (url) => url || '',
-    getRiSvg:
-      typeof rawOptions.getRiSvg === 'function'
-        ? rawOptions.getRiSvg
-        : () => '',
     attachFaviconWithFallbacks:
       typeof rawOptions.attachFaviconWithFallbacks === 'function'
         ? rawOptions.attachFaviconWithFallbacks
@@ -947,12 +941,9 @@ function RecentSiteCard({
             <span>
               {options.t('action_go_current_tab', '前往')}
             </span>
-            <span
-              dangerouslySetInnerHTML={innerHtml(options.getRiSvg(
-                  'ri-arrow-right-line',
-                  'ri-size-12'
-                ))}
-            />
+            <span>
+              <RemixIcon name="ri-arrow-right-line" size={12} />
+            </span>
           </div>
           <span className="x-nt-recent-url-text">
             {ownExtensionDisplay
@@ -985,10 +976,7 @@ function RecentSiteCard({
               onFocus={showTrackTooltip}
               onBlur={options.hideTopActionTooltip}
             >
-              <i
-                aria-hidden="true"
-                className={`ri-icon ri-size-16 ${progressTracked ? 'ri-radar-fill' : 'ri-radar-line'}`}
-              />
+              <RemixIcon name={progressTracked ? 'ri-radar-fill' : 'ri-radar-line'} size={16} />
             </button>
           ) : null}
           <button
@@ -1020,10 +1008,7 @@ function RecentSiteCard({
             onFocus={showPinTooltip}
             onBlur={options.hideTopActionTooltip}
           >
-            <i
-              aria-hidden="true"
-              className={`ri-icon ri-size-16 ${pinned ? 'ri-pushpin-fill' : 'ri-pushpin-line'}`}
-            />
+            <RemixIcon name={pinned ? 'ri-pushpin-fill' : 'ri-pushpin-line'} size={16} />
           </button>
         </div>
       </div>

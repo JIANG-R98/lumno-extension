@@ -6,6 +6,7 @@ import {
 import { InlinePopconfirm } from './inline-popconfirm';
 import { InfoButton } from './info-button';
 import { BusyLabel } from '../../shared/react/busy-label';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 export type BlacklistMatchMode = 'exact' | 'prefix' | 'suffix';
 
@@ -258,7 +259,7 @@ export function BlacklistList({
                     }}
                     type="button"
                   >
-                    <i aria-hidden="true" className="ri-icon ri-size-14 ri-edit-line" />
+                    <RemixIcon name="ri-edit-line" />
                   </button>
                 ) : null}
                 <InlinePopconfirm
@@ -271,7 +272,7 @@ export function BlacklistList({
                   onConfirm={() => onRemove(item.key)}
                   triggerAriaLabel={model.copy.removeLabel}
                   triggerClassName="_x_extension_shortcut_remove_2024_unique_"
-                  triggerIconClass="ri-icon ri-size-14 ri-delete-bin-4-line"
+                  triggerIconName="ri-delete-bin-4-line"
                 />
               </div>
             </div>

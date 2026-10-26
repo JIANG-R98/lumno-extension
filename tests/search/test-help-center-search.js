@@ -273,11 +273,11 @@ function testFeedbackSuggestions() {
   };
   const t = (key, fallback) => `${key}|${fallback}`;
   assert.deepStrictEqual(
-    helpCenterSearch.buildFeedbackSuggestions({ links, channel: 'wechat', t }).map((item) => [item.feedbackKey, item.url, item.iconName]),
+    helpCenterSearch.buildFeedbackSuggestions({ links, channel: 'wechat', t }).map((item) => [item.feedbackKey, item.url]),
     [
-      ['community', links.wechatQr, 'ri-wechat-line'],
-      ['github-issue', links.githubIssue, 'ri-github-line'],
-      ['contact-author', links.x, 'ri-twitter-x-line']
+      ['community', links.wechatQr],
+      ['github-issue', links.githubIssue],
+      ['contact-author', links.x]
     ],
     'an empty search offers the WeChat group, an issue and the author, but not a store rating'
   );

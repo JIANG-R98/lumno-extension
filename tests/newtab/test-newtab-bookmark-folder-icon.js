@@ -2,6 +2,7 @@ const assert = require('assert');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 const folderIcon = require('../../src/newtab/bookmarks/bookmark-folder-icon.ts');
+const { createSvgElement } = require('../../src/shared/ui/svg-tree.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
@@ -76,11 +77,14 @@ assert.deepStrictEqual(folderIcon.normalizeFolderColorMap(JSON.parse('{"1":"#aab
   assert.deepStrictEqual(folderIcon.normalizeFolderColorRefs({ bad: { color: '#FFFFFF' }, ['a'.repeat(16)]: { color: 'nope' } }), {});
 }
 
-const firstSvg = folderIcon.getFigmaFolderSvg('folder one');
-const secondSvg = folderIcon.getFigmaFolderSvg('folder/two');
-assert.ok(firstSvg.includes('x-nt-folder-filter-lower-base-folder_one'));
-assert.ok(secondSvg.includes('x-nt-folder-filter-lower-base-folder_two'));
-assert.ok(!firstSvg.includes('folder one'), 'SVG ids should sanitize caller-provided suffixes');
+const drawFolderIcon = (documentObj, suffix, folderId) =>
+  createSvgElement(documentObj, folderIcon.describeFolderIcon(suffix, folderId));
+const idsOf = (svg) => Array.from(svg.querySelectorAll('[id]'), (element) => element.id);
+const probeDocument = new JSDOM('<!doctype html><body></body>').window.document;
+const firstIds = idsOf(drawFolderIcon(probeDocument, 'folder one'));
+assert.ok(firstIds.includes('x-nt-folder-filter-lower-base-folder_one'));
+assert.ok(idsOf(drawFolderIcon(probeDocument, 'folder/two')).includes('x-nt-folder-filter-lower-base-folder_two'));
+assert.ok(firstIds.every((id) => !id.includes(' ')), 'SVG ids should sanitize caller-provided suffixes');
 assert.strictEqual(
   folderIcon.FOLDER_PATH_MORPH_DURATION_MS,
   460,
@@ -89,7 +93,7 @@ assert.strictEqual(
 
 const dom = new JSDOM('<!doctype html><body><span id="folder"></span></body>');
 const iconElement = dom.window.document.getElementById('folder');
-iconElement.innerHTML = firstSvg;
+iconElement.replaceChildren(drawFolderIcon(dom.window.document, 'folder one'));
 folderIcon.initFolderPathMorph(iconElement);
 assert.ok(Array.isArray(folderIcon.getFolderMorphParts(iconElement)));
 assert.ok(folderIcon.getFolderMorphParts(iconElement).length >= 6);
@@ -120,7 +124,7 @@ folderIcon.setFolderPathMorphState(iconElement, false);
 folderIcon.applyFolderColor(iconElement, null);
 assert.deepStrictEqual(Array.from(iconElement.querySelectorAll('[data-folder-gradient-morph="upper-main"] stop')).map((stop) => stop.getAttribute('stop-color')), ['#CCDFFF', '#B2CEFF', '#89B5FF', '#97BEFF'], 'reset must exactly restore the original blue palette');
 
-iconElement.innerHTML = folderIcon.getFigmaFolderSvg('after-reorder', '123');
+iconElement.replaceChildren(drawFolderIcon(dom.window.document, 'after-reorder', '123'));
 folderIcon.initFolderPathMorph(iconElement);
 folderIcon.applyFolderColor(iconElement, '#EF4444');
 folderIcon.playFolderPathMorph(iconElement, true, { instant: true });
@@ -158,7 +162,7 @@ assert.strictEqual(iconElement.querySelector('svg').getAttribute('data-folder-co
   try {
     const makeIcon = (suffix) => {
       const icon = dom.window.document.createElement('span');
-      icon.innerHTML = folderIcon.getFigmaFolderSvg(suffix);
+      icon.appendChild(drawFolderIcon(dom.window.document, suffix));
       dom.window.document.body.appendChild(icon);
       folderIcon.initFolderPathMorph(icon);
       return icon;
@@ -204,7 +208,7 @@ assert.ok(
   await page.settle(300);
   const tile = page.document.querySelector('.x-nt-shortcut-tile--folder');
   const parts = Array.from(tile.querySelectorAll('svg path[data-folder-part]')).map((part) => part.getAttribute('data-folder-part'));
-  const expected = Array.from(new JSDOM(folderIcon.getFigmaFolderSvg('probe', '10')).window.document.querySelectorAll('path[data-folder-part]'))
+  const expected = Array.from(drawFolderIcon(probeDocument, 'probe', '10').querySelectorAll('path[data-folder-part]'))
     .map((part) => part.getAttribute('data-folder-part'));
   assert.ok(parts.length > 0, 'a folder shortcut should show the folder icon');
   assert.deepStrictEqual(parts, expected, 'drawn by the shared folder icon component');

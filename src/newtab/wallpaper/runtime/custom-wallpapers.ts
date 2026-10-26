@@ -678,7 +678,7 @@ function createCustomWallpapers(deps: CustomWallpapersDeps) {
       selectId: '_x_extension_newtab_wallpaper_context_menu_select_2026_unique_',
       className: 'x-nt-shortcut-context-menu',
       iconOnly: true,
-      triggerIconClass: 'ri-more-line',
+      triggerIconName: 'ri-more-line',
       menuClassName: 'x-nt-shortcut-context-menu-portal',
       menuAlign: 'middle',
       menuWidth: 'content',

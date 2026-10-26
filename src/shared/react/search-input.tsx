@@ -19,7 +19,8 @@ import {
 } from './popconfirm-content';
 import { queryHtmlElement, queryHtmlTag, querySvgElement } from '../dom-lookup';
 import { createRenderStore, type RenderStore } from './render-store';
-import { innerHtml } from './inner-html';
+import { RemixIcon } from './remix-icon';
+import type { RemixIconSpec } from '../ui/remix-icon';
 import { ModeMenu, createModeMenuStore, type ModeMenuStore, type ModeMenuView } from './search/mode-menu';
 import {
   ModeTag,
@@ -88,13 +89,15 @@ function useButtonTooltip<T extends HTMLElement>(tooltip: SearchInputTooltip | n
   return ref;
 }
 
+const CLEAR_ICON: RemixIconSpec = { name: 'ri-close-line', size: 16 };
+
 export interface SearchInputConfig {
   // An empty element the surface's own view drew for the input; a new one
   // otherwise.
   container?: HTMLDivElement;
   clearAction?: {
     ariaLabel?: string;
-    html?: string;
+    icon?: RemixIconSpec;
     id: string;
     styleOverrides?: StyleOverrides;
   };
@@ -118,7 +121,6 @@ export interface SearchInputConfig {
   onKeyDown?(event: KeyboardEvent): void;
   placeholder?: string;
   rightIconAlt?: string;
-  rightIconHtml?: string;
   rightIconId?: string;
   rightIconStyleOverrides?: StyleOverrides;
   secondaryAction?: {
@@ -126,7 +128,7 @@ export interface SearchInputConfig {
     className?: string;
     // Asks in a popconfirm under the button before running the action.
     confirm?: SearchInputActionConfirm;
-    html?: string;
+    icon: RemixIconSpec;
     id: string;
   };
   showRightIcon?: boolean;
@@ -290,7 +292,6 @@ function SecondaryAction({ action, label, tooltip }: {
         {...hover.handlers}
         aria-label={label}
         className={action.className || ''}
-        dangerouslySetInnerHTML={innerHtml(action.html || '')}
         data-hover-active={hover.active ? 'true' : undefined}
         data-tooltip={label || undefined}
         id={action.id}
@@ -298,7 +299,9 @@ function SecondaryAction({ action, label, tooltip }: {
         onKeyDown={confirm ? onKeyDown : undefined}
         ref={triggerRef}
         type="button"
-      />
+      >
+        <RemixIcon {...action.icon} />
+      </button>
       {confirm ? (
         <div
           {...noTranslateProps()}
@@ -369,10 +372,6 @@ function RightIcon({ config, label, tooltip }: {
       {...hover.handlers}
       aria-label={label}
       className={CLASSES.rightIcon}
-      dangerouslySetInnerHTML={innerHtml(
-        config.rightIconHtml ||
-          '<i class="_x_extension_svg_2024_unique_ ri-icon ri-size-16 ri-settings-line" aria-hidden="true"></i>'
-      )}
       data-hover-active={hover.active ? 'true' : 'false'}
       data-tooltip={label}
       id={config.rightIconId || '_x_extension_search_right_icon_2024_unique_'}
@@ -385,7 +384,9 @@ function RightIcon({ config, label, tooltip }: {
       }}
       ref={ref}
       type="button"
-    />
+    >
+      <RemixIcon className="_x_extension_svg_2024_unique_" name="ri-settings-line" size={16} />
+    </button>
   );
 }
 
@@ -406,7 +407,6 @@ function ClearAction({ action, label, visible, inputRef, tooltip }: {
       {...hover.handlers}
       aria-label={label}
       className={CLASSES.clearAction}
-      dangerouslySetInnerHTML={innerHtml(action.html || '<i class="ri-icon ri-size-16 ri-close-line" aria-hidden="true"></i>')}
       data-hover-active={hover.active && visible ? 'true' : undefined}
       data-tooltip={label}
       hidden={!visible}
@@ -428,7 +428,9 @@ function ClearAction({ action, label, visible, inputRef, tooltip }: {
       onMouseDown={(event) => event.preventDefault()}
       ref={ref}
       type="button"
-    />
+    >
+      <RemixIcon {...(action.icon || CLEAR_ICON)} />
+    </button>
   );
 }
 
@@ -494,10 +496,7 @@ function ScopeIcon({ config, action, tooltip }: {
       role={action ? 'button' : undefined}
       tabIndex={action ? (enabled ? 0 : -1) : undefined}
     >
-      <i
-        aria-hidden="true"
-        className="_x_extension_svg_2024_unique_ ri-icon ri-size-16 ri-search-line"
-      />
+      <RemixIcon className="_x_extension_svg_2024_unique_" name="ri-search-line" size={16} />
     </div>
   );
 }

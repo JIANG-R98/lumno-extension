@@ -7,12 +7,10 @@ import type { WallpaperPanelContext } from './use-wallpaper-panel';
 
 export function FaviconSection({ panel }: { panel: WallpaperPanelContext }) {
   const {
-    arrowIcon,
     faviconExpanded,
     setFaviconExpanded,
     state,
     model,
-    checkIcon,
     actions
   } = panel;
   return (
@@ -20,7 +18,6 @@ export function FaviconSection({ panel }: { panel: WallpaperPanelContext }) {
       <div className="x-nt-favicon-group">
         <div className="x-nt-wallpaper-panel-header">
           <SectionTrigger
-            arrowIcon={arrowIcon}
             bodyId="_x_extension_newtab_favicon_section_body_2026_unique_"
             expanded={faviconExpanded}
             onToggle={() => setFaviconExpanded(!faviconExpanded)}
@@ -46,7 +43,6 @@ export function FaviconSection({ panel }: { panel: WallpaperPanelContext }) {
               const option = state.favicon.options.find((entry) => entry.id === item.id);
               return (
                 <FaviconTile
-                  checkIcon={checkIcon}
                   item={item}
                   key={item.id}
                   label={option?.label || ''}

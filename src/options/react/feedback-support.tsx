@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { isNode } from '../../shared/dom-guards';
+import { RemixIcon } from '../../shared/react/remix-icon';
+import type { RemixIconName } from '../../shared/ui/remix-icon';
 
 export interface FeedbackSupportQr {
   alt: string;
@@ -10,7 +12,7 @@ export interface FeedbackSupportQr {
 
 export interface FeedbackSupportItem {
   href: string;
-  iconClass: string;
+  iconName: RemixIconName;
   key: string;
   label: string;
   labelKey: string;
@@ -143,9 +145,9 @@ function FeedbackSupportQrButton({ item, qr }: { item: FeedbackSupportItem; qr: 
         ref={buttonRef}
         type="button"
       >
-        <i className={`ri-icon ri-size-16 ${item.iconClass}`} aria-hidden="true" />
+        <RemixIcon name={item.iconName} size={16} />
         <span data-i18n={item.labelKey}>{item.label}</span>
-        <i className="ri-icon ri-size-14 ri-qr-code-line" aria-hidden="true" />
+        <RemixIcon name="ri-qr-code-line" />
       </button>
       <div
         aria-hidden={open ? undefined : 'true'}
@@ -167,7 +169,7 @@ function FeedbackSupportQrButton({ item, qr }: { item: FeedbackSupportItem; qr: 
             tabIndex={open ? 0 : -1}
             type="button"
           >
-            <i className="ri-icon ri-size-16 ri-close-line" aria-hidden="true" />
+            <RemixIcon name="ri-close-line" size={16} />
           </button>
         </div>
         <img
@@ -237,7 +239,7 @@ function FeedbackSupportAskDemoView({ demo, playing }: { demo: FeedbackSupportAs
   return (
     <div className="_x_extension_help_ask_demo_2026_unique_" data-phase={frame.phase} aria-hidden="true">
       <div className="_x_extension_help_ask_demo_field_2026_unique_">
-        <i className="ri-icon ri-size-14 ri-search-line" />
+        <RemixIcon name="ri-search-line" />
         {inProvider ? (
           <span className="_x_extension_help_ask_demo_chip_2026_unique_">
             <img alt="" src={demo.iconUrl} />
@@ -409,7 +411,7 @@ function FeedbackSupportDiagnosticsRow({ diagnostics }: { diagnostics: FeedbackS
         type="button"
       >
         <span data-i18n={diagnostics.labelKey}>{diagnostics.label}</span>
-        <i className="ri-icon ri-size-14 ri-upload-line" aria-hidden="true" />
+        <RemixIcon name="ri-upload-line" />
       </button>
     </FeedbackSupportRow>
   );
@@ -440,7 +442,7 @@ export function FeedbackSupportView({ channels, diagnostics, heading, headingKey
             target="_blank"
           >
             <span data-i18n={help.labelKey}>{help.label}</span>
-            <i className="ri-icon ri-size-14 ri-external-link-line" aria-hidden="true" />
+            <RemixIcon name="ri-external-link-line" />
           </a>
         </FeedbackSupportRow>
       ) : null}
@@ -460,9 +462,9 @@ export function FeedbackSupportView({ channels, diagnostics, heading, headingKey
             rel="noreferrer noopener"
             target="_blank"
           >
-            <i className={`ri-icon ri-size-16 ${item.iconClass}`} aria-hidden="true" />
+            <RemixIcon name={item.iconName} size={16} />
             <span data-i18n={item.labelKey}>{item.label}</span>
-            <i className="ri-icon ri-size-14 ri-external-link-line" aria-hidden="true" />
+            <RemixIcon name="ri-external-link-line" />
           </a>
         ))}
       </nav>

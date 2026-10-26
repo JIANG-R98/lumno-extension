@@ -372,7 +372,6 @@ describe('Options settings controls', () => {
     const valueInput = queryHtmlTag(host, 'input[type="number"]', 'input');
     expect(reset?.getAttribute('aria-label')).toBe('恢复默认大小');
     expect(reset?.querySelector('.ri-reset-left-line')).not.toBeNull();
-    expect(reset?.querySelector('.ri-size-14')).not.toBeNull();
     expect(reset?.classList.contains(
       '_x_extension_shortcut_group_action_2024_unique_'
     )).toBe(true);

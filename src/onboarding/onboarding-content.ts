@@ -1,5 +1,6 @@
 import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
 import * as SETTINGS from '../domain/settings';
+import { readRemixIconName, type RemixIconName } from '../shared/ui/remix-icon';
 
 // The copy one language reads; every written locale has all of it.
 interface TitleCycleItem {
@@ -62,7 +63,7 @@ interface SiteSearchCaseText {
   // Left out once translated, so the typed query sizes itself.
   promptWidth?: string;
   favicon: string;
-  iconClass: string;
+  iconName: RemixIconName;
   resultTitle: string;
   actionLabel: string;
   brandAccentRgb: readonly number[];
@@ -147,7 +148,7 @@ interface SlideCopy {
 interface SlideAction {
   actionId: string;
   label: string;
-  icon: string;
+  icon?: RemixIconName;
   tooltip?: string;
   tooltipMaxWidth?: number;
   browserOnly?: BrowserOnly;
@@ -172,14 +173,14 @@ interface BrowserAvatars {
 }
 
 interface InfoTooltip {
-  icon: string;
+  icon: RemixIconName;
   label: string;
   type: string;
   text: string;
 }
 
 interface LinkButton {
-  icon: string;
+  icon: RemixIconName;
   label: string;
   tooltip: string;
   href: string;
@@ -192,7 +193,7 @@ interface AccordionLink {
 }
 
 interface Accordion {
-  icon: string;
+  icon: RemixIconName;
   text: string;
   expandedByDefault: boolean;
   links?: readonly AccordionLink[];
@@ -201,17 +202,17 @@ interface Accordion {
 // A row of the left panel as a slide writes it.
 interface InteractionRowSource {
   kind: string;
-  icon: string;
+  icon: RemixIconName;
   label: string;
   actionId?: string;
   accordionId?: string;
   description?: string;
-  trailingIcon?: string;
+  trailingIcon?: RemixIconName;
   browserOnly?: BrowserOnly;
   browserAvatars?: BrowserAvatars;
   infoTooltip?: Partial<InfoTooltip>;
   linkButton?: Partial<LinkButton>;
-  accordion?: { icon: string; text: string; expandedByDefault: boolean; links?: readonly AccordionLink[] };
+  accordion?: { icon: RemixIconName; text: string; expandedByDefault: boolean; links?: readonly AccordionLink[] };
 }
 
 // A row of the left panel as the page renders it.
@@ -220,10 +221,10 @@ interface InteractionSlot {
   kind: string;
   actionId: string;
   accordionId?: string;
-  icon?: string;
+  icon?: RemixIconName;
   label: string;
   description: string;
-  trailingIcon?: string;
+  trailingIcon?: RemixIconName;
   browserOnly?: BrowserOnly;
   browserAvatars?: BrowserAvatars;
   infoTooltip?: InfoTooltip;
@@ -328,7 +329,7 @@ const SUPPORTED_LOCALES: readonly string[] = Object.freeze(SETTINGS.UI_LOCALES.m
 // Ids, URLs, icons, sizes and the demo's brand names stay as written in
 // every language; every other string in the copy is translated.
 const UNTRANSLATED_COPY_KEYS = new Set([
-  'id', 'tone', 'type', 'kind', 'art', 'favicon', 'iconClass', 'url', 'urlText', 'detail',
+  'id', 'tone', 'type', 'kind', 'art', 'favicon', 'iconName', 'url', 'urlText', 'detail',
   'previewUrls', 'query', 'triggerQuery', 'modeLabel', 'prefixLabel', 'siteName',
   'sourceTagKind', 'promptWidth'
 ]);
@@ -533,7 +534,7 @@ const LOCALE_TEXT: Readonly<Record<WrittenLocale, OnboardingCopyText>> = Object.
             promptQuery: 'lumno extension',
             promptWidth: '15ch',
             favicon: 'https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=https%3A%2F%2Fgithub.com%2F&size=64',
-            iconClass: 'ri-github-fill',
+            iconName: 'ri-github-fill',
             resultTitle: '在 GitHub 中搜索 "lumno extension"',
             actionLabel: '搜索',
             brandAccentRgb: Object.freeze([36, 41, 46])
@@ -547,7 +548,7 @@ const LOCALE_TEXT: Readonly<Record<WrittenLocale, OnboardingCopyText>> = Object.
             promptQuery: '这个 PR 有哪些隐藏风险？',
             promptWidth: '14em',
             favicon: 'https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=https%3A%2F%2Fchatgpt.com%2F&size=64',
-            iconClass: 'ri-sparkling-2-line',
+            iconName: 'ri-sparkling-2-line',
             resultTitle: '向 ChatGPT 提问 "这个 PR 有哪些隐藏风险？"',
             actionLabel: '打开 ChatGPT 网页版',
             brandAccentRgb: Object.freeze([16, 163, 127])
@@ -680,8 +681,8 @@ const LOCALE_TEXT: Readonly<Record<WrittenLocale, OnboardingCopyText>> = Object.
       siteSearchDemo: Object.freeze({
         tabHintTemplate: '使用 {provider} 搜尋',
         cases: Object.freeze([
-          Object.freeze({ kind: 'site', label: '站內搜尋', triggerQuery: 'github', modeLabel: 'GitHub', prefixLabel: 'GitHub', promptQuery: 'lumno extension', promptWidth: '15ch', favicon: 'https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=https%3A%2F%2Fgithub.com%2F&size=64', iconClass: 'ri-github-fill', resultTitle: '在 GitHub 中搜尋「lumno extension」', actionLabel: '在 GitHub 中搜尋', brandAccentRgb: Object.freeze([36, 41, 46]) }),
-          Object.freeze({ kind: 'ai', label: 'AI', triggerQuery: 'chatgpt', modeLabel: 'ChatGPT', prefixLabel: 'ChatGPT', promptQuery: '這個 PR 有哪些隱藏風險？', promptWidth: '14em', favicon: 'https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=https%3A%2F%2Fchatgpt.com%2F&size=64', iconClass: 'ri-sparkling-2-line', resultTitle: '向 ChatGPT 提問「這個 PR 有哪些隱藏風險？」', actionLabel: '開啟 ChatGPT 網頁版', brandAccentRgb: Object.freeze([16, 163, 127]) })
+          Object.freeze({ kind: 'site', label: '站內搜尋', triggerQuery: 'github', modeLabel: 'GitHub', prefixLabel: 'GitHub', promptQuery: 'lumno extension', promptWidth: '15ch', favicon: 'https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=https%3A%2F%2Fgithub.com%2F&size=64', iconName: 'ri-github-fill', resultTitle: '在 GitHub 中搜尋「lumno extension」', actionLabel: '在 GitHub 中搜尋', brandAccentRgb: Object.freeze([36, 41, 46]) }),
+          Object.freeze({ kind: 'ai', label: 'AI', triggerQuery: 'chatgpt', modeLabel: 'ChatGPT', prefixLabel: 'ChatGPT', promptQuery: '這個 PR 有哪些隱藏風險？', promptWidth: '14em', favicon: 'https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=https%3A%2F%2Fchatgpt.com%2F&size=64', iconName: 'ri-sparkling-2-line', resultTitle: '向 ChatGPT 提問「這個 PR 有哪些隱藏風險？」', actionLabel: '開啟 ChatGPT 網頁版', brandAccentRgb: Object.freeze([16, 163, 127]) })
         ])
       }),
       featureCards: Object.freeze([
@@ -810,8 +811,8 @@ const LOCALE_TEXT: Readonly<Record<WrittenLocale, OnboardingCopyText>> = Object.
       siteSearchDemo: Object.freeze({
         tabHintTemplate: '{provider}で検索',
         cases: Object.freeze([
-          Object.freeze({ kind: 'site', label: 'サイト内検索', triggerQuery: 'github', modeLabel: 'GitHub', prefixLabel: 'GitHub', promptQuery: 'lumno extension', promptWidth: '15ch', favicon: 'https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=https%3A%2F%2Fgithub.com%2F&size=64', iconClass: 'ri-github-fill', resultTitle: 'GitHub で「lumno extension」を検索', actionLabel: 'GitHub で検索', brandAccentRgb: Object.freeze([36, 41, 46]) }),
-          Object.freeze({ kind: 'ai', label: 'AI', triggerQuery: 'chatgpt', modeLabel: 'ChatGPT', prefixLabel: 'ChatGPT', promptQuery: 'この PR の隠れたリスクは？', promptWidth: '14em', favicon: 'https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=https%3A%2F%2Fchatgpt.com%2F&size=64', iconClass: 'ri-sparkling-2-line', resultTitle: 'ChatGPT に「この PR の隠れたリスクは？」と質問', actionLabel: 'ChatGPT Web版を開く', brandAccentRgb: Object.freeze([16, 163, 127]) })
+          Object.freeze({ kind: 'site', label: 'サイト内検索', triggerQuery: 'github', modeLabel: 'GitHub', prefixLabel: 'GitHub', promptQuery: 'lumno extension', promptWidth: '15ch', favicon: 'https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=https%3A%2F%2Fgithub.com%2F&size=64', iconName: 'ri-github-fill', resultTitle: 'GitHub で「lumno extension」を検索', actionLabel: 'GitHub で検索', brandAccentRgb: Object.freeze([36, 41, 46]) }),
+          Object.freeze({ kind: 'ai', label: 'AI', triggerQuery: 'chatgpt', modeLabel: 'ChatGPT', prefixLabel: 'ChatGPT', promptQuery: 'この PR の隠れたリスクは？', promptWidth: '14em', favicon: 'https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=https%3A%2F%2Fchatgpt.com%2F&size=64', iconName: 'ri-sparkling-2-line', resultTitle: 'ChatGPT に「この PR の隠れたリスクは？」と質問', actionLabel: 'ChatGPT Web版を開く', brandAccentRgb: Object.freeze([16, 163, 127]) })
         ])
       }),
       featureCards: Object.freeze([
@@ -944,8 +945,8 @@ const LOCALE_TEXT: Readonly<Record<WrittenLocale, OnboardingCopyText>> = Object.
       siteSearchDemo: Object.freeze({
         tabHintTemplate: 'Search with {provider}',
         cases: Object.freeze([
-          Object.freeze({ kind: 'site', label: 'Site search', triggerQuery: 'github', modeLabel: 'GitHub', prefixLabel: 'GitHub', promptQuery: 'lumno extension', promptWidth: '15ch', favicon: 'https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=https%3A%2F%2Fgithub.com%2F&size=64', iconClass: 'ri-github-fill', resultTitle: 'Search in GitHub "lumno extension"', actionLabel: 'Search', brandAccentRgb: Object.freeze([36, 41, 46]) }),
-          Object.freeze({ kind: 'ai', label: 'Ask AI', triggerQuery: 'chatgpt', modeLabel: 'ChatGPT', prefixLabel: 'ChatGPT', promptQuery: 'What should I watch for in this PR?', promptWidth: '16em', favicon: 'https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=https%3A%2F%2Fchatgpt.com%2F&size=64', iconClass: 'ri-sparkling-2-line', resultTitle: 'Ask ChatGPT "What should I watch for in this PR?"', actionLabel: 'Open ChatGPT web app', brandAccentRgb: Object.freeze([16, 163, 127]) })
+          Object.freeze({ kind: 'site', label: 'Site search', triggerQuery: 'github', modeLabel: 'GitHub', prefixLabel: 'GitHub', promptQuery: 'lumno extension', promptWidth: '15ch', favicon: 'https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=https%3A%2F%2Fgithub.com%2F&size=64', iconName: 'ri-github-fill', resultTitle: 'Search in GitHub "lumno extension"', actionLabel: 'Search', brandAccentRgb: Object.freeze([36, 41, 46]) }),
+          Object.freeze({ kind: 'ai', label: 'Ask AI', triggerQuery: 'chatgpt', modeLabel: 'ChatGPT', prefixLabel: 'ChatGPT', promptQuery: 'What should I watch for in this PR?', promptWidth: '16em', favicon: 'https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=https%3A%2F%2Fchatgpt.com%2F&size=64', iconName: 'ri-sparkling-2-line', resultTitle: 'Ask ChatGPT "What should I watch for in this PR?"', actionLabel: 'Open ChatGPT web app', brandAccentRgb: Object.freeze([16, 163, 127]) })
         ])
       }),
       featureCards: Object.freeze([
@@ -1181,9 +1182,12 @@ function cloneAction(action: SlideActionSource | undefined): SlideAction | null 
   }
   const cloned: SlideAction = {
     actionId,
-    label,
-    icon: String(action.icon || '').trim()
+    label
   };
+  const icon = readRemixIconName(action.icon);
+  if (icon) {
+    cloned.icon = icon;
+  }
   const tooltip = String(action.tooltip || '').trim();
   if (tooltip) {
     cloned.tooltip = tooltip;
@@ -1228,7 +1232,7 @@ function cloneInfoTooltip(infoTooltip: Partial<InfoTooltip> | undefined): InfoTo
     return null;
   }
   return {
-    icon: String(infoTooltip.icon || 'ri-information-line').trim() || 'ri-information-line',
+    icon: readRemixIconName(infoTooltip.icon, 'ri-information-line'),
     label: String(infoTooltip.label || '说明').trim() || '说明',
     type,
     text
@@ -1246,7 +1250,7 @@ function cloneLinkButton(linkButton: Partial<LinkButton> | undefined): LinkButto
   }
   const tooltip = String(linkButton.tooltip || label).trim() || label;
   return {
-    icon: String(linkButton.icon || 'ri-github-fill').trim() || 'ri-github-fill',
+    icon: readRemixIconName(linkButton.icon, 'ri-github-fill'),
     label,
     tooltip,
     href
@@ -1589,12 +1593,12 @@ function createInteractionSlots(slot: SlideSlot, slideId: string): InteractionSl
       kind: row.kind || 'info-row',
       actionId: String(row.actionId || ''),
       accordionId: String(row.accordionId || '').trim(),
-      icon: row.icon || '',
+      icon: row.icon,
       label: row.label || '',
       description: String(row.description || '')
     };
     if (row.trailingIcon) {
-      interactionSlot.trailingIcon = String(row.trailingIcon);
+      interactionSlot.trailingIcon = row.trailingIcon;
     }
     copyBrowserOnly(row, interactionSlot);
     const browserAvatars = cloneBrowserAvatars(row.browserAvatars);
@@ -1616,7 +1620,7 @@ function createInteractionSlots(slot: SlideSlot, slideId: string): InteractionSl
     if (row.accordion && typeof row.accordion === 'object') {
       const accordionLinks = cloneAccordionLinks(row.accordion.links);
       const accordion: Accordion = {
-        icon: String(row.accordion.icon || 'ri-arrow-left-s-line').trim() || 'ri-arrow-left-s-line',
+        icon: readRemixIconName(row.accordion.icon, 'ri-arrow-left-s-line'),
         text: String(row.accordion.text || ''),
         expandedByDefault: row.accordion.expandedByDefault === true
       };

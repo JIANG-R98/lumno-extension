@@ -4,6 +4,7 @@ import { InfoButton } from './info-button';
 import { getAsyncErrorMessage, useExclusiveAsyncAction } from '../../shared/react/use-exclusive-async-action';
 import { BusyLabel } from '../../shared/react/busy-label';
 import type { ConflictDescription, ListChangeSummary, NameSample, ValueSummary } from '../../domain/webdav-contract';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 export interface WebDavConfig {
   endpoint: string;
@@ -127,7 +128,7 @@ function DiagnosticButton({ copy, text, compact = false, ghost = false }: { copy
     <button className={ghost ? ghostClass : compact ? compactClass : buttonClass} onClick={() => {
       void navigator.clipboard?.writeText(text).then(() => setCopied(true)).catch(() => {});
     }} title={text} type="button">
-      <i aria-hidden="true" className={`ri-icon ri-size-14 ${copied ? 'ri-check-line' : 'ri-file-copy-line'}`} />
+      <RemixIcon name={copied ? 'ri-check-line' : 'ri-file-copy-line'} />
       {copied ? copy.webdav_diagnostic_copied : copy.webdav_copy_diagnostic}
     </button>
   );
@@ -315,12 +316,12 @@ function ConnectionEditor({ id, item, preset, model, open, options, onClose }: {
                 aria-pressed={passwordVisible} className="lumno-webdav-password-icon" disabled={disabled}
                 data-tooltip={copy[passwordVisible ? 'webdav_password_hide' : 'webdav_password_show']}
                 onClick={() => setPasswordVisible((visible) => !visible)} type="button">
-                <i aria-hidden="true" className={`ri-icon ri-size-16 ${passwordVisible ? 'ri-eye-off-line' : 'ri-eye-line'}`} />
+                <RemixIcon name={passwordVisible ? 'ri-eye-off-line' : 'ri-eye-line'} size={16} />
               </button>
               {reusePassword ? (
                 <button aria-label={copy.webdav_password_keep} className="lumno-webdav-password-icon" disabled={disabled}
                   data-tooltip={copy.webdav_password_keep} onClick={() => setChanging(false)} type="button">
-                  <i aria-hidden="true" className="ri-icon ri-size-16 ri-arrow-go-back-line" />
+                  <RemixIcon name="ri-arrow-go-back-line" size={16} />
                 </button>
               ) : null}
             </div>
@@ -334,7 +335,7 @@ function ConnectionEditor({ id, item, preset, model, open, options, onClose }: {
       </div>
       {feedback ? (
         <div className="lumno-webdav-form-feedback" data-tone={feedback.failed ? 'danger' : 'success'} role="status">
-          <i aria-hidden="true" className={`ri-icon ri-size-14 ${feedback.failed ? 'ri-error-warning-line' : 'ri-checkbox-circle-line'}`} />
+          <RemixIcon name={feedback.failed ? 'ri-error-warning-line' : 'ri-checkbox-circle-line'} />
           <span className="lumno-webdav-form-feedback-text">{feedback.text}</span>
           {feedback.diagnostic ? <DiagnosticButton copy={copy} ghost text={feedback.diagnostic} /> : null}
         </div>
@@ -344,7 +345,7 @@ function ConnectionEditor({ id, item, preset, model, open, options, onClose }: {
           if (event.currentTarget.form?.reportValidity()) void run('test');
         }}>
           <BusyLabel busy={pendingOperation === 'test'}>
-            <i aria-hidden="true" className="ri-icon ri-size-14 ri-link-m" />
+            <RemixIcon name="ri-link-m" />
             {copy.webdav_test}
           </BusyLabel>
         </button>
@@ -414,7 +415,7 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
         <p className={classes('setting_desc')}>{item.errorText || copy.webdav_error_interrupted}</p>
         {item.hasMigrationBackup ? <div className="lumno-webdav-actions">
           <button className={compactPrimaryClass} disabled={busy || model.outdated} onClick={() => { void run('restoreBackup'); }} type="button">
-            <i className="ri-icon ri-size-14 ri-history-line" aria-hidden="true" />{copy.webdav_restore_backup}
+            <RemixIcon name="ri-history-line" />{copy.webdav_restore_backup}
           </button>
         </div> : null}
       </div>
@@ -436,7 +437,7 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
         <div className="lumno-webdav-actions">
           {item.state === 'conflict' ? (
             <button aria-expanded={diff.open} className={`${compactGhostClass} lumno-webdav-diff-toggle`} onClick={() => { void toggleDiff(); }} type="button">
-              <i aria-hidden="true" className={`ri-icon ri-size-14 ${diff.open ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'}`} />
+              <RemixIcon name={diff.open ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'} />
               {diff.open ? copy.webdav_hide_diff : copy.webdav_view_diff}
             </button>
           ) : null}
@@ -464,7 +465,7 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
         <div className="lumno-webdav-actions">
           {diagnostic ? <DiagnosticButton compact copy={copy} text={diagnostic} /> : null}
           <button className={compactClass} disabled={busy || model.outdated} onClick={() => { void run(item.enabled ? 'sync' : 'enable'); }} type="button">
-            <i className="ri-icon ri-size-14 ri-refresh-line" aria-hidden="true" />{copy.webdav_retry}
+            <RemixIcon name="ri-refresh-line" />{copy.webdav_retry}
           </button>
         </div>
       </div>
@@ -484,7 +485,7 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
             <span className="lumno-webdav-name" title={location}>{title}</span>
             {/* Credentials stay on this device; the lock says so without a
                 permanent line of text in the form. */}
-            <InfoButton className="lumno-webdav-local-only" iconClass="ri-lock-line"
+            <InfoButton className="lumno-webdav-local-only" iconName="ri-lock-line"
               tooltip={copy.webdav_credentials_hint} tooltipKey="webdav_credentials_hint" />
             <span className={classes('sync_status')} data-status={status.tone} role="status"
               title={lastSyncAt ? `${copy.webdav_last_sync}：${formatTime(lastSyncAt, lang)}` : copy.webdav_never_synced}>
@@ -500,19 +501,19 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
           {item.enabled && !choice && !item.needsRecovery && !errorText ? (
             <button aria-label={copy.webdav_sync} aria-busy={syncing || item.state === 'syncing'} className={`${classes('shortcut_edit')} lumno-webdav-sync-now`}
               data-tooltip={copy.webdav_sync} disabled={busy || model.outdated} onClick={() => { void run('sync'); }} type="button">
-              <i aria-hidden="true" className="ri-icon ri-size-14 ri-refresh-line x-lumno-busy-spin" />
+              <RemixIcon className="x-lumno-busy-spin" name="ri-refresh-line" />
             </button>
           ) : null}
           <button aria-controls={editorId} aria-expanded={expanded} aria-label={copy.webdav_edit_config}
             className={classes('shortcut_edit')} disabled={busy} onClick={onEdit} ref={editRef} type="button">
-            <i aria-hidden="true" className="ri-icon ri-size-14 ri-edit-line" />
+            <RemixIcon name="ri-edit-line" />
           </button>
           <InlinePopconfirm copy={{ cancelLabel: copy.confirm_cancel, confirmLabel: copy.confirm_ok,
             message: copy.webdav_remove_confirm, messageKey: 'webdav_remove_confirm' }}
             onConfirm={async () => { if (!busy && !model.outdated) await run('remove'); }}
             triggerAriaLabel={copy.webdav_remove} triggerClassName={classes('shortcut_remove')}
             triggerDisabled={busy || !model.ready || model.outdated}
-            triggerIconClass="ri-icon ri-size-14 ri-delete-bin-4-line" />
+            triggerIconName="ri-delete-bin-4-line" />
           <label className={classes('switch')}>
             <input aria-label={`${copy.webdav_title} · ${title} / ${item.config.directory}`} checked={item.enabled}
               disabled={busy || !model.ready || (!item.enabled && (model.outdated || choice))} type="checkbox"
@@ -582,7 +583,7 @@ export function WebDavList({ model, options }: { model: WebDavListModel; options
       <div className={classes('shortcut_form_trigger')}>
         <button aria-controls={addId} aria-expanded={adding} className={classes('shortcut_submit')}
           disabled={!model.ready || model.outdated} onClick={() => startAdd(null)} ref={addRef} type="button">
-          <i className="ri-icon ri-size-14 ri-add-line" aria-hidden="true" />{model.copy.webdav_add}
+          <RemixIcon name="ri-add-line" />{model.copy.webdav_add}
         </button>
       </div>
       <ConnectionEditor id={addId} model={model} open={adding} options={options} preset={preset} onClose={closeAdd} />

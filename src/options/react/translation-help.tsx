@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { isNode } from '../../shared/dom-guards';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 export interface TranslationHelpRenderModel {
   visible: boolean;
@@ -76,7 +77,7 @@ export function TranslationHelpView(model: TranslationHelpRenderModel) {
         ref={buttonRef}
         type="button"
       >
-        <i className="ri-icon ri-size-14 ri-translate-2" aria-hidden="true" />
+        <RemixIcon name="ri-translate-2" />
         <span data-i18n={model.actionLabelKey}>{model.actionLabel}</span>
       </button>
       <div
@@ -99,7 +100,7 @@ export function TranslationHelpView(model: TranslationHelpRenderModel) {
             tabIndex={open ? 0 : -1}
             type="button"
           >
-            <i className="ri-icon ri-size-16 ri-close-line" aria-hidden="true" />
+            <RemixIcon name="ri-close-line" size={16} />
           </button>
         </div>
         <p className="_x_extension_translation_help_desc_2026_unique_">{model.description}</p>
@@ -113,9 +114,9 @@ export function TranslationHelpView(model: TranslationHelpRenderModel) {
               tabIndex={open ? 0 : -1}
               target="_blank"
             >
-              <i className="ri-icon ri-size-16 ri-github-line" aria-hidden="true" />
+              <RemixIcon name="ri-github-line" size={16} />
               <span>{model.reportLabel}</span>
-              <i className="ri-icon ri-size-14 ri-external-link-line" aria-hidden="true" />
+              <RemixIcon name="ri-external-link-line" />
             </a>
           ) : null}
           <button
@@ -127,9 +128,9 @@ export function TranslationHelpView(model: TranslationHelpRenderModel) {
             tabIndex={open ? 0 : -1}
             type="button"
           >
-            <i className="ri-icon ri-size-16 ri-file-excel-2-line" aria-hidden="true" />
+            <RemixIcon name="ri-file-excel-2-line" size={16} />
             <span>{model.downloadLabel}</span>
-            <i className="ri-icon ri-size-14 ri-download-2-line" aria-hidden="true" />
+            <RemixIcon name="ri-download-2-line" />
           </button>
         </div>
         <p className="_x_extension_translation_help_hint_2026_unique_">{model.downloadHint}</p>

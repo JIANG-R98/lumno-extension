@@ -2,6 +2,7 @@
 // mode, the bar's layout and background choices.
 import type { SelectMenuOption } from '../../shared/react/select-menu';
 import type { Translate } from '../newtab-types';
+import type { RemixIconName } from '../../shared/ui/remix-icon';
 
 // A menu entry with its label by message key.
 interface ModeMenuOptionSource {
@@ -14,7 +15,7 @@ interface ModeMenuOptionSource {
   groupTitleFallback?: string;
   radio?: boolean;
   checked?: boolean;
-  trailingIconClass?: string;
+  trailingIconName?: RemixIconName;
 }
 
 interface BookmarkModeMenuDeps {
@@ -56,8 +57,8 @@ function createBookmarkModeMenu(deps: BookmarkModeMenuDeps) {
       option.radio = true;
       option.checked = source.checked === true;
     }
-    if (source.trailingIconClass) {
-      option.trailingIconClass = source.trailingIconClass;
+    if (source.trailingIconName) {
+      option.trailingIconName = source.trailingIconName;
     }
     return option;
   }
@@ -129,7 +130,7 @@ function createBookmarkModeMenu(deps: BookmarkModeMenuDeps) {
       labelKey: 'bookmark_topbar_surface_custom',
       fallback: 'Custom color',
       radio: true,
-      trailingIconClass: 'ri-dropper-line',
+      trailingIconName: 'ri-dropper-line',
       checked: effectiveSurfaceMode === 'custom'
     });
     return options.map(toMenuOption);

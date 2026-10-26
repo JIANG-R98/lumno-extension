@@ -2,6 +2,7 @@
 // theme-aware SVG link kept in step with the browser theme across tabs, and
 // the cached choice the next page load starts from.
 import type { StorageAreaLike } from '../../../domain/storage-port';
+import { serializeSvgDocument } from '../../../shared/ui/svg-tree';
 import type { FormatMessage, ShowToast, Translate } from '../../newtab-types';
 import type { WallpaperStorage } from './wallpaper-storage';
 import type { WallpaperVisual } from './wallpaper-visual';
@@ -135,12 +136,10 @@ function createFaviconChooser(deps: FaviconChooserDeps) {
 
   function buildNewtabFaviconSvgDataUrl(themeName: FaviconTheme): string {
     const theme = NEWTAB_FAVICON_THEMES[themeName] || NEWTAB_FAVICON_THEMES.light;
-    const svg = [
-      '<svg width="104" height="104" viewBox="0 0 104 104" fill="none" xmlns="http://www.w3.org/2000/svg">',
-      `<path opacity="${theme.shadowOpacity}" d="${NEWTAB_FAVICON_SVG_SHADOW_PATH}" fill="${theme.color}"/>`,
-      `<path d="${NEWTAB_FAVICON_SVG_MAIN_PATH}" fill="${theme.color}" fill-opacity="${theme.mainOpacity}"/>`,
-      '</svg>'
-    ].join('');
+    const svg = serializeSvgDocument(['svg', { width: 104, height: 104, viewBox: '0 0 104 104', fill: 'none' }, [
+      ['path', { opacity: theme.shadowOpacity, d: NEWTAB_FAVICON_SVG_SHADOW_PATH, fill: theme.color }],
+      ['path', { d: NEWTAB_FAVICON_SVG_MAIN_PATH, fill: theme.color, 'fill-opacity': theme.mainOpacity }]
+    ]]);
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
   }
 

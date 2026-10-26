@@ -270,8 +270,7 @@ assert.deepStrictEqual(
     },
     secondary: {
       actionId: 'prev',
-      label: '返回',
-      icon: ''
+      label: '返回'
     },
     ghost: {
       actionId: 'openShortcuts',
@@ -419,8 +418,7 @@ assert.deepStrictEqual(
     },
     secondary: {
       actionId: 'openChromeWebStore',
-      label: '为我们评分',
-      icon: ''
+      label: '为我们评分'
     },
     ghost: {
       actionId: 'openOptions',

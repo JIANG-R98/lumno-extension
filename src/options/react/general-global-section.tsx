@@ -4,6 +4,7 @@ import { SettingSelect, type SelectControlRenderModel } from './select-control';
 import { SettingDivider, SettingSwitch, SettingTitle } from './setting-rows';
 import type { ToggleControlRenderModel } from './toggle-control';
 import { TranslationHelpView, type TranslationHelpRenderModel } from './translation-help';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 // The top of the General tab: help and feedback, the page's language and
 // the update notice.
@@ -55,7 +56,7 @@ export function GeneralGlobalSection({
           target="_blank"
         >
           <span>{model.licenses.label}</span>
-          <i aria-hidden="true" className="ri-icon ri-size-14 ri-external-link-line" />
+          <RemixIcon name="ri-external-link-line" />
         </a>
         <button
           className="_x_extension_shortcut_submit_2024_unique_ _x_extension_onboarding_guide_button_2026_unique_"
@@ -64,7 +65,7 @@ export function GeneralGlobalSection({
           type="button"
         >
           <span>{model.onboardingLabel}</span>
-          <i aria-hidden="true" className="ri-icon ri-size-14 ri-external-link-line" />
+          <RemixIcon name="ri-external-link-line" />
         </button>
       </div>
       <div className="_x_extension_setting_row_2024_unique_">

@@ -30,7 +30,6 @@ interface FolderColorsDeps {
   closeShortcutDialog(): void;
   hideCursorTooltip(): void;
   t: Translate;
-  getFigmaFolderSvg: typeof FolderIcon.getFigmaFolderSvg;
   playFolderPathMorph: typeof FolderIcon.playFolderPathMorph;
   bindShortcutDialogTooltip: BindTooltip;
   hideShortcutDialogTooltip(): void;
@@ -52,7 +51,6 @@ function createFolderColors(deps: FolderColorsDeps) {
     closeShortcutDialog,
     hideCursorTooltip,
     t,
-    getFigmaFolderSvg,
     playFolderPathMorph,
     bindShortcutDialogTooltip,
     hideShortcutDialogTooltip,
@@ -215,7 +213,6 @@ function createFolderColors(deps: FolderColorsDeps) {
     try {
       return await folderColorApi.createFolderColorPicker({
         documentObj: document, t,
-        getFolderSvg: getFigmaFolderSvg,
         initFolderIcon: NEWTAB_BOOKMARK_FOLDER_ICON.initFolderPathMorph,
         animateFolderIcon: playFolderPathMorph,
         applyFolderColor: NEWTAB_BOOKMARK_FOLDER_ICON.applyFolderColor,

@@ -45,7 +45,7 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
 {
   const model = popup.buildModel(state(), t);
   assert.deepStrictEqual(model.page, {
-    title: 'Kyoto walk', host: 'www.bilibili.com', iconUrl: 'icon.png', iconClass: 'ri-global-line'
+    title: 'Kyoto walk', host: 'www.bilibili.com', iconUrl: 'icon.png', iconName: 'ri-global-line'
   });
   assert.deepStrictEqual(model.actions.map((action) => action.id), ['search', 'copy', 'shortcut', 'pin', 'pip']);
   const actions = byId(model);
@@ -58,7 +58,7 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
   assert.strictEqual(actions.shortcut.tooltip, '添加到新标签页的快捷方式', 'the tooltip says where the shortcut goes');
   assert.strictEqual(actions.pin.label, '置顶到最近访问');
   assert.strictEqual(actions.pin.tooltip, '在新标签页的最近访问里置顶', 'the tooltip says where the pin goes');
-  assert.strictEqual(actions.pin.iconClass, 'ri-pushpin-line');
+  assert.strictEqual(actions.pin.iconName, 'ri-pushpin-line');
   assert.strictEqual(model.notice, null);
   assert.strictEqual(model.settings.label, '快速设置');
   assert.strictEqual(model.settings.expanded, false, 'the settings start folded');
@@ -74,7 +74,7 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
   assert.strictEqual(settingRows.theme.value, 'system');
   assert.deepStrictEqual(model.links.map((link) => [link.id, link.label]),
     [['release', '更新日志'], ['feedback', '反馈'], ['shortcuts', '设置快捷键'], ['settings', '设置']]);
-  assert(model.links.every((link) => link.iconClass.startsWith('ri-')), 'every link has an icon');
+  assert(model.links.every((link) => link.iconName.startsWith('ri-')), 'every link has an icon');
   assert.strictEqual(model.sync, null, 'no sync status without WebDAV');
   assert.strictEqual(model.version, 'Lumno 1.1.3');
   assert.strictEqual(popup.buildModel(state({ settingsExpanded: true }), t).settings.expanded, true);
@@ -104,7 +104,7 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
   const pinned = byId(popup.buildModel(state({ recentPin: { pinned: true, full: true } }), t)).pin;
   assert.strictEqual(pinned.label, '取消置顶');
   assert.strictEqual(pinned.tooltip, '从新标签页的最近访问取消置顶');
-  assert.strictEqual(pinned.iconClass, 'ri-unpin-line');
+  assert.strictEqual(pinned.iconName, 'ri-unpin-line');
   assert.strictEqual(pinned.disabled, false, 'a full list still lets this page go');
   const full = byId(popup.buildModel(state({ recentPin: { pinned: false, full: true } }), t)).pin;
   assert.strictEqual(full.disabled, true);
@@ -145,7 +145,7 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
 // A browser page: clip and add are off and say why; copy and the command bar
 // still work. There is no separate notice.
 {
-  const tab = { id: 3, url: 'chrome://extensions/', title: 'Extensions', iconUrl: 'logo.svg', iconClass: '', host: 'chrome://extensions/' };
+  const tab = { id: 3, url: 'chrome://extensions/', title: 'Extensions', iconUrl: 'logo.svg', iconName: null, host: 'chrome://extensions/' };
   const model = popup.buildModel(state({ tab, restricted: true, documentPipEnabled: true }), t);
   const actions = byId(model);
   assert.strictEqual(actions.clip.disabled, true);
@@ -179,7 +179,7 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
     isBrowserInternalUrl: (url) => /^(?:chrome|edge|about):/.test(url)
   });
   assert.deepStrictEqual(popup.describePage('chrome-extension://lumno/newtab.html', context('Chrome')),
-    { kind: 'lumno', iconPath: 'assets/images/lumno.png', iconClass: '', host: 'Lumno' });
+    { kind: 'lumno', iconPath: 'assets/images/lumno.png', iconName: null, host: 'Lumno' });
   assert.strictEqual(popup.describePage('chrome://settings/', context('Google Chrome')).iconPath,
     'assets/images/browser-logos/google-chrome-2022.svg');
   assert.strictEqual(popup.describePage('edge://settings/', context('Microsoft Edge')).iconPath,
@@ -188,11 +188,11 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
     'assets/images/browser-logos/firefox.svg');
   assert.strictEqual(popup.describePage('chrome://settings/', context('Dia')).iconPath, 'assets/images/browser-logos/dia.jpg');
   assert.deepStrictEqual(popup.describePage('chrome://settings/', context('Brave')),
-    { kind: 'browser', iconPath: '', iconClass: 'ri-window-line', host: 'chrome://settings/' }, 'no logo, a window icon');
-  assert.strictEqual(popup.describePage('chrome-extension://other/page.html', context('Chrome')).iconClass, 'ri-puzzle-line');
-  assert.strictEqual(popup.describePage('file:///Users/me/a.pdf', context('Chrome')).iconClass, 'ri-file-line');
+    { kind: 'browser', iconPath: '', iconName: 'ri-window-line', host: 'chrome://settings/' }, 'no logo, a window icon');
+  assert.strictEqual(popup.describePage('chrome-extension://other/page.html', context('Chrome')).iconName, 'ri-puzzle-line');
+  assert.strictEqual(popup.describePage('file:///Users/me/a.pdf', context('Chrome')).iconName, 'ri-file-line');
   assert.deepStrictEqual(popup.describePage('https://www.bilibili.com/video/1', context('Chrome')),
-    { kind: 'web', iconPath: '', iconClass: 'ri-global-line', host: 'www.bilibili.com' });
+    { kind: 'web', iconPath: '', iconName: 'ri-global-line', host: 'www.bilibili.com' });
   const logoDir = path.join(repoRoot, 'assets/images/browser-logos');
   ['google-chrome-2022.svg', 'microsoft-edge-2019.svg', 'firefox.svg', 'zen.svg', 'dia.jpg', 'comet.jpg']
     .forEach((file) => assert(fs.existsSync(path.join(logoDir, file)), `${file} ships with the extension`));

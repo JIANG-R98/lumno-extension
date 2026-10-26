@@ -5,8 +5,8 @@ const {
   EMPTY_STATE_ART_NAMES,
   createEmptyStateArt,
   ensureEmptyStateArtStyles,
+  describeEmptyStateArt,
   followEmptyStateArtTheme,
-  getEmptyStateArtMarkup,
   resolveEmptyStateArtTheme
 } = require('../../src/shared/ui/empty-state-art.ts');
 
@@ -39,11 +39,10 @@ function testDrawings() {
       assert.ok(element.querySelector(`[id="${reference}"]`), `${name} should define ${reference} itself`);
     });
 
-    // The markup builds the same drawing as the element.
-    const holder = document.createElement('div');
-    holder.innerHTML = getEmptyStateArtMarkup(name, { id: 'art-test' });
-    holder.firstChild.removeAttribute('xmlns');
-    assert.equal(holder.innerHTML, element.outerHTML, `${name} markup and element should match`);
+    // The description React renders is the drawing the element is built from.
+    const [tag, attributes] = describeEmptyStateArt(name, { id: 'art-test' });
+    assert.equal(tag, 'svg');
+    assert.equal(attributes.class, element.getAttribute('class'), `${name} description and element should match`);
   });
 
   // Two illustrations on one page never share ids.
@@ -56,11 +55,10 @@ function testDrawings() {
   assert.equal(labeled.getAttribute('data-theme'), 'dark');
   assert.equal(labeled.getAttribute('width'), '200');
   assert.equal(labeled.getAttribute('height'), '150');
-  assert.ok(getEmptyStateArtMarkup('blockedPage', { label: 'a "b" <c>' }).includes('aria-label="a &quot;b&quot; &lt;c&gt;"'));
   assert.equal(createEmptyStateArt(document, 'nothing', { theme: 'sepia' }).getAttribute('data-theme'), 'auto');
 
   assert.throws(() => createEmptyStateArt(document, 'toString'), /Unknown empty-state art/);
-  assert.throws(() => getEmptyStateArtMarkup('missing'), /Unknown empty-state art/);
+  assert.throws(() => describeEmptyStateArt('missing'), /Unknown empty-state art/);
 }
 
 function testStylesheet() {

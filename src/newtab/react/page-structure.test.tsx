@@ -15,7 +15,7 @@ afterEach(() => {
     act(() => runtime?.destroy());
   }
   runtime = null;
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 function mount(): PageStructureRuntime {

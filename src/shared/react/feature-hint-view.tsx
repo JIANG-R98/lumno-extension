@@ -7,7 +7,7 @@ import type {
   FeatureHintViewOptions
 } from '../../types/view-apis';
 import { queryHtmlTag, queryHtmlTags } from '../dom-lookup';
-import { innerHtml } from './inner-html';
+import { RemixIcon } from './remix-icon';
 import { lazyInstance } from '../lazy-instance';
 
 export type {
@@ -64,12 +64,13 @@ function FeatureHintContent({
       onClick={(event) => activateAction(action.id, event)}
       type="button"
     >
-      {action.iconHtml ? (
+      {action.icon ? (
         <span
           aria-hidden="true"
           className="x-lumno-feature-hint__action-icon"
-          dangerouslySetInnerHTML={innerHtml(action.iconHtml)}
-        />
+        >
+          <RemixIcon {...action.icon} />
+        </span>
       ) : null}
       <span className="x-lumno-feature-hint__action-text">
         {labels.actions?.[action.id] || ''}
@@ -103,11 +104,10 @@ function FeatureHintContent({
               src={model.badgeIconImageSrc}
             />
           </span>
-        ) : model.badgeIconHtml ? (
-          <span
-            className="x-lumno-feature-hint__badge-icon"
-            dangerouslySetInnerHTML={innerHtml(model.badgeIconHtml)}
-          />
+        ) : model.badgeIcon ? (
+          <span className="x-lumno-feature-hint__badge-icon">
+            <RemixIcon {...model.badgeIcon} />
+          </span>
         ) : model.badgeIconText ? (
           <span
             className="x-lumno-feature-hint__badge-icon"
@@ -183,10 +183,9 @@ function FeatureHintContent({
           <span className="x-lumno-feature-hint__link-text">
             {labels.link || ''}
           </span>
-          <span
-            className="x-lumno-feature-hint__link-icon"
-            dangerouslySetInnerHTML={innerHtml('<i class="ri-icon ri-size-12 ri-arrow-right-line" aria-hidden="true"></i>')}
-          />
+          <span className="x-lumno-feature-hint__link-icon">
+            <RemixIcon name="ri-arrow-right-line" size={12} />
+          </span>
         </button>
       ) : null}
       {!model.inlineActions && actions.length > 0 ? (
@@ -201,14 +200,15 @@ function FeatureHintContent({
       <button
         aria-label={labels.close}
         className="x-lumno-feature-hint__close"
-        dangerouslySetInnerHTML={innerHtml('<i class="ri-icon ri-size-12 ri-close-line" aria-hidden="true"></i>')}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
           onDismiss?.();
         }}
         type="button"
-      />
+      >
+        <RemixIcon name="ri-close-line" size={12} />
+      </button>
     </>
   );
 }

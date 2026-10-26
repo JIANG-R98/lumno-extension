@@ -3,23 +3,19 @@
 import { SectionTrigger } from './panel-controls';
 import { collapsible, type SectionSettingsModel } from './panel-model';
 import { ref, Switch, SegmentedChoice } from './panel-primitives';
-import type { WallpaperPanelContext } from './use-wallpaper-panel';
 
 const BODY_ID = '_x_extension_newtab_recentSettings_body_2026_unique_';
 const ROW_TABS = 'x-nt-wallpaper-tabs x-nt-row-tabs';
 
-export function RecentSettingsSection({ panel, settings }: {
-  panel: WallpaperPanelContext;
+export function RecentSettingsSection({ settings }: {
   settings: SectionSettingsModel;
 }) {
-  const { arrowIcon } = panel;
   const { recent, actions } = settings;
   const open = recent.enabled && recent.expanded;
   return (
     <div {...ref('recentSettingsSection')} className="x-nt-wallpaper-section">
       <div className="x-nt-wallpaper-panel-header">
         <SectionTrigger
-          arrowIcon={arrowIcon}
           bodyId={BODY_ID}
           disabled={!recent.enabled}
           expanded={open}

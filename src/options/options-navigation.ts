@@ -70,37 +70,37 @@ function createNavigation(deps: NavigationDeps) {
         key: 'general',
         labelKey: 'settings_tab_general',
         label: getMessage('settings_tab_general', '常规'),
-        iconClass: 'ri-icon ri-command-fill'
+        iconName: 'ri-command-fill'
       },
       {
         key: 'account',
         labelKey: 'settings_tab_account',
         label: getMessage('settings_tab_account', '账号与同步'),
-        iconClass: 'ri-icon ri-user-3-line'
+        iconName: 'ri-user-3-line'
       },
       {
         key: 'appearance',
         labelKey: 'settings_tab_appearance',
         label: getMessage('settings_tab_appearance', '外观'),
-        iconClass: 'ri-icon ri-moon-clear-fill'
+        iconName: 'ri-moon-clear-fill'
       },
       {
         key: 'shortcuts',
         labelKey: 'settings_tab_shortcuts',
         label: getMessage('settings_tab_shortcuts', '搜索源'),
-        iconClass: 'ri-icon ri-search-line'
+        iconName: 'ri-search-line'
       },
       {
         key: 'blacklist',
         labelKey: 'settings_tab_blacklist',
         label: getMessage('settings_tab_blacklist', '黑名单'),
-        iconClass: 'ri-icon ri-forbid-2-fill'
+        iconName: 'ri-forbid-2-fill'
       },
       {
         key: 'labs',
         labelKey: 'settings_tab_labs',
         label: getMessage('settings_tab_labs', '实验室功能'),
-        iconClass: 'ri-icon ri-test-tube-fill'
+        iconName: 'ri-test-tube-fill'
       }
     ];
   }

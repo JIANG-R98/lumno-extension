@@ -16,7 +16,7 @@ afterEach(() => {
     act(() => view?.destroy());
   }
   view = null;
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 function createHandlers(overrides: Partial<CascadeMenuHandlers> = {}): CascadeMenuHandlers {
@@ -54,7 +54,7 @@ function row(overrides: Partial<CascadeRowModel>): CascadeRowModel {
     expanded: false,
     hoverSuppressed: false,
     contextMenuOpen: false,
-    folderIconMarkup: '',
+    folderIconSuffix: '',
     iconUrl: '',
     iconMonochrome: false,
     iconAlt: 'Site',
@@ -68,7 +68,7 @@ const folderRow = row({
   isFolder: true,
   title: 'Assets',
   bookmarkId: '2',
-  folderIconMarkup: '<svg data-folder="true"></svg>'
+  folderIconSuffix: '2-cascade-0'
 });
 const siteRow = row({ key: 'id:3', title: 'Lumno', bookmarkId: '3', bookmarkIndex: '1' });
 
@@ -96,7 +96,8 @@ describe('New Tab React bookmark cascade view', () => {
     const [folder, site] = getTags(menu.element, '.x-nt-bookmark-cascade-item', 'button');
     expect(folder.dataset.bookmarkDropFolderId).toBe('2');
     expect(folder.getAttribute('aria-expanded')).toBe('false');
-    expect(folder.querySelector('svg[data-folder]')).not.toBeNull();
+    expect(folder.querySelector('svg[data-folder-color-id="2"]')).not.toBeNull();
+    expect(folder.querySelector('#x-nt-folder-filter-lower-base-2-cascade-0')).not.toBeNull();
     expect(site.dataset.bookmarkIndex).toBe('1');
     expect(getTag(menu.element, '.x-nt-bookmark-cascade-copy-trigger', 'button').dataset.tooltip).toBe('Copy link');
     expect(handlers.onFolderIconMount).toHaveBeenCalledTimes(1);

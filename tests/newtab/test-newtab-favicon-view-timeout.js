@@ -128,9 +128,6 @@ const runtime = sandbox.LumnoNewtabFaviconView.createFaviconViewRuntime({
       }
     }
   },
-  getRiSvg() {
-    return '';
-  },
   getExtensionFaviconUrl(pageUrl) {
     return `chrome-extension://abc/_favicon/?pageUrl=${encodeURIComponent(pageUrl)}&size=128`;
   },

@@ -3,6 +3,7 @@
 import type { ThemeRgb } from '../../../domain/favicon/favicon-utils';
 import type { AggregateSearch } from '../../../domain/search/aggregate-search-store';
 import type { SearchSourceType, SearchTextIndex, SiteSearchProvider } from '../../../domain/search/types';
+import type { RemixIconName } from '../../ui/remix-icon';
 
 // Message text by key, with {name} placeholders filled from values.
 type FormatMessage = (key: string, fallback: string, values?: Record<string, string>) => string;
@@ -63,7 +64,7 @@ interface ModeMenuItem {
   // A built-in line icon (bookmark, browser, history, star).
   menuIconName?: string;
   // A Remix icon class for the glyph.
-  iconClass?: string;
+  iconName?: RemixIconName;
   isAi?: boolean;
   theme?: InputModeTheme | null;
   iconUrl?: string;
@@ -126,7 +127,7 @@ interface PrefixContentOptions {
   iconUrl?: string;
   // The host whose icon and theme the provider uses.
   iconHost?: string;
-  iconClass?: string;
+  iconName?: RemixIconName;
   isAi?: boolean;
   menuIconName?: string;
   // Keep an icon animation that is running.

@@ -2,6 +2,7 @@ import { useRef, type ReactNode } from 'react';
 import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { SettingTitle } from './setting-rows';
 import { SettingsRows, type SettingsRowModel, type SettingsRowsHandlers } from './settings-rows-view';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 // The custom collection: which file it came from and how many quotes it
 // holds, a way to move today's quote on, and the import.
@@ -59,7 +60,7 @@ function QuoteLibraryRow({ model, handlers }: { model: QuoteLibraryRowModel; han
           id="_x_extension_newtab_quote_count_2026_unique_"
           tabIndex={0}
         >
-          <i aria-hidden="true" className="ri-icon ri-size-14 ri-file-text-line" />
+          <RemixIcon name="ri-file-text-line" />
           <span id="_x_extension_newtab_quote_count_text_2026_unique_">{model.count ? model.count.label : ''}</span>
         </span>
         <button

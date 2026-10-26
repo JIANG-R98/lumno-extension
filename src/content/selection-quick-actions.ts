@@ -98,7 +98,7 @@ type EntryContrastTone = 'dark' | 'light' | 'mixed';
 
 interface IconDefinition {
   viewBox: string;
-  body: string;
+  path: string;
 }
 
 // A page listener the feature adds while it is on and removes when it is off.
@@ -226,7 +226,7 @@ function isTextControlType(type: string): boolean {
   const TOOLBAR_FALLBACK_ACTIONS: readonly SelectionAction[] = Object.freeze(['explain', 'search', 'translate'] as const);
 
   function createInlineIcon(definition: IconDefinition | undefined, className: string): SVGSVGElement | null {
-    if (!definition || !definition.body) {
+    if (!definition || !definition.path) {
       return null;
     }
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -234,7 +234,10 @@ function isTextControlType(type: string): boolean {
     svg.setAttribute('aria-hidden', 'true');
     svg.setAttribute('focusable', 'false');
     svg.setAttribute('viewBox', definition.viewBox || '0 0 24 24');
-    svg.innerHTML = definition.body;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('fill', 'currentColor');
+    path.setAttribute('d', definition.path);
+    svg.appendChild(path);
     return svg;
   }
 

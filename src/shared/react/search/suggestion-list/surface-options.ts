@@ -203,7 +203,6 @@ export function normalizeOptions(
     t: raw.t || ((_key, fallback) => fallback || _key || ''),
     formatMessage: raw.formatMessage || fallbackFormatMessage,
     actionModel: raw.actionModel || {},
-    getRiSvg: raw.getRiSvg || (() => ''),
     sanitizeDisplayText:
       raw.sanitizeDisplayText || ((value) => String(value || '')),
     formatTabRankDebugText: raw.formatTabRankDebugText || (() => ''),

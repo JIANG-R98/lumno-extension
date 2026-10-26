@@ -82,7 +82,6 @@ interface PanelActionsDeps extends
   chrome: FeatureHintChromeApi | null | undefined;
   featureHintVisibilityGate: PromiseLike<unknown> | null;
   t: Translate;
-  getRiSvg(id: string, sizeClass: string): string;
   closeWallpaperPanel(): void;
   wallpaperState: Pick<WallpaperState,
     'currentTimeFont' | 'customWallpaperImporting' | 'customWallpaperUrlFormOpen' | 'customWallpaperUrlInvalid' |
@@ -173,7 +172,6 @@ function createPanelActions(deps: PanelActionsDeps) {
     chrome,
     featureHintVisibilityGate,
     t,
-    getRiSvg,
     syncWallpaperSourceTabToEditMode,
     getResolvedWallpaperMode,
     setWallpaperPanelOpenState,
@@ -388,7 +386,6 @@ function createPanelActions(deps: PanelActionsDeps) {
       definition: 'newtab-wallpaper-sources',
       visibilityGate: featureHintVisibilityGate,
       t,
-      getRiSvg
     });
     if (!controller || !controller.element) {
       return null;

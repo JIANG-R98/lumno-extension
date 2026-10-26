@@ -1,11 +1,12 @@
 // The mode tag's and Tab hint's models, which the input mode controller
 // keeps and the React view (react/search/mode-tag.tsx) draws.
+import type { RemixIconName } from '../../ui/remix-icon';
 
 export interface ModeTagIcon {
   // A built-in line icon's name; empty for a glyph or a site icon.
   lineIcon: string;
   // The Remix icon class shown when there is no site icon, or it failed.
-  glyphClass: string;
+  glyphName: RemixIconName;
   iconUrl: string;
   // The host whose saved icon may replace iconUrl.
   iconHost: string;

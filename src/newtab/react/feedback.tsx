@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { isNode } from '../../shared/dom-guards';
 import { lazyInstance } from '../../shared/lazy-instance';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 export type FeedbackCommunityChannel = 'wechat' | 'x';
 
@@ -210,7 +211,7 @@ function FeedbackControl({
         ref={buttonRef}
         type="button"
       >
-        <i aria-hidden="true" className="ri-icon ri-size-20 ri-message-3-line" />
+        <RemixIcon name="ri-message-3-line" size={20} />
       </button>
       <div
         aria-label={model.menuAriaLabel}
@@ -238,7 +239,7 @@ function FeedbackControl({
             role="menuitem"
             target="_blank"
           >
-            <i aria-hidden="true" className="ri-icon ri-size-16 ri-twitter-x-line" />
+            <RemixIcon name="ri-twitter-x-line" size={16} />
           </a>
           <a
             aria-label={model.githubIssueTooltip}
@@ -261,7 +262,7 @@ function FeedbackControl({
             role="menuitem"
             target="_blank"
           >
-            <i aria-hidden="true" className="ri-icon ri-size-16 ri-github-line" />
+            <RemixIcon name="ri-github-line" size={16} />
           </a>
           <a
             aria-label={model.chromeReviewTooltip}
@@ -284,7 +285,7 @@ function FeedbackControl({
             role="menuitem"
             target="_blank"
           >
-            <i aria-hidden="true" className="ri-icon ri-size-16 ri-star-line" />
+            <RemixIcon name="ri-star-line" size={16} />
           </a>
           {/* Outside Chinese the menu's X button is the community entry, so this one is WeChat only. */}
           {model.channel === 'wechat' && (
@@ -311,7 +312,7 @@ function FeedbackControl({
               role="menuitem"
               type="button"
             >
-              <i aria-hidden="true" className="ri-icon ri-size-16 ri-wechat-fill" />
+              <RemixIcon name="ri-wechat-fill" size={16} />
             </button>
           )}
         </div>
@@ -355,7 +356,7 @@ function FeedbackControl({
                 role="menuitem"
                 type="button"
               >
-                <i aria-hidden="true" className="ri-icon ri-size-16 ri-refresh-line x-lumno-busy-spin" />
+                <RemixIcon className="x-lumno-busy-spin" name="ri-refresh-line" size={16} />
               </button>
               <button
                 aria-label={model.closeTooltip}
@@ -376,7 +377,7 @@ function FeedbackControl({
                 role="menuitem"
                 type="button"
               >
-                <i aria-hidden="true" className="ri-icon ri-size-16 ri-close-line" />
+                <RemixIcon name="ri-close-line" size={16} />
               </button>
             </div>
           </div>

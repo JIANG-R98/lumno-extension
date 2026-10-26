@@ -138,7 +138,7 @@ function createModeMenuIcons(deps: ModeMenuIconsDeps) {
     const provider = item.provider || null;
     return {
       lineIcon: getLineIconName(item),
-      glyphClass: item.iconClass || (item.isAi ? 'ri-search-ai-line' : 'ri-search-line'),
+      glyphName: item.iconName || (item.isAi ? 'ri-search-ai-line' : 'ri-search-line'),
       iconUrl: item.iconUrl ? String(resolveProviderIconUrl(item.provider, item.iconUrl) || '').trim() : '',
       iconHost: provider ? String(getProviderThemeHost(provider) || '').trim() : ''
     };

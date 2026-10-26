@@ -6,6 +6,7 @@ import type {
   ReactNode,
   Ref
 } from 'react';
+import { RemixIcon } from './remix-icon';
 
 export interface RangeSliderProps
   extends Omit<ComponentPropsWithRef<'input'>, 'className' | 'type'> {
@@ -133,15 +134,7 @@ export function RangeSliderResetButton({
       ].filter(Boolean).join(' ')}
       type="button"
     >
-      <i
-        aria-hidden="true"
-        className={[
-          'ri-icon',
-          'ri-size-14',
-          'ri-reset-left-line',
-          iconClassName
-        ].filter(Boolean).join(' ')}
-      />
+      <RemixIcon className={iconClassName} name="ri-reset-left-line" />
     </button>
   );
 }

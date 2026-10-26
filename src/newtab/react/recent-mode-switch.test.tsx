@@ -9,7 +9,7 @@ let root: Root | null = null;
 afterEach(() => {
   act(() => root?.unmount());
   root = null;
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
   vi.useRealTimers();
 });
 

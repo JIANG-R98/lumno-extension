@@ -14,7 +14,7 @@ let elements: HTMLElement[] = [];
 afterEach(() => {
   act(() => elements.forEach((element) => destroyTooltipElement(element)));
   elements = [];
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 describe('Tooltip React view', () => {

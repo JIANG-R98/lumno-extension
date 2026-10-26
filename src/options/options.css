@@ -2962,9 +2962,11 @@ button[aria-busy="true"]:disabled,
 }
 .ri-size-8 { --ri-size: 8px; }
 .ri-size-12 { --ri-size: 12px; }
+.ri-size-14 { --ri-size: 14px; }
 .ri-size-16 { --ri-size: 16px; }
 .ri-size-20 { --ri-size: 20px; }
 .ri-size-24 { --ri-size: 24px; }
+.ri-size-28 { --ri-size: 28px; }
 ._x_extension_toggle_2024_unique_ {
   display: inline-flex;
   align-items: center;

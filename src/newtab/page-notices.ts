@@ -32,7 +32,6 @@ interface PageNoticesDeps {
   pageSearchParams: URLSearchParams;
   bottomDock: HTMLElement | null;
   t: Translate;
-  getRiSvg(id: string, sizeClass: string): string;
   FEATURE_HINTS: typeof LumnoFeatureHints;
   getOpenDisposition(event: OpenEvent | Disposition | null | undefined, fallback?: Disposition): Disposition;
   getFeedbackWebLocale(): string;
@@ -57,7 +56,6 @@ function createPageNotices(deps: PageNoticesDeps) {
     pageSearchParams,
     bottomDock,
     t,
-    getRiSvg,
     FEATURE_HINTS,
     getOpenDisposition,
     getFeedbackWebLocale,
@@ -135,7 +133,6 @@ function createPageNotices(deps: PageNoticesDeps) {
       bottomDock,
       messages: {
         t,
-        getRiSvg,
         detailsUrl
       },
       onClose: () => {
@@ -179,7 +176,6 @@ function createPageNotices(deps: PageNoticesDeps) {
     chromeApi: chrome,
     surface: 'newtab',
     t,
-    getRiSvg,
     onSessionSlotClaimed() {
       if (pageState.engagementNoticeController &&
           typeof pageState.engagementNoticeController.suppressForSession === 'function') {
@@ -202,7 +198,6 @@ function createPageNotices(deps: PageNoticesDeps) {
       surface: 'newtab',
       locale: getFeedbackWebLocale(),
       t,
-      getRiSvg,
       exposureGate: pageState.updateNoticeController && pageState.updateNoticeController.ready,
       canShow() {
         const updateNoticeVisible = Boolean(
@@ -281,7 +276,6 @@ function createPageNotices(deps: PageNoticesDeps) {
       visibilityGate: newtabEntryAnimationReadyPromise,
       initiallyVisible: false,
       t,
-      getRiSvg,
       onLinkClick() {
         dismissHelpCenterAskHint();
         if (helpCenterAskProvider) {

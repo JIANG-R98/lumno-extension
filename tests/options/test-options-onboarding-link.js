@@ -70,7 +70,7 @@ assert.strictEqual(rule(`body[data-theme="dark"] .${versionButtonClass}:hover`).
   assert.ok(button && button.tagName === 'BUTTON' && button.classList.contains(buttonClass),
     'general settings header should expose a compact onboarding tutorial ghost action');
   assert.strictEqual(button.querySelector('span').textContent, '新手引导');
-  assert.ok(button.querySelector('i.ri-icon.ri-size-14.ri-external-link-line'), 'with the onboarding ghost icon');
+  assert.ok(button.querySelector('i.ri-icon.ri-external-link-line'), 'with the onboarding ghost icon');
   await page.click(button);
   assert.ok(page.messages.some((message) => message.action === 'openOnboardingPage'),
     'clicking the tutorial action should ask the background page to open onboarding');

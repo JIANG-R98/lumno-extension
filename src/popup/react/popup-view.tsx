@@ -4,6 +4,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { useSegmentedIndicator } from '../../shared/react/segmented-indicator';
 import { queryHtmlTags } from '../../shared/dom-lookup';
 import { lazyInstance } from '../../shared/lazy-instance';
+import { RemixIcon } from '../../shared/react/remix-icon';
+import type { RemixIconName } from '../../shared/ui/remix-icon';
 
 export type PopupActionId = 'clip' | 'shortcut' | 'copy' | 'search' | 'pin' | 'pip';
 export type PopupLinkId = 'settings' | 'shortcuts' | 'feedback' | 'release' | 'sync';
@@ -14,7 +16,7 @@ export interface PopupPageModel {
   /** The favicon, Lumno's icon or the browser's logo. */
   iconUrl: string;
   /** The icon shown when there is no image, such as a puzzle piece for extensions. */
-  iconClass: string;
+  iconName: RemixIconName;
 }
 
 export interface PopupActionModel {
@@ -22,7 +24,7 @@ export interface PopupActionModel {
   label: string;
   /** Says what the action does, shown in Lumno's tooltip. */
   tooltip: string;
-  iconClass: string;
+  iconName: RemixIconName;
   disabled: boolean;
   /** A chevron in the corner that opens this action's options below the actions. */
   menu?: { label: string; expanded: boolean };
@@ -70,7 +72,7 @@ export interface PopupSectionModel {
 export interface PopupLinkModel {
   id: PopupLinkId;
   label: string;
-  iconClass: string;
+  iconName: RemixIconName;
 }
 
 export interface PopupSyncModel {
@@ -124,7 +126,7 @@ function tooltipProps(text: string | undefined, handlers: PopupHandlers) {
 const TOOLTIP_HOST_CLASS = '_x_extension_tooltip_host_2026_unique_';
 
 // Synced and syncing share the cloud; a wait or a failure gets its own icon.
-const SYNC_ICONS: Partial<Record<PopupSyncModel['tone'], string>> = {
+const SYNC_ICONS: Partial<Record<PopupSyncModel['tone'], RemixIconName>> = {
   waiting: 'ri-time-line',
   error: 'ri-error-warning-line'
 };
@@ -147,7 +149,7 @@ function ActionCell({
         onClick={() => handlers.onAction(action.id)}
         type="button"
       >
-        <i aria-hidden="true" className={`ri-icon ${action.iconClass}`} />
+        <RemixIcon name={action.iconName} />
         <span className="x-lumno-popup__action-label">{action.label}</span>
       </button>
       {action.menu ? (
@@ -160,7 +162,7 @@ function ActionCell({
           onClick={() => handlers.onActionMenuToggle(action.id, !action.menu?.expanded)}
           type="button"
         >
-          <i aria-hidden="true" className="ri-icon ri-arrow-down-s-line" />
+          <RemixIcon name="ri-arrow-down-s-line" />
         </button>
       ) : null}
     </div>
@@ -182,7 +184,7 @@ function PageCard({
           {page.iconUrl ? (
             <img alt="" draggable={false} height={16} src={page.iconUrl} width={16} />
           ) : (
-            <i className={`ri-icon ${page.iconClass}`} />
+            <RemixIcon name={page.iconName} />
           )}
         </span>
         <span className="x-lumno-popup__page-text">
@@ -336,7 +338,7 @@ export function PopupView({ model, handlers }: { model: PopupModel; handlers: Po
           type="button"
         >
           <span>{model.settings.label}</span>
-          <i aria-hidden="true" className="ri-icon ri-arrow-down-s-line x-lumno-popup__settings-chevron" />
+          <RemixIcon className="x-lumno-popup__settings-chevron" name="ri-arrow-down-s-line" />
         </button>
         {/* Always mounted so it can fold and unfold; inert while folded. */}
         <div
@@ -366,10 +368,7 @@ export function PopupView({ model, handlers }: { model: PopupModel; handlers: Po
             onClick={() => handlers.onLink('sync')}
             type="button"
           >
-            <i
-              aria-hidden="true"
-              className={`ri-icon ${SYNC_ICONS[model.sync.tone] || 'ri-cloud-line'}`}
-            />
+            <RemixIcon name={SYNC_ICONS[model.sync.tone] || 'ri-cloud-line'} />
           </button>
         ) : null}
         <nav className="x-lumno-popup__links">
@@ -383,7 +382,7 @@ export function PopupView({ model, handlers }: { model: PopupModel; handlers: Po
               onClick={() => handlers.onLink(link.id)}
               type="button"
             >
-              <i aria-hidden="true" className={`ri-icon ${link.iconClass}`} />
+              <RemixIcon name={link.iconName} />
             </button>
           ))}
         </nav>

@@ -304,7 +304,7 @@ function createBookmarkContextMenu(deps: BookmarkContextMenuDeps) {
       selectId: '_x_extension_newtab_bookmark_context_menu_select_2026_unique_',
       className: 'x-nt-shortcut-context-menu x-nt-bookmark-context-menu',
       iconOnly: true,
-      triggerIconClass: 'ri-more-line',
+      triggerIconName: 'ri-more-line',
       menuClassName: 'x-nt-shortcut-context-menu-portal x-nt-bookmark-context-menu-portal',
       menuAlign: 'middle',
       menuWidth: 'content',

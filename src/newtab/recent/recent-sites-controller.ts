@@ -316,7 +316,7 @@ function createRecentSitesController(deps: RecentSitesControllerDeps) {
       selectId: '_x_extension_newtab_recent_context_menu_select_2026_unique_',
       className: 'x-nt-shortcut-context-menu x-nt-recent-context-menu',
       iconOnly: true,
-      triggerIconClass: 'ri-more-line',
+      triggerIconName: 'ri-more-line',
       menuClassName: 'x-nt-shortcut-context-menu-portal x-nt-recent-context-menu-portal',
       menuAlign: 'middle',
       menuWidth: 'content',

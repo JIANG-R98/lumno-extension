@@ -4,6 +4,7 @@ import {
   type ReactNode
 } from 'react';
 import { RemixIcon as Icon } from '../../shared/react/remix-icon';
+import type { RemixIconName } from '../../shared/ui/remix-icon';
 
 type Rgb = readonly number[];
 
@@ -24,7 +25,7 @@ export interface SiteSearchTheme {
 export interface SiteSearchCaseModel {
   actionLabel?: string;
   favicon?: string;
-  iconClass?: string;
+  iconName?: RemixIconName;
   kind?: string;
   label?: string;
   modeLabel?: string;
@@ -111,11 +112,7 @@ function ProviderIcon({
   }
   return (
     <span className={className}>
-      <Icon
-        className={String(
-          item.iconClass || (failed ? 'ri-link' : 'ri-search-line')
-        )}
-      />
+      <Icon name={item.iconName || (failed ? 'ri-link' : 'ri-search-line')} />
     </span>
   );
 }
@@ -219,7 +216,7 @@ function SearchInput({
   return (
     <div className="x-lumno-search-input x-lumno-search-input__container">
       <span className="x-lumno-search-input__icon">
-        <Icon className="ri-search-line ri-size-16" />
+        <Icon name="ri-search-line" size={16} />
       </span>
       <div
         aria-label={`${String(item.label || '')} demo query`}
@@ -245,7 +242,7 @@ function SearchInput({
         tabIndex={-1}
         type="button"
       >
-        <Icon className="ri-settings-line ri-size-16" />
+        <Icon name="ri-settings-line" size={16} />
       </button>
       <span className="x-lumno-search-input__divider" />
       <ModePrefix item={item} />

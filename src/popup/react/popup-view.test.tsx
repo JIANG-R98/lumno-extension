@@ -6,13 +6,13 @@ import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
 
 function createModel(overrides: Partial<PopupModel> = {}): PopupModel {
   return {
-    page: { title: 'Kyoto walk', host: 'www.bilibili.com', iconUrl: 'icon.png', iconClass: 'ri-global-line' },
+    page: { title: 'Kyoto walk', host: 'www.bilibili.com', iconUrl: 'icon.png', iconName: 'ri-global-line' },
     actionsLabel: 'Page actions',
     actions: [
-      { id: 'search', label: 'Open command bar', tooltip: '⇧⌘K', iconClass: 'ri-search-line', disabled: false },
-      { id: 'copy', label: 'Copy link', tooltip: '⇧⌘C', iconClass: 'ri-link', disabled: false },
-      { id: 'shortcut', label: 'Add shortcut', tooltip: 'Add this page to your Lumno New Tab shortcuts', iconClass: 'ri-apps-2-add-line', disabled: true },
-      { id: 'clip', label: 'Web clip', tooltip: '', iconClass: 'ri-screenshot-2-line', disabled: false }
+      { id: 'search', label: 'Open command bar', tooltip: '⇧⌘K', iconName: 'ri-search-line', disabled: false },
+      { id: 'copy', label: 'Copy link', tooltip: '⇧⌘C', iconName: 'ri-link', disabled: false },
+      { id: 'shortcut', label: 'Add shortcut', tooltip: 'Add this page to your Lumno New Tab shortcuts', iconName: 'ri-apps-2-add-line', disabled: true },
+      { id: 'clip', label: 'Web clip', tooltip: '', iconName: 'ri-screenshot-2-line', disabled: false }
     ],
     actionPanel: null,
     notice: null,
@@ -59,10 +59,10 @@ function createModel(overrides: Partial<PopupModel> = {}): PopupModel {
       ]
     },
     links: [
-      { id: 'release', label: 'What’s new', iconClass: 'ri-sparkling-2-line' },
-      { id: 'feedback', label: 'Feedback', iconClass: 'ri-chat-smile-2-line' },
-      { id: 'shortcuts', label: 'Shortcuts', iconClass: 'ri-keyboard-box-line' },
-      { id: 'settings', label: 'Settings', iconClass: 'ri-settings-3-line' }
+      { id: 'release', label: 'What’s new', iconName: 'ri-sparkling-2-line' },
+      { id: 'feedback', label: 'Feedback', iconName: 'ri-chat-smile-2-line' },
+      { id: 'shortcuts', label: 'Shortcuts', iconName: 'ri-keyboard-box-line' },
+      { id: 'settings', label: 'Settings', iconName: 'ri-settings-3-line' }
     ],
     sync: { label: 'WebDAV synced · 2 minutes ago', tone: 'ok' },
     version: 'Lumno 1.1.3',
@@ -122,7 +122,7 @@ describe('Toolbar popup', () => {
       id: 'pip' as const,
       label: 'Picture-in-picture',
       tooltip: 'Float this page’s video in a small window',
-      iconClass: 'ri-picture-in-picture-2-line',
+      iconName: 'ri-picture-in-picture-2-line' as const,
       disabled: true,
       menu: { label: 'Auto picture-in-picture', expanded: false }
     };
@@ -176,7 +176,7 @@ describe('Toolbar popup', () => {
 
   it('falls back to an icon when the page has no image', () => {
     const { host } = mount(createModel({
-      page: { title: 'Other extension', host: 'other', iconUrl: '', iconClass: 'ri-puzzle-line' }
+      page: { title: 'Other extension', host: 'other', iconUrl: '', iconName: 'ri-puzzle-line' }
     }));
     expect(host.querySelector('.x-lumno-popup__page-icon .ri-puzzle-line')).not.toBeNull();
     expect(host.querySelector('.x-lumno-popup__page-icon img')).toBeNull();

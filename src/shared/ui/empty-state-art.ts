@@ -14,6 +14,8 @@
 // svg: "light", "dark", or "auto" (the system setting). A surface may re-point
 // the accent and the tile with --lumno-art-accent(-dark), --lumno-art-tile(-dark).
 
+import { SVG_NS, createSvgElement, type SvgAttributeValue, type SvgNode } from './svg-tree';
+
 export type EmptyStateArtName =
   | 'blockedPage'
   | 'noResults'
@@ -33,7 +35,6 @@ export interface EmptyStateArtOptions {
   id?: string;
 }
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
 const CLASS_PREFIX = 'lumno-empty-art';
 const WIDTH = 160;
 const HEIGHT = 120;
@@ -409,7 +410,7 @@ function frame(id: string): ArtNode[] {
   ];
 }
 
-type SvgAttributes = Record<string, string | number | undefined>;
+type SvgAttributes = Record<string, SvgAttributeValue>;
 
 function paintAttributes(id: string, paint: PaintName): SvgAttributes {
   const attributes: SvgAttributes = {};
@@ -478,49 +479,27 @@ function describe(name: EmptyStateArtName, options?: EmptyStateArtOptions | null
   return { id, attributes, children: [...frame(id), ...getScene(name)] };
 }
 
-function buildElement(doc: Document, id: string, tag: string, attributes: ArtAttributes, children?: ArtNode[]): SVGElement {
-  const element = doc.createElementNS(SVG_NS, tag);
-  Object.entries(resolveAttributes(id, attributes)).forEach(([key, value]) => {
-    if (key !== 'xmlns' && value !== undefined) {
-      element.setAttribute(key, String(value));
-    }
-  });
-  (children || []).forEach(([childTag, childAttributes, grandchildren]) => {
-    element.appendChild(buildElement(doc, id, childTag, childAttributes, grandchildren));
-  });
-  return element;
+function resolveNode(id: string, [tag, attributes, children]: ArtNode): SvgNode {
+  return [tag, resolveAttributes(id, attributes), (children || []).map((child) => resolveNode(id, child))];
+}
+
+// The illustration as an SVG description, for views that render it
+// themselves (shared/react/svg-tree.tsx).
+// options: { size = 160 (width; height keeps 4:3), theme = 'auto', label, id }
+// Without a label it is aria-hidden.
+export function describeEmptyStateArt(name: EmptyStateArtName, options?: EmptyStateArtOptions | null): SvgNode {
+  const { id, attributes, children } = describe(name, options);
+  return resolveNode(id, ['svg', attributes, children]);
 }
 
 // The illustration as an <svg> element, built with createElementNS so it
 // needs no HTML parsing (pages with Trusted Types stay happy).
-// options: { size = 160 (width; height keeps 4:3), theme = 'auto', label, id }
-// Without a label it is aria-hidden.
 export function createEmptyStateArt(
   doc: Document | null | undefined,
   name: EmptyStateArtName,
   options?: EmptyStateArtOptions | null
 ): SVGElement {
-  const ownerDocument = doc || globalThis.document;
-  const { id, attributes, children } = describe(name, options);
-  return buildElement(ownerDocument, id, 'svg', attributes, children);
-}
-
-function escapeText(value: string | number): string {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-function toMarkup(id: string, tag: string, attributes: ArtAttributes, children?: ArtNode[]): string {
-  const attributeText = Object.entries(resolveAttributes(id, attributes))
-    .map(([key, value]) => (value === undefined ? '' : ` ${key}="${escapeText(value)}"`))
-    .join('');
-  const childText = (children || [])
-    .map(([childTag, childAttributes, grandchildren]) => toMarkup(id, childTag, childAttributes, grandchildren))
-    .join('');
-  return childText ? `<${tag}${attributeText}>${childText}</${tag}>` : `<${tag}${attributeText}/>`;
+  return createSvgElement(doc || globalThis.document, describeEmptyStateArt(name, options));
 }
 
 // The theme an illustration should take where it is placed, from the nearest
@@ -585,8 +564,3 @@ export function followEmptyStateArtTheme(svg: Element | null | undefined): () =>
   return () => observer.disconnect();
 }
 
-// The same illustration as markup, for views that render SVG strings.
-export function getEmptyStateArtMarkup(name: EmptyStateArtName, options?: EmptyStateArtOptions | null): string {
-  const { id, attributes, children } = describe(name, options);
-  return toMarkup(id, 'svg', attributes, children);
-}

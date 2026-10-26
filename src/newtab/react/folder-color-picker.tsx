@@ -6,6 +6,8 @@ import { SelectMenu } from './select-menu';
 import { DEFAULT_CLOSE_DELAY_MS, getEnterOffset } from './shortcut-dialog-helpers';
 import { DEFAULT_FOLDER_COLOR, MAX_SAVED_FOLDER_COLORS, normalizeSavedFolderColors, parseFolderColor, folderColorToChannels, withFolderColorChannel } from './folder-color';
 import { queryHtmlElement, queryHtmlElements, queryHtmlTags } from '../../shared/dom-lookup';
+import { FolderIcon } from './folder-icon';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 interface OpenOptions {
   folderId: string;
@@ -22,7 +24,6 @@ interface OpenOptions {
 interface PickerOptions {
   documentObj?: Document;
   t?: (key: string, fallback: string) => string;
-  getFolderSvg?: (id: string) => string;
   initFolderIcon?: (element: HTMLElement) => void;
   animateFolderIcon?: (element: HTMLElement, active: boolean) => void;
   applyFolderColor?: (element: HTMLElement, color: string) => void;
@@ -81,7 +82,6 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
   // Presets are always one click away, so only new colors can be saved.
   const isKnownColor = presets.includes(color) || savedColors.includes(color);
   const invalidMessage = t('folder_color_invalid', 'Enter a valid HEX color or RGB values from 0 to 255.');
-  const previewHtml = useRef({ __html: previewImageUrl ? '' : options.getFolderSvg?.('color-picker-preview') || '' });
 
   // Rest on the selected swatch, or the saturation area for a custom color, so the dialog opens in a browsing state.
   function focusCurrentColor() {
@@ -205,7 +205,7 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
         style={{ backgroundColor: preset }} aria-label={label} aria-pressed={selectedSource === 'preset' && color === preset}
         onClick={() => selectColor(preset, 'preset', isDefault)}>
         {isDefault && initial.labels?.defaultColor
-          ? <i className="ri-icon ri-size-14 ri-magic-line" aria-hidden="true" /> : null}
+          ? <RemixIcon name="ri-magic-line" /> : null}
       </button>;
     })}
   </>;
@@ -217,7 +217,7 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
       <button type="button" className="x-nt-folder-color-remove" disabled={!savedColorsReady}
         aria-label={`${t('folder_color_remove_saved', 'Delete saved color')} ${saved}`}
         onClick={(event) => { event.stopPropagation(); void removeSavedColor(saved); }}>
-        <i className="ri-icon ri-size-12 ri-close-line" aria-hidden="true" />
+        <RemixIcon name="ri-close-line" size={12} />
       </button>
     </span>)}
     {savedColors.length < MAX_SAVED_FOLDER_COLORS ? <button type="button" ref={addColorRef}
@@ -226,7 +226,7 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
       title={t('folder_color_save_current', 'Save current color')}
       data-tooltip={t('folder_color_save_current', 'Save current color')}
       disabled={!savedColorsReady || invalid || isKnownColor} onClick={() => { void saveCurrentColor(); }}>
-      <i className="ri-icon ri-size-16 ri-add-line" aria-hidden="true" />
+      <RemixIcon name="ri-add-line" size={16} />
     </button> : null}
   </>;
   const presetsLabel = t('folder_color_presets', 'Preset colors');
@@ -243,9 +243,11 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
           <figure className="x-nt-folder-color-stage">
             {previewImageUrl ? <span className="x-nt-folder-color-preview x-nt-folder-color-plate-preview" aria-hidden="true"
               style={{ backgroundColor: color }}><img src={previewImageUrl} alt="" draggable={false} /></span>
-            : <span className="x-nt-folder-color-preview" ref={previewRef} aria-hidden="true" dangerouslySetInnerHTML={previewHtml.current}
+            : <span className="x-nt-folder-color-preview" ref={previewRef} aria-hidden="true"
               onPointerEnter={() => { if (previewRef.current) options.animateFolderIcon?.(previewRef.current, true); }}
-              onPointerLeave={() => { if (previewRef.current) options.animateFolderIcon?.(previewRef.current, false); }} />}
+              onPointerLeave={() => { if (previewRef.current) options.animateFolderIcon?.(previewRef.current, false); }}>
+              <FolderIcon idSuffix="color-picker-preview" />
+            </span>}
             <figcaption className="x-nt-folder-color-name" title={initial.title}>{initial.title}</figcaption>
           </figure>
           <div className="x-nt-folder-color-editor" ref={editorRef}>

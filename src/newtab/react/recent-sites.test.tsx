@@ -44,8 +44,6 @@ function createOptions(
     getBrowserPageFaviconUrl: () => 'chrome://favicon/',
     getSiteDisplayName: (_host, title) => title || 'Example',
     getUrlDisplay: (url) => url,
-    getRiSvg: (id, sizeClass = '') =>
-      `<i class="${sizeClass} ${id}"></i>`,
     attachFaviconWithFallbacks: (image) => {
       image.src = 'data:image/png;base64,dGVzdA==';
     },

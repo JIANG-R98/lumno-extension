@@ -1,3 +1,4 @@
+import { RemixIcon } from '../../shared/react/remix-icon';
 export interface ReorderCopyModel {
   moveDownLabel: string;
   moveUpLabel: string;
@@ -43,7 +44,7 @@ export function ReorderButtons({
         }}
         type="button"
       >
-        <i aria-hidden="true" className="ri-icon ri-size-14 ri-arrow-up-s-line" />
+        <RemixIcon name="ri-arrow-up-s-line" />
       </button>
       <button
         aria-label={copy.moveDownLabel}
@@ -56,7 +57,7 @@ export function ReorderButtons({
         }}
         type="button"
       >
-        <i aria-hidden="true" className="ri-icon ri-size-14 ri-arrow-down-s-line" />
+        <RemixIcon name="ri-arrow-down-s-line" />
       </button>
     </div>
   );

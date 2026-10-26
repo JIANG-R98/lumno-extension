@@ -1,9 +1,11 @@
 import { useRef, type KeyboardEvent } from 'react';
 import { useSegmentedIndicator } from '../../shared/react/segmented-indicator';
 import { queryHtmlTags } from '../../shared/dom-lookup';
+import type { RemixIconName } from '../../shared/ui/remix-icon';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 export interface SegmentedControlItemModel {
-  iconClass?: string;
+  iconName?: RemixIconName;
   label: string;
   labelKey: string;
   value: string;
@@ -99,9 +101,7 @@ export function SegmentedControl({
             tabIndex={tabStop ? 0 : -1}
             type="button"
           >
-            {item.iconClass ? (
-              <i aria-hidden="true" className={item.iconClass} />
-            ) : null}
+            {item.iconName ? <RemixIcon name={item.iconName} /> : null}
             <span data-i18n={item.labelKey}>{item.label}</span>
           </button>
         );

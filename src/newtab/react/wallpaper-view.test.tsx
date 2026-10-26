@@ -26,7 +26,7 @@ afterEach(() => {
     act(() => controller?.destroy());
   }
   controller = null;
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 type MockActions = Record<keyof WallpaperPanelActions, Mock<() => void>>;
@@ -37,11 +37,7 @@ function createActions(): MockActions {
 
 const MODEL: WallpaperPanelModel = {
   appearanceOptions: [{ mode: 'system' }, { mode: 'light' }, { mode: 'dark' }],
-  favicons: [{ id: 'default', previewUrl: '/favicon.png' }, { id: 'alternate', inlineSvg: '<svg></svg>' }],
-  icons: {
-    arrow: '<i class="ri-arrow-right-s-line"></i>',
-    info: '<i class="ri-icon ri-information-line"></i>'
-  },
+  favicons: [{ id: 'default', previewUrl: '/favicon.png' }, { id: 'alternate', inlineSvg: ['svg', { viewBox: '0 0 104 104' }] }],
   marks: { shortcutColumns: [0, 100 / 3, 200 / 3, 100] }
 };
 

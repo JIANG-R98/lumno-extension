@@ -818,8 +818,7 @@ function assertBrandMarkCopy() {
     windowObj: localized.windowObj,
     storageArea: null,
     t: (key, fallback) => (zhMessages[key] ? zhMessages[key].message : fallback || ''),
-    getTopContentMode: () => 'time',
-    getRiSvg: () => ''
+    getTopContentMode: () => 'time'
   });
   localizedRuntime.createControls();
   const search = panelState(localizedRuntime).search;
@@ -844,11 +843,10 @@ function assertThemeAwareAlternateFaviconAsset() {
     documentObj,
     windowObj,
     storageArea: null,
-    t: (key, fallback) => fallback || key,
-    getRiSvg: () => ''
+    t: (key, fallback) => fallback || key
   });
   runtime.createControls();
-  const preview = panelOf(runtime).model.favicons.find((item) => item.id === 'alternate').inlineSvg;
+  const preview = JSON.stringify(panelOf(runtime).model.favicons.find((item) => item.id === 'alternate').inlineSvg);
   assert.ok(preview.includes('M14.1832'), 'favicon picker preview should use the supplied lumno1.svg shadow shape');
   assert.ok(preview.includes('M34.0761'), 'favicon picker preview should use the supplied lumno1.svg main shape');
 
@@ -1317,8 +1315,7 @@ const runtime = sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
   showTopActionTooltip(anchor, text) {
     inputAutoFocusTooltips.push({ anchor, text });
   },
-  t: (_key, fallback) => fallback || '',
-  getRiSvg: () => ''
+  t: (_key, fallback) => fallback || ''
 });
 
 runtime.createControls();
@@ -1443,8 +1440,7 @@ async function testOverlayAndStrengthSnapToTheirMarksWhileDragged() {
     windowObj: testWindow,
     storageArea,
     storageKeys: { overlay: WALLPAPER_OVERLAY_STORAGE_KEY, effect: WALLPAPER_EFFECT_STORAGE_KEY },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
   testRuntime.createControls();
   openPanel(testRuntime);
@@ -1491,8 +1487,7 @@ async function testWallpaperSourcesHintWaitsForFinalFocusRoute() {
         return null;
       }
     },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
   pendingRuntime.createControls();
   await Promise.resolve();
@@ -1534,8 +1529,7 @@ async function testWallpaperSourcesHintWaitsForFinalFocusRoute() {
       }
     },
     featureHintVisibilityGate,
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
   settledRuntime.createControls();
   await Promise.resolve();
@@ -1570,7 +1564,6 @@ const scopedRuntime = sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
   windowObj,
   storageArea: null,
   t: (_key, fallback) => fallback || '',
-  getRiSvg: () => '',
   getThemeScope: () => 'home'
 });
 scopedRuntime.createControls();
@@ -1590,7 +1583,6 @@ const previewRuntime = sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
   windowObj,
   storageArea: null,
   t: (_key, fallback) => fallback || '',
-  getRiSvg: () => '',
   getThemeScope: () => 'home',
   getGlobalThemeMode: () => previewGlobalMode
 });
@@ -1615,7 +1607,6 @@ const switchingRuntime = sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
   windowObj,
   storageArea: null,
   t: (_key, fallback) => fallback || '',
-  getRiSvg: () => '',
   getThemeScope: () => switchingScope,
   setThemeScope: (scope) => {
     switchingScope = scope === 'home' ? 'home' : 'global';
@@ -1668,8 +1659,7 @@ async function testBuiltInWallpaperBootstrapDefersCustomCatalogRead() {
       wallpaper: WALLPAPER_STORAGE_KEY,
       localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY
     },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   await testRuntime.bootstrapInitialWallpaper();
@@ -1702,8 +1692,7 @@ async function testWallpaperTileIntentReusesDecodedImagePromise() {
     windowObj: testWindow,
     storageArea: createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID }),
     storageKeys: { wallpaper: WALLPAPER_STORAGE_KEY },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   await testRuntime.bootstrapInitialWallpaper();
@@ -1745,8 +1734,7 @@ async function testRapidWallpaperSelectionNeverAppliesStaleDecode() {
     windowObj: testWindow,
     storageArea: createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID }),
     storageKeys: { wallpaper: WALLPAPER_STORAGE_KEY },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   await testRuntime.bootstrapInitialWallpaper();
@@ -1792,8 +1780,7 @@ async function testSyncedCustomWallpaperWithoutLocalRecordFallsBackToDefault() {
       wallpaper: WALLPAPER_STORAGE_KEY,
       localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY
     },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   await testRuntime.bootstrapInitialWallpaper();
@@ -1828,8 +1815,7 @@ async function testUnrecognizedSyncedWallpaperIsNotWrittenBack() {
       wallpaper: WALLPAPER_STORAGE_KEY,
       localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY
     },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   await testRuntime.bootstrapInitialWallpaper();
@@ -1872,8 +1858,7 @@ async function testLegacySyncedCustomWallpaperMigratesToLocalOnlySelection() {
       wallpaper: WALLPAPER_STORAGE_KEY,
       localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY
     },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   await testRuntime.bootstrapInitialWallpaper();
@@ -1939,8 +1924,7 @@ async function testOversizedDataUrlWallpaperRendersThroughBlobUrl() {
       wallpaper: WALLPAPER_STORAGE_KEY,
       localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY
     },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   await testRuntime.bootstrapInitialWallpaper();
@@ -1992,8 +1976,7 @@ async function testInitialThemeResolutionDoesNotPaintFallbackBeforeCustomWallpap
         wallpaper: WALLPAPER_STORAGE_KEY,
         localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY
       },
-      t: (_key, fallback) => fallback || '',
-      getRiSvg: () => ''
+      t: (_key, fallback) => fallback || ''
     });
 
     testRuntime.handleThemeModeChange();
@@ -2045,8 +2028,7 @@ async function testWallpaperModeConsistencyDefaultsOnAndCopiesLegacySelectionWhe
       wallpaper: WALLPAPER_STORAGE_KEY,
       localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY
     },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   await testRuntime.bootstrapInitialWallpaper();
@@ -2110,8 +2092,7 @@ async function testDisablingWallpaperModeConsistencyIgnoresStaleLocalDisabledOve
       wallpaper: WALLPAPER_STORAGE_KEY,
       localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY
     },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   await testRuntime.bootstrapInitialWallpaper();
@@ -2161,8 +2142,7 @@ async function testSplitWallpaperPanelOpensOnTheShownMode() {
       localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY,
       effect: WALLPAPER_EFFECT_STORAGE_KEY
     },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   await testRuntime.bootstrapInitialWallpaper();
@@ -2212,8 +2192,7 @@ async function testWallpaperLuminanceIsCachedForThePreload() {
         wallpaper: WALLPAPER_STORAGE_KEY,
         localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY
       },
-      t: (_key, fallback) => fallback || '',
-      getRiSvg: () => ''
+      t: (_key, fallback) => fallback || ''
     });
     const readPreload = () => JSON.parse(testWindow.localStorage.getItem(WALLPAPER_PRELOAD_STORAGE_KEY));
     return { testDocument, testRuntime, readPreload, getToneOptions: () => toneOptions };
@@ -2360,8 +2339,7 @@ async function testSplitBuiltInWallpaperSelectionFollowsResolvedTheme() {
       wallpaper: WALLPAPER_STORAGE_KEY,
       localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY
     },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   await testRuntime.bootstrapInitialWallpaper();
@@ -2454,8 +2432,7 @@ async function testWallpaperPreloadCacheRetainsMinimumLightOverlay() {
       localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY,
       overlay: WALLPAPER_OVERLAY_STORAGE_KEY
     },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   await testRuntime.bootstrapInitialWallpaperOverlay();
@@ -2501,8 +2478,7 @@ async function testSplitLocalWallpaperSelectionStaysLocalOnly() {
       wallpaper: WALLPAPER_STORAGE_KEY,
       localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY
     },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   await testRuntime.bootstrapInitialWallpaper();
@@ -2579,8 +2555,7 @@ async function testDeletingLocalWallpapersKeepsTheLocalTabOpen() {
       wallpaper: WALLPAPER_STORAGE_KEY,
       localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY
     },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   await testRuntime.bootstrapInitialWallpaper();
@@ -2636,8 +2611,7 @@ async function testNewtabFaviconOptionsRenderBelowLogoAndPersistSelection() {
       favicon: NEWTAB_FAVICON_STORAGE_KEY
     },
     t: (_key, fallback) => fallback || '',
-    formatMessage: (_key, fallback, params) => String(fallback || '').replace('{name}', params.name),
-    getRiSvg: () => ''
+    formatMessage: (_key, fallback, params) => String(fallback || '').replace('{name}', params.name)
   });
 
   await testRuntime.bootstrapInitialNewtabFavicon();
@@ -2657,7 +2631,7 @@ async function testNewtabFaviconOptionsRenderBelowLogoAndPersistSelection() {
     faviconModel[0].previewUrl.includes('assets/images/lumno.png'),
     'default favicon option should use the current extension icon'
   );
-  assert.ok(faviconModel[1].inlineSvg.startsWith('<svg'), 'alternate favicon option should use an inline SVG preview');
+  assert.strictEqual(faviconModel[1].inlineSvg[0], 'svg', 'alternate favicon option should use an inline SVG preview');
 
   panelActions(testRuntime).selectFavicon('alternate');
 
@@ -2740,8 +2714,7 @@ async function testNewtabFaviconThemeBroadcastRefreshesBackgroundTabs() {
     storageKeys: {
       favicon: NEWTAB_FAVICON_STORAGE_KEY
     },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
   const backgroundRuntime = background.sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
     documentObj: background.documentObj,
@@ -2750,8 +2723,7 @@ async function testNewtabFaviconThemeBroadcastRefreshesBackgroundTabs() {
     storageKeys: {
       favicon: NEWTAB_FAVICON_STORAGE_KEY
     },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   await Promise.all([
@@ -2812,8 +2784,7 @@ async function testWallpaperEffectInkToneControlPersistsAndFollowsEffectType() {
     windowObj: testWindow,
     storageArea,
     storageKeys: { effect: WALLPAPER_EFFECT_STORAGE_KEY },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   testRuntime.createControls();
@@ -2875,8 +2846,7 @@ async function testBlocksExposeReliefControls() {
     windowObj: testWindow,
     storageArea,
     storageKeys: { effect: WALLPAPER_EFFECT_STORAGE_KEY },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   testRuntime.createControls();
@@ -2954,8 +2924,7 @@ async function testEffectSpecificParametersRoundTrip() {
     windowObj: testWindow,
     storageArea,
     storageKeys: { effect: WALLPAPER_EFFECT_STORAGE_KEY },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   testRuntime.createControls();
@@ -3010,8 +2979,7 @@ async function testTimeSettingsFollowTheContentAboveTheSearchBar() {
     setTimeFont: (font) => { page.font = font; },
     getTimeSecondsVisible: () => page.seconds,
     setTimeSecondsVisible: (visible) => { page.seconds = visible; },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
   testRuntime.createControls();
   openPanel(testRuntime);
@@ -3127,8 +3095,7 @@ async function testGlassBlurCanBeEnabledAndDisabled() {
     windowObj: testWindow,
     storageArea,
     storageKeys: { effect: WALLPAPER_EFFECT_STORAGE_KEY },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   testRuntime.createControls();
@@ -3207,8 +3174,7 @@ async function testGlassBlurFilterSwitchPreservesTheOutgoingFrame() {
     windowObj: testWindow,
     storageArea,
     storageKeys: { effect: WALLPAPER_EFFECT_STORAGE_KEY },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   testRuntime.createControls();
@@ -3288,8 +3254,7 @@ async function testCrtFilterPersistsAndShowsDisplayControls() {
     windowObj: testWindow,
     storageArea,
     storageKeys: { effect: WALLPAPER_EFFECT_STORAGE_KEY },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
 
   testRuntime.createControls();
@@ -3398,7 +3363,7 @@ async function testBingDailySelectionAndManualOverride() {
   } });
   const runtime = context.sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
     documentObj: context.documentObj, windowObj: context.windowObj,
-    storageArea: prefs, localWallpaperStorageArea: createMemoryStorage(), getRiSvg: () => ''
+    storageArea: prefs, localWallpaperStorageArea: createMemoryStorage()
   });
   await runtime.bootstrapInitialWallpaper();
   runtime.createControls();
@@ -3452,7 +3417,7 @@ async function testLegacyOnlineWallpaperMigratesToBing() {
   const prefs = createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: 'wallhaven-abc123' });
   const runtime = context.sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
     documentObj: context.documentObj, windowObj: context.windowObj,
-    storageArea: prefs, localWallpaperStorageArea: createMemoryStorage(), getRiSvg: () => ''
+    storageArea: prefs, localWallpaperStorageArea: createMemoryStorage()
   });
   await runtime.bootstrapInitialWallpaper();
   await waitForAsyncWallpaperApply();
@@ -3476,7 +3441,7 @@ async function testOnlineWallpaperSurvivesOlderVersions() {
     const context = createWallpaperSandbox({ remoteApi: { ...remote, createClient: () => client } });
     const runtime = context.sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
       documentObj: context.documentObj, windowObj: context.windowObj,
-      storageArea: prefs, localWallpaperStorageArea: createMemoryStorage(), getRiSvg: () => ''
+      storageArea: prefs, localWallpaperStorageArea: createMemoryStorage()
     });
     await runtime.bootstrapInitialWallpaper();
     await waitForAsyncWallpaperApply();
@@ -3511,8 +3476,7 @@ function createCuratedRuntime(prefs, options) {
     storageArea: prefs, localWallpaperStorageArea: (options && options.localStorageArea) || createMemoryStorage(),
     showToast: (message, isError) => toasts.push({ message, isError }),
     fetchRemoteContent: options && options.fetchRemoteContent,
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
   return { context, runtime, toasts };
 }
@@ -3974,8 +3938,7 @@ async function testRuntimeAdoptsThePreloadedUploadAndItsBlobUrl() {
     storageArea: createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: 'custom-upload' }),
     localWallpaperStorageArea: createMemoryStorage({ [LOCAL_WALLPAPER_STORAGE_KEY]: id }),
     storageKeys: { wallpaper: WALLPAPER_STORAGE_KEY, localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
+    t: (_key, fallback) => fallback || ''
   });
   await runtime.bootstrapInitialWallpaper();
   assert.deepStrictEqual(metrics.readByIds, [], 'the runtime takes the preloaded record instead of reading the library');

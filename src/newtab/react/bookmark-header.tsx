@@ -153,7 +153,7 @@ function ModeMenu({
             id: menu.id,
             selectId: `${menu.id}_select`,
             iconOnly: true,
-            triggerIconClass: 'ri-more-line',
+            triggerIconName: 'ri-more-line',
             menuClassName: 'x-nt-section-mode-portal',
             menuAlign: 'left',
             menuWidth: 'content',
@@ -202,7 +202,7 @@ export function BookmarkHeaderActions({
         onActivate={() => model.onOpenManager()}
         placement={placement}
       >
-        <RemixIcon className="ri-size-16 ri-bookmark-line" />
+        <RemixIcon name="ri-bookmark-line" size={16} />
       </HeaderButton>
       {model.modeMenu ? <ModeMenu menu={model.modeMenu} model={model} placement={placement} /> : null}
     </>
@@ -312,7 +312,7 @@ export function BookmarkHeader({
           onActivate={() => model?.onPage(-1)}
           placement="top"
         >
-          <RemixIcon className="ri-size-16 ri-arrow-left-s-line" />
+          <RemixIcon name="ri-arrow-left-s-line" size={16} />
         </HeaderButton>
         <HeaderButton
           buttonRef={nextButtonRef}
@@ -322,7 +322,7 @@ export function BookmarkHeader({
           onActivate={() => model?.onPage(1)}
           placement="top"
         >
-          <RemixIcon className="ri-size-16 ri-arrow-right-s-line" />
+          <RemixIcon name="ri-arrow-right-s-line" size={16} />
         </HeaderButton>
         {model && !model.actionsInTopbar ? <BookmarkHeaderActions model={model} placement="top" /> : null}
       </div>

@@ -15,7 +15,6 @@ import * as SUGGESTION_NAVIGATION from '../shared/search/suggestion-navigation';
 import * as SUGGESTIONS_HEIGHT_LAYOUT from '../shared/search/suggestions-height-layout';
 import * as SETTINGS from '../domain/settings';
 import * as LumnoCursorTooltip from '../shared/ui/cursor-tooltip';
-import { getRiSvg } from '../shared/ui/remix-icon';
 import * as SITE_SEARCH_ICON_CACHE from '../shared/search/site-search-icon-cache';
 import * as OVERLAY_TOAST from '../shared/ui/toast';
 import * as LumnoTooltip from '../shared/ui/tooltip';
@@ -387,7 +386,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     getOverlayFaviconUrlResolver: (...args) => getOverlayFaviconUrlResolver(...args),
     t: (...args) => t(...args),
     formatMessage: (...args) => formatMessage(...args),
-    getRiSvg,
     SEARCH_UTILS,
     shouldBlockOverlayFaviconForHost: (...args) => shouldBlockOverlayFaviconForHost(...args),
     isLocalNetworkHost: (...args) => isLocalNetworkHost(...args),
@@ -528,7 +526,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     getSiteSearchTriggerCandidate,
     getLocalSearchScopeCandidate,
     getLocalSearchScopeLabel,
-    getLocalSearchScopeIconClass,
+    getLocalSearchScopeIconName,
     getLocalSearchScopeTabHintProvider,
     setLocalSearchScopePrefix,
     activateLocalSearchScope,
@@ -629,7 +627,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     getSiteSearchDisplayName,
     getPageRenderableProviderIcon,
     getLocalSearchScopeLabel,
-    getLocalSearchScopeIconClass,
+    getLocalSearchScopeIconName,
     SEARCH_SOURCE_ORDER,
     getStorageValuesAsync: (...args) => getStorageValuesAsync(...args),
     SEARCH_SOURCE_ORDER_STORAGE_KEY,
@@ -1144,7 +1142,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     clearAction: {
       id: '_x_extension_search_clear_2026_unique_',
       ariaLabel: t('search_input_clear', '清空'),
-      html: getRiSvg('ri-close-line', 'ri-size-16'),
+      icon: { name: 'ri-close-line', size: 16 },
       styleOverrides: {
         '--x-ext-input-clear-right': '85px',
         '--x-ext-input-clear-top': '13px'
@@ -1154,7 +1152,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
       id: '_x_extension_search_close_other_tabs_2026_unique_',
       className: 'x-ov-close-other-tabs',
       ariaLabel: t('overlay_close_other_tabs_tooltip', '关闭其他标签页'),
-      html: getRiSvg('ri-brush-2-line', 'ri-size-16'),
+      icon: { name: 'ri-brush-2-line', size: 16 },
       confirm: {
         getCopy: getCloseOtherTabsConfirmCopy,
         onConfirm: confirmCloseOtherTabs
@@ -1190,7 +1188,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     removeOverlay,
     COMMUNITY_LINKS,
     t,
-    getRiSvg,
     getOpenDisposition,
     getSystemLocale,
     SETTINGS,

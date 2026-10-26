@@ -8,6 +8,7 @@ import { InfoButton } from './info-button';
 import { useSegmentedIndicator } from '../../shared/react/segmented-indicator';
 import { BusyLabel } from '../../shared/react/busy-label';
 import { ReorderButtons, type ReorderCopyModel } from './reorder-buttons';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 export type SiteSearchProviderCategory = 'site' | 'searchEngine';
 
@@ -363,7 +364,7 @@ export function SiteSearchList({
                       }}
                       type="button"
                     >
-                      <i aria-hidden="true" className="ri-icon ri-size-12 ri-information-line" />
+                      <RemixIcon name="ri-information-line" size={12} />
                       {item.duplicateLabel}
                     </button>
                   ) : null}
@@ -393,7 +394,7 @@ export function SiteSearchList({
                   }}
                   type="button"
                 >
-                  <i aria-hidden="true" className="ri-icon ri-size-14 ri-edit-line" />
+                  <RemixIcon name="ri-edit-line" />
                 </button>
                 <InlinePopconfirm
                   copy={{
@@ -405,7 +406,7 @@ export function SiteSearchList({
                   onConfirm={() => options.onRemove(item.key, item.isBuiltin)}
                   triggerAriaLabel={model.copy.removeLabel}
                   triggerClassName="_x_extension_shortcut_remove_2024_unique_"
-                  triggerIconClass="ri-icon ri-size-14 ri-delete-bin-4-line"
+                  triggerIconName="ri-delete-bin-4-line"
                 />
               </div>
             </div>

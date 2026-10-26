@@ -8,6 +8,7 @@ import type {
   SliderState
 } from './panel-primitives';
 import type { SelectMenuOption } from '../select-menu';
+import type { SvgNode } from '../../../shared/ui/svg-tree';
 
 // The appearance panel renders from two inputs: a static model (asset URLs, icons,
 // slider marks) given once, and the state the wallpaper runtime rebuilds whenever a
@@ -48,17 +49,13 @@ type WallpaperItem = {
 
 export type FaviconItem = {
   id: string;
-  inlineSvg?: string;
+  inlineSvg?: SvgNode;
   previewUrl?: string;
 };
 
 export interface WallpaperPanelModel {
   appearanceOptions?: Array<{ mode: string }>;
   favicons?: FaviconItem[];
-  icons?: Partial<Record<
-    'add' | 'arrow' | 'check' | 'delete' | 'info' | 'link' | 'refresh' | 'restore' | 'wallpaper',
-    string
-  >>;
   /** Notches (0-100) drawn on each slider's track. */
   marks?: Partial<Record<'searchWidth' | 'shortcutColumns' | 'shortcutSize' | 'shortcutGap' | 'timeWeight' | 'timeSize', number[]>>;
   wallpapers?: WallpaperItem[];

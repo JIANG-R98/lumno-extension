@@ -113,7 +113,6 @@ interface HelpFeedbackSuggestion {
   feedbackKey: string;
   title: string;
   url: string;
-  iconName: string;
 }
 
 interface HelpArticleSuggestion {
@@ -931,23 +930,22 @@ function buildFeedbackSuggestions(feedback: FeedbackConfig | null | undefined): 
   }
   const links: FeedbackLinks = config.links && typeof config.links === 'object' ? config.links : {};
   const t = typeof config.t === 'function' ? config.t : (_key: string, fallback: string) => fallback;
-  const rows: Array<[string, string, string, string] | null> = [
+  const rows: Array<[string, string, string] | null> = [
     config.channel === 'wechat' && links.wechatQr
-      ? ['community', links.wechatQr, 'ri-wechat-line', t('settings_feedback_support_wechat_action', '加入反馈群')]
+      ? ['community', links.wechatQr, t('settings_feedback_support_wechat_action', '加入反馈群')]
       : null,
     links.githubIssue
-      ? ['github-issue', links.githubIssue, 'ri-github-line', t('settings_feedback_support_github_issue_action', '创建 Issue')]
+      ? ['github-issue', links.githubIssue, t('settings_feedback_support_github_issue_action', '创建 Issue')]
       : null,
     links.x
-      ? ['contact-author', links.x, 'ri-twitter-x-line', t('settings_feedback_support_contact_author_action', '联系作者')]
+      ? ['contact-author', links.x, t('settings_feedback_support_contact_author_action', '联系作者')]
       : null
   ];
-  return rows.filter((row): row is [string, string, string, string] => Boolean(row)).map(([feedbackKey, url, iconName, title]): HelpFeedbackSuggestion => ({
+  return rows.filter((row): row is [string, string, string] => Boolean(row)).map(([feedbackKey, url, title]): HelpFeedbackSuggestion => ({
     type: 'helpFeedback',
     feedbackKey,
     title: String(title || ''),
-    url: String(url),
-    iconName
+    url: String(url)
   }));
 }
 

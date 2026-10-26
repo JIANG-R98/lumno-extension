@@ -51,7 +51,6 @@ function createOptions(
     onContextMenu: () => {},
     onNativeDragStart: (event) => event.preventDefault(),
     getAddLabel: () => 'Add shortcut',
-    getAddIconSvg: () => '<i class="ri-add-line"></i>',
     getAddVisible: () => true,
     onAdd: () => {},
     onAddContextMenu: () => {},
@@ -96,10 +95,8 @@ describe('Shortcuts React island', () => {
     const animateFolderIcon = vi.fn();
     const openShortcut = vi.fn();
     const queueThemeForTarget = vi.fn();
-    const getFolderIconSvg = vi.fn(() => '<svg data-folder-icon="true"></svg>');
     const resolveShortcutFaviconDataUrl = vi.fn(() => Promise.resolve(''));
     const { view, options } = createView({
-      getFolderIconSvg,
       initFolderIcon, animateFolderIcon, openShortcut, resolveShortcutFaviconDataUrl,
       queueThemeForTarget
     });
@@ -107,10 +104,10 @@ describe('Shortcuts React island', () => {
     const tile = getTag(required(options.grid, 'options.grid'), '[data-shortcut-id="folder-entry"]', 'button');
     expect(tile.getAttribute('aria-haspopup')).toBe('menu');
     expect(tile.getAttribute('data-bookmark-drop-folder-id')).toBe('42');
-    expect(tile.querySelector('[data-folder-icon]')).not.toBeNull();
+    expect(tile.querySelector('svg[data-folder-color-id="42"]')).not.toBeNull();
+    expect(tile.querySelector('#x-nt-folder-filter-lower-base-shortcut-folder-entry')).not.toBeNull();
     expect(tile.dataset.themed).toBe('true');
     expect(tile.querySelector('.x-nt-shortcut-icon--folder')?.classList.contains('x-nt-shortcut-icon')).toBe(true);
-    expect(getFolderIconSvg).toHaveBeenCalledWith('shortcut-folder-entry', '42');
     expect(initFolderIcon).toHaveBeenCalledTimes(1);
     expect(resolveShortcutFaviconDataUrl).not.toHaveBeenCalled();
     expect(queueThemeForTarget).not.toHaveBeenCalled();
@@ -124,9 +121,7 @@ describe('Shortcuts React island', () => {
     expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(false);
   });
   it('preserves animated SVG nodes when a folder shortcut rerenders or is renamed', () => {
-    const { view, options } = createView({
-      getFolderIconSvg: () => '<svg><path data-folder-part="upper-body" d="M0 0" /></svg>'
-    });
+    const { view, options } = createView();
     const folder = folderEntry;
     renderItems(view, [folder]);
     const path = required(required(options.grid, 'grid').querySelector('path'), 'path');
@@ -140,7 +135,6 @@ describe('Shortcuts React island', () => {
   it('keeps the folder icon open while the pointer moves into its context menu', () => {
     const animateFolderIcon = vi.fn();
     const { view } = createView({
-      getFolderIconSvg: () => '<svg data-folder-icon="true"></svg>',
       animateFolderIcon
     });
     renderItems(view, [folderEntry]);

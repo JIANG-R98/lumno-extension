@@ -18,14 +18,13 @@ export function BookmarkSettingsSection({ panel, settings }: {
   panel: WallpaperPanelContext;
   settings: SectionSettingsModel;
 }) {
-  const { arrowIcon, documentObj, registerSelect, sliderBubble } = panel;
+  const { documentObj, registerSelect, sliderBubble } = panel;
   const { bookmark, actions } = settings;
   const open = bookmark.enabled && bookmark.expanded;
   return (
     <div {...ref('bookmarkSettingsSection')} className="x-nt-wallpaper-section">
       <div className="x-nt-wallpaper-panel-header">
         <SectionTrigger
-          arrowIcon={arrowIcon}
           bodyId={BODY_ID}
           disabled={!bookmark.enabled}
           expanded={open}

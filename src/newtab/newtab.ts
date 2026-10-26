@@ -192,7 +192,6 @@ import {
   WORDMARK_ENTRY_ANIMATION_NAME,
   createSiteDisplayNameOptions
 } from './newtab-config';
-import { getRiSvg } from '../shared/ui/remix-icon';
 import * as SITE_SEARCH_ICON_CACHE from '../shared/search/site-search-icon-cache';
 import type { BackgroundAction, BackgroundReply, BackgroundRequest } from '../domain/messages';
 import type { Disposition } from '../domain/navigation-disposition';
@@ -370,7 +369,6 @@ import { getSearchInputApi } from '../shared/react/search-input';
   const NEWTAB_TOP_CONTENT = getTopContentApi();
   const NEWTAB_PAGE_STRUCTURE = getPageStructureApi();
   const SITE_DISPLAY_NAME_OPTIONS = createSiteDisplayNameOptions(t);
-  const getFigmaFolderSvg = NEWTAB_BOOKMARK_FOLDER_ICON.getFigmaFolderSvg;
   function initFolderPathMorph(icon: Element | null | undefined): void {
     NEWTAB_BOOKMARK_FOLDER_ICON.initFolderPathMorph(icon);
     applySavedFolderColor(icon || null);
@@ -704,7 +702,7 @@ import { getSearchInputApi } from '../shared/react/search-input';
     normalizeSearchResultDisplayLimit,
     getLocalSearchScopeCandidate,
     getLocalSearchScopeLabel,
-    getLocalSearchScopeIconClass,
+    getLocalSearchScopeIconName,
     getSearchModeProviderId
   } = NEWTAB_SITE_SEARCH_PROVIDERS.createSiteSearchProviders({
     SEARCH_UTILS,
@@ -938,7 +936,6 @@ import { getSearchInputApi } from '../shared/react/search-input';
     closeShortcutDialog,
     hideCursorTooltip: (...args) => hideCursorTooltip(...args),
     t,
-    getFigmaFolderSvg,
     playFolderPathMorph,
     bindShortcutDialogTooltip: (...args) => bindShortcutDialogTooltip(...args),
     hideShortcutDialogTooltip: (...args) => hideShortcutDialogTooltip(...args),
@@ -1358,7 +1355,6 @@ import { getSearchInputApi } from '../shared/react/search-input';
     getThemeScope: (...args) => getThemeScope(...args),
     setThemeMode: (...args) => setThemeMode(...args),
     setThemeScope: (...args) => setThemeScope(...args),
-    getRiSvg,
     showToast,
     beginToast,
     showTopActionTooltip: (...args) => showTopActionTooltip(...args),
@@ -2060,7 +2056,6 @@ import { getSearchInputApi } from '../shared/react/search-input';
     NEWTAB_SHORTCUTS_VIEW,
     shortcutTiles,
     shortcutGroupHeaders,
-    getFigmaFolderSvg,
     initFolderPathMorph,
     playFolderPathMorph,
     getHostFromUrl,
@@ -2074,7 +2069,6 @@ import { getSearchInputApi } from '../shared/react/search-input';
     isCardActivationSuppressed,
     handleShortcutContextMenu,
     handleShortcutNativeDragStart,
-    getRiSvg,
     openShortcutDialog,
     openShortcutAddContextMenu,
     handleShortcutDragPointerDown: (...args) => handleShortcutDragPointerDown(...args),
@@ -2130,7 +2124,6 @@ import { getSearchInputApi } from '../shared/react/search-input';
     isBookmarkTopbarMode,
     getBookmarkLimit,
     NEWTAB_BOOKMARK_DRAG,
-    getFigmaFolderSvg,
     initFolderPathMorph,
     setFolderPathMorphState,
     isContentSectionVisible,
@@ -2196,8 +2189,6 @@ import { getSearchInputApi } from '../shared/react/search-input';
     getHostFromUrl,
     getSiteDisplayName,
     getUrlDisplay,
-    getRiSvg,
-    getFigmaFolderSvg,
     initFolderPathMorph,
     playFolderPathMorph,
     stableHashCode,
@@ -2252,7 +2243,6 @@ import { getSearchInputApi } from '../shared/react/search-input';
     getCanonicalPageUrlForFavicon,
     getSiteDisplayName,
     getUrlDisplay,
-    getRiSvg,
     attachFaviconWithFallbacks,
     getBrowserPageFaviconUrl,
     getImmediateThemeForSuggestion,
@@ -2422,7 +2412,6 @@ import { getSearchInputApi } from '../shared/react/search-input';
     showToast,
     t,
     formatMessage,
-    getRiSvg,
     pageState
   });
 
@@ -2552,7 +2541,7 @@ import { getSearchInputApi } from '../shared/react/search-input';
     getSiteSearchDisplayName,
     getProviderIcon,
     getLocalSearchScopeLabel,
-    getLocalSearchScopeIconClass,
+    getLocalSearchScopeIconName,
     loadSiteSearchIconCache,
     getSiteSearchProviders,
     getAggregateSearches,
@@ -2820,7 +2809,6 @@ import { getSearchInputApi } from '../shared/react/search-input';
     suggestionItems,
     t,
     formatMessage,
-    getRiSvg,
     sanitizeDisplayText,
     shouldBlockFaviconForHost,
     isLocalNetworkHost,
@@ -2932,7 +2920,6 @@ import { getSearchInputApi } from '../shared/react/search-input';
     pageSearchParams,
     bottomDock,
     t,
-    getRiSvg,
     FEATURE_HINTS,
     getOpenDisposition,
     getFeedbackWebLocale,
@@ -2967,7 +2954,6 @@ import { getSearchInputApi } from '../shared/react/search-input';
     FEATURE_HINTS,
     helpCenterAskHintSettled,
     t,
-    getRiSvg,
     getOpenDisposition,
     searchInput,
     closeFeedbackPopover,

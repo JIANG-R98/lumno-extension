@@ -1,4 +1,5 @@
 import { InlinePopconfirm } from './inline-popconfirm';
+import type { RemixIconName } from '../../shared/ui/remix-icon';
 
 // A group header action that asks first, such as clearing or resetting a list.
 export interface GroupActionConfirmModel {
@@ -12,14 +13,14 @@ export interface GroupActionConfirmModel {
 export function GroupActionConfirm({
   id,
   model,
-  iconClass,
+  iconName,
   disabled = false,
   onConfirm
 }: {
   id: string;
   model: GroupActionConfirmModel;
   // The Remix icon class, such as ri-delete-bin-4-line.
-  iconClass: string;
+  iconName: RemixIconName;
   disabled?: boolean;
   onConfirm(): void | Promise<void>;
 }) {
@@ -35,7 +36,7 @@ export function GroupActionConfirm({
       triggerAriaLabel={model.label}
       triggerClassName="_x_extension_shortcut_group_action_2024_unique_"
       triggerDisabled={disabled}
-      triggerIconClass={`ri-icon ri-size-14 ${iconClass}`}
+      triggerIconName={iconName}
       triggerId={id}
       triggerTooltip={model.label}
     />

@@ -53,7 +53,7 @@ function createController(
 afterEach(() => {
   act(() => controllers.forEach((controller) => controller.destroy()));
   controllers = [];
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
   vi.useRealTimers();
 });
 

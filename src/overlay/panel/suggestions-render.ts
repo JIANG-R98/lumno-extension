@@ -107,7 +107,6 @@ interface SuggestionsRenderDeps {
   } | null;
   t: ViewOption<'t'>;
   formatMessage: ViewOption<'formatMessage'>;
-  getRiSvg: ViewOption<'getRiSvg'>;
   SEARCH_UTILS: { sanitizeDisplayText: ViewOption<'sanitizeDisplayText'> };
   shouldBlockOverlayFaviconForHost: ViewOption<'shouldBlockFaviconForHost'>;
   isLocalNetworkHost: ViewOption<'isLocalNetworkHost'>;
@@ -179,7 +178,6 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
     getOverlayFaviconUrlResolver,
     t,
     formatMessage,
-    getRiSvg,
     SEARCH_UTILS,
     shouldBlockOverlayFaviconForHost,
     isLocalNetworkHost,
@@ -511,7 +509,6 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
       items: suggestionItems,
       t,
       formatMessage,
-      getRiSvg,
       sanitizeDisplayText: SEARCH_UTILS.sanitizeDisplayText,
       formatTabRankDebugText,
       isTabRankScoreDebugEnabled: () => overlayState.overlayTabScoreDebugEnabled,

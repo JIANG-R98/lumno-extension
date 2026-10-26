@@ -33,7 +33,7 @@ const baseConfig: SelectMenuConfig = {
   ],
   selectId: 'mode-menu-select',
   tooltip: 'Display mode',
-  triggerIconClass: 'ri-more-line',
+  triggerIconName: 'ri-more-line',
   value: 'folder'
 };
 
@@ -60,7 +60,7 @@ afterEach(() => {
     mounted.forEach(({ controller, host }) => controller.destroy(host));
   });
   mounted.length = 0;
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 describe('New Tab select menu React island', () => {
@@ -256,7 +256,7 @@ describe('New Tab select menu React island', () => {
         {
           action: 'pick-color',
           dividerBefore: true,
-          iconClass: 'ri-dropper-line',
+          iconName: 'ri-dropper-line',
           label: 'Pick color',
           value: '__pick__'
         }
@@ -395,7 +395,7 @@ describe('New Tab select menu React island', () => {
           checked: false,
           label: 'Custom color',
           radio: true,
-          trailingIconClass: 'ri-dropper-line',
+          trailingIconName: 'ri-dropper-line',
           value: '__surface_custom__'
         }
       ]
@@ -423,7 +423,7 @@ describe('New Tab select menu React island', () => {
           checked: true,
           label: 'Custom color',
           radio: true,
-          trailingIconClass: 'ri-dropper-line',
+          trailingIconName: 'ri-dropper-line',
           value: '__selected_surface_custom__'
         }
       ],

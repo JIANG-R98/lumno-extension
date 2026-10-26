@@ -12,7 +12,7 @@ let runtimes: DockRuntime[] = [];
 afterEach(() => {
   act(() => runtimes.forEach((runtime) => runtime.destroy()));
   runtimes = [];
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 describe('New Tab bottom dock React island', () => {

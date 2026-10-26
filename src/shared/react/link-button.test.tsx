@@ -18,7 +18,7 @@ function render(node: React.ReactNode) {
 afterEach(() => {
   act(() => roots.forEach((root) => root.unmount()));
   roots = [];
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 describe('LinkButton', () => {

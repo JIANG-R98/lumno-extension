@@ -16,18 +16,23 @@ import type {
   SuggestionElement
 } from './types';
 import { surfaceClass, setSurfaceStyle } from './surface-options';
-import { innerHtml } from '../../inner-html';
+import { RemixIcon } from '../../remix-icon';
+import type { RemixIconName } from '../../../ui/remix-icon';
 import { FaviconFallback, OverlayFaviconFallback } from '../../favicon-fallback';
 
 export function getBrowserFallbackIcon(
   options: NormalizedOptions,
   url: string
-): string {
-  if (options.isBrowserNewtabUrl(url)) {
-    return 'ri-link';
-  }
-  return options.isBrowserInternalUrl(url) ? 'ri-link' : '';
+): RemixIconName | undefined {
+  return options.isBrowserNewtabUrl(url) || options.isBrowserInternalUrl(url) ? 'ri-link' : undefined;
 }
+
+// The icon each feedback row draws, by the link it opens.
+const FEEDBACK_ICONS: Readonly<Record<string, RemixIconName>> = {
+  community: 'ri-wechat-line',
+  'github-issue': 'ri-github-line',
+  'contact-author': 'ri-twitter-x-line'
+};
 
 function getFaviconCandidates(
   options: NormalizedOptions,
@@ -81,7 +86,7 @@ export function getSuggestionIconSpec(
       iconName: 'ri-window-2-line'
     };
   }
-  const commandIcons: Record<string, string> = {
+  const commandIcons: Record<string, RemixIconName> = {
     commandNewTab: 'ri-add-line',
     commandSettings: 'ri-settings-3-line',
     commandDocumentPip: 'ri-scissors-cut-line',
@@ -111,7 +116,7 @@ export function getSuggestionIconSpec(
   if (type === 'helpFeedback') {
     return {
       kind: 'inline',
-      iconName: String(suggestion.iconName || 'ri-feedback-line'),
+      iconName: FEEDBACK_ICONS[suggestion.feedbackKey || ''] || 'ri-feedback-line',
       tone: 'subtext'
     };
   }
@@ -160,7 +165,7 @@ function InlineIcon({
   tone
 }: {
   options: NormalizedOptions;
-  name: string;
+  name: RemixIconName;
   tone?: string;
 }) {
   return (
@@ -170,8 +175,9 @@ function InlineIcon({
         'x-nt-suggestion-inline-icon'
       )}
       data-tone={tone || undefined}
-      dangerouslySetInnerHTML={innerHtml(options.getRiSvg(name, 'ri-size-16'))}
-    />
+    >
+      <RemixIcon name={name} size={16} />
+    </span>
   );
 }
 
@@ -351,7 +357,7 @@ export function SuggestionUtilityAction({
   buttonRef: RefObject<HTMLButtonElement | null>;
   leading?: boolean;
   tooltip: string;
-  iconName: string;
+  iconName: RemixIconName;
   onActivate: () => void;
 }) {
   const showTooltip = (): void => {
@@ -428,7 +434,6 @@ export function SuggestionUtilityAction({
         )}
         data-visible="false"
         aria-label={tooltip}
-        dangerouslySetInnerHTML={innerHtml(options.getRiSvg(iconName, 'ri-size-14'))}
         onMouseEnter={applyHover}
         onMouseLeave={reset}
         onFocus={applyHover}
@@ -449,7 +454,9 @@ export function SuggestionUtilityAction({
           reset();
           onActivate();
         }}
-      />
+      >
+        <RemixIcon name={iconName} />
+      </button>
     </div>
   );
 }

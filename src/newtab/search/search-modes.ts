@@ -62,7 +62,7 @@ interface SearchModesDeps {
   getSiteSearchDisplayName: SiteSearchProviders['getSiteSearchDisplayName'];
   getProviderIcon: SiteSearchProviders['getProviderIcon'];
   getLocalSearchScopeLabel: SiteSearchProviders['getLocalSearchScopeLabel'];
-  getLocalSearchScopeIconClass: SiteSearchProviders['getLocalSearchScopeIconClass'];
+  getLocalSearchScopeIconName: SiteSearchProviders['getLocalSearchScopeIconName'];
   loadSiteSearchIconCache(): Promise<unknown>;
   getSiteSearchProviders: SiteSearchProviders['getSiteSearchProviders'];
   getAggregateSearches: SiteSearchProviders['getAggregateSearches'];
@@ -106,7 +106,7 @@ function createSearchModes(deps: SearchModesDeps) {
     getSiteSearchDisplayName,
     getProviderIcon,
     getLocalSearchScopeLabel,
-    getLocalSearchScopeIconClass,
+    getLocalSearchScopeIconName,
     loadSiteSearchIconCache,
     getSiteSearchProviders,
     getAggregateSearches,
@@ -218,7 +218,7 @@ function createSearchModes(deps: SearchModesDeps) {
         groupKey: 'aggregate',
         orderList: 'aggregate',
         orderKey: definition.id,
-        iconClass: 'ri-stack-line',
+        iconName: 'ri-stack-line',
         searchTerms: [definition.name].concat(definition.sourceRefs || []),
         active: Boolean(
           isAggregateSearchProvider(pageState.siteSearchState) &&
@@ -246,7 +246,7 @@ function createSearchModes(deps: SearchModesDeps) {
           orderList: provider._xIsCustom ? 'custom' : groupKey,
           orderKey: provider.key,
           iconUrl: getProviderIcon(provider),
-          iconClass: isAi ? 'ri-search-ai-line' : 'ri-global-line',
+          iconName: isAi ? 'ri-search-ai-line' : 'ri-global-line',
           isAi,
           active: Boolean(pageState.siteSearchState && getSearchModeProviderId(pageState.siteSearchState) === getSearchModeProviderId(provider))
         });
@@ -269,7 +269,7 @@ function createSearchModes(deps: SearchModesDeps) {
             ? ['bookmark', 'bookmarks']
             : ['history', 'browsing history']),
         group: localGroup,
-        iconClass: getLocalSearchScopeIconClass(sourceType),
+        iconName: getLocalSearchScopeIconName(sourceType),
         menuIconName: sourceType === 'topSite' ? 'star' : sourceType,
         active: Boolean(pageState.localSearchScopeState && pageState.localSearchScopeState.sourceType === sourceType)
       });
@@ -438,7 +438,7 @@ function createSearchModes(deps: SearchModesDeps) {
       defaultTheme,
       {
         animate: true,
-        iconClass: getLocalSearchScopeIconClass(scope.sourceType),
+        iconName: getLocalSearchScopeIconName(scope.sourceType),
         menuIconName: scope.sourceType === 'topSite' ? 'star' : scope.sourceType,
         modeId: `local:${scope.sourceType}`
       }

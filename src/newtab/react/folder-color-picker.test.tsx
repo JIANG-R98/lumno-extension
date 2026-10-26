@@ -5,7 +5,7 @@ import { parseFolderColor, folderColorToRgb } from './folder-color';
 import { getElement, getTag, getTags, required } from '../../../tests/react/dom';
 
 let picker: ReturnType<typeof createFolderColorPicker> | undefined;
-afterEach(() => { act(() => picker?.destroy()); picker = undefined; document.body.innerHTML = ''; });
+afterEach(() => { act(() => picker?.destroy()); picker = undefined; document.body.replaceChildren(); });
 
 function setup(overrides: Parameters<typeof createFolderColorPicker>[0] = {}) {
   act(() => {

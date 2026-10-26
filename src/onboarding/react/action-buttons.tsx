@@ -3,12 +3,14 @@ import type {
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent
 } from 'react';
+import type { RemixIconName } from '../../shared/ui/remix-icon';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 export interface OnboardingAction {
   actionId: string;
   browserOnly?: string;
   label: string;
-  icon?: string;
+  icon?: RemixIconName;
   tooltip?: string;
   tooltipMaxWidth?: number;
 }
@@ -36,7 +38,6 @@ function ActionButton({
   kind,
   options
 }: ActionButtonProps) {
-  const iconClass = String(action.icon || '').trim();
   const tooltip = String(action.tooltip || '').trim();
   const tooltipMaxWidth = Number(action.tooltipMaxWidth);
   const handleAction = (event: ReactMouseEvent<HTMLButtonElement>): void => {
@@ -83,12 +84,7 @@ function ActionButton({
       type="button"
     >
       <span>{String(action.label || '')}</span>
-      {iconClass ? (
-        <i
-          aria-hidden="true"
-          className={`ri-icon ri-size-14 ${iconClass}`}
-        />
-      ) : null}
+      {action.icon ? <RemixIcon name={action.icon} size={14} /> : null}
     </button>
   );
 }

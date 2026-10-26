@@ -13,6 +13,7 @@ import {
 import { InfoButton } from './info-button';
 import { BusyLabel } from '../../shared/react/busy-label';
 import { queryHtmlTag } from '../../shared/dom-lookup';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 export interface SiteSearchFormCopyModel
   extends SiteSearchProviderCategoryCopyModel {
@@ -139,7 +140,7 @@ export function SiteSearchForm({
           ref={triggerRef}
           type="button"
         >
-          <i aria-hidden="true" className="ri-icon ri-size-14 ri-add-line" />
+          <RemixIcon name="ri-add-line" />
           <span data-i18n="shortcuts_add">{model.copy.addLabel}</span>
         </button>
       </div>
@@ -176,7 +177,7 @@ export function SiteSearchForm({
               type="button"
             >
               <span data-i18n="shortcuts_insert_query">{model.copy.queryInsertLabel}</span>
-              <i aria-hidden="true" className="ri-icon ri-size-14 ri-add-line" />
+              <RemixIcon name="ri-add-line" />
             </button>
           </div>
           <input
@@ -356,7 +357,7 @@ export function BlacklistForm({
           ref={triggerRef}
           type="button"
         >
-          <i aria-hidden="true" className="ri-icon ri-size-14 ri-add-line" />
+          <RemixIcon name="ri-add-line" />
           <span>{model.copy.addLabel}</span>
         </button>
       </div>

@@ -68,11 +68,23 @@ const TYPE_ASSERTING_QUERY = {
   message: 'Look the element up through a guarded lookup instead of asserting its type.'
 };
 
-// React rewrites innerHTML whenever this object is a new one.
-const INLINE_INNER_HTML = {
-  selector: "JSXAttribute[name.name='dangerouslySetInnerHTML'] > JSXExpressionContainer > ObjectExpression",
-  message: 'Pass innerHtml(markup) from shared/react/inner-html, so unchanged markup stays in place.'
-};
+// Markup never travels as a string: views render JSX, icons are <RemixIcon>,
+// SVG is described as data (shared/ui/svg-tree.ts), and code outside React
+// builds elements with createElement.
+const HTML_STRING_SINKS = [
+  {
+    selector: "JSXAttribute[name.name='dangerouslySetInnerHTML'], Property[key.name='dangerouslySetInnerHTML']",
+    message: 'Render the content as JSX instead of injecting markup.'
+  },
+  {
+    selector: "AssignmentExpression > MemberExpression.left[property.name=/^(?:innerHTML|outerHTML)$/]",
+    message: 'Build the nodes with createElement (or svg-tree) instead of assigning markup.'
+  },
+  {
+    selector: "CallExpression[callee.property.name=/^(?:insertAdjacentHTML|setHTMLUnsafe|createContextualFragment)$/], CallExpression[callee.object.name='document'][callee.property.name=/^(?:write|writeln)$/]",
+    message: 'Build the nodes with createElement (or svg-tree) instead of parsing markup.'
+  }
+];
 
 export default tseslint.config(
   {
@@ -143,7 +155,7 @@ export default tseslint.config(
       // Types are narrowed, never asserted.
       '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
       '@typescript-eslint/no-non-null-assertion': 'error',
-      'no-restricted-syntax': ['error', TYPE_ASSERTING_QUERY, INLINE_INNER_HTML]
+      'no-restricted-syntax': ['error', TYPE_ASSERTING_QUERY, ...HTML_STRING_SINKS]
     }
   },
   {
@@ -156,7 +168,7 @@ export default tseslint.config(
     rules: {
       ...restrictImports(['platform', 'shared', 'react', ...SURFACES]),
       'no-restricted-globals': ['error', ...DOMAIN_GLOBALS],
-      'no-restricted-syntax': ['error', {
+      'no-restricted-syntax': ['error', ...HTML_STRING_SINKS, {
         selector: `MemberExpression[property.name=/^(?:${DOM_MEMBERS.join('|')})$/]`,
         message: 'Domain code does no DOM work; move this to shared/ or a surface.'
       }, {

@@ -140,7 +140,7 @@ async function main() {
   assert.equal(surface().options.find((option) => option.value === 'transparent').checked, true);
   assert.equal(surface().onChange('custom'), false, 'Custom color stays unselected until the color picker returns a color');
   assert.deepEqual(calls.pop(), ['pickColor']);
-  assert.equal(surface().options.find((option) => option.value === 'custom').trailingIconClass, 'ri-dropper-line');
+  assert.equal(surface().options.find((option) => option.value === 'custom').trailingIconName, 'ri-dropper-line');
 
   // Site cards: on restores one row and opens its settings; rows and mode save at once.
   model.actions.setRecentVisible(true);

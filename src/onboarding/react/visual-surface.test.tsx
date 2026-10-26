@@ -328,7 +328,7 @@ describe('Onboarding visual surface', () => {
           {
             actionLabel: 'Search GitHub',
             favicon: '/assets/github.png',
-            iconClass: 'ri-github-fill',
+            iconName: 'ri-github-fill',
             kind: 'site',
             label: 'Site search',
             modeLabel: 'GitHub',
@@ -355,7 +355,7 @@ describe('Onboarding visual surface', () => {
           },
           {
             actionLabel: 'Open ChatGPT',
-            iconClass: 'ri-sparkling-2-line',
+            iconName: 'ri-sparkling-2-line',
             kind: 'ai',
             label: 'AI',
             modeLabel: 'ChatGPT',

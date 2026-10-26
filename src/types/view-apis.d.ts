@@ -2,6 +2,8 @@
 // globals.d.ts): the tooltip view (src/shared/react/tooltip-view.tsx) and
 // the feature hint view (src/shared/react/feature-hint-view.tsx).
 
+import type { RemixIconSpec } from '../shared/ui/remix-icon';
+
 export interface TooltipElementOptions {
   className?: string;
   documentObj?: Document;
@@ -39,14 +41,14 @@ export interface TooltipViewApi {
 
 export interface FeatureHintViewModel {
   actions?: Array<{
-    iconHtml?: string;
+    icon?: RemixIconSpec;
     id: string;
     variant?: 'primary' | 'secondary';
   }>;
   alignMode: string;
   arrowAlign: string;
   arrowSide: string;
-  badgeIconHtml?: string;
+  badgeIcon?: RemixIconSpec;
   badgeIconImageSrc?: string;
   badgeIconText?: string;
   badgeWordmarkDarkImageSrc?: string;

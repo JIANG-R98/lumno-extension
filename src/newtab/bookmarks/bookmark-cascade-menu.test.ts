@@ -249,7 +249,7 @@ beforeEach(() => {
 afterEach(() => {
   act(() => runtimes.forEach((runtime) => runtime.close()));
   runtimes = [];
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 describe('New Tab bookmark folder menu: hover intent', () => {

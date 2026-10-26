@@ -63,8 +63,6 @@ function createController(
       closeDelayMs: 0,
       t: (_key, fallback) => fallback,
       onSubmit,
-      getRiSvg: (id, sizeClass = 'ri-size-16') =>
-        `<i class="${sizeClass} ${id}" aria-hidden="true"></i>`,
       ...overrides
     });
   });

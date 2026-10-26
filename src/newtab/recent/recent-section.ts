@@ -40,7 +40,6 @@ interface RecentSectionDeps {
   getCanonicalPageUrlForFavicon: ViewOption<'getCanonicalPageUrlForFavicon'>;
   getSiteDisplayName: ViewOption<'getSiteDisplayName'>;
   getUrlDisplay: ViewOption<'getUrlDisplay'>;
-  getRiSvg: ViewOption<'getRiSvg'>;
   attachFaviconWithFallbacks: ViewOption<'attachFaviconWithFallbacks'>;
   getBrowserPageFaviconUrl: ViewOption<'getBrowserPageFaviconUrl'>;
   getImmediateThemeForSuggestion: ViewOption<'getImmediateThemeForSuggestion'>;
@@ -80,7 +79,6 @@ function createRecentSection(deps: RecentSectionDeps): void {
     getCanonicalPageUrlForFavicon,
     getSiteDisplayName,
     getUrlDisplay,
-    getRiSvg,
     attachFaviconWithFallbacks,
     getBrowserPageFaviconUrl,
     getImmediateThemeForSuggestion,
@@ -163,7 +161,6 @@ function createRecentSection(deps: RecentSectionDeps): void {
     getCanonicalPageUrlForFavicon,
     getSiteDisplayName,
     getUrlDisplay,
-    getRiSvg,
     attachFaviconWithFallbacks,
     getBrowserPageFaviconUrl,
     getImmediateThemeForSuggestion,

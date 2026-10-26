@@ -223,9 +223,6 @@ function createRuntime(options) {
         }
       }
     },
-    getRiSvg() {
-      return '';
-    },
     getExtensionFaviconUrl(targetPageUrl) {
       return `chrome-extension://abc/_favicon/?pageUrl=${encodeURIComponent(targetPageUrl)}&size=128` +
         (/^https?:\/\//i.test(targetPageUrl) ? '&fallbackToHost=0' : '');

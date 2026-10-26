@@ -2,6 +2,7 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import type { SelectMenuControls } from '../../shared/react/select-menu';
 import { LinkButton } from '../../shared/react/link-button';
+import { RemixIcon } from '../../shared/react/remix-icon';
 import { ref } from './wallpaper-panel/panel-primitives';
 import {
   SELECT_IDS,
@@ -22,7 +23,6 @@ import { QuoteSection } from './wallpaper-panel/quote-section';
 import { WallpaperSection } from './wallpaper-panel/wallpaper-section';
 import { FaviconSection } from './wallpaper-panel/favicon-section';
 import { queryHtmlElement, queryHtmlElements, queryHtmlTag } from '../../shared/dom-lookup';
-import { innerHtml } from '../../shared/react/inner-html';
 import { lazyInstance } from '../../shared/lazy-instance';
 export { EFFECT_SLIDER_KEYS } from './wallpaper-panel/panel-model';
 export type { WallpaperSourceTab, WallpaperMode, ThemeScope, TopContentMode, TimeInk, GlassTheme, EffectSliderKey, WallpaperPanelModel, TileState, OnlineTileState, SelectedSourceState, DailyState, PanelSelectModel, CuratedMixState, WallpaperPanelActions, WallpaperPanelState, SectionSettingsActions, SectionSettingsModel, QuoteSettingsActions, QuoteSettingsModel } from './wallpaper-panel/panel-model';
@@ -33,7 +33,6 @@ function WallpaperPanel(props: WallpaperPanelProps) {
     state,
     sliderBubble,
     actions,
-    model,
     bubbleNode
   } = panel;
   return (
@@ -80,7 +79,7 @@ function WallpaperPanel(props: WallpaperPanelProps) {
               <div className="x-nt-panel-divider" />
               <BookmarkSettingsSection panel={panel} settings={panel.sectionSettings} />
               <div className="x-nt-panel-divider" />
-              <RecentSettingsSection panel={panel} settings={panel.sectionSettings} />
+              <RecentSettingsSection settings={panel.sectionSettings} />
             </>
           ) : null}
           {panel.quoteSettings ? (
@@ -118,7 +117,6 @@ function WallpaperPanel(props: WallpaperPanelProps) {
         className="x-nt-wallpaper-button"
         data-active={state.button.active ? 'true' : 'false'}
         data-open={state.open ? 'true' : 'false'}
-        dangerouslySetInnerHTML={innerHtml(String(model.icons?.wallpaper || ''))}
         onBlur={() => actions.hideTooltip()}
         onClick={(event) => {
           event.preventDefault();
@@ -130,7 +128,9 @@ function WallpaperPanel(props: WallpaperPanelProps) {
         onMouseEnter={(event) => actions.showButtonTooltip(event.currentTarget)}
         onMouseLeave={() => actions.hideTooltip()}
         type="button"
-      />
+      >
+        <RemixIcon name="ri-t-shirt-2-line" size={20} />
+      </button>
       {bubbleNode}
     </>
   );

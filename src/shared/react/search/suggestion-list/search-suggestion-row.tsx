@@ -26,7 +26,7 @@ import { bindTextTooltip, HighlightedText } from './highlight';
 import { isHelpPassage } from '../help-passage-card';
 import { setIconEmphasis } from './action-styles';
 import { queryHtmlElement, queryHtmlTag } from '../../../dom-lookup';
-import { innerHtml } from '../../inner-html';
+import { RemixIcon } from '../../remix-icon';
 
 function SearchSuggestionRowComponent({
   runtime,
@@ -707,11 +707,9 @@ function SearchSuggestionRowComponent({
                 options,
                 'x-nt-suggestion-action-button__icon'
               )}
-              dangerouslySetInnerHTML={innerHtml(options.getRiSvg(
-                  'ri-arrow-right-line',
-                  'ri-size-12'
-                ))}
-            />
+            >
+              <RemixIcon name="ri-arrow-right-line" size={12} />
+            </span>
           )}
         </button>
         {copyableUrl && (

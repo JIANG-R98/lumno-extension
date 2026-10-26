@@ -557,10 +557,6 @@ async function submitPromptInTab(
             Number(style.opacity || '1') > 0.2
           );
         };
-        const escapeHtml = (value: string): string => value
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
         const dispatchInput = (element: Element): void => {
           if (typeof InputEvent === 'function') {
             const eventData = inputEventDataMode === 'none' ? null : promptText;
@@ -656,7 +652,9 @@ async function submitPromptInTab(
           editor.value = value;
         };
         const setContentEditablePrompt = (editor: Element): void => {
-          editor.innerHTML = `<p>${escapeHtml(promptText)}</p>`;
+          const paragraph = editor.ownerDocument.createElement('p');
+          paragraph.textContent = promptText;
+          editor.replaceChildren(paragraph);
         };
         // Rich editors such as Lexical pad their text with zero-width marks.
         const readContentText = (editor: ComposerElement): string => String(editor.innerText || editor.textContent || '')

@@ -43,7 +43,6 @@ interface SearchBoxControlsDeps {
   // Settles with whether the Help Center tip is showing.
   helpCenterAskHintSettled: Promise<boolean>;
   t: Translate;
-  getRiSvg(id: string, sizeClass: string): string;
   getOpenDisposition: PageNavigation['getOpenDisposition'];
   searchInput: HTMLInputElement;
   closeFeedbackPopover(): void;
@@ -69,7 +68,6 @@ function createSearchBoxControls(deps: SearchBoxControlsDeps) {
     FEATURE_HINTS,
     helpCenterAskHintSettled,
     t,
-    getRiSvg,
     getOpenDisposition,
     searchInput,
     closeFeedbackPopover,
@@ -145,7 +143,6 @@ function createSearchBoxControls(deps: SearchBoxControlsDeps) {
         visibilityGate: helpCenterAskHintSettled,
         initiallyVisible: false,
         t,
-        getRiSvg,
         onLinkClick(event) {
           dismissWebdavFeatureHint();
           LumnoMessaging.sendBackgroundMessage(chrome.runtime, {

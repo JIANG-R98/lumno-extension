@@ -12,6 +12,7 @@ import {
   type LensTileCanvas
 } from './liquid-glass';
 import { required } from '../../../tests/react/dom';
+import { createSvgElement } from '../../shared/ui/svg-tree';
 
 function fakeWindow(supportsUrl: boolean, userAgent: string) {
   return {
@@ -127,26 +128,29 @@ describe('New Tab bookmarks bar liquid glass', () => {
 
   it('splits the bend into color channels on plates, red bending furthest', () => {
     const tiles = { shape: 'floating' as const, size: 20, urls: Array.from({ length: 8 }, (_, i) => `data:t${i}`) };
-    const markup = buildLensFilter('lens', 120, 70, tiles, 90, true);
-    const scales = Array.from(markup.matchAll(/feDisplacementMap[^>]*scale="([\d.]+)"/g), (match) => Number(match[1]));
+    const filter = createSvgElement(document, buildLensFilter('lens', 120, 70, tiles, 90, true));
+    const scales = Array.from(filter.querySelectorAll('feDisplacementMap'), (bend) => Number(bend.getAttribute('scale')));
     expect(scales).toHaveLength(3);
     expect(scales[0]).toBeGreaterThan(90);
     expect(scales[1]).toBe(90);
     expect(scales[2]).toBeLessThan(90);
-    expect(markup).toContain('values="0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0"');
-    expect(markup.match(/<feBlend/g)).toHaveLength(2);
-    expect(markup.match(/<feImage/g)).toHaveLength(8);
-    expect(markup).toContain('<filter id="lens" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB" x="0" y="0" width="120" height="70">');
+    expect(filter.querySelectorAll('feColorMatrix')[1].getAttribute('values')).toBe('0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0');
+    expect(filter.querySelectorAll('feBlend')).toHaveLength(2);
+    expect(filter.querySelectorAll('feImage')).toHaveLength(8);
+    expect(['id', 'filterUnits', 'color-interpolation-filters', 'x', 'y', 'width', 'height'].map((name) => filter.getAttribute(name)))
+      .toEqual(['lens', 'userSpaceOnUse', 'sRGB', '0', '0', '120', '70']);
     // A small control bends in one pass.
-    const single = buildLensFilter('lens', 40, 40, tiles, 60, false);
-    expect(single.match(/<feDisplacementMap/g)).toHaveLength(1);
-    expect(single).not.toContain('feBlend');
+    const single = createSvgElement(document, buildLensFilter('lens', 40, 40, tiles, 60, false));
+    expect(single.querySelectorAll('feDisplacementMap')).toHaveLength(1);
+    expect(single.querySelectorAll('feBlend')).toHaveLength(0);
   });
 
   it('bends the whole surface in every pass and moves only its tiles on resize', () => {
     const tiles = { shape: 'floating' as const, size: 30, urls: Array.from({ length: 8 }, (_, i) => `data:t${i}`) };
-    document.body.innerHTML = `<svg>${buildLensFilter('lens', 640, 470, tiles, 90, true)}</svg>`;
-    const filter = required(document.querySelector('filter'), 'filter');
+    const host = document.body.appendChild(createSvgElement(document, ['svg', {}, [
+      buildLensFilter('lens', 640, 470, tiles, 90, true)
+    ]]));
+    const filter = required(host.querySelector('filter'), 'filter');
     // No pass that reads the backdrop is held to a subregion: Chrome draws those wrong.
     const bends = Array.from(filter.querySelectorAll('feDisplacementMap'));
     expect(bends).toHaveLength(3);
@@ -154,13 +158,13 @@ describe('New Tab bookmarks bar liquid glass', () => {
     placeLensFilter(filter, 640, 300, tiles);
     expect(filter.getAttribute('height')).toBe('300');
     expect(filter.querySelectorAll('feImage')[3].getAttribute('y')).toBe('270');
-    document.body.innerHTML = '';
+    document.body.replaceChildren();
   });
 
   describe('surfaces', () => {
     afterEach(() => {
       vi.restoreAllMocks();
-      document.body.innerHTML = '';
+      document.body.replaceChildren();
     });
 
     function setup() {

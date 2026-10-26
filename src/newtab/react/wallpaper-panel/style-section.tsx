@@ -6,12 +6,10 @@ import type { WallpaperPanelContext } from './use-wallpaper-panel';
 
 export function StyleSection({ panel }: { panel: WallpaperPanelContext }) {
   const {
-    arrowIcon,
     styleExpanded,
     setStyleExpanded,
     glassStyle,
     actions,
-    infoIcon,
     documentObj,
     registerSelect,
     state
@@ -20,7 +18,6 @@ export function StyleSection({ panel }: { panel: WallpaperPanelContext }) {
     <div className="x-nt-wallpaper-section">
       <div className="x-nt-wallpaper-panel-header">
         <SectionTrigger
-          arrowIcon={arrowIcon}
           bodyId="_x_extension_newtab_style_section_body_2026_unique_"
           expanded={styleExpanded}
           onToggle={() => setStyleExpanded(!styleExpanded)}
@@ -42,7 +39,6 @@ export function StyleSection({ panel }: { panel: WallpaperPanelContext }) {
             </span>
             <InfoButton
               actions={actions}
-              icon={infoIcon}
               label={glassStyle.title}
               name="glassStyleInfoButton"
               tooltip={glassStyle.infoTooltip}
@@ -72,7 +68,6 @@ export function StyleSection({ panel }: { panel: WallpaperPanelContext }) {
             </span>
             <InfoButton
               actions={actions}
-              icon={infoIcon}
               label={glassStyle.theme.title}
               name="glassThemeInfoButton"
               tooltip={glassStyle.theme.infoTooltip}

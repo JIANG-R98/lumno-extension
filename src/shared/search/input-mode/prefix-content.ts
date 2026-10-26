@@ -268,9 +268,8 @@ function createPrefixContent(deps: PrefixContentDeps) {
       : '';
     const icon: ModeTagIcon = {
       lineIcon: getModeLineIconPaths(lineIconName) ? lineIconName : '',
-      glyphClass: contentOptions && contentOptions.iconClass
-        ? String(contentOptions.iconClass).trim()
-        : (contentOptions && contentOptions.isAi ? 'ri-search-ai-line' : 'ri-search-line'),
+      glyphName: (contentOptions && contentOptions.iconName) ||
+        (contentOptions && contentOptions.isAi ? 'ri-search-ai-line' : 'ri-search-line'),
       iconUrl: String(resolveProviderIconUrl(
         contentOptions && contentOptions.provider,
         contentOptions && contentOptions.iconUrl || ''

@@ -16,28 +16,28 @@ const model: FeedbackSupportRenderModel = {
   items: [
     {
       href: 'https://example.com/qrcode.JPG',
-      iconClass: 'ri-wechat-line',
+      iconName: 'ri-wechat-line',
       key: 'community',
       label: '加入反馈群',
       labelKey: 'settings_feedback_support_wechat_action'
     },
     {
       href: 'https://chromewebstore.google.com/example/reviews',
-      iconClass: 'ri-star-line',
+      iconName: 'ri-star-line',
       key: 'chrome-review',
       label: '为 Lumno 评分',
       labelKey: 'settings_feedback_support_review_action'
     },
     {
       href: 'https://github.com/example/issues/new',
-      iconClass: 'ri-github-line',
+      iconName: 'ri-github-line',
       key: 'github-issue',
       label: '创建 Issue',
       labelKey: 'settings_feedback_support_github_issue_action'
     },
     {
       href: 'https://x.com/example',
-      iconClass: 'ri-twitter-x-line',
+      iconName: 'ri-twitter-x-line',
       key: 'contact-author',
       label: '联系作者',
       labelKey: 'settings_feedback_support_contact_author_action'

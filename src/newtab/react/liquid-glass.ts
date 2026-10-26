@@ -1,5 +1,6 @@
 import { isElementNode, isHtmlElement } from '../../shared/dom-guards';
 import { queryHtmlElements } from '../../shared/dom-lookup';
+import { SVG_NS, createSvgElement, type SvgNode } from '../../shared/ui/svg-tree';
 // Liquid glass: the wallpaper behind a surface's rim bends inward the way a thick glass edge
 // refracts, and splits slightly into its colors there. An SVG displacement map drives the bend
 // through `backdrop-filter: url(#…)`, which only Chromium renders; other browsers keep the CSS-only
@@ -241,7 +242,7 @@ function createLensCache(documentObj: Document, createTileCanvas: () => LensTile
 // Too small a surface has no flat middle to look through, so it goes without a lens.
 const LENS_MIN_PX = 32;
 
-const at = (rect: Rect) => `x="${rect[0]}" y="${rect[1]}" width="${rect[2]}" height="${rect[3]}"`;
+const at = (rect: Rect) => ({ x: rect[0], y: rect[1], width: rect[2], height: rect[3] });
 
 // The filter. The map is the lens tiles over a flat flood; the backdrop is displaced by it once, or
 // once per color channel, each by its own scale, the three channels added back together (screen on
@@ -255,25 +256,39 @@ export function buildLensFilter(
   tiles: LensTiles,
   scale: number,
   dispersion: boolean
-) {
+): SvgNode {
   const tileRects = getLensLayout(tiles.shape, width, height, tiles.size);
-  const pieces = tileRects.map((rect, index) =>
-    `<feImage href="${tiles.urls[index]}" preserveAspectRatio="none" ${at(rect)} result="t${index}"/>`);
-  const pass = (channelScale: number) =>
-    '<feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G" ' +
-    `scale="${channelScale.toFixed(1)}"`;
-  const bend = dispersion
-    ? 'rgb'.split('').map((name, index) => `${pass(scale * (1 + (1 - index) * LIQUID_GLASS_DISPERSION))}/>` +
-      // Keeps this channel and alpha only: a 1 on the diagonal of the 4x5 color matrix.
-      `<feColorMatrix type="matrix" values="${Array.from({ length: 20 }, (_, cell) =>
-        Number(cell === index * 6 || cell === 18)).join(' ')}" result="${name}"/>`).join('') +
-      '<feBlend in="r" in2="g" mode="screen"/><feBlend in2="b" mode="screen"/>'
-    : `${pass(scale)}/>`;
-  return `<filter id="${id}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB" ` +
-    `x="0" y="0" width="${width}" height="${height}">` +
-    `<feFlood flood-color="rgb(128,128,128)" result="flat"/>${pieces.join('')}` +
-    `<feMerge result="map"><feMergeNode in="flat"/>${tileRects.map((_rect, index) =>
-      `<feMergeNode in="t${index}"/>`).join('')}</feMerge>${bend}</filter>`;
+  const pieces = tileRects.map((rect, index): SvgNode =>
+    ['feImage', { href: tiles.urls[index], preserveAspectRatio: 'none', ...at(rect), result: `t${index}` }]);
+  const pass = (channelScale: number): SvgNode => ['feDisplacementMap', {
+    in: 'SourceGraphic', in2: 'map', xChannelSelector: 'R', yChannelSelector: 'G', scale: channelScale.toFixed(1)
+  }];
+  const bend: SvgNode[] = dispersion
+    ? [
+      ...['r', 'g', 'b'].flatMap((name, index): SvgNode[] => [
+        pass(scale * (1 + (1 - index) * LIQUID_GLASS_DISPERSION)),
+        // Keeps this channel and alpha only: a 1 on the diagonal of the 4x5 color matrix.
+        ['feColorMatrix', {
+          type: 'matrix',
+          values: Array.from({ length: 20 }, (_, cell) => Number(cell === index * 6 || cell === 18)).join(' '),
+          result: name
+        }]
+      ]),
+      ['feBlend', { in: 'r', in2: 'g', mode: 'screen' }],
+      ['feBlend', { in2: 'b', mode: 'screen' }]
+    ]
+    : [pass(scale)];
+  return ['filter', {
+    id, filterUnits: 'userSpaceOnUse', 'color-interpolation-filters': 'sRGB', x: 0, y: 0, width, height
+  }, [
+    ['feFlood', { 'flood-color': 'rgb(128,128,128)', result: 'flat' }],
+    ...pieces,
+    ['feMerge', { result: 'map' }, [
+      ['feMergeNode', { in: 'flat' }],
+      ...tileRects.map((_rect, index): SvgNode => ['feMergeNode', { in: `t${index}` }])
+    ]],
+    ...bend
+  ]];
 }
 
 // Fits a lens filter to a new size by moving its tiles; the images stay as they are.
@@ -286,21 +301,16 @@ export function placeLensFilter(filter: Element, width: number, height: number, 
   });
 }
 
-const svgNamespace = 'http://www.w3.org/2000/svg';
+const svgNamespace = SVG_NS;
 
 // Each filter gets an <svg> of its own. Adding a filter to an <svg> that holds others can make
 // Chrome reload all their images, and a backdrop-filter naming a filter whose images are reloading
 // drops its blur too, so one new lens would briefly clear every plate.
-// The markup holds one filter, which becomes the host's first element.
-function createFilterHost(documentObj: Document, markup: string): { host: SVGSVGElement; filter: Element } {
+function createFilterHost(documentObj: Document, description: SvgNode): { host: SVGSVGElement; filter: Element } {
   const host = documentObj.createElementNS(svgNamespace, 'svg');
   host.setAttribute('aria-hidden', 'true');
   host.setAttribute('style', 'position:absolute;width:0;height:0;pointer-events:none');
-  host.innerHTML = markup;
-  const filter = host.firstElementChild;
-  if (!filter) {
-    throw new Error('The lens filter markup has no filter.');
-  }
+  const filter = host.appendChild(createSvgElement(documentObj, description));
   (documentObj.body || documentObj.documentElement).appendChild(host);
   return { host, filter };
 }

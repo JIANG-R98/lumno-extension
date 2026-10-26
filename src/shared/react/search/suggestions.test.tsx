@@ -51,8 +51,6 @@ function createOptions(
           text.replace(`{${key}}`, value),
         fallback
       ),
-    getRiSvg: (name, size = '') =>
-      `<i class="${name} ${size}"></i>`,
     sanitizeDisplayText: (value) => String(value || ''),
     getHostFromUrl: (url) => {
       try {

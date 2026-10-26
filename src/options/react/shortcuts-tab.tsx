@@ -9,6 +9,7 @@ import { SiteSearchForm, type SiteSearchFormRenderModel, type SiteSearchFormSave
 import { SiteSearchList, type SiteSearchListOptions, type SiteSearchListRenderModel } from './site-search-list';
 import type { ToggleControlRenderModel } from './toggle-control';
 import { lazyInstance } from '../../shared/lazy-instance';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 // The lists a reader can reorder by dragging, as the search source order names them.
 export type ShortcutsListId = 'custom' | 'site' | 'ai' | 'engine' | 'aggregate';
@@ -112,7 +113,7 @@ function SearchGroupOrder({
           role="listitem"
           tabIndex={0}
         >
-          <i aria-hidden="true" className="ri-icon ri-size-14 ri-draggable" />
+          <RemixIcon name="ri-draggable" />
           <span>{item.label}</span>
         </div>
       ))}
@@ -172,7 +173,7 @@ export function ShortcutsTab({ model, handlers }: { model: ShortcutsTabModel; ha
           <div className={GROUP_TITLE_CLASS}>{custom.title}</div>
           <GroupActionConfirm
             disabled={!custom.list || custom.list.items.length === 0}
-            iconClass="ri-delete-bin-4-line"
+            iconName="ri-delete-bin-4-line"
             id="_x_extension_custom_clear_2024_unique_"
             model={custom.clear}
             onConfirm={handlers.onClearCustom}
@@ -194,7 +195,7 @@ export function ShortcutsTab({ model, handlers }: { model: ShortcutsTabModel; ha
           <div className={GROUP_TITLE_CLASS}>{aggregate.title}</div>
           <GroupActionConfirm
             disabled={!aggregate.list || aggregate.list.items.length === 0}
-            iconClass="ri-delete-bin-4-line"
+            iconName="ri-delete-bin-4-line"
             id="_x_extension_aggregate_search_clear_2026_unique_"
             model={aggregate.clear}
             onConfirm={handlers.onClearAggregates}
@@ -218,7 +219,7 @@ export function ShortcutsTab({ model, handlers }: { model: ShortcutsTabModel; ha
         <div className={GROUP_HEADER_CLASS}>
           <div className={GROUP_TITLE_CLASS}>{sites.title}</div>
           <GroupActionConfirm
-            iconClass="ri-refresh-line"
+            iconName="ri-refresh-line"
             id="_x_extension_builtin_reset_2024_unique_"
             model={sites.reset}
             onConfirm={handlers.onResetBuiltin}

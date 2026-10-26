@@ -32,7 +32,7 @@ import {
 } from './shortcut-dialog-helpers';
 import { isNode } from '../../shared/dom-guards';
 import { queryHtmlTag } from '../../shared/dom-lookup';
-import { innerHtml } from '../../shared/react/inner-html';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 type Translate = (key: string, fallback: string) => string;
 type IconAction = 'keep' | 'replace' | 'remove';
@@ -131,7 +131,6 @@ export interface ShortcutDialogOptions {
   resolveIconPlate?: (input: IconPlateInput) => IconPlateColors | null;
   getIconPlateColorChoices?: (analysis: IconPlateAnalysis | null) => string[];
   pickIconPlateColor?: (request: IconPlateColorRequest) => Promise<string | null | undefined>;
-  getRiSvg?: (id: string, sizeClass?: string) => string;
   bindTooltip?: (
     target: HTMLElement,
     getText: () => string,
@@ -195,7 +194,6 @@ interface NormalizedOptions {
   resolveIconPlate: NonNullable<ShortcutDialogOptions['resolveIconPlate']>;
   getIconPlateColorChoices: NonNullable<ShortcutDialogOptions['getIconPlateColorChoices']>;
   pickIconPlateColor?: ShortcutDialogOptions['pickIconPlateColor'];
-  getRiSvg: (id: string, sizeClass?: string) => string;
   bindTooltip: NonNullable<ShortcutDialogOptions['bindTooltip']>;
   hideTooltip: () => void;
   closeDelayMs: number;
@@ -911,9 +909,9 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                     'newtab_shortcuts_url_info_label',
                     'About supported URLs'
                   )}
-                  aria-describedby={urlInfoId}
-                  dangerouslySetInnerHTML={innerHtml(options.getRiSvg('ri-information-line', 'ri-size-14'))}
-                />
+                  aria-describedby={urlInfoId}>
+                  <RemixIcon name="ri-information-line" />
+                </button>
               </div>
               <div
                 className="_x_extension_shortcut_input_affix_2026_unique_"
@@ -1021,9 +1019,9 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                     isBuiltinIcon ? 'newtab_shortcuts_icon_builtin_info_label' : 'newtab_shortcuts_icon_info_label',
                     isBuiltinIcon ? 'About built-in icons' : 'About local shortcut icons'
                   )}
-                  aria-describedby={iconInfoId}
-                  dangerouslySetInnerHTML={innerHtml(options.getRiSvg('ri-information-line', 'ri-size-14'))}
-                /> : null}
+                  aria-describedby={iconInfoId}>
+                  <RemixIcon name="ri-information-line" />
+                </button> : null}
               </div>
 
               {isOnlineIcon ? (
@@ -1040,7 +1038,9 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                         />
                       </span>
                     ) : (
-                      <span aria-hidden="true" dangerouslySetInnerHTML={innerHtml(options.getRiSvg('ri-link', 'ri-size-24'))} />
+                      <span aria-hidden="true">
+                        <RemixIcon name="ri-link" size={24} />
+                      </span>
                     )}
                   </span>
                   {!isBuiltinIcon ? <button
@@ -1059,9 +1059,9 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                     <span
                       ref={iconRefreshGlyphRef}
                       className="x-nt-shortcut-icon-refresh-glyph x-lumno-busy-spin"
-                      aria-hidden="true"
-                      dangerouslySetInnerHTML={innerHtml(options.getRiSvg(formState.iconRefreshSuccess ? 'ri-check-line' : 'ri-refresh-line', 'ri-size-16'))}
-                    />
+                      aria-hidden="true">
+                      <RemixIcon name={formState.iconRefreshSuccess ? 'ri-check-line' : 'ri-refresh-line'} size={16} />
+                    </span>
                     <span ref={iconRefreshLabelRef} className="x-nt-shortcut-icon-refresh-label" aria-live="polite">{refreshLabel}</span>
                   </button> : null}
                 </div>
@@ -1100,9 +1100,9 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                     </span>
                     <span
                       className="x-nt-wallpaper-upload-placeholder x-nt-shortcut-icon-placeholder"
-                      hidden={hasIcon}
-                      dangerouslySetInnerHTML={innerHtml(options.getRiSvg('ri-add-large-line', 'ri-size-18'))}
-                    />
+                      hidden={hasIcon}>
+                      <RemixIcon name="ri-add-large-line" />
+                    </span>
                   </span>
                   <button
                     ref={iconRemoveButtonRef}
@@ -1111,9 +1111,9 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                     hidden={!hasIcon}
                     disabled={disabled}
                     aria-label={options.t('newtab_shortcuts_icon_remove', 'Remove')}
-                    onClick={handleIconRemove}
-                    dangerouslySetInnerHTML={innerHtml(options.getRiSvg('ri-subtract-line', 'ri-size-14'))}
-                  />
+                    onClick={handleIconRemove}>
+                    <RemixIcon name="ri-subtract-line" />
+                  </button>
                 </div>
                 <input
                   ref={iconInputRef}
@@ -1189,9 +1189,9 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                     title={plateAutoColorLabel}
                     disabled={formState.busy}
                     style={getIconPlateStyle(autoPlate)}
-                    onClick={() => selectPlateColor('')}
-                    dangerouslySetInnerHTML={innerHtml(options.getRiSvg('ri-magic-line', 'ri-size-14'))}
-                  />
+                    onClick={() => selectPlateColor('')}>
+                    <RemixIcon name="ri-magic-line" />
+                  </button>
                   {plateColorChoices.map((color) => (
                     <button
                       key={color}
@@ -1234,9 +1234,9 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                           presets: [autoColor, ...plateColorChoices.filter((color) => color !== autoColor)].slice(0, 8),
                           sourceElement: event.currentTarget
                         });
-                      }}
-                      dangerouslySetInnerHTML={innerHtml(options.getRiSvg('ri-palette-line', 'ri-size-16'))}
-                    />
+                      }}>
+                      <RemixIcon name="ri-palette-line" size={16} />
+                    </button>
                   ) : null}
                 </div>
               ) : null}
@@ -1320,10 +1320,6 @@ function normalizeOptions(options: ShortcutDialogOptions, root: typeof globalThi
       ? options.getIconPlateColorChoices : () => [],
     pickIconPlateColor: typeof options.pickIconPlateColor === 'function'
       ? options.pickIconPlateColor : undefined,
-    getRiSvg: typeof options.getRiSvg === 'function'
-      ? options.getRiSvg
-      : (id, sizeClass = 'ri-size-16') =>
-          `<i class="ri-icon ${sizeClass} ${id}" aria-hidden="true"></i>`,
     bindTooltip: typeof options.bindTooltip === 'function'
       ? options.bindTooltip
       : () => null,

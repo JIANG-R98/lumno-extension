@@ -8,6 +8,7 @@ import type { InputModeController } from '../../shared/search/search-input-mode'
 import type { PrefixTextOptions } from '../../shared/search/input-mode/prefix-text';
 import type { InputModeProvider, InputModeTheme } from '../../shared/search/input-mode/types';
 import type { FormatMessage, LocalSearchScopeTrigger, SiteSearchTrigger, Translate } from './types';
+import type { RemixIconName } from '../../shared/ui/remix-icon';
 
 interface SearchModesState {
   inputModeController: Pick<InputModeController,
@@ -107,7 +108,7 @@ function createSearchModes(deps: SearchModesDeps) {
         theme,
         {
           animate: prefixOptions.animate !== false,
-          iconClass: 'ri-window-line',
+          iconName: 'ri-window-line',
           menuIconName: 'browser',
           modeId: 'openTabs',
           preserveModeMenuDoubleTab: Boolean(
@@ -312,7 +313,7 @@ function createSearchModes(deps: SearchModesDeps) {
     return '';
   }
 
-  function getLocalSearchScopeIconClass(sourceType: string): string {
+  function getLocalSearchScopeIconName(sourceType: string): RemixIconName {
     if (sourceType === 'bookmark') {
       return 'ri-bookmark-3-line';
     }
@@ -345,7 +346,7 @@ function createSearchModes(deps: SearchModesDeps) {
       overlayState.defaultTheme,
       {
         animate: true,
-        iconClass: getLocalSearchScopeIconClass(scope.sourceType),
+        iconName: getLocalSearchScopeIconName(scope.sourceType),
         menuIconName: scope.sourceType === 'topSite' ? 'star' : scope.sourceType,
         modeId: `local:${scope.sourceType}`
       }
@@ -506,7 +507,7 @@ function createSearchModes(deps: SearchModesDeps) {
     getSiteSearchTriggerCandidate,
     getLocalSearchScopeCandidate,
     getLocalSearchScopeLabel,
-    getLocalSearchScopeIconClass,
+    getLocalSearchScopeIconName,
     getLocalSearchScopeTabHintProvider,
     setLocalSearchScopePrefix,
     activateLocalSearchScope,

@@ -42,7 +42,6 @@ import * as WALLPAPER_WALLPAPER_VISUAL from './runtime/wallpaper-visual';
 import * as WALLPAPER_ADAPTIVE_TONE from './wallpaper-adaptive-tone';
 import * as WALLPAPER_EFFECTS from './wallpaper-effects';
 import * as WALLPAPER_LOCAL_STORE from '../../shared/wallpaper-local-store';
-import { getRiSvg as getDefaultRiSvg } from '../../shared/ui/remix-icon';
 import { readBootValue } from '../../platform/boot-handoff';
 import { getWallpaperViewApi } from '../react/wallpaper-view';
 
@@ -211,7 +210,6 @@ interface WallpaperRuntimeOptions {
   setGlassTheme?: (value: GlassTheme) => void;
   // Feature hints stay hidden until this settles.
   featureHintVisibilityGate?: PromiseLike<unknown>;
-  getRiSvg?: (id: string, sizeClass?: string, extraClass?: string) => string;
   showToast?: ShowToast;
   beginToast?: (message: string) => ToastTask;
   showTopActionTooltip?: (anchor: HTMLElement, text: string, options?: { placement?: string }) => void;
@@ -403,7 +401,6 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
     typeof options.featureHintVisibilityGate.then === 'function'
     ? options.featureHintVisibilityGate
     : null;
-  const getRiSvg = typeof options.getRiSvg === 'function' ? options.getRiSvg : getDefaultRiSvg;
   const showToast: ShowToast = typeof options.showToast === 'function' ? options.showToast : function() {};
   const beginToast = typeof options.beginToast === 'function'
     ? options.beginToast
@@ -826,7 +823,6 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
     NEWTAB_FAVICON_SVG_MAIN_PATH,
     NEWTAB_FAVICON_OPTIONS,
     getNewtabFaviconUrl: (...args) => getNewtabFaviconUrl(...args),
-    getRiSvg,
     SETTINGS,
     getSearchWidthSnapPoints: (...args) => getSearchWidthSnapPoints(...args),
     getSearchWidthPercent: (...args) => getSearchWidthPercent(...args),
@@ -1545,7 +1541,6 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
     chrome,
     featureHintVisibilityGate,
     t,
-    getRiSvg,
     syncWallpaperSourceTabToEditMode,
     getResolvedWallpaperMode,
     setWallpaperPanelOpenState,

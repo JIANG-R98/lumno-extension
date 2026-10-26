@@ -11,10 +11,10 @@ import type {
 } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
-import { innerHtml } from '../../shared/react/inner-html';
 import { FaviconFallback } from '../../shared/react/favicon-fallback';
 import { RemixIcon } from '../../shared/react/remix-icon';
 import { lazyInstance } from '../../shared/lazy-instance';
+import { FolderIcon } from './folder-icon';
 
 // The menu levels size to their content within these bounds.
 const LEVEL_MIN_WIDTH_PX = 210;
@@ -34,8 +34,9 @@ export interface CascadeRowModel {
   hoverSuppressed: boolean;
   // The row's context menu is open.
   contextMenuOpen: boolean;
-  // Folders: the folder glyph's markup. Sites: a chosen icon, else ''.
-  folderIconMarkup: string;
+  // Folders: what makes the folder glyph's ids unique. Sites: a chosen
+  // icon, else ''.
+  folderIconSuffix: string;
   iconUrl: string;
   iconMonochrome: boolean;
   iconAlt: string;
@@ -179,9 +180,10 @@ function CascadeRow({
           <span
             aria-hidden="true"
             className="x-nt-bookmark-cascade-icon x-nt-bookmark-cascade-icon--folder"
-            dangerouslySetInnerHTML={innerHtml(row.folderIconMarkup)}
             ref={folderIconRef}
-          />
+          >
+            <FolderIcon idSuffix={row.folderIconSuffix} folderId={row.bookmarkId} />
+          </span>
         ) : (
           <img
             alt={row.iconAlt}
@@ -197,7 +199,7 @@ function CascadeRow({
         <span className="x-nt-bookmark-cascade-label">{row.title}</span>
         {row.isFolder ? (
           <span aria-hidden="true" className="x-nt-bookmark-cascade-arrow">
-            <RemixIcon className="ri-size-16 ri-arrow-right-s-line" />
+            <RemixIcon name="ri-arrow-right-s-line" size={16} />
           </span>
         ) : null}
       </button>
@@ -214,7 +216,7 @@ function CascadeRow({
           onPointerLeave={() => handlers.onCopyHide()}
           type="button"
         >
-          <RemixIcon className="ri-size-16 ri-file-copy-line" />
+          <RemixIcon name="ri-file-copy-line" size={16} />
         </button>
       )}
     </div>

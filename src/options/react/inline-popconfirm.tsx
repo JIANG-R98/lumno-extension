@@ -5,6 +5,8 @@ import {
   type PopconfirmCopy
 } from '../../shared/react/popconfirm-content';
 import { isNode } from '../../shared/dom-guards';
+import type { RemixIconName } from '../../shared/ui/remix-icon';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 export type InlinePopconfirmCopy = PopconfirmCopy;
 
@@ -13,7 +15,7 @@ export function InlinePopconfirm({
   onConfirm,
   triggerAriaLabel,
   triggerClassName,
-  triggerIconClass,
+  triggerIconName,
   triggerDisabled = false,
   triggerId,
   triggerTooltip
@@ -22,7 +24,7 @@ export function InlinePopconfirm({
   onConfirm(): void | Promise<void>;
   triggerAriaLabel: string;
   triggerClassName: string;
-  triggerIconClass: string;
+  triggerIconName: RemixIconName;
   triggerDisabled?: boolean;
   triggerId?: string;
   // Shown by the page's floating tooltip.
@@ -94,7 +96,7 @@ export function InlinePopconfirm({
         ref={triggerRef}
         type="button"
       >
-        <i aria-hidden="true" className={triggerIconClass} />
+        <RemixIcon name={triggerIconName} />
       </button>
       <div
         aria-hidden={!open}

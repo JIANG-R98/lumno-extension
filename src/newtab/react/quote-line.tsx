@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { createReactRootController } from '../../shared/react/root-controller';
 import { queryHtmlElement } from '../../shared/dom-lookup';
 import { lazyInstance } from '../../shared/lazy-instance';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 export interface QuoteLineModel {
   text: string;
@@ -92,7 +93,7 @@ function QuoteLine({ model, handlers }: { model: QuoteLineModel; handlers: Quote
         title={model.shuffleTitle || undefined}
         type="button"
       >
-        <i aria-hidden="true" className="ri-icon ri-size-16 ri-shuffle-line" />
+        <RemixIcon name="ri-shuffle-line" size={16} />
       </button>
     </div>
   );

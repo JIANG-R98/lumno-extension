@@ -12,7 +12,7 @@ let controllers: FeatureHintViewController[] = [];
 afterEach(() => {
   act(() => controllers.forEach((controller) => controller.destroy()));
   controllers = [];
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 describe('Feature hint React view', () => {
@@ -36,8 +36,7 @@ describe('Feature hint React view', () => {
         model: {
           actions: [
             {
-              iconHtml:
-                '<i class="ri-icon ri-star-line" aria-hidden="true"></i>',
+              icon: { name: 'ri-star-line' },
               id: 'review',
               variant: 'primary'
             },
@@ -49,8 +48,7 @@ describe('Feature hint React view', () => {
           alignMode: 'auto',
           arrowAlign: 'center',
           arrowSide: 'top',
-          badgeIconHtml:
-            '<i class="ri-icon ri-asterisk" aria-hidden="true"></i>',
+          badgeIcon: { name: 'ri-asterisk' },
           className: 'feature-placement',
           dismissStorage: 'sync',
           elementId: 'hint',
@@ -124,14 +122,12 @@ describe('Feature hint React view', () => {
         model: {
           actions: [
             {
-              iconHtml:
-                '<i class="ri-icon ri-size-12 ri-external-link-line" aria-hidden="true"></i>',
+              icon: { name: 'ri-external-link-line', size: 12 },
               id: 'review',
               variant: 'primary'
             },
             {
-              iconHtml:
-                '<i class="ri-icon ri-size-12 ri-external-link-line" aria-hidden="true"></i>',
+              icon: { name: 'ri-external-link-line', size: 12 },
               id: 'community',
               variant: 'secondary'
             }

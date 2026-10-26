@@ -29,7 +29,7 @@ afterEach(() => {
   document.head
     .querySelectorAll('link[id^="_x_extension_"]')
     .forEach((link) => link.remove());
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 describe('Shared search input React island', () => {
@@ -224,7 +224,7 @@ describe('Shared search input React island', () => {
   it('takes the buttons\' labels and the underline from the surface', () => {
     const parts = create({
       clearAction: { ariaLabel: 'Clear', id: 'clear' },
-      secondaryAction: { ariaLabel: 'Close other tabs', id: 'close-tabs' }
+      secondaryAction: { ariaLabel: 'Close other tabs', icon: { name: 'ri-brush-2-line' }, id: 'close-tabs' }
     });
 
     act(() => parts.setChrome({ rightIconLabel: '设置', clearLabel: '清空', secondaryLabel: '关闭其他标签页', underline: true }));
@@ -243,7 +243,7 @@ describe('Shared search input React island', () => {
   });
 
   it('shows the secondary action\'s hover look while the pointer is over it', () => {
-    const parts = create({ secondaryAction: { ariaLabel: 'Close other tabs', id: 'close-tabs' } });
+    const parts = create({ secondaryAction: { ariaLabel: 'Close other tabs', icon: { name: 'ri-brush-2-line' }, id: 'close-tabs' } });
     const button = required(parts.secondaryAction, 'parts.secondaryAction');
 
     act(() => {
@@ -259,7 +259,7 @@ describe('Shared search input React island', () => {
   it('binds the surface\'s tooltip to its buttons with their current labels', () => {
     const parts = create({
       clearAction: { ariaLabel: 'Clear', id: 'clear' },
-      secondaryAction: { ariaLabel: 'Close other tabs', id: 'close-tabs' }
+      secondaryAction: { ariaLabel: 'Close other tabs', icon: { name: 'ri-brush-2-line' }, id: 'close-tabs' }
     });
     const texts = new Map<HTMLElement, () => string>();
     const tooltip = {
@@ -326,7 +326,7 @@ describe('Shared search input React island', () => {
       secondaryAction: {
         ariaLabel: 'Close other tabs',
         className: 'close-tabs',
-        html: '<span aria-hidden="true">×</span>',
+        icon: { name: 'ri-brush-2-line', size: 16 },
         id: 'close-tabs'
       }
     });
@@ -353,6 +353,7 @@ describe('Shared search input React island', () => {
       secondaryAction: {
         ariaLabel: 'Close other tabs',
         confirm: { getCopy, onConfirm },
+        icon: { name: 'ri-brush-2-line' },
         id: 'close-tabs'
       }
     });
@@ -391,6 +392,7 @@ describe('Shared search input React island', () => {
     const onDocumentKeyDown = vi.fn();
     const parts = create({
       secondaryAction: {
+        icon: { name: 'ri-brush-2-line' },
         confirm: {
           getCopy: () => ({
                   confirmLabel: 'Close',

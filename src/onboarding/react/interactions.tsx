@@ -6,6 +6,7 @@ import type {
 } from 'react';
 import { RemixIcon as Icon } from '../../shared/react/remix-icon';
 import type { BrowserAvatar } from '../../types/view-apis';
+import type { RemixIconName } from '../../shared/ui/remix-icon';
 
 interface InteractionLink {
   actionId?: string;
@@ -15,7 +16,7 @@ interface InteractionLink {
 
 interface InteractionAccordion {
   expandedByDefault?: boolean;
-  icon?: string;
+  icon?: RemixIconName;
   links?: readonly InteractionLink[];
   text?: string;
 }
@@ -27,7 +28,7 @@ export interface InteractionBrowserAvatars {
 }
 
 export interface InteractionInfoTooltip {
-  icon?: string;
+  icon?: RemixIconName;
   label?: string;
   text?: string;
   type?: string;
@@ -35,7 +36,7 @@ export interface InteractionInfoTooltip {
 
 interface InteractionLinkButton {
   href?: string;
-  icon?: string;
+  icon?: RemixIconName;
   label?: string;
   tooltip?: string;
 }
@@ -47,13 +48,13 @@ export interface InteractionSlot {
   browserAvatars?: InteractionBrowserAvatars;
   browserOnly?: string;
   description?: string;
-  icon?: string;
+  icon?: RemixIconName;
   id: string;
   infoTooltip?: InteractionInfoTooltip;
   kind?: string;
   label?: string;
   linkButton?: InteractionLinkButton;
-  trailingIcon?: string;
+  trailingIcon?: RemixIconName;
 }
 
 export interface InteractionsRenderModel {
@@ -207,7 +208,7 @@ function InteractionInfoButton({
       onMouseLeave={options.onHideInfoTooltip}
       type="button"
     >
-      <Icon className={String(infoTooltip.icon || 'ri-information-line')} />
+      <Icon name={infoTooltip.icon || 'ri-information-line'} />
     </button>
   );
 }
@@ -248,7 +249,7 @@ function InteractionLinkAffordance({
       rel="noreferrer noopener"
       target="_blank"
     >
-      <Icon className={String(linkButton.icon || 'ri-github-fill')} />
+      <Icon name={linkButton.icon || 'ri-github-fill'} />
     </a>
   );
 }
@@ -270,14 +271,14 @@ function InteractionSlotCopy({
       (slot.infoTooltip.text || slot.infoTooltip.type)
   );
   const hasLinkButton = Boolean(slot.linkButton?.href);
-  const trailingIcon = String(slot.trailingIcon || '').trim();
+  const trailingIcon = slot.trailingIcon;
   const hasInlineAffordance = hasInfoTooltip || hasLinkButton || Boolean(trailingIcon);
 
   return (
     <>
       {slot.icon ? (
         <span className="interaction-row-icon">
-          <Icon className={String(slot.icon)} />
+          <Icon name={slot.icon} />
         </span>
       ) : null}
       <span
@@ -305,11 +306,7 @@ function InteractionSlotCopy({
               aria-hidden="true"
               className="interaction-accordion-chevron"
             >
-              <Icon
-                className={String(
-                  accordion.icon || 'ri-arrow-left-s-line'
-                )}
-              />
+              <Icon name={accordion.icon || 'ri-arrow-left-s-line'} />
             </span>
           </button>
         ) : slot.label ? (
@@ -328,7 +325,7 @@ function InteractionSlotCopy({
         )}
         {trailingIcon ? (
           <span aria-hidden="true" className="interaction-trailing-icon">
-            <Icon className={trailingIcon} />
+            <Icon name={trailingIcon} />
           </span>
         ) : null}
         {slot.description ? (

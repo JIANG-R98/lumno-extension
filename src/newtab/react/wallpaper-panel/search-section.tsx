@@ -8,14 +8,12 @@ import type { WallpaperPanelContext } from './use-wallpaper-panel';
 
 export function SearchSection({ panel }: { panel: WallpaperPanelContext }) {
   const {
-    arrowIcon,
     searchExpanded,
     setSearchExpanded,
     state,
     sliderBubble,
     marks,
     actions,
-    infoIcon,
     documentObj,
     registerSelect
   } = panel;
@@ -23,7 +21,6 @@ export function SearchSection({ panel }: { panel: WallpaperPanelContext }) {
     <div className="x-nt-wallpaper-section x-nt-search-section">
       <div className="x-nt-wallpaper-panel-header">
         <SectionTrigger
-          arrowIcon={arrowIcon}
           bodyId="_x_extension_newtab_search_section_body_2026_unique_"
           expanded={searchExpanded}
           onToggle={() => setSearchExpanded(!searchExpanded)}
@@ -61,7 +58,6 @@ export function SearchSection({ panel }: { panel: WallpaperPanelContext }) {
             </span>
             <InfoButton
               actions={actions}
-              icon={infoIcon}
               label={state.search.autoFocus.infoLabel}
               name="inputAutoFocusInfoButton"
               tooltip={state.search.autoFocus.infoTooltip}

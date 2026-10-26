@@ -47,7 +47,6 @@ interface UpdateNoticeOptions {
   version?: string;
   surface?: string;
   t?: Translate;
-  getRiSvg?(id: string, sizeClass: string): string;
   // The stored notice and setting when the page already read them.
   initialNotice?: unknown;
   updateNoticeEnabled?: unknown;
@@ -214,7 +213,6 @@ function createUpdateNotice(options?: UpdateNoticeOptions | null): UpdateNoticeC
     chromeApi,
     dismissKey,
     t: translate,
-    getRiSvg: config.getRiSvg,
     initiallyVisible: false,
     onLinkClick: openDetails,
     onDismiss() {

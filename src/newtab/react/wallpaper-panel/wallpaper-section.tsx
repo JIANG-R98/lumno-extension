@@ -25,11 +25,10 @@ import {
 } from './wallpaper-tiles';
 import type { WallpaperPanelContext } from './use-wallpaper-panel';
 import { isNode } from '../../../shared/dom-guards';
-import { innerHtml } from '../../../shared/react/inner-html';
+import { RemixIcon } from '../../../shared/react/remix-icon';
 
 export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
   const {
-    arrowIcon,
     wallpaper,
     wallpaperOpen,
     setWallpaperExpanded,
@@ -38,11 +37,9 @@ export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
     fileInput,
     state,
     sourceTabPanel,
-    checkIcon,
     local,
     openFilePicker,
     showUploadTooltip,
-    model,
     urlInput,
     urlDraft,
     setUrlDraft,
@@ -57,7 +54,6 @@ export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
     <div className="x-nt-wallpaper-section">
       <div {...ref('panelHeader')} className="x-nt-wallpaper-panel-header">
         <SectionTrigger
-          arrowIcon={arrowIcon}
           bodyId="_x_extension_newtab_wallpaper_body_2026_unique_"
           disabled={!wallpaper.enabled}
           expanded={wallpaperOpen}
@@ -153,7 +149,6 @@ export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
         >
           {wallpaper.builtIn.tiles.map((tile) => (
             <WallpaperTile
-              checkIcon={checkIcon}
               key={tile.id}
               onPrime={() => actions.primeWallpaper(tile.id)}
               onSelect={() => actions.selectWallpaper(tile.id)}
@@ -192,8 +187,9 @@ export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
             <span className="x-nt-wallpaper-thumb x-nt-wallpaper-upload-thumb">
               <span
                 className="x-nt-wallpaper-upload-placeholder"
-                dangerouslySetInnerHTML={innerHtml(String(model.icons?.add || ''))}
-              />
+              >
+                <RemixIcon name="ri-add-large-line" />
+              </span>
             </span>
           </div>
           <div
@@ -213,15 +209,14 @@ export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
             <span className="x-nt-wallpaper-thumb x-nt-wallpaper-upload-thumb">
               <span
                 className="x-nt-wallpaper-upload-placeholder"
-                dangerouslySetInnerHTML={innerHtml(String(model.icons?.link || ''))}
-              />
+              >
+                <RemixIcon name="ri-link" />
+              </span>
             </span>
           </div>
           {local.tiles.map((tile) => (
             <CustomWallpaperTile
               actions={actions}
-              checkIcon={checkIcon}
-              deleteIcon={String(model.icons?.delete || '')}
               deleteLabel={local.deleteLabel}
               key={tile.id}
               tile={tile}
@@ -270,7 +265,6 @@ export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
           <DailyRow
             actions={actions}
             daily={{ ...bing.daily, toggle: { ...bing.daily.toggle, disabled: bing.daily.busy } }}
-            icons={model.icons}
             name="bing"
             onToggle={actions.setBingDaily}
           />
@@ -290,8 +284,9 @@ export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
                 <span
                   aria-hidden="true"
                   className="x-nt-bing-refresh-glyph x-lumno-busy-spin"
-                  dangerouslySetInnerHTML={innerHtml(String(model.icons?.refresh || ''))}
-                />
+                >
+                  <RemixIcon name="ri-refresh-line" />
+                </span>
               </button>
             </div>
             <div
@@ -302,7 +297,6 @@ export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
             >
               <OnlineTiles
                 actions={actions}
-                checkIcon={checkIcon}
                 name="bing"
                 onSelect={actions.selectBingWallpaper}
                 tiles={bing.tiles}
@@ -318,7 +312,6 @@ export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
           <DailyRow
             actions={actions}
             daily={curated.daily}
-            icons={model.icons}
             name="curated"
             onToggle={actions.setCuratedDaily}
           />
@@ -361,14 +354,14 @@ export function WallpaperSection({ panel }: { panel: WallpaperPanelContext }) {
                 <span
                   aria-hidden="true"
                   className="x-nt-bing-refresh-glyph"
-                  dangerouslySetInnerHTML={innerHtml(String(model.icons?.refresh || ''))}
-                />
+                >
+                  <RemixIcon name="ri-refresh-line" />
+                </span>
               </button>
             </div>
             <div {...ref('curatedItemsHost')} className="x-nt-wallpaper-grid x-nt-wallpaper-grid--curated">
               <OnlineTiles
                 actions={actions}
-                checkIcon={checkIcon}
                 name="curated"
                 onSelect={actions.selectCuratedWallpaper}
                 tiles={curated.tiles}

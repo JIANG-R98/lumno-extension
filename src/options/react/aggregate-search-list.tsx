@@ -6,6 +6,7 @@ import {
 } from '../../shared/react/use-exclusive-async-action';
 import { BusyLabel } from '../../shared/react/busy-label';
 import { ReorderButtons, type ReorderCopyModel } from './reorder-buttons';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 export interface AggregateSearchProviderOptionModel {
   available: boolean;
@@ -518,7 +519,7 @@ export function AggregateSearchList({
                     <div className="_x_extension_shortcut_badge_2024_unique_">
                       {model.copy.groupBadge}
                     </div>
-                    <i aria-hidden="true" className="ri-icon ri-size-16 ri-stack-line" />
+                    <RemixIcon name="ri-stack-line" size={16} />
                     <span>{item.name}</span>
                   </div>
                   <div className="_x_extension_shortcut_item_meta_2024_unique_">
@@ -550,7 +551,7 @@ export function AggregateSearchList({
                     }}
                     type="button"
                   >
-                    <i aria-hidden="true" className="ri-icon ri-size-14 ri-edit-line" />
+                    <RemixIcon name="ri-edit-line" />
                   </button>
                   <InlinePopconfirm
                     copy={{
@@ -566,7 +567,7 @@ export function AggregateSearchList({
                     }}
                     triggerAriaLabel={model.copy.removeLabel}
                     triggerClassName="_x_extension_shortcut_remove_2024_unique_"
-                    triggerIconClass="ri-icon ri-size-14 ri-delete-bin-4-line"
+                    triggerIconName="ri-delete-bin-4-line"
                   />
                 </div>
               </div>
@@ -597,7 +598,7 @@ export function AggregateSearchList({
             ref={addTriggerRef}
             type="button"
           >
-            <i aria-hidden="true" className="ri-icon ri-size-14 ri-add-line" />
+            <RemixIcon name="ri-add-line" />
             <span>{model.copy.addLabel}</span>
           </button>
         </div>

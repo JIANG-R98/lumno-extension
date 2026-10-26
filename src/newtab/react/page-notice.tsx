@@ -2,8 +2,8 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import * as LumnoMessaging from '../../platform/messaging';
 import type { MessageRuntime } from '../../platform/messaging';
-import { innerHtml } from '../../shared/react/inner-html';
 import { lazyInstance } from '../../shared/lazy-instance';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
 export const PAGE_NOTICE_ID =
   '_x_extension_newtab_notice_banner_2026_unique_';
@@ -11,7 +11,6 @@ export const PAGE_NOTICE_ID =
 // The notice's text: a lookup, or the strings by message key.
 export interface PageNoticeMessages {
   t?: (key: string, fallback: string) => string;
-  getRiSvg?: (id: string, sizeClass: string) => string;
   detailsUrl?: string;
   document?: Document;
   bottomDock?: HTMLElement | null;
@@ -100,18 +99,14 @@ function PageNotice({
   onClose(): void;
   onDetails(detailsUrl: string): void;
 }) {
-  const getRiSvg =
-    typeof messages.getRiSvg === 'function'
-      ? messages.getRiSvg
-      : () => '';
   return (
     <>
       <div className="x-nt-page-notice-content">
         <div
           aria-hidden="true"
-          className="x-nt-page-notice-icon"
-          dangerouslySetInnerHTML={innerHtml(getRiSvg('ri-error-warning-line', 'ri-size-20'))}
-        />
+          className="x-nt-page-notice-icon">
+          <RemixIcon name="ri-error-warning-line" size={20} />
+        </div>
         <div className="x-nt-page-notice-message">
           {getMessage(
             messages,
@@ -142,14 +137,14 @@ function PageNotice({
           '关闭提示'
         )}
         className="x-nt-page-notice-close"
-        dangerouslySetInnerHTML={innerHtml(getRiSvg('ri-close-line', 'ri-size-16'))}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
           onClose();
         }}
-        type="button"
-      />
+        type="button">
+        <RemixIcon name="ri-close-line" size={16} />
+      </button>
     </>
   );
 }
