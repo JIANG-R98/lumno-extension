@@ -285,6 +285,20 @@ describe('Shared search input React island', () => {
     expect(tooltip.hide).toHaveBeenCalledTimes(2);
   });
 
+  it('shows the mode badge the surface asks for and keeps its text while hiding', () => {
+    const parts = create({ modeBadge: { id: 'badge', surface: 'newtab', visible: false } });
+    const badge = required(parts.modeBadge, 'parts.modeBadge');
+    expect(badge.dataset.visible).toBe('false');
+
+    act(() => parts.setChrome({ badgeVisible: true, badgeText: '模式：深色' }));
+    expect(badge.dataset.visible).toBe('true');
+    expect(badge.textContent).toBe('模式：深色');
+
+    act(() => parts.setChrome({ badgeVisible: false }));
+    expect(badge.dataset.visible).toBe('false');
+    expect(badge.textContent).toBe('模式：深色');
+  });
+
   it('follows text the surface sets itself once asked', () => {
     const parts = create({ clearAction: { id: 'clear' } });
     const clear = required(parts.clearAction, 'parts.clearAction');

@@ -67,6 +67,10 @@ export interface SearchInputChrome {
   // its results); null leaves it to the field's text.
   underline: boolean | null;
   tooltip: SearchInputTooltip | null;
+  // The mode badge at the field's end (a slash command's current mode);
+  // its text stays while it fades out.
+  badgeVisible: boolean;
+  badgeText: string;
 }
 
 // Binds the surface's tooltip to the button, reading its label as it is
@@ -560,9 +564,11 @@ function SearchInput({ config, stores }: { config: SearchInputConfig; stores: In
             config.modeBadge.className || 'x-lumno-search-input-mode__badge'
           }
           data-surface={config.modeBadge.surface || 'shared'}
-          data-visible={config.modeBadge.visible ? 'true' : 'false'}
+          data-visible={chrome.badgeVisible ? 'true' : 'false'}
           id={config.modeBadge.id}
-        />
+        >
+          {chrome.badgeText}
+        </div>
       ) : null}
     </>
   );
@@ -659,7 +665,9 @@ export function createSearchInput(
       secondaryLabel: config.secondaryAction && config.secondaryAction.ariaLabel ? config.secondaryAction.ariaLabel : '',
       scopeAction: null,
       underline: null,
-      tooltip: null
+      tooltip: null,
+      badgeVisible: Boolean(config.modeBadge && config.modeBadge.visible),
+      badgeText: ''
     })
   };
   flushSync(() => root.render(<SearchInput config={config} stores={stores} />));

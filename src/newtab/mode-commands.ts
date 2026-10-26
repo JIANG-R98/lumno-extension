@@ -5,15 +5,15 @@ import type * as LumnoSettings from '../domain/settings';
 import type { ThemeMode } from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
 import * as LumnoMessaging from '../platform/messaging';
+import type { SearchInputParts } from '../shared/react/search-input';
 import type { Suggestion } from '../shared/react/search/suggestion-list/types';
 import type { FormatMessage, NewtabThemeMode, NewtabThemeScope, Translate } from './newtab-types';
 import type { RenderSuggestions, SlashCommand } from './search/search-types';
 
 interface ModeCommandsState {
-  modeBadge: HTMLElement | null;
   zenModeEnabled: boolean;
   currentThemeMode: ThemeMode;
-  inputParts: { input: HTMLInputElement } | null;
+  inputParts: Pick<SearchInputParts, 'input' | 'setChrome'> | null;
   bookmarkTopbarRuntime: { setVisible(visible: boolean): void } | null;
   currentBookmarkCount: number;
   newtabThemeScope: NewtabThemeScope;
@@ -222,33 +222,38 @@ function createModeCommands(deps: ModeCommandsDeps) {
     };
   }
 
+  function getModeBadgeText(zenCommandActive: boolean, webAppearanceCommandActive: boolean): string {
+    if (webAppearanceCommandActive) {
+      return formatMessage('web_appearance_badge', '网站外观：{mode}', {
+        mode: getWebAppearanceModeLabel(webAppearanceState.mode)
+      });
+    }
+    if (zenCommandActive) {
+      return t(
+        pageState.zenModeEnabled ? 'zen_badge_on' : 'zen_badge_off',
+        pageState.zenModeEnabled ? 'Zen：已开启' : 'Zen：已关闭'
+      );
+    }
+    return formatMessage('mode_badge', '模式：{mode}', {
+      mode: getThemeModeLabel(pageState.currentThemeMode)
+    });
+  }
+
   function updateModeBadge(rawValue: string | null | undefined): void {
-    if (!pageState.modeBadge) {
+    const inputParts = pageState.inputParts;
+    if (!inputParts) {
       return;
     }
     const zenCommandActive = isZenCommand(rawValue || '');
     const webAppearanceCommandActive = isWebAppearanceCommand(rawValue || '');
-    const shouldShow = isModeCommand(rawValue || '') || zenCommandActive || webAppearanceCommandActive;
-    if (!shouldShow) {
-      pageState.modeBadge.setAttribute('data-visible', 'false');
-      updateInputRightPadding();
-      return;
-    }
-    if (webAppearanceCommandActive) {
-      pageState.modeBadge.textContent = formatMessage('web_appearance_badge', '网站外观：{mode}', {
-        mode: getWebAppearanceModeLabel(webAppearanceState.mode)
+    if (isModeCommand(rawValue || '') || zenCommandActive || webAppearanceCommandActive) {
+      inputParts.setChrome({
+        badgeVisible: true,
+        badgeText: getModeBadgeText(zenCommandActive, webAppearanceCommandActive)
       });
     } else {
-      pageState.modeBadge.textContent = zenCommandActive
-        ? t(
-          pageState.zenModeEnabled ? 'zen_badge_on' : 'zen_badge_off',
-          pageState.zenModeEnabled ? 'Zen：已开启' : 'Zen：已关闭'
-        )
-        : formatMessage('mode_badge', '模式：{mode}', {
-          mode: getThemeModeLabel(pageState.currentThemeMode)
-        });
+      inputParts.setChrome({ badgeVisible: false });
     }
-    pageState.modeBadge.setAttribute('data-visible', 'true');
     updateInputRightPadding();
   }
 

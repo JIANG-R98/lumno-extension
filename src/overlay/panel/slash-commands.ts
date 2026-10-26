@@ -1,6 +1,7 @@
 // Slash commands in the overlay: their definitions, matching what is
 // typed, the suggestion each builds, the theme mode command and the website
 // appearance command.
+import type { SearchInputParts } from '../../shared/react/search-input';
 import type { WebAppearanceMode } from '../../domain/messages';
 import type * as Settings from '../../domain/settings';
 import type { ThemeMode } from '../../domain/settings';
@@ -46,8 +47,8 @@ interface WebAppearanceCommandState {
 
 interface SlashCommandsState {
   documentPipEnabled: boolean;
-  // Shows the theme mode while a /mode or /appearance command is typed.
-  modeBadge: HTMLElement | null;
+  // Shows the theme mode in its badge while a /mode or /appearance command is typed.
+  inputParts: Pick<SearchInputParts, 'setChrome'> | null;
   overlayThemeMode: ThemeMode;
   overlayMediaQuery: MediaQueryList;
   searchInput: HTMLInputElement | null;
@@ -226,39 +227,38 @@ function createSlashCommands(deps: SlashCommandsDeps) {
     };
   }
 
-  function updateModeBadge(rawValue: string): void {
-    if (!overlayState.modeBadge) {
-      return;
-    }
-    const webAppearanceCommandActive = isWebAppearanceCommand(rawValue || '');
-    const shouldShow = isModeCommand(rawValue || '') || webAppearanceCommandActive;
-    if (!shouldShow) {
-      overlayState.modeBadge.setAttribute('data-visible', 'false');
-      updateInputRightPadding();
-      return;
-    }
+  function getModeBadgeText(webAppearanceCommandActive: boolean): string {
     if (webAppearanceCommandActive) {
-      overlayState.modeBadge.textContent = formatMessage('web_appearance_badge', '网站外观：{mode}', {
+      return formatMessage('web_appearance_badge', '网站外观：{mode}', {
         mode: getWebAppearanceModeLabel(webAppearanceState.mode)
       });
-    } else if (overlayState.overlayThemeMode === 'system') {
-      const pageTheme = detectPageTheme();
-      if (pageTheme) {
-        overlayState.modeBadge.textContent = formatMessage('mode_badge_follow_site', '模式：{mode}（跟随网站）', {
-          mode: getThemeModeLabel(pageTheme)
-        });
-      } else {
-        const systemResolved = overlayState.overlayMediaQuery.matches ? 'dark' : 'light';
-        overlayState.modeBadge.textContent = formatMessage('mode_badge_follow_system', '模式：{mode}（跟随系统）', {
-          mode: getThemeModeLabel(systemResolved)
-        });
-      }
-    } else {
-      overlayState.modeBadge.textContent = formatMessage('mode_badge', '模式：{mode}', {
+    }
+    if (overlayState.overlayThemeMode !== 'system') {
+      return formatMessage('mode_badge', '模式：{mode}', {
         mode: getThemeModeLabel(overlayState.overlayThemeMode)
       });
     }
-    overlayState.modeBadge.setAttribute('data-visible', 'true');
+    const pageTheme = detectPageTheme();
+    if (pageTheme) {
+      return formatMessage('mode_badge_follow_site', '模式：{mode}（跟随网站）', {
+        mode: getThemeModeLabel(pageTheme)
+      });
+    }
+    return formatMessage('mode_badge_follow_system', '模式：{mode}（跟随系统）', {
+      mode: getThemeModeLabel(overlayState.overlayMediaQuery.matches ? 'dark' : 'light')
+    });
+  }
+
+  function updateModeBadge(rawValue: string): void {
+    if (!overlayState.inputParts) {
+      return;
+    }
+    const webAppearanceCommandActive = isWebAppearanceCommand(rawValue || '');
+    if (isModeCommand(rawValue || '') || webAppearanceCommandActive) {
+      overlayState.inputParts.setChrome({ badgeVisible: true, badgeText: getModeBadgeText(webAppearanceCommandActive) });
+    } else {
+      overlayState.inputParts.setChrome({ badgeVisible: false });
+    }
     updateInputRightPadding();
   }
 
