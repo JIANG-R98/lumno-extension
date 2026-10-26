@@ -81,9 +81,6 @@ interface AppearanceModesDeps extends
   t: Translate;
   formatMessage: FormatMessage;
   updateRecentModeMenu: SectionHeaders['updateRecentModeMenu'];
-  updateBookmarkHeading: SectionHeaders['updateBookmarkHeading'];
-  updateBookmarkPagerLabels: SectionHeaders['updateBookmarkPagerLabels'];
-  updateBookmarkBreadcrumb: SectionHeaders['updateBookmarkBreadcrumb'];
   updateBookmarkModeMenu: SectionHeaders['updateBookmarkModeMenu'];
   // Tells the listeners outside this module that the language changed.
   notifyLanguageChange(): void;
@@ -119,9 +116,6 @@ function createAppearanceModes(deps: AppearanceModesDeps) {
   const {
     t,
     renderNewtabTopContent,
-    updateBookmarkHeading,
-    updateBookmarkPagerLabels,
-    updateBookmarkBreadcrumb,
     updateRecentModeMenu,
     updateBookmarkModeMenu,
     updateWallpaperLanguageStrings,
@@ -180,13 +174,11 @@ function createAppearanceModes(deps: AppearanceModesDeps) {
     if (pageState.topContentController && pageState.newtabTopContentMode === 'time') {
       renderNewtabTopContent(false);
     }
-    updateBookmarkHeading();
-    updateBookmarkPagerLabels();
     if (pageState.bookmarkTopbarRuntime) {
       pageState.bookmarkTopbarRuntime.updateLanguage(t('bookmark_view_mode_top', 'Top bookmarks bar'));
     }
-    updateBookmarkBreadcrumb();
     updateRecentModeMenu();
+    // Also draws the bookmark header with the new language.
     updateBookmarkModeMenu();
     updateWallpaperLanguageStrings();
     if (pageState.quoteRuntime) pageState.quoteRuntime.updateLanguage();

@@ -2,8 +2,8 @@ import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
-import { innerHtml } from '../../shared/react/inner-html';
 import { createRenderStore, type RenderStore } from '../../shared/react/render-store';
+import { BookmarkHeader, type BookmarkHeaderElements, type BookmarkHeaderModel, type BookmarkHeaderStore } from './bookmark-header';
 import { RecentModeSwitch, type RecentModeSwitchModel } from './recent-mode-switch';
 
 export const PAGE_STRUCTURE_IDS = Object.freeze({
@@ -23,18 +23,6 @@ interface ShortcutElements {
   grid: HTMLDivElement;
 }
 
-interface BookmarkElements {
-  breadcrumb: HTMLDivElement;
-  grid: HTMLDivElement;
-  header: HTMLDivElement;
-  heading: HTMLDivElement;
-  managerButton: HTMLButtonElement;
-  nextButton: HTMLButtonElement;
-  pager: HTMLDivElement;
-  previousButton: HTMLButtonElement;
-  titleWrap: HTMLDivElement;
-}
-
 interface RecentElements {
   grid: HTMLDivElement;
   header: HTMLDivElement;
@@ -52,86 +40,6 @@ function ShortcutStructure({
     }
   }, [register]);
   return <div className="x-nt-shortcuts-grid" ref={gridRef} />;
-}
-
-function BookmarkStructure({
-  getRiSvg,
-  register
-}: {
-  getRiSvg(icon: string, className: string): string;
-  register(elements: BookmarkElements): void;
-}) {
-  const breadcrumbRef = useRef<HTMLDivElement>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const headerRef = useRef<HTMLDivElement>(null);
-  const headingRef = useRef<HTMLDivElement>(null);
-  const managerButtonRef = useRef<HTMLButtonElement>(null);
-  const nextButtonRef = useRef<HTMLButtonElement>(null);
-  const pagerRef = useRef<HTMLDivElement>(null);
-  const previousButtonRef = useRef<HTMLButtonElement>(null);
-  const titleWrapRef = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    if (
-      breadcrumbRef.current &&
-      gridRef.current &&
-      headerRef.current &&
-      headingRef.current &&
-      managerButtonRef.current &&
-      nextButtonRef.current &&
-      pagerRef.current &&
-      previousButtonRef.current &&
-      titleWrapRef.current
-    ) {
-      register({
-        breadcrumb: breadcrumbRef.current,
-        grid: gridRef.current,
-        header: headerRef.current,
-        heading: headingRef.current,
-        managerButton: managerButtonRef.current,
-        nextButton: nextButtonRef.current,
-        pager: pagerRef.current,
-        previousButton: previousButtonRef.current,
-        titleWrap: titleWrapRef.current
-      });
-    }
-  }, [register]);
-  return (
-    <>
-      <div className="x-nt-bookmarks-header" ref={headerRef}>
-        <div className="x-nt-bookmarks-title-wrap" ref={titleWrapRef}>
-          <div className="x-nt-bookmarks-heading" ref={headingRef} />
-          <div
-            className="x-nt-bookmarks-breadcrumb"
-            ref={breadcrumbRef}
-            style={{ display: 'none' }}
-          />
-        </div>
-        <div className="x-nt-bookmarks-pager" ref={pagerRef}>
-          <button
-            className="x-nt-bookmarks-pager-btn"
-            dangerouslySetInnerHTML={innerHtml(getRiSvg('ri-arrow-left-s-line', 'ri-size-16'))}
-            ref={previousButtonRef}
-            type="button"
-          />
-          <button
-            className="x-nt-bookmarks-pager-btn"
-            dangerouslySetInnerHTML={innerHtml(getRiSvg('ri-arrow-right-s-line', 'ri-size-16'))}
-            ref={nextButtonRef}
-            type="button"
-          />
-          {/* Firefox gives extensions no way to open its bookmarks Library. */}
-          <button
-            className="x-nt-bookmarks-pager-btn"
-            dangerouslySetInnerHTML={innerHtml(getRiSvg('ri-bookmark-line', 'ri-size-16'))}
-            data-browser-only="chromium"
-            ref={managerButtonRef}
-            type="button"
-          />
-        </div>
-      </div>
-      <div id={PAGE_STRUCTURE_IDS.bookmarkGrid} ref={gridRef} />
-    </>
-  );
 }
 
 // The recent section's heading: the current mode's name, which the mode
@@ -209,7 +117,13 @@ function renderStatic<T>(
 }
 
 export interface PageStructureRuntime {
-  bookmark: BookmarkElements & { section: HTMLElement };
+  bookmark: BookmarkHeaderElements & {
+    section: HTMLElement;
+    // A plain host: the bookmarks view draws into it, and the top bar holds it in top bar mode.
+    grid: HTMLDivElement;
+    headerStore: BookmarkHeaderStore;
+    renderHeader(model: BookmarkHeaderModel): void;
+  };
   destroy(): void;
   recent: RecentElements & {
     section: HTMLElement;
@@ -226,11 +140,8 @@ export interface PageStructureRuntime {
 
 export function createPageStructure(config: {
   documentObj?: Document;
-  getRiSvg?(icon: string, className: string): string;
 } = {}): PageStructureRuntime {
   const documentObj = config.documentObj || document;
-  const getRiSvg =
-    typeof config.getRiSvg === 'function' ? config.getRiSvg : () => '';
   const roots: Root[] = [];
 
   const shortcutSection = createHost(documentObj, 'section', {
@@ -249,11 +160,15 @@ export function createPageStructure(config: {
     island: 'newtab-bookmark-section',
     visible: false
   });
-  const bookmarkRender = renderStatic<BookmarkElements>(
-    bookmarkSection,
-    (register) => (
-      <BookmarkStructure getRiSvg={getRiSvg} register={register} />
-    )
+  const bookmarkHeader = documentObj.createElement('div');
+  bookmarkHeader.className = 'x-nt-bookmarks-header';
+  const bookmarkGrid = documentObj.createElement('div');
+  bookmarkGrid.id = PAGE_STRUCTURE_IDS.bookmarkGrid;
+  bookmarkSection.append(bookmarkHeader, bookmarkGrid);
+  const bookmarkHeaderStore = createRenderStore<BookmarkHeaderModel | null>(null);
+  const bookmarkRender = renderStatic<BookmarkHeaderElements>(
+    bookmarkHeader,
+    (register) => <BookmarkHeader register={register} store={bookmarkHeaderStore} />
   );
   roots.push(bookmarkRender.root);
 
@@ -293,7 +208,12 @@ export function createPageStructure(config: {
   return Object.freeze({
     bookmark: {
       ...bookmarkRender.elements,
-      section: bookmarkSection
+      section: bookmarkSection,
+      grid: bookmarkGrid,
+      headerStore: bookmarkHeaderStore,
+      renderHeader: (model: BookmarkHeaderModel) => {
+        if (!destroyed) bookmarkHeaderStore.render(model);
+      }
     },
     destroy() {
       if (destroyed) {

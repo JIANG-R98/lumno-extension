@@ -1,5 +1,8 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createRenderStore } from '../../shared/react/render-store';
+import type { BookmarkHeaderModel } from './bookmark-header';
+import { createBookmarkHeaderModel } from './bookmark-header.fixtures';
 import {
   createBookmarksTopbar,
   createBookmarksTopbarApi,
@@ -9,6 +12,7 @@ import {
   normalizeSurfaceColor,
   type BookmarksTopbarRuntime
 } from './bookmarks-topbar';
+import { getTag } from '../../../tests/react/dom';
 
 let runtime: BookmarksTopbarRuntime | null = null;
 
@@ -22,21 +26,20 @@ afterEach(() => {
 });
 
 describe('New Tab React bookmarks topbar', () => {
-  it('moves adapter-owned content into the React surface and restores it', () => {
+  it('holds the bookmark grid while active and shows the header actions', () => {
     const section = document.createElement('section');
+    const header = document.createElement('div');
     const grid = document.createElement('div');
-    const modeControl = document.createElement('button');
-    const managerButton = document.createElement('button');
-    section.append(grid, managerButton, modeControl);
+    section.append(header, grid);
     document.body.appendChild(section);
     const onVisibilityChange = vi.fn();
+    const headerStore = createRenderStore<BookmarkHeaderModel | null>(null);
     act(() => {
       runtime = createBookmarksTopbar({
         documentObj: document,
         windowObj: window,
         grid,
-        managerButton,
-        modeControl,
+        headerStore,
         onVisibilityChange
       });
       runtime.mount(document.body);
@@ -51,21 +54,23 @@ describe('New Tab React bookmarks topbar', () => {
     );
     expect(runtime.activate()).toBe(true);
     expect(runtime.itemsHost.firstElementChild).toBe(grid);
-    expect(Array.from(runtime.actions.children)).toEqual([
-      managerButton,
-      modeControl
-    ]);
+    expect(runtime.actions.children).toHaveLength(0);
+    const showTooltip = vi.fn();
+    act(() => headerStore.render(createBookmarkHeaderModel({ actionsInTopbar: true, showTooltip })));
+    const manager = getTag(runtime.actions, '.x-nt-bookmarks-pager-btn', 'button');
+    expect(manager.dataset.tooltip).toBe('Open bookmark manager');
+    expect(runtime.actions.querySelector('#bookmark-mode')).not.toBeNull();
+    manager.dispatchEvent(new MouseEvent('pointerover', { bubbles: true }));
+    expect(showTooltip).toHaveBeenCalledWith(manager, 'Open bookmark manager', 'bottom');
     expect(runtime.setVisible(true)).toBe(true);
     expect(onVisibilityChange).toHaveBeenCalledWith(
       true,
       expect.objectContaining({ height: 36 })
     );
+    act(() => headerStore.render(createBookmarkHeaderModel({ actionsInTopbar: false })));
+    expect(runtime.actions.children).toHaveLength(0);
     expect(runtime.deactivate()).toBe(true);
-    expect(Array.from(section.children)).toEqual([
-      grid,
-      managerButton,
-      modeControl
-    ]);
+    expect(Array.from(section.children)).toEqual([header, grid]);
   });
 
   it('keeps surface color and overflow behavior', () => {

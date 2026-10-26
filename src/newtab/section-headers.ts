@@ -1,20 +1,21 @@
 // Headings, mode menus, pager labels and breadcrumbs for the bookmark and
 // recent-site sections.
 import type { StorageAreaLike } from '../domain/storage-port';
+import type { SelectMenuOption } from '../shared/react/select-menu';
 import type { BookmarkCascadeActions } from './bookmarks/bookmark-cascade-actions';
 import type { BookmarkCascadeRuntime } from './bookmarks/bookmark-cascade-menu';
 import type { BookmarkDisplaySettings, BookmarkViewMode } from './bookmarks/bookmark-display-settings';
 import type { BookmarkPathEntry } from './bookmarks/bookmarks-store';
 import type { Translate } from './newtab-types';
 import type { PageLayout } from './page-layout';
-import type { createBookmarkBreadcrumbController } from './react/bookmark-breadcrumb';
+import type { BookmarkHeaderModel } from './react/bookmark-header';
 import type { BookmarksTopbarRuntime } from './react/bookmarks-topbar';
 import type { SectionLoaders } from './section-loaders';
-import type { SectionModeSelect } from './section-mode-select';
 import type { TooltipBindings } from './tooltip-bindings';
 import type { ViewportInsets } from './viewport-insets';
 
-type BookmarkBreadcrumbController = ReturnType<typeof createBookmarkBreadcrumbController>;
+// Matches the id the display mode menu has always had, which tests and styles may name.
+const BOOKMARK_MODE_MENU_ID = '_x_extension_newtab_bookmark_mode_2026_unique_';
 
 interface BookmarkViewModeOptions {
   // Applies only while the view mode is still at this revision.
@@ -35,21 +36,16 @@ interface BookmarkViewModeResult {
 interface SectionHeadersState {
   recentModeMenu: { update(): void } | null;
   currentRecentMode: string;
-  bookmarkHeading: HTMLElement | null;
-  bookmarkModeMenu: Pick<SectionModeSelect, 'update'> | null;
   bookmarkGrid: HTMLElement | null;
   bookmarkCascadeRuntime: Pick<BookmarkCascadeRuntime, 'positionLevels' | 'isOpen'> | null;
-  bookmarkTopbarRuntime: Pick<BookmarksTopbarRuntime, 'activate' | 'deactivate' | 'setVisible' | 'element'> | null;
-  bookmarkBreadcrumbController: Pick<BookmarkBreadcrumbController, 'render'> | null;
-  bookmarkPagerPrevButton: HTMLElement | null;
-  bookmarkPagerNextButton: HTMLElement | null;
-  bookmarkOpenManagerButton: HTMLElement | null;
+  bookmarkTopbarRuntime: Pick<BookmarksTopbarRuntime, 'activate' | 'deactivate' | 'setVisible' | 'isActive'> | null;
+  // Which pager buttons lead anywhere from the current page.
+  bookmarkPagerAvailability: { previous: boolean; next: boolean };
   currentBookmarkViewMode: BookmarkViewMode;
   bookmarkViewModeRevision: number;
   bookmarkCurrentFolderId: string;
   bookmarkRootFolderId: string;
   bookmarkFolderPath: BookmarkPathEntry[];
-  bookmarkCanNavigateRoot: boolean;
   bookmarkCurrentPage: number;
   bookmarkRenderSignature: string;
   bookmarkLoadedOnce: boolean;
@@ -73,6 +69,11 @@ interface SectionHeadersDeps extends
   BOOKMARK_TOPBAR_HEIGHT_PX: number;
   bookmarkSection: HTMLElement | null;
   bookmarkCards: readonly HTMLElement[];
+  renderBookmarkHeader(model: BookmarkHeaderModel): void;
+  getBookmarkModeMenuOptions(): SelectMenuOption[];
+  handleBookmarkModeMenuAction(action: string): void;
+  goToBookmarkPage(step: -1 | 1): void;
+  openBookmarkManager(): void;
   pageState: SectionHeadersState;
 }
 
@@ -96,7 +97,12 @@ function createSectionHeaders(deps: SectionHeadersDeps) {
     closeBookmarkCascadeMenu,
     persistBookmarkViewMode,
     showTopActionTooltip,
-    hideTopActionTooltip
+    hideTopActionTooltip,
+    renderBookmarkHeader,
+    getBookmarkModeMenuOptions,
+    handleBookmarkModeMenuAction,
+    goToBookmarkPage,
+    openBookmarkManager
   } = deps;
 
   // The page state object shared with newtab.js and the other modules.
@@ -130,13 +136,6 @@ function createSectionHeaders(deps: SectionHeadersDeps) {
 
   function canDismissRecentCard(): boolean {
     return true;
-  }
-
-  function updateBookmarkHeading(): void {
-    if (!pageState.bookmarkHeading) {
-      return;
-    }
-    pageState.bookmarkHeading.textContent = t('bookmarks_heading', '书签');
   }
 
   function isBookmarkTopbarMode(): boolean {
@@ -198,23 +197,21 @@ function createSectionHeaders(deps: SectionHeadersDeps) {
     }
   }
 
+  // In top bar mode the bar holds the bookmarks and the section's actions.
   function syncBookmarkSurfaceMode(): void {
-    if (!pageState.bookmarkTopbarRuntime) {
-      return;
-    }
-    if (isBookmarkTopbarMode()) {
-      pageState.bookmarkTopbarRuntime.activate();
+    const topbar = pageState.bookmarkTopbarRuntime;
+    if (topbar && isBookmarkTopbarMode()) {
+      topbar.activate();
       setContentSectionVisible(bookmarkSection, false);
-      pageState.bookmarkTopbarRuntime.setVisible(
-        bookmarkCards.length > 0 && pageState.currentBookmarkCount > 0
-      );
-    } else {
-      pageState.bookmarkTopbarRuntime.deactivate();
+      topbar.setVisible(bookmarkCards.length > 0 && pageState.currentBookmarkCount > 0);
+    } else if (topbar) {
+      topbar.deactivate();
       setContentSectionVisible(
         bookmarkSection,
         bookmarkCards.length > 0 && pageState.currentBookmarkCount > 0
       );
     }
+    updateBookmarkHeader();
   }
 
   function setBookmarkSurfaceVisible(visible: unknown): void {
@@ -233,9 +230,6 @@ function createSectionHeaders(deps: SectionHeadersDeps) {
   }
 
   function updateBookmarkModeMenu(): void {
-    if (pageState.bookmarkModeMenu) {
-      pageState.bookmarkModeMenu.update();
-    }
     if (pageState.bookmarkGrid) {
       pageState.bookmarkGrid.setAttribute('data-view-mode', pageState.currentBookmarkViewMode);
     }
@@ -317,92 +311,47 @@ function createSectionHeaders(deps: SectionHeadersDeps) {
     void loadBookmarks({ force: true });
   }
 
-  function updateBookmarkHeadingRootLinkState(isNested: boolean): void {
-    if (!pageState.bookmarkHeading) {
-      return;
-    }
-    const nested = !!isNested;
+  function updateBookmarkHeader(): void {
     const rootLabel = t('bookmarks_heading', '书签');
-    pageState.bookmarkHeading.setAttribute('data-bookmark-drop-folder-id', String(pageState.bookmarkRootFolderId || '1'));
-    pageState.bookmarkHeading.setAttribute('data-bookmark-drop-folder-title', rootLabel);
-    pageState.bookmarkHeading.classList.toggle('x-nt-bookmarks-heading--link', nested);
-    pageState.bookmarkCanNavigateRoot = nested;
-    if (nested) {
-      pageState.bookmarkHeading.setAttribute('role', 'button');
-      pageState.bookmarkHeading.setAttribute('tabindex', '0');
-      pageState.bookmarkHeading.setAttribute('aria-label', rootLabel);
-      pageState.bookmarkHeading.title = rootLabel;
-    } else {
-      pageState.bookmarkHeading.removeAttribute('role');
-      pageState.bookmarkHeading.removeAttribute('tabindex');
-      pageState.bookmarkHeading.removeAttribute('aria-label');
-      pageState.bookmarkHeading.removeAttribute('data-bookmark-drop-target');
-      pageState.bookmarkHeading.title = '';
-    }
-  }
-
-  function updateBookmarkPagerLabels(): void {
-    if (pageState.bookmarkPagerPrevButton) {
-      const prevLabel = t('bookmarks_page_prev', '上一页');
-      pageState.bookmarkPagerPrevButton.setAttribute('aria-label', prevLabel);
-      pageState.bookmarkPagerPrevButton.setAttribute('data-tooltip', prevLabel);
-      pageState.bookmarkPagerPrevButton.removeAttribute('title');
-    }
-    if (pageState.bookmarkPagerNextButton) {
-      const nextLabel = t('bookmarks_page_next', '下一页');
-      pageState.bookmarkPagerNextButton.setAttribute('aria-label', nextLabel);
-      pageState.bookmarkPagerNextButton.setAttribute('data-tooltip', nextLabel);
-      pageState.bookmarkPagerNextButton.removeAttribute('title');
-    }
-    if (pageState.bookmarkOpenManagerButton) {
-      const managerLabel = t('bookmarks_open_manager', '打开书签管理页');
-      pageState.bookmarkOpenManagerButton.setAttribute('aria-label', managerLabel);
-      pageState.bookmarkOpenManagerButton.setAttribute('data-tooltip', managerLabel);
-      pageState.bookmarkOpenManagerButton.removeAttribute('title');
-    }
-  }
-
-  function bindBookmarkPagerTooltip(button: HTMLElement | null, getLabel: () => string): void {
-    if (!button || typeof getLabel !== 'function') {
-      return;
-    }
-    const showTooltip = () => {
-      const label = String(getLabel() || '').trim();
-      if (!label) {
-        return;
-      }
-      const inTopbar = Boolean(
-        pageState.bookmarkTopbarRuntime &&
-        pageState.bookmarkTopbarRuntime.element &&
-        pageState.bookmarkTopbarRuntime.element.contains(button)
-      );
-      showTopActionTooltip(button, label, { placement: inTopbar ? 'bottom' : 'top' });
-    };
-    button.addEventListener('pointerenter', showTooltip);
-    button.addEventListener('pointerleave', hideTopActionTooltip);
-    button.addEventListener('focus', showTooltip);
-    button.addEventListener('blur', hideTopActionTooltip);
-  }
-
-  function updateBookmarkBreadcrumb(): void {
-    if (!pageState.bookmarkBreadcrumbController) {
-      return;
-    }
     const path = Array.isArray(pageState.bookmarkFolderPath) ? pageState.bookmarkFolderPath : [];
-    if (path.length <= 1) {
-      pageState.bookmarkBreadcrumbController.render({ items: [] });
-      updateBookmarkHeadingRootLinkState(false);
-      return;
-    }
-    updateBookmarkHeadingRootLinkState(true);
-    pageState.bookmarkBreadcrumbController.render({
-      items: path.slice(1).map((crumb) => {
-      const title = String(crumb && crumb.title ? crumb.title : '').trim() || t('bookmarks_heading', '书签');
-        return {
+    const menuTitle = t('display_mode_title', 'Display mode');
+    const topbar = pageState.bookmarkTopbarRuntime;
+    renderBookmarkHeader({
+      heading: rootLabel,
+      rootFolderId: String(pageState.bookmarkRootFolderId || '1'),
+      crumbs: path.length > 1
+        ? path.slice(1).map((crumb) => ({
           id: String(crumb && crumb.id ? crumb.id : ''),
-          title
-        };
-      })
+          title: String(crumb && crumb.title ? crumb.title : '').trim() || rootLabel
+        }))
+        : [],
+      previous: {
+        label: t('bookmarks_page_prev', '上一页'),
+        enabled: pageState.bookmarkPagerAvailability.previous
+      },
+      next: {
+        label: t('bookmarks_page_next', '下一页'),
+        enabled: pageState.bookmarkPagerAvailability.next
+      },
+      managerLabel: t('bookmarks_open_manager', '打开书签管理页'),
+      modeMenu: {
+        id: BOOKMARK_MODE_MENU_ID,
+        title: menuTitle,
+        value: pageState.currentBookmarkViewMode,
+        options: getBookmarkModeMenuOptions(),
+        onChange: (mode) => {
+          setBookmarkViewMode(mode);
+        },
+        onAction: handleBookmarkModeMenuAction
+      },
+      actionsInTopbar: Boolean(topbar && topbar.isActive()),
+      onNavigate: navigateBookmarkFolder,
+      onPage: goToBookmarkPage,
+      onOpenManager: openBookmarkManager,
+      showTooltip: (target, label, placement) => showTopActionTooltip(target, label, { placement }),
+      hideTooltip: hideTopActionTooltip,
+      onMenuBeforeOpen: hideTopActionTooltip,
+      getMenuViewportTopInset: getNewtabViewportTopPaddingPx
     });
   }
 
@@ -410,7 +359,7 @@ function createSectionHeaders(deps: SectionHeadersDeps) {
     updateRecentModeMenu,
     setRecentMode,
     canDismissRecentCard,
-    updateBookmarkHeading,
+    updateBookmarkHeader,
     isBookmarkTopbarMode,
     getNewtabTopOccupiedInsetPx,
     getNewtabViewportTopPaddingPx,
@@ -422,10 +371,7 @@ function createSectionHeaders(deps: SectionHeadersDeps) {
     updateBookmarkModeMenu,
     applyBookmarkViewMode,
     setBookmarkViewMode,
-    navigateBookmarkFolder,
-    updateBookmarkPagerLabels,
-    bindBookmarkPagerTooltip,
-    updateBookmarkBreadcrumb
+    navigateBookmarkFolder
   };
 }
 

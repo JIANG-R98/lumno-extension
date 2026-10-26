@@ -80,7 +80,7 @@ interface SectionLoadersDeps extends
   resumeRecentCardDragAfterFolderSwitch: RecentCardDrag['resumeRecentCardDragAfterFolderSwitch'];
   isBookmarkTopbarMode: SectionHeaders['isBookmarkTopbarMode'];
   setBookmarkSurfaceVisible: SectionHeaders['setBookmarkSurfaceVisible'];
-  updateBookmarkBreadcrumb: SectionHeaders['updateBookmarkBreadcrumb'];
+  updateBookmarkHeader: SectionHeaders['updateBookmarkHeader'];
   recentSection: HTMLElement | null;
   bookmarksRuntime: Pick<BookmarksRuntime, 'invalidate'>;
   FAVICON_CACHE_BOOT_WAIT_MS: number;
@@ -121,7 +121,7 @@ function createSectionLoaders(deps: SectionLoadersDeps) {
     getTopBookmarks,
     getBookmarkLimit,
     getBookmarkPageCount,
-    updateBookmarkBreadcrumb,
+    updateBookmarkHeader,
     renderCurrentBookmarkPage,
     playPendingBookmarkLayoutAnimation,
     renderShortcuts,
@@ -408,7 +408,7 @@ function createSectionLoaders(deps: SectionLoadersDeps) {
       if (pageState.bookmarkCurrentPage < 0) {
         pageState.bookmarkCurrentPage = 0;
       }
-      updateBookmarkBreadcrumb();
+      updateBookmarkHeader();
       renderCurrentBookmarkPage();
       playPendingBookmarkLayoutAnimation();
       if (pageState.newtabShortcuts.some((shortcut) => shortcut.type === 'folder')) {

@@ -18,7 +18,6 @@ import { createLiquidSurfaces } from './liquid-glass';
 import { createPageNoticeApi } from './page-notice';
 import { createBookmarkCascadeViewApi } from './bookmark-cascade-view';
 import { createWallpaperViewApi } from './wallpaper-view';
-import { createBookmarkBreadcrumbApi } from './bookmark-breadcrumb';
 import { createSearchInputApi } from '../../shared/react/search-input';
 import { createFeatureHintViewApi } from '../../shared/react/feature-hint-view';
 import { createTooltipViewApi } from '../../shared/react/tooltip-view';
@@ -47,7 +46,6 @@ declare global {
       pageNotice: ReturnType<typeof createPageNoticeApi>;
       bookmarkCascadeView: ReturnType<typeof createBookmarkCascadeViewApi>;
       wallpaperView: ReturnType<typeof createWallpaperViewApi>;
-      bookmarkBreadcrumb: ReturnType<typeof createBookmarkBreadcrumbApi>;
       tabSwitcher: ReturnType<typeof createTabSwitcherViewApi>;
     } | undefined;
 }
@@ -74,7 +72,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   const pageNoticeApi = createPageNoticeApi();
   const bookmarkCascadeViewApi = createBookmarkCascadeViewApi();
   const wallpaperViewApi = createWallpaperViewApi();
-  const bookmarkBreadcrumbApi = createBookmarkBreadcrumbApi();
   const searchInputApi = createSearchInputApi();
   const featureHintViewApi = createFeatureHintViewApi();
   const tooltipViewApi = createTooltipViewApi();
@@ -100,7 +97,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoNewtabPageNotice = pageNoticeApi;
   runtime.LumnoNewtabBookmarkCascadeView = bookmarkCascadeViewApi;
   runtime.LumnoNewtabWallpaperView = wallpaperViewApi;
-  runtime.LumnoNewtabBookmarkBreadcrumb = bookmarkBreadcrumbApi;
   runtime.LumnoNewtabQuoteLine = createQuoteLineViewApi();
   runtime.LumnoSearchInputUI = searchInputApi;
   runtime.LumnoFeatureHintView = featureHintViewApi;
@@ -128,7 +124,6 @@ if (!bootstrapState || !bootstrapState.reactReady) {
     pageNotice: pageNoticeApi,
     bookmarkCascadeView: bookmarkCascadeViewApi,
     wallpaperView: wallpaperViewApi,
-    bookmarkBreadcrumb: bookmarkBreadcrumbApi,
     tabSwitcher: tabSwitcherApi
   });
 

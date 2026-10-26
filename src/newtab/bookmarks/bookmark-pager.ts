@@ -9,8 +9,7 @@ interface BookmarkPagerState {
   bookmarkAllItems: BookmarkItem[];
   bookmarkCurrentPage: number;
   bookmarkGrid: HTMLElement | null;
-  bookmarkPagerPrevButton: HTMLElement | null;
-  bookmarkPagerNextButton: HTMLElement | null;
+  bookmarkPagerAvailability: { previous: boolean; next: boolean };
   bookmarkCurrentFolderId: string;
   bookmarkRootFolderId: string;
   // How many items the bookmarks bar holds, and how many of them show.
@@ -23,7 +22,7 @@ interface BookmarkPagerDeps {
   isBookmarkTopbarMode(): boolean;
   getBookmarkLimit(): number;
   NEWTAB_BOOKMARKS_STORE: Pick<typeof BookmarksStore, 'getBookmarkPageItems'>;
-  hideTopActionTooltip(): void;
+  updateBookmarkHeader(): void;
   getBookmarkGridColumnCount(): number;
   renderBookmarks(items: BookmarkItem[]): void;
   updateBookmarkSectionPosition(): void;
@@ -42,7 +41,7 @@ function createBookmarkPager(deps: BookmarkPagerDeps) {
     isBookmarkTopbarMode,
     getBookmarkLimit,
     NEWTAB_BOOKMARKS_STORE,
-    hideTopActionTooltip,
+    updateBookmarkHeader,
     getBookmarkGridColumnCount,
     renderBookmarks,
     updateBookmarkSectionPosition
@@ -76,29 +75,18 @@ function createBookmarkPager(deps: BookmarkPagerDeps) {
     );
   }
 
-  function setBookmarkPagerButtonAvailability(button: HTMLElement | null, available: boolean): void {
-    if (!button) {
-      return;
-    }
-    const enabled = Boolean(available);
-    button.removeAttribute('disabled');
-    button.setAttribute('aria-disabled', enabled ? 'false' : 'true');
-    button.tabIndex = enabled ? 0 : -1;
-    if (!enabled && document.activeElement === button) {
-      button.blur();
-      hideTopActionTooltip();
-    }
-  }
-
   function updateBookmarkPagerState(): void {
-    if (!pageState.bookmarkPagerPrevButton || !pageState.bookmarkPagerNextButton) {
-      return;
-    }
     const pageCount = getBookmarkPageCount();
     const atStart = pageState.bookmarkCurrentPage <= 0;
     const atEnd = pageState.bookmarkCurrentPage >= (pageCount - 1);
-    setBookmarkPagerButtonAvailability(pageState.bookmarkPagerPrevButton, !atStart);
-    setBookmarkPagerButtonAvailability(pageState.bookmarkPagerNextButton, !atEnd);
+    const previous = !atStart;
+    const next = !atEnd;
+    const current = pageState.bookmarkPagerAvailability;
+    if (current.previous === previous && current.next === next) {
+      return;
+    }
+    pageState.bookmarkPagerAvailability = { previous, next };
+    updateBookmarkHeader();
   }
 
   function updateBookmarkGridHeightLock(): void {

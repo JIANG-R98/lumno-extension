@@ -315,9 +315,9 @@ function createWallpaperPage(deps: WallpaperPageDeps) {
         minHeight: 44,
         iconButton: true
       },
-      // The display-mode trigger is appended to bookmarkPager in the regular
-      // section layout. Keep it on the pager's shared tone target so one
-      // visual toolbar does not split into independently sampled colors.
+      // In the regular section layout the pager also holds the manager button
+      // and the display-mode trigger. Keep them on the pager's shared tone
+      // target so one visual toolbar does not split into independently sampled colors.
       {
         element: bookmarkPager,
         sampleElement: bookmarkPager,

@@ -7,7 +7,7 @@ const { moduleScript } = require('../helpers/module-script');
 function fixture({ page = 3, pages = 8, animated = false } = {}) {
   const dom = new JSDOM('<div id="grid"></div>', { runScripts: 'outside-only' });
   const { window } = dom;
-  const env = { clock: 0, timers: [] };
+  const env = { clock: 0, timers: [], headerUpdates: 0 };
   window.Element.prototype.animate = () => ({ startTime: 0, finished: new Promise(() => {}), cancel() {} });
   window.setTimeout = (fn, ms) => env.timers.push({ fn, ms });
   window.clearTimeout = () => {};
@@ -16,11 +16,12 @@ function fixture({ page = 3, pages = 8, animated = false } = {}) {
     'src/newtab/cross-surface-drag.ts': 'LumnoNewtabCrossSurfaceDrag'
   }));
   const state = { bookmarkGrid: window.document.getElementById('grid'),
-    bookmarkAllItems: Array.from({ length: pages }, (_, id) => ({ id })), bookmarkCurrentPage: page };
+    bookmarkAllItems: Array.from({ length: pages }, (_, id) => ({ id })), bookmarkCurrentPage: page,
+    bookmarkPagerAvailability: { previous: false, next: false } };
   const pager = window.LumnoNewtabBookmarkPager.createBookmarkPager({ pageState: state, now: () => env.clock,
     isBookmarkTopbarMode: () => false, getBookmarkLimit: () => 1,
     NEWTAB_BOOKMARKS_STORE: { getBookmarkPageItems: (items, index) => items.slice(index, index + 1) },
-    hideTopActionTooltip() {}, getBookmarkGridColumnCount: () => 1, updateBookmarkSectionPosition() {},
+    updateBookmarkHeader() { env.headerUpdates += 1; }, getBookmarkGridColumnCount: () => 1, updateBookmarkSectionPosition() {},
     renderBookmarks() {} });
   let at = 1000;
   // Sends events 16ms apart (a trackpad's rate) unless one sets its own gap.
@@ -43,6 +44,15 @@ const flick = [2, 5, 12, 30, 40, 30, 20, 12, 8, 5, 3, 2, 1, 1];
 let f = fixture();
 assert(f.send(...f.swipe('deltaX', flick)).every(Boolean), 'swipe events never scroll the page');
 assert.equal(f.state.bookmarkCurrentPage, 4, 'one swipe, accelerating then coasting on momentum, turns one page');
+
+f = fixture({ page: 0, pages: 2 });
+f.send(...f.swipe('deltaX', flick));
+assert.deepEqual({ ...f.state.bookmarkPagerAvailability }, { previous: true, next: false },
+  'on the last page only Previous leads anywhere');
+const updates = f.env.headerUpdates;
+assert.ok(updates > 0, 'the header is drawn again when the pager buttons change');
+f.send(...f.swipe('deltaX', flick, { gap: 200 }));
+assert.equal(f.env.headerUpdates, updates, 'and not when they stay the same');
 
 f = fixture();
 f.send(...f.swipe('deltaX', flick.map(delta => -delta)));

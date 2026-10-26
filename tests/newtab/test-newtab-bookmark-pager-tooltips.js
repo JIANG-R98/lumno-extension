@@ -38,6 +38,28 @@ async function testPager() {
   page.close();
 }
 
+// In top bar mode the bar shows the manager button and the mode menu; the
+// section's pager keeps only its page buttons, and switching back returns them.
+async function testTopbarActions() {
+  const page = await createNewtabPage({ bookmarks: BAR, sync: { '_x_extension_bookmark_view_mode_2026_unique_': 'top' } });
+  await page.settle(400);
+  const actions = page.document.querySelector('.x-nt-bookmarks-topbar-actions');
+  const pager = page.document.querySelector('.x-nt-bookmarks-pager');
+  assert.deepStrictEqual(Array.from(actions.querySelectorAll('.x-nt-bookmarks-pager-btn'), (button) => button.getAttribute('data-tooltip')),
+    ['Open bookmark manager'], 'the top bar should hold the manager button');
+  assert.ok(actions.querySelector('#_x_extension_newtab_bookmark_mode_2026_unique_'), 'and the display mode menu');
+  assert.strictEqual(pager.querySelectorAll('.x-nt-bookmarks-pager-btn').length, 2, 'the section pager keeps only its page buttons');
+  assert.strictEqual(page.document.querySelectorAll('#_x_extension_newtab_bookmark_mode_2026_unique_').length, 1, 'with one mode menu on the page');
+  assert.ok(page.document.querySelector('.x-nt-bookmarks-topbar-items #_x_extension_newtab_bookmarks_grid_2024_unique_'), 'the bar holds the bookmarks grid');
+
+  page.changeStorage('sync', '_x_extension_bookmark_view_mode_2026_unique_', 'folder');
+  await page.settle(400);
+  assert.strictEqual(actions.children.length, 0, 'leaving top bar mode empties the bar');
+  assert.ok(pager.querySelector('#_x_extension_newtab_bookmark_mode_2026_unique_'), 'and the mode menu returns to the section');
+  assert.ok(page.document.querySelector('.x-nt-bookmarks-header + #_x_extension_newtab_bookmarks_grid_2024_unique_'), 'with the grid back under the header');
+  page.close();
+}
+
 function testStyles() {
   const css = parsePageCss('newtab.html');
   const selectors = css.selectors();
@@ -55,6 +77,7 @@ function testStyles() {
 
 (async () => {
   await testPager();
+  await testTopbarActions();
   testStyles();
   console.log('newtab bookmark pager tooltip tests passed');
   process.exit(0);

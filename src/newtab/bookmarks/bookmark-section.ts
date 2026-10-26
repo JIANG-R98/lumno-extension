@@ -1,6 +1,5 @@
-// Builds the bookmark section: its heading, breadcrumb, view mode select,
-// pager buttons and grid, then the bookmark view, the cascade menu runtime
-// and the top bar runtime that render into it.
+// Builds the bookmark section around the page structure's header and grid:
+// the bookmark view, the cascade menu runtime and the top bar runtime.
 import * as LumnoMenuSurface from '../../shared/ui/menu-surface';
 import type { TooltipController } from '../../shared/ui/tooltip';
 import type * as CrossSurfaceDrag from '../cross-surface-drag';
@@ -9,9 +8,7 @@ import type { BindCursorTooltip, FormatMessage, Translate } from '../newtab-type
 import type { BookmarkCardElement, BookmarksViewController, BookmarksViewOptions } from '../react/bookmarks';
 import type { createBookmarksTopbarApi } from '../react/bookmarks-topbar';
 import type { BookmarksTopbarRuntime } from '../react/bookmarks-topbar';
-import type { createBookmarkBreadcrumbController } from '../react/bookmark-breadcrumb';
 import type { PageStructureRuntime } from '../react/page-structure';
-import type { SectionModeOptionSource, SectionModeSelect, SectionModeSelectConfig } from '../section-mode-select';
 import * as NEWTAB_BOOKMARK_CASCADE_MENU from './bookmark-cascade-menu';
 import type { BookmarkCascadeRuntime, CascadeItemEventDetail } from './bookmark-cascade-menu';
 import * as NEWTAB_BOOKMARK_CASCADE_POSITION from './bookmark-cascade-position';
@@ -22,20 +19,11 @@ import type { BookmarksRuntime } from './bookmarks-runtime';
 
 type ViewOption<K extends keyof BookmarksViewOptions> = NonNullable<BookmarksViewOptions[K]>;
 
-// The bookmarks heading, which leads back to the bookmarks bar from a folder.
-type BookmarkBreadcrumbController = ReturnType<typeof createBookmarkBreadcrumbController>;
-
 interface BookmarkSectionState {
   bookmarkTitleWrap: HTMLElement | null;
-  bookmarkHeading: HTMLElement | null;
-  // Whether the heading leads back to the bookmarks bar.
-  bookmarkCanNavigateRoot: boolean;
-  bookmarkBreadcrumbController: BookmarkBreadcrumbController | null;
-  bookmarkModeMenu: SectionModeSelect | null;
   currentBookmarkViewMode: string;
   bookmarkPagerPrevButton: HTMLElement | null;
   bookmarkPagerNextButton: HTMLElement | null;
-  bookmarkOpenManagerButton: HTMLElement | null;
   bookmarkGrid: HTMLElement | null;
   bookmarkFolderIconsVisible: boolean;
   bookmarksView: BookmarksViewController | null;
@@ -51,16 +39,7 @@ interface BookmarkSectionDeps {
   setContentSectionVisible(section: HTMLElement | null, visible: boolean): void;
   bookmarkSection: HTMLElement | null;
   pageStructureRuntime: PageStructureRuntime;
-  updateBookmarkHeading(): void;
-  navigateBookmarkFolder(folderId: string): void;
-  createSectionModeSelect(config: SectionModeSelectConfig): SectionModeSelect | null;
-  setBookmarkViewMode(mode: string): void;
-  handleBookmarkModeMenuAction(action: string): void;
-  getBookmarkViewModeOptions(): SectionModeOptionSource[];
-  bindBookmarkPagerTooltip(button: HTMLElement | null, getLabel: () => string): void;
   t: Translate;
-  updateBookmarkPagerLabels(): void;
-  updateBookmarkBreadcrumb(): void;
   handleBookmarkDragPointerDown(event: PointerEvent): void;
   applyBookmarkGridColumns(): void;
   bookmarkCards: BookmarkCardElement[];
@@ -123,16 +102,7 @@ function createBookmarkSection(deps: BookmarkSectionDeps) {
     setContentSectionVisible,
     bookmarkSection,
     pageStructureRuntime,
-    updateBookmarkHeading,
-    navigateBookmarkFolder,
-    createSectionModeSelect,
-    setBookmarkViewMode,
-    handleBookmarkModeMenuAction,
-    getBookmarkViewModeOptions,
-    bindBookmarkPagerTooltip,
     t,
-    updateBookmarkPagerLabels,
-    updateBookmarkBreadcrumb,
     handleBookmarkDragPointerDown,
     applyBookmarkGridColumns,
     bookmarkCards,
@@ -188,9 +158,7 @@ function createBookmarkSection(deps: BookmarkSectionDeps) {
   const NEWTAB_BOOKMARKS_VIEW = globalThis.LumnoNewtabBookmarksView;
   const NEWTAB_BOOKMARK_CASCADE_VIEW =
     globalThis.LumnoNewtabBookmarkCascadeView;
-  const NEWTAB_BOOKMARK_BREADCRUMB =
-    globalThis.LumnoNewtabBookmarkBreadcrumb;
-  if (!NEWTAB_BOOKMARKS_VIEW || !NEWTAB_BOOKMARK_CASCADE_VIEW || !NEWTAB_BOOKMARK_BREADCRUMB) {
+  if (!NEWTAB_BOOKMARKS_VIEW || !NEWTAB_BOOKMARK_CASCADE_VIEW) {
     return {};
   }
   const bookmarkCardElementCache = new Map<string, BookmarkCardElement>();
@@ -198,65 +166,9 @@ function createBookmarkSection(deps: BookmarkSectionDeps) {
 
   setContentSectionVisible(bookmarkSection, false);
   pageState.bookmarkTitleWrap = pageStructureRuntime.bookmark.titleWrap;
-  const bookmarkHeading = pageStructureRuntime.bookmark.heading;
-  pageState.bookmarkHeading = bookmarkHeading;
-  updateBookmarkHeading();
-  const bookmarkBreadcrumb = pageStructureRuntime.bookmark.breadcrumb;
-  pageState.bookmarkBreadcrumbController =
-    NEWTAB_BOOKMARK_BREADCRUMB.createBookmarkBreadcrumbController(
-      bookmarkBreadcrumb,
-      { onNavigate: navigateBookmarkFolder }
-    );
-  pageState.bookmarkBreadcrumbController.render({ items: [] });
-  pageState.bookmarkModeMenu = createSectionModeSelect({
-    id: '_x_extension_newtab_bookmark_mode_2026_unique_',
-    menuTitleKey: 'display_mode_title',
-    menuTitleFallback: 'Display mode',
-    getValue: () => pageState.currentBookmarkViewMode,
-    onChange: setBookmarkViewMode,
-    onAction: handleBookmarkModeMenuAction,
-    getOptions: getBookmarkViewModeOptions
-  });
-  const bookmarkPager = pageStructureRuntime.bookmark.pager;
-  const previousButton = pageStructureRuntime.bookmark.previousButton;
-  const nextButton = pageStructureRuntime.bookmark.nextButton;
-  const managerButton = pageStructureRuntime.bookmark.managerButton;
-  pageState.bookmarkPagerPrevButton = previousButton;
-  pageState.bookmarkPagerNextButton = nextButton;
-  pageState.bookmarkOpenManagerButton = managerButton;
-  bindBookmarkPagerTooltip(
-    previousButton,
-    () => previousButton.getAttribute('data-tooltip') || t('bookmarks_page_prev', '上一页')
-  );
-  bindBookmarkPagerTooltip(
-    nextButton,
-    () => nextButton.getAttribute('data-tooltip') || t('bookmarks_page_next', '下一页')
-  );
-  bindBookmarkPagerTooltip(
-    managerButton,
-    () => managerButton.getAttribute('data-tooltip') || t('bookmarks_open_manager', '打开书签管理页')
-  );
-  if (pageState.bookmarkModeMenu) {
-    bookmarkPager.appendChild(pageState.bookmarkModeMenu.control);
-  }
-  bookmarkHeading.addEventListener('click', () => {
-    if (!pageState.bookmarkCanNavigateRoot) {
-      return;
-    }
-    navigateBookmarkFolder(pageState.bookmarkRootFolderId);
-  });
-  bookmarkHeading.addEventListener('keydown', (event) => {
-    if (!pageState.bookmarkCanNavigateRoot) {
-      return;
-    }
-    if (event.key !== 'Enter' && event.key !== ' ') {
-      return;
-    }
-    event.preventDefault();
-    navigateBookmarkFolder(pageState.bookmarkRootFolderId);
-  });
-  updateBookmarkPagerLabels();
-  updateBookmarkBreadcrumb();
+  // The drag controller pages through the grid over these buttons.
+  pageState.bookmarkPagerPrevButton = pageStructureRuntime.bookmark.previousButton;
+  pageState.bookmarkPagerNextButton = pageStructureRuntime.bookmark.nextButton;
   const bookmarkGrid = pageStructureRuntime.bookmark.grid;
   pageState.bookmarkGrid = bookmarkGrid;
   bookmarkGrid.setAttribute('data-view-mode', pageState.currentBookmarkViewMode);
@@ -350,8 +262,7 @@ function createBookmarkSection(deps: BookmarkSectionDeps) {
     documentObj: document,
     windowObj: window,
     grid: bookmarkGrid,
-    modeControl: pageState.bookmarkModeMenu ? pageState.bookmarkModeMenu.control : null,
-    managerButton: pageState.bookmarkOpenManagerButton,
+    headerStore: pageStructureRuntime.bookmark.headerStore,
     ariaLabel: t('bookmark_view_mode_top', 'Top bookmarks bar'),
     onVisibilityChange: setNewtabTopOccupied
   });

@@ -76,7 +76,7 @@ import * as NEWTAB_SUGGESTIONS_CONTROLLER from './search/suggestions-controller'
 import * as NEWTAB_SUGGESTIONS_LAYOUT from './search/suggestions-layout';
 import * as NEWTAB_SECTION_HEADERS from './section-headers';
 import * as NEWTAB_SECTION_LOADERS from './section-loaders';
-import * as NEWTAB_SECTION_MODE_SELECT from './section-mode-select';
+import * as NEWTAB_BOOKMARK_MODE_MENU from './bookmarks/bookmark-mode-menu';
 import * as LumnoNewtabSectionPanelSettings from './section-panel-settings';
 import * as NEWTAB_SECTION_RELOAD from './section-reload';
 import * as NEWTAB_SETTINGS_SYNC from './settings-sync';
@@ -974,13 +974,6 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
   const { loadSiteSearchIconCache } = siteSearchIconCache;
 
   loadSiteSearchIconCache();
-  const sectionModeSelectController =
-    NEWTAB_SELECT_MENU.createController({
-      documentObj: document,
-      windowObj: window,
-      onBeforeOpen: (...args) => hideTopActionTooltip(...args),
-      getViewportTopInset: () => getNewtabViewportTopPaddingPx()
-    });
   pageState.shortcutContextMenuSelectController = NEWTAB_SELECT_MENU.createController({
       documentObj: document,
       windowObj: window,
@@ -1052,9 +1045,6 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     t,
     notifyLanguageChange: () => languageChangeListeners.forEach((listener) => listener()),
     renderNewtabTopContent: (...args) => renderNewtabTopContent(...args),
-    updateBookmarkHeading: (...args) => updateBookmarkHeading(...args),
-    updateBookmarkPagerLabels: (...args) => updateBookmarkPagerLabels(...args),
-    updateBookmarkBreadcrumb: (...args) => updateBookmarkBreadcrumb(...args),
     updateRecentModeMenu: (...args) => updateRecentModeMenu(...args),
     updateBookmarkModeMenu: (...args) => updateBookmarkModeMenu(...args),
     updateWallpaperLanguageStrings: (...args) => updateWallpaperLanguageStrings(...args),
@@ -1795,8 +1785,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
   });
 
   const pageStructureRuntime = NEWTAB_PAGE_STRUCTURE.createPageStructure({
-    documentObj: document,
-    getRiSvg
+    documentObj: document
   });
   pageState.suggestionsContainer = pageStructureRuntime.suggestions.container;
   pageState.suggestionsContainer.addEventListener('wheel', function(event) {
@@ -1901,7 +1890,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     updateRecentModeMenu,
     setRecentMode,
     canDismissRecentCard,
-    updateBookmarkHeading,
+    updateBookmarkHeader,
     isBookmarkTopbarMode,
     getNewtabTopOccupiedInsetPx,
     getNewtabViewportTopPaddingPx,
@@ -1913,10 +1902,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     updateBookmarkModeMenu,
     applyBookmarkViewMode,
     setBookmarkViewMode,
-    navigateBookmarkFolder,
-    updateBookmarkPagerLabels,
-    bindBookmarkPagerTooltip,
-    updateBookmarkBreadcrumb
+    navigateBookmarkFolder
   } = NEWTAB_SECTION_HEADERS.createSectionHeaders({
     t,
     normalizeRecentMode,
@@ -1937,23 +1923,33 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     persistBookmarkViewMode,
     showTopActionTooltip,
     hideTopActionTooltip,
+    renderBookmarkHeader: pageStructureRuntime.bookmark.renderHeader,
+    getBookmarkModeMenuOptions: () => getBookmarkModeMenuOptions(),
+    handleBookmarkModeMenuAction,
+    goToBookmarkPage: (step) => {
+      const target = pageState.bookmarkCurrentPage + step;
+      if (target < 0 || target >= getBookmarkPageCount()) {
+        return;
+      }
+      switchBookmarkPage(target);
+    },
+    openBookmarkManager: () => {
+      if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
+        return;
+      }
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openBookmarkManager' });
+    },
     pageState
   });
 
-  const {
-    getBookmarkViewModeOptions,
-    createSectionModeSelect
-  } = NEWTAB_SECTION_MODE_SELECT.createSectionModeSelect({
+  const { getBookmarkModeMenuOptions } = NEWTAB_BOOKMARK_MODE_MENU.createBookmarkModeMenu({
     t,
     getEffectiveBookmarkTopbarSurfaceMode,
     isBookmarkTopbarMode,
     getBookmarkTopbarLayout,
     BOOKMARK_TOPBAR_LAYOUT_ACTION,
     BOOKMARK_TOPBAR_SURFACE_MODE_ACTION,
-    BOOKMARK_TOPBAR_PICK_COLOR_ACTION,
-    sectionModeSelectController,
-    showTopActionTooltip,
-    hideTopActionTooltip
+    BOOKMARK_TOPBAR_PICK_COLOR_ACTION
   });
 
   const {
@@ -2191,16 +2187,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     setContentSectionVisible,
     bookmarkSection,
     pageStructureRuntime,
-    updateBookmarkHeading,
-    navigateBookmarkFolder,
-    createSectionModeSelect,
-    setBookmarkViewMode,
-    handleBookmarkModeMenuAction,
-    getBookmarkViewModeOptions,
-    bindBookmarkPagerTooltip,
     t,
-    updateBookmarkPagerLabels,
-    updateBookmarkBreadcrumb,
     handleBookmarkDragPointerDown,
     applyBookmarkGridColumns,
     bookmarkCards,
@@ -2305,25 +2292,6 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     pageState
   });
 
-  pageStructureRuntime.bookmark.previousButton.addEventListener('click', () => {
-    if (pageState.bookmarkCurrentPage <= 0) {
-      return;
-    }
-    switchBookmarkPage(pageState.bookmarkCurrentPage - 1);
-  });
-  pageStructureRuntime.bookmark.nextButton.addEventListener('click', () => {
-    const pageCount = getBookmarkPageCount();
-    if (pageState.bookmarkCurrentPage >= (pageCount - 1)) {
-      return;
-    }
-    switchBookmarkPage(pageState.bookmarkCurrentPage + 1);
-  });
-  pageStructureRuntime.bookmark.managerButton.addEventListener('click', () => {
-    if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
-      return;
-    }
-    LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'openBookmarkManager' });
-  });
   bookmarkSection.addEventListener('wheel', (event) => {
     if (!event || !isContentSectionVisible(bookmarkSection)) {
       return;
@@ -2343,7 +2311,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     isBookmarkTopbarMode,
     getBookmarkLimit,
     NEWTAB_BOOKMARKS_STORE,
-    hideTopActionTooltip,
+    updateBookmarkHeader,
     getBookmarkGridColumnCount,
     renderBookmarks: (...args) => renderBookmarks(...args),
     updateBookmarkSectionPosition,
@@ -2501,7 +2469,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     getTopBookmarks,
     getBookmarkLimit,
     getBookmarkPageCount,
-    updateBookmarkBreadcrumb,
+    updateBookmarkHeader,
     renderCurrentBookmarkPage,
     playPendingBookmarkLayoutAnimation,
     renderShortcuts,

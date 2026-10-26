@@ -36,7 +36,6 @@ import type { createLiquidSurfaces } from '../newtab/react/liquid-glass';
 import type { createPageNoticeApi } from '../newtab/react/page-notice';
 import type { createBookmarkCascadeViewApi } from '../newtab/react/bookmark-cascade-view';
 import type { createWallpaperViewApi } from '../newtab/react/wallpaper-view';
-import type { createBookmarkBreadcrumbApi } from '../newtab/react/bookmark-breadcrumb';
 import type { createQuoteLineViewApi } from '../newtab/react/quote-line';
 import type { WallpaperEffectPreloadRuntime, WallpaperPreloadState } from '../newtab/wallpaper/wallpaper-preload-types';
 
@@ -137,7 +136,6 @@ declare global {
   // src/newtab/newtab-storage-prefetch.ts before the page's scripts load.
   var LumnoNewtabLocalePrefetch: { locale: string; messages: Promise<unknown> } | null | undefined;
   var LumnoNewtabWallpaperEffectPreload: WallpaperEffectPreloadRuntime | undefined;
-  var LumnoNewtabBookmarkBreadcrumb: ReturnType<typeof createBookmarkBreadcrumbApi> | undefined;
   var LumnoNewtabQuoteLine: ReturnType<typeof createQuoteLineViewApi> | undefined;
   var LumnoSearchInputUI: ReturnType<typeof createSearchInputApi> | undefined;
   var LumnoSegmentedIndicator: ReturnType<typeof createSegmentedIndicatorApi> | undefined;

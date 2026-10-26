@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
+import { TopbarBookmarkActions, type BookmarkHeaderStore } from './bookmark-header';
 import { createLiquidGlass } from './liquid-glass';
 
 export const BOOKMARK_TOPBAR_IDS = Object.freeze({
@@ -110,8 +111,10 @@ interface TopbarElements {
 }
 
 function TopbarStructure({
+  headerStore,
   register
 }: {
+  headerStore: BookmarkHeaderStore | null;
   register(elements: TopbarElements): void;
 }) {
   const actionsRef = useRef<HTMLDivElement>(null);
@@ -157,7 +160,9 @@ function TopbarStructure({
         className="x-nt-bookmarks-topbar-actions"
         id={BOOKMARK_TOPBAR_IDS.actions}
         ref={actionsRef}
-      />
+      >
+        {headerStore ? <TopbarBookmarkActions store={headerStore} /> : null}
+      </div>
     </>
   );
 }
@@ -220,10 +225,10 @@ export interface BookmarksTopbarOptions {
   documentObj?: Document;
   windowObj?: Window & typeof globalThis;
   ariaLabel?: string;
-  // Moved into the bar while it shows, and back when it hides.
+  // Moved into the bar while it is active, and back when it is not.
   grid?: HTMLElement | null;
-  modeControl?: HTMLElement | null;
-  managerButton?: HTMLElement | null;
+  // The bookmark section's header model, whose actions the bar shows while active.
+  headerStore?: BookmarkHeaderStore | null;
   onVisibilityChange?(visible: boolean, detail: { element: HTMLElement; height: number }): void;
 }
 
@@ -245,24 +250,20 @@ export function createBookmarksTopbar(
   const register = (nextElements: TopbarElements) => {
     mounted.elements = nextElements;
   };
-  flushSync(() => reactRoot.render(<TopbarStructure register={register} />));
+  flushSync(() => reactRoot.render(
+    <TopbarStructure headerStore={options.headerStore || null} register={register} />
+  ));
   if (!mounted.elements) {
     flushSync(() => reactRoot.unmount());
     throw new Error('Lumno New Tab React bookmarks topbar did not mount.');
   }
   const { actions, edgeFade, itemsHost, viewport } = mounted.elements;
   const grid: HTMLElement | null = options.grid || null;
-  const modeControl: HTMLElement | null = options.modeControl || null;
-  const managerButton: HTMLElement | null = options.managerButton || null;
   const onVisibilityChange =
     typeof options.onVisibilityChange === 'function'
       ? options.onVisibilityChange
       : null;
-  const placements = {
-    grid: rememberPlacement(grid),
-    managerButton: rememberPlacement(managerButton),
-    modeControl: rememberPlacement(modeControl)
-  };
+  const gridPlacement = rememberPlacement(grid);
   let active = false;
   let visible = false;
   let overflowRight = false;
@@ -388,12 +389,6 @@ export function createBookmarksTopbar(
     if (grid) {
       itemsHost.appendChild(grid);
     }
-    if (managerButton) {
-      actions.appendChild(managerButton);
-    }
-    if (modeControl) {
-      actions.appendChild(modeControl);
-    }
     active = true;
     element.dataset.active = 'true';
     scheduleOverflowFadeSync();
@@ -405,9 +400,7 @@ export function createBookmarksTopbar(
     if (!active) {
       return false;
     }
-    restorePlacement(grid, placements.grid);
-    restorePlacement(modeControl, placements.modeControl);
-    restorePlacement(managerButton, placements.managerButton);
+    restorePlacement(grid, gridPlacement);
     active = false;
     setVisible(false);
     element.dataset.active = 'false';

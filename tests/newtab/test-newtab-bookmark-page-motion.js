@@ -25,11 +25,12 @@ function setup() {
   window.eval(moduleScript('src/newtab/bookmarks/bookmark-pager.ts', 'LumnoNewtabBookmarkPager', null, {
     'src/newtab/cross-surface-drag.ts': 'LumnoNewtabCrossSurfaceDrag'
   }));
-  env.state = { bookmarkGrid: grid, bookmarkAllItems: Array.from({ length: 8 }, (_, id) => ({ id })), bookmarkCurrentPage: 0 };
+  env.state = { bookmarkGrid: grid, bookmarkAllItems: Array.from({ length: 8 }, (_, id) => ({ id })), bookmarkCurrentPage: 0,
+    bookmarkPagerAvailability: { previous: false, next: false } };
   env.pager = window.LumnoNewtabBookmarkPager.createBookmarkPager({ pageState: env.state, now: () => env.clock,
     isBookmarkTopbarMode: () => false, getBookmarkLimit: () => 2,
     NEWTAB_BOOKMARKS_STORE: { getBookmarkPageItems: (items, page, limit) => items.slice(page * limit, (page + 1) * limit) },
-    hideTopActionTooltip() {}, getBookmarkGridColumnCount: () => 2, updateBookmarkSectionPosition() {},
+    updateBookmarkHeader() {}, getBookmarkGridColumnCount: () => 2, updateBookmarkSectionPosition() {},
     renderBookmarks(items) {
       // Like React, remove only owned cards, leaving foreign nodes alone.
       [...grid.children].filter(child => child.tagName === 'BUTTON').forEach(card => card.remove());
