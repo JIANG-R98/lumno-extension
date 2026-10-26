@@ -6,8 +6,7 @@ import * as AppearanceSettings from '../domain/settings/appearance';
 import * as LocaleSettings from '../domain/settings/locale';
 import { readStartCommand } from '../domain/injected-commands';
 import type { LocaleMessage, PageReply } from '../domain/messages';
-import { createSettingsStore } from '../platform/settings-store';
-import type { SettingsStore } from '../platform/settings-store';
+import { getContextSettingsStore } from '../platform/settings-store';
 import * as LumnoMessaging from '../platform/messaging';
 
 type ToastMessages = Record<string, LocaleMessage>;
@@ -34,8 +33,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     'copy_page_url_success',
     'copy_page_url_failed_permission'
   ]);
-  // Made on the first toast: most pages never show one.
-  let settingsStore: SettingsStore | null = null;
   let pageToastTimer: number | null = null;
   let pageToastParts: PageToastParts | null = null;
   // Toast strings by locale, fetched only when a toast in a user-chosen
@@ -72,13 +69,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   // Resolves 'system' when the setting is unset or storage is unavailable.
   async function readStoredMode(setting: typeof LocaleSettings.language | typeof AppearanceSettings.themeMode): Promise<string> {
     try {
-      if (!settingsStore) {
-        settingsStore = createSettingsStore({
-          chromeApi: chrome,
-          settings: [LocaleSettings.language, AppearanceSettings.themeMode]
-        });
-      }
-      await settingsStore.ready;
+      // Read on the first toast: most pages never show one.
+      const settingsStore = getContextSettingsStore(chrome);
+      await settingsStore.include(setting);
       return settingsStore.get(setting);
     } catch (_error) {
       return 'system';

@@ -9,7 +9,7 @@ import * as LocaleSettings from '../domain/settings/locale';
 import * as OverlayPanelSettings from '../domain/settings/overlay-panel';
 import * as PageCacheSettings from '../domain/settings/page-cache';
 import * as SyncStateSettings from '../domain/settings/sync-state';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
+import { getContextSettingsStore } from '../platform/settings-store';
 import * as LumnoShortcutDisplay from '../domain/shortcut-display';
 import * as LumnoCursorTooltip from '../shared/ui/cursor-tooltip';
 import * as LumnoToast from '../shared/ui/toast';
@@ -19,7 +19,7 @@ import { readLocaleMessages } from '../domain/locale-messages';
 import type { BackgroundAction, BackgroundReply, BackgroundRequest, LocaleMessage } from '../domain/messages';
 import type { ThemeMode } from '../domain/settings/appearance';
 import type { OverlaySizeMode } from '../domain/settings/overlay-panel';
-import type { StorageChanges } from '../domain/storage-port';
+import type { Setting } from '../domain/settings/define';
 import * as LumnoMessaging from '../platform/messaging';
 import { isHtmlElement } from '../shared/dom-guards';
 import type {
@@ -411,7 +411,7 @@ function readSyncStatus(value: unknown): PopupSyncStatus | null {
   };
 }
 
-type SettingSpecs = { [K in PopupSettingId]: { key: string; normalize(value: unknown): PopupSettingValues[K] } };
+type PopupSettings = { [K in PopupSettingId]: Setting<PopupSettingValues[K]> };
 
 function start(): void {
   const chromeApi = globalThis.chrome;
@@ -425,52 +425,37 @@ function start(): void {
   }
   // Narrowed here, for the functions below.
   const host = rootElement;
-  const provider = LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
-  // The settings the popup shows, by row id: where each is stored and how a
-  // stored value reads.
-  const SETTING_SPECS: Readonly<SettingSpecs> = Object.freeze({
-    selectionQuickActions: {
-      key: FeatureSettings.selectionQuickActionsEnabled.key,
-      normalize: FeatureSettings.selectionQuickActionsEnabled.parse
-    },
-    overlaySize: {
-      key: OverlayPanelSettings.overlaySizeMode.key,
-      normalize: OverlayPanelSettings.overlaySizeMode.parse
-    },
-    overlayPageTheme: {
-      key: OverlayPanelSettings.overlayPageThemeAdaptationEnabled.key,
-      normalize: OverlayPanelSettings.overlayPageThemeAdaptationEnabled.parse
-    },
-    overlayOpenTabs: {
-      key: OverlayPanelSettings.overlayOpenTabsDefaultVisible.key,
-      normalize: OverlayPanelSettings.overlayOpenTabsDefaultVisible.parse
-    },
-    theme: {
-      key: AppearanceSettings.themeMode.key,
-      normalize: AppearanceSettings.themeMode.parse
-    },
-    autoPip: {
-      key: FeatureSettings.autoPipEnabled.key,
-      normalize: (value: unknown) => value !== false
-    }
+  // The settings the popup shows, by row id.
+  const POPUP_SETTINGS: Readonly<PopupSettings> = Object.freeze({
+    selectionQuickActions: FeatureSettings.selectionQuickActionsEnabled,
+    overlaySize: OverlayPanelSettings.overlaySizeMode,
+    overlayPageTheme: OverlayPanelSettings.overlayPageThemeAdaptationEnabled,
+    overlayOpenTabs: OverlayPanelSettings.overlayOpenTabsDefaultVisible,
+    theme: AppearanceSettings.themeMode,
+    autoPip: FeatureSettings.autoPipEnabled
   });
   const settingIds: readonly PopupSettingId[] = Object.freeze([
     'selectionQuickActions', 'overlaySize', 'overlayPageTheme', 'overlayOpenTabs', 'theme', 'autoPip'
   ]);
   const isSettingId = (id: string): id is PopupSettingId => settingIds.some((settingId) => settingId === id);
-  // Each setting read from stored values; a missing one reads as its default.
-  function readSettings(values: Record<string, unknown>): PopupSettingValues {
+  const settingsStore = getContextSettingsStore(chromeApi, globalThis);
+  const settingsLoaded = settingsStore.include([
+    ...settingIds.map((id) => POPUP_SETTINGS[id]),
+    LocaleSettings.language,
+    FeatureSettings.documentPipEnabled,
+    SyncStateSettings.webdavStatus,
+    popupSettingsExpanded,
+    PageCacheSettings.optionsThemePreload
+  ]);
+  function readSettings(): PopupSettingValues {
     return {
-      selectionQuickActions: SETTING_SPECS.selectionQuickActions.normalize(values[SETTING_SPECS.selectionQuickActions.key]),
-      overlaySize: SETTING_SPECS.overlaySize.normalize(values[SETTING_SPECS.overlaySize.key]),
-      overlayPageTheme: SETTING_SPECS.overlayPageTheme.normalize(values[SETTING_SPECS.overlayPageTheme.key]),
-      overlayOpenTabs: SETTING_SPECS.overlayOpenTabs.normalize(values[SETTING_SPECS.overlayOpenTabs.key]),
-      theme: SETTING_SPECS.theme.normalize(values[SETTING_SPECS.theme.key]),
-      autoPip: SETTING_SPECS.autoPip.normalize(values[SETTING_SPECS.autoPip.key])
+      selectionQuickActions: settingsStore.get(POPUP_SETTINGS.selectionQuickActions),
+      overlaySize: settingsStore.get(POPUP_SETTINGS.overlaySize),
+      overlayPageTheme: settingsStore.get(POPUP_SETTINGS.overlayPageTheme),
+      overlayOpenTabs: settingsStore.get(POPUP_SETTINGS.overlayOpenTabs),
+      theme: settingsStore.get(POPUP_SETTINGS.theme),
+      autoPip: settingsStore.get(POPUP_SETTINGS.autoPip)
     };
-  }
-  function setSetting<K extends PopupSettingId>(id: K, rawValue: unknown): void {
-    state.settings[id] = SETTING_SPECS[id].normalize(rawValue);
   }
   const darkQuery = globalThis.matchMedia('(prefers-color-scheme: dark)');
   const tooltip = LumnoTooltip.createController({
@@ -501,14 +486,14 @@ function start(): void {
     documentPipEnabled: false,
     shortcuts: { search: '', copy: '' },
     recentPin: null,
-    settings: readSettings({}),
+    settings: readSettings(),
     syncStatus: null,
     version: '',
     lang: 'en',
     now: Date.now(),
     busyAction: '',
     notice: null,
-    settingsExpanded: readSettingsExpanded(),
+    settingsExpanded: settingsStore.get(popupSettingsExpanded),
     pip: {
       // Firefox pages have no requestPictureInPicture.
       supported: typeof globalThis.HTMLVideoElement === 'function' &&
@@ -518,23 +503,6 @@ function start(): void {
       menuExpanded: false
     }
   };
-
-  // Whether the settings were left open is this browser's own convenience.
-  function readSettingsExpanded(): boolean {
-    try {
-      return globalThis.localStorage.getItem(popupSettingsExpanded.key) === 'true';
-    } catch (error) {
-      return false;
-    }
-  }
-
-  function writeSettingsExpanded(expanded: boolean): void {
-    try {
-      globalThis.localStorage.setItem(popupSettingsExpanded.key, expanded ? 'true' : 'false');
-    } catch (error) {
-      // The popup opens with the settings folded next time.
-    }
-  }
 
   function t(key: string, fallback: string): string {
     const entry = Object.prototype.hasOwnProperty.call(messages, key) ? messages[key] : undefined;
@@ -571,18 +539,6 @@ function start(): void {
         });
       } catch (error) {
         resolve(null);
-      }
-    });
-  }
-
-  function readLocalValues(keys: string[]): Promise<Record<string, unknown>> {
-    return new Promise((resolve) => {
-      try {
-        chromeApi.storage.local.get(keys, (items) => {
-          resolve(chromeApi.runtime.lastError ? {} : items);
-        });
-      } catch (error) {
-        resolve({});
       }
     });
   }
@@ -639,29 +595,26 @@ function start(): void {
     documentObj.documentElement.style.colorScheme = resolved;
   }
 
+  // The next popup paints this theme before extension storage answers.
   function cacheThemeMode(mode: ThemeMode): void {
-    try {
-      globalThis.localStorage.setItem(PageCacheSettings.optionsThemePreload.key, mode);
-    } catch (error) {
-      // The next popup paints the system theme first instead.
-    }
+    void settingsStore.set(PageCacheSettings.optionsThemePreload, mode);
   }
 
   // Shows a value at once and stores it; the rest of Lumno follows the
   // storage change.
   function saveSetting(id: string, rawValue: unknown): void {
     if (!isSettingId(id)) return;
-    const spec = SETTING_SPECS[id];
-    const updates: Record<string, unknown> = id === 'theme'
-      ? AppearanceSettings.createGlobalThemeModeStorageUpdate(rawValue)
-      : { [spec.key]: spec.normalize(rawValue) };
-    setSetting(id, updates[spec.key]);
-    if (id === 'theme') {
-      cacheThemeMode(state.settings.theme);
-      applyTheme();
-    }
-    render();
-    provider.area.set(updates).catch(() => {});
+    const setting: Setting<unknown> = POPUP_SETTINGS[id];
+    settingsStore.set(setting, setting.parse(rawValue)).catch(() => {});
+  }
+
+  // Applies a change made here or anywhere else in Lumno.
+  function applyStoredSettings(): void {
+    state.settings = readSettings();
+    state.documentPipEnabled = settingsStore.get(FeatureSettings.documentPipEnabled);
+    state.syncStatus = readSyncStatus(settingsStore.getStored(SyncStateSettings.webdavStatus));
+    cacheThemeMode(state.settings.theme);
+    applyTheme();
   }
 
   const controller = reactApi.createPopupController(host, {
@@ -672,7 +625,7 @@ function start(): void {
     // popup stays inside the browser's 600px height limit.
     onSettingsToggle(expanded) {
       state.settingsExpanded = expanded;
-      writeSettingsExpanded(expanded);
+      void settingsStore.set(popupSettingsExpanded, expanded);
       if (expanded) state.pip.menuExpanded = false;
       tooltip.hide();
       render();
@@ -682,7 +635,7 @@ function start(): void {
       state.pip.menuExpanded = expanded;
       if (expanded && state.settingsExpanded) {
         state.settingsExpanded = false;
-        writeSettingsExpanded(false);
+        void settingsStore.set(popupSettingsExpanded, false);
       }
       tooltip.hide();
       render();
@@ -877,41 +830,13 @@ function start(): void {
     reply.then(() => globalThis.close());
   }
 
-  function onStorageChanged(changes: StorageChanges, areaName: string): void {
-    if (areaName === 'local' && changes[SyncStateSettings.webdavStatus.key]) {
-      state.syncStatus = readSyncStatus(changes[SyncStateSettings.webdavStatus.key].newValue);
-      render();
-    }
-    if (!provider.isActiveAreaName(areaName)) return;
-    let changed = false;
-    settingIds.forEach((id) => {
-      const change = changes[SETTING_SPECS[id].key];
-      if (!change) return;
-      setSetting(id, change.newValue);
-      changed = true;
-    });
-    if (changes[AppearanceSettings.themeMode.key]) applyTheme();
-    if (changes[FeatureSettings.documentPipEnabled.key]) {
-      state.documentPipEnabled = changes[FeatureSettings.documentPipEnabled.key].newValue === true;
-      changed = true;
-    }
-    if (changed) render();
-  }
-
   async function init(): Promise<void> {
-    const [activeTab, stored, local, shortcuts] = await Promise.all([
+    const [activeTab, shortcuts] = await Promise.all([
       queryActiveTab(),
-      provider.ready.then(() => provider.area.get([
-        LocaleSettings.language.key,
-        FeatureSettings.documentPipEnabled.key,
-        ...settingIds.map((id) => SETTING_SPECS[id].key)
-      ])).catch(() => ({})),
-      readLocalValues([SyncStateSettings.webdavStatus.key]),
-      readShortcuts()
+      readShortcuts(),
+      settingsLoaded
     ]);
-    const values: Record<string, unknown> = stored || {};
-    const storedLanguage = values[LocaleSettings.language.key];
-    languageMode = typeof storedLanguage === 'string' && storedLanguage ? storedLanguage : 'system';
+    languageMode = settingsStore.get(LocaleSettings.language);
     const uiLanguage = chromeApi.i18n && chromeApi.i18n.getUILanguage ? chromeApi.i18n.getUILanguage() : 'en';
     const locale = LocaleSettings.normalizeLocale(languageMode === 'system' ? uiLanguage : languageMode);
     state.lang = LocaleSettings.localeToHtmlLang(locale);
@@ -945,13 +870,9 @@ function start(): void {
       state.pip.hasVideo = video.hasVideo === true;
       state.pip.active = video.active === true;
     }
-    state.settings = readSettings(values);
-    cacheThemeMode(state.settings.theme);
-    state.documentPipEnabled = values[FeatureSettings.documentPipEnabled.key] === true;
-    state.syncStatus = readSyncStatus(local[SyncStateSettings.webdavStatus.key]);
+    applyStoredSettings();
     state.shortcuts = shortcuts;
     state.version = chromeApi.runtime.getManifest().version || '';
-    applyTheme();
     render();
     globalThis.addEventListener('resize', syncOverflow);
     // A folding panel changes height in one step, after its rows fade on
@@ -962,7 +883,14 @@ function start(): void {
     darkQuery.addEventListener('change', () => {
       if (state.settings.theme === 'system') applyTheme();
     });
-    LumnoSettingsStorage.addStorageChangeListener(chromeApi, onStorageChanged);
+    settingsStore.subscribe([
+      ...settingIds.map((id) => POPUP_SETTINGS[id]),
+      FeatureSettings.documentPipEnabled,
+      SyncStateSettings.webdavStatus
+    ], () => {
+      applyStoredSettings();
+      render();
+    });
   }
 
   init().catch((error) => {

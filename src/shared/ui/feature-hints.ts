@@ -6,7 +6,14 @@ import '../../domain/navigation-disposition';
 import * as LumnoShortcutDisplay from '../../domain/shortcut-display';
 import type { RemixIconName, RemixIconSpec } from './remix-icon';
 import type { NavigatorLike } from '../../domain/shortcut-display';
-import type { StorageAreaLike } from '../../domain/storage-port';
+import type { SettingFamily } from '../../domain/settings/define';
+import {
+  featureHintDismissedEverywhere,
+  featureHintDismissedOnDevice,
+  featureHintDismissedThisSession
+} from '../../domain/settings/features';
+import { getContextSettingsStore } from '../../platform/settings-store';
+import type { SettingsStore, SettingsStoreChromeApi } from '../../platform/settings-store';
 import type { FeatureHintViewController, FeatureHintViewLabels } from '../../types/view-apis';
 import { getFeatureHintViewApi } from '../react/feature-hint-view';
 
@@ -76,14 +83,7 @@ interface FeatureHintDefinition {
 }
 
 // The storage the dismissals use, from chrome or a test double.
-interface FeatureHintChromeApi {
-  runtime?: { lastError?: unknown } | null;
-  storage?: {
-    sync?: StorageAreaLike;
-    local?: StorageAreaLike;
-    session?: StorageAreaLike;
-  } | null;
-}
+type FeatureHintChromeApi = SettingsStoreChromeApi;
 
 // The page window, or a stand-in with the members used here.
 type FeatureHintWindow = Partial<Pick<Window,
@@ -275,9 +275,12 @@ const FEATURE_HINT_DISMISS_STORAGE_TYPES: readonly FeatureHintDismissStorage[] =
 const FEATURE_HINT_WIDTH_MODES: readonly FeatureHintWidthMode[] = ['fixed', 'container', 'content'];
 const FEATURE_HINT_ALIGN_MODES: readonly FeatureHintAlignMode[] = ['center', 'start', 'auto'];
 
-const FEATURE_HINT_SESSION_DISMISS_PREFIX = '_x_lumno_feature_hint_session_dismissed_2026_';
-const FEATURE_HINT_LOCAL_DISMISS_PREFIX = '_x_lumno_feature_hint_local_dismissed_2026_';
-const FEATURE_HINT_SYNC_DISMISS_PREFIX = '_x_lumno_feature_hint_sync_dismissed_2026_';
+// The dismissals, by where they are remembered.
+const DISMISS_FAMILIES: readonly SettingFamily<boolean>[] = [
+  featureHintDismissedEverywhere,
+  featureHintDismissedOnDevice,
+  featureHintDismissedThisSession
+];
 
 function hasOwn(object: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(object, key);
@@ -342,12 +345,10 @@ function getFeatureHintStorageId(definition: FeatureHintReference): string {
 }
 
 function getFeatureHintDismissKey(definition: FeatureHintReference, storageType: FeatureHintDismissStorage): string {
-  const prefix = storageType === 'sync'
-    ? FEATURE_HINT_SYNC_DISMISS_PREFIX
-    : (storageType === 'local'
-      ? FEATURE_HINT_LOCAL_DISMISS_PREFIX
-      : FEATURE_HINT_SESSION_DISMISS_PREFIX);
-  return prefix + getFeatureHintStorageId(definition);
+  const family = storageType === 'sync'
+    ? featureHintDismissedEverywhere
+    : (storageType === 'local' ? featureHintDismissedOnDevice : featureHintDismissedThisSession);
+  return family.keyFor(getFeatureHintStorageId(definition));
 }
 
 function getFeatureHintSessionDismissKey(definition: FeatureHintReference): string {
@@ -362,95 +363,55 @@ function getFeatureHintSyncDismissKey(definition: FeatureHintReference): string 
   return getFeatureHintDismissKey(definition, 'sync');
 }
 
-// Older versions kept sync-remembered dismissals in local storage.
-function getLegacyLocalDismissKeyForSyncKey(key: string): string {
-  const rawKey = String(key || '');
-  if (!rawKey.startsWith(FEATURE_HINT_SYNC_DISMISS_PREFIX)) {
-    return '';
-  }
-  return FEATURE_HINT_LOCAL_DISMISS_PREFIX + rawKey.slice(FEATURE_HINT_SYNC_DISMISS_PREFIX.length);
+function getDismissStore(chromeApi: FeatureHintChromeApi | null): SettingsStore | null {
+  return chromeApi && chromeApi.storage ? getContextSettingsStore(chromeApi) : null;
 }
 
-function getDismissStorageArea(
-  chromeApi: FeatureHintChromeApi | null,
-  storageType: FeatureHintDismissStorage
-): StorageAreaLike | null {
-  const storage = chromeApi ? chromeApi.storage : null;
-  if (!storage) {
-    return null;
-  }
-  if (storageType === 'sync') {
-    return storage.sync || storage.local || null;
-  }
-  if (storageType === 'local') {
-    return storage.local || null;
-  }
-  if (storageType === 'session') {
-    return storage.session || null;
+// The family a dismissal key belongs to, with the hint's id in it.
+function readDismissKey(key: string): { family: SettingFamily<boolean>; id: string } | null {
+  for (const family of DISMISS_FAMILIES) {
+    const id = family.idOf(key);
+    if (id) {
+      return { family, id };
+    }
   }
   return null;
 }
 
-function getStoredDismissedFromArea(
-  chromeApi: FeatureHintChromeApi | null,
-  storageArea: StorageAreaLike | null,
-  key: string
-): Promise<boolean> {
-  if (!storageArea) {
-    return Promise.resolve(false);
+async function readDismissed(store: SettingsStore, family: SettingFamily<boolean>, id: string): Promise<boolean> {
+  try {
+    return family.parse((await store.readMembers(family, [id])).get(id));
+  } catch (_error) {
+    return false;
   }
-  return new Promise((resolve) => {
-    try {
-      storageArea.get([key], (result) => {
-        const runtimeError = chromeApi && chromeApi.runtime
-          ? chromeApi.runtime.lastError
-          : null;
-        resolve(!runtimeError && Boolean(result && result[key]));
-      });
-    } catch (_error) {
-      resolve(false);
-    }
-  });
 }
 
-function getStoredDismissed(
-  chromeApi: FeatureHintChromeApi | null,
-  key: string,
-  storageType: FeatureHintDismissStorage
-): Promise<boolean> {
-  const storageArea = getDismissStorageArea(chromeApi, storageType);
-  return getStoredDismissedFromArea(chromeApi, storageArea, key).then((isDismissed) => {
-    if (isDismissed || storageType !== 'sync') {
-      return isDismissed;
-    }
-    const localArea = chromeApi && chromeApi.storage ? chromeApi.storage.local || null : null;
-    const legacyLocalKey = getLegacyLocalDismissKeyForSyncKey(key);
-    if (!localArea || !legacyLocalKey) {
-      return false;
-    }
-    return getStoredDismissedFromArea(chromeApi, localArea, legacyLocalKey).then((legacyDismissed) => {
-      if (legacyDismissed) {
-        setStoredDismissed(chromeApi, key, storageType);
-      }
-      return legacyDismissed;
-    });
-  });
+async function getStoredDismissed(chromeApi: FeatureHintChromeApi | null, key: string): Promise<boolean> {
+  const store = getDismissStore(chromeApi);
+  const target = readDismissKey(key);
+  if (!store || !target) {
+    return false;
+  }
+  if (await readDismissed(store, target.family, target.id)) {
+    return true;
+  }
+  // Older versions kept dismissals meant for every browser on the device.
+  if (target.family !== featureHintDismissedEverywhere ||
+      !await readDismissed(store, featureHintDismissedOnDevice, target.id)) {
+    return false;
+  }
+  setStoredDismissed(chromeApi, key);
+  return true;
 }
 
-function setStoredDismissed(
-  chromeApi: FeatureHintChromeApi | null,
-  key: string,
-  storageType: FeatureHintDismissStorage
-): void {
-  const storageArea = getDismissStorageArea(chromeApi, storageType);
-  if (!storageArea) {
+function setStoredDismissed(chromeApi: FeatureHintChromeApi | null, key: string): void {
+  const store = getDismissStore(chromeApi);
+  const target = readDismissKey(key);
+  if (!store || !target) {
     return;
   }
-  try {
-    storageArea.set({ [key]: true }, () => {});
-  } catch (_error) {
-    // Storage errors should not block the visible in-page dismissal.
-  }
+  // Storage errors should not block the visible in-page dismissal.
+  store.writeMembers(target.family, new Map([[target.id, true]])).catch(() => {});
 }
 
 function getFeatureHint(definition: FeatureHintReference): FeatureHintDefinition | null {
@@ -782,7 +743,7 @@ function createFeatureHint(options?: FeatureHintOptions | null): FeatureHintCont
     if (nextVisible) {
       if (rememberOnFirstShow && !firstShowRemembered && dismissStorage !== 'none') {
         firstShowRemembered = true;
-        setStoredDismissed(chromeApi, dismissKey, dismissStorage);
+        setStoredDismissed(chromeApi, dismissKey);
       }
       scheduleContentAlignmentUpdate();
     } else {
@@ -827,7 +788,7 @@ function createFeatureHint(options?: FeatureHintOptions | null): FeatureHintCont
       dismissed = true;
       element.setAttribute('data-dismissed', 'true');
       if (dismissStorage !== 'none') {
-        setStoredDismissed(chromeApi, dismissKey, dismissStorage);
+        setStoredDismissed(chromeApi, dismissKey);
       }
       syncVisibility();
       if (typeof config.onDismiss === 'function') {
@@ -909,7 +870,7 @@ function createFeatureHint(options?: FeatureHintOptions | null): FeatureHintCont
     visibilityGate.then(releaseVisibilityGate, releaseVisibilityGate);
   }
   if (dismissStorage !== 'none') {
-    getStoredDismissed(chromeApi, dismissKey, dismissStorage).then((isDismissed) => {
+    getStoredDismissed(chromeApi, dismissKey).then((isDismissed) => {
       if (destroyed) {
         return;
       }

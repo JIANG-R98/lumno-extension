@@ -10,7 +10,7 @@ import { isNavigateEvent, readPageNavigation } from '../platform/page-navigation
 import type { ListenerTarget } from '../platform/page-navigation';
 import { claimContentScript } from '../platform/content-registry';
 import { linkPreviewEnabled } from '../domain/settings/features';
-import { createSettingsStore } from '../platform/settings-store';
+import { getContextSettingsStore } from '../platform/settings-store';
 
 interface PrepareOptions {
   // Shift held over the link, before any press.
@@ -138,13 +138,12 @@ function isElement(value: EventTarget | null | undefined): value is Element {
     if (typeof chrome === 'undefined' || !chrome || !chrome.storage) {
       return;
     }
-    const settingsStore = createSettingsStore({ chromeApi: chrome, settings: [linkPreviewEnabled] });
+    const settingsStore = getContextSettingsStore(chrome);
     const apply = (): void => {
       triggerEnabled = settingsStore.get(linkPreviewEnabled);
     };
-    void settingsStore.ready.then(apply);
-    settingsStore.subscribe(linkPreviewEnabled, apply);
-    cleanups.push(() => settingsStore.destroy());
+    void settingsStore.include(linkPreviewEnabled).then(apply);
+    cleanups.push(settingsStore.subscribe(linkPreviewEnabled, apply));
   }
 
   function isPreviewGesture(event: MouseEvent): boolean {

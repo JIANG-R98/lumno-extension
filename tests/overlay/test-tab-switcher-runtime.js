@@ -331,9 +331,11 @@ async function testThemeFollowsThePageThenTheSetting() {
   assert.strictEqual(stored.panel().getAttribute('data-theme'), 'light', 'a theme change should apply while open');
   stored.changeStorage(THEME_STORAGE_KEY, 'dark', 'local');
   assert.strictEqual(stored.panel().getAttribute('data-theme'), 'light', 'changes to the other storage area should be ignored');
-  const listenersWhileOpen = stored.storageChanged.listeners.length;
   stored.press('Escape');
-  assert.ok(stored.storageChanged.listeners.length < listenersWhileOpen, 'closing should stop following the theme setting');
+  stored.changeStorage(THEME_STORAGE_KEY, 'dark');
+  openDefault(stored);
+  await stored.settle();
+  assert.strictEqual(stored.panel().getAttribute('data-theme'), 'dark', 'a theme changed while closed should apply when reopened');
   stored.close();
 
   const darkPage = createTabSwitcherPage({

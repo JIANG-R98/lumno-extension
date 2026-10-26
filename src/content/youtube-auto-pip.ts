@@ -1,8 +1,7 @@
 // Automatic picture-in-picture on YouTube: enters it when the tab hides
 // with a video playing, and on return undoes YouTube's own PiP and mini
 // player leftovers until the video plays inline again.
-import { createSettingsStore } from '../platform/settings-store';
-import { autoPipEnabled } from '../domain/settings/features';
+import { getContextSettingsStore } from '../platform/settings-store';
 import * as CORE from './auto-pip-core';
 import type { AutoPipState } from './auto-pip-core';
 import { claimContentScript } from '../platform/content-registry';
@@ -58,7 +57,7 @@ import { youtubePipRecoveryReloadAt } from '../domain/settings/page-cache';
     document,
     navigator,
     chrome,
-    settingsStore: createSettingsStore({ chromeApi: chrome, settings: [autoPipEnabled] }),
+    settingsStore: getContextSettingsStore(chrome),
     config: {
       mainWorldExitAction: "ytForceExitPiPInMainWorld",
       enterSuppressAfterExitMs: ENTER_SUPPRESS_AFTER_EXIT_MS,

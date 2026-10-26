@@ -1,6 +1,5 @@
 import * as PAGE_COLOR_SCHEME from '../page-color-scheme';
-import { createSettingsStore } from '../../platform/settings-store';
-import type { SettingsStore } from '../../platform/settings-store';
+import { getContextSettingsStore } from '../../platform/settings-store';
 import { createTabSwitcherViewApi } from '../react/tab-switcher';
 import type { TabSwitcherTab, TabSwitcherThumbnailUpdate, TabSwitcherViewController } from '../react/tab-switcher';
 import * as TOAST from '../ui/toast';
@@ -504,8 +503,8 @@ function createSwitcherThemeController(
     'data-bs-theme'
   ];
   let switcherThemeMode: 'dark' | 'light' | 'system' = 'system';
-  // The Lumno theme setting, followed while the switcher is open.
-  let settingsStore: SettingsStore | null = null;
+  // Stops following the Lumno theme setting once the switcher closes.
+  let unsubscribeTheme: (() => void) | null = null;
   let themeMediaListener: (() => void) | null = null;
   let pageThemeObserver: MutationObserver | null = null;
   let pageThemeSyncRaf: number | null = null;
@@ -626,24 +625,24 @@ function createSwitcherThemeController(
     destroyed = false;
     setSwitcherThemeMode('system');
     if (chromeApi && chromeApi.storage) {
-      const store = createSettingsStore({ chromeApi, settings: [themeMode] });
-      settingsStore = store;
+      const store = getContextSettingsStore(chromeApi);
+      const loaded = store.include(themeMode);
       const apply = (): void => {
         if (!destroyed) {
           setSwitcherThemeMode(store.get(themeMode));
         }
       };
-      void store.ready.then(apply);
-      store.subscribe(themeMode, apply);
+      void loaded.then(apply);
+      unsubscribeTheme = store.subscribe(themeMode, apply);
     }
   }
 
   function destroy(): void {
     destroyed = true;
     started = false;
-    if (settingsStore) {
-      settingsStore.destroy();
-      settingsStore = null;
+    if (unsubscribeTheme) {
+      unsubscribeTheme();
+      unsubscribeTheme = null;
     }
     removeThemeMediaListener();
     stopPageThemeObserver();

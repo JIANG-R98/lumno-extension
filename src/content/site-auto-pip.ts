@@ -1,8 +1,7 @@
 // Automatic picture-in-picture on video sites other than YouTube, with a
 // player profile per site for finding the real player and for the sites
 // that only enter PiP from the page's own world.
-import { createSettingsStore } from '../platform/settings-store';
-import { autoPipEnabled } from '../domain/settings/features';
+import { getContextSettingsStore } from '../platform/settings-store';
 import * as CORE from './auto-pip-core';
 import type { AutoPipState } from './auto-pip-core';
 import { isAutoPipBlacklistedHost } from './auto-pip-blacklist';
@@ -95,7 +94,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     document,
     navigator,
     chrome,
-    settingsStore: createSettingsStore({ chromeApi: chrome, settings: [autoPipEnabled] }),
+    settingsStore: getContextSettingsStore(chrome),
     config: {
       mainWorldExitAction: "forceExitPiPInMainWorld",
       enterSuppressAfterExitMs: ENTER_SUPPRESS_AFTER_EXIT_MS,

@@ -215,12 +215,35 @@ const engagementNoticeState = defineSetting({
   schema: opaque()
 });
 
+// Feature hints the user closed, by hint id and version: on every signed-in
+// browser, on this device, or for this browser session.
+const featureHintDismissedEverywhere = defineSettingFamily({
+  prefix: '_x_lumno_feature_hint_sync_dismissed_2026_',
+  area: 'browserSync',
+  schema: flag(false)
+});
+
+const featureHintDismissedOnDevice = defineSettingFamily({
+  prefix: '_x_lumno_feature_hint_local_dismissed_2026_',
+  area: 'device',
+  schema: flag(false)
+});
+
+const featureHintDismissedThisSession = defineSettingFamily({
+  prefix: '_x_lumno_feature_hint_session_dismissed_2026_',
+  area: 'session',
+  schema: flag(false)
+});
+
 export {
   SELECTION_QUICK_ACTIONS_PROVIDER_KEYS,
   autoPipEnabled,
   documentPipEnabled,
   engagementNoticeState,
   fallbackShortcut,
+  featureHintDismissedEverywhere,
+  featureHintDismissedOnDevice,
+  featureHintDismissedThisSession,
   globalPipOwner,
   linkPreviewEnabled,
   linkPreviewSessions,

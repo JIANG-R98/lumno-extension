@@ -3,7 +3,7 @@ import { defineSetting } from '../domain/settings/define';
 import { flag, oneOf, opaque } from '../domain/settings/schema';
 import { localPrimary } from '../domain/settings/sync-state';
 import type { StorageChangeListener, StorageItems } from '../domain/storage-port';
-import { createSettingsStore } from './settings-store';
+import { createSettingsStore, getContextSettingsStore } from './settings-store';
 import type { SettingsStoreChromeApi } from './settings-store';
 
 const theme = defineSetting({ key: 'test_theme', area: 'preferences', sync: 'browser', schema: oneOf(['light', 'dark', 'system'] as const, 'system') });
@@ -152,5 +152,28 @@ describe('settings store', () => {
     const count = listeners.length;
     store.destroy();
     expect(listeners.length).toBe(count - 1);
+  });
+
+  it('reads settings a module adds later once, and shares one listener per context', async () => {
+    const { api, chromeApi, listeners } = createChrome({ test_theme: 'dark' }, { test_device: true });
+    const store = getContextSettingsStore(api);
+    expect(getContextSettingsStore(api)).toBe(store);
+    expect(listeners).toHaveLength(0);
+    await store.include(theme);
+    await Promise.all([store.include([theme, device]), store.include(device)]);
+    expect(store.get(theme)).toBe('dark');
+    expect(store.get(device)).toBe(true);
+    expect(chromeApi.storage.sync.reads).toEqual([['test_theme']]);
+    expect(chromeApi.storage.local.reads.filter((keys) => keys.includes('test_device'))).toHaveLength(1);
+    // Only a subscriber makes the shared store follow storage.
+    const before = listeners.length;
+    const unsubscribe = store.subscribe(theme, () => {});
+    expect(listeners).toHaveLength(before + 1);
+    unsubscribe();
+    expect(listeners).toHaveLength(before);
+    // Values nobody followed are read again.
+    chromeApi.storage.sync.items.test_theme = 'light';
+    await store.include(theme);
+    expect(store.get(theme)).toBe('light');
   });
 });

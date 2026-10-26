@@ -156,7 +156,7 @@ type PersistOptions = { persist: boolean };
 
 // The extension API parts the runtime reads.
 interface WallpaperChromeApi {
-  runtime?: { getURL?: (path: string) => string; lastError?: unknown };
+  runtime?: FeatureHintChromeApi['runtime'] & { getURL?: (path: string) => string };
   i18n?: { getUILanguage?: () => string };
   storage?: FeatureHintChromeApi['storage'];
 }

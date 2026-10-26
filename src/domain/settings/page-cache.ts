@@ -1,7 +1,7 @@
 // Copies pages keep in their own localStorage or sessionStorage, read
 // before extension storage answers or kept for one tab.
 import { defineSetting } from './define';
-import { opaque } from './schema';
+import { custom, opaque } from './schema';
 
 // The keys the New Tab read at its last start, so the next one can start
 // the same read before its scripts finish loading.
@@ -38,7 +38,7 @@ const optionsThemePreload = defineSetting({
 const popupSettingsExpanded = defineSetting({
   key: 'lumno-popup-settings-expanded',
   area: 'page',
-  schema: opaque()
+  schema: custom((value) => value === true || value === 'true')
 });
 
 // The search state a New Tab hands to the tab it reopens as, so focus and

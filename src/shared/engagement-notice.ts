@@ -4,7 +4,8 @@
 import * as COMMUNITY_LINKS from '../platform/community-links';
 import type { CommunityLoadOptions } from '../platform/community-links';
 import type { CommunityChannel } from '../domain/community-links';
-import type { StorageAreaLike } from '../domain/storage-port';
+import { getContextSettingsStore } from '../platform/settings-store';
+import type { SettingsStoreChromeApi } from '../platform/settings-store';
 import * as LumnoFeatureHints from './ui/feature-hints';
 import type { FeatureHintController, FeatureHintDefinition } from './ui/feature-hints';
 import { engagementNoticeState } from '../domain/settings/features';
@@ -36,9 +37,8 @@ interface SurfaceThreshold {
 }
 
 // The storage and asset URLs the notice uses, from chrome or a test double.
-interface EngagementChromeApi {
-  runtime?: { lastError?: unknown; getURL?(path: string): string } | null;
-  storage?: { local?: StorageAreaLike; sync?: StorageAreaLike } | null;
+interface EngagementChromeApi extends SettingsStoreChromeApi {
+  runtime?: SettingsStoreChromeApi['runtime'] & { getURL?(path: string): string };
 }
 
 type EngagementAction = 'review' | 'community';
@@ -188,46 +188,23 @@ function shouldShowEngagementNotice(value: unknown, surface: unknown, timestamp:
     surfaceState.activeDays.length >= threshold.activeDays;
 }
 
-function getLocalStorageArea(chromeApi: EngagementChromeApi | null | undefined): StorageAreaLike | null {
-  const storage = chromeApi && chromeApi.storage ? chromeApi.storage : null;
-  return storage ? (storage.local || storage.sync || null) : null;
-}
-
-function getStoredEngagementState(chromeApi: EngagementChromeApi | null | undefined): Promise<EngagementState> {
-  const area = getLocalStorageArea(chromeApi);
-  return new Promise((resolve) => {
-    if (!area) {
-      resolve(normalizeEngagementState(null));
-      return;
-    }
-    try {
-      area.get([engagementNoticeState.key], (result) => {
-        const runtimeError = chromeApi && chromeApi.runtime
-          ? chromeApi.runtime.lastError
-          : null;
-        resolve(normalizeEngagementState(
-          runtimeError ? null : result && result[engagementNoticeState.key]
-        ));
-      });
-    } catch (_error) {
-      resolve(normalizeEngagementState(null));
-    }
-  });
-}
-
-function setStoredEngagementState(chromeApi: EngagementChromeApi | null | undefined, value: unknown): Promise<EngagementState> {
-  const area = getLocalStorageArea(chromeApi);
-  const state = normalizeEngagementState(value);
-  if (!area) {
-    return Promise.resolve(state);
+async function getStoredEngagementState(chromeApi: EngagementChromeApi | null | undefined): Promise<EngagementState> {
+  if (!chromeApi || !chromeApi.storage) {
+    return normalizeEngagementState(null);
   }
-  return new Promise((resolve) => {
-    try {
-      area.set({ [engagementNoticeState.key]: state }, () => resolve(state));
-    } catch (_error) {
-      resolve(state);
-    }
-  });
+  const store = getContextSettingsStore(chromeApi);
+  await store.include(engagementNoticeState);
+  return normalizeEngagementState(store.getStored(engagementNoticeState));
+}
+
+async function setStoredEngagementState(chromeApi: EngagementChromeApi | null | undefined, value: unknown): Promise<EngagementState> {
+  const state = normalizeEngagementState(value);
+  if (chromeApi && chromeApi.storage) {
+    const store = getContextSettingsStore(chromeApi);
+    await store.include(engagementNoticeState);
+    await store.set(engagementNoticeState, state).catch(() => {});
+  }
+  return state;
 }
 
 function getCommunityUrl(locale: unknown): string {

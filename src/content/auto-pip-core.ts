@@ -200,7 +200,8 @@ function createAutoPipCore(options: AutoPipCoreOptions) {
   }
 
   function syncAutoPipEnabledSetting(): void {
-    void settingsStore.ready.then(() => setAutoPipEnabled(settingsStore.get(LumnoSettings.autoPipEnabled)));
+    void settingsStore.include(LumnoSettings.autoPipEnabled)
+      .then(() => setAutoPipEnabled(settingsStore.get(LumnoSettings.autoPipEnabled)));
     settingsStore.subscribe(LumnoSettings.autoPipEnabled, () => {
       setAutoPipEnabled(settingsStore.get(LumnoSettings.autoPipEnabled));
       if (!state.autoPipEnabled) {

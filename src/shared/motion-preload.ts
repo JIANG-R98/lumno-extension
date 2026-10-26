@@ -1,13 +1,14 @@
 // Sets <html data-lumno-motion-effects="on|off"> from the stored setting
 // before the page draws, keeps it current, and hands the first value to the
 // page script through the boot handoff (motionPreferenceReady).
-import { createSettingsStore } from '../platform/settings-store';
+import { getContextSettingsStore } from '../platform/settings-store';
 import { motionEffectsEnabled } from '../domain/settings/appearance';
 import { publishBootValue } from '../platform/boot-handoff';
 
 (function() {
   const root = document.documentElement;
-  const settingsStore = createSettingsStore({ chromeApi: chrome, settings: [motionEffectsEnabled] });
+  const settingsStore = getContextSettingsStore(chrome);
+  const loaded = settingsStore.include(motionEffectsEnabled);
 
   function applyMotionEffectsPreference(): boolean {
     const enabled = settingsStore.get(motionEffectsEnabled);
@@ -15,6 +16,6 @@ import { publishBootValue } from '../platform/boot-handoff';
     return enabled;
   }
 
-  publishBootValue('motionPreferenceReady', settingsStore.ready.then(applyMotionEffectsPreference));
+  publishBootValue('motionPreferenceReady', loaded.then(applyMotionEffectsPreference));
   settingsStore.subscribe(motionEffectsEnabled, applyMotionEffectsPreference);
 })();

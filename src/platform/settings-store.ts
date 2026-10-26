@@ -1,12 +1,13 @@
 // The settings a runtime context uses, read once per storage area, kept in
 // step with storage through one storage.onChanged listener, and written back
 // through their schemas. Each context (the worker, a page, a content script)
-// creates one store for the settings it needs.
+// shares one store (getContextSettingsStore), which every module adds the
+// settings it needs to.
 import type { Setting, SettingArea, SettingFamily } from '../domain/settings/define';
 import { localPrimary } from '../domain/settings/sync-state';
 import type { StorageAreaLike, StorageChanges, StorageItems } from '../domain/storage-port';
 import { createProviderStorageRuntime, writeStorageValues } from './settings-storage';
-import type { StorageAreaFacade, StorageChromeApi } from './settings-storage';
+import type { ProviderStorageRuntime, StorageAreaFacade, StorageChromeApi } from './settings-storage';
 import { callStorage, isRecord } from './storage-call';
 
 type StoreArea = Exclude<SettingArea, 'page' | 'tab'>;
@@ -34,6 +35,10 @@ interface SettingsStoreOptions {
   // Values a preload already read, by area, so the store does not read them
   // again.
   initial?: Partial<Record<StoreArea, StorageItems>>;
+  // Follow storage only while something subscribes; values nobody follows
+  // are read again by the next include(). For a store shared by modules
+  // that come and go, so the last one leaving releases the listener.
+  listenWhileSubscribed?: boolean;
 }
 
 type SettingsListener = (setting: Setting<unknown>) => void;
@@ -42,6 +47,9 @@ interface SettingsStore {
   // Settles once every area has been read; get() answers defaults before.
   readonly ready: Promise<void>;
   get<T>(setting: Setting<T>): T;
+  // Adds settings to the store, read from storage the first time; settles
+  // once they are read.
+  include(settings: Setting<unknown> | readonly Setting<unknown>[]): Promise<void>;
   // What storage holds, before the schema reads it; undefined when nothing is
   // stored.
   getStored(setting: Setting<unknown>): unknown;
@@ -101,13 +109,13 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
   const chromeApi = options.chromeApi || null;
   const storage = chromeApi && chromeApi.storage ? chromeApi.storage : null;
   const windowObj = options.windowObj || null;
-  const settings = Array.from(new Set(options.settings));
-  const byKey = new Map(settings.map((setting) => [setting.key, setting]));
+  const byKey = new Map<string, Setting<unknown>>();
+  const loading = new Map<string, Promise<void>>();
   const stored = new Map<string, unknown>();
   const parsed = new Map<string, unknown>();
   const listeners = new Map<string, Set<SettingsListener>>();
-  const usesPreferences = settings.some((setting) => setting.area === 'preferences');
-  const provider = usesPreferences ? createProviderStorageRuntime(chromeApi) : null;
+  let provider: ProviderStorageRuntime | null = null;
+  let listening = false;
   let destroyed = false;
 
   function areaFor(area: StoreArea): StorageAreaLike | StorageAreaFacade | null {
@@ -192,18 +200,30 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
     return groups;
   }
 
-  settings.filter((setting) => !isStoreArea(setting.area)).forEach((setting) => {
-    accept(setting, readWebStorage(webStorageFor(setting), setting.key));
-  });
-  const ready = Promise.all(Array.from(groupByArea(settings), ([area, list]) => readArea(area, list)))
-    .then(() => undefined);
+  function include(list: Setting<unknown> | readonly Setting<unknown>[]): Promise<void> {
+    const targets = toList(list);
+    const added = targets.filter((setting) => !loading.has(setting.key));
+    added.forEach((setting) => byKey.set(setting.key, setting));
+    if (!provider && added.some((setting) => setting.area === 'preferences')) {
+      provider = createProviderStorageRuntime(chromeApi);
+    }
+    if (added.length && !options.listenWhileSubscribed) listen();
+    added.filter((setting) => !isStoreArea(setting.area)).forEach((setting) => {
+      accept(setting, readWebStorage(webStorageFor(setting), setting.key));
+    });
+    const read = Promise.all(Array.from(groupByArea(added), ([area, group]) => readArea(area, group)))
+      .then(() => undefined);
+    added.forEach((setting) => loading.set(setting.key, read));
+    return Promise.all(targets.map((setting) => loading.get(setting.key))).then(() => undefined);
+  }
 
   function onStorageChanged(changes: StorageChanges, areaName: string): void {
     if (destroyed || !changes) return;
     if (provider && areaName === 'local' && Object.hasOwn(changes, localPrimary.key)) {
       // The user moved settings between browser sync and this device: every
       // preference now reads from the other area.
-      void provider.ready.then(() => readArea('preferences', settings.filter((setting) => setting.area === 'preferences')));
+      const preferences = Array.from(byKey.values()).filter((setting) => setting.area === 'preferences');
+      void provider.ready.then(() => readArea('preferences', preferences));
     }
     Object.keys(changes).forEach((key) => {
       const setting = byKey.get(key);
@@ -212,10 +232,24 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
     });
   }
 
-  const onChanged = storage && storage.onChanged;
-  if (onChanged && typeof onChanged.addListener === 'function') {
+  const onChanged = storage ? storage.onChanged : null;
+  // A store kept only for families has nothing to follow.
+  function listen(): void {
+    if (listening || !onChanged || typeof onChanged.addListener !== 'function') return;
+    listening = true;
     onChanged.addListener(onStorageChanged);
   }
+
+  function stopListeningWhenUnfollowed(): void {
+    if (!options.listenWhileSubscribed || !listening) return;
+    if (Array.from(listeners.values()).some((set) => set.size > 0)) return;
+    listening = false;
+    if (onChanged && typeof onChanged.removeListener === 'function') onChanged.removeListener(onStorageChanged);
+    // Nothing follows storage now, so what is kept may go stale.
+    loading.clear();
+  }
+
+  const ready = include(options.settings);
 
   function get<T>(setting: Setting<T>): T {
     return setting.parse(stored.get(setting.key));
@@ -273,10 +307,14 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
       set.add(listener);
       listeners.set(setting.key, set);
     });
-    return () => targets.forEach((setting) => {
-      const set = listeners.get(setting.key);
-      if (set) set.delete(listener);
-    });
+    listen();
+    return () => {
+      targets.forEach((setting) => {
+        const set = listeners.get(setting.key);
+        if (set) set.delete(listener);
+      });
+      stopListeningWhenUnfollowed();
+    };
   }
 
   function familyArea(family: SettingFamily<unknown>): StorageAreaLike | StorageAreaFacade | null {
@@ -320,6 +358,7 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
   return Object.freeze({
     ready,
     get,
+    include,
     getStored: (setting: Setting<unknown>) => stored.get(setting.key),
     set: <T>(setting: Setting<T>, value: T) => setMany([[setting, value]]),
     setMany,
@@ -338,6 +377,22 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
   });
 }
 
+// The store every module of one runtime context shares, so the context
+// follows storage through one listener; each module includes the settings it
+// uses.
+const contextStores = new WeakMap<object, SettingsStore>();
+
+function getContextSettingsStore(chromeApi: SettingsStoreChromeApi, windowObj?: SettingsStoreWindow | null): SettingsStore {
+  let store = contextStores.get(chromeApi);
+  if (!store) {
+    // Page and tab values live in the extension page's own window.
+    const pageWindow = windowObj || (typeof window !== 'undefined' ? window : null);
+    store = createSettingsStore({ chromeApi, settings: [], windowObj: pageWindow, listenWhileSubscribed: true });
+    contextStores.set(chromeApi, store);
+  }
+  return store;
+}
+
 // A value worked out from a setting's stored value (rules from a list, an
 // index from a map), worked out again only when the stored value changes.
 function deriveFromSetting<T>(store: SettingsStore, setting: Setting<unknown>, derive: (stored: unknown) => T): () => T {
@@ -351,5 +406,5 @@ function deriveFromSetting<T>(store: SettingsStore, setting: Setting<unknown>, d
   };
 }
 
-export { createSettingsStore, deriveFromSetting };
+export { createSettingsStore, deriveFromSetting, getContextSettingsStore };
 export type { SettingsListener, SettingsStore, SettingsStoreChromeApi, SettingsStoreOptions, SettingsStoreWindow, WebStorageLike };

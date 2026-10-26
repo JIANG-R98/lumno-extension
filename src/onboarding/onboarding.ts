@@ -4,7 +4,7 @@ import type { BackgroundRequest, OkReply, OverlayTab } from '../domain/messages'
 import * as NAVIGATION_DISPOSITION from '../domain/navigation-disposition';
 import type { Disposition } from '../domain/navigation-disposition';
 import * as LumnoSettings from '../domain/settings/locale';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
+import { getContextSettingsStore } from '../platform/settings-store';
 import { isElementNode } from '../shared/dom-guards';
 import { getHtmlElement, queryHtmlElement } from '../shared/dom-lookup';
 import * as LumnoTooltip from '../shared/ui/tooltip';
@@ -570,23 +570,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       callback(MODEL.normalizeLocale(getBrowserLocale()));
       return;
     }
-    const storageArea = LumnoSettingsStorage.createProviderStorageRuntime(chromeApi).area;
-    if (!storageArea || typeof storageArea.get !== 'function') {
-      callback(MODEL.normalizeLocale(getBrowserLocale()));
-      return;
-    }
-    try {
-      storageArea.get([LumnoSettings.language.key], (result) => {
-        const runtimeError = chromeApi.runtime ? chromeApi.runtime.lastError : null;
-        const stored = !runtimeError && result ? result[LumnoSettings.language.key] : '';
-        const locale = typeof stored === 'string' && stored && stored !== 'system'
-          ? stored
-          : getBrowserLocale();
-        callback(MODEL.normalizeLocale(locale));
-      });
-    } catch (e) {
-      callback(MODEL.normalizeLocale(getBrowserLocale()));
-    }
+    const settingsStore = getContextSettingsStore(chromeApi);
+    void settingsStore.include(LumnoSettings.language).then(() => {
+      const stored = settingsStore.get(LumnoSettings.language);
+      callback(MODEL.normalizeLocale(stored !== 'system' ? stored : getBrowserLocale()));
+    });
   }
 
   function getBrowserLocale(): string {
