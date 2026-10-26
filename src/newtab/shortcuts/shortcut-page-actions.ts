@@ -3,7 +3,7 @@
 // icon plate color picker, and the copy the dialog and menus show.
 import { isElementNode, isHtmlElement } from '../../shared/dom-guards';
 import { queryHtmlElements } from '../../shared/dom-lookup';
-import type { SelectMenuOption } from '../../shared/react/select-menu';
+import type { SelectMenuOption } from '../../shared/react/select-menu/menu-options';
 import type { BookmarkEditTarget } from '../bookmarks/bookmark-actions';
 import type * as BookmarksStore from '../bookmarks/bookmarks-store';
 import type { BookmarksRuntime } from '../bookmarks/bookmarks-runtime';

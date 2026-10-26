@@ -11,7 +11,7 @@ import {
 } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
-import { SelectMenu } from './select-menu';
+import { SelectMenu } from '../../shared/react/select-menu';
 import {
   DEFAULT_CLOSE_DELAY_MS,
   DEFAULT_ID_PREFIX,

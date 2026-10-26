@@ -1,6 +1,6 @@
 // The bookmark section's display mode menu: the view modes and, in top bar
 // mode, the bar's layout and background choices.
-import type { SelectMenuOption } from '../../shared/react/select-menu';
+import type { SelectMenuOption } from '../../shared/react/select-menu/menu-options';
 import type { Translate } from '../newtab-types';
 import type { RemixIconName } from '../../shared/ui/remix-icon';
 

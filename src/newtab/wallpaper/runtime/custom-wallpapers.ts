@@ -4,7 +4,7 @@
 import type { StorageAreaLike } from '../../../domain/storage-port';
 import { isNode } from '../../../shared/dom-guards';
 import type { ToastTask } from '../../../shared/ui/toast-screen';
-import type { SelectMenuOption } from '../../../shared/react/select-menu';
+import type { SelectMenuOption } from '../../../shared/react/select-menu/menu-options';
 import type { WallpaperRecordInput } from '../../../shared/wallpaper-records';
 import type { WallpaperImageCache } from '../../../shared/wallpaper-caches';
 import * as LumnoNewtabDismissStack from '../../dismiss-stack';

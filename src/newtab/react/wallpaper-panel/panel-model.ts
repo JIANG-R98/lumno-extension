@@ -7,7 +7,7 @@ import type {
   SegmentState,
   SliderState
 } from './panel-primitives';
-import type { SelectMenuOption } from '../select-menu';
+import type { SelectMenuOption } from '../../../shared/react/select-menu/menu-options';
 import type { SvgNode } from '../../../shared/ui/svg-tree';
 
 // The appearance panel renders from two inputs: a static model (asset URLs, icons,

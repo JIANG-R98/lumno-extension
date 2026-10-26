@@ -4,7 +4,7 @@ import { type ReactNode, useState } from 'react';
 import { ref, type TooltipActions, tooltipHandlers } from './panel-primitives';
 import type { SelectMenuControls } from '../../../shared/react/select-menu';
 import { type PanelSelectModel, type CuratedMixState, CURATED_MIX_SELECT_ID } from './panel-model';
-import { SelectMenu } from '../select-menu';
+import { SelectMenu } from '../../../shared/react/select-menu';
 import { RemixIcon } from '../../../shared/react/remix-icon';
 
 // Leading chevron + title form one disclosure hot area for every panel section.

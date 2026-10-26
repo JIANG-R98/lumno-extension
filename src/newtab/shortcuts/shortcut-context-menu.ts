@@ -1,7 +1,7 @@
 // Right-click menu for shortcut tiles and the add-shortcut tile.
 import type { Disposition } from '../../domain/navigation-disposition';
 import { isElementNode, isNode } from '../../shared/dom-guards';
-import type { SelectMenuOption } from '../../shared/react/select-menu';
+import type { SelectMenuOption } from '../../shared/react/select-menu/menu-options';
 import type { BookmarkEditTarget } from '../bookmarks/bookmark-actions';
 import * as LumnoNewtabDismissStack from '../dismiss-stack';
 import type { ContextMenuParts, SelectMenuController, Translate } from '../newtab-types';

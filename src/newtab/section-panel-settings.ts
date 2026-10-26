@@ -3,7 +3,7 @@
 // the sections' own menus, so the model reads through getters, its actions write through
 // setters, and it is drawn again whenever one of those keys changes elsewhere.
 import type { StorageChanges } from '../domain/storage-port';
-import type { SelectMenuOption } from '../shared/react/select-menu';
+import type { SelectMenuOption } from '../shared/react/select-menu/menu-options';
 import type { BookmarkViewMode } from './bookmarks/bookmark-display-settings';
 import type { Translate } from './newtab-types';
 import type { WallpaperViewController } from './react/wallpaper-view';

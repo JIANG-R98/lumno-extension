@@ -1,20 +1,9 @@
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
-import {
-  SelectMenu,
-  toCssLength,
-  type SelectMenuConfig,
-  type SelectMenuControls,
-  type SelectMenuOption
-} from '../../shared/react/select-menu';
+import { SelectMenu, type SelectMenuConfig, type SelectMenuControls } from '../../shared/react/select-menu';
+import { toCssLength, type SelectMenuOption } from '../../shared/react/select-menu/menu-options';
 import { queryHtmlElement, queryHtmlElements, queryHtmlTag } from '../../shared/dom-lookup';
 import { lazyInstance } from '../../shared/lazy-instance';
-
-export {
-  SelectMenu,
-  type SelectMenuConfig,
-  type SelectMenuOption
-} from '../../shared/react/select-menu';
 
 export interface SelectMenuControllerOptions {
   documentObj?: Document;

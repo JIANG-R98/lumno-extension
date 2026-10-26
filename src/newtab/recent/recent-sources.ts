@@ -1,7 +1,7 @@
 // Where recent sites come from: open tabs, top sites and history, read
 // once at startup and then on demand, merged into the recent list; plus the
 // change history dialog and the recent context menu's copy.
-import type { SelectMenuOption } from '../../shared/react/select-menu';
+import type { SelectMenuOption } from '../../shared/react/select-menu/menu-options';
 import type { ContextMenuParts, SelectMenuController, ShowToast, Translate } from '../newtab-types';
 import type {
   RecentHistoryDialogController,

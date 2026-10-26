@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 're
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { HexColorPicker } from 'react-colorful';
-import { SelectMenu } from './select-menu';
+import { SelectMenu } from '../../shared/react/select-menu';
 import { DEFAULT_CLOSE_DELAY_MS, getEnterOffset } from './shortcut-dialog-helpers';
 import { DEFAULT_FOLDER_COLOR, MAX_SAVED_FOLDER_COLORS, normalizeSavedFolderColors, parseFolderColor, folderColorToChannels, withFolderColorChannel } from './folder-color';
 import { queryHtmlElement, queryHtmlElements, queryHtmlTags } from '../../shared/dom-lookup';

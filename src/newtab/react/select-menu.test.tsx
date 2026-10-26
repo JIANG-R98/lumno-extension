@@ -1,12 +1,8 @@
 import { act } from 'react';
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  createSelectMenuApi,
-  createSelectMenuController,
-  type SelectMenuConfig,
-  type SelectMenuInstance
-} from './select-menu';
+import { createSelectMenuApi, createSelectMenuController, type SelectMenuInstance } from './select-menu';
+import type { SelectMenuConfig } from '../../shared/react/select-menu';
 import { getElements } from '../../../tests/react/dom';
 import { queryHtmlElement } from '../../shared/dom-lookup';
 

@@ -1,7 +1,7 @@
 // Right-click menu for bookmark cards and folders.
 import type { Disposition } from '../../domain/navigation-disposition';
 import { isElementNode } from '../../shared/dom-guards';
-import type { SelectMenuOption } from '../../shared/react/select-menu';
+import type { SelectMenuOption } from '../../shared/react/select-menu/menu-options';
 import * as LumnoNewtabDismissStack from '../dismiss-stack';
 import type { ContextMenuParts, SelectMenuController, Translate } from '../newtab-types';
 import type { BookmarksViewController } from '../react/bookmarks';

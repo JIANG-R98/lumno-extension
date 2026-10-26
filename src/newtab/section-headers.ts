@@ -1,7 +1,7 @@
 // Headings, mode menus, pager labels and breadcrumbs for the bookmark and
 // recent-site sections.
 import type { StorageAreaLike } from '../domain/storage-port';
-import type { SelectMenuOption } from '../shared/react/select-menu';
+import type { SelectMenuOption } from '../shared/react/select-menu/menu-options';
 import type { BookmarkCascadeActions } from './bookmarks/bookmark-cascade-actions';
 import type { BookmarkCascadeRuntime } from './bookmarks/bookmark-cascade-menu';
 import type { BookmarkDisplaySettings, BookmarkViewMode } from './bookmarks/bookmark-display-settings';

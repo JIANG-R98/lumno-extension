@@ -8,7 +8,7 @@ import * as LumnoMessaging from '../../platform/messaging';
 import * as LumnoRecentSitesStorage from '../../platform/recent-sites-storage';
 import type { RecentSiteStorageOptions } from '../../platform/recent-sites-storage';
 import { isElementNode } from '../../shared/dom-guards';
-import type { SelectMenuOption } from '../../shared/react/select-menu';
+import type { SelectMenuOption } from '../../shared/react/select-menu/menu-options';
 import * as LumnoNewtabDismissStack from '../dismiss-stack';
 import type { ContextMenuParts, SelectMenuController, ShowToast, Translate } from '../newtab-types';
 import type { RecentHistoryItem } from '../react/recent-history-dialog';

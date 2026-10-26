@@ -5,7 +5,8 @@
 // from the same model.
 import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
 import { RemixIcon } from '../../shared/react/remix-icon';
-import { SelectMenu, type SelectMenuControls, type SelectMenuOption } from '../../shared/react/select-menu';
+import { SelectMenu, type SelectMenuControls } from '../../shared/react/select-menu';
+import type { SelectMenuOption } from '../../shared/react/select-menu/menu-options';
 import type { RenderStore } from '../../shared/react/render-store';
 
 export interface BookmarkCrumb {

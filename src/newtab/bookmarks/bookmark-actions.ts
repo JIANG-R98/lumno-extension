@@ -3,7 +3,7 @@
 // the bookmark context menu's copy.
 import type { BookmarkTabGroupReply } from '../../domain/messages';
 import * as LumnoMessaging from '../../platform/messaging';
-import type { SelectMenuOption } from '../../shared/react/select-menu';
+import type { SelectMenuOption } from '../../shared/react/select-menu/menu-options';
 import type { ContextMenuParts, FormatMessage, SelectMenuController, ShowToast, Translate } from '../newtab-types';
 import type { ShortcutDialogOpenOptions } from '../react/shortcut-dialog';
 import type { BookmarkCascadeRuntime } from './bookmark-cascade-menu';
