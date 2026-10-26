@@ -4,7 +4,6 @@
 import type { PageRequest } from '../../domain/messages';
 import * as LumnoMessaging from '../../platform/messaging';
 import { canOpenOverlayOnUrl, getResolvedTabUrl } from '../browser-urls-service';
-import * as RECENT_TAB_SWITCHER from '../recent-tab-switcher';
 import {
   isTabSwitcherExtensionPageMessageTarget,
   postTabSwitcherMessageToExtensionPage
@@ -17,6 +16,7 @@ import {
   tabSwitcherHostTabIdByWindowId
 } from './host';
 import type { SwitcherTab, TabSwitcherShortcuts } from './types';
+import * as SwitcherShortcutKeys from '../recent-tabs/shortcut-keys';
 
 function prepareShortcutKeyObserver(tab: SwitcherTab | null | undefined): Promise<boolean> {
   const tabId = tab ? tab.id : undefined;
@@ -168,7 +168,7 @@ function handleTabSwitcherShortcutModifierReleased(
   getConfiguredTabSwitcherShortcuts(({ forward, reverse }) => {
     const shortcut = [forward, reverse].filter(Boolean).join(' / ');
     const expectedKeys = Array.from(new Set([forward, reverse]
-      .flatMap((item) => (item ? RECENT_TAB_SWITCHER.getShortcutReleaseEventKeys(item) : []))));
+      .flatMap((item) => (item ? SwitcherShortcutKeys.getShortcutReleaseEventKeys(item) : []))));
     if (!expectedKeys.includes(key)) {
       recordTabSwitcherShortcutDebug('release-rejected', {
         windowId,
@@ -204,7 +204,7 @@ function armTabSwitcherShortcutReleaseObservers(
   if (typeof windowId !== 'number') {
     return;
   }
-  const keys = RECENT_TAB_SWITCHER.getShortcutReleaseEventKeys(shortcut);
+  const keys = SwitcherShortcutKeys.getShortcutReleaseEventKeys(shortcut);
   if (!keys.length) {
     return;
   }

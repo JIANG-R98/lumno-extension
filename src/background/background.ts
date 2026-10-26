@@ -57,7 +57,6 @@ import './shortcut-rules';
 import * as LumnoWebAppearance from './web-appearance';
 import './pip-ownership';
 import '../shared/pip-main-world';
-import './recent-tab-switcher';
 import '../domain/progress-match';
 import '../domain/progress-history';
 import './progress-tracker';

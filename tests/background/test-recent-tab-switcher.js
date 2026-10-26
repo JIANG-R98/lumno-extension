@@ -1,12 +1,13 @@
 const assert = require('assert');
-const fs = require('fs');
 const path = require('path');
 
-const helperPath = path.join(__dirname, '..', '..', 'src', 'background', 'recent-tab-switcher.ts');
-
-assert.ok(fs.existsSync(helperPath), 'recent tab switcher helper should exist');
-
-const switcher = require(helperPath);
+const recentTabs = path.join(__dirname, '..', '..', 'src', 'background', 'recent-tabs');
+const switcher = {
+  ...require(path.join(recentTabs, 'tracker.ts')),
+  ...require(path.join(recentTabs, 'records.ts')),
+  ...require(path.join(recentTabs, 'shortcut-keys.ts')),
+  ...require(path.join(recentTabs, 'focus.ts'))
+};
 
 function testRecentStackKeepsLatestFiveSwitchableTabs() {
   const tracker = switcher.createRecentTabTracker({

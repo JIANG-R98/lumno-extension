@@ -1,6 +1,6 @@
+import type { SwitcherFields } from '../recent-tabs/types';
 // What the recent-tab switcher's background modules share: the tab shape
 // they read, the host element's id and a few helpers.
-import type { SwitcherFields } from '../recent-tab-switcher';
 
 // A tab as the switcher's helpers read it: a browser tab, a tab from the
 // recent list with its thumbnail fields, or a payload item.

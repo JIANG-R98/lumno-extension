@@ -6,7 +6,6 @@ import type { TabSwitcherItem } from '../../domain/messages';
 import { tabSwitcherCurrentWindowOnly, tabSwitcherEnabled } from '../../domain/settings/features';
 import { getResolvedTabUrl } from '../browser-urls-service';
 import { openNewtabFallback, openNewtabFallbackForUrl } from '../newtab-fallback';
-import * as RECENT_TAB_SWITCHER from '../recent-tab-switcher';
 import { recordTabSwitchEvent } from '../tab-switch-stats-service';
 import { areBackgroundSettingsLoaded, logHotkeyDebug, whenBackgroundSettingsReady, workerSettings } from '../worker-context';
 import { buildSwitcherTabFavicon, getSwitcherTabAccentRgb } from './appearance';
@@ -31,6 +30,8 @@ import { ensureTabSwitcherStateLoaded, getSwitcherThumbnailStateForPayload, rece
 import { TAB_SWITCHER_LIMIT, getErrorMessage } from './types';
 import type { SwitchResult, SwitcherTab } from './types';
 import { loadFaviconEnhancedFetchEnabled, loadFaviconRequestBlacklistItems } from '../favicon/request-policy';
+import * as TabFocus from '../recent-tabs/focus';
+import * as SwitcherShortcutKeys from '../recent-tabs/shortcut-keys';
 
 function normalizeSwitcherTabForPayload(tab: SwitcherTab | null | undefined, currentTabId: number | undefined): TabSwitcherItem | null {
   if (!tab || typeof tab.id !== 'number') {
@@ -81,7 +82,7 @@ function focusWindowAndActivateTab(
   callback?: (result: SwitchResult) => void
 ): void {
   const run = (resolvedWindowId: number | null | undefined): void => {
-    RECENT_TAB_SWITCHER.focusWindowAndActivateTab(chrome, {
+    TabFocus.focusWindowAndActivateTab(chrome, {
       tabId,
       windowId: typeof resolvedWindowId === 'number' ? resolvedWindowId : null
     })
@@ -266,7 +267,7 @@ function readSwitcherOpenContext(command: SwitcherCommand): Promise<SwitcherOpen
     recordTabSwitcherShortcutDebug('shortcut-configured', {
       windowId: command.windowId,
       shortcut,
-      releaseKeys: RECENT_TAB_SWITCHER.getShortcutReleaseEventKeys(shortcut)
+      releaseKeys: SwitcherShortcutKeys.getShortcutReleaseEventKeys(shortcut)
     });
     if (tabQuery.error) {
       logHotkeyDebug('tab-switcher-query-failed', { source: command.source || '', error: tabQuery.error });

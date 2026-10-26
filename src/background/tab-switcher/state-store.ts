@@ -3,12 +3,12 @@
 import { getTabSwitcherHeadSignature, getThumbnailPersistSignature, readTabSwitcherThumbnailStatus } from '../../domain/tab-switcher-model';
 import { tabSwitcherThumbnail, tabSwitcherThumbnails } from '../../domain/settings/features';
 import { getResolvedTabUrl, isBrowserInternalUrl } from '../browser-urls-service';
-import * as RECENT_TAB_SWITCHER from '../recent-tab-switcher';
-import type { ThumbnailState, TrackerState } from '../recent-tab-switcher';
 import { warnBackgroundFailure, workerSettings } from '../worker-context';
 import { isFirefoxPrivilegedPageUrl } from './appearance';
 import { TAB_SWITCHER_LIMIT, isRecord } from './types';
 import type { SwitcherTab } from './types';
+import * as RecentTabTracker from '../recent-tabs/tracker';
+import type { ThumbnailState, TrackerState } from '../recent-tabs/types';
 
 function shouldTrackSwitcherTab(tab: SwitcherTab | null | undefined): boolean {
   if (!tab || typeof tab.id !== 'number' || typeof tab.windowId !== 'number' || tab.incognito === true) {
@@ -49,7 +49,7 @@ let tabSwitcherStatePersistTimer: ReturnType<typeof setTimeout> | null = null;
 
 let tabSwitcherStateDirtyBeforeLoad = false;
 
-const recentTabTracker = RECENT_TAB_SWITCHER.createRecentTabTracker({
+const recentTabTracker = RecentTabTracker.createRecentTabTracker({
   limit: TAB_SWITCHER_LIMIT,
   thumbnailLimit: TAB_SWITCHER_THUMBNAIL_LIMIT,
   thumbnailTtlMs: TAB_SWITCHER_THUMBNAIL_TTL_MS,
