@@ -1,11 +1,11 @@
 // Filtering the mode menu: the search text and Han readings of each item,
 // matching a query, and the full label of a tile that cuts it short.
-import type { CursorTooltipController } from '../../ui/cursor-tooltip-model';
-import { isElementTextTruncated } from '../../react/text-overflow';
-import type { ModeMenuEntry, ModeMenuItem, ModeMenuMatch, ModeMenuRange, ModeMenuSearchIndex } from './types';
-import * as SearchTextIndex from '../../../domain/search/utils/text-index';
-import * as SearchTextNormalize from '../../../domain/search/utils/text-normalize';
-import * as TextMatching from '../../../domain/search/utils/text-matching';
+import type { CursorTooltipController } from '../../../ui/cursor-tooltip-model';
+import { isElementTextTruncated } from '../../../react/text-overflow';
+import type { ModeMenuEntry, ModeMenuItem, ModeMenuMatch, ModeMenuRange, ModeMenuSearchIndex } from '../types';
+import * as SearchTextIndex from '../../../../domain/search/utils/text-index';
+import * as SearchTextNormalize from '../../../../domain/search/utils/text-normalize';
+import * as TextMatching from '../../../../domain/search/utils/text-matching';
 
 // pinyin-pro, once loaded.
 interface PinyinApi {

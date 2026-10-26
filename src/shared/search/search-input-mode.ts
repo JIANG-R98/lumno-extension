@@ -1,47 +1,48 @@
 // The search box's mode: the tag at the input's start that says where a
 // search goes (a site, an AI, bookmarks, history), its Tab hint, and the
-// mode menu (the search scope panel). The parts live in search/input-mode/;
-// this file builds them around one shared state.
+// mode menu (the search scope panel). The parts live in search/input-mode/
+// and are made in dependency order: the menu, the placeholder that reads
+// it, the tag that opens it, then the Tab and Backspace keys that read
+// both. Each part owns its state; a later part follows an earlier one
+// through the events it emits.
 import * as LumnoCursorTooltip from '../ui/cursor-tooltip';
-import type { ModeTagHandlers } from '../react/search/mode-tag';
-import { EMPTY_MODE_TAG } from './input-mode/mode-tag-model';
-import type { ModeTagModel, TabHintModel } from './input-mode/mode-tag-model';
-import { getDocument, getWindow, readControllerOptions, setStyle } from './input-mode/controller-setup';
-import type { ControllerOptions } from './input-mode/controller-setup';
-import type {
-  InputModeConfig,
-  InputModeParts,
-  InputModeState,
-  InputModeWindow,
-  ModeMenuTooltipController
-} from './input-mode/controller-types';
-import { wireInputModeModules } from './input-mode/controller-wiring';
-import type { InputModeEnv, InputModeModules } from './input-mode/controller-wiring';
-import { createPinyinRuntime, requestPinyinRuntime } from './input-mode/pinyin-runtime';
+import { createEventBus } from '../state/events';
+import type { EventBus } from '../state/events';
+import type { InputModeConfig, InputModeParts } from './input-mode/controller-types';
+import { ModeTabKeys } from './input-mode/keys';
+import type { ModeKeyEvent } from './input-mode/keys';
+import { ModeMenu } from './input-mode/menu';
+import type { ModeMenuEvents, ModeMenuFocusTarget } from './input-mode/menu';
+import type { FitModeMenuOptions } from './input-mode/menu/surface';
+import { readControllerOptions } from './input-mode/mode-options';
+import type { ControllerOptions, ModeMenuTooltipController } from './input-mode/mode-options';
+import { getDocument, getWindow, setStyle } from './input-mode/page';
+import type { InputModeWindow } from './input-mode/page';
+import { InputPlaceholder } from './input-mode/placeholder';
+import { ModeTag } from './input-mode/tag';
+import type { ModeTagEvents, ModeTagOptions } from './input-mode/tag';
+import type { InputModeProvider, InputModeTheme } from './input-mode/types';
 
-function createInputModeState(): InputModeState {
-  return {
-    destroyed: false,
-    modeMenuOpen: false,
-    modeMenuRevealed: false,
-    modeMenuBusy: false,
-    modeMenuSearchActive: false,
-    modeMenuHasQuery: false,
-    modeMenuFocusId: '',
-    modeMenuPending: false,
-    modeMenuRequestId: 0,
-    modeMenuFilterQuery: '',
-    modeMenuEntries: [],
-    modeTagActive: false,
-    modeMenuPinyinRuntimeReady: undefined,
-    inputModePrefixAnimation: null,
-    inputModePrefixAnimationFrame: null,
-    inputModePrefixAnimationTimer: 0,
-    inputModePrefixCurrentAnimation: null,
-    inputModePrefixPendingText: '',
-    modeTag: EMPTY_MODE_TAG,
-    tabHint: { visible: false, label: '', title: '' }
-  };
+// The surface's cursor tooltip for cut-off menu labels, or one the menu
+// makes and owns.
+interface ModeMenuTooltip {
+  controller: ModeMenuTooltipController | null;
+  owned: ReturnType<typeof LumnoCursorTooltip.createController> | null;
+}
+
+// The mode's parts, as the controller holds them.
+interface InputMode {
+  parts: InputModeParts;
+  doc: Document;
+  win: InputModeWindow;
+  menu: ModeMenu;
+  placeholder: InputPlaceholder;
+  tag: ModeTag;
+  keys: ModeTabKeys;
+  menuEvents: EventBus<ModeMenuEvents>;
+  tagEvents: EventBus<ModeTagEvents>;
+  tooltip: ModeMenuTooltip;
+  lifecycle: { destroyed: boolean };
 }
 
 // Where the tag sits and how it moves are the controller's: these start
@@ -55,14 +56,7 @@ function placeModeTag(parts: InputModeParts, options: ControllerOptions): void {
   setStyle(parts.modeTabHint, 'right', `${options.rightAnchorOffset}px`);
 }
 
-// The surface's cursor tooltip for cut-off menu labels, or one the menu
-// makes and owns.
-function createModeMenuTooltip(
-  config: InputModeConfig,
-  parts: InputModeParts,
-  doc: Document,
-  win: InputModeWindow
-): { controller: ModeMenuTooltipController | null; owned: ReturnType<typeof LumnoCursorTooltip.createController> | null } {
+function createModeMenuTooltip(config: InputModeConfig, parts: InputModeParts, doc: Document, win: InputModeWindow): ModeMenuTooltip {
   const provided = config.modeMenuCursorTooltipController || config.modeMenuTooltipController || null;
   if (provided) {
     return { controller: provided, owned: null };
@@ -79,78 +73,99 @@ function createModeMenuTooltip(
   return { controller: owned, owned };
 }
 
-function syncInputPlaceholder(env: InputModeEnv): void {
-  const { input, inputModeState, formatMessage } = env;
-  if (inputModeState.modeMenuOpen) {
-    input.placeholder = formatMessage('search_scope_panel_placeholder', 'Search specific site content…');
-    return;
-  }
-  input.placeholder = env.parts.modePrefix.style.getPropertyValue('display') !== 'none'
-    ? formatMessage(
-      'search_scope_active_placeholder',
-      'Search within this scope; press Tab again to open the scope panel…'
-    )
-    : env.getDefaultPlaceholder();
-}
-
-function createModeTagHandlers(env: InputModeEnv, late: () => InputModeModules): ModeTagHandlers {
-  return {
-    onClick: (event) => late().handlePrefixClick(event),
-    onKeyDown: (event) => late().handlePrefixKeydown(event),
-    onIconError: () => late().handleModeTagIconError(),
-    attachIconData(image, iconUrl, iconHost) {
-      if (env.attachFaviconData) {
-        env.attachFaviconData(image, iconUrl, iconHost);
-      }
-    }
-  };
-}
-
-function createInputModeEnv(
-  config: InputModeConfig,
-  parts: InputModeParts,
-  doc: Document,
-  late: () => InputModeModules
-): InputModeEnv {
-  const win = getWindow(config);
-  const options = readControllerOptions(config, parts.input);
-  const inputModeState = createInputModeState();
-  const pinyinRuntime = createPinyinRuntime(config.pinyinApi);
+function createModeMenu(config: InputModeConfig, parts: InputModeParts, doc: Document, win: InputModeWindow, options: ControllerOptions) {
   const tooltip = createModeMenuTooltip(config, parts, doc, win);
-  let modeTagHandlers: ModeTagHandlers | null = null;
-  const env: InputModeEnv = {
-    ...options,
+  const events = createEventBus<ModeMenuEvents>();
+  const menu = new ModeMenu({
     config,
-    parts,
+    parts: {
+      menu: parts.modeMenu,
+      content: parts.modeMenuContent,
+      footer: parts.modeMenuFooter,
+      view: parts.modeMenuView,
+      container: parts.container,
+      input: parts.input,
+      tag: parts.modePrefix
+    },
     doc,
     win,
-    input: parts.input,
-    container: parts.container,
-    inputModeState,
-    modeMenuCursorTooltipController: tooltip.controller,
-    ownedModeMenuCursorTooltipController: tooltip.owned,
-    updateModeTag(patch: Partial<ModeTagModel>) {
-      inputModeState.modeTag = { ...inputModeState.modeTag, ...patch };
-      modeTagHandlers = modeTagHandlers || createModeTagHandlers(env, late);
-      parts.modeTagView.render(inputModeState.modeTag, modeTagHandlers);
-    },
-    updateTabHint(patch: Partial<TabHintModel>) {
-      inputModeState.tabHint = { ...inputModeState.tabHint, ...patch };
-      parts.tabHintView.render(inputModeState.tabHint);
-    },
-    syncInputPlaceholder: () => syncInputPlaceholder(env),
-    requestModeMenuPinyinRuntime: () => requestPinyinRuntime(
-      pinyinRuntime,
-      inputModeState,
-      () => late().refreshModeMenuSearchIndexes()
-    ),
-    getModeMenuPinyinApi: () => pinyinRuntime.api
-  };
-  return env;
+    options,
+    tooltip: tooltip.controller
+  }, events);
+  return { menu, events, tooltip };
 }
 
-// The input's own listeners: typing and keys reset the pending double Tab
-// and tag removal, and a press elsewhere closes the menu.
+function createInputMode(config: InputModeConfig, parts: InputModeParts, doc: Document): InputMode {
+  const win = getWindow(config);
+  const options = readControllerOptions(config, parts.input);
+  placeModeTag(parts, options);
+  const lifecycle = { destroyed: false };
+  const { menu, events: menuEvents, tooltip } = createModeMenu(config, parts, doc, win, options);
+  const placeholder = new InputPlaceholder({ input: parts.input, tag: parts.modePrefix, isMenuOpen: () => menu.isOpen() }, options);
+  const tagEvents = createEventBus<ModeTagEvents>();
+  const tag = new ModeTag({ config, parts, win, options }, menu, placeholder, tagEvents);
+  const keys = new ModeTabKeys(win, config, {
+    isDestroyed: () => lifecycle.destroyed,
+    inputValue: () => String(parts.input.value || ''),
+    isMenuOpen: () => menu.isOpen(),
+    isMenuOpenOrPending: () => menu.isOpenOrPending(),
+    hasModeTag: () => tag.hasMode()
+  });
+  return { parts, doc, win, menu, placeholder, tag, keys, menuEvents, tagEvents, tooltip, lifecycle };
+}
+
+function resetPendingKeys(keys: ModeTabKeys): void {
+  keys.resetDoubleTab();
+  keys.resetRemovalConfirmation();
+}
+
+// What follows from the menu and the tag: the placeholder, the container's
+// open state, the tag's open look, and letting go of pending keys.
+function connectInputMode(mode: InputMode): void {
+  const { menu, tag, keys, placeholder, parts } = mode;
+  mode.menuEvents.on('opening', () => {
+    placeholder.sync();
+    resetPendingKeys(keys);
+  });
+  mode.menuEvents.on('openChanged', ({ open }) => {
+    if (!open) {
+      resetPendingKeys(keys);
+    }
+    placeholder.sync();
+    if (open) {
+      parts.container.setAttribute('data-mode-menu-open', 'true');
+    } else {
+      parts.container.removeAttribute('data-mode-menu-open');
+    }
+    tag.setMenuOpen(open);
+  });
+  mode.menuEvents.on('focusToggled', () => {
+    keys.resetDoubleTab();
+  });
+  mode.tagEvents.on('modeChanged', ({ preserveDoubleTab }) => {
+    if (!preserveDoubleTab) {
+      keys.resetDoubleTab();
+    }
+    keys.resetRemovalConfirmation();
+  });
+  placeholder.sync();
+  menu.redraw();
+}
+
+function updateLayout(mode: InputMode): void {
+  if (mode.lifecycle.destroyed) {
+    return;
+  }
+  mode.tag.layout.updateRightPadding();
+  mode.tag.layout.updatePrefixLayout();
+  mode.menu.surface.alignFooter();
+  if (mode.menu.isOpen()) {
+    mode.menu.surface.notifyLayoutChange();
+  }
+}
+
+// The input's own listeners: typing and keys let go of a pending double
+// Tab and tag removal, and a press elsewhere closes the menu.
 interface ModeListeners {
   input(): void;
   keydown(event: KeyboardEvent): void;
@@ -161,100 +176,139 @@ interface ModeListeners {
   resizeObserver: ResizeObserver | null;
 }
 
-function createModeListeners(env: InputModeEnv, m: InputModeModules): ModeListeners {
+function createModeListeners(mode: InputMode): ModeListeners {
+  const { menu, keys } = mode;
   return {
     input() {
-      env.requestModeMenuPinyinRuntime();
-      m.resetModeMenuDoubleTab();
-      m.resetModeTagRemovalConfirmation();
-      m.syncModeMenuQueryLift();
+      menu.requestPinyin();
+      resetPendingKeys(keys);
+      menu.syncQueryLift();
     },
     keydown(event: KeyboardEvent) {
       if (event && event.key !== 'Tab') {
-        m.resetModeMenuDoubleTab();
+        keys.resetDoubleTab();
       }
-      if (event && event.key !== 'Backspace' &&
-          !event.metaKey && !event.ctrlKey && !event.altKey) {
-        m.resetModeTagRemovalConfirmation();
+      if (event && event.key !== 'Backspace' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        keys.resetRemovalConfirmation();
       }
     },
-    blur: () => m.resetModeMenuDoubleTab(),
-    focus: () => m.setModeMenuSearchActive(false),
-    resize: () => m.updateLayout(),
-    pointerRoot: env.container.getRootNode(),
+    blur: () => keys.resetDoubleTab(),
+    focus: () => menu.focus.setSearchActive(false),
+    resize: () => updateLayout(mode),
+    pointerRoot: mode.parts.container.getRootNode(),
     resizeObserver: null
   };
 }
 
-function observeModeLayout(env: InputModeEnv, m: InputModeModules): ResizeObserver | null {
-  const win = env.win;
+function observeModeLayout(mode: InputMode, listeners: ModeListeners): ResizeObserver | null {
+  const win = mode.win;
   if (!win || typeof win.ResizeObserver !== 'function') {
     return null;
   }
-  const observer = new win.ResizeObserver(m.updateLayout);
-  observer.observe(env.parts.modePrefix);
-  observer.observe(env.parts.modeTabHint);
-  observer.observe(env.parts.modeMenuContent);
-  const badgeElement = m.getModeBadgeElement();
+  const observer = new win.ResizeObserver(listeners.resize);
+  observer.observe(mode.parts.modePrefix);
+  observer.observe(mode.parts.modeTabHint);
+  observer.observe(mode.parts.modeMenuContent);
+  const badgeElement = mode.tag.layout.badgeElement();
   if (badgeElement) {
     observer.observe(badgeElement);
   }
   return observer;
 }
 
-function addModeListeners(env: InputModeEnv, m: InputModeModules, listeners: ModeListeners): void {
-  const { input, container, doc } = env;
-  input.addEventListener('input', listeners.input);
-  input.addEventListener('keydown', listeners.keydown);
-  input.addEventListener('blur', listeners.blur);
-  input.addEventListener('focus', listeners.focus);
-  if (typeof env.config.onModeMenuHistory === 'function') {
-    container.addEventListener('keydown', m.handleModeMenuHistoryKeydown, true);
+function addModeListeners(mode: InputMode, config: InputModeConfig, listeners: ModeListeners): void {
+  const { parts, doc, menu } = mode;
+  parts.input.addEventListener('input', listeners.input);
+  parts.input.addEventListener('keydown', listeners.keydown);
+  parts.input.addEventListener('blur', listeners.blur);
+  parts.input.addEventListener('focus', listeners.focus);
+  if (typeof config.onModeMenuHistory === 'function') {
+    parts.container.addEventListener('keydown', menu.handleHistoryKeydown, true);
   }
-  doc.addEventListener('pointerdown', m.handleDocumentPointerDown, true);
+  doc.addEventListener('pointerdown', menu.handleDocumentPointerDown, true);
   if (listeners.pointerRoot !== doc) {
-    listeners.pointerRoot.addEventListener('pointerdown', m.handleDocumentPointerDown, true);
+    listeners.pointerRoot.addEventListener('pointerdown', menu.handleDocumentPointerDown, true);
   }
-  listeners.resizeObserver = observeModeLayout(env, m);
-  env.win.addEventListener('resize', listeners.resize);
+  listeners.resizeObserver = observeModeLayout(mode, listeners);
+  mode.win.addEventListener('resize', listeners.resize);
 }
 
-function removeModeListeners(env: InputModeEnv, m: InputModeModules, listeners: ModeListeners): void {
-  const { input, doc } = env;
-  env.container.removeEventListener('keydown', m.handleModeMenuHistoryKeydown, true);
-  env.win.removeEventListener('resize', listeners.resize);
+function removeModeListeners(mode: InputMode, listeners: ModeListeners): void {
+  const { parts, doc, menu } = mode;
+  parts.container.removeEventListener('keydown', menu.handleHistoryKeydown, true);
+  mode.win.removeEventListener('resize', listeners.resize);
   if (listeners.resizeObserver) {
     listeners.resizeObserver.disconnect();
     listeners.resizeObserver = null;
   }
-  input.removeEventListener('input', listeners.input);
-  input.removeEventListener('keydown', listeners.keydown);
-  input.removeEventListener('blur', listeners.blur);
-  input.removeEventListener('focus', listeners.focus);
-  doc.removeEventListener('pointerdown', m.handleDocumentPointerDown, true);
+  parts.input.removeEventListener('input', listeners.input);
+  parts.input.removeEventListener('keydown', listeners.keydown);
+  parts.input.removeEventListener('blur', listeners.blur);
+  parts.input.removeEventListener('focus', listeners.focus);
+  doc.removeEventListener('pointerdown', menu.handleDocumentPointerDown, true);
   if (listeners.pointerRoot !== doc) {
-    listeners.pointerRoot.removeEventListener('pointerdown', m.handleDocumentPointerDown, true);
+    listeners.pointerRoot.removeEventListener('pointerdown', menu.handleDocumentPointerDown, true);
   }
 }
 
-function destroyInputMode(env: InputModeEnv, m: InputModeModules, listeners: ModeListeners): void {
-  const state = env.inputModeState;
-  state.destroyed = true;
-  state.modeMenuRequestId += 1;
-  state.modeMenuPending = false;
-  m.cancelModeMenuRevealFrame();
-  m.resetModeMenuDoubleTab();
-  m.resetModeTagRemovalConfirmation();
-  m.cancelInputModePrefixAnimation();
-  m.cancelInputModePrefixIconAnimation();
-  removeModeListeners(env, m, listeners);
-  m.clearProviderPrefix();
-  m.setTabHintVisible(false);
-  if (env.ownedModeMenuCursorTooltipController) {
-    env.ownedModeMenuCursorTooltipController.destroy();
-  } else if (env.modeMenuCursorTooltipController) {
-    env.modeMenuCursorTooltipController.hide();
+function destroyInputMode(mode: InputMode, listeners: ModeListeners): void {
+  const { menu, tag, keys, tooltip } = mode;
+  mode.lifecycle.destroyed = true;
+  menu.destroy();
+  resetPendingKeys(keys);
+  tag.cancelMotion();
+  removeModeListeners(mode, listeners);
+  tag.clear();
+  tag.setTabHintVisible(false);
+  if (tooltip.owned) {
+    tooltip.owned.destroy();
+  } else if (tooltip.controller) {
+    tooltip.controller.hide();
   }
+  mode.menuEvents.clear();
+  mode.tagEvents.clear();
+}
+
+// The controller's API for the surface: the tag, the menu, the keys, and
+// the layout they share.
+function createInputModeApi(mode: InputMode, listeners: ModeListeners) {
+  const { parts, menu, tag, keys } = mode;
+  return Object.freeze({
+    prefixElement: parts.modePrefix,
+    tabHintElement: parts.modeTabHint,
+    menuElement: parts.modeMenu,
+    setProviderPrefix: (provider: InputModeProvider | null | undefined, theme?: InputModeTheme | null, tagOptions?: ModeTagOptions | null) => (
+      tag.setProvider(provider, theme, tagOptions)
+    ),
+    setPrefixText: (prefixText: string, theme?: InputModeTheme | null, tagOptions?: ModeTagOptions | null) => (
+      tag.setText(prefixText, theme, tagOptions)
+    ),
+    clearProviderPrefix: () => tag.clear(),
+    setTabHintVisible: (visible: boolean, provider?: InputModeProvider | null) => tag.setTabHintVisible(visible, provider),
+    hasActiveModeTag: () => tag.isActive(),
+    openModeMenu: (focusTarget?: ModeMenuFocusTarget) => menu.open(focusTarget),
+    refreshModeMenu: (preferredModeId?: string) => menu.refresh(preferredModeId),
+    closeModeMenu: (restoreFocus?: boolean) => menu.close(restoreFocus),
+    isModeMenuVisible: () => menu.surface.isVisible(),
+    getModeMenuFilterQuery: () => menu.state.filterQuery,
+    refreshModeMenuLanguage: () => {
+      menu.redraw();
+      mode.placeholder.sync();
+    },
+    fitModeMenuWithinViewport: (options?: FitModeMenuOptions | null) => menu.fitWithinViewport(options),
+    setModeMenuResultOffset: (offset: unknown) => menu.surface.setResultOffset(offset),
+    handleModeMenuTabFocusToggle: (event: ModeKeyEvent | null | undefined) => menu.toggleFocus(event),
+    handleModeMenuKeyEvent: (event: KeyboardEvent) => menu.handleKeyEvent(event),
+    shouldHandleModeMenuKeyEvent: (event: { target?: EventTarget | null } | null | undefined) => menu.focus.ownsKeyEvent(event),
+    resetModeMenuDoubleTab: () => keys.resetDoubleTab(),
+    resetModeTagRemovalConfirmation: () => keys.resetRemovalConfirmation(),
+    shouldOpenModeMenuOnDoubleTab: (event: ModeKeyEvent | null | undefined) => keys.shouldOpenMenuOnDoubleTab(event),
+    shouldCompleteModeMenuDoubleTab: (event: ModeKeyEvent | null | undefined) => keys.shouldCompleteMenuDoubleTab(event),
+    shouldOpenModeMenuForActiveModeOnTab: (event: ModeKeyEvent | null | undefined) => keys.shouldOpenMenuForActiveModeOnTab(event),
+    shouldRemoveModeTagOnBackspace: (event?: ModeKeyEvent | null) => keys.shouldRemoveTagOnBackspace(event),
+    updateLayout: () => updateLayout(mode),
+    destroy: () => destroyInputMode(mode, listeners)
+  });
 }
 
 function createInputModeController(parts: InputModeParts, options?: InputModeConfig | null) {
@@ -263,49 +317,11 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
   if (!doc || !parts || !parts.container || !parts.input) {
     throw new Error('createInputModeController requires input parts');
   }
-  let modules: InputModeModules | null = null;
-  const env = createInputModeEnv(config, parts, doc, () => {
-    if (!modules) {
-      throw new Error('The input mode modules are still being built.');
-    }
-    return modules;
-  });
-  placeModeTag(parts, env);
-  const m = wireInputModeModules(env);
-  modules = m;
-  const listeners = createModeListeners(env, m);
-  addModeListeners(env, m, listeners);
-  m.renderModeMenuView();
-
-  return Object.freeze({
-    prefixElement: parts.modePrefix,
-    tabHintElement: parts.modeTabHint,
-    setProviderPrefix: m.setProviderPrefix,
-    setPrefixText: m.setPrefixText,
-    clearProviderPrefix: m.clearProviderPrefix,
-    closeModeMenu: m.closeModeMenu,
-    fitModeMenuWithinViewport: m.fitModeMenuWithinViewport,
-    isModeMenuVisible: m.isModeMenuVisible,
-    menuElement: parts.modeMenu,
-    getModeMenuFilterQuery: () => env.inputModeState.modeMenuFilterQuery,
-    hasActiveModeTag: () => env.inputModeState.modeTagActive,
-    openModeMenu: m.openModeMenu,
-    refreshModeMenuLanguage: m.refreshModeMenuLanguage,
-    refreshModeMenu: m.refreshModeMenu,
-    resetModeMenuDoubleTab: m.resetModeMenuDoubleTab,
-    resetModeTagRemovalConfirmation: m.resetModeTagRemovalConfirmation,
-    setModeMenuResultOffset: m.setModeMenuResultOffset,
-    setTabHintVisible: m.setTabHintVisible,
-    shouldCompleteModeMenuDoubleTab: m.shouldCompleteModeMenuDoubleTab,
-    handleModeMenuTabFocusToggle: m.handleModeMenuTabFocusToggle,
-    handleModeMenuKeyEvent: m.handleModeMenuKeyEvent,
-    shouldHandleModeMenuKeyEvent: m.shouldHandleModeMenuKeyEvent,
-    shouldOpenModeMenuForActiveModeOnTab: m.shouldOpenModeMenuForActiveModeOnTab,
-    shouldOpenModeMenuOnDoubleTab: m.shouldOpenModeMenuOnDoubleTab,
-    shouldRemoveModeTagOnBackspace: m.shouldRemoveModeTagOnBackspace,
-    updateLayout: m.updateLayout,
-    destroy: () => destroyInputMode(env, m, listeners)
-  });
+  const mode = createInputMode(config, parts, doc);
+  connectInputMode(mode);
+  const listeners = createModeListeners(mode);
+  addModeListeners(mode, config, listeners);
+  return createInputModeApi(mode, listeners);
 }
 
 type InputModeController = ReturnType<typeof createInputModeController>;

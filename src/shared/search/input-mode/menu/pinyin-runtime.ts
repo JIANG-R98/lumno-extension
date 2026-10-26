@@ -1,9 +1,8 @@
 // The traditional-to-simplified table and pinyin-pro the mode menu's
 // filter reads, loaded on first use.
-import { getHanVariantPairs, installHanVariantPairs, readHanVariantModule } from '../../../domain/search/han-variants';
-import { readPinyinApi } from '../../../domain/search/pinyin-api';
-import type { PinyinApi } from '../../../domain/search/pinyin-api';
-import type { InputModeState } from './controller-types';
+import { getHanVariantPairs, installHanVariantPairs, readHanVariantModule } from '../../../../domain/search/han-variants';
+import { readPinyinApi } from '../../../../domain/search/pinyin-api';
+import type { PinyinApi } from '../../../../domain/search/pinyin-api';
 
 // The traditional-to-simplified table and pinyin-pro, each built as its own
 // module so pages load them only when the scope panel's filter first needs them.
@@ -54,14 +53,16 @@ const MODE_MENU_PINYIN_FALLBACKS: Readonly<Record<string, string>> = Object.free
 // pinyin-pro once a menu on this page has loaded it; later menus start with it.
 let loadedPinyinApi: PinyinApi | null = null;
 
-// One menu's pinyin: what it filters with, and whether it asked to load.
+// One menu's pinyin: what it filters with, whether it asked to load, and
+// the load it waits for when it opens.
 interface PinyinRuntime {
   api: PinyinApi | null;
   requested: boolean;
+  ready: PromiseLike<unknown> | null | undefined;
 }
 
 function createPinyinRuntime(configured: PinyinApi | null | undefined): PinyinRuntime {
-  return { api: configured !== undefined ? configured : loadedPinyinApi, requested: false };
+  return { api: configured !== undefined ? configured : loadedPinyinApi, requested: false, ready: undefined };
 }
 
 function readExtensionUrl(path: string): string {
@@ -122,15 +123,11 @@ function ensureHanVariants(): Promise<boolean | null> | null {
 // opening. onLoaded runs once pinyin-pro or the variant table arrives, so
 // cards indexed from the fallback table pick up every reading and the
 // simplified forms.
-function requestPinyinRuntime(
-  runtime: PinyinRuntime,
-  inputModeState: Pick<InputModeState, 'modeMenuPinyinRuntimeReady'>,
-  onLoaded: () => void
-): PromiseLike<unknown> | null | undefined {
+function requestPinyinRuntime(runtime: PinyinRuntime, onLoaded: () => void): PromiseLike<unknown> | null | undefined {
   if (!runtime.requested) {
     runtime.requested = true;
     const runtimeReady = ensurePinyinApi(runtime);
-    inputModeState.modeMenuPinyinRuntimeReady = runtimeReady;
+    runtime.ready = runtimeReady;
     Promise.all([runtimeReady, ensureHanVariants()])
       .then(([api, variantsLoaded]) => {
         if (api || variantsLoaded) {
@@ -138,7 +135,7 @@ function requestPinyinRuntime(
         }
       });
   }
-  return inputModeState.modeMenuPinyinRuntimeReady;
+  return runtime.ready;
 }
 
 export type { PinyinRuntime };

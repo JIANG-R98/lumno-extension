@@ -4,7 +4,7 @@
 import type { ShortcutRule } from '../../domain/messages';
 import type { LocalSearchScope, SearchSourceType, SiteSearchProvider, SuggestionLike } from '../../domain/search/types';
 import type { InputModeController } from '../../shared/search/search-input-mode';
-import type { PrefixTextOptions } from '../../shared/search/input-mode/prefix-text';
+import type { ModeTagOptions } from '../../shared/search/input-mode/tag';
 import type { InputModeProvider, InputModeTheme } from '../../shared/search/input-mode/types';
 import type { FormatMessage, LocalSearchScopeTrigger, SiteSearchTrigger, Translate } from './types';
 import type { RemixIconName } from '../../shared/ui/remix-icon';
@@ -92,7 +92,7 @@ function createSearchModes(deps: SearchModesDeps) {
   function setSiteSearchPrefix(
     provider: InputModeProvider | null,
     theme: InputModeTheme | null,
-    options?: PrefixTextOptions | null
+    options?: ModeTagOptions | null
   ): void {
     if (overlayState.inputModeController) {
       overlayState.inputModeController.setProviderPrefix(provider, theme, options);

@@ -1,4 +1,5 @@
-// The mode controller's defaults and the page helpers its modules share.
+// The surface's options for the search box's mode with their defaults
+// filled in, and the page helpers the mode's parts share.
 import type {
   AttachFaviconData,
   FormatMessage,
@@ -8,70 +9,65 @@ import type {
   ResolveProviderIconUrl,
   Rgb
 } from './types';
-import type { InputModeConfig, InputModeWindow } from './controller-types';
+import type { NavigatorLike } from '../../../domain/shortcut-display';
+import type { PinyinApi } from '../../../domain/search/pinyin-api';
+import type { CursorTooltipController } from '../../ui/cursor-tooltip-model';
+import { hasOwn, readNumber, setStyle } from './page';
+import type { InputModeWindow } from './page';
 import { DEFAULT_ACCENT_RGB, defaultParseCssColor, defaultRgbToCss } from './theme-colors';
 
 const DEFAULT_PREFIX_GAP = 8;
-const DEFAULT_MODE_MENU_DOUBLE_TAB_DURATION = 700;
-const DEFAULT_MODE_TAG_REMOVAL_CONFIRMATION_DURATION = 2200;
-const DEFAULT_MODE_MENU_VIEWPORT_BOTTOM_INSET = 24;
-const DEFAULT_MODE_MENU_SCROLL_TOP_CONTEXT = 44;
-const DEFAULT_MODE_MENU_SCROLL_BOTTOM_CONTEXT = 16;
-const DEFAULT_PREFIX_ICON_POP_DURATION = 180;
-const DEFAULT_PREFIX_ICON_POP_EASING = 'linear';
-const DEFAULT_PREFIX_ICON_EXIT_DURATION = 100;
-const DEFAULT_PREFIX_ICON_EXIT_EASING = 'cubic-bezier(0.4, 0, 1, 1)';
-const DEFAULT_PREFIX_RESIZE_DURATION = 140;
-const DEFAULT_PREFIX_RESIZE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
-const DEFAULT_PREFIX_ENTER_DURATION = 180;
-const DEFAULT_PREFIX_ENTER_EASING = 'cubic-bezier(0.16, 1, 0.3, 1)';
 const DEFAULT_PREFIX_TRANSITION = 'background-color 140ms ease, color 140ms ease';
 
-function getDocument(options: InputModeConfig): Document | null {
-  return options.document || globalThis.document || null;
+type ModeMenuTooltipController = Pick<CursorTooltipController, 'bind' | 'hide'>;
+
+// The surface's options for the controller itself.
+interface InputModeOwnConfig {
+  document?: Document | null;
+  windowObj?: InputModeWindow | null;
+  surface?: 'newtab' | 'overlay';
+  setInputStyle?: (target: HTMLElement, property: string, value: string) => void;
+  formatMessage?: FormatMessage;
+  getThemeForMode?: (theme: InputModeTheme) => InputModeTheme | null | undefined;
+  getSiteSearchPrefixText?: (provider: InputModeProvider | null | undefined) => string;
+  getSiteSearchDisplayName?: (provider: InputModeProvider | null | undefined) => string;
+  getProviderIcon?: (provider: InputModeProvider | null | undefined) => string;
+  resolveProviderIconUrl?: ResolveProviderIconUrl;
+  getProviderThemeHost?: (provider: InputModeProvider | null | undefined) => string;
+  getThemeForProvider?: GetThemeForProvider;
+  isAiSiteSearchProvider?: (provider: InputModeProvider | null | undefined) => boolean;
+  attachFaviconData?: AttachFaviconData;
+  isDarkMode?: () => unknown;
+  parseCssColor?: (color: unknown) => Rgb | null;
+  rgbToCss?: (rgb: Rgb) => string;
+  defaultTheme?: InputModeTheme;
+  defaultAccentColor?: Rgb;
+  // The gap between the tag and the typed text.
+  prefixGap?: number;
+  // Space kept at the input's right, and where its right-side hints sit.
+  rightReserveBase?: number;
+  rightAnchorOffset?: number;
+  getExtraRightInset?: () => unknown;
+  baseInputPaddingLeft?: number;
+  prefixTransition?: string;
+  defaultPlaceholder?: string;
+  getDefaultPlaceholder?: () => string;
+  defaultCaretColor?: string;
+  // pinyin-pro for the menu's filter when the surface already has it; null
+  // starts without it. By default the menu imports build/pinyin.js on first use.
+  pinyinApi?: PinyinApi | null;
+  // The surface's cursor tooltip for cut-off menu labels; the menu makes its own without one.
+  modeMenuCursorTooltipController?: ModeMenuTooltipController | null;
+  modeMenuTooltipController?: ModeMenuTooltipController | null;
+  navigatorLike?: NavigatorLike | null;
 }
 
-function getWindow(options: InputModeConfig): InputModeWindow {
-  return options.windowObj || globalThis.window;
-}
-
-function setStyle(
-  element: ElementCSSInlineStyle | null | undefined,
-  property: string,
-  value: string
-): void {
-  if (!element || !element.style) {
-    return;
-  }
-  element.style.setProperty(property, value);
-}
-
-function hasInlineStyle(element: Element): element is Element & ElementCSSInlineStyle {
-  return 'style' in element;
-}
-
-function isElementVisible(element: Element | null | undefined): boolean {
-  if (!element) {
-    return false;
-  }
-  const visibleState = element.getAttribute('data-visible');
-  if (visibleState === 'true') {
-    return true;
-  }
-  if (visibleState === 'false') {
-    return false;
-  }
-  return hasInlineStyle(element) && element.style.getPropertyValue('display') !== 'none';
-}
-
-function hasOwn(object: object, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(object, key);
-}
-
-function readNumber(value: unknown): number | null {
-  const parsed = Number(value);
-  return value !== undefined && value !== null && Number.isFinite(parsed) ? parsed : null;
-}
+// What the options are read from: the controller's own, and whether the
+// surface lets the menu's groups and tiles move.
+type ControllerOptionsSource = InputModeOwnConfig & {
+  onModeMenuReorder?: unknown;
+  onModeMenuGroupMove?: unknown;
+};
 
 type ProviderReader<T> = (provider: InputModeProvider | null | undefined) => T;
 
@@ -121,7 +117,7 @@ function readProviderName(provider: InputModeProvider | null | undefined): strin
   return provider && (provider.name || provider.key) ? (provider.name || provider.key) : '';
 }
 
-function readTextOptions(config: InputModeConfig, input: HTMLInputElement) {
+function readTextOptions(config: ControllerOptionsSource, input: HTMLInputElement) {
   const getSiteSearchPrefixText = functionOr(config.getSiteSearchPrefixText, readProviderName);
   const defaultPlaceholder = hasOwn(config, 'defaultPlaceholder')
     ? String(config.defaultPlaceholder ?? '')
@@ -137,7 +133,7 @@ function readTextOptions(config: InputModeConfig, input: HTMLInputElement) {
   };
 }
 
-function readProviderOptions(config: InputModeConfig) {
+function readProviderOptions(config: ControllerOptionsSource) {
   return {
     getProviderIcon: functionOr<ProviderReader<string>>(config.getProviderIcon, () => ''),
     resolveProviderIconUrl: functionOr<ResolveProviderIconUrl>(config.resolveProviderIconUrl, (_provider, iconUrl) => iconUrl),
@@ -148,7 +144,7 @@ function readProviderOptions(config: InputModeConfig) {
   };
 }
 
-function readThemeOptions(config: InputModeConfig) {
+function readThemeOptions(config: ControllerOptionsSource) {
   return {
     getThemeForMode: functionOr(config.getThemeForMode, (theme: InputModeTheme) => theme || config.defaultTheme || {}),
     isDarkMode: functionOr(config.isDarkMode, () => false),
@@ -160,7 +156,7 @@ function readThemeOptions(config: InputModeConfig) {
   };
 }
 
-function readExtraRightInset(config: InputModeConfig): (() => number) | null {
+function readExtraRightInset(config: ControllerOptionsSource): (() => number) | null {
   const configured = config.getExtraRightInset;
   if (typeof configured !== 'function') {
     return null;
@@ -171,7 +167,7 @@ function readExtraRightInset(config: InputModeConfig): (() => number) | null {
   };
 }
 
-function readLayoutOptions(config: InputModeConfig) {
+function readLayoutOptions(config: ControllerOptionsSource) {
   const surface = config.surface === 'overlay' ? 'overlay' : 'newtab';
   return {
     surface,
@@ -187,7 +183,7 @@ function readLayoutOptions(config: InputModeConfig) {
   } as const;
 }
 
-function readControllerOptions(config: InputModeConfig, input: HTMLInputElement): ControllerOptions {
+function readControllerOptions(config: ControllerOptionsSource, input: HTMLInputElement): ControllerOptions {
   return {
     ...readLayoutOptions(config),
     ...readTextOptions(config, input),
@@ -196,29 +192,5 @@ function readControllerOptions(config: InputModeConfig, input: HTMLInputElement)
   };
 }
 
-export type { ControllerOptions };
-export {
-  readControllerOptions,
-  DEFAULT_MODE_MENU_DOUBLE_TAB_DURATION,
-  DEFAULT_MODE_MENU_SCROLL_BOTTOM_CONTEXT,
-  DEFAULT_MODE_MENU_SCROLL_TOP_CONTEXT,
-  DEFAULT_MODE_MENU_VIEWPORT_BOTTOM_INSET,
-  DEFAULT_MODE_TAG_REMOVAL_CONFIRMATION_DURATION,
-  DEFAULT_PREFIX_ENTER_DURATION,
-  DEFAULT_PREFIX_ENTER_EASING,
-  DEFAULT_PREFIX_GAP,
-  DEFAULT_PREFIX_ICON_EXIT_DURATION,
-  DEFAULT_PREFIX_ICON_EXIT_EASING,
-  DEFAULT_PREFIX_ICON_POP_DURATION,
-  DEFAULT_PREFIX_ICON_POP_EASING,
-  DEFAULT_PREFIX_RESIZE_DURATION,
-  DEFAULT_PREFIX_RESIZE_EASING,
-  DEFAULT_PREFIX_TRANSITION,
-  getDocument,
-  getWindow,
-  hasInlineStyle,
-  hasOwn,
-  isElementVisible,
-  readNumber,
-  setStyle
-};
+export type { ControllerOptions, InputModeOwnConfig, ModeMenuTooltipController };
+export { readControllerOptions };
