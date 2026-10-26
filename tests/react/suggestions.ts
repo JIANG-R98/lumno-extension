@@ -1,0 +1,143 @@
+// What the suggestion list tests share: the options a surface passes, a
+// view made from them, and rendering suggestions into it.
+import { act } from 'react';
+import * as suggestionActionModel from '../../src/domain/search/suggestion-action-model';
+import {
+  createSuggestionsView,
+  type Suggestion,
+  type SuggestionElement,
+  type SuggestionsViewController,
+  type SuggestionsViewOptions
+} from '../../src/shared/react/search/suggestions';
+
+let views: SuggestionsViewController[] = [];
+export const sharedSuggestionActionModel: NonNullable<SuggestionsViewOptions['actionModel']> =
+  suggestionActionModel;
+
+export function createOptions(
+  overrides: Partial<SuggestionsViewOptions> = {}
+): {
+  options: SuggestionsViewOptions;
+  container: HTMLElement;
+  items: SuggestionElement[];
+  getSelectedIndex: () => number;
+} {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const items: SuggestionElement[] = [];
+  let selectedIndex = -1;
+  const defaultTheme = {
+    buttonText: '#111',
+    buttonBg: '#eee',
+    buttonBorder: '#ddd',
+    tagBg: '#def',
+    tagText: '#123',
+    tagBorder: '#abc'
+  };
+  const actionModel = {
+    ...sharedSuggestionActionModel,
+    ...(overrides.actionModel || {})
+  };
+  const options: SuggestionsViewOptions = {
+    document,
+    container,
+    items,
+    t: (_key, fallback) => fallback,
+    formatMessage: (_key, fallback, values = {}) =>
+      Object.entries(values).reduce(
+        (text, [key, value]) =>
+          text.replace(`{${key}}`, value),
+        fallback
+      ),
+    sanitizeDisplayText: (value) => String(value || ''),
+    getHostFromUrl: (url) => {
+      try {
+        return new URL(url).hostname;
+      } catch {
+        return '';
+      }
+    },
+    getThemeHostForSuggestion: (suggestion) => {
+      try {
+        return new URL(String(suggestion.url || '')).hostname;
+      } catch {
+        return '';
+      }
+    },
+    getImmediateThemeForSuggestion: () => defaultTheme,
+    getThemeForSuggestion: () =>
+      new Promise(() => {
+        // Keep async theme resolution pending for deterministic tests.
+      }),
+    getThemeForMode: (theme) => theme || defaultTheme,
+    getHoverColors: () => ({
+      bg: '#eee',
+      border: '#ddd'
+    }),
+    getNeutralHoverActionColors: () => ({
+      bg: '#f5f5f5',
+      border: '#ddd',
+      text: '#555'
+    }),
+    applyThemeVariables: (item) => {
+      item.dataset.themed = 'true';
+    },
+    applyMarkVariables: (item) => {
+      item.dataset.markThemed = 'true';
+    },
+    getPageFaviconRenderCandidates: (_url, favicon) => ({
+      primaryUrl: favicon
+    }),
+    attachFaviconWithFallbacks: (image, _url, _host, candidates) => {
+      image.src =
+        candidates.primaryUrl ||
+        'data:image/png;base64,dGVzdA==';
+    },
+    onSetSelectedIndex: (index) => {
+      selectedIndex = index;
+    },
+    getSelectedIndex: () => selectedIndex,
+    ...overrides,
+    actionModel
+  };
+  return {
+    options,
+    container,
+    items,
+    getSelectedIndex: () => selectedIndex
+  };
+}
+
+export function createView(
+  overrides: Partial<SuggestionsViewOptions> = {}
+) {
+  const result = createOptions(overrides);
+  const view = createSuggestionsView(result.options);
+  views.push(view);
+  return { view, ...result };
+}
+
+export function render(
+  view: SuggestionsViewController,
+  suggestions: Suggestion[],
+  extra: Record<string, unknown> = {}
+): void {
+  act(() => {
+    view.render({
+      suggestions,
+      query: 'exa',
+      primaryHighlightIndex: 0,
+      primaryHighlightReason: 'default',
+      ...extra
+    });
+  });
+}
+
+// Destroys the views a test made and empties the page.
+export function destroyViews(): void {
+  act(() => {
+    views.forEach((view) => view.destroy());
+  });
+  views = [];
+  document.body.textContent = '';
+}
