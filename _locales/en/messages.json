@@ -372,19 +372,10 @@
     "message": "Show all open tabs by default when Lumno opens on a webpage"
   },
   "settings_overlay_open_in_current_tab_title": {
-    "message": "Where results open when Lumno opens on a webpage"
+    "message": "Open results in the current tab when Lumno opens on a webpage"
   },
   "settings_overlay_open_in_current_tab_desc": {
-    "message": "Hold Option/Alt to use the other one"
-  },
-  "settings_overlay_open_in_new_tab": {
-    "message": "In a new tab"
-  },
-  "settings_overlay_open_in_current_tab": {
-    "message": "In the current tab"
-  },
-  "settings_overlay_result_open_title": {
-    "message": "Open results"
+    "message": "When off, results open in the current tab. Hold Option/Alt to use the other one."
   },
   "settings_overlay_open_tabs_default_title": {
     "message": "Show all open tabs by default"
@@ -3462,7 +3453,7 @@
     "message": "Open in a new tab when clicked"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "When checked, clicking opens a new tab and switches to it; unchecked items open in the current tab."
+    "message": "Unchecked items open in the current tab. Hold Option/Alt to use the other one."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Search results"

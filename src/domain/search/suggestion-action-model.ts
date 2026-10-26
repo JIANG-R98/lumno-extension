@@ -1,6 +1,7 @@
 // What each suggestion row offers to do: its action tags, its visit button,
 // how modifier keys change the action, and whether a new slate needs a full
 // render or only new highlights.
+import { getDefaultTabDisposition } from '../navigation-disposition';
 import type { SiteSearchProvider, SuggestionLike } from './types';
 
 type SearchAction = 'switch' | 'search' | 'open' | 'openNewTab' | 'openBackgroundTab' | 'go';
@@ -185,18 +186,13 @@ function shouldOpenSwitchActionInNewTab(
   return action === 'switch';
 }
 
-// Option/Alt flips the default tab and wins over Command/Ctrl, which
-// otherwise opens the result in the background.
 function getSearchResultOpenDisposition(options?: OpenModifiers | null): OpenDisposition {
   const config = options || {};
-  const defaultDisposition: OpenDisposition = config.currentTabByDefault ? 'currentTab' : 'newTab';
-  if (config.openInCurrentTab) {
-    return defaultDisposition === 'currentTab' ? 'newTab' : 'currentTab';
-  }
-  if (config.openInBackgroundTab) {
-    return 'backgroundTab';
-  }
-  return defaultDisposition;
+  return getDefaultTabDisposition({
+    currentTabByDefault: config.currentTabByDefault,
+    openInOtherTab: config.openInCurrentTab,
+    openInBackgroundTab: config.openInBackgroundTab
+  });
 }
 
 function createSearchActionModel(options?: SearchActionModelOptions | null): SearchActionModel {

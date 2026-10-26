@@ -1,7 +1,7 @@
 // Opening URLs, bookmarks, shortcuts and searches from the New Tab with the
 // right tab disposition.
 import type * as NavigationDisposition from '../domain/navigation-disposition';
-import type { Disposition, OpenEvent } from '../domain/navigation-disposition';
+import type { DefaultTabOpen, Disposition, OpenEvent } from '../domain/navigation-disposition';
 import type { NewtabOpenInNewTab, NewtabOpenInNewTabSurface } from '../domain/settings';
 import type { ShortcutItem, VisibleShortcutItem } from '../domain/shortcuts-store';
 import * as LumnoMessaging from '../platform/messaging';
@@ -11,6 +11,9 @@ import type { ShowToast, Translate } from './newtab-types';
 
 // A shortcut as the page opens it: a site, or a bookmark folder.
 type OpenableShortcut = ShortcutItem | VisibleShortcutItem;
+
+// The keys a surface's click or Enter was made with.
+type SurfaceOpenKeys = Pick<DefaultTabOpen, 'openInBackgroundTab' | 'openInOtherTab'>;
 
 // A suggestion whose choice counts toward its future ranking.
 interface SelectableSuggestion {
@@ -29,7 +32,8 @@ interface PageNavigationState {
 }
 
 interface PageNavigationDeps {
-  NAVIGATION_DISPOSITION: Pick<typeof NavigationDisposition, 'isMiddleClick' | 'isBackgroundOpenEvent' | 'getDisposition'>;
+  NAVIGATION_DISPOSITION: Pick<typeof NavigationDisposition,
+    'isMiddleClick' | 'isBackgroundOpenEvent' | 'getDisposition' | 'getDefaultTabDisposition'>;
   getShortcutTileById(id: string): HTMLElement | null;
   bookmarksRuntime: Pick<BookmarksRuntime, 'ensureReady' | 'getNode'>;
   getShortcutFolderId(shortcut: OpenableShortcut): string;
@@ -122,13 +126,14 @@ function createPageNavigation(deps: PageNavigationDeps) {
   }
 
   // A plain click opens in the current tab unless the surface's "open in a new
-  // tab" setting is on; a background-open click wins either way.
-  function getSurfaceOpenDisposition(surface: string | undefined, openInBackgroundTab: unknown): Disposition {
-    if (openInBackgroundTab) {
-      return 'backgroundTab';
-    }
+  // tab" setting is on; Option/Alt opens in the other one, and a
+  // background-open click goes to the background.
+  function getSurfaceOpenDisposition(surface: string | undefined, keys: SurfaceOpenKeys): Disposition {
     const prefs = pageState.newtabOpenInNewTab;
-    return prefs && isOpenInNewTabSurface(surface) && prefs[surface] === true ? 'newTab' : 'currentTab';
+    return NAVIGATION_DISPOSITION.getDefaultTabDisposition({
+      ...keys,
+      currentTabByDefault: !(prefs && isOpenInNewTabSurface(surface) && prefs[surface] === true)
+    });
   }
 
   function isOpenInNewTabSurface(surface: string | undefined): surface is NewtabOpenInNewTabSurface {
@@ -139,13 +144,13 @@ function createPageNavigation(deps: PageNavigationDeps) {
   // navigating away or staying behind.
   function openUrlFromNewtabCard(
     url: string | null | undefined,
-    options?: { surface?: string; openInBackgroundTab?: boolean } | null
+    options?: (SurfaceOpenKeys & { surface?: string }) | null
   ): Disposition | '' {
     if (!url) {
       return '';
     }
     const config = options && typeof options === 'object' ? options : {};
-    const disposition = getSurfaceOpenDisposition(config.surface, config.openInBackgroundTab);
+    const disposition = getSurfaceOpenDisposition(config.surface, config);
     if (disposition !== 'currentTab' &&
         chrome && chrome.runtime && typeof chrome.runtime.sendMessage === 'function') {
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
@@ -177,6 +182,7 @@ function createPageNavigation(deps: PageNavigationDeps) {
     }
     openUrlFromNewtabCard(shortcut.url, {
       openInBackgroundTab: isBackgroundOpenEvent(event),
+      openInOtherTab: Boolean(event && event.altKey),
       surface: 'shortcuts'
     });
   }
@@ -289,4 +295,4 @@ function createPageNavigation(deps: PageNavigationDeps) {
 type PageNavigation = ReturnType<typeof createPageNavigation>;
 
 export { createPageNavigation };
-export type { PageNavigation, PageNavigationDeps, PageNavigationState };
+export type { PageNavigation, PageNavigationDeps, PageNavigationState, SurfaceOpenKeys };

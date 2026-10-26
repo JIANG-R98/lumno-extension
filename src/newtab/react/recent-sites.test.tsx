@@ -246,6 +246,7 @@ describe('Recent Sites React island', () => {
     const opened: Array<{
       url: string;
       openInBackgroundTab: boolean;
+      openInOtherTab: boolean;
     }> = [];
     const { view } = createView({
       openUrl: (url, options) => {
@@ -283,13 +284,30 @@ describe('Recent Sites React island', () => {
     expect(opened).toEqual([
       {
         url: 'https://example.com/',
-        openInBackgroundTab: true
+        openInBackgroundTab: true,
+        openInOtherTab: false
       },
       {
         url: 'https://example.com/',
-        openInBackgroundTab: true
+        openInBackgroundTab: true,
+        openInOtherTab: false
       }
     ]);
+  });
+
+  it('passes Option/Alt on so the card opens in the other tab', () => {
+    const opened = vi.fn();
+    const { view } = createView({ openUrl: opened });
+    renderItems(view, [site({ title: 'Example', url: 'https://example.com/' })]);
+    const card = view.getCards()[0];
+    act(() => {
+      card.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, altKey: true }));
+      card.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0, altKey: true }));
+    });
+    expect(opened).toHaveBeenCalledWith('https://example.com/', {
+      openInBackgroundTab: false,
+      openInOtherTab: true
+    });
   });
 
   it('does not open a card for presses meant for its context menu', () => {
@@ -360,7 +378,8 @@ describe('Recent Sites React island', () => {
     platform.mockReturnValue('Win32');
     controlPress();
     expect(opened).toHaveBeenCalledWith('https://example.com/', {
-      openInBackgroundTab: true
+      openInBackgroundTab: true,
+      openInOtherTab: false
     });
     platform.mockRestore();
   });
@@ -396,7 +415,8 @@ describe('Recent Sites React island', () => {
       card.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
     });
     expect(opened).toHaveBeenCalledWith('https://example.com/', {
-      openInBackgroundTab: false
+      openInBackgroundTab: false,
+      openInOtherTab: false
     });
   });
 

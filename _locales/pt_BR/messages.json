@@ -372,19 +372,10 @@
     "message": "Mostrar todas as guias abertas por padrão ao abrir o Lumno em uma página da Web"
   },
   "settings_overlay_open_in_current_tab_title": {
-    "message": "Abrir resultados ao abrir o Lumno em uma página da Web"
+    "message": "Abrir resultados na guia atual ao abrir o Lumno em uma página da Web"
   },
   "settings_overlay_open_in_current_tab_desc": {
-    "message": "Segure Option/Alt para usar a outra opção"
-  },
-  "settings_overlay_open_in_new_tab": {
-    "message": "Em uma nova guia"
-  },
-  "settings_overlay_open_in_current_tab": {
-    "message": "Na guia atual"
-  },
-  "settings_overlay_result_open_title": {
-    "message": "Abrir resultados"
+    "message": "Desativado, abre na guia atual. Segure Option/Alt para usar a outra opção."
   },
   "settings_overlay_open_tabs_default_title": {
     "message": "Mostrar todas as guias abertas por padrão"
@@ -3462,7 +3453,7 @@
     "message": "Abrir em nova guia ao clicar"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Marcado, o clique abre uma nova guia e muda para ela; desmarcado, abre na guia atual."
+    "message": "Desmarcado, abre na guia atual. Segure Option/Alt para usar a outra opção."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Resultados de pesquisa"

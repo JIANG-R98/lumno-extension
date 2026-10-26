@@ -372,19 +372,10 @@
     "message": "Beim Öffnen von Lumno auf einer Webseite standardmäßig alle offenen Tabs anzeigen"
   },
   "settings_overlay_open_in_current_tab_title": {
-    "message": "Ergebnisse öffnen, wenn Lumno auf einer Webseite geöffnet wird"
+    "message": "Beim Öffnen von Lumno auf einer Webseite Ergebnisse im aktuellen Tab öffnen"
   },
   "settings_overlay_open_in_current_tab_desc": {
-    "message": "Mit Option/Alt die andere Variante"
-  },
-  "settings_overlay_open_in_new_tab": {
-    "message": "In neuem Tab"
-  },
-  "settings_overlay_open_in_current_tab": {
-    "message": "Im aktuellen Tab"
-  },
-  "settings_overlay_result_open_title": {
-    "message": "Ergebnisse öffnen"
+    "message": "Aus: im aktuellen Tab. Mit Option/Alt die andere Variante."
   },
   "settings_overlay_open_tabs_default_title": {
     "message": "Standardmäßig alle offenen Tabs anzeigen"
@@ -3462,7 +3453,7 @@
     "message": "Beim Klicken in neuem Tab öffnen"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Ausgewählt: Ein Klick öffnet einen neuen Tab und wechselt dorthin. Sonst öffnet sich der Link im aktuellen Tab."
+    "message": "Nicht ausgewählt: im aktuellen Tab. Mit Option/Alt die andere Variante."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Suchergebnisse"

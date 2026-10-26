@@ -372,19 +372,10 @@
     "message": "在網頁叫出時，預設顯示所有已開啟分頁"
   },
   "settings_overlay_open_in_current_tab_title": {
-    "message": "在網頁叫出時，結果開啟方式"
+    "message": "在網頁叫出時，結果在目前分頁開啟"
   },
   "settings_overlay_open_in_current_tab_desc": {
-    "message": "按住 Option/Alt 可暫時改用另一種"
-  },
-  "settings_overlay_open_in_new_tab": {
-    "message": "在新分頁開啟"
-  },
-  "settings_overlay_open_in_current_tab": {
-    "message": "在目前分頁開啟"
-  },
-  "settings_overlay_result_open_title": {
-    "message": "結果開啟方式"
+    "message": "關閉後在目前分頁開啟，按住 Option/Alt 可暫時改用另一種"
   },
   "settings_overlay_open_tabs_default_title": {
     "message": "預設顯示所有已開啟分頁"
@@ -3462,7 +3453,7 @@
     "message": "點擊後在新分頁開啟"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "勾選後，點擊會開新分頁並切換過去；不勾選則在目前分頁開啟"
+    "message": "不勾選的在目前分頁開啟，按住 Option/Alt 可暫時改用另一種"
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "搜尋結果"

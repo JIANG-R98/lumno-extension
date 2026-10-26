@@ -372,19 +372,10 @@
     "message": "Mostrar todas las pestañas abiertas al abrir Lumno en una página web"
   },
   "settings_overlay_open_in_current_tab_title": {
-    "message": "Abrir resultados al abrir Lumno en una página web"
+    "message": "Abrir los resultados en la pestaña actual al abrir Lumno en una página web"
   },
   "settings_overlay_open_in_current_tab_desc": {
-    "message": "Mantén Option/Alt para usar la otra opción"
-  },
-  "settings_overlay_open_in_new_tab": {
-    "message": "En una pestaña nueva"
-  },
-  "settings_overlay_open_in_current_tab": {
-    "message": "En la pestaña actual"
-  },
-  "settings_overlay_result_open_title": {
-    "message": "Abrir resultados"
+    "message": "Desactivado, se abre en la pestaña actual. Mantén Option/Alt para usar la otra opción."
   },
   "settings_overlay_open_tabs_default_title": {
     "message": "Mostrar todas las pestañas abiertas"
@@ -3462,7 +3453,7 @@
     "message": "Abrir en una pestaña nueva al hacer clic"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Si está marcado, al hacer clic se abre una pestaña nueva y se cambia a ella; si no, se abre en la pestaña actual."
+    "message": "Lo no marcado se abre en la pestaña actual. Mantén Option/Alt para usar la otra opción."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Resultados de búsqueda"

@@ -11,6 +11,7 @@ import type { SearchInputParts } from '../../shared/react/search-input';
 import type { Suggestion, SuggestionElement } from '../../shared/react/search/suggestion-list/types';
 import type { ModeCommands } from '../mode-commands';
 import type { FormatMessage } from '../newtab-types';
+import type { SurfaceOpenKeys } from '../page-navigation';
 import type { SearchModes } from './search-modes';
 import type { ActiveLocalScope, AutocompleteState, InlineSearchState, RenderSuggestions, SlashCommand } from './search-types';
 import type { SiteSearchProviders } from './site-search-providers';
@@ -46,7 +47,7 @@ interface SearchNavigationDeps {
   SUGGESTION_ACTION_MODEL: Pick<typeof SuggestionActionModel, 'shouldOpenSwitchActionInNewTab' | 'getSearchResultOpenDisposition'>;
   isBackgroundOpenEvent(event: OpenEventLike | null | undefined): boolean;
   // Where a plain open from the surface goes, after its new-tab setting.
-  getSurfaceOpenDisposition(surface: 'search', background: boolean): Disposition;
+  getSurfaceOpenDisposition(surface: 'search', keys: SurfaceOpenKeys): Disposition;
   recordSearchSuggestionSelection(suggestion: Suggestion, query: string): void;
   navigateToUrl(url: string): void;
   suggestionItems: SuggestionElement[];
@@ -284,13 +285,13 @@ function createSearchNavigation(deps: SearchNavigationDeps) {
     return shouldOpenSearchResultInBackgroundTab(event) ? 'backgroundTab' : 'newTab';
   }
 
-  // Option/Alt keeps a result in the current tab even when search results
-  // are set to open in a new tab.
+  // Option/Alt opens a result in the other of the current and a new tab
+  // than search results are set to.
   function getSearchResultDisposition(event: OpenEventLike | null | undefined): Disposition {
-    if (event && event.altKey) {
-      return 'currentTab';
-    }
-    return getSurfaceOpenDisposition('search', shouldOpenSearchResultInBackgroundTab(event));
+    return getSurfaceOpenDisposition('search', {
+      openInBackgroundTab: isBackgroundOpenEvent(event),
+      openInOtherTab: Boolean(event && event.altKey)
+    });
   }
 
   function openSearchResultUrl(suggestion: OpenableSuggestion | null | undefined, query: string, event: OpenEventLike | null | undefined): boolean {

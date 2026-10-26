@@ -372,19 +372,10 @@
     "message": "웹페이지에서 Lumno를 열 때 열린 탭을 기본으로 모두 표시"
   },
   "settings_overlay_open_in_current_tab_title": {
-    "message": "웹페이지에서 Lumno를 열 때 결과 열기 방식"
+    "message": "웹페이지에서 Lumno를 열 때 결과를 현재 탭에서 열기"
   },
   "settings_overlay_open_in_current_tab_desc": {
-    "message": "Option/Alt를 누르면 다른 방식으로 엽니다"
-  },
-  "settings_overlay_open_in_new_tab": {
-    "message": "새 탭에서 열기"
-  },
-  "settings_overlay_open_in_current_tab": {
-    "message": "현재 탭에서 열기"
-  },
-  "settings_overlay_result_open_title": {
-    "message": "결과 열기 방식"
+    "message": "끄면 현재 탭에서 열립니다. Option/Alt를 누르면 다른 방식으로 엽니다."
   },
   "settings_overlay_open_tabs_default_title": {
     "message": "열린 탭을 기본으로 모두 표시"
@@ -3462,7 +3453,7 @@
     "message": "클릭하면 새 탭에서 열기"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "선택하면 클릭 시 새 탭을 열고 그 탭으로 전환합니다. 선택하지 않으면 현재 탭에서 열립니다."
+    "message": "선택하지 않은 항목은 현재 탭에서 열립니다. Option/Alt를 누르면 다른 방식으로 엽니다."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "검색 결과"

@@ -372,19 +372,10 @@
     "message": "Web ページで Lumno を開いたとき、開いているすべてのタブを既定で表示"
   },
   "settings_overlay_open_in_current_tab_title": {
-    "message": "Web ページで Lumno を開いたときの結果の開き方"
+    "message": "Web ページで Lumno を開いたとき、結果を現在のタブで開く"
   },
   "settings_overlay_open_in_current_tab_desc": {
-    "message": "Option/Alt を押すともう一方で開きます"
-  },
-  "settings_overlay_open_in_new_tab": {
-    "message": "新しいタブで開く"
-  },
-  "settings_overlay_open_in_current_tab": {
-    "message": "現在のタブで開く"
-  },
-  "settings_overlay_result_open_title": {
-    "message": "結果を開く場所"
+    "message": "オフにすると現在のタブで開きます。Option/Alt を押すともう一方で開きます。"
   },
   "settings_overlay_open_tabs_default_title": {
     "message": "開いているすべてのタブを既定で表示"
@@ -3462,7 +3453,7 @@
     "message": "クリックで新しいタブで開く"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "チェックすると、クリックで新しいタブを開いて切り替えます。チェックしない項目は現在のタブで開きます。"
+    "message": "チェックしない項目は現在のタブで開きます。Option/Alt を押すともう一方で開きます。"
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "検索結果"

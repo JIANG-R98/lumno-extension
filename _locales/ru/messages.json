@@ -372,19 +372,10 @@
     "message": "Показывать все открытые вкладки при вызове Lumno на веб-странице"
   },
   "settings_overlay_open_in_current_tab_title": {
-    "message": "Открытие результатов при вызове Lumno на веб-странице"
+    "message": "Открывать результаты в текущей вкладке при вызове Lumno на веб-странице"
   },
   "settings_overlay_open_in_current_tab_desc": {
-    "message": "Удерживайте Option/Alt, чтобы открыть другим способом"
-  },
-  "settings_overlay_open_in_new_tab": {
-    "message": "В новой вкладке"
-  },
-  "settings_overlay_open_in_current_tab": {
-    "message": "В текущей вкладке"
-  },
-  "settings_overlay_result_open_title": {
-    "message": "Открытие результатов"
+    "message": "Если выключено, открывается в текущей вкладке. С Option/Alt — другим способом."
   },
   "settings_overlay_open_tabs_default_title": {
     "message": "Показывать все открытые вкладки"
@@ -3462,7 +3453,7 @@
     "message": "Открывать по клику в новой вкладке"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Если отмечено, клик открывает новую вкладку и переходит на неё; иначе ссылка открывается в текущей вкладке."
+    "message": "Неотмеченное открывается в текущей вкладке. С Option/Alt — другим способом."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Результаты поиска"

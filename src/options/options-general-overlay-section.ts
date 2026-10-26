@@ -1,7 +1,8 @@
 // The General tab's webpage focus overlay section: whether the search bar
-// opened on a webpage opens results in a new or the current tab, and
-// whether it lists every open tab before anything is typed. One React view
-// draws the rows; this keeps their values in step with storage.
+// opened on a webpage opens results in a new tab, asked as the New Tab
+// section asks it, and whether it lists every open tab before anything is
+// typed. One React view draws the rows; this keeps their values in step
+// with storage.
 import type * as Settings from '../domain/settings';
 import { createSectionSetting, type SectionSettingBinder, type SectionSettingStorage } from './options-section-setting';
 import type { SectionView } from './options-section-view';
@@ -31,47 +32,31 @@ function createGeneralOverlaySection(deps: GeneralOverlaySectionDeps) {
     normalize: SETTINGS.normalizeOverlayOpenTabsDefaultVisible
   }, storageArea, () => render());
 
+  // The switch says "open in a new tab", the reverse of what is stored.
   const controller = view({
     onToggle(key, checked) {
-      if (key === openTabsDefault.storageKey) {
+      if (key === openInCurrentTab.storageKey) {
+        openInCurrentTab.change(!checked);
+      } else if (key === openTabsDefault.storageKey) {
         openTabsDefault.change(checked);
       }
     },
-    onSelect(key, value) {
-      if (key === openInCurrentTab.storageKey) {
-        openInCurrentTab.change(value === 'currentTab');
-      }
-    }
+    onSelect() {}
   });
 
   function getRows(): SettingsRowModel[] {
-    const openTitle = getMessage('settings_overlay_result_open_title', '结果打开方式');
     return [
       { type: 'header', key: 'header', title: getMessage('settings_webpage_focus_overlay_section_title', '网页聚焦搜索浮层') },
       {
-        type: 'segmented',
+        type: 'toggle',
         key: openInCurrentTab.storageKey,
         title: {
-          text: openTitle,
-          info: getMessage('settings_overlay_open_in_current_tab_desc', '按住 Option/Alt 可临时换成另一种')
+          text: getMessage('settings_newtab_open_in_new_tab_title', '点击后在新标签页打开'),
+          info: getMessage('settings_overlay_open_in_current_tab_desc', '关闭后在当前页打开，按住 Option/Alt 可临时换成另一种')
         },
-        groupId: '_x_extension_overlay_open_in_current_tab_tabs_wrap_2026_unique_',
-        ariaLabel: openTitle,
-        segmented: {
-          activeValue: openInCurrentTab.get() ? 'currentTab' : 'newTab',
-          dataAttribute: 'data-overlay-open-target',
-          items: [
-            {
-              value: 'newTab',
-              labelKey: 'settings_overlay_open_in_new_tab',
-              label: getMessage('settings_overlay_open_in_new_tab', '在新标签页打开')
-            },
-            {
-              value: 'currentTab',
-              labelKey: 'settings_overlay_open_in_current_tab',
-              label: getMessage('settings_overlay_open_in_current_tab', '在当前页打开')
-            }
-          ]
+        toggle: {
+          id: '_x_extension_overlay_open_in_new_tab_toggle_2026_unique_',
+          checked: !openInCurrentTab.get()
         }
       },
       {

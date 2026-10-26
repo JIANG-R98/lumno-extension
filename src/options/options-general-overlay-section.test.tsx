@@ -5,7 +5,7 @@ import type { StorageItems } from '../domain/storage-port';
 import { createGeneralOverlaySection } from './options-general-overlay-section';
 import type { SettingSpec } from './options-setting-bindings';
 import { createSettingsSectionController } from './react/settings-rows-view';
-import { getTag, getTags } from '../../tests/react/dom';
+import { getTag } from '../../tests/react/dom';
 
 const sections: Array<{ destroy(): void }> = [];
 
@@ -33,9 +33,6 @@ function setUp() {
   return { host, writes, changes, store };
 }
 
-const openButtons = (host: HTMLElement) =>
-  getTags(host, '#_x_extension_overlay_open_in_current_tab_tabs_wrap_2026_unique_ button', 'button');
-
 afterEach(() => {
   act(() => sections.splice(0).forEach((section) => section.destroy()));
   document.body.textContent = '';
@@ -47,15 +44,16 @@ describe('Options General webpage focus overlay section', () => {
     expect(Array.from(changes.keys()).sort()).toEqual([OPEN_KEY, OPEN_TABS_KEY].sort());
   });
 
-  it('opens results in a new tab by default and switches to the current tab', () => {
+  it('asks whether results open in a new tab, on by default, and stores the reverse', () => {
     const { host, writes, store } = setUp();
-    expect(openButtons(host).map((button) => button.dataset.active)).toEqual(['true', 'false']);
-    act(() => openButtons(host)[1]?.click());
+    const toggle = () => getTag(host, '#_x_extension_overlay_open_in_new_tab_toggle_2026_unique_', 'input');
+    expect(toggle().checked).toBe(true);
+    act(() => toggle().click());
     expect(writes).toContainEqual({ [OPEN_KEY]: true });
-    store(OPEN_KEY, false);
-    expect(openButtons(host).map((button) => button.dataset.active)).toEqual(['true', 'false']);
     store(OPEN_KEY, true);
-    expect(openButtons(host).map((button) => button.dataset.active)).toEqual(['false', 'true']);
+    expect(toggle().checked).toBe(false);
+    store(OPEN_KEY, false);
+    expect(toggle().checked).toBe(true);
   });
 
   it('saves the open tabs switch', () => {

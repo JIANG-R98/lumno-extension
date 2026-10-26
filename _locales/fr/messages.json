@@ -372,19 +372,10 @@
     "message": "Afficher par défaut tous les onglets ouverts lorsque Lumno s’ouvre sur une page Web"
   },
   "settings_overlay_open_in_current_tab_title": {
-    "message": "Ouverture des résultats lorsque Lumno s’ouvre sur une page Web"
+    "message": "Ouvrir les résultats dans l’onglet actuel lorsque Lumno s’ouvre sur une page Web"
   },
   "settings_overlay_open_in_current_tab_desc": {
-    "message": "Maintenez Option/Alt pour utiliser l’autre option"
-  },
-  "settings_overlay_open_in_new_tab": {
-    "message": "Dans un nouvel onglet"
-  },
-  "settings_overlay_open_in_current_tab": {
-    "message": "Dans l’onglet actuel"
-  },
-  "settings_overlay_result_open_title": {
-    "message": "Ouvrir les résultats"
+    "message": "Désactivé, ouverture dans l’onglet actuel. Maintenez Option/Alt pour l’autre option."
   },
   "settings_overlay_open_tabs_default_title": {
     "message": "Afficher par défaut tous les onglets ouverts"
@@ -3462,7 +3453,7 @@
     "message": "Ouvrir dans un nouvel onglet au clic"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Coché, un clic ouvre un nouvel onglet et y bascule ; sinon, le lien s’ouvre dans l’onglet actuel."
+    "message": "Non coché, ouverture dans l’onglet actuel. Maintenez Option/Alt pour l’autre option."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Résultats de recherche"

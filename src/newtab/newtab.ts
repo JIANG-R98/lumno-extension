@@ -196,7 +196,7 @@ import { getRiSvg } from '../shared/ui/remix-icon';
 import * as SITE_SEARCH_ICON_CACHE from '../shared/search/site-search-icon-cache';
 import type { BackgroundAction, BackgroundReply, BackgroundRequest } from '../domain/messages';
 import type { Disposition } from '../domain/navigation-disposition';
-import type { SearchActionModel, SearchActionModelOptions } from '../domain/search/suggestion-action-model';
+import type { OpenModifiers, SearchActionModel, SearchActionModelOptions } from '../domain/search/suggestion-action-model';
 import type { SuggestionElement } from '../shared/react/search/suggestion-list/types';
 import type { BookmarkCardElement } from './react/bookmarks';
 import type { RecentCardElement } from './react/recent-sites';
@@ -2795,14 +2795,22 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     pageState
   });
 
+  const isSearchOpenInNewTab = (): boolean =>
+    Boolean(pageState.newtabOpenInNewTab && pageState.newtabOpenInNewTab.search === true);
   // Result labels follow where a plain click goes: 「前往」 in this tab, 「新开」 in a new one.
   const newtabSuggestionActionModel = Object.assign({}, SUGGESTION_ACTION_MODEL, {
     createSearchActionModel(input?: SearchActionModelOptions | null): SearchActionModel {
-      const openInNewTab = Boolean(pageState.newtabOpenInNewTab && pageState.newtabOpenInNewTab.search === true);
       return SUGGESTION_ACTION_MODEL.createSearchActionModel({
         ...input,
         enterAction: 'openNewTab',
-        currentTabByDefault: !openInNewTab
+        currentTabByDefault: !isSearchOpenInNewTab()
+      });
+    },
+    // Option/Alt says where the result would go instead.
+    getModifierAdjustedAction(action: unknown, modifiers?: OpenModifiers | null): string {
+      return SUGGESTION_ACTION_MODEL.getModifierAdjustedAction(action, {
+        ...modifiers,
+        currentTabByDefault: !isSearchOpenInNewTab()
       });
     }
   });
