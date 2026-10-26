@@ -2,7 +2,6 @@ import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createSearchInput,
-  createSearchInputApi,
   destroySearchInput,
   type SearchInputParts
 } from './search-input';
@@ -42,7 +41,6 @@ describe('Shared search input React island', () => {
       rightIconAlt: 'Settings'
     });
 
-    expect(createSearchInputApi().implementation).toBe('react');
     expect(parts.container.dataset.reactIsland).toBe('shared-search-input');
     expect(parts.container.id).toBe('container');
     expect(parts.container.classList.contains('x-lumno-search-input')).toBe(

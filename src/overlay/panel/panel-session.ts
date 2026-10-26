@@ -12,7 +12,7 @@ import type * as OverlayLifecycle from '../lifecycle';
 import type { createNoticeLayer } from '../notices';
 import type { OverlaySettings } from '../overlay-settings';
 import { setOverlayOpenState } from '../../platform/content-registry';
-import { getSearchInputApi } from '../../shared/react/search-input';
+import { destroySearchInput } from '../../shared/react/search-input';
 import * as SettingsStorage from '../../platform/settings-storage';
 
 interface PanelSessionState {
@@ -422,9 +422,8 @@ function createPanelSession(deps: PanelSessionDeps) {
         overlayState.overlaySuggestionsView.destroy();
       }
       // The search input's own root, before the panel it sits in goes.
-      const searchInputApi = getSearchInputApi();
-      if (overlayState.inputParts && searchInputApi) {
-        searchInputApi.destroySearchInput(overlayState.inputParts);
+      if (overlayState.inputParts) {
+        destroySearchInput(overlayState.inputParts);
       }
       const mountHost = getOverlayMountHost(overlayElement);
       overlayShell.destroyOverlayMount(mountHost);

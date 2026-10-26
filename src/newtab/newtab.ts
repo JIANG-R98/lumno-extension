@@ -206,7 +206,7 @@ import { getSelectMenuApi } from './react/select-menu';
 import { getTopContentApi } from './react/wordmark';
 import { getPageStructureApi } from './react/page-structure';
 import { getFolderColorPickerApi } from './react/folder-color-picker-lazy';
-import { getSearchInputApi } from '../shared/react/search-input';
+import { createSearchInput } from '../shared/react/search-input';
 import { newtabShortcutGap, newtabShortcutSize } from '../domain/settings/newtab-shortcuts';
 import { bookmarkFolderColorRefs, bookmarkFolderColorsLegacy } from '../domain/settings/bookmarks';
 import { newtabShortcutFaviconCache, newtabShortcutsLocalOverflow, shortcutFolderBindings } from '../domain/settings/newtab-shortcuts';
@@ -226,8 +226,7 @@ import * as SettingsStorage from '../platform/settings-storage';
   // properties this file does. page-state.ts lists its initial values.
   const pageState = LumnoNewtabPageState.createPageState();
   const root = document.getElementById('_x_extension_newtab_root_2024_unique_');
-  const createSearchInput = getSearchInputApi().createSearchInput;
-  if (!root || typeof createSearchInput !== 'function') {
+  if (!root) {
     return;
   }
   if (document.body) {

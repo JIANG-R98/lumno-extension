@@ -57,7 +57,7 @@ import * as LumnoOverlaySiteFixes from './site-fixes';
 import * as LumnoMessaging from '../platform/messaging';
 import { isOverlayOpenState, setOverlayOpenState } from '../platform/content-registry';
 import { getOverlayShellApi } from './react/shell';
-import { getSearchInputApi } from '../shared/react/search-input';
+import { createSearchInput } from '../shared/react/search-input';
 import { themeColorCache, themeHostCache } from '../shared/favicon/theme-caches';
 import {
   aggregateSearches,
@@ -1013,15 +1013,10 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     overlay: overlayState.overlay,
     styleRoot: overlayStyleRoot
   });
-  if (typeof getSearchInputApi().createSearchInput !== 'function') {
-    console.warn('Lumno: input UI helper not available.');
-    removeOverlay(overlayState.overlay);
-    return;
-  }
 
   const initialLanguageReady = bootstrapOverlayLanguageForInitialRender().catch(() => {});
 
-  const inputParts = getSearchInputApi().createSearchInput({
+  const inputParts = createSearchInput({
     container: overlayMount.inputContainer,
     styleRoot: overlayStyleRoot,
     placeholder: t('overlay_search_placeholder', t('search_placeholder', overlayState.defaultPlaceholderText)),
