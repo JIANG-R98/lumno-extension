@@ -54,7 +54,7 @@ import * as OPTIONS_STATE from './options-state';
 import { getBlacklistTabApi } from './react/blacklist-tab';
 import { getAccountTabApi } from './react/account-tab';
 import { getShortcutsTabApi } from './react/shortcuts-tab';
-import { getToastApi } from '../shared/react/toast';
+import { createToastController } from '../shared/react/toast';
 import { getSettingsControlsApi } from './react/settings-controls';
 import { getSettingsNavigationApi } from './react/settings-navigation';
 import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcuts';
@@ -97,7 +97,6 @@ import * as ProviderStorage from '../platform/provider-storage';
   const optionsBlacklistTabApi = getBlacklistTabApi();
   const optionsAccountTabApi = getAccountTabApi();
   const optionsShortcutsTabApi = getShortcutsTabApi();
-  const optionsToastApi = getToastApi();
   const optionsSettingsControlsApi = getSettingsControlsApi();
   const optionsSettingsNavigationApi = getSettingsNavigationApi();
   if (!optionsAccountTabApi || !optionsBlacklistTabApi || !optionsShortcutsTabApi ||
@@ -152,12 +151,10 @@ import * as ProviderStorage from '../platform/provider-storage';
       appendTo: document.body,
       maxWidth: 'min(360px, calc(100vw - 24px))'
     }),
-    toastController: optionsToastApi
-      ? optionsToastApi.createToastController(toastElement, {
-        windowObj: window,
-        duration: 2200
-      })
-      : null,
+    toastController: createToastController(toastElement, {
+      windowObj: window,
+      duration: 2200
+    }),
     isMacPlatform: LumnoShortcutDisplay.getNavigatorPlatform(navigator) === 'mac',
     fallbackSiteSearchProviders: SearchSiteSearchProviders.getDefaultSiteSearchProviders()
   });

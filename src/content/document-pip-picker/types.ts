@@ -1,5 +1,6 @@
 // The shapes the page clip picker's modules share.
-import type { ToastController, ToastStyleGate } from '../../shared/ui/toast';
+import type { ToastController } from '../../shared/ui/toast-screen';
+import type { ToastStyleGate } from '../../shared/ui/toast-style-gate';
 
 type Rgba = [number, number, number, number];
 

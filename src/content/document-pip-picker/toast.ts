@@ -1,6 +1,7 @@
 // The notices the picker shows on the page.
 import * as TOAST from '../../shared/ui/toast';
-import type { ToastController } from '../../shared/ui/toast';
+import { createToastStyleGate } from '../../shared/ui/toast-style-gate';
+import type { ToastController } from '../../shared/ui/toast-screen';
 import { PICKER_Z_INDEX, TOAST_HOST_ID } from './constants';
 import { applyNoTranslate, getMessage } from './locale';
 import { applyPickerTheme, ensurePickerUi } from './picker-ui';
@@ -79,7 +80,7 @@ function ensureToast(): { element: HTMLDivElement; controller: Readonly<ToastCon
 
   state.toastHost = toastHost;
   state.toastElement = toastElement;
-  state.toastStyleGate = TOAST.createToastStyleGate(toastElement, {
+  state.toastStyleGate = createToastStyleGate(toastElement, {
     stylesheetElement: stylesheet,
     windowObj: window
   });

@@ -198,7 +198,7 @@ import type { RecentCardElement } from './react/recent-sites';
 import type { ShortcutTileElement } from './react/shortcuts';
 import { readBootValue } from '../platform/boot-handoff';
 import { getBookmarksTopbarApi } from './react/bookmarks-topbar';
-import { getToastApi } from '../shared/react/toast';
+import { createToastController } from '../shared/react/toast';
 import { getShortcutDialogApi } from './react/shortcut-dialog-lazy';
 import { getShortcutsViewApi } from './react/shortcuts';
 import { getFeedbackControlApi } from './react/feedback';
@@ -326,7 +326,6 @@ import * as SettingsStorage from '../platform/settings-storage';
   // The folder color dialog handles its own Escape.
   const dismissStack = LumnoNewtabDismissStack.getDismissStack();
   dismissStack.setShouldIgnore(() => Boolean(pageState.folderColorPicker && pageState.folderColorPicker.isOpen()));
-  const NEWTAB_TOAST = getToastApi();
   const NEWTAB_SHORTCUT_DIALOG = getShortcutDialogApi();
   const NEWTAB_SHORTCUTS_VIEW = getShortcutsViewApi();
   const NEWTAB_FEEDBACK_CONTROL = getFeedbackControlApi();
@@ -1075,7 +1074,7 @@ import * as SettingsStorage from '../platform/settings-storage';
   });
   const NEWTAB_SEARCH_WIDTH_CONFIG = NEWTAB_LAYOUT.SEARCH_WIDTH_CONFIG;
   const toastElement = document.getElementById('_x_extension_toast_2024_unique_');
-  pageState.toastController = NEWTAB_TOAST.createToastController(toastElement, { windowObj: window });
+  pageState.toastController = createToastController(toastElement, { windowObj: window });
 
 
 

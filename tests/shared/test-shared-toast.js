@@ -45,9 +45,11 @@ const toastElement = {
   }
 };
 
-const LumnoToast = require(path.resolve(__dirname, '../../src/shared/ui/toast.ts'));
+const LumnoToast = {
+  ...require(path.resolve(__dirname, '../../src/shared/ui/toast.ts')),
+  ...require(path.resolve(__dirname, '../../src/shared/ui/toast-style-gate.ts'))
+};
 
-assert.strictEqual(LumnoToast.implementation, 'dom');
 assert.strictEqual(typeof LumnoToast.createToastStyleGate, 'function');
 
 const stylesheetListeners = new Map();

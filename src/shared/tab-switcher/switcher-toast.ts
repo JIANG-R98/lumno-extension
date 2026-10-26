@@ -1,6 +1,7 @@
 // The shared Toast at the top of the screen, inside the switcher's shadow
 // root so it lives and goes with the switcher.
 import * as TOAST from '../ui/toast';
+import { createToastStyleGate } from '../ui/toast-style-gate';
 
 interface SwitcherToast {
   element: HTMLDivElement;
@@ -20,7 +21,7 @@ function createSwitcherToast(shadow: ShadowRoot | HTMLElement): SwitcherToast {
   element.style.setProperty('--x-lumno-toast-top', 'max(24px, calc(env(safe-area-inset-top) + 12px))');
   element.style.setProperty('--x-lumno-toast-z-index', '2147483647');
   shadow.append(stylesheet, element);
-  const styleGate = TOAST.createToastStyleGate(element, {
+  const styleGate = createToastStyleGate(element, {
     stylesheetElement: stylesheet,
     windowObj: window
   });

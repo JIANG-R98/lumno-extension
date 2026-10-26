@@ -15,6 +15,7 @@ import * as SETTINGS from '../domain/settings';
 import * as LumnoCursorTooltip from '../shared/ui/cursor-tooltip';
 import * as SITE_SEARCH_ICON_CACHE from '../shared/search/site-search-icon-cache';
 import * as OVERLAY_TOAST from '../shared/ui/toast';
+import { createToastStyleGate } from '../shared/ui/toast-style-gate';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as LumnoOverlayFaviconView from './favicon-view';
 import * as OVERLAY_KEYBOARD from './keyboard';
@@ -982,7 +983,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   overlayToastElement.setAttribute('aria-live', 'polite');
   const overlayToastStylesheet = overlayStyleRoot
     .getElementById('_x_extension_toast_style_2026_unique_');
-  const overlayToastStyleGate = OVERLAY_TOAST.createToastStyleGate(
+  const overlayToastStyleGate = createToastStyleGate(
     overlayToastElement,
     {
       windowObj: window,

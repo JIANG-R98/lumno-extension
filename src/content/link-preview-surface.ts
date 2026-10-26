@@ -1,7 +1,8 @@
 // The preview on this page and what every part of the surface uses on it:
 // its shape, messages to the worker, its listeners and its teardown.
 import type { BackgroundAction, BackgroundReply, BackgroundRequest, LinkPreviewOrigin } from '../domain/messages';
-import type { ToastController, ToastStyleGate } from '../shared/ui/toast';
+import type { ToastController } from '../shared/ui/toast-screen';
+import type { ToastStyleGate } from '../shared/ui/toast-style-gate';
 import type {
   LinkPreviewElements,
   LinkPreviewViewController,

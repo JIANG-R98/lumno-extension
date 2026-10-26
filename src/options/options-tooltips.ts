@@ -1,6 +1,6 @@
 // Tooltips, toasts, and refreshing the settings forms.
 import { isHtmlElement } from '../shared/dom-guards';
-import type { ToastController } from '../shared/react/toast';
+import type { ToastController } from '../shared/ui/toast-screen';
 import type { TooltipController } from '../shared/ui/tooltip';
 import type { ToastTask } from './options-types';
 

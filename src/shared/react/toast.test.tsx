@@ -1,10 +1,7 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  createToastApi,
-  createToastController,
-  type ToastController
-} from './toast';
+import { createToastController } from './toast';
+import type { ToastController } from '../ui/toast-screen';
 
 let controllers: ToastController[] = [];
 
@@ -39,7 +36,6 @@ describe('Toast React island', () => {
       controller.show('Saved', { error: true, duration: 0 });
     });
 
-    expect(createToastApi().implementation).toBe('react');
     expect(element.dataset.reactIsland).toBe('toast');
     expect(element.dataset.show).toBe('true');
     expect(element.textContent).toBe('Saved');

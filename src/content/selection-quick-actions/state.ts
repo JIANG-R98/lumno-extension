@@ -2,7 +2,8 @@
 // the current selection and the elements it made.
 import { getContextSettingsStore } from '../../platform/settings-store';
 import type { LocaleMessage } from '../../domain/messages';
-import type { ToastController, ToastStyleGate } from '../../shared/ui/toast';
+import type { ToastController } from '../../shared/ui/toast-screen';
+import type { ToastStyleGate } from '../../shared/ui/toast-style-gate';
 import type { PageListener, PointerDownState, SelectionCandidate, SelectionSurface } from './types';
 import * as ProviderStorage from '../../platform/provider-storage';
 

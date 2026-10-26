@@ -1,5 +1,7 @@
 import * as TOAST from '../shared/ui/toast';
-import type { ToastController, ToastStyleGate } from '../shared/ui/toast';
+import { createToastStyleGate } from '../shared/ui/toast-style-gate';
+import type { ToastController } from '../shared/ui/toast-screen';
+import type { ToastStyleGate } from '../shared/ui/toast-style-gate';
 import type { PageShortcutToastOptions } from '../types/content-apis';
 import { readPageShortcutToastCommand } from '../domain/injected-commands';
 
@@ -72,7 +74,7 @@ const toast = (function() {
     document.documentElement.appendChild(host);
     state.host = host;
     state.element = element;
-    state.styleGate = TOAST.createToastStyleGate(element, { stylesheetElement: stylesheet, windowObj: window });
+    state.styleGate = createToastStyleGate(element, { stylesheetElement: stylesheet, windowObj: window });
     state.controller = TOAST.createToastController(element, { windowObj: window });
     return true;
   }

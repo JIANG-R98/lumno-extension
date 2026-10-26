@@ -1,6 +1,7 @@
 // The toast that reports what an action did.
 import * as TOAST from '../../shared/ui/toast';
-import type { ToastController, ToastShowOptions } from '../../shared/ui/toast';
+import { createToastStyleGate } from '../../shared/ui/toast-style-gate';
+import type { ToastController, ToastShowOptions } from '../../shared/ui/toast-screen';
 import { ACTION_FAILURE_DISMISS_MS, TOAST_HOST_ID, TOAST_STYLE_ID } from './constants';
 import { applyNoTranslate } from './host';
 import { state } from './state';
@@ -76,7 +77,7 @@ function ensureSelectionToast(): Readonly<ToastController> {
   toastShadow.append(stylesheet, toastElement);
   (document.documentElement || document.body).appendChild(newHost);
 
-  state.toastStyleGate = TOAST.createToastStyleGate(toastElement, {
+  state.toastStyleGate = createToastStyleGate(toastElement, {
     stylesheetElement: stylesheet,
     windowObj: window
   });

@@ -3,7 +3,7 @@
 // of them together.
 import type { SiteSearchProvider } from '../domain/search/types';
 import type { SettingsStore } from '../platform/settings-store';
-import type { ToastController } from '../shared/react/toast';
+import type { ToastController } from '../shared/ui/toast-screen';
 import type { TooltipController } from '../shared/ui/tooltip';
 import type { AggregateSearchListState } from './options-aggregate-search-list';
 import type { FormsState } from './options-forms';

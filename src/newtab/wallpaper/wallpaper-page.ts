@@ -6,7 +6,7 @@ import type * as LumnoSettings from '../../domain/settings';
 import type { NewtabGlassStyle, NewtabGlassTheme, NewtabTimeInk, NewtabTopContentMode } from '../../domain/settings';
 import type { StorageAreaLike } from '../../domain/storage-port';
 import { queryHtmlElement, queryHtmlElements } from '../../shared/dom-lookup';
-import type { ToastTask } from '../../shared/react/toast';
+import type { ToastTask } from '../../shared/ui/toast-screen';
 import type * as LumnoFeatureHints from '../../shared/ui/feature-hints';
 import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
 import type { ThemeScope } from '../react/wallpaper-panel/panel-model';

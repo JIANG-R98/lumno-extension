@@ -2,7 +2,7 @@
 // kept per day, refreshing them when a day has passed, and picking a Bing
 // or curated photo.
 import type { StorageAreaLike } from '../../../domain/storage-port';
-import type { ToastTask } from '../../../shared/react/toast';
+import type { ToastTask } from '../../../shared/ui/toast-screen';
 import type { FormatMessage, ShowToast, Translate } from '../../newtab-types';
 import type * as RemoteContent from '../../remote-content';
 import type { RemoteContentClient } from '../../remote-content';

@@ -3,7 +3,7 @@
 import { toPreviewFrameUrl } from '../domain/link-preview-frame-url';
 import { PREVIEW_SURFACE_SOURCE, readPreviewFrameMessage } from '../domain/link-preview-frame-messages';
 import type { PreviewSurfaceCommand } from '../domain/link-preview-frame-messages';
-import type { ToastShowOptions } from '../shared/ui/toast';
+import type { ToastShowOptions } from '../shared/ui/toast-screen';
 import { close } from './link-preview-motion';
 import { getMessage, send, surface, update } from './link-preview-surface';
 import type { LinkPreview } from './link-preview-surface';

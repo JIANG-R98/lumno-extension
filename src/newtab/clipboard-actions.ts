@@ -1,7 +1,7 @@
 // Copying a bookmark's or a search result's URL to the clipboard (with
 // the textarea fallback where the async clipboard is unavailable) and the
 // page toast that confirms it.
-import type { ToastController, ToastTask } from '../shared/react/toast';
+import type { ToastController, ToastTask } from '../shared/ui/toast-screen';
 import type { ShowToast, Translate } from './newtab-types';
 
 interface ClipboardActionsState {

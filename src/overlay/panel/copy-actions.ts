@@ -1,4 +1,4 @@
-import type { ToastController, ToastShowOptions } from '../../shared/ui/toast';
+import type { ToastController, ToastShowOptions } from '../../shared/ui/toast-screen';
 import type { Translate } from './types';
 
 interface CopyActionsDeps {

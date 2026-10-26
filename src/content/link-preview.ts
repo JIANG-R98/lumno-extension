@@ -9,6 +9,7 @@
 // screenshot and plays the opening.
 import { toPreviewFrameUrl } from '../domain/link-preview-frame-url';
 import * as TOAST from '../shared/ui/toast';
+import { createToastStyleGate } from '../shared/ui/toast-style-gate';
 import { createLinkPreviewViewApi } from '../shared/react/link-preview-view';
 import { readStartCommand } from '../domain/injected-commands';
 import type { LinkPreviewElements, LinkPreviewViewModel } from '../shared/react/link-preview-view';
@@ -120,7 +121,7 @@ function build(token: string, url: string): LinkPreview | null {
     view,
     model,
     ...elements,
-    toastGate: TOAST.createToastStyleGate(elements.toastElement, { stylesheetElement: elements.toastStylesheet, windowObj: window }),
+    toastGate: createToastStyleGate(elements.toastElement, { stylesheetElement: elements.toastStylesheet, windowObj: window }),
     toast: TOAST.createToastController(elements.toastElement, { windowObj: window }),
     supportsPopover,
     shown: false,
