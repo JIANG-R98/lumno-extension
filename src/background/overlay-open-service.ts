@@ -268,6 +268,7 @@ export function openOverlayOnTab(
         prioritizeCurrentPageMatch: prioritizeCurrentPageMatch,
         currentTabId: tabId,
         currentTabUrl: getResolvedTabUrl(activeTab),
+        currentTabPinned: activeTab.pinned === true,
         openedAt: overlayEntryMotionStartedAt,
         documentPipEnabled: isDocumentPipEnabled(),
         siteSearchProviders,

@@ -372,7 +372,7 @@
     "message": "Open results in the current tab when Lumno opens on a webpage"
   },
   "settings_overlay_open_in_current_tab_desc": {
-    "message": "When off, results open in the current tab. Hold Option/Alt to use the other one."
+    "message": "When off, results open in the current tab unless it’s pinned. Hold Option/Alt to use the other one."
   },
   "settings_overlay_open_tabs_default_title": {
     "message": "Show all open tabs by default"

@@ -145,6 +145,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       }
     },
     prioritizeCurrentPageMatch: openOptions.prioritizeCurrentPageMatch,
+    currentTabPinned: openOptions.currentTabPinned,
     initialContextTabUrl: openOptions.currentTabUrl,
     loadingSessionTrackingActive: openOptions.loadingSessionTracked,
     documentPipEnabled: documentPipSupported && openOptions.documentPipEnabled,
@@ -376,6 +377,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     shouldOpenSearchResultInBackgroundTab: (...args) => shouldOpenSearchResultInBackgroundTab(...args),
     recordSearchSuggestionSelectionFromSuggestion: (...args) => recordSearchSuggestionSelectionFromSuggestion(...args),
     getSearchResultDisposition: (...args) => getSearchResultDisposition(...args),
+    isCurrentTabDefault: (...args) => isCurrentTabDefault(...args),
     getOverlayFaviconUrlResolver: (...args) => getOverlayFaviconUrlResolver(...args),
     t: (...args) => t(...args),
     formatMessage: (...args) => formatMessage(...args),
@@ -644,6 +646,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     getOpenDisposition,
     getSearchResultNewTabDisposition,
     getSearchResultDisposition,
+    isCurrentTabDefault,
     openMatchedTabSuggestion
   } = PANEL_RESULT_ACTIVATION.createResultActivation({
     ensureOverlaySuggestionsView,

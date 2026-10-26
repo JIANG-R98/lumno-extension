@@ -372,7 +372,7 @@
     "message": "在網頁叫出時，結果在目前分頁開啟"
   },
   "settings_overlay_open_in_current_tab_desc": {
-    "message": "關閉後在目前分頁開啟，按住 Option/Alt 可暫時改用另一種"
+    "message": "關閉後在目前分頁開啟（固定分頁除外），按住 Option/Alt 可暫時改用另一種"
   },
   "settings_overlay_open_tabs_default_title": {
     "message": "預設顯示所有已開啟分頁"

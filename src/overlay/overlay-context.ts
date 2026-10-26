@@ -12,6 +12,8 @@ interface OverlayOpenOptions {
   prioritizeCurrentPageMatch: boolean;
   currentTabId: number | null;
   currentTabUrl: string;
+  // Results meant for the current tab open in a new one instead.
+  currentTabPinned: boolean;
   // When the user asked for the overlay, for the entry motion's budget.
   openedAt: number;
   documentPipEnabled: boolean;
@@ -79,6 +81,7 @@ function readOverlayOpenOptions(value: unknown, now: number): OverlayOpenOptions
     prioritizeCurrentPageMatch: Boolean(context.prioritizeCurrentPageMatch),
     currentTabId: Number.isFinite(currentTabId) ? currentTabId : null,
     currentTabUrl: typeof context.currentTabUrl === 'string' ? context.currentTabUrl.trim() : '',
+    currentTabPinned: context.currentTabPinned === true,
     openedAt: readOpenedAt(context.openedAt, now),
     documentPipEnabled: Boolean(context.documentPipEnabled),
     siteSearchProviders,

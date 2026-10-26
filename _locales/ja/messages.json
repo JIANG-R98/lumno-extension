@@ -372,7 +372,7 @@
     "message": "Web ページで Lumno を開いたとき、結果を現在のタブで開く"
   },
   "settings_overlay_open_in_current_tab_desc": {
-    "message": "オフにすると現在のタブで開きます。Option/Alt を押すともう一方で開きます。"
+    "message": "オフにすると現在のタブで開きます（固定タブを除く）。Option/Alt を押すともう一方で開きます。"
   },
   "settings_overlay_open_tabs_default_title": {
     "message": "開いているすべてのタブを既定で表示"

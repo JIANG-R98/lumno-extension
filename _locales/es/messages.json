@@ -372,7 +372,7 @@
     "message": "Abrir los resultados en la pestaña actual al abrir Lumno en una página web"
   },
   "settings_overlay_open_in_current_tab_desc": {
-    "message": "Desactivado, se abre en la pestaña actual. Mantén Option/Alt para usar la otra opción."
+    "message": "Desactivado, se abre en la pestaña actual salvo si está fijada. Mantén Option/Alt para usar la otra opción."
   },
   "settings_overlay_open_tabs_default_title": {
     "message": "Mostrar todas las pestañas abiertas"

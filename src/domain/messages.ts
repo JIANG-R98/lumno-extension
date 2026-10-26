@@ -416,6 +416,8 @@ interface OverlayOpenContext {
   prioritizeCurrentPageMatch: boolean;
   currentTabId: number | null;
   currentTabUrl: string;
+  // Results meant for the current tab open in a new one instead.
+  currentTabPinned: boolean;
   // When the user started waiting, for the entry motion's budget.
   openedAt: number;
   documentPipEnabled: boolean;

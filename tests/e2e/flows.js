@@ -185,15 +185,17 @@ async function overlaySearch({ browser, fixtures }) {
 }
 
 // With the overlay set to open results in the current tab, Enter loads a
-// typed address in the page's own tab and Option/Alt+Enter opens a new one.
+// typed address in the page's own tab and Option/Alt+Enter opens a new one;
+// a pinned tab is kept and Enter opens a new tab instead.
 async function overlayCurrentTab({ browser, fixtures }) {
+  // The page opens first, so the worker is running before it is asked.
+  const web = await browser.openPage(fixtures.url('/page.html'));
   const key = SETTINGS.OVERLAY_OPEN_IN_CURRENT_TAB_STORAGE_KEY;
   await browser.worker.evaluate(`Promise.all([
     chrome.storage.sync.set({ ${JSON.stringify(key)}: true }),
     chrome.storage.local.set({ ${JSON.stringify(key)}: true })
   ])`);
   const tabCount = () => browser.worker.evaluate('chrome.tabs.query({}).then((tabs) => tabs.length)');
-  const web = await browser.openPage(fixtures.url('/page.html'));
   const openOverlayAndType = async (text) => {
     await focusTab(browser, web);
     await dispatchCommand(browser, 'show-search');
@@ -217,6 +219,19 @@ async function overlayCurrentTab({ browser, fixtures }) {
     { message: 'Option/Alt+Enter did not open the address in a new tab' });
   assert.strictEqual(await web.evaluate('location.href'), target, 'Option/Alt+Enter navigated the current tab');
   assert.strictEqual(await tabCount(), before + 1);
+
+  // A pinned tab is kept: Enter opens a new tab there.
+  await browser.worker.evaluate(`chrome.tabs.query({}).then((tabs) => {
+    const tab = tabs.find((candidate) => candidate.url === ${JSON.stringify(target)});
+    return chrome.tabs.update(tab.id, { pinned: true });
+  })`);
+  const pinnedTarget = fixtures.url('/page.html');
+  await openOverlayAndType(pinnedTarget);
+  await web.press('Enter');
+  await browser.worker.waitFor(`chrome.tabs.query({}).then((tabs) => tabs.some((tab) => tab.url === ${JSON.stringify(pinnedTarget)}))`,
+    { message: 'Enter on a pinned tab did not open a new tab' });
+  assert.strictEqual(await web.evaluate('location.href'), target, 'Enter navigated the pinned tab');
+  assert.strictEqual(await tabCount(), before + 2);
 }
 
 // The search scope panel opens on a double Tab, in the new tab search box

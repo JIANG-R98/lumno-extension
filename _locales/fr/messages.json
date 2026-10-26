@@ -372,7 +372,7 @@
     "message": "Ouvrir les résultats dans l’onglet actuel lorsque Lumno s’ouvre sur une page Web"
   },
   "settings_overlay_open_in_current_tab_desc": {
-    "message": "Désactivé, ouverture dans l’onglet actuel. Maintenez Option/Alt pour l’autre option."
+    "message": "Désactivé, ouverture dans l’onglet actuel sauf s’il est épinglé. Maintenez Option/Alt pour l’autre option."
   },
   "settings_overlay_open_tabs_default_title": {
     "message": "Afficher par défaut tous les onglets ouverts"

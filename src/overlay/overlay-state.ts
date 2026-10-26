@@ -107,6 +107,7 @@ interface OverlayStateParts {
   warmIconCache: OverlayState['warmIconCache'];
   // From the open context.
   prioritizeCurrentPageMatch: boolean;
+  currentTabPinned: boolean;
   initialContextTabUrl: string;
   loadingSessionTrackingActive: boolean;
   documentPipEnabled: boolean;
@@ -138,6 +139,7 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
 
     // From the open context.
     prioritizeCurrentPageMatch: parts.prioritizeCurrentPageMatch,
+    currentTabPinned: parts.currentTabPinned,
     initialContextTabUrl: parts.initialContextTabUrl,
     loadingSessionTrackingActive: parts.loadingSessionTrackingActive,
     documentPipEnabled: parts.documentPipEnabled,

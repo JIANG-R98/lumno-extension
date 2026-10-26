@@ -372,7 +372,7 @@
     "message": "在网页唤起时，结果在当前标签页打开"
   },
   "settings_overlay_open_in_current_tab_desc": {
-    "message": "关闭后在当前页打开，按住 Option/Alt 可临时换成另一种"
+    "message": "关闭后在当前页打开（固定标签页除外），按住 Option/Alt 可临时换成另一种"
   },
   "settings_overlay_open_tabs_default_title": {
     "message": "默认展示所有已打开标签页"

@@ -372,7 +372,7 @@
     "message": "Beim Öffnen von Lumno auf einer Webseite Ergebnisse im aktuellen Tab öffnen"
   },
   "settings_overlay_open_in_current_tab_desc": {
-    "message": "Aus: im aktuellen Tab. Mit Option/Alt die andere Variante."
+    "message": "Aus: im aktuellen Tab, außer er ist angeheftet. Mit Option/Alt die andere Variante."
   },
   "settings_overlay_open_tabs_default_title": {
     "message": "Standardmäßig alle offenen Tabs anzeigen"

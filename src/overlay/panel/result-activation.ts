@@ -1,7 +1,7 @@
 // Opening a result: the modifier keys that pick the current, a new or a
 // background tab, and switching to an open tab instead. Results open in a
-// new tab, or in the current one when the overlay is set to; Option/Alt
-// flips that.
+// new tab, or in the current one when the overlay is set to and the tab is
+// not pinned; Option/Alt flips that.
 import * as NAVIGATION_DISPOSITION from '../../domain/navigation-disposition';
 import type { Disposition } from '../../domain/navigation-disposition';
 import type * as SuggestionActionModel from '../../domain/search/suggestion-action-model';
@@ -29,6 +29,7 @@ interface ResultActivationState {
   // Number keys open results at once, so Cmd and Ctrl keep their own use.
   numberShortcutInstantEnabled: boolean;
   overlayOpenInCurrentTab: boolean;
+  currentTabPinned: boolean;
 }
 
 interface ResultActivationDeps {
@@ -109,6 +110,11 @@ function createResultActivation(deps: ResultActivationDeps) {
     });
   }
 
+  // A pinned tab is kept: results meant for it open in a new tab.
+  function isCurrentTabDefault(): boolean {
+    return overlayState.overlayOpenInCurrentTab && !overlayState.currentTabPinned;
+  }
+
   // Where a result opens for the keys and button of `event`.
   function getSearchResultDisposition(event: ActivationEvent | null): Disposition {
     return SUGGESTION_ACTION_MODEL.getSearchResultOpenDisposition({
@@ -117,7 +123,7 @@ function createResultActivation(deps: ResultActivationDeps) {
         NAVIGATION_DISPOSITION.isMiddleClick(event)
       )),
       openInCurrentTab: Boolean(event && event.altKey),
-      currentTabByDefault: overlayState.overlayOpenInCurrentTab
+      currentTabByDefault: isCurrentTabDefault()
     });
   }
 
@@ -190,6 +196,7 @@ function createResultActivation(deps: ResultActivationDeps) {
     getOpenDisposition,
     getSearchResultNewTabDisposition,
     getSearchResultDisposition,
+    isCurrentTabDefault,
     openMatchedTabSuggestion
   };
 }

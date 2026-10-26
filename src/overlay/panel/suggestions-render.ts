@@ -55,7 +55,6 @@ interface SuggestionsRenderState {
   currentOverlayTabId: number | null;
   overlayTabScoreDebugEnabled: boolean;
   simpleModeEnabled: boolean;
-  overlayOpenInCurrentTab: boolean;
   overlaySearchResultDisplayLimit: number;
   loadingSessionTrackingActive: boolean;
   defaultTheme: ThemeValue;
@@ -99,6 +98,8 @@ interface SuggestionsRenderDeps {
   shouldOpenSearchResultInBackgroundTab(event: ActivationEvent | null): boolean;
   recordSearchSuggestionSelectionFromSuggestion(suggestion: DisplayedSuggestion, query: string, source: string): void;
   getSearchResultDisposition(event: ActivationEvent | null): Disposition;
+  // Whether a plain open goes to the current tab, so rows say 「前往」.
+  isCurrentTabDefault(): boolean;
   getOverlayFaviconUrlResolver(): {
     getPageFaviconRenderCandidates(url: string, explicitUrl: string, options?: { includeChromeFallback?: boolean; allowRemoteImage?: boolean }): FaviconCandidates;
   } | null;
@@ -175,6 +176,7 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
     shouldOpenSearchResultInBackgroundTab,
     recordSearchSuggestionSelectionFromSuggestion,
     getSearchResultDisposition,
+    isCurrentTabDefault,
     getOverlayFaviconUrlResolver,
     t,
     formatMessage,
@@ -497,11 +499,11 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
     ...SUGGESTION_ACTION_MODEL,
     createSearchActionModel: (input) => SUGGESTION_ACTION_MODEL.createSearchActionModel({
       ...input,
-      currentTabByDefault: overlayState.overlayOpenInCurrentTab
+      currentTabByDefault: isCurrentTabDefault()
     }),
     getModifierAdjustedAction: (action, modifiers) => SUGGESTION_ACTION_MODEL.getModifierAdjustedAction(action, {
       ...modifiers,
-      currentTabByDefault: overlayState.overlayOpenInCurrentTab
+      currentTabByDefault: isCurrentTabDefault()
     })
   };
 
