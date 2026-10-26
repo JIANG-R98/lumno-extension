@@ -3185,7 +3185,7 @@ button[aria-busy="true"]:disabled,
   opacity: 0.4;
   translate: 0 -50%;
 }
-._x_extension_shortcut_item_header_2024_unique_:hover:not(:has(button:hover, [role="button"]:hover)) > ._x_extension_shortcut_item_info_2024_unique_,
+._x_extension_shortcut_item_header_2024_unique_:has(> ._x_extension_shortcut_drag_handle_2026_unique_):hover:not(:has(button:hover, [role="button"]:hover)) > ._x_extension_shortcut_item_info_2024_unique_,
 ._x_extension_shortcut_item_2024_unique_[data-sort-dragging="true"] ._x_extension_shortcut_item_info_2024_unique_ {
   padding-left: 22px;
 }
