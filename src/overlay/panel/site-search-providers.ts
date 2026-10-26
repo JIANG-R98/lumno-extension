@@ -1,8 +1,7 @@
 // Site search providers and aggregate searches in the overlay: their
 // URLs and icons, running an interactive provider, recording a selection,
 // and loading and reloading both lists.
-import type * as ShortcutFavicon from '../../domain/favicon/shortcut-favicon';
-import type { CachedIconMap, SiteSearchIconOptions } from '../../domain/favicon/shortcut-favicon';
+import * as BundledIcons from '../../domain/favicon/shortcut-favicon/bundled-icons';
 import type * as AggregateSearchStore from '../../domain/search/aggregate-search-store';
 import type { AggregateSearch } from '../../domain/search/aggregate-search-store';
 import * as AGGREGATE_SEARCH_SURFACE from '../../domain/search/aggregate-search-surface';
@@ -20,6 +19,7 @@ import type { ActivationEvent } from './result-activation';
 import type { Translate } from './types';
 import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
 import * as FaviconUrlKinds from '../../domain/favicon/url-kinds';
+import type { CachedIconMap, SiteSearchIconOptions } from '../../domain/favicon/shortcut-favicon/types';
 
 interface SiteSearchProvidersState {
   settings: Pick<OverlaySettings, 'store' | 'loaded' | 'get'>;
@@ -42,7 +42,6 @@ interface SiteSearchProvidersDeps {
     'withHelpCenterLocale' | 'isAiSiteSearchProvider' | 'isSearchEngineSiteSearchProvider' |
     'isInteractiveSiteSearchProvider' | 'mergeCustomProviders'>;
   AGGREGATE_SEARCH_STORE: Pick<typeof AggregateSearchStore, 'isAggregateSearchProvider'>;
-  SHORTCUT_FAVICON: Pick<typeof ShortcutFavicon, 'getSiteSearchProviderIcon' | 'getSiteSearchProviderPageUrl'>;
   getHelpCenterLocale(): string;
   showOverlayToast(message: string, isError?: boolean): void;
   t: Translate;
@@ -65,7 +64,6 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     getSearchResultNewTabDisposition,
     finishOverlayResultActivation,
     getOverlayFaviconUrlResolver,
-    SHORTCUT_FAVICON,
     siteSearchIconCacheOptions,
     faviconDataCache
   } = deps;
@@ -191,13 +189,13 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     if (!resolver) {
       return '';
     }
-    const iconUrl = SHORTCUT_FAVICON.getSiteSearchProviderIcon(
+    const iconUrl = BundledIcons.getSiteSearchProviderIcon(
       overlayState.siteSearchIconCacheLoaded ? overlayState.siteSearchIconCache : {}, provider, Date.now(), {
         ...siteSearchIconCacheOptions,
         resolveAssetUrl: (path: string) => chrome.runtime.getURL(path)
       }
     );
-    return resolver.getProviderFaviconUrl(SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider), iconUrl);
+    return resolver.getProviderFaviconUrl(BundledIcons.getSiteSearchProviderPageUrl(provider), iconUrl);
   }
 
   // Input-mode icons load straight into an <img> in the page, which cannot
@@ -219,7 +217,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     if (!provider) {
       return '';
     }
-    return toPageRenderableIconUrl(getProviderIcon(provider), SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider));
+    return toPageRenderableIconUrl(getProviderIcon(provider), BundledIcons.getSiteSearchProviderPageUrl(provider));
   }
 
   // Starts a load of the providers; a newer load, or an invalidating one,

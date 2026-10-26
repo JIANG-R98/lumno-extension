@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const SHORTCUT_FAVICON = require('../../src/domain/favicon/shortcut-favicon.ts');
+const SHORTCUT_FAVICON = require('../helpers/shortcut-favicon.ts');
 const { createOptionsPage } = require('../helpers/options-page');
 
 // Built-in search engines get their own group in Settings, after the custom

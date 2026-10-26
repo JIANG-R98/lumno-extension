@@ -4,7 +4,7 @@
 // with the extension's own icon store, so a test can start a page or the
 // worker with icons already cached.
 
-const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
+const shortcutFavicon = require('./shortcut-favicon.ts');
 const shortcutFaviconStore = require('../../src/platform/shortcut-favicon-store.ts');
 const { siteSearchIconCache } = require('../../src/domain/settings/search.ts');
 

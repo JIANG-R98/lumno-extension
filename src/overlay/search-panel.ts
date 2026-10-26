@@ -1,6 +1,5 @@
 import * as FAVICON_THEME from '../shared/favicon/favicon-theme';
 import * as COMMUNITY_LINKS from '../platform/community-links';
-import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
 import * as OVERLAY_FONT_FACES from '../shared/overlay-font-faces';
 import * as LumnoShortcutFaviconStore from '../platform/shortcut-favicon-store';
 import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
@@ -71,6 +70,8 @@ import { createSettingPort } from '../platform/settings-store';
 import { createOverlaySettings } from './overlay-settings';
 import * as FaviconDecisionLog from '../domain/favicon/decision-log';
 import * as FaviconHostPolicy from '../domain/favicon/host-policy';
+import * as BundledIcons from '../domain/favicon/shortcut-favicon/bundled-icons';
+import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted';
 
 // Favicon data and preloaded icons the overlay resolved, kept across its
 // openings in this page.
@@ -566,7 +567,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     overlayState
   });
 
-  const siteSearchIconCacheOptions = SHORTCUT_FAVICON.SITE_SEARCH_CACHE_OPTIONS;
+  const siteSearchIconCacheOptions = ShortcutIconCache.SITE_SEARCH_CACHE_OPTIONS;
 
   const {
     buildSearchUrl,
@@ -590,7 +591,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     getSearchResultNewTabDisposition: (...args) => getSearchResultNewTabDisposition(...args),
     finishOverlayResultActivation: (...args) => finishOverlayResultActivation(...args),
     getOverlayFaviconUrlResolver: (...args) => getOverlayFaviconUrlResolver(...args),
-    SHORTCUT_FAVICON,
     siteSearchIconCacheOptions,
     faviconDataCache,
     overlayState
@@ -792,7 +792,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     defaultAccentColor,
     shouldBlockOverlayFaviconForHost,
     faviconDataCache,
-    SHORTCUT_FAVICON,
     getProviderIcon,
     getThemeForMode,
     overlayState
@@ -1336,7 +1335,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   overlayFaviconRuntime = faviconRuntime;
   const attachFaviconData = faviconRuntime.attachFaviconData;
   const attachInputModeFaviconData =
-    SHORTCUT_FAVICON.createSiteSearchProviderIconHydrator(attachFaviconData);
+    BundledIcons.createSiteSearchProviderIconHydrator(attachFaviconData);
   const refreshOverlayThemeAwareFavicons = faviconRuntime.refreshOverlayThemeAwareFavicons;
   const refreshOverlayFaviconsForPolicyChange = faviconRuntime.refreshOverlayFaviconsForPolicyChange;
   const defaultCaretColor = overlayState.searchInput.style.caretColor || 'var(--x-ext-input-caret, #7DB7FF)';
@@ -1412,7 +1411,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     isDarkMode: isOverlayDarkMode,
     getProviderIcon: getPageRenderableProviderIcon,
     resolveProviderIconUrl: (provider, iconUrl) => {
-      const pageUrl = SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider);
+      const pageUrl = BundledIcons.getSiteSearchProviderPageUrl(provider);
       return toPageRenderableIconUrl(getOverlayFaviconUrlResolver().getProviderFaviconUrl(pageUrl, iconUrl), pageUrl);
     },
     getProviderThemeHost,

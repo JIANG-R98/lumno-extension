@@ -6,7 +6,7 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const NEWTAB_SHORTCUTS_STORE = require(path.join(repoRoot, 'src/domain/shortcuts-store.ts'));
-const SHORTCUT_FAVICON = require(path.join(repoRoot, 'src/domain/favicon/shortcut-favicon.ts'));
+const SHORTCUT_FAVICON = require(path.join(repoRoot, 'tests/helpers/shortcut-favicon.ts'));
 const FAVICON_UTILS = require(path.join(repoRoot, 'tests/helpers/favicon-utils.ts'));
 const LumnoNewtabShortcutsController = require(path.join(repoRoot, 'src/newtab/shortcuts/shortcuts-controller.ts'));
 const { png } = require('../helpers/favicon-acquisition');

@@ -560,7 +560,7 @@ assert.ok(
 );
 
 assert.ok(
-  newtabScripts.includes('src/domain/favicon/shortcut-favicon.ts'),
+  newtabScripts.includes('src/domain/favicon/shortcut-favicon/persisted.ts'),
   'new tab page should load the dedicated high-resolution shortcut favicon cache'
 );
 

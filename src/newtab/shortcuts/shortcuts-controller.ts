@@ -1,8 +1,8 @@
 // Shortcut storage, favicons, loading, persistence, rendering and the add/edit
 // dialog.
+import * as ShortcutIconCache from '../../domain/favicon/shortcut-favicon/persisted';
+import * as BundledIcons from '../../domain/favicon/shortcut-favicon/bundled-icons';
 import type { FaviconDataEntry } from '../../domain/favicon/favicon-cache';
-import type * as ShortcutFavicon from '../../domain/favicon/shortcut-favicon';
-import type { CachedIconMap, CachedIconSource } from '../../domain/favicon/shortcut-favicon';
 import type * as SearchUtils from '../../domain/search/search-utils';
 import { getShortcutUrl, isShortcutFolder } from '../../domain/shortcuts-store';
 import type * as ShortcutsStore from '../../domain/shortcuts-store';
@@ -50,6 +50,7 @@ import type { ShortcutPageActions } from './shortcut-page-actions';
 import type { PersistShortcuts, PersistShortcutsOptions, ShortcutIconChange, ShortcutSite } from './shortcut-types';
 import * as FaviconCanonical from '../../domain/favicon/canonical';
 import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
+import type { CachedIconMap, CachedIconSource } from '../../domain/favicon/shortcut-favicon/types';
 
 interface ShortcutsControllerState {
   newtabShortcuts: ShortcutItem[];
@@ -108,16 +109,6 @@ interface ShortcutsControllerDeps {
   NEWTAB_SHORTCUTS_LOCAL_OVERFLOW_STORAGE_KEY: string;
   shortcutIconStore: ShortcutIconStore;
   folderItemIconStore: Pick<FolderItemIconStore, 'get' | 'update'>;
-  SHORTCUT_FAVICON: Pick<typeof ShortcutFavicon,
-    | 'normalizePageUrl'
-    | 'normalizeDataUrl'
-    | 'normalizeCacheMap'
-    | 'getCachedIconSource'
-    | 'getCachedIconDataUrl'
-    | 'setCachedIcon'
-    | 'retainCachedIcons'
-    | 'isCachedIconForPage'
-    | 'getBundledShortcutIconAssetPath'>;
   getPageFaviconUrlResolver(): Pick<FaviconUrlResolver,
     'getShortcutFaviconCandidateUrl' | 'getShortcutFaviconFetchCandidates'> | null;
   SEARCH_UTILS: Pick<typeof SearchUtils, 'getDefaultSiteSearchProviders'>;
@@ -306,7 +297,6 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     NEWTAB_SHORTCUTS_LOCAL_OVERFLOW_STORAGE_KEY,
     shortcutIconStore,
     folderItemIconStore,
-    SHORTCUT_FAVICON,
     getPageFaviconUrlResolver,
     SEARCH_UTILS,
     getExtensionResourceUrl,
@@ -607,7 +597,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
 
   // The first shortcut whose page is `pageUrl` (normalized).
   function findShortcutByPageUrl(pageUrl: string): ShortcutItem | undefined {
-    return pageState.newtabShortcuts.find((item) => SHORTCUT_FAVICON.normalizePageUrl(getShortcutUrl(item)) === pageUrl);
+    return pageState.newtabShortcuts.find((item) => ShortcutIconCache.normalizePageUrl(getShortcutUrl(item)) === pageUrl);
   }
 
   // A built-in choice only holds while this extension still packages artwork
@@ -619,15 +609,15 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
   }
 
   function getShortcutFaviconDataUrl(pageUrl: unknown): string {
-    const normalizedPageUrl = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
+    const normalizedPageUrl = ShortcutIconCache.normalizePageUrl(pageUrl);
     const source = getShortcutIconSource(findShortcutByPageUrl(normalizedPageUrl));
     if (source === 'builtin') return '';
     const entry = normalizedPageUrl ? pageState.newtabShortcutFavicons[normalizedPageUrl] : undefined;
     if (entry && isCachedIconSource(source)) {
-      const savedSource = SHORTCUT_FAVICON.getCachedIconSource(entry);
+      const savedSource = ShortcutIconCache.getCachedIconSource(entry);
       if (source !== savedSource) return '';
     }
-    return SHORTCUT_FAVICON.getCachedIconDataUrl(pageState.newtabShortcutFavicons, pageUrl);
+    return ShortcutIconCache.getCachedIconDataUrl(pageState.newtabShortcutFavicons, pageUrl);
   }
 
   function getShortcutFaviconCandidateUrl(pageUrl: string): string {
@@ -635,7 +625,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     if (getShortcutFaviconDataUrl(pageUrl)) {
       return '';
     }
-    const normalizedPageUrl = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
+    const normalizedPageUrl = ShortcutIconCache.normalizePageUrl(pageUrl);
     if (normalizedPageUrl && getShortcutIconSource(findShortcutByPageUrl(normalizedPageUrl)) !== 'builtin') return '';
     const resolver = getPageFaviconUrlResolver();
     return resolver ? resolver.getShortcutFaviconCandidateUrl(
@@ -644,7 +634,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
   }
 
   function saveShortcutFaviconSnapshot(pageUrl: string, dataUrl: unknown, sourceUrl: unknown, replaceExisting?: boolean): string {
-    const normalizedDataUrl = SHORTCUT_FAVICON.normalizeDataUrl(dataUrl);
+    const normalizedDataUrl = ShortcutIconCache.normalizeDataUrl(dataUrl);
     if (!normalizedDataUrl || !findShortcutByPageUrl(pageUrl)) {
       return '';
     }
@@ -652,7 +642,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     if (savedDataUrl && replaceExisting !== true) {
       return savedDataUrl;
     }
-    pageState.newtabShortcutFavicons = SHORTCUT_FAVICON.setCachedIcon(
+    pageState.newtabShortcutFavicons = ShortcutIconCache.setCachedIcon(
       pageState.newtabShortcutFavicons, pageUrl, normalizedDataUrl, sourceUrl
     );
     scheduleShortcutFaviconCacheWrite(pageUrl);
@@ -666,7 +656,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     shortcutTiles.forEach((tile) => {
       const url = tile.isConnected ? tile.getAttribute('data-shortcut-url') || '' : '';
       if (!url || tile.getAttribute('data-shortcut-custom-icon') === 'true' ||
-          SHORTCUT_FAVICON.normalizePageUrl(url) !== pageUrl) {
+          ShortcutIconCache.normalizePageUrl(url) !== pageUrl) {
         return;
       }
       // Tiles with an uploaded icon are skipped above, so none is passed.
@@ -757,7 +747,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     }
     if (source === 'builtin') return { iconSource: 'builtin' };
     const toPageUrl = (value: unknown): string =>
-      SHORTCUT_FAVICON.normalizePageUrl(NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(value));
+      ShortcutIconCache.normalizePageUrl(NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(value));
     const pageUrl = toPageUrl(url);
     const onlineIcon = iconState.onlineIcon;
     if (onlineIcon && onlineIcon.dataUrl && pageUrl && onlineIcon.pageUrl === pageUrl) {
@@ -775,14 +765,14 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
 
   function getShortcutDialogBuiltinIconUrl(url: unknown): string {
     const pageUrl = NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url);
-    const assetPath = SHORTCUT_FAVICON.getBundledShortcutIconAssetPath(
+    const assetPath = BundledIcons.getBundledShortcutIconAssetPath(
       pageUrl, SEARCH_UTILS.getDefaultSiteSearchProviders()
     );
     return assetPath ? getExtensionResourceUrl(assetPath) : '';
   }
 
   function getShortcutDialogOnlineIconSource(url: string): CachedIconSource | 'builtin' {
-    const pageUrl = SHORTCUT_FAVICON.normalizePageUrl(
+    const pageUrl = ShortcutIconCache.normalizePageUrl(
       NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url)
     );
     const shortcut = findShortcutByPageUrl(pageUrl);
@@ -791,8 +781,8 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
       return iconSource;
     }
     const entry = pageUrl ? pageState.newtabShortcutFavicons[pageUrl] : undefined;
-    if (entry && SHORTCUT_FAVICON.isCachedIconForPage(entry, pageUrl)) {
-      return SHORTCUT_FAVICON.getCachedIconSource(entry);
+    if (entry && ShortcutIconCache.isCachedIconForPage(entry, pageUrl)) {
+      return ShortcutIconCache.getCachedIconSource(entry);
     }
     return 'cache';
   }
@@ -800,7 +790,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
   function isShortcutDialogIconSourceAvailable(source: CachedIconSource, url: string): boolean {
     const pageUrl = NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url);
     if (!pageUrl) return source === 'cache';
-    const normalizedPageUrl = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
+    const normalizedPageUrl = ShortcutIconCache.normalizePageUrl(pageUrl);
     const resolver = getPageFaviconUrlResolver();
     return normalizedPageUrl
       ? Boolean(resolver && resolver.getShortcutFaviconFetchCandidates(normalizedPageUrl, source).length)
@@ -809,7 +799,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
 
   function refreshShortcutDialogOnlineIcon(url: string, iconSource?: CachedIconSource): Promise<OnlineShortcutIcon | null> {
     const pageUrl = NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url);
-    const normalizedPageUrl = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
+    const normalizedPageUrl = ShortcutIconCache.normalizePageUrl(pageUrl);
     if (!normalizedPageUrl) {
       if (iconSource === 'service' || iconSource === 'favicon-is') return Promise.resolve(null);
       // Internal browser pages can only use their browser-provided icon.
@@ -836,7 +826,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
         ...(isCachedIconSource(iconSource) ? { iconSource } : {})
       }, (response) => {
         window.clearTimeout(timeoutId);
-        const dataUrl = SHORTCUT_FAVICON.normalizeDataUrl(response && response.data);
+        const dataUrl = ShortcutIconCache.normalizeDataUrl(response && response.data);
         finish(response && dataUrl && policyRevision === pageState.shortcutFaviconPolicyRevision
           ? { dataUrl, pageUrl: normalizedPageUrl, sourceUrl: String(response.sourceUrl || '') }
           : null);
@@ -849,7 +839,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
   }
 
   function scheduleShortcutFaviconCacheWrite(pageUrl: string): void {
-    const cacheKey = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
+    const cacheKey = ShortcutIconCache.normalizePageUrl(pageUrl);
     const cacheEntry = cacheKey ? pageState.newtabShortcutFavicons[cacheKey] : undefined;
     if (cacheKey && cacheEntry) {
       pageState.shortcutFaviconPendingCacheEntries[cacheKey] = cacheEntry;
@@ -869,7 +859,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
             delete pageState.shortcutFaviconPendingCacheEntries[key];
           }
         });
-        pageState.newtabShortcutFavicons = SHORTCUT_FAVICON.normalizeCacheMap({
+        pageState.newtabShortcutFavicons = ShortcutIconCache.normalizeCacheMap({
           ...savedEntries,
           ...pageState.shortcutFaviconPendingCacheEntries
         });
@@ -897,7 +887,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
   }
 
   function resolveShortcutFaviconDataUrl(pageUrl: string): Promise<string> {
-    const normalizedPageUrl = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
+    const normalizedPageUrl = ShortcutIconCache.normalizePageUrl(pageUrl);
     if (!normalizedPageUrl) {
       return Promise.resolve('');
     }
@@ -925,8 +915,8 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
       const cacheKey = FaviconCanonical.getFaviconPersistCacheKey(normalizedPageUrl);
       const existingEntry = getPersistedFaviconDataEntry(cacheKey);
       // The page favicon cache keeps no source URL.
-      if (!iconSource && existingEntry && SHORTCUT_FAVICON.isCachedIconForPage(existingEntry, normalizedPageUrl) &&
-          SHORTCUT_FAVICON.normalizeDataUrl(existingEntry.dataUrl)) {
+      if (!iconSource && existingEntry && ShortcutIconCache.isCachedIconForPage(existingEntry, normalizedPageUrl) &&
+          ShortcutIconCache.normalizeDataUrl(existingEntry.dataUrl)) {
         return saveShortcutFaviconSnapshot(normalizedPageUrl, existingEntry.dataUrl, '');
       }
       const resolver = getPageFaviconUrlResolver();
@@ -1101,7 +1091,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
   function loadShortcutFavicons(): Promise<CachedIconMap> {
     return shortcutFaviconStore.readAll()
       .then((cacheMap) => {
-        pageState.newtabShortcutFavicons = SHORTCUT_FAVICON.normalizeCacheMap(cacheMap);
+        pageState.newtabShortcutFavicons = ShortcutIconCache.normalizeCacheMap(cacheMap);
         return pageState.newtabShortcutFavicons;
       })
       .catch(() => {
@@ -1112,13 +1102,13 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
 
   function pruneShortcutFavicons(shortcuts: readonly ShortcutItem[], persist?: boolean): boolean {
     const shortcutUrls = shortcuts.map(getShortcutUrl);
-    const nextFavicons = SHORTCUT_FAVICON.retainCachedIcons(
+    const nextFavicons = ShortcutIconCache.retainCachedIcons(
       pageState.newtabShortcutFavicons,
       shortcutUrls
     );
     const changed = JSON.stringify(pageState.newtabShortcutFavicons) !== JSON.stringify(nextFavicons);
     pageState.newtabShortcutFavicons = nextFavicons;
-    pageState.shortcutFaviconPendingCacheEntries = SHORTCUT_FAVICON.retainCachedIcons(
+    pageState.shortcutFaviconPendingCacheEntries = ShortcutIconCache.retainCachedIcons(
       pageState.shortcutFaviconPendingCacheEntries,
       shortcutUrls
     );
@@ -1997,7 +1987,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
           iconPlateColor: payload.iconPlateColor
         }).then((saved) => {
           const onlineIcon = payload.onlineIcon;
-          const pageUrl = SHORTCUT_FAVICON.normalizePageUrl(
+          const pageUrl = ShortcutIconCache.normalizePageUrl(
             NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(payload.url)
           );
           if (saved && onlineIcon && pageUrl && pageUrl === onlineIcon.pageUrl) {

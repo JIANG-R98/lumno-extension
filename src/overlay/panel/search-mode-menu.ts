@@ -1,7 +1,6 @@
 // The search mode menu: its providers and items, the order the user
 // gives them, stepping through it, opening it with a double Tab, and
 // picking an item.
-import type { CachedIconMap } from '../../domain/favicon/shortcut-favicon';
 import type * as AggregateSearchStore from '../../domain/search/aggregate-search-store';
 import type { AggregateSearch } from '../../domain/search/aggregate-search-store';
 import type * as SearchSourceOrder from '../../domain/search/search-source-order';
@@ -16,6 +15,7 @@ import { createHistory as createSearchSourceOrderHistory } from '../../domain/se
 import type { RemixIconName } from '../../shared/ui/remix-icon';
 import { searchSourceOrder } from '../../domain/settings/search';
 import type { OverlaySettings } from '../overlay-settings';
+import type { CachedIconMap } from '../../domain/favicon/shortcut-favicon/types';
 
 interface SearchModeMenuState {
   settings: Pick<OverlaySettings, 'store' | 'loaded' | 'set'>;

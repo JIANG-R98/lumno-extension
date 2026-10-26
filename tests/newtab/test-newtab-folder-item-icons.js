@@ -1,7 +1,7 @@
 const assert = require('assert');
 const icons = require('../../src/newtab/bookmarks/folder-item-icons');
 require('../../src/domain/shortcuts-store');
-require('../../src/domain/favicon/shortcut-favicon');
+require('../helpers/shortcut-favicon.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { shortcutFolderItemIcons } = require('../../src/domain/settings/newtab-shortcuts.ts');
 const png = (text) => `data:image/png;base64,${Buffer.from(text).toString('base64')}`;

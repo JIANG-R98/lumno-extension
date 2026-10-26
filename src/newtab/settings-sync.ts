@@ -1,8 +1,7 @@
 // Keeps an open New Tab in step with settings changed elsewhere (Settings,
 // another tab, sync): one listener per storage key on the shared change
 // registry, and the runtime messages that ask the page to refresh a section.
-import type * as ShortcutFavicon from '../domain/favicon/shortcut-favicon';
-import type { CachedIconMap } from '../domain/favicon/shortcut-favicon';
+import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted';
 import type { SiteSearchIconCache } from '../shared/search/site-search-icon-cache';
 import type * as ProgressHistory from '../domain/progress-history';
 import type { ProgressHistoryMap } from '../domain/progress-history';
@@ -46,6 +45,7 @@ import type { WallpaperPage } from './wallpaper/wallpaper-page';
 import { shortcutFolderBindings } from '../domain/settings/newtab-shortcuts';
 import { bingDailyCache } from '../domain/settings/newtab-wallpaper';
 import { progressHistory } from '../domain/settings/recent-sites';
+import type { CachedIconMap } from '../domain/favicon/shortcut-favicon/types';
 
 interface SettingsSyncState {
   currentBookmarkCount: number;
@@ -140,7 +140,6 @@ interface SettingsSyncDeps extends
   shortcutFolderRuntime: Pick<FolderBindingRuntime, 'accept'>;
   NEWTAB_BOOKMARK_FOLDER_ICON: Pick<typeof BookmarkFolderIcon, 'normalizeFolderColorRefs'>;
   NEWTAB_SHORTCUT_ICON_STORE: Pick<typeof ShortcutIconStore, 'normalizeIconMap'>;
-  SHORTCUT_FAVICON: Pick<typeof ShortcutFavicon, 'normalizeCacheMap'>;
   defaultTheme: ThemeVariant;
   PROGRESS_HISTORY: Pick<typeof ProgressHistory, 'normalizeHistoryMap'>;
   NEWTAB_SHORTCUTS_STORAGE_KEYS: readonly string[];
@@ -219,7 +218,6 @@ function createSettingsSync(deps: SettingsSyncDeps) {
     NEWTAB_SHORTCUT_ICONS_STORAGE_KEY,
     NEWTAB_SHORTCUT_ICON_STORE,
     NEWTAB_SHORTCUT_FAVICON_CACHE_STORAGE_KEY,
-    SHORTCUT_FAVICON,
     siteSearchIconCache,
     setSiteSearchPrefix,
     defaultTheme,
@@ -415,7 +413,7 @@ function createSettingsSync(deps: SettingsSyncDeps) {
   }, { area: 'local' });
   storageChanges.on(NEWTAB_SHORTCUT_FAVICON_CACHE_STORAGE_KEY, (changes) => {
     const storedFavicons = changes[NEWTAB_SHORTCUT_FAVICON_CACHE_STORAGE_KEY].newValue;
-    pageState.newtabShortcutFavicons = SHORTCUT_FAVICON.normalizeCacheMap({
+    pageState.newtabShortcutFavicons = ShortcutIconCache.normalizeCacheMap({
       ...(isRecord(storedFavicons) ? storedFavicons : {}),
       ...pageState.shortcutFaviconPendingCacheEntries
     });

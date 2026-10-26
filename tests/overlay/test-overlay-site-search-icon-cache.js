@@ -1,6 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
-const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
+const shortcutFavicon = require('../helpers/shortcut-favicon.ts');
 const searchUtils = require('../../src/domain/search/search-utils.ts');
 const { parseCss } = require('../helpers/css-rules');
 const { getInjectedScripts, runsBefore } = require('../helpers/runtime-scripts');
@@ -14,7 +14,7 @@ const siteSearchSource = fs.readFileSync('assets/data/site-search.json', 'utf8')
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 
 assert.ok(
-  runsBefore(getInjectedScripts('overlay'), 'src/domain/favicon/shortcut-favicon.ts', 'src/overlay/search-panel.ts'),
+  runsBefore(getInjectedScripts('overlay'), 'src/domain/favicon/shortcut-favicon/bundled-icons.ts', 'src/overlay/search-panel.ts'),
   'the injected overlay should load the shared high-resolution shortcut favicon runtime first'
 );
 

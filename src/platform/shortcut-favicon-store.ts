@@ -1,11 +1,11 @@
 // The saved icon snapshots (domain/favicon/shortcut-favicon.ts) in the
 // extension's local storage. Updates run one at a time across pages when
 // the page has Web Locks, so two pages never overwrite each other's icons.
-import { normalizeCacheMap, normalizeCacheOptions, retainCachedIcons } from '../domain/favicon/shortcut-favicon';
-import type { CachedIconMap, IconCacheOptions } from '../domain/favicon/shortcut-favicon';
 import type { StorageAreaLike } from '../domain/storage-port';
 import type { StorageChromeApi } from './settings-storage';
 import { newtabShortcutFaviconCache } from '../domain/settings/newtab-shortcuts';
+import { normalizeCacheMap, normalizeCacheOptions, retainCachedIcons } from '../domain/favicon/shortcut-favicon/persisted';
+import type { CachedIconMap, IconCacheOptions } from '../domain/favicon/shortcut-favicon/types';
 
 // navigator.locks.
 interface LockManagerLike {

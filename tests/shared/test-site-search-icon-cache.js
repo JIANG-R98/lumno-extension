@@ -1,6 +1,6 @@
 const assert = require('assert');
 const iconCache = require('../../src/shared/search/site-search-icon-cache.ts');
-const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
+const shortcutFavicon = require('../helpers/shortcut-favicon.ts');
 const { siteSearchIconCache } = require('../../src/domain/settings/search.ts');
 
 // Site search icons are read from storage once per surface; a change to the

@@ -1,7 +1,6 @@
 // The site search lists: built-in, custom and AI providers with their
 // icons and copy, saving provider state and disabled keys, and refreshing
 // the lists when providers change.
-import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
 import type { AggregateSearch } from '../domain/search/aggregate-search-store';
 import type * as SearchUtils from '../domain/search/search-utils';
 import { readSiteSearchProviders } from '../domain/search/site-search-provider-reader';
@@ -16,6 +15,7 @@ import type * as SiteSearch from './options-site-search';
 import type { EnqueueOperation, PreparedSiteSearchProviders, SiteSearchProviderSnapshot } from './options-site-search';
 import type { GetMessage } from './options-types';
 import type { ReorderCopyModel } from './react/reorder-buttons';
+import * as BundledIcons from '../domain/favicon/shortcut-favicon/bundled-icons';
 import type {
   SiteSearchListCopyModel,
   SiteSearchListRenderModel,
@@ -133,7 +133,7 @@ function createSiteSearchList(deps: SiteSearchListDeps) {
       return '';
     }
     const localIconAsset = !item._xIsCustom
-      ? SHORTCUT_FAVICON.getSiteSearchPinnedIconAssetPath(item)
+      ? BundledIcons.getSiteSearchPinnedIconAssetPath(item)
       : '';
     if (localIconAsset) {
       return chrome.runtime.getURL(localIconAsset);

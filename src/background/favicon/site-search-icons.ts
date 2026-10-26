@@ -2,21 +2,23 @@
 import * as LumnoShortcutFaviconStore from '../../platform/shortcut-favicon-store';
 import * as SHORTCUT_ICON_MAP from '../../domain/shortcut-icon-map';
 import * as SHORTCUTS_STORE from '../../domain/shortcuts-store';
-import * as SHORTCUT_FAVICON from '../../domain/favicon/shortcut-favicon';
 import { readSiteSearchProviders } from '../../domain/search/site-search-provider-reader';
 import { providerStorageRuntime, warnBackgroundFailure, workerSettings } from '../worker-context';
 import type { ShortcutFaviconStore } from '../../platform/shortcut-favicon-store';
-import type { CachedIconMap } from '../../domain/favicon/shortcut-favicon';
 import type { SiteSearchProvider } from '../../domain/search/types';
 import { NEWTAB_SHORTCUT_LIST_SETTINGS, newtabShortcutFaviconCache, newtabShortcutIcons, newtabShortcutsLocalOverflow } from '../../domain/settings/newtab-shortcuts';
 import * as SearchSettings from '../../domain/settings/search';
 
 import { fetchShortcutFaviconData } from './shortcut-icons';
 import type { ShortcutIconResult, SiteSearchIconWarmItem, SiteSearchShortcutIconSources } from './types';
+import * as BundledIcons from '../../domain/favicon/shortcut-favicon/bundled-icons';
+import * as ShortcutIconCache from '../../domain/favicon/shortcut-favicon/persisted';
+import * as ShortcutIcons from '../../domain/favicon/shortcut-favicon/shortcut-icons';
+import type { CachedIconMap } from '../../domain/favicon/shortcut-favicon/types';
 
 const SITE_SEARCH_ICON_STORAGE_KEY = SearchSettings.siteSearchIconCache.key;
-const SITE_SEARCH_ICON_CACHE_OPTIONS = SHORTCUT_FAVICON.SITE_SEARCH_CACHE_OPTIONS;
-const SITE_SEARCH_PINNED_ICON_KEYS = new Set(Object.keys(SHORTCUT_FAVICON.SITE_SEARCH_PINNED_ICON_ASSETS));
+const SITE_SEARCH_ICON_CACHE_OPTIONS = ShortcutIconCache.SITE_SEARCH_CACHE_OPTIONS;
+const SITE_SEARCH_PINNED_ICON_KEYS = new Set(Object.keys(BundledIcons.SITE_SEARCH_PINNED_ICON_ASSETS));
 
 const SITE_SEARCH_ICON_WARM_CONCURRENCY = 2;
 
@@ -81,7 +83,7 @@ function loadSiteSearchIconCache(): Promise<CachedIconMap> {
 }
 
 function hasUsableCachedSiteSearchProviderIcon(provider: SiteSearchProvider): boolean {
-  const icon = SHORTCUT_FAVICON.getSiteSearchProviderIcon(
+  const icon = BundledIcons.getSiteSearchProviderIcon(
     siteSearchIconCache || {},
     provider,
     Date.now(),
@@ -121,10 +123,10 @@ function pruneSiteSearchProviderIconCache(providers: readonly SiteSearchProvider
     if (SITE_SEARCH_PINNED_ICON_KEYS.has(providerKey)) {
       return [];
     }
-    const pageUrl = SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider);
+    const pageUrl = BundledIcons.getSiteSearchProviderPageUrl(provider);
     return pageUrl ? [pageUrl] : [];
   });
-  const nextCache = SHORTCUT_FAVICON.retainCachedIcons(
+  const nextCache = ShortcutIconCache.retainCachedIcons(
     siteSearchIconCache,
     pageUrls,
     Date.now(),
@@ -143,7 +145,7 @@ function cacheSiteSearchProviderIcon(pageUrl: string, result: ShortcutIconResult
   if (!result || !result.data) {
     return false;
   }
-  const nextCache = SHORTCUT_FAVICON.setCachedIcon(
+  const nextCache = ShortcutIconCache.setCachedIcon(
     siteSearchIconCache || {},
     pageUrl,
     result.data,
@@ -151,7 +153,7 @@ function cacheSiteSearchProviderIcon(pageUrl: string, result: ShortcutIconResult
     Date.now(),
     SITE_SEARCH_ICON_CACHE_OPTIONS
   );
-  const cacheKey = SHORTCUT_FAVICON.getCacheKey(pageUrl);
+  const cacheKey = ShortcutIconCache.getCacheKey(pageUrl);
   const nextEntry = cacheKey && nextCache ? nextCache[cacheKey] : null;
   if (!nextEntry || nextEntry.dataUrl !== result.data) {
     return false;
@@ -203,7 +205,7 @@ function loadSiteSearchShortcutIconSources(): Promise<SiteSearchShortcutIconSour
     return {
       shortcuts: state.items,
       shortcutIcons: SHORTCUT_ICON_MAP.normalizeIconMap(workerSettings.getStored(newtabShortcutIcons)),
-      shortcutFavicons: SHORTCUT_FAVICON.normalizeCacheMap(workerSettings.getStored(newtabShortcutFaviconCache))
+      shortcutFavicons: ShortcutIconCache.normalizeCacheMap(workerSettings.getStored(newtabShortcutFaviconCache))
     };
   });
 }
@@ -221,9 +223,9 @@ function applySiteSearchShortcutIcons(providers: readonly SiteSearchProvider[]):
     if (!sources || !siteSearchIconCache) {
       return;
     }
-    const nextCache = SHORTCUT_FAVICON.applySiteSearchShortcutIcons(
+    const nextCache = ShortcutIcons.applySiteSearchShortcutIcons(
       siteSearchIconCache,
-      SHORTCUT_FAVICON.getSiteSearchShortcutIcons(
+      ShortcutIcons.getSiteSearchShortcutIcons(
         providers,
         sources.shortcuts,
         sources.shortcutIcons,
@@ -248,8 +250,8 @@ function scheduleSiteSearchProviderIconWarmup(providers: unknown, preferredTheme
   loadSiteSearchIconCache().then(() => applySiteSearchShortcutIcons(items)).then(() => {
     pruneSiteSearchProviderIconCache(items);
     items.forEach((provider) => {
-      const explicitIcon = SHORTCUT_FAVICON.getSiteSearchProviderExplicitIcon(provider);
-      const pageUrl = SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider);
+      const explicitIcon = BundledIcons.getSiteSearchProviderExplicitIcon(provider);
+      const pageUrl = BundledIcons.getSiteSearchProviderPageUrl(provider);
       const providerKey = String(provider && provider.key || '').trim().toLowerCase();
       if (SITE_SEARCH_PINNED_ICON_KEYS.has(providerKey)) {
         return;

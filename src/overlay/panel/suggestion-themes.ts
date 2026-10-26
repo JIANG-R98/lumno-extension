@@ -1,5 +1,5 @@
-import type * as ShortcutFavicon from '../../domain/favicon/shortcut-favicon';
 import type * as SearchUtils from '../../domain/search/search-utils';
+import * as BundledIcons from '../../domain/favicon/shortcut-favicon/bundled-icons';
 import type { SiteSearchProvider } from '../../domain/search/types';
 import type { ThemeLike, ThemeVariant } from '../../shared/favicon/favicon-theme';
 import * as BoundedCache from '../../domain/bounded-cache';
@@ -16,7 +16,6 @@ interface SuggestionThemesState {
 
 interface SuggestionThemesDeps {
   SEARCH_UTILS: Pick<typeof SearchUtils, 'normalizeHostIdentity' | 'getSiteSearchProviderHost'>;
-  SHORTCUT_FAVICON: Pick<typeof ShortcutFavicon, 'getSiteSearchProviderPageUrl'>;
   // Themes by icon address and by host, kept across panel sessions.
   themeColorCache: Map<string, ThemeVariant>;
   themeHostCache: Map<string, ThemeVariant>;
@@ -51,7 +50,6 @@ function createSuggestionThemes(deps: SuggestionThemesDeps) {
     defaultAccentColor,
     shouldBlockOverlayFaviconForHost,
     faviconDataCache,
-    SHORTCUT_FAVICON,
     getProviderIcon,
     getThemeForMode
   } = deps;
@@ -385,7 +383,7 @@ function createSuggestionThemes(deps: SuggestionThemesDeps) {
 
   function getThemeForProvider(provider: Partial<SiteSearchProvider>): Promise<ThemeVariant> {
     const hostKey = getProviderThemeHost(provider);
-    const providerPageUrl = SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider);
+    const providerPageUrl = BundledIcons.getSiteSearchProviderPageUrl(provider);
     const resolver = getOverlayFaviconUrlResolver();
     const iconUrl = resolver ? resolver.resolveFaviconSource(getProviderIcon(provider), providerPageUrl) : '';
     const cachedHostTheme = hostKey ? themeHostCache.get(hostKey) : undefined;
@@ -554,7 +552,7 @@ function createSuggestionThemes(deps: SuggestionThemesDeps) {
     if (suggestion && suggestion.provider) {
       const resolver = getOverlayFaviconUrlResolver();
       return resolver ? resolver.resolveFaviconSource(
-        getProviderIcon(suggestion.provider), SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(suggestion.provider)
+        getProviderIcon(suggestion.provider), BundledIcons.getSiteSearchProviderPageUrl(suggestion.provider)
       ) : '';
     }
     const resolver = getOverlayFaviconUrlResolver();

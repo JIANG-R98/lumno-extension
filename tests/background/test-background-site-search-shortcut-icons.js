@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const shortcutFavicon = require('../../src/domain/favicon/shortcut-favicon.ts');
+const shortcutFavicon = require('../helpers/shortcut-favicon.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 const { shortcutsStorage } = require('../helpers/newtab-fixtures');
 const { siteSearchIconCacheStorage } = require('../helpers/site-search-icon-cache');

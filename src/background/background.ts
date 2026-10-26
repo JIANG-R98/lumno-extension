@@ -3,7 +3,6 @@
 // file.
 import '../domain/blacklist-utils';
 import * as LumnoUrlGuards from '../platform/url-guards';
-import '../domain/favicon/shortcut-favicon';
 import '../domain/shortcut-key-matcher';
 import '../shared/favicon/favicon-theme';
 import '../domain/extension-routes';

@@ -4,7 +4,6 @@ import * as FOLDER_BINDINGS from '../platform/bookmark-folder-bindings';
 import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as LumnoCommunityLinks from '../platform/community-links';
 import * as EXTENSION_ROUTES from '../domain/extension-routes';
-import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
 import * as LumnoShortcutFaviconStore from '../platform/shortcut-favicon-store';
 import * as LumnoBrowserIcons from '../platform/browser-icons';
 import * as NAVIGATION_DISPOSITION from '../domain/navigation-disposition';
@@ -217,6 +216,8 @@ import { createSettingPort, createSettingsStore, getContextSettingsStore } from 
 import * as SearchSettings from '../domain/settings/search';
 import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
 import * as FaviconBrowserIconIndex from '../domain/favicon/browser-icon-index';
+import * as BundledIcons from '../domain/favicon/shortcut-favicon/bundled-icons';
+import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted';
 
 (function() {
   // Page state shared with the modules split out of this file: each module
@@ -549,7 +550,7 @@ import * as FaviconBrowserIconIndex from '../domain/favicon/browser-icon-index';
   const NEWTAB_SHORTCUT_ICONS_STORAGE_KEY = NewtabShortcutSettings.newtabShortcutIcons.key;
   const NEWTAB_SHORTCUT_FAVICON_CACHE_STORAGE_KEY = newtabShortcutFaviconCache.key;
   const SITE_SEARCH_ICON_CACHE_STORAGE_KEY = SearchSettings.siteSearchIconCache.key;
-  const siteSearchIconCacheOptions = SHORTCUT_FAVICON.SITE_SEARCH_CACHE_OPTIONS;
+  const siteSearchIconCacheOptions = ShortcutIconCache.SITE_SEARCH_CACHE_OPTIONS;
   const NEWTAB_SHORTCUTS_CRITICAL_SYNC_RESERVE_BYTES = NEWTAB_SHORTCUTS_STORE.DEFAULT_SHORTCUTS_SYNC_RESERVE_BYTES;
   const NEWTAB_SHORTCUTS_STORAGE_KEYS = NEWTAB_SHORTCUTS_STORE.SHORTCUT_STORAGE_KEYS;
   const pageSearchParams = new URLSearchParams(window.location.search || '');
@@ -719,7 +720,6 @@ import * as FaviconBrowserIconIndex from '../domain/favicon/browser-icon-index';
     showToast,
     t,
     navigateToUrl: (...args) => navigateToUrl(...args),
-    SHORTCUT_FAVICON,
     getPageFaviconUrlResolver: (...args) => getPageFaviconUrlResolver(...args),
     siteSearchIconCacheOptions,
     getExtensionResourceUrl,
@@ -1468,7 +1468,6 @@ import * as FaviconBrowserIconIndex from '../domain/favicon/browser-icon-index';
     NEWTAB_SHORTCUT_ICONS_STORAGE_KEY,
     NEWTAB_SHORTCUT_ICON_STORE,
     NEWTAB_SHORTCUT_FAVICON_CACHE_STORAGE_KEY,
-    SHORTCUT_FAVICON,
     siteSearchIconCache,
     setSiteSearchPrefix: (...args) => setSiteSearchPrefix(...args),
     defaultTheme,
@@ -1993,7 +1992,6 @@ import * as FaviconBrowserIconIndex from '../domain/favicon/browser-icon-index';
     NEWTAB_SHORTCUTS_LOCAL_OVERFLOW_STORAGE_KEY,
     shortcutIconStore,
     folderItemIconStore,
-    SHORTCUT_FAVICON,
     getPageFaviconUrlResolver,
     SEARCH_UTILS,
     getExtensionResourceUrl,
@@ -2502,7 +2500,7 @@ import * as FaviconBrowserIconIndex from '../domain/favicon/browser-icon-index';
   });
 
   const attachInputModeFaviconData =
-    SHORTCUT_FAVICON.createSiteSearchProviderIconHydrator(attachFaviconData);
+    BundledIcons.createSiteSearchProviderIconHydrator(attachFaviconData);
 
   const {
     getSearchModeProviders,

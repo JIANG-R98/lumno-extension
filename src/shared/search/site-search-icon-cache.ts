@@ -2,9 +2,9 @@
 // them: read once, and replaced whenever the stored copy changes. A change
 // bumps the revision, so a read that started before it does not overwrite
 // the newer icons when it lands.
-import * as SHORTCUT_FAVICON from '../../domain/favicon/shortcut-favicon';
-import type { CachedIconMap } from '../../domain/favicon/shortcut-favicon';
 import type { ShortcutFaviconStore } from '../../platform/shortcut-favicon-store';
+import * as ShortcutIconCache from '../../domain/favicon/shortcut-favicon/persisted';
+import type { CachedIconMap } from '../../domain/favicon/shortcut-favicon/types';
 
 interface SiteSearchIconCacheState {
   siteSearchIconCache: CachedIconMap;
@@ -47,7 +47,7 @@ function createSiteSearchIconCache(deps: SiteSearchIconCacheDeps) {
   // The stored copy changed (newValue of a storage change): it replaces the
   // icons now, and outranks any read still underway.
   function applyStoredSiteSearchIcons(value: unknown): CachedIconMap {
-    const cache = SHORTCUT_FAVICON.normalizeCacheMap(value, now(), store.cacheOptions);
+    const cache = ShortcutIconCache.normalizeCacheMap(value, now(), store.cacheOptions);
     state.siteSearchIconCache = cache;
     state.siteSearchIconCacheLoaded = true;
     state.siteSearchIconCacheRevision += 1;

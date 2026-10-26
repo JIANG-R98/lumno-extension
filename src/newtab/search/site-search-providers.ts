@@ -1,7 +1,6 @@
 // Site search and aggregate search providers: loading, icons, labels and
 // the trigger/scope lookups used by the search input.
-import type { CachedIconMap, IconCacheOptions } from '../../domain/favicon/shortcut-favicon';
-import type * as ShortcutFavicon from '../../domain/favicon/shortcut-favicon';
+import * as BundledIcons from '../../domain/favicon/shortcut-favicon/bundled-icons';
 import type { OpenDisposition } from '../../domain/messages';
 import type * as AggregateSearchStore from '../../domain/search/aggregate-search-store';
 import type { AggregateScopeProvider, AggregateSearch } from '../../domain/search/aggregate-search-store';
@@ -25,6 +24,7 @@ import { getAggregateSearchId } from './search-types';
 import type { ActiveLocalScope } from './search-types';
 import type { RemixIconName } from '../../shared/ui/remix-icon';
 import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
+import type { CachedIconMap, IconCacheOptions } from '../../domain/favicon/shortcut-favicon/types';
 
 interface SiteSearchProvidersState {
   // Icons saved for site search providers, by page URL.
@@ -59,7 +59,6 @@ interface SiteSearchProvidersDeps {
   showToast: ShowToast;
   t: Translate;
   navigateToUrl(url: string): void;
-  SHORTCUT_FAVICON: Pick<typeof ShortcutFavicon, 'getSiteSearchProviderPageUrl' | 'getSiteSearchProviderIcon'>;
   getPageFaviconUrlResolver(): Pick<FaviconUrlResolver, 'getProviderFaviconUrl'> | null;
   siteSearchIconCacheOptions: Readonly<IconCacheOptions>;
   getExtensionResourceUrl(resourcePath: string): string;
@@ -90,7 +89,6 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     showToast,
     t,
     navigateToUrl,
-    SHORTCUT_FAVICON,
     getPageFaviconUrlResolver,
     siteSearchIconCacheOptions,
     getExtensionResourceUrl,
@@ -194,7 +192,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
   }
 
   function getProviderFaviconPageUrl(provider: Partial<SiteSearchProvider> | null | undefined): string {
-    return SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider);
+    return BundledIcons.getSiteSearchProviderPageUrl(provider);
   }
 
   function getProviderIcon(provider: Partial<SiteSearchProvider> | null | undefined): string {
@@ -202,7 +200,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     if (!resolver) {
       return '';
     }
-    const iconUrl = SHORTCUT_FAVICON.getSiteSearchProviderIcon(
+    const iconUrl = BundledIcons.getSiteSearchProviderIcon(
       pageState.siteSearchIconCacheLoaded ? pageState.siteSearchIconCache : {}, provider, Date.now(), {
         ...siteSearchIconCacheOptions,
         resolveAssetUrl: getExtensionResourceUrl

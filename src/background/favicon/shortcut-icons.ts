@@ -3,7 +3,6 @@
 import * as BROWSER_PROFILE from '../../platform/browser-profile';
 import * as LumnoBrowserIcons from '../../platform/browser-icons';
 import { faviconEnhancedFetchEnabled, faviconRequestBlacklist } from '../../domain/settings';
-import * as SHORTCUT_FAVICON from '../../domain/favicon/shortcut-favicon';
 import { workerSettings } from '../worker-context';
 import * as BoundedCache from '../../domain/bounded-cache';
 import * as FaviconBrowserIconIndex from '../../domain/favicon/browser-icon-index';
@@ -14,6 +13,8 @@ import { arrayBufferToBase64, getBackgroundFaviconUrlResolver, getFaviconTargetP
 import { BACKGROUND_FAVICON_DATA_CACHE_MAX_ENTRIES, faviconDataCache } from './favicon-data';
 import { loadFaviconEnhancedFetchEnabled, loadFaviconRequestBlacklistItems } from './request-policy';
 import type { ShortcutIconResult, ShortcutResourceCandidate } from './types';
+import * as IconResources from '../../domain/favicon/shortcut-favicon/image-dimensions';
+import * as ShortcutIconCache from '../../domain/favicon/shortcut-favicon/persisted';
 
 const shortcutFaviconDataCache = new Map<string, ShortcutIconResult>();
 
@@ -84,7 +85,7 @@ async function inspectShortcutResource(
     return null;
   }
   const buffer = await blob.arrayBuffer();
-  const inspection = SHORTCUT_FAVICON.inspectIconResource(buffer, blob.type, result.sourceUrl, candidate, { minDimension: 16 });
+  const inspection = IconResources.inspectIconResource(buffer, blob.type, result.sourceUrl, candidate, { minDimension: 16 });
   if (inspection.usable !== true) {
     return null;
   }
@@ -164,7 +165,7 @@ async function fetchFirefoxBrowserCacheFavicon(
       return null;
     }
     const buffer = await blob.arrayBuffer();
-    const inspection = SHORTCUT_FAVICON.inspectIconResource(buffer, blob.type, iconUrl, candidate, { minDimension: 16 });
+    const inspection = IconResources.inspectIconResource(buffer, blob.type, iconUrl, candidate, { minDimension: 16 });
     if (inspection.usable !== true) {
       return null;
     }
@@ -261,7 +262,7 @@ function fetchShortcutFaviconData(
   refresh?: boolean,
   iconSource?: unknown
 ): Promise<ShortcutIconResult | null> {
-  const normalizedPageUrl = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
+  const normalizedPageUrl = ShortcutIconCache.normalizePageUrl(pageUrl);
   const theme = getShortcutFaviconPreferredTheme(preferredTheme);
   if (!normalizedPageUrl) {
     return Promise.resolve(null);
