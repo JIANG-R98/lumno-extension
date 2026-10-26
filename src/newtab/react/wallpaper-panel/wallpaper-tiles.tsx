@@ -264,6 +264,7 @@ export function OnlineTiles({
           aria-label={tile.label || undefined}
           aria-pressed={tile.selected ? 'true' : 'false'}
           className="x-nt-wallpaper-tile"
+          data-context-menu-open={tile.contextMenuOpen ? 'true' : undefined}
           data-selected={tile.selected ? 'true' : 'false'}
           data-wallpaper-id={tile.id}
           disabled={tile.disabled}

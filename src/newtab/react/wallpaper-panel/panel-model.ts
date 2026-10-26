@@ -73,6 +73,8 @@ export interface TileState {
 }
 
 export interface OnlineTileState extends TileState {
+  // Its context menu is open.
+  contextMenuOpen?: boolean;
   disabled?: boolean;
   tooltip: string;
 }

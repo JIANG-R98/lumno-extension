@@ -87,6 +87,8 @@ interface WallpaperState {
   bingItems: RemoteWallpaper[];
   bingLoading: boolean;
   bingSelecting: boolean;
+  // The online wallpaper whose context menu is open, or ''.
+  onlineWallpaperMenuId: string;
   bingSelectionSeq: number;
   bingStatus: '' | 'loading' | 'error';
   curatedCategory: string;

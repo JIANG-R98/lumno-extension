@@ -76,7 +76,8 @@ interface CustomWallpapersDeps extends
   wallpaperState: Pick<WallpaperState,
     'customWallpapers' | 'linkWallpapers' | 'customWallpaperImporting' | 'customWallpaperUrlFormOpen' |
     'customWallpaperUrlInvalid' | 'wallpaperViewController' | 'customWallpaperCatalogLoaded' |
-    'hasStoredWallpaperStateLoaded' | 'customWallpaperUrlClearToken' | 'activeWallpaperTab'>;
+    'hasStoredWallpaperStateLoaded' | 'customWallpaperUrlClearToken' | 'activeWallpaperTab' |
+    'onlineWallpaperMenuId'>;
 }
 
 // The global timers with the DOM's numeric ids.
@@ -177,7 +178,6 @@ function createCustomWallpapers(deps: CustomWallpapersDeps) {
   const LOCAL_WALLPAPER_LIMIT = 30;
   // The online photo the save menu is open for.
   let onlineWallpaperMenu: OnlineWallpaperMenu | null = null;
-  let onlineWallpaperMenuTarget: { id: string; element: Element } | null = null;
 
   function isLocalWallpaperLibraryFull(): boolean {
     return wallpaperState.customWallpapers.length + wallpaperState.linkWallpapers.length >= LOCAL_WALLPAPER_LIMIT;
@@ -637,10 +637,10 @@ function createCustomWallpapers(deps: CustomWallpapersDeps) {
   }
 
   function closeOnlineWallpaperMenu(): boolean {
-    const wasOpen = Boolean(onlineWallpaperMenuTarget);
-    if (onlineWallpaperMenuTarget) {
-      onlineWallpaperMenuTarget.element.removeAttribute('data-context-menu-open');
-      onlineWallpaperMenuTarget = null;
+    const wasOpen = Boolean(wallpaperState.onlineWallpaperMenuId);
+    if (wasOpen) {
+      wallpaperState.onlineWallpaperMenuId = '';
+      renderWallpaperPanelState();
     }
     const menu = onlineWallpaperMenu;
     if (menu && menu.controller.isOpen(menu.control)) {
@@ -689,10 +689,10 @@ function createCustomWallpapers(deps: CustomWallpapersDeps) {
       ariaLabel: t('newtab_wallpaper_context_menu_label', 'Wallpaper actions'),
       options: [],
       onAction(payload) {
-        const target = onlineWallpaperMenuTarget;
+        const targetId = wallpaperState.onlineWallpaperMenuId;
         closeOnlineWallpaperMenu();
-        if (target && payload && payload.action === 'save-local') {
-          saveOnlineWallpaperToLocal(target.id);
+        if (targetId && payload && payload.action === 'save-local') {
+          saveOnlineWallpaperToLocal(targetId);
         }
       }
     });
@@ -704,12 +704,12 @@ function createCustomWallpapers(deps: CustomWallpapersDeps) {
       element.addEventListener('contextmenu', (event) => event.preventDefault());
     });
     document.addEventListener('pointerdown', (event) => {
-      if (onlineWallpaperMenuTarget && !isOnlineWallpaperMenuNode(isNode(event.target) ? event.target : null)) {
+      if (wallpaperState.onlineWallpaperMenuId && !isOnlineWallpaperMenuNode(isNode(event.target) ? event.target : null)) {
         closeOnlineWallpaperMenu();
       }
     }, true);
     LumnoNewtabDismissStack.getDismissStack().register('wallpaper-context-menu', {
-      isOpen: () => Boolean(onlineWallpaperMenuTarget || isOnlineWallpaperMenuOpen()),
+      isOpen: () => Boolean(wallpaperState.onlineWallpaperMenuId || isOnlineWallpaperMenuOpen()),
       close: () => closeOnlineWallpaperMenu()
     });
     (document.body || document.documentElement).appendChild(created.wrapper);
@@ -729,8 +729,8 @@ function createCustomWallpapers(deps: CustomWallpapersDeps) {
     }
     closeOnlineWallpaperMenu();
     hideTopActionTooltip();
-    onlineWallpaperMenuTarget = { id, element };
-    element.setAttribute('data-context-menu-open', 'true');
+    wallpaperState.onlineWallpaperMenuId = id;
+    renderWallpaperPanelState();
     menu.control.style.left = `${Math.round(point.x)}px`;
     menu.control.style.top = `${Math.round(point.y)}px`;
     menu.controller.setOptions(menu.control, getOnlineWallpaperMenuOptions(id), 'save-local');

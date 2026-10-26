@@ -736,6 +736,7 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
     bingStatus: '',
     bingLoading: false,
     bingSelecting: false,
+    onlineWallpaperMenuId: '',
     curatedCategory: REMOTE_CONTENT.CURATED_CATEGORIES[0] || '',
     // { day, picks: { [daily ID]: photo ID } }; picks from another date no longer count.
     dailyWallpaperPicks: { day: '', picks: {} },

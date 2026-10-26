@@ -139,7 +139,7 @@ interface PanelStateDeps extends
     'customWallpaperUrlClearToken' | 'bingLoading' | 'bingSelecting' | 'bingItems' | 'bingStatus' |
     'wallpaperPanelOpen' | 'activeWallpaperTab' | 'curatedCategory' | 'currentWallpaperPrefs' |
     'activeWallpaperMode' | 'wallpaperPanelActions' | 'currentWallpaperId' | 'wallpaperViewController' |
-    'wallpaperButton' | 'wallpaperPanelState' | 'wallpaperPanelLayoutKey'>;
+    'wallpaperButton' | 'wallpaperPanelState' | 'wallpaperPanelLayoutKey' | 'onlineWallpaperMenuId'>;
 }
 
 const WALLPAPER_APPEARANCE_MODES: readonly AppearanceMode[] = ['system', 'light', 'dark'];
@@ -714,6 +714,7 @@ function createPanelState(deps: PanelStateDeps) {
           id: item.id,
           thumbnailUrl: getWallpaperThumbnailUrl(wallpaper),
           selected: item.id === selectedTileId,
+          contextMenuOpen: item.id === wallpaperState.onlineWallpaperMenuId,
           disabled: wallpaperState.bingSelecting,
           tooltip: label,
           label: getWallpaperSelectLabel(label)
@@ -820,6 +821,7 @@ function createPanelState(deps: PanelStateDeps) {
           id: item.id,
           thumbnailUrl: getCuratedTileThumbnailUrl(item),
           selected: item.id === selectedTileId,
+          contextMenuOpen: item.id === wallpaperState.onlineWallpaperMenuId,
           tooltip: tileLabel,
           label: getWallpaperSelectLabel(tileLabel)
         };

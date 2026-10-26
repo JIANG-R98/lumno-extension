@@ -452,6 +452,18 @@ describe('New Tab React wallpaper view', () => {
     expect(actions.showTooltip).toHaveBeenLastCalledWith(refs().appearanceInfoButton, state.theme.infoTooltip);
   });
 
+  it('marks the photo whose context menu is open', () => {
+    const { state } = createState((draft) => {
+      draft.wallpaper.curated.tiles = [
+        { id: 'picsum-28', label: 'Bridge', selected: false, thumbnailUrl: '/28.jpg', tooltip: 'Bridge', contextMenuOpen: true },
+        { id: 'picsum-29', label: 'Lake', selected: false, thumbnailUrl: '/29.jpg', tooltip: 'Lake' }
+      ];
+    });
+    mount(state);
+    expect(getElement(refs().curatedItemsHost, '[data-wallpaper-id="picsum-28"]').dataset.contextMenuOpen).toBe('true');
+    expect(getElement(refs().curatedItemsHost, '[data-wallpaper-id="picsum-29"]').hasAttribute('data-context-menu-open')).toBe(false);
+  });
+
   it('opens the save menu on a right-clicked photo and stops uploads at the limit', () => {
     const { actions, state } = createState((draft) => {
       draft.wallpaper.curated.tiles = [
