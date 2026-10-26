@@ -12,7 +12,7 @@ import type { PipPageBridgeRequest } from '../domain/pip-page-bridge';
 import { isDocumentPipActiveState } from '../platform/content-registry';
 import type { BackgroundAction, BackgroundReply, BackgroundRequest, OkReply, PageReply } from '../domain/messages';
 import * as LumnoMessaging from '../platform/messaging';
-import type * as LumnoSettingsStorage from '../platform/settings-storage';
+import type { SettingsStore } from '../platform/settings-store';
 
 // What the two auto PiP scripts track; each adds fields of its own.
 interface AutoPipState {
@@ -63,7 +63,8 @@ interface AutoPipCoreOptions {
   document: Document;
   navigator: Navigator;
   chrome: typeof chrome;
-  providerStorage: ReturnType<typeof LumnoSettingsStorage.getProviderStorage>;
+  // Holds the auto Picture-in-Picture switch.
+  settingsStore: SettingsStore;
   config: AutoPipCoreConfig;
   hooks: AutoPipHooks;
 }
@@ -83,10 +84,6 @@ const MAIN_WORLD_EXIT_TIMEOUT_MS = 760;
 const PAGE_BRIDGE_EXIT_TIMEOUT_MS = 520;
 const MIN_DEFERRED_ENTER_DELAY_MS = 40;
 
-function normalizeAutoPipEnabled(value: unknown): boolean {
-  return value !== false;
-}
-
 function isVideoPlaying(video: HTMLMediaElement | null | undefined): boolean {
   if (!video) {
     return false;
@@ -101,10 +98,10 @@ function warnUnexpected(context: string): (error: unknown) => void {
 }
 
 function createAutoPipCore(options: AutoPipCoreOptions) {
-  const { state, window, document, navigator, chrome, providerStorage, config, hooks } = options;
+  const { state, window, document, navigator, chrome, settingsStore, config, hooks } = options;
 
   function setAutoPipEnabled(value: unknown): void {
-    state.autoPipEnabled = normalizeAutoPipEnabled(value);
+    state.autoPipEnabled = LumnoSettings.autoPipEnabled.parse(value);
   }
 
   // The page clip picker marks its Picture-in-Picture session in the content registry.
@@ -203,29 +200,9 @@ function createAutoPipCore(options: AutoPipCoreOptions) {
   }
 
   function syncAutoPipEnabledSetting(): void {
-    if (!chrome || !chrome.storage) {
-      return;
-    }
-    const storageArea = providerStorage.area;
-    storageArea.get([LumnoSettings.autoPipEnabled.key], (result) => {
-      const rawValue = result ? result[LumnoSettings.autoPipEnabled.key] : undefined;
-      const normalized = normalizeAutoPipEnabled(rawValue);
-      setAutoPipEnabled(normalized);
-      if (rawValue !== normalized) {
-        storageArea.set({ [LumnoSettings.autoPipEnabled.key]: normalized });
-      }
-    });
-    if (!chrome.storage.onChanged || typeof chrome.storage.onChanged.addListener !== 'function') {
-      return;
-    }
-    chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (!providerStorage.runtime.isActiveAreaName(areaName)) {
-        return;
-      }
-      if (!changes || !changes[LumnoSettings.autoPipEnabled.key]) {
-        return;
-      }
-      setAutoPipEnabled(changes[LumnoSettings.autoPipEnabled.key].newValue);
+    void settingsStore.ready.then(() => setAutoPipEnabled(settingsStore.get(LumnoSettings.autoPipEnabled)));
+    settingsStore.subscribe(LumnoSettings.autoPipEnabled, () => {
+      setAutoPipEnabled(settingsStore.get(LumnoSettings.autoPipEnabled));
       if (!state.autoPipEnabled) {
         clearPlaybackRecoveryState();
       }
@@ -563,7 +540,6 @@ type AutoPipCore = ReturnType<typeof createAutoPipCore>;
 
 export type { AutoPipCore, AutoPipCoreConfig, AutoPipCoreOptions, AutoPipHooks, AutoPipState };
 export {
-  normalizeAutoPipEnabled,
   isVideoPlaying,
   warnUnexpected,
   createAutoPipCore

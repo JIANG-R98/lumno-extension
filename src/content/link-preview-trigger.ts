@@ -10,7 +10,7 @@ import { isNavigateEvent, readPageNavigation } from '../platform/page-navigation
 import type { ListenerTarget } from '../platform/page-navigation';
 import { claimContentScript } from '../platform/content-registry';
 import { linkPreviewEnabled } from '../domain/settings/features';
-import { localPrimary } from '../domain/settings/sync-state';
+import { createSettingsStore } from '../platform/settings-store';
 
 interface PrepareOptions {
   // Shift held over the link, before any press.
@@ -135,57 +135,16 @@ function isElement(value: EventTarget | null | undefined): value is Element {
   let triggerEnabled = true;
 
   function followEnabledSetting(): void {
-    const storage = typeof chrome !== 'undefined' && chrome ? chrome.storage : null;
-    if (!storage || !storage.local) {
+    if (typeof chrome === 'undefined' || !chrome || !chrome.storage) {
       return;
     }
-    const stored: { sync: unknown; local: unknown; localPrimary: boolean } = { sync: undefined, local: undefined, localPrimary: false };
+    const settingsStore = createSettingsStore({ chromeApi: chrome, settings: [linkPreviewEnabled] });
     const apply = (): void => {
-      const areaName = stored.localPrimary || !storage.sync ? 'local' : 'sync';
-      triggerEnabled = stored[areaName] !== false;
+      triggerEnabled = settingsStore.get(linkPreviewEnabled);
     };
-    const read = (
-      area: chrome.storage.StorageArea,
-      keys: string[],
-      take: (result: Record<string, unknown>) => void
-    ): void => {
-      try {
-        area.get(keys, (result) => {
-          void (chrome.runtime && chrome.runtime.lastError);
-          take(isRecord(result) ? result : {});
-          apply();
-        });
-      } catch (_error) {
-        // Ignore an extension context invalidated during reload or navigation.
-      }
-    };
-    read(storage.local, [linkPreviewEnabled.key, localPrimary.key], (result) => {
-      stored.local = result[linkPreviewEnabled.key];
-      stored.localPrimary = result[localPrimary.key] === true;
-    });
-    if (storage.sync) {
-      read(storage.sync, [linkPreviewEnabled.key], (result) => {
-        stored.sync = result[linkPreviewEnabled.key];
-      });
-    }
-    const onChanged = storage.onChanged;
-    if (!onChanged || typeof onChanged.addListener !== 'function') {
-      return;
-    }
-    const listener = (changes: Record<string, chrome.storage.StorageChange>, areaName: string): void => {
-      if (!changes || (areaName !== 'sync' && areaName !== 'local')) {
-        return;
-      }
-      if (changes[linkPreviewEnabled.key]) {
-        stored[areaName] = changes[linkPreviewEnabled.key].newValue;
-      }
-      if (areaName === 'local' && changes[localPrimary.key]) {
-        stored.localPrimary = changes[localPrimary.key].newValue === true;
-      }
-      apply();
-    };
-    onChanged.addListener(listener);
-    cleanups.push(() => onChanged.removeListener(listener));
+    void settingsStore.ready.then(apply);
+    settingsStore.subscribe(linkPreviewEnabled, apply);
+    cleanups.push(() => settingsStore.destroy());
   }
 
   function isPreviewGesture(event: MouseEvent): boolean {

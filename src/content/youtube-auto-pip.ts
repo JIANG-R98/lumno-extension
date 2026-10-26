@@ -1,7 +1,8 @@
 // Automatic picture-in-picture on YouTube: enters it when the tab hides
 // with a video playing, and on return undoes YouTube's own PiP and mini
 // player leftovers until the video plays inline again.
-import * as LumnoSettingsStorage from '../platform/settings-storage';
+import { createSettingsStore } from '../platform/settings-store';
+import { autoPipEnabled } from '../domain/settings/features';
 import * as CORE from './auto-pip-core';
 import type { AutoPipState } from './auto-pip-core';
 import { claimContentScript } from '../platform/content-registry';
@@ -57,7 +58,7 @@ import { youtubePipRecoveryReloadAt } from '../domain/settings/page-cache';
     document,
     navigator,
     chrome,
-    providerStorage: LumnoSettingsStorage.getProviderStorage(chrome),
+    settingsStore: createSettingsStore({ chromeApi: chrome, settings: [autoPipEnabled] }),
     config: {
       mainWorldExitAction: "ytForceExitPiPInMainWorld",
       enterSuppressAfterExitMs: ENTER_SUPPRESS_AFTER_EXIT_MS,

@@ -1,7 +1,8 @@
 // Unit tests for the shared auto PiP core (src/content/auto-pip-core.ts),
 // run against plain fakes with no DOM.
 const assert = require('assert');
-const settingsStorage = require('../../src/platform/settings-storage.ts');
+const { createSettingsStore } = require('../../src/platform/settings-store.ts');
+const { autoPipEnabled } = require('../../src/domain/settings/features.ts');
 const CORE = require('../../src/content/auto-pip-core');
 const KEY = '_x_extension_auto_pip_enabled_2026_unique_';
 
@@ -128,7 +129,7 @@ function createHarness(overrides = {}) {
     document,
     navigator: overrides.navigator || {},
     chrome,
-    providerStorage: settingsStorage.getProviderStorage(chrome),
+    settingsStore: createSettingsStore({ chromeApi: chrome, settings: [autoPipEnabled] }),
     config: {
       mainWorldExitAction: 'testExitInMainWorld',
       enterSuppressAfterExitMs: 1100,
@@ -140,9 +141,9 @@ function createHarness(overrides = {}) {
 }
 
 (async () => {
-  assert.strictEqual(CORE.normalizeAutoPipEnabled(undefined), true, 'auto PiP defaults to on');
-  assert.strictEqual(CORE.normalizeAutoPipEnabled(false), false);
-  assert.strictEqual(CORE.normalizeAutoPipEnabled('false'), true, 'only a stored false turns it off');
+  assert.strictEqual(autoPipEnabled.parse(undefined), true, 'auto PiP defaults to on');
+  assert.strictEqual(autoPipEnabled.parse(false), false);
+  assert.strictEqual(autoPipEnabled.parse('false'), true, 'only a stored false turns it off');
   assert.strictEqual(CORE.isVideoPlaying(new FakeMediaElement()), true);
   assert.strictEqual(CORE.isVideoPlaying(new FakeMediaElement({ readyState: 1 })), false,
     'a video without enough data is not playing');
@@ -188,8 +189,8 @@ function createHarness(overrides = {}) {
     const { core, state, document, storageListeners, storageWrites, messages } = harness;
     core.syncAutoPipEnabledSetting();
     await wait(5);
-    assert.strictEqual(state.autoPipEnabled, true);
-    assert.deepStrictEqual(storageWrites, [{ [KEY]: true }]);
+    assert.strictEqual(state.autoPipEnabled, true, 'a missing setting reads as on');
+    assert.deepStrictEqual(storageWrites, [], 'and is not written back');
 
     state.ownerToken = 'token-1';
     state.managedPiP = true;
@@ -212,7 +213,7 @@ function createHarness(overrides = {}) {
     core.syncAutoPipEnabledSetting();
     await wait(5);
     assert.strictEqual(state.autoPipEnabled, false);
-    assert.deepStrictEqual(storageWrites, [], 'an already-normalized value is not rewritten');
+    assert.deepStrictEqual(storageWrites, []);
   }
 
   // maybeExitPiP: falls through main world -> page bridge -> exitPictureInPicture.

@@ -162,8 +162,8 @@ async function testIqiyiUsesMainWorldSetupAndEnter() {
   await env.load();
   assert.deepStrictEqual(env.takeMessages(), ['iqiyiSetupAutoPiPInMainWorld'],
     'iQIYI pages should prepare main-world auto PiP as soon as the script starts');
-  assert.deepStrictEqual(env.storageWrites, [{ [AUTO_PIP_KEY]: true }],
-    'a missing auto PiP setting should be stored as its normalized default');
+  assert.deepStrictEqual(env.storageWrites, [],
+    'a page reading the auto PiP setting never writes it');
   assert.strictEqual(env.document.querySelector('script'), null,
     'the page bridge is registered by the background, not injected by the content script');
 

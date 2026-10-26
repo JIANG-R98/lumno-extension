@@ -3,6 +3,7 @@ import * as INTENT from '../domain/selection-intent';
 import * as FeatureSettings from '../domain/settings/features';
 import * as LocaleSettings from '../domain/settings/locale';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import { createSettingsStore } from '../platform/settings-store';
 import type { SelectionAction } from '../domain/selection-intent';
 import type { LocaleMessage } from '../domain/messages';
 import * as TOAST from '../shared/ui/toast';
@@ -141,9 +142,11 @@ function isTextControlType(type: string): boolean {
   const ACTION_SUCCESS_DISMISS_MS = 900;
   const ACTION_FAILURE_DISMISS_MS = 2200;
   const VIEWPORT_SAFE_MARGIN_PX = 12;
-  const providerStorage = LumnoSettingsStorage.getProviderStorage(chrome);
-  const providerStorageRuntime = providerStorage.runtime;
-  const storageArea = providerStorage.area;
+  const settingsStore = createSettingsStore({
+    chromeApi: chrome,
+    settings: [FeatureSettings.selectionQuickActionsEnabled, LocaleSettings.language]
+  });
+  const providerStorageRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chrome);
 
   let enabled = false;
   let languageMode = 'system';
@@ -2128,51 +2131,22 @@ function isTextControlType(type: string): boolean {
     setOwnershipMonitoring(active);
   }
 
-  function hydrateSettings(): void {
-    storageArea.get([
-      FeatureSettings.selectionQuickActionsEnabled.key,
-      LocaleSettings.language.key
-    ], (result) => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        return;
-      }
-      enabled = Boolean(result && result[FeatureSettings.selectionQuickActionsEnabled.key] === true);
-      languageMode = result && result[LocaleSettings.language.key]
-        ? String(result[LocaleSettings.language.key])
-        : 'system';
-      refreshLocaleMessages();
-      if (!enabled) {
-        cancelSelectionGesture();
-        clearOwnedSurface();
-      }
-      setFeatureActive(enabled);
-      if (currentCandidate && selectionSurface && !selectionSurface.host.hidden) {
-        updateSelectionMark();
-      } else {
-        updateRuntimeDebugState();
-      }
-    });
+  function applySettings(): void {
+    enabled = settingsStore.get(FeatureSettings.selectionQuickActionsEnabled);
+    languageMode = settingsStore.get(LocaleSettings.language);
+    refreshLocaleMessages();
+    if (!enabled) {
+      cancelSelectionGesture();
+      clearOwnedSurface();
+    }
+    setFeatureActive(enabled);
+    if (currentCandidate && selectionSurface && !selectionSurface.host.hidden) {
+      updateSelectionMark();
+    } else {
+      updateRuntimeDebugState();
+    }
   }
 
-  if (chrome && chrome.storage && chrome.storage.onChanged) {
-    chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (!providerStorageRuntime.isActiveAreaName(areaName)) {
-        return;
-      }
-      const enabledChange = changes[FeatureSettings.selectionQuickActionsEnabled.key];
-      if (enabledChange) {
-        enabled = enabledChange.newValue === true;
-        setFeatureActive(enabled);
-        if (!enabled) {
-          cancelSelectionGesture();
-          clearOwnedSurface();
-        }
-      }
-      if (changes[LocaleSettings.language.key]) {
-        hydrateSettings();
-      }
-    });
-  }
-
-  hydrateSettings();
+  settingsStore.subscribe([FeatureSettings.selectionQuickActionsEnabled, LocaleSettings.language], applySettings);
+  void settingsStore.ready.then(applySettings);
 })();

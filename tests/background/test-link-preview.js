@@ -864,10 +864,11 @@ function createTriggerStorage(values) {
   };
 }
 
-function testSwitchTurnsTriggerOff() {
+async function testSwitchTurnsTriggerOff() {
   const ENABLED_KEY = settings.linkPreviewEnabled.key;
   const storage = createTriggerStorage({ sync: { [ENABLED_KEY]: false } });
   const page = loadTrigger({ storage });
+  await flush();
   assert.deepStrictEqual(page.press('out'), [], 'with the switch off a Shift+click keeps Chrome\'s own behavior');
   assert.deepStrictEqual(page.sent, []);
   assert.deepStrictEqual(page.claimed, [], 'and the page still sees the press');
@@ -878,7 +879,9 @@ function testSwitchTurnsTriggerOff() {
     sync: { [ENABLED_KEY]: true },
     local: { [ENABLED_KEY]: false, [settings.localPrimary.key]: true }
   });
-  assert.deepStrictEqual(loadTrigger({ storage: localPrimary }).press('out'), [],
+  const localPage = loadTrigger({ storage: localPrimary });
+  await flush();
+  assert.deepStrictEqual(localPage.press('out'), [],
     'when settings stay local, the local value decides');
   assert.strictEqual(settings.linkPreviewEnabled.parse(undefined), true, 'link preview is on until turned off');
 }
@@ -1059,7 +1062,7 @@ async function testPreviewFrameEscape() {
   testPostOpensPreview();
   testPageNavigationAfterPressCancelled();
   testXPostLoadsPastServiceWorker();
-  testSwitchTurnsTriggerOff();
+  await testSwitchTurnsTriggerOff();
   testPreviewFrameReportsIn();
   testShiftClickInsidePreviewStaysInPreview();
   await testPreviewFrameReportsBackground();

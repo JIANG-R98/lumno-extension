@@ -1,5 +1,6 @@
 import * as PAGE_COLOR_SCHEME from '../page-color-scheme';
-import * as LumnoSettingsStorage from '../../platform/settings-storage';
+import { createSettingsStore } from '../../platform/settings-store';
+import type { SettingsStore } from '../../platform/settings-store';
 import { createTabSwitcherViewApi } from '../react/tab-switcher';
 import type { TabSwitcherTab, TabSwitcherThumbnailUpdate, TabSwitcherViewController } from '../react/tab-switcher';
 import * as TOAST from '../ui/toast';
@@ -138,8 +139,6 @@ const chromeApi = typeof chrome !== 'undefined' ? chrome : null;
 const switcherThemeMediaQuery = typeof window.matchMedia === 'function'
   ? window.matchMedia('(prefers-color-scheme: dark)')
   : null;
-const providerRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
-const switcherThemeStorageArea = providerRuntime.area;
 
 function handleExistingSwitcher(context: OpenContext): boolean {
   const existingHost = getTabSwitcherHost(document);
@@ -505,7 +504,8 @@ function createSwitcherThemeController(
     'data-bs-theme'
   ];
   let switcherThemeMode: 'dark' | 'light' | 'system' = 'system';
-  let themeStorageListener: ((changes: Record<string, chrome.storage.StorageChange>, areaName: string) => void) | null = null;
+  // The Lumno theme setting, followed while the switcher is open.
+  let settingsStore: SettingsStore | null = null;
   let themeMediaListener: (() => void) | null = null;
   let pageThemeObserver: MutationObserver | null = null;
   let pageThemeSyncRaf: number | null = null;
@@ -625,36 +625,25 @@ function createSwitcherThemeController(
     started = true;
     destroyed = false;
     setSwitcherThemeMode('system');
-    if (switcherThemeStorageArea && typeof switcherThemeStorageArea.get === 'function') {
-      void switcherThemeStorageArea.get([themeMode.key], (result) => {
+    if (chromeApi && chromeApi.storage) {
+      const store = createSettingsStore({ chromeApi, settings: [themeMode] });
+      settingsStore = store;
+      const apply = (): void => {
         if (!destroyed) {
-          setSwitcherThemeMode(result ? result[themeMode.key] : undefined);
+          setSwitcherThemeMode(store.get(themeMode));
         }
-      });
-    }
-    if (chromeApi && chromeApi.storage && chromeApi.storage.onChanged) {
-      const listener = (changes: Record<string, chrome.storage.StorageChange>, areaName: string): void => {
-        if (!providerRuntime.isActiveAreaName(areaName)) {
-          return;
-        }
-        const themeChange = changes ? changes[themeMode.key] : undefined;
-        if (!themeChange) {
-          return;
-        }
-        const nextMode: unknown = themeChange.newValue;
-        setSwitcherThemeMode(nextMode);
       };
-      themeStorageListener = listener;
-      chromeApi.storage.onChanged.addListener(listener);
+      void store.ready.then(apply);
+      store.subscribe(themeMode, apply);
     }
   }
 
   function destroy(): void {
     destroyed = true;
     started = false;
-    if (themeStorageListener && chromeApi && chromeApi.storage && chromeApi.storage.onChanged) {
-      chromeApi.storage.onChanged.removeListener(themeStorageListener);
-      themeStorageListener = null;
+    if (settingsStore) {
+      settingsStore.destroy();
+      settingsStore = null;
     }
     removeThemeMediaListener();
     stopPageThemeObserver();

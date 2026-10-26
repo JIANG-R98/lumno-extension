@@ -6,7 +6,8 @@ import * as AppearanceSettings from '../domain/settings/appearance';
 import * as LocaleSettings from '../domain/settings/locale';
 import { readStartCommand } from '../domain/injected-commands';
 import type { LocaleMessage, PageReply } from '../domain/messages';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
+import { createSettingsStore } from '../platform/settings-store';
+import type { SettingsStore } from '../platform/settings-store';
 import * as LumnoMessaging from '../platform/messaging';
 
 type ToastMessages = Record<string, LocaleMessage>;
@@ -33,7 +34,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     'copy_page_url_success',
     'copy_page_url_failed_permission'
   ]);
-  const storageArea = LumnoSettingsStorage.createProviderStorageRuntime(chrome).area;
+  // Made on the first toast: most pages never show one.
+  let settingsStore: SettingsStore | null = null;
   let pageToastTimer: number | null = null;
   let pageToastParts: PageToastParts | null = null;
   // Toast strings by locale, fetched only when a toast in a user-chosen
@@ -68,26 +70,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   }
 
   // Resolves 'system' when the setting is unset or storage is unavailable.
-  function readStoredMode(storageKey: string): Promise<string> {
-    return new Promise((resolve) => {
-      try {
-        storageArea.get([storageKey], (result) => {
-          if (chrome.runtime && chrome.runtime.lastError) {
-            resolve('system');
-            return;
-          }
-          resolve(result && result[storageKey]
-            ? String(result[storageKey])
-            : 'system');
+  async function readStoredMode(setting: typeof LocaleSettings.language | typeof AppearanceSettings.themeMode): Promise<string> {
+    try {
+      if (!settingsStore) {
+        settingsStore = createSettingsStore({
+          chromeApi: chrome,
+          settings: [LocaleSettings.language, AppearanceSettings.themeMode]
         });
-      } catch (_error) {
-        resolve('system');
       }
-    });
+      await settingsStore.ready;
+      return settingsStore.get(setting);
+    } catch (_error) {
+      return 'system';
+    }
   }
 
   function readLanguageMode(): Promise<string> {
-    return readStoredMode(LocaleSettings.language.key);
+    return readStoredMode(LocaleSettings.language);
   }
 
   // Like the tab switcher: the page's own light or dark look first, then the
@@ -97,7 +96,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     if (pageTheme) {
       return Promise.resolve(pageTheme);
     }
-    return readStoredMode(AppearanceSettings.themeMode.key).then((mode): PageTheme => {
+    return readStoredMode(AppearanceSettings.themeMode).then((mode): PageTheme => {
       const normalized = String(mode || '').trim().toLowerCase();
       if (normalized === 'dark' || normalized === 'light') {
         return normalized;
