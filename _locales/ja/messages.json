@@ -3612,7 +3612,7 @@
     "message": "検索パネルの並び順"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Tab で開くパネルだけに効き、検索結果の並び順には影響しません。タグをドラッグしてグループの順序を、下の行をドラッグしてグループ内の順序を変更します。Ctrl/⌘ + Z で取り消し、Shift + Ctrl/⌘ + Z でやり直します。"
+    "message": "ドラッグで Tab パネルのグループ順を変更します。検索結果の並び順は変わりません。Ctrl/⌘ + Z で取り消し。"
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Alt キーと左右の矢印キーで移動します"

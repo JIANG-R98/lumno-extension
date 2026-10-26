@@ -3612,7 +3612,7 @@
     "message": "Search Panel Order"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Only affects the panel that Tab opens, not the order of search results. Drag the tags to reorder groups, and the rows below to reorder within a group. Press Ctrl/⌘ + Z to undo and Shift + Ctrl/⌘ + Z to redo."
+    "message": "Drag to reorder groups in the Tab panel. Result order stays the same. Ctrl/⌘ + Z to undo."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Press Alt with the Left or Right arrow key to move"

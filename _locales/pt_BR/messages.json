@@ -3612,7 +3612,7 @@
     "message": "Ordem do painel de pesquisa"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Afeta só o painel aberto pelo Tab, não a ordem dos resultados. Arraste as etiquetas para reordenar os grupos e as linhas abaixo para ordenar dentro de cada grupo. Pressione Ctrl/⌘ + Z para desfazer e Shift + Ctrl/⌘ + Z para refazer."
+    "message": "Arraste para reordenar os grupos do painel do Tab, sem mudar a ordem dos resultados. Ctrl/⌘ + Z para desfazer."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Pressione Alt com a seta para a esquerda ou para a direita para mover"
