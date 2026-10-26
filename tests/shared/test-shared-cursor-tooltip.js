@@ -558,6 +558,51 @@ assert.strictEqual(
   'switching cursor tooltip should not schedule a delayed hide from a late previous-target leave'
 );
 
+const rowController = cursorTooltip.createController({
+  documentObj: fakeDocument,
+  windowObj: fakeWindow,
+  id: '_x_extension_test_cursor_row_tooltip_2026_unique_'
+});
+const rowTarget = createFakeElement('div');
+rowTarget.ownerDocument = fakeDocument;
+const rowUrlLine = createFakeElement('span');
+rowUrlLine.ownerDocument = fakeDocument;
+rowTarget.appendChild(rowUrlLine);
+rowController.bind(rowTarget, (_target, event) => (
+  event && event.target === rowUrlLine ? 'https://example.com/a/long/address' : '完整标题'
+), {
+  checkActive: false,
+  deferHideVisibility: true,
+  preserveVisibleOnTargetSwitch: true
+});
+rowTarget.dispatchFakeEvent('pointerenter', { clientX: 130, clientY: 90, target: rowTarget });
+const rowElement = rowController.element;
+const getRowTooltipText = () => rowElement.children.map((child) => child.textContent || '').join('');
+assert.strictEqual(
+  getRowTooltipText(),
+  '完整标题',
+  'a row cursor tooltip should show the text for where the pointer entered'
+);
+rowElement.setAttributeLog.length = 0;
+rowTarget.dispatchFakeEvent('pointermove', { clientX: 132, clientY: 100, target: rowUrlLine });
+assert.strictEqual(
+  getRowTooltipText(),
+  'https://example.com/a/long/address',
+  'a row cursor tooltip should swap its text when the pointer moves onto a part with other text'
+);
+assert.strictEqual(
+  rowElement.setAttributeLog.some((entry) => entry.name === 'data-visible' && entry.value === 'false'),
+  false,
+  'a row cursor tooltip should swap its text in place, without hiding'
+);
+rowTarget.dispatchFakeEvent('pointermove', { clientX: 134, clientY: 90, target: rowTarget });
+assert.strictEqual(
+  getRowTooltipText(),
+  '完整标题',
+  'a row cursor tooltip should swap back when the pointer leaves that part'
+);
+rowTarget.dispatchFakeEvent('pointerleave', { clientX: 400, clientY: 400 });
+
 switchUrlTarget.dispatchFakeEvent('pointerleave', { relatedTarget: unrelatedTarget });
 assert.strictEqual(
   switchElement.getAttribute('data-visible'),

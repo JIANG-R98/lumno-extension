@@ -95,7 +95,12 @@ interface CursorTooltipHideOptions {
   deferVisibility?: boolean;
 }
 
-type CursorTooltipTextSource = (target: HTMLElement) => string | null | undefined;
+// The text for the target, which may depend on the input, such as where the
+// pointer is on it.
+type CursorTooltipTextSource = (
+  target: HTMLElement,
+  inputEvent?: CursorPointInput | null
+) => string | null | undefined;
 
 interface CursorTooltipPosition {
   top: number;
@@ -444,6 +449,7 @@ function createController(options?: CursorTooltipOptions | null): CursorTooltipC
   let tagElement: HTMLElement | null = null;
   let hideTimer: number | null = null;
   let currentTarget: HTMLElement | null = null;
+  let currentText = '';
   let lastPoint: CursorPoint | null = null;
   let activeBinding: ActiveBinding | null = null;
   let modifierListenersAttached = false;
@@ -702,7 +708,7 @@ function createController(options?: CursorTooltipOptions | null): CursorTooltipC
     if (!shouldShowTarget(binding.target, eventOptions)) {
       return hideWithOptions({ preserveActiveBinding: true });
     }
-    return show(binding.target, binding.resolveText(binding.target), input, eventOptions);
+    return show(binding.target, binding.resolveText(binding.target, input), input, eventOptions);
   }
 
   function handleModifierRefreshEvent(event: CursorPointInput): void {
@@ -782,6 +788,7 @@ function createController(options?: CursorTooltipOptions | null): CursorTooltipC
     token += 1;
     const showToken = token;
     currentTarget = target;
+    currentText = content;
     const point = getPointFromInput(pointInput, target);
     lastPoint = point;
     LumnoTooltip.renderText(tooltip, content);
@@ -871,7 +878,7 @@ function createController(options?: CursorTooltipOptions | null): CursorTooltipC
         hideWithOptions({ preserveActiveBinding: true });
         return;
       }
-      show(target, resolveText(target), event, eventOptions);
+      show(target, resolveText(target, event), event, eventOptions);
     };
     const moveBoundTooltip = (event: CursorPointInput): void => {
       const eventOptions = getEventOptions(event);
@@ -884,8 +891,19 @@ function createController(options?: CursorTooltipOptions | null): CursorTooltipC
         return;
       }
       if (!currentTarget) {
-        show(target, resolveText(target), event, eventOptions);
+        show(target, resolveText(target, event), event, eventOptions);
         return;
+      }
+      // A target whose text depends on where the pointer is on it, such as a
+      // result row over its address line, swaps the text in place.
+      const text = String(resolveText(target, event) || '');
+      if (!text) {
+        hideWithOptions({ preserveActiveBinding: true });
+        return;
+      }
+      if (text !== currentText && element) {
+        currentText = text;
+        LumnoTooltip.renderText(element, text);
       }
       move(event, eventOptions);
     };

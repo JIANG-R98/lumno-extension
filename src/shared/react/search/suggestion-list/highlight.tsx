@@ -1,5 +1,5 @@
-// Highlighting the query in titles and URLs, and the tooltip a truncated
-// text shows.
+// Highlighting the query in titles and URLs, and the tooltip a row shows for
+// its truncated text.
 import { useSyncExternalStore } from 'react';
 import type { NormalizedOptions, Suggestion, QueryStore } from './types';
 import { surfaceClass } from './surface-options';
@@ -125,22 +125,59 @@ export function HighlightedText({
   );
 }
 
-function isOverflowing(target: HTMLElement): boolean {
-  return isElementTextTruncated(target);
+// A line of a result row whose text may be cut short.
+export interface RowTooltipLine {
+  getElement(): HTMLElement | null;
+  // The full text the tooltip shows; the line's own text when left out.
+  getText?(): unknown;
 }
 
-export function bindTextTooltip(
+function getTruncatedText(
   options: NormalizedOptions,
-  target: HTMLElement | null,
-  text: unknown
+  line: RowTooltipLine
+): string {
+  const element = line.getElement();
+  if (!element || !isElementTextTruncated(element)) {
+    return '';
+  }
+  return options.sanitizeDisplayText(
+    line.getText ? line.getText() : element.textContent
+  );
+}
+
+// The row shows the text it cut short from anywhere on it: the title, or the
+// line under it when only that one is cut. With both cut, the title comes
+// first and the line under it shows its own text where the pointer is on it.
+// A utility button shows its own tooltip instead.
+export function bindRowTooltip(
+  options: NormalizedOptions,
+  row: HTMLElement | null,
+  title: RowTooltipLine,
+  detail?: RowTooltipLine
 ): void {
-  const safeText = options.sanitizeDisplayText(text);
-  if (!options.bindCursorTooltip || !target || !safeText) {
+  if (!options.bindCursorTooltip || !row) {
     return;
   }
-  options.bindCursorTooltip(target, () => safeText, {
+  const utilityButtonSelector = `.${surfaceClass(options, 'x-nt-suggestion-utility-button')}`;
+  // Focus and modifier key refreshes carry no target, so the element the
+  // pointer was last on stands in for it.
+  let pointed: Element | null = null;
+  const resolveText = (inputEvent?: { target?: EventTarget | null } | null): string => {
+    const eventTarget = inputEvent?.target;
+    if (eventTarget instanceof Element) {
+      pointed = eventTarget;
+    }
+    if (pointed?.closest(utilityButtonSelector)) {
+      return '';
+    }
+    const titleText = getTruncatedText(options, title);
+    const detailText = detail ? getTruncatedText(options, detail) : '';
+    const onDetail = Boolean(pointed && detail?.getElement()?.contains(pointed));
+    return detailText && (!titleText || onDetail) ? detailText : titleText;
+  };
+  options.bindCursorTooltip(row, (_target, inputEvent) => resolveText(inputEvent), {
     maxWidth: 520,
-    shouldShow: isOverflowing,
+    shouldShow: (_target, inputEvent) => Boolean(resolveText(inputEvent)),
     deferHideVisibility: true,
     preserveVisibleOnTargetSwitch: true
   });

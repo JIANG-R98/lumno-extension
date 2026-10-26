@@ -16,7 +16,7 @@ import {
   getModifierAction
 } from './action-model';
 import { surfaceClass, setSurfaceStyle } from './surface-options';
-import { bindTextTooltip } from './highlight';
+import { bindRowTooltip } from './highlight';
 import { setIconEmphasis } from './action-styles';
 import { queryHtmlTag } from '../../../dom-lookup';
 import { innerHtml } from '../../inner-html';
@@ -149,7 +149,7 @@ function OpenTabRowComponent({
           )}`, 'span');
     }
     options.applyThemeVariables(item, immediateTheme);
-    bindTextTooltip(options, titleRef.current, titleText);
+    bindRowTooltip(options, item, { getElement: () => titleRef.current });
     let active = true;
     if (!localFallback) {
       void options

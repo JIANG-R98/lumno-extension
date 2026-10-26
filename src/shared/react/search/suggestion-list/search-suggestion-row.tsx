@@ -22,7 +22,7 @@ import {
   SuggestionUtilityAction
 } from './suggestion-icon';
 import { surfaceCssValue, surfaceClass } from './surface-options';
-import { bindTextTooltip, HighlightedText } from './highlight';
+import { bindRowTooltip, HighlightedText } from './highlight';
 import { isHelpPassage } from '../help-passage-card';
 import { setIconEmphasis } from './action-styles';
 import { queryHtmlElement, queryHtmlTag } from '../../../dom-lookup';
@@ -316,34 +316,26 @@ function SearchSuggestionRowComponent({
     suggestionRef
   ]);
 
+  // Bound once: the lines and the suggestion are read when the tooltip shows.
   useLayoutEffect(() => {
     const item = itemRef.current;
-    if (!item) {
-      return;
-    }
-    bindTextTooltip(
+    bindRowTooltip(
       options,
-      titleRef.current,
-      suggestion.title || ''
+      item,
+      { getElement: () => titleRef.current },
+      {
+        getElement: () => item && queryHtmlElement(item, `.${surfaceClass(options, 'x-nt-suggestion-url-line')}`),
+        // A help center page's line shows the matched passage, so its tooltip shows the passage too,
+        // unless the row has a passage card beside the list to show it in full.
+        getText: () => {
+          const latest = suggestionRef.current;
+          return latest.type === 'helpArticle'
+            ? isHelpPassage(latest.context) ? '' : latest.detail || ''
+            : latest.url || '';
+        }
+      }
     );
-    const urlLine = queryHtmlElement(item, `.${surfaceClass(options, 'x-nt-suggestion-url-line')}`);
-    // A help center page's line shows the matched passage, so its tooltip shows the passage too,
-    // unless the row has a passage card beside the list to show it in full.
-    bindTextTooltip(
-      options,
-      urlLine,
-      suggestion.type === 'helpArticle'
-        ? isHelpPassage(suggestion.context) ? '' : suggestion.detail || ''
-        : suggestion.url || ''
-    );
-  }, [
-    options,
-    suggestion.title,
-    suggestion.type,
-    suggestion.detail,
-    suggestion.context,
-    suggestion.url
-  ]);
+  }, [options, suggestionRef]);
 
   const handleRowMouseEnter = (): void => {
     const item = itemRef.current;
