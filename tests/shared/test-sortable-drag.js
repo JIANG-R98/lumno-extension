@@ -38,6 +38,11 @@ function pointer(target, type, x, y) {
   return event;
 }
 
+// A released item glides into its slot before the drop lands.
+function settled() {
+  return new Promise((resolve) => setTimeout(resolve, 220));
+}
+
 function attach(container, calls) {
   return sortable.attach(container, {
     itemSelector: '.item',
@@ -46,7 +51,7 @@ function attach(container, calls) {
   });
 }
 
-function testColumnDragReorders() {
+async function testColumnDragReorders() {
   const container = createList(4, 'column');
   const calls = [];
   const detach = attach(container, calls);
@@ -61,15 +66,26 @@ function testColumnDragReorders() {
     'translate(0px, -50px)',
     'rows the dragged one passes slide up by one row and gap'
   );
+  assert.strictEqual(container.children[2].style.getPropertyValue('translate'), '0px -3px',
+    'the row before the open slot leans away from it');
+  assert.strictEqual(container.children[3].style.getPropertyValue('translate'), '0px 3px',
+    'and so does the row after it');
+  assert.strictEqual(container.children[1].style.getPropertyValue('translate'), '');
   pointer(window, 'pointerup', 20, 125);
-  assert.deepStrictEqual(calls, [['k0', 0, 2]]);
-  assert.strictEqual(first.hasAttribute('data-sort-dragging'), false);
-  assert.strictEqual(container.children[1].style.getPropertyValue('transform'), '');
+  assert.match(first.style.getPropertyValue('transform'), /translate\(0px, 100px\)/,
+    'the dropped row glides into the slot');
+  assert.strictEqual(container.children[2].style.getPropertyValue('translate'), '', 'the gap closes around it');
+  assert.deepStrictEqual(calls, [], 'the drop lands once the row is in place');
   // The click that ends the drag must not activate the row.
   let clicked = false;
   first.addEventListener('click', () => { clicked = true; });
   first.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
   assert.strictEqual(clicked, false);
+  await settled();
+  assert.deepStrictEqual(calls, [['k0', 0, 2]]);
+  assert.strictEqual(first.hasAttribute('data-sort-dragging'), false);
+  assert.strictEqual(container.children[1].style.getPropertyValue('transform'), '');
+  assert.strictEqual(first.style.getPropertyValue('transform'), '');
   detach();
 }
 
@@ -100,7 +116,7 @@ function testControlsInsideItemsDoNotDrag() {
   assert.strictEqual(container.children[0].hasAttribute('data-sort-dragging'), false);
 }
 
-function testEscapeCancels() {
+async function testEscapeCancels() {
   const container = createList(3, 'column');
   const calls = [];
   attach(container, calls);
@@ -108,11 +124,13 @@ function testEscapeCancels() {
   pointer(window, 'pointermove', 20, 10);
   window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   pointer(window, 'pointerup', 20, 10);
-  assert.deepStrictEqual(calls, []);
   assert.strictEqual(container.children[0].style.getPropertyValue('transform'), '');
+  assert.strictEqual(container.children[2].style.getPropertyValue('transform'), '', 'the row glides back to its own slot');
+  await settled();
+  assert.deepStrictEqual(calls, []);
 }
 
-function testRowLayoutAndCanStart() {
+async function testRowLayoutAndCanStart() {
   const container = createList(3, 'row');
   const calls = [];
   let allowed = false;
@@ -129,14 +147,27 @@ function testRowLayoutAndCanStart() {
   allowed = true;
   pointer(container.children[2], 'pointerdown', 200, 20);
   pointer(window, 'pointermove', 10, 20);
+  assert.strictEqual(container.children[0].style.getPropertyValue('translate'), '6px 0px',
+    'the tile after the open slot leans away sideways; the first slot has none before it');
   pointer(window, 'pointerup', 10, 20);
+  assert.match(container.children[2].style.getPropertyValue('transform'), /translate\(-180px, 0px\)/);
+  pointer(container.children[1], 'pointerdown', 110, 20);
+  pointer(window, 'pointermove', 10, 20);
+  assert.strictEqual(container.children[1].hasAttribute('data-sort-dragging'), false,
+    'no new drag starts while the last one settles');
+  pointer(window, 'pointerup', 10, 20);
+  await settled();
   assert.deepStrictEqual(calls, [['k2', 2, 0]]);
 }
 
-testColumnDragReorders();
-testSmallMovesStayClicks();
-testControlsInsideItemsDoNotDrag();
-testEscapeCancels();
-testRowLayoutAndCanStart();
-
-console.log('sortable drag tests passed');
+(async () => {
+  await testColumnDragReorders();
+  testSmallMovesStayClicks();
+  testControlsInsideItemsDoNotDrag();
+  await testEscapeCancels();
+  await testRowLayoutAndCanStart();
+  console.log('sortable drag tests passed');
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
