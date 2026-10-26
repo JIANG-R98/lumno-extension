@@ -44,168 +44,202 @@ export function isHelpPassage(value: unknown): value is HelpPassageBlock[] {
   );
 }
 
-export function createHelpPassageCard(options: HelpPassageCardOptions): HelpPassageCard {
-  const doc = options.document;
-  const win = doc.defaultView;
-  let card: HTMLDivElement | null = null;
-  let row: HTMLElement | null = null;
-  let blocks: HelpPassageBlock[] | null = null;
-  let timer = 0;
+function appendElement(doc: Document, tag: string, className: string, parent: Node): HTMLElement {
+  const node = doc.createElement(tag);
+  node.className = className;
+  parent.appendChild(node);
+  return node;
+}
 
-  function element(tag: string, className: string, parent: Node): HTMLElement {
-    const node = doc.createElement(tag);
-    node.className = className;
-    parent.appendChild(node);
-    return node;
+// Draws a passage as the page has it: paragraphs and headings, bullet and
+// numbered lists, and table rows, with the matched words marked.
+class PassageWriter {
+  private list: HTMLElement | null = null;
+  private table: HTMLElement | null = null;
+  private previousKind = '';
+  private readonly doc: Document;
+  private readonly target: HTMLElement;
+  private readonly highlight: HighlightParts;
+
+  constructor(doc: Document, target: HTMLElement, highlight: HighlightParts) {
+    this.doc = doc;
+    this.target = target;
+    this.highlight = highlight;
   }
 
-  function fill(target: HTMLElement, text: string): void {
-    options.highlight(text).forEach((piece) => {
-      if (piece.highlighted) {
-        element('mark', part('mark'), target).textContent = piece.text;
-      } else {
-        target.appendChild(doc.createTextNode(piece.text));
-      }
+  write(block: HelpPassageBlock): void {
+    if (block.kind === 'row') {
+      this.writeRow(block);
+    } else if (block.kind === 'bullet' || block.kind === 'step') {
+      this.writeListItem(block);
+    } else {
+      this.fill(appendElement(this.doc, 'p', block.kind === 'heading' ? part('heading') : part('text'), this.target), String(block.text || ''));
+    }
+    this.previousKind = block.kind;
+  }
+
+  private writeRow(block: HelpPassageBlock): void {
+    if (!this.table || this.previousKind !== 'row') {
+      this.table = appendElement(this.doc, 'table', part('table'), this.target);
+    }
+    const tr = appendElement(this.doc, 'tr', '', this.table);
+    (block.cells || []).forEach((cell) => {
+      this.fill(appendElement(this.doc, block.header ? 'th' : 'td', part(block.header ? 'th' : 'td'), tr), cell);
     });
   }
 
-  function ensureCard(): HTMLDivElement | null {
-    const host = options.getHost();
+  private writeListItem(block: HelpPassageBlock): void {
+    if (!this.list || this.previousKind !== block.kind) {
+      this.list = appendElement(this.doc, block.kind === 'step' ? 'ol' : 'ul', part('list'), this.target);
+      const start = parseInt(String(block.marker || ''), 10);
+      if (block.kind === 'step' && start > 1) {
+        this.list.setAttribute('start', String(start));
+      }
+    }
+    this.fill(appendElement(this.doc, 'li', part('item'), this.list), String(block.text || ''));
+  }
+
+  private fill(target: HTMLElement, text: string): void {
+    this.highlight(text).forEach((piece) => {
+      if (piece.highlighted) {
+        appendElement(this.doc, 'mark', part('mark'), target).textContent = piece.text;
+      } else {
+        target.appendChild(this.doc.createTextNode(piece.text));
+      }
+    });
+  }
+}
+
+interface CardPlacement {
+  placement: 'right' | 'left' | 'bottom';
+  x: number;
+  y: number;
+}
+
+// To the right of the list, else its left, at the row's height; with no
+// room beside the list, under it, never over the other results or the
+// search box. Null when it fits nowhere.
+function readCardPlacement(list: DOMRect, row: DOMRect, viewport: { width: number; height: number },
+  card: { width: number; height: number }): CardPlacement | null {
+  const clamp = (value: number, max: number): number => Math.max(GAP, Math.min(value, max - GAP));
+  const y = clamp(row.top, viewport.height - card.height);
+  const fitsRight = list.right + GAP + card.width <= viewport.width - GAP;
+  const x = fitsRight ? list.right + GAP : list.left - GAP - card.width;
+  if (x >= GAP) {
+    return { placement: fitsRight ? 'right' : 'left', x, y };
+  }
+  if (list.bottom + GAP + card.height > viewport.height - GAP) {
+    return null;
+  }
+  return { placement: 'bottom', x: clamp(list.left, viewport.width - card.width), y: list.bottom + GAP };
+}
+
+class PassageCard implements HelpPassageCard {
+  private card: HTMLDivElement | null = null;
+  private row: HTMLElement | null = null;
+  private blocks: HelpPassageBlock[] | null = null;
+  private timer = 0;
+  private readonly options: HelpPassageCardOptions;
+  private readonly win: (Window & typeof globalThis) | null;
+
+  constructor(options: HelpPassageCardOptions) {
+    this.options = options;
+    this.win = options.document.defaultView;
+  }
+
+  show(nextRow: HTMLElement, passage: HelpPassageBlock[], showOptions?: { delay?: boolean }): void {
+    this.clearTimer();
+    const visible = this.card?.getAttribute('data-visible') === 'true';
+    if (showOptions?.delay && !visible && this.win) {
+      this.timer = this.win.setTimeout(() => {
+        this.timer = 0;
+        if (nextRow.isConnected) {
+          this.reveal(nextRow, passage);
+        }
+      }, HOVER_DELAY_MS);
+      return;
+    }
+    this.reveal(nextRow, passage);
+  }
+
+  readonly place = (): void => {
+    const { card, row, win } = this;
+    const list = this.options.getList();
+    if (!card || !row || !list || !win) {
+      return;
+    }
+    const placed = readCardPlacement(list.getBoundingClientRect(), row.getBoundingClientRect(),
+      { width: win.innerWidth, height: win.innerHeight }, { width: card.offsetWidth, height: card.offsetHeight });
+    if (!placed) {
+      card.setAttribute('data-visible', 'false');
+      return;
+    }
+    card.setAttribute('data-placement', placed.placement);
+    card.style.setProperty('left', `${Math.round(placed.x)}px`);
+    card.style.setProperty('top', `${Math.round(placed.y)}px`);
+    card.setAttribute('data-visible', 'true');
+    card.setAttribute('aria-hidden', 'false');
+  };
+
+  hide(): void {
+    this.clearTimer();
+    this.row = null;
+    this.blocks = null;
+    this.card?.setAttribute('data-visible', 'false');
+    this.card?.setAttribute('aria-hidden', 'true');
+  }
+
+  destroy(): void {
+    this.clearTimer();
+    this.card?.remove();
+    this.card = null;
+    this.row = null;
+    this.blocks = null;
+  }
+
+  private ensureCard(): HTMLDivElement | null {
+    const host = this.options.getHost();
     if (!host) {
       return null;
     }
-    if (!card) {
-      card = doc.createElement('div');
+    if (!this.card) {
+      const card = this.options.document.createElement('div');
       card.className = `${TOOLTIP_CLASS} ${CARD_CLASS}`;
       card.setAttribute('role', 'tooltip');
       card.setAttribute('translate', 'no');
       card.setAttribute('data-visible', 'false');
       card.setAttribute('aria-hidden', 'true');
+      this.card = card;
     }
-    if (card.parentNode !== host) {
-      host.appendChild(card);
+    if (this.card.parentNode !== host) {
+      host.appendChild(this.card);
     }
-    return card;
+    return this.card;
   }
 
-  function render(target: HTMLDivElement, passage: HelpPassageBlock[]): void {
-    target.replaceChildren();
-    let list: HTMLElement | null = null;
-    let table: HTMLElement | null = null;
-    passage.forEach((block, index) => {
-      const previous = passage[index - 1];
-      if (block.kind === 'row') {
-        if (!table || previous?.kind !== 'row') {
-          table = element('table', part('table'), target);
-        }
-        const tr = element('tr', '', table);
-        (block.cells || []).forEach((cell) => {
-          fill(element(block.header ? 'th' : 'td', part(block.header ? 'th' : 'td'), tr), cell);
-        });
-        return;
-      }
-      if (block.kind === 'bullet' || block.kind === 'step') {
-        if (!list || previous?.kind !== block.kind) {
-          list = element(block.kind === 'step' ? 'ol' : 'ul', part('list'), target);
-          const start = parseInt(String(block.marker || ''), 10);
-          if (block.kind === 'step' && start > 1) {
-            list.setAttribute('start', String(start));
-          }
-        }
-        fill(element('li', part('item'), list), String(block.text || ''));
-        return;
-      }
-      fill(
-        element('p', block.kind === 'heading' ? part('heading') : part('text'), target),
-        String(block.text || '')
-      );
-    });
-  }
-
-  function place(): void {
-    const list = options.getList();
-    if (!card || !row || !list || !win) {
-      return;
-    }
-    const listRect = list.getBoundingClientRect();
-    const rowRect = row.getBoundingClientRect();
-    const width = win.innerWidth;
-    const height = win.innerHeight;
-    const { offsetWidth: w, offsetHeight: h } = card;
-    const clamp = (value: number, max: number): number => Math.max(GAP, Math.min(value, max - GAP));
-    let placement = 'right';
-    let x = listRect.right + GAP;
-    let y = clamp(rowRect.top, height - h);
-    if (x + w > width - GAP) {
-      placement = 'left';
-      x = listRect.left - GAP - w;
-    }
-    // No room beside the list: under it, never over the other results or the search box.
-    if (x < GAP) {
-      if (listRect.bottom + GAP + h > height - GAP) {
-        card.setAttribute('data-visible', 'false');
-        return;
-      }
-      placement = 'bottom';
-      x = clamp(listRect.left, width - w);
-      y = listRect.bottom + GAP;
-    }
-    card.setAttribute('data-placement', placement);
-    card.style.setProperty('left', `${Math.round(x)}px`);
-    card.style.setProperty('top', `${Math.round(y)}px`);
-    card.setAttribute('data-visible', 'true');
-    card.setAttribute('aria-hidden', 'false');
-  }
-
-  function reveal(nextRow: HTMLElement, passage: HelpPassageBlock[]): void {
-    const target = ensureCard();
+  private reveal(nextRow: HTMLElement, passage: HelpPassageBlock[]): void {
+    const target = this.ensureCard();
     if (!target) {
       return;
     }
-    if (nextRow !== row || passage !== blocks) {
-      render(target, passage);
+    if (nextRow !== this.row || passage !== this.blocks) {
+      target.replaceChildren();
+      const writer = new PassageWriter(this.options.document, target, this.options.highlight);
+      passage.forEach((block) => writer.write(block));
     }
-    row = nextRow;
-    blocks = passage;
-    place();
+    this.row = nextRow;
+    this.blocks = passage;
+    this.place();
   }
 
-  function clearTimer(): void {
-    if (timer && win) {
-      win.clearTimeout(timer);
+  private clearTimer(): void {
+    if (this.timer && this.win) {
+      this.win.clearTimeout(this.timer);
     }
-    timer = 0;
+    this.timer = 0;
   }
+}
 
-  return {
-    show(nextRow, passage, showOptions) {
-      clearTimer();
-      const visible = card?.getAttribute('data-visible') === 'true';
-      if (showOptions?.delay && !visible && win) {
-        timer = win.setTimeout(() => {
-          timer = 0;
-          if (nextRow.isConnected) {
-            reveal(nextRow, passage);
-          }
-        }, HOVER_DELAY_MS);
-        return;
-      }
-      reveal(nextRow, passage);
-    },
-    place,
-    hide() {
-      clearTimer();
-      row = null;
-      blocks = null;
-      card?.setAttribute('data-visible', 'false');
-      card?.setAttribute('aria-hidden', 'true');
-    },
-    destroy() {
-      clearTimer();
-      card?.remove();
-      card = null;
-      row = null;
-      blocks = null;
-    }
-  };
+export function createHelpPassageCard(options: HelpPassageCardOptions): HelpPassageCard {
+  return new PassageCard(options);
 }
