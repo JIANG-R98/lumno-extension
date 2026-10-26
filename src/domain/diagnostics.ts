@@ -188,11 +188,27 @@ function appendDiagnosticError(stored: unknown, context: string, failure: unknow
 // A setting value as the file shows it: switches, numbers and option names
 // as they are, and small objects of those a level or two deep; lists only
 // when they hold switches and numbers; any other value as its type and size.
-function summarizeSettingValue(value: unknown, depth = 0): DiagnosticValue {
-  if (value === null) {
-    return null;
+function summarizeList(value: readonly unknown[], depth: number): DiagnosticValue {
+  if (depth >= MAX_SETTING_DEPTH || value.length > MAX_SETTING_LIST_LENGTH || !value.every(isSwitchOrNumber)) {
+    return { redacted: 'list', length: value.length };
   }
-  if (typeof value === 'boolean') {
+  return value.map((item: unknown) => summarizeSettingValue(item, depth + 1));
+}
+
+function summarizeRecord(value: Record<string, unknown>, depth: number): DiagnosticValue {
+  const keys = Object.keys(value);
+  if (depth >= MAX_SETTING_DEPTH || keys.length > MAX_SETTING_LIST_LENGTH || !keys.every(isOptionName)) {
+    return { redacted: 'object', length: keys.length };
+  }
+  const summary: { [key: string]: DiagnosticValue } = {};
+  keys.forEach((key) => {
+    summary[key] = summarizeSettingValue(value[key], depth + 1);
+  });
+  return summary;
+}
+
+function summarizeSettingValue(value: unknown, depth = 0): DiagnosticValue {
+  if (value === null || typeof value === 'boolean') {
     return value;
   }
   if (typeof value === 'number') {
@@ -202,23 +218,9 @@ function summarizeSettingValue(value: unknown, depth = 0): DiagnosticValue {
     return value === '' || isOptionName(value) ? value : { redacted: 'text', length: value.length };
   }
   if (Array.isArray(value)) {
-    if (depth >= MAX_SETTING_DEPTH || value.length > MAX_SETTING_LIST_LENGTH || !value.every(isSwitchOrNumber)) {
-      return { redacted: 'list', length: value.length };
-    }
-    return value.map((item: unknown) => summarizeSettingValue(item, depth + 1));
+    return summarizeList(value, depth);
   }
-  if (isRecord(value)) {
-    const keys = Object.keys(value);
-    if (depth >= MAX_SETTING_DEPTH || keys.length > MAX_SETTING_LIST_LENGTH || !keys.every(isOptionName)) {
-      return { redacted: 'object', length: keys.length };
-    }
-    const summary: { [key: string]: DiagnosticValue } = {};
-    keys.forEach((key) => {
-      summary[key] = summarizeSettingValue(value[key], depth + 1);
-    });
-    return summary;
-  }
-  return { redacted: 'other' };
+  return isRecord(value) ? summarizeRecord(value, depth) : { redacted: 'other' };
 }
 
 // A value as only its type and size.

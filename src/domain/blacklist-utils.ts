@@ -201,6 +201,25 @@ function normalizeItems(items: unknown, fallbackMode?: MatchMode | null): Blackl
   return normalized;
 }
 
+function matchesExact(pattern: string, target: string): boolean {
+  return target === pattern || getEquivalentPatterns(pattern).includes(target);
+}
+
+function matchesPrefix(pattern: string, target: string): boolean {
+  return target.startsWith(pattern) || getEquivalentPatterns(pattern).some((alternate) => target.startsWith(alternate));
+}
+
+// The target's host is the site or one of its subdomains.
+function matchesSite(pattern: string, target: string): boolean {
+  const sitePattern = normalizeDomainPattern(pattern);
+  if (!sitePattern) {
+    return false;
+  }
+  const targetParts = splitHostPathQuery(target);
+  const targetHost = targetParts ? String(targetParts.host || '').toLowerCase() : '';
+  return targetHost === sitePattern || targetHost.endsWith(`.${sitePattern}`);
+}
+
 function isRuleMatch(rule: BlacklistRule | null | undefined, url: unknown): boolean {
   if (!rule || !rule.pattern) {
     return false;
@@ -210,36 +229,9 @@ function isRuleMatch(rule: BlacklistRule | null | undefined, url: unknown): bool
     return false;
   }
   const modes = normalizeMatchModes(rule.matchModes, null);
-  if (modes.includes('exact') && target === rule.pattern) {
-    return true;
-  }
-  if (modes.includes('exact')) {
-    const alternates = getEquivalentPatterns(rule.pattern);
-    if (alternates.includes(target)) {
-      return true;
-    }
-  }
-  if (modes.includes('prefix')) {
-    if (target.startsWith(rule.pattern)) {
-      return true;
-    }
-    const alternates = getEquivalentPatterns(rule.pattern);
-    if (alternates.some((alternate) => target.startsWith(alternate))) {
-      return true;
-    }
-  }
-  if (modes.includes('suffix')) {
-    const sitePattern = normalizeDomainPattern(rule.pattern);
-    if (!sitePattern) {
-      return false;
-    }
-    const targetParts = splitHostPathQuery(target);
-    const targetHost = targetParts ? String(targetParts.host || '').toLowerCase() : '';
-    if (targetHost === sitePattern || targetHost.endsWith(`.${sitePattern}`)) {
-      return true;
-    }
-  }
-  return false;
+  return (modes.includes('exact') && matchesExact(rule.pattern, target)) ||
+    (modes.includes('prefix') && matchesPrefix(rule.pattern, target)) ||
+    (modes.includes('suffix') && matchesSite(rule.pattern, target));
 }
 
 // Takes rules normalizeItems produced.

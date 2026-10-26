@@ -4,64 +4,49 @@ import { getFaviconPageSearchParam, getPageUrlFromFaviconProxyUrl } from './cano
 import type { FaviconHostPolicy, FaviconHostPolicyOptions } from './types';
 import { isBrowserInternalPageUrl, isFaviconProxyUrl, isSafeVirtualFaviconRequestUrl } from './url-kinds';
 
+function isLocalHostName(host: string): boolean {
+  return host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host === 'host.docker.internal';
+}
+
+// A shortened IPv4 address such as 127.1, which browsers expand.
+function isShortIpv4(host: string): boolean {
+  return /^\d{1,3}(?:\.\d{1,3}){0,2}$/.test(host) &&
+    host.split('.').map((part) => Number(part)).every((part) => Number.isInteger(part) && part >= 0 && part <= 255);
+}
+
+// Loopback, private, link-local and shared address space.
+function isPrivateIpv4(parts: readonly number[]): boolean {
+  const [first, second] = parts;
+  return first === 0 || first === 10 || first === 127 ||
+    (first === 169 && second === 254) ||
+    (first === 192 && second === 168) ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 100 && second >= 64 && second <= 127);
+}
+
+function isLocalIpv6(ipv6: string): boolean {
+  return ipv6 === '::1' || ipv6 === '0:0:0:0:0:0:0:1' || ipv6 === '::' ||
+    /^fe[89ab][0-9a-f]*:/i.test(ipv6) || /^[fd][0-9a-f]{1,3}:/i.test(ipv6);
+}
+
 function isLocalNetworkHost(hostname: unknown): boolean {
   const host = String(hostname || '').trim().toLowerCase().replace(/^\[|\]$/g, '');
   if (!host) {
     return false;
   }
-  if (
-    host === 'localhost' ||
-    host.endsWith('.localhost') ||
-    host.endsWith('.local') ||
-    host === 'host.docker.internal'
-  ) {
+  if (isLocalHostName(host) || isShortIpv4(host)) {
     return true;
-  }
-  if (/^\d{1,3}(?:\.\d{1,3}){0,2}$/.test(host)) {
-    const shortParts = host.split('.').map((part) => Number(part));
-    if (shortParts.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)) {
-      return true;
-    }
   }
   if (/^(\d{1,3}\.){3}\d{1,3}$/.test(host)) {
     const parts = host.split('.').map((part) => Number(part));
-    if (parts.some((part) => Number.isNaN(part) || part < 0 || part > 255)) {
-      return false;
-    }
-    if (
-      parts[0] === 0 ||
-      parts[0] === 10 ||
-      parts[0] === 127 ||
-      (parts[0] === 169 && parts[1] === 254)
-    ) {
-      return true;
-    }
-    if (parts[0] === 192 && parts[1] === 168) {
-      return true;
-    }
-    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) {
-      return true;
-    }
-    if (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127) {
-      return true;
-    }
-    return false;
+    return !parts.some((part) => Number.isNaN(part) || part < 0 || part > 255) && isPrivateIpv4(parts);
   }
   const ipv6 = host.split('%')[0];
-  if (
-    ipv6 === '::1' ||
-    ipv6 === '0:0:0:0:0:0:0:1' ||
-    ipv6 === '::' ||
-    /^fe[89ab][0-9a-f]*:/i.test(ipv6) ||
-    /^[fd][0-9a-f]{1,3}:/i.test(ipv6)
-  ) {
+  if (isLocalIpv6(ipv6)) {
     return true;
   }
   const mappedIpv4 = ipv6.match(/::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i);
-  if (mappedIpv4 && mappedIpv4[1]) {
-    return isLocalNetworkHost(mappedIpv4[1]);
-  }
-  return false;
+  return Boolean(mappedIpv4 && mappedIpv4[1]) && isLocalNetworkHost(mappedIpv4 ? mappedIpv4[1] : '');
 }
 
 function isSuspiciousLocalFaviconHost(hostname: unknown): boolean {

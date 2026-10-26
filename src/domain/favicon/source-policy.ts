@@ -8,12 +8,26 @@ import type { FaviconResolverDependencies, FaviconResolverOptions, FaviconSource
 import { isBrowserExtensionProtocol, isChromeMonogramFaviconUrl, isFaviconIsUrl, isFaviconProxyUrl, isOriginScopedFaviconProxyUrl, isSafeVirtualFaviconRequestUrl } from './url-kinds';
 
 // Reads the caller's hooks once; every resolver piece below shares this view.
-function getFaviconResolverDependencies(options?: FaviconResolverOptions | null): Readonly<FaviconResolverDependencies> {
-  const config = options || {};
+function readRuntimeUrlGetter(config: FaviconResolverOptions): RuntimeUrlGetter | null {
   const runtime = config.chromeApi && config.chromeApi.runtime;
   const runtimeGetUrl = runtime && runtime.getURL;
-  const getRuntimeUrl: RuntimeUrlGetter | null = config.getRuntimeUrl ||
-    (runtime && runtimeGetUrl ? runtimeGetUrl.bind(runtime) : null);
+  return config.getRuntimeUrl || (runtime && runtimeGetUrl ? runtimeGetUrl.bind(runtime) : null);
+}
+
+// The URL builders a caller replaced; null keeps the resolver's own.
+function readCustomUrlBuilders(config: FaviconResolverOptions): Pick<FaviconResolverDependencies,
+  'customExtensionFaviconUrl' | 'customBrowserPageFaviconUrl' | 'customGstaticFaviconUrl' | 'customChromeFaviconUrl'> {
+  return {
+    customExtensionFaviconUrl: config.getExtensionFaviconUrl || null,
+    customBrowserPageFaviconUrl: config.getBrowserPageFaviconUrl || null,
+    customGstaticFaviconUrl: config.getGstaticFaviconUrl || null,
+    customChromeFaviconUrl: config.getChromeFaviconUrl || null
+  };
+}
+
+function getFaviconResolverDependencies(options?: FaviconResolverOptions | null): Readonly<FaviconResolverDependencies> {
+  const config = options || {};
+  const getRuntimeUrl = readRuntimeUrlGetter(config);
   const isEnhancedFaviconFetchEnabled = config.isEnhancedFaviconFetchEnabled || (() => true);
   return Object.freeze({
     config,
@@ -25,10 +39,7 @@ function getFaviconResolverDependencies(options?: FaviconResolverOptions | null)
       shouldAvoidDirectFaviconForHost: config.shouldAvoidDirectFaviconForHost || shouldAvoidDirectFaviconForHost
     }),
     isBlockedLocalFaviconUrl: config.isBlockedLocalFaviconUrl || isBlockedLocalFaviconUrl,
-    customExtensionFaviconUrl: config.getExtensionFaviconUrl || null,
-    customBrowserPageFaviconUrl: config.getBrowserPageFaviconUrl || null,
-    customGstaticFaviconUrl: config.getGstaticFaviconUrl || null,
-    customChromeFaviconUrl: config.getChromeFaviconUrl || null,
+    ...readCustomUrlBuilders(config),
     isEnhancedFaviconFetchEnabled,
     getStrictFaviconReason: config.getStrictFaviconReason ||
       ((pageUrl: string) => isEnhancedFaviconFetchEnabled(pageUrl) === true ? '' : 'global-off'),

@@ -25,6 +25,25 @@ function getFaviconPageSearchParam(parsedUrl: URL | null | undefined): string {
     '';
 }
 
+// A favicon service URL that names the page it is asked about.
+function isPageFaviconServiceUrl(parsed: URL): boolean {
+  const lowerHost = parsed.hostname.toLowerCase();
+  const lowerPath = parsed.pathname.toLowerCase();
+  return (parsed.protocol === 'chrome-extension:' && lowerPath.startsWith('/_favicon/')) ||
+    (parsed.protocol === 'chrome:' && lowerHost === 'favicon2') ||
+    (/(?:^|\.)gstatic\.(?:com|cn)$/i.test(lowerHost) && lowerPath.includes('/favicon')) ||
+    (/(?:^|\.)google\.[^/]+$/i.test(lowerHost) && lowerPath.includes('/s2/favicons'));
+}
+
+function readServicePageUrl(parsed: URL): string {
+  const directPageUrl = getHttpPageUrl(getFaviconPageSearchParam(parsed));
+  if (directPageUrl) {
+    return directPageUrl;
+  }
+  const domain = String(parsed.searchParams.get('domain') || '').trim();
+  return domain && !/[/?#]/.test(domain) ? getHttpPageUrl(`https://${domain}/`) : '';
+}
+
 function getPageUrlFromFaviconProxyUrl(url: unknown): string {
   const raw = String(url || '').trim();
   if (!raw) {
@@ -32,27 +51,11 @@ function getPageUrlFromFaviconProxyUrl(url: unknown): string {
   }
   try {
     const parsed = new URL(raw);
-    const lowerHost = parsed.hostname.toLowerCase();
-    const lowerPath = parsed.pathname.toLowerCase();
-    const isExtensionFavicon = parsed.protocol === 'chrome-extension:' && lowerPath.startsWith('/_favicon/');
-    const isChromeFavicon = parsed.protocol === 'chrome:' && lowerHost === 'favicon2';
-    const isGstaticFavicon = /(?:^|\.)gstatic\.(?:com|cn)$/i.test(lowerHost) && lowerPath.includes('/favicon');
-    const isGoogleS2Favicon = /(?:^|\.)google\.[^/]+$/i.test(lowerHost) && lowerPath.includes('/s2/favicons');
-    if (lowerHost === 'favicon.is') return getFaviconIsPageUrl(parsed);
-    if (isExtensionFavicon || isChromeFavicon || isGstaticFavicon || isGoogleS2Favicon) {
-      const directPageUrl = getHttpPageUrl(getFaviconPageSearchParam(parsed));
-      if (directPageUrl) {
-        return directPageUrl;
-      }
-      const domain = String(parsed.searchParams.get('domain') || '').trim();
-      if (domain && !/[/?#]/.test(domain)) {
-        return getHttpPageUrl(`https://${domain}/`);
-      }
-    }
+    if (parsed.hostname.toLowerCase() === 'favicon.is') return getFaviconIsPageUrl(parsed);
+    return isPageFaviconServiceUrl(parsed) ? readServicePageUrl(parsed) : '';
   } catch (e) {
     return '';
   }
-  return '';
 }
 
 function getCanonicalPageUrlForFavicon(url: unknown): string {

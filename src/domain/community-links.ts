@@ -128,40 +128,28 @@ function normalizeCommunityMap(value: unknown): CommunityByLocale {
 
 // The website's community-links.json, with every link it lacks or gets
 // wrong taken from the fallbacks.
+// The first of the payload's spellings of a link that is set, as an https URL.
+function readLink(links: Record<string, unknown>, keys: readonly string[]): string {
+  const key = keys.find((name) => Boolean(links[name]));
+  return key ? normalizeHttpsUrl(links[key]) : normalizeHttpsUrl(undefined);
+}
+
 function normalizeLinksPayload(payload: unknown): CommunityLinks {
   const source = isRecord(payload) ? payload : {};
   const links = isRecord(source.links) ? source.links : source;
   return {
-    x: normalizeHttpsUrl(links.x) || FALLBACK_LINKS.x,
-    githubIssue: normalizeHttpsUrl(
-      links.githubIssue || links.github_issue || links.issue
-    ) || FALLBACK_LINKS.githubIssue,
-    licenses: normalizeHttpsUrl(links.licenses) || FALLBACK_LINKS.licenses,
-    chromeReview: normalizeHttpsUrl(
-      links.chromeReview ||
-      links.chrome_review ||
-      links.chromeWebStoreReview ||
-      links.chrome_web_store_review ||
-      links.chromeRating ||
-      links.chrome_rating
-    ) || FALLBACK_LINKS.chromeReview,
-    edgeReview: normalizeHttpsUrl(
-      links.edgeReview ||
-      links.edge_review ||
-      links.edgeAddonsReview ||
-      links.edge_addons_review
-    ) || FALLBACK_LINKS.edgeReview,
-    firefoxReview: normalizeHttpsUrl(
-      links.firefoxReview ||
-      links.firefox_review ||
-      links.firefoxAddonsReview ||
-      links.firefox_addons_review
-    ) || FALLBACK_LINKS.firefoxReview,
-    wechatQr: normalizeHttpsUrl(links.wechatQr || links.wechat_qr) ||
-      FALLBACK_LINKS.wechatQr,
-    communityByLocale: normalizeCommunityMap(
-      source.communityByLocale || source.community_by_locale
-    )
+    x: readLink(links, ['x']) || FALLBACK_LINKS.x,
+    githubIssue: readLink(links, ['githubIssue', 'github_issue', 'issue']) || FALLBACK_LINKS.githubIssue,
+    licenses: readLink(links, ['licenses']) || FALLBACK_LINKS.licenses,
+    chromeReview: readLink(links, [
+      'chromeReview', 'chrome_review', 'chromeWebStoreReview', 'chrome_web_store_review', 'chromeRating', 'chrome_rating'
+    ]) || FALLBACK_LINKS.chromeReview,
+    edgeReview: readLink(links, ['edgeReview', 'edge_review', 'edgeAddonsReview', 'edge_addons_review']) ||
+      FALLBACK_LINKS.edgeReview,
+    firefoxReview: readLink(links, ['firefoxReview', 'firefox_review', 'firefoxAddonsReview', 'firefox_addons_review']) ||
+      FALLBACK_LINKS.firefoxReview,
+    wechatQr: readLink(links, ['wechatQr', 'wechat_qr']) || FALLBACK_LINKS.wechatQr,
+    communityByLocale: normalizeCommunityMap(source.communityByLocale || source.community_by_locale)
   };
 }
 
