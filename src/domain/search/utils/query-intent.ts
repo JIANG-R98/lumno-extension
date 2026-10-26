@@ -144,87 +144,80 @@ function normalizeClusterSegment(segment: unknown): string {
   return value;
 }
 
+type ClusterPlace = Pick<SearchClusterInfo, 'host' | 'path'>;
+
+// A GitHub repository: its root, its known areas, its code by folder, and
+// everything else under the repository.
+function getRepoClusterInfo(place: ClusterPlace, segments: readonly string[]): SearchClusterInfo {
+  const { host, path } = place;
+  const depth = segments.length;
+  const repoBase = `${host}/${segments[0]}/${segments[1]}`;
+  if (depth === 2) {
+    return { host, category: 'repo-root', clusterKey: repoBase, depth, path };
+  }
+  const third = segments[2] || '';
+  const siteConfig = getSearchSiteConfig(host);
+  const repoAreaCategory = siteConfig && siteConfig.repoAreaCategories ? siteConfig.repoAreaCategories.get(third) : undefined;
+  if (repoAreaCategory) {
+    return { host, category: repoAreaCategory, clusterKey: `${repoBase}/${third}`, depth, path };
+  }
+  if (third === 'tree' || third === 'blob') {
+    const area = segments[4] || segments[3] || 'root';
+    return { host, category: 'repo-code', clusterKey: `${repoBase}/code/${area}`, depth, path };
+  }
+  return { host, category: 'repo-child', clusterKey: `${repoBase}/${third || 'root'}`, depth, path };
+}
+
+const USER_SEGMENTS: ReadonlySet<string> = new Set(['u', 'user', 'users', 'profile', 'profiles']);
+const LANDING_SEGMENTS: ReadonlySet<string> = new Set(['release', 'releases', 'onboarding', 'changelog']);
+const DOCS_SEGMENTS: ReadonlySet<string> = new Set(['docs', 'doc', 'wiki', 'help', 'guide', 'guides']);
+
+// What a page under a site is by its first path segments.
+function getPathClusterInfo(place: ClusterPlace, segments: readonly string[]): SearchClusterInfo {
+  const { host, path } = place;
+  const depth = segments.length;
+  const first = segments[0] || '';
+  const second = segments[1] || '';
+  const utilitySegment = segments.slice(0, 3).find((segment) => SEARCH_UTILITY_SEGMENTS.has(segment));
+  if (utilitySegment) {
+    return { host, category: 'utility', clusterKey: `${host}/utility/${utilitySegment}`, depth, path };
+  }
+  if (SEARCH_ACTION_SEGMENTS.has(first)) {
+    return { host, category: 'action', clusterKey: `${host}/action/${first}`, depth, path };
+  }
+  if (USER_SEGMENTS.has(first) && second) {
+    return { host, category: 'user', clusterKey: `${host}/user/${second}`, depth, path };
+  }
+  if (LANDING_SEGMENTS.has(first)) {
+    return { host, category: 'landing', clusterKey: `${host}/${first}`, depth, path };
+  }
+  if (DOCS_SEGMENTS.has(first)) {
+    return { host, category: 'docs', clusterKey: `${host}/${first}/${second || 'root'}`, depth, path };
+  }
+  if (depth === 1) {
+    return { host, category: 'section', clusterKey: `${host}/${first}`, depth, path };
+  }
+  return { host, category: 'content', clusterKey: `${host}/${first}/${second}`, depth, path };
+}
+
 function getSearchSuggestionClusterInfo(url: unknown): SearchClusterInfo {
   if (!url) {
-    return {
-      host: '',
-      category: 'unknown',
-      clusterKey: '',
-      depth: 0,
-      path: '/'
-    };
+    return { host: '', category: 'unknown', clusterKey: '', depth: 0, path: '/' };
   }
   try {
     const parsed = new URL(String(url));
     const host = normalizeHost(parsed.hostname);
     const path = parsed.pathname !== '/' ? (parsed.pathname.replace(/\/+$/, '') || '/') : '/';
-    const rawSegments = path.split('/').filter(Boolean).map((item) => decodeURIComponent(item).toLowerCase());
-    const segments = rawSegments.map(normalizeClusterSegment);
-    const first = segments[0] || '';
-    const second = segments[1] || '';
-    const third = segments[2] || '';
-
-    const siteConfig = getSearchSiteConfig(host);
+    const segments = path.split('/').filter(Boolean).map((item) => normalizeClusterSegment(decodeURIComponent(item).toLowerCase()));
     if (host === 'github.com' && segments.length >= 2) {
-      const repoBase = `${host}/${segments[0]}/${segments[1]}`;
-      if (segments.length === 2) {
-        return { host, category: 'repo-root', clusterKey: repoBase, depth: segments.length, path };
-      }
-      const repoAreaCategories = siteConfig && siteConfig.repoAreaCategories
-        ? siteConfig.repoAreaCategories
-        : null;
-      const repoAreaCategory = repoAreaCategories ? repoAreaCategories.get(third) : undefined;
-      if (repoAreaCategory) {
-        return { host, category: repoAreaCategory, clusterKey: `${repoBase}/${third}`, depth: segments.length, path };
-      }
-      if (third === 'tree' || third === 'blob') {
-        const area = segments[4] || segments[3] || 'root';
-        return { host, category: 'repo-code', clusterKey: `${repoBase}/code/${area}`, depth: segments.length, path };
-      }
-      return { host, category: 'repo-child', clusterKey: `${repoBase}/${third || 'root'}`, depth: segments.length, path };
+      return getRepoClusterInfo({ host, path }, segments);
     }
-
     if (segments.length === 0) {
       return { host, category: 'site-root', clusterKey: `${host}/`, depth: 0, path };
     }
-
-    const utilitySegment = segments.slice(0, 3).find((segment) => (
-      SEARCH_UTILITY_SEGMENTS.has(segment)
-    ));
-    if (utilitySegment) {
-      return { host, category: 'utility', clusterKey: `${host}/utility/${utilitySegment}`, depth: segments.length, path };
-    }
-
-    if (SEARCH_ACTION_SEGMENTS.has(first)) {
-      return { host, category: 'action', clusterKey: `${host}/action/${first}`, depth: segments.length, path };
-    }
-
-    if ((first === 'u' || first === 'user' || first === 'users' || first === 'profile' || first === 'profiles') && second) {
-      return { host, category: 'user', clusterKey: `${host}/user/${second}`, depth: segments.length, path };
-    }
-
-    if (first === 'release' || first === 'releases' || first === 'onboarding' || first === 'changelog') {
-      return { host, category: 'landing', clusterKey: `${host}/${first}`, depth: segments.length, path };
-    }
-
-    if (first === 'docs' || first === 'doc' || first === 'wiki' || first === 'help' || first === 'guide' || first === 'guides') {
-      const docKey = second || 'root';
-      return { host, category: 'docs', clusterKey: `${host}/${first}/${docKey}`, depth: segments.length, path };
-    }
-
-    if (segments.length === 1) {
-      return { host, category: 'section', clusterKey: `${host}/${first}`, depth: segments.length, path };
-    }
-
-    return { host, category: 'content', clusterKey: `${host}/${first}/${second}`, depth: segments.length, path };
+    return getPathClusterInfo({ host, path }, segments);
   } catch (e) {
-    return {
-      host: '',
-      category: 'unknown',
-      clusterKey: String(url).trim().toLowerCase(),
-      depth: 0,
-      path: '/'
-    };
+    return { host: '', category: 'unknown', clusterKey: String(url).trim().toLowerCase(), depth: 0, path: '/' };
   }
 }
 
@@ -271,47 +264,20 @@ function classifySearchIntent(query: unknown, queryTerms: readonly string[] | nu
   return 'object';
 }
 
+// How much each source counts for each kind of query.
+const SOURCE_ADJUSTMENTS: Readonly<Record<string, Readonly<Record<string, number>>>> = Object.freeze({
+  navigation: { bookmark: 24, topSite: 20, history: 4 },
+  brand: { bookmark: 24, topSite: 20, history: 4 },
+  path: { history: 18, bookmark: 10, topSite: 8 },
+  revisit: { history: 18, bookmark: 10, topSite: 8 },
+  object: { bookmark: 18, history: 12, topSite: 10 }
+});
+
 function getSearchSourceAdjustment(sourceType: unknown, intentType: unknown): number {
   const source = String(sourceType || '');
   const intent = String(intentType || 'object');
-
-  if (intent === 'navigation' || intent === 'brand') {
-    if (source === 'bookmark') {
-      return 24;
-    }
-    if (source === 'topSite') {
-      return 20;
-    }
-    if (source === 'history') {
-      return 4;
-    }
-  }
-
-  if (intent === 'path' || intent === 'revisit') {
-    if (source === 'history') {
-      return 18;
-    }
-    if (source === 'bookmark') {
-      return 10;
-    }
-    if (source === 'topSite') {
-      return 8;
-    }
-  }
-
-  if (intent === 'object') {
-    if (source === 'bookmark') {
-      return 18;
-    }
-    if (source === 'history') {
-      return 12;
-    }
-    if (source === 'topSite') {
-      return 10;
-    }
-  }
-
-  return 0;
+  const bySource = Object.prototype.hasOwnProperty.call(SOURCE_ADJUSTMENTS, intent) ? SOURCE_ADJUSTMENTS[intent] : null;
+  return bySource && Object.prototype.hasOwnProperty.call(bySource, source) ? bySource[source] : 0;
 }
 
 // A Han query spelled the way a site's address writes it: 知乎 is
@@ -381,6 +347,24 @@ function matchesSearchQueryText(
   return coreTerms.length > 0 && coreTerms.every((term) => matchesTerm(term));
 }
 
+// Whether a query term appears in the candidate: a whole token or a token's
+// start in the title, host or path, loosely anywhere, or by title units.
+function candidateHasTerm(candidate: SearchCandidateParts, term: string): boolean {
+  const titleTokens = Array.isArray(candidate.titleTokens) ? candidate.titleTokens : [];
+  const hostLabels = Array.isArray(candidate.hostLabels) ? candidate.hostLabels : [];
+  const pathTokens = Array.isArray(candidate.pathTokens) ? candidate.pathTokens : [];
+  const tokenLists = [titleTokens, hostLabels, pathTokens];
+  if (tokenLists.some((tokens) => tokens.includes(term)) ||
+      tokenLists.some((tokens) => tokens.some((token) => token.startsWith(term)))) {
+    return true;
+  }
+  if (shouldAllowLooseTextContains(term) && [candidate.titleLower, candidate.hostname, candidate.urlLower]
+    .some((text) => String(text || '').includes(term))) {
+    return true;
+  }
+  return typeof candidate.matchesTitleUnits === 'function' && candidate.matchesTitleUnits(term);
+}
+
 function getSearchTermCoverageStats(
   context: Partial<Pick<SearchQueryContext, 'coreQueryTerms' | 'queryLower'>> | null | undefined,
   candidateParts: SearchCandidateParts | null | undefined
@@ -390,56 +374,83 @@ function getSearchTermCoverageStats(
     ? coreTerms
     : splitSearchTerms(context && context.queryLower ? context.queryLower : '');
   if (terms.length === 0) {
-    return {
-      total: 0,
-      matchedCount: 0,
-      missingCount: 0,
-      allMatched: false
-    };
+    return { total: 0, matchedCount: 0, missingCount: 0, allMatched: false };
   }
-  const normalizedCandidate: SearchCandidateParts = candidateParts && typeof candidateParts === 'object'
-    ? candidateParts
-    : {};
-  const titleLower = String(normalizedCandidate.titleLower || '');
-  const hostname = String(normalizedCandidate.hostname || '');
-  const urlLower = String(normalizedCandidate.urlLower || '');
-  const titleTokens = Array.isArray(normalizedCandidate.titleTokens) ? normalizedCandidate.titleTokens : [];
-  const hostLabels = Array.isArray(normalizedCandidate.hostLabels) ? normalizedCandidate.hostLabels : [];
-  const pathTokens = Array.isArray(normalizedCandidate.pathTokens) ? normalizedCandidate.pathTokens : [];
-  const matchesTitleUnits = typeof normalizedCandidate.matchesTitleUnits === 'function'
-    ? normalizedCandidate.matchesTitleUnits
-    : () => false;
-  let matchedCount = 0;
-
-  terms.forEach((term) => {
-    if (!term) {
-      return;
-    }
-    const matched = (
-      titleTokens.includes(term) ||
-      hostLabels.includes(term) ||
-      pathTokens.includes(term) ||
-      titleTokens.some((token) => token.startsWith(term)) ||
-      hostLabels.some((label) => label.startsWith(term)) ||
-      pathTokens.some((token) => token.startsWith(term)) ||
-      (shouldAllowLooseTextContains(term) && (
-        titleLower.includes(term) ||
-        hostname.includes(term) ||
-        urlLower.includes(term)
-      )) ||
-      matchesTitleUnits(term)
-    );
-    if (matched) {
-      matchedCount += 1;
-    }
-  });
-
+  const candidate: SearchCandidateParts = candidateParts && typeof candidateParts === 'object' ? candidateParts : {};
+  const matchedCount = terms.filter((term) => Boolean(term) && candidateHasTerm(candidate, term)).length;
   return {
     total: terms.length,
     matchedCount,
     missingCount: Math.max(0, terms.length - matchedCount),
     allMatched: matchedCount === terms.length
   };
+}
+
+function isRootCategory(category: string): boolean {
+  return category === 'site-root' || category === 'repo-root';
+}
+
+// Site roots, sections, landing pages and docs rank up, more so as top sites.
+function getPageKindAdjustment(info: SearchClusterInfo, isTopSite: boolean): number {
+  let adjustment = 0;
+  if (isRootCategory(info.category)) {
+    adjustment += 18;
+  } else if (info.category === 'section') {
+    adjustment += 8;
+  } else if (info.category === 'landing' || info.category === 'docs') {
+    adjustment += 10;
+  }
+  if (isTopSite) {
+    if (isRootCategory(info.category)) {
+      adjustment += 20;
+    } else {
+      adjustment += info.category === 'section' || info.category === 'landing' ? 10 : 4;
+    }
+  }
+  return adjustment;
+}
+
+// Deep pages, utility and action pages and repository code rank down,
+// unless the query asks for settings or an action.
+function getPageDepthPenalty(info: SearchClusterInfo, querySet: ReadonlySet<string>, hasSettingsIntent: boolean): number {
+  const hasActionIntent = ['new', 'edit', 'create', 'settings', '设置'].some((term) => querySet.has(term));
+  let penalty = 0;
+  if (info.depth >= 3 && info.category !== 'docs' && info.category !== 'repo-code') {
+    penalty += Math.min(16, (info.depth - 2) * 4);
+  }
+  if (info.category === 'utility') {
+    penalty += hasSettingsIntent ? 10 : 95;
+  }
+  if (info.category === 'action') {
+    penalty += hasActionIntent ? 8 : 80;
+  }
+  if (info.category === 'repo-code') {
+    penalty += 18;
+  }
+  if (info.category === 'repo-child' && info.depth >= 4) {
+    penalty += 14;
+  }
+  return penalty;
+}
+
+// With two or more terms: a page matching all of them ranks up, a
+// representative page missing some ranks down.
+function getCoverageAdjustment(info: SearchClusterInfo, isTopSite: boolean, coverageStats: SearchTermCoverage | null | undefined): number {
+  if (!coverageStats || coverageStats.total < 2) {
+    return 0;
+  }
+  const isRepresentativePage = isRootCategory(info.category) || info.category === 'section' || info.category === 'landing';
+  if (coverageStats.allMatched) {
+    if (info.category === 'repo-root') {
+      return 18;
+    }
+    return isRepresentativePage ? 0 : 12;
+  }
+  if (!isRepresentativePage) {
+    return 0;
+  }
+  const topSitePenalty = isTopSite && info.category !== 'repo-root' ? 6 : 0;
+  return -Math.min(36, coverageStats.missingCount * 18) - topSitePenalty;
 }
 
 function getSearchSuggestionCategoryAdjustment(
@@ -453,69 +464,10 @@ function getSearchSuggestionCategoryAdjustment(
   const info = getSearchSuggestionClusterInfo(item.url);
   const queryTerms = context && context.queryTerms;
   const querySet = new Set(Array.isArray(queryTerms) ? queryTerms : []);
-  const hasSettingsIntent = Boolean(context && context.hasSettingsIntent);
-  const hasActionIntent = querySet.has('new') || querySet.has('edit') || querySet.has('create') || querySet.has('settings') || querySet.has('设置');
-  let adjustment = 0;
-
-  if (info.category === 'site-root' || info.category === 'repo-root') {
-    adjustment += 18;
-  } else if (info.category === 'section') {
-    adjustment += 8;
-  } else if (info.category === 'landing' || info.category === 'docs') {
-    adjustment += 10;
-  }
-
-  if (item.type === 'topSite' || item.isTopSite) {
-    if (info.category === 'site-root' || info.category === 'repo-root') {
-      adjustment += 20;
-    } else if (info.category === 'section' || info.category === 'landing') {
-      adjustment += 10;
-    } else {
-      adjustment += 4;
-    }
-  }
-
-  if (info.depth >= 3 && info.category !== 'docs' && info.category !== 'repo-code') {
-    adjustment -= Math.min(16, (info.depth - 2) * 4);
-  }
-
-  if (info.category === 'utility') {
-    adjustment -= hasSettingsIntent ? 10 : 95;
-  }
-
-  if (info.category === 'action') {
-    adjustment -= hasActionIntent ? 8 : 80;
-  }
-
-  if (info.category === 'repo-code') {
-    adjustment -= 18;
-  }
-
-  if (info.category === 'repo-child' && info.depth >= 4) {
-    adjustment -= 14;
-  }
-
-  if (coverageStats && coverageStats.total >= 2) {
-    const isRepresentativePage =
-      info.category === 'site-root' ||
-      info.category === 'repo-root' ||
-      info.category === 'section' ||
-      info.category === 'landing';
-    if (coverageStats.allMatched) {
-      if (info.category === 'repo-root') {
-        adjustment += 18;
-      } else if (!isRepresentativePage) {
-        adjustment += 12;
-      }
-    } else if (isRepresentativePage) {
-      adjustment -= Math.min(36, coverageStats.missingCount * 18);
-      if ((item.type === 'topSite' || item.isTopSite) && info.category !== 'repo-root') {
-        adjustment -= 6;
-      }
-    }
-  }
-
-  return adjustment;
+  const isTopSite = item.type === 'topSite' || Boolean(item.isTopSite);
+  return getPageKindAdjustment(info, isTopSite) -
+    getPageDepthPenalty(info, querySet, Boolean(context && context.hasSettingsIntent)) +
+    getCoverageAdjustment(info, isTopSite, coverageStats);
 }
 
 function getOwnExtensionUtilityPenalty(
