@@ -1,6 +1,6 @@
 const assert = require('assert');
 const settings = require('../../src/domain/settings/index.ts');
-const settingsStorage = require('../../src/platform/settings-storage.ts');
+const settingsStorage = require('../helpers/settings-storage.ts');
 
 let registeredStorageListener = null;
 const storageListener = () => {};

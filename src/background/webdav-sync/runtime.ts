@@ -1,8 +1,8 @@
 // A connection's storage calls, status record, keep-alive and job queue.
-import * as LumnoSettingsStorage from '../../platform/settings-storage';
 import type { StorageItems } from '../../domain/storage-port';
 import { ignoreRejection, isRecord, readSession } from './records';
 import type { ConnectionContext, Session, StatusUpdate, StorageCall, StorageMethod, StoredConnection } from './types';
+import * as SettingsStorage from '../../platform/settings-storage';
 
 function fail(ctx: ConnectionContext, code: string): never { throw ctx.clientApi.error(code); }
 
@@ -21,7 +21,7 @@ function runStorage(ctx: ConnectionContext, area: chrome.storage.StorageArea | n
       finished = true;
       const lastError = failure || (ctx.chromeApi.runtime && ctx.chromeApi.runtime.lastError);
       if (!lastError) { resolve(result); return; }
-      if (call.method !== 'get' && !retried && LumnoSettingsStorage.isStorageRateLimitError(lastError)) {
+      if (call.method !== 'get' && !retried && SettingsStorage.isStorageRateLimitError(lastError)) {
         setTimeout(() => runStorage(ctx, area, call, true).then(resolve, reject), ctx.storageRetryDelayMs);
         return;
       }

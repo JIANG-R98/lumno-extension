@@ -5,7 +5,6 @@ import type * as ExtensionRoutes from '../../domain/extension-routes';
 import type { SiteSearchProvider } from '../../domain/search/types';
 import type { StorageAreaLike, StorageItems } from '../../domain/storage-port';
 import * as LumnoMessaging from '../../platform/messaging';
-import * as LumnoSettingsStorage from '../../platform/settings-storage';
 import type { SearchInputParts } from '../../shared/react/search-input';
 import type { InputModeController } from '../../shared/search/search-input-mode';
 import type * as FeatureHints from '../../shared/ui/feature-hints';
@@ -13,6 +12,7 @@ import type { FeatureHintController } from '../../shared/ui/feature-hints';
 import type { FormatMessage, Translate } from '../newtab-types';
 import type { PageNavigation } from '../page-navigation';
 import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
+import * as SettingsStorage from '../../platform/settings-storage';
 
 interface SearchBoxControlsState {
   inputParts: SearchInputParts | null;
@@ -247,7 +247,7 @@ function createSearchBoxControls(deps: SearchBoxControlsDeps) {
         applyNewtabActionButtonVisibility();
         // A missing value stays missing while this device's local copy
         // migrates in.
-        LumnoSettingsStorage.writeSettingRepairs(chrome, area, repairs, stored);
+        SettingsStorage.writeSettingRepairs(chrome, area, repairs, stored);
         resolve();
       });
     });

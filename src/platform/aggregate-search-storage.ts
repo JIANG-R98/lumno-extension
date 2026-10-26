@@ -2,11 +2,11 @@
 import { normalizeAggregateSearches } from '../domain/search/aggregate-search-store';
 import type { AggregateSearch } from '../domain/search/aggregate-search-store';
 import type { StorageAreaLike } from '../domain/storage-port';
-import { readStorageValue } from './settings-storage';
-import type { StorageChromeApi } from './settings-storage';
 import { readStoredSetting } from './settings-store';
 import type { SettingsStore } from './settings-store';
 import { aggregateSearches } from '../domain/settings/search';
+import type { StorageChromeApi } from './settings-storage';
+import { readStorageValue } from './settings-storage';
 
 // A failed read rejects, so it stays distinguishable from an empty list.
 async function loadAggregateSearches(

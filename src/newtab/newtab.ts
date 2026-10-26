@@ -98,7 +98,6 @@ import * as NEWTAB_TOP_CONTENT_RUNTIME from './top-content/top-content';
 import * as NEWTAB_URL_POLICY from './url-policy';
 import * as NEWTAB_VIEWPORT_INSETS from './viewport-insets';
 import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoMessaging from '../platform/messaging';
 import { isNode } from '../shared/dom-guards';
 import {
@@ -216,6 +215,7 @@ import * as BundledIcons from '../domain/favicon/shortcut-favicon/bundled-icons'
 import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted';
 import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-providers';
 import * as ShortcutConstants from '../domain/shortcuts/constants';
+import * as SettingsStorage from '../platform/settings-storage';
 
 (function() {
   // Page state shared with the modules split out of this file: each module
@@ -2532,12 +2532,12 @@ import * as ShortcutConstants from '../domain/shortcuts/constants';
     getSiteSearchTriggerCandidate,
     getLocalSearchScopeCandidate,
     getShortcutRules: (...args) => getShortcutRules(...args),
-    readSearchSourceOrder: () => LumnoSettingsStorage.readStorageValue(
+    readSearchSourceOrder: () => SettingsStorage.readStorageValue(
       storageArea,
       chrome,
       SETTINGS.searchSourceOrder.key
     ),
-    writeSearchSourceOrder: (value) => LumnoSettingsStorage.writeStorageValue(
+    writeSearchSourceOrder: (value) => SettingsStorage.writeStorageValue(
       storageArea,
       chrome,
       SETTINGS.searchSourceOrder.key,

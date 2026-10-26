@@ -5,8 +5,8 @@
 // registry (src/platform/worker-lazy.ts, untyped here: its scripts publish
 // unchecked values the worker narrows).
 import type { WallpaperEffectPreloadRuntime, WallpaperPreloadState } from '../newtab/wallpaper/wallpaper-preload-types';
-import type { StorageReadPrefetch } from '../platform/settings-storage';
 import type { HeldViewTransition } from '../newtab/focus-resume';
+import type { StorageReadPrefetch } from '../platform/settings-storage';
 
 declare global {
   // The EyeDropper API, which Chromium has and TypeScript's DOM library

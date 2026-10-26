@@ -2,7 +2,7 @@ const assert = require('assert');
 
 const store = require('../../src/domain/search/aggregate-search-store.ts');
 const aggregateStorage = require('../../src/platform/aggregate-search-storage.ts');
-const settingsStorage = require('../../src/platform/settings-storage.ts');
+const settingsStorage = require('../helpers/settings-storage.ts');
 const { aggregateSearches } = require('../../src/domain/settings/search.ts');
 
 const providers = [

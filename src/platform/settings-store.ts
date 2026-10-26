@@ -6,9 +6,10 @@
 import type { Setting, SettingArea, SettingFamily } from '../domain/settings/define';
 import { localPrimary } from '../domain/settings/sync-state';
 import type { StorageAreaLike, StorageChanges, StorageItems, StoredValuePort } from '../domain/storage-port';
-import { createProviderStorageRuntime, writeStorageValues } from './settings-storage';
-import type { ProviderStorageRuntime, StorageAreaFacade, StorageChromeApi } from './settings-storage';
 import { callStorage, isRecord } from './storage-call';
+import { createProviderStorageRuntime } from './provider-storage';
+import type { ProviderStorageRuntime, StorageAreaFacade, StorageChromeApi } from './settings-storage';
+import { writeStorageValues } from './settings-storage';
 
 type StoreArea = Exclude<SettingArea, 'page' | 'tab'>;
 

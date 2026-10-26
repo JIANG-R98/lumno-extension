@@ -4,9 +4,7 @@
 //
 // It imports no background service, so every service may use its bindings
 // while loading, unlike the bindings background.ts itself defines.
-import * as LumnoSettingsStorage from '../platform/settings-storage';
 import { createDiagnosticsLog } from '../platform/diagnostics-log';
-import type { StorageAreaFacade } from '../platform/settings-storage';
 import type { StorageAreaLike } from '../domain/storage-port';
 import type { RestrictedAction } from '../domain/settings/overlay-panel';
 import { restrictedAction, restrictedActionAutoBrowserSettingDone } from '../domain/settings/overlay-panel';
@@ -17,6 +15,8 @@ import { WORKER_SETTINGS } from './worker-settings';
 import type { LocaleMessage } from '../domain/messages';
 import { readLocaleMessages } from '../domain/locale-messages';
 import * as BACKGROUND_SHORTCUT_RULES from './shortcut-rules';
+import * as ProviderStorage from '../platform/provider-storage';
+import type { StorageAreaFacade } from '../platform/settings-storage';
 
 // pinyin-pro (pinyin-data.ts) only matters when a Han-character title is
 // matched against a pinyin query, or a Han query against site addresses, so
@@ -33,7 +33,7 @@ const SHOW_SEARCH_PREFILL_V_COMMAND_NAME = 'show-search-prefill-v';
 const SHOW_TAB_SWITCHER_COMMAND_NAME = 'show-tab-switcher';
 const SHOW_TAB_SWITCHER_REVERSE_COMMAND_NAME = 'show-tab-switcher-reverse';
 
-const providerStorageRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chrome);
+const providerStorageRuntime = ProviderStorage.createProviderStorageRuntime(chrome);
 // The area settings are read from and written to: browser sync, or local when
 // the user keeps settings on this device.
 const storageArea: StorageAreaFacade = providerStorageRuntime.area;

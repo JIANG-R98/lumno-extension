@@ -1,5 +1,5 @@
 const assert = require('assert');
-const settingsStorage = require('../../src/platform/settings-storage.ts');
+const settingsStorage = require('../helpers/settings-storage.ts');
 const { createOptionsPage } = require('../helpers/options-page');
 
 async function run() {

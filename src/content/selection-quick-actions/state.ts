@@ -1,14 +1,14 @@
 // What the toolbar keeps while the page is open: its settings, timers,
 // the current selection and the elements it made.
-import * as LumnoSettingsStorage from '../../platform/settings-storage';
 import { getContextSettingsStore } from '../../platform/settings-store';
 import type { LocaleMessage } from '../../domain/messages';
 import type { ToastController, ToastStyleGate } from '../../shared/ui/toast';
 import type { PageListener, PointerDownState, SelectionCandidate, SelectionSurface } from './types';
+import * as ProviderStorage from '../../platform/provider-storage';
 
 const settingsStore = getContextSettingsStore(chrome);
 
-const providerStorageRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chrome);
+const providerStorageRuntime = ProviderStorage.createProviderStorageRuntime(chrome);
 
 interface SelectionToolbarState {
   enabled: boolean;

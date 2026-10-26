@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const settings = require('../../src/domain/settings/index.ts');
-const settingsStorage = require('../../src/platform/settings-storage.ts');
+const settingsStorage = require('../helpers/settings-storage.ts');
 const settingsMigrations = { ...require('../../src/domain/settings/migrations.ts'), ...require('../../src/domain/settings/removed.ts'), settingsSchemaVersion: require('../../src/domain/settings/sync-state.ts').settingsSchemaVersion };
 const repoRoot = path.join(__dirname, '..', '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'manifest.json'), 'utf8'));

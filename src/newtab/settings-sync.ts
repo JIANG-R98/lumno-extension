@@ -10,7 +10,6 @@ import type * as LumnoSettings from '../domain/settings';
 import type { NewtabWidthMode, ThemeMode } from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
 import type { FolderBindingRuntime } from '../platform/bookmark-folder-bindings';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
 import type { ThemeVariant } from '../shared/favicon/favicon-theme';
 import type { InputModeController } from '../shared/search/search-input-mode';
 import type { AppearanceModes } from './appearance-modes';
@@ -46,6 +45,8 @@ import { bingDailyCache } from '../domain/settings/newtab-wallpaper';
 import { progressHistory } from '../domain/settings/recent-sites';
 import type { CachedIconMap } from '../domain/favicon/shortcut-favicon/types';
 import type { HiddenRecentSite, RecentSite } from '../domain/recent-sites-store';
+import * as ProviderStorage from '../platform/provider-storage';
+import * as SettingsStorage from '../platform/settings-storage';
 
 interface SettingsSyncState {
   currentBookmarkCount: number;
@@ -329,8 +330,8 @@ function createSettingsSync(deps: SettingsSyncDeps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  function addStorageChangeListener(listener: Parameters<typeof LumnoSettingsStorage.addStorageChangeListener>[1]) {
-    return LumnoSettingsStorage.addStorageChangeListener(chrome, listener);
+  function addStorageChangeListener(listener: Parameters<typeof ProviderStorage.addStorageChangeListener>[1]) {
+    return ProviderStorage.addStorageChangeListener(chrome, listener);
   }
 
   // Bookmark and site-card preferences arrive from storage (Options page, other tabs) and from
@@ -485,7 +486,7 @@ function createSettingsSync(deps: SettingsSyncDeps) {
   storageChanges.on(NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY, (changes) => {
     const rawValue = changes[NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY].newValue;
     pageState.newtabInputAutoFocusEnabled = normalizeNewtabInputAutoFocusEnabled(rawValue);
-    LumnoSettingsStorage.cacheNewtabInputAutoFocusEnabled(pageState.newtabInputAutoFocusEnabled);
+    SettingsStorage.cacheNewtabInputAutoFocusEnabled(pageState.newtabInputAutoFocusEnabled);
     updateNewtabInputAutoFocusUi();
   });
   storageChanges.on(RECENT_COUNT_STORAGE_KEY, (changes) => {

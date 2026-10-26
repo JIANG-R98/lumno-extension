@@ -231,7 +231,7 @@ async function createOverlayPage(options) {
       ? bundleScript(entry.name, entry.name === 'overlay'
         ? {
           'src/overlay/runtime.ts': 'LumnoOverlayRuntime',
-          'src/platform/settings-storage.ts': 'LumnoTestSettingsStorage',
+          'src/platform/provider-storage.ts': 'LumnoTestSettingsStorage',
           'src/overlay/overlay-app.ts': 'LumnoTestOverlayApp',
           'src/overlay/react/shell.tsx': 'LumnoTestOverlayShellModule'
         }

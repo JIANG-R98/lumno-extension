@@ -3,9 +3,9 @@
 import type * as LumnoSettings from '../../domain/settings';
 import type { NewtabTimeInk, NewtabTopContentMode } from '../../domain/settings';
 import type * as LumnoCommunityLinks from '../../platform/community-links';
-import * as LumnoSettingsStorage from '../../platform/settings-storage';
 import { queryHtmlElement } from '../../shared/dom-lookup';
 import type { TopContentController, WordmarkAppearance } from '../react/wordmark';
+import * as SettingsStorage from '../../platform/settings-storage';
 
 // A card's place on screen before a layout change.
 type LayoutPosition = { left: number; top: number };
@@ -128,7 +128,7 @@ function createTopContentRuntime(deps: TopContentDeps) {
     }
     const motionEffectsEnabled = !document.documentElement ||
       document.documentElement.getAttribute('data-lumno-motion-effects') !== 'off';
-    return LumnoSettingsStorage.shouldSkipEntryMotion(window, motionEffectsEnabled);
+    return SettingsStorage.shouldSkipEntryMotion(window, motionEffectsEnabled);
   }
 
   function shouldAnimateNewtabLayoutShift(): boolean {

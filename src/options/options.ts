@@ -4,7 +4,6 @@ import * as COMMUNITY_LINKS from '../platform/community-links';
 import * as NAVIGATION_DISPOSITION from '../domain/navigation-disposition';
 import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
 import * as SETTINGS from '../domain/settings';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
 import { getContextSettingsStore, readStoredSetting } from '../platform/settings-store';
 import * as LumnoShortcutDisplay from '../domain/shortcut-display';
 import * as LumnoTooltip from '../shared/ui/tooltip';
@@ -60,6 +59,7 @@ import { getSettingsControlsApi } from './react/settings-controls';
 import { getSettingsNavigationApi } from './react/settings-navigation';
 import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcuts';
 import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-providers';
+import * as ProviderStorage from '../platform/provider-storage';
 
 (function() {
   const optionsRuntimeStartedAt = typeof performance !== 'undefined' && typeof performance.now === 'function'
@@ -114,7 +114,7 @@ import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-p
   const localStorageArea = chrome && chrome.storage ? chrome.storage.local || null : null;
 
   // The provider area, for the settings transfer on the Account tab.
-  const { runtime: providerStorageRuntime, area: providerStorageArea } = LumnoSettingsStorage.getProviderStorage(chrome);
+  const { runtime: providerStorageRuntime, area: providerStorageArea } = ProviderStorage.getProviderStorage(chrome);
   // Page state shared with the parts of this page split out into
   // src/options/: each receives this one object as `optionsState` and reads
   // and writes the same properties this file does.

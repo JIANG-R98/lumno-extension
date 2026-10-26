@@ -2,10 +2,10 @@
 // t() and formatMessage() lookups every module uses, the document's lang
 // attribute, and the listeners that re-render copy when it changes.
 import type * as LumnoSettings from '../domain/settings';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
 import type { FormatMessage, Translate } from './newtab-types';
 import { takeBootValue } from '../platform/boot-handoff';
 import * as SearchDirectNavigation from '../domain/search/utils/direct-navigation';
+import * as SettingsStorage from '../platform/settings-storage';
 
 // A locale's messages as _locales/<locale>/messages.json holds them.
 type LocaleMessages = Record<string, { message?: string } | undefined>;
@@ -82,7 +82,7 @@ function createPageLanguage(deps: PageLanguageDeps) {
 
   function loadLocaleMessages(locale: unknown): Promise<LocaleMessages> {
     const normalized = normalizeLocale(locale);
-    LumnoSettingsStorage.cacheNewtabLocale(normalized);
+    SettingsStorage.cacheNewtabLocale(normalized);
     // newtab-storage-prefetch.ts started the last New Tab's locale before this script loaded.
     const prefetch = takeBootValue('localePrefetch');
     if (prefetch && prefetch.locale === normalized) {

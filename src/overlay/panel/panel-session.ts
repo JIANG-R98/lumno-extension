@@ -2,7 +2,6 @@
 // session's panel from a stale one, the mount host and its visibility, wheel
 // isolation, telling the background about loading and closing, and removing
 // the panel.
-import * as LumnoSettingsStorage from '../../platform/settings-storage';
 import * as LumnoMessaging from '../../platform/messaging';
 import type { SearchInputParts } from '../../shared/react/search-input';
 import type { EngagementNoticeController } from '../../shared/engagement-notice';
@@ -14,6 +13,7 @@ import type { createNoticeLayer } from '../notices';
 import type { OverlaySettings } from '../overlay-settings';
 import { setOverlayOpenState } from '../../platform/content-registry';
 import { getSearchInputApi } from '../../shared/react/search-input';
+import * as SettingsStorage from '../../platform/settings-storage';
 
 interface PanelSessionState {
   overlayContextToken: string;
@@ -345,7 +345,7 @@ function createPanelSession(deps: PanelSessionDeps) {
   // setting and the system's reduced-motion preference.
   function closeOverlayWithMotion(overlayElement: HTMLElement | null): void {
     if (!overlayElement || !overlayElement.isConnected ||
-        LumnoSettingsStorage.shouldSkipEntryMotion(window, overlayState.motionEffectsEnabled) ||
+        SettingsStorage.shouldSkipEntryMotion(window, overlayState.motionEffectsEnabled) ||
         overlayElement.getAttribute('data-lumno-overlay-entry') !== 'done') {
       removeOverlay(overlayElement);
       return;

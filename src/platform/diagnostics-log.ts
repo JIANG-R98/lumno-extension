@@ -5,8 +5,8 @@ import { appendDiagnosticError, readDiagnosticErrors } from '../domain/diagnosti
 import type { DiagnosticError } from '../domain/diagnostics';
 import type { StorageAreaLike } from '../domain/storage-port';
 import { callStorage, isRecord } from './storage-call';
-import type { StorageChromeApi } from './settings-storage';
 import { diagnosticErrors } from '../domain/settings/sync-state';
+import type { StorageChromeApi } from './settings-storage';
 
 interface DiagnosticsLogOptions {
   chromeApi: StorageChromeApi | null | undefined;

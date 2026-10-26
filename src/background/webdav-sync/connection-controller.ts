@@ -4,7 +4,6 @@
 // applies it locally.
 import * as LumnoNewtabWallpaperLocalStore from '../../shared/wallpaper-local-store';
 import * as LumnoSettings from '../../domain/settings';
-import * as LumnoSettingsStorage from '../../platform/settings-storage';
 import { WEBDAV_CLIENT_API } from '../webdav-client/api';
 import { handle } from './connection-requests';
 import type { WebDavRequest } from '../../domain/messages';
@@ -24,6 +23,7 @@ import type {
 } from './types';
 import { SHORTCUTS_STORE_API } from '../../domain/shortcuts/api';
 import { WEBDAV_CONTRACT_API } from '../../domain/webdav/api';
+import * as ProviderStorage from '../../platform/provider-storage';
 
 function onAlarm(ctx: ConnectionContext, alarm: chrome.alarms.Alarm): void {
   if (!ctx.stopped && alarm.name === ctx.alarmName) void backgroundRound(ctx, false);
@@ -84,7 +84,7 @@ function createConnectionController(options?: ConnectionControllerOptions | null
   });
   const localPrefsArea: chrome.storage.StorageArea = chromeApi.storage.local;
   const chromeFallbackArea: chrome.storage.SyncStorageArea | undefined = chromeApi.storage.sync;
-  const runtime = LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
+  const runtime = ProviderStorage.createProviderStorageRuntime(chromeApi);
   const statusKey = opts.statusKey || settings.webdavStatus.key;
   const alarmName = opts.alarmName || ALARM_NAME;
   const withLocalWrite: WithLocalWrite = opts.withLocalWrite || ((fn) => Promise.resolve(fn()));

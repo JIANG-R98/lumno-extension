@@ -1,8 +1,9 @@
 // Starts reading what the last New Tab's choices make known before the page's
 // own scripts load: its locale messages and its startup storage keys.
 import * as LumnoSettings from '../domain/settings';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
 import { publishBootValue } from '../platform/boot-handoff';
+import * as ProviderStorage from '../platform/provider-storage';
+import * as StorageReadBatch from '../platform/storage-read-batch';
 
 (function() {
   // Starts the startup work the last New Tab's choices make known while the rest of the page is still
@@ -40,6 +41,6 @@ import { publishBootValue } from '../platform/boot-handoff';
   if (!keys.length || keys.length !== list.length) {
     return;
   }
-  const providerRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
-  LumnoSettingsStorage.prefetchStorageRead(providerRuntime.area, keys, chromeApi);
+  const providerRuntime = ProviderStorage.createProviderStorageRuntime(chromeApi);
+  StorageReadBatch.prefetchStorageRead(providerRuntime.area, keys, chromeApi);
 })();

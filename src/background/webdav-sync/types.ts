@@ -1,6 +1,5 @@
 // The shapes the WebDAV sync modules share.
 import * as LumnoSettings from '../../domain/settings';
-import * as LumnoSettingsStorage from '../../platform/settings-storage';
 import type { WebDavClientApi } from '../webdav-client/api';
 import type { StorageItems } from '../../domain/storage-port';
 import type { WebDavRequest } from '../../domain/messages';
@@ -10,6 +9,7 @@ import type { GroupedShortcutItem } from '../../domain/shortcuts/types';
 import type { ShortcutsStoreApi } from '../../domain/shortcuts/api';
 import type { ChromeBackupPlan, ConflictDescription, WebDavState } from '../../domain/webdav/types';
 import type { WebDavContractApi } from '../../domain/webdav/api';
+import * as SettingsStorage from '../../platform/settings-storage';
 
 type StorageMethod = 'get' | 'set' | 'remove';
 type StorageCall =
@@ -196,7 +196,7 @@ interface ConnectionContext {
   readonly wallpaperStore: SyncWallpaperStore;
   readonly localPrefsArea: chrome.storage.StorageArea;
   readonly chromeFallbackArea: chrome.storage.SyncStorageArea | undefined;
-  readonly runtime: LumnoSettingsStorage.ProviderStorageRuntime;
+  readonly runtime: SettingsStorage.ProviderStorageRuntime;
   readonly statusKey: string;
   readonly alarmName: string;
   readonly withLocalWrite: WithLocalWrite;

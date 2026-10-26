@@ -1,6 +1,6 @@
 // The settings store and provider runtime the worker builds from its chrome
 // API, built the same way over a test's fake chrome.
-const { createProviderStorageRuntime } = require('../../src/platform/settings-storage.ts');
+const { createProviderStorageRuntime } = require('../../src/platform/provider-storage.ts');
 const { createSettingsStore } = require('../../src/platform/settings-store.ts');
 const { WORKER_SETTINGS } = require('../../src/background/worker-settings.ts');
 

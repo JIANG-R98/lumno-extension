@@ -1,10 +1,11 @@
 // Routes a New Tab to the focus route, where the search box can take
 // keyboard focus from the address bar, when input auto-focus is on.
 import * as LumnoSettings from '../domain/settings';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoNewtabFocusResume from './focus-resume';
 import * as LumnoMessaging from '../platform/messaging';
 import { newtabInputAutoFocusEnabled } from '../domain/settings/newtab-page';
+import * as ProviderStorage from '../platform/provider-storage';
+import * as SettingsStorage from '../platform/settings-storage';
 
 (function() {
   const locationUrl = new URL(window.location.href);
@@ -77,7 +78,7 @@ import { newtabInputAutoFocusEnabled } from '../domain/settings/newtab-page';
   }
 
   function settle(enabled: unknown): void {
-    LumnoSettingsStorage.cacheNewtabInputAutoFocusEnabled(enabled);
+    SettingsStorage.cacheNewtabInputAutoFocusEnabled(enabled);
     if (!normalizeEnabled(enabled)) {
       revealPage();
       return;
@@ -100,7 +101,7 @@ import { newtabInputAutoFocusEnabled } from '../domain/settings/newtab-page';
     return;
   }
 
-  const providerRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
+  const providerRuntime = ProviderStorage.createProviderStorageRuntime(chromeApi);
   const storage = providerRuntime.area;
   if (!storage || typeof storage.get !== 'function') {
     settle(false);

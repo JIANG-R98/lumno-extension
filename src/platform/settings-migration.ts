@@ -10,8 +10,8 @@ import {
 import type { SettingsAreaPatch } from '../domain/settings/migrations';
 import { settingsSchemaVersion } from '../domain/settings/sync-state';
 import type { StorageAreaLike, StorageItems } from '../domain/storage-port';
-import type { StorageChromeApi } from './settings-storage';
 import { callStorage, isRecord } from './storage-call';
+import type { StorageChromeApi } from './settings-storage';
 
 async function readArea(
   chromeApi: StorageChromeApi,

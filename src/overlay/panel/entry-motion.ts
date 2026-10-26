@@ -1,6 +1,6 @@
+import * as SettingsStorage from '../../platform/settings-storage';
 // The panel's entry motion: when to skip it, the start and reveal
 // transforms, and playing, tracking and cleaning up the enter animation.
-import * as LumnoSettingsStorage from '../../platform/settings-storage';
 
 interface EntryMotionState {
   motionEffectsEnabled: boolean;
@@ -73,7 +73,7 @@ function createEntryMotion(deps: EntryMotionDeps) {
   const OVERLAY_ENTER_CLEANUP_BUFFER_MS = 80;
 
   function shouldSkipOverlayEntryMotion(): boolean {
-    return LumnoSettingsStorage.shouldSkipEntryMotion(window, overlayState.motionEffectsEnabled);
+    return SettingsStorage.shouldSkipEntryMotion(window, overlayState.motionEffectsEnabled);
   }
 
   function shouldSkipOverlayEntryMotionForSlowStartup(): boolean {

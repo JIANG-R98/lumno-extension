@@ -8,7 +8,6 @@ import '../shared/favicon/favicon-theme';
 import '../domain/extension-routes';
 import './command-target-policy';
 import * as LumnoSettings from '../domain/settings';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoSettingsMigration from '../platform/settings-migration';
 import * as LumnoBookmarkFolderBindings from '../platform/bookmark-folder-bindings';
 import '../domain/site-display-name';
@@ -122,6 +121,7 @@ import { LOCALE_AND_PERMISSION_MESSAGE_HANDLERS } from './message-handlers/local
 import { POPUP_MESSAGE_HANDLERS } from './message-handlers/toolbar-popup';
 import { SHORTCUT_MESSAGE_HANDLERS } from './message-handlers/shortcut';
 import { TAB_MESSAGE_HANDLERS } from './message-handlers/tab';
+import * as SettingsStorage from '../platform/settings-storage';
 
 // Folds traditional characters to simplified ones for local search matching.
 installHanVariantPairs(HAN_VARIANT_PAIRS);
@@ -151,7 +151,7 @@ function migrateStorageIfNeeded(keys: string[]): void {
   if (isPrimaryStorageAreaName('local')) {
     return;
   }
-  LumnoSettingsStorage.migrateLocalSettingsToSync(chrome.storage.local, storageArea, keys);
+  SettingsStorage.migrateLocalSettingsToSync(chrome.storage.local, storageArea, keys);
 }
 
 loadFirefoxBrandIcon();

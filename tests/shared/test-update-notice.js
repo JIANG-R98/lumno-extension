@@ -153,7 +153,7 @@ const featureHintView = {
 
 const featureHints = require('../../src/shared/ui/feature-hints.ts');
 const updateNotice = require('../../src/shared/update-notice.ts');
-const settingsStorage = require('../../src/platform/settings-storage.ts');
+const settingsStorage = require('../helpers/settings-storage.ts');
 
 function createOnChangedEmitter() {
   const listeners = [];

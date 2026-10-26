@@ -2,11 +2,13 @@
 // fetches every key the first render needs before the modules ask for them
 // one by one, and moving preferences an older version kept locally.
 import * as LumnoSettings from '../domain/settings';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
+import * as ProviderStorage from '../platform/provider-storage';
+import * as SettingsStorage from '../platform/settings-storage';
+import * as StorageReadBatch from '../platform/storage-read-batch';
 
 function createStartupStorage() {
   const settingsRuntimeApi = LumnoSettings;
-  const providerStorageRuntime = LumnoSettingsStorage.createProviderStorageRuntime(chrome);
+  const providerStorageRuntime = ProviderStorage.createProviderStorageRuntime(chrome);
   const rawStorageArea = providerStorageRuntime.area;
   // The next New Tab prefetches these keys before its scripts load (newtab-storage-prefetch.ts).
   function rememberStartupStorageKeys(keys: readonly string[] | null | undefined): void {
@@ -24,7 +26,7 @@ function createStartupStorage() {
     }
   }
   const startupStorageReadBatch = rawStorageArea
-    ? LumnoSettingsStorage.createStorageReadBatch(rawStorageArea)
+    ? StorageReadBatch.createStorageReadBatch(rawStorageArea)
     : null;
   const storageArea = startupStorageReadBatch
     ? startupStorageReadBatch.area
@@ -64,7 +66,7 @@ function createStartupStorage() {
       if (!chrome.storage || !chrome.storage.local || isPrimaryStorageAreaName('local')) {
         return;
       }
-      LumnoSettingsStorage.migrateLocalSettingsToSync(chrome.storage.local, storageArea, keys);
+      SettingsStorage.migrateLocalSettingsToSync(chrome.storage.local, storageArea, keys);
     });
   }
 

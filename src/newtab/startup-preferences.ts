@@ -6,7 +6,6 @@ import type { ProgressHistoryMap } from '../domain/progress-history';
 import type * as LumnoSettings from '../domain/settings';
 import type { NewtabWidthMode } from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
 import type { AppearanceModes } from './appearance-modes';
 import type { BookmarkDisplaySettings } from './bookmarks/bookmark-display-settings';
 import type { BookmarkPager } from './bookmarks/bookmark-pager';
@@ -20,6 +19,7 @@ import type { TopContentRuntime } from './top-content/top-content';
 import type { WallpaperRuntime } from './wallpaper/wallpaper';
 import { progressHistory } from '../domain/settings/recent-sites';
 import type { HiddenRecentSite, RecentSite } from '../domain/recent-sites-store';
+import * as SettingsStorage from '../platform/settings-storage';
 
 interface StartupPreferencesState {
   progressTrackingEnabled: boolean;
@@ -162,7 +162,7 @@ function createStartupPreferences(deps: StartupPreferencesDeps) {
   // leaving a missing one alone while this device's local copy migrates in.
   const repairStoredSetting = (key: string, stored: unknown, value: unknown): void => {
     if (stored !== value) {
-      LumnoSettingsStorage.writeSettingRepairs(chrome, storageArea, { [key]: value }, { [key]: stored });
+      SettingsStorage.writeSettingRepairs(chrome, storageArea, { [key]: value }, { [key]: stored });
     }
   };
 

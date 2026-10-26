@@ -1,6 +1,6 @@
+import type { StorageChromeApi } from './settings-storage';
 // One call to an area that answers like chrome.storage: through the
 // callback, or through the promise it returns when it has no callback.
-import type { StorageChromeApi } from './settings-storage';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';

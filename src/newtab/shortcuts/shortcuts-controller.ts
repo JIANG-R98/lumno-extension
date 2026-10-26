@@ -6,7 +6,6 @@ import type { FaviconDataEntry } from '../../domain/favicon/favicon-cache';
 import type { StorageAreaLike, StorageItems } from '../../domain/storage-port';
 import type { FolderBindingRuntime } from '../../platform/bookmark-folder-bindings';
 import type { FaviconCacheRuntime } from '../../platform/favicon-cache';
-import type { ProviderStorageRuntime } from '../../platform/settings-storage';
 import type { ShortcutFaviconStore } from '../../platform/shortcut-favicon-store';
 import * as LumnoShortcutStorage from '../../platform/shortcut-storage';
 import { isRecord, isThenable } from '../../platform/storage-call';
@@ -45,6 +44,7 @@ import type { ShortcutGroup, ShortcutIconSource, ShortcutItem, ShortcutLink, Sho
 import * as ShortcutConstants from '../../domain/shortcuts/constants';
 import * as ShortcutNormalize from '../../domain/shortcuts/normalize';
 import * as ShortcutStoragePlan from '../../domain/shortcuts/storage-plan';
+import type { ProviderStorageRuntime } from '../../platform/settings-storage';
 
 interface ShortcutsControllerState {
   newtabShortcuts: ShortcutItem[];

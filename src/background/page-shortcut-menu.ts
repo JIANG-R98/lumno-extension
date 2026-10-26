@@ -6,7 +6,6 @@ import * as LumnoSiteDisplayName from '../domain/site-display-name';
 import { isRecord } from '../platform/storage-call';
 import { createShortcutListStorage } from '../platform/shortcut-list-storage';
 import type { ShortcutListStorage } from '../platform/shortcut-list-storage';
-import type { ProviderStorageRuntime } from '../platform/settings-storage';
 import type { SettingsStore } from '../platform/settings-store';
 import type { LocaleMessage, PageShortcutResult } from '../domain/messages';
 import { createInjectedAppRun } from '../platform/injection';
@@ -16,6 +15,7 @@ import { language } from '../domain/settings/locale';
 import { webdavStatus } from '../domain/settings/sync-state';
 import type { ShortcutsStoreApi } from '../domain/shortcuts/api';
 import { SHORTCUTS_STORE_API } from '../domain/shortcuts/api';
+import type { ProviderStorageRuntime } from '../platform/settings-storage';
 
 interface PageShortcutMenuOptions {
   chrome?: typeof chrome;

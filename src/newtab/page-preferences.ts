@@ -2,9 +2,9 @@
 // auto-focus, simple mode and search result settings.
 import type * as LumnoSettings from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
 import type { PageLayout } from './page-layout';
 import type { WallpaperRuntime } from './wallpaper/wallpaper';
+import * as SettingsStorage from '../platform/settings-storage';
 
 // Whether a change is only shown or also saved.
 type PersistOptions = { persist?: boolean } | null | undefined;
@@ -162,7 +162,7 @@ function createPagePreferences(deps: PagePreferencesDeps) {
   }
 
   function cacheNewtabInputAutoFocusEnabled(value: unknown): void {
-    LumnoSettingsStorage.cacheNewtabInputAutoFocusEnabled(value);
+    SettingsStorage.cacheNewtabInputAutoFocusEnabled(value);
   }
 
   function normalizeNewtabFeedbackButtonVisible(value: unknown) {

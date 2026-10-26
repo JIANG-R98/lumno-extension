@@ -2,7 +2,6 @@
 // each module declares the slice it reads and writes, and this type is all
 // of them together.
 import type { SiteSearchProvider } from '../domain/search/types';
-import type { ProviderStorageRuntime } from '../platform/settings-storage';
 import type { SettingsStore } from '../platform/settings-store';
 import type { ToastController } from '../shared/react/toast';
 import type { TooltipController } from '../shared/ui/tooltip';
@@ -18,6 +17,7 @@ import type { SiteSearchActionsState } from './options-site-search-actions';
 import type { SiteSearchFormState } from './options-site-search-form';
 import type { SiteSearchListState } from './options-site-search-list';
 import type { TooltipsState } from './options-tooltips';
+import type { ProviderStorageRuntime } from '../platform/settings-storage';
 
 // What options.ts itself keeps beyond the modules' slices, and the full
 // types of what the slices see only part of.

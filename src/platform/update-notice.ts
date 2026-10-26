@@ -3,9 +3,9 @@
 // many times each version's notice was shown. shared/update-notice.ts shows it.
 import type { Setting } from '../domain/settings/define';
 import * as SETTINGS from '../domain/settings/features';
-import type { StorageChromeApi } from './settings-storage';
 import type { SettingsStore } from './settings-store';
 import { updateNoticeState } from '../domain/settings/features';
+import type { StorageChromeApi } from './settings-storage';
 
 // The extension API the notice reads: the manifest version and storage.
 type UpdateNoticeChromeApi = StorageChromeApi & {

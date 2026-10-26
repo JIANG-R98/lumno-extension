@@ -1,6 +1,5 @@
 // Paints the cached wallpaper and the New Tab favicon before the page's own
 // scripts run, from what an earlier page saved on this device.
-import * as LumnoSettingsStorage from '../../platform/settings-storage';
 import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
 import type { WallpaperEffectPrefs, WallpaperSample } from './wallpaper-effects';
 import type {
@@ -12,6 +11,7 @@ import type {
 } from './wallpaper-preload-types';
 import { publishBootValue } from '../../platform/boot-handoff';
 import { newtabFavicon, newtabFaviconPreload, newtabWallpaperEffect, newtabWallpaperPreload } from '../../domain/settings/newtab-wallpaper';
+import * as ProviderStorage from '../../platform/provider-storage';
 
 type OverlayPosition = 'top' | 'mid' | 'bottom';
 type OverlayStops = Record<WallpaperMode, Record<OverlayPosition, number>>;
@@ -38,7 +38,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 (function() {
   const PRELOAD_STORAGE_VERSION = 4;
-  const providerStorageRuntime = LumnoSettingsStorage.createProviderStorageRuntime(window.chrome);
+  const providerStorageRuntime = ProviderStorage.createProviderStorageRuntime(window.chrome);
   // Only bundled files paint on the first frame. Online photos and links paint from this device's
   // IndexedDB copy as soon as it is read, so a slow or failing network never holds the tab's spinner
   // or blanks the page; uploads paint from the local wallpaper library the same way.

@@ -4,7 +4,7 @@ const { performance } = require('perf_hooks');
 require('../node/register-typescript');
 const bookmarkStore = require('../../src/newtab/bookmarks/bookmarks-store.ts');
 const recentStore = require('../../src/domain/recent-sites-store.ts');
-const settingsStorage = require('../../src/platform/settings-storage.ts');
+const settingsStorage = require('../../tests/helpers/settings-storage.ts');
 
 function round(value) {
   return Number(Number(value || 0).toFixed(2));
