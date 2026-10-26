@@ -5,7 +5,7 @@ import * as COMMUNITY_LINKS from '../platform/community-links';
 import type { CommunityLoadOptions } from '../platform/community-links';
 import type { CommunityChannel } from '../domain/community-links';
 import { getContextSettingsStore } from '../platform/settings-store';
-import type { SettingsStoreChromeApi } from '../platform/settings-store';
+import type { SettingsStoreChromeApi } from '../platform/settings-areas';
 import * as LumnoFeatureHints from './ui/feature-hints';
 import type { FeatureHintController, FeatureHintDefinition } from './ui/feature-hint-catalog';
 import { engagementNoticeState } from '../domain/settings/features';

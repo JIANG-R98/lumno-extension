@@ -2,7 +2,7 @@
 // their actions, and the copy for their states and failures. The card itself
 // is drawn from the model this hands to onRender.
 import { getContextSettingsStore } from '../platform/settings-store';
-import type { SettingsStoreChromeApi } from '../platform/settings-store';
+import type { SettingsStoreChromeApi } from '../platform/settings-areas';
 import * as LumnoSettings from '../domain/settings/sync-state';
 import type { WebDavOperation } from '../domain/messages';
 import * as LumnoMessaging from '../platform/messaging';

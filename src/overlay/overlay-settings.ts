@@ -32,7 +32,9 @@ import {
   tabRankScoreDebug
 } from '../domain/settings/search';
 import { createSettingsStore, getContextSettingsStore } from '../platform/settings-store';
-import type { SettingsListener, SettingsStore, SettingsStoreChromeApi } from '../platform/settings-store';
+import type { SettingsStore } from '../platform/settings-store';
+import type { SettingsStoreChromeApi } from '../platform/settings-areas';
+import type { SettingsListener } from '../platform/setting-values';
 
 const OVERLAY_SETTINGS: readonly Setting<unknown>[] = Object.freeze([
   themeMode,

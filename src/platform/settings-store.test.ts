@@ -4,7 +4,7 @@ import { flag, oneOf, opaque } from '../domain/settings/schema';
 import { localPrimary } from '../domain/settings/sync-state';
 import type { StorageChangeListener, StorageItems } from '../domain/storage-port';
 import { createSettingsStore, getContextSettingsStore } from './settings-store';
-import type { SettingsStoreChromeApi } from './settings-store';
+import type { SettingsStoreChromeApi } from './settings-areas';
 
 const theme = defineSetting({ key: 'test_theme', area: 'preferences', sync: 'browser', schema: oneOf(['light', 'dark', 'system'] as const, 'system') });
 const device = defineSetting({ key: 'test_device', area: 'device', schema: flag(false) });

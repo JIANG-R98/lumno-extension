@@ -3,7 +3,7 @@
 import * as LumnoShortcutDisplay from '../../domain/shortcut-display';
 import type { RemixIconName, RemixIconSpec } from './remix-icon';
 import type { NavigatorLike } from '../../domain/shortcut-display';
-import type { SettingsStoreChromeApi } from '../../platform/settings-store';
+import type { SettingsStoreChromeApi } from '../../platform/settings-areas';
 
 type FeatureHintArrowSide = 'top' | 'right' | 'bottom' | 'left';
 type FeatureHintArrowAlign = 'start' | 'center' | 'end';
