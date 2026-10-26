@@ -1,5 +1,7 @@
 // Reading a page title for the work it names and the episode it is, and
-import type { ProgressDirection } from './progress-match';
+
+// Which way a page lies from another in a work.
+type ProgressDirection = 'forward' | 'backward' | 'unknown';
 // comparing two titles.
 
 interface TitleReading {
@@ -127,6 +129,7 @@ export {
   readTitle
 };
 export type {
+  ProgressDirection,
   TitleComparison,
   TitleReading
 };

@@ -1,5 +1,6 @@
 // Decides whether a page is a later episode, chapter or page of the work a
 import { CJK_NUMERAL, compareTitles, normalizeTitle, readTitle } from './progress-title-compare';
+import type { ProgressDirection } from './progress-title-compare';
 import { SERIES_PATH_WORDS, UNRELATED_PATH_WORDS, compareUrls, getPathSegments, getQueryEntries, getSiteKey, hasPathWord, isDigits, parseUrl } from './progress-url-compare';
 import type { UrlComparison } from './progress-url-compare';
 // tracked card points to. It never guesses: when neither the URL nor the
@@ -29,8 +30,6 @@ interface ProgressCompareContext {
   candidateHints?: ProgressPageHints;
   currentEpisode?: number;
 }
-
-type ProgressDirection = 'forward' | 'backward' | 'unknown';
 
 type ProgressConfidence = 'high' | 'medium' | 'none';
 
@@ -363,7 +362,6 @@ export type {
   ProgressCompareContext,
   ProgressComparison,
   ProgressConfidence,
-  ProgressDirection,
   ProgressFactor,
   ProgressPage,
   ProgressPageHints,

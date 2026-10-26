@@ -17,7 +17,7 @@ const ALLOWLIST = [
   'AI provider remote page selector probes in src/domain/ai-prompt-strategy.ts',
   'localized onboarding content model in src/onboarding/onboarding-content.ts',
   'localized update notice fallback model in src/shared/update-notice.ts',
-  'localized selection prompt model in src/domain/selection-intent.ts',
+  'localized selection prompt model and selection classifier terms in src/domain/selection-intent.ts and selection-text-features.ts',
   'browser built-in bookmark folder aliases used only for folder detection',
   'debug-only score reason strings when the debug flag is disabled by default (src/background/search/suggestion-rows.ts)',
   'Chinese search-intent tokens in the scoring dictionaries of src/domain/search/utils/',
@@ -115,7 +115,7 @@ function isAllowlistedLine(file, line) {
       file === 'src/domain/search/han-variants.generated.ts') {
     return true;
   }
-  if (file === 'src/domain/selection-intent.ts') {
+  if (file === 'src/domain/selection-intent.ts' || file === 'src/domain/selection-text-features.ts') {
     return true;
   }
   // The reasons a result matched, shown only with the score debug flag on.
