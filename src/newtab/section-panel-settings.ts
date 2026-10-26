@@ -1,14 +1,14 @@
-// Appearance panel controls for the bookmark and site-card sections. The page owns the
-// values and stores them under the same keys as the Options page and the sections' own
-// menus, so the panel reads through getters, writes through setters and re-reads whenever
-// one of those keys changes elsewhere.
+// The appearance panel's bookmark and site-card sections, as a model the panel draws.
+// The page owns the values and stores them under the same keys as the Options page and
+// the sections' own menus, so the model reads through getters, its actions write through
+// setters, and it is drawn again whenever one of those keys changes elsewhere.
 import type { StorageChanges } from '../domain/storage-port';
-import { isHtmlElement, isHtmlTag } from '../shared/dom-guards';
-import { queryHtmlElement } from '../shared/dom-lookup';
 import type { SelectMenuOption } from '../shared/react/select-menu';
 import type { BookmarkViewMode } from './bookmarks/bookmark-display-settings';
 import type { Translate } from './newtab-types';
 import type { WallpaperViewController } from './react/wallpaper-view';
+import type { PanelSelectModel, SectionSettingsActions, SectionSettingsModel } from './react/wallpaper-panel/panel-model';
+import type { SliderChange } from './react/wallpaper-panel/panel-primitives';
 
 // The bar backgrounds the panel offers; "custom" opens the color picker.
 type PanelBookmarkTopbarSurfaceMode = 'adaptive' | 'transparent' | 'custom';
@@ -20,10 +20,12 @@ type StorageChangeListener = (changes: StorageChanges) => void;
 const ITEMS_PER_ROW = 4;
 const BOOKMARK_ROWS_MIN = 1;
 const BOOKMARK_ROWS_MAX = 8;
+const BOOKMARK_COLUMNS_MIN = 4;
+const BOOKMARK_COLUMNS_MAX = 8;
+const SLIDER_SAVE_DELAY_MS = 140;
 // Turning a section back on restores its last row count, or the stored defaults.
 const BOOKMARK_COUNT_DEFAULT = 8;
 const RECENT_COUNT_DEFAULT = 4;
-const SLIDER_SAVE_DELAY_MS = 140;
 
 // The page's section values, read through getters and changed through setters.
 interface SectionPanelSettingsOptions {
@@ -58,44 +60,8 @@ interface SectionPanelSettingsOptions {
   setRecentCount?: PersistedSetter<number>;
 }
 
-// The panel's elements by data-wallpaper-ref name.
-type PanelRefs = Readonly<Partial<Record<string, HTMLElement>>>;
-
-interface SectionSettingsRefs {
-  bookmarkSettingsTitle: HTMLElement;
-  bookmarkSettingsTrigger: HTMLButtonElement;
-  bookmarkSettingsToggle: HTMLInputElement;
-  bookmarkSettingsBody: HTMLElement;
-  bookmarkViewModeLabel: HTMLElement;
-  bookmarkGridSettings: HTMLElement;
-  bookmarkRowsLabel: HTMLElement;
-  bookmarkRowsSlider: HTMLInputElement;
-  bookmarkColumnsLabel: HTMLElement;
-  bookmarkColumnsSlider: HTMLInputElement;
-  bookmarkFolderIconsTitle: HTMLElement;
-  bookmarkFolderIconsToggle: HTMLInputElement;
-  bookmarkTopbarSettings: HTMLElement;
-  bookmarkTopbarLayoutLabel: HTMLElement;
-  bookmarkTopbarLayoutTabs: HTMLElement;
-  bookmarkTopbarSurfaceLabel: HTMLElement;
-  recentSettingsTitle: HTMLElement;
-  recentSettingsTrigger: HTMLButtonElement;
-  recentSettingsToggle: HTMLInputElement;
-  recentSettingsBody: HTMLElement;
-  recentModeLabel: HTMLElement;
-  recentModeTabs: HTMLElement;
-  recentRowsLabel: HTMLElement;
-  recentRowsTabs: HTMLElement;
-}
-
-type SectionSettingsView = Pick<WallpaperViewController,
-  'renderBookmarkViewModeSelect' | 'renderBookmarkTopbarSurfaceSelect'>;
-
-// The number boxes beside the range inputs.
-interface SliderValueHelpers {
-  bindSliderValueInput?(slider: HTMLInputElement): void;
-  syncSliderValueInput?(slider: HTMLInputElement): void;
-}
+// The panel view that draws the sections.
+type SectionSettingsView = Pick<WallpaperViewController, 'renderSectionSettings'>;
 
 function isBookmarkViewMode(value: unknown): value is BookmarkViewMode {
   return value === 'folder' || value === 'list' || value === 'top';
@@ -105,76 +71,21 @@ function isBookmarkTopbarSurfaceMode(value: unknown): value is PanelBookmarkTopb
   return value === 'adaptive' || value === 'transparent' || value === 'custom';
 }
 
-// Null when the panel has no section settings; a panel that has them must
-// carry every element they use.
-function readSectionSettingsRefs(refs: PanelRefs): SectionSettingsRefs | null {
-  if (!refs.bookmarkSettingsSection || !refs.recentSettingsSection) {
-    return null;
-  }
-  const element = (name: string): HTMLElement => {
-    const value = refs[name];
-    if (!isHtmlElement(value)) throw new Error(`Section settings element missing: ${name}`);
-    return value;
-  };
-  const button = (name: string): HTMLButtonElement => {
-    const value = refs[name];
-    if (!isHtmlTag(value, 'button')) throw new Error(`Section settings button missing: ${name}`);
-    return value;
-  };
-  const input = (name: string): HTMLInputElement => {
-    const value = refs[name];
-    if (!isHtmlTag(value, 'input')) throw new Error(`Section settings input missing: ${name}`);
-    return value;
-  };
-  return {
-    bookmarkSettingsTitle: element('bookmarkSettingsTitle'),
-    bookmarkSettingsTrigger: button('bookmarkSettingsTrigger'),
-    bookmarkSettingsToggle: input('bookmarkSettingsToggle'),
-    bookmarkSettingsBody: element('bookmarkSettingsBody'),
-    bookmarkViewModeLabel: element('bookmarkViewModeLabel'),
-    bookmarkGridSettings: element('bookmarkGridSettings'),
-    bookmarkRowsLabel: element('bookmarkRowsLabel'),
-    bookmarkRowsSlider: input('bookmarkRowsSlider'),
-    bookmarkColumnsLabel: element('bookmarkColumnsLabel'),
-    bookmarkColumnsSlider: input('bookmarkColumnsSlider'),
-    bookmarkFolderIconsTitle: element('bookmarkFolderIconsTitle'),
-    bookmarkFolderIconsToggle: input('bookmarkFolderIconsToggle'),
-    bookmarkTopbarSettings: element('bookmarkTopbarSettings'),
-    bookmarkTopbarLayoutLabel: element('bookmarkTopbarLayoutLabel'),
-    bookmarkTopbarLayoutTabs: element('bookmarkTopbarLayoutTabs'),
-    bookmarkTopbarSurfaceLabel: element('bookmarkTopbarSurfaceLabel'),
-    recentSettingsTitle: element('recentSettingsTitle'),
-    recentSettingsTrigger: button('recentSettingsTrigger'),
-    recentSettingsToggle: input('recentSettingsToggle'),
-    recentSettingsBody: element('recentSettingsBody'),
-    recentModeLabel: element('recentModeLabel'),
-    recentModeTabs: element('recentModeTabs'),
-    recentRowsLabel: element('recentRowsLabel'),
-    recentRowsTabs: element('recentRowsTabs')
-  };
-}
-
-function syncSegmentedIndicator(group: Element): void {
-  const segmentedIndicator = globalThis.LumnoSegmentedIndicator;
-  if (segmentedIndicator) segmentedIndicator.sync(queryHtmlElement(group, '.x-nt-segmented-tabs-indicator'));
-}
-
 function createRuntime(options: SectionPanelSettingsOptions) {
   const config = options;
   const window = config.windowObj || globalThis.window;
   const t = config.t;
   const watchedKeys = new Set(config.watchedKeys || []);
-  let refs: SectionSettingsRefs | null = null;
   let view: SectionSettingsView | null = null;
-  let helpers: SliderValueHelpers = {};
   let bookmarkExpanded = false;
   let recentExpanded = false;
   let lastBookmarkCount = 0;
   let lastRecentCount = 0;
   let updateTimer = 0;
   let unsubscribe: (() => void) | null = null;
-  const saveTimers = new Map<HTMLInputElement, number>();
-  let tabResizeObserver: ResizeObserver | null = null;
+  // A slider being dragged keeps its thumb, whatever the page reads meanwhile,
+  // until the value settles; a pause in the drag saves it.
+  const drags = new Map<'rows' | 'columns', { value: number; timer: number }>();
 
   const getBookmarkCount = () => Number(config.getBookmarkCount?.()) || 0;
   const getRecentCount = () => Number(config.getRecentCount?.()) || 0;
@@ -186,190 +97,229 @@ function createRuntime(options: SectionPanelSettingsOptions) {
     if (recentCount > 0) lastRecentCount = recentCount;
   }
 
-  function syncTabs(group: HTMLElement | null, attribute: string, value: string | number): void {
-    if (!group) return;
-    group.querySelectorAll(`[${attribute}]`).forEach((button) => {
-      const active = button.getAttribute(attribute) === String(value);
-      button.setAttribute('data-active', active ? 'true' : 'false');
-      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  function getViewModeSelect(viewMode: BookmarkViewMode): PanelSelectModel {
+    return {
+      ariaLabel: t('display_mode_title', 'Display mode'),
+      options: [
+        { value: 'folder', label: t('bookmark_view_mode_folder', 'Multi-layer folder view') },
+        { value: 'list', label: t('bookmark_view_mode_list', 'Multi-level list view') },
+        { value: 'top', label: t('bookmark_view_mode_top', 'Top bookmarks bar') }
+      ],
+      value: viewMode,
+      onChange: (mode) => {
+        if (isBookmarkViewMode(mode)) config.setBookmarkViewMode?.(mode);
+        update();
+      }
+    };
+  }
+
+  // Same choices as the bar's own menu; "Custom color" opens the screen color picker and
+  // only becomes the selection once a color is picked.
+  function getSurfaceSelect(surfaceMode: PanelBookmarkTopbarSurfaceMode): PanelSelectModel {
+    const surfaceOption = (
+      value: PanelBookmarkTopbarSurfaceMode,
+      labelKey: string,
+      fallback: string,
+      extra?: Partial<SelectMenuOption>
+    ): SelectMenuOption => ({
+      value,
+      label: t(labelKey, fallback),
+      radio: true,
+      checked: surfaceMode === value,
+      ...extra
     });
-    syncSegmentedIndicator(group);
+    return {
+      ariaLabel: t('bookmark_topbar_surface_title', 'Bar background'),
+      options: [
+        surfaceOption('adaptive', 'bookmark_topbar_surface_follow', 'Match style'),
+        surfaceOption('transparent', 'bookmark_topbar_surface_transparent', 'Transparent'),
+        surfaceOption('custom', 'bookmark_topbar_surface_custom', 'Custom color', {
+          trailingIconClass: 'ri-dropper-line'
+        })
+      ],
+      value: surfaceMode,
+      onChange: (mode) => {
+        if (!isBookmarkTopbarSurfaceMode(mode)) return false;
+        if (mode === 'custom') {
+          config.pickBookmarkTopbarSurfaceColor?.();
+          return false;
+        }
+        config.setBookmarkTopbarSurfaceMode?.(mode);
+        update();
+        return undefined;
+      }
+    };
   }
 
-  function setSectionState(
-    trigger: HTMLButtonElement,
-    toggle: HTMLInputElement,
-    body: HTMLElement,
-    enabled: boolean,
-    expanded: boolean
+  // A section switched on comes back with its last row count, or the default.
+  function setSectionVisible(
+    visible: boolean,
+    expand: () => void,
+    lastCount: () => number,
+    fallbackCount: number,
+    setCount: PersistedSetter<number> | undefined
   ): void {
-    toggle.checked = enabled;
-    toggle.setAttribute('aria-checked', enabled ? 'true' : 'false');
-    trigger.disabled = !enabled;
-    trigger.setAttribute('aria-disabled', enabled ? 'false' : 'true');
-    trigger.setAttribute('aria-expanded', enabled && expanded ? 'true' : 'false');
-    body.hidden = !(enabled && expanded);
+    rememberCounts();
+    if (visible) expand();
+    setCount?.(visible ? lastCount() || fallbackCount : 0, { persist: true });
+    update();
   }
 
-  function setSlider(slider: HTMLInputElement | null, value: number, label: string): void {
-    if (!slider) return;
-    const min = Number(slider.min);
-    const max = Number(slider.max);
-    slider.value = String(value);
-    slider.setAttribute('aria-label', label);
-    slider.setAttribute('aria-valuenow', String(value));
-    slider.setAttribute('aria-valuetext', String(value));
-    slider.style.setProperty('--x-range-slider-percent', `${max > min ? (value - min) / (max - min) * 100 : 0}%`);
-    if (helpers.syncSliderValueInput) helpers.syncSliderValueInput(slider);
-  }
-
-  function renderBookmarkSelects(viewMode: BookmarkViewMode, surfaceMode: PanelBookmarkTopbarSurfaceMode): void {
-    if (!view) return;
-    if (view.renderBookmarkViewModeSelect) {
-      view.renderBookmarkViewModeSelect({
-        ariaLabel: t('display_mode_title', 'Display mode'),
-        options: [
-          { value: 'folder', label: t('bookmark_view_mode_folder', 'Multi-layer folder view') },
-          { value: 'list', label: t('bookmark_view_mode_list', 'Multi-level list view') },
-          { value: 'top', label: t('bookmark_view_mode_top', 'Top bookmarks bar') }
-        ],
-        value: viewMode,
-        onChange: (mode) => {
-          if (isBookmarkViewMode(mode)) config.setBookmarkViewMode?.(mode);
+  // The page previews each step; storage (and so sync) only sees where the thumb settles.
+  function setCountFromSlider(
+    key: 'rows' | 'columns',
+    setter: PersistedSetter<number> | undefined,
+    sliderValue: number,
+    toCount: (value: number) => number,
+    change: SliderChange
+  ): void {
+    const drag = drags.get(key);
+    if (drag) window.clearTimeout(drag.timer);
+    if (change.final) {
+      drags.delete(key);
+      setter?.(toCount(sliderValue), { persist: true });
+    } else {
+      setter?.(toCount(sliderValue), { persist: false });
+      drags.set(key, {
+        value: sliderValue,
+        timer: window.setTimeout(() => {
+          drags.delete(key);
+          setter?.(toCount(sliderValue), { persist: true });
           update();
-        }
+        }, SLIDER_SAVE_DELAY_MS)
       });
     }
-    if (view.renderBookmarkTopbarSurfaceSelect) {
-      // Same choices as the bar's own menu; "Custom color" opens the screen color picker and
-      // only becomes the selection once a color is picked.
-      const surfaceOption = (
-        value: PanelBookmarkTopbarSurfaceMode,
-        labelKey: string,
-        fallback: string,
-        extra?: Partial<SelectMenuOption>
-      ): SelectMenuOption => ({
-        value,
-        label: t(labelKey, fallback),
-        radio: true,
-        checked: surfaceMode === value,
-        ...extra
-      });
-      view.renderBookmarkTopbarSurfaceSelect({
-        ariaLabel: t('bookmark_topbar_surface_title', 'Bar background'),
-        options: [
-          surfaceOption('adaptive', 'bookmark_topbar_surface_follow', 'Match style'),
-          surfaceOption('transparent', 'bookmark_topbar_surface_transparent', 'Transparent'),
-          surfaceOption('custom', 'bookmark_topbar_surface_custom', 'Custom color', {
-            trailingIconClass: 'ri-dropper-line'
-          })
-        ],
-        value: surfaceMode,
-        onChange: (mode) => {
-          if (!isBookmarkTopbarSurfaceMode(mode)) return false;
-          if (mode === 'custom') {
-            config.pickBookmarkTopbarSurfaceColor?.();
-            return false;
-          }
-          config.setBookmarkTopbarSurfaceMode?.(mode);
-          update();
-          return undefined;
-        }
-      });
-    }
+    update();
   }
 
-  function update(): void {
-    if (!refs) return;
-    window.clearTimeout(updateTimer);
-    updateTimer = 0;
+  const actions: SectionSettingsActions = {
+    toggleBookmarkExpanded() {
+      if (getBookmarkCount() <= 0) return;
+      bookmarkExpanded = !bookmarkExpanded;
+      update();
+    },
+    setBookmarkVisible(visible) {
+      setSectionVisible(visible, () => { bookmarkExpanded = true; }, () => lastBookmarkCount,
+        BOOKMARK_COUNT_DEFAULT, config.setBookmarkCount);
+    },
+    setBookmarkRows(rows, change) {
+      setCountFromSlider('rows', config.setBookmarkCount, rows, (value) => value * ITEMS_PER_ROW, change);
+    },
+    setBookmarkColumns(columns, change) {
+      setCountFromSlider('columns', config.setBookmarkColumns, columns, (value) => value, change);
+    },
+    setBookmarkFolderIconsVisible(visible) {
+      config.setBookmarkFolderIconsVisible?.(visible, { persist: true });
+      update();
+    },
+    setBookmarkTopbarLayout(layout) {
+      config.setBookmarkTopbarLayout?.(layout);
+      update();
+    },
+    toggleRecentExpanded() {
+      if (getRecentCount() <= 0) return;
+      recentExpanded = !recentExpanded;
+      update();
+    },
+    setRecentVisible(visible) {
+      setSectionVisible(visible, () => { recentExpanded = true; }, () => lastRecentCount,
+        RECENT_COUNT_DEFAULT, config.setRecentCount);
+    },
+    setRecentMode(mode) {
+      config.setRecentMode?.(mode);
+      update();
+    },
+    setRecentRows(rows) {
+      config.setRecentCount?.(Number(rows) * ITEMS_PER_ROW, { persist: true });
+      update();
+    }
+  };
+
+  function getModel(): SectionSettingsModel {
     rememberCounts();
     const bookmarkCount = getBookmarkCount();
     const storedViewMode = config.getBookmarkViewMode?.();
     const viewMode = isBookmarkViewMode(storedViewMode) ? storedViewMode : 'folder';
-    const topbarMode = viewMode === 'top';
-    const bookmarkTitle = t('bookmarks_heading', 'Bookmarks');
-    refs.bookmarkSettingsTitle.textContent = bookmarkTitle;
-    refs.bookmarkSettingsToggle.setAttribute('aria-label', bookmarkTitle);
-    refs.bookmarkSettingsTrigger.setAttribute('aria-label', bookmarkTitle);
-    setSectionState(
-      refs.bookmarkSettingsTrigger,
-      refs.bookmarkSettingsToggle,
-      refs.bookmarkSettingsBody,
-      bookmarkCount > 0,
-      bookmarkExpanded
-    );
-    refs.bookmarkViewModeLabel.textContent = t('display_mode_title', 'Display mode');
-    refs.bookmarkGridSettings.hidden = topbarMode;
-    refs.bookmarkTopbarSettings.hidden = !topbarMode;
-    const rowsLabel = t('settings_bookmarks_title', 'Bookmark rows');
-    const columnsLabel = t('settings_bookmark_columns_title', 'Bookmarks per row');
-    const folderIconsLabel = t('settings_bookmark_folder_icons_visible_title', 'Show icons inside bookmark folders');
-    refs.bookmarkRowsLabel.textContent = rowsLabel;
-    refs.bookmarkColumnsLabel.textContent = columnsLabel;
-    refs.bookmarkFolderIconsTitle.textContent = folderIconsLabel;
-    // A drag in progress keeps its thumb; the page already previews that value.
-    if (!saveTimers.has(refs.bookmarkRowsSlider)) {
-      const rows = Math.round((bookmarkCount || lastBookmarkCount || BOOKMARK_COUNT_DEFAULT) / ITEMS_PER_ROW);
-      setSlider(refs.bookmarkRowsSlider, Math.min(BOOKMARK_ROWS_MAX, Math.max(BOOKMARK_ROWS_MIN, rows)), rowsLabel);
-    }
-    if (!saveTimers.has(refs.bookmarkColumnsSlider)) {
-      setSlider(refs.bookmarkColumnsSlider, Number(config.getBookmarkColumns?.()) || 6, columnsLabel);
-    }
-    const folderIconsVisible = config.getBookmarkFolderIconsVisible?.() !== false;
-    refs.bookmarkFolderIconsToggle.checked = folderIconsVisible;
-    refs.bookmarkFolderIconsToggle.setAttribute('aria-checked', folderIconsVisible ? 'true' : 'false');
-    refs.bookmarkFolderIconsToggle.setAttribute('aria-label', folderIconsLabel);
-    refs.bookmarkTopbarLayoutLabel.textContent = t('bookmark_topbar_layout_title', 'Bar style');
-    refs.bookmarkTopbarLayoutTabs.setAttribute('aria-label', t('bookmark_topbar_layout_title', 'Bar style'));
-    refs.bookmarkTopbarLayoutTabs.querySelectorAll('[data-bookmark-topbar-layout]').forEach((button) => {
-      button.textContent = button.getAttribute('data-bookmark-topbar-layout') === 'floating'
-        ? t('bookmark_topbar_layout_floating', 'Floating')
-        : t('bookmark_topbar_layout_docked', 'Docked to top');
-    });
-    syncTabs(
-      refs.bookmarkTopbarLayoutTabs,
-      'data-bookmark-topbar-layout',
-      config.getBookmarkTopbarLayout?.() === 'floating' ? 'floating' : 'docked'
-    );
-    refs.bookmarkTopbarSurfaceLabel.textContent = t('bookmark_topbar_surface_title', 'Bar background');
     const storedSurfaceMode = config.getBookmarkTopbarSurfaceMode?.();
     const surfaceMode = isBookmarkTopbarSurfaceMode(storedSurfaceMode) ? storedSurfaceMode : 'adaptive';
-    renderBookmarkSelects(viewMode, surfaceMode);
-
+    const bookmarkRows = Math.round((bookmarkCount || lastBookmarkCount || BOOKMARK_COUNT_DEFAULT) / ITEMS_PER_ROW);
+    const folderIconsLabel = t('settings_bookmark_folder_icons_visible_title', 'Show icons inside bookmark folders');
+    const topbarLayoutLabel = t('bookmark_topbar_layout_title', 'Bar style');
     const recentCount = getRecentCount();
-    const recentTitle = t('settings_recent_sites_title', 'Site cards');
-    refs.recentSettingsTitle.textContent = recentTitle;
-    refs.recentSettingsToggle.setAttribute('aria-label', recentTitle);
-    refs.recentSettingsTrigger.setAttribute('aria-label', recentTitle);
-    setSectionState(
-      refs.recentSettingsTrigger,
-      refs.recentSettingsToggle,
-      refs.recentSettingsBody,
-      recentCount > 0,
-      recentExpanded
-    );
-    refs.recentModeLabel.textContent = t('display_mode_title', 'Display mode');
-    refs.recentModeTabs.setAttribute('aria-label', t('display_mode_title', 'Display mode'));
-    refs.recentModeTabs.querySelectorAll('[data-recent-mode]').forEach((button) => {
-      button.textContent = button.getAttribute('data-recent-mode') === 'most'
-        ? t('recent_mode_most', 'Most visited')
-        : t('recent_mode_latest', 'Recent');
-    });
-    syncTabs(refs.recentModeTabs, 'data-recent-mode', config.getRecentMode?.() === 'most' ? 'most' : 'latest');
+    const recentRows = Math.round((recentCount || lastRecentCount || RECENT_COUNT_DEFAULT) / ITEMS_PER_ROW);
+    const displayModeLabel = t('display_mode_title', 'Display mode');
     const recentRowsLabel = t('newtab_recent_rows_title', 'Site card rows');
-    refs.recentRowsLabel.textContent = recentRowsLabel;
-    refs.recentRowsTabs.setAttribute('aria-label', recentRowsLabel);
-    syncTabs(
-      refs.recentRowsTabs,
-      'data-recent-rows',
-      Math.round((recentCount || lastRecentCount || RECENT_COUNT_DEFAULT) / ITEMS_PER_ROW)
-    );
+    return {
+      bookmark: {
+        title: t('bookmarks_heading', 'Bookmarks'),
+        enabled: bookmarkCount > 0,
+        expanded: bookmarkExpanded,
+        viewModeLabel: displayModeLabel,
+        viewModeSelect: getViewModeSelect(viewMode),
+        topbarMode: viewMode === 'top',
+        rows: {
+          label: t('settings_bookmarks_title', 'Bookmark rows'),
+          min: BOOKMARK_ROWS_MIN,
+          max: BOOKMARK_ROWS_MAX,
+          value: drags.get('rows')?.value ?? Math.min(BOOKMARK_ROWS_MAX, Math.max(BOOKMARK_ROWS_MIN, bookmarkRows))
+        },
+        columns: {
+          label: t('settings_bookmark_columns_title', 'Bookmarks per row'),
+          min: BOOKMARK_COLUMNS_MIN,
+          max: BOOKMARK_COLUMNS_MAX,
+          value: drags.get('columns')?.value ?? (Number(config.getBookmarkColumns?.()) || 6)
+        },
+        folderIconsTitle: folderIconsLabel,
+        folderIcons: { checked: config.getBookmarkFolderIconsVisible?.() !== false, label: folderIconsLabel },
+        topbarLayoutLabel,
+        topbarLayout: {
+          active: config.getBookmarkTopbarLayout?.() === 'floating' ? 'floating' : 'docked',
+          label: topbarLayoutLabel,
+          options: [
+            { value: 'docked', label: t('bookmark_topbar_layout_docked', 'Docked to top') },
+            { value: 'floating', label: t('bookmark_topbar_layout_floating', 'Floating') }
+          ]
+        },
+        topbarSurfaceLabel: t('bookmark_topbar_surface_title', 'Bar background'),
+        topbarSurfaceSelect: getSurfaceSelect(surfaceMode)
+      },
+      recent: {
+        title: t('settings_recent_sites_title', 'Site cards'),
+        enabled: recentCount > 0,
+        expanded: recentExpanded,
+        modeLabel: displayModeLabel,
+        mode: {
+          active: config.getRecentMode?.() === 'most' ? 'most' : 'latest',
+          label: displayModeLabel,
+          options: [
+            { value: 'latest', label: t('recent_mode_latest', 'Recent') },
+            { value: 'most', label: t('recent_mode_most', 'Most visited') }
+          ]
+        },
+        rowsLabel: recentRowsLabel,
+        rows: {
+          active: recentRows === 2 ? '2' : '1',
+          label: recentRowsLabel,
+          options: [
+            { value: '1', label: '1' },
+            { value: '2', label: '2' }
+          ]
+        }
+      },
+      actions
+    };
+  }
+
+  function update(): void {
+    if (!view) return;
+    window.clearTimeout(updateTimer);
+    updateTimer = 0;
+    view.renderSectionSettings(getModel());
   }
 
   // Storage listeners run in registration order; reading after them sees the page's new values.
   function scheduleUpdate(): void {
-    if (!refs || updateTimer) return;
+    if (!view || updateTimer) return;
     updateTimer = window.setTimeout(update, 0);
   }
 
@@ -377,120 +327,16 @@ function createRuntime(options: SectionPanelSettingsOptions) {
     if (changes && Object.keys(changes).some((key) => watchedKeys.has(key))) scheduleUpdate();
   }
 
-  // The page previews each step; storage (and so sync) only sees where the thumb settles.
-  function bindSlider(
-    slider: HTMLInputElement,
-    toValue: (value: string) => number,
-    setter: PersistedSetter<number> | undefined
-  ): void {
-    const persist = () => {
-      window.clearTimeout(saveTimers.get(slider));
-      saveTimers.delete(slider);
-      setter?.(toValue(slider.value), { persist: true });
-      update();
-    };
-    slider.addEventListener('input', () => {
-      setter?.(toValue(slider.value), { persist: false });
-      setSlider(slider, Number(slider.value), slider.getAttribute('aria-label') || '');
-      window.clearTimeout(saveTimers.get(slider));
-      saveTimers.set(slider, window.setTimeout(persist, SLIDER_SAVE_DELAY_MS));
-    });
-    slider.addEventListener('change', persist);
-    if (helpers.bindSliderValueInput) helpers.bindSliderValueInput(slider);
-  }
-
-  function bindSettings(
-    nextRefs: PanelRefs | null | undefined,
-    nextView?: SectionSettingsView | null,
-    nextHelpers?: SliderValueHelpers | null
-  ): void {
-    const boundRefs = nextRefs ? readSectionSettingsRefs(nextRefs) : null;
-    if (!boundRefs) return;
-    refs = boundRefs;
-    view = nextView || null;
-    helpers = nextHelpers || {};
-    boundRefs.bookmarkSettingsTrigger.addEventListener('click', () => {
-      if (getBookmarkCount() <= 0) return;
-      bookmarkExpanded = !bookmarkExpanded;
-      update();
-    });
-    // Switching a section on opens its settings, like every other section.
-    boundRefs.bookmarkSettingsToggle.addEventListener('change', () => {
-      if (!refs) return;
-      rememberCounts();
-      if (refs.bookmarkSettingsToggle.checked) bookmarkExpanded = true;
-      config.setBookmarkCount?.(
-        refs.bookmarkSettingsToggle.checked ? lastBookmarkCount || BOOKMARK_COUNT_DEFAULT : 0,
-        { persist: true }
-      );
-      update();
-    });
-    bindSlider(boundRefs.bookmarkRowsSlider, (value) => Number(value) * ITEMS_PER_ROW, config.setBookmarkCount);
-    bindSlider(boundRefs.bookmarkColumnsSlider, Number, config.setBookmarkColumns);
-    boundRefs.bookmarkFolderIconsToggle.addEventListener('change', () => {
-      if (!refs) return;
-      config.setBookmarkFolderIconsVisible?.(refs.bookmarkFolderIconsToggle.checked, { persist: true });
-      update();
-    });
-    boundRefs.bookmarkTopbarLayoutTabs.querySelectorAll('[data-bookmark-topbar-layout]').forEach((button) => {
-      button.addEventListener('click', () => {
-        config.setBookmarkTopbarLayout?.(button.getAttribute('data-bookmark-topbar-layout') || '');
-        update();
-      });
-    });
-    boundRefs.recentSettingsTrigger.addEventListener('click', () => {
-      if (getRecentCount() <= 0) return;
-      recentExpanded = !recentExpanded;
-      update();
-    });
-    boundRefs.recentSettingsToggle.addEventListener('change', () => {
-      if (!refs) return;
-      rememberCounts();
-      if (refs.recentSettingsToggle.checked) recentExpanded = true;
-      config.setRecentCount?.(
-        refs.recentSettingsToggle.checked ? lastRecentCount || RECENT_COUNT_DEFAULT : 0,
-        { persist: true }
-      );
-      update();
-    });
-    boundRefs.recentModeTabs.querySelectorAll('[data-recent-mode]').forEach((button) => {
-      button.addEventListener('click', () => {
-        config.setRecentMode?.(button.getAttribute('data-recent-mode') || '');
-        update();
-      });
-    });
-    boundRefs.recentRowsTabs.querySelectorAll('[data-recent-rows]').forEach((button) => {
-      button.addEventListener('click', () => {
-        config.setRecentCount?.(Number(button.getAttribute('data-recent-rows')) * ITEMS_PER_ROW, { persist: true });
-        update();
-      });
-    });
-    if (typeof window.ResizeObserver === 'function') {
-      // Re-measure the tab indicators once a collapsed body lays out, and when labels change width.
-      const observer = new window.ResizeObserver((entries) => entries.forEach((entry) => {
-        syncSegmentedIndicator(entry.target);
-      }));
-      [boundRefs.bookmarkTopbarLayoutTabs, boundRefs.recentModeTabs, boundRefs.recentRowsTabs]
-        .forEach((group) => observer.observe(group));
-      tabResizeObserver = observer;
-    }
+  // Draws the sections in the panel from now on.
+  function bindSettings(nextView: SectionSettingsView | null | undefined): void {
+    if (!nextView || view) return;
+    view = nextView;
     const onChanged = config.chromeObj && config.chromeObj.storage && config.chromeObj.storage.onChanged;
     if (onChanged) {
       onChanged.addListener(handleStorageChange);
       unsubscribe = () => onChanged.removeListener(handleStorageChange);
     }
-    // The bodies ship hidden and are bound on the panel's first open; flush their first state
-    // with transitions off so it does not play the collapsible entry animation.
-    const bodies = [
-      boundRefs.bookmarkSettingsBody,
-      boundRefs.bookmarkGridSettings,
-      boundRefs.bookmarkTopbarSettings,
-      boundRefs.recentSettingsBody
-    ];
-    bodies.forEach((body) => { body.style.transition = 'none'; });
     update();
-    bodies.forEach((body) => body.getBoundingClientRect());
-    bodies.forEach((body) => { body.style.transition = ''; });
   }
 
   return Object.freeze({
@@ -500,11 +346,10 @@ function createRuntime(options: SectionPanelSettingsOptions) {
     handleStorageChange,
     destroy() {
       window.clearTimeout(updateTimer);
-      saveTimers.forEach((timer) => window.clearTimeout(timer));
-      saveTimers.clear();
-      if (tabResizeObserver) tabResizeObserver.disconnect();
+      drags.forEach((drag) => window.clearTimeout(drag.timer));
+      drags.clear();
       if (unsubscribe) unsubscribe();
-      refs = null;
+      view = null;
     }
   });
 }

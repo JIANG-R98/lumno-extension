@@ -8,7 +8,6 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function main() {
   const dom = new JSDOM('<body></body>', { url: 'https://lumno.test/' });
-  const { document } = dom.window;
   // Page state the runtime reads through getters and changes through setters.
   const page = {
     viewMode: 'folder',
@@ -66,158 +65,94 @@ async function main() {
     }
   });
 
-  // Stands in for the panel view: the refs it marks and the dropdowns it renders.
-  const element = (tag, attributes = {}) => {
-    const node = document.createElement(tag);
-    Object.entries(attributes).forEach(([name, value]) => node.setAttribute(name, value));
-    document.body.appendChild(node);
-    return node;
-  };
-  const tabs = (attribute, values) => {
-    const group = element('div');
-    group.appendChild(document.createElement('span')).className = 'x-nt-segmented-tabs-indicator';
-    values.forEach((value) => group.appendChild(document.createElement('button')).setAttribute(attribute, value));
-    return group;
-  };
-  const slider = (min, max) => element('input', { type: 'range', min, max, step: '1' });
-  const refs = {
-    bookmarkSettingsSection: element('div'),
-    bookmarkSettingsTitle: element('span'),
-    bookmarkSettingsTrigger: element('button'),
-    bookmarkSettingsToggle: element('input', { type: 'checkbox' }),
-    bookmarkSettingsBody: element('div', { hidden: '' }),
-    bookmarkViewModeLabel: element('span'),
-    bookmarkGridSettings: element('div'),
-    bookmarkRowsLabel: element('span'),
-    bookmarkRowsSlider: slider('1', '8'),
-    bookmarkColumnsLabel: element('span'),
-    bookmarkColumnsSlider: slider('4', '8'),
-    bookmarkFolderIconsTitle: element('span'),
-    bookmarkFolderIconsToggle: element('input', { type: 'checkbox' }),
-    bookmarkTopbarSettings: element('div', { hidden: '' }),
-    bookmarkTopbarLayoutLabel: element('span'),
-    bookmarkTopbarLayoutTabs: tabs('data-bookmark-topbar-layout', ['docked', 'floating']),
-    bookmarkTopbarSurfaceLabel: element('span'),
-    recentSettingsSection: element('div'),
-    recentSettingsTitle: element('span'),
-    recentSettingsTrigger: element('button'),
-    recentSettingsToggle: element('input', { type: 'checkbox' }),
-    recentSettingsBody: element('div', { hidden: '' }),
-    recentModeLabel: element('span'),
-    recentModeTabs: tabs('data-recent-mode', ['latest', 'most']),
-    recentRowsLabel: element('span'),
-    recentRowsTabs: tabs('data-recent-rows', ['1', '2'])
-  };
-  const selects = {};
-  const view = {
-    renderBookmarkViewModeSelect(model) { selects.viewMode = model; },
-    renderBookmarkTopbarSurfaceSelect(model) { selects.surface = model; }
-  };
-  const syncedSliders = [];
-  runtime.bindSettings(refs, view, {
-    bindSliderValueInput() {},
-    syncSliderValueInput(input) { syncedSliders.push(input); }
-  });
+  // Stands in for the panel view: keeps the last model it was handed.
+  let model = null;
+  const view = { renderSectionSettings(next) { model = next; } };
+  const drag = { dragging: true, final: false };
+  const settle = { dragging: false, final: true };
+  runtime.bindSettings(view);
 
   // First render mirrors the page: bookmarks on (two rows), site cards off.
-  assert.equal(refs.bookmarkSettingsTitle.textContent, 'Bookmarks');
-  assert.equal(refs.bookmarkSettingsToggle.checked, true);
-  assert.equal(refs.bookmarkSettingsTrigger.disabled, false);
-  assert.equal(refs.bookmarkSettingsBody.hidden, true, 'Sections start collapsed like the shortcuts section');
-  assert.equal(refs.bookmarkRowsSlider.value, '2', 'Rows are the stored count in groups of four');
-  assert.equal(refs.bookmarkColumnsSlider.value, '6');
-  assert.equal(refs.bookmarkRowsSlider.getAttribute('aria-label'), 'Bookmark rows');
-  assert(syncedSliders.includes(refs.bookmarkRowsSlider), 'The value input beside each slider is kept in step');
-  assert.equal(refs.bookmarkFolderIconsToggle.checked, true);
-  assert.equal(refs.bookmarkGridSettings.hidden, false);
-  assert.equal(refs.bookmarkTopbarSettings.hidden, true, 'Bar shape and background only apply to the top bar');
-  assert.equal(selects.viewMode.value, 'folder');
-  assert.deepEqual(selects.viewMode.options.map((option) => option.value), ['folder', 'list', 'top']);
-  assert.equal(refs.recentSettingsToggle.checked, false);
-  assert.equal(refs.recentSettingsTrigger.disabled, true, 'A section that is off cannot be expanded');
-  assert.equal(refs.recentSettingsBody.hidden, true);
+  assert.equal(model.bookmark.title, 'Bookmarks');
+  assert.equal(model.bookmark.enabled, true);
+  assert.equal(model.bookmark.expanded, false, 'Sections start collapsed like the shortcuts section');
+  assert.equal(model.bookmark.rows.value, 2, 'Rows are the stored count in groups of four');
+  assert.equal(model.bookmark.columns.value, 6);
+  assert.equal(model.bookmark.rows.label, 'Bookmark rows');
+  assert.equal(model.bookmark.folderIcons.checked, true);
+  assert.equal(model.bookmark.topbarMode, false, 'Bar shape and background only apply to the top bar');
+  assert.equal(model.bookmark.viewModeSelect.value, 'folder');
+  assert.deepEqual(model.bookmark.viewModeSelect.options.map((option) => option.value), ['folder', 'list', 'top']);
+  assert.equal(model.recent.enabled, false, 'A section that is off cannot be expanded');
 
-  refs.recentSettingsTrigger.click();
-  assert.equal(refs.recentSettingsBody.hidden, true);
-  refs.bookmarkSettingsTrigger.click();
-  assert.equal(refs.bookmarkSettingsBody.hidden, false);
-  assert.equal(refs.bookmarkSettingsTrigger.getAttribute('aria-expanded'), 'true');
+  model.actions.toggleRecentExpanded();
+  assert.equal(model.recent.expanded, false);
+  model.actions.toggleBookmarkExpanded();
+  assert.equal(model.bookmark.expanded, true);
 
   // Dragging previews every step; only the settled value is saved.
-  refs.bookmarkRowsSlider.value = '3';
-  refs.bookmarkRowsSlider.dispatchEvent(new dom.window.Event('input'));
+  model.actions.setBookmarkRows(3, drag);
   assert.deepEqual(calls.pop(), ['bookmarkCount', 12, false]);
   // A storage change for the old value lands mid-drag; the thumb stays where it is.
   page.bookmarkCount = 8;
   storageListener({ bookmark_count: { newValue: 8 } }, 'sync');
   await wait(5);
-  assert.equal(refs.bookmarkRowsSlider.value, '3');
-  refs.bookmarkRowsSlider.dispatchEvent(new dom.window.Event('change'));
+  assert.equal(model.bookmark.rows.value, 3);
+  model.actions.setBookmarkRows(3, settle);
   assert.deepEqual(calls.pop(), ['bookmarkCount', 12, true]);
   assert.equal(page.bookmarkCount, 12);
-  refs.bookmarkRowsSlider.value = '4';
-  refs.bookmarkRowsSlider.dispatchEvent(new dom.window.Event('input'));
+  model.actions.setBookmarkRows(4, drag);
   assert.deepEqual(calls.pop(), ['bookmarkCount', 16, false]);
   await wait(200);
   assert.deepEqual(calls.pop(), ['bookmarkCount', 16, true], 'A pause in the drag saves the value');
 
-  refs.bookmarkColumnsSlider.value = '8';
-  refs.bookmarkColumnsSlider.dispatchEvent(new dom.window.Event('input'));
-  refs.bookmarkColumnsSlider.dispatchEvent(new dom.window.Event('change'));
+  model.actions.setBookmarkColumns(8, drag);
+  model.actions.setBookmarkColumns(8, settle);
   assert.deepEqual(calls.slice(-2), [['bookmarkColumns', 8, false], ['bookmarkColumns', 8, true]]);
-  refs.bookmarkFolderIconsToggle.click();
+  model.actions.setBookmarkFolderIconsVisible(false);
   assert.deepEqual(calls.pop(), ['folderIcons', false, true]);
 
   // The switch hides the section by saving zero rows, and brings back the last row count.
-  refs.bookmarkSettingsToggle.click();
+  model.actions.setBookmarkVisible(false);
   assert.deepEqual(calls.pop(), ['bookmarkCount', 0, true]);
-  assert.equal(refs.bookmarkSettingsBody.hidden, true);
-  assert.equal(refs.bookmarkSettingsTrigger.disabled, true);
-  assert.equal(refs.bookmarkRowsSlider.value, '4', 'The rows slider keeps the count it will restore');
-  refs.bookmarkSettingsToggle.click();
+  assert.equal(model.bookmark.enabled, false);
+  assert.equal(model.bookmark.rows.value, 4, 'The rows slider keeps the count it will restore');
+  model.actions.setBookmarkVisible(true);
   assert.deepEqual(calls.pop(), ['bookmarkCount', 16, true]);
-  assert.equal(refs.bookmarkSettingsBody.hidden, false, 'Turning it back on keeps it expanded');
+  assert.equal(model.bookmark.expanded, true, 'Turning it back on keeps it expanded');
 
   // The top bar swaps rows and columns for its shape and background.
-  selects.viewMode.onChange('top');
+  model.bookmark.viewModeSelect.onChange('top');
   assert.deepEqual(calls.pop(), ['viewMode', 'top']);
-  assert.equal(refs.bookmarkGridSettings.hidden, true);
-  assert.equal(refs.bookmarkTopbarSettings.hidden, false);
-  assert.equal(selects.viewMode.value, 'top');
-  refs.bookmarkTopbarLayoutTabs.querySelector('[data-bookmark-topbar-layout="floating"]').click();
+  assert.equal(model.bookmark.topbarMode, true);
+  assert.equal(model.bookmark.viewModeSelect.value, 'top');
+  model.actions.setBookmarkTopbarLayout('floating');
   assert.deepEqual(calls.pop(), ['layout', 'floating']);
-  assert.equal(
-    refs.bookmarkTopbarLayoutTabs.querySelector('[data-active="true"]').getAttribute('data-bookmark-topbar-layout'),
-    'floating'
-  );
+  assert.equal(model.bookmark.topbarLayout.active, 'floating');
   // Liquid glass moved to the page-wide Style setting; the bar's background offers match style,
   // transparent and a custom color.
-  assert.deepEqual(selects.surface.options.map((option) => option.value), ['adaptive', 'transparent', 'custom']);
-  assert.equal(selects.surface.onChange('clear'), false);
-  assert.equal(selects.surface.onChange('transparent'), undefined);
+  const surface = () => model.bookmark.topbarSurfaceSelect;
+  assert.deepEqual(surface().options.map((option) => option.value), ['adaptive', 'transparent', 'custom']);
+  assert.equal(surface().onChange('clear'), false);
+  assert.equal(surface().onChange('transparent'), undefined);
   assert.deepEqual(calls.pop(), ['surface', 'transparent']);
-  assert.equal(selects.surface.value, 'transparent');
-  assert.equal(selects.surface.options.find((option) => option.value === 'transparent').checked, true);
-  assert.equal(
-    selects.surface.onChange('custom'),
-    false,
-    'Custom color stays unselected until the color picker returns a color'
-  );
+  assert.equal(surface().value, 'transparent');
+  assert.equal(surface().options.find((option) => option.value === 'transparent').checked, true);
+  assert.equal(surface().onChange('custom'), false, 'Custom color stays unselected until the color picker returns a color');
   assert.deepEqual(calls.pop(), ['pickColor']);
-  assert.equal(selects.surface.options.find((option) => option.value === 'custom').trailingIconClass, 'ri-dropper-line');
+  assert.equal(surface().options.find((option) => option.value === 'custom').trailingIconClass, 'ri-dropper-line');
 
   // Site cards: on restores one row and opens its settings; rows and mode save at once.
-  refs.recentSettingsToggle.click();
+  model.actions.setRecentVisible(true);
   assert.deepEqual(calls.pop(), ['recentCount', 4, true]);
-  assert.equal(refs.recentSettingsTrigger.disabled, false);
-  assert.equal(refs.recentSettingsBody.hidden, false);
-  assert.equal(refs.recentSettingsTrigger.getAttribute('aria-expanded'), 'true');
-  assert.equal(refs.recentRowsTabs.querySelector('[data-active="true"]').getAttribute('data-recent-rows'), '1');
-  refs.recentRowsTabs.querySelector('[data-recent-rows="2"]').click();
+  assert.equal(model.recent.enabled, true);
+  assert.equal(model.recent.expanded, true);
+  assert.equal(model.recent.rows.active, '1');
+  model.actions.setRecentRows('2');
   assert.deepEqual(calls.pop(), ['recentCount', 8, true]);
-  assert.equal(refs.recentRowsTabs.querySelector('[data-recent-rows="2"]').getAttribute('aria-pressed'), 'true');
-  assert.equal(refs.recentModeTabs.querySelector('[data-active="true"]').getAttribute('data-recent-mode'), 'most');
-  refs.recentModeTabs.querySelector('[data-recent-mode="latest"]').click();
+  assert.equal(model.recent.rows.active, '2');
+  assert.equal(model.recent.mode.active, 'most');
+  model.actions.setRecentMode('latest');
   assert.deepEqual(calls.pop(), ['recentMode', 'latest']);
 
   // Changes made elsewhere (Options page, the section menus) show up in the panel.
@@ -225,25 +160,19 @@ async function main() {
   page.viewMode = 'list';
   storageListener({ unrelated_key: { newValue: 1 } }, 'local');
   await wait(5);
-  assert.equal(refs.recentSettingsToggle.checked, true, 'Unrelated keys do not re-render the panel');
+  assert.equal(model.recent.enabled, true, 'Unrelated keys do not re-render the panel');
   storageListener({ recent_count: { newValue: 0 } }, 'sync');
   await wait(5);
-  assert.equal(refs.recentSettingsToggle.checked, false);
-  assert.equal(refs.recentSettingsBody.hidden, true);
-  assert.equal(selects.viewMode.value, 'list');
-  assert.equal(refs.bookmarkGridSettings.hidden, false);
-  assert.equal(
-    refs.recentRowsTabs.querySelector('[data-active="true"]').getAttribute('data-recent-rows'),
-    '2',
-    'An off section still shows the rows it will restore'
-  );
+  assert.equal(model.recent.enabled, false);
+  assert.equal(model.bookmark.viewModeSelect.value, 'list');
+  assert.equal(model.bookmark.topbarMode, false);
+  assert.equal(model.recent.rows.active, '2', 'An off section still shows the rows it will restore');
 
   messages = { bookmarks_heading: '书签', settings_recent_sites_title: '站点卡片', newtab_recent_rows_title: '站点卡片行数' };
   runtime.updateLanguage();
-  assert.equal(refs.bookmarkSettingsTitle.textContent, '书签');
-  assert.equal(refs.bookmarkSettingsToggle.getAttribute('aria-label'), '书签');
-  assert.equal(refs.recentSettingsTitle.textContent, '站点卡片');
-  assert.equal(refs.recentRowsLabel.textContent, '站点卡片行数');
+  assert.equal(model.bookmark.title, '书签');
+  assert.equal(model.recent.title, '站点卡片');
+  assert.equal(model.recent.rowsLabel, '站点卡片行数');
 
   runtime.destroy();
   assert.equal(storageListener, null, 'Destroy stops listening for storage changes');

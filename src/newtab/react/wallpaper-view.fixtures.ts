@@ -1,4 +1,6 @@
 import type {
+  SectionSettingsActions,
+  SectionSettingsModel,
   DailyState,
   SelectedSourceState,
   WallpaperPanelActions,
@@ -316,3 +318,53 @@ export function createDefaultPanelState(): WallpaperPanelState {
   };
 }
 
+// The bookmark and site card sections' model as their runtime would hand it over.
+export function createSectionSettingsModel(
+  actions: SectionSettingsActions,
+  edit?: (model: SectionSettingsModel) => void
+): SectionSettingsModel {
+  const select = (ariaLabel: string, values: string[], value: string) => ({
+    ariaLabel,
+    onChange: () => undefined,
+    options: values.map((option) => ({ value: option, label: option })),
+    value
+  });
+  const model: SectionSettingsModel = {
+    bookmark: {
+      title: 'Bookmarks',
+      enabled: true,
+      expanded: false,
+      viewModeLabel: 'Display mode',
+      viewModeSelect: select('Display mode', ['folder', 'list', 'top'], 'folder'),
+      topbarMode: false,
+      rows: { label: 'Bookmark rows', min: 1, max: 8, value: 2 },
+      columns: { label: 'Bookmarks per row', min: 4, max: 8, value: 6 },
+      folderIconsTitle: 'Show icons inside bookmark folders',
+      folderIcons: { checked: true, label: 'Show icons inside bookmark folders' },
+      topbarLayoutLabel: 'Bar style',
+      topbarLayout: {
+        active: 'docked',
+        label: 'Bar style',
+        options: [{ value: 'docked', label: 'Docked to top' }, { value: 'floating', label: 'Floating' }]
+      },
+      topbarSurfaceLabel: 'Bar background',
+      topbarSurfaceSelect: select('Bar background', ['adaptive', 'transparent', 'custom'], 'adaptive')
+    },
+    recent: {
+      title: 'Site cards',
+      enabled: true,
+      expanded: false,
+      modeLabel: 'Display mode',
+      mode: {
+        active: 'latest',
+        label: 'Display mode',
+        options: [{ value: 'latest', label: 'Recent' }, { value: 'most', label: 'Most visited' }]
+      },
+      rowsLabel: 'Site card rows',
+      rows: { active: '1', label: 'Site card rows', options: [{ value: '1', label: '1' }, { value: '2', label: '2' }] }
+    },
+    actions
+  };
+  edit?.(model);
+  return model;
+}

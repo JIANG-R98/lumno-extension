@@ -9,6 +9,7 @@ import {
   type WallpaperPanelModel,
   type PanelSelectModel,
   type ExternalSelectKey,
+  type SectionSettingsModel,
   type WallpaperPanelState
 } from './wallpaper-panel/panel-model';
 import { useWallpaperPanel, type WallpaperPanelProps } from './wallpaper-panel/use-wallpaper-panel';
@@ -24,7 +25,7 @@ import { FaviconSection } from './wallpaper-panel/favicon-section';
 import { queryHtmlElement, queryHtmlElements, queryHtmlTag } from '../../shared/dom-lookup';
 import { innerHtml } from '../../shared/react/inner-html';
 export { EFFECT_SLIDER_KEYS } from './wallpaper-panel/panel-model';
-export type { WallpaperSourceTab, WallpaperMode, ThemeScope, TopContentMode, TimeInk, GlassTheme, EffectSliderKey, WallpaperPanelModel, TileState, OnlineTileState, SelectedSourceState, DailyState, PanelSelectModel, CuratedMixState, WallpaperPanelActions, WallpaperPanelState } from './wallpaper-panel/panel-model';
+export type { WallpaperSourceTab, WallpaperMode, ThemeScope, TopContentMode, TimeInk, GlassTheme, EffectSliderKey, WallpaperPanelModel, TileState, OnlineTileState, SelectedSourceState, DailyState, PanelSelectModel, CuratedMixState, WallpaperPanelActions, WallpaperPanelState, SectionSettingsActions, SectionSettingsModel } from './wallpaper-panel/panel-model';
 
 function WallpaperPanel(props: WallpaperPanelProps) {
   const panel = useWallpaperPanel(props);
@@ -74,10 +75,14 @@ function WallpaperPanel(props: WallpaperPanelProps) {
           <SearchSection panel={panel} />
           <div className="x-nt-panel-divider" />
           <ShortcutsSection panel={panel} />
-          <div className="x-nt-panel-divider" />
-          <BookmarkSettingsSection panel={panel} />
-          <div className="x-nt-panel-divider" />
-          <RecentSettingsSection panel={panel} />
+          {panel.sectionSettings ? (
+            <>
+              <div className="x-nt-panel-divider" />
+              <BookmarkSettingsSection panel={panel} settings={panel.sectionSettings} />
+              <div className="x-nt-panel-divider" />
+              <RecentSettingsSection panel={panel} settings={panel.sectionSettings} />
+            </>
+          ) : null}
           <div {...ref('quoteDivider')} className="x-nt-panel-divider" />
           <QuoteSection panel={panel} />
           <div className="x-nt-panel-divider" />
@@ -140,8 +145,8 @@ export interface WallpaperViewController {
   panel: HTMLDivElement;
   /** Renders the panel from new state; the DOM is up to date when this returns. */
   render(state: WallpaperPanelState): void;
-  renderBookmarkTopbarSurfaceSelect(select: PanelSelectModel): void;
-  renderBookmarkViewModeSelect(select: PanelSelectModel): void;
+  // Draws the bookmark and site card sections from their runtime's model.
+  renderSectionSettings(model: SectionSettingsModel): void;
   renderQuotePositionSelect(select: PanelSelectModel): void;
   renderQuoteFontSelect(select: PanelSelectModel): void;
 }
@@ -153,6 +158,7 @@ export function createWallpaperViewController(
   const model = config.model || {};
   let state = config.state;
   const externalSelects: Partial<Record<ExternalSelectKey, PanelSelectModel>> = {};
+  let sectionSettings: SectionSettingsModel | null = null;
   const selectControls = new Map<string, SelectMenuControls>();
   const registerSelect = (id: string, controls: SelectMenuControls) => {
     selectControls.set(id, controls);
@@ -170,6 +176,7 @@ export function createWallpaperViewController(
         externalSelects={{ ...externalSelects }}
         model={model}
         registerSelect={registerSelect}
+        sectionSettings={sectionSettings}
         state={state}
       />
     ));
@@ -240,11 +247,10 @@ export function createWallpaperViewController(
     renderQuoteFontSelect(select: PanelSelectModel) {
       renderExternalSelect('quoteFont', select);
     },
-    renderBookmarkViewModeSelect(select: PanelSelectModel) {
-      renderExternalSelect('bookmarkViewMode', select);
-    },
-    renderBookmarkTopbarSurfaceSelect(select: PanelSelectModel) {
-      renderExternalSelect('bookmarkTopbarSurface', select);
+    renderSectionSettings(nextModel: SectionSettingsModel) {
+      if (destroyed) return;
+      sectionSettings = nextModel;
+      renderRoot();
     }
   };
   return Object.freeze(controller);

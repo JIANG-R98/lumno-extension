@@ -12,8 +12,9 @@ import type { SelectMenuOption } from '../select-menu';
 // The appearance panel renders from two inputs: a static model (asset URLs, icons,
 // slider marks) given once, and the state the wallpaper runtime rebuilds whenever a
 // setting changes. Every control reports through `state.actions`; the runtime owns
-// the data and its storage. The bookmark, site card and quote sections are filled
-// by their own runtimes through data-wallpaper-ref elements and stay static here.
+// the data and its storage. The bookmark and site card sections render from a model
+// of their own, which their runtime hands the panel; the quote section is filled by
+// its runtime through data-wallpaper-ref elements.
 
 export type WallpaperSourceTab = 'built-in' | 'local' | 'bing' | 'curated';
 export type WallpaperMode = 'light' | 'dark';
@@ -99,6 +100,57 @@ export interface PanelSelectModel {
   onChange(value: string): void;
   options: SelectMenuOption[];
   value: string;
+}
+
+// The bookmark section's settings in the panel.
+export interface BookmarkSettingsState {
+  title: string;
+  // The section shows on the page.
+  enabled: boolean;
+  expanded: boolean;
+  viewModeLabel: string;
+  viewModeSelect: PanelSelectModel;
+  // The top bar replaces the grid, with settings of its own.
+  topbarMode: boolean;
+  rows: SliderState;
+  columns: SliderState;
+  folderIconsTitle: string;
+  folderIcons: ToggleState;
+  topbarLayoutLabel: string;
+  topbarLayout: SegmentState<'docked' | 'floating'>;
+  topbarSurfaceLabel: string;
+  topbarSurfaceSelect: PanelSelectModel;
+}
+
+// The site card section's settings in the panel.
+export interface RecentSettingsState {
+  title: string;
+  enabled: boolean;
+  expanded: boolean;
+  modeLabel: string;
+  mode: SegmentState<'latest' | 'most'>;
+  rowsLabel: string;
+  rows: SegmentState<'1' | '2'>;
+}
+
+export interface SectionSettingsActions {
+  toggleBookmarkExpanded(): void;
+  setBookmarkVisible(visible: boolean): void;
+  setBookmarkRows(rows: number, change: SliderChange): void;
+  setBookmarkColumns(columns: number, change: SliderChange): void;
+  setBookmarkFolderIconsVisible(visible: boolean): void;
+  setBookmarkTopbarLayout(layout: 'docked' | 'floating'): void;
+  toggleRecentExpanded(): void;
+  setRecentVisible(visible: boolean): void;
+  setRecentMode(mode: 'latest' | 'most'): void;
+  setRecentRows(rows: '1' | '2'): void;
+}
+
+// What the bookmark and site card runtime hands the panel.
+export interface SectionSettingsModel {
+  bookmark: BookmarkSettingsState;
+  recent: RecentSettingsState;
+  actions: SectionSettingsActions;
 }
 
 export interface CuratedMixState {
@@ -319,7 +371,7 @@ export const SELECT_HOST_REFS: Record<string, string> = {
 };
 export const SELECT_IDS = Object.keys(SELECT_HOST_REFS);
 
-export type ExternalSelectKey = 'quotePosition' | 'quoteFont' | 'bookmarkViewMode' | 'bookmarkTopbarSurface';
+export type ExternalSelectKey = 'quotePosition' | 'quoteFont';
 
 export const EFFECT_SLIDER_REFS: Record<EffectSliderKey, string> = {
   strength: 'effectStrength',

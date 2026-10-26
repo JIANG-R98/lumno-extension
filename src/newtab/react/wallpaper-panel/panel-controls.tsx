@@ -1,9 +1,7 @@
 // Small controls the appearance panel's sections are built from: section
-// triggers, info buttons, switches, toggle sections, setting rows, row tabs,
-// count sliders and selects.
+// triggers, info buttons, switches, setting rows and selects.
 import { type ReactNode, useState } from 'react';
 import { ref, type TooltipActions, tooltipHandlers } from './panel-primitives';
-import { RangeSliderField } from '../../../shared/react/range-slider';
 import type { SelectMenuControls } from '../../../shared/react/select-menu';
 import { type PanelSelectModel, type CuratedMixState, CURATED_MIX_SELECT_ID } from './panel-model';
 import { SelectMenu } from '../select-menu';
@@ -98,119 +96,11 @@ export function StaticSwitch({ ariaLabel, name }: { ariaLabel?: string; name: st
   );
 }
 
-// A section whose header switch turns the page section on or off; the body ships
-// collapsed and is filled in by its own runtime.
-export function ToggleSection({
-  arrowIcon,
-  children,
-  name
-}: {
-  arrowIcon: string;
-  children: ReactNode;
-  name: string;
-}) {
-  const bodyId = `_x_extension_newtab_${name}_body_2026_unique_`;
-  return (
-    <div {...ref(`${name}Section`)} className="x-nt-wallpaper-section">
-      <div className="x-nt-wallpaper-panel-header">
-        <SectionTrigger
-          arrowIcon={arrowIcon}
-          bodyId={bodyId}
-          expanded={false}
-          titleRef={`${name}Title`}
-          triggerRef={`${name}Trigger`}
-        />
-        <StaticSwitch name={`${name}Toggle`} />
-      </div>
-      <div
-        {...ref(`${name}Body`)}
-        className="x-nt-panel-section-body x-nt-panel-collapsible"
-        hidden
-        id={bodyId}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
 export function SettingRow({ children, titleRef }: { children: ReactNode; titleRef: string }) {
   return (
     <div className="x-nt-appearance-setting-row">
       <span {...ref(titleRef)} className="x-nt-appearance-setting-title" />
       {children}
-    </div>
-  );
-}
-
-// Segmented choice another runtime labels and selects.
-export function StaticRowTabs({
-  attribute,
-  labeled = false,
-  name,
-  values
-}: {
-  attribute: `data-${string}`;
-  labeled?: boolean;
-  name: string;
-  values: string[];
-}) {
-  return (
-    <div {...ref(`${name}Tabs`)} className="x-nt-segmented-tabs x-nt-wallpaper-tabs x-nt-row-tabs" role="group">
-      <span
-        {...ref(`${name}Indicator`)}
-        aria-hidden="true"
-        className="x-nt-segmented-tabs-indicator x-nt-wallpaper-tabs-indicator"
-      />
-      {values.map((value) => (
-        <button
-          {...{ [attribute]: value }}
-          aria-pressed="false"
-          className="x-nt-segmented-tab x-nt-wallpaper-tab"
-          data-active="false"
-          key={value}
-          type="button"
-        >
-          {labeled ? value : null}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// Whole-number slider another runtime drives.
-export function StaticCountSlider({
-  defaultValue,
-  marks,
-  max,
-  min,
-  name
-}: {
-  defaultValue: string;
-  marks: number[];
-  max: string;
-  min: string;
-  name: string;
-}) {
-  return (
-    <div className="x-nt-overlay-control">
-      <RangeSliderField
-        label={<span {...ref(`${name}Label`)} className="x-nt-appearance-setting-title" />}
-        {...ref(`${name}Slider`)}
-        className="x-nt-overlay-slider-wrap"
-        defaultValue={defaultValue}
-        inputClass="x-nt-overlay-slider"
-        max={max}
-        min={min}
-        rowClassName="x-nt-range-slider-row"
-        step="1"
-        valueInputProps={{
-          ...ref(`${name}SliderValueInput`),
-          defaultValue,
-          inputMode: 'numeric'
-        }}
-        marks={marks}
-      />
     </div>
   );
 }

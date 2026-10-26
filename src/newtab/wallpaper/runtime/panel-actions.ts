@@ -1,7 +1,6 @@
 // What the appearance panel's controls do: the action table the React view
 // calls, slider value inputs, and the wallpaper sources feature hint.
 import type * as LumnoSettings from '../../../domain/settings';
-import { isHtmlTag } from '../../../shared/dom-guards';
 import type * as LumnoFeatureHints from '../../../shared/ui/feature-hints';
 import type { FeatureHintChromeApi, FeatureHintController, FeatureHintOptions } from '../../../shared/ui/feature-hints';
 import type { Translate } from '../../newtab-types';
@@ -27,19 +26,9 @@ import type { WallpaperState } from './wallpaper-runtime-types';
 // Whether a layout change is only shown or also saved.
 type PersistOptions = { persist: boolean };
 
-// The number boxes the section runtimes' range inputs get.
-interface SliderValueInputs {
-  bindSliderValueInput(slider: HTMLInputElement): void;
-  syncSliderValueInput(slider: HTMLInputElement): void;
-}
-
-// The bookmark and site card settings, which bind to the panel's elements.
+// The bookmark and site card settings, which the panel draws from their runtime's model.
 interface SectionPanelSettings {
-  bindSettings(
-    refs: Readonly<Partial<Record<string, HTMLElement>>>,
-    view: WallpaperViewController | null,
-    sliders: SliderValueInputs
-  ): void;
+  bindSettings(view: WallpaperViewController | null): void;
 }
 
 interface PanelActionsDeps extends
@@ -362,7 +351,7 @@ function createPanelActions(deps: PanelActionsDeps) {
   }
 
   // The bookmark, site card and quote sections belong to their own runtimes; they
-  // bind to the panel's elements the first time it opens.
+  // join the panel the first time it opens.
   function bindWallpaperPanelSectionRuntimes(): void {
     if (wallpaperPanelRendered) {
       return;
@@ -373,90 +362,8 @@ function createPanelActions(deps: PanelActionsDeps) {
     if (quoteRuntime) quoteRuntime.bindSettings(refs, wallpaperState.wallpaperViewController);
     const sectionSettings = options.getSectionPanelSettings && options.getSectionPanelSettings();
     if (sectionSettings) {
-      sectionSettings.bindSettings(refs, wallpaperState.wallpaperViewController, {
-        bindSliderValueInput: bindPanelSliderValueInput,
-        syncSliderValueInput: syncPanelSliderValueInput
-      });
+      sectionSettings.bindSettings(wallpaperState.wallpaperViewController);
     }
-  }
-
-  // Number boxes beside the section runtimes' plain range inputs: typed values
-  // commit on blur or Enter, clamped and stepped like the slider.
-  function getPanelSliderValueInput(slider: HTMLInputElement | null | undefined): HTMLInputElement | null {
-    const row = slider && typeof slider.closest === 'function'
-      ? slider.closest('.x-nt-range-slider-row')
-      : null;
-    const input = row ? row.querySelector('._x_extension_range_slider_value_input_2026_unique_') : null;
-    return isHtmlTag(input, 'input') ? input : null;
-  }
-
-  function syncPanelSliderValueInput(slider: HTMLInputElement): void {
-    const valueInput = getPanelSliderValueInput(slider);
-    if (!valueInput) {
-      return;
-    }
-    valueInput.min = slider.min;
-    valueInput.max = slider.max;
-    valueInput.step = slider.step;
-    valueInput.value = slider.value;
-    valueInput.disabled = Boolean(slider.disabled);
-    const label = String(slider.getAttribute('aria-label') || '').trim();
-    if (label) {
-      valueInput.setAttribute('aria-label', label);
-    }
-  }
-
-  function commitPanelSliderValueInput(slider: HTMLInputElement, valueInput: HTMLInputElement): void {
-    const draft = String(valueInput.value || '').trim();
-    const number = Number(draft);
-    if (!draft || !Number.isFinite(number)) {
-      syncPanelSliderValueInput(slider);
-      return;
-    }
-    const min = Number(slider.min);
-    const max = Number(slider.max);
-    const step = Number(slider.step);
-    const bounded = Math.min(
-      Number.isFinite(max) ? max : number,
-      Math.max(Number.isFinite(min) ? min : number, number)
-    );
-    slider.value = String(Number.isFinite(step) && step > 0 && Number.isFinite(min)
-      ? min + Math.round((bounded - min) / step) * step
-      : bounded);
-    slider.dispatchEvent(new Event('input', { bubbles: true }));
-    slider.dispatchEvent(new Event('change', { bubbles: true }));
-    syncPanelSliderValueInput(slider);
-  }
-
-  function bindPanelSliderValueInput(slider: HTMLInputElement): void {
-    const valueInput = getPanelSliderValueInput(slider);
-    if (!slider || !valueInput || valueInput.dataset.sliderValueInputBound === 'true') {
-      return;
-    }
-    valueInput.dataset.sliderValueInputBound = 'true';
-    slider.addEventListener('input', () => syncPanelSliderValueInput(slider));
-    slider.addEventListener('change', () => syncPanelSliderValueInput(slider));
-    valueInput.addEventListener('input', () => {
-      const number = Number(valueInput.value);
-      const min = Number(slider.min);
-      const max = Number(slider.max);
-      if (!Number.isFinite(number)) {
-        return;
-      }
-      if (Number.isFinite(min) && number < min) {
-        valueInput.value = String(min);
-      } else if (Number.isFinite(max) && number > max) {
-        valueInput.value = String(max);
-      }
-    });
-    valueInput.addEventListener('blur', () => commitPanelSliderValueInput(slider, valueInput));
-    valueInput.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        valueInput.blur();
-      }
-    });
-    syncPanelSliderValueInput(slider);
   }
 
   function isFocusRoutePending(): boolean {
@@ -544,4 +451,4 @@ function createPanelActions(deps: PanelActionsDeps) {
 type PanelActions = ReturnType<typeof createPanelActions>;
 
 export { createPanelActions };
-export type { PanelActions, PanelActionsDeps, SectionPanelSettings, SliderValueInputs };
+export type { PanelActions, PanelActionsDeps, SectionPanelSettings };

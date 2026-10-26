@@ -9,6 +9,7 @@ import {
   sourcePanelId,
   type ExternalSelectKey,
   type PanelSelectModel,
+  type SectionSettingsModel,
   type WallpaperPanelModel,
   type WallpaperPanelState
 } from './panel-model';
@@ -19,11 +20,13 @@ export interface WallpaperPanelProps {
   externalSelects: Partial<Record<ExternalSelectKey, PanelSelectModel>>;
   model: WallpaperPanelModel;
   registerSelect(id: string, controls: SelectMenuControls): void;
+  // Null until the bookmark and site card runtime hands it over.
+  sectionSettings: SectionSettingsModel | null;
   state: WallpaperPanelState;
 }
 
 export function useWallpaperPanel(props: WallpaperPanelProps) {
-  const { documentObj, externalSelects, model, registerSelect, state } = props;
+  const { documentObj, externalSelects, model, registerSelect, sectionSettings, state } = props;
   const { actions, glassStyle } = state;
   const checkIcon = String(model.icons?.check || '');
   const arrowIcon = String(model.icons?.arrow || '');
@@ -89,6 +92,7 @@ export function useWallpaperPanel(props: WallpaperPanelProps) {
     externalSelects,
     model,
     registerSelect,
+    sectionSettings,
     state,
     actions,
     glassStyle,

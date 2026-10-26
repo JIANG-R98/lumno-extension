@@ -1,11 +1,12 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
-import { createDefaultPanelState, createPanelActions } from './wallpaper-view.fixtures';
+import { createDefaultPanelState, createPanelActions, createSectionSettingsModel } from './wallpaper-view.fixtures';
 import {
   createWallpaperViewApi,
   createWallpaperViewController,
   type WallpaperPanelActions,
   type WallpaperPanelModel,
+  type SectionSettingsActions,
   type WallpaperPanelState,
   type WallpaperViewController
 } from './wallpaper-view';
@@ -73,6 +74,21 @@ function mount(state: WallpaperPanelState, model: WallpaperPanelModel = MODEL) {
   }
   document.body.appendChild(controller.control);
   return controller;
+}
+
+function createSectionActions(): Record<keyof SectionSettingsActions, Mock> {
+  return {
+    toggleBookmarkExpanded: vi.fn(),
+    setBookmarkVisible: vi.fn(),
+    setBookmarkRows: vi.fn(),
+    setBookmarkColumns: vi.fn(),
+    setBookmarkFolderIconsVisible: vi.fn(),
+    setBookmarkTopbarLayout: vi.fn(),
+    toggleRecentExpanded: vi.fn(),
+    setRecentVisible: vi.fn(),
+    setRecentMode: vi.fn(),
+    setRecentRows: vi.fn()
+  };
 }
 
 function rerender(state: WallpaperPanelState) {
@@ -154,6 +170,7 @@ describe('New Tab React wallpaper view', () => {
     const { state } = createState();
     mount(state);
     const view = required(controller, 'controller');
+    act(() => view.renderSectionSettings(createSectionSettingsModel(createSectionActions())));
     expect(createWallpaperViewApi().implementation).toBe('react');
     expect(view.control.dataset.reactIsland).toBe('newtab-wallpaper');
     expect(view.control.dataset.panelOpen).toBe('false');
@@ -818,10 +835,15 @@ describe('New Tab React wallpaper view', () => {
     expect(actions.toggleUrlForm).toHaveBeenCalled();
   });
 
-  it('renders the bookmark and site card sections for their runtime', () => {
+  it('draws the bookmark and site card sections once their runtime hands them over', () => {
     const { state } = createState();
     mount(state);
+    expect(refs().bookmarkSettingsSection).toBeUndefined();
     const shortcutsSection = refs().shortcutsAccordion.parentElement;
+    expect(shortcutsSection?.nextElementSibling).toBe(refs().quoteDivider);
+
+    const actions = createSectionActions();
+    act(() => controller?.renderSectionSettings(createSectionSettingsModel(actions)));
     expect(shortcutsSection?.nextElementSibling?.nextElementSibling).toBe(refs().bookmarkSettingsSection);
     expect(refs().bookmarkSettingsSection.nextElementSibling?.nextElementSibling).toBe(refs().recentSettingsSection);
     expect(refs().recentSettingsSection.nextElementSibling).toBe(refs().quoteDivider);
@@ -835,44 +857,33 @@ describe('New Tab React wallpaper view', () => {
       expect(toggle.getAttribute('role')).toBe('switch');
     });
     const rows = expectTag(refs().bookmarkRowsSlider, 'input');
-    expect([rows.min, rows.max, rows.step]).toEqual(['1', '8', '1']);
+    expect([rows.min, rows.max, rows.value]).toEqual(['1', '8', '2']);
     expect(Array.from(refs().recentRowsTabs.querySelectorAll('button'), (button) => button.textContent))
       .toEqual(['1', '2']);
-    const onViewModeChange = vi.fn();
-    const onSurfaceChange = vi.fn(() => false);
-    act(() => {
-      controller?.renderBookmarkViewModeSelect({
-        ariaLabel: 'Display mode',
-        onChange: onViewModeChange,
-        options: ['folder', 'list', 'top'].map((value) => ({ value, label: value })),
-        value: 'folder'
-      });
-      controller?.renderBookmarkTopbarSurfaceSelect({
-        ariaLabel: 'Bar background',
-        onChange: onSurfaceChange,
-        options: ['adaptive', 'custom'].map((value) => ({
-          value,
-          label: value,
-          radio: true,
-          checked: value === 'adaptive'
-        })),
-        value: 'adaptive'
-      });
-    });
-    expect(refs().bookmarkViewModeSelectHost.querySelector('select')?.value).toBe('folder');
-    const topOption = queryHtmlElement(document, '[data-react-select-owner="x-nt-bookmark-view-mode"] [data-value="top"]');
-    act(() => topOption?.click());
-    expect(onViewModeChange).toHaveBeenCalledWith('top');
-    const customOption = queryHtmlElement(document, '[data-react-select-owner="x-nt-bookmark-topbar-surface"] [data-value="custom"]');
-    act(() => customOption?.click());
-    expect(onSurfaceChange).toHaveBeenCalledWith('custom');
-    // Declined until the picker returns a color.
-    expect(refs().bookmarkTopbarSurfaceSelectHost.querySelector('select')?.value).toBe('adaptive');
-    // A panel re-render keeps the selects other runtimes rendered, with their own state.
-    const viewModeSelect = refs().bookmarkViewModeSelectHost.querySelector('select');
+    expect(refs().bookmarkTopbarSettings.hidden).toBe(true);
+
+    act(() => refs().bookmarkSettingsTrigger.click());
+    act(() => getTag(refs().recentRowsTabs, '[data-recent-rows="2"]', 'button').click());
+    act(() => expectTag(refs().recentSettingsToggle, 'input').click());
+    expect(actions.toggleBookmarkExpanded).toHaveBeenCalledTimes(1);
+    expect(actions.setRecentRows).toHaveBeenCalledWith('2');
+    expect(actions.setRecentVisible).toHaveBeenCalledWith(false);
+
+    act(() => controller?.renderSectionSettings(createSectionSettingsModel(actions, (model) => {
+      model.bookmark.expanded = true;
+      model.bookmark.topbarMode = true;
+      model.recent.enabled = false;
+    })));
+    expect(refs().bookmarkSettingsTrigger.getAttribute('aria-expanded')).toBe('true');
+    expect(refs().bookmarkSettingsBody.hidden).toBe(false);
+    expect(refs().bookmarkGridSettings.hidden).toBe(true);
+    expect(refs().bookmarkTopbarSettings.hidden).toBe(false);
+    expect(expectTag(refs().recentSettingsTrigger, 'button').disabled).toBe(true);
+    act(() => getTag(refs().bookmarkTopbarLayoutTabs, '[data-bookmark-topbar-layout="floating"]', 'button').click());
+    expect(actions.setBookmarkTopbarLayout).toHaveBeenCalledWith('floating');
+    // A panel re-render keeps the sections as their runtime last drew them.
     rerender(createState().state);
-    expect(refs().bookmarkViewModeSelectHost.querySelector('select')).toBe(viewModeSelect);
-    expect(viewModeSelect?.value).toBe('top');
+    expect(refs().bookmarkTopbarSettings.hidden).toBe(false);
   });
 
   it('closes an open select menu on request', () => {
