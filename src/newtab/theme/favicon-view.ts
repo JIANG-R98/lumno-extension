@@ -3,8 +3,8 @@
 import type { FaviconDataEntry, FaviconUrlEntry } from '../../domain/favicon/favicon-cache';
 import type { MessageRuntime } from '../../platform/messaging';
 import * as LumnoFaviconViewCore from '../../shared/favicon/favicon-view-core';
+import type { FaviconImage } from '../../shared/favicon/favicon-pixels';
 import type {
-  FaviconImage,
   FaviconViewCoreOptions,
   FaviconViewWindow,
   FaviconWarmItem
