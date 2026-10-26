@@ -53,6 +53,30 @@ function readImmediateTheme(runtime: SuggestionsRuntime, suggestion: Suggestion,
   return theme;
 }
 
+// Shows the row in its known theme, then in its site's theme once that has
+// been read (when `load`); returns the function that stops waiting.
+function followSiteTheme(runtime: SuggestionsRuntime, item: SuggestionElement, suggestion: Suggestion,
+  immediateTheme: ThemeValue, load: boolean): () => void {
+  const { options } = runtime;
+  item._xTheme = immediateTheme;
+  options.applyThemeVariables(item, immediateTheme);
+  let active = true;
+  if (load) {
+    void options.getThemeForSuggestion(suggestion).then((theme) => {
+      if (!active || !item.isConnected) {
+        return;
+      }
+      const nextTheme = resolveTheme(options, suggestion, theme);
+      item._xTheme = nextTheme;
+      options.applyThemeVariables(item, nextTheme);
+      runtime.updateSelection(options.getSelectedIndex());
+    });
+  }
+  return () => {
+    active = false;
+  };
+}
+
 function useRowTheme(input: RowThemeInput): RowThemeSource {
   const { runtime, suggestionRef, suggestionFingerprint, isPrimary, onlyKeywordSuggestions, simpleMode, itemRef } = input;
   const { options } = runtime;
@@ -74,29 +98,9 @@ function useRowTheme(input: RowThemeInput): RowThemeSource {
 
   useLayoutEffect(() => {
     const item = itemRef.current;
-    if (!item) {
-      return undefined;
-    }
-    item._xTheme = immediateTheme;
-    options.applyThemeVariables(item, immediateTheme);
-    let active = true;
-    if (shouldLoadTheme) {
-      const latestSuggestion = suggestionRef.current;
-      void options.getThemeForSuggestion(latestSuggestion).then((theme) => {
-        if (!active || !item.isConnected) {
-          return;
-        }
-        const nextTheme = resolveTheme(options, latestSuggestion, theme);
-        item._xTheme = nextTheme;
-        options.applyThemeVariables(item, nextTheme);
-        runtime.updateSelection(options.getSelectedIndex());
-      });
-    }
-    return () => {
-      active = false;
-    };
-  }, [immediateTheme, itemRef, options, runtime, simpleMode, shouldLoadTheme, suggestionRef]);
+    return item ? followSiteTheme(runtime, item, suggestionRef.current, immediateTheme, shouldLoadTheme) : undefined;
+  }, [immediateTheme, itemRef, runtime, simpleMode, shouldLoadTheme, suggestionRef]);
   return source;
 }
 
-export { useRowTheme };
+export { followSiteTheme, useRowTheme };

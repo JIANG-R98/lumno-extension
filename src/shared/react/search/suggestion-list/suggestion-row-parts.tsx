@@ -5,7 +5,7 @@ import type { MouseEvent as ReactMouseEvent, RefObject } from 'react';
 import { RemixIcon } from '../../remix-icon';
 import { getActionLabel, getModifierAction, getSuggestionUrlLineText } from './action-model';
 import { HighlightedText } from './highlight';
-import { canDeleteHistory, isTopSite, SuggestionUtilityAction } from './suggestion-icon';
+import { canDeleteHistory, isTopSite, SuggestionUtilityAction } from './utility-action';
 import { setDefaultTagColors } from './suggestion-row-elements';
 import type { RowRefs } from './suggestion-row-elements';
 import { surfaceClass } from './surface-options';

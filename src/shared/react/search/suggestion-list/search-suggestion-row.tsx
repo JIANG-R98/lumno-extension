@@ -3,7 +3,8 @@ import { useMemo, useLayoutEffect, type MouseEvent as ReactMouseEvent, type RefO
 import type { NormalizedOptions, SearchSuggestionRowProps, Suggestion, SuggestionElement, SuggestionsRuntime,
   SuggestionValueRef } from './types';
 import { createActionModel } from './action-model';
-import { getSuggestionIconSpec, SuggestionIcon } from './suggestion-icon';
+import { getSuggestionIconSpec } from './icon-spec';
+import { SuggestionIcon } from './suggestion-icon';
 import { surfaceClass } from './surface-options';
 import { bindTextTooltip } from './highlight';
 import { isHelpPassage } from '../help-passage-card';
