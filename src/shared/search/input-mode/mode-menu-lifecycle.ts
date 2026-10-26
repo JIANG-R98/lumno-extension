@@ -10,6 +10,8 @@ import type { ModeMenuRenderApi } from './mode-menu-render';
 import type { ModeTabKeysApi } from './mode-tab-keys';
 import type { PrefixMotionApi } from './prefix-motion';
 import type { PrefixVisualApi } from './prefix-visual';
+import { readMenuKeyAction } from './mode-menu-keys';
+import type { MenuKeyAction } from './mode-menu-keys';
 
 type ModeMenuItemList = ReadonlyArray<ModeMenuItem | null | undefined> | null | undefined;
 
@@ -97,6 +99,339 @@ function hasDataset(element: Element): element is Element & HTMLOrSVGElement {
   return 'dataset' in element;
 }
 
+interface ModeMenuLifecycleContext {
+  readonly config: ModeMenuLifecycleDeps['config'];
+  readonly refreshModeMenuLanguage: ModeMenuLifecycleDeps['refreshModeMenuLanguage'];
+  readonly resetModeMenuDoubleTab: ModeMenuLifecycleDeps['resetModeMenuDoubleTab'];
+  readonly resetModeTagRemovalConfirmation: ModeMenuLifecycleDeps['resetModeTagRemovalConfirmation'];
+  readonly setModeMenuItems: ModeMenuLifecycleDeps['setModeMenuItems'];
+  readonly renderModeMenuView: ModeMenuLifecycleDeps['renderModeMenuView'];
+  readonly clearModeMenuProviderThemes: ModeMenuLifecycleDeps['clearModeMenuProviderThemes'];
+  readonly modeMenu: ModeMenuLifecycleDeps['modeMenu'];
+  readonly input: ModeMenuLifecycleDeps['input'];
+  readonly syncInputPlaceholder: ModeMenuLifecycleDeps['syncInputPlaceholder'];
+  readonly updateModeMenuFooterAlignment: ModeMenuLifecycleDeps['updateModeMenuFooterAlignment'];
+  readonly revealModeMenuSurface: ModeMenuLifecycleDeps['revealModeMenuSurface'];
+  readonly container: ModeMenuLifecycleDeps['container'];
+  readonly siteSearchPrefix: ModeMenuLifecycleDeps['siteSearchPrefix'];
+  readonly updateModeTag: ModeMenuLifecycleDeps['updateModeTag'];
+  readonly setInputModePrefixMenuOpen: ModeMenuLifecycleDeps['setInputModePrefixMenuOpen'];
+  readonly notifyModeMenuLayoutChange: ModeMenuLifecycleDeps['notifyModeMenuLayoutChange'];
+  readonly focusModeInput: ModeMenuLifecycleDeps['focusModeInput'];
+  readonly focusModeMenuSearch: ModeMenuLifecycleDeps['focusModeMenuSearch'];
+  readonly focusModeMenuButton: ModeMenuLifecycleDeps['focusModeMenuButton'];
+  readonly requestModeMenuPinyinRuntime: ModeMenuLifecycleDeps['requestModeMenuPinyinRuntime'];
+  readonly getModeMenuButtons: ModeMenuLifecycleDeps['getModeMenuButtons'];
+  readonly cancelModeMenuRevealFrame: ModeMenuLifecycleDeps['cancelModeMenuRevealFrame'];
+  readonly modeMenuCursorTooltipController: ModeMenuLifecycleDeps['modeMenuCursorTooltipController'];
+  readonly setModeMenuSearchActive: ModeMenuLifecycleDeps['setModeMenuSearchActive'];
+  readonly concealModeMenuSurface: ModeMenuLifecycleDeps['concealModeMenuSurface'];
+  readonly getModeMenuActiveElement: ModeMenuLifecycleDeps['getModeMenuActiveElement'];
+  readonly applyModeMenuFilter: ModeMenuLifecycleDeps['applyModeMenuFilter'];
+  readonly focusFirstModeMenuFilterResult: ModeMenuLifecycleDeps['focusFirstModeMenuFilterResult'];
+  readonly getModeMenuDirectionalIndex: ModeMenuLifecycleDeps['getModeMenuDirectionalIndex'];
+  readonly selectModeMenuItem: ModeMenuLifecycleDeps['selectModeMenuItem'];
+  readonly handleModeMenuTabFocusToggle: ModeMenuLifecycleDeps['handleModeMenuTabFocusToggle'];
+  readonly shouldHandleModeMenuKeyEvent: ModeMenuLifecycleDeps['shouldHandleModeMenuKeyEvent'];
+  readonly inputModeState: ModeMenuLifecycleDeps['inputModeState'];
+}
+
+function setModeMenuBusy(ctx: ModeMenuLifecycleContext, busy: boolean): void {
+  if (ctx.inputModeState.modeMenuBusy !== busy) {
+    ctx.inputModeState.modeMenuBusy = busy;
+    ctx.renderModeMenuView();
+  }
+}
+
+function openModeMenu(ctx: ModeMenuLifecycleContext, focusTarget?: ModeMenuFocusTarget): boolean | Promise<boolean> {
+  if (ctx.inputModeState.destroyed || typeof ctx.config.getModeMenuItems !== 'function') {
+    return false;
+  }
+  ctx.refreshModeMenuLanguage();
+  ctx.resetModeMenuDoubleTab();
+  ctx.resetModeTagRemovalConfirmation();
+  const requestId = ++ctx.inputModeState.modeMenuRequestId;
+  ctx.inputModeState.modeMenuPending = true;
+  const finishOpen = (items: ModeMenuItemList): boolean => {
+    if (ctx.inputModeState.destroyed || requestId !== ctx.inputModeState.modeMenuRequestId) {
+      return false;
+    }
+    ctx.inputModeState.modeMenuPending = false;
+    ctx.inputModeState.modeMenuBusy = false;
+    ctx.inputModeState.modeMenuFilterQuery = '';
+    ctx.inputModeState.modeMenuFocusId = '';
+    if (ctx.modeMenuCursorTooltipController) {
+      ctx.modeMenuCursorTooltipController.hide();
+    }
+    ctx.clearModeMenuProviderThemes();
+    const normalizedItems = ctx.setModeMenuItems(items);
+    if (normalizedItems.length === 0) {
+      ctx.renderModeMenuView();
+      return false;
+    }
+    ctx.inputModeState.modeMenuOpen = true;
+    ctx.inputModeState.modeMenuHasQuery = Boolean(String(ctx.input.value || '').trim());
+    ctx.renderModeMenuView();
+    ctx.syncInputPlaceholder();
+    ctx.updateModeMenuFooterAlignment();
+    ctx.revealModeMenuSurface();
+    ctx.container.setAttribute('data-mode-menu-open', 'true');
+    ctx.updateModeTag({ expanded: true });
+    ctx.setInputModePrefixMenuOpen(true);
+    ctx.notifyModeMenuLayoutChange();
+    const activeIndex = normalizedItems.findIndex((item) => item.active);
+    const targetIndex = focusTarget === 'last'
+      ? normalizedItems.length - 1
+      : (activeIndex >= 0 ? activeIndex : 0);
+    if (focusTarget === 'input') {
+      ctx.focusModeInput();
+    } else if (focusTarget === 'none') {
+      ctx.focusModeMenuSearch();
+    } else {
+      ctx.focusModeMenuButton(targetIndex);
+    }
+    return true;
+  };
+  const items = ctx.config.getModeMenuItems();
+  ctx.requestModeMenuPinyinRuntime();
+  if (isPromiseLike(items) || isPromiseLike(ctx.inputModeState.modeMenuPinyinRuntimeReady)) {
+    setModeMenuBusy(ctx, true);
+    return Promise.all([
+      Promise.resolve(items),
+      Promise.resolve(ctx.inputModeState.modeMenuPinyinRuntimeReady)
+    ]).then(([resolvedItems]) => {
+      if (requestId !== ctx.inputModeState.modeMenuRequestId) {
+        return false;
+      }
+      return finishOpen(resolvedItems);
+    }, () => {
+      if (requestId === ctx.inputModeState.modeMenuRequestId) {
+        ctx.inputModeState.modeMenuPending = false;
+        setModeMenuBusy(ctx, false);
+      }
+      return false;
+    });
+  }
+  return finishOpen(items);
+}
+
+// Draws the items again, keeping focus on the same mode where it can.
+function refreshModeMenu(ctx: ModeMenuLifecycleContext, preferredModeId?: string): boolean | Promise<boolean> {
+  if (ctx.inputModeState.destroyed || !ctx.inputModeState.modeMenuOpen ||
+      typeof ctx.config.getModeMenuItems !== 'function') {
+    return false;
+  }
+  const activeElement = ctx.getModeMenuActiveElement();
+  const focusedButton = activeElement &&
+    activeElement.getAttribute('role') === 'menuitemradio' &&
+    hasDataset(activeElement)
+    ? activeElement
+    : null;
+  const focusedModeId = preferredModeId
+    ? String(preferredModeId)
+    : (focusedButton ? String(focusedButton.dataset.modeId || '') : '');
+  const requestId = ++ctx.inputModeState.modeMenuRequestId;
+  ctx.inputModeState.modeMenuPending = true;
+  const finishRefresh = (items: ModeMenuItemList): boolean => {
+    if (ctx.inputModeState.destroyed || requestId !== ctx.inputModeState.modeMenuRequestId || !ctx.inputModeState.modeMenuOpen) {
+      return false;
+    }
+    ctx.inputModeState.modeMenuPending = false;
+    ctx.inputModeState.modeMenuBusy = false;
+    if (ctx.modeMenuCursorTooltipController) {
+      ctx.modeMenuCursorTooltipController.hide();
+    }
+    const normalizedItems = ctx.setModeMenuItems(items);
+    ctx.inputModeState.modeMenuHasQuery = Boolean(String(ctx.input.value || '').trim());
+    ctx.renderModeMenuView();
+    if (normalizedItems.length === 0) {
+      closeModeMenu(ctx, false);
+      return false;
+    }
+    ctx.updateModeMenuFooterAlignment();
+    ctx.notifyModeMenuLayoutChange();
+    if (focusedModeId) {
+      const buttons = ctx.getModeMenuButtons();
+      const nextFocusedIndex = buttons.findIndex((button) => (
+        String(button.dataset.modeId || '') === focusedModeId
+      ));
+      if (nextFocusedIndex >= 0) {
+        ctx.focusModeMenuButton(nextFocusedIndex);
+      }
+    }
+    return true;
+  };
+  const items = ctx.config.getModeMenuItems();
+  if (isPromiseLike(items)) {
+    setModeMenuBusy(ctx, true);
+    return Promise.resolve(items).then(finishRefresh, () => {
+      if (requestId === ctx.inputModeState.modeMenuRequestId) {
+        ctx.inputModeState.modeMenuPending = false;
+        setModeMenuBusy(ctx, false);
+      }
+      return false;
+    });
+  }
+  return finishRefresh(items);
+}
+
+function closeModeMenu(ctx: ModeMenuLifecycleContext, restoreFocus?: boolean): boolean {
+  if (!ctx.inputModeState.modeMenuOpen && !ctx.inputModeState.modeMenuPending) {
+    return false;
+  }
+  ctx.inputModeState.modeMenuRequestId += 1;
+  ctx.inputModeState.modeMenuPending = false;
+  ctx.resetModeMenuDoubleTab();
+  ctx.resetModeTagRemovalConfirmation();
+  ctx.cancelModeMenuRevealFrame();
+  if (ctx.modeMenuCursorTooltipController) {
+    ctx.modeMenuCursorTooltipController.hide();
+  }
+  ctx.inputModeState.modeMenuOpen = false;
+  ctx.inputModeState.modeMenuBusy = false;
+  ctx.inputModeState.modeMenuFilterQuery = '';
+  ctx.inputModeState.modeMenuFocusId = '';
+  ctx.inputModeState.modeMenuSearchActive = false;
+  ctx.concealModeMenuSurface();
+  ctx.syncInputPlaceholder();
+  ctx.container.removeAttribute('data-mode-menu-open');
+  ctx.updateModeTag({ expanded: false });
+  ctx.setInputModePrefixMenuOpen(false);
+  ctx.notifyModeMenuLayoutChange();
+  if (restoreFocus) {
+    ctx.siteSearchPrefix.focus({ preventScroll: true });
+  }
+  return true;
+}
+
+function handlePrefixClick(ctx: ModeMenuLifecycleContext, event: MouseEvent): void {
+  event.preventDefault();
+  event.stopPropagation();
+  if (ctx.inputModeState.modeMenuOpen || ctx.inputModeState.modeMenuPending) {
+    closeModeMenu(ctx, true);
+  } else {
+    openModeMenu(ctx, 'none');
+  }
+}
+
+function handlePrefixKeydown(ctx: ModeMenuLifecycleContext, event: KeyboardEvent): void {
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault();
+    openModeMenu(ctx, event.key === 'ArrowUp' ? 'last' : 'active');
+  } else if (event.key === 'Escape' && ctx.inputModeState.modeMenuOpen) {
+    event.preventDefault();
+    closeModeMenu(ctx, true);
+  }
+}
+
+function stopModeMenuKeyEvent(event: KeyboardEvent): void {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}
+
+// Keys while the menu has focus: arrows, Home, End, Enter, Escape, Tab,
+// and letters, digits and spaces typed into the filter.
+const MENU_KEY_ACTIONS: Record<MenuKeyAction, (
+  ctx: ModeMenuLifecycleContext,
+  event: KeyboardEvent,
+  buttons: HTMLElement[],
+  currentIndex: number
+) => void> = {
+  escape(ctx) {
+    if (ctx.inputModeState.modeMenuFilterQuery) {
+      ctx.applyModeMenuFilter('');
+      ctx.focusModeMenuSearch();
+    } else {
+      closeModeMenu(ctx, true);
+    }
+  },
+  erase(ctx) {
+    const queryCharacters = Array.from(ctx.inputModeState.modeMenuFilterQuery);
+    queryCharacters.pop();
+    ctx.applyModeMenuFilter(queryCharacters.join(''));
+    ctx.focusFirstModeMenuFilterResult();
+  },
+  move(ctx, event, buttons, currentIndex) {
+    const nextIndex = ctx.getModeMenuDirectionalIndex(buttons, currentIndex, event.key);
+    ctx.focusModeMenuButton(nextIndex, { smoothScroll: true });
+  },
+  edge(ctx, event, buttons) {
+    ctx.focusModeMenuButton(event.key === 'Home' ? 0 : buttons.length - 1);
+  },
+  select(ctx, _event, buttons, currentIndex) {
+    const modeId = buttons[currentIndex].dataset.modeId || '';
+    const entry = ctx.inputModeState.modeMenuEntries.find((candidate) => String(candidate.item.id) === modeId);
+    if (entry) {
+      ctx.selectModeMenuItem(entry.item, {
+        focusAfterSelect: 'panel'
+      });
+    }
+  },
+  filter(ctx, event) {
+    ctx.applyModeMenuFilter(ctx.inputModeState.modeMenuFilterQuery + event.key);
+    ctx.focusFirstModeMenuFilterResult();
+  }
+};
+
+function handleMenuKeydown(ctx: ModeMenuLifecycleContext, event: KeyboardEvent): boolean {
+  if (event.key === 'Tab') {
+    return ctx.handleModeMenuTabFocusToggle(event);
+  }
+  const buttons = ctx.getModeMenuButtons();
+  const activeElement = ctx.getModeMenuActiveElement();
+  const currentIndex = buttons.findIndex((button) => button === activeElement);
+  const action = readMenuKeyAction(event, currentIndex);
+  if (!action) {
+    return false;
+  }
+  stopModeMenuKeyEvent(event);
+  MENU_KEY_ACTIONS[action](ctx, event, buttons, currentIndex);
+  return true;
+}
+
+function handleModeMenuKeyEvent(ctx: ModeMenuLifecycleContext, event: KeyboardEvent): boolean {
+  if (!ctx.shouldHandleModeMenuKeyEvent(event)) {
+    return false;
+  }
+  return handleMenuKeydown(ctx, event);
+}
+
+function handleModeMenuPointerDown(ctx: ModeMenuLifecycleContext, event: PointerEvent): void {
+  if (!ctx.inputModeState.modeMenuOpen) {
+    return;
+  }
+  ctx.setModeMenuSearchActive(true);
+  const target = event.target;
+  const button = isElement(target) ? target.closest('[role="menuitemradio"]') : null;
+  // Native pointer focus can scroll the panel's ancestors before click
+  // returns focus to the input. All menu focus is managed with preventScroll.
+  event.preventDefault();
+  if (button) {
+    return;
+  }
+  ctx.focusModeMenuSearch();
+}
+
+// A press outside the input and its menu closes the menu. In a closed
+// shadow root the press reaches the document as the host's.
+function handleDocumentPointerDown(ctx: ModeMenuLifecycleContext, event: Event): void {
+  const eventPath = event.composedPath();
+  const containerRoot = ctx.container.getRootNode();
+  const containerRootHost = isShadowRoot(containerRoot) ? containerRoot.host : null;
+  const isInsideModeContainer = (isNode(event.target) && ctx.container.contains(event.target)) ||
+    eventPath.includes(ctx.container) ||
+    eventPath.includes(ctx.modeMenu) ||
+    eventPath.includes(ctx.siteSearchPrefix) ||
+    Boolean(containerRootHost && event.currentTarget !== containerRoot && (
+      event.target === containerRootHost ||
+      eventPath.includes(containerRootHost)
+    ));
+  if (!ctx.inputModeState.modeMenuOpen || isInsideModeContainer) {
+    return;
+  }
+  closeModeMenu(ctx, false);
+}
+
 function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
   const {
     config,
@@ -136,314 +471,53 @@ function createModeMenuLifecycle(deps: ModeMenuLifecycleDeps) {
 
   // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
-
-  function setModeMenuBusy(busy: boolean): void {
-    if (inputModeState.modeMenuBusy !== busy) {
-      inputModeState.modeMenuBusy = busy;
-      renderModeMenuView();
-    }
-  }
-
-  function openModeMenu(focusTarget?: ModeMenuFocusTarget): boolean | Promise<boolean> {
-    if (inputModeState.destroyed || typeof config.getModeMenuItems !== 'function') {
-      return false;
-    }
-    refreshModeMenuLanguage();
-    resetModeMenuDoubleTab();
-    resetModeTagRemovalConfirmation();
-    const requestId = ++inputModeState.modeMenuRequestId;
-    inputModeState.modeMenuPending = true;
-    const finishOpen = (items: ModeMenuItemList): boolean => {
-      if (inputModeState.destroyed || requestId !== inputModeState.modeMenuRequestId) {
-        return false;
-      }
-      inputModeState.modeMenuPending = false;
-      inputModeState.modeMenuBusy = false;
-      inputModeState.modeMenuFilterQuery = '';
-      inputModeState.modeMenuFocusId = '';
-      if (modeMenuCursorTooltipController) {
-        modeMenuCursorTooltipController.hide();
-      }
-      clearModeMenuProviderThemes();
-      const normalizedItems = setModeMenuItems(items);
-      if (normalizedItems.length === 0) {
-        renderModeMenuView();
-        return false;
-      }
-      inputModeState.modeMenuOpen = true;
-      inputModeState.modeMenuHasQuery = Boolean(String(input.value || '').trim());
-      renderModeMenuView();
-      syncInputPlaceholder();
-      updateModeMenuFooterAlignment();
-      revealModeMenuSurface();
-      container.setAttribute('data-mode-menu-open', 'true');
-      updateModeTag({ expanded: true });
-      setInputModePrefixMenuOpen(true);
-      notifyModeMenuLayoutChange();
-      const activeIndex = normalizedItems.findIndex((item) => item.active);
-      const targetIndex = focusTarget === 'last'
-        ? normalizedItems.length - 1
-        : (activeIndex >= 0 ? activeIndex : 0);
-      if (focusTarget === 'input') {
-        focusModeInput();
-      } else if (focusTarget === 'none') {
-        focusModeMenuSearch();
-      } else {
-        focusModeMenuButton(targetIndex);
-      }
-      return true;
-    };
-    const items = config.getModeMenuItems();
-    requestModeMenuPinyinRuntime();
-    if (isPromiseLike(items) || isPromiseLike(inputModeState.modeMenuPinyinRuntimeReady)) {
-      setModeMenuBusy(true);
-      return Promise.all([
-        Promise.resolve(items),
-        Promise.resolve(inputModeState.modeMenuPinyinRuntimeReady)
-      ]).then(([resolvedItems]) => {
-        if (requestId !== inputModeState.modeMenuRequestId) {
-          return false;
-        }
-        return finishOpen(resolvedItems);
-      }, () => {
-        if (requestId === inputModeState.modeMenuRequestId) {
-          inputModeState.modeMenuPending = false;
-          setModeMenuBusy(false);
-        }
-        return false;
-      });
-    }
-    return finishOpen(items);
-  }
-
-  // Draws the items again, keeping focus on the same mode where it can.
-  function refreshModeMenu(preferredModeId?: string): boolean | Promise<boolean> {
-    if (inputModeState.destroyed || !inputModeState.modeMenuOpen ||
-        typeof config.getModeMenuItems !== 'function') {
-      return false;
-    }
-    const activeElement = getModeMenuActiveElement();
-    const focusedButton = activeElement &&
-      activeElement.getAttribute('role') === 'menuitemradio' &&
-      hasDataset(activeElement)
-      ? activeElement
-      : null;
-    const focusedModeId = preferredModeId
-      ? String(preferredModeId)
-      : (focusedButton ? String(focusedButton.dataset.modeId || '') : '');
-    const requestId = ++inputModeState.modeMenuRequestId;
-    inputModeState.modeMenuPending = true;
-    const finishRefresh = (items: ModeMenuItemList): boolean => {
-      if (inputModeState.destroyed || requestId !== inputModeState.modeMenuRequestId || !inputModeState.modeMenuOpen) {
-        return false;
-      }
-      inputModeState.modeMenuPending = false;
-      inputModeState.modeMenuBusy = false;
-      if (modeMenuCursorTooltipController) {
-        modeMenuCursorTooltipController.hide();
-      }
-      const normalizedItems = setModeMenuItems(items);
-      inputModeState.modeMenuHasQuery = Boolean(String(input.value || '').trim());
-      renderModeMenuView();
-      if (normalizedItems.length === 0) {
-        closeModeMenu(false);
-        return false;
-      }
-      updateModeMenuFooterAlignment();
-      notifyModeMenuLayoutChange();
-      if (focusedModeId) {
-        const buttons = getModeMenuButtons();
-        const nextFocusedIndex = buttons.findIndex((button) => (
-          String(button.dataset.modeId || '') === focusedModeId
-        ));
-        if (nextFocusedIndex >= 0) {
-          focusModeMenuButton(nextFocusedIndex);
-        }
-      }
-      return true;
-    };
-    const items = config.getModeMenuItems();
-    if (isPromiseLike(items)) {
-      setModeMenuBusy(true);
-      return Promise.resolve(items).then(finishRefresh, () => {
-        if (requestId === inputModeState.modeMenuRequestId) {
-          inputModeState.modeMenuPending = false;
-          setModeMenuBusy(false);
-        }
-        return false;
-      });
-    }
-    return finishRefresh(items);
-  }
-
-  function closeModeMenu(restoreFocus?: boolean): boolean {
-    if (!inputModeState.modeMenuOpen && !inputModeState.modeMenuPending) {
-      return false;
-    }
-    inputModeState.modeMenuRequestId += 1;
-    inputModeState.modeMenuPending = false;
-    resetModeMenuDoubleTab();
-    resetModeTagRemovalConfirmation();
-    cancelModeMenuRevealFrame();
-    if (modeMenuCursorTooltipController) {
-      modeMenuCursorTooltipController.hide();
-    }
-    inputModeState.modeMenuOpen = false;
-    inputModeState.modeMenuBusy = false;
-    inputModeState.modeMenuFilterQuery = '';
-    inputModeState.modeMenuFocusId = '';
-    inputModeState.modeMenuSearchActive = false;
-    concealModeMenuSurface();
-    syncInputPlaceholder();
-    container.removeAttribute('data-mode-menu-open');
-    updateModeTag({ expanded: false });
-    setInputModePrefixMenuOpen(false);
-    notifyModeMenuLayoutChange();
-    if (restoreFocus) {
-      siteSearchPrefix.focus({ preventScroll: true });
-    }
-    return true;
-  }
-
-  function handlePrefixClick(event: MouseEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    if (inputModeState.modeMenuOpen || inputModeState.modeMenuPending) {
-      closeModeMenu(true);
-    } else {
-      openModeMenu('none');
-    }
-  }
-
-  function handlePrefixKeydown(event: KeyboardEvent): void {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault();
-      openModeMenu(event.key === 'ArrowUp' ? 'last' : 'active');
-    } else if (event.key === 'Escape' && inputModeState.modeMenuOpen) {
-      event.preventDefault();
-      closeModeMenu(true);
-    }
-  }
-
-  function stopModeMenuKeyEvent(event: KeyboardEvent): void {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-  }
-
-  // Keys while the menu has focus: arrows, Home, End, Enter, Escape, Tab,
-  // and letters, digits and spaces typed into the filter.
-  function handleMenuKeydown(event: KeyboardEvent): boolean {
-    const buttons = getModeMenuButtons();
-    const activeElement = getModeMenuActiveElement();
-    const currentIndex = buttons.findIndex((button) => button === activeElement);
-    if (event.key === 'Escape') {
-      stopModeMenuKeyEvent(event);
-      if (inputModeState.modeMenuFilterQuery) {
-        applyModeMenuFilter('');
-        focusModeMenuSearch();
-      } else {
-        closeModeMenu(true);
-      }
-      return true;
-    } else if (event.key === 'Backspace' && !event.metaKey &&
-        !event.ctrlKey && !event.altKey) {
-      stopModeMenuKeyEvent(event);
-      const queryCharacters = Array.from(inputModeState.modeMenuFilterQuery);
-      queryCharacters.pop();
-      applyModeMenuFilter(queryCharacters.join(''));
-      focusFirstModeMenuFilterResult();
-      return true;
-    } else if (event.key === 'ArrowDown' || event.key === 'ArrowRight' ||
-        event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
-      stopModeMenuKeyEvent(event);
-      const nextIndex = getModeMenuDirectionalIndex(
-        buttons,
-        currentIndex,
-        event.key
-      );
-      focusModeMenuButton(nextIndex, { smoothScroll: true });
-      return true;
-    } else if (event.key === 'Home' || event.key === 'End') {
-      stopModeMenuKeyEvent(event);
-      focusModeMenuButton(event.key === 'Home' ? 0 : buttons.length - 1);
-      return true;
-    } else if ((event.key === 'Enter' || event.key === ' ') && currentIndex >= 0) {
-      stopModeMenuKeyEvent(event);
-      const modeId = buttons[currentIndex].dataset.modeId || '';
-      const entry = inputModeState.modeMenuEntries.find((candidate) => String(candidate.item.id) === modeId);
-      if (entry) {
-        selectModeMenuItem(entry.item, {
-          focusAfterSelect: 'panel'
-        });
-      }
-      return true;
-    } else if (event.key === 'Tab') {
-      return handleModeMenuTabFocusToggle(event);
-    } else if (!event.isComposing && !event.repeat &&
-        !event.metaKey && !event.ctrlKey && !event.altKey &&
-        typeof event.key === 'string' && event.key.length === 1 &&
-        /^[\p{L}\p{N}\s]$/u.test(event.key)) {
-      stopModeMenuKeyEvent(event);
-      applyModeMenuFilter(inputModeState.modeMenuFilterQuery + event.key);
-      focusFirstModeMenuFilterResult();
-      return true;
-    }
-    return false;
-  }
-
-  function handleModeMenuKeyEvent(event: KeyboardEvent): boolean {
-    if (!shouldHandleModeMenuKeyEvent(event)) {
-      return false;
-    }
-    return handleMenuKeydown(event);
-  }
-
-  function handleModeMenuPointerDown(event: PointerEvent): void {
-    if (!inputModeState.modeMenuOpen) {
-      return;
-    }
-    setModeMenuSearchActive(true);
-    const target = event.target;
-    const button = isElement(target) ? target.closest('[role="menuitemradio"]') : null;
-    // Native pointer focus can scroll the panel's ancestors before click
-    // returns focus to the input. All menu focus is managed with preventScroll.
-    event.preventDefault();
-    if (button) {
-      return;
-    }
-    focusModeMenuSearch();
-  }
-
-  // A press outside the input and its menu closes the menu. In a closed
-  // shadow root the press reaches the document as the host's.
-  function handleDocumentPointerDown(event: Event): void {
-    const eventPath = event.composedPath();
-    const containerRoot = container.getRootNode();
-    const containerRootHost = isShadowRoot(containerRoot) ? containerRoot.host : null;
-    const isInsideModeContainer = (isNode(event.target) && container.contains(event.target)) ||
-      eventPath.includes(container) ||
-      eventPath.includes(modeMenu) ||
-      eventPath.includes(siteSearchPrefix) ||
-      Boolean(containerRootHost && event.currentTarget !== containerRoot && (
-        event.target === containerRootHost ||
-        eventPath.includes(containerRootHost)
-      ));
-    if (!inputModeState.modeMenuOpen || isInsideModeContainer) {
-      return;
-    }
-    closeModeMenu(false);
-  }
+  const ctx: ModeMenuLifecycleContext = {
+    config,
+    refreshModeMenuLanguage,
+    resetModeMenuDoubleTab,
+    resetModeTagRemovalConfirmation,
+    setModeMenuItems,
+    renderModeMenuView,
+    clearModeMenuProviderThemes,
+    modeMenu,
+    input,
+    syncInputPlaceholder,
+    updateModeMenuFooterAlignment,
+    revealModeMenuSurface,
+    container,
+    siteSearchPrefix,
+    updateModeTag,
+    setInputModePrefixMenuOpen,
+    notifyModeMenuLayoutChange,
+    focusModeInput,
+    focusModeMenuSearch,
+    focusModeMenuButton,
+    requestModeMenuPinyinRuntime,
+    getModeMenuButtons,
+    cancelModeMenuRevealFrame,
+    modeMenuCursorTooltipController,
+    setModeMenuSearchActive,
+    concealModeMenuSurface,
+    getModeMenuActiveElement,
+    applyModeMenuFilter,
+    focusFirstModeMenuFilterResult,
+    getModeMenuDirectionalIndex,
+    selectModeMenuItem,
+    handleModeMenuTabFocusToggle,
+    shouldHandleModeMenuKeyEvent,
+    inputModeState
+  };
 
   return {
-    openModeMenu,
-    refreshModeMenu,
-    closeModeMenu,
-    handlePrefixClick,
-    handlePrefixKeydown,
-    handleMenuKeydown,
-    handleModeMenuKeyEvent,
-    handleModeMenuPointerDown,
-    handleDocumentPointerDown
+    openModeMenu: (focusTarget?: ModeMenuFocusTarget) => openModeMenu(ctx, focusTarget),
+    refreshModeMenu: (preferredModeId?: string) => refreshModeMenu(ctx, preferredModeId),
+    closeModeMenu: (restoreFocus?: boolean) => closeModeMenu(ctx, restoreFocus),
+    handlePrefixClick: (event: MouseEvent) => handlePrefixClick(ctx, event),
+    handlePrefixKeydown: (event: KeyboardEvent) => handlePrefixKeydown(ctx, event),
+    handleMenuKeydown: (event: KeyboardEvent) => handleMenuKeydown(ctx, event),
+    handleModeMenuKeyEvent: (event: KeyboardEvent) => handleModeMenuKeyEvent(ctx, event),
+    handleModeMenuPointerDown: (event: PointerEvent) => handleModeMenuPointerDown(ctx, event),
+    handleDocumentPointerDown: (event: Event) => handleDocumentPointerDown(ctx, event)
   };
 }
 

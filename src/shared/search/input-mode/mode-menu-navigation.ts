@@ -66,6 +66,289 @@ function isDocumentOrShadowRoot(node: Node): node is Node & DocumentOrShadowRoot
   return node.nodeType === 9 || node.nodeType === 11;
 }
 
+interface ModeMenuNavigationContext {
+  readonly modeMenu: ModeMenuNavigationDeps['modeMenu'];
+  readonly modeMenuContent: ModeMenuNavigationDeps['modeMenuContent'];
+  readonly doc: ModeMenuNavigationDeps['doc'];
+  readonly input: ModeMenuNavigationDeps['input'];
+  readonly DEFAULT_MODE_MENU_SCROLL_TOP_CONTEXT: ModeMenuNavigationDeps['DEFAULT_MODE_MENU_SCROLL_TOP_CONTEXT'];
+  readonly DEFAULT_MODE_MENU_SCROLL_BOTTOM_CONTEXT: ModeMenuNavigationDeps['DEFAULT_MODE_MENU_SCROLL_BOTTOM_CONTEXT'];
+  readonly win: ModeMenuNavigationDeps['win'];
+  readonly normalizeModeMenuSearchText: ModeMenuNavigationDeps['normalizeModeMenuSearchText'];
+  readonly config: ModeMenuNavigationDeps['config'];
+  readonly refreshModeMenu: ModeMenuNavigationDeps['refreshModeMenu'];
+  readonly renderModeMenuView: ModeMenuNavigationDeps['renderModeMenuView'];
+  readonly setModeMenuSelection: ModeMenuNavigationDeps['setModeMenuSelection'];
+  readonly inputModeState: ModeMenuNavigationDeps['inputModeState'];
+}
+
+function getAllModeMenuButtons(ctx: ModeMenuNavigationContext): HTMLElement[] {
+  return Array.from(queryHtmlElements(ctx.modeMenu, '[role="menuitemradio"]'));
+}
+
+function getModeMenuButtons(ctx: ModeMenuNavigationContext): HTMLElement[] {
+  return getAllModeMenuButtons(ctx).filter((button) => !button.hidden);
+}
+
+// The focused element of the menu's root: its shadow root, or the document.
+function getModeMenuActiveElement(ctx: ModeMenuNavigationContext): Element | null {
+  const rootNode = ctx.modeMenu.getRootNode();
+  return isDocumentOrShadowRoot(rootNode) && rootNode.activeElement
+    ? rootNode.activeElement
+    : ctx.doc.activeElement;
+}
+
+function setModeMenuSearchActive(ctx: ModeMenuNavigationContext, active: boolean): void {
+  if (ctx.inputModeState.modeMenuSearchActive !== active) {
+    ctx.inputModeState.modeMenuSearchActive = active;
+    ctx.renderModeMenuView();
+  }
+}
+
+// Focuses the panel itself, where typing filters it.
+function focusModeMenuSearch(ctx: ModeMenuNavigationContext): boolean {
+  if (ctx.inputModeState.destroyed || !ctx.inputModeState.modeMenuOpen) {
+    return false;
+  }
+  ctx.inputModeState.modeMenuFocusId = '';
+  ctx.inputModeState.modeMenuSearchActive = true;
+  ctx.renderModeMenuView();
+  ctx.modeMenu.focus({ preventScroll: true });
+  return true;
+}
+
+function focusModeInput(ctx: ModeMenuNavigationContext): boolean {
+  if (ctx.inputModeState.destroyed) {
+    return false;
+  }
+  setModeMenuSearchActive(ctx, false);
+  ctx.input.focus({ preventScroll: true });
+  return true;
+}
+
+// Whether a key event belongs to the open menu: focus or the target is in it.
+function shouldHandleModeMenuKeyEvent(ctx: ModeMenuNavigationContext, event: { target?: EventTarget | null } | null | undefined): boolean {
+  if (ctx.inputModeState.destroyed || !ctx.inputModeState.modeMenuOpen) {
+    return false;
+  }
+  const activeElement = getModeMenuActiveElement(ctx);
+  const eventTarget = event ? event.target : null;
+  return Boolean(
+    activeElement === ctx.modeMenu || ctx.modeMenu.contains(activeElement) ||
+    eventTarget === ctx.modeMenu || (isNode(eventTarget) && ctx.modeMenu.contains(eventTarget))
+  );
+}
+
+function scrollModeMenuButtonIntoView(ctx: ModeMenuNavigationContext, button: HTMLElement, scrollOptions?: { smooth?: boolean }): void {
+  const buttonRect = button.getBoundingClientRect();
+  const contentRect = ctx.modeMenuContent.getBoundingClientRect();
+  const topBoundary = contentRect.top + ctx.DEFAULT_MODE_MENU_SCROLL_TOP_CONTEXT;
+  const bottomBoundary = contentRect.bottom -
+    ctx.DEFAULT_MODE_MENU_SCROLL_BOTTOM_CONTEXT;
+  let scrollDelta = 0;
+  if (buttonRect.top < topBoundary) {
+    scrollDelta = buttonRect.top - topBoundary;
+  } else if (buttonRect.bottom > bottomBoundary) {
+    scrollDelta = buttonRect.bottom - bottomBoundary;
+  }
+  if (scrollDelta === 0) {
+    return;
+  }
+  const targetScrollTop = Math.max(
+    0,
+    (Number(ctx.modeMenuContent.scrollTop) || 0) + scrollDelta
+  );
+  const prefersReducedMotion = typeof ctx.win.matchMedia === 'function' &&
+    ctx.win.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const shouldSmoothScroll = scrollOptions &&
+    scrollOptions.smooth === true &&
+    !prefersReducedMotion;
+  if (shouldSmoothScroll && typeof ctx.modeMenuContent.scrollTo === 'function') {
+    ctx.modeMenuContent.scrollTo({
+      behavior: 'smooth',
+      top: targetScrollTop
+    });
+  } else {
+    ctx.modeMenuContent.scrollTop = targetScrollTop;
+  }
+}
+
+function focusModeMenuButton(ctx: ModeMenuNavigationContext, index: number, focusOptions?: { smoothScroll?: boolean }): boolean {
+  const buttons = getModeMenuButtons(ctx);
+  if (buttons.length === 0) {
+    return false;
+  }
+  const normalizedIndex = ((index % buttons.length) + buttons.length) % buttons.length;
+  ctx.inputModeState.modeMenuFocusId = buttons[normalizedIndex].dataset.modeId || '';
+  ctx.inputModeState.modeMenuSearchActive = true;
+  ctx.renderModeMenuView();
+  buttons[normalizedIndex].focus({ preventScroll: true });
+  scrollModeMenuButtonIntoView(ctx, buttons[normalizedIndex], {
+    smooth: Boolean(focusOptions && focusOptions.smoothScroll)
+  });
+  return true;
+}
+
+function focusFirstModeMenuFilterResult(ctx: ModeMenuNavigationContext): boolean {
+  const hasFilterQuery = Boolean(
+    ctx.normalizeModeMenuSearchText(ctx.inputModeState.modeMenuFilterQuery)
+  );
+  if (hasFilterQuery && focusModeMenuButton(ctx, 0)) {
+    return true;
+  }
+  return focusModeMenuSearch(ctx);
+}
+
+function getModeMenuButtonLayout(button: HTMLElement, index: number): ButtonLayout {
+  const rect = button.getBoundingClientRect();
+  const left = Number(rect && rect.left) || 0;
+  const top = Number(rect && rect.top) || 0;
+  const width = Number(rect && rect.width) || 0;
+  const height = Number(rect && rect.height) || 0;
+  return {
+    bottom: Number(rect && rect.bottom) || top + height,
+    centerX: left + (width / 2),
+    centerY: top + (height / 2),
+    height,
+    index,
+    left,
+    right: Number(rect && rect.right) || left + width,
+    top,
+    width
+  };
+}
+
+// The buttons grouped into rows by their vertical centers; null before layout.
+function getModeMenuButtonRows(buttons: HTMLElement[]): ButtonRow[] | null {
+  const layouts = buttons.map(((button: HTMLElement, index: number) => getModeMenuButtonLayout(button, index)));
+  const hasMeasuredLayout = layouts.some((layout) => (
+    layout.width > 0 && layout.height > 0
+  ));
+  if (!hasMeasuredLayout) {
+    return null;
+  }
+  const rows: ButtonRow[] = [];
+  layouts.forEach((layout) => {
+    let row = rows.find((candidate) => {
+      const tolerance = Math.max(
+        2,
+        Math.min(candidate.averageHeight, layout.height) * 0.4
+      );
+      return Math.abs(candidate.centerY - layout.centerY) <= tolerance;
+    });
+    if (!row) {
+      row = {
+        averageHeight: layout.height,
+        centerY: layout.centerY,
+        items: []
+      };
+      rows.push(row);
+    }
+    row.items.push(layout);
+    const itemCount = row.items.length;
+    row.centerY = row.items.reduce((total, item) => total + item.centerY, 0) /
+      itemCount;
+    row.averageHeight = row.items.reduce((total, item) => total + item.height, 0) /
+      itemCount;
+  });
+  rows.sort((left, right) => left.centerY - right.centerY);
+  rows.forEach((row) => {
+    row.items.sort((left, right) => left.centerX - right.centerX);
+  });
+  return rows;
+}
+
+// The button an arrow key moves to: along the row, or to the nearest
+// button of the next row.
+function getModeMenuDirectionalIndex(buttons: HTMLElement[], currentIndex: number, key: string): number {
+  if (buttons.length === 0) {
+    return -1;
+  }
+  const movesForward = key === 'ArrowDown' || key === 'ArrowRight';
+  if (currentIndex < 0) {
+    return movesForward ? 0 : buttons.length - 1;
+  }
+  const rows = getModeMenuButtonRows(buttons);
+  if (!rows) {
+    return ((currentIndex + (movesForward ? 1 : -1)) % buttons.length +
+      buttons.length) % buttons.length;
+  }
+  return moveInRows(rows, currentIndex, key);
+}
+
+// The nearest button of a row to a horizontal position.
+function findClosestInRow(items: ButtonLayout[], centerX: number): ButtonLayout | null {
+  let closest: ButtonLayout | null = null;
+  for (const candidate of items) {
+    if (!closest || Math.abs(candidate.centerX - centerX) < Math.abs(closest.centerX - centerX)) {
+      closest = candidate;
+    }
+  }
+  return closest;
+}
+
+function moveInRows(rows: ButtonRow[], currentIndex: number, key: string): number {
+  const currentRowIndex = rows.findIndex((row) => (
+    row.items.some((item) => item.index === currentIndex)
+  ));
+  if (currentRowIndex < 0) {
+    return currentIndex;
+  }
+  const currentRow = rows[currentRowIndex];
+  const currentItemIndex = currentRow.items.findIndex((item) => (
+    item.index === currentIndex
+  ));
+  const currentItem = currentRow.items[currentItemIndex];
+  if (!currentItem) {
+    return currentIndex;
+  }
+  if (key === 'ArrowLeft' || key === 'ArrowRight') {
+    const horizontalOffset = key === 'ArrowRight' ? 1 : -1;
+    const target = currentRow.items[currentItemIndex + horizontalOffset];
+    return target ? target.index : currentIndex;
+  }
+  const targetRow = rows[currentRowIndex + (key === 'ArrowDown' ? 1 : -1)];
+  const closest = targetRow ? findClosestInRow(targetRow.items, currentItem.centerX) : null;
+  return closest ? closest.index : currentIndex;
+}
+
+function selectModeMenuItem(ctx: ModeMenuNavigationContext, item: ModeMenuItem, selectionOptions?: ModeMenuSelectOptions | null): void {
+  const selectOptions: ModeMenuSelectOptions = selectionOptions || {};
+  const focusAfterSelect = selectOptions.focusAfterSelect === 'panel'
+    ? 'panel'
+    : 'input';
+  let result: unknown = null;
+  if (typeof ctx.config.onModeMenuSelect === 'function') {
+    result = ctx.config.onModeMenuSelect(item);
+  }
+  const syncSelectedMode = (): void => {
+    if (!ctx.inputModeState.destroyed && ctx.inputModeState.modeMenuOpen) {
+      const selectedModeId = item && item.id ? String(item.id) : '';
+      if (!ctx.setModeMenuSelection(selectedModeId)) {
+        ctx.refreshModeMenu(selectedModeId);
+      }
+      if (focusAfterSelect === 'panel') {
+        const buttons = getModeMenuButtons(ctx);
+        const selectedIndex = buttons.findIndex((button) => (
+          String(button.dataset.modeId || '') === selectedModeId
+        ));
+        if (selectedIndex >= 0) {
+          focusModeMenuButton(ctx, selectedIndex);
+        } else {
+          focusModeMenuSearch(ctx);
+        }
+      } else {
+        focusModeInput(ctx);
+      }
+    }
+  };
+  if (result && typeof result === 'object' && 'then' in result && typeof result.then === 'function') {
+    Promise.resolve(result).then(syncSelectedMode, syncSelectedMode);
+    return;
+  }
+  syncSelectedMode();
+}
+
 function createModeMenuNavigation(deps: ModeMenuNavigationDeps) {
   const {
     modeMenu,
@@ -84,279 +367,33 @@ function createModeMenuNavigation(deps: ModeMenuNavigationDeps) {
 
   // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
-
-  function getAllModeMenuButtons(): HTMLElement[] {
-    return Array.from(queryHtmlElements(modeMenu, '[role="menuitemradio"]'));
-  }
-
-  function getModeMenuButtons(): HTMLElement[] {
-    return getAllModeMenuButtons().filter((button) => !button.hidden);
-  }
-
-  // The focused element of the menu's root: its shadow root, or the document.
-  function getModeMenuActiveElement(): Element | null {
-    const rootNode = modeMenu.getRootNode();
-    return isDocumentOrShadowRoot(rootNode) && rootNode.activeElement
-      ? rootNode.activeElement
-      : doc.activeElement;
-  }
-
-  function setModeMenuSearchActive(active: boolean): void {
-    if (inputModeState.modeMenuSearchActive !== active) {
-      inputModeState.modeMenuSearchActive = active;
-      renderModeMenuView();
-    }
-  }
-
-  // Focuses the panel itself, where typing filters it.
-  function focusModeMenuSearch(): boolean {
-    if (inputModeState.destroyed || !inputModeState.modeMenuOpen) {
-      return false;
-    }
-    inputModeState.modeMenuFocusId = '';
-    inputModeState.modeMenuSearchActive = true;
-    renderModeMenuView();
-    modeMenu.focus({ preventScroll: true });
-    return true;
-  }
-
-  function focusModeInput(): boolean {
-    if (inputModeState.destroyed) {
-      return false;
-    }
-    setModeMenuSearchActive(false);
-    input.focus({ preventScroll: true });
-    return true;
-  }
-
-  // Whether a key event belongs to the open menu: focus or the target is in it.
-  function shouldHandleModeMenuKeyEvent(event: { target?: EventTarget | null } | null | undefined): boolean {
-    if (inputModeState.destroyed || !inputModeState.modeMenuOpen) {
-      return false;
-    }
-    const activeElement = getModeMenuActiveElement();
-    const eventTarget = event ? event.target : null;
-    return Boolean(
-      activeElement === modeMenu || modeMenu.contains(activeElement) ||
-      eventTarget === modeMenu || (isNode(eventTarget) && modeMenu.contains(eventTarget))
-    );
-  }
-
-  function scrollModeMenuButtonIntoView(button: HTMLElement, scrollOptions?: { smooth?: boolean }): void {
-    const buttonRect = button.getBoundingClientRect();
-    const contentRect = modeMenuContent.getBoundingClientRect();
-    const topBoundary = contentRect.top + DEFAULT_MODE_MENU_SCROLL_TOP_CONTEXT;
-    const bottomBoundary = contentRect.bottom -
-      DEFAULT_MODE_MENU_SCROLL_BOTTOM_CONTEXT;
-    let scrollDelta = 0;
-    if (buttonRect.top < topBoundary) {
-      scrollDelta = buttonRect.top - topBoundary;
-    } else if (buttonRect.bottom > bottomBoundary) {
-      scrollDelta = buttonRect.bottom - bottomBoundary;
-    }
-    if (scrollDelta === 0) {
-      return;
-    }
-    const targetScrollTop = Math.max(
-      0,
-      (Number(modeMenuContent.scrollTop) || 0) + scrollDelta
-    );
-    const prefersReducedMotion = typeof win.matchMedia === 'function' &&
-      win.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const shouldSmoothScroll = scrollOptions &&
-      scrollOptions.smooth === true &&
-      !prefersReducedMotion;
-    if (shouldSmoothScroll && typeof modeMenuContent.scrollTo === 'function') {
-      modeMenuContent.scrollTo({
-        behavior: 'smooth',
-        top: targetScrollTop
-      });
-    } else {
-      modeMenuContent.scrollTop = targetScrollTop;
-    }
-  }
-
-  function focusModeMenuButton(index: number, focusOptions?: { smoothScroll?: boolean }): boolean {
-    const buttons = getModeMenuButtons();
-    if (buttons.length === 0) {
-      return false;
-    }
-    const normalizedIndex = ((index % buttons.length) + buttons.length) % buttons.length;
-    inputModeState.modeMenuFocusId = buttons[normalizedIndex].dataset.modeId || '';
-    inputModeState.modeMenuSearchActive = true;
-    renderModeMenuView();
-    buttons[normalizedIndex].focus({ preventScroll: true });
-    scrollModeMenuButtonIntoView(buttons[normalizedIndex], {
-      smooth: Boolean(focusOptions && focusOptions.smoothScroll)
-    });
-    return true;
-  }
-
-  function focusFirstModeMenuFilterResult(): boolean {
-    const hasFilterQuery = Boolean(
-      normalizeModeMenuSearchText(inputModeState.modeMenuFilterQuery)
-    );
-    if (hasFilterQuery && focusModeMenuButton(0)) {
-      return true;
-    }
-    return focusModeMenuSearch();
-  }
-
-  function getModeMenuButtonLayout(button: HTMLElement, index: number): ButtonLayout {
-    const rect = button.getBoundingClientRect();
-    const left = Number(rect && rect.left) || 0;
-    const top = Number(rect && rect.top) || 0;
-    const width = Number(rect && rect.width) || 0;
-    const height = Number(rect && rect.height) || 0;
-    return {
-      bottom: Number(rect && rect.bottom) || top + height,
-      centerX: left + (width / 2),
-      centerY: top + (height / 2),
-      height,
-      index,
-      left,
-      right: Number(rect && rect.right) || left + width,
-      top,
-      width
-    };
-  }
-
-  // The buttons grouped into rows by their vertical centers; null before layout.
-  function getModeMenuButtonRows(buttons: HTMLElement[]): ButtonRow[] | null {
-    const layouts = buttons.map(getModeMenuButtonLayout);
-    const hasMeasuredLayout = layouts.some((layout) => (
-      layout.width > 0 && layout.height > 0
-    ));
-    if (!hasMeasuredLayout) {
-      return null;
-    }
-    const rows: ButtonRow[] = [];
-    layouts.forEach((layout) => {
-      let row = rows.find((candidate) => {
-        const tolerance = Math.max(
-          2,
-          Math.min(candidate.averageHeight, layout.height) * 0.4
-        );
-        return Math.abs(candidate.centerY - layout.centerY) <= tolerance;
-      });
-      if (!row) {
-        row = {
-          averageHeight: layout.height,
-          centerY: layout.centerY,
-          items: []
-        };
-        rows.push(row);
-      }
-      row.items.push(layout);
-      const itemCount = row.items.length;
-      row.centerY = row.items.reduce((total, item) => total + item.centerY, 0) /
-        itemCount;
-      row.averageHeight = row.items.reduce((total, item) => total + item.height, 0) /
-        itemCount;
-    });
-    rows.sort((left, right) => left.centerY - right.centerY);
-    rows.forEach((row) => {
-      row.items.sort((left, right) => left.centerX - right.centerX);
-    });
-    return rows;
-  }
-
-  // The button an arrow key moves to: along the row, or to the nearest
-  // button of the next row.
-  function getModeMenuDirectionalIndex(buttons: HTMLElement[], currentIndex: number, key: string): number {
-    if (buttons.length === 0) {
-      return -1;
-    }
-    const movesForward = key === 'ArrowDown' || key === 'ArrowRight';
-    if (currentIndex < 0) {
-      return movesForward ? 0 : buttons.length - 1;
-    }
-    const rows = getModeMenuButtonRows(buttons);
-    if (!rows) {
-      return ((currentIndex + (movesForward ? 1 : -1)) % buttons.length +
-        buttons.length) % buttons.length;
-    }
-    const currentRowIndex = rows.findIndex((row) => (
-      row.items.some((item) => item.index === currentIndex)
-    ));
-    if (currentRowIndex < 0) {
-      return currentIndex;
-    }
-    const currentRow = rows[currentRowIndex];
-    const currentItemIndex = currentRow.items.findIndex((item) => (
-      item.index === currentIndex
-    ));
-    const currentItem = currentRow.items[currentItemIndex];
-    if (!currentItem) {
-      return currentIndex;
-    }
-    if (key === 'ArrowLeft' || key === 'ArrowRight') {
-      const horizontalOffset = key === 'ArrowRight' ? 1 : -1;
-      const target = currentRow.items[currentItemIndex + horizontalOffset];
-      return target ? target.index : currentIndex;
-    }
-    const verticalOffset = key === 'ArrowDown' ? 1 : -1;
-    const targetRow = rows[currentRowIndex + verticalOffset];
-    if (!targetRow) {
-      return currentIndex;
-    }
-    let closest: ButtonLayout | null = null;
-    for (const candidate of targetRow.items) {
-      if (!closest || Math.abs(candidate.centerX - currentItem.centerX) < Math.abs(closest.centerX - currentItem.centerX)) {
-        closest = candidate;
-      }
-    }
-    return closest ? closest.index : currentIndex;
-  }
-
-  function selectModeMenuItem(item: ModeMenuItem, selectionOptions?: ModeMenuSelectOptions | null): void {
-    const selectOptions: ModeMenuSelectOptions = selectionOptions || {};
-    const focusAfterSelect = selectOptions.focusAfterSelect === 'panel'
-      ? 'panel'
-      : 'input';
-    let result: unknown = null;
-    if (typeof config.onModeMenuSelect === 'function') {
-      result = config.onModeMenuSelect(item);
-    }
-    const syncSelectedMode = (): void => {
-      if (!inputModeState.destroyed && inputModeState.modeMenuOpen) {
-        const selectedModeId = item && item.id ? String(item.id) : '';
-        if (!setModeMenuSelection(selectedModeId)) {
-          refreshModeMenu(selectedModeId);
-        }
-        if (focusAfterSelect === 'panel') {
-          const buttons = getModeMenuButtons();
-          const selectedIndex = buttons.findIndex((button) => (
-            String(button.dataset.modeId || '') === selectedModeId
-          ));
-          if (selectedIndex >= 0) {
-            focusModeMenuButton(selectedIndex);
-          } else {
-            focusModeMenuSearch();
-          }
-        } else {
-          focusModeInput();
-        }
-      }
-    };
-    if (result && typeof result === 'object' && 'then' in result && typeof result.then === 'function') {
-      Promise.resolve(result).then(syncSelectedMode, syncSelectedMode);
-      return;
-    }
-    syncSelectedMode();
-  }
+  const ctx: ModeMenuNavigationContext = {
+    modeMenu,
+    modeMenuContent,
+    doc,
+    input,
+    DEFAULT_MODE_MENU_SCROLL_TOP_CONTEXT,
+    DEFAULT_MODE_MENU_SCROLL_BOTTOM_CONTEXT,
+    win,
+    normalizeModeMenuSearchText,
+    config,
+    refreshModeMenu,
+    renderModeMenuView,
+    setModeMenuSelection,
+    inputModeState
+  };
 
   return {
-    getModeMenuButtons,
-    getModeMenuActiveElement,
-    setModeMenuSearchActive,
-    focusModeMenuSearch,
-    focusModeInput,
-    shouldHandleModeMenuKeyEvent,
-    focusModeMenuButton,
-    focusFirstModeMenuFilterResult,
-    getModeMenuDirectionalIndex,
-    selectModeMenuItem
+    getModeMenuButtons: () => getModeMenuButtons(ctx),
+    getModeMenuActiveElement: () => getModeMenuActiveElement(ctx),
+    setModeMenuSearchActive: (active: boolean) => setModeMenuSearchActive(ctx, active),
+    focusModeMenuSearch: () => focusModeMenuSearch(ctx),
+    focusModeInput: () => focusModeInput(ctx),
+    shouldHandleModeMenuKeyEvent: (event: { target?: EventTarget | null } | null | undefined) => shouldHandleModeMenuKeyEvent(ctx, event),
+    focusModeMenuButton: (index: number, focusOptions?: { smoothScroll?: boolean }) => focusModeMenuButton(ctx, index, focusOptions),
+    focusFirstModeMenuFilterResult: () => focusFirstModeMenuFilterResult(ctx),
+    getModeMenuDirectionalIndex: (buttons: HTMLElement[], currentIndex: number, key: string) => getModeMenuDirectionalIndex(buttons, currentIndex, key),
+    selectModeMenuItem: (item: ModeMenuItem, selectionOptions?: ModeMenuSelectOptions | null) => selectModeMenuItem(ctx, item, selectionOptions)
   };
 }
 

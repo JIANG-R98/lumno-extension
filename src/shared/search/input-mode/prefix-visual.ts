@@ -65,6 +65,205 @@ interface PrefixVisualDeps {
   inputModeState: PrefixVisualState;
 }
 
+interface PrefixVisualContext {
+  readonly win: PrefixVisualDeps['win'];
+  readonly surface: PrefixVisualDeps['surface'];
+  readonly getModeMenuLineIconPaths: PrefixVisualDeps['getModeMenuLineIconPaths'];
+  readonly isDarkMode: PrefixVisualDeps['isDarkMode'];
+  readonly getThemeForMode: PrefixVisualDeps['getThemeForMode'];
+  readonly defaultTheme: PrefixVisualDeps['defaultTheme'];
+  readonly parseCssColor: PrefixVisualDeps['parseCssColor'];
+  readonly defaultAccentColor: PrefixVisualDeps['defaultAccentColor'];
+  readonly mixRgb: PrefixVisualDeps['mixRgb'];
+  readonly getAccessibleThemeTextRgb: PrefixVisualDeps['getAccessibleThemeTextRgb'];
+  readonly rgbToCss: PrefixVisualDeps['rgbToCss'];
+  readonly setStyle: PrefixVisualDeps['setStyle'];
+  readonly container: PrefixVisualDeps['container'];
+  readonly siteSearchPrefix: PrefixVisualDeps['siteSearchPrefix'];
+  readonly updateModeTag: PrefixVisualDeps['updateModeTag'];
+  readonly input: PrefixVisualDeps['input'];
+  readonly getExtraRightInset: PrefixVisualDeps['getExtraRightInset'];
+  readonly rightAnchorOffset: PrefixVisualDeps['rightAnchorOffset'];
+  readonly rightReserveBase: PrefixVisualDeps['rightReserveBase'];
+  readonly siteSearchTabHint: PrefixVisualDeps['siteSearchTabHint'];
+  readonly isElementVisible: PrefixVisualDeps['isElementVisible'];
+  readonly setInputStyle: PrefixVisualDeps['setInputStyle'];
+  readonly config: PrefixVisualDeps['config'];
+  readonly configuredBaseInputPaddingLeft: PrefixVisualDeps['configuredBaseInputPaddingLeft'];
+  readonly prefixGap: PrefixVisualDeps['prefixGap'];
+  readonly modeMenu: PrefixVisualDeps['modeMenu'];
+  readonly modeMenuContent: PrefixVisualDeps['modeMenuContent'];
+  readonly modeMenuFooter: PrefixVisualDeps['modeMenuFooter'];
+  readonly notifyModeMenuLayoutChange: PrefixVisualDeps['notifyModeMenuLayoutChange'];
+  readonly inputModeState: PrefixVisualDeps['inputModeState'];
+  baseInputPaddingLeft: number | null;
+}
+
+function shouldReduceInputModeMotion(ctx: PrefixVisualContext): boolean {
+  return Boolean(
+    ctx.win &&
+    typeof ctx.win.matchMedia === 'function' &&
+    ctx.win.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
+function getBuiltInSurfaceColor(ctx: PrefixVisualContext): string {
+  return ctx.surface === 'overlay'
+    ? 'var(--x-ov-text, #111827)'
+    : 'var(--x-nt-text, #111827)';
+}
+
+function getInputModePrefixVisual(
+  ctx: PrefixVisualContext,
+  theme: InputModeTheme | null | undefined,
+  visualOptions: PrefixVisualOptions | null | undefined
+): PrefixVisual {
+  const lineIconName = visualOptions && visualOptions.menuIconName
+    ? String(visualOptions.menuIconName).trim()
+    : '';
+  if (ctx.getModeMenuLineIconPaths(lineIconName)) {
+    const surfaceColor = getBuiltInSurfaceColor(ctx);
+    const isDark = Boolean(ctx.isDarkMode());
+    return {
+      accentColor: surfaceColor,
+      background: `color-mix(in srgb, ${surfaceColor} ${isDark ? 14 : 9}%, transparent)`,
+      border: 'none',
+      shadow: 'none',
+      color: surfaceColor,
+      caretColor: surfaceColor
+    };
+  }
+  const resolvedTheme = theme ? ctx.getThemeForMode(theme) : ctx.defaultTheme;
+  const accentRgb = (resolvedTheme && (resolvedTheme.accentRgb || ctx.parseCssColor(resolvedTheme.accent))) ||
+    ctx.defaultAccentColor;
+  const isDark = Boolean(ctx.isDarkMode());
+  const backgroundOpacity = isDark ? 0.14 : 0.075;
+  const backgroundRgb = ctx.mixRgb(
+    accentRgb,
+    isDark ? [17, 24, 39] : [255, 255, 255],
+    1 - backgroundOpacity
+  );
+  const themeTextRgb = ctx.getAccessibleThemeTextRgb(accentRgb, backgroundRgb);
+  const themeTextColor = ctx.rgbToCss(themeTextRgb);
+  return {
+    accentColor: themeTextColor,
+    background: `rgba(${accentRgb[0]}, ${accentRgb[1]}, ${accentRgb[2]}, ${backgroundOpacity})`,
+    border: 'none',
+    shadow: 'none',
+    color: themeTextColor,
+    caretColor: resolvedTheme && resolvedTheme.placeholderText
+      ? resolvedTheme.placeholderText
+      : ctx.rgbToCss(accentRgb)
+  };
+}
+
+function applyInputModePrefixVisual(
+  ctx: PrefixVisualContext,
+  theme: InputModeTheme | null | undefined,
+  visualOptions?: PrefixVisualOptions | null
+): PrefixVisual {
+  const visual = getInputModePrefixVisual(ctx, theme, visualOptions);
+  ctx.setStyle(ctx.container, '--x-lumno-search-mode-accent', visual.accentColor);
+  ctx.setStyle(ctx.container, '--x-lumno-search-mode-selected-bg', visual.background);
+  ctx.updateModeTag({
+    colors: {
+      accent: visual.accentColor,
+      background: visual.background,
+      color: visual.color,
+      border: visual.border,
+      shadow: visual.shadow
+    }
+  });
+  return visual;
+}
+
+function updateInputRightPadding(ctx: PrefixVisualContext): void {
+  const extraInset = ctx.getExtraRightInset ? ctx.getExtraRightInset() : 0;
+  const anchorOffset = ctx.rightAnchorOffset + extraInset;
+  let totalReserve = ctx.rightReserveBase + extraInset;
+  const badgeElement = getModeBadgeElement(ctx);
+  if (ctx.getExtraRightInset) {
+    ctx.setStyle(ctx.siteSearchTabHint, 'right', `${anchorOffset}px`);
+    if (badgeElement) {
+      ctx.setStyle(badgeElement, 'right', `${anchorOffset}px`);
+    }
+  }
+  if (badgeElement && ctx.isElementVisible(badgeElement)) {
+    const badgeWidth = Math.ceil(badgeElement.getBoundingClientRect().width || 0);
+    totalReserve = Math.max(totalReserve, anchorOffset + badgeWidth + 12);
+  }
+  if (ctx.isElementVisible(ctx.siteSearchTabHint)) {
+    const hintWidth = Math.ceil(ctx.siteSearchTabHint.getBoundingClientRect().width || 0);
+    totalReserve = Math.max(totalReserve, anchorOffset + hintWidth + 12);
+  }
+  ctx.setInputStyle(ctx.input, 'padding-right', `${totalReserve}px`);
+}
+
+function getModeBadgeElement(ctx: PrefixVisualContext): HTMLElement | null {
+  return (typeof ctx.config.getModeBadgeElement === 'function'
+    ? ctx.config.getModeBadgeElement()
+    : ctx.config.modeBadgeElement) || null;
+}
+
+function getBaseInputPaddingLeft(ctx: PrefixVisualContext): number {
+  if (ctx.baseInputPaddingLeft === null) {
+    const computed = parseFloat(ctx.win.getComputedStyle(ctx.input).paddingLeft);
+    ctx.baseInputPaddingLeft = Number.isFinite(computed) && computed > 0
+      ? computed
+      : (ctx.configuredBaseInputPaddingLeft || 50);
+  }
+  return ctx.baseInputPaddingLeft;
+}
+
+function updatePrefixLayout(ctx: PrefixVisualContext): void {
+  const basePadding = getBaseInputPaddingLeft(ctx);
+  ctx.setStyle(ctx.siteSearchPrefix, 'left', `${basePadding}px`);
+  if (!ctx.isElementVisible(ctx.siteSearchPrefix)) {
+    ctx.setInputStyle(ctx.input, 'padding-left', `${basePadding}px`);
+    return;
+  }
+  const prefixWidth = Math.ceil(ctx.siteSearchPrefix.offsetWidth || ctx.siteSearchPrefix.getBoundingClientRect().width || 0);
+  const paddedLeft = Math.max(basePadding + prefixWidth + ctx.prefixGap, basePadding);
+  ctx.setInputStyle(ctx.input, 'padding-left', `${paddedLeft}px`);
+}
+
+// Lines the footer's hints up with the menu items' icons.
+function updateModeMenuFooterAlignment(ctx: PrefixVisualContext): void {
+  if (!ctx.inputModeState.modeMenuOpen) {
+    return;
+  }
+  const firstIcon = queryHtmlElement(ctx.modeMenuContent, '.x-lumno-search-input-mode__menu-icon');
+  if (!firstIcon || Number(firstIcon.offsetWidth) <= 0) {
+    return;
+  }
+  const menuRect = ctx.modeMenu.getBoundingClientRect();
+  const iconRect = firstIcon.getBoundingClientRect();
+  const footerRect = ctx.modeMenuFooter.getBoundingClientRect();
+  const menuLayoutWidth = Number(ctx.modeMenu.offsetWidth) || menuRect.width;
+  const scaleX = menuLayoutWidth > 0 ? menuRect.width / menuLayoutWidth : 1;
+  if (!Number.isFinite(scaleX) || scaleX <= 0) {
+    return;
+  }
+  const inlineStart = Math.max(0, (iconRect.left - footerRect.left) / scaleX);
+  ctx.setStyle(
+    ctx.modeMenuFooter,
+    '--x-lumno-search-mode-footer-inline-start',
+    `${Math.round(inlineStart * 100) / 100}px`
+  );
+}
+
+function updateLayout(ctx: PrefixVisualContext): void {
+  if (ctx.inputModeState.destroyed) {
+    return;
+  }
+  updateInputRightPadding(ctx);
+  updatePrefixLayout(ctx);
+  updateModeMenuFooterAlignment(ctx);
+  if (ctx.inputModeState.modeMenuOpen) {
+    ctx.notifyModeMenuLayoutChange();
+  }
+}
+
 function createPrefixVisual(deps: PrefixVisualDeps) {
   const {
     win,
@@ -100,181 +299,49 @@ function createPrefixVisual(deps: PrefixVisualDeps) {
 
   // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
-
-  let baseInputPaddingLeft: number | null = null;
-
-  function shouldReduceInputModeMotion(): boolean {
-    return Boolean(
-      win &&
-      typeof win.matchMedia === 'function' &&
-      win.matchMedia('(prefers-reduced-motion: reduce)').matches
-    );
-  }
-
-  function getBuiltInSurfaceColor(): string {
-    return surface === 'overlay'
-      ? 'var(--x-ov-text, #111827)'
-      : 'var(--x-nt-text, #111827)';
-  }
-
-  function getInputModePrefixVisual(
-    theme: InputModeTheme | null | undefined,
-    visualOptions: PrefixVisualOptions | null | undefined
-  ): PrefixVisual {
-    const lineIconName = visualOptions && visualOptions.menuIconName
-      ? String(visualOptions.menuIconName).trim()
-      : '';
-    if (getModeMenuLineIconPaths(lineIconName)) {
-      const surfaceColor = getBuiltInSurfaceColor();
-      const isDark = Boolean(isDarkMode());
-      return {
-        accentColor: surfaceColor,
-        background: `color-mix(in srgb, ${surfaceColor} ${isDark ? 14 : 9}%, transparent)`,
-        border: 'none',
-        shadow: 'none',
-        color: surfaceColor,
-        caretColor: surfaceColor
-      };
-    }
-    const resolvedTheme = theme ? getThemeForMode(theme) : defaultTheme;
-    const accentRgb = (resolvedTheme && (resolvedTheme.accentRgb || parseCssColor(resolvedTheme.accent))) ||
-      defaultAccentColor;
-    const isDark = Boolean(isDarkMode());
-    const backgroundOpacity = isDark ? 0.14 : 0.075;
-    const backgroundRgb = mixRgb(
-      accentRgb,
-      isDark ? [17, 24, 39] : [255, 255, 255],
-      1 - backgroundOpacity
-    );
-    const themeTextRgb = getAccessibleThemeTextRgb(accentRgb, backgroundRgb);
-    const themeTextColor = rgbToCss(themeTextRgb);
-    return {
-      accentColor: themeTextColor,
-      background: `rgba(${accentRgb[0]}, ${accentRgb[1]}, ${accentRgb[2]}, ${backgroundOpacity})`,
-      border: 'none',
-      shadow: 'none',
-      color: themeTextColor,
-      caretColor: resolvedTheme && resolvedTheme.placeholderText
-        ? resolvedTheme.placeholderText
-        : rgbToCss(accentRgb)
-    };
-  }
-
-  function applyInputModePrefixVisual(
-    theme: InputModeTheme | null | undefined,
-    visualOptions?: PrefixVisualOptions | null
-  ): PrefixVisual {
-    const visual = getInputModePrefixVisual(theme, visualOptions);
-    setStyle(container, '--x-lumno-search-mode-accent', visual.accentColor);
-    setStyle(container, '--x-lumno-search-mode-selected-bg', visual.background);
-    updateModeTag({
-      colors: {
-        accent: visual.accentColor,
-        background: visual.background,
-        color: visual.color,
-        border: visual.border,
-        shadow: visual.shadow
-      }
-    });
-    return visual;
-  }
-
-  function updateInputRightPadding(): void {
-    const extraInset = getExtraRightInset ? getExtraRightInset() : 0;
-    const anchorOffset = rightAnchorOffset + extraInset;
-    let totalReserve = rightReserveBase + extraInset;
-    const badgeElement = getModeBadgeElement();
-    if (getExtraRightInset) {
-      setStyle(siteSearchTabHint, 'right', `${anchorOffset}px`);
-      if (badgeElement) {
-        setStyle(badgeElement, 'right', `${anchorOffset}px`);
-      }
-    }
-    if (badgeElement && isElementVisible(badgeElement)) {
-      const badgeWidth = Math.ceil(badgeElement.getBoundingClientRect().width || 0);
-      totalReserve = Math.max(totalReserve, anchorOffset + badgeWidth + 12);
-    }
-    if (isElementVisible(siteSearchTabHint)) {
-      const hintWidth = Math.ceil(siteSearchTabHint.getBoundingClientRect().width || 0);
-      totalReserve = Math.max(totalReserve, anchorOffset + hintWidth + 12);
-    }
-    setInputStyle(input, 'padding-right', `${totalReserve}px`);
-  }
-
-  function getModeBadgeElement(): HTMLElement | null {
-    return (typeof config.getModeBadgeElement === 'function'
-      ? config.getModeBadgeElement()
-      : config.modeBadgeElement) || null;
-  }
-
-  function getBaseInputPaddingLeft(): number {
-    if (baseInputPaddingLeft === null) {
-      const computed = parseFloat(win.getComputedStyle(input).paddingLeft);
-      baseInputPaddingLeft = Number.isFinite(computed) && computed > 0
-        ? computed
-        : (configuredBaseInputPaddingLeft || 50);
-    }
-    return baseInputPaddingLeft;
-  }
-
-  function updatePrefixLayout(): void {
-    const basePadding = getBaseInputPaddingLeft();
-    setStyle(siteSearchPrefix, 'left', `${basePadding}px`);
-    if (!isElementVisible(siteSearchPrefix)) {
-      setInputStyle(input, 'padding-left', `${basePadding}px`);
-      return;
-    }
-    const prefixWidth = Math.ceil(siteSearchPrefix.offsetWidth || siteSearchPrefix.getBoundingClientRect().width || 0);
-    const paddedLeft = Math.max(basePadding + prefixWidth + prefixGap, basePadding);
-    setInputStyle(input, 'padding-left', `${paddedLeft}px`);
-  }
-
-  // Lines the footer's hints up with the menu items' icons.
-  function updateModeMenuFooterAlignment(): void {
-    if (!inputModeState.modeMenuOpen) {
-      return;
-    }
-    const firstIcon = queryHtmlElement(modeMenuContent, '.x-lumno-search-input-mode__menu-icon');
-    if (!firstIcon || Number(firstIcon.offsetWidth) <= 0) {
-      return;
-    }
-    const menuRect = modeMenu.getBoundingClientRect();
-    const iconRect = firstIcon.getBoundingClientRect();
-    const footerRect = modeMenuFooter.getBoundingClientRect();
-    const menuLayoutWidth = Number(modeMenu.offsetWidth) || menuRect.width;
-    const scaleX = menuLayoutWidth > 0 ? menuRect.width / menuLayoutWidth : 1;
-    if (!Number.isFinite(scaleX) || scaleX <= 0) {
-      return;
-    }
-    const inlineStart = Math.max(0, (iconRect.left - footerRect.left) / scaleX);
-    setStyle(
-      modeMenuFooter,
-      '--x-lumno-search-mode-footer-inline-start',
-      `${Math.round(inlineStart * 100) / 100}px`
-    );
-  }
-
-  function updateLayout(): void {
-    if (inputModeState.destroyed) {
-      return;
-    }
-    updateInputRightPadding();
-    updatePrefixLayout();
-    updateModeMenuFooterAlignment();
-    if (inputModeState.modeMenuOpen) {
-      notifyModeMenuLayoutChange();
-    }
-  }
+  const ctx: PrefixVisualContext = {
+    win,
+    surface,
+    getModeMenuLineIconPaths,
+    isDarkMode,
+    getThemeForMode,
+    defaultTheme,
+    parseCssColor,
+    defaultAccentColor,
+    mixRgb,
+    getAccessibleThemeTextRgb,
+    rgbToCss,
+    setStyle,
+    container,
+    siteSearchPrefix,
+    updateModeTag,
+    input,
+    getExtraRightInset,
+    rightAnchorOffset,
+    rightReserveBase,
+    siteSearchTabHint,
+    isElementVisible,
+    setInputStyle,
+    config,
+    configuredBaseInputPaddingLeft,
+    prefixGap,
+    modeMenu,
+    modeMenuContent,
+    modeMenuFooter,
+    notifyModeMenuLayoutChange,
+    inputModeState,
+    baseInputPaddingLeft: null
+  };
 
   return {
-    shouldReduceInputModeMotion,
-    getBuiltInSurfaceColor,
-    applyInputModePrefixVisual,
-    updateInputRightPadding,
-    getModeBadgeElement,
-    updatePrefixLayout,
-    updateModeMenuFooterAlignment,
-    updateLayout
+    shouldReduceInputModeMotion: () => shouldReduceInputModeMotion(ctx),
+    getBuiltInSurfaceColor: () => getBuiltInSurfaceColor(ctx),
+    applyInputModePrefixVisual: (theme: InputModeTheme | null | undefined, visualOptions?: PrefixVisualOptions | null) => applyInputModePrefixVisual(ctx, theme, visualOptions),
+    updateInputRightPadding: () => updateInputRightPadding(ctx),
+    getModeBadgeElement: () => getModeBadgeElement(ctx),
+    updatePrefixLayout: () => updatePrefixLayout(ctx),
+    updateModeMenuFooterAlignment: () => updateModeMenuFooterAlignment(ctx),
+    updateLayout: () => updateLayout(ctx)
   };
 }
 

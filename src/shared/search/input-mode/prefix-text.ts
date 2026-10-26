@@ -76,6 +76,286 @@ interface PrefixTextDeps {
   inputModeState: PrefixTextState;
 }
 
+interface PrefixTextContext {
+  readonly config: PrefixTextDeps['config'];
+  readonly siteSearchPrefix: PrefixTextDeps['siteSearchPrefix'];
+  readonly updateModeTag: PrefixTextDeps['updateModeTag'];
+  readonly updateTabHint: PrefixTextDeps['updateTabHint'];
+  readonly resetModeMenuDoubleTab: PrefixTextDeps['resetModeMenuDoubleTab'];
+  readonly resetModeTagRemovalConfirmation: PrefixTextDeps['resetModeTagRemovalConfirmation'];
+  readonly isElementVisible: PrefixTextDeps['isElementVisible'];
+  readonly getInputModePrefixRenderedWidth: PrefixTextDeps['getInputModePrefixRenderedWidth'];
+  readonly cancelInputModePrefixAnimation: PrefixTextDeps['cancelInputModePrefixAnimation'];
+  readonly settleInputModePrefixMenuVisualState: PrefixTextDeps['settleInputModePrefixMenuVisualState'];
+  readonly setStyle: PrefixTextDeps['setStyle'];
+  readonly prefixTransition: PrefixTextDeps['prefixTransition'];
+  readonly setInputModePrefixIdentity: PrefixTextDeps['setInputModePrefixIdentity'];
+  readonly applyInputModePrefixVisual: PrefixTextDeps['applyInputModePrefixVisual'];
+  readonly syncInputPlaceholder: PrefixTextDeps['syncInputPlaceholder'];
+  readonly setInputStyle: PrefixTextDeps['setInputStyle'];
+  readonly input: PrefixTextDeps['input'];
+  readonly updatePrefixLayout: PrefixTextDeps['updatePrefixLayout'];
+  readonly measureInputModePrefixWidthForText: PrefixTextDeps['measureInputModePrefixWidthForText'];
+  readonly playInputModePrefixResizeAnimation: PrefixTextDeps['playInputModePrefixResizeAnimation'];
+  readonly setInputModePrefixContent: PrefixTextDeps['setInputModePrefixContent'];
+  readonly setInputModePrefixRestState: PrefixTextDeps['setInputModePrefixRestState'];
+  readonly playInputModePrefixEnterAnimation: PrefixTextDeps['playInputModePrefixEnterAnimation'];
+  readonly isAiSiteSearchProvider: PrefixTextDeps['isAiSiteSearchProvider'];
+  readonly getProviderIcon: PrefixTextDeps['getProviderIcon'];
+  readonly getProviderThemeHost: PrefixTextDeps['getProviderThemeHost'];
+  readonly getSiteSearchPrefixText: PrefixTextDeps['getSiteSearchPrefixText'];
+  readonly cancelInputModePrefixIconAnimation: PrefixTextDeps['cancelInputModePrefixIconAnimation'];
+  readonly closeModeMenu: PrefixTextDeps['closeModeMenu'];
+  readonly getDefaultPlaceholder: PrefixTextDeps['getDefaultPlaceholder'];
+  readonly defaultCaretColor: PrefixTextDeps['defaultCaretColor'];
+  readonly getSiteSearchDisplayName: PrefixTextDeps['getSiteSearchDisplayName'];
+  readonly formatMessage: PrefixTextDeps['formatMessage'];
+  readonly win: PrefixTextDeps['win'];
+  readonly updateInputRightPadding: PrefixTextDeps['updateInputRightPadding'];
+  readonly inputModeState: PrefixTextDeps['inputModeState'];
+}
+
+function setModeTagActive(ctx: PrefixTextContext, active: boolean): void {
+  const nextActive = Boolean(active);
+  if (ctx.inputModeState.modeTagActive === nextActive) {
+    return;
+  }
+  ctx.inputModeState.modeTagActive = nextActive;
+  if (typeof ctx.config.onModeTagActiveChange === 'function') {
+    ctx.config.onModeTagActiveChange(nextActive);
+  }
+}
+
+// How a change of the mode tag's text plays out.
+interface PrefixTextPlan {
+  text: string;
+  options: PrefixTextOptions;
+  animate: boolean;
+  sameMode: boolean;
+  repeatedMode: boolean;
+  // The tag changes to another mode while showing: it resizes.
+  animateResize: boolean;
+  // The same mode again while an animation runs: that animation goes on.
+  preserveAnimation: boolean;
+  // That animation is already bringing in this text.
+  waitForPendingText: boolean;
+}
+
+function hasActivePrefixAnimation(ctx: PrefixTextContext): boolean {
+  const state = ctx.inputModeState;
+  return Boolean(
+    state.inputModePrefixAnimation ||
+    state.inputModePrefixCurrentAnimation ||
+    state.inputModePrefixAnimationFrame !== null ||
+    state.inputModePrefixAnimationTimer
+  );
+}
+
+function planPrefixText(ctx: PrefixTextContext, text: string, options: PrefixTextOptions): PrefixTextPlan {
+  const animate = Boolean(options.animate);
+  const previousModeId = ctx.inputModeState.modeTag.modeId;
+  const sameMode = previousModeId === (options.modeId ? String(options.modeId) : '');
+  const animationActive = hasActivePrefixAnimation(ctx);
+  return {
+    text,
+    options,
+    animate,
+    sameMode,
+    repeatedMode: Boolean(previousModeId && sameMode),
+    animateResize: Boolean(animate && previousModeId && !sameMode && ctx.isElementVisible(ctx.siteSearchPrefix)),
+    preserveAnimation: !animate && sameMode && animationActive,
+    waitForPendingText: !animate && sameMode && animationActive &&
+      ctx.inputModeState.inputModePrefixPendingText === text
+  };
+}
+
+// A different mode or text ends a pending double Tab and tag removal.
+function resetPendingModeKeys(ctx: PrefixTextContext, plan: PrefixTextPlan): void {
+  const modeTag = ctx.inputModeState.modeTag;
+  if (plan.sameMode && modeTag.text === plan.text) {
+    return;
+  }
+  if (!plan.options.preserveModeMenuDoubleTab) {
+    ctx.resetModeMenuDoubleTab();
+  }
+  ctx.resetModeTagRemovalConfirmation();
+}
+
+function applyPrefixTransition(ctx: PrefixTextContext, plan: PrefixTextPlan): void {
+  if (plan.animateResize) {
+    ctx.setStyle(ctx.siteSearchPrefix, 'transition', ctx.prefixTransition);
+  } else if (!plan.animate && !plan.preserveAnimation) {
+    ctx.setStyle(ctx.siteSearchPrefix, 'transition', 'none');
+  }
+}
+
+function finishPrefixFrame(ctx: PrefixTextContext, caretColor: string): void {
+  ctx.syncInputPlaceholder();
+  ctx.setInputStyle(ctx.input, 'caret-color', caretColor);
+  ctx.updatePrefixLayout();
+}
+
+// A tag growing to a longer name widens first and shows the new name once
+// it fits. Returns false when the tag does not grow.
+function growPrefixBeforeContent(
+  ctx: PrefixTextContext,
+  plan: PrefixTextPlan,
+  previousWidth: number,
+  contentOptions: PrefixContentOptions,
+  caretColor: string
+): boolean {
+  const targetWidth = ctx.measureInputModePrefixWidthForText(plan.text);
+  if (targetWidth <= previousWidth + 0.5) {
+    return false;
+  }
+  ctx.inputModeState.inputModePrefixPendingText = plan.text;
+  finishPrefixFrame(ctx, caretColor);
+  ctx.playInputModePrefixResizeAnimation(previousWidth, targetWidth, {
+    preservePendingText: true,
+    onFinish: () => {
+      if (ctx.inputModeState.inputModePrefixPendingText !== plan.text) {
+        return;
+      }
+      ctx.inputModeState.inputModePrefixPendingText = '';
+      ctx.setInputModePrefixContent(plan.text, contentOptions);
+      ctx.updatePrefixLayout();
+    }
+  });
+  return true;
+}
+
+function setPrefixText(
+  ctx: PrefixTextContext,
+  prefixText: string,
+  theme?: InputModeTheme | null,
+  prefixOptions?: PrefixTextOptions | null
+): void {
+  const plan = planPrefixText(ctx, String(prefixText || ''), prefixOptions || {});
+  resetPendingModeKeys(ctx, plan);
+  const previousWidth = plan.animateResize ? ctx.getInputModePrefixRenderedWidth() : 0;
+  if (plan.animateResize) {
+    ctx.cancelInputModePrefixAnimation();
+    ctx.settleInputModePrefixMenuVisualState();
+  }
+  applyPrefixTransition(ctx, plan);
+  ctx.setInputModePrefixIdentity(plan.text, plan.options);
+  const visual = ctx.applyInputModePrefixVisual(theme, plan.options);
+  ctx.updateModeTag({ visible: true });
+  setModeTagActive(ctx, true);
+  if (plan.waitForPendingText) {
+    finishPrefixFrame(ctx, visual.caretColor);
+    return;
+  }
+  showPrefixContent(ctx, plan, previousWidth, visual.caretColor);
+}
+
+function showPrefixContent(ctx: PrefixTextContext, plan: PrefixTextPlan, previousWidth: number, caretColor: string): void {
+  const contentOptions: PrefixContentOptions = {
+    ...plan.options,
+    animateIcon: plan.animate && !plan.repeatedMode,
+    animateOutgoingIcon: plan.animateResize,
+    preserveIconAnimation: !plan.animate && plan.sameMode
+  };
+  if (plan.animateResize && growPrefixBeforeContent(ctx, plan, previousWidth, contentOptions, caretColor)) {
+    return;
+  }
+  ctx.setInputModePrefixContent(plan.text, contentOptions);
+  const nextWidth = plan.animateResize ? Number(ctx.siteSearchPrefix.getBoundingClientRect().width) || 0 : 0;
+  if (!plan.animate && !plan.preserveAnimation) {
+    ctx.setInputModePrefixRestState({ transition: false });
+  }
+  finishPrefixFrame(ctx, caretColor);
+  if (!plan.animate || plan.repeatedMode) {
+    return;
+  }
+  if (plan.animateResize) {
+    ctx.playInputModePrefixResizeAnimation(previousWidth, nextWidth);
+  } else {
+    ctx.playInputModePrefixEnterAnimation();
+  }
+}
+
+// The aggregate search scope across several sites.
+function isAggregateProvider(provider: InputModeProvider | null | undefined): boolean {
+  return Boolean(provider && (
+    provider._xIsAggregateSearch === true ||
+    String(provider.action || '') === 'aggregateSearch' ||
+    String(provider.category || '') === 'aggregateSearch'
+  ));
+}
+
+function getProviderModeId(provider: InputModeProvider | null | undefined, isAggregate: boolean): string {
+  if (isAggregate) {
+    return `aggregate:${String(provider && provider.aggregateId ? provider.aggregateId : '')}`;
+  }
+  return `provider:${provider && (provider.key || provider.name) ? (provider.key || provider.name) : ''}`;
+}
+
+function setProviderPrefix(
+  ctx: PrefixTextContext,
+  provider: InputModeProvider | null | undefined,
+  theme?: InputModeTheme | null,
+  providerOptions?: PrefixTextOptions | null
+): void {
+  const isAi = ctx.isAiSiteSearchProvider(provider);
+  const isAggregate = isAggregateProvider(provider);
+  const nextOptions: PrefixTextOptions = {
+    ...providerOptions,
+    iconUrl: isAggregate ? '' : ctx.getProviderIcon(provider),
+    iconHost: isAggregate ? '' : ctx.getProviderThemeHost(provider),
+    iconName: isAggregate ? 'ri-stack-line' : (isAi ? 'ri-search-ai-line' : 'ri-global-line'),
+    modeId: getProviderModeId(provider, isAggregate),
+    provider,
+    isAi: isAi && !isAggregate
+  };
+  setPrefixText(ctx, ctx.getSiteSearchPrefixText(provider), theme, nextOptions);
+}
+
+function clearProviderPrefix(ctx: PrefixTextContext): void {
+  ctx.resetModeMenuDoubleTab();
+  ctx.resetModeTagRemovalConfirmation();
+  ctx.cancelInputModePrefixIconAnimation();
+  ctx.updateModeTag({ text: '', modeId: '', ariaLabel: '', icon: null, iconFailed: false });
+  ctx.setInputModePrefixRestState({ transition: false });
+  ctx.updateModeTag({ visible: false });
+  setModeTagActive(ctx, false);
+  ctx.closeModeMenu(false);
+  ctx.input.placeholder = ctx.getDefaultPlaceholder();
+  ctx.setInputStyle(ctx.input, 'caret-color', ctx.defaultCaretColor);
+  ctx.updatePrefixLayout();
+}
+
+function getTabHintLabel(ctx: PrefixTextContext, provider: InputModeProvider | null | undefined): string {
+  const explicitLabel = provider && provider.tabHintLabel
+    ? String(provider.tabHintLabel).trim()
+    : '';
+  return explicitLabel ||
+    ctx.formatMessage('site_search_tab_hint', '使用 {site} 搜索', { site: ctx.getSiteSearchDisplayName(provider) });
+}
+
+// Touch-only devices have no Tab key, so the hint would only crowd the query.
+function hasNoTabKeyPointer(ctx: PrefixTextContext): boolean {
+  return Boolean(
+    ctx.win &&
+    typeof ctx.win.matchMedia === 'function' &&
+    ctx.win.matchMedia('(hover: none) and (pointer: coarse)').matches
+  );
+}
+
+function setTabHintVisible(ctx: PrefixTextContext, visible: boolean, provider?: InputModeProvider | null): void {
+  if (!visible || hasNoTabKeyPointer(ctx)) {
+    ctx.updateTabHint({ visible: false, title: '' });
+    ctx.updateInputRightPadding();
+    return;
+  }
+  if (typeof ctx.config.isTabHintSuppressed === 'function' && ctx.config.isTabHintSuppressed()) {
+    return;
+  }
+  const label = getTabHintLabel(ctx, provider);
+  ctx.updateTabHint({ visible: true, label, title: provider ? label : '' });
+  ctx.updateInputRightPadding();
+}
+
 function createPrefixText(deps: PrefixTextDeps) {
   const {
     config,
@@ -117,203 +397,50 @@ function createPrefixText(deps: PrefixTextDeps) {
 
   // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
-
-  function setModeTagActive(active: boolean): void {
-    const nextActive = Boolean(active);
-    if (inputModeState.modeTagActive === nextActive) {
-      return;
-    }
-    inputModeState.modeTagActive = nextActive;
-    if (typeof config.onModeTagActiveChange === 'function') {
-      config.onModeTagActiveChange(nextActive);
-    }
-  }
-
-  function setPrefixText(
-    prefixText: string,
-    theme?: InputModeTheme | null,
-    prefixOptions?: PrefixTextOptions | null
-  ): void {
-    const nextOptions: PrefixTextOptions = prefixOptions || {};
-    const nextPrefixText = String(prefixText || '');
-    const shouldAnimate = Boolean(nextOptions.animate);
-    const nextModeId = nextOptions.modeId ? String(nextOptions.modeId) : '';
-    const previousModeId = inputModeState.modeTag.modeId;
-    const previousPrefixText = inputModeState.modeTag.text;
-    if (previousModeId !== nextModeId || previousPrefixText !== nextPrefixText) {
-      if (!nextOptions.preserveModeMenuDoubleTab) {
-        resetModeMenuDoubleTab();
-      }
-      resetModeTagRemovalConfirmation();
-    }
-    const isSameMode = previousModeId === nextModeId;
-    const isRepeatedMode = Boolean(previousModeId && isSameMode);
-    const shouldAnimateResize = Boolean(
-      shouldAnimate &&
-      previousModeId &&
-      !isSameMode &&
-      isElementVisible(siteSearchPrefix)
-    );
-    const hasActivePrefixAnimation = Boolean(
-      inputModeState.inputModePrefixAnimation ||
-      inputModeState.inputModePrefixCurrentAnimation ||
-      inputModeState.inputModePrefixAnimationFrame !== null ||
-      inputModeState.inputModePrefixAnimationTimer
-    );
-    const shouldWaitForPendingText = Boolean(
-      !shouldAnimate &&
-      isSameMode &&
-      hasActivePrefixAnimation &&
-      inputModeState.inputModePrefixPendingText === nextPrefixText
-    );
-    const previousWidth = shouldAnimateResize
-      ? getInputModePrefixRenderedWidth()
-      : 0;
-    if (shouldAnimateResize) {
-      cancelInputModePrefixAnimation();
-      settleInputModePrefixMenuVisualState();
-    }
-    const shouldPreserveAnimation = !shouldAnimate && isSameMode && Boolean(
-      hasActivePrefixAnimation
-    );
-    if (shouldAnimateResize) {
-      setStyle(siteSearchPrefix, 'transition', prefixTransition);
-    } else if (!shouldAnimate && !shouldPreserveAnimation) {
-      setStyle(siteSearchPrefix, 'transition', 'none');
-    }
-    setInputModePrefixIdentity(nextPrefixText, nextOptions);
-    const visual = applyInputModePrefixVisual(theme, nextOptions);
-    updateModeTag({ visible: true });
-    setModeTagActive(true);
-    if (shouldWaitForPendingText) {
-      syncInputPlaceholder();
-      setInputStyle(input, 'caret-color', visual.caretColor);
-      updatePrefixLayout();
-      return;
-    }
-    const contentOptions: PrefixContentOptions = {
-      ...nextOptions,
-      animateIcon: shouldAnimate && !isRepeatedMode,
-      animateOutgoingIcon: shouldAnimateResize,
-      preserveIconAnimation: !shouldAnimate && isSameMode
-    };
-    if (shouldAnimateResize) {
-      const targetWidth = measureInputModePrefixWidthForText(nextPrefixText);
-      if (targetWidth > previousWidth + 0.5) {
-        inputModeState.inputModePrefixPendingText = nextPrefixText;
-        syncInputPlaceholder();
-        setInputStyle(input, 'caret-color', visual.caretColor);
-        updatePrefixLayout();
-        playInputModePrefixResizeAnimation(previousWidth, targetWidth, {
-          preservePendingText: true,
-          onFinish: () => {
-            if (inputModeState.inputModePrefixPendingText !== nextPrefixText) {
-              return;
-            }
-            inputModeState.inputModePrefixPendingText = '';
-            setInputModePrefixContent(nextPrefixText, contentOptions);
-            updatePrefixLayout();
-          }
-        });
-        return;
-      }
-    }
-    setInputModePrefixContent(nextPrefixText, contentOptions);
-    const nextWidth = shouldAnimateResize
-      ? Number(siteSearchPrefix.getBoundingClientRect().width) || 0
-      : 0;
-    if (!shouldAnimate && !shouldPreserveAnimation) {
-      setInputModePrefixRestState({ transition: false });
-    }
-    syncInputPlaceholder();
-    setInputStyle(input, 'caret-color', visual.caretColor);
-    updatePrefixLayout();
-    if (shouldAnimate && !isRepeatedMode) {
-      if (shouldAnimateResize) {
-        playInputModePrefixResizeAnimation(previousWidth, nextWidth);
-      } else {
-        playInputModePrefixEnterAnimation();
-      }
-    }
-  }
-
-  function setProviderPrefix(
-    provider: InputModeProvider | null | undefined,
-    theme?: InputModeTheme | null,
-    providerOptions?: PrefixTextOptions | null
-  ): void {
-    const isAi = isAiSiteSearchProvider(provider);
-    const isAggregate = Boolean(
-      provider && (
-        provider._xIsAggregateSearch === true ||
-        String(provider.action || '') === 'aggregateSearch' ||
-        String(provider.category || '') === 'aggregateSearch'
-      )
-    );
-    const nextOptions: PrefixTextOptions = {
-      ...providerOptions,
-      iconUrl: isAggregate ? '' : getProviderIcon(provider),
-      iconHost: isAggregate ? '' : getProviderThemeHost(provider),
-      iconName: isAggregate ? 'ri-stack-line' : (isAi ? 'ri-search-ai-line' : 'ri-global-line'),
-      modeId: isAggregate
-        ? `aggregate:${String(provider && provider.aggregateId ? provider.aggregateId : '')}`
-        : `provider:${provider && (provider.key || provider.name) ? (provider.key || provider.name) : ''}`,
-      provider,
-      isAi: isAi && !isAggregate
-    };
-    setPrefixText(getSiteSearchPrefixText(provider), theme, nextOptions);
-  }
-
-  function clearProviderPrefix(): void {
-    resetModeMenuDoubleTab();
-    resetModeTagRemovalConfirmation();
-    cancelInputModePrefixIconAnimation();
-    updateModeTag({ text: '', modeId: '', ariaLabel: '', icon: null, iconFailed: false });
-    setInputModePrefixRestState({ transition: false });
-    updateModeTag({ visible: false });
-    setModeTagActive(false);
-    closeModeMenu(false);
-    input.placeholder = getDefaultPlaceholder();
-    setInputStyle(input, 'caret-color', defaultCaretColor);
-    updatePrefixLayout();
-  }
-
-  function getTabHintLabel(provider: InputModeProvider | null | undefined): string {
-    const explicitLabel = provider && provider.tabHintLabel
-      ? String(provider.tabHintLabel).trim()
-      : '';
-    return explicitLabel ||
-      formatMessage('site_search_tab_hint', '使用 {site} 搜索', { site: getSiteSearchDisplayName(provider) });
-  }
-
-  // Touch-only devices have no Tab key, so the hint would only crowd the query.
-  function hasNoTabKeyPointer(): boolean {
-    return Boolean(
-      win &&
-      typeof win.matchMedia === 'function' &&
-      win.matchMedia('(hover: none) and (pointer: coarse)').matches
-    );
-  }
-
-  function setTabHintVisible(visible: boolean, provider?: InputModeProvider | null): void {
-    if (!visible || hasNoTabKeyPointer()) {
-      updateTabHint({ visible: false, title: '' });
-      updateInputRightPadding();
-      return;
-    }
-    if (typeof config.isTabHintSuppressed === 'function' && config.isTabHintSuppressed()) {
-      return;
-    }
-    const label = getTabHintLabel(provider);
-    updateTabHint({ visible: true, label, title: provider ? label : '' });
-    updateInputRightPadding();
-  }
+  const ctx: PrefixTextContext = {
+    config,
+    siteSearchPrefix,
+    updateModeTag,
+    updateTabHint,
+    resetModeMenuDoubleTab,
+    resetModeTagRemovalConfirmation,
+    isElementVisible,
+    getInputModePrefixRenderedWidth,
+    cancelInputModePrefixAnimation,
+    settleInputModePrefixMenuVisualState,
+    setStyle,
+    prefixTransition,
+    setInputModePrefixIdentity,
+    applyInputModePrefixVisual,
+    syncInputPlaceholder,
+    setInputStyle,
+    input,
+    updatePrefixLayout,
+    measureInputModePrefixWidthForText,
+    playInputModePrefixResizeAnimation,
+    setInputModePrefixContent,
+    setInputModePrefixRestState,
+    playInputModePrefixEnterAnimation,
+    isAiSiteSearchProvider,
+    getProviderIcon,
+    getProviderThemeHost,
+    getSiteSearchPrefixText,
+    cancelInputModePrefixIconAnimation,
+    closeModeMenu,
+    getDefaultPlaceholder,
+    defaultCaretColor,
+    getSiteSearchDisplayName,
+    formatMessage,
+    win,
+    updateInputRightPadding,
+    inputModeState
+  };
 
   return {
-    setPrefixText,
-    setProviderPrefix,
-    clearProviderPrefix,
-    setTabHintVisible
+    setPrefixText: (prefixText: string, theme?: InputModeTheme | null, prefixOptions?: PrefixTextOptions | null) => setPrefixText(ctx, prefixText, theme, prefixOptions),
+    setProviderPrefix: (provider: InputModeProvider | null | undefined, theme?: InputModeTheme | null, providerOptions?: PrefixTextOptions | null) => setProviderPrefix(ctx, provider, theme, providerOptions),
+    clearProviderPrefix: () => clearProviderPrefix(ctx),
+    setTabHintVisible: (visible: boolean, provider?: InputModeProvider | null) => setTabHintVisible(ctx, visible, provider)
   };
 }
 

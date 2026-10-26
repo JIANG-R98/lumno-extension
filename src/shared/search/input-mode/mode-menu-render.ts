@@ -66,6 +66,219 @@ function isModeMenuItem(item: ModeMenuItem | null | undefined): item is ModeMenu
   return Boolean(item && item.id && item.label);
 }
 
+interface ModeMenuRenderContext {
+  readonly view: ModeMenuRenderDeps['view'];
+  readonly modeMenuContent: ModeMenuRenderDeps['modeMenuContent'];
+  readonly canMoveModeMenuGroups: ModeMenuRenderDeps['canMoveModeMenuGroups'];
+  readonly canReorderModeMenu: ModeMenuRenderDeps['canReorderModeMenu'];
+  readonly config: ModeMenuRenderDeps['config'];
+  readonly buildModeMenuSearchIndex: ModeMenuRenderDeps['buildModeMenuSearchIndex'];
+  readonly normalizeModeMenuSearchText: ModeMenuRenderDeps['normalizeModeMenuSearchText'];
+  readonly getModeMenuItemMatch: ModeMenuRenderDeps['getModeMenuItemMatch'];
+  readonly bindModeMenuLabelTooltip: ModeMenuRenderDeps['bindModeMenuLabelTooltip'];
+  readonly getModeMenuTileIcon: ModeMenuRenderDeps['getModeMenuTileIcon'];
+  readonly getModeMenuTileColors: ModeMenuRenderDeps['getModeMenuTileColors'];
+  readonly requestModeMenuProviderThemes: ModeMenuRenderDeps['requestModeMenuProviderThemes'];
+  readonly getModeMenuLabels: ModeMenuRenderDeps['getModeMenuLabels'];
+  readonly selectModeMenuItem: ModeMenuRenderDeps['selectModeMenuItem'];
+  readonly handleMenuKeydown: ModeMenuRenderDeps['handleMenuKeydown'];
+  readonly handleModeMenuPointerDown: ModeMenuRenderDeps['handleModeMenuPointerDown'];
+  readonly attachFaviconData: ModeMenuRenderDeps['attachFaviconData'];
+  readonly updateModeMenuFooterAlignment: ModeMenuRenderDeps['updateModeMenuFooterAlignment'];
+  readonly notifyModeMenuLayoutChange: ModeMenuRenderDeps['notifyModeMenuLayoutChange'];
+  readonly input: ModeMenuRenderDeps['input'];
+  readonly inputModeState: ModeMenuRenderDeps['inputModeState'];
+  readonly handlers: ModeMenuHandlers;
+}
+
+function findEntry(ctx: ModeMenuRenderContext, id: string): ModeMenuEntry | undefined {
+  return ctx.inputModeState.modeMenuEntries.find((entry) => String(entry.item.id) === id);
+}
+
+// Takes the items to show; returns those that can be shown.
+function setModeMenuItems(ctx: ModeMenuRenderContext, items: ReadonlyArray<ModeMenuItem | null | undefined> | null | undefined): ModeMenuItem[] {
+  const normalizedItems = Array.isArray(items) ? items.filter(isModeMenuItem) : [];
+  ctx.inputModeState.modeMenuEntries = normalizedItems.map((item) => ({
+    checked: Boolean(item.active),
+    group: item.group ? String(item.group) : '',
+    item,
+    labelText: String(item.label),
+    searchIndex: ctx.buildModeMenuSearchIndex(item)
+  }));
+  ctx.requestModeMenuProviderThemes(normalizedItems);
+  return normalizedItems;
+}
+
+function buildModeMenuModel(ctx: ModeMenuRenderContext): ModeMenuModel {
+  const normalizedQuery = ctx.normalizeModeMenuSearchText(ctx.inputModeState.modeMenuFilterQuery);
+  return {
+    open: ctx.inputModeState.modeMenuOpen,
+    revealed: ctx.inputModeState.modeMenuRevealed,
+    busy: ctx.inputModeState.modeMenuBusy,
+    searchActive: ctx.inputModeState.modeMenuSearchActive,
+    hasQuery: ctx.inputModeState.modeMenuHasQuery,
+    filtered: Boolean(normalizedQuery),
+    focusId: ctx.inputModeState.modeMenuFocusId,
+    canMoveGroups: ctx.canMoveModeMenuGroups,
+    canReorder: ctx.canReorderModeMenu,
+    labels: ctx.getModeMenuLabels(),
+    tiles: ctx.inputModeState.modeMenuEntries.map((entry) => {
+      const item = entry.item;
+      const match = ctx.getModeMenuItemMatch(entry, normalizedQuery);
+      return {
+        id: String(item.id),
+        label: entry.labelText,
+        group: entry.group,
+        groupKey: item.groupKey ? String(item.groupKey) : '',
+        checked: entry.checked,
+        // Items of one order list drag among themselves inside their group.
+        sortList: ctx.canReorderModeMenu && item.orderList && item.orderList !== 'pinned'
+          ? String(item.orderList)
+          : '',
+        hidden: !match.matched,
+        ranges: match.ranges,
+        icon: ctx.getModeMenuTileIcon(item),
+        colors: ctx.getModeMenuTileColors(item)
+      };
+    })
+  };
+}
+
+// Draws the menu from the state; returns the model drawn.
+function renderModeMenuView(ctx: ModeMenuRenderContext): ModeMenuModel {
+  const model = buildModeMenuModel(ctx);
+  ctx.view.render(model, ctx.handlers);
+  return model;
+}
+
+// While the panel is open, Ctrl/Cmd+Z and Shift+Ctrl/Cmd+Z step back and
+// forth through the moves made in it. The host answers whether it had a
+// step to take; when it had none, the keys keep their usual meaning.
+function handleModeMenuHistoryKeydown(ctx: ModeMenuRenderContext, event: KeyboardEvent): void {
+  if (!ctx.inputModeState.modeMenuOpen || event.altKey || !(event.metaKey || event.ctrlKey)) {
+    return;
+  }
+  const key = String(event.key || '').toLowerCase();
+  let direction: '' | 'undo' | 'redo' = '';
+  if (key === 'z') {
+    direction = event.shiftKey ? 'redo' : 'undo';
+  } else if (key === 'y' && event.ctrlKey && !event.metaKey && !event.shiftKey) {
+    direction = 'redo';
+  }
+  if (direction && typeof ctx.config.onModeMenuHistory === 'function' && ctx.config.onModeMenuHistory(direction) === true) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+}
+
+// The keys of the groups in the order their titles show.
+function getModeMenuGroupKeys(ctx: ModeMenuRenderContext): string[] {
+  const keys: string[] = [];
+  let previousGroup = '';
+  ctx.inputModeState.modeMenuEntries.forEach((entry) => {
+    if (entry.group && entry.group !== previousGroup) {
+      keys.push(entry.item.groupKey ? String(entry.item.groupKey) : '');
+      previousGroup = entry.group;
+    }
+  });
+  return keys.filter(Boolean);
+}
+
+// The host stores the new group order and refreshes the menu.
+function moveModeMenuGroup(ctx: ModeMenuRenderContext, groupKey: string, delta: number): void {
+  if (typeof ctx.config.onModeMenuGroupMove !== 'function') {
+    return;
+  }
+  ctx.config.onModeMenuGroupMove({
+    delta,
+    group: groupKey,
+    groups: getModeMenuGroupKeys(ctx)
+  });
+}
+
+// A tile dropped in a new place among its list's tiles: they take their
+// new order where the last of them was. The host stores the order through
+// `onModeMenuReorder` and may refresh the menu afterwards.
+function reorderModeMenu(ctx: ModeMenuRenderContext, id: string, list: string, orderedIds: string[]): void {
+  const entries = ctx.inputModeState.modeMenuEntries;
+  const moved = orderedIds
+    .map((orderedId) => findEntry(ctx, orderedId))
+    .filter((entry): entry is ModeMenuEntry => Boolean(entry));
+  if (moved.length === 0) {
+    return;
+  }
+  const movedSet = new Set(moved);
+  let lastIndex = -1;
+  entries.forEach((entry, index) => {
+    if (movedSet.has(entry)) {
+      lastIndex = index;
+    }
+  });
+  ctx.inputModeState.modeMenuEntries = [
+    ...entries.slice(0, lastIndex + 1).filter((entry) => !movedSet.has(entry)),
+    ...moved,
+    ...entries.slice(lastIndex + 1)
+  ];
+  renderModeMenuView(ctx);
+  if (typeof ctx.config.onModeMenuReorder !== 'function') {
+    return;
+  }
+  const entry = findEntry(ctx, id);
+  ctx.config.onModeMenuReorder({
+    item: entry ? entry.item : null,
+    list,
+    movedItems: moved.map((movedEntry) => movedEntry.item),
+    listItems: ctx.inputModeState.modeMenuEntries
+      .filter((candidate) => candidate.item.orderList === list)
+      .map((candidate) => candidate.item)
+  });
+}
+
+// Marks the mode as the selected one; false when the menu does not show it.
+function setModeMenuSelection(ctx: ModeMenuRenderContext, modeId: string): boolean {
+  const selectedModeId = String(modeId || '');
+  let matched = false;
+  ctx.inputModeState.modeMenuEntries.forEach((entry) => {
+    entry.checked = Boolean(selectedModeId && String(entry.item.id) === selectedModeId);
+    matched = matched || entry.checked;
+  });
+  renderModeMenuView(ctx);
+  return matched;
+}
+
+function refreshModeMenuSearchIndexes(ctx: ModeMenuRenderContext): void {
+  if (ctx.inputModeState.modeMenuEntries.length === 0) {
+    return;
+  }
+  ctx.inputModeState.modeMenuEntries.forEach((entry) => {
+    entry.searchIndex = ctx.buildModeMenuSearchIndex(entry.item);
+  });
+  if (ctx.normalizeModeMenuSearchText(ctx.inputModeState.modeMenuFilterQuery)) {
+    applyModeMenuFilter(ctx, ctx.inputModeState.modeMenuFilterQuery, { preserveScroll: true });
+  }
+}
+
+// Shows only the items that match; returns how many do.
+function applyModeMenuFilter(ctx: ModeMenuRenderContext, query: unknown, filterOptions?: { preserveScroll?: boolean } | null): number {
+  ctx.inputModeState.modeMenuFilterQuery = String(query || '');
+  const model = renderModeMenuView(ctx);
+  if (!filterOptions || filterOptions.preserveScroll !== true) {
+    ctx.modeMenuContent.scrollTop = 0;
+  }
+  ctx.updateModeMenuFooterAlignment();
+  ctx.notifyModeMenuLayoutChange();
+  return model.tiles.filter((tile) => !tile.hidden).length;
+}
+
+// The panel lifts a little while the input has text.
+function syncModeMenuQueryLift(ctx: ModeMenuRenderContext): void {
+  const hasQuery = Boolean(String(ctx.input.value || '').trim());
+  if (hasQuery !== ctx.inputModeState.modeMenuHasQuery) {
+    ctx.inputModeState.modeMenuHasQuery = hasQuery;
+    renderModeMenuView(ctx);
+  }
+}
+
 function createModeMenuRender(deps: ModeMenuRenderDeps) {
   const {
     view,
@@ -93,223 +306,59 @@ function createModeMenuRender(deps: ModeMenuRenderDeps) {
   // The controller state object shared with search-input-mode.ts and the other modules.
   const inputModeState = deps.inputModeState;
 
-  function findEntry(id: string): ModeMenuEntry | undefined {
-    return inputModeState.modeMenuEntries.find((entry) => String(entry.item.id) === id);
-  }
-
   const handlers: ModeMenuHandlers = {
     onSelect(id) {
-      const entry = findEntry(id);
+      const entry = findEntry(ctx, id);
       if (entry) {
-        selectModeMenuItem(entry.item, { focusAfterSelect: 'input' });
+        ctx.selectModeMenuItem(entry.item, { focusAfterSelect: 'input' });
       }
     },
-    onGroupMove: (groupKey, delta) => moveModeMenuGroup(groupKey, delta),
-    onReorder: (id, list, orderedIds) => reorderModeMenu(id, list, orderedIds),
+    onGroupMove: (groupKey, delta) => moveModeMenuGroup(ctx, groupKey, delta),
+    onReorder: (id, list, orderedIds) => reorderModeMenu(ctx, id, list, orderedIds),
     onKeyDown(event) {
-      handleMenuKeydown(event);
+      ctx.handleMenuKeydown(event);
     },
-    onPointerDown: (event) => handleModeMenuPointerDown(event),
-    bindLabelTooltip: (button, label) => bindModeMenuLabelTooltip(button, label),
+    onPointerDown: (event) => ctx.handleModeMenuPointerDown(event),
+    bindLabelTooltip: (button, label) => ctx.bindModeMenuLabelTooltip(button, label),
     attachIconData(image, iconUrl, iconHost) {
-      if (attachFaviconData) {
-        attachFaviconData(image, iconUrl, iconHost);
+      if (ctx.attachFaviconData) {
+        ctx.attachFaviconData(image, iconUrl, iconHost);
       }
     }
   };
-
-  // Takes the items to show; returns those that can be shown.
-  function setModeMenuItems(items: ReadonlyArray<ModeMenuItem | null | undefined> | null | undefined): ModeMenuItem[] {
-    const normalizedItems = Array.isArray(items) ? items.filter(isModeMenuItem) : [];
-    inputModeState.modeMenuEntries = normalizedItems.map((item) => ({
-      checked: Boolean(item.active),
-      group: item.group ? String(item.group) : '',
-      item,
-      labelText: String(item.label),
-      searchIndex: buildModeMenuSearchIndex(item)
-    }));
-    requestModeMenuProviderThemes(normalizedItems);
-    return normalizedItems;
-  }
-
-  function buildModeMenuModel(): ModeMenuModel {
-    const normalizedQuery = normalizeModeMenuSearchText(inputModeState.modeMenuFilterQuery);
-    return {
-      open: inputModeState.modeMenuOpen,
-      revealed: inputModeState.modeMenuRevealed,
-      busy: inputModeState.modeMenuBusy,
-      searchActive: inputModeState.modeMenuSearchActive,
-      hasQuery: inputModeState.modeMenuHasQuery,
-      filtered: Boolean(normalizedQuery),
-      focusId: inputModeState.modeMenuFocusId,
-      canMoveGroups: canMoveModeMenuGroups,
-      canReorder: canReorderModeMenu,
-      labels: getModeMenuLabels(),
-      tiles: inputModeState.modeMenuEntries.map((entry) => {
-        const item = entry.item;
-        const match = getModeMenuItemMatch(entry, normalizedQuery);
-        return {
-          id: String(item.id),
-          label: entry.labelText,
-          group: entry.group,
-          groupKey: item.groupKey ? String(item.groupKey) : '',
-          checked: entry.checked,
-          // Items of one order list drag among themselves inside their group.
-          sortList: canReorderModeMenu && item.orderList && item.orderList !== 'pinned'
-            ? String(item.orderList)
-            : '',
-          hidden: !match.matched,
-          ranges: match.ranges,
-          icon: getModeMenuTileIcon(item),
-          colors: getModeMenuTileColors(item)
-        };
-      })
-    };
-  }
-
-  // Draws the menu from the state; returns the model drawn.
-  function renderModeMenuView(): ModeMenuModel {
-    const model = buildModeMenuModel();
-    view.render(model, handlers);
-    return model;
-  }
-
-  // While the panel is open, Ctrl/Cmd+Z and Shift+Ctrl/Cmd+Z step back and
-  // forth through the moves made in it. The host answers whether it had a
-  // step to take; when it had none, the keys keep their usual meaning.
-  function handleModeMenuHistoryKeydown(event: KeyboardEvent): void {
-    if (!inputModeState.modeMenuOpen || event.altKey || !(event.metaKey || event.ctrlKey)) {
-      return;
-    }
-    const key = String(event.key || '').toLowerCase();
-    let direction: '' | 'undo' | 'redo' = '';
-    if (key === 'z') {
-      direction = event.shiftKey ? 'redo' : 'undo';
-    } else if (key === 'y' && event.ctrlKey && !event.metaKey && !event.shiftKey) {
-      direction = 'redo';
-    }
-    if (direction && typeof config.onModeMenuHistory === 'function' && config.onModeMenuHistory(direction) === true) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  }
-
-  // The keys of the groups in the order their titles show.
-  function getModeMenuGroupKeys(): string[] {
-    const keys: string[] = [];
-    let previousGroup = '';
-    inputModeState.modeMenuEntries.forEach((entry) => {
-      if (entry.group && entry.group !== previousGroup) {
-        keys.push(entry.item.groupKey ? String(entry.item.groupKey) : '');
-        previousGroup = entry.group;
-      }
-    });
-    return keys.filter(Boolean);
-  }
-
-  // The host stores the new group order and refreshes the menu.
-  function moveModeMenuGroup(groupKey: string, delta: number): void {
-    if (typeof config.onModeMenuGroupMove !== 'function') {
-      return;
-    }
-    config.onModeMenuGroupMove({
-      delta,
-      group: groupKey,
-      groups: getModeMenuGroupKeys()
-    });
-  }
-
-  // A tile dropped in a new place among its list's tiles: they take their
-  // new order where the last of them was. The host stores the order through
-  // `onModeMenuReorder` and may refresh the menu afterwards.
-  function reorderModeMenu(id: string, list: string, orderedIds: string[]): void {
-    const entries = inputModeState.modeMenuEntries;
-    const moved = orderedIds
-      .map((orderedId) => findEntry(orderedId))
-      .filter((entry): entry is ModeMenuEntry => Boolean(entry));
-    if (moved.length === 0) {
-      return;
-    }
-    const movedSet = new Set(moved);
-    let lastIndex = -1;
-    entries.forEach((entry, index) => {
-      if (movedSet.has(entry)) {
-        lastIndex = index;
-      }
-    });
-    inputModeState.modeMenuEntries = [
-      ...entries.slice(0, lastIndex + 1).filter((entry) => !movedSet.has(entry)),
-      ...moved,
-      ...entries.slice(lastIndex + 1)
-    ];
-    renderModeMenuView();
-    if (typeof config.onModeMenuReorder !== 'function') {
-      return;
-    }
-    const entry = findEntry(id);
-    config.onModeMenuReorder({
-      item: entry ? entry.item : null,
-      list,
-      movedItems: moved.map((movedEntry) => movedEntry.item),
-      listItems: inputModeState.modeMenuEntries
-        .filter((candidate) => candidate.item.orderList === list)
-        .map((candidate) => candidate.item)
-    });
-  }
-
-  // Marks the mode as the selected one; false when the menu does not show it.
-  function setModeMenuSelection(modeId: string): boolean {
-    const selectedModeId = String(modeId || '');
-    let matched = false;
-    inputModeState.modeMenuEntries.forEach((entry) => {
-      entry.checked = Boolean(selectedModeId && String(entry.item.id) === selectedModeId);
-      matched = matched || entry.checked;
-    });
-    renderModeMenuView();
-    return matched;
-  }
-
-  function refreshModeMenuSearchIndexes(): void {
-    if (inputModeState.modeMenuEntries.length === 0) {
-      return;
-    }
-    inputModeState.modeMenuEntries.forEach((entry) => {
-      entry.searchIndex = buildModeMenuSearchIndex(entry.item);
-    });
-    if (normalizeModeMenuSearchText(inputModeState.modeMenuFilterQuery)) {
-      applyModeMenuFilter(inputModeState.modeMenuFilterQuery, { preserveScroll: true });
-    }
-  }
-
-  // Shows only the items that match; returns how many do.
-  function applyModeMenuFilter(query: unknown, filterOptions?: { preserveScroll?: boolean } | null): number {
-    inputModeState.modeMenuFilterQuery = String(query || '');
-    const model = renderModeMenuView();
-    if (!filterOptions || filterOptions.preserveScroll !== true) {
-      modeMenuContent.scrollTop = 0;
-    }
-    updateModeMenuFooterAlignment();
-    notifyModeMenuLayoutChange();
-    return model.tiles.filter((tile) => !tile.hidden).length;
-  }
-
-  // The panel lifts a little while the input has text.
-  function syncModeMenuQueryLift(): void {
-    const hasQuery = Boolean(String(input.value || '').trim());
-    if (hasQuery !== inputModeState.modeMenuHasQuery) {
-      inputModeState.modeMenuHasQuery = hasQuery;
-      renderModeMenuView();
-    }
-  }
+  const ctx: ModeMenuRenderContext = {
+    view,
+    modeMenuContent,
+    canMoveModeMenuGroups,
+    canReorderModeMenu,
+    config,
+    buildModeMenuSearchIndex,
+    normalizeModeMenuSearchText,
+    getModeMenuItemMatch,
+    bindModeMenuLabelTooltip,
+    getModeMenuTileIcon,
+    getModeMenuTileColors,
+    requestModeMenuProviderThemes,
+    getModeMenuLabels,
+    selectModeMenuItem,
+    handleMenuKeydown,
+    handleModeMenuPointerDown,
+    attachFaviconData,
+    updateModeMenuFooterAlignment,
+    notifyModeMenuLayoutChange,
+    input,
+    inputModeState,
+    handlers
+  };
 
   return {
-    setModeMenuItems,
-    renderModeMenuView,
-    handleModeMenuHistoryKeydown,
-    refreshModeMenuSearchIndexes,
-    applyModeMenuFilter,
-    syncModeMenuQueryLift,
-    setModeMenuSelection
+    setModeMenuItems: (items: ReadonlyArray<ModeMenuItem | null | undefined> | null | undefined) => setModeMenuItems(ctx, items),
+    renderModeMenuView: () => renderModeMenuView(ctx),
+    handleModeMenuHistoryKeydown: (event: KeyboardEvent) => handleModeMenuHistoryKeydown(ctx, event),
+    refreshModeMenuSearchIndexes: () => refreshModeMenuSearchIndexes(ctx),
+    applyModeMenuFilter: (query: unknown, filterOptions?: { preserveScroll?: boolean } | null) => applyModeMenuFilter(ctx, query, filterOptions),
+    syncModeMenuQueryLift: () => syncModeMenuQueryLift(ctx),
+    setModeMenuSelection: (modeId: string) => setModeMenuSelection(ctx, modeId)
   };
 }
 
