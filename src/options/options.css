@@ -3140,7 +3140,38 @@ button[aria-busy="true"]:disabled,
    get move buttons that show while the row is hovered or focused, in space
    the row already reserves, so nothing shifts. */
 ._x_extension_shortcut_item_2024_unique_[data-sortable="true"] ._x_extension_shortcut_item_header_2024_unique_ {
+  position: relative;
   cursor: grab;
+}
+/* While the pointer rests where a press would drag (not on a control), a
+   handle fades in at the left and the text slides over to make room. */
+._x_extension_shortcut_drag_handle_2026_unique_ {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  translate: -4px -50%;
+  color: var(--panel-text);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--lumno-duration-sm) ease, translate var(--lumno-duration-sm) ease;
+}
+._x_extension_shortcut_item_2024_unique_[data-sortable="true"] ._x_extension_shortcut_item_info_2024_unique_ {
+  transition: padding-left var(--lumno-duration-sm) ease;
+}
+._x_extension_shortcut_item_header_2024_unique_:hover:not(:has(button:hover, [role="button"]:hover)) > ._x_extension_shortcut_drag_handle_2026_unique_,
+._x_extension_shortcut_item_2024_unique_[data-sort-dragging="true"] ._x_extension_shortcut_drag_handle_2026_unique_ {
+  opacity: 0.4;
+  translate: 0 -50%;
+}
+._x_extension_shortcut_item_header_2024_unique_:hover:not(:has(button:hover, [role="button"]:hover)) > ._x_extension_shortcut_item_info_2024_unique_,
+._x_extension_shortcut_item_2024_unique_[data-sort-dragging="true"] ._x_extension_shortcut_item_info_2024_unique_ {
+  padding-left: 22px;
+}
+@media (prefers-reduced-motion: reduce) {
+  ._x_extension_shortcut_drag_handle_2026_unique_,
+  ._x_extension_shortcut_item_2024_unique_[data-sortable="true"] ._x_extension_shortcut_item_info_2024_unique_ {
+    transition: none;
+  }
 }
 ._x_extension_shortcut_item_2024_unique_[data-sort-dragging="true"],
 ._x_extension_order_chip_2026_unique_[data-sort-dragging="true"] {
