@@ -1,4 +1,6 @@
 import { closestHtmlElement } from '../dom-lookup';
+import { getShift, getTargetIndex, measureSlots, readLayout } from './sortable-geometry';
+import type { Point, Slot, SortLayout } from './sortable-geometry';
 // Pointer-driven reordering shared by Settings lists, chip rows and the search
 // scope panel. The dragged item follows the pointer and its peers slide into
 // the slots they would take, using transforms only, so a framework that owns
@@ -35,18 +37,6 @@ interface SortableDragOptions {
   threshold?: number;
 }
 
-interface Point {
-  x: number;
-  y: number;
-}
-
-interface Slot {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-}
-
 // A style property's value and priority before the drag.
 type SavedStyle = [property: string, value: string, priority: string];
 
@@ -65,7 +55,7 @@ interface DragState {
   fromIndex: number;
   toIndex: number;
   scroller: Element | null;
-  layout: 'column' | 'row' | 'grid';
+  layout: SortLayout;
   startPointer: Point;
   pointer: Point;
   bodyUserSelect: string;
@@ -136,81 +126,209 @@ function isPresent<T>(value: T | null | undefined): value is T {
   return Boolean(value);
 }
 
-// Makes the container's items draggable; returns the function that stops it.
-function attach(container: HTMLElement | null | undefined, options: SortableDragOptions): () => void {
-  const doc = container ? container.ownerDocument : null;
-  const view = doc ? doc.defaultView : null;
-  if (!container || !doc || !view) {
-    return () => {};
-  }
-  const host = container;
-  const page = doc;
-  const win = view;
-  const settings = options;
-  const threshold = typeof settings.threshold === 'number' && Number.isFinite(settings.threshold)
-    ? settings.threshold
-    : DEFAULT_THRESHOLD_PX;
-  let pending: PendingDrag | null = null;
-  let drag: DragState | null = null;
-  let frame = 0;
-
-  function getScroll(scroller: Element | null): Point {
-    return {
-      x: win.scrollX + (scroller ? scroller.scrollLeft : 0),
-      y: win.scrollY + (scroller ? scroller.scrollTop : 0)
-    };
-  }
-
-  function findItem(target: EventTarget | null): HTMLElement | null {
-    const element = isElement(target) ? target : (isNode(target) ? target.parentElement : null);
-    const item = element ? closestHtmlElement(element, settings.itemSelector) : null;
-    if (!element || !item || !host.contains(item)) {
-      return null;
+// Lifts the dragged item above its peers and lets them slide; returns the
+// styles to put back.
+function liftForDrag(item: HTMLElement, peers: readonly HTMLElement[], win: Window): SavedStyle[][] {
+  const previous = peers.map(saveStyles);
+  peers.forEach((peer) => {
+    if (peer !== item) {
+      setImportant(peer, 'transition', SHIFT_TRANSITION);
     }
-    const control = element.closest(IGNORE_SELECTOR);
-    if (control && control !== item && item.contains(control)) {
-      return null;
-    }
-    return item;
+  });
+  setImportant(item, 'transition', 'none');
+  setImportant(item, 'z-index', '20');
+  if (win.getComputedStyle(item).position === 'static') {
+    setImportant(item, 'position', 'relative');
+  }
+  return previous;
+}
+
+// Puts the peers' styles back; their own transition returns after this
+// frame so nothing animates back from the drag offset.
+function settleAfterDrag(peers: readonly HTMLElement[], previous: SavedStyle[][], win: Window): void {
+  peers.forEach((peer, index) => {
+    const saved = previous[index];
+    setImportant(peer, 'transition', 'none');
+    restoreStyles(peer, saved);
+    win.requestAnimationFrame(() => {
+      const transition = saved.find(([prop]) => prop === 'transition');
+      if (transition && transition[1]) {
+        peer.style.setProperty('transition', transition[1], transition[2]);
+      } else {
+        peer.style.removeProperty('transition');
+      }
+    });
+  });
+}
+
+// How far to scroll this frame while the pointer is near the top or the
+// bottom edge.
+function readAutoScrollStep(y: number, bounds: { top: number; bottom: number }): number {
+  if (y < bounds.top + AUTO_SCROLL_EDGE_PX) {
+    return -Math.ceil(AUTO_SCROLL_MAX_STEP_PX * Math.min(1, (bounds.top + AUTO_SCROLL_EDGE_PX - y) / AUTO_SCROLL_EDGE_PX));
+  }
+  if (y > bounds.bottom - AUTO_SCROLL_EDGE_PX) {
+    return Math.ceil(AUTO_SCROLL_MAX_STEP_PX * Math.min(1, (y - bounds.bottom + AUTO_SCROLL_EDGE_PX) / AUTO_SCROLL_EDGE_PX));
+  }
+  return 0;
+}
+
+// One container's drag: a press waiting to become a drag, then the drag
+// with its peers, and the frame that scrolls near the edges.
+class SortableDrag {
+  private pending: PendingDrag | null = null;
+  private drag: DragState | null = null;
+  private frame = 0;
+  private readonly host: HTMLElement;
+  private readonly page: Document;
+  private readonly win: Window;
+  private readonly settings: SortableDragOptions;
+  private readonly threshold: number;
+
+  constructor(host: HTMLElement, page: Document, win: Window, settings: SortableDragOptions) {
+    this.host = host;
+    this.page = page;
+    this.win = win;
+    this.settings = settings;
+    this.threshold = typeof settings.threshold === 'number' && Number.isFinite(settings.threshold)
+      ? settings.threshold
+      : DEFAULT_THRESHOLD_PX;
   }
 
-  function handlePointerDown(event: PointerEvent): void {
-    if (drag || event.button !== 0 || event.isPrimary === false) {
+  detach(): void {
+    if (this.drag) {
+      this.finish(false);
+    } else {
+      this.stop();
+    }
+    this.host.removeEventListener('pointerdown', this.handlePointerDown);
+    this.host.removeEventListener('dragstart', this.handleNativeDragStart);
+  }
+
+  readonly handlePointerDown = (event: PointerEvent): void => {
+    const { settings, win } = this;
+    if (this.drag || event.button !== 0 || event.isPrimary === false) {
       return;
     }
-    const item = findItem(event.target);
+    const item = this.findItem(event.target);
     if (!item || (typeof settings.canStart === 'function' && !settings.canStart(item, event))) {
       return;
     }
-    pending = { item, x: event.clientX, y: event.clientY, pointerId: event.pointerId };
-    win.addEventListener('pointermove', handlePointerMove, true);
-    win.addEventListener('pointerup', handlePointerUp, true);
-    win.addEventListener('pointercancel', handlePointerCancel, true);
-    win.addEventListener('keydown', handleKeyDown, true);
+    this.pending = { item, x: event.clientX, y: event.clientY, pointerId: event.pointerId };
+    win.addEventListener('pointermove', this.handlePointerMove, true);
+    win.addEventListener('pointerup', this.handlePointerUp, true);
+    win.addEventListener('pointercancel', this.handlePointerCancel, true);
+    win.addEventListener('keydown', this.handleKeyDown, true);
+  };
+
+  // A favicon or link inside an item would otherwise start a native drag,
+  // which cancels the pointer stream.
+  readonly handleNativeDragStart = (event: DragEvent): void => {
+    if (this.pending || this.drag) {
+      event.preventDefault();
+    }
+  };
+
+  private readonly handlePointerMove = (event: PointerEvent): void => {
+    const start = this.pending;
+    if (!start || (start.pointerId !== undefined && event.pointerId !== start.pointerId)) {
+      return;
+    }
+    let state = this.drag;
+    if (!state) {
+      if (Math.hypot(event.clientX - start.x, event.clientY - start.y) < this.threshold) {
+        return;
+      }
+      state = this.begin(event, start);
+      if (!state) {
+        this.stop();
+        return;
+      }
+      this.drag = state;
+    }
+    event.preventDefault();
+    state.pointer = { x: event.clientX, y: event.clientY };
+    this.render();
+    if (!this.frame) {
+      this.frame = this.win.requestAnimationFrame(this.autoScroll);
+    }
+  };
+
+  private readonly handlePointerUp = (event: PointerEvent): void => {
+    const state = this.drag;
+    if (!state) {
+      this.stop();
+      return;
+    }
+    state.pointer = { x: event.clientX, y: event.clientY };
+    this.render();
+    this.finish(true);
+  };
+
+  private readonly handlePointerCancel = (): void => {
+    if (this.drag) {
+      this.finish(false);
+    } else {
+      this.stop();
+    }
+  };
+
+  private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape' && this.drag) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.finish(false);
+    }
+  };
+
+  private readonly autoScroll = (): void => {
+    this.frame = 0;
+    const state = this.drag;
+    if (!state) {
+      return;
+    }
+    const bounds = state.scroller ? state.scroller.getBoundingClientRect() : { top: 0, bottom: this.win.innerHeight };
+    const step = readAutoScrollStep(state.pointer.y, bounds);
+    if (!step) {
+      return;
+    }
+    if (state.scroller) {
+      state.scroller.scrollTop += step;
+    } else {
+      this.win.scrollBy(0, step);
+    }
+    this.render();
+    this.frame = this.win.requestAnimationFrame(this.autoScroll);
+  };
+
+  private getScroll(scroller: Element | null): Point {
+    return {
+      x: this.win.scrollX + (scroller ? scroller.scrollLeft : 0),
+      y: this.win.scrollY + (scroller ? scroller.scrollTop : 0)
+    };
   }
 
-  function begin(event: PointerEvent, start: PendingDrag): DragState | null {
+  private findItem(target: EventTarget | null): HTMLElement | null {
+    const element = isElement(target) ? target : (isNode(target) ? target.parentElement : null);
+    const item = element ? closestHtmlElement(element, this.settings.itemSelector) : null;
+    if (!element || !item || !this.host.contains(item)) {
+      return null;
+    }
+    const control = element.closest(IGNORE_SELECTOR);
+    return control && control !== item && item.contains(control) ? null : item;
+  }
+
+  private begin(event: PointerEvent, start: PendingDrag): DragState | null {
+    const { settings, page, win } = this;
     const item = start.item;
-    const peers = typeof settings.getPeers === 'function'
-      ? settings.getPeers(item).filter(isPresent)
-      : [];
+    const peers = typeof settings.getPeers === 'function' ? settings.getPeers(item).filter(isPresent) : [];
     const fromIndex = peers.indexOf(item);
     if (peers.length < 2 || fromIndex < 0) {
       return null;
     }
     const scroller = findScrollParent(item, win);
-    const scroll = getScroll(scroller);
-    const slots = peers.map((peer): Slot => {
-      const rect = peer.getBoundingClientRect();
-      return {
-        left: rect.left + scroll.x,
-        top: rect.top + scroll.y,
-        width: rect.width,
-        height: rect.height
-      };
-    });
-    const sameLeft = slots.every((slot) => Math.abs(slot.left - slots[0].left) < 2);
-    const sameTop = slots.every((slot) => Math.abs(slot.top - slots[0].top) < 2);
+    const scroll = this.getScroll(scroller);
+    const slots = measureSlots(peers, scroll);
     const state: DragState = {
       item,
       peers,
@@ -218,24 +336,14 @@ function attach(container: HTMLElement | null | undefined, options: SortableDrag
       fromIndex,
       toIndex: fromIndex,
       scroller,
-      layout: sameLeft ? 'column' : (sameTop ? 'row' : 'grid'),
+      layout: readLayout(slots),
       startPointer: { x: start.x + scroll.x, y: start.y + scroll.y },
       pointer: { x: event.clientX, y: event.clientY },
       bodyUserSelect: page.body ? page.body.style.userSelect : '',
-      previous: peers.map(saveStyles)
+      previous: liftForDrag(item, peers, win)
     };
-    peers.forEach((peer) => {
-      if (peer !== item) {
-        setImportant(peer, 'transition', SHIFT_TRANSITION);
-      }
-    });
-    setImportant(item, 'transition', 'none');
-    setImportant(item, 'z-index', '20');
-    if (win.getComputedStyle(item).position === 'static') {
-      setImportant(item, 'position', 'relative');
-    }
     item.setAttribute('data-sort-dragging', 'true');
-    host.setAttribute('data-sort-active', 'true');
+    this.host.setAttribute('data-sort-active', 'true');
     if (page.body) {
       page.body.style.userSelect = 'none';
     }
@@ -249,139 +357,33 @@ function attach(container: HTMLElement | null | undefined, options: SortableDrag
     return state;
   }
 
-  function getTargetIndex(state: DragState, center: Point): number {
-    let best = state.fromIndex;
-    let bestDistance = Infinity;
-    state.slots.forEach((slot, index) => {
-      const dx = slot.left + slot.width / 2 - center.x;
-      const dy = slot.top + slot.height / 2 - center.y;
-      const distance = state.layout === 'column'
-        ? Math.abs(dy)
-        : (state.layout === 'row' ? Math.abs(dx) : Math.hypot(dx, dy));
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        best = index;
-      }
-    });
-    return best;
-  }
-
-  // Where peer `index` sits once the dragged item moves to `toIndex`.
-  function getShift(state: DragState, index: number, toIndex: number): Point {
-    const { fromIndex, slots, layout } = state;
-    const moved = slots[fromIndex];
-    if (layout === 'column' || layout === 'row') {
-      const axisSize = layout === 'column' ? 'height' : 'width';
-      const axisStart = layout === 'column' ? 'top' : 'left';
-      const neighbor: Slot | undefined = slots[fromIndex + 1] || slots[fromIndex - 1];
-      const gap = neighbor
-        ? Math.max(0, Math.abs(neighbor[axisStart] - moved[axisStart]) -
-          (neighbor[axisStart] > moved[axisStart] ? moved[axisSize] : neighbor[axisSize]))
-        : 0;
-      const step = moved[axisSize] + gap;
-      let delta = 0;
-      if (fromIndex < toIndex && index > fromIndex && index <= toIndex) {
-        delta = -step;
-      } else if (fromIndex > toIndex && index < fromIndex && index >= toIndex) {
-        delta = step;
-      }
-      return layout === 'column' ? { x: 0, y: delta } : { x: delta, y: 0 };
-    }
-    let slotIndex = index;
-    if (fromIndex < toIndex && index > fromIndex && index <= toIndex) {
-      slotIndex = index - 1;
-    } else if (fromIndex > toIndex && index < fromIndex && index >= toIndex) {
-      slotIndex = index + 1;
-    }
-    return {
-      x: slots[slotIndex].left - slots[index].left,
-      y: slots[slotIndex].top - slots[index].top
-    };
-  }
-
-  function render(): void {
-    const state = drag;
+  private render(): void {
+    const state = this.drag;
     if (!state) {
       return;
     }
-    const scroll = getScroll(state.scroller);
+    const scroll = this.getScroll(state.scroller);
     const dx = state.pointer.x + scroll.x - state.startPointer.x;
     const dy = state.pointer.y + scroll.y - state.startPointer.y;
     const moved = state.slots[state.fromIndex];
-    const center = {
-      x: moved.left + moved.width / 2 + dx,
-      y: moved.top + moved.height / 2 + dy
-    };
-    const constrainedDx = state.layout === 'column' ? 0 : dx;
-    const constrainedDy = state.layout === 'row' ? 0 : dy;
-    setImportant(state.item, 'transform', `translate(${constrainedDx}px, ${constrainedDy}px)`);
-    const toIndex = getTargetIndex(state, center);
-    if (toIndex !== state.toIndex || !state.rendered) {
-      state.toIndex = toIndex;
-      state.rendered = true;
-      state.peers.forEach((peer, index) => {
-        if (peer === state.item) {
-          return;
-        }
-        const shift = getShift(state, index, toIndex);
+    const center = { x: moved.left + moved.width / 2 + dx, y: moved.top + moved.height / 2 + dy };
+    setImportant(state.item, 'transform', `translate(${state.layout === 'column' ? 0 : dx}px, ${state.layout === 'row' ? 0 : dy}px)`);
+    const toIndex = getTargetIndex(state.slots, state.layout, state.fromIndex, center);
+    if (toIndex === state.toIndex && state.rendered) {
+      return;
+    }
+    state.toIndex = toIndex;
+    state.rendered = true;
+    state.peers.forEach((peer, index) => {
+      if (peer !== state.item) {
+        const shift = getShift(state.slots, state.layout, state.fromIndex, index, toIndex);
         setImportant(peer, 'transform', shift.x || shift.y ? `translate(${shift.x}px, ${shift.y}px)` : '');
-      });
-    }
+      }
+    });
   }
 
-  function autoScroll(): void {
-    frame = 0;
-    const state = drag;
-    if (!state) {
-      return;
-    }
-    const bounds = state.scroller
-      ? state.scroller.getBoundingClientRect()
-      : { top: 0, bottom: win.innerHeight };
-    const { y } = state.pointer;
-    let step = 0;
-    if (y < bounds.top + AUTO_SCROLL_EDGE_PX) {
-      step = -Math.ceil(AUTO_SCROLL_MAX_STEP_PX * Math.min(1, (bounds.top + AUTO_SCROLL_EDGE_PX - y) / AUTO_SCROLL_EDGE_PX));
-    } else if (y > bounds.bottom - AUTO_SCROLL_EDGE_PX) {
-      step = Math.ceil(AUTO_SCROLL_MAX_STEP_PX * Math.min(1, (y - bounds.bottom + AUTO_SCROLL_EDGE_PX) / AUTO_SCROLL_EDGE_PX));
-    }
-    if (step) {
-      if (state.scroller) {
-        state.scroller.scrollTop += step;
-      } else {
-        win.scrollBy(0, step);
-      }
-      render();
-      frame = win.requestAnimationFrame(autoScroll);
-    }
-  }
-
-  function handlePointerMove(event: PointerEvent): void {
-    const start = pending;
-    if (!start || (start.pointerId !== undefined && event.pointerId !== start.pointerId)) {
-      return;
-    }
-    let state = drag;
-    if (!state) {
-      if (Math.hypot(event.clientX - start.x, event.clientY - start.y) < threshold) {
-        return;
-      }
-      state = begin(event, start);
-      if (!state) {
-        stop();
-        return;
-      }
-      drag = state;
-    }
-    event.preventDefault();
-    state.pointer = { x: event.clientX, y: event.clientY };
-    render();
-    if (!frame) {
-      frame = win.requestAnimationFrame(autoScroll);
-    }
-  }
-
-  function suppressNextClick(): void {
+  private suppressNextClick(): void {
+    const win = this.win;
     const swallow = (event: Event): void => {
       event.preventDefault();
       event.stopPropagation();
@@ -392,35 +394,21 @@ function attach(container: HTMLElement | null | undefined, options: SortableDrag
     win.setTimeout(() => win.removeEventListener('click', swallow, true), 0);
   }
 
-  function finish(commit: boolean): void {
-    const current = drag;
-    stop();
+  private finish(commit: boolean): void {
+    const current = this.drag;
+    const { settings } = this;
+    this.stop();
     if (!current) {
       return;
     }
-    current.peers.forEach((peer, index) => {
-      const previous = current.previous[index];
-      setImportant(peer, 'transition', 'none');
-      restoreStyles(peer, previous);
-      // Restore the author's transition after this frame so nothing animates
-      // back from the drag offset.
-      win.requestAnimationFrame(() => {
-        const saved = previous.find(([prop]) => prop === 'transition');
-        if (saved && saved[1]) {
-          peer.style.setProperty('transition', saved[1], saved[2]);
-        } else {
-          peer.style.removeProperty('transition');
-        }
-      });
-    });
+    settleAfterDrag(current.peers, current.previous, this.win);
     current.item.removeAttribute('data-sort-dragging');
-    host.removeAttribute('data-sort-active');
-    if (page.body) {
-      page.body.style.userSelect = current.bodyUserSelect;
+    this.host.removeAttribute('data-sort-active');
+    if (this.page.body) {
+      this.page.body.style.userSelect = current.bodyUserSelect;
     }
-    suppressNextClick();
-    if (commit && current.toIndex !== current.fromIndex &&
-        typeof settings.onReorder === 'function') {
+    this.suppressNextClick();
+    if (commit && current.toIndex !== current.fromIndex && typeof settings.onReorder === 'function') {
       settings.onReorder(current.item, current.fromIndex, current.toIndex, current.peers);
     }
     if (typeof settings.onEnd === 'function') {
@@ -428,65 +416,32 @@ function attach(container: HTMLElement | null | undefined, options: SortableDrag
     }
   }
 
-  function stop(): void {
-    pending = null;
-    win.removeEventListener('pointermove', handlePointerMove, true);
-    win.removeEventListener('pointerup', handlePointerUp, true);
-    win.removeEventListener('pointercancel', handlePointerCancel, true);
-    win.removeEventListener('keydown', handleKeyDown, true);
-    if (frame) {
-      win.cancelAnimationFrame(frame);
-      frame = 0;
+  private stop(): void {
+    const win = this.win;
+    this.pending = null;
+    win.removeEventListener('pointermove', this.handlePointerMove, true);
+    win.removeEventListener('pointerup', this.handlePointerUp, true);
+    win.removeEventListener('pointercancel', this.handlePointerCancel, true);
+    win.removeEventListener('keydown', this.handleKeyDown, true);
+    if (this.frame) {
+      win.cancelAnimationFrame(this.frame);
+      this.frame = 0;
     }
-    drag = null;
+    this.drag = null;
   }
+}
 
-  function handlePointerUp(event: PointerEvent): void {
-    const state = drag;
-    if (!state) {
-      stop();
-      return;
-    }
-    state.pointer = { x: event.clientX, y: event.clientY };
-    render();
-    finish(true);
+// Makes the container's items draggable; returns the function that stops it.
+function attach(container: HTMLElement | null | undefined, options: SortableDragOptions): () => void {
+  const doc = container ? container.ownerDocument : null;
+  const view = doc ? doc.defaultView : null;
+  if (!container || !doc || !view) {
+    return () => {};
   }
-
-  function handlePointerCancel(): void {
-    if (drag) {
-      finish(false);
-    } else {
-      stop();
-    }
-  }
-
-  function handleKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Escape' && drag) {
-      event.preventDefault();
-      event.stopPropagation();
-      finish(false);
-    }
-  }
-
-  // A favicon or link inside an item would otherwise start a native drag,
-  // which cancels the pointer stream.
-  function handleNativeDragStart(event: DragEvent): void {
-    if (pending || drag) {
-      event.preventDefault();
-    }
-  }
-
-  host.addEventListener('pointerdown', handlePointerDown);
-  host.addEventListener('dragstart', handleNativeDragStart);
-  return function detach() {
-    if (drag) {
-      finish(false);
-    } else {
-      stop();
-    }
-    host.removeEventListener('pointerdown', handlePointerDown);
-    host.removeEventListener('dragstart', handleNativeDragStart);
-  };
+  const drag = new SortableDrag(container, doc, view, options);
+  container.addEventListener('pointerdown', drag.handlePointerDown);
+  container.addEventListener('dragstart', drag.handleNativeDragStart);
+  return () => drag.detach();
 }
 
 export type { SortableDragOptions };
