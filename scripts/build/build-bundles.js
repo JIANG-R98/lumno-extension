@@ -19,6 +19,7 @@ const SHARED_PREFIX = '\0lumno-shared-module:';
 const TARGETS = ['chrome110', 'firefox140'];
 
 const SHARED_MODULES_GLOBAL = 'LumnoSharedModules';
+const LICENSE_FILE_NAME = 'third-party-licenses.md';
 
 // A shared module's key, its path without src/ and its extension, so the
 // store checks do not read the keys as files the package must contain.
@@ -156,6 +157,34 @@ function extraFor(bundle, shared) {
   return { sharedModules: shared.get(bundle.name), external };
 }
 
+// The npm packages the bundles carry, by name, with their package folders.
+function bundledPackages(output) {
+  const packages = new Map();
+  output.flatMap((chunk) => (chunk.type === 'chunk' ? chunk.moduleIds : [])).forEach((id) => {
+    const match = id.split(path.sep).join('/').match(/^(.*\/node_modules\/)((?:@[^/]+\/)?[^/]+)\//);
+    if (match && !packages.has(match[2])) {
+      packages.set(match[2], path.join(match[1], match[2]));
+    }
+  });
+  return packages;
+}
+
+// The license texts of the npm packages the bundles carry, in the format Vite
+// writes for the React bundles, since minifying drops their license comments.
+function licenseFileContent(packages) {
+  const sections = Array.from(packages.keys()).sort().map((name) => {
+    const directory = packages.get(name);
+    const manifest = JSON.parse(fs.readFileSync(path.join(directory, 'package.json'), 'utf8'));
+    const licenseFile = fs.readdirSync(directory).find((file) => /^licen[cs]e(?:\.|$)/i.test(file));
+    if (!licenseFile) {
+      throw new Error(`${name} ships no license file to copy.`);
+    }
+    const text = fs.readFileSync(path.join(directory, licenseFile), 'utf8').trim();
+    return `## ${name} - ${manifest.version} (${manifest.license})\n\n${text}\n`;
+  });
+  return `# Licenses\n\nThe bundles in this folder contain these dependencies, under these licenses:\n\n${sections.join('\n')}`;
+}
+
 async function buildBundles(options = {}) {
   const common = {
     outdir: options.outdir || extensionOutputPath(BUNDLE_DIRECTORY),
@@ -163,8 +192,11 @@ async function buildBundles(options = {}) {
     write: options.write !== false
   };
   const shared = await collectSharedModules(BUNDLES, common);
-  const outputs = await Promise.all(BUNDLES.map((bundle) => buildOne(bundle, common, extraFor(bundle, shared))));
-  return outputs.flat();
+  const outputs = (await Promise.all(BUNDLES.map((bundle) => buildOne(bundle, common, extraFor(bundle, shared))))).flat();
+  if (common.write) {
+    fs.writeFileSync(path.join(common.outdir, LICENSE_FILE_NAME), licenseFileContent(bundledPackages(outputs)));
+  }
+  return outputs;
 }
 
 async function watchBundles() {

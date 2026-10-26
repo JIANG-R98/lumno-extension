@@ -119,4 +119,11 @@ function bundleScript(name, expose) {
   return cache.get(key);
 }
 
-module.exports = { bundleScript, moduleScript, runModuleInContext };
+// The source of a script the worker imports by URL: a build/<name>.js path
+// is built from scripts/build/bundles.js, anything else is read from disk.
+function workerScriptSource(url) {
+  const match = String(url).match(/(?:^|\/)build\/([\w-]+)\.js$/);
+  return match ? bundleScript(match[1]) : fs.readFileSync(String(url), 'utf8');
+}
+
+module.exports = { bundleScript, moduleScript, runModuleInContext, workerScriptSource };

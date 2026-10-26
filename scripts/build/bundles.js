@@ -101,7 +101,11 @@ const BUNDLES = [
   { name: 'pip-page-bridge', files: ['src/content/pip-page-bridge.ts'] },
 
   // ES modules that pages and injected scripts import by URL on first use
-  { name: 'han-variants', format: 'es', files: ['src/domain/search/han-variants.generated.ts'] }
+  { name: 'han-variants', format: 'es', files: ['src/domain/search/han-variants.generated.ts'] },
+  { name: 'pinyin', format: 'es', files: ['src/shared/search/pinyin-module.ts'] },
+
+  // Classic scripts the service worker imports on first use
+  { name: 'pinyin-data', files: ['src/background/pinyin-data.ts'] }
 ];
 
 module.exports = {

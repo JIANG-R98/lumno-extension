@@ -23,11 +23,16 @@ build output and not in the repository.
 | @number-flow/react, number-flow | MIT |
 | react-colorful | MIT |
 
-## Vendored code
+## npm packages in the runtime bundles
 
-| Component | Files | License | License text |
-| --- | --- | --- | --- |
-| [pinyin-pro](https://github.com/zh-lx/pinyin-pro) 3.28.0, unmodified `dist/index.js` | `assets/vendor/pinyin-pro.js` | MIT | [`assets/vendor/LICENSE-pinyin-pro.txt`](assets/vendor/LICENSE-pinyin-pro.txt) |
+`npm run build:bundles` bundles these into `build/` with Rolldown and writes
+their license texts next to the bundles, to `build/third-party-licenses.md`.
+The file ships in the package; like the bundles, it is build output and not in
+the repository.
+
+| Package | Bundles | License |
+| --- | --- | --- |
+| [pinyin-pro](https://github.com/zh-lx/pinyin-pro) | `build/pinyin.js`, `build/pinyin-data.js` | MIT |
 
 ## Data
 

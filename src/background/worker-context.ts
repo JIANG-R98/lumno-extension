@@ -14,14 +14,14 @@ import type { LocaleMessage } from '../domain/messages';
 import { readLocaleMessages } from '../domain/locale-messages';
 import * as BACKGROUND_SHORTCUT_RULES from './shortcut-rules';
 
-// pinyin-pro (~320 KB) only matters when a Han-character title is matched
-// against a pinyin query, or a Han query against site addresses, so the
-// worker loads it on first use instead of on every wake (see getPinyinPro in
-// search-suggestions-service.ts). A service worker may only importScripts() a
+// pinyin-pro (pinyin-data.ts) only matters when a Han-character title is
+// matched against a pinyin query, or a Han query against site addresses, so
+// the worker loads it on first use instead of on every wake (see getPinyinPro
+// in search-suggestions-service.ts). A service worker may only importScripts() a
 // file after installation if it imported that file while installing, hence
 // background.ts's install hook. Firefox's build lists every *_SCRIPT_PATH
 // here in background.scripts.
-const PINYIN_PRO_SCRIPT_PATH = 'assets/vendor/pinyin-pro.js';
+const PINYIN_DATA_SCRIPT_PATH = 'build/pinyin-data.js';
 
 const SHOW_SEARCH_COMMAND_NAME = 'show-search';
 const SHOW_SEARCH_PREFILL_COMMAND_NAME = 'show-search-prefill';
@@ -263,7 +263,7 @@ function waitForTabComplete(tabId: number, timeoutMs?: number): Promise<chrome.t
 }
 
 export {
-  PINYIN_PRO_SCRIPT_PATH,
+  PINYIN_DATA_SCRIPT_PATH,
   SHOW_SEARCH_COMMAND_NAME,
   SHOW_SEARCH_PREFILL_COMMAND_NAME,
   SHOW_SEARCH_PREFILL_V_COMMAND_NAME,

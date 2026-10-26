@@ -17,8 +17,9 @@
     "test:react": "vitest run --config vitest.config.ts",
     "test:e2e": "node tests/e2e/run.js",
     "check": "npm run build && npm run check:static",
-    "check:static": "npm run check:js && npm run check:names && npm run check:locales && npm run typecheck && npm run check:react-bundle && npm run check:manifest && npm run lint",
+    "check:static": "npm run check:no-js && npm run check:js && npm run check:names && npm run check:locales && npm run typecheck && npm run check:react-bundle && npm run check:manifest && npm run lint",
     "check:react-bundle": "node --check dist/chrome/src/react/newtab-islands.js && node --check dist/chrome/src/react/options-islands.js && node --check dist/chrome/src/react/onboarding-islands.js && node --check dist/chrome/src/react/overlay-islands.js && node --check dist/chrome/src/react/popup-islands.js && node --check dist/chrome/src/react/react-shared.js && node --check dist/chrome/src/react/tab-switcher-shared.js && node --check dist/chrome/src/react/react-runtime.js && node --check dist/chrome/src/react/rolldown-runtime.js",
+    "check:no-js": "node scripts/check/check-no-js.js",
     "check:js": "node scripts/check/check-js-syntax.js",
     "check:names": "node scripts/check/check-undefined-names.js",
     "check:locales": "node scripts/check/check-locales.js",
@@ -41,6 +42,7 @@
   },
   "dependencies": {
     "@number-flow/react": "^0.6.2",
+    "pinyin-pro": "3.28.0",
     "react": "^19.2.9",
     "react-colorful": "^5.8.1",
     "react-dom": "^19.2.9"

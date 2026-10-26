@@ -6,27 +6,27 @@ import { installHanVariantPairs } from '../../domain/search/han-variants';
 import * as searchInputModeModule from '../search/search-input-mode';
 import * as faviconUtils from '../../domain/favicon/favicon-utils';
 import type { ModeMenuItem } from '../search/input-mode/types';
+import type { PinyinApi } from '../../domain/search/pinyin-api';
 import type { CursorTooltipController } from '../ui/cursor-tooltip';
 import { FakeAnimation } from '../../../tests/react/fake-animation';
 import { expectSvg, getElement, getElements, getSvgs, getTags, required } from '../../../tests/react/dom';
 import { queryHtmlElement, queryHtmlTag } from '../dom-lookup';
 import { createSearchInput } from './search-input';
 
-Object.assign(globalThis, {
-  pinyinPro: {
-    pinyin(value: string) {
-      const syllables: Record<string, string> = {
-        包: 'bao',
-        书: 'shu',
-        签: 'qian',
-        豆: 'dou'
-      };
-      return Array.from(String(value || '')).map((character) => (
-        syllables[character] || ''
-      )).filter(Boolean);
-    }
+// A pinyin-pro stand-in with the readings these tests type.
+const testPinyinApi: PinyinApi = {
+  pinyin(value: string) {
+    const syllables: Record<string, string> = {
+      包: 'bao',
+      书: 'shu',
+      签: 'qian',
+      豆: 'dou'
+    };
+    return Array.from(String(value || '')).map((character) => (
+      syllables[character] || ''
+    )).filter(Boolean);
   }
-});
+};
 
 function getTestContrastRatio(firstRgb: number[], secondRgb: number[]) {
   const getLuminance = (rgb: number[]) => rgb.map((channel) => {
@@ -44,7 +44,14 @@ function getTestContrastRatio(firstRgb: number[], secondRgb: number[]) {
 }
 
 installHanVariantPairs(HAN_VARIANT_PAIRS);
-const LumnoSearchInputMode = searchInputModeModule;
+// Every menu starts with the stand-in unless a test passes its own pinyinApi.
+const LumnoSearchInputMode = {
+  ...searchInputModeModule,
+  createInputModeController: (
+    parts: Parameters<typeof searchInputModeModule.createInputModeController>[0],
+    config?: Parameters<typeof searchInputModeModule.createInputModeController>[1]
+  ) => searchInputModeModule.createInputModeController(parts, { pinyinApi: testPinyinApi, ...config })
+};
 
 // The search input's parts as a surface renders them.
 function createModeParts(surface: 'newtab' | 'overlay' = 'newtab') {
@@ -1114,12 +1121,11 @@ describe('Shared search scope menu', () => {
   });
 
   it('keeps built-in Chinese scopes searchable while the full pinyin runtime is still loading', () => {
-    const existingPinyinApi: unknown = Reflect.get(globalThis, 'pinyinPro');
-    Reflect.deleteProperty(globalThis, 'pinyinPro');
     const parts = createModeParts();
     const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
+        pinyinApi: null,
         getModeMenuItems: () => [{
           group: 'Browser content',
           id: 'local:bookmark',
@@ -1142,7 +1148,6 @@ describe('Shared search scope menu', () => {
       item?.querySelector('.x-lumno-search-input-mode__menu-match')?.textContent
     ).toBe('书');
     controller.destroy();
-    Reflect.set(globalThis, 'pinyinPro', existingPinyinApi);
   });
 
   it('filters scope cards by mixed pinyin and initials from the start of the name', () => {

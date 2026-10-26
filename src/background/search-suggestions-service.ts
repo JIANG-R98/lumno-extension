@@ -22,7 +22,9 @@ import {
   SITE_SEARCH_STORAGE_KEY
 } from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
-import { PINYIN_PRO_SCRIPT_PATH, getImportScripts, localStorageArea, normalizeHost, storageArea } from './worker-context';
+import { loadWorkerLazyModule } from '../platform/worker-lazy';
+import { readPinyinApi } from '../domain/search/pinyin-api';
+import { PINYIN_DATA_SCRIPT_PATH, getImportScripts, localStorageArea, normalizeHost, storageArea } from './worker-context';
 import {
   getFaviconFallbackHost,
   getHostFaviconUrl,
@@ -52,6 +54,7 @@ import type {
   SiteSearchProvider,
   SuggestionLike
 } from '../domain/search/types';
+import type { PinyinApi } from '../domain/search/pinyin-api';
 import type { TabGroupContext } from './tab-groups';
 import type { MessageSender } from './message-router';
 
@@ -123,11 +126,6 @@ interface EngineSuggestionOptions {
   signal?: AbortSignal | null;
   rawEngineSuggestionsPromise?: Promise<unknown> | null;
   searchFirst?: boolean;
-}
-
-// pinyin-pro's API as the worker uses it.
-interface PinyinProApi {
-  pinyin(text: string, options: { toneType: 'none'; type: 'array'; multiple?: boolean; v: boolean }): string[];
 }
 
 type HistoryRemoval = { allHistory: boolean; urls?: string[] };
@@ -1606,42 +1604,17 @@ function getOpenTabSearchItems(): Promise<OpenTabItem[]> {
   }, [], LOCAL_SUGGEST_SOURCE_TIMEOUT_MS).catch((): OpenTabItem[] => []);
 }
 
+let pinyinProApi: PinyinApi | null = null;
 let pinyinProImportAttempted = false;
 
-// pinyin-pro sets globalThis.pinyinPro when its script runs.
-function readPinyinPro(): PinyinProApi | null {
-  const api: unknown = 'pinyinPro' in globalThis ? Reflect.get(globalThis, 'pinyinPro') : undefined;
-  if (!isRecord(api)) {
-    return null;
-  }
-  const pinyin = api.pinyin;
-  if (typeof pinyin !== 'function') {
-    return null;
-  }
-  return {
-    pinyin: (text, options) => {
-      const converted: unknown = Reflect.apply(pinyin, api, [text, options]);
-      return Array.isArray(converted) ? converted.map((item: unknown) => String(item)) : [];
-    }
-  };
-}
-
-let pinyinProApi: PinyinProApi | null = null;
-
-function getPinyinPro(): PinyinProApi | null {
-  if (pinyinProApi) {
-    return pinyinProApi;
-  }
-  const importScripts = getImportScripts();
-  if (!('pinyinPro' in globalThis) && !pinyinProImportAttempted && importScripts) {
+// pinyin-pro, imported on first use; null when it could not be loaded, in
+// which case titles still match by their own text.
+function getPinyinPro(): PinyinApi | null {
+  if (!pinyinProApi && !pinyinProImportAttempted) {
     pinyinProImportAttempted = true;
-    try {
-      importScripts(chrome.runtime.getURL(PINYIN_PRO_SCRIPT_PATH));
-    } catch (_error) {
-      // Without pinyin-pro, titles still match by their own text.
-    }
+    pinyinProApi = readPinyinApi(loadWorkerLazyModule(
+      'pinyin', chrome.runtime.getURL(PINYIN_DATA_SCRIPT_PATH), getImportScripts()));
   }
-  pinyinProApi = readPinyinPro();
   return pinyinProApi;
 }
 
@@ -1677,7 +1650,7 @@ function getTitleHanReadings(_text: string, characters: string[]): string[][] | 
   });
 }
 
-function getHanCharacterReadings(pinyinApi: PinyinProApi, character: string): string[] {
+function getHanCharacterReadings(pinyinApi: PinyinApi, character: string): string[] {
   const cached = hanCharacterReadingsCache.get(character);
   if (cached) {
     return cached;

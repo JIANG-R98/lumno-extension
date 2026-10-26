@@ -1,8 +1,7 @@
 const assert = require('assert');
-const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const { runModuleInContext } = require('../helpers/module-script');
+const { runModuleInContext, workerScriptSource } = require('../helpers/module-script');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const searchUtils = require('../../src/domain/search/search-utils.ts');
@@ -213,10 +212,10 @@ function loadBackground(historyItems) {
   });
   context.globalThis = context;
   context.self = context;
-  // The worker still loads its classic, by-URL scripts (the Han variants) lazily.
+  // The worker loads pinyin-pro, a classic by-URL script, on first use.
   context.importScripts = (...urls) => {
     urls.forEach((url) => {
-      vm.runInContext(fs.readFileSync(String(url), 'utf8'), context, { filename: String(url) });
+      vm.runInContext(workerScriptSource(url), context, { filename: String(url) });
     });
   };
   const background = runModuleInContext('src/background/background.ts', context, '__lumnoBackgroundExports', {

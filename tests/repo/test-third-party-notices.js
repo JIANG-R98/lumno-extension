@@ -21,7 +21,8 @@ linkTargets.forEach((target) => {
 
 const generatedLicenseFiles = [
   'src/react/third-party-licenses.md',
-  'src/react/overlay-third-party-licenses.md'
+  'src/react/overlay-third-party-licenses.md',
+  'build/third-party-licenses.md'
 ];
 const bundledSections = generatedLicenseFiles.flatMap((file) => read(file).split(/^## /m).slice(1));
 const bundledPackages = new Set(bundledSections.map((section) => section.split(' - ')[0]));
@@ -30,7 +31,7 @@ bundledSections.forEach((section) => {
   assert(body.join('\n').trim(), `${heading} should ship with its license text`);
 });
 Object.keys(JSON.parse(read('package.json')).dependencies).forEach((name) => {
-  assert(bundledPackages.has(name), `the React bundles' license files should list ${name}`);
+  assert(bundledPackages.has(name), `the bundles' license files should list ${name}`);
   assert(notices.includes(name), `THIRD_PARTY_NOTICES.md should list ${name}`);
 });
 

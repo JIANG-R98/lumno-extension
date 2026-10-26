@@ -31,8 +31,8 @@ const storeManifest = JSON.parse(fs.readFileSync(outPath('manifest.json'), 'utf8
 // load as background scripts before the bundle.
 const workerContextSource = fs.readFileSync(path.join(repoRoot, 'src/background/worker-context.ts'), 'utf8');
 const lazyBackgroundDeps = [...workerContextSource.matchAll(/^(?:export )?const \w+_SCRIPT_PATH = '([^']+)';$/gm)].map((match) => match[1]);
-if (!lazyBackgroundDeps.includes('assets/vendor/pinyin-pro.js')) {
-  throw new Error('Could not find the lazily imported pinyin-pro path in src/background/worker-context.ts.');
+if (!lazyBackgroundDeps.includes('build/pinyin-data.js')) {
+  throw new Error('Could not find the lazily imported pinyin-pro bundle path in src/background/worker-context.ts.');
 }
 fs.writeFileSync(
   outPath(IMPORT_SHIM),

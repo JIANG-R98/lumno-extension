@@ -78,7 +78,7 @@ async function testFontsStayOnTheDevice() {
   const manifest = JSON.parse(read('manifest.json'));
   assert.ok(manifest.permissions.includes('fontSettings'), 'reading the installed font list needs the fontSettings permission');
   assert.ok(!(manifest.optional_permissions || []).includes('fontSettings'), 'Chrome cannot request fontSettings at runtime');
-  const firefox = toFirefoxManifest(manifest, { lazyBackgroundDeps: ['assets/vendor/pinyin-pro.js'], importShim: 'build/firefox-import-shim.js' });
+  const firefox = toFirefoxManifest(manifest, { lazyBackgroundDeps: ['build/pinyin-data.js'], importShim: 'build/firefox-import-shim.js' });
   assert.ok(!firefox.permissions.includes('fontSettings'), 'the Firefox package should drop the Chrome-only permission');
 
   settings.OVERLAY_FONT_LOCAL_STORAGE_KEYS.forEach((key) => {

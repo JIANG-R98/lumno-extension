@@ -1,10 +1,9 @@
 const assert = require('assert');
-const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const { runModuleInContext } = require('../helpers/module-script');
+const { runModuleInContext, workerScriptSource } = require('../helpers/module-script');
 const { loadBackground } = require('../helpers/background-harness');
 
 function createEvent() {
@@ -451,7 +450,7 @@ function loadBackgroundForTest(options) {
   context.globalThis = context;
   context.importScripts = (...urls) => {
     urls.forEach((url) => {
-      vm.runInContext(fs.readFileSync(String(url), 'utf8'), context, {
+      vm.runInContext(workerScriptSource(url), context, {
         filename: String(url)
       });
     });

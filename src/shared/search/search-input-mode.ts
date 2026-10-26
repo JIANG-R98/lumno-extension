@@ -25,7 +25,8 @@ import type { ModeMenuLayoutConfig, ModeMenuLayoutState } from './input-mode/mod
 import type { ModeMenuLifecycleConfig, ModeMenuLifecycleState } from './input-mode/mode-menu-lifecycle';
 import type { ModeMenuNavigationConfig, ModeMenuNavigationState } from './input-mode/mode-menu-navigation';
 import type { ModeMenuRenderConfig, ModeMenuRenderState } from './input-mode/mode-menu-render';
-import type { PinyinApi } from './input-mode/mode-menu-search';
+import { readPinyinApi } from '../../domain/search/pinyin-api';
+import type { PinyinApi } from '../../domain/search/pinyin-api';
 import type { ModeTabKeysConfig, ModeTabKeysState } from './input-mode/mode-tab-keys';
 import type { PrefixContentState } from './input-mode/prefix-content';
 import type { PrefixMotionState } from './input-mode/prefix-motion';
@@ -104,8 +105,9 @@ interface InputModeOwnConfig {
   defaultPlaceholder?: string;
   getDefaultPlaceholder?: () => string;
   defaultCaretColor?: string;
-  // Loads pinyin-pro for the menu's filter; the bundled copy by default.
-  loadPinyinRuntime?: () => unknown;
+  // pinyin-pro for the menu's filter when the surface already has it; null
+  // starts without it. By default the menu imports build/pinyin.js on first use.
+  pinyinApi?: PinyinApi | null;
   // The surface's cursor tooltip for cut-off menu labels; the menu makes its own without one.
   modeMenuCursorTooltipController?: ModeMenuTooltipController | null;
   modeMenuTooltipController?: ModeMenuTooltipController | null;
@@ -136,9 +138,10 @@ type InputModeState = ModeMenuIconsState &
   PrefixTextState &
   PrefixVisualState;
 
-// The traditional-to-simplified table, built as its own module so pages load
-// it only when the scope panel's filter first needs it.
+// The traditional-to-simplified table and pinyin-pro, each built as its own
+// module so pages load them only when the scope panel's filter first needs them.
 const HAN_VARIANTS_MODULE_PATH = 'build/han-variants.js';
+const PINYIN_MODULE_PATH = 'build/pinyin.js';
 const DEFAULT_ACCENT_RGB: Rgb = [59, 130, 246];
 const DEFAULT_PREFIX_GAP = 8;
 const DEFAULT_MODE_MENU_DOUBLE_TAB_DURATION = 700;
@@ -343,25 +346,8 @@ function readNumber(value: unknown): number | null {
   return value !== undefined && value !== null && Number.isFinite(parsed) ? parsed : null;
 }
 
-// pinyin-pro sets globalThis.pinyinPro when its script runs.
-function getModeMenuPinyinApi(): PinyinApi | null {
-  const api: unknown = Reflect.get(globalThis, 'pinyinPro');
-  if (!api || typeof api !== 'object') {
-    return null;
-  }
-  const pinyin: unknown = Reflect.get(api, 'pinyin');
-  if (typeof pinyin !== 'function') {
-    return null;
-  }
-  return {
-    pinyin: (text, options) => Reflect.apply(pinyin, api, [text, options])
-  };
-}
-
-function isPinyinApiLike(value: unknown): boolean {
-  return Boolean(value) && typeof value === 'object' && value !== null &&
-    typeof Reflect.get(value, 'pinyin') === 'function';
-}
+// pinyin-pro once a menu on this page has loaded it; later menus start with it.
+let loadedPinyinApi: PinyinApi | null = null;
 
 function createInputModeController(parts: InputModeParts, options?: InputModeConfig | null) {
   const config: InputModeConfig = options || {};
@@ -481,13 +467,14 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
       : getDefaultPlaceholder();
   }
 
-  function ensureModeMenuPinyinRuntime(): Promise<unknown> | null {
-    const existingApi = getModeMenuPinyinApi();
-    if (existingApi && typeof existingApi.pinyin === 'function') {
+  let modeMenuPinyinApi: PinyinApi | null = config.pinyinApi !== undefined ? config.pinyinApi : loadedPinyinApi;
+  function getModeMenuPinyinApi(): PinyinApi | null {
+    return modeMenuPinyinApi;
+  }
+
+  function ensureModeMenuPinyinRuntime(): Promise<PinyinApi | null> | null {
+    if (modeMenuPinyinApi) {
       return null;
-    }
-    if (typeof config.loadPinyinRuntime === 'function') {
-      return Promise.resolve(config.loadPinyinRuntime()).catch(() => null);
     }
     const chromeApi = typeof chrome !== 'undefined' ? chrome : null;
     if (!chromeApi || !chromeApi.runtime ||
@@ -495,8 +482,15 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
       return null;
     }
     try {
-      return import(chromeApi.runtime.getURL('assets/vendor/pinyin-pro.js'))
-        .then(() => getModeMenuPinyinApi())
+      return import(chromeApi.runtime.getURL(PINYIN_MODULE_PATH))
+        .then((loaded: unknown) => {
+          const api = readPinyinApi(loaded);
+          if (api) {
+            loadedPinyinApi = api;
+            modeMenuPinyinApi = api;
+          }
+          return api;
+        })
         .catch(() => null);
     } catch (_error) {
       return null;
@@ -536,7 +530,7 @@ function createInputModeController(parts: InputModeParts, options?: InputModeCon
       // the simplified forms, once the runtime and the table arrive.
       Promise.all([runtimeReady, ensureModeMenuHanVariants()])
         .then(([api, variantsLoaded]) => {
-          if (isPinyinApiLike(api) || variantsLoaded) {
+          if (api || variantsLoaded) {
             refreshModeMenuSearchIndexes();
           }
         });

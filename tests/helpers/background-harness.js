@@ -7,9 +7,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { extensionFilePath } = require('../../scripts/build/extension-output');
 const vm = require('vm');
-const { moduleScript } = require('./module-script');
+const { moduleScript, workerScriptSource } = require('./module-script');
 
 const BACKGROUND_EXPORTS = '__lumnoBackgroundExports';
 const EXTENSION_ORIGIN = 'chrome-extension://lumno-test';
@@ -413,10 +412,7 @@ function loadBackground(options) {
   context.globalThis = context;
   context.self = context;
   const runFile = (file) => {
-    const filePath = String(file).startsWith(`${EXTENSION_ORIGIN}/`)
-      ? extensionFilePath(String(file).slice(EXTENSION_ORIGIN.length + 1))
-      : String(file);
-    vm.runInContext(fs.readFileSync(filePath, 'utf8'), context, {
+    vm.runInContext(workerScriptSource(file), context, {
       filename: String(file)
     });
   };

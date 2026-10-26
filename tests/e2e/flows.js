@@ -366,19 +366,30 @@ async function pipPageBridge({ browser, fixtures }) {
     'the bridge should answer in the page world');
 }
 
-// Pages import the traditional-to-simplified table by URL as an ES module the
-// first time the scope panel's filter needs it; the module exports the pairs
-// and leaves no global behind.
-async function hanVariantsModule({ browser }) {
+// Code loaded on first use leaves no global behind: pages import the
+// traditional-to-simplified table and pinyin-pro by URL as ES modules, and the
+// worker, which imports pinyin-pro while installing, reads it from its lazy
+// module registry.
+async function lazyModules({ browser }) {
   const newtab = await browser.openPage(browser.extensionUrl('newtab.html'));
-  const result = await newtab.evaluate(`import(chrome.runtime.getURL('build/han-variants.js')).then((module) => ({
-    length: module.HAN_VARIANT_PAIRS.length,
-    first: module.HAN_VARIANT_PAIRS.slice(0, 2),
-    global: 'LumnoSearchHanVariants' in globalThis
+  const page = await newtab.evaluate(`Promise.all([
+    import(chrome.runtime.getURL('build/han-variants.js')),
+    import(chrome.runtime.getURL('build/pinyin.js'))
+  ]).then(([han, pinyin]) => ({
+    pairs: han.HAN_VARIANT_PAIRS.length,
+    readings: pinyin.pinyin('重', { toneType: 'none', type: 'array', multiple: true, v: true }),
+    globals: ['LumnoSearchHanVariants', 'pinyinPro'].filter((name) => name in globalThis)
   }))`);
-  assert.strictEqual(result.length, 2903 * 2);
-  assert.strictEqual(result.first.length, 2);
-  assert.strictEqual(result.global, false);
+  assert.strictEqual(page.pairs, 2903 * 2);
+  assert.ok(page.readings.includes('zhong') && page.readings.includes('chong'), 'pinyin-pro should read 重 both ways');
+  assert.deepStrictEqual(page.globals, []);
+
+  const worker = await browser.worker.evaluate(`({
+    pinyin: typeof (globalThis.__lumnoWorkerLazy && globalThis.__lumnoWorkerLazy.pinyin
+      && globalThis.__lumnoWorkerLazy.pinyin.pinyin),
+    vendorGlobal: 'pinyinPro' in globalThis
+  })`);
+  assert.deepStrictEqual(worker, { pinyin: 'function', vendorGlobal: false });
 }
 
 module.exports = {
@@ -390,5 +401,5 @@ module.exports = {
   'link-preview': linkPreview,
   diagnostics,
   'pip-page-bridge': pipPageBridge,
-  'han-variants-module': hanVariantsModule
+  'lazy-modules': lazyModules
 };

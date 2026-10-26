@@ -104,14 +104,14 @@ export default tseslint.config(
     }
   },
   {
-    files: ['src/**/*.{js,ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}'],
     languageOptions: {
       sourceType: 'module',
       globals: extensionGlobals
     }
   },
   {
-    files: ['src/background/**/*.{js,ts}'],
+    files: ['src/background/**/*.ts'],
     languageOptions: {
       globals: globals.serviceworker
     }

@@ -179,7 +179,7 @@ import {
   TAB_SWITCHER_ENABLED_STORAGE_KEY
 } from '../domain/settings';
 import {
-  PINYIN_PRO_SCRIPT_PATH,
+  PINYIN_DATA_SCRIPT_PATH,
   SHOW_SEARCH_COMMAND_NAME,
   SHOW_SEARCH_PREFILL_COMMAND_NAME,
   SHOW_SEARCH_PREFILL_V_COMMAND_NAME,
@@ -201,12 +201,12 @@ import {
 // Folds traditional characters to simplified ones for local search matching.
 installHanVariantPairs(HAN_VARIANT_PAIRS);
 
-// See PINYIN_PRO_SCRIPT_PATH: the worker imports pinyin-pro while installing
+// See PINYIN_DATA_SCRIPT_PATH: the worker imports pinyin-pro while installing
 // so that it may import it again on first use.
 const importScriptsForInstall = getImportScripts();
 if (importScriptsForInstall && typeof globalThis.addEventListener === 'function') {
   globalThis.addEventListener('install', () => {
-    importScriptsForInstall(chrome.runtime.getURL(PINYIN_PRO_SCRIPT_PATH));
+    importScriptsForInstall(chrome.runtime.getURL(PINYIN_DATA_SCRIPT_PATH));
   });
 }
 // Failures nothing caught go to the diagnostics log as well as the console.

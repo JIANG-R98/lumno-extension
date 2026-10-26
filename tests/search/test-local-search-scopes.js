@@ -174,7 +174,7 @@ function testStylesheet() {
 
 function testPackaging() {
   const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'manifest.json'), 'utf8'));
-  assert.ok(manifest.web_accessible_resources.some((entry) => entry.resources.includes('assets/vendor/pinyin-pro.js')),
+  assert.ok(manifest.web_accessible_resources.some((entry) => entry.resources.includes('build/pinyin.js')),
     'the pinyin runtime the injected panel loads on demand should be web-accessible');
   [
     ['en', 'Only search {source}'],
