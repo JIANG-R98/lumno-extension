@@ -23,6 +23,7 @@ import type {
   WallpaperMode,
   WallpaperState
 } from './wallpaper-runtime-types';
+import { readBootValue } from '../../../platform/boot-handoff';
 
 type SelectMenuController = ReturnType<typeof createSelectMenuController>;
 
@@ -328,7 +329,7 @@ function createCustomWallpapers(deps: CustomWallpapersDeps) {
 
   // The preload already reads the shown photo's copy; take it instead of opening the cache again.
   function takePreloadedWallpaperImage(): Promise<void> {
-    const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
+    const wallpaperPreload = readBootValue('wallpaperPreload');
     const ready = wallpaperPreload && !wallpaperPreload.customImageId && wallpaperPreload.imageReady;
     if (!wallpaperPreload || !ready || typeof ready.then !== 'function') return Promise.resolve();
     wallpaperPreload.imageReady = null;
@@ -344,7 +345,7 @@ function createCustomWallpapers(deps: CustomWallpapersDeps) {
 
   // Likewise for an upload: the preload read its record from the local wallpaper library.
   function takePreloadedCustomWallpaper(): Promise<void> {
-    const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
+    const wallpaperPreload = readBootValue('wallpaperPreload');
     const ready = wallpaperPreload && wallpaperPreload.customImageId && wallpaperPreload.imageReady;
     if (!wallpaperPreload || !ready || typeof ready.then !== 'function') return Promise.resolve();
     wallpaperPreload.imageReady = null;

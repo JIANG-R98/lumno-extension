@@ -18,6 +18,7 @@ import * as NEWTAB_WALLPAPER from './wallpaper';
 import type { WallpaperRuntime } from './wallpaper';
 import type { SectionPanelSettings } from './runtime/panel-actions';
 import type { SearchWidthConfig } from './runtime/panel-settings';
+import { readBootValue } from '../../platform/boot-handoff';
 
 type StorageArea = Pick<StorageAreaLike, 'get' | 'set'>;
 
@@ -645,7 +646,7 @@ function createWallpaperPage(deps: WallpaperPageDeps) {
       return;
     }
     // The preload revealed it already.
-    const effectPreload = globalThis.LumnoNewtabWallpaperEffectPreload;
+    const effectPreload = readBootValue('wallpaperEffectPreload');
     if (!pageState.wallpaperShownAt && effectPreload && effectPreload.wallpaperShownAt) {
       pageState.wallpaperShownAt = effectPreload.wallpaperShownAt;
     }

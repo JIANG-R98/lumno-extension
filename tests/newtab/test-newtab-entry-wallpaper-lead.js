@@ -145,11 +145,11 @@ async function testEffectPreloadRecordsWhenTheWallpaperShowed() {
       createWallpaperEffects: () => ({ apply() {}, refresh: () => Promise.resolve() }),
       resolvePrefsForMode: () => ({ type: 'none' })
     },
-    LumnoNewtabWallpaperPreload: {
+    __lumnoBoot: { wallpaperPreload: {
       effectPrefsReady: Promise.resolve({ type: 'none' }),
       imageUrl: 'chrome-extension://abc/assets/wallpapers/test.webp',
       wallpaper: { id: 'test' }
-    },
+    } },
     globalThis: null
   };
   sandbox.globalThis = sandbox;
@@ -160,7 +160,7 @@ async function testEffectPreloadRecordsWhenTheWallpaperShowed() {
   await Promise.resolve();
   await Promise.resolve();
   assert.strictEqual(body.getAttribute('data-nt-wallpaper-ready'), '1');
-  const shownAt = sandbox.LumnoNewtabWallpaperEffectPreload.wallpaperShownAt;
+  const shownAt = sandbox.__lumnoBoot?.wallpaperEffectPreload.wallpaperShownAt;
   assert.ok(shownAt >= before && shownAt <= performance.now(), 'the reveal time is what the entry measures its lead from');
 }
 

@@ -21,7 +21,7 @@ function run(cache) {
   };
   sandbox.globalThis = sandbox;
   vm.runInNewContext(moduleScript('src/newtab/newtab-storage-prefetch.ts', undefined, null, { 'src/domain/settings.ts': 'LumnoSettings' }), sandbox, { filename: 'newtab-storage-prefetch.ts' });
-  return { fetched, prefetch: sandbox.LumnoNewtabLocalePrefetch };
+  return { fetched, prefetch: sandbox.__lumnoBoot?.localePrefetch };
 }
 
 const prefetched = run({ [settings.NEWTAB_LOCALE_CACHE_KEY]: 'zh_CN' });

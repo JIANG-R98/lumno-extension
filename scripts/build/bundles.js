@@ -13,8 +13,9 @@
 // format 'es' makes a bundle an ES module that re-exports its files, for
 // code that imports it by URL; every other bundle is a classic script.
 //
-// sharedFrom names bundles the page loads before this one: this bundle uses
-// their instances of the modules they run instead of copies of its own.
+// Every bundle carries its own copy of the modules it runs. What a page's
+// preload hands to the page's later bundles travels through the boot handoff
+// (src/platform/boot-handoff.ts), not through shared module instances.
 
 const BUNDLES = [
   // The service worker
@@ -34,12 +35,10 @@ const BUNDLES = [
   },
   {
     name: 'wallpaper-effect-preload',
-    files: ['src/newtab/wallpaper/wallpaper-effect-preload.ts'],
-    sharedFrom: ['newtab-preload']
+    files: ['src/newtab/wallpaper/wallpaper-effect-preload.ts']
   },
   {
     name: 'newtab',
-    sharedFrom: ['newtab-preload'],
     files: ['src/overlay/tab-switcher.ts', 'src/overlay/tab-switcher-page-bridge.ts', 'src/newtab/newtab.ts']
   },
   { name: 'newtab-route-redirect', files: ['src/newtab/newtab-route-redirect.ts'] },
@@ -52,7 +51,6 @@ const BUNDLES = [
   },
   {
     name: 'options',
-    sharedFrom: ['options-preload'],
     files: ['src/overlay/tab-switcher.ts', 'src/overlay/tab-switcher-page-bridge.ts', 'src/options/options.ts']
   },
 
@@ -60,7 +58,6 @@ const BUNDLES = [
   { name: 'onboarding-preload', files: ['src/shared/scrollbar-mode.ts'] },
   {
     name: 'onboarding',
-    sharedFrom: ['onboarding-preload', 'cjk-font-faces'],
     files: [
       'src/overlay/search-panel.ts',
       'src/overlay/tab-switcher.ts',
@@ -71,7 +68,7 @@ const BUNDLES = [
 
   // Toolbar popup
   { name: 'popup-preload', files: ['src/popup/popup-theme-preload.ts'] },
-  { name: 'popup', sharedFrom: ['popup-preload'], files: ['src/popup/popup-page.ts'] },
+  { name: 'popup', files: ['src/popup/popup-page.ts'] },
 
   // Shared by the pages
   { name: 'cjk-font-faces', files: ['src/shared/cjk-font-faces.ts'] },

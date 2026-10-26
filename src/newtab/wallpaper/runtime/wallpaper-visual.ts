@@ -6,6 +6,7 @@ import type { PreloadObjectUrl, WallpaperEffectPreloadRuntime } from '../wallpap
 import type { WallpaperOverlay } from './wallpaper-overlay';
 import type { WallpaperSources } from './wallpaper-sources';
 import type { WallpaperItem, WallpaperOverlayStops, WallpaperState } from './wallpaper-runtime-types';
+import { readBootValue } from '../../../platform/boot-handoff';
 
 interface WallpaperVisualDeps extends
   Pick<WallpaperOverlay, 'getResolvedWallpaperOverlayMode' | 'getWallpaperOverlayOpacityForCurrentMode' | 'getWallpaperOverlayStopPercent'>,
@@ -207,7 +208,7 @@ function createWallpaperVisual(deps: WallpaperVisualDeps) {
   // The preload decoded the small copy of the wallpaper it painted; the first sample uses that
   // image. Taken once, so the page does not keep it alive after the wallpaper changes.
   function takePreloadedDecodedImage(url: string): Promise<HTMLImageElement | null> | null {
-    const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
+    const wallpaperPreload = readBootValue('wallpaperPreload');
     const decoded = wallpaperPreload && wallpaperPreload.decodedImage;
     if (!wallpaperPreload || !decoded) {
       return null;
@@ -219,7 +220,7 @@ function createWallpaperVisual(deps: WallpaperVisualDeps) {
   }
 
   function takePreloadedCssObjectUrl(): PreloadObjectUrl | null {
-    const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
+    const wallpaperPreload = readBootValue('wallpaperPreload');
     const handed = wallpaperPreload && wallpaperPreload.cssObjectUrl;
     if (!wallpaperPreload || !handed || !handed.source || !handed.url) {
       return null;
@@ -362,7 +363,7 @@ function createWallpaperVisual(deps: WallpaperVisualDeps) {
   function applyWallpaperVisualState(wallpaper: WallpaperItem | null | undefined): string {
     const target = document.documentElement;
     const imageUrl = wallpaper ? getDisplayedWallpaperImageUrl(wallpaper) : '';
-    const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
+    const wallpaperPreload = readBootValue('wallpaperPreload');
     if (wallpaperPreload && typeof wallpaperPreload === 'object') {
       // A copy the preload is still reading must not paint over the runtime's choice.
       wallpaperPreload.runtimeApplied = true;

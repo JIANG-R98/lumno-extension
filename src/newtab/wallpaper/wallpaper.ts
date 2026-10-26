@@ -43,6 +43,7 @@ import * as WALLPAPER_ADAPTIVE_TONE from './wallpaper-adaptive-tone';
 import * as WALLPAPER_EFFECTS from './wallpaper-effects';
 import * as WALLPAPER_LOCAL_STORE from '../../shared/wallpaper-local-store';
 import { getRiSvg as getDefaultRiSvg } from '../../shared/ui/remix-icon';
+import { readBootValue } from '../../platform/boot-handoff';
 
 const DEFAULT_STORAGE_KEYS = {
   wallpaper: SETTINGS.NEWTAB_WALLPAPER_STORAGE_KEY,
@@ -1042,7 +1043,7 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
     t,
     wallpaperState
   });
-  const wallpaperEffectPreload = globalThis.LumnoNewtabWallpaperEffectPreload || null;
+  const wallpaperEffectPreload = readBootValue('wallpaperEffectPreload') || null;
 
 
 

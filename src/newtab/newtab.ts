@@ -201,6 +201,7 @@ import type { SuggestionElement } from '../shared/react/search/suggestion-list/t
 import type { BookmarkCardElement } from './react/bookmarks';
 import type { RecentCardElement } from './react/recent-sites';
 import type { ShortcutTileElement } from './react/shortcuts';
+import { readBootValue } from '../platform/boot-handoff';
 
 // The New Tab's React islands entry, which loads first, sets the island
 // globals this page builds on.
@@ -3262,7 +3263,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     loadFaviconEnhancedFetchEnabled()
   ]);
   const initialLanguageReadyTask = bootstrapInitialLanguageMode();
-  const initialMotionPreferenceReadyTask = globalThis.LumnoMotionPreferenceReady;
+  const initialMotionPreferenceReadyTask = readBootValue('motionPreferenceReady');
   const initialLayoutStorageReadyTask = startupStorageReadBatch
     ? startupStorageReadBatch.ready
     : Promise.resolve(true);

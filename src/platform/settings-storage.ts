@@ -20,6 +20,7 @@ import type {
   StorageItems,
   StorageKeys
 } from '../domain/storage-port';
+import { publishBootValue, readBootValue } from './boot-handoff';
 
 // The parts of the extension API these helpers use.
 interface StorageChromeApi {
@@ -92,7 +93,7 @@ interface StorageReadBatch {
   ready: Promise<ReadBatchMetrics>;
 }
 
-interface ReadPrefetch {
+interface StorageReadPrefetch {
   keys: Set<string>;
   stale: boolean;
   result: Promise<StorageItems | null>;
@@ -404,7 +405,17 @@ function writeStorageValue<T>(
     .then(() => value);
 }
 
-const storageReadPrefetches = new WeakMap<object, ReadPrefetch>();
+// The storage reads a preload started, kept in the boot handoff so the page's
+// own copy of this module finds them.
+function getStorageReadPrefetches(create: boolean): WeakMap<object, StorageReadPrefetch> | null {
+  const existing = readBootValue('storageReadPrefetches');
+  if (existing || !create) {
+    return existing || null;
+  }
+  const created = new WeakMap<object, StorageReadPrefetch>();
+  publishBootValue('storageReadPrefetches', created);
+  return created;
+}
 
 // Starts a read before the page's scripts have loaded. The batch created later for the same area
 // takes the result when it covers every requested key and none of them changed in the meantime.
@@ -423,7 +434,7 @@ function prefetchStorageRead(
     if (Object.keys(changes || {}).some((key) => keySet.has(key))) prefetch.stale = true;
   };
   onChanged.addListener(markStale);
-  const prefetch: ReadPrefetch = {
+  const prefetch: StorageReadPrefetch = {
     keys: keySet,
     stale: false,
     release: () => {
@@ -446,7 +457,10 @@ function prefetchStorageRead(
       }
     })
   };
-  storageReadPrefetches.set(area, prefetch);
+  const registry = getStorageReadPrefetches(true);
+  if (registry) {
+    registry.set(area, prefetch);
+  }
   return true;
 }
 
@@ -564,8 +578,11 @@ function createStorageReadBatch(area: StorageAreaLike | null | undefined): Stora
         finish({});
       }
     };
-    const prefetch = storageReadPrefetches.get(source);
-    storageReadPrefetches.delete(source);
+    const registry = getStorageReadPrefetches(false);
+    const prefetch = registry ? registry.get(source) : undefined;
+    if (registry) {
+      registry.delete(source);
+    }
     if (!prefetch) {
       readArea();
       return;
@@ -870,6 +887,7 @@ export {
   writeStorageValues
 };
 export type {
+  StorageReadPrefetch,
   ProviderStorageRuntime,
   ReadBatchMetrics,
   StorageAreaFacade,

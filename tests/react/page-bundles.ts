@@ -2,8 +2,9 @@ import { createRequire } from 'node:module';
 
 // Runs a bundle from scripts/build/bundles.js the way the page runs it: its
 // files in order, as modules. Call vi.resetModules() before a page's first
-// bundle so each boot gets fresh module instances; the page's later bundles
-// then share them, as bundles with sharedFrom do.
+// bundle so each boot gets fresh module instances. The page's later bundles
+// reuse them here, where the extension's bundles carry copies of their own;
+// what crosses between them travels through the boot handoff either way.
 const require = createRequire(import.meta.url);
 
 interface Bundle {

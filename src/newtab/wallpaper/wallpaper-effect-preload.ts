@@ -3,11 +3,12 @@
 import * as LumnoNewtabWallpaperEffects from './wallpaper-effects';
 import type { WallpaperEffectPrefs } from './wallpaper-effects';
 import type { WallpaperEffectPreloadRuntime } from './wallpaper-preload-types';
+import { publishBootValue, readBootValue } from '../../platform/boot-handoff';
 
 (function() {
   const root = document.documentElement;
   const body = document.body;
-  const preloadState = globalThis.LumnoNewtabWallpaperPreload;
+  const preloadState = readBootValue('wallpaperPreload');
   const effects = LumnoNewtabWallpaperEffects;
   if (!root ||
       !body ||
@@ -44,7 +45,7 @@ import type { WallpaperEffectPreloadRuntime } from './wallpaper-preload-types';
       state.sample = sample || null;
     }
   };
-  globalThis.LumnoNewtabWallpaperEffectPreload = preloadRuntime;
+  publishBootValue('wallpaperEffectPreload', preloadRuntime);
 
   // Created up front so wallpaper.ts always adopts this controller instead of starting its own, slower
   // render; it renders nothing until the preferences and the image are known.

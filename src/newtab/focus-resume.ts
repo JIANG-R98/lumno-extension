@@ -28,6 +28,7 @@ animation-delay: 0s !important;
 import type { SearchSourceType, SiteSearchProvider } from '../domain/search/types';
 import type { Suggestion } from '../shared/react/search/suggestion-list/types';
 import type { ActiveLocalScope } from './search/search-types';
+import { publishBootValue, takeBootValue } from '../platform/boot-handoff';
 
 // The search on screen, carried across the focus reload.
 interface SearchSnapshot {
@@ -40,7 +41,7 @@ interface SearchSnapshot {
 }
 
 // The view transition holding the old page's last frame.
-interface HeldTransition {
+interface HeldViewTransition {
   skipTransition(): void;
 }
 
@@ -64,8 +65,6 @@ interface FocusResumeDeps {
   pageState: FocusResumeState;
 }
 
-let heldTransition: HeldTransition | null = null;
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
 }
@@ -82,7 +81,7 @@ function isSavedSuggestion(value: unknown): value is Suggestion {
     (value.title === undefined || typeof value.title === 'string');
 }
 
-function isHeldTransition(value: unknown): value is HeldTransition {
+function isHeldTransition(value: unknown): value is HeldViewTransition {
   return isRecord(value) && typeof value.skipTransition === 'function';
 }
 
@@ -173,7 +172,7 @@ function prepareResumeLoad(): boolean {
   addTransitionStyle(INCOMING_TRANSITION_CSS);
   globalThis.addEventListener('pagereveal', (event) => {
     const transition = event && 'viewTransition' in event ? event.viewTransition : null;
-    heldTransition = isHeldTransition(transition) ? transition : null;
+    publishBootValue('focusResumeTransition', isHeldTransition(transition) ? transition : null);
   }, { once: true });
   return true;
 }
@@ -279,10 +278,10 @@ function createFocusResume(deps: FocusResumeDeps) {
       return;
     }
     documentElement.removeAttribute('data-nt-focus-route-pending');
+    const heldTransition = takeBootValue('focusResumeTransition');
     if (heldTransition && typeof heldTransition.skipTransition === 'function') {
       heldTransition.skipTransition();
     }
-    heldTransition = null;
     if (globalThis.performance && typeof globalThis.performance.mark === 'function') {
       globalThis.performance.mark('lumno-newtab-milestone-focus-resume-visible');
     }
@@ -327,4 +326,4 @@ function createFocusResume(deps: FocusResumeDeps) {
 type FocusResume = ReturnType<typeof createFocusResume>;
 
 export { prepareResumeLoad, createFocusResume };
-export type { FocusResume, FocusResumeDeps, FocusResumeState, SearchSnapshot };
+export type { FocusResume, FocusResumeDeps, FocusResumeState, HeldViewTransition, SearchSnapshot };

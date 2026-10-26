@@ -1197,12 +1197,12 @@ function runEffectPreload({ focusRoute, imageReady, imageUrl = '' }) {
         return value;
       }
     },
-    LumnoNewtabWallpaperPreload: {
+    __lumnoBoot: { wallpaperPreload: {
       effectPrefsReady: Promise.resolve({ type: 'grain', strength: 50, size: 50, spacing: 50 }),
       imageUrl,
       imageReady,
       wallpaper: { id: 'test-wallpaper' }
-    },
+    } },
     window: {}
   };
   preloadSandbox.globalThis = preloadSandbox;
@@ -1213,7 +1213,7 @@ function runEffectPreload({ focusRoute, imageReady, imageUrl = '' }) {
     attributes,
     appliedPrefs,
     getRefreshes: () => refreshes,
-    runtime: preloadSandbox.LumnoNewtabWallpaperEffectPreload
+    runtime: preloadSandbox.__lumnoBoot?.wallpaperEffectPreload
   };
 }
 

@@ -5,6 +5,7 @@ import type { NewtabTimeInk, NewtabTopContentMode } from '../../../domain/settin
 import type { StorageAreaLike } from '../../../domain/storage-port';
 import { queryHtmlElement, queryHtmlElements } from '../../../shared/dom-lookup';
 import type { WallpaperState } from './wallpaper-runtime-types';
+import { readBootValue } from '../../../platform/boot-handoff';
 
 // A slider's range and its value when none is saved.
 interface SliderConfig {
@@ -109,7 +110,7 @@ function createPanelSettings(deps: PanelSettingsDeps) {
     }
     wallpaperState.initialWallpaperApplied = true;
     // The first sample has taken the preload's decoded image if it showed the same wallpaper.
-    const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
+    const wallpaperPreload = readBootValue('wallpaperPreload');
     if (wallpaperPreload && wallpaperPreload.decodedImage) {
       wallpaperPreload.decodedImage = null;
     }

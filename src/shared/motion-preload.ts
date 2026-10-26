@@ -1,8 +1,9 @@
 // Sets <html data-lumno-motion-effects="on|off"> from the stored setting
 // before the page draws, keeps it current, and hands the first value to the
-// page script as globalThis.LumnoMotionPreferenceReady.
+// page script through the boot handoff (motionPreferenceReady).
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import { MOTION_EFFECTS_ENABLED_STORAGE_KEY, normalizeMotionEffectsEnabled } from '../domain/settings';
+import { publishBootValue } from '../platform/boot-handoff';
 
 (function() {
   const root = document.documentElement;
@@ -13,7 +14,7 @@ import { MOTION_EFFECTS_ENABLED_STORAGE_KEY, normalizeMotionEffectsEnabled } fro
     resolveInitialPreference = resolve;
   });
 
-  globalThis.LumnoMotionPreferenceReady = initialPreferenceReady;
+  publishBootValue('motionPreferenceReady', initialPreferenceReady);
 
   function applyMotionEffectsPreference(value: unknown): void {
     const enabled = normalizeMotionEffectsEnabled(value);

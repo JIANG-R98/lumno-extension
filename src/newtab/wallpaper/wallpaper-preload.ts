@@ -10,6 +10,7 @@ import type {
   WallpaperMode,
   WallpaperPreloadState
 } from './wallpaper-preload-types';
+import { publishBootValue } from '../../platform/boot-handoff';
 
 type OverlayPosition = 'top' | 'mid' | 'bottom';
 type OverlayStops = Record<WallpaperMode, Record<OverlayPosition, number>>;
@@ -527,7 +528,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     const sample = samplePath
       ? { url: getRuntimeUrl(samplePath), ...cachedWallpaper.sourceSize }
       : null;
-    globalThis.LumnoNewtabWallpaperPreload = createPreloadState({
+    publishBootValue('wallpaperPreload', createPreloadState({
       imageUrl: url,
       initialImageUrl: url,
       sample,
@@ -536,7 +537,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
         id: cachedWallpaper.path,
         path: cachedWallpaper.path
       }
-    });
+    }));
     applyWallpaperImage(url);
     if (document.head) {
       const link = document.createElement('link');
@@ -593,5 +594,5 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     applyWallpaperImage(cssImage.url);
     return record.imageDataUrl;
   });
-  globalThis.LumnoNewtabWallpaperPreload = preloadState;
+  publishBootValue('wallpaperPreload', preloadState);
 })();

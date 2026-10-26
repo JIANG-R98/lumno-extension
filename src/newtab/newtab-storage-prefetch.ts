@@ -2,6 +2,7 @@
 // own scripts load: its locale messages and its startup storage keys.
 import * as LumnoSettings from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import { publishBootValue } from '../platform/boot-handoff';
 
 (function() {
   // Starts the startup work the last New Tab's choices make known while the rest of the page is still
@@ -22,10 +23,10 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
   if (cachedLocale && settings.normalizeLocale(cachedLocale) === cachedLocale &&
       chromeApi && chromeApi.runtime && typeof chromeApi.runtime.getURL === 'function') {
     const localePath = chromeApi.runtime.getURL(`_locales/${cachedLocale}/messages.json`);
-    globalThis.LumnoNewtabLocalePrefetch = {
+    publishBootValue('localePrefetch', {
       locale: cachedLocale,
       messages: fetch(localePath, { cache: 'no-store' }).then((response): Promise<unknown> => response.json())
-    };
+    });
   }
 
   let stored: unknown = null;
