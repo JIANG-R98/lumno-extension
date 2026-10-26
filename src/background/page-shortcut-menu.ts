@@ -2,7 +2,7 @@
 // New Tab shortcuts, saved the same way the New Tab saves one: browser sync
 // first, this device's overflow record for whatever does not fit.
 import * as LumnoSettings from '../domain/settings';
-import * as LumnoSiteDisplayName from '../domain/site-display-name';
+import { getSiteDisplayName } from '../domain/site-display-name';
 import { isRecord } from '../platform/storage-call';
 import { createShortcutListStorage } from '../platform/shortcut-list-storage';
 import type { ShortcutListStorage } from '../platform/shortcut-list-storage';
@@ -13,17 +13,15 @@ import type { PageShortcutToastCommand } from '../domain/injected-commands';
 import { themeMode } from '../domain/settings/appearance';
 import { language } from '../domain/settings/locale';
 import { webdavStatus } from '../domain/settings/sync-state';
-import type { ShortcutsStoreApi } from '../domain/shortcuts/api';
-import { SHORTCUTS_STORE_API } from '../domain/shortcuts/api';
 import type { ProviderStorageRuntime } from '../platform/settings-storage';
+import { DEFAULT_MAX_SHORTCUTS } from '../domain/shortcuts/constants';
+import { createShortcutRecord, isShortcutFolder } from '../domain/shortcuts/normalize';
 
 interface PageShortcutMenuOptions {
   chrome?: typeof chrome;
   // The worker's settings: the language, the theme the page toast follows,
   // and the WebDAV status.
   settingsStore: SettingsStore;
-  shortcuts?: ShortcutsStoreApi;
-  siteDisplayName?: typeof LumnoSiteDisplayName;
   provider: ProviderStorageRuntime;
   loadLocaleMessages?: (locale: string) => Promise<Record<string, LocaleMessage>>;
 }
@@ -60,13 +58,10 @@ const MENU_ITEM_ID = 'lumno-add-page-shortcut';
 const DOCUMENT_URL_PATTERNS: readonly string[] = Object.freeze(['http://*/*', 'https://*/*']);
 const MENU_TITLE_FALLBACK = 'Add to Lumno New Tab shortcuts';
 
+// What the menu works with, and the adds waiting their turn.
 interface PageShortcutMenuContext {
-  readonly opts: PageShortcutMenuOptions;
   readonly chromeApi: typeof chrome;
   readonly settingsStore: SettingsStore;
-  readonly store: ShortcutsStoreApi;
-  readonly siteDisplayName: typeof LumnoSiteDisplayName;
-  readonly provider: ProviderStorageRuntime;
   readonly shortcutList: ShortcutListStorage;
   readonly loadLocaleMessages: (locale: string) => Promise<Record<string, LocaleMessage>>;
   chain: Promise<unknown>;
@@ -134,7 +129,7 @@ function getShortcutTitle(ctx: PageShortcutMenuContext, url: string, pageTitle: 
   } catch (_error) {
     host = '';
   }
-  const name = ctx.siteDisplayName.getSiteDisplayName(host, pageTitle, {
+  const name = getSiteDisplayName(host, pageTitle, {
     getBrandName(brandHost: string, fallback: string): string {
       if (brandHost === 'mp.weixin.qq.com') return translate(ctx, messages, 'site_brand_wechat_official', fallback);
       if (brandHost === 'weibo.com') return translate(ctx, messages, 'site_search_name_weibo', fallback);
@@ -154,14 +149,14 @@ async function isWebDavSyncEnabled(ctx: PageShortcutMenuContext): Promise<boolea
 // site added from its context menus.
 async function addPage(ctx: PageShortcutMenuContext, page: PageToShortcut, messages: Record<string, LocaleMessage>): Promise<AddResult> {
   const { state } = await ctx.shortcutList.read();
-  const shortcut = ctx.store.createShortcutRecord({
+  const shortcut = createShortcutRecord({
     title: getShortcutTitle(ctx, page.url, page.title, messages),
     url: page.url
   });
   if (!shortcut) return { status: 'invalid' };
-  const shortcutUrl = ctx.store.isShortcutFolder(shortcut) ? '' : shortcut.url;
-  if (state.items.some((item) => !ctx.store.isShortcutFolder(item) && item.url === shortcutUrl)) return { status: 'exists' };
-  if (state.items.length >= ctx.store.DEFAULT_MAX_SHORTCUTS) return { status: 'limit' };
+  const shortcutUrl = isShortcutFolder(shortcut) ? '' : shortcut.url;
+  if (state.items.some((item) => !isShortcutFolder(item) && item.url === shortcutUrl)) return { status: 'exists' };
+  if (state.items.length >= DEFAULT_MAX_SHORTCUTS) return { status: 'limit' };
   const groupId = state.groups.length ? state.groups[state.groups.length - 1].id : '';
   const nextState = {
     groups: state.groups,
@@ -179,7 +174,7 @@ async function describeResult(ctx: PageShortcutMenuContext, result: AddResult, m
   if (result.status === 'limit') {
     return {
       message: translate(ctx, messages, 'newtab_shortcuts_limit_reached', 'You can add up to {count} shortcuts.', {
-        count: ctx.store.DEFAULT_MAX_SHORTCUTS
+        count: DEFAULT_MAX_SHORTCUTS
       }),
       error: true
     };
@@ -278,29 +273,21 @@ function start(ctx: PageShortcutMenuContext): void {
 }
 
 function createController(options: PageShortcutMenuOptions): PageShortcutMenu {
-  const opts = options;
-  const chromeApi = opts.chrome || globalThis.chrome;
-  const settingsStore = opts.settingsStore;
-  const store = opts.shortcuts || SHORTCUTS_STORE_API;
-  const siteDisplayName = opts.siteDisplayName || LumnoSiteDisplayName;
-  const provider = opts.provider;
-  const shortcutList = createShortcutListStorage({ chromeApi, provider });
-  const loadLocaleMessages: PageShortcutMenuContext['loadLocaleMessages'] = typeof opts.loadLocaleMessages === 'function'
-    ? opts.loadLocaleMessages
-    : () => Promise.resolve({});
+  const chromeApi = options.chrome || globalThis.chrome;
   const ctx: PageShortcutMenuContext = {
-    opts,
     chromeApi,
-    settingsStore,
-    store,
-    siteDisplayName,
-    provider,
-    shortcutList,
-    loadLocaleMessages,
+    settingsStore: options.settingsStore,
+    shortcutList: createShortcutListStorage({ chromeApi, provider: options.provider }),
+    loadLocaleMessages: typeof options.loadLocaleMessages === 'function' ? options.loadLocaleMessages : () => Promise.resolve({}),
     chain: Promise.resolve()
   };
-
-  return { start: () => start(ctx), syncMenu: () => syncMenu(ctx), handleClick: (info: chrome.contextMenus.OnClickData | null | undefined, tab: chrome.tabs.Tab | undefined) => handleClick(ctx, info, tab), addTabPage: (tab: chrome.tabs.Tab | null) => addTabPage(ctx, tab), showToast: (tabId: unknown, toast: PageToast | null | undefined) => showToast(ctx, tabId, toast) };
+  return {
+    start: () => start(ctx),
+    syncMenu: () => syncMenu(ctx),
+    handleClick: (info, tab) => handleClick(ctx, info, tab),
+    addTabPage: (tab) => addTabPage(ctx, tab),
+    showToast: (tabId, toast) => showToast(ctx, tabId, toast)
+  };
 }
 
 export { MENU_ITEM_ID, DOCUMENT_URL_PATTERNS, createController };

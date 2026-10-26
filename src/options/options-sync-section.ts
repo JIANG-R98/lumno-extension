@@ -10,7 +10,8 @@ import type { createSyncTransfer, SettingsImportPlan } from './options-sync-tran
 import type { FormatTemplate, GetMessage, ToastTask } from './options-types';
 import type { BrowserSyncCardHandlers, BrowserSyncCardModel, BrowserSyncTone } from './react/account-tab';
 import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
-import { SHORTCUTS_STORE_API } from '../domain/shortcuts/api';
+import { SHORTCUT_STORAGE_KEYS } from '../domain/shortcuts/constants';
+import { summarizeShortcutSync } from '../domain/shortcuts/storage-plan';
 
 interface SyncSectionChromeApi {
   runtime: { lastError?: { message?: string } | null };
@@ -142,7 +143,6 @@ function createSyncSection(options: SyncSectionOptions) {
   // through WebDAV.
   let shortcutSyncSummaryRevision = 0;
   function refreshShortcutSyncSummary(): void {
-    const store = SHORTCUTS_STORE_API;
     if (!storageArea || getActivePrimaryAreaName() !== 'sync' || !localStorageArea) {
       if (shortcutSummary) {
         shortcutSummary = '';
@@ -151,10 +151,10 @@ function createSyncSection(options: SyncSectionOptions) {
       return;
     }
     const revision = ++shortcutSyncSummaryRevision;
-    storageArea.get(store.SHORTCUT_STORAGE_KEYS.slice(), (values) => {
+    storageArea.get(SHORTCUT_STORAGE_KEYS.slice(), (values) => {
       localStorageArea.get([NewtabShortcutSettings.newtabShortcutsLocalOverflow.key, SETTINGS.webdavStatus.key], (local) => {
         if (revision !== shortcutSyncSummaryRevision) return;
-        const summary = store.summarizeShortcutSync(values || {}, local && local[NewtabShortcutSettings.newtabShortcutsLocalOverflow.key]);
+        const summary = summarizeShortcutSync(values || {}, local && local[NewtabShortcutSettings.newtabShortcutsLocalOverflow.key]);
         const webdavStatus = local ? local[SETTINGS.webdavStatus.key] : undefined;
         const webdav = isRecord(webdavStatus) && webdavStatus.enabled === true;
         let text = '';

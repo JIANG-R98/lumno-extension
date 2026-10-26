@@ -6,7 +6,8 @@ const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 require('../node/register-typescript');
 const clientApi = {
-  ...require('../../src/background/webdav-client/api.ts').WEBDAV_CLIENT_API,
+  ...require('../../src/background/webdav-client/client.ts'),
+  ...require('../../src/background/webdav-client/config.ts'),
   ...require('../../src/background/webdav-client/errors.ts')
 };
 
