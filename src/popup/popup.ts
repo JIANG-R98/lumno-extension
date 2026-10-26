@@ -1,7 +1,8 @@
 // The toolbar popup: actions on the current page, two global switches and
 // links to the rest of Lumno. React renders it from the model built here;
 // this script owns the browser APIs and the settings it reads and writes.
-import * as LumnoPipMainWorld from '../shared/pip-main-world';
+import { forceExitPiPInMainWorld } from '../shared/pip-main-world/exit.main-world';
+import { siteTryEnterPiPInMainWorld } from '../shared/pip-main-world/site-enter.main-world';
 import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as AppearanceSettings from '../domain/settings/appearance';
 import * as FeatureSettings from '../domain/settings/features';
@@ -744,11 +745,10 @@ function start(): void {
   // Runs in the page from this click, so the request carries the popup's
   // user activation. Lumno's own helper picks the playing or largest video.
   async function runPictureInPicture(tab: PopupTab): Promise<void> {
-    const mainWorld = LumnoPipMainWorld;
     const exiting = state.pip.active;
     const result = await executeInTab(tab.id, {
       world: 'MAIN',
-      func: exiting ? mainWorld.forceExitPiPInMainWorld : mainWorld.siteTryEnterPiPInMainWorld
+      func: exiting ? forceExitPiPInMainWorld : siteTryEnterPiPInMainWorld
     });
     if (result && result.after === !exiting) {
       globalThis.close();

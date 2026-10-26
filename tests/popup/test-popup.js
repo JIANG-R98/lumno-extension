@@ -253,7 +253,7 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
   const html = read('src/popup/popup.html');
   const scripts = getPageScripts('src/popup/popup.html');
   ['src/domain/settings/appearance.ts', 'src/domain/settings/features.ts', 'src/popup/popup-theme-preload.ts', 'src/platform/url-guards.ts', 'src/domain/shortcut-display.ts',
-    'src/shared/ui/tooltip.ts', 'src/shared/ui/cursor-tooltip.ts', 'src/shared/ui/toast.ts', 'src/shared/pip-main-world.ts',
+    'src/shared/ui/tooltip.ts', 'src/shared/ui/cursor-tooltip.ts', 'src/shared/ui/toast.ts', 'src/shared/pip-main-world/site-enter.main-world.ts',
     'src/platform/browser-profile.ts']
     .forEach((script) => assert(scripts.includes(script), `the popup loads ${script}`));
   const popupDocument = new JSDOM(html).window.document;

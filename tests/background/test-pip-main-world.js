@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const pipMainWorld = require('../../src/shared/pip-main-world.ts');
+const pipMainWorld = require('../../src/shared/pip-main-world/index.ts');
 
 function createChromeStub(executeScript) {
   return {

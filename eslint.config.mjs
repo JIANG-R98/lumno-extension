@@ -185,6 +185,13 @@ export default tseslint.config(
     }
   },
   {
+    // A function run in a page's main world is serialized on its own by
+    // executeScript, so its helpers live inside its body; each such module
+    // holds one function (two short ones at most), so it still reads whole.
+    files: ['src/**/*.main-world.ts'],
+    rules: { 'max-lines-per-function': 'off' }
+  },
+  {
     // Globals are declared with var, the only form globalThis picks up.
     files: ['src/types/**/*.d.ts'],
     rules: { 'no-var': 'off' }
