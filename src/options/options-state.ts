@@ -2,7 +2,8 @@
 // each module declares the slice it reads and writes, and this type is all
 // of them together.
 import type { SiteSearchProvider } from '../domain/search/types';
-import type { BatchedStorageArea, ProviderStorageRuntime, StorageAreaFacade } from '../platform/settings-storage';
+import type { ProviderStorageRuntime } from '../platform/settings-storage';
+import type { SettingsStore } from '../platform/settings-store';
 import type { ToastController } from '../shared/react/toast';
 import type { TooltipController } from '../shared/ui/tooltip';
 import type { AggregateSearchListState } from './options-aggregate-search-list';
@@ -22,6 +23,8 @@ import type { TooltipsState } from './options-tooltips';
 // types of what the slices see only part of.
 interface OptionsPageState {
   providerStorageRuntime: ProviderStorageRuntime;
+  // The page's settings, read and followed through one store.
+  settingsStore: SettingsStore;
   searchSourceOrderController: ReturnType<typeof createSearchSourceOrderController>;
   panelHeightAnimator: ReturnType<typeof createPanelHeightAnimator>;
   tooltipController: TooltipController;
@@ -43,10 +46,7 @@ type OptionsState =
 // starts empty or at its default.
 interface OptionsStateParts {
   providerStorageRuntime: ProviderStorageRuntime;
-  // The provider area, behind the startup read batch.
-  storageArea: BatchedStorageArea;
-  // The provider area itself, for writes.
-  rawStorageArea: StorageAreaFacade;
+  settingsStore: SettingsStore;
   siteSearchModel: ReturnType<typeof createSiteSearchModel>;
   enqueueSiteSearchProviderStorageOperation: EnqueueOperation;
   panelHeightAnimator: ReturnType<typeof createPanelHeightAnimator>;
@@ -61,8 +61,7 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
   return {
     // What the page made before the state.
     providerStorageRuntime: parts.providerStorageRuntime,
-    storageArea: parts.storageArea,
-    rawStorageArea: parts.rawStorageArea,
+    settingsStore: parts.settingsStore,
     siteSearchModel: parts.siteSearchModel,
     enqueueSiteSearchProviderStorageOperation: parts.enqueueSiteSearchProviderStorageOperation,
     panelHeightAnimator: parts.panelHeightAnimator,
@@ -72,8 +71,8 @@ function createOptionsState(parts: OptionsStateParts): OptionsState {
     isMacPlatform: parts.isMacPlatform,
     fallbackSiteSearchProviders: parts.fallbackSiteSearchProviders,
 
-    // Startup: storage reads are batched, and select refreshes wait for them.
-    optionsStartupStorageBatchPending: true,
+    // Startup: select refreshes wait for the settings to be read.
+    optionsStartupReadPending: true,
     optionsStartupRefreshCoalescing: true,
     optionsStartupRefreshDeferred: false,
 

@@ -5,8 +5,8 @@ import type { AggregateSearch } from '../domain/search/aggregate-search-store';
 import type * as SearchUtils from '../domain/search/search-utils';
 import type { SiteSearchProvider } from '../domain/search/types';
 import * as LumnoAggregateSearchStorage from '../platform/aggregate-search-storage';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
-import type { StorageAreaFacade } from '../platform/settings-storage';
+import { aggregateSearches } from '../domain/settings/search';
+import type { SettingsStore } from '../platform/settings-store';
 import type * as AggregateSearchModule from './options-aggregate-search';
 import type { AggregateSearchItem } from './options-aggregate-search';
 import type { createSearchSourceOrderController } from './options-search-source-order';
@@ -28,7 +28,7 @@ interface AggregateSearchListState {
   customSiteSearchProviderIdsReady: boolean;
   disabledSiteSearchKeys: Set<string>;
   searchSourceOrderController: Pick<ReturnType<typeof createSearchSourceOrderController>, 'sortList'>;
-  rawStorageArea: StorageAreaFacade | null;
+  settingsStore: SettingsStore;
 }
 
 interface AggregateSearchListDeps {
@@ -47,7 +47,6 @@ interface AggregateSearchListDeps {
   // The keys each list shows right now, in order, for the move buttons.
   renderedSearchSourceKeys: Record<string, string[]>;
   getSearchSourceReorderCopy(): ReorderCopyModel;
-  AGGREGATE_SEARCH_STORAGE_KEY: string;
   getActivePrimaryAreaName(): string;
   AGGREGATE_SEARCH: Pick<typeof AggregateSearchModule, 'createAggregateSearchStateCoordinator'>;
   showToast(message: string, isError?: boolean): void;
@@ -76,7 +75,6 @@ function createAggregateSearchList(deps: AggregateSearchListDeps) {
     aggregateSearchListController,
     renderedSearchSourceKeys,
     getSearchSourceReorderCopy,
-    AGGREGATE_SEARCH_STORAGE_KEY,
     getActivePrimaryAreaName,
     AGGREGATE_SEARCH,
     showToast,
@@ -276,18 +274,13 @@ function createAggregateSearchList(deps: AggregateSearchListDeps) {
     const serialized = AGGREGATE_SEARCH_STORE.serializeAggregateSearches(items);
     const serializedBytes = AGGREGATE_SEARCH_STORE.getSerializedStorageByteLength(
       serialized,
-      AGGREGATE_SEARCH_STORAGE_KEY
+      aggregateSearches.key
     );
     const byteBudget = AGGREGATE_SEARCH_STORE.SYNC_ITEM_BYTE_BUDGET;
     if (getActivePrimaryAreaName() === 'sync' && serializedBytes > byteBudget) {
       return Promise.reject(new Error('aggregate-search-sync-item-quota-exceeded'));
     }
-    return LumnoSettingsStorage.writeStorageValue(
-      optionsState.rawStorageArea,
-      chrome,
-      AGGREGATE_SEARCH_STORAGE_KEY,
-      serialized
-    ).then(() => serialized.items);
+    return optionsState.settingsStore.set(aggregateSearches, serialized).then(() => serialized.items);
   }
 
   function getAggregateSearchStateCoordinator() {
@@ -305,11 +298,7 @@ function createAggregateSearchList(deps: AggregateSearchListDeps) {
           return optionsState.aggregateSearches;
         },
         load() {
-          return LumnoAggregateSearchStorage.loadAggregateSearches(
-            optionsState.rawStorageArea,
-            AGGREGATE_SEARCH_STORAGE_KEY,
-            chrome
-          );
+          return LumnoAggregateSearchStorage.readAggregateSearches(optionsState.settingsStore);
         },
         normalize: normalizeAggregateSearches,
         onLoadError(error) {

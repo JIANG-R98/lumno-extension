@@ -3,7 +3,7 @@
 import * as AppearanceSettings from '../domain/settings/appearance';
 import * as PageCacheSettings from '../domain/settings/page-cache';
 import type { ThemeMode } from '../domain/settings/appearance';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
+import { getContextSettingsStore } from '../platform/settings-store';
 import { normalizeSettingsTabKey, SETTINGS_TAB_KEYS } from './options-navigation';
 
 (function() {
@@ -146,17 +146,15 @@ import { normalizeSettingsTabKey, SETTINGS_TAB_KEYS } from './options-navigation
     routeObserver.observe(root, { childList: true, subtree: true });
   }
 
-  try {
-    const storage = LumnoSettingsStorage.getProviderStorage(globalThis.chrome).area;
-    if (storage && typeof storage.get === 'function') {
-      storage.get([AppearanceSettings.themeMode.key], (result) => {
-        const storedMode = AppearanceSettings.themeMode.parse(result && result[AppearanceSettings.themeMode.key]);
-        currentThemeMode = storedMode;
-        cacheThemeMode(storedMode);
-        applyTheme(resolveTheme(storedMode));
-      });
-    }
-  } catch (e) {
-    // The cached/system theme already made the page paintable.
+  // The cached or system theme already made the page paintable; the stored
+  // one replaces it once read.
+  if (globalThis.chrome && globalThis.chrome.storage) {
+    const settingsStore = getContextSettingsStore(globalThis.chrome, window);
+    void settingsStore.include(AppearanceSettings.themeMode).then(() => {
+      const storedMode = settingsStore.get(AppearanceSettings.themeMode);
+      currentThemeMode = storedMode;
+      cacheThemeMode(storedMode);
+      applyTheme(resolveTheme(storedMode));
+    });
   }
 })();

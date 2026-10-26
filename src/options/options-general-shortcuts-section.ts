@@ -3,11 +3,9 @@
 // pages, the list of shortcuts, and quick tab switching. One React view
 // draws it; this keeps its values in step with storage.
 import type * as Settings from '../domain/settings';
-import type { RestrictedAction } from '../domain/settings/overlay-panel';
-import type { StorageItems } from '../domain/storage-port';
 import * as LumnoMessaging from '../platform/messaging';
 import type { MessageRuntime } from '../platform/messaging';
-import { createSectionSetting, type SectionSettingBinder } from './options-section-setting';
+import { createSectionSetting, type SectionSettingBinder, type SectionSettingStorage } from './options-section-setting';
 import type { SectionView } from './options-section-view';
 import type { GetMessage } from './options-types';
 import type { GeneralShortcutsSectionHandlers, GeneralShortcutsSectionModel } from './react/general-shortcuts-section';
@@ -16,7 +14,7 @@ import type { ShortcutReferenceRenderModel } from './react/shortcut-reference';
 interface GeneralShortcutsSectionDeps {
   // Draws the section; the General tab hands over its part of the tab's view.
   view(handlers: GeneralShortcutsSectionHandlers): SectionView<GeneralShortcutsSectionModel>;
-  storageArea: { set(items: StorageItems): unknown } | null;
+  settingsStore: SectionSettingStorage;
   SETTINGS: Pick<typeof Settings,
     'restrictedAction' | 'restrictedActionAutoBrowserSettingDone' |
     'overlayTabPriority'>;
@@ -25,26 +23,13 @@ interface GeneralShortcutsSectionDeps {
   showToast(message: string, isError?: boolean): void;
 }
 
-// "lumno" is the old name of the default action.
-function normalizeRestrictedAction(value: unknown): RestrictedAction {
-  return value === 'none' ? 'none' : 'default';
-}
-
 function createGeneralShortcutsSection(deps: GeneralShortcutsSectionDeps) {
-  const { view, storageArea, SETTINGS, runtime, getMessage, showToast } = deps;
+  const { view, settingsStore, SETTINGS, runtime, getMessage, showToast } = deps;
 
   const render = (): void => controller.render(getModel());
-  const restrictedAction = createSectionSetting({
-    storageKey: SETTINGS.restrictedAction.key,
-    normalize: normalizeRestrictedAction,
-    refreshSelects: true
-  }, null, () => render());
-  // Quick tab switching stays on: a stored "off" is shown, and written back, as on.
-  const quickSwitch = createSectionSetting({
-    storageKey: SETTINGS.overlayTabPriority.key,
-    normalize: (): boolean => true,
-    refreshSelects: true
-  }, storageArea, () => render());
+  const restrictedAction = createSectionSetting({ setting: SETTINGS.restrictedAction, refreshSelects: true }, null, () => render());
+  // Quick tab switching stays on: the switch always shows on and saves on.
+  const quickSwitch = createSectionSetting({ setting: SETTINGS.overlayTabPriority, refreshSelects: true }, settingsStore, () => render());
   let status = '';
   let reference: ShortcutReferenceRenderModel | null = null;
 
@@ -60,17 +45,15 @@ function createGeneralShortcutsSection(deps: GeneralShortcutsSectionDeps) {
     },
     // Choosing an action also marks the one-time browser setting step done.
     onRestrictedAction(value) {
-      const next = normalizeRestrictedAction(value);
-      restrictedAction.change(next);
-      if (storageArea) {
-        storageArea.set({
-          [SETTINGS.restrictedAction.key]: next,
-          [SETTINGS.restrictedActionAutoBrowserSettingDone.key]: true
-        });
-      }
+      const next = SETTINGS.restrictedAction.parse(value);
+      restrictedAction.show(next);
+      void settingsStore.setMany([
+        [SETTINGS.restrictedAction, next],
+        [SETTINGS.restrictedActionAutoBrowserSettingDone, true]
+      ]).catch(() => {});
     },
-    onQuickSwitch(checked) {
-      quickSwitch.change(checked);
+    onQuickSwitch() {
+      quickSwitch.change(true);
     }
   });
 
@@ -121,7 +104,7 @@ function createGeneralShortcutsSection(deps: GeneralShortcutsSectionDeps) {
       reference,
       quickSwitch: {
         title: getMessage('settings_overlay_tab_priority_title', '快速切换已开启标签页'),
-        toggle: { id: '_x_extension_overlay_tab_quick_switch_2024_unique_', checked: quickSwitch.get() }
+        toggle: { id: '_x_extension_overlay_tab_quick_switch_2024_unique_', checked: true }
       }
     };
   }

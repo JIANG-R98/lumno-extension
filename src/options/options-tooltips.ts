@@ -6,7 +6,7 @@ import type { ToastTask } from './options-types';
 
 interface TooltipsState {
   // While the startup read batch is pending, select refreshes wait for it.
-  optionsStartupStorageBatchPending: boolean;
+  optionsStartupReadPending: boolean;
   optionsStartupRefreshCoalescing: boolean;
   optionsStartupRefreshDeferred: boolean;
   // Made once the page has mounted them.
@@ -61,7 +61,7 @@ function createTooltips(deps: TooltipsDeps) {
 
   function refreshCustomSelects(options?: { force?: boolean }): void {
     const force = Boolean(options && options.force);
-    if ((optionsState.optionsStartupStorageBatchPending || optionsState.optionsStartupRefreshCoalescing) && !force) {
+    if ((optionsState.optionsStartupReadPending || optionsState.optionsStartupRefreshCoalescing) && !force) {
       optionsState.optionsStartupRefreshDeferred = true;
       return;
     }

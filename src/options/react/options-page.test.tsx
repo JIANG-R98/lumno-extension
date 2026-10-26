@@ -210,7 +210,7 @@ afterEach(() => {
 });
 
 describe('Options page storage wiring', () => {
-  it('restores switches from storage, repairs missing values and becomes ready', async () => {
+  it('restores switches from storage, leaves missing values unwritten and becomes ready', async () => {
     const settings = SETTINGS;
     const chrome = await bootOptionsPage({
       [settings.motionEffectsEnabled.key]: false,
@@ -220,10 +220,14 @@ describe('Options page storage wiring', () => {
     expect(toggle('_x_extension_tab_switcher_toggle_2026_unique_').checked).toBe(true);
     expect(toggle('_x_extension_update_notice_toggle_2026_unique_').checked).toBe(true);
     const synced = chrome.storage.sync.values;
-    expect(synced[settings.updateNoticeEnabled.key]).toBe(true);
-    expect(synced[settings.simpleModeEnabled.key]).toBe(false);
-    expect(synced[settings.aggregateSearchAutoGroupEnabled.key]).toBe(true);
+    expect(synced[settings.updateNoticeEnabled.key]).toBeUndefined();
+    expect(synced[settings.simpleModeEnabled.key]).toBeUndefined();
     expect(synced[settings.motionEffectsEnabled.key]).toBe(false);
+    // An install without the auto-group choice saves the one derived from
+    // its aggregate searches.
+    await vi.waitFor(() => {
+      expect(synced[settings.aggregateSearchAutoGroupEnabled.key]).toBe(true);
+    });
     expect(document.getElementById('_x_extension_feedback_support_2026_unique_')?.textContent)
       .toContain(enMessages.settings_help_center_title.message);
     // The WebDAV controller is created in the page's own declaration order.
@@ -445,7 +449,8 @@ describe('Options page storage wiring', () => {
     const get = failing.storage.sync.get.bind(failing.storage.sync);
     failing.storage.sync.get = (keys: unknown, callback?: (result: StorageValues) => void) => {
       const list = Array.isArray(keys) ? keys : [keys];
-      if (callback && list.length === 1 && list[0] === settings.aggregateSearches.key) {
+      // Settings are read together, so the read that holds the aggregate searches fails.
+      if (callback && list.includes(settings.aggregateSearches.key)) {
         queueMicrotask(() => {
           failing.runtime.lastError = { message: 'read failed' };
           callback({});
@@ -461,12 +466,13 @@ describe('Options page storage wiring', () => {
     });
   });
 
-  it('repairs, persists and follows the overlay opening animation', async () => {
+  it('shows, persists and follows the overlay opening animation', async () => {
     const settings = SETTINGS;
     const chrome = await bootOptionsPage({ [settings.overlayEnterAnimation.key]: 'bounce' });
     const key = settings.overlayEnterAnimation.key;
     const button = (value: string) => getTag(document, `#_x_extension_overlay_enter_animation_tabs_wrap_2026_unique_ button[data-overlay-enter-animation="${value}"]`, 'button');
-    expect(chrome.storage.sync.values[key]).toBe('elastic');
+    // An unknown animation shows as the default and is left as stored.
+    expect(chrome.storage.sync.values[key]).toBe('bounce');
     expect(button('elastic').getAttribute('aria-checked')).toBe('true');
     await act(async () => {
       button('fade').click();

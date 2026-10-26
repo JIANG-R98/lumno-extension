@@ -1,10 +1,11 @@
 // The diagnostics file a person can export from the options page and attach
 // to a report: the extension version, the browser, the settings and the
 // worker's recent failures. Nothing leaves the device unless they export it.
-// Setting values keep only their switches, numbers and option-like names;
+// Each setting is shown as its definition says (Setting.diagnostics): a
+// "value" keeps only its switches, numbers and option-like names, with
 // longer text, addresses and every list of entries (shortcuts, sites,
-// words) are reduced to their type and size. Failure messages lose web and
-// email addresses.
+// words) reduced to their type and size; a "shape" is only ever its type
+// and size. Failure messages lose web and email addresses.
 
 const MAX_DIAGNOSTIC_ERRORS = 50;
 const MAX_MESSAGE_LENGTH = 300;
@@ -62,25 +63,27 @@ interface DiagnosticsReport {
   recentErrors: DiagnosticsReportError[];
 }
 
+interface DiagnosticSettingInput {
+  key: string;
+  diagnostics: 'value' | 'shape';
+  // As stored; undefined when nothing is.
+  stored: unknown;
+}
+
 interface DiagnosticsReportInput {
   generatedAt: string;
   version: string;
   userAgent: string;
   language: string;
   primaryArea: string;
-  // Stored values by storage key; only the keys in settingKeys are read.
-  settings: Record<string, unknown>;
-  settingKeys: readonly string[];
+  // The stored settings the file may show, each with how much of it shows.
+  settings: readonly DiagnosticSettingInput[];
   // The stored error log, read as untrusted.
   errors: unknown;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
-}
-
-function hasOwn(object: object, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(object, key);
 }
 
 // Option names and identifiers such as "dark", "zh_CN" or "auto-fit". Dots
@@ -218,11 +221,30 @@ function summarizeSettingValue(value: unknown, depth = 0): DiagnosticValue {
   return { redacted: 'other' };
 }
 
+// A value as only its type and size.
+function summarizeSettingShape(value: unknown): DiagnosticValue {
+  if (value === null) {
+    return null;
+  }
+  if (typeof value === 'string') {
+    return { redacted: 'text', length: value.length };
+  }
+  if (Array.isArray(value)) {
+    return { redacted: 'list', length: value.length };
+  }
+  if (isRecord(value)) {
+    return { redacted: 'object', length: Object.keys(value).length };
+  }
+  return { redacted: 'other' };
+}
+
 function buildDiagnosticsReport(input: DiagnosticsReportInput): DiagnosticsReport {
   const settings: Record<string, DiagnosticValue> = {};
-  input.settingKeys.forEach((key) => {
-    if (hasOwn(input.settings, key) && typeof input.settings[key] !== 'undefined') {
-      settings[key] = summarizeSettingValue(input.settings[key]);
+  input.settings.forEach((setting) => {
+    if (typeof setting.stored !== 'undefined') {
+      settings[setting.key] = setting.diagnostics === 'shape'
+        ? summarizeSettingShape(setting.stored)
+        : summarizeSettingValue(setting.stored);
     }
   });
   return {
@@ -252,6 +274,7 @@ export {
   summarizeSettingValue
 };
 export type {
+  DiagnosticSettingInput,
   DiagnosticError,
   DiagnosticSummary,
   DiagnosticValue,

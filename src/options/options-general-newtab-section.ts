@@ -11,7 +11,7 @@ import type { SettingsRowModel, SettingsRowsHandlers, SettingsSectionModel } fro
 interface GeneralNewtabSectionDeps {
   // Draws the section; the General tab hands over its part of the tab's view.
   view(handlers: SettingsRowsHandlers): SectionView<SettingsSectionModel>;
-  storageArea: SectionSettingStorage | null;
+  settingsStore: SectionSettingStorage;
   SETTINGS: Pick<typeof Settings,
     'progressTrackingEnabled' | 'newtabOpenInNewTab' |
     'progressTrackingEnabled' | 'newtabOpenInNewTab'>;
@@ -27,22 +27,12 @@ const OPEN_IN_NEW_TAB_SURFACES: ReadonlyArray<{ surface: NewtabOpenInNewTabSurfa
 ];
 
 function createGeneralNewtabSection(deps: GeneralNewtabSectionDeps) {
-  const { view, storageArea, SETTINGS, getMessage } = deps;
+  const { view, settingsStore, SETTINGS, getMessage } = deps;
 
   const render = (): void => controller.render({ rows: getRows() });
   // Both are shown as stored; Options never rewrites them on its own.
-  const progressTracking = createSectionSetting({
-    storageKey: SETTINGS.progressTrackingEnabled.key,
-    normalize: SETTINGS.progressTrackingEnabled.parse,
-    repairOnLoad: false,
-    repairOnChange: false
-  }, storageArea, () => render());
-  const openInNewTab = createSectionSetting({
-    storageKey: SETTINGS.newtabOpenInNewTab.key,
-    normalize: SETTINGS.newtabOpenInNewTab.parse,
-    repairOnLoad: false,
-    repairOnChange: false
-  }, storageArea, () => render());
+  const progressTracking = createSectionSetting({ setting: SETTINGS.progressTrackingEnabled }, settingsStore, () => render());
+  const openInNewTab = createSectionSetting({ setting: SETTINGS.newtabOpenInNewTab }, settingsStore, () => render());
 
   const controller = view({
     onToggle(key, checked) {

@@ -1,41 +1,30 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as Settings from '../domain/settings';
-import type { StorageItems } from '../domain/storage-port';
+import type { Setting } from '../domain/settings/define';
 import { createAppearanceNewtabLayoutSection } from './options-appearance-newtab-layout-section';
-import type { SettingSpec } from './options-setting-bindings';
 import { createAppearanceNewtabLayoutSectionController } from './react/appearance-newtab-layout-section';
 import { getElement, getTag, getTags } from '../../tests/react/dom';
+import { createOptionsTestSettings } from '../../tests/react/options-settings';
 
 const sections: Array<{ destroy(): void }> = [];
 
-function setUp(stored: StorageItems = {}) {
+function setUp(stored: Record<string, unknown> = {}) {
   const host = document.createElement('div');
   document.body.appendChild(host);
-  const writes: StorageItems[] = [];
+  const settings = createOptionsTestSettings({ sync: stored });
   const notifyNewtabSectionsRefresh = vi.fn();
   const section = createAppearanceNewtabLayoutSection({
     view: (handlers) => createAppearanceNewtabLayoutSectionController(host, handlers),
-    storageArea: {
-      get(keys, callback) {
-        const list = Array.isArray(keys) ? keys : [String(keys)];
-        callback?.(Object.fromEntries(list.filter((key) => key in stored).map((key) => [key, stored[key]])));
-      },
-      set: (items) => { writes.push(items); }
-    },
+    settingsStore: settings.store,
     SETTINGS: Settings,
     getMessage: (_key, fallback) => fallback,
     notifyNewtabSectionsRefresh
   });
   sections.push(section);
-  const specs = new Map<string, { load?: boolean; change(raw: unknown): void }>();
-  act(() => section.bindSettings({
-    bindSetting<V>(spec: SettingSpec<V>): void {
-      specs.set(spec.key, { load: spec.load, change: (raw) => spec.apply((spec.normalizeChange || spec.normalize)(raw), raw) });
-    }
-  }));
-  const store = (key: string, raw: unknown) => act(() => specs.get(key)?.change(raw));
-  return { host, writes, specs, store, notifyNewtabSectionsRefresh };
+  act(() => section.bindSettings(settings.binder));
+  const store = (setting: Setting<unknown>, raw: unknown) => settings.change(setting, raw);
+  return { host, writes: settings.writes, settings, store, notifyNewtabSectionsRefresh };
 }
 
 function slide(host: HTMLElement, id: string, value: number) {
@@ -55,8 +44,8 @@ afterEach(() => {
 });
 
 describe('Options Appearance New Tab layout section', () => {
-  it('binds every setting, reading the shortcut ones together', () => {
-    const { specs } = setUp();
+  it('binds every setting', () => {
+    const { settings } = setUp();
     const shortcutKeys = [
       Settings.newtabShortcutsVisible.key,
       Settings.newtabShortcutAddVisible.key,
@@ -65,7 +54,7 @@ describe('Options Appearance New Tab layout section', () => {
       Settings.newtabShortcutSize.key,
       Settings.newtabShortcutGap.key
     ];
-    expect(Array.from(specs.keys()).sort()).toEqual([
+    expect(settings.boundKeys().sort()).toEqual([
       ...shortcutKeys,
       Settings.newtabInputAutoFocusEnabled.key,
       Settings.bookmarkCount.key,
@@ -76,43 +65,39 @@ describe('Options Appearance New Tab layout section', () => {
       Settings.newtabFeedbackButtonVisible.key,
       Settings.newtabAppearanceButtonVisible.key
     ].sort());
-    shortcutKeys.forEach((key) => expect(specs.get(key)?.load, key).toBe(false));
   });
 
-  it('infers the shortcut columns from the older width and writes back what was missing', () => {
+  it('infers the shortcut columns from the older width without writing anything back', async () => {
     const width = Settings.NEWTAB_SHORTCUT_WIDTH_MAX;
-    const { host, writes } = setUp({ [Settings.newtabShortcutWidth.key]: width });
+    const { host, writes, settings } = setUp({ [Settings.newtabShortcutWidth.key]: width });
     const columns = Settings.inferNewtabShortcutColumnsFromWidth(width);
+    await settings.settle();
     expect(getTag(host, '#_x_extension_newtab_shortcut_columns_slider_2026_unique_', 'input').value).toBe(String(columns));
-    expect(writes).toEqual([{
-      [Settings.newtabShortcutsVisible.key]: Settings.newtabShortcutsVisible.parse(undefined),
-      [Settings.newtabShortcutAddVisible.key]: Settings.newtabShortcutAddVisible.parse(undefined),
-      [Settings.newtabShortcutDockMagnificationEnabled.key]: Settings.newtabShortcutDockMagnificationEnabled.parse(undefined),
-      [Settings.newtabShortcutColumns.key]: columns,
-      [Settings.newtabShortcutSize.key]: Settings.NEWTAB_SHORTCUT_SIZE_DEFAULT,
-      [Settings.newtabShortcutGap.key]: Settings.NEWTAB_SHORTCUT_GAP_DEFAULT
-    }]);
+    expect(writes).toEqual([]);
   });
 
-  it('dims the shortcut options while shortcuts are off', () => {
-    const { host, writes } = setUp({
+  it('dims the shortcut options while shortcuts are off', async () => {
+    const { host, writes, settings } = setUp({
       [Settings.newtabShortcutsVisible.key]: true,
       [Settings.newtabShortcutColumns.key]: 8
     });
+    await settings.settle();
     expect(toggle(host, 'newtab_shortcut_add').disabled).toBe(false);
     act(() => toggle(host, 'newtab_shortcuts').click());
+    await settings.settle();
     expect(writes.at(-1)).toEqual({ [Settings.newtabShortcutsVisible.key]: false });
     expect(toggle(host, 'newtab_shortcut_add').disabled).toBe(true);
     expect(getElement(host, '#_x_extension_newtab_shortcut_gap_setting_row_2026_unique_').dataset.disabled).toBe('true');
     expect(getTag(host, '#_x_extension_newtab_shortcut_size_slider_2026_unique_', 'input').disabled).toBe(true);
   });
 
-  it('saves the bookmark rows in fours and folds the bookmark layout when there are none', () => {
-    const { host, writes, notifyNewtabSectionsRefresh, store } = setUp();
-    store(Settings.bookmarkCount.key, 8);
+  it('saves the bookmark rows in fours and folds the bookmark layout when there are none', async () => {
+    const { host, writes, notifyNewtabSectionsRefresh, store, settings } = setUp();
+    await store(Settings.bookmarkCount, 8);
     const subrows = getElement(host, '#_x_extension_bookmark_subrows_2026_unique_');
     expect(subrows.dataset.expanded).toBe('true');
     slide(host, '_x_extension_bookmark_rows_slider_2026_unique_', 0);
+    await settings.settle();
     expect(writes.at(-1)).toEqual({ [Settings.bookmarkCount.key]: 0 });
     expect(notifyNewtabSectionsRefresh).toHaveBeenCalledWith('bookmarks');
     expect(subrows.dataset.expanded).toBe('false');
@@ -124,27 +109,30 @@ describe('Options Appearance New Tab layout section', () => {
     expect(info.dataset.tooltip).toBe('该值为宽度充足时的最大数量，实际显示数量会根据可用空间自适应。');
   });
 
-  it('offers the choice of recent sites only while there are cards', () => {
-    const { host, writes, notifyNewtabSectionsRefresh, store } = setUp();
-    store(Settings.recentCount.key, 4);
+  it('offers the choice of recent sites only while there are cards', async () => {
+    const { host, writes, notifyNewtabSectionsRefresh, store, settings } = setUp();
+    await store(Settings.recentCount, 4);
     const modes = () => getTags(host, '#_x_extension_recent_mode_tabs_wrap_2024_unique_ button', 'button');
-    // A later change to anything but "most" shows "latest".
-    store(Settings.recentMode.key, 'bogus');
+    // Anything but "most" shows "latest".
+    await store(Settings.recentMode, 'bogus');
     expect(modes().map((button) => button.dataset.active)).toEqual(['true', 'false']);
-    store(Settings.recentMode.key, 'most');
+    await store(Settings.recentMode, 'most');
     expect(modes().map((button) => button.dataset.active)).toEqual(['false', 'true']);
     act(() => modes()[0]?.click());
+    await settings.settle();
     expect(writes.at(-1)).toEqual({ [Settings.recentMode.key]: 'latest' });
     expect(notifyNewtabSectionsRefresh).toHaveBeenCalledWith('recent');
     slide(host, '_x_extension_recent_count_slider_2026_unique_', 0);
+    await settings.settle();
     expect(writes.at(-1)).toEqual({ [Settings.recentCount.key]: 0 });
     expect(host.querySelector('#_x_extension_recent_mode_tabs_wrap_2024_unique_')).toBeNull();
   });
 
-  it('saves the page button switches', () => {
-    const { host, writes } = setUp();
+  it('saves the page button switches', async () => {
+    const { host, writes, settings } = setUp();
     act(() => toggle(host, 'newtab_feedback_button_visible').click());
     act(() => toggle(host, 'newtab_input_auto_focus').click());
+    await settings.settle();
     expect(writes.slice(-2)).toEqual([
       { [Settings.newtabFeedbackButtonVisible.key]: !Settings.newtabFeedbackButtonVisible.parse(undefined) },
       { [Settings.newtabInputAutoFocusEnabled.key]: !Settings.newtabInputAutoFocusEnabled.parse(undefined) }

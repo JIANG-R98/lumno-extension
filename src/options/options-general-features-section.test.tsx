@@ -1,11 +1,11 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import * as Settings from '../domain/settings';
-import type { StorageItems } from '../domain/storage-port';
+import type { Setting } from '../domain/settings/define';
 import { createGeneralFeaturesSection } from './options-general-features-section';
-import type { SettingSpec } from './options-setting-bindings';
 import { createSettingsSectionController } from './react/settings-rows-view';
 import { getElement, getTag, getTags } from '../../tests/react/dom';
+import { createOptionsTestSettings } from '../../tests/react/options-settings';
 
 const sections: Array<{ destroy(): void }> = [];
 
@@ -18,10 +18,10 @@ const AUTO_PIP_TOGGLE = '_x_extension_auto_pip_toggle_2024_unique_';
 function setUp(browserFamily = 'chromium') {
   const host = document.createElement('div');
   document.body.appendChild(host);
-  const writes: StorageItems[] = [];
+  const settings = createOptionsTestSettings();
   const section = createGeneralFeaturesSection({
     view: (handlers) => createSettingsSectionController(host, handlers),
-    storageArea: { set: (items) => writes.push(items) },
+    settingsStore: settings.store,
     SETTINGS: Settings,
     getMessage: (_key, fallback) => fallback,
     browserFamily,
@@ -30,14 +30,9 @@ function setUp(browserFamily = 'chromium') {
     getTabSwitcherShortcut: () => '⌥Q'
   });
   sections.push(section);
-  const changes = new Map<string, (raw: unknown) => void>();
-  section.bindSettings({
-    bindSetting<V>(spec: SettingSpec<V>): void {
-      changes.set(spec.key, (raw) => spec.apply(spec.normalize(raw), raw));
-    }
-  });
-  const store = (key: string, raw: unknown) => act(() => changes.get(key)?.(raw));
-  return { host, writes, section, changes, store };
+  section.bindSettings(settings.binder);
+  const store = (setting: Setting<unknown>, raw: unknown) => settings.change(setting, raw);
+  return { host, writes: settings.writes, section, settings, store };
 }
 
 const toggle = (host: HTMLElement, id: string) => getTag(host, `#${id}`, 'input');
@@ -49,8 +44,8 @@ afterEach(() => {
 
 describe('Options General features section', () => {
   it('binds every setting of the section', () => {
-    const { changes } = setUp();
-    expect(Array.from(changes.keys()).sort()).toEqual([
+    const { settings } = setUp();
+    expect(settings.boundKeys().sort()).toEqual([
       Settings.autoPipEnabled.key,
       Settings.linkPreviewEnabled.key,
       Settings.pinnedTabRecoveryEnabled.key,
@@ -72,16 +67,17 @@ describe('Options General features section', () => {
     expect(toggle(host, GROUP_TOGGLE).checked).toBe(false);
   });
 
-  it('opens the tab switcher\'s window option only while the switcher is on', () => {
-    const { host, writes, store } = setUp();
+  it('opens the tab switcher\'s window option only while the switcher is on', async () => {
+    const { host, writes, store, settings } = setUp();
     const subrows = getElement(host, '#_x_extension_tab_switcher_subrows_2026_unique_');
     expect(subrows.dataset.expanded).toBe('true');
     expect(subrows.dataset.motion).toBe('off');
     act(() => toggle(host, TAB_SWITCHER_TOGGLE).click());
+    await settings.settle();
     expect(writes).toEqual([{ [Settings.tabSwitcherEnabled.key]: false }]);
     expect(subrows.dataset.expanded).toBe('false');
     expect(subrows.hasAttribute('inert')).toBe(true);
-    store(Settings.tabSwitcherEnabled.key, true);
+    await store(Settings.tabSwitcherEnabled, true);
     expect(subrows.dataset.expanded).toBe('true');
   });
 
@@ -103,22 +99,22 @@ describe('Options General features section', () => {
     expect(link.dataset.bound).toBe('false');
   });
 
-  it('locks the selection provider and grouping while the toolbar is off', () => {
+  it('locks the selection provider and grouping while the toolbar is off', async () => {
     const { host, store } = setUp();
     const providerRow = getElement(host, '#_x_extension_selection_quick_actions_provider_row_2026_unique_');
     expect(providerRow.dataset.disabled).toBe('true');
     expect(getTag(host, `#${PROVIDER_SELECT}`, 'select').disabled).toBe(true);
     expect(toggle(host, GROUP_TOGGLE).disabled).toBe(true);
-    store(Settings.selectionQuickActionsEnabled.key, true);
+    await store(Settings.selectionQuickActionsEnabled, true);
     expect(providerRow.dataset.disabled).toBe('false');
     expect(getTag(host, `#${PROVIDER_SELECT}`, 'select').disabled).toBe(false);
     expect(toggle(host, GROUP_TOGGLE).disabled).toBe(false);
     expect(getElement(host, '#_x_extension_selection_quick_actions_subrows_2026_unique_').dataset.expanded).toBe('true');
   });
 
-  it('pairs each selection provider with its bundled tile and describes grouping as a background query', () => {
+  it('pairs each selection provider with its bundled tile and describes grouping as a background query', async () => {
     const { host, store } = setUp();
-    store(Settings.selectionQuickActionsEnabled.key, true);
+    await store(Settings.selectionQuickActionsEnabled, true);
     const options = getTags(host, `#${PROVIDER_SELECT} option`, 'option');
     expect(options.length).toBeGreaterThanOrEqual(8);
     const groupRow = getElement(host, '#_x_extension_selection_quick_actions_group_row_2026_unique_');
@@ -127,8 +123,8 @@ describe('Options General features section', () => {
   });
 
   it('saves the chosen provider', async () => {
-    const { host, writes, store } = setUp();
-    store(Settings.selectionQuickActionsEnabled.key, true);
+    const { host, writes, store, settings } = setUp();
+    await store(Settings.selectionQuickActionsEnabled, true);
     const frame = getElement(host, `[data-select="${PROVIDER_SELECT}"]`);
     await act(async () => {
       getTag(frame, '._x_extension_select_trigger_2024_unique_', 'button').click();
@@ -136,17 +132,19 @@ describe('Options General features section', () => {
     await act(async () => {
       getElement(frame, '[data-value="gm"]').click();
     });
+    await settings.settle();
     expect(writes).toEqual([{ [Settings.selectionQuickActionsProvider.key]: 'gm' }]);
   });
 
-  it('keeps picture-in-picture off and disabled on Firefox without touching the synced value', () => {
-    const { host, writes, store } = setUp('firefox');
-    store(Settings.autoPipEnabled.key, true);
+  it('keeps picture-in-picture off and disabled on Firefox without touching the synced value', async () => {
+    const { host, writes, store, settings } = setUp('firefox');
+    await store(Settings.autoPipEnabled, true);
     const input = toggle(host, AUTO_PIP_TOGGLE);
     expect(input.checked).toBe(false);
     expect(input.disabled).toBe(true);
     const row = input.closest('._x_extension_setting_row_2024_unique_');
     expect(row?.getAttribute('data-unsupported')).toBe('true');
+    await settings.settle();
     expect(writes).toEqual([]);
   });
 });

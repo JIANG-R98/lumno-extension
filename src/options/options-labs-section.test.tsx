@@ -1,54 +1,34 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import * as Settings from '../domain/settings';
-import type { StorageItems } from '../domain/storage-port';
 import { createLabsSection } from './options-labs-section';
-import type { SettingSpec } from './options-setting-bindings';
 import { createSettingsControlsApi } from './react/settings-controls';
 import { getElement, getTag, getTags } from '../../tests/react/dom';
+import { createOptionsTestSettings } from '../../tests/react/options-settings';
 
 const PIP_TOGGLE = '_x_extension_document_pip_toggle_2026_unique_';
 const INSTANT_TOGGLE = '_x_extension_number_shortcut_instant_toggle_2026_unique_';
 const MAC_CTRL_TOGGLE = '_x_extension_macos_ctrl_suggestion_navigation_toggle_2026_unique_';
 
-// A setting binder that hands each bound setting a stored value on demand.
-function createFakeBinder() {
-  const applies = new Map<string, (raw: unknown) => void>();
-  return {
-    bindSetting<V>(spec: SettingSpec<V>): void {
-      applies.set(spec.key, (raw) => spec.apply(spec.normalize(raw), raw));
-    },
-    store(key: string, raw: unknown): void {
-      const apply = applies.get(key);
-      if (!apply) {
-        throw new Error(`${key} is not bound`);
-      }
-      act(() => apply(raw));
-    },
-    keys: () => Array.from(applies.keys())
-  };
-}
-
 function setUp(browserFamily = 'chrome') {
   const host = document.createElement('div');
   document.body.appendChild(host);
-  const writes: StorageItems[] = [];
+  const settings = createOptionsTestSettings();
   let language = 'zh';
   const section = createLabsSection({
     host,
     optionsSettingsControlsApi: createSettingsControlsApi(),
-    storageArea: { set: (items) => writes.push(items) },
+    settingsStore: settings.store,
     SETTINGS: Settings,
     getMessage: (key, fallback) => (language === 'en' ? `en:${key}` : fallback),
     browserFamily
   });
-  const binder = createFakeBinder();
-  section.bindSettings(binder);
+  section.bindSettings(settings.binder);
   return {
     host,
-    writes,
+    writes: settings.writes,
     section,
-    binder,
+    settings,
     setLanguage(next: string) {
       language = next;
     }
@@ -71,29 +51,30 @@ describe('Options Labs tab', () => {
     expect(host.dataset.reactIsland).toBe('options-setting-rows');
   });
 
-  it('binds every experiment and follows its stored value', () => {
-    const { host, binder } = setUp();
-    expect(binder.keys().sort()).toEqual([
+  it('binds every experiment and follows its stored value', async () => {
+    const { host, settings } = setUp();
+    expect(settings.boundKeys().sort()).toEqual([
       Settings.documentPipEnabled.key,
       Settings.macosCtrlSuggestionNavigationEnabled.key,
       Settings.numberShortcutInstantEnabled.key
     ].sort());
-    binder.store(Settings.numberShortcutInstantEnabled.key, true);
+    await settings.change(Settings.numberShortcutInstantEnabled, true);
     expect(getTag(host, `#${INSTANT_TOGGLE}`, 'input').checked).toBe(true);
-    binder.store(Settings.documentPipEnabled.key, 'yes');
+    await settings.change(Settings.documentPipEnabled, 'yes');
     expect(getTag(host, `#${PIP_TOGGLE}`, 'input').checked).toBe(false);
   });
 
-  it('saves a switched experiment', () => {
-    const { host, writes } = setUp();
+  it('saves a switched experiment', async () => {
+    const { host, writes, settings } = setUp();
     act(() => getTag(host, `#${MAC_CTRL_TOGGLE}`, 'input').click());
+    await settings.settle();
     expect(writes).toEqual([{ [Settings.macosCtrlSuggestionNavigationEnabled.key]: true }]);
     expect(getTag(host, `#${MAC_CTRL_TOGGLE}`, 'input').checked).toBe(true);
   });
 
-  it('shows web clip off and disabled where the browser lacks it, keeping the synced value', () => {
-    const { host, binder, writes } = setUp('firefox');
-    binder.store(Settings.documentPipEnabled.key, true);
+  it('shows web clip off and disabled where the browser lacks it, keeping the synced value', async () => {
+    const { host, writes, settings } = setUp('firefox');
+    await settings.change(Settings.documentPipEnabled, true);
     const row = getElement(host, '#_x_extension_document_pip_row_2026_unique_');
     const toggle = getTag(host, `#${PIP_TOGGLE}`, 'input');
     expect(row.dataset.browserUnsupported).toBe('firefox');
@@ -101,6 +82,7 @@ describe('Options Labs tab', () => {
     expect(row.getAttribute('aria-disabled')).toBe('true');
     expect(toggle.checked).toBe(false);
     expect(toggle.disabled).toBe(true);
+    await settings.settle();
     expect(writes).toEqual([]);
   });
 

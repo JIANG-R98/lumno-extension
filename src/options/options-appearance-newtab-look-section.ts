@@ -5,9 +5,8 @@
 import type * as Settings from '../domain/settings';
 import type { NewtabGlassStyle, NewtabGlassTheme, NewtabWidthMode } from '../domain/settings/newtab-page';
 import type { NewtabTimeInk, NewtabTopContentMode } from '../domain/settings/newtab-time';
-import type { StorageItems } from '../domain/storage-port';
 import type { SectionView } from './options-section-view';
-import { createSectionSetting, type SectionSettingBinder } from './options-section-setting';
+import { createSectionSetting, type SectionSettingBinder, type SectionSettingStorage } from './options-section-setting';
 import type { GetMessage } from './options-types';
 import type { SegmentedControlItemModel } from './react/segmented-control';
 import type { SelectControlItemModel } from './react/select-control';
@@ -15,7 +14,7 @@ import type { SettingsRowModel, SettingsRowsHandlers, SettingsSectionModel } fro
 
 interface AppearanceNewtabLookSectionDeps {
   view(handlers: SettingsRowsHandlers): SectionView<SettingsSectionModel>;
-  storageArea: { set(items: StorageItems): unknown } | null;
+  settingsStore: SectionSettingStorage;
   SETTINGS: Pick<typeof Settings,
     'newtabGlassStyle' | 'newtabGlassTheme' | 'newtabWidthMode' |
     'newtabTopContentMode' | 'newtabTimeFont' | 'newtabTimeFontWeight' |
@@ -35,74 +34,22 @@ interface AppearanceNewtabLookSectionDeps {
 }
 
 function createAppearanceNewtabLookSection(deps: AppearanceNewtabLookSectionDeps) {
-  const { view, storageArea, SETTINGS, getMessage, notifyNewtabSectionsRefresh, getViewportTopInset } = deps;
+  const { view, settingsStore, SETTINGS, getMessage, notifyNewtabSectionsRefresh, getViewportTopInset } = deps;
 
   const render = (): void => controller.render({ rows: getRows() });
   const onChange = (): void => render();
   // Unset values stay unset, so opening Options does not write the defaults.
-  const glassStyle = createSectionSetting({
-    storageKey: SETTINGS.newtabGlassStyle.key,
-    normalize: SETTINGS.newtabGlassStyle.parse,
-    repairOnLoad: false,
-    repairOnChange: false,
-    refreshSelects: true
-  }, storageArea, onChange);
-  const glassTheme = createSectionSetting({
-    storageKey: SETTINGS.newtabGlassTheme.key,
-    normalize: SETTINGS.newtabGlassTheme.parse,
-    repairOnLoad: false,
-    repairOnChange: false
-  }, storageArea, onChange);
-  const widthMode = createSectionSetting({
-    storageKey: SETTINGS.newtabWidthMode.key,
-    normalize: SETTINGS.newtabWidthMode.parse,
-    repairOnChange: false,
-    refreshSelects: true
-  }, storageArea, onChange);
-  const topContent = createSectionSetting({
-    storageKey: SETTINGS.newtabTopContentMode.key,
-    normalize: SETTINGS.newtabTopContentMode.parse,
-    refreshSelects: true
-  }, storageArea, onChange);
-  const timeFont = createSectionSetting({
-    storageKey: SETTINGS.newtabTimeFont.key,
-    normalize: SETTINGS.newtabTimeFont.parse,
-    repairOnLoad: false,
-    repairOnChange: false,
-    refreshSelects: true
-  }, storageArea, onChange);
-  const timeFontWeight = createSectionSetting({
-    storageKey: SETTINGS.newtabTimeFontWeight.key,
-    normalize: SETTINGS.newtabTimeFontWeight.parse
-  }, storageArea, onChange);
-  const timeFontSize = createSectionSetting({
-    storageKey: SETTINGS.newtabTimeFontSize.key,
-    normalize: SETTINGS.newtabTimeFontSize.parse,
-    repairOnLoad: false,
-    repairOnChange: false
-  }, storageArea, onChange);
-  const timeOpacity = createSectionSetting({
-    storageKey: SETTINGS.newtabTimeOpacity.key,
-    normalize: SETTINGS.newtabTimeOpacity.parse,
-    repairOnLoad: false,
-    repairOnChange: false
-  }, storageArea, onChange);
-  const timeInk = createSectionSetting({
-    storageKey: SETTINGS.newtabTimeInk.key,
-    normalize: SETTINGS.newtabTimeInk.parse,
-    repairOnLoad: false,
-    repairOnChange: false
-  }, storageArea, onChange);
-  const timeSeconds = createSectionSetting({
-    storageKey: SETTINGS.newtabTimeSecondsVisible.key,
-    normalize: SETTINGS.newtabTimeSecondsVisible.parse,
-    refreshSelects: true
-  }, storageArea, onChange);
-  const time12Hour = createSectionSetting({
-    storageKey: SETTINGS.newtabTime12Hour.key,
-    normalize: SETTINGS.newtabTime12Hour.parse,
-    refreshSelects: true
-  }, storageArea, onChange);
+  const glassStyle = createSectionSetting({ setting: SETTINGS.newtabGlassStyle, refreshSelects: true }, settingsStore, onChange);
+  const glassTheme = createSectionSetting({ setting: SETTINGS.newtabGlassTheme }, settingsStore, onChange);
+  const widthMode = createSectionSetting({ setting: SETTINGS.newtabWidthMode, refreshSelects: true }, settingsStore, onChange);
+  const topContent = createSectionSetting({ setting: SETTINGS.newtabTopContentMode, refreshSelects: true }, settingsStore, onChange);
+  const timeFont = createSectionSetting({ setting: SETTINGS.newtabTimeFont, refreshSelects: true }, settingsStore, onChange);
+  const timeFontWeight = createSectionSetting({ setting: SETTINGS.newtabTimeFontWeight }, settingsStore, onChange);
+  const timeFontSize = createSectionSetting({ setting: SETTINGS.newtabTimeFontSize }, settingsStore, onChange);
+  const timeOpacity = createSectionSetting({ setting: SETTINGS.newtabTimeOpacity }, settingsStore, onChange);
+  const timeInk = createSectionSetting({ setting: SETTINGS.newtabTimeInk }, settingsStore, onChange);
+  const timeSeconds = createSectionSetting({ setting: SETTINGS.newtabTimeSecondsVisible, refreshSelects: true }, settingsStore, onChange);
+  const time12Hour = createSectionSetting({ setting: SETTINGS.newtabTime12Hour, refreshSelects: true }, settingsStore, onChange);
   const toggles = [timeSeconds, time12Hour];
 
   // Each face opens at its own default weight, as in New Tab's panel.
@@ -111,9 +58,7 @@ function createAppearanceNewtabLookSection(deps: AppearanceNewtabLookSectionDeps
     const weight = SETTINGS.getNewtabTimeFont(font).defaultWeight;
     timeFont.show(font);
     timeFontWeight.show(weight);
-    if (storageArea) {
-      storageArea.set({ [timeFont.storageKey]: font, [timeFontWeight.storageKey]: weight });
-    }
+    void settingsStore.setMany([[timeFont.setting, font], [timeFontWeight.setting, weight]]).catch(() => {});
   }
 
   const controller = view({

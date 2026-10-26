@@ -3,22 +3,19 @@
 // next load. While the mode is "system" the page follows the OS setting.
 import type * as Settings from '../domain/settings';
 import type { ThemeMode } from '../domain/settings/appearance';
+import type { SettingsStore } from '../platform/settings-store';
 import type { GetMessage } from './options-types';
 import type { ThemePickerRenderModel } from './react/theme-picker';
 
-// The part of a storage area the section reads and writes.
-interface ThemeStorageArea {
-  get(keys: string[], callback: (items: Record<string, unknown> | undefined) => void): unknown;
-  set(items: Record<string, unknown>, callback: () => void): unknown;
-}
+// The page's settings, as the section reads and writes the theme.
+type ThemeSettingsStore = Pick<SettingsStore, 'include' | 'get' | 'set'>;
 
 interface ThemeSectionOptions {
   documentObj: Document;
   windowObj: Window;
   panel: HTMLElement;
-  storageArea: ThemeStorageArea | null;
-  settings: Pick<typeof Settings, 'themeMode' | 'optionsThemePreload' |
-    'createGlobalThemeModeStorageUpdate' | 'themeMode'>;
+  settingsStore: ThemeSettingsStore;
+  settings: Pick<typeof Settings, 'themeMode' | 'optionsThemePreload'>;
   picker: { render(model: ThemePickerRenderModel): void };
   getMessage: GetMessage;
   // Runs whenever the picker shows a mode.
@@ -33,10 +30,9 @@ const THEME_PREVIEWS = Object.freeze({
 const CLICK_EFFECT_MS = 260;
 
 function createThemeSection(options: ThemeSectionOptions) {
-  const { documentObj, windowObj, panel, storageArea, settings, picker } = options;
+  const { documentObj, windowObj, panel, settingsStore, settings, picker } = options;
   const getMessage = options.getMessage;
   const onModeShown = options.onModeShown || (() => {});
-  const themeKey = settings.themeMode.key;
   const mediaQuery = windowObj.matchMedia('(prefers-color-scheme: dark)');
   let currentMode: ThemeMode = 'system';
   let followsSystem = false;
@@ -123,15 +119,8 @@ function createThemeSection(options: ThemeSectionOptions) {
   // marked the page ready before this runs, so there is nothing to fall
   // back to while the stored preference loads.
   function init(): Promise<void> {
-    return new Promise<ThemeMode>((resolve) => {
-      if (!storageArea) {
-        resolve('system');
-        return;
-      }
-      storageArea.get([themeKey], (result) => {
-        resolve(settings.themeMode.parse(result ? result[themeKey] : undefined));
-      });
-    }).then((storedMode) => {
+    return settingsStore.include(settings.themeMode).then(() => {
+      const storedMode = settingsStore.get(settings.themeMode);
       cacheMode(storedMode);
       show(storedMode);
       documentObj.documentElement.setAttribute('data-theme-ready', 'true');
@@ -139,13 +128,9 @@ function createThemeSection(options: ThemeSectionOptions) {
   }
 
   function setMode(mode: unknown): void {
-    if (!storageArea) {
-      return;
-    }
-    const updates = settings.createGlobalThemeModeStorageUpdate(mode);
-    const nextMode = updates[themeKey];
+    const nextMode = settings.themeMode.parse(mode);
     cacheMode(nextMode);
-    storageArea.set(updates, () => show(nextMode));
+    settingsStore.set(settings.themeMode, nextMode).then(() => show(nextMode), () => {});
   }
 
   function applyStorageChange(value: unknown): void {
@@ -170,4 +155,4 @@ function playThemeOptionClickEffect(button: Element | null, windowObj: Window): 
 }
 
 export { createThemeSection, playThemeOptionClickEffect };
-export type { ThemeSectionOptions, ThemeStorageArea };
+export type { ThemeSectionOptions, ThemeSettingsStore };

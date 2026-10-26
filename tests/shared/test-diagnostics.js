@@ -77,8 +77,12 @@ async function run() {
     userAgent: 'TestBrowser/1',
     language: 'en-US',
     primaryArea: 'sync',
-    settings: { theme: 'dark', quote: 'A private note', other: 'not exported' },
-    settingKeys: ['theme', 'quote', 'missing'],
+    settings: [
+      { key: 'theme', diagnostics: 'value', stored: 'dark' },
+      { key: 'quote', diagnostics: 'value', stored: 'A private note' },
+      { key: 'mode', diagnostics: 'shape', stored: 'dark' },
+      { key: 'missing', diagnostics: 'value', stored: undefined }
+    ],
     errors: [{ at: 0, context: 'Storage write', name: 'Error', message: 'failed', count: 3 }]
   });
   assert.deepStrictEqual(report, {
@@ -88,7 +92,7 @@ async function run() {
     extension: { version: '1.2.0' },
     browser: { userAgent: 'TestBrowser/1', language: 'en-US' },
     storage: { primaryArea: 'sync' },
-    settings: { theme: 'dark', quote: { redacted: 'text', length: 14 } },
+    settings: { theme: 'dark', quote: { redacted: 'text', length: 14 }, mode: { redacted: 'text', length: 4 } },
     recentErrors: [{ time: '1970-01-01T00:00:00.000Z', context: 'Storage write', name: 'Error', message: 'failed', count: 3 }]
   });
 

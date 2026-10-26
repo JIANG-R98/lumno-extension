@@ -6,8 +6,9 @@ import type { AggregateSearch } from '../domain/search/aggregate-search-store';
 import type * as SearchUtils from '../domain/search/search-utils';
 import { readSiteSearchProviders } from '../domain/search/site-search-provider-reader';
 import type { SiteSearchProvider } from '../domain/search/types';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
-import type { BatchedStorageArea, StorageAreaFacade } from '../platform/settings-storage';
+import { siteSearchCustom, siteSearchDisabled } from '../domain/settings/search';
+import { readStoredSetting } from '../platform/settings-store';
+import type { SettingsStore } from '../platform/settings-store';
 import * as LumnoMessaging from '../platform/messaging';
 import type { ScrollToTargetOptions } from './options-navigation';
 import type { createSearchSourceOrderController } from './options-search-source-order';
@@ -47,8 +48,7 @@ interface SiteSearchListState {
   siteSearchAiBuiltinListController: SiteSearchListControllerRef;
   // A linked setting to scroll to once the lists have rendered.
   pendingOptionsScrollTarget: string;
-  storageArea: BatchedStorageArea | null;
-  rawStorageArea: StorageAreaFacade | null;
+  settingsStore: SettingsStore;
   enqueueSiteSearchProviderStorageOperation: EnqueueOperation;
 }
 
@@ -75,9 +75,7 @@ interface SiteSearchListDeps {
     item: Partial<SiteSearchProvider> | null | undefined,
     baseItem?: Partial<SiteSearchProvider> | null
   ): SiteSearchProvider | null;
-  SITE_SEARCH_STORAGE_KEY: string;
   getSiteSearchBuiltinKey: typeof SiteSearch.getSiteSearchBuiltinKey;
-  SITE_SEARCH_DISABLED_STORAGE_KEY: string;
   SITE_SEARCH: Pick<typeof SiteSearch, 'createSiteSearchProviderRefreshCoordinator' | 'createSnapshotPersister'>;
   optionsState: SiteSearchListState;
 }
@@ -106,9 +104,7 @@ function createSiteSearchList(deps: SiteSearchListDeps) {
     initTooltips,
     scrollToOptionsTarget,
     normalizeSiteSearchProvider,
-    SITE_SEARCH_STORAGE_KEY,
     getSiteSearchBuiltinKey,
-    SITE_SEARCH_DISABLED_STORAGE_KEY,
     SITE_SEARCH
   } = deps;
 
@@ -445,11 +441,7 @@ function createSiteSearchList(deps: SiteSearchListDeps) {
   }
 
   function loadCustomSiteSearchProviders(baseItems: readonly SiteSearchProvider[]): Promise<SiteSearchProvider[]> {
-    return LumnoSettingsStorage.readStorageValue(
-      optionsState.storageArea,
-      chrome,
-      SITE_SEARCH_STORAGE_KEY
-    ).then((value) => {
+    return readStoredSetting(optionsState.settingsStore, siteSearchCustom).then((value) => {
       const baseMap = new Map(baseItems.map((item) => [item.key.toLowerCase(), item]));
       return readSiteSearchProviders(value).map((item) => {
         const builtinKey = getSiteSearchBuiltinKey(item);
@@ -459,11 +451,7 @@ function createSiteSearchList(deps: SiteSearchListDeps) {
   }
 
   function loadDisabledSiteSearchKeys(): Promise<string[]> {
-    return LumnoSettingsStorage.readStorageValue(
-      optionsState.storageArea,
-      chrome,
-      SITE_SEARCH_DISABLED_STORAGE_KEY
-    ).then((value) => {
+    return readStoredSetting(optionsState.settingsStore, siteSearchDisabled).then((value) => {
       const items: unknown[] = Array.isArray(value) ? value : [];
       return items.map((item) => String(item).toLowerCase()).filter(Boolean);
     });
@@ -473,12 +461,7 @@ function createSiteSearchList(deps: SiteSearchListDeps) {
     const payload = Array.from(keys)
       .map((item) => item.toLowerCase())
       .filter(Boolean);
-    return LumnoSettingsStorage.writeStorageValue(
-      optionsState.rawStorageArea,
-      chrome,
-      SITE_SEARCH_DISABLED_STORAGE_KEY,
-      payload
-    );
+    return optionsState.settingsStore.set(siteSearchDisabled, payload).then(() => payload);
   }
 
   function writeSiteSearchProviderState(items: readonly SiteSearchProvider[], keys: Iterable<string>): Promise<unknown> {
@@ -488,11 +471,10 @@ function createSiteSearchList(deps: SiteSearchListDeps) {
     const disabledPayload = Array.from(keys)
       .map((item) => item.toLowerCase())
       .filter(Boolean);
-    const payload = {
-      [SITE_SEARCH_STORAGE_KEY]: providersPayload,
-      [SITE_SEARCH_DISABLED_STORAGE_KEY]: disabledPayload
-    };
-    return LumnoSettingsStorage.writeStorageValues(optionsState.rawStorageArea, chrome, payload);
+    return optionsState.settingsStore.setMany([
+      [siteSearchCustom, providersPayload],
+      [siteSearchDisabled, disabledPayload]
+    ]);
   }
 
   function saveDisabledSiteSearchKeys(keys: Iterable<string>): Promise<string[]> {

@@ -3,10 +3,9 @@
 // view draws it; the feedback and translation help sections hand it their
 // models, and the language module reports the language it applied.
 import type * as Settings from '../domain/settings';
-import type { StorageItems } from '../domain/storage-port';
 import * as LumnoMessaging from '../platform/messaging';
 import type { MessageRuntime } from '../platform/messaging';
-import { createSectionSetting, type SectionSettingBinder } from './options-section-setting';
+import { createSectionSetting, type SectionSettingBinder, type SectionSettingStorage } from './options-section-setting';
 import type { SectionView } from './options-section-view';
 import type { GetMessage } from './options-types';
 import type { FeedbackSupportRenderModel } from './react/feedback-support';
@@ -16,7 +15,7 @@ import type { TranslationHelpRenderModel } from './react/translation-help';
 interface GeneralGlobalSectionDeps {
   // Draws the section; the General tab hands over its part of the tab's view.
   view(handlers: GeneralGlobalSectionHandlers): SectionView<GeneralGlobalSectionModel>;
-  storageArea: { set(items: StorageItems): unknown } | null;
+  settingsStore: SectionSettingStorage;
   SETTINGS: Pick<typeof Settings,
     'updateNoticeEnabled' | 'UI_LOCALES' | 'updateNoticeEnabled' | 'isMachineTranslatedLocale'>;
   runtime: MessageRuntime & { lastError?: { message?: string } | null };
@@ -32,7 +31,7 @@ const LANGUAGE_SELECT_ID = '_x_extension_language_select_2024_unique_';
 function createGeneralGlobalSection(deps: GeneralGlobalSectionDeps) {
   const {
     view,
-    storageArea,
+    settingsStore,
     SETTINGS,
     runtime,
     getMessage,
@@ -42,11 +41,7 @@ function createGeneralGlobalSection(deps: GeneralGlobalSectionDeps) {
   } = deps;
 
   const render = (): void => controller.render(getModel());
-  const updateNotice = createSectionSetting({
-    storageKey: SETTINGS.updateNoticeEnabled.key,
-    normalize: SETTINGS.updateNoticeEnabled.parse,
-    refreshSelects: true
-  }, storageArea, () => render());
+  const updateNotice = createSectionSetting({ setting: SETTINGS.updateNoticeEnabled, refreshSelects: true }, settingsStore, () => render());
   let feedback: FeedbackSupportRenderModel | null = null;
   let translationHelp: TranslationHelpRenderModel | null = null;
   let licensesHref = '';

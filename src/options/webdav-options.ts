@@ -1,6 +1,8 @@
 // The WebDAV card on the Account tab: the connections the worker reports,
 // their actions, and the copy for their states and failures. The card itself
 // is drawn from the model this hands to onRender.
+import { getContextSettingsStore } from '../platform/settings-store';
+import type { SettingsStoreChromeApi } from '../platform/settings-store';
 import * as LumnoSettings from '../domain/settings/sync-state';
 import type { WebDavOperation } from '../domain/messages';
 import { readConflictDescriptions, readWebDavOperation } from '../domain/webdav-contract';
@@ -50,9 +52,7 @@ interface WebDavChromeApi {
     lastError?: { message?: string } | null;
     getManifest?(): { version?: string };
   };
-  storage: {
-    onChanged: { addListener(listener: (changes: Record<string, unknown>, areaName: string) => void): void };
-  };
+  storage: SettingsStoreChromeApi['storage'];
 }
 
 interface WebDavControllerOptions {
@@ -494,16 +494,17 @@ function createController(options: WebDavControllerOptions) {
     loadFailure = '';
     render();
   }
-  chromeApi.storage.onChanged.addListener((changes, area) => {
-    const key = LumnoSettings.webdavStatus.key;
-    const synced = LumnoSettings.webdavConnections.key;
-    const dismissed = LumnoSettings.webdavDismissedConnections.key;
-    const names = Object.keys(changes);
-    if ((area === 'local' && names.some((name) => name === key || LumnoSettings.webdavConnectionStatus.idOf(name) !== null || name === dismissed)) ||
-        (area === 'sync' && names.includes(synced))) {
-      refresh().catch((error) => console.warn('[Lumno] WebDAV status refresh failed', error));
-    }
-  });
+  // Any connection's status or the list of connections changing elsewhere.
+  const refreshQuietly = (): void => {
+    refresh().catch((error) => console.warn('[Lumno] WebDAV status refresh failed', error));
+  };
+  const settingsStore = getContextSettingsStore(chromeApi);
+  settingsStore.subscribe([
+    LumnoSettings.webdavStatus,
+    LumnoSettings.webdavConnections,
+    LumnoSettings.webdavDismissedConnections
+  ], refreshQuietly);
+  settingsStore.subscribeMembers(LumnoSettings.webdavConnectionStatus, refreshQuietly);
   render();
   refresh().catch((error: unknown) => {
     loadFailure = failure(error).message;

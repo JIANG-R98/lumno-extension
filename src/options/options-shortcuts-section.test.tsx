@@ -1,12 +1,11 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as Settings from '../domain/settings';
-import type { StorageItems } from '../domain/storage-port';
 import { createShortcutsSection } from './options-shortcuts-section';
-import type { SettingSpec } from './options-setting-bindings';
 import { createShortcutsTabApi } from './react/shortcuts-tab';
 import type { SiteSearchListRenderModel } from './react/site-search-list';
 import { getElement, getTag, getTags } from '../../tests/react/dom';
+import { createOptionsTestSettings } from '../../tests/react/options-settings';
 
 const AUTO_GROUP_KEY = Settings.aggregateSearchAutoGroupEnabled.key;
 const AUTO_GROUP_TOGGLE = '_x_extension_aggregate_search_auto_group_toggle_2026_unique_';
@@ -57,10 +56,10 @@ function createListOptions() {
   return { onLocateDuplicate: vi.fn(), onRemove: vi.fn(), onSave: vi.fn().mockResolvedValue({ ok: true }) };
 }
 
-function setUp(stored: StorageItems = {}) {
+function setUp(stored: Record<string, unknown> = {}) {
   const host = document.createElement('div');
   document.body.appendChild(host);
-  const writes: StorageItems[] = [];
+  const settings = createOptionsTestSettings({ sync: stored });
   let groups = ['local', 'aggregate', 'engine', 'site', 'ai'];
   const attachedLists: string[] = [];
   const orderController = {
@@ -95,23 +94,14 @@ function setUp(stored: StorageItems = {}) {
     shortcutsTabApi: createShortcutsTabApi(),
     getMessage: (_key, fallback) => fallback,
     orderController,
-    storageArea: {
-      get: (keys, callback) => callback(Object.fromEntries(keys.filter((key) => key in stored).map((key) => [key, stored[key]]))),
-      set: (items) => writes.push(items)
-    },
+    settingsStore: settings.store,
     SETTINGS: Settings,
     deriveLegacyAutoGroupEnabled: (value) => Array.isArray(value) && value.length > 0,
     refreshCustomSelects: vi.fn(),
     initTooltips: vi.fn(),
     handlers
   });
-  const changes = new Map<string, (raw: unknown) => void>();
-  const binder = {
-    bindSetting<V>(spec: SettingSpec<V>): void {
-      changes.set(spec.key, (raw) => spec.apply(spec.normalize(raw), raw));
-    }
-  };
-  return { host, writes, section, binder, changes, handlers, orderController, attachedLists };
+  return { host, writes: settings.writes, section, binder: settings.binder, settings, handlers, orderController, attachedLists };
 }
 
 async function confirm(host: HTMLElement, id: string): Promise<void> {
@@ -147,7 +137,7 @@ describe('Options Shortcuts tab', () => {
     expect(attachedLists).toEqual(['custom', 'aggregate', 'site', 'ai', 'engine']);
   });
 
-  it('moves a group chip with Alt and the arrow keys and keeps it focused', () => {
+  it('moves a group chip with Alt and the arrow keys and keeps it focused', async () => {
     const { host, section, orderController } = setUp();
     const chip = getElement(host, '[data-group="engine"]');
     chip.focus();
@@ -180,21 +170,24 @@ describe('Options Shortcuts tab', () => {
     expect(handlers.onResetBuiltin).toHaveBeenCalledTimes(1);
   });
 
-  it('derives the auto-group switch from older aggregate searches and saves it once', () => {
-    const { host, section, binder, writes } = setUp({ [Settings.aggregateSearches.key]: [] });
+  it('derives the auto-group switch from older aggregate searches and saves it once', async () => {
+    const { host, section, binder, writes, settings } = setUp({ [Settings.aggregateSearches.key]: [] });
     expect(getTag(host, `#${AUTO_GROUP_TOGGLE}`, 'input').checked).toBe(true);
     act(() => section.bindSettings(binder));
+    await settings.settle();
     expect(getTag(host, `#${AUTO_GROUP_TOGGLE}`, 'input').checked).toBe(false);
     expect(writes).toEqual([{ [AUTO_GROUP_KEY]: false }]);
   });
 
-  it('keeps a stored auto-group choice and follows changes to it', () => {
-    const { host, section, binder, changes, writes } = setUp({ [AUTO_GROUP_KEY]: true });
+  it('keeps a stored auto-group choice and follows changes to it', async () => {
+    const { host, section, binder, settings, writes } = setUp({ [AUTO_GROUP_KEY]: true });
     act(() => section.bindSettings(binder));
+    await settings.settle();
     expect(writes).toEqual([]);
-    act(() => changes.get(AUTO_GROUP_KEY)?.(false));
+    await settings.change(Settings.aggregateSearchAutoGroupEnabled, false);
     expect(getTag(host, `#${AUTO_GROUP_TOGGLE}`, 'input').checked).toBe(false);
     act(() => getTag(host, `#${AUTO_GROUP_TOGGLE}`, 'input').click());
+    await settings.settle();
     expect(writes).toEqual([{ [AUTO_GROUP_KEY]: true }]);
     expect(getTag(host, `#${AUTO_GROUP_TOGGLE}`, 'input').getAttribute('aria-label')).toBe('聚合搜索自动创建标签页组');
   });

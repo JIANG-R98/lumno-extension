@@ -1,29 +1,25 @@
 // One stored setting a React settings section draws: its current value,
 // kept in step with storage through the setting binder, and saved when the
 // reader changes it.
-import type { StorageItems } from '../domain/storage-port';
+import type { Setting } from '../domain/settings/define';
+import type { SettingsStore } from '../platform/settings-store';
 import type { SettingSpec } from './options-setting-bindings';
 
 interface SectionSettingSpec<V> {
-  storageKey: string;
-  normalize(raw: unknown): V;
+  setting: Setting<V>;
   // See createSettingBinder.
   refreshSelects?: boolean;
-  // False when the section reads the key together with related keys.
-  load?: boolean;
-  repairOnLoad?: boolean;
-  repairOnChange?: boolean;
 }
 
 interface SectionSettingBinder {
   bindSetting<V>(spec: SettingSpec<V>): void;
 }
 
-interface SectionSettingStorage {
-  set(items: StorageItems): unknown;
-}
+// The page's settings store, as the sections use it.
+type SectionSettingStorage = Pick<SettingsStore, 'include' | 'get' | 'getStored' | 'isRead' | 'set' | 'setMany' | 'remove'>;
 
 interface SectionSetting<V> {
+  readonly setting: Setting<V>;
   readonly storageKey: string;
   get(): V;
   bind(binder: SectionSettingBinder): void;
@@ -33,35 +29,33 @@ interface SectionSetting<V> {
   show(next: V): void;
 }
 
-// Until storage answers, the value is what the normalizer makes of nothing.
+// Until storage answers, the value is the setting's default.
 function createSectionSetting<V>(
   spec: SectionSettingSpec<V>,
-  storageArea: SectionSettingStorage | null,
+  storage: SectionSettingStorage | null,
   onChange: () => void
 ): SectionSetting<V> {
-  let value = spec.normalize(undefined);
+  const setting = spec.setting;
+  let value = setting.default;
   return {
-    storageKey: spec.storageKey,
+    setting,
+    storageKey: setting.key,
     get: () => value,
     bind(binder) {
       binder.bindSetting({
-        key: spec.storageKey,
-        normalize: spec.normalize,
+        setting,
         apply(next) {
           value = next;
           onChange();
         },
-        refreshSelects: spec.refreshSelects,
-        load: spec.load,
-        repairOnLoad: spec.repairOnLoad,
-        repairOnChange: spec.repairOnChange
+        refreshSelects: spec.refreshSelects
       });
     },
     change(next) {
       value = next;
       onChange();
-      if (storageArea) {
-        storageArea.set({ [spec.storageKey]: next });
+      if (storage) {
+        void storage.set(setting, next).catch(() => {});
       }
     },
     show(next) {

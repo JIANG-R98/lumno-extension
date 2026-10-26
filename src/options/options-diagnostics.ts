@@ -1,19 +1,15 @@
 // "Export diagnostics" in the Feedback & support section: saves the file
 // described in domain/diagnostics.ts, for the person to attach to a report.
 import { buildDiagnosticsReport } from '../domain/diagnostics';
-import type { StorageAreaLike } from '../domain/storage-port';
-import { createDiagnosticsLog } from '../platform/diagnostics-log';
-import type { StorageChromeApi } from '../platform/settings-storage';
-import { callStorage, isRecord } from '../platform/storage-call';
+import type { Setting } from '../domain/settings/define';
+import { diagnosticErrors } from '../domain/settings/sync-state';
+import type { SettingsStore } from '../platform/settings-store';
 import { downloadJsonFile } from './options-download';
 
 interface DiagnosticsExportOptions {
-  chromeApi: StorageChromeApi | null | undefined;
-  // The area the settings live in once storage is set up, and
-  // chrome.storage.local for the log.
-  getSettingsArea(): StorageAreaLike | null | undefined;
-  localArea: StorageAreaLike | null | undefined;
-  settingKeys: readonly string[];
+  settingsStore: Pick<SettingsStore, 'include' | 'isRead' | 'getStored'>;
+  // The settings the file may show (the registry's DIAGNOSTIC_SETTINGS).
+  settings: readonly Setting<unknown>[];
   getPrimaryAreaName(): string;
   getVersion(): string;
   navigatorObj: { userAgent: string; language: string } | null | undefined;
@@ -27,19 +23,20 @@ interface DiagnosticsExport {
 
 function createDiagnosticsExport(options: DiagnosticsExportOptions): Readonly<DiagnosticsExport> {
   const now = options.now || Date.now;
-  const diagnosticsLog = createDiagnosticsLog({ chromeApi: options.chromeApi, area: options.localArea });
+  const store = options.settingsStore;
 
-  async function readSettings(): Promise<Record<string, unknown>> {
-    const area = options.getSettingsArea();
-    if (!area) {
-      return {};
+  // Rejects when storage could not be read, so the page can say the export
+  // failed instead of saving a file without the settings.
+  async function readSettings(): Promise<void> {
+    await store.include([...options.settings, diagnosticErrors]);
+    const unread = options.settings.find((setting) => !store.isRead(setting));
+    if (unread) {
+      throw new Error(`${unread.key} could not be read`);
     }
-    const items = await callStorage(options.chromeApi, (done) => area.get([...options.settingKeys], done));
-    return isRecord(items) ? items : {};
   }
 
   async function exportReport(): Promise<void> {
-    const [settings, errors] = await Promise.all([readSettings(), diagnosticsLog.read()]);
+    await readSettings();
     const exportedAt = now();
     const navigatorObj = options.navigatorObj;
     const report = buildDiagnosticsReport({
@@ -48,9 +45,14 @@ function createDiagnosticsExport(options: DiagnosticsExportOptions): Readonly<Di
       userAgent: navigatorObj ? navigatorObj.userAgent : '',
       language: navigatorObj ? navigatorObj.language : '',
       primaryArea: options.getPrimaryAreaName(),
-      settings,
-      settingKeys: options.settingKeys,
-      errors
+      settings: options.settings
+        .filter((setting) => setting.diagnostics !== 'omit')
+        .map((setting) => ({
+          key: setting.key,
+          diagnostics: setting.diagnostics === 'shape' ? 'shape' : 'value',
+          stored: store.getStored(setting)
+        })),
+      errors: store.getStored(diagnosticErrors)
     });
     downloadJsonFile(options.documentObj, `lumno-diagnostics-${exportedAt}.json`, report);
   }

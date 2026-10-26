@@ -4,9 +4,9 @@
 // in step with storage and saves what the view changes.
 import type { BlacklistRule, MatchMode } from '../domain/blacklist-utils';
 import type * as Settings from '../domain/settings';
-import type { StorageItems } from '../domain/storage-port';
+import type { Setting } from '../domain/settings/define';
 import type { BlacklistRuleDraft, createBlacklistModel } from './options-blacklist';
-import type { SettingSpec } from './options-setting-bindings';
+import type { SectionSettingBinder, SectionSettingStorage } from './options-section-setting';
 import type { GetMessage } from './options-types';
 import type { BlacklistListCopyModel, BlacklistListItemModel, BlacklistSaveResult } from './react/blacklist-list';
 import type { BlacklistClearModel, BlacklistGroupModel, BlacklistTabModel, createBlacklistTabApi } from './react/blacklist-tab';
@@ -14,16 +14,10 @@ import type { BlacklistFormModeCopyModel, BlacklistFormRenderModel, BlacklistFor
 
 type BlacklistModel = ReturnType<typeof createBlacklistModel>;
 
-// The storage area the rules are read from and saved to.
-interface BlacklistStorageArea {
-  get(keys: string[], callback: (items: StorageItems | undefined) => void): unknown;
-  set(items: StorageItems, callback?: () => void): unknown;
-}
-
 interface BlacklistSectionDeps {
   host: HTMLElement | null;
   blacklistTabApi: Pick<ReturnType<typeof createBlacklistTabApi>, 'createBlacklistTabController'>;
-  storageArea: BlacklistStorageArea | null;
+  settingsStore: SectionSettingStorage;
   SETTINGS: Pick<typeof Settings,
     'searchBlacklist' | 'faviconRequestBlacklist' |
     'faviconEnhancedFetchEnabled' | 'faviconEnhancedFetchEnabled'>;
@@ -38,7 +32,7 @@ interface BlacklistSectionDeps {
 
 // A rule list and the add form beside it.
 interface RuleListState {
-  storageKey: string;
+  setting: Setting<unknown>;
   items: BlacklistRule[];
   formResetVersion: number;
 }
@@ -60,7 +54,7 @@ function createBlacklistSection(deps: BlacklistSectionDeps) {
   const {
     host,
     blacklistTabApi,
-    storageArea,
+    settingsStore,
     SETTINGS,
     blacklistModel,
     getMessage,
@@ -70,12 +64,12 @@ function createBlacklistSection(deps: BlacklistSectionDeps) {
   } = deps;
 
   const search: RuleListState = {
-    storageKey: SETTINGS.searchBlacklist.key,
+    setting: SETTINGS.searchBlacklist,
     items: [],
     formResetVersion: 0
   };
   const favicon: RuleListState = {
-    storageKey: SETTINGS.faviconRequestBlacklist.key,
+    setting: SETTINGS.faviconRequestBlacklist,
     items: [],
     formResetVersion: 0
   };
@@ -123,13 +117,7 @@ function createBlacklistSection(deps: BlacklistSectionDeps) {
 
   function saveItems(list: RuleListState, items: BlacklistRule[]): Promise<void> {
     const normalized = blacklistModel.normalizeItems(items);
-    return new Promise<void>((resolve) => {
-      if (!storageArea) {
-        resolve();
-        return;
-      }
-      storageArea.set({ [list.storageKey]: normalized }, () => resolve());
-    }).then(() => {
+    return settingsStore.set(list.setting, normalized).catch(() => {}).then(() => {
       list.items = normalized;
       render();
     });
@@ -252,9 +240,7 @@ function createBlacklistSection(deps: BlacklistSectionDeps) {
     },
     onEnhancedFetchChange(checked) {
       applyEnhancedFetch(checked);
-      if (storageArea) {
-        storageArea.set({ [SETTINGS.faviconEnhancedFetchEnabled.key]: checked });
-      }
+      void settingsStore.set(SETTINGS.faviconEnhancedFetchEnabled, checked).catch(() => {});
     }
   });
 
@@ -390,22 +376,18 @@ function createBlacklistSection(deps: BlacklistSectionDeps) {
 
   // Reads the rules and the switch and follows their changes. A stored rule
   // list is shown as normalized and never written back on its own.
-  function bindSettings(settingBinder: { bindSetting<V>(spec: SettingSpec<V>): void }): void {
+  function bindSettings(settingBinder: SectionSettingBinder): void {
     [search, favicon].forEach((list) => {
       settingBinder.bindSetting({
-        key: list.storageKey,
-        normalize: blacklistModel.normalizeItems,
+        setting: list.setting,
         apply(items) {
-          list.items = items;
+          list.items = blacklistModel.normalizeItems(items);
           render();
-        },
-        repairOnLoad: false,
-        repairOnChange: false
+        }
       });
     });
     settingBinder.bindSetting({
-      key: SETTINGS.faviconEnhancedFetchEnabled.key,
-      normalize: SETTINGS.faviconEnhancedFetchEnabled.parse,
+      setting: SETTINGS.faviconEnhancedFetchEnabled,
       apply: applyEnhancedFetch
     });
   }
@@ -416,4 +398,4 @@ function createBlacklistSection(deps: BlacklistSectionDeps) {
 }
 
 export { createBlacklistSection };
-export type { BlacklistSectionDeps, BlacklistStorageArea };
+export type { BlacklistSectionDeps };

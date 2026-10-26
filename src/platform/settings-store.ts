@@ -64,6 +64,9 @@ interface SettingsStore {
   // A setting not yet included is followed without being read: get()
   // answers its default until a change arrives.
   subscribe(settings: Setting<unknown> | readonly Setting<unknown>[], listener: SettingsListener): () => void;
+  // Calls `listener` with a member's id whenever a member of `family`
+  // changes in storage.
+  subscribeMembers(family: SettingFamily<unknown>, listener: (id: string) => void): () => void;
   // Members of a family are read from storage on request (they are not
   // kept), written and removed by id.
   readMembers(family: SettingFamily<unknown>, ids: readonly (string | number)[]): Promise<Map<string, unknown>>;
@@ -121,6 +124,7 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
   const stored = new Map<string, unknown>();
   const parsed = new Map<string, unknown>();
   const listeners = new Map<string, Set<SettingsListener>>();
+  const memberListeners = new Map<SettingFamily<unknown>, Set<(id: string) => void>>();
   let provider: ProviderStorageRuntime | null = null;
   let listening = false;
   let destroyed = false;
@@ -174,13 +178,13 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
   // changed. A setting's first read is not a change.
   function accept(setting: Setting<unknown>, value: unknown, firstRead = false): void {
     unread.delete(setting.key);
-    const hadParsed = parsed.has(setting.key);
-    const before = hadParsed ? parsed.get(setting.key) : setting.default;
+    const storedBefore = stored.get(setting.key);
+    const before = parsed.has(setting.key) ? parsed.get(setting.key) : setting.default;
     if (value === undefined) stored.delete(setting.key);
     else stored.set(setting.key, value);
     const next = setting.parse(value);
     parsed.set(setting.key, next);
-    if (!firstRead && !sameValue(before, next)) notify(setting);
+    if (!firstRead && (!sameValue(storedBefore, value) || !sameValue(before, next))) notify(setting);
   }
 
   async function readArea(area: StoreArea, list: readonly Setting<unknown>[]): Promise<void> {
@@ -216,6 +220,25 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
     return groups;
   }
 
+  // Settings included in the same task are read together, one storage call
+  // per area.
+  const pendingReads = new Map<StoreArea, { settings: Setting<unknown>[]; done: Promise<void> }>();
+
+  function scheduleRead(area: StoreArea, list: readonly Setting<unknown>[]): Promise<void> {
+    const pending = pendingReads.get(area);
+    if (pending) {
+      pending.settings.push(...list);
+      return pending.done;
+    }
+    const settings = list.slice();
+    const done = Promise.resolve().then(() => {
+      pendingReads.delete(area);
+      return readArea(area, settings);
+    });
+    pendingReads.set(area, { settings, done });
+    return done;
+  }
+
   function include(list: Setting<unknown> | readonly Setting<unknown>[]): Promise<void> {
     const targets = toList(list);
     // A shared store that follows nothing may hold stale values: read again.
@@ -227,7 +250,7 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
     added.filter((setting) => !isStoreArea(setting.area)).forEach((setting) => {
       accept(setting, readWebStorage(webStorageFor(setting), setting.key), true);
     });
-    const read = Promise.all(Array.from(groupByArea(added), ([area, group]) => readArea(area, group)))
+    const read = Promise.all(Array.from(groupByArea(added), ([area, group]) => scheduleRead(area, group)))
       .then(() => undefined);
     added.forEach((setting) => loading.set(setting.key, read));
     return Promise.all(targets.map((setting) => loading.get(setting.key))).then(() => undefined);
@@ -243,8 +266,14 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
     }
     Object.keys(changes).forEach((key) => {
       const setting = byKey.get(key);
-      if (!setting || !isStoreArea(setting.area) || !areaMatches(setting.area, areaName)) return;
-      accept(setting, changes[key].newValue);
+      if (setting && isStoreArea(setting.area) && areaMatches(setting.area, areaName)) {
+        accept(setting, changes[key].newValue);
+      }
+      memberListeners.forEach((set, family) => {
+        const id = family.idOf(key);
+        if (id === null || !isStoreArea(family.area) || !areaMatches(family.area, areaName)) return;
+        Array.from(set).forEach((listener) => listener(id));
+      });
     });
   }
 
@@ -259,6 +288,7 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
   function stopListeningWhenUnfollowed(): void {
     if (!options.listenWhileSubscribed || !listening) return;
     if (Array.from(listeners.values()).some((set) => set.size > 0)) return;
+    if (Array.from(memberListeners.values()).some((set) => set.size > 0)) return;
     listening = false;
     if (onChanged && typeof onChanged.removeListener === 'function') onChanged.removeListener(onStorageChanged);
     // Nothing follows storage now, so what is kept may go stale.
@@ -334,6 +364,18 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
     };
   }
 
+  function subscribeMembers(family: SettingFamily<unknown>, listener: (id: string) => void): () => void {
+    if (family.area === 'preferences') preferencesProvider();
+    const set = memberListeners.get(family) || new Set<(id: string) => void>();
+    set.add(listener);
+    memberListeners.set(family, set);
+    listen();
+    return () => {
+      set.delete(listener);
+      stopListeningWhenUnfollowed();
+    };
+  }
+
   function familyArea(family: SettingFamily<unknown>): StorageAreaLike | StorageAreaFacade | null {
     return isStoreArea(family.area) ? areaFor(family.area) : null;
   }
@@ -382,12 +424,14 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
     setMany,
     remove,
     subscribe,
+    subscribeMembers,
     readMembers,
     writeMembers,
     removeMembers,
     destroy() {
       destroyed = true;
       listeners.clear();
+      memberListeners.clear();
       if (onChanged && typeof onChanged.removeListener === 'function') {
         onChanged.removeListener(onStorageChanged);
       }
@@ -409,6 +453,17 @@ function getContextSettingsStore(chromeApi: SettingsStoreChromeApi, windowObj?: 
     contextStores.set(chromeApi, store);
   }
   return store;
+}
+
+// What storage holds for a setting, read through the store; rejects when
+// storage could not be read, so a caller about to save a list built on it
+// can stop instead of overwriting what it could not see.
+async function readStoredSetting(store: Pick<SettingsStore, 'include' | 'isRead' | 'getStored'>, setting: Setting<unknown>): Promise<unknown> {
+  await store.include(setting);
+  if (!store.isRead(setting)) {
+    throw new Error(`${setting.key} could not be read`);
+  }
+  return store.getStored(setting);
 }
 
 // One setting as a domain module's StoredValuePort.
@@ -433,5 +488,5 @@ function deriveFromSetting<T>(store: SettingsStore, setting: Setting<unknown>, d
   };
 }
 
-export { createSettingPort, createSettingsStore, deriveFromSetting, getContextSettingsStore };
+export { createSettingPort, createSettingsStore, deriveFromSetting, getContextSettingsStore, readStoredSetting };
 export type { SettingsListener, SettingsStore, SettingsStoreChromeApi, SettingsStoreOptions, SettingsStoreWindow, WebStorageLike };

@@ -1,8 +1,8 @@
 // The Labs tab: experiments that stay off until turned on, each a switch row
 // drawn by one React view and kept in step with storage.
 import type * as Settings from '../domain/settings';
-import type { StorageItems } from '../domain/storage-port';
-import type { SettingSpec } from './options-setting-bindings';
+import type { Setting } from '../domain/settings/define';
+import type { SectionSettingBinder, SectionSettingStorage } from './options-section-setting';
 import type { GetMessage } from './options-types';
 import type { createSettingsControlsApi } from './react/settings-controls';
 import type { SettingToggleRowsModel } from './react/setting-rows';
@@ -12,7 +12,7 @@ type LabsSettingKey = 'documentPip' | 'numberShortcutInstant' | 'macosCtrlSugges
 interface LabsSectionDeps {
   host: HTMLElement | null;
   optionsSettingsControlsApi: Pick<ReturnType<typeof createSettingsControlsApi>, 'createSettingToggleRowsController'>;
-  storageArea: { set(items: StorageItems): unknown } | null;
+  settingsStore: SectionSettingStorage;
   SETTINGS: Pick<typeof Settings,
     'documentPipEnabled' | 'numberShortcutInstantEnabled' |
     'macosCtrlSuggestionNavigationEnabled' |
@@ -22,12 +22,10 @@ interface LabsSectionDeps {
   browserFamily: string;
 }
 
-// Each row's setting: its storage key, how a stored value reads, and the
-// browser family that cannot honor it.
+// Each row's setting, and the browser family that cannot honor it.
 interface LabsSetting {
   key: LabsSettingKey;
-  storageKey: string;
-  normalize(raw: unknown): boolean;
+  setting: Setting<boolean>;
   unsupportedBrowser?: string;
 }
 
@@ -35,23 +33,20 @@ interface LabsSetting {
 const DOCUMENT_PIP_UNSUPPORTED_BROWSER = 'firefox';
 
 function createLabsSection(deps: LabsSectionDeps) {
-  const { host, optionsSettingsControlsApi, storageArea, SETTINGS, getMessage, browserFamily } = deps;
+  const { host, optionsSettingsControlsApi, settingsStore, SETTINGS, getMessage, browserFamily } = deps;
   const settings: readonly LabsSetting[] = [
     {
       key: 'documentPip',
-      storageKey: SETTINGS.documentPipEnabled.key,
-      normalize: (raw) => raw === true,
+      setting: SETTINGS.documentPipEnabled,
       unsupportedBrowser: DOCUMENT_PIP_UNSUPPORTED_BROWSER
     },
     {
       key: 'numberShortcutInstant',
-      storageKey: SETTINGS.numberShortcutInstantEnabled.key,
-      normalize: SETTINGS.numberShortcutInstantEnabled.parse
+      setting: SETTINGS.numberShortcutInstantEnabled
     },
     {
       key: 'macosCtrlSuggestionNavigation',
-      storageKey: SETTINGS.macosCtrlSuggestionNavigationEnabled.key,
-      normalize: SETTINGS.macosCtrlSuggestionNavigationEnabled.parse
+      setting: SETTINGS.macosCtrlSuggestionNavigationEnabled
     }
   ];
   // Every experiment starts off until storage answers.
@@ -71,9 +66,7 @@ function createLabsSection(deps: LabsSectionDeps) {
         return;
       }
       values[setting.key] = checked;
-      if (storageArea) {
-        storageArea.set({ [setting.storageKey]: checked });
-      }
+      void settingsStore.set(setting.setting, checked).catch(() => {});
       render();
     }
   });
@@ -133,11 +126,10 @@ function createLabsSection(deps: LabsSectionDeps) {
   }
 
   // Reads each value and follows its changes; until then the rows show off.
-  function bindSettings(settingBinder: { bindSetting<V>(spec: SettingSpec<V>): void }): void {
+  function bindSettings(settingBinder: SectionSettingBinder): void {
     settings.forEach((setting) => {
       settingBinder.bindSetting({
-        key: setting.storageKey,
-        normalize: setting.normalize,
+        setting: setting.setting,
         apply(value) {
           values[setting.key] = value;
           render();

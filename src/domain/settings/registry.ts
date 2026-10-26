@@ -70,7 +70,10 @@ function settingsIn(area: SettingArea): readonly Setting<unknown>[] {
 }
 
 // The preferences browser sync, settings transfer and WebDAV carry.
-const BROWSER_SYNC_KEYS = keysOf(ALL_SETTINGS.filter((setting) => setting.sync === 'browser'));
+const BROWSER_SYNC_SETTINGS: readonly Setting<unknown>[] = Object.freeze(
+  ALL_SETTINGS.filter((setting) => setting.sync === 'browser')
+);
+const BROWSER_SYNC_KEYS = keysOf(BROWSER_SYNC_SETTINGS);
 
 // Device values WebDAV carries but browser sync never does.
 const WEBDAV_ONLY_KEYS = keysOf(ALL_SETTINGS.filter((setting) => setting.sync === 'webdav'));
@@ -80,4 +83,4 @@ const DIAGNOSTIC_SETTINGS: readonly Setting<unknown>[] = Object.freeze(
   ALL_SETTINGS.filter((setting) => setting.diagnostics !== 'omit')
 );
 
-export { ALL_SETTINGS, ALL_SETTING_FAMILIES, BROWSER_SYNC_KEYS, DIAGNOSTIC_SETTINGS, WEBDAV_ONLY_KEYS, getSetting, isSetting, keysOf, settingsIn };
+export { ALL_SETTINGS, ALL_SETTING_FAMILIES, BROWSER_SYNC_KEYS, BROWSER_SYNC_SETTINGS, DIAGNOSTIC_SETTINGS, WEBDAV_ONLY_KEYS, getSetting, isSetting, keysOf, settingsIn };

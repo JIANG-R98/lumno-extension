@@ -1,11 +1,10 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as Settings from '../domain/settings';
-import type { StorageItems } from '../domain/storage-port';
 import { createGeneralGlobalSection } from './options-general-global-section';
-import type { SettingSpec } from './options-setting-bindings';
 import { createGeneralGlobalSectionController } from './react/general-global-section';
 import { getElement, getTag, getTags } from '../../tests/react/dom';
+import { createOptionsTestSettings } from '../../tests/react/options-settings';
 
 const sections: Array<{ destroy(): void }> = [];
 
@@ -14,12 +13,12 @@ const LANGUAGE_SELECT = '_x_extension_language_select_2024_unique_';
 function setUp() {
   const host = document.createElement('div');
   document.body.appendChild(host);
-  const writes: StorageItems[] = [];
+  const settings = createOptionsTestSettings();
   const sent: unknown[] = [];
   const applyLanguage = vi.fn();
   const section = createGeneralGlobalSection({
     view: (handlers) => createGeneralGlobalSectionController(host, handlers),
-    storageArea: { set: (items) => writes.push(items) },
+    settingsStore: settings.store,
     SETTINGS: Settings,
     runtime: {
       lastError: null,
@@ -36,13 +35,8 @@ function setUp() {
     getViewportTopInset: () => 0
   });
   sections.push(section);
-  const changes = new Map<string, (raw: unknown) => void>();
-  section.bindSettings({
-    bindSetting<V>(spec: SettingSpec<V>): void {
-      changes.set(spec.key, (raw) => spec.apply(spec.normalize(raw), raw));
-    }
-  });
-  return { host, writes, sent, applyLanguage, section, changes };
+  section.bindSettings(settings.binder);
+  return { host, writes: settings.writes, sent, applyLanguage, section, settings };
 }
 
 afterEach(() => {
@@ -107,12 +101,13 @@ describe('Options General global section', () => {
     expect(sent).toEqual([{ action: 'openOnboardingPage' }]);
   });
 
-  it('keeps the update notice on by default and saves a change', () => {
-    const { host, writes, changes } = setUp();
-    expect(Array.from(changes.keys())).toEqual([Settings.updateNoticeEnabled.key]);
+  it('keeps the update notice on by default and saves a change', async () => {
+    const { host, writes, settings } = setUp();
+    expect(settings.boundKeys()).toEqual([Settings.updateNoticeEnabled.key]);
     const toggle = getTag(host, '#_x_extension_update_notice_toggle_2026_unique_', 'input');
     expect(toggle.checked).toBe(true);
     act(() => toggle.click());
+    await settings.settle();
     expect(writes).toEqual([{ [Settings.updateNoticeEnabled.key]: false }]);
   });
 });

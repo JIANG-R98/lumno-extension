@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { defineSetting } from '../domain/settings/define';
+import { defineSetting, defineSettingFamily } from '../domain/settings/define';
 import { flag, oneOf, opaque } from '../domain/settings/schema';
 import { localPrimary } from '../domain/settings/sync-state';
 import type { StorageChangeListener, StorageItems } from '../domain/storage-port';
@@ -183,6 +183,26 @@ describe('settings store', () => {
     chromeApi.storage.sync.items.test_theme = 'light';
     await store.include(theme);
     expect(store.get(theme)).toBe('light');
+  });
+
+  it('reads the settings included in one task together', async () => {
+    const { api, chromeApi } = createChrome({ test_theme: 'dark' });
+    const other = defineSetting({ key: 'test_other', area: 'preferences', schema: opaque() });
+    const store = createSettingsStore({ chromeApi: api, settings: [] });
+    await Promise.all([store.include(theme), store.include(other)]);
+    expect(chromeApi.storage.sync.reads).toEqual([['test_theme', 'test_other']]);
+  });
+
+  it('tells member listeners which member of a family changed', async () => {
+    const { api, listeners } = createChrome();
+    const family = defineSettingFamily({ prefix: 'test_member:', area: 'device', schema: opaque() });
+    const store = createSettingsStore({ chromeApi: api, settings: [] });
+    const seen = vi.fn();
+    const unsubscribe = store.subscribeMembers(family, seen);
+    listeners.forEach((listener) => listener({ 'test_member:a': { newValue: 1 }, other: { newValue: 2 } }, 'local'));
+    listeners.forEach((listener) => listener({ 'test_member:b': { newValue: 1 } }, 'sync'));
+    expect(seen.mock.calls).toEqual([['a']]);
+    unsubscribe();
   });
 
   it('writes a preference it never read', async () => {

@@ -7,10 +7,8 @@ import type * as CustomQuotes from '../domain/custom-quotes';
 import type { QuoteLibrary } from '../domain/custom-quotes';
 import type * as Settings from '../domain/settings';
 import type { NewtabQuotePosition, NewtabQuotePrefs } from '../domain/settings/newtab-quote';
-import type { StorageAreaLike, StorageItems } from '../domain/storage-port';
 import type { SectionView } from './options-section-view';
-import type { SectionSettingBinder } from './options-section-setting';
-import type { StorageChangeRegistry } from './options-setting-bindings';
+import type { SectionSettingBinder, SectionSettingStorage } from './options-section-setting';
 import type { GetMessage } from './options-types';
 import type { DailyQuoteSectionHandlers, DailyQuoteSectionModel, QuoteLibraryRowModel } from './react/daily-quote-section';
 import type { SelectControlItemModel } from './react/select-control';
@@ -27,15 +25,13 @@ interface DailyQuoteSectionDeps {
     'readQuotePick'>;
   getMessage: GetMessage;
   showToast?(message: string, isError?: boolean): void;
-  // The synced area the preferences live in.
-  syncArea: { set(items: StorageItems): unknown } | null;
-  // chrome.storage.local, for the custom collection.
-  localArea: StorageAreaLike | null;
+  // The preferences sync; the custom collection is this device's own.
+  settingsStore: SectionSettingStorage;
   getViewportTopInset(): number;
 }
 
 function createDailyQuoteSection(deps: DailyQuoteSectionDeps) {
-  const { view, settings, customQuotes: custom, getMessage, getViewportTopInset } = deps;
+  const { view, settings, customQuotes: custom, getMessage, getViewportTopInset, settingsStore } = deps;
   let prefs: NewtabQuotePrefs = settings.newtabQuotePrefs.parse(null);
   let library: QuoteLibrary | null = null;
   let importing = false;
@@ -48,34 +44,7 @@ function createDailyQuoteSection(deps: DailyQuoteSectionDeps) {
     const next = settings.newtabQuotePrefs.parse({ ...prefs, ...patch });
     prefs = next;
     render();
-    return deps.syncArea
-      ? Promise.resolve(deps.syncArea.set({ [settings.newtabQuotePrefs.key]: next })).then(() => {})
-      : Promise.resolve();
-  }
-
-  function readLocal(keys: string[]): Promise<Record<string, unknown>> {
-    return new Promise((resolve) => {
-      const localArea = deps.localArea;
-      if (!localArea) {
-        resolve({});
-        return;
-      }
-      localArea.get(keys, (values) => resolve(values || {}));
-    });
-  }
-
-  function writeLocal(values: Record<string, unknown>): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const localArea = deps.localArea;
-      if (!localArea) {
-        reject(new Error('Local storage unavailable'));
-        return;
-      }
-      localArea.set(values, () => {
-        const error = chrome.runtime.lastError;
-        if (error) reject(new Error(error.message)); else resolve();
-      });
-    });
+    return settingsStore.set(settings.newtabQuotePrefs, next).catch(() => {});
   }
 
   async function importFile(file: File): Promise<void> {
@@ -87,7 +56,10 @@ function createDailyQuoteSection(deps: DailyQuoteSectionDeps) {
     try {
       const next = await custom.readLibraryFile(file);
       saving = true;
-      await writeLocal({ [custom.KEY]: next, [NewtabQuoteSettings.customQuotePick.key]: null });
+      await settingsStore.setMany([
+        [NewtabQuoteSettings.customQuotes, next],
+        [NewtabQuoteSettings.customQuotePick, null]
+      ]);
       library = next;
       await persist({ provider: 'custom' });
     } catch (_error) {
@@ -107,11 +79,13 @@ function createDailyQuoteSection(deps: DailyQuoteSectionDeps) {
     shuffling = true;
     render();
     try {
-      const values = await readLocal([custom.KEY, NewtabQuoteSettings.customQuotePick.key]);
-      const current = custom.normalizeLibrary(values[custom.KEY]);
+      const quoteSettings = [NewtabQuoteSettings.customQuotes, NewtabQuoteSettings.customQuotePick];
+      await settingsStore.include(quoteSettings);
+      const current = custom.normalizeLibrary(settingsStore.getStored(NewtabQuoteSettings.customQuotes));
       if (!current) return;
-      const selected = custom.select(current, new Date(), custom.readQuotePick(values[NewtabQuoteSettings.customQuotePick.key]), true);
-      await writeLocal({ [NewtabQuoteSettings.customQuotePick.key]: selected.pick });
+      const storedPick = custom.readQuotePick(settingsStore.getStored(NewtabQuoteSettings.customQuotePick));
+      const selected = custom.select(current, new Date(), storedPick, true);
+      await settingsStore.set(NewtabQuoteSettings.customQuotePick, selected.pick);
       if (deps.showToast) {
         deps.showToast(selected.quote.text);
       }
@@ -338,22 +312,16 @@ function createDailyQuoteSection(deps: DailyQuoteSectionDeps) {
   }
 
   // Follows the synced preferences and this device's collection.
-  function bindSettings(settingBinder: SectionSettingBinder, storageChanges: Pick<StorageChangeRegistry, 'on'>): void {
+  function bindSettings(settingBinder: SectionSettingBinder): void {
     settingBinder.bindSetting({
-      key: settings.newtabQuotePrefs.key,
-      normalize: settings.newtabQuotePrefs.parse,
+      setting: settings.newtabQuotePrefs,
       apply(next) {
         prefs = next;
         render();
       },
-      repairOnLoad: false,
-      repairOnChange: false,
       refreshSelects: true
     });
-    storageChanges.on(custom.KEY, (changes) => {
-      applyLibrary(changes[custom.KEY].newValue);
-    }, { area: 'local' });
-    void readLocal([custom.KEY]).then((values) => applyLibrary(values[custom.KEY]));
+    settingBinder.bindSetting({ setting: NewtabQuoteSettings.customQuotes, apply: applyLibrary });
   }
 
   render();

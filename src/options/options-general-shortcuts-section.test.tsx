@@ -1,23 +1,23 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import * as Settings from '../domain/settings';
-import type { StorageItems } from '../domain/storage-port';
+import type { Setting } from '../domain/settings/define';
 import { createGeneralShortcutsSection } from './options-general-shortcuts-section';
-import type { SettingSpec } from './options-setting-bindings';
 import { createGeneralShortcutsSectionController } from './react/general-shortcuts-section';
 import { getElement, getTag, getTags } from '../../tests/react/dom';
+import { createOptionsTestSettings } from '../../tests/react/options-settings';
 
 const sections: Array<{ destroy(): void }> = [];
 
 function setUp(response: unknown = { ok: true }) {
   const host = document.createElement('div');
   document.body.appendChild(host);
-  const writes: StorageItems[] = [];
+  const settings = createOptionsTestSettings();
   const sent: unknown[] = [];
   const toasts: Array<[string, boolean]> = [];
   const section = createGeneralShortcutsSection({
     view: (handlers) => createGeneralShortcutsSectionController(host, handlers),
-    storageArea: { set: (items) => writes.push(items) },
+    settingsStore: settings.store,
     SETTINGS: Settings,
     runtime: {
       lastError: null,
@@ -32,14 +32,9 @@ function setUp(response: unknown = { ok: true }) {
     showToast: (message, isError) => toasts.push([message, Boolean(isError)])
   });
   sections.push(section);
-  const changes = new Map<string, (raw: unknown) => void>();
-  section.bindSettings({
-    bindSetting<V>(spec: SettingSpec<V>): void {
-      changes.set(spec.key, (raw) => spec.apply(spec.normalize(raw), raw));
-    }
-  });
-  const store = (key: string, raw: unknown) => act(() => changes.get(key)?.(raw));
-  return { host, writes, sent, toasts, section, changes, store };
+  section.bindSettings(settings.binder);
+  const store = (setting: Setting<unknown>, raw: unknown) => settings.change(setting, raw);
+  return { host, writes: settings.writes, sent, toasts, section, settings, store };
 }
 
 afterEach(() => {
@@ -49,8 +44,8 @@ afterEach(() => {
 
 describe('Options General shortcuts section', () => {
   it('binds the restricted page action and quick switching', () => {
-    const { changes } = setUp();
-    expect(Array.from(changes.keys()).sort()).toEqual([
+    const { settings } = setUp();
+    expect(settings.boundKeys().sort()).toEqual([
       Settings.overlayTabPriority.key,
       Settings.restrictedAction.key
     ].sort());
@@ -78,12 +73,13 @@ describe('Options General shortcuts section', () => {
     expect(dia.dataset.tooltip).toContain('Dia');
   });
 
-  it('saves the restricted page action together with the one-time setting step', () => {
-    const { host, writes, store } = setUp();
-    store(Settings.restrictedAction.key, 'lumno');
+  it('saves the restricted page action together with the one-time setting step', async () => {
+    const { host, writes, store, settings } = setUp();
+    await store(Settings.restrictedAction, 'lumno');
     const buttons = getTags(host, '#_x_extension_restricted_action_tabs_wrap_2024_unique_ button', 'button');
     expect(buttons.map((button) => button.dataset.active)).toEqual(['true', 'false']);
     act(() => buttons[1]?.click());
+    await settings.settle();
     expect(writes).toEqual([{
       [Settings.restrictedAction.key]: 'none',
       [Settings.restrictedActionAutoBrowserSettingDone.key]: true
@@ -115,11 +111,11 @@ describe('Options General shortcuts section', () => {
     expect(getElement(host, '[data-shortcut-id="show-tab-switcher"]').textContent).toContain('⌥Q');
   });
 
-  it('keeps quick switching on', () => {
+  it('keeps quick switching on', async () => {
     const { host, store } = setUp();
     const toggle = () => getTag(host, '#_x_extension_overlay_tab_quick_switch_2024_unique_', 'input');
     expect(toggle().checked).toBe(true);
-    store(Settings.overlayTabPriority.key, false);
+    await store(Settings.overlayTabPriority, false);
     expect(toggle().checked).toBe(true);
   });
 });

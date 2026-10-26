@@ -3,6 +3,7 @@
 // selection toolbar with its provider and grouping. One React view draws
 // the rows; this keeps their values in step with storage.
 import type * as Settings from '../domain/settings';
+import type { Setting } from '../domain/settings/define';
 import { createSectionSetting, type SectionSettingBinder, type SectionSettingStorage } from './options-section-setting';
 import type { SectionView } from './options-section-view';
 import type { GetMessage } from './options-types';
@@ -11,7 +12,7 @@ import type { SettingsLinkModel, SettingsRowModel, SettingsRowsHandlers, Setting
 interface GeneralFeaturesSectionDeps {
   // Draws the section; the General tab hands over its part of the tab's view.
   view(handlers: SettingsRowsHandlers): SectionView<SettingsSectionModel>;
-  storageArea: SectionSettingStorage | null;
+  settingsStore: SectionSettingStorage;
   SETTINGS: Pick<typeof Settings,
     'autoPipEnabled' | 'tabSwitcherEnabled' |
     'tabSwitcherCurrentWindowOnly' | 'linkPreviewEnabled' |
@@ -52,7 +53,7 @@ const AUTO_PIP_UNSUPPORTED_BROWSER = 'firefox';
 function createGeneralFeaturesSection(deps: GeneralFeaturesSectionDeps) {
   const {
     view,
-    storageArea,
+    settingsStore,
     SETTINGS,
     getMessage,
     browserFamily,
@@ -60,33 +61,19 @@ function createGeneralFeaturesSection(deps: GeneralFeaturesSectionDeps) {
     getViewportTopInset,
     getTabSwitcherShortcut
   } = deps;
-  const isNotFalse = (raw: unknown): boolean => raw !== false;
-  const isTrue = (raw: unknown): boolean => raw === true;
   const autoPipUnsupported = browserFamily === AUTO_PIP_UNSUPPORTED_BROWSER;
 
   const render = (): void => controller.render({ rows: getRows() });
-  const setting = <V>(storageKey: string, normalize: (raw: unknown) => V) =>
-    createSectionSetting({ storageKey, normalize, refreshSelects: true }, storageArea, () => render());
-  const autoPip = setting(SETTINGS.autoPipEnabled.key, isNotFalse);
-  const tabSwitcher = setting(SETTINGS.tabSwitcherEnabled.key, SETTINGS.tabSwitcherEnabled.parse);
-  const currentWindowOnly = setting(
-    SETTINGS.tabSwitcherCurrentWindowOnly.key,
-    SETTINGS.tabSwitcherCurrentWindowOnly.parse
-  );
-  const linkPreview = setting(SETTINGS.linkPreviewEnabled.key, SETTINGS.linkPreviewEnabled.parse);
-  const pinnedTabRecovery = setting(SETTINGS.pinnedTabRecoveryEnabled.key, isTrue);
-  const selectionQuickActions = setting(
-    SETTINGS.selectionQuickActionsEnabled.key,
-    SETTINGS.selectionQuickActionsEnabled.parse
-  );
-  const selectionProvider = setting(
-    SETTINGS.selectionQuickActionsProvider.key,
-    SETTINGS.selectionQuickActionsProvider.parse
-  );
-  const selectionGroup = setting(
-    SETTINGS.selectionQuickActionsGroupEnabled.key,
-    SETTINGS.selectionQuickActionsGroupEnabled.parse
-  );
+  const setting = <V>(stored: Setting<V>) =>
+    createSectionSetting({ setting: stored, refreshSelects: true }, settingsStore, () => render());
+  const autoPip = setting(SETTINGS.autoPipEnabled);
+  const tabSwitcher = setting(SETTINGS.tabSwitcherEnabled);
+  const currentWindowOnly = setting(SETTINGS.tabSwitcherCurrentWindowOnly);
+  const linkPreview = setting(SETTINGS.linkPreviewEnabled);
+  const pinnedTabRecovery = setting(SETTINGS.pinnedTabRecoveryEnabled);
+  const selectionQuickActions = setting(SETTINGS.selectionQuickActionsEnabled);
+  const selectionProvider = setting(SETTINGS.selectionQuickActionsProvider);
+  const selectionGroup = setting(SETTINGS.selectionQuickActionsGroupEnabled);
   const toggles = [autoPip, tabSwitcher, currentWindowOnly, linkPreview, pinnedTabRecovery, selectionQuickActions, selectionGroup];
   // Shown once the tab switcher's shortcut is known.
   let ctrlTabLink: SettingsLinkModel | null = null;

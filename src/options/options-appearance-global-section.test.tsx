@@ -1,11 +1,10 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as Settings from '../domain/settings';
-import type { StorageItems } from '../domain/storage-port';
 import { createAppearanceGlobalSection } from './options-appearance-global-section';
-import type { SettingSpec } from './options-setting-bindings';
 import { createAppearanceGlobalSectionController } from './react/appearance-global-section';
 import { getElement, getTag, getTags } from '../../tests/react/dom';
+import { createOptionsTestSettings } from '../../tests/react/options-settings';
 
 const sections: Array<{ destroy(): void }> = [];
 const MOTION = '_x_extension_motion_effects_toggle_2026_unique_';
@@ -14,23 +13,18 @@ const SIMPLE = '_x_extension_simple_mode_toggle_2026_unique_';
 function setUp() {
   const host = document.createElement('div');
   document.body.appendChild(host);
-  const writes: StorageItems[] = [];
+  const settings = createOptionsTestSettings();
   const onTheme = vi.fn();
   const section = createAppearanceGlobalSection({
     view: (handlers) => createAppearanceGlobalSectionController(host, handlers),
-    storageArea: { set: (items) => writes.push(items) },
+    settingsStore: settings.store,
     SETTINGS: Settings,
     getMessage: (_key, fallback) => fallback,
     onTheme
   });
   sections.push(section);
-  const changes = new Map<string, (raw: unknown) => void>();
-  section.bindSettings({
-    bindSetting<V>(spec: SettingSpec<V>): void {
-      changes.set(spec.key, (raw) => spec.apply(spec.normalize(raw), raw));
-    }
-  });
-  return { host, writes, onTheme, section, changes };
+  section.bindSettings(settings.binder);
+  return { host, writes: settings.writes, onTheme, section, settings };
 }
 
 afterEach(() => {
@@ -49,8 +43,8 @@ describe('Options Appearance global section', () => {
   });
 
   it('keeps its copy and defaults: motion on with its guidance, simple mode off with its description', () => {
-    const { host, changes } = setUp();
-    expect(Array.from(changes.keys()).sort()).toEqual([
+    const { host, settings } = setUp();
+    expect(settings.boundKeys().sort()).toEqual([
       Settings.motionEffectsEnabled.key,
       Settings.simpleModeEnabled.key
     ].sort());
@@ -64,9 +58,10 @@ describe('Options Appearance global section', () => {
       .toBe('移除更多提示元素，使搜索框更简洁');
   });
 
-  it('saves a switched setting', () => {
-    const { host, writes } = setUp();
+  it('saves a switched setting', async () => {
+    const { host, writes, settings } = setUp();
     act(() => getTag(host, `#${SIMPLE}`, 'input').click());
+    await settings.settle();
     expect(writes).toEqual([{ [Settings.simpleModeEnabled.key]: true }]);
   });
 

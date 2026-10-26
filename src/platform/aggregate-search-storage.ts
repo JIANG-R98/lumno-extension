@@ -4,6 +4,7 @@ import type { AggregateSearch } from '../domain/search/aggregate-search-store';
 import type { StorageAreaLike } from '../domain/storage-port';
 import { readStorageValue } from './settings-storage';
 import type { StorageChromeApi } from './settings-storage';
+import { readStoredSetting } from './settings-store';
 import type { SettingsStore } from './settings-store';
 import { aggregateSearches } from '../domain/settings/search';
 
@@ -20,11 +21,7 @@ async function loadAggregateSearches(
 // The aggregate searches a settings store holds; rejects when storage could
 // not be read, as loadAggregateSearches does.
 async function readAggregateSearches(store: SettingsStore): Promise<AggregateSearch[]> {
-  await store.include(aggregateSearches);
-  if (!store.isRead(aggregateSearches)) {
-    throw new Error('Aggregate searches could not be read');
-  }
-  return normalizeAggregateSearches(store.getStored(aggregateSearches));
+  return normalizeAggregateSearches(await readStoredSetting(store, aggregateSearches));
 }
 
 export { loadAggregateSearches, readAggregateSearches };

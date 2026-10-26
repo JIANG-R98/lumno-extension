@@ -3,11 +3,11 @@
 import { readLocaleMessages } from '../domain/locale-messages';
 import type { LocaleMessage } from '../domain/messages';
 import type * as Settings from '../domain/settings';
-import type { StorageAreaLike } from '../domain/storage-port';
+import { language as languageSetting } from '../domain/settings/locale';
 import { isHtmlTag } from '../shared/dom-guards';
 import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as LumnoMessaging from '../platform/messaging';
-import type { BatchedStorageArea } from '../platform/settings-storage';
+import type { SettingsStore } from '../platform/settings-store';
 import type { createSearchShortcutStatus } from './options-search-shortcut-status';
 import type { SettingsTabKey } from './options-navigation';
 import type { createThemeSection } from './options-theme';
@@ -18,7 +18,7 @@ type LocaleMessages = Record<string, LocaleMessage>;
 
 interface LanguageState {
   currentLanguageMode: string;
-  storageArea: BatchedStorageArea | null;
+  settingsStore: Pick<SettingsStore, 'include' | 'get' | 'set'>;
   isMacPlatform: boolean;
   currentActiveSettingsTab: SettingsTabKey;
   // Made as the page starts; null until then.
@@ -31,10 +31,6 @@ interface LanguageDeps {
   formatTemplate: FormatTemplate;
   formatShortcutForDisplay(shortcut: string): string;
   SETTINGS: Pick<typeof Settings, 'normalizeLocale' | 'localeToHtmlLang' | 'resolveSupportedLocale'>;
-  LANGUAGE_STORAGE_KEY: string;
-  localStorageArea: StorageAreaLike | null;
-  // 'sync' while browser sync holds the settings.
-  getActivePrimaryAreaName(): string;
   renderFeedbackSupport(): void;
   renderTranslationHelp(): void;
   refreshCustomSelects(): void;
@@ -55,9 +51,6 @@ function createLanguage(deps: LanguageDeps) {
     formatTemplate,
     formatShortcutForDisplay,
     SETTINGS,
-    LANGUAGE_STORAGE_KEY,
-    localStorageArea,
-    getActivePrimaryAreaName,
     renderFeedbackSupport,
     renderTranslationHelp,
     refreshCustomSelects,
@@ -175,8 +168,7 @@ function createLanguage(deps: LanguageDeps) {
   // A stored language is the picker value: the language's html lang, or
   // 'system' for anything Lumno has no copy in.
   function normalizeLanguageMode(mode: unknown): string {
-    const locale = SETTINGS.resolveSupportedLocale(mode);
-    return locale ? SETTINGS.localeToHtmlLang(locale) : 'system';
+    return languageSetting.parse(mode);
   }
 
   function loadLocaleMessages(locale: string): Promise<LocaleMessages> {
@@ -208,17 +200,8 @@ function createLanguage(deps: LanguageDeps) {
     optionsState.currentLanguageMode = normalizedMode;
     const targetLocale = normalizedMode === 'system' ? getSystemLocale() : normalizeLocale(normalizedMode);
     applyDocumentLanguage(targetLocale);
-    const shouldPersist = Boolean(options && options.persist);
-    if (shouldPersist) {
-      const payload = {
-        [LANGUAGE_STORAGE_KEY]: normalizedMode
-      };
-      if (localStorageArea) {
-        localStorageArea.set(payload);
-      }
-      if (optionsState.storageArea) {
-        optionsState.storageArea.set(payload);
-      }
+    if (options && options.persist) {
+      void optionsState.settingsStore.set(languageSetting, normalizedMode).catch(() => {});
     }
     loadLocaleMessages(targetLocale).then((messages) => {
       if (requestId !== languageApplyRequestId) {
@@ -245,44 +228,12 @@ function createLanguage(deps: LanguageDeps) {
     });
   }
 
-  // Keeps a copy of the language in chrome.storage.local and moves a value
-  // found only there into the primary area. With nothing stored yet the page
-  // shows the system language without writing it, so a choice another page is
-  // still saving is not overwritten; the language change handler applies that
-  // choice once it lands.
+  // With nothing stored the page shows the system language without writing
+  // it, so a choice another page is still saving is not overwritten; the
+  // language change handler applies that choice once it lands.
   function loadLanguageSetting(): void {
-    const storageArea = optionsState.storageArea;
-    if (!storageArea) {
-      return;
-    }
-    storageArea.get([LANGUAGE_STORAGE_KEY], (result) => {
-      if (result && Object.prototype.hasOwnProperty.call(result, LANGUAGE_STORAGE_KEY)) {
-        const storedRaw = result[LANGUAGE_STORAGE_KEY];
-        const stored = normalizeLanguageMode(storedRaw);
-        if (storedRaw !== stored) {
-          storageArea.set({ [LANGUAGE_STORAGE_KEY]: stored });
-        }
-        if (localStorageArea) {
-          localStorageArea.set({ [LANGUAGE_STORAGE_KEY]: stored });
-        }
-        applyLanguageMode(stored);
-        return;
-      }
-      if (getActivePrimaryAreaName() !== 'sync' || !localStorageArea) {
-        applyLanguageMode('system');
-        return;
-      }
-      localStorageArea.get([LANGUAGE_STORAGE_KEY], (localResult) => {
-        if (!localResult || !Object.prototype.hasOwnProperty.call(localResult, LANGUAGE_STORAGE_KEY)) {
-          applyLanguageMode('system');
-          return;
-        }
-        const localMode = normalizeLanguageMode(localResult[LANGUAGE_STORAGE_KEY]);
-        localStorageArea.set({ [LANGUAGE_STORAGE_KEY]: localMode });
-        storageArea.set({ [LANGUAGE_STORAGE_KEY]: localMode });
-        applyLanguageMode(localMode);
-      });
-    });
+    const store = optionsState.settingsStore;
+    void store.include(languageSetting).then(() => applyLanguageMode(store.get(languageSetting)));
   }
 
   return {

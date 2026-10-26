@@ -4,8 +4,7 @@
 // view draws the rows; this keeps their values in step with storage.
 import type { SearchSourceType } from '../domain/search/types';
 import type * as Settings from '../domain/settings';
-import type { StorageItems } from '../domain/storage-port';
-import { createSectionSetting, type SectionSettingBinder } from './options-section-setting';
+import { createSectionSetting, type SectionSettingBinder, type SectionSettingStorage } from './options-section-setting';
 import type { SectionView } from './options-section-view';
 import type { createSearchSourceOrderController } from './options-search-source-order';
 import type { GetMessage } from './options-types';
@@ -15,10 +14,7 @@ import { searchResultSourceTypes } from '../domain/settings/search';
 interface GeneralSearchSectionDeps {
   // Draws the section; the General tab hands over its part of the tab's view.
   view(handlers: SettingsRowsHandlers): SectionView<SettingsSectionModel>;
-  storageArea: {
-    get(keys: string[], callback: (items: StorageItems | undefined) => void): unknown;
-    set(items: StorageItems): unknown;
-  } | null;
+  settingsStore: SectionSettingStorage;
   SETTINGS: Pick<typeof Settings,
     'searchResultTabPosition' | 'searchResultPriority' |
     'searchResultSourceTypes' | 'searchResultDisplayLimit' |
@@ -43,7 +39,7 @@ const SOURCE_TYPES: ReadonlyArray<{ value: SearchSourceType; id: string; labelKe
 function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
   const {
     view,
-    storageArea,
+    settingsStore,
     SETTINGS,
     orderController,
     getMessage,
@@ -52,40 +48,18 @@ function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
   } = deps;
 
   const render = (): void => controller.render({ rows: getRows() });
-  const tabPosition = createSectionSetting({
-    storageKey: SETTINGS.searchResultTabPosition.key,
-    normalize: SETTINGS.searchResultTabPosition.parse,
-    refreshSelects: true,
-    repairOnLoad: false,
-    repairOnChange: false
-  }, storageArea, () => render());
-  const priority = createSectionSetting({
-    storageKey: SETTINGS.searchResultPriority.key,
-    normalize: SETTINGS.searchResultPriority.parse,
-    refreshSelects: true,
-    repairOnChange: false
-  }, storageArea, () => render());
-  const displayLimit = createSectionSetting({
-    storageKey: SETTINGS.searchResultDisplayLimit.key,
-    normalize: SETTINGS.searchResultDisplayLimit.parse
-  }, storageArea, () => render());
-  const openTabsDefault = createSectionSetting({
-    storageKey: SETTINGS.overlayOpenTabsDefaultVisible.key,
-    normalize: SETTINGS.overlayOpenTabsDefaultVisible.parse
-  }, storageArea, () => render());
-  const fuzzyPinyin = createSectionSetting({
-    storageKey: SETTINGS.searchFuzzyPinyinEnabled.key,
-    normalize: SETTINGS.searchFuzzyPinyinEnabled.parse
-  }, storageArea, () => render());
+  const tabPosition = createSectionSetting({ setting: SETTINGS.searchResultTabPosition, refreshSelects: true }, settingsStore, () => render());
+  const priority = createSectionSetting({ setting: SETTINGS.searchResultPriority, refreshSelects: true }, settingsStore, () => render());
+  const displayLimit = createSectionSetting({ setting: SETTINGS.searchResultDisplayLimit }, settingsStore, () => render());
+  const openTabsDefault = createSectionSetting({ setting: SETTINGS.overlayOpenTabsDefaultVisible }, settingsStore, () => render());
+  const fuzzyPinyin = createSectionSetting({ setting: SETTINGS.searchFuzzyPinyinEnabled }, settingsStore, () => render());
   const toggles = [openTabsDefault, fuzzyPinyin];
   let sourceTypes: SearchSourceType[] = SETTINGS.searchResultSourceTypes.parse(undefined);
 
   function saveSourceTypes(value: unknown): void {
     sourceTypes = SETTINGS.searchResultSourceTypes.parse(value);
     render();
-    if (storageArea) {
-      storageArea.set({ [SETTINGS.searchResultSourceTypes.key]: sourceTypes });
-    }
+    void settingsStore.set(SETTINGS.searchResultSourceTypes, sourceTypes).catch(() => {});
   }
 
   // The types in their shown order, which the search source order keeps.
@@ -267,24 +241,10 @@ function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
   function bindSettings(settingBinder: SectionSettingBinder): void {
     [tabPosition, priority, displayLimit, ...toggles].forEach((entry) => entry.bind(settingBinder));
     settingBinder.bindSetting({
-      key: SETTINGS.searchResultSourceTypes.key,
-      normalize: SETTINGS.searchResultSourceTypes.parse,
+      setting: SETTINGS.searchResultSourceTypes,
       apply(value) {
         sourceTypes = value;
         render();
-      },
-      load: false,
-      repairOnChange: false
-    });
-    if (!storageArea) {
-      return;
-    }
-    storageArea.get([SETTINGS.searchResultSourceTypes.key], (items) => {
-      const stored = items ? items[SETTINGS.searchResultSourceTypes.key] : undefined;
-      sourceTypes = SETTINGS.searchResultSourceTypes.parse(stored);
-      render();
-      if (!Array.isArray(stored) || JSON.stringify(stored) !== JSON.stringify(sourceTypes)) {
-        storageArea.set({ [SETTINGS.searchResultSourceTypes.key]: sourceTypes });
       }
     });
   }

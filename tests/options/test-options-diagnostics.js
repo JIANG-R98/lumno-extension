@@ -1,24 +1,9 @@
 const assert = require('assert');
 const { createDiagnosticsExport } = require('../../src/options/options-diagnostics.ts');
 const { diagnosticErrors } = require('../../src/domain/settings/sync-state.ts');
-
-function createArea(values) {
-  return {
-    requested: [],
-    get(keys, callback) {
-      this.requested.push(keys);
-      const result = {};
-      keys.forEach((key) => {
-        if (Object.prototype.hasOwnProperty.call(values, key)) result[key] = values[key];
-      });
-      callback(result);
-    },
-    set(items, callback) {
-      Object.assign(values, items);
-      callback();
-    }
-  };
-}
+const { themeMode } = require('../../src/domain/settings/appearance.ts');
+const { searchBlacklist } = require('../../src/domain/settings/search.ts');
+const { createSettingsStore } = require('../../src/platform/settings-store.ts');
 
 function createDocument() {
   const downloads = [];
@@ -38,26 +23,53 @@ function createDocument() {
   return { documentObj, downloads };
 }
 
-async function run() {
-  const settingsArea = createArea({ theme: 'dark', quote: 'A private note', unrelated: true });
-  const localArea = createArea({
-    [diagnosticErrors.key]: [{ at: 0, context: 'Storage write', name: 'Error', message: 'failed', count: 2 }]
+// A store over in-memory areas; reading fails when `failing` says so.
+function createStore(sync, local, failing) {
+  const chromeApi = { runtime: { lastError: null } };
+  const area = (values) => ({
+    requested: [],
+    get(keys, callback) {
+      this.requested.push(keys);
+      if (failing) {
+        chromeApi.runtime.lastError = { message: 'read failed' };
+        callback(undefined);
+        chromeApi.runtime.lastError = null;
+        return;
+      }
+      const result = {};
+      keys.forEach((key) => {
+        if (Object.prototype.hasOwnProperty.call(values, key)) result[key] = values[key];
+      });
+      callback(result);
+    },
+    set(items, callback) {
+      Object.assign(values, items);
+      callback();
+    }
   });
+  chromeApi.storage = { sync: area(sync), local: area(local) };
+  return { chromeApi, store: createSettingsStore({ chromeApi, settings: [] }) };
+}
+
+async function run() {
+  const { chromeApi, store } = createStore(
+    { [themeMode.key]: 'dark', [searchBlacklist.key]: [{ pattern: 'private.example' }], unrelated: true },
+    { [diagnosticErrors.key]: [{ at: 0, context: 'Storage write', name: 'Error', message: 'failed', count: 2 }] }
+  );
   const { documentObj, downloads } = createDocument();
   const exporter = createDiagnosticsExport({
-    chromeApi: { runtime: {} },
+    settingsStore: store,
+    settings: [themeMode, searchBlacklist],
     documentObj,
     getPrimaryAreaName: () => 'local',
-    getSettingsArea: () => settingsArea,
     getVersion: () => '1.2.0',
-    localArea,
     navigatorObj: { userAgent: 'TestBrowser/1', language: 'de' },
-    now: () => Date.UTC(2026, 9, 25, 8),
-    settingKeys: ['theme', 'quote']
+    now: () => Date.UTC(2026, 9, 25, 8)
   });
 
   await exporter.exportReport();
-  assert.deepStrictEqual(settingsArea.requested, [['theme', 'quote']], 'only the listed settings are read');
+  assert.deepStrictEqual(chromeApi.storage.sync.requested.filter((keys) => keys.includes(themeMode.key)),
+    [[themeMode.key, searchBlacklist.key]], 'only the listed settings are read');
   assert.strictEqual(downloads.length, 1);
   assert.strictEqual(downloads[0].fileName, `lumno-diagnostics-${Date.UTC(2026, 9, 25, 8)}.json`);
   assert.strictEqual(downloads[0].blob.type, 'application/json');
@@ -69,30 +81,20 @@ async function run() {
     extension: { version: '1.2.0' },
     browser: { userAgent: 'TestBrowser/1', language: 'de' },
     storage: { primaryArea: 'local' },
-    settings: { theme: 'dark', quote: { redacted: 'text', length: 14 } },
+    settings: { [themeMode.key]: 'dark', [searchBlacklist.key]: { redacted: 'list', length: 1 } },
     recentErrors: [{ time: '1970-01-01T00:00:00.000Z', context: 'Storage write', name: 'Error', message: 'failed', count: 2 }]
   });
 
   // A settings read that fails rejects, so the page can say the export failed.
-  const failingChrome = { runtime: { lastError: null } };
   const failing = createDiagnosticsExport({
-    chromeApi: failingChrome,
+    settingsStore: createStore({}, {}, true).store,
+    settings: [themeMode],
     documentObj,
     getPrimaryAreaName: () => 'sync',
-    getSettingsArea: () => ({
-      get(keys, callback) {
-        failingChrome.runtime.lastError = { message: 'read failed' };
-        callback(undefined);
-        failingChrome.runtime.lastError = null;
-      },
-      set() {}
-    }),
     getVersion: () => '1.2.0',
-    localArea: null,
-    navigatorObj: null,
-    settingKeys: ['theme']
+    navigatorObj: null
   });
-  await assert.rejects(failing.exportReport(), /read failed/);
+  await assert.rejects(failing.exportReport(), /could not be read/);
   assert.strictEqual(downloads.length, 1, 'nothing is saved after a failed read');
 
   console.log('Options diagnostics export tests passed');

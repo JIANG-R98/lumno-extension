@@ -1,4 +1,3 @@
-import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
 import * as LumnoBlacklistUtils from '../domain/blacklist-utils';
 import * as CUSTOM_QUOTES from '../domain/custom-quotes';
 import * as COMMUNITY_LINKS from '../platform/community-links';
@@ -7,6 +6,7 @@ import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store
 import * as SEARCH_UTILS from '../domain/search/search-utils';
 import * as SETTINGS from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
+import { getContextSettingsStore, readStoredSetting } from '../platform/settings-store';
 import * as LumnoShortcutDisplay from '../domain/shortcut-display';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as OPTIONS_ACCOUNT_SECTION from './options-account-section';
@@ -50,8 +50,6 @@ import * as LumnoOptionsTranslationHelpSection from './options-translation-help'
 import * as LumnoOptionsDiagnostics from './options-diagnostics';
 import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as LumnoMessaging from '../platform/messaging';
-import type { StorageChangeListener } from '../domain/storage-port';
-import type { ReadBatchMetrics } from '../platform/settings-storage';
 import { getHtmlElement, queryHtmlElement, queryHtmlElements } from '../shared/dom-lookup';
 import type { LayoutMutation } from './options-panel-motion';
 import * as OPTIONS_STATE from './options-state';
@@ -115,19 +113,15 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
   // whichever area holds the synced settings.
   const localStorageArea = chrome && chrome.storage ? chrome.storage.local || null : null;
 
-  // The provider area, and the read batch that serves the startup reads in one go.
-  const { runtime: providerStorageRuntime, area: rawStorageArea } = LumnoSettingsStorage.getProviderStorage(chrome);
-  const startupStorageReadBatch = LumnoSettingsStorage.createStorageReadBatch(rawStorageArea);
-  if (!startupStorageReadBatch) {
-    return;
-  }
+  // The provider area, for the settings transfer on the Account tab.
+  const { runtime: providerStorageRuntime, area: providerStorageArea } = LumnoSettingsStorage.getProviderStorage(chrome);
   // Page state shared with the parts of this page split out into
   // src/options/: each receives this one object as `optionsState` and reads
   // and writes the same properties this file does.
+  const optionsSettingsStore = getContextSettingsStore(chrome, window);
   const optionsState = OPTIONS_STATE.createOptionsState({
     providerStorageRuntime,
-    storageArea: startupStorageReadBatch.area,
-    rawStorageArea,
+    settingsStore: optionsSettingsStore,
     siteSearchModel: SITE_SEARCH.createSiteSearchModel({
       searchUtils: SEARCH_UTILS,
       aggregateSearchStore: AGGREGATE_SEARCH_STORE
@@ -142,13 +136,8 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
     searchSourceOrderController: LumnoOptionsSearchSourceOrder.createSearchSourceOrderController({
       getMessage: (key, fallback) => getMessage(key, fallback),
       showToast: (message, isError) => showToast(message, isError),
-      read: () => LumnoSettingsStorage.readStorageValue(startupStorageReadBatch.area, chrome, SETTINGS.searchSourceOrder.key),
-      write: (value) => LumnoSettingsStorage.writeStorageValue(
-        rawStorageArea,
-        chrome,
-        SETTINGS.searchSourceOrder.key,
-        value
-      ),
+      read: () => readStoredSetting(optionsSettingsStore, SETTINGS.searchSourceOrder),
+      write: (value) => optionsSettingsStore.set(SETTINGS.searchSourceOrder, SETTINGS.searchSourceOrder.parse(value)),
       onChange() {
         if (optionsState.siteSearchProvidersLoaded) {
           renderSiteSearchList();
@@ -241,9 +230,7 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
     initTooltips,
     scrollToOptionsTarget: (...args) => scrollToOptionsTarget(...args),
     normalizeSiteSearchProvider,
-    SITE_SEARCH_STORAGE_KEY: SETTINGS.siteSearchCustom.key,
     getSiteSearchBuiltinKey: (...args) => getSiteSearchBuiltinKey(...args),
-    SITE_SEARCH_DISABLED_STORAGE_KEY: SETTINGS.siteSearchDisabled.key,
     SITE_SEARCH,
     optionsState
   });
@@ -290,9 +277,6 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
     formatTemplate: (...args) => formatTemplate(...args),
     formatShortcutForDisplay: (...args) => formatShortcutForDisplay(...args),
     SETTINGS,
-    LANGUAGE_STORAGE_KEY: SETTINGS.language.key,
-    localStorageArea,
-    getActivePrimaryAreaName: () => getActivePrimaryAreaName(),
     renderFeedbackSupport,
     renderTranslationHelp,
     refreshCustomSelects,
@@ -339,21 +323,19 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
 
   const shortcutDisplay = LumnoShortcutDisplay;
   const diagnosticsExport = LumnoOptionsDiagnostics.createDiagnosticsExport({
-    chromeApi: chrome,
+    settingsStore: optionsState.settingsStore,
+    settings: SETTINGS.DIAGNOSTIC_SETTINGS,
     documentObj: document,
     getPrimaryAreaName: () => getActivePrimaryAreaName(),
-    getSettingsArea: () => optionsState.storageArea,
     getVersion: () => chrome?.runtime?.getManifest?.()?.version || '',
-    localArea: localStorageArea,
-    navigatorObj: navigator,
-    settingKeys: SETTINGS.BROWSER_SYNC_KEYS
+    navigatorObj: navigator
   });
   const generalTab = OPTIONS_GENERAL_TAB.createGeneralTab(optionsSettingsControlsApi.createGeneralTabController(
     queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="general"]')
   ));
   const generalGlobalSection = OPTIONS_GENERAL_GLOBAL_SECTION.createGeneralGlobalSection({
     view: generalTab.global,
-    storageArea: optionsState.storageArea,
+    settingsStore: optionsState.settingsStore,
     SETTINGS,
     runtime: chrome.runtime,
     getMessage,
@@ -396,7 +378,7 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
   // browser cannot honor.
   const generalFeaturesSection = OPTIONS_GENERAL_FEATURES_SECTION.createGeneralFeaturesSection({
     view: generalTab.features,
-    storageArea: optionsState.storageArea,
+    settingsStore: optionsState.settingsStore,
     SETTINGS,
     getMessage,
     browserFamily: document.documentElement.getAttribute('data-browser-family') || '',
@@ -408,7 +390,7 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
   });
   const generalShortcutsSection = OPTIONS_GENERAL_SHORTCUTS_SECTION.createGeneralShortcutsSection({
     view: generalTab.shortcuts,
-    storageArea: optionsState.storageArea,
+    settingsStore: optionsState.settingsStore,
     SETTINGS,
     runtime: chrome.runtime,
     getMessage,
@@ -416,13 +398,13 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
   });
   const generalNewtabSection = OPTIONS_GENERAL_NEWTAB_SECTION.createGeneralNewtabSection({
     view: generalTab.newtab,
-    storageArea: optionsState.storageArea,
+    settingsStore: optionsState.settingsStore,
     SETTINGS,
     getMessage
   });
   const generalSearchSection = OPTIONS_GENERAL_SEARCH_SECTION.createGeneralSearchSection({
     view: generalTab.search,
-    storageArea: optionsState.storageArea,
+    settingsStore: optionsState.settingsStore,
     SETTINGS,
     orderController: optionsState.searchSourceOrderController,
     getMessage,
@@ -434,7 +416,7 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
   ));
   const appearanceGlobalSection = OPTIONS_APPEARANCE_GLOBAL_SECTION.createAppearanceGlobalSection({
     view: appearanceTab.global,
-    storageArea: optionsState.storageArea,
+    settingsStore: optionsState.settingsStore,
     SETTINGS,
     getMessage,
     onTheme(mode, button) {
@@ -444,8 +426,7 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
   });
   const appearanceOverlaySection = OPTIONS_APPEARANCE_OVERLAY_SECTION.createAppearanceOverlaySection({
     view: appearanceTab.overlay,
-    storageArea: optionsState.storageArea,
-    localStorageArea,
+    settingsStore: optionsState.settingsStore,
     SETTINGS,
     getMessage,
     formatTemplate: (text, params) => formatTemplate(text, params),
@@ -455,7 +436,7 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
   });
   const appearanceNewtabLookSection = OPTIONS_APPEARANCE_NEWTAB_LOOK_SECTION.createAppearanceNewtabLookSection({
     view: appearanceTab.newtabLook,
-    storageArea: optionsState.storageArea,
+    settingsStore: optionsState.settingsStore,
     SETTINGS,
     getMessage,
     notifyNewtabSectionsRefresh: (section) => notifyNewtabSectionsRefresh(section),
@@ -468,13 +449,12 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
     customQuotes: CUSTOM_QUOTES,
     getMessage,
     showToast: (message, isError) => showToast(message, isError),
-    syncArea: optionsState.storageArea,
-    localArea: localStorageArea,
+    settingsStore: optionsState.settingsStore,
     getViewportTopInset: getMenuViewportTopInset
   });
   const appearanceNewtabLayoutSection = OPTIONS_APPEARANCE_NEWTAB_LAYOUT_SECTION.createAppearanceNewtabLayoutSection({
     view: appearanceTab.newtabLayout,
-    storageArea: optionsState.storageArea,
+    settingsStore: optionsState.settingsStore,
     SETTINGS,
     getMessage,
     notifyNewtabSectionsRefresh: (section) => notifyNewtabSectionsRefresh(section)
@@ -482,7 +462,7 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
   const labsSection = OPTIONS_LABS_SECTION.createLabsSection({
     host: queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="labs"]'),
     optionsSettingsControlsApi,
-    storageArea: optionsState.storageArea,
+    settingsStore: optionsState.settingsStore,
     SETTINGS,
     getMessage,
     browserFamily: document.documentElement.getAttribute('data-browser-family') || ''
@@ -490,7 +470,7 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
   const blacklistSection = OPTIONS_BLACKLIST_SECTION.createBlacklistSection({
     host: queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="blacklist"]'),
     blacklistTabApi: optionsBlacklistTabApi,
-    storageArea: optionsState.storageArea,
+    settingsStore: optionsState.settingsStore,
     SETTINGS,
     blacklistModel: LumnoOptionsBlacklist.createBlacklistModel({
       blacklistUtils: LumnoBlacklistUtils
@@ -526,7 +506,7 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
     shortcutsTabApi: optionsShortcutsTabApi,
     getMessage,
     orderController: optionsState.searchSourceOrderController,
-    storageArea: optionsState.storageArea,
+    settingsStore: optionsState.settingsStore,
     SETTINGS,
     deriveLegacyAutoGroupEnabled: (value) => deriveLegacyAggregateSearchAutoGroupEnabled(value),
     refreshCustomSelects,
@@ -570,35 +550,17 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
     deriveLegacyAutoGroupEnabled: aggregateSearchModel.deriveLegacyAutoGroupEnabled,
     settings: SETTINGS
   });
-  // Each section registers its storage change handlers here, next to the
-  // code that renders it; one chrome.storage listener dispatches to them.
-  const storageChanges = SETTING_BINDINGS.createStorageChangeRegistry({
-    isPrimaryAreaName: isPrimaryStorageAreaName
-  });
+  // Each section binds its settings next to the code that renders it; the
+  // page's settings store follows storage for all of them.
   const settingBinder = SETTING_BINDINGS.createSettingBinder({
-    storageArea: optionsState.storageArea,
-    writeRepairs: (values, stored) => LumnoSettingsStorage.writeSettingRepairs(chrome, optionsState.storageArea, values, stored),
-    registry: storageChanges,
-    refreshCustomSelects
-  });
-  // Device-only settings (the overlay's local fonts) stay in
-  // chrome.storage.local whichever area holds the synced ones.
-  const localSettingBinder = SETTING_BINDINGS.createSettingBinder({
-    area: 'local',
-    storageArea: localStorageArea,
-    registry: storageChanges,
+    store: optionsState.settingsStore,
     refreshCustomSelects
   });
 
-  function finishOptionsStartupStorageBatch(metrics: ReadBatchMetrics): void {
-    optionsState.optionsStartupStorageBatchPending = false;
+  // Once the bound settings are read and shown.
+  function finishOptionsStartupRead(): void {
+    optionsState.optionsStartupReadPending = false;
     const root = document.documentElement;
-    root.setAttribute('data-lumno-options-bootstrap-storage-reads', String(metrics.underlyingReadCount));
-    root.setAttribute('data-lumno-options-bootstrap-storage-requests', String(metrics.requestCount));
-    root.setAttribute(
-      'data-lumno-options-bootstrap-storage-keys',
-      metrics.keyCount === null ? 'all' : String(metrics.keyCount)
-    );
     if (optionsState.optionsStartupRefreshDeferred) {
       optionsState.optionsStartupRefreshDeferred = false;
       refreshCustomSelects({ force: true });
@@ -653,23 +615,16 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
     });
   }
 
-  startupStorageReadBatch.ready.then(finishOptionsStartupStorageBatch);
 
   function getActivePrimaryAreaName() {
     return optionsState.providerStorageRuntime.getActiveAreaName();
-  }
-  function isPrimaryStorageAreaName(areaName: string): boolean {
-    return optionsState.providerStorageRuntime.isActiveAreaName(areaName);
-  }
-  function addStorageChangeListener(listener: StorageChangeListener) {
-    return LumnoSettingsStorage.addStorageChangeListener(chrome, listener);
   }
 
   function animateOptionsPanelHeight(mutateLayout: LayoutMutation): boolean {
     return optionsState.panelHeightAnimator.animate(mutateLayout);
   }
-  storageChanges.on(SETTINGS.searchSourceOrder.key, (changes) => {
-    optionsState.searchSourceOrderController.accept(changes[SETTINGS.searchSourceOrder.key].newValue);
+  settingBinder.onChange(SETTINGS.searchSourceOrder, () => {
+    optionsState.searchSourceOrderController.accept(optionsState.settingsStore.getStored(SETTINGS.searchSourceOrder));
   });
   optionsState.searchSourceOrderController.load();
 
@@ -695,7 +650,6 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
     aggregateSearchListController,
     renderedSearchSourceKeys,
     getSearchSourceReorderCopy,
-    AGGREGATE_SEARCH_STORAGE_KEY: SETTINGS.aggregateSearches.key,
     getActivePrimaryAreaName,
     AGGREGATE_SEARCH,
     showToast,
@@ -763,7 +717,7 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
       localStorageArea,
       settings: SETTINGS,
       showToast,
-      storageArea: optionsState.storageArea,
+      storageArea: providerStorageArea,
       syncTransfer
     },
     webdav: { chromeApi: chrome, getMessage },
@@ -774,16 +728,12 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
   function refreshSyncStatus() {
     syncSection.refreshSyncStatus();
   }
-  storageChanges.on(SETTINGS.webdavStatus.key, refreshSyncStatus, { area: 'local' });
-  storageChanges.on(
-    LumnoNewtabShortcutsStore && newtabShortcutsLocalOverflow.key,
-    () => syncSection.refreshShortcutSyncSummary(),
-    { area: 'local' }
-  );
-  storageChanges.on([SETTINGS.syncMeta.key, ...SETTINGS.BROWSER_SYNC_KEYS], refreshSyncStatus);
+  settingBinder.onChange(SETTINGS.webdavStatus, refreshSyncStatus);
+  settingBinder.onChange(newtabShortcutsLocalOverflow, () => syncSection.refreshShortcutSyncSummary());
+  settingBinder.onChange([SETTINGS.syncMeta, ...SETTINGS.BROWSER_SYNC_SETTINGS], refreshSyncStatus);
 
-  storageChanges.on(SETTINGS.language.key, (changes) => {
-    applyLanguageMode(changes[SETTINGS.language.key].newValue || 'system');
+  settingBinder.onChange(SETTINGS.language, () => {
+    applyLanguageMode(optionsState.settingsStore.get(SETTINGS.language));
   });
 
   const {
@@ -815,7 +765,7 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
       optionsState.searchShortcutStatus.load();
     }
   }
-  storageChanges.on(SETTINGS.fallbackShortcut.key, () => loadCurrentShortcut());
+  settingBinder.onChange(SETTINGS.fallbackShortcut, () => loadCurrentShortcut());
 
   if (settingsVersion && chrome?.runtime?.getManifest) {
     const manifest = chrome.runtime.getManifest();
@@ -872,20 +822,17 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
     panel,
     picker: appearanceGlobalSection.themePicker,
     settings: SETTINGS,
-    storageArea: optionsState.storageArea,
+    settingsStore: optionsState.settingsStore,
     windowObj: window
   });
   optionsState.themeSection.init();
-  storageChanges.on(SETTINGS.themeMode.key, (changes) => {
+  settingBinder.onChange(SETTINGS.themeMode, () => {
     if (optionsState.themeSection) {
-      optionsState.themeSection.applyStorageChange(changes[SETTINGS.themeMode.key].newValue);
+      optionsState.themeSection.applyStorageChange(optionsState.settingsStore.get(SETTINGS.themeMode));
     }
   });
 
 
-  if (!optionsState.storageArea) {
-    applyLanguageMode('system');
-  }
   initTooltips();
 
   function getInitialTabKey() {
@@ -943,26 +890,27 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
   generalNewtabSection.bindSettings(settingBinder);
   generalShortcutsSection.bindSettings(settingBinder);
   appearanceGlobalSection.bindSettings(settingBinder);
-  appearanceOverlaySection.bindSettings(settingBinder, localSettingBinder);
+  appearanceOverlaySection.bindSettings(settingBinder);
   appearanceNewtabLookSection.bindSettings(settingBinder);
-  dailyQuoteSection.bindSettings(settingBinder, storageChanges);
+  dailyQuoteSection.bindSettings(settingBinder);
   appearanceNewtabLayoutSection.bindSettings(settingBinder);
   labsSection.bindSettings(settingBinder);
   blacklistSection.bindSettings(settingBinder);
   shortcutsSection.bindSettings(settingBinder);
   loadLanguageSetting();
+  void settingBinder.whenBound().then(finishOptionsStartupRead);
 
   refreshCustomSelects();
 
-  storageChanges.on(SETTINGS.aggregateSearches.key, (changes) => {
+  settingBinder.onChange(SETTINGS.aggregateSearches, () => {
     getAggregateSearchStateCoordinator().applyStorageChange(
-      changes[SETTINGS.aggregateSearches.key].newValue
+      optionsState.settingsStore.getStored(SETTINGS.aggregateSearches)
     );
   });
 
   // A save on this page suspends refreshes briefly so its own write does not
   // re-render the list mid-edit; a change during that window refreshes after.
-  storageChanges.on([SETTINGS.siteSearchCustom.key, SETTINGS.siteSearchDisabled.key], () => {
+  settingBinder.onChange([SETTINGS.siteSearchCustom, SETTINGS.siteSearchDisabled], () => {
     invalidateSiteSearchProviderRefresh();
     const now = Date.now();
     if (optionsState.siteSearchRefreshSuppressUntil && now < optionsState.siteSearchRefreshSuppressUntil) {
@@ -982,6 +930,4 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
   refreshSiteSearchProviders();
   // Load failures are reported through onLoadError.
   refreshAggregateSearches().catch(() => {});
-
-  addStorageChangeListener(storageChanges.dispatch);
 })();

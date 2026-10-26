@@ -2,16 +2,15 @@
 // simple mode. One React view draws it; the theme section hands it the
 // gallery's model, and this keeps the switches in step with storage.
 import type * as Settings from '../domain/settings';
-import type { StorageItems } from '../domain/storage-port';
 import type { SectionView } from './options-section-view';
-import { createSectionSetting, type SectionSettingBinder } from './options-section-setting';
+import { createSectionSetting, type SectionSettingBinder, type SectionSettingStorage } from './options-section-setting';
 import type { GetMessage } from './options-types';
 import type { AppearanceGlobalSectionHandlers, AppearanceGlobalSectionModel } from './react/appearance-global-section';
 import type { ThemeMode, ThemePickerRenderModel } from './react/theme-picker';
 
 interface AppearanceGlobalSectionDeps {
   view(handlers: AppearanceGlobalSectionHandlers): SectionView<AppearanceGlobalSectionModel>;
-  storageArea: { set(items: StorageItems): unknown } | null;
+  settingsStore: SectionSettingStorage;
   SETTINGS: Pick<typeof Settings,
     'motionEffectsEnabled' | 'simpleModeEnabled' |
     'motionEffectsEnabled' | 'simpleModeEnabled'>;
@@ -21,19 +20,11 @@ interface AppearanceGlobalSectionDeps {
 }
 
 function createAppearanceGlobalSection(deps: AppearanceGlobalSectionDeps) {
-  const { view, storageArea, SETTINGS, getMessage, onTheme } = deps;
+  const { view, settingsStore, SETTINGS, getMessage, onTheme } = deps;
 
   const render = (): void => controller.render(getModel());
-  const motionEffects = createSectionSetting({
-    storageKey: SETTINGS.motionEffectsEnabled.key,
-    normalize: SETTINGS.motionEffectsEnabled.parse,
-    refreshSelects: true
-  }, storageArea, () => render());
-  const simpleMode = createSectionSetting({
-    storageKey: SETTINGS.simpleModeEnabled.key,
-    normalize: SETTINGS.simpleModeEnabled.parse,
-    refreshSelects: true
-  }, storageArea, () => render());
+  const motionEffects = createSectionSetting({ setting: SETTINGS.motionEffectsEnabled, refreshSelects: true }, settingsStore, () => render());
+  const simpleMode = createSectionSetting({ setting: SETTINGS.simpleModeEnabled, refreshSelects: true }, settingsStore, () => render());
   const toggles = [motionEffects, simpleMode];
   // Empty until the theme section draws the gallery.
   let picker: ThemePickerRenderModel = { activeMode: 'system', options: [] };

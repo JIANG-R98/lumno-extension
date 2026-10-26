@@ -3,9 +3,8 @@
 // cards and the page buttons. One React view draws it; this keeps it in step
 // with storage.
 import type * as Settings from '../domain/settings';
-import type { StorageAreaLike } from '../domain/storage-port';
 import type { SectionView } from './options-section-view';
-import { createSectionSetting, type SectionSettingBinder } from './options-section-setting';
+import { createSectionSetting, type SectionSettingBinder, type SectionSettingStorage } from './options-section-setting';
 import type { GetMessage } from './options-types';
 import type {
   AppearanceNewtabLayoutSectionHandlers,
@@ -18,7 +17,7 @@ type RecentMode = 'latest' | 'most';
 
 interface AppearanceNewtabLayoutSectionDeps {
   view(handlers: AppearanceNewtabLayoutSectionHandlers): SectionView<AppearanceNewtabLayoutSectionModel>;
-  storageArea: Pick<StorageAreaLike, 'get' | 'set'> | null;
+  settingsStore: SectionSettingStorage;
   SETTINGS: Pick<typeof Settings,
     'newtabInputAutoFocusEnabled' | 'newtabShortcutsVisible' |
     'newtabShortcutAddVisible' | 'newtabShortcutDockMagnificationEnabled' |
@@ -40,89 +39,31 @@ interface AppearanceNewtabLayoutSectionDeps {
 }
 
 // The recent site cards come in rows of four, up to two rows.
-function normalizeRecentCount(value: unknown): number {
-  const parsed = Number.parseInt(String(value), 10);
-  return parsed === 0 || parsed === 4 || parsed === 8 ? parsed : 4;
-}
-
 function createAppearanceNewtabLayoutSection(deps: AppearanceNewtabLayoutSectionDeps) {
-  const { view, storageArea, SETTINGS, getMessage, notifyNewtabSectionsRefresh } = deps;
+  const { view, settingsStore, SETTINGS, getMessage, notifyNewtabSectionsRefresh } = deps;
 
   const render = (): void => controller.render({ rows: getRows(), recent: getRecentRow() });
   const onChange = (): void => render();
-  const autoFocus = createSectionSetting({
-    storageKey: SETTINGS.newtabInputAutoFocusEnabled.key,
-    normalize: SETTINGS.newtabInputAutoFocusEnabled.parse
-  }, storageArea, onChange);
-  // The shortcut settings are read together (see loadShortcutSettings).
-  const shortcutsVisible = createSectionSetting({
-    storageKey: SETTINGS.newtabShortcutsVisible.key,
-    normalize: SETTINGS.newtabShortcutsVisible.parse,
-    load: false
-  }, storageArea, onChange);
-  const shortcutAdd = createSectionSetting({
-    storageKey: SETTINGS.newtabShortcutAddVisible.key,
-    normalize: SETTINGS.newtabShortcutAddVisible.parse,
-    load: false
-  }, storageArea, onChange);
-  const shortcutDock = createSectionSetting({
-    storageKey: SETTINGS.newtabShortcutDockMagnificationEnabled.key,
-    normalize: SETTINGS.newtabShortcutDockMagnificationEnabled.parse,
-    load: false
-  }, storageArea, onChange);
-  const shortcutColumns = createSectionSetting({
-    storageKey: SETTINGS.newtabShortcutColumns.key,
-    normalize: (value) => SETTINGS.newtabShortcutColumns.parse(value),
-    load: false
-  }, storageArea, onChange);
-  const shortcutSize = createSectionSetting({
-    storageKey: SETTINGS.newtabShortcutSize.key,
-    normalize: (value) => SETTINGS.newtabShortcutSize.parse(value),
-    load: false
-  }, storageArea, onChange);
-  const shortcutGap = createSectionSetting({
-    storageKey: SETTINGS.newtabShortcutGap.key,
-    normalize: (value) => SETTINGS.newtabShortcutGap.parse(value),
-    load: false
-  }, storageArea, onChange);
-  const bookmarkCount = createSectionSetting({
-    storageKey: SETTINGS.bookmarkCount.key,
-    normalize: SETTINGS.bookmarkCount.parse,
-    repairOnChange: false
-  }, storageArea, onChange);
-  const bookmarkColumns = createSectionSetting({
-    storageKey: SETTINGS.bookmarkColumns.key,
-    normalize: SETTINGS.bookmarkColumns.parse,
-    repairOnChange: false,
-    refreshSelects: true
-  }, storageArea, onChange);
-  const folderIcons = createSectionSetting({
-    storageKey: SETTINGS.bookmarkFolderIconsVisible.key,
-    normalize: SETTINGS.bookmarkFolderIconsVisible.parse
-  }, storageArea, onChange);
-  const recentCount = createSectionSetting({
-    storageKey: SETTINGS.recentCount.key,
-    normalize: normalizeRecentCount,
-    repairOnChange: false,
-    refreshSelects: true
-  }, storageArea, onChange);
-  const feedbackButton = createSectionSetting({
-    storageKey: SETTINGS.newtabFeedbackButtonVisible.key,
-    normalize: SETTINGS.newtabFeedbackButtonVisible.parse
-  }, storageArea, onChange);
-  const appearanceButton = createSectionSetting({
-    storageKey: SETTINGS.newtabAppearanceButtonVisible.key,
-    normalize: SETTINGS.newtabAppearanceButtonVisible.parse
-  }, storageArea, onChange);
+  const autoFocus = createSectionSetting({ setting: SETTINGS.newtabInputAutoFocusEnabled }, settingsStore, onChange);
+  const shortcutsVisible = createSectionSetting({ setting: SETTINGS.newtabShortcutsVisible }, settingsStore, onChange);
+  const shortcutAdd = createSectionSetting({ setting: SETTINGS.newtabShortcutAddVisible }, settingsStore, onChange);
+  const shortcutDock = createSectionSetting({ setting: SETTINGS.newtabShortcutDockMagnificationEnabled }, settingsStore, onChange);
+  const shortcutColumns = createSectionSetting({ setting: SETTINGS.newtabShortcutColumns }, settingsStore, onChange);
+  const shortcutSize = createSectionSetting({ setting: SETTINGS.newtabShortcutSize }, settingsStore, onChange);
+  const shortcutGap = createSectionSetting({ setting: SETTINGS.newtabShortcutGap }, settingsStore, onChange);
+  const bookmarkCount = createSectionSetting({ setting: SETTINGS.bookmarkCount }, settingsStore, onChange);
+  const bookmarkColumns = createSectionSetting({ setting: SETTINGS.bookmarkColumns, refreshSelects: true }, settingsStore, onChange);
+  const folderIcons = createSectionSetting({ setting: SETTINGS.bookmarkFolderIconsVisible }, settingsStore, onChange);
+  const recentCount = createSectionSetting({ setting: SETTINGS.recentCount, refreshSelects: true }, settingsStore, onChange);
+  const feedbackButton = createSectionSetting({ setting: SETTINGS.newtabFeedbackButtonVisible }, settingsStore, onChange);
+  const appearanceButton = createSectionSetting({ setting: SETTINGS.newtabAppearanceButtonVisible }, settingsStore, onChange);
   const toggles = [autoFocus, shortcutsVisible, shortcutAdd, shortcutDock, folderIcons, feedbackButton, appearanceButton];
   let recentMode: RecentMode = 'most';
 
   function changeRecentMode(value: string): void {
-    recentMode = value === 'most' ? 'most' : 'latest';
+    recentMode = SETTINGS.recentMode.parse(value);
     render();
-    if (storageArea) {
-      storageArea.set({ [SETTINGS.recentMode.key]: recentMode });
-    }
+    void settingsStore.set(SETTINGS.recentMode, recentMode).catch(() => {});
     notifyNewtabSectionsRefresh('recent');
   }
 
@@ -156,7 +97,7 @@ function createAppearanceNewtabLayoutSection(deps: AppearanceNewtabLayoutSection
       }
     },
     onRecentCount(value) {
-      recentCount.change(normalizeRecentCount(Math.round(value) * 4));
+      recentCount.change(SETTINGS.recentCount.parse(Math.round(value) * 4));
       notifyNewtabSectionsRefresh('recent');
     },
     onRecentMode: changeRecentMode
@@ -448,42 +389,15 @@ function createAppearanceNewtabLayoutSection(deps: AppearanceNewtabLayoutSection
     ];
   }
 
-  // The shortcut switches and sliders are read together because the column
-  // count falls back to one inferred from the older width setting. Values
-  // that were missing or not normalized are written back.
-  function loadShortcutSettings(): void {
-    if (!storageArea) {
-      return;
-    }
-    const entries = [shortcutsVisible, shortcutAdd, shortcutDock, shortcutColumns, shortcutSize, shortcutGap];
-    void storageArea.get([...entries.map((entry) => entry.storageKey), SETTINGS.newtabShortcutWidth.key], (items) => {
-      const result = items || {};
-      const rawColumns = result[shortcutColumns.storageKey];
-      const visible = SETTINGS.newtabShortcutsVisible.parse(result[shortcutsVisible.storageKey]);
-      const add = SETTINGS.newtabShortcutAddVisible.parse(result[shortcutAdd.storageKey]);
-      const dock = SETTINGS.newtabShortcutDockMagnificationEnabled.parse(result[shortcutDock.storageKey]);
-      const columns = rawColumns === undefined
-        ? SETTINGS.inferNewtabShortcutColumnsFromWidth(result[SETTINGS.newtabShortcutWidth.key])
-        : SETTINGS.newtabShortcutColumns.parse(rawColumns);
-      const size = SETTINGS.newtabShortcutSize.parse(result[shortcutSize.storageKey]);
-      const gap = SETTINGS.newtabShortcutGap.parse(result[shortcutGap.storageKey]);
-      shortcutsVisible.show(visible);
-      shortcutAdd.show(add);
-      shortcutDock.show(dock);
-      shortcutColumns.show(columns);
-      shortcutSize.show(size);
-      shortcutGap.show(gap);
-      const values: Record<string, unknown> = {
-        [shortcutsVisible.storageKey]: visible,
-        [shortcutAdd.storageKey]: add,
-        [shortcutDock.storageKey]: dock,
-        [shortcutColumns.storageKey]: columns,
-        [shortcutSize.storageKey]: size,
-        [shortcutGap.storageKey]: gap
-      };
-      const repairs = Object.fromEntries(Object.entries(values).filter(([key, value]) => result[key] !== value));
-      if (Object.keys(repairs).length > 0) {
-        void storageArea.set(repairs);
+  // A column count never saved falls back to one inferred from the older
+  // width setting.
+  function showInferredColumns(): void {
+    const settings = [SETTINGS.newtabShortcutColumns, SETTINGS.newtabShortcutWidth];
+    void settingsStore.include(settings).then(() => {
+      if (settingsStore.getStored(SETTINGS.newtabShortcutColumns) === undefined) {
+        shortcutColumns.show(SETTINGS.inferNewtabShortcutColumnsFromWidth(
+          settingsStore.getStored(SETTINGS.newtabShortcutWidth)
+        ));
       }
     });
   }
@@ -494,20 +408,15 @@ function createAppearanceNewtabLayoutSection(deps: AppearanceNewtabLayoutSection
     [shortcutColumns, shortcutSize, shortcutGap].forEach((entry) => entry.bind(settingBinder));
     [bookmarkCount, bookmarkColumns, folderIcons, recentCount].forEach((entry) => entry.bind(settingBinder));
     settingBinder.bindSetting({
-      key: SETTINGS.recentMode.key,
-      // A missing or unknown mode starts as "most visited"; a later change to
-      // anything but "most" shows "latest", as the switch only offers the two.
-      normalize: (value): RecentMode => (value === 'latest' || value === 'most' ? value : 'most'),
-      normalizeChange: (value): RecentMode => (value === 'most' ? 'most' : 'latest'),
+      setting: SETTINGS.recentMode,
       apply(mode) {
         recentMode = mode;
         render();
       },
-      repairOnChange: false,
       refreshSelects: true
     });
     [feedbackButton, appearanceButton].forEach((entry) => entry.bind(settingBinder));
-    loadShortcutSettings();
+    showInferredColumns();
   }
 
   render();

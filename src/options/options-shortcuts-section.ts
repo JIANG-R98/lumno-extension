@@ -4,9 +4,8 @@
 // the parts this returns; this adds the tab's own copy, the group order and
 // the aggregate auto-group switch.
 import type * as Settings from '../domain/settings';
-import type { StorageItems } from '../domain/storage-port';
 import type { createSearchSourceOrderController } from './options-search-source-order';
-import type { SettingSpec } from './options-setting-bindings';
+import type { SectionSettingBinder, SectionSettingStorage } from './options-section-setting';
 import type { GetMessage } from './options-types';
 import type { AggregateSearchListRenderModel } from './react/aggregate-search-list';
 import type { SiteSearchFormRenderModel } from './react/settings-forms';
@@ -29,10 +28,7 @@ interface ShortcutsSectionDeps {
   getMessage: GetMessage;
   orderController: Pick<ReturnType<typeof createSearchSourceOrderController>,
     'getOrder' | 'getGroupLabel' | 'moveGroup' | 'attachGroupDrag' | 'attachListDrag'>;
-  storageArea: {
-    get(keys: string[], callback: (items: StorageItems | undefined) => void): unknown;
-    set(items: StorageItems): unknown;
-  } | null;
+  settingsStore: SectionSettingStorage;
   SETTINGS: Pick<typeof Settings,
     'aggregateSearchAutoGroupEnabled' | 'aggregateSearches' |
     'aggregateSearchAutoGroupEnabled'>;
@@ -59,7 +55,7 @@ function createShortcutsSection(deps: ShortcutsSectionDeps) {
     shortcutsTabApi,
     getMessage,
     orderController,
-    storageArea,
+    settingsStore,
     SETTINGS,
     deriveLegacyAutoGroupEnabled,
     refreshCustomSelects,
@@ -90,9 +86,7 @@ function createShortcutsSection(deps: ShortcutsSectionDeps) {
     attachListDrag: (listId, dragHost) => orderController.attachListDrag(dragHost, listId, (row) => getRowKey(listId, row)),
     onAutoGroupChange(checked) {
       applyAutoGroup(checked);
-      if (storageArea) {
-        storageArea.set({ [SETTINGS.aggregateSearchAutoGroupEnabled.key]: checked });
-      }
+      void settingsStore.set(SETTINGS.aggregateSearchAutoGroupEnabled, checked).catch(() => {});
     }
   });
 
@@ -186,30 +180,24 @@ function createShortcutsSection(deps: ShortcutsSectionDeps) {
     };
   }
 
-  // Follows the auto-group switch; its first value is read with the
-  // aggregate searches it may be derived from, and written back once.
-  function bindSettings(settingBinder: { bindSetting<V>(spec: SettingSpec<V>): void }): void {
+  // Follows the auto-group switch. Older installs never stored one: it is
+  // derived from their aggregate searches and saved once.
+  function bindSettings(settingBinder: SectionSettingBinder): void {
     settingBinder.bindSetting({
-      key: SETTINGS.aggregateSearchAutoGroupEnabled.key,
-      normalize: SETTINGS.aggregateSearchAutoGroupEnabled.parse,
+      setting: SETTINGS.aggregateSearchAutoGroupEnabled,
       apply: applyAutoGroup,
-      load: false,
       refreshSelects: true
     });
-    if (!storageArea) {
-      return;
-    }
-    storageArea.get([SETTINGS.aggregateSearchAutoGroupEnabled.key, SETTINGS.aggregateSearches.key], (items) => {
-      const result = items || {};
-      const rawValue = result[SETTINGS.aggregateSearchAutoGroupEnabled.key];
-      const stored = typeof rawValue === 'undefined'
-        ? deriveLegacyAutoGroupEnabled(result[SETTINGS.aggregateSearches.key])
-        : SETTINGS.aggregateSearchAutoGroupEnabled.parse(rawValue);
-      applyAutoGroup(stored);
-      if (rawValue !== stored) {
-        storageArea.set({ [SETTINGS.aggregateSearchAutoGroupEnabled.key]: stored });
+    const settings = [SETTINGS.aggregateSearchAutoGroupEnabled, SETTINGS.aggregateSearches];
+    void settingsStore.include(settings).then(() => {
+      if (settingsStore.getStored(SETTINGS.aggregateSearchAutoGroupEnabled) !== undefined ||
+          !settingsStore.isRead(SETTINGS.aggregateSearches)) {
+        return;
       }
+      const derived = deriveLegacyAutoGroupEnabled(settingsStore.getStored(SETTINGS.aggregateSearches));
+      applyAutoGroup(derived);
       refreshCustomSelects();
+      void settingsStore.set(SETTINGS.aggregateSearchAutoGroupEnabled, derived).catch(() => {});
     });
   }
 

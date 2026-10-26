@@ -2,6 +2,10 @@ const assert = require('assert');
 const { JSDOM } = require('jsdom');
 const settings = require('../../src/domain/settings');
 const { createThemeSection } = require('../../src/options/options-theme');
+const { createSettingsStore } = require('../../src/platform/settings-store.ts');
+
+// Lets a save through the settings store finish.
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 function setup(stored, options) {
   const config = options || {};
@@ -19,7 +23,7 @@ function setup(stored, options) {
   window.matchMedia = () => media;
   const values = Object.assign({}, stored);
   const writes = [];
-  const storageArea = {
+  const syncArea = {
     get(keys, callback) {
       callback(Object.fromEntries(keys.filter((key) => key in values).map((key) => [key, values[key]])));
     },
@@ -38,7 +42,13 @@ function setup(stored, options) {
     panel: document.getElementById('panel'),
     picker: { render: (model) => pickerModels.push(model) },
     settings,
-    storageArea,
+    settingsStore: createSettingsStore({
+      chromeApi: {
+        runtime: { lastError: null },
+        storage: { sync: syncArea, local: { get: (keys, callback) => callback({}), set: (payload, callback) => callback() } }
+      },
+      settings: []
+    }),
     windowObj: window
   });
   return {
@@ -83,16 +93,18 @@ function setup(stored, options) {
     assert.strictEqual(page.pageTheme(), 'light');
   }
 
-  // Choosing a theme writes it through the shared global-theme helper.
+  // Choosing a theme saves the global theme mode.
   {
     const page = setup({});
     await page.section.init();
     page.section.setMode('light');
-    assert.deepStrictEqual(page.writes, [settings.createGlobalThemeModeStorageUpdate('light')]);
+    await settle();
+    assert.deepStrictEqual(page.writes, [{ [settings.themeMode.key]: 'light' }]);
     assert.strictEqual(page.cached(), 'light');
     assert.strictEqual(page.pageTheme(), 'light');
     assert.strictEqual(page.mediaListeners.size, 0);
     page.section.setMode('system');
+    await settle();
     assert.strictEqual(page.mediaListeners.size, 1);
   }
 
