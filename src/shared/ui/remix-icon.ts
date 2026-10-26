@@ -25,6 +25,7 @@ const REMIX_ICON_NAMES = [
   'ri-close-line',
   'ri-cloud-line',
   'ri-command-fill',
+  'ri-compass-3-line',
   'ri-contrast-2-line',
   'ri-delete-bin-4-line',
   'ri-delete-bin-6-line',

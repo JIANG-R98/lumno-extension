@@ -482,7 +482,8 @@ function testStylesheetKeepsTheLayoutRules() {
   assert.match(thumb.get('background'), /var\(--x-tab-switcher-card-accent/, 'the thumbnail background should follow the card accent');
   assert.doesNotMatch(thumb.get('background'), /gradient/);
   const stroke = styles.rule('.x-tab-switcher-thumb::after');
-  assert.strictEqual(stroke.get('border'), '1px solid var(--x-tab-switcher-thumb-stroke-color)');
+  assert.strictEqual(stroke.get('border'), '0.5px solid var(--x-tab-switcher-thumb-stroke-color)', 'the thumbnail stroke should be a hairline');
+  assert.strictEqual(stroke.get('inset'), '0', 'the stroke should sit inside the thumbnail clip, not half outside it');
   assert.strictEqual(stroke.get('pointer-events'), 'none');
   assert.strictEqual(styles.rule('.x-tab-switcher-thumb img[data-kind="thumbnail"]').get('transition'),
     'opacity var(--x-tab-switcher-motion-cover)', 'fresh captures should fade over cached ones');

@@ -5,6 +5,7 @@
 import * as LumnoMessaging from '../../platform/messaging';
 import type { SearchInputParts } from '../../shared/react/search-input';
 import type { EngagementNoticeController } from '../../shared/engagement-notice';
+import type { GraphicsNoticeController } from '../../shared/graphics-acceleration-notice';
 import type { SuggestionsViewController } from '../../shared/react/search/suggestion-list/types';
 import type { InputModeController } from '../../shared/search/search-input-mode';
 import type { UpdateNoticeController } from '../../shared/update-notice';
@@ -34,6 +35,7 @@ interface PanelSessionState {
   inputModeController: Pick<InputModeController, 'destroy'> | null;
   inputHistoryController: { destroy?(): void } | null;
   overlayUpdateNoticeController: UpdateNoticeController | null;
+  overlayGraphicsNoticeController: GraphicsNoticeController | null;
   overlayEngagementNoticeController: EngagementNoticeController | null;
   motionEffectsEnabled: boolean;
   // The page under the overlay is loading and the worker keeps its input.
@@ -466,7 +468,11 @@ function createPanelSession(deps: PanelSessionDeps) {
       overlayState.inputHistoryController.destroy();
     }
     overlayState.inputHistoryController = null;
-    [overlayState.overlayUpdateNoticeController, overlayState.overlayEngagementNoticeController].forEach((controller) => {
+    [
+      overlayState.overlayUpdateNoticeController,
+      overlayState.overlayGraphicsNoticeController,
+      overlayState.overlayEngagementNoticeController
+    ].forEach((controller) => {
       if (!controller || typeof controller.destroy !== 'function') {
         return;
       }
@@ -476,6 +482,7 @@ function createPanelSession(deps: PanelSessionDeps) {
       controller.destroy();
     });
     overlayState.overlayUpdateNoticeController = null;
+    overlayState.overlayGraphicsNoticeController = null;
     overlayState.overlayEngagementNoticeController = null;
   }
 

@@ -232,7 +232,8 @@ body[data-nt-suggestions-open="true"] .x-lumno-feature-hint--newtab-help-center-
   max-width: calc(100vw - 24px);
   margin: 0;
   min-height: 40px;
-  padding: 8px 36px 8px 12px;
+  /* Its pill sits as far from the capsule's left edge as from its top and bottom. */
+  padding: 8px 36px 8px 8px;
   border-radius: var(--lumno-radius-pill, 999px);
   display: none;
   align-items: center;
@@ -300,6 +301,12 @@ body[data-nt-suggestions-open="true"] .x-lumno-feature-hint--newtab-help-center-
 }
 
 body[data-nt-suggestions-open="true"] .x-lumno-feature-hint--update-notice {
+  display: none;
+}
+
+/* The graphics acceleration capsule floats free: it points at nothing. */
+.x-lumno-feature-hint.x-lumno-feature-hint--graphics-notice[data-arrow-side]::before,
+.x-lumno-feature-hint.x-lumno-feature-hint--graphics-notice[data-arrow-side]::after {
   display: none;
 }
 
@@ -803,6 +810,8 @@ body[data-theme="dark"] .x-lumno-feature-hint__brand-wordmark-image--dark,
 .x-lumno-feature-hint--engagement-notice[data-width-mode="container"] {
   flex-wrap: nowrap;
   gap: 12px;
+  /* Its logo has no pill around it, so it keeps more room from the edge. */
+  padding-inline-start: 12px;
   white-space: nowrap;
 }
 

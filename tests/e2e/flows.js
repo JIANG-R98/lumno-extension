@@ -184,6 +184,117 @@ async function overlaySearch({ browser, fixtures }) {
   await web.waitFor(`!document.getElementById('${OVERLAY_HOST_ID}')`, { message: 'Escape did not close the overlay' });
 }
 
+// After picking a search scope from the menu over a site search's results,
+// Escape closes the menu only, and the frame around the results follows
+// the list back to its full height (#121); a second Escape leaves the scope
+// and lists the query's ordinary results.
+async function searchScopeEscape({ browser }) {
+  const MENU = '[data-search-input-mode-menu]';
+  const PREFIX = '[data-search-input-mode-prefix]';
+  const CONTAINER = '_x_extension_newtab_suggestions_container_2024_unique_';
+  const SURFACE = '_x_extension_newtab_suggestions_surface_2026_unique_';
+  const newtab = await browser.openPage(browser.extensionUrl('newtab.html'));
+  await focusTab(browser, newtab);
+  await newtab.waitFor(`Boolean(document.getElementById('${NEWTAB_INPUT_ID}'))`, { message: 'no search box' });
+  await newtab.evaluate(`document.getElementById('${NEWTAB_INPUT_ID}').focus()`);
+  await newtab.type('gemini');
+  await delay(500);
+  await newtab.press('Tab');
+  await newtab.waitFor(`document.querySelector('${PREFIX}').textContent.includes('Gemini')`, { message: 'Tab did not start a Gemini search' });
+  await newtab.type('linear');
+  await newtab.waitFor(`document.querySelectorAll('.x-nt-suggestion-item').length > 0`, { message: 'no Gemini row' });
+  await newtab.press('Tab');
+  await newtab.waitFor(`(() => {
+    const menu = document.querySelector('${MENU}');
+    return Boolean(menu && !menu.hidden && menu.querySelectorAll('[role="menuitemradio"]').length > 1);
+  })()`, { message: 'Tab did not open the scope menu' });
+  await delay(1000);
+  // Scrolls the menu's own list, not the page, to the ChatGPT tile.
+  const center = await newtab.evaluate(`(() => {
+    const tile = Array.from(document.querySelectorAll('${MENU} [role="menuitemradio"]'))
+      .find((element) => element.getAttribute('aria-label') === 'ChatGPT');
+    let list = tile.parentElement;
+    while (list && !(list.scrollHeight > list.clientHeight + 2 && /auto|scroll/.test(getComputedStyle(list).overflowY))) {
+      list = list.parentElement;
+    }
+    if (list) {
+      list.scrollTop += tile.getBoundingClientRect().top - list.getBoundingClientRect().top - 40;
+    }
+    const rect = tile.getBoundingClientRect();
+    return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+  })()`);
+  await delay(300);
+  await newtab.click(center.x, center.y);
+  await newtab.waitFor(`document.querySelector('${PREFIX}').textContent.includes('ChatGPT')`, { message: 'the ChatGPT tile did not take the scope' });
+
+  await newtab.press('Escape');
+  await newtab.waitFor(`document.querySelector('${MENU}').hidden`, { message: 'Escape did not close the scope menu' });
+  await delay(500);
+  assert.ok(await newtab.evaluate(`document.querySelector('${PREFIX}').textContent.includes('ChatGPT')`),
+    'Escape on the open menu left the ChatGPT scope');
+  const frame = await newtab.evaluate(`(() => {
+    const list = document.getElementById('${CONTAINER}').getBoundingClientRect();
+    const surface = document.getElementById('${SURFACE}').getBoundingClientRect();
+    return { list: Math.round(list.bottom), surface: Math.round(surface.bottom) };
+  })()`);
+  assert.ok(frame.surface >= frame.list - 1, `the frame stops above the results: ${JSON.stringify(frame)}`);
+
+  await newtab.press('Escape');
+  await newtab.waitFor(`!document.querySelector('${PREFIX}').textContent.includes('ChatGPT')`, { message: 'a second Escape did not leave the scope' });
+  await newtab.waitFor(`Array.from(document.querySelectorAll('.x-nt-suggestion-item')).every((row) => !row.innerText.includes('ChatGPT'))`,
+    { message: 'the ChatGPT row stayed after leaving the scope' });
+}
+
+// With the overlay set to open results in the current tab, Enter loads a
+// typed address in the page's own tab and Option/Alt+Enter opens a new one;
+// a pinned tab is kept and Enter opens a new tab instead.
+async function overlayCurrentTab({ browser, fixtures }) {
+  // The page opens first, so the worker is running before it is asked.
+  const web = await browser.openPage(fixtures.url('/page.html'));
+  const key = SETTINGS.overlayOpenInCurrentTab.key;
+  await browser.worker.evaluate(`Promise.all([
+    chrome.storage.sync.set({ ${JSON.stringify(key)}: true }),
+    chrome.storage.local.set({ ${JSON.stringify(key)}: true })
+  ])`);
+  const tabCount = () => browser.worker.evaluate('chrome.tabs.query({}).then((tabs) => tabs.length)');
+  const openOverlayAndType = async (text) => {
+    await focusTab(browser, web);
+    await dispatchCommand(browser, 'show-search');
+    await web.waitForShadow(OVERLAY_HOST_ID, OVERLAY_INPUT, function isFocused() {
+      return this.getRootNode().activeElement === this;
+    }, (results) => results.length === 1 && results[0] === true, { message: 'the overlay input was not focused' });
+    await web.type(text);
+    await delay(800);
+  };
+  const before = await tabCount();
+  const target = fixtures.url('/target.html');
+  await openOverlayAndType(target);
+  await web.press('Enter');
+  await web.waitFor(`location.href === ${JSON.stringify(target)}`, { message: 'Enter did not load the address in the current tab' });
+  assert.strictEqual(await tabCount(), before, 'Enter opened a tab');
+
+  const fixture = fixtures.url('/fixture.html');
+  await openOverlayAndType(fixture);
+  await web.press('Enter', { modifiers: ['Alt'] });
+  await browser.worker.waitFor(`chrome.tabs.query({}).then((tabs) => tabs.some((tab) => tab.url === ${JSON.stringify(fixture)}))`,
+    { message: 'Option/Alt+Enter did not open the address in a new tab' });
+  assert.strictEqual(await web.evaluate('location.href'), target, 'Option/Alt+Enter navigated the current tab');
+  assert.strictEqual(await tabCount(), before + 1);
+
+  // A pinned tab is kept: Enter opens a new tab there.
+  await browser.worker.evaluate(`chrome.tabs.query({}).then((tabs) => {
+    const tab = tabs.find((candidate) => candidate.url === ${JSON.stringify(target)});
+    return chrome.tabs.update(tab.id, { pinned: true });
+  })`);
+  const pinnedTarget = fixtures.url('/page.html');
+  await openOverlayAndType(pinnedTarget);
+  await web.press('Enter');
+  await browser.worker.waitFor(`chrome.tabs.query({}).then((tabs) => tabs.some((tab) => tab.url === ${JSON.stringify(pinnedTarget)}))`,
+    { message: 'Enter on a pinned tab did not open a new tab' });
+  assert.strictEqual(await web.evaluate('location.href'), target, 'Enter navigated the pinned tab');
+  assert.strictEqual(await tabCount(), before + 2);
+}
+
 // The search scope panel opens on a double Tab, in the new tab search box
 // and in the overlay; a click on a scope tags the input with it, and Escape
 // closes the panel only.
@@ -297,46 +408,6 @@ async function linkPreview({ browser, fixtures }) {
     'Shift+click should not preview once link preview is off');
 }
 
-// A failure in the worker lands in the diagnostics log, and the settings page
-// saves it in the diagnostics file without the address it mentioned.
-async function diagnostics({ browser }) {
-  await browser.worker.evaluate(`self.dispatchEvent(new ErrorEvent('error', {
-    message: 'probe',
-    error: new Error('Probe failure at https://intranet.example/private?q=1')
-  }))`);
-  await browser.worker.waitFor(`chrome.storage.local.get(${JSON.stringify(SETTINGS.diagnosticErrors.key)})
-    .then((items) => (items[${JSON.stringify(SETTINGS.diagnosticErrors.key)}] || [])
-      .some((entry) => entry.message === 'Probe failure at https://...'))`, {
-    message: 'the worker did not record the failure'
-  });
-
-  const options = await browser.openPage(browser.extensionUrl('src/options/options.html'));
-  await focusTab(browser, options);
-  await options.waitFor(`document.documentElement.getAttribute('data-lumno-options-ready') === 'true'`, {
-    timeout: 8000,
-    message: 'Settings did not finish loading'
-  });
-  // Keeps the saved file in the page instead of the downloads folder.
-  await options.evaluate(`(() => {
-    URL.createObjectURL = (blob) => { window.__lumnoDiagnosticsFile = blob; return 'blob:diagnostics'; };
-    URL.revokeObjectURL = () => {};
-    HTMLAnchorElement.prototype.click = function click() {};
-  })()`);
-  const button = await elementCenter(options, `document.querySelector('[data-feedback-support="diagnostics"]')`);
-  await options.click(button.x, button.y);
-  const text = await options.waitFor(`window.__lumnoDiagnosticsFile ? window.__lumnoDiagnosticsFile.text() : null`, {
-    message: 'the diagnostics file was not saved'
-  });
-  const report = JSON.parse(text);
-  const version = await browser.worker.evaluate('chrome.runtime.getManifest().version');
-  assert.strictEqual(report.format, 'lumno-diagnostics');
-  assert.strictEqual(report.extension.version, version);
-  assert.ok(Object.keys(report.settings).length > 0, 'the file should list the settings');
-  assert.ok(report.recentErrors.some((entry) => entry.context === 'Uncaught error in the background worker.'
-    && entry.message === 'Probe failure at https://...'), 'the file should carry the recorded failure');
-  assert.ok(!text.includes('intranet.example'), 'the file should not carry the address');
-}
-
 // The background registers the picture-in-picture page bridge in the page's
 // main world on the automatic picture-in-picture sites, and the bridge
 // answers the isolated-world script's request there. The flow points the
@@ -434,10 +505,11 @@ module.exports = {
   surfaces,
   'newtab-search': newtabSearch,
   'overlay-search': overlaySearch,
+  'overlay-current-tab': overlayCurrentTab,
   'search-scope': searchScope,
+  'search-scope-escape': searchScopeEscape,
   'tab-switcher': tabSwitcher,
   'link-preview': linkPreview,
-  diagnostics,
   'pip-page-bridge': pipPageBridge,
   'lazy-modules': lazyModules,
   'onboarding-overlay': onboardingOverlay,

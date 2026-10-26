@@ -61,7 +61,6 @@ describe('Options General search results section', () => {
   it('binds every setting of the section and attaches the type drag', () => {
     const { settings, orderController } = setUp();
     expect(settings.boundKeys().sort()).toEqual([
-      Settings.overlayOpenTabsDefaultVisible.key,
       Settings.searchFuzzyPinyinEnabled.key,
       Settings.searchResultDisplayLimit.key,
       Settings.searchResultPriority.key,
@@ -143,13 +142,11 @@ describe('Options General search results section', () => {
     expect(getElement(host, '#_x_extension_search_result_display_limit_setting_row_2026_unique_')).toBeTruthy();
   });
 
-  it('saves the overlay and pinyin switches', async () => {
+  it('saves the pinyin switch', async () => {
     const { host, writes, settings } = setUp({ [SOURCE_TYPES_KEY]: ['topSite', 'bookmark', 'history'] });
-    act(() => getTag(host, '#_x_extension_overlay_open_tabs_default_visible_toggle_2026_unique_', 'input').click());
     act(() => getTag(host, '#_x_extension_search_fuzzy_pinyin_toggle_2026_unique_', 'input').click());
     await settings.settle();
     expect(writes).toEqual([
-      { [Settings.overlayOpenTabsDefaultVisible.key]: !Settings.overlayOpenTabsDefaultVisible.parse(undefined) },
       { [Settings.searchFuzzyPinyinEnabled.key]: !Settings.searchFuzzyPinyinEnabled.parse(undefined) }
     ]);
   });

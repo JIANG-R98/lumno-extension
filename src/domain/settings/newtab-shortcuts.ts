@@ -89,7 +89,6 @@ const newtabShortcutsGroupHead = defineSetting({
   key: '_x_extension_newtab_shortcuts_v2_2026_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 
@@ -97,7 +96,6 @@ const newtabShortcutsGroupChunk2 = defineSetting({
   key: '_x_extension_newtab_shortcuts_v2_chunk_2_2026_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 
@@ -105,7 +103,6 @@ const newtabShortcutsGroupChunk3 = defineSetting({
   key: '_x_extension_newtab_shortcuts_v2_chunk_3_2026_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 
@@ -114,7 +111,6 @@ const newtabShortcutsLegacy = defineSetting({
   key: '_x_extension_newtab_shortcuts_2026_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 
@@ -122,7 +118,6 @@ const newtabShortcutsLegacyChunk2 = defineSetting({
   key: '_x_extension_newtab_shortcuts_chunk_2_2026_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 
@@ -130,7 +125,6 @@ const newtabShortcutsLegacyChunk3 = defineSetting({
   key: '_x_extension_newtab_shortcuts_chunk_3_2026_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 
@@ -138,7 +132,6 @@ const newtabShortcutsLegacyChunk3 = defineSetting({
 const newtabShortcutsLocalOverflow = defineSetting({
   key: '_x_extension_newtab_shortcuts_local_overflow_2026_unique_',
   area: 'device',
-  diagnostics: 'shape',
   schema: opaque()
 });
 

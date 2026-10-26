@@ -15,6 +15,7 @@ export interface GeneralTabModel {
   global: SectionPart<GeneralGlobalSectionModel, GeneralGlobalSectionHandlers> | null;
   features: SectionPart<SettingsSectionModel, SettingsRowsHandlers> | null;
   search: SectionPart<SettingsSectionModel, SettingsRowsHandlers> | null;
+  overlay: SectionPart<SettingsSectionModel, SettingsRowsHandlers> | null;
   newtab: SectionPart<SettingsSectionModel, SettingsRowsHandlers> | null;
   shortcuts: SectionPart<GeneralShortcutsSectionModel, GeneralShortcutsSectionHandlers> | null;
 }
@@ -28,6 +29,7 @@ export function GeneralTab({ model }: { model: GeneralTabModel }) {
     ['global', model.global ? <GeneralGlobalSection handlers={model.global.handlers} model={model.global.model} /> : null],
     ['features', rows(model.features)],
     ['search', rows(model.search)],
+    ['overlay', rows(model.overlay)],
     ['newtab', rows(model.newtab)],
     ['shortcuts', model.shortcuts ? <GeneralShortcutsSection handlers={model.shortcuts.handlers} model={model.shortcuts.model} /> : null]
   ];

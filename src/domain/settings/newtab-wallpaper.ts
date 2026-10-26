@@ -36,7 +36,6 @@ const newtabLinkWallpapers = defineSetting({
   key: '_x_extension_newtab_link_wallpapers_2026_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 

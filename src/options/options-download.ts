@@ -1,5 +1,5 @@
-// Saves a file the person asked for (a settings or diagnostics export, the
-// translation sheet) through a temporary download link.
+// Saves a file the person asked for (a settings export, the translation
+// sheet) through a temporary download link.
 function downloadTextFile(documentObj: Document, fileName: string, text: string, type: string): void {
   const view = documentObj.defaultView || window;
   const blob = new view.Blob([text], { type });

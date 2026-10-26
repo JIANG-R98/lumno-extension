@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { isLocalFileLikeUrl } = require('../../src/overlay/overlay-context.ts');
+const { isLocalFileLikeUrl, readOverlayOpenOptions } = require('../../src/overlay/overlay-context.ts');
 
 // Local files and PDFs, where the overlay leaves the tab's zoom alone.
 
@@ -24,6 +24,12 @@ const { isLocalFileLikeUrl } = require('../../src/overlay/overlay-context.ts');
   'not a url at all'
 ].forEach((url) => {
   assert.strictEqual(isLocalFileLikeUrl(url), false, url || '(empty)');
+});
+
+// Only a real true marks the page's tab as pinned.
+assert.strictEqual(readOverlayOpenOptions({ currentTabPinned: true }, Date.now()).currentTabPinned, true);
+[undefined, 'true', 1, null].forEach((value) => {
+  assert.strictEqual(readOverlayOpenOptions({ currentTabPinned: value }, Date.now()).currentTabPinned, false, String(value));
 });
 
 console.log('overlay context tests passed');

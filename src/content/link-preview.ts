@@ -15,7 +15,8 @@ import { readStartCommand } from '../domain/injected-commands';
 import type { LinkPreviewElements, LinkPreviewViewModel } from '../shared/react/link-preview-view';
 import { isNavigateEvent, readPageNavigation } from '../platform/page-navigation';
 import { copyLink, focusPreviewedPage, goBack, handleFrameLoad, handleFrameMessage, moveToTab, reload } from './link-preview-frame';
-import { close, decodeImage, paintVeil, playOpening } from './link-preview-motion';
+import { close, decodeImage, playOpening } from './link-preview-motion';
+import { paintVeil } from './link-preview-veil';
 import { STYLES } from './link-preview-styles';
 import { getMessage, isRecord, listenTarget, listenWindow, readOrigin, send, surface, teardown, update } from './link-preview-surface';
 import type { LinkPreview, ShowRequest } from './link-preview-surface';
@@ -86,6 +87,8 @@ function build(token: string, url: string): LinkPreview | null {
     backVisible: false,
     panelColor: '',
     viewport: null,
+    veilMargin: null,
+    scrollbars: null,
     closing: false,
     frameUrl: toPreviewFrameUrl(url),
     placeholder: readHostLabel(url),

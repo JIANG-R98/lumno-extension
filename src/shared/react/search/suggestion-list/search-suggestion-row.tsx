@@ -1,12 +1,12 @@
 // A search, history, bookmark or help center suggestion row.
 import { useMemo, useLayoutEffect, type MouseEvent as ReactMouseEvent, type RefObject, memo } from 'react';
-import type { NormalizedOptions, SearchSuggestionRowProps, Suggestion, SuggestionElement, SuggestionsRuntime,
+import type { NormalizedOptions, SearchSuggestionRowProps, SuggestionElement, SuggestionsRuntime,
   SuggestionValueRef } from './types';
 import { createActionModel } from './action-model';
 import { getSuggestionIconSpec } from './icon-spec';
 import { SuggestionIcon } from './suggestion-icon';
 import { surfaceClass } from './surface-options';
-import { bindTextTooltip } from './highlight';
+import { bindRowTooltip } from './highlight';
 import { isHelpPassage } from '../help-passage-card';
 import { setIconEmphasis } from './action-styles';
 import { queryHtmlElement } from '../../../dom-lookup';
@@ -14,25 +14,29 @@ import { publishRowElements, useRowRefs } from './suggestion-row-elements';
 import { RowActions, RowText } from './suggestion-row-parts';
 import { useRowTheme } from './suggestion-row-theme';
 
-// The title's and URL line's tooltips, which show their full text.
-function useRowTooltips(options: NormalizedOptions, suggestion: Suggestion, itemRef: RefObject<SuggestionElement | null>,
+// The row's tooltip, which shows the text it cut short from anywhere on it.
+// Bound once: the lines and the suggestion are read when the tooltip shows.
+function useRowTooltip(options: NormalizedOptions, suggestionRef: SuggestionValueRef, itemRef: RefObject<SuggestionElement | null>,
   titleRef: RefObject<HTMLSpanElement | null>): void {
   useLayoutEffect(() => {
-    if (!itemRef.current) {
-      return;
-    }
-    bindTextTooltip(options, titleRef.current, suggestion.title || '');
-    const urlLine = queryHtmlElement(itemRef.current, `.${surfaceClass(options, 'x-nt-suggestion-url-line')}`);
-    // A help center page's line shows the matched passage, so its tooltip shows the passage too,
-    // unless the row has a passage card beside the list to show it in full.
-    bindTextTooltip(
+    const item = itemRef.current;
+    bindRowTooltip(
       options,
-      urlLine,
-      suggestion.type === 'helpArticle'
-        ? isHelpPassage(suggestion.context) ? '' : suggestion.detail || ''
-        : suggestion.url || ''
+      item,
+      { getElement: () => titleRef.current },
+      {
+        getElement: () => item && queryHtmlElement(item, `.${surfaceClass(options, 'x-nt-suggestion-url-line')}`),
+        // A help center page's line shows the matched passage, so its tooltip shows the passage too,
+        // unless the row has a passage card beside the list to show it in full.
+        getText: () => {
+          const latest = suggestionRef.current;
+          return latest.type === 'helpArticle'
+            ? isHelpPassage(latest.context) ? '' : latest.detail || ''
+            : latest.url || '';
+        }
+      }
     );
-  }, [itemRef, options, suggestion.title, suggestion.type, suggestion.detail, suggestion.context, suggestion.url, titleRef]);
+  }, [itemRef, options, suggestionRef, titleRef]);
 }
 
 // Hovering marks the row; a click or middle click activates it.
@@ -136,7 +140,7 @@ function SearchSuggestionRowComponent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actionModel, command, directIcon, iconSpec.kind, isPrimary, options, suggestion, suggestionRef, simpleMode, themeHost]);
 
-  useRowTooltips(options, suggestion, itemRef, refs.title);
+  useRowTooltip(options, suggestionRef, itemRef, refs.title);
 
   const pointer = useRowPointer(runtime, itemRef, suggestionRef, index, command);
 

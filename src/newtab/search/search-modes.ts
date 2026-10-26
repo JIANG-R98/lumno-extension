@@ -4,6 +4,7 @@ import type * as AggregateSearchStore from '../../domain/search/aggregate-search
 import type { AggregateSearch } from '../../domain/search/aggregate-search-store';
 import * as SEARCH_SOURCE_ORDER from '../../domain/search/search-source-order';
 import type { SearchSourceOrder } from '../../domain/search/search-source-order';
+import type { SuggestionInputPreview } from '../../domain/search/suggestion-input-preview';
 import type { LocalSearchScope, SearchSourceType, SiteSearchProvider } from '../../domain/search/types';
 import type { SearchInputParts } from '../../shared/react/search-input';
 import type { Suggestion } from '../../shared/react/search/suggestion-list/types';
@@ -44,9 +45,11 @@ interface SearchModesState {
   autocompleteState: AutocompleteState | null;
   enabledSearchResultSourceTypes: SearchSourceType[];
   currentSuggestions: Suggestion[];
+  selectedIndex: number;
   suggestionRequestSeq: number;
   latestQuery: string;
   latestRawQuery: string;
+  suggestionInputPreview: Pick<SuggestionInputPreview, 'commit' | 'editAddress'>;
 }
 
 interface SearchModesDeps {
@@ -539,12 +542,25 @@ function createSearchModes(deps: SearchModesDeps) {
     if (controller && controller.handleModeMenuTabFocusToggle(event)) {
       return true;
     }
+    // Tab takes the suggestion the arrows show as typed text.
+    if (!event.shiftKey && pageState.suggestionInputPreview.commit()) {
+      event.preventDefault();
+      getSearchInput().dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
+    }
     if (controller && controller.shouldOpenModeMenuForActiveModeOnTab(event)) {
       controller.openModeMenu('none');
       return true;
     }
     if (pageState.siteSearchState || pageState.localSearchScopeState) {
       return false;
+    }
+    // On a page the arrows selected, Tab puts its address in the input to edit.
+    const selectedSuggestion = pageState.selectedIndex >= 0 ? pageState.currentSuggestions[pageState.selectedIndex] : null;
+    if (!event.shiftKey && pageState.suggestionInputPreview.editAddress(getSearchInput(), selectedSuggestion)) {
+      event.preventDefault();
+      getSearchInput().dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
     }
     const rawValue = getSearchInput().value;
     const rawTrigger = pageState.latestRawQuery || rawValue;

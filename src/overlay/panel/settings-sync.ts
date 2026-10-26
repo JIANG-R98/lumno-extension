@@ -10,6 +10,7 @@ import {
   overlayEnterAnimation,
   overlayFontFallback,
   overlayFontFamily,
+  overlayOpenInCurrentTab,
   overlayOpenTabsDefaultVisible,
   overlayPageThemeAdaptationEnabled,
   overlaySizeMode,
@@ -69,6 +70,8 @@ interface SettingsSyncState<Row, Provider> {
   overlayOpenTabsDefaultVisible: boolean;
   overlayOpenTabsDefaultVisibleLoaded: boolean;
   initialOverlayOpenTabsDefaultVisibleReady: Promise<void>;
+  // Results open in this tab rather than a new one.
+  overlayOpenInCurrentTab: boolean;
   documentPipEnabled: boolean;
   overlayTabQuickSwitchEnabled: boolean;
   overlaySizeMode: OverlaySizeMode;
@@ -255,6 +258,12 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
       clearDefaultOpenTabsSuggestions();
     }
   });
+
+  function readOpenInCurrentTab(): void {
+    overlayState.overlayOpenInCurrentTab = settings.get(overlayOpenInCurrentTab);
+  }
+  void loaded.then(readOpenInCurrentTab);
+  settings.follow(overlayOpenInCurrentTab, readOpenInCurrentTab);
 
   function readDocumentPip(): void {
     overlayState.documentPipEnabled = documentPipSupported && settings.get(documentPipEnabled);

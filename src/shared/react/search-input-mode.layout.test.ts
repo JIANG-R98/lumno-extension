@@ -579,7 +579,7 @@ describe('Search scope menu: layout, icons and reordering', () => {
     controller.destroy();
   });
 
-  it('reorders tiles of one list by dragging and reports the new order', () => {
+  it('reorders tiles of one list by dragging and reports the new order', async () => {
     const parts = createModeParts();
     const items: ModeMenuItem[] = ['a', 'b', 'c'].map((id) => ({
       group: 'Custom', groupKey: 'custom', id, kind: 'provider', label: id.toUpperCase(), orderList: 'custom'
@@ -610,6 +610,9 @@ describe('Search scope menu: layout, icons and reordering', () => {
     buttons[0].click();
     expect(onModeMenuSelect).not.toHaveBeenCalled();
 
+    // The tile glides into its slot before the drop lands.
+    expect(onModeMenuReorder).not.toHaveBeenCalled();
+    await new Promise((resolve) => setTimeout(resolve, 220));
     expect(onModeMenuReorder).toHaveBeenCalledTimes(1);
     expect(onModeMenuReorder).toHaveBeenCalledWith({
       item: items[0],

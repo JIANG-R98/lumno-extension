@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { RemixIcon } from '../../shared/react/remix-icon';
 
-export interface RequiredCheckboxItemModel {
+export interface CheckboxItemModel {
   checked: boolean;
   id: string;
   label: string;
@@ -9,19 +9,21 @@ export interface RequiredCheckboxItemModel {
   value: string;
 }
 
-export interface RequiredCheckboxGroupRenderModel {
-  items: RequiredCheckboxItemModel[];
+export interface CheckboxGroupRenderModel {
+  items: CheckboxItemModel[];
+  // At least one item stays checked: unchecking the last one does nothing.
+  required?: boolean;
   // The items can be reordered: dragged (wired by the page) or moved with
   // Alt+Left and Alt+Right from a focused checkbox.
   sortable?: boolean;
 }
 
-export function RequiredCheckboxGroup({
+export function CheckboxGroup({
   model,
   onChange,
   onMove
 }: {
-  model: RequiredCheckboxGroupRenderModel;
+  model: CheckboxGroupRenderModel;
   onChange(values: string[]): void;
   onMove?(fromIndex: number, toIndex: number): void;
 }) {
@@ -76,7 +78,7 @@ export function RequiredCheckboxGroup({
               } else {
                 next.delete(item.value);
               }
-              if (next.size === 0) {
+              if (model.required && next.size === 0) {
                 return;
               }
               setSelected(next);

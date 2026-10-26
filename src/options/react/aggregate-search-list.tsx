@@ -499,6 +499,7 @@ export function AggregateSearchList({
   };
 
   const onMove = model.reorder ? options.onMove : undefined;
+  const sortable = Boolean(onMove && model.items.length > 1);
   return (
     <>
       <div className="_x_extension_shortcut_list_2024_unique_">
@@ -509,11 +510,17 @@ export function AggregateSearchList({
               className="_x_extension_shortcut_item_2024_unique_"
               data-aggregate-id={item.id}
               data-expanded={expanded ? 'true' : 'false'}
-              data-sortable={onMove && model.items.length > 1 ? 'true' : undefined}
+              data-sortable={sortable ? 'true' : undefined}
               data-type="aggregate"
               key={item.id}
             >
               <div className="_x_extension_shortcut_item_header_2024_unique_">
+                {sortable ? (
+                  <i
+                    aria-hidden="true"
+                    className="ri-icon ri-size-14 ri-draggable _x_extension_shortcut_drag_handle_2026_unique_"
+                  />
+                ) : null}
                 <div className="_x_extension_shortcut_item_info_2024_unique_">
                   <div className="_x_extension_shortcut_item_title_2024_unique_">
                     <div className="_x_extension_shortcut_badge_2024_unique_">

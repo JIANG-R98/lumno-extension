@@ -5,6 +5,7 @@ import type { OverlayTab } from '../domain/messages';
 import type { AggregateSearch } from '../domain/search/aggregate-search-store';
 import type { createImeKeyGuard } from '../domain/search/ime-key-guard';
 import type { createSearchInputHistoryController } from '../domain/search/search-input-history';
+import type { SuggestionInputPreview } from '../domain/search/suggestion-input-preview';
 import type { SiteSearchProvider } from '../domain/search/types';
 import type { ThemeVariant } from '../shared/favicon/favicon-theme';
 import type { SearchInputParts } from '../shared/react/search-input';
@@ -48,6 +49,7 @@ interface SearchPanelState {
   inputModeController: InputModeController | null;
   inputHistoryController: ReturnType<typeof createSearchInputHistoryController> | null;
   imeKeyGuard: ReturnType<typeof createImeKeyGuard>;
+  suggestionInputPreview: SuggestionInputPreview;
   overlayNoticeLayer: ReturnType<typeof createNoticeLayer>;
   overlayViewportSizeSync: ReturnType<typeof createViewportSizeSync>;
   overlaySessionCleanups: ReturnType<typeof createSessionCleanupRegistry>;
@@ -93,6 +95,7 @@ interface OverlayStateParts {
   overlayNoticeLayer: SearchPanelState['overlayNoticeLayer'];
   overlayViewportSizeSync: SearchPanelState['overlayViewportSizeSync'];
   imeKeyGuard: SearchPanelState['imeKeyGuard'];
+  suggestionInputPreview: SearchPanelState['suggestionInputPreview'];
   overlayMediaQuery: MediaQueryList;
   defaultTheme: ThemeVariant;
   urlHighlightTheme: ThemeVariant;
@@ -107,6 +110,7 @@ interface OverlayStateParts {
   warmIconCache: OverlayState['warmIconCache'];
   // From the open context.
   prioritizeCurrentPageMatch: boolean;
+  currentTabPinned: boolean;
   initialContextTabUrl: string;
   loadingSessionTrackingActive: boolean;
   documentPipEnabled: boolean;
@@ -124,6 +128,7 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
     overlayNoticeLayer: parts.overlayNoticeLayer,
     overlayViewportSizeSync: parts.overlayViewportSizeSync,
     imeKeyGuard: parts.imeKeyGuard,
+    suggestionInputPreview: parts.suggestionInputPreview,
     overlayMediaQuery: parts.overlayMediaQuery,
     defaultTheme: parts.defaultTheme,
     urlHighlightTheme: parts.urlHighlightTheme,
@@ -137,6 +142,7 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
 
     // From the open context.
     prioritizeCurrentPageMatch: parts.prioritizeCurrentPageMatch,
+    currentTabPinned: parts.currentTabPinned,
     initialContextTabUrl: parts.initialContextTabUrl,
     loadingSessionTrackingActive: parts.loadingSessionTrackingActive,
     documentPipEnabled: parts.documentPipEnabled,
@@ -164,6 +170,7 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
     overlayKeyRouter: null,
     overlayRevealGate: null,
     overlayUpdateNoticeController: null,
+    overlayGraphicsNoticeController: null,
     overlayEngagementNoticeController: null,
     topActionTooltipController: null,
     overlayCursorTooltipController: null,
@@ -201,6 +208,7 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
     overlayOpenTabsDefaultVisible: true,
     overlayOpenTabsDefaultVisibleLoaded: false,
     initialOverlayOpenTabsDefaultVisibleReady: Promise.resolve(),
+    overlayOpenInCurrentTab: false,
     enabledSearchResultSourceTypes: ['topSite', 'bookmark', 'history'],
     defaultPlaceholderText: 'Search or enter URL…',
     overlaySearchEngineState,
@@ -221,6 +229,7 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
     selectedIndex: -1,
     currentSuggestions: [],
     lastSuggestionResponse: [],
+    lastEngineSuggestionResponse: [],
     lastRenderedQuery: '',
     lastRenderedActionContextKey: '',
     overlaySuggestionRequestSeq: 0,

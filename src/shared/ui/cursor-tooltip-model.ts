@@ -93,7 +93,12 @@ interface CursorTooltipHideOptions {
   deferVisibility?: boolean;
 }
 
-type CursorTooltipTextSource = (target: HTMLElement) => string | null | undefined;
+// The text for the target, which may depend on the input, such as where the
+// pointer is on it.
+type CursorTooltipTextSource = (
+  target: HTMLElement,
+  inputEvent?: CursorPointInput | null
+) => string | null | undefined;
 
 interface CursorTooltipPosition {
   top: number;

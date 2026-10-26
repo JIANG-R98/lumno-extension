@@ -103,6 +103,7 @@ const expectedSyncKeys = [
   // Additive preference: a missing value keeps exact pinyin matching.
   '_x_extension_search_fuzzy_pinyin_enabled_2026_unique_',
   '_x_extension_overlay_open_tabs_default_visible_2026_unique_',
+  '_x_extension_overlay_open_in_current_tab_2026_unique_',
   '_x_extension_fallback_hotkey_2024_unique_',
   '_x_extension_site_search_custom_2024_unique_',
   '_x_extension_site_search_disabled_2024_unique_',

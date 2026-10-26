@@ -288,6 +288,8 @@ interface BackgroundMessages {
   createTab: { request: { url: string; disposition?: OpenDisposition }; reply: OkReply };
   openNewTab: { request: { disposition?: OpenDisposition }; reply: OkReply };
   openExtensionDetailsPage: { request: { disposition?: OpenDisposition }; reply: OkReply & { url: string } };
+  checkGraphicsRendering: { request: NoFields; reply: { rendering: 'hardware' | 'software' | 'unknown' } };
+  openGraphicsSettings: { request: { disposition?: OpenDisposition }; reply: OkReply };
   resolveFaviconCandidates: {
     request: {
       url: string;
@@ -416,6 +418,8 @@ interface OverlayOpenContext {
   prioritizeCurrentPageMatch: boolean;
   currentTabId: number | null;
   currentTabUrl: string;
+  // Results meant for the current tab open in a new one instead.
+  currentTabPinned: boolean;
   // When the user started waiting, for the entry motion's budget.
   openedAt: number;
   documentPipEnabled: boolean;

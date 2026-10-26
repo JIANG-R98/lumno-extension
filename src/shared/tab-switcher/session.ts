@@ -13,6 +13,7 @@ import { isCommitModifierPressed, isShortcutTriggerEvent } from './shortcut';
 import type { ParsedShortcut } from './shortcut';
 import { SwitcherThemeFollower } from './switcher-theme';
 import { createSwitcherToast } from './switcher-toast';
+import { createFullscreenEscapeLock } from '../ui/fullscreen-escape-lock';
 import type { SwitcherToast } from './switcher-toast';
 
 const TAB_SWITCHER_ADVANCE_EVENT = '_x_extension_tab_switcher_advance_command_2026_unique_';
@@ -57,6 +58,8 @@ class SwitcherSession {
   private readonly toast: SwitcherToast;
   private readonly theme: SwitcherThemeFollower;
   private readonly visualViewport: VisualViewport | null;
+  // Over a fullscreen video, the first Escape closes the switcher.
+  private readonly fullscreenEscapeLock = createFullscreenEscapeLock(window);
 
   constructor(parts: SwitcherSessionParts, selectedIndex: number) {
     this.host = parts.host;
@@ -88,6 +91,7 @@ class SwitcherSession {
     host._lumnoTabSwitcherCleanup = () => this.cleanup();
     window.addEventListener('keydown', this.handleKeydown, true);
     window.addEventListener('keyup', this.handleKeyup, true);
+    this.fullscreenEscapeLock.start();
     if (this.visualViewport) {
       this.visualViewport.addEventListener('resize', this.placePanel, { passive: true });
       this.visualViewport.addEventListener('scroll', this.placePanel, { passive: true });
@@ -298,6 +302,7 @@ class SwitcherSession {
 
   private cleanup(): void {
     const host = this.host;
+    this.fullscreenEscapeLock.stop();
     window.removeEventListener('keydown', this.handleKeydown, true);
     window.removeEventListener('keyup', this.handleKeyup, true);
     if (this.visualViewport && typeof this.visualViewport.removeEventListener === 'function') {

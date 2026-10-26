@@ -1,5 +1,5 @@
-// The top of the General tab: help and feedback with the licenses link, the
-// onboarding guide, the page's language and the update notice. One React
+// The top of the General tab: help and feedback with the onboarding guide,
+// the licenses link, the page's language and the update notice. One React
 // view draws it; the feedback and translation help sections hand it their
 // models, and the language module reports the language it applied.
 import type * as Settings from '../domain/settings';

@@ -266,9 +266,6 @@
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Modifier l’icône d’un raccourci"
   },
-  "settings_feedback_support_channels_title": {
-    "message": "Contact"
-  },
   "settings_feedback_support_review_action": {
     "message": "Noter Lumno"
   },
@@ -280,21 +277,6 @@
   },
   "settings_feedback_support_contact_author_action": {
     "message": "Contacter l’auteur"
-  },
-  "settings_diagnostics_title": {
-    "message": "Diagnostic"
-  },
-  "settings_diagnostics_desc": {
-    "message": "Exportez la version, les paramètres et les erreurs récentes pour les joindre à un signalement. Les raccourcis, les adresses web et tout autre contenu personnel restent hors du fichier."
-  },
-  "settings_diagnostics_action": {
-    "message": "Exporter le diagnostic"
-  },
-  "settings_diagnostics_export_done": {
-    "message": "Diagnostic exporté"
-  },
-  "settings_diagnostics_export_failed": {
-    "message": "Impossible d’exporter le diagnostic"
   },
   "settings_onboarding_tutorial_action": {
     "message": "Visite guidée"
@@ -385,6 +367,15 @@
   },
   "settings_overlay_open_tabs_default_visible_title": {
     "message": "Afficher par défaut tous les onglets ouverts lorsque Lumno s’ouvre sur une page Web"
+  },
+  "settings_overlay_open_in_current_tab_title": {
+    "message": "Ouvrir les résultats dans l’onglet actuel lorsque Lumno s’ouvre sur une page Web"
+  },
+  "settings_overlay_open_in_current_tab_desc": {
+    "message": "Désactivé, ouverture dans l’onglet actuel sauf s’il est épinglé. Maintenez Option/Alt pour l’autre option."
+  },
+  "settings_overlay_open_tabs_default_title": {
+    "message": "Afficher par défaut tous les onglets ouverts"
   },
   "settings_favicon_enhanced_fetch_title": {
     "message": "Récupération avancée des icônes et couleurs de thème"
@@ -1078,6 +1069,18 @@
   },
   "engagement_notice_close": {
     "message": "Ignorer l’invitation à noter et à rejoindre la communauté"
+  },
+  "graphics_notice_badge": {
+    "message": "L’accélération graphique est désactivée"
+  },
+  "graphics_notice_text": {
+    "message": "Activez-la pour des pages plus fluides ; un redémarrage du navigateur est nécessaire"
+  },
+  "graphics_notice_link": {
+    "message": "Activer"
+  },
+  "graphics_notice_close": {
+    "message": "Fermer l’astuce sur l’accélération graphique"
   },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "Afficher le triangle de sécurité du menu des favoris"
@@ -3456,10 +3459,10 @@
     "message": "Épinglez une série ou un roman\u00a0: sa carte vous suit jusqu’à l’épisode ou au chapitre suivant, pour reprendre là où vous en étiez"
   },
   "settings_newtab_open_in_new_tab_title": {
-    "message": "Ouvrir dans un nouvel onglet"
+    "message": "Ouvrir dans un nouvel onglet au clic"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Les éléments activés s’ouvrent dans un nouvel onglet qui passe au premier plan\u00a0; les éléments désactivés s’ouvrent dans l’onglet actuel. Un clic avec Command/Ctrl ou un clic du milieu ouvre toujours en arrière-plan."
+    "message": "Non coché, ouverture dans l’onglet actuel. Maintenez Option/Alt pour l’autre option."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Résultats de recherche"
@@ -3621,7 +3624,7 @@
     "message": "Ordre du panneau de recherche"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Faites glisser les étiquettes pour réordonner les groupes, et les lignes ci-dessous pour ordonner chaque groupe. Ctrl/⌘ + Z pour annuler, Shift + Ctrl/⌘ + Z pour rétablir."
+    "message": "Faites glisser pour réordonner les groupes du panneau Tab, sans changer l’ordre des résultats. Ctrl/⌘ + Z pour annuler."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Appuyez sur Alt avec la flèche gauche ou droite pour déplacer"

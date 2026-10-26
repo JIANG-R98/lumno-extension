@@ -266,9 +266,6 @@
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Symbol einer Verknüpfung ändern"
   },
-  "settings_feedback_support_channels_title": {
-    "message": "Kontakt"
-  },
   "settings_feedback_support_review_action": {
     "message": "Lumno bewerten"
   },
@@ -280,21 +277,6 @@
   },
   "settings_feedback_support_contact_author_action": {
     "message": "Autor kontaktieren"
-  },
-  "settings_diagnostics_title": {
-    "message": "Diagnose"
-  },
-  "settings_diagnostics_desc": {
-    "message": "Exportieren Sie Version, Einstellungen und aktuelle Fehler, um sie einem Bericht beizufügen. Verknüpfungen, Webadressen und andere persönliche Inhalte gelangen nicht in die Datei."
-  },
-  "settings_diagnostics_action": {
-    "message": "Diagnose exportieren"
-  },
-  "settings_diagnostics_export_done": {
-    "message": "Diagnose exportiert"
-  },
-  "settings_diagnostics_export_failed": {
-    "message": "Diagnose konnte nicht exportiert werden"
   },
   "settings_onboarding_tutorial_action": {
     "message": "Einführungstour"
@@ -385,6 +367,15 @@
   },
   "settings_overlay_open_tabs_default_visible_title": {
     "message": "Beim Öffnen von Lumno auf einer Webseite standardmäßig alle offenen Tabs anzeigen"
+  },
+  "settings_overlay_open_in_current_tab_title": {
+    "message": "Beim Öffnen von Lumno auf einer Webseite Ergebnisse im aktuellen Tab öffnen"
+  },
+  "settings_overlay_open_in_current_tab_desc": {
+    "message": "Aus: im aktuellen Tab, außer er ist angeheftet. Mit Option/Alt die andere Variante."
+  },
+  "settings_overlay_open_tabs_default_title": {
+    "message": "Standardmäßig alle offenen Tabs anzeigen"
   },
   "settings_favicon_enhanced_fetch_title": {
     "message": "Erweiterter Abruf von Symbolen und Designfarben"
@@ -1078,6 +1069,18 @@
   },
   "engagement_notice_close": {
     "message": "Hinweis zu Bewertung und Community schließen"
+  },
+  "graphics_notice_badge": {
+    "message": "Grafikbeschleunigung ist aus"
+  },
+  "graphics_notice_text": {
+    "message": "Einschalten für flüssigere Seiten – erfordert einen Browser-Neustart"
+  },
+  "graphics_notice_link": {
+    "message": "Einschalten"
+  },
+  "graphics_notice_close": {
+    "message": "Hinweis zur Grafikbeschleunigung schließen"
   },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "Sicherheitsdreieck des Lesezeichenmenüs anzeigen"
@@ -3456,10 +3459,10 @@
     "message": "Pinnen Sie eine Serie oder einen Roman an, folgt die Karte Ihnen zur nächsten Folge oder zum nächsten Kapitel und öffnet dort, wo Sie aufgehört haben"
   },
   "settings_newtab_open_in_new_tab_title": {
-    "message": "In neuem Tab öffnen"
+    "message": "Beim Klicken in neuem Tab öffnen"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Aktivierte Elemente öffnen sich in einem neuen Tab und wechseln dorthin; deaktivierte öffnen sich im aktuellen Tab. Command/Ctrl-Klick oder Mittelklick öffnet immer im Hintergrund."
+    "message": "Nicht ausgewählt: im aktuellen Tab. Mit Option/Alt die andere Variante."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Suchergebnisse"
@@ -3621,7 +3624,7 @@
     "message": "Reihenfolge im Suchbereich"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Ziehen Sie die Tags, um die Gruppen neu anzuordnen, und die Zeilen unten, um innerhalb einer Gruppe zu sortieren. Ctrl/⌘ + Z macht rückgängig, Shift + Ctrl/⌘ + Z wiederholt."
+    "message": "Ziehen, um die Gruppen im Tab-Bereich neu anzuordnen. Die Ergebnisreihenfolge bleibt gleich. Ctrl/⌘ + Z macht rückgängig."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Zum Verschieben Alt mit der linken oder rechten Pfeiltaste drücken"

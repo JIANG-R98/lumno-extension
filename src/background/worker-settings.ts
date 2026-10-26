@@ -4,6 +4,7 @@ import type { Setting } from '../domain/settings/define';
 import {
   documentPipEnabled,
   globalPipOwner,
+  graphicsProbe,
   linkPreviewSessions,
   pinnedTabRecoveryEnabled,
   pinnedTabSnapshot,
@@ -49,6 +50,7 @@ const WORKER_SETTINGS: readonly Setting<unknown>[] = Object.freeze([
   restrictedActionAutoBrowserSettingDone,
   documentPipEnabled,
   globalPipOwner,
+  graphicsProbe,
   tabSwitcherEnabled,
   tabSwitcherCurrentWindowOnly,
   tabSwitcherThumbnails,

@@ -47,6 +47,12 @@ export interface LinkPreviewViewModel {
   // The previewed page's own background, shown before it paints.
   panelColor: string;
   viewport: { width: number; height: number } | null;
+  // How far the veil reaches past the page on each side, in CSS pixels;
+  // null until it is painted.
+  veilMargin: { x: number; y: number } | null;
+  // The page's scrollbars, cut off the screenshot, in CSS pixels; null
+  // until the veil is painted.
+  scrollbars: { left: number; right: number; bottom: number } | null;
   // The window lets presses through to the page while it closes.
   closing: boolean;
   frameUrl: string;
@@ -76,7 +82,6 @@ export interface LinkPreviewElements {
   page: HTMLDivElement;
   shot: HTMLImageElement;
   veil: HTMLCanvasElement;
-  surround: HTMLCanvasElement;
   scrim: HTMLDivElement;
   windowElement: HTMLDivElement;
   panel: HTMLDivElement;
@@ -136,6 +141,16 @@ function LinkPreviewView({ model, handlers, refs, styles, toastStylesheetUrl }: 
     ...(model.viewport
       ? { '--lp-window-width': `${model.viewport.width}px`, '--lp-window-height': `${model.viewport.height}px` }
       : {}),
+    ...(model.veilMargin
+      ? { '--lp-veil-margin-x': `${model.veilMargin.x}px`, '--lp-veil-margin-y': `${model.veilMargin.y}px` }
+      : {}),
+    ...(model.scrollbars
+      ? {
+        '--lp-scrollbar-left': `${model.scrollbars.left}px`,
+        '--lp-scrollbar-right': `${model.scrollbars.right}px`,
+        '--lp-scrollbar-bottom': `${model.scrollbars.bottom}px`
+      }
+      : {}),
     ...(model.closing ? { pointerEvents: 'none' } : {})
   };
   const flag = (value: boolean | null): string | undefined => (value === null ? undefined : String(value));
@@ -158,10 +173,10 @@ function LinkPreviewView({ model, handlers, refs, styles, toastStylesheetUrl }: 
       >
         {/* A press outside the window closes it. */}
         <div className="stage" onClick={handlers.onClose}>
-          <canvas className="surround" hidden={!model.shotVisible} ref={refs.surround} />
           <div className="page" hidden={!model.shotVisible} ref={refs.page}>
-            <img alt="" className="shot" ref={refs.shot} />
+            {/* The screenshot fades out from over its blurred copy. */}
             <canvas className="veil" ref={refs.veil} />
+            <img alt="" className="shot" ref={refs.shot} />
           </div>
           <div className="scrim" ref={refs.scrim} />
         </div>
@@ -225,7 +240,7 @@ function createLinkPreviewView(
   assets: { styles: string; toastStylesheetUrl: string }
 ): LinkPreviewViewController | null {
   const refs: ElementRefs = {
-    root: null, page: null, shot: null, veil: null, surround: null, scrim: null, windowElement: null,
+    root: null, page: null, shot: null, veil: null, scrim: null, windowElement: null,
     panel: null, controls: null, frame: null, toastElement: null, toastStylesheet: null
   };
   const setters: RefSetters = {
@@ -245,7 +260,6 @@ function createLinkPreviewView(
     page(element) { refs.page = element; },
     shot(element) { refs.shot = element; },
     veil(element) { refs.veil = element; },
-    surround(element) { refs.surround = element; },
     scrim(element) { refs.scrim = element; },
     windowElement(element) { refs.windowElement = element; },
     panel(element) { refs.panel = element; },
@@ -264,8 +278,8 @@ function createLinkPreviewView(
     />
   ));
   view.render(model);
-  const { root, page, shot, veil, surround, scrim, windowElement, panel, controls, frame, toastElement, toastStylesheet } = refs;
-  if (!root || !page || !shot || !veil || !surround || !scrim || !windowElement || !panel || !controls ||
+  const { root, page, shot, veil, scrim, windowElement, panel, controls, frame, toastElement, toastStylesheet } = refs;
+  if (!root || !page || !shot || !veil || !scrim || !windowElement || !panel || !controls ||
       !frame || !toastElement || !toastStylesheet) {
     view.destroy();
     return null;
@@ -273,7 +287,7 @@ function createLinkPreviewView(
   return Object.freeze({
     render: view.render,
     destroy: view.destroy,
-    elements: { root, page, shot, veil, surround, scrim, windowElement, panel, controls, frame, toastElement, toastStylesheet }
+    elements: { root, page, shot, veil, scrim, windowElement, panel, controls, frame, toastElement, toastStylesheet }
   });
 }
 

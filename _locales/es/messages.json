@@ -266,9 +266,6 @@
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Cambiar el icono de un acceso directo"
   },
-  "settings_feedback_support_channels_title": {
-    "message": "Contacto"
-  },
   "settings_feedback_support_review_action": {
     "message": "Valorar Lumno"
   },
@@ -280,21 +277,6 @@
   },
   "settings_feedback_support_contact_author_action": {
     "message": "Contactar con el autor"
-  },
-  "settings_diagnostics_title": {
-    "message": "Diagnóstico"
-  },
-  "settings_diagnostics_desc": {
-    "message": "Exporta la versión, la configuración y los errores recientes para adjuntarlos a un informe. Los accesos directos, las direcciones web y otro contenido personal no se incluyen en el archivo."
-  },
-  "settings_diagnostics_action": {
-    "message": "Exportar diagnóstico"
-  },
-  "settings_diagnostics_export_done": {
-    "message": "Diagnóstico exportado"
-  },
-  "settings_diagnostics_export_failed": {
-    "message": "No se pudo exportar el diagnóstico"
   },
   "settings_onboarding_tutorial_action": {
     "message": "Tour de bienvenida"
@@ -385,6 +367,15 @@
   },
   "settings_overlay_open_tabs_default_visible_title": {
     "message": "Mostrar todas las pestañas abiertas al abrir Lumno en una página web"
+  },
+  "settings_overlay_open_in_current_tab_title": {
+    "message": "Abrir los resultados en la pestaña actual al abrir Lumno en una página web"
+  },
+  "settings_overlay_open_in_current_tab_desc": {
+    "message": "Desactivado, se abre en la pestaña actual salvo si está fijada. Mantén Option/Alt para usar la otra opción."
+  },
+  "settings_overlay_open_tabs_default_title": {
+    "message": "Mostrar todas las pestañas abiertas"
   },
   "settings_favicon_enhanced_fetch_title": {
     "message": "Obtención mejorada de iconos y colores de tema"
@@ -1078,6 +1069,18 @@
   },
   "engagement_notice_close": {
     "message": "Cerrar el aviso de valoración y comunidad"
+  },
+  "graphics_notice_badge": {
+    "message": "La aceleración de gráficos está desactivada"
+  },
+  "graphics_notice_text": {
+    "message": "Actívala para que las páginas vayan más fluidas; requiere reiniciar el navegador"
+  },
+  "graphics_notice_link": {
+    "message": "Activar"
+  },
+  "graphics_notice_close": {
+    "message": "Cerrar aviso de aceleración de gráficos"
   },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "Mostrar el triángulo seguro del menú de marcadores"
@@ -3456,10 +3459,10 @@
     "message": "Fija una serie o novela y su tarjeta te seguirá al siguiente episodio o capítulo, para que se abra donde lo dejaste"
   },
   "settings_newtab_open_in_new_tab_title": {
-    "message": "Abrir en una pestaña nueva"
+    "message": "Abrir en una pestaña nueva al hacer clic"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Los elementos activados se abren en una pestaña nueva y cambian a ella; los desactivados se abren en la pestaña actual. Command/Ctrl + clic o el clic central siempre abren en segundo plano."
+    "message": "Lo no marcado se abre en la pestaña actual. Mantén Option/Alt para usar la otra opción."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Resultados de búsqueda"
@@ -3621,7 +3624,7 @@
     "message": "Orden del panel de búsqueda"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Arrastra las etiquetas para reordenar los grupos y las filas de abajo para ordenar dentro de cada grupo. Pulsa Ctrl/⌘ + Z para deshacer y Shift + Ctrl/⌘ + Z para rehacer."
+    "message": "Arrastra para reordenar los grupos del panel de Tab, sin cambiar el orden de los resultados. Ctrl/⌘ + Z para deshacer."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Pulsa Alt con la flecha izquierda o derecha para mover"

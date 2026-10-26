@@ -37,6 +37,9 @@ interface CursorSurface {
   // deferVisibility keeps the tooltip up for the hide delay, so a move to
   // the next bound target does not blink it.
   hide(deferVisibility: boolean): HTMLElement | null;
+  // Swaps the shown text in place, for a target whose text depends on where
+  // the pointer is on it.
+  retext(text: string): void;
   // A pointerenter where the pointer already was (the page re-rendered under
   // it) keeps the current target; true when this one is such an enter.
   keepForStaleEnter(event: CursorPointInput | null | undefined, target: HTMLElement): boolean;
@@ -185,12 +188,40 @@ function withInput(
   return { ...config, ...options, inputEvent: pointInput || null };
 }
 
+// Hides the tooltip, at once or after the hide delay; `onConceal` runs as
+// it goes.
+function hideDrawing(drawing: CursorDrawing, turns: Turns, deferVisibility: boolean, onConceal: () => void): HTMLElement | null {
+  const tooltip = drawing.element();
+  drawing.tag.hide(tooltip);
+  if (!tooltip) {
+    return null;
+  }
+  const turn = turns.next();
+  const conceal = (element: HTMLElement): void => {
+    onConceal();
+    setShown(element, false);
+  };
+  if (!deferVisibility) {
+    conceal(tooltip);
+  }
+  turns.afterHideDelay(turn, () => {
+    const element = drawing.element();
+    if (element && deferVisibility) {
+      conceal(element);
+    } else if (element) {
+      element.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, 'false');
+    }
+  });
+  return tooltip;
+}
+
 function createCursorSurface(config: CursorTooltipOptions): CursorSurface {
   const documentObj = getDocument(config);
   const windowObj = getWindow(config);
   const turns = createTurns(windowObj, getNumber(config.hideDelay, 120));
   const drawing = createCursorDrawing(config, documentObj);
   let currentTarget: HTMLElement | null = null;
+  let currentText = '';
   let lastPoint: CursorPoint | null = null;
 
   function show(
@@ -207,6 +238,7 @@ function createCursorSurface(config: CursorTooltipOptions): CursorSurface {
     }
     const turn = turns.next();
     currentTarget = target;
+    currentText = content;
     lastPoint = getPointFromInput(pointInput, target);
     LumnoTooltip.renderText(tooltip, content);
     const preserveVisible = Boolean(options.preserveVisibleOnTargetSwitch) &&
@@ -241,28 +273,9 @@ function createCursorSurface(config: CursorTooltipOptions): CursorSurface {
   }
 
   function hide(deferVisibility: boolean): HTMLElement | null {
-    const tooltip = drawing.element();
-    drawing.tag.hide(tooltip);
-    if (!tooltip) {
-      return null;
-    }
-    const turn = turns.next();
-    const conceal = (element: HTMLElement): void => {
+    return hideDrawing(drawing, turns, deferVisibility, () => {
       currentTarget = null;
-      setShown(element, false);
-    };
-    if (!deferVisibility) {
-      conceal(tooltip);
-    }
-    turns.afterHideDelay(turn, () => {
-      const element = drawing.element();
-      if (element && deferVisibility) {
-        conceal(element);
-      } else if (element) {
-        element.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, 'false');
-      }
     });
-    return tooltip;
   }
 
   return {
@@ -274,6 +287,13 @@ function createCursorSurface(config: CursorTooltipOptions): CursorSurface {
     show,
     move,
     hide,
+    retext(text) {
+      const element = drawing.element();
+      if (element && text !== currentText) {
+        currentText = text;
+        LumnoTooltip.renderText(element, text);
+      }
+    },
     keepForStaleEnter(event, target) {
       const staleEnter = Boolean(currentTarget) && currentTarget !== target && isStaleEnter(event, lastPoint, currentTarget);
       if (staleEnter) {

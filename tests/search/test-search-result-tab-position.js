@@ -58,7 +58,8 @@ function createWorker(options = {}) {
     created: () => recorded('tabs.create').map(([properties]) => properties),
     updated: () => recorded('tabs.update').map(([id, properties]) => Object.assign({ id }, properties)),
     searched,
-    grouped
+    grouped,
+    chrome: worker.chrome
   };
 }
 
@@ -112,6 +113,29 @@ async function run() {
   await current.send({ action: 'createTab', url: 'https://example.test/', disposition: 'currentTab' });
   assert.strictEqual(current.created().length, 0);
   assert.deepStrictEqual(current.updated(), [{ id: 10, url: 'https://example.test/', active: true }], 'current-tab opens reuse the source tab');
+
+  const currentSearch = createWorker({ position: 'afterCurrent' });
+  await currentSearch.send({ action: 'searchOrNavigate', query: 'hello', disposition: 'currentTab' });
+  assert.strictEqual(currentSearch.created().length, 0, 'a current-tab search opens no tab');
+  assert.deepStrictEqual(currentSearch.searched, [{ text: 'hello', tabId: 10 }], 'the browser search fills the source tab');
+  // The results page it loads teaches the default engine, as a new-tab search does.
+  currentSearch.chrome.tabs.onUpdated.dispatch(10, { url: 'https://www.bing.com/search?q=hello' });
+  await wait(30);
+  const learned = await new Promise((resolve) => currentSearch.chrome.storage.sync.get(
+    settings.defaultSearchEngine.key, (items) => resolve(items[settings.defaultSearchEngine.key])
+  ));
+  assert.strictEqual(learned && learned.id, 'bing', 'a current-tab search should still teach the default engine');
+
+  const currentUrl = createWorker({ position: 'afterCurrent' });
+  await currentUrl.send({ action: 'searchOrNavigate', query: 'https://example.test/', disposition: 'currentTab' });
+  assert.strictEqual(currentUrl.created().length, 0);
+  assert.deepStrictEqual(currentUrl.updated(), [{ id: 10, url: 'https://example.test/' }], 'a typed URL loads in the source tab');
+
+  const currentFallback = createWorker({ position: 'afterCurrent', noSearchApi: true });
+  await currentFallback.send({ action: 'searchOrNavigate', query: 'hello', disposition: 'currentTab' });
+  const [fallbackUpdate] = currentFallback.updated();
+  assert.ok(fallbackUpdate && fallbackUpdate.id === 10 && /hello/.test(fallbackUpdate.url),
+    'without the search API the engine URL loads in the source tab');
 
   const closed = createWorker({ position: 'afterCurrent', closedSource: true });
   await closed.send({ action: 'createTab', url: 'https://example.test/' });

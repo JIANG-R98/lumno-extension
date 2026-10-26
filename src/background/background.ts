@@ -97,7 +97,6 @@ import {
   SHOW_SEARCH_PREFILL_V_COMMAND_NAME,
   SHOW_TAB_SWITCHER_COMMAND_NAME,
   SHOW_TAB_SWITCHER_REVERSE_COMMAND_NAME,
-  diagnosticsLog,
   getImportScripts,
   isPrimaryStorageAreaName,
   logHotkeyDebug,
@@ -116,6 +115,8 @@ import './overlay-loading-service';
 import './overlay-open-service';
 import { registerTabLifecycleEvents } from './tab-lifecycle-events';
 import { EXTENSION_PAGE_MESSAGE_HANDLERS } from './message-handlers/extension-page';
+import { GRAPHICS_MESSAGE_HANDLERS } from './message-handlers/graphics';
+import { refreshGraphicsProbe } from './graphics-probe';
 import { FAVICON_MESSAGE_HANDLERS } from './message-handlers/favicon';
 import { LOCALE_AND_PERMISSION_MESSAGE_HANDLERS } from './message-handlers/locale';
 import { POPUP_MESSAGE_HANDLERS } from './message-handlers/toolbar-popup';
@@ -132,15 +133,6 @@ const importScriptsForInstall = getImportScripts();
 if (importScriptsForInstall && typeof globalThis.addEventListener === 'function') {
   globalThis.addEventListener('install', () => {
     importScriptsForInstall(chrome.runtime.getURL(PINYIN_DATA_SCRIPT_PATH));
-  });
-}
-// Failures nothing caught go to the diagnostics log as well as the console.
-if (typeof globalThis.addEventListener === 'function') {
-  globalThis.addEventListener('unhandledrejection', (event) => {
-    diagnosticsLog.record('Unhandled rejection in the background worker.', event.reason);
-  });
-  globalThis.addEventListener('error', (event) => {
-    diagnosticsLog.record('Uncaught error in the background worker.', event.error || event.message);
   });
 }
 const openOnboardingPage = BACKGROUND_PAGES.openOnboardingPage;
@@ -242,6 +234,7 @@ function restoreLocalStorageContentScriptAccess(): void {
 
 chrome.runtime.onInstalled.addListener((details) => {
   restoreLocalStorageContentScriptAccess();
+  void refreshGraphicsProbe();
   // Static manifest content scripts only apply to future document loads. A
   // development-extension reload keeps existing tabs alive, so install the
   // shortcut observer there now instead of waiting for the next shortcut.
@@ -286,6 +279,7 @@ if (chrome && chrome.runtime && chrome.runtime.onStartup) {
   // sweep the open tabs.
   chrome.runtime.onStartup.addListener(() => {
     restoreBackgroundStateOnStartup();
+    void refreshGraphicsProbe();
   });
 }
 // Both loaders settle even when storage is unreadable; the catch only keeps
@@ -373,6 +367,7 @@ export const backgroundMessageRouter = BACKGROUND_MESSAGE_ROUTER.createRouter(
   webAppearance.messageHandlers,
   LOCALE_AND_PERMISSION_MESSAGE_HANDLERS,
   EXTENSION_PAGE_MESSAGE_HANDLERS,
+  GRAPHICS_MESSAGE_HANDLERS,
   POPUP_MESSAGE_HANDLERS,
   FAVICON_MESSAGE_HANDLERS
 );
@@ -396,7 +391,7 @@ const WEB_PAGE_MESSAGE_ACTIONS = Object.freeze([
   'linkPreviewPrepare', 'linkPreviewOpen', 'linkPreviewCancel', 'linkPreviewClose', 'linkPreviewOpenInTab',
   'linkPreviewFrameBind', 'linkPreviewFrameNavigating', 'linkPreviewFrameCommitted', 'linkPreviewFrameRefused',
   'getLocaleMessages', 'openOptionsPage', 'openReleasePage', 'createTab', 'openNewTab',
-  'getFaviconData'
+  'checkGraphicsRendering', 'openGraphicsSettings', 'getFaviconData'
 ]);
 
 const backgroundMessageSenderPolicy = BACKGROUND_MESSAGE_ROUTER.createSenderPolicy({

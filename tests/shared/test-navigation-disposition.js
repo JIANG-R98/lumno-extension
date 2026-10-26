@@ -42,4 +42,21 @@ assert.strictEqual(
   'right-click should not activate link-like controls'
 );
 
+[
+  [{}, 'newTab'],
+  [{ openInOtherTab: true }, 'currentTab'],
+  [{ openInBackgroundTab: true }, 'backgroundTab'],
+  [{ openInOtherTab: true, openInBackgroundTab: true }, 'currentTab'],
+  [{ currentTabByDefault: true }, 'currentTab'],
+  [{ currentTabByDefault: true, openInOtherTab: true }, 'newTab'],
+  [{ currentTabByDefault: true, openInBackgroundTab: true }, 'backgroundTab'],
+  [{ currentTabByDefault: true, openInOtherTab: true, openInBackgroundTab: true }, 'newTab']
+].forEach(([options, disposition]) => {
+  assert.strictEqual(
+    navigationDisposition.getDefaultTabDisposition(options),
+    disposition,
+    `Option/Alt should flip the default tab and win over background opening: ${JSON.stringify(options)}`
+  );
+});
+
 console.log('navigation disposition tests passed');

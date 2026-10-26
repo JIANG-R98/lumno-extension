@@ -54,7 +54,7 @@ interface RecentSectionDeps {
   bindCursorTooltip: BindCursorTooltip;
   hideCursorTooltip(): void;
   // Returns where the URL opened; anything but 'currentTab' keeps this page.
-  openUrlFromNewtabCard(url: string, options: { openInBackgroundTab: boolean; surface: string }): string | void;
+  openUrlFromNewtabCard(url: string, options: { openInBackgroundTab: boolean; openInOtherTab: boolean; surface: string }): string | void;
   togglePinnedRecentSite: ViewOption<'togglePinned'>;
   handleRecentCardContextMenu: ViewOption<'onItemContextMenu'>;
   isCardActivationSuppressed(): boolean;

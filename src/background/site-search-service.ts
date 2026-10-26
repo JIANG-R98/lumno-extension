@@ -215,6 +215,40 @@ function runAggregateSearchQuery(
   return aggregateSearchQueryRunner(aggregateId, query, sender, disposition);
 }
 
+// Loads the query's shortcut, address or search in the tab it came from.
+function searchOrNavigateInTab(
+  sourceTab: chrome.tabs.Tab,
+  tabId: number,
+  query: string,
+  forceSearch: boolean,
+  sendResponse: (reply: { ok: boolean; url: string }) => void
+): void {
+  loadShortcutRules().then((rules) => {
+    const targetUrl = getShortcutUrl(query, rules) || (!forceSearch ? getDirectNavigationUrl(query) : '');
+    if (targetUrl) {
+      chrome.tabs.update(tabId, { url: targetUrl }, () => {
+        sendResponse({ ok: !(chrome.runtime && chrome.runtime.lastError), url: targetUrl });
+      });
+      return;
+    }
+    const fallbackUrl = buildDefaultSearchUrl(query);
+    // The results page this search loads tells which engine is the default.
+    markPendingSearchTab(tabId, sourceTab);
+    SEARCH_RESULT_TABS.searchInTab(chrome, {
+      query,
+      tabId,
+      fallbackUrl,
+      onFallback() {
+        if (pendingSearchTabId === tabId) {
+          clearPendingSearch();
+        }
+      }
+    }, (result) => {
+      sendResponse({ ...result, url: fallbackUrl });
+    });
+  });
+}
+
 // Search, suggestions and history.
 export const SEARCH_MESSAGE_HANDLERS: HandlersFor<SearchAction> = Object.freeze({
   searchOrNavigate(request, sender, sendResponse) {
@@ -222,6 +256,12 @@ export const SEARCH_MESSAGE_HANDLERS: HandlersFor<SearchAction> = Object.freeze(
     const forceSearch = Boolean(request.forceSearch);
     const openInBackgroundTab = request.disposition === 'backgroundTab';
     const sourceTab = sender && sender.tab ? sender.tab : null;
+    // The overlay set to open results in its own tab: the query's shortcut,
+    // address or search loads there instead of in a new tab.
+    if (request.disposition === 'currentTab' && sourceTab && typeof sourceTab.id === 'number') {
+      searchOrNavigateInTab(sourceTab, sourceTab.id, query, forceSearch, sendResponse);
+      return true;
+    }
     Promise.all([loadShortcutRules(), resolveSearchResultTabPlacement(sourceTab)]).then(([rules, placement]) => {
       const createResolvedTab = (url: string, callback: CreatedTabCallback): void => {
         createSearchResultTab({

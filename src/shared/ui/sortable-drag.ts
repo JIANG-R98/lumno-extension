@@ -1,15 +1,29 @@
 import { closestHtmlElement } from '../dom-lookup';
-import { getShift, getTargetIndex, measureSlots, readLayout } from './sortable-geometry';
+import { getGapNeighbours, getRestingOffset, getShift, getTargetIndex, measureSlots, readLayout } from './sortable-geometry';
 import type { Point, Slot, SortLayout } from './sortable-geometry';
 // Pointer-driven reordering shared by Settings lists, chip rows and the search
 // scope panel. The dragged item follows the pointer and its peers slide into
 // the slots they would take, using transforms only, so a framework that owns
-// the DOM (React) never sees a node move. On drop the host gets one
+// the DOM (React) never sees a node move. The two peers beside the open slot
+// lean apart to make room for it, as on the New Tab's bookmark bar. On drop
+// the item glides into its slot, and then the host gets one
 // `onReorder(item, fromIndex, toIndex, peers)` call and re-renders.
 const DEFAULT_THRESHOLD_PX = 5;
 const AUTO_SCROLL_EDGE_PX = 40;
 const AUTO_SCROLL_MAX_STEP_PX = 14;
-const SHIFT_TRANSITION = 'transform 160ms cubic-bezier(0.2, 0, 0, 1)';
+const MOTION_MS = 180;
+const MOTION_EASE = 'cubic-bezier(0.2, 0, 0, 1)';
+// How far the peers beside the open slot lean away from it: sideways in a
+// row or grid, less in a column, whose rows sit closer together.
+const GAP_LEAN_PX = 6;
+const GAP_LEAN_COLUMN_PX = 3;
+const SHIFT_TRANSITION = `transform ${MOTION_MS}ms ${MOTION_EASE}, translate ${MOTION_MS}ms ${MOTION_EASE}`;
+// The dragged item's lift (its shadow, and the scale of a lifted tile) eases
+// in and out; its position follows the pointer directly.
+const LIFT_TRANSITION = ['box-shadow', 'filter', 'scale', 'background-color']
+  .map((prop) => `${prop} ${MOTION_MS}ms ease`)
+  .join(', ');
+const SETTLE_TRANSITION = `transform ${MOTION_MS}ms ${MOTION_EASE}, ${LIFT_TRANSITION}`;
 // Controls inside an item keep their own pointer behavior. An item that is
 // itself a button (a panel tile) still drags.
 const IGNORE_SELECTOR = [
@@ -63,6 +77,13 @@ interface DragState {
   rendered?: boolean;
 }
 
+// A released item on its way into its slot; the drop lands once it is there.
+interface Settling {
+  state: DragState;
+  commit: boolean;
+  timer: number;
+}
+
 function isNode(value: EventTarget | null): value is Node {
   return value !== null && 'nodeType' in value && typeof value.nodeType === 'number';
 }
@@ -91,7 +112,7 @@ function findScrollParent(element: Element, win: Window): Element | null {
 
 // Written as !important so surfaces whose items reset everything with
 // `all: unset !important` (the search scope panel) still move.
-const STYLE_PROPS = ['transform', 'transition', 'z-index', 'position'];
+const STYLE_PROPS = ['transform', 'translate', 'transition', 'z-index', 'position'];
 
 function saveStyles(element: HTMLElement): SavedStyle[] {
   return STYLE_PROPS.map((prop): SavedStyle => [
@@ -126,6 +147,29 @@ function isPresent<T>(value: T | null | undefined): value is T {
   return Boolean(value);
 }
 
+function toTranslate({ x, y }: Point): string {
+  return x || y ? `translate(${x}px, ${y}px)` : '';
+}
+
+function prefersReducedMotion(win: Window): boolean {
+  return typeof win.matchMedia === 'function' && win.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+// Leans the peers that end up on either side of slot `toIndex` away from
+// it, and lets every other peer rest.
+function leanAround(state: DragState, toIndex: number): void {
+  const { item, peers, slots, layout } = state;
+  const lean = layout === 'column' ? GAP_LEAN_COLUMN_PX : GAP_LEAN_PX;
+  const neighbours = getGapNeighbours(slots, layout, state.fromIndex, toIndex);
+  peers.forEach((peer, index) => {
+    if (peer === item) {
+      return;
+    }
+    const offset = (neighbours.get(index) || 0) * lean;
+    setImportant(peer, 'translate', !offset ? '' : (layout === 'column' ? `0px ${offset}px` : `${offset}px 0px`));
+  });
+}
+
 // Lifts the dragged item above its peers and lets them slide; returns the
 // styles to put back.
 function liftForDrag(item: HTMLElement, peers: readonly HTMLElement[], win: Window): SavedStyle[][] {
@@ -135,7 +179,7 @@ function liftForDrag(item: HTMLElement, peers: readonly HTMLElement[], win: Wind
       setImportant(peer, 'transition', SHIFT_TRANSITION);
     }
   });
-  setImportant(item, 'transition', 'none');
+  setImportant(item, 'transition', LIFT_TRANSITION);
   setImportant(item, 'z-index', '20');
   if (win.getComputedStyle(item).position === 'static') {
     setImportant(item, 'position', 'relative');
@@ -178,6 +222,7 @@ function readAutoScrollStep(y: number, bounds: { top: number; bottom: number }):
 class SortableDrag {
   private pending: PendingDrag | null = null;
   private drag: DragState | null = null;
+  private settling: Settling | null = null;
   private frame = 0;
   private readonly host: HTMLElement;
   private readonly page: Document;
@@ -197,17 +242,18 @@ class SortableDrag {
 
   detach(): void {
     if (this.drag) {
-      this.finish(false);
+      this.release(false);
     } else {
       this.stop();
     }
+    this.settle();
     this.host.removeEventListener('pointerdown', this.handlePointerDown);
     this.host.removeEventListener('dragstart', this.handleNativeDragStart);
   }
 
   readonly handlePointerDown = (event: PointerEvent): void => {
     const { settings, win } = this;
-    if (this.drag || event.button !== 0 || event.isPrimary === false) {
+    if (this.drag || this.settling || event.button !== 0 || event.isPrimary === false) {
       return;
     }
     const item = this.findItem(event.target);
@@ -262,12 +308,12 @@ class SortableDrag {
     }
     state.pointer = { x: event.clientX, y: event.clientY };
     this.render();
-    this.finish(true);
+    this.release(true);
   };
 
   private readonly handlePointerCancel = (): void => {
     if (this.drag) {
-      this.finish(false);
+      this.release(false);
     } else {
       this.stop();
     }
@@ -277,7 +323,7 @@ class SortableDrag {
     if (event.key === 'Escape' && this.drag) {
       event.preventDefault();
       event.stopPropagation();
-      this.finish(false);
+      this.release(false);
     }
   };
 
@@ -376,10 +422,10 @@ class SortableDrag {
     state.rendered = true;
     state.peers.forEach((peer, index) => {
       if (peer !== state.item) {
-        const shift = getShift(state.slots, state.layout, state.fromIndex, index, toIndex);
-        setImportant(peer, 'transform', shift.x || shift.y ? `translate(${shift.x}px, ${shift.y}px)` : '');
+        setImportant(peer, 'transform', toTranslate(getShift(state.slots, state.layout, state.fromIndex, index, toIndex)));
       }
     });
+    leanAround(state, toIndex);
   }
 
   private suppressNextClick(): void {
@@ -394,27 +440,58 @@ class SortableDrag {
     win.setTimeout(() => win.removeEventListener('click', swallow, true), 0);
   }
 
-  private finish(commit: boolean): void {
+  // Lets go of the dragged item: it glides into the slot it was dropped on
+  // (its own when the drag is cancelled) and its peers settle, and then the
+  // drop lands.
+  private release(commit: boolean): void {
     const current = this.drag;
-    const { settings } = this;
     this.stop();
     if (!current) {
       return;
     }
-    settleAfterDrag(current.peers, current.previous, this.win);
+    const toIndex = commit ? current.toIndex : current.fromIndex;
+    const { slots, layout, fromIndex } = current;
+    current.peers.forEach((peer, index) => {
+      setImportant(peer, 'translate', '');
+      if (peer !== current.item) {
+        setImportant(peer, 'transform', toTranslate(getShift(slots, layout, fromIndex, index, toIndex)));
+      }
+    });
+    setImportant(current.item, 'transition', SETTLE_TRANSITION);
+    setImportant(current.item, 'transform', toTranslate(getRestingOffset(slots, layout, fromIndex, toIndex)));
     current.item.removeAttribute('data-sort-dragging');
     this.host.removeAttribute('data-sort-active');
     if (this.page.body) {
       this.page.body.style.userSelect = current.bodyUserSelect;
     }
     this.suppressNextClick();
-    if (commit && current.toIndex !== current.fromIndex && typeof settings.onReorder === 'function') {
+    this.settling = { state: current, commit, timer: 0 };
+    if (prefersReducedMotion(this.win)) {
+      this.settle();
+    } else {
+      this.settling.timer = this.win.setTimeout(this.settle, MOTION_MS);
+    }
+  }
+
+  // The released item is in its slot: the peers' styles go back and the
+  // drop lands.
+  private readonly settle = (): void => {
+    const done = this.settling;
+    const { settings } = this;
+    this.settling = null;
+    if (!done) {
+      return;
+    }
+    this.win.clearTimeout(done.timer);
+    const current = done.state;
+    settleAfterDrag(current.peers, current.previous, this.win);
+    if (done.commit && current.toIndex !== current.fromIndex && typeof settings.onReorder === 'function') {
       settings.onReorder(current.item, current.fromIndex, current.toIndex, current.peers);
     }
     if (typeof settings.onEnd === 'function') {
       settings.onEnd(current.item);
     }
-  }
+  };
 
   private stop(): void {
     const win = this.win;

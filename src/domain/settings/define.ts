@@ -1,5 +1,5 @@
 // One persisted value: where it is stored, how it travels between devices,
-// what the diagnostics file shows of it, and how a stored value is read back.
+// and how a stored value is read back.
 import type { Schema } from './schema';
 
 // preferences: the area the user keeps settings in (browser sync, or this
@@ -20,12 +20,6 @@ type SettingArea = 'preferences' | 'browserSync' | 'device' | 'cache' | 'session
 // none: stays where it is.
 type SettingSync = 'browser' | 'webdav' | 'none';
 
-// value: switches, numbers and option names as they are; free text, lists
-//   and objects reduced to their type and size.
-// shape: always reduced to its type and size.
-// omit: left out of the file.
-type SettingDiagnostics = 'value' | 'shape' | 'omit';
-
 interface SettingSpec<T> {
   // The storage key. Never changes once released: stored data and older
   // devices use it.
@@ -33,14 +27,12 @@ interface SettingSpec<T> {
   area: SettingArea;
   schema: Schema<T>;
   sync?: SettingSync;
-  diagnostics?: SettingDiagnostics;
 }
 
 interface Setting<T> {
   readonly key: string;
   readonly area: SettingArea;
   readonly sync: SettingSync;
-  readonly diagnostics: SettingDiagnostics;
   // What the setting reads as when nothing is stored.
   readonly default: T;
   parse(value: unknown): T;
@@ -59,7 +51,6 @@ function defineSetting<T>(spec: SettingSpec<T>): Setting<T> {
     key: spec.key,
     area: spec.area,
     sync,
-    diagnostics: spec.diagnostics || (spec.area === 'preferences' ? 'value' : 'omit'),
     default: schema.parse(undefined),
     parse: (value: unknown) => schema.parse(value)
   });
@@ -99,7 +90,6 @@ function defineSettingFamily<T>(spec: SettingFamilySpec<T>): SettingFamily<T> {
       key,
       area: spec.area,
       sync: 'none',
-      diagnostics: 'omit',
       default: schema.parse(undefined),
       parse
     });
@@ -117,4 +107,4 @@ function defineSettingFamily<T>(spec: SettingFamilySpec<T>): SettingFamily<T> {
 }
 
 export { defineSetting, defineSettingFamily };
-export type { Setting, SettingArea, SettingDiagnostics, SettingFamily, SettingFamilySpec, SettingSpec, SettingSync };
+export type { Setting, SettingArea, SettingFamily, SettingFamilySpec, SettingSpec, SettingSync };

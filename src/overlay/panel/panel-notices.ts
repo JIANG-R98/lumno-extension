@@ -1,10 +1,13 @@
 // Notices in the overlay: the update notice and its session slot, the
-// engagement notice and the community QR dialog.
+// graphics acceleration notice, the engagement notice and the community QR
+// dialog.
 import type { Disposition } from '../../domain/navigation-disposition';
 import type * as Settings from '../../domain/settings';
 import type * as CommunityLinks from '../../platform/community-links';
 import * as ENGAGEMENT_NOTICE from '../../shared/engagement-notice';
 import type { EngagementNoticeController } from '../../shared/engagement-notice';
+import * as GRAPHICS_NOTICE from '../../shared/graphics-acceleration-notice';
+import type { GraphicsNoticeController } from '../../shared/graphics-acceleration-notice';
 import * as COMMUNITY_QR_DIALOG from '../../shared/ui/community-qr-dialog';
 import * as FEATURE_HINTS from '../../shared/ui/feature-hints';
 import * as UPDATE_NOTICE from '../../shared/update-notice';
@@ -18,6 +21,7 @@ interface PanelNoticesState {
   searchInput: HTMLInputElement | null;
   overlayLanguageMode: string;
   overlayUpdateNoticeController: UpdateNoticeController | null;
+  overlayGraphicsNoticeController: GraphicsNoticeController | null;
   overlayEngagementNoticeController: EngagementNoticeController | null;
 }
 
@@ -85,6 +89,37 @@ function createPanelNotices(deps: PanelNoticesDeps) {
       });
     }
   });
+  function overlayGraphicsNoticeClaimsSessionSlot(): boolean {
+    return Boolean(
+      overlayState.overlayGraphicsNoticeController &&
+      overlayState.overlayGraphicsNoticeController.hasSessionSlot()
+    );
+  }
+  // Shows only when the update notice leaves this session's slot free.
+  overlayState.overlayGraphicsNoticeController = GRAPHICS_NOTICE.createGraphicsNotice({
+    documentObj: document,
+    chromeApi: chrome,
+    surface: 'overlay',
+    t,
+    exposureGate: overlayState.overlayUpdateNoticeController && overlayState.overlayUpdateNoticeController.ready,
+    canShow() {
+      const input = overlayState.searchInput;
+      return !overlayUpdateNoticeClaimsSessionSlot() &&
+        !String(input ? input.value || '' : '').trim();
+    },
+    onSessionSlotClaimed() {
+      if (overlayState.overlayEngagementNoticeController) {
+        overlayState.overlayEngagementNoticeController.suppressForSession();
+      }
+    },
+    onOpenSettings(event) {
+      removeOverlay(overlayState.overlay);
+      LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
+        action: 'openGraphicsSettings',
+        disposition: getOpenDisposition(event, 'newTab')
+      });
+    }
+  });
   overlayState.overlayEngagementNoticeController =
     ENGAGEMENT_NOTICE.createEngagementNotice({
       documentObj: document,
@@ -95,9 +130,12 @@ function createPanelNotices(deps: PanelNoticesDeps) {
         ? getSystemLocale()
         : SETTINGS.normalizeLocale(overlayState.overlayLanguageMode),
       t,
-      exposureGate: overlayState.overlayUpdateNoticeController && overlayState.overlayUpdateNoticeController.ready,
-      // Waits until no update notice shows, the page is in view and the
-      // input is empty.
+      exposureGate: Promise.all([
+        overlayState.overlayUpdateNoticeController && overlayState.overlayUpdateNoticeController.ready,
+        overlayState.overlayGraphicsNoticeController && overlayState.overlayGraphicsNoticeController.ready
+      ]),
+      // Waits until no update or graphics notice shows, the page is in view
+      // and the input is empty.
       canShow() {
         const updateNotice = overlayState.overlayUpdateNoticeController;
         const updateNoticeVisible = Boolean(
@@ -109,6 +147,7 @@ function createPanelNotices(deps: PanelNoticesDeps) {
         const input = overlayState.searchInput;
         return !updateNoticeVisible &&
           !overlayUpdateNoticeClaimsSessionSlot() &&
+          !overlayGraphicsNoticeClaimsSessionSlot() &&
           document.visibilityState === 'visible' &&
           Boolean(overlay && overlay.isConnected) &&
           !String(input ? input.value || '' : '').trim();

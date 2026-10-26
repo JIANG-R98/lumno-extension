@@ -4,7 +4,7 @@ import { SettingDivider, SettingSwitch, SettingTitle, type SettingRowUnsupported
 import { SegmentedControl, type SegmentedControlRenderModel } from './segmented-control';
 import { SettingSelect, type SelectControlRenderModel } from './select-control';
 import { RangeSliderControl, type RangeSliderControlRenderModel } from './range-slider-control';
-import { RequiredCheckboxGroup, type RequiredCheckboxGroupRenderModel } from './required-checkbox-group';
+import { CheckboxGroup, type CheckboxGroupRenderModel } from './checkbox-group';
 import type { ToggleControlRenderModel } from './toggle-control';
 import { RemixIcon } from '../../shared/react/remix-icon';
 
@@ -90,9 +90,10 @@ export type SettingsRowModel =
     key: string;
     rowId?: string;
     title: SettingsTitleModel;
+    description?: string;
     groupId: string;
     ariaLabel: string;
-    checkboxes: RequiredCheckboxGroupRenderModel;
+    checkboxes: CheckboxGroupRenderModel;
     // Puts the choices back as they were; hidden while they already are.
     reset?: { id: string; label: string; hidden: boolean } | null;
   })
@@ -233,7 +234,7 @@ export function SettingsReveal({ id, expanded, children }: { id: string; expande
   );
 }
 
-// A group of checkboxes at least one of which stays checked, optionally
+// A group of checkboxes, optionally kept from being cleared and optionally
 // reordered by dragging or with Alt and the arrow keys.
 function CheckboxGroupRow({
   row,
@@ -264,9 +265,9 @@ function CheckboxGroupRow({
   ) : null;
   return (
     <div className={getRowClassName(row)} id={row.rowId}>
-      <RowTitle action={reset} title={row.title} />
+      <RowTitle action={reset} description={row.description} title={row.title} />
       <div aria-label={row.ariaLabel} className="_x_extension_checkbox_group_2026_unique_" id={row.groupId} ref={groupRef} role="group">
-        <RequiredCheckboxGroup
+        <CheckboxGroup
           model={row.checkboxes}
           onChange={(values) => handlers.onCheck?.(row.key, values)}
           onMove={handlers.onMove ? (fromIndex, toIndex) => handlers.onMove?.(row.key, fromIndex, toIndex) : undefined}

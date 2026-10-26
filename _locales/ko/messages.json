@@ -266,9 +266,6 @@
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "바로가기 아이콘 변경하기"
   },
-  "settings_feedback_support_channels_title": {
-    "message": "문의 및 피드백"
-  },
   "settings_feedback_support_review_action": {
     "message": "Lumno 평가하기"
   },
@@ -280,21 +277,6 @@
   },
   "settings_feedback_support_contact_author_action": {
     "message": "개발자에게 문의"
-  },
-  "settings_diagnostics_title": {
-    "message": "진단 정보"
-  },
-  "settings_diagnostics_desc": {
-    "message": "버전, 설정, 최근 오류를 내보내 신고에 첨부할 수 있습니다. 바로가기, 웹 주소 등 개인적인 내용은 파일에 포함되지 않습니다."
-  },
-  "settings_diagnostics_action": {
-    "message": "진단 정보 내보내기"
-  },
-  "settings_diagnostics_export_done": {
-    "message": "진단 정보를 내보냈습니다"
-  },
-  "settings_diagnostics_export_failed": {
-    "message": "진단 정보를 내보내지 못했습니다"
   },
   "settings_onboarding_tutorial_action": {
     "message": "시작 가이드"
@@ -385,6 +367,15 @@
   },
   "settings_overlay_open_tabs_default_visible_title": {
     "message": "웹페이지에서 Lumno를 열 때 열린 탭을 기본으로 모두 표시"
+  },
+  "settings_overlay_open_in_current_tab_title": {
+    "message": "웹페이지에서 Lumno를 열 때 결과를 현재 탭에서 열기"
+  },
+  "settings_overlay_open_in_current_tab_desc": {
+    "message": "끄면 현재 탭에서 열립니다(고정 탭 제외). Option/Alt를 누르면 다른 방식으로 엽니다."
+  },
+  "settings_overlay_open_tabs_default_title": {
+    "message": "열린 탭을 기본으로 모두 표시"
   },
   "settings_favicon_enhanced_fetch_title": {
     "message": "아이콘 및 테마 색상 가져오기 강화"
@@ -1078,6 +1069,18 @@
   },
   "engagement_notice_close": {
     "message": "평가 및 커뮤니티 안내 닫기"
+  },
+  "graphics_notice_badge": {
+    "message": "그래픽 가속이 꺼져 있습니다"
+  },
+  "graphics_notice_text": {
+    "message": "켜면 페이지가 더 부드러워집니다. 브라우저를 다시 시작해야 적용됩니다"
+  },
+  "graphics_notice_link": {
+    "message": "켜기"
+  },
+  "graphics_notice_close": {
+    "message": "그래픽 가속 안내 닫기"
   },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "북마크 메뉴 안전 삼각형 표시"
@@ -3456,10 +3459,10 @@
     "message": "드라마나 소설을 고정하면 다음 화나 다음 장으로 넘어갈 때 카드도 따라와, 보던 곳에서 바로 이어서 열립니다"
   },
   "settings_newtab_open_in_new_tab_title": {
-    "message": "새 탭에서 열기"
+    "message": "클릭하면 새 탭에서 열기"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "켜진 항목은 새 탭에서 열리고 해당 탭으로 전환되며, 꺼진 항목은 현재 탭에서 열립니다. Command/Ctrl+클릭 또는 가운데 클릭은 항상 백그라운드에서 엽니다."
+    "message": "선택하지 않은 항목은 현재 탭에서 열립니다. Option/Alt를 누르면 다른 방식으로 엽니다."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "검색 결과"
@@ -3621,7 +3624,7 @@
     "message": "검색 패널 순서"
   },
   "settings_search_source_group_order_desc": {
-    "message": "태그를 드래그해 그룹 순서를, 아래 행을 드래그해 그룹 내 순서를 바꾸세요. Ctrl/⌘ + Z로 실행 취소, Shift + Ctrl/⌘ + Z로 다시 실행합니다."
+    "message": "드래그해 Tab 패널의 그룹 순서를 바꿉니다. 검색 결과 순서는 그대로입니다. Ctrl/⌘ + Z로 실행 취소."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Alt와 왼쪽 또는 오른쪽 화살표 키를 눌러 이동"

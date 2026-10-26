@@ -68,17 +68,8 @@ const settingsSchemaVersion = defineSetting({
   schema: custom((value) => (typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : 0))
 });
 
-// Errors the extension met recently, for the diagnostics file
-// (domain/diagnostics.ts).
-const diagnosticErrors = defineSetting({
-  key: '_x_lumno_diagnostic_errors_2026_unique_',
-  area: 'device',
-  schema: opaque()
-});
-
 export {
   assetRevision,
-  diagnosticErrors,
   localPrimary,
   settingsSchemaVersion,
   syncMeta,

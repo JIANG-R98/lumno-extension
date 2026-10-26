@@ -31,6 +31,7 @@ type VisualOptions = { instant?: boolean } | undefined;
 type ActivationEvent = {
   metaKey?: boolean;
   ctrlKey?: boolean;
+  altKey?: boolean;
   button?: number;
 };
 
@@ -73,6 +74,8 @@ interface ThemeSuggestion {
 
 interface OpenUrlOptions {
   openInBackgroundTab: boolean;
+  // Option/Alt: the other of the current and a new tab.
+  openInOtherTab: boolean;
 }
 
 export interface BookmarksViewOptions {
@@ -739,7 +742,8 @@ function BookmarkCard({
 
   function openBookmarkUrl(event: ActivationEvent): void {
     options.openUrl(item.url ? String(item.url) : '', {
-      openInBackgroundTab: shouldOpenUrlInBackground(event)
+      openInBackgroundTab: shouldOpenUrlInBackground(event),
+      openInOtherTab: Boolean(event && event.altKey)
     });
   }
 

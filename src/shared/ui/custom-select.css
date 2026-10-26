@@ -244,9 +244,13 @@ body[data-glass-style] ._x_extension_select_wrap_2024_unique_[data-open="true"][
   width: min(300px, calc(100vw - 32px));
 }
 
+/* Capped before the first open too (SEARCHABLE_MENU_MAX_HEIGHT in
+   select-menu.tsx): a closed menu drawn in place is only transparent, and
+   its full list would stretch the page by thousands of pixels. */
 ._x_extension_select_menu_2024_unique_[data-searchable="true"] {
   display: flex;
   flex-direction: column;
+  max-height: 480px;
 }
 
 ._x_extension_select_search_2026_unique_ {

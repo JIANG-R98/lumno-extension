@@ -9,6 +9,7 @@ import * as SEARCH_INPUT_HISTORY from '../domain/search/search-input-history';
 import * as SEARCH_INPUT_MODE from '../shared/search/search-input-mode';
 import * as SEARCH_SOURCE_ORDER from '../domain/search/search-source-order';
 import * as SUGGESTION_ACTION_MODEL from '../domain/search/suggestion-action-model';
+import * as SUGGESTION_INPUT_PREVIEW from '../domain/search/suggestion-input-preview';
 import * as SUGGESTION_NAVIGATION from '../shared/search/suggestion-navigation';
 import * as SUGGESTIONS_HEIGHT_LAYOUT from '../shared/search/suggestions-height-layout';
 import * as SETTINGS from '../domain/settings';
@@ -19,6 +20,7 @@ import { createToastStyleGate } from '../shared/ui/toast-style-gate';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as LumnoOverlayFaviconView from './favicon-view';
 import * as OVERLAY_KEYBOARD from './keyboard';
+import { createFullscreenEscapeLock } from '../shared/ui/fullscreen-escape-lock';
 import * as LumnoOverlayLifecycle from './lifecycle';
 import * as OVERLAY_NOTICES from './notices';
 import * as PANEL_AUTOCOMPLETE from './panel/autocomplete';
@@ -118,6 +120,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     overlaySessionCleanups: overlayLifecycle.createSessionCleanupRegistry(),
     overlayNoticeLayer: OVERLAY_NOTICES.createNoticeLayer(window, {
       getUpdateNotice: () => overlayState.overlayUpdateNoticeController,
+      getGraphicsNotice: () => overlayState.overlayGraphicsNoticeController,
       getEngagementNotice: () => overlayState.overlayEngagementNoticeController,
       getSizePreset: () => getOverlaySizePreset(overlayState.overlaySizeMode),
       decorate: (element) => applyNoTranslateDeep(element)
@@ -128,6 +131,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
       shouldIgnoreTabZoomCompensation: () => shouldIgnoreTabZoomCompensation
     }),
     imeKeyGuard: LumnoImeKeyGuard.createImeKeyGuard(),
+    suggestionInputPreview: SUGGESTION_INPUT_PREVIEW.createSuggestionInputPreview(),
     overlayMediaQuery: window.matchMedia('(prefers-color-scheme: dark)'),
     defaultTheme: createDefaultTheme(),
     urlHighlightTheme: createUrlHighlightTheme(),
@@ -157,6 +161,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
       }
     },
     prioritizeCurrentPageMatch: openOptions.prioritizeCurrentPageMatch,
+    currentTabPinned: openOptions.currentTabPinned,
     initialContextTabUrl: openOptions.currentTabUrl,
     loadingSessionTrackingActive: openOptions.loadingSessionTracked,
     documentPipEnabled: documentPipSupported && openOptions.documentPipEnabled,
@@ -380,7 +385,8 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     openSiteSearchProviderQuery: (...args) => openSiteSearchProviderQuery(...args),
     shouldOpenSearchResultInBackgroundTab: (...args) => shouldOpenSearchResultInBackgroundTab(...args),
     recordSearchSuggestionSelectionFromSuggestion: (...args) => recordSearchSuggestionSelectionFromSuggestion(...args),
-    getSearchResultCreateDisposition: (...args) => getSearchResultCreateDisposition(...args),
+    getSearchResultDisposition: (...args) => getSearchResultDisposition(...args),
+    isCurrentTabDefault: (...args) => isCurrentTabDefault(...args),
     getOverlayFaviconUrlResolver: (...args) => getOverlayFaviconUrlResolver(...args),
     t: (...args) => t(...args),
     formatMessage: (...args) => formatMessage(...args),
@@ -405,7 +411,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     getDefaultSearchEngineThemeUrlForOverlay: (...args) => getDefaultSearchEngineThemeUrlForOverlay(...args),
     getBrandAccentForUrl: (...args) => getBrandAccentForUrl(...args),
     buildTheme,
-    SUGGESTION_ACTION_MODEL,
     normalizeSearchResultDisplayLimit: (...args) => normalizeSearchResultDisplayLimit(...args),
     pauseOverlayAntiTranslateObserverForMutationBurst: (...args) => pauseOverlayAntiTranslateObserverForMutationBurst(...args),
     setOpenTabsResultsViewport: (...args) => setOpenTabsResultsViewport(...args),
@@ -468,11 +473,10 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     openMatchedTabSuggestion: (...args) => openMatchedTabSuggestion(...args),
     shouldOpenSearchResultInBackgroundTab: (...args) => shouldOpenSearchResultInBackgroundTab(...args),
     recordSearchSuggestionSelectionFromSuggestion: (...args) => recordSearchSuggestionSelectionFromSuggestion(...args),
-    getSearchResultCreateDisposition: (...args) => getSearchResultCreateDisposition(...args),
+    getSearchResultDisposition: (...args) => getSearchResultDisposition(...args),
     isSlashCommandInput: (...args) => isSlashCommandInput(...args),
     updateSearchSuggestions,
     isAggregateSearchProvider: (...args) => isAggregateSearchProvider(...args),
-    getSearchResultNewTabDisposition: (...args) => getSearchResultNewTabDisposition(...args),
     resolveQuickNavigation,
     overlayState
   });
@@ -584,6 +588,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     AGGREGATE_SEARCH_STORE,
     showOverlayToast: (...args) => showOverlayToast(...args),
     t: (...args) => t(...args),
+    getSearchResultDisposition: (...args) => getSearchResultDisposition(...args),
     getSearchResultNewTabDisposition: (...args) => getSearchResultNewTabDisposition(...args),
     finishOverlayResultActivation: (...args) => finishOverlayResultActivation(...args),
     getOverlayFaviconUrlResolver: (...args) => getOverlayFaviconUrlResolver(...args),
@@ -631,7 +636,8 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     finishOverlayResultActivation,
     getOpenDisposition,
     getSearchResultNewTabDisposition,
-    getSearchResultCreateDisposition,
+    getSearchResultDisposition,
+    isCurrentTabDefault,
     openMatchedTabSuggestion
   } = PANEL_RESULT_ACTIVATION.createResultActivation({
     ensureOverlaySuggestionsView,
@@ -1269,6 +1275,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   overlayState.searchInput.addEventListener('focus', function() {
     overlayState.selectedIndex = -1;
     updateSelection();
+    overlayState.suggestionInputPreview.restore(overlayState.searchInput, overlayState.latestRawInputValue);
   });
 
   function isImeCompositionEvent(event: KeyboardEvent): boolean {
@@ -1686,6 +1693,12 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     mountConnectionGuard.stop();
   });
   mountConnectionGuard.start(overlayHost);
+  // Over a fullscreen video, the first Escape closes the overlay.
+  const fullscreenEscapeLock = createFullscreenEscapeLock(window);
+  addOverlaySessionCleanup(() => {
+    fullscreenEscapeLock.stop();
+  });
+  fullscreenEscapeLock.start();
   startOverlayViewportSizeSync(overlayState.overlay);
   overlayState.overlayNoticeLayer.startFrameSync(overlayState.overlay);
   startOverlayAntiTranslateObserver(overlayState.overlay);

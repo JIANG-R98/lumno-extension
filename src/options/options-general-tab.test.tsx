@@ -34,10 +34,11 @@ describe('Options General tab', () => {
     expect(host.dataset.reactIsland).toBe('options-general-tab');
 
     act(() => tab.search(handlers).render(header('Search')));
-    expect(titles()).toEqual(['Features', 'Search', 'New Tab']);
-    expect(getTags(host, '._x_extension_setting_divider_wrap_2024_unique_', 'div').length).toBe(2);
+    act(() => tab.overlay(handlers).render(header('Overlay')));
+    expect(titles()).toEqual(['Features', 'Search', 'Overlay', 'New Tab']);
+    expect(getTags(host, '._x_extension_setting_divider_wrap_2024_unique_', 'div').length).toBe(3);
 
     act(() => newtab.destroy());
-    expect(titles()).toEqual(['Features', 'Search']);
+    expect(titles()).toEqual(['Features', 'Search', 'Overlay']);
   });
 });

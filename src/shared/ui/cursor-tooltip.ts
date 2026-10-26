@@ -159,7 +159,7 @@ function listenToBoundTarget(
     if (settings.preserveVisibleOnTargetSwitch === true && surface.keepForStaleEnter(event, target)) {
       return;
     }
-    activateAndShow(event, (options) => surface.show(target, resolveText(target), event, options));
+    activateAndShow(event, (options) => surface.show(target, resolveText(target, event), event, options));
   };
   const onMove = (event: CursorPointInput): void => {
     const current = surface.currentTarget();
@@ -167,11 +167,19 @@ function listenToBoundTarget(
       return;
     }
     activateAndShow(event, (options) => {
-      if (current) {
-        surface.move(event, options, () => actions.hide());
-      } else {
-        surface.show(target, resolveText(target), event, options);
+      if (!current) {
+        surface.show(target, resolveText(target, event), event, options);
+        return;
       }
+      // A target whose text depends on where the pointer is on it, such as
+      // a result row over its address line, swaps the text in place.
+      const text = String(resolveText(target, event) || '');
+      if (!text) {
+        actions.hide({ preserveActiveBinding: true });
+        return;
+      }
+      surface.retext(text);
+      surface.move(event, options, () => actions.hide());
     });
   };
   const onFocus = (): void => {
@@ -215,7 +223,7 @@ function createController(options?: CursorTooltipOptions | null): CursorTooltipC
     if (!shouldShowTarget(binding.target, eventOptions)) {
       return hide({ preserveActiveBinding: true });
     }
-    return surface.show(binding.target, binding.resolveText(binding.target), input, eventOptions);
+    return surface.show(binding.target, binding.resolveText(binding.target, input), input, eventOptions);
   }
 
   // Held modifier keys change the action tag, so key presses refresh it.

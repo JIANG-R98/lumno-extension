@@ -266,9 +266,6 @@
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Change a shortcut's icon"
   },
-  "settings_feedback_support_channels_title": {
-    "message": "Get in Touch"
-  },
   "settings_feedback_support_review_action": {
     "message": "Rate Lumno"
   },
@@ -280,21 +277,6 @@
   },
   "settings_feedback_support_contact_author_action": {
     "message": "Contact the author"
-  },
-  "settings_diagnostics_title": {
-    "message": "Diagnostics"
-  },
-  "settings_diagnostics_desc": {
-    "message": "Export the version, settings and recent errors to attach to a report. Shortcuts, web addresses and other personal content stay out of the file."
-  },
-  "settings_diagnostics_action": {
-    "message": "Export diagnostics"
-  },
-  "settings_diagnostics_export_done": {
-    "message": "Diagnostics exported"
-  },
-  "settings_diagnostics_export_failed": {
-    "message": "Couldn’t export diagnostics"
   },
   "settings_onboarding_tutorial_action": {
     "message": "Welcome tour"
@@ -385,6 +367,15 @@
   },
   "settings_overlay_open_tabs_default_visible_title": {
     "message": "Show all open tabs by default when Lumno opens on a webpage"
+  },
+  "settings_overlay_open_in_current_tab_title": {
+    "message": "Open results in the current tab when Lumno opens on a webpage"
+  },
+  "settings_overlay_open_in_current_tab_desc": {
+    "message": "When off, results open in the current tab unless it’s pinned. Hold Option/Alt to use the other one."
+  },
+  "settings_overlay_open_tabs_default_title": {
+    "message": "Show all open tabs by default"
   },
   "settings_favicon_enhanced_fetch_title": {
     "message": "Enhanced Icon and Theme Color Fetching"
@@ -1078,6 +1069,18 @@
   },
   "engagement_notice_close": {
     "message": "Dismiss rating and community prompt"
+  },
+  "graphics_notice_badge": {
+    "message": "Graphics acceleration is off"
+  },
+  "graphics_notice_text": {
+    "message": "Turn it on for smoother pages; it takes a browser restart"
+  },
+  "graphics_notice_link": {
+    "message": "Turn on"
+  },
+  "graphics_notice_close": {
+    "message": "Dismiss graphics acceleration tip"
   },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "Show bookmark menu safe triangle"
@@ -3456,10 +3459,10 @@
     "message": "Pin a show or novel and its card follows you to the next episode or chapter, so it opens where you left off"
   },
   "settings_newtab_open_in_new_tab_title": {
-    "message": "Open in a new tab"
+    "message": "Open in a new tab when clicked"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Items turned on open in a new tab and switch to it; items turned off open in the current tab. Command/Ctrl-click or middle-click always opens in the background."
+    "message": "Unchecked items open in the current tab. Hold Option/Alt to use the other one."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Search results"
@@ -3621,7 +3624,7 @@
     "message": "Search Panel Order"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Drag the tags to reorder groups, and the rows below to reorder within a group. Press Ctrl/⌘ + Z to undo and Shift + Ctrl/⌘ + Z to redo."
+    "message": "Drag to reorder groups in the Tab panel. Result order stays the same. Ctrl/⌘ + Z to undo."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Press Alt with the Left or Right arrow key to move"

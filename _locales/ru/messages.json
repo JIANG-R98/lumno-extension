@@ -266,9 +266,6 @@
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Изменить значок ярлыка"
   },
-  "settings_feedback_support_channels_title": {
-    "message": "Связь"
-  },
   "settings_feedback_support_review_action": {
     "message": "Оценить Lumno"
   },
@@ -280,21 +277,6 @@
   },
   "settings_feedback_support_contact_author_action": {
     "message": "Написать автору"
-  },
-  "settings_diagnostics_title": {
-    "message": "Диагностика"
-  },
-  "settings_diagnostics_desc": {
-    "message": "Экспортируйте версию, настройки и недавние ошибки, чтобы приложить их к отчёту. Ярлыки, веб-адреса и другие личные данные в файл не попадают."
-  },
-  "settings_diagnostics_action": {
-    "message": "Экспорт диагностики"
-  },
-  "settings_diagnostics_export_done": {
-    "message": "Диагностика экспортирована"
-  },
-  "settings_diagnostics_export_failed": {
-    "message": "Не удалось экспортировать диагностику"
   },
   "settings_onboarding_tutorial_action": {
     "message": "Знакомство"
@@ -385,6 +367,15 @@
   },
   "settings_overlay_open_tabs_default_visible_title": {
     "message": "Показывать все открытые вкладки при вызове Lumno на веб-странице"
+  },
+  "settings_overlay_open_in_current_tab_title": {
+    "message": "Открывать результаты в текущей вкладке при вызове Lumno на веб-странице"
+  },
+  "settings_overlay_open_in_current_tab_desc": {
+    "message": "Если выключено, открывается в текущей вкладке, кроме закреплённой. С Option/Alt — другим способом."
+  },
+  "settings_overlay_open_tabs_default_title": {
+    "message": "Показывать все открытые вкладки"
   },
   "settings_favicon_enhanced_fetch_title": {
     "message": "Расширенная загрузка значков и цветов темы"
@@ -1078,6 +1069,18 @@
   },
   "engagement_notice_close": {
     "message": "Закрыть предложение оценить и присоединиться к сообществу"
+  },
+  "graphics_notice_badge": {
+    "message": "Аппаратное ускорение выключено"
+  },
+  "graphics_notice_text": {
+    "message": "Включите его, чтобы страницы работали плавнее; потребуется перезапуск браузера"
+  },
+  "graphics_notice_link": {
+    "message": "Включить"
+  },
+  "graphics_notice_close": {
+    "message": "Закрыть подсказку об аппаратном ускорении"
   },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "Показать безопасный треугольник меню закладок"
@@ -3456,10 +3459,10 @@
     "message": "Закрепите сериал или книгу, и карточка будет переходить на следующую серию или главу, чтобы открываться там, где вы остановились"
   },
   "settings_newtab_open_in_new_tab_title": {
-    "message": "Открывать в новой вкладке"
+    "message": "Открывать по клику в новой вкладке"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Включенные элементы открываются в новой вкладке с переходом на нее, отключенные — в текущей вкладке. Нажатие с Command/Ctrl или средней кнопкой мыши всегда открывает в фоне."
+    "message": "Неотмеченное открывается в текущей вкладке. С Option/Alt — другим способом."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Результаты поиска"
@@ -3621,7 +3624,7 @@
     "message": "Порядок в панели поиска"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Перетаскивайте теги, чтобы изменить порядок групп, и строки ниже — чтобы упорядочить группу. Ctrl/⌘ + Z — отменить, Shift + Ctrl/⌘ + Z — повторить."
+    "message": "Перетащите, чтобы изменить порядок групп в панели Tab. Порядок результатов не меняется. Ctrl/⌘ + Z — отменить."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Для перемещения нажмите Alt и стрелку влево или вправо"

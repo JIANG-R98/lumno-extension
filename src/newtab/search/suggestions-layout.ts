@@ -43,6 +43,7 @@ function createSuggestionsLayout(deps: SuggestionsLayoutDeps) {
     const fitMaxHeightProperty =
       '--x-nt-suggestions-menu-fit-max-height';
     const resultHeightLimit = pageState.inputModeController.fitModeMenuWithinViewport({ bottomInset: 24 });
+    const previousLimit = container.style.getPropertyValue(fitMaxHeightProperty);
     if (resultHeightLimit !== null && Number.isFinite(resultHeightLimit)) {
       container.style.setProperty(
         fitMaxHeightProperty,
@@ -50,6 +51,12 @@ function createSuggestionsLayout(deps: SuggestionsLayoutDeps) {
       );
     } else {
       container.style.removeProperty(fitMaxHeightProperty);
+    }
+    // The list grows or shrinks with the limit; the frame drawn around it
+    // follows now rather than at the next render, or closing the menu
+    // leaves it around the old, shorter list (#121).
+    if (container.style.getPropertyValue(fitMaxHeightProperty) !== previousLimit) {
+      updateSuggestionsFloatingLayout();
     }
     pageState.inputModeController.setModeMenuResultOffset(
       getSearchModeMenuResultOffset()

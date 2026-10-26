@@ -2,7 +2,7 @@ import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RangeSliderControl, type RangeSliderControlRenderModel } from './range-slider-control';
-import { RequiredCheckboxGroup, type RequiredCheckboxGroupRenderModel } from './required-checkbox-group';
+import { CheckboxGroup, type CheckboxGroupRenderModel } from './checkbox-group';
 import { ToggleControl, type ToggleControlRenderModel } from './toggle-control';
 import { getTag, getTags } from '../../../tests/react/dom';
 import { queryHtmlTag } from '../../shared/dom-lookup';
@@ -22,8 +22,8 @@ const mountToggle = (host: HTMLElement, options: { onChange(checked: boolean): v
 const mountCheckboxGroup = (
   host: HTMLElement,
   options: { onChange(values: string[]): void; onMove?(fromIndex: number, toIndex: number): void }
-) => mount(host, (model: RequiredCheckboxGroupRenderModel) => (
-  <RequiredCheckboxGroup model={model} onChange={options.onChange} onMove={options.onMove} />
+) => mount(host, (model: CheckboxGroupRenderModel) => (
+  <CheckboxGroup model={model} onChange={options.onChange} onMove={options.onMove} />
 ));
 
 const mountSlider = (host: HTMLElement, options: { onInput(value: number): void }) =>
@@ -111,7 +111,8 @@ describe('Options settings controls', () => {
           labelKey: 'search_tag_history',
           value: 'history'
         }
-      ]
+      ],
+      required: true
     }));
     const inputs = getTags(host, 'input', 'input');
 
@@ -121,6 +122,30 @@ describe('Options settings controls', () => {
 
     act(() => inputs[1]?.click());
     expect(onChange).toHaveBeenLastCalledWith(['bookmark', 'history']);
+  });
+
+  it('lets an optional group be cleared', () => {
+    const host = document.createElement('div');
+    const onChange = vi.fn();
+    document.body.appendChild(host);
+    const controller = mountCheckboxGroup(host, {
+      onChange
+    });
+
+    act(() => controller.render({
+      items: [{
+        checked: true,
+        id: 'search',
+        label: '搜索结果',
+        labelKey: 'settings_newtab_open_in_new_tab_search',
+        value: 'search'
+      }]
+    }));
+    const input = queryHtmlTag(host, 'input', 'input');
+
+    act(() => input?.click());
+    expect(input?.checked).toBe(false);
+    expect(onChange).toHaveBeenLastCalledWith([]);
   });
 
   it('accepts adapter-driven state refreshes', () => {

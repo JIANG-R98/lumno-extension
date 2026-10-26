@@ -54,6 +54,8 @@ interface CascadeItemEventDetail<E extends Event = Event> {
 
 interface CascadeOpenUrlOptions {
   openInBackgroundTab: boolean;
+  // Option/Alt: the other of the current and a new tab.
+  openInOtherTab: boolean;
   anchor: BookmarkMenuAnchor | null;
 }
 
@@ -1251,6 +1253,7 @@ function createBookmarkCascadeMenuRuntime(options?: BookmarkCascadeMenuOptions) 
   function openBookmarkCascadeUrl(url: string, event: Event, anchor: BookmarkMenuAnchor | null): void {
     openUrl(url, {
       openInBackgroundTab: shouldOpenUrlInBackground(event),
+      openInOtherTab: 'altKey' in event && event.altKey === true,
       anchor
     });
   }

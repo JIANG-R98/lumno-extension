@@ -948,8 +948,15 @@ async function run() {
     5,
     'search-first remote merge should reserve the full five-item engine suggestion cap'
   );
+  // #123: the local row titled exactly "GitHub" leads (the background list
+  // has no search action), and the five engine suggestions follow it.
+  assert.strictEqual(
+    searchFirstMixedSuggestions[0] && searchFirstMixedSuggestions[0].title,
+    'GitHub',
+    'search-first remote merge should put the exact-title local row before the engine suggestions'
+  );
   assert.ok(
-    searchFirstMixedSuggestions.slice(0, 5).every((item) => item && item.type === 'googleSuggest'),
+    searchFirstMixedSuggestions.slice(1, 6).every((item) => item && item.type === 'googleSuggest'),
     'search-first remote merge should keep all reserved engine suggestions inside the returned slate limit'
   );
   const mergedXiaohongshuSuggestions = await context.__testGetSearchEngineSuggestions(

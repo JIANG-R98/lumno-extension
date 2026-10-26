@@ -24,6 +24,7 @@ import * as OPTIONS_FORMS from './options-forms';
 import * as OPTIONS_GENERAL_FEATURES_SECTION from './options-general-features-section';
 import * as OPTIONS_GENERAL_GLOBAL_SECTION from './options-general-global-section';
 import * as OPTIONS_GENERAL_NEWTAB_SECTION from './options-general-newtab-section';
+import * as OPTIONS_GENERAL_OVERLAY_SECTION from './options-general-overlay-section';
 import * as OPTIONS_GENERAL_SEARCH_SECTION from './options-general-search-section';
 import * as OPTIONS_GENERAL_SHORTCUTS_SECTION from './options-general-shortcuts-section';
 import * as OPTIONS_GENERAL_TAB from './options-general-tab';
@@ -45,7 +46,6 @@ import * as THEME from './options-theme';
 import * as OPTIONS_UNSUPPORTED_SETTINGS from './options-unsupported-settings';
 import * as OPTIONS_TOOLTIPS from './options-tooltips';
 import * as LumnoOptionsTranslationHelpSection from './options-translation-help';
-import * as LumnoOptionsDiagnostics from './options-diagnostics';
 import * as LumnoBrowserProfile from '../platform/browser-profile';
 import * as LumnoMessaging from '../platform/messaging';
 import { getHtmlElement, queryHtmlElement, queryHtmlElements } from '../shared/dom-lookup';
@@ -282,6 +282,7 @@ import * as ProviderStorage from '../platform/provider-storage';
       generalGlobalSection.render();
       generalFeaturesSection.render();
       generalSearchSection.render();
+      generalOverlaySection.render();
       generalNewtabSection.render();
       generalShortcutsSection.render();
       appearanceGlobalSection.render();
@@ -316,14 +317,6 @@ import * as ProviderStorage from '../platform/provider-storage';
   });
 
   const shortcutDisplay = LumnoShortcutDisplay;
-  const diagnosticsExport = LumnoOptionsDiagnostics.createDiagnosticsExport({
-    settingsStore: optionsState.settingsStore,
-    settings: SETTINGS.DIAGNOSTIC_SETTINGS,
-    documentObj: document,
-    getPrimaryAreaName: () => getActivePrimaryAreaName(),
-    getVersion: () => chrome?.runtime?.getManifest?.()?.version || '',
-    navigatorObj: navigator
-  });
   const generalTab = OPTIONS_GENERAL_TAB.createGeneralTab(optionsSettingsControlsApi.createGeneralTabController(
     queryHtmlElement(document, '._x_extension_settings_content_2024_unique_[data-content="general"]')
   ));
@@ -340,13 +333,6 @@ import * as ProviderStorage from '../platform/provider-storage';
   const feedbackSupportSection = LumnoOptionsFeedbackSupportSection.createFeedbackSupportSection({
     communityLinks: COMMUNITY_LINKS,
     controller: generalGlobalSection.feedback,
-    exportDiagnostics: () => diagnosticsExport.exportReport().then(
-      () => showToast(getMessage('settings_diagnostics_export_done', '已导出诊断信息'), false),
-      (error) => {
-        console.warn('[Lumno] Could not export diagnostics.', error);
-        showToast(getMessage('settings_diagnostics_export_failed', '诊断信息导出失败'), true);
-      }
-    ),
     licensesLink: generalGlobalSection.licensesLink,
     getLocale: () => (optionsState.currentLanguageMode === 'system' ? getSystemLocale() : normalizeLocale(optionsState.currentLanguageMode)),
     getMessage,
@@ -392,6 +378,12 @@ import * as ProviderStorage from '../platform/provider-storage';
   });
   const generalNewtabSection = OPTIONS_GENERAL_NEWTAB_SECTION.createGeneralNewtabSection({
     view: generalTab.newtab,
+    settingsStore: optionsState.settingsStore,
+    SETTINGS,
+    getMessage
+  });
+  const generalOverlaySection = OPTIONS_GENERAL_OVERLAY_SECTION.createGeneralOverlaySection({
+    view: generalTab.overlay,
     settingsStore: optionsState.settingsStore,
     SETTINGS,
     getMessage
@@ -880,6 +872,7 @@ import * as ProviderStorage from '../platform/provider-storage';
   generalGlobalSection.bindSettings(settingBinder);
   generalFeaturesSection.bindSettings(settingBinder);
   generalSearchSection.bindSettings(settingBinder);
+  generalOverlaySection.bindSettings(settingBinder);
   generalNewtabSection.bindSettings(settingBinder);
   generalShortcutsSection.bindSettings(settingBinder);
   appearanceGlobalSection.bindSettings(settingBinder);

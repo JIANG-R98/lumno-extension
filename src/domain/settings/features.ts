@@ -30,6 +30,37 @@ const autoPipEnabled = defineSetting({
   schema: flag(true)
 });
 
+// Whether the browser draws with the GPU. 'software' when neither WebGL nor
+// WebGPU reaches a GPU: graphics acceleration is off, or the browser blocks
+// this GPU or driver. Anything the probe cannot be sure of is 'unknown',
+// which suggests nothing.
+type GraphicsRendering = 'hardware' | 'software' | 'unknown';
+
+interface GraphicsProbe {
+  rendering: GraphicsRendering;
+  checkedAt: number;
+}
+
+function normalizeGraphicsRendering(value: unknown): GraphicsRendering {
+  return value === 'hardware' || value === 'software' ? value : 'unknown';
+}
+
+function normalizeGraphicsProbe(value: unknown): GraphicsProbe {
+  const source = isRecord(value) ? value : {};
+  return {
+    rendering: normalizeGraphicsRendering(source.rendering),
+    checkedAt: Math.max(0, Number(source.checkedAt) || 0)
+  };
+}
+
+// The worker's last answer to whether the browser draws with the GPU. It
+// belongs to this computer, so it never syncs.
+const graphicsProbe = defineSetting({
+  key: '_x_lumno_graphics_probe_2026_unique_',
+  area: 'device',
+  schema: custom(normalizeGraphicsProbe)
+});
+
 const documentPipEnabled = defineSetting({
   key: '_x_extension_document_pip_enabled_2026_unique_',
   area: 'preferences',
@@ -245,8 +276,11 @@ export {
   featureHintDismissedOnDevice,
   featureHintDismissedThisSession,
   globalPipOwner,
+  graphicsProbe,
   linkPreviewEnabled,
   linkPreviewSessions,
+  normalizeGraphicsProbe,
+  normalizeGraphicsRendering,
   overlayLoadingRecord,
   overlayNavigationState,
   pinnedTabRecoveryEnabled,
@@ -264,4 +298,4 @@ export {
   updateNoticeEnabled,
   updateNoticeState
 };
-export type { SelectionQuickActionsProvider };
+export type { GraphicsProbe, GraphicsRendering, SelectionQuickActionsProvider };

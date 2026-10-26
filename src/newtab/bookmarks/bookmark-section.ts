@@ -78,7 +78,7 @@ interface BookmarkSectionDeps {
   navigateToUrl(url?: string): void;
   openUrlFromNewtabCard(
     url: string | undefined,
-    options: { openInBackgroundTab?: boolean; anchor?: HTMLElement | null; surface: string }
+    options: { openInBackgroundTab?: boolean; openInOtherTab?: boolean; anchor?: HTMLElement | null; surface: string }
   ): unknown;
   dismissStack: DismissStack;
   NEWTAB_CROSS_SURFACE_DRAG: typeof CrossSurfaceDrag;

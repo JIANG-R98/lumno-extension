@@ -50,7 +50,10 @@ function composeSlate(rows: SuggestionRow[], context: SearchQueryContext, policy
     { context }
   );
   const limit = policy.finalSuggestionLimit || 12;
-  return SearchSuggestionSlate.composeSearchFirstSuggestionSlate([...localCandidates, ...engineCandidates], { limit }).slice(0, limit);
+  return SearchSuggestionSlate.composeSearchFirstSuggestionSlate([...localCandidates, ...engineCandidates], {
+    limit,
+    query: context.lookupQuery
+  }).slice(0, limit);
 }
 
 async function getSearchEngineSuggestions(

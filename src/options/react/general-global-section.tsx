@@ -6,8 +6,8 @@ import type { ToggleControlRenderModel } from './toggle-control';
 import { TranslationHelpView, type TranslationHelpRenderModel } from './translation-help';
 import { RemixIcon } from '../../shared/react/remix-icon';
 
-// The top of the General tab: help and feedback, the page's language and
-// the update notice.
+// The top of the General tab: help and feedback with the onboarding guide
+// after the channels, the page's language and the update notice.
 export interface GeneralGlobalSectionModel {
   // Null until the community links are known.
   feedback: FeedbackSupportRenderModel | null;
@@ -43,7 +43,17 @@ export function GeneralGlobalSection({
   return (
     <>
       <div id="_x_extension_feedback_support_2026_unique_">
-        {model.feedback ? <FeedbackSupportView {...model.feedback} /> : null}
+        {model.feedback ? (
+          <FeedbackSupportView
+            {...model.feedback}
+            actions={[{
+              iconName: 'ri-compass-3-line',
+              id: '_x_extension_open_onboarding_page_2026_unique_',
+              label: model.onboardingLabel,
+              onClick: handlers.onOpenOnboarding
+            }]}
+          />
+        ) : null}
       </div>
       <SettingDivider />
       <div className="_x_extension_setting_row_2024_unique_ _x_extension_section_header_2026_unique_">
@@ -58,15 +68,6 @@ export function GeneralGlobalSection({
           <span>{model.licenses.label}</span>
           <RemixIcon name="ri-external-link-line" />
         </a>
-        <button
-          className="_x_extension_shortcut_submit_2024_unique_ _x_extension_onboarding_guide_button_2026_unique_"
-          id="_x_extension_open_onboarding_page_2026_unique_"
-          onClick={handlers.onOpenOnboarding}
-          type="button"
-        >
-          <span>{model.onboardingLabel}</span>
-          <RemixIcon name="ri-external-link-line" />
-        </button>
       </div>
       <div className="_x_extension_setting_row_2024_unique_">
         <div>

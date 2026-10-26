@@ -14,7 +14,7 @@ import { SuggestionIcon } from './suggestion-icon';
 import { SuggestionUtilityAction } from './utility-action';
 import { isLocalUrlSuggestion, getActionLabel, getModifierAction } from './action-model';
 import { surfaceClass, setSurfaceStyle } from './surface-options';
-import { bindTextTooltip } from './highlight';
+import { bindRowTooltip } from './highlight';
 import { setIconEmphasis } from './action-styles';
 import { followSiteTheme } from './suggestion-row-theme';
 import { queryHtmlTag } from '../../../dom-lookup';
@@ -226,7 +226,7 @@ function OpenTabRowComponent({ runtime, tab, index, last, simpleMode }: OpenTabR
     }
     publishOpenTabElements(options, item, refs, tab, { index, iconIsFavicon, tabSuggestion, simpleMode });
     item._xThemeHost = options.getThemeHostForSuggestion(themeSuggestion);
-    bindTextTooltip(options, refs.title.current, titleText);
+    bindRowTooltip(options, item, { getElement: () => refs.title.current });
     return followSiteTheme(runtime, item, themeSuggestion, immediateTheme, !localFallback);
     // The refs are stable; the row republishes when the tab or its theme changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps

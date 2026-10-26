@@ -1,5 +1,7 @@
 // Opening a result: the modifier keys that pick the current, a new or a
-// background tab, and switching to an open tab instead.
+// background tab, and switching to an open tab instead. Results open in a
+// new tab, or in the current one when the overlay is set to and the tab is
+// not pinned; Option/Alt flips that.
 import * as NAVIGATION_DISPOSITION from '../../domain/navigation-disposition';
 import type { Disposition } from '../../domain/navigation-disposition';
 import type * as SuggestionActionModel from '../../domain/search/suggestion-action-model';
@@ -26,13 +28,15 @@ interface ResultActivationState {
   searchInput: HTMLInputElement | null;
   // Number keys open results at once, so Cmd and Ctrl keep their own use.
   numberShortcutInstantEnabled: boolean;
+  overlayOpenInCurrentTab: boolean;
+  currentTabPinned: boolean;
 }
 
 interface ResultActivationDeps {
   ensureOverlaySuggestionsView(): Pick<SuggestionsViewController,
     'setOpenInCurrentTabModifierActive' | 'setOpenSwitchInNewTabModifierActive' | 'setOpenInBackgroundTabModifierActive'>;
   SUGGESTION_ACTION_MODEL: Pick<typeof SuggestionActionModel,
-    'shouldOpenNewTabActionInCurrentTab' | 'shouldOpenSwitchActionInNewTab' | 'getSearchResultOpenDisposition'>;
+    'shouldOpenSwitchActionInNewTab' | 'getSearchResultOpenDisposition'>;
   removeOverlay(overlay: HTMLElement | null): void;
   recordSearchSuggestionSelectionFromSuggestion(suggestion: DisplayedSuggestion, query: string, surface: string): void;
   overlayState: ResultActivationState;
@@ -91,21 +95,6 @@ function createResultActivation(deps: ResultActivationDeps) {
     );
   }
 
-  function shouldUseCurrentTabForOpenNewTabAction(
-    suggestion: DisplayedSuggestion,
-    event: ActivationEvent | null,
-    item: ActivatedItem | null
-  ): boolean {
-    if (!event || !event.altKey) {
-      return false;
-    }
-    const action = item && item._xVisitButtonAction ? item._xVisitButtonAction : '';
-    return SUGGESTION_ACTION_MODEL.shouldOpenNewTabActionInCurrentTab(suggestion, {
-      action,
-      openInCurrentTab: true
-    });
-  }
-
   function shouldUseNewTabForSwitchAction(
     suggestion: DisplayedSuggestion,
     event: ActivationEvent | null,
@@ -121,15 +110,25 @@ function createResultActivation(deps: ResultActivationDeps) {
     });
   }
 
-  function shouldOpenSearchResultInBackgroundTab(event: ActivationEvent | null): boolean {
-    const config = {
+  // A pinned tab is kept: results meant for it open in a new tab.
+  function isCurrentTabDefault(): boolean {
+    return overlayState.overlayOpenInCurrentTab && !overlayState.currentTabPinned;
+  }
+
+  // Where a result opens for the keys and button of `event`.
+  function getSearchResultDisposition(event: ActivationEvent | null): Disposition {
+    return SUGGESTION_ACTION_MODEL.getSearchResultOpenDisposition({
       openInBackgroundTab: Boolean(event && (
         ((event.metaKey || event.ctrlKey) && !overlayState.numberShortcutInstantEnabled) ||
         NAVIGATION_DISPOSITION.isMiddleClick(event)
       )),
-      openInCurrentTab: Boolean(event && event.altKey)
-    };
-    return SUGGESTION_ACTION_MODEL.getSearchResultOpenDisposition(config) === 'backgroundTab';
+      openInCurrentTab: Boolean(event && event.altKey),
+      currentTabByDefault: isCurrentTabDefault()
+    });
+  }
+
+  function shouldOpenSearchResultInBackgroundTab(event: ActivationEvent | null): boolean {
+    return getSearchResultDisposition(event) === 'backgroundTab';
   }
 
   // Closes the panel after a result opened, unless it opened in the
@@ -155,19 +154,10 @@ function createResultActivation(deps: ResultActivationDeps) {
     return NAVIGATION_DISPOSITION.getDisposition(event, fallback);
   }
 
+  // For results that always open beside the current tab: Shift on a
+  // matched open tab, and aggregate searches.
   function getSearchResultNewTabDisposition(event: ActivationEvent | null): 'backgroundTab' | 'newTab' {
     return shouldOpenSearchResultInBackgroundTab(event) ? 'backgroundTab' : 'newTab';
-  }
-
-  function getSearchResultCreateDisposition(
-    suggestion: DisplayedSuggestion,
-    event: ActivationEvent | null,
-    item: ActivatedItem | null
-  ): Disposition {
-    if (shouldUseCurrentTabForOpenNewTabAction(suggestion, event, item)) {
-      return 'currentTab';
-    }
-    return getSearchResultNewTabDisposition(event);
   }
 
   // Switches to the tab a result is open in, or opens the result in a new
@@ -205,7 +195,8 @@ function createResultActivation(deps: ResultActivationDeps) {
     finishOverlayResultActivation,
     getOpenDisposition,
     getSearchResultNewTabDisposition,
-    getSearchResultCreateDisposition,
+    getSearchResultDisposition,
+    isCurrentTabDefault,
     openMatchedTabSuggestion
   };
 }

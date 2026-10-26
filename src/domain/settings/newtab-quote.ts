@@ -90,7 +90,6 @@ const customQuotes = defineSetting({
   key: '_x_extension_custom_quotes_2026_unique_',
   area: 'device',
   sync: 'webdav',
-  diagnostics: 'shape',
   schema: opaque()
 });
 

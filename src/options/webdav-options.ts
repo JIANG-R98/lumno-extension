@@ -275,6 +275,7 @@ const PREFERENCE_LABELS: ReadonlyArray<readonly [fragment: string, messageKey: s
   ['search_result_tab_position', 'settings_search_result_tab_position_title'],
   ['search_fuzzy_pinyin', 'settings_search_fuzzy_pinyin_title'],
   ['open_tabs_default_visible', 'settings_overlay_open_tabs_default_visible_title'],
+  ['overlay_open_in_current_tab', 'settings_overlay_open_in_current_tab_title'],
   ['fallback_hotkey', 'settings_shortcuts_title'],
   ['aggregate_search_auto_group', 'settings_aggregate_search_auto_group_title'],
   ['site_search', 'settings_tab_shortcuts'], ['aggregate_searches', 'settings_tab_shortcuts'],

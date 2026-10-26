@@ -6,6 +6,7 @@ import type { AggregateSearch } from '../../domain/search/aggregate-search-store
 import type { createSearchInputHistoryController } from '../../domain/search/search-input-history';
 import type * as SearchInputHistory from '../../domain/search/search-input-history';
 import type { DisplayedSuggestion } from '../../domain/search/suggestion-action-model';
+import type { SuggestionInputPreview } from '../../domain/search/suggestion-input-preview';
 import type { LocalSearchScope, SiteSearchProvider, SuggestionLike } from '../../domain/search/types';
 import type { ThemeMode } from '../../domain/settings/appearance';
 import * as LumnoMessaging from '../../platform/messaging';
@@ -26,7 +27,7 @@ interface PanelKeysState {
   suggestionsContainer: HTMLElement | null;
   inputModeController: Pick<InputModeController,
     'handleModeMenuTabFocusToggle' | 'shouldCompleteModeMenuDoubleTab' | 'shouldOpenModeMenuForActiveModeOnTab' |
-    'openModeMenu' | 'shouldOpenModeMenuOnDoubleTab' | 'shouldRemoveModeTagOnBackspace'> | null;
+    'openModeMenu' | 'shouldOpenModeMenuOnDoubleTab' | 'shouldRemoveModeTagOnBackspace' | 'closeModeMenu'> | null;
   inputHistoryController: Pick<ReturnType<typeof createSearchInputHistoryController>, 'move' | 'record'> | null;
   isApplyingSearchInputHistory: boolean;
   siteSearchState: InputModeProvider | null;
@@ -41,6 +42,8 @@ interface PanelKeysState {
   aggregateSearchesCache: AggregateSearch[] | null;
   currentSuggestions: OverlaySuggestion[];
   selectedIndex: number;
+  // The search suggestion the arrows show in the input.
+  suggestionInputPreview: SuggestionInputPreview;
   latestRawInputValue: string;
   latestOverlayQuery: string;
   overlayThemeMode: ThemeMode;
@@ -103,16 +106,11 @@ interface PanelKeysDeps {
   ): void;
   shouldOpenSearchResultInBackgroundTab(event: ActivationEvent | null): boolean;
   recordSearchSuggestionSelectionFromSuggestion(suggestion: DisplayedSuggestion, query: string, source: string): void;
-  getSearchResultCreateDisposition(
-    suggestion: DisplayedSuggestion,
-    event: ActivationEvent | null,
-    item: { _xVisitButtonAction?: string } | null
-  ): Disposition;
+  getSearchResultDisposition(event: ActivationEvent | null): Disposition;
   isSlashCommandInput(input: string): boolean;
   // Called with no rows: the list rebuilds from the typed command.
   updateSearchSuggestions(rows: never[], query: string): void;
   isAggregateSearchProvider(provider: Partial<SiteSearchProvider> | null): boolean;
-  getSearchResultNewTabDisposition(event: ActivationEvent | null): 'backgroundTab' | 'newTab';
   // The address a query leads straight to, or '' to search it.
   resolveQuickNavigation(query: string): Promise<string>;
   overlayState: PanelKeysState;
@@ -165,11 +163,10 @@ function createPanelKeys(deps: PanelKeysDeps) {
     openMatchedTabSuggestion,
     shouldOpenSearchResultInBackgroundTab,
     recordSearchSuggestionSelectionFromSuggestion,
-    getSearchResultCreateDisposition,
+    getSearchResultDisposition,
     isSlashCommandInput,
     updateSearchSuggestions,
     isAggregateSearchProvider,
-    getSearchResultNewTabDisposition,
     resolveQuickNavigation
   } = deps;
 
@@ -186,6 +183,14 @@ function createPanelKeys(deps: PanelKeysDeps) {
     if (overlayState.inputModeController &&
         typeof overlayState.inputModeController.handleModeMenuTabFocusToggle === 'function' &&
         overlayState.inputModeController.handleModeMenuTabFocusToggle(e)) {
+      return true;
+    }
+    // Tab takes the suggestion the arrows show as typed text.
+    if (!e.shiftKey && overlayState.suggestionInputPreview.commit()) {
+      e.preventDefault();
+      overlayState.latestRawInputValue = input.value;
+      overlayState.latestOverlayQuery = input.value.trim();
+      input.dispatchEvent(new Event('input', { bubbles: true }));
       return true;
     }
     if (overlayState.inputModeController &&
@@ -209,6 +214,14 @@ function createPanelKeys(deps: PanelKeysDeps) {
     }
     if (overlayState.siteSearchState || overlayState.localSearchScopeState || overlayState.openTabsSearchModeActive) {
       return false;
+    }
+    // On a page the arrows selected, Tab puts its address in the input to edit.
+    if (!e.shiftKey && overlayState.suggestionInputPreview.editAddress(input, getSelectedSuggestion())) {
+      e.preventDefault();
+      overlayState.latestRawInputValue = input.value;
+      overlayState.latestOverlayQuery = input.value.trim();
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
     }
     const rawValue = input.value;
     const rawTrigger = overlayState.latestRawInputValue || rawValue;
@@ -337,10 +350,32 @@ function createPanelKeys(deps: PanelKeysDeps) {
     if (!e.metaKey && !e.ctrlKey && !e.altKey) {
       e.stopPropagation();
     }
+    // An open scope menu closes first and leaves the scope as it is.
+    if (e.key === 'Escape' && overlayState.inputModeController &&
+        overlayState.inputModeController.closeModeMenu(false)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    // Then the text typed before the arrows showed a suggestion comes back.
+    if (e.key === 'Escape' && overlayState.suggestionInputPreview.restore(input, overlayState.latestRawInputValue)) {
+      e.preventDefault();
+      e.stopPropagation();
+      overlayState.selectedIndex = -1;
+      updateSelection();
+      return;
+    }
+    // Leaving a site search lists the query's ordinary results.
     if (e.key === 'Escape' && overlayState.siteSearchState) {
       e.preventDefault();
       e.stopPropagation();
       clearSiteSearch();
+      const fallbackQuery = input.value.trim();
+      if (fallbackQuery) {
+        requestOverlaySearchSuggestions(fallbackQuery);
+      } else {
+        clearSearchSuggestions();
+      }
       return;
     }
     if (e.key === 'Escape' && overlayState.localSearchScopeState) {
@@ -424,7 +459,8 @@ function createPanelKeys(deps: PanelKeysDeps) {
       return;
     }
     dismissAutocompletePreviewOnNonTabKey(e);
-    if (e.key !== 'Backspace' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    if (e.key !== 'Backspace' && !e.metaKey && !e.ctrlKey && !e.altKey &&
+        !overlayState.suggestionInputPreview.isActive()) {
       overlayState.latestRawInputValue = input.value;
       overlayState.latestOverlayQuery = input.value.trim();
     }
@@ -450,6 +486,19 @@ function createPanelKeys(deps: PanelKeysDeps) {
       return false;
     }
     return index === 0;
+  }
+
+  // The result row the arrows selected; null for none or an open tab.
+  function getSelectedSuggestion(): OverlaySuggestion | null {
+    const index = overlayState.selectedIndex;
+    const item = suggestionItems[index];
+    return item && item._xIsSearchSuggestion ? overlayState.currentSuggestions[index] || null : null;
+  }
+
+  // Shows the selected search suggestion in the input, or what was typed
+  // for any other row.
+  function previewSelectedSuggestion(input: HTMLInputElement): void {
+    overlayState.suggestionInputPreview.show(input, getSelectedSuggestion(), overlayState.latestRawInputValue);
   }
 
   function getSuggestionNavigationKey(event: KeyboardEvent): 'ArrowDown' | 'ArrowUp' | '' {
@@ -502,6 +551,7 @@ function createPanelKeys(deps: PanelKeysDeps) {
         didWrap = previousIndex === suggestionItems.length - 1 && overlayState.selectedIndex === 0;
       }
       updateSelection();
+      previewSelectedSuggestion(input);
       scrollSelectedSuggestionIntoView('down', didWrap);
       input.focus();
     } else if (suggestionNavigationKey === 'ArrowUp') {
@@ -531,11 +581,16 @@ function createPanelKeys(deps: PanelKeysDeps) {
         overlayState.selectedIndex = overlayState.selectedIndex - 1;
       }
       updateSelection();
+      previewSelectedSuggestion(input);
       scrollSelectedSuggestionIntoView('up', didWrap);
       input.focus();
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      const query = input.value.trim();
+      // A suggestion the arrows show opens as its row; the query stays what
+      // was typed.
+      const query = (overlayState.suggestionInputPreview.isActive()
+        ? overlayState.latestRawInputValue
+        : input.value).trim();
       if (query && overlayState.inputHistoryController) {
         overlayState.inputHistoryController.record(query);
       }
@@ -654,7 +709,8 @@ function createPanelKeys(deps: PanelKeysDeps) {
               LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
                 action: 'searchOrNavigate',
                 query: selectedSuggestion.searchQuery,
-                forceSearch: true
+                forceSearch: true,
+                disposition: getSearchResultDisposition(e)
               });
             }
             canKeepOverlayOpen = Boolean(selectedSuggestion.url);
@@ -664,7 +720,7 @@ function createPanelKeys(deps: PanelKeysDeps) {
             LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'createTab',
               url: selectedSuggestion.url || '',
-              disposition: getSearchResultCreateDisposition(selectedSuggestion, e, activeItem)
+              disposition: getSearchResultDisposition(e)
             });
             canKeepOverlayOpen = true;
           }
@@ -708,7 +764,7 @@ function createPanelKeys(deps: PanelKeysDeps) {
             LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'createTab',
               url: inlineSearch.url,
-              disposition: getSearchResultNewTabDisposition(e)
+              disposition: getSearchResultDisposition(e)
             });
           } else {
             return;
@@ -725,7 +781,7 @@ function createPanelKeys(deps: PanelKeysDeps) {
           LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
             action: 'createTab',
             url: overlayState.autocompleteState.url,
-            disposition: getSearchResultNewTabDisposition(e)
+            disposition: getSearchResultDisposition(e)
           });
           finishOverlayResultActivation(e, true);
           return;
@@ -735,19 +791,14 @@ function createPanelKeys(deps: PanelKeysDeps) {
             LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'createTab',
               url: targetUrl,
-              disposition: getSearchResultNewTabDisposition(e)
-            });
-          } else if (shouldOpenSearchResultInBackgroundTab(e)) {
-            LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
-              action: 'searchOrNavigate',
-              query: query,
-              disposition: 'backgroundTab'
+              disposition: getSearchResultDisposition(e)
             });
           } else {
             // Handle search or URL navigation
             LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
               action: 'searchOrNavigate',
-              query: query
+              query: query,
+              disposition: getSearchResultDisposition(e)
             });
           }
           finishOverlayResultActivation(e, true);

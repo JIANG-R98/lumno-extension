@@ -5,6 +5,7 @@ import { SEARCH_POLICY } from './search-policy';
 import { findProviderForSiteSearchSuggestion } from './site-search-matching';
 import { isKeywordSearchSuggestion, isSearchActionSuggestion, isSearchEngineSuggestion } from './engine-suggestions';
 import type { AutocompleteCandidate, PrimaryHighlightReason, RankSlateOptions, RankedSlate } from './slate-types';
+import { compactSearchQuery } from './text-normalize';
 
 // The rows picked so far, up to the limit.
 interface SlatePicks<T> {
@@ -37,9 +38,10 @@ function readSlateLimit(options: { limit?: number } | null | undefined): number 
 
 // Local rows fill the rest, with history and bookmarks each held to half
 // of it; the rows over that cap come back for whatever room is left.
-function pickLocalRows<T extends SuggestionLike>(picks: SlatePicks<T>, localSuggestions: readonly T[], localSlotTarget: number): T[] {
+// `localSourceCounts` holds the local rows already picked, by source.
+function pickLocalRows<T extends SuggestionLike>(picks: SlatePicks<T>, localSuggestions: readonly T[], localSlotTarget: number,
+  localSourceCounts: Map<string, number> = new Map()): T[] {
   const localSourceCap = Math.max(1, Math.ceil(localSlotTarget / 2));
-  const localSourceCounts = new Map<string, number>();
   const deferred: T[] = [];
   for (let i = 0; i < localSuggestions.length && picks.selected.length < picks.limit; i += 1) {
     const suggestion = localSuggestions[i];
@@ -54,23 +56,38 @@ function pickLocalRows<T extends SuggestionLike>(picks: SlatePicks<T>, localSugg
   return deferred;
 }
 
-// Search first: the search row and engine suggestions take about 60% of the
-// slate, local rows the rest.
+// A bookmark, history or top site row whose title is the query itself,
+// spaces and case aside: what the person most likely meant to open.
+function isExactLocalTitleMatch(suggestion: SuggestionLike, compactQuery: string): boolean {
+  return Boolean(compactQuery) &&
+    (suggestion.type === 'bookmark' || suggestion.type === 'history' || suggestion.type === 'topSite') &&
+    compactSearchQuery(suggestion.title) === compactQuery;
+}
+
+// Search first: the search row, then a local row titled exactly as typed,
+// then engine suggestions to about 60% of the slate and local rows the rest.
 function composeSearchFirstSuggestionSlate<T extends SuggestionLike>(
   list: ReadonlyArray<T | null | undefined> | null | undefined,
-  options?: { limit?: number } | null
+  options?: { limit?: number; query?: string } | null
 ): T[] {
   const suggestions: T[] = Array.isArray(list) ? list.filter((item): item is T => Boolean(item)) : [];
   const limit = readSlateLimit(options);
   const searchSlotTarget = Math.ceil(limit * 0.6);
   const searchActions = suggestions.filter(isSearchActionSuggestion);
   const engineSuggestions = suggestions.filter(isSearchEngineSuggestion);
+  const localSuggestions = suggestions.filter((suggestion) => !isKeywordSearchSuggestion(suggestion));
+  const compactQuery = compactSearchQuery(options && typeof options === 'object' ? options.query : '');
+  const exactLocalMatch = localSuggestions.find((suggestion) => isExactLocalTitleMatch(suggestion, compactQuery));
   const picks: SlatePicks<T> = { selected: [], picked: new Set(), limit };
+  const localSourceCounts = new Map<string, number>();
 
   pickSlateRow(picks, searchActions[0]);
-  pickSlateRowsUntil(picks, engineSuggestions, searchSlotTarget);
-  const deferredLocal = pickLocalRows(picks, suggestions.filter((suggestion) => !isKeywordSearchSuggestion(suggestion)),
-    Math.max(0, limit - searchSlotTarget));
+  // It counts as a local row, so the search rows keep their share.
+  if (exactLocalMatch && pickSlateRow(picks, exactLocalMatch) && exactLocalMatch.type !== 'topSite') {
+    localSourceCounts.set(String(exactLocalMatch.type), 1);
+  }
+  pickSlateRowsUntil(picks, engineSuggestions, searchSlotTarget + (exactLocalMatch ? 1 : 0));
+  const deferredLocal = pickLocalRows(picks, localSuggestions, Math.max(0, limit - searchSlotTarget), localSourceCounts);
   pickSlateRowsUntil(picks, engineSuggestions, limit);
   pickSlateRowsUntil(picks, deferredLocal, limit);
   pickSlateRowsUntil(picks, searchActions.slice(1), limit);

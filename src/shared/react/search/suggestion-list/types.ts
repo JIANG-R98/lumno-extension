@@ -85,9 +85,17 @@ interface SuggestionActionModel {
   getSuggestionStructureIdentity?: (suggestion: Suggestion) => string;
 }
 
+// The pointer or focus event a cursor tooltip shows or moves for.
+interface CursorTooltipInput {
+  target?: EventTarget | null;
+}
+
 interface CursorTooltipOptions {
   maxWidth: number;
-  shouldShow: (target: HTMLElement) => boolean;
+  shouldShow: (
+    target: HTMLElement,
+    inputEvent: CursorTooltipInput | null
+  ) => boolean;
   deferHideVisibility: boolean;
   preserveVisibleOnTargetSwitch: boolean;
   renderContent?: (
@@ -281,7 +289,10 @@ export interface SuggestionsViewOptions {
   hideTopActionTooltip?: () => void;
   bindCursorTooltip?: (
     target: HTMLElement,
-    getText: () => string,
+    getText: (
+      target: HTMLElement,
+      inputEvent?: CursorTooltipInput | null
+    ) => string,
     options: CursorTooltipOptions
   ) => unknown;
   // Where a help center result's passage card goes; the document body when left out.

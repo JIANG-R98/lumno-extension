@@ -3,6 +3,7 @@
 // object to every module as `pageState`; properties whose first value
 // depends on settings or other modules are set where that value exists.
 import * as SETTINGS from '../domain/settings';
+import * as SUGGESTION_INPUT_PREVIEW from '../domain/search/suggestion-input-preview';
 import type { AppearanceModesState } from './appearance-modes';
 import type { BookmarkActionsState } from './bookmarks/bookmark-actions';
 import type { BookmarkCascadeActionsState } from './bookmarks/bookmark-cascade-actions';
@@ -149,8 +150,10 @@ function createPageState(): NewtabPageState {
     modeBadge: null,
     inputModeController: null,
     selectedIndex: -1,
+    suggestionInputPreview: SUGGESTION_INPUT_PREVIEW.createSuggestionInputPreview(),
     currentSuggestions: [],
     lastSuggestionResponse: [],
+    lastEngineSuggestionResponse: [],
     latestQuery: '',
     latestRawQuery: '',
     siteSearchTriggerState: null,
@@ -191,6 +194,7 @@ function createPageState(): NewtabPageState {
     quoteRuntime: null,
     sectionPanelSettings: null,
     updateNoticeController: null,
+    graphicsNoticeController: null,
     engagementNoticeController: null,
     webdavFeatureHintController: null,
     helpCenterAskHintController: null,

@@ -266,9 +266,6 @@
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "快捷鍵沒反應怎麼辦？"
   },
-  "settings_feedback_support_channels_title": {
-    "message": "交流與回饋"
-  },
   "settings_feedback_support_review_action": {
     "message": "為 Lumno 評分"
   },
@@ -280,21 +277,6 @@
   },
   "settings_feedback_support_contact_author_action": {
     "message": "聯絡作者"
-  },
-  "settings_diagnostics_title": {
-    "message": "診斷資訊"
-  },
-  "settings_diagnostics_desc": {
-    "message": "匯出版本、設定和最近的錯誤記錄，可附在回報裡。捷徑、網址等個人內容不會寫入檔案。"
-  },
-  "settings_diagnostics_action": {
-    "message": "匯出診斷資訊"
-  },
-  "settings_diagnostics_export_done": {
-    "message": "已匯出診斷資訊"
-  },
-  "settings_diagnostics_export_failed": {
-    "message": "診斷資訊匯出失敗"
   },
   "settings_onboarding_tutorial_action": {
     "message": "新手導覽"
@@ -385,6 +367,15 @@
   },
   "settings_overlay_open_tabs_default_visible_title": {
     "message": "在網頁叫出時，預設顯示所有已開啟分頁"
+  },
+  "settings_overlay_open_in_current_tab_title": {
+    "message": "在網頁叫出時，結果在目前分頁開啟"
+  },
+  "settings_overlay_open_in_current_tab_desc": {
+    "message": "關閉後在目前分頁開啟（固定分頁除外），按住 Option/Alt 可暫時改用另一種"
+  },
+  "settings_overlay_open_tabs_default_title": {
+    "message": "預設顯示所有已開啟分頁"
   },
   "settings_favicon_enhanced_fetch_title": {
     "message": "增強圖示與主題色取得"
@@ -1078,6 +1069,18 @@
   },
   "engagement_notice_close": {
     "message": "關閉評分與社群提示"
+  },
+  "graphics_notice_badge": {
+    "message": "圖形加速未開啟"
+  },
+  "graphics_notice_text": {
+    "message": "開啟後頁面更流暢，需重新啟動瀏覽器才會生效"
+  },
+  "graphics_notice_link": {
+    "message": "前往開啟"
+  },
+  "graphics_notice_close": {
+    "message": "關閉圖形加速提示"
   },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "顯示書籤選單安全三角"
@@ -3456,10 +3459,10 @@
     "message": "釘選劇集或小說後，看到下一集、下一章時卡片會自動跟上，下次點開直接接著看"
   },
   "settings_newtab_open_in_new_tab_title": {
-    "message": "在新分頁開啟"
+    "message": "點擊後在新分頁開啟"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "開啟的項目點擊後會新開分頁並切換過去，關閉時在目前頁面開啟。按住 Command/Ctrl 點擊或用滑鼠中鍵點擊，一律在背景開啟。"
+    "message": "不勾選的在目前分頁開啟，按住 Option/Alt 可暫時改用另一種"
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "搜尋結果"
@@ -3621,7 +3624,7 @@
     "message": "搜尋面板順序"
   },
   "settings_search_source_group_order_desc": {
-    "message": "拖曳標籤調整分組順序，組內順序在下方清單中調整。按 Ctrl/⌘ + Z 復原，Shift + Ctrl/⌘ + Z 重做。"
+    "message": "拖曳調整 Tab 搜尋面板的分組順序，不影響結果排序。Ctrl/⌘ + Z 復原。"
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "按 Alt + 左右方向鍵調整位置"

@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { type SuggestionElement } from './suggestions';
+import type { SuggestionElement } from './suggestions';
 import { getTag } from '../../../../tests/react/dom';
 import { queryHtmlElement } from '../../dom-lookup';
 import { createView, destroyViews, render } from '../../../../tests/react/suggestions';

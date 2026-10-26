@@ -73,7 +73,8 @@ describe('Options feedback support', () => {
     tiles.forEach((tile) => {
       expect(tile.firstElementChild?.classList.contains('ri-icon')).toBe(true);
       expect(tile.querySelector('span')?.textContent).toBeTruthy();
-      expect(tile.lastElementChild?.classList.contains('ri-external-link-line')).toBe(true);
+      // The whole tile is the link; no external-link mark.
+      expect(tile.querySelector('.ri-external-link-line')).toBeNull();
     });
   });
 
@@ -87,7 +88,7 @@ describe('Options feedback support', () => {
     expect(community?.rel).toContain('noopener');
   });
 
-  it('puts the help center first as its own row with a Visit Help Center link', () => {
+  it('puts the help center first as a card that links to it', () => {
     const { controller, host } = createFixture();
     act(() => controller.render({
       ...model,
@@ -102,30 +103,42 @@ describe('Options feedback support', () => {
       }
     }));
 
-    const rows = host.querySelectorAll('._x_extension_feedback_support_row_2026_unique_');
-    expect(rows).toHaveLength(1);
-    expect(rows[0].nextElementSibling?.tagName).toBe('NAV');
-    expect(rows[0].querySelector('._x_extension_setting_title_2024_unique_')?.textContent).toBe('帮助中心');
-    const link = queryHtmlTag(rows[0], '[data-feedback-support="help-center"]', 'a');
+    const card = host.querySelector('._x_extension_feedback_support_help_card_2026_unique_');
+    // The card's row and the tiles share one block, with no row title between them.
+    expect(card?.parentElement?.nextElementSibling?.tagName).toBe('NAV');
+    expect(host.querySelector('._x_extension_setting_title_2024_unique_')).toBeNull();
+    const link = card ? queryHtmlTag(card, '[data-feedback-support="help-center"]', 'a') : null;
     expect(link?.href).toBe('https://lumno.kubai.design/help/what-is-lumno/');
     expect(link?.target).toBe('_blank');
-    expect(link?.textContent).toBe('访问帮助中心');
-    expect(link?.querySelector('.ri-external-link-line')).not.toBeNull();
+    expect(link?.textContent).toBe('帮助中心');
+    expect(link?.getAttribute('aria-label')).toBe('访问帮助中心');
+    expect(card?.querySelector('._x_extension_feedback_support_help_desc_2026_unique_')?.textContent)
+      .toBe('不清楚某个功能怎么用？每个功能的用法都写在这里');
+    expect(card?.querySelector('.ri-external-link-line')).toBeNull();
     // Without the Help Center site search there is nothing to demo.
-    expect(rows[0].querySelector('[data-feedback-support="help-center-ask"]')).toBeNull();
+    expect(card?.querySelector('[data-feedback-support="help-center-ask"]')).toBeNull();
   });
 
-  it('titles the channel tiles as their own row under the help center', () => {
-    const { controller, host } = createFixture();
+  it('draws channel cards beside the help center and action tiles after the channels', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const onClick = vi.fn();
+    const controller = createReactRootController(host, (value: FeedbackSupportRenderModel) => (
+      <FeedbackSupportView
+        {...value}
+        actions={[{ iconName: 'ri-compass-3-line', label: '新手引导', onClick }]}
+      />
+    ));
+    controllers.push(controller);
+    const [community, ...channels] = model.items;
     act(() => controller.render({
       ...model,
-      channels: {
-        title: '交流与反馈',
-        titleKey: 'settings_feedback_support_channels_title'
-      },
+      cards: [{
+        ...community,
+        qr: { alt: '二维码', closeLabel: '关闭', imageUrl: 'https://example.com/qrcode.webp', title: '反馈群' }
+      }],
+      items: channels,
       help: {
-        description: '每个功能的用法和常见问题都在这里。',
-        descriptionKey: 'settings_help_center_desc',
         href: 'https://lumno.kubai.design/help/what-is-lumno/',
         label: '访问帮助中心',
         labelKey: 'settings_help_center_action',
@@ -134,15 +147,23 @@ describe('Options feedback support', () => {
       }
     }));
 
-    const rows = host.querySelectorAll('._x_extension_feedback_support_row_2026_unique_');
-    expect(rows).toHaveLength(2);
-    expect(rows[1].querySelector('._x_extension_setting_title_2024_unique_')?.textContent).toBe('交流与反馈');
-    expect(rows[1].querySelector('._x_extension_setting_desc_2024_unique_')).toBeNull();
-    expect(rows[1].querySelector('a, button')).toBeNull();
-    expect(rows[1].nextElementSibling?.tagName).toBe('NAV');
-
-    act(() => controller.render({ ...model, items: [], channels: { title: 'x', titleKey: '' } }));
-    expect(host.querySelector('._x_extension_feedback_support_row_2026_unique_')).toBeNull();
+    const cards = host.querySelector('._x_extension_feedback_support_cards_2026_unique_');
+    // Both rows take one column per tile, so the card beside the Help Center lines up with the last tile.
+    expect(queryHtmlElement(host, '._x_extension_feedback_support_cards_2026_unique_')?.style
+      .getPropertyValue('--feedback-support-columns')).toBe('4');
+    const row = cards?.firstElementChild;
+    expect(row?.classList.contains('_x_extension_feedback_support_help_row_2026_unique_')).toBe(true);
+    expect(row?.firstElementChild?.querySelector('[data-feedback-support="help-center"]')).not.toBeNull();
+    const group = row?.lastElementChild?.querySelector('[data-feedback-support="community"]');
+    expect(group?.classList.contains('_x_extension_feedback_support_help_card_2026_unique_')).toBe(true);
+    expect(group?.getAttribute('aria-haspopup')).toBe('dialog');
+    const nav = host.querySelector('nav._x_extension_feedback_support_links_2026_unique_');
+    expect(nav?.children).toHaveLength(4);
+    const guide = nav ? queryHtmlTag(nav, ':scope > button:last-child', 'button') : null;
+    expect(guide?.classList.contains('_x_extension_feedback_support_link_2026_unique_')).toBe(true);
+    expect(guide?.textContent).toBe('新手引导');
+    act(() => guide?.click());
+    expect(onClick).toHaveBeenCalledTimes(1);
   });
 
   it('plays a demo of asking the help center from the search box on hover or focus', () => {
@@ -173,10 +194,10 @@ describe('Options feedback support', () => {
       }
     }));
 
-    const row = host.querySelector('._x_extension_feedback_support_row_2026_unique_');
+    const card = host.querySelector('._x_extension_feedback_support_help_card_2026_unique_');
     // The demo hangs off words in the description, not a button beside the title or the link.
-    expect(row?.querySelector('._x_extension_setting_title_2024_unique_ button')).toBeNull();
-    const description = row?.querySelector('._x_extension_setting_desc_2024_unique_');
+    expect(card?.querySelector('[data-feedback-support="help-center"] button')).toBeNull();
+    const description = card?.querySelector('._x_extension_feedback_support_help_desc_2026_unique_');
     // The description mixes copy and markup, so the page-wide i18n pass must leave it alone.
     expect(description?.hasAttribute('data-i18n')).toBe(false);
     const trigger = (description ? queryHtmlTag(description, 'button[data-feedback-support="help-center-ask"]', 'button') : null);
@@ -261,7 +282,7 @@ describe('Options feedback support', () => {
       }
     }));
 
-    const description = host.querySelector('._x_extension_setting_desc_2024_unique_');
+    const description = host.querySelector('._x_extension_feedback_support_help_desc_2026_unique_');
     expect(description?.firstChild?.textContent).toBe('Feature guides.');
     expect(description?.querySelector('[data-feedback-support="help-center-ask"]')?.textContent)
       .toBe('ask from the search box');
@@ -322,49 +343,10 @@ describe('Options feedback support', () => {
         : item)
     }));
 
-    expect(host.querySelector('h2')?.textContent).toBe('Feedback & Support');
+    // The heading has no visible title; it names the section.
+    expect(host.querySelector('h2')).toBeNull();
+    expect(host.querySelector('section')?.getAttribute('aria-label')).toBe('Feedback & Support');
     expect(host.querySelector('[data-feedback-support="community"]')?.textContent)
       .toContain('加入反馈群（新）');
-  });
-
-  it('ends with the diagnostics export, busy until the export settles', async () => {
-    let finishExport = () => {};
-    const onExport = vi.fn(() => new Promise<void>((resolve) => { finishExport = resolve; }));
-    const { controller, host } = createFixture();
-    act(() => controller.render({
-      ...model,
-      diagnostics: {
-        description: '导出版本、设置和最近的错误记录，可附在反馈里。',
-        descriptionKey: 'settings_diagnostics_desc',
-        label: '导出诊断信息',
-        labelKey: 'settings_diagnostics_action',
-        onExport,
-        title: '诊断信息',
-        titleKey: 'settings_diagnostics_title'
-      }
-    }));
-
-    const rows = host.querySelectorAll('._x_extension_feedback_support_row_2026_unique_');
-    const row = rows[rows.length - 1];
-    expect(row?.querySelector('[data-i18n="settings_diagnostics_title"]')?.textContent).toBe('诊断信息');
-    const button = (row ? queryHtmlTag(row, 'button[data-feedback-support="diagnostics"]', 'button') : null);
-    expect(button?.type).toBe('button');
-    expect(button?.textContent).toBe('导出诊断信息');
-
-    act(() => button?.click());
-    act(() => button?.click());
-    expect(onExport).toHaveBeenCalledTimes(1);
-    expect(button?.disabled).toBe(true);
-    expect(button?.getAttribute('aria-busy')).toBe('true');
-
-    await act(async () => finishExport());
-    expect(button?.disabled).toBe(false);
-    expect(button?.hasAttribute('aria-busy')).toBe(false);
-  });
-
-  it('leaves the diagnostics row out when the page offers no export', () => {
-    const { controller, host } = createFixture();
-    act(() => controller.render(model));
-    expect(host.querySelector('[data-feedback-support="diagnostics"]')).toBeNull();
   });
 });

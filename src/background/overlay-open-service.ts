@@ -236,6 +236,7 @@ function buildOverlayContext(
     prioritizeCurrentPageMatch: source === 'page-hotkey-prefill',
     currentTabId: activeTab.id,
     currentTabUrl: getResolvedTabUrl(activeTab),
+    currentTabPinned: activeTab.pinned === true,
     openedAt: attempt.startedAt,
     documentPipEnabled: isDocumentPipEnabled(),
     siteSearchProviders: Array.isArray(siteSearchCache) ? siteSearchCache : [],

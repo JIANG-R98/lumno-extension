@@ -114,7 +114,6 @@ const siteSearchCustom = defineSetting({
   key: '_x_extension_site_search_custom_2024_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 
@@ -122,7 +121,6 @@ const siteSearchDisabled = defineSetting({
   key: '_x_extension_site_search_disabled_2024_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 
@@ -131,7 +129,6 @@ const aggregateSearches = defineSetting({
   key: '_x_extension_aggregate_searches_2026_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 
@@ -150,7 +147,6 @@ const searchSourceOrder = defineSetting({
   key: '_x_extension_search_source_order_2026_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 
@@ -160,7 +156,6 @@ const searchBlacklist = defineSetting({
   key: '_x_extension_search_blacklist_2026_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 
@@ -168,7 +163,6 @@ const faviconRequestBlacklist = defineSetting({
   key: '_x_extension_favicon_request_blacklist_2026_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 

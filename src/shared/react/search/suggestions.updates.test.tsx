@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type Suggestion } from './suggestions';
+import type { Suggestion } from './suggestions';
 import { createView, destroyViews, render } from '../../../../tests/react/suggestions';
 
 afterEach(destroyViews);
@@ -42,6 +42,29 @@ describe('Suggestion rows: updates, labels and commands', () => {
     expect(items[1]).toBe(second);
     expect(items[1].dataset.last).toBe('false');
     expect(items[2].dataset.last).toBe('true');
+  });
+
+  it('binds one tooltip to the whole row for its title and address', () => {
+    const bindCursorTooltip = vi.fn();
+    const { view, items } = createView({ bindCursorTooltip });
+    render(
+      view,
+      [
+        {
+          type: 'history',
+          title: 'Example result',
+          url: 'https://example.com/result'
+        }
+      ],
+      {
+        query: 'ex',
+        updateKind: 'structure'
+      }
+    );
+
+    const row = items[0];
+    expect(bindCursorTooltip).toHaveBeenCalledTimes(1);
+    expect(bindCursorTooltip.mock.calls[0][0]).toBe(row);
   });
 
   it('updates only the matching mark when result content is unchanged', () => {

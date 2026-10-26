@@ -28,7 +28,6 @@ const pinnedRecentSites = defineSetting({
   key: '_x_extension_newtab_pinned_recent_sites_2026_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 
@@ -36,7 +35,6 @@ const hiddenRecentSites = defineSetting({
   key: '_x_extension_newtab_hidden_recent_sites_2026_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 

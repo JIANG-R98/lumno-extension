@@ -84,6 +84,15 @@ const overlayOpenTabsDefaultVisible = defineSetting({
   schema: flag(true)
 });
 
+// Results of the webpage search bar open in the current tab instead of a
+// new one.
+const overlayOpenInCurrentTab = defineSetting({
+  key: '_x_extension_overlay_open_in_current_tab_2026_unique_',
+  area: 'preferences',
+  sync: 'browser',
+  schema: flag(false)
+});
+
 // Whether opening a result switches to its open tab first. Older versions
 // stored the mode names.
 const overlayTabPriority = defineSetting({
@@ -205,6 +214,7 @@ export {
   overlayFontFallback,
   overlayFontFamily,
   overlayFontLabels,
+  overlayOpenInCurrentTab,
   overlayOpenTabsDefaultVisible,
   overlayPageThemeAdaptationEnabled,
   overlaySizeMode,

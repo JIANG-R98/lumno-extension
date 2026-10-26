@@ -14,6 +14,7 @@ import * as LumnoMessaging from '../../platform/messaging';
 import type { SuggestionsViewController } from '../../shared/react/search/suggestion-list/types';
 import type { InputModeProvider } from '../../shared/search/input-mode/types';
 import type { OverlaySettings } from '../overlay-settings';
+import { releaseSuggestionsHeight } from '../../shared/search/suggestions-height-layout';
 import type { AutocompleteRow } from './autocomplete';
 import type { RemoteMixState } from './remote-suggestions';
 import type { CommandSuggestion, SlashCommand } from './slash-commands';
@@ -553,7 +554,8 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
           !siteSearchQueryModeActive &&
           !hasDirectUrlSuggestion) {
         allSuggestions = SearchSuggestionSlate.composeSearchFirstSuggestionSlate(allSuggestions, {
-          limit: overlayState.overlaySearchResultDisplayLimit
+          limit: overlayState.overlaySearchResultDisplayLimit,
+          query
         });
       }
       const keywordSuggestionState = getKeywordSearchSuggestionState(allSuggestions);
@@ -743,6 +745,11 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
         syncSuggestionLastState();
         updateSelection();
       }
+      // Rows shown while the search engine's suggestions are pending keep
+      // the list's height; any other answer lets the list take its own.
+      if (!remoteMixState || finalRemoteMix) {
+        releaseSuggestionsHeight(container, window);
+      }
       commitSuggestionsNaturalHeightAfterRender();
       if (updateKind === 'structure') {
         overlayState.selectedIndex = -1;
@@ -751,6 +758,7 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
   }
   function clearSearchSuggestions(): void {
     cancelPendingOverlaySuggestionRequests();
+    releaseSuggestionsHeight(overlayState.suggestionsContainer, window);
     overlayState.inlineSearchState = null;
     overlayState.siteSearchTriggerState = null;
     overlayState.localSearchScopeTriggerState = null;

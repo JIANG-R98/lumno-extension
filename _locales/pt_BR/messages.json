@@ -266,9 +266,6 @@
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Mudar o ícone de um atalho"
   },
-  "settings_feedback_support_channels_title": {
-    "message": "Contato"
-  },
   "settings_feedback_support_review_action": {
     "message": "Avaliar o Lumno"
   },
@@ -280,21 +277,6 @@
   },
   "settings_feedback_support_contact_author_action": {
     "message": "Falar com o autor"
-  },
-  "settings_diagnostics_title": {
-    "message": "Diagnóstico"
-  },
-  "settings_diagnostics_desc": {
-    "message": "Exporte a versão, as configurações e os erros recentes para anexar a um relato. Atalhos, endereços da web e outros conteúdos pessoais ficam fora do arquivo."
-  },
-  "settings_diagnostics_action": {
-    "message": "Exportar diagnóstico"
-  },
-  "settings_diagnostics_export_done": {
-    "message": "Diagnóstico exportado"
-  },
-  "settings_diagnostics_export_failed": {
-    "message": "Não foi possível exportar o diagnóstico"
   },
   "settings_onboarding_tutorial_action": {
     "message": "Tour de boas-vindas"
@@ -385,6 +367,15 @@
   },
   "settings_overlay_open_tabs_default_visible_title": {
     "message": "Mostrar todas as guias abertas por padrão ao abrir o Lumno em uma página da Web"
+  },
+  "settings_overlay_open_in_current_tab_title": {
+    "message": "Abrir resultados na guia atual ao abrir o Lumno em uma página da Web"
+  },
+  "settings_overlay_open_in_current_tab_desc": {
+    "message": "Desativado, abre na guia atual, exceto se estiver fixada. Segure Option/Alt para usar a outra opção."
+  },
+  "settings_overlay_open_tabs_default_title": {
+    "message": "Mostrar todas as guias abertas por padrão"
   },
   "settings_favicon_enhanced_fetch_title": {
     "message": "Busca avançada de ícones e cores de tema"
@@ -1078,6 +1069,18 @@
   },
   "engagement_notice_close": {
     "message": "Dispensar convite para avaliar e participar da comunidade"
+  },
+  "graphics_notice_badge": {
+    "message": "A aceleração de gráficos está desativada"
+  },
+  "graphics_notice_text": {
+    "message": "Ative para páginas mais fluidas; é preciso reiniciar o navegador"
+  },
+  "graphics_notice_link": {
+    "message": "Ativar"
+  },
+  "graphics_notice_close": {
+    "message": "Fechar dica de aceleração de gráficos"
   },
   "newtab_bookmark_cascade_debug_enable": {
     "message": "Mostrar triângulo de segurança do menu de favoritos"
@@ -3456,10 +3459,10 @@
     "message": "Fixe uma série ou um romance e o cartão acompanha você até o próximo episódio ou capítulo, abrindo onde você parou"
   },
   "settings_newtab_open_in_new_tab_title": {
-    "message": "Abrir em uma nova guia"
+    "message": "Abrir em nova guia ao clicar"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Os itens ativados abrem em uma nova guia e mudam para ela; os desativados abrem na guia atual. Command/Ctrl + clique ou clique do meio sempre abre em segundo plano."
+    "message": "Desmarcado, abre na guia atual. Segure Option/Alt para usar a outra opção."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Resultados de pesquisa"
@@ -3621,7 +3624,7 @@
     "message": "Ordem do painel de pesquisa"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Arraste as etiquetas para reordenar os grupos e as linhas abaixo para ordenar dentro de cada grupo. Pressione Ctrl/⌘ + Z para desfazer e Shift + Ctrl/⌘ + Z para refazer."
+    "message": "Arraste para reordenar os grupos do painel do Tab, sem mudar a ordem dos resultados. Ctrl/⌘ + Z para desfazer."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Pressione Alt com a seta para a esquerda ou para a direita para mover"

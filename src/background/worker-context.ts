@@ -4,7 +4,6 @@
 //
 // It imports no background service, so every service may use its bindings
 // while loading, unlike the bindings background.ts itself defines.
-import { createDiagnosticsLog } from '../platform/diagnostics-log';
 import type { StorageAreaLike } from '../domain/storage-port';
 import type { RestrictedAction } from '../domain/settings/overlay-panel';
 import { restrictedAction, restrictedActionAutoBrowserSettingDone } from '../domain/settings/overlay-panel';
@@ -41,13 +40,6 @@ const storageArea: StorageAreaFacade = providerStorageRuntime.area;
 const localStorageArea: StorageAreaLike = chrome.storage && chrome.storage.local
   ? chrome.storage.local
   : storageArea;
-
-// Recent failures for the diagnostics export; local storage only, so the log
-// never syncs.
-const diagnosticsLog = createDiagnosticsLog({
-  chromeApi: chrome,
-  area: chrome.storage && chrome.storage.local ? chrome.storage.local : null
-});
 
 // Whether a storage.onChanged area name is the one settings live in.
 function isPrimaryStorageAreaName(areaName: unknown): boolean {
@@ -137,12 +129,10 @@ function ignoreExpectedChromeError(): void {
 }
 
 // Rejection handler for work that is not expected to fail (storage writes,
-// startup restores). Failures stay non-fatal but leave a trace with context,
-// in the console and in the diagnostics log.
+// startup restores). Failures stay non-fatal but leave a trace with context.
 function warnBackgroundFailure(context: string): (error: unknown) => void {
   return (error) => {
     console.warn(`[Lumno] ${context}`, error);
-    diagnosticsLog.record(context, error);
   };
 }
 
@@ -251,7 +241,6 @@ export {
   SHOW_TAB_SWITCHER_COMMAND_NAME,
   SHOW_TAB_SWITCHER_REVERSE_COMMAND_NAME,
   areBackgroundSettingsLoaded,
-  diagnosticsLog,
   documentPipEnabledReady,
   getImportScripts,
   getRestrictedAction,

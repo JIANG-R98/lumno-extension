@@ -1047,6 +1047,10 @@ function createLayoutController(layoutOptions?: LayoutControllerOptions) {
     if (!suggestionsContainer) {
       return;
     }
+    if (!shouldShow) {
+      // A hidden list lets go of a height held for pending suggestions.
+      SUGGESTIONS_HEIGHT_LAYOUT.releaseSuggestionsHeight(suggestionsContainer, windowObj);
+    }
     setSuggestionsOpenState(shouldShow);
     setBooleanAttribute(suggestionsContainer, visibleAttribute, shouldShow);
     setBooleanAttribute(suggestionsSurface, visibleAttribute, shouldShow);

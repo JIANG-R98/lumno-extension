@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type Suggestion, type SuggestionElement } from './suggestions';
+import type { Suggestion, SuggestionElement } from './suggestions';
 import { expectTag, getElements, getTag, getTags, required } from '../../../../tests/react/dom';
 import { createView, destroyViews, render } from '../../../../tests/react/suggestions';
 

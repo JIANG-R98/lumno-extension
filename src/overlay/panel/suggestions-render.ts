@@ -3,7 +3,9 @@
 // state and the open tabs list.
 import type { OverlayTab, WebAppearanceMode } from '../../domain/messages';
 import type { Disposition } from '../../domain/navigation-disposition';
+import * as SuggestionActionModel from '../../domain/search/suggestion-action-model';
 import type { DisplayedSuggestion } from '../../domain/search/suggestion-action-model';
+import type { SuggestionInputPreview } from '../../domain/search/suggestion-input-preview';
 import type { LocalSearchScope, SiteSearchProvider } from '../../domain/search/types';
 import * as LumnoMessaging from '../../platform/messaging';
 import type {
@@ -45,6 +47,8 @@ interface SuggestionsRenderState {
   latestOverlayQuery: string;
   latestRawInputValue: string;
   selectedIndex: number;
+  // Dropping the selection puts back what the arrows wrote over.
+  suggestionInputPreview: Pick<SuggestionInputPreview, 'restore'>;
   currentSuggestions: OverlaySuggestion[];
   lastRenderedQuery: string;
   lastRenderedActionContextKey: string;
@@ -99,11 +103,9 @@ interface SuggestionsRenderDeps {
   openSiteSearchProviderQuery(provider: InputModeProvider | null, query: string, event: ActivationEvent | null): boolean;
   shouldOpenSearchResultInBackgroundTab(event: ActivationEvent | null): boolean;
   recordSearchSuggestionSelectionFromSuggestion(suggestion: DisplayedSuggestion, query: string, source: string): void;
-  getSearchResultCreateDisposition(
-    suggestion: DisplayedSuggestion,
-    event: ActivationEvent | null,
-    item: { _xVisitButtonAction?: string } | null
-  ): Disposition;
+  getSearchResultDisposition(event: ActivationEvent | null): Disposition;
+  // Whether a plain open goes to the current tab, so rows say 「前往」.
+  isCurrentTabDefault(): boolean;
   getOverlayFaviconUrlResolver(): {
     getPageFaviconRenderCandidates(url: string, explicitUrl: string, options?: { includeChromeFallback?: boolean; allowRemoteImage?: boolean }): FaviconCandidates;
   } | null;
@@ -130,7 +132,6 @@ interface SuggestionsRenderDeps {
   getDefaultSearchEngineThemeUrlForOverlay: ViewOption<'getDefaultSearchEngineThemeUrl'>;
   getBrandAccentForUrl: ViewOption<'getBrandAccentForUrl'>;
   buildTheme(accent: unknown): ThemeValue;
-  SUGGESTION_ACTION_MODEL: ViewOption<'actionModel'>;
   normalizeSearchResultDisplayLimit(value: unknown): number;
   pauseOverlayAntiTranslateObserverForMutationBurst(): void;
   setOpenTabsResultsViewport(active: boolean, itemCount?: number): void;
@@ -175,7 +176,8 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
     openSiteSearchProviderQuery,
     shouldOpenSearchResultInBackgroundTab,
     recordSearchSuggestionSelectionFromSuggestion,
-    getSearchResultCreateDisposition,
+    getSearchResultDisposition,
+    isCurrentTabDefault,
     getOverlayFaviconUrlResolver,
     t,
     formatMessage,
@@ -200,7 +202,6 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
     getDefaultSearchEngineThemeUrlForOverlay,
     getBrandAccentForUrl,
     buildTheme,
-    SUGGESTION_ACTION_MODEL,
     normalizeSearchResultDisplayLimit,
     pauseOverlayAntiTranslateObserverForMutationBurst,
     setOpenTabsResultsViewport,
@@ -435,7 +436,8 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
         LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
           action: 'searchOrNavigate',
           query: suggestion.searchQuery,
-          forceSearch: true
+          forceSearch: true,
+          disposition: getSearchResultDisposition(event)
         });
       }
     } else {
@@ -447,11 +449,7 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
       LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
         action: 'createTab',
         url: suggestion.url || '',
-        disposition: getSearchResultCreateDisposition(
-          suggestion,
-          event,
-          item
-        )
+        disposition: getSearchResultDisposition(event)
       });
     }
     finishOverlayResultActivation(
@@ -493,6 +491,20 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
     return resolver ? resolver.getPageFaviconRenderCandidates(url, explicitUrl, options) : {};
   }
 
+  // While results open in the current tab, rows say 「前往」 and Option/Alt
+  // turns them to 「新开」.
+  const overlayActionModel: ViewOption<'actionModel'> = {
+    ...SuggestionActionModel,
+    createSearchActionModel: (input) => SuggestionActionModel.createSearchActionModel({
+      ...input,
+      currentTabByDefault: isCurrentTabDefault()
+    }),
+    getModifierAdjustedAction: (action, modifiers) => SuggestionActionModel.getModifierAdjustedAction(action, {
+      ...modifiers,
+      currentTabByDefault: isCurrentTabDefault()
+    })
+  };
+
   // The view, made on first use.
   function ensureOverlaySuggestionsView(): SuggestionsViewController {
     if (overlayState.overlaySuggestionsView) {
@@ -532,6 +544,9 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
       preloadIcon: overlayState.preloadIcon,
       onSetSelectedIndex: (nextIndex) => {
         overlayState.selectedIndex = nextIndex;
+        if (nextIndex < 0) {
+          overlayState.suggestionInputPreview.restore(overlayState.searchInput, overlayState.latestRawInputValue);
+        }
       },
       getSelectedIndex: () => overlayState.selectedIndex,
       onSwitchToTab: (tab, event) => {
@@ -576,7 +591,7 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
       getDefaultSearchEngineThemeUrl: getDefaultSearchEngineThemeUrlForOverlay,
       getBrandAccentForUrl,
       buildThemeFromAccent: (accent) => buildTheme(accent),
-      actionModel: SUGGESTION_ACTION_MODEL,
+      actionModel: overlayActionModel,
       shouldSwitchMatchedTabSuggestion,
       defaultTheme: overlayState.defaultTheme,
       urlHighlightTheme: overlayState.urlHighlightTheme,

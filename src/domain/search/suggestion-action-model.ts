@@ -1,17 +1,21 @@
 // What each suggestion row offers to do: its action tags, its visit button,
 // how modifier keys change the action, and whether a new slate needs a full
 // render or only new highlights.
+import { getDefaultTabDisposition } from '../navigation-disposition';
 import type { SiteSearchProvider, SuggestionLike } from './types';
 
 type SearchAction = 'switch' | 'search' | 'open' | 'openNewTab' | 'openBackgroundTab' | 'go';
 
 type OpenDisposition = 'currentTab' | 'backgroundTab' | 'newTab';
 
-// The keys held when a result is opened.
+// The keys held when a result is opened. `openInCurrentTab` is Option/Alt,
+// which flips a result to the other of the current and a new tab.
 interface OpenModifiers {
   openInCurrentTab?: boolean;
   openSwitchInNewTab?: boolean;
   openInBackgroundTab?: boolean;
+  // The surface opens results in the current tab unless a key says otherwise.
+  currentTabByDefault?: boolean;
 }
 
 // A provider as rows carry it; command rows add display fields.
@@ -64,6 +68,8 @@ interface SearchActionModelOptions {
   simpleMode?: boolean;
   // What Enter does on the primary row.
   enterAction?: string;
+  // Rows say 「前往」 rather than 「新开」: results open in the current tab.
+  currentTabByDefault?: boolean;
 }
 
 interface ActionContextOptions {
@@ -147,6 +153,14 @@ function getVisitButtonAction(suggestion: MaybeSuggestion, options?: { shouldSwi
   return 'openNewTab';
 }
 
+// Option/Alt flips a result between the current and a new tab.
+function getOtherTabAction(rawAction: string, config: OpenModifiers): string | null {
+  if (rawAction === 'openNewTab') {
+    return 'go';
+  }
+  return config.currentTabByDefault && rawAction === 'go' ? 'openNewTab' : null;
+}
+
 function getModifierAdjustedAction(action: unknown, options?: OpenModifiers | null): string {
   const rawAction = String(action || '');
   const config = options || {};
@@ -155,26 +169,15 @@ function getModifierAdjustedAction(action: unknown, options?: OpenModifiers | nu
       ? 'openBackgroundTab'
       : 'openNewTab';
   }
-  if (config.openInCurrentTab && rawAction === 'openNewTab') {
-    return 'go';
+  const otherTabAction = config.openInCurrentTab ? getOtherTabAction(rawAction, config) : null;
+  if (otherTabAction) {
+    return otherTabAction;
   }
   if (config.openInBackgroundTab && !config.openInCurrentTab &&
       (rawAction === 'openNewTab' || rawAction === 'go' || rawAction === 'switch')) {
     return 'openBackgroundTab';
   }
   return rawAction;
-}
-
-function shouldOpenNewTabActionInCurrentTab(
-  suggestion: MaybeSuggestion,
-  options?: (OpenModifiers & { action?: string; shouldSwitchMatchedTab?: boolean }) | null
-): boolean {
-  const config = options || {};
-  if (!config.openInCurrentTab) {
-    return false;
-  }
-  const action = config.action || getVisitButtonAction(suggestion, config);
-  return action === 'openNewTab';
 }
 
 function shouldOpenSwitchActionInNewTab(
@@ -191,33 +194,36 @@ function shouldOpenSwitchActionInNewTab(
 
 function getSearchResultOpenDisposition(options?: OpenModifiers | null): OpenDisposition {
   const config = options || {};
-  if (config.openInCurrentTab) {
-    return 'currentTab';
-  }
-  if (config.openInBackgroundTab) {
-    return 'backgroundTab';
-  }
-  return 'newTab';
+  return getDefaultTabDisposition({
+    currentTabByDefault: config.currentTabByDefault,
+    openInOtherTab: config.openInCurrentTab,
+    openInBackgroundTab: config.openInBackgroundTab
+  });
 }
 
 // The action tags the row shows: switch to its open tab, the Enter action
 // of the primary row, and search for a keyword-only list.
-function getActionTags(config: SearchActionModelOptions, suggestion: MaybeSuggestion): ActionTag[] {
-  const isPrimaryHighlight = Boolean(config.isPrimaryHighlight);
-  const onlyKeywordSuggestions = Boolean(config.onlyKeywordSuggestions);
-  const actionTags: ActionTag[] = [];
-  const shouldShowPrimaryActionTag = !config.isPrimarySearchSuggest &&
-    isPrimaryHighlight &&
-    !onlyKeywordSuggestions &&
+// Whether the primary row shows its Enter action as a tag.
+function showsPrimaryActionTag(config: SearchActionModelOptions, suggestion: MaybeSuggestion): boolean {
+  return !config.isPrimarySearchSuggest &&
+    Boolean(config.isPrimaryHighlight) &&
+    !config.onlyKeywordSuggestions &&
     (
       PRIMARY_ACTION_REASONS.has(String(config.primaryHighlightReason || '')) ||
       isDirectNavigationSuggestion(suggestion) ||
       Boolean(config.isMergedHighlight)
     );
+}
+
+function getActionTags(config: SearchActionModelOptions, suggestion: MaybeSuggestion): ActionTag[] {
+  const isPrimaryHighlight = Boolean(config.isPrimaryHighlight);
+  const onlyKeywordSuggestions = Boolean(config.onlyKeywordSuggestions);
+  const actionTags: ActionTag[] = [];
   if (config.shouldSwitchMatchedTab) {
     actionTags.push({ action: 'switch' });
-  } else if (shouldShowPrimaryActionTag) {
-    actionTags.push({ action: config.enterAction || 'openNewTab' });
+  } else if (showsPrimaryActionTag(config, suggestion)) {
+    // Results opened in the current tab by default say 「前往」.
+    actionTags.push({ action: config.currentTabByDefault ? 'go' : (config.enterAction || 'openNewTab') });
   }
   if (!config.simpleMode && isPrimaryHighlight && onlyKeywordSuggestions && suggestion && suggestion.type === 'newtab') {
     actionTags.push({ action: 'search' });
@@ -230,9 +236,12 @@ function createSearchActionModel(options?: SearchActionModelOptions | null): Sea
   const suggestion = config.suggestion || null;
   const shouldSwitchMatchedTab = Boolean(config.shouldSwitchMatchedTab);
   const actionTags = getActionTags(config, suggestion);
-  const visitButtonAction = getVisitButtonAction(suggestion, {
+  const defaultVisitButtonAction = getVisitButtonAction(suggestion, {
     shouldSwitchMatchedTab
   });
+  const visitButtonAction = config.currentTabByDefault && defaultVisitButtonAction === 'openNewTab'
+    ? 'go'
+    : defaultVisitButtonAction;
   const alwaysHideVisitButton = Boolean(config.simpleMode) || !visitButtonAction || Boolean(
     suggestion && (suggestion.type === 'modeSwitch' || suggestion.type === 'zenSwitch')
   );
@@ -443,7 +452,6 @@ export {
   getModifierAdjustedAction,
   getSearchResultOpenDisposition,
   shouldOpenSwitchActionInNewTab,
-  shouldOpenNewTabActionInCurrentTab,
   shouldShowVisitButton,
   getActionContextKey,
   getSuggestionPresentationFingerprint,

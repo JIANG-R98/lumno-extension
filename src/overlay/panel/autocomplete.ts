@@ -1,3 +1,4 @@
+import type { SuggestionInputPreview } from '../../domain/search/suggestion-input-preview';
 import type { SuggestionLike } from '../../domain/search/types';
 
 // What a row offers for completion; command rows complete to their text.
@@ -35,6 +36,8 @@ interface AutocompleteOverlayState {
   // Only whether a site search or a local scope is active.
   siteSearchState: unknown;
   localSearchScopeState: unknown;
+  // A suggestion the arrows show keeps the input until it is dropped.
+  suggestionInputPreview: Pick<SuggestionInputPreview, 'isActive'>;
 }
 
 interface AutocompleteDeps {
@@ -234,6 +237,9 @@ function createAutocomplete(deps: AutocompleteDeps) {
   ): void {
     const rawQuery = overlayState.latestRawInputValue;
     const trimmedQuery = rawQuery.trim();
+    if (overlayState.suggestionInputPreview.isActive()) {
+      return;
+    }
     if (overlayState.overlaySearchResultPriorityMode === 'search') {
       if (overlayState.searchInput && overlayState.searchInput.value !== rawQuery) {
         overlayState.searchInput.value = rawQuery;

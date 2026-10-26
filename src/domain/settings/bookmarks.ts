@@ -54,7 +54,6 @@ const bookmarkFolderColorRefs = defineSetting({
   key: '_x_extension_bookmark_folder_color_refs_2026_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 
@@ -62,7 +61,6 @@ const bookmarkFolderColorPresets = defineSetting({
   key: '_x_extension_bookmark_folder_color_presets_2026_unique_',
   area: 'preferences',
   sync: 'browser',
-  diagnostics: 'shape',
   schema: opaque()
 });
 

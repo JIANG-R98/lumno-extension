@@ -311,6 +311,7 @@ export function SiteSearchList({
   }
 
   const onMove = model.reorder ? options.onMove : undefined;
+  const sortable = Boolean(onMove && model.items.length > 1);
   return (
     <>
       {model.items.map((item, index) => {
@@ -322,12 +323,18 @@ export function SiteSearchList({
             data-key={item.key}
             data-provider-category={item.category}
             data-provider-id={item.id}
-            data-sortable={onMove && model.items.length > 1 ? 'true' : undefined}
+            data-sortable={sortable ? 'true' : undefined}
             data-template={item.normalizedTemplate}
             data-type={item.isBuiltin ? 'builtin' : 'custom'}
             key={item.id}
           >
             <div className="_x_extension_shortcut_item_header_2024_unique_">
+              {sortable ? (
+                <i
+                  aria-hidden="true"
+                  className="ri-icon ri-size-14 ri-draggable _x_extension_shortcut_drag_handle_2026_unique_"
+                />
+              ) : null}
               <div className="_x_extension_shortcut_item_info_2024_unique_">
                 <div className="_x_extension_shortcut_item_title_2024_unique_">
                   <div className="_x_extension_shortcut_badge_2024_unique_">

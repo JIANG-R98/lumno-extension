@@ -1,7 +1,8 @@
-// Notices on the page: the update notice and its session slot, the
-// engagement notice, the help center ask hint and community QR dialog, the
+// Notices on the page: the update notice and its session slot, the graphics
+// acceleration notice, the engagement notice, the help center ask hint and community QR dialog, the
 // file access notice and the page notice banner, and the WebDAV hint.
 import * as ENGAGEMENT_NOTICE from '../shared/engagement-notice';
+import * as GRAPHICS_NOTICE from '../shared/graphics-acceleration-notice';
 import * as COMMUNITY_QR_DIALOG from '../shared/ui/community-qr-dialog';
 import * as UPDATE_NOTICE from '../shared/update-notice';
 import * as LumnoMessaging from '../platform/messaging';
@@ -10,6 +11,7 @@ import type { Disposition, OpenEvent } from '../domain/navigation-disposition';
 import type { SiteSearchProvider } from '../domain/search/types';
 import type * as LumnoCommunityLinks from '../platform/community-links';
 import type { EngagementNoticeController } from '../shared/engagement-notice';
+import type { GraphicsNoticeController } from '../shared/graphics-acceleration-notice';
 import type * as LumnoFeatureHints from '../shared/ui/feature-hints';
 import type { FeatureHintController } from '../shared/ui/feature-hint-catalog';
 import type { UpdateNoticeController } from '../shared/update-notice';
@@ -19,6 +21,7 @@ import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-p
 
 interface PageNoticesState {
   updateNoticeController: UpdateNoticeController | null;
+  graphicsNoticeController: GraphicsNoticeController | null;
   engagementNoticeController: EngagementNoticeController | null;
   inputParts: { input: HTMLInputElement; container: HTMLElement } | null;
   feedbackLinks: CommunityLinks | null;
@@ -168,6 +171,9 @@ function createPageNotices(deps: PageNoticesDeps) {
       pageState.updateNoticeController.hasSessionSlot()
     );
   }
+  function graphicsNoticeClaimsSessionSlot(): boolean {
+    return Boolean(pageState.graphicsNoticeController && pageState.graphicsNoticeController.hasSessionSlot());
+  }
   pageState.updateNoticeController = UPDATE_NOTICE.createUpdateNotice({
     documentObj: document,
     featureHints: FEATURE_HINTS,
@@ -188,6 +194,31 @@ function createPageNotices(deps: PageNoticesDeps) {
       });
     }
   });
+  // Shows only when the update notice leaves this page view's slot free.
+  function createNewtabGraphicsNoticeController(): GraphicsNoticeController | null {
+    return GRAPHICS_NOTICE.createGraphicsNotice({
+      documentObj: document,
+      chromeApi: chrome,
+      surface: 'newtab',
+      t,
+      exposureGate: pageState.updateNoticeController && pageState.updateNoticeController.ready,
+      canShow() {
+        return !updateNoticeClaimsSessionSlot() &&
+          !String(searchInput.value || '').trim();
+      },
+      onSessionSlotClaimed() {
+        if (pageState.engagementNoticeController) {
+          pageState.engagementNoticeController.suppressForSession();
+        }
+      },
+      onOpenSettings(event) {
+        LumnoMessaging.sendBackgroundMessage(chrome.runtime, {
+          action: 'openGraphicsSettings',
+          disposition: getOpenDisposition(event, 'newTab')
+        });
+      }
+    });
+  }
   function createNewtabEngagementNoticeController(): EngagementNoticeController | null {
     return ENGAGEMENT_NOTICE.createEngagementNotice({
       documentObj: document,
@@ -196,7 +227,10 @@ function createPageNotices(deps: PageNoticesDeps) {
       surface: 'newtab',
       locale: getFeedbackWebLocale(),
       t,
-      exposureGate: pageState.updateNoticeController && pageState.updateNoticeController.ready,
+      exposureGate: Promise.all([
+        pageState.updateNoticeController && pageState.updateNoticeController.ready,
+        pageState.graphicsNoticeController && pageState.graphicsNoticeController.ready
+      ]),
       canShow() {
         const updateNoticeVisible = Boolean(
           pageState.updateNoticeController &&
@@ -205,6 +239,7 @@ function createPageNotices(deps: PageNoticesDeps) {
         );
         return !updateNoticeVisible &&
           !updateNoticeClaimsSessionSlot() &&
+          !graphicsNoticeClaimsSessionSlot() &&
           document.visibilityState === 'visible' &&
           !String(searchInput.value || '').trim() &&
           document.body.getAttribute('data-nt-suggestions-open') !== 'true' &&
@@ -320,6 +355,7 @@ function createPageNotices(deps: PageNoticesDeps) {
 
   return {
     maybeShowFileAccessNotice,
+    createNewtabGraphicsNoticeController,
     createNewtabEngagementNoticeController,
     getHelpCenterLocale,
     openCommunityQrDialog,

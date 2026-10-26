@@ -54,10 +54,10 @@ const STYLES = `
     inset: 0;
     background: var(--lp-stage);
   }
-  /* The receding page: its screenshot, and over it the same picture
-     blurred once in advance (the veil). Receding scales the pair and
-     crossfades from the screenshot to the veil, so the compositor animates
-     only transform and opacity;
+  /* The receding page: the same picture blurred once in advance (the
+     veil), and over it the screenshot. Receding scales the pair and fades
+     the screenshot out while the scrim darkens both, so the compositor
+     animates only transform and opacity, and the veil stays still;
      animating a blur radius re-blurred two full-screen layers each frame. */
   /* captureVisibleTab takes the whole window, scrollbars included, while
      this layer stops at the page's scrollbar. Laid out at the window's
@@ -78,37 +78,32 @@ const STYLES = `
   .shot,
   .veil {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
     display: block;
     object-fit: fill;
   }
+  /* Cut to the page's content: the screenshot's own scrollbars, uncovered
+     as the page recedes, showed as a sharp strip while it faded. A plain
+     rectangle, the clip costs nothing per frame. */
   .shot {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    clip-path: inset(0 var(--lp-scrollbar-right, 0px) var(--lp-scrollbar-bottom, 0px) var(--lp-scrollbar-left, 0px));
     will-change: opacity;
   }
-  /* Its edge is feathered (painted into the canvas, see paintVeil), so
-     once the sharp screenshot has faded out from under it the receded
-     page melts into the surround without a seam. */
+  /* The picture runs on past the page's edges (mirrored, see paintVeil),
+     so the receded page fills the window with no edge of its own; a
+     second, enlarged copy behind it lined up nowhere but the middle and
+     showed the page's edges twice. */
   .veil {
-    opacity: 0;
-    will-change: opacity;
+    top: calc(-1 * var(--lp-veil-margin-y, 0px));
+    left: calc(-1 * var(--lp-veil-margin-x, 0px));
+    width: calc(100% + 2 * var(--lp-veil-margin-x, 0px));
+    height: calc(100% + 2 * var(--lp-veil-margin-y, 0px));
   }
-  /* Fills the space the receding page leaves with the veil's picture, so
-     the shrinking page shows no edge against it. Oversized so the blurred
-     edge stays off screen. */
-  .surround {
-    position: absolute;
-    inset: -48px;
-    width: calc(100% + 96px);
-    height: calc(100% + 96px);
-    display: block;
-  }
-  .page[hidden],
-  .surround[hidden] {
+  .page[hidden] {
     display: none;
   }
-  /* With a screenshot its tone is painted into the veil instead. */
   .scrim {
     position: absolute;
     inset: 0;
@@ -123,6 +118,15 @@ const STYLES = `
   }
   .root[data-shot="none"] .scrim {
     display: block;
+  }
+  /* Over the screenshot and the veil alike, so the two are one tone while
+     one fades into the other: toned into the veil alone, the darker veil
+     showed the sharp screenshot's edge through the whole fade. One flat
+     color, it is the cheapest layer to fade. Its tone is brightness(0.9)
+     under the scrim, rgba(8, 8, 12, 0.2), in one color. */
+  .root[data-shot="image"] .scrim {
+    display: block;
+    background: rgba(6, 6, 9, 0.28);
   }
   .window {
     position: absolute;

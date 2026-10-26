@@ -84,5 +84,39 @@ function getShift(slots: readonly Slot[], layout: SortLayout, fromIndex: number,
   return { x: slots[slotIndex].left - slots[index].left, y: slots[slotIndex].top - slots[index].top };
 }
 
+// Where the dragged item comes to rest in slot `toIndex`, from its own slot.
+function getRestingOffset(slots: readonly Slot[], layout: SortLayout, fromIndex: number, toIndex: number): Point {
+  const moved = slots[fromIndex];
+  const target = slots[toIndex];
+  if (layout === 'grid') {
+    return { x: target.left - moved.left, y: target.top - moved.top };
+  }
+  const axisSize = layout === 'column' ? 'height' : 'width';
+  const axisStart = layout === 'column' ? 'top' : 'left';
+  // Moving later, its far edge lines up with the far edge of the slot.
+  const start = toIndex > fromIndex
+    ? target[axisStart] + target[axisSize] - moved[axisSize]
+    : target[axisStart];
+  const delta = start - moved[axisStart];
+  return layout === 'column' ? { x: 0, y: delta } : { x: delta, y: 0 };
+}
+
+// The peers (by index) that end up on either side of slot `toIndex`, and
+// which way each leans away from it: -1 before, 1 after. In a grid, only
+// those on its line.
+function getGapNeighbours(slots: readonly Slot[], layout: SortLayout, fromIndex: number, toIndex: number): Map<number, number> {
+  const order = slots.map((_slot, index) => index).filter((index) => index !== fromIndex);
+  order.splice(toIndex, 0, fromIndex);
+  const onLine = (index: number): boolean => layout !== 'grid' || Math.abs(slots[index].top - slots[toIndex].top) < 2;
+  const neighbours = new Map<number, number>();
+  if (toIndex > 0 && onLine(toIndex - 1)) {
+    neighbours.set(order[toIndex - 1], -1);
+  }
+  if (toIndex < order.length - 1 && onLine(toIndex + 1)) {
+    neighbours.set(order[toIndex + 1], 1);
+  }
+  return neighbours;
+}
+
 export type { Point, Slot, SortLayout };
-export { getShift, getTargetIndex, measureSlots, readLayout };
+export { getGapNeighbours, getRestingOffset, getShift, getTargetIndex, measureSlots, readLayout };
