@@ -1,7 +1,13 @@
 // The suggestion slate: brand and navigation representations, search
 // engine suggestion scores and limits, and composing and ranking the slate
 // shown under the input.
-import type { SearchQueryContext, SiteSearchProvider, SuggestionLike } from '../types';
+import type {
+  SearchClusterInfo,
+  SearchQueryContext,
+  SearchTermCoverage,
+  SiteSearchProvider,
+  SuggestionLike
+} from '../types';
 import { normalizeHost } from './direct-navigation';
 import { findSearchOpenTabMatchIndex } from './navigation-matching';
 import type { OpenTabMatchOptions } from './navigation-matching';
@@ -137,64 +143,115 @@ function getSearchBrandHostMatchScore(host: string, context: SlateContext | null
   return score;
 }
 
+// Roots, sections and home pages stand for a site.
+function getPageKindBonus(info: SearchClusterInfo, hasHomeTitle: boolean): number {
+  if (info.category === 'site-root' || info.category === 'repo-root') {
+    return 4;
+  }
+  if (info.category === 'section' || info.category === 'landing') {
+    return 3;
+  }
+  if (hasHomeTitle && info.category !== 'utility' && info.category !== 'action') {
+    return 3;
+  }
+  return info.category === 'content' && info.depth <= 2 ? 1 : 0;
+}
+
+// Utility, action and user pages do not, nor does deep content.
+function getPageKindPenalty(info: SearchClusterInfo, hasHomeTitle: boolean): number {
+  if (info.category === 'utility' || info.category === 'action' || info.category === 'user') {
+    return 3;
+  }
+  return info.category === 'content' && info.depth >= 2 && !hasHomeTitle ? 1 : 0;
+}
+
+function getTitleSignal(titleLower: string, context: SlateContext): number {
+  if (titleLower === context.queryLower) {
+    return 4;
+  }
+  if (titleLower.startsWith(context.queryLower)) {
+    return 3;
+  }
+  return context.queryTerms.every((term) => term && titleLower.includes(term)) ? 2 : 0;
+}
+
+// Query terms that name the host, or start one of its labels.
+function getHostTermSignal(url: string, context: SlateContext): number {
+  let hostLabels: string[];
+  try {
+    hostLabels = normalizeHost(new URL(url).hostname).split('.').filter(Boolean);
+  } catch (e) {
+    return 0;
+  }
+  return context.queryTerms.reduce((signal, term) => {
+    if (!term) {
+      return signal;
+    }
+    if (hostLabels.includes(term)) {
+      return signal + 2;
+    }
+    return term.length >= 2 && hostLabels.some((label) => label.startsWith(term)) ? signal + 1 : signal;
+  }, 0);
+}
+
 function getSearchNavigationRepresentativeSignal(item: IntentItem | null | undefined, context: SlateContext): number {
   if (!item || !item.url) {
     return 0;
   }
   const info = getSearchSuggestionClusterInfo(item.url);
   const titleLower = normalizeSearchText(item.title);
+  const sourceSignal = item.type === 'topSite' || item.isTopSite || item.type === 'bookmark' ? 1 : 0;
   const hasHomeTitle = hasSearchHomeTitle(titleLower);
-  let signal = 0;
+  return getPageKindBonus(info, hasHomeTitle) - getPageKindPenalty(info, hasHomeTitle) +
+    getTitleSignal(titleLower, context) +
+    getHostTermSignal(item.url, context) +
+    sourceSignal;
+}
 
-  if (info.category === 'site-root' || info.category === 'repo-root') {
-    signal += 4;
-  } else if (info.category === 'section' || info.category === 'landing') {
-    signal += 3;
-  } else if (hasHomeTitle && info.category !== 'utility' && info.category !== 'action') {
-    signal += 3;
-  } else if (info.category === 'content' && info.depth <= 2) {
-    signal += 1;
-  }
-
-  if (info.category === 'utility' || info.category === 'action' || info.category === 'user') {
-    signal -= 3;
-  } else if (info.category === 'content' && info.depth >= 2 && !hasHomeTitle) {
-    signal -= 1;
-  }
-
-  if (titleLower === context.queryLower) {
-    signal += 4;
-  } else if (titleLower.startsWith(context.queryLower)) {
-    signal += 3;
-  } else if (context.queryTerms.every((term) => term && titleLower.includes(term))) {
-    signal += 2;
-  }
-
+// The host and path tokens of a URL; nothing when it does not parse or its
+// path does not decode.
+function readNavigationUrlParts(url: string): { hostname: string; hostLabels: string[]; pathTokens: string[] } {
   try {
-    const hostLabels = normalizeHost(new URL(item.url).hostname).split('.').filter(Boolean);
-    context.queryTerms.forEach((term) => {
-      if (!term) {
-        return;
-      }
-      if (hostLabels.includes(term)) {
-        signal += 2;
-        return;
-      }
-      if (term.length >= 2 && hostLabels.some((label) => label.startsWith(term))) {
-        signal += 1;
-      }
-    });
+    const parsedUrl = new URL(url);
+    const hostname = normalizeHost(parsedUrl.hostname);
+    const pathTokens = decodeURIComponent(String(parsedUrl.pathname || '').toLowerCase())
+      .split('/')
+      .filter(Boolean)
+      .flatMap((segment) => segment.split(/[^a-z0-9\u4e00-\u9fff]+/i).filter(Boolean));
+    return { hostname, hostLabels: hostname.split('.').filter(Boolean), pathTokens };
   } catch (e) {
-    // Ignore invalid URL.
+    return { hostname: '', hostLabels: [], pathTokens: [] };
   }
+}
 
-  if (item.type === 'topSite' || item.isTopSite) {
-    signal += 1;
-  } else if (item.type === 'bookmark') {
-    signal += 1;
+// For a brand or a brand's product, the site's own pages rank up and deep
+// content down.
+function getBrandPageAdjustment(info: SearchClusterInfo, hasHomeTitle: boolean, context: SlateContext): number {
+  const isRoot = info.category === 'site-root' || info.category === 'repo-root';
+  const isDeepContent = info.category === 'content' && info.depth >= 2;
+  if (context.intentType === 'brand') {
+    if (isRoot) return 70;
+    if (info.category === 'section' || info.category === 'landing') return 32;
+    if (hasHomeTitle) return 42;
+    return isDeepContent ? -28 : 0;
   }
+  if (!isSearchLikelyBrandProductQuery(context)) {
+    return 0;
+  }
+  if (isRoot) return 34;
+  if (info.category === 'section' || info.category === 'landing' || hasHomeTitle) return 28;
+  return isDeepContent ? -12 : 0;
+}
 
-  return signal;
+// A site page that misses some of several query terms ranks down.
+function getMissingTermPenalty(info: SearchClusterInfo, coverageStats: SearchTermCoverage, representativeSignal: number): number {
+  if (coverageStats.total < 2 || coverageStats.allMatched) {
+    return 0;
+  }
+  const sitePagePenalty = info.category === 'site-root' || info.category === 'section' || info.category === 'landing'
+    ? Math.min(42, coverageStats.missingCount * 22)
+    : 0;
+  return sitePagePenalty + (representativeSignal >= 6 ? 10 : 0);
 }
 
 function getSearchDirectNavigationAdjustment(
@@ -207,85 +264,25 @@ function getSearchDirectNavigationAdjustment(
     return 0;
   }
   const url = item.url;
-  const info = getSearchSuggestionClusterInfo(item.url);
+  const info = getSearchSuggestionClusterInfo(url);
   const hasHomeTitle = hasSearchHomeTitle(item.title);
   const representativeSignal = getSearchNavigationRepresentativeSignal(item, context);
-  const titleLower = normalizeSearchText(item.title);
-  const pathTokens: string[] = [];
-  let hostname = '';
-  let hostLabels: string[] = [];
-  try {
-    const parsedUrl = new URL(url);
-    hostname = normalizeHost(parsedUrl.hostname);
-    hostLabels = hostname.split('.').filter(Boolean);
-    decodeURIComponent(String(parsedUrl.pathname || '').toLowerCase())
-      .split('/')
-      .filter(Boolean)
-      .forEach((segment) => {
-        const segmentTokens = segment.split(/[^a-z0-9\u4e00-\u9fff]+/i).filter(Boolean);
-        if (segmentTokens.length > 0) {
-          pathTokens.push(...segmentTokens);
-        }
-      });
-  } catch (e) {
-    hostname = '';
-    hostLabels = [];
-  }
   const coverageStats = getSearchTermCoverageStats(context, {
-    titleLower,
-    hostname,
+    ...readNavigationUrlParts(url),
+    titleLower: normalizeSearchText(item.title),
     urlLower: url.toLowerCase(),
     titleTokens: splitSearchTitleTokens(item.title),
-    hostLabels,
-    pathTokens,
     matchesTitleUnits: (term: string) => Boolean(getSearchTitleUnitMatch(item.title, term, options))
   });
-  let adjustment = 0;
-
-  if (context.intentType === 'brand') {
-    if (info.category === 'site-root' || info.category === 'repo-root') {
-      adjustment += 70;
-    } else if (info.category === 'section' || info.category === 'landing') {
-      adjustment += 32;
-    } else if (hasHomeTitle) {
-      adjustment += 42;
-    } else if (info.category === 'content' && info.depth >= 2) {
-      adjustment -= 28;
-    }
-  } else if (isSearchLikelyBrandProductQuery(context)) {
-    if (info.category === 'site-root' || info.category === 'repo-root') {
-      adjustment += 34;
-    } else if (info.category === 'section' || info.category === 'landing' || hasHomeTitle) {
-      adjustment += 28;
-    } else if (info.category === 'content' && info.depth >= 2) {
-      adjustment -= 12;
-    }
-  }
-
-  if (representativeSignal >= 6) {
-    adjustment += 18;
-  } else if (representativeSignal <= 0) {
-    adjustment -= 12;
-  }
-
-  if ((info.category === 'utility' || info.category === 'action' || info.category === 'user') && !context.hasSettingsIntent) {
-    adjustment -= 36;
-  }
-
-  if (sourceType === 'topSite' && (info.category === 'site-root' || hasHomeTitle)) {
-    adjustment += 10;
-  }
-
-  if (coverageStats.total >= 2 && !coverageStats.allMatched) {
-    if (info.category === 'site-root' || info.category === 'section' || info.category === 'landing') {
-      adjustment -= Math.min(42, coverageStats.missingCount * 22);
-    }
-    if (representativeSignal >= 6) {
-      adjustment -= 10;
-    }
-  }
-
-  return adjustment;
+  const representativeAdjustment = representativeSignal >= 6 ? 18 : (representativeSignal <= 0 ? -12 : 0);
+  const unrequestedUtilityPenalty = (info.category === 'utility' || info.category === 'action' || info.category === 'user') &&
+    !context.hasSettingsIntent ? 36 : 0;
+  const topSiteHomeBonus = sourceType === 'topSite' && (info.category === 'site-root' || hasHomeTitle) ? 10 : 0;
+  return getBrandPageAdjustment(info, hasHomeTitle, context) +
+    representativeAdjustment -
+    unrequestedUtilityPenalty +
+    topSiteHomeBonus -
+    getMissingTermPenalty(info, coverageStats, representativeSignal);
 }
 
 function getSearchEngineSuggestionScore(
