@@ -4,7 +4,7 @@
 import type { FaviconDataEntry, FaviconUrlEntry, SiteThemeEntry } from '../../domain/favicon/favicon-cache';
 import * as NEWTAB_FAVICON_CACHE from '../../platform/favicon-cache';
 import type { FaviconCacheRuntime } from '../../platform/favicon-cache';
-import type * as FaviconTheme from '../../shared/favicon/favicon-theme';
+import type * as Color from '../../domain/color';
 import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 import type { SiteSearchProviders } from '../search/site-search-providers';
 import type { ShortcutsController } from '../shortcuts/shortcuts-controller';
@@ -33,7 +33,7 @@ interface PageFaviconsDeps {
   FAVICON_CACHE_BOOT_WAIT_MS: number;
   isPersistableTheme: SiteThemeResolver['isPersistableTheme'];
   normalizeAccentRgb: SiteThemeResolver['normalizeAccentRgb'];
-  parseCssColor: typeof FaviconTheme.parseCssColor;
+  parseCssColor: typeof Color.parseCssColor;
   getThemeSource: SiteThemeResolver['getThemeSource'];
   isLowConfidenceTheme: SiteThemeResolver['isLowConfidenceTheme'];
   normalizeThemeConfidence: SiteThemeResolver['normalizeThemeConfidence'];

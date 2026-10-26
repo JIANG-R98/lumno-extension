@@ -3,7 +3,7 @@
 // variables the panel draws with.
 import type * as Settings from '../../domain/settings';
 import type { ThemeMode } from '../../domain/settings/appearance';
-import type * as FaviconTheme from '../../shared/favicon/favicon-theme';
+import { getHoverColors as getModeHoverColors, getThemeForMode as getThemeVariantForMode } from '../../shared/favicon/favicon-theme';
 import type { HoverColors, ThemeLike, ThemeVariant } from '../../shared/favicon/favicon-theme';
 import * as LumnoOverlayPageTheme from '../page-theme';
 import type { PageTheme } from '../page-theme';
@@ -31,7 +31,6 @@ interface PanelThemeDeps {
   applyOverlayTheme(mode: ThemeMode): void;
   SETTINGS: Pick<typeof Settings, 'getOverlayFontFamilyCssValue'>;
   OVERLAY_FONT_FAMILY_CSS_VAR: `--${string}`;
-  FAVICON_THEME: Pick<typeof FaviconTheme, 'getThemeForMode' | 'getHoverColors'>;
   overlayState: PanelThemeState;
 }
 
@@ -67,8 +66,7 @@ function createPanelTheme(deps: PanelThemeDeps) {
     stopOverlayPageThemeObserver,
     applyOverlayTheme,
     SETTINGS,
-    OVERLAY_FONT_FAMILY_CSS_VAR,
-    FAVICON_THEME
+    OVERLAY_FONT_FAMILY_CSS_VAR
   } = deps;
 
   // The panel state object shared with search-panel.ts and the other modules.
@@ -277,14 +275,14 @@ function createPanelTheme(deps: PanelThemeDeps) {
 
   // The theme as given in light mode, or its dark variant.
   function getThemeForMode<T extends ThemeLike>(theme: T | null): T | ThemeVariant {
-    return FAVICON_THEME.getThemeForMode(theme, {
+    return getThemeVariantForMode(theme, {
       defaultTheme: overlayState.defaultTheme,
       isDarkMode: isOverlayDarkMode
     });
   }
 
   function getHoverColors(theme: ThemeLike | null): HoverColors {
-    return FAVICON_THEME.getHoverColors(theme, {
+    return getModeHoverColors(theme, {
       defaultTheme: overlayState.defaultTheme,
       isDarkMode: isOverlayDarkMode
     });

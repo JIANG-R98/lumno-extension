@@ -763,30 +763,34 @@ vm.runInNewContext(moduleScript('src/shared/favicon/favicon-theme.ts', 'LumnoNew
   filename: 'src/shared/favicon/favicon-theme.ts'
 });
 const faviconTheme = sandbox.LumnoNewtabFaviconTheme;
+vm.runInNewContext(moduleScript('src/domain/favicon/brand-accents.ts', 'LumnoBrandAccents'), sandbox, {
+  filename: 'src/domain/favicon/brand-accents.ts'
+});
+const brandAccents = sandbox.LumnoBrandAccents;
 assert.ok(faviconTheme, 'LumnoNewtabFaviconTheme should be exported');
 assert.strictEqual(
-  faviconTheme.getBrandAccentForHost('dribbble.com').join(','),
+  brandAccents.getBrandAccentForHost('dribbble.com').join(','),
   '234,100,217',
   'Dribbble should have an immediate pink brand accent'
 );
 assert.strictEqual(
-  faviconTheme.getBrandAccentForHost('cdn.dribbble.com').join(','),
+  brandAccents.getBrandAccentForHost('cdn.dribbble.com').join(','),
   '234,100,217',
   'Dribbble subdomains should inherit the pink brand accent'
 );
 assert.strictEqual(
-  faviconTheme.getBrandAccentForUrl('https://dribbble.com/shots/popular').join(','),
+  brandAccents.getBrandAccentForUrl('https://dribbble.com/shots/popular').join(','),
   '234,100,217',
   'Dribbble URLs should resolve to the pink brand accent before theme-color cache fallback'
 );
 assert.strictEqual(
-  faviconTheme.getBrandAccentForHost('app.dodopayments.com').join(','),
-  faviconTheme.getBrandAccentForHost('checkout.dodopayments.com').join(','),
+  brandAccents.getBrandAccentForHost('app.dodopayments.com').join(','),
+  brandAccents.getBrandAccentForHost('checkout.dodopayments.com').join(','),
   'Dodo Payments subdomains should inherit one shared brand accent'
 );
 assert.strictEqual(
-  faviconTheme.getBrandAccentForHost('customer.dodopayments.com').join(','),
-  faviconTheme.getBrandAccentForHost('dodopayments.com').join(','),
+  brandAccents.getBrandAccentForHost('customer.dodopayments.com').join(','),
+  brandAccents.getBrandAccentForHost('dodopayments.com').join(','),
   'Dodo Payments customer and root domains should not render with separate colors'
 );
 assert.strictEqual(

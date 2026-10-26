@@ -86,7 +86,10 @@ import * as NEWTAB_SHORTCUTS_CONTROLLER from './shortcuts/shortcuts-controller';
 import * as NEWTAB_STARTUP_PREFERENCES from './startup-preferences';
 import * as NEWTAB_STARTUP_STORAGE from './startup-storage';
 import * as NEWTAB_CARD_THEMES from './theme/card-themes';
-import * as NEWTAB_FAVICON_THEME from '../shared/favicon/favicon-theme';
+import { buildFallbackThemeForHost, createDefaultTheme, createUrlHighlightTheme, defaultAccentColor } from '../shared/favicon/favicon-theme';
+import { extractAverageColor } from '../shared/favicon/average-color';
+import { getBrandAccentForUrl, normalizeHost } from '../domain/favicon/brand-accents';
+import { getReadableTextColor, mixColor, parseCssColor, rgbToCss, rgbToCssAlpha, rgbToCssParts, stableHashCode } from '../domain/color';
 import * as NEWTAB_GLASS_SURFACES from './theme/glass-surfaces';
 import * as NEWTAB_PAGE_FAVICONS from './theme/page-favicons';
 import * as NEWTAB_SITE_THEME_RESOLVER from './theme/site-theme-resolver';
@@ -378,7 +381,6 @@ import * as SettingsStorage from '../platform/settings-storage';
   }
   const playFolderPathMorph = NEWTAB_BOOKMARK_FOLDER_ICON.playFolderPathMorph;
   const setFolderPathMorphState = NEWTAB_BOOKMARK_FOLDER_ICON.setFolderPathMorphState;
-  const normalizeHost = NEWTAB_FAVICON_THEME.normalizeHost;
   const bookmarksRuntime = NEWTAB_BOOKMARKS_RUNTIME.createBookmarksRuntime({
     chromeApi: typeof chrome !== 'undefined' ? chrome : null,
     store: NEWTAB_BOOKMARKS_STORE,
@@ -730,19 +732,8 @@ import * as SettingsStorage from '../platform/settings-storage';
     pageState
   });
 
-  const defaultAccentColor = NEWTAB_FAVICON_THEME.defaultAccentColor;
-  const mixColor = NEWTAB_FAVICON_THEME.mixColor;
-  const stableHashCode = NEWTAB_FAVICON_THEME.stableHashCode;
-  const rgbToCss = NEWTAB_FAVICON_THEME.rgbToCss;
-  const rgbToCssAlpha = NEWTAB_FAVICON_THEME.rgbToCssAlpha;
-  const rgbToCssParts = NEWTAB_FAVICON_THEME.rgbToCssParts;
-  const parseCssColor = NEWTAB_FAVICON_THEME.parseCssColor;
-  const getReadableTextColor = NEWTAB_FAVICON_THEME.getReadableTextColor;
-  const getBrandAccentForUrl = NEWTAB_FAVICON_THEME.getBrandAccentForUrl;
-  const buildFallbackThemeForHost = NEWTAB_FAVICON_THEME.buildFallbackThemeForHost;
-  const extractAverageColor = NEWTAB_FAVICON_THEME.extractAverageColor;
-  const defaultTheme = NEWTAB_FAVICON_THEME.createDefaultTheme();
-  const urlHighlightTheme = NEWTAB_FAVICON_THEME.createUrlHighlightTheme();
+  const defaultTheme = createDefaultTheme();
+  const urlHighlightTheme = createUrlHighlightTheme();
 
   const {
     normalizeFaviconHost,
@@ -774,7 +765,6 @@ import * as SettingsStorage from '../platform/settings-storage';
     applyThemeVariables,
     applyMarkVariables
   } = NEWTAB_SITE_THEME_RESOLVER.createSiteThemeResolver({
-    NEWTAB_FAVICON_THEME,
     normalizeHost,
     parseCssColor,
     defaultAccentColor,

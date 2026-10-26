@@ -3,7 +3,8 @@
 import type { SiteThemeColor } from '../../domain/messages';
 import { getSwitcherRegistrableThemeHost, getSwitcherThemeHostCandidates } from '../../domain/tab-switcher-model';
 import * as BROWSER_PROFILE from '../../platform/browser-profile';
-import * as NEWTAB_FAVICON_THEME from '../../shared/favicon/favicon-theme';
+import { defaultAccentColor } from '../../shared/favicon/favicon-theme';
+import { getBrandAccentForHost, getBrandAccentForUrl } from '../../domain/favicon/brand-accents';
 import { getResolvedTabUrl } from '../browser-urls-service';
 import type { SwitcherTab } from './types';
 import * as BoundedCache from '../../domain/bounded-cache';
@@ -131,10 +132,10 @@ function getNewtabBrandAccentForSwitcher(host: unknown, url: string): ThemeRgb |
   const normalizedHost = normalizeFaviconHost(host);
   let accentRgb: ThemeRgb | null = null;
   if (normalizedHost) {
-    accentRgb = NEWTAB_FAVICON_THEME.getBrandAccentForHost(normalizedHost);
+    accentRgb = getBrandAccentForHost(normalizedHost);
   }
   if (!accentRgb) {
-    accentRgb = NEWTAB_FAVICON_THEME.getBrandAccentForUrl(url);
+    accentRgb = getBrandAccentForUrl(url);
   }
   return normalizeThemeAccentRgb(accentRgb);
 }
@@ -145,7 +146,7 @@ function normalizeSwitcherAccentRgbForPayload(accentRgb: unknown): ThemeRgb | nu
     return null;
   }
   if (FaviconThemeColor.getThemeColorConfidence(rgb) === 'neutral') {
-    return normalizeThemeAccentRgb(NEWTAB_FAVICON_THEME.defaultAccentColor) || [59, 130, 246];
+    return normalizeThemeAccentRgb(defaultAccentColor) || [59, 130, 246];
   }
   return rgb;
 }

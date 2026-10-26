@@ -39,10 +39,14 @@ sandbox.Image = class {
 vm.createContext(sandbox);
 runModuleInContext('src/newtab/theme/site-theme-resolver.ts', sandbox, 'LumnoNewtabSiteThemeResolver');
 runModuleInContext('src/shared/favicon/favicon-theme.ts', sandbox, 'LumnoNewtabFaviconTheme');
+runModuleInContext('src/domain/color.ts', sandbox, 'LumnoColor');
+runModuleInContext('src/domain/favicon/brand-accents.ts', sandbox, 'LumnoBrandAccents');
 runModuleInContext('tests/helpers/favicon-utils.ts', sandbox, 'LumnoFaviconUtils');
 
 const FAVICON_UTILS = sandbox.LumnoFaviconUtils;
 const NEWTAB_FAVICON_THEME = sandbox.LumnoNewtabFaviconTheme;
+const COLOR = sandbox.LumnoColor;
+const BRAND_ACCENTS = sandbox.LumnoBrandAccents;
 const defaultTheme = NEWTAB_FAVICON_THEME.createDefaultTheme();
 
 function createTile(url) {
@@ -60,11 +64,10 @@ const persistedThemes = new Map();
 const shortcutIconSources = new Map([['https://www.xiaohongshu.com/', SNAPSHOT_URL]]);
 
 const resolver = sandbox.LumnoNewtabSiteThemeResolver.createSiteThemeResolver({
-  NEWTAB_FAVICON_THEME,
   FAVICON_UTILS,
   getExtensionResourceUrl: (path) => path,
-  normalizeHost: NEWTAB_FAVICON_THEME.normalizeHost,
-  parseCssColor: NEWTAB_FAVICON_THEME.parseCssColor,
+  normalizeHost: BRAND_ACCENTS.normalizeHost,
+  parseCssColor: COLOR.parseCssColor,
   defaultAccentColor: NEWTAB_FAVICON_THEME.defaultAccentColor,
   defaultTheme,
   getProviderHost: () => '',
@@ -84,7 +87,7 @@ const resolver = sandbox.LumnoNewtabSiteThemeResolver.createSiteThemeResolver({
   extractAverageColor: (image) => averageBySource.get(image.src) || null,
   getProviderIcon: () => '',
   isHostFaviconVisitDirty: () => false,
-  stableHashCode: NEWTAB_FAVICON_THEME.stableHashCode,
+  stableHashCode: COLOR.stableHashCode,
   getThemeSourceForSuggestion: (suggestion) => shortcutIconSources.get(suggestion && suggestion.url) || '',
   areFaviconRenderCachesReady: () => true,
   pageState: {

@@ -3,7 +3,7 @@ const assert = require('assert');
 const { JSDOM } = require('jsdom');
 
 const pageTheme = require('../../src/overlay/page-theme.ts');
-const faviconTheme = require('../../src/shared/favicon/favicon-theme.ts');
+const color = require('../../src/domain/color.ts');
 const { createOverlayPage, HOST_ID } = require('../helpers/overlay-runtime-harness');
 
 function createElement(config) {
@@ -222,7 +222,7 @@ function detectTheme(window) {
   return pageTheme.detectPageTheme({
     document: window.document,
     window,
-    parseThemeColorRgb: faviconTheme.parseCssColor
+    parseThemeColorRgb: color.parseCssColor
   });
 }
 

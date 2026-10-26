@@ -1,4 +1,5 @@
 // Accent colors for recent cards, bookmark cards and shortcut icons.
+import type * as Color from '../../domain/color';
 import type * as FaviconTheme from '../../shared/favicon/favicon-theme';
 import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 import type { BookmarkCardElement } from '../react/bookmarks';
@@ -17,14 +18,14 @@ interface CardThemesDeps {
   buildFallbackThemeForHost: typeof FaviconTheme.buildFallbackThemeForHost;
   defaultTheme: ThemeVariant;
   getThemeForMode: SiteThemeResolver['getThemeForMode'];
-  parseCssColor: typeof FaviconTheme.parseCssColor;
+  parseCssColor: typeof Color.parseCssColor;
   defaultAccentColor: ThemeRgb;
-  mixColor: typeof FaviconTheme.mixColor;
-  rgbToCss: typeof FaviconTheme.rgbToCss;
-  rgbToCssParts: typeof FaviconTheme.rgbToCssParts;
-  rgbToCssAlpha: typeof FaviconTheme.rgbToCssAlpha;
+  mixColor: typeof Color.mixColor;
+  rgbToCss: typeof Color.rgbToCss;
+  rgbToCssParts: typeof Color.rgbToCssParts;
+  rgbToCssAlpha: typeof Color.rgbToCssAlpha;
   normalizeAccentRgb: SiteThemeResolver['normalizeAccentRgb'];
-  getReadableTextColor: typeof FaviconTheme.getReadableTextColor;
+  getReadableTextColor: typeof Color.getReadableTextColor;
   getThemeSource: SiteThemeResolver['getThemeSource'];
   normalizeThemeConfidence: SiteThemeResolver['normalizeThemeConfidence'];
   isLowConfidenceTheme: SiteThemeResolver['isLowConfidenceTheme'];

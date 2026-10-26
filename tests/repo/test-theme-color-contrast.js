@@ -2,17 +2,18 @@ const assert = require('assert');
 const fs = require('fs');
 
 const faviconTheme = require('../../src/shared/favicon/favicon-theme.ts');
+const color = require('../../src/domain/color.ts');
 const { parseCss, parsePageCss } = require('../helpers/css-rules');
 const { getInjectedScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 function parseThemeColor(value) {
-  const parsed = faviconTheme.parseCssColor(value);
+  const parsed = color.parseCssColor(value);
   assert.ok(parsed, `expected a parseable theme color, received ${value}`);
   return parsed;
 }
 
 function assertContrast(foreground, background, minimum, message) {
-  const ratio = faviconTheme.getContrastRatio(
+  const ratio = color.getContrastRatio(
     parseThemeColor(foreground),
     Array.isArray(background) ? background : parseThemeColor(background)
   );
@@ -23,7 +24,7 @@ function assertContrast(foreground, background, minimum, message) {
 }
 
 function getContrast(foreground, background) {
-  return faviconTheme.getContrastRatio(
+  return color.getContrastRatio(
     parseThemeColor(foreground),
     Array.isArray(background) ? background : parseThemeColor(background)
   );
@@ -83,7 +84,7 @@ accentSamples.forEach((accent) => {
     assertContrast(theme.accent, theme.highlightBg, 4.5, `${label} themed icon`);
     assertContrast(theme.placeholderText, base, 4.5, `${label} themed placeholder`);
     assertContrast(theme.markText, theme.markBg, 4.5, `${label} highlighted text`);
-    const expectedPassiveMarkBg = faviconTheme.mixColor(
+    const expectedPassiveMarkBg = color.mixColor(
       faviconTheme.getSaturationCappedColor(
         theme.accentRgb,
         mode === 'dark' ? 0.6 : 0.68

@@ -2,7 +2,9 @@
 // and applies them to suggestion rows, shortcut tiles and bookmark/recent cards.
 import type { SiteThemeEntry } from '../../domain/favicon/favicon-cache';
 import type { SiteSearchProvider } from '../../domain/search/types';
-import type * as FaviconTheme from '../../shared/favicon/favicon-theme';
+import { buildTheme, getHoverColors as getModeHoverColors, getThemeFingerprint, getThemeForMode as getThemeVariantForMode } from '../../shared/favicon/favicon-theme';
+import { getBrandAccentForHost } from '../../domain/favicon/brand-accents';
+import type * as Color from '../../domain/color';
 import type { HoverColors, ThemeLike, ThemeVariant } from '../../shared/favicon/favicon-theme';
 import type { FaviconCacheRuntime } from '../../platform/favicon-cache';
 import * as LumnoMessaging from '../../platform/messaging';
@@ -38,16 +40,8 @@ type ViewTheme = Partial<ThemeVariant> | null | undefined;
 type ApplyElementTheme<E> = (element: E, theme: ThemeVariant, host: string) => void;
 
 interface SiteThemeResolverDeps {
-  NEWTAB_FAVICON_THEME: Pick<typeof FaviconTheme,
-    | 'buildTheme'
-    | 'getBrandAccentForHost'
-    | 'getThemeFingerprint'
-    | 'normalizeFaviconHost'
-    | 'isFaviconProxyUrl'
-    | 'getThemeForMode'
-    | 'getHoverColors'>;
   normalizeHost(hostname: string): string;
-  parseCssColor: typeof FaviconTheme.parseCssColor;
+  parseCssColor: typeof Color.parseCssColor;
   defaultAccentColor: ThemeRgb;
   defaultTheme: ThemeVariant;
   getProviderHost: SiteSearchProviders['getProviderHost'];
@@ -113,7 +107,6 @@ interface ThemeResolutionItem {
 
 function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
   const {
-    NEWTAB_FAVICON_THEME,
     normalizeHost,
     parseCssColor,
     defaultAccentColor,
@@ -146,12 +139,8 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
   const THEME_ICON_LOAD_TIMEOUT_MS = 2400;
   const THEME_RESOLUTION_BATCH_SIZE = 2;
   const THEME_RESOLUTION_BATCH_DELAY_MS = 160;
-  const buildTheme = NEWTAB_FAVICON_THEME.buildTheme;
-  const getBrandAccentForHost = NEWTAB_FAVICON_THEME.getBrandAccentForHost;
-  const getThemeFingerprint = NEWTAB_FAVICON_THEME.getThemeFingerprint;
-  const normalizeFaviconHost = FaviconUrlKinds.normalizeFaviconHost || NEWTAB_FAVICON_THEME.normalizeFaviconHost;
-
-  const isFaviconProxyUrl = FaviconUrlKinds.isFaviconProxyUrl || NEWTAB_FAVICON_THEME.isFaviconProxyUrl;
+  const normalizeFaviconHost = FaviconUrlKinds.normalizeFaviconHost;
+  const isFaviconProxyUrl = FaviconUrlKinds.isFaviconProxyUrl;
 
   const siteThemeRequestPending = new Map<string, Promise<ThemeResult | null>>();
   const themeFaviconCandidateRequestPending = new Map<string, Promise<string[]>>();
@@ -1035,14 +1024,14 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
   }
 
   function getThemeForMode<T extends ThemeLike>(theme: T | null | undefined): T | ThemeVariant {
-    return NEWTAB_FAVICON_THEME.getThemeForMode(theme, {
+    return getThemeVariantForMode(theme, {
       defaultTheme,
       isDarkMode: isNewtabDarkMode
     });
   }
 
   function getHoverColors(theme: ViewTheme): HoverColors {
-    return NEWTAB_FAVICON_THEME.getHoverColors(theme, {
+    return getModeHoverColors(theme, {
       defaultTheme,
       isDarkMode: isNewtabDarkMode
     });

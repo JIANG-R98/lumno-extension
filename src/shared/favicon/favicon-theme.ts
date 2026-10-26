@@ -1,9 +1,7 @@
-import * as FaviconThemeColor from '../../domain/favicon/theme-color';
-import * as FaviconThemedCandidates from '../../domain/favicon/themed-candidates';
-import type { ThemeRgb } from '../../domain/favicon/types';
-import * as FaviconUrlKinds from '../../domain/favicon/url-kinds';
 // Accent colors and the light and dark color themes built from them: the
 // tint a result row, tag or button takes from its site's icon or brand.
+import { copyRgb, getContrastRatio, getLuminance, getReadableTextColor, isRgb, mixColor, parseCssColor, rgbToCss } from '../../domain/color';
+import type { ThemeRgb } from '../../domain/favicon/types';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -64,132 +62,6 @@ const MIN_THEME_HIGHLIGHT_CONTRAST = 1.18;
 const MIN_THEME_HOVER_CONTRAST = 1.12;
 const LIGHT_THEME_SURFACE_MAX_SATURATION = 0.68;
 const DARK_THEME_SURFACE_MAX_SATURATION = 0.6;
-const brandAccentMap: Readonly<Record<string, ThemeRgb>> = {
-  'github.com': [36, 41, 46],
-  'docs.github.com': [36, 41, 46],
-  'douban.com': [0, 181, 29],
-  'zhihu.com': [23, 127, 255],
-  'bilibili.com': [0, 174, 236],
-  'dribbble.com': [234, 100, 217],
-  'youtube.com': [255, 0, 0],
-  'youtu.be': [255, 0, 0],
-  'google.com': [66, 133, 244],
-  'chatgpt.com': [16, 163, 127],
-  'gemini.google.com': [66, 133, 244],
-  'doubao.com': [79, 70, 229],
-  'qianwen.com': [37, 99, 235],
-  'yuanbao.tencent.com': [0, 82, 217],
-  'chat.minimax.io': [24, 119, 242],
-  'chat.deepseek.com': [74, 107, 255],
-  'kimi.com': [77, 92, 255],
-  'copilot.com': [34, 83, 206],
-  'copilot.microsoft.com': [34, 83, 206],
-  'grok.com': [17, 24, 39],
-  'chat.qwen.ai': [99, 54, 231],
-  'aistudio.google.com': [66, 133, 244],
-  'bing.com': [0, 120, 215],
-  'baidu.com': [41, 98, 255],
-  'taobao.com': [255, 80, 0],
-  'tmall.com': [226, 35, 26],
-  'juejin.cn': [30, 128, 255],
-  'reddit.com': [255, 69, 0],
-  'wikipedia.org': [64, 64, 64],
-  'zh.wikipedia.org': [64, 64, 64],
-  'dodopayments.com': [190, 255, 0],
-  'x.com': [17, 24, 39],
-  'twitter.com': [29, 161, 242]
-};
-
-function copyRgb(rgb: readonly number[]): ThemeRgb {
-  return [rgb[0], rgb[1], rgb[2]];
-}
-
-function isRgb(value: unknown): value is ThemeRgb {
-  return Array.isArray(value) && value.length === 3;
-}
-
-function mixColor(color: readonly number[], target: readonly number[], amount: number): ThemeRgb {
-  return [
-    Math.round(color[0] + (target[0] - color[0]) * amount),
-    Math.round(color[1] + (target[1] - color[1]) * amount),
-    Math.round(color[2] + (target[2] - color[2]) * amount)
-  ];
-}
-
-function stableHashCode(text: unknown): number {
-  const input = String(text || '');
-  let hash = 0;
-  for (let i = 0; i < input.length; i += 1) {
-    hash = ((hash << 5) - hash) + input.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash);
-}
-
-function rgbToCss(rgb: readonly number[]): string {
-  return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
-}
-
-function rgbToCssAlpha(rgb: readonly number[], alpha: number): string {
-  const nextAlpha = Number.isFinite(alpha) ? Math.max(0, Math.min(1, alpha)) : 1;
-  return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${nextAlpha})`;
-}
-
-function rgbToCssParts(rgb: readonly number[]): string {
-  return `${rgb[0]}, ${rgb[1]}, ${rgb[2]}`;
-}
-
-function parseCssColor(color: unknown): ThemeRgb | null {
-  if (!color || typeof color !== 'string') {
-    return null;
-  }
-  const trimmed = color.trim().toLowerCase();
-  if (trimmed.startsWith('#')) {
-    const hex = trimmed.slice(1);
-    if (hex.length === 3) {
-      const r = parseInt(hex[0] + hex[0], 16);
-      const g = parseInt(hex[1] + hex[1], 16);
-      const b = parseInt(hex[2] + hex[2], 16);
-      if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) {
-        return [r, g, b];
-      }
-    }
-    if (hex.length === 6) {
-      const r = parseInt(hex.slice(0, 2), 16);
-      const g = parseInt(hex.slice(2, 4), 16);
-      const b = parseInt(hex.slice(4, 6), 16);
-      if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) {
-        return [r, g, b];
-      }
-    }
-    return null;
-  }
-  const rgbMatch = trimmed.match(/^rgba?\(\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)(?:\s*,\s*(?:[0-9.]+|[0-9.]+%))?\s*\)$/);
-  if (rgbMatch) {
-    const r = Number(rgbMatch[1]);
-    const g = Number(rgbMatch[2]);
-    const b = Number(rgbMatch[3]);
-    if ([r, g, b].every((value) => Number.isFinite(value))) {
-      return [r, g, b];
-    }
-  }
-  return null;
-}
-
-function getLuminance(rgb: readonly number[]): number {
-  const [r, g, b] = rgb.map((value) => {
-    const channel = value / 255;
-    return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function getContrastRatio(firstRgb: readonly number[], secondRgb: readonly number[]): number {
-  const firstLuminance = getLuminance(firstRgb);
-  const secondLuminance = getLuminance(secondRgb);
-  return (Math.max(firstLuminance, secondLuminance) + 0.05) /
-    (Math.min(firstLuminance, secondLuminance) + 0.05);
-}
 
 function getSaturationCappedColor(color: unknown, maximumSaturation: number): ThemeRgb {
   const source: ThemeRgb = isRgb(color) ? color : defaultAccentColor;
@@ -300,17 +172,6 @@ function getSoftThemeBorderColor(accent: ThemeRgb, background: ThemeRgb): ThemeR
   );
 }
 
-function getReadableTextColor(bgRgb: unknown): string {
-  if (!isRgb(bgRgb)) {
-    return '#111827';
-  }
-  const darkText: ThemeRgb = [17, 24, 39];
-  const lightText: ThemeRgb = [248, 250, 252];
-  const contrastWithDark = getContrastRatio(darkText, bgRgb);
-  const contrastWithLight = getContrastRatio(lightText, bgRgb);
-  return contrastWithDark >= contrastWithLight ? '#111827' : '#F8FAFC';
-}
-
 function normalizeAccentColor(rgb: unknown): ThemeRgb {
   if (!isRgb(rgb)) {
     return copyRgb(defaultAccentColor);
@@ -419,46 +280,6 @@ function createUrlHighlightTheme(): ThemeVariant {
   return theme;
 }
 
-function normalizeHost(hostname: unknown): string {
-  if (!hostname) {
-    return '';
-  }
-  const lower = String(hostname).toLowerCase();
-  const stripped = lower.replace(/^www\./i, '');
-  if (stripped === 'my.feishu.cn') {
-    return 'feishu.cn';
-  }
-  return stripped;
-}
-
-function normalizeFaviconHost(hostname: unknown): string {
-  return FaviconUrlKinds.normalizeFaviconHost(hostname);
-}
-
-function getBrandAccentForHost(hostname: unknown): ThemeRgb | null {
-  const host = String(hostname || '').toLowerCase();
-  if (!host) {
-    return null;
-  }
-  if (Object.prototype.hasOwnProperty.call(brandAccentMap, host)) {
-    return brandAccentMap[host];
-  }
-  const entry = Object.keys(brandAccentMap).find((key) => host === key || host.endsWith(`.${key}`));
-  return entry ? brandAccentMap[entry] : null;
-}
-
-function getBrandAccentForUrl(url: unknown): ThemeRgb | null {
-  if (!url) {
-    return null;
-  }
-  try {
-    const hostname = normalizeHost(new URL(String(url)).hostname);
-    return getBrandAccentForHost(hostname);
-  } catch (_error) {
-    return null;
-  }
-}
-
 function buildFallbackThemeForHost(_hostname?: unknown): ThemeVariant {
   const theme = createDefaultTheme();
   theme._xIsFallback = true;
@@ -474,95 +295,6 @@ function getThemeFingerprint(theme: ThemeLike | null | undefined): string {
   const rgb = theme ? (theme.accentRgb || parseCssColor(theme.accent)) : null;
   const accent = isRgb(rgb) ? rgb : defaultAccentColor;
   return `${source}:${confidence || neutral}:${accent.join(',')}`;
-}
-
-function hasThemeTokenInUrl(url: unknown, token: string): boolean {
-  return FaviconThemedCandidates.hasThemeTokenInUrl(url, token);
-}
-
-function shouldSkipThemeUpgradeCandidate(candidateUrl: unknown, preferredTheme: unknown, currentUrl: unknown): boolean {
-  return FaviconThemedCandidates.shouldSkipThemeUpgradeCandidate(candidateUrl, preferredTheme, currentUrl);
-}
-
-function getKnownThemedFaviconCandidates(hostname: unknown, preferredTheme: unknown): ReturnType<typeof FaviconThemedCandidates.getKnownThemedFaviconCandidateUrls> {
-  return FaviconThemedCandidates.getKnownThemedFaviconCandidateUrls(hostname, preferredTheme, {
-    getRuntimeUrl: (path) => {
-      const chromeApi = typeof chrome !== 'undefined' ? chrome : null;
-      return chromeApi && chromeApi.runtime && typeof chromeApi.runtime.getURL === 'function'
-        ? chromeApi.runtime.getURL(path)
-        : '';
-    }
-  });
-}
-
-function hostHasExplicitDarkFavicon(hostname: unknown): boolean {
-  return FaviconThemeColor.hostHasExplicitDarkFavicon(hostname);
-}
-
-function isFaviconProxyUrl(url: unknown): boolean {
-  return FaviconUrlKinds.isFaviconProxyUrl(url);
-}
-
-function extractAverageColor(image: CanvasImageSource): ThemeRgb | null {
-  const size = 16;
-  const doc = typeof document !== 'undefined' ? document : null;
-  if (!doc || typeof doc.createElement !== 'function') {
-    return null;
-  }
-  const canvas = doc.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const context = canvas.getContext('2d', { willReadFrequently: true });
-  if (!context) {
-    return null;
-  }
-  try {
-    context.drawImage(image, 0, 0, size, size);
-    const data = context.getImageData(0, 0, size, size).data;
-    let r = 0;
-    let g = 0;
-    let b = 0;
-    let count = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      const alpha = data[i + 3];
-      if (alpha < 32) {
-        continue;
-      }
-      const red = data[i];
-      const green = data[i + 1];
-      const blue = data[i + 2];
-      const brightness = (red + green + blue) / 3;
-      if (brightness > 245) {
-        continue;
-      }
-      r += red;
-      g += green;
-      b += blue;
-      count += 1;
-    }
-    if (!count) {
-      for (let i = 0; i < data.length; i += 4) {
-        const alpha = data[i + 3];
-        if (alpha < 32) {
-          continue;
-        }
-        r += data[i];
-        g += data[i + 1];
-        b += data[i + 2];
-        count += 1;
-      }
-    }
-    if (!count) {
-      return null;
-    }
-    return [
-      Math.round(r / count),
-      Math.round(g / count),
-      Math.round(b / count)
-    ];
-  } catch (_error) {
-    return null;
-  }
 }
 
 function resolveDarkModeOption(options: ThemeModeOptions | null | undefined): boolean {
@@ -619,36 +351,17 @@ function getHoverColors(theme: ThemeLike | null | undefined, options?: ThemeMode
 export type { HoverColors, ThemeLike, ThemeModeOptions, ThemeVariant };
 export {
   defaultAccentColor,
-  mixColor,
-  stableHashCode,
-  rgbToCss,
-  rgbToCssAlpha,
-  rgbToCssParts,
-  parseCssColor,
-  getLuminance,
-  getContrastRatio,
   getSaturationCappedColor,
   getAccessibleThemeColor,
   getTintedSurfaceColor,
   getSoftThemeBorderColor,
-  getReadableTextColor,
   normalizeAccentColor,
   buildThemeVariant,
   buildTheme,
   createDefaultTheme,
   createUrlHighlightTheme,
-  normalizeHost,
-  normalizeFaviconHost,
-  getBrandAccentForHost,
-  getBrandAccentForUrl,
   buildFallbackThemeForHost,
   getThemeFingerprint,
-  hasThemeTokenInUrl,
-  shouldSkipThemeUpgradeCandidate,
-  getKnownThemedFaviconCandidates,
-  hostHasExplicitDarkFavicon,
-  isFaviconProxyUrl,
-  extractAverageColor,
   getThemeForMode,
   getHoverColors
 };

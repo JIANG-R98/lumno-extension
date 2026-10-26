@@ -1,4 +1,5 @@
-import * as FAVICON_THEME from '../shared/favicon/favicon-theme';
+import { buildTheme, createDefaultTheme, createUrlHighlightTheme, defaultAccentColor } from '../shared/favicon/favicon-theme';
+import { parseCssColor, rgbToCss } from '../domain/color';
 import * as COMMUNITY_LINKS from '../platform/community-links';
 import * as OVERLAY_FONT_FACES from '../shared/overlay-font-faces';
 import * as LumnoShortcutFaviconStore from '../platform/shortcut-favicon-store';
@@ -127,8 +128,8 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     }),
     imeKeyGuard: LumnoImeKeyGuard.createImeKeyGuard(),
     overlayMediaQuery: window.matchMedia('(prefers-color-scheme: dark)'),
-    defaultTheme: FAVICON_THEME.createDefaultTheme(),
-    urlHighlightTheme: FAVICON_THEME.createUrlHighlightTheme(),
+    defaultTheme: createDefaultTheme(),
+    urlHighlightTheme: createUrlHighlightTheme(),
     defaultSiteSearchProviders: SearchSiteSearchProviders.getDefaultSiteSearchProviders(),
     requestFaviconData: (url, pageUrl) => (
       overlayFaviconRuntime ? overlayFaviconRuntime.requestFaviconData(url, pageUrl || '') : Promise.resolve(null)
@@ -228,7 +229,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     instantActive: () => overlayState.numberShortcutInstantEnabled
   };
 
-  const buildTheme = FAVICON_THEME.buildTheme;
 
 
   const applyOverlayTheme = (mode: ThemeMode): void => {
@@ -735,7 +735,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   };
 
 
-  const parseCssColor = FAVICON_THEME.parseCssColor;
 
   const {
     getHighlightColors,
@@ -754,10 +753,8 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     applyOverlayTheme,
     SETTINGS,
     OVERLAY_FONT_FAMILY_CSS_VAR,
-    FAVICON_THEME,
     overlayState
   });
-  const defaultAccentColor = FAVICON_THEME.defaultAccentColor;
 
   const {
     getExtensionFaviconUrl,
@@ -1332,7 +1329,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   const defaultCaretColor = overlayState.searchInput.style.caretColor || 'var(--x-ext-input-caret, #7DB7FF)';
   const inputModePrefixTransition = 'opacity 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1), background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, color 140ms ease';
 
-  const rgbToCss = FAVICON_THEME.rgbToCss;
 
   const {
     initialOverlayThemeReady,
