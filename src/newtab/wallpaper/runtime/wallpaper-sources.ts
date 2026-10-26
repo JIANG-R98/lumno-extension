@@ -1,7 +1,7 @@
 // Wallpaper identity: modes, ids and their prefs, built-in, custom, online
 // and daily sources, and the files, URLs, thumbnails and names each resolves
 // to.
-import type { WallpaperLocalStore } from '../../../shared/wallpaper-local-store';
+import type { WallpaperLocalStore } from '../../../shared/wallpaper-records';
 import type { Translate } from '../../newtab-types';
 import type * as RemoteContent from '../../remote-content';
 import type { RemoteContentClient } from '../../remote-content';

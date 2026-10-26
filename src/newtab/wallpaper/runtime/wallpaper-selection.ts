@@ -2,7 +2,7 @@
 // or picked wallpaper once it is ready, and saving the choice and whether
 // wallpapers are on, per mode.
 import type { StorageAreaLike } from '../../../domain/storage-port';
-import type { WallpaperRecord } from '../../../shared/wallpaper-local-store';
+import type { WallpaperRecord } from '../../../shared/wallpaper-records';
 import type * as RemoteContent from '../../remote-content';
 import type { RemoteContentClient } from '../../remote-content';
 import type { WallpaperEffectPrefsRuntime } from './wallpaper-effect-prefs';

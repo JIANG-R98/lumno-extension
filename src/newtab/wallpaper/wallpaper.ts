@@ -42,6 +42,8 @@ import * as WALLPAPER_WALLPAPER_VISUAL from './runtime/wallpaper-visual';
 import * as WALLPAPER_ADAPTIVE_TONE from './wallpaper-adaptive-tone';
 import * as WALLPAPER_EFFECTS from './wallpaper-effects';
 import * as WALLPAPER_LOCAL_STORE from '../../shared/wallpaper-local-store';
+import * as WALLPAPER_CACHES from '../../shared/wallpaper-caches';
+import { CUSTOM_WALLPAPER_ID } from '../../shared/wallpaper-records';
 import { readBootValue } from '../../platform/boot-handoff';
 import { getWallpaperViewApi } from '../react/wallpaper-view';
 import { newtabFavicon, newtabWallpaperEffect, newtabWallpaperOverlay, newtabWallpaperPreload } from '../../domain/settings/newtab-wallpaper';
@@ -482,13 +484,13 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
     documentObj,
     windowObj
   });
-  const wallpaperImageCache = typeof WALLPAPER_LOCAL_STORE.createWallpaperImageCache === 'function'
-    ? WALLPAPER_LOCAL_STORE.createWallpaperImageCache({ windowObj })
+  const wallpaperImageCache = typeof WALLPAPER_CACHES.createWallpaperImageCache === 'function'
+    ? WALLPAPER_CACHES.createWallpaperImageCache({ windowObj })
     : null;
   // Without IndexedDB the tiles load from Picsum as before.
-  const wallpaperThumbnailCache = typeof WALLPAPER_LOCAL_STORE.createWallpaperThumbnailCache === 'function' &&
+  const wallpaperThumbnailCache = typeof WALLPAPER_CACHES.createWallpaperThumbnailCache === 'function' &&
     typeof localWallpaperStore.buildTileThumbnail === 'function' && windowObj && windowObj.indexedDB
-    ? WALLPAPER_LOCAL_STORE.createWallpaperThumbnailCache({ windowObj })
+    ? WALLPAPER_CACHES.createWallpaperThumbnailCache({ windowObj })
     : null;
   // Pages without IndexedDB (some private windows) simply have no local copies;
   // any other failure of the stores is unexpected and worth a warning.
@@ -513,7 +515,7 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
   // Every built-in wallpaper's full size; a small copy is sampled where these pixels would be.
   const NEWTAB_WALLPAPER_SOURCE_SIZE = Object.freeze({ width: 2048, height: 1152 });
   const NEWTAB_WALLPAPER_DEFAULT_ID = 'monet-coastal-white';
-  const NEWTAB_CUSTOM_WALLPAPER_ID = WALLPAPER_LOCAL_STORE.CUSTOM_WALLPAPER_ID || 'custom-upload';
+  const NEWTAB_CUSTOM_WALLPAPER_ID = CUSTOM_WALLPAPER_ID || 'custom-upload';
   const NEWTAB_LOCAL_WALLPAPER_DISABLED_VALUE = '__lumno_local_wallpaper_disabled__';
   const NEWTAB_WALLPAPER_PREFS_STORAGE_VERSION = 2;
   const NEWTAB_WALLPAPER_MODE_LIGHT = 'light';

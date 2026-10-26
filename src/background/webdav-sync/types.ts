@@ -3,7 +3,7 @@ import * as LumnoSettings from '../../domain/settings';
 import type { WebDavClientApi } from '../webdav-client/api';
 import type { StorageItems } from '../../domain/storage-port';
 import type { WebDavRequest } from '../../domain/messages';
-import type { WallpaperRecord, WallpaperRecordInput } from '../../shared/wallpaper-local-store';
+import type { WallpaperRecord, WallpaperRecordInput } from '../../shared/wallpaper-records';
 import type { ConnectionCapabilities, WebDavClientOptions, WebDavConnection, WebDavDiagnostic } from '../webdav-client/types';
 import type { GroupedShortcutItem } from '../../domain/shortcuts/types';
 import type { ShortcutsStoreApi } from '../../domain/shortcuts/api';

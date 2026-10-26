@@ -1,6 +1,8 @@
 const assert = require('assert');
 
 const wallpaperStoreApi = require('../../src/shared/wallpaper-local-store.ts');
+const wallpaperCachesApi = require('../../src/shared/wallpaper-caches.ts');
+const wallpaperImageApi = require('../../src/shared/wallpaper-image.ts');
 
 function dataUrlBytes(dataUrl) {
   return Buffer.from(String(dataUrl).split(',')[1] || '', 'base64').byteLength;
@@ -27,7 +29,7 @@ function createStore(options) {
         settings.calls.push({ op: 'toDataURL', quality, width: this.width, height: this.height });
       }
       const byteLength = quality > 0.7
-        ? wallpaperStoreApi.MAX_WALLPAPER_BYTES + 1
+        ? wallpaperImageApi.MAX_WALLPAPER_BYTES + 1
         : (settings.outputBytes || 100);
       return `data:image/webp;base64,${Buffer.alloc(byteLength, 1).toString('base64')}`;
     }
@@ -113,16 +115,16 @@ function createIndexedDbWindow(records, calls) {
 }
 
 async function run() {
-  assert.strictEqual(wallpaperStoreApi.MAX_SOURCE_BYTES, 25 * 1024 * 1024);
-  assert.strictEqual(wallpaperStoreApi.MAX_CSS_URL_LENGTH, 2 * 1024 * 1024);
+  assert.strictEqual(wallpaperImageApi.MAX_SOURCE_BYTES, 25 * 1024 * 1024);
+  assert.strictEqual(wallpaperImageApi.MAX_CSS_URL_LENGTH, 2 * 1024 * 1024);
   // The page applies a wallpaper through a CSS custom property, which Chrome drops past 2 MB, so
   // the largest allowed WebP must still fit there as url("data:…").
   const largestWallpaperCssValue =
-    `url("data:image/webp;base64,${Buffer.alloc(wallpaperStoreApi.MAX_WALLPAPER_BYTES).toString('base64')}")`;
-  assert(largestWallpaperCssValue.length <= wallpaperStoreApi.MAX_CSS_URL_LENGTH);
-  assert.strictEqual(wallpaperStoreApi.MAX_THUMBNAIL_BYTES, 160 * 1024);
+    `url("data:image/webp;base64,${Buffer.alloc(wallpaperImageApi.MAX_WALLPAPER_BYTES).toString('base64')}")`;
+  assert(largestWallpaperCssValue.length <= wallpaperImageApi.MAX_CSS_URL_LENGTH);
+  assert.strictEqual(wallpaperImageApi.MAX_THUMBNAIL_BYTES, 160 * 1024);
   assert.deepStrictEqual(
-    Array.from(wallpaperStoreApi.ACCEPTED_SOURCE_MIME_TYPES),
+    Array.from(wallpaperImageApi.ACCEPTED_SOURCE_MIME_TYPES),
     ['image/jpeg', 'image/png', 'image/webp']
   );
 
@@ -140,14 +142,14 @@ async function run() {
   const sampleCall = canvasCalls.findIndex((call) => call.op === 'toDataURL' && call.quality === 1);
   assert.deepStrictEqual(canvasCalls[sampleCall], { op: 'toDataURL', quality: 1, width: 520, height: 293 });
   assert.deepStrictEqual(canvasCalls[sampleCall - 1], { op: 'getContext', attributes: { willReadFrequently: true } });
-  assert(dataUrlBytes(record.imageDataUrl) <= wallpaperStoreApi.MAX_WALLPAPER_BYTES);
-  assert(dataUrlBytes(record.thumbnailDataUrl) <= wallpaperStoreApi.MAX_THUMBNAIL_BYTES);
+  assert(dataUrlBytes(record.imageDataUrl) <= wallpaperImageApi.MAX_WALLPAPER_BYTES);
+  assert(dataUrlBytes(record.thumbnailDataUrl) <= wallpaperImageApi.MAX_THUMBNAIL_BYTES);
   assert.match(record.imageDataUrl, /^data:image\/webp;base64,/);
 
   await assert.rejects(
     () => createStore().buildRecordFromFile({
       type: 'image/png',
-      size: wallpaperStoreApi.MAX_SOURCE_BYTES + 1,
+      size: wallpaperImageApi.MAX_SOURCE_BYTES + 1,
       name: 'huge.png'
     }),
     /source file is too large/
@@ -311,7 +313,7 @@ function createMemoryIndexedDb() {
 async function testThumbnailCacheKeepsTheMostRecentlySeenTiles() {
   const indexedDB = createMemoryIndexedDb();
   let time = 1000;
-  const cache = wallpaperStoreApi.createWallpaperThumbnailCache({ windowObj: { indexedDB }, limit: 2, now: () => time });
+  const cache = wallpaperCachesApi.createWallpaperThumbnailCache({ windowObj: { indexedDB }, limit: 2, now: () => time });
   const tile = (id) => ({ id, url: `https://picsum.photos/id/${id}/320/180`, dataUrl: `data:image/webp;base64,${id}` });
   await cache.write(tile('a'));
   time += 1;
@@ -328,7 +330,7 @@ async function testThumbnailCacheKeepsTheMostRecentlySeenTiles() {
   assert.deepStrictEqual(Array.from(indexedDB.records.keys()).sort(), ['a', 'c'],
     'Past the limit the tile seen longest ago is dropped');
 
-  await assert.rejects(() => wallpaperStoreApi.createWallpaperThumbnailCache({ windowObj: {} }).readByIds(['a']),
+  await assert.rejects(() => wallpaperCachesApi.createWallpaperThumbnailCache({ windowObj: {} }).readByIds(['a']),
     /IndexedDB is not available/);
 }
 

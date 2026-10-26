@@ -1,6 +1,6 @@
 // Applying a merged state to this device, and mirroring it into Chrome sync.
 import type { StorageItems } from '../../domain/storage-port';
-import type { WallpaperRecordInput } from '../../shared/wallpaper-local-store';
+import type { WallpaperRecordInput } from '../../shared/wallpaper-records';
 import { capture, pickLocalPreferences } from './capture';
 import { getAsset, toDataUrl } from './media';
 import { isRecord, isRecorded, readSession, unrefTimer } from './records';

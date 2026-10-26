@@ -5,7 +5,8 @@ import type * as LumnoExtensionRoutes from '../../../domain/extension-routes';
 import type * as LumnoSettings from '../../../domain/settings';
 import type { NewtabTopContentMode } from '../../../domain/settings';
 import * as LumnoCommunityLinks from '../../../platform/community-links';
-import type { WallpaperLocalStore, WallpaperThumbnailCache } from '../../../shared/wallpaper-local-store';
+import type { WallpaperLocalStore } from '../../../shared/wallpaper-records';
+import type { WallpaperThumbnailCache } from '../../../shared/wallpaper-caches';
 import type { FormatMessage, Translate } from '../../newtab-types';
 import type {
   GlassTheme,

@@ -43,7 +43,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   // IndexedDB copy as soon as it is read, so a slow or failing network never holds the tab's spinner
   // or blanks the page; uploads paint from the local wallpaper library the same way.
   const WALLPAPER_PATH_PATTERN = /^(?:assets\/wallpapers|output\/imagegen)\/[-.\w]+\.webp$/;
-  // Shared with createWallpaperImageCache in wallpaper-local-store.ts.
+  // Shared with createWallpaperImageCache in wallpaper-caches.ts.
   const IMAGE_CACHE_DB_NAME = 'lumno-newtab-wallpaper-cache';
   const IMAGE_CACHE_STORE_NAME = 'images';
   // Shared with createWallpaperLocalStore in wallpaper-local-store.ts.

@@ -2,7 +2,7 @@
 // wallpapers they show, the preferences that pick them, and the one state
 // object wallpaper.ts hands every part.
 import type { NewtabTopContentMode } from '../../../domain/settings';
-import type { WallpaperRecord } from '../../../shared/wallpaper-local-store';
+import type { WallpaperRecord } from '../../../shared/wallpaper-records';
 import type { FeatureHintController } from '../../../shared/ui/feature-hint-catalog';
 import type { WallpaperPanelActions, WallpaperPanelState, WallpaperSourceTab, ThemeScope } from '../../react/wallpaper-panel/panel-model';
 import type { WallpaperViewController } from '../../react/wallpaper-view';

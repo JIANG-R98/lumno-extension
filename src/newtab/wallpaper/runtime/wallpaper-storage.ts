@@ -2,7 +2,7 @@
 // overrides kept on one device, the preload cache the next page reads before
 // the runtime starts, and the custom wallpaper records.
 import type { StorageAreaLike, StorageItems } from '../../../domain/storage-port';
-import type { WallpaperLocalStore } from '../../../shared/wallpaper-local-store';
+import type { WallpaperLocalStore } from '../../../shared/wallpaper-records';
 import type { ShowToast, Translate } from '../../newtab-types';
 import type { WallpaperSourceTab } from '../../react/wallpaper-panel/panel-model';
 import type * as RemoteContent from '../../remote-content';

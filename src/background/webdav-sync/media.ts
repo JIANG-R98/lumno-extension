@@ -1,7 +1,7 @@
 // Shortcut icons and wallpapers: checking, hashing and moving them to and
 // from the server.
 import type { StorageItems } from '../../domain/storage-port';
-import type { WallpaperRecord } from '../../shared/wallpaper-local-store';
+import type { WallpaperRecord } from '../../shared/wallpaper-records';
 import { isArrayBufferBytes, isRecord } from './records';
 import { fail } from './runtime';
 import type { ConnectionContext, DecodedImage, ImageCheck } from './types';
