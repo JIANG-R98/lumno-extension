@@ -5,7 +5,7 @@
 // settings it needs to.
 import type { Setting, SettingArea, SettingFamily } from '../domain/settings/define';
 import { localPrimary } from '../domain/settings/sync-state';
-import type { StorageAreaLike, StorageChanges, StorageItems, StoredValuePort } from '../domain/storage-port';
+import type { StorageAreaLike, StorageChangeEventLike, StorageChanges, StorageItems, StoredValuePort } from '../domain/storage-port';
 import { callStorage, isRecord } from './storage-call';
 import { createProviderStorageRuntime } from './provider-storage';
 import type { ProviderStorageRuntime, StorageAreaFacade, StorageChromeApi } from './settings-storage';
@@ -114,10 +114,314 @@ function writeWebStorage(storage: WebStorageLike | null | undefined, key: string
   }
 }
 
+interface StoreContext {
+  // The storage listener, kept so destroy() and unfollowing remove the one listen() added.
+  readonly storageListener: (changes: StorageChanges, areaName: string) => void;
+  readonly chromeApi: SettingsStoreChromeApi | null;
+  readonly storage: ({ local?: StorageAreaLike; sync?: StorageAreaLike; onChanged?: StorageChangeEventLike; } & { session?: StorageAreaLike; }) | null;
+  readonly windowObj: SettingsStoreWindow | null;
+  readonly initialValues: Partial<Record<StoreArea, StorageItems>> | null;
+  readonly listenWhileSubscribed: boolean;
+  readonly byKey: Map<string, Setting<unknown>>;
+  readonly loading: Map<string, Promise<void>>;
+  readonly unread: Set<string>;
+  readonly everRead: Set<string>;
+  readonly stored: Map<string, unknown>;
+  readonly parsed: Map<string, unknown>;
+  readonly listeners: Map<string, Set<SettingsListener>>;
+  readonly memberListeners: Map<SettingFamily<unknown>, Set<(id: string) => void>>;
+  provider: ProviderStorageRuntime | null;
+  listening: boolean;
+  destroyed: boolean;
+  ready: Promise<void>;
+  readonly pendingReads: Map<StoreArea, { settings: Setting<unknown>[]; done: Promise<void>; }>;
+  readonly onChanged: StorageChangeEventLike | null | undefined;
+}
+
+// The provider runtime is made with the first preference the store meets.
+function preferencesProvider(ctx: StoreContext): ProviderStorageRuntime {
+  if (!ctx.provider) ctx.provider = createProviderStorageRuntime(ctx.chromeApi);
+  return ctx.provider;
+}
+
+function areaFor(ctx: StoreContext, area: StoreArea): StorageAreaLike | StorageAreaFacade | null {
+  if (!ctx.storage) return null;
+  if (area === 'preferences') return preferencesProvider(ctx).area;
+  if (area === 'browserSync') return ctx.storage.sync || null;
+  if (area === 'session') return ctx.storage.session || ctx.storage.local || null;
+  return ctx.storage.local || null;
+}
+
+function webStorageFor(ctx: StoreContext, setting: Setting<unknown>): WebStorageLike | null {
+  if (!ctx.windowObj) return null;
+  return (setting.area === 'tab' ? ctx.windowObj.sessionStorage : ctx.windowObj.localStorage) || null;
+}
+
+function isStoreArea(area: SettingArea): area is StoreArea {
+  return area !== 'page' && area !== 'tab';
+}
+
+// Whether a change in `areaName` reaches settings of `area`.
+function areaMatches(ctx: StoreContext, area: StoreArea, areaName: string): boolean {
+  if (area === 'preferences') return Boolean(ctx.provider && ctx.provider.isActiveAreaName(areaName));
+  if (area === 'browserSync') return areaName === 'sync';
+  if (area === 'session') return areaName === (ctx.storage && ctx.storage.session ? 'session' : 'local');
+  return areaName === 'local';
+}
+
+function notify(ctx: StoreContext, setting: Setting<unknown>): void {
+  const set = ctx.listeners.get(setting.key);
+  if (!set) return;
+  Array.from(set).forEach((listener) => {
+    try {
+      listener(setting);
+    } catch (error) {
+      // One part of the context failing to apply a change must not keep
+      // the rest from seeing it.
+      console.error('[Lumno] Setting listener failed.', error);
+    }
+  });
+}
+
+// Takes a stored value; tells listeners when what the setting reads as
+// changed. A setting's first read is not a change.
+function accept(ctx: StoreContext, setting: Setting<unknown>, value: unknown, firstRead = false): void {
+  ctx.unread.delete(setting.key);
+  const storedBefore = ctx.stored.get(setting.key);
+  const before = ctx.parsed.has(setting.key) ? ctx.parsed.get(setting.key) : setting.default;
+  if (value === undefined) ctx.stored.delete(setting.key);
+  else ctx.stored.set(setting.key, value);
+  const next = setting.parse(value);
+  ctx.parsed.set(setting.key, next);
+  if (!firstRead && (!sameValue(storedBefore, value) || !sameValue(before, next))) notify(ctx, setting);
+}
+
+async function readArea(ctx: StoreContext, area: StoreArea, list: readonly Setting<unknown>[]): Promise<void> {
+  const initial = ctx.initialValues && ctx.initialValues[area];
+  if (initial) {
+    list.forEach((setting) => accept(ctx, setting, initial[setting.key], true));
+    return;
+  }
+  const target = areaFor(ctx, area);
+  if (!target) return;
+  if (area === 'preferences') await preferencesProvider(ctx).ready;
+  let items: unknown;
+  try {
+    items = await callStorage(ctx.chromeApi, (done) => target.get(list.map((setting) => setting.key), done));
+  } catch (_error) {
+    // An area that cannot be read leaves its settings at their defaults.
+    list.forEach((setting) => ctx.unread.add(setting.key));
+    return;
+  }
+  const values = isRecord(items) ? items : {};
+  if (!ctx.destroyed) list.forEach((setting) => accept(ctx, setting, values[setting.key], !ctx.everRead.has(setting.key)));
+  list.forEach((setting) => ctx.everRead.add(setting.key));
+}
+
+function groupByArea(list: readonly Setting<unknown>[]): Map<StoreArea, Setting<unknown>[]> {
+  const groups = new Map<StoreArea, Setting<unknown>[]>();
+  list.forEach((setting) => {
+    if (!isStoreArea(setting.area)) return;
+    const group = groups.get(setting.area) || [];
+    group.push(setting);
+    groups.set(setting.area, group);
+  });
+  return groups;
+}
+
+function scheduleRead(ctx: StoreContext, area: StoreArea, list: readonly Setting<unknown>[]): Promise<void> {
+  const pending = ctx.pendingReads.get(area);
+  if (pending) {
+    pending.settings.push(...list);
+    return pending.done;
+  }
+  const settings = list.slice();
+  const done = Promise.resolve().then(() => {
+    ctx.pendingReads.delete(area);
+    return readArea(ctx, area, settings);
+  });
+  ctx.pendingReads.set(area, { settings, done });
+  return done;
+}
+
+function include(ctx: StoreContext, list: Setting<unknown> | readonly Setting<unknown>[]): Promise<void> {
+  const targets = toList(list);
+  // A shared store that follows nothing may hold stale values: read again.
+  const stale = ctx.listenWhileSubscribed && !ctx.listening;
+  const added = targets.filter((setting) => stale || !ctx.loading.has(setting.key));
+  added.forEach((setting) => ctx.byKey.set(setting.key, setting));
+  if (added.some((setting) => setting.area === 'preferences')) preferencesProvider(ctx);
+  if (added.length && !ctx.listenWhileSubscribed) listen(ctx);
+  added.filter((setting) => !isStoreArea(setting.area)).forEach((setting) => {
+    accept(ctx, setting, readWebStorage(webStorageFor(ctx, setting), setting.key), true);
+  });
+  const read = Promise.all(Array.from(groupByArea(added), ([area, group]) => scheduleRead(ctx, area, group)))
+    .then(() => undefined);
+  added.forEach((setting) => ctx.loading.set(setting.key, read));
+  return Promise.all(targets.map((setting) => ctx.loading.get(setting.key))).then(() => undefined);
+}
+
+function onStorageChanged(ctx: StoreContext, changes: StorageChanges, areaName: string): void {
+  if (ctx.destroyed || !changes) return;
+  if (ctx.provider && areaName === 'local' && Object.hasOwn(changes, localPrimary.key)) {
+    // The user moved settings between browser sync and this device: every
+    // preference now reads from the other area.
+    const preferences = Array.from(ctx.byKey.values()).filter((setting) => setting.area === 'preferences');
+    void ctx.provider.ready.then(() => readArea(ctx, 'preferences', preferences));
+  }
+  Object.keys(changes).forEach((key) => {
+    const setting = ctx.byKey.get(key);
+    if (setting && isStoreArea(setting.area) && areaMatches(ctx, setting.area, areaName)) {
+      accept(ctx, setting, changes[key].newValue);
+    }
+    ctx.memberListeners.forEach((set, family) => {
+      const id = family.idOf(key);
+      if (id === null || !isStoreArea(family.area) || !areaMatches(ctx, family.area, areaName)) return;
+      Array.from(set).forEach((listener) => listener(id));
+    });
+  });
+}
+
+// A store kept only for families has nothing to follow.
+function listen(ctx: StoreContext): void {
+  if (ctx.listening || !ctx.onChanged || typeof ctx.onChanged.addListener !== 'function') return;
+  ctx.listening = true;
+  ctx.onChanged.addListener(ctx.storageListener);
+}
+
+function stopListeningWhenUnfollowed(ctx: StoreContext): void {
+  if (!ctx.listenWhileSubscribed || !ctx.listening) return;
+  if (Array.from(ctx.listeners.values()).some((set) => set.size > 0)) return;
+  if (Array.from(ctx.memberListeners.values()).some((set) => set.size > 0)) return;
+  ctx.listening = false;
+  if (ctx.onChanged && typeof ctx.onChanged.removeListener === 'function') ctx.onChanged.removeListener(ctx.storageListener);
+  // Nothing follows storage now, so what is kept may go stale.
+  ctx.loading.clear();
+}
+
+function get<T>(ctx: StoreContext, setting: Setting<T>): T {
+  return setting.parse(ctx.stored.get(setting.key));
+}
+
+async function setMany(ctx: StoreContext, entries: ReadonlyArray<readonly [Setting<unknown>, unknown]>): Promise<void> {
+  const writes = new Map<StoreArea, StorageItems>();
+  entries.forEach(([setting, value]) => {
+    const next = setting.parse(value);
+    if (!isStoreArea(setting.area)) {
+      writeWebStorage(webStorageFor(ctx, setting), setting.key, next);
+      accept(ctx, setting, next);
+      return;
+    }
+    const items = writes.get(setting.area) || {};
+    items[setting.key] = next;
+    writes.set(setting.area, items);
+    accept(ctx, setting, next);
+  });
+  await Promise.all(Array.from(writes, async ([area, items]) => {
+    if (area === 'preferences') await preferencesProvider(ctx).ready;
+    await writeStorageValues(areaFor(ctx, area), ctx.chromeApi, items);
+  }));
+}
+
+async function remove(ctx: StoreContext, list: Setting<unknown> | readonly Setting<unknown>[]): Promise<void> {
+  const targets = toList(list);
+  const removals = new Map<StoreArea, string[]>();
+  targets.forEach((setting) => {
+    if (!isStoreArea(setting.area)) {
+      writeWebStorage(webStorageFor(ctx, setting), setting.key, undefined);
+    } else {
+      const keys = removals.get(setting.area) || [];
+      keys.push(setting.key);
+      removals.set(setting.area, keys);
+    }
+    accept(ctx, setting, undefined);
+  });
+  await Promise.all(Array.from(removals, async ([area, keys]) => {
+    if (area === 'preferences') await preferencesProvider(ctx).ready;
+    const target = areaFor(ctx, area);
+    if (target && typeof target.remove === 'function') {
+      await callStorage(ctx.chromeApi, (done) => target.remove ? target.remove(keys, () => done()) : done());
+    }
+  }));
+}
+
+function subscribe(ctx: StoreContext, list: Setting<unknown> | readonly Setting<unknown>[], listener: SettingsListener): () => void {
+  const targets = toList(list);
+  targets.forEach((setting) => {
+    if (!ctx.byKey.has(setting.key)) {
+      ctx.byKey.set(setting.key, setting);
+      if (setting.area === 'preferences') preferencesProvider(ctx);
+    }
+    const set = ctx.listeners.get(setting.key) || new Set<SettingsListener>();
+    set.add(listener);
+    ctx.listeners.set(setting.key, set);
+  });
+  listen(ctx);
+  return () => {
+    targets.forEach((setting) => {
+      const set = ctx.listeners.get(setting.key);
+      if (set) set.delete(listener);
+    });
+    stopListeningWhenUnfollowed(ctx);
+  };
+}
+
+function subscribeMembers(ctx: StoreContext, family: SettingFamily<unknown>, listener: (id: string) => void): () => void {
+  if (family.area === 'preferences') preferencesProvider(ctx);
+  const set = ctx.memberListeners.get(family) || new Set<(id: string) => void>();
+  set.add(listener);
+  ctx.memberListeners.set(family, set);
+  listen(ctx);
+  return () => {
+    set.delete(listener);
+    stopListeningWhenUnfollowed(ctx);
+  };
+}
+
+function familyArea(ctx: StoreContext, family: SettingFamily<unknown>): StorageAreaLike | StorageAreaFacade | null {
+  return isStoreArea(family.area) ? areaFor(ctx, family.area) : null;
+}
+
+async function readMembers(ctx: StoreContext, family: SettingFamily<unknown>, ids: readonly (string | number)[]): Promise<Map<string, unknown>> {
+  const members = new Map<string, unknown>();
+  const target = familyArea(ctx, family);
+  if (!target || !ids.length) return members;
+  if (family.area === 'preferences') await preferencesProvider(ctx).ready;
+  const keys = ids.map((id) => family.keyFor(id));
+  const items = await callStorage(ctx.chromeApi, (done) => target.get(keys, done));
+  const values = isRecord(items) ? items : {};
+  ids.forEach((id) => {
+    const value = values[family.keyFor(id)];
+    if (value !== undefined) members.set(String(id), value);
+  });
+  return members;
+}
+
+async function writeMembers(ctx: StoreContext, family: SettingFamily<unknown>, values: ReadonlyMap<string, unknown>): Promise<void> {
+  const target = familyArea(ctx, family);
+  if (!target || !values.size) return;
+  if (family.area === 'preferences') await preferencesProvider(ctx).ready;
+  const items: StorageItems = {};
+  values.forEach((value, id) => {
+    items[family.keyFor(id)] = family.parse(value);
+  });
+  await writeStorageValues(target, ctx.chromeApi, items);
+}
+
+async function removeMembers(ctx: StoreContext, family: SettingFamily<unknown>, ids: readonly (string | number)[]): Promise<void> {
+  const target = familyArea(ctx, family);
+  if (!target || !ids.length || typeof target.remove !== 'function') return;
+  if (family.area === 'preferences') await preferencesProvider(ctx).ready;
+  const keys = ids.map((id) => family.keyFor(id));
+  await callStorage(ctx.chromeApi, (done) => target.remove ? target.remove(keys, () => done()) : done());
+}
+
 function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
   const chromeApi = options.chromeApi || null;
   const storage = chromeApi && chromeApi.storage ? chromeApi.storage : null;
   const windowObj = options.windowObj || null;
+  const initialValues = options.initial || null;
+  const listenWhileSubscribed = options.listenWhileSubscribed === true;
   const byKey = new Map<string, Setting<unknown>>();
   const loading = new Map<string, Promise<void>>();
   const unread = new Set<string>();
@@ -126,315 +430,56 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
   const parsed = new Map<string, unknown>();
   const listeners = new Map<string, Set<SettingsListener>>();
   const memberListeners = new Map<SettingFamily<unknown>, Set<(id: string) => void>>();
-  let provider: ProviderStorageRuntime | null = null;
-  let listening = false;
-  let destroyed = false;
-
-  // The provider runtime is made with the first preference the store meets.
-  function preferencesProvider(): ProviderStorageRuntime {
-    if (!provider) provider = createProviderStorageRuntime(chromeApi);
-    return provider;
-  }
-
-  function areaFor(area: StoreArea): StorageAreaLike | StorageAreaFacade | null {
-    if (!storage) return null;
-    if (area === 'preferences') return preferencesProvider().area;
-    if (area === 'browserSync') return storage.sync || null;
-    if (area === 'session') return storage.session || storage.local || null;
-    return storage.local || null;
-  }
-
-  function webStorageFor(setting: Setting<unknown>): WebStorageLike | null {
-    if (!windowObj) return null;
-    return (setting.area === 'tab' ? windowObj.sessionStorage : windowObj.localStorage) || null;
-  }
-
-  function isStoreArea(area: SettingArea): area is StoreArea {
-    return area !== 'page' && area !== 'tab';
-  }
-
-  // Whether a change in `areaName` reaches settings of `area`.
-  function areaMatches(area: StoreArea, areaName: string): boolean {
-    if (area === 'preferences') return Boolean(provider && provider.isActiveAreaName(areaName));
-    if (area === 'browserSync') return areaName === 'sync';
-    if (area === 'session') return areaName === (storage && storage.session ? 'session' : 'local');
-    return areaName === 'local';
-  }
-
-  function notify(setting: Setting<unknown>): void {
-    const set = listeners.get(setting.key);
-    if (!set) return;
-    Array.from(set).forEach((listener) => {
-      try {
-        listener(setting);
-      } catch (error) {
-        // One part of the context failing to apply a change must not keep
-        // the rest from seeing it.
-        console.error('[Lumno] Setting listener failed.', error);
-      }
-    });
-  }
-
-  // Takes a stored value; tells listeners when what the setting reads as
-  // changed. A setting's first read is not a change.
-  function accept(setting: Setting<unknown>, value: unknown, firstRead = false): void {
-    unread.delete(setting.key);
-    const storedBefore = stored.get(setting.key);
-    const before = parsed.has(setting.key) ? parsed.get(setting.key) : setting.default;
-    if (value === undefined) stored.delete(setting.key);
-    else stored.set(setting.key, value);
-    const next = setting.parse(value);
-    parsed.set(setting.key, next);
-    if (!firstRead && (!sameValue(storedBefore, value) || !sameValue(before, next))) notify(setting);
-  }
-
-  async function readArea(area: StoreArea, list: readonly Setting<unknown>[]): Promise<void> {
-    const initial = options.initial && options.initial[area];
-    if (initial) {
-      list.forEach((setting) => accept(setting, initial[setting.key], true));
-      return;
-    }
-    const target = areaFor(area);
-    if (!target) return;
-    if (area === 'preferences') await preferencesProvider().ready;
-    let items: unknown;
-    try {
-      items = await callStorage(chromeApi, (done) => target.get(list.map((setting) => setting.key), done));
-    } catch (_error) {
-      // An area that cannot be read leaves its settings at their defaults.
-      list.forEach((setting) => unread.add(setting.key));
-      return;
-    }
-    const values = isRecord(items) ? items : {};
-    if (!destroyed) list.forEach((setting) => accept(setting, values[setting.key], !everRead.has(setting.key)));
-    list.forEach((setting) => everRead.add(setting.key));
-  }
-
-  function groupByArea(list: readonly Setting<unknown>[]): Map<StoreArea, Setting<unknown>[]> {
-    const groups = new Map<StoreArea, Setting<unknown>[]>();
-    list.forEach((setting) => {
-      if (!isStoreArea(setting.area)) return;
-      const group = groups.get(setting.area) || [];
-      group.push(setting);
-      groups.set(setting.area, group);
-    });
-    return groups;
-  }
 
   // Settings included in the same task are read together, one storage call
   // per area.
   const pendingReads = new Map<StoreArea, { settings: Setting<unknown>[]; done: Promise<void> }>();
 
-  function scheduleRead(area: StoreArea, list: readonly Setting<unknown>[]): Promise<void> {
-    const pending = pendingReads.get(area);
-    if (pending) {
-      pending.settings.push(...list);
-      return pending.done;
-    }
-    const settings = list.slice();
-    const done = Promise.resolve().then(() => {
-      pendingReads.delete(area);
-      return readArea(area, settings);
-    });
-    pendingReads.set(area, { settings, done });
-    return done;
-  }
-
-  function include(list: Setting<unknown> | readonly Setting<unknown>[]): Promise<void> {
-    const targets = toList(list);
-    // A shared store that follows nothing may hold stale values: read again.
-    const stale = options.listenWhileSubscribed && !listening;
-    const added = targets.filter((setting) => stale || !loading.has(setting.key));
-    added.forEach((setting) => byKey.set(setting.key, setting));
-    if (added.some((setting) => setting.area === 'preferences')) preferencesProvider();
-    if (added.length && !options.listenWhileSubscribed) listen();
-    added.filter((setting) => !isStoreArea(setting.area)).forEach((setting) => {
-      accept(setting, readWebStorage(webStorageFor(setting), setting.key), true);
-    });
-    const read = Promise.all(Array.from(groupByArea(added), ([area, group]) => scheduleRead(area, group)))
-      .then(() => undefined);
-    added.forEach((setting) => loading.set(setting.key, read));
-    return Promise.all(targets.map((setting) => loading.get(setting.key))).then(() => undefined);
-  }
-
-  function onStorageChanged(changes: StorageChanges, areaName: string): void {
-    if (destroyed || !changes) return;
-    if (provider && areaName === 'local' && Object.hasOwn(changes, localPrimary.key)) {
-      // The user moved settings between browser sync and this device: every
-      // preference now reads from the other area.
-      const preferences = Array.from(byKey.values()).filter((setting) => setting.area === 'preferences');
-      void provider.ready.then(() => readArea('preferences', preferences));
-    }
-    Object.keys(changes).forEach((key) => {
-      const setting = byKey.get(key);
-      if (setting && isStoreArea(setting.area) && areaMatches(setting.area, areaName)) {
-        accept(setting, changes[key].newValue);
-      }
-      memberListeners.forEach((set, family) => {
-        const id = family.idOf(key);
-        if (id === null || !isStoreArea(family.area) || !areaMatches(family.area, areaName)) return;
-        Array.from(set).forEach((listener) => listener(id));
-      });
-    });
-  }
-
   const onChanged = storage ? storage.onChanged : null;
-  // A store kept only for families has nothing to follow.
-  function listen(): void {
-    if (listening || !onChanged || typeof onChanged.addListener !== 'function') return;
-    listening = true;
-    onChanged.addListener(onStorageChanged);
-  }
+  const ctx: StoreContext = {
+    storageListener: (changes, areaName) => onStorageChanged(ctx, changes, areaName),
+    chromeApi,
+    storage,
+    windowObj,
+    initialValues,
+    listenWhileSubscribed,
+    byKey,
+    loading,
+    unread,
+    everRead,
+    stored,
+    parsed,
+    listeners,
+    memberListeners,
+    provider: null,
+    listening: false,
+    destroyed: false,
+    ready: Promise.resolve(),
+    pendingReads,
+    onChanged
+  };
 
-  function stopListeningWhenUnfollowed(): void {
-    if (!options.listenWhileSubscribed || !listening) return;
-    if (Array.from(listeners.values()).some((set) => set.size > 0)) return;
-    if (Array.from(memberListeners.values()).some((set) => set.size > 0)) return;
-    listening = false;
-    if (onChanged && typeof onChanged.removeListener === 'function') onChanged.removeListener(onStorageChanged);
-    // Nothing follows storage now, so what is kept may go stale.
-    loading.clear();
-  }
-
-  const ready = include(options.settings);
-
-  function get<T>(setting: Setting<T>): T {
-    return setting.parse(stored.get(setting.key));
-  }
-
-  async function setMany(entries: ReadonlyArray<readonly [Setting<unknown>, unknown]>): Promise<void> {
-    const writes = new Map<StoreArea, StorageItems>();
-    entries.forEach(([setting, value]) => {
-      const next = setting.parse(value);
-      if (!isStoreArea(setting.area)) {
-        writeWebStorage(webStorageFor(setting), setting.key, next);
-        accept(setting, next);
-        return;
-      }
-      const items = writes.get(setting.area) || {};
-      items[setting.key] = next;
-      writes.set(setting.area, items);
-      accept(setting, next);
-    });
-    await Promise.all(Array.from(writes, async ([area, items]) => {
-      if (area === 'preferences') await preferencesProvider().ready;
-      await writeStorageValues(areaFor(area), chromeApi, items);
-    }));
-  }
-
-  async function remove(list: Setting<unknown> | readonly Setting<unknown>[]): Promise<void> {
-    const targets = toList(list);
-    const removals = new Map<StoreArea, string[]>();
-    targets.forEach((setting) => {
-      if (!isStoreArea(setting.area)) {
-        writeWebStorage(webStorageFor(setting), setting.key, undefined);
-      } else {
-        const keys = removals.get(setting.area) || [];
-        keys.push(setting.key);
-        removals.set(setting.area, keys);
-      }
-      accept(setting, undefined);
-    });
-    await Promise.all(Array.from(removals, async ([area, keys]) => {
-      if (area === 'preferences') await preferencesProvider().ready;
-      const target = areaFor(area);
-      if (target && typeof target.remove === 'function') {
-        await callStorage(chromeApi, (done) => target.remove ? target.remove(keys, () => done()) : done());
-      }
-    }));
-  }
-
-  function subscribe(list: Setting<unknown> | readonly Setting<unknown>[], listener: SettingsListener): () => void {
-    const targets = toList(list);
-    targets.forEach((setting) => {
-      if (!byKey.has(setting.key)) {
-        byKey.set(setting.key, setting);
-        if (setting.area === 'preferences') preferencesProvider();
-      }
-      const set = listeners.get(setting.key) || new Set<SettingsListener>();
-      set.add(listener);
-      listeners.set(setting.key, set);
-    });
-    listen();
-    return () => {
-      targets.forEach((setting) => {
-        const set = listeners.get(setting.key);
-        if (set) set.delete(listener);
-      });
-      stopListeningWhenUnfollowed();
-    };
-  }
-
-  function subscribeMembers(family: SettingFamily<unknown>, listener: (id: string) => void): () => void {
-    if (family.area === 'preferences') preferencesProvider();
-    const set = memberListeners.get(family) || new Set<(id: string) => void>();
-    set.add(listener);
-    memberListeners.set(family, set);
-    listen();
-    return () => {
-      set.delete(listener);
-      stopListeningWhenUnfollowed();
-    };
-  }
-
-  function familyArea(family: SettingFamily<unknown>): StorageAreaLike | StorageAreaFacade | null {
-    return isStoreArea(family.area) ? areaFor(family.area) : null;
-  }
-
-  async function readMembers(family: SettingFamily<unknown>, ids: readonly (string | number)[]): Promise<Map<string, unknown>> {
-    const members = new Map<string, unknown>();
-    const target = familyArea(family);
-    if (!target || !ids.length) return members;
-    if (family.area === 'preferences') await preferencesProvider().ready;
-    const keys = ids.map((id) => family.keyFor(id));
-    const items = await callStorage(chromeApi, (done) => target.get(keys, done));
-    const values = isRecord(items) ? items : {};
-    ids.forEach((id) => {
-      const value = values[family.keyFor(id)];
-      if (value !== undefined) members.set(String(id), value);
-    });
-    return members;
-  }
-
-  async function writeMembers(family: SettingFamily<unknown>, values: ReadonlyMap<string, unknown>): Promise<void> {
-    const target = familyArea(family);
-    if (!target || !values.size) return;
-    if (family.area === 'preferences') await preferencesProvider().ready;
-    const items: StorageItems = {};
-    values.forEach((value, id) => {
-      items[family.keyFor(id)] = family.parse(value);
-    });
-    await writeStorageValues(target, chromeApi, items);
-  }
-
-  async function removeMembers(family: SettingFamily<unknown>, ids: readonly (string | number)[]): Promise<void> {
-    const target = familyArea(family);
-    if (!target || !ids.length || typeof target.remove !== 'function') return;
-    if (family.area === 'preferences') await preferencesProvider().ready;
-    const keys = ids.map((id) => family.keyFor(id));
-    await callStorage(chromeApi, (done) => target.remove ? target.remove(keys, () => done()) : done());
-  }
-
+  ctx.ready = include(ctx, options.settings);
   return Object.freeze({
-    ready,
-    get,
-    include,
-    getStored: (setting: Setting<unknown>) => stored.get(setting.key),
-    isRead: (setting: Setting<unknown>) => byKey.has(setting.key) && !unread.has(setting.key),
-    set: <T>(setting: Setting<T>, value: T) => setMany([[setting, value]]),
-    setMany,
-    remove,
-    subscribe,
-    subscribeMembers,
-    readMembers,
-    writeMembers,
-    removeMembers,
+    ready: ctx.ready,
+    get: <T>(setting: Setting<T>) => get(ctx, setting),
+    include: (list: Setting<unknown> | readonly Setting<unknown>[]) => include(ctx, list),
+    getStored: (setting: Setting<unknown>) => ctx.stored.get(setting.key),
+    isRead: (setting: Setting<unknown>) => ctx.byKey.has(setting.key) && !ctx.unread.has(setting.key),
+    set: <T>(setting: Setting<T>, value: T) => setMany(ctx, [[setting, value]]),
+    setMany: (entries: ReadonlyArray<readonly [Setting<unknown>, unknown]>) => setMany(ctx, entries),
+    remove: (list: Setting<unknown> | readonly Setting<unknown>[]) => remove(ctx, list),
+    subscribe: (list: Setting<unknown> | readonly Setting<unknown>[], listener: SettingsListener) => subscribe(ctx, list, listener),
+    subscribeMembers: (family: SettingFamily<unknown>, listener: (id: string) => void) => subscribeMembers(ctx, family, listener),
+    readMembers: (family: SettingFamily<unknown>, ids: readonly (string | number)[]) => readMembers(ctx, family, ids),
+    writeMembers: (family: SettingFamily<unknown>, values: ReadonlyMap<string, unknown>) => writeMembers(ctx, family, values),
+    removeMembers: (family: SettingFamily<unknown>, ids: readonly (string | number)[]) => removeMembers(ctx, family, ids),
     destroy() {
-      destroyed = true;
-      listeners.clear();
-      memberListeners.clear();
-      if (onChanged && typeof onChanged.removeListener === 'function') {
-        onChanged.removeListener(onStorageChanged);
+      ctx.destroyed = true;
+      ctx.listeners.clear();
+      ctx.memberListeners.clear();
+      if (ctx.onChanged && typeof ctx.onChanged.removeListener === 'function') {
+        ctx.onChanged.removeListener(ctx.storageListener);
       }
     }
   });
