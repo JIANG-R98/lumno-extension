@@ -5,6 +5,7 @@ import * as TOAST from '../shared/ui/toast';
 import * as LumnoMessaging from '../platform/messaging';
 import { queryHtmlTags } from '../shared/dom-lookup';
 import { TAB_SWITCHER_HOST_ID, getTabSwitcherHost } from './tab-switcher-host';
+import { createFullscreenEscapeLock } from './fullscreen-escape-lock';
 import type { TabSwitcherHost, TabSwitcherReply } from './tab-switcher-host';
 
 // The context the worker opens the switcher with, as read from its message.
@@ -1503,7 +1504,10 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
     const switcherVisualViewport = window.visualViewport && typeof window.visualViewport.addEventListener === 'function'
       ? window.visualViewport
       : null;
+    // Over a fullscreen video, the first Escape closes the switcher.
+    const fullscreenEscapeLock = createFullscreenEscapeLock(window);
     host._lumnoTabSwitcherCleanup = function() {
+      fullscreenEscapeLock.stop();
       window.removeEventListener('keydown', handleKeydown, true);
       window.removeEventListener('keyup', handleKeyup, true);
       if (switcherVisualViewport && typeof switcherVisualViewport.removeEventListener === 'function') {
@@ -1523,6 +1527,7 @@ function readThumbnailUpdate(value: unknown): TabSwitcherThumbnailUpdate {
     };
     window.addEventListener('keydown', handleKeydown, true);
     window.addEventListener('keyup', handleKeyup, true);
+    fullscreenEscapeLock.start();
     if (switcherVisualViewport) {
       switcherVisualViewport.addEventListener('resize', syncSwitcherZoomCompensation, { passive: true });
       switcherVisualViewport.addEventListener('scroll', syncSwitcherZoomCompensation, { passive: true });

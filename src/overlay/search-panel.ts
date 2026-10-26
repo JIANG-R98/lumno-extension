@@ -22,6 +22,7 @@ import * as OVERLAY_TOAST from '../shared/ui/toast';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as LumnoOverlayFaviconView from './favicon-view';
 import * as OVERLAY_KEYBOARD from './keyboard';
+import { createFullscreenEscapeLock } from './fullscreen-escape-lock';
 import * as LumnoOverlayLifecycle from './lifecycle';
 import * as OVERLAY_NOTICES from './notices';
 import * as PANEL_AUTOCOMPLETE from './panel/autocomplete';
@@ -1850,6 +1851,12 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     mountConnectionGuard.stop();
   });
   mountConnectionGuard.start(overlayHost);
+  // Over a fullscreen video, the first Escape closes the overlay.
+  const fullscreenEscapeLock = createFullscreenEscapeLock(window);
+  addOverlaySessionCleanup(() => {
+    fullscreenEscapeLock.stop();
+  });
+  fullscreenEscapeLock.start();
   startOverlayViewportSizeSync(overlayState.overlay);
   overlayState.overlayNoticeLayer.startFrameSync(overlayState.overlay);
   startOverlayAntiTranslateObserver(overlayState.overlay);
