@@ -109,7 +109,7 @@ interface SettingsSyncDeps extends
   Pick<BookmarkPager, 'renderCurrentBookmarkPage' | 'updateBookmarkGridHeightLock'>,
   Pick<BookmarkDisplaySettings,
     'normalizeBookmarkViewMode' | 'shouldRepairBookmarkViewModeStorageValue' | 'persistBookmarkViewMode'>,
-  Pick<SectionHeaders, 'updateRecentModeMenu' | 'updateRecentHeading' | 'applyBookmarkViewMode'>,
+  Pick<SectionHeaders, 'updateRecentModeMenu' | 'applyBookmarkViewMode'>,
   Pick<RecentSitesController, 'normalizePinnedRecentSites' | 'normalizeHiddenRecentSites'>,
   Pick<ShortcutsController, 'renderShortcuts' | 'isShortcutSyncStorageActive' | 'scheduleShortcutStorageReload'>,
   Pick<ShortcutDock, 'applyNewtabShortcutDockMagnification'>,
@@ -310,7 +310,6 @@ function createSettingsSync(deps: SettingsSyncDeps) {
     RECENT_MODE_STORAGE_KEY,
     normalizeRecentMode,
     updateRecentModeMenu,
-    updateRecentHeading,
     BOOKMARK_VIEW_MODE_STORAGE_KEY,
     normalizeBookmarkViewMode,
     shouldRepairBookmarkViewModeStorageValue,
@@ -701,7 +700,6 @@ function createSettingsSync(deps: SettingsSyncDeps) {
       updateRecentModeMenu();
     } else {
       pageState.currentRecentMode = nextMode;
-      updateRecentHeading();
       updateRecentModeMenu();
       markRecentDataDirty();
       void loadRecentSites({ force: true });

@@ -1,8 +1,10 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { innerHtml } from '../../shared/react/inner-html';
+import { createRenderStore, type RenderStore } from '../../shared/react/render-store';
+import { RecentModeSwitch, type RecentModeSwitchModel } from './recent-mode-switch';
 
 export const PAGE_STRUCTURE_IDS = Object.freeze({
   suggestionsContainer:
@@ -36,7 +38,6 @@ interface BookmarkElements {
 interface RecentElements {
   grid: HTMLDivElement;
   header: HTMLDivElement;
-  heading: HTMLDivElement;
 }
 
 function ShortcutStructure({
@@ -133,27 +134,35 @@ function BookmarkStructure({
   );
 }
 
+// The recent section's heading: the current mode's name, which the mode
+// switch stands in for once the section has one.
+export interface RecentHeaderModel {
+  heading: string;
+  modeSwitch: RecentModeSwitchModel | null;
+}
+
 function RecentStructure({
-  register
+  register,
+  store
 }: {
   register(elements: RecentElements): void;
+  store: RenderStore<RecentHeaderModel>;
 }) {
+  const header = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const gridRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
-  const headingRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
-    if (gridRef.current && headerRef.current && headingRef.current) {
-      register({
-        grid: gridRef.current,
-        header: headerRef.current,
-        heading: headingRef.current
-      });
+    if (gridRef.current && headerRef.current) {
+      register({ grid: gridRef.current, header: headerRef.current });
     }
   }, [register]);
   return (
     <>
       <div className="x-nt-recent-header-bar" ref={headerRef}>
-        <div className="x-nt-recent-heading" ref={headingRef} />
+        <div className="x-nt-recent-heading" hidden={Boolean(header.modeSwitch)}>
+          {header.heading}
+        </div>
+        {header.modeSwitch ? <RecentModeSwitch model={header.modeSwitch} /> : null}
       </div>
       <div id={PAGE_STRUCTURE_IDS.recentGrid} ref={gridRef} />
     </>
@@ -202,7 +211,10 @@ function renderStatic<T>(
 export interface PageStructureRuntime {
   bookmark: BookmarkElements & { section: HTMLElement };
   destroy(): void;
-  recent: RecentElements & { section: HTMLElement };
+  recent: RecentElements & {
+    section: HTMLElement;
+    renderHeader(model: RecentHeaderModel): void;
+  };
   searchLayer: HTMLDivElement;
   shortcut: ShortcutElements & { section: HTMLElement };
   suggestions: {
@@ -250,9 +262,10 @@ export function createPageStructure(config: {
     island: 'newtab-recent-section',
     visible: false
   });
+  const recentHeaderStore = createRenderStore<RecentHeaderModel>({ heading: '', modeSwitch: null });
   const recentRender = renderStatic<RecentElements>(
     recentSection,
-    (register) => <RecentStructure register={register} />
+    (register) => <RecentStructure register={register} store={recentHeaderStore} />
   );
   roots.push(recentRender.root);
 
@@ -291,7 +304,10 @@ export function createPageStructure(config: {
     },
     recent: {
       ...recentRender.elements,
-      section: recentSection
+      section: recentSection,
+      renderHeader: (model: RecentHeaderModel) => {
+        if (!destroyed) recentHeaderStore.render(model);
+      }
     },
     searchLayer,
     shortcut: {

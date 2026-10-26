@@ -80,7 +80,6 @@ interface AppearanceModesDeps extends
   Pick<CardThemes, 'applyRecentCardTheme' | 'applyBookmarkCardTheme' | 'applyShortcutTileTheme'> {
   t: Translate;
   formatMessage: FormatMessage;
-  updateRecentHeading: SectionHeaders['updateRecentHeading'];
   updateRecentModeMenu: SectionHeaders['updateRecentModeMenu'];
   updateBookmarkHeading: SectionHeaders['updateBookmarkHeading'];
   updateBookmarkPagerLabels: SectionHeaders['updateBookmarkPagerLabels'];
@@ -120,7 +119,6 @@ function createAppearanceModes(deps: AppearanceModesDeps) {
   const {
     t,
     renderNewtabTopContent,
-    updateRecentHeading,
     updateBookmarkHeading,
     updateBookmarkPagerLabels,
     updateBookmarkBreadcrumb,
@@ -182,7 +180,6 @@ function createAppearanceModes(deps: AppearanceModesDeps) {
     if (pageState.topContentController && pageState.newtabTopContentMode === 'time') {
       renderNewtabTopContent(false);
     }
-    updateRecentHeading();
     updateBookmarkHeading();
     updateBookmarkPagerLabels();
     if (pageState.bookmarkTopbarRuntime) {

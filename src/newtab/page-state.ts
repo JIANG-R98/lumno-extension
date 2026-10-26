@@ -217,7 +217,6 @@ function createPageState(): NewtabPageState {
     bookmarkModeMenu: null,
     bookmarkGrid: null,
     recentHeader: null,
-    recentHeading: null,
     recentModeMenu: null,
     recentGrid: null,
     bookmarkBreadcrumbController: null,

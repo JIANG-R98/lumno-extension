@@ -1052,7 +1052,6 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     t,
     notifyLanguageChange: () => languageChangeListeners.forEach((listener) => listener()),
     renderNewtabTopContent: (...args) => renderNewtabTopContent(...args),
-    updateRecentHeading: (...args) => updateRecentHeading(...args),
     updateBookmarkHeading: (...args) => updateBookmarkHeading(...args),
     updateBookmarkPagerLabels: (...args) => updateBookmarkPagerLabels(...args),
     updateBookmarkBreadcrumb: (...args) => updateBookmarkBreadcrumb(...args),
@@ -1575,7 +1574,6 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     RECENT_MODE_STORAGE_KEY,
     normalizeRecentMode,
     updateRecentModeMenu: (...args) => updateRecentModeMenu(...args),
-    updateRecentHeading: (...args) => updateRecentHeading(...args),
     BOOKMARK_VIEW_MODE_STORAGE_KEY,
     normalizeBookmarkViewMode,
     shouldRepairBookmarkViewModeStorageValue,
@@ -1645,7 +1643,6 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     setNewtabTopContentMode: (...args) => setNewtabTopContentMode(...args),
     RECENT_MODE_STORAGE_KEY,
     normalizeRecentMode,
-    updateRecentHeading: (...args) => updateRecentHeading(...args),
     updateRecentModeMenu: (...args) => updateRecentModeMenu(...args),
     loadInitialBookmarkViewMode,
     loadInitialBookmarkTopbarSurfaceColors,
@@ -1901,7 +1898,6 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
   });
 
   const {
-    updateRecentHeading,
     updateRecentModeMenu,
     setRecentMode,
     canDismissRecentCard,
@@ -2258,7 +2254,6 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     setContentSectionVisible,
     hideTopActionTooltip,
     pageStructureRuntime,
-    updateRecentHeading,
     t,
     setRecentMode,
     applyRecentGridColumns,

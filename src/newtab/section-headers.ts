@@ -9,7 +9,6 @@ import type { Translate } from './newtab-types';
 import type { PageLayout } from './page-layout';
 import type { createBookmarkBreadcrumbController } from './react/bookmark-breadcrumb';
 import type { BookmarksTopbarRuntime } from './react/bookmarks-topbar';
-import type { RecentModeSwitch } from './recent/recent-mode-switch';
 import type { SectionLoaders } from './section-loaders';
 import type { SectionModeSelect } from './section-mode-select';
 import type { TooltipBindings } from './tooltip-bindings';
@@ -34,8 +33,7 @@ interface BookmarkViewModeResult {
 }
 
 interface SectionHeadersState {
-  recentHeading: HTMLElement | null;
-  recentModeMenu: Pick<RecentModeSwitch, 'update'> | null;
+  recentModeMenu: { update(): void } | null;
   currentRecentMode: string;
   bookmarkHeading: HTMLElement | null;
   bookmarkModeMenu: Pick<SectionModeSelect, 'update'> | null;
@@ -109,15 +107,6 @@ function createSectionHeaders(deps: SectionHeadersDeps) {
   // Matches the floating bar's 8px top offset and 40px height in styles/bookmarks-topbar.css.
   const BOOKMARK_TOPBAR_FLOATING_OCCUPIED_PX = 48;
 
-  function updateRecentHeading(): void {
-    if (!pageState.recentHeading) {
-      return;
-    }
-    const key = pageState.currentRecentMode === 'most' ? 'recent_heading_most' : 'recent_heading_latest';
-    const fallback = pageState.currentRecentMode === 'most' ? 'Most visited' : 'Recent visits';
-    pageState.recentHeading.textContent = t(key, fallback);
-  }
-
   function updateRecentModeMenu(): void {
     if (pageState.recentModeMenu) {
       pageState.recentModeMenu.update();
@@ -131,7 +120,6 @@ function createSectionHeaders(deps: SectionHeadersDeps) {
       return;
     }
     pageState.currentRecentMode = mode;
-    updateRecentHeading();
     updateRecentModeMenu();
     if (storageArea) {
       void storageArea.set({ [RECENT_MODE_STORAGE_KEY]: mode });
@@ -419,7 +407,6 @@ function createSectionHeaders(deps: SectionHeadersDeps) {
   }
 
   return {
-    updateRecentHeading,
     updateRecentModeMenu,
     setRecentMode,
     canDismissRecentCard,

@@ -70,7 +70,6 @@ interface StartupPreferencesDeps extends
   renderRecentSites: SectionLoaders['renderRecentSites'];
   markRecentDataDirty: SectionLoaders['markRecentDataDirty'];
   loadRecentSites: SectionLoaders['loadRecentSites'];
-  updateRecentHeading: SectionHeaders['updateRecentHeading'];
   updateRecentModeMenu: SectionHeaders['updateRecentModeMenu'];
   renderCurrentBookmarkPage: BookmarkPager['renderCurrentBookmarkPage'];
   updateBookmarkGridHeightLock: BookmarkPager['updateBookmarkGridHeightLock'];
@@ -143,7 +142,6 @@ function createStartupPreferences(deps: StartupPreferencesDeps) {
     setNewtabTopContentMode,
     RECENT_MODE_STORAGE_KEY,
     normalizeRecentMode,
-    updateRecentHeading,
     updateRecentModeMenu,
     loadInitialBookmarkViewMode,
     loadInitialBookmarkTopbarSurfaceColors,
@@ -316,7 +314,6 @@ function createStartupPreferences(deps: StartupPreferencesDeps) {
       const mode = normalizeRecentMode(stored, 'most');
       const changed = pageState.currentRecentMode !== mode;
       pageState.currentRecentMode = mode;
-      updateRecentHeading();
       updateRecentModeMenu();
       if (!hasStored) {
         repairStoredSetting(RECENT_MODE_STORAGE_KEY, stored, mode);

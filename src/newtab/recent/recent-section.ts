@@ -3,8 +3,6 @@
 import type { BindCursorTooltip, FormatMessage, ShowToast, Translate } from '../newtab-types';
 import type { PageStructureRuntime } from '../react/page-structure';
 import type { RecentSitesViewController, RecentSitesViewOptions } from '../react/recent-sites';
-import * as NEWTAB_RECENT_MODE_SWITCH from './recent-mode-switch';
-import type { RecentModeSwitch } from './recent-mode-switch';
 
 // An option the recent sites view is handed as it is.
 type ViewOption<K extends keyof RecentSitesViewOptions> = NonNullable<RecentSitesViewOptions[K]>;
@@ -13,8 +11,8 @@ interface RecentSectionState {
   recentMouseInsideSection: boolean;
   recentMouseLeftAt: number;
   recentHeader: HTMLElement | null;
-  recentHeading: HTMLElement | null;
-  recentModeMenu: RecentModeSwitch | null;
+  // Draws the heading and its mode switch again.
+  recentModeMenu: { update(): void } | null;
   recentGrid: HTMLElement | null;
   recentSitesView: RecentSitesViewController | null;
   currentRecentMode: string;
@@ -29,8 +27,7 @@ interface RecentSectionState {
 interface RecentSectionDeps {
   setContentSectionVisible(section: HTMLElement | null, visible: boolean): void;
   hideTopActionTooltip(): void;
-  pageStructureRuntime: { recent: Pick<PageStructureRuntime['recent'], 'section' | 'header' | 'heading' | 'grid'> };
-  updateRecentHeading(): void;
+  pageStructureRuntime: { recent: Pick<PageStructureRuntime['recent'], 'section' | 'header' | 'grid' | 'renderHeader'> };
   t: Translate;
   setRecentMode(mode: string): void;
   applyRecentGridColumns(): void;
@@ -72,7 +69,6 @@ function createRecentSection(deps: RecentSectionDeps): void {
     setContentSectionVisible,
     hideTopActionTooltip,
     pageStructureRuntime,
-    updateRecentHeading,
     t,
     setRecentMode,
     applyRecentGridColumns,
@@ -136,33 +132,23 @@ function createRecentSection(deps: RecentSectionDeps): void {
     pageState.recentMouseInsideSection = false;
     hideTopActionTooltip();
   });
-  const header = pageStructureRuntime.recent.header;
-  const heading = pageStructureRuntime.recent.heading;
-  pageState.recentHeader = header;
-  pageState.recentHeading = heading;
-  updateRecentHeading();
-  const modeMenu = NEWTAB_RECENT_MODE_SWITCH.createRecentModeSwitch({
-    documentObj: document,
-    windowObj: window,
-    t,
-    getValue: () => pageState.currentRecentMode,
-    onChange: (nextMode) => {
-      setRecentMode(nextMode);
-    },
-    options: [
-      {
-        value: 'latest',
-        labelKey: 'recent_heading_latest',
-        fallback: 'Recent visits'
-      },
-      {
-        value: 'most',
-        labelKey: 'recent_heading_most',
-        fallback: 'Most visited'
+  pageState.recentHeader = pageStructureRuntime.recent.header;
+  // The mode switch shows the current mode's name, so it stands in for the plain heading.
+  function renderRecentHeader(): void {
+    const latest = t('recent_heading_latest', 'Recent visits');
+    const most = t('recent_heading_most', 'Most visited');
+    pageStructureRuntime.recent.renderHeader({
+      heading: pageState.currentRecentMode === 'most' ? most : latest,
+      modeSwitch: {
+        title: t('display_mode_title', 'Display mode'),
+        value: pageState.currentRecentMode,
+        options: [{ value: 'latest', label: latest }, { value: 'most', label: most }],
+        onChange: (nextMode) => setRecentMode(nextMode)
       }
-    ]
-  });
-  pageState.recentModeMenu = modeMenu;
+    });
+  }
+  pageState.recentModeMenu = { update: renderRecentHeader };
+  renderRecentHeader();
   pageState.recentGrid = pageStructureRuntime.recent.grid;
   applyRecentGridColumns();
   pageState.recentSitesView = NEWTAB_RECENT_VIEW.createRecentSitesView({
@@ -205,9 +191,6 @@ function createRecentSection(deps: RecentSectionDeps): void {
     getProgressState: getRecentProgressState,
     toggleProgressTracking: toggleRecentProgressTracking
   });
-  // The mode switch shows the current heading, so it stands in for the plain heading.
-  heading.hidden = true;
-  header.appendChild(modeMenu.control);
   pageState.recentRenderSignature = '';
   pageState.recentLoadedOnce = false;
 }
