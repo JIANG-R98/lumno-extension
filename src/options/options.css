@@ -760,7 +760,7 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
   min-width: 0;
   color: var(--panel-text);
   font-size: var(--lumno-font-size-md);
-  font-weight: 550;
+  font-weight: 500;
   line-height: 18px;
 }
 /* A card's own label, beside its icon, takes the free space and gives way first. */
