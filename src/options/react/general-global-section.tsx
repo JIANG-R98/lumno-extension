@@ -1,4 +1,4 @@
-import { FeedbackSupportActionCard, FeedbackSupportView, type FeedbackSupportRenderModel } from './feedback-support';
+import { FeedbackSupportView, type FeedbackSupportRenderModel } from './feedback-support';
 import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { SettingSelect, type SelectControlRenderModel } from './select-control';
 import { SettingDivider, SettingSwitch, SettingTitle } from './setting-rows';
@@ -6,7 +6,7 @@ import type { ToggleControlRenderModel } from './toggle-control';
 import { TranslationHelpView, type TranslationHelpRenderModel } from './translation-help';
 
 // The top of the General tab: help and feedback with the onboarding guide
-// beside the Help Center, the page's language and the update notice.
+// after the channels, the page's language and the update notice.
 export interface GeneralGlobalSectionModel {
   // Null until the community links are known.
   feedback: FeedbackSupportRenderModel | null;
@@ -45,14 +45,12 @@ export function GeneralGlobalSection({
         {model.feedback ? (
           <FeedbackSupportView
             {...model.feedback}
-            helpCards={(
-              <FeedbackSupportActionCard
-                iconClass="ri-compass-3-line"
-                id="_x_extension_open_onboarding_page_2026_unique_"
-                label={model.onboardingLabel}
-                onClick={handlers.onOpenOnboarding}
-              />
-            )}
+            actions={[{
+              iconClass: 'ri-compass-3-line',
+              id: '_x_extension_open_onboarding_page_2026_unique_',
+              label: model.onboardingLabel,
+              onClick: handlers.onOpenOnboarding
+            }]}
           />
         ) : null}
       </div>

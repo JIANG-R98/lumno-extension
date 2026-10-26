@@ -2,7 +2,6 @@ import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildAskDemoFrames,
-  FeedbackSupportActionCard,
   FeedbackSupportView,
   type FeedbackSupportRenderModel
 } from './feedback-support';
@@ -120,19 +119,25 @@ describe('Options feedback support', () => {
     expect(card?.querySelector('[data-feedback-support="help-center-ask"]')).toBeNull();
   });
 
-  it('draws extra cards beside the help center', () => {
+  it('draws channel cards beside the help center and action tiles after the channels', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const onClick = vi.fn();
     const controller = createReactRootController(host, (value: FeedbackSupportRenderModel) => (
       <FeedbackSupportView
         {...value}
-        helpCards={<FeedbackSupportActionCard iconClass="ri-compass-3-line" label="新手引导" onClick={onClick} />}
+        actions={[{ iconClass: 'ri-compass-3-line', label: '新手引导', onClick }]}
       />
     ));
     controllers.push(controller);
+    const [community, ...channels] = model.items;
     act(() => controller.render({
       ...model,
+      cards: [{
+        ...community,
+        qr: { alt: '二维码', closeLabel: '关闭', imageUrl: 'https://example.com/qrcode.webp', title: '反馈群' }
+      }],
+      items: channels,
       help: {
         href: 'https://lumno.kubai.design/help/what-is-lumno/',
         label: '访问帮助中心',
@@ -143,14 +148,19 @@ describe('Options feedback support', () => {
     }));
 
     const cards = host.querySelector('._x_extension_feedback_support_cards_2026_unique_');
-    // Both rows take one column per tile, so the guide lines up with the last tile.
+    // Both rows take one column per tile, so the card beside the Help Center lines up with the last tile.
     expect(queryHtmlElement(host, '._x_extension_feedback_support_cards_2026_unique_')?.style
       .getPropertyValue('--feedback-support-columns')).toBe('4');
     const row = cards?.firstElementChild;
     expect(row?.classList.contains('_x_extension_feedback_support_help_row_2026_unique_')).toBe(true);
     expect(row?.firstElementChild?.querySelector('[data-feedback-support="help-center"]')).not.toBeNull();
-    const guide = row ? queryHtmlTag(row, ':scope > button:last-child', 'button') : null;
-    expect(guide?.classList.contains('_x_extension_feedback_support_help_card_2026_unique_')).toBe(true);
+    const group = row?.lastElementChild?.querySelector('[data-feedback-support="community"]');
+    expect(group?.classList.contains('_x_extension_feedback_support_help_card_2026_unique_')).toBe(true);
+    expect(group?.getAttribute('aria-haspopup')).toBe('dialog');
+    const nav = host.querySelector('nav._x_extension_feedback_support_links_2026_unique_');
+    expect(nav?.children).toHaveLength(4);
+    const guide = nav ? queryHtmlTag(nav, ':scope > button:last-child', 'button') : null;
+    expect(guide?.classList.contains('_x_extension_feedback_support_link_2026_unique_')).toBe(true);
     expect(guide?.textContent).toBe('新手引导');
     act(() => guide?.click());
     expect(onClick).toHaveBeenCalledTimes(1);

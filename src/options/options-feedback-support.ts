@@ -81,23 +81,24 @@ function buildFeedbackSupportModel(input: FeedbackSupportModelInput): FeedbackSu
       title: getMessage('settings_help_center_title', '帮助中心'),
       titleKey: 'settings_help_center_title'
     },
+    // Chinese readers get the WeChat group, as a card beside the Help Center; elsewhere
+    // "contact the author" (X) below is the community entry.
+    cards: communityIsWechat && links.wechatQr
+      ? [{
+          href: links.wechatQr,
+          iconClass: 'ri-wechat-line',
+          key: 'community',
+          label: getMessage('settings_feedback_support_wechat_action', '加入反馈群'),
+          labelKey: 'settings_feedback_support_wechat_action',
+          qr: {
+            alt: getMessage('newtab_feedback_wechat_qr_alt', 'Lumno 微信群二维码'),
+            closeLabel: getMessage('newtab_feedback_wechat_close_tooltip', '关闭'),
+            imageUrl: links.wechatQr,
+            title: getMessage('newtab_feedback_wechat_panel_title', 'Bug 反馈 & 新功能提需')
+          }
+        }]
+      : [],
     items: [
-      // Chinese readers get the WeChat group; elsewhere "contact the author" (X) below is the community entry.
-      ...(communityIsWechat
-        ? [{
-            href: links.wechatQr,
-            iconClass: 'ri-wechat-line',
-            key: 'community',
-            label: getMessage('settings_feedback_support_wechat_action', '加入反馈群'),
-            labelKey: 'settings_feedback_support_wechat_action',
-            qr: {
-              alt: getMessage('newtab_feedback_wechat_qr_alt', 'Lumno 微信群二维码'),
-              closeLabel: getMessage('newtab_feedback_wechat_close_tooltip', '关闭'),
-              imageUrl: links.wechatQr,
-              title: getMessage('newtab_feedback_wechat_panel_title', 'Bug 反馈 & 新功能提需')
-            }
-          }]
-        : []),
       {
         href: communityLinks.getReviewUrl(links),
         iconClass: 'ri-star-line',

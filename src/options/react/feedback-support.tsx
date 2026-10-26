@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { isNode } from '../../shared/dom-guards';
 
 export interface FeedbackSupportQr {
@@ -53,10 +53,21 @@ export interface FeedbackSupportHelp extends FeedbackSupportHelpCopy {
 }
 
 export interface FeedbackSupportRenderModel {
+  /** Channels drawn as cards beside the Help Center rather than as tiles under it. */
+  cards?: FeedbackSupportItem[];
   heading: string;
   headingKey: string;
   help?: FeedbackSupportHelp | null;
   items: FeedbackSupportItem[];
+}
+
+/** A tile after the channels that runs an action in the extension rather than opening a link, e.g. the onboarding guide. */
+export interface FeedbackSupportAction {
+  iconClass: string;
+  id?: string;
+  label: string;
+  labelKey?: string;
+  onClick(): void;
 }
 
 
@@ -64,25 +75,49 @@ const TILE_CLASS = '_x_extension_feedback_support_link_2026_unique_';
 const HELP_CARD_CLASS = '_x_extension_feedback_support_help_card_2026_unique_';
 const HELP_TITLE_CLASS = '_x_extension_feedback_support_help_title_2026_unique_';
 
-/** A card beside the Help Center that runs an action in the extension rather than opening a link, e.g. the onboarding guide. */
-export function FeedbackSupportActionCard({ iconClass, id, label, labelKey, onClick }: {
-  iconClass: string;
-  id?: string;
-  label: string;
-  labelKey?: string;
-  onClick(): void;
-}) {
+function FeedbackSupportActionTile({ action }: { action: FeedbackSupportAction }) {
   return (
-    <button className={HELP_CARD_CLASS} id={id} onClick={onClick} type="button">
-      <span className="_x_extension_feedback_support_help_icon_2026_unique_" aria-hidden="true">
-        <i className={`ri-icon ri-size-20 ${iconClass}`} />
-      </span>
-      <span className={HELP_TITLE_CLASS} data-i18n={labelKey}>{label}</span>
+    <button className={TILE_CLASS} id={action.id} onClick={action.onClick} type="button">
+      <i className={`ri-icon ri-size-16 ${action.iconClass}`} aria-hidden="true" />
+      <span data-i18n={action.labelKey}>{action.label}</span>
     </button>
   );
 }
 
-function FeedbackSupportQrButton({ item, qr }: { item: FeedbackSupportItem; qr: FeedbackSupportQr }) {
+// A channel's icon and label, as a tile under the Help Center or as a card beside it.
+function FeedbackSupportItemFace({ card, item }: { card?: boolean; item: FeedbackSupportItem }) {
+  return card ? (
+    <>
+      <span className="_x_extension_feedback_support_help_icon_2026_unique_" aria-hidden="true">
+        <i className={`ri-icon ri-size-20 ${item.iconClass}`} />
+      </span>
+      <span className={HELP_TITLE_CLASS} data-i18n={item.labelKey}>{item.label}</span>
+    </>
+  ) : (
+    <>
+      <i className={`ri-icon ri-size-16 ${item.iconClass}`} aria-hidden="true" />
+      <span data-i18n={item.labelKey}>{item.label}</span>
+    </>
+  );
+}
+
+function FeedbackSupportItemLink({ card, item }: { card?: boolean; item: FeedbackSupportItem }) {
+  return item.qr ? (
+    <FeedbackSupportQrButton card={card} item={item} qr={item.qr} />
+  ) : (
+    <a
+      className={card ? HELP_CARD_CLASS : TILE_CLASS}
+      data-feedback-support={item.key}
+      href={item.href}
+      rel="noreferrer noopener"
+      target="_blank"
+    >
+      <FeedbackSupportItemFace card={card} item={item} />
+    </a>
+  );
+}
+
+function FeedbackSupportQrButton({ card, item, qr }: { card?: boolean; item: FeedbackSupportItem; qr: FeedbackSupportQr }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -117,16 +152,15 @@ function FeedbackSupportQrButton({ item, qr }: { item: FeedbackSupportItem; qr: 
         aria-controls={popoverId}
         aria-expanded={open ? 'true' : 'false'}
         aria-haspopup="dialog"
-        className={TILE_CLASS}
+        className={card ? HELP_CARD_CLASS : TILE_CLASS}
         data-feedback-support={item.key}
         data-open={open ? 'true' : 'false'}
         onClick={() => setOpen((value) => !value)}
         ref={buttonRef}
         type="button"
       >
-        <i className={`ri-icon ri-size-16 ${item.iconClass}`} aria-hidden="true" />
-        <span data-i18n={item.labelKey}>{item.label}</span>
-        <i className="ri-icon ri-size-14 ri-qr-code-line" aria-hidden="true" />
+        <FeedbackSupportItemFace card={card} item={item} />
+        <i className={`ri-icon ${card ? 'ri-size-16' : 'ri-size-14'} ri-qr-code-line`} aria-hidden="true" />
       </button>
       <div
         aria-hidden={open ? undefined : 'true'}
@@ -404,12 +438,12 @@ function FeedbackSupportHelpCard({ help }: { help: FeedbackSupportHelp }) {
   );
 }
 
-export function FeedbackSupportView({ heading, headingKey, help, helpCards, items }: FeedbackSupportRenderModel & {
-  /** More cards in the Help Center's row, after it. */
-  helpCards?: ReactNode;
+export function FeedbackSupportView({ actions = [], cards = [], heading, headingKey, help, items }: FeedbackSupportRenderModel & {
+  /** Tiles after the channels. */
+  actions?: FeedbackSupportAction[];
 }) {
   // Both rows share one column grid, so the cards beside the Help Center line up with the tiles.
-  const columns = { '--feedback-support-columns': Math.max(2, items.length) };
+  const columns = { '--feedback-support-columns': Math.max(2, items.length + actions.length) };
   return (
     <section
       className="_x_extension_feedback_support_section_2026_unique_"
@@ -425,32 +459,19 @@ export function FeedbackSupportView({ heading, headingKey, help, helpCards, item
         </h2>
       </div>
       <div className="_x_extension_feedback_support_cards_2026_unique_" style={columns}>
-        {help?.href || helpCards ? (
+        {help?.href || cards.length ? (
           <div className="_x_extension_feedback_support_help_row_2026_unique_">
             {help?.href ? <FeedbackSupportHelpCard help={help} /> : null}
-            {helpCards}
+            {cards.map((item) => <FeedbackSupportItemLink card item={item} key={item.key} />)}
           </div>
         ) : null}
-        {items.length ? (
+        {items.length || actions.length ? (
           <nav
             className="_x_extension_feedback_support_links_2026_unique_"
             aria-labelledby="_x_extension_feedback_support_heading_2026_unique_"
           >
-            {items.map((item) => item.qr ? (
-              <FeedbackSupportQrButton item={item} key={item.key} qr={item.qr} />
-            ) : (
-              <a
-                key={item.key}
-                className={TILE_CLASS}
-                data-feedback-support={item.key}
-                href={item.href}
-                rel="noreferrer noopener"
-                target="_blank"
-              >
-                <i className={`ri-icon ri-size-16 ${item.iconClass}`} aria-hidden="true" />
-                <span data-i18n={item.labelKey}>{item.label}</span>
-              </a>
-            ))}
+            {items.map((item) => <FeedbackSupportItemLink item={item} key={item.key} />)}
+            {actions.map((action) => <FeedbackSupportActionTile action={action} key={action.id || action.label} />)}
           </nav>
         ) : null}
       </div>

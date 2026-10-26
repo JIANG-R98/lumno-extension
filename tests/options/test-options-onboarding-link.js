@@ -27,8 +27,8 @@ assert.ok(onboardingContent.getOnboardingBlueprint('en').slides.some((slide) => 
   slide.actions.ghost.icon === 'ri-external-link-line'),
 'onboarding should keep the reference ghost action icon used by the options tutorial link');
 
-// The guide is a card of its own, beside the Help Center's.
-const cardClass = '_x_extension_feedback_support_help_card_2026_unique_';
+// The guide is the last tile, after the feedback channels.
+const tileClass = '_x_extension_feedback_support_link_2026_unique_';
 
 const version = optionsDocument.getElementById(versionButtonId);
 assert.ok(version && version.tagName === 'BUTTON' && version.type === 'button' && version.classList.contains(versionButtonClass),
@@ -51,10 +51,10 @@ assert.strictEqual(rule(`body[data-theme="dark"] .${versionButtonClass}:hover`).
   const page = await createOptionsPage({});
   await page.settle(200);
   const button = page.byId(buttonId);
-  assert.ok(button && button.tagName === 'BUTTON' && button.classList.contains(cardClass),
-    'the onboarding tutorial should be a card like the Help Center');
-  assert.ok(button.previousElementSibling && button.previousElementSibling.querySelector('[data-feedback-support="help-center"]'),
-    'the onboarding tutorial should sit just after the Help Center card');
+  assert.ok(button && button.tagName === 'BUTTON' && button.classList.contains(tileClass),
+    'the onboarding tutorial should be a tile like the feedback channels');
+  assert.ok(button.parentElement.tagName === 'NAV' && button.parentElement.lastElementChild === button,
+    'the onboarding tutorial should be the last tile');
   assert.strictEqual(button.textContent, '新手引导');
   assert.ok(button.querySelector('i.ri-compass-3-line') && !button.querySelector('i.ri-external-link-line'),
     'with its own icon and no external-link mark');

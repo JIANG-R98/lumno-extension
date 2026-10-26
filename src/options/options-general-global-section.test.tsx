@@ -116,7 +116,8 @@ describe('Options General global section', () => {
       items: []
     }));
     const guide = getTag(host, '#_x_extension_open_onboarding_page_2026_unique_', 'button');
-    expect(guide.previousElementSibling?.querySelector('[data-feedback-support="help-center"]')).not.toBeNull();
+    expect(guide.parentElement?.lastElementChild).toBe(guide);
+    expect(guide.closest('nav._x_extension_feedback_support_links_2026_unique_')).not.toBeNull();
     act(() => guide.click());
     expect(sent).toEqual([{ action: 'openOnboardingPage' }]);
   });
