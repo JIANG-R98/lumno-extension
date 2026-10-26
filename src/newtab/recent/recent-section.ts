@@ -3,6 +3,7 @@
 import type { BindCursorTooltip, FormatMessage, ShowToast, Translate } from '../newtab-types';
 import type { PageStructureRuntime } from '../react/page-structure';
 import type { RecentSitesViewController, RecentSitesViewOptions } from '../react/recent-sites';
+import { getRecentSitesViewApi } from '../react/recent-sites';
 
 // An option the recent sites view is handed as it is.
 type ViewOption<K extends keyof RecentSitesViewOptions> = NonNullable<RecentSitesViewOptions[K]>;
@@ -104,7 +105,7 @@ function createRecentSection(deps: RecentSectionDeps): void {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  const NEWTAB_RECENT_VIEW = globalThis.LumnoNewtabRecentSitesView;
+  const NEWTAB_RECENT_VIEW = getRecentSitesViewApi();
   if (!NEWTAB_RECENT_VIEW) {
     throw new Error('Recent sites view unavailable');
   }

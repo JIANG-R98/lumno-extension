@@ -20,6 +20,7 @@ import * as NEWTAB_BACKGROUND_SEARCH_FOCUS from './background-search-focus';
 import type { SearchAutocomplete } from './search-autocomplete';
 import type { SearchModes } from './search-modes';
 import type { ActiveLocalScope, RenderSuggestions, RequestSuggestions } from './search-types';
+import { getSuggestionsViewApi } from '../../shared/react/search/suggestions';
 
 // An option the suggestions view is handed as it is.
 type ViewOption<K extends keyof SuggestionsViewOptions> = NonNullable<SuggestionsViewOptions[K]>;
@@ -232,7 +233,7 @@ function createSearchBox(deps: SearchBoxDeps) {
     throw new Error('Search results container unavailable');
   }
 
-  const NEWTAB_SUGGESTIONS_VIEW = globalThis.LumnoNewtabSuggestionsView;
+  const NEWTAB_SUGGESTIONS_VIEW = getSuggestionsViewApi();
   if (!NEWTAB_SUGGESTIONS_VIEW) {
     throw new Error('Suggestions view unavailable');
   }

@@ -24,6 +24,7 @@ import type {
   PopupNoticeModel,
   PopupSyncModel
 } from './react/popup-view';
+import { getPopupApi } from './react/popup-view';
 
 type Translate = (key: string, fallback: string) => string;
 
@@ -409,7 +410,7 @@ function start(): void {
   const settings = LumnoSettings;
   const urlGuards = LumnoUrlGuards;
   const shortcutDisplay = LumnoShortcutDisplay;
-  const reactApi = globalThis.LumnoPopupReact;
+  const reactApi = getPopupApi();
   const documentObj = globalThis.document;
   const rootElement = documentObj.getElementById('x-lumno-popup-root');
   if (!chromeApi || !reactApi || !isHtmlElement(rootElement)) {

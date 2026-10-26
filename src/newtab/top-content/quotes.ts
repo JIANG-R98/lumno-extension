@@ -14,6 +14,7 @@ import type { RemoteContentClient } from '../remote-content';
 import type { DailyQuote } from '../remote-content-types';
 import * as LumnoCustomQuotes from '../../domain/custom-quotes';
 import type { QuoteFile, QuoteLibrary } from '../../domain/custom-quotes';
+import { getQuoteLineViewApi } from '../react/quote-line';
 
 type QuoteStorageArea = Pick<StorageAreaLike, 'get' | 'set'>;
 
@@ -266,7 +267,7 @@ function createRuntime(options: QuoteRuntimeOptions) {
     const tooltip = getTooltip();
     if (tooltip) tooltip.hide();
   };
-  const lineViewApi: QuoteLineViewApi | null = config.lineView || globalThis.LumnoNewtabQuoteLine || null;
+  const lineViewApi: QuoteLineViewApi | null = config.lineView || getQuoteLineViewApi() || null;
   const lineView = lineViewApi ? lineViewApi.createQuoteLineView(element, {
     onShowOrigin: (target) => showTooltip(target, origin),
     onShowShuffleLabel: (target) => showTooltip(target, shuffleLabel()),

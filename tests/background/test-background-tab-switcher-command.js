@@ -35,6 +35,7 @@ function bootSwitcher(options) {
     extensionUrls: true,
     sync: Object.assign({ [TAB_SWITCHER_ENABLED_KEY]: true }, config.sync || {}),
     local: config.local,
+    exposeModules: { 'src/background/tab-switcher-service.ts': ['readTabSwitcherShortcutDebugEvents'] },
     commands: [
       { name: 'show-tab-switcher', shortcut: config.shortcut || 'Alt+Q' },
       { name: 'show-tab-switcher-reverse', shortcut: config.reverseShortcut || '' }
@@ -133,7 +134,7 @@ async function testCommandOpensTheRecentTabsOnTheActivePage() {
     }
   });
 
-  const debug = session.harness.context._lumnoTabSwitcherShortcutDebug.snapshot().map((event) => event.stage);
+  const debug = session.harness.exposed('readTabSwitcherShortcutDebugEvents')().map((event) => event.stage);
   ['command-received', 'shortcut-configured', 'switcher-opened'].forEach((stage) => {
     assert.ok(debug.includes(stage), `the shortcut trace should record ${stage}`);
   });
@@ -287,7 +288,7 @@ async function testReleaseCommitsOnlyForTheConfiguredModifier() {
   assert.deepStrictEqual(JSON.parse(JSON.stringify(await notify('Meta'))), { ok: true, committed: true });
   assert.deepStrictEqual(session.sent('commitOpenTabSwitcherFromShortcutRelease').map((entry) => entry.tabId), [11],
     'the commit should go straight to the tab the switcher opened on');
-  const debug = session.harness.context._lumnoTabSwitcherShortcutDebug.snapshot().map((event) => event.stage);
+  const debug = session.harness.exposed('readTabSwitcherShortcutDebugEvents')().map((event) => event.stage);
   assert.ok(debug.includes('commit-host-resolved') && debug.includes('commit-finished'));
 }
 

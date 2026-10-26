@@ -15,6 +15,7 @@ import type { ShortcutTileElement } from '../react/shortcuts';
 import type { SearchModeController } from '../search/search-mode-controller';
 import type { SiteSearchProviders } from '../search/site-search-providers';
 import type { ThemeConfidence, ThemeSource, ThemeSubject } from './theme-types';
+import { themeColorCache, themeHostCache } from '../../shared/favicon/theme-caches';
 
 interface SiteThemeResolverState {
   siteSearchState: SiteSearchProvider | null;
@@ -155,13 +156,6 @@ function createSiteThemeResolver(deps: SiteThemeResolverDeps) {
   const normalizeFaviconHost = FAVICON_UTILS.normalizeFaviconHost || NEWTAB_FAVICON_THEME.normalizeFaviconHost;
 
   const isFaviconProxyUrl = FAVICON_UTILS.isFaviconProxyUrl || NEWTAB_FAVICON_THEME.isFaviconProxyUrl;
-  const themeColorCache = window._x_extension_theme_color_cache_2024_unique_ || new Map<string, ThemeVariant>();
-
-  window._x_extension_theme_color_cache_2024_unique_ = themeColorCache;
-
-  const themeHostCache = window._x_extension_theme_host_cache_2024_unique_ || new Map<string, ThemeVariant>();
-
-  window._x_extension_theme_host_cache_2024_unique_ = themeHostCache;
 
   const siteThemeRequestPending = new Map<string, Promise<ThemeResult | null>>();
   const themeFaviconCandidateRequestPending = new Map<string, Promise<string[]>>();

@@ -23,6 +23,7 @@ import { WallpaperSection } from './wallpaper-panel/wallpaper-section';
 import { FaviconSection } from './wallpaper-panel/favicon-section';
 import { queryHtmlElement, queryHtmlElements, queryHtmlTag } from '../../shared/dom-lookup';
 import { innerHtml } from '../../shared/react/inner-html';
+import { lazyInstance } from '../../shared/lazy-instance';
 export { EFFECT_SLIDER_KEYS } from './wallpaper-panel/panel-model';
 export type { WallpaperSourceTab, WallpaperMode, ThemeScope, TopContentMode, TimeInk, GlassTheme, EffectSliderKey, WallpaperPanelModel, TileState, OnlineTileState, SelectedSourceState, DailyState, PanelSelectModel, CuratedMixState, WallpaperPanelActions, WallpaperPanelState, SectionSettingsActions, SectionSettingsModel, QuoteSettingsActions, QuoteSettingsModel } from './wallpaper-panel/panel-model';
 
@@ -260,3 +261,6 @@ export function createWallpaperViewApi() {
     createController: createWallpaperViewController
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getWallpaperViewApi = lazyInstance(createWallpaperViewApi);

@@ -12,6 +12,8 @@ import type { StorageAreaFacade } from '../../platform/settings-storage';
 import type { InputModeController } from '../../shared/search/search-input-mode';
 import type { InputModeProvider, ModeMenuItem } from '../../shared/search/input-mode/types';
 import type { Translate } from './types';
+import { lazyInstance } from '../../shared/lazy-instance';
+import { createHistory as createSearchSourceOrderHistory } from '../../domain/search/search-source-order';
 
 interface SearchModeMenuState {
   storageArea: StorageAreaFacade | null;
@@ -70,6 +72,9 @@ interface GroupMove {
 }
 
 const LOCAL_SOURCE_TYPES: readonly SearchSourceType[] = ['topSite', 'bookmark', 'history'];
+
+// Undo and redo of the scope panel's moves in this page.
+const getPageSearchSourceOrderHistory = lazyInstance(() => createSearchSourceOrderHistory());
 
 function createSearchModeMenu(deps: SearchModeMenuDeps) {
   const {
@@ -297,12 +302,10 @@ function createSearchModeMenu(deps: SearchModeMenuDeps) {
     });
   }
 
-  // Undo and redo for the moves made in this page's panel. Kept on the
-  // content script's global so it outlives one opening of the command bar.
+  // Undo and redo for the moves made in this page's panel, kept in module
+  // scope so it outlives one opening of the command bar.
   function getSearchSourceOrderHistory(): ReturnType<typeof SEARCH_SOURCE_ORDER.createHistory> {
-    const history = globalThis.__lumnoSearchSourceOrderHistory2026 || SEARCH_SOURCE_ORDER.createHistory();
-    globalThis.__lumnoSearchSourceOrderHistory2026 = history;
-    return history;
+    return getPageSearchSourceOrderHistory();
   }
 
   function recordSearchSourceOrder(before: unknown, after: SearchSourceOrder.SearchSourceOrder): Promise<void> {

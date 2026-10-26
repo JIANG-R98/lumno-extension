@@ -8,6 +8,7 @@ import type {
 } from '../../types/view-apis';
 import { queryHtmlTag, queryHtmlTags } from '../dom-lookup';
 import { innerHtml } from './inner-html';
+import { lazyInstance } from '../lazy-instance';
 
 export type {
   FeatureHintViewController,
@@ -327,3 +328,6 @@ export function createFeatureHintViewApi() {
     createFeatureHintView
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getFeatureHintViewApi = lazyInstance(createFeatureHintViewApi);

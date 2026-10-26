@@ -4,6 +4,7 @@ import * as LumnoNewtabLayoutMotion from '../layout-motion';
 import type { LayoutController } from '../layout';
 import type { LayoutMotion } from '../layout-motion';
 import type { BottomDockRuntimeConfig } from '../react/dock';
+import { getDockApi } from '../react/dock';
 
 // A part of the page that may show an element of its own.
 type ElementOwner = { element?: HTMLElement | null } | null;
@@ -55,7 +56,7 @@ function createBottomDockRuntime(deps: BottomDockRuntimeDeps) {
   const pageState = deps.pageState;
 
   // Set by the New Tab's React islands entry, which loads first.
-  const NEWTAB_DOCK = globalThis.LumnoNewtabDock;
+  const NEWTAB_DOCK = getDockApi();
   const recentSection = pageState.recentSection;
   if (!NEWTAB_DOCK || !bookmarkSection || !recentSection) {
     throw new Error('The New Tab dock, bookmark or recent section is unavailable.');

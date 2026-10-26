@@ -19,6 +19,7 @@ import type { WallpaperRuntime } from './wallpaper';
 import type { SectionPanelSettings } from './runtime/panel-actions';
 import type { SearchWidthConfig } from './runtime/panel-settings';
 import { readBootValue } from '../../platform/boot-handoff';
+import { getWallpaperViewApi } from '../react/wallpaper-view';
 
 type StorageArea = Pick<StorageAreaLike, 'get' | 'set'>;
 
@@ -217,7 +218,7 @@ function createWallpaperPage(deps: WallpaperPageDeps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  const NEWTAB_WALLPAPER_VIEW = globalThis.LumnoNewtabWallpaperView;
+  const NEWTAB_WALLPAPER_VIEW = getWallpaperViewApi();
 
   // The clock's ink when the user fixed it; '' leaves it to the wallpaper or theme.
   function getFixedTimeInk(): Exclude<NewtabTimeInk, 'auto'> | '' {

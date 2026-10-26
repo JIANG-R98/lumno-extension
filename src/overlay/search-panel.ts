@@ -59,6 +59,15 @@ import * as LumnoOverlayRuntime from './runtime';
 import * as LumnoOverlaySiteFixes from './site-fixes';
 import * as LumnoMessaging from '../platform/messaging';
 import { isOverlayOpenState, setOverlayOpenState } from '../platform/content-registry';
+import { getOverlayShellApi } from './react/shell';
+import { getSearchInputApi } from '../shared/react/search-input';
+import { themeColorCache, themeHostCache } from '../shared/favicon/theme-caches';
+
+// Favicon data and preloaded icons the overlay resolved, kept across its
+// openings in this page.
+const faviconDataCache = new Map<string, string>();
+const faviconDataPending = new Map<string, Promise<string | null>>();
+const iconPreloadCache = new Map<string, HTMLImageElement>();
 
 // Opens or closes the search overlay with the window's tabs and the context
 // it was opened with, both read as untrusted.
@@ -70,7 +79,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     return;
   }
   // Set by the overlay's React bundle, which the worker injects first.
-  const overlayShell = globalThis.LumnoOverlayShell;
+  const overlayShell = getOverlayShellApi();
   if (!overlayShell) {
     console.warn('Lumno: overlay shell not available.');
     return;
@@ -564,7 +573,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   const SITE_SEARCH_DISABLED_STORAGE_KEY = overlayStorageKeys.siteSearchDisabled;
   const AGGREGATE_SEARCH_STORAGE_KEY = overlayStorageKeys.aggregateSearches;
 
-  const faviconDataCache = window._x_extension_overlay_favicon_data_cache_2026_unique_ || new Map();
   const siteSearchIconCacheOptions = SHORTCUT_FAVICON.SITE_SEARCH_CACHE_OPTIONS;
 
   const {
@@ -827,8 +835,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     overlayState
   });
   const defaultAccentColor = FAVICON_THEME.defaultAccentColor;
-  const themeColorCache = window._x_extension_theme_color_cache_2024_unique_ || new Map();
-  const themeHostCache = window._x_extension_theme_host_cache_2024_unique_ || new Map();
 
   const {
     getExtensionFaviconUrl,
@@ -1093,7 +1099,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     overlay: overlayState.overlay,
     styleRoot: overlayStyleRoot
   });
-  if (typeof globalThis._x_extension_createSearchInput_2024_unique_ !== 'function') {
+  if (typeof getSearchInputApi().createSearchInput !== 'function') {
     console.warn('Lumno: input UI helper not available.');
     removeOverlay(overlayState.overlay);
     return;
@@ -1103,7 +1109,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     initialOverlaySettingsReady
   ).catch(() => {});
 
-  const inputParts = globalThis._x_extension_createSearchInput_2024_unique_({
+  const inputParts = getSearchInputApi().createSearchInput({
     container: overlayMount.inputContainer,
     styleRoot: overlayStyleRoot,
     placeholder: t('overlay_search_placeholder', t('search_placeholder', overlayState.defaultPlaceholderText)),
@@ -1384,13 +1390,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
 
   // Warm local icon lookup immediately, but never put it on the overlay reveal path.
   loadSiteSearchIconCache();
-  window._x_extension_theme_color_cache_2024_unique_ = themeColorCache;
-  window._x_extension_theme_host_cache_2024_unique_ = themeHostCache;
-  window._x_extension_overlay_favicon_data_cache_2026_unique_ = faviconDataCache;
-  const faviconDataPending = window._x_extension_overlay_favicon_data_pending_2026_unique_ || new Map();
-  window._x_extension_overlay_favicon_data_pending_2026_unique_ = faviconDataPending;
-  const iconPreloadCache = window._x_extension_overlay_icon_preload_cache_2026_unique_ || new Map();
-  window._x_extension_overlay_icon_preload_cache_2026_unique_ = iconPreloadCache;
   const faviconRuntime = overlayFaviconView.createOverlayFaviconViewRuntime({
     document,
     windowObj: window,

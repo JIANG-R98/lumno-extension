@@ -10,7 +10,7 @@ const cursorTooltipJsPath = path.join(repoRoot, 'src/shared/ui/cursor-tooltip.ts
 const cursorTooltipCssPath = path.join(repoRoot, 'src/shared/ui/cursor-tooltip.css');
 const newtabHtmlPath = path.join(repoRoot, 'newtab.html');
 
-global.LumnoTooltipView = {
+const tooltipView = {
   implementation: 'react-test-double',
   createTooltipElement(options) {
     const element = options.documentObj.createElement('div');
@@ -67,6 +67,10 @@ global.LumnoTooltipView = {
 assert.ok(fs.existsSync(cursorTooltipJsPath), 'cursor-following tooltip should live in src/shared/ui/cursor-tooltip.ts');
 assert.ok(fs.existsSync(cursorTooltipCssPath), 'cursor-following tooltip styling should live in src/shared/ui/cursor-tooltip.css');
 
+// The module under test draws through this stand-in for its React view.
+global.__lumnoTestModuleStubs = Object.assign(global.__lumnoTestModuleStubs || {}, {
+  'src/shared/react/tooltip-view.tsx': { getTooltipViewApi: () => tooltipView }
+});
 require(tooltipJsPath);
 const cursorTooltip = require(cursorTooltipJsPath);
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');

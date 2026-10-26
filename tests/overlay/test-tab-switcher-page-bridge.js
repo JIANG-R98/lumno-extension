@@ -191,15 +191,15 @@ async function testReconnectsAfterTheWorkerGoesAway() {
   page.close();
 }
 
-function testPagesConnectTheBridgeAfterTheirReactEntry() {
+function testPagesConnectTheBridgeBeforeTheirPageScript() {
   [
-    ['newtab.html', 'src/newtab/react/react-islands-entry.ts'],
-    ['src/options/options.html', 'src/options/react/options-islands-entry.ts'],
-    ['src/onboarding/onboarding.html', 'src/onboarding/react/onboarding-islands-entry.ts']
-  ].forEach(([page, reactEntry]) => {
+    ['newtab.html', 'src/newtab/newtab.ts'],
+    ['src/options/options.html', 'src/options/options.ts'],
+    ['src/onboarding/onboarding.html', 'src/onboarding/onboarding.ts']
+  ].forEach(([page, pageScript]) => {
     const scripts = getPageScripts(page);
-    assert.ok(runsBefore(scripts, 'src/shared/tab-switcher/tab-switcher.ts', 'src/shared/tab-switcher/page-bridge.ts'), `${page} should load the runtime before the bridge`);
-    assert.ok(runsBefore(scripts, reactEntry, 'src/shared/tab-switcher/page-bridge.ts'), `${page} should connect the bridge after its React entry`);
+    assert.ok(runsBefore(scripts, 'src/shared/tab-switcher/tab-switcher.ts', 'src/shared/tab-switcher/page-bridge.ts'), `${page} should load the switcher before the bridge`);
+    assert.ok(runsBefore(scripts, 'src/shared/tab-switcher/page-bridge.ts', pageScript), `${page} should connect the bridge before its page script runs`);
   });
 }
 
@@ -210,7 +210,7 @@ function testPagesConnectTheBridgeAfterTheirReactEntry() {
   await testBufferedReleaseIsReplayedForTheCurrentCommand();
   await testEarlyReleaseInAnArmedPageWaitsForItsSwitcher();
   await testReconnectsAfterTheWorkerGoesAway();
-  testPagesConnectTheBridgeAfterTheirReactEntry();
+  testPagesConnectTheBridgeBeforeTheirPageScript();
   console.log('tab switcher page bridge tests passed');
 })().catch((error) => {
   console.error(error);

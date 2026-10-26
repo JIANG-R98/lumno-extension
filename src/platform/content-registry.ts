@@ -10,6 +10,13 @@
 // or updated extension runs in a new isolated world, so each extension
 // context starts with an empty registry and fresh module instances.
 
+const REGISTRY_KEY = '__lumnoContent';
+
+function isRegistry(value: unknown): value is LumnoContentRegistry {
+  return Boolean(value) && typeof value === 'object' && value !== null &&
+    'claimed' in value && Boolean(value.claimed) && typeof value.claimed === 'object';
+}
+
 function getRegistry(): LumnoContentRegistry {
   const existing = globalThis.__lumnoContent;
   if (existing) {
@@ -17,6 +24,21 @@ function getRegistry(): LumnoContentRegistry {
   }
   const created: LumnoContentRegistry = { claimed: {} };
   globalThis.__lumnoContent = created;
+  return created;
+}
+
+// The registry of a given window: the isolated world's own global in the
+// extension, another window in tests.
+function getRegistryOf(scope: object): LumnoContentRegistry {
+  if (scope === globalThis) {
+    return getRegistry();
+  }
+  const existing: unknown = Reflect.get(scope, REGISTRY_KEY);
+  if (isRegistry(existing)) {
+    return existing;
+  }
+  const created: LumnoContentRegistry = { claimed: {} };
+  Reflect.set(scope, REGISTRY_KEY, created);
   return created;
 }
 
@@ -41,6 +63,16 @@ function isDocumentPipActiveState(): boolean {
   return getRegistry().documentPipActive === true;
 }
 
+// The overlay's font faces the shortcut observer registered at document
+// start, for the overlay to keep when it first opens; read as untrusted.
+function setEarlyOverlayFontFaces(scope: object, faces: unknown): void {
+  getRegistryOf(scope).earlyOverlayFontFaces = faces;
+}
+
+function readEarlyOverlayFontFaces(scope: object): unknown {
+  return getRegistryOf(scope).earlyOverlayFontFaces;
+}
+
 function setOverlayOpenState(open: boolean): void {
   getRegistry().overlayOpen = open;
 }
@@ -53,6 +85,8 @@ export {
   claimContentScript,
   isDocumentPipActiveState,
   isOverlayOpenState,
+  readEarlyOverlayFontFaces,
   setDocumentPipActiveState,
+  setEarlyOverlayFontFaces,
   setOverlayOpenState
 };

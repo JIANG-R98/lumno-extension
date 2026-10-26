@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { moduleScript } = require('../helpers/module-script');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
 const postcss = require('postcss');
@@ -28,7 +29,7 @@ for (const value of ['none', 'frosted', 'liquid']) {
 }
 
 // New Tab with the given material and material theme stored. The liquid
-// material's rim refraction is drawn by LumnoNewtabLiquidSurfaces, which needs
+// material's rim refraction is drawn by the liquid glass module, which needs
 // a real canvas; the test counts the surfaces New Tab asks it for.
 async function boot(value, themeValue) {
   const surfaces = { created: 0, destroyed: 0, selector: '' };
@@ -38,24 +39,22 @@ async function boot(value, themeValue) {
   const page = await createNewtabPage({
     sync,
     darkSystem: true,
+    // The page's liquid glass module, replaced by one that counts the
+    // surfaces it is asked for and hands each to the real one.
+    stubs: { 'src/newtab/react/liquid-glass.ts': 'LumnoTestLiquidGlass' },
     setup(window) {
-      let runtime;
-      Object.defineProperty(window, 'LumnoNewtabLiquidSurfaces', {
-        configurable: true,
-        get: () => runtime,
-        set(next) {
-          runtime = Object.assign({}, next, {
-            create(options) {
-              surfaces.created += 1;
-              surfaces.selector = options.selector;
-              assert.strictEqual(options.property, '--x-nt-glass-refraction');
-              const created = next.create(options);
-              return Object.assign({}, created, {
-                destroy() {
-                  surfaces.destroyed += 1;
-                  return created && created.destroy && created.destroy();
-                }
-              });
+      window.eval(moduleScript('src/newtab/react/liquid-glass.ts', 'LumnoRealLiquidGlass'));
+      const real = window.LumnoRealLiquidGlass;
+      window.LumnoTestLiquidGlass = Object.assign({}, real, {
+        createLiquidSurfaces(options) {
+          surfaces.created += 1;
+          surfaces.selector = options.selector;
+          assert.strictEqual(options.property, '--x-nt-glass-refraction');
+          const created = real.createLiquidSurfaces(options);
+          return Object.assign({}, created, {
+            destroy() {
+              surfaces.destroyed += 1;
+              return created && created.destroy && created.destroy();
             }
           });
         }

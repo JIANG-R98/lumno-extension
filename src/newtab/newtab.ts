@@ -202,15 +202,16 @@ import type { BookmarkCardElement } from './react/bookmarks';
 import type { RecentCardElement } from './react/recent-sites';
 import type { ShortcutTileElement } from './react/shortcuts';
 import { readBootValue } from '../platform/boot-handoff';
-
-// The New Tab's React islands entry, which loads first, sets the island
-// globals this page builds on.
-function requireIslandApi<T>(api: T | undefined, name: string): T {
-  if (!api) {
-    throw new Error(`The New Tab ${name} island is unavailable.`);
-  }
-  return api;
-}
+import { getBookmarksTopbarApi } from './react/bookmarks-topbar';
+import { getToastApi } from '../shared/react/toast';
+import { getShortcutDialogApi } from './react/shortcut-dialog-lazy';
+import { getShortcutsViewApi } from './react/shortcuts';
+import { getFeedbackControlApi } from './react/feedback';
+import { getSelectMenuApi } from './react/select-menu';
+import { getTopContentApi } from './react/wordmark';
+import { getPageStructureApi } from './react/page-structure';
+import { getFolderColorPickerApi } from './react/folder-color-picker-lazy';
+import { getSearchInputApi } from '../shared/react/search-input';
 
 (function() {
   // Page state shared with the modules split out of this file: each module
@@ -218,7 +219,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
   // properties this file does. page-state.ts lists its initial values.
   const pageState = LumnoNewtabPageState.createPageState();
   const root = document.getElementById('_x_extension_newtab_root_2024_unique_');
-  const createSearchInput = window._x_extension_createSearchInput_2024_unique_;
+  const createSearchInput = getSearchInputApi().createSearchInput;
   if (!root || typeof createSearchInput !== 'function') {
     return;
   }
@@ -310,7 +311,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
   const BROWSER_PROFILE = LumnoBrowserProfile;
   const COMMUNITY_LINKS = LumnoCommunityLinks;
   const LUMNO_FEEDBACK_LINKS_FALLBACK = COMMUNITY_LINKS.FALLBACK_LINKS;
-  const NEWTAB_BOOKMARKS_TOPBAR = requireIslandApi(globalThis.LumnoNewtabBookmarksTopbar, 'bookmarks bar');
+  const NEWTAB_BOOKMARKS_TOPBAR = getBookmarksTopbarApi();
   const BOOKMARK_TOPBAR_HEIGHT_PX = Math.max(
     0,
     Number(NEWTAB_BOOKMARKS_TOPBAR.HEIGHT_PX) || 36
@@ -319,10 +320,10 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
   // The folder color dialog handles its own Escape.
   const dismissStack = LumnoNewtabDismissStack.getDismissStack();
   dismissStack.setShouldIgnore(() => Boolean(pageState.folderColorPicker && pageState.folderColorPicker.isOpen()));
-  const NEWTAB_TOAST = requireIslandApi(globalThis.LumnoNewtabToast, 'toast');
-  const NEWTAB_SHORTCUT_DIALOG = requireIslandApi(globalThis.LumnoNewtabShortcutDialog, 'shortcut dialog');
-  const NEWTAB_SHORTCUTS_VIEW = requireIslandApi(globalThis.LumnoNewtabShortcutsView, 'shortcuts view');
-  const NEWTAB_FEEDBACK_CONTROL = requireIslandApi(globalThis.LumnoNewtabFeedbackControl, 'feedback control');
+  const NEWTAB_TOAST = getToastApi();
+  const NEWTAB_SHORTCUT_DIALOG = getShortcutDialogApi();
+  const NEWTAB_SHORTCUTS_VIEW = getShortcutsViewApi();
+  const NEWTAB_FEEDBACK_CONTROL = getFeedbackControlApi();
 
   // Text set once at startup may be read before the chosen language loads;
   // controls register here to re-read it whenever the language is applied.
@@ -365,9 +366,9 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     pageState
   });
 
-  const NEWTAB_SELECT_MENU = requireIslandApi(globalThis.LumnoNewtabSelectMenu, 'select menu');
-  const NEWTAB_TOP_CONTENT = requireIslandApi(globalThis.LumnoNewtabTopContent, 'top content');
-  const NEWTAB_PAGE_STRUCTURE = requireIslandApi(globalThis.LumnoNewtabPageStructure, 'page structure');
+  const NEWTAB_SELECT_MENU = getSelectMenuApi();
+  const NEWTAB_TOP_CONTENT = getTopContentApi();
+  const NEWTAB_PAGE_STRUCTURE = getPageStructureApi();
   const SITE_DISPLAY_NAME_OPTIONS = createSiteDisplayNameOptions(t);
   const getFigmaFolderSvg = NEWTAB_BOOKMARK_FOLDER_ICON.getFigmaFolderSvg;
   function initFolderPathMorph(icon: Element | null | undefined): void {
@@ -397,7 +398,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
   const MAX_NEWTAB_SHORTCUTS = NEWTAB_SHORTCUTS_STORE.DEFAULT_MAX_SHORTCUTS;
   const shortcutTiles: ShortcutTileElement[] = [];
   const SHORTCUT_DIALOG_MODE_EDIT = NEWTAB_SHORTCUT_DIALOG.MODE_EDIT || 'edit';
-  const folderColorApi = globalThis.LumnoNewtabFolderColorPicker;
+  const folderColorApi = getFolderColorPickerApi();
 
 
   const {

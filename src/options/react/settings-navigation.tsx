@@ -5,6 +5,7 @@ import {
   type ReactRootController
 } from '../../shared/react/root-controller';
 import { queryHtmlElement } from '../../shared/dom-lookup';
+import { lazyInstance } from '../../shared/lazy-instance';
 
 export interface SettingsNavigationItemModel {
   iconClass: string;
@@ -156,3 +157,6 @@ export function createSettingsNavigationApi() {
     createSettingsNavigationController
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getSettingsNavigationApi = lazyInstance(createSettingsNavigationApi);

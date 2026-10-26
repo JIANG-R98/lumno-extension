@@ -8,6 +8,7 @@ import { SettingDivider, SettingSwitch } from './setting-rows';
 import { SiteSearchForm, type SiteSearchFormRenderModel, type SiteSearchFormSaveHandler } from './settings-forms';
 import { SiteSearchList, type SiteSearchListOptions, type SiteSearchListRenderModel } from './site-search-list';
 import type { ToggleControlRenderModel } from './toggle-control';
+import { lazyInstance } from '../../shared/lazy-instance';
 
 // The lists a reader can reorder by dragging, as the search source order names them.
 export type ShortcutsListId = 'custom' | 'site' | 'ai' | 'engine' | 'aggregate';
@@ -284,3 +285,6 @@ export function createShortcutsTabApi() {
     createShortcutsTabController
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getShortcutsTabApi = lazyInstance(createShortcutsTabApi);

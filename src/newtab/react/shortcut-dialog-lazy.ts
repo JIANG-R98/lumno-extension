@@ -1,5 +1,6 @@
 import type { ShortcutDialogOptions } from './shortcut-dialog';
 import { MODE_ADD, MODE_EDIT, clampEnterOffset, getEnterOffset, normalizeMode } from './shortcut-dialog-helpers';
+import { lazyInstance } from '../../shared/lazy-instance';
 
 // The modal is needed only when editing; keep it off the initial New Tab route.
 export function createShortcutDialogApi() {
@@ -16,3 +17,6 @@ export function createShortcutDialogApi() {
     }
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getShortcutDialogApi = lazyInstance(createShortcutDialogApi);

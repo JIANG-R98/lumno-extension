@@ -31,6 +31,7 @@ import {
   type TabHintStore,
   type TabHintView
 } from './search/mode-tag';
+import { lazyInstance } from '../lazy-instance';
 
 type StyleOverrides = Record<string, string>;
 
@@ -822,3 +823,6 @@ export function createSearchInputApi() {
     destroySearchInput
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getSearchInputApi = lazyInstance(createSearchInputApi);

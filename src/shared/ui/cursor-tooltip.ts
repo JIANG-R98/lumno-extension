@@ -4,6 +4,7 @@
 import * as LumnoTooltip from './tooltip';
 import type { TooltipElementOptions, TooltipRect, TooltipWindow } from './tooltip';
 import { queryHtmlElements } from '../dom-lookup';
+import { getTooltipViewApi } from '../react/tooltip-view';
 
 const HOST_CLASS = '_x_extension_cursor_tooltip_host_2026_unique_';
 const TAG_CLASS = '_x_extension_cursor_tooltip_tag_2026_unique_';
@@ -511,7 +512,7 @@ function createController(options?: CursorTooltipOptions | null): CursorTooltipC
       return null;
     }
     const keyText = getCursorTooltipTagKeyText({ ...config, ...renderOptions });
-    const tooltipView = globalThis.LumnoTooltipView;
+    const tooltipView = getTooltipViewApi();
     if (!tooltipView) {
       return null;
     }
@@ -952,7 +953,7 @@ function createController(options?: CursorTooltipOptions | null): CursorTooltipC
         clearTimer(hideTimer);
         hideTimer = null;
       }
-      const tooltipView = globalThis.LumnoTooltipView;
+      const tooltipView = getTooltipViewApi();
       [element, tagElement].forEach((node) => {
         if (node && tooltipView) {
           tooltipView.destroyTooltipElement(node);

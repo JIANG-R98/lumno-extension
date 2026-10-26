@@ -28,6 +28,7 @@ import type {
   SiteSearchTrigger,
   Translate
 } from './types';
+import { shortcutRulesCache } from '../../shared/search/shortcut-rules-cache';
 
 interface SuggestionSourcesState {
   storageArea: StorageAreaFacade | null;
@@ -217,11 +218,11 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
   // The shortcut rules, read once per page; through the worker when this
   // page's copy of the extension cannot fetch its own files.
   function getShortcutRules(): Promise<ShortcutRule[]> {
-    const cachedRules = window._x_extension_shortcut_rules_2024_unique_;
+    const cachedRules = shortcutRulesCache.rules;
     if (cachedRules) {
       return Promise.resolve(cachedRules);
     }
-    const pendingRules = window._x_extension_shortcut_rules_promise_2024_unique_;
+    const pendingRules = shortcutRulesCache.pending;
     if (pendingRules) {
       return pendingRules;
     }
@@ -230,17 +231,17 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
       .then((response) => response.json())
       .then((data: unknown) => {
         const items = readShortcutRules(data);
-        window._x_extension_shortcut_rules_2024_unique_ = items;
+        shortcutRulesCache.rules = items;
         return items;
       })
       .catch(() => new Promise<ShortcutRule[]>((resolve) => {
         LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'getShortcutRules' }, (response) => {
           const items = response && Array.isArray(response.items) ? response.items : [];
-          window._x_extension_shortcut_rules_2024_unique_ = items;
+          shortcutRulesCache.rules = items;
           resolve(items);
         });
       }));
-    window._x_extension_shortcut_rules_promise_2024_unique_ = rulesPromise;
+    shortcutRulesCache.pending = rulesPromise;
     return rulesPromise;
   }
 

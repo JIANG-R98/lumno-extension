@@ -3,8 +3,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import onboardingHtml from '../onboarding.html?raw';
 import * as onboardingContent from '../onboarding-content';
 import { runPageBundle } from '../../../tests/react/page-bundles';
-import { createOnboardingPageApi } from './onboarding-page';
-import { createTooltipViewApi } from '../../shared/react/tooltip-view';
 import { expectElement, getElements, required } from '../../../tests/react/dom';
 import { queryHtmlTag } from '../../shared/dom-lookup';
 
@@ -79,8 +77,6 @@ async function bootOnboardingPage(stored: Record<string, unknown> = {}) {
     addEventListener() {},
     removeEventListener() {}
   }));
-  globalThis.LumnoOnboardingPage = createOnboardingPageApi();
-  globalThis.LumnoTooltipView = createTooltipViewApi();
   vi.resetModules();
   await runPageBundle('onboarding-preload');
   trackListeners(document);

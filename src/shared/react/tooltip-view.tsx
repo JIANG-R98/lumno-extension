@@ -7,6 +7,7 @@ import type {
   CursorTagModel,
   TooltipElementOptions
 } from '../../types/view-apis';
+import { lazyInstance } from '../lazy-instance';
 
 const TOOLTIP_CLASS = '_x_extension_tooltip_2026_unique_';
 const LINE_CLASS = '_x_extension_tooltip_line_2026_unique_';
@@ -305,3 +306,6 @@ export function createTooltipViewApi() {
     renderTooltipText
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getTooltipViewApi = lazyInstance(createTooltipViewApi);

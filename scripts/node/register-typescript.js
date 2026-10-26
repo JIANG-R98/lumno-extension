@@ -12,6 +12,10 @@
 //   with its types blanked out (line and column positions are kept), so
 //   source checks and tests that run sliced-out functions see plain
 //   JavaScript.
+// - A source file named in globalThis.__lumnoTestModuleStubs (by repository
+//   path, set before the module is first imported) loads as that stand-in
+//   object's properties instead, so a test can replace a module its subject
+//   imports.
 
 const fs = require('fs');
 const path = require('path');
@@ -124,6 +128,20 @@ fs.readFileSync = function readFileSync(file, options) {
   return stripTypes(resolved, originalReadFileSync(resolved, 'utf8'));
 };
 
+// The source of a stand-in module: one named export per property of the
+// object a test registered for the file.
+function readModuleStub(file) {
+  const stubs = globalThis.__lumnoTestModuleStubs;
+  const key = path.relative(repoRoot, file).split(path.sep).join('/');
+  if (!stubs || typeof stubs !== 'object' || !Object.prototype.hasOwnProperty.call(stubs, key)) {
+    return null;
+  }
+  const names = Object.keys(stubs[key]).filter((name) => /^[A-Za-z_$][\w$]*$/.test(name));
+  return [`const stub = globalThis.__lumnoTestModuleStubs[${JSON.stringify(key)}];`]
+    .concat(names.map((name) => `export const ${name} = stub[${JSON.stringify(name)}];`))
+    .join('\n');
+}
+
 nodeModule.registerHooks({
   resolve(specifier, context, nextResolve) {
     try {
@@ -151,6 +169,10 @@ nodeModule.registerHooks({
     const file = fileURLToPath(url);
     if (!isTypeScriptFile(file)) {
       return nextLoad(url, context);
+    }
+    const stubSource = readModuleStub(file);
+    if (stubSource !== null) {
+      return { format: 'module', source: stubSource, shortCircuit: true };
     }
     return { format: 'module', source: compileTypeScript(file), shortCircuit: true };
   }

@@ -1,13 +1,14 @@
 // In-page feature hints ("New: ..." notes beside a control): their
 // definitions, where each remembers that it was dismissed, and the
 // controller that shows one through the React feature hint view
-// (globalThis.LumnoFeatureHintView).
+// (getFeatureHintViewApi()).
 import '../../domain/navigation-disposition';
 import * as LumnoShortcutDisplay from '../../domain/shortcut-display';
 import { getRiSvg as getDefaultRiSvg } from './remix-icon';
 import type { NavigatorLike } from '../../domain/shortcut-display';
 import type { StorageAreaLike } from '../../domain/storage-port';
 import type { FeatureHintViewController, FeatureHintViewLabels } from '../../types/view-apis';
+import { getFeatureHintViewApi } from '../react/feature-hint-view';
 
 type FeatureHintArrowSide = 'top' | 'right' | 'bottom' | 'left';
 type FeatureHintArrowAlign = 'start' | 'center' | 'end';
@@ -476,7 +477,7 @@ function createFeatureHint(options?: FeatureHintOptions | null): FeatureHintCont
   const config: FeatureHintOptions = options || {};
   const documentObj = config.documentObj || (typeof document !== 'undefined' ? document : null);
   const definition = getFeatureHint(config.definition || config.id || config.hint);
-  const featureHintView = globalThis.LumnoFeatureHintView;
+  const featureHintView = getFeatureHintViewApi();
   if (!definition || !documentObj || !featureHintView) {
     return null;
   }

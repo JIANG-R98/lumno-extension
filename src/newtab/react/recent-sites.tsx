@@ -18,6 +18,7 @@ import { queryHtmlTags } from '../../shared/dom-lookup';
 import { innerHtml } from '../../shared/react/inner-html';
 import { FaviconFallback } from '../../shared/react/favicon-fallback';
 import { createRenderStore, type RenderStore } from '../../shared/react/render-store';
+import { lazyInstance } from '../../shared/lazy-instance';
 
 type Translate = (key: string, fallback: string) => string;
 // A site's theme as the page resolves it; the view passes it through.
@@ -1155,3 +1156,6 @@ export function createRecentSitesViewApi() {
     getRecentSitesSignature
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getRecentSitesViewApi = lazyInstance(createRecentSitesViewApi);

@@ -8,6 +8,7 @@ import * as LumnoMessaging from '../../platform/messaging';
 import type { EngagementNoticeController } from '../../shared/engagement-notice';
 import type { InputModeProvider } from '../../shared/search/input-mode/types';
 import type { LocalSearchScopeTrigger, SiteSearchTrigger } from './types';
+import { shortcutRulesCache } from '../../shared/search/shortcut-rules-cache';
 
 // Provider is a site search provider, Aggregate an aggregate search; this
 // module passes both to the trigger lookups.
@@ -175,7 +176,7 @@ function createSearchInputEvents<Provider, Aggregate>(deps: SearchInputEventsDep
       return;
     }
 
-    const shortcutRules = window._x_extension_shortcut_rules_2024_unique_;
+    const shortcutRules = shortcutRulesCache.rules;
     const localScope = getLocalSearchScopeCandidate(triggerInput, shortcutRules);
     if (localScope) {
       overlayState.siteSearchTriggerState = null;

@@ -15,6 +15,7 @@ import type * as LumnoFeatureHints from '../shared/ui/feature-hints';
 import type { FeatureHintController } from '../shared/ui/feature-hints';
 import type { UpdateNoticeController } from '../shared/update-notice';
 import type { Translate } from './newtab-types';
+import { getPageNoticeApi } from './react/page-notice';
 
 interface PageNoticesState {
   updateNoticeController: UpdateNoticeController | null;
@@ -84,7 +85,7 @@ function createPageNotices(deps: PageNoticesDeps) {
   const searchInput = inputParts.input;
   const searchInputContainer = inputParts.container;
 
-  const NEWTAB_PAGE_NOTICE = globalThis.LumnoNewtabPageNotice;
+  const NEWTAB_PAGE_NOTICE = getPageNoticeApi();
 
   function clearPageNoticeQueryParam(): void {
     try {

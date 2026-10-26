@@ -18,6 +18,7 @@ import type { AutocompleteState } from './autocomplete';
 import type { ActivationEvent } from './result-activation';
 import type { SlashCommand } from './slash-commands';
 import type { InlineSearchState, LocalSearchScopeTrigger, OverlaySuggestion, SiteSearchTrigger } from './types';
+import { shortcutRulesCache } from '../../shared/search/shortcut-rules-cache';
 
 interface PanelKeysState {
   overlay: HTMLElement | null;
@@ -255,7 +256,7 @@ function createPanelKeys(deps: PanelKeysDeps) {
         activateSiteSearch(directProvider);
         return true;
       }
-      const cachedRules = window._x_extension_shortcut_rules_2024_unique_;
+      const cachedRules = shortcutRulesCache.rules;
       const directLocalScope = getLocalSearchScopeCandidate(triggerInput, cachedRules);
       if (overlayState.siteSearchProvidersCache && directLocalScope) {
         activateLocalSearchScope(directLocalScope);

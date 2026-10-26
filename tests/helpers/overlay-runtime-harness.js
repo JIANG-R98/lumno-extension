@@ -231,7 +231,11 @@ async function createOverlayPage(options) {
     const entry = ENTRIES.find((candidate) => entryOutputPath(candidate) === file);
     const source = entry
       ? bundleScript(entry.name, entry.name === 'overlay'
-        ? { 'src/overlay/runtime.ts': 'LumnoOverlayRuntime', 'src/overlay/overlay-app.ts': 'LumnoTestOverlayApp' }
+        ? {
+          'src/overlay/runtime.ts': 'LumnoOverlayRuntime',
+          'src/overlay/overlay-app.ts': 'LumnoTestOverlayApp',
+          'src/overlay/react/shell.tsx': 'LumnoTestOverlayShellModule'
+        }
         : null)
       : fs.readFileSync(extensionFilePath(file), 'utf8');
     window.eval(`${source}\n//# sourceURL=${file}`);
@@ -330,7 +334,7 @@ async function createOverlayPage(options) {
     // Marks the mounted overlay as one an earlier extension context left in
     // the page, which the next toggle replaces instead of closing.
     markOverlayFromOtherContext() {
-      const panel = window.LumnoOverlayShell.findOverlayPanel(window.document);
+      const panel = window.LumnoTestOverlayShellModule.getOverlayShellApi().findOverlayPanel(window.document);
       [page.host(), panel].forEach((element) => {
         if (element) element.setAttribute(CONTEXT_TOKEN_ATTRIBUTE, 'earlier-context');
       });
@@ -340,7 +344,7 @@ async function createOverlayPage(options) {
     },
     // The overlay's shadow root (null while closed).
     root() {
-      const panel = window.LumnoOverlayShell.findOverlayPanel(window.document);
+      const panel = window.LumnoTestOverlayShellModule.getOverlayShellApi().findOverlayPanel(window.document);
       return panel ? panel._lumnoOverlayRoot : null;
     },
     input() {
@@ -398,7 +402,7 @@ async function openAndSettle(page) {
   page.toggle();
   const host = page.host();
   assert.ok(host, 'the overlay host should mount');
-  const panel = page.window.LumnoOverlayShell.findOverlayPanel(page.window.document);
+  const panel = page.window.LumnoTestOverlayShellModule.getOverlayShellApi().findOverlayPanel(page.window.document);
   const root = panel._lumnoOverlayRoot;
   const input = root.querySelector('#_x_extension_search_input_2024_unique_');
   await waitFor(() => root.activeElement === input, 'the overlay should finish initialization', page.errors);

@@ -1,4 +1,8 @@
 const assert = require('assert');
+// The module under test draws through this stand-in for its React view.
+global.__lumnoTestModuleStubs = Object.assign(global.__lumnoTestModuleStubs || {}, {
+  'src/shared/react/feature-hint-view.tsx': { getFeatureHintViewApi: () => featureHintView }
+});
 const fs = require('fs');
 const { readStylesheet } = require('../helpers/css-tokens');
 const { parseCss } = require('../helpers/css-rules');
@@ -73,7 +77,7 @@ function createFakeDocument() {
   return fakeDocument;
 }
 
-global.LumnoFeatureHintView = {
+const featureHintView = {
   implementation: 'react-test-double',
   createFeatureHintView(options) {
     const documentObj = options.documentObj;

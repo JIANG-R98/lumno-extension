@@ -9,7 +9,7 @@ const newtabHtmlPath = path.join(repoRoot, 'newtab.html');
 const optionsHtmlPath = path.join(repoRoot, 'src/options/options.html');
 const overlayPanelPath = path.join(repoRoot, 'src/overlay/search-panel.ts');
 
-global.LumnoTooltipView = {
+const tooltipView = {
   implementation: 'react-test-double',
   createTooltipElement(options) {
     const element = options.documentObj.createElement('div');
@@ -43,6 +43,11 @@ global.LumnoTooltipView = {
     });
     return element;
   }
+};
+
+// The shared tooltip draws through this stand-in for its React view.
+global.__lumnoTestModuleStubs = {
+  'src/shared/react/tooltip-view.tsx': { getTooltipViewApi: () => tooltipView }
 };
 
 assert.ok(fs.existsSync(tooltipJsPath), 'shared tooltip behavior should live in src/shared/ui/tooltip.ts');

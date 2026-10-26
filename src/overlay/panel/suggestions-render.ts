@@ -24,6 +24,7 @@ import type { CursorTooltipController } from '../../shared/ui/cursor-tooltip';
 import type { TooltipController } from '../../shared/ui/tooltip';
 import type { ActivationEvent } from './result-activation';
 import type { OverlaySuggestion } from './types';
+import { getSuggestionsViewApi } from '../../shared/react/search/suggestions';
 
 // What the view takes for an option this module passes straight through.
 type ViewOption<K extends keyof SuggestionsViewOptions> = NonNullable<SuggestionsViewOptions[K]>;
@@ -499,7 +500,7 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
     if (overlayState.overlaySuggestionsView) {
       return overlayState.overlaySuggestionsView;
     }
-    const viewApi = globalThis.LumnoOverlaySuggestionsView;
+    const viewApi = getSuggestionsViewApi();
     if (!viewApi) {
       throw new Error('The overlay suggestions view has not loaded');
     }

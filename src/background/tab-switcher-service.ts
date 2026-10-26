@@ -715,15 +715,10 @@ function recordTabSwitcherShortcutDebug(stage: string, payload?: Record<string, 
   }
 }
 
-// Reachable from the worker's console while diagnosing the release relay.
-Reflect.set(globalThis, '_lumnoTabSwitcherShortcutDebug', Object.freeze({
-  snapshot() {
-    return tabSwitcherShortcutDebugEvents.map((event) => ({ ...event }));
-  },
-  clear() {
-    tabSwitcherShortcutDebugEvents.length = 0;
-  }
-}));
+// The recorded release relay events, for diagnosing it.
+export function readTabSwitcherShortcutDebugEvents(): Array<Record<string, unknown>> {
+  return tabSwitcherShortcutDebugEvents.map((event) => ({ ...event }));
+}
 
 const TAB_SWITCHER_HOST_ID = '_x_extension_tab_switcher_host_2026_unique_';
 

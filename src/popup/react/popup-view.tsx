@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { useSegmentedIndicator } from '../../shared/react/segmented-indicator';
 import { queryHtmlTags } from '../../shared/dom-lookup';
+import { lazyInstance } from '../../shared/lazy-instance';
 
 export type PopupActionId = 'clip' | 'shortcut' | 'copy' | 'search' | 'pin' | 'pip';
 export type PopupLinkId = 'settings' | 'shortcuts' | 'feedback' | 'release' | 'sync';
@@ -416,3 +417,6 @@ export function createPopupController(
 export function createPopupApi() {
   return Object.freeze({ createPopupController });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getPopupApi = lazyInstance(createPopupApi);

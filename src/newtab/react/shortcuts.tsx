@@ -24,6 +24,7 @@ import { queryHtmlElements, queryHtmlTag, queryHtmlTags } from '../../shared/dom
 import { innerHtml } from '../../shared/react/inner-html';
 import { FaviconFallback } from '../../shared/react/favicon-fallback';
 import { createRenderStore, type RenderStore } from '../../shared/react/render-store';
+import { lazyInstance } from '../../shared/lazy-instance';
 
 // A site's theme as the page resolves it; the view passes it through.
 type ThemeValue = Partial<ThemeVariant> | null;
@@ -916,3 +917,6 @@ export function createShortcutsViewApi() {
     }
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getShortcutsViewApi = lazyInstance(createShortcutsViewApi);

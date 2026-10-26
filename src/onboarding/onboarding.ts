@@ -25,6 +25,8 @@ import type { VisualSurfaceRenderModel } from './react/visual-surface';
 import * as LumnoMessaging from '../platform/messaging';
 import { INJECTED_APP_PATHS } from '../domain/injected-commands';
 import type { OverlayToggleCommand } from '../domain/injected-commands';
+import { getTooltipViewApi } from '../shared/react/tooltip-view';
+import { getOnboardingPageApi } from './react/onboarding-page';
 
 type RuntimeMiscKey = keyof OnboardingRuntimeCopy['misc'];
 type SiteSearchCase = OnboardingRuntimeCopy['siteSearchDemo']['cases'][number];
@@ -125,7 +127,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   const params = new URLSearchParams(window.location.search || '');
   const root = queryHtmlElement(document, '[data-onboarding-shell]');
   // Set by the React islands entry, which the page loads first.
-  const onboardingPageApi = globalThis.LumnoOnboardingPage;
+  const onboardingPageApi = getOnboardingPageApi();
   if (!onboardingPageApi) {
     return;
   }
@@ -635,7 +637,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     if (!element) {
       return;
     }
-    const tooltipView = globalThis.LumnoTooltipView;
+    const tooltipView = getTooltipViewApi();
     const isBrowserAvatarTooltip = infoTooltip.type === 'browser-avatars';
     element.classList.toggle(
       'onboarding-browser-tooltip',

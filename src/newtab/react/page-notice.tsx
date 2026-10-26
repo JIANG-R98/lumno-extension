@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import * as LumnoMessaging from '../../platform/messaging';
 import type { MessageRuntime } from '../../platform/messaging';
 import { innerHtml } from '../../shared/react/inner-html';
+import { lazyInstance } from '../../shared/lazy-instance';
 
 export const PAGE_NOTICE_ID =
   '_x_extension_newtab_notice_banner_2026_unique_';
@@ -221,3 +222,6 @@ export function createPageNoticeApi() {
     renderPageNotice
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getPageNoticeApi = lazyInstance(createPageNoticeApi);

@@ -44,6 +44,7 @@ import * as WALLPAPER_EFFECTS from './wallpaper-effects';
 import * as WALLPAPER_LOCAL_STORE from '../../shared/wallpaper-local-store';
 import { getRiSvg as getDefaultRiSvg } from '../../shared/ui/remix-icon';
 import { readBootValue } from '../../platform/boot-handoff';
+import { getWallpaperViewApi } from '../react/wallpaper-view';
 
 const DEFAULT_STORAGE_KEYS = {
   wallpaper: SETTINGS.NEWTAB_WALLPAPER_STORAGE_KEY,
@@ -249,7 +250,7 @@ function createWallpaperRuntime(runtimeOptions?: WallpaperRuntimeOptions | null)
   const extensionRoutes = options.extensionRoutes || LumnoExtensionRoutes;
   const storageArea = options.storageArea || null;
   const localWallpaperStorageArea = options.localWallpaperStorageArea || null;
-  const wallpaperView = options.view || globalThis.LumnoNewtabWallpaperView || null;
+  const wallpaperView = options.view || getWallpaperViewApi() || null;
   const storageKeys = { ...DEFAULT_STORAGE_KEYS, ...options.storageKeys };
   const NEWTAB_WALLPAPER_STORAGE_KEY = storageKeys.wallpaper;
   const NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY = storageKeys.localWallpaper;

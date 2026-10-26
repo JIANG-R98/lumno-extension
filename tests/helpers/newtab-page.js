@@ -43,6 +43,8 @@ const DEFAULT_SYNC = {
 //   layout         true to give elements boxes with page.layout.place()
 //                  (see fake-layout.js) for tests that drag or hit-test
 //   setup          (window) => void, run before the page scripts
+//   stubs          modules of the page entry replaced by window globals the
+//                  setup defines: { 'src/x.ts': 'GlobalName' }
 async function createNewtabPage(options) {
   const config = options || {};
   const errors = [];
@@ -209,7 +211,7 @@ async function createNewtabPage(options) {
   const settle = timers.settle;
   run(bundleScript('newtab-preload'), 'build/newtab-preload.js');
   run(bundleScript('wallpaper-effect-preload'), 'build/wallpaper-effect-preload.js');
-  run(bundleScript('newtab'), 'build/newtab.js');
+  run(bundleScript('newtab', null, config.stubs), 'build/newtab.js');
   await settle(120);
 
   const waitFor = async (condition, message, timeoutMs) => {

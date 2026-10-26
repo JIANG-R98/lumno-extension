@@ -1,9 +1,8 @@
 // The search overlay the worker injects into a web page (and the onboarding
 // page loads for its demo), an ES module the browser loads once per page: the
-// CJK font faces its text falls back to, its React views, then the search
-// panel. The worker calls run() with each toggle (src/platform/injection.ts).
+// CJK font faces its text falls back to, then the search panel, which imports
+// its views. The worker calls run() with each toggle (src/platform/injection.ts).
 import '../shared/cjk-font-faces';
-import './react/react-islands-entry';
 import { toggleSearchOverlay } from './search-panel';
 import { isOverlayOpenState, setOverlayOpenState } from '../platform/content-registry';
 import { OVERLAY_HOST_ID, readOverlayCommand } from '../domain/injected-commands';

@@ -8,6 +8,7 @@ import {
   type SelectMenuOption
 } from '../../shared/react/select-menu';
 import { queryHtmlElement, queryHtmlElements, queryHtmlTag } from '../../shared/dom-lookup';
+import { lazyInstance } from '../../shared/lazy-instance';
 
 export {
   SelectMenu,
@@ -191,3 +192,6 @@ export function createSelectMenuApi() {
     createController: createSelectMenuController
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getSelectMenuApi = lazyInstance(createSelectMenuApi);

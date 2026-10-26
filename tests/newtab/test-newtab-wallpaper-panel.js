@@ -22,7 +22,10 @@ const REAL_WALLPAPER_DEPENDENCIES = {
   LumnoNewtabRemoteContent: LumnoNewtabRemoteContent,
   LumnoNewtabWallpaperAdaptiveTone: LumnoNewtabWallpaperAdaptiveTone,
   LumnoNewtabWallpaperEffects: LumnoNewtabWallpaperEffects,
-  LumnoNewtabWallpaperLocalStore: LumnoNewtabWallpaperLocalStore
+  LumnoNewtabWallpaperLocalStore: LumnoNewtabWallpaperLocalStore,
+  // No React views unless a test hands one in.
+  LumnoNewtabWallpaperViewModule: { getWallpaperViewApi: () => null },
+  LumnoFeatureHintViewModule: { getFeatureHintViewApi: () => null }
 };
 
 const WALLPAPER_STORAGE_KEY = '_x_extension_newtab_wallpaper_2026_unique_';
@@ -1227,8 +1230,8 @@ function createWallpaperSandbox(options) {
       REAL_WALLPAPER_DEPENDENCIES.LumnoNewtabWallpaperAdaptiveTone,
       options && options.adaptiveToneApi
     ),
-    LumnoNewtabWallpaperView: {
-      createController: createRecordingWallpaperViewController
+    LumnoNewtabWallpaperViewModule: {
+      getWallpaperViewApi: () => ({ createController: createRecordingWallpaperViewController })
     },
     // What wallpaper-preload.ts left for the runtime, when a test ran it first.
     __lumnoBoot: options && options.preload ? { wallpaperPreload: options.preload } : undefined
@@ -1264,8 +1267,8 @@ const sandbox = {
     }
   },
   ...REAL_WALLPAPER_DEPENDENCIES,
-  LumnoNewtabWallpaperView: {
-    createController: createRecordingWallpaperViewController
+  LumnoNewtabWallpaperViewModule: {
+    getWallpaperViewApi: () => ({ createController: createRecordingWallpaperViewController })
   }
 };
 sandbox.globalThis = sandbox;

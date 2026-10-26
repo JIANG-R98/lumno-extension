@@ -14,6 +14,7 @@ import type { FormatMessage } from '../newtab-types';
 import type { SearchModes } from './search-modes';
 import type { ActiveLocalScope, AutocompleteState, InlineSearchState, RenderSuggestions, SlashCommand } from './search-types';
 import type { SiteSearchProviders } from './site-search-providers';
+import { shortcutRulesCache } from '../../shared/search/shortcut-rules-cache';
 
 interface SearchNavigationState {
   tabs: OverlayTab[];
@@ -121,34 +122,34 @@ function createSearchNavigation(deps: SearchNavigationDeps) {
   }
 
   function getShortcutRules(): Promise<ShortcutRule[]> {
-    const cached = window._x_extension_shortcut_rules_2024_unique_;
+    const cached = shortcutRulesCache.rules;
     if (cached) {
       return Promise.resolve(cached);
     }
-    if (window._x_extension_shortcut_rules_promise_2024_unique_) {
-      return window._x_extension_shortcut_rules_promise_2024_unique_;
+    if (shortcutRulesCache.pending) {
+      return shortcutRulesCache.pending;
     }
     const rulesUrl = getExtensionResourceUrl('assets/data/shortcut-rules.json');
     const rulesPromise = fetch(rulesUrl)
       .then((response) => response.json())
       .then((data: unknown) => {
         const items = readShortcutRules(isRecord(data) ? data.items : null);
-        window._x_extension_shortcut_rules_2024_unique_ = items;
+        shortcutRulesCache.rules = items;
         return items;
       })
       .catch(() => new Promise<ShortcutRule[]>((resolve) => {
         if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
-          window._x_extension_shortcut_rules_2024_unique_ = [];
+          shortcutRulesCache.rules = [];
           resolve([]);
           return;
         }
         LumnoMessaging.sendBackgroundMessage(chrome.runtime, { action: 'getShortcutRules' }, (response) => {
           const items = response ? readShortcutRules(response.items) : [];
-          window._x_extension_shortcut_rules_2024_unique_ = items;
+          shortcutRulesCache.rules = items;
           resolve(items);
         });
       }));
-    window._x_extension_shortcut_rules_promise_2024_unique_ = rulesPromise;
+    shortcutRulesCache.pending = rulesPromise;
     return rulesPromise;
   }
 

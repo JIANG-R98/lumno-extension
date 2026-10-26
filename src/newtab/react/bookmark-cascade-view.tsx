@@ -14,6 +14,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { innerHtml } from '../../shared/react/inner-html';
 import { FaviconFallback } from '../../shared/react/favicon-fallback';
 import { RemixIcon } from '../../shared/react/remix-icon';
+import { lazyInstance } from '../../shared/lazy-instance';
 
 // The menu levels size to their content within these bounds.
 const LEVEL_MIN_WIDTH_PX = 210;
@@ -296,3 +297,6 @@ export function createBookmarkCascadeViewApi() {
     createMenu: createCascadeMenu
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getBookmarkCascadeViewApi = lazyInstance(createBookmarkCascadeViewApi);

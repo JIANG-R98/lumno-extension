@@ -24,6 +24,7 @@ import { SearchSuggestionRow } from './suggestion-list/search-suggestion-row';
 import { OpenTabRow } from './suggestion-list/open-tab-row';
 import { EmptyState, getHelpGroupCaptionStart } from './suggestion-list/empty-state';
 import { queryHtmlTags } from '../../dom-lookup';
+import { lazyInstance } from '../../lazy-instance';
 export type {
   SuggestionsSurface,
   SuggestionUpdateKind,
@@ -508,3 +509,6 @@ export function createSuggestionsViewApi() {
     }
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getSuggestionsViewApi = lazyInstance(createSuggestionsViewApi);

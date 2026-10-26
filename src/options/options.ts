@@ -55,6 +55,12 @@ import type { ReadBatchMetrics } from '../platform/settings-storage';
 import { getHtmlElement, queryHtmlElement, queryHtmlElements } from '../shared/dom-lookup';
 import type { LayoutMutation } from './options-panel-motion';
 import * as OPTIONS_STATE from './options-state';
+import { getBlacklistTabApi } from './react/blacklist-tab';
+import { getAccountTabApi } from './react/account-tab';
+import { getShortcutsTabApi } from './react/shortcuts-tab';
+import { getToastApi } from '../shared/react/toast';
+import { getSettingsControlsApi } from './react/settings-controls';
+import { getSettingsNavigationApi } from './react/settings-navigation';
 
 (function() {
   const optionsRuntimeStartedAt = typeof performance !== 'undefined' && typeof performance.now === 'function'
@@ -89,12 +95,12 @@ import * as OPTIONS_STATE from './options-state';
     return;
   }
   // The React views, set by the options islands bundle that loads first.
-  const optionsBlacklistTabApi = globalThis.LumnoOptionsBlacklistTab;
-  const optionsAccountTabApi = globalThis.LumnoOptionsAccountTab;
-  const optionsShortcutsTabApi = globalThis.LumnoOptionsShortcutsTab;
-  const optionsToastApi = globalThis.LumnoOptionsToast;
-  const optionsSettingsControlsApi = globalThis.LumnoOptionsSettingsControls;
-  const optionsSettingsNavigationApi = globalThis.LumnoOptionsSettingsNavigation;
+  const optionsBlacklistTabApi = getBlacklistTabApi();
+  const optionsAccountTabApi = getAccountTabApi();
+  const optionsShortcutsTabApi = getShortcutsTabApi();
+  const optionsToastApi = getToastApi();
+  const optionsSettingsControlsApi = getSettingsControlsApi();
+  const optionsSettingsNavigationApi = getSettingsNavigationApi();
   if (!optionsAccountTabApi || !optionsBlacklistTabApi || !optionsShortcutsTabApi ||
       !optionsSettingsControlsApi || !optionsSettingsNavigationApi) {
     console.warn('Lumno: options views not available.');

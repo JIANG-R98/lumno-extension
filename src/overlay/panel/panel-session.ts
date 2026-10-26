@@ -13,6 +13,7 @@ import type * as OverlayLifecycle from '../lifecycle';
 import type { createNoticeLayer } from '../notices';
 import type { StorageChangeListeners } from './types';
 import { setOverlayOpenState } from '../../platform/content-registry';
+import { getSearchInputApi } from '../../shared/react/search-input';
 
 interface PanelSessionState {
   overlayContextToken: string;
@@ -421,7 +422,7 @@ function createPanelSession(deps: PanelSessionDeps) {
         overlayState.overlaySuggestionsView.destroy();
       }
       // The search input's own root, before the panel it sits in goes.
-      const searchInputApi = globalThis.LumnoSearchInputUI;
+      const searchInputApi = getSearchInputApi();
       if (overlayState.inputParts && searchInputApi) {
         searchInputApi.destroySearchInput(overlayState.inputParts);
       }

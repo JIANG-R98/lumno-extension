@@ -21,6 +21,7 @@ esbuild.build({
   format: 'iife',
   globalName,
   target: ['chrome110', 'firefox140'],
+  define: { 'process.env.NODE_ENV': '"production"' },
   charset: 'utf8',
   write: false,
   logLevel: 'silent',

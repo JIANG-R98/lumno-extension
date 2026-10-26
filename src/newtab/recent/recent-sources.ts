@@ -12,6 +12,7 @@ import type {
   RecentHistoryItem
 } from '../react/recent-history-dialog';
 import type { RecentContextTarget, StartupRecentSourceReads } from './recent-types';
+import { getRecentHistoryDialogApi } from '../react/recent-history-dialog-lazy';
 
 interface RecentSourcesState {
   recentContextMenu: ContextMenuParts | null;
@@ -65,7 +66,7 @@ function createRecentSources(deps: RecentSourcesDeps) {
   // pass shares these reads until the first pass lands or the history changes; later passes, or
   // one long after load, read afresh.
   const STARTUP_RECENT_SOURCE_MAX_AGE_MS = 3000;
-  const NEWTAB_RECENT_HISTORY_DIALOG = globalThis.LumnoNewtabRecentHistoryDialog;
+  const NEWTAB_RECENT_HISTORY_DIALOG = getRecentHistoryDialogApi();
   let recentHistoryDialogLoadPromise: Promise<RecentHistoryDialogController> | null = null;
 
   function updateRecentContextMenuLanguageStrings(): void {

@@ -4,9 +4,9 @@
 import type * as Settings from '../../domain/settings';
 import type { NewtabGlassTheme } from '../../domain/settings';
 import type { StorageAreaLike } from '../../domain/storage-port';
-import type { createLiquidSurfaces } from '../react/liquid-glass';
 import * as LumnoNewtabWallpaperAdaptiveTone from '../wallpaper/wallpaper-adaptive-tone';
 import type { ToneScheduleOptions } from '../wallpaper/wallpaper-adaptive-tone';
+import { createLiquidSurfaces } from '../react/liquid-glass';
 
 interface GlassSurfacesState {
   newtabGlassTheme: NewtabGlassTheme;
@@ -73,11 +73,10 @@ function createGlassSurfaces(deps: GlassSurfacesDeps) {
       }
       return;
     }
-    const api = globalThis.LumnoNewtabLiquidSurfaces;
-    if (newtabLiquidSurfaces || !api) {
+    if (newtabLiquidSurfaces) {
       return;
     }
-    newtabLiquidSurfaces = api.create({
+    newtabLiquidSurfaces = createLiquidSurfaces({
       documentObj: document,
       windowObj: window,
       selector: NEWTAB_LIQUID_SURFACE_SELECTOR,

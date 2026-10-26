@@ -16,6 +16,7 @@ import type { SearchModeController } from './search-mode-controller';
 import { getAggregateSearchId } from './search-types';
 import type { ActiveLocalScope, AutocompleteState, InlineSearchState } from './search-types';
 import type { SiteSearchProviders } from './site-search-providers';
+import { shortcutRulesCache } from '../../shared/search/shortcut-rules-cache';
 
 // A site search the typed text turns into on Tab.
 interface SiteSearchTrigger {
@@ -585,7 +586,7 @@ function createSearchModes(deps: SearchModesDeps) {
         activateSiteSearch(directProvider);
         return true;
       }
-      const cachedRules = window._x_extension_shortcut_rules_2024_unique_;
+      const cachedRules = shortcutRulesCache.rules;
       const directLocalScope = getLocalSearchScopeCandidate(triggerInput, cachedRules);
       if (pageState.siteSearchProvidersCache && directLocalScope) {
         activateLocalSearchScope(directLocalScope);

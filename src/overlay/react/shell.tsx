@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { createRenderStore, type RenderStore } from '../../shared/react/render-store';
 import { queryHtmlElement } from '../../shared/dom-lookup';
+import { lazyInstance } from '../../shared/lazy-instance';
 
 type OverlayShellOptions = Record<string, unknown> & {
   cursorTooltipCssUrl?: string;
@@ -755,3 +756,6 @@ export function createOverlayShellApi() {
     implementation: 'react'
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getOverlayShellApi = lazyInstance(createOverlayShellApi);

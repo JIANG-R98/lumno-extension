@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import type { CSSProperties } from 'react';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { queryHtmlElement } from '../../shared/dom-lookup';
+import { lazyInstance } from '../../shared/lazy-instance';
 
 export type NewtabTopContentMode = 'brand' | 'time';
 
@@ -596,3 +597,6 @@ export function createTopContentApi() {
     createWordmarkController: createTopContentController
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getTopContentApi = lazyInstance(createTopContentApi);

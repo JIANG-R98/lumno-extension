@@ -1,6 +1,7 @@
 import { queryHtmlElements } from '../dom-lookup';
+import { getTooltipViewApi } from '../react/tooltip-view';
 // The shared tooltip: one element per controller, placed beside its target
-// and drawn by the React tooltip view (globalThis.LumnoTooltipView).
+// and drawn by the React tooltip view (getTooltipViewApi()).
 const TOOLTIP_CLASS = '_x_extension_tooltip_2026_unique_';
 const HOST_CLASS = '_x_extension_tooltip_host_2026_unique_';
 const LEGACY_HOST_CLASS = '_x_extension_tooltip_host_2024_unique_';
@@ -157,7 +158,7 @@ function getElementRect(element: Element | null | undefined, fallback?: TooltipR
 
 function createElement(doc: Document | null | undefined, options?: TooltipElementOptions | null): HTMLElement | null {
   const documentObj = doc || getDocument(options);
-  const tooltipView = globalThis.LumnoTooltipView;
+  const tooltipView = getTooltipViewApi();
   if (!documentObj || !tooltipView) {
     return null;
   }
@@ -179,7 +180,7 @@ function renderText(element: HTMLElement | null | undefined, text: string | null
   if (!element) {
     return null;
   }
-  const tooltipView = globalThis.LumnoTooltipView;
+  const tooltipView = getTooltipViewApi();
   if (!tooltipView) {
     return null;
   }
@@ -433,7 +434,7 @@ function createController(options?: TooltipControllerOptions | null): TooltipCon
         clearTimer(hideTimer);
         hideTimer = null;
       }
-      const tooltipView = globalThis.LumnoTooltipView;
+      const tooltipView = getTooltipViewApi();
       if (element && tooltipView) {
         tooltipView.destroyTooltipElement(element);
       }

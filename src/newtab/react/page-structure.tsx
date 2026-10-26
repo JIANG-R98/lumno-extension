@@ -5,6 +5,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { createRenderStore, type RenderStore } from '../../shared/react/render-store';
 import { BookmarkHeader, type BookmarkHeaderElements, type BookmarkHeaderModel, type BookmarkHeaderStore } from './bookmark-header';
 import { RecentModeSwitch, type RecentModeSwitchModel } from './recent-mode-switch';
+import { lazyInstance } from '../../shared/lazy-instance';
 
 export const PAGE_STRUCTURE_IDS = Object.freeze({
   suggestionsContainer:
@@ -249,3 +250,6 @@ export function createPageStructureApi() {
     createPageStructure
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getPageStructureApi = lazyInstance(createPageStructureApi);

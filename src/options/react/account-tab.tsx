@@ -3,6 +3,7 @@ import { InfoButton } from './info-button';
 import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { SettingDivider } from './setting-rows';
 import { WebDavList, type WebDavListModel, type WebDavListOptions } from './webdav-list';
+import { lazyInstance } from '../../shared/lazy-instance';
 
 export type BrowserSyncTone = 'success' | 'danger' | '';
 
@@ -215,3 +216,6 @@ export function createAccountTabApi() {
     createAccountTabController
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getAccountTabApi = lazyInstance(createAccountTabApi);

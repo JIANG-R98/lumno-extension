@@ -7,6 +7,7 @@ import type {
   LayoutConstants,
   LayoutControllerOptions
 } from '../layout';
+import { lazyInstance } from '../../shared/lazy-instance';
 
 export const DOCK_IDS = Object.freeze({
   bottomDock: '_x_extension_newtab_bottom_dock_2024_unique_',
@@ -181,3 +182,6 @@ export function createDockApi() {
     createBottomDockRuntime
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getDockApi = lazyInstance(createDockApi);

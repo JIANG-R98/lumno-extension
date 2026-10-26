@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { createReactRootController } from '../../shared/react/root-controller';
 import { queryHtmlElement } from '../../shared/dom-lookup';
+import { lazyInstance } from '../../shared/lazy-instance';
 
 export interface QuoteLineModel {
   text: string;
@@ -121,3 +122,6 @@ export function createQuoteLineViewApi() {
     createQuoteLineView
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getQuoteLineViewApi = lazyInstance(createQuoteLineViewApi);

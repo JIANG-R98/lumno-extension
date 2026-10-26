@@ -1,5 +1,6 @@
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
+import { lazyInstance } from '../lazy-instance';
 
 export interface ToastOptions {
   windowObj?: Pick<Window, 'setTimeout' | 'clearTimeout'>;
@@ -247,3 +248,6 @@ export function createToastApi() {
     }
   });
 }
+
+// The one instance a page or injected script draws through, made on first use.
+export const getToastApi = lazyInstance(createToastApi);

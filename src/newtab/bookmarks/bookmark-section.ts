@@ -16,6 +16,8 @@ import type { PointLike } from './bookmark-cascade-position';
 import type { BookmarkItemContextMenuEvent } from './bookmark-context-menu';
 import type * as FolderIcon from './bookmark-folder-icon';
 import type { BookmarksRuntime } from './bookmarks-runtime';
+import { getBookmarksViewApi } from '../react/bookmarks';
+import { getBookmarkCascadeViewApi } from '../react/bookmark-cascade-view';
 
 type ViewOption<K extends keyof BookmarksViewOptions> = NonNullable<BookmarksViewOptions[K]>;
 
@@ -155,9 +157,9 @@ function createBookmarkSection(deps: BookmarkSectionDeps) {
   const pageState = deps.pageState;
 
   // Set by the New Tab's React islands entry, which loads first.
-  const NEWTAB_BOOKMARKS_VIEW = globalThis.LumnoNewtabBookmarksView;
+  const NEWTAB_BOOKMARKS_VIEW = getBookmarksViewApi();
   const NEWTAB_BOOKMARK_CASCADE_VIEW =
-    globalThis.LumnoNewtabBookmarkCascadeView;
+    getBookmarkCascadeViewApi();
   if (!NEWTAB_BOOKMARKS_VIEW || !NEWTAB_BOOKMARK_CASCADE_VIEW) {
     return {};
   }

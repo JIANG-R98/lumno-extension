@@ -24,6 +24,7 @@ import type {
   WallpaperState
 } from './wallpaper-runtime-types';
 import { readBootValue } from '../../../platform/boot-handoff';
+import { getSelectMenuApi } from '../../react/select-menu';
 
 type SelectMenuController = ReturnType<typeof createSelectMenuController>;
 
@@ -663,7 +664,7 @@ function createCustomWallpapers(deps: CustomWallpapersDeps) {
   }
 
   function createOnlineWallpaperMenu(): OnlineWallpaperMenu | null {
-    const selectMenuApi = globalThis.LumnoNewtabSelectMenu;
+    const selectMenuApi = getSelectMenuApi();
     if (!selectMenuApi || typeof selectMenuApi.createController !== 'function') {
       return null;
     }

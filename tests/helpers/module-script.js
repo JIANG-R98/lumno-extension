@@ -103,9 +103,14 @@ function runModuleInContext(file, context, globalName = '__lumnoTestModule', opt
 // An entry from scripts/build/entries.js, as a classic script that runs it
 // the way the page, manifest or injection list does. `expose` leaves the
 // exports of some of its modules on globals, so a test can reach the
-// instances the entry uses: { 'src/x.ts': 'GlobalName' }.
-function bundleScript(name, expose) {
+// instances the entry uses: { 'src/x.ts': 'GlobalName' }. `stubs` replaces
+// modules it imports with context globals instead, as for moduleScript.
+function bundleScript(name, expose, stubs) {
   const entry = getEntry(name);
+  if (stubs) {
+    if (expose) throw new Error('bundleScript takes expose or stubs, not both');
+    return buildWithStubs(sourcePath(entry.source), undefined, stubs);
+  }
   const key = `bundle:${name}\0${JSON.stringify(expose || {})}`;
   if (!cache.has(key)) {
     const imports = [`import ${JSON.stringify(sourcePath(entry.source))};`];

@@ -2,8 +2,7 @@ import { useLayoutEffect, type RefObject } from 'react';
 import { queryHtmlElement } from '../dom-lookup';
 
 // The one implementation of the sliding indicator under a segmented control's active
-// button. React controls use the hook; the page modules call the same functions through
-// globalThis.LumnoSegmentedIndicator (registered by the page's React entry).
+// button. React controls use the hook; page modules import the same functions.
 
 export interface SegmentedIndicatorMeasurement {
   /** False while the control is hidden or has no active button. */
@@ -136,10 +135,3 @@ export function useSegmentedIndicator(
   }, [activeSelector, indicatorRef, signature]);
 }
 
-export function createSegmentedIndicatorApi() {
-  return Object.freeze({
-    apply: applySegmentedIndicator,
-    measure: measureSegmentedIndicator,
-    sync: syncSegmentedIndicator
-  });
-}

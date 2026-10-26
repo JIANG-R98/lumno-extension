@@ -2,8 +2,6 @@ const assert = require('assert');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
 const { parseCss } = require('../helpers/css-rules');
-const { createNewtabPage } = require('../helpers/newtab-page');
-const { createOptionsPage } = require('../helpers/options-page');
 const { readLightTokens, readStylesheetSource } = require('../helpers/css-tokens');
 
 // Stylesheets split into parts read as the joined parts.
@@ -73,20 +71,4 @@ const newtabCss = read('src/newtab/newtab.css');
 assert.doesNotMatch(optionsCss, /^\._x_extension_toast_2024_unique_ \{[^}]*background:/m,
   'the Options toast uses src/shared/ui/toast.css');
 
-// One indicator implementation: each page's React entry gives its page
-// modules the shared segmented indicator.
-(async () => {
-  for (const [name, open] of [['Options', () => createOptionsPage({})], ['New Tab', () => createNewtabPage({})]]) {
-    const page = await open();
-    await page.settle(200);
-    const api = page.window.LumnoSegmentedIndicator;
-    assert.ok(api && ['apply', 'measure', 'sync'].every((name) => typeof api[name] === 'function'),
-      `${name} should expose the shared segmented indicator to the page modules`);
-    page.close();
-  }
-  console.log('design token tests passed');
-  process.exit(0);
-})().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+console.log('design token tests passed');

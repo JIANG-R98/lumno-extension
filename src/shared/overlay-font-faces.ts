@@ -15,6 +15,7 @@
 // "Lumno Open Sans", and the icons always draw from "lumno-remixicon".
 import * as CJK_FONT_FACES from './cjk-font-faces';
 import type { CjkScript } from './cjk-font-faces';
+import { readEarlyOverlayFontFaces, setEarlyOverlayFontFaces } from '../platform/content-registry';
 
 // Resolves a path inside the extension to its URL.
 type AssetUrlResolver = (assetPath: string) => string;
@@ -52,7 +53,6 @@ const REMIXICON_PATH = 'assets/remixicon/fonts/remixicon.woff2';
 const OPEN_SANS_WEIGHT_BANDS: readonly string[] = Object.freeze(['300 549', '550 649', '650 800']);
 // The faces registered early in this page, kept in the extension's isolated
 // world where the overlay runtime reads them.
-const EARLY_FONT_FACES_KEY = '_x_extension_overlay_early_font_faces_2026_unique_';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
@@ -106,7 +106,7 @@ function isCjkScript(value: unknown): value is CjkScript | '' {
 // only a FontFace made by this window's constructor counts.
 function readEarlyFontFaces(win: FontFaceWindow | null | undefined): EarlyOverlayFontFaces | null {
   const FontFaceCtor = win ? win.FontFace : undefined;
-  const early: unknown = win ? Reflect.get(win, EARLY_FONT_FACES_KEY) : null;
+  const early: unknown = win ? readEarlyOverlayFontFaces(win) : null;
   if (typeof FontFaceCtor !== 'function' || !isRecord(early) || !Array.isArray(early.faces)) {
     return null;
   }
@@ -131,7 +131,7 @@ function registerEarlyOverlayFontFaces(
   const FontFaceCtor = win ? win.FontFace : undefined;
   const getUrl = settings.getUrl;
   if (!win || !fonts || typeof FontFaceCtor !== 'function' || typeof getUrl !== 'function' ||
-      Reflect.get(win, EARLY_FONT_FACES_KEY)) {
+      readEarlyOverlayFontFaces(win)) {
     return false;
   }
   try {
@@ -151,7 +151,7 @@ function registerEarlyOverlayFontFaces(
       cjkFace,
       cjkScript: cjk ? cjk.script : ''
     };
-    Reflect.set(win, EARLY_FONT_FACES_KEY, early);
+    setEarlyOverlayFontFaces(win, early);
     return true;
   } catch (_error) {
     // Firefox content scripts may not hand their FontFace objects to the
@@ -184,13 +184,12 @@ function keepEarlyCjkFontFace(win: FontFaceWindow | null | undefined, lang: stri
   }
   if (win) {
     const kept: EarlyOverlayFontFaces = { faces: early.faces, cjkFace: null, cjkScript: '' };
-    Reflect.set(win, EARLY_FONT_FACES_KEY, kept);
+    setEarlyOverlayFontFaces(win, kept);
   }
   return false;
 }
 
 export {
-  EARLY_FONT_FACES_KEY,
   OVERLAY_ICON_FAMILY,
   OVERLAY_TEXT_FAMILY,
   OPEN_SANS_WEIGHT_BANDS,
