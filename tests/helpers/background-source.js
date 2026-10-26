@@ -16,7 +16,7 @@ const BACKGROUND_ENTRY = 'src/background/background.ts';
 // share, in its import order.
 function getBackgroundServiceFiles() {
   const source = fs.readFileSync(path.join(repoRoot, BACKGROUND_ENTRY), 'utf8');
-  const files = [...source.matchAll(/(?:from |import )'\.\/((?:[\w-]+-service|pinned-tab-recovery|worker-[\w-]+|tab-lifecycle-events))(?:\.[jt]s)?';/g)]
+  const files = [...source.matchAll(/(?:from |import )'\.\/((?:[\w-]+-service|pinned-tab-recovery|worker-[\w-]+|tab-lifecycle-events|message-handlers\/[\w-]+))(?:\.[jt]s)?';/g)]
     .map((match) => path.relative(repoRoot, resolveSourceFile(`src/background/${match[1]}.js`)).split(path.sep).join('/'));
   return [...new Set(files)];
 }

@@ -96,14 +96,6 @@ import {
   SITE_SEARCH_MESSAGE_HANDLERS,
   readSiteSearchProvider
 } from './site-search-service';
-import {
-  EXTENSION_PAGE_MESSAGE_HANDLERS,
-  FAVICON_MESSAGE_HANDLERS,
-  LOCALE_AND_PERMISSION_MESSAGE_HANDLERS,
-  POPUP_MESSAGE_HANDLERS,
-  SHORTCUT_MESSAGE_HANDLERS,
-  TAB_MESSAGE_HANDLERS
-} from './message-handlers-service';
 import { selectionQuickActionsEnabled, siteSearchCustom, siteSearchDisabled } from '../domain/settings';
 import {
   PINYIN_DATA_SCRIPT_PATH,
@@ -130,6 +122,12 @@ import * as Service from './link-preview/service';
 import './overlay-loading-service';
 import './overlay-open-service';
 import { registerTabLifecycleEvents } from './tab-lifecycle-events';
+import { EXTENSION_PAGE_MESSAGE_HANDLERS } from './message-handlers/extension-page';
+import { FAVICON_MESSAGE_HANDLERS } from './message-handlers/favicon';
+import { LOCALE_AND_PERMISSION_MESSAGE_HANDLERS } from './message-handlers/locale';
+import { POPUP_MESSAGE_HANDLERS } from './message-handlers/popup';
+import { SHORTCUT_MESSAGE_HANDLERS } from './message-handlers/shortcut';
+import { TAB_MESSAGE_HANDLERS } from './message-handlers/tab';
 
 // Folds traditional characters to simplified ones for local search matching.
 installHanVariantPairs(HAN_VARIANT_PAIRS);
