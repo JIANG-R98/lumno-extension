@@ -702,7 +702,8 @@ function createSuggestionsController(deps: SuggestionsControllerDeps) {
           !siteSearchQueryModeActive &&
           !hasDirectUrlSuggestion) {
         allSuggestions = SEARCH_UTILS.composeSearchFirstSuggestionSlate(allSuggestions, {
-          limit: pageState.searchResultDisplayLimit
+          limit: pageState.searchResultDisplayLimit,
+          query
         });
       }
 

@@ -2303,7 +2303,8 @@ export async function getSearchEngineSuggestions(
   }
   if (settings.searchFirst === true) {
     finalSuggestions = searchUtils.composeSearchFirstSuggestionSlate(finalSuggestions, {
-      limit: searchPolicy.finalSuggestionLimit || 12
+      limit: searchPolicy.finalSuggestionLimit || 12,
+      query: String(query || '')
     }).slice(0, searchPolicy.finalSuggestionLimit || 12);
   } else {
     finalSuggestions = searchUtils.composeSearchSuggestionSlate(finalSuggestions, context);

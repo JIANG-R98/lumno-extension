@@ -523,6 +523,39 @@ assert.deepStrictEqual(
   ['newtab', 'googleSuggest', 'googleSuggest', 'history', 'history'],
   'unused local-source quota should backfill instead of leaving the result list empty'
 );
+// #123: a bookmark titled exactly as typed comes right after the search
+// action, and counts as a local row so the search rows keep their share.
+const whatsappSlate = [
+  { type: 'googleSuggest', title: 'whatsapp web' },
+  { type: 'googleSuggest', title: 'whatsapp desktop' },
+  { type: 'googleSuggest', title: 'whatsapp download' },
+  { type: 'googleSuggest', title: 'whatsapp online' },
+  { type: 'googleSuggest', title: 'whatsapp störung' },
+  { type: 'history', title: 'WhatsApp Business' },
+  { type: 'bookmark', title: 'WhatsApp' },
+  { type: 'newtab', title: 'whatsapp' }
+];
+assert.deepStrictEqual(
+  search.composeSearchFirstSuggestionSlate(whatsappSlate, { limit: 7, query: 'whatsapp' })
+    .slice(0, 7).map((item) => item.title),
+  ['whatsapp', 'WhatsApp', 'whatsapp web', 'whatsapp desktop', 'whatsapp download', 'whatsapp online', 'WhatsApp Business'],
+  'search-first should put a local row titled exactly as the query second'
+);
+assert.strictEqual(
+  search.composeSearchFirstSuggestionSlate(whatsappSlate, { limit: 7, query: 'Whats App' })[1].title,
+  'WhatsApp',
+  'the exact-title match should ignore case and spaces'
+);
+assert.strictEqual(
+  search.composeSearchFirstSuggestionSlate(whatsappSlate, { limit: 7, query: 'whats' })[1].title,
+  'whatsapp web',
+  'a title that only starts with the query should keep its usual place'
+);
+assert.deepStrictEqual(
+  search.composeSearchFirstSuggestionSlate(searchFirstQuotaInput, { limit: 10 }).map((item) => item.title),
+  search.composeSearchFirstSuggestionSlate(searchFirstQuotaInput, { limit: 10, query: 'nothing matches' }).map((item) => item.title),
+  'without an exact-title row the search-first slate should not change'
+);
 const pinnedExactSearchActionSuggestions = search.pinExactSearchActionSecond([
   { type: 'history', title: 'Local A' },
   { type: 'history', title: 'Local B' },

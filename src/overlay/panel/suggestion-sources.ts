@@ -561,7 +561,8 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
           !siteSearchQueryModeActive &&
           !hasDirectUrlSuggestion) {
         allSuggestions = SEARCH_UTILS.composeSearchFirstSuggestionSlate(allSuggestions, {
-          limit: overlayState.overlaySearchResultDisplayLimit
+          limit: overlayState.overlaySearchResultDisplayLimit,
+          query
         });
       }
       const keywordSuggestionState = getKeywordSearchSuggestionState(allSuggestions);

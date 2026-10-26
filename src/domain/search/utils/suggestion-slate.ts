@@ -14,7 +14,7 @@ import type { TextMatchingApi, TitleMatchOptions } from './text-matching';
 import type { TextNormalizeApi } from './text-normalize';
 
 type SuggestionSlateDeps =
-  Pick<TextNormalizeApi, 'splitSearchTerms' | 'normalizeSearchText' | 'splitSearchTitleTokens'> &
+  Pick<TextNormalizeApi, 'splitSearchTerms' | 'normalizeSearchText' | 'splitSearchTitleTokens' | 'compactSearchQuery'> &
   Pick<DirectNavigationApi, 'normalizeHost'> &
   Pick<QueryIntentApi, 'getSearchSuggestionClusterInfo' | 'getSearchTermCoverageStats'> &
   Pick<TextMatchingApi, 'getSearchTitleUnitMatch'> &
@@ -95,6 +95,7 @@ function createSuggestionSlate(deps: SuggestionSlateDeps) {
     normalizeHost,
     getSearchSuggestionClusterInfo,
     normalizeSearchText,
+    compactSearchQuery,
     getSearchTermCoverageStats,
     splitSearchTitleTokens,
     getSearchTitleUnitMatch,
@@ -411,12 +412,22 @@ function createSuggestionSlate(deps: SuggestionSlateDeps) {
       : [...navigationSuggestions, ...keywordSuggestions];
   }
 
+  // A bookmark, history or top site row whose title is the query itself,
+  // spaces and case aside: what the person most likely meant to open.
+  function isExactLocalTitleMatch(suggestion: SuggestionLike, compactQuery: string): boolean {
+    return Boolean(compactQuery) &&
+      (suggestion.type === 'bookmark' || suggestion.type === 'history' || suggestion.type === 'topSite') &&
+      compactSearchQuery(suggestion.title) === compactQuery;
+  }
+
+  // Search-first: the search action, then a local row titled exactly as
+  // typed, then about sixty percent search rows and the local rest.
   function composeSearchFirstSuggestionSlate<T extends SuggestionLike>(
     list: ReadonlyArray<T | null | undefined> | null | undefined,
-    options?: { limit?: number } | null
+    options?: { limit?: number; query?: string } | null
   ): T[] {
     const suggestions: T[] = Array.isArray(list) ? list.filter((item): item is T => Boolean(item)) : [];
-    const settings: { limit?: number } = options && typeof options === 'object' ? options : {};
+    const settings: { limit?: number; query?: string } = options && typeof options === 'object' ? options : {};
     const rawLimit = Number(settings.limit);
     const fallbackLimit = Number(SEARCH_POLICY.displaySuggestionLimit) || 10;
     const limit = Number.isInteger(rawLimit) && rawLimit >= 5 && rawLimit <= 12
@@ -426,6 +437,8 @@ function createSuggestionSlate(deps: SuggestionSlateDeps) {
     const searchActions = suggestions.filter(isSearchActionSuggestion);
     const engineSuggestions = suggestions.filter(isSearchEngineSuggestion);
     const localSuggestions = suggestions.filter((suggestion) => !isKeywordSearchSuggestion(suggestion));
+    const compactQuery = compactSearchQuery(settings.query);
+    const exactLocalMatch = localSuggestions.find((suggestion) => isExactLocalTitleMatch(suggestion, compactQuery));
     const selected: T[] = [];
     const selectedSuggestions = new Set<T>();
 
@@ -441,13 +454,18 @@ function createSuggestionSlate(deps: SuggestionSlateDeps) {
     if (searchActions.length > 0) {
       take(searchActions[0]);
     }
-    for (let i = 0; i < engineSuggestions.length && selected.length < searchSlotTarget; i += 1) {
-      take(engineSuggestions[i]);
-    }
-
     const localSlotTarget = Math.max(0, limit - searchSlotTarget);
     const localSourceCap = Math.max(1, Math.ceil(localSlotTarget / 2));
     const localSourceCounts = new Map<string, number>();
+    // It counts as a local row, so the search rows keep their share.
+    if (exactLocalMatch && take(exactLocalMatch) && exactLocalMatch.type !== 'topSite') {
+      localSourceCounts.set(String(exactLocalMatch.type), 1);
+    }
+    const searchRowTarget = searchSlotTarget + (exactLocalMatch ? 1 : 0);
+    for (let i = 0; i < engineSuggestions.length && selected.length < searchRowTarget; i += 1) {
+      take(engineSuggestions[i]);
+    }
+
     const deferredLocalSuggestions: T[] = [];
     for (let i = 0; i < localSuggestions.length && selected.length < limit; i += 1) {
       const suggestion = localSuggestions[i];

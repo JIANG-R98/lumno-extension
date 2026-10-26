@@ -3612,7 +3612,7 @@
     "message": "Reihenfolge im Suchbereich"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Ziehen Sie die Tags, um die Gruppen neu anzuordnen, und die Zeilen unten, um innerhalb einer Gruppe zu sortieren. Ctrl/⌘ + Z macht rückgängig, Shift + Ctrl/⌘ + Z wiederholt."
+    "message": "Gilt nur für den Bereich, den Tab öffnet, nicht für die Reihenfolge der Suchergebnisse. Ziehen Sie die Tags, um die Gruppen neu anzuordnen, und die Zeilen unten, um innerhalb einer Gruppe zu sortieren. Ctrl/⌘ + Z macht rückgängig, Shift + Ctrl/⌘ + Z wiederholt."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Zum Verschieben Alt mit der linken oder rechten Pfeiltaste drücken"

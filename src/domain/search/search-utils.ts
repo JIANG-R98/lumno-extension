@@ -263,6 +263,7 @@ const {
   normalizeHost,
   getSearchSuggestionClusterInfo,
   normalizeSearchText,
+  compactSearchQuery,
   getSearchTermCoverageStats,
   splitSearchTitleTokens,
   getSearchTitleUnitMatch,

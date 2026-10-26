@@ -3612,7 +3612,7 @@
     "message": "Ordre du panneau de recherche"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Faites glisser les étiquettes pour réordonner les groupes, et les lignes ci-dessous pour ordonner chaque groupe. Ctrl/⌘ + Z pour annuler, Shift + Ctrl/⌘ + Z pour rétablir."
+    "message": "Concerne seulement le panneau ouvert par Tab, pas l’ordre des résultats. Faites glisser les étiquettes pour réordonner les groupes, et les lignes ci-dessous pour ordonner chaque groupe. Ctrl/⌘ + Z pour annuler, Shift + Ctrl/⌘ + Z pour rétablir."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Appuyez sur Alt avec la flèche gauche ou droite pour déplacer"

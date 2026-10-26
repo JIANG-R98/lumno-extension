@@ -3612,7 +3612,7 @@
     "message": "Orden del panel de búsqueda"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Arrastra las etiquetas para reordenar los grupos y las filas de abajo para ordenar dentro de cada grupo. Pulsa Ctrl/⌘ + Z para deshacer y Shift + Ctrl/⌘ + Z para rehacer."
+    "message": "Solo afecta al panel que abre Tab, no al orden de los resultados. Arrastra las etiquetas para reordenar los grupos y las filas de abajo para ordenar dentro de cada grupo. Pulsa Ctrl/⌘ + Z para deshacer y Shift + Ctrl/⌘ + Z para rehacer."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Pulsa Alt con la flecha izquierda o derecha para mover"

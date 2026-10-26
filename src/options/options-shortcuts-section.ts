@@ -113,7 +113,7 @@ function createShortcutsSection(deps: ShortcutsSectionDeps) {
         title: getMessage('settings_search_source_group_order_title', '搜索面板顺序'),
         info: getMessage(
           'settings_search_source_group_order_desc',
-          '拖动标签调整分组顺序，组内顺序在下方列表中调整。按 Ctrl/⌘ + Z 撤销，Shift + Ctrl/⌘ + Z 恢复。'
+          '只影响 Tab 打开的搜索面板，不影响结果排序。拖动标签调整分组顺序，组内顺序在下方列表中调整。按 Ctrl/⌘ + Z 撤销，Shift + Ctrl/⌘ + Z 恢复。'
         ),
         keyboardHint: getMessage('settings_search_source_order_keyboard_hint', '按 Alt + 左右方向键调整位置'),
         groups: orderController.getOrder().groups.map((group) => ({ group, label: orderController.getGroupLabel(group) }))
