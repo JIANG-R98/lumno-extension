@@ -115,151 +115,164 @@ function fallbackFormatMessage(
   return text;
 }
 
-export function normalizeOptions(
-  raw: SuggestionsViewOptions
-): NormalizedOptions | null {
-  const documentRef = raw.document || globalThis.document;
-  if (!documentRef || !raw.container) {
-    return null;
+const BROWSER_NEWTAB_URLS = [
+  'chrome://newtab',
+  'chrome://new-tab-page',
+  'edge://newtab',
+  'brave://newtab',
+  'vivaldi://newtab',
+  'opera://startpage',
+  'about:newtab',
+  'about:home'
+];
+
+function isDefaultBrowserNewtabUrl(url: string): boolean {
+  const normalized = String(url || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[?#].*$/, '')
+    .replace(/\/+$/, '');
+  return BROWSER_NEWTAB_URLS.includes(normalized);
+}
+
+function isDefaultBrowserInternalUrl(url: string): boolean {
+  return /^(chrome|edge|brave|vivaldi|opera):\/\/|^about:/i.test(String(url || '').trim());
+}
+
+// A positive whole limit read now from `read`, or `fallback`.
+function readCurrentLimit(read: (() => unknown) | undefined, fallback: number): number {
+  if (typeof read !== 'function') {
+    return fallback;
   }
-  const defaultTheme = raw.defaultTheme || {};
-  const isBrowserNewtabUrl = raw.isBrowserNewtabUrl || ((url) => {
-    const normalized = String(url || '')
-      .trim()
-      .toLowerCase()
-      .replace(/[?#].*$/, '')
-      .replace(/\/+$/, '');
-    return [
-      'chrome://newtab',
-      'chrome://new-tab-page',
-      'edge://newtab',
-      'brave://newtab',
-      'vivaldi://newtab',
-      'opera://startpage',
-      'about:newtab',
-      'about:home'
-    ].includes(normalized);
-  });
-  const isBrowserInternalUrl = raw.isBrowserInternalUrl || ((url) =>
-    /^(chrome|edge|brave|vivaldi|opera):\/\/|^about:/i.test(
-      String(url || '').trim()
-    ));
-  const shouldBlockFaviconForHost =
-    raw.shouldBlockFaviconForHost || (() => false);
-  const getChromeFaviconUrl = raw.getChromeFaviconUrl || (() => '');
-  const getBrowserPageFaviconUrl =
-    raw.getBrowserPageFaviconUrl || (() => '');
-  const getHoverColors =
-    raw.getHoverColors ||
-    (() => ({
-      bg: raw.surface === 'overlay'
-        ? 'var(--x-ov-hover-bg, #F3F4F6)'
-        : 'var(--x-nt-hover-bg, #F3F4F6)',
-      border: 'transparent'
-    }));
-  const openTabSuggestionLimit =
-    Number(raw.openTabSuggestionLimit) > 0
-      ? Number(raw.openTabSuggestionLimit)
-      : 3;
-  const openTabInitialRenderLimit =
-    Number(raw.openTabInitialRenderLimit) > 0
-      ? Number(raw.openTabInitialRenderLimit)
-      : openTabSuggestionLimit;
-  const getOpenTabInitialRenderLimit = (): number => {
-    if (typeof raw.getOpenTabInitialRenderLimit !== 'function') {
-      return openTabInitialRenderLimit;
-    }
-    try {
-      const currentLimit = Number(raw.getOpenTabInitialRenderLimit());
-      return Number.isFinite(currentLimit) && currentLimit > 0
-        ? Math.max(1, Math.trunc(currentLimit))
-        : openTabInitialRenderLimit;
-    } catch {
-      return openTabInitialRenderLimit;
-    }
-  };
-  const openTabRenderBatchSize =
-    Number(raw.openTabRenderBatchSize) > 0
-      ? Number(raw.openTabRenderBatchSize)
-      : openTabSuggestionLimit;
-  const getOpenTabRenderBatchSize = (): number => {
-    if (typeof raw.getOpenTabRenderBatchSize !== 'function') {
-      return openTabRenderBatchSize;
-    }
-    try {
-      const currentBatchSize = Number(raw.getOpenTabRenderBatchSize());
-      return Number.isFinite(currentBatchSize) && currentBatchSize > 0
-        ? Math.max(1, Math.trunc(currentBatchSize))
-        : openTabRenderBatchSize;
-    } catch {
-      return openTabRenderBatchSize;
-    }
-  };
+  try {
+    const current = Number(read());
+    return Number.isFinite(current) && current > 0 ? Math.max(1, Math.trunc(current)) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function readPositive(value: unknown, fallback: number): number {
+  return Number(value) > 0 ? Number(value) : fallback;
+}
+
+type OptionGroup<K extends keyof NormalizedOptions> = Pick<NormalizedOptions, K>;
+
+// How many open tabs show, and how many render at first and per batch.
+function readOpenTabLimits(raw: SuggestionsViewOptions): OptionGroup<'openTabSuggestionLimit' | 'openTabInitialRenderLimit' |
+  'getOpenTabInitialRenderLimit' | 'openTabRenderBatchSize' | 'getOpenTabRenderBatchSize'> {
+  const openTabSuggestionLimit = readPositive(raw.openTabSuggestionLimit, 3);
+  const openTabInitialRenderLimit = readPositive(raw.openTabInitialRenderLimit, openTabSuggestionLimit);
+  const openTabRenderBatchSize = readPositive(raw.openTabRenderBatchSize, openTabSuggestionLimit);
   return {
-    surface: raw.surface === 'overlay' ? 'overlay' : 'newtab',
-    document: documentRef,
-    container: raw.container,
-    items: Array.isArray(raw.items) ? raw.items : [],
+    openTabSuggestionLimit,
+    openTabInitialRenderLimit,
+    getOpenTabInitialRenderLimit: () => readCurrentLimit(raw.getOpenTabInitialRenderLimit, openTabInitialRenderLimit),
+    openTabRenderBatchSize,
+    getOpenTabRenderBatchSize: () => readCurrentLimit(raw.getOpenTabRenderBatchSize, openTabRenderBatchSize)
+  };
+}
+
+// The text the rows show: messages, display forms of URLs and titles, and
+// the labels of search actions.
+function readTextOptions(raw: SuggestionsViewOptions): OptionGroup<'t' | 'formatMessage' | 'sanitizeDisplayText' |
+  'formatTabRankDebugText' | 'isTabRankScoreDebugEnabled' | 'getHostFromUrl' | 'getUrlDisplay' | 'isSimpleModeEnabled' |
+  'getSearchActionLabel' | 'getSiteSearchDisplayName' | 'isAiSiteSearchProvider'> {
+  return {
     t: raw.t || ((_key, fallback) => fallback || _key || ''),
     formatMessage: raw.formatMessage || fallbackFormatMessage,
-    actionModel: raw.actionModel || {},
-    sanitizeDisplayText:
-      raw.sanitizeDisplayText || ((value) => String(value || '')),
+    sanitizeDisplayText: raw.sanitizeDisplayText || ((value) => String(value || '')),
     formatTabRankDebugText: raw.formatTabRankDebugText || (() => ''),
-    isTabRankScoreDebugEnabled:
-      raw.isTabRankScoreDebugEnabled || (() => false),
-    shouldBlockFaviconForHost,
-    isLocalNetworkHost:
-      raw.isLocalNetworkHost || shouldBlockFaviconForHost,
-    getChromeFaviconUrl,
+    isTabRankScoreDebugEnabled: raw.isTabRankScoreDebugEnabled || (() => false),
     getHostFromUrl: raw.getHostFromUrl || (() => ''),
     getUrlDisplay: raw.getUrlDisplay || ((url) => String(url || '')),
     isSimpleModeEnabled: raw.isSimpleModeEnabled || (() => false),
-    getThemeHostForSuggestion:
-      raw.getThemeHostForSuggestion || (() => ''),
-    getImmediateThemeForSuggestion:
-      raw.getImmediateThemeForSuggestion || (() => defaultTheme),
-    getThemeForSuggestion:
-      raw.getThemeForSuggestion ||
-      (() => Promise.resolve(defaultTheme)),
-    shouldUseUrlFallbackThemeForSuggestion:
-      raw.shouldUseUrlFallbackThemeForSuggestion || (() => false),
-    getThemeForMode:
-      raw.getThemeForMode || ((theme) => theme || defaultTheme),
+    getSearchActionLabel: raw.getSearchActionLabel || (() => 'Search'),
+    getSiteSearchDisplayName: raw.getSiteSearchDisplayName || ((provider) => String(provider.name || provider.key || '')),
+    isAiSiteSearchProvider: raw.isAiSiteSearchProvider ||
+      ((provider) => String(provider.action || '').trim() === 'openAndSubmit')
+  };
+}
+
+function readDefaultHoverColors(surface: SuggestionsViewOptions['surface']): { bg: string; border: string } {
+  return {
+    bg: surface === 'overlay' ? 'var(--x-ov-hover-bg, #F3F4F6)' : 'var(--x-nt-hover-bg, #F3F4F6)',
+    border: 'transparent'
+  };
+}
+
+// The themes rows take from their sites, and the colors read from them.
+function readThemeOptions(raw: SuggestionsViewOptions): OptionGroup<'getThemeHostForSuggestion' | 'getImmediateThemeForSuggestion' |
+  'getThemeForSuggestion' | 'shouldUseUrlFallbackThemeForSuggestion' | 'getThemeForMode' | 'getHoverColors' |
+  'getHighlightColors' | 'getNeutralHoverActionColors' | 'applyThemeVariables' | 'applyMarkVariables' |
+  'defaultTheme' | 'urlHighlightTheme'> {
+  const defaultTheme = raw.defaultTheme || {};
+  const getHoverColors = raw.getHoverColors || (() => readDefaultHoverColors(raw.surface));
+  return {
+    getThemeHostForSuggestion: raw.getThemeHostForSuggestion || (() => ''),
+    getImmediateThemeForSuggestion: raw.getImmediateThemeForSuggestion || (() => defaultTheme),
+    getThemeForSuggestion: raw.getThemeForSuggestion || (() => Promise.resolve(defaultTheme)),
+    shouldUseUrlFallbackThemeForSuggestion: raw.shouldUseUrlFallbackThemeForSuggestion || (() => false),
+    getThemeForMode: raw.getThemeForMode || ((theme) => theme || defaultTheme),
     getHoverColors,
     getHighlightColors: raw.getHighlightColors || getHoverColors,
-    getNeutralHoverActionColors:
-      raw.getNeutralHoverActionColors ||
-      (() => ({
-        bg: 'rgba(200, 208, 218, 0.45)',
-        border: 'rgba(148, 163, 184, 0.28)',
-        text: '#4B5563'
-      })),
+    getNeutralHoverActionColors: raw.getNeutralHoverActionColors || (() => ({
+      bg: 'rgba(200, 208, 218, 0.45)',
+      border: 'rgba(148, 163, 184, 0.28)',
+      text: '#4B5563'
+    })),
     applyThemeVariables: raw.applyThemeVariables || noop,
     applyMarkVariables: raw.applyMarkVariables || noop,
-    applyFaviconOpticalAlignment:
-      raw.applyFaviconOpticalAlignment || noop,
-    attachFaviconWithFallbacks:
-      raw.attachFaviconWithFallbacks || noop,
-    getPageFaviconRenderCandidates:
-      raw.getPageFaviconRenderCandidates ||
-      ((url, explicitUrl, options) => {
-        const browserPageUrl = getBrowserPageFaviconUrl(url);
-        const chromeUrl = getChromeFaviconUrl(url);
-        const internal = isBrowserInternalUrl(url);
-        const primaryUrl = internal
-          ? browserPageUrl || explicitUrl || chromeUrl
-          : browserPageUrl || explicitUrl;
-        return {
-          primaryUrl,
-          browserUrl:
-            (internal || options?.includeChromeFallback) &&
-            chromeUrl !== primaryUrl
-              ? chromeUrl
-              : ''
-        };
-      }),
+    defaultTheme,
+    urlHighlightTheme: raw.urlHighlightTheme || defaultTheme
+  };
+}
+
+// The accents search rows take before their site's theme is known.
+function readAccentOptions(raw: SuggestionsViewOptions): OptionGroup<'getDefaultSearchEngineThemeUrl' | 'getBrandAccentForUrl' |
+  'buildThemeFromAccent'> {
+  return {
+    getDefaultSearchEngineThemeUrl: raw.getDefaultSearchEngineThemeUrl || (() => ''),
+    getBrandAccentForUrl: raw.getBrandAccentForUrl || (() => null),
+    buildThemeFromAccent: raw.buildThemeFromAccent || (() => null)
+  };
+}
+
+// Where row icons come from, and the browser pages that have their own.
+function readFaviconOptions(raw: SuggestionsViewOptions): OptionGroup<'shouldBlockFaviconForHost' | 'isLocalNetworkHost' |
+  'getChromeFaviconUrl' | 'applyFaviconOpticalAlignment' | 'attachFaviconWithFallbacks' | 'getPageFaviconRenderCandidates' |
+  'preloadIcon' | 'isBrowserNewtabUrl' | 'isBrowserInternalUrl'> {
+  const isBrowserInternalUrl = raw.isBrowserInternalUrl || isDefaultBrowserInternalUrl;
+  const shouldBlockFaviconForHost = raw.shouldBlockFaviconForHost || (() => false);
+  const getChromeFaviconUrl = raw.getChromeFaviconUrl || (() => '');
+  const getBrowserPageFaviconUrl = raw.getBrowserPageFaviconUrl || (() => '');
+  return {
+    shouldBlockFaviconForHost,
+    isLocalNetworkHost: raw.isLocalNetworkHost || shouldBlockFaviconForHost,
+    getChromeFaviconUrl,
+    applyFaviconOpticalAlignment: raw.applyFaviconOpticalAlignment || noop,
+    attachFaviconWithFallbacks: raw.attachFaviconWithFallbacks || noop,
+    getPageFaviconRenderCandidates: raw.getPageFaviconRenderCandidates || ((url, explicitUrl, options) => {
+      const browserPageUrl = getBrowserPageFaviconUrl(url);
+      const chromeUrl = getChromeFaviconUrl(url);
+      const internal = isBrowserInternalUrl(url);
+      const primaryUrl = internal ? browserPageUrl || explicitUrl || chromeUrl : browserPageUrl || explicitUrl;
+      return {
+        primaryUrl,
+        browserUrl: (internal || options?.includeChromeFallback) && chromeUrl !== primaryUrl ? chromeUrl : ''
+      };
+    }),
     preloadIcon: raw.preloadIcon || noop,
+    isBrowserNewtabUrl: raw.isBrowserNewtabUrl || isDefaultBrowserNewtabUrl,
+    isBrowserInternalUrl
+  };
+}
+
+// What the surface does when a row is chosen, selected or acted on.
+function readCallbacks(raw: SuggestionsViewOptions): OptionGroup<'setSuggestionsVisible' | 'onSetSelectedIndex' | 'getSelectedIndex' |
+  'onSwitchToTab' | 'onActivateSuggestion' | 'onDeleteHistory' | 'onCopyUrl' | 'shouldSwitchMatchedTabSuggestion' |
+  'showTopActionTooltip' | 'hideTopActionTooltip' | 'bindCursorTooltip'> {
+  return {
     setSuggestionsVisible: raw.setSuggestionsVisible || noop,
     onSetSelectedIndex: raw.onSetSelectedIndex || noop,
     getSelectedIndex: raw.getSelectedIndex || (() => -1),
@@ -267,32 +280,30 @@ export function normalizeOptions(
     onActivateSuggestion: raw.onActivateSuggestion || noop,
     onDeleteHistory: raw.onDeleteHistory || noop,
     onCopyUrl: raw.onCopyUrl || noop,
-    shouldSwitchMatchedTabSuggestion:
-      raw.shouldSwitchMatchedTabSuggestion || (() => false),
+    shouldSwitchMatchedTabSuggestion: raw.shouldSwitchMatchedTabSuggestion || (() => false),
     showTopActionTooltip: raw.showTopActionTooltip || noop,
     hideTopActionTooltip: raw.hideTopActionTooltip || noop,
-    bindCursorTooltip: raw.bindCursorTooltip,
-    getSearchActionLabel: raw.getSearchActionLabel || (() => 'Search'),
-    getSiteSearchDisplayName:
-      raw.getSiteSearchDisplayName ||
-      ((provider) => String(provider.name || provider.key || '')),
-    isAiSiteSearchProvider:
-      raw.isAiSiteSearchProvider ||
-      ((provider) => String(provider.action || '').trim() === 'openAndSubmit'),
-    getDefaultSearchEngineThemeUrl:
-      raw.getDefaultSearchEngineThemeUrl || (() => ''),
-    getBrandAccentForUrl: raw.getBrandAccentForUrl || (() => null),
-    buildThemeFromAccent:
-      raw.buildThemeFromAccent || (() => null),
-    isBrowserNewtabUrl,
-    isBrowserInternalUrl,
-    defaultTheme,
-    urlHighlightTheme: raw.urlHighlightTheme || defaultTheme,
-    openTabSuggestionLimit,
-    openTabInitialRenderLimit,
-    getOpenTabInitialRenderLimit,
-    openTabRenderBatchSize,
-    getOpenTabRenderBatchSize,
+    bindCursorTooltip: raw.bindCursorTooltip
+  };
+}
+
+export function normalizeOptions(raw: SuggestionsViewOptions): NormalizedOptions | null {
+  const documentRef = raw.document || globalThis.document;
+  if (!documentRef || !raw.container) {
+    return null;
+  }
+  return {
+    surface: raw.surface === 'overlay' ? 'overlay' : 'newtab',
+    document: documentRef,
+    container: raw.container,
+    items: Array.isArray(raw.items) ? raw.items : [],
+    actionModel: raw.actionModel || {},
+    ...readTextOptions(raw),
+    ...readThemeOptions(raw),
+    ...readAccentOptions(raw),
+    ...readFaviconOptions(raw),
+    ...readCallbacks(raw),
+    ...readOpenTabLimits(raw),
     enterAction: String(raw.enterAction || 'go'),
     autoHighlightFirstTab: Boolean(raw.autoHighlightFirstTab)
   };
