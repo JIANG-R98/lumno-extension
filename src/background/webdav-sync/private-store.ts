@@ -1,8 +1,8 @@
 // The extension-origin IndexedDB store for credentials and baselines, and
 // the cache of what each server supports.
-import type { WebDavConnection } from '../webdav-client';
 import { DB_NAME, PROBE_CACHE_MS } from './constants';
 import type { PrivateStore, ProbeCache, ProbeCapabilities } from './types';
+import type { WebDavConnection } from '../webdav-client/types';
 
 function createPrivateStore(indexedDB: IDBFactory): Required<PrivateStore> {
   async function open(): Promise<IDBDatabase> {

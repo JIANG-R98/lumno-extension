@@ -1,6 +1,5 @@
 // Connecting to a server, pausing, and the connection's status.
 import type { WebDavState } from '../../domain/webdav-contract';
-import type { WebDavClient, WebDavConnection } from '../webdav-client';
 import { capture } from './capture';
 import { ACCOUNT_FIELDS, CONNECTION_FIELDS, INITIAL_DECISIONS, SYNC_REVISION } from './constants';
 import { apply, mirrorChrome, mirrorReporting, prepareChrome } from './local-apply';
@@ -9,6 +8,7 @@ import { publish, readRemote, releaseOwnStaleLock, verifiedClient } from './remo
 import { fail, saveConfig, session, setStatus, storage } from './runtime';
 import { guardedSync, schedule } from './sync-round';
 import type { Captured, ConnectionContext, ConnectionHint, ConnectionStatus, RemoteState, StoredConnection, SyncResult } from './types';
+import type { WebDavClient, WebDavConnection } from '../webdav-client/types';
 
 function sameAccount(left: ConnectionHint, right: ConnectionHint): boolean {
   return ACCOUNT_FIELDS.every((key) => left[key] === right[key]);

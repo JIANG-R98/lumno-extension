@@ -7,7 +7,7 @@ import * as LumnoNewtabWallpaperLocalStore from '../../shared/wallpaper-local-st
 import * as LumnoSettings from '../../domain/settings';
 import * as LumnoSettingsStorage from '../../platform/settings-storage';
 import * as LumnoWebDavContract from '../../domain/webdav-contract';
-import * as LumnoWebDavClient from '../webdav-client';
+import { WEBDAV_CLIENT_API } from '../webdav-client/api';
 import { handle } from './connection-requests';
 import type { WebDavRequest } from '../../domain/messages';
 import { capture } from './capture';
@@ -76,7 +76,7 @@ function createConnectionController(options?: ConnectionControllerOptions | null
   const settings = opts.settings || LumnoSettings;
   const contract = opts.contract || LumnoWebDavContract;
   const shortcuts = opts.shortcuts || LumnoNewtabShortcutsStore;
-  const clientApi = opts.client || LumnoWebDavClient;
+  const clientApi = opts.client || WEBDAV_CLIENT_API;
   const cryptoApi = opts.crypto || globalThis.crypto;
   const privateStore = opts.privateStore || createPrivateStore(globalThis.indexedDB);
   const wallpaperStore: SyncWallpaperStore = opts.wallpaperStore || LumnoNewtabWallpaperLocalStore.createWallpaperLocalStore({

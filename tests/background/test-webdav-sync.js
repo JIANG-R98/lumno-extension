@@ -5,7 +5,10 @@ const settings = require('../../src/domain/settings/index.ts');
 const settingsStorage = require('../../src/platform/settings-storage.ts');
 const shortcuts = require('../../src/domain/shortcuts-store.ts');
 const contract = require('../../src/domain/webdav-contract.ts');
-const client = require('../../src/background/webdav-client.ts');
+const client = {
+  ...require('../../src/background/webdav-client/api.ts').WEBDAV_CLIENT_API,
+  ...require('../../src/background/webdav-client/errors.ts')
+};
 const syncApi = {
   ...require('../../src/background/webdav-sync/connection-controller.ts'),
   ...require('../../src/background/webdav-sync/records.ts'),

@@ -2,12 +2,12 @@
 import type { StorageItems } from '../../domain/storage-port';
 import type { WebDavState } from '../../domain/webdav-contract';
 import type { WallpaperRecordInput } from '../../shared/wallpaper-local-store';
-import type { WebDavClient } from '../webdav-client';
 import { capture, pickLocalPreferences } from './capture';
 import { getAsset, toDataUrl } from './media';
 import { isRecord, isRecorded, readSession, unrefTimer } from './records';
 import { fail, report, setStatus, storage } from './runtime';
 import type { Captured, ChromePreparation, ConnectionContext, MirrorResult, Session } from './types';
+import type { WebDavClient } from '../webdav-client/types';
 
 // This device's local-only folder shortcuts go back where they were; the
 // rest of the list beyond the browser sync budget goes to the overflow record.
@@ -78,7 +78,8 @@ function isOwnWrite(ctx: ConnectionContext, areaName: string, key: string, chang
   return expected;
 }
 
-async function apply(ctx: ConnectionContext, 
+async function apply(
+  ctx: ConnectionContext,
   state: WebDavState,
   captured: Captured,
   client: WebDavClient | null,

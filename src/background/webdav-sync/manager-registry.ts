@@ -1,11 +1,11 @@
 // The list of connections, their per-connection storage and the hints that
 // tell other devices about them.
 import type { StorageItems } from '../../domain/storage-port';
-import type { WebDavConnection } from '../webdav-client';
 import { createConnectionController } from './connection-controller';
 import { ACCOUNT_FIELDS, ALARM_NAME, MAX_HINTS, MAX_HINT_BYTES } from './constants';
 import { isRecord, readSession } from './records';
 import type { ConnectionController, ConnectionHint, ManagerContext, PrivateStore, StorageMethod } from './types';
+import type { WebDavConnection } from '../webdav-client/types';
 
 function failManager(ctx: ManagerContext, code: string): never { throw ctx.clientApi.error(code); }
 

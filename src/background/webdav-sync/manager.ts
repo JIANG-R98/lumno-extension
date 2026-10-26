@@ -3,14 +3,14 @@
 // IndexedDB.
 import * as LumnoNewtabWallpaperLocalStore from '../../shared/wallpaper-local-store';
 import * as LumnoSettings from '../../domain/settings';
-import * as LumnoWebDavClient from '../webdav-client';
+import { WEBDAV_CLIENT_API } from '../webdav-client/api';
 import type { WebDavRequest } from '../../domain/messages';
-import type { WebDavConnection } from '../webdav-client';
 import { SYNC_REVISION } from './constants';
 import { configOf, connectionHints, failManager, keyFor, loadConnections, localStorage, notifyRegistry, publishHints, sameConnection, serialRegistry, statusKeyFor, syncStorage, worker } from './manager-registry';
 import { createPrivateStore, createProbeCache } from './private-store';
 import { isRecord, isRecorded } from './records';
 import type { ConnectionController, ConnectionControllerOptions, ConnectionHint, ConnectionStatus, HandleResult, ManagerContext, ManagerStatus, SyncResult, SyncWallpaperStore, WebDavSyncManager } from './types';
+import type { WebDavConnection } from '../webdav-client/types';
 
 // Two connections to the same account and directory would sync one remote
 // with two independent baselines and treat each other's writes as changes.
@@ -170,7 +170,7 @@ function createController(options?: ConnectionControllerOptions | null): Readonl
   const probeCache = opts.probeCache || createProbeCache();
   const recordKeys = ['session', 'pendingApply', 'recoveryBlocked', 'conflict', 'replacementBackup', 'replacementBackupMeta', 'migrationBackup', 'migrationBackupMeta',
     'staleLock', 'snapshotRing', 'throttle', 'sweptAt'];
-  const clientApi = opts.client || LumnoWebDavClient;
+  const clientApi = opts.client || WEBDAV_CLIENT_API;
   // Settles once the saved connections are loaded and recovered.
   const ctx: ManagerContext = {
     opts,

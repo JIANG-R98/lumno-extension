@@ -5,7 +5,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 require('../node/register-typescript');
-const clientApi = require('../../src/background/webdav-client.ts');
+const clientApi = {
+  ...require('../../src/background/webdav-client/api.ts').WEBDAV_CLIENT_API,
+  ...require('../../src/background/webdav-client/errors.ts')
+};
 
 async function probeProvider(input, options = {}) {
   const config = clientApi.normalizeConfig(input);

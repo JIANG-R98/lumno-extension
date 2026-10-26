@@ -48,7 +48,8 @@ function storage(ctx: ConnectionContext, area: chrome.storage.StorageArea | null
 
 function storage(ctx: ConnectionContext, area: chrome.storage.StorageArea | null | undefined, method: 'remove', keys: string[]): Promise<void>;
 
-function storage(ctx: ConnectionContext, 
+function storage(
+  ctx: ConnectionContext,
   area: chrome.storage.StorageArea | null | undefined,
   method: StorageMethod,
   value: string[] | StorageItems | null

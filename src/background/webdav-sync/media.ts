@@ -3,10 +3,10 @@
 import type { StorageItems } from '../../domain/storage-port';
 import type { WebDavAsset, WebDavAssetMime, WebDavState } from '../../domain/webdav-contract';
 import type { WallpaperRecord } from '../../shared/wallpaper-local-store';
-import type { WebDavClient } from '../webdav-client';
 import { isArrayBufferBytes, isRecord } from './records';
 import { fail } from './runtime';
 import type { ConnectionContext, DecodedImage, ImageCheck } from './types';
+import type { WebDavClient } from '../webdav-client/types';
 
 async function hash(ctx: ConnectionContext, bytes: Uint8Array<ArrayBuffer>): Promise<string> {
   const digest = await ctx.cryptoApi.subtle.digest('SHA-256', bytes);
@@ -68,7 +68,8 @@ function toDataUrl(bytes: Uint8Array, mime: WebDavAssetMime): string {
 function assetPath(ctx: ConnectionContext, hashValue: string, mime: WebDavAssetMime): string { return `assets/${hashValue}.${mime === 'image/png' ? 'png' : 'webp'}`; }
 
 
-async function collectMedia(ctx: ConnectionContext, 
+async function collectMedia(
+  ctx: ConnectionContext,
   state: WebDavState,
   local: StorageItems,
   ids: ReadonlySet<string>

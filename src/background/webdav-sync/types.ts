@@ -3,18 +3,13 @@ import * as LumnoNewtabShortcutsStore from '../../domain/shortcuts-store';
 import * as LumnoSettings from '../../domain/settings';
 import * as LumnoSettingsStorage from '../../platform/settings-storage';
 import * as LumnoWebDavContract from '../../domain/webdav-contract';
-import * as LumnoWebDavClient from '../webdav-client';
+import type { WebDavClientApi } from '../webdav-client/api';
 import type { GroupedShortcutItem } from '../../domain/shortcuts-store';
 import type { StorageItems } from '../../domain/storage-port';
 import type { ChromeBackupPlan, ConflictDescription, WebDavState } from '../../domain/webdav-contract';
 import type { WebDavRequest } from '../../domain/messages';
 import type { WallpaperRecord, WallpaperRecordInput } from '../../shared/wallpaper-local-store';
-import type {
-  ConnectionCapabilities,
-  WebDavClientOptions,
-  WebDavConnection,
-  WebDavDiagnostic
-} from '../webdav-client';
+import type { ConnectionCapabilities, WebDavClientOptions, WebDavConnection, WebDavDiagnostic } from '../webdav-client/types';
 
 type StorageMethod = 'get' | 'set' | 'remove';
 type StorageCall =
@@ -153,7 +148,7 @@ interface ConnectionControllerOptions {
   settings?: typeof LumnoSettings;
   contract?: typeof LumnoWebDavContract;
   shortcuts?: typeof LumnoNewtabShortcutsStore;
-  client?: typeof LumnoWebDavClient;
+  client?: WebDavClientApi;
   crypto?: Crypto;
   privateStore?: PrivateStore;
   wallpaperStore?: SyncWallpaperStore;
@@ -195,7 +190,7 @@ interface ConnectionContext {
   readonly settings: typeof LumnoSettings;
   readonly contract: typeof LumnoWebDavContract;
   readonly shortcuts: typeof LumnoNewtabShortcutsStore;
-  readonly clientApi: typeof LumnoWebDavClient;
+  readonly clientApi: WebDavClientApi;
   readonly cryptoApi: Crypto;
   readonly privateStore: PrivateStore;
   readonly wallpaperStore: SyncWallpaperStore;
@@ -248,7 +243,7 @@ interface ManagerContext {
   hintChain: Promise<unknown>;
   localChain: Promise<unknown>;
   started: boolean;
-  readonly clientApi: typeof LumnoWebDavClient;
+  readonly clientApi: WebDavClientApi;
   ready: Promise<void>;
 }
 

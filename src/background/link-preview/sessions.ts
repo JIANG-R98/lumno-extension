@@ -148,7 +148,8 @@ function scheduleExpiry(ctx: LinkPreviewContext, tabId: number, session: Preview
 
 // A press prepares with the screenshot; Shift held over the link prepares
 // without it (capture: false).
-function prepare(ctx: LinkPreviewContext, 
+function prepare(
+  ctx: LinkPreviewContext,
   tab: chrome.tabs.Tab | null | undefined,
   url: unknown,
   prepareOptions?: PrepareOptions
@@ -210,7 +211,8 @@ function deliverScreenshot(ctx: LinkPreviewContext, tabId: number, session: Prev
   ));
 }
 
-async function open(ctx: LinkPreviewContext, 
+async function open(
+  ctx: LinkPreviewContext,
   tab: chrome.tabs.Tab | null | undefined,
   url: unknown,
   origin: LinkPreviewOrigin | null

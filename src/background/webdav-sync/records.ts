@@ -1,6 +1,6 @@
 // Reading untyped values: stored records, errors and Options requests.
 import * as LumnoWebDavContract from '../../domain/webdav-contract';
-import * as LumnoWebDavClient from '../webdav-client';
+import { diagnostic } from '../webdav-client/errors';
 import type { GroupedShortcutItem } from '../../domain/shortcuts-store';
 import type { WebDavReply, WebDavRequest } from '../../domain/messages';
 import type { Session, StoredConnection } from './types';
@@ -109,7 +109,7 @@ function readWebDavRequest(message: Record<string, unknown>): WebDavRequest | nu
 // The reply for a request that failed: its code and redacted diagnostic.
 function failureReply(cause: unknown): WebDavReply {
   return { ok: false, error: errorCode(cause) || 'sync-failed',
-    diagnostic: LumnoWebDavClient.diagnostic(errorField(cause, 'diagnostic')) };
+    diagnostic: diagnostic(errorField(cause, 'diagnostic')) };
 }
 
 export {
