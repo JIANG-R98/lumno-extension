@@ -341,7 +341,6 @@ function createRecordingWallpaperViewController(config) {
     renders: 0,
     focused: [],
     selectOpen: false,
-    selects: {},
     getRefs() {
       return refs;
     },
@@ -362,14 +361,11 @@ function createRecordingWallpaperViewController(config) {
     containsSelectMenuTarget(target) {
       return target === view.selectMenu;
     },
-    renderQuotePositionSelect(select) {
-      view.selects.quotePosition = select;
+    renderQuoteSettings(model) {
+      view.quoteSettings = model;
     },
-    renderBookmarkViewModeSelect(select) {
-      view.selects.bookmarkViewMode = select;
-    },
-    renderBookmarkTopbarSurfaceSelect(select) {
-      view.selects.bookmarkTopbarSurface = select;
+    renderSectionSettings(model) {
+      view.sectionSettings = model;
     },
     destroy() {}
   };

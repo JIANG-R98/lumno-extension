@@ -1,3 +1,4 @@
+import { createQuoteLineViewApi } from './quote-line';
 import { createBookmarksViewApi } from './bookmarks';
 import { createSegmentedIndicatorApi } from '../../shared/react/segmented-indicator';
 import { createDockApi } from './dock';
@@ -100,6 +101,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoNewtabBookmarkCascadeView = bookmarkCascadeViewApi;
   runtime.LumnoNewtabWallpaperView = wallpaperViewApi;
   runtime.LumnoNewtabBookmarkBreadcrumb = bookmarkBreadcrumbApi;
+  runtime.LumnoNewtabQuoteLine = createQuoteLineViewApi();
   runtime.LumnoSearchInputUI = searchInputApi;
   runtime.LumnoFeatureHintView = featureHintViewApi;
   runtime.LumnoTooltipView = tooltipViewApi;

@@ -25,7 +25,6 @@ import type { SegmentOption, SliderChange, SliderState, ToggleState } from '../.
 import type * as RemoteContent from '../../remote-content';
 import type { RemoteContentClient } from '../../remote-content';
 import type { RemoteWallpaper } from '../../remote-content-types';
-import type { QuoteRuntime } from '../../top-content/quotes';
 import type { CustomWallpapers } from './custom-wallpapers';
 import type { DailyWallpapers } from './daily-wallpapers';
 import type { FaviconChooser, NewtabFaviconOption } from './favicon-chooser';
@@ -127,7 +126,6 @@ interface PanelStateDeps extends
   NEWTAB_WALLPAPER_MODES: readonly WallpaperMode[];
   NEWTAB_WALLPAPER_MODE_DARK: 'dark';
   NEWTAB_WALLPAPER_OPTIONS: readonly BuiltInWallpaper[];
-  options: { getQuoteRuntime?: () => Pick<QuoteRuntime, 'getProviderLabel'> | null | undefined };
   // Runs a change to the open panel while animating its height.
   animateWallpaperPanelResize(mutate: () => void): void;
   document: Document;
@@ -267,7 +265,6 @@ function createPanelState(deps: PanelStateDeps) {
     getGlassStyle,
     getGlassTheme,
     buildNewtabFaviconState,
-    options,
     animateWallpaperPanelResize,
     snapWallpaperOverlaySliderValue,
     normalizeWallpaperOverlayOpacity,
@@ -336,11 +333,6 @@ function createPanelState(deps: PanelStateDeps) {
         restore: getRiSvg('ri-arrow-go-back-line', 'ri-size-14'),
         link: getRiSvg('ri-link', 'ri-size-18'),
         wallpaper: getRiSvg('ri-t-shirt-2-line', 'ri-size-20')
-      },
-      quoteFontSize: {
-        min: SETTINGS.NEWTAB_QUOTE_FONT_SIZE_MIN || 12,
-        max: SETTINGS.NEWTAB_QUOTE_FONT_SIZE_MAX || 24,
-        defaultValue: SETTINGS.NEWTAB_QUOTE_FONT_SIZE_DEFAULT || 15
       },
       marks: {
         // One mark per snap point, so the marks show where the slider settles.
@@ -1080,23 +1072,9 @@ function createPanelState(deps: PanelStateDeps) {
       },
       search: buildWallpaperSearchState(),
       shortcuts: buildWallpaperShortcutsState(),
-      quote: {
-        infoTooltip: getQuoteProviderLabel(),
-        library: {
-          title: t('newtab_quote_library', 'Quote collection'),
-          shuffleLabel: t('newtab_quote_shuffle_button', 'Shuffle'),
-          infoTooltip: t('newtab_quote_import_hint', 'TXT / MD: one non-empty content line per quote. Up to 1 MB, 1,000 quotes, 500 characters each; kept on this device, not in browser sync; WebDAV syncs it when turned on.')
-        }
-      },
       wallpaper: buildWallpaperSectionState(),
       favicon: buildNewtabFaviconState()
     };
-  }
-
-  function getQuoteProviderLabel(): string {
-    const quoteRuntime = options.getQuoteRuntime && options.getQuoteRuntime();
-    return (quoteRuntime && typeof quoteRuntime.getProviderLabel === 'function' &&
-      quoteRuntime.getProviderLabel()) || t('newtab_quote_provider', 'Powered by Hitokoto');
   }
 
   // What changes the panel's height: a change here animates the resize.

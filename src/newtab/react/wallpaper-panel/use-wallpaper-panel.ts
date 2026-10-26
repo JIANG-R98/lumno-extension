@@ -7,8 +7,7 @@ import {
   type WallpaperSourceTab,
   sourceTabId,
   sourcePanelId,
-  type ExternalSelectKey,
-  type PanelSelectModel,
+  type QuoteSettingsModel,
   type SectionSettingsModel,
   type WallpaperPanelModel,
   type WallpaperPanelState
@@ -17,8 +16,9 @@ import type { SelectMenuControls } from '../../../shared/react/select-menu';
 
 export interface WallpaperPanelProps {
   documentObj: Document;
-  externalSelects: Partial<Record<ExternalSelectKey, PanelSelectModel>>;
   model: WallpaperPanelModel;
+  // Null until the quote runtime hands it over.
+  quoteSettings: QuoteSettingsModel | null;
   registerSelect(id: string, controls: SelectMenuControls): void;
   // Null until the bookmark and site card runtime hands it over.
   sectionSettings: SectionSettingsModel | null;
@@ -26,7 +26,7 @@ export interface WallpaperPanelProps {
 }
 
 export function useWallpaperPanel(props: WallpaperPanelProps) {
-  const { documentObj, externalSelects, model, registerSelect, sectionSettings, state } = props;
+  const { documentObj, model, quoteSettings, registerSelect, sectionSettings, state } = props;
   const { actions, glassStyle } = state;
   const checkIcon = String(model.icons?.check || '');
   const arrowIcon = String(model.icons?.arrow || '');
@@ -89,8 +89,8 @@ export function useWallpaperPanel(props: WallpaperPanelProps) {
 
   return {
     documentObj,
-    externalSelects,
     model,
+    quoteSettings,
     registerSelect,
     sectionSettings,
     state,

@@ -34,7 +34,7 @@ interface SectionPanelSettings {
 interface PanelActionsDeps extends
   Pick<WallpaperEffectPrefsRuntime, 'getWallpaperEffectPrefsForEditMode' | 'persistWallpaperEffectPrefs'>,
   Pick<PanelState, 'getWallpaperStyleSliderValue' | 'getWallpaperButtonLabel' | 'renderWallpaperPanelState' |
-    'isWallpaperTileSelected' | 'getWallpaperPanelRefs'>,
+    'isWallpaperTileSelected'>,
   Pick<WallpaperSources, 'getWallpaperById'>,
   Pick<DailyWallpapers, 'clearDailyWallpaperPick' | 'selectBingWallpaper' | 'loadBingCatalog' |
     'setCuratedDailyWallpaper' | 'selectCuratedCategory' | 'setCuratedMixCategory' | 'showMoreCuratedWallpapers' |
@@ -166,7 +166,6 @@ function createPanelActions(deps: PanelActionsDeps) {
     persistWallpaperOverlayOpacity,
     getWallpaperOverlayOpacityForCurrentMode,
     persistNewtabFavicon,
-    getWallpaperPanelRefs,
     options,
     document,
     featureHints,
@@ -357,9 +356,8 @@ function createPanelActions(deps: PanelActionsDeps) {
       return;
     }
     wallpaperPanelRendered = true;
-    const refs = getWallpaperPanelRefs();
     const quoteRuntime = options.getQuoteRuntime && options.getQuoteRuntime();
-    if (quoteRuntime) quoteRuntime.bindSettings(refs, wallpaperState.wallpaperViewController);
+    if (quoteRuntime) quoteRuntime.bindSettings(wallpaperState.wallpaperViewController);
     const sectionSettings = options.getSectionPanelSettings && options.getSectionPanelSettings();
     if (sectionSettings) {
       sectionSettings.bindSettings(wallpaperState.wallpaperViewController);

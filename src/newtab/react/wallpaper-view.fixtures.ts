@@ -1,4 +1,6 @@
 import type {
+  QuoteSettingsActions,
+  QuoteSettingsModel,
   SectionSettingsActions,
   SectionSettingsModel,
   DailyState,
@@ -141,7 +143,6 @@ export function createDefaultPanelState(): WallpaperPanelState {
       title: 'Material',
       value: 'none'
     },
-    quote: { infoTooltip: '', library: { infoTooltip: '', shuffleLabel: '', title: '' } },
     search: {
       autoFocus: { infoLabel: '', infoTooltip: '', title: '', toggle: toggle('Automatically focus input') },
       seconds: { title: 'Show seconds', toggle: toggle('Show seconds'), visible: false },
@@ -362,6 +363,62 @@ export function createSectionSettingsModel(
       },
       rowsLabel: 'Site card rows',
       rows: { active: '1', label: 'Site card rows', options: [{ value: '1', label: '1' }, { value: '2', label: '2' }] }
+    },
+    actions
+  };
+  edit?.(model);
+  return model;
+}
+
+// The quote section's model as its runtime would hand it over.
+export function createQuoteSettingsModel(
+  actions: QuoteSettingsActions,
+  edit?: (model: QuoteSettingsModel) => void
+): QuoteSettingsModel {
+  const model: QuoteSettingsModel = {
+    quote: {
+      title: 'Daily quote',
+      enabled: false,
+      expanded: true,
+      infoTooltip: 'Powered by Hitokoto',
+      sourceLabel: 'Source',
+      source: {
+        active: 'hitokoto',
+        label: 'Source',
+        options: [{ value: 'hitokoto', label: 'Hitokoto' }, { value: 'custom', label: 'Custom' }]
+      },
+      customMode: false,
+      library: {
+        title: 'Quote collection',
+        infoTooltip: 'TXT / MD',
+        importLabel: 'Import file',
+        importing: false,
+        shuffleLabel: 'Shuffle',
+        shuffleVisible: false,
+        status: null,
+        count: null
+      },
+      categoryLabel: 'Quote category',
+      category: {
+        active: 'literature',
+        label: 'Quote category',
+        options: [{ value: 'literature', label: 'Literature' }, { value: 'poetry', label: 'Poetry' }]
+      },
+      positionLabel: 'Quote position',
+      positionSelect: {
+        ariaLabel: 'Quote position',
+        onChange: () => undefined,
+        options: ['top', 'input', 'search', 'bottom'].map((value) => ({ value, label: value })),
+        value: 'search'
+      },
+      fontLabel: 'Font',
+      fontSelect: {
+        ariaLabel: 'Quote font',
+        onChange: () => undefined,
+        options: ['wenkai', 'xiaowei', 'sans'].map((value) => ({ value, label: value })),
+        value: 'wenkai'
+      },
+      fontSize: { label: 'Font size', ariaLabel: 'Quote font size (px)', min: 12, max: 24, value: 15 }
     },
     actions
   };

@@ -7,8 +7,7 @@ import {
   SELECT_IDS,
   SELECT_HOST_REFS,
   type WallpaperPanelModel,
-  type PanelSelectModel,
-  type ExternalSelectKey,
+  type QuoteSettingsModel,
   type SectionSettingsModel,
   type WallpaperPanelState
 } from './wallpaper-panel/panel-model';
@@ -25,7 +24,7 @@ import { FaviconSection } from './wallpaper-panel/favicon-section';
 import { queryHtmlElement, queryHtmlElements, queryHtmlTag } from '../../shared/dom-lookup';
 import { innerHtml } from '../../shared/react/inner-html';
 export { EFFECT_SLIDER_KEYS } from './wallpaper-panel/panel-model';
-export type { WallpaperSourceTab, WallpaperMode, ThemeScope, TopContentMode, TimeInk, GlassTheme, EffectSliderKey, WallpaperPanelModel, TileState, OnlineTileState, SelectedSourceState, DailyState, PanelSelectModel, CuratedMixState, WallpaperPanelActions, WallpaperPanelState, SectionSettingsActions, SectionSettingsModel } from './wallpaper-panel/panel-model';
+export type { WallpaperSourceTab, WallpaperMode, ThemeScope, TopContentMode, TimeInk, GlassTheme, EffectSliderKey, WallpaperPanelModel, TileState, OnlineTileState, SelectedSourceState, DailyState, PanelSelectModel, CuratedMixState, WallpaperPanelActions, WallpaperPanelState, SectionSettingsActions, SectionSettingsModel, QuoteSettingsActions, QuoteSettingsModel } from './wallpaper-panel/panel-model';
 
 function WallpaperPanel(props: WallpaperPanelProps) {
   const panel = useWallpaperPanel(props);
@@ -83,8 +82,12 @@ function WallpaperPanel(props: WallpaperPanelProps) {
               <RecentSettingsSection panel={panel} settings={panel.sectionSettings} />
             </>
           ) : null}
-          <div {...ref('quoteDivider')} className="x-nt-panel-divider" />
-          <QuoteSection panel={panel} />
+          {panel.quoteSettings ? (
+            <>
+              <div {...ref('quoteDivider')} className="x-nt-panel-divider" />
+              <QuoteSection panel={panel} settings={panel.quoteSettings} />
+            </>
+          ) : null}
           <div className="x-nt-panel-divider" />
           <WallpaperSection panel={panel} />
           <div className="x-nt-panel-divider" />
@@ -147,8 +150,8 @@ export interface WallpaperViewController {
   render(state: WallpaperPanelState): void;
   // Draws the bookmark and site card sections from their runtime's model.
   renderSectionSettings(model: SectionSettingsModel): void;
-  renderQuotePositionSelect(select: PanelSelectModel): void;
-  renderQuoteFontSelect(select: PanelSelectModel): void;
+  // Draws the quote section from its runtime's model.
+  renderQuoteSettings(model: QuoteSettingsModel): void;
 }
 
 export function createWallpaperViewController(
@@ -157,8 +160,8 @@ export function createWallpaperViewController(
   const documentObj: Document = config.documentObj || document;
   const model = config.model || {};
   let state = config.state;
-  const externalSelects: Partial<Record<ExternalSelectKey, PanelSelectModel>> = {};
   let sectionSettings: SectionSettingsModel | null = null;
+  let quoteSettings: QuoteSettingsModel | null = null;
   const selectControls = new Map<string, SelectMenuControls>();
   const registerSelect = (id: string, controls: SelectMenuControls) => {
     selectControls.set(id, controls);
@@ -173,8 +176,8 @@ export function createWallpaperViewController(
     flushSync(() => root.render(
       <WallpaperPanel
         documentObj={documentObj}
-        externalSelects={{ ...externalSelects }}
         model={model}
+        quoteSettings={quoteSettings}
         registerSelect={registerSelect}
         sectionSettings={sectionSettings}
         state={state}
@@ -199,11 +202,7 @@ export function createWallpaperViewController(
       });
     return refs;
   };
-  const renderExternalSelect = (key: ExternalSelectKey, select: PanelSelectModel) => {
-    if (destroyed) return;
-    externalSelects[key] = select;
-    renderRoot();
-  };
+
   const controller: WallpaperViewController = {
     button,
     control,
@@ -241,11 +240,10 @@ export function createWallpaperViewController(
       return Boolean(target && SELECT_IDS.some((id) => documentObj
         .querySelector(`[data-react-select-owner="${id}"]`)?.contains(target)));
     },
-    renderQuotePositionSelect(select: PanelSelectModel) {
-      renderExternalSelect('quotePosition', select);
-    },
-    renderQuoteFontSelect(select: PanelSelectModel) {
-      renderExternalSelect('quoteFont', select);
+    renderQuoteSettings(nextModel: QuoteSettingsModel) {
+      if (destroyed) return;
+      quoteSettings = nextModel;
+      renderRoot();
     },
     renderSectionSettings(nextModel: SectionSettingsModel) {
       if (destroyed) return;

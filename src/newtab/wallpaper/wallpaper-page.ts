@@ -51,7 +51,7 @@ interface WallpaperPageState {
   topContentController: TopContentController | null;
   topContentContainer: HTMLElement | null;
   wordmarkImageEl: HTMLImageElement | null;
-  quoteRuntime: Pick<QuoteRuntime, 'element' | 'textElement' | 'bindSettings' | 'getProviderLabel' | 'updateLanguage'> | null;
+  quoteRuntime: Pick<QuoteRuntime, 'element' | 'getTextElement' | 'bindSettings' | 'getProviderLabel' | 'updateLanguage'> | null;
   sectionPanelSettings: (SectionPanelSettings & { updateLanguage(): void }) | null;
   recentHeader: HTMLElement | null;
   feedbackButton: HTMLElement | null;
@@ -269,7 +269,7 @@ function createWallpaperPage(deps: WallpaperPageDeps) {
       ? (pageState.topContentController.getContent() || pageState.topContentContainer)
       : (pageState.wordmarkImageEl || pageState.topContentContainer);
     const quoteElement = pageState.quoteRuntime && pageState.quoteRuntime.element;
-    const quoteSample = pageState.quoteRuntime && (pageState.quoteRuntime.textElement || quoteElement);
+    const quoteSample = pageState.quoteRuntime && (pageState.quoteRuntime.getTextElement() || quoteElement);
     // A quote at the top is the wordmark's caption: both read the wallpaper under
     // the pair and share one ink, so the line never flips against the mark above it.
     const quoteIsCaption = Boolean(quoteElement && !quoteElement.hidden &&

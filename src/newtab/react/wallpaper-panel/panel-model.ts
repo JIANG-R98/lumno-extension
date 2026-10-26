@@ -12,9 +12,8 @@ import type { SelectMenuOption } from '../select-menu';
 // The appearance panel renders from two inputs: a static model (asset URLs, icons,
 // slider marks) given once, and the state the wallpaper runtime rebuilds whenever a
 // setting changes. Every control reports through `state.actions`; the runtime owns
-// the data and its storage. The bookmark and site card sections render from a model
-// of their own, which their runtime hands the panel; the quote section is filled by
-// its runtime through data-wallpaper-ref elements.
+// the data and its storage. The bookmark and site card sections, and the quote
+// section, render from models of their own, which their runtimes hand the panel.
 
 export type WallpaperSourceTab = 'built-in' | 'local' | 'bing' | 'curated';
 export type WallpaperMode = 'light' | 'dark';
@@ -60,7 +59,6 @@ export interface WallpaperPanelModel {
     'add' | 'arrow' | 'check' | 'delete' | 'info' | 'link' | 'refresh' | 'restore' | 'wallpaper',
     string
   >>;
-  quoteFontSize?: { defaultValue?: number; max?: number; min?: number };
   /** Notches (0-100) drawn on each slider's track. */
   marks?: Partial<Record<'searchWidth' | 'shortcutColumns' | 'shortcutSize' | 'shortcutGap' | 'timeWeight' | 'timeSize', number[]>>;
   wallpapers?: WallpaperItem[];
@@ -153,6 +151,53 @@ export interface SectionSettingsModel {
   actions: SectionSettingsActions;
 }
 
+// The quote section's settings in the panel.
+export interface QuoteSettingsState {
+  title: string;
+  enabled: boolean;
+  expanded: boolean;
+  // Where the quotes come from, beside the title.
+  infoTooltip: string;
+  sourceLabel: string;
+  source: SegmentState<'hitokoto' | 'custom'>;
+  customMode: boolean;
+  library: {
+    title: string;
+    infoTooltip: string;
+    importLabel: string;
+    importing: boolean;
+    shuffleLabel: string;
+    shuffleVisible: boolean;
+    // Shown under the title when an import fails.
+    status: { text: string; error: boolean } | null;
+    // How many quotes the collection holds; hovering it names the file.
+    count: { text: string; label: string; filename: string } | null;
+  };
+  categoryLabel: string;
+  category: SegmentState<'literature' | 'poetry'>;
+  positionLabel: string;
+  positionSelect: PanelSelectModel;
+  fontLabel: string;
+  fontSelect: PanelSelectModel;
+  fontSize: SliderState;
+}
+
+export interface QuoteSettingsActions {
+  toggleExpanded(): void;
+  setEnabled(enabled: boolean): void;
+  setProvider(provider: 'hitokoto' | 'custom'): void;
+  importFile(file: File): void;
+  shuffleLibrary(): void;
+  setCategory(category: 'literature' | 'poetry'): void;
+  setFontSize(size: number, change: SliderChange): void;
+}
+
+// What the quote runtime hands the panel.
+export interface QuoteSettingsModel {
+  quote: QuoteSettingsState;
+  actions: QuoteSettingsActions;
+}
+
 export interface CuratedMixState {
   ariaLabel: string;
   label: string;
@@ -243,10 +288,6 @@ export interface WallpaperPanelState {
     theme: { infoTooltip: string; tabs: SegmentState<GlassTheme>; title: string; visible: boolean };
     title: string;
     value: string;
-  };
-  quote: {
-    infoTooltip: string;
-    library: { infoTooltip: string; shuffleLabel: string; title: string };
   };
   search: {
     autoFocus: { infoLabel: string; infoTooltip: string; title: string; toggle: ToggleState };
@@ -371,7 +412,6 @@ export const SELECT_HOST_REFS: Record<string, string> = {
 };
 export const SELECT_IDS = Object.keys(SELECT_HOST_REFS);
 
-export type ExternalSelectKey = 'quotePosition' | 'quoteFont';
 
 export const EFFECT_SLIDER_REFS: Record<EffectSliderKey, string> = {
   strength: 'effectStrength',

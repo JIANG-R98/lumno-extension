@@ -86,20 +86,10 @@ export function InfoButton({
   );
 }
 
-// Sections whose content another runtime fills keep uncontrolled switches.
-export function StaticSwitch({ ariaLabel, name }: { ariaLabel?: string; name: string }) {
-  return (
-    <label className="x-nt-wallpaper-switch">
-      <input {...ref(name)} aria-label={ariaLabel} role="switch" type="checkbox" />
-      <span aria-hidden="true" className="x-nt-wallpaper-switch-slider" />
-    </label>
-  );
-}
-
-export function SettingRow({ children, titleRef }: { children: ReactNode; titleRef: string }) {
+export function SettingRow({ children, title, titleRef }: { children: ReactNode; title: string; titleRef: string }) {
   return (
     <div className="x-nt-appearance-setting-row">
-      <span {...ref(titleRef)} className="x-nt-appearance-setting-title" />
+      <span {...ref(titleRef)} className="x-nt-appearance-setting-title">{title}</span>
       {children}
     </div>
   );

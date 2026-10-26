@@ -44,7 +44,14 @@ async function main() {
       callback(); chromeObj.runtime.lastError = null;
     }
   };
-  const makeRuntime = () => quotesApi.createRuntime({ documentObj: document, windowObj: dom.window,
+  // Stand in for the React line view and the appearance panel: each keeps the last model.
+  let line = null;
+  const lineView = { createQuoteLineView(_host, handlers) {
+    line = { model: null, handlers };
+    return { render(model) { line.model = model; }, getTextElement: () => null, destroy() {} };
+  } };
+  let panelModel = null;
+  const makeRuntime = () => quotesApi.createRuntime({ documentObj: document, windowObj: dom.window, lineView,
     t: (key, fallback) => locale[key]?.message || fallback, getLocale: () => 'en', chromeObj,
     getSearchRoot: () => document.querySelector('#search'), getShortcutSection: () => document.querySelector('#shortcuts'),
     localStorageArea: localArea, storageArea: { get(_keys, callback) { callback({ [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY]: prefs }); },
@@ -52,17 +59,15 @@ async function main() {
     client: { getQuote() { networkCalls++; return Promise.resolve({ text: 'Remote', author: '', source: '', url: 'https://hitokoto.cn/' }); } }
   });
   const runtime = makeRuntime(); await runtime.mount(); await tick();
-  const refs = Object.fromEntries(['quoteTitle', 'quoteBody', 'quoteCategory', 'quoteImportStatus'].map(key => [key, document.createElement('div')]));
-  refs.quoteEnabledToggle = document.createElement('input');
-  refs.quoteEnabledToggle.type = 'checkbox';
-  runtime.bindSettings(refs);
+  runtime.bindSettings({ renderQuoteSettings(model) { panelModel = model; } });
+  const status = () => panelModel.quote.library.status;
   assert.equal(networkCalls, 0); assert.equal(runtime.element.hidden, true);
   const file = { name: 'my.md', size: 200, text: async () => 'First local quote.\nSecond local quote.' };
   assert.equal(await runtime.importQuoteFile(file), true); await tick();
   assert.equal(local[custom.KEY].quotes.length, 2);
   assert.equal(runtime.element.hidden, false, 'Custom text is available for English UI too');
-  assert.ok(runtime.textElement.textContent.includes('local quote'));
-  assert.equal(runtime.element.querySelector('a').hasAttribute('href'), false, 'Custom quotes never link to Hitokoto');
+  assert.ok(line.model.text.includes('local quote'));
+  assert.equal(line.model.href, null, 'Custom quotes never link to Hitokoto');
   assert.equal(networkCalls, 0);
   assert.equal(await runtime.importQuoteFile({ ...file, name: 'LINES.TXT', text: async () => '\uFEFF第一句\r\n第二句\r\n\r\n第三句' }), true);
   assert.deepEqual(local[custom.KEY].quotes.map(q => q.text), ['第一句', '第二句', '第三句']);
@@ -71,18 +76,18 @@ async function main() {
   assert.equal(await runtime.importMarkdown({ ...file, text: async () => '# Empty' }), false);
   assert.equal(JSON.stringify(local[custom.KEY]), before);
   assert.equal(await runtime.importQuoteFile({ ...file, name: 'wrong.pdf' }), false);
-  assert.match(refs.quoteImportStatus.textContent, /format or size limits/);
+  assert.match(status().text, /format or size limits/);
   failSave = true; assert.equal(await runtime.importMarkdown(file), false); failSave = false;
   assert.equal(JSON.stringify(local[custom.KEY]), before, 'Failed save preserves the previous collection');
-  assert.match(refs.quoteImportStatus.textContent, /save on this device.*previous collection is kept/);
-  assert.doesNotMatch(refs.quoteImportStatus.textContent, /format or size limits/);
-  assert.equal(refs.quoteImportStatus.getAttribute('role'), 'alert');
-  runtime.element.querySelector('.x-nt-quote-shuffle').click(); await tick();
-  const afterShuffle = runtime.textElement.textContent;
+  assert.match(status().text, /save on this device.*previous collection is kept/);
+  assert.doesNotMatch(status().text, /format or size limits/);
+  assert.equal(status().error, true);
+  line.handlers.onShuffle(); await tick();
+  const afterShuffle = line.model.text;
   assert.ok(local[custom.PICK_KEY]);
   runtime.destroy();
   const restored = makeRuntime(); await restored.mount(); await tick();
-  assert.equal(restored.textElement.textContent, afterShuffle, 'Shuffle selection survives refresh');
+  assert.equal(line.model.text, afterShuffle, 'Shuffle selection survives refresh');
   assert.equal(networkCalls, 0); restored.destroy(); dom.window.close();
   // A reroll is random but never repeats the quote on screen.
   const pool = { version: 1, filename: 'pool.txt', revision: 7, quotes: ['a', 'b', 'c', 'd'].map((text) => ({ text, author: '' })) };
@@ -97,4 +102,4 @@ async function main() {
   assert.equal(custom.select(pool, day, null, false).pick.index, first.pick.index, 'The daily quote is stable through the day');
   console.log('Custom TXT / MD quotes: one line per quote, CRLF/BOM, blank lines, limits, safe plain text, import failure, local storage, daily selection, shuffle persistence and no remote requests passed.');
 }
-main().catch(error => { console.error(error); process.exitCode = 1; });
+main().catch(error => { console.error(error); process.exit(1); });

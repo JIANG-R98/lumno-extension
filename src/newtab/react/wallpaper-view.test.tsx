@@ -1,11 +1,17 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
-import { createDefaultPanelState, createPanelActions, createSectionSettingsModel } from './wallpaper-view.fixtures';
+import {
+  createDefaultPanelState,
+  createPanelActions,
+  createQuoteSettingsModel,
+  createSectionSettingsModel
+} from './wallpaper-view.fixtures';
 import {
   createWallpaperViewApi,
   createWallpaperViewController,
   type WallpaperPanelActions,
   type WallpaperPanelModel,
+  type QuoteSettingsActions,
   type SectionSettingsActions,
   type WallpaperPanelState,
   type WallpaperViewController
@@ -74,6 +80,18 @@ function mount(state: WallpaperPanelState, model: WallpaperPanelModel = MODEL) {
   }
   document.body.appendChild(controller.control);
   return controller;
+}
+
+function createQuoteActions(): Record<keyof QuoteSettingsActions, Mock> {
+  return {
+    toggleExpanded: vi.fn(),
+    setEnabled: vi.fn(),
+    setProvider: vi.fn(),
+    importFile: vi.fn(),
+    shuffleLibrary: vi.fn(),
+    setCategory: vi.fn(),
+    setFontSize: vi.fn()
+  };
 }
 
 function createSectionActions(): Record<keyof SectionSettingsActions, Mock> {
@@ -171,11 +189,16 @@ describe('New Tab React wallpaper view', () => {
     mount(state);
     const view = required(controller, 'controller');
     act(() => view.renderSectionSettings(createSectionSettingsModel(createSectionActions())));
+    const quoteActions = createQuoteActions();
+    const onQuotePositionChange = vi.fn();
+    act(() => view.renderQuoteSettings(createQuoteSettingsModel(quoteActions, (model) => {
+      model.quote.positionSelect.onChange = onQuotePositionChange;
+    })));
     expect(createWallpaperViewApi().implementation).toBe('react');
     expect(view.control.dataset.reactIsland).toBe('newtab-wallpaper');
     expect(view.control.dataset.panelOpen).toBe('false');
     expect(refs().builtInGrid).toBeTruthy();
-    // Sections other runtimes fill in keep their element contract.
+    // Sections other runtimes hand models for keep their element contract.
     expect(refs().quoteEnabledToggle.getAttribute('role')).toBe('switch');
     expect(refs().quoteBody.hidden).toBe(true);
     expect(refs().quoteFileInput.getAttribute('accept')).toContain('.txt');
@@ -184,15 +207,6 @@ describe('New Tab React wallpaper view', () => {
     expect(Array.from(quoteTabGroups, (group) => group.getAttribute('data-wallpaper-ref')))
       .toEqual(['quoteSource', 'quoteCategory']);
     expect(quoteTabGroups[0].querySelector('.x-nt-segmented-tabs-indicator')).not.toBeNull();
-    const onQuotePositionChange = vi.fn();
-    act(() => {
-      view.renderQuotePositionSelect({
-        ariaLabel: 'Quote position',
-        onChange: onQuotePositionChange,
-        options: ['top', 'input', 'search', 'bottom'].map((value) => ({ value, label: value })),
-        value: 'search'
-      });
-    });
     const quotePositionHost = refs().quotePositionSelectHost;
     expect(quotePositionHost.classList.contains('_x_extension_custom_select_2024_unique_')).toBe(true);
     expect(quotePositionHost.querySelector('select')?.value).toBe('search');
@@ -308,8 +322,10 @@ describe('New Tab React wallpaper view', () => {
       }));
       draft.favicon.options = draft.favicon.options.map((option) => ({ ...option, selected: option.id === 'alternate' }));
     });
-    // Another runtime opened its section; a re-render must leave that alone.
-    refs().quoteBody.hidden = false;
+    // A section another runtime drew stays as it drew it.
+    act(() => controller?.renderQuoteSettings(createQuoteSettingsModel(createQuoteActions(), (model) => {
+      model.quote.enabled = true;
+    })));
     rerender(next);
     expect(required(controller, 'controller').panel).toBe(panel);
     expect(refs().quoteBody.hidden).toBe(false);
@@ -839,6 +855,7 @@ describe('New Tab React wallpaper view', () => {
     const { state } = createState();
     mount(state);
     expect(refs().bookmarkSettingsSection).toBeUndefined();
+    act(() => controller?.renderQuoteSettings(createQuoteSettingsModel(createQuoteActions())));
     const shortcutsSection = refs().shortcutsAccordion.parentElement;
     expect(shortcutsSection?.nextElementSibling).toBe(refs().quoteDivider);
 
@@ -884,6 +901,55 @@ describe('New Tab React wallpaper view', () => {
     // A panel re-render keeps the sections as their runtime last drew them.
     rerender(createState().state);
     expect(refs().bookmarkTopbarSettings.hidden).toBe(false);
+  });
+
+  it('draws the quote section from its runtime\'s model', () => {
+    const { state, actions: panelActions } = createState();
+    mount(state);
+    expect(refs().quoteSection).toBeUndefined();
+    const actions = createQuoteActions();
+    act(() => controller?.renderQuoteSettings(createQuoteSettingsModel(actions)));
+    expect(expectTag(refs().quoteAccordionTrigger, 'button').disabled).toBe(true);
+    expect(refs().quoteBody.hidden).toBe(true);
+    act(() => expectTag(refs().quoteEnabledToggle, 'input').click());
+    expect(actions.setEnabled).toHaveBeenCalledWith(true);
+
+    act(() => controller?.renderQuoteSettings(createQuoteSettingsModel(actions, (model) => {
+      model.quote.enabled = true;
+      model.quote.customMode = true;
+      model.quote.source.active = 'custom';
+      model.quote.library.status = { text: 'Import failed', error: true };
+      model.quote.library.count = { text: '3 quotes', label: 'mine.txt · 3 quotes', filename: 'mine.txt' };
+      model.quote.library.shuffleVisible = true;
+      model.quote.fontSize.value = 20;
+    })));
+    expect(refs().quoteBody.hidden).toBe(false);
+    expect(refs().quoteCustomBody.hidden).toBe(false);
+    expect(refs().quoteCategory.closest('.x-nt-appearance-setting-row')?.hasAttribute('hidden')).toBe(true);
+    expect(refs().quoteImportStatus.textContent).toBe('Import failed');
+    expect(refs().quoteImportStatus.getAttribute('role')).toBe('alert');
+    expect(refs().quoteLibraryCountText.textContent).toBe('3 quotes');
+    expect(refs().quoteLibraryCount.getAttribute('aria-label')).toBe('mine.txt · 3 quotes');
+    act(() => {
+      refs().quoteLibraryCount.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, relatedTarget: document.body }));
+    });
+    expect(panelActions.showTooltip).toHaveBeenCalledWith(refs().quoteLibraryCount, 'mine.txt');
+    expect(refs().quoteLibraryShuffleButton.hidden).toBe(false);
+    act(() => refs().quoteLibraryShuffleButton.click());
+    expect(actions.shuffleLibrary).toHaveBeenCalledTimes(1);
+    expect(expectTag(refs().quoteFontSizeSlider, 'input').value).toBe('20');
+
+    const fileInput = expectTag(refs().quoteFileInput, 'input');
+    const file = new File(['海上生明月'], 'mine.txt', { type: 'text/plain' });
+    Object.defineProperty(fileInput, 'files', { configurable: true, value: [file] });
+    act(() => fileInput.dispatchEvent(new Event('change', { bubbles: true })));
+    expect(actions.importFile).toHaveBeenCalledWith(file);
+
+    act(() => controller?.renderQuoteSettings(createQuoteSettingsModel(actions, (model) => {
+      model.quote.enabled = true;
+    })));
+    act(() => getTag(refs().quoteCategory, '[data-quote-category="poetry"]', 'button').click());
+    expect(actions.setCategory).toHaveBeenCalledWith('poetry');
   });
 
   it('closes an open select menu on request', () => {

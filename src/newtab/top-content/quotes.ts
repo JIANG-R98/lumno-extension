@@ -3,11 +3,12 @@
 import * as LumnoSettings from '../../domain/settings';
 import type { NewtabQuotePosition, NewtabQuotePrefs } from '../../domain/settings';
 import type { StorageAreaLike, StorageChangeEventLike, StorageChanges, StorageItems } from '../../domain/storage-port';
-import { isHtmlElement, isHtmlTag } from '../../shared/dom-guards';
-import { queryHtmlElement, queryHtmlElements, queryHtmlTags } from '../../shared/dom-lookup';
 import type { TooltipController } from '../../shared/ui/tooltip';
 import type { ShowToast, Translate } from '../newtab-types';
 import type { WallpaperViewController } from '../react/wallpaper-view';
+import type { QuoteSettingsActions, QuoteSettingsModel } from '../react/wallpaper-panel/panel-model';
+import type { SliderChange } from '../react/wallpaper-panel/panel-primitives';
+import type { QuoteLineHandlers, QuoteLineModel, QuoteLineView } from '../react/quote-line';
 import * as LumnoNewtabRemoteContent from '../remote-content';
 import type { RemoteContentClient } from '../remote-content';
 import type { DailyQuote } from '../remote-content-types';
@@ -24,8 +25,13 @@ interface QuoteChromeApi {
 
 type QuoteTooltip = Pick<TooltipController, 'show' | 'hide'>;
 
-// The panel view, which renders the position and font dropdowns.
-type QuoteSettingsView = Partial<Pick<WallpaperViewController, 'renderQuotePositionSelect' | 'renderQuoteFontSelect'>>;
+// The panel view, which draws the quote section.
+type QuoteSettingsView = Pick<WallpaperViewController, 'renderQuoteSettings'>;
+
+// Draws the quote's line into its host element; the New Tab's React islands provide it.
+interface QuoteLineViewApi {
+  createQuoteLineView(host: HTMLElement, handlers: QuoteLineHandlers): QuoteLineView;
+}
 
 interface QuoteRuntimeOptions {
   documentObj?: Document;
@@ -45,84 +51,8 @@ interface QuoteRuntimeOptions {
   isPreferenceArea?: (areaName: string) => boolean;
   onLayout?: () => void;
   client?: Pick<RemoteContentClient, 'getQuote'>;
-}
-
-// The quote section of the appearance panel. The first four are always
-// rendered; the rest depend on the panel version.
-interface QuoteSettingsRefs {
-  quoteTitle: HTMLElement;
-  quoteEnabledToggle: HTMLInputElement;
-  quoteBody: HTMLElement;
-  quoteCategory: HTMLElement;
-  quoteSection: HTMLElement | null;
-  quoteDivider: HTMLElement | null;
-  quoteAccordionTrigger: HTMLButtonElement | null;
-  quoteInfoButton: HTMLElement | null;
-  quotePositionLabel: HTMLElement | null;
-  quoteCategoryLabel: HTMLElement | null;
-  quoteSourceLabel: HTMLElement | null;
-  quoteSource: HTMLElement | null;
-  quoteCustomBody: HTMLElement | null;
-  quoteImportButton: HTMLButtonElement | null;
-  quoteLibraryShuffleButton: HTMLButtonElement | null;
-  quoteImportStatus: HTMLElement | null;
-  quoteLibraryCount: HTMLElement | null;
-  quoteLibraryCountText: HTMLElement | null;
-  quoteFileInput: HTMLInputElement | null;
-  quoteFontLabel: HTMLElement | null;
-  // The font size slider with its title and number field.
-  quoteFontSize: { title: HTMLElement; slider: HTMLInputElement; input: HTMLInputElement } | null;
-}
-
-// The panel's elements by data-wallpaper-ref name.
-type PanelRefs = Readonly<Partial<Record<string, HTMLElement>>>;
-
-function readQuoteSettingsRefs(refs: PanelRefs): QuoteSettingsRefs | null {
-  const element = (name: string): HTMLElement | null => {
-    const value = refs[name];
-    return isHtmlElement(value) ? value : null;
-  };
-  const button = (name: string): HTMLButtonElement | null => {
-    const value = refs[name];
-    return isHtmlTag(value, 'button') ? value : null;
-  };
-  const input = (name: string): HTMLInputElement | null => {
-    const value = refs[name];
-    return isHtmlTag(value, 'input') ? value : null;
-  };
-  const quoteTitle = element('quoteTitle');
-  const quoteEnabledToggle = input('quoteEnabledToggle');
-  const quoteBody = element('quoteBody');
-  const quoteCategory = element('quoteCategory');
-  if (!quoteTitle || !quoteEnabledToggle || !quoteBody || !quoteCategory) return null;
-  const fontSizeTitle = element('quoteFontSizeTitle');
-  const fontSizeSlider = input('quoteFontSizeSlider');
-  const fontSizeInput = input('quoteFontSizeSliderValueInput');
-  return {
-    quoteTitle,
-    quoteEnabledToggle,
-    quoteBody,
-    quoteCategory,
-    quoteSection: element('quoteSection'),
-    quoteDivider: element('quoteDivider'),
-    quoteAccordionTrigger: button('quoteAccordionTrigger'),
-    quoteInfoButton: element('quoteInfoButton'),
-    quotePositionLabel: element('quotePositionLabel'),
-    quoteCategoryLabel: element('quoteCategoryLabel'),
-    quoteSourceLabel: element('quoteSourceLabel'),
-    quoteSource: element('quoteSource'),
-    quoteCustomBody: element('quoteCustomBody'),
-    quoteImportButton: button('quoteImportButton'),
-    quoteLibraryShuffleButton: button('quoteLibraryShuffleButton'),
-    quoteImportStatus: element('quoteImportStatus'),
-    quoteLibraryCount: element('quoteLibraryCount'),
-    quoteLibraryCountText: element('quoteLibraryCountText'),
-    quoteFileInput: input('quoteFileInput'),
-    quoteFontLabel: element('quoteFontLabel'),
-    quoteFontSize: fontSizeTitle && fontSizeSlider && fontSizeInput
-      ? { title: fontSizeTitle, slider: fontSizeSlider, input: fontSizeInput }
-      : null
-  };
+  // The line's view; the New Tab's React islands one by default.
+  lineView?: QuoteLineViewApi | null;
 }
 
 function createRuntime(options: QuoteRuntimeOptions) {
@@ -144,39 +74,17 @@ function createRuntime(options: QuoteRuntimeOptions) {
       url: 'https://hitokoto.cn/'
     })
   });
+  // The line's host: it moves between slots on the page with the chosen position.
   const element = document.createElement('div');
   element.className = 'x-nt-quote';
   element.hidden = true;
-  // The whole line opens the quote's Hitokoto page; its origin lives in the shared tooltip.
-  const button = document.createElement('a');
-  button.className = 'x-nt-quote-text';
-  button.target = '_blank';
-  button.rel = 'noopener noreferrer';
-  // The link spans the whole row; the inline line box marks where the glyphs
-  // actually sit, so wallpaper tone sampling stays local to the text.
-  const line = document.createElement('span');
-  line.className = 'x-nt-quote-line';
-  button.appendChild(line);
-  // Revealed on hover; it hangs past the line's end so the quote stays centered.
-  const shuffleButton = document.createElement('button');
-  shuffleButton.type = 'button';
-  shuffleButton.className = 'x-nt-quote-shuffle';
-  const shuffleIcon = document.createElement('i');
-  shuffleIcon.className = 'ri-icon ri-size-16 ri-shuffle-line';
-  shuffleIcon.setAttribute('aria-hidden', 'true');
-  shuffleButton.appendChild(shuffleIcon);
-  const row = document.createElement('div');
-  row.className = 'x-nt-quote-row';
-  row.append(button, shuffleButton);
-  element.append(row);
   // Resolved on use: the page creates its tooltip controllers after the quote runtime.
   const getTooltip = () => (config.getTooltipController ? config.getTooltipController() : null);
   let origin = '';
   let prefs = settings.normalizeNewtabQuotePrefs(null);
   let quote: DailyQuote | null = null;
   let revision = 0;
-  let refs: QuoteSettingsRefs | null = null;
-  let view: QuoteSettingsView | null = null;
+  let settingsView: QuoteSettingsView | null = null;
   let settingsExpanded = true;
   let mounted = false;
   let dayTimer: number | undefined;
@@ -184,6 +92,7 @@ function createRuntime(options: QuoteRuntimeOptions) {
   let disposed = false;
   let draftFontSize: number | null = null;
   let shuffling = false;
+  let swapCount = 0;
   let library: QuoteLibrary | null = null;
   let importing = false;
   let importError = false;
@@ -201,53 +110,27 @@ function createRuntime(options: QuoteRuntimeOptions) {
   const resizeObserver = typeof window.ResizeObserver === 'function'
     ? new window.ResizeObserver(syncBottomHeight) : null;
 
-  function syncFontSizeControls(forceValue: boolean): void {
-    const fontSize = refs && refs.quoteFontSize;
-    if (!fontSize) return;
-    const size = draftFontSize === null ? prefs.fontSize : draftFontSize;
-    const min = settings.NEWTAB_QUOTE_FONT_SIZE_MIN;
-    const max = settings.NEWTAB_QUOTE_FONT_SIZE_MAX;
-    const label = t('newtab_quote_font_size_label', 'Quote font size (px)');
-    fontSize.title.textContent = t('newtab_quote_font_size', 'Font size');
-    fontSize.slider.min = String(min);
-    fontSize.slider.max = String(max);
-    fontSize.slider.step = '1';
-    fontSize.slider.value = String(size);
-    fontSize.slider.setAttribute('aria-label', label);
-    fontSize.slider.style.setProperty('--x-range-slider-percent', `${(size - min) / (max - min) * 100}%`);
-    const input = fontSize.input;
-    input.min = String(min);
-    input.max = String(max);
-    input.step = '1';
-    input.setAttribute('aria-label', label);
-    if (forceValue || document.activeElement !== input) input.value = String(size);
+  function getFontSize(): number {
+    return draftFontSize === null ? prefs.fontSize : draftFontSize;
   }
 
-  function previewFontSize(value: string): void {
-    draftFontSize = settings.normalizeNewtabQuotePrefs({ ...prefs, fontSize: value }).fontSize;
+  function previewFontSize(size: number): void {
+    draftFontSize = settings.normalizeNewtabQuotePrefs({ ...prefs, fontSize: size }).fontSize;
     element.style.setProperty('--x-nt-quote-font-size', `${draftFontSize}px`);
-    syncFontSizeControls(false);
+    renderSettings();
     syncBottomHeight();
     if (config.onLayout) config.onLayout();
   }
 
-  function commitFontSize(value: string): void {
-    const raw = String(value).trim();
-    if (!raw || !Number.isFinite(Number(raw))) {
+  function commitFontSize(size: number): void {
+    const normalized = settings.normalizeNewtabQuotePrefs({ ...prefs, fontSize: size }).fontSize;
+    if (normalized !== prefs.fontSize) {
+      draftFontSize = normalized;
+      persist({ fontSize: normalized });
+    } else {
       draftFontSize = null;
       render();
-    } else {
-      const size = settings.normalizeNewtabQuotePrefs({ ...prefs, fontSize: raw }).fontSize;
-      if (size !== prefs.fontSize) {
-        draftFontSize = size;
-        persist({ fontSize: size });
-      }
-      else {
-        draftFontSize = null;
-        render();
-      }
     }
-    syncFontSizeControls(true);
   }
 
   function getFont() {
@@ -266,140 +149,164 @@ function createRuntime(options: QuoteRuntimeOptions) {
       poetry: t('newtab_quote_poetry', 'Poetry')
     };
   }
-  function updateSettings(): void {
-    // Narrowed here, for the callbacks below.
-    const panelRefs = refs;
-    if (!panelRefs) return;
-    if (panelRefs.quoteSection) panelRefs.quoteSection.hidden = false;
-    if (panelRefs.quoteDivider) panelRefs.quoteDivider.hidden = false;
+
+  const settingsActions: QuoteSettingsActions = {
+    toggleExpanded() {
+      if (!prefs.enabled) return;
+      settingsExpanded = !settingsExpanded;
+      renderSettings();
+    },
+    setEnabled(enabled) {
+      if (enabled) settingsExpanded = true;
+      persist({ enabled });
+    },
+    setProvider(provider) {
+      persist({ provider });
+    },
+    importFile(file) {
+      void importQuoteFile(file);
+    },
+    shuffleLibrary() {
+      void shuffle();
+    },
+    setCategory(category) {
+      persist({ category });
+    },
+    setFontSize(size: number, change: SliderChange) {
+      if (change.final) commitFontSize(size);
+      else previewFontSize(size);
+    }
+  };
+
+  function getSettingsModel(): QuoteSettingsModel {
     const text = labels();
     const title = t('newtab_quote_title', 'Daily quote');
-    panelRefs.quoteTitle.textContent = title;
-    panelRefs.quoteEnabledToggle.checked = prefs.enabled;
-    panelRefs.quoteEnabledToggle.setAttribute('aria-label', title);
-    panelRefs.quoteBody.hidden = !(prefs.enabled && settingsExpanded);
-    if (panelRefs.quoteAccordionTrigger) {
-      panelRefs.quoteAccordionTrigger.disabled = !prefs.enabled;
-      panelRefs.quoteAccordionTrigger.setAttribute('aria-disabled', prefs.enabled ? 'false' : 'true');
-      panelRefs.quoteAccordionTrigger.setAttribute(
-        'aria-expanded',
-        prefs.enabled && settingsExpanded ? 'true' : 'false'
-      );
-    }
-    if (panelRefs.quoteInfoButton) panelRefs.quoteInfoButton.setAttribute('aria-label', getProviderLabel());
-    panelRefs.quoteCategory.setAttribute('aria-label', t('newtab_quote_category', 'Quote category'));
-    if (panelRefs.quotePositionLabel) panelRefs.quotePositionLabel.textContent = t('newtab_quote_position', 'Quote position');
-    if (panelRefs.quoteCategoryLabel) panelRefs.quoteCategoryLabel.textContent = t('newtab_quote_category', 'Quote category');
-    const customMode = prefs.provider === 'custom';
-    if (panelRefs.quoteSourceLabel) panelRefs.quoteSourceLabel.textContent = t('newtab_quote_source', 'Source');
-    if (panelRefs.quoteSource) {
-      panelRefs.quoteSource.setAttribute('aria-label', t('newtab_quote_source', 'Source'));
-      queryHtmlTags(panelRefs.quoteSource, '[data-quote-provider]', 'button').forEach(item => {
-        const provider = item.dataset.quoteProvider;
-        item.textContent = provider === 'custom' ? t('newtab_quote_custom', 'Custom') : t('newtab_quote_hitokoto', 'Hitokoto');
-        item.setAttribute('aria-pressed', String(provider === prefs.provider));
-        item.setAttribute('data-active', String(provider === prefs.provider));
-        item.disabled = importing;
-      });
-    }
-    if (panelRefs.quoteCustomBody) panelRefs.quoteCustomBody.hidden = !customMode;
-    panelRefs.quoteCategory.hidden = customMode;
-    if (panelRefs.quoteCategory.parentElement?.classList.contains('x-nt-appearance-setting-row')) panelRefs.quoteCategory.parentElement.hidden = customMode;
-    if (panelRefs.quoteImportButton) {
-      panelRefs.quoteImportButton.textContent = importing
-        ? t('newtab_quote_importing', 'Importing…')
-        : (library ? t('newtab_quote_replace', 'Replace file') : t('newtab_quote_import', 'Import file'));
-      panelRefs.quoteImportButton.disabled = importing;
-    }
-    if (panelRefs.quoteLibraryShuffleButton) {
-      panelRefs.quoteLibraryShuffleButton.hidden = !library || library.quotes.length < 2;
-      panelRefs.quoteLibraryShuffleButton.disabled = importing;
-    }
-    // Under the title only when an import fails.
-    if (panelRefs.quoteImportStatus) {
-      panelRefs.quoteImportStatus.textContent = importMessage;
-      panelRefs.quoteImportStatus.hidden = !importMessage;
-      panelRefs.quoteImportStatus.setAttribute('data-error', importError ? 'true' : 'false');
-      panelRefs.quoteImportStatus.setAttribute('role', importError ? 'alert' : 'status');
-    }
-    // Beside the actions: how many quotes; hovering it names the file.
-    if (panelRefs.quoteLibraryCount) {
-      const count = library ? t('newtab_quote_count', '{count} quotes').replace('{count}', String(library.quotes.length)) : '';
-      panelRefs.quoteLibraryCount.hidden = !library;
-      if (panelRefs.quoteLibraryCountText) panelRefs.quoteLibraryCountText.textContent = count;
-      panelRefs.quoteLibraryCount.setAttribute('aria-label', library ? `${library.filename} · ${count}` : '');
-    }
-    syncFontSizeControls(false);
-    queryHtmlElements(panelRefs.quoteCategory, '[data-quote-category]').forEach((item) => {
-      const value = item.getAttribute('data-quote-category');
-      item.textContent = value === 'poetry' || value === 'literature' ? text[value] : '';
-      const selected = value === prefs.category;
-      item.setAttribute('aria-pressed', selected ? 'true' : 'false');
-      item.setAttribute('data-active', selected ? 'true' : 'false');
-    });
-    syncTabIndicator(panelRefs.quoteCategory);
-    if (panelRefs.quoteSource) syncTabIndicator(panelRefs.quoteSource);
-    if (view && view.renderQuotePositionSelect) {
-      view.renderQuotePositionSelect({
-        ariaLabel: t('newtab_quote_position', 'Quote position'),
-        options: POSITIONS.map((value) => ({ value, label: text[value] })),
-        value: prefs.position,
-        onChange: (position) => persist({ position })
-      });
-    }
-    if (panelRefs.quoteFontLabel) panelRefs.quoteFontLabel.textContent = t('newtab_quote_font', 'Font');
-    if (view && view.renderQuoteFontSelect) {
-      view.renderQuoteFontSelect({
-        ariaLabel: t('newtab_quote_font_label', 'Quote font'),
-        options: settings.NEWTAB_QUOTE_FONTS.map((font) => ({ value: font.id, label: t(font.labelKey, font.label) })),
-        value: getFont().id,
-        onChange: (font) => persist({ font })
-      });
-    }
+    const sourceLabel = t('newtab_quote_source', 'Source');
+    const categoryLabel = t('newtab_quote_category', 'Quote category');
+    const positionLabel = t('newtab_quote_position', 'Quote position');
+    const count = library
+      ? t('newtab_quote_count', '{count} quotes').replace('{count}', String(library.quotes.length))
+      : '';
+    return {
+      quote: {
+        title,
+        enabled: prefs.enabled,
+        expanded: settingsExpanded,
+        infoTooltip: getProviderLabel(),
+        sourceLabel,
+        source: {
+          active: prefs.provider === 'custom' ? 'custom' : 'hitokoto',
+          label: sourceLabel,
+          options: [
+            { value: 'hitokoto', label: t('newtab_quote_hitokoto', 'Hitokoto') },
+            { value: 'custom', label: t('newtab_quote_custom', 'Custom') }
+          ]
+        },
+        customMode: prefs.provider === 'custom',
+        library: {
+          title: t('newtab_quote_library', 'Quote collection'),
+          infoTooltip: t('newtab_quote_import_hint', 'TXT / MD: one non-empty content line per quote. Up to 1 MB, 1,000 quotes, 500 characters each; kept on this device, not in browser sync; WebDAV syncs it when turned on.'),
+          importLabel: importing
+            ? t('newtab_quote_importing', 'Importing…')
+            : (library ? t('newtab_quote_replace', 'Replace file') : t('newtab_quote_import', 'Import file')),
+          importing,
+          shuffleLabel: t('newtab_quote_shuffle_button', 'Shuffle'),
+          shuffleVisible: Boolean(library && library.quotes.length >= 2),
+          status: importMessage ? { text: importMessage, error: importError } : null,
+          count: library ? { text: count, label: `${library.filename} · ${count}`, filename: library.filename } : null
+        },
+        categoryLabel,
+        category: {
+          active: prefs.category === 'poetry' ? 'poetry' : 'literature',
+          label: categoryLabel,
+          options: [
+            { value: 'literature', label: text.literature },
+            { value: 'poetry', label: text.poetry }
+          ]
+        },
+        positionLabel,
+        positionSelect: {
+          ariaLabel: positionLabel,
+          options: POSITIONS.map((value) => ({ value, label: text[value] })),
+          value: prefs.position,
+          onChange: (position) => persist({ position })
+        },
+        fontLabel: t('newtab_quote_font', 'Font'),
+        fontSelect: {
+          ariaLabel: t('newtab_quote_font_label', 'Quote font'),
+          options: settings.NEWTAB_QUOTE_FONTS.map((font) => ({ value: font.id, label: t(font.labelKey, font.label) })),
+          value: getFont().id,
+          onChange: (font) => persist({ font })
+        },
+        fontSize: {
+          label: t('newtab_quote_font_size', 'Font size'),
+          ariaLabel: t('newtab_quote_font_size_label', 'Quote font size (px)'),
+          min: settings.NEWTAB_QUOTE_FONT_SIZE_MIN,
+          max: settings.NEWTAB_QUOTE_FONT_SIZE_MAX,
+          value: getFontSize()
+        }
+      },
+      actions: settingsActions
+    };
   }
-  // Tabs hug their labels, so the indicator follows the active button's measured box.
-  function syncTabIndicator(group: ParentNode): void {
-    const segmentedIndicator = globalThis.LumnoSegmentedIndicator;
-    if (segmentedIndicator) segmentedIndicator.sync(queryHtmlElement(group, '.x-nt-segmented-tabs-indicator'));
+
+  function renderSettings(): void {
+    if (settingsView) settingsView.renderQuoteSettings(getSettingsModel());
   }
-  const tabResizeObserver = typeof window.ResizeObserver === 'function'
-    ? new window.ResizeObserver((entries) => entries.forEach((entry) => syncTabIndicator(entry.target)))
-    : null;
+
   const shuffleLabel = () => t('newtab_quote_shuffle', 'Show another quote');
-  // Full-width closing punctuation leaves half an em of blank space after its ink, which reads as
-  // a lopsided gap at the end of the line, so the trailing run is set half-width.
-  const TRAILING_PUNCTUATION = /[、。，．：；！？）〉》」』】〕〗”’]+$/;
-  function renderLine(text: string): void {
-    if (line.textContent === text) return;
-    const tail = TRAILING_PUNCTUATION.exec(text);
-    if (!tail) {
-      line.textContent = text;
-      return;
+  // Open toward the free side of the page: away from the search box, and inward at the bottom edge.
+  const showTooltip = (target: HTMLElement, text: string) => {
+    const tooltip = getTooltip();
+    if (tooltip && text) {
+      tooltip.show(target, text, { placement: prefs.position === 'top' || prefs.position === 'bottom' ? 'top' : 'bottom' });
     }
-    const tailElement = document.createElement('span');
-    tailElement.className = 'x-nt-quote-tail';
-    tailElement.textContent = tail[0];
-    line.replaceChildren(document.createTextNode(text.slice(0, tail.index)), tailElement);
+  };
+  const hideTooltip = () => {
+    const tooltip = getTooltip();
+    if (tooltip) tooltip.hide();
+  };
+  const lineViewApi: QuoteLineViewApi | null = config.lineView || globalThis.LumnoNewtabQuoteLine || null;
+  const lineView = lineViewApi ? lineViewApi.createQuoteLineView(element, {
+    onShowOrigin: (target) => showTooltip(target, origin),
+    onShowShuffleLabel: (target) => showTooltip(target, shuffleLabel()),
+    onHideTooltip: hideTooltip,
+    onShuffle: () => { void shuffle(); }
+  }) : null;
+
+  function getLineModel(current: DailyQuote): QuoteLineModel {
+    const withoutTooltip = !config.getTooltipController;
+    return {
+      text: current.text,
+      href: prefs.provider === 'custom'
+        ? null
+        : (/^https:\/\/hitokoto\.cn\//.test(current.url || '') ? current.url : 'https://hitokoto.cn/'),
+      ariaLabel: [current.text, origin].filter(Boolean).join(' — '),
+      shuffleLabel: shuffleLabel(),
+      originTitle: withoutTooltip ? origin : '',
+      shuffleTitle: withoutTooltip ? shuffleLabel() : '',
+      shuffling,
+      swapCount
+    };
   }
+
+  function renderLine(): void {
+    if (quote && lineView && !disposed) lineView.render(getLineModel(quote));
+  }
+
   function updateText(): void {
     element.setAttribute('aria-label', t('newtab_quote_title', 'Daily quote'));
-    shuffleButton.setAttribute('aria-label', shuffleLabel());
-    if (!config.getTooltipController) shuffleButton.title = shuffleLabel();
     if (quote) {
-      renderLine(quote.text);
       origin = [quote.author, quote.source ? `《${quote.source}》` : ''].filter(Boolean).join(' · ');
-      if (!config.getTooltipController) button.title = origin;
-      button.setAttribute('aria-label', [quote.text, origin].filter(Boolean).join(' — '));
-      if (prefs.provider === 'custom') { button.removeAttribute('href'); button.tabIndex = -1; }
-      else { button.href = /^https:\/\/hitokoto\.cn\//.test(quote.url || '') ? quote.url : 'https://hitokoto.cn/'; button.removeAttribute('tabindex'); }
+      renderLine();
     }
-    updateSettings();
+    renderSettings();
   }
   function render(): void {
     if (!mounted || disposed) return;
     element.dataset.position = prefs.position;
     document.body.dataset.quotePosition = isActive() ? prefs.position : 'off';
-    element.style.setProperty('--x-nt-quote-font-size', `${draftFontSize === null ? prefs.fontSize : draftFontSize}px`);
+    element.style.setProperty('--x-nt-quote-font-size', `${getFontSize()}px`);
     element.style.setProperty('--x-nt-quote-font-family', getFont().family);
     element.hidden = !isActive() || !quote;
     // Re-inserting a node restarts its entry animation, so only move it when its slot changed.
@@ -478,7 +385,7 @@ function createRuntime(options: QuoteRuntimeOptions) {
       window.clearTimeout(dayTimer);
     }
     render();
-    updateSettings();
+    renderSettings();
     if (shouldRefresh) refresh().catch(() => {});
   }
   function updateLanguage(): void {
@@ -507,7 +414,7 @@ function createRuntime(options: QuoteRuntimeOptions) {
     const libraryChange = changes[custom.KEY];
     if (areaName === 'local' && (libraryChange || changes[custom.PICK_KEY])) {
       if (libraryChange) library = custom.normalizeLibrary(libraryChange.newValue);
-      updateSettings();
+      renderSettings();
       if (prefs.provider === 'custom') refresh().catch(() => {});
     }
     const cacheChange = changes[LumnoNewtabRemoteContent.QUOTE_CACHE_KEY];
@@ -522,26 +429,13 @@ function createRuntime(options: QuoteRuntimeOptions) {
   const onVisibility = () => {
     if (document.visibilityState === 'visible' && isActive()) refresh().catch(() => {});
   };
-  // Open toward the free side of the page: away from the search box, and inward at the bottom edge.
-  const showTooltip = (target: HTMLElement, text: string) => {
-    const tooltip = getTooltip();
-    if (tooltip && text) {
-      tooltip.show(target, text, { placement: prefs.position === 'top' || prefs.position === 'bottom' ? 'top' : 'bottom' });
-    }
-  };
-  const showOrigin = () => showTooltip(button, origin);
-  const hideOrigin = () => {
-    const tooltip = getTooltip();
-    if (tooltip) tooltip.hide();
-  };
   // The pick replaces today's cached quote, so it stays until the next daily update.
   async function shuffle(): Promise<void> {
     if (shuffling || !isActive()) return;
     const current = ++revision;
     const category = prefs.category;
     shuffling = true;
-    shuffleButton.dataset.loading = 'true';
-    shuffleButton.setAttribute('aria-busy', 'true');
+    renderLine();
     try {
       let next: DailyQuote;
       if (prefs.provider === 'custom') {
@@ -554,20 +448,16 @@ function createRuntime(options: QuoteRuntimeOptions) {
       } else next = await client.getQuote(category, { reroll: true });
       if (current !== revision || disposed || !isActive()) return;
       quote = next;
+      // Each shuffled quote fades in, even when two land back to back.
+      swapCount += 1;
       render();
-      // Restart the swap fade even when two shuffles land back to back.
-      line.removeAttribute('data-swap');
-      void line.offsetWidth;
-      line.setAttribute('data-swap', 'true');
     } catch {
       if (!disposed && config.showToast) config.showToast(t('newtab_quote_shuffle_error', 'Could not load another quote'), true);
     } finally {
       shuffling = false;
-      delete shuffleButton.dataset.loading;
-      shuffleButton.removeAttribute('aria-busy');
+      renderLine();
     }
   }
-  const showShuffleLabel = () => showTooltip(shuffleButton, shuffleLabel());
   function getProviderLabel(): string {
     return prefs.provider === 'custom' ? t('newtab_quote_provider_custom', 'Custom collection · on this device, syncs with WebDAV') : t('newtab_quote_provider', 'Powered by Hitokoto');
   }
@@ -596,7 +486,7 @@ function createRuntime(options: QuoteRuntimeOptions) {
   }
   async function importQuoteFile(file: QuoteFile): Promise<boolean> {
     if (importing || disposed) return false;
-    importing = true; importError = false; importMessage = ''; updateSettings();
+    importing = true; importError = false; importMessage = ''; renderSettings();
     let saving = false;
     try {
       const next = await custom.readLibraryFile(file);
@@ -616,91 +506,13 @@ function createRuntime(options: QuoteRuntimeOptions) {
           : t('newtab_quote_import_error', 'Import failed: the file doesn’t meet the format or size limits. Your previous collection is kept.');
       }
       return false;
-    } finally { importing = false; if (!disposed) updateSettings(); }
+    } finally { importing = false; if (!disposed) renderSettings(); }
   }
-  shuffleButton.addEventListener('click', () => { void shuffle(); });
-  line.addEventListener('animationend', () => line.removeAttribute('data-swap'));
-  shuffleButton.addEventListener('mouseenter', showShuffleLabel);
-  shuffleButton.addEventListener('focus', showShuffleLabel);
-  shuffleButton.addEventListener('mouseleave', hideOrigin);
-  shuffleButton.addEventListener('blur', hideOrigin);
-  button.addEventListener('mouseenter', showOrigin);
-  button.addEventListener('focus', showOrigin);
-  button.addEventListener('mouseleave', hideOrigin);
-  button.addEventListener('blur', hideOrigin);
-  button.addEventListener('click', hideOrigin);
-  // The position select is a React island owned by the panel view, so the view renders it.
-  function bindSettings(nextRefs: PanelRefs, nextView?: QuoteSettingsView | null): void {
-    const panelRefs = readQuoteSettingsRefs(nextRefs);
-    refs = panelRefs;
-    view = nextView || null;
-    if (!panelRefs) return;
-    const toggle = panelRefs.quoteEnabledToggle;
-    toggle.addEventListener('change', () => {
-      if (toggle.checked) settingsExpanded = true;
-      persist({ enabled: toggle.checked });
-    });
-    if (panelRefs.quoteSource) {
-      queryHtmlTags(panelRefs.quoteSource, '[data-quote-provider]', 'button')
-        .forEach(item => item.addEventListener('click', () => persist({ provider: item.dataset.quoteProvider })));
-    }
-    const fileInput = panelRefs.quoteFileInput;
-    panelRefs.quoteImportButton?.addEventListener('click', () => fileInput?.click());
-    panelRefs.quoteLibraryShuffleButton?.addEventListener('click', () => { void shuffle(); });
-    const libraryCount = panelRefs.quoteLibraryCount;
-    if (libraryCount) {
-      const showFile = () => {
-        const tooltip = getTooltip();
-        if (tooltip && library) tooltip.show(libraryCount, library.filename, { placement: 'top' });
-      };
-      const hideFile = () => { const tooltip = getTooltip(); if (tooltip) tooltip.hide(); };
-      libraryCount.addEventListener('mouseenter', showFile);
-      libraryCount.addEventListener('focus', showFile);
-      libraryCount.addEventListener('mouseleave', hideFile);
-      libraryCount.addEventListener('blur', hideFile);
-    }
-    fileInput?.addEventListener('change', () => {
-      const file = fileInput.files && fileInput.files[0];
-      fileInput.value = '';
-      if (file) void importQuoteFile(file);
-    });
-    if (panelRefs.quoteAccordionTrigger) {
-      panelRefs.quoteAccordionTrigger.addEventListener('click', () => {
-        if (!prefs.enabled) return;
-        settingsExpanded = !settingsExpanded;
-        updateSettings();
-      });
-    }
-    queryHtmlElements(panelRefs.quoteCategory, '[data-quote-category]').forEach((item) => {
-      item.addEventListener('click', () => persist({ category: item.dataset.quoteCategory }));
-    });
-    if (tabResizeObserver) {
-      // Re-measure once the collapsed panel lays out, and when translated labels change width.
-      tabResizeObserver.observe(panelRefs.quoteCategory);
-      if (panelRefs.quoteSource) tabResizeObserver.observe(panelRefs.quoteSource);
-    }
-    if (panelRefs.quoteFontSize) {
-      const { slider, input } = panelRefs.quoteFontSize;
-      slider.addEventListener('input', () => previewFontSize(slider.value));
-      slider.addEventListener('change', () => commitFontSize(slider.value));
-      input.addEventListener('input', () => {
-        if (input.value.trim() && Number.isFinite(Number(input.value))) previewFontSize(input.value);
-      });
-      input.addEventListener('blur', () => commitFontSize(input.value));
-      input.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          input.blur();
-        }
-      });
-    }
-    // The body ships hidden and is bound on the panel's first open, so its first sync would
-    // otherwise play the collapsible entry animation. Flush that state with transitions off.
-    const body = panelRefs.quoteBody;
-    body.style.transition = 'none';
-    updateSettings();
-    body.getBoundingClientRect();
-    body.style.transition = '';
+  // Draws the quote section in the panel from now on.
+  function bindSettings(nextView: QuoteSettingsView | null | undefined): void {
+    if (!nextView) return;
+    settingsView = nextView;
+    renderSettings();
   }
   function mount(): Promise<void> {
     mounted = true;
@@ -722,7 +534,8 @@ function createRuntime(options: QuoteRuntimeOptions) {
       });
     });
   }
-  return Object.freeze({ element, textElement: line, mount, bindSettings, updateLanguage, getProviderLabel,
+  return Object.freeze({ element, mount, bindSettings, updateLanguage, getProviderLabel,
+    getTextElement: () => (lineView ? lineView.getTextElement() : null),
     importQuoteFile,
     importMarkdown: importQuoteFile,
     destroy() {
@@ -730,10 +543,10 @@ function createRuntime(options: QuoteRuntimeOptions) {
       revision += 1;
       window.clearTimeout(dayTimer);
       if (resizeObserver) resizeObserver.disconnect();
-      if (tabResizeObserver) tabResizeObserver.disconnect();
       if (unsubscribe) unsubscribe();
       document.removeEventListener('visibilitychange', onVisibility);
-      hideOrigin();
+      hideTooltip();
+      if (lineView) lineView.destroy();
       element.remove();
     } });
 }
@@ -741,4 +554,4 @@ function createRuntime(options: QuoteRuntimeOptions) {
 type QuoteRuntime = ReturnType<typeof createRuntime>;
 
 export { createRuntime };
-export type { QuoteRuntime, QuoteRuntimeOptions, QuoteSettingsRefs };
+export type { QuoteRuntime, QuoteRuntimeOptions };

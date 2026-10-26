@@ -37,6 +37,7 @@ import type { createPageNoticeApi } from '../newtab/react/page-notice';
 import type { createBookmarkCascadeViewApi } from '../newtab/react/bookmark-cascade-view';
 import type { createWallpaperViewApi } from '../newtab/react/wallpaper-view';
 import type { createBookmarkBreadcrumbApi } from '../newtab/react/bookmark-breadcrumb';
+import type { createQuoteLineViewApi } from '../newtab/react/quote-line';
 import type { WallpaperEffectPreloadRuntime, WallpaperPreloadState } from '../newtab/wallpaper/wallpaper-preload-types';
 
 declare global {
@@ -137,6 +138,7 @@ declare global {
   var LumnoNewtabLocalePrefetch: { locale: string; messages: Promise<unknown> } | null | undefined;
   var LumnoNewtabWallpaperEffectPreload: WallpaperEffectPreloadRuntime | undefined;
   var LumnoNewtabBookmarkBreadcrumb: ReturnType<typeof createBookmarkBreadcrumbApi> | undefined;
+  var LumnoNewtabQuoteLine: ReturnType<typeof createQuoteLineViewApi> | undefined;
   var LumnoSearchInputUI: ReturnType<typeof createSearchInputApi> | undefined;
   var LumnoSegmentedIndicator: ReturnType<typeof createSegmentedIndicatorApi> | undefined;
   // Opens the tab switcher with the context the worker sends, read as
