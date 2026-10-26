@@ -314,7 +314,10 @@
   font: inherit;
   vertical-align: baseline;
   content-visibility: auto;
-  contain-intrinsic-block-size: var(--x-ov-suggestion-row-height, 52px);
+  /* The size stands in for the content box, inside the 12px padding and
+     1px border, so a row not laid out yet already takes its 52px instead
+     of 78px for a frame; `auto` keeps a row's last rendered size. */
+  contain-intrinsic-block-size: auto calc(var(--x-ov-suggestion-row-height, 52px) - 26px);
 }
 
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-item[data-last="true"] {
