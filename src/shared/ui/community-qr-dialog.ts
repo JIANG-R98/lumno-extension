@@ -250,6 +250,155 @@ function isOpen(): boolean {
   return Boolean(active);
 }
 
+interface DialogTree {
+  host: HTMLElement;
+  backdrop: HTMLElement;
+  card: HTMLElement;
+  closeButton: HTMLButtonElement;
+}
+
+function createCloseButton(documentObj: Document, label: string): HTMLButtonElement {
+  const button = documentObj.createElement('button');
+  button.className = 'close';
+  button.type = 'button';
+  button.setAttribute('aria-label', label);
+  button.title = label;
+  button.appendChild(createSvgElement(documentObj, ['svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' }, [
+    ['path', { d: CLOSE_ICON_PATH }]
+  ]]));
+  return button;
+}
+
+function createQrImage(documentObj: Document, imageUrl: string, alt: string): HTMLImageElement {
+  const image = documentObj.createElement('img');
+  image.className = 'qr';
+  image.alt = alt;
+  image.width = 1080;
+  image.height = 1596;
+  image.decoding = 'async';
+  image.src = imageUrl;
+  return image;
+}
+
+// The closed dialog: a host with its own shadow root, the backdrop, and the
+// card with its title, close button and image.
+function createDialogTree(documentObj: Document, config: CommunityQrDialogOptions, imageUrl: string): DialogTree {
+  const host = documentObj.createElement('div');
+  host.id = HOST_ID;
+  host.setAttribute('data-theme', config.theme === 'dark' ? 'dark' : 'light');
+  host.setAttribute('data-open', 'false');
+  if (config.glass === true) {
+    host.setAttribute('data-glass', '');
+  }
+  const shadow = host.attachShadow({ mode: 'open' });
+  const style = documentObj.createElement('style');
+  style.textContent = STYLES;
+  const backdrop = documentObj.createElement('div');
+  backdrop.className = 'backdrop';
+  const card = documentObj.createElement('div');
+  card.className = 'card';
+  card.setAttribute('role', 'dialog');
+  card.setAttribute('aria-modal', 'true');
+  card.tabIndex = -1;
+  const header = documentObj.createElement('div');
+  header.className = 'header';
+  const title = documentObj.createElement('h2');
+  title.className = 'title';
+  title.id = 'title';
+  title.textContent = String(config.title || '');
+  card.setAttribute('aria-labelledby', 'title');
+  const closeButton = createCloseButton(documentObj, String(config.closeLabel || 'Close'));
+  header.append(title, closeButton);
+  card.append(header, createQrImage(documentObj, imageUrl, String(config.alt || '')));
+  backdrop.appendChild(card);
+  shadow.append(style, backdrop);
+  return { host, backdrop, card, closeButton };
+}
+
+function swallowScroll(event: Event): void {
+  event.preventDefault();
+}
+
+function stopPropagation(event: Event): void {
+  event.stopPropagation();
+}
+
+// An open dialog: closes once, on Escape, the close button or a click on
+// the backdrop, and keeps the page from seeing its keys and clicks.
+class OpenDialog implements CommunityQrDialog {
+  readonly element: HTMLElement;
+  private closed = false;
+  private readonly tree: DialogTree;
+  private readonly windowObj: Window | typeof globalThis;
+  private readonly returnFocus: Element | null;
+
+  constructor(tree: DialogTree, windowObj: Window | typeof globalThis, returnFocus: Element | null) {
+    this.tree = tree;
+    this.element = tree.host;
+    this.windowObj = windowObj;
+    this.returnFocus = returnFocus;
+    const { host, backdrop, closeButton } = tree;
+    backdrop.addEventListener('wheel', swallowScroll, { passive: false });
+    backdrop.addEventListener('touchmove', swallowScroll, { passive: false });
+    backdrop.addEventListener('click', (event) => {
+      if (event.target === backdrop) {
+        this.close();
+      }
+    });
+    closeButton.addEventListener('click', () => this.close());
+    host.addEventListener('keydown', this.handleKeyDown);
+    ['keyup', 'keypress', 'pointerdown', 'mousedown', 'click'].forEach((type) => {
+      host.addEventListener(type, stopPropagation);
+    });
+  }
+
+  // Shows the dialog in `parent` and runs its enter transition.
+  show(parent: Element): void {
+    parent.appendChild(this.tree.host);
+    this.tree.closeButton.focus({ preventScroll: true });
+    // Lay out the closed state first so the enter transition runs.
+    void this.tree.card.offsetWidth;
+    this.tree.host.setAttribute('data-open', 'true');
+  }
+
+  close(): void {
+    if (this.closed) {
+      return;
+    }
+    this.closed = true;
+    if (active === this) {
+      active = null;
+    }
+    const { host } = this.tree;
+    const windowObj = this.windowObj;
+    host.setAttribute('data-open', 'false');
+    const reduceMotion = typeof windowObj.matchMedia === 'function' &&
+      windowObj.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    windowObj.setTimeout(() => {
+      host.remove();
+    }, reduceMotion ? 0 : EXIT_DURATION_MS);
+    const returnFocus = this.returnFocus;
+    if (returnFocus && returnFocus.isConnected && isFocusable(returnFocus)) {
+      returnFocus.focus({ preventScroll: true });
+    }
+  }
+
+  private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    // Keys typed in the dialog stay in it, so page shortcuts and the
+    // search box behind it don't react while it is open.
+    event.stopPropagation();
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.close();
+      return;
+    }
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      this.tree.closeButton.focus();
+    }
+  };
+}
+
 // Opens the dialog; null without a document or an image.
 function open(options?: CommunityQrDialogOptions | null): CommunityQrDialog | null {
   const config: CommunityQrDialogOptions = options || {};
@@ -259,128 +408,11 @@ function open(options?: CommunityQrDialogOptions | null): CommunityQrDialog | nu
     return null;
   }
   close();
-  const windowObj = documentObj.defaultView || globalThis;
-  const returnFocus = config.returnFocus || null;
-
-  const host = documentObj.createElement('div');
-  host.id = HOST_ID;
-  host.setAttribute('data-theme', config.theme === 'dark' ? 'dark' : 'light');
-  host.setAttribute('data-open', 'false');
-  if (config.glass === true) {
-    host.setAttribute('data-glass', '');
-  }
-  const shadow = host.attachShadow({ mode: 'open' });
-
-  const style = documentObj.createElement('style');
-  style.textContent = STYLES;
-
-  const backdrop = documentObj.createElement('div');
-  backdrop.className = 'backdrop';
-
-  const card = documentObj.createElement('div');
-  card.className = 'card';
-  card.setAttribute('role', 'dialog');
-  card.setAttribute('aria-modal', 'true');
-  card.tabIndex = -1;
-
-  const header = documentObj.createElement('div');
-  header.className = 'header';
-  const title = documentObj.createElement('h2');
-  title.className = 'title';
-  title.id = 'title';
-  title.textContent = String(config.title || '');
-  card.setAttribute('aria-labelledby', 'title');
-
-  const closeButton = documentObj.createElement('button');
-  closeButton.className = 'close';
-  closeButton.type = 'button';
-  const closeLabel = String(config.closeLabel || 'Close');
-  closeButton.setAttribute('aria-label', closeLabel);
-  closeButton.title = closeLabel;
-  closeButton.appendChild(createSvgElement(documentObj, ['svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' }, [
-    ['path', { d: CLOSE_ICON_PATH }]
-  ]]));
-
-  const image = documentObj.createElement('img');
-  image.className = 'qr';
-  image.alt = String(config.alt || '');
-  image.width = 1080;
-  image.height = 1596;
-  image.decoding = 'async';
-  image.src = imageUrl;
-
-  header.append(title, closeButton);
-  card.append(header, image);
-  backdrop.appendChild(card);
-  shadow.append(style, backdrop);
-
-  let closed = false;
-
-  function swallowScroll(event: Event): void {
-    event.preventDefault();
-  }
-
-  function onKeyDown(event: KeyboardEvent): void {
-    // Keys typed in the dialog stay in it, so page shortcuts and the
-    // search box behind it don't react while it is open.
-    event.stopPropagation();
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      controller.close();
-      return;
-    }
-    if (event.key === 'Tab') {
-      event.preventDefault();
-      closeButton.focus();
-    }
-  }
-
-  function stopPropagation(event: Event): void {
-    event.stopPropagation();
-  }
-
-  const controller: CommunityQrDialog = {
-    element: host,
-    close() {
-      if (closed) {
-        return;
-      }
-      closed = true;
-      if (active === controller) {
-        active = null;
-      }
-      host.setAttribute('data-open', 'false');
-      const reduceMotion = typeof windowObj.matchMedia === 'function' &&
-        windowObj.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      windowObj.setTimeout(() => {
-        host.remove();
-      }, reduceMotion ? 0 : EXIT_DURATION_MS);
-      if (returnFocus && returnFocus.isConnected && isFocusable(returnFocus)) {
-        returnFocus.focus({ preventScroll: true });
-      }
-    }
-  };
-
-  backdrop.addEventListener('wheel', swallowScroll, { passive: false });
-  backdrop.addEventListener('touchmove', swallowScroll, { passive: false });
-  backdrop.addEventListener('click', (event) => {
-    if (event.target === backdrop) {
-      controller.close();
-    }
-  });
-  closeButton.addEventListener('click', () => controller.close());
-  host.addEventListener('keydown', onKeyDown);
-  ['keyup', 'keypress', 'pointerdown', 'mousedown', 'click'].forEach((type) => {
-    host.addEventListener(type, stopPropagation);
-  });
-
-  (config.glass === true && documentObj.body ? documentObj.body : documentObj.documentElement).appendChild(host);
-  active = controller;
-  closeButton.focus({ preventScroll: true });
-  // Lay out the closed state first so the enter transition runs.
-  void card.offsetWidth;
-  host.setAttribute('data-open', 'true');
-  return controller;
+  const dialog = new OpenDialog(createDialogTree(documentObj, config, imageUrl),
+    documentObj.defaultView || globalThis, config.returnFocus || null);
+  active = dialog;
+  dialog.show(config.glass === true && documentObj.body ? documentObj.body : documentObj.documentElement);
+  return dialog;
 }
 
 export type { CommunityQrDialog, CommunityQrDialogOptions };
