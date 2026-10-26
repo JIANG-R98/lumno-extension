@@ -1,9 +1,9 @@
 import { readSearchEngineState } from '../../domain/search/search-engine-state-reader';
-import type * as SearchUtils from '../../domain/search/search-utils';
 import type { SearchEngineState } from '../../domain/search/types';
 import { defaultSearchEngine } from '../../domain/settings/search';
 import type { OverlaySettings } from '../overlay-settings';
 import type { Translate } from './types';
+import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
 
 interface DefaultSearchEngineState {
   // The engine the user chose, once read from storage.
@@ -14,7 +14,6 @@ interface DefaultSearchEngineDeps {
   getOverlayFaviconUrlResolver(): { getPageFaviconCandidateUrl(url: string): string } | null;
   t: Translate;
   settings: Pick<OverlaySettings, 'loaded' | 'get'>;
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'isRetiredSearchEngineState'>;
   overlayState: DefaultSearchEngineState;
 }
 
@@ -24,8 +23,7 @@ function createDefaultSearchEngine(deps: DefaultSearchEngineDeps) {
   const {
     getOverlayFaviconUrlResolver,
     t,
-    settings,
-    SEARCH_UTILS
+    settings
   } = deps;
 
   // The panel state object shared with search-panel.ts and the other modules.
@@ -74,7 +72,7 @@ function createDefaultSearchEngine(deps: DefaultSearchEngineDeps) {
   function loadOverlaySearchEngineState(onReload?: () => void): Promise<SearchEngineState | null> {
     return settings.loaded.then(() => {
       const stored = readSearchEngineState(settings.get(defaultSearchEngine));
-      if (stored && stored.id && !SEARCH_UTILS.isRetiredSearchEngineState(stored)) {
+      if (stored && stored.id && !SearchSiteSearchProviders.isRetiredSearchEngineState(stored)) {
         overlayState.overlaySearchEngineState = stored;
         if (typeof onReload === 'function') {
           onReload();

@@ -2,13 +2,16 @@
 // prefixes and labels, and the top-site and trigger candidates that suggest
 // switching.
 import type { ShortcutRule } from '../../domain/messages';
-import type * as SearchUtils from '../../domain/search/search-utils';
 import type { LocalSearchScope, SearchSourceType, SiteSearchProvider, SuggestionLike } from '../../domain/search/types';
 import type { InputModeController } from '../../shared/search/search-input-mode';
 import type { PrefixTextOptions } from '../../shared/search/input-mode/prefix-text';
 import type { InputModeProvider, InputModeTheme } from '../../shared/search/input-mode/types';
 import type { FormatMessage, LocalSearchScopeTrigger, SiteSearchTrigger, Translate } from './types';
 import type { RemixIconName } from '../../shared/ui/remix-icon';
+import * as SearchNavigationMatching from '../../domain/search/utils/navigation-matching';
+import * as SearchSiteSearchMatching from '../../domain/search/utils/site-search-matching';
+import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
+import * as SearchSuggestionSlate from '../../domain/search/utils/suggestion-slate';
 
 interface SearchModesState {
   inputModeController: Pick<InputModeController,
@@ -31,9 +34,6 @@ interface SearchModesState {
 interface SearchModesDeps {
   t: Translate;
   formatMessage: FormatMessage;
-  SEARCH_UTILS: Pick<typeof SearchUtils,
-    'getSiteSearchProviderDisplayNameMessage' | 'getInlineSiteSearchCandidate' | 'promoteStrongNavigationMatch' |
-    'getKeywordSearchSuggestionState' | 'getSiteSearchTriggerCandidate' | 'findLocalSearchScope'>;
   isAggregateSearchProvider(provider: Partial<SiteSearchProvider> | null): boolean;
   isAiSiteSearchProvider(provider: Partial<SiteSearchProvider> | null | undefined): boolean;
   getDirectNavigationUrl(rawQuery: string): unknown;
@@ -60,7 +60,6 @@ interface OpenTabsPrefixOptions {
 function createSearchModes(deps: SearchModesDeps) {
   const {
     t,
-    SEARCH_UTILS,
     isAggregateSearchProvider,
     formatMessage,
     isAiSiteSearchProvider,
@@ -157,7 +156,7 @@ function createSearchModes(deps: SearchModesDeps) {
     if (!provider) {
       return t('site_search_default', '站内');
     }
-    const mapping = SEARCH_UTILS.getSiteSearchProviderDisplayNameMessage(provider);
+    const mapping = SearchSiteSearchProviders.getSiteSearchProviderDisplayNameMessage(provider);
     if (mapping) {
       return t(mapping.messageKey, mapping.fallback);
     }
@@ -195,18 +194,18 @@ function createSearchModes(deps: SearchModesDeps) {
   }
 
   function getInlineSiteSearchCandidate(input: string, providers: SiteSearchProvider[] | null) {
-    return SEARCH_UTILS.getInlineSiteSearchCandidate(input, providers);
+    return SearchSiteSearchMatching.getInlineSiteSearchCandidate(input, providers);
   }
 
   function promoteStrongNavigationMatch<T extends SuggestionLike>(list: T[], rawQuery: string): T | null {
-    return SEARCH_UTILS.promoteStrongNavigationMatch(list, rawQuery, {
+    return SearchNavigationMatching.promoteStrongNavigationMatch(list, rawQuery, {
       getDirectNavigationUrl,
       getUrlDisplay
     });
   }
 
   function getKeywordSearchSuggestionState<T extends SuggestionLike>(list: T[]) {
-    return SEARCH_UTILS.getKeywordSearchSuggestionState(list);
+    return SearchSuggestionSlate.getKeywordSearchSuggestionState(list);
   }
 
   function matchesTopSitePrefix(suggestion: SuggestionLike | null, input: string): boolean {
@@ -286,13 +285,13 @@ function createSearchModes(deps: SearchModesDeps) {
     providers: SiteSearchProvider[] | null,
     topSiteMatch: SuggestionLike | null
   ): SiteSearchProvider | null {
-    return SEARCH_UTILS.getSiteSearchTriggerCandidate(input, providers, topSiteMatch, {
+    return SearchSiteSearchMatching.getSiteSearchTriggerCandidate(input, providers, topSiteMatch, {
       matchesTopSitePrefix
     });
   }
 
   function getLocalSearchScopeCandidate(input: string, rules: ShortcutRule[] | undefined): LocalSearchScope | null {
-    const scope = SEARCH_UTILS.findLocalSearchScope(input, rules);
+    const scope = SearchSiteSearchProviders.findLocalSearchScope(input, rules);
     if (!scope || !overlayState.enabledSearchResultSourceTypes.includes(scope.sourceType)) {
       return null;
     }

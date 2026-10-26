@@ -1,9 +1,9 @@
 // The default search engine: the built-in engine list, the stored choice,
 // and the search URL, label, theme and favicon each engine contributes.
-import type * as SearchUtils from '../../domain/search/search-utils';
 import type { SearchEngineState } from '../../domain/search/types';
 import type { StorageAreaLike } from '../../domain/storage-port';
 import type { Translate } from '../newtab-types';
+import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
 
 // The browser's default search engine as the background stores it.
 interface DefaultSearchEngineState extends SearchEngineState {
@@ -29,7 +29,6 @@ interface DefaultSearchEngineDeps {
   t: Translate;
   storageArea: StorageAreaLike | null;
   DEFAULT_SEARCH_ENGINE_STORAGE_KEY: string;
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'isRetiredSearchEngineState'>;
   pageState: DefaultSearchEngineModuleState;
 }
 
@@ -61,8 +60,7 @@ function createDefaultSearchEngine(deps: DefaultSearchEngineDeps) {
     getPageFaviconCandidateUrl,
     t,
     storageArea,
-    DEFAULT_SEARCH_ENGINE_STORAGE_KEY,
-    SEARCH_UTILS
+    DEFAULT_SEARCH_ENGINE_STORAGE_KEY
   } = deps;
 
   // The page state object shared with newtab.js and the other modules.
@@ -163,7 +161,7 @@ function createDefaultSearchEngine(deps: DefaultSearchEngineDeps) {
     void storageArea.get([DEFAULT_SEARCH_ENGINE_STORAGE_KEY], (result) => {
       const stored = readStoredSearchEngineState(
         result ? result[DEFAULT_SEARCH_ENGINE_STORAGE_KEY] : null,
-        SEARCH_UTILS.isRetiredSearchEngineState
+        SearchSiteSearchProviders.isRetiredSearchEngineState
       );
       if (stored) {
         pageState.defaultSearchEngineState = stored;

@@ -7,7 +7,6 @@ import type { AggregateSearch } from '../../domain/search/aggregate-search-store
 import * as AGGREGATE_SEARCH_SURFACE from '../../domain/search/aggregate-search-surface';
 import { readSiteSearchProviders } from '../../domain/search/site-search-provider-reader';
 import type { DisplayedSuggestion } from '../../domain/search/suggestion-action-model';
-import type * as SearchUtils from '../../domain/search/search-utils';
 import type { SiteSearchProvider } from '../../domain/search/types';
 import { siteSearchCustom, siteSearchDisabled } from '../../domain/settings/search';
 import type { OverlaySettings } from '../overlay-settings';
@@ -20,6 +19,7 @@ import type { Translate } from './types';
 import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
 import * as FaviconUrlKinds from '../../domain/favicon/url-kinds';
 import type { CachedIconMap, SiteSearchIconOptions } from '../../domain/favicon/shortcut-favicon/types';
+import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
 
 interface SiteSearchProvidersState {
   settings: Pick<OverlaySettings, 'store' | 'loaded' | 'get'>;
@@ -38,9 +38,6 @@ interface SiteSearchProvidersState {
 }
 
 interface SiteSearchProvidersDeps {
-  SEARCH_UTILS: Pick<typeof SearchUtils,
-    'withHelpCenterLocale' | 'isAiSiteSearchProvider' | 'isSearchEngineSiteSearchProvider' |
-    'isInteractiveSiteSearchProvider' | 'mergeCustomProviders'>;
   AGGREGATE_SEARCH_STORE: Pick<typeof AggregateSearchStore, 'isAggregateSearchProvider'>;
   getHelpCenterLocale(): string;
   showOverlayToast(message: string, isError?: boolean): void;
@@ -56,7 +53,6 @@ interface SiteSearchProvidersDeps {
 
 function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
   const {
-    SEARCH_UTILS,
     getHelpCenterLocale,
     AGGREGATE_SEARCH_STORE,
     showOverlayToast,
@@ -79,15 +75,15 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
       return '';
     }
     const url = template.replace(/\{query\}/g, encodeURIComponent(query));
-    return provider ? SEARCH_UTILS.withHelpCenterLocale(url, provider, getHelpCenterLocale()) : url;
+    return provider ? SearchSiteSearchProviders.withHelpCenterLocale(url, provider, getHelpCenterLocale()) : url;
   }
 
   function isAiSiteSearchProvider(provider: Partial<SiteSearchProvider> | null | undefined): boolean {
-    return SEARCH_UTILS.isAiSiteSearchProvider(provider);
+    return SearchSiteSearchProviders.isAiSiteSearchProvider(provider);
   }
 
   function isSearchEngineSiteSearchProvider(provider: Partial<SiteSearchProvider> | null | undefined): boolean {
-    return SEARCH_UTILS.isSearchEngineSiteSearchProvider(provider);
+    return SearchSiteSearchProviders.isSearchEngineSiteSearchProvider(provider);
   }
 
   function isAggregateSearchProvider(provider: Partial<SiteSearchProvider> | null): boolean {
@@ -95,7 +91,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
   }
 
   function isInteractiveSiteSearchProvider(provider: SiteSearchProvider): boolean {
-    return SEARCH_UTILS.isInteractiveSiteSearchProvider(provider);
+    return SearchSiteSearchProviders.isInteractiveSiteSearchProvider(provider);
   }
 
   function getAggregateSearchRequestController(): ReturnType<typeof AGGREGATE_SEARCH_SURFACE.createAggregateSearchRequestController> {
@@ -269,7 +265,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
       chromeApi: chrome,
       settingsStore: overlayState.settings.store,
       defaultProviders: overlayState.defaultSiteSearchProviders,
-      mergeCustomProviders: SEARCH_UTILS.mergeCustomProviders
+      mergeCustomProviders: SearchSiteSearchProviders.mergeCustomProviders
     })).promise;
   }
 
@@ -283,7 +279,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
         overlayState.defaultSiteSearchProviders,
         customItems,
         disabledKeys,
-        SEARCH_UTILS.mergeCustomProviders
+        SearchSiteSearchProviders.mergeCustomProviders
       );
     }), { invalidate: true });
   }

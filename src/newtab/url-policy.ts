@@ -4,13 +4,13 @@ import type { BlacklistRule } from '../domain/blacklist-utils';
 import type * as BlacklistUtils from '../domain/blacklist-utils';
 import type * as ExtensionRoutes from '../domain/extension-routes';
 import type * as LumnoSettings from '../domain/settings';
-import type * as SearchUtils from '../domain/search/search-utils';
 import type { StorageAreaLike } from '../domain/storage-port';
 import * as LumnoUrlGuards from '../platform/url-guards';
 import type { Translate } from './newtab-types';
 import * as FaviconCanonical from '../domain/favicon/canonical';
 import * as FaviconHostPolicy from '../domain/favicon/host-policy';
 import type { FaviconUrlResolver } from '../domain/favicon/resolver';
+import * as SearchBrandSuggestions from '../domain/search/utils/brand-suggestions';
 
 // What the search blacklist reads from a suggestion.
 interface BlacklistableSuggestion {
@@ -35,7 +35,6 @@ interface UrlPolicyDeps {
   SEARCH_BLACKLIST_STORAGE_KEY: string;
   FAVICON_REQUEST_BLACKLIST_STORAGE_KEY: string;
   FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY: string;
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'limitSearchSuggestionsForDisplay'>;
   // The browser's own icon for a page, where _favicon is missing (Firefox).
   getBrowserIconUrl?: (pageUrl: string) => string;
   pageState: UrlPolicyState;
@@ -52,7 +51,6 @@ function createUrlPolicy(deps: UrlPolicyDeps) {
     SEARCH_BLACKLIST_STORAGE_KEY,
     FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
     FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
-    SEARCH_UTILS,
     getBrowserIconUrl
   } = deps;
 
@@ -348,7 +346,7 @@ function createUrlPolicy(deps: UrlPolicyDeps) {
     if (config.uncapped === true) {
       return list || [];
     }
-    return SEARCH_UTILS.limitSearchSuggestionsForDisplay(list, {
+    return SearchBrandSuggestions.limitSearchSuggestionsForDisplay(list, {
       limit: pageState.searchResultDisplayLimit
     });
   }

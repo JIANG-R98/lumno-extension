@@ -3,7 +3,6 @@
 import * as ShortcutIconCache from '../../domain/favicon/shortcut-favicon/persisted';
 import * as BundledIcons from '../../domain/favicon/shortcut-favicon/bundled-icons';
 import type { FaviconDataEntry } from '../../domain/favicon/favicon-cache';
-import type * as SearchUtils from '../../domain/search/search-utils';
 import { getShortcutUrl, isShortcutFolder } from '../../domain/shortcuts-store';
 import type * as ShortcutsStore from '../../domain/shortcuts-store';
 import type {
@@ -51,6 +50,7 @@ import type { PersistShortcuts, PersistShortcutsOptions, ShortcutIconChange, Sho
 import * as FaviconCanonical from '../../domain/favicon/canonical';
 import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
 import type { CachedIconMap, CachedIconSource } from '../../domain/favicon/shortcut-favicon/types';
+import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
 
 interface ShortcutsControllerState {
   newtabShortcuts: ShortcutItem[];
@@ -111,7 +111,6 @@ interface ShortcutsControllerDeps {
   folderItemIconStore: Pick<FolderItemIconStore, 'get' | 'update'>;
   getPageFaviconUrlResolver(): Pick<FaviconUrlResolver,
     'getShortcutFaviconCandidateUrl' | 'getShortcutFaviconFetchCandidates'> | null;
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'getDefaultSiteSearchProviders'>;
   getExtensionResourceUrl(resourcePath: string): string;
   sendRuntimeMessage: SendRuntimeMessage;
   shortcutFaviconStore: Pick<ShortcutFaviconStore, 'readAll' | 'mergeAll' | 'retainAll'>;
@@ -298,7 +297,6 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     shortcutIconStore,
     folderItemIconStore,
     getPageFaviconUrlResolver,
-    SEARCH_UTILS,
     getExtensionResourceUrl,
     sendRuntimeMessage,
     shortcutFaviconStore,
@@ -766,7 +764,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
   function getShortcutDialogBuiltinIconUrl(url: unknown): string {
     const pageUrl = NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url);
     const assetPath = BundledIcons.getBundledShortcutIconAssetPath(
-      pageUrl, SEARCH_UTILS.getDefaultSiteSearchProviders()
+      pageUrl, SearchSiteSearchProviders.getDefaultSiteSearchProviders()
     );
     return assetPath ? getExtensionResourceUrl(assetPath) : '';
   }

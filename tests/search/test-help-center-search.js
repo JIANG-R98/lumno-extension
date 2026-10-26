@@ -8,7 +8,7 @@ const helpCenterSearch = {
 };
 const helpCenterIndex = require('../../src/platform/help-center-index.ts');
 const communityLinks = require('../../src/domain/community-links.ts');
-const searchUtils = require('../../src/domain/search/search-utils.ts');
+const searchUtils = require('../helpers/search-utils.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');

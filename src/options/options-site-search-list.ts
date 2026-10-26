@@ -2,7 +2,6 @@
 // icons and copy, saving provider state and disabled keys, and refreshing
 // the lists when providers change.
 import type { AggregateSearch } from '../domain/search/aggregate-search-store';
-import type * as SearchUtils from '../domain/search/search-utils';
 import { readSiteSearchProviders } from '../domain/search/site-search-provider-reader';
 import type { SiteSearchProvider } from '../domain/search/types';
 import { siteSearchCustom, siteSearchDisabled } from '../domain/settings/search';
@@ -23,6 +22,7 @@ import type {
   SiteSearchProviderItemModel,
   SiteSearchSaveResult
 } from './react/site-search-list';
+import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-providers';
 
 // A provider as a list shows it: built-in or custom.
 type ListedSiteSearchProvider = SiteSearchProvider & { _xIsCustom: boolean };
@@ -53,7 +53,6 @@ interface SiteSearchListState {
 }
 
 interface SiteSearchListDeps {
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'getSiteSearchProviderDisplayNameMessage' | 'isHelpCenterSiteSearchProvider'>;
   getMessage: GetMessage;
   normalizeSiteSearchTemplate(template: unknown): string;
   isSearchEngineSiteSearchProvider(item: Partial<SiteSearchProvider> | null | undefined): boolean;
@@ -86,7 +85,6 @@ function isPresent<T>(value: T | null | undefined): value is T {
 
 function createSiteSearchList(deps: SiteSearchListDeps) {
   const {
-    SEARCH_UTILS,
     getMessage,
     normalizeSiteSearchTemplate,
     isSearchEngineSiteSearchProvider,
@@ -121,7 +119,7 @@ function createSiteSearchList(deps: SiteSearchListDeps) {
     if (!item || item._xIsCustom) {
       return item ? (item.name || item.key) : '';
     }
-    const mapping = SEARCH_UTILS.getSiteSearchProviderDisplayNameMessage(item);
+    const mapping = SearchSiteSearchProviders.getSiteSearchProviderDisplayNameMessage(item);
     if (!mapping) {
       return item.name || item.key;
     }
@@ -330,7 +328,7 @@ function createSiteSearchList(deps: SiteSearchListDeps) {
         optionsState.disabledSiteSearchKeys
       ),
       ...optionsState.customSiteSearchProviders
-    ].some((item) => SEARCH_UTILS.isHelpCenterSiteSearchProvider(item));
+    ].some((item) => SearchSiteSearchProviders.isHelpCenterSiteSearchProvider(item));
     if (enabled !== optionsState.helpCenterSearchEnabled) {
       optionsState.helpCenterSearchEnabled = enabled;
       renderFeedbackSupport();

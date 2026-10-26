@@ -2,7 +2,6 @@
 // removing and clearing aggregate searches, and their error copy.
 import type * as AggregateSearchStore from '../domain/search/aggregate-search-store';
 import type { AggregateSearch } from '../domain/search/aggregate-search-store';
-import type * as SearchUtils from '../domain/search/search-utils';
 import type { SiteSearchProvider } from '../domain/search/types';
 import * as LumnoAggregateSearchStorage from '../platform/aggregate-search-storage';
 import { aggregateSearches } from '../domain/settings/search';
@@ -20,6 +19,7 @@ import type {
   AggregateSearchSaveResult
 } from './react/aggregate-search-list';
 import type { ReorderCopyModel } from './react/reorder-buttons';
+import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-providers';
 
 interface AggregateSearchListState {
   aggregateSearches: AggregateSearch[];
@@ -36,7 +36,6 @@ interface AggregateSearchListDeps {
     'normalizeAggregateSearches' | 'getProviderSourceRef' | 'getAggregateSearchAvailability' |
     'serializeAggregateSearches' | 'getSerializedStorageByteLength' | 'SYNC_ITEM_BYTE_BUDGET'>;
   aggregateSearchModel: ReturnType<typeof AggregateSearchModule.createAggregateSearchModel>;
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'mergeCustomProviders'>;
   isAiSiteSearchProvider(item: Partial<SiteSearchProvider> | null | undefined): boolean;
   isSearchEngineSiteSearchProvider(item: Partial<SiteSearchProvider> | null | undefined): boolean;
   getMessage: GetMessage;
@@ -65,7 +64,6 @@ function createAggregateSearchList(deps: AggregateSearchListDeps) {
   const {
     AGGREGATE_SEARCH_STORE,
     aggregateSearchModel,
-    SEARCH_UTILS,
     isAiSiteSearchProvider,
     getMessage,
     isSearchEngineSiteSearchProvider,
@@ -112,7 +110,7 @@ function createAggregateSearchList(deps: AggregateSearchListDeps) {
     const aggregateCustomProviders = optionsState.customSiteSearchProviderIdsReady
       ? optionsState.customSiteSearchProviders
       : optionsState.customSiteSearchProviders.filter((item) => String(item.id || '').trim());
-    return SEARCH_UTILS.mergeCustomProviders(activeDefaults, aggregateCustomProviders);
+    return SearchSiteSearchProviders.mergeCustomProviders(activeDefaults, aggregateCustomProviders);
   }
 
   function getAggregateSearchProviderGroup(provider: SiteSearchProvider): AggregateProviderGroup {

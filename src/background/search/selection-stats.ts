@@ -1,6 +1,5 @@
 // Which suggestion the user picked for a query (this device only), and the
 // boost it gives that page the next time.
-import * as SEARCH_UTILS from '../../domain/search/search-utils';
 import { workerSettings } from '../worker-context';
 import { deriveFromSetting } from '../../platform/settings-store';
 import type {
@@ -11,11 +10,13 @@ import type {
 } from '../../domain/search/types';
 import { searchSelectionStats } from '../../domain/settings/search';
 import { isRecord } from './types';
+import * as SearchRelevanceScore from '../../domain/search/utils/relevance-score';
+import * as SelectionStatsRules from '../../domain/search/utils/selection-stats';
 
 const getSearchSelectionStats = deriveFromSetting(workerSettings, searchSelectionStats, (stored) => normalizeSearchSelectionStats(stored));
 
 function normalizeSearchSelectionStats(rawStats: unknown): SearchSelectionStats {
-  return SEARCH_UTILS.normalizeSearchSelectionStats(rawStats);
+  return SelectionStatsRules.normalizeSearchSelectionStats(rawStats);
 }
 
 function loadSearchSelectionStats(): Promise<SearchSelectionStats> {
@@ -62,7 +63,7 @@ function recordSearchSuggestionSelection(selection: unknown): Promise<{ ok: bool
   };
   return loadSearchSelectionStats()
     .then((stats) => {
-      const updatedStats = SEARCH_UTILS.recordSearchSelectionInStats(stats, recorded);
+      const updatedStats = SelectionStatsRules.recordSearchSelectionInStats(stats, recorded);
       return saveSearchSelectionStats(updatedStats);
     })
     .then((ok) => ({ ok: ok === true }));
@@ -74,7 +75,7 @@ function getSearchSelectionBoost(
   stats: SearchSelectionStats,
   options: SearchRankingOptions
 ): number {
-  return SEARCH_UTILS.getSearchSelectionBoost(item, context, stats, options);
+  return SearchRelevanceScore.getSearchSelectionBoost(item, context, stats, options);
 }
 
 

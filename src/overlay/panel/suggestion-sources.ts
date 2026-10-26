@@ -2,8 +2,6 @@
 // answers, and the update that merges local, tab and remote results.
 import type { ShortcutRule } from '../../domain/messages';
 import type { AggregateSearch } from '../../domain/search/aggregate-search-store';
-import * as LumnoSearchUtils from '../../domain/search/search-utils';
-import type * as SearchUtils from '../../domain/search/search-utils';
 import type * as SuggestionActionModel from '../../domain/search/suggestion-action-model';
 import type { LocalSearchScope, SiteSearchProvider, SuggestionLike } from '../../domain/search/types';
 import type * as Settings from '../../domain/settings';
@@ -29,6 +27,9 @@ import type {
 } from './types';
 import { shortcutRulesCache } from '../../shared/search/shortcut-rules-cache';
 import * as Search from '../../domain/search/help-center/search';
+import * as SearchDirectNavigation from '../../domain/search/utils/direct-navigation';
+import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
+import * as SearchSuggestionSlate from '../../domain/search/utils/suggestion-slate';
 
 interface SuggestionSourcesState {
   settings: Pick<OverlaySettings, 'get'>;
@@ -67,8 +68,6 @@ interface SuggestionSourcesDeps {
   formatMessage: FormatMessage;
   t: Translate;
   SETTINGS: Pick<typeof Settings, 'normalizeLocale'>;
-  SEARCH_UTILS: Pick<typeof SearchUtils,
-    'isHelpCenterSiteSearchProvider' | 'composeSearchFirstSuggestionSlate' | 'rankSearchSuggestionSlate'>;
   SUGGESTION_ACTION_MODEL: Pick<typeof SuggestionActionModel, 'getSuggestionUpdateKind' | 'getActionContextKey'>;
   COMMUNITY_LINKS: Pick<typeof CommunityLinks, 'load' | 'getLinks' | 'getCommunityChannel'>;
   getPageFaviconCandidateUrl(url: string): string;
@@ -146,7 +145,6 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
     SUGGESTION_ACTION_MODEL,
     getSystemLocale,
     SETTINGS,
-    SEARCH_UTILS,
     getProviderIcon,
     COMMUNITY_LINKS,
     t,
@@ -280,7 +278,7 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
   }
 
   function getDirectNavigationUrl(input: string): string {
-    return LumnoSearchUtils.getDirectNavigationUrl(input);
+    return SearchDirectNavigation.getDirectNavigationUrl(input);
   }
 
   // The row that opens a typed address, or null when it is no address.
@@ -339,7 +337,7 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
   // The help pages matching the query while the help center site search is on.
   function getHelpCenterSuggestions(query: string): OverlaySuggestion[] {
     const provider = overlayState.siteSearchState;
-    if (!provider || !SEARCH_UTILS.isHelpCenterSiteSearchProvider(provider)) {
+    if (!provider || !SearchSiteSearchProviders.isHelpCenterSiteSearchProvider(provider)) {
       return [];
     }
     if (!helpCenterSuggestionSource) {
@@ -554,7 +552,7 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
           !modeCommandActive &&
           !siteSearchQueryModeActive &&
           !hasDirectUrlSuggestion) {
-        allSuggestions = SEARCH_UTILS.composeSearchFirstSuggestionSlate(allSuggestions, {
+        allSuggestions = SearchSuggestionSlate.composeSearchFirstSuggestionSlate(allSuggestions, {
           limit: overlayState.overlaySearchResultDisplayLimit
         });
       }
@@ -566,7 +564,7 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
       let mergedProvider: SiteSearchProvider | null = null;
       let primarySuggestion: OverlaySuggestion | null = null;
       if (!localSearchQueryModeActive && !slashCommandModeActive && !modeCommandActive && !hasCommand) {
-        const rankedSlate = SEARCH_UTILS.rankSearchSuggestionSlate(allSuggestions, {
+        const rankedSlate = SearchSuggestionSlate.rankSearchSuggestionSlate(allSuggestions, {
           query,
           rawQuery: overlayState.latestRawInputValue,
           triggerInput: rawTagInput,

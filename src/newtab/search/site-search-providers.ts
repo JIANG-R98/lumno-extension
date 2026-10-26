@@ -5,7 +5,6 @@ import type { OpenDisposition } from '../../domain/messages';
 import type * as AggregateSearchStore from '../../domain/search/aggregate-search-store';
 import type { AggregateScopeProvider, AggregateSearch } from '../../domain/search/aggregate-search-store';
 import type * as AggregateSearchSurface from '../../domain/search/aggregate-search-surface';
-import type * as SearchUtils from '../../domain/search/search-utils';
 import { readSiteSearchProviders } from '../../domain/search/site-search-provider-reader';
 import type {
   LocalSearchScope,
@@ -25,6 +24,10 @@ import type { ActiveLocalScope } from './search-types';
 import type { RemixIconName } from '../../shared/ui/remix-icon';
 import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
 import type { CachedIconMap, IconCacheOptions } from '../../domain/favicon/shortcut-favicon/types';
+import * as SearchNavigationMatching from '../../domain/search/utils/navigation-matching';
+import * as SearchSiteSearchMatching from '../../domain/search/utils/site-search-matching';
+import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
+import * as SearchSuggestionSlate from '../../domain/search/utils/suggestion-slate';
 
 interface SiteSearchProvidersState {
   // Icons saved for site search providers, by page URL.
@@ -41,19 +44,6 @@ interface SiteSearchProvidersState {
 }
 
 interface SiteSearchProvidersDeps {
-  SEARCH_UTILS: Pick<typeof SearchUtils,
-    | 'withHelpCenterLocale'
-    | 'isAiSiteSearchProvider'
-    | 'isSearchEngineSiteSearchProvider'
-    | 'isInteractiveSiteSearchProvider'
-    | 'mergeCustomProviders'
-    | 'getSiteSearchProviderDisplayNameMessage'
-    | 'getInlineSiteSearchCandidate'
-    | 'promoteStrongNavigationMatch'
-    | 'getKeywordSearchSuggestionState'
-    | 'getSiteSearchProviderHost'
-    | 'getSiteSearchTriggerCandidate'
-    | 'findLocalSearchScope'>;
   AGGREGATE_SEARCH_STORE: Pick<typeof AggregateSearchStore, 'isAggregateSearchProvider' | 'createScopeProvider'>;
   AGGREGATE_SEARCH_SURFACE: Pick<typeof AggregateSearchSurface, 'createAggregateSearchRequestController'>;
   showToast: ShowToast;
@@ -68,7 +58,7 @@ interface SiteSearchProvidersDeps {
   SITE_SEARCH_DISABLED_STORAGE_KEY: string;
   defaultSiteSearchProviders: SiteSearchProvider[];
   formatMessage: FormatMessage;
-  getDirectNavigationUrl: NonNullable<Parameters<typeof SearchUtils.promoteStrongNavigationMatch>[2]>['getDirectNavigationUrl'];
+  getDirectNavigationUrl: NonNullable<Parameters<typeof SearchNavigationMatching.promoteStrongNavigationMatch>[2]>['getDirectNavigationUrl'];
   getUrlDisplay(url: string): string;
   getHelpCenterLocale?(): string;
   SETTINGS: Pick<typeof Settings, 'searchResultSourceTypes' | 'searchResultDisplayLimit'>;
@@ -83,7 +73,6 @@ interface SiteSearchProviderLoad {
 
 function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
   const {
-    SEARCH_UTILS,
     AGGREGATE_SEARCH_STORE,
     AGGREGATE_SEARCH_SURFACE,
     showToast,
@@ -116,16 +105,16 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     }
     const url = template.replace(/\{query\}/g, encodeURIComponent(query));
     return provider && typeof getHelpCenterLocale === 'function'
-      ? SEARCH_UTILS.withHelpCenterLocale(url, provider, getHelpCenterLocale())
+      ? SearchSiteSearchProviders.withHelpCenterLocale(url, provider, getHelpCenterLocale())
       : url;
   }
 
   function isAiSiteSearchProvider(provider: Partial<SiteSearchProvider> | null | undefined): boolean {
-    return SEARCH_UTILS.isAiSiteSearchProvider(provider);
+    return SearchSiteSearchProviders.isAiSiteSearchProvider(provider);
   }
 
   function isSearchEngineSiteSearchProvider(provider: SiteSearchProvider | null | undefined): boolean {
-    return SEARCH_UTILS.isSearchEngineSiteSearchProvider(provider);
+    return SearchSiteSearchProviders.isSearchEngineSiteSearchProvider(provider);
   }
 
   function isAggregateSearchProvider(provider: SiteSearchProvider | null | undefined): boolean {
@@ -133,7 +122,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
   }
 
   function isInteractiveSiteSearchProvider(provider: SiteSearchProvider | null | undefined): boolean {
-    return SEARCH_UTILS.isInteractiveSiteSearchProvider(provider);
+    return SearchSiteSearchProviders.isInteractiveSiteSearchProvider(provider);
   }
 
   function getAggregateSearchRequestController(): ReturnType<typeof AggregateSearchSurface.createAggregateSearchRequestController> {
@@ -261,7 +250,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
         disabled: SITE_SEARCH_DISABLED_STORAGE_KEY
       },
       defaultProviders: defaultSiteSearchProviders,
-      mergeCustomProviders: SEARCH_UTILS.mergeCustomProviders,
+      mergeCustomProviders: SearchSiteSearchProviders.mergeCustomProviders,
       getResourceUrl: getExtensionResourceUrl
     })).promise;
   }
@@ -277,7 +266,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
           defaultSiteSearchProviders,
           customItems,
           disabledKeys,
-          SEARCH_UTILS.mergeCustomProviders
+          SearchSiteSearchProviders.mergeCustomProviders
         );
       });
     }, { invalidate: true });
@@ -324,7 +313,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     if (!provider) {
       return t('site_search_default', '站内');
     }
-    const mapping = SEARCH_UTILS.getSiteSearchProviderDisplayNameMessage(provider);
+    const mapping = SearchSiteSearchProviders.getSiteSearchProviderDisplayNameMessage(provider);
     if (mapping) {
       return t(mapping.messageKey, mapping.fallback);
     }
@@ -362,21 +351,21 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
   }
 
   function getInlineSiteSearchCandidate(
-    ...args: Parameters<typeof SearchUtils.getInlineSiteSearchCandidate>
-  ): ReturnType<typeof SearchUtils.getInlineSiteSearchCandidate> {
+    ...args: Parameters<typeof SearchSiteSearchMatching.getInlineSiteSearchCandidate>
+  ): ReturnType<typeof SearchSiteSearchMatching.getInlineSiteSearchCandidate> {
     const [input, providers] = args;
-    return SEARCH_UTILS.getInlineSiteSearchCandidate(input, providers);
+    return SearchSiteSearchMatching.getInlineSiteSearchCandidate(input, providers);
   }
 
   function promoteStrongNavigationMatch<T extends SuggestionLike>(list: T[] | null | undefined, rawQuery: unknown): T | null {
-    return SEARCH_UTILS.promoteStrongNavigationMatch(list, rawQuery, {
+    return SearchNavigationMatching.promoteStrongNavigationMatch(list, rawQuery, {
       getDirectNavigationUrl,
       getUrlDisplay
     });
   }
 
   function getKeywordSearchSuggestionState<T extends SuggestionLike>(list: readonly T[] | null | undefined) {
-    return SEARCH_UTILS.getKeywordSearchSuggestionState(list);
+    return SearchSuggestionSlate.getKeywordSearchSuggestionState(list);
   }
 
   function matchesTopSitePrefix(suggestion: SuggestionLike | null | undefined, input: unknown): boolean {
@@ -449,15 +438,15 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
   }
 
   function getProviderHost(provider: Partial<SiteSearchProvider> | null | undefined): string {
-    return SEARCH_UTILS.getSiteSearchProviderHost(provider);
+    return SearchSiteSearchProviders.getSiteSearchProviderHost(provider);
   }
 
   function getSiteSearchTriggerCandidate(
     input: unknown,
-    providers: Parameters<typeof SearchUtils.getSiteSearchTriggerCandidate>[1],
+    providers: Parameters<typeof SearchSiteSearchMatching.getSiteSearchTriggerCandidate>[1],
     topSiteMatch?: SuggestionLike | null
-  ): ReturnType<typeof SearchUtils.getSiteSearchTriggerCandidate> {
-    return SEARCH_UTILS.getSiteSearchTriggerCandidate(input, providers, topSiteMatch, {
+  ): ReturnType<typeof SearchSiteSearchMatching.getSiteSearchTriggerCandidate> {
+    return SearchSiteSearchMatching.getSiteSearchTriggerCandidate(input, providers, topSiteMatch, {
       matchesTopSitePrefix
     });
   }
@@ -474,7 +463,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     input: unknown,
     rules: ReadonlyArray<LocalSearchScopeRule | null | undefined> | null | undefined
   ): LocalSearchScope | null {
-    const scope = SEARCH_UTILS.findLocalSearchScope(input, rules);
+    const scope = SearchSiteSearchProviders.findLocalSearchScope(input, rules);
     if (!scope || !pageState.enabledSearchResultSourceTypes.includes(scope.sourceType)) {
       return null;
     }

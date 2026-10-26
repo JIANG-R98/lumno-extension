@@ -2,9 +2,9 @@
 // normalizing providers, finding key conflicts, and holding storage
 // refreshes back while a save settles.
 import type { AggregateSearch } from '../domain/search/aggregate-search-store';
-import type * as SearchUtils from '../domain/search/search-utils';
 import type { SiteSearchProvider } from '../domain/search/types';
 import type { createSiteSearchModel } from './options-site-search';
+import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-providers';
 
 interface SiteSearchFormState {
   siteSearchModel: Pick<ReturnType<typeof createSiteSearchModel>, 'findSiteSearchKeyConflict'>;
@@ -16,34 +16,31 @@ interface SiteSearchFormState {
 }
 
 interface SiteSearchFormDeps {
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'normalizeSiteSearchTemplate' | 'isAiSiteSearchProvider' |
-    'isSearchEngineSiteSearchProvider' | 'normalizeSiteSearchProvider'>;
   optionsState: SiteSearchFormState;
 }
 
 function createSiteSearchForm(deps: SiteSearchFormDeps) {
-  const { SEARCH_UTILS } = deps;
 
   // The page state object shared with options.js and the other modules.
   const optionsState = deps.optionsState;
 
   function normalizeSiteSearchTemplate(template: unknown): string {
-    return SEARCH_UTILS.normalizeSiteSearchTemplate(template);
+    return SearchSiteSearchProviders.normalizeSiteSearchTemplate(template);
   }
 
   function isAiSiteSearchProvider(item: Partial<SiteSearchProvider> | null | undefined): boolean {
-    return SEARCH_UTILS.isAiSiteSearchProvider(item);
+    return SearchSiteSearchProviders.isAiSiteSearchProvider(item);
   }
 
   function isSearchEngineSiteSearchProvider(item: Partial<SiteSearchProvider> | null | undefined): boolean {
-    return SEARCH_UTILS.isSearchEngineSiteSearchProvider(item);
+    return SearchSiteSearchProviders.isSearchEngineSiteSearchProvider(item);
   }
 
   function normalizeSiteSearchProvider(
     item: Partial<SiteSearchProvider> | null | undefined,
     baseItem?: Partial<SiteSearchProvider> | null
   ): SiteSearchProvider | null {
-    return SEARCH_UTILS.normalizeSiteSearchProvider(item, baseItem);
+    return SearchSiteSearchProviders.normalizeSiteSearchProvider(item, baseItem);
   }
 
   function findSiteSearchKeyConflict(

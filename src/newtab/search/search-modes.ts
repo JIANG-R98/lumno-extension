@@ -4,7 +4,6 @@ import type * as AggregateSearchStore from '../../domain/search/aggregate-search
 import type { AggregateSearch } from '../../domain/search/aggregate-search-store';
 import * as SEARCH_SOURCE_ORDER from '../../domain/search/search-source-order';
 import type { SearchSourceOrder } from '../../domain/search/search-source-order';
-import type * as SearchUtils from '../../domain/search/search-utils';
 import type { LocalSearchScope, SearchSourceType, SiteSearchProvider } from '../../domain/search/types';
 import type { SearchInputParts } from '../../shared/react/search-input';
 import type { Suggestion } from '../../shared/react/search/suggestion-list/types';
@@ -17,6 +16,7 @@ import { getAggregateSearchId } from './search-types';
 import type { ActiveLocalScope, AutocompleteState, InlineSearchState } from './search-types';
 import type { SiteSearchProviders } from './site-search-providers';
 import { shortcutRulesCache } from '../../shared/search/shortcut-rules-cache';
+import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
 
 // A site search the typed text turns into on Tab.
 interface SiteSearchTrigger {
@@ -50,7 +50,6 @@ interface SearchModesState {
 }
 
 interface SearchModesDeps {
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'getSearchEngineSiteSearchProvider'>;
   defaultSiteSearchProviders: SiteSearchProvider[];
   getSearchModeProviderId: SiteSearchProviders['getSearchModeProviderId'];
   AGGREGATE_SEARCH_STORE: Pick<typeof AggregateSearchStore, 'isAggregateSearchAvailable' | 'mergeTriggerProviders'>;
@@ -94,7 +93,6 @@ const LOCAL_SCOPE_SOURCES: readonly SearchSourceType[] = ['topSite', 'bookmark',
 
 function createSearchModes(deps: SearchModesDeps) {
   const {
-    SEARCH_UTILS,
     defaultSiteSearchProviders,
     getSearchModeProviderId,
     AGGREGATE_SEARCH_STORE,
@@ -147,7 +145,7 @@ function createSearchModes(deps: SearchModesDeps) {
   }
 
   function getDefaultSearchModeProvider(providers: readonly SiteSearchProvider[]): SiteSearchProvider | null {
-    return SEARCH_UTILS.getSearchEngineSiteSearchProvider(
+    return SearchSiteSearchProviders.getSearchEngineSiteSearchProvider(
       pageState.defaultSearchEngineState,
       providers
     );

@@ -25,6 +25,7 @@ import type { TooltipController } from '../../shared/ui/tooltip';
 import type { ActivationEvent } from './result-activation';
 import type { OverlaySuggestion } from './types';
 import { getSuggestionsViewApi } from '../../shared/react/search/suggestions';
+import * as SearchDirectNavigation from '../../domain/search/utils/direct-navigation';
 
 // What the view takes for an option this module passes straight through.
 type ViewOption<K extends keyof SuggestionsViewOptions> = NonNullable<SuggestionsViewOptions[K]>;
@@ -107,7 +108,6 @@ interface SuggestionsRenderDeps {
   } | null;
   t: ViewOption<'t'>;
   formatMessage: ViewOption<'formatMessage'>;
-  SEARCH_UTILS: { sanitizeDisplayText: ViewOption<'sanitizeDisplayText'> };
   shouldBlockOverlayFaviconForHost: ViewOption<'shouldBlockFaviconForHost'>;
   isLocalNetworkHost: ViewOption<'isLocalNetworkHost'>;
   getChromeFaviconUrl: ViewOption<'getChromeFaviconUrl'>;
@@ -178,7 +178,6 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
     getOverlayFaviconUrlResolver,
     t,
     formatMessage,
-    SEARCH_UTILS,
     shouldBlockOverlayFaviconForHost,
     isLocalNetworkHost,
     getChromeFaviconUrl,
@@ -509,7 +508,7 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
       items: suggestionItems,
       t,
       formatMessage,
-      sanitizeDisplayText: SEARCH_UTILS.sanitizeDisplayText,
+      sanitizeDisplayText: SearchDirectNavigation.sanitizeDisplayText,
       formatTabRankDebugText,
       isTabRankScoreDebugEnabled: () => overlayState.overlayTabScoreDebugEnabled,
       shouldBlockFaviconForHost: shouldBlockOverlayFaviconForHost,

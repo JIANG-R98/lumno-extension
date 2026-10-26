@@ -2,7 +2,6 @@
 // button, close other tabs, the input's right padding, and which action
 // buttons the page shows.
 import type * as ExtensionRoutes from '../../domain/extension-routes';
-import type * as SearchUtils from '../../domain/search/search-utils';
 import type { SiteSearchProvider } from '../../domain/search/types';
 import type { StorageAreaLike, StorageItems } from '../../domain/storage-port';
 import * as LumnoMessaging from '../../platform/messaging';
@@ -13,6 +12,7 @@ import type * as FeatureHints from '../../shared/ui/feature-hints';
 import type { FeatureHintController } from '../../shared/ui/feature-hints';
 import type { FormatMessage, Translate } from '../newtab-types';
 import type { PageNavigation } from '../page-navigation';
+import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
 
 interface SearchBoxControlsState {
   inputParts: SearchInputParts | null;
@@ -30,7 +30,6 @@ interface SearchBoxControlsState {
 }
 
 interface SearchBoxControlsDeps {
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'isHelpCenterSiteSearchProvider'>;
   dismissHelpCenterAskHint(): void;
   rightIcon: HTMLElement | null;
   formatMessage: FormatMessage;
@@ -57,7 +56,6 @@ interface SearchBoxControlsDeps {
 
 function createSearchBoxControls(deps: SearchBoxControlsDeps) {
   const {
-    SEARCH_UTILS,
     dismissHelpCenterAskHint,
     rightIcon,
     formatMessage,
@@ -90,7 +88,7 @@ function createSearchBoxControls(deps: SearchBoxControlsDeps) {
 
   inputParts.input.addEventListener('input', function() {
     // Typing a question in the Help Center search means the tip has done its job.
-    if (pageState.siteSearchState && SEARCH_UTILS.isHelpCenterSiteSearchProvider(pageState.siteSearchState)) {
+    if (pageState.siteSearchState && SearchSiteSearchProviders.isHelpCenterSiteSearchProvider(pageState.siteSearchState)) {
       dismissHelpCenterAskHint();
     }
   });

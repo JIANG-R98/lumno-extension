@@ -2,7 +2,6 @@
 // engine, result priority, sources and limit, open-in-new-tab, number
 // shortcuts, simple mode and the search and favicon blacklists.
 import type { BlacklistRule } from '../../domain/blacklist-utils';
-import type * as SearchUtils from '../../domain/search/search-utils';
 import type { SearchSourceType, SiteSearchProvider } from '../../domain/search/types';
 import type * as Settings from '../../domain/settings';
 import type { NewtabOpenInNewTab, SearchResultPriority } from '../../domain/settings';
@@ -15,6 +14,7 @@ import { readStoredSearchEngineState } from './default-search-engine';
 import type { DefaultSearchEngineState } from './default-search-engine';
 import type { SearchModeController } from './search-mode-controller';
 import type { ActiveLocalScope, RenderSuggestions, RequestSuggestions } from './search-types';
+import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
 
 interface SearchSettingsSyncState {
   defaultSearchEngineState: DefaultSearchEngineState;
@@ -44,7 +44,6 @@ interface SearchSettingsSyncDeps {
   loadDefaultSearchEngineState(): void;
   storageChanges: Pick<StorageChangeRegistry, 'on'>;
   DEFAULT_SEARCH_ENGINE_STORAGE_KEY: string;
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'isRetiredSearchEngineState'>;
   SEARCH_RESULT_PRIORITY_STORAGE_KEY: string;
   normalizeSearchResultPriority(value: unknown): SearchResultPriority;
   SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY: string;
@@ -86,7 +85,6 @@ function createSearchSettingsSync(deps: SearchSettingsSyncDeps): void {
     loadDefaultSearchEngineState,
     storageChanges,
     DEFAULT_SEARCH_ENGINE_STORAGE_KEY,
-    SEARCH_UTILS,
     SEARCH_RESULT_PRIORITY_STORAGE_KEY,
     normalizeSearchResultPriority,
     SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
@@ -129,7 +127,7 @@ function createSearchSettingsSync(deps: SearchSettingsSyncDeps): void {
   storageChanges.on(DEFAULT_SEARCH_ENGINE_STORAGE_KEY, (changes) => {
     const nextValue = readStoredSearchEngineState(
       changes[DEFAULT_SEARCH_ENGINE_STORAGE_KEY].newValue,
-      SEARCH_UTILS.isRetiredSearchEngineState
+      SearchSiteSearchProviders.isRetiredSearchEngineState
     );
     if (nextValue) {
       pageState.defaultSearchEngineState = nextValue;

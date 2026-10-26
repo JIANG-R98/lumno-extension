@@ -13,7 +13,6 @@ import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store
 import * as AGGREGATE_SEARCH_SURFACE from '../domain/search/aggregate-search-surface';
 import * as LumnoImeKeyGuard from '../domain/search/ime-key-guard';
 import * as SEARCH_INPUT_HISTORY from '../domain/search/search-input-history';
-import * as SEARCH_UTILS from '../domain/search/search-utils';
 import * as SITE_SEARCH_STORE from '../shared/search/site-search-store';
 import * as SUGGESTION_ACTION_MODEL from '../domain/search/suggestion-action-model';
 import * as SUGGESTION_NAVIGATION from '../shared/search/suggestion-navigation';
@@ -217,6 +216,7 @@ import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
 import * as FaviconBrowserIconIndex from '../domain/favicon/browser-icon-index';
 import * as BundledIcons from '../domain/favicon/shortcut-favicon/bundled-icons';
 import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted';
+import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-providers';
 
 (function() {
   // Page state shared with the modules split out of this file: each module
@@ -346,7 +346,6 @@ import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted
   } = NEWTAB_PAGE_LANGUAGE.createPageLanguage({
     languageChangeListeners,
     SETTINGS,
-    SEARCH_UTILS,
     getExtensionResourceUrl,
     pageState
   });
@@ -681,7 +680,7 @@ import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted
   const LEGACY_FOLDER_COLORS_STORAGE_KEY = bookmarkFolderColorsLegacy.key;
   const FOLDER_COLOR_REFS_STORAGE_KEY = bookmarkFolderColorRefs.key;
 
-  const defaultSiteSearchProviders = SEARCH_UTILS.getDefaultSiteSearchProviders();
+  const defaultSiteSearchProviders = SearchSiteSearchProviders.getDefaultSiteSearchProviders();
 
 
   const {
@@ -713,7 +712,6 @@ import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted
     getLocalSearchScopeIconName,
     getSearchModeProviderId
   } = NEWTAB_SITE_SEARCH_PROVIDERS.createSiteSearchProviders({
-    SEARCH_UTILS,
     AGGREGATE_SEARCH_STORE,
     AGGREGATE_SEARCH_SURFACE,
     showToast,
@@ -852,7 +850,6 @@ import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted
     SEARCH_BLACKLIST_STORAGE_KEY: searchBlacklist.key,
     FAVICON_REQUEST_BLACKLIST_STORAGE_KEY: faviconRequestBlacklist.key,
     FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY: faviconEnhancedFetchEnabled.key,
-    SEARCH_UTILS,
     getBrowserIconUrl: pageState.firefoxBrowserIcons ? pageState.firefoxBrowserIcons.get : undefined,
     pageState
   });
@@ -1233,7 +1230,6 @@ import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted
     t,
     storageArea,
     DEFAULT_SEARCH_ENGINE_STORAGE_KEY: defaultSearchEngine.key,
-    SEARCH_UTILS,
     pageState
   });
 
@@ -1654,7 +1650,6 @@ import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted
     loadDefaultSearchEngineState,
     storageChanges,
     DEFAULT_SEARCH_ENGINE_STORAGE_KEY: defaultSearchEngine.key,
-    SEARCH_UTILS,
     SEARCH_RESULT_PRIORITY_STORAGE_KEY: searchResultPriority.key,
     normalizeSearchResultPriority,
     SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY: searchResultSourceTypes.key,
@@ -1992,7 +1987,6 @@ import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted
     shortcutIconStore,
     folderItemIconStore,
     getPageFaviconUrlResolver,
-    SEARCH_UTILS,
     getExtensionResourceUrl,
     sendRuntimeMessage,
     shortcutFaviconStore,
@@ -2520,7 +2514,6 @@ import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted
     clearSiteSearch,
     handleSearchTabKey
   } = NEWTAB_SEARCH_MODES.createSearchModes({
-    SEARCH_UTILS,
     defaultSiteSearchProviders,
     getSearchModeProviderId,
     AGGREGATE_SEARCH_STORE,
@@ -2580,7 +2573,6 @@ import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted
     getExtensionResourceUrl,
     BROWSER_PROFILE,
     getPageFaviconCandidateUrl,
-    SEARCH_UTILS,
     SUGGESTION_ACTION_MODEL,
     isBackgroundOpenEvent,
     getSurfaceOpenDisposition,
@@ -2673,7 +2665,6 @@ import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted
     buildDefaultSearchUrl,
     getDefaultSearchEngineFaviconUrl,
     isAggregateSearchProvider,
-    SEARCH_UTILS,
     getMatchedOpenTabIdForSuggestion,
     filterBlacklistedSuggestions,
     getKeywordSearchSuggestionState,
@@ -2923,7 +2914,6 @@ import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted
     activateSiteSearch,
     root,
     getSiteSearchProviders,
-    SEARCH_UTILS,
     pageState
   });
 
@@ -2933,7 +2923,6 @@ import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted
     applyNewtabActionButtonVisibility,
     loadNewtabActionButtonVisibility
   } = NEWTAB_SEARCH_BOX_CONTROLS.createSearchBoxControls({
-    SEARCH_UTILS,
     dismissHelpCenterAskHint,
     rightIcon,
     formatMessage,

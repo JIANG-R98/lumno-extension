@@ -7,7 +7,6 @@ import * as UPDATE_NOTICE from '../shared/update-notice';
 import * as LumnoMessaging from '../platform/messaging';
 import type { CommunityLinks } from '../domain/community-links';
 import type { Disposition, OpenEvent } from '../domain/navigation-disposition';
-import type * as SearchUtils from '../domain/search/search-utils';
 import type { SiteSearchProvider } from '../domain/search/types';
 import type * as LumnoCommunityLinks from '../platform/community-links';
 import type { EngagementNoticeController } from '../shared/engagement-notice';
@@ -16,6 +15,7 @@ import type { FeatureHintController } from '../shared/ui/feature-hints';
 import type { UpdateNoticeController } from '../shared/update-notice';
 import type { Translate } from './newtab-types';
 import { getPageNoticeApi } from './react/page-notice';
+import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-providers';
 
 interface PageNoticesState {
   updateNoticeController: UpdateNoticeController | null;
@@ -47,7 +47,6 @@ interface PageNoticesDeps {
   // The search box's container.
   root: HTMLElement;
   getSiteSearchProviders(): Promise<SiteSearchProvider[]>;
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'isHelpCenterSiteSearchProvider'>;
   pageState: PageNoticesState;
 }
 
@@ -68,8 +67,7 @@ function createPageNotices(deps: PageNoticesDeps) {
     newtabEntryAnimationReadyPromise,
     activateSiteSearch,
     root,
-    getSiteSearchProviders,
-    SEARCH_UTILS
+    getSiteSearchProviders
   } = deps;
 
   // The page state object shared with newtab.js and the other modules.
@@ -299,7 +297,7 @@ function createPageNotices(deps: PageNoticesDeps) {
     }
     const providerReady = getSiteSearchProviders()
       .then((items) => (items || [])
-        .find((item) => SEARCH_UTILS.isHelpCenterSiteSearchProvider(item)) || null)
+        .find((item) => SearchSiteSearchProviders.isHelpCenterSiteSearchProvider(item)) || null)
       .catch(() => null);
     return Promise.all([providerReady, askHint.ready]).then(([provider]) => {
       helpCenterAskProvider = provider;

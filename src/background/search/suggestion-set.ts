@@ -1,10 +1,11 @@
 // The results of one search as they are collected from each source: one row
 // per page, keeping the strongest evidence any source gave for it.
-import * as SEARCH_UTILS from '../../domain/search/search-utils';
 import type { SearchQueryContext, SearchRankingOptions, SearchSelectionStats, SuggestionLike } from '../../domain/search/types';
 import { getSearchSelectionBoost } from './selection-stats';
 import { buildSearchSuggestionFavicon, buildSuggestionReasons } from './suggestion-rows';
 import type { OpenTabItem, RowExtras, SourceItem, SuggestionRow } from './types';
+import * as SearchRelevanceScore from '../../domain/search/utils/relevance-score';
+import * as SearchResultDedup from '../../domain/search/utils/result-dedup';
 
 interface SuggestionSetOptions {
   context: SearchQueryContext;
@@ -13,12 +14,12 @@ interface SuggestionSetOptions {
 }
 
 function getSuggestionKey(item: SourceItem | SuggestionLike | null | undefined): string {
-  return SEARCH_UTILS.buildSearchDedupEntryKey(item);
+  return SearchResultDedup.buildSearchDedupEntryKey(item);
 }
 
 // The rows in ranking order, one per page, at most `limit`.
 function takeRankedUniqueRows(rows: readonly SuggestionRow[], limit: number): SuggestionRow[] {
-  const sorted = rows.slice().sort((a, b) => SEARCH_UTILS.compareSearchSuggestions(a, b));
+  const sorted = rows.slice().sort((a, b) => SearchRelevanceScore.compareSearchSuggestions(a, b));
   const unique: SuggestionRow[] = [];
   const seenKeys = new Set<string>();
   for (let index = 0; index < sorted.length && unique.length < limit; index += 1) {
@@ -79,7 +80,7 @@ class SuggestionSet {
     const { key, index } = this.find(rawItem);
     const existing = typeof index === 'number' ? this.rows[index] : null;
     const item = this.mergeSignals({ ...rawItem, url: rawItem.url }, existing);
-    const baseScore = SEARCH_UTILS.calculateSearchRelevanceScore(item, sourceType, context, scoreOptions);
+    const baseScore = SearchRelevanceScore.calculateSearchRelevanceScore(item, sourceType, context, scoreOptions);
     if (baseScore <= 0 && sourceType !== 'openTab') {
       return null;
     }
@@ -103,7 +104,7 @@ class SuggestionSet {
       ...(item.isTopSite ? { isTopSite: true } : {}),
       ...normalizedExtras
     };
-    const row: SuggestionRow = SEARCH_UTILS.createSearchSuggestion(item, sourceType, score, rowExtras);
+    const row: SuggestionRow = SearchRelevanceScore.createSearchSuggestion(item, sourceType, score, rowExtras);
     this.put(key, index, row);
     return row;
   }

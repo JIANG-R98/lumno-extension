@@ -1,11 +1,11 @@
 // Suggestions from the default search engine: fetching them with a timeout,
 // and the requests a prefetch starts and the query that follows consumes.
-import * as SEARCH_UTILS from '../../domain/search/search-utils';
 import type { MessageSender } from '../message-router';
 import { getSuggestionSource } from '../../domain/search/suggestion-parsers';
 import type { SuggestionResponseKind } from '../../domain/search/suggestion-parsers';
 import type { EngineSuggestionRequest } from './types';
 import { defaultSearchEngineStateReady, getDefaultSearchEngineId } from './default-engine';
+import * as SearchDirectNavigation from '../../domain/search/utils/direct-navigation';
 
 function getSearchEngineSuggestionRequestKey(request: { context?: unknown } | null | undefined, sender: MessageSender | null | undefined): string {
   const senderTabId = sender && sender.tab && typeof sender.tab.id === 'number'
@@ -41,7 +41,7 @@ async function fetchSuggestionResponse(url: string, kind: SuggestionResponseKind
 async function fetchSearchSuggestionsForEngine(query: string, options?: { signal?: AbortSignal } | null): Promise<unknown[]> {
   const source = getSuggestionSource(getDefaultSearchEngineId());
   // A URL, host or path (the prefilled current page among them) stays local.
-  if (!query || !source || SEARCH_UTILS.isUrlLikeSearchQuery(query)) {
+  if (!query || !source || SearchDirectNavigation.isUrlLikeSearchQuery(query)) {
     return [];
   }
   try {
@@ -94,7 +94,7 @@ function shouldPrefetchSearchEngineSuggestions(
   return (context === 'newtab' || context === 'overlay') &&
     Boolean(normalizedQuery) &&
     !normalizedQuery.startsWith('/') &&
-    !SEARCH_UTILS.isUrlLikeSearchQuery(normalizedQuery) &&
+    !SearchDirectNavigation.isUrlLikeSearchQuery(normalizedQuery) &&
     !isScopedLocalSearch;
 }
 

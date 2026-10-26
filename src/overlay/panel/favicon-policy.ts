@@ -2,13 +2,13 @@
 // blacklists, local network hosts, and the display limit for results.
 import * as LumnoBlacklistUtils from '../../domain/blacklist-utils';
 import type { BlacklistRule } from '../../domain/blacklist-utils';
-import type * as SearchUtils from '../../domain/search/search-utils';
 import type * as Settings from '../../domain/settings';
 import * as FaviconCanonical from '../../domain/favicon/canonical';
 import * as FaviconHostPolicy from '../../domain/favicon/host-policy';
 import * as FaviconResolver from '../../domain/favicon/resolver';
 import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
 import type { FaviconDecisionLogger } from '../../domain/favicon/types';
+import * as SearchBrandSuggestions from '../../domain/search/utils/brand-suggestions';
 
 interface FaviconPolicyState {
   // Results under these addresses are left out of search.
@@ -21,7 +21,6 @@ interface FaviconPolicyState {
 
 interface FaviconPolicyDeps {
   SETTINGS: Pick<typeof Settings, 'searchResultDisplayLimit'>;
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'limitSearchSuggestionsForDisplay'>;
   logOverlayFaviconDecision: FaviconDecisionLogger;
   overlayState: FaviconPolicyState;
 }
@@ -35,7 +34,6 @@ interface FilterableSuggestion {
 function createFaviconPolicy(deps: FaviconPolicyDeps) {
   const {
     SETTINGS,
-    SEARCH_UTILS,
     logOverlayFaviconDecision
   } = deps;
 
@@ -118,7 +116,7 @@ function createFaviconPolicy(deps: FaviconPolicyDeps) {
     if (config.uncapped === true) {
       return Array.isArray(list) ? list : [];
     }
-    return SEARCH_UTILS.limitSearchSuggestionsForDisplay(list, {
+    return SearchBrandSuggestions.limitSearchSuggestionsForDisplay(list, {
       limit: overlayState.overlaySearchResultDisplayLimit
     });
   }

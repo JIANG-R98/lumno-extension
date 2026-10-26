@@ -1,4 +1,3 @@
-import type * as SearchUtils from '../../domain/search/search-utils';
 import * as BundledIcons from '../../domain/favicon/shortcut-favicon/bundled-icons';
 import type { SiteSearchProvider } from '../../domain/search/types';
 import type { ThemeLike, ThemeVariant } from '../../shared/favicon/favicon-theme';
@@ -6,6 +5,8 @@ import * as BoundedCache from '../../domain/bounded-cache';
 import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
 import type { ThemeRgb } from '../../domain/favicon/types';
 import * as FaviconUrlKinds from '../../domain/favicon/url-kinds';
+import * as SearchDirectNavigation from '../../domain/search/utils/direct-navigation';
+import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
 
 interface SuggestionThemesState {
   defaultTheme: ThemeVariant;
@@ -15,7 +16,6 @@ interface SuggestionThemesState {
 }
 
 interface SuggestionThemesDeps {
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'normalizeHostIdentity' | 'getSiteSearchProviderHost'>;
   // Themes by icon address and by host, kept across panel sessions.
   themeColorCache: Map<string, ThemeVariant>;
   themeHostCache: Map<string, ThemeVariant>;
@@ -45,7 +45,6 @@ function createSuggestionThemes(deps: SuggestionThemesDeps) {
     themeColorCache,
     themeHostCache,
     getOverlayFaviconUrlResolver,
-    SEARCH_UTILS,
     buildTheme,
     defaultAccentColor,
     shouldBlockOverlayFaviconForHost,
@@ -148,7 +147,7 @@ function createSuggestionThemes(deps: SuggestionThemesDeps) {
       return null;
     }
     try {
-      const hostname = SEARCH_UTILS.normalizeHostIdentity(new URL(url).hostname);
+      const hostname = SearchDirectNavigation.normalizeHostIdentity(new URL(url).hostname);
       return getBrandAccentForHost(hostname);
     } catch (_error) {
       return null;
@@ -170,7 +169,7 @@ function createSuggestionThemes(deps: SuggestionThemesDeps) {
       return '';
     }
     try {
-      return SEARCH_UTILS.normalizeHostIdentity(new URL(url).hostname);
+      return SearchDirectNavigation.normalizeHostIdentity(new URL(url).hostname);
     } catch (_error) {
       return '';
     }
@@ -360,11 +359,11 @@ function createSuggestionThemes(deps: SuggestionThemesDeps) {
   }
 
   function getProviderThemeHost(provider: Partial<SiteSearchProvider> | null | undefined): string {
-    return SEARCH_UTILS.normalizeHostIdentity(SEARCH_UTILS.getSiteSearchProviderHost(provider));
+    return SearchDirectNavigation.normalizeHostIdentity(SearchSiteSearchProviders.getSiteSearchProviderHost(provider));
   }
 
   function buildAndCacheBrandThemeForHost(hostKey: string, iconUrl: string): ThemeVariant | null {
-    const normalizedHost = SEARCH_UTILS.normalizeHostIdentity(hostKey);
+    const normalizedHost = SearchDirectNavigation.normalizeHostIdentity(hostKey);
     if (!normalizedHost) {
       return null;
     }

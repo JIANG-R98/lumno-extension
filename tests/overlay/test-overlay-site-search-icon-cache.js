@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const shortcutFavicon = require('../helpers/shortcut-favicon.ts');
-const searchUtils = require('../../src/domain/search/search-utils.ts');
+const searchUtils = require('../helpers/search-utils.ts');
 const { parseCss } = require('../helpers/css-rules');
 const { getInjectedScripts, runsBefore } = require('../helpers/runtime-scripts');
 const { siteSearchIconCache } = require('../../src/domain/settings/search.ts');

@@ -5,7 +5,6 @@ import type * as AggregateSearchStore from '../../domain/search/aggregate-search
 import type { AggregateSearch } from '../../domain/search/aggregate-search-store';
 import type * as SearchSourceOrder from '../../domain/search/search-source-order';
 import type { ScopeMenuMove } from '../../domain/search/search-source-order';
-import type * as SearchUtils from '../../domain/search/search-utils';
 import type { LocalSearchScope, SearchEngineState, SearchSourceType, SiteSearchProvider } from '../../domain/search/types';
 import type { InputModeController } from '../../shared/search/search-input-mode';
 import type { InputModeProvider, ModeMenuItem } from '../../shared/search/input-mode/types';
@@ -16,6 +15,8 @@ import type { RemixIconName } from '../../shared/ui/remix-icon';
 import { searchSourceOrder } from '../../domain/settings/search';
 import type { OverlaySettings } from '../overlay-settings';
 import type { CachedIconMap } from '../../domain/favicon/shortcut-favicon/types';
+import * as SearchSiteSearchMatching from '../../domain/search/utils/site-search-matching';
+import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
 
 interface SearchModeMenuState {
   settings: Pick<OverlaySettings, 'store' | 'loaded' | 'set'>;
@@ -41,7 +42,6 @@ interface SearchModeMenuState {
 }
 
 interface SearchModeMenuDeps {
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'getSearchEngineSiteSearchProvider' | 'findSiteSearchProviderForPageUrl'>;
   AGGREGATE_SEARCH_STORE: Pick<typeof AggregateSearchStore,
     'isAggregateSearchAvailable' | 'mergeTriggerProviders' | 'createScopeProvider'>;
   SEARCH_SOURCE_ORDER: Pick<typeof SearchSourceOrder,
@@ -78,7 +78,6 @@ const getPageSearchSourceOrderHistory = lazyInstance(() => createSearchSourceOrd
 
 function createSearchModeMenu(deps: SearchModeMenuDeps) {
   const {
-    SEARCH_UTILS,
     AGGREGATE_SEARCH_STORE,
     t,
     isAggregateSearchProvider,
@@ -106,14 +105,14 @@ function createSearchModeMenu(deps: SearchModeMenuDeps) {
   }
 
   function getOverlayDefaultSearchModeProvider(providers: readonly SiteSearchProvider[]): SiteSearchProvider | null {
-    return SEARCH_UTILS.getSearchEngineSiteSearchProvider(
+    return SearchSiteSearchProviders.getSearchEngineSiteSearchProvider(
       overlayState.overlaySearchEngineState,
       providers
     );
   }
 
   function getCurrentPageSiteSearchModeProvider(providers: readonly SiteSearchProvider[]): SiteSearchProvider | null {
-    return SEARCH_UTILS.findSiteSearchProviderForPageUrl(
+    return SearchSiteSearchMatching.findSiteSearchProviderForPageUrl(
       overlayState.initialContextTabUrl,
       providers
     );

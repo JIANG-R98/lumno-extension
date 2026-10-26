@@ -1,5 +1,5 @@
 const assert = require('assert');
-const searchUtils = require('../../src/domain/search/search-utils');
+const searchUtils = require('../helpers/search-utils.ts');
 const aggregateSearchStore = require('../../src/domain/search/aggregate-search-store');
 const siteSearch = require('../../src/options/options-site-search');
 

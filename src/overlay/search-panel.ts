@@ -7,7 +7,6 @@ import * as LumnoImeKeyGuard from '../domain/search/ime-key-guard';
 import * as SEARCH_INPUT_HISTORY from '../domain/search/search-input-history';
 import * as SEARCH_INPUT_MODE from '../shared/search/search-input-mode';
 import * as SEARCH_SOURCE_ORDER from '../domain/search/search-source-order';
-import * as SEARCH_UTILS from '../domain/search/search-utils';
 import * as SUGGESTION_ACTION_MODEL from '../domain/search/suggestion-action-model';
 import * as SUGGESTION_NAVIGATION from '../shared/search/suggestion-navigation';
 import * as SUGGESTIONS_HEIGHT_LAYOUT from '../shared/search/suggestions-height-layout';
@@ -72,6 +71,7 @@ import * as FaviconDecisionLog from '../domain/favicon/decision-log';
 import * as FaviconHostPolicy from '../domain/favicon/host-policy';
 import * as BundledIcons from '../domain/favicon/shortcut-favicon/bundled-icons';
 import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted';
+import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-providers';
 
 // Favicon data and preloaded icons the overlay resolved, kept across its
 // openings in this page.
@@ -129,7 +129,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     overlayMediaQuery: window.matchMedia('(prefers-color-scheme: dark)'),
     defaultTheme: FAVICON_THEME.createDefaultTheme(),
     urlHighlightTheme: FAVICON_THEME.createUrlHighlightTheme(),
-    defaultSiteSearchProviders: SEARCH_UTILS.getDefaultSiteSearchProviders(),
+    defaultSiteSearchProviders: SearchSiteSearchProviders.getDefaultSiteSearchProviders(),
     requestFaviconData: (url, pageUrl) => (
       overlayFaviconRuntime ? overlayFaviconRuntime.requestFaviconData(url, pageUrl || '') : Promise.resolve(null)
     ),
@@ -209,7 +209,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     getMatchedOpenTabIdForSuggestion,
     isCurrentOverlayTabUrl
   } = PANEL_TAB_MATCHING.createTabMatching({
-    SEARCH_UTILS,
     overlayState
   });
 
@@ -291,7 +290,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     SUGGESTION_ACTION_MODEL,
     getSystemLocale: (...args) => getSystemLocale(...args),
     SETTINGS,
-    SEARCH_UTILS,
     getProviderIcon: (...args) => getProviderIcon(...args),
     COMMUNITY_LINKS,
     t: (...args) => t(...args),
@@ -385,7 +383,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     getOverlayFaviconUrlResolver: (...args) => getOverlayFaviconUrlResolver(...args),
     t: (...args) => t(...args),
     formatMessage: (...args) => formatMessage(...args),
-    SEARCH_UTILS,
     shouldBlockOverlayFaviconForHost: (...args) => shouldBlockOverlayFaviconForHost(...args),
     isLocalNetworkHost: (...args) => isLocalNetworkHost(...args),
     getChromeFaviconUrl: (...args) => getChromeFaviconUrl(...args),
@@ -536,7 +533,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     clearOpenTabsSearchMode
   } = PANEL_SEARCH_MODES.createSearchModes({
     t: (...args) => t(...args),
-    SEARCH_UTILS,
     isAggregateSearchProvider: (...args) => isAggregateSearchProvider(...args),
     formatMessage: (...args) => formatMessage(...args),
     isAiSiteSearchProvider: (...args) => isAiSiteSearchProvider(...args),
@@ -583,7 +579,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     reloadSiteSearchProvidersFromStorage,
     getAggregateSearches
   } = PANEL_SITE_SEARCH_PROVIDERS.createSiteSearchProviders({
-    SEARCH_UTILS,
     getHelpCenterLocale,
     AGGREGATE_SEARCH_STORE,
     showOverlayToast: (...args) => showOverlayToast(...args),
@@ -608,7 +603,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     openSearchModeMenuFromDoubleTab,
     selectSearchModeMenuItem
   } = PANEL_SEARCH_MODE_MENU.createSearchModeMenu({
-    SEARCH_UTILS,
     AGGREGATE_SEARCH_STORE,
     t: (...args) => t(...args),
     isAggregateSearchProvider,
@@ -711,7 +705,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     isLocalNetworkInput
   } = PANEL_FAVICON_POLICY.createFaviconPolicy({
     SETTINGS,
-    SEARCH_UTILS,
     logOverlayFaviconDecision,
     overlayState
   });
@@ -732,7 +725,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     getOverlayFaviconUrlResolver,
     t: (...args) => t(...args),
     settings: overlayState.settings,
-    SEARCH_UTILS,
     overlayState
   });
   const setInputScopedStyle = (element: HTMLElement | null, property: string, value: string): void => {
@@ -787,7 +779,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     themeColorCache,
     themeHostCache,
     getOverlayFaviconUrlResolver,
-    SEARCH_UTILS,
     buildTheme,
     defaultAccentColor,
     shouldBlockOverlayFaviconForHost,
@@ -1360,7 +1351,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     applyOverlayTheme,
     applyLanguageMode,
     loadOverlaySearchEngineState,
-    SEARCH_UTILS,
     clearLocalSearchScope,
     requestOverlaySearchSuggestions,
     shouldShowOpenTabsForEmptyQuery,

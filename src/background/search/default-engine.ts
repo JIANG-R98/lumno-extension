@@ -1,10 +1,11 @@
 // The search engine this device last searched with: recognizing an engine's
 // result pages, building search URLs for it, and its icon.
-import * as SEARCH_UTILS from '../../domain/search/search-utils';
 import { defaultSearchEngine } from '../../domain/settings';
 import { normalizeHost, workerSettings } from '../worker-context';
 import { isRecord } from './types';
 import type { DefaultSearchEngineState, SearchEngineDef } from './types';
+import * as SearchDirectNavigation from '../../domain/search/utils/direct-navigation';
+import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
 
 const SEARCH_ENGINE_DEFS: readonly SearchEngineDef[] = [
   {
@@ -130,7 +131,7 @@ function loadDefaultSearchEngineState(): Promise<DefaultSearchEngineState> {
     void workerSettings.ready.then(() => {
       const stored = workerSettings.get(defaultSearchEngine);
       if (isRecord(stored) && stored.id) {
-        if (SEARCH_UTILS.isRetiredSearchEngineState({
+        if (SearchSiteSearchProviders.isRetiredSearchEngineState({
           id: typeof stored.id === 'string' ? stored.id : undefined,
           host: typeof stored.host === 'string' ? stored.host : undefined,
           searchTemplate: typeof stored.searchTemplate === 'string' ? stored.searchTemplate : undefined
@@ -216,7 +217,7 @@ function buildDefaultSearchUrl(query: string): string {
 }
 
 function getDirectNavigationUrl(input: unknown): string {
-  return SEARCH_UTILS.getDirectNavigationUrl(input);
+  return SearchDirectNavigation.getDirectNavigationUrl(input);
 }
 
 function getDefaultSearchEngineFaviconUrl(): string {

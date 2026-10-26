@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { installHanVariantPairs } = require('../../src/domain/search/han-variants.ts');
 installHanVariantPairs(require('../../src/domain/search/han-variants.generated.ts').HAN_VARIANT_PAIRS);
-const search = require('../../src/domain/search/search-utils.ts');
+const search = require('../helpers/search-utils.ts');
 const pinyinPro = require('pinyin-pro');
 
 const repoRoot = path.resolve(__dirname, '..', '..');

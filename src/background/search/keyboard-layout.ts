@@ -1,6 +1,5 @@
 // Retrying a search that found nothing with the query read in other
 // keyboard layouts.
-import * as SEARCH_UTILS from '../../domain/search/search-utils';
 import type { SearchPolicy, SearchQueryContext } from '../../domain/search/types';
 import {
   getCachedBookmarkItemsOrWarm,
@@ -10,6 +9,9 @@ import {
 } from './local-sources';
 import { isRecord } from './types';
 import type { SearchSuggestionOptions, SuggestionRow } from './types';
+import * as SearchKeyboardLayouts from '../../domain/search/utils/keyboard-layouts';
+import * as SearchRelevanceScore from '../../domain/search/utils/relevance-score';
+import * as SearchResultDedup from '../../domain/search/utils/result-dedup';
 
 const KEYBOARD_LAYOUT_SCORE_PENALTY = 12;
 
@@ -25,8 +27,7 @@ async function getKeyboardLayoutSuggestions(
   searchPolicy: Readonly<SearchPolicy>,
   search: (query: string, options: SearchSuggestionOptions) => Promise<SuggestionRow[]>
 ): Promise<SuggestionRow[]> {
-  const searchUtils = SEARCH_UTILS;
-  const candidates = searchUtils.getSearchKeyboardLayoutQueries(context.lookupQuery);
+  const candidates = SearchKeyboardLayouts.getSearchKeyboardLayoutQueries(context.lookupQuery);
   if (candidates.length === 0) {
     return [];
   }
@@ -38,7 +39,7 @@ async function getKeyboardLayoutSuggestions(
   ]);
   const readings = candidates.filter((reading) => corpora.some((items) => (
     Array.isArray(items) && items.some((item) => (
-      item && searchUtils.hasSearchKeyboardLayoutScript(reading.layout, item.title)
+      item && SearchKeyboardLayouts.hasSearchKeyboardLayoutScript(reading.layout, item.title)
     ))
   )));
   if (readings.length === 0) {
@@ -53,7 +54,7 @@ async function getKeyboardLayoutSuggestions(
   groups.forEach((group, index) => {
     const reading = readings[index];
     group.forEach((suggestion) => {
-      const key = searchUtils.buildSearchDedupEntryKey(suggestion);
+      const key = SearchResultDedup.buildSearchDedupEntryKey(suggestion);
       if (!key || seenKeys.has(key)) {
         return;
       }
@@ -70,7 +71,7 @@ async function getKeyboardLayoutSuggestions(
       });
     });
   });
-  merged.sort((a, b) => searchUtils.compareSearchSuggestions(a, b));
+  merged.sort((a, b) => SearchRelevanceScore.compareSearchSuggestions(a, b));
   return merged.slice(0, searchPolicy.candidatePoolLimit || 20);
 }
 

@@ -1,6 +1,5 @@
 // Matching titles to a query: the title matcher with its pinyin readings,
 // the query context, and where a result's title shows the query.
-import * as SEARCH_UTILS from '../../domain/search/search-utils';
 import * as SETTINGS from '../../domain/settings';
 import { searchResultSourceTypes } from '../../domain/settings';
 import { loadWorkerLazyModule } from '../../platform/worker-lazy';
@@ -16,6 +15,11 @@ import type {
 import type { PinyinApi } from '../../domain/search/pinyin-api';
 import type { SuggestionRow } from './types';
 import * as BoundedCache from '../../domain/bounded-cache';
+import * as SearchTextMatching from '../../domain/search/utils/text-matching';
+import * as SearchTextNormalize from '../../domain/search/utils/text-normalize';
+import * as SearchDirectNavigation from '../../domain/search/utils/direct-navigation';
+import * as SearchSearchPolicy from '../../domain/search/utils/search-policy';
+import * as SearchSelectionStats from '../../domain/search/utils/selection-stats';
 
 // Titles whose units (and pinyin readings) were built for matching, about
 // 1 KB each. It holds the Han-title history and the bookmarks, so typing one
@@ -78,7 +82,7 @@ function getTitleHanReadings(_text: string, characters: string[]): string[][] | 
     if (cached) {
       return cached;
     }
-    const readings = SEARCH_UTILS.expandSearchFuzzyPinyinReadings(getHanCharacterReadings(pinyinApi, character));
+    const readings = SearchTextNormalize.expandSearchFuzzyPinyinReadings(getHanCharacterReadings(pinyinApi, character));
     BoundedCache.setBoundedCacheEntry(
       hanCharacterFuzzyReadingsCache,
       character,
@@ -111,8 +115,8 @@ function getHanCharacterReadings(pinyinApi: PinyinApi, character: string): strin
 }
 
 function getTitleTextMatcher(): SearchTextMatcher | null {
-  if (!titleTextMatcher && SEARCH_UTILS && typeof SEARCH_UTILS.createSearchTextMatcher === 'function') {
-    titleTextMatcher = SEARCH_UTILS.createSearchTextMatcher({
+  if (!titleTextMatcher && typeof SearchTextMatching.createSearchTextMatcher === 'function') {
+    titleTextMatcher = SearchTextMatching.createSearchTextMatcher({
       getHanReadings: getTitleHanReadings,
       maxEntries: BACKGROUND_TITLE_PINYIN_CACHE_MAX_ENTRIES
     });
@@ -120,18 +124,18 @@ function getTitleTextMatcher(): SearchTextMatcher | null {
   return titleTextMatcher;
 }
 
-function getBackgroundSearchPolicy(searchUtils: typeof SEARCH_UTILS): Readonly<SearchPolicy> {
-  return searchUtils.SEARCH_POLICY;
+function getBackgroundSearchPolicy(): Readonly<SearchPolicy> {
+  return SearchSearchPolicy.SEARCH_POLICY;
 }
 
 // A query of Han characters alone, as a site's address would spell it: its
 // pinyin and its initials: 知乎 is zhihu, 京东 is jd.
-function getQueryHostSpellings(context: SearchQueryContext, searchUtils: typeof SEARCH_UTILS): string[] {
-  const compact = typeof searchUtils.compactSearchQuery === 'function'
-    ? searchUtils.compactSearchQuery(context.queryLower)
+function getQueryHostSpellings(context: SearchQueryContext): string[] {
+  const compact = typeof SearchTextNormalize.compactSearchQuery === 'function'
+    ? SearchTextNormalize.compactSearchQuery(context.queryLower)
     : '';
   if (compact.length < 2 || compact.length > 8 ||
-      !Array.from(compact).every((character) => searchUtils.hasSearchHanCharacters(character))) {
+      !Array.from(compact).every((character) => SearchTextNormalize.hasSearchHanCharacters(character))) {
     return [];
   }
   const pinyinApi = getPinyinPro();
@@ -153,9 +157,9 @@ function getQueryHostSpellings(context: SearchQueryContext, searchUtils: typeof 
   }
 }
 
-function buildBackgroundSearchQueryContext(query: unknown, searchUtils: typeof SEARCH_UTILS): SearchQueryContext {
-  const context = searchUtils.buildSearchQueryContext(query);
-  context.queryHostSpellings = getQueryHostSpellings(context, searchUtils);
+function buildBackgroundSearchQueryContext(query: unknown): SearchQueryContext {
+  const context = SearchSelectionStats.buildSearchQueryContext(query);
+  context.queryHostSpellings = getQueryHostSpellings(context);
   return context;
 }
 
@@ -165,19 +169,18 @@ function buildBackgroundSearchQueryContext(query: unknown, searchUtils: typeof S
 function attachSuggestionTitleHighlight<T extends SuggestionRow>(
   suggestion: T,
   context: SearchQueryContext,
-  scoreOptions: SearchRankingOptions,
-  searchUtils: typeof SEARCH_UTILS
+  scoreOptions: SearchRankingOptions
 ): T {
   if (!suggestion || !suggestion.title) {
     return suggestion;
   }
-  const text = searchUtils.sanitizeDisplayText(suggestion.title);
+  const text = SearchDirectNavigation.sanitizeDisplayText(suggestion.title);
   return {
     ...suggestion,
     titleHighlight: {
       text,
       query: String(context.lookupQuery || '').trim().toLowerCase(),
-      ranges: searchUtils.getSearchTitleHighlightRanges(text, context, scoreOptions)
+      ranges: SearchTextMatching.getSearchTitleHighlightRanges(text, context, scoreOptions)
     }
   };
 }

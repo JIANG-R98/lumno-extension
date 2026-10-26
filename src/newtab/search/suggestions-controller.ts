@@ -1,7 +1,6 @@
 // Requesting, rendering and activating search suggestions.
 import type { OverlayTab, ShortcutRule } from '../../domain/messages';
 import type { AggregateSearch } from '../../domain/search/aggregate-search-store';
-import type * as SearchUtils from '../../domain/search/search-utils';
 import type * as SuggestionActionModel from '../../domain/search/suggestion-action-model';
 import type { SiteSearchProvider } from '../../domain/search/types';
 import type { ThemeMode } from '../../domain/settings';
@@ -32,6 +31,8 @@ import type {
 } from './search-types';
 import type { SiteSearchProviders } from './site-search-providers';
 import { createSuggestionSource } from '../../domain/search/help-center/search';
+import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
+import * as SearchSuggestionSlate from '../../domain/search/utils/suggestion-slate';
 
 interface SuggestionsControllerState {
   suggestionsView: SuggestionsViewController | null;
@@ -119,11 +120,6 @@ interface SuggestionsControllerDeps {
   buildDefaultSearchUrl(query: string): string;
   getDefaultSearchEngineFaviconUrl(): string;
   isAggregateSearchProvider: SiteSearchProviders['isAggregateSearchProvider'];
-  SEARCH_UTILS: Pick<typeof SearchUtils,
-    | 'isHelpCenterSiteSearchProvider'
-    | 'groupSearchSuggestionsByKind'
-    | 'composeSearchFirstSuggestionSlate'
-    | 'rankSearchSuggestionSlate'>;
   getMatchedOpenTabIdForSuggestion: SearchNavigation['getMatchedOpenTabIdForSuggestion'];
   // The suggestions the search blacklist does not leave out.
   filterBlacklistedSuggestions(list: Suggestion[], query: string): Suggestion[];
@@ -218,7 +214,6 @@ function createSuggestionsController(deps: SuggestionsControllerDeps) {
     buildDefaultSearchUrl,
     getDefaultSearchEngineFaviconUrl,
     isAggregateSearchProvider,
-    SEARCH_UTILS,
     getMatchedOpenTabIdForSuggestion,
     filterBlacklistedSuggestions,
     getKeywordSearchSuggestionState,
@@ -644,7 +639,7 @@ function createSuggestionsController(deps: SuggestionsControllerDeps) {
         : null;
 
       const helpCenterSuggestions: Suggestion[] = siteSearchQueryModeActive && siteSearchProvider &&
-          helpCenterSuggestionSource && SEARCH_UTILS.isHelpCenterSiteSearchProvider(siteSearchProvider)
+          helpCenterSuggestionSource && SearchSiteSearchProviders.isHelpCenterSiteSearchProvider(siteSearchProvider)
         ? helpCenterSuggestionSource.getSuggestions(
           query,
           getHelpCenterLocale(),
@@ -660,7 +655,7 @@ function createSuggestionsController(deps: SuggestionsControllerDeps) {
       ].filter((item): item is Suggestion => Boolean(item));
       let groupedDefaultSuggestions = defaultSuggestions;
       if (pageState.searchResultPriorityMode !== 'search') {
-        groupedDefaultSuggestions = SEARCH_UTILS.groupSearchSuggestionsByKind(defaultSuggestions, {
+        groupedDefaultSuggestions = SearchSuggestionSlate.groupSearchSuggestionsByKind(defaultSuggestions, {
           searchFirst: false
         });
       }
@@ -697,7 +692,7 @@ function createSuggestionsController(deps: SuggestionsControllerDeps) {
           !toggleCommandActive &&
           !siteSearchQueryModeActive &&
           !hasDirectUrlSuggestion) {
-        allSuggestions = SEARCH_UTILS.composeSearchFirstSuggestionSlate(allSuggestions, {
+        allSuggestions = SearchSuggestionSlate.composeSearchFirstSuggestionSlate(allSuggestions, {
           limit: pageState.searchResultDisplayLimit
         });
       }
@@ -710,7 +705,7 @@ function createSuggestionsController(deps: SuggestionsControllerDeps) {
       let mergedProvider: SuggestionProvider | null = null;
       let primarySuggestion: Suggestion | null = null;
       if (!localSearchQueryModeActive && !slashCommandModeActive && !toggleCommandActive && !hasCommand) {
-        const rankedSlate = SEARCH_UTILS.rankSearchSuggestionSlate(allSuggestions, {
+        const rankedSlate = SearchSuggestionSlate.rankSearchSuggestionSlate(allSuggestions, {
           query,
           rawQuery: pageState.latestRawQuery,
           triggerInput: rawTagInput,

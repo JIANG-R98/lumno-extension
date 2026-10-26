@@ -1,5 +1,5 @@
 import type { OverlayTab } from '../../domain/messages';
-import type * as SearchUtils from '../../domain/search/search-utils';
+import * as SearchNavigationMatching from '../../domain/search/utils/navigation-matching';
 
 interface TabMatchingState {
   // The window's open tabs, as the overlay lists them.
@@ -13,7 +13,6 @@ interface TabMatchingState {
 }
 
 interface TabMatchingDeps {
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'buildTabMatchUrl'>;
   overlayState: TabMatchingState;
 }
 
@@ -26,10 +25,6 @@ interface TabTextSource {
 // Matching open tabs: the text a tab is searched by, filtering them for
 // the query, and finding the tab a suggestion already has open.
 function createTabMatching(deps: TabMatchingDeps) {
-  const {
-    SEARCH_UTILS
-  } = deps;
-
   // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
 
@@ -117,11 +112,11 @@ function createTabMatching(deps: TabMatchingDeps) {
   }
 
   function normalizeTabMatchUrl(url: string): string {
-    return SEARCH_UTILS.buildTabMatchUrl(url);
+    return SearchNavigationMatching.buildTabMatchUrl(url);
   }
 
   function normalizeTabMatchUrlWithoutSearch(url: string): string {
-    return SEARCH_UTILS.buildTabMatchUrl(url, { includeSearch: false });
+    return SearchNavigationMatching.buildTabMatchUrl(url, { includeSearch: false });
   }
 
   // The open tab that already shows a suggestion's page, if any.

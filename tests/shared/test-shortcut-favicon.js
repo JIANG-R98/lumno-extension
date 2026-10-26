@@ -4,7 +4,7 @@ const path = require('path');
 
 const shortcutFavicon = require('../helpers/shortcut-favicon.ts');
 const shortcutFaviconStore = require('../../src/platform/shortcut-favicon-store.ts');
-const searchUtils = require('../../src/domain/search/search-utils.ts');
+const searchUtils = require('../helpers/search-utils.ts');
 const { shortcutsStorage } = require('../helpers/newtab-fixtures');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { newtabShortcutFaviconCache } = require('../../src/domain/settings/newtab-shortcuts.ts');

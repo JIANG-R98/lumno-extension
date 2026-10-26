@@ -3,7 +3,6 @@ import * as CUSTOM_QUOTES from '../domain/custom-quotes';
 import * as COMMUNITY_LINKS from '../platform/community-links';
 import * as NAVIGATION_DISPOSITION from '../domain/navigation-disposition';
 import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
-import * as SEARCH_UTILS from '../domain/search/search-utils';
 import * as SETTINGS from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import { getContextSettingsStore, readStoredSetting } from '../platform/settings-store';
@@ -60,6 +59,7 @@ import { getToastApi } from '../shared/react/toast';
 import { getSettingsControlsApi } from './react/settings-controls';
 import { getSettingsNavigationApi } from './react/settings-navigation';
 import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcuts';
+import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-providers';
 
 (function() {
   const optionsRuntimeStartedAt = typeof performance !== 'undefined' && typeof performance.now === 'function'
@@ -123,7 +123,6 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
     providerStorageRuntime,
     settingsStore: optionsSettingsStore,
     siteSearchModel: SITE_SEARCH.createSiteSearchModel({
-      searchUtils: SEARCH_UTILS,
       aggregateSearchStore: AGGREGATE_SEARCH_STORE
     }),
     enqueueSiteSearchProviderStorageOperation: SITE_SEARCH.createOperationQueue(),
@@ -160,7 +159,7 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
       })
       : null,
     isMacPlatform: LumnoShortcutDisplay.getNavigatorPlatform(navigator) === 'mac',
-    fallbackSiteSearchProviders: SEARCH_UTILS.getDefaultSiteSearchProviders()
+    fallbackSiteSearchProviders: SearchSiteSearchProviders.getDefaultSiteSearchProviders()
   });
 
 
@@ -192,7 +191,6 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
     findSiteSearchKeyConflict,
     suspendSiteSearchRefresh
   } = OPTIONS_SITE_SEARCH_FORM.createSiteSearchForm({
-    SEARCH_UTILS,
     optionsState
   });
   // The keys each list shows right now, in order, for the move buttons.
@@ -212,7 +210,6 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
     invalidateSiteSearchProviderRefresh,
     refreshSiteSearchProviders
   } = OPTIONS_SITE_SEARCH_LIST.createSiteSearchList({
-    SEARCH_UTILS,
     getMessage: (...args) => getMessage(...args),
     normalizeSiteSearchTemplate,
     isSearchEngineSiteSearchProvider,
@@ -640,7 +637,6 @@ import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcut
   } = OPTIONS_AGGREGATE_SEARCH_LIST.createAggregateSearchList({
     AGGREGATE_SEARCH_STORE,
     aggregateSearchModel,
-    SEARCH_UTILS,
     isAiSiteSearchProvider,
     getMessage,
     isSearchEngineSiteSearchProvider,

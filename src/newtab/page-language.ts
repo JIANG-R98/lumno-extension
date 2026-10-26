@@ -3,9 +3,9 @@
 // attribute, and the listeners that re-render copy when it changes.
 import type * as LumnoSettings from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
-import type * as SearchUtils from '../domain/search/search-utils';
 import type { FormatMessage, Translate } from './newtab-types';
 import { takeBootValue } from '../platform/boot-handoff';
+import * as SearchDirectNavigation from '../domain/search/utils/direct-navigation';
 
 // A locale's messages as _locales/<locale>/messages.json holds them.
 type LocaleMessages = Record<string, { message?: string } | undefined>;
@@ -17,7 +17,6 @@ interface PageLanguageState {
 interface PageLanguageDeps {
   languageChangeListeners: Array<() => void>;
   SETTINGS: Pick<typeof LumnoSettings, 'normalizeLocale' | 'localeToHtmlLang'>;
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'sanitizeDisplayText'>;
   getExtensionResourceUrl(path: string): string;
   pageState: PageLanguageState;
 }
@@ -45,7 +44,6 @@ function createPageLanguage(deps: PageLanguageDeps) {
   const {
     languageChangeListeners,
     SETTINGS,
-    SEARCH_UTILS,
     getExtensionResourceUrl
   } = deps;
 
@@ -79,7 +77,7 @@ function createPageLanguage(deps: PageLanguageDeps) {
   }
 
   function sanitizeDisplayText(text: unknown): string {
-    return SEARCH_UTILS.sanitizeDisplayText(text);
+    return SearchDirectNavigation.sanitizeDisplayText(text);
   }
 
   function loadLocaleMessages(locale: unknown): Promise<LocaleMessages> {

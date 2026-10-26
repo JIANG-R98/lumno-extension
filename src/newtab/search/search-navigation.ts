@@ -1,7 +1,6 @@
 // Keyword and direct-URL suggestions, open-tab matching and quick navigation.
 import type { OverlayTab, ShortcutRule } from '../../domain/messages';
 import type { Disposition } from '../../domain/navigation-disposition';
-import type * as SearchUtils from '../../domain/search/search-utils';
 import type * as SuggestionActionModel from '../../domain/search/suggestion-action-model';
 import type { SiteSearchProvider } from '../../domain/search/types';
 import type * as BrowserProfile from '../../platform/browser-profile';
@@ -15,6 +14,8 @@ import type { SearchModes } from './search-modes';
 import type { ActiveLocalScope, AutocompleteState, InlineSearchState, RenderSuggestions, SlashCommand } from './search-types';
 import type { SiteSearchProviders } from './site-search-providers';
 import { shortcutRulesCache } from '../../shared/search/shortcut-rules-cache';
+import * as SearchDirectNavigation from '../../domain/search/utils/direct-navigation';
+import * as SearchNavigationMatching from '../../domain/search/utils/navigation-matching';
 
 interface SearchNavigationState {
   tabs: OverlayTab[];
@@ -43,7 +44,6 @@ interface SearchNavigationDeps {
   getExtensionResourceUrl(resourcePath: string): string;
   BROWSER_PROFILE: Pick<typeof BrowserProfile, 'getBrowserInternalProfile' | 'canOpenBrowserPages'>;
   getPageFaviconCandidateUrl(pageUrl: string): string;
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'getDirectNavigationUrl' | 'buildTabMatchUrl'>;
   SUGGESTION_ACTION_MODEL: Pick<typeof SuggestionActionModel, 'shouldOpenSwitchActionInNewTab' | 'getSearchResultOpenDisposition'>;
   isBackgroundOpenEvent(event: OpenEventLike | null | undefined): boolean;
   // Where a plain open from the surface goes, after its new-tab setting.
@@ -83,7 +83,6 @@ function createSearchNavigation(deps: SearchNavigationDeps) {
     getExtensionResourceUrl,
     BROWSER_PROFILE,
     getPageFaviconCandidateUrl,
-    SEARCH_UTILS,
     SUGGESTION_ACTION_MODEL,
     isBackgroundOpenEvent,
     getSurfaceOpenDisposition,
@@ -214,11 +213,11 @@ function createSearchNavigation(deps: SearchNavigationDeps) {
   }
 
   function getDirectNavigationUrl(input: unknown): string {
-    return SEARCH_UTILS.getDirectNavigationUrl(input);
+    return SearchDirectNavigation.getDirectNavigationUrl(input);
   }
 
   function normalizeTabMatchUrl(url: unknown): string {
-    return SEARCH_UTILS.buildTabMatchUrl(url);
+    return SearchNavigationMatching.buildTabMatchUrl(url);
   }
 
   function getMatchedOpenTabForSuggestion(suggestion: Suggestion | null | undefined): OverlayTab | null {

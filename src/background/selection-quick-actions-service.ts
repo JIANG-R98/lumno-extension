@@ -6,7 +6,6 @@
 // runs.
 
 import * as AI_PROVIDER_SUBMIT from './ai-provider-submit';
-import * as SEARCH_UTILS from '../domain/search/search-utils';
 import * as SELECTION_INTENT from '../domain/selection-intent';
 import * as SELECTION_QUICK_ACTION_PROVIDER from './selection-quick-action-provider';
 import * as SELECTION_TARGET from './selection-target';
@@ -20,6 +19,7 @@ import type { SiteSearchProvider } from '../domain/search/types';
 import type { SelectionTargetOptions, SelectionTargetResult } from './selection-target';
 import type { HandlersFor, IncomingRequest, MessageSender } from './message-router';
 import type { OkReply } from '../domain/messages';
+import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-providers';
 
 // What a selection quick action did: the tab it opened and how the prompt
 // went in, or why it stopped.
@@ -93,7 +93,7 @@ function loadSelectionQuickActionFallbackProviders(): Promise<SiteSearchProvider
     return selectionQuickActionFallbackProvidersPromise;
   }
   const localUrl = chrome.runtime.getURL('assets/data/site-search.json');
-  const fallbackDefaults = SEARCH_UTILS.getDefaultSiteSearchProviders();
+  const fallbackDefaults = SearchSiteSearchProviders.getDefaultSiteSearchProviders();
   selectionQuickActionFallbackProvidersPromise = fetch(localUrl)
     .then((response) => response.json())
     .then((data: unknown) => {

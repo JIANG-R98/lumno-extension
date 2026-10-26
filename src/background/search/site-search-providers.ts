@@ -1,11 +1,11 @@
 // The site search providers: the bundled list merged with the custom and
 // disabled ones from settings, cached until either changes.
-import * as SEARCH_UTILS from '../../domain/search/search-utils';
 import { siteSearchDisabled, siteSearchCustom } from '../../domain/settings';
 import { workerSettings } from '../worker-context';
 import type { NormalizedSiteSearchProvider, SiteSearchProvider } from '../../domain/search/types';
 import { isRecord } from './types';
 import { scheduleSiteSearchProviderIconWarmup } from '../favicon/site-search-icons';
+import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
 
 let siteSearchCache: SiteSearchProvider[] | null = null;
 
@@ -14,11 +14,11 @@ let siteSearchPromise: Promise<SiteSearchProvider[]> | null = null;
 let siteSearchLoadGeneration = 0;
 
 function isInteractiveSiteSearchProvider(provider: SiteSearchProvider | null | undefined): boolean {
-  return SEARCH_UTILS.isInteractiveSiteSearchProvider(provider);
+  return SearchSiteSearchProviders.isInteractiveSiteSearchProvider(provider);
 }
 
 function sanitizeSiteSearchProviders(items: unknown): NormalizedSiteSearchProvider[] {
-  return SEARCH_UTILS.sanitizeSiteSearchProviders(items);
+  return SearchSiteSearchProviders.sanitizeSiteSearchProviders(items);
 }
 
 function loadCustomSiteSearchProviders(): Promise<NormalizedSiteSearchProvider[]> {
@@ -38,14 +38,14 @@ function mergeCustomProviders(
   baseItems: readonly SiteSearchProvider[],
   customItems: readonly SiteSearchProvider[]
 ): SiteSearchProvider[] {
-  return SEARCH_UTILS.mergeCustomProviders(baseItems, customItems);
+  return SearchSiteSearchProviders.mergeCustomProviders(baseItems, customItems);
 }
 
 function getSiteSearchProviderEntryUrl(provider: SiteSearchProvider | null | undefined, query: unknown): string {
   if (!provider || !provider.template) {
     return '';
   }
-  return SEARCH_UTILS.buildSearchUrlFromTemplate(provider.template, query || '');
+  return SearchSiteSearchProviders.buildSearchUrlFromTemplate(provider.template, query || '');
 }
 
 function invalidateSiteSearchProviderCache(): void {
@@ -64,7 +64,7 @@ function loadSiteSearchProviders(): Promise<SiteSearchProvider[]> {
     return siteSearchPromise;
   }
   const localUrl = chrome.runtime.getURL('assets/data/site-search.json');
-  const fallbackDefaults = SEARCH_UTILS.getDefaultSiteSearchProviders();
+  const fallbackDefaults = SearchSiteSearchProviders.getDefaultSiteSearchProviders();
   const loadGeneration = siteSearchLoadGeneration;
   const loadTask: Promise<SiteSearchProvider[]> = fetch(localUrl)
     .then((response) => response.json())

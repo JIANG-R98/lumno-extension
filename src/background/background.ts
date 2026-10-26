@@ -35,7 +35,6 @@ import '../domain/search/utils/brand-suggestions';
 import '../domain/search/utils/navigation-matching';
 import '../domain/search/utils/site-search-providers';
 import '../domain/search/utils/site-search-matching';
-import '../domain/search/search-utils';
 import '../domain/selection-intent';
 import '../shared/search/site-search-store';
 import '../domain/community-links';

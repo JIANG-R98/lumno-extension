@@ -4,8 +4,9 @@
 // name a locale message key in `error`; the page turns it into text.
 import type * as AggregateSearchStore from '../domain/search/aggregate-search-store';
 import type { AggregateSearch } from '../domain/search/aggregate-search-store';
-import type * as SearchUtils from '../domain/search/search-utils';
 import type { SiteSearchProvider } from '../domain/search/types';
+import * as SearchSiteSearchMatching from '../domain/search/utils/site-search-matching';
+import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-providers';
 
 // What a refresh step reports: whether storage needs the cleaned snapshot.
 interface PreparedSnapshot {
@@ -73,8 +74,6 @@ interface SiteSearchEditState {
 }
 
 interface SiteSearchModelDeps {
-  searchUtils: Pick<typeof SearchUtils, 'normalizeSiteSearchTemplate' | 'findSiteSearchProviderKeyConflict' |
-    'normalizeSiteSearchProvider' | 'isAiSiteSearchProvider'>;
   aggregateSearchStore: Pick<typeof AggregateSearchStore, 'ensureCustomProviderIds' | 'createDeterministicCustomProviderId'>;
 }
 
@@ -245,9 +244,8 @@ function getActiveBuiltinSiteSearchProviders<T extends Pick<SiteSearchProvider, 
 }
 
 function createSiteSearchModel(deps: SiteSearchModelDeps) {
-  const searchUtils = deps.searchUtils;
   const aggregateSearchStore = deps.aggregateSearchStore;
-  const normalizeTemplate = (template: string): string => searchUtils.normalizeSiteSearchTemplate(template);
+  const normalizeTemplate = (template: string): string => SearchSiteSearchProviders.normalizeSiteSearchTemplate(template);
 
   function isDuplicateTemplate(template: string | undefined, providers: readonly SiteSearchProvider[]): boolean {
     const normalized = normalizeTemplate(String(template || '').trim());
@@ -298,7 +296,7 @@ function createSiteSearchModel(deps: SiteSearchModelDeps) {
     if (!normalizedKey) {
       return null;
     }
-    const providerConflict = searchUtils.findSiteSearchProviderKeyConflict(
+    const providerConflict = SearchSiteSearchMatching.findSiteSearchProviderKeyConflict(
       normalizedKey,
       state.providers,
       normalizeKey(allowedKey)
@@ -398,7 +396,7 @@ function createSiteSearchModel(deps: SiteSearchModelDeps) {
       return { ok: false, error: 'toast_error_template' };
     }
     const name = String(draft && draft.name ? draft.name : '').trim();
-    const nextItem = searchUtils.normalizeSiteSearchProvider({
+    const nextItem = SearchSiteSearchProviders.normalizeSiteSearchProvider({
       id: state.createId(),
       aliases: normalizeAliases(draft && draft.aliases ? draft.aliases : ''),
       key,
@@ -436,7 +434,7 @@ function createSiteSearchModel(deps: SiteSearchModelDeps) {
       return { ok: false, error: keyError };
     }
     const template = normalizeTemplate(String(draft && draft.template ? draft.template : '').trim());
-    const isBuiltinAiProvider = isBuiltin && searchUtils.isAiSiteSearchProvider(item);
+    const isBuiltinAiProvider = isBuiltin && SearchSiteSearchProviders.isAiSiteSearchProvider(item);
     if (!template || (!isBuiltinAiProvider && !template.includes('{query}'))) {
       return { ok: false, error: 'toast_error_template' };
     }
@@ -474,7 +472,7 @@ function createSiteSearchModel(deps: SiteSearchModelDeps) {
       disabledKeys
     );
     const shouldDisable = !builtinKey && isDuplicateTemplate(template, activeBuiltins);
-    const nextItem = searchUtils.normalizeSiteSearchProvider({
+    const nextItem = SearchSiteSearchProviders.normalizeSiteSearchProvider({
       ...nextItemDraft,
       disabled: shouldDisable,
       disabledReason: shouldDisable ? 'duplicate' : ''

@@ -2,11 +2,11 @@
 // bookmarks, open tabs), with short-lived caches the browser's own change
 // events invalidate.
 import * as BROWSER_PROFILE from '../../platform/browser-profile';
-import * as SEARCH_UTILS from '../../domain/search/search-utils';
 import { getResolvedTabUrl } from '../browser-urls-service';
 import type { SearchPolicy } from '../../domain/search/types';
 import { withTimeout } from './timeout';
 import type { BookmarkItem, BookmarkNodeInfo, HistoryRemoval, OpenTabItem, TimedCache } from './types';
+import * as SearchTextNormalize from '../../domain/search/utils/text-normalize';
 
 const LOCAL_SUGGEST_SOURCE_TIMEOUT_MS = 800;
 
@@ -334,7 +334,7 @@ function getHanTitleHistoryItemsCached(policy: Partial<SearchPolicy> | null | un
       startTime: Date.now() - (windowDays * 24 * 60 * 60 * 1000)
     }, (items) => {
       const list = (Array.isArray(items) ? items : [])
-        .filter((item) => item && SEARCH_UTILS.hasSearchHanCharacters(item.title));
+        .filter((item) => item && SearchTextNormalize.hasSearchHanCharacters(item.title));
       if (hanTitleHistoryRequest === request) {
         hanTitleHistoryCache = {
           items: list,

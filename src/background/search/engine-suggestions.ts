@@ -1,6 +1,5 @@
 // The search engine's suggestions merged into a local search's rows: on the
 // overlay below the pages, or after them for a search-first New Tab.
-import * as SEARCH_UTILS from '../../domain/search/search-utils';
 import type { SearchPolicy, SearchQueryContext } from '../../domain/search/types';
 import { filterBlacklistedSuggestions, isSuggestionBlockedBySearchBlacklist, loadSearchBlacklistItems } from './blacklist';
 import { buildDefaultSearchUrl, defaultSearchEngineStateReady, getDefaultSearchEngineFaviconUrl } from './default-engine';
@@ -9,6 +8,8 @@ import { takeRankedUniqueRows } from './suggestion-set';
 import { buildBackgroundSearchQueryContext, getBackgroundSearchPolicy, loadSearchResultSourceTypes } from './text-matching';
 import { readSuggestionRow } from './types';
 import type { EngineSuggestionOptions, SuggestionRow } from './types';
+import * as SearchBrandSuggestions from '../../domain/search/utils/brand-suggestions';
+import * as SearchSuggestionSlate from '../../domain/search/utils/suggestion-slate';
 
 // The engine's suggestions as rows, as many as the policy lets in.
 function buildEngineRows(
@@ -18,12 +19,12 @@ function buildEngineRows(
   policy: Readonly<SearchPolicy>,
   searchFirst: boolean
 ): SuggestionRow[] {
-  const engineSuggestions = SEARCH_UTILS.normalizeSearchEngineSuggestions(
+  const engineSuggestions = SearchSuggestionSlate.normalizeSearchEngineSuggestions(
     rawEngineSuggestions,
     context.lookupQuery,
     { limit: policy.maxEngineSuggestions }
   );
-  const enginePolicy = SEARCH_UTILS.getSearchEngineSuggestionPolicy(context, localRows, { ...policy, searchFirst });
+  const enginePolicy = SearchSuggestionSlate.getSearchEngineSuggestionPolicy(context, localRows, { ...policy, searchFirst });
   return engineSuggestions.slice(0, enginePolicy.limit).map((suggestion): SuggestionRow => ({
     type: 'googleSuggest',
     title: suggestion,
@@ -40,15 +41,15 @@ function buildEngineRows(
 // suggestions after them; otherwise everything is ranked together.
 function composeSlate(rows: SuggestionRow[], context: SearchQueryContext, policy: Readonly<SearchPolicy>, searchFirst: boolean): SuggestionRow[] {
   if (!searchFirst) {
-    return SEARCH_UTILS.composeSearchSuggestionSlate(SEARCH_UTILS.applySearchSuggestionHostDiversity(rows, { context }), context);
+    return SearchBrandSuggestions.composeSearchSuggestionSlate(SearchBrandSuggestions.applySearchSuggestionHostDiversity(rows, { context }), context);
   }
   const engineCandidates = rows.filter((row) => row && row.type === 'googleSuggest');
-  const localCandidates = SEARCH_UTILS.applySearchSuggestionHostDiversity(
+  const localCandidates = SearchBrandSuggestions.applySearchSuggestionHostDiversity(
     rows.filter((row) => !row || row.type !== 'googleSuggest'),
     { context }
   );
   const limit = policy.finalSuggestionLimit || 12;
-  return SEARCH_UTILS.composeSearchFirstSuggestionSlate([...localCandidates, ...engineCandidates], { limit }).slice(0, limit);
+  return SearchSuggestionSlate.composeSearchFirstSuggestionSlate([...localCandidates, ...engineCandidates], { limit }).slice(0, limit);
 }
 
 async function getSearchEngineSuggestions(
@@ -57,8 +58,8 @@ async function getSearchEngineSuggestions(
   options?: EngineSuggestionOptions | null
 ): Promise<SuggestionRow[]> {
   await defaultSearchEngineStateReady;
-  const policy = getBackgroundSearchPolicy(SEARCH_UTILS);
-  const context = buildBackgroundSearchQueryContext(query, SEARCH_UTILS);
+  const policy = getBackgroundSearchPolicy();
+  const context = buildBackgroundSearchQueryContext(query);
   const settings: EngineSuggestionOptions = options && typeof options === 'object' ? options : {};
   const signal = settings.signal || null;
   const pageRows: unknown[] = Array.isArray(localSuggestions) ? localSuggestions : [];
@@ -86,7 +87,7 @@ async function getSearchEngineSuggestions(
     .filter((row) => !isSuggestionBlockedBySearchBlacklist(row, blacklist));
   let rows = takeRankedUniqueRows([...localRows, ...engineRows], policy.candidatePoolLimit || 20);
   rows = filterBlacklistedSuggestions(rows, blacklist);
-  rows = SEARCH_UTILS.filterSearchSuggestionsBySourceTypes(rows, sourceTypes);
+  rows = SearchBrandSuggestions.filterSearchSuggestionsBySourceTypes(rows, sourceTypes);
   return composeSlate(rows, context, policy, searchFirst);
 }
 

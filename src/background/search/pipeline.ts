@@ -2,7 +2,6 @@
 // keeps on, collects one row per page, ranks them, and falls back to other
 // keyboard layouts when nothing matched.
 import type { BlacklistRule } from '../../domain/blacklist-utils';
-import * as SEARCH_UTILS from '../../domain/search/search-utils';
 import type {
   SearchPolicy,
   SearchQueryContext,
@@ -40,6 +39,9 @@ import {
 import type { BookmarkItem, OpenTabItem, SearchSuggestionOptions, SourceItem, SuggestionRow } from './types';
 import * as FaviconHostPolicy from '../../domain/favicon/host-policy';
 import { loadFaviconEnhancedFetchEnabled, loadFaviconRequestBlacklistItems } from '../favicon/request-policy';
+import * as SearchBrandSuggestions from '../../domain/search/utils/brand-suggestions';
+import * as SearchNavigationMatching from '../../domain/search/utils/navigation-matching';
+import * as SearchResultDedup from '../../domain/search/utils/result-dedup';
 
 // The matches of each source for one query.
 interface SourceMatches {
@@ -110,11 +112,11 @@ async function readSourceMatches(run: SearchRun): Promise<SourceMatches> {
     loadFaviconEnhancedFetchEnabled(),
     loadSearchSelectionStats()
   ]);
-  const collect = <T extends SourceItem>(items: readonly T[]): T[] => SEARCH_UTILS.collectSearchMatches(items, context, blacklist, {
+  const collect = <T extends SourceItem>(items: readonly T[]): T[] => SearchNavigationMatching.collectSearchMatches(items, context, blacklist, {
     titleMatcher: run.scoreOptions.titleMatcher,
     isUrlBlockedBySearchBlacklist
   });
-  const merge = SEARCH_UTILS.mergeItemsByUrl;
+  const merge = SearchResultDedup.mergeItemsByUrl;
   const fallbackHistoryMatches = collect(merge([fallbackHistory, hanTitleHistory]));
   return {
     history: collect(merge([Array.isArray(history) ? history : [], fallbackHistoryMatches])),
@@ -163,12 +165,12 @@ async function collectSuggestions(run: SearchRun, matches: SourceMatches): Promi
       set.upsert(bookmark, 'bookmark', { path: buildBookmarkPath(bookmark, nodeMap), scoreAdjustment: 4 });
     }
   });
-  const openTabMatches = SEARCH_UTILS.collectSearchMatches(await matches.openTabs, context, matches.blacklist, {
+  const openTabMatches = SearchNavigationMatching.collectSearchMatches(await matches.openTabs, context, matches.blacklist, {
     titleMatcher: scoreOptions.titleMatcher,
     isUrlBlockedBySearchBlacklist
   });
   openTabMatches.forEach((item) => set.upsertOpenTab(item));
-  const brandDirect = SEARCH_UTILS.buildSearchBrandDirectSuggestion(set.rows, context, {
+  const brandDirect = SearchBrandSuggestions.buildSearchBrandDirectSuggestion(set.rows, context, {
     ...scoreOptions,
     buildFavicon: buildSearchSuggestionFavicon,
     buildReasons: (item, sourceType) => buildSuggestionReasons(item, sourceType, context, scoreOptions)
@@ -182,8 +184,8 @@ async function collectSuggestions(run: SearchRun, matches: SourceMatches): Promi
 async function getSearchSuggestions(query: unknown, options?: SearchSuggestionOptions | null): Promise<SuggestionRow[]> {
   const requestOptions: SearchSuggestionOptions = options && typeof options === 'object' ? options : {};
   ensureLocalSearchSourceCacheListeners();
-  const policy = getBackgroundSearchPolicy(SEARCH_UTILS);
-  const context = buildBackgroundSearchQueryContext(query, SEARCH_UTILS);
+  const policy = getBackgroundSearchPolicy();
+  const context = buildBackgroundSearchQueryContext(query);
   if (!context.queryLower) {
     return [];
   }
@@ -198,12 +200,12 @@ async function getSearchSuggestions(query: unknown, options?: SearchSuggestionOp
     const matches = await readSourceMatches(run);
     const set = await collectSuggestions(run, matches);
     let rows = filterBlacklistedSuggestions(takeRankedUniqueRows(set.rows, policy.candidatePoolLimit || 20), matches.blacklist);
-    rows = SEARCH_UTILS.filterSearchSuggestionsBySourceTypes(rows, sourceTypes);
-    rows = SEARCH_UTILS.applySearchSuggestionHostDiversity(rows, { context });
+    rows = SearchBrandSuggestions.filterSearchSuggestionsBySourceTypes(rows, sourceTypes);
+    rows = SearchBrandSuggestions.applySearchSuggestionHostDiversity(rows, { context });
     if (rows.length === 0 && requestOptions.keyboardLayoutRetry !== false) {
       return getKeyboardLayoutSuggestions(context, requestOptions, policy, getSearchSuggestions);
     }
-    return rows.map((row) => attachSuggestionTitleHighlight(row, context, scoreOptions, SEARCH_UTILS));
+    return rows.map((row) => attachSuggestionTitleHighlight(row, context, scoreOptions));
   } catch (error) {
     console.error('Error getting search suggestions:', error);
     return [];

@@ -1,9 +1,11 @@
 // Filtering the mode menu: the search text and Han readings of each item,
 // matching a query, and the full label of a tile that cuts it short.
-import * as LumnoSearchUtils from '../../../domain/search/search-utils';
 import type * as LumnoCursorTooltip from '../../ui/cursor-tooltip';
 import type { CursorTooltipController } from '../../ui/cursor-tooltip';
 import type { ModeMenuEntry, ModeMenuItem, ModeMenuMatch, ModeMenuRange, ModeMenuSearchIndex } from './types';
+import * as SearchTextIndex from '../../../domain/search/utils/text-index';
+import * as SearchTextMatching from '../../../domain/search/utils/text-matching';
+import * as SearchTextNormalize from '../../../domain/search/utils/text-normalize';
 
 // pinyin-pro, once loaded.
 interface PinyinApi {
@@ -36,7 +38,7 @@ function createModeMenuSearch(deps: ModeMenuSearchDeps) {
   // search results: kana, Hangul and Cyrillic included, accents and
   // full-width forms folded.
   function normalizeModeMenuSearchText(value: unknown): string {
-    return LumnoSearchUtils.compactSearchQuery(value);
+    return SearchTextNormalize.compactSearchQuery(value);
   }
 
   function appendModeMenuSearchSequence(
@@ -104,7 +106,7 @@ function createModeMenuSearch(deps: ModeMenuSearchDeps) {
       labelMap,
       // Pinyin, initials and mixed spellings ("db", "douban", "doub"), by the
       // same rules as the search results.
-      units: LumnoSearchUtils.buildSearchTextIndex(labelText, { getHanReadings: getModeMenuHanReadings }),
+      units: SearchTextIndex.buildSearchTextIndex(labelText, { getHanReadings: getModeMenuHanReadings }),
       searchTerms
     });
   }
@@ -142,7 +144,7 @@ function createModeMenuSearch(deps: ModeMenuSearchDeps) {
       return { matched: true, ranges: [directRange] };
     }
     const unitMatch = index.units
-      ? LumnoSearchUtils.matchSearchTextIndex(index.units, normalizedQuery)
+      ? SearchTextMatching.matchSearchTextIndex(index.units, normalizedQuery)
       : null;
     if (unitMatch) {
       return {

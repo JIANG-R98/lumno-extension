@@ -1,7 +1,6 @@
 import type { BlacklistRule } from '../../domain/blacklist-utils';
 import { readSearchEngineState } from '../../domain/search/search-engine-state-reader';
 import type { OverlayTab } from '../../domain/messages';
-import type * as SearchUtils from '../../domain/search/search-utils';
 import type { LocalSearchScope, SearchEngineState, SearchSourceType } from '../../domain/search/types';
 import { motionEffectsEnabled, simpleModeEnabled, themeMode } from '../../domain/settings/appearance';
 import type { ThemeMode } from '../../domain/settings/appearance';
@@ -33,6 +32,7 @@ import {
 import type { SearchResultPriority } from '../../domain/settings/search';
 import type * as SuggestionNavigation from '../../shared/search/suggestion-navigation';
 import type { OverlaySettings } from '../overlay-settings';
+import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
 
 // Row is a suggestion row, Provider a site search provider and Theme a
 // suggestion theme; this module only passes them along.
@@ -79,7 +79,6 @@ interface SettingsSyncState<Row, Provider> {
 }
 
 interface SettingsSyncDeps<Row, Provider, Theme> {
-  SEARCH_UTILS: Pick<typeof SearchUtils, 'isRetiredSearchEngineState'>;
   SUGGESTION_NAVIGATION: Pick<typeof SuggestionNavigation, 'cancelNumberShortcuts'>;
   normalizeOverlaySearchBlacklistItems(items: unknown): BlacklistRule[];
   normalizeOverlayFaviconRequestBlacklistItems(items: unknown): BlacklistRule[];
@@ -113,7 +112,6 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
     applyOverlayTheme,
     applyLanguageMode,
     loadOverlaySearchEngineState,
-    SEARCH_UTILS,
     clearLocalSearchScope,
     requestOverlaySearchSuggestions,
     shouldShowOpenTabsForEmptyQuery,
@@ -165,7 +163,7 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
   );
   settings.follow(defaultSearchEngine, () => {
     const nextValue = readSearchEngineState(settings.get(defaultSearchEngine));
-    if (nextValue && nextValue.id && !SEARCH_UTILS.isRetiredSearchEngineState(nextValue)) {
+    if (nextValue && nextValue.id && !SearchSiteSearchProviders.isRetiredSearchEngineState(nextValue)) {
       overlayState.overlaySearchEngineState = nextValue;
       refreshOverlaySuggestionsFromLastResponse();
     }
