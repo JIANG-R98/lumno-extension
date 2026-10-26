@@ -103,74 +103,90 @@ function getUpdateNoticeDismissKey(versionTag: unknown): string {
   return getFeatureHintSyncDismissKey(createUpdateNoticeDefinition(versionTag));
 }
 
-function createUpdateNotice(options?: UpdateNoticeOptions | null): UpdateNoticeController | null {
-  const config: UpdateNoticeOptions = options || {};
-  const documentObj = config.documentObj || (typeof document !== 'undefined' ? document : null);
-  const featureHints = config.featureHints || LumnoFeatureHints;
-  const chromeApi: UpdateNoticeChromeApi | null = config.chromeApi || (typeof chrome !== 'undefined' ? chrome : null);
-  const currentVersion = normalizeVersionTag(config.version || getCurrentVersionTag(chromeApi));
-  if (!documentObj || !currentVersion) {
-    return null;
+// The notice's copy for the version, with the release's own title once
+// it is known.
+function translateNotice(baseT: Translate, key: string, fallback: string, notice: UpdateNotice | null, displayVersion: string): string {
+  if (key === 'update_notice_badge') {
+    return stripBadgeButterfly(formatTemplate(baseT(key, fallback || '已更新至 {version}'), { version: displayVersion }));
+  }
+  if (key === 'update_notice_text') {
+    return notice && notice.title
+      ? notice.title
+      : formatTemplate(baseT('update_notice_text_fallback', fallback || '查看本次更新'), { version: displayVersion });
+  }
+  if (key === 'update_notice_link') {
+    return baseT(key, fallback || '更新日志');
+  }
+  if (key === 'update_notice_close') {
+    return baseT(key, fallback || '关闭更新提示');
+  }
+  return baseT(key, fallback);
+}
+
+// What the options settle for this version's notice.
+interface UpdateNoticeSettings {
+  readonly config: UpdateNoticeOptions;
+  readonly store: SettingsStore;
+  readonly currentVersion: string;
+  readonly displayVersion: string;
+  readonly baseT: Translate;
+  readonly displayCountSetting: Setting<unknown>;
+  // The per-version dismissal, written once the notice has shown its last time.
+  readonly dismissSetting: Setting<boolean> | null;
+}
+
+// How many times this version's notice has shown, counted once per page
+// view and only once the stored count is known.
+class DisplayCount {
+  count = 0;
+  loaded = false;
+  requested = false;
+  recorded = false;
+  // The dismissal this count wrote, so its own change does not close the notice.
+  writingDismissal = false;
+
+  limitReached(): boolean {
+    return this.loaded && this.count >= UPDATE_NOTICE_MAX_DISPLAY_COUNT && !this.recorded;
   }
 
-  const store = config.settingsStore ||
-    (chromeApi ? getContextSettingsStore(chromeApi) : createSettingsStore({ chromeApi: null, settings: [] }));
-  const surface = readSurface(config.surface);
-  const definition = createUpdateNoticeDefinition(currentVersion, { surface });
-  const dismissKey = getUpdateNoticeDismissKey(currentVersion);
-  const displayCountSetting = getUpdateNoticeDisplayCountSetting(currentVersion);
-  const dismissId = featureHintDismissedEverywhere.idOf(dismissKey);
-  const dismissSetting = dismissId ? featureHintDismissedEverywhere.member(dismissId) : null;
-  const baseT: Translate = typeof config.t === 'function'
-    ? config.t
-    : (_key, fallback) => fallback || '';
-  const displayVersion = formatVersionLabel(currentVersion);
-  let notice = shouldShowUpdateNotice(config.initialNotice, currentVersion)
-    ? normalizeUpdateNoticePayload(config.initialNotice)
-    : null;
-  let updateNoticeEnabled = normalizeUpdateNoticeEnabled(config.updateNoticeEnabled);
-  let destroyed = false;
-  let titleRefreshPromise: Promise<void> | null = null;
-  let sessionSlotClaimed = false;
-  let displayCount = 0;
-  let displayCountLoaded = false;
-  let exposureRequested = false;
-  let exposureRecorded = false;
-  let ignoreOwnAutoDismissChange = false;
+  load(count: number): void {
+    this.count = count;
+    this.loaded = true;
+  }
+}
 
-  function translate(key: string, fallback: string): string {
-    if (key === 'update_notice_badge') {
-      return stripBadgeButterfly(
-        formatTemplate(baseT(key, fallback || '已更新至 {version}'), { version: displayVersion })
-      );
-    }
-    if (key === 'update_notice_text') {
-      if (notice && notice.title) {
-        return notice.title;
-      }
-      return formatTemplate(baseT('update_notice_text_fallback', fallback || '查看本次更新'), {
-        version: displayVersion
-      });
-    }
-    if (key === 'update_notice_link') {
-      return baseT(key, fallback || '更新日志');
-    }
-    if (key === 'update_notice_close') {
-      return baseT(key, fallback || '关闭更新提示');
-    }
-    return baseT(key, fallback);
+class UpdateNoticeSession {
+  notice: UpdateNotice | null;
+  sessionSlotClaimed = false;
+  readonly display = new DisplayCount();
+  private enabled: boolean;
+  private destroyed = false;
+  private titleRefresh: Promise<void> | null = null;
+  readonly settings: UpdateNoticeSettings;
+
+  constructor(settings: UpdateNoticeSettings) {
+    const { config, currentVersion } = settings;
+    this.settings = settings;
+    this.notice = shouldShowUpdateNotice(config.initialNotice, currentVersion) ? normalizeUpdateNoticePayload(config.initialNotice) : null;
+    this.enabled = normalizeUpdateNoticeEnabled(config.updateNoticeEnabled);
   }
 
-  function getActiveNotice(): UpdateNotice | null {
-    return notice || normalizeUpdateNoticePayload({
-      version: currentVersion,
+  translate(key: string, fallback: string): string {
+    return translateNotice(this.settings.baseT, key, fallback, this.notice, this.settings.displayVersion);
+  }
+
+  activeNotice(): UpdateNotice | null {
+    const version = this.settings.currentVersion;
+    return this.notice || normalizeUpdateNoticePayload({
+      version,
       reason: 'update',
-      releaseUrl: buildReleaseDetailsUrl(currentVersion, { reason: 'update' })
+      releaseUrl: buildReleaseDetailsUrl(version, { reason: 'update' })
     });
   }
 
-  function openDetails(event: MouseEvent): void {
-    const activeNotice = getActiveNotice();
+  openDetails(event: MouseEvent): void {
+    const { config } = this.settings;
+    const activeNotice = this.activeNotice();
     if (typeof config.onDetailsClick === 'function') {
       config.onDetailsClick(activeNotice, event);
       return;
@@ -182,193 +198,196 @@ function createUpdateNotice(options?: UpdateNoticeOptions | null): UpdateNoticeC
     }
   }
 
-  const createdHint = featureHints.createFeatureHint({
+  // Reads the stored notice, setting and count; settles once they are applied.
+  load(hint: FeatureHintController): Promise<void> {
+    const { store, currentVersion } = this.settings;
+    return Promise.all([
+      getStoredUpdateNotice(store),
+      getStoredUpdateNoticeEnabled(store),
+      getStoredUpdateNoticeDisplayCount(store, currentVersion)
+    ]).then(([payload, enabled, storedDisplayCount]) => {
+      this.enabled = enabled;
+      this.display.load(storedDisplayCount);
+      this.syncDisplayCountAttribute(hint);
+      this.applyPayload(hint, payload);
+    });
+  }
+
+  applyPayload(hint: FeatureHintController, payload: unknown): void {
+    if (this.destroyed) {
+      return;
+    }
+    this.notice = shouldShowUpdateNotice(payload, this.settings.currentVersion) ? normalizeUpdateNoticePayload(payload) : null;
+    this.syncVisibility(hint);
+  }
+
+  // Follows the setting, the published notice, the count and the dismissal
+  // other pages write; returns the unsubscribe.
+  follow(hint: FeatureHintController): () => void {
+    const { store, displayCountSetting, dismissSetting } = this.settings;
+    const followed: Setting<unknown>[] = [updateNoticeEnabledSetting, updateNoticeState, displayCountSetting];
+    if (dismissSetting) followed.push(dismissSetting);
+    return store.subscribe(followed, (setting) => {
+      if (this.destroyed) {
+        return;
+      }
+      if (setting === updateNoticeEnabledSetting) {
+        this.enabled = normalizeUpdateNoticeEnabled(store.getStored(updateNoticeEnabledSetting));
+        this.syncVisibility(hint);
+      } else if (setting === updateNoticeState) {
+        this.applyPayload(hint, store.getStored(updateNoticeState));
+      } else if (setting === displayCountSetting) {
+        this.display.load(normalizeUpdateNoticeDisplayCount(store.getStored(displayCountSetting)));
+        this.syncDisplayCountAttribute(hint);
+        if (!this.display.recorded) this.syncVisibility(hint);
+      } else if (dismissSetting && store.get(dismissSetting) && !this.display.writingDismissal && !hint.isDismissed()) {
+        hint.dismiss();
+      }
+    });
+  }
+
+  claimSessionSlotIfVisible(hint: FeatureHintController): void {
+    const onClaimed = this.settings.config.onSessionSlotClaimed;
+    if (this.destroyed || this.sessionSlotClaimed || !hint.isVisible()) {
+      return;
+    }
+    this.sessionSlotClaimed = true;
+    if (typeof onClaimed === 'function') {
+      onClaimed();
+    }
+  }
+
+  // Counts this showing, once, while the notice shows. The last allowed
+  // showing also writes the per-version dismissal, so later New Tab and
+  // overlay pages start dismissed while this one stays visible.
+  recordExposureIfVisible(hint: FeatureHintController): boolean {
+    const display = this.display;
+    if (this.destroyed || display.recorded || !display.requested || !display.loaded || !hint.isVisible()) {
+      return false;
+    }
+    const { store, displayCountSetting, dismissSetting } = this.settings;
+    display.recorded = true;
+    display.count = normalizeUpdateNoticeDisplayCount(display.count + 1);
+    this.syncDisplayCountAttribute(hint);
+    const values: Array<[Setting<unknown>, unknown]> = [[displayCountSetting, display.count]];
+    if (display.count >= UPDATE_NOTICE_MAX_DISPLAY_COUNT && dismissSetting) {
+      values.push([dismissSetting, true]);
+      display.writingDismissal = true;
+    }
+    store.setMany(values).catch(() => {});
+    display.writingDismissal = false;
+    return true;
+  }
+
+  destroy(hint: FeatureHintController, unsubscribe: () => void): void {
+    this.destroyed = true;
+    hint.destroy();
+    unsubscribe();
+  }
+
+  private syncDisplayCountAttribute(hint: FeatureHintController): void {
+    hint.element.setAttribute('data-update-notice-display-count', String(this.display.count));
+    hint.element.setAttribute('data-update-notice-display-limit', String(UPDATE_NOTICE_MAX_DISPLAY_COUNT));
+  }
+
+  private syncVisibility(hint: FeatureHintController): void {
+    hint.updateLanguage();
+    hint.setVisible(Boolean(this.enabled && this.notice && this.display.loaded && !this.display.limitReached()));
+    this.claimSessionSlotIfVisible(hint);
+    this.recordExposureIfVisible(hint);
+    if (this.enabled) {
+      this.refreshMissingTitle(hint);
+    }
+  }
+
+  // A notice published without a title reads it from the release page.
+  private refreshMissingTitle(hint: FeatureHintController): void {
+    const notice = this.notice;
+    if (this.destroyed || !notice || notice.title || this.titleRefresh) {
+      return;
+    }
+    this.titleRefresh = fetchReleaseTitle(notice.version, { fetchImpl: this.settings.config.fetchImpl })
+      .then((title) => {
+        this.titleRefresh = null;
+        const sanitizedTitle = sanitizeText(title || '');
+        const current = this.notice;
+        if (this.destroyed || !sanitizedTitle || !current || current.title) {
+          return;
+        }
+        const nextNotice = normalizeUpdateNoticePayload({ ...current, title: sanitizedTitle });
+        if (nextNotice) {
+          this.notice = nextNotice;
+          hint.updateLanguage();
+          void setStoredUpdateNotice(this.settings.store, nextNotice);
+        }
+      })
+      .catch(() => {
+        this.titleRefresh = null;
+      });
+  }
+}
+
+function readUpdateNoticeSettings(config: UpdateNoticeOptions, chromeApi: UpdateNoticeChromeApi | null, currentVersion: string): UpdateNoticeSettings {
+  const dismissId = featureHintDismissedEverywhere.idOf(getUpdateNoticeDismissKey(currentVersion));
+  return {
+    config,
+    store: config.settingsStore ||
+      (chromeApi ? getContextSettingsStore(chromeApi) : createSettingsStore({ chromeApi: null, settings: [] })),
+    currentVersion,
+    displayVersion: formatVersionLabel(currentVersion),
+    baseT: typeof config.t === 'function' ? config.t : (_key, fallback) => fallback || '',
+    displayCountSetting: getUpdateNoticeDisplayCountSetting(currentVersion),
+    dismissSetting: dismissId ? featureHintDismissedEverywhere.member(dismissId) : null
+  };
+}
+
+function createUpdateNotice(options?: UpdateNoticeOptions | null): UpdateNoticeController | null {
+  const config: UpdateNoticeOptions = options || {};
+  const documentObj = config.documentObj || (typeof document !== 'undefined' ? document : null);
+  const chromeApi: UpdateNoticeChromeApi | null = config.chromeApi || (typeof chrome !== 'undefined' ? chrome : null);
+  const currentVersion = normalizeVersionTag(config.version || getCurrentVersionTag(chromeApi));
+  if (!documentObj || !currentVersion) {
+    return null;
+  }
+  const session = new UpdateNoticeSession(readUpdateNoticeSettings(config, chromeApi, currentVersion));
+  const hint = (config.featureHints || LumnoFeatureHints).createFeatureHint({
     documentObj,
-    definition,
+    definition: createUpdateNoticeDefinition(currentVersion, { surface: readSurface(config.surface) }),
     chromeApi,
-    dismissKey,
-    t: translate,
+    dismissKey: getUpdateNoticeDismissKey(currentVersion),
+    t: (key, fallback) => session.translate(key, fallback),
     initiallyVisible: false,
-    onLinkClick: openDetails,
+    onLinkClick: (event) => session.openDetails(event),
     onDismiss() {
       if (typeof config.onDismiss === 'function') {
         config.onDismiss();
       }
     }
   });
-  if (!createdHint) {
+  if (!hint) {
     return null;
   }
-  const hintController: FeatureHintController = createdHint;
-
-  function isVisible(): boolean {
-    return hintController.isVisible();
-  }
-
-  function claimSessionSlotIfVisible(): void {
-    if (destroyed || sessionSlotClaimed || !isVisible()) {
-      return;
-    }
-    sessionSlotClaimed = true;
-    if (typeof config.onSessionSlotClaimed === 'function') {
-      config.onSessionSlotClaimed();
-    }
-  }
-
-  function syncDisplayCountAttribute(): void {
-    hintController.element.setAttribute(
-      'data-update-notice-display-count',
-      String(displayCount)
-    );
-    hintController.element.setAttribute(
-      'data-update-notice-display-limit',
-      String(UPDATE_NOTICE_MAX_DISPLAY_COUNT)
-    );
-  }
-
-  function recordExposureIfVisible(): boolean {
-    if (destroyed || exposureRecorded || !exposureRequested || !displayCountLoaded || !isVisible()) {
-      return false;
-    }
-    exposureRecorded = true;
-    displayCount = normalizeUpdateNoticeDisplayCount(displayCount + 1);
-    syncDisplayCountAttribute();
-    const values: Array<[Setting<unknown>, unknown]> = [[displayCountSetting, displayCount]];
-    if (displayCount >= UPDATE_NOTICE_MAX_DISPLAY_COUNT && dismissSetting) {
-      // Persist the normal per-version dismissal while leaving this third
-      // exposure visible. Any later newtab or overlay instance will start
-      // dismissed, and already-open sibling instances close as it changes.
-      values.push([dismissSetting, true]);
-      ignoreOwnAutoDismissChange = true;
-    }
-    store.setMany(values).catch(() => {});
-    ignoreOwnAutoDismissChange = false;
-    return true;
-  }
-
-  function syncNoticeVisibility(): void {
-    hintController.updateLanguage();
-    const displayLimitReached = displayCountLoaded &&
-      displayCount >= UPDATE_NOTICE_MAX_DISPLAY_COUNT &&
-      !exposureRecorded;
-    hintController.setVisible(Boolean(
-      updateNoticeEnabled &&
-      notice &&
-      displayCountLoaded &&
-      !displayLimitReached
-    ));
-    claimSessionSlotIfVisible();
-    recordExposureIfVisible();
-    if (updateNoticeEnabled) {
-      refreshMissingTitle();
-    }
-  }
-
-  function applyNoticePayload(payload: unknown): void {
-    if (destroyed) {
-      return;
-    }
-    notice = shouldShowUpdateNotice(payload, currentVersion)
-      ? normalizeUpdateNoticePayload(payload)
-      : null;
-    syncNoticeVisibility();
-  }
-
-  function refreshMissingTitle(): void {
-    if (destroyed || !notice || notice.title || titleRefreshPromise) {
-      return;
-    }
-    titleRefreshPromise = fetchReleaseTitle(notice.version, { fetchImpl: config.fetchImpl })
-      .then((title) => {
-        titleRefreshPromise = null;
-        const sanitizedTitle = sanitizeText(title || '');
-        if (destroyed || !sanitizedTitle || !notice || notice.title) {
-          return;
-        }
-        const nextNotice = normalizeUpdateNoticePayload({ ...notice, title: sanitizedTitle });
-        if (!nextNotice) {
-          return;
-        }
-        notice = nextNotice;
-        hintController.updateLanguage();
-        void setStoredUpdateNotice(store, nextNotice);
-      })
-      .catch(() => {
-        titleRefreshPromise = null;
-      });
-  }
-
-  const storedNoticeReadyPromise = Promise.all([
-    getStoredUpdateNotice(store),
-    getStoredUpdateNoticeEnabled(store),
-    getStoredUpdateNoticeDisplayCount(store, currentVersion)
-  ]).then(([payload, enabled, storedDisplayCount]) => {
-    updateNoticeEnabled = enabled;
-    displayCount = storedDisplayCount;
-    displayCountLoaded = true;
-    syncDisplayCountAttribute();
-    applyNoticePayload(payload);
+  const ready: Promise<boolean> = Promise.all([session.load(hint), hint.ready]).then(() => {
+    session.claimSessionSlotIfVisible(hint);
+    return session.sessionSlotClaimed;
   });
-  const readyPromise: Promise<boolean> = Promise.all([
-    storedNoticeReadyPromise,
-    hintController.ready
-  ]).then(() => {
-    claimSessionSlotIfVisible();
-    return sessionSlotClaimed;
-  });
-
-  const followed = dismissSetting
-    ? [updateNoticeEnabledSetting, updateNoticeState, displayCountSetting, dismissSetting]
-    : [updateNoticeEnabledSetting, updateNoticeState, displayCountSetting];
-  const unsubscribe = store.subscribe(followed, (setting) => {
-    if (destroyed) {
-      return;
-    }
-    if (setting === updateNoticeEnabledSetting) {
-      updateNoticeEnabled = normalizeUpdateNoticeEnabled(store.getStored(updateNoticeEnabledSetting));
-      syncNoticeVisibility();
-    } else if (setting === updateNoticeState) {
-      applyNoticePayload(store.getStored(updateNoticeState));
-    } else if (setting === displayCountSetting) {
-      displayCount = normalizeUpdateNoticeDisplayCount(store.getStored(displayCountSetting));
-      displayCountLoaded = true;
-      syncDisplayCountAttribute();
-      if (!exposureRecorded) {
-        syncNoticeVisibility();
-      }
-    } else if (dismissSetting && store.get(dismissSetting) && !ignoreOwnAutoDismissChange && !hintController.isDismissed()) {
-      hintController.dismiss();
-    }
-  });
-
+  const unsubscribe = session.follow(hint);
   return Object.freeze({
-    ...hintController,
-    applyNoticePayload,
-    destroy() {
-      destroyed = true;
-      hintController.destroy();
-      unsubscribe();
-    },
-    getNotice() {
-      return notice;
-    },
-    getDisplayCount() {
-      return displayCount;
-    },
-    hasSessionSlot() {
-      return sessionSlotClaimed;
-    },
-    isVisible,
+    ...hint,
+    applyNoticePayload: (payload: unknown) => session.applyPayload(hint, payload),
+    destroy: () => session.destroy(hint, unsubscribe),
+    getNotice: () => session.notice,
+    getDisplayCount: () => session.display.count,
+    hasSessionSlot: () => session.sessionSlotClaimed,
+    isVisible: () => hint.isVisible(),
     recordExposure() {
-      const wasRecorded = exposureRecorded;
-      exposureRequested = true;
-      return readyPromise.then(() => (
-        recordExposureIfVisible() || (!wasRecorded && exposureRecorded)
-      ));
+      const wasRecorded = session.display.recorded;
+      session.display.requested = true;
+      return ready.then(() => session.recordExposureIfVisible(hint) || (!wasRecorded && session.display.recorded));
     },
-    ready: readyPromise,
+    ready,
     getDetailsUrl() {
-      const activeNotice = getActiveNotice();
+      const activeNotice = session.activeNotice();
       return activeNotice ? activeNotice.releaseUrl : '';
     }
   });
