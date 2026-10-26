@@ -111,7 +111,7 @@ const tabSwitcherViewStub = {
   }
 };
 // The switcher draws through this stand-in for its React view.
-window.LumnoTabSwitcherViewModule = { createTabSwitcherViewApi: () => tabSwitcherViewStub };
+window.LumnoTabSwitcherViewModule = { createTabSwitcherView: (options) => tabSwitcherViewStub.createTabSwitcherView(options) };
 window.eval(moduleScript('src/shared/tab-switcher/tab-switcher.ts', 'LumnoTabSwitcher', null, {
   'src/shared/react/tab-switcher.tsx': 'LumnoTabSwitcherViewModule'
 }));

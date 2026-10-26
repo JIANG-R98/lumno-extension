@@ -2,7 +2,6 @@ import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createTabSwitcherView,
-  createTabSwitcherViewApi,
   type TabSwitcherViewController
 } from './tab-switcher';
 import { getTags } from '../../../tests/react/dom';
@@ -61,7 +60,6 @@ describe('Overlay tab switcher React island', () => {
   it('renders cards synchronously with the legacy DOM contract', () => {
     const { controller, shadow } = createView();
 
-    expect(createTabSwitcherViewApi().implementation).toBe('react');
     expect(controller.panel?.dataset.reactIsland).toBe(
       'overlay-tab-switcher'
     );

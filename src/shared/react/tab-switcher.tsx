@@ -196,46 +196,93 @@ function TitleFavicon({
   );
 }
 
-function TabCard({
-  options,
-  tab,
-  index,
-  active
-}: {
+interface CardProps {
   options: NormalizedOptions;
   tab: InternalTab;
   index: number;
-  active: boolean;
-}) {
-  const title = options.sanitizeText(
-    tab.title,
-    options.getMessage('tab_switcher_untitled', 'Untitled')
-  );
-  const url = String(tab.url || '');
-  const favicon = String(tab.favIconUrl || '');
+}
+
+// The card's thumbnail, cross-fading from the previous one, or its site
+// icon while there is none.
+function CardThumbnail({ options, tab, thumbnailStatus }: Omit<CardProps, 'index'> & { thumbnailStatus: string }) {
   const thumbnail = String(tab.thumbnail || '');
   const previousThumbnail = String(tab._previousThumbnail || '');
-  const thumbnailStatus = options.getThumbnailStatus(
-    tab,
-    thumbnail
-  );
-  const accent = options.normalizeAccentCss(tab.accentRgb);
-  const style = accent
-    ? ({
-        '--x-tab-switcher-card-accent': accent
-      })
-    : undefined;
-
-  const closeLabel = options.getMessage(
-    'tab_switcher_close_tab',
-    'Close tab'
-  );
-
+  const favicon = String(tab.favIconUrl || '');
   return (
     <div
-      className="x-tab-switcher-item"
-      data-closing={tab._closing ? 'true' : undefined}
+      className="x-tab-switcher-thumb"
+      data-tab-id={String(tab.id)}
+      data-thumbnail-status={thumbnailStatus}
+      data-thumbnail-reason={tab.thumbnailReason ? options.sanitizeText(tab.thumbnailReason) : undefined}
     >
+      {isImageDataUrl(previousThumbnail) && <PreparedImage src={previousThumbnail} alt="" kind="thumbnail" exiting />}
+      {isImageDataUrl(thumbnail) ? (
+        <PreparedImage src={thumbnail} alt="" kind="thumbnail" entering={Boolean(tab._thumbnailEntering)} />
+      ) : (
+        <div className="x-tab-switcher-fallback">
+          {favicon && (
+            <PreparedImage
+              className="x-tab-switcher-favicon"
+              src={favicon}
+              alt={options.getMessage('tab_switcher_favicon_alt', 'Site icon')}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CardMeta({ options, tab, title }: Omit<CardProps, 'index'> & { title: string }) {
+  const url = String(tab.url || '');
+  return (
+    <div className="x-tab-switcher-meta">
+      <div className="x-tab-switcher-name-row">
+        <TitleFavicon src={String(tab.favIconUrl || '')} />
+        <div className="x-tab-switcher-name" title={title}>{title}</div>
+      </div>
+      <div className="x-tab-switcher-host">{options.getHostLabel(url) || url}</div>
+    </div>
+  );
+}
+
+function CloseButton({ options, tab, index }: CardProps) {
+  const closeLabel = options.getMessage('tab_switcher_close_tab', 'Close tab');
+  return (
+    <button
+      type="button"
+      className="x-tab-switcher-close"
+      aria-label={closeLabel}
+      title={closeLabel}
+      tabIndex={-1}
+      disabled={Boolean(tab._closing)}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        options.onClose(index, event.nativeEvent);
+      }}
+      onContextMenu={(event) => {
+        if (!isControlHeldPrimaryClick(event) || tab._closing) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        options.onClose(index, event.nativeEvent);
+      }}
+    >
+      <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+        <path d="M3 3l6 6M9 3l-6 6" />
+      </svg>
+    </button>
+  );
+}
+
+function TabCard({ options, tab, index, active }: CardProps & { active: boolean }) {
+  const title = options.sanitizeText(tab.title, options.getMessage('tab_switcher_untitled', 'Untitled'));
+  const thumbnailStatus = options.getThumbnailStatus(tab, String(tab.thumbnail || ''));
+  const accent = options.normalizeAccentCss(tab.accentRgb);
+  return (
+    <div className="x-tab-switcher-item" data-closing={tab._closing ? 'true' : undefined}>
       <button
         type="button"
         role="option"
@@ -246,7 +293,7 @@ function TabCard({
         aria-selected={active}
         aria-label={title}
         tabIndex={active ? 0 : -1}
-        style={style}
+        style={accent ? { '--x-tab-switcher-card-accent': accent } : undefined}
         onPointerEnter={() => options.onSelect(index)}
         onFocus={() => options.onSelect(index)}
         onClick={(event) => {
@@ -263,83 +310,10 @@ function TabCard({
           options.onActivate(index, event.nativeEvent);
         }}
       >
-        <div
-          className="x-tab-switcher-thumb"
-          data-tab-id={String(tab.id)}
-          data-thumbnail-status={thumbnailStatus}
-          data-thumbnail-reason={
-            tab.thumbnailReason
-              ? options.sanitizeText(tab.thumbnailReason)
-              : undefined
-          }
-        >
-          {isImageDataUrl(previousThumbnail) && (
-            <PreparedImage
-              src={previousThumbnail}
-              alt=""
-              kind="thumbnail"
-              exiting
-            />
-          )}
-          {isImageDataUrl(thumbnail) ? (
-            <PreparedImage
-              src={thumbnail}
-              alt=""
-              kind="thumbnail"
-              entering={Boolean(tab._thumbnailEntering)}
-            />
-          ) : (
-            <div className="x-tab-switcher-fallback">
-              {favicon && (
-                <PreparedImage
-                  className="x-tab-switcher-favicon"
-                  src={favicon}
-                  alt={options.getMessage(
-                    'tab_switcher_favicon_alt',
-                    'Site icon'
-                  )}
-                />
-              )}
-            </div>
-          )}
-        </div>
-        <div className="x-tab-switcher-meta">
-          <div className="x-tab-switcher-name-row">
-            <TitleFavicon src={favicon} />
-            <div className="x-tab-switcher-name" title={title}>
-              {title}
-            </div>
-          </div>
-          <div className="x-tab-switcher-host">
-            {options.getHostLabel(url) || url}
-          </div>
-        </div>
+        <CardThumbnail options={options} tab={tab} thumbnailStatus={thumbnailStatus} />
+        <CardMeta options={options} tab={tab} title={title} />
       </button>
-      <button
-        type="button"
-        className="x-tab-switcher-close"
-        aria-label={closeLabel}
-        title={closeLabel}
-        tabIndex={-1}
-        disabled={Boolean(tab._closing)}
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          options.onClose(index, event.nativeEvent);
-        }}
-        onContextMenu={(event) => {
-          if (!isControlHeldPrimaryClick(event) || tab._closing) {
-            return;
-          }
-          event.preventDefault();
-          event.stopPropagation();
-          options.onClose(index, event.nativeEvent);
-        }}
-      >
-        <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
-          <path d="M3 3l6 6M9 3l-6 6" />
-        </svg>
-      </button>
+      <CloseButton index={index} options={options} tab={tab} />
     </div>
   );
 }
@@ -406,172 +380,166 @@ function createNoopController(): TabSwitcherViewController {
   };
 }
 
-export function createTabSwitcherView(
-  rawOptions: TabSwitcherViewOptions = {}
-): TabSwitcherViewController {
-  const normalizedOptions = normalizeOptions(rawOptions);
-  if (!normalizedOptions) {
-    return createNoopController();
+type ThumbnailReply = { ok: boolean; reason?: string };
+
+// Why a captured thumbnail cannot replace a card's; null when it can.
+function readThumbnailRefusal(tabs: InternalTab[], update: TabSwitcherThumbnailUpdate, index: number): string | null {
+  if (!Number.isInteger(Number(update && update.tabId)) || index < 0) {
+    return 'tab-not-visible';
   }
-  const options: NormalizedOptions = normalizedOptions;
-  const mount = options.document.createElement('div');
-  mount.setAttribute(
-    'data-react-island-owner',
-    'overlay-tab-switcher'
-  );
-  options.root.appendChild(mount);
-  const root: Root = createRoot(mount);
-  let tabs: InternalTab[] = (
-    Array.isArray(rawOptions.tabs) ? rawOptions.tabs : []
-  )
-    .filter((tab) => tab && Number.isInteger(tab.id))
-    .slice(0, 5)
-    .map((tab) => ({ ...tab }));
-  let selectedIndex = Number(rawOptions.selectedIndex) || 0;
-  let theme: TabSwitcherTheme | null = null;
-  let panel: HTMLElement | null = null;
-  let destroyed = false;
-  const timers = new Set<number>();
+  if (!isImageDataUrl(update.thumbnail)) {
+    return 'invalid-thumbnail';
+  }
+  const tab = tabs[index];
+  const updateUrl = String(update.url || '');
+  return updateUrl && tab.url && updateUrl !== tab.url ? 'tab-url-mismatch' : null;
+}
 
-  const controller: TabSwitcherViewController = {
-    get panel() {
-      return panel;
-    },
-    get buttons() {
-      return panel
-        ? Array.from(
-            queryHtmlTags(panel, '.x-tab-switcher-card', 'button')
-          )
-        : [];
-    },
-    setTheme(nextTheme) {
-      if (theme !== nextTheme) {
-        theme = nextTheme;
-        render();
-      }
-    },
-    updateSelection(index) {
-      selectedIndex = Number(index) || 0;
-      render();
-    },
-    setTabClosing(tabId, closing) {
-      const index = tabs.findIndex((tab) => tab.id === tabId);
-      if (index < 0 || Boolean(tabs[index]._closing) === closing) {
-        return;
-      }
-      tabs[index] = { ...tabs[index], _closing: closing };
-      render();
-    },
-    removeTab(tabId) {
-      const index = tabs.findIndex((tab) => tab.id === tabId);
-      if (index < 0) {
-        return false;
-      }
-      tabs = tabs.filter((tab) => tab.id !== tabId);
-      render();
-      return true;
-    },
-    updateThumbnail(update) {
-      const tabId = Number(update && update.tabId);
-      const index = tabs.findIndex((tab) => tab.id === tabId);
-      if (!Number.isInteger(tabId) || index < 0) {
-        return { ok: false, reason: 'tab-not-visible' };
-      }
-      const thumbnail = String(update.thumbnail || '');
-      if (!isImageDataUrl(thumbnail)) {
-        return { ok: false, reason: 'invalid-thumbnail' };
-      }
-      const tab = tabs[index];
-      const updateUrl = String(update.url || '');
-      if (updateUrl && tab.url && updateUrl !== tab.url) {
-        return { ok: false, reason: 'tab-url-mismatch' };
-      }
-      if (tab.thumbnail === thumbnail) {
-        return { ok: true };
-      }
-      tabs[index] = {
-        ...tab,
-        _previousThumbnail: isImageDataUrl(tab.thumbnail)
-          ? String(tab.thumbnail)
-          : '',
-        _thumbnailEntering: true,
-        thumbnail,
-        thumbnailStatus: update.thumbnailStatus || 'ok',
-        thumbnailReason: update.thumbnailReason || ''
-      };
-      render();
-      const windowRef = options.document.defaultView;
-      const requestFrame =
-        windowRef?.requestAnimationFrame?.bind(windowRef) ||
-        ((callback: FrameRequestCallback) =>
-          window.setTimeout(() => callback(Date.now()), 0));
-      requestFrame(() => {
-        if (destroyed || !tabs[index] || tabs[index].id !== tabId) {
-          return;
-        }
-        tabs[index] = {
-          ...tabs[index],
-          _thumbnailEntering: false
-        };
-        render();
-        const timer = window.setTimeout(() => {
-          timers.delete(timer);
-          if (
-            destroyed ||
-            !tabs[index] ||
-            tabs[index].id !== tabId
-          ) {
-            return;
-          }
-          tabs[index] = {
-            ...tabs[index],
-            _previousThumbnail: ''
-          };
-          render();
-        }, 260);
-        timers.add(timer);
-      });
-      return { ok: true };
-    },
-    destroy() {
-      if (destroyed) {
-        return;
-      }
-      destroyed = true;
-      timers.forEach((timer) => window.clearTimeout(timer));
-      timers.clear();
-      root.unmount();
-      mount.remove();
-      panel = null;
+class ReactTabSwitcherView implements TabSwitcherViewController {
+  private tabs: InternalTab[];
+  private selectedIndex: number;
+  private theme: TabSwitcherTheme | null = null;
+  private panelElement: HTMLElement | null = null;
+  private destroyed = false;
+  private readonly timers = new Set<number>();
+  private readonly options: NormalizedOptions;
+  private readonly mount: HTMLDivElement;
+  private readonly root: Root;
+
+  constructor(options: NormalizedOptions, rawOptions: TabSwitcherViewOptions) {
+    this.options = options;
+    this.mount = options.document.createElement('div');
+    this.mount.setAttribute('data-react-island-owner', 'overlay-tab-switcher');
+    options.root.appendChild(this.mount);
+    this.root = createRoot(this.mount);
+    this.tabs = (Array.isArray(rawOptions.tabs) ? rawOptions.tabs : [])
+      .filter((tab) => tab && Number.isInteger(tab.id))
+      .slice(0, 5)
+      .map((tab) => ({ ...tab }));
+    this.selectedIndex = Number(rawOptions.selectedIndex) || 0;
+    this.render();
+  }
+
+  get panel(): HTMLElement | null {
+    return this.panelElement;
+  }
+
+  get buttons(): HTMLButtonElement[] {
+    return this.panelElement ? Array.from(queryHtmlTags(this.panelElement, '.x-tab-switcher-card', 'button')) : [];
+  }
+
+  setTheme(nextTheme: TabSwitcherTheme): void {
+    if (this.theme !== nextTheme) {
+      this.theme = nextTheme;
+      this.render();
     }
-  };
+  }
 
-  function render(): void {
-    if (destroyed) {
+  updateSelection(index: number): void {
+    this.selectedIndex = Number(index) || 0;
+    this.render();
+  }
+
+  setTabClosing(tabId: number, closing: boolean): void {
+    const index = this.tabs.findIndex((tab) => tab.id === tabId);
+    if (index < 0 || Boolean(this.tabs[index]._closing) === closing) {
+      return;
+    }
+    this.patchTab(index, { _closing: closing });
+  }
+
+  removeTab(tabId: number): boolean {
+    if (!this.tabs.some((tab) => tab.id === tabId)) {
+      return false;
+    }
+    this.tabs = this.tabs.filter((tab) => tab.id !== tabId);
+    this.render();
+    return true;
+  }
+
+  updateThumbnail(update: TabSwitcherThumbnailUpdate): ThumbnailReply {
+    const tabId = Number(update && update.tabId);
+    const index = this.tabs.findIndex((tab) => tab.id === tabId);
+    const refusal = readThumbnailRefusal(this.tabs, update, index);
+    if (refusal) {
+      return { ok: false, reason: refusal };
+    }
+    const tab = this.tabs[index];
+    const thumbnail = String(update.thumbnail || '');
+    if (tab.thumbnail === thumbnail) {
+      return { ok: true };
+    }
+    this.patchTab(index, {
+      _previousThumbnail: isImageDataUrl(tab.thumbnail) ? String(tab.thumbnail) : '',
+      _thumbnailEntering: true,
+      thumbnail,
+      thumbnailStatus: update.thumbnailStatus || 'ok',
+      thumbnailReason: update.thumbnailReason || ''
+    });
+    this.settleThumbnail(index, tabId);
+    return { ok: true };
+  }
+
+  destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+    this.destroyed = true;
+    this.timers.forEach((timer) => window.clearTimeout(timer));
+    this.timers.clear();
+    this.root.unmount();
+    this.mount.remove();
+    this.panelElement = null;
+  }
+
+  // The new thumbnail enters on the next frame; the previous one goes once
+  // it has faded out.
+  private settleThumbnail(index: number, tabId: number): void {
+    const windowRef = this.options.document.defaultView;
+    const requestFrame = windowRef?.requestAnimationFrame?.bind(windowRef) ||
+      ((callback: FrameRequestCallback) => window.setTimeout(() => callback(Date.now()), 0));
+    const stillShows = (): boolean => !this.destroyed && Boolean(this.tabs[index]) && this.tabs[index].id === tabId;
+    requestFrame(() => {
+      if (!stillShows()) {
+        return;
+      }
+      this.patchTab(index, { _thumbnailEntering: false });
+      const timer = window.setTimeout(() => {
+        this.timers.delete(timer);
+        if (stillShows()) {
+          this.patchTab(index, { _previousThumbnail: '' });
+        }
+      }, 260);
+      this.timers.add(timer);
+    });
+  }
+
+  private patchTab(index: number, patch: Partial<InternalTab>): void {
+    this.tabs[index] = { ...this.tabs[index], ...patch };
+    this.render();
+  }
+
+  private render(): void {
+    if (this.destroyed) {
       return;
     }
     flushSync(() => {
-      root.render(
+      this.root.render(
         <TabSwitcherView
-          options={options}
-          tabs={tabs}
-          selectedIndex={selectedIndex}
-          theme={theme}
+          options={this.options}
+          tabs={this.tabs}
+          selectedIndex={this.selectedIndex}
+          theme={this.theme}
           panelRef={(node) => {
-            panel = node;
+            this.panelElement = node;
           }}
         />
       );
     });
   }
-
-  render();
-  return controller;
 }
 
-export function createTabSwitcherViewApi() {
-  return Object.freeze({
-    implementation: 'react' as const,
-    createTabSwitcherView
-  });
+export function createTabSwitcherView(rawOptions: TabSwitcherViewOptions = {}): TabSwitcherViewController {
+  const options = normalizeOptions(rawOptions);
+  return options ? new ReactTabSwitcherView(options, rawOptions) : createNoopController();
 }

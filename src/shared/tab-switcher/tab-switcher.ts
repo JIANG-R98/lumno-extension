@@ -1,7 +1,7 @@
 // The Alt+Q tab switcher: opens over the page with the recent tabs the
 // worker sends, or moves an open one along, and answers the worker's
 // messages about the open switcher.
-import { createTabSwitcherViewApi } from '../react/tab-switcher';
+import { createTabSwitcherView } from '../react/tab-switcher';
 import { getHostLabel, getMessage, getThumbnailStatus, normalizeAccentCss, sanitizeText } from './card-text';
 import { TAB_SWITCHER_HOST_ID, getTabSwitcherHost } from './host';
 import type { TabSwitcherHost, TabSwitcherReply } from './host';
@@ -12,19 +12,7 @@ import { SwitcherSession } from './session';
 import { parseTabSwitcherShortcut } from './shortcut';
 import { PANEL_ID, SWITCHER_STYLES } from './switcher-styles';
 
-type TabSwitcherViewApi = ReturnType<typeof createTabSwitcherViewApi>;
-
 const chromeApi = typeof chrome !== 'undefined' ? chrome : null;
-let tabSwitcherViewApi: TabSwitcherViewApi | null = null;
-
-// The React view the switcher draws through, made on first use.
-function getTabSwitcherViewApi(): TabSwitcherViewApi {
-  if (!tabSwitcherViewApi) {
-    tabSwitcherViewApi = createTabSwitcherViewApi();
-  }
-  return tabSwitcherViewApi;
-}
-
 // Moves an open switcher along, or closes it before a new one opens; false
 // when none is open.
 function handleExistingSwitcher(context: OpenContext): boolean {
@@ -77,12 +65,11 @@ function toggleTabSwitcher(rawContext: unknown): TabSwitcherReply {
   if (!context.tabs.length) {
     return { ok: false, reason: 'empty' };
   }
-  const viewApi = getTabSwitcherViewApi();
   const { host, shadow } = createSwitcherHost();
   const selectedIndex = clampSelectedIndex(context.selectedIndex, context.tabs.length);
   // The view calls back into the session made right after it.
   let session: SwitcherSession | null = null;
-  const view = viewApi.createTabSwitcherView({
+  const view = createTabSwitcherView({
     document,
     root: shadow,
     panelId: PANEL_ID,
