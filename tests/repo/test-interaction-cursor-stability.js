@@ -11,7 +11,7 @@ const newtabHtml = readPageSource('newtab.html');
 const optionsHtml = readPageSource('src/options/options.html');
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 const overlayShell = read('src/overlay/react/shell.tsx');
-const documentPipPicker = read('src/content/document-pip-picker.ts');
+const documentPipPicker = read('src/content/document-pip-picker/dock.ts');
 const tooltipCss = read('src/shared/ui/tooltip.css');
 const cursorTooltipCss = read('src/shared/ui/cursor-tooltip.css');
 const featureHintsCss = read('src/shared/ui/feature-hints.css');
@@ -155,7 +155,7 @@ assertStableHoverTarget(
 );
 assertStableHoverTarget(
   documentPipPicker,
-  '.lumno-pip-dock-btn:hover,\n        .lumno-pip-dock-btn:focus-visible'
+  '.lumno-pip-dock-btn:hover,\n      .lumno-pip-dock-btn:focus-visible'
 );
 assert.match(
   getRule(documentPipPicker, '.lumno-pip-dock-btn > *'),
@@ -165,7 +165,7 @@ assert.match(
 assert.match(
   getRule(
     documentPipPicker,
-    '.lumno-pip-dock-btn:hover .ri-icon,\n        .lumno-pip-dock-btn:focus-visible .ri-icon'
+    '.lumno-pip-dock-btn:hover .ri-icon,\n      .lumno-pip-dock-btn:focus-visible .ri-icon'
   ),
   /transform:\s*scale\(1\.03\);/,
   'document PiP hover motion should stay on the decorative icon'
