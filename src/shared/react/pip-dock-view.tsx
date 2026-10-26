@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { createReactRootController, type ReactRootController } from './root-controller';
 import type { RemixIconName } from '../ui/remix-icon';
 import { RemixIcon } from './remix-icon';
@@ -61,12 +61,12 @@ function DockButton({ label, iconName, background, theme, onClick }: {
   );
 }
 
-function PipDock({ model, handlers }: { model: PipDockModel; handlers: PipDockHandlers }) {
+// The dock comes up while the pointer is near the window's bottom edge or
+// over the dock, or a button has focus, and goes down a moment after.
+function useDockReveal(dockRef: RefObject<HTMLDivElement | null>) {
   const [expanded, setExpanded] = useState(false);
-  const dockRef = useRef<HTMLDivElement>(null);
   const hideTimer = useRef(0);
   const viewRef = useRef<Window | null>(null);
-
   const cancelHide = (): void => {
     if (hideTimer.current && viewRef.current) {
       viewRef.current.clearTimeout(hideTimer.current);
@@ -116,10 +116,12 @@ function PipDock({ model, handlers }: { model: PipDockModel; handlers: PipDockHa
       hideTimer.current = 0;
       viewRef.current = null;
     };
-  }, []);
+  }, [dockRef]);
+  return { expanded, show, hide };
+}
 
-  const { theme, labels } = model;
-  const style: CSSProperties = {
+function readDockStyle(theme: PipDockTheme, expanded: boolean): CSSProperties {
+  return {
     position: 'fixed',
     left: '50%',
     bottom: '10px',
@@ -138,6 +140,12 @@ function PipDock({ model, handlers }: { model: PipDockModel; handlers: PipDockHa
     opacity: expanded ? 1 : 0.92,
     zIndex: 2147483647
   };
+}
+
+function PipDock({ model, handlers }: { model: PipDockModel; handlers: PipDockHandlers }) {
+  const dockRef = useRef<HTMLDivElement>(null);
+  const { expanded, show, hide } = useDockReveal(dockRef);
+  const { theme, labels } = model;
   return (
     <div
       {...NO_TRANSLATE}
@@ -148,7 +156,7 @@ function PipDock({ model, handlers }: { model: PipDockModel; handlers: PipDockHa
       onMouseEnter={show}
       onMouseLeave={hide}
       ref={dockRef}
-      style={style}
+      style={readDockStyle(theme, expanded)}
     >
       <DockButton
         background={theme.buttonBackground}
@@ -171,13 +179,6 @@ function PipDock({ model, handlers }: { model: PipDockModel; handlers: PipDockHa
 export type PipDockViewController = ReactRootController<PipDockModel>;
 
 // Draws the dock into a container in the picture-in-picture window.
-function createPipDockView(container: HTMLElement, handlers: PipDockHandlers): PipDockViewController {
+export function createPipDockView(container: HTMLElement, handlers: PipDockHandlers): PipDockViewController {
   return createReactRootController(container, (model: PipDockModel) => <PipDock handlers={handlers} model={model} />);
-}
-
-export function createPipDockViewApi() {
-  return Object.freeze({
-    implementation: 'react',
-    createPipDockView
-  });
 }

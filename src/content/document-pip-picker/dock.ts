@@ -1,20 +1,10 @@
 // The clip window's frame: its layout, scaffold and bottom dock.
-import { createPipDockViewApi } from '../../shared/react/pip-dock-view';
+import { createPipDockView } from '../../shared/react/pip-dock-view';
 import { hasPaintedSurface } from './candidates';
 import { PIP_CARD_GUTTER, PIP_DOCK_CLEARANCE, PIP_MAX_HEIGHT, PIP_MAX_WIDTH, PIP_MIN_HEIGHT, PIP_MIN_WIDTH } from './constants';
 import { getMessage, getRuntimeUrl } from './locale';
 import { ensurePiPDocumentBase, ensurePiPStyleAnchor } from './style-sync';
 import type { ClipLayout, PiPDock, VisualTheme } from './types';
-
-let pipDockViewApi: ReturnType<typeof createPipDockViewApi> | null = null;
-
-// The React view the clip window's dock draws through, made on first use.
-function getPipDockViewApi(): ReturnType<typeof createPipDockViewApi> {
-  if (!pipDockViewApi) {
-    pipDockViewApi = createPipDockViewApi();
-  }
-  return pipDockViewApi;
-}
 
 
 function ensurePiPDockAssets(pipDocument: Document): void {
@@ -195,10 +185,9 @@ function createPiPDock(pipContext: {
   onReselect: () => void;
 }): PiPDock | null {
   const { pipDocument, shell, visualTheme, onClose, onReselect } = pipContext;
-  const viewApi = getPipDockViewApi();
   const host = pipDocument.createElement('div');
   shell.appendChild(host);
-  const view = viewApi.createPipDockView(host, {
+  const view = createPipDockView(host, {
     onClose,
     onReselect() {
       onClose();
@@ -228,7 +217,5 @@ export {
   createPiPScaffold,
   ensurePiPDockAssets,
   getClipLayout,
-  getPipDockViewApi,
-  hasFloatingSurface,
-  pipDockViewApi
+  hasFloatingSurface
 };

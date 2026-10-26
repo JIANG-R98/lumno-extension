@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createPipDockViewApi, type PipDockModel, type PipDockViewController } from './pip-dock-view';
+import { createPipDockView, type PipDockModel, type PipDockViewController } from './pip-dock-view';
 import { getElement, getTags } from '../../../tests/react/dom';
 
 let views: PipDockViewController[] = [];
@@ -22,7 +22,7 @@ function setUp() {
   const host = document.createElement('div');
   document.body.appendChild(host);
   const handlers = { onReselect: vi.fn(), onClose: vi.fn() };
-  const view = createPipDockViewApi().createPipDockView(host, handlers);
+  const view = createPipDockView(host, handlers);
   views.push(view);
   act(() => view.render(model));
   return { host, handlers, dock: getElement(host, '[data-lumno-pip-dock="1"]') };
