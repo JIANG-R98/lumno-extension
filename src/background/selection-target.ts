@@ -137,6 +137,53 @@ function resolveSelectionGroup(
 }
 
 // An open tab of the provider's site, the most recently used loaded one.
+function readSourceTab(settings: SelectionTargetOptions): chrome.tabs.Tab | null {
+  return settings.sourceTab && typeof settings.sourceTab === 'object' ? settings.sourceTab : null;
+}
+
+// The window to open in: the source tab's, or the one the request names.
+function readTargetWindowId(settings: SelectionTargetOptions): number | null {
+  const sourceTab = readSourceTab(settings);
+  if (sourceTab && typeof sourceTab.windowId === 'number') {
+    return sourceTab.windowId;
+  }
+  return typeof settings.windowId === 'number' ? settings.windowId : null;
+}
+
+// A new tab for the URL, next to and opened from the source tab.
+function createPropertiesFor(settings: SelectionTargetOptions, active: boolean): chrome.tabs.CreateProperties {
+  const createProperties: chrome.tabs.CreateProperties = {
+    url: String(settings.url || ''),
+    active
+  };
+  const windowId = readTargetWindowId(settings);
+  if (typeof windowId === 'number') {
+    createProperties.windowId = windowId;
+  }
+  const sourceTab = readSourceTab(settings);
+  if (sourceTab && typeof sourceTab.id === 'number') {
+    createProperties.openerTabId = sourceTab.id;
+  }
+  return createProperties;
+}
+
+function isReusableTab(tab: chrome.tabs.Tab, sourceTab: chrome.tabs.Tab | null, origin: string): boolean {
+  return Boolean(tab) &&
+    typeof tab.id === 'number' &&
+    (!sourceTab || tab.id !== sourceTab.id) &&
+    tab.discarded !== true &&
+    getHttpOrigin(getTabUrl(tab)) === origin;
+}
+
+// Loaded tabs first, then the most recently used.
+function compareReusableTabs(left: chrome.tabs.Tab, right: chrome.tabs.Tab): number {
+  const statusDifference = Number(right.status === 'complete') - Number(left.status === 'complete');
+  if (statusDifference !== 0) {
+    return statusDifference;
+  }
+  return (Number(right.lastAccessed) || 0) - (Number(left.lastAccessed) || 0);
+}
+
 function findReusableSelectionTab(
   chromeApi: SelectionTargetChromeApi | null | undefined,
   options: SelectionTargetOptions | null | undefined,
@@ -152,13 +199,9 @@ function findReusableSelectionTab(
     done(null);
     return;
   }
-  const sourceTab = settings.sourceTab && typeof settings.sourceTab === 'object'
-    ? settings.sourceTab
-    : null;
+  const sourceTab = readSourceTab(settings);
   const queryInfo: { windowId?: number } = {};
-  const windowId = sourceTab && typeof sourceTab.windowId === 'number'
-    ? sourceTab.windowId
-    : (typeof settings.windowId === 'number' ? settings.windowId : null);
+  const windowId = readTargetWindowId(settings);
   if (typeof windowId === 'number') {
     queryInfo.windowId = windowId;
   }
@@ -169,20 +212,8 @@ function findReusableSelectionTab(
         return;
       }
       const candidates = (Array.isArray(tabs) ? tabs : [])
-        .filter((tab) => (
-          tab &&
-          typeof tab.id === 'number' &&
-          (!sourceTab || tab.id !== sourceTab.id) &&
-          tab.discarded !== true &&
-          getHttpOrigin(getTabUrl(tab)) === expectedOrigin
-        ))
-        .sort((left, right) => {
-          const statusDifference = Number(right.status === 'complete') - Number(left.status === 'complete');
-          if (statusDifference !== 0) {
-            return statusDifference;
-          }
-          return (Number(right.lastAccessed) || 0) - (Number(left.lastAccessed) || 0);
-        });
+        .filter((tab) => isReusableTab(tab, sourceTab, expectedOrigin))
+        .sort(compareReusableTabs);
       done(candidates[0] || null);
     });
   } catch (_error) {
@@ -324,28 +355,13 @@ function openInSelectionGroup(
   const api = getChromeApi(chromeApi);
   const settings = options && typeof options === 'object' ? options : {};
   const done: SelectionTargetCallback = typeof callback === 'function' ? callback : () => {};
-  const sourceTab = settings.sourceTab && typeof settings.sourceTab === 'object'
-    ? settings.sourceTab
-    : null;
-  const windowId = sourceTab && typeof sourceTab.windowId === 'number'
-    ? sourceTab.windowId
-    : (typeof settings.windowId === 'number' ? settings.windowId : null);
   const tabsApi = api && api.tabs;
   const create = tabsApi && tabsApi.create;
   if (!api || !tabsApi || typeof create !== 'function') {
     done({ ok: false, mode: 'none', tab: null, reason: 'tabs-api-unavailable' });
     return;
   }
-  const createProperties: chrome.tabs.CreateProperties = {
-    url: String(settings.url || ''),
-    active: false
-  };
-  if (typeof windowId === 'number') {
-    createProperties.windowId = windowId;
-  }
-  if (sourceTab && typeof sourceTab.id === 'number') {
-    createProperties.openerTabId = sourceTab.id;
-  }
+  const createProperties = createPropertiesFor(settings, false);
   resolveSelectionGroup(api, settings, (group) => {
     try {
       create.call(tabsApi, createProperties, (tab) => {
@@ -384,28 +400,13 @@ function openInNewTab(
   const api = getChromeApi(chromeApi);
   const settings = options && typeof options === 'object' ? options : {};
   const done: SelectionTargetCallback = typeof callback === 'function' ? callback : () => {};
-  const sourceTab = settings.sourceTab && typeof settings.sourceTab === 'object'
-    ? settings.sourceTab
-    : null;
   const tabsApi = api && api.tabs;
   const create = tabsApi && tabsApi.create;
   if (!api || !tabsApi || typeof create !== 'function') {
     done({ ok: false, mode: 'none', tab: null, groupId: null, reason: 'tabs-api-unavailable' });
     return;
   }
-  const createProperties: chrome.tabs.CreateProperties = {
-    url: String(settings.url || ''),
-    active: true
-  };
-  const windowId = sourceTab && typeof sourceTab.windowId === 'number'
-    ? sourceTab.windowId
-    : (typeof settings.windowId === 'number' ? settings.windowId : null);
-  if (typeof windowId === 'number') {
-    createProperties.windowId = windowId;
-  }
-  if (sourceTab && typeof sourceTab.id === 'number') {
-    createProperties.openerTabId = sourceTab.id;
-  }
+  const createProperties = createPropertiesFor(settings, true);
   try {
     create.call(tabsApi, createProperties, (tab) => {
       const createError = getRuntimeError(api, 'tab-create-failed');

@@ -220,6 +220,28 @@ export function clearTabSwitchStat(tabId: unknown): void {
   }
 }
 
+function forgetClosedTabs(aliveIds: ReadonlySet<number>): void {
+  const staleIds: number[] = [];
+  tabLastAccessedByTabId.forEach((_, tabId) => {
+    if (!aliveIds.has(tabId)) {
+      staleIds.push(tabId);
+    }
+  });
+  staleIds.forEach((tabId) => {
+    tabLastAccessedByTabId.delete(tabId);
+  });
+}
+
+// The most recently used tab counts as a switch unless it was recorded at
+// that time already.
+function recordLatestSwitch(tabId: number, lastAccessed: number): void {
+  const existing = getTabSwitchStat(tabId, false);
+  const lastRecordedAt = Number(existing && existing.lastSwitchAt) || 0;
+  if (lastAccessed > (lastRecordedAt + 250)) {
+    recordTabSwitchEvent(tabId, lastAccessed);
+  }
+}
+
 // Records the switches a listing reveals: tabs used since the last listing.
 export function syncTabSwitchStatsFromTabList(tabs: readonly (ListedTab | null | undefined)[]): void {
   const list = Array.isArray(tabs) ? tabs : [];
@@ -247,21 +269,9 @@ export function syncTabSwitchStatsFromTabList(tabs: readonly (ListedTab | null |
       recordTabSwitchEvent(tabId, lastAccessed);
     }
   }
-  const staleIds: number[] = [];
-  tabLastAccessedByTabId.forEach((_, tabId) => {
-    if (!aliveIds.has(tabId)) {
-      staleIds.push(tabId);
-    }
-  });
-  staleIds.forEach((tabId) => {
-    tabLastAccessedByTabId.delete(tabId);
-  });
+  forgetClosedTabs(aliveIds);
   if (typeof mostRecentTabId === 'number' && mostRecentLastAccessed > 0) {
-    const existing = getTabSwitchStat(mostRecentTabId, false);
-    const lastRecordedAt = Number(existing && existing.lastSwitchAt) || 0;
-    if (mostRecentLastAccessed > (lastRecordedAt + 250)) {
-      recordTabSwitchEvent(mostRecentTabId, mostRecentLastAccessed);
-    }
+    recordLatestSwitch(mostRecentTabId, mostRecentLastAccessed);
   }
 }
 

@@ -64,17 +64,9 @@ import { pageShortcutMenuController, startProgressTracking } from './worker-cont
 import './overlay-loading-lifecycle';
 import * as DEV_EXTENSION_STARTUP from './dev-extension-startup';
 import { loadFirefoxBrandIcon } from './tab-switcher/appearance';
-import { removeRecentSwitcherTab, scheduleSwitcherThumbnailCapture } from './tab-switcher/capture';
-import { clearSwitcherThumbnailPriority } from './tab-switcher/thumbnail-priority';
-import { tabSwitcherHostTabIdByWindowId } from './tab-switcher/host';
 import { triggerTabSwitcherForTab } from './tab-switcher/open';
 import { prepareShortcutKeyObserversInOpenTabs } from './tab-switcher/shortcut-release';
-import {
-  ensureTabSwitcherStateLoaded,
-  flushPendingTabSwitcherState,
-  recordRecentSwitcherTab,
-  updateRecentSwitcherTab
-} from './tab-switcher/state-store';
+import { ensureTabSwitcherStateLoaded, flushPendingTabSwitcherState } from './tab-switcher/state-store';
 import { registerTabSwitcherExtensionPagePortConnection } from './tab-switcher-extension-page';
 import {
   flushPendingPinnedTabSnapshot,
@@ -95,14 +87,8 @@ import {
   moveTabToSourceGroupContext,
   rememberBrowserNewtabProviderCandidate
 } from './browser-urls-service';
-import type { UrlTabLike } from './browser-urls-service';
-import {
-  clearTabSwitchStat,
-  ensureTabSwitchStatsLoaded,
-  recordTabSwitchEvent
-} from './tab-switch-stats-service';
-import { finishOverlayOpening, overlayOpeningByTabId } from './overlay-open-service';
-import { PIP_MESSAGE_HANDLERS, pipOwnership } from './pip-service';
+import { ensureTabSwitchStatsLoaded } from './tab-switch-stats-service';
+import { PIP_MESSAGE_HANDLERS } from './pip-service';
 import type { BackgroundHandler } from './message-router';
 import { SELECTION_QUICK_ACTION_MESSAGE_HANDLERS } from './selection-quick-actions-service';
 import {
@@ -135,15 +121,15 @@ import {
   warnBackgroundFailure,
   workerSettings
 } from './worker-context';
-import { clearOverlayLoadingRecord, clearOverlayNavigationState, rememberOverlayTopFrameNavigation, updateOverlayTopFrameNavigation } from './overlay-loading-records';
-import { markOverlayLoadingRecordUnstable, recoverOverlayAfterLoadingUpdate } from './overlay-loading-service';
 import { getRecentPageHotkeyContext } from './command-context';
 import { recoverFromPageHotkeyNewtab, triggerCopyCurrentUrlForTab, triggerShowSearchForTab } from './command-service';
 import { getBackgroundFaviconCacheRuntime } from './favicon/candidates';
 import { SITE_SEARCH_SHORTCUT_ICON_SETTINGS } from './favicon/site-search-icons';
-import { markFaviconDirtyForUrl } from './favicon/visit-dirty';
 import * as FrameRules from './link-preview/frame-rules';
 import * as Service from './link-preview/service';
+import './overlay-loading-service';
+import './overlay-open-service';
+import { registerTabLifecycleEvents } from './tab-lifecycle-events';
 
 // Folds traditional characters to simplified ones for local search matching.
 installHanVariantPairs(HAN_VARIANT_PAIRS);
@@ -325,167 +311,7 @@ if (chrome && chrome.runtime && chrome.runtime.onSuspend) {
 LumnoSettingsMigration.runSettingsMigrations(chrome)
   .catch(warnBackgroundFailure('Failed to migrate this device\'s stored settings.'));
 
-if (chrome && chrome.tabs && chrome.tabs.onActivated) {
-  chrome.tabs.onActivated.addListener((activeInfo) => {
-    if (!activeInfo || typeof activeInfo.tabId !== 'number') {
-      return;
-    }
-    recordTabSwitchEvent(activeInfo.tabId);
-    if (chrome.tabs && typeof chrome.tabs.get === 'function') {
-      chrome.tabs.get(activeInfo.tabId, (tab) => {
-        if (chrome.runtime && chrome.runtime.lastError) {
-          return;
-        }
-        ensureTabSwitcherStateLoaded().catch(() => {}).finally(() => {
-          recordRecentSwitcherTab(tab);
-          scheduleSwitcherThumbnailCapture(tab, 'activated');
-        });
-      });
-    }
-  });
-}
-
-if (chrome && chrome.windows && chrome.windows.onFocusChanged) {
-  chrome.windows.onFocusChanged.addListener((windowId) => {
-    if (typeof windowId !== 'number' ||
-        windowId === chrome.windows.WINDOW_ID_NONE ||
-        !chrome.tabs ||
-        typeof chrome.tabs.query !== 'function') {
-      return;
-    }
-    chrome.tabs.query({ active: true, windowId }, (tabs) => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        return;
-      }
-      const tab = Array.isArray(tabs) && tabs.length > 0 ? tabs[0] : null;
-      if (!tab || typeof tab.id !== 'number') {
-        return;
-      }
-      ensureTabSwitcherStateLoaded().catch(() => {}).finally(() => {
-        recordRecentSwitcherTab(tab);
-        scheduleSwitcherThumbnailCapture(tab, 'window-focus');
-      });
-    });
-  });
-}
-
-if (chrome && chrome.tabs && chrome.tabs.onRemoved) {
-  chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-    const overlayOpening = overlayOpeningByTabId.get(tabId);
-    if (overlayOpening) {
-      finishOverlayOpening(overlayOpening);
-    }
-    clearOverlayNavigationState(tabId);
-    clearOverlayLoadingRecord(tabId);
-    clearTabSwitchStat(tabId);
-    removeRecentSwitcherTab(tabId);
-    pipOwnership.clearGlobalPipOwnerForTabId(tabId);
-    Array.from(tabSwitcherHostTabIdByWindowId.entries()).forEach(([windowId, hostTabId]) => {
-      if (hostTabId === tabId) {
-        tabSwitcherHostTabIdByWindowId.delete(windowId);
-      }
-    });
-    if (removeInfo && removeInfo.isWindowClosing) {
-      return;
-    }
-    schedulePersistPinnedTabSnapshot();
-  });
-}
-
-if (chrome && chrome.tabs && chrome.tabs.onUpdated) {
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (!changeInfo) {
-      return;
-    }
-    if (changeInfo.status === 'loading') {
-      rememberOverlayTopFrameNavigation({
-        tabId,
-        frameId: 0,
-        url: typeof changeInfo.url === 'string'
-          ? changeInfo.url
-          : (tab && typeof tab.pendingUrl === 'string' ? tab.pendingUrl : '')
-      });
-      markOverlayLoadingRecordUnstable(tabId);
-    } else if (typeof changeInfo.url === 'string') {
-      updateOverlayTopFrameNavigation({
-        tabId,
-        frameId: 0,
-        url: changeInfo.url
-      });
-    }
-    recoverOverlayAfterLoadingUpdate(tabId, changeInfo, tab);
-    if (changeInfo.status === 'complete') {
-      clearOverlayNavigationState(tabId);
-    }
-    if (typeof changeInfo.url === 'string' || changeInfo.status === 'complete') {
-      const providerTab: UrlTabLike = {
-        id: tabId,
-        url: typeof changeInfo.url === 'string' ? changeInfo.url : (tab ? tab.url : undefined),
-        pendingUrl: tab ? tab.pendingUrl : undefined,
-        status: changeInfo.status || (tab ? tab.status : undefined)
-      };
-      maybeAutoSelectRestrictedBrowserSetting(
-        providerTab,
-        changeInfo.status === 'complete' ? 'updated-complete' : 'updated'
-      );
-    }
-    if (typeof changeInfo.url === 'string') {
-      // URL changed means the tab semantic target changed; reset historical switch stats.
-      clearTabSwitchStat(tabId);
-      pipOwnership.clearGlobalPipOwnerForTabId(tabId);
-      clearSwitcherThumbnailPriority(tabId);
-      updateRecentSwitcherTab(tab);
-    }
-    if (tab && tab.active === true && (typeof changeInfo.title === 'string' || typeof changeInfo.favIconUrl === 'string')) {
-      updateRecentSwitcherTab(tab);
-    }
-    if (tab && tab.active === true && changeInfo.status === 'complete') {
-      recordRecentSwitcherTab(tab);
-      scheduleSwitcherThumbnailCapture(tab, 'updated-complete');
-    }
-    if (changeInfo.pinned !== undefined || typeof changeInfo.url === 'string' || changeInfo.status === 'complete') {
-      schedulePersistPinnedTabSnapshot();
-    }
-    if (typeof changeInfo.favIconUrl === 'string' && changeInfo.favIconUrl) {
-      const completedUrl = typeof changeInfo.url === 'string'
-        ? changeInfo.url
-        : (tab && typeof tab.url === 'string' ? tab.url : '');
-      markFaviconDirtyForUrl(completedUrl);
-    } else if (changeInfo.status === 'complete' && !(tab && tab.favIconUrl)) {
-      const completedUrl = typeof changeInfo.url === 'string'
-        ? changeInfo.url
-        : (tab && typeof tab.url === 'string' ? tab.url : '');
-      markFaviconDirtyForUrl(completedUrl);
-    }
-  });
-}
-
-if (chrome && chrome.tabs && chrome.tabs.onMoved) {
-  chrome.tabs.onMoved.addListener(() => {
-    schedulePersistPinnedTabSnapshot();
-  });
-}
-
-if (chrome && chrome.windows && chrome.windows.onCreated) {
-  chrome.windows.onCreated.addListener((windowInfo) => {
-    if (windowInfo && windowInfo.incognito === true) {
-      return;
-    }
-    if (windowInfo && windowInfo.type && windowInfo.type !== 'normal') {
-      return;
-    }
-    restorePinnedTabsFromSnapshotOnStartup().catch(warnBackgroundFailure('Failed to restore pinned tabs.')).finally(() => {
-      schedulePersistPinnedTabSnapshot({ skipEmptyWhenNoNormalWindows: true });
-    });
-  });
-}
-
-if (chrome && chrome.windows && chrome.windows.onRemoved) {
-  chrome.windows.onRemoved.addListener((windowId) => {
-    tabSwitcherHostTabIdByWindowId.delete(windowId);
-    schedulePersistPinnedTabSnapshot({ skipEmptyWhenNoNormalWindows: true });
-  });
-}
+registerTabLifecycleEvents();
 
 const selectionScriptRegistration = LumnoSelectionScriptRegistration
   .createSelectionScriptRegistration({ chromeApi: chrome });
