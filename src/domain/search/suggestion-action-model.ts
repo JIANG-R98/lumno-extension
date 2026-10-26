@@ -200,41 +200,40 @@ function getSearchResultOpenDisposition(options?: OpenModifiers | null): OpenDis
   return 'newTab';
 }
 
-function createSearchActionModel(options?: SearchActionModelOptions | null): SearchActionModel {
-  const config: SearchActionModelOptions = options || {};
-  const suggestion = config.suggestion || null;
+// The action tags the row shows: switch to its open tab, the Enter action
+// of the primary row, and search for a keyword-only list.
+function getActionTags(config: SearchActionModelOptions, suggestion: MaybeSuggestion): ActionTag[] {
   const isPrimaryHighlight = Boolean(config.isPrimaryHighlight);
-  const primaryHighlightReason = String(config.primaryHighlightReason || '');
   const onlyKeywordSuggestions = Boolean(config.onlyKeywordSuggestions);
-  const isPrimarySearchSuggest = Boolean(config.isPrimarySearchSuggest);
-  const isMergedHighlight = Boolean(config.isMergedHighlight);
-  const shouldSwitchMatchedTab = Boolean(config.shouldSwitchMatchedTab);
-  const simpleMode = Boolean(config.simpleMode);
-  const enterAction = config.enterAction || 'openNewTab';
   const actionTags: ActionTag[] = [];
-  const isDirectHighlight = isPrimaryHighlight && isDirectNavigationSuggestion(suggestion);
-  const shouldShowPrimaryActionTag = !isPrimarySearchSuggest &&
+  const shouldShowPrimaryActionTag = !config.isPrimarySearchSuggest &&
     isPrimaryHighlight &&
     !onlyKeywordSuggestions &&
     (
-      PRIMARY_ACTION_REASONS.has(primaryHighlightReason) ||
-      isDirectHighlight ||
-      isMergedHighlight
+      PRIMARY_ACTION_REASONS.has(String(config.primaryHighlightReason || '')) ||
+      isDirectNavigationSuggestion(suggestion) ||
+      Boolean(config.isMergedHighlight)
     );
-
-  if (shouldSwitchMatchedTab) {
+  if (config.shouldSwitchMatchedTab) {
     actionTags.push({ action: 'switch' });
   } else if (shouldShowPrimaryActionTag) {
-    actionTags.push({ action: enterAction });
+    actionTags.push({ action: config.enterAction || 'openNewTab' });
   }
-  if (!simpleMode && isPrimaryHighlight && onlyKeywordSuggestions && suggestion && suggestion.type === 'newtab') {
+  if (!config.simpleMode && isPrimaryHighlight && onlyKeywordSuggestions && suggestion && suggestion.type === 'newtab') {
     actionTags.push({ action: 'search' });
   }
+  return actionTags;
+}
 
+function createSearchActionModel(options?: SearchActionModelOptions | null): SearchActionModel {
+  const config: SearchActionModelOptions = options || {};
+  const suggestion = config.suggestion || null;
+  const shouldSwitchMatchedTab = Boolean(config.shouldSwitchMatchedTab);
+  const actionTags = getActionTags(config, suggestion);
   const visitButtonAction = getVisitButtonAction(suggestion, {
     shouldSwitchMatchedTab
   });
-  const alwaysHideVisitButton = simpleMode || !visitButtonAction || Boolean(
+  const alwaysHideVisitButton = Boolean(config.simpleMode) || !visitButtonAction || Boolean(
     suggestion && (suggestion.type === 'modeSwitch' || suggestion.type === 'zenSwitch')
   );
 
@@ -297,6 +296,32 @@ function getSuggestionProviderIdentity(suggestion: MaybeSuggestion): string {
 }
 
 // Everything a row shows; equal fingerprints render the same.
+function fingerprintText(value: unknown): string {
+  return String(value || '');
+}
+
+// The provider fields a row shows, '' each when the row has no provider.
+function providerFingerprint(provider: DisplayedProvider | null): string[] {
+  if (!provider) {
+    return ['', '', '', '', '', ''];
+  }
+  return [
+    fingerprintText(provider.name),
+    fingerprintText(provider.label),
+    fingerprintText(provider.displayName),
+    fingerprintText(provider.action),
+    fingerprintText(provider.template),
+    fingerprintText(provider.icon || provider.favicon)
+  ];
+}
+
+function debugReasonsFingerprint(suggestion: NonNullable<MaybeSuggestion>, includeDebugReasons: boolean): string[] {
+  if (!includeDebugReasons || !Array.isArray(suggestion.reasons)) {
+    return [];
+  }
+  return suggestion.reasons.map((reason) => String(reason || '').trim()).filter(Boolean);
+}
+
 function getSuggestionPresentationFingerprint(
   suggestion: MaybeSuggestion,
   options?: { includeDebugReasons?: boolean } | null
@@ -309,36 +334,40 @@ function getSuggestionPresentationFingerprint(
     ? suggestion.provider
     : null;
   return JSON.stringify([
-    String(suggestion.type || ''),
-    String(suggestion.title || ''),
-    String(suggestion.url || ''),
-    String(suggestion.favicon || ''),
-    String(suggestion.path || ''),
-    String(suggestion.detail || ''),
+    ...[suggestion.type, suggestion.title, suggestion.url, suggestion.favicon, suggestion.path, suggestion.detail]
+      .map(fingerprintText),
     suggestion.recommended === true,
-    String(suggestion.commandText || ''),
+    fingerprintText(suggestion.commandText),
     suggestion.isTopSite === true,
     getSuggestionProviderIdentity(suggestion),
-    provider ? String(provider.name || '') : '',
-    provider ? String(provider.label || '') : '',
-    provider ? String(provider.displayName || '') : '',
-    provider ? String(provider.action || '') : '',
-    provider ? String(provider.template || '') : '',
-    provider ? String(provider.icon || provider.favicon || '') : '',
-    String(suggestion.searchQuery || ''),
+    ...providerFingerprint(provider),
+    fingerprintText(suggestion.searchQuery),
     suggestion.forceSearch === true,
     String(suggestion._xMatchedTabId ?? ''),
-    String(suggestion.nextMode || ''),
+    fingerprintText(suggestion.nextMode),
     String(suggestion.nextEnabled ?? ''),
-    config.includeDebugReasons === true && Array.isArray(suggestion.reasons)
-      ? suggestion.reasons
-          .map((reason) => String(reason || '').trim())
-          .filter(Boolean)
-      : []
+    debugReasonsFingerprint(suggestion, config.includeDebugReasons === true)
   ]);
 }
 
 // Which row a suggestion is, across slates.
+// What a row is about, after its type: its URL, command, query or title.
+function getContentIdentity(type: string, suggestion: NonNullable<MaybeSuggestion>, providerIdentity: string): string {
+  const url = String(suggestion.url || '');
+  if (url) {
+    return `${type}:url:${url}`;
+  }
+  const commandText = String(suggestion.commandText || '');
+  if (commandText) {
+    return `${type}:command:${commandText}`;
+  }
+  const searchQuery = String(suggestion.searchQuery || '');
+  if (providerIdentity || searchQuery) {
+    return `${type}:provider:${providerIdentity}:query:${searchQuery}`;
+  }
+  return `${type}:title:${String(suggestion.title || '')}`;
+}
+
 function getSuggestionStructureIdentity(suggestion: MaybeSuggestion): string {
   if (!suggestion || typeof suggestion !== 'object') {
     return '';
@@ -356,19 +385,7 @@ function getSuggestionStructureIdentity(suggestion: MaybeSuggestion): string {
   if (SITE_SEARCH_TYPES.has(type)) {
     return `${type}:provider:${providerIdentity || 'default'}`;
   }
-  const url = String(suggestion.url || '');
-  if (url) {
-    return `${type}:url:${url}`;
-  }
-  const commandText = String(suggestion.commandText || '');
-  if (commandText) {
-    return `${type}:command:${commandText}`;
-  }
-  const searchQuery = String(suggestion.searchQuery || '');
-  if (providerIdentity || searchQuery) {
-    return `${type}:provider:${providerIdentity}:query:${searchQuery}`;
-  }
-  return `${type}:title:${String(suggestion.title || '')}`;
+  return getContentIdentity(type, suggestion, providerIdentity);
 }
 
 function hasSameSuggestionSequence(
