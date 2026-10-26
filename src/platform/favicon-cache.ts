@@ -57,16 +57,19 @@ interface FaviconCacheRuntime {
   setPersistedThemeEntry(cacheKey: unknown, entry: unknown): boolean;
 }
 
-// One persisted cache: its entries, whether they are loaded, and its
-// pending write.
-interface PersistedCache<T> {
-  entries: Map<string, T>;
-  loaded: boolean;
-  loadPromise: Promise<void> | null;
-  writePending: boolean;
+// One kind of cached entry: where it persists, how long and how many are
+// kept, how a stored record is read and how an entry is stored.
+interface PersistedCacheSpec<T, S> {
+  key: string;
+  version: number;
+  ttlMs: number;
+  maxEntries: number;
+  // Writes wait this long, so a burst of changes is written once.
+  writeDelayMs: number;
+  read(record: unknown, now: number): Array<[string, T]>;
+  toStored(entry: T): S;
 }
 
-// Writes wait this long, so a burst of changes is written once.
 const WRITE_DELAY_MS = 600;
 
 function defaultNormalizeHost(value: unknown): string {
@@ -81,315 +84,277 @@ function finiteOr(value: number | undefined, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
-function createPersistedCache<T>(): PersistedCache<T> {
-  return { entries: new Map(), loaded: false, loadPromise: null, writePending: false };
-}
+// One persisted cache: its entries in memory, loaded once from storage and
+// written back a moment after they change.
+class PersistedCache<T extends { updatedAt: number }, S> {
+  loaded = false;
+  private readonly entries = new Map<string, T>();
+  private loadPromise: Promise<void> | null = null;
+  private writePending = false;
+  private readonly spec: PersistedCacheSpec<T, S>;
+  private readonly area: StorageAreaLike | null;
+  private readonly timers: TimerHost;
 
-interface FaviconCacheContext {
-  readonly config: FaviconCacheOptions;
-  readonly storageArea: StorageAreaLike | null;
-  readonly timers: TimerHost;
-  readonly normalizeFaviconHost: (hostname: unknown) => string;
-  readonly isBlockedLocalFaviconUrl: (url: string) => boolean;
-  readonly isChromeMonogramFaviconUrl: (url: string) => boolean;
-  readonly urlKey: string;
-  readonly urlRetention: { ttlMs: number; maxEntries: number; };
-  readonly dataKey: string;
-  readonly dataRetention: { ttlMs: number; maxEntries: number; };
-  readonly dataMaxLength: number;
-  readonly themeKey: string;
-  readonly themeRetention: { ttlMs: number; maxEntries: number; };
-  readonly visitDirtyKey: string;
-  readonly visitDirtyRetention: { ttlMs: number; maxEntries: number; };
-  readonly bootWaitMs: number;
-  readonly urlCache: PersistedCache<FaviconUrlEntry>;
-  readonly dataCache: PersistedCache<FaviconDataEntry>;
-  readonly themeCache: PersistedCache<SiteThemeEntry>;
-  readonly visitDirtyCache: PersistedCache<{ updatedAt: number; }>;
-}
-
-function isRejectedUrl(ctx: FaviconCacheContext, url: string): boolean {
-  return ctx.isBlockedLocalFaviconUrl(url) || ctx.isChromeMonogramFaviconUrl(url);
-}
-
-function load<T>(ctx: FaviconCacheContext, cache: PersistedCache<T>, key: string, read: (record: unknown, now: number) => Array<[string, T]>): Promise<void> {
-  if (cache.loadPromise) {
-    return cache.loadPromise;
+  constructor(spec: PersistedCacheSpec<T, S>, area: StorageAreaLike | null, timers: TimerHost) {
+    this.spec = spec;
+    this.area = area;
+    this.timers = timers;
   }
-  const area = ctx.storageArea;
-  if (!area || cache.loaded) {
-    cache.loaded = true;
-    cache.loadPromise = Promise.resolve();
-    return cache.loadPromise;
-  }
-  cache.loadPromise = new Promise((resolve) => {
-    area.get([key], (result: StorageItems | undefined) => {
-      for (const [entryKey, entry] of read(result && result[key], Date.now())) {
-        cache.entries.set(entryKey, entry);
-      }
-      cache.loaded = true;
-      resolve();
+
+  load(): Promise<void> {
+    if (this.loadPromise) {
+      return this.loadPromise;
+    }
+    const area = this.area;
+    if (!area || this.loaded) {
+      this.loaded = true;
+      this.loadPromise = Promise.resolve();
+      return this.loadPromise;
+    }
+    this.loadPromise = new Promise((resolve) => {
+      area.get([this.spec.key], (result: StorageItems | undefined) => {
+        for (const [entryKey, entry] of this.spec.read(result && result[this.spec.key], Date.now())) {
+          this.entries.set(entryKey, entry);
+        }
+        this.loaded = true;
+        resolve();
+      });
     });
-  });
-  return cache.loadPromise;
-}
-
-function ensureCachesReady(ctx: FaviconCacheContext): Promise<void> {
-  return Promise.all([
-    load(ctx, ctx.urlCache, ctx.urlKey, (record, now) => readFaviconUrlRecord(record, ctx.urlRetention, ((url: string) => isRejectedUrl(ctx, url)), now)),
-    load(ctx, ctx.dataCache, ctx.dataKey, (record, now) => readFaviconDataRecord(record, ctx.dataRetention, ctx.dataMaxLength, now)),
-    load(ctx, ctx.themeCache, ctx.themeKey, (record, now) => readSiteThemeRecord(record, ctx.themeRetention, now)),
-    load(ctx, ctx.visitDirtyCache, ctx.visitDirtyKey, (record, now) => readVisitDirtyRecord(record, ctx.visitDirtyRetention, now)
-      .map(([host, updatedAt]): [string, { updatedAt: number }] => [host, { updatedAt }]))
-  ]).then(() => undefined).catch(() => undefined);
-}
-
-function waitForCachesOrTimeout(ctx: FaviconCacheContext, maxWaitMs?: number): Promise<void> {
-  const waitMs = typeof maxWaitMs === 'number' && Number.isFinite(maxWaitMs) && maxWaitMs >= 0 ? maxWaitMs : ctx.bootWaitMs;
-  return Promise.race([
-    ensureCachesReady(ctx),
-    new Promise<void>((resolve) => {
-      ctx.timers.setTimeout(resolve, waitMs);
-    })
-  ]).then(() => undefined).catch(() => undefined);
-}
-
-// Writes the cache's newest entries after `delay`; changes made meanwhile
-// go into the same write.
-function scheduleWrite<T extends { updatedAt: number }, S>(
-  ctx: FaviconCacheContext,
-  cache: PersistedCache<T>,
-  key: string,
-  version: number,
-  maxEntries: number,
-  toStored: (entry: T) => S,
-  delay: number
-): void {
-  const area = ctx.storageArea;
-  if (!area || cache.writePending) {
-    return;
+    return this.loadPromise;
   }
-  cache.writePending = true;
-  ctx.timers.setTimeout(() => {
-    cache.writePending = false;
-    const newest = keepNewest(cache.entries.entries(), maxEntries)
-      .map(([entryKey, entry]): [string, S] => [entryKey, toStored(entry)]);
-    area.set({ [key]: createRecord(version, newest, Date.now()) });
-  }, delay);
+
+  has(key: string): boolean {
+    return this.entries.has(key);
+  }
+
+  peek(key: string): T | undefined {
+    return this.entries.get(key);
+  }
+
+  // The entry while it is usable and fresh; an expired one is dropped.
+  fresh(key: string, isUsable: (entry: T) => boolean): T | null {
+    const entry = key ? this.entries.get(key) : undefined;
+    if (!entry || !isUsable(entry)) {
+      return null;
+    }
+    if (isExpired(entry.updatedAt, this.spec.ttlMs, Date.now())) {
+      this.drop(key);
+      return null;
+    }
+    return entry;
+  }
+
+  put(key: string, entry: T): void {
+    this.entries.set(key, entry);
+    this.compact();
+    this.scheduleWrite();
+  }
+
+  drop(key: string): void {
+    this.entries.delete(key);
+    this.scheduleWrite();
+  }
+
+  // Keeps a map that grew past twice its limit at its newest entries.
+  private compact(): void {
+    const { maxEntries } = this.spec;
+    if (this.entries.size <= maxEntries * 2) {
+      return;
+    }
+    const newest = keepNewest(this.entries.entries(), maxEntries);
+    this.entries.clear();
+    newest.forEach(([key, entry]) => this.entries.set(key, entry));
+  }
+
+  // Writes the newest entries after the delay; changes made meanwhile go
+  // into the same write.
+  private scheduleWrite(): void {
+    const area = this.area;
+    if (!area || this.writePending) {
+      return;
+    }
+    const { key, version, maxEntries, toStored, writeDelayMs } = this.spec;
+    this.writePending = true;
+    this.timers.setTimeout(() => {
+      this.writePending = false;
+      const newest = keepNewest(this.entries.entries(), maxEntries)
+        .map(([entryKey, entry]): [string, S] => [entryKey, toStored(entry)]);
+      area.set({ [key]: createRecord(version, newest, Date.now()) });
+    }, writeDelayMs);
+  }
 }
 
-function persistUrls(ctx: FaviconCacheContext): void {
-  scheduleWrite(ctx, ctx.urlCache, ctx.urlKey, PAGE_FAVICON_CACHE_VERSION, ctx.urlRetention.maxEntries,
-    (entry) => ({ url: entry.url, updatedAt: entry.updatedAt }), WRITE_DELAY_MS);
+// The caches of one page or worker: favicon URLs and data URLs by page,
+// site themes and hosts visited since their icon was read, by host.
+interface FaviconCaches {
+  urls: PersistedCache<FaviconUrlEntry, FaviconUrlEntry>;
+  data: PersistedCache<FaviconDataEntry, FaviconDataEntry>;
+  themes: PersistedCache<SiteThemeEntry, SiteThemeEntry>;
+  visitDirty: PersistedCache<{ updatedAt: number }, number>;
 }
 
-function persistData(ctx: FaviconCacheContext): void {
-  scheduleWrite(ctx, ctx.dataCache, ctx.dataKey, PAGE_FAVICON_CACHE_VERSION, ctx.dataRetention.maxEntries,
-    (entry) => ({ dataUrl: entry.dataUrl, updatedAt: entry.updatedAt }), WRITE_DELAY_MS);
+interface FaviconCacheRules {
+  normalizeHost: (hostname: unknown) => string;
+  // Addresses never kept as favicon URLs.
+  isRejectedUrl: (url: string) => boolean;
+  dataMaxLength: number;
+  bootWaitMs: number;
 }
 
-function persistThemes(ctx: FaviconCacheContext): void {
-  scheduleWrite(ctx, ctx.themeCache, ctx.themeKey, 1, ctx.themeRetention.maxEntries, (entry) => ({
-    accentRgb: entry.accentRgb,
-    source: entry.source,
-    neutral: entry.neutral,
-    confidence: entry.confidence,
-    updatedAt: entry.updatedAt
-  }), WRITE_DELAY_MS);
-}
-
-function persistVisitDirty(ctx: FaviconCacheContext): void {
-  scheduleWrite(ctx, ctx.visitDirtyCache, ctx.visitDirtyKey, 1, ctx.visitDirtyRetention.maxEntries, (entry) => entry.updatedAt, 0);
-}
-
-// Keeps a map that grew past twice its limit at its newest entries.
-function compact<T extends { updatedAt: number }>(cache: PersistedCache<T>, maxEntries: number): void {
-  if (cache.entries.size <= maxEntries * 2) {
-    return;
-  }
-  const newest = keepNewest(cache.entries.entries(), maxEntries);
-  cache.entries.clear();
-  newest.forEach(([key, entry]) => cache.entries.set(key, entry));
-}
-
-function isHostVisitDirty(ctx: FaviconCacheContext, hostname: unknown): boolean {
-  const host = ctx.normalizeFaviconHost(hostname);
-  if (!host) {
-    return false;
-  }
-  const entry = ctx.visitDirtyCache.entries.get(host);
-  const updatedAt = Number(entry ? entry.updatedAt : 0);
-  if (!Number.isFinite(updatedAt) || !updatedAt) {
-    return false;
-  }
-  if (Date.now() - updatedAt > ctx.visitDirtyRetention.ttlMs) {
-    ctx.visitDirtyCache.entries.delete(host);
-    persistVisitDirty(ctx);
-    return false;
-  }
-  return true;
-}
-
-function clearHostVisitDirty(ctx: FaviconCacheContext, hostname: unknown): void {
-  const host = ctx.normalizeFaviconHost(hostname);
-  if (!host || !ctx.visitDirtyCache.entries.has(host)) {
-    return;
-  }
-  ctx.visitDirtyCache.entries.delete(host);
-  persistVisitDirty(ctx);
-}
-
-function getPersistedEntry(ctx: FaviconCacheContext, cacheKey: string): FaviconUrlEntry | null {
-  const cached = cacheKey ? ctx.urlCache.entries.get(cacheKey) : undefined;
-  if (!cached || !cached.url) {
-    return null;
-  }
-  if (isExpired(cached.updatedAt, ctx.urlRetention.ttlMs, Date.now())) {
-    ctx.urlCache.entries.delete(cacheKey);
-    persistUrls(ctx);
-    return null;
-  }
-  return { url: cached.url, updatedAt: cached.updatedAt };
-}
-
-function setPersistedUrl(ctx: FaviconCacheContext, cacheKey: unknown, url: unknown): void {
-  const key = String(cacheKey || '').trim();
-  const nextUrl = String(url || '').trim();
-  if (!key || !nextUrl || nextUrl.startsWith('data:') || isRejectedUrl(ctx, nextUrl)) {
-    return;
-  }
-  ctx.urlCache.entries.set(key, { url: nextUrl, updatedAt: Date.now() });
-  compact(ctx.urlCache, ctx.urlRetention.maxEntries);
-  persistUrls(ctx);
-}
-
-function getPersistedDataEntry(ctx: FaviconCacheContext, cacheKey: string): FaviconDataEntry | null {
-  const cached = cacheKey ? ctx.dataCache.entries.get(cacheKey) : undefined;
-  if (!cached || !isValidDataUrlIcon(cached.dataUrl, ctx.dataMaxLength)) {
-    return null;
-  }
-  if (isExpired(cached.updatedAt, ctx.dataRetention.ttlMs, Date.now())) {
-    ctx.dataCache.entries.delete(cacheKey);
-    persistData(ctx);
-    return null;
-  }
-  return { dataUrl: cached.dataUrl, updatedAt: cached.updatedAt };
-}
-
-function setPersistedData(ctx: FaviconCacheContext, cacheKey: unknown, dataUrl: unknown): void {
-  const key = String(cacheKey || '').trim();
-  const nextDataUrl = String(dataUrl || '').trim();
-  if (!key || !isValidDataUrlIcon(nextDataUrl, ctx.dataMaxLength)) {
-    return;
-  }
-  ctx.dataCache.entries.set(key, { dataUrl: nextDataUrl, updatedAt: Date.now() });
-  compact(ctx.dataCache, ctx.dataRetention.maxEntries);
-  persistData(ctx);
-}
-
-function getPersistedThemeEntry(ctx: FaviconCacheContext, cacheKey: unknown): SiteThemeEntry | null {
-  const key = ctx.normalizeFaviconHost(cacheKey);
-  const cached = key ? ctx.themeCache.entries.get(key) : undefined;
-  if (!cached) {
-    return null;
-  }
-  if (isExpired(cached.updatedAt, ctx.themeRetention.ttlMs, Date.now())) {
-    ctx.themeCache.entries.delete(key);
-    persistThemes(ctx);
-    return null;
-  }
-  return { ...cached, accentRgb: [...cached.accentRgb] };
-}
-
-function setPersistedThemeEntry(ctx: FaviconCacheContext, cacheKey: unknown, entry: unknown): boolean {
-  const key = ctx.normalizeFaviconHost(cacheKey);
-  const next = normalizeSiteThemeEntry(entry, Date.now());
-  if (!key || !next) {
-    return false;
-  }
-  const current = ctx.themeCache.entries.get(key);
-  if (current && isSameSiteTheme(current, next)) {
-    return false;
-  }
-  ctx.themeCache.entries.set(key, next);
-  compact(ctx.themeCache, ctx.themeRetention.maxEntries);
-  persistThemes(ctx);
-  return true;
-}
-
-function createFaviconCache(options?: FaviconCacheOptions | null): FaviconCacheRuntime {
-  const config = options || {};
-  const storageArea = config.storageArea || null;
+function createCaches(config: FaviconCacheOptions, rules: FaviconCacheRules): FaviconCaches {
+  const area = config.storageArea || null;
   const timers: TimerHost = config.windowObj || globalThis;
-  const normalizeFaviconHost = config.normalizeFaviconHost || defaultNormalizeHost;
-  const isBlockedLocalFaviconUrl = config.isBlockedLocalFaviconUrl || (() => false);
-  const isChromeMonogramFaviconUrl = config.isChromeMonogramFaviconUrl || isMonogramUrl;
-
-  const urlKey = config.faviconPersistStorageKey || DEFAULTS.faviconPersistStorageKey;
   const urlRetention = {
     ttlMs: finiteOr(config.faviconPersistTtlMs, DEFAULTS.faviconPersistTtlMs),
     maxEntries: finiteOr(config.faviconPersistMaxEntries, DEFAULTS.faviconPersistMaxEntries)
   };
-  const dataKey = config.faviconDataPersistStorageKey || DEFAULTS.faviconDataPersistStorageKey;
   // Data URLs expire with the favicon URLs.
   const dataRetention = {
     ttlMs: urlRetention.ttlMs,
     maxEntries: finiteOr(config.faviconDataPersistMaxEntries, DEFAULTS.faviconDataPersistMaxEntries)
   };
-  const dataMaxLength = finiteOr(config.faviconDataPersistMaxLength, DEFAULTS.faviconDataPersistMaxLength);
-  const themeKey = config.siteThemePersistStorageKey || DEFAULTS.siteThemePersistStorageKey;
   const themeRetention = {
     ttlMs: finiteOr(config.siteThemePersistTtlMs, DEFAULTS.siteThemePersistTtlMs),
     maxEntries: finiteOr(config.siteThemePersistMaxEntries, DEFAULTS.siteThemePersistMaxEntries)
   };
-  const visitDirtyKey = config.faviconVisitDirtyStorageKey || DEFAULTS.faviconVisitDirtyStorageKey;
   const visitDirtyRetention = {
     ttlMs: finiteOr(config.faviconVisitDirtyTtlMs, DEFAULTS.faviconVisitDirtyTtlMs),
     maxEntries: finiteOr(config.faviconVisitDirtyMaxEntries, DEFAULTS.faviconVisitDirtyMaxEntries)
   };
-  const bootWaitMs = finiteOr(config.faviconCacheBootWaitMs, DEFAULTS.faviconCacheBootWaitMs);
-
-  const urlCache = createPersistedCache<FaviconUrlEntry>();
-  const dataCache = createPersistedCache<FaviconDataEntry>();
-  const themeCache = createPersistedCache<SiteThemeEntry>();
-  const visitDirtyCache = createPersistedCache<{ updatedAt: number }>();
-  const ctx: FaviconCacheContext = {
-    config,
-    storageArea,
-    timers,
-    normalizeFaviconHost,
-    isBlockedLocalFaviconUrl,
-    isChromeMonogramFaviconUrl,
-    urlKey,
-    urlRetention,
-    dataKey,
-    dataRetention,
-    dataMaxLength,
-    themeKey,
-    themeRetention,
-    visitDirtyKey,
-    visitDirtyRetention,
-    bootWaitMs,
-    urlCache,
-    dataCache,
-    themeCache,
-    visitDirtyCache
-  };
-
   return {
-    isFaviconPersistLoaded: () => ctx.urlCache.loaded,
-    isFaviconDataPersistLoaded: () => ctx.dataCache.loaded,
-    isSiteThemePersistLoaded: () => ctx.themeCache.loaded,
-    ensureCachesReady: () => ensureCachesReady(ctx),
-    waitForCachesOrTimeout: (maxWaitMs?: number) => waitForCachesOrTimeout(ctx, maxWaitMs),
-    isHostVisitDirty: (hostname: unknown) => isHostVisitDirty(ctx, hostname),
-    clearHostVisitDirty: (hostname: unknown) => clearHostVisitDirty(ctx, hostname),
-    getPersistedEntry: (cacheKey: string) => getPersistedEntry(ctx, cacheKey),
-    setPersistedUrl: (cacheKey: unknown, url: unknown) => setPersistedUrl(ctx, cacheKey, url),
-    getPersistedDataEntry: (cacheKey: string) => getPersistedDataEntry(ctx, cacheKey),
-    setPersistedData: (cacheKey: unknown, dataUrl: unknown) => setPersistedData(ctx, cacheKey, dataUrl),
-    getPersistedThemeEntry: (cacheKey: unknown) => getPersistedThemeEntry(ctx, cacheKey),
-    setPersistedThemeEntry: (cacheKey: unknown, entry: unknown) => setPersistedThemeEntry(ctx, cacheKey, entry)
+    urls: new PersistedCache({
+      key: config.faviconPersistStorageKey || DEFAULTS.faviconPersistStorageKey,
+      version: PAGE_FAVICON_CACHE_VERSION,
+      ...urlRetention,
+      writeDelayMs: WRITE_DELAY_MS,
+      read: (record, now) => readFaviconUrlRecord(record, urlRetention, rules.isRejectedUrl, now),
+      toStored: (entry) => ({ url: entry.url, updatedAt: entry.updatedAt })
+    }, area, timers),
+    data: new PersistedCache({
+      key: config.faviconDataPersistStorageKey || DEFAULTS.faviconDataPersistStorageKey,
+      version: PAGE_FAVICON_CACHE_VERSION,
+      ...dataRetention,
+      writeDelayMs: WRITE_DELAY_MS,
+      read: (record, now) => readFaviconDataRecord(record, dataRetention, rules.dataMaxLength, now),
+      toStored: (entry) => ({ dataUrl: entry.dataUrl, updatedAt: entry.updatedAt })
+    }, area, timers),
+    themes: new PersistedCache({
+      key: config.siteThemePersistStorageKey || DEFAULTS.siteThemePersistStorageKey,
+      version: 1,
+      ...themeRetention,
+      writeDelayMs: WRITE_DELAY_MS,
+      read: (record, now) => readSiteThemeRecord(record, themeRetention, now),
+      toStored: (entry) => ({
+        accentRgb: entry.accentRgb,
+        source: entry.source,
+        neutral: entry.neutral,
+        confidence: entry.confidence,
+        updatedAt: entry.updatedAt
+      })
+    }, area, timers),
+    visitDirty: new PersistedCache({
+      key: config.faviconVisitDirtyStorageKey || DEFAULTS.faviconVisitDirtyStorageKey,
+      version: 1,
+      ...visitDirtyRetention,
+      writeDelayMs: 0,
+      read: (record, now) => readVisitDirtyRecord(record, visitDirtyRetention, now)
+        .map(([host, updatedAt]): [string, { updatedAt: number }] => [host, { updatedAt }]),
+      toStored: (entry) => entry.updatedAt
+    }, area, timers)
+  };
+}
+
+function ensureCachesReady(caches: FaviconCaches): Promise<void> {
+  return Promise.all([caches.urls.load(), caches.data.load(), caches.themes.load(), caches.visitDirty.load()])
+    .then(() => undefined).catch(() => undefined);
+}
+
+function waitForCachesOrTimeout(caches: FaviconCaches, timers: TimerHost, bootWaitMs: number, maxWaitMs?: number): Promise<void> {
+  const waitMs = typeof maxWaitMs === 'number' && Number.isFinite(maxWaitMs) && maxWaitMs >= 0 ? maxWaitMs : bootWaitMs;
+  return Promise.race([
+    ensureCachesReady(caches),
+    new Promise<void>((resolve) => {
+      timers.setTimeout(resolve, waitMs);
+    })
+  ]).then(() => undefined).catch(() => undefined);
+}
+
+function isHostVisitDirty(caches: FaviconCaches, rules: FaviconCacheRules, hostname: unknown): boolean {
+  const host = rules.normalizeHost(hostname);
+  return Boolean(host && caches.visitDirty.fresh(host, (entry) => Number.isFinite(Number(entry.updatedAt)) && Boolean(entry.updatedAt)));
+}
+
+function clearHostVisitDirty(caches: FaviconCaches, rules: FaviconCacheRules, hostname: unknown): void {
+  const host = rules.normalizeHost(hostname);
+  if (host && caches.visitDirty.has(host)) {
+    caches.visitDirty.drop(host);
+  }
+}
+
+function setPersistedUrl(caches: FaviconCaches, rules: FaviconCacheRules, cacheKey: unknown, url: unknown): void {
+  const key = String(cacheKey || '').trim();
+  const nextUrl = String(url || '').trim();
+  if (key && nextUrl && !nextUrl.startsWith('data:') && !rules.isRejectedUrl(nextUrl)) {
+    caches.urls.put(key, { url: nextUrl, updatedAt: Date.now() });
+  }
+}
+
+function setPersistedData(caches: FaviconCaches, rules: FaviconCacheRules, cacheKey: unknown, dataUrl: unknown): void {
+  const key = String(cacheKey || '').trim();
+  const nextDataUrl = String(dataUrl || '').trim();
+  if (key && isValidDataUrlIcon(nextDataUrl, rules.dataMaxLength)) {
+    caches.data.put(key, { dataUrl: nextDataUrl, updatedAt: Date.now() });
+  }
+}
+
+function getPersistedThemeEntry(caches: FaviconCaches, rules: FaviconCacheRules, cacheKey: unknown): SiteThemeEntry | null {
+  const cached = caches.themes.fresh(rules.normalizeHost(cacheKey), () => true);
+  return cached ? { ...cached, accentRgb: [...cached.accentRgb] } : null;
+}
+
+function setPersistedThemeEntry(caches: FaviconCaches, rules: FaviconCacheRules, cacheKey: unknown, entry: unknown): boolean {
+  const key = rules.normalizeHost(cacheKey);
+  const next = normalizeSiteThemeEntry(entry, Date.now());
+  const current = key && next ? caches.themes.peek(key) : undefined;
+  if (!key || !next || (current && isSameSiteTheme(current, next))) {
+    return false;
+  }
+  caches.themes.put(key, next);
+  return true;
+}
+
+function createFaviconCache(options?: FaviconCacheOptions | null): FaviconCacheRuntime {
+  const config = options || {};
+  const timers: TimerHost = config.windowObj || globalThis;
+  const isBlockedLocalFaviconUrl = config.isBlockedLocalFaviconUrl || (() => false);
+  const isChromeMonogramFaviconUrl = config.isChromeMonogramFaviconUrl || isMonogramUrl;
+  const rules: FaviconCacheRules = {
+    normalizeHost: config.normalizeFaviconHost || defaultNormalizeHost,
+    isRejectedUrl: (url) => isBlockedLocalFaviconUrl(url) || isChromeMonogramFaviconUrl(url),
+    dataMaxLength: finiteOr(config.faviconDataPersistMaxLength, DEFAULTS.faviconDataPersistMaxLength),
+    bootWaitMs: finiteOr(config.faviconCacheBootWaitMs, DEFAULTS.faviconCacheBootWaitMs)
+  };
+  const caches = createCaches(config, rules);
+  return {
+    isFaviconPersistLoaded: () => caches.urls.loaded,
+    isFaviconDataPersistLoaded: () => caches.data.loaded,
+    isSiteThemePersistLoaded: () => caches.themes.loaded,
+    ensureCachesReady: () => ensureCachesReady(caches),
+    waitForCachesOrTimeout: (maxWaitMs?: number) => waitForCachesOrTimeout(caches, timers, rules.bootWaitMs, maxWaitMs),
+    isHostVisitDirty: (hostname: unknown) => isHostVisitDirty(caches, rules, hostname),
+    clearHostVisitDirty: (hostname: unknown) => clearHostVisitDirty(caches, rules, hostname),
+    getPersistedEntry: (cacheKey: string) => {
+      const cached = caches.urls.fresh(cacheKey, (entry) => Boolean(entry.url));
+      return cached ? { url: cached.url, updatedAt: cached.updatedAt } : null;
+    },
+    setPersistedUrl: (cacheKey: unknown, url: unknown) => setPersistedUrl(caches, rules, cacheKey, url),
+    getPersistedDataEntry: (cacheKey: string) => {
+      const cached = caches.data.fresh(cacheKey, (entry) => isValidDataUrlIcon(entry.dataUrl, rules.dataMaxLength));
+      return cached ? { dataUrl: cached.dataUrl, updatedAt: cached.updatedAt } : null;
+    },
+    setPersistedData: (cacheKey: unknown, dataUrl: unknown) => setPersistedData(caches, rules, cacheKey, dataUrl),
+    getPersistedThemeEntry: (cacheKey: unknown) => getPersistedThemeEntry(caches, rules, cacheKey),
+    setPersistedThemeEntry: (cacheKey: unknown, entry: unknown) => setPersistedThemeEntry(caches, rules, cacheKey, entry)
   };
 }
 
