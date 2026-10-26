@@ -225,7 +225,6 @@ function createBookmarkSection(deps: BookmarkSectionDeps) {
     getHostFromUrl,
     getSiteDisplayName,
     getUrlDisplay,
-    getRiSvg,
     getFigmaFolderSvg,
     initFolderPathMorph,
     playFolderPathMorph,

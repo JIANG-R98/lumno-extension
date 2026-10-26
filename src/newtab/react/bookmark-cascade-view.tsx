@@ -1,291 +1,293 @@
-import { useLayoutEffect, useRef } from 'react';
+// The bookmark folder menu: one React root on the menu host draws every open
+// level from the controller's model. The controller keeps the state (open
+// levels, active and hover-suppressed rows) and the work that measures or
+// animates (placement, width lock, opening motion, drop marks).
+import { useCallback, useLayoutEffect, useRef } from 'react';
+import type {
+  FocusEvent as ReactFocusEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent
+} from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
-import { queryHtmlTag, queryHtmlTags } from '../../shared/dom-lookup';
-import { isHtmlTag } from '../../shared/dom-guards';
 import { innerHtml } from '../../shared/react/inner-html';
+import { RemixIcon } from '../../shared/react/remix-icon';
 
-export interface CascadeItemView {
-  button: HTMLButtonElement;
-  copyButton: HTMLButtonElement | null;
-  icon: HTMLImageElement | HTMLSpanElement | null;
-  row: HTMLDivElement;
-}
+// The menu levels size to their content within these bounds.
+const LEVEL_MIN_WIDTH_PX = 210;
+const LEVEL_MAX_WIDTH_PX = 260;
 
-export interface CascadeLevelView {
-  content: HTMLDivElement;
-  destroy(): void;
-  element: HTMLDivElement;
-  items: CascadeItemView[];
-}
-
-export interface CascadeItem {
-  host?: string;
-  id?: string | number;
-  index?: number;
-  parentId?: string | number;
-  themeUrl?: string;
-  title?: string;
-  type?: string;
-  url?: string;
-}
-
-export interface CascadeLevelConfig {
-  documentObj?: Document;
-  levelIndex: number;
-  folderId: string;
-  folderTitle: string;
-  items: readonly CascadeItem[];
-  sanitizeDisplayText?(value: unknown): string;
-  getFigmaFolderSvg?(suffix: string, folderId?: string): string;
-  getRiSvg?(icon: string, className: string): string;
-  getUrlDisplay?(url: string): string;
-  copyLabel?: string;
-  emptyLabel?: string;
-  siteIconAlt?: string;
-}
-
-function CascadeLevel({
-  copyLabel,
-  emptyLabel,
-  folderId,
-  folderTitle,
-  getFigmaFolderSvg,
-  getRiSvg,
-  getUrlDisplay,
-  items,
-  levelIndex,
-  register,
-  sanitizeDisplayText,
-  siteIconAlt
-}: {
+export interface CascadeRowModel {
+  key: string;
+  isFolder: boolean;
+  title: string;
+  bookmarkId: string;
+  parentId: string;
+  // The bookmark's place in its folder, or '' when unknown.
+  bookmarkIndex: string;
+  draggable: boolean;
+  active: boolean;
+  expanded: boolean;
+  hoverSuppressed: boolean;
+  // Folders: the folder glyph's markup. Sites: a chosen icon, else ''.
+  folderIconMarkup: string;
+  iconUrl: string;
+  iconMonochrome: boolean;
+  iconAlt: string;
   copyLabel: string;
-  emptyLabel: string;
-  folderId: string;
-  folderTitle: string;
-  getFigmaFolderSvg(suffix: string, folderId?: string): string;
-  getRiSvg(icon: string, className: string): string;
-  getUrlDisplay(url: string): string;
-  items: readonly CascadeItem[];
+}
+
+export interface CascadeLevelModel {
+  // Changes whenever the level is drawn afresh, so it mounts and opens again.
+  key: string;
   levelIndex: number;
-  register(content: HTMLDivElement, items: CascadeItemView[]): void;
-  sanitizeDisplayText(value: unknown): string;
-  siteIconAlt: string;
+  title: string;
+  emptyLabel: string;
+  rows: readonly CascadeRowModel[];
+}
+
+export interface CascadeMenuModel {
+  levels: readonly CascadeLevelModel[];
+}
+
+// A row event: the level, the row's key, the native event and the row's button.
+type RowHandler<E extends Event> = (levelIndex: number, key: string, event: E, button: HTMLButtonElement) => void;
+
+export interface CascadeMenuHandlers {
+  onLevelElement(levelKey: string, element: HTMLDivElement | null): void;
+  onRowPointerEnter: RowHandler<PointerEvent>;
+  onRowPointerLeave: RowHandler<PointerEvent>;
+  onRowPointerDown: RowHandler<PointerEvent>;
+  onRowFocus: RowHandler<FocusEvent>;
+  onRowClick: RowHandler<MouseEvent>;
+  onRowAuxClick: RowHandler<MouseEvent>;
+  onRowKeyDown: RowHandler<KeyboardEvent>;
+  onRowContextMenu: RowHandler<MouseEvent>;
+  onCopyShow: RowHandler<Event>;
+  onCopyHide(): void;
+  onCopyClick: RowHandler<MouseEvent>;
+  // A site row's icon without a chosen one loads its favicon through the fallbacks.
+  onSiteIconMount(levelIndex: number, key: string, image: HTMLImageElement): void;
+  // A site row shows its title in a tooltip that follows the cursor.
+  onSiteButtonMount(button: HTMLButtonElement, getTitle: () => string): void;
+  onFolderIconMount(icon: HTMLElement): void;
+  onFolderIconOpenChange(icon: HTMLElement, open: boolean): void;
+}
+
+function CascadeRow({
+  handlers,
+  index,
+  levelIndex,
+  row
+}: {
+  handlers: CascadeMenuHandlers;
+  index: number;
+  levelIndex: number;
+  row: CascadeRowModel;
 }) {
-  const contentRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const folderIconRef = useRef<HTMLSpanElement>(null);
+  const siteIconRef = useRef<HTMLImageElement>(null);
+  const titleRef = useRef(row.title);
+  titleRef.current = row.title;
+  const open = row.active || row.expanded;
+  const openRef = useRef(open);
+
   useLayoutEffect(() => {
-    const content = contentRef.current;
-    if (!content) {
+    const button = buttonRef.current;
+    if (folderIconRef.current) {
+      handlers.onFolderIconMount(folderIconRef.current);
+    }
+    if (siteIconRef.current && !row.iconUrl) {
+      handlers.onSiteIconMount(levelIndex, row.key, siteIconRef.current);
+    }
+    if (button && !row.isFolder) {
+      handlers.onSiteButtonMount(button, () => titleRef.current);
+    }
+    // Each row's icon and tooltip are set up once, when it mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useLayoutEffect(() => {
+    if (openRef.current === open) {
       return;
     }
-    const itemViews = queryHtmlTags(content, '[data-cascade-view-index]', 'div').map((row): CascadeItemView => {
-      const button = queryHtmlTag(row, '.x-nt-bookmark-cascade-item', 'button');
-      if (!button) {
-        throw new Error('A bookmark cascade row has no item button.');
-      }
-      const icon = row.querySelector('.x-nt-bookmark-cascade-icon');
-      return {
-        row,
-        button,
-        copyButton: queryHtmlTag(row, '.x-nt-bookmark-cascade-copy-trigger', 'button'),
-        icon: isHtmlTag(icon, 'img') || isHtmlTag(icon, 'span') ? icon : null
-      };
-    });
-    register(content, itemViews);
-  }, [register]);
-  const cleanFolderTitle = sanitizeDisplayText(folderTitle);
+    openRef.current = open;
+    if (folderIconRef.current) {
+      handlers.onFolderIconOpenChange(folderIconRef.current, open);
+    }
+  }, [handlers, open]);
+
+  const rowEvent = <E extends Event>(handler: RowHandler<E>) =>
+    (event: { nativeEvent: E; currentTarget: HTMLButtonElement }) =>
+      handler(levelIndex, row.key, event.nativeEvent, event.currentTarget);
+  const onPointerEnter = rowEvent(handlers.onRowPointerEnter);
+  const onPointerLeave = rowEvent(handlers.onRowPointerLeave);
+  const onPointerDown = rowEvent(handlers.onRowPointerDown);
+  const onFocus: (event: ReactFocusEvent<HTMLButtonElement>) => void = rowEvent(handlers.onRowFocus);
+  const onClick: (event: ReactMouseEvent<HTMLButtonElement>) => void = rowEvent(handlers.onRowClick);
+  const onAuxClick: (event: ReactMouseEvent<HTMLButtonElement>) => void = rowEvent(handlers.onRowAuxClick);
+  const onKeyDown: (event: ReactKeyboardEvent<HTMLButtonElement>) => void = rowEvent(handlers.onRowKeyDown);
+  const onContextMenu: (event: ReactMouseEvent<HTMLButtonElement>) => void = rowEvent(handlers.onRowContextMenu);
+  const onCopyShow = (event: ReactPointerEvent<HTMLButtonElement> | ReactFocusEvent<HTMLButtonElement>) =>
+    handlers.onCopyShow(levelIndex, row.key, event.nativeEvent, event.currentTarget);
+
   return (
-    <div className="x-nt-bookmark-cascade-content" ref={contentRef} role="none">
-      {cleanFolderTitle ? (
-        <div
-          className="x-nt-bookmark-cascade-title"
-          role="presentation"
-          title={cleanFolderTitle}
+    <div
+      className={row.isFolder ? 'x-nt-bookmark-cascade-row x-nt-bookmark-cascade-row--folder' : 'x-nt-bookmark-cascade-row'}
+      role="none"
+    >
+      <button
+        aria-expanded={row.isFolder ? row.expanded : undefined}
+        aria-haspopup={row.isFolder ? 'menu' : undefined}
+        aria-label={row.title}
+        className={row.isFolder ? 'x-nt-bookmark-cascade-item x-nt-bookmark-cascade-item--folder' : 'x-nt-bookmark-cascade-item'}
+        data-active={row.active ? 'true' : 'false'}
+        data-bookmark-dragging="false"
+        data-bookmark-draggable={row.draggable ? 'true' : 'false'}
+        data-bookmark-drop-folder-id={row.isFolder ? row.bookmarkId : undefined}
+        data-bookmark-drop-folder-title={row.isFolder ? row.title : undefined}
+        data-bookmark-id={row.bookmarkId}
+        data-bookmark-index={row.bookmarkIndex}
+        data-bookmark-parent-id={row.parentId}
+        data-hover-suppressed={row.hoverSuppressed ? 'true' : undefined}
+        data-level={levelIndex}
+        data-type={row.isFolder ? 'folder' : 'bookmark'}
+        draggable={false}
+        onAuxClick={onAuxClick}
+        onClick={onClick}
+        onContextMenu={onContextMenu}
+        onDragStart={(event) => event.preventDefault()}
+        onFocus={onFocus}
+        onKeyDown={onKeyDown}
+        onPointerDown={onPointerDown}
+        onPointerEnter={onPointerEnter}
+        onPointerLeave={onPointerLeave}
+        ref={buttonRef}
+        role="menuitem"
+        tabIndex={row.active ? 0 : -1}
+        title={row.title}
+        type="button"
+      >
+        {row.isFolder ? (
+          <span
+            aria-hidden="true"
+            className="x-nt-bookmark-cascade-icon x-nt-bookmark-cascade-icon--folder"
+            dangerouslySetInnerHTML={innerHtml(row.folderIconMarkup)}
+            ref={folderIconRef}
+          />
+        ) : (
+          <img
+            alt={row.iconAlt}
+            className="x-nt-bookmark-cascade-icon"
+            data-builtin-monochrome={row.iconMonochrome ? 'true' : undefined}
+            draggable={false}
+            loading={index < 4 ? 'eager' : 'lazy'}
+            ref={siteIconRef}
+            src={row.iconUrl || undefined}
+          />
+        )}
+        <span className="x-nt-bookmark-cascade-label">{row.title}</span>
+        {row.isFolder ? (
+          <span aria-hidden="true" className="x-nt-bookmark-cascade-arrow">
+            <RemixIcon className="ri-size-16 ri-arrow-right-s-line" />
+          </span>
+        ) : null}
+      </button>
+      {row.isFolder ? null : (
+        <button
+          aria-label={row.copyLabel}
+          className="x-nt-bookmark-cascade-copy-trigger"
+          data-tooltip={row.copyLabel}
+          onBlur={() => handlers.onCopyHide()}
+          onClick={(event) => handlers.onCopyClick(levelIndex, row.key, event.nativeEvent, event.currentTarget)}
+          onFocus={onCopyShow}
+          onPointerDown={(event) => event.stopPropagation()}
+          onPointerEnter={onCopyShow}
+          onPointerLeave={() => handlers.onCopyHide()}
+          type="button"
         >
-          {cleanFolderTitle}
-        </div>
-      ) : null}
-      {items.length === 0 ? (
-        <div className="x-nt-bookmark-cascade-empty">{emptyLabel}</div>
-      ) : null}
-      {items.map((item, index) => {
-        const isFolder = item.type === 'folder';
-        const titleText = sanitizeDisplayText(
-          item.title || (item.url ? getUrlDisplay(item.url) : folderTitle)
-        );
-        const parentId = String(item.parentId || folderId || '');
-        const bookmarkIndex = Number.isFinite(Number(item.index))
-          ? String(item.index)
-          : '';
-        const draggable = Boolean(
-          item.id && parentId && Number.isFinite(Number(item.index))
-        );
-        return (
-          <div
-            className={`x-nt-bookmark-cascade-row${
-              isFolder ? ' x-nt-bookmark-cascade-row--folder' : ''
-            }`}
-            data-cascade-view-index={index}
-            key={`${String(item.id || item.url || index)}-${index}`}
-            role="none"
-          >
-            <button
-              aria-expanded={isFolder ? false : undefined}
-              aria-haspopup={isFolder ? 'menu' : undefined}
-              aria-label={titleText}
-              className={`x-nt-bookmark-cascade-item${
-                isFolder ? ' x-nt-bookmark-cascade-item--folder' : ''
-              }`}
-              data-bookmark-dragging="false"
-              data-bookmark-draggable={draggable ? 'true' : 'false'}
-              data-bookmark-drop-folder-id={
-                isFolder ? String(item.id || '') : undefined
-              }
-              data-bookmark-drop-folder-title={
-                isFolder ? titleText : undefined
-              }
-              data-bookmark-id={String(item.id || '')}
-              data-bookmark-index={bookmarkIndex}
-              data-bookmark-parent-id={parentId}
-              data-level={levelIndex}
-              data-type={isFolder ? 'folder' : 'bookmark'}
-              draggable={false}
-              role="menuitem"
-              tabIndex={-1}
-              title={titleText}
-              type="button"
-            >
-              {isFolder ? (
-                <span
-                  aria-hidden="true"
-                  className="x-nt-bookmark-cascade-icon x-nt-bookmark-cascade-icon--folder"
-                  dangerouslySetInnerHTML={innerHtml(getFigmaFolderSvg(
-                      `${String(item.id || 'folder')}-cascade-${index}`, String(item.id || '')
-                    ))}
-                />
-              ) : (
-                <img
-                  alt={siteIconAlt}
-                  className="x-nt-bookmark-cascade-icon"
-                  draggable={false}
-                  loading={index < 4 ? 'eager' : 'lazy'}
-                />
-              )}
-              <span className="x-nt-bookmark-cascade-label">{titleText}</span>
-              {isFolder ? (
-                <span
-                  aria-hidden="true"
-                  className="x-nt-bookmark-cascade-arrow"
-                  dangerouslySetInnerHTML={innerHtml(getRiSvg(
-                      'ri-arrow-right-s-line',
-                      'ri-size-16'
-                    ))}
-                />
-              ) : null}
-            </button>
-            {!isFolder && item.url ? (
-              <button
-                aria-label={copyLabel}
-                className="x-nt-bookmark-cascade-copy-trigger"
-                data-tooltip={copyLabel}
-                dangerouslySetInnerHTML={innerHtml(getRiSvg('ri-file-copy-line', 'ri-size-16'))}
-                type="button"
-              />
-            ) : null}
-          </div>
-        );
-      })}
+          <RemixIcon className="ri-size-16 ri-file-copy-line" />
+        </button>
+      )}
     </div>
   );
 }
 
-export function createCascadeMenu(documentObj: Document = document) {
+function CascadeLevel({ handlers, level }: { handlers: CascadeMenuHandlers; level: CascadeLevelModel }) {
+  const levelKey = level.key;
+  const ref = useCallback(
+    (element: HTMLDivElement | null) => handlers.onLevelElement(levelKey, element),
+    [handlers, levelKey]
+  );
+  return (
+    <div
+      className={level.levelIndex > 0
+        ? 'x-nt-bookmark-cascade-level x-nt-bookmark-cascade-submenu _x_extension_menu_surface_2024_unique_'
+        : 'x-nt-bookmark-cascade-level _x_extension_menu_surface_2024_unique_'}
+      data-level={level.levelIndex}
+      data-menu-surface-width="content"
+      ref={ref}
+      role="menu"
+      style={{
+        '--x-extension-menu-surface-min-width': `${LEVEL_MIN_WIDTH_PX}px`,
+        '--x-extension-menu-surface-max-width': `${LEVEL_MAX_WIDTH_PX}px`
+      }}
+    >
+      <div className="x-nt-bookmark-cascade-content" role="none">
+        {level.title ? (
+          <div className="x-nt-bookmark-cascade-title" role="presentation" title={level.title}>
+            {level.title}
+          </div>
+        ) : null}
+        {level.rows.length === 0 ? <div className="x-nt-bookmark-cascade-empty">{level.emptyLabel}</div> : null}
+        {level.rows.map((row, index) => (
+          <CascadeRow handlers={handlers} index={index} key={row.key} levelIndex={level.levelIndex} row={row} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export interface CascadeMenuView {
+  element: HTMLDivElement;
+  render(model: CascadeMenuModel): void;
+  destroy(): void;
+}
+
+export function createCascadeMenu(documentObj: Document, handlers: CascadeMenuHandlers): CascadeMenuView {
   const element = documentObj.createElement('div');
   element.className = 'x-nt-bookmark-cascade-menu';
   element.dataset.reactIsland = 'newtab-bookmark-cascade';
   element.setAttribute('role', 'menu');
-  return element;
-}
-
-export function createCascadeLevel(config: CascadeLevelConfig): CascadeLevelView {
-  const documentObj: Document = config.documentObj || document;
-  const levelIndex = Math.max(0, Math.floor(Number(config.levelIndex)) || 0);
-  const element = documentObj.createElement('div');
-  element.className = `x-nt-bookmark-cascade-level${
-    levelIndex > 0 ? ' x-nt-bookmark-cascade-submenu' : ''
-  }`;
-  element.dataset.level = String(levelIndex);
-  element.dataset.reactIsland = 'newtab-bookmark-cascade-level';
-  element.setAttribute('role', 'menu');
   const root: Root = createRoot(element);
-  let content: HTMLDivElement | null = null;
-  let itemViews: CascadeItemView[] = [];
-  const register = (
-    nextContent: HTMLDivElement,
-    nextItems: CascadeItemView[]
-  ) => {
-    content = nextContent;
-    itemViews = nextItems;
-  };
-  const rawItems = Array.isArray(config.items) ? config.items : [];
-  const items = rawItems.filter(
-    (item) => item && (item.url || item.type === 'folder')
-  );
-  flushSync(() =>
-    root.render(
-      <CascadeLevel
-        copyLabel={String(config.copyLabel || 'Copy link')}
-        emptyLabel={String(config.emptyLabel || 'No content')}
-        folderId={String(config.folderId || '')}
-        folderTitle={String(config.folderTitle || '')}
-        getFigmaFolderSvg={
-          typeof config.getFigmaFolderSvg === 'function'
-            ? config.getFigmaFolderSvg
-            : () => ''
-        }
-        getRiSvg={
-          typeof config.getRiSvg === 'function' ? config.getRiSvg : () => ''
-        }
-        getUrlDisplay={
-          typeof config.getUrlDisplay === 'function'
-            ? config.getUrlDisplay
-            : (url) => String(url || '')
-        }
-        items={items}
-        levelIndex={levelIndex}
-        register={register}
-        sanitizeDisplayText={
-          typeof config.sanitizeDisplayText === 'function'
-            ? config.sanitizeDisplayText
-            : (value) => String(value || '')
-        }
-        siteIconAlt={String(config.siteIconAlt || 'Site')}
-      />
-    )
-  );
-  if (!content) {
-    flushSync(() => root.unmount());
-    throw new Error('Lumno React bookmark cascade level did not mount.');
-  }
   let destroyed = false;
   return {
-    content,
+    element,
+    render(model) {
+      if (destroyed) {
+        return;
+      }
+      flushSync(() => root.render(
+        <>
+          {model.levels.map((level) => <CascadeLevel handlers={handlers} key={level.key} level={level} />)}
+        </>
+      ));
+    },
     destroy() {
       if (destroyed) {
         return;
       }
       destroyed = true;
       flushSync(() => root.unmount());
-    },
-    element,
-    items: itemViews
+    }
   };
 }
 
 export function createBookmarkCascadeViewApi() {
   return Object.freeze({
     implementation: 'react',
-    createLevel: createCascadeLevel,
     createMenu: createCascadeMenu
   });
 }
