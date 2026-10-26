@@ -87,11 +87,6 @@ import {
   restorePinnedTabsFromSnapshotOnStartup,
   schedulePersistPinnedTabSnapshot
 } from './pinned-tab-recovery';
-import {
-  SITE_SEARCH_SHORTCUT_ICON_SETTINGS,
-  getBackgroundFaviconCacheRuntime,
-  markFaviconDirtyForUrl
-} from './favicon-service';
 import { refreshDefaultSearchEngineState, updateDefaultSearchEngineFromUrl } from './search/default-engine';
 import {
   clearPendingSearch,
@@ -150,6 +145,9 @@ import { clearOverlayLoadingRecord, clearOverlayNavigationState, rememberOverlay
 import { markOverlayLoadingRecordUnstable, recoverOverlayAfterLoadingUpdate } from './overlay-loading-service';
 import { getRecentPageHotkeyContext } from './command-context';
 import { recoverFromPageHotkeyNewtab, triggerCopyCurrentUrlForTab, triggerShowSearchForTab } from './command-service';
+import { getBackgroundFaviconCacheRuntime } from './favicon/candidates';
+import { SITE_SEARCH_SHORTCUT_ICON_SETTINGS } from './favicon/site-search-icons';
+import { markFaviconDirtyForUrl } from './favicon/visit-dirty';
 
 // Folds traditional characters to simplified ones for local search matching.
 installHanVariantPairs(HAN_VARIANT_PAIRS);

@@ -11,7 +11,6 @@ import type {
   SearchSourceType
 } from '../../domain/search/types';
 import { isOwnExtensionUrl } from '../browser-urls-service';
-import { loadFaviconEnhancedFetchEnabled, loadFaviconRequestBlacklistItems } from '../favicon-service';
 import { normalizeHost } from '../worker-context';
 import { filterBlacklistedSuggestions, isUrlBlockedBySearchBlacklist, loadSearchBlacklistItems } from './blacklist';
 import { isSearchEngineResultUrl } from './default-engine';
@@ -40,6 +39,7 @@ import {
 } from './text-matching';
 import type { BookmarkItem, OpenTabItem, SearchSuggestionOptions, SourceItem, SuggestionRow } from './types';
 import * as FaviconHostPolicy from '../../domain/favicon/host-policy';
+import { loadFaviconEnhancedFetchEnabled, loadFaviconRequestBlacklistItems } from '../favicon/request-policy';
 
 // The matches of each source for one query.
 interface SourceMatches {

@@ -13,7 +13,6 @@ import {
   logHotkeyDebug,
   whenBackgroundSettingsReady
 } from './worker-context';
-import { scheduleSiteSearchProviderIconWarmup } from './favicon-service';
 import { loadSiteSearchProviders, siteSearchCache } from './search/site-search-providers';
 import {
   canOpenOverlayOnUrl,
@@ -45,6 +44,7 @@ import {
   setOverlayReopener,
   updateOverlayLoadingRecordFromInvocation
 } from './overlay-loading-service';
+import { scheduleSiteSearchProviderIconWarmup } from './favicon/site-search-icons';
 
 // The overlay being opened on a tab; a second open meanwhile is ignored.
 interface OverlayOpening {

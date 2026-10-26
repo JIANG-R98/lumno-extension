@@ -5,7 +5,6 @@ import type { SwitcherOffset } from '../../domain/tab-switcher-model';
 import type { TabSwitcherItem } from '../../domain/messages';
 import { tabSwitcherCurrentWindowOnly, tabSwitcherEnabled } from '../../domain/settings/features';
 import { getResolvedTabUrl } from '../browser-urls-service';
-import { loadFaviconEnhancedFetchEnabled, loadFaviconRequestBlacklistItems } from '../favicon-service';
 import { openNewtabFallback, openNewtabFallbackForUrl } from '../newtab-fallback';
 import * as RECENT_TAB_SWITCHER from '../recent-tab-switcher';
 import { recordTabSwitchEvent } from '../tab-switch-stats-service';
@@ -31,6 +30,7 @@ import {
 import { ensureTabSwitcherStateLoaded, getSwitcherThumbnailStateForPayload, recentTabTracker, recordRecentSwitcherTab, shouldTrackSwitcherTab } from './state-store';
 import { TAB_SWITCHER_LIMIT, getErrorMessage } from './types';
 import type { SwitchResult, SwitcherTab } from './types';
+import { loadFaviconEnhancedFetchEnabled, loadFaviconRequestBlacklistItems } from '../favicon/request-policy';
 
 function normalizeSwitcherTabForPayload(tab: SwitcherTab | null | undefined, currentTabId: number | undefined): TabSwitcherItem | null {
   if (!tab || typeof tab.id !== 'number') {

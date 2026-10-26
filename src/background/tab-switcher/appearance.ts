@@ -5,21 +5,12 @@ import { getSwitcherRegistrableThemeHost, getSwitcherThemeHostCandidates } from 
 import * as BROWSER_PROFILE from '../../platform/browser-profile';
 import * as NEWTAB_FAVICON_THEME from '../../shared/favicon/favicon-theme';
 import { getResolvedTabUrl } from '../browser-urls-service';
-import {
-  BACKGROUND_SITE_THEME_CACHE_MAX_ENTRIES,
-  getBackgroundFaviconCacheRuntime,
-  getBackgroundFaviconUrlResolver,
-  normalizeFaviconHost,
-  normalizeThemeAccentRgb,
-  resolveSiteThemeColor,
-  shouldBlockFaviconForHost,
-  siteThemeColorCache,
-  siteThemeColorPending
-} from '../favicon-service';
 import type { SwitcherTab } from './types';
 import * as BoundedCache from '../../domain/bounded-cache';
 import * as FaviconThemeColor from '../../domain/favicon/theme-color';
 import type { ThemeRgb } from '../../domain/favicon/types';
+import { getBackgroundFaviconCacheRuntime, getBackgroundFaviconUrlResolver, normalizeFaviconHost, shouldBlockFaviconForHost } from '../favicon/candidates';
+import { BACKGROUND_SITE_THEME_CACHE_MAX_ENTRIES, normalizeThemeAccentRgb, resolveSiteThemeColor, siteThemeColorCache, siteThemeColorPending } from '../favicon/site-theme-color';
 
 // Firefox gives its about: pages chrome:// icons that web pages cannot load,
 // and those monochrome icons would vanish on a dark switcher anyway. The

@@ -1,5 +1,5 @@
+import { arrayBufferToBase64 } from '../favicon/candidates';
 // A captured shot cut to the switcher's thumbnail size and re-encoded small.
-import { arrayBufferToBase64 } from '../favicon-service';
 
 const TAB_SWITCHER_THUMBNAIL_TARGET_WIDTH = 320;
 

@@ -7,7 +7,6 @@ import type { TabSwitcherContext, TabSwitcherItem } from '../../domain/messages'
 import { createInjectedAppRun } from '../../platform/injection';
 import * as LumnoMessaging from '../../platform/messaging';
 import { getResolvedTabUrl } from '../browser-urls-service';
-import { inlineExtensionFaviconsForWebPage } from '../favicon-service';
 import { openNewtabFallback, openNewtabFallbackForUrl } from '../newtab-fallback';
 import {
   isTabSwitcherExtensionPageMessageTarget,
@@ -16,6 +15,7 @@ import {
 import { logHotkeyDebug } from '../worker-context';
 import { canHostSwitcherSurface } from './host';
 import type { InjectContext } from './types';
+import { inlineExtensionFaviconsForWebPage } from '../favicon/favicon-data';
 
 // Opening the switcher in one host tab, and reporting how it went.
 interface SwitcherInjection {

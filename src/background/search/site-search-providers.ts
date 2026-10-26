@@ -3,9 +3,9 @@
 import * as SEARCH_UTILS from '../../domain/search/search-utils';
 import { siteSearchDisabled, siteSearchCustom } from '../../domain/settings';
 import { workerSettings } from '../worker-context';
-import { scheduleSiteSearchProviderIconWarmup } from '../favicon-service';
 import type { NormalizedSiteSearchProvider, SiteSearchProvider } from '../../domain/search/types';
 import { isRecord } from './types';
+import { scheduleSiteSearchProviderIconWarmup } from '../favicon/site-search-icons';
 
 let siteSearchCache: SiteSearchProvider[] | null = null;
 

@@ -2,6 +2,7 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
+    "noUncheckedSideEffectImports": true,
     "types": [
       "chrome",
       "vite/client"

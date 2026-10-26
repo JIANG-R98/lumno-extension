@@ -3,15 +3,9 @@
 import * as SEARCH_UTILS from '../../domain/search/search-utils';
 import type { SearchQueryContext, SearchRankingOptions } from '../../domain/search/types';
 import { getOwnExtensionFaviconUrl, isOwnExtensionUrl } from '../browser-urls-service';
-import {
-  getFaviconFallbackHost,
-  getHostFaviconUrl,
-  getPageFaviconCandidateUrl,
-  isBrowserInternalPageUrl,
-  shouldBlockFaviconForHost
-} from '../favicon-service';
 import { normalizeHost } from '../worker-context';
 import type { BookmarkNodeInfo, SourceItem } from './types';
+import { getFaviconFallbackHost, getHostFaviconUrl, getPageFaviconCandidateUrl, isBrowserInternalPageUrl, shouldBlockFaviconForHost } from '../favicon/candidates';
 
 // The roots every bookmark tree has, which a path leaves out.
 const ROOT_FOLDER_TITLES: ReadonlySet<string> = new Set([

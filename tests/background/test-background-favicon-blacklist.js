@@ -43,13 +43,10 @@ async function bootFavicons(options) {
       });
     },
     exposeModules: {
-      'src/background/favicon-service.ts': [
-        'resolveSiteThemeColor',
-        'resolveFaviconCandidates',
-        'fetchFaviconData',
-        'loadFaviconRequestBlacklistItems',
-        'loadFaviconEnhancedFetchEnabled'
-      ]
+      'src/background/favicon/site-theme-color.ts': ['resolveSiteThemeColor'],
+      'src/background/favicon/candidates.ts': ['resolveFaviconCandidates'],
+      'src/background/favicon/favicon-data.ts': ['fetchFaviconData'],
+      'src/background/favicon/request-policy.ts': ['loadFaviconRequestBlacklistItems', 'loadFaviconEnhancedFetchEnabled']
     }
   });
   await harness.exposed('loadFaviconRequestBlacklistItems')();

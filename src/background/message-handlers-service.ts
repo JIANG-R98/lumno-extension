@@ -19,16 +19,6 @@ import {
 } from './worker-controllers';
 import { focusWindowAndActivateTab } from './tab-switcher/open';
 import { handleTabSwitcherShortcutModifierReleased } from './tab-switcher/shortcut-release';
-import {
-  fetchFaviconData,
-  fetchShortcutFaviconData,
-  isBlockedLocalFaviconUrl,
-  loadFaviconRequestBlacklistItems,
-  logBlockedLocalFavicon,
-  resolveFaviconCandidates,
-  resolveSiteThemeColor,
-  shouldBlockFaviconForHost
-} from './favicon-service';
 import { markPendingSearchTab } from './search/pending-search';
 import {
   createSearchResultTab,
@@ -52,6 +42,11 @@ import { clearOverlayLoadingRecord } from './overlay-loading-records';
 import { recoverOverlayAfterTopFrameDocumentStart, updateOverlayLoadingSessionFromMessage } from './overlay-loading-service';
 import { rememberPageHotkeyContext, requestFocusVisibleNewtabInput } from './command-context';
 import { getConfiguredCopyUrlCommandShortcut, getConfiguredFallbackShortcut, triggerCopyCurrentUrlForTab, triggerShowSearchForTab } from './command-service';
+import { isBlockedLocalFaviconUrl, logBlockedLocalFavicon, resolveFaviconCandidates, shouldBlockFaviconForHost } from './favicon/candidates';
+import { fetchFaviconData } from './favicon/favicon-data';
+import { loadFaviconRequestBlacklistItems } from './favicon/request-policy';
+import { fetchShortcutFaviconData } from './favicon/shortcut-icons';
+import { resolveSiteThemeColor } from './favicon/site-theme-color';
 
 type TabAction =
   | 'swapNewtabForFocus' | 'switchToTab' | 'closeTabFromTabSwitcher' | 'notifyOverlayClosed'
