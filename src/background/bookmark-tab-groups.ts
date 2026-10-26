@@ -158,45 +158,24 @@ function createResult(overrides: Partial<BookmarkTabGroupResult>): BookmarkTabGr
   }, overrides || {});
 }
 
-async function openBookmarkFolderInNewTabGroup(
-  chromeApi: BookmarkTabGroupChromeApi | null | undefined,
-  rawOptions: BookmarkTabGroupOptions | null | undefined
-): Promise<BookmarkTabGroupResult> {
-  const options = rawOptions && typeof rawOptions === 'object'
-    ? rawOptions
-    : {};
-  const folderId = String(options.folderId || '').trim();
-  if (!folderId) {
-    return createResult({ reason: 'invalid-folder-id' });
-  }
-  if (!chromeApi || !chromeApi.bookmarks ||
-      typeof chromeApi.bookmarks.getSubTree !== 'function') {
-    return createResult({ reason: 'bookmarks-api-unavailable' });
-  }
-  if (!isReady(chromeApi)) {
-    return createResult({ reason: 'tab-group-api-unavailable' });
-  }
-
-  let folderNode: BookmarkNodeLike | null = null;
+async function readFolder(
+  chromeApi: ReadyChromeApi,
+  folderId: string
+): Promise<{ node: BookmarkNodeLike } | { reason: string }> {
   try {
-    folderNode = await getBookmarkSubTree(chromeApi, folderId);
+    const node = await getBookmarkSubTree(chromeApi, folderId);
+    return node ? { node } : { reason: 'bookmark-folder-unavailable' };
   } catch (error) {
-    return createResult({
-      reason: error instanceof Error && error.message
-        ? error.message
-        : 'bookmark-folder-unavailable'
-    });
+    return { reason: error instanceof Error && error.message ? error.message : 'bookmark-folder-unavailable' };
   }
-  if (!folderNode) {
-    return createResult({ reason: 'bookmark-folder-unavailable' });
-  }
+}
 
-  const urls = collectBookmarkUrls(folderNode);
-  const requestedCount = urls.length;
-  if (!requestedCount) {
-    return createResult({ reason: 'empty-folder' });
-  }
-
+// Opens the folder's links in order, in the background, at the position asked.
+async function openFolderTabs(
+  chromeApi: ReadyChromeApi,
+  urls: readonly string[],
+  options: BookmarkTabGroupOptions
+): Promise<Array<chrome.tabs.Tab & { id: number }>> {
   const windowId = Number(options.windowId);
   const insertIndex = Number(options.insertIndex);
   const openedTabs: Array<chrome.tabs.Tab & { id: number }> = [];
@@ -217,11 +196,66 @@ async function openBookmarkFolderInNewTabGroup(
       openedTabs.push({ ...tab, id: tabId });
     }
   }
+  return openedTabs;
+}
 
+// Groups the opened tabs under the folder's title; the reason says what failed.
+async function groupFolderTabs(
+  chromeApi: ReadyChromeApi,
+  tabIds: number[],
+  title: string
+): Promise<{ groupId: number | null; reason: string }> {
+  let groupId: number | null = null;
+  try {
+    const [first, ...others] = tabIds;
+    groupId = await createTabGroup(chromeApi, [first, ...others]);
+    await updateTabGroupTitle(chromeApi, groupId, title);
+    return { groupId, reason: '' };
+  } catch (error) {
+    return { groupId, reason: error instanceof Error && error.message ? error.message : 'tab-group-failed' };
+  }
+}
+
+// The bookmark and tab group APIs this needs, or why they are unavailable.
+function readyApi(chromeApi: BookmarkTabGroupChromeApi | null | undefined): ReadyChromeApi | string {
+  if (!chromeApi || !chromeApi.bookmarks || typeof chromeApi.bookmarks.getSubTree !== 'function') {
+    return 'bookmarks-api-unavailable';
+  }
+  return isReady(chromeApi) ? chromeApi : 'tab-group-api-unavailable';
+}
+
+async function openBookmarkFolderInNewTabGroup(
+  chromeApi: BookmarkTabGroupChromeApi | null | undefined,
+  rawOptions: BookmarkTabGroupOptions | null | undefined
+): Promise<BookmarkTabGroupResult> {
+  const options = rawOptions && typeof rawOptions === 'object'
+    ? rawOptions
+    : {};
+  const folderId = String(options.folderId || '').trim();
+  if (!folderId) {
+    return createResult({ reason: 'invalid-folder-id' });
+  }
+  const api = readyApi(chromeApi);
+  if (typeof api === 'string') {
+    return createResult({ reason: api });
+  }
+
+  const folder = await readFolder(api, folderId);
+  if ('reason' in folder) {
+    return createResult({ reason: folder.reason });
+  }
+  const folderNode = folder.node;
+
+  const urls = collectBookmarkUrls(folderNode);
+  const requestedCount = urls.length;
+  if (!requestedCount) {
+    return createResult({ reason: 'empty-folder' });
+  }
+
+  const openedTabs = await openFolderTabs(api, urls, options);
   const openedCount = openedTabs.length;
   const failedCount = requestedCount - openedCount;
-  const [firstOpenedTab, ...otherOpenedTabs] = openedTabs;
-  if (!firstOpenedTab) {
+  if (!openedTabs.length) {
     return createResult({
       requestedCount,
       failedCount,
@@ -229,24 +263,11 @@ async function openBookmarkFolderInNewTabGroup(
     });
   }
 
-  let groupId: number | null = null;
-  try {
-    groupId = await createTabGroup(
-      chromeApi,
-      [firstOpenedTab.id, ...otherOpenedTabs.map((tab) => tab.id)]
-    );
-    const folderTitle = String(options.title || folderNode.title || '').trim();
-    await updateTabGroupTitle(chromeApi, groupId, folderTitle);
-  } catch (error) {
-    return createResult({
-      requestedCount,
-      openedCount,
-      failedCount,
-      groupId,
-      reason: error instanceof Error && error.message ? error.message : 'tab-group-failed'
-    });
+  const grouped = await groupFolderTabs(api, openedTabs.map((tab) => tab.id), String(options.title || folderNode.title || '').trim());
+  if (grouped.reason) {
+    return createResult({ requestedCount, openedCount, failedCount, groupId: grouped.groupId, reason: grouped.reason });
   }
-
+  const groupId = grouped.groupId;
   return createResult({
     ok: failedCount === 0,
     requestedCount,

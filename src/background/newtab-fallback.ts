@@ -35,50 +35,42 @@ function createTab(
 
 // File URLs, and pages that are likely files (PDF, saved HTML), need the
 // extension's file access to open from a script.
+// A local file or a document type the browser opens in a viewer, by its URL.
+function isLocalFileLikeUrl(url: URL): boolean {
+  const pathname = String(url.pathname || '').toLowerCase();
+  return String(url.protocol || '').toLowerCase() === 'file:' ||
+    pathname.endsWith('.pdf') || pathname.endsWith('.htm') || pathname.endsWith('.html');
+}
+
+// The same check on a string that does not parse as a URL.
+function looksLocalFileLike(value: string): boolean {
+  const lower = value.toLowerCase();
+  return lower.startsWith('file://') || lower.includes('.pdf') || lower.includes('.htm') || lower.includes('.html');
+}
+
 function isLocalFileLikeTargetUrl(url: unknown): boolean {
   if (!url) {
     return false;
   }
+  let parsed: URL;
   try {
-    const parsed = new URL(String(url));
-    const protocol = String(parsed.protocol || '').toLowerCase();
-    if (protocol === 'file:') {
-      return true;
-    }
-    const pathname = String(parsed.pathname || '').toLowerCase();
-    if (pathname.endsWith('.pdf') || pathname.endsWith('.htm') || pathname.endsWith('.html')) {
-      return true;
-    }
-    const srcParam = parsed.searchParams ? parsed.searchParams.get('src') : '';
-    if (srcParam) {
-      try {
-        const nested = new URL(srcParam);
-        const nestedProtocol = String(nested.protocol || '').toLowerCase();
-        const nestedPath = String(nested.pathname || '').toLowerCase();
-        if (nestedProtocol === 'file:' ||
-          nestedPath.endsWith('.pdf') ||
-          nestedPath.endsWith('.htm') ||
-          nestedPath.endsWith('.html')) {
-          return true;
-        }
-      } catch (_error) {
-        const lowerSrc = String(srcParam).toLowerCase();
-        if (lowerSrc.startsWith('file://') ||
-          lowerSrc.includes('.pdf') ||
-          lowerSrc.includes('.htm') ||
-          lowerSrc.includes('.html')) {
-          return true;
-        }
-      }
-    }
+    parsed = new URL(String(url));
   } catch (_error) {
-    const lower = String(url).toLowerCase();
-    return lower.startsWith('file://') ||
-      lower.includes('.pdf') ||
-      lower.includes('.htm') ||
-      lower.includes('.html');
+    return looksLocalFileLike(String(url));
   }
-  return false;
+  if (isLocalFileLikeUrl(parsed)) {
+    return true;
+  }
+  // A viewer page names the file it shows in its src parameter.
+  const srcParam = parsed.searchParams ? parsed.searchParams.get('src') : '';
+  if (!srcParam) {
+    return false;
+  }
+  try {
+    return isLocalFileLikeUrl(new URL(srcParam));
+  } catch (_error) {
+    return looksLocalFileLike(String(srcParam));
+  }
 }
 
 function isFirefoxRuntime(chromeApi: typeof chrome): boolean {

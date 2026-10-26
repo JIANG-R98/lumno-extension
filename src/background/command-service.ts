@@ -186,46 +186,33 @@ function getConfiguredFallbackShortcut(callback: (shortcut: string) => void): vo
   });
 }
 
+const COMMAND_SPECIAL_KEYS: ReadonlySet<string> = new Set([
+  'Tab', 'Enter', 'Return', 'Escape', 'Esc', 'Space', 'Spacebar',
+  'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+  ',', '.', '/', ';', '\'', '-', '+', '\\', '`', '[', ']'
+]);
+
+const COMMAND_MODIFIERS: ReadonlySet<string> = new Set([
+  'ctrl', 'control', 'macctrl', 'alt', 'option', 'shift', 'command', 'cmd', 'meta', 'super'
+]);
+
+function isCommandKeyToken(token: string): boolean {
+  return /^[A-Za-z0-9]$/.test(token) || /^F\d{1,2}$/i.test(token) || COMMAND_SPECIAL_KEYS.has(token);
+}
+
+// A shortcut as chrome.commands reports it ("Ctrl+Shift+K"), or '' when it
+// is unset or not one key with modifiers.
 function normalizeShortcutFromCommandsValue(value: unknown): string {
   const text = String(value || '').trim();
   if (!text || text.includes('%')) {
     return '';
   }
   const parts = text.split('+').map((item) => String(item || '').trim()).filter(Boolean);
-  if (parts.length < 2) {
+  if (parts.length < 2 || !isCommandKeyToken(parts[parts.length - 1])) {
     return '';
   }
-  const keyToken = parts[parts.length - 1];
-  if (!/^[A-Za-z0-9]$/.test(keyToken) && !/^F\d{1,2}$/i.test(keyToken)) {
-    const specialKeys = new Set([
-      'Tab', 'Enter', 'Return', 'Escape', 'Esc', 'Space', 'Spacebar',
-      'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-      ',', '.', '/', ';', '\'', '-', '+', '\\', '`', '[', ']'
-    ]);
-    if (!specialKeys.has(keyToken)) {
-      return '';
-    }
-  }
-  let hasModifier = false;
-  for (let i = 0; i < parts.length - 1; i += 1) {
-    const token = parts[i].toLowerCase();
-    const isModifier =
-      token === 'ctrl' ||
-      token === 'control' ||
-      token === 'macctrl' ||
-      token === 'alt' ||
-      token === 'option' ||
-      token === 'shift' ||
-      token === 'command' ||
-      token === 'cmd' ||
-      token === 'meta' ||
-      token === 'super';
-    if (!isModifier) {
-      return '';
-    }
-    hasModifier = true;
-  }
-  return hasModifier ? text : '';
+  const modifiers = parts.slice(0, -1);
+  return modifiers.every((token) => COMMAND_MODIFIERS.has(token.toLowerCase())) ? text : '';
 }
 
 function getConfiguredCopyUrlCommandShortcut(callback: (shortcut: string) => void): void {

@@ -51,126 +51,157 @@ function sameList(left: readonly string[] | undefined, right: readonly string[])
   return Array.isArray(left) && left.join('\n') === right.join('\n');
 }
 
+interface RegistrationContext {
+  readonly chromeApi: RegistrationChromeApi | null | undefined;
+  readonly spec: ContentScriptSpec;
+  readonly scripting: Partial<ScriptingApi> | null | undefined;
+  queue: Promise<boolean>;
+}
+
+function readLastError(ctx: RegistrationContext): { message?: string } | null | undefined {
+  return ctx.chromeApi && ctx.chromeApi.runtime ? ctx.chromeApi.runtime.lastError : null;
+}
+
+// Runs one scripting call; resolves with its result (true when it has
+// none), or null when it failed or the API is missing.
+function call<R>(ctx: RegistrationContext, start: ((done: (result?: R) => void) => void) | null): Promise<R | true | null> {
+  return new Promise((resolve) => {
+    if (!start) {
+      resolve(null);
+      return;
+    }
+    try {
+      start((result) => {
+        resolve(readLastError(ctx) ? null : (result === undefined ? true : result));
+      });
+    } catch (_error) {
+      resolve(null);
+    }
+  });
+}
+
+function isCurrent(ctx: RegistrationContext, registered: RegisteredScript | null | undefined): boolean {
+  if (!registered) {
+    return false;
+  }
+  return sameList(registered.js, ctx.spec.files) &&
+    (registered.matches === undefined || sameList(registered.matches, ctx.spec.matches)) &&
+    registered.runAt === ctx.spec.runAt &&
+    (registered.allFrames === true) === ctx.spec.allFrames &&
+    (registered.world || 'ISOLATED') === (ctx.spec.world || 'ISOLATED');
+}
+
+function toRegisteredScript(ctx: RegistrationContext): RegisteredScript {
+  const script: RegisteredScript = {
+    id: ctx.spec.id,
+    matches: ctx.spec.matches.slice(),
+    js: ctx.spec.files.slice(),
+    runAt: ctx.spec.runAt,
+    allFrames: ctx.spec.allFrames,
+    persistAcrossSessions: true
+  };
+  if (ctx.spec.world) {
+    script.world = ctx.spec.world;
+  }
+  return script;
+}
+
+function queryOpenTabs(ctx: RegistrationContext): Promise<chrome.tabs.Tab[]> {
+  return new Promise((resolve) => {
+    const tabsApi = ctx.chromeApi && ctx.chromeApi.tabs;
+    if (!tabsApi || typeof tabsApi.query !== 'function') {
+      resolve([]);
+      return;
+    }
+    tabsApi.query({}, (tabs) => {
+      resolve(!readLastError(ctx) && Array.isArray(tabs) ? tabs : []);
+    });
+  });
+}
+
+async function injectIntoOpenTabs(ctx: RegistrationContext): Promise<void> {
+  const pattern = ctx.spec.injectableUrlPattern;
+  if (!pattern) {
+    return;
+  }
+  const tabs = await queryOpenTabs(ctx);
+  const execute = ctx.scripting && ctx.scripting.executeScript;
+  await Promise.all(tabs.map((tab) => {
+    const tabId = tab && tab.id;
+    if (typeof tabId !== 'number' || !pattern.test(String(tab.url || ''))) {
+      return null;
+    }
+    return call<void>(ctx, execute && ctx.scripting
+      ? (done) => execute.call(ctx.scripting, { target: { tabId }, files: ctx.spec.files.slice() }, done)
+      : null);
+  }));
+}
+
+async function readRegistered(ctx: RegistrationContext): Promise<RegisteredScript | null> {
+  const { scripting } = ctx;
+  const getRegistered = scripting && scripting.getRegisteredContentScripts;
+  const registeredList = await call<RegisteredScript[]>(ctx, getRegistered && scripting
+    ? (done) => getRegistered.call(scripting, { ids: [ctx.spec.id] }, done)
+    : null);
+  return Array.isArray(registeredList) ? registeredList[0] : null;
+}
+
+async function unregister(ctx: RegistrationContext): Promise<void> {
+  const { scripting } = ctx;
+  const unregisterScripts = scripting && scripting.unregisterContentScripts;
+  await call<void>(ctx, unregisterScripts && scripting
+    ? (done) => unregisterScripts.call(scripting, { ids: [ctx.spec.id] }, done)
+    : null);
+}
+
+// Registers the script, or updates a registration that no longer matches it.
+async function registerCurrent(ctx: RegistrationContext, registered: RegisteredScript | null): Promise<void> {
+  const { scripting } = ctx;
+  const script = toRegisteredScript(ctx);
+  if (!registered) {
+    const register = scripting && scripting.registerContentScripts;
+    await call<void>(ctx, register && scripting ? (done) => register.call(scripting, [script], done) : null);
+  } else if (!isCurrent(ctx, registered)) {
+    const update = scripting && scripting.updateContentScripts;
+    await call<void>(ctx, update && scripting ? (done) => update.call(scripting, [script], done) : null);
+  }
+}
+
+async function apply(ctx: RegistrationContext, enabled: boolean, applyOptions: { injectOpenTabs?: boolean }): Promise<boolean> {
+  const registered = await readRegistered(ctx);
+  if (!enabled) {
+    if (registered) {
+      await unregister(ctx);
+    }
+    return false;
+  }
+  await registerCurrent(ctx, registered);
+  if (applyOptions && applyOptions.injectOpenTabs) {
+    await injectIntoOpenTabs(ctx);
+  }
+  return true;
+}
+
+function sync(ctx: RegistrationContext, enabled: unknown, syncOptions?: { injectOpenTabs?: boolean } | null): Promise<boolean> {
+  ctx.queue = ctx.queue.then(() => apply(ctx, Boolean(enabled), syncOptions || {})).catch(() => false);
+  return ctx.queue;
+}
+
 function createContentScriptRegistration(options: {
   chromeApi?: RegistrationChromeApi | null;
   spec: ContentScriptSpec;
 }): Readonly<ContentScriptRegistration> {
-  const { chromeApi, spec } = options;
+  const chromeApi = options.chromeApi;
+  const spec = options.spec;
   const scripting = chromeApi && chromeApi.scripting;
-  let queue: Promise<boolean> = Promise.resolve(false);
+  const ctx: RegistrationContext = {
+    chromeApi,
+    spec,
+    scripting,
+    queue: Promise.resolve(false)
+  };
 
-  function readLastError(): { message?: string } | null | undefined {
-    return chromeApi && chromeApi.runtime ? chromeApi.runtime.lastError : null;
-  }
-
-  // Runs one scripting call; resolves with its result (true when it has
-  // none), or null when it failed or the API is missing.
-  function call<R>(start: ((done: (result?: R) => void) => void) | null): Promise<R | true | null> {
-    return new Promise((resolve) => {
-      if (!start) {
-        resolve(null);
-        return;
-      }
-      try {
-        start((result) => {
-          resolve(readLastError() ? null : (result === undefined ? true : result));
-        });
-      } catch (_error) {
-        resolve(null);
-      }
-    });
-  }
-
-  function isCurrent(registered: RegisteredScript | null | undefined): boolean {
-    if (!registered) {
-      return false;
-    }
-    return sameList(registered.js, spec.files) &&
-      (registered.matches === undefined || sameList(registered.matches, spec.matches)) &&
-      registered.runAt === spec.runAt &&
-      (registered.allFrames === true) === spec.allFrames &&
-      (registered.world || 'ISOLATED') === (spec.world || 'ISOLATED');
-  }
-
-  function toRegisteredScript(): RegisteredScript {
-    const script: RegisteredScript = {
-      id: spec.id,
-      matches: spec.matches.slice(),
-      js: spec.files.slice(),
-      runAt: spec.runAt,
-      allFrames: spec.allFrames,
-      persistAcrossSessions: true
-    };
-    if (spec.world) {
-      script.world = spec.world;
-    }
-    return script;
-  }
-
-  function queryOpenTabs(): Promise<chrome.tabs.Tab[]> {
-    return new Promise((resolve) => {
-      const tabsApi = chromeApi && chromeApi.tabs;
-      if (!tabsApi || typeof tabsApi.query !== 'function') {
-        resolve([]);
-        return;
-      }
-      tabsApi.query({}, (tabs) => {
-        resolve(!readLastError() && Array.isArray(tabs) ? tabs : []);
-      });
-    });
-  }
-
-  async function injectIntoOpenTabs(): Promise<void> {
-    const pattern = spec.injectableUrlPattern;
-    if (!pattern) {
-      return;
-    }
-    const tabs = await queryOpenTabs();
-    const execute = scripting && scripting.executeScript;
-    await Promise.all(tabs.map((tab) => {
-      const tabId = tab && tab.id;
-      if (typeof tabId !== 'number' || !pattern.test(String(tab.url || ''))) {
-        return null;
-      }
-      return call<void>(execute && scripting
-        ? (done) => execute.call(scripting, { target: { tabId }, files: spec.files.slice() }, done)
-        : null);
-    }));
-  }
-
-  async function apply(enabled: boolean, applyOptions: { injectOpenTabs?: boolean }): Promise<boolean> {
-    const getRegistered = scripting && scripting.getRegisteredContentScripts;
-    const registeredList = await call<RegisteredScript[]>(getRegistered && scripting
-      ? (done) => getRegistered.call(scripting, { ids: [spec.id] }, done)
-      : null);
-    const registered = Array.isArray(registeredList) ? registeredList[0] : null;
-    if (!enabled) {
-      const unregister = scripting && scripting.unregisterContentScripts;
-      if (registered) {
-        await call<void>(unregister && scripting ? (done) => unregister.call(scripting, { ids: [spec.id] }, done) : null);
-      }
-      return false;
-    }
-    const script = toRegisteredScript();
-    const register = scripting && scripting.registerContentScripts;
-    const update = scripting && scripting.updateContentScripts;
-    if (!registered) {
-      await call<void>(register && scripting ? (done) => register.call(scripting, [script], done) : null);
-    } else if (!isCurrent(registered)) {
-      await call<void>(update && scripting ? (done) => update.call(scripting, [script], done) : null);
-    }
-    if (applyOptions && applyOptions.injectOpenTabs) {
-      await injectIntoOpenTabs();
-    }
-    return true;
-  }
-
-  function sync(enabled: unknown, syncOptions?: { injectOpenTabs?: boolean } | null): Promise<boolean> {
-    queue = queue.then(() => apply(Boolean(enabled), syncOptions || {})).catch(() => false);
-    return queue;
-  }
-
-  return Object.freeze({ sync });
+  return Object.freeze({ sync: (enabled: unknown, syncOptions?: { injectOpenTabs?: boolean } | null) => sync(ctx, enabled, syncOptions) });
 }
 
 export { createContentScriptRegistration };
