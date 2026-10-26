@@ -260,17 +260,13 @@ function startYouTubeAutoPip(): void {
     enteringPiP: false,
     exitingPiP: false,
     managedPiP: false,
-    mediaSessionHandlerBound: false,
     lastManagedVideo: null,
     recoveryTimer: null,
-    enterRetryTimer: null,
     hiddenRetryBudget: 0,
     suppressEnterUntil: 0,
     uiRecoverySuppressUntil: 0,
     shouldResumeInlinePlayback: false,
-    wasPlayingBeforeHide: false,
-    ownerToken: "",
-    runtimeMessageHandlerBound: false
+    wasPlayingBeforeHide: false
   };
   const core = CORE.createAutoPipCore({
     state,

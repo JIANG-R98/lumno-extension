@@ -88,7 +88,7 @@ function createOwnershipClaim(ctx: SitePipContext): OwnershipClaim {
   const claim: OwnershipClaim = {
     granted: false,
     async ensure() {
-      if (claim.granted || ctx.state.ownerToken) {
+      if (claim.granted || ctx.core.hasOwnership()) {
         claim.granted = true;
         return true;
       }
@@ -379,17 +379,13 @@ function startSiteAutoPip(): void {
     enteringPiP: false,
     exitingPiP: false,
     managedPiP: false,
-    enterRetryTimer: null,
     recoveryTimer: null,
     suppressEnterUntil: 0,
     lastVisibleAt: 0,
     hadUserGesture: false,
-    mediaSessionHandlerBound: false,
     hiddenRetryBudget: 0,
     shouldResumeInlinePlayback: false,
     wasPlayingBeforeHide: false,
-    ownerToken: '',
-    runtimeMessageHandlerBound: false,
     douyinModalReloadAt: 0
   };
 

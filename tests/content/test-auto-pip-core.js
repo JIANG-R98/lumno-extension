@@ -103,15 +103,11 @@ function createHarness(overrides = {}) {
     enteringPiP: false,
     exitingPiP: false,
     managedPiP: false,
-    enterRetryTimer: null,
     recoveryTimer: null,
     suppressEnterUntil: 0,
     hiddenRetryBudget: 0,
     shouldResumeInlinePlayback: false,
-    wasPlayingBeforeHide: false,
-    ownerToken: '',
-    mediaSessionHandlerBound: false,
-    runtimeMessageHandlerBound: false
+    wasPlayingBeforeHide: false
   };
   const hooks = {
     maybeEnterPiP: async (reason) => {
@@ -166,11 +162,11 @@ function createHarness(overrides = {}) {
 
   // Ownership: the granted token is kept and released exactly once.
   {
-    const { core, state, messages } = createHarness();
+    const { core, messages } = createHarness();
     assert.deepStrictEqual(await core.requestPiPOwnership('video'), { ok: true, granted: true });
-    assert.strictEqual(state.ownerToken, 'token-1');
+    assert.strictEqual(core.hasOwnership(), true);
     await core.releasePiPOwnership();
-    assert.strictEqual(state.ownerToken, '');
+    assert.strictEqual(core.hasOwnership(), false);
     assert.deepStrictEqual(await core.releasePiPOwnership(),
       { ok: true, released: false, reason: 'no-owner-token' });
     assert.deepStrictEqual(messages, [
@@ -192,7 +188,8 @@ function createHarness(overrides = {}) {
     assert.strictEqual(state.autoPipEnabled, true, 'a missing setting reads as on');
     assert.deepStrictEqual(storageWrites, [], 'and is not written back');
 
-    state.ownerToken = 'token-1';
+    await core.requestPiPOwnership('video');
+    messages.length = 0;
     state.managedPiP = true;
     state.shouldResumeInlinePlayback = true;
     state.hiddenRetryBudget = 3;
@@ -226,7 +223,8 @@ function createHarness(overrides = {}) {
     assert.deepStrictEqual(afterExit, [], 'the after-exit hook only runs when an exit was attempted');
 
     state.managedPiP = true;
-    state.ownerToken = 'token-1';
+    await core.requestPiPOwnership('video');
+    messages.length = 0;
     document.pictureInPictureElement = {};
     const before = Date.now();
     // No CustomEvent on the fake window, so the page bridge reports failure at once.
@@ -260,7 +258,8 @@ function createHarness(overrides = {}) {
       'visibility_hidden_retry_loop_loop'
     ]);
     assert.strictEqual(state.hiddenRetryBudget, 0);
-    assert.strictEqual(state.enterRetryTimer, null);
+    await wait(200);
+    assert.strictEqual(hookCalls.length, 3, 'no retry is left scheduled once the budget is spent');
   }
   {
     const { core, state, hookCalls, document } = createHarness();
