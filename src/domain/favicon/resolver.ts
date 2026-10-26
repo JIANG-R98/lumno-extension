@@ -21,10 +21,10 @@ function createFaviconCandidatePlanBuilder(
   policy: Readonly<FaviconSourcePolicy>,
   sources: Readonly<FaviconSourceUrls>
 ): (state?: FaviconPlanState | null) => FaviconPlanCandidate[] {
-  return function buildFaviconCandidatePlan(state?: FaviconPlanState | null): FaviconPlanCandidate[] {
-    const input = state || {};
-    const pageUrl = getCanonicalFaviconPage(input.pageUrl || input.url || '');
-    const allowRemotePrimary = input.allowRemoteImage === true;
+  // Every source the plan may use, most specific first. A full-page
+  // resolution is more specific than host-scoped browser and persisted
+  // caches, which may legitimately collapse sibling URLs.
+  function listPlanCandidates(input: FaviconPlanState, pageUrl: string): FaviconPlanCandidate[] {
     const browserUrl = String(input.browserUrl || '').trim() ||
       (pageUrl && isBrowserInternalPageUrl(pageUrl) ? sources.getChromeFaviconUrl(pageUrl) : '');
     const persistedCandidates: FaviconPlanCandidate[] = input.skipPersisted === true
@@ -33,9 +33,7 @@ function createFaviconCandidatePlanBuilder(
         { kind: 'persisted-data', url: input.persistedDataUrl || '' },
         { kind: 'persisted-url', url: input.persistedUrl || '' }
       ];
-    // A full-page resolution is more specific than host-scoped browser and
-    // persisted caches, which may legitimately collapse sibling URLs.
-    const rawCandidates: FaviconPlanCandidate[] = [
+    return [
       { kind: 'page-specific', url: input.pageSpecificUrl || '' },
       ...persistedCandidates,
       { kind: 'primary', url: input.primaryUrl || input.fallbackUrl || '' },
@@ -43,6 +41,13 @@ function createFaviconCandidatePlanBuilder(
       { kind: 'browser', url: browserUrl },
       { kind: 'gstatic', url: input.gstaticFavicon || input.gstaticUrl || sources.getGstaticFaviconUrl(pageUrl) }
     ];
+  }
+
+  return function buildFaviconCandidatePlan(state?: FaviconPlanState | null): FaviconPlanCandidate[] {
+    const input = state || {};
+    const pageUrl = getCanonicalFaviconPage(input.pageUrl || input.url || '');
+    const allowRemotePrimary = input.allowRemoteImage === true;
+    const rawCandidates = listPlanCandidates(input, pageUrl);
     const seen = new Set<string>();
     const candidates = rawCandidates.filter((candidate) => {
       const safeUrl = policy.getSafeFaviconCandidateUrl(candidate.url, pageUrl, candidate.kind,

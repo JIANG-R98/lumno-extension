@@ -47,6 +47,19 @@ function createPageFaviconCandidates(
     return safeUrl && safeUrl !== primaryUrl ? safeUrl : '';
   }
 
+  // A local or custom icon the page set, then the page's own favicon.
+  function webPagePrimaryUrl(page: string, explicitFavicon: string, candidateConfig: PageFaviconCandidateOptions): string {
+    const localOrCustomIcon = explicitFavicon &&
+      (!/^https?:\/\//i.test(explicitFavicon) || candidateConfig.allowRemoteImage === true)
+      ? explicitFavicon : '';
+    return localOrCustomIcon || getPageFaviconCandidateUrl(page) || explicitFavicon || '';
+  }
+
+  function usesChromeFallback(page: string, candidateConfig: PageFaviconCandidateOptions): boolean {
+    return candidateConfig.includeChromeFallback === true ||
+      (!/^https?:\/\//i.test(page) && candidateConfig.includeChromeForNonHttp !== false);
+  }
+
   function getPageFaviconRenderCandidates(
     pageUrl: unknown,
     explicitUrl?: unknown,
@@ -75,15 +88,10 @@ function createPageFaviconCandidates(
     const browserPageFavicon = getSafeFaviconCandidateUrl(sources.getBrowserPageFaviconUrl(page), page, 'browser-cache');
     const chromeFavicon = getSafeFaviconCandidateUrl(sources.getChromeFaviconUrl(page), page, 'browser-favicon');
     const isInternalPage = isBrowserInternalPageUrl(page);
-    const localOrCustomIcon = explicitFavicon &&
-      (!/^https?:\/\//i.test(explicitFavicon) || candidateConfig.allowRemoteImage === true)
-      ? explicitFavicon : '';
     const primaryUrl = isInternalPage
       ? (browserPageFavicon || explicitFavicon || chromeFavicon || '')
-      : (localOrCustomIcon || getPageFaviconCandidateUrl(page) || explicitFavicon || '');
-    const shouldUseChromeFallback = isInternalPage ||
-      candidateConfig.includeChromeFallback === true ||
-      (!/^https?:\/\//i.test(page) && candidateConfig.includeChromeForNonHttp !== false);
+      : webPagePrimaryUrl(page, explicitFavicon, candidateConfig);
+    const shouldUseChromeFallback = isInternalPage || usesChromeFallback(page, candidateConfig);
 
     return {
       primaryUrl,

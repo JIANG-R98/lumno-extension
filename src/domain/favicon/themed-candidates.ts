@@ -163,41 +163,35 @@ function getRootFaviconCandidateUrls(hostname: unknown, preferredTheme: unknown)
   });
 }
 
-function getThemeHintScore(url: unknown, mediaValue: unknown, preferredTheme: unknown): number {
-  const normalizedTheme = normalizeFaviconThemePreference(preferredTheme);
-  if (!normalizedTheme) {
+type ThemePreference = ReturnType<typeof normalizeFaviconThemePreference>;
+
+// A media query that names the preferred scheme raises the icon; one that
+// names the other scheme lowers it.
+function getMediaThemeScore(mediaValue: unknown, theme: ThemePreference): number {
+  const lowerMedia = String(mediaValue || '').toLowerCase();
+  if (!lowerMedia.includes('prefers-color-scheme')) {
     return 0;
   }
-  let score = 0;
-  const lowerMedia = String(mediaValue || '').toLowerCase();
-  if (lowerMedia.includes('prefers-color-scheme')) {
-    const hasDark = /prefers-color-scheme\s*:\s*dark/.test(lowerMedia);
-    const hasLight = /prefers-color-scheme\s*:\s*light/.test(lowerMedia);
-    if ((normalizedTheme === 'dark' && hasDark) || (normalizedTheme === 'light' && hasLight)) {
-      score += 34;
-    }
-    if ((normalizedTheme === 'dark' && hasLight) || (normalizedTheme === 'light' && hasDark)) {
-      score -= 20;
-    }
+  const hasDark = /prefers-color-scheme\s*:\s*dark/.test(lowerMedia);
+  const hasLight = /prefers-color-scheme\s*:\s*light/.test(lowerMedia);
+  const matches = theme === 'dark' ? hasDark : hasLight;
+  const opposes = theme === 'dark' ? hasLight : hasDark;
+  return (matches ? 34 : 0) - (opposes ? 20 : 0);
+}
+
+// The same for "dark" and "light" in the icon's URL.
+function getUrlThemeScore(url: unknown, theme: ThemePreference): number {
+  const matches = hasThemeTokenInUrl(url, theme === 'dark' ? 'dark' : 'light');
+  const opposes = hasThemeTokenInUrl(url, theme === 'dark' ? 'light' : 'dark');
+  return (matches ? 16 : 0) - (opposes ? 8 : 0);
+}
+
+function getThemeHintScore(url: unknown, mediaValue: unknown, preferredTheme: unknown): number {
+  const normalizedTheme = normalizeFaviconThemePreference(preferredTheme);
+  if (normalizedTheme !== 'dark' && normalizedTheme !== 'light') {
+    return 0;
   }
-  const hasDarkToken = hasThemeTokenInUrl(url, 'dark');
-  const hasLightToken = hasThemeTokenInUrl(url, 'light');
-  if (normalizedTheme === 'dark') {
-    if (hasDarkToken) {
-      score += 16;
-    }
-    if (hasLightToken) {
-      score -= 8;
-    }
-  } else if (normalizedTheme === 'light') {
-    if (hasLightToken) {
-      score += 16;
-    }
-    if (hasDarkToken) {
-      score -= 8;
-    }
-  }
-  return score;
+  return getMediaThemeScore(mediaValue, normalizedTheme) + getUrlThemeScore(url, normalizedTheme);
 }
 
 function getHtmlAttributeValue(tag: unknown, name: string): string {
@@ -207,6 +201,63 @@ function getHtmlAttributeValue(tag: unknown, name: string): string {
   const pattern = new RegExp(`\\b${name}\\s*=\\s*("([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i');
   const match = String(tag).match(pattern);
   return match ? String(match[2] || match[3] || match[4] || '').trim() : '';
+}
+
+// How well a <link rel="icon"> fits: icon rels, SVG, a favicon name, the
+// theme it is for and its declared size.
+function scoreIconLink(tag: string, rel: string, href: string, theme: ThemePreference): number {
+  const type = getHtmlAttributeValue(tag, 'type').toLowerCase();
+  const sizes = getHtmlAttributeValue(tag, 'sizes').toLowerCase();
+  const media = getHtmlAttributeValue(tag, 'media').toLowerCase();
+  const lowerHref = href.toLowerCase();
+  let score = 10;
+  score += /\bicon\b/.test(rel) ? 20 : 0;
+  score += rel.includes('shortcut') ? 6 : 0;
+  score += rel.includes('apple-touch-icon') ? 8 : 0;
+  score += type.includes('svg') || lowerHref.endsWith('.svg') ? 14 : 0;
+  score += lowerHref.includes('favicon') ? 6 : 0;
+  score += getThemeHintScore(href, media, theme);
+  const sizeNumbers = sizes.match(/\d+/g);
+  if (sizeNumbers && sizeNumbers.length > 0) {
+    const size = Math.max(...sizeNumbers.map((n) => Number(n) || 0));
+    score += Math.min(20, Math.floor(size / 8));
+  }
+  return score;
+}
+
+// The other scheme's sibling of a favicon.svg / favicon-dark.svg pair.
+function themedSvgVariants(href: string, score: number, theme: ThemePreference): ScoredFaviconUrl[] {
+  if (theme === 'dark' && /\/favicon\.svg(?:[?#].*)?$/i.test(href)) {
+    return [{ url: href.replace(/\/favicon\.svg([?#].*)?$/i, '/favicon-dark.svg$1'), score: score + 14 }];
+  }
+  if (theme === 'light' && /\/favicon-dark\.svg(?:[?#].*)?$/i.test(href)) {
+    return [{ url: href.replace(/\/favicon-dark\.svg([?#].*)?$/i, '/favicon.svg$1'), score: score + 14 }];
+  }
+  return [];
+}
+
+// Icons named from a data-base-href, one per scheme.
+function baseHrefVariants(tag: string, base: string, score: number, theme: ThemePreference): ScoredFaviconUrl[] {
+  const baseHrefRaw = getHtmlAttributeValue(tag, 'data-base-href');
+  if (!baseHrefRaw) {
+    return [];
+  }
+  let baseHref = '';
+  try {
+    baseHref = new URL(baseHrefRaw, base).href;
+  } catch (e) {
+    return [];
+  }
+  if (!baseHref) {
+    return [];
+  }
+  if (theme === 'dark') {
+    return [{ url: `${baseHref}-dark.svg`, score: score + 20 }, { url: `${baseHref}.svg`, score: score + 8 }];
+  }
+  if (theme === 'light') {
+    return [{ url: `${baseHref}.svg`, score: score + 20 }, { url: `${baseHref}-light.svg`, score: score + 12 }];
+  }
+  return [{ url: `${baseHref}.svg`, score: score + 12 }, { url: `${baseHref}-dark.svg`, score: score + 12 }];
 }
 
 function parseHtmlIconCandidateScores(html: unknown, pageUrl: unknown, preferredTheme: unknown): ScoredFaviconUrl[] {
@@ -229,65 +280,10 @@ function parseHtmlIconCandidateScores(html: unknown, pageUrl: unknown, preferred
     } catch (e) {
       return;
     }
-    const type = getHtmlAttributeValue(tag, 'type').toLowerCase();
-    const sizes = getHtmlAttributeValue(tag, 'sizes').toLowerCase();
-    const media = getHtmlAttributeValue(tag, 'media').toLowerCase();
-    let score = 10;
-    if (/\bicon\b/.test(rel)) {
-      score += 20;
-    }
-    if (rel.includes('shortcut')) {
-      score += 6;
-    }
-    if (rel.includes('apple-touch-icon')) {
-      score += 8;
-    }
-    if (type.includes('svg') || href.toLowerCase().endsWith('.svg')) {
-      score += 14;
-    }
-    if (href.toLowerCase().includes('favicon')) {
-      score += 6;
-    }
-    score += getThemeHintScore(href, media, normalizedTheme);
-    const sizeNumbers = sizes.match(/\d+/g);
-    if (sizeNumbers && sizeNumbers.length > 0) {
-      const size = Math.max(...sizeNumbers.map((n) => Number(n) || 0));
-      score += Math.min(20, Math.floor(size / 8));
-    }
+    const score = scoreIconLink(tag, rel, href, normalizedTheme);
     list.push({ url: href, score: score });
-    if (normalizedTheme === 'dark' && /\/favicon\.svg(?:[?#].*)?$/i.test(href)) {
-      list.push({
-        url: href.replace(/\/favicon\.svg([?#].*)?$/i, '/favicon-dark.svg$1'),
-        score: score + 14
-      });
-    }
-    if (normalizedTheme === 'light' && /\/favicon-dark\.svg(?:[?#].*)?$/i.test(href)) {
-      list.push({
-        url: href.replace(/\/favicon-dark\.svg([?#].*)?$/i, '/favicon.svg$1'),
-        score: score + 14
-      });
-    }
-    const baseHrefRaw = getHtmlAttributeValue(tag, 'data-base-href');
-    if (baseHrefRaw) {
-      let baseHref = '';
-      try {
-        baseHref = new URL(baseHrefRaw, base).href;
-      } catch (e) {
-        baseHref = '';
-      }
-      if (baseHref) {
-        if (normalizedTheme === 'dark') {
-          list.push({ url: `${baseHref}-dark.svg`, score: score + 20 });
-          list.push({ url: `${baseHref}.svg`, score: score + 8 });
-        } else if (normalizedTheme === 'light') {
-          list.push({ url: `${baseHref}.svg`, score: score + 20 });
-          list.push({ url: `${baseHref}-light.svg`, score: score + 12 });
-        } else {
-          list.push({ url: `${baseHref}.svg`, score: score + 12 });
-          list.push({ url: `${baseHref}-dark.svg`, score: score + 12 });
-        }
-      }
-    }
+    list.push(...themedSvgVariants(href, score, normalizedTheme));
+    list.push(...baseHrefVariants(tag, base, score, normalizedTheme));
   });
   return list;
 }
