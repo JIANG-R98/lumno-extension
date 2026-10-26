@@ -6,7 +6,6 @@ import type { AggregateSearch } from '../domain/search/aggregate-search-store';
 import type { createImeKeyGuard } from '../domain/search/ime-key-guard';
 import type { createSearchInputHistoryController } from '../domain/search/search-input-history';
 import type { SiteSearchProvider } from '../domain/search/types';
-import type { StorageAreaFacade } from '../platform/settings-storage';
 import type { ThemeVariant } from '../shared/favicon/favicon-theme';
 import type { SearchInputParts } from '../shared/react/search-input';
 import type { InputModeController } from '../shared/search/search-input-mode';
@@ -14,7 +13,7 @@ import type { InputModeProvider } from '../shared/search/input-mode/types';
 import type { CursorTooltipController } from '../shared/ui/cursor-tooltip';
 import type { TooltipController } from '../shared/ui/tooltip';
 import type { createOverlayKeyRouter } from './keyboard';
-import type { createChromeEventListenerRegistry, createSessionCleanupRegistry, createViewportSizeSync } from './lifecycle';
+import type { createSessionCleanupRegistry, createViewportSizeSync } from './lifecycle';
 import type { createNoticeLayer } from './notices';
 import type { AutocompleteOverlayState } from './panel/autocomplete';
 import type { DefaultSearchEngineState } from './panel/default-search-engine';
@@ -39,7 +38,8 @@ import type { SuggestionSourcesState } from './panel/suggestion-sources';
 import type { SuggestionThemesState } from './panel/suggestion-themes';
 import type { SuggestionsRenderState } from './panel/suggestions-render';
 import type { TabMatchingState } from './panel/tab-matching';
-import type { OverlaySuggestion, StorageChangeListener } from './panel/types';
+import type { OverlaySuggestion } from './panel/types';
+import type { OverlaySettings } from './overlay-settings';
 import type { RevealGate } from './site-fixes';
 
 // What search-panel.ts itself keeps beyond the modules' slices, in full.
@@ -51,7 +51,8 @@ interface SearchPanelState {
   overlayNoticeLayer: ReturnType<typeof createNoticeLayer>;
   overlayViewportSizeSync: ReturnType<typeof createViewportSizeSync>;
   overlaySessionCleanups: ReturnType<typeof createSessionCleanupRegistry>;
-  storageChangeListeners: ReturnType<typeof createChromeEventListenerRegistry<StorageChangeListener>>;
+  // The session's settings, and what it follows of them until it closes.
+  settings: OverlaySettings;
   overlayKeyRouter: ReturnType<typeof createOverlayKeyRouter> | null;
   overlayRevealGate: RevealGate | null;
   topActionTooltipController: TooltipController | null;
@@ -87,8 +88,7 @@ type OverlayState =
 // What the state starts from: what the panel made before it, and what the
 // open context said. Everything else starts empty or at its default.
 interface OverlayStateParts {
-  storageArea: StorageAreaFacade | null;
-  storageChangeListeners: SearchPanelState['storageChangeListeners'];
+  settings: SearchPanelState['settings'];
   overlaySessionCleanups: SearchPanelState['overlaySessionCleanups'];
   overlayNoticeLayer: SearchPanelState['overlayNoticeLayer'];
   overlayViewportSizeSync: SearchPanelState['overlayViewportSizeSync'];
@@ -119,8 +119,7 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
   const overlaySearchEngineState = { id: '', name: '', host: '', searchTemplate: '' };
   return {
     // What the panel made before the state.
-    storageArea: parts.storageArea,
-    storageChangeListeners: parts.storageChangeListeners,
+    settings: parts.settings,
     overlaySessionCleanups: parts.overlaySessionCleanups,
     overlayNoticeLayer: parts.overlayNoticeLayer,
     overlayViewportSizeSync: parts.overlayViewportSizeSync,
@@ -200,7 +199,7 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
     faviconEnhancedFetchEnabled: false,
     initialFaviconEnhancedFetchReady: Promise.resolve(),
     overlayOpenTabsDefaultVisible: true,
-    overlayOpenTabsDefaultVisibleLoaded: !parts.storageArea,
+    overlayOpenTabsDefaultVisibleLoaded: false,
     initialOverlayOpenTabsDefaultVisibleReady: Promise.resolve(),
     enabledSearchResultSourceTypes: ['topSite', 'bookmark', 'history'],
     defaultPlaceholderText: 'Search or enter URL…',

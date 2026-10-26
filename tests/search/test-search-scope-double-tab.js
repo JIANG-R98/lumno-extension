@@ -85,40 +85,16 @@ async function testShortcutNamesThePlatformKey() {
   windows.close();
 }
 
-// The overlay waits for the stored engine before committing a tag, so a fast
-// double Tab never flashes the Google fallback; input typed meanwhile wins.
+// The overlay reads its settings, the stored engine among them, before its
+// input takes focus, so the fastest double Tab commits the stored engine and
+// never flashes the Google fallback.
 async function testOverlayWaitsForTheStoredEngine() {
-  let release;
-  const held = new Promise((resolve) => { release = resolve; });
-  const surface = await openSearchSurface('overlay', {
-    settings: { [ENGINE_KEY]: BING },
-    storageGate: (keys) => (keys.includes(ENGINE_KEY) ? held : null)
-  });
+  const surface = await openSearchSurface('overlay', { settings: { [ENGINE_KEY]: BING } });
   await doubleTab(surface);
-  assert.deepStrictEqual([surface.scopeLabel(), surface.scopeMenuOpen()], ['', false],
-    'no scope should be committed before the stored engine is known');
-  release();
   await surface.settle(150);
   assert.deepStrictEqual([surface.scopeLabel(), surface.scopeMenuOpen()], ['Bing', true],
     'the stored engine, not the fallback, should be committed');
   surface.close();
-
-  let releaseLate;
-  const late = new Promise((resolve) => { releaseLate = resolve; });
-  const typing = await openSearchSurface('overlay', {
-    settings: { [ENGINE_KEY]: BING },
-    storageGate: (keys) => (keys.includes(ENGINE_KEY) ? late : null)
-  });
-  typing.press('Tab');
-  await typing.settle(10);
-  typing.press('Tab');
-  await typing.settle(30);
-  await typing.type('typed while loading');
-  releaseLate();
-  await typing.settle(150);
-  assert.deepStrictEqual([typing.scopeLabel(), typing.scopeMenuOpen(), typing.input().value], ['', false, 'typed while loading'],
-    'typing while the engine loads should cancel the pending scope');
-  typing.close();
 }
 
 async function testOverlayPrefersTheCurrentSite() {

@@ -1,5 +1,4 @@
-import type { StorageAreaLike, StorageChangeEventLike, StorageChanges, StorageItems } from '../storage-port';
-import { searchInputHistory } from '../settings/search';
+import type { StoredValuePort } from '../storage-port';
 
 type HistoryDirection = 'previous' | 'next' | '';
 
@@ -9,10 +8,8 @@ interface HistoryMove {
 }
 
 interface SearchInputHistoryOptions {
-  storageArea?: StorageAreaLike | null;
-  storageChanges?: StorageChangeEventLike | null;
-  storageAreaName?: string;
-  storageKey?: string;
+  // Where the history is kept (the searchInputHistory setting).
+  storage?: StoredValuePort | null;
   maxEntries?: number;
 }
 
@@ -65,10 +62,7 @@ function getShortcutDirection(
 
 function createSearchInputHistoryController(options?: SearchInputHistoryOptions) {
   const config: SearchInputHistoryOptions = options && typeof options === 'object' ? options : {};
-  const storageArea = config.storageArea || null;
-  const storageChanges = config.storageChanges || null;
-  const storageAreaName = config.storageAreaName || 'local';
-  const storageKey = config.storageKey || searchInputHistory.key;
+  const storage = config.storage || null;
   const maxEntries = Number.isFinite(Number(config.maxEntries))
     ? Math.max(1, Math.round(Number(config.maxEntries)))
     : DEFAULT_MAX_ENTRIES;
@@ -79,7 +73,7 @@ function createSearchInputHistoryController(options?: SearchInputHistoryOptions)
   let destroyed = false;
   let loadPromise: Promise<string[]> | null = null;
   let pendingRecords: string[] = [];
-  let storageChangeListener: ((changes: StorageChanges, areaName: string) => void) | null = null;
+  let unsubscribe: (() => void) | null = null;
 
   function resetNavigation() {
     cursor = entries.length;
@@ -105,39 +99,15 @@ function createSearchInputHistoryController(options?: SearchInputHistoryOptions)
   }
 
   function persist() {
-    if (!storageArea || typeof storageArea.set !== 'function' || destroyed) {
+    if (!storage || destroyed) {
       return;
     }
-    try {
-      storageArea.set({ [storageKey]: entries.slice() });
-    } catch (_error) {
-      // Input history is best-effort and must never block search.
-    }
+    // Input history is best-effort and must never block search.
+    storage.write(entries.slice()).catch(() => {});
   }
 
-  function readStorage(): Promise<StorageItems> {
-    return new Promise((resolve) => {
-      if (!storageArea || typeof storageArea.get !== 'function') {
-        resolve({});
-        return;
-      }
-      let settled = false;
-      const finish = (result?: StorageItems) => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        resolve(result || {});
-      };
-      try {
-        const maybePromise = storageArea.get([storageKey], finish);
-        if (maybePromise && typeof maybePromise.then === 'function') {
-          maybePromise.then(finish).catch(() => finish({}));
-        }
-      } catch (_error) {
-        finish({});
-      }
-    });
+  function readStorage(): Promise<unknown> {
+    return storage ? storage.read().catch(() => []) : Promise.resolve([]);
   }
 
   function load(): Promise<string[]> {
@@ -150,7 +120,7 @@ function createSearchInputHistoryController(options?: SearchInputHistoryOptions)
       }
       const queued = pendingRecords.slice();
       pendingRecords = [];
-      replaceEntries(result ? result[storageKey] : []);
+      replaceEntries(result);
       queued.forEach(applyRecord);
       hydrated = true;
       if (queued.length > 0) {
@@ -204,23 +174,14 @@ function createSearchInputHistoryController(options?: SearchInputHistoryOptions)
     return { handled: false, value: String(currentValue || '') };
   }
 
-  function handleStorageChange(changes: StorageChanges, areaName: string) {
-    if (destroyed ||
-        areaName !== storageAreaName ||
-        !changes ||
-        !Object.prototype.hasOwnProperty.call(changes, storageKey)) {
-      return;
-    }
-    const change = changes[storageKey];
-    replaceEntries(change ? change.newValue : []);
-    hydrated = true;
-  }
-
-  if (storageChanges &&
-      typeof storageChanges.addListener === 'function' &&
-      typeof storageChanges.removeListener === 'function') {
-    storageChangeListener = handleStorageChange;
-    storageChanges.addListener(storageChangeListener);
+  if (storage) {
+    unsubscribe = storage.subscribe((value) => {
+      if (destroyed) {
+        return;
+      }
+      replaceEntries(value);
+      hydrated = true;
+    });
   }
 
   load();
@@ -228,9 +189,9 @@ function createSearchInputHistoryController(options?: SearchInputHistoryOptions)
   return Object.freeze({
     destroy() {
       destroyed = true;
-      if (storageChangeListener && storageChanges) {
-        storageChanges.removeListener(storageChangeListener);
-        storageChangeListener = null;
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
       }
     },
     getEntries() {

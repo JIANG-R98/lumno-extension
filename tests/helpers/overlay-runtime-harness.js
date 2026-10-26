@@ -112,7 +112,6 @@ function createChromeEvent() {
 //   darkSystem      whether prefers-color-scheme: dark matches
 //   setup           (window) => void, run before the overlay is injected
 //   storageDelayMs  how long chrome.storage reads take to answer
-//   storageGate     (keys) => promise or null; a read waits for the promise
 //   recordAnimations  provide and record element.animate()
 //   stylesheetsLoad whether the overlay's stylesheets fire load (JSDOM never
 //                   fetches them, so by default they stay pending)
@@ -162,11 +161,10 @@ async function createOverlayPage(options) {
         }
       });
       const delay = Number(config.storageDelayMs) || 0;
-      const gate = typeof config.storageGate === 'function' ? config.storageGate(read) : null;
-      return Promise.resolve(gate).then(() => new Promise((resolve) => window.setTimeout(() => {
+      return new Promise((resolve) => window.setTimeout(() => {
         callback?.(result);
         resolve(result);
-      }, delay)));
+      }, delay));
     },
     set(items, callback) {
       storageWrites.push(Object.assign(JSON.parse(JSON.stringify(items)), {}));
@@ -233,6 +231,7 @@ async function createOverlayPage(options) {
       ? bundleScript(entry.name, entry.name === 'overlay'
         ? {
           'src/overlay/runtime.ts': 'LumnoOverlayRuntime',
+          'src/platform/settings-storage.ts': 'LumnoTestSettingsStorage',
           'src/overlay/overlay-app.ts': 'LumnoTestOverlayApp',
           'src/overlay/react/shell.tsx': 'LumnoTestOverlayShellModule'
         }
@@ -287,7 +286,7 @@ async function createOverlayPage(options) {
   // The settings storage runtime is memoized per chrome API object and keeps
   // one storage-mode listener for the page's lifetime; create it up front so
   // it counts as part of the page baseline rather than the overlay session.
-  window.LumnoOverlayRuntime.getStorageArea(window.chrome);
+  window.LumnoTestSettingsStorage.createProviderStorageRuntime(window.chrome);
   await settle();
   const ledger = createListenerLedger(window);
   const baselineStorageListeners = new Set(storageChanged.listeners);

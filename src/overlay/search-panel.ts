@@ -50,7 +50,6 @@ import * as OVERLAY_CONTEXT from './overlay-context';
 import * as OVERLAY_STATE from './overlay-state';
 import { TAB_SWITCHER_HOST_ID } from '../shared/tab-switcher/host';
 import type { OverlaySizePreset } from './lifecycle';
-import type { StorageChangeListener } from './panel/types';
 import type { ThemeMode } from '../domain/settings/appearance';
 import type { SuggestionElement } from '../shared/react/search/suggestion-list/types';
 import type { NumberShortcutOptions } from '../shared/search/suggestion-navigation';
@@ -61,7 +60,16 @@ import { isOverlayOpenState, setOverlayOpenState } from '../platform/content-reg
 import { getOverlayShellApi } from './react/shell';
 import { getSearchInputApi } from '../shared/react/search-input';
 import { themeColorCache, themeHostCache } from '../shared/favicon/theme-caches';
-import { searchSourceOrder } from '../domain/settings/search';
+import {
+  aggregateSearches,
+  searchInputHistory,
+  searchSourceOrder,
+  siteSearchCustom,
+  siteSearchDisabled,
+  siteSearchIconCache as siteSearchIconCacheSetting
+} from '../domain/settings/search';
+import { createSettingPort } from '../platform/settings-store';
+import { createOverlaySettings } from './overlay-settings';
 
 // Favicon data and preloaded icons the overlay resolved, kept across its
 // openings in this page.
@@ -74,10 +82,6 @@ const iconPreloadCache = new Map<string, HTMLImageElement>();
 function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): void {
   const overlayLifecycle = LumnoOverlayLifecycle;
   const overlayRuntime = LumnoOverlayRuntime;
-  if (!overlayRuntime.STORAGE_KEYS) {
-    console.warn('Lumno: overlay runtime helper not available.');
-    return;
-  }
   // Set by the overlay's React bundle, which the worker injects first.
   const overlayShell = getOverlayShellApi();
   if (!overlayShell) {
@@ -93,7 +97,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   const initialOverlayOpenStartedAt = openOptions.openedAt;
   const initialLoadingSession = openOptions.loadingSession;
   const shouldIgnoreTabZoomCompensation = OVERLAY_CONTEXT.isLocalFileLikeUrl(openOptions.currentTabUrl);
-  const storageRuntime = overlayRuntime.getStorageArea(chrome);
   // Web clip needs Document Picture-in-Picture, which Firefox does not ship.
   const documentPipSupported = 'documentPictureInPicture' in window;
   // Made once the modules it relies on exist; the state reaches it through
@@ -104,10 +107,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   // receives this one object as `overlayState` and reads and writes the same
   // properties this function does.
   const overlayState = OVERLAY_STATE.createOverlayState({
-    storageArea: storageRuntime.area,
-    storageChangeListeners: overlayLifecycle.createChromeEventListenerRegistry<StorageChangeListener>(
-      chrome && chrome.storage ? chrome.storage.onChanged : null
-    ),
+    settings: createOverlaySettings(chrome),
     // Teardown steps owned by this invocation's overlay session. Controllers
     // created deep inside the mount block register here so removeOverlay can
     // release them without stashing them on DOM expandos.
@@ -198,7 +198,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   });
 
   overlayState.overlayContextToken = getOrCreateOverlayContextToken();
-  const SEARCH_SOURCE_ORDER_STORAGE_KEY = searchSourceOrder.key;
 
 
   const {
@@ -230,8 +229,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
 
   const buildTheme = FAVICON_THEME.buildTheme;
 
-  const overlayStorageKeys = overlayRuntime.STORAGE_KEYS;
-  const THEME_STORAGE_KEY = overlayStorageKeys.themeMode;
 
   const applyOverlayTheme = (mode: ThemeMode): void => {
     overlayState.overlayThemeMode = mode;
@@ -298,7 +295,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     t: (...args) => t(...args),
     isSlashCommandInput: (...args) => isSlashCommandInput(...args),
     isModeCommand: (...args) => isModeCommand(...args),
-    THEME_STORAGE_KEY,
     applyOverlayTheme,
     buildDefaultSearchUrlForOverlay: (...args) => buildDefaultSearchUrlForOverlay(...args),
     getDefaultSearchEngineFaviconUrlForOverlay: (...args) => getDefaultSearchEngineFaviconUrlForOverlay(...args),
@@ -568,9 +564,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     getKeywordSearchSuggestionState,
     overlayState
   });
-  const SITE_SEARCH_STORAGE_KEY = overlayStorageKeys.siteSearchCustom;
-  const SITE_SEARCH_DISABLED_STORAGE_KEY = overlayStorageKeys.siteSearchDisabled;
-  const AGGREGATE_SEARCH_STORAGE_KEY = overlayStorageKeys.aggregateSearches;
 
   const siteSearchIconCacheOptions = SHORTCUT_FAVICON.SITE_SEARCH_CACHE_OPTIONS;
 
@@ -600,10 +593,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     siteSearchIconCacheOptions,
     FAVICON_UTILS,
     faviconDataCache,
-    SITE_SEARCH_STORAGE_KEY,
-    SITE_SEARCH_DISABLED_STORAGE_KEY,
-    getStorageValuesAsync: (...args) => getStorageValuesAsync(...args),
-    AGGREGATE_SEARCH_STORAGE_KEY,
     overlayState
   });
 
@@ -630,8 +619,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     getLocalSearchScopeLabel,
     getLocalSearchScopeIconName,
     SEARCH_SOURCE_ORDER,
-    getStorageValuesAsync: (...args) => getStorageValuesAsync(...args),
-    SEARCH_SOURCE_ORDER_STORAGE_KEY,
     loadSiteSearchIconCache: () => loadSiteSearchIconCache(),
     getSiteSearchProviders,
     getAggregateSearches,
@@ -697,38 +684,8 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   } = PANEL_PAGE_GUARDS.createPageGuards({
     overlayAntiTranslateGuard
   });
-  const LANGUAGE_STORAGE_KEY = overlayStorageKeys.language;
-  const DEFAULT_SEARCH_ENGINE_STORAGE_KEY = overlayStorageKeys.defaultSearchEngine;
   const OVERLAY_MODE_MENU_DOUBLE_TAB_DURATION_MS = 700;
-  const SITE_SEARCH_ICON_CACHE_STORAGE_KEY = overlayStorageKeys.siteSearchIconCache;
-  const DOCUMENT_PIP_ENABLED_STORAGE_KEY = overlayStorageKeys.documentPipEnabled;
-  const SEARCH_RESULT_PRIORITY_STORAGE_KEY = overlayStorageKeys.searchResultPriority;
-  const SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY = overlayStorageKeys.searchResultSourceTypes;
-  const SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY = overlayStorageKeys.searchResultDisplayLimit;
-  const SEARCH_BLACKLIST_STORAGE_KEY = overlayStorageKeys.searchBlacklist;
-  const FAVICON_REQUEST_BLACKLIST_STORAGE_KEY = overlayStorageKeys.faviconRequestBlacklist;
-  const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = overlayStorageKeys.faviconEnhancedFetchEnabled;
-  const OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY = overlayStorageKeys.overlayOpenTabsDefaultVisible;
-  const OVERLAY_SIZE_MODE_STORAGE_KEY = overlayStorageKeys.overlaySizeMode;
-  const OVERLAY_WIDTH_STORAGE_KEY = overlayStorageKeys.overlayWidth;
-  const OVERLAY_ENTER_ANIMATION_STORAGE_KEY = overlayStorageKeys.overlayEnterAnimation;
-  const OVERLAY_FONT_FAMILY_STORAGE_KEY = overlayStorageKeys.overlayFontFamily;
-  const OVERLAY_FONT_FALLBACK_STORAGE_KEY = overlayStorageKeys.overlayFontFallback;
   const OVERLAY_FONT_FAMILY_CSS_VAR = SETTINGS.OVERLAY_FONT_FAMILY_CSS_VAR;
-  const OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY = overlayStorageKeys.overlayPageThemeAdaptationEnabled;
-  const MOTION_EFFECTS_ENABLED_STORAGE_KEY = overlayStorageKeys.motionEffectsEnabled;
-  const SIMPLE_MODE_ENABLED_STORAGE_KEY = overlayStorageKeys.simpleModeEnabled;
-  const NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY = overlayStorageKeys.numberShortcutInstantEnabled;
-  const MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY = overlayStorageKeys.macosCtrlSuggestionNavigationEnabled;
-  const OVERLAY_TAB_PRIORITY_STORAGE_KEY = overlayStorageKeys.overlayTabPriority;
-  const TAB_RANK_SCORE_DEBUG_STORAGE_KEY = overlayStorageKeys.tabRankScoreDebug;
-  const storageAreaName = storageRuntime.name;
-  function isPrimaryStorageAreaName(areaName: string): boolean {
-    return storageRuntime.isActiveAreaName(areaName);
-  }
-  const localStorageArea = chrome && chrome.storage && chrome.storage.local
-    ? chrome.storage.local
-    : overlayState.storageArea;
   const RI_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'assets/remixicon/fonts/remixicon.css');
   const SEARCH_INPUT_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'src/shared/search/search-input.css');
   const FEATURE_HINTS_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'src/shared/ui/feature-hints.css');
@@ -737,25 +694,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   const TOAST_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'src/shared/ui/toast.css');
   const EXTERNAL_LINK_ICON_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'src/shared/ui/external-link-icon.css');
   const OVERLAY_SUGGESTIONS_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'src/overlay/suggestions-view.css');
-  const initialOverlaySettingsReady = overlayRuntime.getStorageValues(
-    overlayState.storageArea,
-    [
-      LANGUAGE_STORAGE_KEY,
-      THEME_STORAGE_KEY,
-      OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
-      OVERLAY_SIZE_MODE_STORAGE_KEY,
-      OVERLAY_WIDTH_STORAGE_KEY,
-      OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
-      MOTION_EFFECTS_ENABLED_STORAGE_KEY,
-      SIMPLE_MODE_ENABLED_STORAGE_KEY,
-      FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
-      FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
-      SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
-      OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
-      NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY,
-      MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY
-    ]
-  );
   const logOverlayFaviconDecision = FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'overlay' });
 
   const {
@@ -779,10 +717,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     overlayState
   });
 
-  function normalizeOverlayPageThemeAdaptationEnabled(value: unknown): boolean {
-    return SETTINGS.overlayPageThemeAdaptationEnabled.parse(value);
-  }
-
   function stopOverlayPageThemeObserver() {
     if (overlayState.overlayPageThemeObserver) {
       overlayState.overlayPageThemeObserver.stop();
@@ -798,8 +732,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   } = PANEL_DEFAULT_SEARCH_ENGINE.createDefaultSearchEngine({
     getOverlayFaviconUrlResolver,
     t: (...args) => t(...args),
-    storageArea: overlayState.storageArea,
-    DEFAULT_SEARCH_ENGINE_STORAGE_KEY,
+    settings: overlayState.settings,
     SEARCH_UTILS,
     overlayState
   });
@@ -884,10 +817,8 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     formatMessage: (...args) => formatMessage(...args),
     updateInputRightPadding: (...args) => updateInputRightPadding(...args),
     detectPageTheme,
-    SETTINGS,
-    storageArea: overlayState.storageArea,
+    settings: overlayState.settings,
     applyOverlayTheme,
-    THEME_STORAGE_KEY,
     updateSearchSuggestions,
     overlayState
   });
@@ -917,7 +848,6 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     applyOverlayCjkFontFace,
     getSystemLocale,
     t,
-    getStorageValuesAsync,
     bootstrapOverlayLanguageForInitialRender,
     formatMessage,
     applyLanguageStrings,
@@ -925,8 +855,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   } = PANEL_PANEL_LANGUAGE.createPanelLanguage({
     SETTINGS,
     overlayRuntime,
-    storageArea: overlayState.storageArea,
-    LANGUAGE_STORAGE_KEY,
+    settings: overlayState.settings,
     updateModeBadge,
     setSiteSearchPrefix,
     getThemeForProvider,
@@ -1104,9 +1033,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     return;
   }
 
-  const initialLanguageReady = bootstrapOverlayLanguageForInitialRender(
-    initialOverlaySettingsReady
-  ).catch(() => {});
+  const initialLanguageReady = bootstrapOverlayLanguageForInitialRender().catch(() => {});
 
   const inputParts = getSearchInputApi().createSearchInput({
     container: overlayMount.inputContainer,
@@ -1174,13 +1101,7 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   const rightIcon = inputParts.rightIcon;
   overlayState.inputHistoryController =
     SEARCH_INPUT_HISTORY.createSearchInputHistoryController({
-      storageArea: chrome && chrome.storage
-        ? (chrome.storage.local || overlayState.storageArea)
-        : overlayState.storageArea,
-      storageChanges: chrome && chrome.storage ? chrome.storage.onChanged : null,
-      storageAreaName: chrome && chrome.storage && chrome.storage.local
-        ? 'local'
-        : storageAreaName
+      storage: createSettingPort(overlayState.settings.store, searchInputHistory)
     });
 
   const {
@@ -1375,8 +1296,8 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
   const defaultPlaceholder = overlayState.searchInput.placeholder;
   const siteSearchIconStore = LumnoShortcutFaviconStore.createShortcutFaviconStore({
     chromeApi: chrome,
-    storageArea: localStorageArea,
-    storageKey: SITE_SEARCH_ICON_CACHE_STORAGE_KEY,
+    storageArea: chrome && chrome.storage ? chrome.storage.local : null,
+    storageKey: siteSearchIconCacheSetting.key,
     ...siteSearchIconCacheOptions
   });
 
@@ -1436,56 +1357,26 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     initialOverlaySizeReady,
     initialOverlayFontFamilyReady
   } = PANEL_SETTINGS_SYNC.createSettingsSync({
-    SEARCH_BLACKLIST_STORAGE_KEY,
     normalizeOverlaySearchBlacklistItems,
-    SETTINGS,
+    normalizeOverlayFaviconRequestBlacklistItems,
     updateSearchSuggestions,
-    isPrimaryStorageAreaName,
-    THEME_STORAGE_KEY,
-    OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
-    normalizeOverlayPageThemeAdaptationEnabled,
     applyOverlayTheme,
-    LANGUAGE_STORAGE_KEY,
     applyLanguageMode,
     loadOverlaySearchEngineState,
-    DEFAULT_SEARCH_ENGINE_STORAGE_KEY,
     SEARCH_UTILS,
-    SEARCH_RESULT_PRIORITY_STORAGE_KEY,
-    SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
     clearLocalSearchScope,
     requestOverlaySearchSuggestions,
-    SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
-    normalizeSearchResultDisplayLimit,
     shouldShowOpenTabsForEmptyQuery,
     renderTabSuggestions,
     filterTabsForOverlay,
-    NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY,
     SUGGESTION_NAVIGATION,
-    MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY,
-    SIMPLE_MODE_ENABLED_STORAGE_KEY,
-    initialOverlaySettingsReady,
-    FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
-    normalizeOverlayFaviconRequestBlacklistItems,
-    FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
     refreshOverlayFaviconsForPolicyChange,
     setSiteSearchPrefix,
     getImmediateThemeForSuggestion,
-    OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
     requestTabsAndRender,
     clearDefaultOpenTabsSuggestions,
-    DOCUMENT_PIP_ENABLED_STORAGE_KEY,
     documentPipSupported,
-    OVERLAY_TAB_PRIORITY_STORAGE_KEY,
-    OVERLAY_SIZE_MODE_STORAGE_KEY,
-    OVERLAY_WIDTH_STORAGE_KEY,
-    OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
-    MOTION_EFFECTS_ENABLED_STORAGE_KEY,
-    overlayRuntime,
-    localStorageArea,
-    OVERLAY_FONT_FAMILY_STORAGE_KEY,
-    OVERLAY_FONT_FALLBACK_STORAGE_KEY,
     applyOverlayFontFamily,
-    TAB_RANK_SCORE_DEBUG_STORAGE_KEY,
     overlayState
   });
 
@@ -1593,56 +1484,44 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     }
   });
 
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    if (!isPrimaryStorageAreaName(areaName) || !(
-      changes[SITE_SEARCH_STORAGE_KEY] ||
-      changes[SITE_SEARCH_DISABLED_STORAGE_KEY] ||
-      changes[AGGREGATE_SEARCH_STORAGE_KEY] ||
-      changes[SEARCH_SOURCE_ORDER_STORAGE_KEY]
-    )) {
-      return;
-    }
-    // A new order from Settings or another surface reaches an open scope
-    // panel now; a closed one reads it when it opens.
-    if (changes[SEARCH_SOURCE_ORDER_STORAGE_KEY] && overlayState.inputModeController) {
+  // A new order from Settings or another surface reaches an open scope
+  // panel now; a closed one reads it when it opens.
+  overlayState.settings.follow(searchSourceOrder, () => {
+    if (overlayState.inputModeController) {
       overlayState.inputModeController.refreshModeMenu();
     }
-    if (changes[AGGREGATE_SEARCH_STORAGE_KEY]) {
-      overlayState.aggregateSearchesLoadVersion += 1;
-      overlayState.aggregateSearchesLoadPromise = null;
-      overlayState.aggregateSearchesCache = AGGREGATE_SEARCH_STORE.normalizeAggregateSearches(
-        changes[AGGREGATE_SEARCH_STORAGE_KEY].newValue
+  });
+  overlayState.settings.follow(aggregateSearches, () => {
+    overlayState.aggregateSearchesLoadVersion += 1;
+    overlayState.aggregateSearchesLoadPromise = null;
+    overlayState.aggregateSearchesCache = AGGREGATE_SEARCH_STORE.normalizeAggregateSearches(
+      overlayState.settings.store.getStored(aggregateSearches)
+    );
+    const activeProvider = overlayState.siteSearchState;
+    if (activeProvider && isAggregateSearchProvider(activeProvider)) {
+      const currentId = String(activeProvider.aggregateId || '');
+      const updatedDefinition = overlayState.aggregateSearchesCache.find(
+        (item) => String(item && item.id ? item.id : '') === currentId
       );
-      const activeProvider = overlayState.siteSearchState;
-      if (activeProvider && isAggregateSearchProvider(activeProvider)) {
-        const currentId = String(activeProvider.aggregateId || '');
-        const updatedDefinition = overlayState.aggregateSearchesCache.find(
-          (item) => String(item && item.id ? item.id : '') === currentId
-        );
-        const updatedProvider = updatedDefinition &&
-          isAggregateSearchDefinitionAvailable(updatedDefinition, getSearchModeProviders())
-          ? AGGREGATE_SEARCH_STORE.createScopeProvider(updatedDefinition)
-          : null;
-        if (updatedProvider) {
-          overlayState.siteSearchState = updatedProvider;
-          setSiteSearchPrefix(updatedProvider, overlayState.defaultTheme, { animate: false });
-        } else {
-          clearSiteSearch();
-        }
-      }
-      if (overlayState.inputModeController) {
-        overlayState.inputModeController.refreshModeMenu();
-      }
-      if (overlayState.latestOverlayQuery) {
-        requestOverlaySearchSuggestions(overlayState.latestOverlayQuery);
+      const updatedProvider = updatedDefinition &&
+        isAggregateSearchDefinitionAvailable(updatedDefinition, getSearchModeProviders())
+        ? AGGREGATE_SEARCH_STORE.createScopeProvider(updatedDefinition)
+        : null;
+      if (updatedProvider) {
+        overlayState.siteSearchState = updatedProvider;
+        setSiteSearchPrefix(updatedProvider, overlayState.defaultTheme, { animate: false });
+      } else {
+        clearSiteSearch();
       }
     }
-    if (!changes[SITE_SEARCH_STORAGE_KEY] && !changes[SITE_SEARCH_DISABLED_STORAGE_KEY]) {
-      return;
+    if (overlayState.inputModeController) {
+      overlayState.inputModeController.refreshModeMenu();
     }
-    if (!overlayState.storageArea) {
-      return;
+    if (overlayState.latestOverlayQuery) {
+      requestOverlaySearchSuggestions(overlayState.latestOverlayQuery);
     }
+  });
+  overlayState.settings.follow([siteSearchCustom, siteSearchDisabled], () => {
     const providerReload = reloadSiteSearchProvidersFromStorage();
     providerReload.promise.then(() => {
       if (providerReload.version !== overlayState.siteSearchProvidersLoadVersion) {
@@ -1668,12 +1547,8 @@ function toggleSearchOverlay(requestedTabs: unknown, overlayContext: unknown): v
     });
   });
 
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    const iconChange = changes && changes[siteSearchIconCache.storageKey];
-    if (areaName !== 'local' || !iconChange) {
-      return;
-    }
-    siteSearchIconCache.applyStoredSiteSearchIcons(iconChange.newValue);
+  overlayState.settings.follow(siteSearchIconCacheSetting, () => {
+    siteSearchIconCache.applyStoredSiteSearchIcons(overlayState.settings.store.getStored(siteSearchIconCacheSetting));
     if (overlayState.siteSearchState && overlayState.inputModeController) {
       const activeProvider = overlayState.siteSearchState;
       setSiteSearchPrefix(activeProvider, overlayState.defaultTheme);

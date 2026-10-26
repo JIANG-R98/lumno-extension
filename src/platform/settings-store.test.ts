@@ -140,9 +140,17 @@ describe('settings store', () => {
     expect(localStorage.getItem('test_page')).toBeNull();
   });
 
-  it('refuses listeners for settings it does not hold', () => {
-    const store = createSettingsStore({ chromeApi: null, settings: [theme] });
-    expect(() => store.subscribe(device, () => {})).toThrow(/test_device/);
+  it('follows changes of a setting it never read', async () => {
+    const { api, chromeApi, listeners } = createChrome({}, { test_device: true });
+    const store = createSettingsStore({ chromeApi: api, settings: [theme] });
+    await store.ready;
+    const seen = vi.fn();
+    store.subscribe(device, seen);
+    expect(store.get(device)).toBe(false);
+    expect(chromeApi.storage.local.reads.some((keys) => keys.includes('test_device'))).toBe(false);
+    listeners.forEach((listener) => listener({ test_device: { newValue: true } }, 'local'));
+    expect(store.get(device)).toBe(true);
+    expect(seen).toHaveBeenCalledTimes(1);
   });
 
   it('stops listening once destroyed', async () => {
@@ -159,21 +167,31 @@ describe('settings store', () => {
     const store = getContextSettingsStore(api);
     expect(getContextSettingsStore(api)).toBe(store);
     expect(listeners).toHaveLength(0);
+    // Only a subscriber makes the shared store follow storage.
+    const unsubscribe = store.subscribe([theme, device], () => {});
+    const following = listeners.length;
+    expect(following).toBeGreaterThan(0);
     await store.include(theme);
     await Promise.all([store.include([theme, device]), store.include(device)]);
     expect(store.get(theme)).toBe('dark');
     expect(store.get(device)).toBe(true);
     expect(chromeApi.storage.sync.reads).toEqual([['test_theme']]);
     expect(chromeApi.storage.local.reads.filter((keys) => keys.includes('test_device'))).toHaveLength(1);
-    // Only a subscriber makes the shared store follow storage.
-    const before = listeners.length;
-    const unsubscribe = store.subscribe(theme, () => {});
-    expect(listeners).toHaveLength(before + 1);
     unsubscribe();
-    expect(listeners).toHaveLength(before);
+    expect(listeners).toHaveLength(following - 1);
     // Values nobody followed are read again.
     chromeApi.storage.sync.items.test_theme = 'light';
     await store.include(theme);
     expect(store.get(theme)).toBe('light');
+  });
+
+  it('does not report a first read as a change', async () => {
+    const { api } = createChrome({ test_theme: 'dark' });
+    const store = createSettingsStore({ chromeApi: api, settings: [] });
+    const seen = vi.fn();
+    store.subscribe(theme, seen);
+    await store.include(theme);
+    expect(store.get(theme)).toBe('dark');
+    expect(seen).not.toHaveBeenCalled();
   });
 });

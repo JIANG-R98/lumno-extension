@@ -11,7 +11,7 @@ import type { InputModeController } from '../../shared/search/search-input-mode'
 import type { UpdateNoticeController } from '../../shared/update-notice';
 import type * as OverlayLifecycle from '../lifecycle';
 import type { createNoticeLayer } from '../notices';
-import type { StorageChangeListeners } from './types';
+import type { OverlaySettings } from '../overlay-settings';
 import { setOverlayOpenState } from '../../platform/content-registry';
 import { getSearchInputApi } from '../../shared/react/search-input';
 
@@ -20,7 +20,7 @@ interface PanelSessionState {
   overlayViewportSizeSync: Pick<ReturnType<typeof OverlayLifecycle.createViewportSizeSync>, 'stop'>;
   overlayNoticeLayer: Pick<ReturnType<typeof createNoticeLayer>, 'stop'>;
   overlaySessionCleanups: Pick<ReturnType<typeof OverlayLifecycle.createSessionCleanupRegistry>, 'run'>;
-  storageChangeListeners: StorageChangeListeners;
+  settings: Pick<OverlaySettings, 'release'>;
   overlayKeyRouter: { stop(): void } | null;
   // Holds the panel back until its styles load; cancelled when it closes.
   overlayRevealGate: { cancel?(): void } | null;
@@ -447,7 +447,7 @@ function createPanelSession(deps: PanelSessionDeps) {
       document.removeEventListener('click', overlayState.clickOutsideHandler);
       overlayState.clickOutsideHandler = null;
     }
-    overlayState.storageChangeListeners.clear();
+    overlayState.settings.release();
     if (overlayState.overlayThemeMediaListener) {
       overlayState.overlayMediaQuery.removeEventListener('change', overlayState.overlayThemeMediaListener);
       overlayState.overlayThemeMediaListener = null;

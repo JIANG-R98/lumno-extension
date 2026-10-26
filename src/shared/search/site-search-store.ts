@@ -7,6 +7,7 @@ import { readSiteSearchProviders } from '../../domain/search/site-search-provide
 import type { SiteSearchProvider } from '../../domain/search/types';
 import type { StorageAreaLike, StorageItems } from '../../domain/storage-port';
 import { siteSearchCustom, siteSearchDisabled } from '../../domain/settings/search';
+import type { SettingsStore } from '../../platform/settings-store';
 
 interface SiteSearchStorageKeys {
   custom: string;
@@ -27,6 +28,8 @@ interface SiteSearchStoreOptions {
   mergeCustomProviders?: MergeCustomProviders | null;
   getResourceUrl?(path: string): string;
   getStorageValues?(keys: string[]): Promise<StorageItems>;
+  // Where the custom and disabled providers are read from instead.
+  settingsStore?: SettingsStore | null;
 }
 
 const STORAGE_KEYS: Readonly<SiteSearchStorageKeys> = Object.freeze({
@@ -161,9 +164,15 @@ function loadSiteSearchProviders(options?: SiteSearchStoreOptions | null): Promi
   const getResourceUrl = typeof settings.getResourceUrl === 'function'
     ? settings.getResourceUrl
     : (path: string) => getRuntimeUrl(chromeApi, path);
-  const getValues = typeof settings.getStorageValues === 'function'
-    ? settings.getStorageValues
-    : (keys: string[]) => getStorageValues(storageArea, keys);
+  const settingsStore = settings.settingsStore || null;
+  const getValues = settingsStore
+    ? (keys: string[]) => settingsStore.include([siteSearchCustom, siteSearchDisabled]).then(() => ({
+      [siteSearchCustom.key]: settingsStore.getStored(siteSearchCustom),
+      [siteSearchDisabled.key]: settingsStore.getStored(siteSearchDisabled)
+    }))
+    : (typeof settings.getStorageValues === 'function'
+      ? settings.getStorageValues
+      : (keys: string[]) => getStorageValues(storageArea, keys));
 
   const loadLocalProviders = fetch(getResourceUrl('assets/data/site-search.json'))
     .then((response) => response.json())

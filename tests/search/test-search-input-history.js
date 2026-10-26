@@ -8,29 +8,25 @@ const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 const { getInjectedScripts, getPageScripts } = require('../helpers/runtime-scripts');
 const searchSettings = require('../../src/domain/settings/search.ts');
 
+// The history setting as the controller's storage port.
 function createStorage(initialValue) {
   const state = {
     [searchSettings.searchInputHistory.key]: initialValue
   };
   return {
     state,
-    get(keys, callback) {
-      const result = {};
-      keys.forEach((key) => {
-        result[key] = state[key];
-      });
-      callback(result);
+    read: async () => state[searchSettings.searchInputHistory.key],
+    async write(value) {
+      state[searchSettings.searchInputHistory.key] = value;
     },
-    set(payload) {
-      Object.assign(state, payload);
-    }
+    subscribe: () => () => {}
   };
 }
 
 async function testHistoryNavigationRestoresDraft() {
   const storage = createStorage(['first query', 'second query']);
   const controller = historyApi.createSearchInputHistoryController({
-    storageArea: storage
+    storage
   });
   await controller.load();
 
@@ -56,7 +52,7 @@ async function testRecordDeduplicatesAndPersists() {
   const storage = createStorage(['one', 'two', 'one']);
   const controller = historyApi.createSearchInputHistoryController({
     maxEntries: 3,
-    storageArea: storage
+    storage
   });
   await controller.load();
 

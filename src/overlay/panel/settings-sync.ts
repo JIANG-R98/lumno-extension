@@ -3,24 +3,41 @@ import { readSearchEngineState } from '../../domain/search/search-engine-state-r
 import type { OverlayTab } from '../../domain/messages';
 import type * as SearchUtils from '../../domain/search/search-utils';
 import type { LocalSearchScope, SearchEngineState, SearchSourceType } from '../../domain/search/types';
-import type * as Settings from '../../domain/settings';
-import { themeMode } from '../../domain/settings/appearance';
+import { motionEffectsEnabled, simpleModeEnabled, themeMode } from '../../domain/settings/appearance';
 import type { ThemeMode } from '../../domain/settings/appearance';
+import { documentPipEnabled } from '../../domain/settings/features';
+import { language } from '../../domain/settings/locale';
+import {
+  overlayEnterAnimation,
+  overlayFontFallback,
+  overlayFontFamily,
+  overlayOpenTabsDefaultVisible,
+  overlayPageThemeAdaptationEnabled,
+  overlaySizeMode,
+  overlayTabPriority,
+  overlayWidth
+} from '../../domain/settings/overlay-panel';
 import type { OverlayEnterAnimation, OverlaySizeMode } from '../../domain/settings/overlay-panel';
+import {
+  defaultSearchEngine,
+  faviconEnhancedFetchEnabled,
+  faviconRequestBlacklist,
+  macosCtrlSuggestionNavigationEnabled,
+  numberShortcutInstantEnabled,
+  searchBlacklist,
+  searchResultDisplayLimit,
+  searchResultPriority,
+  searchResultSourceTypes,
+  tabRankScoreDebug
+} from '../../domain/settings/search';
 import type { SearchResultPriority } from '../../domain/settings/search';
-import type { StorageAreaFacade } from '../../platform/settings-storage';
 import type * as SuggestionNavigation from '../../shared/search/suggestion-navigation';
-import type * as OverlayRuntime from '../runtime';
-import type { ReadableStorageArea } from '../runtime';
-import type { StorageChangeListeners } from './types';
-
-type StoredValues = Record<string, unknown>;
+import type { OverlaySettings } from '../overlay-settings';
 
 // Row is a suggestion row, Provider a site search provider and Theme a
 // suggestion theme; this module only passes them along.
 interface SettingsSyncState<Row, Provider> {
-  storageArea: StorageAreaFacade | null;
-  storageChangeListeners: StorageChangeListeners;
+  settings: OverlaySettings;
   overlay: HTMLElement | null;
   suggestionsContainer: HTMLElement | null;
   overlayViewportSizeSync: { apply(overlayElement: HTMLElement | null): void };
@@ -62,43 +79,10 @@ interface SettingsSyncState<Row, Provider> {
 }
 
 interface SettingsSyncDeps<Row, Provider, Theme> {
-  SEARCH_BLACKLIST_STORAGE_KEY: string;
-  THEME_STORAGE_KEY: string;
-  OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY: string;
-  LANGUAGE_STORAGE_KEY: string;
-  DEFAULT_SEARCH_ENGINE_STORAGE_KEY: string;
-  SEARCH_RESULT_PRIORITY_STORAGE_KEY: string;
-  SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY: string;
-  SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY: string;
-  NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY: string;
-  MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY: string;
-  SIMPLE_MODE_ENABLED_STORAGE_KEY: string;
-  FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY: string;
-  FAVICON_REQUEST_BLACKLIST_STORAGE_KEY: string;
-  OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY: string;
-  DOCUMENT_PIP_ENABLED_STORAGE_KEY: string;
-  OVERLAY_TAB_PRIORITY_STORAGE_KEY: string;
-  OVERLAY_SIZE_MODE_STORAGE_KEY: string;
-  OVERLAY_WIDTH_STORAGE_KEY: string;
-  OVERLAY_ENTER_ANIMATION_STORAGE_KEY: string;
-  MOTION_EFFECTS_ENABLED_STORAGE_KEY: string;
-  OVERLAY_FONT_FAMILY_STORAGE_KEY: string;
-  OVERLAY_FONT_FALLBACK_STORAGE_KEY: string;
-  TAB_RANK_SCORE_DEBUG_STORAGE_KEY: string;
-  SETTINGS: Pick<typeof Settings,
-    'faviconEnhancedFetchEnabled' | 'searchResultPriority' |
-    'searchResultSourceTypes' | 'numberShortcutInstantEnabled' |
-    'macosCtrlSuggestionNavigationEnabled' | 'simpleModeEnabled' |
-    'overlayOpenTabsDefaultVisible' | 'overlayTabPriority' |
-    'overlaySizeMode' | 'overlayWidth' | 'normalizeOverlayFontFamily' | 'tabRankScoreDebug' |
-    'overlayEnterAnimation' | 'motionEffectsEnabled'>;
   SEARCH_UTILS: Pick<typeof SearchUtils, 'isRetiredSearchEngineState'>;
   SUGGESTION_NAVIGATION: Pick<typeof SuggestionNavigation, 'cancelNumberShortcuts'>;
   normalizeOverlaySearchBlacklistItems(items: unknown): BlacklistRule[];
   normalizeOverlayFaviconRequestBlacklistItems(items: unknown): BlacklistRule[];
-  normalizeOverlayPageThemeAdaptationEnabled(value: unknown): boolean;
-  normalizeSearchResultDisplayLimit(value: unknown): number;
-  isPrimaryStorageAreaName(areaName: string): boolean;
   updateSearchSuggestions(rows: Row[], query: string, options?: { forceFullRerender?: boolean }): void;
   requestOverlaySearchSuggestions(query: string): void;
   applyOverlayTheme(mode: ThemeMode): void;
@@ -114,92 +98,41 @@ interface SettingsSyncDeps<Row, Provider, Theme> {
   refreshOverlayFaviconsForPolicyChange(): void;
   setSiteSearchPrefix(provider: Provider, theme: Theme, options: { animate: boolean }): void;
   getImmediateThemeForSuggestion(suggestion: { provider: Provider }): Theme;
-  // The settings read once when the panel opened.
-  initialOverlaySettingsReady: Promise<StoredValues>;
   documentPipSupported: boolean;
-  overlayRuntime: Pick<typeof OverlayRuntime, 'getStorageValues'>;
-  // chrome.storage.local, or the provider area where there is none.
-  localStorageArea: ReadableStorageArea | null;
   overlayState: SettingsSyncState<Row, Provider>;
 }
 
-// Overlay settings that can change while it is open: one storage
-// listener per setting, and the reads that load them for this session.
+// Overlay settings that can change while it is open: what each one sets in
+// the panel when the session's settings are read, and again on every
+// change until the panel closes.
 function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Provider, Theme>) {
   const {
-    SEARCH_BLACKLIST_STORAGE_KEY,
     normalizeOverlaySearchBlacklistItems,
-    SETTINGS,
+    normalizeOverlayFaviconRequestBlacklistItems,
     updateSearchSuggestions,
-    isPrimaryStorageAreaName,
-    THEME_STORAGE_KEY,
-    OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
-    normalizeOverlayPageThemeAdaptationEnabled,
     applyOverlayTheme,
-    LANGUAGE_STORAGE_KEY,
     applyLanguageMode,
     loadOverlaySearchEngineState,
-    DEFAULT_SEARCH_ENGINE_STORAGE_KEY,
     SEARCH_UTILS,
-    SEARCH_RESULT_PRIORITY_STORAGE_KEY,
-    SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
     clearLocalSearchScope,
     requestOverlaySearchSuggestions,
-    SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
-    normalizeSearchResultDisplayLimit,
     shouldShowOpenTabsForEmptyQuery,
     renderTabSuggestions,
     filterTabsForOverlay,
-    NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY,
     SUGGESTION_NAVIGATION,
-    MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY,
-    SIMPLE_MODE_ENABLED_STORAGE_KEY,
-    initialOverlaySettingsReady,
-    FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
-    normalizeOverlayFaviconRequestBlacklistItems,
-    FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
     refreshOverlayFaviconsForPolicyChange,
     setSiteSearchPrefix,
     getImmediateThemeForSuggestion,
-    OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
     requestTabsAndRender,
     clearDefaultOpenTabsSuggestions,
-    DOCUMENT_PIP_ENABLED_STORAGE_KEY,
     documentPipSupported,
-    OVERLAY_TAB_PRIORITY_STORAGE_KEY,
-    OVERLAY_SIZE_MODE_STORAGE_KEY,
-    OVERLAY_WIDTH_STORAGE_KEY,
-    OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
-    MOTION_EFFECTS_ENABLED_STORAGE_KEY,
-    overlayRuntime,
-    localStorageArea,
-    OVERLAY_FONT_FAMILY_STORAGE_KEY,
-    OVERLAY_FONT_FALLBACK_STORAGE_KEY,
-    applyOverlayFontFamily,
-    TAB_RANK_SCORE_DEBUG_STORAGE_KEY
+    applyOverlayFontFamily
   } = deps;
 
   // The panel state object shared with search-panel.ts and the other modules.
   const overlayState = deps.overlayState;
-
-  function loadOverlaySearchBlacklistItems(onReload: () => void): void {
-    if (!overlayState.storageArea) {
-      overlayState.overlaySearchBlacklistItems = [];
-      return;
-    }
-    void overlayState.storageArea.get([SEARCH_BLACKLIST_STORAGE_KEY], (result) => {
-      overlayState.overlaySearchBlacklistItems = normalizeOverlaySearchBlacklistItems(
-        result ? result[SEARCH_BLACKLIST_STORAGE_KEY] : null
-      );
-      if (typeof onReload === 'function') {
-        onReload();
-      }
-    });
-  }
-
-  function normalizeFaviconEnhancedFetchEnabled(value: unknown): boolean {
-    return SETTINGS.faviconEnhancedFetchEnabled.parse(value);
-  }
+  const settings = overlayState.settings;
+  const loaded = settings.loaded;
 
   function applyOverlaySizeForPageZoom(overlayElement: HTMLElement | null): void {
     overlayState.overlayViewportSizeSync.apply(overlayElement);
@@ -211,85 +144,48 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
       updateSearchSuggestions(overlayState.lastSuggestionResponse, overlayState.latestOverlayQuery);
     }
   }
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    if (!isPrimaryStorageAreaName(areaName) || (
-      !changes[THEME_STORAGE_KEY] &&
-      !changes[OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY]
-    )) {
-      return;
-    }
-    const adaptationChange = changes[OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY];
-    if (adaptationChange) {
-      overlayState.overlayPageThemeAdaptationEnabled = normalizeOverlayPageThemeAdaptationEnabled(
-        adaptationChange.newValue
-      );
-    }
-    const themeChange = changes[THEME_STORAGE_KEY];
-    const nextMode = themeChange
-      ? themeMode.parse(themeChange.newValue)
-      : overlayState.overlayThemeMode;
-    applyOverlayTheme(nextMode);
+
+  function showsOpenTabs(): boolean {
+    return overlayState.openTabsSearchModeActive ||
+      (!overlayState.latestOverlayQuery && shouldShowOpenTabsForEmptyQuery());
+  }
+
+  function readTheme(): void {
+    overlayState.overlayPageThemeAdaptationEnabled = settings.get(overlayPageThemeAdaptationEnabled);
+  }
+  settings.follow([themeMode, overlayPageThemeAdaptationEnabled], () => {
+    readTheme();
+    applyOverlayTheme(settings.get(themeMode));
   });
 
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    if (!isPrimaryStorageAreaName(areaName)) {
-      return;
-    }
-    const languageChange = changes[LANGUAGE_STORAGE_KEY];
-    if (languageChange) {
-      applyLanguageMode(languageChange.newValue || 'system');
-    }
-  });
+  settings.follow(language, () => applyLanguageMode(settings.get(language)));
 
   overlayState.overlaySearchEngineStateReady = loadOverlaySearchEngineState(
     refreshOverlaySuggestionsFromLastResponse
   );
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    const engineChange = changes[DEFAULT_SEARCH_ENGINE_STORAGE_KEY];
-    if (!isPrimaryStorageAreaName(areaName) || !engineChange) {
-      return;
-    }
-    const nextValue = readSearchEngineState(engineChange.newValue);
-    if (nextValue && nextValue.id &&
-        (!SEARCH_UTILS.isRetiredSearchEngineState(nextValue))) {
+  settings.follow(defaultSearchEngine, () => {
+    const nextValue = readSearchEngineState(settings.get(defaultSearchEngine));
+    if (nextValue && nextValue.id && !SEARCH_UTILS.isRetiredSearchEngineState(nextValue)) {
       overlayState.overlaySearchEngineState = nextValue;
-      if (overlayState.latestOverlayQuery) {
-        updateSearchSuggestions(overlayState.lastSuggestionResponse, overlayState.latestOverlayQuery);
-      }
+      refreshOverlaySuggestionsFromLastResponse();
     }
   });
-  if (overlayState.storageArea) {
-    void overlayState.storageArea.get([
-      SEARCH_RESULT_PRIORITY_STORAGE_KEY,
-      SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY
-    ], (result) => {
-      overlayState.overlaySearchResultPriorityMode = SETTINGS.searchResultPriority.parse(
-        result ? result[SEARCH_RESULT_PRIORITY_STORAGE_KEY] : undefined
-      );
-      overlayState.enabledSearchResultSourceTypes = SETTINGS.searchResultSourceTypes.parse(
-        result ? result[SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY] : undefined
-      );
-    });
+
+  function readSearchResults(): void {
+    overlayState.overlaySearchResultPriorityMode = settings.get(searchResultPriority);
+    overlayState.enabledSearchResultSourceTypes = settings.get(searchResultSourceTypes);
+    overlayState.overlaySearchBlacklistItems = normalizeOverlaySearchBlacklistItems(settings.get(searchBlacklist));
   }
-  loadOverlaySearchBlacklistItems(refreshOverlaySuggestionsFromLastResponse);
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    const priorityChange = changes[SEARCH_RESULT_PRIORITY_STORAGE_KEY];
-    if (!isPrimaryStorageAreaName(areaName) || !priorityChange) {
-      return;
-    }
-    overlayState.overlaySearchResultPriorityMode = SETTINGS.searchResultPriority.parse(priorityChange.newValue);
-    if (overlayState.latestOverlayQuery) {
-      updateSearchSuggestions(overlayState.lastSuggestionResponse, overlayState.latestOverlayQuery);
-    }
+  void loaded.then(() => {
+    readSearchResults();
+    refreshOverlaySuggestionsFromLastResponse();
   });
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    const sourceTypesChange = changes[SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY];
-    if (!isPrimaryStorageAreaName(areaName) || !sourceTypesChange) {
-      return;
-    }
-    overlayState.enabledSearchResultSourceTypes = SETTINGS.searchResultSourceTypes.parse(
-      sourceTypesChange.newValue
-    );
+  settings.follow([searchResultPriority, searchBlacklist], () => {
+    readSearchResults();
+    refreshOverlaySuggestionsFromLastResponse();
+  });
+  settings.follow(searchResultSourceTypes, () => {
+    readSearchResults();
     const scope = overlayState.localSearchScopeState;
     if (scope && !overlayState.enabledSearchResultSourceTypes.some((type) => type === scope.sourceType)) {
       clearLocalSearchScope();
@@ -298,46 +194,24 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
       requestOverlaySearchSuggestions(overlayState.latestOverlayQuery);
     }
   });
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    const displayLimitChange = changes[SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY];
-    if (!isPrimaryStorageAreaName(areaName) || !displayLimitChange) {
-      return;
-    }
-    overlayState.overlaySearchResultDisplayLimit = normalizeSearchResultDisplayLimit(
-      displayLimitChange.newValue
-    );
-    if (overlayState.openTabsSearchModeActive || (!overlayState.latestOverlayQuery && shouldShowOpenTabsForEmptyQuery())) {
+  settings.follow(searchResultDisplayLimit, () => {
+    overlayState.overlaySearchResultDisplayLimit = settings.get(searchResultDisplayLimit);
+    if (showsOpenTabs()) {
       renderTabSuggestions(filterTabsForOverlay(overlayState.tabs, overlayState.latestOverlayQuery));
       return;
     }
     refreshOverlaySuggestionsFromLastResponse();
   });
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    const numberShortcutChange = changes[NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY];
-    if (!isPrimaryStorageAreaName(areaName) || !numberShortcutChange) {
-      return;
-    }
-    const rawValue = numberShortcutChange.newValue;
-    overlayState.numberShortcutInstantEnabled = SETTINGS.numberShortcutInstantEnabled.parse(rawValue);
+  settings.follow(numberShortcutInstantEnabled, () => {
+    overlayState.numberShortcutInstantEnabled = settings.get(numberShortcutInstantEnabled);
     SUGGESTION_NAVIGATION.cancelNumberShortcuts(overlayState.suggestionsContainer);
   });
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    const ctrlNavigationChange = changes[MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY];
-    if (!isPrimaryStorageAreaName(areaName) || !ctrlNavigationChange) {
-      return;
-    }
-    const rawValue = ctrlNavigationChange.newValue;
-    overlayState.macosCtrlSuggestionNavigationEnabled =
-      SETTINGS.macosCtrlSuggestionNavigationEnabled.parse(rawValue);
+  settings.follow(macosCtrlSuggestionNavigationEnabled, () => {
+    overlayState.macosCtrlSuggestionNavigationEnabled = settings.get(macosCtrlSuggestionNavigationEnabled);
   });
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    const simpleModeChange = changes[SIMPLE_MODE_ENABLED_STORAGE_KEY];
-    if (!isPrimaryStorageAreaName(areaName) || !simpleModeChange) {
-      return;
-    }
-    const rawValue = simpleModeChange.newValue;
-    overlayState.simpleModeEnabled = SETTINGS.simpleModeEnabled.parse(rawValue);
-    if (overlayState.openTabsSearchModeActive || (!overlayState.latestOverlayQuery && shouldShowOpenTabsForEmptyQuery())) {
+  settings.follow(simpleModeEnabled, () => {
+    overlayState.simpleModeEnabled = settings.get(simpleModeEnabled);
+    if (showsOpenTabs()) {
       renderTabSuggestions(filterTabsForOverlay(overlayState.tabs, overlayState.latestOverlayQuery));
       return;
     }
@@ -347,44 +221,16 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
       });
     }
   });
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    const blacklistChange = changes[SEARCH_BLACKLIST_STORAGE_KEY];
-    if (!isPrimaryStorageAreaName(areaName) || !blacklistChange) {
-      return;
-    }
-    overlayState.overlaySearchBlacklistItems = normalizeOverlaySearchBlacklistItems(
-      blacklistChange.newValue
+
+  function readFaviconPolicy(): void {
+    overlayState.faviconEnhancedFetchEnabled = settings.get(faviconEnhancedFetchEnabled);
+    overlayState.overlayFaviconRequestBlacklistItems = normalizeOverlayFaviconRequestBlacklistItems(
+      settings.get(faviconRequestBlacklist)
     );
-    if (overlayState.latestOverlayQuery) {
-      updateSearchSuggestions(overlayState.lastSuggestionResponse, overlayState.latestOverlayQuery);
-    }
-  });
-  if (overlayState.storageArea) {
-    overlayState.initialFaviconEnhancedFetchReady = initialOverlaySettingsReady.then((result) => {
-      overlayState.faviconEnhancedFetchEnabled = normalizeFaviconEnhancedFetchEnabled(
-        result ? result[FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY] : true
-      );
-      overlayState.overlayFaviconRequestBlacklistItems = normalizeOverlayFaviconRequestBlacklistItems(
-        result ? result[FAVICON_REQUEST_BLACKLIST_STORAGE_KEY] : null
-      );
-    });
   }
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    const enhancedFetchChange = changes[FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY];
-    const requestBlacklistChange = changes[FAVICON_REQUEST_BLACKLIST_STORAGE_KEY];
-    if (!isPrimaryStorageAreaName(areaName) || (!enhancedFetchChange && !requestBlacklistChange)) {
-      return;
-    }
-    if (enhancedFetchChange) {
-      overlayState.faviconEnhancedFetchEnabled = normalizeFaviconEnhancedFetchEnabled(
-        enhancedFetchChange.newValue
-      );
-    }
-    if (requestBlacklistChange) {
-      overlayState.overlayFaviconRequestBlacklistItems = normalizeOverlayFaviconRequestBlacklistItems(
-        requestBlacklistChange.newValue
-      );
-    }
+  overlayState.initialFaviconEnhancedFetchReady = loaded.then(readFaviconPolicy);
+  settings.follow([faviconEnhancedFetchEnabled, faviconRequestBlacklist], () => {
+    readFaviconPolicy();
     refreshOverlayFaviconsForPolicyChange();
     if (overlayState.inputModeController) {
       const provider = overlayState.siteSearchState;
@@ -394,189 +240,103 @@ function createSettingsSync<Row, Provider, Theme>(deps: SettingsSyncDeps<Row, Pr
       overlayState.inputModeController.refreshModeMenu();
     }
   });
-  if (overlayState.storageArea) {
-    overlayState.initialOverlayOpenTabsDefaultVisibleReady = initialOverlaySettingsReady.then((result) => {
-      const rawValue = result ? result[OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY] : undefined;
-      const normalized = SETTINGS.overlayOpenTabsDefaultVisible.parse(rawValue);
-      overlayState.overlayOpenTabsDefaultVisible = normalized;
-      overlayState.overlayOpenTabsDefaultVisibleLoaded = true;
-      if (rawValue !== normalized && overlayState.storageArea) {
-        void overlayState.storageArea.set({ [OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY]: normalized });
-      }
-    });
-  }
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    const openTabsChange = changes[OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY];
-    if (!isPrimaryStorageAreaName(areaName) || !openTabsChange) {
-      return;
-    }
-    const rawValue = openTabsChange.newValue;
-    const normalized = SETTINGS.overlayOpenTabsDefaultVisible.parse(rawValue);
-    overlayState.overlayOpenTabsDefaultVisible = normalized;
+
+  function readOpenTabsDefaultVisible(): void {
+    overlayState.overlayOpenTabsDefaultVisible = settings.get(overlayOpenTabsDefaultVisible);
     overlayState.overlayOpenTabsDefaultVisibleLoaded = true;
-    if (rawValue !== normalized && overlayState.storageArea) {
-      void overlayState.storageArea.set({ [OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY]: normalized });
-    }
+  }
+  overlayState.initialOverlayOpenTabsDefaultVisibleReady = loaded.then(readOpenTabsDefaultVisible);
+  settings.follow(overlayOpenTabsDefaultVisible, () => {
+    readOpenTabsDefaultVisible();
     if (overlayState.latestOverlayQuery || overlayState.openTabsSearchModeActive) {
       return;
     }
-    if (normalized) {
+    if (overlayState.overlayOpenTabsDefaultVisible) {
       requestTabsAndRender('');
     } else {
       clearDefaultOpenTabsSuggestions();
     }
   });
-  if (overlayState.storageArea) {
-    void overlayState.storageArea.get([DOCUMENT_PIP_ENABLED_STORAGE_KEY], (result) => {
-      overlayState.documentPipEnabled = documentPipSupported && result !== undefined &&
-        result[DOCUMENT_PIP_ENABLED_STORAGE_KEY] === true;
-      if (overlayState.latestOverlayQuery) {
-        updateSearchSuggestions(overlayState.lastSuggestionResponse, overlayState.latestOverlayQuery);
-      }
-    });
+
+  function readDocumentPip(): void {
+    overlayState.documentPipEnabled = documentPipSupported && settings.get(documentPipEnabled);
   }
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    const documentPipChange = changes[DOCUMENT_PIP_ENABLED_STORAGE_KEY];
-    if (!isPrimaryStorageAreaName(areaName) || !documentPipChange) {
-      return;
-    }
-    overlayState.documentPipEnabled = documentPipSupported && documentPipChange.newValue === true;
-    if (overlayState.latestOverlayQuery) {
-      updateSearchSuggestions(overlayState.lastSuggestionResponse, overlayState.latestOverlayQuery);
-    }
+  void loaded.then(() => {
+    readDocumentPip();
+    refreshOverlaySuggestionsFromLastResponse();
+  });
+  settings.follow(documentPipEnabled, () => {
+    readDocumentPip();
+    refreshOverlaySuggestionsFromLastResponse();
   });
 
-  if (overlayState.storageArea) {
-    void overlayState.storageArea.get([OVERLAY_TAB_PRIORITY_STORAGE_KEY], (result) => {
-      overlayState.overlayTabQuickSwitchEnabled = SETTINGS.overlayTabPriority.parse(
-        result ? result[OVERLAY_TAB_PRIORITY_STORAGE_KEY] : undefined
-      );
-    });
-  }
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    const tabPriorityChange = changes[OVERLAY_TAB_PRIORITY_STORAGE_KEY];
-    if (!isPrimaryStorageAreaName(areaName) || !tabPriorityChange) {
-      return;
-    }
-    overlayState.overlayTabQuickSwitchEnabled = SETTINGS.overlayTabPriority.parse(tabPriorityChange.newValue);
-    if (overlayState.latestOverlayQuery) {
-      updateSearchSuggestions(overlayState.lastSuggestionResponse, overlayState.latestOverlayQuery);
-    }
+  void loaded.then(() => {
+    overlayState.overlayTabQuickSwitchEnabled = settings.get(overlayTabPriority);
   });
-  const initialOverlayThemeReady = initialOverlaySettingsReady.then((result): ThemeMode => {
-    if (!overlayState.storageArea) {
-      applyOverlayTheme('system');
-      return 'system';
-    }
-    const initialThemeMode = themeMode.parse(result[THEME_STORAGE_KEY]);
-    const rawAdaptationEnabled = result[OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY];
-    overlayState.overlayPageThemeAdaptationEnabled = normalizeOverlayPageThemeAdaptationEnabled(rawAdaptationEnabled);
-    if (rawAdaptationEnabled !== overlayState.overlayPageThemeAdaptationEnabled) {
-      void overlayState.storageArea.set({
-        [OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY]: overlayState.overlayPageThemeAdaptationEnabled
-      });
-    }
+  settings.follow(overlayTabPriority, () => {
+    overlayState.overlayTabQuickSwitchEnabled = settings.get(overlayTabPriority);
+    refreshOverlaySuggestionsFromLastResponse();
+  });
+
+  const initialOverlayThemeReady = loaded.then((): ThemeMode => {
+    readTheme();
+    const initialThemeMode = settings.get(themeMode);
     applyOverlayTheme(initialThemeMode);
     return initialThemeMode;
   });
-  const initialOverlayEnterAnimationReady = initialOverlaySettingsReady.then((result) => {
-    overlayState.overlayEnterAnimation = SETTINGS.overlayEnterAnimation.parse(result[OVERLAY_ENTER_ANIMATION_STORAGE_KEY]);
+  const initialOverlayEnterAnimationReady = loaded.then(() => {
+    overlayState.overlayEnterAnimation = settings.get(overlayEnterAnimation);
     return overlayState.overlayEnterAnimation;
   });
-  const initialMotionEffectsReady = initialOverlaySettingsReady.then((result) => {
-    overlayState.motionEffectsEnabled = SETTINGS.motionEffectsEnabled.parse(result[MOTION_EFFECTS_ENABLED_STORAGE_KEY]);
+  const initialMotionEffectsReady = loaded.then(() => {
+    overlayState.motionEffectsEnabled = settings.get(motionEffectsEnabled);
     return overlayState.motionEffectsEnabled;
   });
-  const initialSimpleModeReady = initialOverlaySettingsReady.then((result) => {
-    overlayState.simpleModeEnabled = SETTINGS.simpleModeEnabled.parse(result[SIMPLE_MODE_ENABLED_STORAGE_KEY]);
+  const initialSimpleModeReady = loaded.then(() => {
+    overlayState.simpleModeEnabled = settings.get(simpleModeEnabled);
     return overlayState.simpleModeEnabled;
   });
-  // A stored limit out of range is written back in range.
-  const initialSearchResultDisplayLimitReady = initialOverlaySettingsReady.then((result) => {
-    const rawValue = result[SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY];
-    overlayState.overlaySearchResultDisplayLimit = normalizeSearchResultDisplayLimit(rawValue);
-    if (overlayState.storageArea && rawValue !== overlayState.overlaySearchResultDisplayLimit) {
-      void overlayState.storageArea.set({
-        [SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY]: overlayState.overlaySearchResultDisplayLimit
-      });
-    }
+  const initialSearchResultDisplayLimitReady = loaded.then(() => {
+    overlayState.overlaySearchResultDisplayLimit = settings.get(searchResultDisplayLimit);
     return overlayState.overlaySearchResultDisplayLimit;
   });
-  const initialNumberShortcutInstantReady = initialOverlaySettingsReady.then((result) => {
-    overlayState.numberShortcutInstantEnabled = SETTINGS.numberShortcutInstantEnabled.parse(
-      result[NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY]
-    );
+  const initialNumberShortcutInstantReady = loaded.then(() => {
+    overlayState.numberShortcutInstantEnabled = settings.get(numberShortcutInstantEnabled);
     return overlayState.numberShortcutInstantEnabled;
   });
-  const initialMacosCtrlSuggestionNavigationReady = initialOverlaySettingsReady.then((result) => {
-    overlayState.macosCtrlSuggestionNavigationEnabled = SETTINGS.macosCtrlSuggestionNavigationEnabled.parse(
-      result[MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY]
-    );
+  const initialMacosCtrlSuggestionNavigationReady = loaded.then(() => {
+    overlayState.macosCtrlSuggestionNavigationEnabled = settings.get(macosCtrlSuggestionNavigationEnabled);
     return overlayState.macosCtrlSuggestionNavigationEnabled;
   });
-  const initialOverlaySizeReady = initialOverlaySettingsReady.then((result) => {
-    overlayState.overlaySizeMode = SETTINGS.overlaySizeMode.parse(result[OVERLAY_SIZE_MODE_STORAGE_KEY]);
-    overlayState.overlayCustomWidth = SETTINGS.overlayWidth.parse(result[OVERLAY_WIDTH_STORAGE_KEY]);
+
+  function readOverlaySize(): void {
+    overlayState.overlaySizeMode = settings.get(overlaySizeMode);
+    overlayState.overlayCustomWidth = settings.get(overlayWidth);
     applyOverlaySizeForPageZoom(overlayState.overlay);
+  }
+  const initialOverlaySizeReady = loaded.then(() => {
+    readOverlaySize();
     return overlayState.overlaySizeMode;
   });
-  // The fonts are this device's own choice (installed faces), so they are
-  // read from chrome.storage.local whichever area holds synced settings.
-  const initialOverlayFontFamilyReady = overlayRuntime.getStorageValues(
-    localStorageArea,
-    [OVERLAY_FONT_FAMILY_STORAGE_KEY, OVERLAY_FONT_FALLBACK_STORAGE_KEY]
-  ).then((result) => {
-    overlayState.overlayFontFamily = SETTINGS.normalizeOverlayFontFamily(result[OVERLAY_FONT_FAMILY_STORAGE_KEY]);
-    overlayState.overlayFontFallback = SETTINGS.normalizeOverlayFontFamily(result[OVERLAY_FONT_FALLBACK_STORAGE_KEY]);
+  settings.follow([overlaySizeMode, overlayWidth], readOverlaySize);
+
+  // The fonts are this device's own choice (installed faces).
+  function readOverlayFonts(): void {
+    overlayState.overlayFontFamily = settings.get(overlayFontFamily);
+    overlayState.overlayFontFallback = settings.get(overlayFontFallback);
     applyOverlayFontFamily();
+  }
+  const initialOverlayFontFamilyReady = loaded.then(() => {
+    readOverlayFonts();
     return overlayState.overlayFontFamily;
   });
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    if (areaName !== 'local') {
-      return;
-    }
-    let changed = false;
-    const fontFamilyChange = changes[OVERLAY_FONT_FAMILY_STORAGE_KEY];
-    const fontFallbackChange = changes[OVERLAY_FONT_FALLBACK_STORAGE_KEY];
-    if (fontFamilyChange) {
-      overlayState.overlayFontFamily = SETTINGS.normalizeOverlayFontFamily(fontFamilyChange.newValue);
-      changed = true;
-    }
-    if (fontFallbackChange) {
-      overlayState.overlayFontFallback = SETTINGS.normalizeOverlayFontFamily(fontFallbackChange.newValue);
-      changed = true;
-    }
-    if (changed) {
-      applyOverlayFontFamily();
-    }
+  settings.follow([overlayFontFamily, overlayFontFallback], readOverlayFonts);
+
+  void loaded.then(() => {
+    overlayState.overlayTabScoreDebugEnabled = settings.get(tabRankScoreDebug);
   });
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    const sizeModeChange = changes[OVERLAY_SIZE_MODE_STORAGE_KEY];
-    const widthChange = changes[OVERLAY_WIDTH_STORAGE_KEY];
-    if (!isPrimaryStorageAreaName(areaName) || (!sizeModeChange && !widthChange)) {
-      return;
-    }
-    if (sizeModeChange) {
-      overlayState.overlaySizeMode = SETTINGS.overlaySizeMode.parse(sizeModeChange.newValue);
-    }
-    if (widthChange) {
-      overlayState.overlayCustomWidth = SETTINGS.overlayWidth.parse(widthChange.newValue);
-    }
-    applyOverlaySizeForPageZoom(overlayState.overlay);
-  });
-  if (overlayState.storageArea) {
-    void overlayState.storageArea.get([TAB_RANK_SCORE_DEBUG_STORAGE_KEY], (result) => {
-      overlayState.overlayTabScoreDebugEnabled = SETTINGS.tabRankScoreDebug.parse(
-        result ? result[TAB_RANK_SCORE_DEBUG_STORAGE_KEY] : undefined
-      );
-    });
-  }
-  overlayState.storageChangeListeners.add((changes, areaName) => {
-    const scoreDebugChange = changes[TAB_RANK_SCORE_DEBUG_STORAGE_KEY];
-    if (!isPrimaryStorageAreaName(areaName) || !scoreDebugChange) {
-      return;
-    }
-    overlayState.overlayTabScoreDebugEnabled = SETTINGS.tabRankScoreDebug.parse(scoreDebugChange.newValue);
+  settings.follow(tabRankScoreDebug, () => {
+    overlayState.overlayTabScoreDebugEnabled = settings.get(tabRankScoreDebug);
     if (!overlayState.latestOverlayQuery || !overlayState.latestOverlayQuery.trim()) {
       requestTabsAndRender();
     }

@@ -214,7 +214,7 @@ import { getSearchInputApi } from '../shared/react/search-input';
 import { newtabShortcutGap, newtabShortcutSize } from '../domain/settings/newtab-shortcuts';
 import { bookmarkFolderColorRefs, bookmarkFolderColorsLegacy } from '../domain/settings/bookmarks';
 import { newtabShortcutFaviconCache, newtabShortcutsLocalOverflow, shortcutFolderBindings } from '../domain/settings/newtab-shortcuts';
-import { createSettingsStore } from '../platform/settings-store';
+import { createSettingPort, createSettingsStore, getContextSettingsStore } from '../platform/settings-store';
 import * as SearchSettings from '../domain/settings/search';
 import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
 
@@ -1648,9 +1648,7 @@ import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
   const imeKeyGuard = LumnoImeKeyGuard.createImeKeyGuard();
   const searchInputHistoryController =
     SEARCH_INPUT_HISTORY.createSearchInputHistoryController({
-      storageArea: localStorageArea,
-      storageChanges: chrome && chrome.storage ? chrome.storage.onChanged : null,
-      storageAreaName: 'local'
+      storage: createSettingPort(getContextSettingsStore(chrome), SearchSettings.searchInputHistory)
     });
   function isImeCompositionEvent(event: KeyboardEvent): boolean {
     return imeKeyGuard.shouldIgnoreKeydown(event);

@@ -8,16 +8,17 @@ import type * as SearchSourceOrder from '../../domain/search/search-source-order
 import type { ScopeMenuMove } from '../../domain/search/search-source-order';
 import type * as SearchUtils from '../../domain/search/search-utils';
 import type { LocalSearchScope, SearchEngineState, SearchSourceType, SiteSearchProvider } from '../../domain/search/types';
-import type { StorageAreaFacade } from '../../platform/settings-storage';
 import type { InputModeController } from '../../shared/search/search-input-mode';
 import type { InputModeProvider, ModeMenuItem } from '../../shared/search/input-mode/types';
 import type { Translate } from './types';
 import { lazyInstance } from '../../shared/lazy-instance';
 import { createHistory as createSearchSourceOrderHistory } from '../../domain/search/search-source-order';
 import type { RemixIconName } from '../../shared/ui/remix-icon';
+import { searchSourceOrder } from '../../domain/settings/search';
+import type { OverlaySettings } from '../overlay-settings';
 
 interface SearchModeMenuState {
-  storageArea: StorageAreaFacade | null;
+  settings: Pick<OverlaySettings, 'store' | 'loaded' | 'set'>;
   searchInput: HTMLInputElement | null;
   inputModeController: Pick<InputModeController, 'openModeMenu'> | null;
   overlaySearchEngineState: SearchEngineState | null;
@@ -53,8 +54,6 @@ interface SearchModeMenuDeps {
   getPageRenderableProviderIcon(provider: SiteSearchProvider): string;
   getLocalSearchScopeLabel(scope: Pick<LocalSearchScope, 'sourceType'> | null): string;
   getLocalSearchScopeIconName(sourceType: string): RemixIconName;
-  getStorageValuesAsync(keys: string[]): Promise<Record<string, unknown>>;
-  SEARCH_SOURCE_ORDER_STORAGE_KEY: string;
   loadSiteSearchIconCache(): Promise<CachedIconMap>;
   getSiteSearchProviders(): Promise<SiteSearchProvider[]>;
   getAggregateSearches(): Promise<AggregateSearch[]>;
@@ -90,8 +89,6 @@ function createSearchModeMenu(deps: SearchModeMenuDeps) {
     getLocalSearchScopeLabel,
     getLocalSearchScopeIconName,
     SEARCH_SOURCE_ORDER,
-    getStorageValuesAsync,
-    SEARCH_SOURCE_ORDER_STORAGE_KEY,
     loadSiteSearchIconCache,
     getSiteSearchProviders,
     getAggregateSearches,
@@ -263,9 +260,8 @@ function createSearchModeMenu(deps: SearchModeMenuDeps) {
 
   // The stored order, as stored; the order helpers read it as untrusted.
   function loadSearchSourceOrder(): Promise<unknown> {
-    return getStorageValuesAsync([SEARCH_SOURCE_ORDER_STORAGE_KEY])
-      .then((result) => result && result[SEARCH_SOURCE_ORDER_STORAGE_KEY])
-      .catch(() => null);
+    const settings = overlayState.settings;
+    return settings.loaded.then(() => settings.store.getStored(searchSourceOrder));
   }
 
   function getSearchModeMenuItems(): Promise<ModeMenuItem[]> {
@@ -282,9 +278,6 @@ function createSearchModeMenu(deps: SearchModeMenuDeps) {
   // A tile dragged in the panel: store the new order on top of the latest
   // stored one, so a concurrent change from Settings is not lost.
   function reorderSearchModeMenu(payload: ScopeMenuMove | null): Promise<unknown> {
-    if (!overlayState.storageArea) {
-      return Promise.resolve();
-    }
     return queueSearchSourceOrderTask(() => loadSearchSourceOrder()
       .then((value) => recordSearchSourceOrder(value, SEARCH_SOURCE_ORDER.applyScopeMenuMove(value, payload))));
   }
@@ -294,13 +287,7 @@ function createSearchModeMenu(deps: SearchModeMenuDeps) {
   }
 
   function writeSearchSourceOrder(value: unknown): Promise<void> {
-    const area = overlayState.storageArea;
-    if (!area) {
-      return Promise.resolve();
-    }
-    return new Promise((resolve) => {
-      void area.set({ [SEARCH_SOURCE_ORDER_STORAGE_KEY]: value }, () => resolve());
-    });
+    return overlayState.settings.set(searchSourceOrder, searchSourceOrder.parse(value)).catch(() => {});
   }
 
   // Undo and redo for the moves made in this page's panel, kept in module
@@ -317,9 +304,6 @@ function createSearchModeMenu(deps: SearchModeMenuDeps) {
   // Returns whether there was a step to take, so the panel only claims
   // Ctrl/Cmd+Z when it does something.
   function stepSearchModeMenuHistory(direction: 'undo' | 'redo'): boolean {
-    if (!overlayState.storageArea) {
-      return false;
-    }
     const history = getSearchSourceOrderHistory();
     if (!(direction === 'redo' ? history.canRedo() : history.canUndo())) {
       return false;
@@ -334,7 +318,7 @@ function createSearchModeMenu(deps: SearchModeMenuDeps) {
 
   // A group block moved from its title in the panel.
   function moveSearchModeMenuGroup(payload: GroupMove | null): Promise<unknown> {
-    if (!overlayState.storageArea || !payload) {
+    if (!payload) {
       return Promise.resolve();
     }
     return queueSearchSourceOrderTask(() => loadSearchSourceOrder()

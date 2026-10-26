@@ -3,10 +3,10 @@
 // appearance command.
 import type { SearchInputParts } from '../../shared/react/search-input';
 import type { WebAppearanceMode } from '../../domain/messages';
-import type * as Settings from '../../domain/settings';
+import { themeMode } from '../../domain/settings/appearance';
 import type { ThemeMode } from '../../domain/settings/appearance';
 import * as LumnoMessaging from '../../platform/messaging';
-import type { StorageAreaFacade } from '../../platform/settings-storage';
+import type { OverlaySettings } from '../overlay-settings';
 import type { FormatMessage, Translate } from './types';
 
 type SlashCommandType =
@@ -59,10 +59,8 @@ interface SlashCommandsDeps {
   formatMessage: FormatMessage;
   updateInputRightPadding(): void;
   detectPageTheme(): string | null;
-  SETTINGS: Pick<typeof Settings, 'createGlobalThemeModeStorageUpdate'>;
-  storageArea: StorageAreaFacade | null;
+  settings: Pick<OverlaySettings, 'set'>;
   applyOverlayTheme(mode: ThemeMode): void;
-  THEME_STORAGE_KEY: string;
   // Called with no rows: the list rebuilds from the typed command.
   updateSearchSuggestions(suggestions: never[], query: string): void;
   overlayState: SlashCommandsState;
@@ -74,10 +72,8 @@ function createSlashCommands(deps: SlashCommandsDeps) {
     formatMessage,
     updateInputRightPadding,
     detectPageTheme,
-    SETTINGS,
-    storageArea,
+    settings,
     applyOverlayTheme,
-    THEME_STORAGE_KEY,
     updateSearchSuggestions
   } = deps;
 
@@ -292,16 +288,10 @@ function createSlashCommands(deps: SlashCommandsDeps) {
     };
   }
 
-  function getThemeStorageUpdate(mode: string): Record<string, ThemeMode> {
-    return SETTINGS.createGlobalThemeModeStorageUpdate(mode);
-  }
-
   function applyThemeModeChange(mode: string): void {
-    const updates = getThemeStorageUpdate(mode);
-    if (storageArea) {
-      void storageArea.set(updates);
-    }
-    applyOverlayTheme(updates[THEME_STORAGE_KEY]);
+    const nextMode = themeMode.parse(mode);
+    void settings.set(themeMode, nextMode).catch(() => {});
+    applyOverlayTheme(nextMode);
     const input = overlayState.searchInput;
     if (input && isModeCommand(input.value || '')) {
       updateSearchSuggestions([], (input.value || '').trim());

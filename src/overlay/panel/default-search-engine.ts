@@ -1,7 +1,8 @@
 import { readSearchEngineState } from '../../domain/search/search-engine-state-reader';
 import type * as SearchUtils from '../../domain/search/search-utils';
 import type { SearchEngineState } from '../../domain/search/types';
-import type { StorageAreaFacade } from '../../platform/settings-storage';
+import { defaultSearchEngine } from '../../domain/settings/search';
+import type { OverlaySettings } from '../overlay-settings';
 import type { Translate } from './types';
 
 interface DefaultSearchEngineState {
@@ -12,8 +13,7 @@ interface DefaultSearchEngineState {
 interface DefaultSearchEngineDeps {
   getOverlayFaviconUrlResolver(): { getPageFaviconCandidateUrl(url: string): string } | null;
   t: Translate;
-  storageArea: StorageAreaFacade | null;
-  DEFAULT_SEARCH_ENGINE_STORAGE_KEY: string;
+  settings: Pick<OverlaySettings, 'loaded' | 'get'>;
   SEARCH_UTILS: Pick<typeof SearchUtils, 'isRetiredSearchEngineState'>;
   overlayState: DefaultSearchEngineState;
 }
@@ -24,8 +24,7 @@ function createDefaultSearchEngine(deps: DefaultSearchEngineDeps) {
   const {
     getOverlayFaviconUrlResolver,
     t,
-    storageArea,
-    DEFAULT_SEARCH_ENGINE_STORAGE_KEY,
+    settings,
     SEARCH_UTILS
   } = deps;
 
@@ -73,35 +72,15 @@ function createDefaultSearchEngine(deps: DefaultSearchEngineDeps) {
 
   // Reads the stored engine; onReload runs when one was found.
   function loadOverlaySearchEngineState(onReload?: () => void): Promise<SearchEngineState | null> {
-    if (!storageArea || typeof storageArea.get !== 'function') {
-      return Promise.resolve(overlayState.overlaySearchEngineState);
-    }
-    const area = storageArea;
-    return new Promise((resolve) => {
-      let settled = false;
-      const finish = (result: Record<string, unknown> | null | undefined): void => {
-        if (settled) {
-          return;
+    return settings.loaded.then(() => {
+      const stored = readSearchEngineState(settings.get(defaultSearchEngine));
+      if (stored && stored.id && !SEARCH_UTILS.isRetiredSearchEngineState(stored)) {
+        overlayState.overlaySearchEngineState = stored;
+        if (typeof onReload === 'function') {
+          onReload();
         }
-        settled = true;
-        const stored = readSearchEngineState(result ? result[DEFAULT_SEARCH_ENGINE_STORAGE_KEY] : null);
-        if (stored && stored.id &&
-            (!SEARCH_UTILS.isRetiredSearchEngineState(stored))) {
-          overlayState.overlaySearchEngineState = stored;
-          if (typeof onReload === 'function') {
-            onReload();
-          }
-        }
-        resolve(overlayState.overlaySearchEngineState);
-      };
-      try {
-        const maybePromise = area.get([DEFAULT_SEARCH_ENGINE_STORAGE_KEY], finish);
-        if (maybePromise && typeof maybePromise.then === 'function') {
-          maybePromise.then(finish, () => finish(null));
-        }
-      } catch (_error) {
-        finish(null);
       }
+      return overlayState.overlaySearchEngineState;
     });
   }
 

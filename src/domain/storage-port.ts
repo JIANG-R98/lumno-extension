@@ -24,7 +24,18 @@ interface StorageChangeEventLike {
   removeListener(listener: StorageChangeListener): void;
 }
 
+// One stored value as a domain module sees it, read, written and followed
+// through a context's settings store (createSettingPort in
+// platform/settings-store.ts) or a test double.
+interface StoredValuePort {
+  read(): Promise<unknown>;
+  write(value: unknown): Promise<void>;
+  // Calls `listener` with the new value when it changes elsewhere.
+  subscribe(listener: (value: unknown) => void): () => void;
+}
+
 export type {
+  StoredValuePort,
   StorageAreaLike,
   StorageChangeEventLike,
   StorageChangeListener,

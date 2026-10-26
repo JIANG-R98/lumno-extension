@@ -4,7 +4,8 @@ import type * as Settings from '../../domain/settings';
 import * as LumnoCjkFontFaces from '../../shared/cjk-font-faces';
 import * as OVERLAY_FONT_FACES from '../../shared/overlay-font-faces';
 import type * as OverlayRuntime from '../runtime';
-import type { ReadableStorageArea } from '../runtime';
+import { language } from '../../domain/settings/locale';
+import type { OverlaySettings } from '../overlay-settings';
 
 // Row is a suggestion row, Provider a site search provider and Theme a
 // suggestion theme; this module only passes them along.
@@ -26,9 +27,8 @@ interface PanelLanguageState<Row, Provider, Theme> {
 
 interface PanelLanguageDeps<Row, Provider, Theme> {
   SETTINGS: Pick<typeof Settings, 'localeToHtmlLang' | 'normalizeLocale'>;
-  overlayRuntime: Pick<typeof OverlayRuntime, 'loadLocaleMessages' | 'getStorageValues'>;
-  storageArea: ReadableStorageArea | null;
-  LANGUAGE_STORAGE_KEY: string;
+  overlayRuntime: Pick<typeof OverlayRuntime, 'loadLocaleMessages'>;
+  settings: Pick<OverlaySettings, 'loaded' | 'get'>;
   updateModeBadge(rawValue: string): void;
   setSiteSearchPrefix(provider: Provider, theme: Theme): void;
   getThemeForProvider(provider: Provider): Promise<Theme>;
@@ -47,8 +47,7 @@ function createPanelLanguage<Row, Provider, Theme>(deps: PanelLanguageDeps<Row, 
   const {
     SETTINGS,
     overlayRuntime,
-    storageArea,
-    LANGUAGE_STORAGE_KEY,
+    settings,
     updateModeBadge,
     setSiteSearchPrefix,
     getThemeForProvider,
@@ -105,10 +104,6 @@ function createPanelLanguage<Row, Provider, Theme>(deps: PanelLanguageDeps<Row, 
     return fallback || '';
   }
 
-  function getStorageValuesAsync(keys: string[]): Promise<Record<string, unknown>> {
-    return overlayRuntime.getStorageValues(storageArea, keys);
-  }
-
   // The locale's messages, or fallbackMessages when it has none.
   function loadPreferredLocaleMessages(locale: string, fallbackMessages: LocaleMessages | null): Promise<LocaleMessages> {
     return loadLocaleMessages(locale).then((messages) => {
@@ -120,11 +115,9 @@ function createPanelLanguage<Row, Provider, Theme>(deps: PanelLanguageDeps<Row, 
   }
 
   // Loads the messages before the panel first renders.
-  async function bootstrapOverlayLanguageForInitialRender(settingsReady?: Promise<Record<string, unknown>> | null): Promise<void> {
-    const result = await Promise.resolve(settingsReady ||
-      getStorageValuesAsync([LANGUAGE_STORAGE_KEY]));
-    const storedMode = result[LANGUAGE_STORAGE_KEY];
-    overlayState.overlayLanguageMode = typeof storedMode === 'string' && storedMode ? storedMode : 'system';
+  async function bootstrapOverlayLanguageForInitialRender(): Promise<void> {
+    await settings.loaded;
+    overlayState.overlayLanguageMode = settings.get(language);
     const targetLocale = overlayState.overlayLanguageMode === 'system'
       ? getSystemLocale()
       : SETTINGS.normalizeLocale(overlayState.overlayLanguageMode);
@@ -208,7 +201,6 @@ function createPanelLanguage<Row, Provider, Theme>(deps: PanelLanguageDeps<Row, 
     applyOverlayCjkFontFace,
     getSystemLocale,
     t,
-    getStorageValuesAsync,
     bootstrapOverlayLanguageForInitialRender,
     formatMessage,
     applyLanguageStrings,

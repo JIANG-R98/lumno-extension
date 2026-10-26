@@ -14,9 +14,9 @@ import { readShortcutRules } from '../../domain/shortcut-rules-reader';
 import * as BROWSER_PROFILE from '../../platform/browser-profile';
 import type * as CommunityLinks from '../../platform/community-links';
 import * as LumnoMessaging from '../../platform/messaging';
-import type { StorageAreaFacade } from '../../platform/settings-storage';
 import type { SuggestionsViewController } from '../../shared/react/search/suggestion-list/types';
 import type { InputModeProvider } from '../../shared/search/input-mode/types';
+import type { OverlaySettings } from '../overlay-settings';
 import type { AutocompleteRow } from './autocomplete';
 import type { RemoteMixState } from './remote-suggestions';
 import type { CommandSuggestion, SlashCommand } from './slash-commands';
@@ -31,7 +31,7 @@ import type {
 import { shortcutRulesCache } from '../../shared/search/shortcut-rules-cache';
 
 interface SuggestionSourcesState {
-  storageArea: StorageAreaFacade | null;
+  settings: Pick<OverlaySettings, 'get'>;
   searchInput: HTMLInputElement | null;
   suggestionsContainer: HTMLElement | null;
   latestOverlayQuery: string;
@@ -79,7 +79,6 @@ interface SuggestionSourcesDeps {
   getProviderIcon(provider: SiteSearchProvider): string;
   isSlashCommandInput(input: string): boolean;
   isModeCommand(input: string): boolean;
-  THEME_STORAGE_KEY: string;
   applyOverlayTheme(mode: ThemeMode): void;
   buildDefaultSearchUrlForOverlay(query: string): string;
   getDefaultSearchEngineFaviconUrlForOverlay(): string;
@@ -153,7 +152,6 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
     t,
     isSlashCommandInput,
     isModeCommand,
-    THEME_STORAGE_KEY,
     applyOverlayTheme,
     buildDefaultSearchUrlForOverlay,
     getDefaultSearchEngineFaviconUrlForOverlay,
@@ -412,14 +410,9 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
       Boolean(overlayState.siteSearchState && String(query || '').trim());
     const modeCommandActive = slashCommandModeActive && !siteSearchQueryModeActive && isModeCommand(rawTagInput);
     if (modeCommandActive) {
-      if (overlayState.storageArea) {
-        void overlayState.storageArea.get([THEME_STORAGE_KEY], (result) => {
-          const storedMode = themeMode.parse(result ? result[THEME_STORAGE_KEY] : undefined);
-          if (storedMode !== overlayState.overlayThemeMode && query === overlayState.latestOverlayQuery) {
-            applyOverlayTheme(storedMode);
-            updateSearchSuggestions([], query);
-          }
-        });
+      const storedMode = overlayState.settings.get(themeMode);
+      if (storedMode !== overlayState.overlayThemeMode) {
+        applyOverlayTheme(storedMode);
       }
     }
 

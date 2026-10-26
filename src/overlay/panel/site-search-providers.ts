@@ -12,7 +12,8 @@ import { readSiteSearchProviders } from '../../domain/search/site-search-provide
 import type { DisplayedSuggestion } from '../../domain/search/suggestion-action-model';
 import type * as SearchUtils from '../../domain/search/search-utils';
 import type { SiteSearchProvider } from '../../domain/search/types';
-import type { StorageAreaFacade } from '../../platform/settings-storage';
+import { siteSearchCustom, siteSearchDisabled } from '../../domain/settings/search';
+import type { OverlaySettings } from '../overlay-settings';
 import type { InputModeProvider } from '../../shared/search/input-mode/types';
 import * as SITE_SEARCH_STORE from '../../shared/search/site-search-store';
 import * as LumnoAggregateSearchStorage from '../../platform/aggregate-search-storage';
@@ -21,7 +22,7 @@ import type { ActivationEvent } from './result-activation';
 import type { Translate } from './types';
 
 interface SiteSearchProvidersState {
-  storageArea: StorageAreaFacade | null;
+  settings: Pick<OverlaySettings, 'store' | 'loaded' | 'get'>;
   // The bundled providers, for when the stored list cannot load.
   defaultSiteSearchProviders: SiteSearchProvider[];
   siteSearchProvidersCache: SiteSearchProvider[] | null;
@@ -52,10 +53,6 @@ interface SiteSearchProvidersDeps {
   siteSearchIconCacheOptions: SiteSearchIconOptions;
   // Favicon images already fetched, as data: URLs by address.
   faviconDataCache: Map<string, string>;
-  SITE_SEARCH_STORAGE_KEY: string;
-  SITE_SEARCH_DISABLED_STORAGE_KEY: string;
-  AGGREGATE_SEARCH_STORAGE_KEY: string;
-  getStorageValuesAsync(keys: string[]): Promise<Record<string, unknown>>;
   overlayState: SiteSearchProvidersState;
 }
 
@@ -72,11 +69,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     SHORTCUT_FAVICON,
     siteSearchIconCacheOptions,
     FAVICON_UTILS,
-    faviconDataCache,
-    SITE_SEARCH_STORAGE_KEY,
-    SITE_SEARCH_DISABLED_STORAGE_KEY,
-    getStorageValuesAsync,
-    AGGREGATE_SEARCH_STORAGE_KEY
+    faviconDataCache
   } = deps;
 
   // The panel state object shared with search-panel.ts and the other modules.
@@ -278,24 +271,17 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     }
     return beginSiteSearchProviderLoad(() => SITE_SEARCH_STORE.loadSiteSearchProviders({
       chromeApi: chrome,
-      storageArea: overlayState.storageArea,
-      storageKeys: {
-        custom: SITE_SEARCH_STORAGE_KEY,
-        disabled: SITE_SEARCH_DISABLED_STORAGE_KEY
-      },
+      settingsStore: overlayState.settings.store,
       defaultProviders: overlayState.defaultSiteSearchProviders,
-      mergeCustomProviders: SEARCH_UTILS.mergeCustomProviders,
-      getStorageValues: getStorageValuesAsync
+      mergeCustomProviders: SEARCH_UTILS.mergeCustomProviders
     })).promise;
   }
 
   function reloadSiteSearchProvidersFromStorage(): { promise: Promise<SiteSearchProvider[]>; version: number } {
-    return beginSiteSearchProviderLoad(() => getStorageValuesAsync([
-      SITE_SEARCH_STORAGE_KEY,
-      SITE_SEARCH_DISABLED_STORAGE_KEY
-    ]).then((result) => {
-      const customItems = readSiteSearchProviders(result[SITE_SEARCH_STORAGE_KEY]);
-      const storedDisabledKeys = result[SITE_SEARCH_DISABLED_STORAGE_KEY];
+    const settings = overlayState.settings;
+    return beginSiteSearchProviderLoad(() => settings.loaded.then(() => {
+      const customItems = readSiteSearchProviders(settings.get(siteSearchCustom));
+      const storedDisabledKeys: unknown = settings.get(siteSearchDisabled);
       const disabledKeys = Array.isArray(storedDisabledKeys) ? storedDisabledKeys : [];
       return SITE_SEARCH_STORE.mergeStoredProviders(
         overlayState.defaultSiteSearchProviders,
@@ -314,11 +300,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
       return overlayState.aggregateSearchesLoadPromise;
     }
     const loadVersion = overlayState.aggregateSearchesLoadVersion;
-    const loadTask = LumnoAggregateSearchStorage.loadAggregateSearches(
-      overlayState.storageArea,
-      AGGREGATE_SEARCH_STORAGE_KEY,
-      chrome
-    ).then((items) => {
+    const loadTask = LumnoAggregateSearchStorage.readAggregateSearches(overlayState.settings.store).then((items) => {
       if (loadVersion === overlayState.aggregateSearchesLoadVersion) {
         overlayState.aggregateSearchesCache = items;
         return items;
