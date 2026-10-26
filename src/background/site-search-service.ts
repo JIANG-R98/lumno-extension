@@ -250,7 +250,18 @@ export const SEARCH_MESSAGE_HANDLERS: HandlersFor<SearchAction> = Object.freeze(
           return;
         }
         const fallbackUrl = buildDefaultSearchUrl(query);
-        SEARCH_RESULT_TABS.searchInTab(chrome, { query, tabId, fallbackUrl }, (result) => {
+        // The results page this search loads tells which engine is the default.
+        markPendingSearchTab(tabId, sourceTab);
+        SEARCH_RESULT_TABS.searchInTab(chrome, {
+          query,
+          tabId,
+          fallbackUrl,
+          onFallback() {
+            if (pendingSearchTabId === tabId) {
+              clearPendingSearch();
+            }
+          }
+        }, (result) => {
           sendResponse({ ...result, url: fallbackUrl });
         });
       });
