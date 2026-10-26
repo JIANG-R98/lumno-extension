@@ -203,6 +203,7 @@ function createGeneralSearchSection(deps: GeneralSearchSectionDeps) {
         groupId: '_x_extension_search_result_source_types_2026_unique_',
         ariaLabel: getMessage('settings_search_result_sources_title', '显示结果类型'),
         checkboxes: {
+          required: true,
           sortable: true,
           items: ordered.flatMap((type) => {
             const item = SOURCE_TYPES.find((entry) => entry.value === type);

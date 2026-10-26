@@ -2,7 +2,7 @@
 // and which New Tab surfaces open their links in a new tab. One React view
 // draws the rows; this keeps their values in step with storage.
 import type * as Settings from '../domain/settings';
-import type { NewtabOpenInNewTab, NewtabOpenInNewTabSurface } from '../domain/settings';
+import type { NewtabOpenInNewTabSurface } from '../domain/settings';
 import { createSectionSetting, type SectionSettingBinder, type SectionSettingStorage } from './options-section-setting';
 import type { SectionView } from './options-section-view';
 import type { GetMessage } from './options-types';
@@ -18,12 +18,12 @@ interface GeneralNewtabSectionDeps {
   getMessage: GetMessage;
 }
 
-// Each surface's switch, in the order the rows show them.
-const OPEN_IN_NEW_TAB_SURFACES: ReadonlyArray<{ surface: NewtabOpenInNewTabSurface; id: string }> = [
-  { surface: 'search', id: '_x_extension_newtab_open_in_new_tab_search_toggle_2026_unique_' },
-  { surface: 'shortcuts', id: '_x_extension_newtab_open_in_new_tab_shortcuts_toggle_2026_unique_' },
-  { surface: 'bookmarks', id: '_x_extension_newtab_open_in_new_tab_bookmarks_toggle_2026_unique_' },
-  { surface: 'recentSites', id: '_x_extension_newtab_open_in_new_tab_recent_sites_toggle_2026_unique_' }
+// Each surface's checkbox, in the order the group shows them.
+const OPEN_IN_NEW_TAB_SURFACES: ReadonlyArray<{ surface: NewtabOpenInNewTabSurface; id: string; labelKey: string }> = [
+  { surface: 'search', id: '_x_extension_newtab_open_in_new_tab_search_2026_unique_', labelKey: 'settings_newtab_open_in_new_tab_search' },
+  { surface: 'shortcuts', id: '_x_extension_newtab_open_in_new_tab_shortcuts_2026_unique_', labelKey: 'settings_newtab_open_in_new_tab_shortcuts' },
+  { surface: 'bookmarks', id: '_x_extension_newtab_open_in_new_tab_bookmarks_2026_unique_', labelKey: 'settings_newtab_open_in_new_tab_bookmarks' },
+  { surface: 'recentSites', id: '_x_extension_newtab_open_in_new_tab_recent_sites_2026_unique_', labelKey: 'settings_newtab_open_in_new_tab_recent_sites' }
 ];
 
 function createGeneralNewtabSection(deps: GeneralNewtabSectionDeps) {
@@ -48,13 +48,14 @@ function createGeneralNewtabSection(deps: GeneralNewtabSectionDeps) {
     onToggle(key, checked) {
       if (key === progressTracking.storageKey) {
         progressTracking.change(checked);
+      }
+    },
+    onCheck(key, values) {
+      if (key !== openInNewTab.storageKey) {
         return;
       }
-      const target = OPEN_IN_NEW_TAB_SURFACES.find((entry) => entry.id === key);
-      if (target) {
-        const next: NewtabOpenInNewTab = { ...openInNewTab.get(), [target.surface]: checked };
-        openInNewTab.change(SETTINGS.normalizeNewtabOpenInNewTab(next));
-      }
+      const next = Object.fromEntries(OPEN_IN_NEW_TAB_SURFACES.map(({ surface }) => [surface, values.includes(surface)]));
+      openInNewTab.change(SETTINGS.normalizeNewtabOpenInNewTab(next));
     },
     onSelect() {}
   });
@@ -86,21 +87,24 @@ function createGeneralNewtabSection(deps: GeneralNewtabSectionDeps) {
         toggle: { id: '_x_extension_progress_tracking_toggle_2026_unique_', checked: progressTracking.get() }
       },
       {
-        type: 'label',
-        key: 'open-in-new-tab',
-        group: true,
-        title: { text: getMessage('settings_newtab_open_in_new_tab_title', '在新标签页打开') }
-      },
-      ...OPEN_IN_NEW_TAB_SURFACES.map(({ surface, id }): SettingsRowModel => {
-        const title = getSurfaceTitle(surface);
-        return {
-          type: 'toggle',
-          key: id,
-          subrow: true,
-          title: { text: title },
-          toggle: { id, checked: surfaces[surface], ariaLabel: title }
-        };
-      })
+        type: 'checkbox-group',
+        key: openInNewTab.storageKey,
+        compact: false,
+        title: { text: getMessage('settings_newtab_open_in_new_tab_title', '点击后在新标签页打开') },
+        description: getMessage('settings_newtab_open_in_new_tab_desc',
+          '勾选的内容点击后会新开标签页并切换过去，未勾选的在当前页打开。按住 Command/Ctrl 点击或用鼠标中键点击，始终在后台打开。'),
+        groupId: '_x_extension_newtab_open_in_new_tab_2026_unique_',
+        ariaLabel: getMessage('settings_newtab_open_in_new_tab_title', '点击后在新标签页打开'),
+        checkboxes: {
+          items: OPEN_IN_NEW_TAB_SURFACES.map(({ surface, id, labelKey }) => ({
+            checked: surfaces[surface],
+            id,
+            label: getSurfaceTitle(surface),
+            labelKey,
+            value: surface
+          }))
+        }
+      }
     ];
   }
 

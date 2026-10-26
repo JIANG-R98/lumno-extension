@@ -3441,10 +3441,10 @@
     "message": "釘選劇集或小說後，看到下一集、下一章時卡片會自動跟上，下次點開直接接著看"
   },
   "settings_newtab_open_in_new_tab_title": {
-    "message": "在新分頁開啟"
+    "message": "點擊後在新分頁開啟"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "開啟的項目點擊後會新開分頁並切換過去，關閉時在目前頁面開啟。按住 Command/Ctrl 點擊或用滑鼠中鍵點擊，一律在背景開啟。"
+    "message": "勾選的內容點擊後會開新分頁並切換過去，未勾選的在目前分頁開啟。按住 Command/Ctrl 點擊或用滑鼠中鍵點擊，一律在背景開啟。"
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "搜尋結果"

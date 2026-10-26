@@ -583,6 +583,10 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
 #_x_extension_settings_panel_2024_unique_[data-theme="dark"] ._x_extension_setting_row_2024_unique_ {
   background: transparent;
 }
+/* A row's checkboxes stay on one line; its description wraps instead. */
+._x_extension_setting_row_2024_unique_ > ._x_extension_checkbox_group_2026_unique_ {
+  flex: none;
+}
 ._x_extension_setting_title_2024_unique_ {
   font-size: var(--lumno-font-size-md);
   font-weight: 400;

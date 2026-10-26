@@ -3441,10 +3441,10 @@
     "message": "Fixe uma série ou um romance e o cartão acompanha você até o próximo episódio ou capítulo, abrindo onde você parou"
   },
   "settings_newtab_open_in_new_tab_title": {
-    "message": "Abrir em uma nova guia"
+    "message": "Abrir em nova guia ao clicar"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Os itens ativados abrem em uma nova guia e mudam para ela; os desativados abrem na guia atual. Command/Ctrl + clique ou clique do meio sempre abre em segundo plano."
+    "message": "Os itens marcados abrem em uma nova guia e mudam para ela; os desmarcados abrem na guia atual. Command/Ctrl + clique ou clique do meio sempre abre em segundo plano."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Resultados de pesquisa"

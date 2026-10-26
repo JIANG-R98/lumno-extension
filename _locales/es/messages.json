@@ -3441,10 +3441,10 @@
     "message": "Fija una serie o novela y su tarjeta te seguirá al siguiente episodio o capítulo, para que se abra donde lo dejaste"
   },
   "settings_newtab_open_in_new_tab_title": {
-    "message": "Abrir en una pestaña nueva"
+    "message": "Abrir en una pestaña nueva al hacer clic"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Los elementos activados se abren en una pestaña nueva y cambian a ella; los desactivados se abren en la pestaña actual. Command/Ctrl + clic o el clic central siempre abren en segundo plano."
+    "message": "Los elementos marcados se abren en una pestaña nueva y cambian a ella; los no marcados se abren en la pestaña actual. Command/Ctrl + clic o clic central siempre abre en segundo plano."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Resultados de búsqueda"

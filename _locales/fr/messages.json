@@ -3441,10 +3441,10 @@
     "message": "Épinglez une série ou un roman\u00a0: sa carte vous suit jusqu’à l’épisode ou au chapitre suivant, pour reprendre là où vous en étiez"
   },
   "settings_newtab_open_in_new_tab_title": {
-    "message": "Ouvrir dans un nouvel onglet"
+    "message": "Ouvrir dans un nouvel onglet au clic"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Les éléments activés s’ouvrent dans un nouvel onglet qui passe au premier plan\u00a0; les éléments désactivés s’ouvrent dans l’onglet actuel. Un clic avec Command/Ctrl ou un clic du milieu ouvre toujours en arrière-plan."
+    "message": "Les éléments cochés s’ouvrent dans un nouvel onglet, qui passe au premier plan ; les autres s’ouvrent dans l’onglet actuel. Command/Ctrl + clic ou clic du milieu ouvre toujours en arrière-plan."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Résultats de recherche"

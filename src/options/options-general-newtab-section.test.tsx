@@ -56,10 +56,18 @@ describe('Options General New Tab section', () => {
   it('saves every surface together when one of them changes', () => {
     const { host, writes, store } = setUp();
     store(OPEN_KEY, { search: true });
-    const toggles = getTags(host, '._x_extension_setting_subrow_2026_unique_ input', 'input');
-    expect(toggles.map((input) => input.checked)).toEqual([true, false, false, false]);
-    expect(toggles.map((input) => input.getAttribute('aria-label'))).toEqual(['搜索结果', '快捷方式', '书签', '站点卡片']);
-    act(() => getTag(host, '#_x_extension_newtab_open_in_new_tab_bookmarks_toggle_2026_unique_', 'input').click());
+    const group = getTag(host, '#_x_extension_newtab_open_in_new_tab_2026_unique_', 'div');
+    const boxes = getTags(group, 'input', 'input');
+    expect(boxes.map((input) => input.checked)).toEqual([true, false, false, false]);
+    expect(Array.from(group.querySelectorAll('label')).map((label) => label.textContent)).toEqual(['搜索结果', '快捷方式', '书签', '站点卡片']);
+    act(() => getTag(host, '#_x_extension_newtab_open_in_new_tab_bookmarks_2026_unique_', 'input').click());
     expect(writes).toEqual([{ [OPEN_KEY]: { search: true, shortcuts: false, bookmarks: true, recentSites: false } }]);
+  });
+
+  it('lets every surface open in the current tab', () => {
+    const { host, writes, store } = setUp();
+    store(OPEN_KEY, { search: true });
+    act(() => getTag(host, '#_x_extension_newtab_open_in_new_tab_search_2026_unique_', 'input').click());
+    expect(writes).toEqual([{ [OPEN_KEY]: { search: false, shortcuts: false, bookmarks: false, recentSites: false } }]);
   });
 });
