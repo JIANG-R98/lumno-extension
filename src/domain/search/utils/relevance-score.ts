@@ -31,6 +31,148 @@ interface SuggestionExtras {
   [field: string]: unknown;
 }
 
+// How a query word appears in the title: a whole token, a token's start,
+// anywhere, or spelled by its units.
+function scoreTitleWord(word: string, title: string, titleLower: string, titleTokens: readonly string[], settings: SearchRankingOptions): number {
+  if (titleTokens.includes(word)) {
+    return 24;
+  }
+  if (titleTokens.some((token) => token.startsWith(word))) {
+    return 14;
+  }
+  if (shouldAllowLooseTextContains(word) && titleLower.includes(word)) {
+    return 8;
+  }
+  const wordUnitMatch = getSearchTitleUnitMatch(title, word, settings, { skipLiteral: true });
+  if (!wordUnitMatch) {
+    return 0;
+  }
+  if (wordUnitMatch.pieces > 1) {
+    return 6;
+  }
+  return wordUnitMatch.exact ? 24 : (wordUnitMatch.anchored ? 16 : 10);
+}
+
+function scoreTitleText(title: string, titleLower: string, titleTokens: readonly string[], context: SearchQueryContext, settings: SearchRankingOptions): number {
+  let score = 0;
+  if (titleLower === context.queryLower) score += 140;
+  if (titleLower.startsWith(context.queryLower)) score += 70;
+  if (titleTokens.includes(context.queryLower)) score += 45;
+  // Pinyin, initials and words spelled across spaces, where the title does
+  // not already hold the query as typed.
+  const titleUnitMatch = context.unitQuery
+    ? getSearchTitleUnitMatch(title, context.unitQuery, settings, { skipLiteral: true })
+    : null;
+  if (titleUnitMatch) score += titleUnitMatch.score;
+  context.queryTerms.forEach((word) => {
+    if (word) score += scoreTitleWord(word, title, titleLower, titleTokens, settings);
+  });
+  if (shouldAllowLooseTextContains(context.queryLower) && titleLower.includes(context.queryLower)) score += 24;
+  return score;
+}
+
+function readHostLabels(url: string): { hostname: string; hostLabels: string[] } {
+  try {
+    const hostname = normalizeHost(new URL(url).hostname);
+    return { hostname, hostLabels: hostname.split('.').filter(Boolean) };
+  } catch (e) {
+    return { hostname: '', hostLabels: [] };
+  }
+}
+
+function scoreHostWord(word: string, hostname: string, hostLabels: readonly string[]): number {
+  if (hostLabels.includes(word)) {
+    return 28;
+  }
+  if (hostLabels.some((label) => label.startsWith(word))) {
+    return 16;
+  }
+  return shouldAllowLooseTextContains(word) && hostname.includes(word) ? 8 : 0;
+}
+
+function scoreHostText(hostname: string, hostLabels: string[], context: SearchQueryContext): number {
+  if (!hostname) {
+    return 0;
+  }
+  let score = 0;
+  if (shouldAllowLooseTextContains(context.queryLower) && hostname.includes(context.queryLower)) score += 14;
+  if (hostname.startsWith(context.queryLower)) score += 20;
+  if (hostLabels.includes(context.queryLower)) {
+    score += 42;
+  } else if (matchesSearchHostSpelling(hostLabels, context)) {
+    score += 28;
+  }
+  context.queryTerms.forEach((word) => {
+    if (word) score += scoreHostWord(word, hostname, hostLabels);
+  });
+  return score;
+}
+
+// The decoded path and its word tokens; nothing for a path that does not decode.
+function readPathTokens(url: string): { decodedPathnameLower: string; pathTokens: string[] } {
+  try {
+    const decodedPathnameLower = decodeURIComponent(String(new URL(url).pathname || '').toLowerCase());
+    const pathTokens = decodedPathnameLower.split('/').filter(Boolean)
+      .flatMap((segment) => segment.split(/[^a-z0-9\u4e00-\u9fff]+/i).filter(Boolean));
+    return { decodedPathnameLower, pathTokens };
+  } catch (e) {
+    return { decodedPathnameLower: '', pathTokens: [] };
+  }
+}
+
+function scorePathWord(word: string, decodedPathnameLower: string, pathTokens: readonly string[]): number {
+  if (pathTokens.includes(word)) {
+    return 32;
+  }
+  if (pathTokens.some((token) => token.startsWith(word))) {
+    return 18;
+  }
+  if (shouldAllowLooseTextContains(word) && pathTokens.some((token) => token.includes(word))) {
+    return 10;
+  }
+  return shouldAllowLooseTextContains(word) && decodedPathnameLower.includes(word) ? 8 : 0;
+}
+
+// A page on this computer or the local network matches by its title.
+function scoreLocalNetworkTitle(hostname: string, titleLower: string, urlLower: string, context: SearchQueryContext, settings: SearchRankingOptions): number {
+  if (!hostname || typeof settings.isLocalNetworkHost !== 'function' || !settings.isLocalNetworkHost(hostname)) {
+    return 0;
+  }
+  const loose = shouldAllowLooseTextContains(context.queryLower);
+  if (titleLower === context.queryLower) return 60;
+  if (titleLower.startsWith(context.queryLower)) return 42;
+  if (loose && titleLower.includes(context.queryLower)) return 24;
+  return loose && urlLower.includes(context.queryLower) ? 20 : 0;
+}
+
+// Recent, frequent and typed visits.
+function scoreVisits(item: ScoredItem, now: number): number {
+  let score = 0;
+  const lastVisitTime = Number(item.lastVisitTime) || 0;
+  if (lastVisitTime) {
+    const hoursSinceVisit = (now - lastVisitTime) / (1000 * 60 * 60);
+    const daysSinceVisit = hoursSinceVisit / 24;
+    if (daysSinceVisit < 1) score += 10;
+    else if (daysSinceVisit < 7) score += 5;
+    else if (daysSinceVisit < 30) score += 2;
+    if (hoursSinceVisit < 2) score += 20;
+    else if (hoursSinceVisit < 24) score += 14;
+    else if (hoursSinceVisit < 72) score += 8;
+  }
+  const visitCount = Number(item.visitCount) > 0 ? Number(item.visitCount) : 0;
+  const typedCount = Number(item.typedCount) > 0 ? Number(item.typedCount) : 0;
+  if (visitCount > 0) score += Math.min(18, Math.log2(visitCount + 1) * 4);
+  if (typedCount > 0) score += Math.min(12, typedCount * 2);
+  return score;
+}
+
+const SOURCE_BASE_SCORES: Readonly<Record<string, number>> = Object.freeze({ bookmark: 12, history: 4, topSite: 6 });
+
+function scoreSource(sourceType: string, intentType: unknown): number {
+  const base = Object.prototype.hasOwnProperty.call(SOURCE_BASE_SCORES, sourceType) ? SOURCE_BASE_SCORES[sourceType] : 0;
+  return base + getSearchSourceAdjustment(sourceType, intentType);
+}
+
 function calculateSearchRelevanceScore(
   item: ScoredItem,
   sourceType: string,
@@ -41,135 +183,21 @@ function calculateSearchRelevanceScore(
   const title = item.title ? String(item.title) : '';
   const titleLower = normalizeSearchText(title);
   const urlLower = item.url.toLowerCase();
-  let hostname = '';
-  let hostLabels: string[] = [];
-  let titleTokens: string[] = [];
-  const pathTokens: string[] = [];
-  let textScore = 0;
-  let behaviorScore = 0;
-  let sourceScore = 0;
-  const now = getNow(settings);
-  const clusterInfo = getSearchSuggestionClusterInfo(item.url);
-  const isGenericBrandDeepTitle = Boolean(
-    context &&
-    context.intentType === 'brand' &&
-    titleLower === context.queryLower &&
-    clusterInfo.depth > 0
-  );
-
-  if (titleLower === context.queryLower) textScore += 140;
-  if (titleLower.startsWith(context.queryLower)) textScore += 70;
-
-  titleTokens = splitSearchTitleTokens(title);
-  if (titleTokens.includes(context.queryLower)) {
-    textScore += 45;
-  }
-
-  // Pinyin, initials and words spelled across spaces, where the title does
-  // not already hold the query as typed.
-  const titleUnitMatch = context.unitQuery
-    ? getSearchTitleUnitMatch(title, context.unitQuery, settings, { skipLiteral: true })
-    : null;
-  if (titleUnitMatch) {
-    textScore += titleUnitMatch.score;
-  }
-
-  context.queryTerms.forEach((word) => {
-    if (!word) {
-      return;
-    }
-    if (titleTokens.includes(word)) {
-      textScore += 24;
-      return;
-    }
-    if (titleTokens.some((token) => token.startsWith(word))) {
-      textScore += 14;
-      return;
-    }
-    if (shouldAllowLooseTextContains(word) && titleLower.includes(word)) {
-      textScore += 8;
-      return;
-    }
-    const wordUnitMatch = getSearchTitleUnitMatch(title, word, settings, { skipLiteral: true });
-    if (wordUnitMatch) {
-      if (wordUnitMatch.pieces > 1) {
-        textScore += 6;
-      } else {
-        textScore += wordUnitMatch.exact ? 24 : (wordUnitMatch.anchored ? 16 : 10);
-      }
-    }
-  });
-
-  if (shouldAllowLooseTextContains(context.queryLower) && titleLower.includes(context.queryLower)) textScore += 24;
-
-  try {
-    hostname = normalizeHost(new URL(item.url).hostname);
-    hostLabels = hostname.split('.').filter(Boolean);
-    if (shouldAllowLooseTextContains(context.queryLower) && hostname.includes(context.queryLower)) textScore += 14;
-    if (hostname.startsWith(context.queryLower)) textScore += 20;
-    if (hostLabels.includes(context.queryLower)) {
-      textScore += 42;
-    } else if (matchesSearchHostSpelling(hostLabels, context)) {
-      textScore += 28;
-    }
-    context.queryTerms.forEach((word) => {
-      if (!word) {
-        return;
-      }
-      if (hostLabels.includes(word)) {
-        textScore += 28;
-        return;
-      }
-      if (hostLabels.some((label) => label.startsWith(word))) {
-        textScore += 16;
-        return;
-      }
-      if (shouldAllowLooseTextContains(word) && hostname.includes(word)) {
-        textScore += 8;
-      }
-    });
-  } catch (e) {
-    // Ignore invalid URL.
-  }
-
+  const titleTokens = splitSearchTitleTokens(title);
+  const { hostname, hostLabels } = readHostLabels(item.url);
+  const { decodedPathnameLower, pathTokens } = readPathTokens(item.url);
+  let textScore = scoreTitleText(title, titleLower, titleTokens, context, settings) +
+    scoreHostText(hostname, hostLabels, context);
   if (shouldAllowLooseTextContains(context.queryLower) && urlLower.includes(context.queryLower)) textScore += 10;
-  try {
-    const parsedUrl = new URL(item.url);
-    const pathnameLower = String(parsedUrl.pathname || '').toLowerCase();
-    const decodedPathnameLower = decodeURIComponent(pathnameLower);
-    const pathSegments = decodedPathnameLower.split('/').filter(Boolean);
-    pathSegments.forEach((segment) => {
-      const segmentTokens = segment.split(/[^a-z0-9\u4e00-\u9fff]+/i).filter(Boolean);
-      if (segmentTokens.length > 0) {
-        pathTokens.push(...segmentTokens);
-      }
+  if (decodedPathnameLower) {
+    context.queryTerms.forEach((word) => {
+      if (word) textScore += scorePathWord(word, decodedPathnameLower, pathTokens);
     });
-    if (decodedPathnameLower && context.queryTerms.length > 0) {
-      context.queryTerms.forEach((word) => {
-        if (!word) {
-          return;
-        }
-        if (pathTokens.includes(word)) {
-          textScore += 32;
-          return;
-        }
-        if (pathTokens.some((token) => token.startsWith(word))) {
-          textScore += 18;
-          return;
-        }
-        if (shouldAllowLooseTextContains(word) && pathTokens.some((token) => token.includes(word))) {
-          textScore += 10;
-          return;
-        }
-        if (shouldAllowLooseTextContains(word) && decodedPathnameLower.includes(word)) {
-          textScore += 8;
-        }
-      });
-    }
-  } catch (e) {
-    // Ignore invalid URL parsing/decoding errors.
   }
-
+  textScore += scoreLocalNetworkTitle(hostname, titleLower, urlLower, context, settings);
+  if (textScore <= 0) {
+    return 0;
+  }
   const coverageStats = getSearchTermCoverageStats(context, {
     titleLower,
     hostname,
@@ -182,56 +210,11 @@ function calculateSearchRelevanceScore(
       matchesSearchHostSpelling(hostLabels, context)
     )
   });
-
-  const isLocalNetworkHost = typeof settings.isLocalNetworkHost === 'function'
-    ? settings.isLocalNetworkHost
-    : () => false;
-  if (hostname && isLocalNetworkHost(hostname)) {
-    if (titleLower === context.queryLower) textScore += 60;
-    else if (titleLower.startsWith(context.queryLower)) textScore += 42;
-    else if (shouldAllowLooseTextContains(context.queryLower) && titleLower.includes(context.queryLower)) textScore += 24;
-    else if (shouldAllowLooseTextContains(context.queryLower) && urlLower.includes(context.queryLower)) textScore += 20;
-  }
-
-  if (textScore <= 0) {
-    return 0;
-  }
-
-  const lastVisitTime = Number(item.lastVisitTime) || 0;
-  if (lastVisitTime) {
-    const daysSinceVisit = (now - lastVisitTime) / (1000 * 60 * 60 * 24);
-    if (daysSinceVisit < 1) behaviorScore += 10;
-    else if (daysSinceVisit < 7) behaviorScore += 5;
-    else if (daysSinceVisit < 30) behaviorScore += 2;
-  }
-
-  const visitCount = Number(item.visitCount) > 0 ? Number(item.visitCount) : 0;
-  const typedCount = Number(item.typedCount) > 0 ? Number(item.typedCount) : 0;
-  if (visitCount > 0) {
-    behaviorScore += Math.min(18, Math.log2(visitCount + 1) * 4);
-  }
-  if (typedCount > 0) {
-    behaviorScore += Math.min(12, typedCount * 2);
-  }
-  if (lastVisitTime) {
-    const hoursSinceVisit = (now - lastVisitTime) / (1000 * 60 * 60);
-    if (hoursSinceVisit < 2) behaviorScore += 20;
-    else if (hoursSinceVisit < 24) behaviorScore += 14;
-    else if (hoursSinceVisit < 72) behaviorScore += 8;
-  }
-
-  if (sourceType === 'bookmark') {
-    sourceScore += 12;
-  } else if (sourceType === 'history') {
-    sourceScore += 4;
-  } else if (sourceType === 'topSite') {
-    sourceScore += 6;
-  }
-  sourceScore += getSearchSourceAdjustment(sourceType, context.intentType);
-
+  const clusterInfo = getSearchSuggestionClusterInfo(item.url);
+  const isGenericBrandDeepTitle = context.intentType === 'brand' && titleLower === context.queryLower && clusterInfo.depth > 0;
   return textScore +
-    behaviorScore +
-    sourceScore +
+    scoreVisits(item, getNow(settings)) +
+    scoreSource(sourceType, context.intentType) +
     getSearchSuggestionCategoryAdjustment(item, context, coverageStats) +
     getSearchDirectNavigationAdjustment(item, sourceType, context, settings) -
     (isGenericBrandDeepTitle ? SEARCH_POLICY.genericBrandDeepTitlePenalty : 0) -
@@ -239,6 +222,41 @@ function calculateSearchRelevanceScore(
       hasSettingsIntent: context.hasSettingsIntent,
       isOwnExtensionUrl: settings.isOwnExtensionUrl
     });
+}
+
+type SelectionEntry = { lastSelectedAt?: number; count?: number };
+
+// The stats entry for this query and page.
+function findSelectionEntry(
+  item: SuggestionLike & { url: string },
+  context: Pick<SearchQueryContext, 'lookupQuery' | 'queryLower'>,
+  stats: StoredSelectionStats
+): SelectionEntry | null {
+  const queryKey = normalizeSearchSelectionQuery(context.lookupQuery || context.queryLower);
+  const bucket = queryKey && stats.queries && stats.queries[queryKey] ? stats.queries[queryKey] : null;
+  if (!bucket || !bucket.entries) {
+    return null;
+  }
+  const urlKey = buildSearchDedupUrlKey(item.url);
+  return (urlKey && bucket.entries[urlKey]) || null;
+}
+
+function positiveSetting(value: unknown, fallback: number): number {
+  return Number(value) > 0 ? Number(value) : fallback;
+}
+
+function getRecencyBoost(ageDays: number): number {
+  if (ageDays < 1) return 64;
+  if (ageDays < 7) return 44;
+  return ageDays < 30 ? 24 : 10;
+}
+
+// A brand query's deep pages are capped, so the site itself stays first.
+function capBrandDeepPage(boost: number, item: SuggestionLike & { url: string }, intentType: unknown, settings: SearchRankingOptions): number {
+  if (intentType !== 'brand' || getSearchSuggestionClusterInfo(item.url).depth <= 0) {
+    return boost;
+  }
+  return Math.min(boost, positiveSetting(settings.brandDeepSelectionBoostLimit, SEARCH_POLICY.brandDeepSelectionBoostLimit));
 }
 
 function getSearchSelectionBoost(
@@ -250,53 +268,21 @@ function getSearchSelectionBoost(
   if (!item || !item.url || !context || !stats || typeof stats !== 'object') {
     return 0;
   }
-  const queryKey = normalizeSearchSelectionQuery(context.lookupQuery || context.queryLower);
-  if (!queryKey) {
-    return 0;
-  }
-  const bucket = stats.queries && stats.queries[queryKey] ? stats.queries[queryKey] : null;
-  if (!bucket || !bucket.entries) {
-    return 0;
-  }
-  const urlKey = buildSearchDedupUrlKey(item.url);
-  const entry = urlKey ? bucket.entries[urlKey] : null;
-  if (!entry) {
+  const page = { ...item, url: item.url };
+  const entry = findSelectionEntry(page, context, stats);
+  const lastSelectedAt = Number(entry && entry.lastSelectedAt) || 0;
+  if (!entry || !lastSelectedAt) {
     return 0;
   }
   const settings: SearchRankingOptions = options && typeof options === 'object' ? options : {};
-  const now = getNow(settings);
-  const lastSelectedAt = Number(entry.lastSelectedAt) || 0;
-  if (!lastSelectedAt) {
-    return 0;
-  }
-  const retentionDays = Number(settings.retentionDays) > 0
-    ? Number(settings.retentionDays)
-    : SEARCH_SELECTION_POLICY.retentionDays;
-  const ageDays = (now - lastSelectedAt) / (1000 * 60 * 60 * 24);
-  if (ageDays > retentionDays) {
+  const ageDays = (getNow(settings) - lastSelectedAt) / (1000 * 60 * 60 * 24);
+  if (ageDays > positiveSetting(settings.retentionDays, SEARCH_SELECTION_POLICY.retentionDays)) {
     return 0;
   }
   const count = Math.max(1, Number(entry.count) || 1);
   const frequencyBoost = Math.min(256, Math.log2(count + 1) * 64);
-  let recencyBoost = 0;
-  if (ageDays < 1) recencyBoost = 64;
-  else if (ageDays < 7) recencyBoost = 44;
-  else if (ageDays < 30) recencyBoost = 24;
-  else recencyBoost = 10;
-  const maxBoost = Number(settings.maxSelectionBoost) > 0
-    ? Number(settings.maxSelectionBoost)
-    : SEARCH_SELECTION_POLICY.maxSelectionBoost;
-  let boost = Math.min(maxBoost, frequencyBoost + recencyBoost);
-  if (context.intentType === 'brand') {
-    const info = getSearchSuggestionClusterInfo(item.url);
-    if (info.depth > 0) {
-      const deepPageLimit = Number(settings.brandDeepSelectionBoostLimit) > 0
-        ? Number(settings.brandDeepSelectionBoostLimit)
-        : SEARCH_POLICY.brandDeepSelectionBoostLimit;
-      boost = Math.min(boost, deepPageLimit);
-    }
-  }
-  return boost;
+  const maxBoost = positiveSetting(settings.maxSelectionBoost, SEARCH_SELECTION_POLICY.maxSelectionBoost);
+  return capBrandDeepPage(Math.min(maxBoost, frequencyBoost + getRecencyBoost(ageDays)), page, context.intentType, settings);
 }
 
 function getSearchSuggestionSourceRank(suggestion: SuggestionLike | null | undefined): number {
