@@ -143,8 +143,7 @@
         "src/shared/ui/cursor-tooltip.css",
         "src/shared/ui/toast.css",
         "src/shared/ui/external-link-icon.css",
-        "src/overlay/suggestions-view.css",
-        "src/content/youtube-auto-pip-page.js"
+        "src/overlay/suggestions-view.css"
       ],
       "matches": [
         "<all_urls>"

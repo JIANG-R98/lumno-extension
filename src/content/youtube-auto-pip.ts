@@ -40,7 +40,6 @@ import type { AutoPipState } from './auto-pip-core';
   };
   const RECOVERY_RELOAD_GUARD_KEY = "_x_lumno_yt_pip_recovery_reload_at_2026_";
   const RECOVERY_RELOAD_GUARD_MS = 15000;
-  const PAGE_BRIDGE_SCRIPT_ID = "__lumno_yt_auto_pip_page_bridge_script_2026__";
   const ENTER_SUPPRESS_AFTER_EXIT_MS = 1200;
   const ENTER_SUPPRESS_AFTER_VISIBLE_MS = 1400;
   // After the tab is shown again, keep undoing PiP and mini-player leftovers:
@@ -61,7 +60,6 @@ import type { AutoPipState } from './auto-pip-core';
     chrome,
     providerStorage: LumnoSettingsStorage.getProviderStorage(chrome),
     config: {
-      pageBridgeScriptId: PAGE_BRIDGE_SCRIPT_ID,
       mainWorldExitAction: "ytForceExitPiPInMainWorld",
       enterSuppressAfterExitMs: ENTER_SUPPRESS_AFTER_EXIT_MS,
       enterSuppressAfterVisibleMs: ENTER_SUPPRESS_AFTER_VISIBLE_MS
@@ -652,7 +650,6 @@ import type { AutoPipState } from './auto-pip-core';
     } catch (_error) {
       // Ignore URL cleanup errors.
     }
-    core.ensurePageBridgeInjected();
     syncActiveVideo();
     core.bindMediaSessionAutoPiP();
     core.bindRuntimeMessageListener();

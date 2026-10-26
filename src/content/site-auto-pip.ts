@@ -75,7 +75,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   const MIN_VISIBLE_WIDTH = 220;
   const MIN_VISIBLE_HEIGHT = 124;
   const MIN_VISIBLE_AREA = 60000;
-  const PAGE_BRIDGE_SCRIPT_ID = "__lumno_site_auto_pip_page_bridge_script_2026__";
   const DOUYIN_MODAL_RECOVERY_RELOAD_GUARD_MS = 15000;
   // Timeouts for asking the background to run PiP code in the page's world.
   const MAIN_WORLD_SETUP_TIMEOUT_MS = 960;
@@ -97,7 +96,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     chrome,
     providerStorage: LumnoSettingsStorage.getProviderStorage(chrome),
     config: {
-      pageBridgeScriptId: PAGE_BRIDGE_SCRIPT_ID,
       mainWorldExitAction: "forceExitPiPInMainWorld",
       enterSuppressAfterExitMs: ENTER_SUPPRESS_AFTER_EXIT_MS,
       enterSuppressAfterVisibleMs: ENTER_SUPPRESS_AFTER_VISIBLE_MS
@@ -934,7 +932,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     }
     syncActiveVideo();
     markPlaybackIntentFromActiveVideo();
-    core.ensurePageBridgeInjected();
     core.bindMediaSessionAutoPiP();
     core.bindRuntimeMessageListener();
 

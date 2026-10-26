@@ -3,6 +3,12 @@
 // content_scripts entries. Nothing here touches the page until a content
 // script calls createAutoPipCore.
 import * as LumnoSettings from '../domain/settings';
+import {
+  PIP_PAGE_BRIDGE_REQUEST_EVENT,
+  PIP_PAGE_BRIDGE_RESPONSE_EVENT,
+  readPipPageBridgeResponse
+} from '../domain/pip-page-bridge';
+import type { PipPageBridgeRequest } from '../domain/pip-page-bridge';
 import type { BackgroundAction, BackgroundReply, BackgroundRequest, OkReply, PageReply } from '../domain/messages';
 import * as LumnoMessaging from '../platform/messaging';
 import type * as LumnoSettingsStorage from '../platform/settings-storage';
@@ -31,7 +37,6 @@ interface AutoPipState {
 }
 
 interface AutoPipCoreConfig {
-  pageBridgeScriptId: string;
   // The background action that leaves PiP from the page's own world.
   mainWorldExitAction: 'forceExitPiPInMainWorld' | 'ytForceExitPiPInMainWorld';
   enterSuppressAfterExitMs: number;
@@ -75,9 +80,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 const AUTO_PIP_ENABLED_STORAGE_KEY = LumnoSettings.AUTO_PIP_ENABLED_STORAGE_KEY;
 const DOCUMENT_PIP_ACTIVE_FLAG = '__lumno_document_pip_active_2026__';
-const PAGE_BRIDGE_REQUEST_EVENT = '__lumno_yt_force_exit_pip_req_2026__';
-const PAGE_BRIDGE_RESPONSE_EVENT = '__lumno_yt_force_exit_pip_res_2026__';
-const PAGE_BRIDGE_SCRIPT_PATH = 'src/content/youtube-auto-pip-page.js';
 const MAIN_WORLD_EXIT_TIMEOUT_MS = 760;
 const PAGE_BRIDGE_EXIT_TIMEOUT_MS = 520;
 const MIN_DEFERRED_ENTER_DELAY_MS = 40;
@@ -305,35 +307,16 @@ function createAutoPipCore(options: AutoPipCoreOptions) {
     });
   }
 
-  function ensurePageBridgeInjected(): void {
-    if (document.getElementById(config.pageBridgeScriptId)) {
-      return;
-    }
-    const runtime = chrome ? chrome.runtime : null;
-    if (!runtime || typeof runtime.getURL !== 'function') {
-      return;
-    }
-    const script = document.createElement('script');
-    script.id = config.pageBridgeScriptId;
-    script.src = runtime.getURL(PAGE_BRIDGE_SCRIPT_PATH);
-    script.async = false;
-    const target = document.documentElement || document.head || document.body;
-    if (!target) {
-      return;
-    }
-    target.appendChild(script);
-  }
-
   let pageBridgeRequestSeq = 0;
 
-  // Asks youtube-auto-pip-page.js, running in the page's own world, to exit PiP.
+  // Asks the page bridge (pip-page-bridge.ts), running in the page's own
+  // world, to exit PiP.
   function requestPageBridgeExitPiP(timeoutMs: number): Promise<PageBridgeExitResult> {
     return new Promise((resolve) => {
       if (typeof window.CustomEvent !== 'function') {
         resolve({ ok: false, reason: 'no-custom-event' });
         return;
       }
-      ensurePageBridgeInjected();
       const requestId = ++pageBridgeRequestSeq;
       let done = false;
       let timer = 0;
@@ -342,7 +325,7 @@ function createAutoPipCore(options: AutoPipCoreOptions) {
           return;
         }
         done = true;
-        window.removeEventListener(PAGE_BRIDGE_RESPONSE_EVENT, onResponse, true);
+        window.removeEventListener(PIP_PAGE_BRIDGE_RESPONSE_EVENT, onResponse, true);
         if (timer) {
           window.clearTimeout(timer);
         }
@@ -350,26 +333,24 @@ function createAutoPipCore(options: AutoPipCoreOptions) {
       };
       // The page's answer, as plain data on a CustomEvent from the page's world.
       const onResponse = (event: Event): void => {
-        const rawDetail: unknown = 'detail' in event ? event.detail : null;
-        const detail: Record<string, unknown> = isRecord(rawDetail) ? rawDetail : {};
-        if (Number(detail.requestId || 0) !== requestId) {
+        const response = readPipPageBridgeResponse('detail' in event ? event.detail : null);
+        if (!response || response.requestId !== requestId) {
           return;
         }
         finish({
           ok: true,
-          attempted: Boolean(detail.attempted),
-          before: Boolean(detail.before),
-          after: Boolean(detail.after),
-          error: String(detail.error || '')
+          attempted: response.attempted,
+          before: response.before,
+          after: response.after,
+          error: response.error
         });
       };
-      window.addEventListener(PAGE_BRIDGE_RESPONSE_EVENT, onResponse, true);
+      window.addEventListener(PIP_PAGE_BRIDGE_RESPONSE_EVENT, onResponse, true);
       timer = window.setTimeout(() => {
         finish({ ok: false, reason: 'timeout' });
       }, Math.max(120, Number(timeoutMs || PAGE_BRIDGE_EXIT_TIMEOUT_MS)));
-      window.dispatchEvent(new window.CustomEvent(PAGE_BRIDGE_REQUEST_EVENT, {
-        detail: { requestId: requestId }
-      }));
+      const request: PipPageBridgeRequest = { requestId };
+      window.dispatchEvent(new window.CustomEvent(PIP_PAGE_BRIDGE_REQUEST_EVENT, { detail: request }));
     });
   }
 
@@ -569,7 +550,6 @@ function createAutoPipCore(options: AutoPipCoreOptions) {
     getRectArea,
     pickPrimaryVideo,
     syncActiveVideo,
-    ensurePageBridgeInjected,
     maybeExitPiP,
     bindRuntimeMessageListener,
     bindMediaSessionAutoPiP,

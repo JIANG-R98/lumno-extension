@@ -33,7 +33,9 @@ function collectSourceFiles(directory) {
       if (entry.isDirectory()) {
         return excludedDirectories.has(entry.name) ? [] : collectSourceFiles(filePath);
       }
-      return entry.isFile() && /\.(?:js|ts|tsx)$/.test(entry.name) && !entry.name.endsWith('.d.ts') ? [filePath] : [];
+      // Tests are type-checked with their runner's types by tsconfig.test.json.
+      return entry.isFile() && /\.(?:js|ts|tsx)$/.test(entry.name) && !entry.name.endsWith('.d.ts') &&
+        !/\.test\.tsx?$/.test(entry.name) ? [filePath] : [];
     });
 }
 

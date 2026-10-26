@@ -119,8 +119,7 @@ export default tseslint.config(
   {
     // Pages load these by URL as classic scripts, outside the bundles.
     files: [
-      'src/shared/search/search-han-variants.js',
-      'src/content/youtube-auto-pip-page.js'
+      'src/shared/search/search-han-variants.js'
     ],
     languageOptions: {
       sourceType: 'script'

@@ -52,6 +52,7 @@ import './bookmark-tab-groups';
 import './selection-target';
 import './selection-quick-action-provider';
 import * as LumnoSelectionScriptRegistration from './selection-script-registration';
+import * as LumnoPipPageBridgeRegistration from './pip-page-bridge-registration';
 import * as LumnoLinkPreview from './link-preview';
 import * as BACKGROUND_MESSAGE_ROUTER from './message-router';
 import './newtab-fallback';
@@ -576,6 +577,11 @@ if (chrome && chrome.windows && chrome.windows.onRemoved) {
 
 const selectionScriptRegistration = LumnoSelectionScriptRegistration
   .createSelectionScriptRegistration({ chromeApi: chrome });
+// The page bridge is in every page the automatic picture-in-picture scripts
+// run in, as it was when they injected it themselves.
+LumnoPipPageBridgeRegistration
+  .createPipPageBridgeRegistration({ chromeApi: chrome, manifest: chrome.runtime.getManifest() })
+  .sync(true);
 loadSelectionQuickActionsEnabled().then((enabled) => selectionScriptRegistration.sync(enabled));
 chrome.storage.onChanged.addListener((changes, areaName) => {
   const storageModeChanged = areaName === 'local' && Boolean(changes[SETTINGS.LOCAL_PRIMARY_STORAGE_KEY]);

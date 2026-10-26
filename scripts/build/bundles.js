@@ -92,7 +92,10 @@ const BUNDLES = [
     files: ['src/content/shortcut-key-observer.ts', 'src/content/link-preview-trigger.ts']
   },
   { name: 'site-auto-pip', files: ['src/content/auto-pip-blacklist.ts', 'src/content/site-auto-pip.ts'] },
-  { name: 'youtube-auto-pip', files: ['src/content/youtube-auto-pip.ts'] }
+  { name: 'youtube-auto-pip', files: ['src/content/youtube-auto-pip.ts'] },
+
+  // Registered by the background in the page's main world
+  { name: 'pip-page-bridge', files: ['src/content/pip-page-bridge.ts'] }
 ];
 
 module.exports = {

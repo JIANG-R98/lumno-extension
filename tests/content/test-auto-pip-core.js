@@ -130,7 +130,6 @@ function createHarness(overrides = {}) {
     chrome,
     providerStorage: settingsStorage.getProviderStorage(chrome),
     config: {
-      pageBridgeScriptId: 'bridge',
       mainWorldExitAction: 'testExitInMainWorld',
       enterSuppressAfterExitMs: 1100,
       enterSuppressAfterVisibleMs: 1300

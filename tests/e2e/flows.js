@@ -338,6 +338,34 @@ async function diagnostics({ browser }) {
   assert.ok(!text.includes('intranet.example'), 'the file should not carry the address');
 }
 
+// The background registers the picture-in-picture page bridge in the page's
+// main world on the automatic picture-in-picture sites, and the bridge
+// answers the isolated-world script's request there. The flow points the
+// registration at the fixture page, since the real sites need the network.
+async function pipPageBridge({ browser, fixtures }) {
+  const registered = await browser.worker.waitFor(`chrome.scripting.getRegisteredContentScripts({ ids: ['lumno-pip-page-bridge'] })
+    .then(([script]) => script || null)`, { message: 'the page bridge was not registered' });
+  assert.strictEqual(registered.world, 'MAIN');
+  assert.strictEqual(registered.runAt, 'document_start');
+  assert.deepStrictEqual(registered.js, ['build/pip-page-bridge.js']);
+  assert.ok(registered.matches.includes('*://*.youtube.com/*'));
+  assert.ok(!registered.matches.includes('<all_urls>'));
+
+  const fixtureMatch = fixtures.url('/*').replace(/:\d+\//, '/');
+  await browser.worker.evaluate(`chrome.scripting.updateContentScripts([
+    { id: 'lumno-pip-page-bridge', matches: [${JSON.stringify(fixtureMatch)}] }
+  ])`);
+  const page = await browser.openPage(fixtures.url('/fixture.html'));
+  // CDP evaluates in the page's main world, the same world as the bridge.
+  const response = await page.evaluate(`new Promise((resolve) => {
+    window.addEventListener('__lumno_yt_force_exit_pip_res_2026__', (event) => resolve(event.detail), { once: true });
+    window.dispatchEvent(new CustomEvent('__lumno_yt_force_exit_pip_req_2026__', { detail: { requestId: 42 } }));
+    setTimeout(() => resolve(null), 2000);
+  })`);
+  assert.deepStrictEqual(response, { requestId: 42, attempted: false, before: false, after: false, error: '' },
+    'the bridge should answer in the page world');
+}
+
 module.exports = {
   surfaces,
   'newtab-search': newtabSearch,
@@ -345,5 +373,6 @@ module.exports = {
   'search-scope': searchScope,
   'tab-switcher': tabSwitcher,
   'link-preview': linkPreview,
-  diagnostics
+  diagnostics,
+  'pip-page-bridge': pipPageBridge
 };

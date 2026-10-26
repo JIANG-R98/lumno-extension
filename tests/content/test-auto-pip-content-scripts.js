@@ -164,8 +164,8 @@ async function testIqiyiUsesMainWorldSetupAndEnter() {
     'iQIYI pages should prepare main-world auto PiP as soon as the script starts');
   assert.deepStrictEqual(env.storageWrites, [{ [AUTO_PIP_KEY]: true }],
     'a missing auto PiP setting should be stored as its normalized default');
-  assert(env.document.getElementById('__lumno_site_auto_pip_page_bridge_script_2026__'),
-    'the page bridge script should be injected at start');
+  assert.strictEqual(env.document.querySelector('script'), null,
+    'the page bridge is registered by the background, not injected by the content script');
 
   env.setVisibility('hidden');
   await waitFor(() => env.pipElement === env.video, 'iQIYI to enter PiP');
@@ -246,7 +246,7 @@ async function testYoutubeEnterExitAndSurrender() {
   await env.load();
   assert.strictEqual(env.window.location.search, '?v=abc',
     'the recovery marker should be removed from the URL on load');
-  assert(env.document.getElementById('__lumno_yt_auto_pip_page_bridge_script_2026__'));
+  assert.strictEqual(env.document.querySelector('script'), null);
   assert.deepStrictEqual(env.takeMessages(), []);
 
   env.setVisibility('hidden');

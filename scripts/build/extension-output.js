@@ -30,8 +30,7 @@ const EXTENSION_ROOTS = [
 // Scripts pages and content scripts load by URL; every other script in src/
 // runs from a bundle.
 const SOURCE_RUNTIME_SCRIPTS = new Set([
-  'src/shared/search/search-han-variants.js',
-  'src/content/youtube-auto-pip-page.js'
+  'src/shared/search/search-han-variants.js'
 ]);
 
 function toRepoPath(file) {
