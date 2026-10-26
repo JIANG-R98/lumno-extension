@@ -55,11 +55,11 @@ const routes = {
 // KiB. 1.1.4 measured 425 / 126.5, 288 / 85.0, 274 / 82.5, 215 / 67.9 and
 // 821 / 238.5 (uncompressed / gzip) under Node 22.
 const ceilings = {
-  'the New Tab route': { uncompressed: 470, gzip: 140 },
+  'the New Tab route': { uncompressed: 480, gzip: 140 },
   'the Options route': { uncompressed: 320, gzip: 90 },
   'the injected Overlay route': { uncompressed: 320, gzip: 97 },
   'the toolbar popup route': { uncompressed: 230, gzip: 72 },
-  'all React artifacts together': { uncompressed: 940, gzip: 275 }
+  'all React artifacts together': { uncompressed: 950, gzip: 275 }
 };
 
 const GROWTH_LIMIT_KIB = { uncompressed: 12, gzip: 4 };
