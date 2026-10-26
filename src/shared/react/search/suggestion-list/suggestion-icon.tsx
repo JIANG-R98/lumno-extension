@@ -17,6 +17,7 @@ import type {
 } from './types';
 import { surfaceClass, setSurfaceStyle } from './surface-options';
 import { innerHtml } from '../../inner-html';
+import { FaviconFallback, OverlayFaviconFallback } from '../../favicon-fallback';
 
 export function getBrowserFallbackIcon(
   options: NormalizedOptions,
@@ -293,7 +294,13 @@ export function SuggestionIcon({
               : undefined
           }
         />
-      ) : (
+      ) : null}
+      {isFavicon && spec.attach ? (
+        options.surface === 'overlay'
+          ? <OverlayFaviconFallback />
+          : <FaviconFallback iconName={spec.fallbackIconName || 'ri-link'} tone="suggestion" />
+      ) : null}
+      {isFavicon ? null : (
         <InlineIcon
           options={options}
           name={spec.fallbackIconName || spec.iconName || 'ri-link'}

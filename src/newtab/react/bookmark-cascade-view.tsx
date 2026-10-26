@@ -12,6 +12,7 @@ import type {
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { innerHtml } from '../../shared/react/inner-html';
+import { FaviconFallback } from '../../shared/react/favicon-fallback';
 import { RemixIcon } from '../../shared/react/remix-icon';
 
 // The menu levels size to their content within these bounds.
@@ -188,6 +189,7 @@ function CascadeRow({
             src={row.iconUrl || undefined}
           />
         )}
+        {row.isFolder || row.iconUrl ? null : <FaviconFallback />}
         <span className="x-nt-bookmark-cascade-label">{row.title}</span>
         {row.isFolder ? (
           <span aria-hidden="true" className="x-nt-bookmark-cascade-arrow">

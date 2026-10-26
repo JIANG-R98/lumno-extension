@@ -4,14 +4,11 @@
 import * as faviconUtils from '../../domain/favicon/favicon-utils';
 import * as LumnoMessaging from '../../platform/messaging';
 import type { MessageRuntime } from '../../platform/messaging';
-import { queryHtmlElements } from '../dom-lookup';
+import { isHtmlElement } from '../dom-guards';
 
 // A favicon <img>; the load token tells a finished load whether a newer
 // one started since. The surfaces read it too.
 type FaviconImage = HTMLImageElement & { _xFaviconLoadToken?: number };
-
-// The fallback icon shown beside an image, linked back to it.
-type FallbackIconNode = HTMLElement & { _xFallbackForImage?: FaviconImage };
 
 // The page window, or a stand-in with the members used here.
 type FaviconViewWindow = Partial<Pick<Window, 'requestAnimationFrame' | 'setTimeout'>> & {
@@ -66,7 +63,7 @@ interface FaviconSrcOptions {
 }
 
 interface FaviconRestoreOptions {
-  removeFallbackNode?(img: FaviconImage): void;
+  hideFallbackNode?(img: FaviconImage): void;
   onFailed?(): void;
   applyFallbackIcon?(img: FaviconImage): void;
 }
@@ -531,8 +528,8 @@ function createFaviconViewCore(options?: FaviconViewCoreOptions | null) {
         return true;
       }
     }
-    if (typeof optionsForRestore.removeFallbackNode === 'function') {
-      optionsForRestore.removeFallbackNode(img);
+    if (typeof optionsForRestore.hideFallbackNode === 'function') {
+      optionsForRestore.hideFallbackNode(img);
     }
     if (typeof optionsForRestore.onFailed === 'function') {
       optionsForRestore.onFailed();
@@ -668,74 +665,45 @@ function setFallbackNodeVisible(node: Element | null | undefined, visible: boole
   node.setAttribute('data-visible', visible ? 'true' : 'false');
 }
 
-// Keeps the fallback icon node next to a favicon <img> in step with the
-// image's resolved, pending and failed states. Surfaces differ only in how
-// they build the node and how they show or hide the image itself.
+// Keeps the fallback icon node a view draws beside each favicon <img> in step
+// with the image's resolved, pending and failed states. Surfaces differ only
+// in where their views put the node and how they show or hide the image.
 interface FallbackIconPresenterOptions {
   fallbackClassName: string;
-  // Builds the node and puts it next to the image.
-  createFallbackNode(img: FaviconImage): FallbackIconNode;
+  // The sibling of the image where its view draws the node.
+  getFallbackSibling(img: FaviconImage): Element | null;
+  // Sizes a node before it shows, e.g. to the image it stands in for.
+  styleFallbackNode?(img: FaviconImage, node: HTMLElement): void;
   setImageVisible(img: FaviconImage, visible: boolean): void;
   clearCandidateTimer(img: FaviconImage): void;
   setTimer(callback: () => void, delay: number): unknown;
-  nodeMap?: WeakMap<FaviconImage, FallbackIconNode>;
 }
 
 function createFallbackIconPresenter(options: FallbackIconPresenterOptions) {
   const {
     fallbackClassName,
-    createFallbackNode,
+    getFallbackSibling,
     setImageVisible,
     clearCandidateTimer,
     setTimer
   } = options;
-  const nodeMap = options.nodeMap || new WeakMap<FaviconImage, FallbackIconNode>();
+  const styleFallbackNode = options.styleFallbackNode || noop;
 
-  function findFallbackIconNode(img: FaviconImage | null | undefined): FallbackIconNode | null {
-    if (!img || !img.parentElement) {
-      return null;
-    }
-    const mappedNode = nodeMap.get(img);
-    if (mappedNode && mappedNode.isConnected && mappedNode.parentElement === img.parentElement) {
-      return mappedNode;
-    }
-    const fallbackNodes: FallbackIconNode[] = Array.from(queryHtmlElements(img.parentElement, `.${fallbackClassName}`));
-    const linkedNode = fallbackNodes.find((candidate) => candidate && candidate._xFallbackForImage === img) || null;
-    if (linkedNode) {
-      nodeMap.set(img, linkedNode);
-      return linkedNode;
-    }
-    if (fallbackNodes.length === 1 && img.parentElement.querySelectorAll('img').length === 1) {
-      const onlyNode = fallbackNodes[0];
-      onlyNode._xFallbackForImage = img;
-      nodeMap.set(img, onlyNode);
-      return onlyNode;
-    }
-    return null;
+  function findFallbackIconNode(img: FaviconImage | null | undefined): HTMLElement | null {
+    const sibling = img ? getFallbackSibling(img) : null;
+    return isHtmlElement(sibling) && sibling.classList.contains(fallbackClassName) ? sibling : null;
   }
 
-  function ensureFallbackIconNode(img: FaviconImage | null | undefined): FallbackIconNode | null {
-    if (!img || !img.parentElement) {
-      return null;
-    }
-    const existingNode = findFallbackIconNode(img);
-    if (existingNode) {
-      return existingNode;
-    }
-    const node = createFallbackNode(img);
-    node._xFallbackForImage = img;
-    nodeMap.set(img, node);
-    return node;
-  }
-
-  function removeFallbackIconNode(img: FaviconImage | null | undefined): void {
+  function setFallbackIconVisible(img: FaviconImage | null | undefined, visible: boolean): void {
     const node = findFallbackIconNode(img);
-    if (node && node.parentNode) {
-      node.parentNode.removeChild(node);
+    if (node && img && visible) {
+      styleFallbackNode(img, node);
     }
-    if (img) {
-      nodeMap.delete(img);
-    }
+    setFallbackNodeVisible(node, visible);
+  }
+
+  function hideFallbackIconNode(img: FaviconImage | null | undefined): void {
+    setFallbackIconVisible(img, false);
   }
 
   function showResolvedFavicon(img: FaviconImage | null | undefined): void {
@@ -743,28 +711,27 @@ function createFallbackIconPresenter(options: FallbackIconPresenterOptions) {
       return;
     }
     clearCandidateTimer(img);
-    setFallbackNodeVisible(findFallbackIconNode(img), false);
+    setFallbackIconVisible(img, false);
     img.removeAttribute('data-fallback-icon');
     img.removeAttribute('data-favicon-placeholder');
     setImageVisible(img, true);
   }
 
-  // The node may not be insertable until the image is attached, so retry once
-  // on the next task while the image still waits on the same state.
+  // The image may not be in its view yet, so look for the node once more on
+  // the next task while the image still waits on the same state.
   function revealFallbackNode(img: FaviconImage, stateAttribute: string, clearedAttribute: string): void {
-    const node = ensureFallbackIconNode(img);
     img.removeAttribute(clearedAttribute);
     img.setAttribute(stateAttribute, 'true');
     setImageVisible(img, false);
-    if (node) {
-      setFallbackNodeVisible(node, true);
+    if (findFallbackIconNode(img)) {
+      setFallbackIconVisible(img, true);
       return;
     }
     setTimer(() => {
       if (!img.isConnected || img.getAttribute(stateAttribute) !== 'true') {
         return;
       }
-      setFallbackNodeVisible(ensureFallbackIconNode(img), true);
+      setFallbackIconVisible(img, true);
     }, 0);
   }
 
@@ -785,8 +752,8 @@ function createFallbackIconPresenter(options: FallbackIconPresenterOptions) {
 
   return Object.freeze({
     findFallbackIconNode,
-    ensureFallbackIconNode,
-    removeFallbackIconNode,
+    setFallbackIconVisible,
+    hideFallbackIconNode,
     showResolvedFavicon,
     showPendingFallbackIcon,
     applyFallbackIcon
@@ -797,7 +764,6 @@ type FaviconViewCore = ReturnType<typeof createFaviconViewCore>;
 type FallbackIconPresenter = ReturnType<typeof createFallbackIconPresenter>;
 
 export type {
-  FallbackIconNode,
   FallbackIconPresenter,
   FallbackIconPresenterOptions,
   FaviconImage,

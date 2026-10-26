@@ -14,6 +14,7 @@ import type { RecentSite } from '../../domain/recent-sites-store';
 import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 import { queryHtmlTags } from '../../shared/dom-lookup';
 import { innerHtml } from '../../shared/react/inner-html';
+import { FaviconFallback } from '../../shared/react/favicon-fallback';
 
 type Translate = (key: string, fallback: string) => string;
 // A site's theme as the page resolves it; the view passes it through.
@@ -930,14 +931,8 @@ function RecentSiteCard({
                 browserPageFaviconUrl ? 'ri-link' : undefined
               }
             />
-            {browserPageFaviconUrl ? (
-              <span
-                aria-hidden="true"
-                className="x-nt-favicon-fallback _x_extension_favicon_fallback_2024_unique_"
-                data-visible="true"
-                dangerouslySetInnerHTML={innerHtml(options.getRiSvg('ri-link', 'ri-size-16'))}
-              />
-            ) : null}
+            {/* A browser page shows the link icon until its own icon loads. */}
+            <FaviconFallback visible={Boolean(browserPageFaviconUrl)} />
             <div className="x-nt-recent-name" title={siteName}>
               {siteName}
             </div>

@@ -21,6 +21,7 @@ import {
 import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 import { queryHtmlElements, queryHtmlTag, queryHtmlTags } from '../../shared/dom-lookup';
 import { innerHtml } from '../../shared/react/inner-html';
+import { FaviconFallback } from '../../shared/react/favicon-fallback';
 
 // A site's theme as the page resolves it; the view passes it through.
 type ThemeValue = Partial<ThemeVariant> | null;
@@ -338,9 +339,6 @@ function ShortcutFavicon({
       return;
     }
     if (localIconDataUrl) {
-      image.parentElement
-        ?.querySelectorAll('._x_extension_favicon_fallback_2024_unique_')
-        .forEach((node) => node.remove());
       return;
     }
     options.attachFaviconWithFallbacks(image, url, host, {
@@ -398,6 +396,8 @@ function ShortcutFavicon({
           draggable={false}
           src={localIconDataUrl || undefined}
         />
+        {/* A saved local icon needs no fallback; a new icon starts with a hidden one. */}
+        {localIconDataUrl ? null : <FaviconFallback key={`fallback:${iconKey}`} />}
       </span>
     </span>
   );

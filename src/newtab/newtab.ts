@@ -1732,7 +1732,6 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     isLowConfidenceTheme,
     normalizeThemeConfidence,
     FAVICON_UTILS,
-    getRiSvg,
     getExtensionFaviconUrl,
     getGstaticFaviconUrl,
     getChromeFaviconUrl,

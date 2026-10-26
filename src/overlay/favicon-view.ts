@@ -1,7 +1,7 @@
 import * as LumnoFaviconUtils from '../domain/favicon/favicon-utils';
 import type { FaviconChromeApi, FaviconDecisionLogger, FaviconPlanCandidate } from '../domain/favicon/favicon-utils';
 import * as LumnoFaviconViewCore from '../shared/favicon/favicon-view-core';
-import type { FallbackIconNode, FaviconImage, FaviconViewCoreOptions, FaviconViewWindow, FaviconWarmItem } from '../shared/favicon/favicon-view-core';
+import type { FaviconImage, FaviconViewCoreOptions, FaviconViewWindow, FaviconWarmItem } from '../shared/favicon/favicon-view-core';
 import * as LumnoMessaging from '../platform/messaging';
 import type { MessageRuntime } from '../platform/messaging';
 import { queryHtmlTags } from '../shared/dom-lookup';
@@ -21,7 +21,6 @@ interface OverlayFaviconViewOptions {
   document?: Document | null;
   windowObj?: OverlayFaviconWindow | null;
   chromeApi?: (FaviconChromeApi & { runtime?: FaviconChromeApi['runtime'] & MessageRuntime }) | null;
-  getRiSvg?(id: string, sizeClass: string): string;
   getHostFromUrl?(url: string): string;
   getExtensionFaviconUrl?(pageUrl: string): string;
   getGstaticFaviconUrl?(pageUrl: string): string;
@@ -49,7 +48,6 @@ interface OverlayFaviconViewOptions {
   faviconDataCache?: Map<string, string>;
   faviconDataPending?: Map<string, Promise<string | null>>;
   iconPreloadCache?: Map<string, HTMLImageElement>;
-  faviconFallbackNodeMap?: WeakMap<FaviconImage, FallbackIconNode>;
   faviconCandidateLoadTimeoutMs?: number;
 }
 
@@ -79,7 +77,6 @@ function createOverlayFaviconViewRuntime(options?: OverlayFaviconViewOptions | n
   const doc = config.document || (typeof document !== 'undefined' ? document : null);
   const win: OverlayFaviconWindow = config.windowObj || (typeof window !== 'undefined' ? window : {});
   const chromeApi = config.chromeApi || (typeof chrome !== 'undefined' ? chrome : {});
-  const getRiSvg = typeof config.getRiSvg === 'function' ? config.getRiSvg : (() => '');
   const getHostFromUrl = typeof config.getHostFromUrl === 'function' ? config.getHostFromUrl : (() => '');
   const getExtensionFaviconUrl = typeof config.getExtensionFaviconUrl === 'function' ? config.getExtensionFaviconUrl : (() => '');
   const getGstaticFaviconUrl = typeof config.getGstaticFaviconUrl === 'function' ? config.getGstaticFaviconUrl : (() => '');
@@ -196,7 +193,6 @@ function createOverlayFaviconViewRuntime(options?: OverlayFaviconViewOptions | n
     detectDefaultExtensionFavicon: config.detectDefaultExtensionFavicon
   });
   const {
-    setFallbackNodeVisible,
     applyFaviconOpticalShift,
     applyFaviconOpticalAlignment,
     setFaviconSrcWithAnimation,
@@ -214,27 +210,15 @@ function createOverlayFaviconViewRuntime(options?: OverlayFaviconViewOptions | n
     }
   }
 
-  function createFallbackIconNode(img: FaviconImage): FallbackIconNode {
-    const ownerDocument = doc || document;
-    const node = ownerDocument.createElement('span');
-    node.className = 'x-ov-suggestion-inline-icon x-ov-suggestion-favicon-fallback _x_extension_overlay_favicon_fallback_2026_unique_';
-    node.innerHTML = getRiSvg('ri-link', 'ri-size-16');
-    setFallbackNodeVisible(node, true);
-    if (img.parentElement) {
-      img.parentElement.insertBefore(node, img.nextSibling);
-    }
-    return node;
-  }
-
   const {
-    removeFallbackIconNode,
+    hideFallbackIconNode,
     showResolvedFavicon,
     showPendingFallbackIcon,
     applyFallbackIcon
   } = faviconViewCoreApi.createFallbackIconPresenter({
     fallbackClassName: '_x_extension_overlay_favicon_fallback_2026_unique_',
-    nodeMap: config.faviconFallbackNodeMap,
-    createFallbackNode: createFallbackIconNode,
+    // The suggestion row draws the fallback right after its image.
+    getFallbackSibling: (img) => img.nextElementSibling,
     setImageVisible: (img, visible) => setFaviconVisibility(img, visible ? 'visible' : 'hidden'),
     clearCandidateTimer: clearOverlayCandidateLoadTimer,
     setTimer
@@ -358,7 +342,7 @@ function createOverlayFaviconViewRuntime(options?: OverlayFaviconViewOptions | n
 
   function restoreWorkingFaviconOrFail(img: FaviconImage, previousSrc: string, onFailed: () => void) {
     return faviconViewCore.restoreWorkingFaviconOrFallback(img, previousSrc, {
-      removeFallbackNode: removeFallbackIconNode,
+      hideFallbackNode: hideFallbackIconNode,
       onFailed,
       applyFallbackIcon
     });
@@ -696,7 +680,7 @@ function createOverlayFaviconViewRuntime(options?: OverlayFaviconViewOptions | n
   function finalizeOverlayOwnedFaviconFailure(img: OverlayFaviconImage, state: FaviconAttachState): void {
     clearOverlayCandidateLoadTimer(img);
     if (state.hasFailedHandler) {
-      removeFallbackIconNode(img);
+      hideFallbackIconNode(img);
       state.handleFailed();
       return;
     }

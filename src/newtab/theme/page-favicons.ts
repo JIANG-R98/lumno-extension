@@ -39,7 +39,6 @@ interface PageFaviconsDeps {
     | 'isChromeMonogramFaviconUrl'
     | 'isPlaceholderFaviconColor'
     | 'createFaviconUrlResolver'>;
-  getRiSvg(id: string, sizeClass?: string): string;
   getExtensionFaviconUrl(pageUrl: string): string;
   getGstaticFaviconUrl(pageUrl: string): string;
   getChromeFaviconUrl(pageUrl: string): string;
@@ -77,7 +76,6 @@ function createPageFavicons(deps: PageFaviconsDeps) {
     isLowConfidenceTheme,
     normalizeThemeConfidence,
     FAVICON_UTILS,
-    getRiSvg,
     getExtensionFaviconUrl,
     getGstaticFaviconUrl,
     getChromeFaviconUrl,
@@ -191,7 +189,6 @@ function createPageFavicons(deps: PageFaviconsDeps) {
     document,
     windowObj: window,
     chromeApi: chrome,
-    getRiSvg,
     getExtensionFaviconUrl,
     getGstaticFaviconUrl,
     getChromeFaviconUrl,

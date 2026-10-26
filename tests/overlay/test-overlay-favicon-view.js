@@ -61,48 +61,26 @@ function createFakeImage() {
   };
 }
 
-function attachFakeFallbackParent(img) {
-  const children = [img];
-  const parent = {
-    children,
-    querySelectorAll(selector) {
-      if (selector === 'img') {
-        return children.filter((node) => node === img && node.isConnected);
-      }
-      if (selector === '._x_extension_overlay_favicon_fallback_2026_unique_') {
-        return children.filter((node) =>
-          node !== img &&
-          node.isConnected &&
-          String(node.className || '').split(/\s+/).includes(
-            '_x_extension_overlay_favicon_fallback_2026_unique_'
-          )
-        );
-      }
-      return [];
+// The fallback icon the suggestion row draws right after its image, shown
+// as it is while the icon is still pending.
+function attachFakeFallbackNode(img) {
+  const attributes = new Map([['data-visible', 'true']]);
+  const node = {
+    nodeType: 1,
+    namespaceURI: 'http://www.w3.org/1999/xhtml',
+    classList: {
+      contains: (name) => name === '_x_extension_overlay_favicon_fallback_2026_unique_'
     },
-    insertBefore(node, referenceNode) {
-      const referenceIndex = children.indexOf(referenceNode);
-      const insertIndex = referenceIndex === -1 ? children.length : referenceIndex;
-      children.splice(insertIndex, 0, node);
-      node.parentElement = parent;
-      node.parentNode = parent;
-      node.isConnected = true;
-      return node;
+    style: { setProperty() {}, removeProperty() {} },
+    setAttribute(name, value) {
+      attributes.set(name, String(value));
     },
-    removeChild(node) {
-      const index = children.indexOf(node);
-      if (index !== -1) {
-        children.splice(index, 1);
-      }
-      node.parentElement = null;
-      node.parentNode = null;
-      node.isConnected = false;
-      return node;
+    getAttribute(name) {
+      return attributes.has(name) ? attributes.get(name) : null;
     }
   };
-  img.parentElement = parent;
-  img.parentNode = parent;
-  return parent;
+  img.nextElementSibling = node;
+  return node;
 }
 
 function wait(ms) {
@@ -377,9 +355,9 @@ async function testOverlayResolvesLocalFaviconThroughDataUrl() {
 async function testOverlayFallsBackWhenLocalFaviconDataUnavailable() {
   const { runtime, localPageUrl, extensionUrl } = createRuntime({ requestFaviconData: () => Promise.resolve(null) });
   const img = createFakeImage();
-  const parent = attachFakeFallbackParent(img);
+  const fallbackNode = attachFakeFallbackNode(img);
   let failed = false;
-  let fallbackCountWhenReactTakesOwnership = -1;
+  let fallbackVisibleWhenRowTakesOver = null;
 
   runtime.attachResolvedFaviconWithFallbacks(
     img,
@@ -388,9 +366,7 @@ async function testOverlayFallsBackWhenLocalFaviconDataUnavailable() {
     extensionUrl,
     () => {
       failed = true;
-      fallbackCountWhenReactTakesOwnership = parent.querySelectorAll(
-        '._x_extension_overlay_favicon_fallback_2026_unique_'
-      ).length;
+      fallbackVisibleWhenRowTakesOver = fallbackNode.getAttribute('data-visible');
     }
   );
 
@@ -398,9 +374,9 @@ async function testOverlayFallsBackWhenLocalFaviconDataUnavailable() {
 
   assert.strictEqual(failed, true, 'local overlay favicon should fall back immediately');
   assert.strictEqual(
-    fallbackCountWhenReactTakesOwnership,
-    0,
-    'runtime fallback should be removed before React renders the final fallback icon'
+    fallbackVisibleWhenRowTakesOver,
+    'false',
+    'the row\'s pending fallback should be hidden before the row draws its failed icon'
   );
   assert.strictEqual(img.src, '', 'local overlay favicon should not assign a page-visible image src');
 }

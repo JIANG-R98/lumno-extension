@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -18,6 +19,7 @@ import type { CursorTooltipOptions } from '../../shared/ui/cursor-tooltip';
 import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 import { queryHtmlTags } from '../../shared/dom-lookup';
 import { innerHtml } from '../../shared/react/inner-html';
+import { FaviconFallback, FolderPreviewFaviconFallback } from '../../shared/react/favicon-fallback';
 
 // A site's theme as the page resolves it; the view passes it through.
 type ThemeValue = Partial<ThemeVariant> | null;
@@ -1025,17 +1027,20 @@ function BookmarkCard({
           dangerouslySetInnerHTML={folderIconHtml}
         />
       ) : (
-        <img
-          ref={faviconRef}
-          className="x-nt-bookmark-icon"
-          alt={siteName || options.t('site_icon_alt', '站点')}
-          width={22}
-          height={22}
-          decoding="async"
-          loading={index < 4 ? 'eager' : 'lazy'}
-          fetchPriority={index < 4 ? 'high' : undefined}
-          draggable={false}
-        />
+        <>
+          <img
+            ref={faviconRef}
+            className="x-nt-bookmark-icon"
+            alt={siteName || options.t('site_icon_alt', '站点')}
+            width={22}
+            height={22}
+            decoding="async"
+            loading={index < 4 ? 'eager' : 'lazy'}
+            fetchPriority={index < 4 ? 'high' : undefined}
+            draggable={false}
+          />
+          <FaviconFallback tone="bookmark" />
+        </>
       )}
       <span ref={titleRef} className="x-nt-bookmark-title">
         {safeTitleText}
@@ -1082,24 +1087,26 @@ function BookmarkCard({
       {previewItems.length > 0 ? (
         <span className="x-nt-folder-preview">
           {previewItems.map((preview, previewIndex) => (
-            <img
-              key={`${previewIndex}::${preview.url}`}
-              ref={(image) => {
-                previewFaviconRefs.current[previewIndex] = image;
-              }}
-              className="x-nt-folder-preview-favicon"
-              width={24}
-              height={24}
-              style={{
-                '--x-nt-folder-favicon-rot': preview.rotation,
-                zIndex: 10 + previewIndex
-              }}
-              alt=""
-              loading="eager"
-              decoding="async"
-              aria-hidden="true"
-              draggable={false}
-            />
+            <Fragment key={`${previewIndex}::${preview.url}`}>
+              <FolderPreviewFaviconFallback />
+              <img
+                ref={(image) => {
+                  previewFaviconRefs.current[previewIndex] = image;
+                }}
+                className="x-nt-folder-preview-favicon"
+                width={24}
+                height={24}
+                style={{
+                  '--x-nt-folder-favicon-rot': preview.rotation,
+                  zIndex: 10 + previewIndex
+                }}
+                alt=""
+                loading="eager"
+                decoding="async"
+                aria-hidden="true"
+                draggable={false}
+              />
+            </Fragment>
           ))}
         </span>
       ) : null}

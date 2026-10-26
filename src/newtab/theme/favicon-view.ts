@@ -6,7 +6,6 @@ import type { FaviconPlanCandidate, FaviconResolverOptions } from '../../domain/
 import type { MessageRuntime } from '../../platform/messaging';
 import * as LumnoFaviconViewCore from '../../shared/favicon/favicon-view-core';
 import type {
-  FallbackIconNode,
   FaviconImage,
   FaviconViewCoreOptions,
   FaviconViewWindow,
@@ -46,7 +45,6 @@ interface FaviconViewRuntimeOptions extends Pick<FaviconViewCoreOptions,
   document?: Document | null;
   windowObj?: FaviconRuntimeWindow | null;
   chromeApi?: { runtime?: MessageRuntime & { id?: string; getURL?(path: string): string } } | null;
-  getRiSvg?(id: string, sizeClass?: string): string;
   isOwnExtensionUrl?(url: string): boolean;
   isBlockedLocalFaviconUrl?(url: string): boolean;
   getHostFromUrl?(url: string): string;
@@ -58,7 +56,6 @@ interface FaviconViewRuntimeOptions extends Pick<FaviconViewCoreOptions,
   // Logs each icon that could not load once, while debugging.
   missingIconCache?: Set<string>;
   missingIconDebugEnabled?: boolean;
-  faviconFallbackNodeMap?: WeakMap<FaviconImage, FallbackIconNode>;
   // How long a source may load before the next one is tried.
   faviconCandidateLoadTimeoutMs?: number;
 }
@@ -99,7 +96,6 @@ function createFaviconViewRuntime(options?: FaviconViewRuntimeOptions | null) {
   const clearTimer: (timer: number) => void = typeof win.clearTimeout === 'function'
     ? win.clearTimeout.bind(win)
     : (timer) => clearTimeout(timer);
-  const getRiSvg = typeof config.getRiSvg === 'function' ? config.getRiSvg : (() => '');
   const getExtensionFaviconUrl = typeof config.getExtensionFaviconUrl === 'function' ? config.getExtensionFaviconUrl : (() => '');
   const getGstaticFaviconUrl = typeof config.getGstaticFaviconUrl === 'function' ? config.getGstaticFaviconUrl : (() => '');
   const getChromeFaviconUrl = typeof config.getChromeFaviconUrl === 'function' ? config.getChromeFaviconUrl : (() => '');
@@ -180,7 +176,6 @@ function createFaviconViewRuntime(options?: FaviconViewRuntimeOptions | null) {
   let themeFaviconRescueTimer: number | null = null;
 
   const {
-    setFallbackNodeVisible,
     applyFaviconOpticalShift,
     applyFaviconOpticalAlignment,
     requestFaviconData,
@@ -227,56 +222,29 @@ function createFaviconViewRuntime(options?: FaviconViewRuntimeOptions | null) {
     return defaultSize;
   }
 
-  function getFallbackIconName(img: HTMLImageElement, fallback: string): string {
-    const raw = String(img.getAttribute('data-fallback-icon-name') || '').trim();
-    return raw || fallback || 'ri-link';
+  // A folder card's preview favicons stack, each with its fallback drawn
+  // before it; elsewhere the fallback follows its image.
+  function getFallbackSibling(img: FaviconImage): Element | null {
+    return img.classList.contains('x-nt-folder-preview-favicon')
+      ? img.previousElementSibling
+      : img.nextElementSibling;
   }
 
-  function createFallbackIconNode(img: FaviconImage): FallbackIconNode {
-    const node = doc.createElement('span');
-    const parent = img.parentElement;
-    const isFolderPreview = img.classList.contains('x-nt-folder-preview-favicon');
-    const isBookmarkLeadingIcon = Boolean(
-      img.classList.contains('x-nt-bookmark-icon') &&
-      parent &&
-      parent.classList.contains('x-nt-bookmark-card')
-    );
-    const isSearchSuggestionIcon = (img.getAttribute('data-x-nt-suggestion-icon') === '1') || Boolean(
-      img.closest('#_x_extension_newtab_suggestions_container_2024_unique_')
-    );
-    if (isFolderPreview) {
-      node.className = 'x-nt-folder-preview-favicon x-nt-folder-preview-favicon--fallback _x_extension_favicon_fallback_2024_unique_';
-      setFallbackNodeVisible(node, true);
-      node.innerHTML = getRiSvg(getFallbackIconName(img, 'ri-link'), 'ri-size-12');
-      if (parent) parent.insertBefore(node, img);
-      return node;
+  // The fallback tile takes the size of the image it stands in for.
+  function sizeFallbackNode(img: FaviconImage, node: HTMLElement): void {
+    if (!node.classList.contains('x-nt-favicon-fallback')) {
+      return;
     }
+    const isSearchSuggestionIcon = img.getAttribute('data-x-nt-suggestion-icon') === '1';
     const defaultDimension = isSearchSuggestionIcon ? 16 : 25;
-    const fallbackWidth = resolveFallbackIconDimension(img, 'width', defaultDimension);
-    const fallbackHeight = resolveFallbackIconDimension(img, 'height', defaultDimension);
-    const fallbackBackground = isBookmarkLeadingIcon
-      ? 'var(--x-nt-bookmark-icon-color, var(--x-nt-bookmark-icon-bg, rgba(241, 245, 249, 0.92)))'
-      : (isSearchSuggestionIcon ? 'transparent' : 'var(--x-nt-tag-bg, #F3F4F6)');
-    node.className = 'x-nt-favicon-fallback _x_extension_favicon_fallback_2024_unique_';
-    node.style.setProperty('--x-nt-favicon-fallback-width', `${fallbackWidth}px`);
-    node.style.setProperty('--x-nt-favicon-fallback-height', `${fallbackHeight}px`);
-    node.style.setProperty('--x-nt-favicon-fallback-radius', `${isSearchSuggestionIcon ? 2 : 6}px`);
-    node.style.setProperty('--x-nt-favicon-fallback-bg', fallbackBackground);
-    node.style.setProperty(
-      '--x-nt-favicon-fallback-color',
-      isSearchSuggestionIcon ? 'var(--x-nt-subtext, #6B7280)' : 'var(--x-nt-tag-text, #6B7280)'
-    );
-    node.style.setProperty('--x-nt-favicon-fallback-padding', `${isSearchSuggestionIcon ? 0 : 3}px`);
-    setFallbackNodeVisible(node, true);
-    node.innerHTML = getRiSvg(getFallbackIconName(img, 'ri-link'), 'ri-size-16');
-    if (parent) parent.insertBefore(node, img.nextSibling);
-    return node;
+    node.style.setProperty('--x-nt-favicon-fallback-width', `${resolveFallbackIconDimension(img, 'width', defaultDimension)}px`);
+    node.style.setProperty('--x-nt-favicon-fallback-height', `${resolveFallbackIconDimension(img, 'height', defaultDimension)}px`);
   }
 
   const fallbackIcons = faviconViewCoreApi.createFallbackIconPresenter({
     fallbackClassName: '_x_extension_favicon_fallback_2024_unique_',
-    nodeMap: config.faviconFallbackNodeMap,
-    createFallbackNode: createFallbackIconNode,
+    getFallbackSibling,
+    styleFallbackNode: sizeFallbackNode,
     setImageVisible(img: FaviconImage, visible: boolean) {
       if (visible) {
         img.style.setProperty('display', 'block');
@@ -288,19 +256,16 @@ function createFaviconViewRuntime(options?: FaviconViewRuntimeOptions | null) {
     setTimer
   });
   const {
-    ensureFallbackIconNode,
+    setFallbackIconVisible,
     showResolvedFavicon,
     showPendingFallbackIcon,
     applyFallbackIcon
   } = fallbackIcons;
 
+  // After a theme change the fallback tiles size and show again.
   function refreshFallbackIcons(): void {
     queryHtmlTags(doc, 'img[data-fallback-icon="true"]', 'img').forEach((img) => {
-      const node = ensureFallbackIconNode(img);
-      if (node) {
-        setFallbackNodeVisible(node, true);
-      }
-      img.setAttribute('data-fallback-icon', 'true');
+      setFallbackIconVisible(img, true);
       img.style.removeProperty('display');
     });
   }

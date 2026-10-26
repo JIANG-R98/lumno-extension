@@ -1396,7 +1396,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     document,
     windowObj: window,
     chromeApi: chrome,
-    getRiSvg,
     getHostFromUrl,
     getExtensionFaviconUrl,
     getGstaticFaviconUrl,

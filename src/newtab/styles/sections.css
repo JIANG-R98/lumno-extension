@@ -728,7 +728,8 @@ body[data-glass-style] .x-nt-bookmark-copy-action[data-glass-ink-theme="dark"]:f
   -webkit-user-drag: none;
   user-select: none;
 }
-.x-nt-folder-preview-favicon:first-child {
+.x-nt-folder-preview-favicon:first-child,
+.x-nt-folder-preview-favicon--fallback[data-visible="false"]:first-child + .x-nt-folder-preview-favicon {
   margin-left: 0;
 }
 .x-nt-folder-preview-favicon--fallback {
