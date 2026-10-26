@@ -219,7 +219,7 @@ function loadBackground(historyItems) {
     });
   };
   const background = runModuleInContext('src/background/background.ts', context, '__lumnoBackgroundExports', {
-    also: { 'src/background/search-suggestions-service.ts': ['getSearchSuggestions'] }
+    also: { 'src/background/search/pipeline.ts': ['getSearchSuggestions'] }
   });
   return (query, options) => background.getSearchSuggestions(query, options);
 }

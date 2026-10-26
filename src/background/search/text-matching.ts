@@ -1,0 +1,193 @@
+// Matching titles to a query: the title matcher with its pinyin readings,
+// the query context, and where a result's title shows the query.
+import * as FAVICON_UTILS from '../../domain/favicon/favicon-utils';
+import * as SEARCH_UTILS from '../../domain/search/search-utils';
+import * as SETTINGS from '../../domain/settings';
+import { searchResultSourceTypes } from '../../domain/settings';
+import { loadWorkerLazyModule } from '../../platform/worker-lazy';
+import { readPinyinApi } from '../../domain/search/pinyin-api';
+import { PINYIN_DATA_SCRIPT_PATH, getImportScripts, workerSettings } from '../worker-context';
+import type {
+  SearchPolicy,
+  SearchQueryContext,
+  SearchRankingOptions,
+  SearchSourceType,
+  SearchTextMatcher
+} from '../../domain/search/types';
+import type { PinyinApi } from '../../domain/search/pinyin-api';
+import type { SuggestionRow } from './types';
+
+// Titles whose units (and pinyin readings) were built for matching, about
+// 1 KB each. It holds the Han-title history and the bookmarks, so typing one
+// more letter never rebuilds them.
+const BACKGROUND_TITLE_PINYIN_CACHE_MAX_ENTRIES = 6144;
+
+let titleTextMatcher: SearchTextMatcher | null = null;
+
+// Fuzzy pinyin (模糊音) is off unless the reader turns it on in Options.
+
+function loadSearchResultSourceTypes(): Promise<SearchSourceType[]> {
+  return workerSettings.ready.then(() => workerSettings.get(searchResultSourceTypes));
+}
+
+function loadSearchFuzzyPinyinEnabled(): Promise<boolean> {
+  return workerSettings.ready.then(() => workerSettings.get(SETTINGS.searchFuzzyPinyinEnabled));
+}
+
+// Titles were indexed with the readings of the old choice, so they are
+// indexed again.
+workerSettings.subscribe(SETTINGS.searchFuzzyPinyinEnabled, () => {
+  if (titleTextMatcher) {
+    titleTextMatcher.clear();
+  }
+});
+
+
+let pinyinProApi: PinyinApi | null = null;
+let pinyinProImportAttempted = false;
+
+// pinyin-pro, imported on first use; null when it could not be loaded, in
+// which case titles still match by their own text.
+function getPinyinPro(): PinyinApi | null {
+  if (!pinyinProApi && !pinyinProImportAttempted) {
+    pinyinProImportAttempted = true;
+    pinyinProApi = readPinyinApi(loadWorkerLazyModule(
+      'pinyin', chrome.runtime.getURL(PINYIN_DATA_SCRIPT_PATH), getImportScripts()));
+  }
+  return pinyinProApi;
+}
+
+// Every reading of each Han character, so a polyphone matches either way:
+// 重庆 matches "chongqing" and "zhongqing", 银行 "yinhang" and "yinxing".
+// Readings depend on the character alone, so a few thousand entries cover
+// every title.
+const hanCharacterReadingsCache = new Map<string, string[]>();
+const hanCharacterFuzzyReadingsCache = new Map<string, string[]>();
+const BACKGROUND_HAN_READINGS_CACHE_MAX_ENTRIES = 8192;
+
+function getTitleHanReadings(_text: string, characters: string[]): string[][] | null {
+  const pinyinApi = getPinyinPro();
+  if (!pinyinApi) {
+    return null;
+  }
+  if (!workerSettings.get(SETTINGS.searchFuzzyPinyinEnabled)) {
+    return characters.map((character) => getHanCharacterReadings(pinyinApi, character));
+  }
+  return characters.map((character) => {
+    const cached = hanCharacterFuzzyReadingsCache.get(character);
+    if (cached) {
+      return cached;
+    }
+    const readings = SEARCH_UTILS.expandSearchFuzzyPinyinReadings(getHanCharacterReadings(pinyinApi, character));
+    FAVICON_UTILS.setBoundedCacheEntry(
+      hanCharacterFuzzyReadingsCache,
+      character,
+      readings,
+      BACKGROUND_HAN_READINGS_CACHE_MAX_ENTRIES
+    );
+    return readings;
+  });
+}
+
+function getHanCharacterReadings(pinyinApi: PinyinApi, character: string): string[] {
+  const cached = hanCharacterReadingsCache.get(character);
+  if (cached) {
+    return cached;
+  }
+  const converted = pinyinApi.pinyin(character, {
+    toneType: 'none',
+    type: 'array',
+    multiple: true,
+    v: true
+  });
+  const readings = Array.isArray(converted) ? converted : [];
+  FAVICON_UTILS.setBoundedCacheEntry(
+    hanCharacterReadingsCache,
+    character,
+    readings,
+    BACKGROUND_HAN_READINGS_CACHE_MAX_ENTRIES
+  );
+  return readings;
+}
+
+function getTitleTextMatcher(): SearchTextMatcher | null {
+  if (!titleTextMatcher && SEARCH_UTILS && typeof SEARCH_UTILS.createSearchTextMatcher === 'function') {
+    titleTextMatcher = SEARCH_UTILS.createSearchTextMatcher({
+      getHanReadings: getTitleHanReadings,
+      maxEntries: BACKGROUND_TITLE_PINYIN_CACHE_MAX_ENTRIES
+    });
+  }
+  return titleTextMatcher;
+}
+
+function getBackgroundSearchPolicy(searchUtils: typeof SEARCH_UTILS): Readonly<SearchPolicy> {
+  return searchUtils.SEARCH_POLICY;
+}
+
+// A query of Han characters alone, as a site's address would spell it: its
+// pinyin and its initials: 知乎 is zhihu, 京东 is jd.
+function getQueryHostSpellings(context: SearchQueryContext, searchUtils: typeof SEARCH_UTILS): string[] {
+  const compact = typeof searchUtils.compactSearchQuery === 'function'
+    ? searchUtils.compactSearchQuery(context.queryLower)
+    : '';
+  if (compact.length < 2 || compact.length > 8 ||
+      !Array.from(compact).every((character) => searchUtils.hasSearchHanCharacters(character))) {
+    return [];
+  }
+  const pinyinApi = getPinyinPro();
+  if (!pinyinApi) {
+    return [];
+  }
+  try {
+    const syllables = pinyinApi.pinyin(compact, { toneType: 'none', type: 'array', v: true })
+      .map((syllable) => String(syllable || '').toLowerCase().replace(/[^a-z]+/g, ''))
+      .filter(Boolean);
+    if (syllables.length !== compact.length) {
+      return [];
+    }
+    const full = syllables.join('');
+    const initials = syllables.map((syllable) => syllable.charAt(0)).join('');
+    return full === initials ? [full] : [full, initials];
+  } catch (_error) {
+    return [];
+  }
+}
+
+function buildBackgroundSearchQueryContext(query: unknown, searchUtils: typeof SEARCH_UTILS): SearchQueryContext {
+  const context = searchUtils.buildSearchQueryContext(query);
+  context.queryHostSpellings = getQueryHostSpellings(context, searchUtils);
+  return context;
+}
+
+// Marks where a local result's title shows the query, by the same rules that
+// matched it, so a pinyin or initials match marks the characters it spelled.
+// The view uses the ranges only while its title text and query are these.
+function attachSuggestionTitleHighlight<T extends SuggestionRow>(
+  suggestion: T,
+  context: SearchQueryContext,
+  scoreOptions: SearchRankingOptions,
+  searchUtils: typeof SEARCH_UTILS
+): T {
+  if (!suggestion || !suggestion.title) {
+    return suggestion;
+  }
+  const text = searchUtils.sanitizeDisplayText(suggestion.title);
+  return {
+    ...suggestion,
+    titleHighlight: {
+      text,
+      query: String(context.lookupQuery || '').trim().toLowerCase(),
+      ranges: searchUtils.getSearchTitleHighlightRanges(text, context, scoreOptions)
+    }
+  };
+}
+
+
+export {
+  attachSuggestionTitleHighlight,
+  buildBackgroundSearchQueryContext,
+  getBackgroundSearchPolicy,
+  getTitleTextMatcher,
+  loadSearchFuzzyPinyinEnabled,
+  loadSearchResultSourceTypes
+};

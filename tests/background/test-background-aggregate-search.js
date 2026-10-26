@@ -140,7 +140,7 @@ async function createSiteSearchProviderCacheHarness() {
       return request.promise;
     },
     exposeModules: {
-      'src/background/search-suggestions-service.ts': ['loadSiteSearchProviders', 'invalidateSiteSearchProviderCache']
+      'src/background/search/site-search-providers.ts': ['loadSiteSearchProviders', 'invalidateSiteSearchProviderCache']
     }
   });
   // Let the worker's own start-up load finish before the test takes over.

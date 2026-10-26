@@ -29,7 +29,7 @@ import {
   resolveSiteThemeColor,
   shouldBlockFaviconForHost
 } from './favicon-service';
-import { markPendingSearchTab } from './search-suggestions-service';
+import { markPendingSearchTab } from './search/pending-search';
 import {
   createSearchResultTab,
   createTabWithSourceGroup,

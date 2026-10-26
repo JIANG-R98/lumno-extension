@@ -190,7 +190,8 @@ function checkRelativeResourcePath(file, value) {
 }
 
 function checkCssUrlReferences(file, source) {
-  const cssUrlPattern = /url\(\s*(?:"([^"]+)"|'([^']+)'|([^)"'\s]+))\s*\)/g;
+  // A CSS url(), not a call such as `source.url(query)` in scripts.
+  const cssUrlPattern = /(?<![\w$.])url\(\s*(?:"([^"]+)"|'([^']+)'|([^)"'\s]+))\s*\)/g;
   let match = null;
   while ((match = cssUrlPattern.exec(source))) {
     checkRelativeResourcePath(file, match[1] || match[2] || match[3] || '');

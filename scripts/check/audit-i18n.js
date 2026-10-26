@@ -19,7 +19,7 @@ const ALLOWLIST = [
   'localized update notice fallback model in src/shared/update-notice.ts',
   'localized selection prompt model in src/domain/selection-intent.ts',
   'browser built-in bookmark folder aliases used only for folder detection',
-  'debug-only score reason strings when the debug flag is disabled by default',
+  'debug-only score reason strings when the debug flag is disabled by default (src/background/search/suggestion-rows.ts)',
   'Chinese search-intent tokens in src/domain/search/search-utils.ts and its utils/ parts\' scoring dictionaries',
   'generated traditional-to-simplified character table in src/domain/search/han-variants.generated.ts',
   'question filler words dropped from help center queries in src/domain/search/help-center-search.ts',
@@ -116,6 +116,10 @@ function isAllowlistedLine(file, line) {
     return true;
   }
   if (file === 'src/domain/selection-intent.ts') {
+    return true;
+  }
+  // The reasons a result matched, shown only with the score debug flag on.
+  if (file === 'src/background/search/suggestion-rows.ts') {
     return true;
   }
   if (file === 'src/domain/search/help-center-search.ts') {

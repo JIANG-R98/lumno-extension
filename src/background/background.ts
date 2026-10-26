@@ -92,17 +92,15 @@ import {
   getBackgroundFaviconCacheRuntime,
   markFaviconDirtyForUrl
 } from './favicon-service';
+import { refreshDefaultSearchEngineState, updateDefaultSearchEngineFromUrl } from './search/default-engine';
 import {
   clearPendingSearch,
-  getSiteSearchProviderEntryUrl,
   pendingSearchAt,
   pendingSearchGroupContext,
   pendingSearchTabId,
-  refreshDefaultSearchEngineState,
-  setPendingSearchTabId,
-  updateDefaultSearchEngineFromUrl,
-  warmSiteSearchProviderIcons
-} from './search-suggestions-service';
+  setPendingSearchTabId
+} from './search/pending-search';
+import { getSiteSearchProviderEntryUrl, warmSiteSearchProviderIcons } from './search/site-search-providers';
 import {
   maybeAutoSelectRestrictedBrowserSetting,
   moveTabToSourceGroupContext,

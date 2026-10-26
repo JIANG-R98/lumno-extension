@@ -21,7 +21,7 @@ import * as BACKGROUND_SHORTCUT_RULES from './shortcut-rules';
 // pinyin-pro (pinyin-data.ts) only matters when a Han-character title is
 // matched against a pinyin query, or a Han query against site addresses, so
 // the worker loads it on first use instead of on every wake (see getPinyinPro
-// in search-suggestions-service.ts). A service worker may only importScripts() a
+// in search/text-matching.ts). A service worker may only importScripts() a
 // file after installation if it imported that file while installing, hence
 // background.ts's install hook. Firefox's build lists every *_SCRIPT_PATH
 // here in background.scripts.

@@ -13,7 +13,7 @@ import * as SELECTION_TARGET from './selection-target';
 import * as SETTINGS from '../domain/settings';
 import { selectionQuickActionsEnabled, selectionQuickActionsGroupEnabled, selectionQuickActionsProvider } from '../domain/settings';
 import { waitForTabComplete, workerSettings } from './worker-context';
-import { getSiteSearchProviderEntryUrl, isInteractiveSiteSearchProvider, loadSiteSearchProviders, sanitizeSiteSearchProviders } from './search-suggestions-service';
+import { getSiteSearchProviderEntryUrl, isInteractiveSiteSearchProvider, loadSiteSearchProviders, sanitizeSiteSearchProviders } from './search/site-search-providers';
 import type { SelectionAction } from '../domain/selection-intent';
 import type { SelectionQuickActionsProvider } from '../domain/settings';
 import type { SiteSearchProvider } from '../domain/search/types';

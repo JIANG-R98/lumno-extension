@@ -14,7 +14,23 @@ import * as HELP_CENTER_SEARCH from '../domain/search/help-center-search';
 import * as SEARCH_RESULT_TABS from './search-result-tabs';
 import { aggregateSearchAutoGroupEnabled, aggregateSearches } from '../domain/settings';
 import { getShortcutUrl, loadShortcutRules, waitForTabComplete, workerSettings } from './worker-context';
-import { abortSearchEngineSuggestionRequest, buildDefaultSearchUrl, clearPendingSearch, consumeSearchEngineSuggestionRequest, deleteHistoryUrlFromSearch, getDirectNavigationUrl, getSearchEngineSuggestionRequestKey, getSearchEngineSuggestions, getSearchSuggestions, getSiteSearchProviderEntryUrl, isInteractiveSiteSearchProvider, loadSiteSearchProviders, markPendingSearchTab, pendingSearchTabId, recordSearchSuggestionSelection, releaseSearchEngineSuggestionRequest, scheduleSearchEngineSuggestionPrefetch, searchEngineSuggestionRequests, shouldPrefetchSearchEngineSuggestions, startSearchEngineSuggestionRequest } from './search-suggestions-service';
+import { buildDefaultSearchUrl, getDirectNavigationUrl } from './search/default-engine';
+import { getSearchEngineSuggestions } from './search/engine-suggestions';
+import {
+  abortSearchEngineSuggestionRequest,
+  consumeSearchEngineSuggestionRequest,
+  getSearchEngineSuggestionRequestKey,
+  releaseSearchEngineSuggestionRequest,
+  scheduleSearchEngineSuggestionPrefetch,
+  searchEngineSuggestionRequests,
+  shouldPrefetchSearchEngineSuggestions,
+  startSearchEngineSuggestionRequest
+} from './search/engine-requests';
+import { deleteHistoryUrlFromSearch } from './search/local-sources';
+import { clearPendingSearch, markPendingSearchTab, pendingSearchTabId } from './search/pending-search';
+import { getSearchSuggestions } from './search/pipeline';
+import { recordSearchSuggestionSelection } from './search/selection-stats';
+import { getSiteSearchProviderEntryUrl, isInteractiveSiteSearchProvider, loadSiteSearchProviders } from './search/site-search-providers';
 import { createSearchResultTab, resolveSearchResultTabPlacement } from './browser-urls-service';
 import type { AggregateSearchQueryRunner } from './aggregate-search';
 import type { CreatedTabCallback } from './tab-groups';

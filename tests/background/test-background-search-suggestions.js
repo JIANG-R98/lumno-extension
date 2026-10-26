@@ -458,12 +458,9 @@ function loadBackgroundForTest(options) {
 
   const service = runModuleInContext('src/background/background.ts', context, '__testBackground', {
     also: {
-      'src/background/search-suggestions-service.ts': [
-        'getSearchSuggestions',
-        'isSearchEngineResultUrl',
-        'setDefaultSearchEngineState',
-        'getSearchEngineSuggestions'
-      ]
+      'src/background/search/pipeline.ts': ['getSearchSuggestions'],
+      'src/background/search/default-engine.ts': ['isSearchEngineResultUrl', 'setDefaultSearchEngineState'],
+      'src/background/search/engine-suggestions.ts': ['getSearchEngineSuggestions']
     }
   });
   context.__testGetSearchSuggestions = service.getSearchSuggestions;

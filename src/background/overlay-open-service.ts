@@ -18,7 +18,7 @@ import {
   whenBackgroundSettingsReady
 } from './worker-context';
 import { scheduleSiteSearchProviderIconWarmup } from './favicon-service';
-import { loadSiteSearchProviders, siteSearchCache } from './search-suggestions-service';
+import { loadSiteSearchProviders, siteSearchCache } from './search/site-search-providers';
 import {
   canOpenOverlayOnUrl,
   getResolvedTabUrl,
