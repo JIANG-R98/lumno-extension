@@ -85,6 +85,31 @@ function getGlobalAbortController(): AbortControllerConstructor | null {
     : null;
 }
 
+// Aborts the request after the timeout, when the page can abort requests.
+function startAbortTimeout(
+  settings: CommunityLoadOptions,
+  config: CommunityLoaderOptions
+): { signal: AbortSignal | undefined; clear(): void } {
+  const timeoutRuntime: TimerRuntime | null = settings.windowObj || config.windowObj ||
+    (typeof globalThis !== 'undefined' ? globalThis : null);
+  const AbortControllerImpl = settings.AbortControllerImpl || config.AbortControllerImpl || getGlobalAbortController();
+  const controller = AbortControllerImpl ? new AbortControllerImpl() : null;
+  const timeoutMs = Number.isFinite(Number(settings.timeoutMs))
+    ? Math.max(0, Number(settings.timeoutMs))
+    : links.FETCH_TIMEOUT_MS;
+  const timeoutId = controller && timeoutRuntime
+    ? timeoutRuntime.setTimeout(() => controller.abort(), timeoutMs)
+    : 0;
+  return {
+    signal: controller ? controller.signal : undefined,
+    clear() {
+      if (timeoutId && timeoutRuntime && typeof timeoutRuntime.clearTimeout === 'function') {
+        timeoutRuntime.clearTimeout(timeoutId);
+      }
+    }
+  };
+}
+
 function createLoader(options?: CommunityLoaderOptions | null): Readonly<CommunityLinksLoader> {
   const config = options && typeof options === 'object' ? options : {};
   let currentLinks: Readonly<CommunityLinks> = links.FALLBACK_LINKS;
@@ -108,19 +133,10 @@ function createLoader(options?: CommunityLoaderOptions | null): Readonly<Communi
     if (!fetchImpl) {
       return Promise.resolve(currentLinks);
     }
-    const timeoutRuntime: TimerRuntime | null = settings.windowObj || config.windowObj ||
-      (typeof globalThis !== 'undefined' ? globalThis : null);
-    const AbortControllerImpl = settings.AbortControllerImpl || config.AbortControllerImpl || getGlobalAbortController();
-    const controller = AbortControllerImpl ? new AbortControllerImpl() : null;
-    const timeoutMs = Number.isFinite(Number(settings.timeoutMs))
-      ? Math.max(0, Number(settings.timeoutMs))
-      : links.FETCH_TIMEOUT_MS;
-    const timeoutId = controller && timeoutRuntime
-      ? timeoutRuntime.setTimeout(() => controller.abort(), timeoutMs)
-      : 0;
+    const abort = startAbortTimeout(settings, config);
     loadingPromise = Promise.resolve(fetchImpl(settings.url || links.COMMUNITY_LINKS_URL, {
       cache: 'no-store',
-      signal: controller ? controller.signal : undefined
+      signal: abort.signal
     }))
       .then((response) => {
         if (!response || !response.ok || typeof response.json !== 'function') {
@@ -141,9 +157,7 @@ function createLoader(options?: CommunityLoaderOptions | null): Readonly<Communi
         return currentLinks;
       })
       .finally(() => {
-        if (timeoutId && timeoutRuntime && typeof timeoutRuntime.clearTimeout === 'function') {
-          timeoutRuntime.clearTimeout(timeoutId);
-        }
+        abort.clear();
         loadingPromise = null;
       });
     return loadingPromise;
