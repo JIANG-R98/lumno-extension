@@ -9,7 +9,10 @@ const preview = require(path.join(repoRoot, 'src/domain/search/suggestion-input-
 // into the input, as the address bar does
 // (https://github.com/kubai087/lumno-extension/issues/124).
 
-const LOCAL = [{ type: 'history', title: 'GitHub', url: 'https://github.com/' }];
+const LOCAL = [
+  { type: 'history', title: 'GitHub', url: 'https://github.com/' },
+  { type: 'history', title: 'git - Brave Search', url: 'https://search.brave.com/search?q=git' }
+];
 const ENGINE = ['github desktop', 'github copilot'].map((query) => ({
   type: 'googleSuggest',
   title: query,
@@ -39,6 +42,15 @@ function testController() {
   assert.strictEqual(controller.commit(), true);
   assert.strictEqual(controller.restore(input, 'git'), false, 'a committed suggestion stays');
   assert.strictEqual(input.value, 'github copilot');
+
+  assert.strictEqual(preview.getSuggestionEditText(LOCAL[0]), 'github.com', 'https:// and a lone slash are dropped');
+  assert.strictEqual(preview.getSuggestionEditText(LOCAL[1]), 'search.brave.com/search?q=git');
+  assert.strictEqual(preview.getSuggestionEditText({ type: 'bookmark', url: 'http://localhost:3000/docs' }),
+    'http://localhost:3000/docs', 'http:// and the port stay');
+  assert.strictEqual(preview.getSuggestionEditText(ENGINE[0]), '', 'a search suggestion has no address to edit');
+  assert.strictEqual(controller.editAddress(input, { type: 'openTab', url: 'https://a.test/' }), false);
+  assert.strictEqual(controller.editAddress(input, LOCAL[1]), true);
+  assert.strictEqual(input.value, 'search.brave.com/search?q=git');
 }
 
 function respond(message) {
@@ -121,6 +133,24 @@ async function testTypingKeepsTheSuggestion(name) {
   tabbed.close();
 }
 
+// Tab on a page the arrows selected puts its address in the input; Enter
+// then opens what was edited.
+async function testTabEditsPageAddress(name) {
+  const surface = await openWithSuggestions(name);
+  await selectRow(surface, 'git - Brave Search');
+  assert.strictEqual(surface.input().value, 'git', `${name}: the arrows alone leave a page row's address out`);
+  surface.press('Tab');
+  await surface.settle(150);
+  assert.strictEqual(surface.input().value, 'search.brave.com/search?q=git', `${name}: Tab takes the page's address`);
+  await surface.type('search.brave.com/search?q=github');
+  await surface.settle(150);
+  surface.press('Enter');
+  await surface.settle(150);
+  assert.deepStrictEqual(surface.navigation(), { url: 'https://search.brave.com/search?q=github' },
+    `${name}: Enter opens the edited address`);
+  surface.close();
+}
+
 // Typed text that names a site search ("yt") would switch the scope on Tab;
 // with a suggestion shown, Tab takes the suggestion instead.
 async function testTabOverSiteSearchTrigger(name) {
@@ -140,6 +170,7 @@ async function testTabOverSiteSearchTrigger(name) {
     await testEnterSearchesTheSuggestion(name);
     await testTypingKeepsTheSuggestion(name);
     await testTabOverSiteSearchTrigger(name);
+    await testTabEditsPageAddress(name);
   }
   console.log('suggestion input preview tests passed');
   process.exit(0);

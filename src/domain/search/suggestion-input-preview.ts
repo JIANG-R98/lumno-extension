@@ -1,7 +1,8 @@
 // The search suggestion the arrow keys land on, shown in the input as the
 // browser's address bar does. What was typed comes back when the selection
 // leaves the suggestion, on Escape, or when the list drops the selection;
-// typing on (or Tab) keeps the suggestion as the typed text instead.
+// typing on (or Tab) keeps the suggestion as the typed text instead. Tab on
+// a selected page puts its address in the input to edit.
 
 // The input, or a test double.
 interface PreviewInput {
@@ -13,7 +14,11 @@ interface PreviewInput {
 interface PreviewSuggestion {
   type?: string;
   searchQuery?: string;
+  url?: string;
 }
+
+// Rows that open a page whose address Tab can take.
+const PAGE_ROW_TYPES = new Set(['history', 'bookmark', 'topSite', 'browserPage']);
 
 // The query a row puts in the input, or '' for a row that keeps what was
 // typed (pages, tabs, commands, the search action itself).
@@ -22,6 +27,22 @@ function getSuggestionInputText(suggestion: PreviewSuggestion | null | undefined
     return '';
   }
   return String(suggestion.searchQuery || '');
+}
+
+// The address a page row puts in the input on Tab, as one would type it:
+// https:// and a lone trailing slash dropped, http:// and ports kept. ''
+// for rows that are not pages.
+function getSuggestionEditText(suggestion: PreviewSuggestion | null | undefined): string {
+  if (!suggestion || !PAGE_ROW_TYPES.has(String(suggestion.type))) {
+    return '';
+  }
+  const url = String(suggestion.url || '').trim();
+  if (!/^https:\/\//i.test(url)) {
+    return url;
+  }
+  const address = url.slice('https://'.length);
+  const slash = address.indexOf('/');
+  return slash === address.length - 1 ? address.slice(0, -1) : address;
 }
 
 function setInputValue(input: PreviewInput, value: string): void {
@@ -72,10 +93,22 @@ function createSuggestionInputPreview() {
     return active;
   }
 
-  return { show, restore, commit, isActive };
+  // Puts a selected page's address in the input to edit; true when the row
+  // has one.
+  function editAddress(input: PreviewInput | null, suggestion: PreviewSuggestion | null | undefined): boolean {
+    const text = getSuggestionEditText(suggestion);
+    if (!input || !text) {
+      return false;
+    }
+    active = false;
+    setInputValue(input, text);
+    return true;
+  }
+
+  return { show, restore, commit, isActive, editAddress };
 }
 
 type SuggestionInputPreview = ReturnType<typeof createSuggestionInputPreview>;
 
 export type { PreviewInput, PreviewSuggestion, SuggestionInputPreview };
-export { createSuggestionInputPreview, getSuggestionInputText };
+export { createSuggestionInputPreview, getSuggestionEditText, getSuggestionInputText };

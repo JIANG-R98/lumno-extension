@@ -214,6 +214,14 @@ function createPanelKeys(deps: PanelKeysDeps) {
     if (overlayState.siteSearchState || overlayState.localSearchScopeState || overlayState.openTabsSearchModeActive) {
       return false;
     }
+    // On a page the arrows selected, Tab puts its address in the input to edit.
+    if (!e.shiftKey && overlayState.suggestionInputPreview.editAddress(input, getSelectedSuggestion())) {
+      e.preventDefault();
+      overlayState.latestRawInputValue = input.value;
+      overlayState.latestOverlayQuery = input.value.trim();
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
+    }
     const rawValue = input.value;
     const rawTrigger = overlayState.latestRawInputValue || rawValue;
     const triggerInput = (rawTrigger || rawValue).trim();
@@ -479,13 +487,17 @@ function createPanelKeys(deps: PanelKeysDeps) {
     return index === 0;
   }
 
+  // The result row the arrows selected; null for none or an open tab.
+  function getSelectedSuggestion(): OverlaySuggestion | null {
+    const index = overlayState.selectedIndex;
+    const item = suggestionItems[index];
+    return item && item._xIsSearchSuggestion ? overlayState.currentSuggestions[index] || null : null;
+  }
+
   // Shows the selected search suggestion in the input, or what was typed
   // for any other row.
   function previewSelectedSuggestion(input: HTMLInputElement): void {
-    const index = overlayState.selectedIndex;
-    const item = suggestionItems[index];
-    const suggestion = item && item._xIsSearchSuggestion ? overlayState.currentSuggestions[index] : null;
-    overlayState.suggestionInputPreview.show(input, suggestion, overlayState.latestRawInputValue);
+    overlayState.suggestionInputPreview.show(input, getSelectedSuggestion(), overlayState.latestRawInputValue);
   }
 
   function getSuggestionNavigationKey(event: KeyboardEvent): 'ArrowDown' | 'ArrowUp' | '' {

@@ -44,10 +44,11 @@ interface SearchModesState {
   autocompleteState: AutocompleteState | null;
   enabledSearchResultSourceTypes: SearchSourceType[];
   currentSuggestions: Suggestion[];
+  selectedIndex: number;
   suggestionRequestSeq: number;
   latestQuery: string;
   latestRawQuery: string;
-  suggestionInputPreview: Pick<SuggestionInputPreview, 'commit'>;
+  suggestionInputPreview: Pick<SuggestionInputPreview, 'commit' | 'editAddress'>;
 }
 
 interface SearchModesDeps {
@@ -554,6 +555,13 @@ function createSearchModes(deps: SearchModesDeps) {
     }
     if (pageState.siteSearchState || pageState.localSearchScopeState) {
       return false;
+    }
+    // On a page the arrows selected, Tab puts its address in the input to edit.
+    const selectedSuggestion = pageState.selectedIndex >= 0 ? pageState.currentSuggestions[pageState.selectedIndex] : null;
+    if (!event.shiftKey && pageState.suggestionInputPreview.editAddress(getSearchInput(), selectedSuggestion)) {
+      event.preventDefault();
+      getSearchInput().dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
     }
     const rawValue = getSearchInput().value;
     const rawTrigger = pageState.latestRawQuery || rawValue;
