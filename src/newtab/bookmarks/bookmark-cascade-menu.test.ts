@@ -379,6 +379,15 @@ describe('New Tab bookmark folder menu: hover intent', () => {
     ]);
   });
 
+  it('marks the row whose context menu is open', async () => {
+    const fixture = await openWithSubmenu();
+    act(() => fixture.runtime.setContextMenuBookmark('amazon'));
+    expect(items(levels()[1])[0].getAttribute('data-bookmark-context-menu-open')).toBe('true');
+    expect(items(levels()[0]).some((row) => row.hasAttribute('data-bookmark-context-menu-open'))).toBe(false);
+    act(() => fixture.runtime.setContextMenuBookmark(null));
+    expect(items(levels()[1])[0].hasAttribute('data-bookmark-context-menu-open')).toBe(false);
+  });
+
   it('opens a site in the background on Ctrl+Enter and stays open', async () => {
     const fixture = await openWithSubmenu();
     const site = items(levels()[1])[0];

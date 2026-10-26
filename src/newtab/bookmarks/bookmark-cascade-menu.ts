@@ -251,6 +251,8 @@ function createBookmarkCascadeMenuRuntime(options?: BookmarkCascadeMenuOptions) 
   // The level elements the view has drawn, by level key.
   const levelElements = new Map<string, HTMLElement>();
   let levelSerial = 0;
+  // The bookmark whose context menu is open from a row, or ''.
+  let contextMenuBookmarkId = '';
   let bookmarkCascadeAnchor: BookmarkMenuAnchor | null = null;
   let bookmarkCascadeOpenRequest: { folderId: string; anchorElement: BookmarkMenuAnchor; dragMode: boolean } | null = null;
   let bookmarkCascadeLevels: CascadeLevelEntry[] = [];
@@ -367,6 +369,7 @@ function createBookmarkCascadeMenuRuntime(options?: BookmarkCascadeMenuOptions) 
           active: entry.activeKey === row.key,
           expanded: row.isFolder && isRowExpanded(entry, row.key),
           hoverSuppressed: entry.suppressedKeys.has(row.key),
+          contextMenuOpen: contextMenuBookmarkId !== '' && contextMenuBookmarkId === String(row.item.id || ''),
           folderIconMarkup: row.folderIconMarkup,
           iconUrl: row.iconUrl,
           iconMonochrome: row.iconMonochrome,
@@ -1971,6 +1974,13 @@ function createBookmarkCascadeMenuRuntime(options?: BookmarkCascadeMenuOptions) 
     clearDragTarget: clearBookmarkCascadeDragTarget,
     refresh: refreshBookmarkCascadeMenu,
     setDragMode: setBookmarkCascadeDragMode,
+    setContextMenuBookmark(id: string | null) {
+      const nextId = id || '';
+      if (nextId !== contextMenuBookmarkId) {
+        contextMenuBookmarkId = nextId;
+        invalidate();
+      }
+    },
     updateDragPointer: (pointInput: PointLike | null | undefined) =>
       batch(() => updateBookmarkCascadeDragPointer(pointInput))
   });

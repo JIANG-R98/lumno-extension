@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type DragEvent as ReactDragEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent
@@ -22,6 +23,7 @@ import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 import { queryHtmlElements, queryHtmlTag, queryHtmlTags } from '../../shared/dom-lookup';
 import { innerHtml } from '../../shared/react/inner-html';
 import { FaviconFallback } from '../../shared/react/favicon-fallback';
+import { createRenderStore, type RenderStore } from '../../shared/react/render-store';
 
 // A site's theme as the page resolves it; the view passes it through.
 type ThemeValue = Partial<ThemeVariant> | null;
@@ -126,6 +128,13 @@ export interface ShortcutsViewOptions {
   onGroupAdd?: (groupId: string, sourceElement: HTMLButtonElement) => void;
 }
 
+// What a shortcut context menu is open for: a tile, a group's menu button
+// or the add tile.
+export type ShortcutContextMenuMark =
+  | { kind: 'shortcut'; shortcutId: string }
+  | { kind: 'group'; groupId: string }
+  | { kind: 'add' };
+
 export interface ShortcutsViewController {
   render(items: VisibleShortcutItem[], layout?: ShortcutsLayout): { count: number };
   fitGroupedColumns(items: VisibleShortcutItem[], groups: ShortcutGroup[]): boolean;
@@ -133,9 +142,12 @@ export interface ShortcutsViewController {
   refreshElements(): void;
   getTiles(): ShortcutTileElement[];
   getAddButton(): HTMLButtonElement | null;
+  // Marks what a context menu is open for, or nothing.
+  setContextMenuMark(mark: ShortcutContextMenuMark | null): void;
 }
 
 interface NormalizedOptions {
+  contextMenuMark: RenderStore<ShortcutContextMenuMark | null>;
   getFolderIconSvg: (idSuffix: string, folderId?: string) => string;
   initFolderIcon: (icon: HTMLElement) => void;
   animateFolderIcon: (icon: HTMLElement, active: boolean) => void;
@@ -216,6 +228,7 @@ function normalizeOptions(
     return null;
   }
   return {
+    contextMenuMark: createRenderStore<ShortcutContextMenuMark | null>(null),
     getFolderIconSvg: options.getFolderIconSvg || (() => ''),
     initFolderIcon: options.initFolderIcon || (() => {}),
     animateFolderIcon: options.animateFolderIcon || (() => {}),
@@ -275,6 +288,10 @@ function normalizeOptions(
 
 function isFolderShortcut(shortcut: VisibleShortcutItem): shortcut is VisibleShortcutFolder {
   return shortcut.type === 'folder';
+}
+
+function useContextMenuMark(options: NormalizedOptions): ShortcutContextMenuMark | null {
+  return useSyncExternalStore(options.contextMenuMark.subscribe, options.contextMenuMark.getSnapshot);
 }
 
 function ShortcutFavicon({
@@ -420,6 +437,9 @@ function ShortcutTile({
   const url = link ? link.url : '';
   const host = link && link.host ? link.host : options.getHostFromUrl(url);
   const shortcutId = shortcut.id || url;
+  const contextMenuMark = useContextMenuMark(options);
+  const contextMenuOpen = Boolean(contextMenuMark && contextMenuMark.kind === 'shortcut' &&
+    contextMenuMark.shortcutId === shortcutId);
   // Preserve the SVG paths owned by the animation runtime across list refreshes.
   const folderIconHtml = useMemo(() => ({
     __html: isFolder ? options.getFolderIconSvg(`shortcut-${shortcutId}`, folderId) : ''
@@ -530,6 +550,7 @@ function ShortcutTile({
       data-bookmark-drop-folder-title={isFolder ? title : undefined}
       aria-haspopup={isFolder ? 'menu' : undefined}
       aria-expanded={isFolder ? false : undefined}
+      data-shortcut-context-menu-open={contextMenuOpen ? 'true' : undefined}
       data-shortcut-custom-icon={localIconDataUrl ? 'true' : undefined}
       data-shortcut-from-bookmark={link && link.fromBookmark === true ? 'true' : undefined}
       data-tooltip={title}
@@ -574,6 +595,9 @@ function ShortcutGroupHeader({
   options: NormalizedOptions;
 }) {
   const moreRef = useRef<HTMLButtonElement>(null);
+  const contextMenuMark = useContextMenuMark(options);
+  const contextMenuOpen = Boolean(contextMenuMark && contextMenuMark.kind === 'group' &&
+    contextMenuMark.groupId === group.id);
 
   function openMenu(): void {
     options.hideTooltip();
@@ -613,6 +637,7 @@ function ShortcutGroupHeader({
         ref={moreRef}
         type="button"
         className="x-nt-shortcut-group-more"
+        data-shortcut-context-menu-open={contextMenuOpen ? 'true' : undefined}
         aria-haspopup="menu"
         aria-label={options.getGroupActionsLabel(group.title)}
         onClick={(event) => {
@@ -638,6 +663,7 @@ function ShortcutsList({
   addButtonRef: React.RefObject<HTMLButtonElement | null>;
 }) {
   const addLabel = options.getAddLabel();
+  const contextMenuMark = useContextMenuMark(options);
   const keys = new Map<string, number>();
   const renderTile = (shortcut: VisibleShortcutItem) => {
     const identity = shortcut.id || (isFolderShortcut(shortcut) ? '' : shortcut.url) || 'shortcut';
@@ -695,6 +721,7 @@ function ShortcutsList({
         ref={addButtonRef}
         type="button"
         className="x-nt-shortcut-tile x-nt-shortcut-tile--add"
+        data-shortcut-context-menu-open={contextMenuMark && contextMenuMark.kind === 'add' ? 'true' : undefined}
         hidden={!options.getAddVisible() || items.length >= options.maxShortcuts || lastGroupEmpty}
         data-tooltip={addLabel}
         aria-label={addLabel}
@@ -743,7 +770,8 @@ function createNoopController(
     },
     getAddButton() {
       return null;
-    }
+    },
+    setContextMenuMark() {}
   };
 }
 
@@ -861,6 +889,9 @@ export function createShortcutsView(
     },
     getAddButton() {
       return addButtonRef.current;
+    },
+    setContextMenuMark(mark) {
+      options.contextMenuMark.render(mark);
     }
   };
 }

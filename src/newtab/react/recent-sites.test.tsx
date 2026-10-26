@@ -549,6 +549,20 @@ describe('Recent Sites React island', () => {
     expect(opened).not.toHaveBeenCalled();
   });
 
+  it('marks the card whose context menu is open', () => {
+    const { view } = createView();
+    renderItems(view, [
+      site({ title: 'First', url: 'https://first.example/' }),
+      site({ title: 'Second', url: 'https://second.example/' })
+    ]);
+    const marked = () => view.getCards().map((card) => card.getAttribute('data-recent-context-menu-open'));
+
+    act(() => view.setContextMenuSite('https://second.example/'));
+    expect(marked()).toEqual([null, 'true']);
+    act(() => view.setContextMenuSite(null));
+    expect(marked()).toEqual([null, null]);
+  });
+
   it('draws its labels in the new language when drawn again', () => {
     let english = false;
     const { view } = createView({

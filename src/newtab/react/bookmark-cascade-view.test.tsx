@@ -53,6 +53,7 @@ function row(overrides: Partial<CascadeRowModel>): CascadeRowModel {
     active: false,
     expanded: false,
     hoverSuppressed: false,
+    contextMenuOpen: false,
     folderIconMarkup: '',
     iconUrl: '',
     iconMonochrome: false,

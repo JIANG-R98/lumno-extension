@@ -176,6 +176,23 @@ describe('Shortcuts React island', () => {
     required(tile._xSetBookmarkMenuVisualActive, 'tile._xSetBookmarkMenuVisualActive')(false);
     expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(false);
   });
+  it('marks the tile or add button its context menu is open for', () => {
+    const { view } = createView();
+    renderItems(view, [
+      site({ id: 'docs', title: 'Docs', url: 'https://example.com/docs' }),
+      site({ id: 'mail', title: 'Mail', url: 'https://example.com/mail' })
+    ]);
+    const marked = () => view.getTiles().map((tile) => tile.getAttribute('data-shortcut-context-menu-open'));
+
+    act(() => view.setContextMenuMark({ kind: 'shortcut', shortcutId: 'mail' }));
+    expect(marked()).toEqual([null, 'true']);
+    act(() => view.setContextMenuMark({ kind: 'add' }));
+    expect(marked()).toEqual([null, null]);
+    expect(view.getAddButton()?.getAttribute('data-shortcut-context-menu-open')).toBe('true');
+    act(() => view.setContextMenuMark(null));
+    expect(view.getAddButton()?.hasAttribute('data-shortcut-context-menu-open')).toBe(false);
+  });
+
   it('renders shortcut metadata and keeps the external tile cache synchronous', () => {
     const attachFavicon = vi.fn((image: HTMLImageElement) => {
       image.src = 'data:image/png;base64,dGVzdA==';

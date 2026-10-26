@@ -3,13 +3,13 @@ import type { Disposition } from '../../domain/navigation-disposition';
 import { isShortcutFolder } from '../../domain/shortcuts-store';
 import type { ShortcutItem } from '../../domain/shortcuts-store';
 import { isElementNode, isNode } from '../../shared/dom-guards';
-import { queryHtmlElements } from '../../shared/dom-lookup';
 import type { SelectMenuOption } from '../../shared/react/select-menu';
 import type { BookmarkEditTarget } from '../bookmarks/bookmark-actions';
 import type { BookmarkMenuAnchor } from '../bookmarks/bookmark-cascade-menu';
 import * as LumnoNewtabDismissStack from '../dismiss-stack';
 import type { ContextMenuParts, SelectMenuController, Translate } from '../newtab-types';
 import type { SelectMenuInstance } from '../react/select-menu';
+import type { ShortcutContextMenuMark } from '../react/shortcuts';
 import type { ShortcutDock } from './shortcut-dock';
 import type { ShortcutContextTarget, ShortcutGroupMenuValues } from './shortcut-types';
 
@@ -23,6 +23,8 @@ interface ShortcutContextMenuState {
 }
 
 interface ShortcutContextMenuDeps {
+  // Draws the mark on what the menu is open for, or clears it.
+  setShortcutContextMenuMark(mark: ShortcutContextMenuMark | null): void;
   getShortcutDockIcon: ShortcutDock['getShortcutDockIcon'];
   setShortcutDockHover: ShortcutDock['setShortcutDockHover'];
   resetShortcutDockHover(): void;
@@ -61,6 +63,7 @@ function createShortcutContextMenu(deps: ShortcutContextMenuDeps) {
   // Escape closes the menu through the page's dismiss stack.
   const dismissStack = LumnoNewtabDismissStack.getDismissStack();
   const {
+    setShortcutContextMenuMark,
     getShortcutDockIcon,
     setShortcutDockHover,
     resetShortcutDockHover,
@@ -117,30 +120,29 @@ function createShortcutContextMenu(deps: ShortcutContextMenuDeps) {
     return control.contains(node) || menu.contains(node);
   }
 
-  // A group's menu button is marked as well as tiles, so clear by the mark.
+  // The tile a context menu shows as active through its own menu visual.
+  let visuallyActiveTile: BookmarkMenuAnchor | null = null;
+
   function clearShortcutContextMenuTileActive(): void {
-    const tiles: BookmarkMenuAnchor[] = pageState.shortcutGrid
-      ? queryHtmlElements(pageState.shortcutGrid, '[data-shortcut-context-menu-open]')
-      : [];
-    tiles.forEach((tile) => {
-      if (!tile.hasAttribute('data-shortcut-context-menu-open')) {
-        return;
-      }
-      tile.removeAttribute('data-shortcut-context-menu-open');
-      if (typeof tile._xSetBookmarkMenuVisualActive === 'function') {
-        tile._xSetBookmarkMenuVisualActive(false);
-      }
-    });
+    setShortcutContextMenuMark(null);
+    const tile = visuallyActiveTile;
+    visuallyActiveTile = null;
+    if (tile && typeof tile._xSetBookmarkMenuVisualActive === 'function') {
+      tile._xSetBookmarkMenuVisualActive(false);
+    }
   }
 
   function setShortcutContextMenuTileActive(target: ShortcutContextTarget): void {
     clearShortcutContextMenuTileActive();
+    setShortcutContextMenuMark(target.kind === 'shortcut'
+      ? { kind: 'shortcut', shortcutId: target.shortcutId }
+      : target.kind === 'group'
+        ? { kind: 'group', groupId: target.groupId }
+        : { kind: 'add' });
     const tile: BookmarkMenuAnchor = target.tile;
-    if (tile) {
-      tile.setAttribute('data-shortcut-context-menu-open', 'true');
-      if (typeof tile._xSetBookmarkMenuVisualActive === 'function') {
-        tile._xSetBookmarkMenuVisualActive(true);
-      }
+    if (tile && typeof tile._xSetBookmarkMenuVisualActive === 'function') {
+      visuallyActiveTile = tile;
+      tile._xSetBookmarkMenuVisualActive(true);
     }
   }
 
@@ -161,7 +163,6 @@ function createShortcutContextMenu(deps: ShortcutContextMenuDeps) {
       return;
     }
     setShortcutDockHover(tile, getShortcutContextMenuAnchorX(tile), { settle: true });
-    tile.setAttribute('data-shortcut-context-menu-open', 'true');
   }
 
   function syncShortcutDockHoverFromPoint(clientX: unknown, clientY: unknown): void {

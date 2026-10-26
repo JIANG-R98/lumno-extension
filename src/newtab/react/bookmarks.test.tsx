@@ -158,6 +158,25 @@ describe('Bookmarks React island', () => {
     expect(attachFavicon.mock.calls.length).toBe(attached);
   });
 
+  it('marks the card whose context menu is open', () => {
+    const { view } = createView();
+    const bookmark = (id: string, index: number): BookmarkItem => ({
+      id,
+      parentId: '1',
+      index,
+      type: 'bookmark',
+      title: id,
+      url: `https://example.com/${id}`
+    });
+    renderItems(view, [bookmark('first', 0), bookmark('second', 1)]);
+    const marked = () => view.getCards().map((card) => card.getAttribute('data-bookmark-context-menu-open'));
+
+    act(() => view.setContextMenuBookmark('first'));
+    expect(marked()).toEqual(['true', null]);
+    act(() => view.setContextMenuBookmark(null));
+    expect(marked()).toEqual([null, null]);
+  });
+
   it('renders synchronously with external metadata and stable keyed cards', () => {
     const attachFavicon = vi.fn();
     const bindTooltip = vi.fn();

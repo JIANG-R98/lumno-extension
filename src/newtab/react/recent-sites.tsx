@@ -2,6 +2,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
@@ -16,6 +17,7 @@ import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 import { queryHtmlTags } from '../../shared/dom-lookup';
 import { innerHtml } from '../../shared/react/inner-html';
 import { FaviconFallback } from '../../shared/react/favicon-fallback';
+import { createRenderStore, type RenderStore } from '../../shared/react/render-store';
 
 type Translate = (key: string, fallback: string) => string;
 // A site's theme as the page resolves it; the view passes it through.
@@ -159,6 +161,8 @@ export interface RecentSitesViewController {
   ): RecentSitesRenderResult;
   getSignature(items: RecentSite[]): string;
   getCards(): RecentCardElement[];
+  // Marks the card of the site whose context menu is open, or none.
+  setContextMenuSite(url: string | null): void;
 }
 
 interface NormalizedRecentSitesOptions {
@@ -166,6 +170,7 @@ interface NormalizedRecentSitesOptions {
   windowObj: Window;
   grid: HTMLElement;
   cards: RecentCardElement[];
+  contextMenuSite: RenderStore<string | null>;
   t: Translate;
   formatMessage: NonNullable<RecentSitesViewOptions['formatMessage']>;
   sanitizeDisplayText: NonNullable<RecentSitesViewOptions['sanitizeDisplayText']>;
@@ -311,6 +316,7 @@ function normalizeOptions(
     windowObj,
     grid,
     cards: Array.isArray(rawOptions.cards) ? rawOptions.cards : [],
+    contextMenuSite: createRenderStore<string | null>(null),
     t: typeof rawOptions.t === 'function'
       ? rawOptions.t
       : (_key, fallback) => fallback || '',
@@ -478,6 +484,8 @@ function RecentSiteCard({
   const safeTitleText = options.sanitizeDisplayText(titleText);
   const shouldEager = index < options.getCurrentRecentCount();
   const initiallyPinned = options.isPinned(item);
+  const contextMenuSite = useSyncExternalStore(options.contextMenuSite.subscribe, options.contextMenuSite.getSnapshot);
+  const contextMenuOpen = contextMenuSite !== null && contextMenuSite === String(item.url || '');
   const progressState = options.getProgressState(item);
   const progressTracked = progressState === 'tracking';
   const progressLabel = progressTracked
@@ -874,6 +882,7 @@ function RecentSiteCard({
     <div
       ref={cardRef}
       className="x-nt-recent-card"
+      data-recent-context-menu-open={contextMenuOpen ? 'true' : undefined}
       tabIndex={0}
       role="button"
       aria-label={options.formatMessage('open_prefix', '打开 {title}', {
@@ -1063,7 +1072,8 @@ function createNoopController(
     getSignature: getRecentSitesSignature,
     getCards() {
       return cards;
-    }
+    },
+    setContextMenuSite() {}
   };
 }
 
@@ -1129,6 +1139,9 @@ export function createRecentSitesView(
     getSignature: getRecentSitesSignature,
     getCards() {
       return options.cards;
+    },
+    setContextMenuSite(url) {
+      options.contextMenuSite.render(url);
     }
   };
 }

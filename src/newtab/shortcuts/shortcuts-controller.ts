@@ -42,7 +42,7 @@ import type {
   ShortcutDialogPayload
 } from '../react/shortcut-dialog';
 import type { createShortcutDialogApi } from '../react/shortcut-dialog-lazy';
-import type { createShortcutsViewApi, ShortcutsViewController, ShortcutsViewOptions } from '../react/shortcuts';
+import type { createShortcutsViewApi, ShortcutContextMenuMark, ShortcutsViewController, ShortcutsViewOptions } from '../react/shortcuts';
 import type { ShortcutContextMenu } from './shortcut-context-menu';
 import type { ShortcutDock } from './shortcut-dock';
 import type * as ShortcutIconPlate from './shortcut-icon-plate';
@@ -2020,7 +2020,14 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     });
   }
 
+  function setShortcutContextMenuMark(mark: ShortcutContextMenuMark | null): void {
+    if (shortcutsView) {
+      shortcutsView.setContextMenuMark(mark);
+    }
+  }
+
   return {
+    setShortcutContextMenuMark,
     getShortcutFolderId,
     getFolderItemIconUrl,
     getFolderItemIcon,

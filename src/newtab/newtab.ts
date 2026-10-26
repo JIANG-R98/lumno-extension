@@ -616,6 +616,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
     openShortcutAddContextMenu,
     openShortcutGroupMenu
   } = NEWTAB_SHORTCUT_CONTEXT_MENU.createShortcutContextMenu({
+    setShortcutContextMenuMark: (mark) => setShortcutContextMenuMark(mark),
     getShortcutDockIcon: (...args) => getShortcutDockIcon(...args),
     setShortcutDockHover: (...args) => setShortcutDockHover(...args),
     resetShortcutDockHover: (...args) => resetShortcutDockHover(...args),
@@ -1949,6 +1950,7 @@ function requireIslandApi<T>(api: T | undefined, name: string): T {
   });
 
   const {
+    setShortcutContextMenuMark,
     getShortcutFolderId,
     getFolderItemIconUrl,
     getFolderItemIcon,

@@ -3,6 +3,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useSyncExternalStore,
   type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
@@ -20,6 +21,7 @@ import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 import { queryHtmlTags } from '../../shared/dom-lookup';
 import { innerHtml } from '../../shared/react/inner-html';
 import { FaviconFallback, FolderPreviewFaviconFallback } from '../../shared/react/favicon-fallback';
+import { createRenderStore, type RenderStore } from '../../shared/react/render-store';
 
 // A site's theme as the page resolves it; the view passes it through.
 type ThemeValue = Partial<ThemeVariant> | null;
@@ -162,6 +164,7 @@ interface NormalizedBookmarksOptions {
   grid: HTMLElement;
   cards: BookmarkCardElement[];
   cardElementCache: Map<string, BookmarkCardElement>;
+  contextMenuBookmark: RenderStore<string | null>;
   folderIconsVisible: { current: boolean };
   t: NonNullable<BookmarksViewOptions['t']>;
   formatMessage: NonNullable<BookmarksViewOptions['formatMessage']>;
@@ -255,6 +258,8 @@ export interface BookmarksViewController {
   getCacheKey(item: BookmarkItem): string;
   setFolderIconsVisible(value: boolean): boolean;
   getCards(): BookmarkCardElement[];
+  // Marks the card of the bookmark whose context menu is open, or none.
+  setContextMenuBookmark(id: string | null): void;
 }
 
 function fallbackFormatMessage(
@@ -325,6 +330,7 @@ function normalizeOptions(
     windowObj,
     grid,
     cards: Array.isArray(rawOptions.cards) ? rawOptions.cards : [],
+    contextMenuBookmark: createRenderStore<string | null>(null),
     cardElementCache:
       rawOptions.cardElementCache instanceof Map
         ? rawOptions.cardElementCache
@@ -542,6 +548,11 @@ function BookmarkCard({
 
   const isTopbarMode = viewMode === 'top';
   const isFolder = item.type === 'folder';
+  const contextMenuBookmark = useSyncExternalStore(
+    options.contextMenuBookmark.subscribe,
+    options.contextMenuBookmark.getSnapshot
+  );
+  const contextMenuOpen = contextMenuBookmark !== null && contextMenuBookmark === String(item.id || '');
   const folderIconId = String(item.id || `folder-${index}`);
   const folderIconHtml = useMemo(() => ({
     __html: isFolder ? options.getFigmaFolderSvg(`bookmark-${folderIconId}`, item.id) : ''
@@ -937,6 +948,7 @@ function BookmarkCard({
           isFolder ? ' x-nt-bookmark-card--folder' : ''
         }`
       }
+      data-bookmark-context-menu-open={contextMenuOpen ? 'true' : undefined}
       tabIndex={0}
       role="button"
       draggable={false}
@@ -1200,7 +1212,8 @@ function createNoopController(
     },
     getCards() {
       return cards;
-    }
+    },
+    setContextMenuBookmark() {}
   };
 }
 
@@ -1319,6 +1332,9 @@ export function createBookmarksView(
     },
     getCards() {
       return options.cards;
+    },
+    setContextMenuBookmark(id) {
+      options.contextMenuBookmark.render(id);
     }
   };
 }

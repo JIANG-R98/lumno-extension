@@ -14,7 +14,7 @@ import type { SelectMenuOption } from '../../shared/react/select-menu';
 import * as LumnoNewtabDismissStack from '../dismiss-stack';
 import type { ContextMenuParts, SelectMenuController, ShowToast, Translate } from '../newtab-types';
 import type { RecentHistoryItem } from '../react/recent-history-dialog';
-import type { RecentProgressState, RecentSitesViewOptions } from '../react/recent-sites';
+import type { RecentProgressState, RecentSitesViewController, RecentSitesViewOptions } from '../react/recent-sites';
 import type { SelectMenuInstance } from '../react/select-menu';
 import type { ShortcutSite } from '../shortcuts/shortcut-types';
 import type { RecentContextTarget } from './recent-types';
@@ -23,6 +23,7 @@ interface RecentSitesControllerState {
   recentContextMenu: ContextMenuParts | null;
   recentContextMenuSelectController: SelectMenuController | null;
   recentContextMenuTarget: RecentContextTarget | null;
+  recentSitesView: Pick<RecentSitesViewController, 'setContextMenuSite'> | null;
   hiddenRecentSites: HiddenRecentSite[];
   pinnedRecentSites: RecentSite[];
   // The items the grid shows, to skip renders that change nothing.
@@ -189,15 +190,14 @@ function createRecentSitesController(deps: RecentSitesControllerDeps) {
     return control.contains(node) || menu.contains(node);
   }
 
-  function clearRecentContextMenuTargetVisual(): void {
-    const element = pageState.recentContextMenuTarget && pageState.recentContextMenuTarget.element;
-    if (element) {
-      element.removeAttribute('data-recent-context-menu-open');
+  function setRecentContextMenuSite(url: string | null): void {
+    if (pageState.recentSitesView) {
+      pageState.recentSitesView.setContextMenuSite(url);
     }
   }
 
   function closeRecentContextMenu(): void {
-    clearRecentContextMenuTargetVisual();
+    setRecentContextMenuSite(null);
     if (pageState.recentContextMenu && pageState.recentContextMenuSelectController) {
       pageState.recentContextMenuSelectController.setOpen(pageState.recentContextMenu.control, false);
     }
@@ -368,7 +368,7 @@ function createRecentSitesController(deps: RecentSitesControllerDeps) {
     closeBookmarkContextMenu();
     closeRecentContextMenu();
     pageState.recentContextMenuTarget = target;
-    target.element.setAttribute('data-recent-context-menu-open', 'true');
+    setRecentContextMenuSite(String(target.item.url || ''));
     setRecentContextMenuPosition(target, event);
     pageState.recentContextMenuSelectController.setOptions(
       pageState.recentContextMenu.control,

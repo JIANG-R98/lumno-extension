@@ -4,8 +4,10 @@ import { isElementNode } from '../../shared/dom-guards';
 import type { SelectMenuOption } from '../../shared/react/select-menu';
 import * as LumnoNewtabDismissStack from '../dismiss-stack';
 import type { ContextMenuParts, SelectMenuController, Translate } from '../newtab-types';
+import type { BookmarksViewController } from '../react/bookmarks';
 import type { SelectMenuInstance } from '../react/select-menu';
 import type { ShortcutSite } from '../shortcuts/shortcut-types';
+import type { BookmarkCascadeRuntime } from './bookmark-cascade-menu';
 import type { BookmarkDragSession } from './bookmark-drag';
 import type * as BookmarksStore from './bookmarks-store';
 import type { BookmarksRuntime } from './bookmarks-runtime';
@@ -30,6 +32,8 @@ interface BookmarkContextMenuState {
   bookmarkContextMenuSelectController: SelectMenuController | null;
   bookmarkContextMenuTarget: BookmarkContextTarget | null;
   bookmarkDragState: BookmarkDragSession | null;
+  bookmarksView: Pick<BookmarksViewController, 'setContextMenuBookmark'> | null;
+  bookmarkCascadeRuntime: Pick<BookmarkCascadeRuntime, 'setContextMenuBookmark'> | null;
 }
 
 // A right-click on a bookmark card or a cascade row.
@@ -188,15 +192,20 @@ function createBookmarkContextMenu(deps: BookmarkContextMenuDeps) {
     return control.contains(node) || menu.contains(node);
   }
 
-  function clearBookmarkContextMenuTargetVisual(): void {
-    const element = pageState.bookmarkContextMenuTarget && pageState.bookmarkContextMenuTarget.element;
-    if (element) {
-      element.removeAttribute('data-bookmark-context-menu-open');
+  // The card or folder menu row the menu opened from shows it; none when closed.
+  function setBookmarkContextMenuMark(target: BookmarkContextTarget | null): void {
+    const cardId = target && target.sourceKind === 'card' ? target.bookmarkId : null;
+    const rowId = target && target.sourceKind === 'cascade' ? target.bookmarkId : null;
+    if (pageState.bookmarksView) {
+      pageState.bookmarksView.setContextMenuBookmark(cardId);
+    }
+    if (pageState.bookmarkCascadeRuntime) {
+      pageState.bookmarkCascadeRuntime.setContextMenuBookmark(rowId);
     }
   }
 
   function closeBookmarkContextMenu(): void {
-    clearBookmarkContextMenuTargetVisual();
+    setBookmarkContextMenuMark(null);
     if (pageState.bookmarkContextMenu && pageState.bookmarkContextMenuSelectController) {
       pageState.bookmarkContextMenuSelectController.setOpen(pageState.bookmarkContextMenu.control, false);
     }
@@ -350,7 +359,7 @@ function createBookmarkContextMenu(deps: BookmarkContextMenuDeps) {
     closeRecentContextMenu();
     closeBookmarkContextMenu();
     pageState.bookmarkContextMenuTarget = target;
-    target.element.setAttribute('data-bookmark-context-menu-open', 'true');
+    setBookmarkContextMenuMark(target);
     setBookmarkContextMenuPosition(target, event);
     pageState.bookmarkContextMenuSelectController.setOptions(
       pageState.bookmarkContextMenu.control,

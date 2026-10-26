@@ -31,6 +31,8 @@ export interface CascadeRowModel {
   active: boolean;
   expanded: boolean;
   hoverSuppressed: boolean;
+  // The row's context menu is open.
+  contextMenuOpen: boolean;
   // Folders: the folder glyph's markup. Sites: a chosen icon, else ''.
   folderIconMarkup: string;
   iconUrl: string;
@@ -146,6 +148,7 @@ function CascadeRow({
         className={row.isFolder ? 'x-nt-bookmark-cascade-item x-nt-bookmark-cascade-item--folder' : 'x-nt-bookmark-cascade-item'}
         data-active={row.active ? 'true' : 'false'}
         data-bookmark-dragging="false"
+        data-bookmark-context-menu-open={row.contextMenuOpen ? 'true' : undefined}
         data-bookmark-draggable={row.draggable ? 'true' : 'false'}
         data-bookmark-drop-folder-id={row.isFolder ? row.bookmarkId : undefined}
         data-bookmark-drop-folder-title={row.isFolder ? row.title : undefined}
