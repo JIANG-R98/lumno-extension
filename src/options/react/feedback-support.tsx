@@ -445,19 +445,12 @@ export function FeedbackSupportView({ actions = [], cards = [], heading, heading
   // Both rows share one column grid, so the cards beside the Help Center line up with the tiles.
   const columns = { '--feedback-support-columns': Math.max(2, items.length + actions.length) };
   return (
+    // No visible title: the cards lead the tab, and the heading only names the section for screen readers.
     <section
       className="_x_extension_feedback_support_section_2026_unique_"
-      aria-labelledby="_x_extension_feedback_support_heading_2026_unique_"
+      aria-label={heading}
+      data-i18n-aria-label={headingKey}
     >
-      <div className="_x_extension_setting_row_2024_unique_ _x_extension_section_header_2026_unique_">
-        <h2
-          id="_x_extension_feedback_support_heading_2026_unique_"
-          className="_x_extension_section_title_2024_unique_"
-          data-i18n={headingKey}
-        >
-          {heading}
-        </h2>
-      </div>
       <div className="_x_extension_feedback_support_cards_2026_unique_" style={columns}>
         {help?.href || cards.length ? (
           <div className="_x_extension_feedback_support_help_row_2026_unique_">
@@ -468,7 +461,8 @@ export function FeedbackSupportView({ actions = [], cards = [], heading, heading
         {items.length || actions.length ? (
           <nav
             className="_x_extension_feedback_support_links_2026_unique_"
-            aria-labelledby="_x_extension_feedback_support_heading_2026_unique_"
+            aria-label={heading}
+            data-i18n-aria-label={headingKey}
           >
             {items.map((item) => <FeedbackSupportItemLink item={item} key={item.key} />)}
             {actions.map((action) => <FeedbackSupportActionTile action={action} key={action.id || action.label} />)}

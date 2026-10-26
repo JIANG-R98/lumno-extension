@@ -343,7 +343,9 @@ describe('Options feedback support', () => {
         : item)
     }));
 
-    expect(host.querySelector('h2')?.textContent).toBe('Feedback & Support');
+    // The heading has no visible title; it names the section.
+    expect(host.querySelector('h2')).toBeNull();
+    expect(host.querySelector('section')?.getAttribute('aria-label')).toBe('Feedback & Support');
     expect(host.querySelector('[data-feedback-support="community"]')?.textContent)
       .toContain('加入反馈群（新）');
   });

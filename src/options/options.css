@@ -687,13 +687,14 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
   flex: 1 1 auto;
   min-width: 0;
 }
-/* The Help Center card, then the tiles, as one block of cards under the heading. */
+/* The Help Center card, then the tiles, as one block of cards at the top of the tab,
+   as far from the panel's top edge as from its sides. */
 ._x_extension_feedback_support_cards_2026_unique_ {
   display: flex;
   flex-direction: column;
   gap: 8px;
   min-width: 0;
-  padding: 4px var(--settings-content-edge-space) var(--settings-row-block-space);
+  padding: var(--settings-content-edge-space) var(--settings-content-edge-space) var(--settings-row-block-space);
 }
 /* The Help Center spans every column but the last, which the onboarding guide takes. */
 ._x_extension_feedback_support_help_row_2026_unique_ {
