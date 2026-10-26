@@ -10,7 +10,6 @@ import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store
 import * as LumnoHelpCenterIndex from '../platform/help-center-index';
 import * as AI_PROVIDER_SUBMIT from './ai-provider-submit';
 import * as COMMUNITY_LINKS from '../domain/community-links';
-import * as HELP_CENTER_SEARCH from '../domain/search/help-center-search';
 import * as SEARCH_RESULT_TABS from './search-result-tabs';
 import { aggregateSearchAutoGroupEnabled, aggregateSearches } from '../domain/settings';
 import { getShortcutUrl, loadShortcutRules, waitForTabComplete, workerSettings } from './worker-context';
@@ -34,10 +33,12 @@ import { getSiteSearchProviderEntryUrl, isInteractiveSiteSearchProvider, loadSit
 import { createSearchResultTab, resolveSearchResultTabPlacement } from './browser-urls-service';
 import type { AggregateSearchQueryRunner } from './aggregate-search';
 import type { CreatedTabCallback } from './tab-groups';
-import type { HelpIndexDoc, HelpSearchResult } from '../domain/search/help-center-search';
 import type { SiteSearchProvider } from '../domain/search/types';
 import type { OkReply, OpenDisposition } from '../domain/messages';
 import type { HandlersFor, MessageSender } from './message-router';
+import * as IndexBuild from '../domain/search/help-center/index-build';
+import * as Search from '../domain/search/help-center/search';
+import type { HelpIndexDoc, HelpSearchResult } from '../domain/search/help-center/types';
 
 type SearchAction =
   | 'searchOrNavigate'
@@ -371,7 +372,7 @@ export const SEARCH_MESSAGE_HANDLERS: HandlersFor<SearchAction> = Object.freeze(
   }
 });
 
-type HelpSynonyms = ReturnType<typeof HELP_CENTER_SEARCH.normalizeSynonyms>;
+type HelpSynonyms = ReturnType<typeof IndexBuild.normalizeSynonyms>;
 
 let helpCenterLoaders: {
   index: { load(url: unknown): Promise<HelpIndexDoc[] | never[]> };
@@ -393,7 +394,7 @@ function getHelpCenterSearchResults(query: unknown, locale: unknown): Promise<He
         fetchImpl: (url, init) => fetch(url, init).then((response) => (
           response.status === 404 ? { ok: true, json: () => [] } : response
         )),
-        parse: HELP_CENTER_SEARCH.normalizeSynonyms
+        parse: IndexBuild.normalizeSynonyms
       })
     };
   }
@@ -401,7 +402,7 @@ function getHelpCenterSearchResults(query: unknown, locale: unknown): Promise<He
   return Promise.all([
     loaders.index.load(COMMUNITY_LINKS.getHelpSearchIndexUrl(locale)),
     loaders.synonyms.load(COMMUNITY_LINKS.getHelpSearchSynonymsUrl(locale)).catch((): never[] => [])
-  ]).then(([index, synonyms]) => HELP_CENTER_SEARCH.searchIndex(index, query, {
+  ]).then(([index, synonyms]) => Search.searchIndex(index, query, {
     origin: COMMUNITY_LINKS.WEB_ORIGIN,
     synonyms
   }));

@@ -2,7 +2,6 @@
 // New Tab and overlay adapters that create it.
 import type { RemixIconName } from '../../../ui/remix-icon';
 import type { TabRankFields } from '../../../../domain/messages';
-import type { HelpContextBlock } from '../../../../domain/search/help-center-search';
 import type {
   DisplayedSuggestion,
   SearchActionModel,
@@ -10,6 +9,7 @@ import type {
 } from '../../../../domain/search/suggestion-action-model';
 import type { SiteSearchProvider } from '../../../../domain/search/types';
 import type { ThemeVariant } from '../../../favicon/favicon-theme';
+import type { HelpContextBlock } from '../../../../domain/search/help-center/types';
 
 // A row's theme, as the surface builds it from favicon-theme; the list
 // reads what is there and falls back for the rest.

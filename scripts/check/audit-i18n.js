@@ -22,7 +22,7 @@ const ALLOWLIST = [
   'debug-only score reason strings when the debug flag is disabled by default (src/background/search/suggestion-rows.ts)',
   'Chinese search-intent tokens in src/domain/search/search-utils.ts and its utils/ parts\' scoring dictionaries',
   'generated traditional-to-simplified character table in src/domain/search/han-variants.generated.ts',
-  'question filler words dropped from help center queries in src/domain/search/help-center-search.ts',
+  'question filler words dropped from help center queries in src/domain/search/help-center/query.ts',
   'episode and chapter title patterns in src/domain/progress-match.ts',
   'photographer names credited in src/newtab/wallpaper/wallpaper-catalog.ts',
   'language names written in their own language in UI_LOCALES (src/domain/settings/locale.ts)'
@@ -122,7 +122,7 @@ function isAllowlistedLine(file, line) {
   if (file === 'src/background/search/suggestion-rows.ts') {
     return true;
   }
-  if (file === 'src/domain/search/help-center-search.ts') {
+  if (file === 'src/domain/search/help-center/query.ts') {
     return true;
   }
   if (file === 'src/domain/progress-match.ts') {

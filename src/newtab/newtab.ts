@@ -11,7 +11,6 @@ import * as PROGRESS_HISTORY from '../domain/progress-history';
 import * as PROGRESS_MATCH from '../domain/progress-match';
 import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
 import * as AGGREGATE_SEARCH_SURFACE from '../domain/search/aggregate-search-surface';
-import * as LumnoHelpCenterSearch from '../domain/search/help-center-search';
 import * as LumnoImeKeyGuard from '../domain/search/ime-key-guard';
 import * as SEARCH_INPUT_HISTORY from '../domain/search/search-input-history';
 import * as SEARCH_UTILS from '../domain/search/search-utils';
@@ -2695,7 +2694,6 @@ import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted
     setSuggestionsVisible,
     NEWTAB_DIRECT_NAVIGATION_SETTLE,
     sendRuntimeMessage,
-    HELP_CENTER_SEARCH: LumnoHelpCenterSearch || null,
     COMMUNITY_LINKS: LumnoCommunityLinks || null,
     openCommunityQrDialog: (...args) => openCommunityQrDialog(...args),
     getHelpCenterLocale: (...args) => getHelpCenterLocale(...args),

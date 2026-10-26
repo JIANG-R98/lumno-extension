@@ -1,8 +1,8 @@
+import { normalizeIndex } from '../domain/search/help-center/index-build';
+import type { HelpIndexDoc } from '../domain/search/help-center/types';
 // Fetching the help center's search index and synonym list for a language
-// (domain/search/help-center-search.ts parses and searches them). One cached
+// (domain/search/help-center/ parses and searches them). One cached
 // copy per language; a failed load is forgotten so the next query retries.
-import { normalizeIndex } from '../domain/search/help-center-search';
-import type { HelpIndexDoc } from '../domain/search/help-center-search';
 
 // The parts of a Response the loader reads.
 interface IndexResponse {

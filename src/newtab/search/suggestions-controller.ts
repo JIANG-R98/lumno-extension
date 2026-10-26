@@ -1,7 +1,6 @@
 // Requesting, rendering and activating search suggestions.
 import type { OverlayTab, ShortcutRule } from '../../domain/messages';
 import type { AggregateSearch } from '../../domain/search/aggregate-search-store';
-import type * as HelpCenterSearch from '../../domain/search/help-center-search';
 import type * as SearchUtils from '../../domain/search/search-utils';
 import type * as SuggestionActionModel from '../../domain/search/suggestion-action-model';
 import type { SiteSearchProvider } from '../../domain/search/types';
@@ -32,6 +31,7 @@ import type {
   SlashCommand
 } from './search-types';
 import type { SiteSearchProviders } from './site-search-providers';
+import { createSuggestionSource } from '../../domain/search/help-center/search';
 
 interface SuggestionsControllerState {
   suggestionsView: SuggestionsViewController | null;
@@ -146,7 +146,6 @@ interface SuggestionsControllerDeps {
   setSuggestionsVisible(visible: boolean): void;
   NEWTAB_DIRECT_NAVIGATION_SETTLE: Pick<typeof DirectNavigationSettle, 'createDirectNavigationSettleController'>;
   sendRuntimeMessage: SendRuntimeMessage;
-  HELP_CENTER_SEARCH: Pick<typeof HelpCenterSearch, 'createSuggestionSource'> | null;
   COMMUNITY_LINKS: Pick<typeof CommunityLinks, 'load' | 'getLinks' | 'getCommunityChannel'> | null;
   openCommunityQrDialog?(url: string | undefined): void;
   getHelpCenterLocale(): string;
@@ -240,7 +239,6 @@ function createSuggestionsController(deps: SuggestionsControllerDeps) {
     setSuggestionsVisible,
     NEWTAB_DIRECT_NAVIGATION_SETTLE,
     sendRuntimeMessage,
-    HELP_CENTER_SEARCH,
     COMMUNITY_LINKS,
     openCommunityQrDialog,
     getHelpCenterLocale
@@ -274,18 +272,16 @@ function createSuggestionsController(deps: SuggestionsControllerDeps) {
   }
 
   // Lumno Help Center search lists the matching help pages under its search row.
-  const helpCenterSuggestionSource = HELP_CENTER_SEARCH
-    ? HELP_CENTER_SEARCH.createSuggestionSource({
-      sendMessage: (message, callback) => sendRuntimeMessage<'getHelpCenterSearchResults'>(message, (response) => {
-        callback(chrome.runtime && chrome.runtime.lastError ? undefined : response);
-      }),
-      onUpdate: (query) => {
-        if (query === pageState.latestQuery) {
-          renderSuggestions(pageState.lastSuggestionResponse, query);
-        }
+  const helpCenterSuggestionSource = createSuggestionSource({
+    sendMessage: (message, callback) => sendRuntimeMessage<'getHelpCenterSearchResults'>(message, (response) => {
+      callback(chrome.runtime && chrome.runtime.lastError ? undefined : response);
+    }),
+    onUpdate: (query) => {
+      if (query === pageState.latestQuery) {
+        renderSuggestions(pageState.lastSuggestionResponse, query);
       }
-    })
-    : null;
+    }
+  });
   let pendingProviderReload = false;
   let openInCurrentTabModifierActive = false;
   let openSwitchInNewTabModifierActive = false;

@@ -2,7 +2,6 @@
 // answers, and the update that merges local, tab and remote results.
 import type { ShortcutRule } from '../../domain/messages';
 import type { AggregateSearch } from '../../domain/search/aggregate-search-store';
-import * as HELP_CENTER_SEARCH from '../../domain/search/help-center-search';
 import * as LumnoSearchUtils from '../../domain/search/search-utils';
 import type * as SearchUtils from '../../domain/search/search-utils';
 import type * as SuggestionActionModel from '../../domain/search/suggestion-action-model';
@@ -29,6 +28,7 @@ import type {
   Translate
 } from './types';
 import { shortcutRulesCache } from '../../shared/search/shortcut-rules-cache';
+import * as Search from '../../domain/search/help-center/search';
 
 interface SuggestionSourcesState {
   settings: Pick<OverlaySettings, 'get'>;
@@ -198,7 +198,7 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
   const overlayState = deps.overlayState;
 
   // Lumno Help Center search lists the matching help pages under its search row.
-  let helpCenterSuggestionSource: ReturnType<typeof HELP_CENTER_SEARCH.createSuggestionSource> | null = null;
+  let helpCenterSuggestionSource: ReturnType<typeof Search.createSuggestionSource> | null = null;
   let helpCenterFeedbackLinksRequested = false;
   let pendingProviderReload = false;
 
@@ -343,7 +343,7 @@ function createSuggestionSources(deps: SuggestionSourcesDeps) {
       return [];
     }
     if (!helpCenterSuggestionSource) {
-      helpCenterSuggestionSource = HELP_CENTER_SEARCH.createSuggestionSource({
+      helpCenterSuggestionSource = Search.createSuggestionSource({
         sendMessage: (message, callback) => {
           try {
             LumnoMessaging.sendBackgroundMessage(chrome.runtime, message, (response) => {

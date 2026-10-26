@@ -39,7 +39,6 @@ import '../domain/search/search-utils';
 import '../domain/selection-intent';
 import '../shared/search/site-search-store';
 import '../domain/community-links';
-import '../domain/search/help-center-search';
 import '../domain/search/aggregate-search-store';
 import './ai-provider-submit';
 import './aggregate-search';

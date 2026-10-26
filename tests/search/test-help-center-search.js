@@ -1,6 +1,11 @@
 const assert = require('assert');
 const fs = require('fs');
-const helpCenterSearch = require('../../src/domain/search/help-center-search.ts');
+const helpCenterSearch = {
+  ...require('../../src/domain/search/help-center/search.ts'),
+  ...require('../../src/domain/search/help-center/index-build.ts'),
+  ...require('../../src/domain/search/help-center/query.ts'),
+  ...require('../../src/domain/search/help-center/score.ts')
+};
 const helpCenterIndex = require('../../src/platform/help-center-index.ts');
 const communityLinks = require('../../src/domain/community-links.ts');
 const searchUtils = require('../../src/domain/search/search-utils.ts');
@@ -357,11 +362,11 @@ function testSuggestionSource() {
 }
 
 assert.ok(
-  runsBefore(getInjectedScripts('overlay'), 'src/domain/search/help-center-search.ts', 'src/overlay/search-panel.ts'),
+  runsBefore(getInjectedScripts('overlay'), 'src/domain/search/help-center/search.ts', 'src/overlay/search-panel.ts'),
   'the overlay should load the help center module before the search panel'
 );
 assert.ok(
-  runsBefore(getPageScripts('newtab.html'), 'src/domain/search/help-center-search.ts', 'src/newtab/search/suggestions-controller.ts'),
+  runsBefore(getPageScripts('newtab.html'), 'src/domain/search/help-center/search.ts', 'src/newtab/search/suggestions-controller.ts'),
   'the new tab should load the help center module before its suggestions controller'
 );
 
