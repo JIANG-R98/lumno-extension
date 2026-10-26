@@ -17,10 +17,8 @@ import {
   popupRecentPin,
   progressTracker
 } from './worker-controllers';
-import {
-  focusWindowAndActivateTab,
-  handleTabSwitcherShortcutModifierReleased
-} from './tab-switcher-service';
+import { focusWindowAndActivateTab } from './tab-switcher/open';
+import { handleTabSwitcherShortcutModifierReleased } from './tab-switcher/shortcut-release';
 import {
   fetchFaviconData,
   fetchShortcutFaviconData,

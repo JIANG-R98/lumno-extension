@@ -69,19 +69,18 @@ import './popup-recent-pin';
 import { pageShortcutMenuController, startProgressTracking } from './worker-controllers';
 import './overlay-loading-lifecycle';
 import * as DEV_EXTENSION_STARTUP from './dev-extension-startup';
+import { loadFirefoxBrandIcon } from './tab-switcher/appearance';
+import { removeRecentSwitcherTab, scheduleSwitcherThumbnailCapture } from './tab-switcher/capture';
+import { clearSwitcherThumbnailPriority } from './tab-switcher/thumbnail-priority';
+import { tabSwitcherHostTabIdByWindowId } from './tab-switcher/host';
+import { triggerTabSwitcherForTab } from './tab-switcher/open';
+import { prepareShortcutKeyObserversInOpenTabs } from './tab-switcher/shortcut-release';
 import {
-  clearSwitcherThumbnailPriority,
   ensureTabSwitcherStateLoaded,
   flushPendingTabSwitcherState,
-  loadFirefoxBrandIcon,
-  prepareShortcutKeyObserversInOpenTabs,
   recordRecentSwitcherTab,
-  removeRecentSwitcherTab,
-  scheduleSwitcherThumbnailCapture,
-  tabSwitcherHostTabIdByWindowId,
-  triggerTabSwitcherForTab,
   updateRecentSwitcherTab
-} from './tab-switcher-service';
+} from './tab-switcher/state-store';
 import { registerTabSwitcherExtensionPagePortConnection } from './tab-switcher-extension-page';
 import {
   flushPendingPinnedTabSnapshot,

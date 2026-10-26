@@ -35,7 +35,7 @@ function bootSwitcher(options) {
     extensionUrls: true,
     sync: Object.assign({ [TAB_SWITCHER_ENABLED_KEY]: true }, config.sync || {}),
     local: config.local,
-    exposeModules: { 'src/background/tab-switcher-service.ts': ['readTabSwitcherShortcutDebugEvents'] },
+    exposeModules: { 'src/background/tab-switcher/shortcut-release.ts': ['readTabSwitcherShortcutDebugEvents'] },
     commands: [
       { name: 'show-tab-switcher', shortcut: config.shortcut || 'Alt+Q' },
       { name: 'show-tab-switcher-reverse', shortcut: config.reverseShortcut || '' }
