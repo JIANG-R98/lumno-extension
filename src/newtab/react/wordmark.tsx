@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import type { CSSProperties } from 'react';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
+import { queryHtmlElement } from '../../shared/dom-lookup';
 
 export type NewtabTopContentMode = 'brand' | 'time';
 
@@ -17,14 +17,23 @@ export interface TopContentClockFont {
   tracking: number | null;
 }
 
+// How the brand mark sits on the page: the image for the theme, or on a
+// wallpaper a solid layer in the sampled ink; the clock takes the same ink.
+export interface WordmarkAppearance {
+  imageSrc: string;
+  imageOpacity: number;
+  solidOpacity: number;
+  solidFill: string;
+}
+
 export interface TopContentModel {
   animateEntry: boolean;
+  appearance: WordmarkAppearance;
   ariaLabel: string;
   font?: TopContentClockFont;
   /** The clock's size at full window width, in px. */
   fontSize?: number;
   fontWeight?: number;
-  imageSrc: string;
   locale?: string;
   mode: NewtabTopContentMode;
   /** The clock's opacity, 0-1. */
@@ -44,8 +53,9 @@ export interface TopContentController {
   getButton(): HTMLButtonElement | null;
   getContent(): HTMLElement | null;
   getImage(): HTMLImageElement | null;
-  getSolid(): HTMLSpanElement | null;
   render(model: TopContentModel): void;
+  // Draws the last model in a new appearance, leaving its entry motion alone.
+  updateAppearance(appearance: WordmarkAppearance): void;
 }
 
 const containerStyle = `
@@ -333,21 +343,21 @@ function Wordmark({
         onActivate(getDisposition(event));
       }}
       ref={buttonRef}
-      style={buttonStyle}
+      style={{ ...buttonStyle, '--x-nt-wordmark-solid-fill': model.appearance.solidFill }}
       type="button"
     >
       <span
         aria-hidden="true"
         className="x-nt-wordmark-solid"
-        style={solidStyle}
+        style={{ ...solidStyle, opacity: model.appearance.solidOpacity }}
       />
       <img
         alt=""
         className="x-nt-wordmark-image"
         draggable={false}
         height={25.1557}
-        src={model.imageSrc}
-        style={imageStyle}
+        src={model.appearance.imageSrc}
+        style={{ ...imageStyle, opacity: model.appearance.imageOpacity }}
         width={112}
       />
     </button>
@@ -448,6 +458,7 @@ function ClockMark({
       }
       style={{
         ...clockStyle,
+        '--x-nt-wordmark-solid-fill': model.appearance.solidFill,
         ...fontStyle,
         fontSize: getClockFontSize(model.fontSize),
         fontWeight
@@ -517,8 +528,8 @@ export function createTopContentController(
       getButton: () => null,
       getContent: () => null,
       getImage: () => null,
-      getSolid: () => null,
-      render() {}
+      render() {},
+      updateAppearance() {}
     });
   }
   host.id = '_x_extension_newtab_wordmark_2026_unique_';
@@ -526,6 +537,25 @@ export function createTopContentController(
   host.style.cssText = containerStyle;
   const root: Root = createRoot(host);
   let destroyed = false;
+  let current: TopContentModel | null = null;
+  const draw = (model: TopContentModel) => {
+    current = model;
+    flushSync(() => {
+      root.render(model.mode === 'time' ? (
+        <ClockMark
+          key={model.showSeconds === true ? 'seconds' : 'minutes'}
+          model={model}
+          onEntryAnimationComplete={options.onEntryAnimationComplete}
+        />
+      ) : (
+        <Wordmark
+          model={model}
+          onActivate={options.onActivate}
+          onEntryAnimationComplete={options.onEntryAnimationComplete}
+        />
+      ));
+    });
+  };
   return Object.freeze({
     destroy() {
       if (destroyed) {
@@ -543,29 +573,18 @@ export function createTopContentController(
     getImage() {
       return host.querySelector('img');
     },
-    getSolid() {
-      return queryHtmlTag(host, '.x-nt-wordmark-solid', 'span');
-    },
     render(model: TopContentModel) {
       if (destroyed) {
         return;
       }
       host.dataset.enter = model.animateEntry ? 'run' : 'done';
-      flushSync(() => {
-        root.render(model.mode === 'time' ? (
-          <ClockMark
-            key={model.showSeconds === true ? 'seconds' : 'minutes'}
-            model={model}
-            onEntryAnimationComplete={options.onEntryAnimationComplete}
-          />
-        ) : (
-          <Wordmark
-            model={model}
-            onActivate={options.onActivate}
-            onEntryAnimationComplete={options.onEntryAnimationComplete}
-          />
-        ));
-      });
+      draw(model);
+    },
+    updateAppearance(appearance: WordmarkAppearance) {
+      if (destroyed || !current) {
+        return;
+      }
+      draw({ ...current, appearance });
     }
   });
 }
@@ -577,10 +596,3 @@ export function createTopContentApi() {
     createWordmarkController: createTopContentController
   });
 }
-
-// Compatibility aliases for the original brand-only island API.
-export type WordmarkModel = TopContentModel;
-export type WordmarkControllerOptions = TopContentControllerOptions;
-export type WordmarkController = TopContentController;
-export const createWordmarkController = createTopContentController;
-export const createWordmarkApi = createTopContentApi;

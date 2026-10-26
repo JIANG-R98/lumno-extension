@@ -5,7 +5,7 @@ import type { NewtabTimeInk, NewtabTopContentMode } from '../../domain/settings'
 import type * as LumnoCommunityLinks from '../../platform/community-links';
 import * as LumnoSettingsStorage from '../../platform/settings-storage';
 import { queryHtmlElement } from '../../shared/dom-lookup';
-import type { TopContentController } from '../react/wordmark';
+import type { TopContentController, WordmarkAppearance } from '../react/wordmark';
 
 // A card's place on screen before a layout change.
 type LayoutPosition = { left: number; top: number };
@@ -67,13 +67,13 @@ function createTopContentRuntime(deps: TopContentDeps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  let wordmarkSolidEl: HTMLSpanElement | null = null;
   const recentResizeLayoutAnimations = new Set<Animation>();
   let wordmarkEntryTransitionTimer = 0;
   const WORDMARK_ENTRY_ANIMATION_TOTAL_MS = 260;
-  const WORDMARK_WALLPAPER_COVER_DARK_OPACITY = '0.32';
-  const WORDMARK_WALLPAPER_COVER_LIGHT_OPACITY = '0.32';
-  const WORDMARK_WALLPAPER_SOLID_OPACITY = '0.6';
+  const WORDMARK_WALLPAPER_COVER_OPACITY = 0.32;
+  const WORDMARK_WALLPAPER_SOLID_OPACITY = 0.6;
+  const WORDMARK_LIGHT_SRC = '../../assets/images/lumno-wordmark.svg';
+  const WORDMARK_DARK_SRC = '../../assets/images/lumno-wordmark-dark.svg';
   const RECENT_RESIZE_LAYOUT_TRANSITION_MS = 260;
   const RECENT_RESIZE_LAYOUT_TRANSITION_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
   // The area fits the wordmark and the default 54px clock; a larger clock
@@ -287,78 +287,43 @@ function createTopContentRuntime(deps: TopContentDeps) {
     return theme === 'dark' ? 'rgb(248 250 252)' : 'rgb(31 41 55)';
   }
 
-  function applyWordmarkSolidFill(fill: string): void {
-    if (!pageState.topContentContainer) {
-      return;
+  // The brand image for the theme; on a wallpaper, a solid layer in the
+  // sampled ink, or the theme's image faintly when an overlay covers it.
+  function getWordmarkAppearance(resolvedTheme?: string | null): WordmarkAppearance {
+    const theme = resolvedTheme || (document.body ? document.body.getAttribute('data-theme') : 'light');
+    const container = pageState.topContentContainer;
+    const wallpaperActive = Boolean(document.body &&
+      document.body.getAttribute('data-wallpaper-active') === 'true');
+    const wallpaperInk = container ? container.getAttribute('data-wallpaper-ink') : '';
+    const themeSrc = theme === 'dark' ? WORDMARK_DARK_SRC : WORDMARK_LIGHT_SRC;
+    if (wallpaperActive && container && container.getAttribute('data-wallpaper-overlay-cover') === 'true') {
+      return {
+        imageSrc: themeSrc,
+        imageOpacity: WORDMARK_WALLPAPER_COVER_OPACITY,
+        solidOpacity: 0,
+        solidFill: getWordmarkSolidFill(false, '', theme)
+      };
     }
-    pageState.topContentContainer.style.setProperty('--x-nt-wordmark-solid-fill', fill);
-  }
-
-  function applyWordmarkSolidLayerVisible(visible: boolean): void {
-    if (!wordmarkSolidEl) {
-      return;
+    if (wallpaperActive) {
+      return {
+        imageSrc: wallpaperInk === 'dark' ? WORDMARK_LIGHT_SRC : WORDMARK_DARK_SRC,
+        imageOpacity: 0,
+        solidOpacity: WORDMARK_WALLPAPER_SOLID_OPACITY,
+        solidFill: getWordmarkSolidFill(true, wallpaperInk, theme)
+      };
     }
-    wordmarkSolidEl.style.setProperty(
-      'opacity',
-      visible ? WORDMARK_WALLPAPER_SOLID_OPACITY : '0'
-    );
+    return {
+      imageSrc: themeSrc,
+      imageOpacity: theme === 'dark' ? 0.9 : 0.82,
+      solidOpacity: 0,
+      solidFill: getWordmarkSolidFill(false, '', theme)
+    };
   }
 
   function applyWordmarkThemeAppearance(resolvedTheme?: string | null): void {
-    const theme = resolvedTheme || (document.body ? document.body.getAttribute('data-theme') : 'light');
-    const wallpaperActive = document.body &&
-      document.body.getAttribute('data-wallpaper-active') === 'true';
-    const wallpaperInk = pageState.topContentContainer
-      ? pageState.topContentContainer.getAttribute('data-wallpaper-ink')
-      : '';
-    applyWordmarkSolidFill(getWordmarkSolidFill(wallpaperActive, wallpaperInk, theme));
-    const image = pageState.wordmarkImageEl;
-    if (!image) {
-      return;
+    if (pageState.topContentController) {
+      pageState.topContentController.updateAppearance(getWordmarkAppearance(resolvedTheme));
     }
-    const lightSrc = '../../assets/images/lumno-wordmark.svg';
-    const darkSrc = '../../assets/images/lumno-wordmark-dark.svg';
-    if (wallpaperActive) {
-      const wallpaperOverlayCover = pageState.topContentContainer &&
-        pageState.topContentContainer.getAttribute('data-wallpaper-overlay-cover') === 'true';
-      if (wallpaperOverlayCover) {
-        applyWordmarkSolidLayerVisible(false);
-        const themeSrc = theme === 'dark' ? darkSrc : lightSrc;
-        if (image.getAttribute('src') !== themeSrc) {
-          image.setAttribute('src', themeSrc);
-        }
-        applyWordmarkSolidFill(getWordmarkSolidFill(false, '', theme));
-        image.style.setProperty(
-          'opacity',
-          theme === 'dark'
-            ? WORDMARK_WALLPAPER_COVER_DARK_OPACITY
-            : WORDMARK_WALLPAPER_COVER_LIGHT_OPACITY
-        );
-        return;
-      }
-      const wallpaperSrc = wallpaperInk === 'dark' ? lightSrc : darkSrc;
-      if (image.getAttribute('src') !== wallpaperSrc) {
-        image.setAttribute('src', wallpaperSrc);
-      }
-      applyWordmarkSolidFill(getWordmarkSolidFill(true, wallpaperInk, theme));
-      applyWordmarkSolidLayerVisible(true);
-      image.style.setProperty('opacity', '0');
-      return;
-    }
-    applyWordmarkSolidLayerVisible(false);
-    if (theme === 'dark') {
-      if (image.getAttribute('src') !== darkSrc) {
-        image.setAttribute('src', darkSrc);
-      }
-      applyWordmarkSolidFill(getWordmarkSolidFill(false, '', theme));
-      image.style.setProperty('opacity', '0.9');
-      return;
-    }
-    if (image.getAttribute('src') !== lightSrc) {
-      image.setAttribute('src', lightSrc);
-    }
-    applyWordmarkSolidFill(getWordmarkSolidFill(false, '', theme));
-    image.style.setProperty('opacity', '0.82');
   }
 
   function renderNewtabTopContent(animateEntry?: boolean): void {
@@ -380,7 +345,7 @@ function createTopContentRuntime(deps: TopContentDeps) {
       },
       fontSize: SETTINGS.normalizeNewtabTimeFontSize(pageState.newtabTimeFontSize),
       fontWeight: SETTINGS.resolveNewtabTimeFontWeight(timeFont.id, pageState.newtabTimeFontWeight),
-      imageSrc: '../../assets/images/lumno-wordmark.svg',
+      appearance: getWordmarkAppearance(),
       locale: document.documentElement ? document.documentElement.lang : undefined,
       mode: pageState.newtabTopContentMode === 'time' ? 'time' : 'brand',
       opacity: SETTINGS.normalizeNewtabTimeOpacity(pageState.newtabTimeOpacity) / 100,
@@ -388,8 +353,6 @@ function createTopContentRuntime(deps: TopContentDeps) {
       twelveHour: pageState.newtabTime12Hour
     });
     pageState.wordmarkImageEl = controller.getImage();
-    wordmarkSolidEl = controller.getSolid();
-    applyWordmarkThemeAppearance();
     scheduleWallpaperAdaptiveToneUpdate();
   }
 

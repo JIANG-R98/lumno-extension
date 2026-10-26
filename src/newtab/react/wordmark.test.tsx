@@ -4,12 +4,20 @@ import {
   createTopContentApi,
   createTopContentController,
   type TopContentClockFont,
-  type TopContentController
+  type TopContentController,
+  type WordmarkAppearance
 } from './wordmark';
 import { getElement, getElements } from '../../../tests/react/dom';
 import { queryHtmlElement } from '../../shared/dom-lookup';
 
 let controllers: TopContentController[] = [];
+
+const APPEARANCE: WordmarkAppearance = {
+  imageSrc: '/wordmark.svg',
+  imageOpacity: 0.82,
+  solidOpacity: 0,
+  solidFill: 'rgb(31 41 55)'
+};
 
 function createController(
   animateEntry = true,
@@ -31,7 +39,7 @@ function createController(
     controller.render({
       animateEntry,
       ariaLabel: 'Lumno Chrome Web Store',
-      imageSrc: '/wordmark.svg',
+      appearance: APPEARANCE,
       locale: 'zh-CN',
       mode,
       showSeconds,
@@ -63,7 +71,24 @@ describe('New Tab top-content React island', () => {
     expect(controller.getImage()?.getAttribute('src')).toBe('/wordmark.svg');
     expect(controller.getImage()?.getAttribute('width')).toBe('112');
     expect(controller.getImage()?.getAttribute('height')).toBe('25.1557');
-    expect(controller.getSolid()?.className).toBe('x-nt-wordmark-solid');
+    expect(controller.getImage()?.style.opacity).toBe('0.82');
+    expect(getElement(host, '.x-nt-wordmark-solid').style.opacity).toBe('0');
+  });
+
+  it('takes a new appearance without replaying its entry motion', () => {
+    const { controller, host } = createController(true);
+    act(() => controller.updateAppearance({
+      imageSrc: '/wordmark-dark.svg',
+      imageOpacity: 0,
+      solidOpacity: 0.6,
+      solidFill: 'rgb(238 240 242)'
+    }));
+
+    expect(host.dataset.enter).toBe('run');
+    expect(controller.getImage()?.getAttribute('src')).toBe('/wordmark-dark.svg');
+    expect(controller.getImage()?.style.opacity).toBe('0');
+    expect(getElement(host, '.x-nt-wordmark-solid').style.opacity).toBe('0.6');
+    expect(controller.getButton()?.style.getPropertyValue('--x-nt-wordmark-solid-fill')).toBe('rgb(238 240 242)');
   });
 
   it('preserves foreground and background navigation dispositions', () => {
@@ -104,7 +129,7 @@ describe('New Tab top-content React island', () => {
     expect(clock?.querySelector('br')).toBeNull();
     expect(controller.getButton()).toBeNull();
     expect(controller.getImage()).toBeNull();
-    expect(controller.getSolid()).toBeNull();
+    expect(host.querySelector('.x-nt-wordmark-solid')).toBeNull();
   });
 
   it('applies a custom variable-font weight to the clock', () => {
@@ -184,7 +209,7 @@ describe('New Tab top-content React island', () => {
         controller.render({
           animateEntry: false,
           ariaLabel: 'Lumno',
-          imageSrc: '/wordmark.svg',
+          appearance: APPEARANCE,
           locale,
           mode: 'time',
           twelveHour
