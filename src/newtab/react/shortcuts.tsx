@@ -10,7 +10,6 @@ import {
   type MouseEvent as ReactMouseEvent
 } from 'react';
 import { flushSync } from 'react-dom';
-import type { ShortcutGroup, ShortcutLink, VisibleShortcutFolder, VisibleShortcutItem } from '../../domain/shortcuts-store';
 import { createRoot, type Root } from 'react-dom/client';
 import {
   getIconPlateStyle,
@@ -26,6 +25,7 @@ import { createRenderStore, type RenderStore } from '../../shared/react/render-s
 import { lazyInstance } from '../../shared/lazy-instance';
 import { RemixIcon } from '../../shared/react/remix-icon';
 import { FolderIcon } from './folder-icon';
+import type { ShortcutGroup, ShortcutLink, VisibleShortcutFolder, VisibleShortcutItem } from '../../domain/shortcuts/types';
 
 // A site's theme as the page resolves it; the view passes it through.
 type ThemeValue = Partial<ThemeVariant> | null;

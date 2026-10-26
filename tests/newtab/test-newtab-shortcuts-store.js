@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const shortcutsStore = require('../../src/domain/shortcuts-store.ts');
+const shortcutsStore = require('../helpers/shortcuts-store.ts');
 const shortcutStorage = require('../../src/platform/shortcut-storage.ts');
 const { newtabShortcutsLocalOverflow } = require('../../src/domain/settings/newtab-shortcuts.ts');
 

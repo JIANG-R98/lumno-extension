@@ -1,6 +1,6 @@
 const assert = require('assert');
 const refs = require('../../src/domain/bookmark-folder-reference.ts');
-const shortcuts = require('../../src/domain/shortcuts-store.ts');
+const shortcuts = require('../helpers/shortcuts-store.ts');
 const shortcutStorage = require('../../src/platform/shortcut-storage.ts');
 const bindings = require('../../src/platform/bookmark-folder-bindings.ts');
 const drag = require('../../src/newtab/cross-surface-drag.ts');

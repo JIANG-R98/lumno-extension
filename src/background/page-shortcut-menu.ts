@@ -1,7 +1,6 @@
 // The page context menu item that adds the page it was opened on to the
 // New Tab shortcuts, saved the same way the New Tab saves one: browser sync
 // first, this device's overflow record for whatever does not fit.
-import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
 import * as LumnoSettings from '../domain/settings';
 import * as LumnoSiteDisplayName from '../domain/site-display-name';
 import { isRecord } from '../platform/storage-call';
@@ -15,13 +14,15 @@ import type { PageShortcutToastCommand } from '../domain/injected-commands';
 import { themeMode } from '../domain/settings/appearance';
 import { language } from '../domain/settings/locale';
 import { webdavStatus } from '../domain/settings/sync-state';
+import type { ShortcutsStoreApi } from '../domain/shortcuts/api';
+import { SHORTCUTS_STORE_API } from '../domain/shortcuts/api';
 
 interface PageShortcutMenuOptions {
   chrome?: typeof chrome;
   // The worker's settings: the language, the theme the page toast follows,
   // and the WebDAV status.
   settingsStore: SettingsStore;
-  shortcuts?: typeof LumnoNewtabShortcutsStore;
+  shortcuts?: ShortcutsStoreApi;
   siteDisplayName?: typeof LumnoSiteDisplayName;
   provider: ProviderStorageRuntime;
   loadLocaleMessages?: (locale: string) => Promise<Record<string, LocaleMessage>>;
@@ -63,7 +64,7 @@ interface PageShortcutMenuContext {
   readonly opts: PageShortcutMenuOptions;
   readonly chromeApi: typeof chrome;
   readonly settingsStore: SettingsStore;
-  readonly store: typeof LumnoNewtabShortcutsStore;
+  readonly store: ShortcutsStoreApi;
   readonly siteDisplayName: typeof LumnoSiteDisplayName;
   readonly provider: ProviderStorageRuntime;
   readonly shortcutList: ShortcutListStorage;
@@ -280,7 +281,7 @@ function createController(options: PageShortcutMenuOptions): PageShortcutMenu {
   const opts = options;
   const chromeApi = opts.chrome || globalThis.chrome;
   const settingsStore = opts.settingsStore;
-  const store = opts.shortcuts || LumnoNewtabShortcutsStore;
+  const store = opts.shortcuts || SHORTCUTS_STORE_API;
   const siteDisplayName = opts.siteDisplayName || LumnoSiteDisplayName;
   const provider = opts.provider;
   const shortcutList = createShortcutListStorage({ chromeApi, provider });

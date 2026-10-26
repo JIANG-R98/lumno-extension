@@ -11,7 +11,6 @@ import * as LumnoSettings from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoSettingsMigration from '../platform/settings-migration';
 import * as LumnoBookmarkFolderBindings from '../platform/bookmark-folder-bindings';
-import '../domain/shortcuts-store';
 import '../domain/site-display-name';
 import './page-shortcut-menu';
 import '../shared/wallpaper-local-store';

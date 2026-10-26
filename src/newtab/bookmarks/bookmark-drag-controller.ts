@@ -1,9 +1,6 @@
 // Bookmark card layout animation, drag and drop (within the grid, across
 // folders and onto shortcuts) and the bookmark move undo history.
 import type * as FolderReferences from '../../domain/bookmark-folder-reference';
-import { isShortcutFolder } from '../../domain/shortcuts-store';
-import type * as ShortcutsStore from '../../domain/shortcuts-store';
-import type { ShortcutGroup, ShortcutItem } from '../../domain/shortcuts-store';
 import type { FolderBindingRuntime } from '../../platform/bookmark-folder-bindings';
 import { isElementNode, isHtmlElement, isHtmlTag } from '../../shared/dom-guards';
 import { queryHtmlTags } from '../../shared/dom-lookup';
@@ -38,6 +35,9 @@ import * as BOOKMARK_SHORTCUT_TRANSFER from './bookmark-shortcut-transfer';
 import type { AnimationRect } from './bookmark-drag-rules';
 import type { BookmarksRuntime } from './bookmarks-runtime';
 import type { FolderItemIcon, FolderItemIconMap } from './folder-item-icons';
+import { isShortcutFolder } from '../../domain/shortcuts/normalize';
+import type { ShortcutGroup, ShortcutItem } from '../../domain/shortcuts/types';
+import * as ShortcutNormalize from '../../domain/shortcuts/normalize';
 
 interface BookmarkDragControllerState {
   bookmarkGrid: HTMLElement | null;
@@ -80,8 +80,7 @@ interface BookmarkDragControllerDeps {
   getShortcutFolderId(shortcut: ShortcutItem): string;
   getShortcutReorderTiles(): HTMLElement[];
   getShortcutTileLayoutRect(tile: HTMLElement | null): LayoutRect | null;
-  NEWTAB_SHORTCUTS_STORE: Pick<typeof ShortcutsStore, 'createShortcutRecord'>;
-  getShortcutStoreOptions(): Parameters<typeof ShortcutsStore.createShortcutRecord>[1];
+  getShortcutStoreOptions(): Parameters<typeof ShortcutNormalize.createShortcutRecord>[1];
   getShortcutInsertionSlotAt(pointerX: number, pointerY: number, excludedTile: HTMLElement | null): ShortcutInsertionSlot;
   MAX_NEWTAB_SHORTCUTS: number;
   getShortcutTileId(tile: HTMLElement | null | undefined): string;
@@ -153,7 +152,6 @@ function createBookmarkDragController(deps: BookmarkDragControllerDeps) {
     getShortcutFolderId,
     getShortcutReorderTiles,
     getShortcutTileLayoutRect,
-    NEWTAB_SHORTCUTS_STORE,
     getShortcutStoreOptions,
     getShortcutInsertionSlotAt,
     MAX_NEWTAB_SHORTCUTS,
@@ -658,7 +656,7 @@ function createBookmarkDragController(deps: BookmarkDragControllerDeps) {
   function getBookmarkDragShortcutDropTarget(state: BookmarkDragSession, pointerX: number, pointerY: number): ShortcutInsertionTarget | null {
     const node = bookmarksRuntime.getNodeMap().get(String(state.bookmarkId || ''));
     const record = node
-      ? NEWTAB_SHORTCUTS_STORE.createShortcutRecord(
+      ? ShortcutNormalize.createShortcutRecord(
         state.isFolder
           ? { type: 'folder', folderId: node.id, title: node.title }
           : { title: node.title, url: node.url },
@@ -713,7 +711,6 @@ function createBookmarkDragController(deps: BookmarkDragControllerDeps) {
     bookmarksRuntime,
     NEWTAB_CROSS_SURFACE_DRAG,
     NEWTAB_BOOKMARK_MOVE_HISTORY,
-    NEWTAB_SHORTCUTS_STORE,
     getShortcutStoreOptions,
     getShortcutFolderId,
     getShortcutGroups,

@@ -2,7 +2,6 @@
 // wallpapers, merges them with the server's copy against the last state
 // both shared, publishes the result under the server's write lock and
 // applies it locally.
-import * as LumnoNewtabShortcutsStore from '../../domain/shortcuts-store';
 import * as LumnoNewtabWallpaperLocalStore from '../../shared/wallpaper-local-store';
 import * as LumnoSettings from '../../domain/settings';
 import * as LumnoSettingsStorage from '../../platform/settings-storage';
@@ -24,6 +23,7 @@ import type {
   SyncWallpaperStore,
   WithLocalWrite
 } from './types';
+import { SHORTCUTS_STORE_API } from '../../domain/shortcuts/api';
 
 function onAlarm(ctx: ConnectionContext, alarm: chrome.alarms.Alarm): void {
   if (!ctx.stopped && alarm.name === ctx.alarmName) void backgroundRound(ctx, false);
@@ -75,7 +75,7 @@ function createConnectionController(options?: ConnectionControllerOptions | null
   const chromeApi = opts.chrome || chrome;
   const settings = opts.settings || LumnoSettings;
   const contract = opts.contract || LumnoWebDavContract;
-  const shortcuts = opts.shortcuts || LumnoNewtabShortcutsStore;
+  const shortcuts = opts.shortcuts || SHORTCUTS_STORE_API;
   const clientApi = opts.client || WEBDAV_CLIENT_API;
   const cryptoApi = opts.crypto || globalThis.crypto;
   const privateStore = opts.privateStore || createPrivateStore(globalThis.indexedDB);

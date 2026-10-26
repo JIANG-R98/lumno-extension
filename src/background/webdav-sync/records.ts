@@ -1,9 +1,9 @@
 // Reading untyped values: stored records, errors and Options requests.
 import * as LumnoWebDavContract from '../../domain/webdav-contract';
 import { diagnostic } from '../webdav-client/errors';
-import type { GroupedShortcutItem } from '../../domain/shortcuts-store';
 import type { WebDavReply, WebDavRequest } from '../../domain/messages';
 import type { Session, StoredConnection } from './types';
+import type { GroupedShortcutItem } from '../../domain/shortcuts/types';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';

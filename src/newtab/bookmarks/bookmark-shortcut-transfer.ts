@@ -4,9 +4,6 @@
 // destination before it removes its source, rolls back what it wrote when
 // a later step fails, and goes on the move history to undo.
 import type * as FolderReferences from '../../domain/bookmark-folder-reference';
-import { isShortcutFolder } from '../../domain/shortcuts-store';
-import type * as ShortcutsStore from '../../domain/shortcuts-store';
-import type { ShortcutFolder, ShortcutGroup, ShortcutItem } from '../../domain/shortcuts-store';
 import type { FolderBindingRuntime } from '../../platform/bookmark-folder-bindings';
 import type * as CrossSurfaceDrag from '../cross-surface-drag';
 import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
@@ -22,6 +19,9 @@ import type {
 import type { BookmarkNode } from './bookmarks-store';
 import type { BookmarksRuntime } from './bookmarks-runtime';
 import type { FolderItemIcon, FolderItemIconMap } from './folder-item-icons';
+import { isShortcutFolder } from '../../domain/shortcuts/normalize';
+import type { ShortcutFolder, ShortcutGroup, ShortcutItem } from '../../domain/shortcuts/types';
+import * as ShortcutNormalize from '../../domain/shortcuts/normalize';
 
 interface BookmarkShortcutTransferState {
   newtabShortcuts: ShortcutItem[];
@@ -37,8 +37,7 @@ interface BookmarkShortcutTransferDeps {
   NEWTAB_CROSS_SURFACE_DRAG: Pick<typeof CrossSurfaceDrag, 'planBookmarkToShortcut' | 'planTransferShortcuts' | 'planShortcutStack'>;
   NEWTAB_BOOKMARK_MOVE_HISTORY: Pick<typeof MoveHistory,
     'createTransferRecord' | 'getMoveApiDestinationIndex' | 'isShortcutStackFolderIntact'>;
-  NEWTAB_SHORTCUTS_STORE: Pick<typeof ShortcutsStore, 'createShortcutRecord'>;
-  getShortcutStoreOptions(): Parameters<typeof ShortcutsStore.createShortcutRecord>[1];
+  getShortcutStoreOptions(): Parameters<typeof ShortcutNormalize.createShortcutRecord>[1];
   // The local bookmark folder a folder shortcut shows.
   getShortcutFolderId(shortcut: ShortcutItem): string;
   getShortcutGroups?(): ShortcutGroup[];
@@ -76,7 +75,6 @@ function createBookmarkShortcutTransfer(deps: BookmarkShortcutTransferDeps) {
     bookmarksRuntime,
     NEWTAB_CROSS_SURFACE_DRAG,
     NEWTAB_BOOKMARK_MOVE_HISTORY,
-    NEWTAB_SHORTCUTS_STORE,
     getShortcutStoreOptions,
     getShortcutFolderId,
     getShortcutGroups,
@@ -117,7 +115,7 @@ function createBookmarkShortcutTransfer(deps: BookmarkShortcutTransferDeps) {
     if (!node || node.url || hasShortcutForBookmarkFolder(node.id)) {
       return Promise.resolve(false);
     }
-    const record = NEWTAB_SHORTCUTS_STORE.createShortcutRecord(
+    const record = ShortcutNormalize.createShortcutRecord(
       { type: 'folder', folderId: node.id, title: node.title },
       getShortcutStoreOptions()
     );

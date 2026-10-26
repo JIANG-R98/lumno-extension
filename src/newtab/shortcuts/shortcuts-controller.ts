@@ -3,17 +3,6 @@
 import * as ShortcutIconCache from '../../domain/favicon/shortcut-favicon/persisted';
 import * as BundledIcons from '../../domain/favicon/shortcut-favicon/bundled-icons';
 import type { FaviconDataEntry } from '../../domain/favicon/favicon-cache';
-import { getShortcutUrl, isShortcutFolder } from '../../domain/shortcuts-store';
-import type * as ShortcutsStore from '../../domain/shortcuts-store';
-import type {
-  ShortcutGroup,
-  ShortcutIconSource,
-  ShortcutItem,
-  ShortcutLink,
-  ShortcutNormalizeOptions,
-  ShortcutState,
-  VisibleShortcutItem
-} from '../../domain/shortcuts-store';
 import type { StorageAreaLike, StorageItems } from '../../domain/storage-port';
 import type { FolderBindingRuntime } from '../../platform/bookmark-folder-bindings';
 import type { FaviconCacheRuntime } from '../../platform/favicon-cache';
@@ -51,6 +40,11 @@ import * as FaviconCanonical from '../../domain/favicon/canonical';
 import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
 import type { CachedIconMap, CachedIconSource } from '../../domain/favicon/shortcut-favicon/types';
 import * as SearchSiteSearchProviders from '../../domain/search/utils/site-search-providers';
+import { getShortcutUrl, isShortcutFolder } from '../../domain/shortcuts/normalize';
+import type { ShortcutGroup, ShortcutIconSource, ShortcutItem, ShortcutLink, ShortcutNormalizeOptions, ShortcutState, VisibleShortcutItem } from '../../domain/shortcuts/types';
+import * as ShortcutConstants from '../../domain/shortcuts/constants';
+import * as ShortcutNormalize from '../../domain/shortcuts/normalize';
+import * as ShortcutStoragePlan from '../../domain/shortcuts/storage-plan';
 
 interface ShortcutsControllerState {
   newtabShortcuts: ShortcutItem[];
@@ -91,20 +85,6 @@ interface ShortcutsControllerDeps {
   normalizeHost: NonNullable<ShortcutNormalizeOptions['normalizeHost']>;
   sanitizeDisplayText(text: unknown): string;
   providerStorageRuntime: Pick<ProviderStorageRuntime, 'getActiveAreaName'> | null;
-  NEWTAB_SHORTCUTS_STORE: Pick<typeof ShortcutsStore,
-    | 'DEFAULT_MAX_SHORTCUT_GROUPS'
-    | 'SHORTCUTS_SYNC_KEYS'
-    | 'LEGACY_SHORTCUTS_CHUNK_KEYS'
-    | 'SHORTCUT_STORAGE_KEYS'
-    | 'getDefaultShortcutState'
-    | 'getShortcutSyncBudget'
-    | 'readShortcutState'
-    | 'normalizeShortcuts'
-    | 'normalizeShortcutState'
-    | 'normalizeShortcutGroups'
-    | 'normalizeShortcutUrl'
-    | 'createShortcutRecord'
-    | 'createShortcutGroupId'>;
   NEWTAB_SHORTCUTS_CRITICAL_SYNC_RESERVE_BYTES: number;
   NEWTAB_SHORTCUTS_LOCAL_OVERFLOW_STORAGE_KEY: string;
   shortcutIconStore: ShortcutIconStore;
@@ -291,7 +271,6 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     normalizeHost,
     sanitizeDisplayText,
     providerStorageRuntime,
-    NEWTAB_SHORTCUTS_STORE,
     NEWTAB_SHORTCUTS_CRITICAL_SYNC_RESERVE_BYTES,
     NEWTAB_SHORTCUTS_LOCAL_OVERFLOW_STORAGE_KEY,
     shortcutIconStore,
@@ -386,7 +365,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
   let shortcutStorageReloadTimer: number | null = null;
   // Groups and the migration time of the stored shortcut state; items live
   // in pageState.newtabShortcuts.
-  let shortcutGroups = NEWTAB_SHORTCUTS_STORE.getDefaultShortcutState().groups;
+  let shortcutGroups = ShortcutNormalize.getDefaultShortcutState().groups;
   let shortcutMigratedAt = 0;
   let shortcutStateTorn = false;
   // The group a site added from the dialog joins, and the group the
@@ -516,10 +495,10 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     const syncArea = chrome.storage.sync;
     return Promise.all([
       getStorageBytesInUse(syncArea, null),
-      getStorageBytesInUse(syncArea, NEWTAB_SHORTCUTS_STORE.SHORTCUTS_SYNC_KEYS.slice()),
-      getStorageBytesInUse(syncArea, NEWTAB_SHORTCUTS_STORE.LEGACY_SHORTCUTS_CHUNK_KEYS.slice())
+      getStorageBytesInUse(syncArea, ShortcutConstants.SHORTCUTS_SYNC_KEYS.slice()),
+      getStorageBytesInUse(syncArea, ShortcutConstants.LEGACY_SHORTCUTS_CHUNK_KEYS.slice())
     ]).then(([totalBytes, shortcutBytes, legacyBytes]) => ({
-      maxTotalBytes: NEWTAB_SHORTCUTS_STORE.getShortcutSyncBudget({
+      maxTotalBytes: ShortcutStoragePlan.getShortcutSyncBudget({
         quotaBytes: Number(syncArea.QUOTA_BYTES) || (100 * 1024),
         reserveBytes: NEWTAB_SHORTCUTS_CRITICAL_SYNC_RESERVE_BYTES,
         totalBytes,
@@ -553,7 +532,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
   function readShortcutSyncValues(area: StorageAreaLike): Promise<StorageItems> {
     return new Promise((resolve) => {
       try {
-        const maybePromise = area.get(NEWTAB_SHORTCUTS_STORE.SHORTCUT_STORAGE_KEYS.slice(), (result) => {
+        const maybePromise = area.get(ShortcutConstants.SHORTCUT_STORAGE_KEYS.slice(), (result) => {
           resolve(result || {});
         });
         if (maybePromise) {
@@ -745,7 +724,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     }
     if (source === 'builtin') return { iconSource: 'builtin' };
     const toPageUrl = (value: unknown): string =>
-      ShortcutIconCache.normalizePageUrl(NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(value));
+      ShortcutIconCache.normalizePageUrl(ShortcutNormalize.normalizeShortcutUrl(value));
     const pageUrl = toPageUrl(url);
     const onlineIcon = iconState.onlineIcon;
     if (onlineIcon && onlineIcon.dataUrl && pageUrl && onlineIcon.pageUrl === pageUrl) {
@@ -757,12 +736,12 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
   }
 
   function getShortcutDialogOnlineIconUrl(url: string): string {
-    const pageUrl = NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url);
+    const pageUrl = ShortcutNormalize.normalizeShortcutUrl(url);
     return pageUrl ? getShortcutFaviconDataUrl(pageUrl) || getShortcutFaviconCandidateUrl(pageUrl) : '';
   }
 
   function getShortcutDialogBuiltinIconUrl(url: unknown): string {
-    const pageUrl = NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url);
+    const pageUrl = ShortcutNormalize.normalizeShortcutUrl(url);
     const assetPath = BundledIcons.getBundledShortcutIconAssetPath(
       pageUrl, SearchSiteSearchProviders.getDefaultSiteSearchProviders()
     );
@@ -771,7 +750,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
 
   function getShortcutDialogOnlineIconSource(url: string): CachedIconSource | 'builtin' {
     const pageUrl = ShortcutIconCache.normalizePageUrl(
-      NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url)
+      ShortcutNormalize.normalizeShortcutUrl(url)
     );
     const shortcut = findShortcutByPageUrl(pageUrl);
     const iconSource = shortcut && !isShortcutFolder(shortcut) ? shortcut.iconSource : undefined;
@@ -786,7 +765,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
   }
 
   function isShortcutDialogIconSourceAvailable(source: CachedIconSource, url: string): boolean {
-    const pageUrl = NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url);
+    const pageUrl = ShortcutNormalize.normalizeShortcutUrl(url);
     if (!pageUrl) return source === 'cache';
     const normalizedPageUrl = ShortcutIconCache.normalizePageUrl(pageUrl);
     const resolver = getPageFaviconUrlResolver();
@@ -796,7 +775,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
   }
 
   function refreshShortcutDialogOnlineIcon(url: string, iconSource?: CachedIconSource): Promise<OnlineShortcutIcon | null> {
-    const pageUrl = NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url);
+    const pageUrl = ShortcutNormalize.normalizeShortcutUrl(url);
     const normalizedPageUrl = ShortcutIconCache.normalizePageUrl(pageUrl);
     if (!normalizedPageUrl) {
       if (iconSource === 'service' || iconSource === 'favicon-is') return Promise.resolve(null);
@@ -1001,7 +980,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     shortcutRenderDeferred = false;
     hideShortcutTooltip();
     closeShortcutContextMenu();
-    pageState.newtabShortcuts = NEWTAB_SHORTCUTS_STORE.normalizeShortcuts(pageState.newtabShortcuts, getShortcutStoreOptions());
+    pageState.newtabShortcuts = ShortcutNormalize.normalizeShortcuts(pageState.newtabShortcuts, getShortcutStoreOptions());
     const items = getVisibleShortcuts();
     const grouped = isShortcutGroupLayoutActive();
     shortcutsView.render(items, {
@@ -1047,14 +1026,14 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
 
   function loadShortcuts(): Promise<ShortcutItem[]> {
     if (!storageArea) {
-      applyShortcutState(NEWTAB_SHORTCUTS_STORE.getDefaultShortcutState(getShortcutStoreOptions()));
+      applyShortcutState(ShortcutNormalize.getDefaultShortcutState(getShortcutStoreOptions()));
       return Promise.resolve(pageState.newtabShortcuts);
     }
     return Promise.all([
       readShortcutSyncValues(storageArea),
       readShortcutOverflowRecord()
     ]).then(([values, overflowRecord]) => {
-      const state = NEWTAB_SHORTCUTS_STORE.readShortcutState(values, overflowRecord, getShortcutStoreOptions());
+      const state = ShortcutStoragePlan.readShortcutState(values, overflowRecord, getShortcutStoreOptions());
       applyShortcutState(state);
       shortcutStateTorn = state.torn === true;
       // Part of another device's save has not arrived yet; read again
@@ -1260,7 +1239,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
   const persistShortcuts: PersistShortcuts = (nextShortcuts, toastMessage, iconChange, persistOptions) => {
     const options = getShortcutStoreOptions();
     const settings: PersistShortcutsOptions = persistOptions || {};
-    const nextState = NEWTAB_SHORTCUTS_STORE.normalizeShortcutState({
+    const nextState = ShortcutNormalize.normalizeShortcutState({
       groups: settings.groups || shortcutGroups,
       items: nextShortcuts,
       migratedAt: shortcutMigratedAt
@@ -1430,7 +1409,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     if (groupId && !group) {
       return;
     }
-    if (!group && shortcutGroups.length >= NEWTAB_SHORTCUTS_STORE.DEFAULT_MAX_SHORTCUT_GROUPS) {
+    if (!group && shortcutGroups.length >= ShortcutConstants.DEFAULT_MAX_SHORTCUT_GROUPS) {
       showGroupLimitToast();
       return;
     }
@@ -1454,7 +1433,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     showToast(formatMessage(
       'newtab_shortcuts_group_limit_reached',
       'You can create up to {count} groups.',
-      { count: NEWTAB_SHORTCUTS_STORE.DEFAULT_MAX_SHORTCUT_GROUPS }
+      { count: ShortcutConstants.DEFAULT_MAX_SHORTCUT_GROUPS }
     ), true);
   }
 
@@ -1462,19 +1441,19 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
     if (pageState.bookmarkMoveHistoryBusy) {
       return Promise.resolve(false);
     }
-    if (shortcutGroups.length >= NEWTAB_SHORTCUTS_STORE.DEFAULT_MAX_SHORTCUT_GROUPS) {
+    if (shortcutGroups.length >= ShortcutConstants.DEFAULT_MAX_SHORTCUT_GROUPS) {
       showGroupLimitToast();
       return Promise.resolve(false);
     }
-    const group = NEWTAB_SHORTCUTS_STORE.normalizeShortcutGroups([{
-      id: NEWTAB_SHORTCUTS_STORE.createShortcutGroupId(),
+    const group = ShortcutNormalize.normalizeShortcutGroups([{
+      id: ShortcutNormalize.createShortcutGroupId(),
       title: String(title || '')
     }])[0];
     // The first new group turns the existing row into a group of its own,
     // named "Shortcuts" unless it already has a name; it can be renamed or
     // cleared like any title.
     const groups = shortcutGroups.length === 1 && !shortcutGroups[0].title
-      ? NEWTAB_SHORTCUTS_STORE.normalizeShortcutGroups([{
+      ? ShortcutNormalize.normalizeShortcutGroups([{
         id: shortcutGroups[0].id,
         title: t('newtab_shortcuts_group_default_title', 'Shortcuts')
       }])
@@ -1486,7 +1465,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
   }
 
   function renameShortcutGroup(groupId: string, title: string): Promise<boolean> {
-    const nextTitle = NEWTAB_SHORTCUTS_STORE.normalizeShortcutGroups([{ id: groupId, title }])[0].title;
+    const nextTitle = ShortcutNormalize.normalizeShortcutGroups([{ id: groupId, title }])[0].title;
     const group = shortcutGroups.find((item) => item.id === groupId);
     if (!group || group.title === nextTitle) {
       return Promise.resolve(Boolean(group));
@@ -1623,7 +1602,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
         : Promise.resolve(false);
     }
     if (shortcutGroups.some((group) => group.id === record.group.id) ||
-        shortcutGroups.length >= NEWTAB_SHORTCUTS_STORE.DEFAULT_MAX_SHORTCUT_GROUPS ||
+        shortcutGroups.length >= ShortcutConstants.DEFAULT_MAX_SHORTCUT_GROUPS ||
         items.length + record.removed.length > MAX_NEWTAB_SHORTCUTS ||
         record.removed.some(({ snapshot }) => items.some((item) => item.id === snapshot.id ||
           (getShortcutUrl(snapshot) && getShortcutUrl(item) === getShortcutUrl(snapshot))))) {
@@ -1645,7 +1624,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
 
   // A website record; null when its URL is not one a shortcut can open.
   function createShortcutLinkRecord(fields: Readonly<Record<string, unknown>>): ShortcutLink | null {
-    const record = NEWTAB_SHORTCUTS_STORE.createShortcutRecord(fields, getShortcutStoreOptions());
+    const record = ShortcutNormalize.createShortcutRecord(fields, getShortcutStoreOptions());
     return record && !isShortcutFolder(record) ? record : null;
   }
 
@@ -1741,7 +1720,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
       iconPlate: keepsPlate ? currentShortcut.iconPlate : iconState.plate,
       iconPlateColor: keepsPlate ? currentShortcut.iconPlateColor : iconState.plateColor,
       fromBookmark: currentShortcut.fromBookmark === true &&
-        NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url) === currentShortcut.url });
+        ShortcutNormalize.normalizeShortcutUrl(url) === currentShortcut.url });
     if (!nextShortcut) {
       setShortcutError(t('newtab_shortcuts_invalid_url', 'Enter a valid http, https, or browser internal URL.'));
       return Promise.resolve(false);
@@ -1986,7 +1965,7 @@ function createShortcutsController(deps: ShortcutsControllerDeps) {
         }).then((saved) => {
           const onlineIcon = payload.onlineIcon;
           const pageUrl = ShortcutIconCache.normalizePageUrl(
-            NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(payload.url)
+            ShortcutNormalize.normalizeShortcutUrl(payload.url)
           );
           if (saved && onlineIcon && pageUrl && pageUrl === onlineIcon.pageUrl) {
             saveShortcutFaviconSnapshot(pageUrl, onlineIcon.dataUrl, onlineIcon.sourceUrl, true);

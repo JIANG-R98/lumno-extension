@@ -1,7 +1,6 @@
 // High-resolution icons for site-search providers: their cache and warmup.
 import * as LumnoShortcutFaviconStore from '../../platform/shortcut-favicon-store';
 import * as SHORTCUT_ICON_MAP from '../../domain/shortcut-icon-map';
-import * as SHORTCUTS_STORE from '../../domain/shortcuts-store';
 import { readSiteSearchProviders } from '../../domain/search/site-search-provider-reader';
 import { providerStorageRuntime, warnBackgroundFailure, workerSettings } from '../worker-context';
 import type { ShortcutFaviconStore } from '../../platform/shortcut-favicon-store';
@@ -15,6 +14,7 @@ import * as BundledIcons from '../../domain/favicon/shortcut-favicon/bundled-ico
 import * as ShortcutIconCache from '../../domain/favicon/shortcut-favicon/persisted';
 import * as ShortcutIcons from '../../domain/favicon/shortcut-favicon/shortcut-icons';
 import type { CachedIconMap } from '../../domain/favicon/shortcut-favicon/types';
+import * as ShortcutStoragePlan from '../../domain/shortcuts/storage-plan';
 
 const SITE_SEARCH_ICON_STORAGE_KEY = SearchSettings.siteSearchIconCache.key;
 const SITE_SEARCH_ICON_CACHE_OPTIONS = ShortcutIconCache.SITE_SEARCH_CACHE_OPTIONS;
@@ -198,7 +198,7 @@ function loadSiteSearchShortcutIconSources(): Promise<SiteSearchShortcutIconSour
   return workerSettings.ready.then((): SiteSearchShortcutIconSources | null => {
     const values = Object.fromEntries(NEWTAB_SHORTCUT_LIST_SETTINGS.map((setting) => [setting.key, workerSettings.getStored(setting)]));
     const syncActive = providerStorageRuntime.getActiveAreaName() === 'sync';
-    const state = SHORTCUTS_STORE.readShortcutState(values, syncActive ? workerSettings.getStored(newtabShortcutsLocalOverflow) : undefined);
+    const state = ShortcutStoragePlan.readShortcutState(values, syncActive ? workerSettings.getStored(newtabShortcutsLocalOverflow) : undefined);
     if (state.torn) {
       return null;
     }

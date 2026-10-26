@@ -1,8 +1,8 @@
 // What dragging between the bookmarks, the shortcuts and the recent sites
 // shares: insertion slots and gaps, and the shortcut lists a drop makes.
-import { isShortcutFolder } from '../domain/shortcuts-store';
-import type { ShortcutItem } from '../domain/shortcuts-store';
 import type { BookmarkNode } from './bookmarks/bookmarks-store';
+import { isShortcutFolder } from '../domain/shortcuts/normalize';
+import type { ShortcutItem } from '../domain/shortcuts/types';
 
 const BOOKMARK_TREE_ROOT_ID = '0';
 

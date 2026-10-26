@@ -3,22 +3,15 @@
 // settings in browser sync, or one area when they keep them on the device.
 // Every context that changes the list (the New Tab, the page context menu,
 // folder shortcuts following their bookmarks) saves it through here.
-import {
-  DEFAULT_SHORTCUTS_SYNC_RESERVE_BYTES,
-  LEGACY_SHORTCUTS_CHUNK_KEYS,
-  SHORTCUTS_SYNC_KEYS,
-  SHORTCUT_STORAGE_KEYS,
-  getShortcutSyncBudget,
-  measureShortcutSyncUsage,
-  readShortcutState
-} from '../domain/shortcuts-store';
-import type { ShortcutNormalizeOptions, ShortcutStateRead } from '../domain/shortcuts-store';
 import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcuts';
 import type { StorageAreaLike, StorageItems } from '../domain/storage-port';
 import type { ProviderStorageRuntime, StorageChromeApi } from './settings-storage';
 import { persistShortcutState } from './shortcut-storage';
 import type { ShortcutPersistOptions, ShortcutPersistResult } from './shortcut-storage';
 import { callStorage, isRecord } from './storage-call';
+import { DEFAULT_SHORTCUTS_SYNC_RESERVE_BYTES, LEGACY_SHORTCUTS_CHUNK_KEYS, SHORTCUTS_SYNC_KEYS, SHORTCUT_STORAGE_KEYS } from '../domain/shortcuts/constants';
+import { getShortcutSyncBudget, measureShortcutSyncUsage, readShortcutState } from '../domain/shortcuts/storage-plan';
+import type { ShortcutNormalizeOptions, ShortcutStateRead } from '../domain/shortcuts/types';
 
 // What browser sync's area adds to chrome.storage: its quota and byte counts.
 interface SyncAreaLike extends StorageAreaLike {

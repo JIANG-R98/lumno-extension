@@ -5,7 +5,7 @@ const transferModule = require('../../src/newtab/bookmarks/bookmark-shortcut-tra
 const bookmarksRuntimeModule = require('../../src/newtab/bookmarks/bookmarks-runtime.ts');
 const moveHistory = require('../../src/newtab/bookmarks/bookmark-move-history.ts');
 const crossSurfaceDrag = require('../../src/newtab/cross-surface-drag.ts');
-const shortcutsStore = require('../../src/domain/shortcuts-store.ts');
+const shortcutsStore = require('../helpers/shortcuts-store.ts');
 const folderReferences = require('../../src/domain/bookmark-folder-reference.ts');
 
 // A bookmark dropped on the shortcuts: copied while the shortcuts have no

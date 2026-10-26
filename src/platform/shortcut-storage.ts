@@ -1,16 +1,11 @@
 // Loading and saving the shortcut state in the extension's storage: one
 // area, or browser sync with the local overflow record beside it.
-import { SHORTCUT_STORAGE_KEYS, createAuthoritativeOverflowRecord, createShortcutStoragePlan, readShortcutState } from '../domain/shortcuts-store';
-import type {
-  GroupedShortcutItem,
-  ShortcutNormalizeOptions,
-  ShortcutStateRead,
-  ShortcutStoragePlan,
-  ShortcutStoragePlanOptions
-} from '../domain/shortcuts-store';
 import type { StorageItems } from '../domain/storage-port';
 import type { StorageChromeApi } from './settings-storage';
 import { newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcuts';
+import { SHORTCUT_STORAGE_KEYS } from '../domain/shortcuts/constants';
+import { createAuthoritativeOverflowRecord, createShortcutStoragePlan, readShortcutState } from '../domain/shortcuts/storage-plan';
+import type { GroupedShortcutItem, ShortcutNormalizeOptions, ShortcutStateRead, ShortcutStoragePlan, ShortcutStoragePlanOptions } from '../domain/shortcuts/types';
 
 // An area that answers like chrome.storage: through the callback, or
 // through the promise it returns. A missing method reads as empty or

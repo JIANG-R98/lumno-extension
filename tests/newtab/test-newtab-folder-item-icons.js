@@ -1,6 +1,6 @@
 const assert = require('assert');
 const icons = require('../../src/newtab/bookmarks/folder-item-icons');
-require('../../src/domain/shortcuts-store');
+require('../helpers/shortcuts-store.ts');
 require('../helpers/shortcut-favicon.ts');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { shortcutFolderItemIcons } = require('../../src/domain/settings/newtab-shortcuts.ts');

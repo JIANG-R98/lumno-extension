@@ -94,7 +94,7 @@ async function run() {
   await legacy.controller.handle({ operation: 'save', config });
   await legacy.controller.stop();
   const createMigrated = () => syncApi.createController({ chrome: legacy.chrome, settings,
-    contract: require('../../src/domain/webdav-contract.ts'), shortcuts: require('../../src/domain/shortcuts-store.ts'),
+    contract: require('../../src/domain/webdav-contract.ts'), shortcuts: require('../helpers/shortcuts-store.ts'),
     client: require('../../src/background/webdav-client/api.ts').WEBDAV_CLIENT_API, privateStore: legacy.privateStore, wallpaperStore: legacy.wallpaperStore,
     crypto: require('crypto').webcrypto });
   const migrated = createMigrated();

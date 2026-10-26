@@ -1,15 +1,15 @@
 // The shapes the WebDAV sync modules share.
-import * as LumnoNewtabShortcutsStore from '../../domain/shortcuts-store';
 import * as LumnoSettings from '../../domain/settings';
 import * as LumnoSettingsStorage from '../../platform/settings-storage';
 import * as LumnoWebDavContract from '../../domain/webdav-contract';
 import type { WebDavClientApi } from '../webdav-client/api';
-import type { GroupedShortcutItem } from '../../domain/shortcuts-store';
 import type { StorageItems } from '../../domain/storage-port';
 import type { ChromeBackupPlan, ConflictDescription, WebDavState } from '../../domain/webdav-contract';
 import type { WebDavRequest } from '../../domain/messages';
 import type { WallpaperRecord, WallpaperRecordInput } from '../../shared/wallpaper-local-store';
 import type { ConnectionCapabilities, WebDavClientOptions, WebDavConnection, WebDavDiagnostic } from '../webdav-client/types';
+import type { GroupedShortcutItem } from '../../domain/shortcuts/types';
+import type { ShortcutsStoreApi } from '../../domain/shortcuts/api';
 
 type StorageMethod = 'get' | 'set' | 'remove';
 type StorageCall =
@@ -147,7 +147,7 @@ interface ConnectionControllerOptions {
   chrome?: typeof chrome;
   settings?: typeof LumnoSettings;
   contract?: typeof LumnoWebDavContract;
-  shortcuts?: typeof LumnoNewtabShortcutsStore;
+  shortcuts?: ShortcutsStoreApi;
   client?: WebDavClientApi;
   crypto?: Crypto;
   privateStore?: PrivateStore;
@@ -189,7 +189,7 @@ interface ConnectionContext {
   readonly chromeApi: typeof chrome;
   readonly settings: typeof LumnoSettings;
   readonly contract: typeof LumnoWebDavContract;
-  readonly shortcuts: typeof LumnoNewtabShortcutsStore;
+  readonly shortcuts: ShortcutsStoreApi;
   readonly clientApi: WebDavClientApi;
   readonly cryptoApi: Crypto;
   readonly privateStore: PrivateStore;

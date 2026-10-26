@@ -1,6 +1,5 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ShortcutLink, VisibleShortcutFolder } from '../../domain/shortcuts-store';
 import {
   createShortcutsView,
   createShortcutsViewApi,
@@ -12,6 +11,7 @@ import {
 } from './shortcuts';
 import { expectElement, getElement, getTag, required } from '../../../tests/react/dom';
 import { queryHtmlTag } from '../../shared/dom-lookup';
+import type { ShortcutLink, VisibleShortcutFolder } from '../../domain/shortcuts/types';
 
 let views: ShortcutsViewController[] = [];
 

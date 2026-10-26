@@ -1,7 +1,7 @@
 // Types the shortcut modules share with the bookmark and recent-site
 // surfaces that drop sites onto the shortcuts.
-import type { ShortcutGroup, ShortcutItem } from '../../domain/shortcuts-store';
 import type { LayoutRect, MarkerPosition } from '../cross-surface-drag';
+import type { ShortcutGroup, ShortcutItem } from '../../domain/shortcuts/types';
 
 // A change to a shortcut's own icon, saved with the shortcuts.
 type ShortcutIconChange =

@@ -1,10 +1,10 @@
 // The undo and redo history of bookmark and shortcut changes: moves,
 // deletes, transfers between bookmarks and shortcuts, stacking shortcuts
 // into a folder, reordering and deleting shortcut groups.
-import { isPortableFolder, isShortcutFolder } from '../../domain/shortcuts-store';
-import type { ShortcutItem } from '../../domain/shortcuts-store';
 import type { FolderItemIcon } from './folder-item-icons';
 import type { BookmarkNode } from './bookmarks-store';
+import { isPortableFolder, isShortcutFolder } from '../../domain/shortcuts/normalize';
+import type { ShortcutItem } from '../../domain/shortcuts/types';
 
 interface BookmarkLocation {
   parentId: string;

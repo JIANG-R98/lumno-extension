@@ -1,8 +1,6 @@
 // The bookmark changes the move history records, and undoing or redoing
 // each: a reorder or a move across folders after a drag, a delete from a
 // context menu, and the shortcut changes that share the same history.
-import { isShortcutFolder } from '../../domain/shortcuts-store';
-import type { ShortcutItem } from '../../domain/shortcuts-store';
 import type * as CrossSurfaceDrag from '../cross-surface-drag';
 import type { DragDropTarget } from '../cross-surface-drag';
 import type { FormatMessage, ShowToast, Translate } from '../newtab-types';
@@ -15,6 +13,8 @@ import type { BookmarkLocation, BookmarkMoveHistory, ShortcutGroupDeleteRecord }
 import type { BookmarkShortcutTransfer } from './bookmark-shortcut-transfer';
 import type { BookmarkItem, BookmarkNode } from './bookmarks-store';
 import type { BookmarksRuntime } from './bookmarks-runtime';
+import { isShortcutFolder } from '../../domain/shortcuts/normalize';
+import type { ShortcutItem } from '../../domain/shortcuts/types';
 
 interface BookmarkMoveActionsState {
   bookmarkAllItems: BookmarkItem[];

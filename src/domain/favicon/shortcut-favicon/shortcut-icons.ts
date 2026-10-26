@@ -1,10 +1,10 @@
 // The icon a shortcut shows, and site-search icons shared with shortcuts to
 // the same site.
 import type { ShortcutIconMap } from '../../shortcut-icon-map';
-import type { ShortcutItem, ShortcutLink } from '../../shortcuts-store';
 import { getSiteSearchPinnedIconAssetPath, getSiteSearchProviderPageUrl } from './bundled-icons';
 import { getCacheKey, getCachedIconSource, normalizeCacheMap, normalizeDataUrl, normalizePageUrl } from './persisted';
 import type { CachedIconMap, IconProvider } from './types';
+import type { ShortcutItem, ShortcutLink } from '../../shortcuts/types';
 
 function getShortcutHomeHost(url: unknown): string {
   const page = normalizePageUrl(url);

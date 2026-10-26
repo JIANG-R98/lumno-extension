@@ -1,7 +1,5 @@
 // Pointer-driven shortcut reordering and dragging shortcuts onto bookmarks.
 import type * as FolderReferences from '../../domain/bookmark-folder-reference';
-import { getShortcutUrl, isShortcutFolder } from '../../domain/shortcuts-store';
-import type { ShortcutItem } from '../../domain/shortcuts-store';
 import { isElementNode, isHtmlElement } from '../../shared/dom-guards';
 import { queryHtmlElement, queryHtmlElements } from '../../shared/dom-lookup';
 import type { BookmarkDragSession } from '../bookmarks/bookmark-drag';
@@ -21,6 +19,8 @@ import type { ShortcutIconMap } from './shortcut-icon-store';
 import type { ShortcutPageActions } from './shortcut-page-actions';
 import type { PersistShortcuts, ShortcutInsertionSlot } from './shortcut-types';
 import type { ShortcutsController } from './shortcuts-controller';
+import { getShortcutUrl, isShortcutFolder } from '../../domain/shortcuts/normalize';
+import type { ShortcutItem } from '../../domain/shortcuts/types';
 
 interface ShortcutDragState {
   shortcutGrid: HTMLElement | null;

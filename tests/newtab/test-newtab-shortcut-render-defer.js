@@ -5,7 +5,7 @@ const assert = require('assert');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const NEWTAB_SHORTCUTS_STORE = require(path.join(repoRoot, 'src/domain/shortcuts-store.ts'));
+const NEWTAB_SHORTCUTS_STORE = require(path.join(repoRoot, 'tests/helpers/shortcuts-store.ts'));
 const LumnoNewtabShortcutsController = require(path.join(repoRoot, 'src/newtab/shortcuts/shortcuts-controller.ts'));
 
 global.document = { body: { getAttribute: () => '1' } };

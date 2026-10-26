@@ -3,7 +3,6 @@
 // its "sync now", export and import buttons do, and moving settings that
 // older versions kept only in chrome.storage.local into browser sync. The
 // card itself is drawn from the model this hands to onRender.
-import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
 import type * as Settings from '../domain/settings';
 import type { StorageAreaLike } from '../domain/storage-port';
 import { downloadJsonFile } from './options-download';
@@ -11,6 +10,7 @@ import type { createSyncTransfer, SettingsImportPlan } from './options-sync-tran
 import type { FormatTemplate, GetMessage, ToastTask } from './options-types';
 import type { BrowserSyncCardHandlers, BrowserSyncCardModel, BrowserSyncTone } from './react/account-tab';
 import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
+import { SHORTCUTS_STORE_API } from '../domain/shortcuts/api';
 
 interface SyncSectionChromeApi {
   runtime: { lastError?: { message?: string } | null };
@@ -142,7 +142,7 @@ function createSyncSection(options: SyncSectionOptions) {
   // through WebDAV.
   let shortcutSyncSummaryRevision = 0;
   function refreshShortcutSyncSummary(): void {
-    const store = LumnoNewtabShortcutsStore;
+    const store = SHORTCUTS_STORE_API;
     if (!storageArea || getActivePrimaryAreaName() !== 'sync' || !localStorageArea) {
       if (shortcutSummary) {
         shortcutSummary = '';

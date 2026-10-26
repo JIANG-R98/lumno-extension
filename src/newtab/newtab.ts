@@ -83,7 +83,6 @@ import * as NEWTAB_SHORTCUT_ICON_PLATE from './shortcuts/shortcut-icon-plate';
 import * as NEWTAB_SHORTCUT_ICON_STORE from './shortcuts/shortcut-icon-store';
 import * as NEWTAB_SHORTCUT_PAGE_ACTIONS from './shortcuts/shortcut-page-actions';
 import * as NEWTAB_SHORTCUTS_CONTROLLER from './shortcuts/shortcuts-controller';
-import * as NEWTAB_SHORTCUTS_STORE from '../domain/shortcuts-store';
 import * as NEWTAB_STARTUP_PREFERENCES from './startup-preferences';
 import * as NEWTAB_STARTUP_STORAGE from './startup-storage';
 import * as NEWTAB_CARD_THEMES from './theme/card-themes';
@@ -216,6 +215,7 @@ import * as FaviconBrowserIconIndex from '../domain/favicon/browser-icon-index';
 import * as BundledIcons from '../domain/favicon/shortcut-favicon/bundled-icons';
 import * as ShortcutIconCache from '../domain/favicon/shortcut-favicon/persisted';
 import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-providers';
+import * as ShortcutConstants from '../domain/shortcuts/constants';
 
 (function() {
   // Page state shared with the modules split out of this file: each module
@@ -396,7 +396,7 @@ import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-p
     t,
     pageState
   });
-  const MAX_NEWTAB_SHORTCUTS = NEWTAB_SHORTCUTS_STORE.DEFAULT_MAX_SHORTCUTS;
+  const MAX_NEWTAB_SHORTCUTS = ShortcutConstants.DEFAULT_MAX_SHORTCUTS;
   const shortcutTiles: ShortcutTileElement[] = [];
   const SHORTCUT_DIALOG_MODE_EDIT = NEWTAB_SHORTCUT_DIALOG.MODE_EDIT || 'edit';
   const folderColorApi = getFolderColorPickerApi();
@@ -451,7 +451,6 @@ import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-p
     saveSavedFolderColors: (...args) => saveSavedFolderColors(...args),
     SHORTCUT_GROUP_MENU_VALUES,
     getShortcutGroups: (...args) => getShortcutGroups(...args),
-    NEWTAB_SHORTCUTS_STORE,
     SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE,
     MAX_NEWTAB_SHORTCUTS,
     NEWTAB_CONTEXT_MENU_OPEN_VALUE,
@@ -547,8 +546,8 @@ import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-p
   const NEWTAB_SHORTCUT_FAVICON_CACHE_STORAGE_KEY = newtabShortcutFaviconCache.key;
   const SITE_SEARCH_ICON_CACHE_STORAGE_KEY = SearchSettings.siteSearchIconCache.key;
   const siteSearchIconCacheOptions = ShortcutIconCache.SITE_SEARCH_CACHE_OPTIONS;
-  const NEWTAB_SHORTCUTS_CRITICAL_SYNC_RESERVE_BYTES = NEWTAB_SHORTCUTS_STORE.DEFAULT_SHORTCUTS_SYNC_RESERVE_BYTES;
-  const NEWTAB_SHORTCUTS_STORAGE_KEYS = NEWTAB_SHORTCUTS_STORE.SHORTCUT_STORAGE_KEYS;
+  const NEWTAB_SHORTCUTS_CRITICAL_SYNC_RESERVE_BYTES = ShortcutConstants.DEFAULT_SHORTCUTS_SYNC_RESERVE_BYTES;
+  const NEWTAB_SHORTCUTS_STORAGE_KEYS = ShortcutConstants.SHORTCUT_STORAGE_KEYS;
   const pageSearchParams = new URLSearchParams(window.location.search || '');
   const {
     mediaQuery,
@@ -1977,7 +1976,6 @@ import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-p
     normalizeHost,
     sanitizeDisplayText,
     providerStorageRuntime,
-    NEWTAB_SHORTCUTS_STORE,
     NEWTAB_SHORTCUTS_CRITICAL_SYNC_RESERVE_BYTES,
     NEWTAB_SHORTCUTS_LOCAL_OVERFLOW_STORAGE_KEY,
     shortcutIconStore,
@@ -2116,7 +2114,6 @@ import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-p
     getShortcutFolderId,
     getShortcutReorderTiles,
     getShortcutTileLayoutRect: (...args) => getShortcutTileLayoutRect(...args),
-    NEWTAB_SHORTCUTS_STORE,
     getShortcutStoreOptions,
     getShortcutInsertionSlotAt: (...args) => getShortcutInsertionSlotAt(...args),
     MAX_NEWTAB_SHORTCUTS,
@@ -2355,7 +2352,6 @@ import * as SearchSiteSearchProviders from '../domain/search/utils/site-search-p
   });
 
   pageState.recentCardDragRuntime = NEWTAB_RECENT_CARD_DRAG.createRecentCardDrag({
-    NEWTAB_SHORTCUTS_STORE,
     NEWTAB_CROSS_SURFACE_DRAG,
     NEWTAB_BOOKMARK_MOVE_HISTORY,
     getShortcutStoreOptions,

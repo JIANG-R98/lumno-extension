@@ -1,9 +1,6 @@
 // Dragging a recent-site card onto the shortcuts or the bookmarks. The card
 // stays where it is: a copy of it lifts off and shrinks into a small site
 // icon that follows the pointer, and lands as a new shortcut or bookmark.
-import { isShortcutFolder } from '../../domain/shortcuts-store';
-import type * as ShortcutsStore from '../../domain/shortcuts-store';
-import type { ShortcutItem, ShortcutLink } from '../../domain/shortcuts-store';
 import { isHtmlElement, isHtmlTag } from '../../shared/dom-guards';
 import { queryHtmlElement } from '../../shared/dom-lookup';
 import { createRemixIconElement } from '../../shared/ui/remix-icon';
@@ -21,6 +18,9 @@ import type { BookmarksTopbarRuntime } from '../react/bookmarks-topbar';
 import type { RecentSitesViewOptions } from '../react/recent-sites';
 import type { ShortcutDrag, ShortcutDragSession } from '../shortcuts/shortcut-drag';
 import type { ShortcutsController } from '../shortcuts/shortcuts-controller';
+import { isShortcutFolder } from '../../domain/shortcuts/normalize';
+import type { ShortcutItem, ShortcutLink } from '../../domain/shortcuts/types';
+import * as ShortcutNormalize from '../../domain/shortcuts/normalize';
 
 interface RecentCardDragState {
   newtabShortcuts: ShortcutItem[];
@@ -33,7 +33,6 @@ interface RecentCardDragState {
 }
 
 interface RecentCardDragDeps {
-  NEWTAB_SHORTCUTS_STORE: Pick<typeof ShortcutsStore, 'createShortcutRecord'>;
   NEWTAB_CROSS_SURFACE_DRAG: Pick<typeof CrossSurfaceDrag, 'planBookmarkToShortcut'>;
   NEWTAB_BOOKMARK_MOVE_HISTORY: Pick<typeof MoveHistory,
     'createShortcutReorderRecord' | 'createShortcutAddRecord' | 'createTransferRecord'>;
@@ -109,7 +108,6 @@ function cloneHtmlElement(element: HTMLElement): HTMLElement | null {
 
 function createRecentCardDrag(deps: RecentCardDragDeps) {
   const {
-    NEWTAB_SHORTCUTS_STORE,
     NEWTAB_CROSS_SURFACE_DRAG,
     NEWTAB_BOOKMARK_MOVE_HISTORY,
     getShortcutStoreOptions,
@@ -425,7 +423,7 @@ function createRecentCardDrag(deps: RecentCardDragDeps) {
   // The shortcut a site becomes; null when its URL is not one a shortcut
   // can open.
   function getSiteRecord(site: { title: string; url: string }): ShortcutLink | null {
-    const record = NEWTAB_SHORTCUTS_STORE.createShortcutRecord({
+    const record = ShortcutNormalize.createShortcutRecord({
       title: site.title,
       url: site.url
     }, getShortcutStoreOptions());

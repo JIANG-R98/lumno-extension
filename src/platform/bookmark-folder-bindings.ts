@@ -7,8 +7,6 @@ import type {
   FolderBindings,
   FolderShortcutLike
 } from '../domain/bookmark-folder-reference';
-import { isShortcutFolder } from '../domain/shortcuts-store';
-import type { PortableShortcutFolder, ShortcutItem, VisibleShortcutItem } from '../domain/shortcuts-store';
 import {
   NEWTAB_SHORTCUT_LIST_SETTINGS,
   newtabShortcutsLocalOverflow,
@@ -19,6 +17,8 @@ import type { SettingsStore } from './settings-store';
 import { createShortcutListStorage } from './shortcut-list-storage';
 import type { ShortcutListChromeApi } from './shortcut-list-storage';
 import { isRecord } from './storage-call';
+import { isShortcutFolder } from '../domain/shortcuts/normalize';
+import type { PortableShortcutFolder, ShortcutItem, VisibleShortcutItem } from '../domain/shortcuts/types';
 
 type BookmarkEventName = 'onCreated' | 'onRemoved' | 'onChanged' | 'onMoved' | 'onChildrenReordered' | 'onImportEnded';
 

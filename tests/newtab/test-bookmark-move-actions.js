@@ -5,7 +5,7 @@ const actionsModule = require('../../src/newtab/bookmarks/bookmark-move-actions.
 const bookmarksRuntimeModule = require('../../src/newtab/bookmarks/bookmarks-runtime.ts');
 const moveHistory = require('../../src/newtab/bookmarks/bookmark-move-history.ts');
 const crossSurfaceDrag = require('../../src/newtab/cross-surface-drag.ts');
-const shortcutsStore = require('../../src/domain/shortcuts-store.ts');
+const shortcutsStore = require('../helpers/shortcuts-store.ts');
 
 // Bookmark moves and deletes go on the move history; undo and redo replay
 // them, and the shortcut changes that share the history.

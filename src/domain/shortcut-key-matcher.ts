@@ -87,14 +87,38 @@ function lookup(table: Readonly<Record<string, string>>, key: string): string {
 
 // A shortcut as Chrome writes it ("Ctrl+Shift+K", "⌘⇧K"), or null when it
 // is not one.
+type ModifierName = 'ctrl' | 'alt' | 'shift' | 'meta';
+
+// Each modifier's spellings, by name and as a Mac symbol.
+const MODIFIER_TOKENS: Readonly<Record<string, ModifierName>> = Object.freeze({
+  ctrl: 'ctrl', control: 'ctrl', macctrl: 'ctrl', '⌃': 'ctrl',
+  alt: 'alt', option: 'alt', '⌥': 'alt',
+  shift: 'shift', '⇧': 'shift',
+  command: 'meta', cmd: 'meta', meta: 'meta', super: 'meta', '⌘': 'meta'
+});
+
+// "⌘⇧K" spelled the long way, "⌘+⇧+K".
+function expandCompactMacShortcut(value: string): string {
+  const compactMacMatch = value.match(/^([⌘⇧⌃⌥]+)(.+)$/);
+  return compactMacMatch ? `${Array.from(compactMacMatch[1]).join('+')}+${compactMacMatch[2]}` : value;
+}
+
+function readShortcutKey(keyToken: string): string {
+  const normalizedKey = keyToken.toLowerCase();
+  const alias = lookup(KEY_ALIASES, normalizedKey);
+  if (alias) {
+    return alias;
+  }
+  if (/^f\d{1,2}$/.test(normalizedKey)) {
+    return normalizedKey.toUpperCase();
+  }
+  return normalizedKey.length === 1 ? normalizedKey : keyToken;
+}
+
 function parseShortcut(shortcut: unknown): ShortcutSpec | null {
-  let value = String(shortcut || '').trim().replace(/\s*\+\s*/g, '+');
+  const value = expandCompactMacShortcut(String(shortcut || '').trim().replace(/\s*\+\s*/g, '+'));
   if (!value || value.includes('%')) {
     return null;
-  }
-  const compactMacMatch = value.match(/^([⌘⇧⌃⌥]+)(.+)$/);
-  if (compactMacMatch) {
-    value = `${Array.from(compactMacMatch[1]).join('+')}+${compactMacMatch[2]}`;
   }
   const parts = value
     .split('+')
@@ -112,29 +136,14 @@ function parseShortcut(shortcut: unknown): ShortcutSpec | null {
     key: ''
   };
   for (const token of parts) {
-    const normalized = token.toLowerCase();
-    if (normalized === 'ctrl' || normalized === 'control' || normalized === 'macctrl' || token === '⌃') {
-      spec.ctrl = true;
-    } else if (normalized === 'alt' || normalized === 'option' || token === '⌥') {
-      spec.alt = true;
-    } else if (normalized === 'shift' || token === '⇧') {
-      spec.shift = true;
-    } else if (normalized === 'command' || normalized === 'cmd' ||
-        normalized === 'meta' || normalized === 'super' || token === '⌘') {
-      spec.meta = true;
-    } else {
+    const name = token.toLowerCase();
+    const modifier = Object.prototype.hasOwnProperty.call(MODIFIER_TOKENS, name) ? MODIFIER_TOKENS[name] : null;
+    if (!modifier) {
       return null;
     }
+    spec[modifier] = true;
   }
-  const normalizedKey = keyToken.toLowerCase();
-  const alias = lookup(KEY_ALIASES, normalizedKey);
-  if (alias) {
-    spec.key = alias;
-  } else if (/^f\d{1,2}$/.test(normalizedKey)) {
-    spec.key = normalizedKey.toUpperCase();
-  } else {
-    spec.key = normalizedKey.length === 1 ? normalizedKey : keyToken;
-  }
+  spec.key = readShortcutKey(keyToken);
   return spec.key ? spec : null;
 }
 

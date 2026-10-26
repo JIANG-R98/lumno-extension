@@ -550,7 +550,7 @@ async function assertDarkThemeKeepsShortcutThemeBackground() {
 
 const newtabScripts = getPageScripts('newtab.html');
 assert.ok(
-  runsBefore(newtabScripts, 'src/domain/shortcuts-store.ts', 'src/newtab/newtab.ts'),
+  runsBefore(newtabScripts, 'src/domain/shortcuts/normalize.ts', 'src/newtab/newtab.ts'),
   'new tab page should load the shortcuts store before newtab.js'
 );
 

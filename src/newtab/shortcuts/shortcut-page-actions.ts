@@ -1,9 +1,6 @@
 // Shortcut tiles on the page: finding a tile and its shortcut, the
 // context menu's options, opening the shortcut dialog to add or edit, the
 // icon plate color picker, and the copy the dialog and menus show.
-import { isShortcutFolder } from '../../domain/shortcuts-store';
-import type * as ShortcutsStore from '../../domain/shortcuts-store';
-import type { ShortcutGroup, ShortcutItem } from '../../domain/shortcuts-store';
 import { isElementNode, isHtmlElement } from '../../shared/dom-guards';
 import { queryHtmlElements } from '../../shared/dom-lookup';
 import type { SelectMenuOption } from '../../shared/react/select-menu';
@@ -20,6 +17,9 @@ import type {
   ShortcutDialogOpenOptions
 } from '../react/shortcut-dialog';
 import type { ShortcutContextTarget, ShortcutGroupMenuValues } from './shortcut-types';
+import { isShortcutFolder } from '../../domain/shortcuts/normalize';
+import type { ShortcutGroup, ShortcutItem } from '../../domain/shortcuts/types';
+import * as ShortcutConstants from '../../domain/shortcuts/constants';
 
 interface ShortcutPageActionsState {
   // The folder color picker, made the first time a plate color is picked.
@@ -44,7 +44,6 @@ interface ShortcutPageActionsDeps {
   saveSavedFolderColors(colors: string[]): Promise<void>;
   SHORTCUT_GROUP_MENU_VALUES: ShortcutGroupMenuValues;
   getShortcutGroups(): ShortcutGroup[];
-  NEWTAB_SHORTCUTS_STORE: Pick<typeof ShortcutsStore, 'DEFAULT_MAX_SHORTCUT_GROUPS'>;
   SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE: string;
   MAX_NEWTAB_SHORTCUTS: number;
   NEWTAB_CONTEXT_MENU_OPEN_VALUE: string;
@@ -78,7 +77,6 @@ function createShortcutPageActions(deps: ShortcutPageActionsDeps) {
     saveSavedFolderColors,
     SHORTCUT_GROUP_MENU_VALUES,
     getShortcutGroups,
-    NEWTAB_SHORTCUTS_STORE,
     SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE,
     MAX_NEWTAB_SHORTCUTS,
     NEWTAB_CONTEXT_MENU_OPEN_VALUE,
@@ -174,7 +172,7 @@ function createShortcutPageActions(deps: ShortcutPageActionsDeps) {
           value: SHORTCUT_GROUP_MENU_VALUES.addShortcut,
           label: t('newtab_shortcuts_add_site', 'Add site')
         },
-        { ...createGroupOption, disabled: getShortcutGroups().length >= NEWTAB_SHORTCUTS_STORE.DEFAULT_MAX_SHORTCUT_GROUPS },
+        { ...createGroupOption, disabled: getShortcutGroups().length >= ShortcutConstants.DEFAULT_MAX_SHORTCUT_GROUPS },
         {
           value: SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE,
           label: t('newtab_shortcuts_hide_add', 'Hide'),
@@ -199,7 +197,7 @@ function createShortcutPageActions(deps: ShortcutPageActionsDeps) {
         option(SHORTCUT_GROUP_MENU_VALUES.moveDown, t('newtab_shortcuts_group_move_down', 'Move down'), {
           disabled: index < 0 || index >= groups.length - 1
         }),
-        { ...createGroupOption, disabled: groups.length >= NEWTAB_SHORTCUTS_STORE.DEFAULT_MAX_SHORTCUT_GROUPS },
+        { ...createGroupOption, disabled: groups.length >= ShortcutConstants.DEFAULT_MAX_SHORTCUT_GROUPS },
         option(SHORTCUT_GROUP_MENU_VALUES.delete, t('newtab_shortcuts_group_delete', 'Delete group'), {
           dividerBefore: true, disabled: groups.length <= 1
         }),

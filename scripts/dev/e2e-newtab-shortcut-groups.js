@@ -15,7 +15,7 @@ const path = require('path');
 const { EXTENSION_OUTPUT } = require('../build/extension-output');
 const WebSocket = require('ws');
 require('../node/register-typescript');
-const shortcutsStore = require('../../src/domain/shortcuts-store.ts');
+const { SHORTCUTS_STORE_API: shortcutsStore } = require('../../src/domain/shortcuts/api.ts');
 const { findChrome, launchChrome } = require('./chrome-launcher.js');
 
 const repoRoot = path.resolve(__dirname, '..', '..');

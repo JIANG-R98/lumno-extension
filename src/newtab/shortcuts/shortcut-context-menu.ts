@@ -1,7 +1,5 @@
 // Right-click menu for shortcut tiles and the add-shortcut tile.
 import type { Disposition } from '../../domain/navigation-disposition';
-import { isShortcutFolder } from '../../domain/shortcuts-store';
-import type { ShortcutItem } from '../../domain/shortcuts-store';
 import { isElementNode, isNode } from '../../shared/dom-guards';
 import type { SelectMenuOption } from '../../shared/react/select-menu';
 import type { BookmarkEditTarget } from '../bookmarks/bookmark-actions';
@@ -11,6 +9,8 @@ import type { SelectMenuInstance } from '../react/select-menu';
 import type { ShortcutContextMenuMark } from '../react/shortcuts';
 import type { ShortcutDock } from './shortcut-dock';
 import type { ShortcutContextTarget, ShortcutGroupMenuValues } from './shortcut-types';
+import { isShortcutFolder } from '../../domain/shortcuts/normalize';
+import type { ShortcutItem } from '../../domain/shortcuts/types';
 
 interface ShortcutContextMenuState {
   shortcutContextMenu: ContextMenuParts | null;

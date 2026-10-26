@@ -1,10 +1,10 @@
 // The shapes the worker's favicon modules share.
 import type { SiteSearchProvider } from '../../domain/search/types';
 import type { ShortcutIconMap } from '../../domain/shortcut-icon-map';
-import type { GroupedShortcutItem } from '../../domain/shortcuts-store';
 import type { ShortcutFaviconData } from '../../domain/messages';
 import type { ShortcutFetchCandidateKind } from '../../domain/favicon/types';
 import type { CachedIconMap } from '../../domain/favicon/shortcut-favicon/types';
+import type { GroupedShortcutItem } from '../../domain/shortcuts/types';
 
 
 // What the favicon policy allows for a page and its host.

@@ -3,12 +3,15 @@
 // validating a state, merging two of them and backing one up to browser
 // sync.
 import * as settings from './settings';
-import * as shortcutStore from './shortcuts-store';
-import type { GroupedShortcutItem, ShortcutGroup, ShortcutStateRead } from './shortcuts-store';
 import type { WebDavOperation } from './messages';
 import type { StorageItems } from './storage-port';
 import { customQuotes } from './settings/newtab-quote';
 import { newtabShortcutIcons, newtabShortcutsLocalOverflow } from './settings/newtab-shortcuts';
+import * as ShortcutConstants from './shortcuts/constants';
+import * as ShortcutNormalize from './shortcuts/normalize';
+import * as ShortcutStoragePlan from './shortcuts/storage-plan';
+import * as ShortcutSyncEncoding from './shortcuts/sync-encoding';
+import type { GroupedShortcutItem, ShortcutGroup, ShortcutStateRead } from './shortcuts/types';
 
 type WebDavAssetMime = 'image/png' | 'image/webp';
 
@@ -118,14 +121,14 @@ class WebDavContractError extends Error {
 }
 
 // Grouped and legacy shortcut keys: none of them is a plain preference.
-const SHORTCUT_KEYS = shortcutStore.SHORTCUT_STORAGE_KEYS;
-const SHORTCUT_SYNC_KEYS = shortcutStore.SHORTCUTS_SYNC_KEYS;
+const SHORTCUT_KEYS = ShortcutConstants.SHORTCUT_STORAGE_KEYS;
+const SHORTCUT_SYNC_KEYS = ShortcutConstants.SHORTCUTS_SYNC_KEYS;
 const OVERFLOW_KEY = newtabShortcutsLocalOverflow.key;
 // Version 3 states carry shortcut groups and more shortcuts than older
 // versions accept; a state is only written as version 3 when it needs to be.
 const GROUPED_STATE_VERSION = 3;
 const LEGACY_MAX_SHORTCUTS = 60;
-const MAX_SHORTCUTS = shortcutStore.DEFAULT_MAX_SHORTCUTS;
+const MAX_SHORTCUTS = ShortcutConstants.DEFAULT_MAX_SHORTCUTS;
 const ICONS_KEY = newtabShortcutIcons.key;
 const WALLPAPER_KEY = settings.newtabWallpaper.key;
 const LOCAL_WALLPAPER_KEY = settings.newtabLocalWallpaper.key;
@@ -227,13 +230,13 @@ function adoptRemote(local: WebDavState, remote: WebDavState): WebDavState {
 }
 
 function readShortcutState(values: unknown, overflow: unknown): ShortcutStateRead {
-  return shortcutStore.readShortcutState(values, overflow);
+  return ShortcutStoragePlan.readShortcutState(values, overflow);
 }
 
 // Whether a state needs the grouped format: real groups, or more shortcuts
 // than older versions accept.
 function needsGroupedState(groups: unknown, shortcuts: readonly unknown[]): boolean {
-  return !shortcutStore.isDefaultShortcutGroupLayout(groups) || shortcuts.length > LEGACY_MAX_SHORTCUTS;
+  return !ShortcutNormalize.isDefaultShortcutGroupLayout(groups) || shortcuts.length > LEGACY_MAX_SHORTCUTS;
 }
 
 function selectPreferences(values: unknown): StorageItems {
@@ -271,12 +274,12 @@ function validateState(value: unknown): WebDavState {
   if (byteLength(JSON.stringify(value)) > MAX_STATE_BYTES ||
       rawShortcuts.length > (grouped ? MAX_SHORTCUTS : LEGACY_MAX_SHORTCUTS) || rawWallpapers.length > 256) fail('state-too-large');
   // Older states have no groups; their shortcuts all belong to the default one.
-  let groups = shortcutStore.normalizeShortcutGroups(null);
+  let groups = ShortcutNormalize.normalizeShortcutGroups(null);
   if (grouped) {
     const rawGroups: unknown = value.groups;
     if (!Array.isArray(rawGroups) || !rawGroups.length) fail('invalid-shortcuts');
     const groupList: unknown[] = rawGroups;
-    groups = shortcutStore.normalizeShortcutGroups(groupList);
+    groups = ShortcutNormalize.normalizeShortcutGroups(groupList);
     if (groups.length !== groupList.length || groupList.some((group, index) => !isObject(group) ||
         group.id !== groups[index].id)) fail('invalid-shortcuts');
     const groupIds = new Set(groups.map((group) => group.id));
@@ -284,15 +287,15 @@ function validateState(value: unknown): WebDavState {
       fail('invalid-shortcuts');
     }
   }
-  const shortcutState = shortcutStore.normalizeShortcutState({ groups, items: grouped ? rawShortcuts
+  const shortcutState = ShortcutNormalize.normalizeShortcutState({ groups, items: grouped ? rawShortcuts
     : rawShortcuts.map((item) => {
       if (!isObject(item)) return item;
       const { groupId: _ignored, ...rest } = item;
       return rest;
     }) });
   const shortcuts = shortcutState.items;
-  if (shortcuts.length !== rawShortcuts.length || shortcuts.some((item) => shortcutStore.isShortcutFolder(item) &&
-      (version < 2 || !shortcutStore.isPortableFolder(item)))) fail('invalid-shortcuts');
+  if (shortcuts.length !== rawShortcuts.length || shortcuts.some((item) => ShortcutNormalize.isShortcutFolder(item) &&
+      (version < 2 || !ShortcutNormalize.isPortableFolder(item)))) fail('invalid-shortcuts');
   if (rawShortcuts.some((item) => isObject(item) && item.type === 'folder' && own(item, 'folderId'))) fail('invalid-shortcuts');
   const ids = new Set(shortcuts.map((item) => item.id));
   if (ids.size !== shortcuts.length) fail('invalid-shortcuts');
@@ -473,7 +476,7 @@ function describeList<T extends { id: string }>(
 }
 
 function getShortcutName(item: GroupedShortcutItem): string {
-  return String(item.title || (shortcutStore.isShortcutFolder(item) ? '' : item.url) || '').slice(0, 60);
+  return String(item.title || (ShortcutNormalize.isShortcutFolder(item) ? '' : item.url) || '').slice(0, 60);
 }
 
 function describeShortcuts(base: WebDavState, side: WebDavState): ListChangeSummary {
@@ -673,8 +676,8 @@ function planChromeBackup(values: StorageItems, existing: StorageItems, options?
     const nonShortcutBytes = Object.entries(projected).filter(([key]) => !SHORTCUT_SYNC_KEYS.includes(key))
       .reduce((sum, [key, value]) => sum + bytes(key, value), 0);
     const state = readShortcutState(values, null);
-    const fallback = shortcutStore.createShortcutStoragePlan(state, {
-      maxItemBytes: Math.min(itemQuota, shortcutStore.DEFAULT_SHORTCUTS_SYNC_ITEM_BUDGET_BYTES),
+    const fallback = ShortcutStoragePlan.createShortcutStoragePlan(state, {
+      maxItemBytes: Math.min(itemQuota, ShortcutConstants.DEFAULT_SHORTCUTS_SYNC_ITEM_BUDGET_BYTES),
       maxTotalBytes: Math.max(0, quota - nonShortcutBytes)
     });
     Object.assign(projected, fallback.payload);
@@ -682,9 +685,9 @@ function planChromeBackup(values: StorageItems, existing: StorageItems, options?
     if (fits) {
       // All three chunks are updated together, including empty tail chunks.
       // Keeping a stale tail would resurrect removed shortcuts on a new device.
-      const current = shortcutStore.readShortcutSyncValues(existing);
+      const current = ShortcutSyncEncoding.readShortcutSyncValues(existing);
       if (current.source !== 'v2' || current.torn ||
-          !sameShortcutState(shortcutStore.normalizeShortcutState(current), fallback.state)) {
+          !sameShortcutState(ShortcutNormalize.normalizeShortcutState(current), fallback.state)) {
         Object.assign(payload, fallback.payload);
       }
       if (fallback.overflowItems.length) skipped.push(...SHORTCUT_SYNC_KEYS);
