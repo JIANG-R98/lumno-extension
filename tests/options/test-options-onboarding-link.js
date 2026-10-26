@@ -12,7 +12,6 @@ const optionsCss = parsePageCss('src/options/options.html');
 const onboardingContent = require('../../src/onboarding/onboarding-content.ts');
 
 const buttonId = '_x_extension_open_onboarding_page_2026_unique_';
-const buttonClass = '_x_extension_onboarding_guide_button_2026_unique_';
 const labelKey = 'settings_onboarding_tutorial_action';
 const versionButtonId = '_x_extension_settings_version_2024_unique_';
 const versionButtonClass = '_x_extension_settings_version_badge_2024_unique_';
@@ -28,23 +27,8 @@ assert.ok(onboardingContent.getOnboardingBlueprint('en').slides.some((slide) => 
   slide.actions.ghost.icon === 'ri-external-link-line'),
 'onboarding should keep the reference ghost action icon used by the options tutorial link');
 
-const ghost = rule(`._x_extension_shortcut_submit_2024_unique_.${buttonClass}`);
-assert.deepStrictEqual(
-  ['margin-left', '--settings-button-min-height', '--settings-button-padding', '--settings-button-bg', '--settings-button-shadow', 'white-space']
-    .map((name) => ghost.get(name)),
-  ['auto', '28px', '0 10px', 'transparent', 'none', 'nowrap'],
-  'tutorial action should stay compact and ghost-styled'
-);
-assert.strictEqual(ghost.get('--settings-button-hover-bg'), 'rgba(15, 23, 42, 0.045)', 'tutorial ghost action should only gain a background on hover');
-const dark = rule(`body[data-theme="dark"] .${buttonClass}`);
-assert.deepStrictEqual(
-  ['--settings-button-color', '--settings-button-bg', '--settings-button-shadow', '--settings-button-hover-bg', '--settings-button-hover-color']
-    .map((name) => dark.get(name)),
-  ['var(--panel-subtext)', 'transparent', 'none', 'color-mix(in srgb, var(--control-hover-bg) 72%, transparent)', 'var(--panel-text)'],
-  'dark tutorial ghost action should use dark tokens and expose its hover as variant tokens'
-);
-assert.strictEqual(optionsCss.rule(`body[data-theme="dark"] .${buttonClass}:hover`), null,
-  'dark tutorial ghost action should not need a separate hover selector');
+// The guide is a card of its own, beside the Help Center's.
+const cardClass = '_x_extension_feedback_support_help_card_2026_unique_';
 
 const version = optionsDocument.getElementById(versionButtonId);
 assert.ok(version && version.tagName === 'BUTTON' && version.type === 'button' && version.classList.contains(versionButtonClass),
@@ -67,10 +51,13 @@ assert.strictEqual(rule(`body[data-theme="dark"] .${versionButtonClass}:hover`).
   const page = await createOptionsPage({});
   await page.settle(200);
   const button = page.byId(buttonId);
-  assert.ok(button && button.tagName === 'BUTTON' && button.classList.contains(buttonClass),
-    'general settings header should expose a compact onboarding tutorial ghost action');
-  assert.strictEqual(button.querySelector('span').textContent, '新手引导');
-  assert.ok(button.querySelector('i.ri-icon.ri-size-14.ri-external-link-line'), 'with the onboarding ghost icon');
+  assert.ok(button && button.tagName === 'BUTTON' && button.classList.contains(cardClass),
+    'the onboarding tutorial should be a card like the Help Center');
+  assert.ok(button.previousElementSibling && button.previousElementSibling.querySelector('[data-feedback-support="help-center"]'),
+    'the onboarding tutorial should sit just after the Help Center card');
+  assert.strictEqual(button.textContent, '新手引导');
+  assert.ok(button.querySelector('i.ri-compass-3-line') && !button.querySelector('i.ri-external-link-line'),
+    'with its own icon and no external-link mark');
   await page.click(button);
   assert.ok(page.messages.some((message) => message.action === 'openOnboardingPage'),
     'clicking the tutorial action should ask the background page to open onboarding');

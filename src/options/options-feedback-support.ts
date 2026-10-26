@@ -1,5 +1,5 @@
 // The "Feedback & support" section on the General tab: the Help Center
-// row (whose description offers the "ask in the search box" demo while the
+// card (whose description offers the "ask in the search box" demo while the
 // lm site search is on) and the community, review, GitHub and contact links.
 // It also points the open-source licenses link in the Global settings header
 // at the current URL. Links come from the shared remote community-links
@@ -25,7 +25,7 @@ interface FeedbackSupportModelInput {
 interface FeedbackSupportSectionOptions {
   // The section's React controller; null when the section is not on the page.
   controller: { render(model: FeedbackSupportRenderModel): void } | null;
-  // The open-source licenses link beside the onboarding guide.
+  // The open-source licenses link in the Global settings header.
   licensesLink?: Pick<HTMLAnchorElement, 'href'> | null;
   communityLinks: FeedbackCommunityLinks;
   getMessage: GetMessage;
@@ -49,10 +49,6 @@ function buildFeedbackSupportModel(input: FeedbackSupportModelInput): FeedbackSu
   const { communityLinks, getMessage, links, webLocale } = input;
   const communityIsWechat = communityLinks.getCommunityChannel(links, webLocale) === 'wechat';
   return {
-    channels: {
-      title: getMessage('settings_feedback_support_channels_title', '交流与反馈'),
-      titleKey: 'settings_feedback_support_channels_title'
-    },
     heading: getMessage('settings_feedback_support_section_title', '反馈与支持'),
     headingKey: 'settings_feedback_support_section_title',
     help: {

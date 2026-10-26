@@ -101,9 +101,23 @@ describe('Options General global section', () => {
     expect(getTag(host, '#_x_extension_open_licenses_2026_unique_', 'a').href).toBe('https://example.test/licenses');
   });
 
-  it('asks the background page to open onboarding', () => {
-    const { host, sent } = setUp();
-    act(() => getTag(host, '#_x_extension_open_onboarding_page_2026_unique_', 'button').click());
+  it('puts the onboarding guide beside the Help Center card and opens it', () => {
+    const { host, sent, section } = setUp();
+    act(() => section.feedback.render({
+      heading: '反馈与支持',
+      headingKey: 'settings_feedback_support_section_title',
+      help: {
+        href: 'https://example.test/help/',
+        label: '访问帮助中心',
+        labelKey: 'settings_help_center_action',
+        title: '帮助中心',
+        titleKey: 'settings_help_center_title'
+      },
+      items: []
+    }));
+    const guide = getTag(host, '#_x_extension_open_onboarding_page_2026_unique_', 'button');
+    expect(guide.previousElementSibling?.querySelector('[data-feedback-support="help-center"]')).not.toBeNull();
+    act(() => guide.click());
     expect(sent).toEqual([{ action: 'openOnboardingPage' }]);
   });
 

@@ -18,7 +18,7 @@ export interface FeedbackSupportItem {
   qr?: FeedbackSupportQr | null;
 }
 
-export interface FeedbackSupportRowCopy {
+export interface FeedbackSupportHelpCopy {
   description?: string;
   descriptionKey?: string;
   title: string;
@@ -45,7 +45,7 @@ export interface FeedbackSupportAskDemo {
   results: FeedbackSupportAskDemoResult[];
 }
 
-export interface FeedbackSupportHelp extends FeedbackSupportRowCopy {
+export interface FeedbackSupportHelp extends FeedbackSupportHelpCopy {
   ask?: FeedbackSupportAskDemo | null;
   href: string;
   label: string;
@@ -53,8 +53,6 @@ export interface FeedbackSupportHelp extends FeedbackSupportRowCopy {
 }
 
 export interface FeedbackSupportRenderModel {
-  /** The title above the channel tiles, apart from the Help Center. */
-  channels?: FeedbackSupportRowCopy | null;
   heading: string;
   headingKey: string;
   help?: FeedbackSupportHelp | null;
@@ -62,33 +60,25 @@ export interface FeedbackSupportRenderModel {
 }
 
 
-const ACTION_CLASS = '_x_extension_shortcut_submit_2024_unique_ _x_extension_feedback_support_action_2026_unique_';
 const TILE_CLASS = '_x_extension_feedback_support_link_2026_unique_';
+const HELP_CARD_CLASS = '_x_extension_feedback_support_help_card_2026_unique_';
+const HELP_TITLE_CLASS = '_x_extension_feedback_support_help_title_2026_unique_';
 
-// Laid out like every other setting: title and description on the left, quiet actions on the right.
-function FeedbackSupportRow({ children, copy, description }: {
-  children?: ReactNode;
-  copy: FeedbackSupportRowCopy;
-  /** Replaces the plain description, e.g. one with an inline popover trigger. */
-  description?: ReactNode;
+/** A card beside the Help Center that runs an action in the extension rather than opening a link, e.g. the onboarding guide. */
+export function FeedbackSupportActionCard({ iconClass, id, label, labelKey, onClick }: {
+  iconClass: string;
+  id?: string;
+  label: string;
+  labelKey?: string;
+  onClick(): void;
 }) {
   return (
-    <div className="_x_extension_setting_row_2024_unique_ _x_extension_feedback_support_row_2026_unique_">
-      <div className="_x_extension_feedback_support_copy_2026_unique_">
-        <p className="_x_extension_setting_title_2024_unique_" data-i18n={copy.titleKey}>
-          {copy.title}
-        </p>
-        {description ? (
-          // A div, since the description may hold a popover; no data-i18n, as it mixes copy and markup.
-          <div className="_x_extension_setting_desc_2024_unique_">{description}</div>
-        ) : copy.description ? (
-          <p className="_x_extension_setting_desc_2024_unique_" data-i18n={copy.descriptionKey}>
-            {copy.description}
-          </p>
-        ) : null}
-      </div>
-      {children}
-    </div>
+    <button className={HELP_CARD_CLASS} id={id} onClick={onClick} type="button">
+      <span className="_x_extension_feedback_support_help_icon_2026_unique_" aria-hidden="true">
+        <i className={`ri-icon ri-size-20 ${iconClass}`} />
+      </span>
+      <span className={HELP_TITLE_CLASS} data-i18n={labelKey}>{label}</span>
+    </button>
   );
 }
 
@@ -380,7 +370,46 @@ function FeedbackSupportAskDescription({ demo }: { demo: FeedbackSupportAskDemo 
   return rest.length ? <>{before}{trigger}{after}</> : <>{before} {trigger}</>;
 }
 
-export function FeedbackSupportView({ channels, heading, headingKey, help, items }: FeedbackSupportRenderModel) {
+// The Help Center leads the section as a stronger card. The whole card opens
+// it, while the ask hint in its description stays a control of its own.
+function FeedbackSupportHelpCard({ help }: { help: FeedbackSupportHelp }) {
+  return (
+    <div className={HELP_CARD_CLASS}>
+      <span className="_x_extension_feedback_support_help_icon_2026_unique_" aria-hidden="true">
+        <i className="ri-icon ri-size-20 ri-book-open-line" />
+      </span>
+      <div className="_x_extension_feedback_support_copy_2026_unique_">
+        <a
+          aria-label={help.label}
+          className="_x_extension_feedback_support_help_link_2026_unique_"
+          data-feedback-support="help-center"
+          href={help.href}
+          rel="noreferrer noopener"
+          target="_blank"
+        >
+          <span className={HELP_TITLE_CLASS} data-i18n={help.titleKey}>{help.title}</span>
+        </a>
+        {help.ask ? (
+          // A div, since the description holds a popover; no data-i18n, as it mixes copy and markup.
+          <div className="_x_extension_feedback_support_help_desc_2026_unique_">
+            <FeedbackSupportAskDescription demo={help.ask} />
+          </div>
+        ) : help.description ? (
+          <p className="_x_extension_feedback_support_help_desc_2026_unique_" data-i18n={help.descriptionKey}>
+            {help.description}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export function FeedbackSupportView({ heading, headingKey, help, helpCards, items }: FeedbackSupportRenderModel & {
+  /** More cards in the Help Center's row, after it. */
+  helpCards?: ReactNode;
+}) {
+  // Both rows share one column grid, so the cards beside the Help Center line up with the tiles.
+  const columns = { '--feedback-support-columns': Math.max(2, items.length) };
   return (
     <section
       className="_x_extension_feedback_support_section_2026_unique_"
@@ -395,42 +424,36 @@ export function FeedbackSupportView({ channels, heading, headingKey, help, items
           {heading}
         </h2>
       </div>
-      {help?.href ? (
-        <FeedbackSupportRow copy={help} description={help.ask ? <FeedbackSupportAskDescription demo={help.ask} /> : null}>
-          <a
-            className={ACTION_CLASS}
-            data-feedback-support="help-center"
-            href={help.href}
-            rel="noreferrer noopener"
-            target="_blank"
+      <div className="_x_extension_feedback_support_cards_2026_unique_" style={columns}>
+        {help?.href || helpCards ? (
+          <div className="_x_extension_feedback_support_help_row_2026_unique_">
+            {help?.href ? <FeedbackSupportHelpCard help={help} /> : null}
+            {helpCards}
+          </div>
+        ) : null}
+        {items.length ? (
+          <nav
+            className="_x_extension_feedback_support_links_2026_unique_"
+            aria-labelledby="_x_extension_feedback_support_heading_2026_unique_"
           >
-            <span data-i18n={help.labelKey}>{help.label}</span>
-            <i className="ri-icon ri-size-14 ri-external-link-line" aria-hidden="true" />
-          </a>
-        </FeedbackSupportRow>
-      ) : null}
-      {channels && items.length ? <FeedbackSupportRow copy={channels} /> : null}
-      <nav
-        className="_x_extension_feedback_support_links_2026_unique_"
-        aria-labelledby="_x_extension_feedback_support_heading_2026_unique_"
-      >
-        {items.map((item) => item.qr ? (
-          <FeedbackSupportQrButton item={item} key={item.key} qr={item.qr} />
-        ) : (
-          <a
-            key={item.key}
-            className={TILE_CLASS}
-            data-feedback-support={item.key}
-            href={item.href}
-            rel="noreferrer noopener"
-            target="_blank"
-          >
-            <i className={`ri-icon ri-size-16 ${item.iconClass}`} aria-hidden="true" />
-            <span data-i18n={item.labelKey}>{item.label}</span>
-            <i className="ri-icon ri-size-14 ri-external-link-line" aria-hidden="true" />
-          </a>
-        ))}
-      </nav>
+            {items.map((item) => item.qr ? (
+              <FeedbackSupportQrButton item={item} key={item.key} qr={item.qr} />
+            ) : (
+              <a
+                key={item.key}
+                className={TILE_CLASS}
+                data-feedback-support={item.key}
+                href={item.href}
+                rel="noreferrer noopener"
+                target="_blank"
+              >
+                <i className={`ri-icon ri-size-16 ${item.iconClass}`} aria-hidden="true" />
+                <span data-i18n={item.labelKey}>{item.label}</span>
+              </a>
+            ))}
+          </nav>
+        ) : null}
+      </div>
     </section>
   );
 }

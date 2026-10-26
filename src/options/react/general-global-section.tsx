@@ -1,12 +1,12 @@
-import { FeedbackSupportView, type FeedbackSupportRenderModel } from './feedback-support';
+import { FeedbackSupportActionCard, FeedbackSupportView, type FeedbackSupportRenderModel } from './feedback-support';
 import { createReactRootController, type ReactRootController } from '../../shared/react/root-controller';
 import { SettingSelect, type SelectControlRenderModel } from './select-control';
 import { SettingDivider, SettingSwitch, SettingTitle } from './setting-rows';
 import type { ToggleControlRenderModel } from './toggle-control';
 import { TranslationHelpView, type TranslationHelpRenderModel } from './translation-help';
 
-// The top of the General tab: help and feedback, the page's language and
-// the update notice.
+// The top of the General tab: help and feedback with the onboarding guide
+// beside the Help Center, the page's language and the update notice.
 export interface GeneralGlobalSectionModel {
   // Null until the community links are known.
   feedback: FeedbackSupportRenderModel | null;
@@ -42,7 +42,19 @@ export function GeneralGlobalSection({
   return (
     <>
       <div id="_x_extension_feedback_support_2026_unique_">
-        {model.feedback ? <FeedbackSupportView {...model.feedback} /> : null}
+        {model.feedback ? (
+          <FeedbackSupportView
+            {...model.feedback}
+            helpCards={(
+              <FeedbackSupportActionCard
+                iconClass="ri-compass-3-line"
+                id="_x_extension_open_onboarding_page_2026_unique_"
+                label={model.onboardingLabel}
+                onClick={handlers.onOpenOnboarding}
+              />
+            )}
+          />
+        ) : null}
       </div>
       <SettingDivider />
       <div className="_x_extension_setting_row_2024_unique_ _x_extension_section_header_2026_unique_">
@@ -57,15 +69,6 @@ export function GeneralGlobalSection({
           <span>{model.licenses.label}</span>
           <i aria-hidden="true" className="ri-icon ri-size-14 ri-external-link-line" />
         </a>
-        <button
-          className="_x_extension_shortcut_submit_2024_unique_ _x_extension_onboarding_guide_button_2026_unique_"
-          id="_x_extension_open_onboarding_page_2026_unique_"
-          onClick={handlers.onOpenOnboarding}
-          type="button"
-        >
-          <span>{model.onboardingLabel}</span>
-          <i aria-hidden="true" className="ri-icon ri-size-14 ri-external-link-line" />
-        </button>
       </div>
       <div className="_x_extension_setting_row_2024_unique_">
         <div>

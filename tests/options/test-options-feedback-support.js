@@ -66,9 +66,9 @@ async function openPage(language, disabledSiteSearch) {
   return page;
 }
 
-// Feedback channels are external links with an icon, a label and an
-// external-link mark. The community channel is the WeChat group (a QR
-// dialog) on Chinese pages and X elsewhere.
+// Feedback channels are external links with an icon and a label. The
+// community channel is the WeChat group (a QR dialog) on Chinese pages and
+// X elsewhere.
 async function testChannels() {
   const zh = await openPage('zh-CN');
   const en = await openPage('en');
@@ -78,8 +78,8 @@ async function testChannels() {
     external.forEach((link) => {
       const icons = Array.from(link.querySelectorAll('i')).map((icon) => icon.className);
       assert.ok(link.getAttribute('href') && link.target === '_blank', 'feedback entries should render as direct external links');
-      assert.ok(icons.length === 2 && icons[1].includes('ri-external-link-line') && link.querySelector('span[data-i18n]').textContent,
-        'every feedback entry should keep its channel icon, label and external-link mark');
+      assert.ok(icons.length === 1 && !icons[0].includes('ri-external-link-line') && link.querySelector('span[data-i18n]').textContent,
+        'every feedback entry should show its channel icon and label, with no external-link mark');
     });
   });
   const community = (page) => page.byId(HOST_ID).querySelector('[data-feedback-support="community"]');
@@ -94,9 +94,9 @@ async function testChannels() {
     assert.ok(licenses && licenses.getAttribute('href') === 'https://github.com/kubai087/lumno-extension/blob/main/THIRD_PARTY_NOTICES.md',
       'the open-source licenses link should open the third-party notices on GitHub');
     assert.ok(!page.byId(HOST_ID).contains(licenses) &&
-      licenses.nextElementSibling === page.byId('_x_extension_open_onboarding_page_2026_unique_') &&
+      licenses.closest('._x_extension_section_header_2026_unique_') &&
       licenses.target === '_blank' && licenses.rel.includes('noopener'),
-    'the licenses link should sit just left of the onboarding guide in the Global settings header');
+    'the licenses link should sit in the Global settings header');
   });
   zh.close();
   en.close();

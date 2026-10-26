@@ -687,14 +687,125 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
   flex: 1 1 auto;
   min-width: 0;
 }
-/* Feedback channels sit as one row of equal tiles, however many the locale shows. */
+/* The Help Center card, then the tiles, as one block of cards under the heading. */
+._x_extension_feedback_support_cards_2026_unique_ {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px var(--settings-content-edge-space) var(--settings-row-block-space);
+}
+/* The Help Center spans every column but the last, which the onboarding guide takes. */
+._x_extension_feedback_support_help_row_2026_unique_ {
+  display: grid;
+  grid-template-columns: repeat(var(--feedback-support-columns), minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+._x_extension_feedback_support_help_row_2026_unique_ > :first-child:not(:last-child) {
+  grid-column: 1 / -2;
+}
+._x_extension_feedback_support_help_row_2026_unique_ > :only-child {
+  grid-column: 1 / -1;
+}
+/* A step up from the tiles: taller, with its icon in a gray square. */
+._x_extension_feedback_support_help_card_2026_unique_ {
+  --feedback-support-help-bg: var(--control-bg);
+  --feedback-support-help-hover-bg: rgba(15, 23, 42, 0.07);
+  --feedback-support-help-icon-bg: rgba(15, 23, 42, 0.05);
+  --feedback-support-help-icon-color: rgba(107, 114, 128, 0.86);
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 64px;
+  margin: 0;
+  padding: 12px 14px 12px 12px;
+  border: 0;
+  border-radius: var(--lumno-radius-lg);
+  background: var(--feedback-support-help-bg);
+  color: var(--panel-text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--lumno-duration-sm) ease;
+}
+._x_extension_feedback_support_help_card_2026_unique_:hover {
+  background: var(--feedback-support-help-hover-bg);
+}
+._x_extension_feedback_support_help_card_2026_unique_:focus-visible,
+._x_extension_feedback_support_help_card_2026_unique_:has(._x_extension_feedback_support_help_link_2026_unique_:focus-visible) {
+  outline: 2px solid var(--input-focus-color);
+  outline-offset: 2px;
+}
+._x_extension_feedback_support_help_icon_2026_unique_ {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--lumno-radius-md);
+  background: var(--feedback-support-help-icon-bg);
+  color: var(--feedback-support-help-icon-color);
+  transition: color var(--lumno-duration-sm) ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+._x_extension_feedback_support_help_title_2026_unique_ {
+  min-width: 0;
+  color: var(--panel-text);
+  font-size: var(--lumno-font-size-md);
+  font-weight: 550;
+  line-height: 18px;
+}
+/* A card's own label, beside its icon, takes the free space and gives way first. */
+._x_extension_feedback_support_help_card_2026_unique_ > ._x_extension_feedback_support_help_title_2026_unique_ {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+._x_extension_feedback_support_help_link_2026_unique_ {
+  color: inherit;
+  text-decoration: none;
+}
+._x_extension_feedback_support_help_link_2026_unique_:focus-visible {
+  outline: none;
+}
+/* The title's link covers the whole card; the ask hint sits above it to stay hoverable. */
+._x_extension_feedback_support_help_link_2026_unique_::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+._x_extension_feedback_support_help_card_2026_unique_ ._x_extension_help_ask_anchor_2026_unique_ {
+  z-index: 1;
+}
+._x_extension_feedback_support_help_desc_2026_unique_ {
+  margin: 2px 0 0;
+  color: var(--panel-subtext);
+  font-size: var(--lumno-font-size-sm);
+  line-height: 18px;
+}
+._x_extension_feedback_support_help_card_2026_unique_:hover ._x_extension_feedback_support_help_icon_2026_unique_ {
+  color: var(--panel-text);
+}
+body[data-theme="dark"] ._x_extension_feedback_support_help_card_2026_unique_ {
+  --feedback-support-help-bg: color-mix(in srgb, var(--control-bg) 72%, transparent);
+  --feedback-support-help-hover-bg: var(--control-hover-bg);
+  --feedback-support-help-icon-bg: color-mix(in srgb, var(--control-hover-bg) 72%, transparent);
+  --feedback-support-help-icon-color: var(--panel-subtext);
+}
+/* The tiles sit as one row of equal cards, however many the locale shows. */
 ._x_extension_feedback_support_links_2026_unique_ {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
   gap: 8px;
   min-width: 0;
-  padding: 4px var(--settings-content-edge-space) var(--settings-row-block-space);
 }
 ._x_extension_feedback_support_link_2026_unique_ {
   --feedback-support-link-bg: var(--control-bg);
@@ -763,7 +874,7 @@ body[data-theme="dark"] ._x_extension_feedback_support_link_2026_unique_ {
   --feedback-support-link-hover-bg: var(--control-hover-bg);
   --feedback-support-link-icon-color: var(--panel-subtext);
 }
-/* Same quiet text button as the onboarding guide link: no surface until hover. */
+/* A quiet text button, like the licenses link: no surface until hover. */
 ._x_extension_shortcut_submit_2024_unique_._x_extension_feedback_support_action_2026_unique_ {
   --settings-button-min-height: 28px;
   --settings-button-padding: 0 10px;
@@ -1198,38 +1309,11 @@ body[data-theme="dark"] ._x_extension_feedback_support_action_2026_unique_ {
   --settings-button-hover-bg: color-mix(in srgb, var(--control-hover-bg) 72%, transparent);
   --settings-button-hover-color: var(--panel-text);
 }
-._x_extension_shortcut_submit_2024_unique_._x_extension_onboarding_guide_button_2026_unique_ {
-  margin-left: auto;
-  --settings-button-min-height: 28px;
-  --settings-button-padding: 0 10px;
-  --settings-button-border-color: transparent;
-  --settings-button-bg: transparent;
-  --settings-button-color: rgba(107, 114, 128, 0.86);
-  --settings-button-shadow: none;
-  --settings-button-hover-bg: rgba(15, 23, 42, 0.045);
-  --settings-button-hover-color: var(--panel-text);
-  --settings-button-hover-shadow: none;
-  --settings-button-font-size: 12px;
-  align-self: center;
-  line-height: 1;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-/* The licenses link takes the free space instead, so it and the guide sit together at the right. */
+/* The licenses link takes the free space, so it sits alone at the right. */
 ._x_extension_section_header_2026_unique_ > ._x_extension_licenses_link_2026_unique_ {
-  /* An <a>, so it would miss the 400 weight Options gives every button, the guide included. */
+  /* An <a>, so it would miss the 400 weight Options gives every button. */
   --settings-button-font-weight: 400;
   margin-left: auto;
-}
-._x_extension_section_header_2026_unique_ > ._x_extension_licenses_link_2026_unique_ + ._x_extension_onboarding_guide_button_2026_unique_ {
-  margin-left: 0;
-}
-body[data-theme="dark"] ._x_extension_onboarding_guide_button_2026_unique_ {
-  --settings-button-bg: transparent;
-  --settings-button-color: var(--panel-subtext);
-  --settings-button-shadow: none;
-  --settings-button-hover-bg: color-mix(in srgb, var(--control-hover-bg) 72%, transparent);
-  --settings-button-hover-color: var(--panel-text);
 }
 /* Tone-only variables stay single-class so the compact size modifier can
    override them. */
@@ -2738,13 +2822,11 @@ body[data-theme="dark"] ._x_extension_shortcut_secondary_2024_unique_ {
   ._x_extension_feedback_support_link_2026_unique_ > i:last-child {
     display: none;
   }
-  /* The help center actions drop under the description and start where it starts. */
-  ._x_extension_feedback_support_row_2026_unique_ {
-    flex-wrap: wrap;
-    row-gap: 6px;
+  ._x_extension_feedback_support_help_row_2026_unique_ {
+    grid-template-columns: minmax(0, 1fr);
   }
-  ._x_extension_feedback_support_row_2026_unique_ > ._x_extension_feedback_support_copy_2026_unique_ {
-    flex-basis: 100%;
+  ._x_extension_feedback_support_help_row_2026_unique_ > :first-child:not(:last-child) {
+    grid-column: auto;
   }
   ._x_extension_settings_tabs_frame_2026_unique_ {
     width: 100%;
