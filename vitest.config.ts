@@ -8,6 +8,9 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     setupFiles: ['tests/react/setup.ts'],
-    restoreMocks: true
+    restoreMocks: true,
+    // Whole-page tests such as the options page take several seconds each on
+    // a hosted CI runner, past Vitest's 5 s default.
+    testTimeout: 20000
   }
 });

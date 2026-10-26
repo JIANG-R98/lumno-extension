@@ -523,15 +523,17 @@ describe('Options page storage wiring', () => {
       await act(async () => {
         queryHtmlElement(host, '[data-value="beforeCurrent"]')?.click();
       });
-      await settle();
-      expect(chrome.storage.sync.values[settings.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY]).toBe('beforeCurrent');
-      expect(label()).toBe(messages.search_result_tab_position_before_current.message);
+      await vi.waitFor(() => {
+        expect(chrome.storage.sync.values[settings.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY]).toBe('beforeCurrent');
+        expect(label()).toBe(messages.search_result_tab_position_before_current.message);
+      });
 
       await act(async () => {
         chrome.storage.sync.externalSet({ [settings.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY]: 'afterCurrent' });
       });
-      await settle();
-      expect(label()).toBe(messages.search_result_tab_position_after_current.message);
+      await vi.waitFor(() => {
+        expect(label()).toBe(messages.search_result_tab_position_after_current.message);
+      });
     }
   );
 
