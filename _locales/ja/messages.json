@@ -3444,7 +3444,7 @@
     "message": "クリックで新しいタブで開く"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "チェックした項目はクリックすると新しいタブで開いて切り替わり、チェックしていない項目は現在のタブで開きます。Command/Ctrl を押しながらクリック、または中クリックすると常にバックグラウンドで開きます。"
+    "message": "チェックなしの項目は現在のタブで開きます。Cmd/Ctrl クリックか中クリックは常にバックグラウンドで開きます。"
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "検索結果"

@@ -3444,7 +3444,7 @@
     "message": "Beim Klicken in neuem Tab öffnen"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Ausgewählte Elemente öffnen sich in einem neuen Tab und wechseln dorthin; nicht ausgewählte öffnen sich im aktuellen Tab. Command/Ctrl-Klick oder Mittelklick öffnet immer im Hintergrund."
+    "message": "Nicht ausgewählte öffnen sich im aktuellen Tab. Cmd/Ctrl- oder Mittelklick öffnet immer im Hintergrund."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Suchergebnisse"

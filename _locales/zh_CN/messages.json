@@ -3444,7 +3444,7 @@
     "message": "点击后在新标签页打开"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "勾选的内容点击后会新开标签页并切换过去，未勾选的在当前页打开。按住 Command/Ctrl 点击或用鼠标中键点击，始终在后台打开。"
+    "message": "未勾选的在当前页打开，Cmd/Ctrl 或中键点击总在后台打开"
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "搜索结果"

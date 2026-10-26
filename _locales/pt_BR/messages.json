@@ -3444,7 +3444,7 @@
     "message": "Abrir em nova guia ao clicar"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "Os itens marcados abrem em uma nova guia e mudam para ela; os desmarcados abrem na guia atual. Command/Ctrl + clique ou clique do meio sempre abre em segundo plano."
+    "message": "Os desmarcados abrem na guia atual. Cmd/Ctrl + clique ou clique do meio sempre abre em segundo plano."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "Resultados de pesquisa"

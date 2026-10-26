@@ -3444,7 +3444,7 @@
     "message": "點擊後在新分頁開啟"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "勾選的內容點擊後會開新分頁並切換過去，未勾選的在目前分頁開啟。按住 Command/Ctrl 點擊或用滑鼠中鍵點擊，一律在背景開啟。"
+    "message": "未勾選的在目前分頁開啟，Cmd/Ctrl 或中鍵點擊一律在背景開啟"
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "搜尋結果"

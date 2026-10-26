@@ -89,10 +89,10 @@ function createGeneralNewtabSection(deps: GeneralNewtabSectionDeps) {
       {
         type: 'checkbox-group',
         key: openInNewTab.storageKey,
-        compact: false,
-        title: { text: getMessage('settings_newtab_open_in_new_tab_title', '点击后在新标签页打开') },
-        description: getMessage('settings_newtab_open_in_new_tab_desc',
-          '勾选的内容点击后会新开标签页并切换过去，未勾选的在当前页打开。按住 Command/Ctrl 点击或用鼠标中键点击，始终在后台打开。'),
+        title: {
+          text: getMessage('settings_newtab_open_in_new_tab_title', '点击后在新标签页打开'),
+          info: getMessage('settings_newtab_open_in_new_tab_desc', '未勾选的在当前页打开，Cmd/Ctrl 或中键点击总在后台打开')
+        },
         groupId: '_x_extension_newtab_open_in_new_tab_2026_unique_',
         ariaLabel: getMessage('settings_newtab_open_in_new_tab_title', '点击后在新标签页打开'),
         checkboxes: {

@@ -3444,7 +3444,7 @@
     "message": "클릭하면 새 탭에서 열기"
   },
   "settings_newtab_open_in_new_tab_desc": {
-    "message": "선택한 항목은 클릭하면 새 탭에서 열리고 그 탭으로 전환되며, 선택하지 않은 항목은 현재 탭에서 열립니다. Command/Ctrl을 누른 채 클릭하거나 가운데 버튼으로 클릭하면 항상 백그라운드에서 열립니다."
+    "message": "선택하지 않은 항목은 현재 탭에서 열립니다. Cmd/Ctrl 클릭이나 가운데 클릭은 항상 백그라운드에서 열립니다."
   },
   "settings_newtab_open_in_new_tab_search": {
     "message": "검색 결과"
