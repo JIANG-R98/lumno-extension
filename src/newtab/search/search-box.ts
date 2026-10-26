@@ -31,7 +31,7 @@ interface SearchBoxState {
   simpleModeEnabled: boolean;
   selectedIndex: number;
   inputParts: SearchInputParts | null;
-  inputModeController: Pick<InputModeController, 'shouldRemoveModeTagOnBackspace' | 'resetModeMenuDoubleTab'> | null;
+  inputModeController: Pick<InputModeController, 'shouldRemoveModeTagOnBackspace' | 'resetModeMenuDoubleTab' | 'closeModeMenu'> | null;
   defaultPlaceholderText: string;
   // Hidden from the background; the input's focus shows them again.
   searchSuggestionsDismissed: boolean;
@@ -477,9 +477,22 @@ function createSearchBox(deps: SearchBoxDeps) {
         pageState.latestRawQuery = input.value;
         pageState.latestQuery = input.value.trim();
       }
+      // An open scope menu closes first and leaves the scope as it is.
+      if (event.key === 'Escape' && pageState.inputModeController &&
+          pageState.inputModeController.closeModeMenu(false)) {
+        event.preventDefault();
+        return;
+      }
+      // Leaving a site search lists the query's ordinary results.
       if (event.key === 'Escape' && pageState.siteSearchState) {
         event.preventDefault();
         clearSiteSearch();
+        const fallbackQuery = input.value.trim();
+        if (fallbackQuery) {
+          requestSuggestions(fallbackQuery, { immediate: true });
+        } else {
+          clearSearchSuggestions();
+        }
         return;
       }
       if (event.key === 'Escape' && pageState.localSearchScopeState) {

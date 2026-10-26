@@ -25,7 +25,7 @@ interface PanelKeysState {
   suggestionsContainer: HTMLElement | null;
   inputModeController: Pick<InputModeController,
     'handleModeMenuTabFocusToggle' | 'shouldCompleteModeMenuDoubleTab' | 'shouldOpenModeMenuForActiveModeOnTab' |
-    'openModeMenu' | 'shouldOpenModeMenuOnDoubleTab' | 'shouldRemoveModeTagOnBackspace'> | null;
+    'openModeMenu' | 'shouldOpenModeMenuOnDoubleTab' | 'shouldRemoveModeTagOnBackspace' | 'closeModeMenu'> | null;
   inputHistoryController: Pick<ReturnType<typeof createSearchInputHistoryController>, 'move' | 'record'> | null;
   isApplyingSearchInputHistory: boolean;
   siteSearchState: InputModeProvider | null;
@@ -330,10 +330,24 @@ function createPanelKeys(deps: PanelKeysDeps) {
     if (!e.metaKey && !e.ctrlKey && !e.altKey) {
       e.stopPropagation();
     }
+    // An open scope menu closes first and leaves the scope as it is.
+    if (e.key === 'Escape' && overlayState.inputModeController &&
+        overlayState.inputModeController.closeModeMenu(false)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    // Leaving a site search lists the query's ordinary results.
     if (e.key === 'Escape' && overlayState.siteSearchState) {
       e.preventDefault();
       e.stopPropagation();
       clearSiteSearch();
+      const fallbackQuery = input.value.trim();
+      if (fallbackQuery) {
+        requestOverlaySearchSuggestions(fallbackQuery);
+      } else {
+        clearSearchSuggestions();
+      }
       return;
     }
     if (e.key === 'Escape' && overlayState.localSearchScopeState) {
