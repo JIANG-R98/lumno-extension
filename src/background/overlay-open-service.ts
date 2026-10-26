@@ -30,7 +30,7 @@ import {
   triggerOnboardingOverlayFromCommand
 } from './command-context';
 import type { OverlayOpenContext } from '../domain/messages';
-import type { OpenOverlayOptions, TargetTab } from './overlay-types';
+import type { OpenOverlayOptions, TargetTab, TrackedLoadingRecord } from './overlay-types';
 import {
   getPendingOverlayNavigationUrl,
   overlayLoadingRecordsByTabId,
@@ -145,194 +145,231 @@ function openOverlayInjectionFallback(activeTab: TargetTab, activeUrl: string, s
   });
 }
 
+// One request to open the overlay, and how it ends.
+interface OverlayOpenAttempt {
+  activeTab: TargetTab | null | undefined;
+  tabs: readonly TargetTab[];
+  source: string;
+  options: OpenOverlayOptions;
+  // When the user asked; the entry motion budget measures from here. The
+  // overlay restarts it once its modules have loaded in a tab for the first
+  // time (overlay-app.ts).
+  startedAt: number;
+  opening: OverlayOpening | null;
+  finished: boolean;
+  // A failure before the page completed is retried once it has.
+  retryPreCompleteFailure: boolean;
+}
+
+function finishOpenAttempt(attempt: OverlayOpenAttempt, ok: boolean): void {
+  if (attempt.finished) {
+    return;
+  }
+  attempt.finished = true;
+  const { activeTab, options } = attempt;
+  if (typeof options.onComplete === 'function') {
+    options.onComplete(ok === true);
+  }
+  if (attempt.opening) {
+    finishOverlayOpening(attempt.opening);
+    attempt.opening = null;
+  }
+  if (!activeTab || typeof activeTab.id !== 'number') {
+    return;
+  }
+  if (ok !== true && options.loadingRecovery !== true && attempt.retryPreCompleteFailure) {
+    const trackedRecord = overlayLoadingRecordsByTabId.get(activeTab.id) || null;
+    if (trackedRecord) {
+      scheduleOverlayLoadingPreCompleteRetry(activeTab, trackedRecord);
+    }
+  }
+  if (options.loadingRecovery === true || attempt.retryPreCompleteFailure) {
+    finishOverlayLoadingOpenAttempt(activeTab.id);
+  }
+}
+
+// The overlay cannot open on this page: focus New Tab's own search box,
+// start onboarding, retarget a command from New Tab, or fall back.
+function openOnRestrictedPage(attempt: OverlayOpenAttempt, activeTab: TargetTab & { id: number }, activeUrl: string): void {
+  const { source, tabs } = attempt;
+  finishOpenAttempt(attempt, false);
+  if (isSearchCommandSource(source) && (isLumnoNewtabUrl(activeUrl) || isBrowserNewtabUrl(activeUrl))) {
+    requestFocusVisibleNewtabInput(source, activeTab.id);
+    return;
+  }
+  if (shouldTriggerOnboardingOverlayFromCommand(source, activeUrl)) {
+    triggerOnboardingOverlayFromCommand(activeTab, source);
+    logHotkeyDebug('suppressed', { reason: 'restricted_onboarding_command', source: source || '' });
+    return;
+  }
+  if (recoverOverlayTargetFromCommandNewtab(activeTab, tabs, source, openOverlayOnTab)) {
+    return;
+  }
+  whenBackgroundSettingsReady(() => {
+    openRestrictedOverlayFallback(activeTab, activeUrl, source);
+  });
+}
+
+// Whether the request ends before the overlay is injected.
+function isOpenAttemptStopped(attempt: OverlayOpenAttempt, activeTab: TargetTab & { id: number }): boolean {
+  const { options, source } = attempt;
+  if (options.skipDuplicateGuard !== true && shouldIgnoreDuplicateHotkey(activeTab.id)) {
+    logHotkeyDebug('duplicate-ignored', { tabId: activeTab.id, source: source || '' });
+    return true;
+  }
+  const pendingNavigationUrl = getPendingOverlayNavigationUrl(activeTab);
+  return options.loadingRecovery !== true &&
+    shouldDeferRestrictedOverlayNavigation(activeTab) &&
+    Boolean(rememberOverlayPendingNavigationIntent(activeTab, source, pendingNavigationUrl));
+}
+
+function buildOverlayContext(
+  attempt: OverlayOpenAttempt,
+  activeTab: TargetTab & { id: number },
+  tabZoomFactor: number,
+  loadingRecord: TrackedLoadingRecord | null
+): OverlayOpenContext {
+  const { source, options } = attempt;
+  return {
+    tabZoomFactor,
+    prefillQuery: getOverlayPrefillQueryForSource(activeTab, source),
+    prioritizeCurrentPageMatch: source === 'page-hotkey-prefill',
+    currentTabId: activeTab.id,
+    currentTabUrl: getResolvedTabUrl(activeTab),
+    openedAt: attempt.startedAt,
+    documentPipEnabled: isDocumentPipEnabled(),
+    siteSearchProviders: Array.isArray(siteSearchCache) ? siteSearchCache : [],
+    ensureOpen: options.ensureOpen === true,
+    loadingSessionTracked: Boolean(loadingRecord),
+    loadingSession: loadingRecord && loadingRecord.session ? loadingRecord.session : null
+  };
+}
+
+// The injection failed or the overlay refused: open the fallback unless a
+// loading retry will try again.
+function failOverlayInjection(
+  attempt: OverlayOpenAttempt,
+  activeTab: TargetTab & { id: number },
+  activeUrl: string,
+  error: string
+): void {
+  const { options, source } = attempt;
+  logHotkeyDebug('inject-failed', { step: 'overlay', tabId: activeTab.id, error, source: source || '' });
+  if (options.loadingRecovery !== true && !overlayLoadingRecordsByTabId.has(activeTab.id)) {
+    openOverlayInjectionFallback(activeTab, activeUrl, source);
+  }
+  finishOpenAttempt(attempt, false);
+}
+
+function injectOverlay(
+  attempt: OverlayOpenAttempt,
+  activeTab: TargetTab & { id: number },
+  activeUrl: string,
+  tabZoomFactor: number,
+  loadingRecord: TrackedLoadingRecord | null
+): void {
+  const { tabs, source } = attempt;
+  const tabId = activeTab.id;
+  const overlayContext = buildOverlayContext(attempt, activeTab, tabZoomFactor, loadingRecord);
+  // Icon warmup is best effort; the overlay falls back to bundled icons.
+  loadSiteSearchProviders()
+    .then((providers) => {
+      scheduleSiteSearchProviderIconWarmup(providers, '');
+    })
+    .catch(() => {});
+  const overlayCommand: OverlayToggleCommand = { type: 'toggle', tabs, context: overlayContext };
+  // The icon font preload loads alongside the overlay, so the font starts
+  // loading before the overlay's larger modules have parsed.
+  chrome.scripting.executeScript(createInjectedAppRun(
+    chrome.runtime,
+    { tabId },
+    ['icon-font-preload', 'overlay'],
+    overlayCommand,
+    { injectImmediately: true }
+  ), function(results) {
+    const lastError = chrome.runtime.lastError;
+    if (lastError) {
+      failOverlayInjection(attempt, activeTab, activeUrl, lastError.message || 'unknown');
+      return;
+    }
+    const mainResult = OVERLAY_LOADING_LIFECYCLE.getMainFrameResult(results);
+    const result = mainResult && isRecord(mainResult.result) ? mainResult.result : null;
+    if (result && result.ok === false) {
+      failOverlayInjection(attempt, activeTab, activeUrl, String(result.reason || '') || 'unknown');
+      return;
+    }
+    updateOverlayLoadingRecordFromInvocation(activeTab, results);
+    logHotkeyDebug('overlay-opened', {
+      tabId,
+      tabCount: Array.isArray(tabs) ? tabs.length : 0,
+      source: source || '',
+      tabZoomFactor,
+      siteSearchProviderCount: overlayContext.siteSearchProviders.length
+    });
+    finishOpenAttempt(attempt, Boolean(result && result.overlayOpen === true));
+  });
+}
+
+function withTabZoom(tabId: number, run: (zoomFactor: number) => void): void {
+  if (!chrome.tabs || typeof chrome.tabs.getZoom !== 'function') {
+    run(1);
+    return;
+  }
+  chrome.tabs.getZoom(tabId, (zoomFactor) => {
+    run(Number.isFinite(Number(zoomFactor)) && Number(zoomFactor) > 0 ? Number(zoomFactor) : 1);
+  });
+}
+
 export function openOverlayOnTab(
   activeTab: TargetTab | null | undefined,
   tabs: readonly TargetTab[],
   source: string,
   options?: OpenOverlayOptions | null
 ): void {
-  const openOptions: OpenOverlayOptions = options && typeof options === 'object' ? options : {};
-  const overlayOpenStartedAt = Date.now();
-  // The entry motion budget measures how long the user has waited on the
-  // renderer; the overlay restarts it once its modules have loaded in a tab
-  // for the first time (overlay-app.ts).
-  const overlayEntryMotionStartedAt = overlayOpenStartedAt;
-  let overlayOpening: OverlayOpening | null = null;
-  let didFinishOpenAttempt = false;
-  let shouldRetryPreCompleteFailure = false;
-  const finishOpenAttempt = (ok: boolean): void => {
-    if (didFinishOpenAttempt) {
-      return;
-    }
-    didFinishOpenAttempt = true;
-    if (typeof openOptions.onComplete === 'function') {
-      openOptions.onComplete(ok === true);
-    }
-    if (overlayOpening) {
-      finishOverlayOpening(overlayOpening);
-      overlayOpening = null;
-    }
-    if (ok !== true && openOptions.loadingRecovery !== true &&
-        shouldRetryPreCompleteFailure && activeTab &&
-        typeof activeTab.id === 'number') {
-      const trackedRecord = overlayLoadingRecordsByTabId.get(activeTab.id) || null;
-      if (trackedRecord) {
-        scheduleOverlayLoadingPreCompleteRetry(activeTab, trackedRecord);
-      }
-    }
-    if ((openOptions.loadingRecovery === true || shouldRetryPreCompleteFailure) &&
-        activeTab && typeof activeTab.id === 'number') {
-      finishOverlayLoadingOpenAttempt(activeTab.id);
-    }
+  const attempt: OverlayOpenAttempt = {
+    activeTab,
+    tabs,
+    source,
+    options: options && typeof options === 'object' ? options : {},
+    startedAt: Date.now(),
+    opening: null,
+    finished: false,
+    retryPreCompleteFailure: false
   };
   if (!activeTab || typeof activeTab.id !== 'number') {
     logHotkeyDebug('no-active-tab', { source: source || '' });
     openNewtabFallback();
-    finishOpenAttempt(false);
+    finishOpenAttempt(attempt, false);
     return;
   }
-  const tabId = activeTab.id;
-  if (openOptions.skipDuplicateGuard !== true && shouldIgnoreDuplicateHotkey(tabId)) {
-    logHotkeyDebug('duplicate-ignored', { tabId, source: source || '' });
-    finishOpenAttempt(false);
-    return;
-  }
-  const pendingNavigationUrl = getPendingOverlayNavigationUrl(activeTab);
-  if (openOptions.loadingRecovery !== true &&
-      shouldDeferRestrictedOverlayNavigation(activeTab) &&
-      rememberOverlayPendingNavigationIntent(activeTab, source, pendingNavigationUrl)) {
-    finishOpenAttempt(false);
+  const targetTab = { ...activeTab, id: activeTab.id };
+  if (isOpenAttemptStopped(attempt, targetTab)) {
+    finishOpenAttempt(attempt, false);
     return;
   }
   const activeUrl = getResolvedTabUrl(activeTab);
-  const rawUrl = typeof activeTab.url === 'string' ? activeTab.url : '';
-  const rawPendingUrl = typeof activeTab.pendingUrl === 'string' ? activeTab.pendingUrl : '';
   const restricted = !canOpenOverlayOnUrl(activeUrl);
   logHotkeyDebug('active-tab', {
     tabId: activeTab.id,
     resolvedUrl: activeUrl,
-    tabUrl: rawUrl,
-    pendingUrl: rawPendingUrl,
+    tabUrl: typeof activeTab.url === 'string' ? activeTab.url : '',
+    pendingUrl: typeof activeTab.pendingUrl === 'string' ? activeTab.pendingUrl : '',
     url: activeUrl,
-    restricted: restricted,
+    restricted,
     source: source || ''
   });
   if (restricted) {
-    finishOpenAttempt(false);
-    if (isSearchCommandSource(source) && (isLumnoNewtabUrl(activeUrl) || isBrowserNewtabUrl(activeUrl))) {
-      requestFocusVisibleNewtabInput(source, tabId);
-      return;
-    }
-    if (shouldTriggerOnboardingOverlayFromCommand(source, activeUrl)) {
-      triggerOnboardingOverlayFromCommand(activeTab, source);
-      logHotkeyDebug('suppressed', { reason: 'restricted_onboarding_command', source: source || '' });
-      return;
-    }
-    if (recoverOverlayTargetFromCommandNewtab(activeTab, tabs, source, openOverlayOnTab)) {
-      return;
-    }
-    whenBackgroundSettingsReady(() => {
-      openRestrictedOverlayFallback(activeTab, activeUrl, source);
-    });
+    openOnRestrictedPage(attempt, targetTab, activeUrl);
     return;
   }
-  overlayOpening = beginOverlayOpening(activeTab, source);
-  if (!overlayOpening) {
-    finishOpenAttempt(false);
+  attempt.opening = beginOverlayOpening(activeTab, source);
+  if (!attempt.opening) {
+    finishOpenAttempt(attempt, false);
     return;
   }
-  const overlayLoadingRecord = rememberOverlayLoadingRecord({ ...activeTab, id: tabId }, source, openOptions);
-  shouldRetryPreCompleteFailure = Boolean(overlayLoadingRecord);
-  const runOverlayScript = (tabZoomFactor: number): void => {
-      const prefillQuery = getOverlayPrefillQueryForSource(activeTab, source);
-      const prioritizeCurrentPageMatch = source === 'page-hotkey-prefill';
-      const siteSearchProviders = Array.isArray(siteSearchCache) ? siteSearchCache : [];
-      const overlayContext: OverlayOpenContext = {
-        tabZoomFactor: tabZoomFactor,
-        prefillQuery: prefillQuery,
-        prioritizeCurrentPageMatch: prioritizeCurrentPageMatch,
-        currentTabId: tabId,
-        currentTabUrl: getResolvedTabUrl(activeTab),
-        openedAt: overlayEntryMotionStartedAt,
-        documentPipEnabled: isDocumentPipEnabled(),
-        siteSearchProviders,
-        ensureOpen: openOptions.ensureOpen === true,
-        loadingSessionTracked: Boolean(overlayLoadingRecord),
-        loadingSession: overlayLoadingRecord && overlayLoadingRecord.session
-          ? overlayLoadingRecord.session
-          : null
-      };
-      // Icon warmup is best effort; the overlay falls back to bundled icons.
-      loadSiteSearchProviders()
-        .then((providers) => {
-          scheduleSiteSearchProviderIconWarmup(providers, '');
-        })
-        .catch(() => {});
-      const overlayCommand: OverlayToggleCommand = { type: 'toggle', tabs, context: overlayContext };
-      // The icon font preload loads alongside the overlay, so the font starts
-      // loading before the overlay's larger modules have parsed.
-      chrome.scripting.executeScript(createInjectedAppRun(
-        chrome.runtime,
-        { tabId },
-        ['icon-font-preload', 'overlay'],
-        overlayCommand,
-        { injectImmediately: true }
-      ), function(results) {
-        const lastError = chrome.runtime.lastError;
-        if (lastError) {
-          logHotkeyDebug('inject-failed', {
-            step: 'overlay',
-            tabId,
-            error: lastError.message || 'unknown',
-            source: source || ''
-          });
-          if (openOptions.loadingRecovery !== true &&
-              !overlayLoadingRecordsByTabId.has(tabId)) {
-            openOverlayInjectionFallback(activeTab, activeUrl, source);
-          }
-          finishOpenAttempt(false);
-          return;
-        }
-        const mainResult = OVERLAY_LOADING_LIFECYCLE.getMainFrameResult(results);
-        const result = mainResult && isRecord(mainResult.result) ? mainResult.result : null;
-        if (result && result.ok === false) {
-          logHotkeyDebug('inject-failed', {
-            step: 'overlay',
-            tabId,
-            error: String(result.reason || '') || 'unknown',
-            source: source || ''
-          });
-          if (openOptions.loadingRecovery !== true &&
-              !overlayLoadingRecordsByTabId.has(tabId)) {
-            openOverlayInjectionFallback(activeTab, activeUrl, source);
-          }
-          finishOpenAttempt(false);
-          return;
-        }
-        updateOverlayLoadingRecordFromInvocation(activeTab, results);
-        logHotkeyDebug('overlay-opened', {
-          tabId,
-          tabCount: Array.isArray(tabs) ? tabs.length : 0,
-          source: source || '',
-          tabZoomFactor: tabZoomFactor,
-          siteSearchProviderCount: Array.isArray(siteSearchProviders) ? siteSearchProviders.length : 0
-        });
-        finishOpenAttempt(Boolean(result && result.overlayOpen === true));
-      });
-  };
-  const runOverlayWithResolvedZoom = (): void => {
-    if (chrome.tabs && typeof chrome.tabs.getZoom === 'function') {
-      chrome.tabs.getZoom(tabId, (zoomFactor) => {
-        const zoom = Number.isFinite(Number(zoomFactor)) && Number(zoomFactor) > 0
-          ? Number(zoomFactor)
-          : 1;
-        runOverlayScript(zoom);
-      });
-      return;
-    }
-    runOverlayScript(1);
-  };
-  runOverlayWithResolvedZoom();
+  const loadingRecord = rememberOverlayLoadingRecord(targetTab, source, attempt.options);
+  attempt.retryPreCompleteFailure = Boolean(loadingRecord);
+  withTabZoom(targetTab.id, (zoomFactor) => injectOverlay(attempt, targetTab, activeUrl, zoomFactor, loadingRecord));
 }
 
 // The loading retries reopen the overlay through this module.
