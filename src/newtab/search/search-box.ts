@@ -20,7 +20,7 @@ import * as NEWTAB_BACKGROUND_SEARCH_FOCUS from './background-search-focus';
 import type { SearchAutocomplete } from './search-autocomplete';
 import type { SearchModes } from './search-modes';
 import type { ActiveLocalScope, RenderSuggestions, RequestSuggestions } from './search-types';
-import { getSuggestionsViewApi } from '../../shared/react/search/suggestions';
+import { createSuggestionsView } from '../../shared/react/search/suggestions';
 
 // An option the suggestions view is handed as it is.
 type ViewOption<K extends keyof SuggestionsViewOptions> = NonNullable<SuggestionsViewOptions[K]>;
@@ -231,10 +231,6 @@ function createSearchBox(deps: SearchBoxDeps) {
     throw new Error('Search results container unavailable');
   }
 
-  const NEWTAB_SUGGESTIONS_VIEW = getSuggestionsViewApi();
-  if (!NEWTAB_SUGGESTIONS_VIEW) {
-    throw new Error('Suggestions view unavailable');
-  }
   const NEWTAB_OPEN_TAB_SUGGESTION_LIMIT = 8;
 
   function formatTabRankDebugText(tab: OpenTabSuggestion): string {
@@ -255,7 +251,7 @@ function createSearchBox(deps: SearchBoxDeps) {
     return `score ${score} · 30m ${count30m} · 24h ${count24h} · ev ${debugTotal} · la ${lastAccessedSec} · s ${sortAtSec} · fs ${fetchSeq} · build 20260308-1`;
   }
   let isApplyingSearchInputHistory = false;
-  pageState.suggestionsView = NEWTAB_SUGGESTIONS_VIEW.createSuggestionsView({
+  pageState.suggestionsView = createSuggestionsView({
     document,
     container: suggestionsContainer,
     items: suggestionItems,

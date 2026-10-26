@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as suggestionActionModel from '../../../domain/search/suggestion-action-model';
 import {
   createSuggestionsView,
-  createSuggestionsViewApi,
   type Suggestion,
   type SuggestionElement,
   type SuggestionsViewController,
@@ -238,7 +237,6 @@ describe('Suggestions React island', () => {
       favicon: 'data:image/png;base64,dGVzdA=='
     }]);
 
-    expect(createSuggestionsViewApi().implementation).toBe('react');
     expect(container.dataset.reactIsland).toBe('suggestions');
     expect(items).toHaveLength(1);
     expect(items[0]._xIsSearchSuggestion).toBe(true);

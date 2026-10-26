@@ -25,7 +25,7 @@ import type { CursorTooltipController } from '../../shared/ui/cursor-tooltip-mod
 import type { TooltipController } from '../../shared/ui/tooltip';
 import type { ActivationEvent } from './result-activation';
 import type { OverlaySuggestion } from './types';
-import { getSuggestionsViewApi } from '../../shared/react/search/suggestions';
+import { createSuggestionsView } from '../../shared/react/search/suggestions';
 import * as SearchDirectNavigation from '../../domain/search/utils/direct-navigation';
 
 // What the view takes for an option this module passes straight through.
@@ -493,16 +493,12 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
     return resolver ? resolver.getPageFaviconRenderCandidates(url, explicitUrl, options) : {};
   }
 
-  // The view, made on first use from the React islands entry's API.
+  // The view, made on first use.
   function ensureOverlaySuggestionsView(): SuggestionsViewController {
     if (overlayState.overlaySuggestionsView) {
       return overlayState.overlaySuggestionsView;
     }
-    const viewApi = getSuggestionsViewApi();
-    if (!viewApi) {
-      throw new Error('The overlay suggestions view has not loaded');
-    }
-    const view = viewApi.createSuggestionsView({
+    const view = createSuggestionsView({
       surface: 'overlay',
       document,
       container: overlayState.suggestionsContainer,
