@@ -125,7 +125,7 @@ import { registerTabLifecycleEvents } from './tab-lifecycle-events';
 import { EXTENSION_PAGE_MESSAGE_HANDLERS } from './message-handlers/extension-page';
 import { FAVICON_MESSAGE_HANDLERS } from './message-handlers/favicon';
 import { LOCALE_AND_PERMISSION_MESSAGE_HANDLERS } from './message-handlers/locale';
-import { POPUP_MESSAGE_HANDLERS } from './message-handlers/popup';
+import { POPUP_MESSAGE_HANDLERS } from './message-handlers/toolbar-popup';
 import { SHORTCUT_MESSAGE_HANDLERS } from './message-handlers/shortcut';
 import { TAB_MESSAGE_HANDLERS } from './message-handlers/tab';
 
