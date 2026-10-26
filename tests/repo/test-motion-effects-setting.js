@@ -9,7 +9,9 @@ const { getBundleFiles, getPageScripts } = require('../helpers/runtime-scripts')
 // New Tab's sequence by tests/newtab/test-newtab-page-layout.js.)
 
 const MOTION_KEY = '_x_extension_motion_effects_enabled_2026_unique_';
-const tabSwitcherSource = fs.readFileSync('src/shared/tab-switcher/tab-switcher.ts', 'utf8');
+const tabSwitcherSource = fs.readdirSync('src/shared/tab-switcher')
+  .map((name) => fs.readFileSync(`src/shared/tab-switcher/${name}`, 'utf8'))
+  .join('\n');
 const backgroundSource = readBackgroundSource();
 const selectionActionsSource = fs.readFileSync('src/content/selection-quick-actions.ts', 'utf8');
 
