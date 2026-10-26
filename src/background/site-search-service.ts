@@ -5,7 +5,6 @@
 // A module of the service worker; background.ts imports it before its own code
 // runs.
 
-import * as AGGREGATE_SEARCH from './aggregate-search';
 import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
 import * as LumnoHelpCenterIndex from '../platform/help-center-index';
 import * as AI_PROVIDER_SUBMIT from './ai-provider-submit';
@@ -31,7 +30,6 @@ import { getSearchSuggestions } from './search/pipeline';
 import { recordSearchSuggestionSelection } from './search/selection-stats';
 import { getSiteSearchProviderEntryUrl, isInteractiveSiteSearchProvider, loadSiteSearchProviders } from './search/site-search-providers';
 import { createSearchResultTab, resolveSearchResultTabPlacement } from './browser-urls-service';
-import type { AggregateSearchQueryRunner } from './aggregate-search';
 import type { CreatedTabCallback } from './tab-groups';
 import type { SiteSearchProvider } from '../domain/search/types';
 import type { OkReply, OpenDisposition } from '../domain/messages';
@@ -39,6 +37,9 @@ import type { HandlersFor, MessageSender } from './message-router';
 import * as IndexBuild from '../domain/search/help-center/index-build';
 import * as Search from '../domain/search/help-center/search';
 import type { HelpIndexDoc, HelpSearchResult } from '../domain/search/help-center/types';
+import * as Open from './aggregate-search/open';
+import * as Runner from './aggregate-search/runner';
+import type { AggregateSearchQueryRunner } from './aggregate-search/types';
 
 type SearchAction =
   | 'searchOrNavigate'
@@ -194,7 +195,7 @@ function runAggregateSearchQuery(
   disposition: OpenDisposition | undefined
 ): ReturnType<AggregateSearchQueryRunner> {
   if (!aggregateSearchQueryRunner) {
-    aggregateSearchQueryRunner = AGGREGATE_SEARCH.createAggregateSearchQueryRunner({
+    aggregateSearchQueryRunner = Runner.createAggregateSearchQueryRunner({
       aggregateSearchStore: AGGREGATE_SEARCH_STORE,
       chromeApi: chrome,
       loadAggregateSearches: () => workerSettings.ready
@@ -204,7 +205,7 @@ function runAggregateSearchQuery(
       loadAggregateSearchAutoGroupEnabled() {
         return workerSettings.ready.then(() => workerSettings.get(aggregateSearchAutoGroupEnabled));
       },
-      openAggregateSearch: AGGREGATE_SEARCH.openAggregateSearch,
+      openAggregateSearch: Open.openAggregateSearch,
       getEntryUrl: getSiteSearchProviderEntryUrl,
       isInteractiveProvider: isInteractiveSiteSearchProvider,
       waitForTabComplete,

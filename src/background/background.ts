@@ -41,7 +41,6 @@ import '../shared/search/site-search-store';
 import '../domain/community-links';
 import '../domain/search/aggregate-search-store';
 import './ai-provider-submit';
-import './aggregate-search';
 import * as BACKGROUND_PAGES from './extension-pages';
 import './tab-groups';
 import './search-result-tabs';

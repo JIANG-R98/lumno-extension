@@ -1,5 +1,9 @@
 const assert = require('assert');
-const aggregateSearch = require('../../src/background/aggregate-search.ts');
+const aggregateSearch = {
+  ...require('../../src/background/aggregate-search/open.ts'),
+  ...require('../../src/background/aggregate-search/runner.ts'),
+  ...require('../../src/background/aggregate-search/tabs.ts')
+};
 const aggregateStore = require('../../src/domain/search/aggregate-search-store.ts');
 const aggregateStorage = require('../../src/platform/aggregate-search-storage.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
