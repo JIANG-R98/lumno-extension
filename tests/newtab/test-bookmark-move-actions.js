@@ -14,7 +14,8 @@ const wait = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 async function setUp() {
   const dom = new JSDOM('<!doctype html><body></body>', { url: 'chrome-extension://lumno/newtab.html' });
-  global.navigator = { platform: 'MacIntel' };
+  // Node 22 has a getter-only global navigator, so plain assignment is ignored.
+  Object.defineProperty(global, 'navigator', { value: { platform: 'MacIntel' }, configurable: true });
   const bookmarks = createFakeBookmarks(dom.window, [
     { id: '10', title: 'Alpha', url: 'https://alpha.example/' },
     { id: '11', title: 'Beta', url: 'https://beta.example/' },
