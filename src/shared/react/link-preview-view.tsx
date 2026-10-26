@@ -51,6 +51,9 @@ export interface LinkPreviewViewModel {
   // How far the veil reaches past the page on each side, in CSS pixels;
   // null until it is painted.
   veilMargin: { x: number; y: number } | null;
+  // The page's scrollbars, cut off the screenshot, in CSS pixels; null
+  // until the veil is painted.
+  scrollbars: { left: number; right: number; bottom: number } | null;
   // The window lets presses through to the page while it closes.
   closing: boolean;
   frameUrl: string;
@@ -143,6 +146,13 @@ function LinkPreviewView({ model, handlers, refs, styles, toastStylesheetUrl, bl
     ...(model.veilMargin
       ? { '--lp-veil-margin-x': `${model.veilMargin.x}px`, '--lp-veil-margin-y': `${model.veilMargin.y}px` }
       : {}),
+    ...(model.scrollbars
+      ? {
+        '--lp-scrollbar-left': `${model.scrollbars.left}px`,
+        '--lp-scrollbar-right': `${model.scrollbars.right}px`,
+        '--lp-scrollbar-bottom': `${model.scrollbars.bottom}px`
+      }
+      : {}),
     ...(model.closing ? { pointerEvents: 'none' } : {})
   };
   const flag = (value: boolean | null): string | undefined => (value === null ? undefined : String(value));
@@ -166,8 +176,9 @@ function LinkPreviewView({ model, handlers, refs, styles, toastStylesheetUrl, bl
         {/* A press outside the window closes it. */}
         <div className="stage" onClick={handlers.onClose}>
           <div className="page" hidden={!model.shotVisible} ref={refs.page}>
-            <img alt="" className="shot" ref={refs.shot} />
+            {/* The screenshot fades out from over its blurred copy. */}
             <canvas className="veil" ref={refs.veil} />
+            <img alt="" className="shot" ref={refs.shot} />
           </div>
           <div className="scrim" ref={refs.scrim} />
         </div>

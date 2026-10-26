@@ -17,6 +17,7 @@ function model(overrides: Partial<LinkPreviewViewModel> = {}): LinkPreviewViewMo
     panelColor: '',
     viewport: null,
     veilMargin: null,
+    scrollbars: null,
     closing: false,
     frameUrl: 'https://example.com/',
     placeholder: 'example.com',
@@ -76,13 +77,18 @@ describe('Link preview view', () => {
     const { shadow, view } = setUp();
     act(() => view.render(model({
       state: 'open', motion: 'still', loaded: true, blocked: false, shot: 'image', shotVisible: true,
-      backVisible: true, panelColor: 'rgb(1, 2, 3)', viewport: { width: 800, height: 600 }, veilMargin: { x: 26, y: 20 }, closing: true
+      backVisible: true, panelColor: 'rgb(1, 2, 3)', viewport: { width: 800, height: 600 }, veilMargin: { x: 26, y: 20 },
+      scrollbars: { left: 0, right: 15, bottom: 0 }, closing: true
     })));
     const { root, page, panel } = view.elements;
     expect([root.dataset.state, root.dataset.motion, root.dataset.loaded, root.dataset.blocked, root.dataset.shot])
       .toEqual(['open', 'still', 'true', 'false', 'image']);
-    expect([root.style.getPropertyValue('--lp-window-width'), root.style.getPropertyValue('--lp-veil-margin-x'), root.style.pointerEvents])
-      .toEqual(['800px', '26px', 'none']);
+    expect([
+      root.style.getPropertyValue('--lp-window-width'),
+      root.style.getPropertyValue('--lp-veil-margin-x'),
+      root.style.getPropertyValue('--lp-scrollbar-right'),
+      root.style.pointerEvents
+    ]).toEqual(['800px', '26px', '15px', 'none']);
     expect([page.hidden, panel.style.backgroundColor]).toEqual([false, 'rgb(1, 2, 3)']);
     expect(getTag(shadow, '.control[aria-label="Back"]', 'button').hidden).toBe(false);
   });

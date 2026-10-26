@@ -143,10 +143,10 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       inset: 0;
       background: var(--lp-stage);
     }
-    /* The receding page: its screenshot, and over it the same picture
-       blurred once in advance (the veil). Receding scales the pair and
-       crossfades from the screenshot to the veil, so the compositor animates
-       only transform and opacity;
+    /* The receding page: the same picture blurred once in advance (the
+       veil), and over it the screenshot. Receding scales the pair and fades
+       the screenshot out while the scrim darkens both, so the compositor
+       animates only transform and opacity, and the veil stays still;
        animating a blur radius re-blurred two full-screen layers each frame. */
     /* captureVisibleTab takes the whole window, scrollbars included, while
        this layer stops at the page's scrollbar. Laid out at the window's
@@ -170,10 +170,14 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       display: block;
       object-fit: fill;
     }
+    /* Cut to the page's content: the screenshot's own scrollbars, uncovered
+       as the page recedes, showed as a sharp strip while it faded. A plain
+       rectangle, the clip costs nothing per frame. */
     .shot {
       inset: 0;
       width: 100%;
       height: 100%;
+      clip-path: inset(0 var(--lp-scrollbar-right, 0px) var(--lp-scrollbar-bottom, 0px) var(--lp-scrollbar-left, 0px));
       will-change: opacity;
     }
     /* The picture runs on past the page's edges (mirrored, see paintVeil),
@@ -185,13 +189,10 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       left: calc(-1 * var(--lp-veil-margin-x, 0px));
       width: calc(100% + 2 * var(--lp-veil-margin-x, 0px));
       height: calc(100% + 2 * var(--lp-veil-margin-y, 0px));
-      opacity: 0;
-      will-change: opacity;
     }
     .page[hidden] {
       display: none;
     }
-    /* With a screenshot its tone is painted into the veil instead. */
     .scrim {
       position: absolute;
       inset: 0;
@@ -206,6 +207,15 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
     }
     .root[data-shot="none"] .scrim {
       display: block;
+    }
+    /* Over the screenshot and the veil alike, so the two are one tone while
+       one fades into the other: toned into the veil alone, the darker veil
+       showed the sharp screenshot's edge through the whole fade. One flat
+       color, it is the cheapest layer to fade. Its tone is brightness(0.9)
+       under the scrim, rgba(8, 8, 12, 0.2), in one color. */
+    .root[data-shot="image"] .scrim {
+      display: block;
+      background: rgba(6, 6, 9, 0.28);
     }
     .window {
       position: absolute;
@@ -405,17 +415,16 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
   const SOFT_SPRING = createSpringEasing(640, 38);
 
 
-  // The page receded behind the preview: scaled, and crossfaded to its veil, the
-  // screenshot blurred by BLUR_CSS_PX and toned by VEIL_TONE. The veil is
-  // painted at BLUR_RENDER_WIDTH pixels wide; blurred, it scales up unseen.
+  // The page receded behind the preview: scaled, with the screenshot faded
+  // out to show its veil, the screenshot blurred by BLUR_CSS_PX and toned by
+  // VEIL_TONE, and the scrim darkening both. The veil is painted at
+  // BLUR_RENDER_WIDTH pixels wide; blurred, it scales up unseen.
   const RECEDED_SCALE = 0.95;
   const PAGE_AT_REST = { transform: 'scale(1)' };
   const PAGE_RECEDED = { transform: `scale(${RECEDED_SCALE})` };
   const BLUR_CSS_PX = 16;
-  const VEIL_TONE = 'brightness(0.9) saturate(1.1)';
+  const VEIL_TONE = 'saturate(1.1)';
   const BLUR_RENDER_WIDTH = 480;
-  // The scrim over the receded page.
-  const SCRIM_TONE = 'rgba(8, 8, 12, 0.2)';
 
   let current: LinkPreview | null = null;
 
@@ -636,6 +645,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       panelColor: '',
       viewport: null,
       veilMargin: null,
+      scrollbars: null,
       closing: false,
       frameUrl: toPreviewFrameUrl(url),
       placeholder: readHostLabel(url),
@@ -900,9 +910,9 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
   }
 
   // The part of the window the page's content fills, as fractions of it:
-  // the screenshot takes the page's scrollbars too, which blurred would show
-  // as a grey band inside the receded page. The vertical one sits on the
-  // left of a right-to-left page.
+  // the screenshot takes the page's scrollbars too, which would show as a
+  // grey band inside the receded page. The vertical one sits on the left of
+  // a right-to-left page.
   function readContentBox(): { left: number; width: number; height: number } {
     const root = document.documentElement;
     const width = Math.min(1, root.clientWidth / Math.max(1, window.innerWidth)) || 1;
@@ -961,12 +971,14 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
     preview.veil.height = pictureHeight + marginY * 2;
     context.filter = `blur(${radius}px) ${VEIL_TONE}`;
     context.drawImage(source, -pad, -pad);
-    // The scrim's tone goes into the picture rather than a layer of its own
-    // over the whole window.
-    context.filter = 'none';
-    context.fillStyle = SCRIM_TONE;
-    context.fillRect(0, 0, preview.veil.width, preview.veil.height);
-    update(preview, { veilMargin: { x: marginX / perCssX, y: marginY / perCssY } });
+    update(preview, {
+      veilMargin: { x: marginX / perCssX, y: marginY / perCssY },
+      scrollbars: {
+        left: content.left * window.innerWidth,
+        right: (1 - content.left - content.width) * window.innerWidth,
+        bottom: (1 - content.height) * window.innerHeight
+      }
+    });
     return true;
   }
 
@@ -1048,7 +1060,6 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
     const blurIn: KeyframeAnimationOptions = { duration: reduced ? 1 : 260, easing: 'cubic-bezier(0.3, 0.7, 0.2, 1)', fill: 'forwards' };
     preview.page.animate([PAGE_AT_REST, PAGE_RECEDED], recede);
     preview.shot.animate([{ opacity: 1 }, { opacity: 0 }], blurIn);
-    preview.veil.animate([{ opacity: 0 }, { opacity: 1 }], blurIn);
     preview.scrim.animate([{ opacity: 0 }, { opacity: 1 }], blurIn);
     if (reduced) {
       update(preview, { motion: 'still' });
@@ -1112,7 +1123,6 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
     const restore: KeyframeAnimationOptions = { duration: reduced ? 1 : 280, easing: 'cubic-bezier(0.2, 0.9, 0.1, 1)', fill: 'forwards' };
     const blurOut: KeyframeAnimationOptions = { duration: reduced ? 1 : 220, easing: 'cubic-bezier(0.4, 0, 0.6, 1)', fill: 'forwards' };
     preview.shot.animate([{ opacity: 0 }, { opacity: 1 }], blurOut);
-    preview.veil.animate([{ opacity: 1 }, { opacity: 0 }], blurOut);
     preview.scrim.animate([{ opacity: 1 }, { opacity: 0 }], blurOut);
     preview.page.animate([PAGE_RECEDED, PAGE_AT_REST], restore).finished.then(finish, finish);
   }
