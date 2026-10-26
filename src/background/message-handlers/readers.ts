@@ -1,5 +1,5 @@
 // Reading the untyped fields of incoming messages.
-import * as SHORTCUT_KEY_MATCHER from '../../domain/shortcut-key-matcher';
+import type * as SHORTCUT_KEY_MATCHER from '../../domain/shortcut-key-matcher';
 import type { OpenDisposition } from '../../domain/messages';
 
 function readDisposition(value: unknown): OpenDisposition | undefined {

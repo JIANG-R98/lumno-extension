@@ -2,7 +2,7 @@
 // gets the modules built before it directly, and reaches the rest through
 // late(), which answers once every module is built.
 import * as LumnoShortcutDisplay from '../../../domain/shortcut-display';
-import * as LumnoCursorTooltip from '../../ui/cursor-tooltip';
+import type * as LumnoCursorTooltip from '../../ui/cursor-tooltip';
 import { createModeMenuIcons } from './mode-menu-icons';
 import type { ModeMenuIconsApi } from './mode-menu-icons';
 import { createModeMenuLanguage } from './mode-menu-language';
@@ -357,7 +357,6 @@ function wireModeMenuText(env: InputModeEnv, prev: ModeMenuRenderApi, late: () =
     getModeMenuPinyinApi: env.getModeMenuPinyinApi,
     MODE_MENU_PINYIN_FALLBACKS,
     modeMenuCursorTooltipController: env.modeMenuCursorTooltipController,
-    cursorTooltipApi: LumnoCursorTooltip,
     modeMenu: env.parts.modeMenu
   });
   return { ...language, ...search };

@@ -9,7 +9,7 @@ import * as FaviconDecisionLog from '../../domain/favicon/decision-log';
 import * as FaviconHostPolicy from '../../domain/favicon/host-policy';
 import * as FaviconResolver from '../../domain/favicon/resolver';
 import type { FaviconUrlResolver } from '../../domain/favicon/resolver';
-import * as FaviconTypes from '../../domain/favicon/types';
+import type * as FaviconTypes from '../../domain/favicon/types';
 import * as FaviconUrlKinds from '../../domain/favicon/url-kinds';
 
 import { isUrlBlockedByFaviconRequestBlacklist, loadFaviconEnhancedFetchEnabled, loadFaviconRequestBlacklistItems } from './request-policy';
