@@ -9,7 +9,7 @@ import { isRecord, isThenable } from '../platform/storage-call';
 import type * as LumnoProgressMatch from '../domain/progress-match';
 import type * as LumnoProgressHistory from '../domain/progress-history';
 import type { ProgressComparison, ProgressConfidence } from '../domain/progress-match';
-import type { StorageAreaLike, StorageItems } from '../domain/storage-port';
+import type { SettingsStore } from '../platform/settings-store';
 import * as RecentSiteSettings from '../domain/settings/recent-sites';
 
 type ProgressMatchApi = Pick<typeof LumnoProgressMatch,
@@ -80,9 +80,8 @@ interface ProgressTrackerOptions {
   chromeApi?: typeof chrome | null;
   progressMatch: ProgressMatchApi;
   progressHistory: ProgressHistoryApi;
-  getPinnedArea: () => StorageAreaLike | null;
-  historyArea: StorageAreaLike | null;
-  pinnedKey: string;
+  // The settings the pinned sites and the progress history live in.
+  settingsStore: SettingsStore;
   isEnabled?: () => boolean;
   dwellMs?: number;
   probeTimeoutMs?: number;
@@ -219,9 +218,7 @@ function createProgressTracker(options: ProgressTrackerOptions): Readonly<Progre
   const chromeApi = config.chromeApi || null;
   const progressMatch = config.progressMatch;
   const progressHistory = config.progressHistory;
-  const getPinnedArea = config.getPinnedArea;
-  const historyArea = config.historyArea;
-  const pinnedKey = config.pinnedKey;
+  const settingsStore = config.settingsStore;
   const isEnabled = typeof config.isEnabled === 'function' ? config.isEnabled : () => true;
   const dwellMs = Number.isFinite(Number(config.dwellMs)) ? Number(config.dwellMs) : DEFAULT_DWELL_MS;
   const probeTimeoutMs = Number.isFinite(Number(config.probeTimeoutMs))
@@ -247,31 +244,7 @@ function createProgressTracker(options: ProgressTrackerOptions): Readonly<Progre
     return chromeApi && chromeApi.runtime ? chromeApi.runtime.lastError : null;
   }
 
-  function storageGet(area: StorageAreaLike | null, key: string): Promise<StorageItems> {
-    return new Promise((resolve) => {
-      if (!area || typeof area.get !== 'function') {
-        resolve({});
-        return;
-      }
-      area.get([key], (result) => {
-        resolve(readLastError() ? {} : (result || {}));
-      });
-    });
-  }
 
-  function storageSet(area: StorageAreaLike | null, value: StorageItems): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (!area || typeof area.set !== 'function') {
-        reject(new Error('storage-unavailable'));
-        return;
-      }
-      area.set(value, () => {
-        const error = readLastError();
-        if (error) reject(new Error(error.message || 'storage-error'));
-        else resolve();
-      });
-    });
-  }
 
   function getTab(tabId: number): Promise<chrome.tabs.Tab | null> {
     return new Promise((resolve) => {
@@ -485,20 +458,19 @@ function createProgressTracker(options: ProgressTrackerOptions): Readonly<Progre
     options?: { record?: boolean }
   ): Promise<void> {
     if (options && options.record) {
-      const historyKey = RecentSiteSettings.progressHistory.key;
-      const storedHistory = await storageGet(historyArea, historyKey);
+      await settingsStore.ready;
       const nextHistory = progressHistory.recordVersion(
-        storedHistory[historyKey],
+        settingsStore.getStored(RecentSiteSettings.progressHistory),
         progressHistory.getHistoryId(previous, progressMatch),
         { url: previous.url, title: previous.title, updatedAt: timestamp }
       );
-      await storageSet(historyArea, { [historyKey]: nextHistory });
+      await settingsStore.set(RecentSiteSettings.progressHistory, nextHistory);
     }
     // The site name can come from the old title, so New Tab derives it again.
     const { siteName: _staleSiteName, ...card } = nextCard;
     const nextItems = items.slice();
     nextItems[index] = card;
-    await storageSet(getPinnedArea(), { [pinnedKey]: nextItems });
+    await settingsStore.set(RecentSiteSettings.pinnedRecentSites, nextItems);
   }
 
   function getMediaTitle(media: MediaReading): string {
@@ -543,8 +515,8 @@ function createProgressTracker(options: ProgressTrackerOptions): Readonly<Progre
   // version it leaves goes into the history first, so it can be restored.
   async function advance(tab: chrome.tabs.Tab & { id: number; url: string }): Promise<AdvanceResult> {
     if (!isEnabled()) return { changed: false, reason: 'disabled' };
-    const stored = await storageGet(getPinnedArea(), pinnedKey);
-    const storedItems = stored[pinnedKey];
+    await settingsStore.ready;
+    const storedItems = settingsStore.getStored(RecentSiteSettings.pinnedRecentSites);
     const items: readonly unknown[] = Array.isArray(storedItems) ? storedItems : [];
     const siteKey = progressMatch.getProgressSiteKey(tab.url);
     const tracked: Array<{ item: TrackedCard; index: number }> = [];

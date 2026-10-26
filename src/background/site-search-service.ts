@@ -7,15 +7,13 @@
 
 import * as AGGREGATE_SEARCH from './aggregate-search';
 import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
-import * as LumnoAggregateSearchStorage from '../platform/aggregate-search-storage';
 import * as LumnoHelpCenterIndex from '../platform/help-center-index';
 import * as AI_PROVIDER_SUBMIT from './ai-provider-submit';
 import * as COMMUNITY_LINKS from '../domain/community-links';
 import * as HELP_CENTER_SEARCH from '../domain/search/help-center-search';
 import * as SEARCH_RESULT_TABS from './search-result-tabs';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
 import { aggregateSearchAutoGroupEnabled, aggregateSearches } from '../domain/settings';
-import { getShortcutUrl, loadShortcutRules, storageArea, waitForTabComplete } from './worker-context';
+import { getShortcutUrl, loadShortcutRules, waitForTabComplete, workerSettings } from './worker-context';
 import { abortSearchEngineSuggestionRequest, buildDefaultSearchUrl, clearPendingSearch, consumeSearchEngineSuggestionRequest, deleteHistoryUrlFromSearch, getDirectNavigationUrl, getSearchEngineSuggestionRequestKey, getSearchEngineSuggestions, getSearchSuggestions, getSiteSearchProviderEntryUrl, isInteractiveSiteSearchProvider, loadSiteSearchProviders, markPendingSearchTab, pendingSearchTabId, recordSearchSuggestionSelection, releaseSearchEngineSuggestionRequest, scheduleSearchEngineSuggestionPrefetch, searchEngineSuggestionRequests, shouldPrefetchSearchEngineSuggestions, startSearchEngineSuggestionRequest } from './search-suggestions-service';
 import { createSearchResultTab, resolveSearchResultTabPlacement } from './browser-urls-service';
 import type { AggregateSearchQueryRunner } from './aggregate-search';
@@ -182,19 +180,12 @@ function runAggregateSearchQuery(
     aggregateSearchQueryRunner = AGGREGATE_SEARCH.createAggregateSearchQueryRunner({
       aggregateSearchStore: AGGREGATE_SEARCH_STORE,
       chromeApi: chrome,
-      loadAggregateSearches: () => LumnoAggregateSearchStorage.loadAggregateSearches(
-        storageArea,
-        aggregateSearches.key,
-        chrome
-      ),
+      loadAggregateSearches: () => workerSettings.ready
+        .then(() => AGGREGATE_SEARCH_STORE.normalizeAggregateSearches(workerSettings.getStored(aggregateSearches))),
       loadSiteSearchProviders,
       resolveTabPlacement: resolveSearchResultTabPlacement,
       loadAggregateSearchAutoGroupEnabled() {
-        return LumnoSettingsStorage.readStorageValue(
-          storageArea,
-          chrome,
-          aggregateSearchAutoGroupEnabled.key
-        );
+        return workerSettings.ready.then(() => workerSettings.get(aggregateSearchAutoGroupEnabled));
       },
       openAggregateSearch: AGGREGATE_SEARCH.openAggregateSearch,
       getEntryUrl: getSiteSearchProviderEntryUrl,

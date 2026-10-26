@@ -3,7 +3,7 @@
 // transfer carry, and what each storage area holds.
 import * as Appearance from './appearance';
 import * as Bookmarks from './bookmarks';
-import type { Setting, SettingArea } from './define';
+import type { Setting, SettingArea, SettingFamily } from './define';
 import * as Features from './features';
 import * as Locale from './locale';
 import * as NewtabPage from './newtab-page';
@@ -41,6 +41,16 @@ function isSetting(value: unknown): value is Setting<unknown> {
     typeof Reflect.get(Object(value), 'area') === 'string';
 }
 
+function isSettingFamily(value: unknown): value is SettingFamily<unknown> {
+  return Boolean(value) && typeof value === 'object' &&
+    typeof Reflect.get(Object(value), 'prefix') === 'string' &&
+    typeof Reflect.get(Object(value), 'keyFor') === 'function';
+}
+
+const ALL_SETTING_FAMILIES: readonly SettingFamily<unknown>[] = Object.freeze(
+  AREA_MODULES.flatMap((module) => Object.values(module).filter(isSettingFamily))
+);
+
 const ALL_SETTINGS: readonly Setting<unknown>[] = Object.freeze(
   AREA_MODULES.flatMap((module) => Object.values(module).filter(isSetting))
 );
@@ -70,4 +80,4 @@ const DIAGNOSTIC_SETTINGS: readonly Setting<unknown>[] = Object.freeze(
   ALL_SETTINGS.filter((setting) => setting.diagnostics !== 'omit')
 );
 
-export { ALL_SETTINGS, BROWSER_SYNC_KEYS, DIAGNOSTIC_SETTINGS, WEBDAV_ONLY_KEYS, getSetting, isSetting, keysOf, settingsIn };
+export { ALL_SETTINGS, ALL_SETTING_FAMILIES, BROWSER_SYNC_KEYS, DIAGNOSTIC_SETTINGS, WEBDAV_ONLY_KEYS, getSetting, isSetting, keysOf, settingsIn };

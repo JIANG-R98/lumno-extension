@@ -1,6 +1,7 @@
 const assert = require('assert');
 const store = require('../../src/domain/recent-sites-store.ts');
 const { createController } = require('../../src/background/popup-recent-pin.ts');
+const { createAreaSettingsStore } = require('../helpers/worker-settings');
 
 const KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
 
@@ -21,9 +22,8 @@ function memoryArea(initial) {
 function controller(area, series = false) {
   return createController({
     store,
-    key: KEY,
+    settingsStore: createAreaSettingsStore({ sync: area, local: memoryArea({}) }),
     storeOptions: { maxPinned: 3 },
-    getArea: () => area,
     probeSeries: () => Promise.resolve(series),
     createProgressId: () => 'p1'
   });

@@ -20,7 +20,7 @@ function boot(options) {
   }, options || {}));
 }
 
-async function testSiteSearchProviderLoadFailureStillAnswers() {
+async function testUnreadableSettingsStillAnswer() {
   const harness = boot({
     configureChrome(chromeApi) {
       const syncGet = chromeApi.storage.sync.get;
@@ -35,10 +35,9 @@ async function testSiteSearchProviderLoadFailureStillAnswers() {
     }
   });
   const response = await harness.sendMessage({ action: 'getSiteSearchProviders' });
-  assert.deepStrictEqual(
-    plain(response),
-    { items: [], reason: 'site-search-provider-load-failed' },
-    'a failed provider load must answer the runtime message so callers can use their local fallback'
+  assert.ok(
+    Array.isArray(response.items) && response.items.length > 0 && !response.reason,
+    'settings that cannot be read leave the bundled providers to answer with'
   );
 }
 
@@ -287,7 +286,7 @@ async function testLocaleMessagesAreCachedAndCanBeNarrowed() {
 
 (async () => {
   await testLocaleMessagesAreCachedAndCanBeNarrowed();
-  await testSiteSearchProviderLoadFailureStillAnswers();
+  await testUnreadableSettingsStillAnswer();
   await testOpenNewTabUsesBrowserNewtab();
   await testOpenOptionsPageKeepsRequestedHash();
   await testLoadingSessionUpdatesAreAsyncAndAnswered();

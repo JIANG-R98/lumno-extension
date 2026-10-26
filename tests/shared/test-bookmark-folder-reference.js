@@ -5,6 +5,7 @@ const shortcutStorage = require('../../src/platform/shortcut-storage.ts');
 const bindings = require('../../src/platform/bookmark-folder-bindings.ts');
 const drag = require('../../src/newtab/cross-surface-drag.ts');
 const { openDragPage } = require('../helpers/newtab-drag-page');
+const { createWorkerSettings } = require('../helpers/worker-settings');
 const { newtabShortcutsLegacy, shortcutFolderBindings } = require('../../src/domain/settings/newtab-shortcuts.ts');
 
 function tree(folderId = '42', rootId = '1', rootTitle = '书签栏') {
@@ -90,16 +91,16 @@ async function run() {
   assert.deepStrictEqual(refs.describe('42', refs.buildNodeMap(reordered)), refBefore, 'item order is not target identity');
 
   const a = device();
-  const aRuntime = bindings.createRuntime({ chrome: a.chrome });
+  const aRuntime = bindings.createRuntime({ settingsStore: createWorkerSettings(a.chrome).settingsStore });
   await aRuntime.ready;
   aRuntime.bind(item.id, '42');
   await aRuntime.flush();
-  const restarted = bindings.createRuntime({ chrome: a.chrome });
+  const restarted = bindings.createRuntime({ settingsStore: createWorkerSettings(a.chrome).settingsStore });
   await restarted.ready;
   assert.strictEqual(restarted.getNode(item, aMap).id, '42', 'drag-selected binding survives restart');
 
   const b = device();
-  const bRuntime = bindings.createRuntime({ chrome: b.chrome });
+  const bRuntime = bindings.createRuntime({ settingsStore: createWorkerSettings(b.chrome).settingsStore });
   await bRuntime.ready;
   const before = shortcuts.createShortcutRecord({ id: 'before', url: 'https://before.example/' }, { now: 1 });
   const after = shortcuts.createShortcutRecord({ id: 'after', url: 'https://after.example/' }, { now: 1 });
@@ -122,7 +123,7 @@ async function run() {
   assert.strictEqual(bRuntime.getNode(item, recreated), null, 'deleted bindings never attach to a replacement folder');
 
   const legacy = shortcuts.createShortcutRecord({ type: 'folder', folderId: '42', title: '灵感' }, { now: 1 });
-  const legacyRuntime = bindings.createRuntime({ chrome: device().chrome });
+  const legacyRuntime = bindings.createRuntime({ settingsStore: createWorkerSettings(device().chrome).settingsStore });
   await legacyRuntime.ready;
   assert.strictEqual(legacyRuntime.reconcile([legacy], aMap)[0].folderRef.path[0], '灵感');
   assert.strictEqual(legacyRuntime.reconcile([{ ...legacy, id: 'untrusted', folderId: '117' }], aMap)[0].folderRef, undefined,
@@ -138,7 +139,7 @@ async function run() {
   assert.strictEqual(plan.shortcutId, item.id, 'repeat drag uses the existing portable entry');
 
   const sourceDevice = device({ sync: { [newtabShortcutsLegacy.key]: [legacy] } });
-  const controller = bindings.createSyncController({ chrome: sourceDevice.chrome });
+  const controller = bindings.createSyncController({ chrome: sourceDevice.chrome, ...createWorkerSettings(sourceDevice.chrome) });
   controller.start();
   await controller.refresh();
   await controller.refresh();
@@ -175,7 +176,7 @@ async function run() {
     newTabSaved = true;
     shortcutStorage.saveShortcuts(raceDevice.chrome.storage.sync, [entry(aMap), site]).then(() => fn(nodes));
   });
-  await bindings.createSyncController({ chrome: raceDevice.chrome }).refresh();
+  await bindings.createSyncController({ chrome: raceDevice.chrome, ...createWorkerSettings(raceDevice.chrome) }).refresh();
   await new Promise((resolve) => setTimeout(resolve, 250));
   const afterRace = await shortcutStorage.loadShortcuts(raceDevice.chrome.storage.sync);
   assert.deepStrictEqual(afterRace.map((row) => row.title), ['灵感', 'Site'],

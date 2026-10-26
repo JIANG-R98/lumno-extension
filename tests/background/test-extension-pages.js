@@ -1,7 +1,4 @@
 const assert = require('assert');
-// The service worker loads settings before extension pages.
-require('../../src/domain/settings/index.ts');
-const pages = require('../../src/background/extension-pages.ts');
 const { releasePageOpened } = require('../../src/domain/settings/features.ts');
 
 // The Settings version badge that sends openReleasePage is covered by
@@ -54,10 +51,13 @@ function createChromeApi(localStore, syncStore, createdTabs, version) {
   };
 }
 
+let pages;
+
+// Resolves once the page opened and its marker was saved.
 function openReleasePage(options) {
   return new Promise((resolve) => {
     pages.openReleasePage(options, resolve);
-  });
+  }).then((opened) => new Promise((resolve) => setTimeout(() => resolve(opened), 0)));
 }
 
 function openOnboardingPage(options) {
@@ -89,6 +89,8 @@ function openExtensionShortcutsPage(options) {
   const syncStore = {};
   const createdTabs = [];
   global.chrome = createChromeApi(localStore, syncStore, createdTabs, '0.9.9');
+  // The worker's settings read the chrome API the module finds as it loads.
+  pages = require('../../src/background/extension-pages.ts');
 
   assert.strictEqual(typeof pages.buildOnboardingUrl, 'function', 'onboarding URL builder should be exported');
   const builtOnboardingUrl = new URL(pages.buildOnboardingUrl({ reason: 'manual' }));
@@ -193,25 +195,6 @@ function openExtensionShortcutsPage(options) {
     syncStore[releasePageOpened.key].version,
     'v0.10.0',
     'new version marker should replace the old marker'
-  );
-
-  const legacyLocalStore = {
-    [releasePageOpened.key]: {
-      version: 'v0.10.1',
-      reason: 'update',
-      openedAt: 1
-    }
-  };
-  const legacySyncStore = {};
-  const legacyCreatedTabs = [];
-  global.chrome = createChromeApi(legacyLocalStore, legacySyncStore, legacyCreatedTabs, '0.10.1');
-  const legacyOpened = await openReleasePage({ reason: 'update', oncePerVersion: true });
-  assert.strictEqual(legacyOpened, false, 'legacy local marker should prevent reopening the same version');
-  assert.strictEqual(legacyCreatedTabs.length, 0, 'legacy local marker should not create another release tab');
-  assert.strictEqual(
-    legacySyncStore[releasePageOpened.key].version,
-    'v0.10.1',
-    'legacy local release marker should migrate into sync'
   );
 
   delete global.chrome;

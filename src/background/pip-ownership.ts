@@ -4,17 +4,18 @@
 import * as LumnoMessaging from '../platform/messaging';
 import type { MessageTabs } from '../platform/messaging';
 import type { OkReply, PipKind, PipOwner, PipOwnershipReply, PipReleaseReply } from '../domain/messages';
-import type { StorageAreaLike } from '../domain/storage-port';
+import type { SettingsStore } from '../platform/settings-store';
 import { globalPipOwner } from '../domain/settings/features';
 
 interface PipOwnershipChromeApi {
-  storage?: { session?: StorageAreaLike; local?: StorageAreaLike };
   tabs?: MessageTabs;
   runtime?: { lastError?: { message?: string } | null };
 }
 
 interface PipOwnershipOptions {
   chromeApi?: PipOwnershipChromeApi | null;
+  // The settings the owner record lives in.
+  settingsStore: SettingsStore;
   // The tab's URL, also while a navigation is pending.
   getResolvedTabUrl?: (tab: chrome.tabs.Tab) => string;
 }
@@ -31,108 +32,32 @@ interface PipOwnership {
   requestGlobalPipOwnership(sender: chrome.runtime.MessageSender | null | undefined, kind: unknown): Promise<PipOwnershipReply>;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object';
-}
 
-function create(options?: PipOwnershipOptions | null): Readonly<PipOwnership> {
-  const settings = options && typeof options === 'object' ? options : {};
+function create(options: PipOwnershipOptions): Readonly<PipOwnership> {
+  const settings = options;
+  const settingsStore = options.settingsStore;
   const chromeApi: PipOwnershipChromeApi | null = settings.chromeApi || (typeof chrome !== 'undefined' ? chrome : null);
   const getResolvedTabUrl = typeof settings.getResolvedTabUrl === 'function'
     ? settings.getResolvedTabUrl
     : (tab: chrome.tabs.Tab) => (tab && typeof tab.url === 'string' ? tab.url : '');
-  let globalPipOwnerCache: PipOwner | null = null;
-  let globalPipOwnerCacheLoaded = false;
 
-  function getSessionStorageArea(): StorageAreaLike | null {
-    if (!chromeApi || !chromeApi.storage) {
-      return null;
-    }
-    return chromeApi.storage.session || chromeApi.storage.local || null;
-  }
 
-  function normalizePipOwnerRecord(value: unknown): PipOwner | null {
-    if (!isRecord(value)) {
-      return null;
-    }
-    const kind: PipKind | '' = value.kind === 'document' ? 'document' : (value.kind === 'video' ? 'video' : '');
-    const tabId = Number(value.tabId);
-    if (!kind || !Number.isInteger(tabId) || tabId < 0) {
-      return null;
-    }
-    const frameId = Number.isInteger(Number(value.frameId)) ? Number(value.frameId) : 0;
-    const token = typeof value.token === 'string' && value.token
-      ? value.token
-      : '';
-    if (!token) {
-      return null;
-    }
-    return {
-      kind: kind,
-      tabId: tabId,
-      frameId: frameId,
-      token: token,
-      url: typeof value.url === 'string' ? value.url : '',
-      updatedAt: Number.isFinite(Number(value.updatedAt)) ? Number(value.updatedAt) : Date.now()
-    };
-  }
 
   function getGlobalPipOwnerRecord(): Promise<PipOwner | null> {
-    if (globalPipOwnerCacheLoaded) {
-      return Promise.resolve(globalPipOwnerCache);
-    }
-    const storageArea = getSessionStorageArea();
-    if (!storageArea) {
-      globalPipOwnerCacheLoaded = true;
-      globalPipOwnerCache = null;
-      return Promise.resolve(null);
-    }
-    return new Promise((resolve) => {
-      storageArea.get([globalPipOwner.key], (result) => {
-        const normalized = normalizePipOwnerRecord(
-          result ? result[globalPipOwner.key] : null
-        );
-        globalPipOwnerCacheLoaded = true;
-        globalPipOwnerCache = normalized;
-        resolve(normalized);
-      });
-    });
+    return settingsStore.ready.then(() => settingsStore.get(globalPipOwner));
   }
 
   function setGlobalPipOwnerRecord(record: PipOwner): Promise<PipOwner | null> {
-    const normalized = normalizePipOwnerRecord(record);
-    globalPipOwnerCacheLoaded = true;
-    globalPipOwnerCache = normalized;
-    const storageArea = getSessionStorageArea();
-    if (!storageArea) {
-      return Promise.resolve(normalized);
-    }
-    return new Promise((resolve) => {
-      storageArea.set({ [globalPipOwner.key]: normalized }, () => {
-        resolve(normalized);
-      });
-    });
+    const normalized = globalPipOwner.parse(record);
+    return settingsStore.set(globalPipOwner, normalized).then(() => normalized, () => normalized);
   }
 
   function clearGlobalPipOwnerRecord(expectedToken?: string): Promise<boolean> {
-    const shouldClear = !expectedToken ||
-      !globalPipOwnerCache ||
-      globalPipOwnerCache.token === expectedToken;
-    if (!shouldClear) {
+    const current = settingsStore.get(globalPipOwner);
+    if (expectedToken && current && current.token !== expectedToken) {
       return Promise.resolve(false);
     }
-    globalPipOwnerCacheLoaded = true;
-    globalPipOwnerCache = null;
-    const storageArea = getSessionStorageArea();
-    const remove = storageArea && storageArea.remove;
-    if (!storageArea || typeof remove !== 'function') {
-      return Promise.resolve(true);
-    }
-    return new Promise((resolve) => {
-      remove.call(storageArea, globalPipOwner.key, () => {
-        resolve(true);
-      });
-    });
+    return settingsStore.remove(globalPipOwner).then(() => true, () => true);
   }
 
   function createGlobalPipOwnerToken(): string {

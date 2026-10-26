@@ -1,9 +1,8 @@
 // Opening the extension's own pages (settings, onboarding, the release
 // notes, the browser's shortcut and bookmark managers).
 import * as LumnoExtensionRoutes from '../domain/extension-routes';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
 import type { OpenDisposition } from '../domain/messages';
-import type { StorageAreaLike } from '../domain/storage-port';
+import { workerSettings } from './worker-context';
 import { releasePageOpened } from '../domain/settings/features';
 
 interface PageOpenOptions {
@@ -172,18 +171,7 @@ function getExtensionVersionTag(): string {
   return normalizeExtensionVersionTag(manifest ? String(manifest.version || '').trim() : '');
 }
 
-function getLocalStorageArea(chromeApi: typeof chrome): StorageAreaLike | null {
-  return chromeApi && chromeApi.storage && chromeApi.storage.local
-    ? chromeApi.storage.local
-    : null;
-}
 
-function getSyncableStorageArea(chromeApi: typeof chrome): StorageAreaLike | null {
-  if (!chromeApi || !chromeApi.storage) {
-    return null;
-  }
-  return LumnoSettingsStorage.createProviderStorageRuntime(chromeApi).area;
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
@@ -235,8 +223,6 @@ function openReleasePage(options?: PageOpenOptions | null, callback?: OpenCallba
   const active = !(options && options.disposition === 'backgroundTab');
   const oncePerVersion = Boolean(options && options.oncePerVersion);
   const version = getExtensionVersionTag();
-  const storageArea = getSyncableStorageArea(chromeApi);
-  const localStorageArea = getLocalStorageArea(chromeApi);
   const openTab = (afterOpen: (() => void) | null): void => {
     chromeApi.tabs.create({ url: releaseUrl, active }, () => {
       const opened = !(chromeApi.runtime && chromeApi.runtime.lastError);
@@ -246,57 +232,30 @@ function openReleasePage(options?: PageOpenOptions | null, callback?: OpenCallba
       done(opened);
     });
   };
+  // A failed marker should not block the user from seeing the release page.
   const markOpened = (): void => {
-    if (!storageArea || !version) {
+    if (!version) {
       return;
     }
-    try {
-      storageArea.set({
-        [releasePageOpened.key]: {
-          version,
-          reason: getReleaseOpenReason(options),
-          openedAt: Date.now()
-        }
-      }, () => {});
-    } catch (_error) {
-      // A failed marker should not block the user from seeing the release page.
-    }
+    void workerSettings.set(releasePageOpened, {
+      version,
+      reason: getReleaseOpenReason(options),
+      openedAt: Date.now()
+    }).catch(() => {});
   };
 
-  if (!oncePerVersion || !version || !storageArea) {
+  if (!oncePerVersion || !version) {
     openTab(oncePerVersion ? markOpened : null);
     return;
   }
-  try {
-    storageArea.get([releasePageOpened.key], (result) => {
-      const runtimeError = chromeApi.runtime ? chromeApi.runtime.lastError : null;
-      const stored = runtimeError
-        ? null
-        : getStoredReleasePageOpen(result && result[releasePageOpened.key]);
-      if (stored && stored.version === version) {
-        done(false);
-        return;
-      }
-      if (storageArea !== localStorageArea && localStorageArea) {
-        localStorageArea.get([releasePageOpened.key], (localResult) => {
-          const localRuntimeError = chromeApi.runtime ? chromeApi.runtime.lastError : null;
-          const legacyStored = localRuntimeError
-            ? null
-            : getStoredReleasePageOpen(localResult && localResult[releasePageOpened.key]);
-          if (legacyStored && legacyStored.version === version) {
-            markOpened();
-            done(false);
-            return;
-          }
-          openTab(markOpened);
-        });
-        return;
-      }
-      openTab(markOpened);
-    });
-  } catch (_error) {
+  void workerSettings.ready.then(() => {
+    const stored = getStoredReleasePageOpen(workerSettings.getStored(releasePageOpened));
+    if (stored && stored.version === version) {
+      done(false);
+      return;
+    }
     openTab(markOpened);
-  }
+  });
 }
 
 // The bookmark manager addresses of this browser, best first.

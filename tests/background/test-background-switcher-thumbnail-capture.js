@@ -6,7 +6,7 @@ const { loadBackground, wait } = require('../helpers/background-harness');
 
 const TAB_SWITCHER_ENABLED_KEY = '_x_extension_tab_switcher_enabled_2026_unique_';
 const TAB_SWITCHER_STATE_KEY = '_x_extension_tab_switcher_state_2026_unique_';
-const TAB_SWITCHER_THUMBNAIL_KEY_PREFIX = '_x_extension_tab_switcher_thumbnail_2026_unique_:';
+const TAB_SWITCHER_THUMBNAIL_KEY_PREFIX = require('../../src/domain/settings/features.ts').tabSwitcherThumbnail.prefix;
 const SETTLE_WAIT_MS = 1100;
 const JPEG = 'data:image/jpeg;base64,AAAA';
 

@@ -1313,7 +1313,7 @@ function createController(options?: ConnectionControllerOptions | null): Readonl
   const clientApi = opts.client || LumnoWebDavClient;
   function fail(code: string): never { throw clientApi.error(code); }
   const keyFor = (id: string, key: string): string => id === 'default' || key.startsWith('asset:') ? key : `connection:${id}:${key}`;
-  const statusKeyFor = (id: string): string => id === 'default' ? settings.webdavStatus.key : `${settings.webdavStatus.key}:${id}`;
+  const statusKeyFor = (id: string): string => id === 'default' ? settings.webdavStatus.key : settings.webdavConnectionStatus.keyFor(id);
   function serialRegistry<T>(fn: () => Promise<T>): Promise<T> {
     const job = registryChain.then(fn);
     registryChain = job.catch(() => {});
@@ -1344,7 +1344,7 @@ function createController(options?: ConnectionControllerOptions | null): Readonl
     });
   }
   async function notifyRegistry(): Promise<void> {
-    await localStorage('set', { [`${settings.webdavStatus.key}:connections`]: cryptoApi.randomUUID() });
+    await localStorage('set', { [settings.webdavConnectionStatus.keyFor('connections')]: cryptoApi.randomUUID() });
   }
   // Every device publishes the address, directory and username of its
   // connections through browser sync, so a new device only asks for the app

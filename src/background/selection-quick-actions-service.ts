@@ -12,7 +12,7 @@ import * as SELECTION_QUICK_ACTION_PROVIDER from './selection-quick-action-provi
 import * as SELECTION_TARGET from './selection-target';
 import * as SETTINGS from '../domain/settings';
 import { selectionQuickActionsEnabled, selectionQuickActionsGroupEnabled, selectionQuickActionsProvider } from '../domain/settings';
-import { storageArea, waitForTabComplete } from './worker-context';
+import { waitForTabComplete, workerSettings } from './worker-context';
 import { getSiteSearchProviderEntryUrl, isInteractiveSiteSearchProvider, loadSiteSearchProviders, sanitizeSiteSearchProviders } from './search-suggestions-service';
 import type { SelectionAction } from '../domain/selection-intent';
 import type { SelectionQuickActionsProvider } from '../domain/settings';
@@ -42,53 +42,15 @@ function isSelectionAction(value: unknown): value is SelectionAction {
 }
 
 export function loadSelectionQuickActionsEnabled(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (!storageArea || typeof storageArea.get !== 'function') {
-      resolve(false);
-      return;
-    }
-    storageArea.get([selectionQuickActionsEnabled.key], (result) => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        resolve(false);
-        return;
-      }
-      resolve(Boolean(result && result[selectionQuickActionsEnabled.key] === true));
-    });
-  });
+  return workerSettings.ready.then(() => workerSettings.get(selectionQuickActionsEnabled));
 }
 
 function loadSelectionQuickActionsProvider(): Promise<SelectionQuickActionsProvider> {
-  return new Promise((resolve) => {
-    if (!storageArea || typeof storageArea.get !== 'function') {
-      resolve('gpt');
-      return;
-    }
-    storageArea.get([selectionQuickActionsProvider.key], (result) => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        resolve('gpt');
-        return;
-      }
-      const rawValue = result && result[selectionQuickActionsProvider.key];
-      const providerKey = SETTINGS.selectionQuickActionsProvider.parse(rawValue);
-      resolve(providerKey || 'gpt');
-    });
-  });
+  return workerSettings.ready.then(() => workerSettings.get(selectionQuickActionsProvider));
 }
 
 function loadSelectionQuickActionsGroupEnabled(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (!storageArea || typeof storageArea.get !== 'function') {
-      resolve(false);
-      return;
-    }
-    storageArea.get([selectionQuickActionsGroupEnabled.key], (result) => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        resolve(false);
-        return;
-      }
-      resolve(Boolean(result && result[selectionQuickActionsGroupEnabled.key] === true));
-    });
-  });
+  return workerSettings.ready.then(() => workerSettings.get(selectionQuickActionsGroupEnabled));
 }
 
 let selectionTargetOpenQueue: Promise<unknown> = Promise.resolve();

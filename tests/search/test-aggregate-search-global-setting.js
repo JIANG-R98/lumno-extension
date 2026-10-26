@@ -32,8 +32,8 @@ async function testMarkup() {
   page.close();
 }
 
-// The worker reads the setting for every run, so a change made in Settings
-// applies to the next aggregate search without a restart.
+// A change made in Settings applies to the next aggregate search without
+// restarting the worker.
 async function testWorkerReadsTheSettingEachRun() {
   const definition = { id: 'research', key: 'research', name: 'Research', sourceRefs: ['builtin:gg', 'builtin:bi'] };
   const grouped = [];
@@ -63,6 +63,7 @@ async function testWorkerReadsTheSettingEachRun() {
   assert.strictEqual(grouped.length, 0, 'with grouping off, the tabs should stay ungrouped');
 
   worker.storage.sync.data[AUTO_GROUP] = true;
+  worker.chrome.storage.onChanged.listeners.forEach((listener) => listener({ [AUTO_GROUP]: { oldValue: false, newValue: true } }, 'sync'));
   await run('world');
   await wait(50);
   assert.strictEqual(grouped.length, 1, 'turning grouping on should apply to the next run');

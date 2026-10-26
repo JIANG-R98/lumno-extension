@@ -7,32 +7,18 @@ import type {
   FolderBindings,
   FolderShortcutLike
 } from '../domain/bookmark-folder-reference';
-import { localPrimary } from '../domain/settings/sync-state';
-import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
 import { isShortcutFolder } from '../domain/shortcuts-store';
 import type { PortableShortcutFolder, ShortcutItem, VisibleShortcutItem } from '../domain/shortcuts-store';
-import type {
-  StorageAreaLike,
-  StorageChangeEventLike,
-  StorageItems,
-  StorageKeys
-} from '../domain/storage-port';
-import { createProviderStorageRuntime } from './settings-storage';
-import { persistShortcutState } from './shortcut-storage';
-import { callStorage, isRecord } from './storage-call';
-import type { ProviderStorageRuntime, StorageChromeApi } from './settings-storage';
-import { shortcutFolderBindings } from '../domain/settings/newtab-shortcuts';
-import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
-
-// An area that reads like chrome.storage: through the callback, or through
-// the promise it returns.
-interface StorageReader {
-  get(keys: StorageKeys, callback: (items: unknown) => void): unknown;
-}
-
-interface StorageWriter {
-  set(items: StorageItems, callback: () => void): unknown;
-}
+import {
+  NEWTAB_SHORTCUT_LIST_SETTINGS,
+  newtabShortcutsLocalOverflow,
+  shortcutFolderBindings
+} from '../domain/settings/newtab-shortcuts';
+import type { ProviderStorageRuntime } from './settings-storage';
+import type { SettingsStore } from './settings-store';
+import { createShortcutListStorage } from './shortcut-list-storage';
+import type { ShortcutListChromeApi } from './shortcut-list-storage';
+import { isRecord } from './storage-call';
 
 type BookmarkEventName = 'onCreated' | 'onRemoved' | 'onChanged' | 'onMoved' | 'onChildrenReordered' | 'onImportEnded';
 
@@ -49,17 +35,13 @@ interface BookmarksApiLike extends Partial<Record<BookmarkEventName, BookmarkEve
 }
 
 // The parts of the extension API the background controller uses.
-interface FolderSyncChromeApi extends StorageChromeApi {
-  storage: {
-    local: StorageAreaLike;
-    sync: StorageAreaLike & { QUOTA_BYTES?: number };
-    onChanged: StorageChangeEventLike;
-  };
+interface FolderSyncChromeApi extends ShortcutListChromeApi {
   bookmarks: BookmarksApiLike;
 }
 
 interface FolderBindingRuntimeOptions {
-  chrome?: StorageChromeApi | null;
+  // The settings this device's bindings are read from and saved to.
+  settingsStore: SettingsStore;
 }
 
 interface FolderBindingRuntime {
@@ -79,7 +61,9 @@ interface FolderBindingRuntime {
 
 interface FolderSyncControllerOptions {
   chrome: FolderSyncChromeApi;
-  provider?: ProviderStorageRuntime | null;
+  provider: ProviderStorageRuntime;
+  // Holds the bindings and the stored shortcut list.
+  settingsStore: SettingsStore;
   onError?: (error: unknown) => void;
 }
 
@@ -93,33 +77,19 @@ function unrefTimer(handle: unknown): void {
   if (isRecord(handle) && 'unref' in handle && typeof handle.unref === 'function') handle.unref();
 }
 
-async function readItems(
-  chromeApi: StorageChromeApi | null | undefined,
-  area: StorageReader,
-  keys: StorageKeys
-): Promise<StorageItems> {
-  const result = await callStorage(chromeApi, (done) => area.get(keys, done));
-  return isRecord(result) ? result : {};
-}
 
-function createRuntime(options?: FolderBindingRuntimeOptions | null): FolderBindingRuntime {
-  const chromeApi: StorageChromeApi | undefined = (options && options.chrome) || globalThis.chrome;
-  const area = chromeApi && chromeApi.storage ? chromeApi.storage.local : undefined;
+function createRuntime(options: FolderBindingRuntimeOptions): FolderBindingRuntime {
+  const settingsStore = options.settingsStore;
   let bindings: FolderBindings = {};
   let loaded = false;
   let pending: FolderBindings = {};
   let chain: Promise<void> = Promise.resolve();
-  function requireArea(): StorageAreaLike {
-    if (!area) throw new Error('Folder binding storage is unavailable');
-    return area;
-  }
   async function readBindings(): Promise<FolderBindings> {
-    const values = await readItems(chromeApi, requireArea(), [shortcutFolderBindings.key]);
-    return normalizeBindings(values[shortcutFolderBindings.key]);
+    await settingsStore.ready;
+    return normalizeBindings(settingsStore.getStored(shortcutFolderBindings));
   }
-  async function writeBindings(value: FolderBindings): Promise<void> {
-    const writer: StorageWriter = requireArea();
-    await callStorage(chromeApi, (done) => writer.set({ [shortcutFolderBindings.key]: value }, done));
+  function writeBindings(value: FolderBindings): Promise<void> {
+    return settingsStore.set(shortcutFolderBindings, value);
   }
   const ready = readBindings().then((stored) => {
     bindings = stored;
@@ -128,6 +98,8 @@ function createRuntime(options?: FolderBindingRuntimeOptions | null): FolderBind
   function accept(value: unknown): void {
     bindings = { ...normalizeBindings(value), ...pending };
   }
+  // Bindings another page stored arrive here too.
+  settingsStore.subscribe(shortcutFolderBindings, () => accept(settingsStore.getStored(shortcutFolderBindings)));
   function bind(id: string, folderId: string | number): void {
     const next = { folderId: String(folderId) };
     if (!id || !next.folderId || isTreeRootId(next.folderId)) return;
@@ -203,10 +175,10 @@ function createRuntime(options?: FolderBindingRuntimeOptions | null): FolderBind
 // Keep portable locators current even when the originating new-tab is closed.
 function createSyncController(options: FolderSyncControllerOptions): FolderSyncController {
   const chromeApi = options.chrome;
-  const store = LumnoNewtabShortcutsStore;
-  const provider = options.provider || createProviderStorageRuntime(chromeApi);
-  const runtime = createRuntime({ chrome: chromeApi });
-  const overflowKey = NewtabShortcutSettings.newtabShortcutsLocalOverflow.key;
+  const provider = options.provider;
+  const settingsStore = options.settingsStore;
+  const runtime = createRuntime({ settingsStore });
+  const shortcutList = createShortcutListStorage({ chromeApi, provider });
   let revision = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let chain: Promise<void> = Promise.resolve();
@@ -223,12 +195,10 @@ function createSyncController(options: FolderSyncControllerOptions): FolderSyncC
     });
   }
   async function update(): Promise<void> {
-    await Promise.all([provider.ready, runtime.ready]);
+    await runtime.ready;
     const generation = revision;
-    const sync = provider.getActiveAreaName() === 'sync';
-    const values = await readItems(chromeApi, provider.area, store.SHORTCUT_STORAGE_KEYS.slice());
-    const local = sync ? await readItems(chromeApi, chromeApi.storage.local, [overflowKey]) : {};
-    const state = store.readShortcutState(values, local[overflowKey]);
+    const read = await shortcutList.read();
+    const state = read.state;
     // A save from another device is still arriving; its next part reruns this.
     if (state.torn || !state.items.some((item) => item.type === 'folder')) return;
     const next = runtime.reconcile(state.items, buildNodeMap(await readBookmarkTree()));
@@ -239,28 +209,9 @@ function createSyncController(options: FolderSyncControllerOptions): FolderSyncC
     // site dragged out of a folder, whose bookmark it then removes). Writing
     // this older list over that save would lose the site, so a changed list
     // is read again instead.
-    const unchanged = async (): Promise<boolean> => {
-      const latest = await readItems(chromeApi, provider.area, store.SHORTCUT_STORAGE_KEYS.slice());
-      const latestLocal = sync ? await readItems(chromeApi, chromeApi.storage.local, [overflowKey]) : {};
-      return JSON.stringify(latest) === JSON.stringify(values) &&
-        JSON.stringify(latestLocal[overflowKey]) === JSON.stringify(local[overflowKey]);
-    };
-    if (!sync) {
-      if (generation !== revision) return;
-      if (!await unchanged()) { schedule(); return; }
-      await persistShortcutState(provider.area, nextState);
-      return;
-    }
-    const allSync = await readItems(chromeApi, chromeApi.storage.sync, null);
+    if (!shortcutList.isSameRead(read, await shortcutList.read())) { schedule(); return; }
     if (generation !== revision) return;
-    if (!await unchanged()) { schedule(); return; }
-    const usage = store.measureShortcutSyncUsage(allSync);
-    await persistShortcutState(chromeApi.storage.sync, nextState, {
-      overflowArea: chromeApi.storage.local,
-      maxTotalBytes: store.getShortcutSyncBudget({ ...usage, quotaBytes: chromeApi.storage.sync.QUOTA_BYTES }),
-      legacyKeysPresent: usage.legacyBytes > 0,
-      getLastError: () => chromeApi.runtime && chromeApi.runtime.lastError
-    });
+    await shortcutList.write(nextState);
   }
   function refresh(): Promise<void> {
     if (timer) clearTimeout(timer);
@@ -283,13 +234,7 @@ function createSyncController(options: FolderSyncControllerOptions): FolderSyncC
       const event = chromeApi.bookmarks[name];
       if (event) event.addListener(schedule);
     }
-    chromeApi.storage.onChanged.addListener((changes, area) => {
-      if (area === 'local' && changes[shortcutFolderBindings.key]) {
-        runtime.accept(changes[shortcutFolderBindings.key].newValue);
-        schedule();
-      } else if (changes[localPrimary.key] || changes[overflowKey] ||
-          (provider.isActiveAreaName(area) && store.SHORTCUT_STORAGE_KEYS.some((key) => changes[key]))) schedule();
-    });
+    settingsStore.subscribe([shortcutFolderBindings, newtabShortcutsLocalOverflow, ...NEWTAB_SHORTCUT_LIST_SETTINGS], schedule);
     refresh().catch(reportError);
   }
   return { start, refresh };

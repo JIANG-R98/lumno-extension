@@ -78,7 +78,7 @@ async function testOldAnswersDoNotReturn() {
   worker.answer = () => old.promise;
   const staleRequest = worker.icon('https://stale.example/');
   await new Promise((resolve) => setTimeout(resolve, 50));
-  worker.change(settings.faviconRequestBlacklist.key, []);
+  worker.change(settings.faviconRequestBlacklist.key, ['policy-1.example']);
   worker.answer = () => png(64, 5);
   assert.strictEqual(await worker.icon('https://stale.example/'), 5);
   old.resolve(png(64, 6));
@@ -91,7 +91,7 @@ async function testOldAnswersDoNotReturn() {
   worker.answer = () => lone.promise;
   const loneRequest = worker.icon('https://lone.example/');
   await new Promise((resolve) => setTimeout(resolve, 50));
-  worker.change(settings.faviconRequestBlacklist.key, []);
+  worker.change(settings.faviconRequestBlacklist.key, ['policy-2.example']);
   lone.resolve(png(64, 9));
   await loneRequest;
   worker.answer = () => png(64, 10);

@@ -34,7 +34,7 @@ assert.strictEqual(model.normalizeOpenTabSwitcherStateScriptResults(null), null)
 // Thumbnails.
 assert.strictEqual(model.readTabSwitcherThumbnailStatus('stale'), 'stale');
 assert.strictEqual(model.readTabSwitcherThumbnailStatus('weird'), '');
-assert.strictEqual(model.getTabSwitcherThumbnailStorageKey(7), `${model.TAB_SWITCHER_THUMBNAIL_KEY_PREFIX}7`);
+assert.strictEqual(model.getTabSwitcherThumbnailStorageKey(7), require('../../src/domain/settings/features.ts').tabSwitcherThumbnail.keyFor(7));
 assert.strictEqual(
   model.getThumbnailPersistSignature({ updatedAt: 2, capturedAt: 1, status: 'ok', url: 'https://a/', reason: 'r', dataUrl: 'data:abc' }),
   '2|1|ok|https://a/|r|8', 'the signature counts the image, not its bytes');

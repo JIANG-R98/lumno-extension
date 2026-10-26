@@ -3,7 +3,7 @@
 // platform/update-notice.ts, re-exported here for the surfaces.
 import * as LumnoFeatureHints from './ui/feature-hints';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
-import { UPDATE_NOTICE_DISPLAY_COUNT_STORAGE_PREFIX, UPDATE_NOTICE_MAX_DISPLAY_COUNT, RELEASE_DETAILS_URL, GITHUB_RELEASE_API_URL, GITHUB_RELEASE_PAGE_URL, normalizeVersionTag, formatVersionLabel, getReleaseTagCandidates, sanitizeText, extractReleaseTitleFromHtml, getCurrentVersionTag, buildReleaseDetailsUrl, normalizeUpdateNoticePayload, shouldShowUpdateNotice, normalizeUpdateNoticeEnabled, getUpdateNoticeDisplayCountKey, normalizeUpdateNoticeDisplayCount, getStoredUpdateNotice, getStoredUpdateNoticeEnabled, getStoredUpdateNoticeDisplayCount, setStoredUpdateNotice, fetchReleaseTitle, publishUpdateNotice } from '../platform/update-notice';
+import { UPDATE_NOTICE_MAX_DISPLAY_COUNT, RELEASE_DETAILS_URL, GITHUB_RELEASE_API_URL, GITHUB_RELEASE_PAGE_URL, normalizeVersionTag, formatVersionLabel, getReleaseTagCandidates, sanitizeText, extractReleaseTitleFromHtml, getCurrentVersionTag, buildReleaseDetailsUrl, normalizeUpdateNoticePayload, shouldShowUpdateNotice, normalizeUpdateNoticeEnabled, getUpdateNoticeDisplayCountKey, normalizeUpdateNoticeDisplayCount, getStoredUpdateNotice, getStoredUpdateNoticeEnabled, getStoredUpdateNoticeDisplayCount, setStoredUpdateNotice, fetchReleaseTitle, publishUpdateNotice } from '../platform/update-notice';
 import type { ReleaseFetch, UpdateNotice, UpdateNoticeChromeApi } from '../platform/update-notice';
 import type { StorageChanges } from '../domain/storage-port';
 import type { FeatureHintController, FeatureHintDefinition } from './ui/feature-hints';
@@ -398,7 +398,6 @@ function createUpdateNotice(options?: UpdateNoticeOptions | null): UpdateNoticeC
 export type { UpdateNoticeController, UpdateNoticeOptions, UpdateNoticeSurface };
 
 export {
-  UPDATE_NOTICE_DISPLAY_COUNT_STORAGE_PREFIX,
   UPDATE_NOTICE_MAX_DISPLAY_COUNT,
   RELEASE_DETAILS_URL,
   GITHUB_RELEASE_API_URL,

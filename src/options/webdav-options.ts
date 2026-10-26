@@ -499,7 +499,7 @@ function createController(options: WebDavControllerOptions) {
     const synced = LumnoSettings.webdavConnections.key;
     const dismissed = LumnoSettings.webdavDismissedConnections.key;
     const names = Object.keys(changes);
-    if ((area === 'local' && names.some((name) => name === key || name.startsWith(`${key}:`) || name === dismissed)) ||
+    if ((area === 'local' && names.some((name) => name === key || LumnoSettings.webdavConnectionStatus.idOf(name) !== null || name === dismissed)) ||
         (area === 'sync' && names.includes(synced))) {
       refresh().catch((error) => console.warn('[Lumno] WebDAV status refresh failed', error));
     }

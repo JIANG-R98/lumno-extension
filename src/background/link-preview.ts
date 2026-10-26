@@ -25,10 +25,10 @@ import type {
   PageReply,
   PageRequest
 } from '../domain/messages';
-import type { StorageItems } from '../domain/storage-port';
 import { createInjectedAppRun } from '../platform/injection';
 import type { StartCommand } from '../domain/injected-commands';
 import { linkPreviewSessions } from '../domain/settings/features';
+import type { SettingsStore } from '../platform/settings-store';
 
 type Rule = chrome.declarativeNetRequest.Rule;
 type HeaderInfo = chrome.declarativeNetRequest.HeaderInfo;
@@ -106,6 +106,9 @@ interface FrameSession {
 
 interface LinkPreviewServiceOptions {
   chromeApi?: typeof chrome | null;
+  // Where open previews are kept for a restarted worker; none keeps them in
+  // memory only.
+  settingsStore?: SettingsStore | null;
   now?: () => number;
   setTimeout?: (callback: () => void, delayMs: number) => TimerHandle;
   clearTimeout?: (timer: TimerHandle) => void;
@@ -318,6 +321,7 @@ function buildWorkerHeaderRule(domains: readonly string[]): Rule {
 function createLinkPreviewService(options?: LinkPreviewServiceOptions | null): Readonly<LinkPreviewService> {
   const config = options || {};
   const chromeApi = config.chromeApi || null;
+  const settingsStore = config.settingsStore || null;
   const now = typeof config.now === 'function' ? config.now : () => Date.now();
   const setTimer = config.setTimeout || ((callback: () => void, delayMs: number): TimerHandle => setTimeout(callback, delayMs));
   const clearTimer = config.clearTimeout || ((timer: TimerHandle): void => {
@@ -367,10 +371,7 @@ function createLinkPreviewService(options?: LinkPreviewServiceOptions | null): R
     return dnr && typeof dnr.updateSessionRules === 'function' ? dnr : null;
   }
 
-  function getSessionStorage(): chrome.storage.StorageArea | null {
-    const area = chromeApi && chromeApi.storage && chromeApi.storage.session;
-    return area && typeof area.get === 'function' && typeof area.set === 'function' ? area : null;
-  }
+
 
   function createSession(token: string, url: string): PreviewSession {
     const frameUrl = toPreviewFrameUrl(url);
@@ -397,8 +398,7 @@ function createLinkPreviewService(options?: LinkPreviewServiceOptions | null): R
 
   // Only open previews are kept: a press dies with the worker anyway.
   function persistSessions(): void {
-    const area = getSessionStorage();
-    if (!area) {
+    if (!settingsStore) {
       return;
     }
     const saved: Record<string, SavedSession> = {};
@@ -420,16 +420,15 @@ function createLinkPreviewService(options?: LinkPreviewServiceOptions | null): R
         lastFrameUrl: session.lastFrameUrl
       };
     });
-    void callback<void>((done) => area.set({ [linkPreviewSessions.key]: saved }, done));
+    void settingsStore.set(linkPreviewSessions, saved).catch(() => {});
   }
 
   async function restoreSessions(): Promise<void> {
-    const area = getSessionStorage();
-    if (!area) {
+    if (!settingsStore) {
       return;
     }
-    const result = await callback<StorageItems>((done) => area.get([linkPreviewSessions.key], done));
-    const saved = isRecord(result) ? result[linkPreviewSessions.key] : null;
+    await settingsStore.ready;
+    const saved = settingsStore.getStored(linkPreviewSessions);
     if (!isRecord(saved)) {
       return;
     }

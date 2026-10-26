@@ -5,7 +5,6 @@ const aggregateStorage = require('../../src/platform/aggregate-search-storage.ts
 const { loadBackground, wait } = require('../helpers/background-harness');
 const { aggregateSearches } = require('../../src/domain/settings/search.ts');
 
-const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_custom_2024_unique_';
 assert.strictEqual(
   aggregateSearch.resolveAggregateSearchAutoGroupEnabled(undefined, []),
   true,
@@ -122,19 +121,10 @@ function createDeferred() {
   return { promise, resolve, reject };
 }
 
-async function waitForDeferredCount(deferreds, expectedCount) {
-  for (let attempt = 0; attempt < 20 && deferreds.length < expectedCount; attempt += 1) {
-    await Promise.resolve();
-  }
-  assert.strictEqual(deferreds.length, expectedCount);
-}
-
 // The worker's provider loader, with the bundled provider list
-// (assets/data/site-search.json) and the stored custom providers answered
-// one request at a time.
+// (assets/data/site-search.json) answered one request at a time.
 async function createSiteSearchProviderCacheHarness() {
   const requests = [];
-  const customProviderRequests = [];
   let holdReads = false;
   const background = loadBackground({
     extensionUrls: true,
@@ -149,25 +139,6 @@ async function createSiteSearchProviderCacheHarness() {
       requests.push(request);
       return request.promise;
     },
-    configureChrome(chromeApi) {
-      const get = chromeApi.storage.sync.get;
-      chromeApi.storage.sync.get = (keys, callback) => {
-        const keyList = Array.isArray(keys) ? keys : [keys];
-        if (!holdReads || !keyList.includes(SITE_SEARCH_STORAGE_KEY)) {
-          return get(keys, callback);
-        }
-        const request = createDeferred();
-        customProviderRequests.push(request);
-        request.promise.then((items) => {
-          callback({ [SITE_SEARCH_STORAGE_KEY]: items });
-        }, (error) => {
-          chromeApi.runtime.lastError = { message: error.message };
-          callback(undefined);
-          chromeApi.runtime.lastError = null;
-        });
-        return undefined;
-      };
-    },
     exposeModules: {
       'src/background/search-suggestions-service.ts': ['loadSiteSearchProviders', 'invalidateSiteSearchProviderCache']
     }
@@ -181,8 +152,7 @@ async function createSiteSearchProviderCacheHarness() {
       load: background.exposed('loadSiteSearchProviders'),
       invalidate: background.exposed('invalidateSiteSearchProviderCache')
     },
-    requests,
-    customProviderRequests
+    requests
   };
 }
 
@@ -193,7 +163,7 @@ function providerList(key) {
 }
 
 async function testSiteSearchProviderCacheInvalidationRace() {
-  const { harness, requests, customProviderRequests } = await createSiteSearchProviderCacheHarness();
+  const { harness, requests } = await createSiteSearchProviderCacheHarness();
   const firstLoad = harness.load();
   assert.strictEqual(harness.load(), firstLoad, 'concurrent reads should share the current load');
 
@@ -203,13 +173,9 @@ async function testSiteSearchProviderCacheInvalidationRace() {
   assert.strictEqual(requests.length, 2);
 
   requests[1].resolve(providerList('new-provider'));
-  await waitForDeferredCount(customProviderRequests, 1);
-  customProviderRequests[0].resolve([]);
   assert.strictEqual((await secondLoad)[0].key, 'new-provider');
 
   requests[0].resolve(providerList('obsolete-provider'));
-  await waitForDeferredCount(customProviderRequests, 2);
-  customProviderRequests[1].resolve([]);
   const staleResult = await firstLoad;
   assert.strictEqual(
     staleResult[0].key,
@@ -224,23 +190,19 @@ async function testSiteSearchProviderCacheInvalidationRace() {
   assert.strictEqual(requests.length, 2, 'the published providers should be served without loading again');
 
   harness.invalidate();
-  const staleFailure = harness.load();
+  const staleLoad = harness.load();
   harness.invalidate();
   const latestLoad = harness.load();
   requests[3].resolve(providerList('latest-provider'));
-  await waitForDeferredCount(customProviderRequests, 3);
-  customProviderRequests[2].resolve([]);
   await latestLoad;
-  requests[2].resolve(providerList('stale-provider'));
-  await waitForDeferredCount(customProviderRequests, 4);
-  customProviderRequests[3].reject(new Error('stale provider load failed'));
-  await assert.rejects(staleFailure, /stale provider load failed/);
+  requests[2].reject(new Error('stale provider list unavailable'));
+  await staleLoad;
   assert.strictEqual(
     (await harness.load())[0].key,
     'latest-provider',
-    'an obsolete rejection must not clear the latest providers'
+    'an obsolete load that fails last must not clear the latest providers'
   );
-  assert.strictEqual(requests.length, 4, 'an obsolete rejection must not force the next read to load again');
+  assert.strictEqual(requests.length, 4, 'an obsolete failure must not force the next read to load again');
 }
 
 async function run() {

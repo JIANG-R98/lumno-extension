@@ -4,6 +4,8 @@ const { moduleScript } = require('../helpers/module-script');
 const linkPreview = require('../../src/background/link-preview.ts');
 const settings = require('../../src/domain/settings/index.ts');
 const { toPreviewFrameUrl } = require('../../src/domain/link-preview-frame-url.ts');
+const { linkPreviewSessions } = require('../../src/domain/settings/features.ts');
+const { createAreaSettingsStore } = require('../helpers/worker-settings');
 
 // The link preview: the background service that prepares and opens a
 // preview for a tab, and the content script that turns Shift+click on a link
@@ -290,18 +292,18 @@ async function testOpenPreviewOutlivesWorker() {
   const { chromeApi, calls, sessionRules } = createChromeMock({
     respond: surfaceResponder({ lumnoLinkPreviewPing: null })
   });
-  chromeApi.storage = {
-    session: {
-      get(keys, callback) {
-        callback(Object.fromEntries(keys.filter((key) => Object.hasOwn(stored, key)).map((key) => [key, stored[key]])));
-      },
-      set(values, callback) {
-        Object.assign(stored, JSON.parse(JSON.stringify(values)));
-        callback();
-      }
+  const session = {
+    get(keys, callback) {
+      callback(Object.fromEntries(keys.filter((key) => Object.hasOwn(stored, key)).map((key) => [key, stored[key]])));
+    },
+    set(values, callback) {
+      Object.assign(stored, JSON.parse(JSON.stringify(values)));
+      callback();
     }
   };
-  const first = linkPreview.createLinkPreviewService({ chromeApi });
+  // Each worker reads the saved sessions afresh.
+  const workerSettings = () => createAreaSettingsStore({ session, local: session }, [linkPreviewSessions]);
+  const first = linkPreview.createLinkPreviewService({ chromeApi, settingsStore: workerSettings() });
   await first.open({ id: 8, windowId: 1 }, 'https://example.com/a');
   const token = calls.sent[0].message.token;
   await bindPreviewFrame(first, calls, 8, 'https://example.com/a');
@@ -309,7 +311,7 @@ async function testOpenPreviewOutlivesWorker() {
   chromeApi.tabs.sendMessage = (tabId, message, sendOptions, callback) => {
     callback(message.action === 'lumnoLinkPreviewPing' ? { token } : true);
   };
-  const woken = linkPreview.createLinkPreviewService({ chromeApi });
+  const woken = linkPreview.createLinkPreviewService({ chromeApi, settingsStore: workerSettings() });
   woken.attach();
   await woken.noteFrameCommitted(frameSender(8, 'https://other.test/x'));
   assert.deepStrictEqual(allowedDomains(sessionRules, 8), ['example.com', 'other.test'],

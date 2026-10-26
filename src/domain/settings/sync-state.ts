@@ -1,6 +1,6 @@
 // How settings are kept and synced: the area the user keeps them in, WebDAV
 // connections and status, the last sync, and the storage schema version.
-import { defineSetting } from './define';
+import { defineSetting, defineSettingFamily } from './define';
 import { custom, flag, opaque } from './schema';
 
 // On when the user keeps settings on this device instead of browser sync.
@@ -14,6 +14,14 @@ const localPrimary = defineSetting({
 
 const webdavStatus = defineSetting({
   key: '_x_extension_webdav_status_2026_unique_',
+  area: 'device',
+  schema: opaque()
+});
+
+// The status of each further WebDAV connection, by connection id; the first
+// connection keeps webdavStatus.
+const webdavConnectionStatus = defineSettingFamily({
+  prefix: '_x_extension_webdav_status_2026_unique_:',
   area: 'device',
   schema: opaque()
 });
@@ -74,6 +82,7 @@ export {
   localPrimary,
   settingsSchemaVersion,
   syncMeta,
+  webdavConnectionStatus,
   webdavConnections,
   webdavDismissedConnections,
   webdavStatus

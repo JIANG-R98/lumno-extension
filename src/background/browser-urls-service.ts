@@ -11,15 +11,13 @@ import * as BACKGROUND_TAB_GROUPS from './tab-groups';
 import * as EXTENSION_ROUTES from '../domain/extension-routes';
 import * as SEARCH_RESULT_TABS from './search-result-tabs';
 import * as SETTINGS from '../domain/settings';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
-import { restrictedActionAutoBrowserSettingDone, restrictedAction } from '../domain/settings';
 import {
   areBackgroundSettingsLoaded,
   isRestrictedActionAutoBrowserSettingDone,
   logHotkeyDebug,
   markRestrictedActionAutoSelected,
-  storageArea,
-  whenBackgroundSettingsReady
+  whenBackgroundSettingsReady,
+  workerSettings
 } from './worker-context';
 import type { CreatedTabCallback, TabGroupContext, TabLike } from './tab-groups';
 import type { TabPlacement } from './search-result-tabs';
@@ -105,13 +103,11 @@ export function createTabWithSourceGroup(
 }
 
 export function resolveSearchResultTabPlacement(sourceTab: chrome.tabs.Tab | null | undefined): Promise<TabPlacement> {
-  return LumnoSettingsStorage.readStorageValue(storageArea, chrome, SETTINGS.searchResultTabPosition.key)
-    .catch(() => undefined)
-    .then((value) => SEARCH_RESULT_TABS.resolvePlacement(
-      chrome,
-      sourceTab,
-      SETTINGS.searchResultTabPosition.parse(value)
-    ));
+  return workerSettings.ready.then(() => SEARCH_RESULT_TABS.resolvePlacement(
+    chrome,
+    sourceTab,
+    workerSettings.get(SETTINGS.searchResultTabPosition)
+  ));
 }
 
 // Opens a result tab where the person chose (next to the source tab or at
@@ -288,12 +284,7 @@ function setRestrictedActionFromBrowserNewtabProvider(
     return;
   }
   const url = getResolvedTabUrl(tab);
-  markRestrictedActionAutoSelected();
-  const payload = {
-    [restrictedAction.key]: 'none',
-    [restrictedActionAutoBrowserSettingDone.key]: true
-  };
-  void storageArea.set(payload);
+  void markRestrictedActionAutoSelected();
   logHotkeyDebug('restricted-action-auto-browser-setting', {
     providerType,
     stage: stage || '',

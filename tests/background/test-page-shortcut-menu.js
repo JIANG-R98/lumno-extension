@@ -8,6 +8,7 @@ const siteDisplayName = require('../../src/domain/site-display-name.ts');
 const menu = require('../../src/background/page-shortcut-menu.ts');
 const { loadBackground, wait } = require('../helpers/background-harness');
 const { injectedModules } = require('../helpers/injected-modules');
+const { createWorkerSettings } = require('../helpers/worker-settings');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const LANGUAGE_KEY = settings.language.key;
@@ -77,11 +78,10 @@ function device(initial = {}, options = {}) {
   }
   const controller = menu.createController({
     chrome,
-    settings,
+    ...createWorkerSettings(chrome),
     shortcuts,
     siteDisplayName,
-    loadLocaleMessages: async (locale) => readMessages(locale),
-    themeStorageKey: THEME_KEY
+    loadLocaleMessages: async (locale) => readMessages(locale)
   });
   return {
     chrome,

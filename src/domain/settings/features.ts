@@ -1,8 +1,9 @@
 // The features the worker and content scripts run, and the state each keeps:
 // picture-in-picture, the tab switcher, pinned tab recovery, link preview,
 // the selection toolbar, and the update and engagement notices.
-import { defineSetting } from './define';
-import { custom, flag, isOneOf, opaque } from './schema';
+import { defineSetting, defineSettingFamily } from './define';
+import type { PipKind, PipOwner } from '../messages';
+import { custom, flag, isOneOf, isRecord, opaque } from './schema';
 
 type SelectionQuickActionsProvider =
   | 'gpt' | 'gm' | 'dbai' | 'qw' | 'yb' | 'mx' | 'ds' | 'kimi' | 'cp' | 'grok' | 'qwen' | 'ais';
@@ -36,11 +37,37 @@ const documentPipEnabled = defineSetting({
   schema: flag(false)
 });
 
-// Which tab holds the picture-in-picture window this browser session.
+function normalizePipOwnerRecord(value: unknown): PipOwner | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const kind: PipKind | '' = value.kind === 'document' ? 'document' : (value.kind === 'video' ? 'video' : '');
+  const tabId = Number(value.tabId);
+  if (!kind || !Number.isInteger(tabId) || tabId < 0) {
+    return null;
+  }
+  const frameId = Number.isInteger(Number(value.frameId)) ? Number(value.frameId) : 0;
+  const token = typeof value.token === 'string' && value.token
+    ? value.token
+    : '';
+  if (!token) {
+    return null;
+  }
+  return {
+    kind: kind,
+    tabId: tabId,
+    frameId: frameId,
+    token: token,
+    url: typeof value.url === 'string' ? value.url : '',
+    updatedAt: Number.isFinite(Number(value.updatedAt)) ? Number(value.updatedAt) : Date.now()
+  };
+}
+
+// Which frame holds the picture-in-picture window this browser session.
 const globalPipOwner = defineSetting({
   key: '_x_lumno_global_pip_owner_2026_',
   area: 'session',
-  schema: opaque()
+  schema: custom(normalizePipOwnerRecord)
 });
 
 const tabSwitcherEnabled = defineSetting({
@@ -60,6 +87,28 @@ const tabSwitcherCurrentWindowOnly = defineSetting({
 // The switcher's tab thumbnails, and how often each tab was switched to.
 const tabSwitcherThumbnails = defineSetting({
   key: '_x_extension_tab_switcher_state_2026_unique_',
+  area: 'session',
+  schema: opaque()
+});
+
+// One thumbnail per tab, so a switch rewrites only the thumbnails that
+// changed; tabSwitcherThumbnails lists which tabs have one.
+const tabSwitcherThumbnail = defineSettingFamily({
+  prefix: '_x_extension_tab_switcher_thumbnail_2026_unique_:',
+  area: 'session',
+  schema: opaque()
+});
+
+// The worker's record of each tab's top frame navigation and of the search
+// overlay loading in it, so a restarted worker can finish what it started.
+const overlayNavigationState = defineSettingFamily({
+  prefix: '_x_extension_overlay_navigation_state_2026_unique_:',
+  area: 'session',
+  schema: opaque()
+});
+
+const overlayLoadingRecord = defineSettingFamily({
+  prefix: '_x_extension_overlay_loading_record_2026_unique_:',
   area: 'session',
   schema: opaque()
 });
@@ -145,6 +194,13 @@ const updateNoticeState = defineSetting({
   schema: opaque()
 });
 
+// How many times each release's notice was shown, by version.
+const updateNoticeDisplayCount = defineSettingFamily({
+  prefix: '_x_lumno_update_notice_display_count_2026_',
+  area: 'preferences',
+  schema: opaque()
+});
+
 // When the release page last opened after an update.
 const releasePageOpened = defineSetting({
   key: '_x_lumno_release_page_opened_2026_unique_',
@@ -168,6 +224,8 @@ export {
   globalPipOwner,
   linkPreviewEnabled,
   linkPreviewSessions,
+  overlayLoadingRecord,
+  overlayNavigationState,
   pinnedTabRecoveryEnabled,
   pinnedTabSnapshot,
   releasePageOpened,
@@ -177,7 +235,9 @@ export {
   tabSwitchStats,
   tabSwitcherCurrentWindowOnly,
   tabSwitcherEnabled,
+  tabSwitcherThumbnail,
   tabSwitcherThumbnails,
+  updateNoticeDisplayCount,
   updateNoticeEnabled,
   updateNoticeState
 };

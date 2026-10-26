@@ -21,10 +21,10 @@ import {
   siteSearchDisabled,
   siteSearchCustom
 } from '../domain/settings';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
 import { loadWorkerLazyModule } from '../platform/worker-lazy';
 import { readPinyinApi } from '../domain/search/pinyin-api';
-import { PINYIN_DATA_SCRIPT_PATH, getImportScripts, localStorageArea, normalizeHost, storageArea } from './worker-context';
+import { PINYIN_DATA_SCRIPT_PATH, getImportScripts, normalizeHost, workerSettings } from './worker-context';
+import { deriveFromSetting } from '../platform/settings-store';
 import {
   getFaviconFallbackHost,
   getHostFaviconUrl,
@@ -225,33 +225,9 @@ let siteSearchPromise: Promise<SiteSearchProvider[]> | null = null;
 
 let siteSearchLoadGeneration = 0;
 
-let searchBlacklistCache: BlacklistRule[] | null = null;
+const getSearchBlacklistRules = deriveFromSetting(workerSettings, searchBlacklist, (stored) => normalizeSearchBlacklistItems(stored));
 
-let searchBlacklistPromise: Promise<BlacklistRule[]> | null = null;
-
-let searchResultSourceTypesCache: SearchSourceType[] | null = null;
-
-let searchResultSourceTypesPromise: Promise<SearchSourceType[]> | null = null;
-
-let searchSelectionStatsCache: SearchSelectionStats | null = null;
-
-let searchSelectionStatsPromise: Promise<SearchSelectionStats> | null = null;
-
-// Storage listeners call these when the stored values change elsewhere.
-export function invalidateSearchBlacklistCache(): void {
-  searchBlacklistCache = null;
-  searchBlacklistPromise = null;
-}
-
-export function invalidateSearchResultSourceTypesCache(): void {
-  searchResultSourceTypesCache = null;
-  searchResultSourceTypesPromise = null;
-}
-
-export function replaceSearchSelectionStatsCache(stats: SearchSelectionStats): void {
-  searchSelectionStatsCache = stats;
-  searchSelectionStatsPromise = null;
-}
+const getSearchSelectionStats = deriveFromSetting(workerSettings, searchSelectionStats, (stored) => normalizeSearchSelectionStats(stored));
 
 const SEARCH_ENGINE_SUGGEST_TIMEOUT_MS = 900;
 
@@ -319,9 +295,6 @@ const BACKGROUND_TITLE_PINYIN_CACHE_MAX_ENTRIES = 6144;
 let titleTextMatcher: SearchTextMatcher | null = null;
 
 // Fuzzy pinyin (模糊音) is off unless the reader turns it on in Options.
-let searchFuzzyPinyinEnabled = false;
-let searchFuzzyPinyinEnabledLoaded = false;
-let searchFuzzyPinyinEnabledPromise: Promise<boolean> | null = null;
 
 const SEARCH_ENGINE_DEFS: readonly SearchEngineDef[] = [
   {
@@ -437,8 +410,8 @@ export function setDefaultSearchEngineState(nextState: unknown, shouldPersist: b
     updatedAt: Number(nextState.updatedAt) || Date.now()
   };
   defaultSearchEngineState = updated;
-  if (shouldPersist && storageArea) {
-    storageArea.set({ [defaultSearchEngine.key]: updated });
+  if (shouldPersist) {
+    void workerSettings.set(defaultSearchEngine, updated);
   }
 }
 
@@ -448,12 +421,9 @@ export function refreshDefaultSearchEngineState(): void {
 }
 
 function loadDefaultSearchEngineState(): Promise<DefaultSearchEngineState> {
-  if (!storageArea) {
-    return Promise.resolve(defaultSearchEngineState);
-  }
   return new Promise((resolve) => {
-    storageArea.get([defaultSearchEngine.key], (result) => {
-      const stored = result ? result[defaultSearchEngine.key] : null;
+    void workerSettings.ready.then(() => {
+      const stored = workerSettings.get(defaultSearchEngine);
       if (isRecord(stored) && stored.id) {
         if (SEARCH_UTILS.isRetiredSearchEngineState({
           id: typeof stored.id === 'string' ? stored.id : undefined,
@@ -739,19 +709,12 @@ export function sanitizeSiteSearchProviders(items: unknown): NormalizedSiteSearc
 }
 
 function loadCustomSiteSearchProviders(): Promise<NormalizedSiteSearchProvider[]> {
-  return LumnoSettingsStorage.readStorageValue(
-    storageArea,
-    chrome,
-    siteSearchCustom.key
-  ).then(sanitizeSiteSearchProviders);
+  return workerSettings.ready.then(() => sanitizeSiteSearchProviders(workerSettings.get(siteSearchCustom)));
 }
 
 function loadDisabledSiteSearchKeys(): Promise<string[]> {
-  return LumnoSettingsStorage.readStorageValue(
-    storageArea,
-    chrome,
-    siteSearchDisabled.key
-  ).then((value) => {
+  return workerSettings.ready.then(() => {
+    const value = workerSettings.get(siteSearchDisabled);
     const items: unknown[] = Array.isArray(value) ? value : [];
     return items.map((item) => String(item).toLowerCase()).filter(Boolean);
   });
@@ -764,104 +727,25 @@ function normalizeSearchBlacklistItems(items: unknown): BlacklistRule[] {
   return [];
 }
 
-function areStringArraysEqual(a: unknown, b: unknown): boolean {
-  const left: unknown[] = Array.isArray(a) ? a : [];
-  const right: unknown[] = Array.isArray(b) ? b : [];
-  if (left.length !== right.length) {
-    return false;
-  }
-  for (let i = 0; i < left.length; i += 1) {
-    if (String(left[i]) !== String(right[i])) {
-      return false;
-    }
-  }
-  return true;
-}
 
 function loadSearchResultSourceTypes(): Promise<SearchSourceType[]> {
-  if (searchResultSourceTypesCache) {
-    return Promise.resolve(searchResultSourceTypesCache);
-  }
-  if (searchResultSourceTypesPromise) {
-    return searchResultSourceTypesPromise;
-  }
-  searchResultSourceTypesPromise = new Promise<SearchSourceType[]>((resolve) => {
-    if (!storageArea) {
-      const defaults = SETTINGS.searchResultSourceTypes.parse(null);
-      searchResultSourceTypesCache = defaults;
-      resolve(defaults);
-      return;
-    }
-    storageArea.get([searchResultSourceTypes.key], (result) => {
-      const raw = result && result[searchResultSourceTypes.key];
-      const normalized = SETTINGS.searchResultSourceTypes.parse(raw);
-      searchResultSourceTypesCache = normalized;
-      if (!areStringArraysEqual(raw, normalized)) {
-        storageArea.set({ [searchResultSourceTypes.key]: normalized });
-      }
-      resolve(normalized);
-    });
-  }).finally(() => {
-    searchResultSourceTypesPromise = null;
-  });
-  return searchResultSourceTypesPromise;
+  return workerSettings.ready.then(() => workerSettings.get(searchResultSourceTypes));
 }
 
 function loadSearchFuzzyPinyinEnabled(): Promise<boolean> {
-  if (searchFuzzyPinyinEnabledLoaded) {
-    return Promise.resolve(searchFuzzyPinyinEnabled);
-  }
-  if (searchFuzzyPinyinEnabledPromise) {
-    return searchFuzzyPinyinEnabledPromise;
-  }
-  searchFuzzyPinyinEnabledPromise = LumnoSettingsStorage.readStorageValue(
-    storageArea,
-    chrome,
-    SETTINGS.searchFuzzyPinyinEnabled.key
-  )
-    .catch(() => undefined)
-    .then((value) => {
-      setSearchFuzzyPinyinEnabled(SETTINGS.searchFuzzyPinyinEnabled.parse(value));
-      return searchFuzzyPinyinEnabled;
-    })
-    .finally(() => {
-      searchFuzzyPinyinEnabledPromise = null;
-    });
-  return searchFuzzyPinyinEnabledPromise;
+  return workerSettings.ready.then(() => workerSettings.get(SETTINGS.searchFuzzyPinyinEnabled));
 }
 
 // Titles were indexed with the readings of the old choice, so they are
 // indexed again.
-export function setSearchFuzzyPinyinEnabled(enabled: unknown): void {
-  const next = enabled === true;
-  if (searchFuzzyPinyinEnabledLoaded && next !== searchFuzzyPinyinEnabled && titleTextMatcher) {
+workerSettings.subscribe(SETTINGS.searchFuzzyPinyinEnabled, () => {
+  if (titleTextMatcher) {
     titleTextMatcher.clear();
   }
-  searchFuzzyPinyinEnabled = next;
-  searchFuzzyPinyinEnabledLoaded = true;
-}
+});
 
 function loadSearchBlacklistItems(): Promise<BlacklistRule[]> {
-  if (searchBlacklistCache) {
-    return Promise.resolve(searchBlacklistCache);
-  }
-  if (searchBlacklistPromise) {
-    return searchBlacklistPromise;
-  }
-  searchBlacklistPromise = new Promise<BlacklistRule[]>((resolve) => {
-    if (!storageArea) {
-      resolve([]);
-      return;
-    }
-    storageArea.get([searchBlacklist.key], (result) => {
-      const items = normalizeSearchBlacklistItems(result && result[searchBlacklist.key]);
-      searchBlacklistCache = items;
-      resolve(items);
-    });
-  }).finally(() => {
-    searchBlacklistPromise = null;
-  });
-  return searchBlacklistPromise;
+  return workerSettings.ready.then(getSearchBlacklistRules);
 }
 
 export function normalizeSearchSelectionStats(rawStats: unknown): SearchSelectionStats {
@@ -869,42 +753,12 @@ export function normalizeSearchSelectionStats(rawStats: unknown): SearchSelectio
 }
 
 function loadSearchSelectionStats(): Promise<SearchSelectionStats> {
-  if (searchSelectionStatsCache) {
-    return Promise.resolve(searchSelectionStatsCache);
-  }
-  if (searchSelectionStatsPromise) {
-    return searchSelectionStatsPromise;
-  }
-  searchSelectionStatsPromise = new Promise<SearchSelectionStats>((resolve) => {
-    if (!localStorageArea) {
-      const emptyStats = normalizeSearchSelectionStats(null);
-      searchSelectionStatsCache = emptyStats;
-      resolve(emptyStats);
-      return;
-    }
-    localStorageArea.get([searchSelectionStats.key], (result) => {
-      const stats = normalizeSearchSelectionStats(result && result[searchSelectionStats.key]);
-      searchSelectionStatsCache = stats;
-      resolve(stats);
-    });
-  }).finally(() => {
-    searchSelectionStatsPromise = null;
-  });
-  return searchSelectionStatsPromise;
+  return workerSettings.ready.then(getSearchSelectionStats);
 }
 
 function saveSearchSelectionStats(stats: SearchSelectionStats): Promise<boolean> {
-  const normalizedStats = normalizeSearchSelectionStats(stats);
-  searchSelectionStatsCache = normalizedStats;
-  return new Promise((resolve) => {
-    if (!localStorageArea) {
-      resolve(false);
-      return;
-    }
-    localStorageArea.set({ [searchSelectionStats.key]: normalizedStats }, () => {
-      resolve(!(chrome.runtime && chrome.runtime.lastError));
-    });
-  });
+  return workerSettings.set(searchSelectionStats, normalizeSearchSelectionStats(stats))
+    .then(() => true, () => false);
 }
 
 function shouldRecordSearchSuggestionSelectionPayload(selection: unknown): selection is Record<string, unknown> {
@@ -1005,6 +859,8 @@ export function invalidateSiteSearchProviderCache(): void {
   siteSearchCache = null;
   siteSearchPromise = null;
 }
+
+workerSettings.subscribe([siteSearchCustom, siteSearchDisabled], invalidateSiteSearchProviderCache);
 
 export function loadSiteSearchProviders(): Promise<SiteSearchProvider[]> {
   if (siteSearchCache) {
@@ -1631,7 +1487,7 @@ function getTitleHanReadings(_text: string, characters: string[]): string[][] | 
   if (!pinyinApi) {
     return null;
   }
-  if (!searchFuzzyPinyinEnabled) {
+  if (!workerSettings.get(SETTINGS.searchFuzzyPinyinEnabled)) {
     return characters.map((character) => getHanCharacterReadings(pinyinApi, character));
   }
   return characters.map((character) => {

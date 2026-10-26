@@ -3,31 +3,27 @@
 // first, this device's overflow record for whatever does not fit.
 import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
 import * as LumnoSettings from '../domain/settings';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoSiteDisplayName from '../domain/site-display-name';
-import * as LumnoShortcutStorage from '../platform/shortcut-storage';
-import { callStorage, isRecord } from '../platform/storage-call';
+import { isRecord } from '../platform/storage-call';
+import { createShortcutListStorage } from '../platform/shortcut-list-storage';
 import type { ProviderStorageRuntime } from '../platform/settings-storage';
+import type { SettingsStore } from '../platform/settings-store';
 import type { LocaleMessage, PageShortcutResult } from '../domain/messages';
-import type { StorageItems, StorageKeys } from '../domain/storage-port';
 import { createInjectedAppRun } from '../platform/injection';
 import type { PageShortcutToastCommand } from '../domain/injected-commands';
-import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
+import { themeMode } from '../domain/settings/appearance';
+import { language } from '../domain/settings/locale';
+import { webdavStatus } from '../domain/settings/sync-state';
 
 interface PageShortcutMenuOptions {
   chrome?: typeof chrome;
-  settings?: typeof LumnoSettings;
+  // The worker's settings: the language, the theme the page toast follows,
+  // and the WebDAV status.
+  settingsStore: SettingsStore;
   shortcuts?: typeof LumnoNewtabShortcutsStore;
   siteDisplayName?: typeof LumnoSiteDisplayName;
-  provider?: ProviderStorageRuntime | null;
+  provider: ProviderStorageRuntime;
   loadLocaleMessages?: (locale: string) => Promise<Record<string, LocaleMessage>>;
-  // The theme the page toast follows.
-  themeStorageKey?: string;
-}
-
-// An area that reads like chrome.storage.
-interface StorageReader {
-  get(keys: StorageKeys, callback: (items: StorageItems | undefined) => void): unknown;
 }
 
 interface PageToShortcut {
@@ -62,42 +58,30 @@ const MENU_ITEM_ID = 'lumno-add-page-shortcut';
 const DOCUMENT_URL_PATTERNS: readonly string[] = Object.freeze(['http://*/*', 'https://*/*']);
 const MENU_TITLE_FALLBACK = 'Add to Lumno New Tab shortcuts';
 
-function createController(options?: PageShortcutMenuOptions | null): PageShortcutMenu {
-  const opts = options || {};
+function createController(options: PageShortcutMenuOptions): PageShortcutMenu {
+  const opts = options;
   const chromeApi = opts.chrome || globalThis.chrome;
-  const settings = opts.settings || LumnoSettings;
+  const settingsStore = opts.settingsStore;
   const store = opts.shortcuts || LumnoNewtabShortcutsStore;
   const siteDisplayName = opts.siteDisplayName || LumnoSiteDisplayName;
-  const provider = opts.provider || LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
+  const provider = opts.provider;
+  const shortcutList = createShortcutListStorage({ chromeApi, provider });
   const loadLocaleMessages = typeof opts.loadLocaleMessages === 'function'
     ? opts.loadLocaleMessages
     : () => Promise.resolve({});
-  const themeStorageKey = String(opts.themeStorageKey || '');
-  const overflowKey = NewtabShortcutSettings.newtabShortcutsLocalOverflow.key;
   let chain: Promise<unknown> = Promise.resolve();
 
   function getLastError(): chrome.runtime.LastError | null {
     return chromeApi.runtime && chromeApi.runtime.lastError ? chromeApi.runtime.lastError : null;
   }
 
-  // Reads keys from an area; rejects with the storage error.
-  async function read(area: StorageReader, keys: StorageKeys): Promise<StorageItems> {
-    const result = await callStorage(chromeApi, (done) => area.get(keys, done));
-    return isRecord(result) ? result : {};
-  }
-
-  async function readProviderValue(key: string): Promise<unknown> {
-    await provider.ready;
-    const values = await read(provider.area, [key]).catch((): StorageItems => ({}));
-    return values[key];
-  }
-
   async function getMessages(): Promise<Record<string, LocaleMessage>> {
-    const mode = await readProviderValue(settings.language.key);
+    await settingsStore.ready;
+    const mode = settingsStore.get(language);
     const uiLanguage = chromeApi.i18n && typeof chromeApi.i18n.getUILanguage === 'function'
       ? chromeApi.i18n.getUILanguage()
       : 'en';
-    const locale = settings.normalizeLocale(!mode || mode === 'system' ? uiLanguage : mode);
+    const locale = LumnoSettings.normalizeLocale(!mode || mode === 'system' ? uiLanguage : mode);
     return (await loadLocaleMessages(locale)) || {};
   }
 
@@ -159,21 +143,16 @@ function createController(options?: PageShortcutMenuOptions | null): PageShortcu
   }
 
   async function isWebDavSyncEnabled(): Promise<boolean> {
-    const key = settings.webdavStatus.key;
-    if (!key || !chromeApi.storage.local) return false;
-    const values = await read(chromeApi.storage.local, [key]).catch((): StorageItems => ({}));
-    const status = values[key];
+    await settingsStore.ready;
+    const status = settingsStore.get(webdavStatus);
     return isRecord(status) && status.enabled === true;
   }
+
 
   // Adds the page to the end of the last group, as the New Tab does for a
   // site added from its context menus.
   async function addPage(page: PageToShortcut, messages: Record<string, LocaleMessage>): Promise<AddResult> {
-    await provider.ready;
-    const sync = provider.getActiveAreaName() === 'sync';
-    const values = await read(provider.area, store.SHORTCUT_STORAGE_KEYS.slice());
-    const local = sync ? await read(chromeApi.storage.local, [overflowKey]) : {};
-    const state = store.readShortcutState(values, local[overflowKey]);
+    const { state } = await shortcutList.read();
     const shortcut = store.createShortcutRecord({
       title: getShortcutTitle(page.url, page.title, messages),
       url: page.url
@@ -188,17 +167,7 @@ function createController(options?: PageShortcutMenuOptions | null): PageShortcu
       items: [...state.items, groupId ? { ...shortcut, groupId } : shortcut],
       migratedAt: state.migratedAt
     };
-    if (!sync) {
-      await LumnoShortcutStorage.persistShortcutState(provider.area, nextState);
-      return { status: 'added', localOnly: false };
-    }
-    const usage = store.measureShortcutSyncUsage(await read(chromeApi.storage.sync, null));
-    const result = await LumnoShortcutStorage.persistShortcutState(chromeApi.storage.sync, nextState, {
-      overflowArea: chromeApi.storage.local,
-      maxTotalBytes: store.getShortcutSyncBudget({ ...usage, quotaBytes: chromeApi.storage.sync.QUOTA_BYTES }),
-      legacyKeysPresent: usage.legacyBytes > 0,
-      getLastError
-    });
+    const result = await shortcutList.write(nextState);
     return { status: 'added', localOnly: result.localOnlyIds.includes(shortcut.id) };
   }
 
@@ -236,14 +205,15 @@ function createController(options?: PageShortcutMenuOptions | null): PageShortcu
   // store page, a PDF viewer) shows none; resolves to whether it showed.
   async function showToast(tabId: unknown, toast: PageToast | null | undefined): Promise<boolean> {
     if (!chromeApi.scripting || typeof tabId !== 'number' || !toast || !toast.message) return false;
-    const themeMode = themeStorageKey ? await readProviderValue(themeStorageKey) : '';
+    await settingsStore.ready;
+    const theme = settingsStore.get(themeMode);
     try {
       const command: PageShortcutToastCommand = {
         type: 'show',
         message: toast.message,
         error: toast.error === true,
         duration: toast.duration,
-        themeMode: String(themeMode || 'system')
+        themeMode: theme
       };
       const results = await chromeApi.scripting.executeScript(
         createInjectedAppRun(chromeApi.runtime, { tabId }, ['page-shortcut-toast'], command)
@@ -300,11 +270,8 @@ function createController(options?: PageShortcutMenuOptions | null): PageShortcu
     chromeApi.contextMenus.onClicked.addListener((info, tab) => {
       handleClick(info, tab);
     });
-    chromeApi.storage.onChanged.addListener((changes, area) => {
-      if (changes[settings.localPrimary.key] ||
-          (provider.isActiveAreaName(area) && changes[settings.language.key])) {
-        syncMenu().catch(() => {});
-      }
+    settingsStore.subscribe(language, () => {
+      syncMenu().catch(() => {});
     });
     syncMenu().catch(() => {});
   }

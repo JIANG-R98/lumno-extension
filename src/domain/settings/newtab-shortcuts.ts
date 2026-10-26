@@ -181,6 +181,8 @@ const NEWTAB_SHORTCUTS_LEGACY_SETTINGS = Object.freeze([
   newtabShortcutsLegacyChunk3
 ]);
 
+// Every item the shortcut list is stored in, the older flat list included.
+const NEWTAB_SHORTCUT_LIST_SETTINGS = Object.freeze([...NEWTAB_SHORTCUTS_GROUP_SETTINGS, ...NEWTAB_SHORTCUTS_LEGACY_SETTINGS]);
 const NEWTAB_SHORTCUTS_GROUP_KEYS: readonly string[] = Object.freeze(NEWTAB_SHORTCUTS_GROUP_SETTINGS.map((setting) => setting.key));
 const NEWTAB_SHORTCUTS_LEGACY_KEYS: readonly string[] = Object.freeze(NEWTAB_SHORTCUTS_LEGACY_SETTINGS.map((setting) => setting.key));
 
@@ -227,6 +229,7 @@ function inferNewtabShortcutColumnsFromWidth(value: unknown, options?: ShortcutC
 }
 
 export {
+  NEWTAB_SHORTCUT_LIST_SETTINGS,
   NEWTAB_SHORTCUTS_GROUP_KEYS,
   NEWTAB_SHORTCUTS_GROUP_SETTINGS,
   NEWTAB_SHORTCUTS_LEGACY_KEYS,

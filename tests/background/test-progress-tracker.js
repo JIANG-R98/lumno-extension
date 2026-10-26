@@ -3,6 +3,7 @@ const progressMatch = require('../../src/domain/progress-match.ts');
 const progressHistory = require('../../src/domain/progress-history.ts');
 const { createProgressTracker } = require('../../src/background/progress-tracker.ts');
 const recentSiteSettings = require('../../src/domain/settings/recent-sites.ts');
+const { createAreaSettingsStore } = require('../helpers/worker-settings');
 
 const PINNED_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
 const HISTORY_KEY = recentSiteSettings.progressHistory.key;
@@ -63,9 +64,7 @@ function createHarness(pinned, options = {}) {
     chromeApi,
     progressMatch,
     progressHistory,
-    getPinnedArea: () => syncArea,
-    historyArea: localArea,
-    pinnedKey: PINNED_KEY,
+    settingsStore: createAreaSettingsStore({ sync: syncArea, local: localArea }),
     isEnabled: () => enabled,
     dwellMs: 1000,
     now: () => 5000,

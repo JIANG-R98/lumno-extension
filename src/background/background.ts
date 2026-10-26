@@ -9,7 +9,6 @@ import '../domain/shortcut-key-matcher';
 import '../shared/favicon/favicon-theme';
 import '../domain/extension-routes';
 import './command-target-policy';
-import * as SETTINGS from '../domain/settings';
 import * as LumnoSettings from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
 import * as LumnoSettingsMigration from '../platform/settings-migration';
@@ -71,8 +70,6 @@ import { pageShortcutMenuController, startProgressTracking } from './worker-cont
 import './overlay-loading-lifecycle';
 import * as DEV_EXTENSION_STARTUP from './dev-extension-startup';
 import {
-  applyTabSwitcherEnabledSetting,
-  applyTabSwitcherCurrentWindowOnlySetting,
   clearSwitcherThumbnailPriority,
   ensureTabSwitcherStateLoaded,
   flushPendingTabSwitcherState,
@@ -87,21 +84,26 @@ import {
 } from './tab-switcher-service';
 import { registerTabSwitcherExtensionPagePortConnection } from './tab-switcher-extension-page';
 import {
-  applyPinnedTabRecoverySetting,
   flushPendingPinnedTabSnapshot,
   restorePinnedTabsFromSnapshotOnStartup,
   schedulePersistPinnedTabSnapshot
 } from './pinned-tab-recovery';
 import {
+  SITE_SEARCH_SHORTCUT_ICON_SETTINGS,
   getBackgroundFaviconCacheRuntime,
-  invalidateFaviconEnhancedFetchEnabledCache,
-  invalidateFaviconRequestBlacklistCache,
-  invalidateShortcutFaviconPolicyCache,
-  invalidateSiteSearchShortcutIconSources,
-  isSiteSearchShortcutIconStorageChange,
   markFaviconDirtyForUrl
 } from './favicon-service';
-import { clearPendingSearch, getSiteSearchProviderEntryUrl, invalidateSearchBlacklistCache, invalidateSearchResultSourceTypesCache, invalidateSiteSearchProviderCache, normalizeSearchSelectionStats, pendingSearchAt, pendingSearchGroupContext, pendingSearchTabId, refreshDefaultSearchEngineState, replaceSearchSelectionStatsCache, setPendingSearchTabId, setSearchFuzzyPinyinEnabled, updateDefaultSearchEngineFromUrl, warmSiteSearchProviderIcons } from './search-suggestions-service';
+import {
+  clearPendingSearch,
+  getSiteSearchProviderEntryUrl,
+  pendingSearchAt,
+  pendingSearchGroupContext,
+  pendingSearchTabId,
+  refreshDefaultSearchEngineState,
+  setPendingSearchTabId,
+  updateDefaultSearchEngineFromUrl,
+  warmSiteSearchProviderIcons
+} from './search-suggestions-service';
 import {
   maybeAutoSelectRestrictedBrowserSetting,
   moveTabToSourceGroupContext,
@@ -130,10 +132,7 @@ import {
 } from './command-service';
 import { PIP_MESSAGE_HANDLERS, pipOwnership } from './pip-service';
 import type { BackgroundHandler } from './message-router';
-import {
-  SELECTION_QUICK_ACTION_MESSAGE_HANDLERS,
-  loadSelectionQuickActionsEnabled
-} from './selection-quick-actions-service';
+import { SELECTION_QUICK_ACTION_MESSAGE_HANDLERS } from './selection-quick-actions-service';
 import {
   SEARCH_MESSAGE_HANDLERS,
   SITE_SEARCH_MESSAGE_HANDLERS,
@@ -147,20 +146,7 @@ import {
   SHORTCUT_MESSAGE_HANDLERS,
   TAB_MESSAGE_HANDLERS
 } from './message-handlers-service';
-import {
-  documentPipEnabled,
-  faviconEnhancedFetchEnabled,
-  faviconRequestBlacklist,
-  pinnedTabRecoveryEnabled,
-  restrictedActionAutoBrowserSettingDone,
-  restrictedAction,
-  searchBlacklist,
-  searchResultSourceTypes,
-  selectionQuickActionsEnabled,
-  siteSearchDisabled,
-  siteSearchCustom,
-  tabSwitcherEnabled
-} from '../domain/settings';
+import { selectionQuickActionsEnabled, siteSearchCustom, siteSearchDisabled } from '../domain/settings';
 import {
   PINYIN_DATA_SCRIPT_PATH,
   SHOW_SEARCH_COMMAND_NAME,
@@ -172,15 +158,11 @@ import {
   getImportScripts,
   isPrimaryStorageAreaName,
   logHotkeyDebug,
-  markBackgroundSettingsLoaded,
   providerStorageRuntime,
-  setDocumentPipEnabled,
-  setRestrictedAction,
-  setRestrictedActionAutoBrowserSettingDone,
   storageArea,
-  warnBackgroundFailure
+  warnBackgroundFailure,
+  workerSettings
 } from './worker-context';
-import { searchSelectionStats } from '../domain/settings/search';
 
 // Folds traditional characters to simplified ones for local search matching.
 installHanVariantPairs(HAN_VARIANT_PAIRS);
@@ -206,45 +188,6 @@ const openOnboardingPage = BACKGROUND_PAGES.openOnboardingPage;
 const shouldOpenOnboardingForUpdate = BACKGROUND_PAGES.shouldOpenOnboardingForUpdate;
 
 startProgressTracking();
-// The settings mirrors in worker-context.ts are re-read from storage on every
-// wake here, and kept current by the storage.onChanged listener further down.
-// The tab switcher and pinned-tab recovery services keep their own.
-storageArea.get([
-  restrictedAction.key,
-  restrictedActionAutoBrowserSettingDone.key,
-  documentPipEnabled.key,
-  tabSwitcherEnabled.key,
-  SETTINGS.tabSwitcherCurrentWindowOnly.key,
-  pinnedTabRecoveryEnabled.key
-], (storedResult) => {
-  const result = storedResult || {};
-  const stored = result[restrictedAction.key];
-  const normalized = SETTINGS.restrictedAction.parse(stored);
-  if (normalized !== stored) {
-    storageArea.set({ [restrictedAction.key]: normalized });
-  }
-  setRestrictedAction(normalized);
-  setRestrictedActionAutoBrowserSettingDone(result[restrictedActionAutoBrowserSettingDone.key] === true);
-  const documentPipStored = result[documentPipEnabled.key];
-  const normalizedDocumentPip = documentPipStored === true;
-  if (documentPipStored !== normalizedDocumentPip) {
-    storageArea.set({ [documentPipEnabled.key]: normalizedDocumentPip });
-  }
-  setDocumentPipEnabled(normalizedDocumentPip);
-  const tabSwitcherStored = result[tabSwitcherEnabled.key];
-  const normalizedTabSwitcher = SETTINGS.tabSwitcherEnabled.parse(tabSwitcherStored);
-  if (tabSwitcherStored !== normalizedTabSwitcher) {
-    storageArea.set({ [tabSwitcherEnabled.key]: normalizedTabSwitcher });
-  }
-  applyTabSwitcherEnabledSetting(normalizedTabSwitcher);
-  applyTabSwitcherCurrentWindowOnlySetting(SETTINGS.tabSwitcherCurrentWindowOnly.parse(
-    result[SETTINGS.tabSwitcherCurrentWindowOnly.key]
-  ));
-  const pinnedTabRecoveryStored = result[pinnedTabRecoveryEnabled.key];
-  applyPinnedTabRecoverySetting(pinnedTabRecoveryStored);
-  markBackgroundSettingsLoaded();
-});
-
 function migrateStorageIfNeeded(keys: string[]): void {
   if (isPrimaryStorageAreaName('local')) {
     return;
@@ -569,20 +512,14 @@ const selectionScriptRegistration = LumnoSelectionScriptRegistration
 LumnoPipPageBridgeRegistration
   .createPipPageBridgeRegistration({ chromeApi: chrome, manifest: chrome.runtime.getManifest() })
   .sync(true);
-loadSelectionQuickActionsEnabled().then((enabled) => selectionScriptRegistration.sync(enabled));
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  const storageModeChanged = areaName === 'local' && Boolean(changes[SETTINGS.localPrimary.key]);
-  if (!storageModeChanged &&
-      !(isPrimaryStorageAreaName(areaName) && changes[selectionQuickActionsEnabled.key])) {
-    return;
-  }
-  loadSelectionQuickActionsEnabled().then((enabled) => {
-    selectionScriptRegistration.sync(enabled, { injectOpenTabs: enabled });
-  });
+void workerSettings.ready.then(() => selectionScriptRegistration.sync(workerSettings.get(selectionQuickActionsEnabled)));
+workerSettings.subscribe(selectionQuickActionsEnabled, () => {
+  const enabled = workerSettings.get(selectionQuickActionsEnabled);
+  selectionScriptRegistration.sync(enabled, { injectOpenTabs: enabled });
 });
 
 const shortcutFolderSyncController = chrome.bookmarks && typeof chrome.bookmarks.getTree === 'function'
-  ? LumnoBookmarkFolderBindings.createSyncController({ chrome, provider: providerStorageRuntime,
+  ? LumnoBookmarkFolderBindings.createSyncController({ chrome, provider: providerStorageRuntime, settingsStore: workerSettings,
     onError: (error) => console.warn('[Lumno] Could not refresh folder shortcuts.', error) }) : null;
 if (shortcutFolderSyncController) shortcutFolderSyncController.start();
 const webDavSyncController = typeof indexedDB !== 'undefined'
@@ -614,7 +551,7 @@ const handleWebDavMessage: BackgroundHandler<'webdav'> = (message, sender, sendR
 if (pageShortcutMenuController) pageShortcutMenuController.start();
 
 // Link preview: Shift+click opens a link in a small window over the page.
-const linkPreviewService = LumnoLinkPreview.createLinkPreviewService({ chromeApi: chrome });
+const linkPreviewService = LumnoLinkPreview.createLinkPreviewService({ chromeApi: chrome, settingsStore: workerSettings });
 linkPreviewService.attach();
 
 // Firefox's website appearance setting, behind the /appearance command.
@@ -748,11 +685,7 @@ warmSiteSearchProviderIcons();
 // Site-search icons follow the icon chosen for a home-page shortcut. One
 // shortcut save touches several keys, so they settle before the rewarm.
 let siteSearchShortcutIconRewarmTimer: ReturnType<typeof setTimeout> | undefined;
-chrome.storage.onChanged.addListener((changes) => {
-  if (!isSiteSearchShortcutIconStorageChange(changes)) {
-    return;
-  }
-  invalidateSiteSearchShortcutIconSources();
+workerSettings.subscribe(SITE_SEARCH_SHORTCUT_ICON_SETTINGS, () => {
   clearTimeout(siteSearchShortcutIconRewarmTimer);
   siteSearchShortcutIconRewarmTimer = setTimeout(() => {
     siteSearchShortcutIconRewarmTimer = undefined;
@@ -760,80 +693,5 @@ chrome.storage.onChanged.addListener((changes) => {
   }, 300);
 });
 
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (!isPrimaryStorageAreaName(areaName)) {
-    return;
-  }
-  if (changes[restrictedAction.key]) {
-    const next = changes[restrictedAction.key].newValue;
-    const normalized = SETTINGS.restrictedAction.parse(next);
-    setRestrictedAction(normalized);
-    if (typeof next !== 'undefined' && next !== normalized) {
-      storageArea.set({ [restrictedAction.key]: normalized });
-    }
-  }
-  if (changes[restrictedActionAutoBrowserSettingDone.key]) {
-    const next = changes[restrictedActionAutoBrowserSettingDone.key].newValue;
-    setRestrictedActionAutoBrowserSettingDone(next === true);
-  }
-  if (changes[documentPipEnabled.key]) {
-    const next = changes[documentPipEnabled.key].newValue;
-    const normalized = next === true;
-    setDocumentPipEnabled(normalized);
-    if (typeof next !== 'undefined' && next !== normalized) {
-      storageArea.set({ [documentPipEnabled.key]: normalized });
-    }
-  }
-  if (changes[tabSwitcherEnabled.key]) {
-    const next = changes[tabSwitcherEnabled.key].newValue;
-    const normalized = SETTINGS.tabSwitcherEnabled.parse(next);
-    applyTabSwitcherEnabledSetting(normalized);
-    if (typeof next !== 'undefined' && next !== normalized) {
-      storageArea.set({ [tabSwitcherEnabled.key]: normalized });
-    }
-  }
-  if (changes[SETTINGS.tabSwitcherCurrentWindowOnly.key]) {
-    applyTabSwitcherCurrentWindowOnlySetting(SETTINGS.tabSwitcherCurrentWindowOnly.parse(
-      changes[SETTINGS.tabSwitcherCurrentWindowOnly.key].newValue
-    ));
-  }
-  if (changes[pinnedTabRecoveryEnabled.key]) {
-    const next = changes[pinnedTabRecoveryEnabled.key].newValue;
-    const normalized = applyPinnedTabRecoverySetting(next);
-    if (normalized) {
-      schedulePersistPinnedTabSnapshot();
-    }
-  }
-  if (changes[siteSearchCustom.key] || changes[siteSearchDisabled.key]) {
-    invalidateSiteSearchProviderCache();
-    warmSiteSearchProviderIcons();
-  }
-  if (changes[searchBlacklist.key]) {
-    invalidateSearchBlacklistCache();
-  }
-  if (changes[faviconRequestBlacklist.key]) {
-    invalidateFaviconRequestBlacklistCache();
-    invalidateShortcutFaviconPolicyCache();
-  }
-  if (changes[faviconEnhancedFetchEnabled.key]) {
-    invalidateFaviconEnhancedFetchEnabledCache();
-    invalidateShortcutFaviconPolicyCache();
-  }
-  if (changes[searchResultSourceTypes.key]) {
-    invalidateSearchResultSourceTypesCache();
-  }
-  if (changes[SETTINGS.searchFuzzyPinyinEnabled.key]) {
-    setSearchFuzzyPinyinEnabled(SETTINGS.searchFuzzyPinyinEnabled.parse(
-      changes[SETTINGS.searchFuzzyPinyinEnabled.key].newValue
-    ));
-  }
-});
-
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== 'local' || !changes[searchSelectionStats.key]) {
-    return;
-  }
-  replaceSearchSelectionStatsCache(normalizeSearchSelectionStats(
-    changes[searchSelectionStats.key].newValue
-  ));
-});
+// Changed site searches get their icons.
+workerSettings.subscribe([siteSearchCustom, siteSearchDisabled], () => warmSiteSearchProviderIcons());

@@ -12,8 +12,8 @@
 // Suspension: the setting is re-read on wake before an event is acted on, and
 // a pending debounced snapshot is flushed on runtime.onSuspend.
 
-import { pinnedTabRecoveryEnabled } from '../domain/settings';
-import { storageArea } from './worker-context';
+import { pinnedTabRecoveryEnabled } from '../domain/settings/features';
+import { areBackgroundSettingsLoaded, workerSettings } from './worker-context';
 import { getResolvedTabUrl } from './browser-urls-service';
 import { isTabGroupColor } from './tab-groups';
 import type { TabGroupColor } from './tab-groups';
@@ -52,60 +52,20 @@ function isRestorablePinnedUrl(url: unknown): boolean {
 
 const PINNED_TAB_RESTORE_MAX_TABS = 24;
 
-let pinnedTabRecoveryEnabledCache = false;
 
 // Pinned-tab snapshot: debounced write, flushed on runtime.onSuspend.
 let pinnedTabSnapshotTimer: ReturnType<typeof setTimeout> | null = null;
 
 let pinnedTabSnapshotPersistOptions: SnapshotPersistOptions | null = null;
 
-let pinnedTabRecoverySettingLoaded = false;
 
-let pinnedTabRecoverySettingLoadPromise: Promise<boolean> | null = null;
 
 let pinnedTabRestorePromise: Promise<void> | null = null;
 
-function normalizePinnedTabRecoveryEnabled(value: unknown): boolean {
-  return value === true;
-}
 
-export function applyPinnedTabRecoverySetting(rawValue: unknown): boolean {
-  const normalized = normalizePinnedTabRecoveryEnabled(rawValue);
-  pinnedTabRecoveryEnabledCache = normalized;
-  pinnedTabRecoverySettingLoaded = true;
-  if (rawValue !== normalized && storageArea && typeof storageArea.set === 'function') {
-    storageArea.set({ [pinnedTabRecoveryEnabled.key]: normalized });
-  }
-  return normalized;
-}
 
 function ensurePinnedTabRecoverySettingLoaded(): Promise<boolean> {
-  if (pinnedTabRecoverySettingLoaded) {
-    return Promise.resolve(pinnedTabRecoveryEnabledCache);
-  }
-  if (pinnedTabRecoverySettingLoadPromise) {
-    return pinnedTabRecoverySettingLoadPromise;
-  }
-  if (!storageArea || typeof storageArea.get !== 'function') {
-    pinnedTabRecoverySettingLoaded = true;
-    pinnedTabRecoveryEnabledCache = false;
-    return Promise.resolve(false);
-  }
-  pinnedTabRecoverySettingLoadPromise = new Promise<boolean>((resolve) => {
-    storageArea.get([pinnedTabRecoveryEnabled.key], (result) => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        pinnedTabRecoverySettingLoaded = true;
-        pinnedTabRecoveryEnabledCache = false;
-        resolve(false);
-        return;
-      }
-      const rawValue = result ? result[pinnedTabRecoveryEnabled.key] : undefined;
-      resolve(applyPinnedTabRecoverySetting(rawValue));
-    });
-  }).finally(() => {
-    pinnedTabRecoverySettingLoadPromise = null;
-  });
-  return pinnedTabRecoverySettingLoadPromise;
+  return workerSettings.ready.then(() => workerSettings.get(pinnedTabRecoveryEnabled));
 }
 
 function queryTabsForPinnedSnapshot(queryInfo: chrome.tabs.QueryInfo): Promise<chrome.tabs.Tab[]> {
@@ -125,35 +85,11 @@ function queryTabsForPinnedSnapshot(queryInfo: chrome.tabs.QueryInfo): Promise<c
 }
 
 function getPinnedSnapshotFromStorage(): Promise<unknown> {
-  return new Promise((resolve) => {
-    if (!chrome || !chrome.storage || !chrome.storage.local) {
-      resolve(null);
-      return;
-    }
-    chrome.storage.local.get([pinnedTabSnapshot.key], (result) => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        resolve(null);
-        return;
-      }
-      resolve(result ? result[pinnedTabSnapshot.key] : null);
-    });
-  });
+  return workerSettings.ready.then(() => workerSettings.getStored(pinnedTabSnapshot));
 }
 
 function setPinnedSnapshotToStorage(snapshot: unknown): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (!chrome || !chrome.storage || !chrome.storage.local) {
-      resolve(false);
-      return;
-    }
-    chrome.storage.local.set({ [pinnedTabSnapshot.key]: snapshot }, () => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        resolve(false);
-        return;
-      }
-      resolve(true);
-    });
-  });
+  return workerSettings.set(pinnedTabSnapshot, snapshot).then(() => true, () => false);
 }
 
 function createPinnedTabForRestore(url: string, windowId: number | null): Promise<{ ok: boolean; tab: chrome.tabs.Tab | null }> {
@@ -455,7 +391,7 @@ function groupRestoredPinnedTab(
 }
 
 async function persistPinnedTabSnapshotNow(options: SnapshotPersistOptions | null): Promise<void> {
-  if (!pinnedTabRecoveryEnabledCache) {
+  if (!workerSettings.get(pinnedTabRecoveryEnabled)) {
     return;
   }
   const opts = options && typeof options === 'object' ? options : {};
@@ -516,17 +452,13 @@ function mergePinnedTabSnapshotPersistOptions(options: SnapshotPersistOptions | 
 }
 
 export function schedulePersistPinnedTabSnapshot(options?: SnapshotPersistOptions | null): void {
-  if (!pinnedTabRecoverySettingLoaded) {
+  if (!areBackgroundSettingsLoaded()) {
     // A worker woken by a pin, move or close sees that event before the
     // recovery setting is read; dropping it would leave the snapshot stale.
-    ensurePinnedTabRecoverySettingLoaded().then(() => {
-      if (pinnedTabRecoverySettingLoaded) {
-        schedulePersistPinnedTabSnapshot(options);
-      }
-    });
+    void workerSettings.ready.then(() => schedulePersistPinnedTabSnapshot(options));
     return;
   }
-  if (!pinnedTabRecoveryEnabledCache) {
+  if (!workerSettings.get(pinnedTabRecoveryEnabled)) {
     if (pinnedTabSnapshotTimer !== null) {
       clearTimeout(pinnedTabSnapshotTimer);
       pinnedTabSnapshotTimer = null;
@@ -540,6 +472,13 @@ export function schedulePersistPinnedTabSnapshot(options?: SnapshotPersistOption
   }
   pinnedTabSnapshotTimer = setTimeout(flushPendingPinnedTabSnapshot, PINNED_TAB_SNAPSHOT_DEBOUNCE_MS);
 }
+
+// Turning recovery on takes a snapshot of the pinned tabs now.
+workerSettings.subscribe(pinnedTabRecoveryEnabled, () => {
+  if (workerSettings.get(pinnedTabRecoveryEnabled)) {
+    schedulePersistPinnedTabSnapshot();
+  }
+});
 
 export function flushPendingPinnedTabSnapshot(): Promise<void> {
   if (pinnedTabSnapshotTimer === null) {

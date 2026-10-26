@@ -7,7 +7,8 @@
 // while this file loads, because the services import one another.
 
 import * as OVERLAY_LOADING_LIFECYCLE from './overlay-loading-lifecycle';
-import { ignoreExpectedChromeError, logHotkeyDebug } from './worker-context';
+import { logHotkeyDebug, workerSettings } from './worker-context';
+import { overlayLoadingRecord, overlayNavigationState } from '../domain/settings/features';
 import { canOpenOverlayOnUrl, getResolvedTabUrl } from './browser-urls-service';
 import {
   OVERLAY_HOST_ID,
@@ -107,13 +108,9 @@ function readStoredNavigationState(value: unknown, tabId: number): TopFrameNavig
   };
 }
 
-const OVERLAY_NAVIGATION_STATE_STORAGE_PREFIX =
-  '_x_extension_overlay_navigation_state_2026_unique_:';
 export const OVERLAY_NAVIGATION_STATE_TTL_MS = Number(
   OVERLAY_LOADING_LIFECYCLE.DEFAULT_NAVIGATION_STATE_TTL_MS
 ) || (5 * 60 * 1000);
-const OVERLAY_LOADING_RECORD_STORAGE_PREFIX =
-  '_x_extension_overlay_loading_record_2026_unique_:';
 const OVERLAY_LOADING_RECORD_TTL_MS = Number(
   OVERLAY_LOADING_LIFECYCLE.DEFAULT_RECORD_TTL_MS
 ) || (5 * 60 * 1000);
@@ -128,33 +125,15 @@ const overlayLoadingPendingUpdateByTabId = new Map<number, PendingLoadingUpdate>
 export const overlayNavigationStateByTabId = new Map<number, TopFrameNavigationState>();
 export const overlayLoadingRecordsByTabId = new Map<number, TrackedLoadingRecord>();
 
-function getOverlayLoadingRecordStorageArea(): chrome.storage.SessionStorageArea | null {
-  return chrome && chrome.storage && chrome.storage.session &&
-    typeof chrome.storage.session.get === 'function'
-    ? chrome.storage.session
-    : null;
-}
 
-function getOverlayNavigationStateStorageKey(tabId: number): string {
-  return `${OVERLAY_NAVIGATION_STATE_STORAGE_PREFIX}${tabId}`;
-}
 
 function setOverlayNavigationState(state: TopFrameNavigationState): void {
   if (!state || typeof state.tabId !== 'number') {
     return;
   }
   overlayNavigationStateByTabId.set(state.tabId, state);
-  const sessionArea = getOverlayLoadingRecordStorageArea();
-  if (!sessionArea || typeof sessionArea.set !== 'function') {
-    return;
-  }
-  try {
-    sessionArea.set({
-      [getOverlayNavigationStateStorageKey(state.tabId)]: state
-    }, ignoreExpectedChromeError);
-  } catch (_error) {
-    // The in-memory state still covers the current service-worker lifetime.
-  }
+  // The in-memory state still covers the current service-worker lifetime.
+  void workerSettings.writeMembers(overlayNavigationState, new Map([[String(state.tabId), state]])).catch(() => {});
 }
 
 export function clearOverlayNavigationState(tabId: unknown): void {
@@ -162,15 +141,7 @@ export function clearOverlayNavigationState(tabId: unknown): void {
     return;
   }
   overlayNavigationStateByTabId.delete(tabId);
-  const sessionArea = getOverlayLoadingRecordStorageArea();
-  if (!sessionArea || typeof sessionArea.remove !== 'function') {
-    return;
-  }
-  try {
-    sessionArea.remove(getOverlayNavigationStateStorageKey(tabId), ignoreExpectedChromeError);
-  } catch (_error) {
-    // Ignore session-storage cleanup failures.
-  }
+  void workerSettings.removeMembers(overlayNavigationState, [tabId]).catch(() => {});
 }
 
 export function getOverlayNavigationState(tabId: unknown, callback?: (state: TopFrameNavigationState | null) => void): void {
@@ -194,19 +165,8 @@ export function getOverlayNavigationState(tabId: unknown, callback?: (state: Top
     done(cached);
     return;
   }
-  const sessionArea = getOverlayLoadingRecordStorageArea();
-  if (!sessionArea) {
-    done(null);
-    return;
-  }
-  const storageKey = getOverlayNavigationStateStorageKey(tabId);
-  try {
-    sessionArea.get(storageKey, (result) => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        done(null);
-        return;
-      }
-      const storedValue = result ? result[storageKey] : null;
+  workerSettings.readMembers(overlayNavigationState, [tabId]).then((members) => {
+      const storedValue = members.get(String(tabId));
       const stored = readStoredNavigationState(storedValue, tabId);
       if (!stored || isExpired(stored)) {
         if (isRecord(storedValue)) {
@@ -217,10 +177,7 @@ export function getOverlayNavigationState(tabId: unknown, callback?: (state: Top
       }
       overlayNavigationStateByTabId.set(tabId, stored);
       done(stored);
-    });
-  } catch (_error) {
-    done(null);
-  }
+    }, () => done(null));
 }
 
 export function rememberOverlayTopFrameNavigation(details: NavigationDetails | null | undefined): void {
@@ -250,9 +207,6 @@ export function updateOverlayTopFrameNavigation(details: NavigationDetails | nul
   });
 }
 
-function getOverlayLoadingRecordStorageKey(tabId: number): string {
-  return `${OVERLAY_LOADING_RECORD_STORAGE_PREFIX}${tabId}`;
-}
 
 function setOverlayLoadingRecord(record: TrackedLoadingRecord): void {
   if (!record || typeof record.tabId !== 'number') {
@@ -298,17 +252,8 @@ function setOverlayLoadingRecord(record: TrackedLoadingRecord): void {
       : String(record.stableCompletionUrl || '')
   };
   overlayLoadingRecordsByTabId.set(record.tabId, nextRecord);
-  const sessionArea = getOverlayLoadingRecordStorageArea();
-  if (!sessionArea || typeof sessionArea.set !== 'function') {
-    return;
-  }
-  try {
-    sessionArea.set({
-      [getOverlayLoadingRecordStorageKey(record.tabId)]: nextRecord
-    }, ignoreExpectedChromeError);
-  } catch (_error) {
-    // The in-memory record still covers ordinary loading lifetimes.
-  }
+  // The in-memory record still covers ordinary loading lifetimes.
+  void workerSettings.writeMembers(overlayLoadingRecord, new Map([[String(record.tabId), nextRecord]])).catch(() => {});
 }
 
 export function clearOverlayLoadingRecord(tabId: unknown): void {
@@ -318,15 +263,7 @@ export function clearOverlayLoadingRecord(tabId: unknown): void {
   overlayLoadingRecordsByTabId.delete(tabId);
   overlayLoadingRecoveryInFlightByTabId.delete(tabId);
   overlayLoadingPendingUpdateByTabId.delete(tabId);
-  const sessionArea = getOverlayLoadingRecordStorageArea();
-  if (!sessionArea || typeof sessionArea.remove !== 'function') {
-    return;
-  }
-  try {
-    sessionArea.remove(getOverlayLoadingRecordStorageKey(tabId), ignoreExpectedChromeError);
-  } catch (_error) {
-    // Ignore session-storage cleanup failures.
-  }
+  void workerSettings.removeMembers(overlayLoadingRecord, [tabId]).catch(() => {});
 }
 
 function getOverlayLoadingRecord(tabId: unknown, callback?: (record: TrackedLoadingRecord | null) => void): void {
@@ -349,19 +286,8 @@ function getOverlayLoadingRecord(tabId: unknown, callback?: (record: TrackedLoad
     done(cached);
     return;
   }
-  const sessionArea = getOverlayLoadingRecordStorageArea();
-  if (!sessionArea) {
-    done(null);
-    return;
-  }
-  const storageKey = getOverlayLoadingRecordStorageKey(tabId);
-  try {
-    sessionArea.get(storageKey, (result) => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        done(null);
-        return;
-      }
-      const storedValue = result ? result[storageKey] : null;
+  workerSettings.readMembers(overlayLoadingRecord, [tabId]).then((members) => {
+      const storedValue = members.get(String(tabId));
       const stored = readStoredLoadingRecord(storedValue, tabId);
       if (!stored ||
           (OVERLAY_LOADING_LIFECYCLE.isExpired(
@@ -377,10 +303,7 @@ function getOverlayLoadingRecord(tabId: unknown, callback?: (record: TrackedLoad
       }
       overlayLoadingRecordsByTabId.set(tabId, stored);
       done(stored);
-    });
-  } catch (_error) {
-    done(null);
-  }
+    }, () => done(null));
 }
 
 export function rememberOverlayLoadingRecord(

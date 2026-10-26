@@ -4,9 +4,8 @@
 // A module of the service worker; background.ts imports it before its own code
 // runs.
 
-import { warnBackgroundFailure } from './worker-context';
+import { warnBackgroundFailure, workerSettings } from './worker-context';
 import type { OverlayTab, TabRankFields } from '../domain/messages';
-import type { StorageAreaLike } from '../domain/storage-port';
 import { tabSwitchStats } from '../domain/settings/features';
 
 // When a tab was switched to in the last day, and last of all.
@@ -55,18 +54,6 @@ let tabSwitchStatsLoadPromise: Promise<void> | null = null;
 // merge skips their stored entries so a cleared stat is not resurrected.
 const tabSwitchStatsClearedBeforeLoad = new Set<number>();
 
-function getTabSwitchStorageArea(): StorageAreaLike | null {
-  if (!chrome || !chrome.storage) {
-    return null;
-  }
-  if (chrome.storage.session) {
-    return chrome.storage.session;
-  }
-  if (chrome.storage.local) {
-    return chrome.storage.local;
-  }
-  return null;
-}
 
 function normalizeTabSwitchStatEntry(raw: unknown, now: number): TabSwitchStat | null {
   if (!isRecord(raw)) {
@@ -146,21 +133,13 @@ function exportTabSwitchStatsSnapshot(): Record<string, TabSwitchStat> {
 }
 
 function persistTabSwitchStatsNow(): Promise<boolean> {
-  const area = getTabSwitchStorageArea();
-  if (!area) {
-    return Promise.resolve(false);
-  }
   if (!tabSwitchStatsLoaded) {
     // A tab activation can wake the worker; writing before the stored stats
     // are merged back would replace them with just this one event.
     return ensureTabSwitchStatsLoaded().then(() => persistTabSwitchStatsNow());
   }
   const snapshot = exportTabSwitchStatsSnapshot();
-  return new Promise((resolve) => {
-    area.set({ [tabSwitchStats.key]: snapshot }, () => {
-      resolve(!(chrome.runtime && chrome.runtime.lastError));
-    });
-  });
+  return workerSettings.set(tabSwitchStats, snapshot).then(() => true, () => false);
 }
 
 export function ensureTabSwitchStatsLoaded(): Promise<void> {
@@ -170,15 +149,9 @@ export function ensureTabSwitchStatsLoaded(): Promise<void> {
   if (tabSwitchStatsLoadPromise) {
     return tabSwitchStatsLoadPromise;
   }
-  const area = getTabSwitchStorageArea();
-  if (!area) {
-    tabSwitchStatsLoaded = true;
-    return Promise.resolve();
-  }
   tabSwitchStatsLoadPromise = new Promise((resolve) => {
-    area.get([tabSwitchStats.key], (result) => {
-      const payload = result ? result[tabSwitchStats.key] : null;
-      applyPersistedTabSwitchStats(payload);
+    void workerSettings.ready.then(() => {
+      applyPersistedTabSwitchStats(workerSettings.getStored(tabSwitchStats));
       tabSwitchStatsClearedBeforeLoad.clear();
       tabSwitchStatsLoaded = true;
       tabSwitchStatsLoadPromise = null;

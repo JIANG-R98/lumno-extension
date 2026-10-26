@@ -8,7 +8,7 @@
 import * as LumnoPipMainWorld from '../shared/pip-main-world';
 import * as LumnoPipOwnership from './pip-ownership';
 import { openExtensionOptionsPage } from './extension-pages';
-import { documentPipEnabledReady, isDocumentPipEnabled, logHotkeyDebug } from './worker-context';
+import { documentPipEnabledReady, isDocumentPipEnabled, logHotkeyDebug, workerSettings } from './worker-context';
 import { getResolvedTabUrl, isRestrictedUrl } from './browser-urls-service';
 import type { HandlersFor, MessageSender, RejectionReply } from './message-router';
 import type { PipMainWorldReply } from '../domain/messages';
@@ -62,6 +62,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
 
 export const pipOwnership = LumnoPipOwnership.create({
   chromeApi: chrome,
+  settingsStore: workerSettings,
   getResolvedTabUrl: getResolvedTabUrl
 });
 

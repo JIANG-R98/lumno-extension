@@ -40,8 +40,6 @@ interface PublishOptions {
   reason?: string;
 }
 
-const UPDATE_NOTICE_DISPLAY_COUNT_STORAGE_PREFIX =
-  '_x_lumno_update_notice_display_count_2026_';
 const UPDATE_NOTICE_MAX_DISPLAY_COUNT = 3;
 const RELEASE_DETAILS_URL = 'https://lumno.kubai.design/release/';
 const GITHUB_RELEASE_API_URL = 'https://api.github.com/repos/kubai087/lumno-extension/releases/tags/';
@@ -187,7 +185,7 @@ function getDomIdPart(id: unknown): string {
 
 function getUpdateNoticeDisplayCountKey(versionTag: unknown): string {
   const versionPart = getDomIdPart(normalizeVersionTag(versionTag) || 'unversioned');
-  return `${UPDATE_NOTICE_DISPLAY_COUNT_STORAGE_PREFIX}${versionPart}`;
+  return SETTINGS.updateNoticeDisplayCount.keyFor(versionPart);
 }
 
 function normalizeUpdateNoticeDisplayCount(value: unknown): number {
@@ -344,7 +342,6 @@ function publishUpdateNotice(options?: PublishOptions | null, callback?: (saved:
 
 export type { PublishOptions, ReleaseFetch, UpdateNotice, UpdateNoticeChromeApi };
 export {
-  UPDATE_NOTICE_DISPLAY_COUNT_STORAGE_PREFIX,
   UPDATE_NOTICE_MAX_DISPLAY_COUNT,
   RELEASE_DETAILS_URL,
   GITHUB_RELEASE_API_URL,

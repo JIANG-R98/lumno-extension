@@ -213,7 +213,8 @@ import { getFolderColorPickerApi } from './react/folder-color-picker-lazy';
 import { getSearchInputApi } from '../shared/react/search-input';
 import { newtabShortcutGap, newtabShortcutSize } from '../domain/settings/newtab-shortcuts';
 import { bookmarkFolderColorRefs, bookmarkFolderColorsLegacy } from '../domain/settings/bookmarks';
-import { newtabShortcutFaviconCache, newtabShortcutsLocalOverflow } from '../domain/settings/newtab-shortcuts';
+import { newtabShortcutFaviconCache, newtabShortcutsLocalOverflow, shortcutFolderBindings } from '../domain/settings/newtab-shortcuts';
+import { createSettingsStore } from '../platform/settings-store';
 import * as SearchSettings from '../domain/settings/search';
 import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
 
@@ -504,7 +505,9 @@ import * as NewtabShortcutSettings from '../domain/settings/newtab-shortcuts';
     pageState
   });
 
-  const shortcutFolderRuntime = FOLDER_BINDINGS.createRuntime({ chrome });
+  const shortcutFolderRuntime = FOLDER_BINDINGS.createRuntime({
+    settingsStore: createSettingsStore({ chromeApi: chrome, settings: [shortcutFolderBindings] })
+  });
   shortcutFolderRuntime.ready.catch((error) => {
     console.warn('[Lumno] Could not load shortcut folder bindings.', error);
   });

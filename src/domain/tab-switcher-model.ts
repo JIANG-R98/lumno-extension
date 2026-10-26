@@ -3,6 +3,7 @@
 // and the site whose colors a tab's card takes.
 import { normalizeFaviconHost } from './favicon/favicon-utils';
 import type { TabSwitcherItem, TabSwitcherThumbnailStatus } from './messages';
+import { tabSwitcherThumbnail } from './settings/features';
 
 // 1 moves to older tabs, -1 back toward newer ones.
 type SwitcherOffset = 1 | -1;
@@ -24,7 +25,6 @@ interface ThumbnailPersistFields {
 }
 
 // Each tab's thumbnail is its own session storage entry under this prefix.
-const TAB_SWITCHER_THUMBNAIL_KEY_PREFIX = '_x_extension_tab_switcher_thumbnail_2026_unique_:';
 
 // Second-level domains under which a registrable domain takes three labels.
 const MULTIPART_SUFFIXES: ReadonlySet<string> = new Set([
@@ -115,7 +115,7 @@ function normalizeOpenTabSwitcherStateScriptResults(results: unknown): OpenSwitc
 }
 
 function getTabSwitcherThumbnailStorageKey(tabId: unknown): string {
-  return `${TAB_SWITCHER_THUMBNAIL_KEY_PREFIX}${tabId}`;
+  return tabSwitcherThumbnail.keyFor(String(tabId));
 }
 
 function getThumbnailPersistSignature(entry: ThumbnailPersistFields): string {
@@ -197,7 +197,6 @@ function getSwitcherThemeHostCandidates(host: unknown): string[] {
 }
 
 export {
-  TAB_SWITCHER_THUMBNAIL_KEY_PREFIX,
   getDefaultSwitcherSelectedIndex,
   getFailedOpenTabSwitcherState,
   getSwitcherRegistrableThemeHost,

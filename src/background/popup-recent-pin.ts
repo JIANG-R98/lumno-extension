@@ -1,15 +1,16 @@
 // Pins the toolbar popup's page among the New Tab's recent sites, in the
 // list the New Tab keeps (one card per site, a tracked card per work). An
 // episode or chapter starts tracked, as when it is pinned on the New Tab.
-import * as LumnoRecentSitesStorage from '../platform/recent-sites-storage';
+import type { SettingsStore } from '../platform/settings-store';
+import { pinnedRecentSites } from '../domain/settings/recent-sites';
 import type { RecentSite, RecentSiteOptions } from '../domain/recent-sites-store';
 import type { RecentPinStatus, RecentPinToggleStatus } from '../domain/messages';
-import type { StorageAreaLike } from '../domain/storage-port';
 
 // The recent sites store functions the controller uses.
 interface RecentSitesStoreApi {
   normalizeRecentSiteItem(item: unknown, options?: RecentSiteOptions | null): RecentSite | null;
   isSamePinnedRecentSite(a: unknown, b: unknown, options?: RecentSiteOptions | null): boolean;
+  normalizePinnedRecentSites(items: unknown, options?: RecentSiteOptions | null): RecentSite[];
 }
 
 // The popup's page.
@@ -20,12 +21,9 @@ interface PopupPage {
 
 interface RecentPinOptions {
   store: RecentSitesStoreApi;
-  // The pinned sites' storage key.
-  key?: string;
+  // The settings the pinned sites are read from and saved to.
+  settingsStore: SettingsStore;
   storeOptions?: RecentSiteOptions;
-  getArea?: () => StorageAreaLike | null;
-  // Settles once the storage area is known.
-  ready?: () => Promise<unknown>;
   // Whether a page reads as an episode or chapter, which starts tracked.
   probeSeries?: (url: string) => Promise<boolean>;
   createProgressId?: (now: number) => string;
@@ -44,11 +42,9 @@ interface RecentPinController {
 function createController(options: RecentPinOptions): RecentPinController {
   const opts = options;
   const store = opts.store;
-  const key = String(opts.key || '');
+  const settingsStore = opts.settingsStore;
   const storeOptions = opts.storeOptions || {};
   const maxPinned = Number(storeOptions.maxPinned) || 3;
-  const getArea = typeof opts.getArea === 'function' ? opts.getArea : () => null;
-  const ready = typeof opts.ready === 'function' ? opts.ready : () => Promise.resolve();
   const probeSeries = typeof opts.probeSeries === 'function' ? opts.probeSeries : () => Promise.resolve(false);
   const createProgressId = typeof opts.createProgressId === 'function'
     ? opts.createProgressId
@@ -65,8 +61,8 @@ function createController(options: RecentPinOptions): RecentPinController {
   }
 
   async function readPinned(): Promise<RecentSite[]> {
-    await ready();
-    return LumnoRecentSitesStorage.loadPinnedRecentSites(getArea(), { ...storeOptions, key });
+    await settingsStore.ready;
+    return store.normalizePinnedRecentSites(settingsStore.getStored(pinnedRecentSites), storeOptions);
   }
 
   function findPinned(pinned: readonly RecentSite[], item: RecentSite): number {
@@ -94,8 +90,10 @@ function createController(options: RecentPinOptions): RecentPinController {
       if (!item) return { status: 'invalid' };
       const pinned = await readPinned();
       const index = findPinned(pinned, item);
-      const save = (items: unknown[]): Promise<RecentSite[]> =>
-        LumnoRecentSitesStorage.savePinnedRecentSites(getArea(), items, { ...storeOptions, key });
+      const save = (items: unknown[]): Promise<RecentSite[]> => {
+        const normalized = store.normalizePinnedRecentSites(items, storeOptions);
+        return settingsStore.set(pinnedRecentSites, normalized).then(() => normalized);
+      };
       if (index >= 0) {
         await save(pinned.filter((_, position) => position !== index));
         return { status: 'unpinned' };

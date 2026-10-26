@@ -8,8 +8,12 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
 import { createDiagnosticsLog } from '../platform/diagnostics-log';
 import type { StorageAreaFacade } from '../platform/settings-storage';
 import type { StorageAreaLike } from '../domain/storage-port';
-import type { RestrictedAction } from '../domain/settings';
-import { normalizeLocale } from '../domain/settings';
+import type { RestrictedAction } from '../domain/settings/overlay-panel';
+import { restrictedAction, restrictedActionAutoBrowserSettingDone } from '../domain/settings/overlay-panel';
+import { documentPipEnabled } from '../domain/settings/features';
+import { normalizeLocale } from '../domain/settings/locale';
+import { createSettingsStore } from '../platform/settings-store';
+import { WORKER_SETTINGS } from './worker-settings';
 import type { LocaleMessage } from '../domain/messages';
 import { readLocaleMessages } from '../domain/locale-messages';
 import * as BACKGROUND_SHORTCUT_RULES from './shortcut-rules';
@@ -58,80 +62,57 @@ const shortcutRules = BACKGROUND_SHORTCUT_RULES.create({
 const loadShortcutRules = shortcutRules.loadShortcutRules;
 const getShortcutUrl = shortcutRules.getShortcutUrl;
 
-// Service-worker lifetime: the mirrors below are lost when the worker
-// suspends. background.ts re-reads them from storage on every wake and keeps
-// them current from storage.onChanged; until that read lands they hold
-// defaults, so event paths that act on them wait for whenBackgroundSettingsReady.
-let restrictedAction: RestrictedAction = 'default';
-let restrictedActionAutoBrowserSettingDone = false;
-let documentPipEnabled = false;
-let backgroundSettingsLoaded = false;
-
-let resolveDocumentPipEnabledReady: () => void = () => {};
-// A service worker woken by the toolbar button or a clip command handles that
-// event before its stored settings arrive, so web clip waits for the real value.
-const documentPipEnabledReady = new Promise<void>((resolve) => {
-  resolveDocumentPipEnabledReady = resolve;
-});
-let resolveBackgroundSettingsReady: () => void = () => {};
-const backgroundSettingsReady = new Promise<void>((resolve) => {
-  resolveBackgroundSettingsReady = resolve;
+// The settings the worker reads, loaded again on every wake. Until they
+// arrive they read as their defaults, so event paths that act on them wait
+// for whenBackgroundSettingsReady.
+const workerSettings = createSettingsStore({ chromeApi: chrome, settings: WORKER_SETTINGS });
+let workerSettingsLoaded = false;
+void workerSettings.ready.then(() => {
+  workerSettingsLoaded = true;
 });
 
 // What a page the extension cannot run on does when the search is asked for.
 function getRestrictedAction(): RestrictedAction {
-  return restrictedAction;
-}
-
-function setRestrictedAction(action: RestrictedAction): void {
-  restrictedAction = action;
+  return workerSettings.get(restrictedAction);
 }
 
 // Whether the restricted-action choice was already made for the user once,
 // when the browser's own New Tab provider was detected.
 function isRestrictedActionAutoBrowserSettingDone(): boolean {
-  return restrictedActionAutoBrowserSettingDone;
-}
-
-function setRestrictedActionAutoBrowserSettingDone(done: boolean): void {
-  restrictedActionAutoBrowserSettingDone = done;
+  return workerSettings.get(restrictedActionAutoBrowserSettingDone);
 }
 
 // Records the restricted-action choice made for the user when the browser's
 // own New Tab provider is detected (browser-urls-service.ts).
-function markRestrictedActionAutoSelected(): void {
-  restrictedActionAutoBrowserSettingDone = true;
-  restrictedAction = 'none';
+function markRestrictedActionAutoSelected(): Promise<void> {
+  return workerSettings.setMany([
+    [restrictedAction, 'none'],
+    [restrictedActionAutoBrowserSettingDone, true]
+  ]);
 }
 
 function isDocumentPipEnabled(): boolean {
-  return documentPipEnabled;
+  return workerSettings.get(documentPipEnabled);
 }
 
-function setDocumentPipEnabled(enabled: boolean): void {
-  documentPipEnabled = enabled;
-  resolveDocumentPipEnabledReady();
-}
+// A service worker woken by the toolbar button or a clip command handles that
+// event before its stored settings arrive, so web clip waits for the real value.
+const documentPipEnabledReady = workerSettings.ready;
 
 // Whether the stored settings arrived since the worker woke.
 function areBackgroundSettingsLoaded(): boolean {
-  return backgroundSettingsLoaded;
-}
-
-function markBackgroundSettingsLoaded(): void {
-  backgroundSettingsLoaded = true;
-  resolveBackgroundSettingsReady();
+  return workerSettingsLoaded;
 }
 
 // A worker woken by a command, a tab event or a page hotkey runs that handler
 // before its stored settings arrive. Run the callback now when they are known,
 // otherwise as soon as they are, so a disabled feature stays disabled.
 function whenBackgroundSettingsReady(callback: () => void): void {
-  if (backgroundSettingsLoaded) {
+  if (workerSettingsLoaded) {
     callback();
     return;
   }
-  void backgroundSettingsReady.then(callback);
+  void workerSettings.ready.then(callback);
 }
 
 const HOTKEY_DEBUG_ENABLED = false;
@@ -283,15 +264,12 @@ export {
   loadShortcutRules,
   localStorageArea,
   logHotkeyDebug,
-  markBackgroundSettingsLoaded,
   markRestrictedActionAutoSelected,
   normalizeHost,
   providerStorageRuntime,
-  setDocumentPipEnabled,
-  setRestrictedAction,
-  setRestrictedActionAutoBrowserSettingDone,
   storageArea,
   waitForTabComplete,
   warnBackgroundFailure,
+  workerSettings,
   whenBackgroundSettingsReady
 };

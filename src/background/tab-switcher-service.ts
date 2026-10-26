@@ -16,7 +16,6 @@ import {
   getSwitcherThemeHostCandidates,
   getSwitcherThumbnailStatusForFailureReason,
   getTabSwitcherHeadSignature,
-  getTabSwitcherThumbnailStorageKey,
   getThumbnailPersistSignature,
   isSwitcherThumbnailRefreshNeeded,
   normalizeOpenTabSwitcherStateResponse,
@@ -40,7 +39,8 @@ import {
   ignoreExpectedChromeError,
   logHotkeyDebug,
   warnBackgroundFailure,
-  whenBackgroundSettingsReady
+  whenBackgroundSettingsReady,
+  workerSettings
 } from './worker-context';
 import {
   BACKGROUND_SITE_THEME_CACHE_MAX_ENTRIES,
@@ -82,7 +82,7 @@ import type {
   TabSwitcherThumbnailUpdate
 } from '../domain/messages';
 import { createInjectedAppRun } from '../platform/injection';
-import { tabSwitcherThumbnails } from '../domain/settings/features';
+import { tabSwitcherCurrentWindowOnly, tabSwitcherEnabled, tabSwitcherThumbnail, tabSwitcherThumbnails } from '../domain/settings/features';
 
 // A tab as the switcher's helpers read it: a browser tab, a tab from the
 // recent list with its thumbnail fields, or a payload item.
@@ -795,12 +795,6 @@ const recentTabTracker = RECENT_TAB_SWITCHER.createRecentTabTracker({
   shouldIncludeTab: shouldTrackSwitcherTab
 });
 
-function getTabSwitcherStateStorageArea(): chrome.storage.StorageArea | null {
-  if (!chrome || !chrome.storage) {
-    return null;
-  }
-  return chrome.storage.session || chrome.storage.local || null;
-}
 
 // The switcher state is saved as one small record (the recent-tab stack and
 // which tabs have thumbnails) plus one key per thumbnail, and a save writes
@@ -810,22 +804,11 @@ function getTabSwitcherStateStorageArea(): chrome.storage.StorageArea | null {
 let persistedTabSwitcherHeadSignature = '';
 const persistedThumbnailSignatureByTabId = new Map<number, string>();
 
-function readTabSwitcherStorage(storageArea: chrome.storage.StorageArea, keys: string[]): Promise<Record<string, unknown> | null> {
-  return new Promise((resolve) => {
-    storageArea.get(keys, (result) => {
-      resolve(chrome.runtime && chrome.runtime.lastError ? null : (result || {}));
-    });
-  });
-}
 
 // The stored state as saved; the tracker checks it as it hydrates.
 async function getTabSwitcherStateFromStorage(): Promise<Record<string, unknown> | null> {
-  const storageArea = getTabSwitcherStateStorageArea();
-  if (!storageArea || typeof storageArea.get !== 'function') {
-    return null;
-  }
-  const headResult = await readTabSwitcherStorage(storageArea, [tabSwitcherThumbnails.key]);
-  const head = headResult ? headResult[tabSwitcherThumbnails.key] : null;
+  await workerSettings.ready;
+  const head = workerSettings.getStored(tabSwitcherThumbnails);
   if (!isRecord(head)) {
     return null;
   }
@@ -835,11 +818,10 @@ async function getTabSwitcherStateFromStorage(): Promise<Record<string, unknown>
   }
   const storedTabIds: unknown[] = Array.isArray(head.thumbnailTabIds) ? head.thumbnailTabIds : [];
   const thumbnailTabIds = storedTabIds.filter((tabId) => Number.isInteger(tabId));
-  const thumbnailResult = thumbnailTabIds.length
-    ? await readTabSwitcherStorage(storageArea, thumbnailTabIds.map(getTabSwitcherThumbnailStorageKey))
-    : {};
+  const thumbnailResult = await workerSettings.readMembers(tabSwitcherThumbnail, thumbnailTabIds.map(String))
+    .catch(() => new Map<string, unknown>());
   const thumbnails = thumbnailTabIds
-    .map((tabId) => thumbnailResult && thumbnailResult[getTabSwitcherThumbnailStorageKey(tabId)])
+    .map((tabId) => thumbnailResult.get(String(tabId)))
     .filter(isRecord);
   persistedTabSwitcherHeadSignature = getTabSwitcherHeadSignature(head);
   persistedThumbnailSignatureByTabId.clear();
@@ -852,8 +834,7 @@ async function getTabSwitcherStateFromStorage(): Promise<Record<string, unknown>
 }
 
 function setTabSwitcherStateToStorage(state: TrackerState): Promise<boolean> {
-  const storageArea = getTabSwitcherStateStorageArea();
-  if (!storageArea || typeof storageArea.set !== 'function' || !state) {
+  if (!state) {
     return Promise.resolve(false);
   }
   const thumbnails = Array.isArray(state.thumbnails) ? state.thumbnails : [];
@@ -864,44 +845,32 @@ function setTabSwitcherStateToStorage(state: TrackerState): Promise<boolean> {
     thumbnailTabIds: thumbnails.map((entry) => entry.tabId)
   };
   const headSignature = getTabSwitcherHeadSignature(head);
-  const writes: Record<string, unknown> = {};
+  const thumbnailWrites = new Map<string, unknown>();
   const nextSignatures = new Map<number, string>();
   thumbnails.forEach((entry) => {
     const signature = getThumbnailPersistSignature(entry);
     nextSignatures.set(entry.tabId, signature);
     if (persistedThumbnailSignatureByTabId.get(entry.tabId) !== signature) {
-      writes[getTabSwitcherThumbnailStorageKey(entry.tabId)] = entry;
+      thumbnailWrites.set(String(entry.tabId), entry);
     }
   });
-  if (headSignature !== persistedTabSwitcherHeadSignature) {
-    writes[tabSwitcherThumbnails.key] = head;
-  }
+  const headChanged = headSignature !== persistedTabSwitcherHeadSignature;
   const removals = Array.from(persistedThumbnailSignatureByTabId.keys())
-    .filter((tabId) => !nextSignatures.has(tabId))
-    .map(getTabSwitcherThumbnailStorageKey);
-  if (!Object.keys(writes).length && !removals.length) {
+    .filter((tabId) => !nextSignatures.has(tabId));
+  if (!thumbnailWrites.size && !headChanged && !removals.length) {
     return Promise.resolve(true);
   }
-  return new Promise((resolve) => {
-    storageArea.set(writes, () => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        resolve(false);
-        return;
-      }
-      persistedTabSwitcherHeadSignature = headSignature;
-      persistedThumbnailSignatureByTabId.clear();
-      nextSignatures.forEach((signature, tabId) => {
-        persistedThumbnailSignatureByTabId.set(tabId, signature);
-      });
-      if (!removals.length || typeof storageArea.remove !== 'function') {
-        resolve(true);
-        return;
-      }
-      storageArea.remove(removals, () => {
-        resolve(!(chrome.runtime && chrome.runtime.lastError));
-      });
+  return Promise.all([
+    workerSettings.writeMembers(tabSwitcherThumbnail, thumbnailWrites),
+    headChanged ? workerSettings.set(tabSwitcherThumbnails, head) : Promise.resolve()
+  ]).then(() => {
+    persistedTabSwitcherHeadSignature = headSignature;
+    persistedThumbnailSignatureByTabId.clear();
+    nextSignatures.forEach((signature, tabId) => {
+      persistedThumbnailSignatureByTabId.set(tabId, signature);
     });
-  });
+    return workerSettings.removeMembers(tabSwitcherThumbnail, removals).then(() => true, () => false);
+  }, () => false);
 }
 
 export function ensureTabSwitcherStateLoaded(): Promise<boolean> {
@@ -1666,7 +1635,7 @@ function isSwitcherWindowFocused(windowId: number): Promise<boolean> {
 // Re-checked when the settle timer fires: the tab must still be the active tab
 // of a focused window, on a URL whose thumbnail is still wanted.
 function getSettledSwitcherCaptureTab(request: CaptureRequest): Promise<chrome.tabs.Tab | null> {
-  if (!tabSwitcherEnabledCache || typeof chrome.tabs.get !== 'function') {
+  if (!workerSettings.get(tabSwitcherEnabled) || typeof chrome.tabs.get !== 'function') {
     return Promise.resolve(null);
   }
   return new Promise((resolve) => {
@@ -1695,7 +1664,7 @@ export function scheduleSwitcherThumbnailCapture(tab: chrome.tabs.Tab, reason: s
     return;
   }
   // Thumbnails exist only for the switcher's previews.
-  if (!tabSwitcherEnabledCache) {
+  if (!workerSettings.get(tabSwitcherEnabled)) {
     return;
   }
   if (!canCaptureSwitcherThumbnail(tab)) {
@@ -1752,23 +1721,12 @@ function clearSwitcherThumbnailsForDisabledSwitcher(): Promise<boolean | void> {
   }).catch(warnBackgroundFailure('Failed to clear the recent-tab switcher thumbnails.'));
 }
 
-// Mirrors the stored setting, re-read on every wake; background.js applies it.
-let tabSwitcherEnabledCache = true;
-
-// Browsers that present each space as its own window need this to keep other
-// spaces out of the list; by default every normal window shares one list.
-let tabSwitcherCurrentWindowOnlyCache = false;
-
-export function applyTabSwitcherCurrentWindowOnlySetting(enabled: unknown): void {
-  tabSwitcherCurrentWindowOnlyCache = enabled === true;
-}
-
-export function applyTabSwitcherEnabledSetting(enabled: unknown): void {
-  tabSwitcherEnabledCache = enabled === true;
-  if (!tabSwitcherEnabledCache) {
+// Turning the switcher off drops the thumbnails it kept.
+workerSettings.subscribe(tabSwitcherEnabled, () => {
+  if (!workerSettings.get(tabSwitcherEnabled)) {
     void clearSwitcherThumbnailsForDisabledSwitcher();
   }
-}
+});
 
 function normalizeSwitcherTabForPayload(tab: SwitcherTab | null | undefined, currentTabId: number | undefined): TabSwitcherItem | null {
   if (!tab || typeof tab.id !== 'number') {
@@ -1801,7 +1759,7 @@ function getRecentTabsForSwitcher(
   windowId: number | undefined
 ): TabSwitcherItem[] {
   const normalizedTabs = (Array.isArray(tabList) ? tabList : [])
-    .filter((tab) => !tabSwitcherCurrentWindowOnlyCache || (tab && tab.windowId === windowId))
+    .filter((tab) => !workerSettings.get(tabSwitcherCurrentWindowOnly) || (tab && tab.windowId === windowId))
     .map((tab) => ({
       ...tab,
       url: getResolvedTabUrl(tab)
@@ -2164,7 +2122,7 @@ export function triggerTabSwitcherForTab(
   const commandStartedAt = Number.isFinite(observedAt) && observedAt > 0
     ? observedAt
     : Date.now();
-  if (!tabSwitcherEnabledCache) {
+  if (!workerSettings.get(tabSwitcherEnabled)) {
     if (tab && typeof tab.windowId === 'number') {
       tabSwitcherHostTabIdByWindowId.delete(tab.windowId);
     }

@@ -65,5 +65,34 @@ function defineSetting<T>(spec: SettingSpec<T>): Setting<T> {
   });
 }
 
-export { defineSetting };
-export type { Setting, SettingArea, SettingDiagnostics, SettingSpec, SettingSync };
+interface SettingFamilySpec<T> {
+  // What every key of the family starts with; the rest is the member's id.
+  prefix: string;
+  area: SettingArea;
+  schema: Schema<T>;
+}
+
+// Values stored under one key each, named by an id known only at run time
+// (a tab, a release version, a WebDAV connection).
+interface SettingFamily<T> {
+  readonly prefix: string;
+  readonly area: SettingArea;
+  keyFor(id: string | number): string;
+  // The id a key of this family names, or null for any other key.
+  idOf(key: string): string | null;
+  parse(value: unknown): T;
+}
+
+function defineSettingFamily<T>(spec: SettingFamilySpec<T>): SettingFamily<T> {
+  const { prefix, schema } = spec;
+  return Object.freeze({
+    prefix,
+    area: spec.area,
+    keyFor: (id: string | number) => `${prefix}${id}`,
+    idOf: (key: string) => (key.startsWith(prefix) ? key.slice(prefix.length) : null),
+    parse: (value: unknown) => schema.parse(value)
+  });
+}
+
+export { defineSetting, defineSettingFamily };
+export type { Setting, SettingArea, SettingDiagnostics, SettingFamily, SettingFamilySpec, SettingSpec, SettingSync };
