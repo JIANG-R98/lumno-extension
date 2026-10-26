@@ -184,48 +184,55 @@ function updateOverlayTopFrameNavigation(details: NavigationDetails | null | und
 }
 
 
+type LoadingSession = TrackedLoadingRecord['session'];
+
+function readSession(record: TrackedLoadingRecord | null): LoadingSession | null {
+  return record && record.session && typeof record.session === 'object' ? record.session : null;
+}
+
+// The newer of two sessions by revision, then by update time; the
+// incoming one wins a tie.
+function newerSession(current: LoadingSession | null, incoming: LoadingSession | null): LoadingSession | null {
+  if (!current || !incoming) {
+    return current || incoming;
+  }
+  const currentRevision = Number(current.revision || 0);
+  const incomingRevision = Number(incoming.revision || 0);
+  if (currentRevision !== incomingRevision) {
+    return currentRevision > incomingRevision ? current : incoming;
+  }
+  return Number(current.updatedAt || 0) > Number(incoming.updatedAt || 0) ? current : incoming;
+}
+
+type StabilityFields = Pick<TrackedLoadingRecord, 'stableCompletionToken' | 'stableCompletionStartedAt' | 'stableCompletionUrl'>;
+
+function readStability(record: TrackedLoadingRecord): Required<StabilityFields> {
+  return {
+    stableCompletionToken: Math.max(0, Number(record.stableCompletionToken) || 0),
+    stableCompletionStartedAt: Number(record.stableCompletionStartedAt) || 0,
+    stableCompletionUrl: String(record.stableCompletionUrl || '')
+  };
+}
+
+// A stability check already counted for the tab is kept over an older one.
+function laterStability(current: TrackedLoadingRecord | null, incoming: TrackedLoadingRecord): Required<StabilityFields> {
+  const incomingStability = readStability(incoming);
+  if (!current) {
+    return incomingStability;
+  }
+  const currentStability = readStability(current);
+  return currentStability.stableCompletionToken >= incomingStability.stableCompletionToken ? currentStability : incomingStability;
+}
+
 function setOverlayLoadingRecord(record: TrackedLoadingRecord): void {
   if (!record || typeof record.tabId !== 'number') {
     return;
   }
   const currentRecord = overlayLoadingRecordsByTabId.get(record.tabId) || null;
-  const currentSession = currentRecord && currentRecord.session &&
-    typeof currentRecord.session === 'object'
-    ? currentRecord.session
-    : null;
-  const incomingSession = record.session && typeof record.session === 'object'
-    ? record.session
-    : null;
-  const shouldPreserveCurrentSession = Boolean(
-    currentSession &&
-    (!incomingSession ||
-      Number(currentSession.revision || 0) > Number(incomingSession.revision || 0) ||
-      (Number(currentSession.revision || 0) === Number(incomingSession.revision || 0) &&
-        Number(currentSession.updatedAt || 0) > Number(incomingSession.updatedAt || 0)))
-  );
-  const currentStableCompletionToken = Math.max(
-    0,
-    Number(currentRecord && currentRecord.stableCompletionToken) || 0
-  );
-  const incomingStableCompletionToken = Math.max(
-    0,
-    Number(record.stableCompletionToken) || 0
-  );
-  const shouldPreserveCurrentStability = Boolean(
-    currentRecord && currentStableCompletionToken >= incomingStableCompletionToken
-  );
   const nextRecord: TrackedLoadingRecord = {
     ...record,
-    session: shouldPreserveCurrentSession ? currentSession : incomingSession,
-    stableCompletionToken: shouldPreserveCurrentStability
-      ? currentStableCompletionToken
-      : incomingStableCompletionToken,
-    stableCompletionStartedAt: shouldPreserveCurrentStability && currentRecord
-      ? Number(currentRecord.stableCompletionStartedAt) || 0
-      : Number(record.stableCompletionStartedAt) || 0,
-    stableCompletionUrl: shouldPreserveCurrentStability && currentRecord
-      ? String(currentRecord.stableCompletionUrl || '')
-      : String(record.stableCompletionUrl || '')
+    session: newerSession(readSession(currentRecord), readSession(record)),
+    ...laterStability(currentRecord, record)
   };
   overlayLoadingRecordsByTabId.set(record.tabId, nextRecord);
   // The in-memory record still covers ordinary loading lifetimes.

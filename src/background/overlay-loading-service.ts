@@ -339,6 +339,101 @@ function restoreOverlayAfterLoadingDocumentChange(tab: TargetTab | null | undefi
   });
 }
 
+// The page went somewhere the overlay cannot open. The record goes, and an
+// overlay asked for while the tab was still leaving its page opens once it
+// has loaded; a pending move back to an openable page keeps the record.
+function settleOnRestrictedUrl(
+  tabId: number,
+  record: TrackedLoadingRecord,
+  resolvedTab: TargetTab & { id: number },
+  isComplete: boolean
+): void {
+  const trackedPendingUrl = typeof record.pendingNavigationUrl === 'string'
+    ? record.pendingNavigationUrl
+    : '';
+  if (!isComplete && canOpenOverlayOnUrl(trackedPendingUrl)) {
+    return;
+  }
+  const shouldReplayRestrictedIntent = isComplete &&
+    record.pendingNavigationDeferred === true;
+  clearOverlayLoadingRecord(tabId);
+  if (shouldReplayRestrictedIntent) {
+    const settledTab: TargetTab = {
+      ...resolvedTab,
+      status: 'complete',
+      pendingUrl: ''
+    };
+    setTimeout(() => {
+      reopenOverlay(settledTab, [], record.source, {
+        skipDuplicateGuard: true
+      });
+    }, 0);
+  }
+}
+
+// The overlay is still up: wait for the page to settle before letting go.
+function keepTracking(
+  tabId: number,
+  resolvedTab: TargetTab & { id: number },
+  record: TrackedLoadingRecord,
+  flags: { isComplete: boolean; isStableComplete: boolean }
+): void {
+  const hasPendingLoadingUpdate = overlayLoadingPendingUpdateByTabId.has(tabId);
+  finishOverlayLoadingOpenAttempt(tabId);
+  if (flags.isComplete && !flags.isStableComplete && !hasPendingLoadingUpdate) {
+    scheduleOverlayLoadingStableCompletion(resolvedTab, record);
+  }
+}
+
+// Acts on what the probe found in the tab: clears, keeps or restores the
+// overlay.
+function applyRecoveryProbe(
+  tabId: number,
+  record: TrackedLoadingRecord,
+  resolvedTab: TargetTab & { id: number },
+  results: Parameters<Parameters<typeof probeOverlayLoadingState>[1]>[0],
+  flags: { isComplete: boolean; isStableComplete: boolean }
+): void {
+  const { isComplete, isStableComplete } = flags;
+  const pendingDocumentStart = overlayLoadingPendingUpdateByTabId.get(tabId);
+  if (pendingDocumentStart && pendingDocumentStart.changeInfo &&
+      pendingDocumentStart.changeInfo.documentStarted === true) {
+    finishOverlayLoadingOpenAttempt(tabId);
+    return;
+  }
+  if (chrome.runtime && chrome.runtime.lastError) {
+    if (isComplete) {
+      restoreOverlayAfterLoadingDocumentChange(resolvedTab, record, true);
+    } else {
+      finishOverlayLoadingOpenAttempt(tabId);
+      scheduleOverlayLoadingPreCompleteRetry(resolvedTab, record);
+    }
+    return;
+  }
+  const outcome = OVERLAY_LOADING_LIFECYCLE.decideRecovery(record, results, {
+    complete: isComplete,
+    stable: isStableComplete,
+    now: Date.now(),
+    ttlMs: OVERLAY_LOADING_RECORD_TTL_MS
+  });
+  if (outcome.action === 'clear' || outcome.action === 'none') {
+    clearOverlayLoadingRecord(tabId);
+    return;
+  }
+  if (outcome.record) {
+    setOverlayLoadingRecord(outcome.record);
+  }
+  if (outcome.action === 'keep') {
+    keepTracking(tabId, resolvedTab, outcome.record || record, flags);
+    return;
+  }
+  restoreOverlayAfterLoadingDocumentChange(
+    resolvedTab,
+    outcome.record || record,
+    isComplete
+  );
+}
+
 function recoverOverlayAfterLoadingUpdate(
   tabId: number,
   changeInfo: LoadingChangeInfo | null | undefined,
@@ -372,75 +467,13 @@ function recoverOverlayAfterLoadingUpdate(
     }
     const resolvedUrl = getResolvedTabUrl(resolvedTab);
     if (!canOpenOverlayOnUrl(resolvedUrl)) {
-      const trackedPendingUrl = typeof record.pendingNavigationUrl === 'string'
-        ? record.pendingNavigationUrl
-        : '';
-      if (!isComplete && canOpenOverlayOnUrl(trackedPendingUrl)) {
-        return;
-      }
-      const shouldReplayRestrictedIntent = isComplete &&
-        record.pendingNavigationDeferred === true;
-      clearOverlayLoadingRecord(tabId);
-      if (shouldReplayRestrictedIntent) {
-        const settledTab: TargetTab = {
-          ...resolvedTab,
-          status: 'complete',
-          pendingUrl: ''
-        };
-        setTimeout(() => {
-          reopenOverlay(settledTab, [], record.source, {
-            skipDuplicateGuard: true
-          });
-        }, 0);
-      }
+      settleOnRestrictedUrl(tabId, record, resolvedTab, isComplete);
       return;
     }
     overlayLoadingRecoveryInFlightByTabId.add(tabId);
     probeOverlayLoadingState(tabId, (results) => {
-      const pendingDocumentStart = overlayLoadingPendingUpdateByTabId.get(tabId);
-      if (pendingDocumentStart && pendingDocumentStart.changeInfo &&
-          pendingDocumentStart.changeInfo.documentStarted === true) {
-        finishOverlayLoadingOpenAttempt(tabId);
-        return;
-      }
-      if (chrome.runtime && chrome.runtime.lastError) {
-        if (isComplete) {
-          restoreOverlayAfterLoadingDocumentChange(resolvedTab, record, true);
-        } else {
-          finishOverlayLoadingOpenAttempt(tabId);
-          scheduleOverlayLoadingPreCompleteRetry(resolvedTab, record);
-        }
-        return;
-      }
-      const outcome = OVERLAY_LOADING_LIFECYCLE.decideRecovery(record, results, {
-        complete: isComplete,
-        stable: isStableComplete,
-        now: Date.now(),
-        ttlMs: OVERLAY_LOADING_RECORD_TTL_MS
-      });
-      if (outcome.action === 'clear' || outcome.action === 'none') {
-        clearOverlayLoadingRecord(tabId);
-        return;
-      }
-      if (outcome.record) {
-        setOverlayLoadingRecord(outcome.record);
-      }
-      if (outcome.action === 'keep') {
-        const hasPendingLoadingUpdate = overlayLoadingPendingUpdateByTabId.has(tabId);
-        finishOverlayLoadingOpenAttempt(tabId);
-        if (isComplete && !isStableComplete && !hasPendingLoadingUpdate) {
-          scheduleOverlayLoadingStableCompletion(
-            resolvedTab,
-            outcome.record || record
-          );
-        }
-        return;
-      }
-      restoreOverlayAfterLoadingDocumentChange(
-        resolvedTab,
-        outcome.record || record,
-        isComplete
-      );
+      applyRecoveryProbe(tabId, record, resolvedTab, results, { isComplete, isStableComplete });
+
     });
   });
 }

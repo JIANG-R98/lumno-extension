@@ -203,16 +203,15 @@ function clampSelectionOffset(value: unknown, inputLength: number, fallback: num
 
 // The overlay's input as the page last reported it; missing fields keep
 // their previous values.
-function normalizeSessionState(value: unknown, previousSession: OverlaySessionState | null | undefined, now?: number): OverlaySessionState {
-  const input = isRecord(value) ? value : {};
-  const previous = previousSession && typeof previousSession === 'object'
-    ? previousSession
-    : null;
-  const rawInputValue = typeof input.inputValue === 'string'
-    ? input.inputValue
-    : (previous && typeof previous.inputValue === 'string' ? previous.inputValue : '');
-  const inputValue = rawInputValue.slice(0, MAX_INPUT_VALUE_LENGTH);
-  const inputLength = inputValue.length;
+type SessionSelection = Pick<OverlaySessionState, 'selectionStart' | 'selectionEnd' | 'selectionDirection'>;
+
+// The selection the overlay reported, kept within the text; offsets it left
+// out stay where they were.
+function readSelection(
+  input: Record<string, unknown>,
+  previous: OverlaySessionState | null,
+  inputLength: number
+): SessionSelection {
   const previousStart = previous && Number.isFinite(Number(previous.selectionStart))
     ? Number(previous.selectionStart)
     : inputLength;
@@ -229,10 +228,23 @@ function normalizeSessionState(value: unknown, previousSession: OverlaySessionSt
     inputLength,
     Math.min(previousEnd, inputLength)
   ));
-  const selectionDirection = input.selectionDirection === 'backward' ||
-    input.selectionDirection === 'forward'
+  const selectionDirection = input.selectionDirection === 'backward' || input.selectionDirection === 'forward'
     ? input.selectionDirection
     : 'none';
+  return { selectionStart, selectionEnd, selectionDirection };
+}
+
+function normalizeSessionState(value: unknown, previousSession: OverlaySessionState | null | undefined, now?: number): OverlaySessionState {
+  const input = isRecord(value) ? value : {};
+  const previous = previousSession && typeof previousSession === 'object'
+    ? previousSession
+    : null;
+  const rawInputValue = typeof input.inputValue === 'string'
+    ? input.inputValue
+    : (previous && typeof previous.inputValue === 'string' ? previous.inputValue : '');
+  const inputValue = rawInputValue.slice(0, MAX_INPUT_VALUE_LENGTH);
+  const inputLength = inputValue.length;
+  const { selectionStart, selectionEnd, selectionDirection } = readSelection(input, previous, inputLength);
   const updatedAt = Number.isFinite(Number(now)) ? Number(now) : Date.now();
   return {
     inputValue,
@@ -333,6 +345,24 @@ function isExpired(record: OverlayLoadingRecord | null | undefined, now?: number
 
 // What to do with a record once the tab's page reports in: restore the
 // overlay, keep waiting, or let the record go.
+// The overlay is still there: keep tracking until the page has settled.
+function decideConnected(nextRecord: OverlayLoadingRecord | null, settings: RecoveryOptions): LifecycleDecision {
+  if (settings.complete === true && settings.stable === true) {
+    return { action: 'clear', record: null, reason: 'stable-complete-and-connected' };
+  }
+  return {
+    action: 'keep',
+    record: nextRecord,
+    reason: settings.complete === true ? 'complete-awaiting-stability' : 'connected'
+  };
+}
+
+function hasDocumentChanged(record: OverlayLoadingRecord, mainResult: InjectionResult): boolean {
+  const previousDocumentId = String(record.documentId || '');
+  const currentDocumentId = String(mainResult.documentId || '');
+  return Boolean(previousDocumentId && currentDocumentId) && previousDocumentId !== currentDocumentId;
+}
+
 function decideRecovery(
   record: OverlayLoadingRecord | null | undefined,
   results: readonly (InjectionResult | null | undefined)[] | null | undefined,
@@ -353,21 +383,9 @@ function decideRecovery(
   }
   const nextRecord = withResultDocument(record, mainResult, now);
   if (payload.overlayConnected === true) {
-    if (settings.complete === true && settings.stable === true) {
-      return { action: 'clear', record: null, reason: 'stable-complete-and-connected' };
-    }
-    return {
-      action: 'keep',
-      record: nextRecord,
-      reason: settings.complete === true
-        ? 'complete-awaiting-stability'
-        : 'connected'
-    };
+    return decideConnected(nextRecord, settings);
   }
-  const previousDocumentId = String(record.documentId || '');
-  const currentDocumentId = String(mainResult.documentId || '');
-  const comparableDocumentIds = Boolean(previousDocumentId && currentDocumentId);
-  const documentChanged = comparableDocumentIds && previousDocumentId !== currentDocumentId;
+  const documentChanged = hasDocumentChanged(record, mainResult);
   if (payload.runtimeReady === true && payload.overlayOpenState === 'closed' && !documentChanged) {
     return { action: 'clear', record: null, reason: 'closed-in-same-document' };
   }
