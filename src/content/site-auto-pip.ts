@@ -6,38 +6,364 @@ import * as CORE from './auto-pip-core';
 import type { AutoPipState } from './auto-pip-core';
 import { isAutoPipBlacklistedHost } from './auto-pip-blacklist';
 import { claimContentScript } from '../platform/content-registry';
+import { getMatchedProfile } from './site-auto-pip-profiles';
 
-// How auto PiP finds and enters a site's player.
-interface SitePlayerProfile {
-  test: RegExp;
-  // Containers of the real player; matching videos score higher.
-  selectors: string[];
-  // Previews and feeds that never enter PiP.
-  rejectSelectors?: string[];
-  // Enter even where the site set disablePictureInPicture.
-  allowDisablePiP?: boolean;
-  minVisibleArea?: number;
-  allowEnterWhenHiddenVideo?: boolean;
-  autoResumeOnHiddenEnter?: boolean;
-  allowNoUserGesture?: boolean;
-  allowEnterWhenNotPlaying?: boolean;
-  hiddenRetryLimit?: number;
-  hiddenRetryDelayMs?: number;
-  // The site's player only enters PiP reliably from the page's own world:
-  // the background runs `action` there (after `setupAction`, when set).
-  mainWorldEnter?: {
-    action: 'siteTryEnterPiPInMainWorld' | 'iqiyiTryEnterPiPInMainWorld';
-    setupAction?: 'iqiyiSetupAutoPiPInMainWorld';
-    requiresPlaying?: boolean;
+import { ENTER_SUPPRESS_AFTER_EXIT_MS, ENTER_SUPPRESS_AFTER_VISIBLE_MS, MAIN_WORLD_ENTER_TIMEOUT_MS, QUICK_REHIDE_BYPASS_MS, VISIBLE_RECOVERY_FAST_ATTEMPTS, VISIBLE_RECOVERY_FAST_DELAY_MS, VISIBLE_RECOVERY_MAX_ATTEMPTS, VISIBLE_RECOVERY_SLOW_DELAY_MS } from './site-auto-pip-context';
+import type { SitePipContext } from './site-auto-pip-context';
+import { getHiddenRetryDelayMs, getHiddenRetryLimit, isVideoCandidate, isVideoVisibleEnough, markPlaybackIntentFromActiveVideo, reloadJingxuanModalIfNeeded, requestMainWorldSetup, scoreVideo } from './site-auto-pip-video';
+
+// Enters PiP, lifting the site's disablePictureInPicture for the request
+// where the profile allows it.
+async function requestVideoPictureInPicture(ctx: SitePipContext, video: HTMLVideoElement): Promise<boolean> {
+  if (typeof video.requestPictureInPicture !== "function") {
+    return false;
+  }
+  const allowDisablePiP = Boolean(ctx.matchedProfile && ctx.matchedProfile.allowDisablePiP);
+  const hadDisableAttr = video.hasAttribute("disablepictureinpicture");
+  const previousDisable = Boolean(video.disablePictureInPicture);
+  if (allowDisablePiP && previousDisable) {
+    try {
+      video.disablePictureInPicture = false;
+      if (hadDisableAttr) {
+        video.removeAttribute("disablepictureinpicture");
+      }
+    } catch (_error) {
+      // Ignore property/attribute write errors.
+    }
+  }
+  try {
+    await video.requestPictureInPicture();
+    return true;
+  } finally {
+    if (allowDisablePiP && previousDisable) {
+      try {
+        video.disablePictureInPicture = previousDisable;
+        if (hadDisableAttr) {
+          video.setAttribute("disablepictureinpicture", "");
+        }
+      } catch (_error) {
+        // Ignore restore errors.
+      }
+    }
+  }
+}
+
+// Whether auto PiP may try to enter now: enabled, nothing else in PiP, the
+// tab hidden, after a user gesture, and not in the pause after leaving.
+// 'retry' when it was asked too soon and will try again.
+function getEnterGate(ctx: SitePipContext, reason: string): 'enter' | 'skip' | 'retry' {
+  const { state, core } = ctx;
+  if (!state.autoPipEnabled || core.isDocumentPiPActive()) {
+    return 'skip';
+  }
+  if (!core.canEnterPiP() || !core.canExitPiP() || state.enteringPiP || state.exitingPiP) {
+    return 'skip';
+  }
+  const allowNoUserGesture = Boolean(ctx.matchedProfile && ctx.matchedProfile.allowNoUserGesture);
+  if (!state.hadUserGesture && !allowNoUserGesture && reason !== "media_session_action") {
+    return 'skip';
+  }
+  if (Date.now() < Number(state.suppressEnterUntil || 0)) {
+    return 'retry';
+  }
+  return document.visibilityState === "hidden" ? 'enter' : 'skip';
+}
+
+// The playing video, or the last one auto PiP managed when it still qualifies.
+function pickEnterVideo(ctx: SitePipContext): HTMLVideoElement | null {
+  const activeVideo = ctx.core.syncActiveVideo();
+  if ((!activeVideo || !CORE.isVideoPlaying(activeVideo)) && isVideoCandidate(ctx, ctx.state.lastManagedVideo)) {
+    return ctx.core.syncActiveVideo(ctx.state.lastManagedVideo);
+  }
+  return activeVideo;
+}
+
+// PiP ownership across tabs, asked for once per attempt.
+interface OwnershipClaim {
+  granted: boolean;
+  ensure(): Promise<boolean>;
+}
+
+function createOwnershipClaim(ctx: SitePipContext): OwnershipClaim {
+  const claim: OwnershipClaim = {
+    granted: false,
+    async ensure() {
+      if (claim.granted || ctx.state.ownerToken) {
+        claim.granted = true;
+        return true;
+      }
+      const ownershipResult = await ctx.core.requestPiPOwnership("video");
+      if (!ownershipResult.granted) {
+        ctx.core.clearPlaybackRecoveryState();
+        return false;
+      }
+      claim.granted = true;
+      return true;
+    }
   };
-  reloadsJingxuanModal?: boolean;
+  return claim;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object';
+function markManagedPiP(ctx: SitePipContext, video: Element | null): void {
+  ctx.state.managedPiP = true;
+  if (video instanceof HTMLVideoElement) {
+    ctx.state.lastManagedVideo = video;
+  }
+  ctx.state.hiddenRetryBudget = 0;
+  ctx.core.clearEnterRetryTimer();
 }
 
-(function () {
+// Sites whose player only enters PiP from the page's own world: true once
+// it entered, false when it may not, null to try the video element next.
+async function enterFromMainWorld(
+  ctx: SitePipContext,
+  mainWorldEnter: NonNullable<SitePipContext['mainWorldEnter']>,
+  claim: OwnershipClaim
+): Promise<boolean | null> {
+  if (!(await claim.ensure())) {
+    return false;
+  }
+  if (mainWorldEnter.setupAction) {
+    await requestMainWorldSetup(ctx);
+  }
+  await ctx.core.sendRuntimeMessage(
+    { action: mainWorldEnter.action },
+    { ms: MAIN_WORLD_ENTER_TIMEOUT_MS, minMs: 160 }
+  );
+  // Read afresh: the page entered PiP while this function waited.
+  const pipElement = getPictureInPictureElement();
+  if (pipElement) {
+    markManagedPiP(ctx, pipElement);
+    return true;
+  }
+  return null;
+}
+
+// Enters PiP on the video element itself, if it is visible enough.
+async function enterVideoElement(ctx: SitePipContext, activeVideo: HTMLVideoElement, claim: OwnershipClaim): Promise<boolean> {
+  const allowEnterWhenHiddenVideo = Boolean(
+    ctx.matchedProfile &&
+    ctx.matchedProfile.allowEnterWhenHiddenVideo &&
+    document.visibilityState === "hidden"
+  );
+  if (!allowEnterWhenHiddenVideo && !isVideoVisibleEnough(ctx, activeVideo)) {
+    return false;
+  }
+  if (!(await claim.ensure())) {
+    return false;
+  }
+  ctx.state.enteringPiP = true;
+  try {
+    const entered = await requestVideoPictureInPicture(ctx, activeVideo);
+    if (!entered) {
+      return false;
+    }
+    markManagedPiP(ctx, activeVideo);
+    return true;
+  } catch (_error) {
+    return false;
+  } finally {
+    ctx.state.enteringPiP = false;
+    if (!ctx.state.managedPiP && claim.granted) {
+      await ctx.core.releasePiPOwnership();
+    }
+  }
+}
+
+async function maybeEnterPiP(ctx: SitePipContext, reason: string): Promise<boolean> {
+  const gate = getEnterGate(ctx, reason);
+  if (gate === 'retry') {
+    ctx.core.scheduleDeferredEnterPiP(`${reason || "enter"}_suppressed_retry`);
+    return false;
+  }
+  if (gate === 'skip') {
+    return false;
+  }
+  if (document.pictureInPictureElement) {
+    return true;
+  }
+  const activeVideo = pickEnterVideo(ctx);
+  const claim = createOwnershipClaim(ctx);
+  const { mainWorldEnter } = ctx;
+  if (mainWorldEnter && mainWorldEnter.requiresPlaying && !CORE.isVideoPlaying(activeVideo)) {
+    return false;
+  }
+  if (mainWorldEnter) {
+    const entered = await enterFromMainWorld(ctx, mainWorldEnter, claim);
+    if (entered !== null) {
+      return entered;
+    }
+  }
+  if (!activeVideo || !CORE.isVideoPlaying(activeVideo)) {
+    return false;
+  }
+  return enterVideoElement(ctx, activeVideo, claim);
+}
+
+function recoverInlinePlaybackIfNeeded(ctx: SitePipContext): void {
+  if (document.visibilityState !== "visible") {
+    return;
+  }
+  if (!ctx.state.shouldResumeInlinePlayback) {
+    return;
+  }
+  if (document.pictureInPictureElement) {
+    return;
+  }
+  if (reloadJingxuanModalIfNeeded(ctx)) {
+    return;
+  }
+  const video = ctx.core.syncActiveVideo(ctx.state.lastManagedVideo || ctx.state.activeVideo);
+  if (video && video.paused && !video.ended) {
+    video.play().catch(() => {
+      // Expected when autoplay policy blocks playback or a pause interrupts it.
+    });
+  }
+}
+
+function scheduleVisibleRecovery(ctx: SitePipContext): void {
+  ctx.core.clearRecoveryTimer();
+  if (!ctx.state.shouldResumeInlinePlayback &&
+      !ctx.state.managedPiP &&
+      !document.pictureInPictureElement) {
+    return;
+  }
+  if (!ctx.state.managedPiP && !document.pictureInPictureElement) {
+    recoverInlinePlaybackIfNeeded(ctx);
+    return;
+  }
+
+  let attempts = 0;
+  const run = async (): Promise<void> => {
+    attempts += 1;
+    await ctx.core.maybeExitPiP();
+    if (reloadJingxuanModalIfNeeded(ctx)) {
+      ctx.core.clearRecoveryTimer();
+      return;
+    }
+    recoverInlinePlaybackIfNeeded(ctx);
+    if (document.visibilityState !== "visible") {
+      ctx.core.clearRecoveryTimer();
+      return;
+    }
+    if (document.pictureInPictureElement && attempts < VISIBLE_RECOVERY_MAX_ATTEMPTS) {
+      ctx.state.recoveryTimer = window.setTimeout(
+        run,
+        attempts < VISIBLE_RECOVERY_FAST_ATTEMPTS
+          ? VISIBLE_RECOVERY_FAST_DELAY_MS
+          : VISIBLE_RECOVERY_SLOW_DELAY_MS
+      );
+      return;
+    }
+    ctx.core.clearRecoveryTimer();
+  };
+  run();
+}
+
+function handleVisibilityChange(ctx: SitePipContext): void {
+  if (document.visibilityState === "hidden") {
+    ctx.core.capturePlaybackStateOnHide();
+    ctx.state.hiddenRetryBudget = getHiddenRetryLimit(ctx);
+    if (ctx.mainWorldEnter && ctx.mainWorldEnter.setupAction) {
+      // sendRuntimeMessage reports failures in its result instead of rejecting.
+      requestMainWorldSetup(ctx).catch(CORE.warnUnexpected("main-world PiP setup"));
+    }
+    const now = Date.now();
+    const visibleSuppressStart = Number(ctx.state.lastVisibleAt || 0);
+    const isQuickRehide = visibleSuppressStart > 0 &&
+      (now - visibleSuppressStart) <= QUICK_REHIDE_BYPASS_MS;
+    if (isQuickRehide && Number(ctx.state.suppressEnterUntil || 0) > now) {
+      ctx.state.suppressEnterUntil = 0;
+    }
+    ctx.core.clearRecoveryTimer();
+    ctx.core.scheduleDeferredEnterPiP("visibility_hidden_retry");
+    maybeEnterPiP(ctx, "visibility_hidden");
+    return;
+  }
+  if (document.visibilityState === "visible") {
+    markPlaybackIntentFromActiveVideo(ctx);
+    ctx.state.hiddenRetryBudget = 0;
+    ctx.state.lastVisibleAt = Date.now();
+    ctx.core.clearEnterRetryTimer();
+    ctx.state.suppressEnterUntil = Date.now() + ENTER_SUPPRESS_AFTER_VISIBLE_MS;
+    scheduleVisibleRecovery(ctx);
+  }
+}
+
+// Playback started: remember it, and enter PiP when the tab is hidden.
+function onVideoPlay(ctx: SitePipContext): void {
+  ctx.state.hadUserGesture = true;
+  ctx.state.wasPlayingBeforeHide = true;
+  if (document.visibilityState === "hidden") {
+    ctx.state.shouldResumeInlinePlayback = true;
+    maybeEnterPiP(ctx, "video_play_hidden");
+  }
+}
+
+function onVideoEvent(ctx: SitePipContext, event: Event): void {
+  const target = event.target;
+  if (!(target instanceof HTMLVideoElement)) {
+    return;
+  }
+  ctx.core.syncActiveVideo(target);
+  if (event.type === "play" || event.type === "playing") {
+    onVideoPlay(ctx);
+    return;
+  }
+  if (event.type === "pause" || event.type === "ended") {
+    ctx.state.shouldResumeInlinePlayback = false;
+    ctx.state.wasPlayingBeforeHide = false;
+  }
+  if (event.type === "ended" && target === document.pictureInPictureElement && ctx.state.managedPiP) {
+    ctx.core.maybeExitPiP();
+  }
+}
+
+function onEnterPictureInPicture(ctx: SitePipContext, event: Event): void {
+  if (ctx.state.enteringPiP || document.visibilityState === "hidden") {
+    ctx.state.managedPiP = true;
+    return;
+  }
+  const target = event.target;
+  ctx.state.managedPiP = Boolean(target && target === ctx.state.lastManagedVideo);
+}
+
+function getPictureInPictureElement(): Element | null {
+  return document.pictureInPictureElement;
+}
+
+function markUserGesture(ctx: SitePipContext): void {
+  ctx.state.hadUserGesture = true;
+}
+
+function init(ctx: SitePipContext): void {
+  if (!ctx.core.canExitPiP()) {
+    return;
+  }
+  if (ctx.mainWorldEnter && ctx.mainWorldEnter.setupAction) {
+    // sendRuntimeMessage reports failures in its result instead of rejecting.
+    requestMainWorldSetup(ctx).catch(CORE.warnUnexpected("main-world PiP setup"));
+  }
+  ctx.core.syncActiveVideo();
+  markPlaybackIntentFromActiveVideo(ctx);
+  ctx.core.bindMediaSessionAutoPiP();
+  ctx.core.bindRuntimeMessageListener();
+
+  document.addEventListener("pointerdown", (() => markUserGesture(ctx)), true);
+  document.addEventListener("keydown", (() => markUserGesture(ctx)), true);
+  document.addEventListener("touchstart", (() => markUserGesture(ctx)), true);
+  document.addEventListener("visibilitychange", (() => handleVisibilityChange(ctx)), true);
+  document.addEventListener("play", ((event: Event) => onVideoEvent(ctx, event)), true);
+  document.addEventListener("playing", ((event: Event) => onVideoEvent(ctx, event)), true);
+  document.addEventListener("pause", ((event: Event) => onVideoEvent(ctx, event)), true);
+  document.addEventListener("ended", ((event: Event) => onVideoEvent(ctx, event)), true);
+  document.addEventListener("loadedmetadata", ((event: Event) => onVideoEvent(ctx, event)), true);
+  document.addEventListener("enterpictureinpicture", ((event: Event) => onEnterPictureInPicture(ctx, event)), true);
+  document.addEventListener("leavepictureinpicture", ctx.core.onLeavePictureInPicture, true);
+  ctx.core.bindPageReturnListeners();
+}
+
+function startSiteAutoPip(): void {
   if (!claimContentScript('site-auto-pip')) {
     return;
   }
@@ -67,27 +393,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     douyinModalReloadAt: 0
   };
 
-  const ENTER_SUPPRESS_AFTER_EXIT_MS = 1100;
-  const ENTER_SUPPRESS_AFTER_VISIBLE_MS = 1300;
-  const QUICK_REHIDE_BYPASS_MS = 900;
-  const DEFAULT_HIDDEN_RETRY_LIMIT = 4;
-  const DEFAULT_HIDDEN_RETRY_DELAY_MS = 220;
-  const MIN_VISIBLE_WIDTH = 220;
-  const MIN_VISIBLE_HEIGHT = 124;
-  const MIN_VISIBLE_AREA = 60000;
-  const DOUYIN_MODAL_RECOVERY_RELOAD_GUARD_MS = 15000;
-  // Timeouts for asking the background to run PiP code in the page's world.
-  const MAIN_WORLD_SETUP_TIMEOUT_MS = 960;
-  const MAIN_WORLD_ENTER_TIMEOUT_MS = 920;
-  // After the tab is shown again, retry leaving PiP a few times: quickly at
-  // first, then more slowly while the site's player settles.
-  const VISIBLE_RECOVERY_MAX_ATTEMPTS = 5;
-  const VISIBLE_RECOVERY_FAST_ATTEMPTS = 3;
-  const VISIBLE_RECOVERY_FAST_DELAY_MS = 120;
-  const VISIBLE_RECOVERY_SLOW_DELAY_MS = 280;
-
   const host = String(location.hostname || "").toLowerCase();
-  const isVideoPlaying = CORE.isVideoPlaying;
   const core = CORE.createAutoPipCore({
     state,
     window,
@@ -101,308 +407,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       enterSuppressAfterVisibleMs: ENTER_SUPPRESS_AFTER_VISIBLE_MS
     },
     hooks: {
-      maybeEnterPiP,
-      scheduleVisibleRecovery,
-      isVideoCandidate,
-      scoreVideo,
-      getHiddenRetryDelayMs,
-      onPageReturn: markPlaybackIntentFromActiveVideo
+      maybeEnterPiP: (reason: string) => maybeEnterPiP(ctx, reason),
+      scheduleVisibleRecovery: () => scheduleVisibleRecovery(ctx),
+      isVideoCandidate: (video: HTMLVideoElement | null) => isVideoCandidate(ctx, video),
+      scoreVideo: (video: HTMLVideoElement) => scoreVideo(ctx, video),
+      getHiddenRetryDelayMs: () => getHiddenRetryDelayMs(ctx),
+      onPageReturn: (() => markPlaybackIntentFromActiveVideo(ctx))
     }
   });
-  const syncActiveVideo = core.syncActiveVideo;
-  const clearEnterRetryTimer = core.clearEnterRetryTimer;
-  const clearRecoveryTimer = core.clearRecoveryTimer;
-  const maybeExitPiP = core.maybeExitPiP;
 
-  core.syncAutoPipEnabledSetting();
-  if (host && isAutoPipBlacklistedHost(host)) {
-    return;
-  }
-
-  const IQIYI_PLAYER_PROFILE: Omit<SitePlayerProfile, 'test'> = {
-    selectors: [
-      ".iqp-player video",
-      ".iqp-player-videolayer video",
-      "#flashbox video",
-      "#player video"
-    ],
-    rejectSelectors: [
-      ".player_outer_video video",
-      "video[outer='1']"
-    ],
-    allowDisablePiP: true,
-    minVisibleArea: 38000,
-    allowEnterWhenHiddenVideo: true,
-    autoResumeOnHiddenEnter: true,
-    allowNoUserGesture: true
-  };
-
-  // Per-site player profiles, keyed by site. The first profile whose test
-  // matches the host applies. mainWorldEnter marks sites whose player only
-  // enters PiP reliably from the page's own world: the background runs
-  // `action` there (after `setupAction`, when set). With requiresPlaying, the
-  // main-world attempt is skipped unless the video is playing.
-  const SITE_PROFILES: Readonly<Record<string, SitePlayerProfile>> = {
-    douyin: {
-      test: /(^|\.)douyin\.com$/,
-      selectors: [
-        ".xgplayer video",
-        ".xgplayer-video-wrap video",
-        ".xg-video-container video",
-        "[class*='videoPlayer'] video",
-        "[class*='Player'] video",
-        "video"
-      ],
-      rejectSelectors: [
-        ".discover-video-card-item video",
-        ".waterfall-videoCardContainer video",
-        ".jingxuanVideoCard video"
-      ],
-      allowDisablePiP: true,
-      minVisibleArea: 24000,
-      allowEnterWhenHiddenVideo: true,
-      autoResumeOnHiddenEnter: true,
-      allowNoUserGesture: true,
-      allowEnterWhenNotPlaying: true,
-      hiddenRetryLimit: 24,
-      hiddenRetryDelayMs: 180,
-      mainWorldEnter: {
-        action: "siteTryEnterPiPInMainWorld",
-        requiresPlaying: true
-      },
-      // The Jingxuan feed's video modal can lose its player while in PiP;
-      // reloading the modal URL is the only reliable way back.
-      reloadsJingxuanModal: true
-    },
-    bilibili: {
-      test: /(^|\.)bilibili\.com$/,
-      selectors: [
-        ".bpx-player-video-wrap video",
-        ".bilibili-player-video-wrap video",
-        ".bilibili-player-video video",
-        "#bilibili-player video",
-        "#player video"
-      ]
-    },
-    bilibiliTv: {
-      test: /(^|\.)bilibili\.tv$/,
-      selectors: [
-        ".bpx-player-video-wrap video",
-        ".bilibili-player-video-wrap video",
-        ".bilibili-player-video video",
-        "#bilibili-player video",
-        "#player video"
-      ]
-    },
-    youku: {
-      test: /(^|\.)youku\.com$/,
-      selectors: [
-        ".html5player-video video",
-        ".youku-player video",
-        "#player video",
-        "#ykPlayer video"
-      ]
-    },
-    tencentVideo: {
-      test: /(^|\.)v\.qq\.com$/,
-      selectors: [
-        ".txp_video_container video",
-        ".txp-player video",
-        ".txp_videos_container video",
-        ".txp_video video",
-        ".mod_player video",
-        "#mod_player video",
-        "#player video",
-        "video"
-      ],
-      rejectSelectors: [
-        "[class*='preview'] video",
-        "[class*='recommend'] video"
-      ],
-      allowDisablePiP: true,
-      allowEnterWhenHiddenVideo: true,
-      autoResumeOnHiddenEnter: true,
-      allowNoUserGesture: true,
-      allowEnterWhenNotPlaying: true,
-      minVisibleArea: 30000,
-      hiddenRetryLimit: 16,
-      hiddenRetryDelayMs: 180
-    },
-    iqiyi: {
-      test: /(^|\.)iqiyi\.com$/,
-      mainWorldEnter: {
-        action: "iqiyiTryEnterPiPInMainWorld",
-        setupAction: "iqiyiSetupAutoPiPInMainWorld"
-      },
-      ...IQIYI_PLAYER_PROFILE
-    },
-    // iQIYI's international site shares the player but not the main-world setup.
-    iqiyiInternational: {
-      test: /(^|\.)iq\.com$/,
-      ...IQIYI_PLAYER_PROFILE
-    },
-    kuaishou: {
-      test: /(^|\.)(kuaishou\.com|kwai\.com)$/,
-      selectors: [
-        ".ks-player video",
-        ".video-player video",
-        "[class*='player'] video",
-        "video"
-      ],
-      rejectSelectors: [
-        ".video-card video",
-        ".sidebar video",
-        "[class*='preview'] video"
-      ],
-      minVisibleArea: 36000
-    },
-    netflix: {
-      test: /(^|\.)netflix\.com$/,
-      selectors: [
-        ".watch-video video",
-        "[data-uia='video-canvas'] video",
-        ".NFPlayer video",
-        "video"
-      ],
-      rejectSelectors: [
-        ".previewModal video",
-        "[class*='preview'] video",
-        "[class*='billboard'] video"
-      ],
-      minVisibleArea: 56000
-    },
-    vimeo: {
-      test: /(^|\.)vimeo\.com$/,
-      selectors: [
-        ".vp-video video",
-        ".player video",
-        ".js-player video",
-        "video"
-      ],
-      rejectSelectors: [
-        ".vp-preview video",
-        "[class*='thumbnail'] video"
-      ]
-    },
-    dailymotion: {
-      test: /(^|\.)dailymotion\.com$/,
-      selectors: [
-        ".dmp_Player video",
-        ".dmp_VideoContainer video",
-        "#player video",
-        "video"
-      ],
-      rejectSelectors: [
-        ".sd_video_list video",
-        "[class*='preview'] video"
-      ]
-    },
-    primeVideo: {
-      test: /(^|\.)(primevideo\.com|amazon\.(com|co\.uk|de|co\.jp|in))$/,
-      selectors: [
-        ".webPlayerSDKContainer video",
-        ".atvwebplayersdk-video video",
-        "#dv-web-player video",
-        "video"
-      ],
-      rejectSelectors: [
-        "[class*='trailer'] video",
-        "[class*='preview'] video"
-      ],
-      minVisibleArea: 56000
-    },
-    disneyPlus: {
-      test: /(^|\.)(disneyplus\.com|hotstar\.com)$/,
-      selectors: [
-        ".btm-media-client-element video",
-        ".video-container video",
-        "[data-testid='videoPlayer'] video",
-        "video"
-      ],
-      rejectSelectors: [
-        "[class*='preview'] video",
-        "[class*='trailer'] video"
-      ],
-      minVisibleArea: 56000
-    },
-    max: {
-      test: /(^|\.)(max\.com|hbomax\.com)$/,
-      selectors: [
-        ".video-player video",
-        ".player-container video",
-        "[data-testid='video-player'] video",
-        "video"
-      ],
-      rejectSelectors: [
-        "[class*='preview'] video",
-        "[class*='sizzle'] video"
-      ],
-      minVisibleArea: 56000
-    },
-    tiktok: {
-      test: /(^|\.)tiktok\.com$/,
-      selectors: [
-        "[data-e2e='video-player'] video",
-        ".tiktok-player video",
-        "[class*='DivVideoContainer'] video",
-        "video"
-      ],
-      rejectSelectors: [
-        "[class*='recommend'] video",
-        "[class*='preview'] video"
-      ],
-      allowEnterWhenHiddenVideo: true,
-      autoResumeOnHiddenEnter: true,
-      allowNoUserGesture: true,
-      minVisibleArea: 26000
-    },
-    tubi: {
-      test: /(^|\.)tubitv\.com$/,
-      selectors: [
-        ".video-js video",
-        ".vjs-tech",
-        "#video_player video",
-        "video"
-      ],
-      rejectSelectors: [
-        ".poster video",
-        "[class*='preview'] video"
-      ]
-    },
-    pluto: {
-      test: /(^|\.)pluto\.tv$/,
-      selectors: [
-        ".video-js video",
-        ".vjs-tech",
-        ".player video",
-        "video"
-      ],
-      rejectSelectors: [
-        "[class*='grid'] video",
-        "[class*='preview'] video"
-      ]
-    },
-    twitch: {
-      test: /(^|\.)twitch\.tv$/,
-      selectors: [
-        ".video-player video",
-        ".persistent-player video",
-        "[data-a-target='player-overlay-click-handler'] video",
-        "video"
-      ],
-      rejectSelectors: [
-        ".channel-root__player-container--theatre + * video",
-        "[class*='preview'] video"
-      ],
-      minVisibleArea: 42000
-    }
-  };
-
-  function getMatchedProfile(): SitePlayerProfile | null {
-    return Object.values(SITE_PROFILES).find((profile) => profile.test.test(host)) || null;
-  }
-
-  const matchedProfile = getMatchedProfile();
+  const matchedProfile = getMatchedProfile(host);
   const profileSelectors = matchedProfile && Array.isArray(matchedProfile.selectors)
     ? matchedProfile.selectors
     : [];
@@ -412,542 +426,26 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   const mainWorldEnter = matchedProfile && matchedProfile.mainWorldEnter
     ? matchedProfile.mainWorldEnter
     : null;
+  const ctx: SitePipContext = {
+    state,
+    host,
+    core,
+    matchedProfile,
+    profileSelectors,
+    profileRejectSelectors,
+    mainWorldEnter
+  };
 
-  function isJingxuanModalUrl(): boolean {
-    if (!matchedProfile || !matchedProfile.reloadsJingxuanModal) {
-      return false;
-    }
-    try {
-      const url = new URL(location.href);
-      return url.pathname === "/jingxuan" && url.searchParams.has("modal_id");
-    } catch (_error) {
-      return false;
-    }
-  }
-
-  function requestMainWorldSetup(): Promise<unknown> {
-    if (!mainWorldEnter || !mainWorldEnter.setupAction) {
-      return Promise.resolve({ ok: false, reason: "no-main-world-setup" });
-    }
-    return core.sendRuntimeMessage(
-      { action: mainWorldEnter.setupAction },
-      { ms: MAIN_WORLD_SETUP_TIMEOUT_MS, minMs: 200 }
-    );
-  }
-
-  function getHiddenRetryLimit(): number {
-    const value = Number(matchedProfile && matchedProfile.hiddenRetryLimit);
-    if (Number.isFinite(value) && value >= 0) {
-      return Math.floor(value);
-    }
-    return DEFAULT_HIDDEN_RETRY_LIMIT;
-  }
-
-  function getHiddenRetryDelayMs(): number {
-    const value = Number(matchedProfile && matchedProfile.hiddenRetryDelayMs);
-    if (Number.isFinite(value) && value >= 40) {
-      return Math.floor(value);
-    }
-    return DEFAULT_HIDDEN_RETRY_DELAY_MS;
-  }
-
-  // The part of the video inside the viewport.
-  function getVisibleArea(video: Element | null): number {
-    if (!video) {
-      return 0;
-    }
-    const rect = video.getBoundingClientRect();
-    const vw = window.innerWidth || document.documentElement.clientWidth || 0;
-    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
-    if (vw <= 0 || vh <= 0) {
-      return 0;
-    }
-    const left = Math.max(0, Math.min(vw, rect.left));
-    const right = Math.max(0, Math.min(vw, rect.right));
-    const top = Math.max(0, Math.min(vh, rect.top));
-    const bottom = Math.max(0, Math.min(vh, rect.bottom));
-    const width = Math.max(0, right - left);
-    const height = Math.max(0, bottom - top);
-    return width * height;
-  }
-
-  function isVideoVisibleEnough(video: HTMLVideoElement | null): boolean {
-    if (!video || !video.isConnected || core.isProbablyHiddenByStyles(video)) {
-      return false;
-    }
-    const rect = video.getBoundingClientRect();
-    const width = Number(rect.width || 0);
-    const height = Number(rect.height || 0);
-    if (width < MIN_VISIBLE_WIDTH || height < MIN_VISIBLE_HEIGHT) {
-      return false;
-    }
-    const profileMinArea = matchedProfile ? Number(matchedProfile.minVisibleArea) : 0;
-    const minArea = profileMinArea > 0 ? profileMinArea : MIN_VISIBLE_AREA;
-    return getVisibleArea(video) >= minArea;
-  }
-
-  function hasAnyPlayingMedia(): boolean {
-    const mediaNodes = Array.from(document.querySelectorAll("video, audio"));
-    return mediaNodes.some((node) => {
-      return node instanceof HTMLMediaElement &&
-        !node.paused &&
-        !node.ended &&
-        Number(node.readyState || 0) >= 2;
-    });
-  }
-
-  function shouldRecoverJingxuanModalByReload(): boolean {
-    if (!isJingxuanModalUrl()) {
-      return false;
-    }
-    const activeVideo = syncActiveVideo(state.lastManagedVideo || state.activeVideo);
-    if (activeVideo && activeVideo.isConnected && isVideoVisibleEnough(activeVideo)) {
-      return false;
-    }
-    return hasAnyPlayingMedia() || state.shouldResumeInlinePlayback;
-  }
-
-  function reloadJingxuanModalIfNeeded(): boolean {
-    if (!shouldRecoverJingxuanModalByReload()) {
-      return false;
-    }
-    const now = Date.now();
-    if ((now - Number(state.douyinModalReloadAt || 0)) < DOUYIN_MODAL_RECOVERY_RELOAD_GUARD_MS) {
-      return false;
-    }
-    state.douyinModalReloadAt = now;
-    location.replace(location.href);
-    return true;
-  }
-
-  function isLikelyAudible(video: HTMLVideoElement | null): boolean {
-    if (!video) {
-      return false;
-    }
-    if (video.muted || Number(video.volume || 0) === 0) {
-      return false;
-    }
-    // AudioTrackList is missing from some browsers and from the DOM types.
-    const audioTracks: unknown = Reflect.get(video, "audioTracks");
-    const trackCount = isRecord(audioTracks) && typeof audioTracks.length === "number" ? audioTracks.length : 0;
-    if (isRecord(audioTracks) && trackCount > 0) {
-      for (let i = 0; i < trackCount; i += 1) {
-        const track: unknown = Reflect.get(audioTracks, i);
-        if (isRecord(track) && track.enabled !== false) {
-          return true;
-        }
-      }
-      return false;
-    }
-    return true;
-  }
-
-  function isRejectedByProfile(video: HTMLVideoElement | null): boolean {
-    if (!video || profileRejectSelectors.length === 0) {
-      return false;
-    }
-    for (const selector of profileRejectSelectors) {
-      try {
-        if (video.matches(selector)) {
-          return true;
-        }
-      } catch (_error) {
-        // Ignore invalid selector and continue.
-      }
-      try {
-        const node = document.querySelector(selector);
-        if (!node) {
-          continue;
-        }
-        if (node === video) {
-          return true;
-        }
-        if (node.contains(video)) {
-          return true;
-        }
-      } catch (_error) {
-        // Ignore invalid selector and continue.
-      }
-    }
-    return false;
-  }
-
-  function isVideoCandidate(video: HTMLVideoElement | null): boolean {
-    if (isRejectedByProfile(video)) {
-      return false;
-    }
-    const allowDisablePiP = Boolean(matchedProfile && matchedProfile.allowDisablePiP);
-    return video instanceof HTMLVideoElement &&
-      video.isConnected &&
-      (allowDisablePiP || !video.disablePictureInPicture) &&
-      Number(video.videoWidth || 0) > 0 &&
-      Number(video.videoHeight || 0) > 0;
-  }
-
-  function hasProfileBoost(video: HTMLVideoElement | null): boolean {
-    if (!video || profileSelectors.length === 0) {
-      return false;
-    }
-    for (const selector of profileSelectors) {
-      try {
-        const node = document.querySelector(selector);
-        if (!node) {
-          continue;
-        }
-        if (node === video) {
-          return true;
-        }
-        if (node.contains(video)) {
-          return true;
-        }
-      } catch (_error) {
-        // Ignore invalid selector and continue.
-      }
-    }
-    return false;
-  }
-
-  // Playing beats audible beats profile-matched beats recently used; the
-  // on-screen area breaks ties. Videos with no area are skipped.
-  function scoreVideo(video: HTMLVideoElement): number | null {
-    const visibleArea = getVisibleArea(video);
-    const area = Math.max(visibleArea, core.getRectArea(video));
-    if (area <= 0) {
-      return null;
-    }
-    const playingBoost = isVideoPlaying(video) ? 1_000_000_000 : 0;
-    const audibleBoost = isLikelyAudible(video) ? 250_000_000 : 0;
-    const profileBoost = hasProfileBoost(video) ? 180_000_000 : 0;
-    const lastManagedBoost = video === state.lastManagedVideo ? 20_000_000 : 0;
-    const activeBoost = video === state.activeVideo ? 10_000_000 : 0;
-    return playingBoost + audibleBoost + profileBoost + lastManagedBoost + activeBoost + area;
-  }
-
-  function markPlaybackIntentFromActiveVideo(): boolean {
-    const activeVideo = syncActiveVideo(state.lastManagedVideo || state.activeVideo);
-    if (isVideoPlaying(activeVideo)) {
-      state.hadUserGesture = true;
-      state.wasPlayingBeforeHide = true;
-      return true;
-    }
-    return false;
-  }
-
-  // Enters PiP, lifting the site's disablePictureInPicture for the request
-  // where the profile allows it.
-  async function requestVideoPictureInPicture(video: HTMLVideoElement): Promise<boolean> {
-    if (typeof video.requestPictureInPicture !== "function") {
-      return false;
-    }
-    const allowDisablePiP = Boolean(matchedProfile && matchedProfile.allowDisablePiP);
-    const hadDisableAttr = video.hasAttribute("disablepictureinpicture");
-    const previousDisable = Boolean(video.disablePictureInPicture);
-    if (allowDisablePiP && previousDisable) {
-      try {
-        video.disablePictureInPicture = false;
-        if (hadDisableAttr) {
-          video.removeAttribute("disablepictureinpicture");
-        }
-      } catch (_error) {
-        // Ignore property/attribute write errors.
-      }
-    }
-    try {
-      await video.requestPictureInPicture();
-      return true;
-    } finally {
-      if (allowDisablePiP && previousDisable) {
-        try {
-          video.disablePictureInPicture = previousDisable;
-          if (hadDisableAttr) {
-            video.setAttribute("disablepictureinpicture", "");
-          }
-        } catch (_error) {
-          // Ignore restore errors.
-        }
-      }
-    }
-  }
-
-  async function maybeEnterPiP(reason: string): Promise<boolean> {
-    if (!state.autoPipEnabled) {
-      return false;
-    }
-    if (core.isDocumentPiPActive()) {
-      return false;
-    }
-    if (!core.canEnterPiP() || !core.canExitPiP() || state.enteringPiP || state.exitingPiP) {
-      return false;
-    }
-    const allowNoUserGesture = Boolean(matchedProfile && matchedProfile.allowNoUserGesture);
-    if (!state.hadUserGesture && !allowNoUserGesture && reason !== "media_session_action") {
-      return false;
-    }
-    if (Date.now() < Number(state.suppressEnterUntil || 0)) {
-      core.scheduleDeferredEnterPiP(`${reason || "enter"}_suppressed_retry`);
-      return false;
-    }
-    if (document.visibilityState !== "hidden") {
-      return false;
-    }
-    if (document.pictureInPictureElement) {
-      return true;
-    }
-
-    let activeVideo = syncActiveVideo();
-    if ((!activeVideo || !isVideoPlaying(activeVideo)) &&
-        isVideoCandidate(state.lastManagedVideo)) {
-      activeVideo = syncActiveVideo(state.lastManagedVideo);
-    }
-
-    let ownershipGranted = false;
-    const ensureOwnership = async (): Promise<boolean> => {
-      if (ownershipGranted || state.ownerToken) {
-        ownershipGranted = true;
-        return true;
-      }
-      const ownershipResult = await core.requestPiPOwnership("video");
-      if (!ownershipResult.granted) {
-        core.clearPlaybackRecoveryState();
-        return false;
-      }
-      ownershipGranted = true;
-      return true;
-    };
-
-    if (mainWorldEnter && mainWorldEnter.requiresPlaying && !isVideoPlaying(activeVideo)) {
-      return false;
-    }
-
-    if (mainWorldEnter) {
-      if (!(await ensureOwnership())) {
-        return false;
-      }
-      if (mainWorldEnter.setupAction) {
-        await requestMainWorldSetup();
-      }
-      await core.sendRuntimeMessage(
-        { action: mainWorldEnter.action },
-        { ms: MAIN_WORLD_ENTER_TIMEOUT_MS, minMs: 160 }
-      );
-      // Read afresh: the page entered PiP while this function waited.
-      const pipElement = getPictureInPictureElement();
-      if (pipElement) {
-        state.managedPiP = true;
-        if (pipElement instanceof HTMLVideoElement) {
-          state.lastManagedVideo = pipElement;
-        }
-        state.hiddenRetryBudget = 0;
-        clearEnterRetryTimer();
-        return true;
-      }
-    }
-
-    if (!activeVideo || !isVideoPlaying(activeVideo)) {
-      return false;
-    }
-
-    const allowEnterWhenHiddenVideo = Boolean(
-      matchedProfile &&
-      matchedProfile.allowEnterWhenHiddenVideo &&
-      document.visibilityState === "hidden"
-    );
-    if (!allowEnterWhenHiddenVideo && !isVideoVisibleEnough(activeVideo)) {
-      return false;
-    }
-
-    if (!(await ensureOwnership())) {
-      return false;
-    }
-
-    state.enteringPiP = true;
-    try {
-      const entered = await requestVideoPictureInPicture(activeVideo);
-      if (!entered) {
-        return false;
-      }
-      state.managedPiP = true;
-      state.lastManagedVideo = activeVideo;
-      state.hiddenRetryBudget = 0;
-      clearEnterRetryTimer();
-      return true;
-    } catch (_error) {
-      return false;
-    } finally {
-      state.enteringPiP = false;
-      if (!state.managedPiP && ownershipGranted) {
-        await core.releasePiPOwnership();
-      }
-    }
-  }
-
-  function recoverInlinePlaybackIfNeeded(): void {
-    if (document.visibilityState !== "visible") {
-      return;
-    }
-    if (!state.shouldResumeInlinePlayback) {
-      return;
-    }
-    if (document.pictureInPictureElement) {
-      return;
-    }
-    if (reloadJingxuanModalIfNeeded()) {
-      return;
-    }
-    const video = syncActiveVideo(state.lastManagedVideo || state.activeVideo);
-    if (video && video.paused && !video.ended) {
-      video.play().catch(() => {
-        // Expected when autoplay policy blocks playback or a pause interrupts it.
-      });
-    }
-  }
-
-  function scheduleVisibleRecovery(): void {
-    clearRecoveryTimer();
-    if (!state.shouldResumeInlinePlayback &&
-        !state.managedPiP &&
-        !document.pictureInPictureElement) {
-      return;
-    }
-    if (!state.managedPiP && !document.pictureInPictureElement) {
-      recoverInlinePlaybackIfNeeded();
-      return;
-    }
-
-    let attempts = 0;
-    const run = async (): Promise<void> => {
-      attempts += 1;
-      await maybeExitPiP();
-      if (reloadJingxuanModalIfNeeded()) {
-        clearRecoveryTimer();
-        return;
-      }
-      recoverInlinePlaybackIfNeeded();
-      if (document.visibilityState !== "visible") {
-        clearRecoveryTimer();
-        return;
-      }
-      if (document.pictureInPictureElement && attempts < VISIBLE_RECOVERY_MAX_ATTEMPTS) {
-        state.recoveryTimer = window.setTimeout(
-          run,
-          attempts < VISIBLE_RECOVERY_FAST_ATTEMPTS
-            ? VISIBLE_RECOVERY_FAST_DELAY_MS
-            : VISIBLE_RECOVERY_SLOW_DELAY_MS
-        );
-        return;
-      }
-      clearRecoveryTimer();
-    };
-    run();
-  }
-
-  function handleVisibilityChange(): void {
-    if (document.visibilityState === "hidden") {
-      core.capturePlaybackStateOnHide();
-      state.hiddenRetryBudget = getHiddenRetryLimit();
-      if (mainWorldEnter && mainWorldEnter.setupAction) {
-        // sendRuntimeMessage reports failures in its result instead of rejecting.
-        requestMainWorldSetup().catch(CORE.warnUnexpected("main-world PiP setup"));
-      }
-      const now = Date.now();
-      const visibleSuppressStart = Number(state.lastVisibleAt || 0);
-      const isQuickRehide = visibleSuppressStart > 0 &&
-        (now - visibleSuppressStart) <= QUICK_REHIDE_BYPASS_MS;
-      if (isQuickRehide && Number(state.suppressEnterUntil || 0) > now) {
-        state.suppressEnterUntil = 0;
-      }
-      clearRecoveryTimer();
-      core.scheduleDeferredEnterPiP("visibility_hidden_retry");
-      maybeEnterPiP("visibility_hidden");
-      return;
-    }
-    if (document.visibilityState === "visible") {
-      markPlaybackIntentFromActiveVideo();
-      state.hiddenRetryBudget = 0;
-      state.lastVisibleAt = Date.now();
-      clearEnterRetryTimer();
-      state.suppressEnterUntil = Date.now() + ENTER_SUPPRESS_AFTER_VISIBLE_MS;
-      scheduleVisibleRecovery();
-    }
-  }
-
-  function onVideoEvent(event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLVideoElement)) {
-      return;
-    }
-    syncActiveVideo(target);
-    if (event.type === "pause" || event.type === "ended") {
-      state.shouldResumeInlinePlayback = false;
-      state.wasPlayingBeforeHide = false;
-    }
-    if ((event.type === "play" || event.type === "playing") && !state.hadUserGesture) {
-      state.hadUserGesture = true;
-    }
-    if (event.type === "play" || event.type === "playing") {
-      state.wasPlayingBeforeHide = true;
-      if (document.visibilityState === "hidden") {
-        state.shouldResumeInlinePlayback = true;
-      }
-    }
-    if ((event.type === "play" || event.type === "playing") && document.visibilityState === "hidden") {
-      maybeEnterPiP("video_play_hidden");
-      return;
-    }
-    if (event.type === "ended" &&
-        target === document.pictureInPictureElement &&
-        state.managedPiP) {
-      maybeExitPiP();
-    }
-  }
-
-  function onEnterPictureInPicture(event: Event): void {
-    if (state.enteringPiP || document.visibilityState === "hidden") {
-      state.managedPiP = true;
-      return;
-    }
-    const target = event.target;
-    state.managedPiP = Boolean(target && target === state.lastManagedVideo);
-  }
-
-  function getPictureInPictureElement(): Element | null {
-    return document.pictureInPictureElement;
-  }
-
-  function markUserGesture(): void {
-    state.hadUserGesture = true;
-  }
-
-  function init(): void {
-    if (!core.canExitPiP()) {
-      return;
-    }
-    if (mainWorldEnter && mainWorldEnter.setupAction) {
-      // sendRuntimeMessage reports failures in its result instead of rejecting.
-      requestMainWorldSetup().catch(CORE.warnUnexpected("main-world PiP setup"));
-    }
-    syncActiveVideo();
-    markPlaybackIntentFromActiveVideo();
-    core.bindMediaSessionAutoPiP();
-    core.bindRuntimeMessageListener();
-
-    document.addEventListener("pointerdown", markUserGesture, true);
-    document.addEventListener("keydown", markUserGesture, true);
-    document.addEventListener("touchstart", markUserGesture, true);
-    document.addEventListener("visibilitychange", handleVisibilityChange, true);
-    document.addEventListener("play", onVideoEvent, true);
-    document.addEventListener("playing", onVideoEvent, true);
-    document.addEventListener("pause", onVideoEvent, true);
-    document.addEventListener("ended", onVideoEvent, true);
-    document.addEventListener("loadedmetadata", onVideoEvent, true);
-    document.addEventListener("enterpictureinpicture", onEnterPictureInPicture, true);
-    document.addEventListener("leavepictureinpicture", core.onLeavePictureInPicture, true);
-    core.bindPageReturnListeners();
+  ctx.core.syncAutoPipEnabledSetting();
+  if (ctx.host && isAutoPipBlacklistedHost(ctx.host)) {
+    return;
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
+    document.addEventListener("DOMContentLoaded", (() => init(ctx)), { once: true });
     return;
   }
-  init();
-})();
+  init(ctx);
+}
+
+startSiteAutoPip();
