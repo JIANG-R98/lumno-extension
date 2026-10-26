@@ -10,7 +10,7 @@ import type { FeatureHintController } from '../shared/ui/feature-hints';
 import type { BookmarkDisplaySettings } from './bookmarks/bookmark-display-settings';
 import type { FeedbackControlRuntime } from './feedback-control';
 import type { ModeCommands } from './mode-commands';
-import type { FormatMessage, NewtabThemeMode, NewtabThemeScope, Translate } from './newtab-types';
+import type { NewtabThemeMode, NewtabThemeScope, Translate } from './newtab-types';
 import type { LocaleMessages, PageLanguage } from './page-language';
 import type { BookmarkCardElement } from './react/bookmarks';
 import type { BookmarksTopbarRuntime } from './react/bookmarks-topbar';
@@ -22,7 +22,6 @@ import type { SectionHeaders } from './section-headers';
 import type { SectionLoaders } from './section-loaders';
 import type { ActiveLocalScope } from './search/search-types';
 import type { SuggestionsController } from './search/suggestions-controller';
-import type { ShortcutPageActions } from './shortcuts/shortcut-page-actions';
 import type { CardThemes } from './theme/card-themes';
 import type { FaviconViewRuntime } from './theme/favicon-view';
 import type { QuoteRuntime } from './top-content/quotes';
@@ -72,14 +71,13 @@ interface AppearanceModesDeps extends
   Pick<TopContentRuntime, 'renderNewtabTopContent' | 'applyWordmarkThemeAppearance'>,
   Pick<WallpaperPage, 'updateWallpaperLanguageStrings' | 'updateWallpaperAppearanceSelectionUi'>,
   Pick<FeedbackControlRuntime, 'updateFeedbackLanguageStrings'>,
-  Pick<ShortcutPageActions, 'updateShortcutLanguageStrings'>,
   Pick<SearchModes, 'setLocalSearchScopePrefix'>,
   Pick<ModeCommands, 'updateModeBadge'>,
   Pick<SuggestionsController, 'renderSuggestions' | 'updateSelection'>,
   Pick<BookmarkDisplaySettings, 'syncBookmarkTopbarSurfaceColorForTheme'>,
   Pick<CardThemes, 'applyRecentCardTheme' | 'applyBookmarkCardTheme' | 'applyShortcutTileTheme'> {
   t: Translate;
-  formatMessage: FormatMessage;
+  renderShortcuts(): void;
   updateRecentModeMenu: SectionHeaders['updateRecentModeMenu'];
   updateBookmarkModeMenu: SectionHeaders['updateBookmarkModeMenu'];
   // Tells the listeners outside this module that the language changed.
@@ -121,12 +119,11 @@ function createAppearanceModes(deps: AppearanceModesDeps) {
     updateWallpaperLanguageStrings,
     updateWallpaperAppearanceSelectionUi,
     updateFeedbackLanguageStrings,
-    updateShortcutLanguageStrings,
+    renderShortcuts,
     notifyLanguageChange,
     setLocalSearchScopePrefix,
     updateModeBadge,
     recentCards,
-    formatMessage,
     bookmarkCards,
     renderSuggestions,
     getSystemLocale,
@@ -184,7 +181,8 @@ function createAppearanceModes(deps: AppearanceModesDeps) {
     if (pageState.quoteRuntime) pageState.quoteRuntime.updateLanguage();
     updateWallpaperAppearanceSelectionUi();
     updateFeedbackLanguageStrings();
-    updateShortcutLanguageStrings();
+    // Draws the tiles' labels and the shortcut menus in the new language.
+    renderShortcuts();
     if (pageState.inputModeController) {
       pageState.inputModeController.refreshModeMenuLanguage();
     }
@@ -210,23 +208,6 @@ function createAppearanceModes(deps: AppearanceModesDeps) {
       }
     }
     updateModeBadge(pageState.inputParts && pageState.inputParts.input ? pageState.inputParts.input.value : '');
-    recentCards.forEach((card) => {
-      if (!card || !card._xActionText || !card._xTitleText) {
-        return;
-      }
-      card._xActionText.textContent = t('action_go_current_tab', '前往');
-      card.setAttribute('aria-label', formatMessage('open_prefix', '打开 {title}', {
-        title: card._xTitleText
-      }));
-    });
-    bookmarkCards.forEach((card) => {
-      if (!card || !card._xTitleText) {
-        return;
-      }
-      card.setAttribute('aria-label', formatMessage('open_prefix', '打开 {title}', {
-        title: card._xTitleText
-      }));
-    });
     if (pageState.latestQuery && pageState.latestQuery.trim()) {
       void renderSuggestions(pageState.lastSuggestionResponse, pageState.latestQuery);
     }

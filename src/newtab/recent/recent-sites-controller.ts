@@ -787,27 +787,6 @@ function createRecentSitesController(deps: RecentSitesControllerDeps) {
     });
   }
 
-  function updateRecentPinButton(button: HTMLButtonElement, isPinned: boolean, limitReached: boolean): void {
-    button.classList.toggle('x-nt-recent-pin--active', Boolean(isPinned));
-    button.disabled = false;
-    button.classList.toggle('x-nt-recent-pin--limit', Boolean(!isPinned && limitReached));
-    button.setAttribute('aria-pressed', isPinned ? 'true' : 'false');
-    const label = isPinned
-      ? t('recent_pin_remove', '取消置顶')
-      : (limitReached
-        ? t('recent_pin_limit', '最多置顶 3 个')
-        : t('recent_pin_add', '置顶'));
-    button.setAttribute('aria-label', label);
-    button.setAttribute('data-tooltip', label);
-    button.removeAttribute('title');
-    const icon = button.querySelector('[data-recent-pin-icon]');
-    if (icon) {
-      icon.className = `ri-icon ri-size-16 ${
-        isPinned ? 'ri-pushpin-fill' : 'ri-pushpin-line'
-      }`;
-    }
-  }
-
   return {
     getRecentContextMenuOptions,
     closeRecentContextMenu,
@@ -824,7 +803,6 @@ function createRecentSitesController(deps: RecentSitesControllerDeps) {
     isRecentSitePinned,
     mergeRecentSitesWithPinned,
     togglePinnedRecentSite,
-    updateRecentPinButton,
     getRecentProgressState,
     toggleRecentProgressTracking,
     setProgressTracking,

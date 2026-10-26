@@ -9,8 +9,12 @@ import {
   type RecentSitesViewController,
   type RecentSitesViewOptions
 } from './recent-sites';
-import { expectElement } from '../../../tests/react/dom';
+import { expectElement, getTag } from '../../../tests/react/dom';
 import { queryHtmlElement, queryHtmlTag } from '../../shared/dom-lookup';
+
+function pinButtonOf(card: HTMLElement): HTMLButtonElement {
+  return getTag(card, '.x-nt-recent-pin', 'button');
+}
 
 let views: RecentSitesViewController[] = [];
 
@@ -54,11 +58,6 @@ function createOptions(
     isPinned: () => false,
     getPinnedCount: () => 0,
     getMaxPinnedCount: () => 3,
-    updatePinButton: (button, pinned, limitReached) => {
-      button.dataset.pinned = String(pinned);
-      button.dataset.limitReached = String(limitReached);
-      button.setAttribute('aria-label', pinned ? 'Unpin' : 'Pin');
-    },
     showToast: () => {},
     showTopActionTooltip: () => {},
     hideTopActionTooltip: () => {},
@@ -154,8 +153,10 @@ describe('Recent Sites React island', () => {
     expect(view.getCards()).toEqual([card]);
     expect(card?._xHost).toBe('example.com');
     expect(card?._xTitleText).toBe('Example Docs');
-    expect(card?._xActionText?.textContent).toBe('前往');
-    expect(card?._xPinButton).toBeInstanceOf(HTMLButtonElement);
+    expect(card?.querySelector('.x-nt-recent-action')?.textContent).toContain('前往');
+    const pin = card ? pinButtonOf(card) : null;
+    expect(pin?.getAttribute('aria-label')).toBe('置顶');
+    expect(pin?.getAttribute('aria-pressed')).toBe('false');
     expect(card?.querySelector('.x-nt-recent-dismiss')).toBeNull();
     expect(
       card?.querySelector('.x-nt-recent-card-visual')
@@ -488,31 +489,27 @@ describe('Recent Sites React island', () => {
   it('keeps pin-limit activation inside the action button', () => {
     const opened = vi.fn();
     const showToast = vi.fn();
-    const updatePinButton = vi.fn();
     const { view } = createView({
       openUrl: opened,
       getPinnedCount: () => 3,
       getMaxPinnedCount: () => 3,
-      showToast,
-      updatePinButton
+      showToast
     });
     renderItems(view, [site({
       title: 'Example',
       url: 'https://example.com/'
     })]);
-    updatePinButton.mockClear();
+    const pinButton = pinButtonOf(view.getCards()[0]);
+    expect(pinButton.classList.contains('x-nt-recent-pin--limit')).toBe(true);
+    expect(pinButton.getAttribute('aria-label')).toBe('最多置顶 3 个');
 
     act(() => {
-      view.getCards()[0]._xPinButton?.click();
+      pinButton.click();
     });
 
     expect(opened).not.toHaveBeenCalled();
     expect(showToast).toHaveBeenCalledWith('最多只能置顶 3 个卡片。', false);
-    expect(updatePinButton).toHaveBeenCalledWith(
-      view.getCards()[0]._xPinButton,
-      false,
-      true
-    );
+    expect(pinButton.getAttribute('aria-pressed')).toBe('false');
   });
 
   it('routes right-click through the shared New Tab context-menu callback', () => {
@@ -552,6 +549,23 @@ describe('Recent Sites React island', () => {
     expect(opened).not.toHaveBeenCalled();
   });
 
+  it('draws its labels in the new language when drawn again', () => {
+    let english = false;
+    const { view } = createView({
+      t: (key, fallback) => (english ? `en:${key}` : fallback),
+      formatMessage: (key, fallback, values) => (english ? `en:${key}:${values.title}` : fallback)
+    });
+    const items = [site({ title: 'Example', url: 'https://example.com/' })];
+    renderItems(view, items);
+    english = true;
+    renderItems(view, items);
+    const card = view.getCards()[0];
+
+    expect(card.getAttribute('aria-label')).toBe('en:open_prefix:Example');
+    expect(card.querySelector('.x-nt-recent-action')?.textContent).toContain('en:action_go_current_tab');
+    expect(pinButtonOf(card).getAttribute('aria-label')).toBe('en:recent_pin_add');
+  });
+
   it('coalesces rapid pin actions while persistence is pending', async () => {
     let resolvePin: (
       result: { pinned: boolean; limitReached: boolean }
@@ -567,11 +581,11 @@ describe('Recent Sites React island', () => {
       title: 'Example',
       url: 'https://example.com/'
     })]);
-    const pinButton = view.getCards()[0]._xPinButton;
+    const pinButton = pinButtonOf(view.getCards()[0]);
 
     act(() => {
-      pinButton?.click();
-      pinButton?.click();
+      pinButton.click();
+      pinButton.click();
     });
 
     expect(togglePinned).toHaveBeenCalledTimes(1);
@@ -585,5 +599,9 @@ describe('Recent Sites React island', () => {
 
     expect(pinButton?.disabled).toBe(false);
     expect(pinButton?.getAttribute('aria-busy')).toBe('false');
+    expect(pinButton.getAttribute('aria-pressed')).toBe('true');
+    expect(pinButton.classList.contains('x-nt-recent-pin--active')).toBe(true);
+    expect(pinButton.getAttribute('aria-label')).toBe('取消置顶');
+    expect(pinButton.querySelector('i')?.className).toContain('ri-pushpin-fill');
   });
 });

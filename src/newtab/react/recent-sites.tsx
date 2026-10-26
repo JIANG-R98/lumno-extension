@@ -1,6 +1,7 @@
 import {
   useLayoutEffect,
   useRef,
+  useState,
   type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
@@ -42,9 +43,7 @@ interface ThemeSuggestion {
 export interface RecentCardElement extends HTMLDivElement {
   _xHost?: string;
   _xTheme?: ThemeValue;
-  _xActionText?: HTMLSpanElement | null;
   _xTitleText?: string;
-  _xPinButton?: HTMLButtonElement | null;
   _xDisposeRecentCard?: () => void;
   // Set while a drag of the card ends, so its click does not open the site.
 }
@@ -95,11 +94,6 @@ export interface RecentSitesViewOptions {
   isPinned?: (item: RecentSite) => boolean;
   getPinnedCount?: () => number;
   getMaxPinnedCount?: () => number;
-  updatePinButton?: (
-    button: HTMLButtonElement,
-    pinned: boolean,
-    limitReached: boolean
-  ) => void;
   showToast?: (message: string, isError: boolean) => void;
   showTopActionTooltip?: (
     target: HTMLElement,
@@ -204,7 +198,6 @@ interface NormalizedRecentSitesOptions {
   isPinned: NonNullable<RecentSitesViewOptions['isPinned']>;
   getPinnedCount: NonNullable<RecentSitesViewOptions['getPinnedCount']>;
   getMaxPinnedCount: NonNullable<RecentSitesViewOptions['getMaxPinnedCount']>;
-  updatePinButton: NonNullable<RecentSitesViewOptions['updatePinButton']>;
   showToast: NonNullable<RecentSitesViewOptions['showToast']>;
   showTopActionTooltip: NonNullable<
     RecentSitesViewOptions['showTopActionTooltip']
@@ -388,10 +381,6 @@ function normalizeOptions(
       typeof rawOptions.getMaxPinnedCount === 'function'
         ? rawOptions.getMaxPinnedCount
         : () => 3,
-    updatePinButton:
-      typeof rawOptions.updatePinButton === 'function'
-        ? rawOptions.updatePinButton
-        : () => {},
     showToast:
       typeof rawOptions.showToast === 'function'
         ? rawOptions.showToast
@@ -450,7 +439,6 @@ function RecentSiteCard({
   const cardRef = useRef<RecentCardElement>(null);
   const faviconRef = useRef<HTMLImageElement>(null);
   const titleRef = useRef<HTMLDivElement>(null);
-  const actionTextRef = useRef<HTMLSpanElement>(null);
   const pinButtonRef = useRef<HTMLButtonElement>(null);
   const isCardPointerActiveRef = useRef(false);
   const hasNavigateAttemptedRef = useRef(false);
@@ -513,6 +501,22 @@ function RecentSiteCard({
   const pinAction = useExclusiveAsyncAction(
     () => options.togglePinned(item)
   );
+  // A pin attempt's outcome, shown until the list draws the card afresh.
+  const [pinOutcome, setPinOutcome] = useState<{
+    from: boolean;
+    pinned: boolean;
+    limitReached: boolean;
+  } | null>(null);
+  const currentPinOutcome = pinOutcome && pinOutcome.from === initiallyPinned ? pinOutcome : null;
+  const pinned = currentPinOutcome ? currentPinOutcome.pinned : initiallyPinned;
+  const pinLimitReached = currentPinOutcome
+    ? currentPinOutcome.limitReached
+    : !initiallyPinned && options.getPinnedCount() >= options.getMaxPinnedCount();
+  const pinLabel = pinned
+    ? options.t('recent_pin_remove', '取消置顶')
+    : (pinLimitReached
+      ? options.t('recent_pin_limit', '最多置顶 3 个')
+      : options.t('recent_pin_add', '置顶'));
   const trackAction = useExclusiveAsyncAction(
     () => options.toggleProgressTracking(item)
   );
@@ -653,12 +657,8 @@ function RecentSiteCard({
 
   function showPinTooltip(): void {
     const button = pinButtonRef.current;
-    const label =
-      button?.getAttribute('data-tooltip') ||
-      button?.getAttribute('aria-label') ||
-      '';
-    if (button && label) {
-      options.showTopActionTooltip(button, label);
+    if (button) {
+      options.showTopActionTooltip(button, pinLabel);
     }
   }
 
@@ -675,9 +675,8 @@ function RecentSiteCard({
   }
 
   async function handlePin(): Promise<void> {
-    const button = pinButtonRef.current;
     const card = cardRef.current;
-    if (!button || !card) {
+    if (!card) {
       return;
     }
     if (
@@ -688,7 +687,7 @@ function RecentSiteCard({
         options.t('recent_pin_limit_toast', '最多只能置顶 3 个卡片。'),
         false
       );
-      options.updatePinButton(button, false, true);
+      setPinOutcome({ from: initiallyPinned, pinned: false, limitReached: true });
       return;
     }
     const outcome = await pinAction.run();
@@ -712,11 +711,11 @@ function RecentSiteCard({
         false
       );
     }
-    options.updatePinButton(
-      button,
-      Boolean(result.pinned),
-      Boolean(!result.pinned && result.limitReached)
-    );
+    setPinOutcome({
+      from: initiallyPinned,
+      pinned: Boolean(result.pinned),
+      limitReached: Boolean(!result.pinned && result.limitReached)
+    });
   }
 
   function dispose(): void {
@@ -746,21 +745,13 @@ function RecentSiteCard({
     const disposeCard = () => disposeRef.current();
     card._xHost = host;
     card._xTheme = immediateTheme;
-    card._xActionText = actionTextRef.current;
     card._xTitleText = safeTitleText;
-    card._xPinButton = pinButton;
     card._xDisposeRecentCard = disposeCard;
 
     options.applyCardTheme(card, immediateTheme, host);
     options.attachFaviconWithFallbacks(favicon, faviconPageUrl, host, {
       primaryUrl: browserPageFaviconUrl
     });
-    options.updatePinButton(
-      pinButton,
-      initiallyPinned,
-      !initiallyPinned &&
-        options.getPinnedCount() >= options.getMaxPinnedCount()
-    );
     options.bindCursorTooltip(
       card,
       () => card._xTitleText || safeTitleText,
@@ -943,7 +934,7 @@ function RecentSiteCard({
         </div>
         <div className="x-nt-recent-url" title={itemUrl}>
           <div className="x-nt-recent-action">
-            <span ref={actionTextRef}>
+            <span>
               {options.t('action_go_current_tab', '前往')}
             </span>
             <span
@@ -993,9 +984,14 @@ function RecentSiteCard({
           <button
             ref={pinButtonRef}
             aria-busy={pinAction.pending}
+            aria-label={pinLabel}
+            aria-pressed={pinned}
+            data-tooltip={pinLabel}
             disabled={pinAction.pending}
             type="button"
-            className="x-nt-recent-pin"
+            className={`x-nt-recent-pin${pinned ? ' x-nt-recent-pin--active' : ''}${
+              pinLimitReached && !pinned ? ' x-nt-recent-pin--limit' : ''
+            }`}
             onPointerDown={stopCardActivation}
             onClick={(event) => {
               stopCardActivation(event);
@@ -1016,10 +1012,7 @@ function RecentSiteCard({
           >
             <i
               aria-hidden="true"
-              className={`ri-icon ri-size-16 ${
-                initiallyPinned ? 'ri-pushpin-fill' : 'ri-pushpin-line'
-              }`}
-              data-recent-pin-icon=""
+              className={`ri-icon ri-size-16 ${pinned ? 'ri-pushpin-fill' : 'ri-pushpin-line'}`}
             />
           </button>
         </div>

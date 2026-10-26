@@ -11,7 +11,7 @@ import type { BookmarkEditTarget } from '../bookmarks/bookmark-actions';
 import type * as BookmarksStore from '../bookmarks/bookmarks-store';
 import type { BookmarksRuntime } from '../bookmarks/bookmarks-runtime';
 import type { FolderColorPicker } from '../bookmarks/folder-colors';
-import type { BindTooltip, ContextMenuParts, FormatMessage, SelectMenuController, ShowToast, Translate } from '../newtab-types';
+import type { BindTooltip, ContextMenuParts, SelectMenuController, ShowToast, Translate } from '../newtab-types';
 import type { createFolderColorPickerApi } from '../react/folder-color-picker-lazy';
 import type {
   IconPlateColorRequest,
@@ -32,7 +32,6 @@ interface ShortcutPageActionsState {
   shortcutContextMenuTarget: ShortcutContextTarget | null;
   newtabShortcuts: ShortcutItem[];
   shortcutSection: HTMLElement | null;
-  addShortcutButton: HTMLElement | null;
   shortcutGrid: HTMLElement | null;
 }
 
@@ -56,7 +55,6 @@ interface ShortcutPageActionsDeps {
   SHORTCUT_CONTEXT_MENU_EDIT_VALUE: string;
   FOLDER_COLOR_CONTEXT_MENU_VALUE: string;
   SHORTCUT_CONTEXT_MENU_REMOVE_VALUE: string;
-  formatMessage: FormatMessage;
   updateBookmarkContextMenuLanguageStrings(): void;
   updateRecentContextMenuLanguageStrings(): void;
   createShortcutDialogComponent(): Promise<ShortcutDialogController | null>;
@@ -91,7 +89,6 @@ function createShortcutPageActions(deps: ShortcutPageActionsDeps) {
     SHORTCUT_CONTEXT_MENU_EDIT_VALUE,
     FOLDER_COLOR_CONTEXT_MENU_VALUE,
     SHORTCUT_CONTEXT_MENU_REMOVE_VALUE,
-    formatMessage,
     updateBookmarkContextMenuLanguageStrings,
     updateRecentContextMenuLanguageStrings,
     createShortcutDialogComponent,
@@ -267,22 +264,13 @@ function createShortcutPageActions(deps: ShortcutPageActionsDeps) {
     );
   }
 
+  // The tiles draw their own labels; this names the section's host and
+  // updates the dialog and the menus.
   function updateShortcutLanguageStrings(): void {
     if (pageState.shortcutSection) {
       pageState.shortcutSection.setAttribute('aria-label', t('newtab_shortcuts_section_label', 'Shortcuts'));
     }
-    if (pageState.addShortcutButton) {
-      const addLabel = t('newtab_shortcuts_add', 'Add shortcut');
-      pageState.addShortcutButton.setAttribute('aria-label', addLabel);
-      pageState.addShortcutButton.setAttribute('data-tooltip', addLabel);
-    }
     updateShortcutDialogLanguageStrings();
-    if (pageState.shortcutGrid) {
-      pageState.shortcutGrid.querySelectorAll('.x-nt-shortcut-tile[data-shortcut-url]').forEach((tile) => {
-        const title = tile.getAttribute('data-shortcut-title') || '';
-        tile.setAttribute('aria-label', formatMessage('open_prefix', '打开 {title}', { title }));
-      });
-    }
     updateShortcutContextMenuLanguageStrings();
     updateBookmarkContextMenuLanguageStrings();
     updateRecentContextMenuLanguageStrings();

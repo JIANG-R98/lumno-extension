@@ -48,7 +48,6 @@ interface RecentSectionDeps {
   getRecentLimit(): number;
   isRecentSitePinned: ViewOption<'isPinned'>;
   MAX_PINNED_RECENT_SITES: number;
-  updateRecentPinButton: ViewOption<'updatePinButton'>;
   showToast: ShowToast;
   showTopActionTooltip: ViewOption<'showTopActionTooltip'>;
   navigateToUrl: ViewOption<'navigateToUrl'>;
@@ -89,7 +88,6 @@ function createRecentSection(deps: RecentSectionDeps): void {
     getRecentLimit,
     isRecentSitePinned,
     MAX_PINNED_RECENT_SITES,
-    updateRecentPinButton,
     showToast,
     showTopActionTooltip,
     navigateToUrl,
@@ -174,7 +172,6 @@ function createRecentSection(deps: RecentSectionDeps): void {
     isPinned: isRecentSitePinned,
     getPinnedCount: () => pageState.pinnedRecentSites.length,
     getMaxPinnedCount: () => MAX_PINNED_RECENT_SITES,
-    updatePinButton: updateRecentPinButton,
     showToast,
     showTopActionTooltip,
     hideTopActionTooltip,
