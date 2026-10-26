@@ -11,6 +11,7 @@ import * as SEARCH_INPUT_MODE from '../shared/search/search-input-mode';
 import * as SEARCH_SOURCE_ORDER from '../domain/search/search-source-order';
 import * as SEARCH_UTILS from '../domain/search/search-utils';
 import * as SUGGESTION_ACTION_MODEL from '../domain/search/suggestion-action-model';
+import * as SUGGESTION_INPUT_PREVIEW from '../domain/search/suggestion-input-preview';
 import * as SUGGESTION_NAVIGATION from '../shared/search/suggestion-navigation';
 import * as SUGGESTIONS_HEIGHT_LAYOUT from '../shared/search/suggestions-height-layout';
 import * as SETTINGS from '../domain/settings';
@@ -116,6 +117,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       shouldIgnoreTabZoomCompensation: () => shouldIgnoreTabZoomCompensation
     }),
     imeKeyGuard: LumnoImeKeyGuard.createImeKeyGuard(),
+    suggestionInputPreview: SUGGESTION_INPUT_PREVIEW.createSuggestionInputPreview(),
     overlayMediaQuery: window.matchMedia('(prefers-color-scheme: dark)'),
     defaultTheme: FAVICON_THEME.createDefaultTheme(),
     urlHighlightTheme: FAVICON_THEME.createUrlHighlightTheme(),
@@ -1372,6 +1374,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   overlayState.searchInput.addEventListener('focus', function() {
     overlayState.selectedIndex = -1;
     updateSelection();
+    overlayState.suggestionInputPreview.restore(overlayState.searchInput, overlayState.latestRawInputValue);
   });
 
   function isImeCompositionEvent(event: KeyboardEvent): boolean {

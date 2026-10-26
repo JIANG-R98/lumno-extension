@@ -5,6 +5,7 @@ import type { OverlayTab } from '../domain/messages';
 import type { AggregateSearch } from '../domain/search/aggregate-search-store';
 import type { createImeKeyGuard } from '../domain/search/ime-key-guard';
 import type { createSearchInputHistoryController } from '../domain/search/search-input-history';
+import type { SuggestionInputPreview } from '../domain/search/suggestion-input-preview';
 import type { SiteSearchProvider } from '../domain/search/types';
 import type { StorageAreaFacade } from '../platform/settings-storage';
 import type { ThemeVariant } from '../shared/favicon/favicon-theme';
@@ -48,6 +49,7 @@ interface SearchPanelState {
   inputModeController: InputModeController | null;
   inputHistoryController: ReturnType<typeof createSearchInputHistoryController> | null;
   imeKeyGuard: ReturnType<typeof createImeKeyGuard>;
+  suggestionInputPreview: SuggestionInputPreview;
   overlayNoticeLayer: ReturnType<typeof createNoticeLayer>;
   overlayViewportSizeSync: ReturnType<typeof createViewportSizeSync>;
   overlaySessionCleanups: ReturnType<typeof createSessionCleanupRegistry>;
@@ -93,6 +95,7 @@ interface OverlayStateParts {
   overlayNoticeLayer: SearchPanelState['overlayNoticeLayer'];
   overlayViewportSizeSync: SearchPanelState['overlayViewportSizeSync'];
   imeKeyGuard: SearchPanelState['imeKeyGuard'];
+  suggestionInputPreview: SearchPanelState['suggestionInputPreview'];
   overlayMediaQuery: MediaQueryList;
   defaultTheme: ThemeVariant;
   urlHighlightTheme: ThemeVariant;
@@ -126,6 +129,7 @@ function createOverlayState(parts: OverlayStateParts): OverlayState {
     overlayNoticeLayer: parts.overlayNoticeLayer,
     overlayViewportSizeSync: parts.overlayViewportSizeSync,
     imeKeyGuard: parts.imeKeyGuard,
+    suggestionInputPreview: parts.suggestionInputPreview,
     overlayMediaQuery: parts.overlayMediaQuery,
     defaultTheme: parts.defaultTheme,
     urlHighlightTheme: parts.urlHighlightTheme,

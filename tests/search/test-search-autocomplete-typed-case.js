@@ -26,7 +26,8 @@ const pageState = {
   lastDeletionAt: 0,
   siteSearchState: null,
   inputParts: { input },
-  autocompleteState: null
+  autocompleteState: null,
+  suggestionInputPreview: { isActive: () => false }
 };
 const autocomplete = LumnoNewtabSearchAutocomplete.createSearchAutocomplete({
   pageState,

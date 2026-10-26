@@ -5,6 +5,7 @@ import type { AggregateSearch } from '../../domain/search/aggregate-search-store
 import * as SEARCH_SOURCE_ORDER from '../../domain/search/search-source-order';
 import type { SearchSourceOrder } from '../../domain/search/search-source-order';
 import type * as SearchUtils from '../../domain/search/search-utils';
+import type { SuggestionInputPreview } from '../../domain/search/suggestion-input-preview';
 import type { LocalSearchScope, SearchSourceType, SiteSearchProvider } from '../../domain/search/types';
 import type { SearchInputParts } from '../../shared/react/search-input';
 import type { Suggestion } from '../../shared/react/search/suggestion-list/types';
@@ -46,6 +47,7 @@ interface SearchModesState {
   suggestionRequestSeq: number;
   latestQuery: string;
   latestRawQuery: string;
+  suggestionInputPreview: Pick<SuggestionInputPreview, 'commit'>;
 }
 
 interface SearchModesDeps {
@@ -538,6 +540,12 @@ function createSearchModes(deps: SearchModesDeps) {
     }
     const controller = pageState.inputModeController;
     if (controller && controller.handleModeMenuTabFocusToggle(event)) {
+      return true;
+    }
+    // Tab takes the suggestion the arrows show as typed text.
+    if (!event.shiftKey && pageState.suggestionInputPreview.commit()) {
+      event.preventDefault();
+      getSearchInput().dispatchEvent(new Event('input', { bubbles: true }));
       return true;
     }
     if (controller && controller.shouldOpenModeMenuForActiveModeOnTab(event)) {

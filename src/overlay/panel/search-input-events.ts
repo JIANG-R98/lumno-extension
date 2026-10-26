@@ -3,6 +3,7 @@
 import type { ShortcutRule } from '../../domain/messages';
 import type { createImeKeyGuard } from '../../domain/search/ime-key-guard';
 import type { createSearchInputHistoryController } from '../../domain/search/search-input-history';
+import type { SuggestionInputPreview } from '../../domain/search/suggestion-input-preview';
 import type { LocalSearchScope } from '../../domain/search/types';
 import * as LumnoMessaging from '../../platform/messaging';
 import type { EngagementNoticeController } from '../../shared/engagement-notice';
@@ -18,6 +19,8 @@ interface SearchInputEventsState<Provider, Aggregate> {
   inputHistoryController: Pick<ReturnType<typeof createSearchInputHistoryController>, 'resetNavigation'> | null;
   // History is being written into the input, which is not typing.
   isApplyingSearchInputHistory: boolean;
+  // Typing on from a suggestion the arrows show keeps it as typed text.
+  suggestionInputPreview: Pick<SuggestionInputPreview, 'commit'>;
   overlayEngagementNoticeController: Pick<EngagementNoticeController, 'recordMeaningfulUse'> | null;
   siteSearchTriggerState: SiteSearchTrigger<Provider> | null;
   localSearchScopeTriggerState: LocalSearchScopeTrigger | null;
@@ -190,6 +193,7 @@ function createSearchInputEvents<Provider, Aggregate>(deps: SearchInputEventsDep
   // Add input event for search suggestions
   function handleSearchInputCompositionStart(event: Event | null): void {
     runSearchInputEventOnce(event, () => {
+      overlayState.suggestionInputPreview.commit();
       cancelPendingOverlaySuggestionRequests();
       syncLiveSearchInputFromEvent(event);
       overlayState.imeKeyGuard.markCompositionStart(event);
@@ -239,6 +243,7 @@ function createSearchInputEvents<Provider, Aggregate>(deps: SearchInputEventsDep
 
   function handleSearchInputEvent(event: Event | null): void {
     runSearchInputEventOnce(event, () => {
+      overlayState.suggestionInputPreview.commit();
       if (overlayState.inputHistoryController && !overlayState.isApplyingSearchInputHistory) {
         overlayState.inputHistoryController.resetNavigation();
       }

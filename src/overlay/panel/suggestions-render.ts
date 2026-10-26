@@ -5,6 +5,7 @@ import type { OverlayTab, WebAppearanceMode } from '../../domain/messages';
 import type { Disposition } from '../../domain/navigation-disposition';
 import type * as SuggestionActionModel from '../../domain/search/suggestion-action-model';
 import type { DisplayedSuggestion } from '../../domain/search/suggestion-action-model';
+import type { SuggestionInputPreview } from '../../domain/search/suggestion-input-preview';
 import type { LocalSearchScope, SiteSearchProvider } from '../../domain/search/types';
 import * as LumnoMessaging from '../../platform/messaging';
 import type {
@@ -43,6 +44,8 @@ interface SuggestionsRenderState {
   latestOverlayQuery: string;
   latestRawInputValue: string;
   selectedIndex: number;
+  // Dropping the selection puts back what the arrows wrote over.
+  suggestionInputPreview: Pick<SuggestionInputPreview, 'restore'>;
   currentSuggestions: OverlaySuggestion[];
   lastRenderedQuery: string;
   lastRenderedActionContextKey: string;
@@ -551,6 +554,9 @@ function createSuggestionsRender(deps: SuggestionsRenderDeps) {
       preloadIcon: overlayState.preloadIcon,
       onSetSelectedIndex: (nextIndex) => {
         overlayState.selectedIndex = nextIndex;
+        if (nextIndex < 0) {
+          overlayState.suggestionInputPreview.restore(overlayState.searchInput, overlayState.latestRawInputValue);
+        }
       },
       getSelectedIndex: () => overlayState.selectedIndex,
       onSwitchToTab: (tab, event) => {

@@ -6,6 +6,7 @@ import type { AggregateSearch } from '../../domain/search/aggregate-search-store
 import type { createSearchInputHistoryController } from '../../domain/search/search-input-history';
 import type * as SearchInputHistory from '../../domain/search/search-input-history';
 import type { DisplayedSuggestion } from '../../domain/search/suggestion-action-model';
+import type { SuggestionInputPreview } from '../../domain/search/suggestion-input-preview';
 import type { LocalSearchScope, SiteSearchProvider, SuggestionLike } from '../../domain/search/types';
 import type { ThemeMode } from '../../domain/settings';
 import * as LumnoMessaging from '../../platform/messaging';
@@ -40,6 +41,8 @@ interface PanelKeysState {
   aggregateSearchesCache: AggregateSearch[] | null;
   currentSuggestions: OverlaySuggestion[];
   selectedIndex: number;
+  // The search suggestion the arrows show in the input.
+  suggestionInputPreview: SuggestionInputPreview;
   latestRawInputValue: string;
   latestOverlayQuery: string;
   overlayThemeMode: ThemeMode;
@@ -179,6 +182,14 @@ function createPanelKeys(deps: PanelKeysDeps) {
     if (overlayState.inputModeController &&
         typeof overlayState.inputModeController.handleModeMenuTabFocusToggle === 'function' &&
         overlayState.inputModeController.handleModeMenuTabFocusToggle(e)) {
+      return true;
+    }
+    // Tab takes the suggestion the arrows show as typed text.
+    if (!e.shiftKey && overlayState.suggestionInputPreview.commit()) {
+      e.preventDefault();
+      overlayState.latestRawInputValue = input.value;
+      overlayState.latestOverlayQuery = input.value.trim();
+      input.dispatchEvent(new Event('input', { bubbles: true }));
       return true;
     }
     if (overlayState.inputModeController &&
@@ -337,6 +348,14 @@ function createPanelKeys(deps: PanelKeysDeps) {
       e.stopPropagation();
       return;
     }
+    // Then the text typed before the arrows showed a suggestion comes back.
+    if (e.key === 'Escape' && overlayState.suggestionInputPreview.restore(input, overlayState.latestRawInputValue)) {
+      e.preventDefault();
+      e.stopPropagation();
+      overlayState.selectedIndex = -1;
+      updateSelection();
+      return;
+    }
     // Leaving a site search lists the query's ordinary results.
     if (e.key === 'Escape' && overlayState.siteSearchState) {
       e.preventDefault();
@@ -431,7 +450,8 @@ function createPanelKeys(deps: PanelKeysDeps) {
       return;
     }
     dismissAutocompletePreviewOnNonTabKey(e);
-    if (e.key !== 'Backspace' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    if (e.key !== 'Backspace' && !e.metaKey && !e.ctrlKey && !e.altKey &&
+        !overlayState.suggestionInputPreview.isActive()) {
       overlayState.latestRawInputValue = input.value;
       overlayState.latestOverlayQuery = input.value.trim();
     }
@@ -457,6 +477,15 @@ function createPanelKeys(deps: PanelKeysDeps) {
       return false;
     }
     return index === 0;
+  }
+
+  // Shows the selected search suggestion in the input, or what was typed
+  // for any other row.
+  function previewSelectedSuggestion(input: HTMLInputElement): void {
+    const index = overlayState.selectedIndex;
+    const item = suggestionItems[index];
+    const suggestion = item && item._xIsSearchSuggestion ? overlayState.currentSuggestions[index] : null;
+    overlayState.suggestionInputPreview.show(input, suggestion, overlayState.latestRawInputValue);
   }
 
   function getSuggestionNavigationKey(event: KeyboardEvent): 'ArrowDown' | 'ArrowUp' | '' {
@@ -509,6 +538,7 @@ function createPanelKeys(deps: PanelKeysDeps) {
         didWrap = previousIndex === suggestionItems.length - 1 && overlayState.selectedIndex === 0;
       }
       updateSelection();
+      previewSelectedSuggestion(input);
       scrollSelectedSuggestionIntoView('down', didWrap);
       input.focus();
     } else if (suggestionNavigationKey === 'ArrowUp') {
@@ -538,11 +568,16 @@ function createPanelKeys(deps: PanelKeysDeps) {
         overlayState.selectedIndex = overlayState.selectedIndex - 1;
       }
       updateSelection();
+      previewSelectedSuggestion(input);
       scrollSelectedSuggestionIntoView('up', didWrap);
       input.focus();
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      const query = input.value.trim();
+      // A suggestion the arrows show opens as its row; the query stays what
+      // was typed.
+      const query = (overlayState.suggestionInputPreview.isActive()
+        ? overlayState.latestRawInputValue
+        : input.value).trim();
       if (query && overlayState.inputHistoryController) {
         overlayState.inputHistoryController.record(query);
       }

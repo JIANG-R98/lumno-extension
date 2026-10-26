@@ -4,12 +4,14 @@
 import type * as SearchInputHistory from '../../domain/search/search-input-history';
 import type { createSearchInputHistoryController } from '../../domain/search/search-input-history';
 import type { createImeKeyGuard } from '../../domain/search/ime-key-guard';
+import type { SuggestionInputPreview } from '../../domain/search/suggestion-input-preview';
 import type { SiteSearchProvider, SuggestionLike } from '../../domain/search/types';
 import * as LumnoMessaging from '../../platform/messaging';
 import { isHtmlTag } from '../../shared/dom-guards';
 import type { createSearchInput, SearchInputParts } from '../../shared/react/search-input';
 import type {
   OpenTabSuggestion,
+  Suggestion,
   SuggestionsViewController,
   SuggestionsViewOptions
 } from '../../shared/react/search/suggestion-list/types';
@@ -30,6 +32,9 @@ interface SearchBoxState {
   tabRankScoreDebugEnabled: boolean;
   simpleModeEnabled: boolean;
   selectedIndex: number;
+  currentSuggestions: Suggestion[];
+  // The search suggestion the arrows show in the input.
+  suggestionInputPreview: SuggestionInputPreview;
   inputParts: SearchInputParts | null;
   inputModeController: Pick<InputModeController, 'shouldRemoveModeTagOnBackspace' | 'resetModeMenuDoubleTab' | 'closeModeMenu'> | null;
   defaultPlaceholderText: string;
@@ -292,6 +297,12 @@ function createSearchBox(deps: SearchBoxDeps) {
     setSuggestionsVisible,
     onSetSelectedIndex: (nextIndex) => {
       pageState.selectedIndex = nextIndex;
+      if (nextIndex < 0) {
+        pageState.suggestionInputPreview.restore(
+          pageState.inputParts ? pageState.inputParts.input : null,
+          pageState.latestRawQuery
+        );
+      }
     },
     getSelectedIndex: () => pageState.selectedIndex,
     onSwitchToTab: (tab, event) => {
@@ -404,6 +415,8 @@ function createSearchBox(deps: SearchBoxDeps) {
       }
     },
     onInput: function(event) {
+      // Typing on from a suggestion the arrows show keeps it as typed text.
+      pageState.suggestionInputPreview.commit();
       pageState.searchSuggestionsDismissed = false;
       if (!isApplyingSearchInputHistory) {
         searchInputHistoryController.resetNavigation();
@@ -473,7 +486,8 @@ function createSearchBox(deps: SearchBoxDeps) {
           navigatorLike: typeof navigator === 'object' && navigator ? navigator : null
         });
       const input = inputParts.input;
-      if (event.key !== 'Backspace' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      if (event.key !== 'Backspace' && !event.metaKey && !event.ctrlKey && !event.altKey &&
+          !pageState.suggestionInputPreview.isActive()) {
         pageState.latestRawQuery = input.value;
         pageState.latestQuery = input.value.trim();
       }
@@ -481,6 +495,13 @@ function createSearchBox(deps: SearchBoxDeps) {
       if (event.key === 'Escape' && pageState.inputModeController &&
           pageState.inputModeController.closeModeMenu(false)) {
         event.preventDefault();
+        return;
+      }
+      // Then the text typed before the arrows showed a suggestion comes back.
+      if (event.key === 'Escape' && pageState.suggestionInputPreview.restore(input, pageState.latestRawQuery)) {
+        event.preventDefault();
+        pageState.selectedIndex = -1;
+        updateSelection();
         return;
       }
       // Leaving a site search lists the query's ordinary results.
@@ -559,6 +580,13 @@ function createSearchBox(deps: SearchBoxDeps) {
         pageState.selectedIndex = next.index;
         const didWrap = next.didWrap;
         updateSelection();
+        // A search suggestion shows in the input; other rows keep what was typed.
+        const selectedItem = suggestionItems[next.index];
+        pageState.suggestionInputPreview.show(
+          input,
+          selectedItem && selectedItem._xIsSearchSuggestion ? pageState.currentSuggestions[next.index] : null,
+          pageState.latestRawQuery
+        );
         scrollSelectedSuggestionIntoView(
           suggestionNavigationKey === 'ArrowDown' ? 'down' : 'up',
           didWrap
@@ -572,7 +600,11 @@ function createSearchBox(deps: SearchBoxDeps) {
       if (event.key !== 'Enter') {
         return;
       }
-      const query = readInputValue(event).trim();
+      // A suggestion the arrows show opens as its row; the query stays what
+      // was typed.
+      const query = (pageState.suggestionInputPreview.isActive()
+        ? pageState.latestRawQuery
+        : readInputValue(event)).trim();
       if (!query) {
         return;
       }

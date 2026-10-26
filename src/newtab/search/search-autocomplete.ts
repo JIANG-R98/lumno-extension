@@ -1,4 +1,5 @@
 // Inline autocomplete for the search input.
+import type { SuggestionInputPreview } from '../../domain/search/suggestion-input-preview';
 import type { SiteSearchProvider } from '../../domain/search/types';
 import type { SearchInputParts } from '../../shared/react/search-input';
 import type { Suggestion } from '../../shared/react/search/suggestion-list/types';
@@ -14,6 +15,8 @@ interface SearchAutocompleteState {
   // When the user last deleted text; autocomplete holds off right after.
   lastDeletionAt: number;
   siteSearchState: SiteSearchProvider | null;
+  // A suggestion the arrows show keeps the input until it is dropped.
+  suggestionInputPreview: Pick<SuggestionInputPreview, 'isActive'>;
 }
 
 interface SearchAutocompleteDeps {
@@ -226,6 +229,9 @@ function createSearchAutocomplete(deps: SearchAutocompleteDeps) {
     const rawQuery = pageState.latestRawQuery;
     const trimmedQuery = rawQuery.trim();
     const inputParts = pageState.inputParts;
+    if (pageState.suggestionInputPreview.isActive()) {
+      return;
+    }
     if (pageState.searchResultPriorityMode === 'search') {
       if (inputParts && inputParts.input.value !== rawQuery) {
         inputParts.input.value = rawQuery;
