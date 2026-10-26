@@ -4,8 +4,9 @@ import type { MessageSender } from '../message-router';
 import type { LinkPreviewRetry } from '../../domain/messages';
 import { MAX_REFUSED_RETRIES, RESOLVE_TIMEOUT_MS } from './constants';
 import { isPreviewableUrl, readUrlDomain, sessionDomains } from './frame-rules';
-import { persistSessions, syncRules } from './sessions';
-import type { FrameSession, LinkPreviewContext } from './types';
+import { syncRules } from './sessions';
+import type { FrameSession } from './types';
+import type { LinkPreview } from './preview-state';
 
 function getSenderTabId(sender: MessageSender | null | undefined): number | null {
   const tabId = sender && sender.tab ? sender.tab.id : undefined;
@@ -13,10 +14,10 @@ function getSenderTabId(sender: MessageSender | null | undefined): number | null
 }
 
 // The preview's session, when the sender is the preview frame itself.
-async function findFrameSession(ctx: LinkPreviewContext, sender: MessageSender | null | undefined): Promise<FrameSession | null> {
-  await ctx.restored;
+async function findFrameSession(preview: LinkPreview, sender: MessageSender | null | undefined): Promise<FrameSession | null> {
+  await preview.sessions.restored;
   const tabId = getSenderTabId(sender);
-  const session = tabId !== null ? ctx.sessions.get(tabId) : undefined;
+  const session = tabId !== null ? preview.sessions.get(tabId) : undefined;
   if (tabId === null || !sender || !session || session.frameId === null || sender.frameId !== session.frameId) {
     return null;
   }
@@ -26,10 +27,10 @@ async function findFrameSession(ctx: LinkPreviewContext, sender: MessageSender |
 // The surface's frame passes on the secret the surface gave it: the frame
 // that sent it is the preview frame from now on. It binds once, and a page
 // in the frame that passed the secret to a frame of its own comes second.
-async function bindFrame(ctx: LinkPreviewContext, sender: MessageSender | null | undefined, secret: unknown): Promise<boolean> {
-  await ctx.restored;
+async function bindFrame(preview: LinkPreview, sender: MessageSender | null | undefined, secret: unknown): Promise<boolean> {
+  await preview.sessions.restored;
   const tabId = getSenderTabId(sender);
-  const session = tabId !== null ? ctx.sessions.get(tabId) : undefined;
+  const session = tabId !== null ? preview.sessions.get(tabId) : undefined;
   const frameId = sender ? sender.frameId : undefined;
   if (!session || typeof secret !== 'string' || secret !== session.frameSecret ||
       typeof frameId !== 'number' || !Number.isInteger(frameId) || frameId <= 0) {
@@ -37,22 +38,22 @@ async function bindFrame(ctx: LinkPreviewContext, sender: MessageSender | null |
   }
   if (session.frameId === null) {
     session.frameId = frameId;
-    persistSessions(ctx);
+    preview.sessions.persist();
   }
   if (session.frameId !== frameId) {
     return false;
   }
-  await noteFrameCommitted(ctx, sender);
+  await noteFrameCommitted(preview, sender);
   return true;
 }
 
 // The preview frame is about to leave for another address: kept so a
 // refusal there can be tried again. Nothing is allowed yet.
-async function noteFrameNavigation(ctx: LinkPreviewContext, sender: MessageSender | null | undefined, url: unknown): Promise<boolean> {
-  const found = await findFrameSession(ctx, sender);
+async function noteFrameNavigation(preview: LinkPreview, sender: MessageSender | null | undefined, url: unknown): Promise<boolean> {
+  const found = await findFrameSession(preview, sender);
   if (found && isPreviewableUrl(url)) {
     found.session.lastFrameUrl = url;
-    persistSessions(ctx);
+    preview.sessions.persist();
   }
   return Boolean(found);
 }
@@ -60,8 +61,8 @@ async function noteFrameNavigation(ctx: LinkPreviewContext, sender: MessageSende
 // A page loaded in the preview frame (the browser names its address). The
 // preview now shows that page's site: domains allowed for an earlier
 // page or try go, so a page the preview went back to cannot frame them.
-async function noteFrameCommitted(ctx: LinkPreviewContext, sender: MessageSender | null | undefined): Promise<boolean> {
-  const found = await findFrameSession(ctx, sender);
+async function noteFrameCommitted(preview: LinkPreview, sender: MessageSender | null | undefined): Promise<boolean> {
+  const found = await findFrameSession(preview, sender);
   if (!found) {
     return false;
   }
@@ -74,18 +75,18 @@ async function noteFrameCommitted(ctx: LinkPreviewContext, sender: MessageSender
   if (sessionDomains(session).join(' ') === before) {
     return false;
   }
-  return syncRules(ctx, tabId);
+  return syncRules(preview, tabId);
 }
 
 // Where an address ends up after its redirects. The body is not read.
-async function resolveFinalUrl(ctx: LinkPreviewContext, url: string): Promise<string> {
-  if (!ctx.fetchUrl) {
+async function resolveFinalUrl(preview: LinkPreview, url: string): Promise<string> {
+  if (!preview.ports.fetchUrl) {
     return '';
   }
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
-  const timer = controller ? ctx.setTimer(() => controller.abort(), RESOLVE_TIMEOUT_MS) : null;
+  const timer = controller ? preview.ports.setTimer(() => controller.abort(), RESOLVE_TIMEOUT_MS) : null;
   try {
-    const response = await ctx.fetchUrl(url, {
+    const response = await preview.ports.fetchUrl(url, {
       credentials: 'include',
       redirect: 'follow',
       cache: 'no-store',
@@ -96,7 +97,7 @@ async function resolveFinalUrl(ctx: LinkPreviewContext, url: string): Promise<st
     return '';
   } finally {
     if (timer !== null) {
-      ctx.clearTimer(timer);
+      preview.ports.clearTimer(timer);
     }
     if (controller) {
       controller.abort();
@@ -107,15 +108,15 @@ async function resolveFinalUrl(ctx: LinkPreviewContext, url: string): Promise<st
 // The surface found the frame showing Chrome's error page. If the address
 // the frame went to, or where it redirects, is a domain the preview does
 // not cover yet, that domain is allowed and the frame tries once more.
-async function retryRefusedFrame(ctx: LinkPreviewContext, tabId: number, token: string): Promise<LinkPreviewRetry> {
-  await ctx.restored;
-  const session = ctx.sessions.get(tabId);
+async function retryRefusedFrame(preview: LinkPreview, tabId: number, token: string): Promise<LinkPreviewRetry> {
+  await preview.sessions.restored;
+  const session = preview.sessions.get(tabId);
   if (!session || session.token !== token || session.retries >= MAX_REFUSED_RETRIES) {
     return { retry: false };
   }
   const target = session.lastFrameUrl || session.frameUrl;
-  const finalUrl = await resolveFinalUrl(ctx, target);
-  if (ctx.sessions.get(tabId) !== session) {
+  const finalUrl = await resolveFinalUrl(preview, target);
+  if (preview.sessions.get(tabId) !== session) {
     return { retry: false };
   }
   // A domain allowed on a redirect may have come too late for the load it
@@ -128,8 +129,8 @@ async function retryRefusedFrame(ctx: LinkPreviewContext, tabId: number, token: 
   }
   session.retries += 1;
   session.retryDomains = Array.from(new Set(session.retryDomains.concat(added)));
-  const applied = await syncRules(ctx, tabId);
-  return applied && ctx.sessions.get(tabId) === session ? { retry: true, url: target } : { retry: false };
+  const applied = await syncRules(preview, tabId);
+  return applied && preview.sessions.get(tabId) === session ? { retry: true, url: target } : { retry: false };
 }
 
 export {

@@ -107,28 +107,11 @@ interface LinkPreviewService {
 }
 
 
-interface LinkPreviewContext {
-  readonly config: LinkPreviewServiceOptions;
-  readonly chromeApi: typeof chrome | null;
-  readonly settingsStore: SettingsStore | null;
-  readonly now: () => number;
-  readonly setTimer: (callback: () => void, delayMs: number) => TimerHandle;
-  readonly clearTimer: (timer: TimerHandle) => void;
-  readonly fetchUrl: ((input: RequestInfo | URL, init?: RequestInit) => Promise<Response>) | null;
-  readonly sessions: Map<number, PreviewSession>;
-  tokenCounter: number;
-  headerMatching: boolean;
-  ruleQueue: Promise<unknown>;
-  restored: Promise<void>;
-  redirectListener: ((details: chrome.webRequest.OnBeforeRedirectDetails) => void) | null;
-}
-
 export type {
   FrameRedirect,
   FrameSession,
   HeaderInfo,
   LinkPreviewAction,
-  LinkPreviewContext,
   LinkPreviewService,
   LinkPreviewServiceOptions,
   PrepareOptions,
