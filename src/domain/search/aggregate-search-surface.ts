@@ -138,11 +138,56 @@ function createAggregateSearchRequestController(rawOptions?: RequestControllerOp
     onFeedback(getResponseDescriptor(response, runtimeError), response || null, runtimeError || null);
   }
 
-  function run(rawRequest?: AggregateSearchRequest | null, callbacks?: RequestCallbacks | null): RequestRun {
+  function readRequest(rawRequest: AggregateSearchRequest | null | undefined): { aggregateId: string; query: string; disposition: string } {
     const request: AggregateSearchRequest = rawRequest && typeof rawRequest === 'object' ? rawRequest : {};
-    const aggregateId = String(request.aggregateId || '').trim();
-    const query = String(request.query || '').trim();
-    const disposition = String(request.disposition || 'currentTab');
+    return {
+      aggregateId: String(request.aggregateId || '').trim(),
+      query: String(request.query || '').trim(),
+      disposition: String(request.disposition || 'currentTab')
+    };
+  }
+
+  function reportDuplicate(handlers: RequestCallbacks): void {
+    const duplicateResponse: AggregateSearchResponse = {
+      ok: false,
+      reason: 'aggregate-search-request-in-progress'
+    };
+    notify(duplicateResponse, null);
+    if (typeof handlers.onDuplicate === 'function') {
+      handlers.onDuplicate(duplicateResponse);
+    }
+  }
+
+  function reportFailure(handlers: RequestCallbacks, response: AggregateSearchResponse | null, error: unknown): void {
+    notify(response, error);
+    if (typeof handlers.onFailure === 'function') {
+      handlers.onFailure(response, error);
+    }
+  }
+
+  // The worker's answer: success feedback, or the failure and its reason.
+  function finishRequest(
+    requestKey: string,
+    runtime: { lastError?: unknown },
+    handlers: RequestCallbacks,
+    response?: AggregateSearchResponse
+  ): void {
+    pending.delete(requestKey);
+    const runtimeError = runtime.lastError ? runtime.lastError : null;
+    if (runtimeError || !response || response.ok !== true) {
+      reportFailure(handlers, response || null, runtimeError);
+      return;
+    }
+    if (hasSuccessFeedback(response)) {
+      notify(response, null);
+    }
+    if (typeof handlers.onSuccess === 'function') {
+      handlers.onSuccess(response);
+    }
+  }
+
+  function run(rawRequest?: AggregateSearchRequest | null, callbacks?: RequestCallbacks | null): RequestRun {
+    const { aggregateId, query, disposition } = readRequest(rawRequest);
     const handlers: RequestCallbacks = callbacks && typeof callbacks === 'object' ? callbacks : {};
     const runtime = chromeApi && chromeApi.runtime;
     const sendMessage = runtime && runtime.sendMessage;
@@ -152,35 +197,12 @@ function createAggregateSearchRequestController(rawOptions?: RequestControllerOp
     }
     const requestKey = [aggregateId, query, disposition].join('\n');
     if (pending.has(requestKey)) {
-      const duplicateResponse: AggregateSearchResponse = {
-        ok: false,
-        reason: 'aggregate-search-request-in-progress'
-      };
-      notify(duplicateResponse, null);
-      if (typeof handlers.onDuplicate === 'function') {
-        handlers.onDuplicate(duplicateResponse);
-      }
+      reportDuplicate(handlers);
       return { duplicate: true, key: requestKey, started: false };
     }
 
     pending.add(requestKey);
-    const finish = (response?: AggregateSearchResponse) => {
-      pending.delete(requestKey);
-      const runtimeError = runtime.lastError ? runtime.lastError : null;
-      if (runtimeError || !response || response.ok !== true) {
-        notify(response, runtimeError);
-        if (typeof handlers.onFailure === 'function') {
-          handlers.onFailure(response || null, runtimeError);
-        }
-        return;
-      }
-      if (hasSuccessFeedback(response)) {
-        notify(response, null);
-      }
-      if (typeof handlers.onSuccess === 'function') {
-        handlers.onSuccess(response);
-      }
-    };
+    const finish = (response?: AggregateSearchResponse) => finishRequest(requestKey, runtime, handlers, response);
 
     try {
       sendMessage.call(runtime, {
@@ -191,10 +213,7 @@ function createAggregateSearchRequestController(rawOptions?: RequestControllerOp
       }, finish);
     } catch (error) {
       pending.delete(requestKey);
-      notify(null, error);
-      if (typeof handlers.onFailure === 'function') {
-        handlers.onFailure(null, error);
-      }
+      reportFailure(handlers, null, error);
       return { duplicate: false, key: requestKey, started: false };
     }
     return { duplicate: false, key: requestKey, started: true };

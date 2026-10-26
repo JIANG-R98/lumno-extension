@@ -60,147 +60,166 @@ function getShortcutDirection(
   return '';
 }
 
+interface InputHistoryContext {
+  readonly config: SearchInputHistoryOptions;
+  readonly storage: StoredValuePort | null;
+  readonly maxEntries: number;
+  entries: string[];
+  cursor: number;
+  draft: string;
+  hydrated: boolean;
+  destroyed: boolean;
+  loadPromise: Promise<string[]> | null;
+  pendingRecords: string[];
+  unsubscribe: (() => void) | null;
+}
+
+function resetNavigation(ctx: InputHistoryContext) {
+  ctx.cursor = ctx.entries.length;
+  ctx.draft = '';
+}
+
+function replaceEntries(ctx: InputHistoryContext, value: unknown): string[] {
+  ctx.entries = normalizeEntries(value, ctx.maxEntries);
+  resetNavigation(ctx);
+  return ctx.entries.slice();
+}
+
+function applyRecord(ctx: InputHistoryContext, value: unknown): string {
+  const entry = normalizeEntry(value);
+  if (!entry) {
+    return '';
+  }
+  const next = ctx.entries.filter((item) => item !== entry);
+  next.push(entry);
+  ctx.entries = next.slice(-ctx.maxEntries);
+  resetNavigation(ctx);
+  return entry;
+}
+
+function persist(ctx: InputHistoryContext) {
+  if (!ctx.storage || ctx.destroyed) {
+    return;
+  }
+  // Input history is best-effort and must never block search.
+  ctx.storage.write(ctx.entries.slice()).catch(() => {});
+}
+
+function readStorage(ctx: InputHistoryContext): Promise<unknown> {
+  return ctx.storage ? ctx.storage.read().catch(() => []) : Promise.resolve([]);
+}
+
+function load(ctx: InputHistoryContext): Promise<string[]> {
+  if (ctx.loadPromise) {
+    return ctx.loadPromise;
+  }
+  ctx.loadPromise = readStorage(ctx).then((result) => {
+    if (ctx.destroyed) {
+      return ctx.entries.slice();
+    }
+    const queued = ctx.pendingRecords.slice();
+    ctx.pendingRecords = [];
+    replaceEntries(ctx, result);
+    queued.forEach(((value: unknown) => applyRecord(ctx, value)));
+    ctx.hydrated = true;
+    if (queued.length > 0) {
+      persist(ctx);
+    }
+    return ctx.entries.slice();
+  });
+  return ctx.loadPromise;
+}
+
+function record(ctx: InputHistoryContext, value: unknown): boolean {
+  const entry = normalizeEntry(value);
+  if (!entry) {
+    return false;
+  }
+  if (!ctx.hydrated) {
+    ctx.pendingRecords.push(entry);
+  }
+  applyRecord(ctx, entry);
+  if (ctx.hydrated) {
+    persist(ctx);
+  } else {
+    load(ctx);
+  }
+  return true;
+}
+
+function move(ctx: InputHistoryContext, direction: HistoryDirection, currentValue: unknown): HistoryMove {
+  if (ctx.entries.length === 0) {
+    return { handled: false, value: String(currentValue || '') };
+  }
+  if (direction === 'previous') {
+    if (ctx.cursor >= ctx.entries.length) {
+      ctx.cursor = ctx.entries.length;
+      ctx.draft = String(currentValue || '');
+    }
+    ctx.cursor = Math.max(0, ctx.cursor - 1);
+    return { handled: true, value: ctx.entries[ctx.cursor] };
+  }
+  if (direction === 'next') {
+    if (ctx.cursor >= ctx.entries.length) {
+      return { handled: false, value: String(currentValue || '') };
+    }
+    if (ctx.cursor < ctx.entries.length - 1) {
+      ctx.cursor += 1;
+      return { handled: true, value: ctx.entries[ctx.cursor] };
+    }
+    ctx.cursor = ctx.entries.length;
+    return { handled: true, value: ctx.draft };
+  }
+  return { handled: false, value: String(currentValue || '') };
+}
+
 function createSearchInputHistoryController(options?: SearchInputHistoryOptions) {
   const config: SearchInputHistoryOptions = options && typeof options === 'object' ? options : {};
   const storage = config.storage || null;
   const maxEntries = Number.isFinite(Number(config.maxEntries))
     ? Math.max(1, Math.round(Number(config.maxEntries)))
     : DEFAULT_MAX_ENTRIES;
-  let entries: string[] = [];
-  let cursor = 0;
-  let draft = '';
-  let hydrated = false;
-  let destroyed = false;
-  let loadPromise: Promise<string[]> | null = null;
-  let pendingRecords: string[] = [];
-  let unsubscribe: (() => void) | null = null;
+  const ctx: InputHistoryContext = {
+    config,
+    storage,
+    maxEntries,
+    entries: [],
+    cursor: 0,
+    draft: '',
+    hydrated: false,
+    destroyed: false,
+    loadPromise: null,
+    pendingRecords: [],
+    unsubscribe: null
+  };
 
-  function resetNavigation() {
-    cursor = entries.length;
-    draft = '';
-  }
-
-  function replaceEntries(value: unknown): string[] {
-    entries = normalizeEntries(value, maxEntries);
-    resetNavigation();
-    return entries.slice();
-  }
-
-  function applyRecord(value: unknown): string {
-    const entry = normalizeEntry(value);
-    if (!entry) {
-      return '';
-    }
-    const next = entries.filter((item) => item !== entry);
-    next.push(entry);
-    entries = next.slice(-maxEntries);
-    resetNavigation();
-    return entry;
-  }
-
-  function persist() {
-    if (!storage || destroyed) {
-      return;
-    }
-    // Input history is best-effort and must never block search.
-    storage.write(entries.slice()).catch(() => {});
-  }
-
-  function readStorage(): Promise<unknown> {
-    return storage ? storage.read().catch(() => []) : Promise.resolve([]);
-  }
-
-  function load(): Promise<string[]> {
-    if (loadPromise) {
-      return loadPromise;
-    }
-    loadPromise = readStorage().then((result) => {
-      if (destroyed) {
-        return entries.slice();
-      }
-      const queued = pendingRecords.slice();
-      pendingRecords = [];
-      replaceEntries(result);
-      queued.forEach(applyRecord);
-      hydrated = true;
-      if (queued.length > 0) {
-        persist();
-      }
-      return entries.slice();
-    });
-    return loadPromise;
-  }
-
-  function record(value: unknown): boolean {
-    const entry = normalizeEntry(value);
-    if (!entry) {
-      return false;
-    }
-    if (!hydrated) {
-      pendingRecords.push(entry);
-    }
-    applyRecord(entry);
-    if (hydrated) {
-      persist();
-    } else {
-      load();
-    }
-    return true;
-  }
-
-  function move(direction: HistoryDirection, currentValue: unknown): HistoryMove {
-    if (entries.length === 0) {
-      return { handled: false, value: String(currentValue || '') };
-    }
-    if (direction === 'previous') {
-      if (cursor >= entries.length) {
-        cursor = entries.length;
-        draft = String(currentValue || '');
-      }
-      cursor = Math.max(0, cursor - 1);
-      return { handled: true, value: entries[cursor] };
-    }
-    if (direction === 'next') {
-      if (cursor >= entries.length) {
-        return { handled: false, value: String(currentValue || '') };
-      }
-      if (cursor < entries.length - 1) {
-        cursor += 1;
-        return { handled: true, value: entries[cursor] };
-      }
-      cursor = entries.length;
-      return { handled: true, value: draft };
-    }
-    return { handled: false, value: String(currentValue || '') };
-  }
-
-  if (storage) {
-    unsubscribe = storage.subscribe((value) => {
-      if (destroyed) {
+  if (ctx.storage) {
+    ctx.unsubscribe = ctx.storage.subscribe((value) => {
+      if (ctx.destroyed) {
         return;
       }
-      replaceEntries(value);
-      hydrated = true;
+      replaceEntries(ctx, value);
+      ctx.hydrated = true;
     });
   }
 
-  load();
+  load(ctx);
 
   return Object.freeze({
     destroy() {
-      destroyed = true;
-      if (unsubscribe) {
-        unsubscribe();
-        unsubscribe = null;
+      ctx.destroyed = true;
+      if (ctx.unsubscribe) {
+        ctx.unsubscribe();
+        ctx.unsubscribe = null;
       }
     },
     getEntries() {
-      return entries.slice();
+      return ctx.entries.slice();
     },
-    load,
-    move,
-    record,
-    resetNavigation
+    load: () => load(ctx),
+    move: (direction: HistoryDirection, currentValue: unknown) => move(ctx, direction, currentValue),
+    record: (value: unknown) => record(ctx, value),
+    resetNavigation: () => resetNavigation(ctx)
   });
 }
 

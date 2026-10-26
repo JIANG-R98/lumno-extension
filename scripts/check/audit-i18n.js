@@ -23,7 +23,7 @@ const ALLOWLIST = [
   'Chinese search-intent tokens in the scoring dictionaries of src/domain/search/utils/',
   'generated traditional-to-simplified character table in src/domain/search/han-variants.generated.ts',
   'question filler words dropped from help center queries in src/domain/search/help-center/query.ts',
-  'episode and chapter title patterns in src/domain/progress-match.ts',
+  'episode and chapter title patterns in src/domain/progress-match.ts and progress-title-compare.ts',
   'photographer names credited in src/newtab/wallpaper/wallpaper-catalog.ts',
   'language names written in their own language in UI_LOCALES (src/domain/settings/locale.ts)'
 ];
@@ -125,7 +125,7 @@ function isAllowlistedLine(file, line) {
   if (file === 'src/domain/search/help-center/query.ts') {
     return true;
   }
-  if (file === 'src/domain/progress-match.ts') {
+  if (file === 'src/domain/progress-match.ts' || file === 'src/domain/progress-title-compare.ts') {
     return true;
   }
   if (file === 'src/onboarding/onboarding-content.ts') {
