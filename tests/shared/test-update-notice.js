@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { createSettingsStore } = require('../../src/platform/settings-store.ts');
 // The module under test draws through this stand-in for its React view.
 global.__lumnoTestModuleStubs = Object.assign(global.__lumnoTestModuleStubs || {}, {
   'src/shared/react/feature-hint-view.tsx': { getFeatureHintViewApi: () => featureHintView }
@@ -420,6 +421,7 @@ function flushMicrotasks() {
   };
   await updateNotice.publishUpdateNotice({
     chromeApi: publishChromeApi,
+    settingsStore: createSettingsStore({ chromeApi: publishChromeApi, settings: [] }),
     version: 'v0.9.10',
     previousVersion: '0.9.9',
     reason: 'update',

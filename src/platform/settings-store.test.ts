@@ -185,6 +185,13 @@ describe('settings store', () => {
     expect(store.get(theme)).toBe('light');
   });
 
+  it('writes a preference it never read', async () => {
+    const { api, chromeApi } = createChrome();
+    const store = createSettingsStore({ chromeApi: api, settings: [] });
+    await store.set(theme, 'dark');
+    expect(chromeApi.storage.sync.items.test_theme).toBe('dark');
+  });
+
   it('does not report a first read as a change', async () => {
     const { api } = createChrome({ test_theme: 'dark' });
     const store = createSettingsStore({ chromeApi: api, settings: [] });

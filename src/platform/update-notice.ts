@@ -1,9 +1,10 @@
 // The "updated to vX" notice's data: the record the worker publishes after an
 // update (with the release title from GitHub), the person's setting, and how
 // many times each version's notice was shown. shared/update-notice.ts shows it.
+import type { Setting } from '../domain/settings/define';
 import * as SETTINGS from '../domain/settings/features';
-import * as LumnoSettingsStorage from './settings-storage';
 import type { StorageChromeApi } from './settings-storage';
+import type { SettingsStore } from './settings-store';
 import { updateNoticeState } from '../domain/settings/features';
 
 // The extension API the notice reads: the manifest version and storage.
@@ -32,6 +33,8 @@ interface UpdateNotice {
 
 interface PublishOptions {
   chromeApi?: UpdateNoticeChromeApi | null;
+  // Where the notice is saved.
+  settingsStore: SettingsStore;
   fetchImpl?: ReleaseFetch | null;
   version?: string;
   previousVersion?: unknown;
@@ -167,15 +170,6 @@ function normalizeUpdateNoticeEnabled(value: unknown): boolean {
   return SETTINGS.updateNoticeEnabled.parse(value);
 }
 
-function getStorageRuntime(chromeApi: UpdateNoticeChromeApi | null | undefined): LumnoSettingsStorage.ProviderStorageRuntime {
-  return LumnoSettingsStorage.createProviderStorageRuntime(getChromeApi(chromeApi));
-}
-
-function readLastError(chromeApi: UpdateNoticeChromeApi | null | undefined): unknown {
-  const api = getChromeApi(chromeApi);
-  return api && api.runtime ? api.runtime.lastError : null;
-}
-
 // A storage-safe id part: letters, digits and underscores.
 function getDomIdPart(id: unknown): string {
   return String(id || 'update-notice')
@@ -183,9 +177,14 @@ function getDomIdPart(id: unknown): string {
     .replace(/^_+|_+$/g, '') || 'update_notice';
 }
 
-function getUpdateNoticeDisplayCountKey(versionTag: unknown): string {
+// How many times this version's notice was shown.
+function getUpdateNoticeDisplayCountSetting(versionTag: unknown): Setting<unknown> {
   const versionPart = getDomIdPart(normalizeVersionTag(versionTag) || 'unversioned');
-  return SETTINGS.updateNoticeDisplayCount.keyFor(versionPart);
+  return SETTINGS.updateNoticeDisplayCount.member(versionPart);
+}
+
+function getUpdateNoticeDisplayCountKey(versionTag: unknown): string {
+  return getUpdateNoticeDisplayCountSetting(versionTag).key;
 }
 
 function normalizeUpdateNoticeDisplayCount(value: unknown): number {
@@ -196,57 +195,31 @@ function normalizeUpdateNoticeDisplayCount(value: unknown): number {
   return Math.min(UPDATE_NOTICE_MAX_DISPLAY_COUNT, Math.max(0, Math.floor(count)));
 }
 
-// Reads one key from the settings area; the fallback when it cannot.
-function readStoredValue<T>(chromeApi: UpdateNoticeChromeApi | null | undefined, key: string, read: (value: unknown) => T, fallback: T): Promise<T> {
-  const storageRuntime = getStorageRuntime(chromeApi);
-  return new Promise((resolve) => {
-    if (!storageRuntime.area || typeof storageRuntime.area.get !== 'function') {
-      resolve(fallback);
-      return;
-    }
-    try {
-      void storageRuntime.area.get([key], (result) => {
-        resolve(readLastError(chromeApi) ? fallback : read(result && result[key]));
-      });
-    } catch (_error) {
-      resolve(fallback);
-    }
-  });
+async function readStored(store: SettingsStore, setting: Setting<unknown>): Promise<unknown> {
+  await store.include(setting);
+  return store.getStored(setting);
 }
 
-function getStoredUpdateNotice(chromeApi?: UpdateNoticeChromeApi | null): Promise<UpdateNotice | null> {
-  return readStoredValue(chromeApi, updateNoticeState.key, normalizeUpdateNoticePayload, null);
+async function getStoredUpdateNotice(store: SettingsStore): Promise<UpdateNotice | null> {
+  return normalizeUpdateNoticePayload(await readStored(store, updateNoticeState));
 }
 
-function getStoredUpdateNoticeEnabled(chromeApi?: UpdateNoticeChromeApi | null): Promise<boolean> {
-  return readStoredValue(chromeApi, SETTINGS.updateNoticeEnabled.key, normalizeUpdateNoticeEnabled,
-    normalizeUpdateNoticeEnabled(undefined));
+async function getStoredUpdateNoticeEnabled(store: SettingsStore): Promise<boolean> {
+  return normalizeUpdateNoticeEnabled(await readStored(store, SETTINGS.updateNoticeEnabled));
 }
 
-function getStoredUpdateNoticeDisplayCount(chromeApi: UpdateNoticeChromeApi | null | undefined, versionTag: unknown): Promise<number> {
-  return readStoredValue(chromeApi, getUpdateNoticeDisplayCountKey(versionTag), normalizeUpdateNoticeDisplayCount, 0);
+async function getStoredUpdateNoticeDisplayCount(store: SettingsStore, versionTag: unknown): Promise<number> {
+  return normalizeUpdateNoticeDisplayCount(await readStored(store, getUpdateNoticeDisplayCountSetting(versionTag)));
 }
 
-function setStoredUpdateNotice(chromeApi: UpdateNoticeChromeApi | null | undefined, payload: unknown, callback?: (saved: boolean) => void): void {
-  const storageRuntime = getStorageRuntime(chromeApi);
+// Resolves to whether the notice was saved.
+async function setStoredUpdateNotice(store: SettingsStore, payload: unknown, callback?: (saved: boolean) => void): Promise<boolean> {
   const notice = normalizeUpdateNoticePayload(payload);
-  if (!notice || !storageRuntime.area || typeof storageRuntime.area.set !== 'function') {
-    if (typeof callback === 'function') {
-      callback(false);
-    }
-    return;
+  const saved = notice ? await store.set(updateNoticeState, notice).then(() => true, () => false) : false;
+  if (typeof callback === 'function') {
+    callback(saved);
   }
-  try {
-    void storageRuntime.area.set({ [updateNoticeState.key]: notice }, () => {
-      if (typeof callback === 'function') {
-        callback(!readLastError(chromeApi));
-      }
-    });
-  } catch (_error) {
-    if (typeof callback === 'function') {
-      callback(false);
-    }
-  }
+  return saved;
 }
 
 function readReleaseTitle(release: unknown): string {
@@ -306,9 +279,9 @@ function fetchReleaseTitle(versionTag: unknown, options?: { fetchImpl?: ReleaseF
 
 // Saves the notice for this version, with its release title when one can be
 // fetched; resolves false only when there is no version to announce.
-function publishUpdateNotice(options?: PublishOptions | null, callback?: (saved: boolean) => void): Promise<boolean> {
-  const settings: PublishOptions = options && typeof options === 'object' ? options : {};
+function publishUpdateNotice(settings: PublishOptions, callback?: (saved: boolean) => void): Promise<boolean> {
   const chromeApi = getChromeApi(settings.chromeApi);
+  const store = settings.settingsStore;
   const version = normalizeVersionTag(settings.version || getCurrentVersionTag(chromeApi));
   const reason = String(settings.reason || 'update').trim().toLowerCase() || 'update';
   const basePayload = version ? normalizeUpdateNoticePayload({
@@ -328,16 +301,11 @@ function publishUpdateNotice(options?: PublishOptions | null, callback?: (saved:
   const titlePromise = basePayload.title
     ? Promise.resolve(basePayload.title)
     : fetchReleaseTitle(version, settings);
-  return titlePromise.then((title) => {
-    setStoredUpdateNotice(chromeApi, {
-      ...basePayload,
-      title: sanitizeText(title || basePayload.title || '')
-    }, callback);
-    return true;
-  }).catch(() => {
-    setStoredUpdateNotice(chromeApi, basePayload, callback);
-    return true;
-  });
+  return titlePromise
+    .then((title) => ({ ...basePayload, title: sanitizeText(title || basePayload.title || '') }))
+    .catch(() => basePayload)
+    .then((payload) => setStoredUpdateNotice(store, payload, callback))
+    .then(() => true);
 }
 
 export type { PublishOptions, ReleaseFetch, UpdateNotice, UpdateNoticeChromeApi };
@@ -358,6 +326,7 @@ export {
   normalizeUpdateNoticeEnabled,
   getDomIdPart,
   getUpdateNoticeDisplayCountKey,
+  getUpdateNoticeDisplayCountSetting,
   normalizeUpdateNoticeDisplayCount,
   getStoredUpdateNotice,
   getStoredUpdateNoticeEnabled,

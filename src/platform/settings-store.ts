@@ -125,9 +125,15 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
   let listening = false;
   let destroyed = false;
 
+  // The provider runtime is made with the first preference the store meets.
+  function preferencesProvider(): ProviderStorageRuntime {
+    if (!provider) provider = createProviderStorageRuntime(chromeApi);
+    return provider;
+  }
+
   function areaFor(area: StoreArea): StorageAreaLike | StorageAreaFacade | null {
     if (!storage) return null;
-    if (area === 'preferences') return provider ? provider.area : null;
+    if (area === 'preferences') return preferencesProvider().area;
     if (area === 'browserSync') return storage.sync || null;
     if (area === 'session') return storage.session || storage.local || null;
     return storage.local || null;
@@ -185,7 +191,7 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
     }
     const target = areaFor(area);
     if (!target) return;
-    if (area === 'preferences' && provider) await provider.ready;
+    if (area === 'preferences') await preferencesProvider().ready;
     let items: unknown;
     try {
       items = await callStorage(chromeApi, (done) => target.get(list.map((setting) => setting.key), done));
@@ -216,9 +222,7 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
     const stale = options.listenWhileSubscribed && !listening;
     const added = targets.filter((setting) => stale || !loading.has(setting.key));
     added.forEach((setting) => byKey.set(setting.key, setting));
-    if (!provider && added.some((setting) => setting.area === 'preferences')) {
-      provider = createProviderStorageRuntime(chromeApi);
-    }
+    if (added.some((setting) => setting.area === 'preferences')) preferencesProvider();
     if (added.length && !options.listenWhileSubscribed) listen();
     added.filter((setting) => !isStoreArea(setting.area)).forEach((setting) => {
       accept(setting, readWebStorage(webStorageFor(setting), setting.key), true);
@@ -282,7 +286,7 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
       accept(setting, next);
     });
     await Promise.all(Array.from(writes, async ([area, items]) => {
-      if (area === 'preferences' && provider) await provider.ready;
+      if (area === 'preferences') await preferencesProvider().ready;
       await writeStorageValues(areaFor(area), chromeApi, items);
     }));
   }
@@ -301,7 +305,7 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
       accept(setting, undefined);
     });
     await Promise.all(Array.from(removals, async ([area, keys]) => {
-      if (area === 'preferences' && provider) await provider.ready;
+      if (area === 'preferences') await preferencesProvider().ready;
       const target = areaFor(area);
       if (target && typeof target.remove === 'function') {
         await callStorage(chromeApi, (done) => target.remove ? target.remove(keys, () => done()) : done());
@@ -314,7 +318,7 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
     targets.forEach((setting) => {
       if (!byKey.has(setting.key)) {
         byKey.set(setting.key, setting);
-        if (!provider && setting.area === 'preferences') provider = createProviderStorageRuntime(chromeApi);
+        if (setting.area === 'preferences') preferencesProvider();
       }
       const set = listeners.get(setting.key) || new Set<SettingsListener>();
       set.add(listener);
@@ -338,7 +342,7 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
     const members = new Map<string, unknown>();
     const target = familyArea(family);
     if (!target || !ids.length) return members;
-    if (family.area === 'preferences' && provider) await provider.ready;
+    if (family.area === 'preferences') await preferencesProvider().ready;
     const keys = ids.map((id) => family.keyFor(id));
     const items = await callStorage(chromeApi, (done) => target.get(keys, done));
     const values = isRecord(items) ? items : {};
@@ -352,7 +356,7 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
   async function writeMembers(family: SettingFamily<unknown>, values: ReadonlyMap<string, unknown>): Promise<void> {
     const target = familyArea(family);
     if (!target || !values.size) return;
-    if (family.area === 'preferences' && provider) await provider.ready;
+    if (family.area === 'preferences') await preferencesProvider().ready;
     const items: StorageItems = {};
     values.forEach((value, id) => {
       items[family.keyFor(id)] = family.parse(value);
@@ -363,7 +367,7 @@ function createSettingsStore(options: SettingsStoreOptions): SettingsStore {
   async function removeMembers(family: SettingFamily<unknown>, ids: readonly (string | number)[]): Promise<void> {
     const target = familyArea(family);
     if (!target || !ids.length || typeof target.remove !== 'function') return;
-    if (family.area === 'preferences' && provider) await provider.ready;
+    if (family.area === 'preferences') await preferencesProvider().ready;
     const keys = ids.map((id) => family.keyFor(id));
     await callStorage(chromeApi, (done) => target.remove ? target.remove(keys, () => done()) : done());
   }

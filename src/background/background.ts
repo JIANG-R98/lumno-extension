@@ -201,6 +201,7 @@ function publishExtensionUpdateNotice(details: chrome.runtime.InstalledDetails):
   const version = UPDATE_NOTICE.getCurrentVersionTag(chrome);
   UPDATE_NOTICE.publishUpdateNotice({
     chromeApi: chrome,
+    settingsStore: workerSettings,
     fetchImpl: typeof fetch === 'function' ? fetch : null,
     version,
     previousVersion: details.previousVersion || '',

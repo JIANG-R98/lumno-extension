@@ -379,11 +379,9 @@ function readDismissKey(key: string): { family: SettingFamily<boolean>; id: stri
 }
 
 async function readDismissed(store: SettingsStore, family: SettingFamily<boolean>, id: string): Promise<boolean> {
-  try {
-    return family.parse((await store.readMembers(family, [id])).get(id));
-  } catch (_error) {
-    return false;
-  }
+  const member = family.member(id);
+  await store.include(member);
+  return store.get(member);
 }
 
 async function getStoredDismissed(chromeApi: FeatureHintChromeApi | null, key: string): Promise<boolean> {
@@ -411,7 +409,7 @@ function setStoredDismissed(chromeApi: FeatureHintChromeApi | null, key: string)
     return;
   }
   // Storage errors should not block the visible in-page dismissal.
-  store.writeMembers(target.family, new Map([[target.id, true]])).catch(() => {});
+  store.set(target.family.member(target.id), true).catch(() => {});
 }
 
 function getFeatureHint(definition: FeatureHintReference): FeatureHintDefinition | null {

@@ -81,16 +81,38 @@ interface SettingFamily<T> {
   // The id a key of this family names, or null for any other key.
   idOf(key: string): string | null;
   parse(value: unknown): T;
+  // One member as a setting of its own, so a store can read, write and
+  // follow it like any other; the same member is always the same object.
+  member(id: string | number): Setting<T>;
 }
 
 function defineSettingFamily<T>(spec: SettingFamilySpec<T>): SettingFamily<T> {
   const { prefix, schema } = spec;
+  const members = new Map<string, Setting<T>>();
+  const keyFor = (id: string | number) => `${prefix}${id}`;
+  const parse = (value: unknown) => schema.parse(value);
+  function member(id: string | number): Setting<T> {
+    const key = keyFor(id);
+    const known = members.get(key);
+    if (known) return known;
+    const created: Setting<T> = Object.freeze({
+      key,
+      area: spec.area,
+      sync: 'none',
+      diagnostics: 'omit',
+      default: schema.parse(undefined),
+      parse
+    });
+    members.set(key, created);
+    return created;
+  }
   return Object.freeze({
     prefix,
     area: spec.area,
-    keyFor: (id: string | number) => `${prefix}${id}`,
+    keyFor,
     idOf: (key: string) => (key.startsWith(prefix) ? key.slice(prefix.length) : null),
-    parse: (value: unknown) => schema.parse(value)
+    parse,
+    member
   });
 }
 

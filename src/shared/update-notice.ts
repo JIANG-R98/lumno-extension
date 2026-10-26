@@ -2,13 +2,13 @@
 // Its data (the published notice, the setting, display counts) lives in
 // platform/update-notice.ts, re-exported here for the surfaces.
 import * as LumnoFeatureHints from './ui/feature-hints';
-import * as LumnoSettingsStorage from '../platform/settings-storage';
-import { UPDATE_NOTICE_MAX_DISPLAY_COUNT, RELEASE_DETAILS_URL, GITHUB_RELEASE_API_URL, GITHUB_RELEASE_PAGE_URL, normalizeVersionTag, formatVersionLabel, getReleaseTagCandidates, sanitizeText, extractReleaseTitleFromHtml, getCurrentVersionTag, buildReleaseDetailsUrl, normalizeUpdateNoticePayload, shouldShowUpdateNotice, normalizeUpdateNoticeEnabled, getUpdateNoticeDisplayCountKey, normalizeUpdateNoticeDisplayCount, getStoredUpdateNotice, getStoredUpdateNoticeEnabled, getStoredUpdateNoticeDisplayCount, setStoredUpdateNotice, fetchReleaseTitle, publishUpdateNotice } from '../platform/update-notice';
+import { createSettingsStore, getContextSettingsStore } from '../platform/settings-store';
+import type { SettingsStore } from '../platform/settings-store';
+import { UPDATE_NOTICE_MAX_DISPLAY_COUNT, RELEASE_DETAILS_URL, GITHUB_RELEASE_API_URL, GITHUB_RELEASE_PAGE_URL, normalizeVersionTag, formatVersionLabel, getReleaseTagCandidates, sanitizeText, extractReleaseTitleFromHtml, getCurrentVersionTag, buildReleaseDetailsUrl, normalizeUpdateNoticePayload, shouldShowUpdateNotice, normalizeUpdateNoticeEnabled, getUpdateNoticeDisplayCountKey, getUpdateNoticeDisplayCountSetting, normalizeUpdateNoticeDisplayCount, getStoredUpdateNotice, getStoredUpdateNoticeEnabled, getStoredUpdateNoticeDisplayCount, setStoredUpdateNotice, fetchReleaseTitle, publishUpdateNotice } from '../platform/update-notice';
 import type { ReleaseFetch, UpdateNotice, UpdateNoticeChromeApi } from '../platform/update-notice';
-import type { StorageChanges } from '../domain/storage-port';
 import type { FeatureHintController, FeatureHintDefinition } from './ui/feature-hints';
-import { updateNoticeState } from '../domain/settings/features';
-import * as FeatureSettings from '../domain/settings/features';
+import type { Setting } from '../domain/settings/define';
+import { featureHintDismissedEverywhere, updateNoticeEnabled as updateNoticeEnabledSetting, updateNoticeState } from '../domain/settings/features';
 
 type UpdateNoticeSurface = 'newtab' | 'overlay' | 'shared';
 
@@ -18,6 +18,8 @@ interface UpdateNoticeOptions {
   documentObj?: Document | null;
   windowObj?: Partial<Pick<Window, 'open'>> | null;
   chromeApi?: UpdateNoticeChromeApi | null;
+  // The page's settings store; the context's shared one when absent.
+  settingsStore?: SettingsStore | null;
   featureHints?: Pick<typeof LumnoFeatureHints, 'createFeatureHint' | 'getFeatureHintSyncDismissKey'> | null;
   // This version; the manifest's when absent.
   version?: string;
@@ -46,10 +48,6 @@ interface UpdateNoticeController extends Omit<FeatureHintController, 'ready'> {
 }
 
 const UPDATE_NOTICE_ID = 'update-notice';
-
-function getStorageRuntime(chromeApi: UpdateNoticeChromeApi | null): LumnoSettingsStorage.ProviderStorageRuntime {
-  return LumnoSettingsStorage.createProviderStorageRuntime(chromeApi);
-}
 
 function formatTemplate(template: string, params: Record<string, string>): string {
   let text = String(template || '');
@@ -117,11 +115,14 @@ function createUpdateNotice(options?: UpdateNoticeOptions | null): UpdateNoticeC
     return null;
   }
 
-  const storageRuntime = getStorageRuntime(chromeApi);
+  const store = config.settingsStore ||
+    (chromeApi ? getContextSettingsStore(chromeApi) : createSettingsStore({ chromeApi: null, settings: [] }));
   const surface = readSurface(config.surface);
   const definition = createUpdateNoticeDefinition(currentVersion, { surface });
   const dismissKey = getUpdateNoticeDismissKey(featureHints, currentVersion);
-  const displayCountKey = getUpdateNoticeDisplayCountKey(currentVersion);
+  const displayCountSetting = getUpdateNoticeDisplayCountSetting(currentVersion);
+  const dismissId = featureHintDismissedEverywhere.idOf(dismissKey);
+  const dismissSetting = dismissId ? featureHintDismissedEverywhere.member(dismissId) : null;
   const baseT: Translate = typeof config.t === 'function'
     ? config.t
     : (_key, fallback) => fallback || '';
@@ -234,23 +235,16 @@ function createUpdateNotice(options?: UpdateNoticeOptions | null): UpdateNoticeC
     exposureRecorded = true;
     displayCount = normalizeUpdateNoticeDisplayCount(displayCount + 1);
     syncDisplayCountAttribute();
-    const values: Record<string, unknown> = { [displayCountKey]: displayCount };
-    if (displayCount >= UPDATE_NOTICE_MAX_DISPLAY_COUNT) {
+    const values: Array<[Setting<unknown>, unknown]> = [[displayCountSetting, displayCount]];
+    if (displayCount >= UPDATE_NOTICE_MAX_DISPLAY_COUNT && dismissSetting) {
       // Persist the normal per-version dismissal while leaving this third
       // exposure visible. Any later newtab or overlay instance will start
-      // dismissed, and already-open sibling instances close via onChanged.
-      values[dismissKey] = true;
+      // dismissed, and already-open sibling instances close as it changes.
+      values.push([dismissSetting, true]);
       ignoreOwnAutoDismissChange = true;
     }
-    try {
-      storageRuntime.area.set(values, () => {
-        if (chromeApi && chromeApi.runtime && chromeApi.runtime.lastError) {
-          ignoreOwnAutoDismissChange = false;
-        }
-      });
-    } catch (_error) {
-      ignoreOwnAutoDismissChange = false;
-    }
+    store.setMany(values).catch(() => {});
+    ignoreOwnAutoDismissChange = false;
     return true;
   }
 
@@ -299,7 +293,7 @@ function createUpdateNotice(options?: UpdateNoticeOptions | null): UpdateNoticeC
         }
         notice = nextNotice;
         hintController.updateLanguage();
-        setStoredUpdateNotice(chromeApi, nextNotice);
+        void setStoredUpdateNotice(store, nextNotice);
       })
       .catch(() => {
         titleRefreshPromise = null;
@@ -307,9 +301,9 @@ function createUpdateNotice(options?: UpdateNoticeOptions | null): UpdateNoticeC
   }
 
   const storedNoticeReadyPromise = Promise.all([
-    getStoredUpdateNotice(chromeApi),
-    getStoredUpdateNoticeEnabled(chromeApi),
-    getStoredUpdateNoticeDisplayCount(chromeApi, currentVersion)
+    getStoredUpdateNotice(store),
+    getStoredUpdateNoticeEnabled(store),
+    getStoredUpdateNoticeDisplayCount(store, currentVersion)
   ]).then(([payload, enabled, storedDisplayCount]) => {
     updateNoticeEnabled = enabled;
     displayCount = storedDisplayCount;
@@ -325,40 +319,29 @@ function createUpdateNotice(options?: UpdateNoticeOptions | null): UpdateNoticeC
     return sessionSlotClaimed;
   });
 
-  function handleStorageChanged(changes: StorageChanges, areaName: string): void {
-    if (destroyed || (storageRuntime.name && areaName && areaName !== storageRuntime.name)) {
+  const followed = dismissSetting
+    ? [updateNoticeEnabledSetting, updateNoticeState, displayCountSetting, dismissSetting]
+    : [updateNoticeEnabledSetting, updateNoticeState, displayCountSetting];
+  const unsubscribe = store.subscribe(followed, (setting) => {
+    if (destroyed) {
       return;
     }
-    if (changes && changes[FeatureSettings.updateNoticeEnabled.key]) {
-      updateNoticeEnabled = normalizeUpdateNoticeEnabled(
-        changes[FeatureSettings.updateNoticeEnabled.key].newValue
-      );
+    if (setting === updateNoticeEnabledSetting) {
+      updateNoticeEnabled = normalizeUpdateNoticeEnabled(store.getStored(updateNoticeEnabledSetting));
       syncNoticeVisibility();
-    }
-    if (changes && changes[updateNoticeState.key]) {
-      applyNoticePayload(changes[updateNoticeState.key].newValue);
-    }
-    if (changes && changes[displayCountKey]) {
-      displayCount = normalizeUpdateNoticeDisplayCount(changes[displayCountKey].newValue);
+    } else if (setting === updateNoticeState) {
+      applyNoticePayload(store.getStored(updateNoticeState));
+    } else if (setting === displayCountSetting) {
+      displayCount = normalizeUpdateNoticeDisplayCount(store.getStored(displayCountSetting));
       displayCountLoaded = true;
       syncDisplayCountAttribute();
       if (!exposureRecorded) {
         syncNoticeVisibility();
       }
+    } else if (dismissSetting && store.get(dismissSetting) && !ignoreOwnAutoDismissChange && !hintController.isDismissed()) {
+      hintController.dismiss();
     }
-    if (changes && changes[dismissKey] && changes[dismissKey].newValue && !hintController.isDismissed()) {
-      if (ignoreOwnAutoDismissChange) {
-        ignoreOwnAutoDismissChange = false;
-      } else {
-        hintController.dismiss();
-      }
-    }
-  }
-
-  const storageChanges = chromeApi && chromeApi.storage ? chromeApi.storage.onChanged : null;
-  if (storageChanges) {
-    storageChanges.addListener(handleStorageChanged);
-  }
+  });
 
   return Object.freeze({
     ...hintController,
@@ -366,9 +349,7 @@ function createUpdateNotice(options?: UpdateNoticeOptions | null): UpdateNoticeC
     destroy() {
       destroyed = true;
       hintController.destroy();
-      if (storageChanges) {
-        storageChanges.removeListener(handleStorageChanged);
-      }
+      unsubscribe();
     },
     getNotice() {
       return notice;
