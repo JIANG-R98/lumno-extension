@@ -17,7 +17,8 @@ import '../domain/site-display-name';
 import './page-shortcut-menu';
 import '../shared/wallpaper-local-store';
 import '../domain/webdav-contract';
-import * as LumnoWebDavSync from './webdav-sync';
+import * as WebDavManager from './webdav-sync/manager';
+import * as WebDavRecords from './webdav-sync/records';
 import * as UPDATE_NOTICE from '../platform/update-notice';
 import { HAN_VARIANT_PAIRS } from '../domain/search/han-variants.generated';
 import { installHanVariantPairs } from '../domain/search/han-variants';
@@ -510,13 +511,13 @@ const shortcutFolderSyncController = chrome.bookmarks && typeof chrome.bookmarks
     onError: (error) => console.warn('[Lumno] Could not refresh folder shortcuts.', error) }) : null;
 if (shortcutFolderSyncController) shortcutFolderSyncController.start();
 const webDavSyncController = typeof indexedDB !== 'undefined'
-  ? LumnoWebDavSync.createController({ chrome }) : null;
+  ? WebDavManager.createController({ chrome }) : null;
 if (webDavSyncController) webDavSyncController.start();
 
 const handleWebDavMessage: BackgroundHandler<'webdav'> = (message, sender, sendResponse) => {
   // Content scripts and externally connected extensions cannot use stored
   // credentials, configure endpoints, or request arbitrary remote resources.
-  if (!LumnoWebDavSync.isTrustedSender(chrome, sender)) {
+  if (!WebDavRecords.isTrustedSender(chrome, sender)) {
     sendResponse({ ok: false, error: 'forbidden' });
     return;
   }
@@ -524,13 +525,13 @@ const handleWebDavMessage: BackgroundHandler<'webdav'> = (message, sender, sendR
     sendResponse({ ok: false, error: 'private-storage-unavailable' });
     return;
   }
-  const request = LumnoWebDavSync.readWebDavRequest(message);
+  const request = WebDavRecords.readWebDavRequest(message);
   if (!request) {
     sendResponse({ ok: false, error: 'invalid-request' });
     return;
   }
   webDavSyncController.handle(request).then((result) => sendResponse({ ok: true, ...result }))
-    .catch((error: unknown) => sendResponse(LumnoWebDavSync.failureReply(error)));
+    .catch((error: unknown) => sendResponse(WebDavRecords.failureReply(error)));
   return true;
 };
 

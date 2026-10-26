@@ -6,7 +6,11 @@ const settingsStorage = require('../../src/platform/settings-storage.ts');
 const shortcuts = require('../../src/domain/shortcuts-store.ts');
 const contract = require('../../src/domain/webdav-contract.ts');
 const client = require('../../src/background/webdav-client.ts');
-const syncApi = require('../../src/background/webdav-sync.ts');
+const syncApi = {
+  ...require('../../src/background/webdav-sync/connection-controller.ts'),
+  ...require('../../src/background/webdav-sync/records.ts'),
+  ...require('../../src/background/webdav-sync/constants.ts')
+};
 const { probeProvider } = require('../../scripts/dev/probe-webdav.js');
 const { newtabShortcutsLegacy, shortcutFolderBindings } = require('../../src/domain/settings/newtab-shortcuts.ts');
 const cryptoApi = { subtle: webcrypto.subtle, randomUUID };

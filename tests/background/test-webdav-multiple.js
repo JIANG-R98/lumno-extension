@@ -1,5 +1,5 @@
 const assert = require('assert');
-const syncApi = require('../../src/background/webdav-sync.ts');
+const syncApi = require('../../src/background/webdav-sync/manager.ts');
 const settings = require('../../src/domain/settings/index.ts');
 const { createServer, createDevice, config, set } = require('./test-webdav-sync.js');
 
