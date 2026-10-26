@@ -187,6 +187,89 @@ function getDefaultNavigationUrlDisplay(url: unknown): string {
   }
 }
 
+// A query that is a URL: the row going there, or a URL starting with it.
+function scoreUrlQueryMatch(
+  suggestion: SuggestionLike,
+  query: string,
+  directUrl: string,
+  settings: StrongNavigationOptions
+): number {
+  const queryLower = query.toLowerCase();
+  const getUrlDisplay = typeof settings.getUrlDisplay === 'function'
+    ? settings.getUrlDisplay
+    : getDefaultNavigationUrlDisplay;
+  const suggestionUrlText = (getUrlDisplay(suggestion.url || '') || '').toLowerCase();
+  const isDirectRow = suggestion.type === 'directUrl';
+  const isDirectMatch = isDirectNavigationMatch(suggestion, query, { ...settings, directNavigationUrl: directUrl });
+  if (!isDirectRow && isDirectMatch) {
+    return 520;
+  }
+  if (suggestionUrlText && suggestionUrlText === queryLower) {
+    return isDirectRow ? 420 : 480;
+  }
+  if (isDirectRow && isDirectMatch) {
+    return 400;
+  }
+  if (suggestionUrlText && suggestionUrlText.startsWith(queryLower)) {
+    return isDirectRow ? 320 : 280;
+  }
+  return 0;
+}
+
+const GENERIC_NAVIGATION_TERMS: ReadonlySet<string> = new Set([
+  'home', 'login', 'account', 'settings', 'dashboard', 'search', 'docs', 'help', 'api'
+]);
+
+// How the query appears in the title: a whole word, its start, or inside it.
+function scoreTitleMatch(titleLower: string, queryLower: string): number {
+  if (splitSearchTerms(titleLower).includes(queryLower)) {
+    return 140;
+  }
+  if (titleLower.startsWith(queryLower)) {
+    return 100;
+  }
+  return titleLower.includes(queryLower) ? 42 : 0;
+}
+
+// Site roots rank first, deep pages lower.
+function scorePathDepth(url: string | undefined): number {
+  const depth = getNavigationSuggestionPathDepth(url);
+  if (depth === 0) {
+    return 90;
+  }
+  if (depth === 1) {
+    return 36;
+  }
+  return Number.isFinite(depth) ? -Math.min(32, (depth - 1) * 8) : 0;
+}
+
+function scoreRowSource(suggestion: SuggestionLike): number {
+  if (suggestion.type === 'bookmark') {
+    return 16;
+  }
+  if (suggestion.type === 'history') {
+    return 10;
+  }
+  return suggestion.type === 'topSite' || suggestion.isTopSite ? 12 : 0;
+}
+
+// A one-word query that names a page: the title, the page's depth, a home
+// title, the source and earlier picks.
+function scoreNameQueryMatch(suggestion: SuggestionLike, queryLower: string): number {
+  if (/\s/.test(queryLower) || queryLower.length < 4 || GENERIC_NAVIGATION_TERMS.has(queryLower)) {
+    return 0;
+  }
+  const titleLower = normalizeSearchText(suggestion.title);
+  const titleScore = scoreTitleMatch(titleLower, queryLower);
+  if (!titleScore) {
+    return 0;
+  }
+  const homeTitleScore = /(^|[\s-])(home|首页)([\s-]|$)/i.test(titleLower) ? 28 : 0;
+  const selectionBoost = Number(suggestion.selectionBoost) || 0;
+  return titleScore + scorePathDepth(suggestion.url) + homeTitleScore + scoreRowSource(suggestion) +
+    (selectionBoost > 0 ? Math.min(260, selectionBoost) : 0);
+}
+
 function getStrongNavigationMatchScore(
   suggestion: SuggestionLike | null | undefined,
   rawQuery: unknown,
@@ -200,81 +283,10 @@ function getStrongNavigationMatchScore(
   if (!query) {
     return 0;
   }
-
-  const queryLower = query.toLowerCase();
   const directUrl = getDirectNavigationUrlForQuery(query, settings);
-  const getUrlDisplay = typeof settings.getUrlDisplay === 'function'
-    ? settings.getUrlDisplay
-    : getDefaultNavigationUrlDisplay;
-  const suggestionUrlText = (getUrlDisplay(suggestion.url) || '').toLowerCase();
-  const titleLower = normalizeSearchText(suggestion.title);
-
-  if (directUrl) {
-    const isDirectMatch = isDirectNavigationMatch(suggestion, query, {
-      ...settings,
-      directNavigationUrl: directUrl
-    });
-    if (suggestion.type !== 'directUrl' && isDirectMatch) {
-      return 520;
-    }
-    if (suggestionUrlText && suggestionUrlText === queryLower) {
-      return suggestion.type === 'directUrl' ? 420 : 480;
-    }
-    if (suggestion.type === 'directUrl' && isDirectMatch) {
-      return 400;
-    }
-    if (suggestionUrlText && suggestionUrlText.startsWith(queryLower)) {
-      return suggestion.type === 'directUrl' ? 320 : 280;
-    }
-    return 0;
-  }
-
-  if (/\s/.test(query) || queryLower.length < 4) {
-    return 0;
-  }
-
-  const genericTerms = new Set(['home', 'login', 'account', 'settings', 'dashboard', 'search', 'docs', 'help', 'api']);
-  if (genericTerms.has(queryLower)) {
-    return 0;
-  }
-
-  let score = 0;
-  const titleTerms = splitSearchTerms(titleLower);
-  if (titleTerms.includes(queryLower)) {
-    score += 140;
-  } else if (titleLower.startsWith(queryLower)) {
-    score += 100;
-  } else if (titleLower.includes(queryLower)) {
-    score += 42;
-  } else {
-    return 0;
-  }
-
-  const depth = getNavigationSuggestionPathDepth(suggestion.url);
-  if (depth === 0) {
-    score += 90;
-  } else if (depth === 1) {
-    score += 36;
-  } else if (Number.isFinite(depth)) {
-    score -= Math.min(32, (depth - 1) * 8);
-  }
-
-  if (/(^|[\s-])(home|首页)([\s-]|$)/i.test(titleLower)) {
-    score += 28;
-  }
-  if (suggestion.type === 'bookmark') {
-    score += 16;
-  } else if (suggestion.type === 'history') {
-    score += 10;
-  } else if (suggestion.type === 'topSite' || suggestion.isTopSite) {
-    score += 12;
-  }
-  const selectionBoost = Number(suggestion.selectionBoost) || 0;
-  if (selectionBoost > 0) {
-    score += Math.min(260, selectionBoost);
-  }
-
-  return score;
+  return directUrl
+    ? scoreUrlQueryMatch(suggestion, query, directUrl, settings)
+    : scoreNameQueryMatch(suggestion, query.toLowerCase());
 }
 
 // Moves the strongest navigation match to the front of list (in place) and
