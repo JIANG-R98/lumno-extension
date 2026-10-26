@@ -111,21 +111,7 @@ import {
   ensureTabSwitchStatsLoaded,
   recordTabSwitchEvent
 } from './tab-switch-stats-service';
-import {
-  clearOverlayLoadingRecord,
-  clearOverlayNavigationState,
-  markOverlayLoadingRecordUnstable,
-  recoverOverlayAfterLoadingUpdate,
-  rememberOverlayTopFrameNavigation,
-  updateOverlayTopFrameNavigation
-} from './overlay-loading-service';
 import { finishOverlayOpening, overlayOpeningByTabId } from './overlay-open-service';
-import {
-  getRecentPageHotkeyContext,
-  recoverFromPageHotkeyNewtab,
-  triggerCopyCurrentUrlForTab,
-  triggerShowSearchForTab
-} from './command-service';
 import { PIP_MESSAGE_HANDLERS, pipOwnership } from './pip-service';
 import type { BackgroundHandler } from './message-router';
 import { SELECTION_QUICK_ACTION_MESSAGE_HANDLERS } from './selection-quick-actions-service';
@@ -159,6 +145,10 @@ import {
   warnBackgroundFailure,
   workerSettings
 } from './worker-context';
+import { clearOverlayLoadingRecord, clearOverlayNavigationState, rememberOverlayTopFrameNavigation, updateOverlayTopFrameNavigation } from './overlay-loading-records';
+import { markOverlayLoadingRecordUnstable, recoverOverlayAfterLoadingUpdate } from './overlay-loading-service';
+import { getRecentPageHotkeyContext } from './command-context';
+import { recoverFromPageHotkeyNewtab, triggerCopyCurrentUrlForTab, triggerShowSearchForTab } from './command-service';
 
 // Folds traditional characters to simplified ones for local search matching.
 installHanVariantPairs(HAN_VARIANT_PAIRS);

@@ -1,16 +1,11 @@
 // Which icon sources a page may use, given the resolver's options and the
 // extension it runs in.
-import { getExtensionFaviconUrl, getFaviconServiceSiteUrl, getOwnExtensionRuntimeInfo } from './candidate-urls';
+import { getExtensionFaviconUrl, getFaviconResolverSize, getFaviconServiceSiteUrl, getOwnExtensionRuntimeInfo } from './candidate-urls';
 import { getCanonicalPageUrlForFavicon, getFaviconPersistCacheKey, getPageUrlFromFaviconProxyUrl } from './canonical';
 import { isFaviconSourceAllowedByEnhancedFetchPolicy } from './enhanced-fetch-policy';
 import { getFaviconUrlPolicy, isBlockedLocalFaviconUrl, shouldAvoidDirectFaviconForHost, shouldBlockDirectFaviconHost, shouldBlockFaviconForHost } from './host-policy';
 import type { FaviconResolverDependencies, FaviconResolverOptions, FaviconSourceOptions, FaviconSourcePolicy, RuntimeUrlGetter } from './types';
 import { isBrowserExtensionProtocol, isChromeMonogramFaviconUrl, isFaviconIsUrl, isFaviconProxyUrl, isOriginScopedFaviconProxyUrl, isSafeVirtualFaviconRequestUrl } from './url-kinds';
-
-function getFaviconResolverSize(options: { size?: unknown } | null | undefined): number {
-  const size = Number(options && options.size);
-  return Number.isFinite(size) ? Math.max(1, Math.round(size)) : 128;
-}
 
 // Reads the caller's hooks once; every resolver piece below shares this view.
 function getFaviconResolverDependencies(options?: FaviconResolverOptions | null): Readonly<FaviconResolverDependencies> {
@@ -206,7 +201,6 @@ export {
   createFaviconSourcePolicy,
   getCanonicalFaviconPage,
   getFaviconResolverDependencies,
-  getFaviconResolverSize,
   isFaviconRequestForOtherPage,
   isOtherExtensionPageUrl,
   isOwnExtensionPageUrl,

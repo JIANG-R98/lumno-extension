@@ -1,4 +1,6 @@
 import js from '@eslint/js';
+import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
+import importX from 'eslint-plugin-import-x';
 import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
@@ -156,6 +158,30 @@ export default tseslint.config(
       '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
       '@typescript-eslint/no-non-null-assertion': 'error',
       'no-restricted-syntax': ['error', TYPE_ASSERTING_QUERY, ...HTML_STRING_SINKS]
+    }
+  },
+  {
+    // Modules stay small enough to read whole: one reason to change, short
+    // functions with few paths through them, and no import cycles.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/**/*.test.{ts,tsx}', 'src/**/*.generated.ts'],
+    plugins: { 'import-x': importX },
+    settings: {
+      'import-x/extensions': ['.ts', '.tsx'],
+      'import-x/parsers': { '@typescript-eslint/parser': ['.ts', '.tsx'] },
+      'import-x/resolver-next': [createTypeScriptImportResolver({ project: 'tsconfig.json' })]
+    },
+    rules: {
+      'max-lines': ['warn', { max: 500, skipBlankLines: true, skipComments: true }],
+      'max-lines-per-function': ['warn', { max: 100, skipBlankLines: true, skipComments: true }],
+      complexity: ['warn', 15],
+      'import-x/no-cycle': 'warn'
+    }
+  },
+  {
+    files: ['src/**/*.test.{ts,tsx}'],
+    rules: {
+      'max-lines': ['warn', { max: 800, skipBlankLines: true, skipComments: true }]
     }
   },
   {

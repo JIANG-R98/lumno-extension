@@ -1,13 +1,5 @@
 // The keyboard commands' targets: show search (with or without the page URL
-// prefilled), copy the page URL, and onboarding's demo command. Picks the tab a
-// command acts on (recovering from a New Tab the shortcut itself opened), drops
-// duplicate presses, and resolves the fallback and copy-URL shortcuts.
-//
-// A module of the service worker; background.ts imports it before its own code
-// runs. It uses other services' bindings only when its functions run, never
-// while this file loads, because the services import one another.
-
-import * as COMMAND_TARGET_POLICY from './command-target-policy';
+// prefilled) and copy the page URL, and the fallback and copy-URL shortcuts.
 import * as OVERLAY_LOADING_LIFECYCLE from './overlay-loading-lifecycle';
 import { openNewtabFallback } from './newtab-fallback';
 import {
@@ -19,255 +11,17 @@ import {
   canOpenOverlayOnUrl,
   getResolvedTabUrl,
   isBrowserNewtabUrl,
-  isLumnoNewtabUrl,
-  isLumnoOnboardingUrl,
-  isOwnExtensionUrl
+  isLumnoNewtabUrl
 } from './browser-urls-service';
-import {
-  OVERLAY_NAVIGATION_STATE_TTL_MS,
-  clearOverlayNavigationState,
-  getOverlayNavigationState,
-  overlayNavigationStateByTabId,
-  shouldDeferRestrictedOverlayNavigation
-} from './overlay-loading-service';
 import { openOverlayOnTab } from './overlay-open-service';
 import * as LumnoMessaging from '../platform/messaging';
-import type { TargetTab } from './overlay-open-service';
+import type { TargetTab } from './overlay-types';
 import { createInjectedAppRun } from '../platform/injection';
 import type { StartCommand } from '../domain/injected-commands';
+import { OVERLAY_NAVIGATION_STATE_TTL_MS, clearOverlayNavigationState, getOverlayNavigationState, overlayNavigationStateByTabId, shouldDeferRestrictedOverlayNavigation } from './overlay-loading-records';
+import { clearRecentPageHotkeyContext, getRecentPageHotkeyContext } from './command-context';
 
-// The tab a page hotkey came from, for recovering from a New Tab it opened.
-interface PageHotkeyContext {
-  at: number;
-  tabId: number;
-  windowId: number;
-}
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message ? error.message : fallback;
-}
-
-export function shouldTriggerOnboardingOverlayFromCommand(source: string, url: string): boolean {
-  return COMMAND_TARGET_POLICY.shouldTriggerOnboardingOverlayFromCommand(source, url, {
-    isOwnExtensionUrl,
-    isOnboardingUrl: isLumnoOnboardingUrl
-  });
-}
-
-export function triggerOnboardingOverlayFromCommand(activeTab: TargetTab | null | undefined, source: string): void {
-  if (!activeTab || typeof activeTab.id !== 'number') {
-    return;
-  }
-  const tabId = activeTab.id;
-  const action = COMMAND_TARGET_POLICY.ONBOARDING_SEARCH_OVERLAY_COMMAND_ACTION;
-  if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
-    logHotkeyDebug('onboarding-command-forward-missed', {
-      tabId,
-      source: source || '',
-      reason: 'runtime-send-message-unavailable'
-    });
-    return;
-  }
-  LumnoMessaging.sendPageMessage(chrome.runtime, {
-    action,
-    tabId,
-    source: source || ''
-  }, (response) => {
-    const lastError = chrome.runtime && chrome.runtime.lastError;
-    if (lastError) {
-      logHotkeyDebug('onboarding-command-forward-failed', {
-        tabId,
-        source: source || '',
-        error: lastError.message || 'unknown'
-      });
-      return;
-    }
-    logHotkeyDebug('onboarding-command-forwarded', {
-      tabId,
-      source: source || '',
-      handled: Boolean(response && response.ok)
-    });
-  });
-}
-
-function shouldRecoverFromCommandNewtab(activeTab: TargetTab | null | undefined, source: string): boolean {
-  if (source !== 'commands' || !activeTab) {
-    return false;
-  }
-  const activeUrl = getResolvedTabUrl(activeTab);
-  return isLumnoNewtabUrl(activeUrl) || isBrowserNewtabUrl(activeUrl);
-}
-
-function pickRecoveryTargetTab(activeTab: TargetTab, tabs: readonly TargetTab[]): TargetTab | null {
-  const tabList = Array.isArray(tabs) ? tabs : [];
-  if (!activeTab || typeof activeTab.id !== 'number') {
-    return null;
-  }
-  const openerTabId = typeof activeTab.openerTabId === 'number' ? activeTab.openerTabId : null;
-  if (typeof openerTabId === 'number') {
-    const openerTab = tabList.find((item) =>
-      item &&
-      item.id === openerTabId &&
-      canOpenOverlayOnUrl(item.url || '')
-    );
-    if (openerTab) {
-      return openerTab;
-    }
-  }
-  const candidates = tabList
-    .filter((item) =>
-      item &&
-      typeof item.id === 'number' &&
-      item.id !== activeTab.id &&
-      canOpenOverlayOnUrl(item.url || '')
-    )
-    .sort((a, b) => Number(b.lastAccessed || 0) - Number(a.lastAccessed || 0));
-  return candidates[0] || null;
-}
-
-export function recoverOverlayTargetFromCommandNewtab(
-  activeTab: TargetTab | null | undefined,
-  tabs: readonly TargetTab[],
-  source: string
-): boolean {
-  if (!activeTab || !shouldRecoverFromCommandNewtab(activeTab, source)) {
-    return false;
-  }
-  const targetTab = pickRecoveryTargetTab(activeTab, tabs);
-  if (!targetTab || typeof targetTab.id !== 'number') {
-    logHotkeyDebug('command-newtab-recover-missed', {
-      reason: 'no-target',
-      tabId: activeTab && typeof activeTab.id === 'number' ? activeTab.id : null,
-      source: source || ''
-    });
-    return false;
-  }
-  logHotkeyDebug('command-newtab-recover-start', {
-    source: source || '',
-    fromTabId: activeTab.id,
-    toTabId: targetTab.id,
-    fromUrl: activeTab.url || '',
-    toUrl: targetTab.url || ''
-  });
-  const targetTabId = targetTab.id;
-  const activeTabId = activeTab.id;
-  chrome.tabs.update(targetTabId, { active: true }, () => {
-    const updateError = chrome.runtime && chrome.runtime.lastError;
-    if (updateError) {
-      logHotkeyDebug('command-newtab-recover-failed', {
-        source: source || '',
-        targetTabId,
-        error: updateError.message || 'unknown'
-      });
-      return;
-    }
-    if (typeof activeTabId === 'number') {
-      chrome.tabs.remove(activeTabId, () => {
-        const removeError = chrome.runtime && chrome.runtime.lastError;
-        if (removeError) {
-          logHotkeyDebug('command-newtab-close-failed', {
-            source: source || '',
-            tabId: activeTabId,
-            error: removeError.message || 'unknown'
-          });
-        }
-      });
-    }
-    openOverlayOnTab(targetTab, tabs, 'commands-recover');
-  });
-  return true;
-}
-
-export function isSearchCommandSource(source: string): boolean {
-  return source === 'commands' || source === 'commands-prefill';
-}
-
-export function requestFocusVisibleNewtabInput(source: string, tabId: number | null | undefined): void {
-  try {
-    LumnoMessaging.sendPageMessage(chrome.runtime, {
-      action: 'lumno:newtab-focus-input',
-      source: source || '',
-      tabId: typeof tabId === 'number' ? tabId : null
-    }, (response) => {
-      const lastError = chrome.runtime && chrome.runtime.lastError;
-      if (lastError) {
-        logHotkeyDebug('command-newtab-focus-send-failed', {
-          source: source || '',
-          tabId: typeof tabId === 'number' ? tabId : null,
-          error: lastError.message || 'unknown'
-        });
-        return;
-      }
-      logHotkeyDebug('command-newtab-focus-send-done', {
-        source: source || '',
-        tabId: typeof tabId === 'number' ? tabId : null,
-        ok: Boolean(response && response.ok)
-      });
-    });
-  } catch (error) {
-    logHotkeyDebug('command-newtab-focus-send-error', {
-      source: source || '',
-      tabId: typeof tabId === 'number' ? tabId : null,
-      error: getErrorMessage(error, String(error || ''))
-    });
-  }
-}
-const HOTKEY_DUP_GUARD_MS = 180;
-const PAGE_HOTKEY_NEWTAB_RECOVER_MS = 1200;
-// Short-lived guards (<= a few seconds) that may be lost: a fresh worker simply
-// treats the next hotkey/open as new.
-const hotkeyInvokeAtByTabId = new Map<number, number>();
-let lastPageHotkeyContext: PageHotkeyContext | null = null;
-
-export function shouldIgnoreDuplicateHotkey(tabId: unknown): boolean {
-  if (typeof tabId !== 'number') {
-    return false;
-  }
-  const now = Date.now();
-  const lastAt = hotkeyInvokeAtByTabId.get(tabId) || 0;
-  hotkeyInvokeAtByTabId.set(tabId, now);
-  return (now - lastAt) <= HOTKEY_DUP_GUARD_MS;
-}
-
-export function rememberPageHotkeyContext(tab: TargetTab | null | undefined): void {
-  if (!tab || typeof tab.id !== 'number' || typeof tab.windowId !== 'number') {
-    lastPageHotkeyContext = null;
-    return;
-  }
-  lastPageHotkeyContext = {
-    at: Date.now(),
-    tabId: tab.id,
-    windowId: tab.windowId
-  };
-}
-
-export function getRecentPageHotkeyContext(windowId?: unknown): PageHotkeyContext | null {
-  if (!lastPageHotkeyContext) {
-    return null;
-  }
-  const age = Date.now() - Number(lastPageHotkeyContext.at || 0);
-  if (age > PAGE_HOTKEY_NEWTAB_RECOVER_MS) {
-    lastPageHotkeyContext = null;
-    return null;
-  }
-  if (typeof windowId === 'number' && lastPageHotkeyContext.windowId !== windowId) {
-    return null;
-  }
-  return lastPageHotkeyContext;
-}
-
-function clearRecentPageHotkeyContext(): void {
-  lastPageHotkeyContext = null;
-}
-
-export function getOverlayPrefillQueryForSource(tab: TargetTab, source: string): string {
-  if (source !== 'page-hotkey-prefill' && source !== 'commands-prefill') {
-    return '';
-  }
-  return getResolvedTabUrl(tab);
-}
-
-export function recoverFromPageHotkeyNewtab(newTabId: unknown, windowId: unknown): void {
+function recoverFromPageHotkeyNewtab(newTabId: unknown, windowId: unknown): void {
   const recentContext = getRecentPageHotkeyContext(windowId);
   if (!recentContext || typeof newTabId !== 'number') {
     return;
@@ -344,7 +98,7 @@ function triggerShowSearchForResolvedTab(tab: TargetTab | null | undefined, sour
   });
 }
 
-export function triggerShowSearchForTab(tab: TargetTab | null | undefined, source: string): void {
+function triggerShowSearchForTab(tab: TargetTab | null | undefined, source: string): void {
   if (!tab || typeof tab.id !== 'number') {
     triggerShowSearchForResolvedTab(tab, source);
     return;
@@ -411,7 +165,7 @@ function getDefaultFallbackShortcut(callback: (shortcut: string) => void): void 
   });
 }
 
-export function getConfiguredFallbackShortcut(callback: (shortcut: string) => void): void {
+function getConfiguredFallbackShortcut(callback: (shortcut: string) => void): void {
   getDefaultFallbackShortcut((defaultShortcut) => {
     if (!chrome || !chrome.commands || typeof chrome.commands.getAll !== 'function') {
       callback(defaultShortcut);
@@ -474,7 +228,7 @@ function normalizeShortcutFromCommandsValue(value: unknown): string {
   return hasModifier ? text : '';
 }
 
-export function getConfiguredCopyUrlCommandShortcut(callback: (shortcut: string) => void): void {
+function getConfiguredCopyUrlCommandShortcut(callback: (shortcut: string) => void): void {
   if (!chrome || !chrome.commands || typeof chrome.commands.getAll !== 'function') {
     callback('');
     return;
@@ -506,7 +260,7 @@ function sendCopyCurrentUrlCommand(tabId: number, callback: (error: string, resp
   });
 }
 
-export function triggerCopyCurrentUrlForTab(
+function triggerCopyCurrentUrlForTab(
   activeTab: TargetTab | null | undefined,
   source: string,
   callback?: (copied: boolean) => void
@@ -556,3 +310,17 @@ export function triggerCopyCurrentUrlForTab(
     });
   });
 }
+
+export {
+  COPY_URL_LISTENER_START,
+  getConfiguredCopyUrlCommandShortcut,
+  getConfiguredFallbackShortcut,
+  getDefaultFallbackShortcut,
+  getDefaultFallbackShortcutByPlatform,
+  normalizeShortcutFromCommandsValue,
+  recoverFromPageHotkeyNewtab,
+  sendCopyCurrentUrlCommand,
+  triggerCopyCurrentUrlForTab,
+  triggerShowSearchForResolvedTab,
+  triggerShowSearchForTab
+};

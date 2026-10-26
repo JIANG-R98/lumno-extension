@@ -1,9 +1,14 @@
 // The URLs an icon can be fetched from: the extension's _favicon endpoint,
 // Google's and favicon.is's services, the browser's own pages and Lumno's
 // bundled artwork.
-import { getFaviconResolverSize } from './source-policy';
 import type { ExtensionRuntimeInfo, FaviconChromeApi, FaviconUrlOptions, RuntimeUrlGetter } from './types';
 import { isBrowserExtensionProtocol, isBrowserInternalPageUrl } from './url-kinds';
+
+// The icon size a resolver asks for, 128 unless it says.
+function getFaviconResolverSize(options: { size?: unknown } | null | undefined): number {
+  const size = Number(options && options.size);
+  return Number.isFinite(size) ? Math.max(1, Math.round(size)) : 128;
+}
 
 const LUMNO_EXTENSION_ICON_PATH = 'assets/images/lumno.png';
 
@@ -204,6 +209,7 @@ function getOwnExtensionAssetUrl(path: string, runtimeInfo: ExtensionRuntimeInfo
 }
 
 export {
+  getFaviconResolverSize,
   LUMNO_EXTENSION_ICON_PATH,
   getBrowserPageFaviconUrl,
   getChromeFaviconUrl,

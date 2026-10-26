@@ -1,10 +1,6 @@
 // Opening the search overlay on a tab: the per-tab opening guard, injecting the
 // overlay runtime and its stylesheets, handing it the tab list and settings,
 // and the fallbacks for pages the overlay cannot run on.
-//
-// A module of the service worker; background.ts imports it before its own code
-// runs. It uses other services' bindings only when its functions run, never
-// while this file loads, because the services import one another.
 
 import * as OVERLAY_LOADING_LIFECYCLE from './overlay-loading-lifecycle';
 import { createInjectedAppRun } from '../platform/injection';
@@ -26,16 +22,6 @@ import {
   isLumnoNewtabUrl
 } from './browser-urls-service';
 import {
-  finishOverlayLoadingOpenAttempt,
-  getPendingOverlayNavigationUrl,
-  overlayLoadingRecordsByTabId,
-  rememberOverlayLoadingRecord,
-  rememberOverlayPendingNavigationIntent,
-  scheduleOverlayLoadingPreCompleteRetry,
-  shouldDeferRestrictedOverlayNavigation,
-  updateOverlayLoadingRecordFromInvocation
-} from './overlay-loading-service';
-import {
   getOverlayPrefillQueryForSource,
   isSearchCommandSource,
   recoverOverlayTargetFromCommandNewtab,
@@ -43,21 +29,22 @@ import {
   shouldIgnoreDuplicateHotkey,
   shouldTriggerOnboardingOverlayFromCommand,
   triggerOnboardingOverlayFromCommand
-} from './command-service';
+} from './command-context';
 import type { OverlayOpenContext } from '../domain/messages';
-import type { TrackedLoadingRecord } from './overlay-loading-service';
-
-// A tab as the overlay services read it; recovery builds partial ones.
-type TargetTab = Partial<chrome.tabs.Tab>;
-
-interface OpenOverlayOptions {
-  onComplete?: (ok: boolean) => void;
-  // Reopening after the page loaded under the overlay.
-  loadingRecovery?: boolean;
-  loadingRecord?: TrackedLoadingRecord | null;
-  ensureOpen?: boolean;
-  skipDuplicateGuard?: boolean;
-}
+import type { OpenOverlayOptions, TargetTab } from './overlay-types';
+import {
+  getPendingOverlayNavigationUrl,
+  overlayLoadingRecordsByTabId,
+  rememberOverlayLoadingRecord,
+  rememberOverlayPendingNavigationIntent,
+  shouldDeferRestrictedOverlayNavigation
+} from './overlay-loading-records';
+import {
+  finishOverlayLoadingOpenAttempt,
+  scheduleOverlayLoadingPreCompleteRetry,
+  setOverlayReopener,
+  updateOverlayLoadingRecordFromInvocation
+} from './overlay-loading-service';
 
 // The overlay being opened on a tab; a second open meanwhile is ignored.
 interface OverlayOpening {
@@ -241,7 +228,7 @@ export function openOverlayOnTab(
       logHotkeyDebug('suppressed', { reason: 'restricted_onboarding_command', source: source || '' });
       return;
     }
-    if (recoverOverlayTargetFromCommandNewtab(activeTab, tabs, source)) {
+    if (recoverOverlayTargetFromCommandNewtab(activeTab, tabs, source, openOverlayOnTab)) {
       return;
     }
     whenBackgroundSettingsReady(() => {
@@ -348,4 +335,7 @@ export function openOverlayOnTab(
   runOverlayWithResolvedZoom();
 }
 
-export type { OpenOverlayOptions, OverlayOpening, TargetTab };
+// The loading retries reopen the overlay through this module.
+setOverlayReopener(openOverlayOnTab);
+
+export type { OverlayOpening };

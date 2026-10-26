@@ -44,23 +44,14 @@ import {
   sortTabsForOverlay,
   syncTabSwitchStatsFromTabList
 } from './tab-switch-stats-service';
-import {
-  clearOverlayLoadingRecord,
-  recoverOverlayAfterTopFrameDocumentStart,
-  updateOverlayLoadingSessionFromMessage
-} from './overlay-loading-service';
 import { nextTabOverlayFetchSeq } from './overlay-open-service';
-import {
-  getConfiguredCopyUrlCommandShortcut,
-  getConfiguredFallbackShortcut,
-  rememberPageHotkeyContext,
-  requestFocusVisibleNewtabInput,
-  triggerCopyCurrentUrlForTab,
-  triggerShowSearchForTab
-} from './command-service';
 import { openDocumentPipPickerOnTab } from './pip-service';
 import type { HandlersFor } from './message-router';
 import type { LocaleMessage, OpenDisposition } from '../domain/messages';
+import { clearOverlayLoadingRecord } from './overlay-loading-records';
+import { recoverOverlayAfterTopFrameDocumentStart, updateOverlayLoadingSessionFromMessage } from './overlay-loading-service';
+import { rememberPageHotkeyContext, requestFocusVisibleNewtabInput } from './command-context';
+import { getConfiguredCopyUrlCommandShortcut, getConfiguredFallbackShortcut, triggerCopyCurrentUrlForTab, triggerShowSearchForTab } from './command-service';
 
 type TabAction =
   | 'swapNewtabForFocus' | 'switchToTab' | 'closeTabFromTabSwitcher' | 'notifyOverlayClosed'
