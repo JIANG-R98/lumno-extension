@@ -4,7 +4,7 @@
 // The views that draw such rows disable their controls themselves.
 import { isHtmlElement } from '../shared/dom-guards';
 import * as LumnoCursorTooltip from '../shared/ui/cursor-tooltip';
-import type { CursorTooltipController } from '../shared/ui/cursor-tooltip';
+import type { CursorTooltipController } from '../shared/ui/cursor-tooltip-model';
 import type { GetMessage } from './options-types';
 
 function markBrowserUnsupportedSettings(getMessage: GetMessage): void {

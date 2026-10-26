@@ -14,7 +14,7 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { isElementTextTruncated } from '../../shared/react/text-overflow';
 import { followEmptyStateArtTheme } from '../../shared/ui/empty-state-art';
-import type { CursorTooltipOptions } from '../../shared/ui/cursor-tooltip';
+import type { CursorTooltipOptions } from '../../shared/ui/cursor-tooltip-model';
 import type { ThemeVariant } from '../../shared/favicon/favicon-theme';
 import { queryHtmlTags } from '../../shared/dom-lookup';
 import { EmptyStateArt } from '../../shared/react/empty-state-art';

@@ -3,25 +3,25 @@ export interface TextOverflowOptions {
   vertical?: boolean;
 }
 
-// The sizes the check reads, which any element has.
-type MeasuredElement = Pick<HTMLElement, 'clientHeight' | 'clientWidth' | 'scrollHeight' | 'scrollWidth'>;
+// The element's sizes, or a stand-in with them.
+type MeasuredElement = Partial<Pick<Element, 'clientHeight' | 'clientWidth' | 'scrollHeight' | 'scrollWidth'>>;
 
+function overflows(client: unknown, scroll: unknown): boolean {
+  const clientSize = Number(client);
+  const scrollSize = Number(scroll);
+  return Number.isFinite(clientSize) && Number.isFinite(scrollSize) && clientSize > 0 && scrollSize > clientSize;
+}
+
+// Whether the element's text overflows it: horizontally by default, and
+// vertically (clamped lines) when asked.
 export function isElementTextTruncated(
-  element: MeasuredElement | null,
-  options: TextOverflowOptions = {}
+  element: MeasuredElement | null | undefined,
+  options?: TextOverflowOptions | null
 ): boolean {
   if (!element) {
     return false;
   }
-  const checkHorizontal = options.horizontal !== false;
-  const checkVertical = options.vertical === true;
-  return (
-    checkHorizontal &&
-    element.clientWidth > 0 &&
-    element.scrollWidth > element.clientWidth
-  ) || (
-    checkVertical &&
-    element.clientHeight > 0 &&
-    element.scrollHeight > element.clientHeight
-  );
+  const config = options || {};
+  return (config.horizontal !== false && overflows(element.clientWidth, element.scrollWidth)) ||
+    (config.vertical === true && overflows(element.clientHeight, element.scrollHeight));
 }

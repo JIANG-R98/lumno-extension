@@ -197,6 +197,106 @@ interface PendingTask {
   delayTimer: number;
 }
 
+function renderToast(element: ToastElement, text: string, tone: 'loading' | 'error' | ''): void {
+  const doc = element.ownerDocument;
+  if (tone === 'loading' && doc && element.replaceChildren) {
+    const spinner = doc.createElement('span');
+    spinner.className = 'x-lumno-toast-spinner';
+    spinner.setAttribute('aria-hidden', 'true');
+    element.replaceChildren(spinner, doc.createTextNode(text));
+  } else {
+    element.textContent = text;
+  }
+  if (tone) {
+    element.setAttribute('data-tone', tone);
+  } else if (element.removeAttribute) {
+    element.removeAttribute('data-tone');
+  } else {
+    element.setAttribute('data-tone', '');
+  }
+  element.setAttribute('data-show', 'true');
+}
+
+// The newest task that has passed its delay.
+function findVisibleTask(tasks: readonly PendingTask[]): PendingTask | null {
+  for (let index = tasks.length - 1; index >= 0; index -= 1) {
+    if (tasks[index].visible) {
+      return tasks[index];
+    }
+  }
+  return null;
+}
+
+// The Toast as its running tasks see it.
+interface ToastQueue {
+  win: ToastWindow;
+  // Tasks still running, oldest first.
+  tasks: PendingTask[];
+  isShowingMessage(): boolean;
+  isDestroyed(): boolean;
+  showLoading(text: string): void;
+  show(message: string, showOptions?: ToastShowOptions | null): void;
+  settle(): void;
+}
+
+// A task shows its loading message once its delay passes, while it is the
+// newest one shown and no result message covers it; finishing it shows its
+// result or hands the Toast back.
+function startToastTask(queue: ToastQueue, text: string, delay: number): Readonly<ToastTask> {
+  const task: PendingTask = { text, visible: false, delayTimer: 0 };
+  let finished = false;
+  const isOnScreen = (): boolean => (
+    task.visible && !queue.isShowingMessage() && findVisibleTask(queue.tasks) === task
+  );
+  const reveal = (): void => {
+    task.delayTimer = 0;
+    if (finished || queue.isDestroyed()) {
+      return;
+    }
+    task.visible = true;
+    if (isOnScreen()) {
+      queue.showLoading(task.text);
+    }
+  };
+  const finish = (resultMessage?: string, resultOptions?: ToastShowOptions | null): void => {
+    if (finished) {
+      return;
+    }
+    finished = true;
+    if (task.delayTimer) {
+      queue.win.clearTimeout(task.delayTimer);
+    }
+    const wasOnScreen = isOnScreen();
+    queue.tasks.splice(queue.tasks.indexOf(task), 1);
+    if (resultMessage) {
+      queue.show(resultMessage, resultOptions);
+    } else if (wasOnScreen) {
+      queue.settle();
+    }
+  };
+
+  queue.tasks.push(task);
+  if (delay > 0) {
+    task.delayTimer = queue.win.setTimeout(reveal, delay);
+  } else {
+    reveal();
+  }
+  return Object.freeze({
+    update(nextMessage: string) {
+      if (finished) {
+        return;
+      }
+      task.text = String(nextMessage || '');
+      if (isOnScreen()) {
+        queue.showLoading(task.text);
+      }
+    },
+    done: (resultMessage?: string, resultOptions?: ToastShowOptions | null) => finish(resultMessage, resultOptions),
+    fail: (resultMessage?: string, resultOptions?: ToastShowOptions | null) => finish(resultMessage, { ...resultOptions, error: true }),
+    cancel: () => finish('')
+  });
+}
+
 function createToastController(
   toastElement: ToastElement | null | undefined,
   options?: ToastControllerOptions | null
@@ -228,35 +328,6 @@ function createToastController(
     timer = 0;
   }
 
-  function render(text: string, tone: 'loading' | 'error' | ''): void {
-    const doc = element.ownerDocument;
-    if (tone === 'loading' && doc && element.replaceChildren) {
-      const spinner = doc.createElement('span');
-      spinner.className = 'x-lumno-toast-spinner';
-      spinner.setAttribute('aria-hidden', 'true');
-      element.replaceChildren(spinner, doc.createTextNode(text));
-    } else {
-      element.textContent = text;
-    }
-    if (tone) {
-      element.setAttribute('data-tone', tone);
-    } else if (element.removeAttribute) {
-      element.removeAttribute('data-tone');
-    } else {
-      element.setAttribute('data-tone', '');
-    }
-    element.setAttribute('data-show', 'true');
-  }
-
-  function visibleTask(): PendingTask | null {
-    for (let index = tasks.length - 1; index >= 0; index -= 1) {
-      if (tasks[index].visible) {
-        return tasks[index];
-      }
-    }
-    return null;
-  }
-
   // Falls back to the running task once a result message is gone.
   function settle(): void {
     clearTimer();
@@ -264,9 +335,9 @@ function createToastController(
     if (destroyed) {
       return;
     }
-    const task = visibleTask();
+    const task = findVisibleTask(tasks);
     if (task) {
-      render(task.text, 'loading');
+      renderToast(element, task.text, 'loading');
     } else {
       element.setAttribute('data-show', 'false');
     }
@@ -280,7 +351,7 @@ function createToastController(
     const nextOptions: ToastShowOptions = showOptions || {};
     clearTimer();
     messageShowing = true;
-    render(text, nextOptions.error ? 'error' : '');
+    renderToast(element, text, nextOptions.error ? 'error' : '');
     const duration = readDelay(nextOptions.duration, defaultDuration);
     if (duration > 0) {
       timer = win.setTimeout(() => {
@@ -290,74 +361,22 @@ function createToastController(
     }
   }
 
+  // What a running task needs of the Toast it reports through.
+  const queue: ToastQueue = {
+    win,
+    tasks,
+    isShowingMessage: () => messageShowing,
+    isDestroyed: () => destroyed,
+    showLoading: (text) => renderToast(element, text, 'loading'),
+    show,
+    settle
+  };
+
   function begin(message: string, beginOptions?: ToastBeginOptions | null): Readonly<ToastTask> {
     if (destroyed) {
       return NOOP_TASK;
     }
-    const nextOptions: ToastBeginOptions = beginOptions || {};
-    const delay = readDelay(nextOptions.delay, loadingDelay);
-    const task: PendingTask = { text: String(message || ''), visible: false, delayTimer: 0 };
-    let finished = false;
-
-    function isOnScreen(): boolean {
-      return task.visible && !messageShowing && visibleTask() === task;
-    }
-
-    function reveal(): void {
-      task.delayTimer = 0;
-      if (finished || destroyed) {
-        return;
-      }
-      task.visible = true;
-      if (isOnScreen()) {
-        render(task.text, 'loading');
-      }
-    }
-
-    function finish(resultMessage?: string, resultOptions?: ToastShowOptions | null): void {
-      if (finished) {
-        return;
-      }
-      finished = true;
-      if (task.delayTimer) {
-        win.clearTimeout(task.delayTimer);
-      }
-      const wasOnScreen = isOnScreen();
-      tasks.splice(tasks.indexOf(task), 1);
-      if (resultMessage) {
-        show(resultMessage, resultOptions);
-      } else if (wasOnScreen) {
-        settle();
-      }
-    }
-
-    tasks.push(task);
-    if (delay > 0) {
-      task.delayTimer = win.setTimeout(reveal, delay);
-    } else {
-      reveal();
-    }
-
-    return Object.freeze({
-      update(nextMessage: string) {
-        if (finished) {
-          return;
-        }
-        task.text = String(nextMessage || '');
-        if (isOnScreen()) {
-          render(task.text, 'loading');
-        }
-      },
-      done(resultMessage?: string, resultOptions?: ToastShowOptions | null) {
-        finish(resultMessage, resultOptions);
-      },
-      fail(resultMessage?: string, resultOptions?: ToastShowOptions | null) {
-        finish(resultMessage, { ...resultOptions, error: true });
-      },
-      cancel() {
-        finish('');
-      }
-    });
+    return startToastTask(queue, String(message || ''), readDelay((beginOptions || {}).delay, loadingDelay));
   }
 
   return Object.freeze({

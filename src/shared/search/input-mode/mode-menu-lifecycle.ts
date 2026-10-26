@@ -1,6 +1,6 @@
 // Opening, refreshing and closing the mode menu, and the prefix, menu and
 // document pointer and key handlers around it.
-import type { CursorTooltipController } from '../../ui/cursor-tooltip';
+import type { CursorTooltipController } from '../../ui/cursor-tooltip-model';
 import type { ModeTagModel } from './mode-tag-model';
 import type { ModeMenuEntry, ModeMenuItem } from './types';
 import type { ModeMenuLanguageApi } from './mode-menu-language';

@@ -6,7 +6,7 @@ import { installHanVariantPairs } from '../../domain/search/han-variants';
 import * as searchInputModeModule from '../search/search-input-mode';
 import type { ModeMenuItem } from '../search/input-mode/types';
 import type { PinyinApi } from '../../domain/search/pinyin-api';
-import type { CursorTooltipController } from '../ui/cursor-tooltip';
+import type { CursorTooltipController } from '../ui/cursor-tooltip-model';
 import { FakeAnimation } from '../../../tests/react/fake-animation';
 import { expectSvg, getElement, getElements, getSvgs, getTags, required } from '../../../tests/react/dom';
 import { queryHtmlElement, queryHtmlTag } from '../dom-lookup';

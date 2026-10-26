@@ -72,7 +72,7 @@ global.__lumnoTestModuleStubs = Object.assign(global.__lumnoTestModuleStubs || {
   'src/shared/react/tooltip-view.tsx': { getTooltipViewApi: () => tooltipView }
 });
 require(tooltipJsPath);
-const cursorTooltip = require(cursorTooltipJsPath);
+const cursorTooltip = require('../helpers/cursor-tooltip.ts');
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 const cursorTooltipCss = fs.readFileSync(cursorTooltipCssPath, 'utf8');
 

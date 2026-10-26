@@ -1,7 +1,7 @@
 // Types the New Tab shares with the modules split out of it.
 import type { BackgroundAction, BackgroundReply, BackgroundRequest } from '../domain/messages';
 import type { ToastShowOptions } from '../shared/react/toast';
-import type { CursorTooltipOptions, CursorTooltipTextSource } from '../shared/ui/cursor-tooltip';
+import type { CursorTooltipOptions, CursorTooltipTextSource } from '../shared/ui/cursor-tooltip-model';
 import type { createSelectMenuController } from './react/select-menu';
 import type { TooltipBindOptions, TooltipTextSource } from '../shared/ui/tooltip';
 

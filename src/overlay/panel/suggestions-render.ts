@@ -21,7 +21,7 @@ import type { InputModeParts } from '../../shared/search/input-mode/controller-t
 import type { InputModeProvider } from '../../shared/search/input-mode/types';
 import type * as SuggestionNavigation from '../../shared/search/suggestion-navigation';
 import type * as SuggestionsHeightLayout from '../../shared/search/suggestions-height-layout';
-import type { CursorTooltipController } from '../../shared/ui/cursor-tooltip';
+import type { CursorTooltipController } from '../../shared/ui/cursor-tooltip-model';
 import type { TooltipController } from '../../shared/ui/tooltip';
 import type { ActivationEvent } from './result-activation';
 import type { OverlaySuggestion } from './types';

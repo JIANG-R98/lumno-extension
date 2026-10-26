@@ -17,7 +17,7 @@ import * as LumnoSortableDrag from '../../ui/sortable-drag';
 import { followEmptyStateArtTheme } from '../../ui/empty-state-art';
 import { EmptyStateArt } from '../empty-state-art';
 import { className as MENU_SURFACE_CLASS } from '../../ui/menu-surface';
-import { hostClassName as CURSOR_TOOLTIP_HOST_CLASS } from '../../ui/cursor-tooltip';
+import { HOST_CLASS as CURSOR_TOOLTIP_HOST_CLASS } from '../../ui/cursor-tooltip-model';
 import { getModeLineIconPaths } from '../../search/input-mode/line-icons';
 import { createRenderStore, type RenderStore } from '../render-store';
 import { FONT_STACK, NO_TRANSLATE, SURFACE_VARS, type ModeSurface } from './mode-surface';

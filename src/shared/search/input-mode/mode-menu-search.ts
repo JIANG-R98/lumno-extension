@@ -1,7 +1,7 @@
 // Filtering the mode menu: the search text and Han readings of each item,
 // matching a query, and the full label of a tile that cuts it short.
-import type * as LumnoCursorTooltip from '../../ui/cursor-tooltip';
-import type { CursorTooltipController } from '../../ui/cursor-tooltip';
+import type { CursorTooltipController } from '../../ui/cursor-tooltip-model';
+import { isElementTextTruncated } from '../../react/text-overflow';
 import type { ModeMenuEntry, ModeMenuItem, ModeMenuMatch, ModeMenuRange, ModeMenuSearchIndex } from './types';
 import * as SearchTextIndex from '../../../domain/search/utils/text-index';
 import * as SearchTextNormalize from '../../../domain/search/utils/text-normalize';
@@ -17,7 +17,6 @@ interface ModeMenuSearchDeps {
   // Readings of common characters in built-in scope names, before pinyin-pro loads.
   MODE_MENU_PINYIN_FALLBACKS: Readonly<Record<string, string>>;
   modeMenuCursorTooltipController: Pick<CursorTooltipController, 'bind'> | null;
-  cursorTooltipApi: Pick<typeof LumnoCursorTooltip, 'isElementTextTruncated'>;
   modeMenu: HTMLElement;
 }
 
@@ -166,7 +165,7 @@ function bindModeMenuLabelTooltip(ctx: ModeMenuSearchContext, button: HTMLElemen
     return;
   }
   const updateTruncatedState = (): boolean => {
-    const isTruncated = ctx.cursorTooltipApi.isElementTextTruncated(label);
+    const isTruncated = isElementTextTruncated(label);
     button.setAttribute('data-label-truncated', isTruncated ? 'true' : 'false');
     return isTruncated;
   };

@@ -10,7 +10,7 @@ import type { ThemeVariant } from '../shared/favicon/favicon-theme';
 import type { SearchInputParts } from '../shared/react/search-input';
 import type { InputModeController } from '../shared/search/search-input-mode';
 import type { InputModeProvider } from '../shared/search/input-mode/types';
-import type { CursorTooltipController } from '../shared/ui/cursor-tooltip';
+import type { CursorTooltipController } from '../shared/ui/cursor-tooltip-model';
 import type { TooltipController } from '../shared/ui/tooltip';
 import type { createOverlayKeyRouter } from './keyboard';
 import type { createSessionCleanupRegistry, createViewportSizeSync } from './lifecycle';

@@ -1,6 +1,6 @@
 // Binds and hides the New Tab tooltips: top actions, search input, shortcut
 // tiles, the shortcut dialog and bookmark cursor tooltips.
-import type { CursorTooltipController, CursorTooltipOptions, CursorTooltipTextSource } from '../shared/ui/cursor-tooltip';
+import type { CursorTooltipController, CursorTooltipOptions, CursorTooltipTextSource } from '../shared/ui/cursor-tooltip-model';
 import type { TooltipBindOptions, TooltipController, TooltipShowOptions, TooltipTextSource } from '../shared/ui/tooltip';
 import type { Translate } from './newtab-types';
 

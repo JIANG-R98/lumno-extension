@@ -1,6 +1,6 @@
 // The parts, options and shared state of the search box's mode controller.
 import type { NavigatorLike } from '../../../domain/shortcut-display';
-import type { CursorTooltipController } from '../../ui/cursor-tooltip';
+import type { CursorTooltipController } from '../../ui/cursor-tooltip-model';
 import type { ModeMenuIconsState } from './mode-menu-icons';
 import type { ModeMenuLanguageConfig, ModeMenuLanguageState } from './mode-menu-language';
 import type { ModeMenuLayoutConfig, ModeMenuLayoutState } from './mode-menu-layout';

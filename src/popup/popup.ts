@@ -12,6 +12,7 @@ import * as SyncStateSettings from '../domain/settings/sync-state';
 import { getContextSettingsStore } from '../platform/settings-store';
 import * as LumnoShortcutDisplay from '../domain/shortcut-display';
 import * as LumnoCursorTooltip from '../shared/ui/cursor-tooltip';
+import { isElementTextTruncated } from '../shared/react/text-overflow';
 import * as LumnoToast from '../shared/ui/toast';
 import * as LumnoTooltip from '../shared/ui/tooltip';
 import * as LumnoUrlGuards from '../platform/url-guards';
@@ -649,7 +650,7 @@ function start(): void {
     },
     bindTruncationTooltip(element) {
       cursorTooltip.bind(element, () => (element ? element.textContent || '' : ''), {
-        shouldShow: (target) => LumnoCursorTooltip.isElementTextTruncated(target)
+        shouldShow: (target) => isElementTextTruncated(target)
       });
     }
   });

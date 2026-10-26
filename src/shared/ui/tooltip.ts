@@ -1,5 +1,7 @@
 import { queryHtmlElements } from '../dom-lookup';
 import { getTooltipViewApi } from '../react/tooltip-view';
+import { getClearTimeout, getElementRect, getNumber, getRequestAnimationFrame, getSetTimeout, placeTooltipAt, prepareTooltipFrame } from './tooltip-frame';
+import type { TooltipPosition, TooltipRect, TooltipWindow } from './tooltip-frame';
 // The shared tooltip: one element per controller, placed beside its target
 // and drawn by the React tooltip view (getTooltipViewApi()).
 const TOOLTIP_CLASS = '_x_extension_tooltip_2026_unique_';
@@ -12,23 +14,6 @@ const DEFAULT_BOUND_ATTRIBUTE = 'data-tooltip-bound';
 const DEFAULT_TEXT_ATTRIBUTE = 'data-tooltip';
 
 type TooltipPlacement = 'top' | 'bottom' | 'left' | 'left-above';
-
-// The page window, or a stand-in with the members used here.
-type TooltipWindow = Partial<Pick<Window, 'innerWidth' | 'innerHeight' | 'requestAnimationFrame' | 'setTimeout' | 'clearTimeout'>>;
-
-interface TooltipRect {
-  top: number;
-  left: number;
-  right: number;
-  bottom: number;
-  width: number;
-  height: number;
-}
-
-interface TooltipPosition {
-  top: number;
-  left: number;
-}
 
 interface TooltipElementOptions {
   documentObj?: Document | null;
@@ -85,59 +70,12 @@ interface TooltipController {
 }
 
 // The global timers with the DOM's numeric ids.
-const globalTimers: Pick<Window, 'setTimeout' | 'clearTimeout'> = globalThis;
-
 function getDocument(options: TooltipElementOptions | null | undefined): Document | null {
   return (options && options.documentObj) || globalThis.document || null;
 }
 
 function getWindow(options: TooltipPositionOptions | null | undefined): TooltipWindow {
   return (options && options.windowObj) || globalThis;
-}
-
-function getRequestAnimationFrame(windowObj: TooltipWindow): (callback: () => void) => void {
-  if (typeof windowObj.requestAnimationFrame === 'function') {
-    const requestFrame = windowObj.requestAnimationFrame;
-    return (callback) => {
-      Reflect.apply(requestFrame, windowObj, [callback]);
-    };
-  }
-  return (callback) => {
-    globalTimers.setTimeout(callback, 0);
-  };
-}
-
-function getSetTimeout(windowObj: TooltipWindow): (callback: () => void, delay: number) => number {
-  const setTimer = typeof windowObj.setTimeout === 'function' ? windowObj.setTimeout : null;
-  if (setTimer) {
-    return (callback, delay) => Reflect.apply(setTimer, windowObj, [callback, delay]);
-  }
-  return (callback, delay) => globalTimers.setTimeout(callback, delay);
-}
-
-function getClearTimeout(windowObj: TooltipWindow): (timerId: number) => void {
-  const clearTimer = typeof windowObj.clearTimeout === 'function' ? windowObj.clearTimeout : null;
-  if (clearTimer) {
-    return (timerId) => {
-      Reflect.apply(clearTimer, windowObj, [timerId]);
-    };
-  }
-  return (timerId) => globalTimers.clearTimeout(timerId);
-}
-
-function normalizeCssLength(value: number | string | null | undefined): string {
-  if (value === undefined || value === null || value === '') {
-    return '';
-  }
-  if (typeof value === 'number') {
-    return Number.isFinite(value) && value >= 0 ? `${value}px` : '';
-  }
-  return String(value).trim();
-}
-
-function getNumber(value: unknown, fallback: number): number {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function getDynamicNumber(
@@ -147,13 +85,6 @@ function getDynamicNumber(
 ): number {
   const resolved = typeof value === 'function' ? value(target) : value;
   return getNumber(resolved, fallback);
-}
-
-function getElementRect(element: Element | null | undefined, fallback?: TooltipRect): TooltipRect {
-  if (element) {
-    return element.getBoundingClientRect();
-  }
-  return fallback || { top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 };
 }
 
 function createElement(doc: Document | null | undefined, options?: TooltipElementOptions | null): HTMLElement | null {
@@ -212,6 +143,44 @@ function readPlacement(value: string | undefined): TooltipPlacement {
   return value === 'left' || value === 'left-above' || value === 'bottom' ? value : 'top';
 }
 
+// Where the target and the tooltip sit, relative to the boundary.
+interface PlacementBox {
+  targetTop: number;
+  targetBottom: number;
+  targetLeft: number;
+  targetRight: number;
+  targetRect: TooltipRect;
+  tooltipRect: TooltipRect;
+  boundaryHeight: number;
+  spacing: number;
+  margin: number;
+}
+
+// The tooltip's place beside its target, flipped to the other side when the
+// preferred side has no room.
+function placeBesideTarget(placement: TooltipPlacement, box: PlacementBox): { top: number; left: number } {
+  const { targetTop, targetBottom, targetLeft, targetRight, targetRect, tooltipRect, spacing, margin } = box;
+  const centeredLeft = targetLeft + ((targetRect.width - tooltipRect.width) / 2);
+  if (placement === 'left' || placement === 'left-above') {
+    const left = targetLeft - tooltipRect.width - spacing;
+    return {
+      top: placement === 'left-above'
+        ? targetTop - tooltipRect.height - spacing
+        : targetTop + ((targetRect.height - tooltipRect.height) / 2),
+      left: left < margin ? targetRight + spacing : left
+    };
+  }
+  if (placement === 'bottom') {
+    const top = targetBottom + spacing;
+    return {
+      top: top + tooltipRect.height + margin > box.boundaryHeight ? targetTop - tooltipRect.height - spacing : top,
+      left: centeredLeft
+    };
+  }
+  const top = targetTop - tooltipRect.height - spacing;
+  return { top: top < margin ? targetBottom + spacing : top, left: centeredLeft };
+}
+
 // Places the tooltip above its target (or below, to the left, or above and to
 // the left), flipped to the other side when it would leave the viewport or
 // the boundary element, and clamped inside it.
@@ -224,66 +193,112 @@ function position(
     return null;
   }
   const config: TooltipPositionOptions = options || {};
-  const windowObj = getWindow(config);
-  const positionMode = config.positionMode === 'absolute' ? 'absolute' : 'fixed';
-  const placement = readPlacement(config.placement);
-  const margin = getNumber(config.margin, 8);
-  const spacing = getDynamicNumber(config.spacing, target, 10);
-  const viewportWidth = getNumber(windowObj.innerWidth, 1024);
-  const viewportHeight = getNumber(windowObj.innerHeight, 768);
-  const boundaryElement = config.boundaryElement || null;
-  const viewportRect: TooltipRect = {
-    top: 0, left: 0, right: viewportWidth, bottom: viewportHeight, width: viewportWidth, height: viewportHeight
-  };
-  const boundaryRect = positionMode === 'absolute' ? getElementRect(boundaryElement, viewportRect) : viewportRect;
-  const availableWidth = Math.max(180, Math.floor((boundaryRect.width || viewportWidth) - (margin * 2)));
-  const configuredMaxWidth = config.maxWidth === undefined ? 420 : config.maxWidth;
-  const resolvedMaxWidth = typeof configuredMaxWidth === 'number'
-    ? `${Math.min(configuredMaxWidth, availableWidth)}px`
-    : (normalizeCssLength(configuredMaxWidth) || `${availableWidth}px`);
-  element.style.setProperty('max-width', resolvedMaxWidth);
-  element.style.setProperty('width', 'max-content');
-  element.setAttribute('data-tooltip-position', positionMode);
-
+  const frame = prepareTooltipFrame(element, config, getWindow(config));
+  const { boundaryRect } = frame;
   const targetRect = getElementRect(target);
   const tooltipRect = getElementRect(element);
-  let top = 0;
-  let left = 0;
-  const targetTop = targetRect.top - boundaryRect.top;
-  const targetBottom = targetRect.bottom - boundaryRect.top;
-  const targetLeft = targetRect.left - boundaryRect.left;
-  const targetRight = targetRect.right - boundaryRect.left;
+  const placed = placeBesideTarget(readPlacement(config.placement), {
+    targetTop: targetRect.top - boundaryRect.top,
+    targetBottom: targetRect.bottom - boundaryRect.top,
+    targetLeft: targetRect.left - boundaryRect.left,
+    targetRight: targetRect.right - boundaryRect.left,
+    targetRect,
+    tooltipRect,
+    boundaryHeight: frame.height,
+    spacing: getDynamicNumber(config.spacing, target, 10),
+    margin: frame.margin
+  });
+  return placeTooltipAt(element, frame, tooltipRect, placed);
+}
 
-  if (placement === 'left' || placement === 'left-above') {
-    top = targetTop + ((targetRect.height - tooltipRect.height) / 2);
-    left = targetLeft - tooltipRect.width - spacing;
-    if (placement === 'left-above') {
-      top = targetTop - tooltipRect.height - spacing;
-    }
-    if (left < margin) {
-      left = targetRight + spacing;
-    }
-  } else if (placement === 'bottom') {
-    top = targetBottom + spacing;
-    left = targetLeft + ((targetRect.width - tooltipRect.width) / 2);
-    if (top + tooltipRect.height + margin > (boundaryRect.height || viewportHeight)) {
-      top = targetTop - tooltipRect.height - spacing;
-    }
-  } else {
-    top = targetTop - tooltipRect.height - spacing;
-    left = targetLeft + ((targetRect.width - tooltipRect.width) / 2);
-    if (top < margin) {
-      top = targetBottom + spacing;
+// Marks a target as bound, moving its native title aside so the browser's
+// own tooltip does not show too. False when it was bound already.
+function markBoundTarget(target: HTMLElement, settings: TooltipBindOptions): boolean {
+  const boundAttribute = settings.boundAttribute || DEFAULT_BOUND_ATTRIBUTE;
+  if (target.getAttribute(boundAttribute) === 'true') {
+    return false;
+  }
+  target.classList.add(HOST_CLASS);
+  target.classList.add(LEGACY_HOST_CLASS);
+  target.setAttribute(boundAttribute, 'true');
+  if (settings.suppressNativeTitle !== false) {
+    const nativeTitle = target.getAttribute('title');
+    if (nativeTitle) {
+      target.setAttribute('data-tooltip-native-title', nativeTitle);
+      target.removeAttribute('title');
     }
   }
+  return true;
+}
 
-  const maxTop = Math.max(margin, (boundaryRect.height || viewportHeight) - tooltipRect.height - margin);
-  const maxLeft = Math.max(margin, (boundaryRect.width || viewportWidth) - tooltipRect.width - margin);
-  top = Math.max(margin, Math.min(top, maxTop));
-  left = Math.max(margin, Math.min(left, maxLeft));
-  element.style.setProperty('top', `${Math.round(top)}px`);
-  element.style.setProperty('left', `${Math.round(left)}px`);
-  return Object.freeze({ top: Math.round(top), left: Math.round(left) });
+function setTooltipShown(tooltip: HTMLElement, shown: boolean): void {
+  tooltip.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, shown ? 'true' : 'false');
+  tooltip.setAttribute('aria-hidden', shown ? 'false' : 'true');
+}
+
+function removeTooltipElement(element: HTMLElement): void {
+  const tooltipView = getTooltipViewApi();
+  if (tooltipView) {
+    tooltipView.destroyTooltipElement(element);
+  }
+  if (element.parentNode) {
+    element.parentNode.removeChild(element);
+  }
+}
+
+// Binds every element under the scope that names its tooltip text.
+function bindAllIn(
+  scope: ParentNode | null | undefined,
+  settings: TooltipBindOptions,
+  bind: (target: HTMLElement, getText: null, bindOptions: TooltipBindOptions) => HTMLElement | null
+): HTMLElement[] {
+  if (!scope) {
+    return [];
+  }
+  const selector = settings.selector || `[${settings.attributeName || DEFAULT_TEXT_ATTRIBUTE}]`;
+  const bound: HTMLElement[] = [];
+  queryHtmlElements(scope, selector).forEach((node) => {
+    const result = bind(node, null, settings);
+    if (result) {
+      bound.push(result);
+    }
+  });
+  return bound;
+}
+
+// Shows the tooltip while the pointer is over the target or it has focus.
+function bindTarget(
+  target: HTMLElement,
+  getText: TooltipTextSource | null | undefined,
+  settings: TooltipBindOptions,
+  show: (target: HTMLElement, text: string | null | undefined, showOptions: TooltipShowOptions) => unknown,
+  hide: () => unknown
+): HTMLElement {
+  if (!markBoundTarget(target, settings)) {
+    return target;
+  }
+  const resolveText: TooltipTextSource = typeof getText === 'function'
+    ? getText
+    : () => target.getAttribute(settings.attributeName || DEFAULT_TEXT_ATTRIBUTE);
+  const showBoundTooltip = (): void => {
+    show(target, resolveText(target), settings);
+  };
+  target.addEventListener('mouseenter', showBoundTooltip);
+  target.addEventListener('mouseleave', hide);
+  if (settings.showOnFocus !== false) {
+    target.addEventListener('focus', showBoundTooltip);
+    target.addEventListener('blur', hide);
+  }
+  return target;
+}
+
+function createAttachedElement(documentObj: Document | null, config: TooltipControllerOptions): HTMLElement | null {
+  const element = createElement(documentObj, config);
+  const appendTo = config.appendTo || (documentObj && documentObj.body);
+  if (appendTo && element) {
+    appendTo.appendChild(element);
+  }
+  return element;
 }
 
 function createController(options?: TooltipControllerOptions | null): TooltipController {
@@ -299,15 +314,15 @@ function createController(options?: TooltipControllerOptions | null): TooltipCon
   let token = 0;
 
   function ensureElement(): HTMLElement | null {
-    if (element) {
-      return element;
-    }
-    element = createElement(documentObj, config);
-    const appendTo = config.appendTo || (documentObj && documentObj.body);
-    if (appendTo && element) {
-      appendTo.appendChild(element);
-    }
+    element = element || createAttachedElement(documentObj, config);
     return element;
+  }
+
+  function cancelHideTimer(): void {
+    if (hideTimer) {
+      clearTimer(hideTimer);
+      hideTimer = null;
+    }
   }
 
   function show(
@@ -323,24 +338,19 @@ function createController(options?: TooltipControllerOptions | null): TooltipCon
     if (!tooltip) {
       return null;
     }
-    if (hideTimer) {
-      clearTimer(hideTimer);
-      hideTimer = null;
-    }
+    cancelHideTimer();
     token += 1;
     const showToken = token;
     currentTarget = target;
     renderText(tooltip, content);
-    tooltip.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, 'false');
-    tooltip.setAttribute('aria-hidden', 'true');
+    setTooltipShown(tooltip, false);
     const mergedOptions: TooltipShowOptions = { ...config, ...showOptions };
     position(tooltip, target, mergedOptions);
     requestFrame(() => {
       if (showToken !== token || currentTarget !== target || !isTargetActive(target, documentObj, mergedOptions)) {
         return;
       }
-      tooltip.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, 'true');
-      tooltip.setAttribute('aria-hidden', 'false');
+      setTooltipShown(tooltip, true);
     });
     return tooltip;
   }
@@ -353,11 +363,8 @@ function createController(options?: TooltipControllerOptions | null): TooltipCon
     token += 1;
     const hideToken = token;
     currentTarget = null;
-    tooltip.setAttribute(DEFAULT_VISIBLE_ATTRIBUTE, 'false');
-    tooltip.setAttribute('aria-hidden', 'true');
-    if (hideTimer) {
-      clearTimer(hideTimer);
-    }
+    setTooltipShown(tooltip, false);
+    cancelHideTimer();
     hideTimer = setTimer(() => {
       if (hideToken !== token || !element) {
         return;
@@ -373,54 +380,7 @@ function createController(options?: TooltipControllerOptions | null): TooltipCon
     getText?: TooltipTextSource | null,
     bindOptions?: TooltipBindOptions | null
   ): HTMLElement | null {
-    if (!target) {
-      return null;
-    }
-    const settings: TooltipBindOptions = bindOptions || {};
-    const boundAttribute = settings.boundAttribute || DEFAULT_BOUND_ATTRIBUTE;
-    if (target.getAttribute(boundAttribute) === 'true') {
-      return target;
-    }
-    target.classList.add(HOST_CLASS);
-    target.classList.add(LEGACY_HOST_CLASS);
-    target.setAttribute(boundAttribute, 'true');
-    if (settings.suppressNativeTitle !== false) {
-      const nativeTitle = target.getAttribute('title');
-      if (nativeTitle) {
-        target.setAttribute('data-tooltip-native-title', nativeTitle);
-        target.removeAttribute('title');
-      }
-    }
-    const resolveText: TooltipTextSource = typeof getText === 'function'
-      ? getText
-      : () => target.getAttribute(settings.attributeName || DEFAULT_TEXT_ATTRIBUTE);
-    const showBoundTooltip = (): void => {
-      show(target, resolveText(target), settings);
-    };
-    target.addEventListener('mouseenter', showBoundTooltip);
-    target.addEventListener('mouseleave', hide);
-    if (settings.showOnFocus !== false) {
-      target.addEventListener('focus', showBoundTooltip);
-      target.addEventListener('blur', hide);
-    }
-    return target;
-  }
-
-  function bindAll(rootNode?: ParentNode | null, bindOptions?: TooltipBindOptions | null): HTMLElement[] {
-    const scope = rootNode || documentObj;
-    if (!scope) {
-      return [];
-    }
-    const settings: TooltipBindOptions = bindOptions || {};
-    const selector = settings.selector || `[${settings.attributeName || DEFAULT_TEXT_ATTRIBUTE}]`;
-    const bound: HTMLElement[] = [];
-    queryHtmlElements(scope, selector).forEach((node) => {
-      const result = bind(node, null, settings);
-      if (result) {
-        bound.push(result);
-      }
-    });
-    return bound;
+    return target ? bindTarget(target, getText, bindOptions || {}, show, hide) : null;
   }
 
   return {
@@ -430,23 +390,18 @@ function createController(options?: TooltipControllerOptions | null): TooltipCon
     destroy() {
       token += 1;
       currentTarget = null;
-      if (hideTimer) {
-        clearTimer(hideTimer);
-        hideTimer = null;
-      }
-      const tooltipView = getTooltipViewApi();
-      if (element && tooltipView) {
-        tooltipView.destroyTooltipElement(element);
-      }
-      if (element && element.parentNode) {
-        element.parentNode.removeChild(element);
+      cancelHideTimer();
+      if (element) {
+        removeTooltipElement(element);
       }
       element = null;
     },
     show,
     hide,
     bind,
-    bindAll
+    bindAll: (rootNode?: ParentNode | null, bindOptions?: TooltipBindOptions | null) => (
+      bindAllIn(rootNode || documentObj, bindOptions || {}, bind)
+    )
   };
 }
 
@@ -457,12 +412,9 @@ export type {
   TooltipControllerOptions,
   TooltipElementOptions,
   TooltipPlacement,
-  TooltipPosition,
   TooltipPositionOptions,
-  TooltipRect,
   TooltipShowOptions,
-  TooltipTextSource,
-  TooltipWindow
+  TooltipTextSource
 };
 export {
   TOOLTIP_CLASS as className,
@@ -471,6 +423,7 @@ export {
   DIVIDER_CLASS as dividerClassName,
   createElement,
   createController,
+  removeTooltipElement,
   renderText,
   position
 };
