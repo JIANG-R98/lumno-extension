@@ -610,7 +610,7 @@ function createRecentSitesController(deps: RecentSitesControllerDeps) {
   }
 
   function getProgressHistoryId(item: RecentSite): string {
-    return progressHistory.getHistoryId(item, progressMatch);
+    return progressHistory.getHistoryId(item);
   }
 
   function getProgressVersions(item: RecentSite): ProgressVersion[] {

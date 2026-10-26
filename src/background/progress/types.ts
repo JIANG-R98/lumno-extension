@@ -1,12 +1,6 @@
 // The shapes of the progress tracker.
-import type * as LumnoProgressMatch from '../../domain/progress-match';
-import type * as LumnoProgressHistory from '../../domain/progress-history';
 import type { ProgressConfidence } from '../../domain/progress-match';
 import type { SettingsStore } from '../../platform/settings-store';
-
-type ProgressMatchApi = Pick<typeof LumnoProgressMatch,
-  'getComparableUrl' | 'getProgressSiteKey' | 'compareProgressPages' | 'shouldAdvance' | 'looksLikeSeriesPage'>;
-type ProgressHistoryApi = Pick<typeof LumnoProgressHistory, 'recordVersion' | 'getHistoryId'>;
 
 // A timer from the injected timer functions; only they read it.
 type TimerHandle = unknown;
@@ -70,8 +64,6 @@ interface ObserveOptions {
 
 interface ProgressTrackerOptions {
   chromeApi?: typeof chrome | null;
-  progressMatch: ProgressMatchApi;
-  progressHistory: ProgressHistoryApi;
   // The settings the pinned sites and the progress history live in.
   settingsStore: SettingsStore;
   isEnabled?: () => boolean;
@@ -90,24 +82,6 @@ interface ProgressTracker {
   getPendingCount(): number;
 }
 
-interface ProgressContext {
-  readonly config: ProgressTrackerOptions;
-  readonly chromeApi: typeof chrome | null;
-  readonly progressMatch: ProgressMatchApi;
-  readonly progressHistory: ProgressHistoryApi;
-  readonly settingsStore: SettingsStore;
-  readonly isEnabled: () => boolean;
-  readonly dwellMs: number;
-  readonly probeTimeoutMs: number;
-  readonly now: () => number;
-  readonly setTimer: (callback: () => void, delayMs: number) => TimerHandle;
-  readonly clearTimer: (timer: TimerHandle) => void;
-  readonly candidates: Map<number, DwellCandidate>;
-  readonly trails: Map<number, Trail>;
-  readonly cardHints: Map<string, CardHints>;
-  queue: Promise<unknown>;
-}
-
 // Finds the tracked card this page continues and moves it forward. The
 // version it leaves goes into the history first, so it can be restored.
 type TrackedEntry = { item: TrackedCard; index: number };
@@ -119,9 +93,6 @@ export type {
   MediaReading,
   ObserveOptions,
   PageHints,
-  ProgressContext,
-  ProgressHistoryApi,
-  ProgressMatchApi,
   ProgressTracker,
   ProgressTrackerOptions,
   TimerHandle,

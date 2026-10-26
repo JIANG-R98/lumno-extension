@@ -1,5 +1,7 @@
 // Earlier versions of tracked cards, newest first, keyed by site. Kept in
 // local storage: the pinned cards sync, and synced items are capped at 8 KB.
+import { getProgressSiteKey } from './progress-match';
+
 const MAX_VERSIONS = 10;
 
 // A page a tracked card pointed at before.
@@ -74,13 +76,10 @@ function restoreVersion(map: unknown, siteKey: string, index: number, currentVer
 
 // Tracked cards store their history under their own id; cards tracked
 // before ids existed fall back to their site.
-function getHistoryId(
-  card: { progressId?: unknown; url?: unknown } | null | undefined,
-  progressMatch?: { getProgressSiteKey(url: unknown): string } | null
-): string {
+function getHistoryId(card: { progressId?: unknown; url?: unknown } | null | undefined): string {
   const progressId = String(card && card.progressId || '').trim();
   if (progressId) return progressId;
-  return progressMatch && card ? progressMatch.getProgressSiteKey(card.url) : '';
+  return card ? getProgressSiteKey(card.url) : '';
 }
 
 function createProgressId(now?: number): string {

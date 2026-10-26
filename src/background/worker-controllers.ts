@@ -5,7 +5,6 @@
 // They are created here and started by background.ts, which wires the
 // browser events, so starting them keeps its place in the worker's startup.
 import * as LumnoProgressHistory from '../domain/progress-history';
-import * as LumnoProgressMatch from '../domain/progress-match';
 import * as LumnoSettings from '../domain/settings';
 import * as LumnoPageShortcutMenu from './page-shortcut-menu';
 import * as LumnoPopupRecentPin from './popup-recent-pin';
@@ -26,8 +25,6 @@ function isProgressTrackingEnabled(): boolean {
 
 const progressTracker = Tracker.createProgressTracker({
   chromeApi: chrome,
-  progressMatch: LumnoProgressMatch,
-  progressHistory: LumnoProgressHistory,
   settingsStore: workerSettings,
   isEnabled: isProgressTrackingEnabled
 });
