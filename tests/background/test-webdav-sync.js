@@ -4,7 +4,7 @@ const { webcrypto, randomUUID } = require('crypto');
 const settings = require('../../src/domain/settings/index.ts');
 const settingsStorage = require('../../src/platform/settings-storage.ts');
 const shortcuts = require('../helpers/shortcuts-store.ts');
-const contract = require('../../src/domain/webdav-contract.ts');
+const contract = require('../../src/domain/webdav/api.ts').WEBDAV_CONTRACT_API;
 const client = {
   ...require('../../src/background/webdav-client/api.ts').WEBDAV_CLIENT_API,
   ...require('../../src/background/webdav-client/errors.ts')

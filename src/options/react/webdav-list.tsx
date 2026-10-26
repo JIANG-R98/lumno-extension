@@ -3,8 +3,8 @@ import { InlinePopconfirm } from './inline-popconfirm';
 import { InfoButton } from './info-button';
 import { getAsyncErrorMessage, useExclusiveAsyncAction } from '../../shared/react/use-exclusive-async-action';
 import { BusyLabel } from '../../shared/react/busy-label';
-import type { ConflictDescription, ListChangeSummary, NameSample, ValueSummary } from '../../domain/webdav-contract';
 import { RemixIcon } from '../../shared/react/remix-icon';
+import type { ConflictDescription, ListChangeSummary, NameSample, ValueSummary } from '../../domain/webdav/types';
 
 export interface WebDavConfig {
   endpoint: string;

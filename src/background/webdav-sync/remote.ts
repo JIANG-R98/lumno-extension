@@ -1,11 +1,11 @@
 // Reading and writing the server's state, its lock and its snapshots.
-import type { WebDavState } from '../../domain/webdav-contract';
 import { SNAPSHOT_SLOTS } from './constants';
 import { uploadAssets } from './media';
 import { isRecord } from './records';
 import { fail, report } from './runtime';
 import type { ConnectionContext, RemoteState, StoredConnection } from './types';
 import type { StaleLockMarker, WebDavClient } from '../webdav-client/types';
+import type { WebDavState } from '../../domain/webdav/types';
 
 async function readRemote(ctx: ConnectionContext, client: WebDavClient): Promise<RemoteState | null> {
   const remote = await client.readState();

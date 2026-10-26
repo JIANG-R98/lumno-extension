@@ -1,9 +1,9 @@
 // Reading untyped values: stored records, errors and Options requests.
-import * as LumnoWebDavContract from '../../domain/webdav-contract';
 import { diagnostic } from '../webdav-client/errors';
 import type { WebDavReply, WebDavRequest } from '../../domain/messages';
 import type { Session, StoredConnection } from './types';
 import type { GroupedShortcutItem } from '../../domain/shortcuts/types';
+import * as WebDavConflicts from '../../domain/webdav/conflicts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
@@ -79,7 +79,7 @@ function isTrustedSender(
 // Rebuilds the request from a runtime message; null when it names no known
 // operation or one of its fields has the wrong type.
 function readWebDavRequest(message: Record<string, unknown>): WebDavRequest | null {
-  const operation = LumnoWebDavContract.readWebDavOperation(message.operation);
+  const operation = WebDavConflicts.readWebDavOperation(message.operation);
   if (!operation) return null;
   const { id, config, decision, enable, resume } = message;
   const request: WebDavRequest = { operation };

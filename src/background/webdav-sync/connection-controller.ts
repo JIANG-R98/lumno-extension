@@ -5,7 +5,6 @@
 import * as LumnoNewtabWallpaperLocalStore from '../../shared/wallpaper-local-store';
 import * as LumnoSettings from '../../domain/settings';
 import * as LumnoSettingsStorage from '../../platform/settings-storage';
-import * as LumnoWebDavContract from '../../domain/webdav-contract';
 import { WEBDAV_CLIENT_API } from '../webdav-client/api';
 import { handle } from './connection-requests';
 import type { WebDavRequest } from '../../domain/messages';
@@ -24,6 +23,7 @@ import type {
   WithLocalWrite
 } from './types';
 import { SHORTCUTS_STORE_API } from '../../domain/shortcuts/api';
+import { WEBDAV_CONTRACT_API } from '../../domain/webdav/api';
 
 function onAlarm(ctx: ConnectionContext, alarm: chrome.alarms.Alarm): void {
   if (!ctx.stopped && alarm.name === ctx.alarmName) void backgroundRound(ctx, false);
@@ -74,7 +74,7 @@ function createConnectionController(options?: ConnectionControllerOptions | null
   const opts = options || {};
   const chromeApi = opts.chrome || chrome;
   const settings = opts.settings || LumnoSettings;
-  const contract = opts.contract || LumnoWebDavContract;
+  const contract = opts.contract || WEBDAV_CONTRACT_API;
   const shortcuts = opts.shortcuts || SHORTCUTS_STORE_API;
   const clientApi = opts.client || WEBDAV_CLIENT_API;
   const cryptoApi = opts.crypto || globalThis.crypto;

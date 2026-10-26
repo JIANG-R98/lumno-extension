@@ -5,13 +5,13 @@ import { getContextSettingsStore } from '../platform/settings-store';
 import type { SettingsStoreChromeApi } from '../platform/settings-store';
 import * as LumnoSettings from '../domain/settings/sync-state';
 import type { WebDavOperation } from '../domain/messages';
-import { readConflictDescriptions, readWebDavOperation } from '../domain/webdav-contract';
-import type { ConflictDescription, ValueSummary } from '../domain/webdav-contract';
 import * as LumnoMessaging from '../platform/messaging';
 import type { MessageRuntime } from '../platform/messaging';
 import type { GetMessage } from './options-types';
 import type { WebDavCardModel } from './react/account-tab';
 import type { WebDavActionResult, WebDavConfig, WebDavConflictItem, WebDavConnection } from './react/webdav-list';
+import { readConflictDescriptions, readWebDavOperation } from '../domain/webdav/conflicts';
+import type { ConflictDescription, ValueSummary } from '../domain/webdav/types';
 
 const EXPECTED_CLIENT_REVISION = 'dav-lock-5';
 const EXPECTED_SYNC_REVISION = 'dav-multi-1';

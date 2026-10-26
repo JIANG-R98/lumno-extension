@@ -1,6 +1,5 @@
 // Applying a merged state to this device, and mirroring it into Chrome sync.
 import type { StorageItems } from '../../domain/storage-port';
-import type { WebDavState } from '../../domain/webdav-contract';
 import type { WallpaperRecordInput } from '../../shared/wallpaper-local-store';
 import { capture, pickLocalPreferences } from './capture';
 import { getAsset, toDataUrl } from './media';
@@ -8,6 +7,7 @@ import { isRecord, isRecorded, readSession, unrefTimer } from './records';
 import { fail, report, setStatus, storage } from './runtime';
 import type { Captured, ChromePreparation, ConnectionContext, MirrorResult, Session } from './types';
 import type { WebDavClient } from '../webdav-client/types';
+import type { WebDavState } from '../../domain/webdav/types';
 
 // This device's local-only folder shortcuts go back where they were; the
 // rest of the list beyond the browser sync budget goes to the overflow record.

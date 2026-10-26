@@ -14,7 +14,6 @@ import * as LumnoBookmarkFolderBindings from '../platform/bookmark-folder-bindin
 import '../domain/site-display-name';
 import './page-shortcut-menu';
 import '../shared/wallpaper-local-store';
-import '../domain/webdav-contract';
 import * as WebDavManager from './webdav-sync/manager';
 import * as WebDavRecords from './webdav-sync/records';
 import * as UPDATE_NOTICE from '../platform/update-notice';

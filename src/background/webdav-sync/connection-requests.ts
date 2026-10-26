@@ -1,6 +1,5 @@
 // Requests from the Options page to one connection.
 import type { WebDavRequest } from '../../domain/messages';
-import type { WebDavState } from '../../domain/webdav-contract';
 import { capture } from './capture';
 import { connection, connectReporting, pause, sameAccount, sameCredentials, status, useBrowserSync } from './connect';
 import { apply, mirrorReporting, recoverPendingApply } from './local-apply';
@@ -10,6 +9,7 @@ import { fail, session, setStatus } from './runtime';
 import { guardedSync, schedule } from './sync-round';
 import type { ConnectionContext, HandleResult, SyncResult } from './types';
 import type { ConnectionCapabilities } from '../webdav-client/types';
+import type { WebDavState } from '../../domain/webdav/types';
 
 async function saveConnection(ctx: ConnectionContext, request: WebDavRequest): Promise<HandleResult> {
   const config = await connection(ctx, request.config);

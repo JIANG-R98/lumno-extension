@@ -1,12 +1,12 @@
 // Reading this device's preferences, shortcuts and wallpapers into a state
 // to merge.
 import type { StorageItems } from '../../domain/storage-port';
-import type { WebDavState } from '../../domain/webdav-contract';
 import { LOCAL_DATA_CODES } from './constants';
 import { collectMedia } from './media';
 import { errorCode, hasFolderRef, readStateVersion } from './records';
 import { fail, session, storage } from './runtime';
 import type { Captured, ConnectionContext } from './types';
+import type { WebDavState } from '../../domain/webdav/types';
 
 function pickLocalPreferences(ctx: ConnectionContext, values: StorageItems): StorageItems {
   return Object.fromEntries(ctx.contract.LOCAL_PREFERENCE_KEYS

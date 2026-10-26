@@ -1,5 +1,4 @@
 // One sync round, its retries and the background schedule that runs it.
-import type { WebDavState } from '../../domain/webdav-contract';
 import { syncMeta } from '../../domain/settings/sync-state';
 import { capture } from './capture';
 import { CONTENTION_CODES, INITIAL_DECISIONS, SWEEP_INTERVAL_MS, THROTTLE_CODES } from './constants';
@@ -9,6 +8,7 @@ import { publish, readRemote, releaseOwnStaleLock, verifiedClient } from './remo
 import { exclusive, fail, holdKeepAlive, releaseKeepAlive, report, saveConfig, session, setStatus } from './runtime';
 import type { Captured, ConnectionContext, RemoteState, StoredConnection, SyncResult } from './types';
 import type { WebDavClient } from '../webdav-client/types';
+import type { WebDavState } from '../../domain/webdav/types';
 
 // What this round publishes and applies: the merge of both sides against
 // their shared baseline, or one side when the user chose it. A conflict or a

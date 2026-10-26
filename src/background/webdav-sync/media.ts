@@ -1,12 +1,12 @@
 // Shortcut icons and wallpapers: checking, hashing and moving them to and
 // from the server.
 import type { StorageItems } from '../../domain/storage-port';
-import type { WebDavAsset, WebDavAssetMime, WebDavState } from '../../domain/webdav-contract';
 import type { WallpaperRecord } from '../../shared/wallpaper-local-store';
 import { isArrayBufferBytes, isRecord } from './records';
 import { fail } from './runtime';
 import type { ConnectionContext, DecodedImage, ImageCheck } from './types';
 import type { WebDavClient } from '../webdav-client/types';
+import type { WebDavAsset, WebDavAssetMime, WebDavState } from '../../domain/webdav/types';
 
 async function hash(ctx: ConnectionContext, bytes: Uint8Array<ArrayBuffer>): Promise<string> {
   const digest = await ctx.cryptoApi.subtle.digest('SHA-256', bytes);
