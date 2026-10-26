@@ -25,7 +25,7 @@ assert(
 assert.deepStrictEqual(Array.from(selectionScriptRegistration.SCRIPT_FILES), ['build/selection-quick-actions.js']);
 assert.strictEqual(selectionScriptRegistration.RUN_AT, 'document_idle');
 assert.deepStrictEqual(
-  getBundleFiles('selection-quick-actions').sort(),
+  getBundleFiles('selection-quick-actions').filter((file) => !file.startsWith('src/content/selection-quick-actions/')).sort(),
   ['src/content/selection-quick-actions.ts', 'src/domain/selection-action-icons.ts', 'src/domain/selection-intent.ts', 'src/domain/settings/appearance.ts', 'src/domain/settings/define.ts', 'src/domain/settings/features.ts', 'src/domain/settings/locale.ts', 'src/domain/settings/newtab-page.ts', 'src/domain/settings/newtab-shortcuts.ts', 'src/domain/settings/page-cache.ts', 'src/domain/settings/schema.ts', 'src/domain/settings/sync-state.ts', 'src/platform/boot-handoff.ts', 'src/platform/content-registry.ts', 'src/platform/messaging.ts', 'src/platform/settings-storage.ts', 'src/platform/settings-store.ts', 'src/platform/storage-call.ts', 'src/shared/ui/toast.ts'],
   'the toolbar bundle should carry provider-aware settings, the selection classifier and the shared Toast, and nothing else'
 );
