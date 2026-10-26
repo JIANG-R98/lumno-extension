@@ -16,7 +16,8 @@ import type {
   SuggestionsViewOptions,
   ThemeValue
 } from '../../shared/react/search/suggestion-list/types';
-import type { InputModeController, InputModeParts } from '../../shared/search/search-input-mode';
+import type { InputModeController } from '../../shared/search/search-input-mode';
+import type { InputModeParts } from '../../shared/search/input-mode/controller-types';
 import type { InputModeProvider } from '../../shared/search/input-mode/types';
 import type * as SuggestionNavigation from '../../shared/search/suggestion-navigation';
 import type * as SuggestionsHeightLayout from '../../shared/search/suggestions-height-layout';
