@@ -3,6 +3,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   useSyncExternalStore,
   type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -493,34 +494,26 @@ function getBrowserFaviconCandidate(
     : '';
 }
 
+// The drag controllers read the bookmark and its place in the page from the card.
 function applyBookmarkCardMetadata(
   card: BookmarkCardElement,
   item: BookmarkItem,
   index: number
 ): void {
-  const bookmarkId = item.id ? String(item.id) : '';
-  const parentId = item.parentId ? String(item.parentId) : '';
-  const itemIndex = Number(item.index);
-  card.draggable = false;
   card._xBookmarkItem = item;
   card._xBookmarkPageIndex = Number.isFinite(index) ? index : 0;
-  card.setAttribute('data-bookmark-id', bookmarkId);
-  card.setAttribute(
-    'data-bookmark-type',
-    item.type ? String(item.type) : ''
-  );
-  card.setAttribute('data-bookmark-parent-id', parentId);
-  card.setAttribute(
-    'data-bookmark-index',
-    Number.isFinite(itemIndex) ? String(itemIndex) : ''
-  );
-  card.setAttribute(
-    'data-bookmark-draggable',
-    bookmarkId && parentId && Number.isFinite(itemIndex)
-      ? 'true'
-      : 'false'
-  );
 }
+
+// How a card looks: pointed at or focused, its folder icon open, its copy
+// button showing, its folder menu open.
+interface CardVisual {
+  hover: boolean;
+  expanded: boolean;
+  copyVisible: boolean;
+  menuOpen: boolean;
+}
+
+const CARD_VISUAL_AT_REST: CardVisual = { hover: false, expanded: false, copyVisible: false, menuOpen: false };
 
 function BookmarkCard({
   item,
@@ -545,6 +538,26 @@ function BookmarkCard({
   const menuVisualLockedRef = useRef(false);
   const folderExpandedRef = useRef(false);
   const copyActionFocusedRef = useRef(false);
+  const copyActionVisibleRef = useRef(false);
+  // The refs hold the visual state the handlers decide on; this draws it.
+  const [visual, setVisual] = useState<CardVisual>(CARD_VISUAL_AT_REST);
+
+  function commitVisual(): void {
+    const next: CardVisual = {
+      hover: hoverVisualActiveRef.current,
+      expanded: folderExpandedRef.current,
+      copyVisible: copyActionVisibleRef.current,
+      menuOpen: menuVisualLockedRef.current
+    };
+    setVisual((current) => (
+      current.hover === next.hover &&
+      current.expanded === next.expanded &&
+      current.copyVisible === next.copyVisible &&
+      current.menuOpen === next.menuOpen
+        ? current
+        : next
+    ));
+  }
 
   const isTopbarMode = viewMode === 'top';
   const isFolder = item.type === 'folder';
@@ -616,36 +629,20 @@ function BookmarkCard({
   }
 
   function shouldKeepMenuVisualActive(): boolean {
-    const card = cardRef.current;
-    return Boolean(
-      isFolder &&
-      menuMode &&
-      (
-        menuVisualLockedRef.current ||
-        card?.getAttribute('aria-expanded') === 'true'
-      )
-    );
+    return Boolean(isFolder && menuMode && menuVisualLockedRef.current);
   }
 
   function setFolderExpanded(
     active: boolean,
     visualOptions?: VisualOptions
   ): void {
-    const card = cardRef.current;
     const folderIcon = iconRef.current;
     const nextActive = Boolean(active);
-    if (
-      !card ||
-      !folderIcon ||
-      folderExpandedRef.current === nextActive
-    ) {
+    if (!folderIcon || folderExpandedRef.current === nextActive) {
       return;
     }
     folderExpandedRef.current = nextActive;
-    card.classList.toggle(
-      'x-nt-bookmark-card--folder-expanded',
-      nextActive
-    );
+    commitVisual();
     options.playFolderPathMorph(
       folderIcon,
       nextActive,
@@ -670,17 +667,13 @@ function BookmarkCard({
     active: boolean,
     visualOptions?: VisualOptions
   ): void {
-    const card = cardRef.current;
-    if (!card) {
-      return;
-    }
     const nextActive = Boolean(active);
     if (hoverVisualActiveRef.current === nextActive) {
       syncFolderExpandedState(visualOptions);
       return;
     }
     hoverVisualActiveRef.current = nextActive;
-    card.classList.toggle('x-nt-bookmark-card--hover', nextActive);
+    commitVisual();
     syncFolderExpandedState(visualOptions);
   }
 
@@ -697,6 +690,7 @@ function BookmarkCard({
       return;
     }
     menuVisualLockedRef.current = nextActive;
+    commitVisual();
     clearHoverIntentTimer();
     setHoverVisualActive(nextActive, visualOptions);
     if (nextActive) {
@@ -713,17 +707,14 @@ function BookmarkCard({
     setHoverVisualActive(false);
   }
 
+  // Back to rest, except that a card whose folder menu is open stays lit.
   function resetInteractionState(): void {
-    const card = cardRef.current;
-    if (!card) {
-      return;
-    }
     clearHoverIntentTimer();
-    menuVisualLockedRef.current = Boolean(isFolder && menuMode && card.getAttribute('aria-expanded') === 'true');
+    menuVisualLockedRef.current = shouldKeepMenuVisualActive();
     hoverVisualActiveRef.current = menuVisualLockedRef.current;
     copyActionFocusedRef.current = false;
-    card.classList.toggle('x-nt-bookmark-card--hover', menuVisualLockedRef.current);
-    card.removeAttribute('data-bookmark-copy-action-visible');
+    copyActionVisibleRef.current = false;
+    commitVisual();
     syncFolderExpandedState();
   }
 
@@ -732,15 +723,8 @@ function BookmarkCard({
   }
 
   function setCopyActionVisible(visible: boolean): void {
-    const card = cardRef.current;
-    if (!card) {
-      return;
-    }
-    if (visible) {
-      card.setAttribute('data-bookmark-copy-action-visible', 'true');
-    } else {
-      card.removeAttribute('data-bookmark-copy-action-visible');
-    }
+    copyActionVisibleRef.current = visible;
+    commitVisual();
   }
 
   function activateBookmarkHoverVisual(
@@ -837,15 +821,17 @@ function BookmarkCard({
     card._xNoThemeTint = isFolder;
     card._xTheme = immediateTheme;
     card._xHost = host;
+    // Called from outside React (drag controllers, the folder menu), so each
+    // draws its change before returning; they read the card right after.
     card._xDeactivateBookmarkHoverVisual = () =>
-      cardHelpersRef.current.deactivateBookmarkHoverVisual();
+      flushSync(() => cardHelpersRef.current.deactivateBookmarkHoverVisual());
     card._xSyncBookmarkFolderExpandedState = (visualOptions) =>
-      cardHelpersRef.current.syncFolderExpandedState(visualOptions);
+      flushSync(() => cardHelpersRef.current.syncFolderExpandedState(visualOptions));
     card._xResetBookmarkInteractionState = () =>
-      cardHelpersRef.current.resetInteractionState();
+      flushSync(() => cardHelpersRef.current.resetInteractionState());
     card._xSetBookmarkMenuVisualActive = isFolder && menuMode
       ? (active, visualOptions) =>
-        cardHelpersRef.current.setMenuVisualLocked(active, visualOptions)
+        flushSync(() => cardHelpersRef.current.setMenuVisualLocked(active, visualOptions))
       : undefined;
     card._xDisposeBookmarkCard = disposeCard;
 
@@ -946,9 +932,12 @@ function BookmarkCard({
       className={
         `x-nt-bookmark-card${
           isFolder ? ' x-nt-bookmark-card--folder' : ''
+        }${visual.hover ? ' x-nt-bookmark-card--hover' : ''}${
+          visual.expanded ? ' x-nt-bookmark-card--folder-expanded' : ''
         }`
       }
       data-bookmark-context-menu-open={contextMenuOpen ? 'true' : undefined}
+      data-bookmark-copy-action-visible={visual.copyVisible ? 'true' : undefined}
       tabIndex={0}
       role="button"
       draggable={false}
@@ -959,7 +948,7 @@ function BookmarkCard({
         { title: titleText }
       )}
       aria-haspopup={isFolder && menuMode ? 'menu' : undefined}
-      aria-expanded={isFolder && menuMode ? false : undefined}
+      aria-expanded={isFolder && menuMode ? visual.menuOpen : undefined}
       data-cursor-tooltip={titleText}
       data-bookmark-id={bookmarkId}
       data-bookmark-type={item.type ? String(item.type) : ''}

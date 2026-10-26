@@ -5,7 +5,6 @@ import type { ShortcutItem } from '../../domain/shortcuts-store';
 import { isElementNode, isNode } from '../../shared/dom-guards';
 import type { SelectMenuOption } from '../../shared/react/select-menu';
 import type { BookmarkEditTarget } from '../bookmarks/bookmark-actions';
-import type { BookmarkMenuAnchor } from '../bookmarks/bookmark-cascade-menu';
 import * as LumnoNewtabDismissStack from '../dismiss-stack';
 import type { ContextMenuParts, SelectMenuController, Translate } from '../newtab-types';
 import type { SelectMenuInstance } from '../react/select-menu';
@@ -120,16 +119,8 @@ function createShortcutContextMenu(deps: ShortcutContextMenuDeps) {
     return control.contains(node) || menu.contains(node);
   }
 
-  // The tile a context menu shows as active through its own menu visual.
-  let visuallyActiveTile: BookmarkMenuAnchor | null = null;
-
   function clearShortcutContextMenuTileActive(): void {
     setShortcutContextMenuMark(null);
-    const tile = visuallyActiveTile;
-    visuallyActiveTile = null;
-    if (tile && typeof tile._xSetBookmarkMenuVisualActive === 'function') {
-      tile._xSetBookmarkMenuVisualActive(false);
-    }
   }
 
   function setShortcutContextMenuTileActive(target: ShortcutContextTarget): void {
@@ -139,11 +130,6 @@ function createShortcutContextMenu(deps: ShortcutContextMenuDeps) {
       : target.kind === 'group'
         ? { kind: 'group', groupId: target.groupId }
         : { kind: 'add' });
-    const tile: BookmarkMenuAnchor = target.tile;
-    if (tile && typeof tile._xSetBookmarkMenuVisualActive === 'function') {
-      visuallyActiveTile = tile;
-      tile._xSetBookmarkMenuVisualActive(true);
-    }
   }
 
   function getShortcutContextMenuAnchorElement(tile: HTMLElement): HTMLElement {

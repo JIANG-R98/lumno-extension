@@ -146,34 +146,35 @@ describe('Shortcuts React island', () => {
     renderItems(view, [folderEntry]);
     const tile = view.getTiles()[0];
     const icon = tile.querySelector('.x-nt-shortcut-icon');
-    tile.setAttribute('data-shortcut-context-menu-open', 'true');
-    required(tile._xSetBookmarkMenuVisualActive, 'tile._xSetBookmarkMenuVisualActive')(true);
+    act(() => view.setContextMenuMark({ kind: 'shortcut', shortcutId: 'folder-entry' }));
+    expect(animateFolderIcon).toHaveBeenLastCalledWith(icon, true);
+    expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(true);
     animateFolderIcon.mockClear();
     act(() => tile.dispatchEvent(new MouseEvent('pointerout', { bubbles: true, relatedTarget: document.body })));
     expect(animateFolderIcon).not.toHaveBeenCalled();
-    // A folder contents menu can close while the context menu is still open.
+    // A folder contents menu can open and close while the context menu stays open.
+    required(tile._xSetBookmarkMenuVisualActive, 'tile._xSetBookmarkMenuVisualActive')(true);
     required(tile._xSetBookmarkMenuVisualActive, 'tile._xSetBookmarkMenuVisualActive')(false);
-    expect(animateFolderIcon).toHaveBeenLastCalledWith(icon, true);
     expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(true);
-    tile.removeAttribute('data-shortcut-context-menu-open');
-    required(tile._xSetBookmarkMenuVisualActive, 'tile._xSetBookmarkMenuVisualActive')(false);
+    act(() => view.setContextMenuMark(null));
     expect(animateFolderIcon).toHaveBeenLastCalledWith(icon, false);
     expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(false);
   });
   it('keeps an open folder contents menu expanded when its context menu closes', () => {
     const animateFolderIcon = vi.fn();
-    const { view } = createView({ animateFolderIcon });
+    const onFolderMenuChange = vi.fn();
+    const { view } = createView({ animateFolderIcon, onFolderMenuChange });
     renderItems(view, [folderEntry]);
     const tile = view.getTiles()[0];
-    tile.setAttribute('aria-expanded', 'true');
     required(tile._xSetBookmarkMenuVisualActive, 'tile._xSetBookmarkMenuVisualActive')(true);
-    tile.setAttribute('data-shortcut-context-menu-open', 'true');
-    tile.removeAttribute('data-shortcut-context-menu-open');
-    required(tile._xSetBookmarkMenuVisualActive, 'tile._xSetBookmarkMenuVisualActive')(false);
+    expect(tile.getAttribute('aria-expanded')).toBe('true');
+    expect(onFolderMenuChange).toHaveBeenLastCalledWith(tile);
+    act(() => view.setContextMenuMark({ kind: 'shortcut', shortcutId: 'folder-entry' }));
+    act(() => view.setContextMenuMark(null));
     expect(animateFolderIcon).toHaveBeenLastCalledWith(tile.querySelector('.x-nt-shortcut-icon'), true);
     expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(true);
-    tile.setAttribute('aria-expanded', 'false');
     required(tile._xSetBookmarkMenuVisualActive, 'tile._xSetBookmarkMenuVisualActive')(false);
+    expect(tile.getAttribute('aria-expanded')).toBe('false');
     expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(false);
   });
   it('marks the tile or add button its context menu is open for', () => {

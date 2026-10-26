@@ -440,6 +440,10 @@ function ShortcutTile({
   const contextMenuMark = useContextMenuMark(options);
   const contextMenuOpen = Boolean(contextMenuMark && contextMenuMark.kind === 'shortcut' &&
     contextMenuMark.shortcutId === shortcutId);
+  // A folder tile's contents menu is open; its icon stays open for that or its context menu.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const folderOpen = isFolder && (menuOpen || contextMenuOpen);
+  const folderOpenRef = useRef(false);
   // Preserve the SVG paths owned by the animation runtime across list refreshes.
   const folderIconHtml = useMemo(() => ({
     __html: isFolder ? options.getFolderIconSvg(`shortcut-${shortcutId}`, folderId) : ''
@@ -468,15 +472,9 @@ function ShortcutTile({
       { maxWidth: 360 }
     );
     if (isFolder && folderIconRef.current) {
-      const icon = folderIconRef.current;
-      options.initFolderIcon(icon);
-      tile._xSetBookmarkMenuVisualActive = (active) => {
-        const expanded = active || tile.getAttribute('aria-expanded') === 'true' ||
-          tile.hasAttribute('data-shortcut-context-menu-open');
-        tile.toggleAttribute('data-shortcut-folder-open', expanded);
-        options.animateFolderIcon(icon, expanded);
-        options.onFolderMenuChange(tile);
-      };
+      options.initFolderIcon(folderIconRef.current);
+      // The folder menu calls this from outside React and reads the tile right after.
+      tile._xSetBookmarkMenuVisualActive = (active) => flushSync(() => setMenuOpen(active));
       return () => { delete tile._xSetBookmarkMenuVisualActive; };
     }
     options.queueThemeForTarget(
@@ -492,6 +490,19 @@ function ShortcutTile({
       { priority: 0 }
     );
   }, [host, isFolder, options, themeSuggestion, title]);
+
+  useLayoutEffect(() => {
+    if (folderOpenRef.current === folderOpen) {
+      return;
+    }
+    folderOpenRef.current = folderOpen;
+    if (folderIconRef.current) {
+      options.animateFolderIcon(folderIconRef.current, folderOpen);
+    }
+    if (tileRef.current) {
+      options.onFolderMenuChange(tileRef.current);
+    }
+  }, [folderOpen, options]);
 
   function activate(
     event: ReactMouseEvent<HTMLButtonElement> |
@@ -549,7 +560,8 @@ function ShortcutTile({
       data-bookmark-drop-folder-id={isFolder ? folderId : undefined}
       data-bookmark-drop-folder-title={isFolder ? title : undefined}
       aria-haspopup={isFolder ? 'menu' : undefined}
-      aria-expanded={isFolder ? false : undefined}
+      aria-expanded={isFolder ? menuOpen : undefined}
+      data-shortcut-folder-open={folderOpen ? 'true' : undefined}
       data-shortcut-context-menu-open={contextMenuOpen ? 'true' : undefined}
       data-shortcut-custom-icon={localIconDataUrl ? 'true' : undefined}
       data-shortcut-from-bookmark={link && link.fromBookmark === true ? 'true' : undefined}
@@ -567,7 +579,7 @@ function ShortcutTile({
         }
       }}
       onPointerLeave={() => {
-        if (folderIconRef.current && !tileRef.current?.hasAttribute('data-shortcut-folder-open')) {
+        if (folderIconRef.current && !folderOpenRef.current) {
           options.animateFolderIcon(folderIconRef.current, false);
         }
       }}

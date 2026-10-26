@@ -177,8 +177,10 @@ function createFixture(options: Partial<BookmarkCascadeMenuOptions> & { folders?
   const openedUrls: Fixture['openedUrls'] = [];
   const anchorStates: boolean[] = [];
   const anchor: BookmarkMenuAnchor = document.createElement('button');
+  // Draws its own expanded state, as the views' folder cards and tiles do.
   anchor._xSetBookmarkMenuVisualActive = (active) => {
     anchorStates.push(active);
+    anchor.setAttribute('aria-expanded', String(active));
   };
   setRect(anchor, box(20, 20, 120, 40));
   document.body.appendChild(anchor);

@@ -17,8 +17,8 @@ import type * as CascadePosition from './bookmark-cascade-position';
 import type { Point, PointLike, Rect, RootPlacement, SubmenuPlacement } from './bookmark-cascade-position';
 import type { BookmarkItem } from './bookmarks-store';
 
-// An element the menu opens from. The view that drew it may hook in to
-// show it as active while its menu is open.
+// An element the menu opens from. The view that drew it hooks in to show
+// its menu as open: it draws its own expanded state and active look.
 type BookmarkMenuAnchor = HTMLElement & {
   _xSetBookmarkMenuVisualActive?: (active: boolean, options?: { instant?: boolean }) => void;
 };
@@ -731,7 +731,6 @@ function createBookmarkCascadeMenuRuntime(options?: BookmarkCascadeMenuOptions) 
     const pendingAnchor = bookmarkCascadeOpenRequest && bookmarkCascadeOpenRequest.anchorElement;
     bookmarkCascadeOpenRequest = null;
     if (pendingAnchor && pendingAnchor !== bookmarkCascadeAnchor) {
-      pendingAnchor.setAttribute('aria-expanded', 'false');
       setAnchorVisualActive(pendingAnchor, false);
     }
   }
@@ -786,7 +785,6 @@ function createBookmarkCascadeMenuRuntime(options?: BookmarkCascadeMenuOptions) 
     clearBookmarkCascadeDragTarget();
     bookmarkCascadeDragMode = false;
     if (anchorToRestore) {
-      anchorToRestore.setAttribute('aria-expanded', 'false');
       setAnchorVisualActive(anchorToRestore, false);
     }
     bookmarkCascadeAnchor = null;
@@ -1590,7 +1588,6 @@ function createBookmarkCascadeMenuRuntime(options?: BookmarkCascadeMenuOptions) 
       batch(() => {
         close();
         bookmarkCascadeAnchor = anchorElement;
-        anchorElement.setAttribute('aria-expanded', 'true');
         setAnchorVisualActive(anchorElement, true);
         menuView = view.createMenu(documentObj, viewHandlers);
         bookmarkCascadeMenu = menuView.element;
@@ -1639,11 +1636,9 @@ function createBookmarkCascadeMenuRuntime(options?: BookmarkCascadeMenuOptions) 
     };
     const previousAnchor = bookmarkCascadeAnchor;
     if (previousAnchor && previousAnchor !== anchorElement) {
-      previousAnchor.setAttribute('aria-expanded', 'false');
       setAnchorVisualActive(previousAnchor, false, visualOptions);
     }
     bookmarkCascadeAnchor = anchorElement;
-    anchorElement.setAttribute('aria-expanded', 'true');
     setAnchorVisualActive(anchorElement, true, visualOptions);
     positionBookmarkCascadeLevels();
     return true;
@@ -1679,7 +1674,6 @@ function createBookmarkCascadeMenuRuntime(options?: BookmarkCascadeMenuOptions) 
       menuAtRefreshStart.setAttribute('data-refreshing', 'true');
       try {
         return batch(() => {
-          anchorAtRefresh.setAttribute('aria-expanded', 'true');
           const rootEntry = createBookmarkCascadeLevel(openPath[0].folderId, 0, '', openPath[0].folderTitle);
           if (!rootEntry) {
             return false;

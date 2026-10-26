@@ -333,8 +333,8 @@ describe('Bookmarks React island', () => {
     renderItems(view, [folder], { viewMode: 'top', menuMode: true });
     const card = view.getCards()[0];
     const path = required(card.querySelector('path'), 'path');
-    card.setAttribute('aria-expanded', 'true');
     card._xSetBookmarkMenuVisualActive?.(true);
+    expect(card.getAttribute('aria-expanded')).toBe('true');
     path.setAttribute('d', 'M9 13');
     morph.mockClear();
     renderItems(view, [{ id: 'link', parentId: '1', index: 0, title: 'Link', url: 'https://example.com/' }, { ...folder, title: 'Renamed', index: 1 }], { viewMode: 'top', menuMode: true });
@@ -346,8 +346,8 @@ describe('Bookmarks React island', () => {
     expect(morph.mock.calls.every(([, active]) => active)).toBe(true);
     act(() => card.dispatchEvent(new PointerEvent('pointerout', { bubbles: true })));
     expect(card.classList.contains('x-nt-bookmark-card--folder-expanded')).toBe(true);
-    card.setAttribute('aria-expanded', 'false');
     card._xSetBookmarkMenuVisualActive?.(false);
+    expect(card.getAttribute('aria-expanded')).toBe('false');
     expect(card.classList.contains('x-nt-bookmark-card--folder-expanded')).toBe(false);
   });
 
