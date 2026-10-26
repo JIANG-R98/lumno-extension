@@ -21,20 +21,22 @@ function model(webLocale, helpCenterSearchEnabled) {
   });
 }
 
-// Chinese readers get the WeChat group first, with its QR popover.
+// Chinese readers get the WeChat group as a card beside the Help Center, with its QR popover.
 {
   const zh = model('zh-CN', true);
-  assert.deepStrictEqual(zh.items.map((item) => item.key), ['community', 'chrome-review', 'github-issue', 'contact-author']);
-  assert.strictEqual(zh.items[0].href, links.wechatQr);
-  assert.strictEqual(zh.items[0].qr.imageUrl, links.wechatQr);
+  assert.deepStrictEqual(zh.cards.map((card) => card.key), ['community']);
+  assert.strictEqual(zh.cards[0].href, links.wechatQr);
+  assert.strictEqual(zh.cards[0].qr.imageUrl, links.wechatQr);
+  assert.deepStrictEqual(zh.items.map((item) => item.key), ['chrome-review', 'github-issue', 'contact-author']);
   assert.strictEqual(zh.help.href, communityLinks.getHelpUrl('zh-CN'));
   assert.strictEqual(zh.help.ask.iconUrl, 'icon.png');
-  assert.strictEqual(model('zh-TW', true).items[0].key, 'community');
+  assert.strictEqual(model('zh-TW', true).cards[0].key, 'community');
 }
 
 // Elsewhere contacting the author on X is the community entry.
 {
   const en = model('en', false);
+  assert.deepStrictEqual(en.cards, []);
   assert.deepStrictEqual(en.items.map((item) => item.key), ['chrome-review', 'github-issue', 'contact-author']);
   assert.strictEqual(en.help.ask, null, 'the ask demo hides while the lm site search is off');
   assert.strictEqual(model('ja', null).help.ask, null, 'and until the providers have loaded');
@@ -72,13 +74,13 @@ function model(webLocale, helpCenterSearchEnabled) {
     licensesLink
   });
   section.render();
-  assert.strictEqual(rendered[0].items[0].href, communityLinks.FALLBACK_LINKS.wechatQr);
+  assert.strictEqual(rendered[0].cards[0].href, communityLinks.FALLBACK_LINKS.wechatQr);
   assert.strictEqual(licensesLink.href, 'https://github.com/kubai087/lumno-extension/blob/main/THIRD_PARTY_NOTICES.md',
     'the licenses link should open the third-party notices on GitHub');
   const loading = section.loadLinks();
   resolveLoad(links);
   await loading;
-  assert.strictEqual(rendered[1].items[0].href, links.wechatQr);
+  assert.strictEqual(rendered[1].cards[0].href, links.wechatQr);
   assert.strictEqual(licensesLink.href, links.licenses);
   feedback.createFeedbackSupportSection({
     communityLinks, controller: null, getLocale: () => 'en', getMessage, isHelpCenterSearchEnabled: () => false
