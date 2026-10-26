@@ -243,6 +243,45 @@ function isSearchEngineSiteSearchProvider(provider: ProviderInput): boolean {
 
 // The provider for the browser's search engine: a listed one where it can
 // be told apart, else one made from the engine's own template.
+function sameText(value: unknown, expected: string): boolean {
+  return String(value || '').trim().toLowerCase() === expected;
+}
+
+// The listed engine the browser's default search engine is: by host, then
+// name, then id.
+function findListedEngine(
+  state: SearchEngineState,
+  engineProviders: readonly SiteSearchProvider[],
+  stateHost: string
+): SiteSearchProvider | null {
+  const stateName = String(state.name || '').trim().toLowerCase();
+  const stateId = String(state.id || '').trim().toLowerCase();
+  return (stateHost && engineProviders.find((provider) => siteSearchHostsMatch(stateHost, getSiteSearchProviderHost(provider)))) ||
+    (stateName && engineProviders.find((provider) => sameText(provider && provider.name, stateName))) ||
+    (stateId && engineProviders.find((provider) => {
+      const aliases = provider && provider.aliases;
+      return Array.isArray(aliases) && aliases.some((alias: unknown) => sameText(alias, stateId));
+    })) ||
+    null;
+}
+
+// An engine this list does not know, from the template the browser reports.
+function createDetectedEngine(state: SearchEngineState, stateHost: string, template: string): SiteSearchProvider {
+  const stateName = String(state.name || '').trim().toLowerCase();
+  const stateId = String(state.id || '').trim().toLowerCase();
+  const keyToken = (stateId || stateHost || stateName || 'detected')
+    .replace(/[^a-z0-9.-]+/gi, '-')
+    .replace(/^-+|-+$/g, '') || 'detected';
+  return {
+    key: `engine-${keyToken}`,
+    aliases: stateId ? [stateId] : [],
+    name: String(state.name || state.host || state.id || '').trim() || 'Search',
+    template,
+    category: 'searchEngine',
+    _xIsDetectedSearchEngine: true
+  };
+}
+
 function getSearchEngineSiteSearchProvider(
   searchEngineState: SearchEngineState | null | undefined,
   providers: readonly SiteSearchProvider[] | null | undefined
@@ -252,56 +291,20 @@ function getSearchEngineSiteSearchProvider(
     : {};
   const engineProviders: SiteSearchProvider[] = (Array.isArray(providers) ? providers : [])
     .filter(isSearchEngineSiteSearchProvider);
-  const stateHost = normalizeHost(state.host) || getUrlHost(state.searchTemplate);
   const fallbackProvider = findSiteSearchProvider('google', engineProviders);
   if (isRetiredSearchEngineState(state)) {
     return fallbackProvider || null;
   }
-  if (stateHost) {
-    const hostMatch = engineProviders.find((provider) => siteSearchHostsMatch(
-      stateHost,
-      getSiteSearchProviderHost(provider)
-    ));
-    if (hostMatch) {
-      return hostMatch;
-    }
-  }
-  const stateName = String(state.name || '').trim().toLowerCase();
-  if (stateName) {
-    const nameMatch = engineProviders.find((provider) => (
-      String(provider && provider.name || '').trim().toLowerCase() === stateName
-    ));
-    if (nameMatch) {
-      return nameMatch;
-    }
-  }
-  const stateId = String(state.id || '').trim().toLowerCase();
-  if (stateId) {
-    const aliasMatch = engineProviders.find((provider) => {
-      const aliases = provider && provider.aliases;
-      return Array.isArray(aliases) &&
-        aliases.some((alias: unknown) => String(alias || '').trim().toLowerCase() === stateId);
-    });
-    if (aliasMatch) {
-      return aliasMatch;
-    }
+  const stateHost = normalizeHost(state.host) || getUrlHost(state.searchTemplate);
+  const listed = findListedEngine(state, engineProviders, stateHost);
+  if (listed) {
+    return listed;
   }
   const normalizedTemplate = normalizeSiteSearchTemplate(state.searchTemplate);
   if (!normalizedTemplate || !normalizedTemplate.includes('{query}')) {
     return fallbackProvider || null;
   }
-  const keyToken = (stateId || stateHost || stateName || 'detected')
-    .replace(/[^a-z0-9.-]+/gi, '-')
-    .replace(/^-+|-+$/g, '') || 'detected';
-  const displayName = String(state.name || state.host || state.id || '').trim() || 'Search';
-  return {
-    key: `engine-${keyToken}`,
-    aliases: stateId ? [stateId] : [],
-    name: displayName,
-    template: normalizedTemplate,
-    category: 'searchEngine',
-    _xIsDetectedSearchEngine: true
-  };
+  return createDetectedEngine(state, stateHost, normalizedTemplate);
 }
 
 function isInteractiveSiteSearchProvider(provider: ProviderInput): boolean {
@@ -313,51 +316,55 @@ function isInteractiveSiteSearchProvider(provider: ProviderInput): boolean {
 
 // A stored provider, filled in from the built-in it started from; null
 // when it has no key or no usable template.
-function normalizeSiteSearchProvider(item: ProviderInput, baseProvider?: ProviderInput): NormalizedSiteSearchProvider | null {
-  if (!item && !baseProvider) {
-    return null;
-  }
-  const key = String((item && item.key) || (baseProvider && baseProvider.key) || '').trim();
-  const template = normalizeSiteSearchTemplate(
-    (item && item.template) || (baseProvider && baseProvider.template) || ''
-  );
-  if (!key || !template) {
-    return null;
-  }
-  if (!template.includes('{query}') && !isAiSiteSearchProvider({
-    ...(baseProvider || {}),
-    ...(item || {}),
-    key,
-    template
-  })) {
-    return null;
-  }
+// A field from the entry, or from the provider it customizes.
+function inheritedText(item: ProviderInput, baseProvider: ProviderInput, field: keyof SiteSearchProvider): string {
+  return String((item && item[field]) || (baseProvider && baseProvider[field]) || '').trim();
+}
+
+function inheritedAliases(item: ProviderInput, baseProvider: ProviderInput): string[] {
   const itemAliases = item && item.aliases;
   const baseAliases = baseProvider && baseProvider.aliases;
   const aliasSource: readonly unknown[] = Array.isArray(itemAliases)
     ? itemAliases
     : (Array.isArray(baseAliases) ? baseAliases : []);
-  const provider: NormalizedSiteSearchProvider = {
-    id: String((item && item.id) || (baseProvider && baseProvider.id) || '').trim(),
+  return aliasSource.filter((alias): alias is string => typeof alias === 'string' && Boolean(alias));
+}
+
+// A provider needs a key and a template with {query}; an AI provider's page
+// takes the prompt without one.
+function hasUsableTemplate(item: ProviderInput, baseProvider: ProviderInput, key: string, template: string): boolean {
+  return Boolean(key && template) && (template.includes('{query}') || isAiSiteSearchProvider({
+    ...(baseProvider || {}),
+    ...(item || {}),
     key,
-    aliases: aliasSource.filter((alias): alias is string => typeof alias === 'string' && Boolean(alias)),
-    name: String((item && item.name) || (baseProvider && baseProvider.name) || key).trim() || key,
+    template
+  }));
+}
+
+function normalizeSiteSearchProvider(item: ProviderInput, baseProvider?: ProviderInput): NormalizedSiteSearchProvider | null {
+  if (!item && !baseProvider) {
+    return null;
+  }
+  const key = inheritedText(item, baseProvider, 'key');
+  const template = normalizeSiteSearchTemplate(inheritedText(item, baseProvider, 'template'));
+  if (!hasUsableTemplate(item, baseProvider, key, template)) {
+    return null;
+  }
+  const provider: NormalizedSiteSearchProvider = {
+    id: inheritedText(item, baseProvider, 'id'),
+    key,
+    aliases: inheritedAliases(item, baseProvider),
+    name: String(inheritedText(item, baseProvider, 'name') || key).trim() || key,
     template,
-    action: String((item && item.action) || (baseProvider && baseProvider.action) || '').trim(),
-    submitStrategy: String(
-      (item && item.submitStrategy) || (baseProvider && baseProvider.submitStrategy) || ''
-    ).trim(),
-    category: String(
-      (item && item.category) || (baseProvider && baseProvider.category) || ''
-    ).trim(),
+    action: inheritedText(item, baseProvider, 'action'),
+    submitStrategy: inheritedText(item, baseProvider, 'submitStrategy'),
+    category: inheritedText(item, baseProvider, 'category'),
     disabled: Boolean(item && item.disabled),
     disabledReason: String((item && item.disabledReason) || '').trim(),
-    icon: String((item && item.icon) || (baseProvider && baseProvider.icon) || '').trim(),
-    iconUrl: String((item && item.iconUrl) || (baseProvider && baseProvider.iconUrl) || '').trim()
+    icon: inheritedText(item, baseProvider, 'icon'),
+    iconUrl: inheritedText(item, baseProvider, 'iconUrl')
   };
-  const builtinKey = String(
-    (item && item.builtinKey) || (baseProvider && baseProvider.builtinKey) || ''
-  ).trim().toLowerCase();
+  const builtinKey = inheritedText(item, baseProvider, 'builtinKey').toLowerCase();
   if (builtinKey) {
     provider.builtinKey = builtinKey;
   }

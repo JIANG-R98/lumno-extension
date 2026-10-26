@@ -256,6 +256,32 @@ function normalizeFullWidthHostDots(input: string): string {
   return `${authority}${match[2] || ''}`;
 }
 
+// An IP address typed with spaces or doubled dots ("192 168 1 1").
+function normalizeTypedAddress(raw: string): string {
+  return raw.match(/^(\d{1,3})([.\s]\d{1,3}){0,3}(?::\d{1,5})?(?:[/?#].*)?$/)
+    ? raw.replace(/\s+/g, '.').replace(/\.{2,}/g, '.')
+    : raw;
+}
+
+// Whether input without a scheme names a host: a dotted name, a dev host or
+// an address. A scheme other than http(s) is only allowed for those last two.
+function looksLikeNavigableHost(normalizedInput: string, hostOnly: string): boolean {
+  const isDevHost = isDevDirectNavigationHost(hostOnly);
+  const isNumericLike = isNumericDirectNavigationHost(hostOnly);
+  if (getDirectNavigationProtocol(normalizedInput) && !isDevHost && !isNumericLike) {
+    return false;
+  }
+  return (normalizedInput.includes('.') && !normalizedInput.includes(' ')) || isDevHost || isNumericLike;
+}
+
+// An IPv6 address gets brackets, and a URL without a scheme gets https.
+function withNavigationScheme(normalizedInput: string, hostOnly: string): string {
+  const bracketed = hostOnly.includes(':') && !/^https?:\/\//i.test(normalizedInput) && !normalizedInput.startsWith('[')
+    ? `[${normalizedInput}]`
+    : normalizedInput;
+  return bracketed.startsWith('http://') || bracketed.startsWith('https://') ? bracketed : `https://${bracketed}`;
+}
+
 function getDirectNavigationUrl(input: unknown): string {
   const trimmed = String(input || '').trim();
   if (!trimmed) {
@@ -264,30 +290,9 @@ function getDirectNavigationUrl(input: unknown): string {
   if (isExplicitDirectNavigationUrl(trimmed)) {
     return trimmed;
   }
-  const raw = normalizeFullWidthHostDots(trimmed);
-  let normalizedInput = raw.match(/^(\d{1,3})([.\s]\d{1,3}){0,3}(?::\d{1,5})?(?:[/?#].*)?$/)
-    ? raw.replace(/\s+/g, '.').replace(/\.{2,}/g, '.')
-    : raw;
+  const normalizedInput = normalizeTypedAddress(normalizeFullWidthHostDots(trimmed));
   const hostOnly = extractDirectNavigationHost(normalizedInput);
-  const isDevHost = isDevDirectNavigationHost(hostOnly);
-  const isNumericLike = isNumericDirectNavigationHost(hostOnly);
-  const protocol = getDirectNavigationProtocol(normalizedInput);
-  if (protocol && !isDevHost && !isNumericLike) {
-    return '';
-  }
-  const looksLikeUrl = (normalizedInput.includes('.') && !normalizedInput.includes(' ')) ||
-    isDevHost ||
-    isNumericLike;
-  if (!looksLikeUrl) {
-    return '';
-  }
-  if (hostOnly.includes(':') && !/^https?:\/\//i.test(normalizedInput) && !normalizedInput.startsWith('[')) {
-    normalizedInput = `[${normalizedInput}]`;
-  }
-  if (!normalizedInput.startsWith('http://') && !normalizedInput.startsWith('https://')) {
-    return `https://${normalizedInput}`;
-  }
-  return normalizedInput;
+  return looksLikeNavigableHost(normalizedInput, hostOnly) ? withNavigationScheme(normalizedInput, hostOnly) : '';
 }
 
 // Input that names a page or a local resource rather than words to search:

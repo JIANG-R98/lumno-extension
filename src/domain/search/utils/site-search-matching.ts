@@ -204,32 +204,25 @@ function getInlineSiteSearchCandidate(input: unknown, providers: Providers): Inl
   return { provider: provider, query: remainder };
 }
 
+function tokenMatchesInput(token: string, needle: string): boolean {
+  return Boolean(token) && (token === needle || (needle.length >= 2 && token.startsWith(needle)));
+}
+
+// The provider's key, name, aliases or the first label of its host start
+// with the input; an aggregate search matches by its key only.
 function providerMatchesSiteSearchInputPrefix(provider: MaybeProvider, input: unknown): boolean {
   const needle = String(input || '').toLowerCase();
   if (!needle || !provider) {
     return false;
   }
-  const allowPrefix = needle.length >= 2;
   const tokens = provider._xIsAggregateSearch === true
     ? [provider.key]
     : [provider.key, provider.name].concat(provider.aliases || []);
-  for (let i = 0; i < tokens.length; i += 1) {
-    const token = String(tokens[i] || '').toLowerCase();
-    if (!token) {
-      continue;
-    }
-    if (token === needle || (allowPrefix && token.startsWith(needle))) {
-      return true;
-    }
+  if (tokens.some((token) => tokenMatchesInput(String(token || '').toLowerCase(), needle))) {
+    return true;
   }
   const host = normalizeHost(getSiteSearchProviderHost(provider));
-  if (host) {
-    const hostToken = host.split('.')[0] || host;
-    if (hostToken === needle || (allowPrefix && hostToken.startsWith(needle))) {
-      return true;
-    }
-  }
-  return false;
+  return Boolean(host) && tokenMatchesInput(host.split('.')[0] || host, needle);
 }
 
 function siteSearchTemplatePartMatchesCandidate(candidatePart: string, probePart: string): boolean {
@@ -310,6 +303,34 @@ function providerMatchesSiteSearchSuggestionTitle(provider: MaybeProvider, sugge
 
 // The provider a site-search tag would offer for what is typed, using the
 // top site match when the input only names its site.
+// The provider behind the top site the input already matches.
+function findTopSiteProvider(providers: Providers, topSiteMatch: SuggestionLike, trimmed: string): SiteSearchProvider | null {
+  return (providers || []).find((candidate) => {
+    if (!suggestionMatchesSiteSearchProvider(topSiteMatch, candidate)) {
+      return false;
+    }
+    return providerMatchesSiteSearchInputPrefix(candidate, trimmed) ||
+      providerMatchesSiteSearchSuggestionTitle(candidate, topSiteMatch, trimmed);
+  }) || null;
+}
+
+// A one- or two-letter input that already completes a top site only offers
+// that site's own search.
+function conflictsWithTopSite(
+  provider: SiteSearchProvider,
+  topSiteMatch: SuggestionLike | null | undefined,
+  trimmed: string,
+  options: TriggerCandidateOptions | null | undefined
+): boolean {
+  const matchesTopSitePrefix = options && typeof options.matchesTopSitePrefix === 'function'
+    ? options.matchesTopSitePrefix
+    : null;
+  if (!topSiteMatch || trimmed.length > 2 || !matchesTopSitePrefix || !matchesTopSitePrefix(topSiteMatch, trimmed)) {
+    return false;
+  }
+  return !siteSearchHostsMatch(getSiteSearchProviderHost(provider), getSearchSuggestionHost(topSiteMatch));
+}
+
 function getSiteSearchTriggerCandidate(
   input: unknown,
   providers: Providers,
@@ -325,29 +346,11 @@ function getSiteSearchTriggerCandidate(
   if (/\s/.test(trimmed) && !exactProvider) {
     return null;
   }
-  let provider = exactProvider ||
-    findSiteSearchProviderByInput(trimmed, providers);
-  if (!provider && topSiteMatch) {
-    provider = (providers || []).find((candidate) => {
-      if (!suggestionMatchesSiteSearchProvider(topSiteMatch, candidate)) {
-        return false;
-      }
-      return providerMatchesSiteSearchInputPrefix(candidate, trimmed) ||
-        providerMatchesSiteSearchSuggestionTitle(candidate, topSiteMatch, trimmed);
-    }) || null;
-  }
-  if (!provider) {
+  const provider = exactProvider ||
+    findSiteSearchProviderByInput(trimmed, providers) ||
+    (topSiteMatch ? findTopSiteProvider(providers, topSiteMatch, trimmed) : null);
+  if (!provider || conflictsWithTopSite(provider, topSiteMatch, trimmed, options)) {
     return null;
-  }
-  const matchesTopSitePrefix = options && typeof options.matchesTopSitePrefix === 'function'
-    ? options.matchesTopSitePrefix
-    : null;
-  if (topSiteMatch && trimmed.length <= 2 && matchesTopSitePrefix && matchesTopSitePrefix(topSiteMatch, trimmed)) {
-    const providerHost = getSiteSearchProviderHost(provider);
-    const topHost = getSearchSuggestionHost(topSiteMatch);
-    if (!siteSearchHostsMatch(providerHost, topHost)) {
-      return null;
-    }
   }
   return provider;
 }
