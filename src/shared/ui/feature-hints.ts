@@ -28,30 +28,69 @@ function isBlurrable(element: Element): element is Element & HTMLOrSVGElement {
   return 'blur' in element && typeof element.blur === 'function';
 }
 
-// One hint on one page, from its view's creation to destroy().
-interface FeatureHintContext {
-  config: FeatureHintOptions;
-  hint: FeatureHintDefinition;
-  page: Document;
-  t: Translate | null;
-  windowObj: FeatureHintWindow | null;
-  chromeApi: FeatureHintChromeApi | null;
-  dismissStorage: FeatureHintDismissStorage;
-  dismissKey: string;
-  rememberOnFirstShow: boolean;
-  hasLink: boolean;
-  actions: FeatureHintActionItem[];
-  view: FeatureHintViewController;
-  element: HTMLSpanElement;
-  alignment: FeatureHintAlignment;
+// Whether a hint shows: asked to, not dismissed, and both its stored
+// dismissal and its visibility gate known. `ready` settles once both are.
+class HintVisibility {
+  requested: boolean;
   dismissed: boolean;
-  requestedVisible: boolean;
-  dismissStateLoaded: boolean;
-  visibilityGateSettled: boolean;
-  firstShowRemembered: boolean;
-  destroyed: boolean;
-  readySettled: boolean;
-  resolveReady: ((visible: boolean) => void) | null;
+  dismissLoaded: boolean;
+  gateSettled = true;
+  destroyed = false;
+  // A hint remembered on first show is remembered once.
+  firstShowRemembered = false;
+  readonly ready: Promise<boolean>;
+  private settled = false;
+  private resolveReady: ((visible: boolean) => void) | null = null;
+
+  constructor(requested: boolean, dismissed: boolean, dismissLoaded: boolean) {
+    this.requested = requested;
+    this.dismissed = dismissed;
+    this.dismissLoaded = dismissLoaded;
+    this.ready = new Promise<boolean>((resolve) => {
+      this.resolveReady = resolve;
+    });
+  }
+
+  shows(): boolean {
+    return this.requested && !this.dismissed && this.dismissLoaded && this.gateSettled;
+  }
+
+  // Resolves `ready` with whether the hint shows, once both are known
+  // (or at once when forced).
+  settle(visible: boolean, force?: boolean): void {
+    if (this.settled || (!force && (!this.dismissLoaded || !this.gateSettled))) {
+      return;
+    }
+    this.settled = true;
+    if (this.resolveReady) {
+      this.resolveReady(visible);
+    }
+  }
+}
+
+// One hint on one page, from its view's creation to destroy(): what its
+// options and definition settled, its view, and whether it shows.
+interface FeatureHintContext {
+  readonly settings: FeatureHintSettings;
+  readonly view: FeatureHintViewController;
+  readonly element: HTMLSpanElement;
+  readonly alignment: FeatureHintAlignment;
+  readonly visibility: HintVisibility;
+}
+
+// What the options and the definition settle, once the view is made.
+interface FeatureHintSettings {
+  readonly config: FeatureHintOptions;
+  readonly hint: FeatureHintDefinition;
+  readonly page: Document;
+  readonly t: Translate | null;
+  readonly windowObj: FeatureHintWindow | null;
+  readonly chromeApi: FeatureHintChromeApi | null;
+  readonly dismissStorage: FeatureHintDismissStorage;
+  readonly dismissKey: string;
+  readonly rememberOnFirstShow: boolean;
+  readonly hasLink: boolean;
+  readonly actions: FeatureHintActionItem[];
 }
 
 // What the options and the definition settle before the view is made.
@@ -219,7 +258,7 @@ function setElementInert(element: HTMLElement, inert: boolean): void {
 }
 
 function blurFocusedChildIfNeeded(ctx: FeatureHintContext): void {
-  const activeElement = ctx.page.activeElement;
+  const activeElement = ctx.settings.page.activeElement;
   if (!activeElement || !isBlurrable(activeElement)) {
     return;
   }
@@ -230,56 +269,50 @@ function blurFocusedChildIfNeeded(ctx: FeatureHintContext): void {
 
 function syncVisibility(ctx: FeatureHintContext): void {
   const element = ctx.element;
-  const nextVisible = ctx.requestedVisible && !ctx.dismissed && ctx.dismissStateLoaded && ctx.visibilityGateSettled;
+  const nextVisible = ctx.visibility.shows();
   element.setAttribute('data-visible', nextVisible ? 'true' : 'false');
   element.setAttribute('aria-hidden', nextVisible ? 'false' : 'true');
   setElementInert(element, !nextVisible);
   if (nextVisible) {
-    if (ctx.rememberOnFirstShow && !ctx.firstShowRemembered && ctx.dismissStorage !== 'none') {
-      ctx.firstShowRemembered = true;
-      setStoredDismissed(ctx.chromeApi, ctx.dismissKey);
+    if (ctx.settings.rememberOnFirstShow && !ctx.visibility.firstShowRemembered && ctx.settings.dismissStorage !== 'none') {
+      ctx.visibility.firstShowRemembered = true;
+      setStoredDismissed(ctx.settings.chromeApi, ctx.settings.dismissKey);
     }
     scheduleContentAlignmentUpdate(ctx.alignment);
   } else {
     blurFocusedChildIfNeeded(ctx);
-    if (ctx.dismissed) {
+    if (ctx.visibility.dismissed) {
       disconnectAlignmentObserver(ctx.alignment);
     }
   }
 }
 
 function settleReady(ctx: FeatureHintContext, force?: boolean): void {
-  if (ctx.readySettled || (!force && (!ctx.dismissStateLoaded || !ctx.visibilityGateSettled))) {
-    return;
-  }
-  ctx.readySettled = true;
-  if (ctx.resolveReady) {
-    ctx.resolveReady(ctx.element.getAttribute('data-visible') === 'true');
-  }
+  ctx.visibility.settle(ctx.element.getAttribute('data-visible') === 'true', force);
 }
 
 function destroyHint(ctx: FeatureHintContext): void {
-  if (ctx.destroyed) {
+  if (ctx.visibility.destroyed) {
     return;
   }
-  ctx.destroyed = true;
+  ctx.visibility.destroyed = true;
   settleReady(ctx, true);
   destroyAlignment(ctx.alignment);
   ctx.view.destroy();
 }
 
 function dismissHint(ctx: FeatureHintContext): void {
-  if (ctx.destroyed || ctx.dismissed) {
+  if (ctx.visibility.destroyed || ctx.visibility.dismissed) {
     return;
   }
-  ctx.dismissed = true;
+  ctx.visibility.dismissed = true;
   ctx.element.setAttribute('data-dismissed', 'true');
-  if (ctx.dismissStorage !== 'none') {
-    setStoredDismissed(ctx.chromeApi, ctx.dismissKey);
+  if (ctx.settings.dismissStorage !== 'none') {
+    setStoredDismissed(ctx.settings.chromeApi, ctx.settings.dismissKey);
   }
   syncVisibility(ctx);
-  if (typeof ctx.config.onDismiss === 'function') {
-    ctx.config.onDismiss(ctx.hint);
+  if (typeof ctx.settings.config.onDismiss === 'function') {
+    ctx.settings.config.onDismiss(ctx.settings.hint);
   }
 }
 
@@ -289,13 +322,13 @@ function readOptionalLabel(t: Translate | null, key: string, fallback: string): 
 }
 
 function readNavigator(ctx: FeatureHintContext): NavigatorLike | null {
-  return ctx.config.navigatorLike || (ctx.windowObj && ctx.windowObj.navigator) || globalThis.navigator || null;
+  return ctx.settings.config.navigatorLike || (ctx.settings.windowObj && ctx.settings.windowObj.navigator) || globalThis.navigator || null;
 }
 
 function readLabels(ctx: FeatureHintContext): FeatureHintViewLabels {
-  const { config, hint, t } = ctx;
+  const { config, hint, t } = ctx.settings;
   const actionLabels: Record<string, string> = {};
-  ctx.actions.forEach((action) => {
+  ctx.settings.actions.forEach((action) => {
     actionLabels[action.id] = getMessage(t, action.labelKey, action.labelFallback);
   });
   return {
@@ -304,7 +337,7 @@ function readLabels(ctx: FeatureHintContext): FeatureHintViewLabels {
     close: getMessage(t, hint.closeLabelKey, hint.closeLabelFallback),
     connector: readOptionalLabel(t, config.connectorKey || hint.connectorKey || '',
       config.connectorFallback || hint.connectorFallback || ''),
-    link: ctx.hasLink
+    link: ctx.settings.hasLink
       ? getMessage(t, config.linkKey || hint.linkKey, config.linkFallback || hint.linkFallback)
       : '',
     text: formatShortcutText(getMessage(t, hint.textKey, hint.textFallback), 'Alt+Q', readNavigator(ctx)),
@@ -314,7 +347,7 @@ function readLabels(ctx: FeatureHintContext): FeatureHintViewLabels {
 }
 
 function updateHintLanguage(ctx: FeatureHintContext): void {
-  if (ctx.destroyed) {
+  if (ctx.visibility.destroyed) {
     return;
   }
   ctx.view.updateLabels(readLabels(ctx));
@@ -323,10 +356,10 @@ function updateHintLanguage(ctx: FeatureHintContext): void {
 
 function waitForVisibilityGate(ctx: FeatureHintContext, visibilityGate: PromiseLike<unknown>): void {
   const releaseVisibilityGate = (): void => {
-    if (ctx.destroyed || ctx.visibilityGateSettled) {
+    if (ctx.visibility.destroyed || ctx.visibility.gateSettled) {
       return;
     }
-    ctx.visibilityGateSettled = true;
+    ctx.visibility.gateSettled = true;
     syncVisibility(ctx);
     settleReady(ctx);
   };
@@ -334,17 +367,17 @@ function waitForVisibilityGate(ctx: FeatureHintContext, visibilityGate: PromiseL
 }
 
 function loadDismissState(ctx: FeatureHintContext): void {
-  if (ctx.dismissStorage === 'none') {
+  if (ctx.settings.dismissStorage === 'none') {
     settleReady(ctx);
     return;
   }
-  getStoredDismissed(ctx.chromeApi, ctx.dismissKey).then((isDismissed) => {
-    if (ctx.destroyed) {
+  getStoredDismissed(ctx.settings.chromeApi, ctx.settings.dismissKey).then((isDismissed) => {
+    if (ctx.visibility.destroyed) {
       return;
     }
-    ctx.dismissStateLoaded = true;
-    if (isDismissed && !ctx.dismissed) {
-      ctx.dismissed = true;
+    ctx.visibility.dismissLoaded = true;
+    if (isDismissed && !ctx.visibility.dismissed) {
+      ctx.visibility.dismissed = true;
       ctx.element.setAttribute('data-dismissed', 'true');
     }
     syncVisibility(ctx);
@@ -357,28 +390,23 @@ function createFeatureHintContext(setup: FeatureHintSetup, view: FeatureHintView
   const windowObj: FeatureHintWindow | null = config.windowObj || page.defaultView ||
     (typeof window !== 'undefined' ? window : null);
   return {
-    config,
-    hint,
-    page,
-    t: typeof config.t === 'function' ? config.t : null,
-    windowObj,
-    chromeApi: config.chromeApi || (typeof chrome !== 'undefined' ? chrome : null),
-    dismissStorage,
-    dismissKey: chooseDismissKey(config, hint, dismissStorage),
-    rememberOnFirstShow: readBooleanOption(config.rememberOnFirstShow, hint.rememberOnFirstShow),
-    hasLink: setup.hasLink,
-    actions: setup.actions,
+    settings: {
+      config,
+      hint,
+      page,
+      t: typeof config.t === 'function' ? config.t : null,
+      windowObj,
+      chromeApi: config.chromeApi || (typeof chrome !== 'undefined' ? chrome : null),
+      dismissStorage,
+      dismissKey: chooseDismissKey(config, hint, dismissStorage),
+      rememberOnFirstShow: readBooleanOption(config.rememberOnFirstShow, hint.rememberOnFirstShow),
+      hasLink: setup.hasLink,
+      actions: setup.actions
+    },
     view,
     element: view.element,
     alignment: createFeatureHintAlignment(setup.alignMode, windowObj, view, setup.hasLink),
-    dismissed: Boolean(config.initiallyDismissed),
-    requestedVisible: config.initiallyVisible !== false,
-    dismissStateLoaded: dismissStorage === 'none',
-    visibilityGateSettled: true,
-    firstShowRemembered: false,
-    destroyed: false,
-    readySettled: false,
-    resolveReady: null
+    visibility: new HintVisibility(config.initiallyVisible !== false, Boolean(config.initiallyDismissed), dismissStorage === 'none')
   };
 }
 
@@ -403,11 +431,8 @@ function createFeatureHint(options?: FeatureHintOptions | null): FeatureHintCont
   const visibilityGate = config.visibilityGate && typeof config.visibilityGate.then === 'function'
     ? config.visibilityGate
     : null;
-  ctx.visibilityGateSettled = !visibilityGate;
-  const ready = new Promise<boolean>((resolve) => {
-    ctx.resolveReady = resolve;
-  });
-  ctx.element.setAttribute('data-dismissed', ctx.dismissed ? 'true' : 'false');
+  ctx.visibility.gateSettled = !visibilityGate;
+  ctx.element.setAttribute('data-dismissed', ctx.visibility.dismissed ? 'true' : 'false');
 
   const hintController: FeatureHintController = {
     definition,
@@ -415,14 +440,14 @@ function createFeatureHint(options?: FeatureHintOptions | null): FeatureHintCont
     textId: view.text.id,
     destroy: () => destroyHint(ctx),
     dismiss: () => dismissHint(ctx),
-    isDismissed: () => ctx.dismissed,
+    isDismissed: () => ctx.visibility.dismissed,
     isVisible: () => ctx.element.getAttribute('data-visible') === 'true',
-    ready,
+    ready: ctx.visibility.ready,
     setVisible(visible: boolean) {
-      if (ctx.destroyed) {
+      if (ctx.visibility.destroyed) {
         return;
       }
-      ctx.requestedVisible = Boolean(visible);
+      ctx.visibility.requested = Boolean(visible);
       syncVisibility(ctx);
     },
     updateLanguage: () => updateHintLanguage(ctx)
