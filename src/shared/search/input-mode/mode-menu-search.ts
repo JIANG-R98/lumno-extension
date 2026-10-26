@@ -4,8 +4,8 @@ import type * as LumnoCursorTooltip from '../../ui/cursor-tooltip';
 import type { CursorTooltipController } from '../../ui/cursor-tooltip';
 import type { ModeMenuEntry, ModeMenuItem, ModeMenuMatch, ModeMenuRange, ModeMenuSearchIndex } from './types';
 import * as SearchTextIndex from '../../../domain/search/utils/text-index';
-import * as SearchTextMatching from '../../../domain/search/utils/text-matching';
 import * as SearchTextNormalize from '../../../domain/search/utils/text-normalize';
+import * as TextMatching from '../../../domain/search/utils/text-matching';
 
 // pinyin-pro, once loaded.
 interface PinyinApi {
@@ -144,7 +144,7 @@ function createModeMenuSearch(deps: ModeMenuSearchDeps) {
       return { matched: true, ranges: [directRange] };
     }
     const unitMatch = index.units
-      ? SearchTextMatching.matchSearchTextIndex(index.units, normalizedQuery)
+      ? TextMatching.matchSearchTextIndex(index.units, normalizedQuery)
       : null;
     if (unitMatch) {
       return {

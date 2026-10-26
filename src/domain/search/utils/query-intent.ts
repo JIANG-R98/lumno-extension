@@ -9,9 +9,9 @@ import type {
   SearchTermCoverage
 } from '../types';
 import { getSearchSiteConfig, normalizeHost } from './direct-navigation';
-import { getSearchTitleUnitMatch } from './text-matching';
-import type { TitleMatchOptions } from './text-matching';
 import { normalizeSearchText, shouldAllowLooseTextContains, splitSearchTerms, splitSearchTitleTokens } from './text-normalize';
+import type { TitleMatchOptions } from './text-matching';
+import { getSearchTitleUnitMatch } from './text-matching';
 
 // What the intent checks read from a result.
 interface IntentItem {

@@ -5,7 +5,7 @@ import { getOwnExtensionFaviconUrl, isOwnExtensionUrl } from '../browser-urls-se
 import { normalizeHost } from '../worker-context';
 import type { BookmarkNodeInfo, SourceItem } from './types';
 import { getFaviconFallbackHost, getHostFaviconUrl, getPageFaviconCandidateUrl, isBrowserInternalPageUrl, shouldBlockFaviconForHost } from '../favicon/candidates';
-import * as SearchTextMatching from '../../domain/search/utils/text-matching';
+import * as TextMatching from '../../domain/search/utils/text-matching';
 
 // The roots every bookmark tree has, which a path leaves out.
 const ROOT_FOLDER_TITLES: ReadonlySet<string> = new Set([
@@ -48,7 +48,7 @@ function buildSuggestionReasons(
     reasons.push(SOURCE_REASONS[sourceType]);
   }
   const unitMatch = context.unitQuery
-    ? SearchTextMatching.getSearchTitleUnitMatch(item && item.title, context.unitQuery, scoreOptions, { skipLiteral: true })
+    ? TextMatching.getSearchTitleUnitMatch(item && item.title, context.unitQuery, scoreOptions, { skipLiteral: true })
     : null;
   if (unitMatch && unitMatch.abbreviation) {
     reasons.push('标题首字母匹配');

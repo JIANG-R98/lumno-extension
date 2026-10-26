@@ -5,8 +5,8 @@ import type { SuggestionLike } from '../types';
 import { normalizeHost } from './direct-navigation';
 import { matchesSearchQueryText } from './query-intent';
 import type { IntentItem, QueryTextContext } from './query-intent';
-import type { TitleMatchOptions } from './text-matching';
 import { normalizeSearchText, splitSearchTerms } from './text-normalize';
+import type { TitleMatchOptions } from './text-matching';
 
 interface CollectMatchesOptions extends TitleMatchOptions {
   isUrlBlockedBySearchBlacklist?: (url: string | undefined, blacklistItems: readonly BlacklistRule[]) => boolean;

@@ -15,11 +15,11 @@ import type {
 import type { PinyinApi } from '../../domain/search/pinyin-api';
 import type { SuggestionRow } from './types';
 import * as BoundedCache from '../../domain/bounded-cache';
-import * as SearchTextMatching from '../../domain/search/utils/text-matching';
 import * as SearchTextNormalize from '../../domain/search/utils/text-normalize';
 import * as SearchDirectNavigation from '../../domain/search/utils/direct-navigation';
 import * as SearchSearchPolicy from '../../domain/search/utils/search-policy';
 import * as SearchSelectionStats from '../../domain/search/utils/selection-stats';
+import * as TextMatching from '../../domain/search/utils/text-matching';
 
 // Titles whose units (and pinyin readings) were built for matching, about
 // 1 KB each. It holds the Han-title history and the bookmarks, so typing one
@@ -115,8 +115,8 @@ function getHanCharacterReadings(pinyinApi: PinyinApi, character: string): strin
 }
 
 function getTitleTextMatcher(): SearchTextMatcher | null {
-  if (!titleTextMatcher && typeof SearchTextMatching.createSearchTextMatcher === 'function') {
-    titleTextMatcher = SearchTextMatching.createSearchTextMatcher({
+  if (!titleTextMatcher && typeof TextMatching.createSearchTextMatcher === 'function') {
+    titleTextMatcher = TextMatching.createSearchTextMatcher({
       getHanReadings: getTitleHanReadings,
       maxEntries: BACKGROUND_TITLE_PINYIN_CACHE_MAX_ENTRIES
     });
@@ -180,7 +180,7 @@ function attachSuggestionTitleHighlight<T extends SuggestionRow>(
     titleHighlight: {
       text,
       query: String(context.lookupQuery || '').trim().toLowerCase(),
-      ranges: SearchTextMatching.getSearchTitleHighlightRanges(text, context, scoreOptions)
+      ranges: TextMatching.getSearchTitleHighlightRanges(text, context, scoreOptions)
     }
   };
 }

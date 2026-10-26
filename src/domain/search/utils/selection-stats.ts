@@ -12,8 +12,8 @@ import type {
 import { classifySearchIntent } from './query-intent';
 import { buildSearchDedupUrlKey } from './result-dedup';
 import { SEARCH_SELECTION_POLICY } from './search-policy';
-import { isSearchUnitQueryEligible } from './text-matching';
 import { compactSearchQuery, normalizeSearchText, splitSearchTerms } from './text-normalize';
+import { isSearchUnitQueryEligible } from './text-matching';
 
 type SelectionStatsOptions = Pick<SearchRankingOptions, 'now' | 'retentionDays' | 'maxQueries' | 'maxEntriesPerQuery'>;
 

@@ -71,14 +71,15 @@ const SEARCH_DIGIT_ZEROS = [
 // Marks a reader leaves out when typing: Latin, Greek and Cyrillic accents,
 // Arabic vowel signs and the tatweel, Hebrew points. Marks that change a
 // word, such as the vowel signs of Devanagari or Thai, stay.
+// Combining marks and Arabic and Hebrew points a query may leave out.
+const SEARCH_OPTIONAL_MARK_RANGES: ReadonlyArray<readonly [number, number]> = [
+  [0x0300, 0x036f], [0x0591, 0x05bd], [0x05bf, 0x05bf], [0x05c1, 0x05c2], [0x05c4, 0x05c5], [0x05c7, 0x05c7],
+  [0x0610, 0x061a], [0x0640, 0x0640], [0x064b, 0x065f], [0x0670, 0x0670], [0x06d6, 0x06dc], [0x06df, 0x06e4],
+  [0x06e7, 0x06e8], [0x06ea, 0x06ed]
+];
+
 function isSearchOptionalMark(code: number): boolean {
-  return (code >= 0x0300 && code <= 0x036f) ||
-    (code >= 0x0591 && code <= 0x05bd) || code === 0x05bf ||
-    (code >= 0x05c1 && code <= 0x05c2) || (code >= 0x05c4 && code <= 0x05c5) || code === 0x05c7 ||
-    (code >= 0x0610 && code <= 0x061a) || code === 0x0640 ||
-    (code >= 0x064b && code <= 0x065f) || code === 0x0670 ||
-    (code >= 0x06d6 && code <= 0x06dc) || (code >= 0x06df && code <= 0x06e4) ||
-    (code >= 0x06e7 && code <= 0x06e8) || (code >= 0x06ea && code <= 0x06ed);
+  return SEARCH_OPTIONAL_MARK_RANGES.some(([first, last]) => code >= first && code <= last);
 }
 
 // One character after decomposition: kana as hiragana, digits as 0-9,

@@ -23,7 +23,6 @@ import '../domain/search/utils/direct-navigation';
 import '../domain/search/utils/text-normalize';
 import '../domain/search/utils/text-index';
 import '../domain/search/utils/keyboard-layouts';
-import '../domain/search/utils/text-matching';
 import '../domain/search/utils/selection-stats';
 import '../domain/search/utils/result-dedup';
 import '../domain/search/utils/suggestion-slate';

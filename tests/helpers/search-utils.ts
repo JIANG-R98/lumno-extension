@@ -15,3 +15,4 @@ export * from '../../src/domain/search/utils/suggestion-slate';
 export * from '../../src/domain/search/utils/text-index';
 export * from '../../src/domain/search/utils/text-matching';
 export * from '../../src/domain/search/utils/text-normalize';
+export * from '../../src/domain/search/utils/unit-paths';

@@ -9,9 +9,9 @@ import { getSearchSuggestionClusterInfo, getSearchTermCoverageStats } from './qu
 import type { IntentItem } from './query-intent';
 import { SEARCH_POLICY } from './search-policy';
 import { findProviderForSiteSearchSuggestion } from './site-search-matching';
-import { getSearchTitleUnitMatch } from './text-matching';
-import type { TitleMatchOptions } from './text-matching';
 import { normalizeSearchText, splitSearchTerms, splitSearchTitleTokens } from './text-normalize';
+import type { TitleMatchOptions } from './text-matching';
+import { getSearchTitleUnitMatch } from './text-matching';
 
 type SlateContext = Pick<SearchQueryContext, 'queryLower' | 'queryTerms' | 'intentType' | 'hasSettingsIntent' |
   'hasInformationalIntent' | 'coreQueryTerms'>;
