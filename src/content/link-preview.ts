@@ -167,34 +167,28 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
     .shot,
     .veil {
       position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
       display: block;
       object-fit: fill;
     }
     .shot {
+      inset: 0;
+      width: 100%;
+      height: 100%;
       will-change: opacity;
     }
-    /* Its edge is feathered (painted into the canvas, see paintVeil), so
-       once the sharp screenshot has faded out from under it the receded
-       page melts into the surround without a seam. */
+    /* The picture runs on past the page's edges (mirrored, see paintVeil),
+       so the receded page fills the window with no edge of its own; a
+       second, enlarged copy behind it lined up nowhere but the middle and
+       showed the page's edges twice. */
     .veil {
+      top: calc(-1 * var(--lp-veil-margin-y, 0px));
+      left: calc(-1 * var(--lp-veil-margin-x, 0px));
+      width: calc(100% + 2 * var(--lp-veil-margin-x, 0px));
+      height: calc(100% + 2 * var(--lp-veil-margin-y, 0px));
       opacity: 0;
       will-change: opacity;
     }
-    /* Fills the space the receding page leaves with the veil's picture, so
-       the shrinking page shows no edge against it. Oversized so the blurred
-       edge stays off screen. */
-    .surround {
-      position: absolute;
-      inset: -48px;
-      width: calc(100% + 96px);
-      height: calc(100% + 96px);
-      display: block;
-    }
-    .page[hidden],
-    .surround[hidden] {
+    .page[hidden] {
       display: none;
     }
     /* With a screenshot its tone is painted into the veil instead. */
@@ -414,15 +408,14 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
   // The page receded behind the preview: scaled, and crossfaded to its veil, the
   // screenshot blurred by BLUR_CSS_PX and toned by VEIL_TONE. The veil is
   // painted at BLUR_RENDER_WIDTH pixels wide; blurred, it scales up unseen.
+  const RECEDED_SCALE = 0.95;
   const PAGE_AT_REST = { transform: 'scale(1)' };
-  const PAGE_RECEDED = { transform: 'scale(0.95)' };
+  const PAGE_RECEDED = { transform: `scale(${RECEDED_SCALE})` };
   const BLUR_CSS_PX = 16;
   const VEIL_TONE = 'brightness(0.9) saturate(1.1)';
   const BLUR_RENDER_WIDTH = 480;
-  // The scrim over the receded page, and the width of the veil's feathered
-  // edge in CSS pixels.
+  // The scrim over the receded page.
   const SCRIM_TONE = 'rgba(8, 8, 12, 0.2)';
-  const FEATHER_CSS_PX = 48;
 
   let current: LinkPreview | null = null;
 
@@ -642,6 +635,7 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
       backVisible: false,
       panelColor: '',
       viewport: null,
+      veilMargin: null,
       closing: false,
       frameUrl: toPreviewFrameUrl(url),
       placeholder: readHostLabel(url),
@@ -899,63 +893,81 @@ function isFocusable(element: Element): element is Element & HTMLOrSVGElement {
     return image.decode().then(() => true, () => false);
   }
 
-  // Paints the veil: the screenshot blurred and toned, small. The blurred
-  // edge would fade to transparent, so a slightly enlarged copy is painted
-  // first to fill it, then the copy that lines up with the screenshot. The
-  // surround gets the same picture.
+  // How far past the page's edge the veil must reach, in CSS pixels, to
+  // cover the window once the page has receded about its center.
+  function veilMarginFor(size: number): number {
+    return Math.ceil(size * (1 - RECEDED_SCALE) / (2 * RECEDED_SCALE)) + 4;
+  }
+
+  // The part of the window the page's content fills, as fractions of it:
+  // the screenshot takes the page's scrollbars too, which blurred would show
+  // as a grey band inside the receded page. The vertical one sits on the
+  // left of a right-to-left page.
+  function readContentBox(): { left: number; width: number; height: number } {
+    const root = document.documentElement;
+    const width = Math.min(1, root.clientWidth / Math.max(1, window.innerWidth)) || 1;
+    const height = Math.min(1, root.clientHeight / Math.max(1, window.innerHeight)) || 1;
+    const rightToLeft = window.getComputedStyle(root).direction === 'rtl';
+    return { left: rightToLeft ? 1 - width : 0, width, height };
+  }
+
+  // Paints the veil: the screenshot blurred and toned, small, running on
+  // past the page's edges. Around the page's content go mirrored copies of
+  // it, so the picture continues across each edge (and over the scrollbars)
+  // the way the page left it, and the blur reads only picture: its own fade
+  // to transparent falls outside the canvas.
   function paintVeil(preview: LinkPreview): boolean {
     const image = preview.shot;
     const width = image.naturalWidth;
     const height = image.naturalHeight;
     const context = preview.veil.getContext('2d');
-    if (!width || !height || !context) {
+    const source = document.createElement('canvas');
+    const sourceContext = source.getContext('2d');
+    if (!width || !height || !context || !sourceContext) {
       return false;
     }
     const scale = Math.min(1, BLUR_RENDER_WIDTH / width);
-    const canvasWidth = Math.max(1, Math.round(width * scale));
-    const canvasHeight = Math.max(1, Math.round(height * scale));
-    // The screenshot is in device pixels; the blur is meant in CSS pixels.
-    const radius = BLUR_CSS_PX * (width / Math.max(1, window.innerWidth)) * scale;
-    const pad = Math.ceil(radius * 2);
-    preview.veil.width = canvasWidth;
-    preview.veil.height = canvasHeight;
+    const pictureWidth = Math.max(1, Math.round(width * scale));
+    const pictureHeight = Math.max(1, Math.round(height * scale));
+    // The screenshot is in device pixels; the blur and margins are meant in
+    // CSS pixels.
+    const perCssX = pictureWidth / Math.max(1, window.innerWidth);
+    const perCssY = pictureHeight / Math.max(1, window.innerHeight);
+    const radius = BLUR_CSS_PX * perCssX;
+    const marginX = Math.ceil(veilMarginFor(window.innerWidth) * perCssX);
+    const marginY = Math.ceil(veilMarginFor(window.innerHeight) * perCssY);
+    const pad = Math.ceil(radius * 3);
+    const content = readContentBox();
+    const contentLeft = content.left * pictureWidth;
+    const contentWidth = content.width * pictureWidth;
+    const contentHeight = content.height * pictureHeight;
+    source.width = pictureWidth + (marginX + pad) * 2;
+    source.height = pictureHeight + (marginY + pad) * 2;
+    [-1, 0, 1].forEach((column) => {
+      [-1, 0, 1].forEach((row) => {
+        sourceContext.setTransform(
+          column === 0 ? 1 : -1, 0, 0, row === 0 ? 1 : -1,
+          marginX + pad + contentLeft + (column === 1 ? contentWidth * 2 : 0),
+          marginY + pad + (row === 1 ? contentHeight * 2 : 0)
+        );
+        sourceContext.drawImage(
+          image,
+          content.left * width, 0, content.width * width, content.height * height,
+          0, 0, contentWidth, contentHeight
+        );
+      });
+    });
+    preview.veil.width = pictureWidth + marginX * 2;
+    preview.veil.height = pictureHeight + marginY * 2;
     context.filter = `blur(${radius}px) ${VEIL_TONE}`;
-    context.drawImage(image, -pad, -pad, canvasWidth + pad * 2, canvasHeight + pad * 2);
-    context.drawImage(image, 0, 0, canvasWidth, canvasHeight);
+    context.drawImage(source, -pad, -pad);
     // The scrim's tone goes into the picture rather than a layer of its own
     // over the whole window.
     context.filter = 'none';
     context.fillStyle = SCRIM_TONE;
-    context.fillRect(0, 0, canvasWidth, canvasHeight);
-    const surroundContext = preview.surround.getContext('2d');
-    if (surroundContext) {
-      preview.surround.width = canvasWidth;
-      preview.surround.height = canvasHeight;
-      surroundContext.drawImage(preview.veil, 0, 0);
-    }
-    featherEdges(context, canvasWidth, canvasHeight, FEATHER_CSS_PX * canvasWidth / Math.max(1, window.innerWidth));
+    context.fillRect(0, 0, preview.veil.width, preview.veil.height);
+    update(preview, { veilMargin: { x: marginX / perCssX, y: marginY / perCssY } });
     return true;
-  }
-
-  // Fades the veil's edges out, once: a CSS mask did the same on every frame
-  // the veil faded in, each time compositing the whole window offscreen.
-  function featherEdges(context: CanvasRenderingContext2D, width: number, height: number, feather: number): void {
-    const fade = (x0: number, y0: number, x1: number, y1: number, length: number): CanvasGradient => {
-      const gradient = context.createLinearGradient(x0, y0, x1, y1);
-      const stop = Math.min(0.5, feather / Math.max(1, length));
-      gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-      gradient.addColorStop(stop, '#000');
-      gradient.addColorStop(1 - stop, '#000');
-      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      return gradient;
-    };
-    context.save();
-    context.globalCompositeOperation = 'destination-in';
-    context.fillStyle = fade(0, 0, width, 0, width);
-    context.fillRect(0, 0, width, height);
-    context.fillStyle = fade(0, 0, 0, height, height);
-    context.fillRect(0, 0, width, height);
-    context.restore();
   }
 
   // The screenshot usually arrives while the button is still down, so a
